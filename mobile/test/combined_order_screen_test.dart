@@ -184,11 +184,11 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      expect(find.text('১ কার্টন = ৪৮ পিস'), findsOneWidget);
+      expect(find.text('1 কার্টন = 48 পিস'), findsOneWidget);
       expect(find.text('১২টা কিনলে ১টা ফ্রি'), findsOneWidget);
-      expect(find.text('+১ কার্টন'), findsOneWidget);
-      expect(find.text('+১০ কার্টন'), findsOneWidget);
-      expect(find.text('আগের মতো (১,২০০)'), findsOneWidget);
+      expect(find.text('+1 কার্টন'), findsOneWidget);
+      expect(find.text('+10 কার্টন'), findsOneWidget);
+      expect(find.text('আগের মতো (1,200)'), findsOneWidget);
       expect(find.text('ঝুড়িতে যোগ'), findsOneWidget);
 
       // 31 cartons and 12 pieces = 1,500 — typed, not reached with a + button.
@@ -198,7 +198,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('keypad-1')));
       await tester.tap(find.byKey(const ValueKey('keypad-2')));
       await tester.pump();
-      expect(find.text('১,৫০০'), findsOneWidget);
+      expect(find.text('1,500'), findsOneWidget);
       expect(find.textContaining('এই লাইনে ৳52,500.00'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('keypad-add')));
@@ -231,7 +231,7 @@ void main() {
       expect(result, 500);
     });
 
-    testWidgets('a quick chip: +১ কার্টন and আগের মতো', (tester) async {
+    testWidgets('a quick chip: +1 কার্টন and আগের মতো', (tester) async {
       _phone(tester);
       int? result;
       await tester.pumpWidget(MaterialApp(
@@ -245,14 +245,14 @@ void main() {
       ));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('+১ কার্টন'));
+      await tester.tap(find.text('+1 কার্টন'));
       await tester.tap(find.byKey(const ValueKey('keypad-add')));
       await tester.pumpAndSettle();
       expect(result, 58);
 
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('আগের মতো (৯৬)'));
+      await tester.tap(find.text('আগের মতো (96)'));
       await tester.tap(find.byKey(const ValueKey('keypad-add')));
       await tester.pumpAndSettle();
       expect(result, 96);
@@ -300,11 +300,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final free = find.byKey(const ValueKey('order-free-$_soap'));
-    expect(find.descendant(of: free, matching: find.text('২')), findsOneWidget);
+    expect(find.descendant(of: free, matching: find.text('2')), findsOneWidget);
     expect(find.text('ফ্রি · নিজে বসেছে'), findsOneWidget);
     expect(find.text('✓ ঝুড়িতে আছে · ৳35.00'), findsOneWidget);
     expect(find.text('বিক্রি · ৳840.00'), findsOneWidget);
-    expect(find.text('বিক্রি ২৪ পিস · ফ্রি ২'), findsOneWidget);
+    expect(find.text('বিক্রি 24 পিস · ফ্রি 2'), findsOneWidget);
     expect(find.text('৳840.00'), findsWidgets);
     expect(api.offerCalls.last.single.qty, 24);
   });
@@ -375,17 +375,59 @@ void main() {
     ]));
     expect(payload.toString().contains('free'), isFalse, reason: 'free goods are applied at the bill');
     expect(memory.remembered.single, {_soap: 2});
-    expect(find.text('বিক্রি ০ পিস · ফ্রি ০'), findsOneWidget, reason: 'the basket empties');
+    expect(find.text('বিক্রি 0 পিস · ফ্রি 0'), findsOneWidget, reason: 'the basket empties');
   });
 
-  testWidgets('offline offers: the free box keeps the last answer, or ০', (tester) async {
+  testWidgets('offline offers: the free box keeps the last answer, or 0', (tester) async {
     final api = _Api();
     await pumpScreen(tester, api);
     await tester.tap(find.byKey(const ValueKey('order-plus-$_soap')));
     await tester.pump(const Duration(milliseconds: 20));
     await tester.pumpAndSettle();
     final free = find.byKey(const ValueKey('order-free-$_soap'));
-    expect(find.descendant(of: free, matching: find.text('০')), findsOneWidget);
+    expect(find.descendant(of: free, matching: find.text('0')), findsOneWidget);
+  });
+
+  // ⭐ অঙ্ক দুই ভাষাতেই ইংরেজি — বাংলাতেও (মালিকের স্থায়ী নিয়ম; a4, 0.4.44): অর্ডারের পর্দা, ঘটির পাতা, ছাঁকনি আর পাঠানোর আগের
+  // পাতায় পর্দার নিজের কোনো ০-৯ নেই। ⓘ সার্ভারের লেখা (পণ্যের নাম, অফারের বাক্য) যেমন এল তেমন — সেগুলো বাদ।
+  testWidgets('no Bengali digit (০-৯) is drawn by the order screen or its sheets, in Bengali', (tester) async {
+    const server = {'সাবান ১০০ গ্রাম', 'ডিটারজেন্ট ৫০০ গ্রাম', '১২টা কিনলে ১টা ফ্রি'};
+    final bengaliDigit = RegExp('[০-৯]');
+    void noBengaliDigits(String where) {
+      final drawn = [
+        for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? t.textSpan?.toPlainText() ?? '',
+        for (final s in tester.widgetList<Semantics>(find.byType(Semantics))) ...[s.properties.label ?? '', s.properties.value ?? ''],
+      ].where((t) => bengaliDigit.hasMatch(t) && !server.contains(t)).toList();
+      expect(drawn, isEmpty, reason: '$where: বাংলা অঙ্ক আঁকা — $drawn');
+    }
+
+    final api = _Api(standingAnswer: _overLimit, freeFor: (id, qty) => id == _soap ? (qty ~/ 12).toDouble() : 0);
+    await pumpScreen(tester, api, memory: _Memory({_soap: 96}));
+    await tester.tap(find.byKey(const ValueKey('order-qty-$_soap')));
+    await tester.pumpAndSettle();
+    for (final key in ['keypad-1', 'keypad-2', 'keypad-pieces', 'keypad-1', 'keypad-2']) {
+      await tester.tap(find.byKey(ValueKey(key)));
+    }
+    await tester.pump();
+    expect(find.text('1 কার্টন = 48 পিস'), findsOneWidget);
+    noBengaliDigits('the keypad');
+    await tester.tap(find.byKey(const ValueKey('keypad-add')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pumpAndSettle();
+    expect(find.text('588'), findsWidgets, reason: '12 cartons of 48 and 12 pieces');
+    noBengaliDigits('the order screen');
+
+    await tester.tap(find.byKey(const ValueKey('order-filter')));
+    await tester.pumpAndSettle();
+    noBengaliDigits('the filter sheet');
+    await tester.tap(find.byKey(const ValueKey('filter-apply')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('order-send')));
+    await tester.pumpAndSettle();
+    expect(find.text('পাঠানোর আগে দেখে নিন'), findsOneWidget);
+    noBengaliDigits('the check before sending');
   });
 
   testWidgets('no stock figure anywhere on the screen', (tester) async {
@@ -416,13 +458,13 @@ void main() {
     await tester.tap(find.text('অফার আছে'));
     await tester.tap(find.text('দাম ধরে'));
     await tester.pumpAndSettle();
-    expect(find.text('১টা পণ্য দেখান'), findsOneWidget);
+    expect(find.text('1টা পণ্য দেখান'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('filter-apply')));
     await tester.pumpAndSettle();
 
     expect(find.text('সাবান ১০০ গ্রাম'), findsOneWidget);
     expect(find.text('ডিটারজেন্ট ৫০০ গ্রাম'), findsNothing);
-    expect(find.descendant(of: find.byKey(const ValueKey('order-filter')), matching: find.text('২')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('order-filter')), matching: find.text('2')), findsOneWidget);
 
     // A chip removes its own filter.
     await tester.tap(find.descendant(
@@ -450,7 +492,7 @@ void main() {
     await tester.tap(find.text('খুঁজুন'));
     await tester.pumpAndSettle();
     expect(find.text('ঝুড়িতে যোগ'), findsOneWidget);
-    expect(find.text('১ কার্টন = ৪৮ পিস'), findsOneWidget);
+    expect(find.text('1 কার্টন = 48 পিস'), findsOneWidget);
   });
 
   test('offers are matched back by public_id, or by position when the server sends only its own id', () {

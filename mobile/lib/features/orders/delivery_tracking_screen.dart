@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/tracking_api.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
@@ -63,9 +65,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent:
-                'সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.ordersTrackingLoadFailed,
+            whenAbsent: context.l10n.ordersTrackingAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -93,7 +94,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     final rows = TrackingListQuery.apply(list?.rows ?? const <TrackedSale>[],
         sort: _sort);
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'ডেলিভারি ট্র্যাকিং', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.ordersTrackingTitle, module: context.l10n.ordersModuleSales),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -104,10 +105,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _load(),
               decoration: InputDecoration(
-                hintText: 'বিক্রয় নম্বর, ডিও বা দোকান',
+                hintText: context.l10n.ordersTrackingSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                    tooltip: 'খুঁজুন', icon: const Icon(Icons.arrow_forward), onPressed: _load),
+                    tooltip: context.l10n.ordersSearch, icon: const Icon(Icons.arrow_forward), onPressed: _load),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -121,7 +122,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 ])
                   ChoiceChip(
                     label: Text(
-                        '${key == 'all' ? 'সব' : trackingStepLabels[key]} (${counts[key] ?? 0})'),
+                        '${key == 'all' ? context.l10n.ordersTrackingAll : trackingStepLabels[key]} (${counts[key] ?? 0})'),
                     selected: (_step ?? 'all') == key,
                     onSelected: (_) {
                       setState(() => _step = key == 'all' ? null : key);
@@ -146,14 +147,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             if (list != null && list.rows.isEmpty && !_busy && _error == null)
               EmptyState(
                 icon: Icons.local_shipping_outlined,
-                title: 'কোনো বিক্রি নেই।',
-                message: _filtered ? 'এই ছাঁকনিতে কিছু নেই।' : 'গেট পাস হলে বিক্রি এখানে আসে।',
+                title: context.l10n.ordersTrackingEmptyTitle,
+                message: _filtered ? context.l10n.ordersTrackingEmptyFiltered : context.l10n.ordersTrackingEmptyHint,
                 action: OutlinedButton.icon(
                   key: const ValueKey('tracking-empty-action'),
                   style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
                   onPressed: _filtered ? _showAll : _load,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_filtered ? 'সব দেখুন' : 'নতুন করে দেখুন'),
+                  label: Text(_filtered ? context.l10n.ordersTrackingShowAll : context.l10n.ordersTrackingReload),
                 ),
               ),
             // ⭐ নকশা ৩-এর সারি — গ্রাহক "নাম · পয়েন্ট · শাখা", নিচে বিক্রির নম্বর (আর কাগজের নম্বর) · তারিখ, ডানে টাকা আর
@@ -163,7 +164,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 key: ValueKey('tracked-row-${sale.id}'),
                 icon: Icons.local_shipping_outlined,
                 tone: _saleColour(context, sale),
-                party: sale.customer ?? 'গ্রাহক নেই',
+                party: sale.customer ?? context.l10n.ordersTrackingNoCustomer,
                 // ⭐ বিক্রির নম্বর আর কাগজের নিজের নম্বর, দুটোই — খোঁজায় যেকোনোটা চলে
                 number: _numbers(sale),
                 numberKey: ValueKey('tracked-no-${sale.id}'),
@@ -187,8 +188,8 @@ String _numbers(TrackedSale sale) => [
 
 String _stepText(TrackedSale sale) => [
       trackingStepLabels[sale.step] ?? sale.step,
-      if (sale.billed) 'বিল হয়েছে',
-      if (sale.backOrder) 'বাকি মাল পরে যাবে'
+      if (sale.billed) AppLocale.l10n.ordersTrackingStepBilled,
+      if (sale.backOrder) AppLocale.l10n.ordersTrackingBackOrder
     ].join(' · ');
 
 /// ধাপের চিপের মানে — পৌঁছানো সবুজ, আটকানো/বাতিল লাল, অপেক্ষা হলুদ, বাকিটা চলছে
@@ -248,7 +249,7 @@ class _StoryScreenState extends State<_StoryScreen> {
     } catch (e) {
       if (mounted) {
         setState(() =>
-            _error = errorMessageFor(e, fallback: 'সময়রেখা আনা গেল না।'));
+            _error = errorMessageFor(e, fallback: context.l10n.ordersTrackingStoryFailed));
       }
     }
   }
@@ -257,7 +258,7 @@ class _StoryScreenState extends State<_StoryScreen> {
   Widget build(BuildContext context) {
     final sale = _sale ?? widget.sale;
     return Scaffold(
-      appBar: AbosScreenBar(title: sale.no, module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: sale.no, module: context.l10n.ordersModuleSales),
       // ⭐ টেনে নামালে নতুন — মালিকের আদেশ (ধাপ ২)
       body: RefreshIndicator(
         onRefresh: _load,
@@ -266,7 +267,7 @@ class _StoryScreenState extends State<_StoryScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে বিক্রির নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
-            CustomerLine(sale.customer ?? 'গ্রাহক নেই',
+            CustomerLine(sale.customer ?? context.l10n.ordersTrackingNoCustomer,
                 key: const ValueKey('story-customer'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
             Text([_numbers(sale), if (sale.date != null) sale.date!].join(' · '),
@@ -288,8 +289,8 @@ class _StoryScreenState extends State<_StoryScreen> {
                   last: i == _milestones.length - 1),
             if (_milestones.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              const Text('কে কখন কী করলেন',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              Text(context.l10n.ordersTrackingStoryWho,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
             if (_error != null)
               ErrorState(key: const ValueKey('story-error'), message: _error!, onRetry: _load),
@@ -311,7 +312,7 @@ class _StoryScreenState extends State<_StoryScreen> {
                                   const TextStyle(fontWeight: FontWeight.w600)),
                           Text(
                             [
-                              if (e.at != null) banglaStamp(e.at!),
+                              if (e.at != null) stampText(e.at!),
                               if (e.by != null) e.by!
                             ].join(' · '),
                             style: TextStyle(
@@ -408,7 +409,7 @@ class _MilestoneRow extends StatelessWidget {
                   if (m.at != null || m.by != null)
                     Text(
                       [
-                        if (m.at != null) banglaStamp(m.at!),
+                        if (m.at != null) stampText(m.at!),
                         if (m.by != null) m.by!
                       ].join(' · '),
                       style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),

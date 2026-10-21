@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
@@ -77,7 +78,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     } catch (e) {
       if (mounted) {
         setState(() =>
-            _setupError = errorMessageFor(e, fallback: 'ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'));
+            _setupError = errorMessageFor(e, fallback: context.l10n.counterReturnLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -100,8 +101,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
       });
     } catch (e) {
       if (mounted) {
-        await _popup('বিল খোলা গেল না',
-            errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+        await _popup(context.l10n.counterReturnBillFailed,
+            errorMessageFor(e, fallback: context.l10n.counterTryAgain));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -113,7 +114,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     final reason = _reasonId;
     // ⛔ লেখা আছে অথচ পড়া যায় না (অক্ষর, দুই দশমিক) — বাংলা অঙ্ক আর হাজারের কমা পড়া যায়; আগে লাইনটা ফেরত থেকে চুপচাপ বাদ পড়ত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
     if (_qty.values.any((c) => Money.typed(c.text) == null)) {
-      setState(() => _error = 'ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।');
+      setState(() => _error = context.l10n.counterReturnQtyUnreadable);
       return;
     }
     final lines = {
@@ -122,7 +123,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     }..removeWhere((_, v) => v <= 0);
     if (bill == null || reason == null || lines.isEmpty) {
       setState(() => _error =
-          reason == null ? 'কারণ বাছুন।' : 'অন্তত একটা মালের ফেরত পরিমাণ দিন।');
+          reason == null ? context.l10n.counterReturnPickReason : context.l10n.counterReturnNeedQty);
       return;
     }
     setState(() {
@@ -141,8 +142,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
       final choice = await showConfirmOverview(context, overview);
       if (!mounted) return;
       if (choice != OverviewChoice.confirm) {
-        await _popup('খসড়া ফেরত রাখা হলো',
-            'নিশ্চিত হয়নি — ওয়েবের ফেরতের তালিকায় খসড়া হয়ে আছে।');
+        await _popup(context.l10n.counterReturnDraftKeptTitle,
+            context.l10n.counterReturnDraftKeptText);
         if (mounted) Navigator.of(context).pop();
         return;
       }
@@ -150,13 +151,13 @@ class _ReturnScreenState extends State<ReturnScreen> {
       final (status, notice) = await widget.api.confirm(id);
       if (!mounted) return;
       setState(() => _busy = false);
-      await _popup(status == 'done' ? 'ফেরত হলো' : 'সইয়ের অপেক্ষায়', notice);
+      await _popup(status == 'done' ? context.l10n.counterReturnDone : context.l10n.counterAwaitingSignature, notice);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
         await _popup(
-            'ফেরত হলো না', errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+            context.l10n.counterReturnFailed, errorMessageFor(e, fallback: context.l10n.counterTryAgain));
       }
     }
   }
@@ -170,7 +171,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(dialog),
-                child: const Text('ঠিক আছে'))
+                child: Text(context.l10n.counterOk))
           ],
         ),
       );
@@ -184,7 +185,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     final bill = _bill;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'বিক্রি ফেরত', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.counterReturnTitle, module: context.l10n.ordersModuleSales),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -206,20 +207,20 @@ class _ReturnScreenState extends State<ReturnScreen> {
               ),
             ),
           if (setup != null && bill == null) ...[
-            Text('কোন বিলের ফেরত',
+            Text(context.l10n.counterReturnWhichBill,
                 style: Theme.of(context).textTheme.titleMedium),
             if (setup.invoices.isEmpty)
               EmptyState(
                 key: const ValueKey('return-empty'),
                 icon: Icons.receipt_long_outlined,
-                title: 'ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।',
-                message: 'বিল পাকা হলে এখানে আসবে।',
+                title: context.l10n.counterReturnEmptyTitle,
+                message: context.l10n.counterReturnEmptyHint,
                 action: OutlinedButton.icon(
                     key: const ValueKey('return-empty-refresh'),
                     style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
                     onPressed: _busy ? null : _load,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('নতুন করে দেখুন')),
+                    label: Text(context.l10n.counterReload)),
               ),
             // ⭐ নকশা ৩-এর সারি: ক্রেতা "নাম · পয়েন্ট · শাখা", ডানে বিলের টাকা; দ্বিতীয় লাইনে বিলের নম্বর · তারিখ।
             // ⓘ টাকা Money.taka — ইংরেজি অঙ্ক, লাখের কমা (⛔ আগে সার্ভারের কাঁচা লেখা "৳ 12500.0000" সোজা বসত)
@@ -240,7 +241,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
             CustomerLine(bill.customerName,
                 key: const ValueKey('return-bill-customer'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-            Text('বিল ${bill.no}',
+            Text(context.l10n.counterReturnBillNo(bill.no),
                 key: const ValueKey('return-bill-no'),
                 style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             for (final l in bill.lines)
@@ -252,15 +253,15 @@ class _ReturnScreenState extends State<ReturnScreen> {
                     children: [
                       Text(l.name,
                           style: const TextStyle(fontWeight: FontWeight.w700)),
-                      if (l.lotNo != null) Text('লট: ${l.lotNo}'),
-                      Text('বেচা: ${l.qty} × ${Money.taka(l.rate)}'),
+                      if (l.lotNo != null) Text(context.l10n.counterLotNo('${l.lotNo}')),
+                      Text(context.l10n.counterReturnSold('${l.qty}', Money.taka(l.rate))),
                       TextField(
                         key: ValueKey('return-qty-${l.id}'),
                         controller: _qty[l.id],
                         onChanged: (_) => setState(() {}),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration: const InputDecoration(labelText: 'কত ফেরত'),
+                        decoration: InputDecoration(labelText: context.l10n.counterReturnQtyLabel),
                       ),
                     ],
                   ),
@@ -270,7 +271,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
               DropdownButtonFormField<String>(
                 key: const ValueKey('return-reason'),
                 initialValue: _reasonId,
-                decoration: const InputDecoration(labelText: 'কেন ফেরত'),
+                decoration: InputDecoration(labelText: context.l10n.counterReturnReasonLabel),
                 items: [
                   for (final r in setup.reasons)
                     DropdownMenuItem(value: r.id, child: Text(r.label))
@@ -280,16 +281,16 @@ class _ReturnScreenState extends State<ReturnScreen> {
             TextField(
                 controller: _note,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)')),
+                decoration: InputDecoration(labelText: context.l10n.counterNoteLabel)),
             const SizedBox(height: AppSpacing.md),
             FilledButton(
               key: const ValueKey('return-go'),
               onPressed: _busy ? null : _go,
-              child: const Text('নিশ্চিত করুন'),
+              child: Text(context.l10n.counterConfirm),
             ),
             TextButton(
                 onPressed: _busy ? null : () => setState(() => _bill = null),
-                child: const Text('অন্য বিল বাছুন')),
+                child: Text(context.l10n.counterReturnOtherBill)),
           ],
         ],
       ),
