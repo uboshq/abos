@@ -15,6 +15,7 @@ use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Models\MaternityDelivery;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\LeaveService;
@@ -117,6 +118,37 @@ final class TheFestivalBonusIsNotAMaternityMonthTest extends TestCase
             '⛔ কেবল উৎসব ভাতার নভেম্বরকে "দেওয়া মাস" ধরে পার্থক্য বসল — নভেম্বরের বেতনের রান আবার দিলে দুইবার।');
         $this->assertSame(0, $this->leaveRows($leave, '2026-11-15', '2026-11-20'),
             '⛔ নভেম্বরের বেতন এখনো দেওয়া হয়নি, অথচ বাদ পড়া দিনের "ছুটি" সারি রয়ে গেল।');
+    }
+
+    /**
+     * ⭐ নিয়মটা পাতায় লেখা — "গড় দৈনিক মজুরি: নোটিশের আগের 3 মাসের বেতন রান থেকে; উৎসব বোনাস মজুরি নয় (ধারা 2(45), 48)"
+     * (fe-র সিদ্ধান্ত ১, ২১ অক্টোবর ২০২৬): ছুটির তালিকায় মাতৃত্বকালীন আবেদনের সারিতে, আর মাতৃত্বকালীন সুবিধার সারি থাকা বেতনের
+     * রানের পাতায়; সেই সারি ছাড়া রানের পাতায় নয়।
+     */
+    public function test_the_leave_list_and_the_run_page_say_the_festival_bonus_is_not_wages(): void
+    {
+        $this->travelTo(Carbon::parse('2026-08-01 09:00:00'));
+        $leave = $this->approvedLeave();
+
+        $list = $this->actingAs($this->owner)->get(route('hr.leave.index'))->assertOk();
+        $rule = __('hr::message.maternity_wage_rule');
+        $list->assertSee('data-maternity-wage-rule', false);
+        $list->assertSee($rule);
+        $this->assertStringContainsString($this->mother->code, $list->getContent(), 'প্রস্তুতি — আবেদনটা তালিকায় নেই।');
+
+        $july = PayrollRun::acrossBranches()->where('document_no', 'PRL-FBM-salary-2026-07-01')->firstOrFail();
+        $slip = Payslip::query()->where('payroll_run_id', $july->id)->sole();
+        PayslipLine::query()->create(['company_id' => $this->company->id, 'payslip_id' => $slip->id,
+            'head_code' => MaternityBenefit::LINE_CODE, 'head_name_en' => 'Maternity benefit', 'head_name_bn' => 'মাতৃত্বকালীন সুবিধা',
+            'kind' => SalaryHead::EARNING, 'amount' => '800', 'sort_order' => 900]);
+
+        $page = $this->actingAs($this->owner)->get(route('hr.payroll.show', $july->id))->assertOk();
+        $page->assertSee('data-maternity-wage-rule', false);
+        $page->assertSee(__('hr::message.maternity_wage_rule'));
+
+        $june = PayrollRun::acrossBranches()->where('document_no', 'PRL-FBM-salary-2026-06-01')->firstOrFail();
+        $this->actingAs($this->owner)->get(route('hr.payroll.show', $june->id))->assertOk()
+            ->assertDontSee('data-maternity-wage-rule', false);
     }
 
     private function approvedLeave(): LeaveApplication
