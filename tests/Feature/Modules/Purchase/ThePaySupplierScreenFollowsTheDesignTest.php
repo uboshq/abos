@@ -375,6 +375,28 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertStringContainsString('data-account-balance', $html);
     }
 
+    /** ⭐ মিল-তালিকা #৯ — মোট টাকার ঘর লাখ-কমায় ("1,20,000.00"), আর কমাসহ লেখা হুবহু সেই অঙ্কেই খাতায় যায় */
+    public function test_gap_9_the_amount_reads_in_lakh_commas_and_posts_the_same_figure(): void
+    {
+        $bill = $this->bill('120000');
+
+        $html = (string) $this->get(route('purchase.payment.create', ['purchase_bill_id' => $bill->id]))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<input[^>]*name="amount"[^>]*value="1,20,000\.00"|<input[^>]*value="1,20,000\.00"[^>]*name="amount"/', $html,
+            '⛔ #৯: মোট টাকার ঘর লাখ-কমা ছাড়া ("120000") দেখায়');
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="amount"[^>]*type="number"|<input[^>]*type="number"[^>]*name="amount"/', $html,
+            '⛔ #৯: সংখ্যার ঘর কমা দেখাতে পারে না');
+
+        $this->putMoneyIn($this->till(), '200000');
+        $this->pay(['account_id' => $this->till()->id], [[$bill->id, '120000']], amount: '1,20,000.00');
+        $this->assertSame('', $this->errorOn('amount'), '⛔ #৯: লাখ-কমায় লেখা অঙ্ক ফেরত এল');
+        $this->assertSame(0, bccomp((string) $this->lastPayment()->amount, '120000', 4), '⛔ #৯: কমাসহ লেখা অঙ্কটা অন্য অঙ্কে বসল');
+        $this->assertMoved($this->book($this->lastPayment()), StandardChart::PAYABLE, debit: '120000', message: '⛔ #৯: খাতায় কমাসহ অঙ্কটা ঠিক যায়নি');
+
+        // ⛔ কেবল কমা ছাঁটা — অক্ষর থাকলে আগের মতোই থামে
+        $this->pay(['account_id' => $this->till()->id], [], amount: '1,20,0x0');
+        $this->assertNotSame('', $this->errorOn('amount'), '⛔ #৯: অক্ষরসহ অঙ্ক কমা ছাঁটার ফাঁকে ঢুকে গেল');
+    }
+
     // ── সহায়ক ────────────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $extra */

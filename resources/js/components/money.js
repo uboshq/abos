@@ -284,9 +284,15 @@ export function payBills ({
 
         init () {
             this.$watch('supplier', () => this.allocate())
-            this.$watch('amount', () => this.allocate())
+            // ⓘ কেবল অঙ্ক বদলালে নতুন করে বসানো — লাখ-কমা বসানো (একই অঙ্ক) হাতে বসানো প্রয়োগ মুছবে না
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.allocate() })
             this.$watch('account', () => this.refresh())
             this.$nextTick(() => this.refresh())
+        },
+
+        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("1,20,000.00", নকশার মিল-তালিকা #৯); ফাঁকা বা শূন্য যেমন ছিল */
+        tidyAmount () {
+            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
         },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */

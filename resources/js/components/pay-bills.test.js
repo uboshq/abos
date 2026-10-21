@@ -78,3 +78,34 @@ describe('দফা #১০ — প্রিভিউতে কেবল শে�
         host.remove()
     })
 })
+
+describe('মিল-তালিকা #৯ — মোট টাকার ঘর লাখ-কমায়', () => {
+    it('ঘর ছাড়লে ১,২০,০০০.০০ দেখায়, আর হাতে বসানো প্রয়োগ মুছে যায় না', async () => {
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [{ id: 1, supplier: '7', remaining: '120000', total: '120000' }], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '' })">
+                <input name="amount" x-model="amount" @change="tidyAmount()">
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        const form = host.querySelector('form')
+        const field = host.querySelector('[name="amount"]')
+        const pay = Alpine.$data(form)
+
+        field.value = '120000'
+        field.dispatchEvent(new Event('input'))
+        await Alpine.nextTick()
+        expect(pay.shown(1), 'অঙ্ক লিখলে বিলে বসেনি').toBe('120000.00')
+
+        pay.typed(1, '50000')
+        field.dispatchEvent(new Event('change'))
+        await Alpine.nextTick()
+        await Alpine.nextTick()
+
+        expect(field.value, '⛔ #৯: ঘর ছাড়ার পরেও লাখ-কমা নেই').toBe('1,20,000.00')
+        expect(pay.shown(1), '⛔ #৯: কমা বসাতে গিয়ে হাতে বসানো প্রয়োগ মুছে গেল').toBe('50000.00')
+        host.remove()
+    })
+})
