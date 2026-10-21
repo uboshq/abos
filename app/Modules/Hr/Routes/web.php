@@ -11,6 +11,7 @@ use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
+use App\Modules\Hr\Http\Controllers\WppfController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -117,6 +118,13 @@ Route::middleware('auth')->prefix('hr')->group(function () {
      * ⓘ চাবি প্রতিটা স্লাগের নিজের, পদ্ধতির ভেতরে।
      */
     Route::get('/reports/{slug}', [HrReportController::class, 'show'])->name('report.show');
+
+    /*
+     * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল — বছরের হিসাব আর "সই দিন" (শ্রম আইন ২০০৬, অধ্যায় ১৫; a6, ২১ অক্টোবর ২০২৬; [[WppfController]])।
+     * ⛔ কোম্পানির সুইচ বন্ধ থাকলে দুইটাই ৪০৪।
+     */
+    Route::get('/wppf', [WppfController::class, 'show'])->name('wppf.show');
+    Route::post('/wppf/{year}/provision', [WppfController::class, 'provision'])->whereNumber('year')->name('wppf.provision');
 
     Route::prefix('salary-heads')->name('salary_head.')->group(function () {
         Route::get('/', [SalaryHeadController::class, 'index'])->name('index');

@@ -16,4 +16,5 @@ return [
     'report_payroll' => 'Payroll register',
     'report_headcount' => 'Headcount by department',
     'report_leave_balance' => 'Leave balance',
+    'wppf' => 'Workers\' profit participation fund (WPPF)',
 ];

@@ -17,4 +17,5 @@ return [
     'salary_change' => 'Changing a salary structure',
     // ⭐ কর্মীর বেতনের ঠিকানা বদল — সবসময় দ্বিতীয় সই (মালিক, a6, ২১ অক্টোবর ২০২৬)
     'payment_change' => 'Changing where an employee\'s salary goes',
+    'wppf_provision' => 'Workers\' profit participation fund provision',
 ];

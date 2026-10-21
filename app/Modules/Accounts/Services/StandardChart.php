@@ -472,6 +472,14 @@ final class StandardChart implements ProvisionsCompany
 
     public const PROVIDENT_FUND_PAYABLE = '2131';
 
+    /**
+     * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — বাংলাদেশ শ্রম আইন ২০০৬, অধ্যায় ১৫, ধারা ২৩৪ (২০১৩-র সংশোধনী): নিট মুনাফার ৫%,
+     * ৮০:১০:১০ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])। ⓘ খরচ ৫২২৩-এ, তিন তহবিলের দেনা একসাথে ২১৩২-এ — ভাগ কাগজে আর পর্দায়।
+     */
+    public const WPPF_EXPENSE = '5223';
+
+    public const WPPF_PAYABLE = '2132';
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /**
@@ -1040,6 +1048,8 @@ final class StandardChart implements ProvisionsCompany
              * জমা দিতে হবে" দুইটা প্রশ্নের একটাই উত্তর থাকত।
              */
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
+            // ⭐ WPPF ও কল্যাণ তহবিলের দেনা — শ্রম আইন ধারা ২৩৪ ([[WPPF_PAYABLE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['2132', 'WPPF & Welfare Fund Payable', 'প্রদেয় মুনাফায় অংশগ্রহণ ও কল্যাণ তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
@@ -1280,6 +1290,8 @@ final class StandardChart implements ProvisionsCompany
             ['5221', 'Insurance Premium', 'বীমা প্রিমিয়াম', $X, '5200', false, []],
             // ⭐ অফারের উপহার মাল — খরচের দামে (৪ অক্টোবর ২০২৬; [[PROMOTION_EXPENSE]])
             ['5222', 'Promotion Expense', 'প্রচারের খরচ', $X, '5200', false, []],
+            // ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিলের খরচ — নিট মুনাফার ৫% ([[WPPF_EXPENSE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['5223', 'Workers Profit Participation Fund', 'শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

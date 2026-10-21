@@ -89,6 +89,12 @@ return [
                 'route_params' => ['slug' => 'headcount'], 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.report_leave_balance', 'icon' => 'clock', 'route' => 'hr.report.show',
                 'route_params' => ['slug' => 'leave-balance'], 'permission' => 'hr.leave.view'],
+            /*
+             * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+             * ⛔ সারিটা কোম্পানির সুইচে (`hr.wppf.enabled`, ডিফল্টে বন্ধ) — বন্ধে সারিও নেই, দরজাও ৪০৪ ([[WppfController]])।
+             */
+            ['label' => 'hr::menu.wppf', 'icon' => 'cash', 'route' => 'hr.wppf.show', 'permission' => 'hr.wppf.view',
+                'setting' => 'hr.wppf.enabled'],
         ],
     ],
 
@@ -172,6 +178,13 @@ return [
          */
         'hr.leave.self',
         'hr.payslip.self',
+
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল — দেখা আর জাবেদার "সই দিন" আলাদা (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⓘ কোনো রোলে ডিফল্টে নেই — মালিক (super admin) সব চাবি পান, কাকে দেবেন তিনিই ঠিক করেন।
+         */
+        'hr.wppf.view',
+        'hr.wppf.manage',
     ],
 
     /*
@@ -257,6 +270,8 @@ return [
          * দ্বিতীয় সই (নিচের `second_hand`; মালিক, a6, ২১ অক্টোবর ২০২৬)।
          */
         'payment_change' => 'hr::approval.payment_change',
+        // ⓘ WPPF-এর জাবেদা — কোম্পানি চাইলে ছক বসায়; না থাকলে "সই দিন" চাপা মানুষটিই সই ([[WppfService::provision()]])
+        'wppf_provision' => 'hr::approval.wppf_provision',
     ],
 
     /*
@@ -447,6 +462,18 @@ return [
          * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
          * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
          */
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⛔ ডিফল্টে বন্ধ — আইনটা সব প্রতিষ্ঠানে খাটে না (ধারা ২৩২: পরিশোধিত মূলধন ≥ ১ কোটি বা স্থায়ী সম্পদ ≥ ২ কোটি), আর যন্ত্র
+         * সেটা আন্দাজ করে না। বন্ধ থাকলে কোথাও কিছু নেই।
+         */
+        [
+            'key' => 'hr.wppf.enabled',
+            'label' => 'hr::settings.wppf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.attendance_affects_salary',
             'label' => 'hr::settings.attendance_affects_salary',

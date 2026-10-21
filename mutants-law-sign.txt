@@ -135,3 +135,75 @@ M26 app/Modules/Hr/Services/PaymentChanges.php
     old: "            ->filter(fn (User $u) => $this->engine->canDecide($approval, $u));"
     new: "            ->filter(fn (User $u) => true);"
     kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (the keyless looker gets the 'waiting' notice)
+
+== Item 2 — WPPF (Labour Act 2006 ch.15, s.234(1)(b) as amended 2013) ==
+
+M27 app/Modules/Hr/Http/Controllers/WppfController.php
+    old: "        abort_unless($this->wppf->enabled(), 404);"
+    new: ""
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_off_there_is_no_menu_and_no_door
+
+M28 app/Modules/Hr/module.php
+    old: "                'setting' => 'hr.wppf.enabled'],"
+    new: "                ],"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_off_there_is_no_menu_and_no_door (the menu row shows while off)
+
+M29 app/Modules/Hr/module.php (the setting block)
+    old: "            'default' => false,"   (inside the 'hr.wppf.enabled' entry)
+    new: "            'default' => true,"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_off_there_is_no_menu_and_no_door
+
+M30 app/Modules/Hr/Services/WppfService.php
+    old: "    public const RATE = '5';"
+    new: "    public const RATE = '6';"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_on_the_figures_are_the_profit_and_loss_to_the_paisa
+
+M31 app/Modules/Hr/Services/WppfService.php
+    old: "    public const PARTICIPATION = '80';"
+    new: "    public const PARTICIPATION = '70';"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_on_the_figures_are_the_profit_and_loss_to_the_paisa
+
+M32 app/Modules/Hr/Services/WppfService.php
+    old: "        $wppf = Money::round(bcdiv(bcmul($base, self::RATE, 6), '100', 6));"
+    new: "        $wppf = bcdiv(bcmul($base, self::RATE, 6), '100', 2);"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_on_the_figures_are_the_profit_and_loss_to_the_paisa (6172.86 truncated, not 6172.87)
+
+M33 app/Modules/Hr/Services/WppfService.php
+    old: "            'foundation_fund' => bcsub(bcsub($wppf, $participation, 4), $welfare, 4),"
+    new: "            'foundation_fund' => $welfare,"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_on_the_figures_are_the_profit_and_loss_to_the_paisa (617.29 ≠ 617.28; parts no longer sum to the fund)
+
+M34 app/Modules/Hr/Services/WppfService.php
+    old: "        $base = bccomp($net, '0', 4) > 0 ? $net : '0';"
+    new: "        $base = $net;"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_a_loss_year_has_no_fund_and_no_journal
+
+M35 app/Modules/Hr/Services/WppfService.php
+    old: "            ...self::split(bcadd($plNet, $charged, 4)),"
+    new: "            ...self::split($plNet),"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year (after the journal the fund shrinks on itself)
+
+M36 app/Modules/Hr/Services/WppfService.php
+    old: "        $result = app(ReportEngine::class)->run('accounts.profit_loss', ['from' => $from, 'to' => $to, 'branch_id' => null], 1, 1);"
+    new: "        $result = app(ReportEngine::class)->run('accounts.profit_loss', ['from' => $to, 'to' => $to, 'branch_id' => null], 1, 1);"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_switched_on_the_figures_are_the_profit_and_loss_to_the_paisa
+
+M37 app/Modules/Hr/Services/WppfService.php
+    old: "            if ($row?->isPosted()) {"
+    new: "            if (false) {"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year (the second press rewrites the posted row back to draft and the posting engine's own double-post guard throws, not a 'provision' error)
+
+M38 app/Modules/Hr/Services/WppfService.php
+    old: "            if ($locked->isPosted()) {"
+    new: "            if (false) {"
+    EQUIVALENT in a single-threaded run: the first guard (inside the first transaction, under lock) already refuses a posted year; this second check only closes the race of two presses between the two transactions, and PostingEngine::assertNotAlreadyPosted is a third wall for that race.
+
+M39 app/Modules/Hr/Services/WppfService.php
+    old: "        return $every !== [] && array_diff($every, array_map('intval', $allowed)) === [];"
+    new: "        return true;"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_a_branch_limited_or_keyless_user_does_not_get_the_whole_companys_fund
+
+M40 app/Modules/Hr/Services/WppfService.php
+    old: "                    ['account_id' => (int) $expense->id, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch],"
+    new: "                    ['account_id' => (int) $payable->id, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch],"
+    kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year
