@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\Ownership;
 use App\Models\Approval;
+use App\Models\ApprovalDecision;
+use App\Models\User;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Models\SalaryStructure;
@@ -31,6 +34,9 @@ final class SalaryStructureService
     public const MODULE = 'hr';
 
     public const ACTION_CHANGE = 'salary_change';
+
+    /** ⛔ অডিটের আলাদা চিহ্ন — মালিক নিজের চাওয়া বদলে নিজেই সই দিলেন (a5-এর অফারের একই নাম; ⚠️ কলাম ২৪ অক্ষরের) */
+    public const OWNER_SELF_SIGNED = 'owner_self_signed';
 
     /**
      * এই তারিখে কার্যকর প্রতিটা খাত ও তার টাকার অঙ্ক।
@@ -245,11 +251,47 @@ final class SalaryStructureService
                 $this->apply($employee, $proposal['effective_from'], $proposal['lines'],
                     $approval->requested_by === null ? null : (int) $approval->requested_by);
                 $approval->markUsed();
+
+                /*
+                 * ⭐ প্রতিটা সই-পাওয়া বদলের নিজের অডিট-সারি, অঙ্ক ছাড়া — একসাথে দশটায় সই দিলেও দশটা সারি (fe-র উত্তর ৪, a6, ২১ অক্টোবর
+                 * ২০২৬)। ⓘ অঙ্কগুলো কাঠামোর সারির নিজের `created`/`updated` অডিটে, বেতনের চাবিতে ঢাকা ([[FieldSecurity]])।
+                 */
+                $employee->auditAction('salary_change_signed', __('hr::message.salary_change_signed', [
+                    'date' => $proposal['effective_from'],
+                    'approval' => $approval->id,
+                ]));
+                $this->markOwnerSelfSigned($approval, $employee);
             });
         } catch (ValidationException $e) {
             $employee->auditAction('salary_change_late', __('hr::message.salary_change_late', [
                 'reason' => (string) collect($e->errors())->flatten()->first(),
             ]));
+        }
+    }
+
+    /**
+     * ⛔ মালিক নিজের চাওয়া বদলে নিজেই সই দিলেন — অডিটে আলাদা চিহ্ন `owner_self_signed` (fe-র উত্তর ১, a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ a5-এর অফারের সইয়ের অবিকল একই উপায় (`PromotionApprovalChain::OWNER_SELF_SIGNED`, b5f0971fa): কাগজের `auditAction()`,
+     * মডিউলের বাংলা কারণ, নতুন কলাম নয়। ⓘ ইঞ্জিন কেবল সুপার অ্যাডমিনকে নিজের অনুরোধে সই দিতে দেয় ([[ApprovalEngine::canDecide()]]);
+     * চিহ্নটা বসে যখন সই-দেওয়া মানুষটাই অনুরোধকারী আর তিনি এই কোম্পানির মালিক ([[Ownership::isOwnerIn()]])। SOX: শীর্ষ কর্তার
+     * নিজে-অনুমোদিত বদল আলাদা করে খোঁজা যায়।
+     */
+    private function markOwnerSelfSigned(Approval $approval, Employee $employee): void
+    {
+        $requester = $approval->requested_by === null ? null : User::query()->find((int) $approval->requested_by);
+
+        if ($requester === null) {
+            return;
+        }
+
+        $selfSigned = $approval->decisions()
+            ->where('decision', ApprovalDecision::APPROVED)
+            ->where('user_id', $requester->id)
+            ->exists();
+
+        if ($selfSigned && app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {
+            $employee->auditAction(self::OWNER_SELF_SIGNED, __('hr::message.owner_self_signed'));
         }
     }
 

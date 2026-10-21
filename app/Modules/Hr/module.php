@@ -237,6 +237,18 @@ return [
     ],
 
     /*
+     * ⭐ বেতন-বদলের সইয়ের নিয়ম — fe-র উত্তর ২ ও ৪, a6, ২১ অক্টোবর ২০২৬ ([[ApprovalRules]])।
+     *  · `signer_key` — ছকের ধাপে বেতনের চাবি ছাড়া কাউকে (মানুষ বা রোল) বসানো যায় না; নাহলে অঙ্ক না দেখে সই ([[ApprovalFlowService]])।
+     *  · `summary` — ইনবক্স আর একসাথে সইয়ের তালিকায় প্রতিটা সারিতে আগে → পরের অঙ্ক, চাবি না থাকলে ঢাকা ([[SalaryChangeSummary]])।
+     */
+    'approval_rules' => [
+        'salary_change' => [
+            'signer_key' => 'hr.salary.view',
+            'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
+        ],
+    ],
+
+    /*
      * ⛔ যে কাজগুলোতে **টাকা নড়ে** — ২৪ সেপ্টেম্বর ২০২৬।
      *
      * ⭐ মালিকের সিদ্ধান্ত: এগুলোতে **একসাথে সই দেওয়া যায় না**

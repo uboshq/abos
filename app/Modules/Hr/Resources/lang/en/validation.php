@@ -55,6 +55,6 @@ return [
     'days_format' => 'Write the days as a plain number with at most one decimal place, such as 2 or 1.5.',
     'leave_type_closed' => 'That leave type cannot be chosen: it is switched off, deleted or not of this company. Choose an active leave type.',
     // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
-    'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Enter the new amount from a date in the next open month.',
+    'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Arrears pay is coming; until then, enter the new amount from the next month.',
     'salary_change_waiting' => 'Another salary change for this employee is still waiting for a signature. Let it be signed or rejected first, then enter the new change.',
 ];
