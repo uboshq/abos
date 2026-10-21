@@ -76,6 +76,8 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::post('/{run}/confirm', [PayrollController::class, 'confirm'])->whereNumber('run')->name('confirm');
         Route::post('/{run}/cancel', [PayrollController::class, 'cancel'])->whereNumber('run')->name('cancel');
         Route::get('/{run}/bank-file', [PayrollController::class, 'bankFile'])->whereNumber('run')->name('bank_file');
+        // ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ আর কেন (fe, ২১ অক্টোবর ২০২৬)
+        Route::get('/{run}/bank-file/left-out', [PayrollController::class, 'leftOut'])->whereNumber('run')->name('bank_file_left_out');
         Route::get('/{run}/payslips', [PayslipPrintController::class, 'all'])->whereNumber('run')->name('payslips');
     });
 

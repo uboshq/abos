@@ -93,11 +93,76 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->looker = $this->person(['hr.employee.view']);
 
         app(SalaryHeadService::class)->installDefaults();
-        $this->employee = app(EmployeeService::class)->create([
+        $this->employee = $this->employeeWithSignedDetails([
             'code' => 'EMP-PAY', 'name_en' => 'Paid Person', 'joining_date' => '2026-01-15', 'user_id' => $this->worker->id,
             'payment_method' => 'bank', 'bank_account_no' => self::OLD, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
         ]);
         app(SalaryStructureService::class)->set($this->employee, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '20000');
+
+        // ⓘ প্রস্তুতির প্রথম তথ্য দ্বিতীয় সইয়ে গেছে (নিচের দাবি দেখে); তার খবরগুলো এই ফাইলের গোনায় না আসুক
+        Notification::query()->withoutGlobalScopes()->delete();
+    }
+
+    /**
+     * ⛔ নতুন কর্মীর প্রথম ব্যাংক তথ্যও দ্বিতীয় সইয়ে, আর সই না পড়া পর্যন্ত বেতন সেখানে নয় — বেতনশিট "আটকে", ব্যাংক ফাইলে নাম নেই,
+     * রানের পাতা আর সঙ্গী-তালিকায় বাংলা কারণ; সই পড়ার পর রান আবার বানালে ফাইলে (fe, ২১ অক্টোবর ২০২৬)।
+     */
+    public function test_a_new_employees_first_bank_details_wait_and_the_salary_is_held_until_signed(): void
+    {
+        $this->as($this->clerk);
+        $fresh = app(EmployeeService::class)->create([
+            'code' => 'EMP-NEW', 'name_en' => 'New Joiner', 'joining_date' => '2026-01-15',
+            'payment_method' => 'bank', 'bank_account_no' => self::NEW, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
+        ]);
+        app(SalaryStructureService::class)->set($fresh, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '15000');
+
+        $this->assertNull($fresh->fresh()->bank_account_no, '⛔ নতুন কর্মীর প্রথম ব্যাংক নম্বর একজনের হাতেই বসল');
+        $change = app(PaymentChanges::class)->pendingFor($fresh);
+        $this->assertNotNull($change, '⛔ প্রথম তথ্যের সইয়ের অনুরোধ নেই');
+        $this->assertSame(self::NEW, $change->proposed['bank_account_no']);
+
+        $this->as($this->owner);
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $slip = $run->payslips()->where('employee_id', $fresh->id)->firstOrFail();
+        $this->assertSame(PayrollService::HELD, (string) $slip->payment_method, '⛔ সই-না-পড়া হিসাবের বেতন আটকে নয়');
+
+        $file = (string) app(PayrollService::class)->bankFile($run->fresh())['content'];
+        $this->assertStringNotContainsString('EMP-NEW', $file, '⛔ সই-না-পড়া কর্মী ব্যাংক ফাইলে');
+        $this->assertStringContainsString('EMP-PAY', $file, 'প্রস্তুতি — সই-পড়া কর্মী ফাইলে নেই');
+
+        $reason = (string) __('hr::payroll.held_waiting', [], 'bn');
+        $this->assertStringContainsString('দ্বিতীয় সইয়ের অপেক্ষায়', $reason);
+        $this->as($this->owner)->get(route('hr.payroll.show', $run->id))->assertOk()
+            ->assertSee('data-bank-left-out', false)->assertSee('EMP-NEW', false)->assertSee(__('hr::payroll.held_waiting'), false);
+        $report = $this->as($this->owner)->get(route('hr.payroll.bank_file_left_out', $run->id))->assertOk();
+        $this->assertStringContainsString('EMP-NEW', (string) $report->getContent());
+        $this->assertStringContainsString((string) __('hr::payroll.held_waiting'), (string) $report->getContent());
+
+        // ⓘ সই পড়ল — এখন সারিতে; পরের মাসের রান ব্যাংকে পাঠায়
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$fresh, $change]))->assertSessionHasNoErrors();
+        $this->assertSame(self::NEW, (string) $fresh->fresh()->bank_account_no);
+        $this->assertNull(PayrollService::heldReason($fresh->fresh()));
+    }
+
+    /** ⛔ খালি থেকে ব্যাংক — আগের পথ (নগদ) চলে, ব্যাংকে নয়, সই না পড়া পর্যন্ত */
+    public function test_bank_details_set_from_empty_fall_back_to_the_previous_method_until_signed(): void
+    {
+        $cash = app(EmployeeService::class)->create([
+            'code' => 'EMP-CASH', 'name_en' => 'Cash Person', 'joining_date' => '2026-01-15', 'payment_method' => 'cash',
+        ]);
+        app(SalaryStructureService::class)->set($cash, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '15000');
+
+        $this->as($this->clerk)->put(route('hr.employee.update', $cash), [
+            'name_en' => 'Cash Person', 'joining_date' => '2026-01-15', 'payment_method' => 'bank', 'bank_name' => 'Sonali',
+            'bank_account_no' => self::NEW, 'bank_routing_no' => '200270001', 'photo' => $this->png(),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('cash', (string) $cash->fresh()->payment_method, '⛔ খালি থেকে ব্যাংক একজনের হাতেই বসল');
+
+        $this->as($this->owner);
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $this->assertSame('cash', (string) $run->payslips()->where('employee_id', $cash->id)->firstOrFail()->payment_method,
+            '⛔ সই-না-পড়া ব্যাংক হিসাবে বেতন — আগের পথ (নগদ) নয়');
+        $this->assertStringNotContainsString('EMP-CASH', (string) app(PayrollService::class)->bankFile($run->fresh())['content']);
     }
 
     protected function tearDown(): void

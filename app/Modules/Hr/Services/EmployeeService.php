@@ -46,12 +46,32 @@ final class EmployeeService
             $this->assertDatesMakeSense($data);
             $this->assertPaymentDetailsAreComplete($data);
 
+            /*
+             * ⛔ নতুন কর্মীর প্রথম ব্যাংক/MFS তথ্যও দ্বিতীয় সইয়ে — fe, ২১ অক্টোবর ২০২৬ (a6; [[PaymentChanges]])। ⓘ আগে কেবল সংশোধন
+             * সইয়ে যেত; নতুন কর্মী বানানোর ফর্মেই একজন যেকোনো হিসাব বসাতে পারতেন, আর প্রথম বেতনই সেখানে যেত।
+             * ⭐ সারিতে কেবল পথ (`payment_method`) বসে, নম্বর-নাম-রাউটিং খালি — সই পড়ার আগে বেতনশিট "আটকে" থাকে, ব্যাংক ফাইলে নাম থাকে না
+             * ([[PayrollService::heldReason()]])। নম্বর অপেক্ষার বদলে, ঢাকা।
+             */
+            $details = array_diff_key(array_intersect_key($data, array_flip(PaymentChange::FIELDS)), ['payment_method' => true]);
+            $asked = array_filter($details, fn ($value) => filled($value)) !== [];
+
             $employee = Employee::create([
-                ...$data,
+                ...($asked ? array_diff_key($data, $details) : $data),
                 'code' => $code,
                 'is_active' => $data['is_active'] ?? true,
                 'created_by' => auth()->id(),
             ]);
+
+            if ($asked) {
+                $user = auth()->user();
+
+                // ⛔ কে চাইলেন না জানলে বদলটা লেখাই যায় না — নীরবে ফেলে দেওয়াও নয়
+                if (! $user instanceof User) {
+                    throw new \RuntimeException('The first bank or wallet details of an employee need a signed-in user to stand behind them.');
+                }
+
+                app(PaymentChanges::class)->propose($employee, $details + ['payment_method' => $employee->payment_method], $user);
+            }
 
             return $employee->fresh();
         });

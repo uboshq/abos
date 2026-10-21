@@ -119,6 +119,24 @@
         @endcan
     </div>
 
+    {{-- ⭐ ব্যাংক ফাইলে কারা নেই আর কেন — সই-না-পড়া হিসাবে বেতন আটকে (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::heldReason()]]) --}}
+    @if (! empty($leftOut))
+        <section data-bank-left-out role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">
+            <p class="font-semibold text-(--color-badge-warning-ink)">{{ __('hr::payroll.left_out_title') }}</p>
+            <ul class="mt-2 list-inside list-disc">
+                @foreach ($leftOut as $row)
+                    <li data-left-out="{{ $row['code'] }}">{{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}</li>
+                @endforeach
+            </ul>
+            @if ($run->isConfirmed())
+                @can('hr.identity.view')
+                    <x-ui.button class="mt-3" :href="route('hr.payroll.bank_file_left_out', $run->id)">{{ __('hr::payroll.left_out_title') }} (CSV)</x-ui.button>
+                @endcan
+            @endif
+        </section>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('hr::message.no_runs')"

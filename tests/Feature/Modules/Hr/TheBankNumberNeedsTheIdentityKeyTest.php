@@ -49,7 +49,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(SalaryHeadService::class)->installDefaults();
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => 'EMP-BANK', 'name_en' => 'Bank Paid', 'joining_date' => '2026-01-15',
             'payment_method' => 'bank', 'bank_account_no' => self::ACCOUNT, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
         ]);

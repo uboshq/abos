@@ -70,6 +70,26 @@ trait SignsTheSecondHand
             fn () => app(ApprovalEngine::class)->approve($approval, $signer, 'second hand in test'));
     }
 
+    /**
+     * ⭐ ব্যাংক/MFS তথ্যসহ কর্মী — প্রথম তথ্যও দ্বিতীয় সইয়ে (fe, ২১ অক্টোবর ২০২৬; [[EmployeeService::create()]]); যে টেস্টের বিষয় সই নয়,
+     * সে আসল পথে যায়: বানানো → অপেক্ষার বদল → আলাদা একজনের সই → তথ্য কর্মীর সারিতে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function employeeWithSignedDetails(array $data): \App\Modules\Hr\Models\Employee
+    {
+        $employee = app(\App\Modules\Hr\Services\EmployeeService::class)->create($data);
+        $changes = app(\App\Modules\Hr\Services\PaymentChanges::class);
+        $pending = $changes->pendingFor($employee);
+
+        if ($pending !== null) {
+            $signer = $this->secondHandIn((int) $employee->company_id, 'hr.employee.view', 'hr.employee.manage', 'hr.identity.view', 'approval.decide');
+            CompanyContext::forCompany((int) $employee->company_id, fn () => $changes->approve($pending, $signer));
+        }
+
+        return $employee->fresh();
+    }
+
     /** ⓘ চাবি থাকা আলাদা একজন — প্রতিবার নতুন, সুপার অ্যাডমিন নন */
     protected function secondHandIn(int $companyId, string ...$keys): User
     {

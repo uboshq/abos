@@ -112,7 +112,7 @@ final class TheBankFileAndTheBooksPaidTheSameSalaryTest extends TestCase
 
     private function employee(string $code, string $bankAccount, int $absentDays): void
     {
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => $code,
             'name_en' => 'Worker '.$code,
             'joining_date' => '2026-01-15',

@@ -240,3 +240,40 @@ M46 app/Core/Engines/Approval/ApprovalEngine.php
     old: "            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)) {"
     new: "            if (false) {"
     kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_maker_cannot_sign_through_a_stand_in (the owner's stand-in signs the owner's own run)
+
+== fe round 2, answer 2 — the first bank details also go to the second signature; no salary to an unsigned account ==
+
+M47 app/Modules/Hr/Services/EmployeeService.php
+    old: "                ...($asked ? array_diff_key($data, $details) : $data),"
+    new: "                ...$data,"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_new_employees_first_bank_details_wait_and_the_salary_is_held_until_signed (the number lands on the row at once)
+
+M48 app/Modules/Hr/Services/EmployeeService.php
+    old: "                app(PaymentChanges::class)->propose($employee, $details + ['payment_method' => $employee->payment_method], $user);"
+    new: ""
+    kill: same test (no pending request for the first details)
+
+M49 app/Modules/Hr/Services/PayrollService.php
+    old: "            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,"
+    new: "            'payment_method' => $employee->payment_method,"
+    kill: same test (the slip is 'bank' with no number, not held)
+
+M50 app/Modules/Hr/Services/PayrollService.php
+    old: "        $missing = ($method === 'bank' && blank($employee->bank_account_no)) || ($method === 'mfs' && blank($employee->mfs_number));"
+    new: "        $missing = false;"
+    kill: same test
+
+M51 app/Modules/Hr/Services/PayrollService.php
+    old: "        return app(PaymentChanges::class)->pendingFor($employee) !== null ? 'hr::payroll.held_waiting' : 'hr::payroll.held_no_account';"
+    new: "        return 'hr::payroll.held_no_account';"
+    kill: same test (the run page and the left-out file must say "waiting for a second signature")
+
+M52 app/Modules/Hr/Resources/views/payroll/show.blade.php
+    old: "    @if (! empty($leftOut))"
+    new: "    @if (false)"
+    kill: same test (data-bank-left-out on the run page)
+
+M53 app/Modules/Hr/Services/PayrollService.php
+    old: "            ->where('payment_method', self::HELD)"
+    new: "            ->where('payment_method', 'none')"
+    kill: same test (the left-out CSV lists EMP-NEW)

@@ -33,12 +33,12 @@ class PayrollController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:hr.payroll.view', only: ['index', 'show', 'bankFile']),
+            new Middleware('can:hr.payroll.view', only: ['index', 'show', 'bankFile', 'leftOut']),
             /*
              * ⛔ ব্যাংকের ফাইলে প্রতিটা কর্মীর হিসাব আর রাউটিং নম্বর — পরিচয়ের চাবিও লাগে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔৩)।
              * ⓘ মডিউল এই ঘরগুলোকে `hr.identity.view`-এর বলে ([[FieldSecurity]]), অথচ ফাইলটা কেবল বেতন দেখার চাবিতে নামত।
              */
-            new Middleware('can:hr.identity.view', only: ['bankFile']),
+            new Middleware('can:hr.identity.view', only: ['bankFile', 'leftOut']),
             new Middleware('can:hr.payroll.manage', only: ['create', 'store', 'rebuild', 'confirm', 'cancel']),
         ];
     }
@@ -158,6 +158,8 @@ class PayrollController extends Controller implements HasMiddleware
             // ব্যাংকে কতজনের বেতন যাবে — ফাইলটা নামানোর আগে জানা দরকার
             'bankRows' => $run->payslips->where('payment_method', 'bank')
                 ->filter(fn ($s) => bccomp((string) $s->net, '0', 4) > 0)->count(),
+            // ⭐ ব্যাংক ফাইলে কারা নেই আর কেন — আটকে থাকা স্লিপ (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::leftOutOfTheBankFile()]])
+            'leftOut' => $this->payroll->leftOutOfTheBankFile($run, $request->user()),
         ]);
     }
 
@@ -193,6 +195,26 @@ class PayrollController extends Controller implements HasMiddleware
      * নিশ্চিত করা বেতন থেকেই বেরোয়, নাহলে খাতায় না বসা টাকা ব্যাংকে
      * চলে যেতে পারত।
      */
+    /**
+     * ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা ফাইলে নেই আর কেন (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::leftOutOfTheBankFile()]])।
+     */
+    public function leftOut(PayrollRun $run): Response
+    {
+        abort_unless($run->isConfirmed(), 404);
+
+        $csv = "\u{FEFF}".__('hr::payroll.left_out_head')."\r\n";
+
+        foreach ($this->payroll->leftOutOfTheBankFile($run, request()->user()) as $row) {
+            $csv .= implode(',', array_map(fn (string $v) => '"'.str_replace('"', '""', ltrim($v, "=+-@\t\r")).'"',
+                [$row['code'], $row['name'], $row['reason']]))."\r\n";
+        }
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="salary-'.$run->month->format('Y-m').'-'.$run->document_no.'-left-out.csv"',
+        ]);
+    }
+
     public function bankFile(PayrollRun $run): Response
     {
         abort_unless($run->isConfirmed(), 404);

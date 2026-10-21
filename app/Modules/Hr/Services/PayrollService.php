@@ -329,6 +329,54 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
+    /**
+     * ⛔ বেতনশিটের "আটকে" পথ — কর্মীর সারিতে পথ ব্যাংক বা MFS, অথচ সই-পড়া নম্বর নেই (fe, ২১ অক্টোবর ২০২৬; a6; [[PaymentChanges]])।
+     *
+     * ⓘ নিয়ম, সবচেয়ে নিরাপদ আর এক রকম: বেতন যায় কেবল সই-পড়া তথ্যে। ঠিকানা বদল অপেক্ষায় থাকলে কর্মীর সারিতে আগের, সই-পড়া
+     * তথ্যই থাকে — বেতন সেখানে যায় (আগের পথ)। আগের তথ্য না থাকলে (নতুন কর্মীর প্রথম নম্বর, বা খালি থেকে বসানো) বেতন
+     * **আটকে**: নগদেও নয় (নগদে দিলে সই ছাড়া পথ খুলত), ব্যাংক ফাইলে নাম থাকে না, রানের পাতা আর ফাইলের সঙ্গী-তালিকায় কারণ।
+     * সই পড়ার পরে রান আবার বানালে স্লিপ নতুন হিসাবে।
+     */
+    public const HELD = 'held';
+
+    /** @return string|null কারণের ভাষা-চাবি; `null` = আটকে নয় */
+    public static function heldReason(Employee $employee): ?string
+    {
+        $method = (string) $employee->payment_method;
+        $missing = ($method === 'bank' && blank($employee->bank_account_no)) || ($method === 'mfs' && blank($employee->mfs_number));
+
+        if (! $missing) {
+            return null;
+        }
+
+        return app(PaymentChanges::class)->pendingFor($employee) !== null ? 'hr::payroll.held_waiting' : 'hr::payroll.held_no_account';
+    }
+
+    /**
+     * ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ, আর কেন, বাংলায় (fe, ২১ অক্টোবর ২০২৬)। ⓘ রানের পাতা আর `bank-file/left-out` ফাইল দুইটাই এটা পড়ে।
+     *
+     * @return list<array{code: string, name: string, reason: string}>
+     */
+    public function leftOutOfTheBankFile(PayrollRun $run, ?User $user = null): array
+    {
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
+            ->with('employee')
+            ->where('payment_method', self::HELD)
+            ->get();
+
+        return $slips->map(function (Payslip $slip): array {
+            $employee = $slip->employee;
+            $reason = $employee === null ? null : self::heldReason($employee);
+
+            return [
+                'code' => (string) $employee?->code,
+                'name' => (string) $employee?->name(),
+                // ⓘ সই পড়ে গেছে, কিন্তু রানটা আগের — আবার বানালে নতুন হিসাবে যাবে
+                'reason' => (string) __($reason ?? 'hr::payroll.held_rebuild'),
+            ];
+        })->values()->all();
+    }
+
     public function bankFile(PayrollRun $run, ?User $user = null): array
     {
         // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
@@ -403,7 +451,8 @@ final class PayrollService
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
             'employee_id' => $employee->id,
-            'payment_method' => $employee->payment_method,
+            // ⛔ সই-না-পড়া প্রথম হিসাব — বেতন কোথাও যায় না, "আটকে" ([[heldReason()]]; fe, ২১ অক্টোবর ২০২৬)
+            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,
             'bank_name' => $employee->bank_name,
             'bank_account_name' => $employee->bank_account_name,
             'bank_account_no' => $employee->bank_account_no,

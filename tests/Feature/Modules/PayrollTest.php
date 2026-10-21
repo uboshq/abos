@@ -88,7 +88,7 @@ class PayrollTest extends TestCase
      */
     private function employeeWithSalary(array $overrides = [], string $code = 'EMP-001'): Employee
     {
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => $code,
             'name_en' => 'Rafiq Islam',
             'joining_date' => '2026-01-15',

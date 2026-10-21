@@ -20,4 +20,6 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Rejected',
     'cancelled' => 'Withdrawn',
+    // ⓘ বেতনশিট আটকে — সই-না-পড়া হিসাব (fe, ২১ অক্টোবর ২০২৬)
+    'held' => 'Held — not signed',
 ];
