@@ -86,7 +86,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             $counts[$key] = (clone $base)->inTab($key)->count();
         }
 
-        $query = (clone $base)->with(['customer', 'order'])->inTab($tab);
+        $query = (clone $base)->with(['customer.location.parent', 'customer.branch', 'order'])->inTab($tab);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -146,7 +146,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
 
         $quotations = SalesQuotation::query()
             ->whereKey($ids->all())
-            ->with(['lines.product', 'lines.enteredUnit', 'customer', 'paymentTerm'])
+            ->with(['lines.product', 'lines.enteredUnit', 'customer.location.parent', 'customer.branch', 'paymentTerm'])
             ->orderBy('id')
             ->get();
 
@@ -157,7 +157,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
         if ($quotations->count() < 2) {
             $picker = SalesQuotation::query()
                 ->search($request->query('q'))
-                ->with('customer')
+                ->with(['customer.location.parent', 'customer.branch'])
                 ->latest('id')
                 ->limit(50)
                 ->get();
@@ -184,7 +184,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             ->whereNull('root_quotation_id')
             ->whereIn('id', SalesQuotation::query()->whereNotNull('root_quotation_id')->select('root_quotation_id'))
             ->search($request->query('q'))
-            ->with('customer')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
             ->paginate(50)
             ->withQueryString();
@@ -458,7 +458,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
         $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
 
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'priceLists' => PriceList::query()->active()->orderBy('code')->get(),
             'paymentTerms' => PaymentTerm::query()->active()->orderBy('days')->get(),
             'products' => $products,

@@ -24,7 +24,9 @@
         [
             'key' => 'document_no',
             'label' => __('documents::field.document_no'),
-            'width' => '9rem',
+            'width' => '16rem',
+            // ⭐ নম্বরের পাশে পক্ষ — জোড়া গ্রাহক/সরবরাহকারী/কর্মী (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]], পাতার একবারে)
+            'render' => fn ($d) => view('documents::partials.number-party', ['no' => $d->document_no, 'party' => ($parties ?? [])[$d->id] ?? null]),
         ],
         [
             'key' => 'name',

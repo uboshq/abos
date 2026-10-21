@@ -15,7 +15,11 @@
         [
             'key' => 'document_no',
             'label' => __('core.table.document'),
-            'render' => fn ($j) => $j->document_no ?: '—',
+            // ⭐ নম্বরের পাশে গ্রাহক, পয়েন্টসহ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে নিয়ন্ত্রক, গোটা পাতার একবারে
+            'render' => fn ($j) => view('sales::print_queue.partials.document', [
+                'no' => $j->document_no ?: '—',
+                'party' => ($parties ?? [])[$j->id] ?? null,
+            ]),
         ],
         [
             'key' => 'paper',

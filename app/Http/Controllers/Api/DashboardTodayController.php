@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Approval\ApprovalEngine;
-use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
 use App\Core\Services\PhoneModules;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\UnchangedAnswer;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
@@ -20,9 +20,10 @@ use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Supplier\Reports\PrincipalCommissionReport;
+use App\Modules\Supplier\Services\PrincipalCommissionFigures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 /**
@@ -49,8 +50,10 @@ use Illuminate\Support\Carbon;
  *   approvals    approval.decide
  *   money        accounts.till.view  ⭐ ওয়েবের "হাতে ও ব্যাংকে মোট" — নগদ · MFS · ব্যাংক · পথে (৬ অক্টোবর ২০২৬)
  *   inflow       accounts.view       ⭐ আজ যত টাকা ঢুকল, স্থানান্তর বাদ
+ *   outflow      accounts.view       ⭐ আজ যত টাকা গেল, স্থানান্তর বাদ (২০ অক্টোবর ২০২৬)
  *   payable      accounts.view       ⭐ সব দায় + হাতধারে আমাদের দেনা (হাতধারের ভাগ কেবল finance.hand_loan.view-এ)
  *   principals   supplier.report     ⭐ প্রিন্সিপালের কমিশন — শতাংশ, দেওয়া, বাকি
+ *   principalsTotal supplier.report  ⭐ একই সারির মোট — ওয়েবের বাক্সের সর্বমোট (২০ অক্টোবর ২০২৬)
  *
  * ── শাখা ─────────────────────────────────────────────────────────────
  * ⓘ বাছাই-করা শাখা নয় — ব্যবহারকারীর শাখা-সীমা ([[ScopedToUserBranch]]),
@@ -64,7 +67,7 @@ class DashboardTodayController extends Controller
         private readonly ApprovalEngine $approvals,
     ) {}
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): JsonResponse|Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -119,6 +122,11 @@ class DashboardTodayController extends Controller
                 'mfs' => $mfs,
                 'bank' => $bank,
                 'transit' => self::money(AccountsWidgets::inTransit()),
+                // ⭐ MFS-এ চাপলে প্রতিটা খাত (বিকাশ, নগদ …) আর তার জের — যোগফল ঠিক `mfs` (২০ অক্টোবর ২০২৬)
+                'mfsAccounts' => array_map(
+                    fn (array $row) => ['name' => $row['name'], 'balance' => self::money($row['balance'])],
+                    AccountsWidgets::mfsAccounts(),
+                ),
             ];
         }
 
@@ -126,7 +134,10 @@ class DashboardTodayController extends Controller
             $facts = app(AccountsFacts::class);
 
             // ⭐ আজকের ইনফ্লো — আজ যত টাকা ঢুকল, নগদ-ব্যাংক-MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ৬ অক্টোবর ২০২৬)
-            $body['inflow'] = ['amount' => self::money($facts->moneyFlowBetween($today, $today)['in'])];
+            $flow = $facts->moneyFlowBetween($today, $today);
+            $body['inflow'] = ['amount' => self::money($flow['in'])];
+            // ⭐ আজ যত টাকা গেল — একই খাত, একই নিয়ম, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ২০ অক্টোবর ২০২৬: হোমে "আজ গেছে")
+            $body['outflow'] = ['amount' => self::money($flow['out'])];
 
             /*
              * ⭐ Payable — "যাকেই আমার পেমেন্ট করতে হবে" (মালিক, ৬ অক্টোবর ২০২৬): দায়ের গোটা দল (সরবরাহকারী, ভাড়া, ভ্যাট,
@@ -142,25 +153,13 @@ class DashboardTodayController extends Controller
         /*
          * ⭐ প্রিন্সিপালের কমিশন — রিপোর্টের পুরো ফল (মালিক, ৬ অক্টোবর ২০২৬: "ডিলাররা যে টাকা দেয়, এখান থেকে আমি কত
          * পার্সেন্টেজ পাব, কত দেওয়া হয়েছে, কত ব্যালেন্স")। নিজে গোনা নয় — [[PrincipalCommissionReport]], শাখার দেয়ালসহ।
+         * ⭐ সারি আর মোট এক নির্মাতা থেকে ([[PrincipalCommissionFigures]]) — অ্যাপের পর্দা আর উইজেটও সেটাই নেয়, তাই তিন
+         * জায়গা কখনো আলাদা হয় না (মালিক, fe-র মারফত, ২০ অক্টোবর ২০২৬: *"app e dekhate hobe"*; চুক্তি সংশোধন ১)।
+         * ⓘ `principals`-এর ঘরের নাম আগের মতোই (০.৪.৪০-এর অ্যাপ পড়ে); নতুন কেবল `supplierId`, `branch`। পাশে
+         * `principalsTotal` — একই সারির bcmath যোগফল, ওয়েবের বাক্সের সর্বমোটের একই নিয়ম ও লেখা।
          */
-        if ($on('purchase') && $user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
-            $body['principals'] = array_map(fn (array $r) => [
-                // ⭐ সংক্ষিপ্ত নাম, না থাকলে নাম — কোড নয় (মালিক, ৬ অক্টোবর ২০২৬; রিপোর্টের সারিতেই)
-                'name' => (string) $r['supplier_name'],
-                'period' => (string) $r['period'],
-                // ⭐ ওয়েবের বাক্সের "সময়কাল: 26/09/2026 – আজ পর্যন্ত" — অঙ্কগুলো চক্রের শুরু থেকে আজ পর্যন্ত
-                'periodFrom' => (string) $r['period_from'],
-                'periodTo' => (string) $r['period_to'],
-                'periodSoFar' => \App\Modules\Supplier\Reports\PrincipalCommission::soFar((string) $r['period_from'], (string) $r['period_to']),
-                'basisRate' => (string) $r['basis_rate'],
-                'inflow' => self::money((string) $r['inflow']),
-                'commission' => self::money((string) $r['commission']),
-                // ⭐ ওয়েবের বাক্সের লেখাই — ঋণাত্মক হলে "লোকসান ৳… — কেনা দামের নিচে বিক্রি", খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
-                'commissionLabel' => \App\Modules\Supplier\Dashboard\SupplierDashboard::earned((string) $r['commission']),
-                'share' => self::money((string) $r['share']),
-                'paid' => self::money((string) $r['paid']),
-                'balance' => self::money((string) $r['balance']),
-            ], app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [], 1, 50)->rows);
+        if ($on('purchase') && $user->can('supplier.report') && class_exists(PrincipalCommissionFigures::class)) {
+            ['rows' => $body['principals'], 'total' => $body['principalsTotal']] = app(PrincipalCommissionFigures::class)->figures();
         }
 
         if ($on('customer') && $user->can('customer.report')) {
@@ -175,7 +174,11 @@ class DashboardTodayController extends Controller
             )->count()];
         }
 
-        return response()->json($body);
+        /*
+         * ⛔ উত্তরে হাতের নগদ, দেনা আর কমিশন — কোনো ক্যাশে নয়; ⭐ তবু ETag আর ৩০৪, উইজেটের দরজার একই সহায়কে (cb, ২০ অক্টোবর
+         * ২০২৬; [[UnchangedAnswer]])। ⓘ hash-এ `asOf` নেই — সময়ের ছাপ থাকলে কখনো ৩০৪ আসত না।
+         */
+        return UnchangedAnswer::json($request, array_diff_key($body, ['asOf' => true]), $body);
     }
 
     /** সীমা নেই → null; এক বা একাধিক শাখা → নামগুলো ", " দিয়ে। */

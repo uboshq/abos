@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Support;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesOrder;
@@ -25,7 +26,7 @@ final class OrderPaperFacts
     /** @return array<string, mixed> */
     public static function order(SalesOrder $order): array
     {
-        $order->loadMissing(['customer.location.parent', 'warehouse', 'creator', 'quotation', 'lines.product.unit']);
+        $order->loadMissing(['customer.location.parent', 'customer.branch', 'warehouse', 'creator', 'quotation', 'lines.product.unit']);
 
         $byUnit = [];
         foreach ($order->lines as $line) {
@@ -52,7 +53,7 @@ final class OrderPaperFacts
     /** @return array<string, mixed> */
     public static function receipt(Collection $collection): array
     {
-        $collection->loadMissing(['customer.location.parent', 'account', 'creator', 'lines.invoice']);
+        $collection->loadMissing(['customer.location.parent', 'customer.branch', 'account', 'creator', 'lines.invoice']);
 
         return [
             'no' => (string) $collection->document_no,
@@ -88,7 +89,8 @@ final class OrderPaperFacts
 
         return [
             'name' => (string) ($customer?->name('en') ?? ''),
-            'point' => (string) ($point?->name('en') ?? ''),
+            // ⭐ "পয়েন্ট · শাখা" — এক লাইনে, কাগজের মাপ অক্ষত ([[PaperPlace::of()]]; মালিক, ১৯ অক্টোবর ২০২৬)
+            'point' => PaperPlace::of($customer instanceof Customer ? $customer : null, $point),
             'address' => (string) ($customer?->address('en') ?? ''),
             'phone' => (string) ($customer?->phone ?? ''),
         ];

@@ -26,7 +26,15 @@
                 @foreach ($group as $row)
                     <li class="flex flex-wrap justify-between gap-2 border-t border-(--color-border)
                                py-2 first:border-0 first:pt-0">
-                        <span class="min-w-0 font-medium">{{ $row['what'] }}</span>
+                        <span class="min-w-0">
+                            <span class="font-medium">{{ $row['what'] }}</span>
+                            {{-- ⭐ কোন কাগজ, কার — নম্বর · পক্ষ এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬; [[ApprovalExceptions::paperRows()]]) --}}
+                            @if (! empty($row['no']) || ! empty($row['party']))
+                                <span class="block text-(--color-ink-muted)">
+                                    <x-ui.party-cell :party="$row['party'] ?? null"><span class="num">{{ ($row['no'] ?? null) ?: '—' }}</span></x-ui.party-cell>
+                                </span>
+                            @endif
+                        </span>
                         <span class="text-(--color-ink-muted)">{{ $row['detail'] }}</span>
                     </li>
                 @endforeach

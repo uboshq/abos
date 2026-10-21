@@ -59,7 +59,8 @@ final class SalesRegisterReports
                     'source_type' => 'source_type_literal',
                     'source_id' => 'doc_id',
                 ],
-                ['key' => 'customer_name', 'label' => 'sales::field.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::field.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'status_label', 'label' => 'sales::register.status', 'width' => '7rem'],
                 ['key' => 'total', 'label' => 'sales::field.total', 'type' => ReportColumn::MONEY],
                 ['key' => 'age_days', 'label' => 'sales::register.age_days', 'width' => '6rem'],
@@ -147,6 +148,7 @@ final class SalesRegisterReports
             ->selectRaw(DB::getPdo()->quote($sourceType).' as source_type_literal')
             ->selectRaw("{$a}.id as doc_id")
             ->selectRaw("{$name} as customer_name")
+            ->selectRaw("{$a}.customer_id")
             ->selectRaw("CASE {$a}.status {$statuses} ELSE {$a}.status END as status_label")
             ->selectRaw("{$a}.total")
             // ⓘ "আজ" অ্যাপের ঘড়ি থেকে, ডেটাবেসের নয় — UTC ডেটাবেসে রাত ১২টা থেকে ভোর ৬টা বয়স এক দিন কম দেখাত (৬ অক্টোবর ২০২৬)

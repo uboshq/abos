@@ -282,6 +282,8 @@ return [
              */
             ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.final.cash_flow', 'permission' => 'accounts.report.final'],
+            // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী — IAS 1.10(c), 1.106 (ERP ১০০%-এর হিসাবের ফাঁক #৬, ২০ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.equity_statement', 'icon' => 'grid', 'route' => 'accounts.equity_statement', 'permission' => 'accounts.report.final'],
             /*
              * ⓘ চূড়ান্ত হিসাবগুলোর পরেই, আর সেটা ইচ্ছাকৃত: গ্রুপের ছবিটা
              * এক কোম্পানির লাভ-ক্ষতি ও স্থিতিপত্র পড়ার **পরের** প্রশ্ন,
@@ -1022,5 +1024,13 @@ return [
             // ⭐ ভাউচারও — শেষ সইয়ে নিজে পোস্ট (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
             \App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature::class,
         ],
+    ],
+
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — টাকা হাতে, খরচ, লাভ, ব্যাংক মেলানো (cb, ২০ অক্টোবর ২০২৬; [[WidgetSummaries]])
+    'phone_widgets' => [
+        \App\Modules\Accounts\Widgets\MoneyInHandSummary::class,
+        \App\Modules\Accounts\Widgets\ExpensesSummary::class,
+        \App\Modules\Accounts\Widgets\ProfitSummary::class,
+        \App\Modules\Accounts\Widgets\BankReconcileSummary::class,
     ],
 ];

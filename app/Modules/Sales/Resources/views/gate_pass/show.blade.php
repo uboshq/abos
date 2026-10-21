@@ -56,7 +56,7 @@
                         @endif
                     @else — @endif</dd></div>
             <div><dt class="text-(--color-ink-muted)">{{ __('sales::gate_pass.column.customer') }}</dt>
-                <dd>{{ $pass->challan?->customer?->name() ?? '—' }}</dd></div>
+                <dd>{{ $pass->challan?->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint() ?? '—' }}</dd></div>
             <div><dt class="text-(--color-ink-muted)">{{ __('sales::gate_pass.column.trip') }}</dt>
                 <dd>{{ $pass->shipment?->document_no ?? '—' }}</dd></div>
             <div><dt class="text-(--color-ink-muted)">{{ __('sales::gate_pass.column.vehicle') }}</dt>

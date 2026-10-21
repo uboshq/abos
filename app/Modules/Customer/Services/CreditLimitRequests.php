@@ -288,11 +288,14 @@ final class CreditLimitRequests
     /** ⓘ যিনি চাইলেন তিনি নিজে মালিক হলে নিজের খবর পান না (তিনি নিজেই জানেন) */
     private function tellTheOwners(CustomerCreditRequest $request, Customer $customer, Approval $approval): void
     {
+        // ⭐ "নাম · পয়েন্ট · শাখা" — কোন দোকান, কোন শাখা (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+        $customer->loadMissing(['location.parent', 'branch']);
+
         foreach ($this->owners->activeOwnersIn((int) $request->company_id) as $owner) {
             app(NotificationService::class)->send(
                 $owner,
                 self::WAITING,
-                __('customer::credit_request.waiting_title', ['customer' => $customer->name()]),
+                __('customer::credit_request.waiting_title', ['customer' => $customer->nameWithPoint()]),
                 $this->wordFor($request, $customer),
                 route(...$approval->drillRoute()),
                 key: 'customer:limit_request:'.$request->id,
@@ -309,7 +312,7 @@ final class CreditLimitRequests
         $key = $request->kind === CustomerCreditRequest::TEMPORARY ? 'customer::credit_request.word_temporary' : 'customer::credit_request.word_limit';
 
         return mb_substr(__($key, [
-            'customer' => $customer->name(),
+            'customer' => $customer->nameWithPoint(),
             'from' => Money::format((string) $request->current_limit),
             'to' => Money::format((string) $request->requested_limit),
             'until' => $request->temp_until === null ? '' : DateFormat::format($request->temp_until),

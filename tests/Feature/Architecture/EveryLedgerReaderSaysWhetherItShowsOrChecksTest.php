@@ -37,6 +37,9 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Services/AccountLedger.php' => 'খাতের খাতা আর ছকের জের — ওয়েব আর ফোনের একই সেবা, দেখার শাখা ধরে (ViewedBranch::one(); মালিক, ১৭ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Http/Controllers/AccountLedgerApiController.php' => 'ফোনের ছক আর খাতের খাতা — জের [[AccountLedger]] থেকে, দেখার শাখা ধরে (ViewedBranch::one())',
         'app/Modules/Accounts/Dashboard/AccountsWidgets.php' => 'ড্যাশবোর্ডের টাকার ঘর',
+        // ⭐ ফোনের উইজেট — ওয়েবের পাতার একই হিসাব, দেখার শাখায় (DataScope::inView; ২০ অক্টোবর ২০২৬)
+        'app/Modules/Accounts/Widgets/ExpensesSummary.php' => 'ফোনের উইজেট: এই মাসের খরচ, খাত ধরে — দেখার শাখায়',
+        'app/Modules/Accounts/Widgets/ProfitSummary.php' => 'ফোনের উইজেট: এই মাসের লাভ — দেখার শাখায়',
         'app/Modules/Customer/Support/CustomerListFilters.php' => 'গ্রাহক তালিকার বকেয়া ও অগ্রিমের ছাঁকনি — দেখার শাখা ধরে',
         'app/Modules/Customer/Http/Controllers/CustomerSummaryController.php' => 'গ্রাহকের সারাংশের বকেয়া — দেখার শাখা ধরে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৩)',
         'app/Modules/Accounts/Http/Controllers/CashTillController.php' => 'টিলের তালিকা আর জের',
@@ -68,10 +71,14 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Services/SalesCustomerTrade.php' => 'গ্রাহকের কেনাবেচার পর্দা',
         'app/Modules/Supplier/Dashboard/SupplierWidgets.php' => 'ড্যাশবোর্ডের পাওনা',
         'app/Modules/Supplier/Http/Controllers/SupplierController.php' => 'সরবরাহকারীর পাতার পাওনা',
+        // ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি (ISA 505) — পক্ষের পাতার খাতার একই ভিত্তি, তাই পাতার মতোই দেখার শাখা ধরে (হিসাবের ফাঁক #১৯)
+        'app/Modules/Customer/Http/Controllers/CustomerBalanceConfirmationController.php' => 'গ্রাহকের জের নিশ্চিতকরণের চিঠি — গ্রাহকের পাতার একই খাতা, দেখার শাখা ধরে',
+        'app/Modules/Supplier/Http/Controllers/SupplierBalanceConfirmationController.php' => 'সরবরাহকারীর জের নিশ্চিতকরণের চিঠি — সরবরাহকারীর পাতার একই দেনার খাতা, দেখার শাখা ধরে',
     ];
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Core/Services/SourceParties.php' => 'পর্দায় আগে থেকে থাকা কাগজের পক্ষ কে — খাতার সারি থেকে কেবল party_type/party_id, কোনো অঙ্ক নয়; কাগজটা তালিকার নিজের শাখা-ছাঁকনিতে আগেই বাছা, তাই খোঁজ গোটা কোম্পানি ধরে (নম্বরের পাশে পক্ষ, a5, ১৯ অক্টোবর ২০২৬)',
         'app/Core/Concerns/PickableWhileOwing.php' => 'টাকার কাগজের বাছাইয়ে নিষ্ক্রিয় পক্ষের এখনো জের আছে কি না — গোটা কোম্পানি ধরে; জের শাখায় ভাগ হয় না (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/AccountService.php' => 'খাতের দিক বা মা বদলের আগে নিচে দাখিলা আছে কি না — গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে বদল ভুল করে চলত (a6, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Database/Migrations/2027_02_18_100000_an_account_says_which_parties_it_holds.php' => 'কোন খাতে আজ পক্ষসহ সারি আছে — খাত কোন পক্ষ রাখে তা আজকের খাতা থেকে; গোটা কোম্পানি, শাখা নয় (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬)',

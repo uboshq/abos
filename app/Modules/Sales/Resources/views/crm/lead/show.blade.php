@@ -76,9 +76,9 @@
                         <dd class="mt-0.5">
                             @can('customer.view')
                                 <a class="text-(--color-link) hover:underline"
-                                   href="{{ route('customer.show', $lead->customer) }}">{{ $lead->customer->code }} — {{ $lead->customer->name() }}</a>
+                                   href="{{ route('customer.show', $lead->customer) }}">{{ $lead->customer->code }} — {{ $lead->customer->nameWithPoint() }}</a>
                             @else
-                                {{ $lead->customer->code }} — {{ $lead->customer->name() }}
+                                {{ $lead->customer->code }} — {{ $lead->customer->nameWithPoint() }}
                             @endcan
                             <span class="block text-2xs text-(--color-ink-muted)">
                                 {{ \App\Core\Support\DateFormat::format($lead->converted_at) }} · {{ $lead->converter?->name }}

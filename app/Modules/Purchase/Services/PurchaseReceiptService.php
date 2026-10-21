@@ -154,12 +154,16 @@ final class PurchaseReceiptService
             $order = $this->resolveOrder($data['purchase_order_id'] ?? null);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
 
-            $documentNo = $this->numbers->next('GRN');
+            // চালানের শাখা গুদামের শাখা — মালটা যেখানে নামল সেখানেই
+            $branchId = $warehouse->branch_id ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            // ⛔ নম্বরও সেই শাখার সিরিজে, উপরের শাখার নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $documentNo = $this->numbers->next('GRN', $branchId);
 
             $receipt = PurchaseReceipt::create([
                 'company_id' => CompanyContext::id(),
-                // চালানের শাখা গুদামের শাখা — মালটা যেখানে নামল সেখানেই
-                'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $order?->supplier_id ?? $data['supplier_id'],

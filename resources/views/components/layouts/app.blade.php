@@ -27,6 +27,9 @@
                 <div class="mb-4">{{ $header }}</div>
             @endisset
 
+            {{-- ⛔ ভুল শাখায় জমা থামলে কারণ আর বোতাম — পপআপেও ([[shell.branch-pin]]) --}}
+            <x-shell.branch-pin />
+
             {{ $slot }}
         </div>
 
@@ -439,6 +442,10 @@
                     @unless (\App\Core\Support\PageHeading::present((string) ($header ?? ''), (string) $slot))
                         <h1 class="sr-only">{{ $title ?? 'ABOS' }}</h1>
                     @endunless
+
+                    {{-- ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — থামলে কারণ আর "X-এই জমা দিন" বোতাম, একবারই, সব পাতায়
+                         ([[shell.branch-pin]], RCV-0143, ec, ১৯ অক্টোবর ২০২৬) --}}
+                    <x-shell.branch-pin />
 
                     {{ $slot }}
                 </div>

@@ -48,10 +48,16 @@ final class RfqService
         $suppliers = $this->cleanSuppliers($supplierIds);
 
         return DB::transaction(function () use ($data, $clean, $suppliers) {
+            // ⛔ মাল যে গুদামে নামবে তার শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $branchId = (filled($data['warehouse_id'] ?? null) ? \App\Modules\Inventory\Models\Warehouse::query()->withoutGlobalScopes()
+                ->where('company_id', CompanyContext::id())->whereKey((int) $data['warehouse_id'])->value('branch_id') : null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
             $rfq = Rfq::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('RFQ'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('RFQ', $branchId),
                 'trx_date' => Carbon::parse($data['trx_date'] ?? now())->toDateString(),
                 'respond_by' => filled($data['respond_by'] ?? null)
                     ? Carbon::parse($data['respond_by'])->toDateString()
@@ -197,10 +203,15 @@ final class RfqService
                 }
             }
 
+            // ⛔ দর তার দরপত্রের শাখায়, নম্বরও সেই শাখার সিরিজে (RCV-0143, ec, ১৯ অক্টোবর ২০২৬); দরপত্র ছাড়া দরে আগের মতো
+            $branchId = ($rfqId === null ? null : Rfq::acrossBranches()->whereKey((int) $rfqId)->value('branch_id'))
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
             $quotation = Quotation::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('QT'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('QT', $branchId),
                 'rfq_id' => $rfqId,
                 'supplier_id' => $supplierId,
                 'supplier_quote_no' => $data['supplier_quote_no'] ?? null,

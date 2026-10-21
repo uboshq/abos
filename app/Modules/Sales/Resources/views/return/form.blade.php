@@ -67,7 +67,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="$invoice?->customer_id ?? $return->customer_id"
                              placeholder="-" required />
 
@@ -115,7 +115,7 @@
                     যথেষ্ট, আর সেটা কোনো কিছুর উপর নির্ভর করে না।
                 --}}
                 <x-ui.select name="sales_invoice_id" :label="__('sales::field.invoice')"
-                             :options="$invoices->mapWithKeys(fn ($i) => [$i->id => $i->document_no.' — '.$i->customer?->name()])"
+                             :options="$invoices->mapWithKeys(fn ($i) => [$i->id => $i->document_no.' — '.$i->customer?->nameWithPoint()])"
                              :selected="$invoice?->id ?? $return->sales_invoice_id" placeholder="-"
                              data-go-to="{{ route('sales.return.create') }}" data-go-param="sales_invoice_id" />
 

@@ -79,6 +79,8 @@ final class AccountLedgerApiController extends Controller
             'entries' => collect($entries->items())->map(fn (LedgerEntry $e) => [
                 'date' => DateFormat::format($e->trx_date),
                 'document_no' => (string) ($e->document_no ?? ''),
+                // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট", ওয়েবের খাতার একই নাম (মালিক, ১৯ অক্টোবর ২০২৬); না থাকলে null
+                'party' => $page['parties'][$e->id] ?? null,
                 'narration' => (string) ($e->narration ?? ''),
                 'debit' => Money::isZero($e->debit) ? '' : Money::format($e->debit),
                 'credit' => Money::isZero($e->credit) ? '' : Money::format($e->credit),

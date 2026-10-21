@@ -151,9 +151,15 @@ final class PartyRegistry
                     fn ($q) => $q->inViewedBranch(),
                 )
                 // ⓘ পয়েন্টের নাম খোঁজার জন্য — নিচের [[pickerHint()]]; সারি প্রতি একটা প্রশ্ন নয়
+                // ⭐ মা পয়েন্টও (রুটে বসা দোকানে পয়েন্ট মায়ের নাম, [[Customer::pointName()]]) আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬
+                // (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"*
                 ->when(
                     method_exists($model, 'location'),
-                    fn ($q) => $q->with('location'),
+                    fn ($q) => $q->with(method_exists($model, 'pointName') ? 'location.parent' : 'location'),
+                )
+                ->when(
+                    method_exists($model, 'branch'),
+                    fn ($q) => $q->with('branch'),
                 )
                 ->get();
 
@@ -208,6 +214,42 @@ final class PartyRegistry
      */
     public function labelsOf(iterable $pairs): array
     {
+        return array_map(fn (array $parts) => implode(' · ', array_filter($parts, fn ($part) => $part !== null && $part !== '')), $this->partsOf($pairs));
+    }
+
+    /**
+     * ⭐ কেবল জায়গা — "পয়েন্ট · শাখা", নাম ছাড়া (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)। রিপোর্টের নামের ঘর SQL থেকে নাম
+     * আনে (খোঁজা, সাজানো চলে), আর ইঞ্জিন তার পাশে এটা জোড়ে ([[ReportColumn::$place]])। `$branchOnly` — যে রিপোর্টের
+     * নিজের পয়েন্টের কলাম আছে, সেখানে কেবল শাখা। ⓘ ধরন প্রতি একটা প্রশ্ন, [[labelsOf()]]-এর একই নিয়ম; জায়গা না থাকলে
+     * চাবিটাই থাকে না। ⚠️ নিচের পুরোনো [[placesOf()]] কেবল নিজের স্থানের নাম দেয় (নোটের তালিকা) — এটা নয়।
+     *
+     * @param  iterable<array{0: string, 1: int}>  $pairs  [ধরন, id]
+     * @return array<string, string>  "ধরন:id" => "পয়েন্ট · শাখা"
+     */
+    public function pointAndBranchOf(iterable $pairs, bool $branchOnly = false): array
+    {
+        $places = [];
+
+        foreach ($this->partsOf($pairs) as $key => $parts) {
+            $place = implode(' · ', array_filter($branchOnly ? [$parts['branch']] : [$parts['point'], $parts['branch']],
+                fn ($part) => $part !== null && $part !== ''));
+
+            if ($place !== '') {
+                $places[$key] = $place;
+            }
+        }
+
+        return $places;
+    }
+
+    /**
+     * নাম, পয়েন্ট আর শাখা — আলাদা আলাদা, ধরন প্রতি একটা প্রশ্ন ([[labelsOf()]], [[pointAndBranchOf()]] দুজনেরই)।
+     *
+     * @param  iterable<array{0: string, 1: int}>  $pairs
+     * @return array<string, array{label: string, point: ?string, branch: ?string}>
+     */
+    private function partsOf(iterable $pairs): array
+    {
         $byType = [];
 
         foreach ($pairs as [$type, $id]) {
@@ -232,10 +274,21 @@ final class PartyRegistry
              */
             $points = method_exists($model, 'pointName') && method_exists($model, 'location');
 
-            foreach ($model::query()->whereKey(array_unique($ids))->when($points, fn ($q) => $q->with('location.parent'))->get() as $row) {
-                $label = method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey();
-                $point = $points ? $row->pointName() : null;
-                $labels[$type.':'.$row->getKey()] = $point === null ? $label : $label.' · '.$point;
+            /*
+             * ⭐ শাখাও — "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম: *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব
+             * জায়গায়, আর শাখার নামও দিতে হবে"*)। ⓘ যে মডেলের নিজের `branch()` আছে তার (গ্রাহক, সরবরাহকারী); পয়েন্ট কেবল গ্রাহকের।
+             * শাখাও একবারে আনা হয়, সারি ধরে নয়।
+             */
+            $branches = method_exists($model, 'branch');
+            $with = array_values(array_filter([$points ? 'location.parent' : null, $branches ? 'branch' : null]));
+
+            foreach ($model::query()->whereKey(array_unique($ids))->when($with !== [], fn ($q) => $q->with($with))->get() as $row) {
+                $branch = $branches ? trim((string) $row->branch?->name()) : '';
+                $labels[$type.':'.$row->getKey()] = [
+                    'label' => method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey(),
+                    'point' => $points ? $row->pointName() : null,
+                    'branch' => $branch === '' ? null : $branch,
+                ];
             }
         }
 
@@ -331,12 +384,24 @@ final class PartyRegistry
         $place = $row->relationLoaded('location') ? $row->getRelation('location') : null;
 
         if (! $place instanceof Model) {
-            return null;
+            $point = null;
+        } elseif (method_exists($row, 'pointName')) {
+            // ⭐ গ্রাহকের পয়েন্ট — রুটে বসা দোকানে মা পয়েন্ট, সব জায়গার এক নিয়ম ([[Customer::pointName()]]; মা আগেই একসাথে তোলা)
+            $point = $row->pointName();
+        } else {
+            $bn = $place->getAttribute('name_bn');
+            $point = app()->getLocale() === 'bn' && filled($bn) ? (string) $bn : $place->getAttribute('name_en');
         }
 
-        $bn = $place->getAttribute('name_bn');
+        // ⭐ শাখা — "পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬); আগেই একসাথে তোলা, সারি ধরে নয়
+        $office = $row->relationLoaded('branch') ? $row->getRelation('branch') : null;
+        $branch = $office instanceof Model
+            ? trim((string) (method_exists($office, 'name') ? $office->name() : $office->getAttribute('name_en')))
+            : '';
 
-        return app()->getLocale() === 'bn' && filled($bn) ? (string) $bn : $place->getAttribute('name_en');
+        $text = implode(' · ', array_filter([$point, $branch], fn ($v) => filled($v)));
+
+        return $text === '' ? null : $text;
     }
 
     /**
@@ -438,6 +503,52 @@ final class PartyRegistry
         }
 
         return $places;
+    }
+
+    /**
+     * পক্ষের নিজের শাখা — যে মডেলের `branch_id` আছে (গ্রাহক, সরবরাহকারী); বাকিদের চাবিটাই থাকে না।
+     *
+     * ⛔ মালিক, ১৯ অক্টোবর ২০২৬: *"ei party super er tai eta lion e keno zabe"* — পক্ষের টাকা পক্ষের শাখাতেই
+     * (Accounts-এর ভাউচার সেবা)। ⓘ গ্লোবাল স্কোপ ছাড়া, কোম্পানি ধরে: লেখক নিজে যে শাখা বা ডিলার দেখেন তার বাইরের
+     * পক্ষেরও আসল শাখা চাই, নইলে Lion-এ বসা লেখকের কাছে Super-এর গ্রাহকের শাখা "নেই" হয়ে পাহারা চুপ থাকত।
+     *
+     * @param  iterable<array{0: string|null, 1: int|string|null}>  $pairs
+     * @return array<string, int> "ধরন:আইডি" => শাখা
+     */
+    public function branchesOf(iterable $pairs): array
+    {
+        $byType = [];
+
+        foreach ($pairs as [$type, $id]) {
+            if ($type !== null && $type !== '' && (int) $id > 0) {
+                $byType[$type][] = (int) $id;
+            }
+        }
+
+        $branches = [];
+
+        foreach ($byType as $type => $ids) {
+            $model = $this->modelFor($type);
+
+            if ($model === null || ! in_array('branch_id', $model->getFillable(), true)) {
+                continue;
+            }
+
+            $rows = $model::query()->withoutGlobalScopes()
+                ->when(
+                    in_array('company_id', $model->getFillable(), true),
+                    fn ($q) => $q->where('company_id', CompanyContext::id()),
+                )
+                ->whereKey(array_unique($ids))
+                ->whereNotNull('branch_id')
+                ->pluck('branch_id', $model->getKeyName());
+
+            foreach ($rows as $id => $branch) {
+                $branches[$type.':'.$id] = (int) $branch;
+            }
+        }
+
+        return $branches;
     }
 
     /**

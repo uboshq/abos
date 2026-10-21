@@ -30,6 +30,7 @@ return [
     'inter_company' => 'Inter-company Money',
     'inter_company_new' => 'New — money to a sister company',
     'balance_sheet' => 'Balance Sheet',
+    'equity_statement' => 'Changes in Equity',
     'cash_flow' => 'Cash Flow',
     'settings' => 'Settings',
     'loans' => 'Loans',

@@ -155,6 +155,7 @@ return [
         'unbalanced' => 'Debit and credit do not match',
         'refused' => 'Could not post to the books — :reason',
         'nothing_to_post' => 'There are no lines to post.',
+        'party_in_other_branch' => 'This party belongs to the ":branch" branch — its transactions cannot be written in ":here".',
         'both_sides' => 'Line :line carries both a debit and a credit — split it into two lines.',
         'zero_line' => 'Line :line is zero on both sides.',
         'already_posted' => 'This paper is already in the books — reverse it before posting again.',
@@ -1199,6 +1200,25 @@ return [
         'still_saving' => 'Saved — give it a moment and check the list.',
     ],
 
+    /*
+     * A form lands in the branch it was opened in — RCV-0143, owner: "never in another branch" (ec, 19 Oct 2026;
+     * [[KeepsAFormInItsOwnBranch]]). Every message names the branches, never ids.
+     */
+    'branch_pin' => [
+        'moved' => 'The form was opened in :opened, the header now shows :current — stopped before it went to the wrong branch.',
+        'submit_in' => 'Submit in :opened',
+        'or_here' => 'To submit in :current instead, check the form below and save it again.',
+        'files_again' => 'Attached files are not sent again — add them from the document page after it is saved.',
+        'elsewhere' => 'The form was opened in another branch or company, the header now shows :current — stopped before it went to the wrong place. Check the form below and save it again.',
+        'unstamped' => 'This form was opened before the update and was saved in :current. Check that this is the right branch; next time open the page afresh.',
+        'unstamped_refused' => 'This form is from an older page — the branch it was opened in is unknown, so it was stopped. Check the form below and save it again.',
+        'confirm_refused' => 'This button no longer works (already used, expired, or for another form) — nothing was saved. Check the form below and save it again.',
+        'no_reach' => 'The :opened branch is no longer within your reach — nothing was saved there.',
+        'confirm_failed' => 'Nothing was saved in :opened — the reason is below. To work in :opened, pick :opened in the header and submit again.',
+        'saved_elsewhere' => 'Saved in :opened. To see it, pick :opened or All branches in the header.',
+        'no_branch' => 'no branch',
+    ],
+
     'profile' => [
         'title' => 'My profile',
         'menu' => ':name — profile and settings',
@@ -1270,6 +1290,15 @@ return [
     'avatar' => [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
+        // the phone's profile menu takes JPG and PNG only (a6, 20 Oct 2026)
+        'phone_jpg_png_only' => 'Use a JPG or PNG photo.',
+    ],
+
+    // "My phones" on the app's profile menu ([[MeDevicesController]])
+    'devices' => [
+        'android' => 'Android phone',
+        'ios' => 'iPhone',
+        'phone' => 'Phone',
     ],
 
     // ছবির ইঞ্জিন যা ছুঁড়তে পারে। ⚠️ `avatar.*` থেকে আলাদা রাখা হয়েছে,

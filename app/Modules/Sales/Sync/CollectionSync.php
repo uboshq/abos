@@ -270,8 +270,8 @@ final class CollectionSync implements SyncsToDevices
         if (($payload['confirm'] ?? false) === true) {
             try {
                 $collection = $this->collections->confirm($collection->fresh(['lines']));
-            } catch (ValidationException) {
-                // ⓘ খসড়া থাকল — ওয়েবের একই আচরণ
+            } catch (ValidationException|\App\Core\Engines\Posting\PostingException) {
+                // ⓘ খসড়া থাকল — ওয়েবের একই আচরণ; খাতার "না"-ও (যেমন অন্য শাখার পক্ষ) খসড়া রাখে, ফোনকে চিরকাল আবার পাঠাতে দেয় না
             }
         }
 

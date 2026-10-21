@@ -993,4 +993,8 @@ return [
         \App\Core\Events\ApprovalDecided::class => [\App\Modules\Inventory\Listeners\FinishTheIssueOnTheLastSignature::class],
     ],
 
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — মজুদ সতর্কতা (নকশা ৫), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    'phone_widgets' => [
+        \App\Modules\Inventory\Widgets\StockAlertsSummary::class,
+    ],
 ];

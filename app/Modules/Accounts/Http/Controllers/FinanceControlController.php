@@ -17,6 +17,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\DuplicateParties;
 use App\Modules\Accounts\Services\MonthEndChecklist;
 use App\Modules\Accounts\Services\PostingBacklog;
+use App\Modules\Accounts\Services\VoucherParties;
 use App\Modules\Backup\Models\BackupRun;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
@@ -118,6 +119,8 @@ class FinanceControlController extends Controller implements HasMiddleware
             'date' => $date,
             'posted' => $posted,
             'stuck' => $stuck,
+            // ⭐ আটকে থাকা ভাউচারের নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — গোটা তালিকার একবারে ([[VoucherParties]])
+            'stuckParties' => $tab === 'stuck' ? app(VoucherParties::class)->of($stuck) : [],
             'awaitingIds' => $awaitingIds->map(fn ($id) => (int) $id)->all(),
             'failedCount' => $this->failedQuery()->count(),
         ]);

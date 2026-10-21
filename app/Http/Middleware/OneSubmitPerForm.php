@@ -79,6 +79,9 @@ class OneSubmitPerForm
          */
         $request->request->remove(FormIsNotSubmittedTwice::FIELD);
 
+        // ⓘ পরের পাহারা ([[KeepsAFormInItsOwnBranch]]) কিছু না লিখে থামালে দাবিটা ফেরত দেয় — তার জন্য টোকেনটা রাখা
+        $request->attributes->set(FormIsNotSubmittedTwice::FIELD, $token);
+
         $response = $next($request);
 
         /*

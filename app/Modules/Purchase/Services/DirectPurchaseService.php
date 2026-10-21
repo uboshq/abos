@@ -795,6 +795,12 @@ final class DirectPurchaseService
             [
                 'type' => Voucher::PAYMENT,
                 'trx_date' => $bill->trx_date,
+                /*
+                 * ⛔ পরিশোধ বিলের শাখায় — উপরের শাখা-বাছাই নয়। RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর
+                 * ২০২৬)। ⓘ বিল গুদামের শাখায় বসে ([[PurchaseBillService::branchForBill()]]); আগে তার টাকা উপরের শাখায় যেত — দেনা
+                 * A-তে, পরিশোধ B-তে, দুই শাখার খাতাই ভুল।
+                 */
+                'branch_id' => $bill->branch_id,
                 'party_type' => 'supplier',
                 'party_id' => $bill->supplier_id,
                 'instrument' => $instrument,

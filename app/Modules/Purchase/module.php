@@ -852,4 +852,8 @@ return [
         // ⛔ সইয়ের পরে পোস্ট হওয়া সরাসরি কেনার চেক-পরিশোধ রেজিস্টারে ওঠে (fe, ১৩ অক্টোবর ২০২৬)
         \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Purchase\Listeners\RecordTheChequeOfASignedPurchasePayment::class],
     ],
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — মাল আসছে (নকশা ১৫), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    'phone_widgets' => [
+        \App\Modules\Purchase\Widgets\GoodsIncomingSummary::class,
+    ],
 ];

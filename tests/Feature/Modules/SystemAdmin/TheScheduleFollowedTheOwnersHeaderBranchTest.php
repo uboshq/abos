@@ -42,16 +42,21 @@ final class TheScheduleFollowedTheOwnersHeaderBranchTest extends TestCase
         $b = Branch::query()->withoutGlobalScopes()->where('company_id', $company->id)->where('code', 'NTK')->firstOrFail();
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
+        // ⓘ প্রতিটা বিক্রি নিজের শাখার গুদাম থেকে, নিজের শাখায় — এক শাখার দোকানের লেনদেন অন্য শাখায় যায় না (মালিক, ১৯ অক্টোবর;
+        // PostingEngine থামায়)। ডেমোর নেত্রকোনা গুদামে কেবল চাল আছে, তাই শাখা B চাল বেচে
         $sell = function (Branch $branch, string $code) use ($company, $owner, $a) {
-            CompanyContext::set($company->id, $a->id);
+            CompanyContext::set($company->id, $branch->id);
             $this->actingAs($owner);
+            [$warehouse, $product, $rate] = $branch->is($a)
+                ? [Warehouse::query()->withoutGlobalScopes()->where('company_id', $company->id)->where('is_default', true)->value('id'), 'Cosmos Biscuit 40gm', '10']
+                : [Warehouse::query()->withoutGlobalScopes()->where('company_id', $company->id)->where('code', 'WH-NTK')->value('id'), 'Miniket Rice 50kg', '3550'];
             $shop = Customer::query()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'code' => $code,
                 'name_en' => 'Shop '.$code, 'status' => DocumentStatus::CONFIRMED, 'is_active' => true, 'credit_limit' => '1000000']);
             $done = app(DirectSaleService::class)->complete(
-                ['customer_id' => $shop->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'own_transport' => '1'],
-                [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => '3', 'rate' => '10', 'free_qty' => '0']],
+                ['customer_id' => $shop->id, 'warehouse_id' => $warehouse, 'own_transport' => '1'],
+                [['product_id' => Product::query()->where('name_en', $product)->value('id'), 'qty' => '3', 'rate' => $rate, 'free_qty' => '0']],
             );
-            $done['invoice']->forceFill(['branch_id' => $branch->id])->saveQuietly();
+            $this->assertSame((int) $branch->id, (int) $done['invoice']->branch_id, 'বিল নিজের শাখায় বসেনি — দাবি অন্ধ।');
         };
         $sell($a, 'SHOP-IN-A');
         $sell($b, 'SHOP-IN-B');

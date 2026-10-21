@@ -35,7 +35,7 @@ final class CustomerLedgerApiController extends Controller implements HasMiddlew
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $customer = Customer::query()->inViewedBranch()->where('public_id', $id)->firstOrFail();
+        $customer = Customer::query()->inViewedBranch()->where('public_id', $id)->with(['location.parent', 'branch'])->firstOrFail();
 
         $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Customer::drillSourceType(), $customer->id)
@@ -59,6 +59,9 @@ final class CustomerLedgerApiController extends Controller implements HasMiddlew
             'id' => (string) $customer->public_id,
             'code' => (string) $customer->code,
             'name' => (string) $customer->name(),
+            // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+            'point' => $customer->pointName(),
+            'branch' => $customer->branchName(),
             // ⓘ ধনাত্মক = গ্রাহকের কাছে পাওনা (Dr), ঋণাত্মক = গ্রাহকের জমা (Cr) — খাতার নিয়ম ([[Money::drCr()]])
             'due' => Money::round($due, 4),
             /*

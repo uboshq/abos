@@ -229,4 +229,9 @@ return [
     ],
 
     // ⓘ নতুন দুই মডেল (NotificationEvent, NotificationAuditLog) কোরের — তাদের অডিট-ছাড় EveryChangeableRowRemembersWhoChangedItTest-এ
+
+    // ⭐ ফোনের হোম-স্ক্রিনে ৭ নোটিশ (a6, ২০ অক্টোবর ২০২৬) — ফোনের সুইচ system_admin-এর, এই মডিউলেরটা ফোনে ডিফল্ট বন্ধ
+    'phone_widgets' => [
+        \App\Modules\Notification\Widgets\NoticesSummary::class,
+    ],
 ];

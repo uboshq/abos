@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Services;
 
-use App\Core\Services\PartyRegistry;
+use App\Core\Services\PaperParties;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\Branch;
@@ -38,6 +38,12 @@ final class ApprovalFacts
     /** কোন কাগজের লাইনে খাত থাকে — একবার দেখে মনে রাখা হয়। */
     private static array $linesCarryAccounts = [];
 
+    /** কোন কাগজে কোন পক্ষ-সম্পর্ক সত্যিই সম্পর্ক — একবার দেখে মনে রাখা হয় ([[fallbackRelations()]])। */
+    private static array $partyRelations = [];
+
+    /** পক্ষের নিজের সম্পর্ক — পুরনো ক্রমে: ব্যক্তি, গ্রাহক, সরবরাহকারী, কর্মী */
+    private const PARTY_RELATIONS = ['person', 'customer', 'supplier', 'employee'];
+
     /** কোন কাগজের লাইনে পণ্য থাকে — [[about()]]-এর "প্রথম পণ্য" একবারে আনতে; একবার দেখে মনে রাখা হয়। */
     private static array $linesCarryProducts = [];
 
@@ -57,7 +63,7 @@ final class ApprovalFacts
      */
     public const VIEW_WALLS = ['user-branch', 'user-warehouse', 'viewed-branch-warehouse'];
 
-    public function __construct(private readonly PartyRegistry $parties) {}
+    public function __construct(private readonly PaperParties $parties) {}
 
     /**
      * @param  iterable<Approval>  $approvals
@@ -75,6 +81,8 @@ final class ApprovalFacts
                 $idsByType[$approval->approvable_type][(int) $approval->id] = (int) $approval->approvable_id;
             }
         }
+
+        $loaded = [];
 
         foreach ($idsByType as $class => $ids) {
             if (! is_subclass_of($class, Model::class)) {
@@ -100,13 +108,22 @@ final class ApprovalFacts
                  * থাকলেই হোম আর ড্যাশবোর্ড ৫০০ দিত (ওয়েবের মান ধাপ ২-এর ছবি তুলতে গিয়ে ধরা, ২০ অক্টোবর ২০২৬)।
                  */
                 ->when($this->linesCarryProducts($class), fn ($q) => $q->with('lines.product'))
-                // ⓘ গ্রাহকের পয়েন্ট — নামের পাশে (নিচের [[party()]]); কাগজগুলোর সাথে একবারে
-                ->when(method_exists($class, 'customer'), fn ($q) => $q->with('customer.location.parent'))
                 ->whereKey(array_values(array_unique($ids)))
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
 
-            $partyLabels = $this->partyLabels($documents);
+            $loaded[$class] = [$ids, $documents];
+        }
+
+        /*
+         * ⭐ পক্ষ — গোটা পাতার সব ধরনের কাগজের জন্য **একবারে** (মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর
+         * পয়েন্টের নাম"*)। ⛔ আগে কাগজের ধরন প্রতি আলাদা গ্রাহক-প্রশ্ন, আর সরবরাহকারী/ব্যক্তি সারি ধরে তোলা হত (N+1);
+         * এখন পক্ষের ধরন প্রতি একটা প্রশ্ন ([[PaperParties::of()]]) — গ্রাহক হলে "নাম · পয়েন্ট", বাকিরা নাম।
+         */
+        $partyLabels = $this->parties->of(collect($loaded)->flatMap(fn (array $pair) => $pair[1]->all()));
+
+        foreach ($loaded as $class => [$ids, $documents]) {
+            $this->loadFallbackParties($class, $documents, $partyLabels);
             $accountNames = $this->accountNames($documents);
             $branchNames = $this->branchNames($documents);
 
@@ -131,62 +148,105 @@ final class ApprovalFacts
     }
 
     /**
-     * পক্ষের নামগুলো একবারে — `party_type`/`party_id` জোড়া ধরে।
+     * কাগজের পক্ষ — আগেই একবারে তোলা নাম ([[PaperParties::of()]]), না থাকলে কাগজে হাতে লেখা নাম।
      *
-     * @param  Collection<int, Model>  $documents
-     * @return array<string, string>
+     * ⓘ পক্ষ পড়া হয় কাগজের নিজের ঘর থেকে — `party_type`/`party_id` জোড়া (ভাউচার, চেক), নয়তো `customer_id`,
+     * `supplier_id`, `employee_id`, `person_id` (চালান, ক্রয়ের বিল, খরচের দাবি, উত্তোলন)। ⭐ গ্রাহক হলে "নাম · পয়েন্ট" —
+     * মালিক, ৭ অক্টোবর ২০২৬: *"app e sob jaygay customer er pase obosoi point dibe nahoy cina zayna"*।
+     * ⛔ আগে সরবরাহকারী আর ব্যক্তি সারি ধরে সম্পর্ক দিয়ে তোলা হত — পঞ্চাশ সারির ক্রয়-ইনবক্সে পঞ্চাশটা প্রশ্ন; আর কর্মীর
+     * কাগজে (খরচের দাবি, ছুটি) পক্ষ "—" দেখাত।
+     *
+     * @param  array<string, string>  $partyLabels
      */
-    private function partyLabels($documents): array
-    {
-        $pairs = [];
-
-        foreach ($documents as $document) {
-            if (isset($document->party_type, $document->party_id)) {
-                $pairs[] = [(string) $document->party_type, (int) $document->party_id];
-            }
-        }
-
-        return $pairs === [] ? [] : $this->parties->labelsOf($pairs);
-    }
-
-    /** @param array<string, string> $partyLabels */
     private function party(Model $document, array $partyLabels): ?string
     {
-        if (isset($document->party_type, $document->party_id)) {
-            $label = $partyLabels[$document->party_type.':'.$document->party_id] ?? null;
+        $label = $partyLabels[PaperParties::slot($document)] ?? null;
 
-            if ($label !== null) {
-                return $label;
-            }
+        if ($label !== null) {
+            return $label;
         }
 
-        // ⓘ অর্থের কাগজগুলোয় মানুষটা `person` সম্পর্কে বসে, পক্ষের জোড়ায় নয়
-        if ($this->has($document, 'person')) {
-            $person = $document->person;
+        // ⓘ নাম না মেলা কাগজ — আগের পথ, তবে কেবল আগেই একবারে তোলা সম্পর্ক ([[loadFallbackParties()]]); সারি ধরে কখনো নয়
+        foreach (self::PARTY_RELATIONS as $relation) {
+            if ($document->relationLoaded($relation) && $document->getRelation($relation) instanceof Model) {
+                $party = $document->getRelation($relation);
+                // ⭐ "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম) — গ্রাহকের নিজের এক নিয়ম ([[Customer::placeName()]])
+                $point = method_exists($party, 'placeName') ? $party->placeName() : (method_exists($party, 'pointName') ? $party->pointName() : null);
 
-            if ($person !== null) {
-                return $this->nameOf($person);
-            }
-        }
-
-        /*
-         * ⓘ বিক্রয় আর ক্রয়ের কাগজে পক্ষ বসে নিজের সম্পর্কে (`customer`, `supplier`) — ২৯
-         * সেপ্টেম্বর ২০২৬। ⛔ আগে এই দুইটা খোঁজা হত না, তাই ইনবক্সে চালান আর বিলের সারিতে
-         * পক্ষ "—" দেখাত (abos-7c ধরেছেন)।
-         */
-        foreach (['customer', 'supplier'] as $relation) {
-            if ($this->has($document, $relation) && $document->{$relation} instanceof Model) {
-                /*
-                 * ⭐ গ্রাহকের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe
-                 * nahoy cina zayna"। ফোনের সই-বাক্স আর ওয়েবের ইনবক্স একই সারি দেখায় ([[Customer::pointName()]])।
-                 */
-                $point = method_exists($document->{$relation}, 'pointName') ? $document->{$relation}->pointName() : null;
-
-                return $this->nameOf($document->{$relation}).($point === null ? '' : ' · '.$point);
+                return $this->nameOf($party).($point === null ? '' : ' · '.$point);
             }
         }
 
         return $this->firstFilled($document, ['payee_name', 'holder_name', 'party_name']);
+    }
+
+    /**
+     * ⛔ পিছিয়ে না পড়া — যে কাগজের পক্ষ [[PaperParties]] চিনল না (পক্ষের ধরনটা নিবন্ধিত নয়: মডিউল বন্ধ, যেমন MasterData-র
+     * `person`), তার জন্য আগের মতো কাগজের নিজের সম্পর্ক — ব্যক্তি, গ্রাহক (পয়েন্টসহ), সরবরাহকারী, কর্মী।
+     *
+     * ⓘ কেবল নাম-না-মেলা সারিগুলোর জন্য, আর গোটা দলের জন্য একবারে (`load()`, সম্পর্ক প্রতি একটা প্রশ্ন) — সারি ধরে নয়।
+     * সবার নাম মিললে একটা প্রশ্নও যায় না।
+     *
+     * @param  class-string<Model>  $class
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Model>  $documents
+     * @param  array<string, string>  $partyLabels
+     */
+    private function loadFallbackParties(string $class, $documents, array $partyLabels): void
+    {
+        $unnamed = $documents->filter(fn (Model $d) => ! isset($partyLabels[PaperParties::slot($d)]));
+        $relations = $this->fallbackRelations($class);
+
+        if ($unnamed->isEmpty() || $relations === []) {
+            return;
+        }
+
+        // ⓘ গ্রাহকের পয়েন্ট আর শাখা — একই দলের সাথে, সারি ধরে নয়
+        $with = array_merge(...array_map(
+            fn (string $r) => $r === 'customer' && method_exists($unnamed->first()->customer()->getRelated(), 'location')
+                ? ['customer.location.parent', 'customer.branch']
+                : [$r],
+            $relations,
+        ));
+
+        try {
+            $unnamed->load($with);
+        } catch (Throwable $e) {
+            // ⓘ সম্পর্ক তোলা গেল না — তখন হাতে লেখা নাম (নিচে), ইনবক্স ৫০০ নয়
+            report($e);
+        }
+    }
+
+    /**
+     * এই কাগজের কোন পক্ষ-নামের পদ্ধতি সত্যিই Eloquent সম্পর্ক।
+     *
+     * ⚠️ `method_exists` যথেষ্ট নয় — একই নামের সাধারণ পদ্ধতি `load()`-কে ছুঁড়তে বাধ্য করত।
+     *
+     * @param  class-string<Model>  $class
+     * @return list<string>
+     */
+    private function fallbackRelations(string $class): array
+    {
+        if (! array_key_exists($class, self::$partyRelations)) {
+            $found = [];
+
+            foreach (self::PARTY_RELATIONS as $relation) {
+                if (! method_exists($class, $relation)) {
+                    continue;
+                }
+
+                try {
+                    if ((new $class)->{$relation}() instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                        $found[] = $relation;
+                    }
+                } catch (Throwable) {
+                    // ⓘ পড়া গেল না — না-চাওয়াই নিরাপদ
+                }
+            }
+
+            self::$partyRelations[$class] = $found;
+        }
+
+        return self::$partyRelations[$class];
     }
 
     private function about(Model $document): ?string

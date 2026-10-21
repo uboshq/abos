@@ -74,6 +74,54 @@ class CashTill extends Model implements Drillable
         return app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
     }
 
+    /**
+     * ⭐ টাকা যে বাক্স দিয়ে নড়ল, সেই বাক্সের শাখা — কাগজের শাখা এখান থেকে (মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য শাখায়
+     * নয়"*; RCV-0143)।
+     *
+     * ⚠️ আগে কাগজ বসত জমা দেওয়ার মুহূর্তের উপরের শাখা-বাছাইয়ে: A-র বাক্স থেকে খরচ, অথচ উপরে B বাছা থাকলে কাগজ, নম্বর আর খাতার
+     * সারি B-তে। ⓘ খাতগুলোর কোনোটা শাখায় বাঁধা বাক্সের হলে আর সব বাক্স একই শাখার হলে সেই শাখা; বাক্স নেই, শাখাহীন বাক্স, বা দুই
+     * শাখার বাক্স (শাখা পেরোনো কন্ট্রা) → `null`, ডাকনেওয়ালা আগের মতো চলে। দেখার দেয়ালের বাইরে পড়া — কোন শাখার বাক্স, সেটা
+     * দেখা-না-দেখার প্রশ্ন নয়।
+     *
+     * @param  iterable<int|string|null>  $accountIds
+     */
+    public static function branchOfAccounts(iterable $accountIds): ?int
+    {
+        $branches = self::branchesOfAccounts($accountIds);
+
+        return count($branches) === 1 ? $branches[0] : null;
+    }
+
+    /**
+     * এই খাতগুলোর শাখায় বাঁধা বাক্সের সব আলাদা শাখা — শাখাহীন বাক্স বা বাক্স নেই এমন খাত বাদ ([[branchOfAccounts()]])।
+     *
+     * @param  iterable<int|string|null>  $accountIds
+     * @return list<int>
+     */
+    public static function branchesOfAccounts(iterable $accountIds): array
+    {
+        $ids = [];
+
+        foreach ($accountIds as $id) {
+            if ((int) $id > 0) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return self::query()->withoutGlobalScope('viewed-branch')
+            ->whereIn('account_id', array_unique($ids))
+            ->whereNotNull('branch_id')
+            ->pluck('branch_id')
+            ->map(fn ($branch) => (int) $branch)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     protected $fillable = [
         'company_id', 'branch_id', 'account_id', 'code',
         'name_en', 'name_bn', 'holder_id', 'limit_amount',

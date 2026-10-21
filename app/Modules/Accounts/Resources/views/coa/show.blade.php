@@ -175,7 +175,7 @@
                     ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
                     ['key' => 'document_no', 'label' => __('core.table.document'),
-                     'render' => fn ($e) => view('accounts::coa.partials.entry-source', ['entry' => $e])],
+                     'render' => fn ($e) => view('accounts::coa.partials.entry-source', ['entry' => $e, 'party' => ($entryParties ?? [])[$e->id] ?? null])],
                     ['key' => 'narration', 'label' => __('core.table.narration')],
                     ['key' => 'debit', 'total' => 'money', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],

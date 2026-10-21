@@ -221,8 +221,8 @@ class OpportunityController extends Controller implements HasMiddleware
                 // বন্ধ করা ধাপে বসে থাকা সুযোগ সম্পাদনায় ধাপটা হারায় না
                 ->when($current?->stage && ! $current->stage->is_active, fn ($c) => $c->push($current->stage))
                 ->mapWithKeys(fn ($s) => [$s->id => $s->name().' ('.$s->probability.'%)']),
-            'customers' => Customer::query()->active()->inViewedBranch()->orderBy('name_en')->get()
-                ->mapWithKeys(fn (Customer $c) => [$c->id => $c->code.' — '.$c->name()]),
+            'customers' => Customer::query()->active()->inViewedBranch()->with(Customer::PLACE)->orderBy('name_en')->get()
+                ->mapWithKeys(fn (Customer $c) => [$c->id => $c->code.' — '.$c->nameWithPoint()]),
 
             // ⛔ কেবল নিজের দেখার ভিতরের লিড, আর যেগুলো এখনো লিড
             'leads' => Lead::query()->visibleTo($user)

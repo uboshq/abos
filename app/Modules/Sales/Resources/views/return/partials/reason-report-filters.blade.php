@@ -16,7 +16,7 @@
         <option value="">{{ __('sales::return_reason.any_customer') }}</option>
         @foreach ($customers as $customer)
             <option value="{{ $customer->id }}" @selected(($filters['customer_id'] ?? null) == $customer->id)>
-                {{ $customer->name() }}
+                {{ $customer->nameWithPoint() }}
             </option>
         @endforeach
     </select>

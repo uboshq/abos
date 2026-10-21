@@ -94,6 +94,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
         // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
+        // ⓘ শাখার ছাপের পাহারার বাইরের প্যারামিটারহীন POST দরজা, প্রতিটা কারণসহ (RCV-0143; ec, ২০ অক্টোবর ২০২৬)
+        'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
+        // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -118,6 +122,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     private const NOT_EXCUSES = [
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
+        // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_A_DISPLAY',
         // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
         'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
@@ -402,7 +408,28 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
      *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
      */
-    private const CEILING = 371;
+    /*
+     * ── ⚠️ ৩৭১ → ৪৫৩, ২০ অক্টোবর ২০২৬ (ফর্ম খোলার শাখায় জমা — RCV-0143, মালিক: কোনোভাবেই অন্য শাখায় নয়; ec) ─────────────
+     *   +৮২ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — প্যারামিটারহীন POST দরজা যা `*.store` নয়, CREATE_DOORS-এও নয়:
+     *       সুইচ, ব্যক্তিগত পছন্দ, বিজ্ঞপ্তি, লগইন, ডিফল্ট-তালিকা বসানো (মাস্টারের লুপের ২১টা সহ), মাসিক দৌড় (প্রতিটা কাগজ
+     *       নিজের শাখায়), আর লেখে-না এমন পূর্বদর্শন। ⓘ বেশিরভাগ কাগজই বানায় না, তবু গোনা — কারণ থাকা মানে ছাড়টা ছাড় নয়, এমন
+     *       নয় (২২২ → ২২৪-এর একই যুক্তি)। ⭐ কোনো দরজা কাগজ বানাতে শুরু করলে সারিটা CREATE_DOORS-এ যায় আর ছাদ এক কমে
+     */
+    /*
+     * ── ⚠️ ৩৭১ → ৩৭২ (দুই শাখা মিলে ৩৭১ + ৮২ + ১ = ৪৫৪, fe বান্ডেল ২০ অক্টোবর), ১৯ অক্টোবর ২০২৬ (গ্রাহকের নামের পাশে পয়েন্ট আর শাখা — মালিকের স্থায়ী নিয়ম; a5) ──────────────────────
+     *   +১  ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET — Sales-এর POS পর্দার গ্রাহক-পিকার: POS মালিকের আদেশে ২১ অক্টোবর
+     *       পর্যন্ত বন্ধ; খুললে nameWithPoint() আর with(Customer::PLACE), তখন সারি ওঠে আর ছাদ কমে
+     */
+    /*
+     * ── ⚠️ ৪৫৪ → ৪৫৬ (fe বান্ডেল ২১ অক্টোবর; শাখায় ছিল ৩৭১ → ৩৭৩), ২০ অক্টোবর ২০২৬ (অ্যাপের প্রোফাইল মেনু ০.৪.৪১ — fe; a6) ────────────────────────────────────────────
+     *   +৪  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.photo.store / .destroy, api.me.devices.index / .destroy: নিজের ছবি আর
+     *       নিজের ফোন, `/me`-র মতোই কোনো চাবি নেই (ঢুকতে পারা মানুষকে নিজের ছবি বদলাতে বা চুরি যাওয়া ফোন বের করতে বাধা নয়);
+     *       পাহারা নিয়ামকে — কেবল নিজের সারি আর নিজের টোকেন, অন্যের ফোনের id ৪০৪ (AStolenPhoneStayedSignedInTest)
+     *   −২  ছবির দরজা (`users.photo`, `api.users.photo`) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeFace')` → UserPolicy::seeFace
+     *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
+     *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
+     */
+    private const CEILING = 456;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -322,9 +322,15 @@
                                     @endphp
                                     <div data-home-listing class="px-4 py-2">
                                         @forelse ($homeList->rows->take(4) as $listRow)
+                                            {{-- ⓘ ঘরটা লেখা বা HTML (অনুমোদনের তালিকা ইনবক্সের `what` অংশ দেয় — নাম, নম্বর · পক্ষ, কারণ): লেখায় যেমন আছে,
+                                                 আর `title`-এ কেবল সাদা লেখা — ⛔ নইলে ট্যাগসুদ্ধ HTML গুণের ভেতরে পড়ে মার্কআপ ভাঙত (a5-এর তালিকা মেশানোয়, ২১ অক্টোবর ২০২৬) --}}
+                                            @php
+                                                $cell = ($firstCol['render'])($listRow);
+                                                $cellText = trim((string) preg_replace('/\s+/u', ' ', strip_tags($cell instanceof \Illuminate\Contracts\Support\Htmlable ? $cell->toHtml() : (string) $cell)));
+                                            @endphp
                                             <div class="flex min-w-0 items-center justify-between gap-2 border-b border-(--color-border) py-1.5 text-sm last:border-b-0">
                                                 {{-- ⓘ কাটা নয়, দুই লাইন পর্যন্ত — "নম্বর · নাম · পয়েন্ট · শাখা" পুরোটা পড়া যায় (মালিকের স্থায়ী নিয়ম; fe-র ছবি-যাচাই) --}}
-                                                <span class="line-clamp-2 min-w-0 break-words leading-snug text-(--color-ink-body)" title="{{ ($firstCol['render'])($listRow) }}">{{ ($firstCol['render'])($listRow) }}</span>
+                                                <span class="line-clamp-2 min-w-0 break-words leading-snug text-(--color-ink-body)" title="{{ $cellText }}">{{ $cell }}</span>
                                                 <span class="shrink-0">{{ ($lastCol['render'])($listRow) }}</span>
                                             </div>
                                         @empty

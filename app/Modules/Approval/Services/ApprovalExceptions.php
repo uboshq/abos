@@ -43,10 +43,14 @@ final class ApprovalExceptions
      */
     public const LOOK_AT = 200;
 
-    public function __construct(private readonly ApprovalSla $sla) {}
+    public function __construct(
+        private readonly ApprovalSla $sla,
+        private readonly ApprovalFacts $facts,
+        private readonly ApprovalFlowService $flows,
+    ) {}
 
     /**
-     * @return Collection<int, array{kind: string, what: string, detail: string, id: int|null}>
+     * @return Collection<int, array{kind: string, what: string, detail: string, id: int|null, no?: ?string, party?: ?string}>
      */
     public function all(): Collection
     {
@@ -89,7 +93,7 @@ final class ApprovalExceptions
     /** ⛔ সময় পার, এখনো কারও হাতে যায়নি। */
     private function pastTheirTime(): array
     {
-        return Approval::query()
+        $rows = Approval::query()
             ->where('status', Approval::PENDING)
             ->whereNotNull('due_at')
             ->where('due_at', '<', now())
@@ -97,16 +101,14 @@ final class ApprovalExceptions
             // ⓘ সবচেয়ে পুরনোটা আগে — সেটাই সবচেয়ে বেশি কাউকে আটকে রেখেছে
             ->orderBy('due_at')
             ->limit(self::LOOK_AT)
-            ->get()
-            ->map(fn (Approval $a) => [
-                'kind' => 'sla_breached',
-                'what' => $a->module.' · '.$a->action,
-                'detail' => __('approval::exception.waiting_since', [
-                    'date' => $a->requested_at?->format('d-m-Y') ?? '—',
-                ]),
-                'id' => (int) $a->id,
-            ])
-            ->all();
+            ->get();
+
+        return $this->paperRows($rows, fn (Approval $a) => [
+            'kind' => 'sla_breached',
+            'detail' => __('approval::exception.waiting_since', [
+                'date' => $a->requested_at?->format('d-m-Y') ?? '—',
+            ]),
+        ]);
     }
 
     /**
@@ -118,7 +120,7 @@ final class ApprovalExceptions
      */
     private function changedAfterSigning(): array
     {
-        return Approval::query()
+        $rows = Approval::query()
             ->where('status', Approval::APPROVED)
             ->whereNotNull('state_hash')
 
@@ -149,15 +151,41 @@ final class ApprovalExceptions
                     app(DocumentFingerprint::class)->forApproval($a, $document),
                 );
             })
-            ->map(fn (Approval $a) => [
-                'kind' => 'changed_after_approval',
-                'what' => $a->module.' · '.$a->action,
-                'detail' => __('approval::exception.signed_on', [
-                    'date' => $a->decided_at?->format('d-m-Y') ?? '—',
-                ]),
-                'id' => (int) $a->id,
-            ])
-            ->all();
+            ->values();
+
+        return $this->paperRows($rows, fn (Approval $a) => [
+            'kind' => 'changed_after_approval',
+            'detail' => __('approval::exception.signed_on', [
+                'date' => $a->decided_at?->format('d-m-Y') ?? '—',
+            ]),
+        ]);
+    }
+
+    /**
+     * ⭐ কাগজের সারি — কাজের নাম, নম্বর আর পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬: *"অনেক জায়গায় তালিকায় শুধু ভাউচার নম্বর দেওয়া।
+     * সেখানে নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"*)।
+     *
+     * ⛔ আগে কাঁচা চাবি ("sales · delivery_order"), নম্বর নেই — কোন কাগজ সময় পার করল বা সইয়ের পর বদলাল, পর্দা দেখে বলা যেত না।
+     * ⓘ নাম মডিউলের নিজের ঘোষণা ([[ApprovalFlowService::labels()]]), নম্বর আর পক্ষ ইনবক্সের একই সেবা থেকে, গোটা দলের জন্য
+     * একবারে ([[ApprovalFacts]]) — সারি ধরে নয়। ⚠️ দেয়াল থাকে (`$pastWalls` না): নিরীক্ষক গোটা কোম্পানির সারি দেখেন, কিন্তু
+     * নিজের শাখার বাইরের কাগজের পক্ষ নয় — সেখানে আগের মতো কেবল কাজের নাম।
+     *
+     * @param  Collection<int, Approval>  $rows
+     * @param  callable(Approval): array{kind: string, detail: string}  $row
+     * @return list<array{kind: string, what: string, detail: string, id: int, no: ?string, party: ?string}>
+     */
+    private function paperRows(Collection $rows, callable $row): array
+    {
+        $facts = $this->facts->of($rows);
+        $labels = $this->flows->labels();
+
+        return $rows->map(fn (Approval $a) => [
+            ...$row($a),
+            'what' => $labels[$a->module.'.'.$a->action] ?? $a->module.' · '.$a->action,
+            'id' => (int) $a->id,
+            'no' => $facts[(int) $a->id]['no'] ?? null,
+            'party' => $facts[(int) $a->id]['party'] ?? null,
+        ])->values()->all();
     }
 
     /** ⓘ মেয়াদ শেষ হয়ে গেছে — তথ্য, ভুল নয়; কিন্তু দেখা দরকার। */

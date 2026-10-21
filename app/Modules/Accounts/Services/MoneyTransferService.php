@@ -75,11 +75,20 @@ final class MoneyTransferService
             $this->cash->lock($from->account);
             $this->assertEnoughInHand($from, $amount, on: $trxDate->toDateString());
 
+            /*
+             * ⛔ কাগজ দাতার বাক্সের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য শাখায় নয়"* (RCV-0143)। ⚠️ আগে কাগজ আর তার
+             * নম্বর বসত জমার মুহূর্তের উপরের শাখায়: A-র বাক্স থেকে পাঠানো, অথচ অন্য ট্যাবে উপরে B বাছা থাকলে কাগজ B-র, নম্বর
+             * B-র সিরিজের (পা দুটো আগে থেকেই বাক্স ধরে, [[legBranch()]])। ⓘ শাখাহীন বাক্স → আগের মতো।
+             */
+            $branchId = $from->branch_id !== null
+                ? (int) $from->branch_id
+                : (filled($data['branch_id'] ?? null) ? (int) $data['branch_id'] : CompanyContext::branchId());
+
             $transfer = MoneyTransfer::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $this->year($trxDate)->id,
-                'document_no' => $this->numbers->next('MT'),
+                'document_no' => $this->numbers->next('MT', $branchId),
                 'trx_date' => $trxDate->toDateString(),
                 'from_till_id' => $from->id,
                 'to_till_id' => $data['to_till_id'] ?? null,

@@ -84,11 +84,22 @@ final class SalesOrderService
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
-            $documentNo = $this->numbers->next('SO');
+            /*
+             * ⛔ আদেশ গ্রাহকের শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর
+             * ২০২৬)। ⓘ আগে উপরের শাখা: A-র গ্রাহকের আদেশ B-তে বসত, অথচ তাঁর বিল আর টাকা কেবল A-তে বসতে পারে ([[PostingEngine]]-এর
+             * পক্ষের পাহারা)। গ্রাহকের শাখা না থাকলে আগের মতো।
+             */
+            $customerId = (int) $data['customer_id'];
+            $branchId = $data['branch_id']
+                ?? (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['customer', $customerId]])['customer:'.$customerId] ?? null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('SO', $branchId);
 
             $order = SalesOrder::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'customer_id' => $data['customer_id'],

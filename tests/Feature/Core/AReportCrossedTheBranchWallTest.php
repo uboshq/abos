@@ -218,7 +218,8 @@ final class AReportCrossedTheBranchWallTest extends TestCase
     {
         $body = $this->phone()->assertOk()->json();
 
-        $this->assertSame([self::OURS], array_column($body['rows'], 'customer_name'),
+        // ⓘ সারিতে নামের পাশে পয়েন্ট আর শাখা (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬) — দেয়ালের দাবি কেবল নামটা মাপে
+        $this->assertSame([self::OURS], array_map(fn (string $name) => explode(' · ', $name)[0], array_column($body['rows'], 'customer_name')),
             '⛔ ফোনে অন্য শাখার বিক্রয় এসেছে।');
         $this->assertSame(0, bccomp((string) $body['totals']['total'], self::OURS_AMOUNT, 2));
 
@@ -226,9 +227,10 @@ final class AReportCrossedTheBranchWallTest extends TestCase
 
         $this->liftClerksLimit();
 
-        $this->assertSame([self::OURS, self::THEIRS], array_column($this->phone()->assertOk()->json('rows'), 'customer_name'));
-        $this->assertSame([self::THEIRS], array_column(
-            $this->phone(['branch_id' => $this->netrakona->id])->assertOk()->json('rows'), 'customer_name'));
+        $names = fn (array $rows) => array_map(fn (string $name) => explode(' · ', $name)[0], array_column($rows, 'customer_name'));
+        $this->assertSame([self::OURS, self::THEIRS], $names($this->phone()->assertOk()->json('rows')));
+        $this->assertSame([self::THEIRS], $names(
+            $this->phone(['branch_id' => $this->netrakona->id])->assertOk()->json('rows')));
     }
 
     // ── নির্ধারিত ফাইল ────────────────────────────────────────────────────
@@ -440,7 +442,8 @@ final class AReportCrossedTheBranchWallTest extends TestCase
     /** @return list<string> সারিগুলোর ক্রেতা, নাম ধরে সাজানো */
     private function names(ReportResult $result): array
     {
-        $names = array_map(fn (array $row): string => (string) $row['customer_name'], $result->rows);
+        // ⓘ নামটুকু — ঘরে পাশে পয়েন্ট আর শাখাও বসে ("নাম · পয়েন্ট · শাখা", ১৯ অক্টোবর ২০২৬); এই দাবি দেয়াল মাপে, লেখা নয়
+        $names = array_map(fn (array $row): string => explode(' · ', (string) $row['customer_name'])[0], $result->rows);
         sort($names);
 
         return $names;

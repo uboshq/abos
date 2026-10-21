@@ -414,14 +414,62 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     }
 
     /**
-     * নাম আর পয়েন্ট একসাথে — "নাম · পয়েন্ট"; পয়েন্টে না বসলে কেবল নাম। ফোনের বিজ্ঞপ্তির লেখায় (মালিক, ৭ অক্টোবর ২০২৬:
-     * "app e notification e customer er sathe point nai") — ফোন নিজে যেখানে জোড়ে, সেখানে এটা লাগে না।
+     * ⭐ গ্রাহকের শাখার নাম — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর
+     * শাখার নামও দিতে হবে।"* ⓘ ভাষা ধরে নাম (কোড "MMS"-এর মতো, পড়া যায় না)। ডাকার আগে `branch` একসাথে আনুন।
+     */
+    public function branchName(): ?string
+    {
+        $name = trim((string) $this->branch?->name());
+
+        return $name === '' ? null : $name;
+    }
+
+    /**
+     * ⭐ জায়গা — "পয়েন্ট · শাখা"; যেটা নেই সেটা বাদ, দুটোই না থাকলে null। আলাদা পয়েন্টের কলামে এটাই বসে।
+     */
+    public function placeName(): ?string
+    {
+        $place = implode(' · ', array_filter([$this->pointName(), $this->branchName()]));
+
+        return $place === '' ? null : $place;
+    }
+
+    /**
+     * নাম, পয়েন্ট আর শাখা একসাথে — "নাম · পয়েন্ট · শাখা"; যেটা নেই সেটা বাদ। ফোনের বিজ্ঞপ্তির লেখায় (মালিক, ৭ অক্টোবর ২০২৬:
+     * "app e notification e customer er sathe point nai"; শাখা ১৯ অক্টোবর থেকে) — এক নিয়ম, এক জায়গায়।
+     * ⚠️ ডাকার আগে `location.parent` আর `branch` একসাথে আনুন, নইলে তালিকায় সারি-প্রতি ডাক।
      */
     public function nameWithPoint(): string
     {
-        $point = $this->pointName();
+        $place = $this->placeName();
 
-        return $this->name().($point === null ? '' : ' · '.$point);
+        return $this->name().($place === null ? '' : ' · '.$place);
+    }
+
+    /**
+     * ⭐ জায়গার জন্য যা একসাথে আনতে হয় — পয়েন্ট (নিজের ধাপ আর মা) আর শাখা। তালিকা, পিকার আর ড্যাশবোর্ড এটা দিয়েই আনে,
+     * যাতে কোথাও একটা বাদ পড়ে সারি-প্রতি প্রশ্ন না যায়।
+     */
+    public const PLACE = ['location.parent', 'branch'];
+
+    /**
+     * ⓘ অন্য কাগজের ভেতর দিয়ে — `Customer::placeVia('customer')` → `['customer.location.parent', 'customer.branch']`,
+     * `placeVia('challan.customer')` → চালানের গ্রাহকের।
+     *
+     * @return list<string>
+     */
+    public static function placeVia(string $relation): array
+    {
+        return array_map(fn (string $r) => $relation.'.'.$r, self::PLACE);
+    }
+
+    /**
+     * পিকারের নাম — "নাম · পয়েন্ট · শাখা", নিষ্ক্রিয় হলে চিহ্নসহ ([[PickableWhileOwing::pickerName()]]-এর গ্রাহকের রূপ)।
+     * ⚠️ ডাকার আগে [[PLACE]] একসাথে আনুন।
+     */
+    public function pickerName(): string
+    {
+        return $this->is_active ? $this->nameWithPoint() : $this->nameWithPoint().' — '.__('core.inactive_with_balance');
     }
 
     /**

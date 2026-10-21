@@ -36,6 +36,8 @@ return [
     'bucket_90' => '90+ days',
     'state' => 'Status',
     'point' => 'Point',
+    'place' => 'Point · Branch',
+    'branch' => 'Branch',
     'area' => 'Area',
     'owner_name' => 'Owner name',
     'available_limit' => 'Available limit',

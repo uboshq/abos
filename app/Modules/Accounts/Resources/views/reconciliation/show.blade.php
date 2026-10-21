@@ -36,7 +36,11 @@
         [
             'key' => 'document',
             'label' => __('accounts::recon.document'),
-            'render' => fn ($l) => $l->voucher?->document_no,
+            // ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে কন্ট্রোলার, পাতার একবারে
+            'render' => fn ($l) => view('accounts::partials.number-party', [
+                'no' => $l->voucher?->document_no,
+                'party' => $l->voucher ? (($partyNames ?? [])[$l->voucher->id] ?? null) : null,
+            ]),
         ],
         [
             'key' => 'narration',
@@ -241,7 +245,10 @@
                     সার্ভারেও একই পাহারা আছে, আর সেটাই আসল পাহারা;
                     এটা কেবল যাতে কেউ চেপে ভুল বার্তা না পান।
                 --}}
-                @if ($summary['agrees'])
+                {{-- ⛔ যিনি খুলেছেন তিনি বন্ধ করেন না (maker-checker, সেবাতেও একই পাহারা) — বোতামের জায়গায় কারণটা --}}
+                @if ($summary['agrees'] && app(\App\Modules\Accounts\Services\BankReconciliationService::class)->openerMayNotClose($recon))
+                    <p role="note" class="text-sm text-(--color-badge-pending-ink)">{{ __('accounts::recon.needs_another_hand') }}</p>
+                @elseif ($summary['agrees'])
                     <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary">

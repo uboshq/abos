@@ -239,6 +239,9 @@ class ACancelledPaperLooksValidTest extends TestCase
             'documents.print' => 'আপলোড করা ফাইলই হুবহু (DocumentFileController::print) — ABOS কোনো কাগজ আঁকে না, আর ডকুমেন্টের "বাতিল" অবস্থা নেই',
             'sales.print_queue.index' => 'কিউয়ের পর্দা, কাগজ নয়',
             'sales.print_queue.settle' => 'কিউয়ের সারি মেটানোর কাজ, কাগজ নয়',
+            // ⓘ ফোনের দুই দরজা — ওয়েবের কিউয়ের একই দুই কাজ, কাগজ আঁকে না (a5, ১৭ অক্টোবর ২০২৬; [[SalesDeskApiController]])
+            'api.sales.desk.print_queue' => 'ফোনে না ছাপা কাগজের সারি — তালিকা, কাগজ নয় (sales.print_queue.index-এর ফোন-রূপ)',
+            'api.sales.desk.print_settle' => 'ফোনে "হাতে ছাপা হলো" — সারি মেটানো, কাগজ নয় (sales.print_queue.settle-এর ফোন-রূপ)',
             'system_admin.print_control' => 'ছাপার সেটিংসের পর্দা, কাগজ নয়',
             'system_admin.print_control.update' => 'ছাপার সেটিংস সংরক্ষণ, কাগজ নয়',
             'system_admin.print_control.preview' => 'বানানো নমুনা (PrintSample), সংরক্ষিত কাগজ নয় — বাতিল হতে পারে না',
