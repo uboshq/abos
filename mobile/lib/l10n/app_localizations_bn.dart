@@ -577,4 +577,200 @@ class AppL10nBn extends AppL10n {
   String ordersNewDueSynced(String when) {
     return 'বকেয়ার তথ্য সিঙ্ক $when';
   }
+
+  @override
+  String get counterLoadFailed =>
+      'কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।';
+
+  @override
+  String get counterAbsent =>
+      'সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।';
+
+  @override
+  String get counterThisUnit => 'এই একক';
+
+  @override
+  String counterNoFraction(String unit) {
+    return '$unit ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।';
+  }
+
+  @override
+  String counterQtyDecimals(String places) {
+    return 'পরিমাণ $places দশমিকের বেশি নয় (যেমন 2.5 বা 0.125)।';
+  }
+
+  @override
+  String get counterNoWarehouseLot =>
+      'গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।';
+
+  @override
+  String get counterPickProduct => 'পণ্য বাছুন।';
+
+  @override
+  String get counterPickLot => 'লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।';
+
+  @override
+  String get counterNeedQty => 'পরিমাণ দিন।';
+
+  @override
+  String get counterNeedRate => 'দর ছাড়া বিক্রি হয় না।';
+
+  @override
+  String counterDiscountRange(String min, String max) {
+    return 'ছাড় $min থেকে $max%।';
+  }
+
+  @override
+  String counterFreeMax(String max) {
+    return 'স্কিমে ফ্রি সর্বোচ্চ $max।';
+  }
+
+  @override
+  String get counterNoWarehouseSale =>
+      'গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।';
+
+  @override
+  String get counterPickBuyer => 'ক্রেতা বাছুন।';
+
+  @override
+  String get counterCartEmpty => 'কার্টে অন্তত একটা পণ্য দিন।';
+
+  @override
+  String get counterSold => 'বিক্রি হলো';
+
+  @override
+  String get counterDraftKept => 'খসড়া রাখা হলো';
+
+  @override
+  String get counterOpenBill => 'বিলটা দেখুন';
+
+  @override
+  String get counterSaleFailed => 'বিক্রি হলো না';
+
+  @override
+  String get counterSaleFailedRetry => 'বিক্রি করা গেল না। আবার চেষ্টা করুন।';
+
+  @override
+  String get counterOverviewFailed => 'সারাংশ আনা গেল না';
+
+  @override
+  String get counterCheckNet => 'নেট আছে কি না দেখে আবার চেষ্টা করুন।';
+
+  @override
+  String get counterMoneyTitle => 'টাকা নেওয়া';
+
+  @override
+  String counterMoneyReference(String ref) {
+    return 'রেফারেন্স: $ref';
+  }
+
+  @override
+  String get counterRemove => 'বাদ দিন';
+
+  @override
+  String get counterMoneyMethod => 'কীভাবে';
+
+  @override
+  String get counterMoneyAccount => 'কোন খাতে';
+
+  @override
+  String get counterMoneyAmount => 'টাকা';
+
+  @override
+  String get counterMoneyReferenceLabel => 'রেফারেন্স / লেনদেন নম্বর';
+
+  @override
+  String get counterMoneyAddAnother => 'আরেকটা টাকা যোগ করুন';
+
+  @override
+  String counterMoneyTotal(String amount) {
+    return 'মোট নেওয়া: $amount';
+  }
+
+  @override
+  String get counterUnreadableAmount =>
+      'অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।';
+
+  @override
+  String get counterVehicleTitle => 'গাড়ি ও ভাড়া';
+
+  @override
+  String get counterVehicleOwner => 'কার গাড়ি';
+
+  @override
+  String get counterVehicleOwn => 'আমাদের গাড়ি';
+
+  @override
+  String get counterVehicleHired => 'ভাড়ার গাড়ি';
+
+  @override
+  String get counterVehicleCustomer => 'ক্রেতার গাড়ি';
+
+  @override
+  String get counterVehicleNone => 'গাড়ি লাগবে না';
+
+  @override
+  String get counterCarrier => 'বাহক (পরিবহনকারী)';
+
+  @override
+  String get counterCarrierName => 'বাহকের নাম (তালিকায় না থাকলে)';
+
+  @override
+  String get counterFare => 'ভাড়া';
+
+  @override
+  String get counterFarePaidBy => 'ভাড়া কে দেবে';
+
+  @override
+  String get counterFareUs => 'আমরা — আমাদের খরচ';
+
+  @override
+  String get counterFareUsAddToBill => 'আমরা দেব, বিলে যোগ হবে';
+
+  @override
+  String get counterFareCustomer => 'ক্রেতা চালককে দেবেন';
+
+  @override
+  String get counterFareNone => 'ভাড়া নেই';
+
+  @override
+  String get counterFareNow => 'এখনই দিলাম';
+
+  @override
+  String get counterFareLater => 'পরে দেব';
+
+  @override
+  String get counterFareAccount => 'কোন খাত থেকে দিলেন';
+
+  @override
+  String get counterFareTrxId => 'লেনদেন নম্বর (TrxID)';
+
+  @override
+  String get counterFarePayer => 'কে দিলেন';
+
+  @override
+  String get counterFareCarrierLater => 'বাহক — যাঁকে পরে দেবেন';
+
+  @override
+  String get counterDeliveryTitle => 'মাল কীভাবে যাবে';
+
+  @override
+  String get counterDeliveryTakeNow => 'ক্রেতা এখনই নিয়ে যাবেন';
+
+  @override
+  String get counterDeliverySendLater => 'পরে পাঠানো হবে';
+
+  @override
+  String get counterDeliveryPickupLater => 'ক্রেতা পরে এসে নেবেন';
+
+  @override
+  String get counterShipTo => 'কোথায় পাঠানো হবে';
+
+  @override
+  String get counterShipDatePick => 'কবে পাঠানো হবে — তারিখ বাছুন';
+
+  @override
+  String counterShipDate(String date) {
+    return 'পাঠানোর তারিখ: $date';
+  }
 }

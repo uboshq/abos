@@ -658,5 +658,279 @@
         "type": "String"
       }
     }
+  },
+  "counterLoadFailed": "কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterLoadFailed": {
+    "description": "Counter: the setup could not be loaded"
+  },
+  "counterAbsent": "সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।",
+  "@counterAbsent": {
+    "description": "Counter: the server does not have the phone counter yet"
+  },
+  "counterThisUnit": "এই একক",
+  "@counterThisUnit": {
+    "description": "Counter: stands in for the unit name when the product has none"
+  },
+  "counterNoFraction": "{unit} ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।",
+  "@counterNoFraction": {
+    "description": "Counter: this unit takes whole numbers only",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterQtyDecimals": "পরিমাণ {places} দশমিকের বেশি নয় (যেমন 2.5 বা 0.125)।",
+  "@counterQtyDecimals": {
+    "description": "Counter: too many decimals in the quantity",
+    "placeholders": {
+      "places": {
+        "type": "String"
+      }
+    }
+  },
+  "counterNoWarehouseLot": "গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।",
+  "@counterNoWarehouseLot": {
+    "description": "Counter: no warehouse, so no lots"
+  },
+  "counterPickProduct": "পণ্য বাছুন।",
+  "@counterPickProduct": {
+    "description": "Counter: no product chosen"
+  },
+  "counterPickLot": "লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।",
+  "@counterPickLot": {
+    "description": "Counter: a lot-tracked product needs a lot"
+  },
+  "counterNeedQty": "পরিমাণ দিন।",
+  "@counterNeedQty": {
+    "description": "Counter: no quantity"
+  },
+  "counterNeedRate": "দর ছাড়া বিক্রি হয় না।",
+  "@counterNeedRate": {
+    "description": "Counter: a zero rate is refused"
+  },
+  "counterDiscountRange": "ছাড় {min} থেকে {max}%।",
+  "@counterDiscountRange": {
+    "description": "Counter: the discount percent is out of range",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterFreeMax": "স্কিমে ফ্রি সর্বোচ্চ {max}।",
+  "@counterFreeMax": {
+    "description": "Counter: more free quantity than the scheme allows",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterNoWarehouseSale": "গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।",
+  "@counterNoWarehouseSale": {
+    "description": "Counter: no warehouse, so no sale"
+  },
+  "counterPickBuyer": "ক্রেতা বাছুন।",
+  "@counterPickBuyer": {
+    "description": "Counter: no buyer chosen"
+  },
+  "counterCartEmpty": "কার্টে অন্তত একটা পণ্য দিন।",
+  "@counterCartEmpty": {
+    "description": "Counter: the cart is empty"
+  },
+  "counterSold": "বিক্রি হলো",
+  "@counterSold": {
+    "description": "Counter popup title: the sale is done"
+  },
+  "counterDraftKept": "খসড়া রাখা হলো",
+  "@counterDraftKept": {
+    "description": "Counter popup title: the sale is kept as a draft"
+  },
+  "counterOpenBill": "বিলটা দেখুন",
+  "@counterOpenBill": {
+    "description": "Counter popup: open the new bill"
+  },
+  "counterSaleFailed": "বিক্রি হলো না",
+  "@counterSaleFailed": {
+    "description": "Counter popup title: the sale was refused"
+  },
+  "counterSaleFailedRetry": "বিক্রি করা গেল না। আবার চেষ্টা করুন।",
+  "@counterSaleFailedRetry": {
+    "description": "Counter: fallback when the sale failed without a reason"
+  },
+  "counterOverviewFailed": "সারাংশ আনা গেল না",
+  "@counterOverviewFailed": {
+    "description": "Counter popup title: the summary before confirming could not be loaded"
+  },
+  "counterCheckNet": "নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterCheckNet": {
+    "description": "Counter: fallback when the server could not be reached"
+  },
+  "counterMoneyTitle": "টাকা নেওয়া",
+  "@counterMoneyTitle": {
+    "description": "Counter: the money-taken sheet title and its button"
+  },
+  "counterMoneyReference": "রেফারেন্স: {ref}",
+  "@counterMoneyReference": {
+    "description": "Counter money sheet: a payment reference",
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "counterRemove": "বাদ দিন",
+  "@counterRemove": {
+    "description": "Counter: remove a payment or a cart line"
+  },
+  "counterMoneyMethod": "কীভাবে",
+  "@counterMoneyMethod": {
+    "description": "Counter money sheet: the payment method"
+  },
+  "counterMoneyAccount": "কোন খাতে",
+  "@counterMoneyAccount": {
+    "description": "Counter money sheet: the money account"
+  },
+  "counterMoneyAmount": "টাকা",
+  "@counterMoneyAmount": {
+    "description": "Counter money sheet: the amount box"
+  },
+  "counterMoneyReferenceLabel": "রেফারেন্স / লেনদেন নম্বর",
+  "@counterMoneyReferenceLabel": {
+    "description": "Counter money sheet: the reference box"
+  },
+  "counterMoneyAddAnother": "আরেকটা টাকা যোগ করুন",
+  "@counterMoneyAddAnother": {
+    "description": "Counter money sheet: add one more payment"
+  },
+  "counterMoneyTotal": "মোট নেওয়া: {amount}",
+  "@counterMoneyTotal": {
+    "description": "Counter money sheet: the total taken (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterUnreadableAmount": "অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।",
+  "@counterUnreadableAmount": {
+    "description": "Counter money sheet: the amount is not a number"
+  },
+  "counterVehicleTitle": "গাড়ি ও ভাড়া",
+  "@counterVehicleTitle": {
+    "description": "Counter: the vehicle and fare sheet title and its button"
+  },
+  "counterVehicleOwner": "কার গাড়ি",
+  "@counterVehicleOwner": {
+    "description": "Counter vehicle sheet: whose vehicle"
+  },
+  "counterVehicleOwn": "আমাদের গাড়ি",
+  "@counterVehicleOwn": {
+    "description": "Counter vehicle sheet: our own vehicle"
+  },
+  "counterVehicleHired": "ভাড়ার গাড়ি",
+  "@counterVehicleHired": {
+    "description": "Counter vehicle sheet: a hired vehicle"
+  },
+  "counterVehicleCustomer": "ক্রেতার গাড়ি",
+  "@counterVehicleCustomer": {
+    "description": "Counter vehicle sheet: the buyer's vehicle"
+  },
+  "counterVehicleNone": "গাড়ি লাগবে না",
+  "@counterVehicleNone": {
+    "description": "Counter vehicle sheet: no vehicle"
+  },
+  "counterCarrier": "বাহক (পরিবহনকারী)",
+  "@counterCarrier": {
+    "description": "Counter vehicle sheet: the carrier list"
+  },
+  "counterCarrierName": "বাহকের নাম (তালিকায় না থাকলে)",
+  "@counterCarrierName": {
+    "description": "Counter vehicle sheet: a carrier typed by hand"
+  },
+  "counterFare": "ভাড়া",
+  "@counterFare": {
+    "description": "Counter vehicle sheet: the fare amount"
+  },
+  "counterFarePaidBy": "ভাড়া কে দেবে",
+  "@counterFarePaidBy": {
+    "description": "Counter vehicle sheet: who pays the fare"
+  },
+  "counterFareUs": "আমরা — আমাদের খরচ",
+  "@counterFareUs": {
+    "description": "Counter vehicle sheet: we pay, as our cost"
+  },
+  "counterFareUsAddToBill": "আমরা দেব, বিলে যোগ হবে",
+  "@counterFareUsAddToBill": {
+    "description": "Counter vehicle sheet: we pay and add it to the bill"
+  },
+  "counterFareCustomer": "ক্রেতা চালককে দেবেন",
+  "@counterFareCustomer": {
+    "description": "Counter vehicle sheet: the buyer pays the driver"
+  },
+  "counterFareNone": "ভাড়া নেই",
+  "@counterFareNone": {
+    "description": "Counter vehicle sheet: no fare"
+  },
+  "counterFareNow": "এখনই দিলাম",
+  "@counterFareNow": {
+    "description": "Counter vehicle sheet: the fare is paid now"
+  },
+  "counterFareLater": "পরে দেব",
+  "@counterFareLater": {
+    "description": "Counter vehicle sheet: the fare is paid later"
+  },
+  "counterFareAccount": "কোন খাত থেকে দিলেন",
+  "@counterFareAccount": {
+    "description": "Counter vehicle sheet: the account the fare came from"
+  },
+  "counterFareTrxId": "লেনদেন নম্বর (TrxID)",
+  "@counterFareTrxId": {
+    "description": "Counter vehicle sheet: the bank or MFS transaction id"
+  },
+  "counterFarePayer": "কে দিলেন",
+  "@counterFarePayer": {
+    "description": "Counter vehicle sheet: the person who paid the fare"
+  },
+  "counterFareCarrierLater": "বাহক — যাঁকে পরে দেবেন",
+  "@counterFareCarrierLater": {
+    "description": "Counter vehicle sheet: the carrier owed the fare"
+  },
+  "counterDeliveryTitle": "মাল কীভাবে যাবে",
+  "@counterDeliveryTitle": {
+    "description": "Counter: the delivery sheet title"
+  },
+  "counterDeliveryTakeNow": "ক্রেতা এখনই নিয়ে যাবেন",
+  "@counterDeliveryTakeNow": {
+    "description": "Counter delivery sheet: taken now"
+  },
+  "counterDeliverySendLater": "পরে পাঠানো হবে",
+  "@counterDeliverySendLater": {
+    "description": "Counter delivery sheet: sent later"
+  },
+  "counterDeliveryPickupLater": "ক্রেতা পরে এসে নেবেন",
+  "@counterDeliveryPickupLater": {
+    "description": "Counter delivery sheet: collected later"
+  },
+  "counterShipTo": "কোথায় পাঠানো হবে",
+  "@counterShipTo": {
+    "description": "Counter delivery sheet: the address"
+  },
+  "counterShipDatePick": "কবে পাঠানো হবে — তারিখ বাছুন",
+  "@counterShipDatePick": {
+    "description": "Counter delivery sheet: no date chosen yet"
+  },
+  "counterShipDate": "পাঠানোর তারিখ: {date}",
+  "@counterShipDate": {
+    "description": "Counter delivery sheet: the chosen date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }

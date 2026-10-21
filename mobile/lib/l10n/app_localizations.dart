@@ -1032,6 +1032,360 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বকেয়ার তথ্য সিঙ্ক {when}'**
   String ordersNewDueSynced(String when);
+
+  /// Counter: the setup could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterLoadFailed;
+
+  /// Counter: the server does not have the phone counter yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।'**
+  String get counterAbsent;
+
+  /// Counter: stands in for the unit name when the product has none
+  ///
+  /// In bn, this message translates to:
+  /// **'এই একক'**
+  String get counterThisUnit;
+
+  /// Counter: this unit takes whole numbers only
+  ///
+  /// In bn, this message translates to:
+  /// **'{unit} ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।'**
+  String counterNoFraction(String unit);
+
+  /// Counter: too many decimals in the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ {places} দশমিকের বেশি নয় (যেমন 2.5 বা 0.125)।'**
+  String counterQtyDecimals(String places);
+
+  /// Counter: no warehouse, so no lots
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।'**
+  String get counterNoWarehouseLot;
+
+  /// Counter: no product chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন।'**
+  String get counterPickProduct;
+
+  /// Counter: a lot-tracked product needs a lot
+  ///
+  /// In bn, this message translates to:
+  /// **'লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।'**
+  String get counterPickLot;
+
+  /// Counter: no quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ দিন।'**
+  String get counterNeedQty;
+
+  /// Counter: a zero rate is refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দর ছাড়া বিক্রি হয় না।'**
+  String get counterNeedRate;
+
+  /// Counter: the discount percent is out of range
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় {min} থেকে {max}%।'**
+  String counterDiscountRange(String min, String max);
+
+  /// Counter: more free quantity than the scheme allows
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিমে ফ্রি সর্বোচ্চ {max}।'**
+  String counterFreeMax(String max);
+
+  /// Counter: no warehouse, so no sale
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।'**
+  String get counterNoWarehouseSale;
+
+  /// Counter: no buyer chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা বাছুন।'**
+  String get counterPickBuyer;
+
+  /// Counter: the cart is empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টে অন্তত একটা পণ্য দিন।'**
+  String get counterCartEmpty;
+
+  /// Counter popup title: the sale is done
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি হলো'**
+  String get counterSold;
+
+  /// Counter popup title: the sale is kept as a draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখা হলো'**
+  String get counterDraftKept;
+
+  /// Counter popup: open the new bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলটা দেখুন'**
+  String get counterOpenBill;
+
+  /// Counter popup title: the sale was refused
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি হলো না'**
+  String get counterSaleFailed;
+
+  /// Counter: fallback when the sale failed without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি করা গেল না। আবার চেষ্টা করুন।'**
+  String get counterSaleFailedRetry;
+
+  /// Counter popup title: the summary before confirming could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সারাংশ আনা গেল না'**
+  String get counterOverviewFailed;
+
+  /// Counter: fallback when the server could not be reached
+  ///
+  /// In bn, this message translates to:
+  /// **'নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterCheckNet;
+
+  /// Counter: the money-taken sheet title and its button
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা নেওয়া'**
+  String get counterMoneyTitle;
+
+  /// Counter money sheet: a payment reference
+  ///
+  /// In bn, this message translates to:
+  /// **'রেফারেন্স: {ref}'**
+  String counterMoneyReference(String ref);
+
+  /// Counter: remove a payment or a cart line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get counterRemove;
+
+  /// Counter money sheet: the payment method
+  ///
+  /// In bn, this message translates to:
+  /// **'কীভাবে'**
+  String get counterMoneyMethod;
+
+  /// Counter money sheet: the money account
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাতে'**
+  String get counterMoneyAccount;
+
+  /// Counter money sheet: the amount box
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get counterMoneyAmount;
+
+  /// Counter money sheet: the reference box
+  ///
+  /// In bn, this message translates to:
+  /// **'রেফারেন্স / লেনদেন নম্বর'**
+  String get counterMoneyReferenceLabel;
+
+  /// Counter money sheet: add one more payment
+  ///
+  /// In bn, this message translates to:
+  /// **'আরেকটা টাকা যোগ করুন'**
+  String get counterMoneyAddAnother;
+
+  /// Counter money sheet: the total taken (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট নেওয়া: {amount}'**
+  String counterMoneyTotal(String amount);
+
+  /// Counter money sheet: the amount is not a number
+  ///
+  /// In bn, this message translates to:
+  /// **'অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।'**
+  String get counterUnreadableAmount;
+
+  /// Counter: the vehicle and fare sheet title and its button
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি ও ভাড়া'**
+  String get counterVehicleTitle;
+
+  /// Counter vehicle sheet: whose vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'কার গাড়ি'**
+  String get counterVehicleOwner;
+
+  /// Counter vehicle sheet: our own vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'আমাদের গাড়ি'**
+  String get counterVehicleOwn;
+
+  /// Counter vehicle sheet: a hired vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়ার গাড়ি'**
+  String get counterVehicleHired;
+
+  /// Counter vehicle sheet: the buyer's vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতার গাড়ি'**
+  String get counterVehicleCustomer;
+
+  /// Counter vehicle sheet: no vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি লাগবে না'**
+  String get counterVehicleNone;
+
+  /// Counter vehicle sheet: the carrier list
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহক (পরিবহনকারী)'**
+  String get counterCarrier;
+
+  /// Counter vehicle sheet: a carrier typed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহকের নাম (তালিকায় না থাকলে)'**
+  String get counterCarrierName;
+
+  /// Counter vehicle sheet: the fare amount
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া'**
+  String get counterFare;
+
+  /// Counter vehicle sheet: who pays the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া কে দেবে'**
+  String get counterFarePaidBy;
+
+  /// Counter vehicle sheet: we pay, as our cost
+  ///
+  /// In bn, this message translates to:
+  /// **'আমরা — আমাদের খরচ'**
+  String get counterFareUs;
+
+  /// Counter vehicle sheet: we pay and add it to the bill
+  ///
+  /// In bn, this message translates to:
+  /// **'আমরা দেব, বিলে যোগ হবে'**
+  String get counterFareUsAddToBill;
+
+  /// Counter vehicle sheet: the buyer pays the driver
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা চালককে দেবেন'**
+  String get counterFareCustomer;
+
+  /// Counter vehicle sheet: no fare
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া নেই'**
+  String get counterFareNone;
+
+  /// Counter vehicle sheet: the fare is paid now
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনই দিলাম'**
+  String get counterFareNow;
+
+  /// Counter vehicle sheet: the fare is paid later
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে দেব'**
+  String get counterFareLater;
+
+  /// Counter vehicle sheet: the account the fare came from
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাত থেকে দিলেন'**
+  String get counterFareAccount;
+
+  /// Counter vehicle sheet: the bank or MFS transaction id
+  ///
+  /// In bn, this message translates to:
+  /// **'লেনদেন নম্বর (TrxID)'**
+  String get counterFareTrxId;
+
+  /// Counter vehicle sheet: the person who paid the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'কে দিলেন'**
+  String get counterFarePayer;
+
+  /// Counter vehicle sheet: the carrier owed the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহক — যাঁকে পরে দেবেন'**
+  String get counterFareCarrierLater;
+
+  /// Counter: the delivery sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল কীভাবে যাবে'**
+  String get counterDeliveryTitle;
+
+  /// Counter delivery sheet: taken now
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা এখনই নিয়ে যাবেন'**
+  String get counterDeliveryTakeNow;
+
+  /// Counter delivery sheet: sent later
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে পাঠানো হবে'**
+  String get counterDeliverySendLater;
+
+  /// Counter delivery sheet: collected later
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা পরে এসে নেবেন'**
+  String get counterDeliveryPickupLater;
+
+  /// Counter delivery sheet: the address
+  ///
+  /// In bn, this message translates to:
+  /// **'কোথায় পাঠানো হবে'**
+  String get counterShipTo;
+
+  /// Counter delivery sheet: no date chosen yet
+  ///
+  /// In bn, this message translates to:
+  /// **'কবে পাঠানো হবে — তারিখ বাছুন'**
+  String get counterShipDatePick;
+
+  /// Counter delivery sheet: the chosen date
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানোর তারিখ: {date}'**
+  String counterShipDate(String date);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

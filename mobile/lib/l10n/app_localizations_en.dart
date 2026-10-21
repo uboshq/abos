@@ -585,4 +585,200 @@ class AppL10nEn extends AppL10n {
   String ordersNewDueSynced(String when) {
     return 'Dues synced $when';
   }
+
+  @override
+  String get counterLoadFailed =>
+      'Could not open the counter. Check the connection and try again.';
+
+  @override
+  String get counterAbsent =>
+      'The phone counter is not on the server yet — tell the office.';
+
+  @override
+  String get counterThisUnit => 'This unit';
+
+  @override
+  String counterNoFraction(String unit) {
+    return '$unit is not sold in fractions — type a whole number.';
+  }
+
+  @override
+  String counterQtyDecimals(String places) {
+    return 'A quantity takes at most $places decimals (like 2.5 or 0.125).';
+  }
+
+  @override
+  String get counterNoWarehouseLot =>
+      'No warehouse found — lots need a warehouse.';
+
+  @override
+  String get counterPickProduct => 'Choose a product.';
+
+  @override
+  String get counterPickLot => 'Choose a lot — this product is sold by lot.';
+
+  @override
+  String get counterNeedQty => 'Give a quantity.';
+
+  @override
+  String get counterNeedRate => 'No sale without a rate.';
+
+  @override
+  String counterDiscountRange(String min, String max) {
+    return 'Discount is $min to $max%.';
+  }
+
+  @override
+  String counterFreeMax(String max) {
+    return 'The scheme allows at most $max free.';
+  }
+
+  @override
+  String get counterNoWarehouseSale =>
+      'No warehouse found — no sale without a warehouse.';
+
+  @override
+  String get counterPickBuyer => 'Choose a buyer.';
+
+  @override
+  String get counterCartEmpty => 'Put at least one product in the cart.';
+
+  @override
+  String get counterSold => 'Sold';
+
+  @override
+  String get counterDraftKept => 'Draft kept';
+
+  @override
+  String get counterOpenBill => 'See the bill';
+
+  @override
+  String get counterSaleFailed => 'Sale failed';
+
+  @override
+  String get counterSaleFailedRetry => 'Could not make the sale. Try again.';
+
+  @override
+  String get counterOverviewFailed => 'Could not load the summary';
+
+  @override
+  String get counterCheckNet => 'Check the connection and try again.';
+
+  @override
+  String get counterMoneyTitle => 'Amount received';
+
+  @override
+  String counterMoneyReference(String ref) {
+    return 'Reference: $ref';
+  }
+
+  @override
+  String get counterRemove => 'Remove';
+
+  @override
+  String get counterMoneyMethod => 'How';
+
+  @override
+  String get counterMoneyAccount => 'Into which account';
+
+  @override
+  String get counterMoneyAmount => 'Amount';
+
+  @override
+  String get counterMoneyReferenceLabel => 'Reference / transaction number';
+
+  @override
+  String get counterMoneyAddAnother => 'Add another amount';
+
+  @override
+  String counterMoneyTotal(String amount) {
+    return 'Total taken: $amount';
+  }
+
+  @override
+  String get counterUnreadableAmount =>
+      'Could not read the figure — type numbers only, like 1250.';
+
+  @override
+  String get counterVehicleTitle => 'Vehicle and fare';
+
+  @override
+  String get counterVehicleOwner => 'Whose vehicle';
+
+  @override
+  String get counterVehicleOwn => 'Our vehicle';
+
+  @override
+  String get counterVehicleHired => 'Hired vehicle';
+
+  @override
+  String get counterVehicleCustomer => 'Buyer\'s vehicle';
+
+  @override
+  String get counterVehicleNone => 'No vehicle needed';
+
+  @override
+  String get counterCarrier => 'Carrier';
+
+  @override
+  String get counterCarrierName => 'Carrier name (if not in the list)';
+
+  @override
+  String get counterFare => 'Fare';
+
+  @override
+  String get counterFarePaidBy => 'Who pays the fare';
+
+  @override
+  String get counterFareUs => 'We do — our cost';
+
+  @override
+  String get counterFareUsAddToBill => 'We pay, added to the bill';
+
+  @override
+  String get counterFareCustomer => 'The buyer pays the driver';
+
+  @override
+  String get counterFareNone => 'No fare';
+
+  @override
+  String get counterFareNow => 'Paid now';
+
+  @override
+  String get counterFareLater => 'Pay later';
+
+  @override
+  String get counterFareAccount => 'Paid from which account';
+
+  @override
+  String get counterFareTrxId => 'Transaction number (TrxID)';
+
+  @override
+  String get counterFarePayer => 'Who paid';
+
+  @override
+  String get counterFareCarrierLater => 'Carrier — to be paid later';
+
+  @override
+  String get counterDeliveryTitle => 'How the goods go';
+
+  @override
+  String get counterDeliveryTakeNow => 'The buyer takes them now';
+
+  @override
+  String get counterDeliverySendLater => 'Sent later';
+
+  @override
+  String get counterDeliveryPickupLater => 'The buyer collects them later';
+
+  @override
+  String get counterShipTo => 'Where to send';
+
+  @override
+  String get counterShipDatePick => 'When to send — choose a date';
+
+  @override
+  String counterShipDate(String date) {
+    return 'Send date: $date';
+  }
 }
