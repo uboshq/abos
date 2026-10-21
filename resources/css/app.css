@@ -1152,6 +1152,14 @@
     display: var(--topbar-label, inline);
 }
 
+/* ⛔ ফোনে (sm-এর নিচে) লেখা নয়, কেবল আইকন — এই নিয়ম স্তরের বাইরে, তাই Tailwind-এর `hidden sm:inline` একে হারাতে পারত না:
+   ৩৭৫px-এ "＋ তৈরি করুন" পুরো লেখায় বসত আর কোম্পানির নাম ঢেকে দিত (লাইভ-পরখ, ২১ অক্টোবর ২০২৬) */
+@media (width < 40rem) {
+    .topbar .topbar-label {
+        display: none;
+    }
+}
+
 .topbar :is(a, button):not(.pops-onto-page a, .pops-onto-page button) {
     min-height: var(--topbar-control-h, 36px);
     height: var(--topbar-control-h, 36px);

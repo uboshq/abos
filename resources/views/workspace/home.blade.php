@@ -214,9 +214,9 @@
 
         @if ($position)
             <a href="{{ $position->href }}" data-money-position
-               class="block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-ink-inverse) shadow-lg
+               class="block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-on-brand-ink) shadow-lg
                       transition-shadow hover:shadow-xl"
-               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900))"
+               style="background: linear-gradient(135deg, var(--color-on-brand-from), var(--color-on-brand-to))"
                @if ($position->definition) title="{{ $position->definition }}" @endif>
                 <p class="flex items-center gap-1.5 text-sm text-white/70">
                     @if ($position->icon)

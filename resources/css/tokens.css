@@ -334,6 +334,12 @@
     --color-on-brand-surface: rgb(255 255 255 / .08);
     --color-on-brand-in: #8ff0c0;
     --color-on-brand-out: #ffc9a3;
+    /* ⛔ জমিন আর কালিও এখানেই, গাঢ় থিমে বদলায় না — লাইভ-পরখ, ২১ অক্টোবর ২০২৬: বাক্স brand-700→900 আর ink-inverse নিত, অথচ গাঢ় থিমে
+       brand-700 = হালকা অ্যাকসেন্ট (লেখার রং হিসেবে) আর ink-inverse = #0f172a, তাই অন্ধকারে টাকার অঙ্ক হালকা নীলের উপর কালো লেখা হত।
+       ⓘ জমিন ব্যবহারকারীর নিজের অ্যাকসেন্টের গাঢ় দুই ধাপ (আলোর মান), দুই থিমেই। */
+    --color-on-brand-ink: #ffffff;
+    --color-on-brand-from: rgb(var(--accent-700, 13 71 161) / 1);
+    --color-on-brand-to: rgb(var(--accent-900, 8 19 43) / 1);
 
     /* ⭐ কাগজের অবস্থার চিপ ([[x-ui.paper-state]]) — প্রতিটা চিপ নিজের রং paper_states.json থেকে বসায়; এগুলো কেবল
        ডিফল্ট, যাতে কোনো চিপ রং না পেলেও নিরপেক্ষ দেখায় (AScreenAskedForAColourNobodyDeclaresTest) */
