@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Core\Support\PaperStates;
+use Illuminate\Support\Arr;
 use Tests\TestCase;
 
 /**
@@ -79,6 +80,25 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
             'প্রোভাইডারের ফেরত-বার্তা (webhook) — আমাদের বিজ্ঞপ্তি নয়'],
     ];
 
+    /**
+     * "rejected" নামের চাবিতে "বাতিল" থাকার ছাড়: [ফাইল, চাবি (ডট-পথ), কারণ]। fe, ২১ অক্টোবর ২০২৬: rejected = "প্রত্যাখ্যাত",
+     * cancelled = "বাতিল" — দুটো আলাদা অবস্থা; "বাতিল" থাকতে পারে কেবল যেখানে মানেটাই বাতিল।
+     *
+     * @var list<array{0: string, 1: string, 2: string}>
+     */
+    private const REJECTED_SAYS_CANCELLED = [
+        ['app/Modules/Inventory/Resources/lang/bn/field.php', 'qc_rejected',
+            'মান-পরীক্ষার ফল (মালের অংশ বাতিল), দলিলের অবস্থা নয় — তাই "মান-পরীক্ষায় বাতিল" (fe)'],
+        ['app/Modules/Inventory/Resources/lang/bn/status.php', 'qc_rejected',
+            'মান-পরীক্ষার ফল (মালের অংশ বাতিল), দলিলের অবস্থা নয় — তাই "মান-পরীক্ষায় বাতিল" (fe)'],
+        ['app/Modules/Sales/Resources/lang/bn/auto_finish.php', 'rejected',
+            'সই প্রত্যাখ্যাত বলে, আর পরের কাজ বলে — বিক্রিটা সংশোধন বা বাতিল করা'],
+        ['app/Modules/Sales/Resources/lang/bn/message.php', 'return_rejected',
+            'সই প্রত্যাখ্যাত হলে ফেরতটা সত্যিই বাতিল হয় (FinishTheReturnOnTheLastSignature → cancel)'],
+        ['app/Modules/Sales/Resources/lang/bn/order_status.php', 'rejected_cannot_cancel',
+            'ফেরানো আদেশ আবার বাতিল করা যায় না — বাতিল এখানে কাজটার নাম'],
+    ];
+
     /** @return list<string> রেপোর মূল থেকে পথ */
     private function files(): array
     {
@@ -142,6 +162,47 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
 
         $stale = array_values(array_diff_key(self::EXCEPTIONS, $used));
         $this->assertSame([], $stale, '⛔ ছাড়ের তালিকায় বাসি ছাড় — যে লেখার জন্য ছাড়, সেটা আর নেই।');
+    }
+
+    public function test_no_rejected_key_says_cancelled(): void
+    {
+        $files = array_merge($this->files(), ['lang/bn/core.php']);
+        $used = [];
+        $found = [];
+        $seen = 0;
+        foreach ($files as $file) {
+            $words = include base_path($file);
+            if (! is_array($words)) {
+                continue;
+            }
+            foreach (Arr::dot($words) as $key => $text) {
+                if (! is_string($text) || stripos((string) $key, 'reject') === false) {
+                    continue;
+                }
+                $seen++;
+                if (! str_contains($text, 'বাতিল')) {
+                    continue;
+                }
+                $allowed = false;
+                foreach (self::REJECTED_SAYS_CANCELLED as $i => [$exFile, $exKey]) {
+                    if ($exFile === $file && $exKey === (string) $key) {
+                        $allowed = true;
+                        $used[$i] = true;
+                    }
+                }
+                if (! $allowed) {
+                    $found[] = "{$file}: {$key} — \"{$text}\"";
+                }
+            }
+        }
+
+        $this->assertGreaterThan(20, $seen, 'প্রস্তুতিটাই ভুল — rejected নামের কোনো চাবি পাওয়া যায়নি।');
+        $this->assertSame([], $found, "⛔ প্রত্যাখ্যাত কাগজকে \"বাতিল\" বলা হচ্ছে (বাতিল আলাদা অবস্থা):\n".implode("\n", $found));
+        $stale = array_values(array_diff_key(self::REJECTED_SAYS_CANCELLED, $used));
+        $this->assertSame([], $stale, '⛔ ছাড়ের তালিকায় বাসি ছাড় — যে লেখার জন্য ছাড়, সেটা আর নেই।');
+
+        $this->assertSame('মান-পরীক্ষায় বাতিল', __('inventory::status.qc_rejected', [], 'bn'));
+        $this->assertSame('মান-পরীক্ষায় বাতিল', __('inventory::field.qc_rejected', [], 'bn'));
     }
 
     public function test_the_shown_state_words_equal_the_shared_file(): void
