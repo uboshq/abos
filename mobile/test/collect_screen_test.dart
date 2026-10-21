@@ -540,8 +540,9 @@ void main() {
     expect(find.text('মিলেছে · পঁয়তাল্লিশ হাজার টাকা মাত্র'), findsOneWidget, reason: '⛔ কথায় টাকা সার্ভারের (রসিদের হুবহু) নয়');
     expect(find.textContaining('INV-0094 30,000.00'), findsOneWidget);
     expect(find.text('খাতায় যা যাবে'), findsOneWidget);
-    expect(find.text('Dr 1102 ডাচ-বাংলা ব্যাংক · ময়মনসিংহ'), findsOneWidget);
-    expect(find.text('Cr 1130 পাওনা · করিম স্টোর · ময়মনসিংহ'), findsOneWidget);
+    // ⓘ সার্ভারের খাতা (a6 d5cc9657f): টাকার খাত Dr, গ্রাহকের পাওনা ১১১০ প্রাপ্য হিসাব Cr
+    expect(find.text('Dr 1101-07 আল-আমিনের নগদ · ময়মনসিংহ'), findsOneWidget);
+    expect(find.text('Cr 1110 প্রাপ্য হিসাব · করিম স্টোর · ময়মনসিংহ'), findsOneWidget);
     expect(find.text('মোট মিলেছে'), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-needs-signature')), findsOneWidget, reason: 'বিষয় ৪/১১: সইয়ে যাবে বলা নেই');
     expect(find.text('নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।'), findsOneWidget);
@@ -1078,6 +1079,110 @@ void main() {
       expect(chip('collect-method-cash').selected, isTrue);
       expect(chip('collect-method-cash').labelStyle?.color, c.selectedLabel);
     });
+  });
+
+  group('the journal balances (fe, 22 Oct 2026; a6 d5cc9657f ledgerLines)', () {
+    /// পর্দার টাকা → পয়সা ("৳45,000.51" → 4500051)
+    int paisa(String text) => paisaOf(text.split('|').last.replaceAll('৳', '').replaceAll(',', '').trim());
+
+    Future<void> check(WidgetTester tester, FakeCollect api, String what) async {
+      final p = api.lastPreview!;
+      final dr = p.lines.fold(0, (s, l) => s + l.dr);
+      final cr = p.lines.fold(0, (s, l) => s + l.cr);
+      final applied = paisa(_texts(tester, 'collect-net-applied'));
+      final unapplied = paisa(_texts(tester, 'collect-unapplied'));
+      expect([dr, cr, p.totalDr, p.totalCr], everyElement(applied + unapplied),
+          reason: '⛔ $what: Dr $dr · Cr $cr · মোট ${p.totalDr}/${p.totalCr} ≠ বিলে প্রয়োগ + অপ্রয়োগকৃত ${applied + unapplied}');
+      expect(find.text('মোট মিলেছে'), findsOneWidget, reason: '⛔ $what: মেলা খাতায় "মোট মিলেছে" নেই');
+    }
+
+    for (final (what, amount, method, adjust) in [
+      ('cash, oldest first', '45000', 'cash', <String, String>{}),
+      ('bank with a charge', '45000', 'transfer', {'charge': '25'}),
+      ('rounding ৳0.51 (the sign state)', '45000', 'transfer', {'rounding': '0.51'}),
+      ('discount, VDS and AIT', '40000', 'cash', {'discount': '1000', 'vds': '500', 'ait': '200'}),
+      ('more than the due', '60000', 'cash', <String, String>{}),
+      ('MFS', '1500', 'mfs', <String, String>{}),
+    ]) {
+      testWidgets('10 · Dr = Cr = applied + unapplied, in paisa: $what', (tester) async {
+        final api = FakeCollect();
+        await _pump(tester, _screen(api));
+        await _pickShop(tester);
+        await _type(tester, 'collect-amount', amount);
+        if (method != 'cash') {
+          await _tap(tester, 'collect-method-$method');
+          await _type(tester, 'collect-reference', 'NP1');
+        }
+        if (adjust['charge'] case final c?) {
+          await _tap(tester, 'collect-bank-change');
+          await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), c);
+          await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+          await tester.pumpAndSettle();
+        }
+        if (adjust.keys.any((k) => k != 'charge')) {
+          await _tap(tester, 'collect-adjust');
+          if (adjust['rounding'] case final r?) {
+            await _tap(tester, 'collect-difference-rounding');
+            await _type(tester, 'collect-difference', r);
+          }
+          if (adjust['discount'] case final d?) await _type(tester, 'collect-difference', d);
+          if (adjust['vds'] case final v?) await _type(tester, 'collect-vds', v);
+          if (adjust['ait'] case final a?) await _type(tester, 'collect-ait', a);
+        }
+        await _review(tester);
+        await check(tester, api, what);
+      });
+    }
+
+    testWidgets('10 · the sign state reads Dr 1102 45,000.00 + Dr 5305 0.51 = Cr 1110 45,000.51', (tester) async {
+      final api = FakeCollect();
+      await _pump(tester, _screen(api));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-method-transfer');
+      await _type(tester, 'collect-reference', 'NP1');
+      await _tap(tester, 'collect-adjust');
+      await _tap(tester, 'collect-difference-rounding');
+      await _type(tester, 'collect-difference', '0.51');
+      await _review(tester);
+      expect(_texts(tester, 'collect-journal-0'), 'Dr 1102 ডাচ-বাংলা ব্যাংক চলতি · ময়মনসিংহ | 45,000.00');
+      expect(_texts(tester, 'collect-journal-1'), 'Dr 5305 রাউন্ডিং পার্থক্য · ময়মনসিংহ | 0.51', reason: '⛔ রাউন্ডিংয়ের ৫৩০৫ লাইন নেই');
+      expect(_texts(tester, 'collect-journal-2'), 'Cr 1110 প্রাপ্য হিসাব · করিম স্টোর · ময়মনসিংহ | 45,000.51');
+      expect(_texts(tester, 'collect-net-applied'), 'বিলে প্রয়োগ | ৳45,000.51');
+      expect(find.text('মোট মিলেছে'), findsOneWidget);
+    });
+
+    testWidgets('10 · an unbalanced preview never says "মোট মিলেছে"', (tester) async {
+      final api = FakeCollect(unbalancedPreview: true);
+      await _pump(tester, _screen(api));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _review(tester);
+      expect(find.text('মোট মিলেছে'), findsNothing, reason: '⛔ মেলেনি, তবু "মোট মিলেছে"');
+      expect(find.text('মোট মেলেনি — পোস্ট করবেন না, অফিসে জানান।'), findsOneWidget);
+    });
+
+    test('10 · "balanced" needs Dr = Cr, lines that add up, the server not saying otherwise, and Cr = applied + unapplied', () {
+      const ok = [JournalLine(account: 'Dr', dr: 4500000, cr: 0), JournalLine(account: 'Cr', dr: 0, cr: 4500000)];
+      expect(JournalLines.isBalanced(ok, 4500000, 4500000, serverBalanced: true, expected: 4500000), isTrue);
+      expect(JournalLines.isBalanced(ok, 4500000, 4500001), isFalse, reason: 'মোট Dr ≠ Cr');
+      expect(JournalLines.isBalanced(ok, 4500051, 4500051), isFalse, reason: 'লাইনের যোগ মোটের সমান নয়');
+      expect(JournalLines.isBalanced(ok, 4500000, 4500000, serverBalanced: false), isFalse, reason: 'সার্ভার বলল মেলেনি');
+      expect(JournalLines.isBalanced(ok, 4500000, 4500000, expected: 4500051), isFalse, reason: 'পর্দার প্রয়োগ + অপ্রয়োগকৃতের সাথে মেলে না');
+    });
+  });
+
+  testWidgets('18 · a customer outside this person\'s reach (the server\'s deliberate 404) says so, is not an old server, and nothing goes',
+      (tester) async {
+    final api = FakeCollect(outOfReach: true);
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    expect(find.text('এই গ্রাহক আপনার শাখায় নেই'), findsWidgets, reason: '⛔ নাগালের বাইরের গ্রাহকের কথা নেই');
+    expect(find.text('নিজে থেকে: পুরনো বিল আগে'), findsNothing, reason: '⛔ ৪০৪ পুরনো সার্ভার বলে ধরা হলো');
+    await _type(tester, 'collect-amount', '45000');
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull);
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-draft'))).onPressed, isNull);
+    expect(api.sent, isEmpty);
   });
 
   testWidgets('the collections list\'s "＋ নতুন আদায়" opens this screen', (tester) async {

@@ -115,7 +115,7 @@ class CollectScreen extends StatefulWidget {
   State<CollectScreen> createState() => _CollectScreenState();
 }
 
-enum _Bills { none, loading, loaded, absent, failed }
+enum _Bills { none, loading, loaded, absent, failed, outOfReach }
 
 /// পর্দা ২-এর পোস্টের ফল
 class CollectPostResult {
@@ -349,6 +349,14 @@ class _CollectScreenState extends State<CollectScreen> {
         _plan = CollectionPlan(bills: bills.bills, credits: bills.credits);
       });
       _reallocate();
+    } on CustomerOutOfReach {
+      // ⛔ গ্রাহক নাগালের বাইরে (সার্ভারের ইচ্ছাকৃত ৪০৪) — পুরনো সার্ভার নয়; বলা হয়, পাঠানো বন্ধ
+      if (mounted && _customer?.id == picked.id) {
+        setState(() {
+          _billsState = _Bills.outOfReach;
+          _error = context.l10n.collectOutOfBranch;
+        });
+      }
     } catch (_) {
       if (mounted && _customer?.id == picked.id) setState(() => _billsState = _Bills.failed);
     }
@@ -528,6 +536,14 @@ class _CollectScreenState extends State<CollectScreen> {
     CollectionPreview? preview;
     try {
       preview = await widget.api.preview(_draft(confirm: true));
+    } on CustomerOutOfReach {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _billsState = _Bills.outOfReach;
+        _error = context.l10n.collectOutOfBranch;
+      });
+      return;
     } catch (_) {
       // ⓘ প্রিভিউ না এলে সারাংশ তবু খোলে — সার্ভার পোস্টে নিজেই সব দেখে
       preview = null;
@@ -1087,6 +1103,7 @@ class _CollectScreenState extends State<CollectScreen> {
           // ⛔ পুরনো সার্ভার: তালিকা নেই, সার্ভার নিজে পুরনো বিল আগে বসায়
           _Bills.absent => Text(w.collectBillsAuto, key: const ValueKey('collect-bills-auto')),
           _Bills.failed => Text(w.collectBillsFailed, key: const ValueKey('collect-bills-failed'), style: muted),
+          _Bills.outOfReach => Text(w.collectOutOfBranch, key: const ValueKey('collect-out-of-branch'), style: muted),
           _Bills.loaded when ordered.isEmpty => Text(w.collectBillsNone, key: const ValueKey('collect-bills-none'), style: muted),
           _Bills.loaded when _folded => Text(
               applied.isEmpty ? w.collectBillsAuto : (_manual ? applied.join(' · ') : w.collectBillsAutoWith(applied.join(' · '))),
@@ -1199,7 +1216,7 @@ class _CollectScreenState extends State<CollectScreen> {
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
-            onPressed: _busy || _party != 'customer' ? null : _saveDraft,
+            onPressed: _busy || _party != 'customer' || _billsState == _Bills.outOfReach ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
         ),
@@ -1209,7 +1226,7 @@ class _CollectScreenState extends State<CollectScreen> {
           child: FilledButton(
             key: const ValueKey('collect-post'),
             style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
-            onPressed: _busy || _party != 'customer' || _roundingTooBig ? null : _review,
+            onPressed: _busy || _party != 'customer' || _roundingTooBig || _billsState == _Bills.outOfReach ? null : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
           ),
         ),
@@ -1417,7 +1434,14 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
             // ── খাতায় যা যাবে ──
             if (p != null && p.lines.isNotEmpty)
               _Section(key: const ValueKey('collect-journal'), title: w.collectJournalTitle, children: [
-                JournalLines(lines: p.lines, totalDr: p.totalDr, totalCr: p.totalCr),
+                JournalLines(
+                  lines: p.lines,
+                  totalDr: p.totalDr,
+                  totalCr: p.totalCr,
+                  serverBalanced: p.balanced,
+                  // ⓘ গ্রাহকের পাওনা থেকে যা কমে = পাওয়া + কাটা + ছাড়/রাউন্ডিং = বিলে প্রয়োগ + অপ্রয়োগকৃত (সার্ভারের Cr)
+                  expected: d.netApplied == null ? null : d.netApplied! + d.unapplied!,
+                ),
               ]),
             // ── নিয়ন্ত্রণ ──
             _Section(key: const ValueKey('collect-controls'), title: w.collectControlsTitle, children: [
@@ -1955,16 +1979,31 @@ String _isoDay(String iso) {
 
 /// ⭐ খাতায় যা যাবে — "Dr 1102 ডাচ্-বাংলা ব্যাংক · ময়মনসিংহ  45,000.00"; নিচে মোট মেলে কি না (বিষয় ১০)
 class JournalLines extends StatelessWidget {
-  const JournalLines({super.key, required this.lines, required this.totalDr, required this.totalCr});
+  const JournalLines(
+      {super.key, required this.lines, required this.totalDr, required this.totalCr, this.serverBalanced, this.expected});
 
   final List<JournalLine> lines;
   final int totalDr;
   final int totalCr;
 
+  /// সার্ভারের `summary.balanced`; না পাঠালে null
+  final bool? serverBalanced;
+
+  /// পর্দার হিসাব — বিলে প্রয়োগ + অপ্রয়োগকৃত, পয়সায়; পুরনো সার্ভারে null
+  final int? expected;
+
+  /// ⭐ "মোট মিলেছে" কেবল যখন সত্যিই মেলে: Dr = Cr, লাইনগুলোর যোগ মোটের সমান, সার্ভার "মেলেনি" বলেনি, আর Cr = পর্দার
+  /// বিলে প্রয়োগ + অপ্রয়োগকৃত (fe, ২২ অক্টোবর ২০২৬) — পয়সায়, পূর্ণসংখ্যায়
+  static bool isBalanced(List<JournalLine> lines, int totalDr, int totalCr, {bool? serverBalanced, int? expected}) {
+    final dr = lines.fold(0, (s, l) => s + l.dr);
+    final cr = lines.fold(0, (s, l) => s + l.cr);
+    return totalDr == totalCr && dr == totalDr && cr == totalCr && serverBalanced != false && (expected == null || totalCr == expected);
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = context.l10n;
-    final balanced = totalDr == totalCr;
+    final balanced = isBalanced(lines, totalDr, totalCr, serverBalanced: serverBalanced, expected: expected);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (final (i, l) in lines.indexed) ...[
         if (i > 0) const Divider(height: 1),

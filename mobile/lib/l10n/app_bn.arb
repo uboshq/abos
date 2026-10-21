@@ -10525,6 +10525,10 @@
   "@collectSendForSign": {
     "description": "Collection screen 2: the post button when the owner must sign first"
   },
+  "collectOutOfBranch": "এই গ্রাহক আপনার শাখায় নেই",
+  "@collectOutOfBranch": {
+    "description": "Collection: the server answers 404 for a customer outside this person's reach (on purpose, so existence is not revealed)"
+  },
   "collectOtherIncome": "অন্য আয়",
   "@collectOtherIncome": {
     "description": "Voucher list: income from non-customers, a separate entry"

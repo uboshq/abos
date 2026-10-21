@@ -7845,6 +7845,9 @@ class AppL10nEn extends AppL10n {
   String get collectSendForSign => 'Send for signature';
 
   @override
+  String get collectOutOfBranch => 'This customer is not in your branch';
+
+  @override
   String get collectOtherIncome => 'Other income';
 
   @override

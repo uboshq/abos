@@ -7711,6 +7711,9 @@ class AppL10nBn extends AppL10n {
   String get collectSendForSign => 'সইয়ে পাঠান';
 
   @override
+  String get collectOutOfBranch => 'এই গ্রাহক আপনার শাখায় নেই';
+
+  @override
   String get collectOtherIncome => 'অন্য আয়';
 
   @override

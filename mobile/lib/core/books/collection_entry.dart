@@ -402,6 +402,14 @@ class CollectionSaved {
 bool isDoorMissing(Object error) =>
     error is DioException && const {404, 405}.contains(error.response?.statusCode);
 
+int? _status(Object error) => error is DioException ? error.response?.statusCode : null;
+
+/// ⭐ বাছা গ্রাহক এই মানুষের নাগালে নেই — অন্য শাখার, বা SR-এর নিজের ডিলার নয়। সার্ভার ইচ্ছে করে ৪০৪ দেয় (গ্রাহক আছে কি না
+/// ফাঁস হয় না; fe, ২২ অক্টোবর ২০২৬)। ⛔ এটা পুরনো সার্ভার নয় — পর্দা বলে "এই গ্রাহক আপনার শাখায় নেই", আর পাঠানো বন্ধ।
+class CustomerOutOfReach implements Exception {
+  const CustomerOutOfReach();
+}
+
 /// ট্রান্সফার মোড — সেটআপের `transfer_modes:[{id, name}]`
 class TransferMode {
   const TransferMode({required this.id, required this.name});
@@ -497,7 +505,7 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
           queryParameters: {'customer': customerId});
       return OpenBills.fromJson(response.data ?? const {});
     } catch (e) {
-      if (isDoorMissing(e)) return null;
+      if (await _oldServerOr(e)) return null;
       rethrow;
     }
   }
@@ -509,9 +517,24 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
           await ApiClient.dio.post<Map<String, dynamic>>('/sales/collections/preview', data: draft.toPayload());
       return CollectionPreview.fromJson(response.data ?? const {});
     } catch (e) {
-      if (isDoorMissing(e)) return null;
+      if (await _oldServerOr(e)) return null;
       rethrow;
     }
+  }
+
+  /// ⭐ দুই রকম ৪০৪ আলাদা (fe, ২২ অক্টোবর ২০২৬): ৪০৫ মানে দরজাই নেই — পুরনো সার্ভার; ৪০৪ হলে গ্রাহক ছাড়া একবার খোলা বিল
+  /// জিজ্ঞেস করে দেখা — নতুন সার্ভার তখন ৪২২ বলে ("গ্রাহক লাগবে"), পুরনো সার্ভারে দরজা নেই তাই আবার ৪০৪/৪০৫। নতুন সার্ভারের ৪০৪
+  /// মানে গ্রাহক নাগালের বাইরে → [CustomerOutOfReach]। অন্য ভুল যেমন ছিল তেমন (false, ডাকা জায়গা আবার ছোড়ে)।
+  static Future<bool> _oldServerOr(Object error) async {
+    final status = _status(error);
+    if (status == 405) return true;
+    if (status != 404) return false;
+    try {
+      await ApiClient.dio.get<Map<String, dynamic>>('/sales/collections/open-bills');
+    } catch (probe) {
+      if (isDoorMissing(probe)) return true;
+    }
+    throw const CustomerOutOfReach();
   }
 
   @override

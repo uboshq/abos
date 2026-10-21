@@ -12691,6 +12691,12 @@ abstract class AppL10n {
   /// **'সইয়ে পাঠান'**
   String get collectSendForSign;
 
+  /// Collection: the server answers 404 for a customer outside this person's reach (on purpose, so existence is not revealed)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই গ্রাহক আপনার শাখায় নেই'**
+  String get collectOutOfBranch;
+
   /// Voucher list: income from non-customers, a separate entry
   ///
   /// In bn, this message translates to:

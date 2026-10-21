@@ -2099,6 +2099,7 @@
   "collectRoundingSign": "Rounding {amount} — posts after the owner's signature",
   "collectOwnerSign": "This collection needs the owner's signature — it goes to the books after signing",
   "collectSendForSign": "Send for signature",
+  "collectOutOfBranch": "This customer is not in your branch",
   "collectOtherIncome": "Other income",
   "collectOtherIncomeHint": "From someone who is not a customer, such as rent",
   "collectFromCustomerHint": "From a customer — on one page"

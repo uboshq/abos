@@ -72,6 +72,54 @@ Map<String, dynamic> previewJson({List<String> stops = const [], bool needsSigna
       'stops': stops,
     };
 
+
+/// ⭐ খাতায় যা যাবে — a6-এর সার্ভারের হুবহু নিয়মে (d5cc9657f, CollectionService::ledgerLines; পোস্ট আর প্রিভিউ একই জায়গা থেকে):
+///
+///     Dr  টাকার খাত            পাওয়া টাকা − ব্যাংক চার্জ
+///     Dr  ৫২১০ ব্যাংক চার্জ / ৫২১১ মোবাইল ব্যাংকিং চার্জ   চার্জ
+///     Dr  ১১৩৮ উৎসে কাটা ভ্যাট পাওনা   VDS
+///     Dr  ১১৩৫ অগ্রিম আয়কর           AIT
+///     Dr  ৪১২০ আদায়ে বিক্রয় ছাড়  বা  ৫৩০৫ রাউন্ডিং পার্থক্য   ছাড়/রাউন্ডিং
+///     Cr  ১১১০ প্রাপ্য হিসাব · গ্রাহক   সবগুলোর যোগ (অপ্রয়োগকৃত অংশও এখানে)
+///
+/// ⓘ [unbalanced]: পরীক্ষার জন্য ভুল সার্ভার — Cr এক পয়সা কম, আর `balanced: false`
+({List<Map<String, String>> lines, int dr, int cr}) serverJournal(CollectionDraft d, List<CollectionAccount> accounts,
+    {bool unbalanced = false}) {
+  final amount = paisaOf(d.amount);
+  final charge = paisaOf(d.bankCharge);
+  final vds = paisaOf(d.vds);
+  final ait = paisaOf(d.ait);
+  final difference = paisaOf(d.difference?.amount);
+  final gross = amount + vds + ait + difference;
+  final money = accounts.where((a) => a.id == d.accountId).firstOrNull;
+  String text(int paisa) => paisaText(paisa);
+  final lines = <Map<String, String>>[
+    {'account': '${money?.code ?? ''} ${money?.name ?? ''}'.trim(), 'branch': 'ময়মনসিংহ', 'dr': text(amount - charge), 'cr': '0.00'},
+    if (charge > 0)
+      {'account': money?.kind == 'mfs' ? '5211 মোবাইল ব্যাংকিং চার্জ' : '5210 ব্যাংক চার্জ', 'branch': 'ময়মনসিংহ', 'dr': text(charge), 'cr': '0.00'},
+    if (vds > 0) {'account': '1138 উৎসে কাটা ভ্যাট পাওনা', 'branch': 'ময়মনসিংহ', 'dr': text(vds), 'cr': '0.00'},
+    if (ait > 0) {'account': '1135 অগ্রিম আয়কর', 'branch': 'ময়মনসিংহ', 'dr': text(ait), 'cr': '0.00'},
+    if (difference > 0)
+      {
+        'account': d.difference!.kind == 'discount' ? '4120 আদায়ে বিক্রয় ছাড়' : '5305 রাউন্ডিং পার্থক্য',
+        'branch': 'ময়মনসিংহ',
+        'dr': text(difference),
+        'cr': '0.00',
+      },
+    {'account': '1110 প্রাপ্য হিসাব · করিম স্টোর', 'branch': 'ময়মনসিংহ', 'dr': '0.00', 'cr': text(unbalanced ? gross - 1 : gross)},
+  ];
+  final dr = lines.fold(0, (s, l) => s + paisaOf(l['dr']));
+  final cr = lines.fold(0, (s, l) => s + paisaOf(l['cr']));
+  return (lines: lines, dr: dr, cr: cr);
+}
+
+/// সার্ভারের সইয়ের নিয়ম (Settlement::differenceNeedsOwner): ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে
+bool serverNeedsOwner(CollectionDraft d) {
+  final amount = paisaOf(d.difference?.amount);
+  if (amount <= 0) return false;
+  return d.difference!.kind == 'discount' || amount > 50;
+}
+
 class FakeCollect implements CollectionEntryApi {
   FakeCollect({
     this.shops = const [shop],
@@ -86,6 +134,8 @@ class FakeCollect implements CollectionEntryApi {
     this.slowTimes = 0,
     this.billsFail = false,
     this.slipState = 'posted',
+    this.unbalancedPreview = false,
+    this.outOfReach = false,
     this.transferModes = const [
       {'id': 'tm-beftn', 'code': 'BEFTN', 'name': 'BEFTN'},
       {'id': 'tm-npsb', 'code': 'NPSB', 'name': 'NPSB'},
@@ -122,6 +172,15 @@ class FakeCollect implements CollectionEntryApi {
   /// স্লিপের উত্তরের `state` — "পোস্ট" চাওয়া খসড়া স্লিপ পেলে সার্ভার পোস্ট করে
   final String slipState;
 
+  /// ভুল সার্ভার — প্রিভিউর Dr ≠ Cr আর `balanced: false`
+  final bool unbalancedPreview;
+
+  /// গ্রাহক নাগালের বাইরে — সার্ভারের ইচ্ছাকৃত ৪০৪ (খোলা বিল আর প্রিভিউ দুটোতেই)
+  final bool outOfReach;
+
+  /// শেষ প্রিভিউর উত্তর — দাবিগুলো খাতার যোগ মেলায়
+  CollectionPreview? lastPreview;
+
   /// ⛔ পুরনো সার্ভার — খোলা বিল, প্রিভিউ আর স্লিপের দরজা নেই, সংরক্ষণে কেবল আইডি
   final bool oldServer;
   final bool noPreview;
@@ -157,14 +216,27 @@ class FakeCollect implements CollectionEntryApi {
   @override
   Future<OpenBills?> openBills(String customerId) async {
     if (billsFail) throw StateError('500');
+    if (outOfReach) throw const CustomerOutOfReach();
     return oldServer ? null : OpenBills.fromJson(billsJson);
   }
 
   @override
   Future<CollectionPreview?> preview(CollectionDraft draft) async {
+    if (outOfReach) throw const CustomerOutOfReach();
     if (oldServer || noPreview) return null;
     previewed.add(draft);
-    return CollectionPreview.fromJson(previewData);
+    // ⓘ খাতার লাইন পাঠানো আদায় থেকে, সার্ভারের নিয়মে; থামার কারণ, কথায় টাকা আর জোর-করা সই previewData থেকে
+    final j = serverJournal(draft, accountList, unbalanced: unbalancedPreview);
+    final summary = Map<String, dynamic>.from(previewData['summary'] as Map? ?? const {});
+    final json = <String, dynamic>{
+      ...previewData,
+      'lines': j.lines,
+      'total_dr': paisaText(j.dr),
+      'total_cr': paisaText(j.cr),
+      'needs_signature': previewData['needs_signature'] == true || serverNeedsOwner(draft),
+      'summary': {...summary, 'balanced': !unbalancedPreview && j.dr == j.cr},
+    };
+    return lastPreview = CollectionPreview.fromJson(json);
   }
 
   @override
