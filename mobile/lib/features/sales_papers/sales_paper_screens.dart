@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -26,7 +28,9 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 enum SalesPaperKind { invoice, challan }
 
 extension on SalesPaperKind {
-  String get title => this == SalesPaperKind.invoice ? 'বিক্রয় বিল' : 'চালান';
+  /// `invoice` বা `challan` — ARB-এর select-এর চাবি
+  String get word => name;
+  String title(BuildContext context) => context.l10n.salesPapersKindTitle(word);
   String get path => this == SalesPaperKind.invoice ? 'invoices' : 'challans';
   String get recentKind => this == SalesPaperKind.invoice ? 'invoice' : 'challan';
   String get printType => this == SalesPaperKind.invoice ? 'SalesInvoice' : 'DeliveryChallan';
@@ -92,8 +96,8 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: '${widget.kind.title}ের তালিকা আনা গেল না।',
-            whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.salesPapersListLoadFailed(widget.kind.word),
+            whenAbsent: context.l10n.salesPapersNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -106,7 +110,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
     final invoice = widget.kind == SalesPaperKind.invoice;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.title ?? widget.kind.title),
+      appBar: AbosScreenBar(title: widget.title ?? widget.kind.title(context)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -131,9 +135,9 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                 key: const ValueKey('papers-search'),
                 controller: _search,
                 textInputAction: TextInputAction.search,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'নম্বর বা দোকানের নাম',
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: context.l10n.salesPapersSearch,
                   isDense: true,
                 ),
                 onSubmitted: (_) => _load(),
@@ -142,12 +146,12 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
             if (_busy && page == null) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (page != null && _rows.isNotEmpty)
-              TotalStrip(label: 'মোট ${widget.kind.title}', value: Money.taka(page.sum), count: page.count),
+              TotalStrip(label: context.l10n.salesPapersTotal(widget.kind.word), value: Money.taka(page.sum), count: page.count),
             if (page != null && _rows.isEmpty)
               EmptyState(
                 icon: Icons.receipt_long_outlined,
-                title: 'এই সময়ে কোনো ${widget.kind.title} নেই',
-                message: 'তারিখ বদলে বা নিচে টেনে আবার দেখুন।',
+                title: context.l10n.salesPapersEmptyTitle(widget.kind.word),
+                message: context.l10n.salesPapersEmptyMessage,
               ),
             for (final r in _rows)
               Card(
@@ -179,7 +183,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                     children: [
                       Text(Money.taka(r.total), style: const TextStyle(fontWeight: FontWeight.w700)),
                       if (invoice && r.due != null)
-                        Text(Money.valueOrZero(r.due) > 0.004 ? 'বাকি ${Money.taka(r.due)}' : 'শোধ',
+                        Text(Money.valueOrZero(r.due) > 0.004 ? context.l10n.salesPapersDueAmount(Money.taka(r.due)) : context.l10n.salesPapersPaid,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Money.valueOrZero(r.due) > 0.004 ? context.palette.danger : context.palette.success)),
@@ -194,7 +198,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                   key: const ValueKey('papers-more'),
                   onPressed: _busy ? null : () => _load(more: true),
                   icon: const Icon(Icons.expand_more),
-                  label: const Text('আরও'),
+                  label: Text(context.l10n.salesPapersMore),
                 ),
               ),
           ],
@@ -238,7 +242,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
       RecentPapers.note(
           kind: widget.kind.recentKind, id: widget.id, number: paper.no, party: withPoint(paper.customer, paper.point, paper.branch));
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${widget.kind.title}টা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.salesPapersLoadFailed(widget.kind.word)));
     }
   }
 
@@ -249,15 +253,15 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
 
     return Scaffold(
       appBar: AbosScreenBar(
-        title: p == null ? widget.kind.title : '${widget.kind.title} · ${p.no}',
+        title: p == null ? widget.kind.title(context) : '${widget.kind.title(context)} · ${p.no}',
         actions: [
           if (p != null)
             IconButton(
               key: const ValueKey('paper-print'),
-              tooltip: 'ছাপা / পাঠান',
+              tooltip: context.l10n.salesPapersPrint,
               icon: const Icon(Icons.print_outlined),
               onPressed: () => DocumentActionsSheet.show(context,
-                  type: widget.kind.printType, id: p.id, title: '${widget.kind.title} · ${p.no}', fileStem: p.no),
+                  type: widget.kind.printType, id: p.id, title: '${widget.kind.title(context)} · ${p.no}', fileStem: p.no),
             ),
         ],
       ),
@@ -281,23 +285,23 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                       if (placeOf(p.point, p.branch) != null)
                         Text(placeOf(p.point, p.branch)!, style: TextStyle(color: context.palette.onSurfaceMuted)),
                       const SizedBox(height: AppSpacing.xs),
-                      _pair(context, 'তারিখ', dayOf(p.date)),
-                      if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair(context, 'বিক্রির নম্বর', p.saleNo!),
+                      _pair(context, context.l10n.salesPapersDate, dayOf(p.date)),
+                      if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair(context, context.l10n.salesPapersSaleNo, p.saleNo!),
                       if (p.status.isNotEmpty || p.statusLabel.isNotEmpty)
                         PaperStateFact(
                             chip: AppStatusChip.forServer(p.status,
                                 key: const ValueKey('paper-state'), fallbackLabel: p.statusLabel, kind: widget.kind.paperKind)),
-                      if (p.dueOn != null) _pair(context, 'মেয়াদ', dayOf(p.dueOn)),
-                      if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair(context, 'গুদাম', p.warehouse!),
-                      if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair(context, 'গাড়ি', p.vehicleNo!),
-                      if (p.createdBy != null && p.createdBy!.isNotEmpty) _pair(context, 'লিখেছেন', p.createdBy!),
+                      if (p.dueOn != null) _pair(context, context.l10n.salesPapersDueOn, dayOf(p.dueOn)),
+                      if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair(context, context.l10n.salesPapersWarehouse, p.warehouse!),
+                      if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair(context, context.l10n.salesPapersVehicle, p.vehicleNo!),
+                      if (p.createdBy != null && p.createdBy!.isNotEmpty) _pair(context, context.l10n.salesPapersCreatedBy, p.createdBy!),
                     ],
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                child: Text('পণ্য', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
+                child: Text(context.l10n.salesPapersProducts, style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
               ),
               for (final l in p.lines)
                 Card(
@@ -306,8 +310,8 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                     title: Text(l.name),
                     subtitle: Text([
                       '${Money.plain(l.qty)}${l.unit == null ? '' : ' ${l.unit}'} × ${Money.taka(l.rate)}',
-                      if (Money.valueOrZero(l.freeQty) > 0) 'ফ্রি ${Money.plain(l.freeQty)}',
-                      if (Money.valueOrZero(l.discount) > 0) 'ছাড় ${Money.taka(l.discount)}',
+                      if (Money.valueOrZero(l.freeQty) > 0) context.l10n.salesPapersFreeQty(Money.plain(l.freeQty)),
+                      if (Money.valueOrZero(l.discount) > 0) context.l10n.salesPapersLineDiscount(Money.taka(l.discount)),
                     ].join(' · ')),
                     trailing: Text(Money.taka(l.amount), style: const TextStyle(fontWeight: FontWeight.w600)),
                   ),
@@ -318,12 +322,12 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     children: [
-                      if (Money.valueOrZero(p.discount) > 0) _pair(context, 'ছাড়', Money.taka(p.discount)),
-                      if (Money.valueOrZero(p.tax) > 0) _pair(context, 'কর', Money.taka(p.tax)),
-                      _pair(context, 'মোট', Money.taka(p.total), bold: true),
-                      if (invoice && p.collected != null) _pair(context, 'আদায়', Money.taka(p.collected)),
+                      if (Money.valueOrZero(p.discount) > 0) _pair(context, context.l10n.salesPapersDiscount, Money.taka(p.discount)),
+                      if (Money.valueOrZero(p.tax) > 0) _pair(context, context.l10n.salesPapersTax, Money.taka(p.tax)),
+                      _pair(context, context.l10n.salesPapersGrandTotal, Money.taka(p.total), bold: true),
+                      if (invoice && p.collected != null) _pair(context, context.l10n.salesPapersCollected, Money.taka(p.collected)),
                       if (invoice && p.due != null)
-                        _pair(context, 'বাকি', Money.taka(p.due), bold: true,
+                        _pair(context, context.l10n.salesPapersDue, Money.taka(p.due), bold: true,
                             colour: Money.valueOrZero(p.due) > 0.004 ? context.palette.danger : context.palette.success),
                     ],
                   ),
@@ -332,7 +336,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
               if (p.links.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                  child: Text(invoice ? 'এই বিলের চালান' : 'এই চালানের বিল',
+                  child: Text(invoice ? context.l10n.salesPapersInvoiceChallans : context.l10n.salesPapersChallanInvoices,
                       style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final link in p.links)
@@ -419,14 +423,9 @@ class SalesPaperRow {
 
 /// অবস্থা বাংলায় — সার্ভারের লেখা বাংলা না হলে ফোনের নিজের
 String _status(String? status, String? label) {
-  const words = {
-    'draft': 'খসড়া',
-    'confirmed': 'নিশ্চিত',
-    'cancelled': 'বাতিল',
-    'closed': 'সম্পন্ন',
-    'awaiting_approval': 'অনুমোদনের অপেক্ষায়',
-  };
-  return words[status] ?? label ?? '';
+  const words = {'draft', 'confirmed', 'cancelled', 'closed', 'awaiting_approval'};
+  return words.contains(status) ? AppLocale.l10n.salesPapersStatus(status!) : label ?? '';
+
 }
 
 class SalesPaperPage {

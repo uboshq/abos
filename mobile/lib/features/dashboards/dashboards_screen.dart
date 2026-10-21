@@ -4,6 +4,7 @@ import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/dashboard/dashboard_api.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/records/customer_record.dart';
@@ -48,7 +49,7 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _error = errorMessageFor(error,
-            fallback: 'ড্যাশবোর্ডের তালিকা আনা গেল না।'));
+            fallback: context.l10n.salesDashboardsListLoadFailed));
       }
     }
   }
@@ -58,7 +59,7 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
     final entries = _entries;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'ব্যবসার ড্যাশবোর্ড', module: 'ড্যাশবোর্ড'),
+      appBar: AbosScreenBar(title: context.l10n.salesDashboardsTitle, module: context.l10n.salesDashboardsModule),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -72,8 +73,8 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
             else if (entries.isEmpty)
               EmptyState(
                   icon: Icons.dashboard_outlined,
-                  title: 'আপনার জন্য কোনো ড্যাশবোর্ড নেই',
-                  message: 'কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।',
+                  title: context.l10n.salesDashboardsNoneTitle,
+                  message: context.l10n.salesDashboardsNoneMessage,
                   action: _RefreshButton(onPressed: _load))
             else
               for (final entry in entries)
@@ -88,7 +89,7 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
                     subtitle: entry.stat == null
                         ? null
                         : Text(
-                            '${entry.stat!.label}: ${entry.stat!.hidden ? 'চাবি নেই' : (entry.stat!.value ?? '—')}',
+                            '${entry.stat!.label}: ${entry.stat!.hidden ? context.l10n.salesDashboardsNoKey : (entry.stat!.value ?? '—')}',
                             style: TextStyle(
                                 fontSize: 13,
                                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -146,7 +147,7 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _error =
-            errorMessageFor(error, fallback: 'ড্যাশবোর্ড আনা গেল না।'));
+            errorMessageFor(error, fallback: context.l10n.salesDashboardsLoadFailed));
       }
     }
   }
@@ -156,7 +157,7 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
     final d = _dashboard;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : widget.name, module: 'ড্যাশবোর্ড'),
+      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : widget.name, module: context.l10n.salesDashboardsModule),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -170,8 +171,8 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
             else if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
               EmptyState(
                   icon: Icons.insights_outlined,
-                  title: 'এই ড্যাশবোর্ডে এখনো কিছু নেই',
-                  message: 'কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।',
+                  title: context.l10n.salesDashboardsEmptyTitle,
+                  message: context.l10n.salesDashboardsEmptyMessage,
                   action: _RefreshButton(onPressed: _load))
             else ...[
               if (d.subtitle.isNotEmpty)
@@ -190,13 +191,12 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
                 child: OutlinedButton.icon(
                   key: const Key('dashboard-reports'),
                   icon: const Icon(Icons.assessment_outlined, size: 18),
-                  label: const Text('এই মডিউলের রিপোর্ট'),
+                  label: Text(context.l10n.salesDashboardsReports),
                   onPressed: () =>
                       Navigator.of(context).push(MaterialPageRoute<void>(
                     builder: (_) => ReportsScreen(
                       module: widget.module,
-                      title:
-                          '${d.title.isNotEmpty ? d.title : widget.name} — রিপোর্ট',
+                      title: context.l10n.salesDashboardsReportsTitle(d.title.isNotEmpty ? d.title : widget.name),
                     ),
                   )),
                 ),
@@ -251,7 +251,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _error =
-            errorMessageFor(error, fallback: 'বিক্রয়ের হালচাল আনা গেল না।'));
+            errorMessageFor(error, fallback: context.l10n.salesDashboardsOverviewLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -263,7 +263,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
     final d = _dashboard;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : 'বিক্রয়ের হালচাল', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : context.l10n.salesDashboardsOverviewTitle, module: context.l10n.salesDashboardsSalesModule),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -305,7 +305,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
               if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
                 EmptyState(
                     icon: Icons.lock_outline,
-                    title: 'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।',
+                    title: context.l10n.salesDashboardsOverviewNoAccess,
                     action: _RefreshButton(onPressed: _load)),
               for (final stat in d.stats) _StatCard(stat: stat),
               for (final panel in d.panels) _PanelCard(panel: panel),
@@ -346,7 +346,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               stat.hidden
-                  ? 'চাবি নেই — দেখার অনুমতি লাগে'
+                  ? context.l10n.salesDashboardsNoKeyLong
                   : (stat.value ?? '—'),
               style: TextStyle(
                 fontSize: stat.hidden ? 14 : 22,
@@ -464,7 +464,7 @@ class _RefreshButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
         onPressed: onPressed,
         icon: const Icon(Icons.refresh),
-        label: const Text('নতুন করে দেখুন'),
+        label: Text(context.l10n.salesDashboardsRefresh),
       );
 }
 
@@ -602,7 +602,8 @@ class _ListingCard extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('সর্বমোট', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              Text(context.l10n.salesDashboardsGrandTotal, style:
+ TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
               if (rest.isNotEmpty) Text(rest, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             ]),
           ),

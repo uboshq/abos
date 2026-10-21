@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -141,9 +142,8 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback:
-                'ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.deliveriesTodayLoadFailed,
+            whenAbsent: context.l10n.deliveriesTodayNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -167,7 +167,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'পরের পাতা আনা গেল না। আবার চেষ্টা করুন।'));
+            fallback: context.l10n.deliveriesTodayMoreFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -191,14 +191,14 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
           damaged: result.damaged);
       if (mounted) {
         setState(() => _notice = paper.stage == 'partially_delivered'
-            ? '${row.documentNo}: আংশিক পৌঁছেছে — কম আর ভাঙা মাল ফেরতের কাগজে উঠেছে।'
-            : '${row.documentNo}: পৌঁছেছে — ${result.receiver} বুঝে নিলেন।');
+            ? context.l10n.deliveriesTodayPartlyDelivered(row.documentNo)
+            : context.l10n.deliveriesTodayDelivered(row.documentNo, result.receiver));
       }
       await _load();
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'পৌঁছানো লেখা গেল না। আবার চেষ্টা করুন।'));
+            fallback: context.l10n.deliveriesTodaySaveFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -209,7 +209,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryRunRow>[];
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'আজকের ডেলিভারি'),
+      appBar: AbosScreenBar(title: context.l10n.deliveriesTodayTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -236,11 +236,11 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
               ),
             // ⭐ গোটা তালিকার গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
             if (_count != null && rows.isNotEmpty)
-              TotalStrip(label: 'পথে মোট চালান', value: '$_count টি'),
+              TotalStrip(label: context.l10n.deliveriesTodayTotalLabel, value: context.l10n.deliveriesTodayTotalValue('$_count')),
             if (_rows != null && rows.isEmpty && !_busy)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Center(child: Text('পথে কোনো চালান নেই।')),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Center(child: Text(context.l10n.deliveriesTodayEmpty)),
               ),
             for (final row in rows)
               Card(
@@ -270,8 +270,8 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                       if (row.vehicle != null || row.driver != null)
                         Text(
                             [
-                              if (row.vehicle != null) 'গাড়ি ${row.vehicle}',
-                              if (row.driver != null) 'চালক ${row.driver}'
+                              if (row.vehicle != null) context.l10n.deliveriesTodayVehicle('${row.vehicle}'),
+                              if (row.driver != null) context.l10n.deliveriesTodayDriver('${row.driver}')
                             ].join(' · '),
                             style: TextStyle(
                                 color: context.palette.onSurfaceMuted)),
@@ -284,7 +284,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                           key: ValueKey('deliver-${row.documentNo}'),
                           onPressed: _busy ? null : () => _handOver(row),
                           icon: const Icon(Icons.how_to_reg),
-                          label: const Text('বুঝিয়ে দিন'),
+                          label: Text(context.l10n.deliveriesTodayHandOver),
                         ),
                       ),
                     ],
@@ -296,7 +296,8 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                 child: OutlinedButton(
                   key: const ValueKey('deliveries-more'),
                   onPressed: _busy ? null : _more,
-                  child: const Text('আরও দেখুন'),
+                  child: Text(context.l10n.deliveriesTodayMore),
+
                 ),
               ),
           ],
