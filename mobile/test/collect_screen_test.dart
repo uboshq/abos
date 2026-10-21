@@ -199,7 +199,8 @@ void main() {
 
     expect(find.text('COL-0042'), findsWidgets,
         reason: '⛔ রসিদে আদায়ের নম্বর নেই');
-    expect(find.text('পাকা — খাতায় উঠেছে'), findsOneWidget);
+    expect(find.text('পোস্ট হয়েছে · খাতায় উঠেছে'), findsOneWidget);
+    expect(find.textContaining('পাকা'), findsNothing, reason: '⛔ "পাকা" আর নয় — খাতায় ওঠা মানে "পোস্ট হয়েছে"');
   });
 
   testWidgets(
