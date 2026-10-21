@@ -93,13 +93,16 @@ final class TheMonthlySalesAgreeWithTheBooksTest extends TestCase
 
         $this->assertSame(['2026-08', '2026-09'], $rows->keys()->all());
 
-        // ⓘ আগস্ট: ZB-1 আর বাতিলের আগের ZB-2 — খসড়ায় বাতিল ZB-3 নয়
-        $this->assertEqualsWithDelta(3150.0, $rows['2026-08']['net_sales'], 0.001, '⛔ খাতায় বসা বাতিল বিল নিজের মাস থেকে উধাও, বা খসড়া-বাতিল ঢুকল');
+        // ⓘ আগস্ট: ZB-1 আর বাতিলের আগের ZB-2 — খসড়ায় বাতিল ZB-3 নয়; নিট ভ্যাট আর বিলের ভাড়া বাদে (১,১৫০ − ৫০ − ১০০ = ১,০০০; ২১ অক্টোবর ২০২৬)
+        $this->assertEqualsWithDelta(3000.0, $rows['2026-08']['net_sales'], 0.001, '⛔ খাতায় বসা বাতিল বিল নিজের মাস থেকে উধাও, বা খসড়া-বাতিল ঢুকল');
         $this->assertEqualsWithDelta(1200.0, $rows['2026-08']['gross_profit'], 0.001, '⛔ লাভে বিলের ভাড়া ঢুকল (৪০০ + ৮০০ হওয়ার কথা)');
 
-        // ⓘ সেপ্টেম্বর: ZB-2-এর উল্টো আর ফেরত — ফেরত ভ্যাট-সহ ২২০
-        $this->assertEqualsWithDelta(-2000.0 - 220.0, $rows['2026-09']['net_sales'], 0.001, '⛔ বাতিলের মাসে উল্টো সারি নেই');
-        $this->assertEqualsWithDelta(220.0, $rows['2026-09']['returned'], 0.001);
+        // ⓘ সেপ্টেম্বর: ZB-2-এর উল্টো আর ফেরত — ফেরত ভ্যাট বাদে ২০০ (২২০ − ২০; ২১ অক্টোবর ২০২৬)
+        $this->assertEqualsWithDelta(-2000.0 - 200.0, $rows['2026-09']['net_sales'], 0.001, '⛔ বাতিলের মাসে উল্টো সারি নেই');
+        $this->assertEqualsWithDelta(200.0, $rows['2026-09']['returned'], 0.001);
+        // ⓘ বাকি-যোগ ভ্যাটসহ থাকে — পাওনা ভ্যাট আর ভাড়াসহই: আগস্টে ১,১৫০ + ২,০০০, সেপ্টেম্বরে −২,০০০ − ২২০
+        $this->assertEqualsWithDelta(3150.0, $rows['2026-08']['due_added'], 0.001, '⛔ বাকি-যোগ ভ্যাট বা ভাড়া হারাল');
+        $this->assertEqualsWithDelta(-2220.0, $rows['2026-09']['due_added'], 0.001, '⛔ ফেরতের বাকি-যোগ ভ্যাটসহ নয়');
         // ⓘ বাতিলের −৮০০ আর ফেরতের −(২২০ − ভ্যাট ২০ − খরচ ১২০) = −৮০
         $this->assertEqualsWithDelta(-800.0 - 80.0, $rows['2026-09']['gross_profit'], 0.001);
     }
@@ -111,17 +114,18 @@ final class TheMonthlySalesAgreeWithTheBooksTest extends TestCase
             ->keyBy(fn ($r) => (is_array($r) ? $r : (array) $r)['month'])
             ->map(fn ($r) => array_map(fn ($v) => is_numeric($v) ? (float) $v : $v, is_array($r) ? $r : (array) $r));
 
-        $this->assertEqualsWithDelta(-2000.0 - 220.0, $rows['2026-09']['net_sales'], 0.001, '⛔ পরিসরের বাইরের বিলের বাতিল বাতিলের মাসে এল না');
+        $this->assertEqualsWithDelta(-2000.0 - 200.0, $rows['2026-09']['net_sales'], 0.001, '⛔ পরিসরের বাইরের বিলের বাতিল বাতিলের মাসে এল না');
     }
 
     public function test_by_product_the_return_carries_its_vat_once_and_the_cancellation_comes_back(): void
     {
         $rows = $this->rows(['product_id' => $this->product]);
 
-        $this->assertEqualsWithDelta(1050.0 + 2000.0, $rows['2026-08']['net_sales'], 0.001, '⛔ পণ্য ধরলে খাতায় বসা বাতিল বিলের সারি উধাও');
-        $this->assertEqualsWithDelta(220.0, $rows['2026-09']['returned'], 0.001, '⛔ পণ্য ধরলে ফেরত ভ্যাট-বাদ — বিক্রি ভ্যাট-সহ');
+        // ⓘ পণ্য ধরলেও নিট ভ্যাট বাদে ([[LineNetSale]]: ১,০৫০ − ৫০ = ১,০০০), ফেরতও ভ্যাট বাদে (২০০) — হেডারের একই ভিত্তি (২১ অক্টোবর ২০২৬)
+        $this->assertEqualsWithDelta(1000.0 + 2000.0, $rows['2026-08']['net_sales'], 0.001, '⛔ পণ্য ধরলে খাতায় বসা বাতিল বিলের সারি উধাও');
+        $this->assertEqualsWithDelta(200.0, $rows['2026-09']['returned'], 0.001, '⛔ পণ্য ধরলে ফেরত আর বিক্রি দুই ভিত্তিতে');
         $this->assertEqualsWithDelta(-(200.0 - 120.0) - (2000.0 - 1200.0), $rows['2026-09']['gross_profit'], 0.001, '⛔ ফেরতের লাভে ভ্যাট দুবার বাদ, বা বাতিলের সারি নেই');
-        $this->assertEqualsWithDelta(-2000.0 - 220.0, $rows['2026-09']['net_sales'], 0.001);
+        $this->assertEqualsWithDelta(-2000.0 - 200.0, $rows['2026-09']['net_sales'], 0.001);
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
