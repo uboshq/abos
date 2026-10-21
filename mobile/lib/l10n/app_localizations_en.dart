@@ -467,7 +467,7 @@ class AppL10nEn extends AppL10n {
   String get navTabCollections => 'Collections';
 
   @override
-  String get navTabChallans => 'Delivery challans';
+  String get navTabChallans => 'Challans';
 
   @override
   String get navTabStock => 'Stock';
