@@ -12,8 +12,9 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
 
 /// ⭐ মালিকের হোম, ০.৪.৪১ — মালিকের অনুমোদিত পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬, পাতা ২: "ok ei planei kore felo")।
-/// ভিতরের তিন কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · ব্যাংক · আজ এসেছে · বকেয়া), সইয়ের অপেক্ষায় থাকা কাগজ, আর
-/// শাখা ধরে আজকের বিক্রি — নিচে মোট।
+/// ভিতরের কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · MFS · ব্যাংক · পথে · আজ এসেছে · আজ গেছে · বকেয়া), সইয়ের
+/// অপেক্ষায় থাকা কাগজ, শাখা ধরে আজকের বিক্রি — নিচে মোট; দেনা আর প্রিন্সিপালের কমিশন (০.৪.৪০-এর অঙ্ক ফেরত, মালিক,
+/// ২০ অক্টোবর ২০২৬)।
 ///
 /// <p>⛔ সার্ভার যা পাঠায়নি তা দেখানো হয় না: না-আসা অঙ্ক "—", কখনো ৳0.00 নয় (TodayRecord-এর নিয়ম ক — শূন্য এমন একটা অঙ্ক
 /// যার উপর মানুষ কাজ করে; "আজ নগদ নেই" আর "নগদ দেখার অনুমতি নেই" আলাদা কথা)।
@@ -59,6 +60,10 @@ String figureText(double? value) => value == null ? '—' : Money.taka(value);
 String figureSpoken(String label, double? value) => '$label, ${value == null ? 'জানা নেই' : Money.spoken(value)}';
 
 /// ── ১ · টাকার বড় কার্ড ──
+///
+/// <p>⭐ ০.৪.৪০-এর অঙ্ক ফেরত (মালিক, ২০ অক্টোবর ২০২৬: "MFS অ্যাপের হোমে দেখায় না, আগে দেখাত"): মোটের নিচে চার ভাগ —
+/// হাতে নগদ · MFS · ব্যাংকে · পথে — সবসময়, শূন্য হলে ৳0.00; তারপর একটা দাগ, আর আজ এসেছে · আজ গেছে · বাজারে বকেয়া।
+/// ⛔ মোট = নগদ + MFS + ব্যাংক, সার্ভারের `money.amount` — পথের টাকা মোটে যোগ হয় না (ওয়েবেও না)।
 class OwnerMoneyCard extends StatelessWidget {
   const OwnerMoneyCard({super.key, required this.today, this.onTap});
 
@@ -74,33 +79,90 @@ class OwnerMoneyCard extends StatelessWidget {
     final fg = dark ? cs.onPrimaryContainer : cs.onPrimary;
     final money = today.money;
     final cash = money?.cash ?? today.cashInHand?.amount;
-    final bank = money?.bank;
     final cameIn = (today.inflow ?? today.collections)?.amount;
-    final dues = today.dues?.amount;
-    final extra = [
-      if (money?.mfs case final mfs? when mfs != 0) 'MFS ${Money.taka(mfs)}',
-      if (money?.transit case final t? when t != 0) 'পথে ${Money.taka(t)}',
-    ].join(' · ');
+    final out = today.outflow;
+    final duesFigure = today.dues;
+    final mfsAccounts = money?.mfsAccounts;
 
-    Widget cell(String key, String label, double? value, {String sign = ''}) => Semantics(
+    Widget figure(String key, String label, double? value, {String sign = '', String? under}) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(label, style: TextStyle(fontSize: 12.5, color: fg)),
+          Text('${value == null ? '' : sign}${figureText(value)}',
+              key: ValueKey('owner-money-$key-value'),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
+          if (under != null)
+            Text(under, key: ValueKey('owner-money-$key-under'), style: TextStyle(fontSize: 11.5, color: fg)),
+        ]);
+
+    Widget cell(String key, String label, double? value, {String sign = '', String? under}) => Semantics(
           key: ValueKey('owner-money-$key'),
           container: true,
-          label: figureSpoken(label, value),
+          label: [figureSpoken(label, value), if (under != null) Money.speakable(under)].join(', '),
           excludeSemantics: true,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: TextStyle(fontSize: 12.5, color: fg)),
-            Text('$sign${figureText(value)}',
-                key: ValueKey('owner-money-$key-value'),
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
-          ]),
+          child: figure(key, label, value, sign: sign, under: under),
         );
 
-    final cells = [
+    // ⭐ MFS-এর খাতগুলো সার্ভার পাঠালে MFS নিজে চাপা যায় — খাত ধরে তালিকা; পুরনো সার্ভারে কেবল লেখা
+    final Widget mfsCell = mfsAccounts == null
+        ? cell('mfs', 'MFS', money?.mfs)
+        : Semantics(
+            key: const ValueKey('owner-money-mfs'),
+            container: true,
+            button: true,
+            label: figureSpoken('MFS', money?.mfs),
+            hint: 'MFS খাতগুলো দেখুন',
+            onTap: () => showMfsAccounts(context, mfsAccounts),
+            excludeSemantics: true,
+            child: InkWell(
+              key: const ValueKey('owner-money-mfs-tap'),
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => showMfsAccounts(context, mfsAccounts),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Flexible(child: figure('mfs', 'MFS', money?.mfs)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.expand_more, size: 18, color: fg),
+                ]),
+              ),
+            ),
+          );
+
+    final parts = [
       cell('cash', 'হাতে নগদ', cash),
-      cell('bank', 'ব্যাংকে', bank),
-      cell('in', 'আজ এসেছে', cameIn, sign: cameIn != null && cameIn > 0 ? '+' : ''),
-      cell('dues', 'বাজারে বকেয়া', dues),
+      mfsCell,
+      cell('bank', 'ব্যাংকে', money?.bank),
+      cell('transit', 'পথে', money?.transit),
     ];
+    final flows = [
+      // ⓘ ইনফ্লোর নিচে তার আদায়ের ভাগ — ০.৪.৪০-এর "আদায় ৳…"
+      cell('in', 'আজ এসেছে', cameIn,
+          sign: cameIn != null && cameIn > 0 ? '+' : '',
+          under: today.inflow != null && today.collections != null
+              ? 'আদায় ${figureText(today.collections!.amount)}'
+              : null),
+      // ⓘ নতুন অঙ্ক: পুরনো সার্ভার চাবিই পাঠায় না — তখন ঘরই নেই, "—" নয়
+      if (out != null) cell('out', 'আজ গেছে', out.amount, sign: (out.amount ?? 0) > 0 ? '-' : ''),
+      cell('dues', 'বাজারে বকেয়া', duesFigure?.amount,
+          under: duesFigure?.shops == null ? null : '${duesFigure!.shops} টি দোকান'),
+    ];
+    // ⓘ দুই কলাম; বড় অক্ষরে (১৫০%-এর বেশি) এক কলাম — অঙ্ক কাটে না
+    final oneColumn = MediaQuery.textScalerOf(context).scale(10) > 15;
+
+    List<Widget> grid(List<Widget> cells) => [
+          if (oneColumn)
+            for (final c in cells) Padding(padding: const EdgeInsets.only(bottom: 6), child: c)
+          else
+            for (var i = 0; i < cells.length; i += 2)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: cells[i]),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: i + 1 < cells.length ? cells[i + 1] : const SizedBox.shrink()),
+                ]),
+              ),
+        ];
 
     return Card(
       key: const ValueKey('owner-money-card'),
@@ -132,22 +194,10 @@ class OwnerMoneyCard extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: AppSpacing.sm),
-              // ⓘ দুই কলাম; বড় অক্ষরে (১৫০%-এর বেশি) এক কলাম — অঙ্ক কাটে না
-              if (MediaQuery.textScalerOf(context).scale(10) > 15)
-                for (final c in cells) Padding(padding: const EdgeInsets.only(bottom: 6), child: c)
-              else
-                for (var i = 0; i < cells.length; i += 2)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(child: cells[i]),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: cells[i + 1]),
-                    ]),
-                  ),
-              if (extra.isNotEmpty)
-                Text('মোটের মধ্যে $extra',
-                    key: const ValueKey('owner-money-extra'), style: TextStyle(fontSize: 12, color: fg)),
+              // ⓘ টাকার বাক্স এলে চার ভাগ সবসময় — পুরনো সার্ভারে বাক্স নেই, তখন কেবল নগদ
+              if (money != null) ...grid(parts) else ...grid([parts.first]),
+              Divider(key: const ValueKey('owner-money-divider'), height: 13, color: fg.withValues(alpha: 0.35)),
+              ...grid(flows),
             ]),
           ),
         ),
@@ -156,11 +206,52 @@ class OwnerMoneyCard extends StatelessWidget {
   }
 }
 
+/// ⭐ "MFS খাত" — প্রতিটা MFS খাত আর তার জের, নিচে মোট (সারির যোগফল, পয়সায় গোনা)।
+Future<void> showMfsAccounts(BuildContext context, List<(String name, double? balance)> accounts) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          key: const ValueKey('mfs-accounts-sheet'),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+            Semantics(
+              header: true,
+              child: Text('MFS খাত',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            for (var i = 0; i < accounts.length; i++) ...[
+              if (i > 0) Divider(height: 1, color: context.palette.border),
+              AmountLine(
+                  key: ValueKey('mfs-account-$i'),
+                  label: accounts[i].$1.isEmpty ? '—' : accounts[i].$1,
+                  amount: accounts[i].$2),
+            ],
+            Divider(height: 1, thickness: 2, color: context.palette.border),
+            AmountLine(
+                key: const ValueKey('mfs-accounts-total'),
+                label: 'মোট',
+                amount: sumOf([for (final a in accounts) if (a.$2 != null) a.$2!]),
+                total: true),
+          ]),
+        ),
+      ),
+    );
+
 /// কার্ডের মাথা: শিরোনাম বাঁয়ে, "সব দেখুন →" ডানে (৪৮dp)।
 class HomeSectionCard extends StatelessWidget {
-  const HomeSectionCard({super.key, required this.title, this.actionLabel, this.onAction, required this.children});
+  const HomeSectionCard(
+      {super.key, required this.title, this.subtitle, this.subtitleKey, this.actionLabel, this.onAction, required this.children});
 
   final String title;
+
+  /// শিরোনামের নিচে মলিন এক লাইন (যেমন "বিল ৳… · ফেরত ৳…")
+  final String? subtitle;
+  final Key? subtitleKey;
   final String? actionLabel;
   final VoidCallback? onAction;
   final List<Widget> children;
@@ -194,6 +285,11 @@ class HomeSectionCard extends StatelessWidget {
             else
               const SizedBox(height: 48),
           ]),
+          if (subtitle != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8, bottom: 4),
+              child: Text(subtitle!, key: subtitleKey, style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant)),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -441,6 +537,9 @@ class BranchSalesCard extends StatelessWidget {
       key: const ValueKey('branch-sales'),
       // ⓘ ফেরত বাদ না দেওয়া মোট বিল — তাই "আজ বিল হয়েছে", "বিক্রি" নয় (fe, ২০ অক্টোবর ২০২৬; IFRS 15: আয় ফেরত বাদে নিট)
       title: 'আজ বিল হয়েছে',
+      // ⭐ ০.৪.৪০-এর বিক্রির নিচের লাইন ফেরত — আজকের পাতার একই লেখা ([TodayFigure.salesDetail])
+      subtitle: today.sales?.salesDetail,
+      subtitleKey: const ValueKey('branch-sales-detail'),
       actionLabel: 'বিস্তারিত',
       onAction: onOpen,
       children: [
@@ -453,32 +552,183 @@ class BranchSalesCard extends StatelessWidget {
   }
 }
 
-/// হোমের তিন কার্ড একসাথে — [TodayPanel.figures]-এ বসে।
+/// ── ৪ · দেনা ── ০.৪.৪০-এর "দেনা (Payable)" ফেরত, হাতধারসহ (মালিক, ২০ অক্টোবর ২০২৬)
+class PayableCard extends StatelessWidget {
+  const PayableCard({super.key, required this.payable, this.handLoans});
+
+  final TodayFigure payable;
+  final double? handLoans;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final loans = handLoans ?? 0;
+    final loansText = loans > 0 ? 'হাতধার ${Money.taka(loans)} সহ' : null;
+    return HomeSectionCard(
+      key: const ValueKey('payable-card'),
+      title: 'দেনা',
+      children: [
+        Semantics(
+          container: true,
+          label: [figureSpoken('দেনা', payable.amount), if (loans > 0) 'হাতধার ${Money.spoken(loans)} সহ'].join(', '),
+          excludeSemantics: true,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(figureText(payable.amount),
+                    key: const ValueKey('payable-value'),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: context.palette.danger)),
+              ),
+              if (loansText != null)
+                Text(loansText,
+                    key: const ValueKey('payable-hand-loans'),
+                    style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant)),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ── ৫ · প্রিন্সিপালের কমিশন ── ০.৪.৪০-এর কার্ড ফেরত: জের সবচেয়ে বড় (চিহ্ন ছাড়া) তিন প্রিন্সিপাল, নিচে সবার মোট।
+///
+/// <p>⛔ মোট সবার, কেবল দেখানো তিনজনের নয়: সার্ভারের `principalsTotal.balance` (ওয়েবের মোটের সারি, bcmath); পুরনো
+/// সার্ভারে সব সারির জের যোগ করে।
+class PrincipalsHomeCard extends StatelessWidget {
+  const PrincipalsHomeCard({super.key, required this.lines, this.total, this.onOpenAll, this.shown = 3});
+
+  final List<PrincipalLine> lines;
+  final PrincipalLine? total;
+  final VoidCallback? onOpenAll;
+  final int shown;
+
+  /// জের চিহ্ন ছাড়া সবচেয়ে বড় [count]টি — সমান হলে সার্ভারের ক্রম
+  static List<PrincipalLine> topByBalance(List<PrincipalLine> lines, int count) {
+    final indexed = [for (var i = 0; i < lines.length; i++) (i, lines[i])];
+    indexed.sort((a, b) {
+      final by = (b.$2.balance ?? 0).abs().compareTo((a.$2.balance ?? 0).abs());
+      return by != 0 ? by : a.$1.compareTo(b.$1);
+    });
+    return [for (final e in indexed.take(count)) e.$2];
+  }
+
+  /// সবার জের — সার্ভারের মোট থাকলে সেটাই, নইলে সব সারির যোগ
+  static double totalBalance(List<PrincipalLine> lines, PrincipalLine? total) =>
+      total?.balance ?? sumOf([for (final l in lines) if (l.balance != null) l.balance!]);
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = topByBalance(lines, shown);
+    final sum = PrincipalLine(name: 'মোট', period: '', basisRate: '', balance: totalBalance(lines, total));
+    return HomeSectionCard(
+      key: const ValueKey('principals-card'),
+      title: 'প্রিন্সিপালের কমিশন',
+      actionLabel: 'সব দেখুন',
+      onAction: onOpenAll,
+      children: [
+        for (var i = 0; i < rows.length; i++) _PrincipalRow(key: ValueKey('principal-row-$i'), line: rows[i]),
+        _PrincipalRow(key: const ValueKey('principals-total'), line: sum, total: true),
+      ],
+    );
+  }
+}
+
+class _PrincipalRow extends StatelessWidget {
+  const _PrincipalRow({super.key, required this.line, this.total = false});
+
+  final PrincipalLine line;
+  final bool total;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final balance = line.balance ?? 0;
+    // ⓘ ০.৪.৪০-এর কার্ডের রং: দিতে হবে লাল, পাব বা জের নেই সবুজ
+    final colour = balance > 0 ? context.palette.danger : context.palette.success;
+    final commission =
+        line.isLoss ? 'লোকসান ${Money.taka(-(line.commission ?? 0))}' : 'কমিশন ${figureText(line.commission)}';
+    final detail = total ? null : 'এসেছে ${figureText(line.inflow)} · $commission';
+    final name = line.name.isEmpty ? '—' : line.name;
+    return Semantics(
+      container: true,
+      label: [name, if (detail != null) Money.speakable(detail), Money.speakable(line.balanceLabel)].join(', '),
+      excludeSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: LayoutBuilder(
+            builder: (context, box) => Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Text(name,
+                      style: TextStyle(
+                          fontSize: 13.5, fontWeight: total ? FontWeight.w700 : FontWeight.w600, color: cs.onSurface)),
+                  if (detail != null) Text(detail, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                ]),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.5),
+                child: Text(line.balanceLabel,
+                    key: total ? const ValueKey('principals-total-value') : null,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colour)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// হোমের কার্ড একসাথে — [TodayPanel.figures]-এ বসে: টাকার বড় কার্ড; সইয়ের অপেক্ষা | আজকের বিল; দেনা | প্রিন্সিপালের কমিশন।
 List<Widget> ownerHomeCards(
   TodayRecord today, {
   Future<ApprovalPage> Function()? loadWaiting,
   VoidCallback? onOpenApprovals,
   VoidCallback? onOpenSales,
   VoidCallback? onOpenMoney,
-}) =>
-    [
-      OwnerMoneyCard(today: today, onTap: onOpenMoney),
-      WidePair(
-        first: today.pendingApprovals == null ? null : _waitingCard(today, loadWaiting, onOpenApprovals),
-        second: BranchSalesCard(today: today, onOpen: onOpenSales),
-      ),
-    ];
+  VoidCallback? onOpenPrincipals,
+}) {
+  final payable = today.payable;
+  final principals = today.principals;
+  final Widget? payableCard = payable == null ? null : PayableCard(payable: payable, handLoans: today.payableHandLoans);
+  final Widget? principalsCard = principals == null || principals.isEmpty
+      ? null
+      : PrincipalsHomeCard(lines: principals, total: today.principalsTotal, onOpenAll: onOpenPrincipals);
+  return [
+    OwnerMoneyCard(today: today, onTap: onOpenMoney),
+    WidePair(
+      first: today.pendingApprovals == null ? null : _waitingCard(today, loadWaiting, onOpenApprovals),
+      second: BranchSalesCard(today: today, onOpen: onOpenSales),
+    ),
+    // ⓘ দেনা | প্রিন্সিপালের কমিশন — একটা থাকলে সেটা একা, পুরো চওড়ায়
+    if (payableCard != null && principalsCard != null)
+      WidePair(pairKey: const ValueKey('home-wide-pair-books'), first: payableCard, second: principalsCard)
+    else if (payableCard ?? principalsCard case final alone?)
+      alone,
+  ];
+}
 
 /// ⭐ বড় পর্দায় (Material 3 "expanded", জানালা ৮৪০dp বা বেশি) দুই কার্ড পাশাপাশি — টাকার কার্ড পুরো চওড়ায়, তার নিচে
 /// সইয়ের অপেক্ষা আর আজকের বিল (fe, ২০ অক্টোবর ২০২৬: এক কলামে টানা কার্ডের ডানে খালি জায়গা)। ছোট পর্দায় একটার নিচে আরেকটা।
 class WidePair extends StatelessWidget {
-  const WidePair({super.key, required this.first, required this.second});
+  const WidePair({super.key, required this.first, required this.second, this.pairKey = const ValueKey('home-wide-pair')});
 
   /// Material 3 window size class "expanded"
   static const double expandedWidth = 840;
 
   final Widget? first;
   final Widget second;
+
+  /// পাশাপাশি সারির চাবি — দ্বিতীয় জোড়ার আলাদা
+  final Key pairKey;
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +738,7 @@ class WidePair extends StatelessWidget {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, second]);
     }
     return Row(
-      key: const ValueKey('home-wide-pair'),
+      key: pairKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: a),

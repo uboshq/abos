@@ -43,6 +43,10 @@ class TodayRecord {
   /// sends none of them and the screen draws the old cards instead.
   TodayFigure? get inflow => _tile('inflow');
 
+  /// ⭐ Today's money out (owner's home, 20 Oct 2026). An older server sends no key and the home draws no cell for it —
+  /// not a dash: the figure is new, not withheld.
+  TodayFigure? get outflow => _tile('outflow');
+
   TodayFigure? get payable => _tile('payable');
 
   /// What of [payable] is hand loans we took — shown under it when not zero.
@@ -60,7 +64,17 @@ class TodayRecord {
       mfs: Money.value(block['mfs']),
       bank: Money.value(block['bank']),
       transit: Money.value(block['transit']),
+      mfsAccounts: _mfsAccounts(block['mfsAccounts']),
     );
+  }
+
+  /// `money.mfsAccounts: [{name, balance}]` — each MFS account behind the MFS figure; null from an older server.
+  static List<(String name, double? balance)>? _mfsAccounts(Object? list) {
+    if (list is! List) return null;
+    return [
+      for (final row in list)
+        if (row is Map) ((row['name'] ?? '').toString().trim(), Money.value(row['balance'])),
+    ];
   }
 
   /// ⭐ The principal commission report, each principal's current cycle —
@@ -84,6 +98,23 @@ class TodayRecord {
             balance: Money.value(row['balance']),
           ),
     ];
+  }
+
+  /// ⭐ `principalsTotal` — the server's bcmath sum of every principal's row, the web's own total row (a4, 20 Oct 2026).
+  /// Null from an older server: the home then sums the rows itself.
+  PrincipalLine? get principalsTotal {
+    final row = payload['principalsTotal'];
+    if (row is! Map) return null;
+    return PrincipalLine(
+      name: 'মোট',
+      period: '',
+      basisRate: '',
+      inflow: Money.value(row['inflow']),
+      commission: Money.value(row['commission']),
+      commissionLabel: row['commissionLabel']?.toString(),
+      paid: Money.value(row['paid']),
+      balance: Money.value(row['balance']),
+    );
   }
 
   int? get pendingApprovals {
@@ -142,18 +173,31 @@ class TodayFigure {
 
   /// বিক্রির ঘরের নাম — সার্ভার যা বলে; না বললে "আজ বিল হয়েছে", কারণ তখন অঙ্কটা ফেরত বাদ দেওয়া নয় (কখনো হাতে লেখা "আজকের বিক্রি" নয়)
   String get salesHeading => label ?? 'আজ বিল হয়েছে';
+
+  /// ⭐ বিক্রির নিচের লাইন — নিট হলে তার দুই ভাগ "বিল ৳… · ফেরত ৳…" (VAT এলে " · VAT ৳…"); পুরনো সার্ভারে (ভাগ নেই) কেবল
+  /// বিলের গোনা "N টি বিক্রয়"। আজকের পাতা আর মালিকের হোমের শাখার কার্ড — দুই জায়গায় এই এক লেখা।
+  String? get salesDetail => billed != null && returned != null
+      ? 'বিল ${Money.taka(billed)} · ফেরত ${Money.taka(returned)}'
+          // ⓘ বিল আর ফেরত VAT বাদে — VAT আলাদা দেখায়, যাতে বিলের কাগজের মোটের সাথে মেলানো যায়
+          '${vat == null ? '' : ' · VAT ${Money.taka(vat)}'}'
+      : count == null
+          ? null
+          : '$count টি বিক্রয়';
 }
 
 /// "হাতে ও ব্যাংকে মোট" — the web home's top-right box, the same figures: the
 /// total is cash + MFS + bank, and what is on the road is its own part.
 class MoneyBox {
-  const MoneyBox({this.amount, this.cash, this.mfs, this.bank, this.transit});
+  const MoneyBox({this.amount, this.cash, this.mfs, this.bank, this.transit, this.mfsAccounts});
 
   final double? amount;
   final double? cash;
   final double? mfs;
   final double? bank;
   final double? transit;
+
+  /// Each MFS account behind [mfs] (server `money.mfsAccounts`); null from an older server.
+  final List<(String name, double? balance)>? mfsAccounts;
 }
 
 /// One principal's cycle in the commission report.

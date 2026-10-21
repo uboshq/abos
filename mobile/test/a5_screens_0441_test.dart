@@ -38,7 +38,10 @@ void main() {
       expect(textOf(tester, const ValueKey('owner-money-dues-value')), '৳8,45,210.00');
       expect(textOf(tester, const ValueKey('owner-money-total-value')), '৳11,66,320.00');
       expect(
-          find.descendant(of: find.byKey(const ValueKey('owner-money-card')), matching: find.text('৳0.00')), findsNothing);
+          find.descendant(of: find.byKey(const ValueKey('owner-money-cash')), matching: find.text('৳0.00')), findsNothing);
+      // ⓘ ০.৪.৪০-এর অঙ্ক ফেরত (২০ অক্টোবর ২০২৬): সার্ভারের পাঠানো শূন্য MFS আর পথে ৳0.00-ই দেখায়
+      expect(textOf(tester, const ValueKey('owner-money-mfs-value')), '৳0.00');
+      expect(textOf(tester, const ValueKey('owner-money-transit-value')), '৳0.00');
 
       await pump(tester, ownerHomeBody(today: ownerToday()));
       expect(textOf(tester, const ValueKey('owner-money-cash-value')), '৳0.00', reason: 'সার্ভার শূন্য পাঠালে শূন্য');

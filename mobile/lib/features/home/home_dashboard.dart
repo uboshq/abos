@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/menu/menu_item.dart';
+import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/records/today_record.dart';
@@ -81,6 +83,21 @@ class HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+    // ⓘ সেশনের ভিতরে (ProviderScope) ফোনের মডিউলের সুইচ শোনে — বদলালে হোম নতুন করে আঁকে; সেশন ছাড়া (পুরনো পরীক্ষা)
+    // সুইচ জানা নেই, তখন কিছু লুকায় না ([ModuleGate.allows]-এর নিয়ম)
+    final scoped = context.getElementForInheritedWidgetOfExactType<UncontrolledProviderScope>() != null;
+    if (!scoped) return _build(context, null);
+    return Consumer(builder: (context, ref, _) => _build(context, ref.watch(phoneModulesProvider)));
+  }
+
+  /// ⭐ প্রিন্সিপালের কমিশনের পাতা মেনুতে যার আছে, কেবল তারই "সব দেখুন" (a4, ২১ অক্টোবর ২০২৬): `supplier.report` চাবি আর
+  /// ক্রয় মডিউলের ফোনের সুইচ চালু — মেনু আর দরজার একই নিয়ম ([ModuleGate.allows]); নইলে কার্ড থাকে, বোতাম নয়।
+  static bool canOpenPrincipals(AuthUser user, Set<String>? modulesOn) =>
+      user.can('supplier.report') &&
+      ModuleGate.allows(modulesOn, 'principals') &&
+      ModuleGate.allows(modulesOn, 'principal-commission');
+
+  Widget _build(BuildContext context, Set<String>? modulesOn) {
     final cs = Theme.of(context).colorScheme;
     // ⓘ "আজ"-এর লোড, ভুল আর খালি অবস্থা TodayPanel-এর নিজের (today_panel.dart) — হোম নিজে কিছু আনে না
     return TodayPanel(
@@ -100,6 +117,10 @@ class HomeDashboard extends StatelessWidget {
               onOpenApprovals: () => _go(context, 'approvals', 'অনুমোদন'),
               onOpenSales: () => _go(context, 'orders', 'অর্ডারের অবস্থা'),
               onOpenMoney: () => _go(context, 'dues', 'বকেয়া তালিকা'),
+              // ⓘ প্রিন্সিপালের কমিশনের পাতা — পথটা অন্য একজন বানাচ্ছেন; ডাক এখানেই বাঁধা
+              onOpenPrincipals: canOpenPrincipals(user, modulesOn)
+                  ? () => _go(context, 'principal-commission', 'প্রিন্সিপালের কমিশন')
+                  : null,
             )
           : null,
       // ⓘ সংখ্যাগুলোর নিচে — আজকের অঙ্কই পর্দার প্রথম জিনিস থাকে

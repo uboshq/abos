@@ -18,21 +18,43 @@ import 'package:abos_mobile/features/home/home_dashboard.dart';
 /// ⓘ ০.৪.৪১-এর দুই পর্দার নমুনা তথ্য — মালিকের অনুমোদিত পুরো-পাতার নমুনার একই নাম আর অঙ্ক (২০ অক্টোবর ২০২৬, পাতা ২)।
 
 /// মালিকের "আজ" — নমুনার অঙ্ক। ⚠️ `salesByBranch` আজকের সার্ভার পাঠায় না; এখানে নমুনার মতো দেখাতে দেওয়া।
-Map<String, dynamic> ownerToday({bool withCash = true, bool withBranches = true}) => {
+///
+/// ⓘ বাড়তি চাবি (০.৪.৪০-এর অঙ্ক ফেরত, ২০ অক্টোবর ২০২৬) — না দিলে আগের মতোই: [outflow] `outflow.amount`, [payable]
+/// `payable` ব্লক, [principals]/[principalsTotal], [mfsAccounts] `money.mfsAccounts`, [sales] বিক্রির ব্লক বদলে, আর
+/// [mfs]/[transit]/[moneyTotal] টাকার বাক্সের অঙ্ক।
+Map<String, dynamic> ownerToday({
+  bool withCash = true,
+  bool withBranches = true,
+  String? outflow,
+  Map<String, dynamic>? payable,
+  List<Map<String, dynamic>>? principals,
+  Map<String, dynamic>? principalsTotal,
+  List<Map<String, dynamic>>? mfsAccounts,
+  Map<String, dynamic>? sales,
+  String mfs = '0.0000',
+  String transit = '0.0000',
+  String moneyTotal = '1166320.0000',
+}) =>
+    {
       'date': '2026-10-20',
       'company': 'ADI Wholesale',
       'branch': 'সব শাখা',
       'asOf': '2026-10-20T10:30:00+06:00',
-      'sales': {'amount': '162700.0000', 'count': 9},
+      'sales': sales ?? {'amount': '162700.0000', 'count': 9},
       'collections': {'amount': '170000.0000', 'count': 6},
       'dues': {'amount': '845210.0000', 'shops': 41},
       'inflow': {'amount': '170000.0000'},
+      if (outflow != null) 'outflow': {'amount': outflow},
+      if (payable != null) 'payable': payable,
+      if (principals != null) 'principals': principals,
+      if (principalsTotal != null) 'principalsTotal': principalsTotal,
       'money': {
-        'amount': '1166320.0000',
+        'amount': moneyTotal,
         if (withCash) 'cash': '0.0000',
-        'mfs': '0.0000',
+        'mfs': mfs,
         'bank': '1166320.0000',
-        'transit': '0.0000',
+        'transit': transit,
+        if (mfsAccounts != null) 'mfsAccounts': mfsAccounts,
       },
       'approvals': {'pending': 3},
       if (withBranches)
@@ -66,15 +88,20 @@ const waitingWithLevels = ApprovalPage(rows: [
 
 const ownerUser = AuthUser(id: 'u1', name: 'আল-আমিন শুভ', email: 'o@x', roles: ['Owner'], permissions: []);
 
-Widget ownerHomeBody({Map<String, dynamic>? today, Future<ApprovalPage> Function()? loadWaiting}) => Scaffold(
+Widget ownerHomeBody(
+        {Map<String, dynamic>? today,
+        Future<ApprovalPage> Function()? loadWaiting,
+        void Function(String path, String label)? onOpen,
+        AuthUser user = ownerUser}) =>
+    Scaffold(
       body: HomeDashboard(
-        user: ownerUser,
+        user: user,
         items: const [],
         headerNamesOrg: true,
         fetchToday: () async => TodayRecord(today ?? ownerToday()),
         lastKnownToday: () => null,
         loadWaiting: loadWaiting ?? () async => waitingPapers,
-        onOpen: (_, __) {},
+        onOpen: onOpen ?? (_, __) {},
       ),
     );
 
