@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Shell;
 
+use App\Core\Services\NoticeBoard;
 use App\Core\Services\StatusNotices;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
@@ -150,6 +151,13 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringNotContainsString('গুদামে পানি উঠেছে', $this->part($html, '<footer data-footer', '</footer>'),
             '⛔ একই নোটিশ দুই জায়গায় — জরুরিটা চলন্ত বারেও ঘুরছে।');
         $this->assertSame(['0', '1'], $this->urgentChange($notice, 1), '⛔ জরুরি টিকের বদল নিরীক্ষায় আগে/পরে সহ বসেনি।');
+
+        // ⓘ উৎসেও একবারই — ফোনের বার দুই তালিকা জোড়ে ([[NoticeBoard::onTheBars()]]), আর চলন্ত বারের জায়গা সীমিত
+        $board = app(NoticeBoard::class);
+        $this->assertTrue($board->forStrip($this->owner())->contains('id', $notice->id), '⛔ জরুরিটা ফিতার তালিকায় নেই।');
+        $this->assertFalse($board->forTicker($this->owner())->contains('id', $notice->id),
+            '⛔ জরুরিটা চলন্ত বারের তালিকাতেও — ফোনে দুইবার আসে, আর চলন্ত বারের জায়গা খায়।');
+        $this->assertSame(1, $board->onTheBars($this->owner())->where('id', $notice->id)->count(), '⛔ ফোনের বারে জরুরিটা একবারের বেশি।');
 
         // ⓘ টিক তুলে দিলে (ফাঁকা টিকবক্স কিছু পাঠায় না) চলন্ত বারে ফেরে — আর সেটাও নিরীক্ষায়
         $this->actingAs($this->owner())
