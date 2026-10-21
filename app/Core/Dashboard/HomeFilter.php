@@ -124,7 +124,8 @@ final class HomeFilter
         return $query
             ->when($this->warehouse !== null, fn ($q) => $q->where($table.'.warehouse_id', $this->warehouse))
             ->when($this->seller !== null, fn ($q) => $q->whereIn($table.'.sales_invoice_id',
-                \Illuminate\Support\Facades\DB::table('sal_invoices')->select('id')->where('created_by', $this->seller)))
+                \Illuminate\Support\Facades\DB::table('sal_invoices')->select('id')
+                    ->where('company_id', \App\Core\Support\CompanyContext::id())->where('created_by', $this->seller)))
             ->when($this->customers !== null, fn ($q) => $q->whereIn($table.'.customer_id', $this->customers ?: [0]));
     }
 

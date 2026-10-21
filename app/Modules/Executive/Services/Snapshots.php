@@ -187,7 +187,8 @@ final class Snapshots
                             $out['difference'] = bcadd($out['difference'], bcsub($net, (string) $row->{Figures::SALES}, 4), 4);
 
                             if (! $dryRun) {
-                                DB::table(self::TABLE)->where('id', $row->id)->update([Figures::SALES => $net, 'updated_at' => now()]);
+                                DB::table(self::TABLE)->where('company_id', (int) $company->id)->where('id', $row->id)
+                                    ->update([Figures::SALES => $net, 'updated_at' => now()]);
                             }
                         }
                     });
