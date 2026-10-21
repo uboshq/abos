@@ -10,6 +10,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ মালিকের হোম, ০.৪.৪১ — মালিকের অনুমোদিত পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬, পাতা ২: "ok ei planei kore felo")।
 /// ভিতরের কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · MFS · ব্যাংক · পথে · আজ এসেছে · আজ গেছে · বকেয়া), সইয়ের
@@ -138,6 +139,7 @@ class OwnerMoneyCard extends StatelessWidget {
       cell('transit', 'পথে', money?.transit),
     ];
     final stock = today.stockValue;
+    final l10n = context.l10n;
     final flows = [
       // ⓘ ইনফ্লোর নিচে তার আদায়ের ভাগ — ০.৪.৪০-এর "আদায় ৳…"
       cell('in', 'আজ এসেছে', cameIn,
@@ -152,13 +154,13 @@ class OwnerMoneyCard extends StatelessWidget {
       // ⭐ বকেয়ার পাশে মজুদের মূল্য (মালিক, ২১ অক্টোবর ২০২৬) — সার্ভার না পাঠালে ঘরই নেই, "—"-ও নয়
       if (stock != null)
         onOpenStock == null
-            ? cell('stock', 'মজুদের মূল্য', stock.amount, under: 'খরচ-দামে')
+            ? cell('stock', l10n.homeStockValue, stock.amount, under: l10n.homeStockValueBasis)
             : Semantics(
                 key: const ValueKey('owner-money-stock'),
                 container: true,
                 button: true,
-                label: '${figureSpoken('মজুদের মূল্য', stock.amount)}, খরচ-দামে',
-                hint: 'মজুদের পাতা খুলুন',
+                label: '${figureSpoken(l10n.homeStockValue, stock.amount)}, ${l10n.homeStockValueBasis}',
+                hint: l10n.homeStockValueOpenHint,
                 onTap: onOpenStock,
                 excludeSemantics: true,
                 child: InkWell(
@@ -167,7 +169,7 @@ class OwnerMoneyCard extends StatelessWidget {
                   onTap: onOpenStock,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-                    child: figure('stock', 'মজুদের মূল্য', stock.amount, under: 'খরচ-দামে'),
+                    child: figure('stock', l10n.homeStockValue, stock.amount, under: l10n.homeStockValueBasis),
                   ),
                 ),
               ),

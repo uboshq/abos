@@ -228,6 +228,30 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বের হওয়া'**
   String get avatarMenuSignOut;
+
+  /// Owner home: the stock value figure beside the dues (IAS 2, at cost)
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদের মূল্য'**
+  String get homeStockValue;
+
+  /// Owner home: small line under the stock value: valued at cost
+  ///
+  /// In bn, this message translates to:
+  /// **'খরচ-দামে'**
+  String get homeStockValueBasis;
+
+  /// Screen reader hint: tapping the stock value opens the stock page
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদের পাতা খুলুন'**
+  String get homeStockValueOpenHint;
+
+  /// Title of the stock page opened from the owner home
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ'**
+  String get homeStockPageTitle;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

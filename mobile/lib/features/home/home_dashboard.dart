@@ -12,6 +12,7 @@ import '../../core/records/today_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/row_icon.dart';
+import '../../core/locale/l10n.dart';
 import '../today/today_panel.dart';
 import 'owner_home_cards.dart';
 
@@ -125,7 +126,7 @@ class HomeDashboard extends StatelessWidget {
               onOpenPrincipals: canOpenPrincipals(user, modulesOn)
                   ? () => _go(context, 'principal-commission', 'প্রিন্সিপালের কমিশন')
                   : null,
-              onOpenStock: canOpenStock(user, modulesOn) ? () => _go(context, 'stock', 'মজুদ') : null,
+              onOpenStock: canOpenStock(user, modulesOn) ? () => _go(context, 'stock', context.l10n.homeStockPageTitle) : null,
             )
           : null,
       // ⓘ সংখ্যাগুলোর নিচে — আজকের অঙ্কই পর্দার প্রথম জিনিস থাকে

@@ -115,5 +115,21 @@
   "avatarMenuSignOut": "বের হওয়া",
   "@avatarMenuSignOut": {
     "description": "Avatar menu row: sign out"
+  },
+  "homeStockValue": "মজুদের মূল্য",
+  "@homeStockValue": {
+    "description": "Owner home: the stock value figure beside the dues (IAS 2, at cost)"
+  },
+  "homeStockValueBasis": "খরচ-দামে",
+  "@homeStockValueBasis": {
+    "description": "Owner home: small line under the stock value: valued at cost"
+  },
+  "homeStockValueOpenHint": "মজুদের পাতা খুলুন",
+  "@homeStockValueOpenHint": {
+    "description": "Screen reader hint: tapping the stock value opens the stock page"
+  },
+  "homeStockPageTitle": "মজুদ",
+  "@homeStockPageTitle": {
+    "description": "Title of the stock page opened from the owner home"
   }
 }

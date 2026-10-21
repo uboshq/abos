@@ -98,4 +98,16 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get avatarMenuSignOut => 'বের হওয়া';
+
+  @override
+  String get homeStockValue => 'মজুদের মূল্য';
+
+  @override
+  String get homeStockValueBasis => 'খরচ-দামে';
+
+  @override
+  String get homeStockValueOpenHint => 'মজুদের পাতা খুলুন';
+
+  @override
+  String get homeStockPageTitle => 'মজুদ';
 }

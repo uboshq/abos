@@ -99,4 +99,16 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get avatarMenuSignOut => 'Sign out';
+
+  @override
+  String get homeStockValue => 'Stock value';
+
+  @override
+  String get homeStockValueBasis => 'At cost';
+
+  @override
+  String get homeStockValueOpenHint => 'Open the stock page';
+
+  @override
+  String get homeStockPageTitle => 'Stock';
 }

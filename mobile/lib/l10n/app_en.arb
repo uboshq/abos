@@ -21,5 +21,9 @@
   "avatarMenuLockAfter": "Locks after: {delay}",
   "avatarMenuMyPhones": "My phones",
   "avatarMenuSettingsVersion": "Settings · Version {version}",
-  "avatarMenuSignOut": "Sign out"
+  "avatarMenuSignOut": "Sign out",
+  "homeStockValue": "Stock value",
+  "homeStockValueBasis": "At cost",
+  "homeStockValueOpenHint": "Open the stock page",
+  "homeStockPageTitle": "Stock"
 }
