@@ -2485,9 +2485,6 @@ class AppL10nEn extends AppL10n {
   String get ordersSearch => 'Search';
 
   @override
-  String get ordersTrackingAll => 'All';
-
-  @override
   String get ordersTrackingEmptyTitle => 'No sales.';
 
   @override
@@ -3425,9 +3422,6 @@ class AppL10nEn extends AppL10n {
   String get booksMoneyInSearchHint => 'Search customer, shop or number';
 
   @override
-  String get booksMoneyInAllMethods => 'All';
-
-  @override
   String get booksMoneyInEmptyTitle => 'No collection in this period';
 
   @override
@@ -3487,9 +3481,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get booksFactAmount => 'Amount';
-
-  @override
-  String get booksFactStatus => 'Status';
 
   @override
   String get booksFactMethod => 'Method';

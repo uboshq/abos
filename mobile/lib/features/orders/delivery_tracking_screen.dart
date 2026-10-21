@@ -122,7 +122,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 ])
                   ChoiceChip(
                     label: Text(
-                        '${key == 'all' ? context.l10n.ordersTrackingAll : trackingStepLabels[key]} (${counts[key] ?? 0})'),
+                        '${key == 'all' ? context.l10n.commonAll : trackingStepLabels[key]} (${counts[key] ?? 0})'),
                     selected: (_step ?? 'all') == key,
                     onSelected: (_) {
                       setState(() => _step = key == 'all' ? null : key);

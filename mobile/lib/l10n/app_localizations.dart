@@ -4183,12 +4183,6 @@ abstract class AppL10n {
   /// **'খুঁজুন'**
   String get ordersSearch;
 
-  /// Delivery tracking: the chip for every step
-  ///
-  /// In bn, this message translates to:
-  /// **'সব'**
-  String get ordersTrackingAll;
-
   /// Delivery tracking: empty state title
   ///
   /// In bn, this message translates to:
@@ -5773,12 +5767,6 @@ abstract class AppL10n {
   /// **'গ্রাহক, দোকান বা নম্বর খুঁজুন'**
   String get booksMoneyInSearchHint;
 
-  /// Collections list: method chip, every method
-  ///
-  /// In bn, this message translates to:
-  /// **'সব'**
-  String get booksMoneyInAllMethods;
-
   /// Collections list: empty state title
   ///
   /// In bn, this message translates to:
@@ -5862,12 +5850,6 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'টাকা'**
   String get booksFactAmount;
-
-  /// Fact row label: the paper's state
-  ///
-  /// In bn, this message translates to:
-  /// **'অবস্থা'**
-  String get booksFactStatus;
 
   /// Fact row label: payment method
   ///

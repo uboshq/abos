@@ -276,7 +276,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 child: Column(children: [
                   FactRow(context.l10n.booksFactPrincipal, d.row.principal),
                   FactRow(context.l10n.booksFactDate, dayOf(d.row.date)),
-                  FactRow(context.l10n.booksFactStatus, d.row.statusLabel),
+                  FactRow(context.l10n.commonStatus, d.row.statusLabel),
                   if (d.supplierNo.isNotEmpty)
                     FactRow(context.l10n.booksFactSupplierNo, d.supplierNo),
                   if (d.row.total != null) FactRow(context.l10n.booksFactTotal, Money.taka(d.row.total)),

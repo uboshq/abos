@@ -2436,9 +2436,6 @@ class AppL10nBn extends AppL10n {
   String get ordersSearch => 'খুঁজুন';
 
   @override
-  String get ordersTrackingAll => 'সব';
-
-  @override
   String get ordersTrackingEmptyTitle => 'কোনো বিক্রি নেই।';
 
   @override
@@ -3365,9 +3362,6 @@ class AppL10nBn extends AppL10n {
   String get booksMoneyInSearchHint => 'গ্রাহক, দোকান বা নম্বর খুঁজুন';
 
   @override
-  String get booksMoneyInAllMethods => 'সব';
-
-  @override
   String get booksMoneyInEmptyTitle => 'এই সময়ে কোনো আদায় নেই';
 
   @override
@@ -3425,9 +3419,6 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get booksFactAmount => 'টাকা';
-
-  @override
-  String get booksFactStatus => 'অবস্থা';
 
   @override
   String get booksFactMethod => 'পদ্ধতি';

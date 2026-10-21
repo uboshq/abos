@@ -154,7 +154,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(
                 key: const ValueKey('method-all'),
-                label: Text(context.l10n.booksMoneyInAllMethods),
+                label: Text(context.l10n.commonAll),
                 selected: _method == null,
                 onSelected: (_) {
                   setState(() => _method = null);
@@ -377,7 +377,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
                   FactRow(context.l10n.booksFactCustomer, d.row.customer),
                   FactRow(context.l10n.booksFactDate, dayOf(d.row.date)),
                   FactRow(context.l10n.booksFactAmount, Money.taka(d.row.amount)),
-                  if (d.statusLabel.isNotEmpty) FactRow(context.l10n.booksFactStatus, d.statusLabel),
+                  if (d.statusLabel.isNotEmpty) FactRow(context.l10n.commonStatus, d.statusLabel),
                   FactRow(context.l10n.booksFactMethod, MoneyInRow.methodLabel(d.row.method)),
                   FactRow(context.l10n.booksFactAccount, d.row.account),
                   if (d.instrumentNo.isNotEmpty)

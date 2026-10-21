@@ -3307,10 +3307,6 @@
   "@ordersSearch": {
     "description": "Delivery tracking: tooltip of the search button"
   },
-  "ordersTrackingAll": "সব",
-  "@ordersTrackingAll": {
-    "description": "Delivery tracking: the chip for every step"
-  },
   "ordersTrackingEmptyTitle": "কোনো বিক্রি নেই।",
   "@ordersTrackingEmptyTitle": {
     "description": "Delivery tracking: empty state title"
@@ -4617,10 +4613,6 @@
   "@booksMoneyInSearchHint": {
     "description": "Collections list: search field hint"
   },
-  "booksMoneyInAllMethods": "সব",
-  "@booksMoneyInAllMethods": {
-    "description": "Collections list: method chip, every method"
-  },
   "booksMoneyInEmptyTitle": "এই সময়ে কোনো আদায় নেই",
   "@booksMoneyInEmptyTitle": {
     "description": "Collections list: empty state title"
@@ -4692,10 +4684,6 @@
   "booksFactAmount": "টাকা",
   "@booksFactAmount": {
     "description": "Fact row label: the money amount"
-  },
-  "booksFactStatus": "অবস্থা",
-  "@booksFactStatus": {
-    "description": "Fact row label: the paper's state"
   },
   "booksFactMethod": "পদ্ধতি",
   "@booksFactMethod": {
