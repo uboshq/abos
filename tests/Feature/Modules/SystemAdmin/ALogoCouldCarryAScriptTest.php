@@ -120,6 +120,36 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ fail-closed (fe, ২২ অক্টোবর ২০২৬): ছবির মতো দেখতে ফাইল (আসল PNG মাথা, `image` নিয়ম পেরোয়) যা ইঞ্জিন পড়তে পারে না —
+     * আগে "কাঁচা ফাইলই রাখো" পথে লোগো হয়ে বসত আর প্রতিটা ছাপা কাগজে যেত। এখন ফেরত, বাংলা বার্তায়, আর আগের লোগো অক্ষত।
+     */
+    public function test_a_broken_png_that_looks_like_a_picture_is_refused_and_the_old_logo_stays(): void
+    {
+        Storage::disk('public')->put('logos/before.png', 'png');
+        $this->company->forceFill(['logo_path' => 'logos/before.png'])->save();
+
+        // ⓘ আসল PNG — তারপর ছবির তথ্য (IDAT) নষ্ট: মাথা আর মাপ ঠিক, ভেতরটা পড়া যায় না
+        $image = imagecreatetruecolor(300, 120);
+        ob_start();
+        imagepng($image);
+        $png = (string) ob_get_clean();
+        $at = (int) strpos($png, 'IDAT');
+        $length = unpack('N', substr($png, $at - 4, 4))[1];
+        $broken = substr($png, 0, $at + 4).str_repeat("\x00\xff", intdiv($length, 2)).substr($png, $at + 4 + $length);
+        $upload = $this->realUpload('logo.png', $broken);
+        $this->assertSame('image/png', $upload->getMimeType(), 'প্রস্তুতিটাই ভুল — ফাইলটা ছবি বলে চেনা যায় না, দরজার আগেই ফিরবে');
+
+        $this->send($this->owner, $upload);
+
+        $errors = session('errors');
+        $has = $errors instanceof \Illuminate\Support\ViewErrorBag
+            ? $errors->has('logo')
+            : ! empty(((array) $errors)['default']['messages']['logo'] ?? null);
+        $this->assertTrue($has, '⛔ পড়া-না-যাওয়া ছবি লোগো হিসেবে নেওয়া হল — বার্তা নেই');
+        $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ পড়া-না-যাওয়া ছবি আগের লোগো সরিয়ে বসল');
+    }
+
     public function test_only_company_manage_may_change_the_logo(): void
     {
         Storage::disk('public')->put('logos/before.png', 'png');
