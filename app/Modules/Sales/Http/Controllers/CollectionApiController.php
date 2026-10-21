@@ -213,7 +213,13 @@ class CollectionApiController extends Controller implements HasMiddleware
         return [
             'no' => (string) $c->document_no,
             'state' => $state,
-            'amount_words' => AmountInWords::of(bcadd((string) $c->amount, '0', 4), 'bn'),
+            /*
+             * ⭐ কথায় টাকা যিনি চাইছেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — আগে সবসময় বাংলা, ইংরেজির মানুষও বাংলা পেতেন।
+             * ⓘ ফোনের দরজায় ভাষা আগেই বসানো: [[ResolveCompanyContext]] চলতি মানুষের `users.locale` থেকে app()->setLocale() করে
+             * (টোকেনের পরে); `Accept-Language` কেবল সই-না-করা অনুরোধের — এখানে সবসময় কেউ সই করা। ⚠️ a4/api-locale-এর
+             * `UserLocale` এলে ভাষার নিয়ম সেখানে; এখানে কেবল app()->getLocale() পড়া, তাই কিছু সরাতে হবে না।
+             */
+            'amount_words' => AmountInWords::of(bcadd((string) $c->amount, '0', 4), app()->getLocale()),
             'receipt_pdf' => route('sales.print.receipt', $c->id),
             'applied' => $applied,
             'unapplied' => Money::round($unapplied, 4),

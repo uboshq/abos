@@ -115,6 +115,28 @@ final class CollectionSyncAnswerTest extends TestCase
         $this->assertSame('300.0000', $other['unapplied'] ?? null, '⛔ দফা ১৯: দ্বিতীয় সারির অপ্রয়োগকৃত নিজের নয়');
     }
 
+    /**
+     * কথায় টাকা যিনি পাঠালেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — একই পুশ: ইংরেজির মানুষ ইংরেজি কথা পান, বাংলার মানুষ
+     * বাংলা। ⓘ ভাষা মানুষের `users.locale` থেকে ([[ResolveCompanyContext]]); সই-করা মানুষের বেলায় `Accept-Language` তাঁর বাছাই উল্টায় না
+     * (a4/api-locale-এর একই ক্রম), তাই শিরোনামটা ইচ্ছে করে উল্টো ভাষায় পাঠানো।
+     */
+    public function test_the_amount_in_words_follows_the_senders_own_language(): void
+    {
+        $this->assertNotSame(AmountInWords::of('700.0000', 'en'), AmountInWords::of('700.0000', 'bn'), 'দুই ভাষার কথা একই — দাবিটা কিছু মাপছে না');
+
+        $this->clerk->forceFill(['locale' => 'en'])->save();
+        $this->withHeader('Accept-Language', 'bn');
+        $english = $this->rowOf($this->pushHttp([$this->change('lang-en', ['amount' => '700', 'lines' => []])]), 'lang-en');
+
+        $this->assertSame(AmountInWords::of('700.0000', 'en'), $english['amount_words'] ?? null, '⛔ ইংরেজির মানুষ কথায় টাকা ইংরেজিতে পাননি');
+
+        $this->clerk->forceFill(['locale' => 'bn'])->save();
+        $this->withHeader('Accept-Language', 'en');
+        $bangla = $this->rowOf($this->pushHttp([$this->change('lang-bn', ['amount' => '700', 'lines' => []])]), 'lang-bn');
+
+        $this->assertSame(AmountInWords::of('700.0000', 'bn'), $bangla['amount_words'] ?? null, '⛔ বাংলার মানুষ কথায় টাকা বাংলায় পাননি');
+    }
+
     /** দফা ৭ — নেট গেলে আবার চাপলে (একই changeId) একটাই আদায়, আর উত্তরে একই নম্বর ও রসিদ */
     public function test_item_7_the_same_change_twice_gives_one_collection_and_the_same_answer(): void
     {

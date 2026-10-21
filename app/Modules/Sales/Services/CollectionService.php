@@ -481,7 +481,8 @@ final class CollectionService
                 'applied' => $applied,
                 'unapplied' => $unapplied,
                 // ⓘ রসিদের হুবহু কথায় টাকা — পাওয়া টাকা (দফা ১৭; a4-এর ক্লায়েন্ট `summary.amount_words` পড়ে)
-                'amount_words' => \App\Core\Support\AmountInWords::of($in->amount, 'bn'),
+                // ⓘ যিনি চাইছেন তাঁর ভাষায় — ফোনে আর ওয়েবে দুই দরজাতেই app()-এর ভাষা মানুষের `users.locale` ([[ResolveCompanyContext]])
+                'amount_words' => \App\Core\Support\AmountInWords::of($in->amount, app()->getLocale()),
                 // ⓘ "মিলেছে" কেবল যখন হিসাব বসে আর খাতার দুই দিক সমান: পাওয়া + কাটা + ছাড় = প্রয়োগ + অপ্রয়োগকৃত
                 'balanced' => $plan !== null && $lines !== [] && bccomp($totalDr, $totalCr, 4) === 0
                     && bccomp(bcadd($applied, $unapplied, 4), $plan['gross'], 4) === 0,

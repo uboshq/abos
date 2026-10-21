@@ -218,6 +218,20 @@ final class CollectionAppContractTest extends TestCase
         $this->assertSame($web['applied'], $phone['applied'], '⛔ দফা ১৯: ফোন আর ওয়েবের প্রয়োগ আলাদা');
     }
 
+    /** প্রিভিউর কথায় টাকাও যিনি চাইছেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — ইংরেজির মানুষ ইংরেজি, বাংলার মানুষ বাংলা */
+    public function test_the_preview_words_follow_the_askers_own_language(): void
+    {
+        $this->clerk->forceFill(['locale' => 'en'])->save();
+        $this->phone($this->clerk);
+        $english = $this->postJson('/api/v1/sales/collections/preview', $this->payload(['amount' => '1800', 'lines' => []]))->assertOk()->json();
+        $this->assertSame(\App\Core\Support\AmountInWords::of('1800.0000', 'en'), $english['summary']['amount_words'], '⛔ ইংরেজির মানুষ প্রিভিউর কথা ইংরেজিতে পাননি');
+
+        $this->clerk->forceFill(['locale' => 'bn'])->save();
+        $this->phone($this->clerk);
+        $bangla = $this->postJson('/api/v1/sales/collections/preview', $this->payload(['amount' => '1800', 'lines' => []]))->assertOk()->json();
+        $this->assertSame(\App\Core\Support\AmountInWords::of('1800.0000', 'bn'), $bangla['summary']['amount_words'], '⛔ বাংলার মানুষ প্রিভিউর কথা বাংলায় পাননি');
+    }
+
     /**
      * দফা ১৩, ৭ — প্রিভিউর `stops` সার্ভারেও পোস্ট আটকায়, কেবল অ্যাপে নয়: বন্ধ মাসে "পোস্ট" চাইলেও খসড়া, খাতায় কিছু নয়; আর একই
      * খাতে একই রেফারেন্স প্রিভিউ বলে আর সিঙ্ক ফেরায়।
