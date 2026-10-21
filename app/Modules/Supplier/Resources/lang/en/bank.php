@@ -12,6 +12,9 @@ return [
     'account_name' => 'Account name',
     'account_no' => 'Account number',
     'routing_no' => 'Routing number',
+    // পরিশোধের পর্দার এক-লাইনের বাক্সে ছোট নাম (মিল-তালিকা #১১)
+    'account_short' => 'A/C',
+    'routing_short' => 'Routing',
     'reason' => 'Reason for the change',
     'note' => 'Reason for refusing',
 

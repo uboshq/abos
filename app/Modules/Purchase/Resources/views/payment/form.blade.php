@@ -124,8 +124,9 @@
                         </div>
                     </fieldset>
 
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="sm:col-span-2">
+                    {{-- ⓘ তারিখের ঘরের নিচের সীমা — ১৩৬৬-এ মডিউল-মেনু খোলা থাকলে সমান চার ভাগে "22-10-202" কাটা পড়ত (২২ অক্টোবর ২০২৬) --}}
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_minmax(9.5rem,1fr)_minmax(9.5rem,1fr)]" data-pay-general-row>
+                        <div class="sm:col-span-2 lg:col-span-1">
                             <x-ui.select name="supplier_id" :label="__('money.screen.supplier')" x-model="supplier"
                                          :options="$suppliers->mapWithKeys(fn ($s) => [$s->id => $s->pickerName()])"
                                          :selected="$supplierId" placeholder="—" required />

@@ -385,6 +385,9 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
             '⛔ #৯: মোট টাকার ঘর লাখ-কমা ছাড়া ("120000") দেখায়');
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="amount"[^>]*type="number"|<input[^>]*type="number"[^>]*name="amount"/', $html,
             '⛔ #৯: সংখ্যার ঘর কমা দেখাতে পারে না');
+        // ⓘ তারিখ আর কোটির অঙ্ক ("1,23,45,678.90") ১৩৬৬-এ মেনু খোলা রেখেও না কেটে — ঘরের নিচের সীমা (ব্রাউজারে মাপা, ২২ অক্টোবর ২০২৬)
+        $this->assertStringContainsString('lg:grid-cols-[minmax(0,1.6fr)_minmax(9.5rem,1fr)_minmax(9.5rem,1fr)]', $html,
+            '⛔ তারিখ আর টাকার ঘরের নিচের সীমা নেই — ১৩৬৬-এ "22-10-202" কাটা পড়ে');
 
         $this->putMoneyIn($this->till(), '200000');
         $this->pay(['account_id' => $this->till()->id], [[$bill->id, '120000']], amount: '1,20,000.00');
@@ -395,6 +398,22 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         // ⛔ কেবল কমা ছাঁটা — অক্ষর থাকলে আগের মতোই থামে
         $this->pay(['account_id' => $this->till()->id], [], amount: '1,20,0x0');
         $this->assertNotSame('', $this->errorOn('amount'), '⛔ #৯: অক্ষরসহ অঙ্ক কমা ছাঁটার ফাঁকে ঢুকে গেল');
+    }
+
+    /** ⭐ মিল-তালিকা #১১ — প্রাপকের ব্যাংক এক লাইনে: ব্যাংক · শাখা · নাম · হিসাব ••••শেষ চার · রাউটিং · ✓ */
+    public function test_gap_11_the_payees_bank_reads_on_one_line(): void
+    {
+        $this->signBank();
+
+        $box = \Illuminate\Support\Facades\Blade::render('<x-supplier::payee-bank :supplier="$s" />', ['s' => $this->supplier->fresh()]);
+
+        $this->assertSame(1, substr_count($box, '<p'), '⛔ #১১: প্রাপকের ব্যাংক আবার কয়েক লাইনে ভাঙল');
+        $this->assertMatchesRegularExpression('/<p[^>]*data-payee-bank-line[^>]*>.*Sonali Bank.*Motijheel.*Jabed Agro Food Processing Ltd.*'
+            .preg_quote(e(__('supplier::bank.account_short')), '/').'.*••••4521.*'
+            .preg_quote(e(__('supplier::bank.routing_short')), '/').'.*200274466.*'
+            .preg_quote(e(__('supplier::bank.verified')), '/').'.*<\/p>/s', $box,
+            '⛔ #১১: এক লাইনে নকশার ক্রমে ব্যাংক · শাখা · নাম · হিসাব · রাউটিং · ✓ নেই');
+        $this->assertStringNotContainsString('0012345674521', $box, '⛔ পুরো হিসাব নম্বর পরিশোধের পর্দায় এল');
     }
 
     // ── সহায়ক ────────────────────────────────────────────────────────────
