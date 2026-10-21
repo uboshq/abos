@@ -63,7 +63,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e, fallback: context.l10n.customersLedgerFailed));
+        setState(() => _error = errorMessageFor(e, fallback: AppLocale.l10n.customersLedgerFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

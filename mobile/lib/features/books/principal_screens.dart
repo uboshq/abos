@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
 /// ⭐ প্রিন্সিপালের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
@@ -64,8 +65,8 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.booksPrincipalListFailed,
-            whenAbsent: context.l10n.booksPrincipalListAbsent));
+            fallback: AppLocale.l10n.booksPrincipalListFailed,
+            whenAbsent: AppLocale.l10n.booksPrincipalListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -175,7 +176,7 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: context.l10n.booksLedgerFailed));
+            () => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksLedgerFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

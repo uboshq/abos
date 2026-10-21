@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
 /// ⭐ ক্রয়ের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
@@ -74,8 +75,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.booksPurchaseListFailed,
-            whenAbsent: context.l10n.booksPurchaseListAbsent));
+            fallback: AppLocale.l10n.booksPurchaseListFailed,
+            whenAbsent: AppLocale.l10n.booksPurchaseListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -89,7 +90,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error =
-            errorMessageFor(e, fallback: context.l10n.booksPurchasePrincipalsFailed));
+            errorMessageFor(e, fallback: AppLocale.l10n.booksPurchasePrincipalsFailed));
       }
       return;
     }
@@ -237,7 +238,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     }).catchError((Object e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: context.l10n.booksPurchaseFailed));
+            () => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksPurchaseFailed));
       }
     });
   }

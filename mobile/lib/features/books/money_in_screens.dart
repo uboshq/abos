@@ -19,6 +19,7 @@ import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import 'collect_screen.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
 /// ⭐ টাকা আদায় (Payment received) — মালিক, ৬ অক্টোবর ২০২৬।
@@ -98,8 +99,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.booksMoneyInListFailed,
-            whenAbsent: context.l10n.booksMoneyInListAbsent));
+            fallback: AppLocale.l10n.booksMoneyInListFailed,
+            whenAbsent: AppLocale.l10n.booksMoneyInListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -343,7 +344,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: context.l10n.booksMoneyInFailed));
+            () => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksMoneyInFailed));
       }
     }
   }

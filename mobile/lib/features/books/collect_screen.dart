@@ -12,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'money_in_screens.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
 /// ⭐ টাকা আদায় নিন — অফিসের লোকের ফোনে (মালিক, ৭ অক্টোবর ২০২৬: "এখন অ্যাপে পেমেন্ট অপশন চালু করো … এটা কেবল
@@ -104,7 +105,7 @@ class _CollectScreenState extends State<CollectScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.booksCollectAccountsFailed));
+            fallback: AppLocale.l10n.booksCollectAccountsFailed));
       }
     }
   }
@@ -185,7 +186,7 @@ class _CollectScreenState extends State<CollectScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.booksCollectSendFailed));
+            fallback: AppLocale.l10n.booksCollectSendFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

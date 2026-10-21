@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
 /// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
@@ -98,8 +99,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.customersDepositLoadFailed,
-            whenAbsent: context.l10n.customersDepositAbsent));
+            fallback: AppLocale.l10n.customersDepositLoadFailed,
+            whenAbsent: AppLocale.l10n.customersDepositAbsent));
       }
     }
   }
@@ -174,7 +175,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       });
       await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.customersDepositSendFailed));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: AppLocale.l10n.customersDepositSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
