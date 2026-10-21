@@ -37,7 +37,8 @@ use Tests\TestCase;
  *   · মালিক নিজে দেন → CXL-… সাথে সাথে পাকা; বিল আর চালান বাতিল, মাল তাকে ফেরে, গ্রাহকের দেনা শূন্য, উল্টো সারি CXL নম্বরে,
  *     বিলের আগে-পরে সংশোধনের খাতায়; বিলের পাতায় সূত্র, কাগজ ছাপা যায়।
  *   · কাউন্টারের কর্মী (চাবিসহ) দেন → প্রতিষ্ঠানের সইয়ের ছক থাকলে সইয়ের অপেক্ষা, সই হলে নিজে পাকা; ছক না থাকলে সাথে সাথে।
- *   · গেট পাস হয়ে গেলে, মাস বন্ধ থাকলে, কারণ না দিলে, আগেই একটা থাকলে — ফেরত, কারণসহ।
+ *   · গেট পাস হয়ে গেলে, কারণ না দিলে, আগেই একটা থাকলে — ফেরত, কারণসহ।
+ *   · বিলের মাস বন্ধ হলেও চলে — উল্টো সারি বাতিলের দিনে (fe, ২১ অক্টোবর ২০২৬); থামে কেবল বাতিলের নিজের মাস বন্ধ হলে।
  */
 final class TheCancellationInvoiceUndoesAWrongInvoiceTest extends TestCase
 {
@@ -111,8 +112,11 @@ final class TheCancellationInvoiceUndoesAWrongInvoiceTest extends TestCase
         $this->assertSame(DocumentStatus::CONFIRMED, $sale->fresh()->status);
     }
 
-    /** ⓘ আগের মাসের বিল, সেই মাস বন্ধ — এ মাস খোলা থাকলেও ফেরত (খাতার ইঞ্জিন কেবল আজকের মাস দেখত) */
-    public function test_a_closed_month_refuses_and_nothing_is_left_behind(): void
+    /**
+     * ⭐ আগের মাসের বিল, সেই মাস বন্ধ — বাতিল চলে, উল্টো সারি আজকের দিনে (fe, ২১ অক্টোবর ২০২৬; IAS 8)। ⓘ আগে এখানে থামত
+     * (`cancellation.month_closed`); এখন থামে কেবল বাতিলের নিজের মাস বন্ধ হলে ([[AnAugustBillCancelledInOctoberLeavesAugustAloneTest]])।
+     */
+    public function test_a_bill_in_a_closed_month_is_cancelled_today_and_its_month_is_left_alone(): void
     {
         $this->travel(-1)->months();
         $sale = $this->sell('2');
@@ -121,15 +125,18 @@ final class TheCancellationInvoiceUndoesAWrongInvoiceTest extends TestCase
             'company_id' => $sale->company_id, 'year' => (int) $sale->trx_date->year, 'month' => (int) $sale->trx_date->month,
             'reason' => 'মাস বন্ধ', 'locked_by' => $this->owner->id, 'locked_at' => now(),
         ]);
+        $this->assertNotSame(now()->format('Y-m'), $sale->trx_date->format('Y-m'), 'প্রস্তুতিটাই ভুল — বিলটা আগের মাসের নয়।');
 
-        try {
-            $this->request($sale, $this->owner);
-            $this->fail('⛔ বন্ধ মাসে বাতিল-ইনভয়েস হয়ে গেল।');
-        } catch (ValidationException) {
-        }
+        $paper = $this->request($sale, $this->owner);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $sale->fresh()->status);
-        $this->assertSame(0, SalesInvoiceCancellation::query()->count(), '⛔ থামার পরেও কাগজ রয়ে গেছে।');
+        $this->assertSame(DocumentStatus::CONFIRMED, $paper->status, '⛔ বন্ধ মাসের বিলের বাতিল-ইনভয়েস পাকা হয়নি।');
+        $this->assertSame(DocumentStatus::CANCELLED, $sale->fresh()->status);
+        $this->assertSame(0, bccomp('0', $this->receivableOf($sale), 4), '⛔ গ্রাহকের দেনা শূন্যে ফেরেনি।');
+
+        $reversal = DB::table('ledger_entries')->where('source_type', SalesInvoice::drillSourceType().':reversal')->where('source_id', $sale->id)->pluck('trx_date');
+        $this->assertNotEmpty($reversal, '⛔ উল্টো সারি নেই।');
+        $this->assertSame([now()->toDateString()], $reversal->map(fn ($d) => substr((string) $d, 0, 10))->unique()->values()->all(),
+            '⛔ উল্টো সারি বাতিলের দিনে নয়।');
     }
 
     public function test_staff_with_the_key_waits_for_the_owner_and_the_signature_finishes_it(): void

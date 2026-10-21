@@ -38,7 +38,10 @@ use Illuminate\Validation\ValidationException;
  *   · গেট পাস হয়ে মাল বেরিয়ে গেছে → ফেরত (SRT), এই কাগজ নয়;
  *   · ফেরত বা ক্রেডিট নোট আছে → তারা আগে উল্টাক;
  *   · চালানে অন্য বিলের মালও আছে → চালান উল্টানো যায় না, ফেরত;
- *   · বিলের মাস বন্ধ → মাসের তালা ([[OpenPeriod::lockOn()]]); অনুমতিপ্রাপ্ত কেউ কারণসহ মাস খুললে তবেই।
+ *   · আজকের (বাতিলের নিজের) মাস বন্ধ → মাসের তালা ([[OpenPeriod::lockOn()]])।
+ * ⭐ বিলের মাস বন্ধ হলেও বাতিল চলে — fe, ২১ অক্টোবর ২০২৬ (IAS 8, SAP-এর উল্টো দাখিলার তারিখ): উল্টো সারি (খাতা, মজুদ, খরচের স্তর)
+ *   বসে বাতিলের নিজের দিনে, চলতি খোলা মাসে; বন্ধ মাসের কোনো সারি বদলায় না, নতুনও বসে না
+ *   ([[AnAugustBillCancelledInOctoberLeavesAugustAloneTest]])।
  *
  * ── কে দেন ──────────────────────────────────────────────────────────────────
  * চাবি `sales.invoice.cancellation`। সইয়ের ধারা (`sales.cancellation`) প্রতিষ্ঠান নিজে ঠিক করে — মালিকের সংস্করণ ২:
@@ -191,15 +194,19 @@ final class SalesInvoiceCancellationService
                 ])]);
             }
 
-            // ⛔ বিলের মাস বন্ধ — ছাপা হয়ে যাওয়া হিসাব; আগে অনুমতিপ্রাপ্ত কেউ কারণসহ মাস খুলুন
-            if (app(OpenPeriod::class)->lockOn($locked->trx_date->format('Y-m-d')) !== null) {
-                throw ValidationException::withMessages(['reason' => __('sales::cancellation.month_closed', [
-                    'no' => $locked->document_no, 'month' => $locked->trx_date->format('m/Y'),
-                ])]);
-            }
-
             $challans = $this->assertCancellable($locked);
             $date = Carbon::today();
+
+            /*
+             * ⭐ বিলের মাস বন্ধ হলেও বাতিল চলে — fe, ২১ অক্টোবর ২০২৬ (IAS 8; SAP-এর উল্টো দাখিলা নিজের তারিখে)। ⓘ সব উল্টো সারি
+             * `$date`-এ, অর্থাৎ বাতিলের নিজের দিনে: বন্ধ মাস যেমন ছাপা হয়েছিল তেমনই থাকে, বিয়োগটা চলতি মাসে।
+             * ⛔ বাতিলের নিজের মাসই বন্ধ হলে থামে — সেই একই মাসের তালা ([[OpenPeriod::lockOn()]]); আগে অনুমতিপ্রাপ্ত কেউ কারণসহ মাস খুলুন।
+             */
+            if (app(OpenPeriod::class)->lockOn($date->format('Y-m-d')) !== null) {
+                throw ValidationException::withMessages(['reason' => __('sales::cancellation.month_closed', [
+                    'no' => $paper->document_no, 'month' => $date->format('m/Y'),
+                ])]);
+            }
 
             foreach ($challans as $challan) {
                 $this->challans->reverseForCancellation(
