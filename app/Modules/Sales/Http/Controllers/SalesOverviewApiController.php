@@ -139,20 +139,41 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
             default => '',
         };
 
+        /*
+         * ⓘ পুরো তালিকা (শাখা, বিক্রেতা, এরিয়া) সব সারি পাঠায় — ওয়েবের পাতাও সব সারি দেখায়, আর যোগের নাম "মোট"; প্রথম দশের তালিকা
+         * দশটাই (দরজার সীমার নিচে), নাম "এই সারিগুলোর যোগ" (fe, ২১ অক্টোবর ২০২৬)। ফলে যোগ সবসময় পাঠানো সারিগুলোরই।
+         */
+        $shown = ($total['whole'] ?? false) ? $rows : array_slice($rows, 0, self::MAX_ROWS);
+
+        /*
+         * ⭐ যোগের টাকা দেখানো সারিগুলোর গোল করা অঙ্কের bcmath যোগ — মানুষ যা পড়ে তাই যোগ হয়, এক পয়সাও এদিক-ওদিক নয়।
+         * ⓘ বিলের সংখ্যা সারির যোগ; ভাগ (%) [[SalesOverview::totals()]]-এর, নিট বিক্রির মোটে।
+         */
+        $sum = fn (string $field, int $decimals) => array_reduce($shown,
+            fn (string $s, array $r) => bcadd($s, Money::round((string) ($r[$field] ?? '0'), $decimals), 4), '0.0000');
+        $totalRow = $total === null ? null : [
+            'count' => array_sum(array_map(fn (array $r) => (int) ($r['count'] ?? 0), $shown)),
+            'qty' => $sum('qty', 4),
+            'amount' => $sum('amount', 2),
+            'share' => $total['share'],
+        ];
+
+        $totalCells = $totalRow === null ? null : array_combine($columns, array_map(fn (string $c, int $i) => $i === 0
+            ? (string) __($total['whole'] ? 'sales::overview.total_all' : 'sales::overview.total_shown')
+            : $value($totalRow, $c), $columns, array_keys($columns)));
+
         return [
             'label' => $label,
             'empty' => __('sales::overview.empty'),
             'columns' => array_map(fn (string $c) => ['key' => $c, 'label' => __('sales::overview.col.'.$c)], $columns),
-            'rows' => array_map(fn (array $row) => array_map(fn (string $c) => $value($row, $c), $columns),
-                array_slice($rows, 0, self::MAX_ROWS)),
+            'rows' => array_map(fn (array $row) => array_map(fn (string $c) => $value($row, $c), $columns), $shown),
             /*
-             * ⭐ যোগের সারি — কলামের চাবি → লেখা ([[DashboardApiController::listing()]]-এর একই `total`); প্রথম ঘরে "মোট" বা
-             * "এই সারিগুলোর যোগ" (fe, ২১ অক্টোবর ২০২৬)। ⓘ ফোন নিজে কিছু যোগ করে না।
+             * ⭐ যোগের সারি — কলামের চাবি → লেখা ([[DashboardApiController::listing()]]-এর একই `total`, [[Listing::$total]]); ফোন একে
+             * আলাদা মোটা সারিতে আঁকে, `rows`-এ কখনো নয়। ⚠️ `amount` = `net` কেবল তথ্যের চাবি, কলাম নয় — অ্যাপ ০.৪.৪১-এর জন্য
+             * (fe, ২১ অক্টোবর ২০২৬); a4 ০.৪.৪৩-এ তুলে দেবে। ⓘ সারি ঘর-ক্রমের তালিকা (`[ঘর, ঘর, …]`), তাই সারিতে নামের চাবি বসানো
+             * যায় না — বসালে JSON-এ তালিকাটা বস্তু হয়ে যেত আর দুই অ্যাপই ভাঙত।
              */
-            ...($total === null ? [] : ['total' => array_combine($columns, array_map(fn (string $c, int $i) => $i === 0
-                ? (string) __($total['whole'] ? 'sales::overview.total_all' : 'sales::overview.total_shown')
-                : $value(['count' => $total['count'], 'qty' => $total['qty'], 'amount' => $total['amount'], 'share' => $total['share']], $c),
-                $columns, array_keys($columns)))]),
+            ...($totalCells === null ? [] : ['total' => $totalCells + (isset($totalCells['net']) ? ['amount' => $totalCells['net']] : [])]),
         ];
     }
 }

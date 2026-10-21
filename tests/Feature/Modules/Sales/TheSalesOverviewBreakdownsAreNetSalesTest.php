@@ -29,6 +29,7 @@ use DOMDocument;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -114,7 +115,12 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         $phone = $this->phone();
         $branchListing = collect($phone->json('listings'))->firstWhere('label', __('sales::overview.panel.by_branch'));
         $this->assertNotNull($branchListing, 'প্রস্তুতিটাই ভুল — ফোনে শাখার তালিকা নেই।');
-        $this->assertSame(Money::format($after['net']), $branchListing['total']['net'] ?? null, '⛔ ফোনের শাখার তালিকার মোট নিট বিক্রি নয়।');
+        // ⓘ ফোনের যোগ = দেখানো সারিগুলোর (গোল করা) যোগ — পয়সার নিচের ভগ্নাংশ না থাকলে নিট বিক্রির কার্ডই
+        $netColumn = array_search('net', array_column($branchListing['columns'], 'key'), true);
+        $this->assertNotFalse($netColumn, '⛔ ফোনের শাখার তালিকায় নিট বিক্রির কলাম নেই।');
+        $phoneSum = array_reduce($branchListing['rows'], fn (string $s, array $r) => bcadd($s, str_replace(',', '', $r[$netColumn]), 4), '0.0000');
+        $this->assertSame(Money::format($phoneSum), $branchListing['total']['net'] ?? null, '⛔ ফোনের শাখার তালিকার মোট দেখানো সারিগুলোর যোগ নয়।');
+        $this->assertSame(0, bccomp(Money::round($after['net'], 2), $phoneSum, 2), '⛔ ফোনের শাখার তালিকার মোট নিট বিক্রি নয়।');
         $this->assertSame(__('sales::overview.total_all'), $branchListing['total']['name'] ?? null);
 
         // ⓘ নাম — "নিট বিক্রি (ভ্যাট ও ফেরত বাদে)"
@@ -168,7 +174,176 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         $this->assertSame('Receivable rose this period', __('sales::overview.card.outstanding_up', [], 'en'));
     }
 
+    /**
+     * ⭐ ফোনের দরজা (fe আর a4, ২১ অক্টোবর ২০২৬): প্রতিটা তালিকার যোগ `listing.total`-এ (কলামের চাবি → লেখা), সারিতে নয়; টাকার
+     * প্রতিটা ঘর সারিগুলোর bcmath যোগ; আর অ্যাপ ০.৪.৪১-এর জন্য পুরনো চাবি `amount` নতুন `net`-এর পাশে, একই অঙ্কে।
+     */
+    public function test_the_phone_lists_carry_their_total_apart_and_keep_the_old_amount_key(): void
+    {
+        $this->fixture();
+        $this->web($this->owner);
+        $panels = $this->get(route('sales.overview', ['period' => 'today']))->assertOk()->viewData('panels');
+        $listings = collect($this->phone()->json('listings'))->keyBy('label');
+
+        $territory = __('sales::overview.panel.by_territory', ['level' => __('master_data::level.'.$panels['by_territory']['level'])]);
+        $expected = [
+            __('sales::overview.panel.top_customers') => $panels['top_customers'],
+            __('sales::overview.panel.top_products') => $panels['top_products'],
+            __('sales::overview.panel.slow_products') => $panels['slow_products'],
+            __('sales::overview.panel.by_seller') => $panels['by_seller'],
+            $territory => $panels['by_territory']['rows'],
+            __('sales::overview.panel.by_branch') => $panels['by_branch'],
+        ];
+        $this->assertSame(array_keys($expected), $listings->keys()->all(), 'প্রস্তুতিটাই ভুল — ফোনে ঠিক এই ছয়টা তালিকা নেই।');
+        $money = fn (string $text) => bcadd(str_replace(',', '', $text), '0', 4);
+
+        foreach ($listings as $label => $listing) {
+            $keys = array_column($listing['columns'], 'key');
+            $this->assertArrayHasKey('total', $listing, "⛔ {$label}: যোগ `listing.total`-এ নেই।");
+            $this->assertNotContains('amount', $keys, "⛔ {$label}: `amount` কলাম হিসেবে ঘোষিত — অ্যাপ নিট অঙ্ক দুইবার আঁকবে।");
+            $this->assertSame([...$keys, ...(in_array('net', $keys, true) ? ['amount'] : [])], array_keys($listing['total']),
+                "⛔ {$label}: যোগের চাবি কলামের চাবি (আর পুরনো `amount`) নয়।");
+
+            // ⓘ সারির সংখ্যা = তালিকার আসল সারি: পুরো তালিকা ("মোট") সবগুলো, প্রথম দশের তালিকা দরজার সীমায় — যোগের সারি সারিতে ঢোকেনি
+            $whole = $listing['total'][$keys[0]] === __('sales::overview.total_all');
+            $this->assertSame($whole, in_array($label, [__('sales::overview.panel.by_seller'), $territory, __('sales::overview.panel.by_branch')], true),
+                "⛔ {$label}: যোগের নাম তালিকার ধরনের সাথে মেলে না।");
+            $this->assertCount($whole ? count($expected[$label]) : min(count($expected[$label]), 20), $listing['rows'],
+                "⛔ {$label}: সারির সংখ্যায় যোগের সারি ঢুকেছে, বা সারি বাদ পড়েছে।");
+            $this->assertNotContains($listing['total'][$keys[0]], array_column($listing['rows'], 0), "⛔ {$label}: যোগের সারি সাধারণ সারি হয়ে বসেছে।");
+
+            $rows = array_map(fn (array $r) => array_combine($keys, $r), $listing['rows']);
+            foreach (array_intersect($keys, ['net', 'revenue']) as $column) {
+                $sum = array_reduce($rows, fn (string $s, array $r) => bcadd($s, $money($r[$column]), 4), '0.0000');
+                $this->assertSame(Money::format($sum), $listing['total'][$column], "⛔ {$label}: যোগের {$column} সারিগুলোর bcmath যোগ নয়।");
+            }
+            if (in_array('count', $keys, true)) {
+                $this->assertSame((string) array_sum(array_map(fn (array $r) => (int) $r['count'], $rows)), $listing['total']['count'],
+                    "⛔ {$label}: বিলের সংখ্যার যোগ ভুল।");
+            }
+
+            // ⓘ পুরনো অ্যাপের চাবি — যোগে `amount` তথ্য হিসেবে, `net`-এর সমান; সারি ঘর-ক্রমের তালিকা, তাই সেখানে নামের চাবি নেই
+            if (in_array('net', $keys, true)) {
+                $this->assertSame($listing['total']['net'], $listing['total']['amount'], "⛔ {$label}: যোগে `amount` আর `net` দুই অঙ্ক।");
+                foreach ($listing['rows'] as $r) {
+                    $this->assertTrue(array_is_list($r), "⛔ {$label}: সারি আর ঘর-ক্রমের তালিকা নয় — দুই অ্যাপই ভাঙবে।");
+                }
+            }
+        }
+    }
+
+    /**
+     * ⭐ ফোনের যোগ = দেখানো সারিগুলোর গোল করা অঙ্কের যোগ (fe, ২১ অক্টোবর ২০২৬)। ⚠️ বিপজ্জনক ইনপুট: পয়সার নিচের ভগ্নাংশ —
+     * দুইজন ক্রেতার নিট .০০৪০-তে শেষ; প্রতিটা সারি নিচে গোল হয়, অথচ কাঁচা যোগ (.০০৮০) উপরে — তাই কাঁচা অঙ্ক যোগ করলে যোগফল
+     * এক পয়সা বেশি দেখাত, আর সারি যোগ করা মানুষ মেলাতে পারতেন না।
+     */
+    public function test_the_phone_total_adds_the_rounded_rows_it_shows(): void
+    {
+        [$bill] = $this->fixture();
+        $niloy = Customer::acrossDealers()->where('name_en', 'Niloy Store')->firstOrFail();
+        $niloy->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save();
+        $second = $this->billTo((int) $niloy->id, '5', '7000');
+
+        // ⓘ দুই বিলের মোটে .০০৪০ — পয়সার নিচের ভগ্নাংশ (মাথার ঘর সরাসরি, [[TheSalesScreenCountsWhatTheBooksSayTest]]-এর ধাঁচে)
+        foreach ([$bill, $second] as $paper) {
+            DB::table('sal_invoices')->where('id', $paper->id)->update(['total' => DB::raw('total + 0.0040')]);
+        }
+        $this->assertSame('0040', substr(bcadd((string) DB::table('sal_invoices')->where('id', $second->id)->value('total'), '0', 4), -4),
+            'প্রস্তুতিটাই ভুল — বিলের মোটে পয়সার নিচের ভগ্নাংশ বসেনি।');
+
+        $this->web($this->owner);
+        $raw = array_column($this->get(route('sales.overview', ['period' => 'today']))->assertOk()->viewData('panels')['top_customers'], 'amount', 'id');
+        $this->assertArrayHasKey((int) $bill->customer_id, $raw, 'প্রস্তুতিটাই ভুল — রহিম প্রথম দশে নেই।');
+        $this->assertArrayHasKey((int) $niloy->id, $raw, 'প্রস্তুতিটাই ভুল — নিলয় প্রথম দশে নেই।');
+        $this->assertSame('0040', substr(bcadd((string) $raw[(int) $niloy->id], '0', 4), -4), 'প্রস্তুতিটাই ভুল — সারির নিটে ভগ্নাংশ নেই।');
+
+        // ⓘ প্রস্তুতির প্রমাণ: এই তালিকায় "গোল করা সারির যোগ" আর "কাঁচা যোগের গোল" সত্যিই আলাদা — নইলে দাবিটা কিছু মাপত না
+        $roundedSum = array_reduce($raw, fn (string $s, $a) => bcadd($s, Money::round((string) $a, 2), 4), '0.0000');
+        $rawSum = array_reduce($raw, fn (string $s, $a) => bcadd($s, (string) $a, 4), '0.0000');
+        $this->assertNotSame(Money::format($rawSum), Money::format($roundedSum), 'প্রস্তুতিটাই ভুল — ভগ্নাংশগুলো যোগে এক পয়সাও সরায় না।');
+
+        $listing = collect($this->phone()->json('listings'))->firstWhere('label', __('sales::overview.panel.top_customers'));
+        $this->assertNotNull($listing, 'প্রস্তুতিটাই ভুল — ফোনে সেরা ক্রেতার তালিকা নেই।');
+        $net = array_search('net', array_column($listing['columns'], 'key'), true);
+        $shown = array_reduce($listing['rows'], fn (string $s, array $r) => bcadd($s, str_replace(',', '', $r[$net]), 4), '0.0000');
+
+        $this->assertSame(Money::format($roundedSum), Money::format($shown), 'প্রস্তুতিটাই ভুল — ফোনের সারি পাতার সারির গোল করা অঙ্ক নয়।');
+        $this->assertSame(Money::format($shown), $listing['total']['net'], '⛔ ফোনের যোগ দেখানো সারিগুলোর যোগ নয় — কাঁচা অঙ্ক যোগ করে এক পয়সা সরেছে।');
+        $this->assertSame($listing['total']['net'], $listing['total']['amount']);
+    }
+
+    /**
+     * ⭐ সারির সীমা আর যোগ (fe, ২১ অক্টোবর ২০২৬): পুরো তালিকা (বিক্রেতা ধরে) দরজার ২০-এর সীমা পেরোলেও সব সারি পাঠায়, যোগের নাম
+     * "মোট" আর যোগ = সব সারি = নিট বিক্রি; প্রথম দশের তালিকা (সেরা ক্রেতা) কেবল দশটা, যোগের নাম "এই সারিগুলোর যোগ" আর যোগ = কেবল
+     * পাঠানো সারি, পুরো নিট বিক্রি নয়। ⚠️ বিপজ্জনক ইনপুট: ২১ জন বিক্রেতা আর ২১ জন নতুন ক্রেতা।
+     */
+    public function test_a_whole_list_sends_every_row_and_a_top_list_only_its_ten(): void
+    {
+        $this->fixture();
+
+        for ($i = 1; $i <= 21; $i++) {
+            $this->web($this->owner);
+            $customer = app(\App\Modules\Customer\Services\CustomerService::class)->create([
+                'name_en' => "NS2A Buyer {$i}", 'name_bn' => "এনএস২এ ক্রেতা {$i}", 'credit_limit' => '0', 'credit_days' => 30,
+            ]);
+            $customer->forceFill(['credit_limit' => '100000000'])->save();
+            $paper = $this->billTo((int) $customer->id, '1', (string) (1000 + $i));
+
+            // ⓘ প্রতিটা বিল আলাদা মানুষের কাটা — বিক্রেতা ধরে তালিকা ২০ ছাড়ায়
+            $seller = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+            DB::table('sal_invoices')->where('id', $paper->id)->update(['created_by' => $seller->id]);
+        }
+
+        $this->web($this->owner);
+        $page = $this->get(route('sales.overview', ['period' => 'today']))->assertOk();
+        $panels = $page->viewData('panels');
+        $net = bcadd((string) collect($page->viewData('cards'))->firstWhere('key', 'sales.overview.net')['raw'], '0', 4);
+        $this->assertGreaterThan(20, count($panels['by_seller']), 'প্রস্তুতিটাই ভুল — বিক্রেতার তালিকা ২০ ছাড়ায়নি।');
+        $this->assertCount(SalesAnalytics::TOP, $panels['top_customers'], 'প্রস্তুতিটাই ভুল — সেরা ক্রেতার তালিকা দশে কাটেনি।');
+
+        $listings = collect($this->phone()->json('listings'))->keyBy('label');
+        $sum = function (array $listing): string {
+            $net = array_search('net', array_column($listing['columns'], 'key'), true);
+
+            return array_reduce($listing['rows'], fn (string $s, array $r) => bcadd($s, str_replace(',', '', $r[$net]), 4), '0.0000');
+        };
+
+        // ── পুরো তালিকা: সব সারি, "মোট", যোগ = নিট বিক্রি ──
+        $sellers = $listings[__('sales::overview.panel.by_seller')];
+        $this->assertCount(count($panels['by_seller']), $sellers['rows'], '⛔ বিক্রেতার পুরো তালিকা ২০-এ কাটা — "মোট" তখন না-পাঠানো সারিও গোনে।');
+        $this->assertSame(__('sales::overview.total_all'), $sellers['total']['name']);
+        $this->assertSame(Money::format($sum($sellers)), $sellers['total']['net'], '⛔ বিক্রেতার যোগ পাঠানো সারির যোগ নয়।');
+        // ⓘ পুরো তালিকার প্রতিটা সারি এসেছে: পাতার সব সারির গোল করা অঙ্কের যোগ = ফোনের যোগ (পাতার সারির যোগ = নিট বিক্রি, প্রথম দাবি)
+        $allSellers = array_reduce($panels['by_seller'], fn (string $s, array $r) => bcadd($s, Money::round((string) $r['amount'], 2), 4), '0.0000');
+        $this->assertSame(Money::format($allSellers), $sellers['total']['net'], '⛔ বিক্রেতার পুরো তালিকার যোগে সব সারি নেই।');
+
+        // ── প্রথম দশ: দশটা, "এই সারিগুলোর যোগ", যোগ = কেবল এই দশ ──
+        $top = $listings[__('sales::overview.panel.top_customers')];
+        $this->assertCount(SalesAnalytics::TOP, $top['rows'], '⛔ সেরা ক্রেতার তালিকা দশের বেশি বা কম পাঠায়।');
+        $this->assertSame(__('sales::overview.total_shown'), $top['total']['name'], '⛔ প্রথম দশের যোগ "এই সারিগুলোর যোগ" বলে না।');
+        $this->assertSame(Money::format($sum($top)), $top['total']['net'], '⛔ প্রথম দশের যোগ পাঠানো সারির যোগ নয়।');
+        $this->assertSame(1, bccomp(Money::round($net, 2), $sum($top), 2), '⛔ প্রথম দশের যোগ পুরো নিট বিক্রি — না-পাঠানো সারিও গোনা।');
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
+
+    private function billTo(int $customerId, string $qty, string $rate): SalesInvoice
+    {
+        $this->web($this->owner);
+        CompanyContext::set((int) $this->company->id, (int) $this->warehouse->branch_id);
+        $service = app(SalesInvoiceService::class);
+        $paper = $service->confirm($service->create([
+            'customer_id' => $customerId,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => Carbon::today()->toDateString(),
+        ], [[
+            'product_id' => Product::query()->where('name_en', 'Miniket Rice 50kg')->firstOrFail()->id,
+            'qty' => $qty, 'rate' => $rate,
+        ]]))->fresh('lines');
+        $this->assertContains($paper->status, DocumentStatus::POSTED, 'প্রস্তুতিটাই ভুল — বিলটা খাতায় বসেনি।');
+
+        return $paper;
+    }
 
     /** @return array{0: SalesInvoice, 1: SalesReturn} বিল ১,১০,০০০ (VAT ১০,০০০) আর আংশিক ফেরত ১১,০০০ (VAT ১,০০০), দুইটাই আজ, খাতায় */
     private function fixture(): array

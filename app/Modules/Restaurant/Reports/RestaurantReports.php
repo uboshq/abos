@@ -103,55 +103,62 @@ final class RestaurantReports
     }
 
     /**
-     * ⭐ খাদ্য-খরচের ভিত — কেবল পাকা বিল, নিট বিক্রি (fe, নিট বিক্রি ২য় ভাগ, ২১ অক্টোবর ২০২৬; IFRS 15.47/15.51)।
+     * ⭐ খাদ্য-খরচের ভিত — কেবল পাকা বিল, নিট বিক্রি (fe, নিট বিক্রি ২য় ভাগ, ২১ অক্টোবর ২০২৬; IFRS 15.47/15.51), আর প্রতিটা ঘটনা
+     * **নিজের তারিখে** — বন্ধ মাস কখনো বদলায় না (IAS 8: বাতিল বা ফেরত চলতি সময়ের ঘটনা, আগের সময়ের ভুল নয়; fe, ২১ অক্টোবর ২০২৬)।
      *
      * ⛔ আগে `status <> 'cancelled'`: খসড়া (ধরে রাখা, কাউন্টারের অসমাপ্ত) বিলও গোনা হত, মোছা বিলও (`deleted_at` দেখা হত না), আর
-     * বিক্রয়মূল্য ছিল সারির ভ্যাটসহ `amount`, বিলের ছাড় বাদ না দিয়ে — অথচ খাদ্য-খরচের % মানে খরচ ÷ **নিট** বিক্রি।
-     * ⭐ এখন:
-     *   · বিল = পাকা ([[DocumentStatus::POSTED]]), মোছা নয়, বিলের তারিখে; বিক্রি = [[LineNetSale]] (সারি − ভ্যাট ± বিলের ছাড়/গোলের ভাগ)
-     *   · ফেরত = পাকা, মোছা নয়, **ফেরতের নিজের তারিখে** আর নিজের শাখায়; বিক্রি থেকে বাদ ফেরতের সারির `amount` (ভ্যাট বাদে, বিলের
-     *     ছাড়ের ভাগসহ), পরিমাণ থেকে ফেরতের পরিমাণ, আর খরচ থেকে ফেরত প্লেট × মূল বিলের সারির `unit_cost` — বিলে যে দরে খরচ বসেছিল
-     *   · খাদ্য-খরচ % = নিট খরচ ÷ নিট বিক্রি × ১০০
-     * ⓘ রেসিপিওয়ালা পণ্য `whereExists` দিয়ে — এক পণ্যের দুই রেসিপি থাকলেও সারি দুইবার গোনা হয় না।
+     * বিক্রয়মূল্য ছিল সারির ভ্যাটসহ `amount`, বিলের ছাড় বাদ না দিয়ে — অথচ খাদ্য-খরচের % মানে খরচ ÷ **নিট** বিক্রি। ⛔ আর বিলের অবস্থা
+     * ধরে ছাঁকায় আগস্টের বিল অক্টোবরে বাতিল হলে আগস্ট থেকেই উধাও হত।
+     * ⭐ এখন চার ঘটনা, প্রতিটা নিজের দিনে:
+     *   ১ · বিক্রি (+) — যে বিল খাতায় বসেছিল: এখন পাকা, **বা** বাতিল কিন্তু আগে পাকা ছিল (তার নামে `sales_invoice` স্তর-টান আছে;
+     *       খসড়া বাতিলে টান নেই) — বিলের তারিখে; মোছা বিল নয়। বিক্রি = [[LineNetSale]], খরচ = প্লেট × সারির `unit_cost`।
+     *   ২ · বিল বাতিল (−) — একই সারি, বাতিলের উল্টো টানের দিনে (`sales_invoice:cancel` টানের `trx_date`)।
+     *       ⓘ যে বিলের কোনো স্তর-টানই নেই (সব সারি মজুদ-ছাড়া), সে ১-এও নেই ২-এও নেই — রেসিপির খাবার সবসময় টানে।
+     *   ৩ · ফেরত (−) — যে ফেরত পাকা হয়েছিল (এখন পাকা, বা বাতিল কিন্তু তার `sales_return` টান আছে), ফেরতের দিনে আর শাখায়;
+     *       বিক্রি থেকে ফেরতের সারির `amount` (ভ্যাট বাদে, বিলের ছাড়ের ভাগসহ), খরচ থেকে ফেরত প্লেট × মূল বিলের সারির `unit_cost`।
+     *   ৪ · ফেরত বাতিল (+) — একই সারি, ফেরত বাতিলের উল্টো টানের দিনে (`sales_return:cancel`)।
+     * ⓘ বিলের অবস্থা বা তারিখ পরে বদলালেও আগের মাসের যোগ একই থাকে; সম্পাদনা (বিল পাকাই থাকে) বিলের নিজের তারিখে।
+     * ⓘ খাদ্য-খরচ % = নিট খরচ ÷ নিট বিক্রি × ১০০। রেসিপিওয়ালা পণ্য `whereExists` দিয়ে — দুই রেসিপিতে সারি দুইবার নয়।
      *
      * @param  array<string, mixed>  $f
      */
     private static function foodCostQuery(array $f): Builder
     {
         $company = (int) $f['company_id'];
+        $range = [$f['from'], $f['to']];
 
-        $bills = DB::table('sal_invoice_lines as l')
-            ->join('sal_invoices as i', 'i.id', '=', 'l.sales_invoice_id')
-            ->where('i.company_id', $company)
-            ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
-            ->whereBetween('i.trx_date', [$f['from'], $f['to']])
-            // খসড়া বা বাতিল বিল গোনা হয় না — ওগুলো বিক্রি নয়; মোছা বিলও নয়
-            ->whereIn('i.status', DocumentStatus::POSTED)
-            ->whereNull('i.deleted_at')
-            ->tap(fn (Builder $q) => LineNetSale::joinBasis($q, $company, $f['from'], $f['to']))
-            ->select([
-                'l.product_id',
-                DB::raw('l.qty as qty'),
-                DB::raw(LineNetSale::sql('l', 'i').' as revenue'),
-                DB::raw('l.qty * l.unit_cost as food_cost'),
-            ]);
+        // ১ · বিক্রি — বিলের দিনে
+        $sold = self::billLines($f, '1')
+            ->whereBetween('i.trx_date', $range)
+            ->where(fn (Builder $q) => $q->whereIn('i.status', DocumentStatus::POSTED)
+                ->orWhere(fn (Builder $c) => $c->where('i.status', DocumentStatus::CANCELLED)
+                    ->whereIn('i.id', self::drawn($company, 'sales_invoice'))))
+            ->tap(fn (Builder $q) => LineNetSale::joinBasis($q, $company, $f['from'], $f['to']));
 
-        $returns = DB::table('sal_return_lines as rl')
-            ->join('sal_returns as rt', 'rt.id', '=', 'rl.sales_return_id')
-            ->leftJoin('sal_invoice_lines as ol', 'ol.id', '=', 'rl.sales_invoice_line_id')
-            ->where('rt.company_id', $company)
-            ->tap(ReportEngine::branchWall($f, 'rt.branch_id'))
-            ->whereBetween('rt.trx_date', [$f['from'], $f['to']])
-            ->whereIn('rt.status', DocumentStatus::POSTED)
-            ->whereNull('rt.deleted_at')
-            ->select([
-                'rl.product_id',
-                DB::raw('0 - rl.qty as qty'),
-                DB::raw('0 - rl.amount as revenue'),
-                DB::raw('0 - rl.qty * COALESCE(ol.unit_cost, 0) as food_cost'),
-            ]);
+        // ২ · বিল বাতিল — বাতিলের দিনে
+        $cancelled = self::billLines($f, '-1')
+            ->where('i.status', DocumentStatus::CANCELLED)
+            ->joinSub(self::undoneOn($company, 'sales_invoice'), 'cx', 'cx.source_id', '=', 'i.id')
+            ->whereBetween('cx.on_date', $range)
+            ->tap(fn (Builder $q) => LineNetSale::joinBasis($q, $company, '1000-01-01', '9999-12-31', 'i',
+                fn (Builder $b) => $b->whereIn('bi.id', self::drawn($company, 'sales_invoice:cancel')->whereBetween('trx_date', $range))));
 
-        return DB::query()->fromSub($bills->unionAll($returns), 'm')
+        // ৩ · ফেরত — ফেরতের দিনে
+        $returned = self::returnLines($f, '-1')
+            ->whereBetween('rt.trx_date', $range)
+            ->where(fn (Builder $q) => $q->whereIn('rt.status', DocumentStatus::POSTED)
+                ->orWhere(fn (Builder $c) => $c->where('rt.status', DocumentStatus::CANCELLED)
+                    ->whereIn('rt.id', self::drawn($company, 'sales_return'))));
+
+        // ৪ · ফেরত বাতিল — ফেরত বাতিলের দিনে
+        $unreturned = self::returnLines($f, '1')
+            ->where('rt.status', DocumentStatus::CANCELLED)
+            ->joinSub(self::undoneOn($company, 'sales_return'), 'rx', 'rx.source_id', '=', 'rt.id')
+            ->whereBetween('rx.on_date', $range);
+
+        $bills = $sold->unionAll($cancelled)->unionAll($returned)->unionAll($unreturned);
+
+        return DB::query()->fromSub($bills, 'm')
             ->join('inv_products as p', 'p.id', '=', 'm.product_id')
             /*
              * রেসিপি নেই এমন পণ্য বাদ।
@@ -167,7 +174,8 @@ final class RestaurantReports
                 ->whereColumn('r.product_id', 'm.product_id')
                 ->whereNull('r.deleted_at'))
             ->groupBy('m.product_id', 'p.code', 'p.name_en', 'p.name_bn')
-            ->havingRaw('SUM(m.qty) > 0')
+            // ⭐ কেবল বাতিল/ফেরতের মাসেও সারি থাকে (ঋণাত্মক) — বিয়োগটা লুকায় না (IAS 8, ২১ অক্টোবর ২০২৬)
+            ->havingRaw('SUM(m.qty) <> 0 OR SUM(m.revenue) <> 0')
             ->orderByRaw('SUM(m.revenue) DESC')
             ->select([
                 'm.product_id as product_id',
@@ -188,5 +196,51 @@ final class RestaurantReports
                  */
                 DB::raw('ROUND(SUM(m.food_cost) / NULLIF(SUM(m.revenue), 0) * 100, 2) as food_cost_pct'),
             ]);
+    }
+
+    /** বিলের সারি, চিহ্নসহ (`$sign` = '1' বা '-1') — কোম্পানি, বিলের শাখার দেয়াল, মোছা বিল বাদ। */
+    private static function billLines(array $f, string $sign): Builder
+    {
+        return DB::table('sal_invoice_lines as l')
+            ->join('sal_invoices as i', 'i.id', '=', 'l.sales_invoice_id')
+            ->where('i.company_id', (int) $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+            ->whereNull('i.deleted_at')
+            ->select([
+                'l.product_id',
+                DB::raw("{$sign} * l.qty as qty"),
+                DB::raw("{$sign} * ".LineNetSale::sql('l', 'i').' as revenue'),
+                DB::raw("{$sign} * l.qty * l.unit_cost as food_cost"),
+            ]);
+    }
+
+    /** ফেরতের সারি, চিহ্নসহ — কোম্পানি, ফেরতের শাখার দেয়াল, মোছা ফেরত বাদ; খরচ মূল বিলের সারির দরে। */
+    private static function returnLines(array $f, string $sign): Builder
+    {
+        return DB::table('sal_return_lines as rl')
+            ->join('sal_returns as rt', 'rt.id', '=', 'rl.sales_return_id')
+            ->leftJoin('sal_invoice_lines as ol', 'ol.id', '=', 'rl.sales_invoice_line_id')
+            ->where('rt.company_id', (int) $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'rt.branch_id'))
+            ->whereNull('rt.deleted_at')
+            ->select([
+                'rl.product_id',
+                DB::raw("{$sign} * rl.qty as qty"),
+                DB::raw("{$sign} * rl.amount as revenue"),
+                DB::raw("{$sign} * rl.qty * COALESCE(ol.unit_cost, 0) as food_cost"),
+            ]);
+    }
+
+    /** যে কাগজের নামে এই ধরনের স্তর-টান আছে — মানে কাগজটা একবার খাতায় বসেছিল। */
+    private static function drawn(int $company, string $type): Builder
+    {
+        return DB::table('inv_cost_layer_uses')->where('company_id', $company)->where('source_type', $type)->select('source_id');
+    }
+
+    /** কাগজ ধরে বাতিলের দিন — তার উল্টো টানের (`…:cancel`) শেষ তারিখ। */
+    private static function undoneOn(int $company, string $type): Builder
+    {
+        return DB::table('inv_cost_layer_uses')->where('company_id', $company)->where('source_type', $type.':cancel')
+            ->groupBy('source_id')->selectRaw('source_id, MAX(trx_date) as on_date');
     }
 }
