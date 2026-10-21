@@ -210,7 +210,7 @@
                                         <td class="num whitespace-nowrap" x-text="money(bill.remaining)"></td>
                                         <td class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-apply-col>
                                             <input type="text" inputmode="decimal" :value="shown(bill.id)" @change="typed(bill.id, $event.target.value)"
-                                                   :aria-label="bill.no"
+                                                   aria-label="{{ __('money.screen.col.apply') }}"
                                                    class="num h-(--spacing-field-compact) w-26 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                         </td>
                                     </tr>
@@ -241,10 +241,11 @@
                 <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <h2 class="mb-3 font-semibold">{{ __('money.screen.attach_and_note') }}</h2>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="flex min-h-16 cursor-pointer items-center justify-center rounded-(--radius-field) border border-dashed border-(--color-border) px-3 text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)">
-                            <input type="file" name="attachment" accept="image/*,application/pdf" class="sr-only" data-pay-attachment>
-                            {{ __('money.screen.attach_hint') }}
-                        </label>
+                        {{-- ⓘ বাংলা ফাইল-বাছাই ([[ui.file-input]]) — ব্রাউজারের "Choose File" নয় (AFileIsChosenInBengaliTest) --}}
+                        <div data-pay-attachment>
+                            <span class="mb-1 block text-sm font-medium">{{ __('money.screen.attach_hint') }}</span>
+                            <x-ui.file-input name="attachment" accept="image/*,application/pdf" />
+                        </div>
                         <x-ui.field name="narration" :label="__('money.screen.narration')" :value="old('narration', $payment->narration)" />
                     </div>
                 </section>

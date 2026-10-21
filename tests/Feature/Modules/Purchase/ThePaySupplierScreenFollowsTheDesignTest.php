@@ -299,6 +299,61 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertStringContainsString('data-balance-ok', $html, '⛔ #২৪: খাতে যথেষ্ট টাকায় ✓ নেই');
     }
 
+    /**
+     * ⭐ #১০: প্রিভিউ কিছুই লেখে না — পরিশোধ, খাতা, নিরীক্ষা, নম্বরের সিরিজ সবই আগের মতো (fe, ২২ অক্টোবর ২০২৬; তাই শাখার
+     * ছাপের পাহারা থেকে বাদ: [[EveryNewPaperFormCarriesItsBranchTest::EXCLUDED]])।
+     */
+    public function test_item_10_the_preview_writes_nothing(): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5'])->save();
+        $bill = $this->bill('10000');
+        $count = fn () => [Payment::query()->count(), LedgerEntry::query()->count(),
+            \App\Models\AuditTrail::query()->withoutGlobalScopes()->count(), \App\Models\IssuedNumber::query()->withoutGlobalScopes()->count()];
+        $before = $count();
+
+        $form = $this->form(['account_id' => $this->till()->id], [[$bill->id, '10000']], '10000');
+        $this->post(route('purchase.payment.simulate'), $form)->assertOk();
+        $this->post(route('purchase.payment.simulate'), $form)->assertOk();
+
+        $this->assertSame($before, $count(), '⛔ #১০: প্রিভিউ কিছু লিখল — পরিশোধ, খাতা, নিরীক্ষা বা নম্বরের সারি বদলেছে');
+    }
+
+    /**
+     * ⛔ #১৮: শাখায় সীমিত মানুষ অন্য শাখার সরবরাহকারীর প্রিভিউ দেখেন না, পরিশোধও করেন না — দেনা, কাটা বা ব্যাংক কিছুই ফাঁস নয়
+     * (fe, ২২ অক্টোবর ২০২৬; আগে প্রিভিউ `Supplier::find` দিয়ে যেকোনো শাখার সরবরাহকারী খুঁজত)। ⓘ নিজের শাখায় চলে — বাধাটা ঢালাও নয়।
+     */
+    public function test_item_18_a_branch_clerk_can_neither_preview_nor_pay_another_branchs_supplier(): void
+    {
+        $mine = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'MMS')->firstOrFail();
+        $theirs = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
+        $far = app(SupplierService::class)->create(['name_en' => 'Far Mill', 'branch_id' => $theirs->id, 'credit_limit' => 0, 'credit_days' => 0,
+            'party_type_id' => $this->supplier->party_type_id]);
+        $near = app(SupplierService::class)->create(['name_en' => 'Near Mill', 'branch_id' => $mine->id, 'credit_limit' => 0, 'credit_days' => 0,
+            'party_type_id' => $this->supplier->party_type_id]);
+
+        $clerk = $this->someone(['purchase.payment.view', 'purchase.payment.create']);
+        $clerk->forceFill(['current_branch_id' => $mine->id])->save();
+        \App\Models\UserDataScope::query()->withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'user_id' => $clerk->id, 'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $mine->id,
+        ]);
+        CompanyContext::set($this->company->id, $mine->id);
+        $this->actingAs($clerk->fresh());
+
+        $own = ['account_id' => $this->till()->id];
+        $this->post(route('purchase.payment.simulate'), [...$this->form($own, [], '1000'), 'supplier_id' => $near->id])->assertOk();
+
+        $response = $this->post(route('purchase.payment.simulate'), [...$this->form($own, [], '1000'), 'supplier_id' => $far->id]);
+        $this->assertContains($response->status(), [403, 404, 422, 302], '⛔ #১৮: অন্য শাখার সরবরাহকারীর প্রিভিউ খুলল');
+        $this->assertStringNotContainsString('Far Mill', (string) $response->getContent(), '⛔ #১৮: প্রিভিউতে অন্য শাখার সরবরাহকারী ফাঁস হল');
+        $this->assertStringNotContainsString('"rows"', (string) $response->getContent(), '⛔ #১৮: অন্য শাখার সরবরাহকারীর খাতার সারি ফাঁস হল');
+
+        $before = Payment::query()->withoutGlobalScopes()->count();
+        $this->from(route('purchase.payment.create'))
+            ->post(route('purchase.payment.store'), [...$this->form($own, [], '1000'), 'supplier_id' => $far->id, 'intent' => 'post'])
+            ->assertSessionHasErrors('supplier_id');
+        $this->assertSame($before, Payment::query()->withoutGlobalScopes()->count(), '⛔ #১৮: অন্য শাখার সরবরাহকারীকে পরিশোধ বানানো গেল');
+    }
+
     public function test_item_11_the_main_button_and_the_controls_follow_the_companys_signature_setting(): void
     {
         $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();

@@ -73,6 +73,7 @@ return [
     'opening_corrected' => 'Opening stock row corrected',
     'opening_removed' => 'Opening stock row removed',
     'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
+    'withholding_rate' => 'Withholding rate changed',
     'own_claim_signed' => 'Own claim signed by the same person',
     'claim_gone_rejected' => 'Signed after the employee left: claim rejected, nothing paid',
     'own_advice_accepted' => 'Own payment advice accepted by the same person',
