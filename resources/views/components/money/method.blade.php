@@ -164,11 +164,10 @@
         <div data-method-block="cheque" @class(['flex flex-col gap-2', 'order-3 col-span-full' => $inline])>
             <div class="grid gap-3 sm:grid-cols-3">
                 <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
+                {{-- ⓘ দেশের তারিখের ঘর ([[ui.date]]), ব্রাউজারেরটা নয়; মান `chequeDate`-এ যায় আগাম চেকের কথার জন্য --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('money.field.cheque_date') }}</span>
-                    <input type="date" name="instrument_date" x-model="chequeDate"
-                           value="{{ $dateOf($was('instrument_date')) }}"
-                           class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 py-2 text-sm">
+                    <x-ui.date name="instrument_date" :value="$dateOf($was('instrument_date'))" bind-model="chequeDate" />
                 </label>
                 <x-ui.field name="from_bank" :label="__('money.field.cheque_bank')" :value="$was('from_bank')" />
             </div>

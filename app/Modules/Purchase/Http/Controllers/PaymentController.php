@@ -131,7 +131,9 @@ class PaymentController extends Controller implements HasMiddleware
             'document_no' => '—',
             'charge_amount' => blank($data['charge_amount'] ?? null) ? '0' : $data['charge_amount'],
         ]);
-        $supplier = Supplier::query()->find((int) $data['supplier_id']);
+        // ⛔ হেডারে বাছা শাখার বাইরের সরবরাহকারী নয় — শাখায় সীমিত মানুষ অন্য শাখার দেনা, কাটা বা ব্যাংক প্রিভিউ দিয়েও দেখেন না (fe, ২২ অক্টোবর ২০২৬)
+        $supplier = Supplier::query()->inViewedBranch()->find((int) $data['supplier_id']);
+        abort_if($supplier === null, 404);
         // ⭐ কাটা — পোস্টের একই হিসাবে ([[PaymentWithholding::forLines()]]); প্রিভিউ আর খাতা কখনো আলাদা নয়
         $cut = \App\Modules\Purchase\Services\PaymentWithholding::forLines($supplier, $request->lineData());
         $paper->forceFill(['ait_amount' => $cut['ait'], 'vds_amount' => $cut['vds']]);

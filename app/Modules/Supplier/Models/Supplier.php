@@ -61,6 +61,9 @@ class Supplier extends Model implements Drillable
     protected function casts(): array
     {
         return [
+            // ⭐ উৎসে কর আর ভ্যাটের হার — টাকার মতোই string-এ, float নয় (MoneyIsNeverAFloatTest)
+            'ait_rate' => 'decimal:4',
+            'vds_rate' => 'decimal:4',
             'credit_limit' => 'decimal:4',
             'credit_days' => 'integer',
             'opening_balance' => 'decimal:4',

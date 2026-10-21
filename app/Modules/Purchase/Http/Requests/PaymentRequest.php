@@ -21,7 +21,13 @@ class PaymentRequest extends FormRequest
 
         return [
             'supplier_id' => ['required', 'integer',
-                Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
+                Rule::exists('suppliers', 'id')->where('company_id', $companyId),
+                // ⛔ হেডারে বাছা শাখার বাইরের সরবরাহকারীকে পরিশোধ নয় — পর্দার তালিকার একই ছাঁকনি ([[Supplier::scopeInViewedBranch()]])
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! \App\Modules\Supplier\Models\Supplier::query()->inViewedBranch()->whereKey((int) $value)->exists()) {
+                        $fail(__('validation.branch_out_of_reach'));
+                    }
+                }],
             'account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
