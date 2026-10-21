@@ -77,6 +77,9 @@
 <div x-data="launcher" class="relative shrink-0" data-module-launcher-box
      @open-module-launcher.window="show()"
      @keydown.window="hotkey($event)">
+    {{-- ⓘ ফোনে (sm-এর নিচে) বোতামটা বারে নয়, নিচের নেভিগেশনের "আরও"-তে ([[shell.bottom-nav]]) — পাতাটা একই, এখান থেকেই খোলে।
+         ⛔ ৩৭৫px-এ বারে জায়গা ~১০৭px: ⊞ ৪০ + লোগো ৪১ + খোঁজার আইকন ৪৪ ধরে না, আর খোঁজার আইকনটা লোগোর উপর চেপে বসত
+         (ছবিতে মাপা, ২১ অক্টোবর ২০২৬)। ফোনের "রেল" নিচের বারটাই, তাই ⊞-ও সেখানে। --}}
     <button type="button" x-ref="button"
             data-module-launcher
             @click="show()"
@@ -84,7 +87,7 @@
             aria-haspopup="dialog"
             aria-controls="module-launcher"
             aria-keyshortcuts="Alt+M"
-            class="grid size-[40px] shrink-0 place-items-center rounded-full text-(--color-topbar-ink-muted)
+            class="grid size-[40px] shrink-0 place-items-center rounded-full text-(--color-topbar-ink-muted) max-sm:hidden
                    transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
             style="--topbar-control-h: 40px"
@@ -102,8 +105,8 @@
         পুরো পর্দার পাতা — বারের উপরেও (Odoo-র হোম), পেছনে পাতাটা হালকা ঝাপসা।
 
         ⓘ `pops-onto-page` — বারের ৩৬px বোতাম-উচ্চতা আর বারের কালি এখানে নয় (app.css-এর `.topbar` নিয়ম)।
-        ⓘ কলাম: ৩৭৫px-এ ৩, ট্যাবলেটে ৪, ১৩৬৬-এ ৫, ১৯২০-এ ৬ (মালিকের মাপ) — Tailwind-এর sm/xl/2xl ধাপে (মিডিয়া-কোয়েরির rem
-        ব্রাউজারের ১৬px ধরে, পাতার বদলানো মূল-ফন্ট নয়)।
+        ⓘ কলাম: ৩৭৫px-এ ৩, ট্যাবলেটে ৪, ১৩৬৬-এ ৫, ১৯২০-এ ৬ (মালিকের মাপ) — এই রিপোর ধাপে: md ৭৬৮ · lg ১০২৪ · xl ১৪৪০
+        (tokens.css-এর `--breakpoint-*`; ⛔ প্রথম খসড়ায় Tailwind-এর ডিফল্ট ধরে xl লিখেছিলাম, আর ১৩৬৬-এ ৪ কলাম এল — ছবিতে মাপা)।
         ⓘ ARIA: dialog, ভেতরে grid — এক সারির গ্রিড, ঘরগুলো চোখে কয়েক সারিতে ভাঙে; তীর-চাবি চোখের সারি ধরেই চলে (`move()`)।
     --}}
     <div id="module-launcher" x-show="open" x-cloak
@@ -145,7 +148,7 @@
             <div id="module-launcher-grid" role="grid" aria-label="{{ __('core.ui.all_modules') }}" class="mt-8"
                  @keydown="move($event)">
                 <div role="row" data-launcher-row
-                     class="grid grid-cols-3 gap-x-2 gap-y-5 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                     class="grid grid-cols-3 gap-x-2 gap-y-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     @foreach ($tiles as $tile)
                         <div role="gridcell" data-launcher-cell data-launcher-keys="{{ $tile['keys'] }}">
                             <a href="{{ $tile['url'] }}" data-launcher-tile="{{ $tile['code'] }}"

@@ -496,7 +496,7 @@
 
     <x-shell.statusbar />
 
-    <x-shell.bottom-nav :menu="$menu ?? []" />
+    <x-shell.bottom-nav :menu="$menu ?? []" :launcher="$fullBar" />
 
     {{-- স্ক্রিনের নিজের স্ক্রিপ্ট — Alpine লোড হওয়ার পরে।
 
