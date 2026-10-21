@@ -97,7 +97,10 @@ final class ALogoCouldCarryAScriptTest extends TestCase
 
         foreach ($refused as $what => $file) {
             $this->send($this->owner, $file);
-            $this->assertTrue(session('errors')?->has('logo') ?? false, "⛔ {$what}: লোগোর ঘরে ভুলের বার্তা নেই — দরজা ফেরায়নি।");
+            // ⓘ পরীক্ষার সেশনে ভুলগুলো কখনো ViewErrorBag, কখনো সাধারণ array (Mac-এ দেখা) — দুই রূপই পড়া হয়
+            $errors = session('errors');
+            $has = $errors instanceof \Illuminate\Support\ViewErrorBag ? $errors->has('logo') : array_key_exists('logo', (array) $errors);
+            $this->assertTrue($has, "⛔ {$what}: লোগোর ঘরে ভুলের বার্তা নেই — দরজা ফেরায়নি।");
             $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, "⛔ {$what}: ফেরত যাওয়ার কথা, অথচ লোগো বদলে গেল।");
         }
     }
