@@ -112,6 +112,20 @@ return [
 
         // ⛔ শুরুর দেনা খাতায় বসানো — টাকার কাজ, নিজের চাবি (অডিট ⛔১২, ৬ অক্টোবর ২০২৬; [[SupplierService]])
         'supplier.opening_balance',
+
+        // ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SupplierBank]]): পুরো হিসাব নম্বর দেখা, আর দ্বিতীয় সই
+        'supplier.bank.view',
+        'supplier.bank.approve',
+    ],
+
+    /*
+     * ⭐ পুরো হিসাব নম্বর — অডিট আর সময়যন্ত্রের সাধারণ পর্দায় ঘর ধরে ঢাকা; নিজের পর্দায় সেবা ঢাকে
+     * ([[SupplierBank::accountShown()]]), তাই ব্লেড-খোঁজার `sensitive_fields` নয়।
+     */
+    'section_guarded_fields' => [
+        \App\Modules\Supplier\Models\SupplierBankDetail::class => [
+            'account_no' => 'supplier.bank.view',
+        ],
     ],
 
     /* নতুন ইনস্টলে (§৫): Manager সরবরাহকারী দেখা ও রিপোর্ট (বানানো নয়)। */
@@ -126,6 +140,9 @@ return [
             'supplier.report',
             // ⓘ শুরুর দেনা হিসাবের কাজ — গ্রাহকের `customer.opening_balance`-এর জোড়া
             'supplier.opening_balance',
+            // ⭐ সরবরাহকারীর ব্যাংক তথ্যে দ্বিতীয় সই আর পুরো নম্বর — হিসাবের কাজ (নকশা দফা #৬)
+            'supplier.bank.view',
+            'supplier.bank.approve',
         ],
         'Manager' => [
             'supplier.view',

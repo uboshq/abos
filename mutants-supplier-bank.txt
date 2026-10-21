@@ -1,0 +1,55 @@
+mutants-supplier-bank.txt — fe/supplier-bank (design item #6, 21 Oct 2026)
+Each mutant: file · exact old → exact new · killing test (file::method). Run one at a time on the Mac, from the tested commit; restore with mtime = now.
+Status of every line below: listed, NOT yet run (Mac).
+
+== Item #6 — a supplier's bank details change needs a second hand ==
+
+M1  app/Modules/Supplier/Services/SupplierBank.php
+    old: "        if ((int) $detail->requested_by === (int) $by->id) {"
+    new: "        if (false) {"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_the_maker_cannot_sign_their_own_request_even_with_the_key_nor_can_the_owner (the clerk, holding the key, signs his own request)
+
+M2  app/Modules/Supplier/Services/SupplierBank.php
+    old: "            && (int) $detail->requested_by !== (int) $by->id"
+    new: "            && true"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_the_maker_cannot_sign_their_own_request_even_with_the_key_nor_can_the_owner (the page shows the maker a sign button: assertDontSee data-bank-sign)
+
+M3  app/Modules/Supplier/Services/SupplierBank.php
+    old: "            && $by->can(self::APPROVE_KEY)"
+    new: "            && true"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_the_maker_cannot_sign_their_own_request_even_with_the_key_nor_can_the_owner (the keyless looker signs the owner's request)
+
+M4  app/Modules/Supplier/Services/SupplierBank.php
+    old: "            ->where('status', SupplierBankDetail::SIGNED)\n            ->latest('signed_at')"
+    new: "            ->whereIn('status', [SupplierBankDetail::SIGNED, SupplierBankDetail::PENDING])\n            ->latest('signed_at')"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_a_refusal_keeps_the_old_details_and_only_pending_is_never_signed (signedFor returns the pending row)
+
+M5  app/Modules/Supplier/Services/SupplierBank.php
+    old: "                'status' => SupplierBankDetail::PENDING,\n                'requested_by' => $by->id,"
+    new: "                'status' => SupplierBankDetail::SIGNED,\n                'requested_by' => $by->id,"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_a_request_waits_and_leaves_the_active_bank_alone_until_another_person_signs (no pending row; the active bank changes on request)
+
+M6  app/Modules/Supplier/Services/SupplierBank.php
+    old: "                    $old->update(['status' => SupplierBankDetail::SUPERSEDED]);"
+    new: "                    // superseded skipped"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_a_request_waits_and_leaves_the_active_bank_alone_until_another_person_signs (two signed rows for one supplier)
+
+M7  app/Modules/Supplier/Services/SupplierBank.php
+    old: "        return $viewer !== null && $viewer->can(self::VIEW_KEY) ? $detail->account_no : $detail->maskedAccount();"
+    new: "        return $detail->account_no;"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_the_account_is_masked_without_the_bank_view_key (the looker sees the full number)
+
+M8  app/Modules/Supplier/Services/SupplierBank.php
+    old: "        if ($signed === null) {\n            throw ValidationException::withMessages(["
+    new: "        if ($signed === null) {\n            return new SupplierBankDetail;\n            throw ValidationException::withMessages(["
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_a_refusal_keeps_the_old_details_and_only_pending_is_never_signed ('bank payment not blocked' fail message)
+
+M9  app/Modules/Supplier/Models/SupplierBankDetail.php
+    old: "            'account_no' => 'encrypted',"
+    new: "            'account_no' => 'string',"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_a_request_waits_and_leaves_the_active_bank_alone_until_another_person_signs (the number is stored in the open)
+
+M10 resources/views/components/money/payee-bank.blade.php
+    old: "            {{ $signedBank->account_name }} · <span class=\"num\" data-payee-bank-account>{{ $signedBank->maskedAccount() }}</span>"
+    new: "            {{ $signedBank->account_name }} · <span class=\"num\" data-payee-bank-account>{{ $signedBank->account_no }}</span>"
+    kill: ASupplierBankChangeNeedsASecondHandTest::test_the_payee_bank_component_shows_only_signed_details_masked (the full number on the payment screen)
