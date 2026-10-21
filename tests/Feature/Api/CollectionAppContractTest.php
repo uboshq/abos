@@ -96,6 +96,24 @@ final class CollectionAppContractTest extends TestCase
         $this->assertSame($mode->name(), $sent['name'], '⛔ দফা ১৯: ট্রান্সফার মোডের নাম নেই');
     }
 
+    /**
+     * setup-এ রাউন্ডিংয়ের দুই সীমা (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — ফোনের আগাম সতর্কতা আর ৳১০ হাতে-লেখা নয়: ডিফল্ট
+     * কোম্পানিতে `rounding_limit` "10.0000", সীমা ২৫ করলে "25.0000"; `rounding_sign_above` "0.5000" ([[Settlement]])।
+     */
+    public function test_setup_carries_the_companys_rounding_limit_and_the_unsigned_ceiling(): void
+    {
+        $this->phone($this->clerk);
+        $default = $this->getJson('/api/v1/sales/collections/setup')->assertOk()->json();
+        $this->assertSame('10.0000', $default['rounding_limit'] ?? null, '⛔ ডিফল্ট কোম্পানির রাউন্ডিং সীমা ১০ নয়');
+        $this->assertSame('0.5000', $default['rounding_sign_above'] ?? null, '⛔ সই-ছাড়া রাউন্ডিংয়ের সীমা ০.৫০ নয়');
+
+        app(\App\Core\Services\SettingsService::class)->set(\App\Core\Support\Settlement::LIMIT_KEY, 25);
+        $this->phone($this->clerk);
+        $set = $this->getJson('/api/v1/sales/collections/setup')->assertOk()->json();
+        $this->assertSame('25.0000', $set['rounding_limit'] ?? null, '⛔ কোম্পানির নিজের রাউন্ডিং সীমা (২৫) setup-এ আসেনি');
+        $this->assertSame('0.5000', $set['rounding_sign_above'] ?? null, '⛔ সীমা বদলালে সই-ছাড়ার সীমাও বদলাল');
+    }
+
     /** দফা ৩ — open-bills: এক `items` তালিকা, পুরনো আগে, ক্রেডিট ঋণাত্মক (অ্যাপ `open.abs()` পড়ে), বকেয়া খাতার বকেয়া */
     public function test_item_3_open_bills_is_one_list_oldest_first_with_credits_negative(): void
     {

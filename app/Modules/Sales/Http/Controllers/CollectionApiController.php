@@ -271,6 +271,13 @@ class CollectionApiController extends Controller implements HasMiddleware
             // ⭐ ব্যাংক ট্রান্সফারের মোড — পাঠানোর `transfer_mode_id` এখান থেকে (cb-র পদ্ধতির ব্লকের একই তালিকা)
             'transfer_modes' => \App\Modules\MasterData\Models\TransferMode::query()->active()->orderBy('code')->get()
                 ->map(fn ($m): array => ['id' => (string) $m->public_id, 'code' => (string) $m->code, 'name' => $m->name()])->values(),
+            /*
+             * ⭐ রাউন্ডিংয়ের দুই সীমা, সার্ভারের নিজের নিয়ম থেকে ([[Settlement]]; a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — ফোনের আগাম
+             * সতর্কতা ৳১০ হাতে-লেখা ছিল: `rounding_limit` কোম্পানির সীমা (এর বেশি ফেরত), `rounding_sign_above` এর বেশি হলে মালিকের সই।
+             * ⓘ এই API-র অন্য টাকার মতো চার দশমিকের স্ট্রিং।
+             */
+            'rounding_limit' => Money::round(\App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class)), 4),
+            'rounding_sign_above' => Money::round(\App\Core\Support\Settlement::UNSIGNED, 4),
         ]);
     }
 
