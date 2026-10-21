@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\JsonResponse;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\GrandTotals;
@@ -45,6 +49,8 @@ class PaymentController extends Controller implements HasMiddleware
         return [
             ...static::resourcePermissions(Payment::class, 'payment'),
             new Middleware('can:purchase.payment.create', only: ['confirm']),
+            // ⓘ প্রিভিউ ফর্মেরই অংশ — যিনি পরিশোধ লিখতে পারেন, কেবল তিনিই
+            new Middleware('can:purchase.payment.create', only: ['simulate']),
             new Middleware('can:purchase.payment.cancel', only: ['cancel']),
         ];
     }
@@ -110,9 +116,73 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $document = $this->service->create($request->documentData(), $request->lineData());
 
-        return redirect()
-            ->route('purchase.payment.show', $document)
-            ->with('saved', __('purchase::message.payment_created'));
+        return $this->afterSave($request, $document, __('purchase::message.payment_created'));
+    }
+
+    /**
+     * ⭐ পোস্টের আগে খাতায় যা যাবে — Dr/Cr, খাত আর শাখা (নকশা #১০, SAP-এর "Simulate")। ⓘ কিছুই লেখা হয় না: ফর্মের মান থেকে
+     * একটা না-রাখা পরিশোধ বানিয়ে পোস্টের একই [[PaymentService::linesFor()]] ডাকা হয় — তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
+     */
+    public function simulate(PaymentRequest $request): JsonResponse
+    {
+        $data = $request->documentData();
+        $paper = new Payment([
+            ...$data,
+            'document_no' => '—',
+            'charge_amount' => blank($data['charge_amount'] ?? null) ? '0' : $data['charge_amount'],
+        ]);
+        $supplier = Supplier::query()->find((int) $data['supplier_id']);
+        $branchId = $supplier === null ? null : (app(\App\Core\Services\PartyRegistry::class)
+            ->branchesOf([['supplier', (int) $supplier->id]])['supplier:'.$supplier->id] ?? null);
+        $branch = \App\Models\Branch::query()->find($branchId ?? CompanyContext::branchId());
+
+        $rows = [];
+        $debit = '0';
+        $credit = '0';
+        foreach ($this->service->linesFor($paper) as $line) {
+            $account = Account::query()->find((int) $line['account_id']);
+            $d = (string) ($line['debit'] ?? '0');
+            $c = (string) ($line['credit'] ?? '0');
+            $rows[] = [
+                'account' => $account === null ? '—' : $account->code.' '.$account->name(),
+                'party' => ($line['party_type'] ?? null) === 'supplier' ? $supplier?->name() : null,
+                'branch' => $branch?->name(),
+                'debit' => bccomp($d, '0', 4) > 0 ? Money::format($d) : '',
+                'credit' => bccomp($c, '0', 4) > 0 ? Money::format($c) : '',
+            ];
+            $debit = bcadd($debit, $d, 4);
+            $credit = bcadd($credit, $c, 4);
+        }
+
+        return response()->json([
+            'rows' => $rows,
+            'debit' => Money::format($debit),
+            'credit' => Money::format($credit),
+            'balanced' => bccomp($debit, $credit, 4) === 0,
+        ]);
+    }
+
+    /**
+     * ⭐ নিচের বোতাম-সারি (নকশা): "খসড়া রাখুন" কেবল রাখে; "পোস্ট" (বা "সইয়ে পাঠান") রেখে সাথে সাথে পোস্টের চেষ্টা করে।
+     * ⓘ সই লাগলে ([[HeldForApproval]]) কাগজ সইয়ের পথে যায় — ভুল নয়, তাই দেখানোর পাতায় "সইয়ে পাঠানো হল"। অন্য বাধায় খসড়া
+     * থাকে আর সম্পাদনায় ফেরে, কারণসহ — লেখা হারায় না।
+     */
+    private function afterSave(Request $request, Payment $payment, string $saved): RedirectResponse
+    {
+        if ($request->input('intent') !== 'post') {
+            return redirect()->route('purchase.payment.show', $payment)->with('saved', $saved);
+        }
+
+        try {
+            $this->service->confirm($payment->fresh());
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+            return redirect()->route('purchase.payment.show', $payment)->with('saved', __('purchase::message.payment_sent_to_sign'));
+        } catch (ValidationException $e) {
+            return redirect()->route('purchase.payment.edit', $payment)->withErrors($e->errors())->withInput()
+                ->with('saved', $saved);
+        }
+
+        return redirect()->route('purchase.payment.show', $payment)->with('saved', __('purchase::message.payment_confirmed'));
     }
 
     public function show(Request $request, Payment $payment): View
@@ -141,9 +211,7 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $this->service->update($payment, $request->documentData(), $request->lineData());
 
-        return redirect()
-            ->route('purchase.payment.show', $payment)
-            ->with('saved', __('purchase::message.payment_updated'));
+        return $this->afterSave($request, $payment, __('purchase::message.payment_updated'));
     }
 
     public function confirm(Payment $payment): RedirectResponse

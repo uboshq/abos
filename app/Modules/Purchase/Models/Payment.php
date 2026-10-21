@@ -49,6 +49,8 @@ class Payment extends Model implements Drillable
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'account_id', 'trx_date', 'amount',
         'instrument', 'instrument_no', 'instrument_date',
+        // ⭐ পদ্ধতির নিজের ঘর আর চার্জ — [[components.money.method]] (মালিক, ২১ অক্টোবর ২০২৬)
+        'transfer_mode_id', 'value_date', 'deposit_slip_no', 'from_bank', 'charge_amount',
 
         /*
          * ⓘ চেকে দেওয়া হলে কোন চেকটা — বাকি সব পরিশোধে `null`।
@@ -72,6 +74,8 @@ class Payment extends Model implements Drillable
         return [
             'trx_date' => 'date',
             'instrument_date' => 'date',
+            'value_date' => 'date',
+            'charge_amount' => 'decimal:4',
             'cancelled_at' => 'datetime',
             'amount' => 'decimal:4',
         ];

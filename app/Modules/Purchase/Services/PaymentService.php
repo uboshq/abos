@@ -12,6 +12,7 @@ use App\Core\Services\SlipIsNotUsedTwice;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Core\Support\MoneyMethod;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
@@ -132,9 +133,7 @@ final class PaymentService
                 'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
-                'instrument' => $data['instrument'] ?? null,
-                'instrument_no' => $data['instrument_no'] ?? null,
-                'instrument_date' => $data['instrument_date'] ?? null,
+                ...$this->methodFields($data),
                 'narration' => $data['narration'] ?? null,
                 'proposal_no' => $data['proposal_no'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -186,9 +185,7 @@ final class PaymentService
                 'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $this->money($data['amount'] ?? $payment->amount),
-                'instrument' => $data['instrument'] ?? null,
-                'instrument_no' => $data['instrument_no'] ?? null,
-                'instrument_date' => $data['instrument_date'] ?? null,
+                ...$this->methodFields($data),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
@@ -208,6 +205,9 @@ final class PaymentService
         }
 
         $this->assertStillFits($payment);
+
+        // ⛔ ব্যাংক, MFS বা নগদ জমায় রেফারেন্স ছাড়া পোস্ট নয় — নকশা #২ ([[MoneyMethod::assertReadyToPost()]])
+        MoneyMethod::assertReadyToPost($payment);
 
         // টাকা বেরোনোর আগেই সই — ছক বসানো না থাকলে আগের মতোই চলে।
         $print = $this->approvals->assertClear(
@@ -296,20 +296,7 @@ final class PaymentService
                 sourceType: Payment::drillSourceType(),
                 sourceId: $payment->id,
                 trxDate: $payment->trx_date,
-                lines: [
-                    [
-                        'account_id' => $this->account(StandardChart::PAYABLE)->id,
-                        'debit' => (string) $payment->amount,
-                        'party_type' => 'supplier',
-                        'party_id' => $payment->supplier_id,
-                        'narration' => __('purchase::message.against_payable', ['no' => $payment->document_no]),
-                    ],
-                    [
-                        'account_id' => $payment->account_id,
-                        'credit' => (string) $payment->amount,
-                        'narration' => __('purchase::message.money_out', ['no' => $payment->document_no]),
-                    ],
-                ],
+                lines: $this->linesFor($payment),
                 documentNo: $payment->document_no,
                 branchId: $payment->branch_id,
             );
@@ -642,6 +629,93 @@ final class PaymentService
      * ⚠️ তালা আগে, মাপা পরে, আর দুইটাই পোস্টের একই লেনদেনে — নাহলে দুইটা
      * পরিশোধ একই মুহূর্তে একই জের দেখে দুইটাই পাশ করত।
      */
+    /**
+     * ⭐ খাতায় যা যাবে — পোস্ট আর পোস্টের আগের প্রিভিউ দুটোই এখান থেকে, তাই প্রিভিউ যা দেখায় খাতায় ঠিক তাই বসে (নকশা #১০,
+     * SAP-এর "Simulate"; মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     *   Dr প্রদেয় (সরবরাহকারী)              পুরো টাকা
+     *   Dr ব্যাংক বা MFS চার্জ (৫২১০/৫২১১)   চার্জ — আমাদের খরচ (নকশা #৯)
+     *   Cr টাকার খাত                        টাকা + চার্জ
+     *
+     * ⓘ চার্জ ছাড়া আগের দুই সারি হুবহু — পুরনো নিয়ম এক টাকাও বদলায়নি।
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function linesFor(Payment $payment): array
+    {
+        $amount = bcadd((string) $payment->amount, '0', 4);
+        $charge = $this->money($payment->charge_amount ?? '0');
+        $no = (string) $payment->document_no;
+
+        $lines = [[
+            'account_id' => $this->account(StandardChart::PAYABLE)->id,
+            'debit' => $amount,
+            'party_type' => 'supplier',
+            'party_id' => $payment->supplier_id,
+            'narration' => __('purchase::message.against_payable', ['no' => $no]),
+        ]];
+
+        if (bccomp($charge, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->chargeHead((int) $payment->account_id)->id,
+                'debit' => $charge,
+                'narration' => __('purchase::message.charge_on_payment', ['no' => $no]),
+            ];
+        }
+
+        $lines[] = [
+            'account_id' => $payment->account_id,
+            'credit' => bcadd($amount, $charge, 4),
+            'narration' => __('purchase::message.money_out', ['no' => $no]),
+        ];
+
+        return $lines;
+    }
+
+    /**
+     * চার্জের খাত — ব্যাংকে ৫২১০, MFS-এ ৫২১১ ([[VoucherService::chargeAccountFor()]]-এর একই নিয়ম)।
+     * ⛔ নগদে চার্জ হয় না — নগদ খাতে চার্জ লিখলে থামে, নিঃশব্দে ফেলে দেওয়া হয় না।
+     */
+    private function chargeHead(int $moneyAccountId): Account
+    {
+        $money = Account::query()->find($moneyAccountId);
+        $code = match (true) {
+            $money?->isMfs() === true => StandardChart::MFS_CHARGES,
+            $money?->isBank() === true => StandardChart::BANK_CHARGES,
+            default => null,
+        };
+
+        if ($code === null) {
+            throw ValidationException::withMessages(['charge_amount' => __('purchase::validation.charge_needs_bank_or_mfs')]);
+        }
+
+        return $this->account($code);
+    }
+
+    /**
+     * ⓘ পদ্ধতির ঘরগুলো — কেবল বাছা পদ্ধতির ([[MoneyMethod::onlyItsOwn()]]); বাকিগুলো ফাঁকা বা শূন্য।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function methodFields(array $data): array
+    {
+        $kept = MoneyMethod::onlyItsOwn([
+            'instrument' => $data['instrument'] ?? null,
+            'instrument_no' => $data['instrument_no'] ?? null,
+            'instrument_date' => $data['instrument_date'] ?? null,
+            'from_bank' => $data['from_bank'] ?? null,
+            'transfer_mode_id' => $data['transfer_mode_id'] ?? null,
+            'value_date' => $data['value_date'] ?? null,
+            'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
+            'charge_amount' => $data['charge_amount'] ?? null,
+        ]);
+        // ⓘ খালি চার্জের ঘর মানে শূন্য — [[money()]] খালি লেখাকে ভুল ধরে
+        $kept['charge_amount'] = $this->money(blank($kept['charge_amount'] ?? null) ? '0' : $kept['charge_amount']);
+
+        return $kept;
+    }
+
     private function assertMoneyIsThere(Payment $payment): void
     {
         $account = Account::query()->findOrFail($payment->account_id);
@@ -653,14 +727,16 @@ final class PaymentService
 
         $cash->lock($account);
 
-        $short = $cash->shortfall($account, (string) $payment->amount, $payment->trx_date?->toDateString());
+        // ⓘ খাত থেকে বেরোয় টাকা আর চার্জ দুটোই ([[linesFor()]]) — চার্জ বাদে মাপলে খাত ঋণাত্মক হতে পারত
+        $out = bcadd((string) $payment->amount, $this->money($payment->charge_amount ?? '0'), 4);
+        $short = $cash->shortfall($account, $out, $payment->trx_date?->toDateString());
 
         if ($short !== null) {
             throw ValidationException::withMessages([
                 'amount' => __('purchase::validation.not_enough_money_in', [
                     'account' => $account->name(),
-                    'held' => Money::format(bcsub((string) $payment->amount, $short, 4)),
-                    'amount' => Money::format((string) $payment->amount),
+                    'held' => Money::format(bcsub($out, $short, 4)),
+                    'amount' => Money::format($out),
                 ]),
             ]);
         }
