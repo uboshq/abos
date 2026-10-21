@@ -114,9 +114,9 @@ final class SignedButNotPosted
                     continue;
                 }
 
-                // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
                 $label = Schema::hasColumn($table, 'document_no') ? 'document_no' : 'id';
                 $hasBranch = Schema::hasColumn($table, 'branch_id');
+                // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
                 $found = DB::table($table)
                     ->where('company_id', CompanyContext::id())
                     ->whereIn('id', $rows->pluck('approvable_id')->all())
