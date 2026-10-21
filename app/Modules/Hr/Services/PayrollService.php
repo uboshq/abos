@@ -1367,7 +1367,13 @@ final class PayrollService
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
             'employee_id' => $employee->id,
-            'payment_method' => $employee->payment_method,
+            /*
+             * ⛔ সই-না-পড়া প্রথম হিসাব — ভাতাও "আটকে", বেতনের স্লিপের একই নিয়ম ([[heldReason()]]; মেশানোর পর, a6, ২১ অক্টোবর ২০২৬;
+             * [[AHeldFestivalBonusNeverReachesTheBankFileTest]])। ⓘ পে-শাখার ভাতা কর্মীর পথ সোজা কপি করত, অথচ সই-শাখায় প্রথম নম্বর সই
+             * না পড়া পর্যন্ত কর্মীর সারিতে খালি থাকে — ভাতার ব্যাংক ফাইলে খালি হিসাব-নম্বরের সারি যেত। এখন আটকে থাকে, সই পড়লে পরের
+             * ব্যাংক ফাইলে বা বকেয়ার কাগজে একবারই যায় ([[arrearsFor()]], [[HeldWages]])।
+             */
+            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,
             'bank_name' => $employee->bank_name,
             'bank_account_name' => $employee->bank_account_name,
             'bank_account_no' => $employee->bank_account_no,
