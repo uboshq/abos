@@ -42,7 +42,8 @@ final class TheBarKeptEveryTaskItHadTest extends TestCase
     private const TASKS = [
         'মেনু গুটানো-খোলা' => ['bar', '$store.sidebar.toggle()'],
         'চলতি মডিউল' => ['rail', 'data-active-module'],
-        '⊞ সব মডিউল' => ['rail', 'data-site-map'],
+        // ⓘ ২১ অক্টোবর ২০২৬: ⊞ আবার বারে, "≡"-এর পরে (মালিক; [[shell.launcher]]) — আগে রেলের মডিউল-প্যানেলে (`data-site-map`)
+        '⊞ সব মডিউল' => ['bar', 'data-module-launcher-sheet'],
         '＋ তৈরি' => ['bar', 'data-shell-create'],
         'অনুমোদন' => ['bar', 'data-shell-approvals'],
         'সই হয়েছে, পোস্ট হয়নি' => ['bar', 'data-signed-unposted-bar'],
