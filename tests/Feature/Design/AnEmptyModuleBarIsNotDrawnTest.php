@@ -34,7 +34,9 @@ final class AnEmptyModuleBarIsNotDrawnTest extends TestCase
 
         $list = (string) $this->actingAs($owner)->get(route('sales.invoice.index'))->assertOk()->getContent();
         $this->assertStringContainsString('data-module-bar', $list, '⛔ বিক্রয়ের তালিকায় ট্যাব আছে, অথচ মডিউল-বার নেই।');
-        $bar = substr($list, (int) strpos($list, 'data-module-bar'), 20000);
+        // ⓘ বারের নিজের `</nav>` পর্যন্ত — বিক্রয়ের বার ~৪৮ হাজার অক্ষর লম্বা (Mac, ২১ অক্টোবর: বাঁধা ২০ হাজারে ট্যাবটা বাইরে পড়েছিল)
+        $at = (int) strpos($list, 'data-module-bar');
+        $bar = substr($list, $at, (int) strpos($list, '</nav>', $at) - $at);
         $this->assertStringContainsString('href="'.e(route('sales.invoice.index')).'"', $bar, 'প্রস্তুতিটাই ভুল — বারে বিক্রয়ের ট্যাব নেই।');
     }
 }
