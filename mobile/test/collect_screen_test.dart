@@ -4,6 +4,7 @@ import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/books/collection_plan.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
+import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:flutter/material.dart';
@@ -118,9 +119,9 @@ void main() {
     expect(find.text('মাস খোলা'), findsOneWidget, reason: 'বিষয় ১৩');
 
     await _type(tester, 'collect-amount', '45000');
-    expect(_texts(tester, 'collect-figure-due'), 'বকেয়া | ৳53,200.00');
+    expect(_texts(tester, 'collect-figure-due'), 'বকেয়া | ৳51,200.00');
     expect(_texts(tester, 'collect-figure-this'), 'এই আদায় | ৳45,000.00');
-    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳8,200.00', reason: '⛔ বকেয়া − এই আদায় ভুল');
+    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳6,200.00', reason: '⛔ বকেয়া − এই আদায় ভুল');
     expect(find.byKey(const ValueKey('collect-over-due')), findsNothing);
     final ys = [for (final k in ['collect-figure-due', 'collect-figure-this', 'collect-figure-left']) tester.getTopLeft(find.byKey(ValueKey(k))).dy];
     expect(ys.toSet(), hasLength(1), reason: 'তিন অঙ্ক এক সারিতে');
@@ -130,7 +131,7 @@ void main() {
     await _pump(tester, _screen(FakeCollect()));
     await _pickShop(tester);
     await _tap(tester, 'collect-full-due');
-    expect(_field(tester, 'collect-amount'), '53,200.00');
+    expect(_field(tester, 'collect-amount'), '51,200.00');
     expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳0.00');
   });
 
@@ -160,9 +161,9 @@ void main() {
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '60000');
 
-    expect(find.text('বকেয়ার চেয়ে ৳6,800.00 বেশি — বাড়তি টাকা গ্রাহকের খাতায় জমা (Cr) থাকবে।'), findsOneWidget,
+    expect(find.text('বকেয়ার চেয়ে ৳8,800.00 বেশি — বাড়তি টাকা গ্রাহকের খাতায় জমা (Cr) থাকবে।'), findsOneWidget,
         reason: '⛔ বকেয়ার বেশি টাকায় সতর্কতা নেই');
-    expect(_texts(tester, 'collect-figure-left'), 'গ্রাহকের খাতায় জমা থাকবে | ৳6,800.00');
+    expect(_texts(tester, 'collect-figure-left'), 'গ্রাহকের খাতায় জমা থাকবে | ৳8,800.00');
     // ⓘ 60,000 + ক্রেডিট নোট 2,000 = 62,000 হাতে; বিল 53,200 — বাকি 8,800 অপ্রয়োগকৃত, গ্রাহকের খাতায়
     await _review(tester);
     expect(_texts(tester, 'collect-unapplied'), contains('৳8,800.00'));
@@ -180,7 +181,9 @@ void main() {
   testWidgets('the party type: picking সরবরাহকারী shows the note and opens the old form only on its button; posting is off meanwhile',
       (tester) async {
     await _pump(tester, _screen(FakeCollect()));
-    expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('collect-party-customer'))).selected, isTrue);
+    expect(
+        tester.widget<ChoiceChip>(find.descendant(of: find.byKey(const ValueKey('collect-party-customer')), matching: find.byType(ChoiceChip))).selected,
+        isTrue);
     expect(find.byKey(const ValueKey('collect-party-note')), findsNothing);
 
     await _tap(tester, 'collect-party-supplier');
@@ -436,7 +439,7 @@ void main() {
     expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: '⛔ ছাড়ে মালিকের সইয়ের কথা নেই');
     await _type(tester, 'collect-vds', '500');
     await _type(tester, 'collect-ait', '200');
-    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳11,500.00', reason: 'বকেয়া − আদায় − ছাড় − কাটা');
+    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳9,500.00', reason: 'বকেয়া − আদায় − ছাড় − কাটা');
 
     await _review(tester);
     expect(_texts(tester, 'collect-sum-received'), 'পাওয়া টাকা | ৳40,000.00');
@@ -927,6 +930,91 @@ void main() {
       expect(payload.containsKey('lines'), isFalse, reason: 'লাইন না দিলে সার্ভার পুরনো বিল আগে বসায়');
       expect(payload['confirm'], true);
       expect(payload['trxDate'], '2026-10-07');
+    });
+  });
+
+  group('readable and distinct (fe, 22 Oct 2026)', () {
+    /// প্রতিটা লেখার আসল মাপ — RichText-এর মেলানো স্টাইল থেকে; আইকন (ফন্ট-চিহ্ন) বাদ
+    List<(double, String, Element)> sizes(WidgetTester tester) => [
+          for (final e in find.byType(RichText).evaluate())
+            if ((e.widget as RichText).text.style case final st?)
+              if (!(st.fontFamily ?? '').contains('Material') && (e.widget as RichText).text.toPlainText().trim().isNotEmpty)
+                (st.fontSize ?? 14, (e.widget as RichText).text.toPlainText(), e),
+        ];
+
+    void floor(WidgetTester tester, {required String screen}) {
+      final all = sizes(tester);
+      expect(all, isNotEmpty);
+      final small = [for (final (size, text, _) in all) if (size < 12) '$text ($size)'];
+      expect(small, isEmpty, reason: '⛔ $screen: ১২-এর নিচে লেখা: $small');
+      bool under(Element e, String key) {
+        var hit = false;
+        e.visitAncestorElements((a) {
+          final k = a.widget.key;
+          if (k is ValueKey<String> && k.value.startsWith(key)) {
+            hit = true;
+            return false;
+          }
+          return true;
+        });
+        return hit;
+      }
+
+      // ⓘ টাকার অঙ্ক আর লেখার মূল অংশ ১৪-র কম নয়; মাথার তিন অঙ্ক ১৬-র কম নয়
+      for (final (size, text, e) in all) {
+        if (text.contains('৳') && under(e, 'collect-figure-')) {
+          expect(size, greaterThanOrEqualTo(16), reason: '⛔ $screen: মাথার অঙ্ক "$text" $size');
+        }
+        for (final key in ['collect-row-amount-', 'collect-sum-', 'collect-net-applied', 'collect-unapplied', 'collect-applied-total',
+          'collect-journal-', 'collect-controls', 'collect-after']) {
+          // ⓘ অবস্থার চিপের লেখা লেবেল (১২-র নিয়ম), মূল লেখা নয়
+          if (under(e, key) && find.ancestor(of: find.byElementPredicate((x) => x == e), matching: find.byType(AppStatusChip)).evaluate().isEmpty) {
+            expect(size, greaterThanOrEqualTo(14), reason: '⛔ $screen: "$text" $size (চাবি $key)');
+          }
+        }
+      }
+    }
+
+    testWidgets('every text on screen 1 and screen 2 is at least 12; amounts and body 14; the three figures 16', (tester) async {
+      await _pump(tester, _screen(FakeCollect(preview: previewJson(needsSignature: true))));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-item-INV-0094');
+      await _tap(tester, 'collect-adjust');
+      floor(tester, screen: 'পর্দা ১');
+      await _post(tester);
+      floor(tester, screen: 'পর্দা ২');
+    });
+
+    /// WCAG-এর আপেক্ষিক উজ্জ্বলতা আর অনুপাত
+    double ratio(Color a, Color b) {
+      final la = a.computeLuminance();
+      final lb = b.computeLuminance();
+      final hi = la > lb ? la : lb;
+      final lo = la > lb ? lb : la;
+      return (hi + 0.05) / (lo + 0.05);
+    }
+
+    for (final (mode, theme) in [('light', AppTheme.light()), ('dark', AppTheme.dark())]) {
+      test('a selected chip stands apart in $mode: fill or outline 3:1 on the card, its label 4.5:1 on the fill', () {
+        final c = CollectChipColors.of(theme);
+        final edge = [ratio(c.selectedFill, c.unselectedSurface), ratio(c.selectedBorder, c.unselectedSurface)].reduce((a, b) => a > b ? a : b);
+        expect(edge, greaterThanOrEqualTo(3), reason: '⛔ বাছা চিপ না-বাছা থেকে আলাদা দেখায় না ($mode, ${edge.toStringAsFixed(2)}:1)');
+        final label = ratio(c.selectedLabel, c.selectedFill);
+        expect(label, greaterThanOrEqualTo(4.5), reason: '⛔ বাছা চিপের লেখা পড়া যায় না ($mode, ${label.toStringAsFixed(2)}:1)');
+      });
+    }
+
+    testWidgets('the chips on screen use those colours: the selected one filled and outlined, the others not', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      final c = CollectChipColors.of(Theme.of(tester.element(find.byType(CollectScreen))));
+      ChoiceChip chip(String key) => tester.widget<ChoiceChip>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(ChoiceChip)));
+      expect(chip('collect-party-customer').selectedColor, c.selectedFill);
+      expect(chip('collect-party-customer').side?.color, c.selectedBorder);
+      expect(chip('collect-party-customer').side?.width, 2);
+      expect(chip('collect-party-supplier').side, isNull);
+      expect(chip('collect-method-cash').selected, isTrue);
+      expect(chip('collect-method-cash').labelStyle?.color, c.selectedLabel);
     });
   });
 

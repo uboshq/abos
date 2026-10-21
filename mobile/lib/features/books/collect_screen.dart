@@ -828,7 +828,7 @@ class _CollectScreenState extends State<CollectScreen> {
         _Label(w.collectPartyKind),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           for (final k in CollectScreen.partyKinds)
-            ChoiceChip(
+            _Segment(
               key: ValueKey('collect-party-$k'),
               label: Text(switch (k) {
                 'customer' => w.collectPartyCustomer,
@@ -851,7 +851,7 @@ class _CollectScreenState extends State<CollectScreen> {
               border: BorderDirectional(start: BorderSide(color: context.palette.pending, width: 3)),
             ),
             child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-              Text(w.collectPartyOldNote, style: TextStyle(color: context.palette.onSurface, fontSize: 13)),
+              Text(w.collectPartyOldNote, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.palette.onSurface)),
               TextButton(
                 key: const ValueKey('collect-party-open-old'),
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -937,7 +937,7 @@ class _CollectScreenState extends State<CollectScreen> {
         _Label(w.collectMethod),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           for (final m in CollectScreen.methods)
-            ChoiceChip(
+            _Segment(
               key: ValueKey('collect-method-$m'),
               label: Text(_methodLabel(context, m)),
               selected: _method == m,
@@ -1144,7 +1144,7 @@ class _CollectScreenState extends State<CollectScreen> {
           _Label(w.collectDifference),
           Wrap(spacing: AppSpacing.xs, children: [
             for (final (kind, label) in [('discount', w.collectDifferenceDiscount), ('rounding', w.collectDifferenceRounding)])
-              ChoiceChip(
+              _Segment(
                 key: ValueKey('collect-difference-$kind'),
                 label: Text(label),
                 selected: _differenceKind == kind,
@@ -1479,6 +1479,49 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
   }
 }
 
+/// ⭐ বাছা চিপের রং — বাছা আর না-বাছা স্পষ্ট আলাদা (fe, ২২ অক্টোবর ২০২৬; WCAG 2.2: সীমানা ৩:১, লেখা ৪.৫:১): বাছা চিপ থিমের
+/// primary-তে ভরা, লেখা onPrimary, চারপাশে ২dp primary; না-বাছা চিপ কার্ডের রঙের উপর। অ্যাপের নীলচে-সবুজ (teal) থাকে।
+class CollectChipColors {
+  const CollectChipColors({required this.selectedFill, required this.selectedBorder, required this.selectedLabel, required this.unselectedSurface});
+
+  final Color selectedFill;
+  final Color selectedBorder;
+  final Color selectedLabel;
+
+  /// না-বাছা চিপ যার উপর বসে — কার্ডের রং
+  final Color unselectedSurface;
+
+  static CollectChipColors of(ThemeData theme) => CollectChipColors(
+        selectedFill: theme.colorScheme.primary,
+        selectedBorder: theme.colorScheme.primary,
+        selectedLabel: theme.colorScheme.onPrimary,
+        unselectedSurface: theme.cardTheme.color ?? theme.colorScheme.surfaceContainerLow,
+      );
+}
+
+/// বেছে নেওয়ার চিপ — পক্ষের ধরন, পদ্ধতি, ছাড়/রাউন্ডিং; বাছা অবস্থা [CollectChipColors]-এ
+class _Segment extends StatelessWidget {
+  const _Segment({super.key, required this.label, required this.selected, required this.onSelected});
+
+  final Widget label;
+  final bool selected;
+  final ValueChanged<bool>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = CollectChipColors.of(Theme.of(context));
+    return ChoiceChip(
+      label: label,
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: c.selectedFill,
+      checkmarkColor: c.selectedLabel,
+      labelStyle: selected ? TextStyle(color: c.selectedLabel, fontWeight: FontWeight.w600) : null,
+      side: selected ? BorderSide(color: c.selectedBorder, width: 2) : null,
+    );
+  }
+}
+
 /// নকশার হালকা-ভরা চিপ — "পুরো বকেয়া", "নির্বাচিত বিল", রসিদের চার পথ
 class _TonalChip extends StatelessWidget {
   const _TonalChip({super.key, required this.label, required this.onPressed});
@@ -1705,7 +1748,7 @@ class _Note extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         ExcludeSemantics(child: Icon(icon, size: 18, color: fg)),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(child: Text(text, style: TextStyle(color: p.onSurface, fontSize: 13))),
+        Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: p.onSurface))),
       ]),
     );
   }
@@ -1733,8 +1776,8 @@ class _Banner extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(text, style: TextStyle(color: p.onSurface, fontSize: 13)),
-            if (detail != null) Text(detail!, style: TextStyle(color: p.onSurfaceMuted, fontSize: 12)),
+            Text(text, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: p.onSurface)),
+            if (detail != null) Text(detail!, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: p.onSurfaceMuted)),
           ]),
         ),
       ]),

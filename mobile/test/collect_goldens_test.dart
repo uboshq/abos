@@ -32,8 +32,8 @@ Future<void> _loadRounded() async {
 
 /// [review]: পর্দা ২ খোলা; [posted]: তার পরে পোস্টও হয়ে গেছে
 Future<void> _open(WidgetTester tester,
-    {bool dark = false, Locale locale = AppLocale.locale, bool review = false, bool posted = false}) async {
-  tester.view.physicalSize = Size(412, review ? 1400 : 1900);
+    {bool dark = false, Locale locale = AppLocale.locale, bool review = false, bool posted = false, double textScale = 1}) async {
+  tester.view.physicalSize = Size(412, (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   AppLocale.current = locale;
@@ -48,6 +48,7 @@ Future<void> _open(WidgetTester tester,
       locale: locale,
       supportedLocales: AppLocale.supported,
       localizationsDelegates: AppLocale.delegates,
+      builder: (context, child) => MediaQuery.withClampedTextScaling(minScaleFactor: textScale, maxScaleFactor: textScale, child: child!),
       home: CollectScreen(
         api: FakeCollect(preview: previewJson(needsSignature: false)),
         books: FakeBooks(),
@@ -118,6 +119,23 @@ void main() {
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/${name}_412_light_en.png'));
     });
   }
+
+  // ⓘ ১৩০% লেখায় দুই পর্দা — কিছু কাটা পড়ে না (২০০%-এর উপচে-না-পড়া দাবি collect_screen_test-এ)
+  for (final (name, what, review) in [('collect_screen', 'screen 1', false), ('collect_review', 'screen 2', true)]) {
+    testWidgets('20 · $what at 130% text, light, in Bengali — nothing cut', (tester) async {
+      await _open(tester, review: review, textScale: 1.3);
+      expect(tester.takeException(), isNull, reason: '⛔ ১৩০% লেখায় উপচে পড়ল');
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/${name}_412_light_bn_130.png'));
+    });
+  }
+
+  test('the sample shows the design\'s figures (page 6): due 51,200, this 45,000, left 6,200', () {
+    final b = OpenBills.fromJson(openBillsJson());
+    expect(b.due, 5120000);
+    expect(b.items.map((i) => (i.no, i.isCredit ? -i.open : i.open)),
+        [('INV-0094', 3000000), ('INV-0101', 1520000), ('CN-0007', -200000), ('INV-0112', 800000)]);
+    expect(b.items.first.overdueDays, 8);
+  });
 
   test('the fake speaks the final contract', () {
     final b = OpenBills.fromJson(openBillsJson());

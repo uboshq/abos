@@ -24,7 +24,8 @@ Map<String, dynamic> openBillsJson({bool monthOpen = true, bool slipRequired = f
         'credit_limit': '100000.0000',
         'oldest_overdue_days': 49,
       },
-      'due': '53200.0000',
+      // ⓘ নকশার পাতা ৬-এর অঙ্ক: বকেয়া ৳51,200 = বিল 30,000 + 15,200 + 8,000 − ফেরত 2,000
+      'due': '51200.0000',
       'credit': '2000.0000',
       'month_open': monthOpen,
       'attachment_required': slipRequired,
