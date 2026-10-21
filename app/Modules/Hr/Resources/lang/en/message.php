@@ -87,6 +87,8 @@ return [
     'no_information' => 'No information',
     'maternity_children_unknown' => 'No information on surviving children — with two or more, no maternity benefit is due (s.46(3)). Check before you sign.',
     'maternity_benefit_line' => 'Maternity benefit',
+    // ⭐ the average rule written on the page — a festival bonus is not wages (s.2(45), s.48; fe, 21 Oct 2026)
+    'maternity_wage_rule' => 'Average daily wage: from the salary runs of the 3 months before notice; a festival bonus is not wages (s.2(45), 48)',
     // ⭐ branch weekly off (s.103, s.114; a6, 21 Oct 2026)
     'weekly_off_saved' => 'Weekly off saved for the branch.',
     'weekly_off_branches' => 'Weekly off by branch',

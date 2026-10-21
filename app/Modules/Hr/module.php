@@ -12,6 +12,7 @@ use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
 use App\Modules\Hr\Listeners\CloseThePaymentChangeOnWithdrawal;
 use App\Modules\Hr\Listeners\ReleaseHeldWagesWhenTheVoucherFalls;
 use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheBankUnpaidLineOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
@@ -288,6 +289,11 @@ return [
         'payment_change' => 'hr::approval.payment_change',
         // ⓘ WPPF-এর জাবেদা — কোম্পানি চাইলে ছক বসায়; না থাকলে "সই দিন" চাপা মানুষটিই সই ([[WppfService::provision()]])
         'wppf_provision' => 'hr::approval.wppf_provision',
+        /*
+         * ⭐ "ব্যাংক এই লাইন দেয়নি" — বাতিল রানের ব্যাংক ফাইলে যাওয়া বকেয়া মজুরি আবার দেওয়ার তালিকায়, কেবল দ্বিতীয় সইয়ে (fe-র সিদ্ধান্ত ২,
+         * ২১ অক্টোবর ২০২৬; [[HeldWages::askBankUnpaid()]]); ছক না থাকলেও দ্বিতীয় সই (নিচের `second_hand`)।
+         */
+        'bank_unpaid' => 'hr::approval.bank_unpaid',
     ],
 
     /*
@@ -330,6 +336,14 @@ return [
             'signer_key' => 'hr.identity.view',
             'second_hand' => ['hr.employee.manage'],
             'summary' => \App\Modules\Hr\Services\PaymentChangeSummary::class,
+        ],
+        /*
+         * ⛔ "ব্যাংক এই লাইন দেয়নি" — মজুরি আবার দেওয়ার তালিকায় ফেরে, তাই বেতনের রানের অবিকল নিয়ম: `hr.payroll.manage` + `hr.salary.view`
+         * থাকা আরেকজন, যিনি চাইলেন তিনি কখনো নন — মালিকও নন (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬; [[HeldWages::finishBankUnpaid()]])।
+         */
+        'bank_unpaid' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.payroll.manage'],
         ],
     ],
 
@@ -740,11 +754,13 @@ return [
             FinishThePaymentChangeOnTheLastSignature::class,
             // ⭐ বকেয়া মজুরির খসড়া ভাউচার সইয়ে "না" — মজুরি আবার দেওয়ার অপেক্ষায় (fe, ২১ অক্টোবর ২০২৬)
             ReleaseHeldWagesWhenTheVoucherFalls::class,
+            // ⭐ "ব্যাংক এই লাইন দেয়নি"-র শেষ সই — মজুরি আবার দেওয়ার তালিকায়, একবারই (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
+            FinishTheBankUnpaidLineOnTheLastSignature::class,
         ],
         // ⭐ বকেয়া মজুরির খসড়া ভাউচার বাতিল — একই কথা ([[HeldWages::releaseFor()]])
         \App\Modules\Accounts\Events\VoucherCancelled::class => [ReleaseHeldWagesWhenTheVoucherFalls::class],
         // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
-        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class],
+        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class, FinishTheBankUnpaidLineOnTheLastSignature::class],
     ],
 
     'sensitive_fields' => [

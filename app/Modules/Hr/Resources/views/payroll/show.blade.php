@@ -66,6 +66,13 @@
         </div>
     @endif
 
+    {{-- ⭐ মাতৃত্বকালীন সুবিধার সারি আছে — গড়ের নিয়ম লেখা: উৎসব বোনাস মজুরি নয় (ধারা ২(৪৫), ৪৮; fe, ২১ অক্টোবর ২০২৬; [[MaternityBenefit::averageDailyWage()]]) --}}
+    @if ($run->payslips->contains(fn ($s) => $s->lines->contains('head_code', \App\Modules\Hr\Services\MaternityBenefit::LINE_CODE)))
+        <p role="note" data-maternity-wage-rule class="mb-4 text-2xs text-(--color-ink-muted)">
+            {{ __('hr::message.maternity_wage_rule') }}
+        </p>
+    @endif
+
     <div class="mb-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
         <div class="grid gap-3 sm:grid-cols-4">
             {{-- ⓘ নাগালের কর্মীদের মোট — সীমা না থাকলে রানের নিজের (অডিট HR ⛔২) --}}

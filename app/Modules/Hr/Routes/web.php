@@ -92,6 +92,9 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/held', [HeldWageController::class, 'index'])->name('held.index');
         Route::post('/held/pay/{channel}', [HeldWageController::class, 'pay'])->whereIn('channel', ['bank', 'mfs'])->name('held.pay');
         Route::get('/held/paper/{voucher}', [HeldWageController::class, 'paper'])->whereNumber('voucher')->name('held.paper');
+        // ⭐ বাতিল রানের ব্যাংক ফাইলের লাইন — "ব্যাংক এই লাইন দেয়নি" আর তার দ্বিতীয় সই (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
+        Route::post('/held/bank-unpaid/{payment}', [HeldWageController::class, 'bankUnpaid'])->whereNumber('payment')->name('held.bank_unpaid');
+        Route::post('/held/bank-unpaid-line/{line}/sign', [HeldWageController::class, 'signBankUnpaid'])->whereNumber('line')->name('held.bank_unpaid_sign');
         Route::get('/{run}/payslips', [PayslipPrintController::class, 'all'])->whereNumber('run')->name('payslips');
     });
 

@@ -4,23 +4,29 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Approval;
+use App\Models\ApprovalDecision;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Hr\Models\BankUnpaidLine;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\HeldWagePayment;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 /**
  * ⭐ দেওয়ার অপেক্ষায় বকেয়া মজুরি — আটকে থাকা স্লিপ, যার কর্মীর ব্যাংক বা MFS হিসাব এখন সই-পড়া; যেকোনো দিন দেওয়া যায় (fe, ২১ অক্টোবর
@@ -186,6 +192,249 @@ final class HeldWages
         }
 
         return $released;
+    }
+
+    /** ⭐ "ব্যাংক এই লাইন দেয়নি"-র সই — অনুমোদনের ছকে `hr` · `bank_unpaid` (module.php-র `second_hand`, বেতনের রানের একই নিয়ম) */
+    public const UNPAID_MODULE = 'hr';
+
+    public const UNPAID_ACTION = 'bank_unpaid';
+
+    /**
+     * ⭐ ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায় (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা ১২৩)।
+     *
+     * ⓘ যে বকেয়া মজুরি কোনো রানের ব্যাংক ফাইলে গিয়েছিল ([[PayrollService::arrearsFor()]] — ফাইল নামানোর সময় সারি বসে), আর সেই রান
+     * পরে বাতিল। ⛔ রান বাতিলে সারিটা নিজে নিজে ছাড়া হয় না: ফাইলটা ব্যাংকে উঠে গিয়ে থাকলে টাকা গেছে — ছাড়লে মজুরি দুইবার। হিসাবের
+     * মানুষ ব্যাংকের বিবরণী মিলিয়ে "ব্যাংক এই লাইন দেয়নি" বলেন ([[askBankUnpaid()]]), আরেকজনের দ্বিতীয় সইয়ে তবে ছাড়া।
+     *
+     * @return Collection<int, array{payslip: Payslip, employee: ?Employee, payment: HeldWagePayment, held_run: ?PayrollRun, carrier: ?PayrollRun, amount: string, asked: ?BankUnpaidLine}>
+     */
+    public function awaitingBank(?User $user = null): Collection
+    {
+        $query = Payslip::query()
+            ->whereHas('heldPayment', fn ($q) => $q->whereIn('paid_in_run_id',
+                PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+            ->with(['employee', 'heldPayment']);
+
+        $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
+        $slips = $query->orderBy('id')->get();
+
+        if ($slips->isEmpty()) {
+            return collect();
+        }
+
+        // ⓘ রান সব শাখা জুড়ে — বাতিল রানটা অন্য শাখার হলেও লাইনটা দেখা যায় (কর্মী নাগালে, তাই যথেষ্ট)
+        $runs = PayrollRun::acrossBranches()
+            ->whereKey([...$slips->pluck('payroll_run_id')->all(), ...$slips->pluck('heldPayment.paid_in_run_id')->all()])
+            ->get()->keyBy('id');
+        $asked = BankUnpaidLine::query()->whereIn('held_wage_payment_id', $slips->pluck('heldPayment.id')->all())
+            ->where('status', BankUnpaidLine::PENDING)->get()->keyBy('held_wage_payment_id');
+
+        return $slips->map(fn (Payslip $slip) => [
+            'payslip' => $slip,
+            'employee' => $slip->employee,
+            'payment' => $slip->heldPayment,
+            'held_run' => $runs->get($slip->payroll_run_id),
+            'carrier' => $runs->get($slip->heldPayment->paid_in_run_id),
+            'amount' => Money::round((string) $slip->heldPayment->amount, 2),
+            'asked' => $asked->get($slip->heldPayment->id),
+        ])->values();
+    }
+
+    /** ⓘ এই "দেওয়া হয়েছে" সারি কি বাতিল রানের ব্যাংক ফাইলের — "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" */
+    public static function awaitsTheBank(HeldWagePayment $payment): bool
+    {
+        return $payment->paid_in_run_id !== null
+            && PayrollRun::acrossBranches()->whereKey($payment->paid_in_run_id)->value('status') === DocumentStatus::CANCELLED;
+    }
+
+    /**
+     * ⭐ "ব্যাংক এই লাইন দেয়নি" — কারণসহ চাওয়া; দ্বিতীয় সইয়ের অপেক্ষায় (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ কারণ ছাড়া নয় — ব্যাংকের বিবরণীর কোন কথায় বলা হলো, নিরীক্ষকের প্রশ্ন সেটাই। ⛔ কেবল "নিশ্চিতের অপেক্ষায়" লাইনে — চালু রানের
+     * ফাইল বা বকেয়ার নিজের কাগজের লাইনে নয় (সেটার পথ ভাউচার, [[releaseFor()]])। ⛔ এক লাইনে একটাই অপেক্ষার চাওয়া।
+     * ⓘ সই সইয়ের ইঞ্জিনে, বেতনের রানের একই নিয়মে — ছক না থাকলেও যন্ত্রের "দ্বিতীয় সই", যিনি চাইলেন তিনি কখনো নন, মালিকও নন
+     * ([[ApprovalEngine::twoHands()]])। মজুরি ছাড়ে কেবল শেষ সইয়ে ([[finishBankUnpaid()]])। কর্মীর অডিটে `bank_unpaid_asked`।
+     */
+    public function askBankUnpaid(HeldWagePayment $payment, ?string $reason, User $by): BankUnpaidLine
+    {
+        $reason = mb_substr(trim((string) $reason), 0, 500);
+
+        if ($reason === '') {
+            throw ValidationException::withMessages(['reason' => __('hr::payroll.bank_unpaid_reason_required')]);
+        }
+
+        return DB::transaction(function () use ($payment, $reason, $by): BankUnpaidLine {
+            $fresh = HeldWagePayment::query()->whereKey($payment->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null || ! self::awaitsTheBank($fresh)) {
+                throw ValidationException::withMessages(['payment' => __('hr::payroll.bank_unpaid_not_awaiting')]);
+            }
+
+            if (BankUnpaidLine::query()->where('held_wage_payment_id', $fresh->id)->where('status', BankUnpaidLine::PENDING)->exists()) {
+                throw ValidationException::withMessages(['payment' => __('hr::payroll.bank_unpaid_already_asked')]);
+            }
+
+            $slip = Payslip::query()->with('employee')->findOrFail($fresh->payslip_id);
+            $carrier = (string) PayrollRun::acrossBranches()->whereKey($fresh->paid_in_run_id)->value('document_no');
+
+            $line = BankUnpaidLine::query()->create([
+                'company_id' => (int) $fresh->company_id,
+                'employee_id' => (int) $slip->employee_id,
+                'payslip_id' => (int) $slip->id,
+                'held_wage_payment_id' => (int) $fresh->id,
+                'payroll_run_id' => (int) $fresh->paid_in_run_id,
+                'amount' => (string) $fresh->amount,
+                'reason' => $reason,
+                'status' => BankUnpaidLine::PENDING,
+                'requested_by' => $by->id,
+            ]);
+
+            $slip->employee?->auditAction('bank_unpaid_asked', __('hr::payroll.bank_unpaid_asked_audit', ['no' => $carrier, 'reason' => $reason]));
+
+            $approval = app(ApprovalEngine::class)->request(
+                $line,
+                self::UNPAID_MODULE,
+                self::UNPAID_ACTION,
+                amount: null,
+                reason: __('hr::payroll.bank_unpaid_asked_reason', ['employee' => (string) $slip->employee?->name(), 'no' => $carrier]),
+                userId: (int) $by->id,
+                matchOn: [],
+            );
+
+            // ⛔ সই ছাড়া কখনো নয় — ঘোষণা (`second_hand`) সরানো হলে চাওয়াটাই ফেরে, এক হাতে মজুরি ছাড়ার পথ খোলে না
+            if ($approval === null) {
+                throw new RuntimeException('hr.bank_unpaid must declare its second_hand in module.php — a wage is never released by one hand.');
+            }
+
+            return $line->fresh();
+        });
+    }
+
+    /**
+     * ⭐ দ্বিতীয় সই — পাতার বোতাম; ইনবক্সের একই ইঞ্জিন, একই প্রশ্ন ([[ApprovalEngine::canDecide()]])।
+     *
+     * ⛔ যিনি চাইলেন তিনি নন (মালিকও নন); চাবি ছাড়া কেউ নন; অপেক্ষায় নেই এমন অনুরোধে আর নয় — দ্বিতীয় চাপ ফেরে।
+     */
+    public function signBankUnpaid(BankUnpaidLine $line, User $by): BankUnpaidLine
+    {
+        $approval = $this->unpaidApprovalOf($line);
+
+        if (! $line->isPending() || $approval === null || ! $approval->isPending()) {
+            throw ValidationException::withMessages(['bank_unpaid' => __('hr::payroll.bank_unpaid_not_pending')]);
+        }
+
+        if (! app(ApprovalEngine::class)->canDecide($approval, $by)) {
+            throw ValidationException::withMessages(['bank_unpaid' => (int) $line->requested_by === (int) $by->id
+                ? __('hr::payroll.bank_unpaid_another_hand')
+                : __('hr::payroll.bank_unpaid_no_right')]);
+        }
+
+        app(ApprovalEngine::class)->approve($approval, $by);
+
+        return $line->fresh();
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — "দেওয়া হয়েছে" সারিটা মোছে, মজুরি আবার দেওয়ার তালিকায় ([[ready()]], [[PayrollService::heldWagesOwed()]], পরের
+     * রানের ব্যাংক ফাইল) — একবারই; "না" হলে লাইন যেমন ছিল ([[FinishTheBankUnpaidLineOnTheLastSignature]])।
+     *
+     * ⛔ একবারই: লাইনে তালা দিয়ে তাজা অবস্থা — অপেক্ষায় না থাকলে কিছুই নয়; অনুরোধ `used`; আর সারিটা মোছে কেবল যদি সেটা এখনো একই
+     * বাতিল রানের — মাঝে মজুরি অন্য পথে আবার দেওয়া হয়ে থাকলে সেই নতুন সারি কখনো ছোঁয়া হয় না। কর্মীর অডিটে `bank_unpaid_released`।
+     */
+    public function finishBankUnpaid(Approval $approval): void
+    {
+        $line = $approval->approvable;
+
+        if (! $line instanceof BankUnpaidLine || ! $line->isPending()) {
+            return;
+        }
+
+        $signerId = $approval->decisions()->whereIn('decision', [ApprovalDecision::APPROVED, ApprovalDecision::REJECTED])
+            ->latest('id')->value('user_id');
+        $signer = $signerId === null ? null : User::query()->find((int) $signerId);
+
+        if ($approval->status === Approval::REJECTED) {
+            $this->closeUnpaid($line, BankUnpaidLine::REJECTED, $signer, $approval->decisions()->latest('id')->value('remarks'), 'bank_unpaid_refused');
+
+            return;
+        }
+
+        if ($approval->status !== Approval::APPROVED || $approval->isUsed() || $signer === null) {
+            return;
+        }
+
+        DB::transaction(function () use ($line, $approval, $signer): void {
+            $fresh = BankUnpaidLine::query()->whereKey($line->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null || ! $fresh->isPending()) {
+                return;
+            }
+
+            $payment = $fresh->held_wage_payment_id === null ? null
+                : HeldWagePayment::query()->whereKey($fresh->held_wage_payment_id)->lockForUpdate()->first();
+
+            if ($payment !== null && (int) $payment->payslip_id === (int) $fresh->payslip_id
+                && (int) $payment->paid_in_run_id === (int) $fresh->payroll_run_id) {
+                $payment->delete();
+            }
+
+            $fresh->forceFill(['status' => BankUnpaidLine::RELEASED, 'decided_by' => $signer->id, 'decided_at' => now()])->save();
+            $approval->markUsed();
+
+            Employee::query()->find($fresh->employee_id)?->auditAction('bank_unpaid_released', __('hr::payroll.bank_unpaid_released_audit', [
+                'no' => (string) PayrollRun::acrossBranches()->whereKey($fresh->payroll_run_id)->value('document_no'),
+                'by' => (string) $signer->name,
+                'reason' => (string) $fresh->reason,
+            ]));
+        });
+    }
+
+    /** ⓘ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — লাইন বন্ধ, মজুরির সারি যেমন ছিল */
+    public function closeWithdrawnUnpaid(Approval $approval): void
+    {
+        $line = $approval->approvable;
+
+        if ($line instanceof BankUnpaidLine && $line->isPending()) {
+            $by = $approval->requested_by === null ? null : User::query()->find((int) $approval->requested_by);
+            $this->closeUnpaid($line, BankUnpaidLine::CANCELLED, $by, null, 'bank_unpaid_withdrawn');
+        }
+    }
+
+    /** ⓘ এই লাইনের সইয়ের অনুরোধ — সর্বশেষটা */
+    public function unpaidApprovalOf(BankUnpaidLine $line): ?Approval
+    {
+        return app(ApprovalEngine::class)->latestFor($line, self::UNPAID_ACTION);
+    }
+
+    /** ⓘ পাতার বোতাম — এই মানুষ এখন সই দিতে পারেন কি না, ইনবক্সের একই প্রশ্নে */
+    public function canSignUnpaid(BankUnpaidLine $line, ?User $user): bool
+    {
+        $approval = $this->unpaidApprovalOf($line);
+
+        return $user !== null && $line->isPending() && $approval !== null && $approval->isPending()
+            && app(ApprovalEngine::class)->canDecide($approval, $user);
+    }
+
+    private function closeUnpaid(BankUnpaidLine $line, string $status, ?User $by, ?string $note, string $audit): void
+    {
+        DB::transaction(function () use ($line, $status, $by, $note, $audit): void {
+            $fresh = BankUnpaidLine::query()->whereKey($line->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null || ! $fresh->isPending()) {
+                return;
+            }
+
+            $fresh->forceFill([
+                'status' => $status,
+                'decided_by' => $by?->id,
+                'decided_at' => now(),
+                'note' => filled($note) ? mb_substr(trim((string) $note), 0, 500) : null,
+            ])->save();
+
+            Employee::query()->find($fresh->employee_id)?->auditAction($audit, __('hr::payroll.bank_unpaid_closed_audit', [
+                'no' => (string) PayrollRun::acrossBranches()->whereKey($fresh->payroll_run_id)->value('document_no'),
+            ]));
+        });
     }
 
     /**

@@ -39,7 +39,17 @@ final class MaternityBenefit
     /** প্রসবের আসল দিনে সরা ছুটির দেওয়া মাসের পার্থক্যের সারি ([[MaternityDeliveryService]]) */
     public const ADJUSTMENT_CODE = 'MATERNITY_ADJUST';
 
-    /** @return string|null গড় দৈনিক মজুরি (১০ ঘর), বা আগের মজুরি না থাকলে null */
+    /**
+     * ⭐ গড় দৈনিক মজুরি — ধারা ৪৮(২): নোটিশের আগের তিন মাসে অর্জিত **মজুরি** ÷ সেই সময়ে কাজ করা দিন।
+     *
+     * ⛔ **উৎসব বোনাস মজুরি নয়** — বাংলাদেশ শ্রম আইন ২০০৬ ধারা ২(৪৫) "মজুরি"-র সংজ্ঞা থেকে বোনাস বাদ দেয়; তাই যোগ হয় কেবল
+     * সেই তিন মাসের **নিশ্চিত বেতনের রানের** (`run_type` salary) স্লিপের মোট আয়, উৎসব ভাতার রান (`run_type` bonus) কখনো নয়
+     * (fe-র সিদ্ধান্ত, ২১ অক্টোবর ২০২৬; কোড 853aaad4e থেকেই এমন, এখানে নিয়মটা লেখা)। ⓘ নইলে নোটিশের আগের তিন মাসে ঈদ পড়লেই
+     * একই বেতনের মায়ের গড় বাড়ত — সুবিধা নির্ভর করত ঈদের তারিখে। নিয়মটা পাতাতেও লেখা (`hr::message.maternity_wage_rule` —
+     * ছুটির তালিকায় মাতৃত্বকালীন আবেদনের সারিতে, আর যে বেতনের রানে মাতৃত্বকালীন সুবিধার সারি আছে তার পাতায়)।
+     *
+     * @return string|null গড় দৈনিক মজুরি (১০ ঘর), বা আগের মজুরি না থাকলে null
+     */
     public function averageDailyWage(LeaveApplication $application): ?string
     {
         $employee = Employee::query()->withoutGlobalScopes()->find($application->employee_id);
