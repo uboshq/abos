@@ -280,6 +280,32 @@
         </form>
     </div>
 
+    {{-- ⭐ ছকের বাইরের সই — সবসময় দ্বিতীয় একজনের (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SignaturesWaitingElsewhere]])।
+         ⓘ এগুলো `approvals` সারি নয়, তাই উপরের তালিকা আর গোনায় নেই; সই দেওয়া হয় কাগজের নিজের পাতায়। --}}
+    @if (($elsewhere ?? []) !== [])
+        <section data-boxed data-signatures-elsewhere
+                 class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="font-semibold">{{ __('approval::message.elsewhere_title') }}</h2>
+            <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('approval::message.elsewhere_hint') }}</p>
+            <ul>
+                @foreach ($elsewhere as $item)
+                    <li class="flex flex-wrap items-center justify-between gap-2 border-t border-(--color-border) py-2" data-elsewhere-kind="{{ $item['kind'] }}">
+                        <div>
+                            <p class="text-sm font-medium">{{ $item['title'] }}</p>
+                            <p class="text-2xs text-(--color-ink-muted)">
+                                {{ $item['detail'] }} · {{ $item['requested_by'] }}
+                                @if ($item['requested_at'])
+                                    · {{ \App\Core\Support\DateFormat::format($item['requested_at']) }}
+                                @endif
+                            </p>
+                        </div>
+                        <x-ui.button tone="secondary" :href="$item['url']">{{ __('approval::message.elsewhere_open') }}</x-ui.button>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     {{-- "সব বাছাই" — JavaScript বন্ধ থাকলে ঘরটা কিছুই করে না, আর
          প্রতিটা সারির নিজের চেকবক্স তখনও কাজ করে। ⓘ তাই এটা সুবিধা,
          শর্ত নয় — ঠিক সেভাবেই বসানো। --}}
