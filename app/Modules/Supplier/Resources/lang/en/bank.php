@@ -41,4 +41,5 @@ return [
 
     'unsigned_blocks_payment' => 'The payee\'s bank details have no second signature yet — a bank payment cannot be made.',
     'payee_none' => 'No payee bank details',
+    'waiting_title' => ':supplier — bank details change awaits signature',
 ];

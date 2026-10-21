@@ -34,7 +34,7 @@ use Tests\TestCase;
  *   - "না" দিলে পুরনোটাই চালু
  *   - অন্য কোম্পানি সারিটা দেখে না, দরজায় ৪০৪
  *   - `supplier.bank.view` ছাড়া নম্বর ••••শেষ চার; চাবি থাকলে পুরো
- *   - `x-money.payee-bank` দুই অবস্থায়
+ *   - `x-supplier::payee-bank` দুই অবস্থায়
  */
 final class ASupplierBankChangeNeedsASecondHandTest extends TestCase
 {
@@ -217,7 +217,7 @@ final class ASupplierBankChangeNeedsASecondHandTest extends TestCase
 
     public function test_the_payee_bank_component_shows_only_signed_details_masked(): void
     {
-        $render = fn () => Blade::render('<x-money.payee-bank :supplier="$s" />', ['s' => $this->supplier->fresh()]);
+        $render = fn () => Blade::render('<x-supplier::payee-bank :supplier="$s" />', ['s' => $this->supplier->fresh()]);
 
         // ⓘ কিছুই নেই
         $none = $render();

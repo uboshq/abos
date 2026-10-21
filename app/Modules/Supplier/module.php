@@ -98,6 +98,14 @@ return [
      * ⓘ ঘরটা ভাউচারের পর্দায় বসে, কিন্তু তালিকাটা যার, সে-ই দেয়
      * ([[App\Core\Contracts\OffersChoicesOnAForm]])।
      */
+    /*
+     * ⭐ ব্যাংক তথ্যের অপেক্ষার বদল অনুমোদনের বাক্সে — ছকের বাইরের সই (নকশা দফা #৬, ২১ অক্টোবর ২০২৬;
+     * [[SignaturesWaitingElsewhere]])। ⓘ কোর এই মডিউলের নাম জানে না; বাঁধনটা এখান থেকে।
+     */
+    'bindings' => [
+        \App\Core\Contracts\SignaturesWaitingElsewhere::class => \App\Modules\Supplier\Services\SupplierBankWaiting::class,
+    ],
+
     'form_choices' => [
         \App\Modules\Supplier\Services\PayeesOnTheVoucherForm::class,
     ],

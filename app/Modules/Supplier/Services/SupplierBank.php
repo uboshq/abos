@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Supplier\Services;
 
+use App\Core\Services\NotificationService;
 use App\Models\User;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Models\SupplierBankDetail;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -128,8 +130,62 @@ final class SupplierBank
 
             $detail->auditAction('bank_requested', $detail->reason);
 
+            // ⭐ ঘণ্টায় খবর — সইকারীদের, যিনি চাইলেন তাঁকে নয়; লেনদেন পাকা হওয়ার পরে
+            DB::afterCommit(fn () => $this->tellTheSigners($detail));
+
             return $detail;
         });
+    }
+
+    public const WAITING = 'supplier.bank_change_waiting';
+
+    /**
+     * ⭐ এই বদলে কে কে সই দিতে পারেন — এই কোম্পানির চালু মানুষ, চাবি আর নাগালসহ, যিনি চেয়েছেন তিনি বাদে।
+     *
+     * @return Collection<int, User>
+     */
+    public function signersFor(SupplierBankDetail $detail): Collection
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->whereKeyNot((int) $detail->requested_by)
+            ->whereHas('companies', fn ($q) => $q->where('companies.id', (int) $detail->company_id))
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (User $user) => $this->canSign($detail, $user))
+            ->values();
+    }
+
+    /** কার, কোন ব্যাংক, শেষ চার অঙ্ক — খবরের লাইন (পুরো নম্বর কখনো নয়) */
+    public function summaryOf(SupplierBankDetail $detail): string
+    {
+        return collect([$detail->bank_name, $detail->branch_name, $detail->account_name, $detail->maskedAccount()])
+            ->filter()->implode(' · ');
+    }
+
+    /** সরবরাহকারীর পাতা, ব্যাংক কার্ড খোলা */
+    public function cardUrl(Supplier $supplier): string
+    {
+        return route('supplier.show', [$supplier, 'bank' => 1]).'#supplier-bank';
+    }
+
+    private function tellTheSigners(SupplierBankDetail $detail): void
+    {
+        $supplier = $detail->supplier;
+
+        if ($supplier === null) {
+            return;
+        }
+
+        app(NotificationService::class)->sendMany(
+            $this->signersFor($detail),
+            self::WAITING,
+            __('supplier::bank.waiting_title', ['supplier' => $supplier->name()]),
+            $this->summaryOf($detail),
+            $this->cardUrl($supplier),
+            key: 'supplier:bank:'.$detail->id,
+            about: $supplier,
+        );
     }
 
     /**

@@ -17,6 +17,9 @@ return [
     'flow_deleted' => 'The rule was deleted.',
 
     'nothing_waiting' => 'Nothing is waiting for your decision.',
+    'elsewhere_title' => 'More waiting for your signature',
+    'elsewhere_hint' => 'These always need a second person — open each one and sign on its own page.',
+    'elsewhere_open' => 'Open',
 
     'inbox_capped' => 'Showing the :shown oldest; :total are waiting in all.',
     'no_requests' => 'You have not asked for an approval yet.',

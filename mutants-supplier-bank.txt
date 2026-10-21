@@ -49,7 +49,36 @@ M9  app/Modules/Supplier/Models/SupplierBankDetail.php
     new: "            'account_no' => 'string',"
     kill: ASupplierBankChangeNeedsASecondHandTest::test_a_request_waits_and_leaves_the_active_bank_alone_until_another_person_signs (the number is stored in the open)
 
-M10 resources/views/components/money/payee-bank.blade.php
+M10 app/Modules/Supplier/Resources/views/components/payee-bank.blade.php
     old: "            {{ $signedBank->account_name }} · <span class=\"num\" data-payee-bank-account>{{ $signedBank->maskedAccount() }}</span>"
     new: "            {{ $signedBank->account_name }} · <span class=\"num\" data-payee-bank-account>{{ $signedBank->account_no }}</span>"
     kill: ASupplierBankChangeNeedsASecondHandTest::test_the_payee_bank_component_shows_only_signed_details_masked (the full number on the payment screen)
+
+== Item #6 follow-up — signers find it (inbox, bell) and the deploy command ==
+
+M11 app/Modules/Supplier/Services/SupplierBank.php
+    old: "            ->filter(fn (User $user) => $this->canSign($detail, $user))"
+    new: "            ->filter(fn (User $user) => true)"
+    kill: ASupplierBankChangeReachesItsSignersTest::test_the_signer_finds_it_in_the_inbox_and_the_bell_and_the_requester_and_another_company_do_not (the keyless TDEPOT looker gets the bell)
+
+M12 app/Modules/Supplier/Services/SupplierBank.php
+    old: "            ->whereHas('companies', fn ($q) => $q->where('companies.id', (int) $detail->company_id))"
+    new: "            ->whereHas('companies', fn ($q) => $q)"
+    kill: ASupplierBankChangeReachesItsSignersTest::test_the_signer_finds_it_in_the_inbox_and_the_bell_and_the_requester_and_another_company_do_not (the FMART key holder gets the bell; read the first failure — if canSign drops him through his TDEPOT-context keys the mutant SURVIVES as EQUIVALENT, note it)
+
+Note: the requester exclusion is held twice (whereKeyNot in signersFor and canSign); a mutant on one alone is EQUIVALENT by design and is not listed.
+
+M13 app/Modules/Approval/Http/Controllers/ApprovalInboxController.php
+    old: "        abort_unless($user->can('approval.decide') || $user->can('approval.report') || $elsewhere !== [], 403);"
+    new: "        abort_unless($user->can('approval.decide') || $user->can('approval.report'), 403);"
+    kill: ASupplierBankChangeReachesItsSignersTest::test_the_signer_finds_it_in_the_inbox_and_the_bell_and_the_requester_and_another_company_do_not (the signer's inbox is 403)
+
+M14 app/Console/Commands/GrantSupplierBankKeys.php
+    old: "            if ($new === [] || $dry) {"
+    new: "            if ($new === []) {"
+    kill: TheOldRolesGetTheSupplierBankKeysOnceTest::test_dry_writes_nothing_the_run_grants_both_keys_and_a_second_run_changes_nothing (--dry wrote the keys)
+
+M15 app/Console/Commands/GrantSupplierBankKeys.php
+    old: "            ->where('company_id', (int) $company->id)\n            ->whereIn('name', self::ROLES)"
+    new: "            ->whereIn('name', self::ROLES)"
+    kill: TheOldRolesGetTheSupplierBankKeysOnceTest::test_dry_writes_nothing_the_run_grants_both_keys_and_a_second_run_changes_nothing (FMART's roles touched with --company=TDEPOT)

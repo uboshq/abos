@@ -67,7 +67,8 @@
 
     {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
          "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
-    <div x-data="{ open: false }" @party-eye.window="open = true" @keydown.escape.window="open = false">
+    {{-- ⓘ `?bank=1` — অনুমোদনের বাক্স আর ঘণ্টার খবর থেকে এলে পপ-আপটা ব্যাংক কার্ডসহ খোলা ([[SupplierBank::cardUrl()]]) --}}
+    <div x-data="{ open: {{ request()->boolean('bank') ? 'true' : 'false' }} }" @party-eye.window="open = true" @keydown.escape.window="open = false">
     <div x-show="open" x-cloak @click.self="open = false" data-party-details
          class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
     <div class="w-full max-w-5xl rounded-(--radius-card) bg-(--color-surface-app) p-4 shadow-lg">
@@ -169,7 +170,7 @@
         {{-- ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SupplierBank]])।
              ⓘ চালু = সই-পাওয়া সারি; বদল চাইলে "সইয়ের অপেক্ষায়", আর অন্য একজন সই না দেওয়া পর্যন্ত পুরনোটাই চালু।
              ⓘ হিসাব নম্বর পুরো কেবল `supplier.bank.view`-এ, নাহলে ••••শেষ চার — কন্ট্রোলার ঠিক করে ([[SupplierBank::accountShown()]])। --}}
-        <section data-boxed data-supplier-bank class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+        <section id="supplier-bank" data-boxed data-supplier-bank class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
                         lg:col-span-3">
             <div class="mb-3 flex items-center justify-between gap-2">
                 <h2 class="font-semibold">{{ __('supplier::bank.title') }}</h2>
