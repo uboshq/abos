@@ -97,4 +97,5 @@ return [
     'delivery_rejected' => 'প্রসবের আসল দিন প্রত্যাখ্যাত — কিছুই বদলায়নি।',
     'delivery_waiting' => 'প্রসব :date — সইয়ের অপেক্ষায় (ছুটি শেষ হবে :to)',
     'delivery_signed' => 'প্রসবের আসল দিন :actual অনুমোদিত: ছুটির শেষ দিন :old → :new।',
+    'weekly_off_company_row' => 'কোম্পানির ডিফল্ট',
 ];

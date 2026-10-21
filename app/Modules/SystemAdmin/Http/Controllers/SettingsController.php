@@ -273,7 +273,9 @@ class SettingsController extends Controller implements HasMiddleware
     {
         return array_filter(
             $this->settings->definitions(),
+            // ⓘ `owned_by` — ঘরটা নিজের পর্দায় বদলায় (যেমন HR-এর সাপ্তাহিক ছুটি, ছুটির দিনের পর্দা); এখানে দেখালে এক নিয়ম দুই জায়গায় (a6, ২১ অক্টোবর ২০২৬)
             fn (array $d) => ! ($d['menu'] ?? false)
+                && ! isset($d['owned_by'])
                 && ! in_array(
                     $d['group'] ?? 'general',
                     [self::OWNED_BY_CONTROL_PANEL, self::OWNED_BY_PRINT_SCREEN, InvoiceInfoController::GROUP],

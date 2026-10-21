@@ -97,4 +97,5 @@ return [
     'delivery_rejected' => 'Actual delivery date rejected — nothing changed.',
     'delivery_waiting' => 'Delivery :date — waiting for a signature (leave would end :to)',
     'delivery_signed' => 'Actual delivery :actual signed: leave end moved :old → :new.',
+    'weekly_off_company_row' => 'Company default',
 ];

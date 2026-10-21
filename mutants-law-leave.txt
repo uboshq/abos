@@ -577,3 +577,46 @@ Q3.8 app/Modules/Hr/Services/MaternityDeliveryService.php (record)
   old: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7 - 1)->toDateString(),
   new: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7)->toDateString(),
   kill: K (2026-11-15, not 2026-11-14)
+
+== Q4 — one card for the weekly off (company default + branch overrides) ==
+K = tests/Feature/Modules/Hr/TheWeeklyOffHasOneHomeTest.php (test_the_company_weekly_off_changes_only_on_the_holiday_card)
+
+Q4.1 app/Modules/SystemAdmin/Http/Controllers/SettingsController.php (editable)
+  old: && ! isset($d['owned_by'])
+  new: (line deleted)
+  kill: K (settings page shows the field and its PUT sets sunday)
+
+Q4.2 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (update)
+  old: if (isset($definition['owned_by'])) {
+                continue;
+            }
+
+            $raw = $submitted[$key] ?? null;
+  new: $raw = $submitted[$key] ?? null;
+  kill: K (control panel PUT with scope[] sets sunday)
+
+Q4.3 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (byModule)
+  old: if (isset($definition['owned_by'])) {
+                    continue;
+                }
+
+                $group = $definition['group'] ?? 'general';
+  new: $group = $definition['group'] ?? 'general';
+  kill: K (the HR tab draws settings[hr.weekly_off])
+
+Q4.4 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff, company branch)
+  old: if ($limited !== null) {
+                throw ValidationException::withMessages(['branch_id' => __('hr::validation.weekly_off_company_needs_all_branches')]);
+  new: if (false) {
+                throw ValidationException::withMessages(['branch_id' => __('hr::validation.weekly_off_company_needs_all_branches')]);
+  kill: K (a branch-limited user changes the company rule)
+
+Q4.5 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: app(\App\Core\Services\SettingsService::class)->set('hr.weekly_off', $value);
+  new: (line deleted)
+  kill: K (the card leaves friday)
+
+Q4.6 app/Modules/Hr/module.php
+  old: 'owned_by' => 'hr.holiday.index',
+  new: (line deleted)
+  kill: K (both other screens show and change it)

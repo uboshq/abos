@@ -80,4 +80,5 @@ return [
     'delivery_out_of_range' => 'The actual delivery date must be on or after the first day of leave and not in the future.',
     'delivery_already_waiting' => 'An actual delivery date for this leave is already waiting for a signature.',
     'delivery_entered_by_you' => 'You entered this delivery date, so you cannot sign or refuse it. Ask another signer or the owner.',
+    'weekly_off_company_needs_all_branches' => 'Only someone whose reach covers every branch can change the weekly off for the whole company.',
 ];

@@ -113,6 +113,24 @@ class HolidayController extends Controller implements HasMiddleware
         $companyId = CompanyContext::id();
         $limited = $this->reach->branches($request->user());
 
+        /*
+         * ⭐ কোম্পানির ডিফল্টও এখানেই — শাখা খালি পাঠালে (fe-র উত্তর ৪, ২১ অক্টোবর ২০২৬): এক নিয়ম, এক জায়গা। সেটিংসের পাতা আর কন্ট্রোল
+         * প্যানেল ঘরটা দেখায়ই না (`owned_by`)। ⛔ শাখায় সীমিত মানুষ কোম্পানির নিয়ম বদলান না — তাতে অন্য শাখার কামাই বদলাত।
+         */
+        if (blank($request->input('branch_id'))) {
+            $value = $request->validate([
+                'weekly_off' => ['required', Rule::in(array_keys(WorkCalendar::WEEKLY_OFF))],
+            ])['weekly_off'];
+
+            if ($limited !== null) {
+                throw ValidationException::withMessages(['branch_id' => __('hr::validation.weekly_off_company_needs_all_branches')]);
+            }
+
+            app(\App\Core\Services\SettingsService::class)->set('hr.weekly_off', $value);
+
+            return back()->with('saved', __('hr::message.weekly_off_saved'));
+        }
+
         $data = $request->validate([
             'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->where('company_id', $companyId),
                 function (string $attribute, mixed $value, \Closure $fail) use ($limited): void {
@@ -162,6 +180,7 @@ class HolidayController extends Controller implements HasMiddleware
             'branchWeeklyOff' => \App\Models\BranchSetting::query()->where('company_id', CompanyContext::id())
                 ->where('key', 'hr.weekly_off')->pluck('value', 'branch_id')->all(),
             'weeklyOffOptions' => array_keys(WorkCalendar::WEEKLY_OFF),
+            'weeklyOffKey' => app(WorkCalendar::class)->weeklyOffKey(),
         ]);
     }
 

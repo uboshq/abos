@@ -373,6 +373,11 @@ class ControlPanelController extends Controller implements HasMiddleware
                 continue;
             }
 
+            // ⓘ নিজের পর্দায় বদলায় (`owned_by`) — হাতে বানানো `scope[]`-এও এখানে নয় (a6, ২১ অক্টোবর ২০২৬)
+            if (isset($definition['owned_by'])) {
+                continue;
+            }
+
             $raw = $submitted[$key] ?? null;
 
             $value = match ($definition['type']) {
@@ -652,6 +657,11 @@ class ControlPanelController extends Controller implements HasMiddleware
 
                 // ⛔ ছাপার পর্দার ঘর এখানে নয় ([[ownedByThePrintScreen()]]) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬
                 if (self::ownedByThePrintScreen($definition)) {
+                    continue;
+                }
+
+                // ⓘ নিজের পর্দায় বদলায় (`owned_by`) — যেমন সাপ্তাহিক ছুটি, ছুটির দিনের পর্দায় (a6, ২১ অক্টোবর ২০২৬)
+                if (isset($definition['owned_by'])) {
                     continue;
                 }
 

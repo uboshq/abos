@@ -100,6 +100,22 @@
                 <h2 class="mb-3 font-semibold">{{ __('hr::message.weekly_off_branches') }}</h2>
 
                 <div class="space-y-2">
+                    {{-- ⭐ কোম্পানির ডিফল্ট — প্রথম সারি, শাখা খালি; নিচে প্রতিটা শাখার বদল (fe-র উত্তর ৪; এক নিয়ম, এক জায়গা) --}}
+                    <form data-weekly-off-company method="POST" action="{{ route('hr.holiday.weekly_off.store') }}" class="flex items-center gap-2 border-b border-(--color-border) pb-2">
+                        @csrf
+                        <input type="hidden" name="branch_id" value="">
+                        <span class="w-28 truncate text-sm font-semibold">{{ __('hr::message.weekly_off_company_row') }}</span>
+                        <select name="weekly_off" aria-label="{{ __('hr::message.weekly_off_company_row') }}" @disabled(! $mayAllBranches)
+                                class="h-(--spacing-field) flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            @foreach ($weeklyOffOptions as $option)
+                                <option value="{{ $option }}" @selected($weeklyOffKey === $option)>{{ __('hr::settings.weekly_off_'.$option) }}</option>
+                            @endforeach
+                        </select>
+                        @if ($mayAllBranches)
+                            <x-ui.button type="submit">{{ __('hr::action.save') }}</x-ui.button>
+                        @endif
+                    </form>
+
                     @foreach ($branches as $branch)
                         <form method="POST" action="{{ route('hr.holiday.weekly_off.store') }}" class="flex items-center gap-2">
                             @csrf
