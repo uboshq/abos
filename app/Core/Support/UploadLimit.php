@@ -31,13 +31,26 @@ final class UploadLimit
     /** গোটা POST-এর সর্বোচ্চ বাইট; ০ মানে সীমা নেই */
     public static function postMax(): int
     {
-        return self::bytes((string) (config('abos.uploads.post_max_size') ?? ini_get('post_max_size')));
+        return self::bytes(self::setOr('abos.uploads.post_max_size', 'post_max_size'));
     }
 
     /** একটা ফাইলের সর্বোচ্চ বাইট; ০ মানে সীমা নেই */
     public static function fileMax(): int
     {
-        return self::bytes((string) (config('abos.uploads.upload_max_filesize') ?? ini_get('upload_max_filesize')));
+        return self::bytes(self::setOr('abos.uploads.upload_max_filesize', 'upload_max_filesize'));
+    }
+
+    /**
+     * কনফিগের বদল, নইলে ini।
+     *
+     * ⛔ খালিটাও "নেই" — `.env.example`-এর খালি `ABOS_POST_MAX_SIZE=` `.env`-এ কপি হলে env() দেয় `''`, আর `??` সেখানে ini-তে
+     * ফিরত না: `bytes('')` = ০ = "সীমা নেই", তাই লাইভের ৮ MB-র POST-সীমা পর্দা থেকে নিঃশব্দে উধাও হত।
+     */
+    private static function setOr(string $key, string $ini): string
+    {
+        $set = trim((string) config($key));
+
+        return $set !== '' ? $set : (string) ini_get($ini);
     }
 
     /** ছবির (PNG/JPG/WebP) সীমা, বাইটে */

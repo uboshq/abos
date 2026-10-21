@@ -86,12 +86,16 @@ final class TheModuleLauncherIsTheRailOnOnePageTest extends TestCase
 
     public function test_no_tile_for_a_switched_off_module(): void
     {
-        $this->assertArrayHasKey('purchase', $this->tiles($this->page($this->owner)), 'প্রস্তুতিটাই ভুল — চালু অবস্থায় ক্রয়ের টাইল নেই।');
+        $on = $this->page($this->owner);
+        $this->assertArrayHasKey('purchase', $this->tiles($on), 'প্রস্তুতিটাই ভুল — চালু অবস্থায় ক্রয়ের টাইল নেই।');
+        $purchase = $this->tiles($on)['purchase'];
+        $this->assertContains($purchase, $this->rail($on), 'প্রস্তুতিটাই ভুল — চালু অবস্থায় ক্রয় রেলে নেই।');
 
         app(SettingsService::class)->set('purchase.enabled', false);
         $html = $this->page($this->owner);
 
         $this->assertArrayNotHasKey('purchase', $this->tiles($html), '⛔ বন্ধ মডিউলের টাইল লঞ্চারে।');
+        $this->assertNotContains($purchase, $this->rail($html), '⛔ বন্ধ মডিউল রেলে।');
         $this->assertSame(array_values($this->rail($html)), array_values($this->tiles($html)), '⛔ মডিউল বন্ধের পরে লঞ্চার আর রেল আলাদা।');
     }
 

@@ -70,6 +70,25 @@ final class ALogoBiggerThanTheServerTakesTest extends TestCase
         $this->assertMatchesRegularExpression('/data-logo-limit[^>]*>\s*সর্বোচ্চ 7\.7 MB/u', $html, '⛔ লাইভের ৮ MB-তে পর্দার সংখ্যা 7.7 নয়।');
     }
 
+    /**
+     * ⭐ লাইভের `.env`-এ বদল নেই — তখন সীমা সার্ভারের ini থেকে (fe, ২১ অক্টোবর ২০২৬)। ⛔ `.env.example`-এর খালি লাইনটা কপি হলেও
+     * (env() → `''`) একই: খালি মানে "নেই", "সীমা নেই" নয়।
+     */
+    public function test_without_a_setting_the_limit_comes_from_the_servers_ini(): void
+    {
+        $fromIni = array_filter([UploadLimit::PICTURE_CEILING, UploadLimit::bytes((string) ini_get('post_max_size')),
+            UploadLimit::bytes((string) ini_get('upload_max_filesize'))], fn (int $n): bool => $n > 0);
+        $expected = min($fromIni) - UploadLimit::FORM_MARGIN;
+
+        foreach (['না-থাকা' => null, 'খালি' => '', 'ফাঁকা' => '  '] as $how => $value) {
+            config(['abos.uploads.post_max_size' => $value, 'abos.uploads.upload_max_filesize' => $value]);
+
+            $this->assertSame(UploadLimit::bytes((string) ini_get('post_max_size')), UploadLimit::postMax(), "⛔ বদল {$how}, তবু POST-সীমা ini-র নয়।");
+            $this->assertSame(UploadLimit::bytes((string) ini_get('upload_max_filesize')), UploadLimit::fileMax(), "⛔ বদল {$how}, তবু ফাইল-সীমা ini-র নয়।");
+            $this->assertSame($expected, UploadLimit::pictureBytes(), "⛔ বদল {$how}, তবু ছবির সীমা ini থেকে গোনা নয়।");
+        }
+    }
+
     public function test_a_picture_over_the_limit_is_refused_in_bengali_and_nothing_changes(): void
     {
         Storage::disk('public')->put('logos/before.png', 'png');
