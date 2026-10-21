@@ -345,7 +345,7 @@ return [
          * রাখা কোম্পানিতেও (UB) ছক জন্মাত, মালিকের "সই বন্ধ মানে বন্ধ" নিয়ম ভাঙত। দুই হাত এমনিতেই নিশ্চিত — উপরের `second_hand`, ছক
          * ছাড়াই সবসময়।
          * ⛔ কেন `no_bulk`: এটা টাকা আবার বেরোনোর পথ — প্রতিটা লাইনের কারণ আর ব্যাংকের প্রমাণ নিজের পাতায় দেখে, নিজের সইয়ে; একসাথে সই
-         * মানে না দেখে সই (fe, ২১ অক্টোবর ২০২৬; [[BulkApproval::oneByOne()]], [[ABankLineIsNeverSignedInBulkTest]])।
+         * মানে না দেখে সই (fe, ২১ অক্টোবর ২০২৬; [[BulkApproval::oneByOne()]], [[ACancelledRunsBankLineIsNotReleasedByItselfTest::test_a_bank_line_is_never_signed_in_bulk_but_its_own_page_signs_it]])।
          */
         'bank_unpaid' => [
             'signer_key' => 'hr.salary.view',
