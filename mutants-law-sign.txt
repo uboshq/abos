@@ -78,3 +78,60 @@ M15 app/Modules/Hr/Support/OwnerSelfSigned.php
     old: "        if (! $selfSigned || ! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
     new: "        if (! $selfSigned) {"
     EQUIVALENT: the engine lets only a super_admin sign his own request (ApprovalEngine::canDecide), and Ownership::activeOwnersIn() defines the owner as the active super_admin role holder of that company (one only, assertMayBecomeOwner); so a self-signature already implies the owner. The check stays as a second wall.
+
+== Item 1b — employee bank-account change (cb's hr_payment_changes, signed through the same built-in second signature) ==
+
+M16 app/Modules/Hr/module.php
+    old: "            'second_hand' => ['hr.employee.manage'],"
+    new: "" (line removed)
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (no rule: the clerk's change lands at once)
+
+M17 app/Modules/Hr/Services/PaymentChanges.php
+    old: "        if ($approval === null) {"
+    new: "        if (true) {"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account
+
+M18 app/Modules/Hr/Services/PaymentChanges.php
+    old: "        if (! $this->engine->canDecide($approval, $by)) {"   (first occurrence, in approve())
+    new: "        if (false) {"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (the author's button gets no 'another_hand' error; the engine then throws instead)
+
+M19 app/Modules/Hr/Services/PaymentChanges.php
+    old: "                $this->apply($fresh, $employee, $signer);"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_the_web_inbox_signs_the_same_request
+
+M20 app/Modules/Hr/Services/PaymentChanges.php
+    old: "                    $this->engine->withdrawStale($asked);"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark ('replaced' request stays pending)
+
+M21 app/Modules/Hr/Services/PaymentChanges.php
+    old: "            $this->engine->cancel($approval, $by);"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark (withdrawn request still pending)
+
+M22 app/Modules/Hr/Services/PaymentChanges.php
+    old: "            $this->close($change, PaymentChange::REJECTED, $signer, $approval->decisions()->latest('id')->value('remarks'));"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark (status stays pending)
+
+M23 app/Modules/Hr/Services/PaymentChanges.php
+    old: "                OwnerSelfSigned::mark($approval, $employee, __('hr::payment_change.owner_self_signed'));"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark
+
+M24 app/Modules/Hr/Services/PaymentChanges.php
+    old: "                $approval->markUsed();"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (isUsed assertion)
+
+M25 app/Modules/Hr/Resources/views/employee/show.blade.php
+    old: "            $canSign = app(\App\Modules\Hr\Services\PaymentChanges::class)->canSign($paymentChange, $viewer);"
+    new: "            $canSign = true;"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (keyless looker sees the sign button)
+
+M26 app/Modules/Hr/Services/PaymentChanges.php
+    old: "            ->filter(fn (User $u) => $this->engine->canDecide($approval, $u));"
+    new: "            ->filter(fn (User $u) => true);"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_one_hand_asks_another_signs_and_the_salary_waits_at_the_old_account (the keyless looker gets the 'waiting' notice)

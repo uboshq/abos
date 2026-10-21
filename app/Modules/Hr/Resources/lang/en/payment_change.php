@@ -26,4 +26,8 @@ return [
     'told_applied_body' => 'From the next salary it goes to the new account. If you did not ask for this, tell HR or the owner now.',
     'told_rejected_title' => 'Your salary account did not change',
     'told_rejected_body' => 'The change was not applied — the salary goes to the old account.',
+    'summary' => ':employee — :lines',
+    'signed_waiting' => 'Your signature is in. The change lands once the remaining signatures are given.',
+    'asked_reason' => 'Change to where :employee\'s salary goes, waiting for a second signature.',
+    'owner_self_signed' => 'The owner signed a salary account change he asked for himself — self-approved.',
 ];

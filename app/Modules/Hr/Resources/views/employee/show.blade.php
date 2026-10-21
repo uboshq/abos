@@ -45,14 +45,16 @@
     <x-ui.errors />
 
     {{-- ⭐ বেতনের ঠিকানার অপেক্ষার বদল — দ্বিতীয় সইয়ের আগে বসে না (#৮, ২০ অক্টোবর ২০২৬; [[PaymentChanges]])।
-         ⓘ নম্বর ঢাকা — শেষ চার অঙ্ক; পুরোটা কেবল hr.identity.view-এ। সই কেবল চাবি থাকা, লেখক নন এমন জনের; লেখক নিজে ফিরিয়ে নেন। --}}
+         ⓘ নম্বর ঢাকা — শেষ চার অঙ্ক; পুরোটা কেবল hr.identity.view-এ। সই সইয়ের ইঞ্জিনের নিয়মে — চাবি থাকা আরেকজন, লেখক নন (মালিক
+         নিজের চাওয়ায় পারেন, চিহ্নসহ); লেখক নিজে ফিরিয়ে নেন। --}}
     @if ($paymentChange)
         @php
             $viewer = auth()->user();
             $now = \App\Modules\Hr\Services\PaymentChanges::detailsOf($employee);
             $asked = $paymentChange->proposed;
             $mine = (int) $paymentChange->requested_by === (int) $viewer?->id;
-            $canSign = ! $mine && (bool) $viewer?->can('hr.payment_change.approve');
+            // ⓘ ইনবক্সের একই প্রশ্ন — সইয়ের ইঞ্জিন বলে ইনি এখন সই দিতে পারেন কি না (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)
+            $canSign = app(\App\Modules\Hr\Services\PaymentChanges::class)->canSign($paymentChange, $viewer);
         @endphp
         <section data-payment-change role="status" data-boxed
                  class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">

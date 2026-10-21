@@ -8,6 +8,7 @@ use App\Core\Events\ApprovalDecided;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\MarkTheOwnersOwnPayrollSignature;
 use App\Modules\Hr\Models\Employee;
@@ -119,12 +120,6 @@ return [
          * কথা নয়।
          */
         'hr.identity.view',
-
-        /*
-         * ⭐ কর্মীর বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])। ⓘ কোনো ভূমিকায় ডিফল্টে নেই:
-         * মালিক (super admin) সব চাবি পান, আর কাকে দেবেন তা তিনিই ঠিক করেন। ⛔ যিনি বদলটা লিখলেন, চাবি থাকলেও তিনি সই দেন না।
-         */
-        'hr.payment_change.approve',
 
         'hr.salary.view',
         'hr.salary.manage',
@@ -257,6 +252,11 @@ return [
          * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না। ⭐ ছক না থাকলেও দ্বিতীয় সই — নিচের `second_hand` (মালিক, ২১ অক্টোবর ২০২৬)।
          */
         'salary_change' => 'hr::approval.salary_change',
+        /*
+         * ⭐ কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল — cb-র অপেক্ষার বদল ([[PaymentChanges]], ee99f3eaa), সই এখন ইঞ্জিনে; ছক না থাকলেও
+         * দ্বিতীয় সই (নিচের `second_hand`; মালিক, a6, ২১ অক্টোবর ২০২৬)।
+         */
+        'payment_change' => 'hr::approval.payment_change',
     ],
 
     /*
@@ -290,6 +290,15 @@ return [
             'second_hand' => ['hr.payroll.manage'],
             'amount_key' => 'hr.salary.view',
             'summary' => \App\Modules\Hr\Services\PayrollRunSummary::class,
+        ],
+        /*
+         * ⛔ বেতনের ঠিকানার বদল — সই দেন বদলটা লেখার চাবি থাকা আরেকজন (`hr.employee.manage` + `hr.identity.view`), যিনি চাইলেন তিনি নন।
+         * ⓘ পুরো নম্বর তাঁর চোখে খোলে (পরিচয়ের চাবি) — মিলিয়ে দেখে সই; চাবি ছাড়া কেউ ধাপে বসেন না (`signer_key`)।
+         */
+        'payment_change' => [
+            'signer_key' => 'hr.identity.view',
+            'second_hand' => ['hr.employee.manage'],
+            'summary' => \App\Modules\Hr\Services\PaymentChangeSummary::class,
         ],
     ],
 
@@ -438,17 +447,6 @@ return [
          * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
          * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
          */
-        /*
-         * ⭐ বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])। ⓘ ডিফল্টে চালু, আর কোম্পানির সাধারণ সই-ছক
-         * (UB-তে সব বন্ধ) এটা বন্ধ করে না — বেতন জালিয়াতির পথ বলে আলাদা সুইচ। বন্ধ করলে বদল সাথে সাথে বসে, তবু লেখা থাকে আর কর্মী খবর পান।
-         */
-        [
-            'key' => 'hr.payment_change_needs_second_hand',
-            'label' => 'hr::settings.payment_change_needs_second_hand',
-            'type' => 'boolean',
-            'default' => true,
-            'group' => 'entry',
-        ],
         [
             'key' => 'hr.attendance_affects_salary',
             'label' => 'hr::settings.attendance_affects_salary',
@@ -540,6 +538,7 @@ return [
             FinishTheClaimOnTheLastSignature::class,
             FinishTheSalaryChangeOnTheLastSignature::class,
             MarkTheOwnersOwnPayrollSignature::class,
+            FinishThePaymentChangeOnTheLastSignature::class,
         ],
     ],
 

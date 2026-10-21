@@ -200,9 +200,12 @@ class EmployeeController extends Controller implements HasMiddleware
         $this->authorize('view', $employee);
         abort_unless((int) $change->employee_id === (int) $employee->id, 404);
 
-        app(PaymentChanges::class)->approve($change, $request->user());
+        $after = app(PaymentChanges::class)->approve($change, $request->user());
 
-        return redirect()->route('hr.employee.show', $employee)->with('saved', __('hr::payment_change.applied'));
+        // ⓘ কোম্পানির নিজের কয়েক ধাপের ছকে এটা শেষ সই না-ও হতে পারে — তখন "বসেছে" বলা মিথ্যা (a6, ২১ অক্টোবর ২০২৬)
+        return redirect()->route('hr.employee.show', $employee)->with('saved', $after->status === PaymentChange::APPLIED
+            ? __('hr::payment_change.applied')
+            : __('hr::payment_change.signed_waiting'));
     }
 
     /** না — বা লেখক নিজে ফিরিয়ে নিলেন; কর্মীর সারি যেমন ছিল */
