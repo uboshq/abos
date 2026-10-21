@@ -195,7 +195,7 @@ void main() {
     expect(textOf(tester, const ValueKey('branch-sales-detail')), '9 টি বিক্রয়');
   });
 
-  // ⭐ মজুদের দাম — বকেয়ার পাশে, খরচ-দামে; সার্ভার না পাঠালে (চাবি নেই, SR, পুরনো সার্ভার) ঘরই নেই
+  // ⭐ মজুদের মূল্য — বকেয়ার পাশে, খরচ-দামে; সার্ভার না পাঠালে (চাবি নেই, SR, পুরনো সার্ভার) ঘরই নেই
   testWidgets('stock value sits beside the dues at cost, and is absent when the server sends none', (tester) async {
     await pump(tester, ownerHomeBody(today: full()));
     final dues = tester.getRect(find.byKey(const ValueKey('owner-money-dues')));
@@ -207,7 +207,7 @@ void main() {
 
     await pump(tester, ownerHomeBody(today: ownerToday(outflow: '45000.0000')));
     expect(find.byKey(const ValueKey('owner-money-stock')), findsNothing);
-    expect(find.text('মজুদের দাম'), findsNothing, reason: '⛔ সার্ভার না পাঠালে "—" নয়, ঘরই নেই');
+    expect(find.text('মজুদের মূল্য'), findsNothing, reason: '⛔ সার্ভার না পাঠালে "—" নয়, ঘরই নেই');
   });
 
   testWidgets('stock value opens the stock page only for one who has it in the menu', (tester) async {
@@ -248,8 +248,8 @@ void main() {
       '৳1,313.46',
       '৳11,66,320.00',
       '৳5,000.00',
-      // মজুদের দাম, খরচ-দামে (মালিক, ২১ অক্টোবর ২০২৬ — বকেয়ার পাশে)
-      'মজুদের দাম',
+      // মজুদের মূল্য, খরচ-দামে (মালিক, ২১ অক্টোবর ২০২৬ — বকেয়ার পাশে)
+      'মজুদের মূল্য',
       '৳23,45,678.90',
       'খরচ-দামে',
       // প্রিন্সিপালের কমিশন

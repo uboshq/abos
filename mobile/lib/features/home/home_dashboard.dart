@@ -97,7 +97,7 @@ class HomeDashboard extends StatelessWidget {
       ModuleGate.allows(modulesOn, 'principals') &&
       ModuleGate.allows(modulesOn, 'principal-commission');
 
-  /// ⭐ মজুদের দাম থেকে মজুদের পাতা — মেনুর একই নিয়ম: মজুদ দেখার চাবি আর ফোনের মজুদ-সুইচ চালু (cb: ওয়েবের পথ /inventory/stock)
+  /// ⭐ মজুদের মূল্য থেকে মজুদের পাতা — মেনুর একই নিয়ম: মজুদ দেখার চাবি আর ফোনের মজুদ-সুইচ চালু (cb: ওয়েবের পথ /inventory/stock)
   static bool canOpenStock(AuthUser user, Set<String>? modulesOn) =>
       user.can('inventory.stock.view') && ModuleGate.allows(modulesOn, 'stock');
 

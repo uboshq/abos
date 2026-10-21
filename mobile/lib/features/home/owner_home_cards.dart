@@ -70,7 +70,7 @@ class OwnerMoneyCard extends StatelessWidget {
   final TodayRecord today;
   final VoidCallback? onTap;
 
-  /// মজুদের দামে চাপলে মজুদের পাতা — মেনুতে যার সেই পাতা আছে কেবল তার; নইলে null, কেবল অঙ্ক
+  /// মজুদের মূল্যে চাপলে মজুদের পাতা — মেনুতে যার সেই পাতা আছে কেবল তার; নইলে null, কেবল অঙ্ক
   final VoidCallback? onOpenStock;
 
   @override
@@ -149,15 +149,15 @@ class OwnerMoneyCard extends StatelessWidget {
       if (out != null) cell('out', 'আজ গেছে', out.amount, sign: (out.amount ?? 0) > 0 ? '-' : ''),
       cell('dues', 'বাজারে বকেয়া', duesFigure?.amount,
           under: duesFigure?.shops == null ? null : '${duesFigure!.shops} টি দোকান'),
-      // ⭐ বকেয়ার পাশে মজুদের দাম (মালিক, ২১ অক্টোবর ২০২৬) — সার্ভার না পাঠালে ঘরই নেই, "—"-ও নয়
+      // ⭐ বকেয়ার পাশে মজুদের মূল্য (মালিক, ২১ অক্টোবর ২০২৬) — সার্ভার না পাঠালে ঘরই নেই, "—"-ও নয়
       if (stock != null)
         onOpenStock == null
-            ? cell('stock', 'মজুদের দাম', stock.amount, under: 'খরচ-দামে')
+            ? cell('stock', 'মজুদের মূল্য', stock.amount, under: 'খরচ-দামে')
             : Semantics(
                 key: const ValueKey('owner-money-stock'),
                 container: true,
                 button: true,
-                label: '${figureSpoken('মজুদের দাম', stock.amount)}, খরচ-দামে',
+                label: '${figureSpoken('মজুদের মূল্য', stock.amount)}, খরচ-দামে',
                 hint: 'মজুদের পাতা খুলুন',
                 onTap: onOpenStock,
                 excludeSemantics: true,
@@ -167,7 +167,7 @@ class OwnerMoneyCard extends StatelessWidget {
                   onTap: onOpenStock,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-                    child: figure('stock', 'মজুদের দাম', stock.amount, under: 'খরচ-দামে'),
+                    child: figure('stock', 'মজুদের মূল্য', stock.amount, under: 'খরচ-দামে'),
                   ),
                 ),
               ),
