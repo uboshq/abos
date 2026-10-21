@@ -401,3 +401,35 @@ M82 app/Modules/Hr/Http/Controllers/HeldWageController.php
     old: "        abort_unless($kind === ($channel === 'mfs' ? Account::MFS : Account::BANK), 422);"
     new: ""
     kill: TheSalaryWentWhereOneHandSaidTest::test_an_mfs_employees_held_wage_is_ready_the_day_it_is_signed_and_is_paid_once (a bank-channel press with the MFS account must be refused 422 with nothing written)
+
+== fe round 5 — a fallen arrears voucher releases the wage; a posted one never does ==
+
+M83 app/Modules/Hr/Services/HeldWages.php
+    old: "        if ($everPosted || $voucher->isPosted()) {"
+    new: "        if (false) {"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_cancelled_or_rejected_arrears_voucher_releases_the_wage_and_a_posted_one_never_does (a posted-then-cancelled voucher frees the wage)
+
+M84 app/Modules/Hr/Services/HeldWages.php
+    old: "            $payment->delete();"
+    new: ""
+    kill: same test (the cancelled draft leaves the wage stuck)
+
+M85 app/Modules/Hr/Services/HeldWages.php
+    old: "            $payment->payslip?->employee?->auditAction('held_wage_payment_released',"
+    new: "            $payment->payslip?->employee?->auditAction('released',"
+    kill: same test (no held_wage_payment_released audit row with the old voucher number)
+
+M86 app/Modules/Hr/Listeners/ReleaseHeldWagesWhenTheVoucherFalls.php
+    old: "            app(HeldWages::class)->releaseFor((int) ($payload['voucher_id'] ?? 0));"
+    new: ""
+    kill: same test (cancel path)
+
+M87 app/Modules/Hr/Listeners/ReleaseHeldWagesWhenTheVoucherFalls.php
+    old: "        if (($payload['status'] ?? null) !== Approval::REJECTED) {"
+    new: "        if (true) {"
+    kill: same test (reject path — the wage stays stuck, the rejected draft is not cancelled)
+
+M88 app/Modules/Hr/Listeners/ReleaseHeldWagesWhenTheVoucherFalls.php
+    old: "            app(\App\Modules\Accounts\Services\VoucherService::class)->cancel($voucher, (string) __('hr::payroll.held_rejected_cancel'));"
+    new: "            app(HeldWages::class)->releaseFor((int) $voucher->id);"
+    kill: same test (the rejected draft is not cancelled — could be posted later and pay twice)

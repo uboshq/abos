@@ -149,6 +149,46 @@ final class HeldWages
     }
 
     /**
+     * ⭐ বকেয়ার খসড়া ভাউচার "না" পেল বা বাতিল হলো — মজুরি চিরকাল আটকে থাকে না (শ্রম আইন ধারা ১২৩; fe, ২১ অক্টোবর ২০২৬;
+     * [[ReleaseHeldWagesWhenTheVoucherFalls]])।
+     *
+     * ⓘ এই ভাউচারের "দেওয়া হয়েছে" সারিগুলো মোছা — স্লিপ আবার "দেওয়ার অপেক্ষায়", আবার দেওয়া যায় (একবারের নিয়ম অটুট: সারি না থাকা
+     * মানে এখনো দেওয়া হয়নি)। প্রতিটা কর্মীর অডিটে `held_wage_payment_released`, পুরনো ভাউচারের নম্বরসহ।
+     * ⛔ যে ভাউচার কখনো খাতায় বসেছিল (পাকা, পরে বাতিল হলেও) — ছাড়া হয় না: টাকা হয়তো সত্যিই গেছে; সেটা হিসাবের মানুষের হাতে দেখার কথা।
+     *
+     * @return int কয়টা সারি ছাড়া হলো
+     */
+    public function releaseFor(int $voucherId): int
+    {
+        $voucher = Voucher::query()->withoutGlobalScopes()->find($voucherId);
+
+        if ($voucher === null || $voucher->type !== Voucher::PAYMENT) {
+            return 0;
+        }
+
+        // ⛔ খাতায় কখনো বসেছিল কি না — পাকা ভাউচারের নিজের সারি থাকে (বাতিলে উল্টো সারি আলাদা নামে)
+        $everPosted = DB::table('ledger_entries')
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])
+            ->where('source_id', $voucher->id)
+            ->exists();
+
+        if ($everPosted || $voucher->isPosted()) {
+            return 0;
+        }
+
+        $released = 0;
+
+        foreach (HeldWagePayment::query()->where('voucher_id', $voucher->id)->with('payslip.employee')->get() as $payment) {
+            $payment->payslip?->employee?->auditAction('held_wage_payment_released',
+                __('hr::payroll.held_released', ['no' => (string) $voucher->document_no]));
+            $payment->delete();
+            $released++;
+        }
+
+        return $released;
+    }
+
+    /**
      * ⓘ দেওয়ার কাগজ — একই ভাউচারের, যতবার নামানো হোক একই সারি (নতুন কিছু দেওয়া হয় না)।
      *
      * @return array{name: string, content: string}

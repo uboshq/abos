@@ -32,4 +32,6 @@ return [
     'held_pay_not_ready' => 'The arrear of :code is not ready to pay this way (account not signed, or another channel).',
     'held_pay_narration' => 'Wage arrears — :count people (Labour Act s.123)',
     'held_paid_voucher' => 'Paid on the wage-arrears paper (:no).',
+    'held_released' => 'Wage-arrears voucher :no was cancelled or rejected — the wage is ready to pay again.',
+    'held_rejected_cancel' => 'Wage-arrears voucher rejected at signing — cancelled; the wage is ready to pay again.',
 ];

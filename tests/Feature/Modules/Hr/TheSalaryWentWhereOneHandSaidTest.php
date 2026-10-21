@@ -374,6 +374,81 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertNull($payment->fresh()->paid_in_run_id);
     }
 
+    /**
+     * ⭐ মজুরি চিরকাল আটকে থাকে না (ধারা ১২৩; fe, ২১ অক্টোবর ২০২৬): বকেয়ার খসড়া ভাউচার বাতিল হলে বা সইয়ে "না" পেলে মজুরি আবার
+     * "দেওয়ার অপেক্ষায়", কর্মীর অডিটে কারণসহ, আর আবার দেওয়া যায় — একবারই; পাকা ভাউচার বাতিল হলেও কখনো ছাড়া হয় না।
+     */
+    public function test_a_cancelled_or_rejected_arrears_voucher_releases_the_wage_and_a_posted_one_never_does(): void
+    {
+        $this->travelTo('2026-12-05 10:00:00');
+        $this->as($this->clerk);
+        $mfs = app(EmployeeService::class)->create([
+            'code' => 'EMP-REL', 'name_en' => 'Released Wage', 'joining_date' => '2026-01-15', 'payment_method' => 'mfs', 'mfs_number' => '01799999999',
+        ]);
+        app(SalaryStructureService::class)->set($mfs, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '12000');
+        $this->as($this->owner);
+        $august = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $held = $august->payslips()->where('employee_id', $mfs->id)->firstOrFail();
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$mfs, app(PaymentChanges::class)->pendingFor($mfs)]));
+
+        $wallet = (int) \App\Modules\Accounts\Models\Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1105-REL', 'name_en' => 'Nagad Payroll', 'name_bn' => 'নগদ বেতন',
+            'parent_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::MOBILE_MONEY)->id,
+            'type' => \App\Modules\Accounts\Models\Account::ASSET, 'nature' => \App\Modules\Accounts\Models\Account::DEBIT,
+            'money_kind' => \App\Modules\Accounts\Models\Account::MFS, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
+        ])->id;
+        $held_ = fn () => app(\App\Modules\Hr\Services\HeldWages::class)->ready()->pluck('payslip.id')->map(fn ($id) => (int) $id)->all();
+        $pay = function () use ($held, $wallet): \App\Modules\Accounts\Models\Voucher {
+            $this->as($this->owner)->post(route('hr.payroll.held.pay', ['channel' => 'mfs']), ['payslips' => [$held->id], 'account_id' => $wallet])->assertOk();
+
+            return \App\Modules\Accounts\Models\Voucher::query()->findOrFail(
+                \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->sole()->voucher_id);
+        };
+        $vouchers = app(\App\Modules\Accounts\Services\VoucherService::class);
+
+        // ── ১. খসড়া বাতিল — আবার তালিকায়, অডিটে কারণ
+        $first = $pay();
+        $this->assertNotContains((int) $held->id, $held_());
+        $vouchers->cancel($first->fresh(), 'wrong wallet');
+        $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count(), '⛔ বাতিল ভাউচারে মজুরি আটকে রইল');
+        $this->assertContains((int) $held->id, $held_(), '⛔ বাতিলের পরে মজুরি দেওয়ার অপেক্ষায় ফেরেনি');
+        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $mfs->id)->where('action', 'held_wage_payment_released')
+            ->where('reason', 'like', '%'.$first->document_no.'%')->exists(), '⛔ ছাড়ার কথা কর্মীর অডিটে নেই');
+        $this->as($this->owner)->get(route('hr.payroll.held.index'))->assertOk()->assertSee('data-held-line="EMP-REL"', false);
+
+        // ── ২. সইয়ে "না" — আবার তালিকায়
+        $checker = $this->person(['approval.decide']);
+        $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'payment',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => \App\Models\ApprovalFlowStep::BY_USER, 'approver_id' => $checker->id]);
+        app()->forgetInstance(ApprovalEngine::class);
+
+        $second = $pay();
+        try {
+            $vouchers->post($second->fresh());
+            $this->fail('প্রস্তুতি — ভাউচার সইয়ের অপেক্ষায় থামেনি');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+        $asked = Approval::query()->where('approvable_id', $second->id)->where('status', Approval::PENDING)->latest('id')->firstOrFail();
+        app(ApprovalEngine::class)->reject($asked, $checker->fresh(), 'not this month');
+        $this->assertContains((int) $held->id, $held_(), '⛔ "না" পাওয়া ভাউচারে মজুরি আটকে রইল');
+        $this->assertTrue($second->fresh()->isCancelled(), '⛔ "না" পাওয়া খসড়া রয়ে গেল — পরে পাকা হলে একই মজুরি দুইবার');
+
+        // ── ৩. আবার দেওয়া — একবারই; পাকা হলো, তারপর বাতিল — ছাড়া হয় না
+        $flow->update(['is_active' => false]);
+        app()->forgetInstance(ApprovalEngine::class);
+        $third = $pay();
+        $this->as($this->owner)->from(route('hr.payroll.held.index'))
+            ->post(route('hr.payroll.held.pay', ['channel' => 'mfs']), ['payslips' => [$held->id], 'account_id' => $wallet])
+            ->assertSessionHasErrors('payslips');
+        $vouchers->post($third->fresh());
+        $vouchers->cancel($third->fresh(), 'reversed after posting');
+        $this->assertSame(1, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count(),
+            '⛔ পাকা ভাউচার বাতিলে মজুরি ছাড়া পেল — টাকা হয়তো সত্যিই গেছে, দুইবার দেওয়ার পথ খুলল');
+        $this->assertNotContains((int) $held->id, $held_());
+    }
+
     /** ⛔ খালি থেকে ব্যাংক — আগের পথ (নগদ) চলে, ব্যাংকে নয়, সই না পড়া পর্যন্ত */
     public function test_bank_details_set_from_empty_fall_back_to_the_previous_method_until_signed(): void
     {

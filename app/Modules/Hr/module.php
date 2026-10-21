@@ -10,6 +10,7 @@ use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
 use App\Modules\Hr\Listeners\CloseThePaymentChangeOnWithdrawal;
+use App\Modules\Hr\Listeners\ReleaseHeldWagesWhenTheVoucherFalls;
 use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
@@ -565,7 +566,11 @@ return [
             FinishTheClaimOnTheLastSignature::class,
             FinishTheSalaryChangeOnTheLastSignature::class,
             FinishThePaymentChangeOnTheLastSignature::class,
+            // ⭐ বকেয়া মজুরির খসড়া ভাউচার সইয়ে "না" — মজুরি আবার দেওয়ার অপেক্ষায় (fe, ২১ অক্টোবর ২০২৬)
+            ReleaseHeldWagesWhenTheVoucherFalls::class,
         ],
+        // ⭐ বকেয়া মজুরির খসড়া ভাউচার বাতিল — একই কথা ([[HeldWages::releaseFor()]])
+        \App\Modules\Accounts\Events\VoucherCancelled::class => [ReleaseHeldWagesWhenTheVoucherFalls::class],
         // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
         ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class],
     ],
