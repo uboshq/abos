@@ -55,6 +55,13 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         Storage::fake('public');
+
+        /*
+         * ⓘ সার্ভারের মাপ বাঁধা — এই দাবি দরজার নিয়ম মাপে (ছবি নয়, ১ MB-র বড় SVG, ১২ MB-র বড় ছবি), PHP-র ini নয়। ⛔ না বাঁধলে
+         * Mac-এর ini (৮M/২M) থেকে ১৩ MB-র ছবি POST-সীমা পেরোত, ফর্মে ফিরত `?file_too_big=1` নিয়ে, নিয়মের ভুল ছাড়া — এই PC-র
+         * ২G-তে সবুজ, Mac-এ লাল (cb-web21-a, ২১ অক্টোবর ২০২৬)। বড় POST-এর ফেরা মাপে [[ALogoBiggerThanTheServerTakesTest]]।
+         */
+        config(['abos.uploads.post_max_size' => '64M', 'abos.uploads.upload_max_filesize' => '64M']);
     }
 
     public function test_a_script_in_an_svg_logo_is_cut_out_and_the_drawing_stays(): void
@@ -89,7 +96,8 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         ];
 
         foreach ($refused as $what => $file) {
-            $this->send($this->owner, $file)->assertSessionHasErrors('logo');
+            $this->send($this->owner, $file);
+            $this->assertTrue(session('errors')?->has('logo') ?? false, "⛔ {$what}: লোগোর ঘরে ভুলের বার্তা নেই — দরজা ফেরায়নি।");
             $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, "⛔ {$what}: ফেরত যাওয়ার কথা, অথচ লোগো বদলে গেল।");
         }
     }

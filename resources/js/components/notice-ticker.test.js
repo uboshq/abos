@@ -50,8 +50,25 @@ beforeAll(() => {
 
 let host = null
 
+/*
+ * ⓘ ভাণ্ডারটা পরীক্ষার নিজের — happy-dom-এর নয়। ⛔ Node ২৫+ নিজের একটা `localStorage` বসায় (`--localstorage-file` ছাড়া
+ * undefined), আর সেটা happy-dom-এরটাকে ঢেকে দেয়: Mac-এর Node ২৬-এ পাঁচটা পরীক্ষাই `clear` পড়তে গিয়ে ভাঙল, এই PC-র Node
+ * ২৪-এ সবুজ (cb-web21-a, ২১ অক্টোবর ২০২৬)। counter/direct-sale.test.js-এর একই পথ — কোড যেমন পড়ে, `window.localStorage`-এ।
+ */
+const memoryStore = () => {
+    const box = new Map()
+
+    return {
+        getItem: (k) => (box.has(k) ? box.get(k) : null),
+        setItem: (k, v) => { box.set(k, String(v)) },
+        removeItem: (k) => { box.delete(k) },
+    }
+}
+
+const useStore = (store) => Object.defineProperty(window, 'localStorage', { value: store, configurable: true, writable: true })
+
 beforeEach(() => {
-    window.localStorage.clear()
+    useStore(memoryStore())
 })
 
 afterEach(async () => {
@@ -127,8 +144,8 @@ describe('চলন্ত ঘোষণা — ⏸/▶ (WCAG 2.2.2)', () => {
     })
 
     it('localStorage আটকানো থাকলেও পাতা ভাঙে না — চলে, আর বোতাম এই পাতায় কাজ করে', async () => {
-        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
-        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+        const blocked = () => { throw new Error('blocked') }
+        useStore({ getItem: blocked, setItem: blocked, removeItem: blocked })
 
         await mount()
         expect(bar().getAttribute('data-state')).toBe('running')
