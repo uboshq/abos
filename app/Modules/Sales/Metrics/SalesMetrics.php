@@ -222,28 +222,6 @@ final class SalesMetrics implements ProvidesMetrics
     }
 
     /**
-     * ⭐ [[invoiceTotal()]] শাখা ধরে — একই বিল, একই দেয়াল, এক কোয়েরিতে `GROUP BY branch_id` (ফোনের হোমের
-     * "আজকের বিক্রি" কার্ড, অ্যাপ ০.৪.৪১, ২০ অক্টোবর ২০২৬)। ⓘ চাবি শাখার আইডি, শাখাহীন বিল `0`-তে;
-     * কেবল যে শাখায় বিক্রি আছে। ⛔ সারিগুলোর যোগ = [[invoiceTotal()]] হুবহু — দুইটাই নিচের একই ভিত থেকে।
-     *
-     * @return array<int, string>
-     */
-    public static function invoiceTotalByBranch(string $from, string $to): array
-    {
-        $out = [];
-
-        foreach (self::invoices($from, $to)
-            ->selectRaw('sal_invoices.branch_id as branch_id, COALESCE(SUM(sal_invoices.total), 0) as amount')
-            ->groupBy('sal_invoices.branch_id')
-            ->toBase()
-            ->get() as $row) {
-            $out[(int) $row->branch_id] = Money::of((string) $row->amount);
-        }
-
-        return $out;
-    }
-
-    /**
      * ⭐ নিট বিক্রি — IFRS 15 (fe, ২০ অক্টোবর ২০২৬): আয় ফেরত বাদে (১৫.৫১) **আর ভ্যাট বাদে** (১৫.৪৭ — তৃতীয় পক্ষের হয়ে তোলা টাকা আয় নয়)।
      *   billed   = পাকা বিলের `total − tax − freight_charge` (ছাড় বাদে, রাউন্ডিংসহ; ভ্যাট আর বিলে যোগ করা গাড়িভাড়া বাদে)
      *   returned = পাকা বিক্রয় ফেরতের `total − tax`, **ফেরতের নিজের তারিখে**
