@@ -223,6 +223,13 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
             '⛔ ⏸ আঁকা চিহ্ন নয়, বা চলার সময় দেখায় না।');
         $this->assertMatchesRegularExpression('/<svg[^>]*viewBox="0 0 24 24"[^>]*data-ticker-icon="play"[^>]*x-show="paused"/s', $button,
             '⛔ ▶ আঁকা চিহ্ন নয়, বা থামলে দেখায় না।');
+        // ⓘ ভরাট Material চিহ্ন, ১৮px — রেখার দুই সরু দাগ ১৪px-এ আবার "॥" পড়াত (fe, ২১ অক্টোবর ২০২৬)
+        $this->assertMatchesRegularExpression('/<svg width="18" height="18" viewBox="0 0 24 24"\s+fill="currentColor"[^>]*data-ticker-icon="pause"/s', $button,
+            '⛔ ⏸ ভরাট ১৮px চিহ্ন নয়।');
+        $this->assertMatchesRegularExpression('/<svg width="18" height="18" viewBox="0 0 24 24"\s+fill="currentColor"[^>]*data-ticker-icon="play"/s', $button,
+            '⛔ ▶ ভরাট ১৮px চিহ্ন নয়।');
+        $this->assertMatchesRegularExpression('/<button type="button" data-ticker-toggle[^>]*class="[^"]*\bsize-6\b/s', $ticker,
+            '⛔ বোতামটা ২৪px-এর ছোট — আঙুলে ধরা যায় না।');
         foreach (["\u{23F8}", "\u{25B6}", '&#x23F8;', '&#x25B6;', '॥'] as $glyph) {
             $this->assertStringNotContainsString($glyph, $button, "⛔ বোতামে লেখার চিহ্ন: {$glyph}");
         }

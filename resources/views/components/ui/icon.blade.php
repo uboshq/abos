@@ -383,19 +383,33 @@
 
         // ⓘ কাগজের অবস্থা v4 (a6 fbff00bfe) — Material Symbols-এর cancel (প্রত্যাখ্যাত) আর verified (অনুমোদিত)-এর রেখায়
         'cancel' => '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
-        // ⓘ চলন্ত ঘোষণার ⏸/▶ ([[shell.statusbar]], fe, ২১ অক্টোবর ২০২৬) — Material Symbols-এর pause আর play_arrow-এর রেখায়;
-        // ⛔ লেখার চিহ্ন (⏸ ▶) বাংলা ফন্টে "॥" হয়ে আঁকা হত
-        'pause' => '<path d="M9 6v12M15 6v12"/>',
-        'play' => '<path d="M8.5 5.5v13l10-6.5Z"/>',
         'verified' => '<path d="M12 2.8 14.4 5l3.2-.4.8 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.8 3.1-3.2-.4L12 21.2 9.6 19l-3.2.4-.8-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.8-3.1 3.2.4Z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/>',
     ];
 
-    $d = $paths[$name] ?? null;
+    /*
+     * ⭐ ভরাট চিহ্ন — কেবল যেখানে রেখা চেনা যায় না (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ চলন্ত ঘোষণার ⏸/▶ ([[shell.statusbar]]) ছোট বোতামে বসে; ⛔ রেখায় আঁকা ⏸ (দুইটা সরু দাগ) ১৪px-এ "॥" পড়াত, আর
+     * লেখার ⏸ বাংলা ফন্টে সত্যিই "॥" হত। ⭐ তাই এখানে Material Symbols-এর ভরাট রূপ (Rounded: গোল প্রান্তের দুইটা মোটা
+     * দাগ, ভরাট ত্রিভুজ) — মিডিয়া-চালকের চিহ্ন সবখানে ভরাটই, চোখ ওভাবেই চেনে। ⚠️ সেটের বাকি সব রেখায়ই থাকে; রং
+     * `currentColor`, তাই দুই থিমেই বোতামের নিজের রং।
+     */
+    $solid = [
+        'pause' => '<path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/>',
+        'play' => '<path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/>',
+    ];
+
+    $filled = isset($solid[$name]);
+    $d = $paths[$name] ?? $solid[$name] ?? null;
 @endphp
 
 {{-- অচেনা নাম মানে চুপ থাকা, ভাঙা নয়: একটা মেনু সারিতে ভুল নামের
      জন্য গোটা পাতা নামিয়ে দেওয়ার কোনো কারণ নেই। --}}
-@if ($d)
+@if ($d && $filled)
+    <svg width="{{ $size }}" height="{{ $size }}" viewBox="0 0 24 24"
+         fill="currentColor" aria-hidden="true"
+         {{ $attributes->class('shrink-0') }}>{!! $d !!}</svg>
+@elseif ($d)
     <svg width="{{ $size }}" height="{{ $size }}" viewBox="0 0 24 24"
          fill="none" stroke="currentColor" stroke-width="1.75"
          stroke-linecap="round" stroke-linejoin="round"

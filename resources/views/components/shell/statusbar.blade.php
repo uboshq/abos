@@ -197,8 +197,9 @@
                     class="grid size-6 shrink-0 place-items-center rounded-(--radius-field) text-(--color-ink-muted)
                            hover:bg-(--color-surface-hover) hover:text-(--color-ink) motion-reduce:hidden">
                 {{-- ⭐ আঁকা চিহ্ন, লেখা নয় (fe, ২১ অক্টোবর ২০২৬) — ⛔ ⏸ লেখাটা বাংলা ফন্টে "॥" দেখাত --}}
-                <x-ui.icon name="pause" :size="14" data-ticker-icon="pause" x-show="running" />
-                <x-ui.icon name="play" :size="14" data-ticker-icon="play" x-show="paused" x-cloak />
+                {{-- ⓘ ভরাট Material চিহ্ন, ১৮px, বোতাম ২৪px (size-6) — রেখার ⏸ ১৪px-এ "॥" পড়াত --}}
+                <x-ui.icon name="pause" :size="18" data-ticker-icon="pause" x-show="running" />
+                <x-ui.icon name="play" :size="18" data-ticker-icon="play" x-show="paused" x-cloak />
             </button>
         </div>
     @else
