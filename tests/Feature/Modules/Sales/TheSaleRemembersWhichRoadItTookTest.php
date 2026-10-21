@@ -106,8 +106,8 @@ final class TheSaleRemembersWhichRoadItTookTest extends TestCase
         // রিপোর্টেও দুইটা আলাদা সারি — পুরনোটা খুচরায়, নতুনটা ডিলারে
         $rows = $this->reportRows();
 
-        $this->assertSame(0, bccomp((string) $rows[$this->retail->id]['net_sales'], '200', 2));
-        $this->assertSame(0, bccomp((string) $rows[$this->dealer->id]['net_sales'], '100', 2));
+        $this->assertSame(0, bccomp((string) $rows[$this->retail->id]['billed'], '200', 2));
+        $this->assertSame(0, bccomp((string) $rows[$this->dealer->id]['billed'], '100', 2));
     }
 
     /**
