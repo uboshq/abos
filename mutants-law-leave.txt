@@ -476,3 +476,20 @@ P6.6 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
   old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy', 'storeWeeklyOff']),
   new: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
   kill: K::test_a_branch_limited_person_sets_only_their_own_branch (view-key holder writes)
+
+== P8 — five standard types once; no live approval flow in an approvals-off company ==
+K = tests/Feature/Modules/Hr/TheLeaveInstallersStayQuietInAnApprovalsOffCompanyTest.php
+
+P8.1 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
+  new: if (LeaveType::query()->where('code', $code)->exists()) {
+  kill: not by K (nothing trashed there) — EQUIVALENT under K; the trashed case is the M3.9 family. One-line proof: K creates no
+        soft-deleted type, so withTrashed() and the plain query see the same rows. (Kept honest; M3.9 kills the duplicate case.)
+
+P8.2 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: continue;
+  new: (line deleted — every run creates all five)
+  kill: K::test_five_types_once_and_no_live_approval_flow (10+ rows)
+
+P8.3 approval flows: no file on a6/hr-law-leave writes approval_flows (grep ApprovalFlow over the branch diff: only this test).
+  EQUIVALENT by absence — there is no write to mutate; K pins that none appears.
