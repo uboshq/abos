@@ -54,6 +54,13 @@ final class BulkApproval
                 continue;
             }
 
+            // ⛔ মডিউল বলেছে একটা একটা করে (`no_bulk`) — কখনো সই নয়, কারণসহ বাদ ([[oneByOne()]])
+            if ($this->oneByOne($approval)) {
+                $skipped['one_by_one'] = ($skipped['one_by_one'] ?? 0) + 1;
+
+                continue;
+            }
+
             if ($approval->status !== Approval::PENDING) {
                 $skipped['not_pending'] = ($skipped['not_pending'] ?? 0) + 1;
 
@@ -87,6 +94,16 @@ final class BulkApproval
      * এখানে বসাতে ভুলে যেত, আর সেটা **নীরবে bulk-এ ঢুকে পড়ত**
      * ([[never-supply-the-name-yourself]])।
      */
+    /**
+     * ⛔ এই কাজটা একটা একটা করে দেখে সই দিতে হয় — মডিউলের `approval_rules.{কাজ}.no_bulk` (fe, ২১ অক্টোবর ২০২৬; a6;
+     * [[ApprovalRules::noBulk()]])। ⓘ যেমন "ব্যাংক এই লাইন দেয়নি": মজুরি আবার বেরোনোর পথ, প্রতিটার কারণ আর ব্যাংকের প্রমাণ দেখে সই।
+     * ইনবক্সের টিক-বাক্সও এই প্রশ্নেই লুকায় ([[ApprovalInboxController]]), আর সরাসরি POST এলে উপরে বাদ পড়ে।
+     */
+    public function oneByOne(Approval $approval): bool
+    {
+        return app(ApprovalRules::class)->noBulk((string) $approval->module, (string) $approval->action);
+    }
+
     public function movesMoney(Approval $approval): bool
     {
         $module = $this->modules->get($approval->module);

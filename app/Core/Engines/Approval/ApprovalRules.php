@@ -20,6 +20,17 @@ final class ApprovalRules
 {
     public function __construct(private readonly ModuleRegistry $modules) {}
 
+    /**
+     * ⛔ এই কাজ একসাথে সইয়ে নয় — প্রতিটা অনুরোধ নিজের পাতায়, নিজের কারণ আর প্রমাণ দেখে, নিজের সইয়ে (fe, ২১ অক্টোবর ২০২৬; a6)।
+     *
+     * ⓘ মডিউল বলে `'no_bulk' => true` ([[BulkApproval]] পড়ে)। `moves_money`-র বাইরের কাজের জন্য — সেখানে থাকলে [[MoneyFlowDefaults]]
+     * প্রতিটা কোম্পানিতে একটা ছক বসাত; এটা কেবল একসাথে সই বন্ধ করে, কোনো ছক বসায় না।
+     */
+    public function noBulk(string $module, string $action): bool
+    {
+        return ($this->modules->get($module)?->approvalRules[$action]['no_bulk'] ?? false) === true;
+    }
+
     public function signerKey(string $module, string $action): ?string
     {
         $key = $this->modules->get($module)?->approvalRules[$action]['signer_key'] ?? null;
