@@ -44,10 +44,6 @@ M8  app/Models/ApprovalFlowStep.php
     new: "            if (false) {"
     kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_signer_without_every_key_is_no_signer_and_never_sees_it
 
-M9  app/Models/ApprovalFlowStep.php
-    old: "        if ($user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {"
-    new: "        if (false) {"
-    EQUIVALENT: PermissionSyncer::sync() gives the super_admin role every declared permission (PermissionSyncer.php:247), so the owner holds every key anyway; the line only saves the can() calls.
 
 M10 app/Core/Module/ModuleDefinition.php
     old: "            if ($second !== null && (! is_array($second) || $second === [] || array_diff($second, $permissions) !== [])) {"
@@ -64,20 +60,8 @@ M12 app/Modules/Hr/module.php
     new: "" (line removed)
     kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_salary_structure_change_waits_for_a_second_key_holder; ASalaryChangeNeedsASecondHandTest::test_with_no_flow_the_change_still_waits_for_the_built_in_second_signature
 
-M13 app/Modules/Hr/Listeners/MarkTheOwnersOwnPayrollSignature.php
-    old: "            OwnerSelfSigned::mark($approval, $run, __('hr::message.owner_self_signed_payroll'));"
-    new: ""
-    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_owner_may_sign_his_own_run_and_the_audit_marks_it
 
-M14 app/Modules/Hr/Support/OwnerSelfSigned.php
-    old: "        if (! $selfSigned || ! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
-    new: "        if (! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
-    kill: ASalaryChangeIsSignedWithEyesOpenTest::test_someone_else_signing_the_owners_change_leaves_no_mark
 
-M15 app/Modules/Hr/Support/OwnerSelfSigned.php
-    old: "        if (! $selfSigned || ! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
-    new: "        if (! $selfSigned) {"
-    EQUIVALENT: the engine lets only a super_admin sign his own request (ApprovalEngine::canDecide), and Ownership::activeOwnersIn() defines the owner as the active super_admin role holder of that company (one only, assertMayBecomeOwner); so a self-signature already implies the owner. The check stays as a second wall.
 
 == Item 1b — employee bank-account change (cb's hr_payment_changes, signed through the same built-in second signature) ==
 
@@ -116,10 +100,6 @@ M22 app/Modules/Hr/Services/PaymentChanges.php
     new: ""
     kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark (status stays pending)
 
-M23 app/Modules/Hr/Services/PaymentChanges.php
-    old: "                OwnerSelfSigned::mark($approval, $employee, __('hr::payment_change.owner_self_signed'));"
-    new: ""
-    kill: TheSalaryWentWhereOneHandSaidTest::test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark
 
 M24 app/Modules/Hr/Services/PaymentChanges.php
     old: "                $approval->markUsed();"
@@ -193,10 +173,6 @@ M37 app/Modules/Hr/Services/WppfService.php
     new: "            if (false) {"
     kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year (the second press rewrites the posted row back to draft and the posting engine's own double-post guard throws, not a 'provision' error)
 
-M38 app/Modules/Hr/Services/WppfService.php
-    old: "            if ($locked->isPosted()) {"
-    new: "            if (false) {"
-    EQUIVALENT in a single-threaded run: the first guard (inside the first transaction, under lock) already refuses a posted year; this second check only closes the race of two presses between the two transactions, and PostingEngine::assertNotAlreadyPosted is a third wall for that race.
 
 M39 app/Modules/Hr/Services/WppfService.php
     old: "        return $every !== [] && array_diff($every, array_map('intval', $allowed)) === [];"
@@ -209,7 +185,7 @@ M40 app/Modules/Hr/Services/WppfService.php
     kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year
 
 == fe round 2, answer 1 — at least two different people, always; the maker never signs (owner included) ==
-(Supersedes M13, M14, M15 and M23: OwnerSelfSigned and the payroll mark listener are deleted, owner_self_signed no longer applies to the three actions.)
+(M13, M14 and M23 were removed: OwnerSelfSigned and the payroll mark listener are deleted, so there is no code left to mutate.)
 
 M41 app/Core/Engines/Approval/ApprovalEngine.php — the maker signing their own (refused)
     old: "        if ((int) $approval->requested_by === (int) $user->id && $this->twoHands((string) $approval->module, (string) $approval->action)) {"
@@ -297,10 +273,6 @@ M56 app/Modules/Hr/Services/PaymentChanges.php
 
 == fe round 2, answer 4 — WPPF on its own line in the profit and loss, above profit before tax ==
 
-M57 app/Modules/Accounts/Reports/CoreReports.php
-    old: "            'rank' => \"CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$wppf} THEN 5 WHEN {$income} THEN 3 ELSE 4 END\","
-    new: "            'rank' => \"CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$income} THEN 3 ELSE 4 END\","
-    EQUIVALENT for the claim's figures (order of rows only): with 5223 ranked with the other expenses its row still carries its own section label; the visible order of the section within expenses is not asserted. Kept for reading order, not for a figure.
 
 M58 app/Modules/Accounts/Reports/CoreReports.php
     old: "            'label' => \"CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN {$wppf} THEN ? WHEN {$income} THEN ? ELSE ? END\","
@@ -335,10 +307,6 @@ M63 app/Core/Engines/Approval/ApprovalEngine.php
     new: "            ->contains(fn (User $user) => false);"
     kill: same test (the banner stays after a clerk gets the keys)
 
-M64 app/Core/Engines/Approval/ApprovalEngine.php
-    old: "            ->when($approval->requested_by !== null, fn ($q) => $q->whereKeyNot((int) $approval->requested_by))"
-    new: ""
-    EQUIVALENT: the requester never passes canDecide() on these actions (M41's line), so leaving him in the list changes nothing; the filter only saves one canDecide call.
 
 M65 resources/views/components/ui/no-second-signer.blade.php
     old: "@if ($note !== null)"
