@@ -36,6 +36,7 @@ use Tests\TestCase;
 final class APayrollWasCancelledAfterItWasConfirmedTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const MONTH = '2026-08-01';
 
@@ -67,7 +68,7 @@ final class APayrollWasCancelledAfterItWasConfirmedTest extends TestCase
         $run = app(PayrollService::class)->build(self::MONTH);
         $stale = PayrollRun::query()->findOrFail($run->id);
 
-        app(PayrollService::class)->confirm($run);
+        $this->confirmedPayroll($run);
         $this->assertNotSame('0', $this->net($run), 'প্রস্তুতিটাই ভুল — নিশ্চিত রানের বেতন খাতায় বসেনি।');
 
         app(PayrollService::class)->cancel($stale, 'ভুল মাস');
@@ -84,6 +85,8 @@ final class APayrollWasCancelledAfterItWasConfirmedTest extends TestCase
     {
         $run = app(PayrollService::class)->build(self::MONTH);
         $stale = PayrollRun::query()->findOrFail($run->id);
+        // ⓘ সই আগে — যাতে থামায় বাতিলের পাহারা, "দ্বিতীয় সই" নয় (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)
+        $this->signPayrollWithoutConfirming($run);
 
         app(PayrollService::class)->cancel($run, 'ভুল মাস');
 

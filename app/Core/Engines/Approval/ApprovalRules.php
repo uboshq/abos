@@ -43,6 +43,51 @@ final class ApprovalRules
         return is_string($key) && $key !== '' ? $key : null;
     }
 
+    /**
+     * ⛔ মালিকের একমাত্র ব্যতিক্রম — "সই বন্ধ মানে বন্ধ", কেবল এই কাজগুলো ছাড়া (মালিক, ২১ অক্টোবর ২০২৬; a6)।
+     *
+     * ⓘ বেতনের রান নিশ্চিত, বেতনের কাঠামো বদল আর কর্মীর ব্যাংকের ঠিকানা বদল — যে কোম্পানিতে সব ছক বন্ধ (UB), সেখানেও আরেকজনের
+     * "সই দিন" লাগে। মডিউল বলে কোন চাবি থাকলে সেই আরেকজন সই দিতে পারেন (`second_hand`); সাথে কাজটার `signer_key` থাকলে সেটাও
+     * — নাহলে অঙ্ক না দেখে সই। ⓘ কোম্পানির নিজের চালু ছক থাকলে সেটাই খাটে ([[ApprovalEngine::flows()]]); এটা কেবল ফাঁকটা ভরে।
+     *
+     * @return list<string> খালি = এই কাজে এমন কোনো নিয়ম নেই
+     */
+    public function secondHand(string $module, string $action): array
+    {
+        $rule = $this->modules->get($module)?->approvalRules[$action] ?? [];
+        $keys = $rule['second_hand'] ?? [];
+
+        if (! is_array($keys) || $keys === []) {
+            return [];
+        }
+
+        $signer = $this->signerKey($module, $action);
+
+        return array_values(array_unique(array_map('strval', $signer === null ? $keys : [...$keys, $signer])));
+    }
+
+    /**
+     * ⓘ যে কাজগুলোতে নিয়মটা আছে — সব মডিউল ধরে।
+     *
+     * @return list<array{module: string, action: string, keys: list<string>}>
+     */
+    public function secondHandActions(): array
+    {
+        $out = [];
+
+        foreach ($this->modules->all() as $module) {
+            foreach (array_keys($module->approvalRules) as $action) {
+                $keys = $this->secondHand($module->code, (string) $action);
+
+                if ($keys !== []) {
+                    $out[] = ['module' => $module->code, 'action' => (string) $action, 'keys' => $keys];
+                }
+            }
+        }
+
+        return $out;
+    }
+
     public function summaryOf(Approval $approval): ?string
     {
         $class = $this->modules->get((string) $approval->module)?->approvalRules[(string) $approval->action]['summary'] ?? null;

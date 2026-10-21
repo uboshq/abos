@@ -31,6 +31,7 @@ use Tests\TestCase;
 final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const ACCOUNT = '1234567890123';
 
@@ -56,7 +57,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $employee->forceFill(['payment_method' => 'bank'])->save();
         app(SalaryStructureService::class)->set($employee, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '20000');
 
-        $this->run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $this->run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
     }
 
     public function test_the_same_clerk_is_shut_out_without_the_key_and_let_in_with_it(): void

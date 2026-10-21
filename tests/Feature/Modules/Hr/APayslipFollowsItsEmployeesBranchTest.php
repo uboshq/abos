@@ -34,6 +34,7 @@ use Tests\TestCase;
 final class APayslipFollowsItsEmployeesBranchTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -56,7 +57,7 @@ final class APayslipFollowsItsEmployeesBranchTest extends TestCase
         $this->here = $this->employee('EMP-MMS', 'Here Person', 'MMS', '20000', '1111111111');
         $this->there = $this->employee('EMP-NTK', 'There Person', 'NTK', '35000', '2222222222');
 
-        $this->run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $this->run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
     }
 
     public function test_a_manager_of_one_branch_sees_prints_and_pays_only_that_branchs_people(): void

@@ -39,6 +39,7 @@ use Tests\TestCase;
 final class TheBankFileAndTheBooksPaidTheSameSalaryTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -67,7 +68,7 @@ final class TheBankFileAndTheBooksPaidTheSameSalaryTest extends TestCase
         $this->employee('EMP-102', '2222222222', absentDays: 5);
 
         $payroll = app(PayrollService::class);
-        $run = $payroll->confirm($payroll->build('2026-07-01'));
+        $run = $this->confirmedPayroll($payroll->build('2026-07-01'));
 
         foreach (PayslipLine::query()->whereIn('payslip_id', $run->payslips()->pluck('id'))->get() as $line) {
             $this->assertSame(0, bccomp((string) $line->amount, Money::round($line->amount, 2), 4),

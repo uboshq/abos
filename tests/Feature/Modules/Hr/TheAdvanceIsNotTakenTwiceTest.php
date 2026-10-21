@@ -40,6 +40,7 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
 {
     use PutsMoneyInTheTill;
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -86,7 +87,7 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
             ['account_id' => StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)->id, 'credit' => '2500', 'party_type' => 'employee', 'party_id' => $this->borrower->id],
         ], branchId: $this->company->defaultBranch()?->id);
 
-        $run = app(PayrollService::class)->confirm($run->fresh());
+        $run = $this->confirmedPayroll($run->fresh());
 
         $this->assertSame('500', $this->deducted($run), '⛔ ফেরত দেওয়া অগ্রিম বেতন থেকেও কাটা হল');
         $this->assertSame('0', $this->open(), '⛔ কর্মীর অগ্রিম ঋণাত্মক — একই টাকা দুইবার আদায়');
@@ -113,7 +114,7 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
             ->where('approvable_id', $claim->id)->where('status', Approval::PENDING)->sole(), $this->owner);
         $this->assertSame('2800', bcadd((string) $claim->fresh()->from_advance, '0', 0), 'দাবি অগ্রিম থেকে মিটল');
 
-        $run = app(PayrollService::class)->confirm($run->fresh());
+        $run = $this->confirmedPayroll($run->fresh());
 
         $this->assertSame('200', $this->deducted($run), '⛔ দাবিতে মেটানো অগ্রিম বেতন থেকেও কাটা হল');
         $this->assertSame('0', $this->open(), '⛔ কর্মীর অগ্রিম ঋণাত্মক — একই টাকা দুইবার আদায়');

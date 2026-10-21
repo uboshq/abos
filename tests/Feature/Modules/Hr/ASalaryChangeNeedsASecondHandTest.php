@@ -48,6 +48,7 @@ use Tests\TestCase;
 final class ASalaryChangeNeedsASecondHandTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const PAID_BASIC = '24680';
 
@@ -214,7 +215,11 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
             '⛔ বেতন-বদল টাকার কাজের তালিকায় — পরের deploy-এ ছক নিজে বসে যেত।');
     }
 
-    public function test_with_no_flow_the_change_lands_at_once_as_before(): void
+    /**
+     * ⛔ মালিকের ব্যতিক্রম (a6, ২১ অক্টোবর ২০২৬) — আগে এখানে দাবি ছিল "ছক নেই, বদল সাথে সাথে বসে"; মালিক এখন বলেছেন বেতনের কাঠামো
+     * বদলে সবসময় আরেকজনের সই, ছক না থাকলেও ([[ApprovalRules::secondHand()]], [[APayrollRunNeedsASecondHandEvenWithApprovalsOffTest]])।
+     */
+    public function test_with_no_flow_the_change_still_waits_for_the_built_in_second_signature(): void
     {
         $maker = $this->maker();
 
@@ -222,11 +227,13 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
             'effective_from' => '2026-09-01',
             'amounts' => [$this->basic->id => self::RAISED_BASIC],
         ])->assertRedirect()->assertSessionHas('saved');
-        $this->assertSaid('hr::message.salary_saved');
+        $this->assertSaid('hr::message.salary_change_waiting');
 
-        $this->assertSame(self::RAISED_BASIC, $this->rowsByDate()['2026-09-01'] ?? null, '⛔ ছক নেই, তবু বদলটা বসেনি।');
-        $this->assertSame(0, Approval::query()->where('action', SalaryStructureService::ACTION_CHANGE)->count(),
-            '⛔ ছক নেই, তবু সইয়ের অনুরোধ বসল — অনুমোদন বন্ধ রাখা কোম্পানি আটকাত।');
+        $this->assertArrayNotHasKey('2026-09-01', $this->rowsByDate(), '⛔ ছক নেই, আর একজনের চাপেই বদলটা বসল।');
+        $approval = $this->salaries()->waitingChange($this->employee);
+        $this->assertNotNull($approval, '⛔ ছক নেই, আর দ্বিতীয় সইয়ের অনুরোধও বসেনি।');
+        $this->assertTrue(app(ApprovalEngine::class)->isSecondHand($approval), '⛔ অনুরোধটা যন্ত্রের "দ্বিতীয় সই" ছকে নয়।');
+        $this->assertSame(0, ApprovalFlow::query()->where('module', 'hr')->count(), '⛔ দ্বিতীয় সইয়ের জন্য ছক বসানো হলো।');
     }
 
     public function test_with_the_flow_on_the_change_waits_and_lands_only_on_another_persons_signature(): void
@@ -319,7 +326,7 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
 
         // ⓘ সই পড়ার আগেই সেপ্টেম্বরের বেতন দেওয়া হলো — পুরনো অঙ্কে
         $this->travelTo('2026-10-03 10:00:00');
-        $september = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-09-01'));
+        $september = $this->confirmedPayroll(app(PayrollService::class)->build('2026-09-01'));
         $this->assertSame('confirmed', (string) $september->status);
 
         $this->actingAs($signer);
@@ -347,7 +354,7 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
 
     private function paidAugust(): PayrollRun
     {
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
 
         $this->assertSame('confirmed', (string) $run->status, 'প্রস্তুতি — আগস্টের রান নিশ্চিত হয়নি।');
         $this->assertTrue($run->payslips()->where('employee_id', $this->employee->id)->exists(), 'প্রস্তুতি — কর্মী রানে নেই।');

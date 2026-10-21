@@ -39,6 +39,9 @@ use RuntimeException;
  */
 final class ApprovalEngine
 {
+    /** ⓘ সই দেওয়ার দরজার চাবি — ওয়েবের ইনবক্স আর ফোনের সই-পথ ([[secondHandFlow()]]) */
+    public const DECIDE_KEY = 'approval.decide';
+
     /**
      * কোম্পানির সব সক্রিয় ছক — এই অনুরোধে একবার তোলা।
      *
@@ -130,7 +133,8 @@ final class ApprovalEngine
             return null;
         }
 
-        if ($flow->steps()->count() === 0) {
+        // ⓘ জমানো ধাপ গোনা, কোয়েরি নয় — [[flows()]] ধাপসহ তোলে, আর "দ্বিতীয় সই" ছকের ধাপ ডাটাবেসে নেই
+        if ($flow->steps->isEmpty()) {
             throw new RuntimeException(
                 "Approval flow for {$module}.{$action} has no steps. "
                 .'A flow with nobody in it would leave every document waiting forever.'
@@ -1445,7 +1449,61 @@ final class ApprovalEngine
             $flows[$flow->module.'|'.$flow->action.'|'.$flow->document_type] = $flow;
         }
 
+        /*
+         * ⛔ মালিকের একমাত্র ব্যতিক্রম — "সই বন্ধ মানে বন্ধ", কেবল বেতনের রান, বেতনের কাঠামো আর ব্যাংকের ঠিকানা ছাড়া (মালিক, ২১ অক্টোবর
+         * ২০২৬; a6; [[ApprovalRules::secondHand()]])। ⓘ এই কাজগুলোর "সব ধরনে" চালু ছক না থাকলে (UB-র মতো সব বন্ধ, বা কাজটার ছক মোছা)
+         * যন্ত্রের নিজের এক ধাপের ছক — "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, সীমা নেই, শর্ত নেই।
+         * ⭐ ডাটাবেসে বসে না: ছকের পর্দায় দেখা যায় না, বদলানো যায় না, আর [[MoneyFlowDefaults]] আগের মতোই কিছু বসায় না।
+         * ⓘ কোম্পানির নিজের চালু ছক থাকলে (যেকোনো সীমা-শর্তসহ) সেটাই খাটে — অবিকল আগের মতো।
+         */
+        foreach (app(ApprovalRules::class)->secondHandActions() as $rule) {
+            $slot = $rule['module'].'|'.$rule['action'].'|';
+
+            if (! isset($flows[$slot])) {
+                $flows[$slot] = $this->secondHandFlow($rule['module'], $rule['action'], $rule['keys']);
+            }
+        }
+
         return $this->flowCache = $flows;
+    }
+
+    /**
+     * ⭐ যন্ত্রের "দ্বিতীয় সই" ছক — সারি নয় (`exists` মিথ্যা), ধাপ আর শর্ত হাতে বসানো, যাতে কোনো প্রশ্ন ডাটাবেসে না যায়।
+     *
+     * @param  list<string>  $keys
+     */
+    private function secondHandFlow(string $module, string $action, array $keys): ApprovalFlow
+    {
+        $flow = new ApprovalFlow;
+        $flow->forceFill([
+            'company_id' => CompanyContext::id(),
+            'module' => $module,
+            'action' => $action,
+            'document_type' => '',
+            'threshold_amount' => null,
+            'is_active' => true,
+        ]);
+
+        $name = __('core.approval.second_hand');
+        /*
+         * ⓘ সাথে `approval.decide` — সইয়ের দুই দরজা (ওয়েবের ইনবক্স, ফোনের `approvals/{id}/approve`) এই চাবিতেই খোলে; ⛔ না থাকলে
+         * ইনবক্স আর ঘণ্টা তাঁকে "আপনার সই" দেখাত, অথচ দরজা ৪০৩ দিত।
+         */
+        $flow->setRelation('steps', new Collection([
+            ApprovalFlowStep::secondHand(array_values(array_unique([...$keys, self::DECIDE_KEY])),
+                is_string($name) && $name !== 'core.approval.second_hand' ? $name : 'দ্বিতীয় সই'),
+        ]));
+        $flow->setRelation('conditions', new Collection);
+
+        return $flow;
+    }
+
+    /** ⓘ এই অনুরোধ যন্ত্রের "দ্বিতীয় সই" ছকে চলছে কি না — পর্দা আর অডিট নাম ধরে বলতে পারে ([[secondHandFlow()]]) */
+    public function isSecondHand(Approval $approval): bool
+    {
+        $flow = $this->flowOf($approval);
+
+        return $flow !== null && ! $flow->exists;
     }
 
     /**
@@ -1615,9 +1673,12 @@ final class ApprovalEngine
         $levels = [];
 
         foreach ($flow->steps as $step) {
-            $mine = $step->approver_type === ApprovalFlowStep::BY_USER
-                ? (int) $step->approver_id === $user->id
-                : in_array((int) $step->approver_id, $roleIds, true);
+            // ⓘ চাবি ধরে ধাপ — কেবল যন্ত্রের "দ্বিতীয় সই" ছকে ([[secondHandFlow()]])
+            $mine = match ($step->approver_type) {
+                ApprovalFlowStep::BY_KEY => $step->heldBy($user),
+                ApprovalFlowStep::BY_USER => (int) $step->approver_id === $user->id,
+                default => in_array((int) $step->approver_id, $roleIds, true),
+            };
 
             if ($mine) {
                 $levels[] = (int) $step->level;

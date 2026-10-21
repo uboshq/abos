@@ -9,6 +9,7 @@ use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
+use App\Modules\Hr\Listeners\MarkTheOwnersOwnPayrollSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
@@ -253,7 +254,7 @@ return [
         'cash_advance' => 'hr::approval.cash_advance',
         /*
          * ⭐ বেতনের কাঠামো বদল — §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬ ([[SalaryStructureService::change()]])। ⓘ ছক কেউ বসান না, কোম্পানি
-         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না, তাই অনুমোদন বন্ধ রাখা কোম্পানিতে আচরণ অবিকল আগের মতো।
+         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না। ⭐ ছক না থাকলেও দ্বিতীয় সই — নিচের `second_hand` (মালিক, ২১ অক্টোবর ২০২৬)।
          */
         'salary_change' => 'hr::approval.salary_change',
     ],
@@ -263,9 +264,17 @@ return [
      *  · `signer_key` — ছকের ধাপে বেতনের চাবি ছাড়া কাউকে (মানুষ বা রোল) বসানো যায় না; নাহলে অঙ্ক না দেখে সই ([[ApprovalFlowService]])।
      *  · `summary` — ইনবক্স আর একসাথে সইয়ের তালিকায় প্রতিটা সারিতে আগে → পরের অঙ্ক, চাবি না থাকলে ঢাকা ([[SalaryChangeSummary]])।
      */
+    /*
+     * ⛔ `second_hand` — মালিকের একমাত্র ব্যতিক্রম, ২১ অক্টোবর ২০২৬ (a6; [[ApprovalRules::secondHand()]]): "সই বন্ধ মানে বন্ধ", কেবল বেতনের
+     * রান নিশ্চিত, বেতনের কাঠামো বদল আর কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল ছাড়া। সব ছক বন্ধ থাকা কোম্পানিতেও (UB) এগুলোয়
+     * আরেকজনের "সই দিন" লাগে — যন্ত্রের নিজের এক ধাপ "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, যিনি চাইলেন তিনি নন; মালিক নিজের
+     * চাওয়ায় নিজে দিলে অডিটে `owner_self_signed` ([[OwnerSelfSigned]])। ⓘ ছক বসানো হয় না ([[MoneyFlowDefaults]] আগের মতোই);
+     * কোম্পানির নিজের চালু ছক থাকলে সেটাই খাটে।
+     */
     'approval_rules' => [
         'salary_change' => [
             'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.salary.manage'],
             'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
         ],
         /*
@@ -278,6 +287,7 @@ return [
          */
         'payroll' => [
             'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.payroll.manage'],
             'amount_key' => 'hr.salary.view',
             'summary' => \App\Modules\Hr\Services\PayrollRunSummary::class,
         ],
@@ -525,7 +535,12 @@ return [
      */
     'listeners' => [
         // ⭐ বেতনের কাঠামো বদলের শেষ সই — তবে বসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
-        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class, FinishTheSalaryChangeOnTheLastSignature::class],
+        // ⓘ মালিক নিজের চাওয়া বেতনের রানে নিজে সই দিলে অডিটে চিহ্ন (a6, ২১ অক্টোবর ২০২৬; [[OwnerSelfSigned]])
+        ApprovalDecided::class => [
+            FinishTheClaimOnTheLastSignature::class,
+            FinishTheSalaryChangeOnTheLastSignature::class,
+            MarkTheOwnersOwnPayrollSignature::class,
+        ],
     ],
 
     'sensitive_fields' => [

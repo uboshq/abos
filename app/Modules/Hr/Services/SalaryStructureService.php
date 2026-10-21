@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
-use App\Core\Services\Ownership;
 use App\Models\Approval;
-use App\Models\ApprovalDecision;
-use App\Models\User;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Models\SalaryStructure;
+use App\Modules\Hr\Support\OwnerSelfSigned;
 use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Carbon;
@@ -36,7 +34,7 @@ final class SalaryStructureService
     public const ACTION_CHANGE = 'salary_change';
 
     /** ⛔ অডিটের আলাদা চিহ্ন — মালিক নিজের চাওয়া বদলে নিজেই সই দিলেন (a5-এর অফারের একই নাম; ⚠️ কলাম ২৪ অক্ষরের) */
-    public const OWNER_SELF_SIGNED = 'owner_self_signed';
+    public const OWNER_SELF_SIGNED = OwnerSelfSigned::ACTION;
 
     /**
      * এই তারিখে কার্যকর প্রতিটা খাত ও তার টাকার অঙ্ক।
@@ -105,10 +103,11 @@ final class SalaryStructureService
     /**
      * ⭐ মানুষের দরজা — পর্দার "সংরক্ষণ" এখানে আসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[ASalaryChangeNeedsASecondHandTest]])।
      *
-     * ⓘ এক তারিখ, কয়েকটা খাত — একসাথে। ছক (`hr` · `salary_change`) চালু না থাকলে আগের মতোই সাথে সাথে বসে, আর ফেরে `null`।
-     * ⭐ ছক চালু থাকলে কিছুই বসে না: প্রস্তাবটা একটা অনুরোধে জমা থাকে ("সইয়ের অপেক্ষায়"), আর আরেকজন "সই দিন" চাপলে তবে বসে
-     * ([[applySigned()]], [[FinishTheSalaryChangeOnTheLastSignature]]) — SOX/ITGC maker-checker। ⛔ ছক কোডে বসানো হয় না —
-     * কোম্পানি নিজে চালু করে; UB-র মতো যাঁরা সব অনুমোদন বন্ধ রেখেছেন, তাঁদের আচরণ অবিকল আগের মতো।
+     * ⓘ এক তারিখ, কয়েকটা খাত — একসাথে। ⭐ কিছুই সাথে সাথে বসে না: প্রস্তাবটা একটা অনুরোধে জমা থাকে ("সইয়ের অপেক্ষায়"), আর
+     * আরেকজন "সই দিন" চাপলে তবে বসে ([[applySigned()]], [[FinishTheSalaryChangeOnTheLastSignature]]) — SOX/ITGC maker-checker।
+     * ⛔ মালিকের ব্যতিক্রম (a6, ২১ অক্টোবর ২০২৬): কোম্পানির ছক (`hr` · `salary_change`) না থাকলে, বা UB-র মতো সব বন্ধ থাকলেও,
+     * যন্ত্রের নিজের "দ্বিতীয় সই" ([[ApprovalRules::secondHand()]]) — `hr.salary.manage` আর `hr.salary.view` থাকা আরেকজন। ছক কোডে
+     * বসানো হয় না। ⓘ `null` ফেরে কেবল তখন, যখন কোনো নিয়মই ধরে না (মডিউলের ঘোষণা সরালে) — তখন আগের মতো সাথে সাথে।
      *
      * ⛔ অনুরোধে অঙ্কটা `amount` ঘরে নয়, আর `payload`-এ খোলা নয় — এনক্রিপ্ট করা ([[Crypt]])। ⓘ `amount` ইনবক্স আর অনুমোদনের
      * রিপোর্টে ছাপে, `payload` ইনবক্সের খোঁজায় LIKE হয় আর অনুরোধের অডিট-সারিতে যায় — দুটোই বেতনের চাবি ছাড়া মানুষের চোখে
@@ -279,20 +278,8 @@ final class SalaryStructureService
      */
     private function markOwnerSelfSigned(Approval $approval, Employee $employee): void
     {
-        $requester = $approval->requested_by === null ? null : User::query()->find((int) $approval->requested_by);
-
-        if ($requester === null) {
-            return;
-        }
-
-        $selfSigned = $approval->decisions()
-            ->where('decision', ApprovalDecision::APPROVED)
-            ->where('user_id', $requester->id)
-            ->exists();
-
-        if ($selfSigned && app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {
-            $employee->auditAction(self::OWNER_SELF_SIGNED, __('hr::message.owner_self_signed'));
-        }
+        // ⓘ তিন কাজের এক নিয়ম — বেতনের রান, কাঠামো, বেতনের ঠিকানা (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)
+        OwnerSelfSigned::mark($approval, $employee, __('hr::message.owner_self_signed'));
     }
 
     /**

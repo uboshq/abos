@@ -39,6 +39,7 @@ use Tests\TestCase;
 final class TheSalaryWentWhereOneHandSaidTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const OLD = '1234567890123';
 
@@ -101,7 +102,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
 
         // ⓘ অপেক্ষার সময়ের বেতন পুরনো হিসাবে
         $this->as($this->owner);
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
         $this->assertSame(self::OLD, (string) $run->payslips()->where('employee_id', $this->employee->id)->firstOrFail()->bank_account_no,
             '⛔ সইয়ের আগেই বেতন নতুন হিসাবে গেল');
 

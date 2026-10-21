@@ -1,0 +1,80 @@
+mutants-law-sign.txt — a6/hr-law-sign (a6, 21 Oct 2026)
+Each mutant: file · exact old → exact new · killing test (file::method). Run one at a time on the Mac, from the tested commit; restore with mtime = now.
+Status of every line below: listed, NOT yet run (Mac).
+
+== Item 1a — built-in second signature (core + payroll + salary structure) ==
+
+M1  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            if (! isset($flows[$slot])) {"
+    new: "            if (false) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_maker_cannot_post_the_run_and_a_second_key_holder_signs_it_on_the_web (the run posts on the maker's press)
+
+M2  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            if (! isset($flows[$slot])) {"
+    new: "            if (true) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_company_with_its_own_active_flow_keeps_using_it (the company's own flow is overridden)
+
+M3  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "                ApprovalFlowStep::BY_KEY => $step->heldBy($user),"
+    new: "                ApprovalFlowStep::BY_KEY => true,"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_signer_without_every_key_is_no_signer_and_never_sees_it
+
+M4  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            ApprovalFlowStep::secondHand(array_values(array_unique([...$keys, self::DECIDE_KEY])),"
+    new: "            ApprovalFlowStep::secondHand(array_values(array_unique($keys)),"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_signer_without_every_key_is_no_signer_and_never_sees_it ('no signing door' case)
+
+M5  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "        if ($flow->steps->isEmpty()) {"
+    new: "        if ($flow->steps()->count() === 0) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_maker_cannot_post_the_run_and_a_second_key_holder_signs_it_on_the_web (RuntimeException: the built-in flow has no rows)
+
+M6  app/Core/Engines/Approval/ApprovalEngine.php
+    old: "        return $flow !== null && ! $flow->exists;"
+    new: "        return $flow !== null;"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_company_with_its_own_active_flow_keeps_using_it
+
+M7  app/Core/Engines/Approval/ApprovalRules.php
+    old: "        return array_values(array_unique(array_map('strval', $signer === null ? $keys : [...$keys, $signer])));"
+    new: "        return array_values(array_unique(array_map('strval', $keys)));"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_signer_without_every_key_is_no_signer_and_never_sees_it ('no salary key' case)
+
+M8  app/Models/ApprovalFlowStep.php
+    old: "            if (! $user->can($key)) {"
+    new: "            if (false) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_signer_without_every_key_is_no_signer_and_never_sees_it
+
+M9  app/Models/ApprovalFlowStep.php
+    old: "        if ($user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {"
+    new: "        if (false) {"
+    EQUIVALENT: PermissionSyncer::sync() gives the super_admin role every declared permission (PermissionSyncer.php:247), so the owner holds every key anyway; the line only saves the can() calls.
+
+M10 app/Core/Module/ModuleDefinition.php
+    old: "            if ($second !== null && (! is_array($second) || $second === [] || array_diff($second, $permissions) !== [])) {"
+    new: "            if ($second !== null && (! is_array($second) || $second === [])) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_module_cannot_name_a_second_hand_key_it_does_not_declare ('unknown key')
+
+M11 app/Modules/Hr/module.php
+    old: "            'second_hand' => ['hr.payroll.manage'],"
+    new: "" (line removed)
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_maker_cannot_post_the_run_and_a_second_key_holder_signs_it_on_the_web
+
+M12 app/Modules/Hr/module.php
+    old: "            'second_hand' => ['hr.salary.manage'],"
+    new: "" (line removed)
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_salary_structure_change_waits_for_a_second_key_holder; ASalaryChangeNeedsASecondHandTest::test_with_no_flow_the_change_still_waits_for_the_built_in_second_signature
+
+M13 app/Modules/Hr/Listeners/MarkTheOwnersOwnPayrollSignature.php
+    old: "            OwnerSelfSigned::mark($approval, $run, __('hr::message.owner_self_signed_payroll'));"
+    new: ""
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_owner_may_sign_his_own_run_and_the_audit_marks_it
+
+M14 app/Modules/Hr/Support/OwnerSelfSigned.php
+    old: "        if (! $selfSigned || ! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
+    new: "        if (! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
+    kill: ASalaryChangeIsSignedWithEyesOpenTest::test_someone_else_signing_the_owners_change_leaves_no_mark
+
+M15 app/Modules/Hr/Support/OwnerSelfSigned.php
+    old: "        if (! $selfSigned || ! app(Ownership::class)->isOwnerIn($requester, (int) $approval->company_id)) {"
+    new: "        if (! $selfSigned) {"
+    EQUIVALENT: the engine lets only a super_admin sign his own request (ApprovalEngine::canDecide), and Ownership::activeOwnersIn() defines the owner as the active super_admin role holder of that company (one only, assertMayBecomeOwner); so a self-signature already implies the owner. The check stays as a second wall.

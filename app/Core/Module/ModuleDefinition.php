@@ -525,7 +525,7 @@ final class ModuleDefinition
          * ⭐ অনুমোদনের কাজ ধরে নিয়ম — সইকারীর চাবি (`signer_key`) আর ইনবক্সের সারির লেখা (`summary`); a6, ২১ অক্টোবর ২০২৬
          * (Hr §৮ ⚠️৫, fe-র উত্তর ২ ও ৪; [[ApprovalRules]])। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
          *
-         * @var array<string, array{signer_key?: string, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
+         * @var array<string, array{signer_key?: string, amount_key?: string, second_hand?: list<string>, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
          */
         public readonly array $approvalRules = [],
     ) {}
@@ -776,6 +776,18 @@ final class ModuleDefinition
                         "{$path}: approval_rules.{$action}.{$slot} must be a permission this module declares."
                     );
                 }
+            }
+
+            /*
+             * ⭐ `second_hand` — ছক না থাকলেও আরেকজনের সই, যে চাবিগুলো থাকলে তিনি সই দিতে পারেন (মালিকের একমাত্র ব্যতিক্রম, a6, ২১ অক্টোবর
+             * ২০২৬; [[ApprovalRules::secondHand()]])। ⛔ খালি তালিকা বা অজানা চাবি বুটেই থামে — নাহলে "কেউ সই দিতে পারেন না" নীরবে বসত।
+             */
+            $second = $rule['second_hand'] ?? null;
+
+            if ($second !== null && (! is_array($second) || $second === [] || array_diff($second, $permissions) !== [])) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules.{$action}.second_hand must be a non-empty list of permissions this module declares."
+                );
             }
 
             $summary = $rule['summary'] ?? null;
