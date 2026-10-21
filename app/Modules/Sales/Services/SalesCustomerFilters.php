@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Services;
 use App\Core\Contracts\CustomerSalesFilters;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -46,33 +48,55 @@ final class SalesCustomerFilters implements CustomerSalesFilters
     }
 
     /**
-     * ⭐ গ্রাহকের ড্যাশবোর্ড — এ সময়কালের পাকা বিল, সংখ্যা ও মোট (৫ অক্টোবর ২০২৬)।
-     * ⓘ [[SalesMetrics::invoiceTotal()]]-এর ছাঁকনি (`posted()` + `trx_date`), হেডারে বাছা শাখায় — বিক্রয়ের পর্দার
-     * "এ মাসের বিক্রয়" আর গ্রাহকের পর্দার সংখ্যা এক।
+     * ⭐ গ্রাহকের ড্যাশবোর্ড — এ সময়কালের পাকা বিল, সংখ্যা ও মোট (৫ অক্টোবর ২০২৬), আর নিট বিক্রি (fe, ২১ অক্টোবর ২০২৬)।
+     * ⓘ [[SalesMetrics::invoiceTotal()]]-এর ছাঁকনি (`posted()` + `trx_date`), হেডারে বাছা শাখায়। ⭐ `net` = বিলের
+     * [[SalesMetrics::billNetSql()]] − পাকা ফেরতের [[SalesMetrics::returnNetSql()]] (ফেরতের তারিখে, একই শাখায়) — VAT, গাড়িভাড়া আর
+     * ফেরত বাদে, বিক্রয়ের পর্দার "নিট বিক্রি"-র একই সংজ্ঞা। ⓘ `total` আগের মতো বিলের মোট — গড় বিলের অঙ্কের জন্য।
      */
     public function billsBetween(string $from, string $to): ?array
     {
         $row = $this->posted($from, $to)
-            ->selectRaw('COUNT(*) as n, COALESCE(SUM(sal_invoices.total), 0) as total')
+            ->selectRaw('COUNT(*) as n, COALESCE(SUM(sal_invoices.total), 0) as total, '
+                .'COALESCE(SUM('.SalesMetrics::billNetSql('sal_invoices').'), 0) as billed')
+            ->toBase()
+            ->first();
+        $back = $this->returned($from, $to)
+            ->selectRaw('COALESCE(SUM('.SalesMetrics::returnNetSql('sal_returns').'), 0) as returned')
             ->toBase()
             ->first();
 
-        return ['count' => (int) ($row->n ?? 0), 'total' => bcadd((string) ($row->total ?? '0'), '0', 4)];
+        return [
+            'count' => (int) ($row->n ?? 0),
+            'total' => bcadd((string) ($row->total ?? '0'), '0', 4),
+            'net' => bcsub(bcadd((string) ($row->billed ?? '0'), '0', 4), bcadd((string) ($back->returned ?? '0'), '0', 4), 4),
+        ];
     }
 
-    /** ⭐ সবচেয়ে বেশি কেনা গ্রাহক — একই ছাঁকনি, গ্রাহক ধরে; সমান হলে আগের id আগে (৫ অক্টোবর ২০২৬) */
+    /**
+     * ⭐ সবচেয়ে বেশি কেনা গ্রাহক — নিট বিক্রি ধরে (বিল − ফেরত, VAT ও গাড়িভাড়া বাদে; fe, ২১ অক্টোবর ২০২৬), [[billsBetween()]]-এর
+     * একই ছাঁকনি, গ্রাহক ধরে; কেবল যাঁর এ সময়ে বিল আছে; সমান হলে আগের id আগে। ⓘ `total` এখন সেই নিট।
+     */
     public function topBuyers(string $from, string $to, int $limit): ?array
     {
-        return $this->posted($from, $to)
-            ->selectRaw('sal_invoices.customer_id, COALESCE(SUM(sal_invoices.total), 0) as total')
-            ->groupBy('sal_invoices.customer_id')
-            ->orderByRaw('SUM(sal_invoices.total) desc')
-            ->orderBy('sal_invoices.customer_id')
-            ->limit($limit)
-            ->toBase()
-            ->get()
-            ->map(fn ($r): array => ['customer_id' => (int) $r->customer_id, 'total' => bcadd((string) $r->total, '0', 4)])
-            ->all();
+        $net = [];
+
+        foreach ($this->posted($from, $to)
+            ->selectRaw('sal_invoices.customer_id as customer_id, COALESCE(SUM('.SalesMetrics::billNetSql('sal_invoices').'), 0) as amount')
+            ->groupBy('sal_invoices.customer_id')->toBase()->get() as $r) {
+            $net[(int) $r->customer_id] = bcadd((string) $r->amount, '0', 4);
+        }
+
+        foreach ($this->returned($from, $to)
+            ->whereIn('sal_returns.customer_id', array_keys($net) ?: [0])
+            ->selectRaw('sal_returns.customer_id as customer_id, COALESCE(SUM('.SalesMetrics::returnNetSql('sal_returns').'), 0) as amount')
+            ->groupBy('sal_returns.customer_id')->toBase()->get() as $r) {
+            $net[(int) $r->customer_id] = bcsub($net[(int) $r->customer_id] ?? '0.0000', bcadd((string) $r->amount, '0', 4), 4);
+        }
+
+        $rows = array_map(fn (int $id, string $amount): array => ['customer_id' => $id, 'total' => $amount], array_keys($net), $net);
+        usort($rows, fn (array $a, array $b): int => bccomp($b['total'], $a['total'], 4) ?: $a['customer_id'] <=> $b['customer_id']);
+
+        return array_slice($rows, 0, $limit);
     }
 
     /**
@@ -109,6 +133,13 @@ final class SalesCustomerFilters implements CustomerSalesFilters
     {
         return ViewedBranch::narrow(SalesInvoice::query()->posted(), 'sal_invoices.branch_id')
             ->whereBetween('sal_invoices.trx_date', [$from, $to]);
+    }
+
+    /** পাকা ফেরত, ফেরতের তারিখে, হেডারে বাছা শাখায় — [[posted()]]-এর জোড়া (নিট বিক্রির জন্য) */
+    private function returned(string $from, string $to): \Illuminate\Database\Eloquent\Builder
+    {
+        return ViewedBranch::narrow(SalesReturn::query()->posted(), 'sal_returns.branch_id')
+            ->whereBetween('sal_returns.trx_date', [$from, $to]);
     }
 
     private function bills(string $from, string $to): \Illuminate\Database\Eloquent\Builder
