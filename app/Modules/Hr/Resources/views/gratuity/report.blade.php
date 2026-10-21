@@ -42,6 +42,9 @@
         </div>
     @endif
 
+    {{-- ⭐ নিরীক্ষকের জন্য এক লাইন — IAS 19-এর সরলীকরণ (fe, ২১ অক্টোবর ২০২৬) --}}
+    <p class="mb-2 text-2xs text-(--color-ink-muted)" data-ias19-note>{{ __('hr::message.gratuity_ias19') }}</p>
+
     <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <p class="mb-2 text-sm">{{ __($enabled ? 'hr::message.gratuity_on_note' : 'hr::message.gratuity_off_note') }}</p>
         <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('hr::message.gratuity_formula_note') }}</p>

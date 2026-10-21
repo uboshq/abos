@@ -112,4 +112,6 @@ return [
     'gratuity_booked' => 'The gratuity provision for :month is booked.',
     'gratuity_nothing' => 'Nothing to book for :month — already booked, or the obligation did not change.',
     'gratuity_narration' => 'Gratuity provision :month',
+    // ⭐ নিরীক্ষকের জন্য — IAS 19-এর সরলীকরণ (fe, ২১ অক্টোবর ২০২৬)
+    'gratuity_ias19' => 'Under IAS 19 gratuity is a defined benefit; instead of a full actuarial valuation we carry the accrued obligation at current salary — an acceptable simplification for a small company.',
 ];
