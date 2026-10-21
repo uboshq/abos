@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/auth_user.dart';
+import '../../core/auth/me_features.dart';
 import '../../core/auth/session_profile.dart';
 import '../../core/auth/session_repository.dart';
 import '../../core/menu/me_api.dart';
@@ -24,6 +25,8 @@ import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
 import '../../core/privacy/phone_privacy.dart';
+import '../../core/profile/face_image.dart';
+import '../../core/router/profile_routes.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
@@ -296,6 +299,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ref.read(ordersReplaceDoProvider.notifier).state =
           profile.ordersReplaceDo;
       ref.read(mayCollectProvider.notifier).state = profile.mayCollect;
+      // ⭐ সার্ভার ছবি বদল আর "আমার ফোনগুলো" জানে কি না — মেনু আর প্রোফাইলের পর্দা এটা দেখে ([MeFeatures])
+      ref.read(meFeaturesProvider.notifier).state = profile.features;
       // ⭐ মালিকের দুই সুইচ — পর্দা আড়াল, আর উইজেটের অঙ্ক; হোম আঁকা এর জন্য থামে না
       unawaited(PhonePrivacy.follow(
           secureScreens: profile.secureScreens,
@@ -316,6 +321,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       }
       if (fresh != null && !fresh.isEmpty) _org = fresh;
     });
+    // ⭐ নিজের মুখ সবার জন্য — ছবির পর্দা এখান থেকে পড়ে, বদলালে এখানে লেখে ([[myFaceProvider]])
+    if (home.me != null) ref.read(myFaceProvider.notifier).state = _avatarUrl;
     _publishTopBar();
     if (fresh != null && !fresh.isEmpty) {
       await (widget.cacheOrg ?? SessionRepository.instance.saveOrg)(fresh);
@@ -395,7 +402,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (!fromScreen) setState(() => _menuOpen = false);
     switch (choice) {
       case AvatarChoice.profile:
-        await _showProfile(user, org);
+        // ⭐ "প্রোফাইল ও ছবি" — নিজের তথ্য, ছবি বদল আর "আমার ফোনগুলো" (অ্যাপ ০.৪.৪১, a6, ২০ অক্টোবর ২০২৬)
+        await (widget.openPath ?? _push)(ProfileRoutes.profile);
       case AvatarChoice.company:
         if (await mayLeaveUnsaved(context)) await _openPicker(fromScreen: fromScreen);
       case AvatarChoice.lock:
@@ -409,27 +417,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         break;
     }
   }
-
-  /// "আমার প্রোফাইল" — কেবল নিজের তথ্য: নাম, পদবি, কোম্পানি · শাখা, ইমেইল (সেশনে যা আছে)। ⓘ ছবি বদল, আমার ফোন আর
-  /// দূর থেকে বের করা সার্ভারের অংশ এলে আসবে — তার আগে কোনো বোতাম বা প্রতিশ্রুতি নয় (মালিক, ২০ অক্টোবর ২০২৬)।
-  Future<void> _showProfile(AuthUser user, OrgSnapshot? org) => showDialog<void>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          key: const ValueKey('profile-dialog'),
-          icon: AvatarDisc(name: user.name, image: avatarImage(_avatarUrl), size: 64),
-          title: Text(user.name),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (_designation != null) Text(_designation!, key: const ValueKey('profile-designation')),
-            if (org != null && !org.isEmpty)
-              Text([org.company, org.branch].where((s) => s.isNotEmpty).join(' · '),
-                  key: const ValueKey('profile-where'), textAlign: TextAlign.center),
-            if (user.email.isNotEmpty) Text(user.email, key: const ValueKey('profile-email')),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বন্ধ করুন')),
-          ],
-        ),
-      );
 
   static Future<SessionProfile?> _fetchProfile() async {
     try {
@@ -549,6 +536,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ ছবির পর্দায় মুখ বদলালে বা সরালে — ওপরের বার, ছবির মেনু আর "আমি" সাথে সাথে নতুন মুখে, `/me` আবার না ডেকে
+    ref.listen<String?>(myFaceProvider, (_, face) {
+      if (face == _avatarUrl || !mounted) return;
+      setState(() => _avatarUrl = face);
+      _publishTopBar();
+    });
     final user = ref.watch(authStateProvider).user;
     if (user == null) {
       // app_router.dart's redirect keeps this from being reachable
@@ -777,6 +770,8 @@ class _MoreTab extends ConsumerWidget {
               backgroundColor: cs.primary,
               foregroundColor: cs.onPrimary,
               foregroundImage: avatarImage(avatarUrl),
+              // ⓘ ছবি না এলে (৪০৪, নেট নেই) নামের প্রথম অক্ষর — ভুলটা লাল পর্দা হয়ে ওঠে না
+              onForegroundImageError: avatarUrl == null ? null : (_, __) {},
               child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
             ),
             title: Text(user.name,
@@ -924,4 +919,7 @@ Future<void> _showLockDelaySheet(BuildContext context) {
 
 /// ⭐ মানুষের ছবি — যত ছোট দেখায় তত ছোট করে খোলা (১২০ পিক্সেল, ৪০dp গোলের ৩ গুণ)। ⛔ নইলে ফোনের ৪০০০ পিক্সেলের ছবি
 /// পুরোটা মেমরিতে খুলত (প্রায় ৪৮ MB), কম-RAM ফোনে টানতে আটকাত (Android vitals; পরিকল্পনা ৪, অংশ ২; ২০ অক্টোবর ২০২৬)।
-ImageProvider? avatarImage(String? url) => url == null ? null : ResizeImage(NetworkImage(url), width: 120, policy: ResizeImagePolicy.fit);
+///
+/// <p>⛔ ছবির দরজা টোকেন চায় (a6, ২০ অক্টোবর ২০২৬) — তাই [FaceImage]: অ্যাপের নিজের ক্লায়েন্টে, `Authorization: Bearer`,
+/// লাইভের pinning আর ৪০১-এ নবায়নসহ; সাধারণ `NetworkImage` এর কোনোটাই করে না।
+ImageProvider? avatarImage(String? url) => url == null ? null : ResizeImage(FaceImage(url), width: 120, policy: ResizeImagePolicy.fit);

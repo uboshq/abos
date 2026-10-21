@@ -141,6 +141,11 @@ class AuthController extends StateNotifier<AuthState> {
     await _clearLocalSession();
   }
 
+  /// ⭐ এই ফোনটাকেই "আমার ফোনগুলো" থেকে বের করা হলো (a6, ২০ অক্টোবর ২০২৬) — সার্ভার টোকেন দুটো আগেই মুছে দিয়েছে, তাই
+  /// `/auth/logout` আর ডাকা হয় না (মরা টোকেনে ৪০১ → নবায়নের চেষ্টা → আবার ৪০১ — দুটো বাড়তি ডাক আর দুবার মোছা)। বাকিটা
+  /// [logout]-এর হুবহু একই স্থানীয় মোছা।
+  Future<void> signOutHere() => _clearLocalSession();
+
   void _handleSessionExpired() {
     // The refresh token itself was rejected (stolen/rotated token reuse, or
     // the 30-day life ran out) — ApiClient already cleared the tokens; this

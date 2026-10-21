@@ -53,6 +53,7 @@ void main() {
         raw.add(f.path.replaceAll(r'\', '/'));
       }
     }
-    expect(raw, ['lib/features/home/home_shell.dart'], reason: '⛔ মানুষের ছবি পুরো মাপে খোলা হচ্ছে');
+    // ⓘ ২০ অক্টোবর ২০২৬ (a6): avatarImage-এর ভেতরেও আর NetworkImage নেই — টোকেনসহ FaceImage (test/profile/face_image_test.dart)
+    expect(raw, isEmpty, reason: '⛔ মানুষের ছবি পুরো মাপে, টোকেন আর pinning ছাড়া খোলা হচ্ছে');
   });
 }

@@ -93,6 +93,7 @@ void main() {
     Future<List<NoticeBarItem>> Function()? noticeBar,
     Future<ApprovalPage> Function()? pending,
     Future<void> Function()? syncNow,
+    Future<void> Function(String path)? openPath,
     AuthUser? as,
   }) =>
       ProviderScope(
@@ -112,7 +113,7 @@ void main() {
                 pending ?? () async => throw StateError('not an approver'),
             syncNow: syncNow ?? () async {},
             prefs: MemoryNavPrefsStore(),
-            openPath: (_) async {},
+            openPath: openPath ?? (_) async {},
           ),
         ),
       );
@@ -156,21 +157,18 @@ void main() {
         reason: 'the photo opens my menu, its settings row the profile');
   });
 
-  // ⭐ "আমার প্রোফাইল" — কেবল নিজের তথ্য, কোনো প্রতিশ্রুতি নয় (মালিক, ২০ অক্টোবর ২০২৬)
-  testWidgets('my profile shows who I am and where, and promises nothing', (tester) async {
-    await tester.pumpWidget(shell());
+  // ⭐ "আমার প্রোফাইল" → পুরো পর্দা "প্রোফাইল ও ছবি" (০.৪.৪১, a6, ২০ অক্টোবর ২০২৬: সার্ভারের ছবি আর ফোনের দরজা এসেছে;
+  // নিজের তথ্য, ছবি বদল আর "আমার ফোনগুলো" সেখানে — test/profile/profile_screen_test.dart, profile_menu_test.dart)
+  testWidgets('my profile opens the profile and photo screen', (tester) async {
+    final opened = <String>[];
+    await tester.pumpWidget(shell(openPath: (path) async => opened.add(path)));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('avatar-profile')));
     await tester.pumpAndSettle();
-    final dialog = find.byKey(const ValueKey('profile-dialog'));
-    expect(dialog, findsOneWidget);
-    expect(find.descendant(of: dialog, matching: find.text('করিম')), findsOneWidget);
-    expect(find.descendant(of: dialog, matching: find.text('karim@testco.local')), findsOneWidget);
-    expect(find.descendant(of: dialog, matching: find.text('টেষ্ট কোম্পানী লিমিটেড · Head Office')), findsOneWidget);
-    expect(find.textContaining('শীঘ্রই'), findsNothing);
-    expect(find.textContaining('ছবি বদল'), findsNothing);
+    expect(opened, ['me/profile']);
+    expect(find.byKey(const ValueKey('profile-dialog')), findsNothing);
   });
 
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা

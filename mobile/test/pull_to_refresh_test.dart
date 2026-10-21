@@ -93,6 +93,8 @@ void main() {
     'money_screens.dart',
     // ⭐ আমার অনুরোধ (১৭ অক্টোবর ২০২৬) — টান test/my_requests_test.dart-এ দেখা
     'my_requests_screen.dart',
+    // ⭐ আমার ফোনগুলো (০.৪.৪১, a6, ২০ অক্টোবর ২০২৬) — টান test/profile/my_phones_screen_test.dart-এ দেখা
+    'my_phones_screen.dart',
     // ⭐ টাকা আদায়ের খালি তালিকা (নকশা ৩, ২০ অক্টোবর ২০২৬) — টান test/a5_counter_money_dues_design3_test.dart-এ দেখা
     'money_in_screens.dart',
   };

@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>QR পড়তে, স্লিপ বা রসিদের ছবি আর নিজের প্রোফাইলের ছবি তুলতে ABOS ক্যামেরা ব্যবহার করে। কেবল আপনার পাঠানো ছবিটাই অফিসে যায়।</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>প্রোফাইলের ছবি বা কাগজের ছবি বাছতে ABOS কেবল আপনার বাছা ছবিটাই নেয় — বাকি ছবি দেখে না, কোথাও পাঠায় না।</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
