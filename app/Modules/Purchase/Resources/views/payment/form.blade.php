@@ -183,8 +183,9 @@
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier === ''">{{ __('money.screen.pick_supplier_first') }}</p>
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier !== '' && visible.length === 0" x-cloak>{{ __('money.screen.no_bills') }}</p>
 
+                    {{-- ⓘ সাত কলাম এক কার্ডে — ঘরের পাশের ফাঁক কম (`--grid-pad-x`), নইলে "এখন প্রয়োগ" ঘর ডানে কেটে যেত (১৩৬৬-এর মিল-তালিকায় ধরা) --}}
                     <div class="table-responsive" x-show="visible.length > 0" x-cloak>
-                        <table class="ui-grid w-full text-sm">
+                        <table class="ui-grid w-full text-sm [--grid-pad-x:6px]">
                             <thead>
                                 <tr>
                                     <th class="w-8"><span class="sr-only">{{ __('money.screen.col.apply') }}</span></th>
@@ -200,15 +201,15 @@
                                 <template x-for="bill in visible" :key="bill.id">
                                     <tr data-open-bill>
                                         <td><input type="checkbox" :checked="isOn(bill.id)" @change="toggle(bill.id)" :aria-label="bill.no"></td>
-                                        <td><a :href="bill.url" class="text-(--color-link) hover:underline" x-text="bill.no"></a></td>
-                                        <td x-text="bill.ref"></td>
-                                        <td :class="bill.late ? 'text-(--color-danger) font-medium' : ''" x-text="bill.due"></td>
-                                        <td class="num" x-text="money(bill.total)"></td>
-                                        <td class="num" x-text="money(bill.remaining)"></td>
+                                        <td class="whitespace-nowrap"><a :href="bill.url" class="text-(--color-link) hover:underline" x-text="bill.no"></a></td>
+                                        <td class="whitespace-nowrap" x-text="bill.ref"></td>
+                                        <td class="whitespace-nowrap" :class="bill.late ? 'text-(--color-danger) font-medium' : ''" x-text="bill.due"></td>
+                                        <td class="num whitespace-nowrap" x-text="money(bill.total)"></td>
+                                        <td class="num whitespace-nowrap" x-text="money(bill.remaining)"></td>
                                         <td class="num">
                                             <input type="text" inputmode="decimal" :value="shown(bill.id)" @change="typed(bill.id, $event.target.value)"
                                                    :aria-label="bill.no"
-                                                   class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                                   class="num h-(--spacing-field-compact) w-26 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                         </td>
                                     </tr>
                                 </template>
@@ -286,7 +287,7 @@
                         <tbody>
                             <template x-for="(row, i) in preview.rows" :key="i">
                                 <tr data-ledger-row>
-                                    <td><span x-text="row.account"></span><span class="block text-2xs text-(--color-ink-muted)" x-text="row.branch"></span></td>
+                                    <td class="text-xs"><span x-text="row.account"></span><span class="block text-2xs text-(--color-ink-muted)" x-text="row.branch"></span></td>
                                     <td class="num" x-text="row.debit"></td>
                                     <td class="num" x-text="row.credit"></td>
                                 </tr>

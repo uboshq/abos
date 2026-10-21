@@ -241,6 +241,28 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertSame([$preview['ait'], $preview['vds']], ['500.00', '225.00'], '⛔ #১০: প্রিভিউর কাটা পোস্টের হিসাবের নয়');
     }
 
+    /**
+     * ⛔ #১০: প্রিভিউ ফর্মের একবারের টোকেন খরচ করে না — আগে প্রথম প্রিভিউ টোকেনটা খেয়ে ফেলত, আর পরে "পোস্ট" চাপলে পরিশোধ "জমা
+     * হয়েছে" বলে ফিরত, কিছুই না রেখে (মিল-তালিকার সময় ধরা, ২২ অক্টোবর ২০২৬)। একই টোকেনে দুইবার প্রিভিউ, তারপর জমা — জমা হয়।
+     */
+    public function test_item_10_a_preview_never_spends_the_forms_one_time_token(): void
+    {
+        $bill = $this->bill('1000');
+        $this->putMoneyIn($this->till(), '5000');
+        $once = app(\App\Core\Services\FormIsNotSubmittedTwice::class)->newToken();
+        $form = [...$this->form(['account_id' => $this->till()->id], [[$bill->id, '1000']], '1000'), '_once' => $once];
+
+        $this->post(route('purchase.payment.simulate'), $form)->assertOk();
+        $this->post(route('purchase.payment.simulate'), $form)->assertOk();
+        $before = Payment::query()->count();
+
+        $this->from(route('purchase.payment.create'))->post(route('purchase.payment.store'), [...$form, 'intent' => 'post'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($before + 1, Payment::query()->count(), '⛔ #১০: প্রিভিউর পরে আসল জমা "আগেই জমা হয়েছে" ধরা পড়ল — কিছুই রাখা হয়নি');
+        $this->assertSame(DocumentStatus::CONFIRMED, $this->lastPayment()->status);
+    }
+
     public function test_item_11_the_main_button_and_the_controls_follow_the_companys_signature_setting(): void
     {
         $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
