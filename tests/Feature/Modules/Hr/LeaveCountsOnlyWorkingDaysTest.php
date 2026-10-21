@@ -183,6 +183,17 @@ final class LeaveCountsOnlyWorkingDaysTest extends TestCase
             ->assertForbidden();
         $this->assertSame(0, Holiday::query()->where('name', 'Independence Day')->count());
 
+        // ⭐ ছুটির চাবিতেও দেখা যায়, লেখা যায় না — বসানো, বদলের পাতা, বদল, মোছা চারটাই ৪০৩ (fe-র উত্তর ৫, ২১ অক্টোবর ২০২৬)
+        $leaveViewer = $this->person(['hr.leave.view']);
+        $victory = Holiday::query()->where('name', 'Victory Day')->firstOrFail();
+        $this->actingAs($leaveViewer)->get(route('hr.holiday.index', ['year' => 2026]))->assertOk()->assertSee('Victory Day');
+        $this->actingAs($leaveViewer)->post(route('hr.holiday.store'), ['holiday_date' => '2026-03-26', 'name' => 'Independence Day'])->assertForbidden();
+        $this->actingAs($leaveViewer)->get(route('hr.holiday.edit', $victory->id))->assertForbidden();
+        $this->actingAs($leaveViewer)->put(route('hr.holiday.update', $victory->id), ['holiday_date' => '2026-12-16', 'name' => 'Changed'])->assertForbidden();
+        $this->actingAs($leaveViewer)->delete(route('hr.holiday.destroy', $victory->id))->assertForbidden();
+        $this->assertSame('Victory Day', $victory->fresh()->name);
+        $this->assertSame(0, Holiday::query()->where('name', 'Independence Day')->count());
+
         $this->actingAs($this->hr)->post(route('hr.holiday.store'), ['holiday_date' => '2026-03-26', 'name' => 'Independence Day'])
             ->assertSessionHasNoErrors();
         $row = Holiday::query()->where('name', 'Independence Day')->firstOrFail();

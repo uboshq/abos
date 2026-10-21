@@ -103,7 +103,7 @@ Route::middleware('auth')->prefix('hr')->group(function () {
 
     /*
      * ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব, সব শাখার বা একটা শাখার (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)।
-     * ⓘ চাবি নিয়ামকে: দেখা `hr.attendance.view`, লেখা `hr.attendance.manage`; শাখার দেয়ালও সেখানে।
+     * ⓘ চাবি নিয়ামকে: দেখা `hr.attendance.view` বা `hr.leave.view`, লেখা কেবল `hr.attendance.manage`; শাখার দেয়ালও সেখানে।
      */
     Route::prefix('holidays')->name('holiday.')->group(function () {
         Route::get('/', [HolidayController::class, 'index'])->name('index');

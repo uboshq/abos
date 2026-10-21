@@ -26,7 +26,7 @@ use Illuminate\View\View;
  * ২০০৬ ধারা ১১৮; [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)।
  *
  * ── চাবি ───────────────────────────────────────────────────────────────
- * দেখা `hr.attendance.view`, বসানো-বদলানো-মোছা `hr.attendance.manage` — হাজিরার চাবি, কারণ তালিকাটা হাজিরা আর বেতনের কাটা দিন
+ * দেখা `hr.attendance.view` বা `hr.leave.view` (fe-র উত্তর ৫), বসানো-বদলানো-মোছা কেবল `hr.attendance.manage` — হাজিরার চাবি, কারণ তালিকাটা হাজিরা আর বেতনের কাটা দিন
  * বদলায় ([[AttendanceService::unpaidDays()]]); যিনি কামাই লিখতে পারেন, কেবল তিনিই কোন দিন কাজের দিন নয় তা বলতে পারেন।
  *
  * ── ⛔ শাখার দেয়াল ─────────────────────────────────────────────────────
@@ -47,14 +47,23 @@ class HolidayController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:hr.attendance.view', only: ['index']),
+            // ⓘ দেখা দুই চাবির যেকোনোটায় — `can:` একটাই চাবি নেয়, তাই পদ্ধতিতে ([[authorizeViewing()]])
             new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
         ];
     }
 
     public function index(Request $request): View
     {
+        // ⭐ দেখা হাজিরার বা ছুটির চাবিতে — ছুটির দিন দুই পাতারই প্রশ্ন (fe-র উত্তর ৫, ২১ অক্টোবর ২০২৬); লেখা কেবল hr.attendance.manage
+        $this->authorizeViewing($request, ['hr.attendance.view', 'hr.leave.view']);
+
         return $this->screen($request, new Holiday);
+    }
+
+    /** @param  list<string>  $keys  যেকোনো একটা থাকলেই — নইলে ৪০৩ */
+    private function authorizeViewing(Request $request, array $keys): void
+    {
+        abort_unless((bool) $request->user()?->canAny($keys), 403);
     }
 
     public function edit(Request $request, int $holiday): View
@@ -96,7 +105,7 @@ class HolidayController extends Controller implements HasMiddleware
 
     private function screen(Request $request, Holiday $editing): View
     {
-        $year = (int) $request->integer('year', $editing->exists ? $editing->holiday_date->year : (int) now()->year);
+        $year = $request->integer('year', $editing->exists ? $editing->holiday_date->year : (int) now()->year);
         $year = $year >= 2000 && $year <= 2100 ? $year : (int) now()->year;
         $view = $this->reach->viewing($request->user());
 

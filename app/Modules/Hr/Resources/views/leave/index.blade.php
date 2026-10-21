@@ -49,6 +49,8 @@
                 :sort="$sortOptions"
                 :columns="$columns" :search="false">
         <x-slot:actions>
+            {{-- ⭐ ছুটির দিনের তালিকা — ছুটির চাবিতেও দেখা যায় (fe-র উত্তর ৫; [[HolidayController]]) --}}
+            <x-ui.button :href="route('hr.holiday.index')">{{ __('hr::menu.holidays') }}</x-ui.button>
             @can('hr.leave.manage')
                     <x-ui.button :href="route('hr.leave_type.index')">
                         {{ __('hr::menu.leave_types') }}

@@ -85,10 +85,7 @@ M1.16 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
   new: new Middleware('can:hr.attendance.manage', only: ['edit', 'update', 'destroy']),
   kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (viewer stores Independence Day)
 
-M1.17 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
-  old: new Middleware('can:hr.attendance.view', only: ['index']),
-  new: (line deleted)
-  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (stranger gets 200)
+M1.17 SUPERSEDED by P5.2 (the index door moved from `can:` middleware into authorizeViewing()).
 
 == Item 2 — earned leave accrual + carry forward ==
 K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
@@ -426,3 +423,21 @@ P4.3 app/Console/Commands/EarnedLeaveDaysToZero.php
   old: $type->forceFill(['days_per_year' => 0])->save();
   new: LeaveType::query()->whereKey($type->id)->update(['days_per_year' => 0]);
   kill: K (no audit row with the old value — a query update skips the model events)
+
+== P5 — holiday screen: view with hr.attendance.view OR hr.leave.view, write only hr.attendance.manage ==
+K = tests/Feature/Modules/Hr/LeaveCountsOnlyWorkingDaysTest.php
+
+P5.1 app/Modules/Hr/Http/Controllers/HolidayController.php (index)
+  old: $this->authorizeViewing($request, ['hr.attendance.view', 'hr.leave.view']);
+  new: $this->authorizeViewing($request, ['hr.attendance.view']);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (leave viewer gets 403 on the list)
+
+P5.2 app/Modules/Hr/Http/Controllers/HolidayController.php (authorizeViewing)
+  old: abort_unless((bool) $request->user()?->canAny($keys), 403);
+  new: abort_unless(true, 403);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (stranger gets 200)
+
+P5.3 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  new: new Middleware('can:hr.attendance.manage', only: ['store', 'update', 'destroy']),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (leave viewer opens the edit page — writable() lets an unlimited user through)
