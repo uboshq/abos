@@ -130,4 +130,5 @@ return [
     'requisition_over_budget' => 'This cost centre has :budget for the month and :already is already approved. Adding the :asking on this paper goes past the limit - either the budget rises or the request comes down.',
 
     'withheld_over_total' => 'Tax withheld at source (:withheld) cannot exceed the bill total (:total).',
+    'withheld_twice' => 'Tax was already withheld on bill :no — it cannot be withheld again on the payment.',
 ];

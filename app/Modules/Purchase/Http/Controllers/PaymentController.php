@@ -132,6 +132,9 @@ class PaymentController extends Controller implements HasMiddleware
             'charge_amount' => blank($data['charge_amount'] ?? null) ? '0' : $data['charge_amount'],
         ]);
         $supplier = Supplier::query()->find((int) $data['supplier_id']);
+        // ⭐ কাটা — পোস্টের একই হিসাবে ([[PaymentWithholding::forLines()]]); প্রিভিউ আর খাতা কখনো আলাদা নয়
+        $cut = \App\Modules\Purchase\Services\PaymentWithholding::forLines($supplier, $request->lineData());
+        $paper->forceFill(['ait_amount' => $cut['ait'], 'vds_amount' => $cut['vds']]);
         $branchId = $supplier === null ? null : (app(\App\Core\Services\PartyRegistry::class)
             ->branchesOf([['supplier', (int) $supplier->id]])['supplier:'.$supplier->id] ?? null);
         $branch = \App\Models\Branch::query()->find($branchId ?? CompanyContext::branchId());
@@ -159,6 +162,9 @@ class PaymentController extends Controller implements HasMiddleware
             'debit' => Money::format($debit),
             'credit' => Money::format($credit),
             'balanced' => bccomp($debit, $credit, 4) === 0,
+            'ait' => Money::format($cut['ait']),
+            'vds' => Money::format($cut['vds']),
+            'net' => Money::format(bcsub(bcsub(bcadd((string) ($data['amount'] ?? '0'), '0', 4), $cut['ait'], 4), $cut['vds'], 4)),
         ]);
     }
 
@@ -274,8 +280,12 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $moneyCodes = StandardChart::MONEY_PARENTS;
         $accounts = self::moneyAccounts();
+        $suppliers = Supplier::query()->inViewedBranch()->activeOrOwing()->forPurchasing()->orderBy('name_en')->get();
 
         return [
+            // ⓘ যাঁদের ব্যাংক তথ্য (সই-পাওয়া বা অপেক্ষার) আছে — এক প্রশ্নে; পর্দা কেবল এঁদের বাক্স আঁকে (নকশা #৬)
+            'bankSuppliers' => $suppliers->whereIn('id', \App\Modules\Supplier\Models\SupplierBankDetail::query()
+                ->whereIn('supplier_id', $suppliers->pluck('id'))->distinct()->pluck('supplier_id')->all())->values(),
             /*
              * ⭐ নকশার ডানের "নিয়ন্ত্রণ" আর নিচের মূল বোতাম — কোম্পানিতে টাকা দেওয়ায় সই চালু থাকলে "সইয়ে পাঠান", নইলে "পোস্ট"
              * (নকশা #১১)। ⓘ পোস্টের মুহূর্তে আসল বিচার [[DocumentApproval::assertClear()]]-এর; এটা কেবল বোতামের নাম।
@@ -295,7 +305,7 @@ class PaymentController extends Controller implements HasMiddleware
             ]])->all(),
             // ⭐ কেবল পণ্যের সরবরাহকারী — পরিশোধ ক্রয় বিল মেটায়; সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬)
             // ⭐ জের-থাকা নিষ্ক্রিয় সরবরাহকারীও — বন্ধ সরবরাহকারীর বাকি দেনা মেটানোর পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
-            'suppliers' => Supplier::query()->inViewedBranch()->activeOrOwing()->forPurchasing()->orderBy('name_en')->get(),
+            'suppliers' => $suppliers,
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
             'accounts' => $accounts,
@@ -322,6 +332,9 @@ class PaymentController extends Controller implements HasMiddleware
                  * পুরনো বাকি শোধ।
                  */
                 ->stillOwed()
+                // ⭐ শেষ দিনের ক্রমে — আগে যেটার দিন পেরোয়, টাকা আগে সেটায় (নকশা #৩: "শেষ দিনের ক্রমে"); দিন না থাকলে শেষে, তারিখ ধরে
+                ->orderByRaw('due_on IS NULL')
+                ->orderBy('due_on')
                 ->orderBy('trx_date')
                 ->orderBy('id')
                 ->limit(500)

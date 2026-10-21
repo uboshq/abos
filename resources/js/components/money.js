@@ -266,6 +266,7 @@ export function payBills ({
     picks = {},
     balances = {},
     taxIds = {},
+    bankIds = [],
     simulateUrl = '',
 } = {}) {
     return {
@@ -360,7 +361,10 @@ export function payBills ({
         get remainingText () { return taka(this.owed / 100) },
         get billTotalText () { return taka(this.billTotal / 100) },
         get chargeText () { return taka(this.charge / 100) },
-        get netText () { return taka(paisa(this.amount) / 100) },
+        /* ⓘ কাটা আর নিট — সার্ভারের প্রিভিউ থেকে ([[PaymentWithholding]]); প্রিভিউ আসার আগে কাটা শূন্য, নিট মোট */
+        get aitText () { return this.preview.ait ?? '0.00' },
+        get vdsText () { return this.preview.vds ?? '0.00' },
+        get netText () { return this.preview.net ?? taka(paisa(this.amount) / 100) },
 
         /* ⓘ প্রয়োগের বাইরে যা থাকে — অগ্রিম, সরবরাহকারীর খাতায় (নকশা #৪) */
         get unapplied () {
@@ -413,6 +417,9 @@ export function payBills ({
         },
 
         get hasPreview () { return this.preview.rows.length > 0 },
+
+        /* ⓘ বাছা সরবরাহকারীর ব্যাংক তথ্যের বাক্স আঁকা নেই — তখন "নেই" বাক্স (নকশা #৬) */
+        get noBankRecord () { return !bankIds.includes(this.supplier) },
 
         /* ⓘ সরবরাহকারীর BIN · TIN — নকশায় নামের নিচে */
         get taxLine () { return taxIds[this.supplier] ?? '' },

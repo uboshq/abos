@@ -51,6 +51,8 @@ class Payment extends Model implements Drillable
         'instrument', 'instrument_no', 'instrument_date',
         // ⭐ পদ্ধতির নিজের ঘর আর চার্জ — [[components.money.method]] (মালিক, ২১ অক্টোবর ২০২৬)
         'transfer_mode_id', 'value_date', 'deposit_slip_no', 'from_bank', 'charge_amount',
+        // ⭐ উৎসে কর আর ভ্যাট — পরিশোধে কাটা হলে ([[PaymentWithholding]])
+        'ait_amount', 'vds_amount', 'withholding_reason',
 
         /*
          * ⓘ চেকে দেওয়া হলে কোন চেকটা — বাকি সব পরিশোধে `null`।
@@ -76,6 +78,8 @@ class Payment extends Model implements Drillable
             'instrument_date' => 'date',
             'value_date' => 'date',
             'charge_amount' => 'decimal:4',
+            'ait_amount' => 'decimal:4',
+            'vds_amount' => 'decimal:4',
             'cancelled_at' => 'datetime',
             'amount' => 'decimal:4',
         ];

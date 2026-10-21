@@ -51,7 +51,7 @@
     <form method="POST" data-pay-screen
           action="{{ $isNew ? route('purchase.payment.store') : route('purchase.payment.update', $payment) }}"
           enctype="multipart/form-data"
-          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), simulateUrl: @js(route('purchase.payment.simulate')) })"
+          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')) })"
           @money-method="heard($event.detail)"
           class="pb-20">
         @csrf
@@ -154,11 +154,18 @@
                             </p>
                         </div>
 
+                        {{-- ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার জন্য (নকশা #৬; fe-র [[supplier::components.payee-bank]])।
+                             ⓘ কেবল যাঁদের ব্যাংক তথ্য আছে তাঁদের বাক্স আঁকা হয় (একটা প্রশ্নে খোঁজা), বাছা সরবরাহকারীরটা দেখায়; বাকিদের "নেই" --}}
                         <div class="order-2 col-span-full" data-payee-bank-row>
                             <span class="mb-1 block text-xs text-(--color-ink-muted)">{{ __('money.screen.payee_bank') }}</span>
-                            <p class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) px-3 py-2 text-sm text-(--color-ink-muted)">
-                                {{ __('money.screen.payee_bank_soon') }}
-                            </p>
+                            @foreach ($bankSuppliers as $withBank)
+                                <template x-if="supplier === '{{ $withBank->id }}'">
+                                    <x-supplier::payee-bank :supplier="$withBank" />
+                                </template>
+                            @endforeach
+                            <template x-if="noBankRecord">
+                                <x-supplier::payee-bank :supplier="null" />
+                            </template>
                         </div>
 
                         <x-money.method direction="out" inline :record="$isNew ? null : $payment" :modes="$modes"
@@ -247,8 +254,8 @@
                     <h2 class="mb-3 font-semibold">{{ __('money.screen.summary') }}</h2>
                     <dl class="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
                         <dt>{{ __('money.screen.sum.applied') }}</dt><dd class="num" x-text="appliedText"></dd>
-                        <dt>{{ __('money.screen.sum.ait') }}</dt><dd class="num" data-sum-ait>0.00</dd>
-                        <dt>{{ __('money.screen.sum.vds') }}</dt><dd class="num" data-sum-vds>0.00</dd>
+                        <dt>{{ __('money.screen.sum.ait') }}</dt><dd class="num" data-sum-ait x-text="aitText"></dd>
+                        <dt>{{ __('money.screen.sum.vds') }}</dt><dd class="num" data-sum-vds x-text="vdsText"></dd>
                         <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ __('money.screen.sum.net') }}</dt>
                         <dd class="num border-t border-(--color-border) pt-2 font-semibold" x-text="netText"></dd>
                         <dt>{{ __('money.screen.sum.charge') }}</dt><dd class="num" data-sum-charge x-text="chargeText"></dd>

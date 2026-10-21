@@ -129,6 +129,8 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
         'lc_no', 'be_no', 'be_date', 'vessel', 'port_of_entry',
 
         'subtotal', 'discount', 'tax', 'total',
+        // ⭐ কর কোথায় কাটা — `bill` বা `payment`; দুবার কাটা ঠেকায় ([[PaymentWithholding]])
+        'withheld_at',
         'status', 'narration', 'created_by',
 
         /*

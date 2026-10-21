@@ -209,6 +209,15 @@ final class PaymentService
         // ⛔ ব্যাংক, MFS বা নগদ জমায় রেফারেন্স ছাড়া পোস্ট নয় — নকশা #২ ([[MoneyMethod::assertReadyToPost()]])
         MoneyMethod::assertReadyToPost($payment);
 
+        /*
+         * ⛔ সরবরাহকারীর ব্যাংকে টাকা (ট্রান্সফার বা তাঁর হিসাবে নগদ জমা) — তাঁর ব্যাংক তথ্য দুই হাতে সই-পাওয়া না হলে নয়
+         * (নকশা #৬; জালিয়াতি ঠেকাতে, SAP vendor master dual control; fe-র [[SupplierBank::assertBankPayable()]])।
+         * ⓘ নগদ, MFS আর চেকে প্রাপকের ব্যাংক লাগে না, তাই সেখানে আটকায় না।
+         */
+        if (in_array($payment->instrument, ['transfer', 'deposit'], true)) {
+            app(\App\Modules\Supplier\Services\SupplierBank::class)->assertBankPayable($payment->supplier);
+        }
+
         // টাকা বেরোনোর আগেই সই — ছক বসানো না থাকলে আগের মতোই চলে।
         $print = $this->approvals->assertClear(
             document: $payment,
@@ -255,6 +264,7 @@ final class PaymentService
             $payment->unsetRelation('lines');
             $this->assertStillFits($payment);
             $this->assertThreeHands($locked);
+            $this->assertNotWithheldTwice($payment);
 
             /*
              * ── চেকে দিলে টাকাটা এখনো যায়নি ──────────────────────────
@@ -302,9 +312,37 @@ final class PaymentService
             );
 
             $payment->update(['status' => DocumentStatus::CONFIRMED]);
+            $this->markWithheldOnPayment($payment);
 
             return $payment->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⛔ কর একবারই — যে বিলে বিলেই কাটা, তার লাইনে পরিশোধে কাটা থাকলে থামে (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)। ⓘ খসড়া লেখার পরে
+     * কেউ বিলের দাগ বদলালে বা পুরনো খসড়া হলে — পোস্টের মুহূর্তে আবার দেখা।
+     */
+    private function assertNotWithheldTwice(Payment $payment): void
+    {
+        foreach ($payment->lines()->with('bill')->get() as $line) {
+            $cut = bcadd((string) $line->ait_amount, (string) $line->vds_amount, 4);
+
+            if ($line->bill !== null && bccomp($cut, '0', 4) > 0 && PaymentWithholding::withheldOnBill($line->bill)) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.withheld_twice', ['no' => $line->bill->document_no]),
+                ]);
+            }
+        }
+    }
+
+    /** ⓘ পরিশোধে কাটা হলে বিলে দাগ — পরে বিলে আবার কাটার পথ বন্ধ, আর রিপোর্ট জানে কোথায় কাটা */
+    private function markWithheldOnPayment(Payment $payment): void
+    {
+        $billIds = $payment->lines()->whereRaw('ait_amount + vds_amount > 0')->pluck('purchase_bill_id')->filter()->all();
+
+        if ($billIds !== []) {
+            PurchaseBill::acrossBranches()->whereKey($billIds)->whereNull('withheld_at')->update(['withheld_at' => 'payment']);
+        }
     }
 
     /**
@@ -541,6 +579,10 @@ final class PaymentService
         $payment->lines()->delete();
 
         $allocated = '0';
+        // ⭐ উৎসে কর আর ভ্যাট — একবারই ([[PaymentWithholding]]; নকশা #৫, #২৫)
+        $ait = '0';
+        $vds = '0';
+        $supplier = $payment->supplier()->first();
         $lineNo = 0;
         // ⓘ এই পরিশোধেই একই বিলে আগের লাইনে যা বসল — বাকি থেকে সেটাও বাদ ([[assertStillFits()]]-এর একই কারণ)
         $usedByBill = [];
@@ -591,17 +633,24 @@ final class PaymentService
             }
 
             $usedByBill[$bill->id] = bcadd($usedByBill[$bill->id] ?? '0', $amount, 4);
+            $cut = PaymentWithholding::forLine($bill, $supplier, $amount);
 
             PaymentLine::create([
                 'company_id' => $payment->company_id,
                 'payment_id' => $payment->id,
                 'purchase_bill_id' => $bill->id,
                 'amount' => $amount,
+                'ait_amount' => $cut['ait'],
+                'vds_amount' => $cut['vds'],
                 'line_no' => ++$lineNo,
             ]);
 
             $allocated = bcadd($allocated, $amount, 4);
+            $ait = bcadd($ait, $cut['ait'], 4);
+            $vds = bcadd($vds, $cut['vds'], 4);
         }
+
+        $payment->forceFill(['ait_amount' => $ait, 'vds_amount' => $vds])->save();
 
         if (bccomp($allocated, (string) $payment->amount, 4) > 0) {
             throw ValidationException::withMessages([
@@ -645,6 +694,8 @@ final class PaymentService
     {
         $amount = bcadd((string) $payment->amount, '0', 4);
         $charge = $this->money($payment->charge_amount ?? '0');
+        $ait = bcadd((string) ($payment->ait_amount ?? '0'), '0', 4);
+        $vds = bcadd((string) ($payment->vds_amount ?? '0'), '0', 4);
         $no = (string) $payment->document_no;
 
         $lines = [[
@@ -663,9 +714,21 @@ final class PaymentService
             ];
         }
 
+        // ⭐ কেটে রাখা কর সরকারের দায় — AIT ২১২১, VDS ২১২২ (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)
+        foreach (['ait' => [$ait, StandardChart::TAX_DEDUCTED_AT_SOURCE], 'vds' => [$vds, StandardChart::VDS_PAYABLE]] as $kind => [$value, $code]) {
+            if (bccomp($value, '0', 4) > 0) {
+                $lines[] = [
+                    'account_id' => $this->account($code)->id,
+                    'credit' => $value,
+                    'narration' => __('purchase::message.withheld_'.$kind, ['no' => $no]),
+                ];
+            }
+        }
+
+        // ⓘ টাকার খাত থেকে যায় নিট আর চার্জ: মোট − AIT − VDS + চার্জ
         $lines[] = [
             'account_id' => $payment->account_id,
-            'credit' => bcadd($amount, $charge, 4),
+            'credit' => bcadd(bcsub(bcsub($amount, $ait, 4), $vds, 4), $charge, 4),
             'narration' => __('purchase::message.money_out', ['no' => $no]),
         ];
 
@@ -728,7 +791,8 @@ final class PaymentService
         $cash->lock($account);
 
         // ⓘ খাত থেকে বেরোয় টাকা আর চার্জ দুটোই ([[linesFor()]]) — চার্জ বাদে মাপলে খাত ঋণাত্মক হতে পারত
-        $out = bcadd((string) $payment->amount, $this->money($payment->charge_amount ?? '0'), 4);
+        $out = bcadd(bcsub(bcsub((string) $payment->amount, (string) ($payment->ait_amount ?? '0'), 4), (string) ($payment->vds_amount ?? '0'), 4),
+            $this->money($payment->charge_amount ?? '0'), 4);
         $short = $cash->shortfall($account, $out, $payment->trx_date?->toDateString());
 
         if ($short !== null) {
