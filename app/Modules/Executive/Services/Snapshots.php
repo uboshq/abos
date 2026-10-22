@@ -70,11 +70,10 @@ final class Snapshots
         $skipped = [];
         $failed = [];
 
-        // ⭐ নতুন কোডের প্রথম রাত — বিক্রির ভিত্তি বদলের দিনটা লেখা থাকে ([[SalesBasis]], ২১ অক্টোবর ২০২৬)
-        $this->basis->noteNetSnapshot();
-
         foreach (Company::query()->where('is_active', true)->orderBy('id')->get() as $company) {
             try {
+                // ⭐ নতুন কোডের প্রথম রাত — বিক্রির ভিত্তি বদলের দিনটা কোম্পানি ধরে লেখা থাকে ([[SalesBasis]], ২১–২২ অক্টোবর ২০২৬)
+                $this->basis->noteNetSnapshot((int) $company->id);
                 $rows += $this->takeCompany($company, $day, $monthStart, $skipped);
             } catch (Throwable $e) {
                 report($e);
@@ -150,10 +149,11 @@ final class Snapshots
      */
     public function salesToNet(bool $dryRun, ?int $companyId = null): array
     {
-        $since = $this->basis->since();
         $out = ['companies' => 0, 'rows' => 0, 'changed' => 0, 'difference' => '0.0000', 'skipped' => []];
 
         foreach (Company::query()->when($companyId !== null, fn ($q) => $q->whereKey($companyId))->orderBy('id')->get() as $company) {
+            // ⓘ প্রতিটা কোম্পানির নিজের বদলের দিন — অন্যের দিন এর সারি ঠিক করে না (fe, ২২ অক্টোবর ২০২৬)
+            $since = $this->basis->since((int) $company->id);
             $viewer = $this->viewerFor((int) $company->id);
 
             if ($viewer === null) {
@@ -193,11 +193,11 @@ final class Snapshots
                         }
                     });
             });
-        }
 
-        // ⓘ গোটা টেবিল হয়ে গেলে তবেই চিহ্ন সরে — এক কোম্পানির চালে অন্যগুলো তখনো পুরনো
-        if (! $dryRun && $companyId === null && $out['skipped'] === []) {
-            $this->basis->markConverted();
+            // ⭐ এই কোম্পানির সব পুরনো সারি নিট — কেবল এর চিহ্ন সরে; অন্য কোম্পানি নিজের পালায় (fe, ২২ অক্টোবর ২০২৬)
+            if (! $dryRun) {
+                $this->basis->markConverted((int) $company->id);
+            }
         }
 
         return $out;
