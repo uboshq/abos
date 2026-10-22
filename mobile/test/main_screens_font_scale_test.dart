@@ -79,6 +79,14 @@ void main() {
         await tester.pumpAndSettle();
       });
 
+  // ⛔ বড় লেখায় বোতামের লেখা বোতামের ভেতরে, উপরে-নিচে-পাশে অন্তত ৮dp ফাঁক রেখে — দুই লাইনে ভাঙলে বোতাম বাড়ে, লেখা কিনারা ছোঁয় না
+  // (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬: login_200-এ "সাইন ইন"-এর উপরের লাইন বোতামের উপরের কিনারায় লেগে ছিল)
+  testWidgets('login: at 200% text the sign-in label lies inside its button, clear of every edge', (tester) async {
+    setScreenSize(tester, const Size(390, 844));
+    await open(tester, loginScreen(textScale: 2.0));
+    _expectClearInside(tester, find.byKey(const ValueKey('login-submit')), find.byKey(const ValueKey('login-submit-label')));
+  });
+
   for (final screen in screens.entries) {
     testWidgets('${screen.key}: nothing overflows at 200% text', (tester) async {
       setScreenSize(tester, const Size(390, 844));
@@ -113,6 +121,15 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/settings_$pct.png'));
     });
   }
+}
+
+/// [inner]-এর ঘর [outer]-এর ঘরের ভেতরে, প্রতিটা কিনারা থেকে অন্তত [gap] dp দূরে
+void _expectClearInside(WidgetTester tester, Finder outer, Finder inner, {double gap = 8}) {
+  final o = tester.getRect(outer);
+  final i = tester.getRect(inner);
+  final room = (top: i.top - o.top, bottom: o.bottom - i.bottom, left: i.left - o.left, right: o.right - i.right);
+  expect(room.top >= gap && room.bottom >= gap && room.left >= gap && room.right >= gap, isTrue,
+      reason: '⛔ লেখা $i ঘরের $o কিনারায় লাগে বা বাইরে — ফাঁক $room, চাই অন্তত $gap');
 }
 
 /// কোন পর্দার কোন লাইনে ভাঙল — লাল হলে খুঁজতে হয় না
