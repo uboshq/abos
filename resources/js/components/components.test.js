@@ -429,3 +429,29 @@ describe('ব্যাংকের সুবিধা', () => {
         expect([bg.hasExpiry, bg.hasInstalments, bg.hasInterest]).toEqual([true, false, false])
     })
 })
+
+describe('খরচের উৎসে কর্তনের সারাংশ', () => {
+    it('পাতা লেখা হিসেবে পাঠালেও (’0’) কর্তন যোগ হয়, জোড়া নয়, আর সারাংশ আঁকা হয়', async () => {
+        const host = await mount(`
+            <div x-data="expenseFields({ gross: '1000', ait: '0', vds: '0' })">
+                <span id="cut" x-text="deductedText"></span>
+                <span id="net" x-text="netText"></span>
+                <input id="ait" x-model.number="ait">
+                <input id="vds" x-model.number="vds">
+            </div>`)
+
+        expect(host.querySelector('#cut').textContent, '⛔ লেখা হিসেবে আসা শূন্য জোড়া লেগে সারাংশ ভাঙল').toBe('0.00')
+        expect(host.querySelector('#net').textContent, '⛔ কর্তন ছাড়া হাতে যাবে বিলের মোট নয়').toBe('1000.00')
+
+        for (const [id, value] of [['ait', '50'], ['vds', '30']]) {
+            const input = host.querySelector('#' + id)
+            input.value = value
+            input.dispatchEvent(new Event('input'))
+        }
+        await Alpine.nextTick()
+
+        expect(host.querySelector('#cut').textContent, '⛔ AIT আর VDS যোগ না হয়ে জোড়া লাগল').toBe('80.00')
+        expect(host.querySelector('#net').textContent, '⛔ হাতে যাবে বিলের মোট বিয়োগ কর্তন নয়').toBe('920.00')
+        expect(warnings, '⛔ খরচের সারাংশে Alpine-এর ভুল').toEqual([])
+    })
+})

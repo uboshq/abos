@@ -597,9 +597,14 @@ export function expenseFields (config) {
         head: config.head ?? '',
         payeeType: config.payeeType ?? '',
         payeesByType: config.payeesByType ?? {},
-        gross: config.gross ?? 0,
-        ait: config.ait ?? 0,
-        vds: config.vds ?? 0,
+        /*
+         * ⛔ সংখ্যা হিসেবে শুরু — পাতা এগুলো লেখা হিসেবে পাঠায় ('0'), আর `(ait + vds)` তখন জোড়া লাগাত ('00'), গুণ নয়; তার উপর
+         * `.toFixed(2)` → "Value is not a function", উৎসে কর্তনের সারাংশ কখনো আঁকা হত না (২২ অক্টোবর ২০২৬)। ⓘ কারণটা CSP নয় —
+         * a5 মেপেছে, CSP-র Alpine `(a * b).toFixed(2)` ঠিকই আঁকে; ভুলটা লেখার যোগে।
+         */
+        gross: Number(config.gross ?? 0) || 0,
+        ait: Number(config.ait ?? 0) || 0,
+        vds: Number(config.vds ?? 0) || 0,
         tagged: config.tagged ?? 0,
         bills: config.bills ?? [],
         basis: config.basis ?? 'qty',
@@ -617,8 +622,7 @@ export function expenseFields (config) {
         },
 
         /*
-         * ⛔ লেখাগুলো এখানে, পর্দার প্রকাশে নয় — CSP-র Alpine `(ait + vds).toFixed(2)` বোঝে না ("Value is not a function"),
-         * তাই খরচের ভাউচারে উৎসে কর্তনের সারাংশটা কখনো আঁকা হত না (২২ অক্টোবর ২০২৬, নতুন ভাউচারের কাজে ধরা)।
+         * ⓘ লেখাগুলো এখানে, পর্দার প্রকাশে নয় — `Number()` দিয়ে, যাতে ঘরে কিছু লেখা থাকলেও যোগ হয়, জোড়া নয় (উপরের নোট দেখুন)।
          */
         get deductedText () {
             return (Number(this.ait || 0) + Number(this.vds || 0)).toFixed(2)
