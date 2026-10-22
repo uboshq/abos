@@ -595,7 +595,11 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     public function test_item_12_the_maker_cannot_reverse_a_posted_collection_and_a_second_person_reverses_on_the_day(): void
     {
         $day = now()->subMonthNoOverflow()->startOfMonth()->addDays(4)->toDateString();
+        // ⓘ আদায়টা সত্যিই সেই দিনে নেওয়া (ঘড়ি সেখানে) — আজ থেকে পেছনের তারিখ লিখলে ৭ দিনের বেশি পেছনের নিয়মে ফেরে
+        // (Mac-এর লাল a59a63dc2: "7 দিনের বেশি পেছনের তারিখে এন্ট্রি নেওয়া যায় না"); তারপর আজে ফিরে মাসটা বন্ধ
+        $this->travelTo(\Illuminate\Support\Carbon::parse($day)->setTime(11, 0));
         $collection = $this->book(['amount' => '600', 'lines_given' => '1', 'trx_date' => $day]);
+        $this->travelBack();
         $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১২: আদায়টাই পোস্ট হয়নি — '.json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
         $original = fn () => LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
             ->orderBy('id')->get()->map(fn ($r) => [(int) $r->id, $r->trx_date->toDateString(), (int) $r->account_id,
