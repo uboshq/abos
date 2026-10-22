@@ -10,7 +10,7 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action)"
+            :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action))"
             :subtitle="\App\Core\Support\DateFormat::spoken($approval->requested_at)">
             <x-slot:actions>
                 {{-- ⭐ ঘড়িটা অবস্থার পাশে — ২৪ সেপ্টেম্বর ২০২৬।

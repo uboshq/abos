@@ -814,17 +814,13 @@ final class ApprovalEngine
             $key = $definition->approvals[(string) $approval->action] ?? null;
             $action = $key === null ? null : __($key);
 
-            return trim($definition->label().' · '.($action === null || $action === $key ? $approval->action : $action));
+            return $action === null || $action === $key
+                ? app(ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action)
+                : trim($definition->label().' · '.$action);
         }
 
-        $module = __('core.module.'.$approval->module);
-        $action = __('core.approval.action.'.$approval->action);
-
-        return trim(
-            (str_starts_with($module, 'core.') ? $approval->module : $module)
-            .' · '.
-            (str_starts_with($action, 'core.') ? $approval->action : $action)
-        );
+        // ⭐ দফা ৪ — অচেনা মডিউলেও কোড নয়, নাম ([[ApprovalLabel]])
+        return app(ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action);
     }
 
     public function latestFor(Model $document, string $action): ?Approval

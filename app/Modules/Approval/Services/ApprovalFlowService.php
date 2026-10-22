@@ -65,6 +65,18 @@ class ApprovalFlowService
     }
 
     /**
+     * ⭐ কাজের নাম, সবসময় মানুষের ভাষায় — দফা ৪ (অনুমোদন মডিউলের নকশা, মালিক ২১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে ঘোষণা না থাকলে কাঁচা কোড পর্দায় যেত ("sales · invoice", "accounts · journal") — ভাউচারের ধরন আর পুরনো সারির কাজ
+     * কোনো মডিউলের `approvals`-এ ঘোষিত নয়, অথচ ইনবক্সে আসে। ⭐ ক্রম: মডিউলের ঘোষণা → এই মডিউলের পুরনো/ভাউচারের নাম
+     * ([[approval::paper]]) → মডিউলের নাম + "কাগজ"। ⛔ কোড কখনো নয় — চেনার জন্য কোডটা পাতার ভেতরে থাকে না, পাহারা-পরীক্ষা ধরে।
+     */
+    public function labelOf(string $module, string $action): string
+    {
+        return app(\App\Core\Engines\Approval\ApprovalLabel::class)->of($module, $action);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @param  list<array{level: mixed, approver_type: mixed, approver_id: mixed, requires_all?: mixed}>  $steps
      */
