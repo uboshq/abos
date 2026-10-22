@@ -10,7 +10,7 @@ return [
     'withdraw' => 'প্রত্যাহার',
     'open_document' => 'ডকুমেন্ট খুলুন',
     'new_flow' => 'নতুন ছক',
-    'add_step' => 'স্তর যোগ',
+    'add_step' => 'ধাপ যোগ',
     'by_role' => 'রোল',
     'by_user' => 'ব্যক্তি',
     'always' => 'সব ক্ষেত্রে',

@@ -49,6 +49,8 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         'sent_back_draft' => ['/খসড়ায় ফেরত গেছে/u', 'সইকারী সংশোধনে ফেরালে "সংশোধনে ফেরত গেছে" (লেখক নিজে খসড়ায় ফেরালে সেটা আলাদা কাজ)'],
         'notification_en' => ['/নোটিফিকেশন/u', 'বিজ্ঞপ্তি "বিজ্ঞপ্তি"'],
         'attendance_old' => ['/উপস্থিতি/u', 'হাজিরা "হাজিরা"'],
+        // ⓘ দফা ১৫ (অনুমোদন মডিউলের নকশা, মালিক ২১ অক্টোবর ২০২৬): অপেক্ষাটা সইয়ের, "সিদ্ধান্তের" নয়
+        'decision_wait' => ['/সিদ্ধান্তের অপেক্ষায়/u', 'অপেক্ষার লেখা "সইয়ের অপেক্ষায়"'],
     ];
 
     /**
@@ -56,6 +58,19 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
      * মেশানো কিছু নয় ("সই দিন" বা "মঞ্জুর" একা নয়)।
      */
     private const LEAVE_APPROVE = 'মঞ্জুর করুন';
+
+    /**
+     * ⭐ অনুমোদন মডিউলে মালিকের শব্দ — দফা ১৫ (মালিক, ২১ অক্টোবর ২০২৬)। ⓘ কেবল এই মডিউলে: "স্তর" অন্য জায়গায় অন্য মানে
+     * (মালের খরচের স্তর), আর ছাপা কাগজের "অনুমোদনকারী" সারি আলাদা সিদ্ধান্তের অপেক্ষায় (fe-কে জানানো)।
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const APPROVAL_ONLY = [
+        'approval_level' => ['/স্তর/u', 'সইয়ের ধাপ "ধাপ" ("ধাপ 2 / 3")'],
+        'approval_signer' => ['/অনুমোদনকারী/u', 'যিনি সই দেন তিনি "সইদাতা"'],
+        'approval_flow_name' => ['/অনুমোদনের ছক/u', 'ছকের নাম "সইয়ের নিয়ম"'],
+        'approval_bengali_digit' => ['/[০-৯]/u', 'অঙ্ক সবসময় ইংরেজিতে (মালিকের নিয়ম "খ")'],
+    ];
 
     /** বিজ্ঞপ্তি মডিউলে "খবর" মানে বিজ্ঞপ্তিই — সেখানে আলাদা নিয়ম */
     private const NOTIFICATION_NEWS = '/খবর/u';
@@ -135,6 +150,9 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $found = [];
         foreach ($files as $file) {
             $rules = self::RETIRED;
+            if (str_starts_with($file, 'app/Modules/Approval/')) {
+                $rules += self::APPROVAL_ONLY;
+            }
             if (str_starts_with($file, 'app/Modules/Notification/')) {
                 $rules['notification_news'] = [self::NOTIFICATION_NEWS, 'বিজ্ঞপ্তি মডিউলে "খবর" নয়, "বিজ্ঞপ্তি"'];
             }
