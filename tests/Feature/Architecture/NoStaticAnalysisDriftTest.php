@@ -47,7 +47,8 @@ final class NoStaticAnalysisDriftTest extends TestCase
      */
     private function settings(string $neon): array
     {
-        $lines = array_values(array_filter(array_map('rtrim', preg_split('/\R/', $neon) ?: []), fn (string $l) => ! preg_match('/^\s*(#|$)/', $l)));
+        // ⚠️ কেবল আসল লাইন-ভাঙা: `\R` u-ছাড়া বাইট ধরে, আর বাংলা অক্ষরের ভেতরের 0x85 (NEL) বাইটে মন্তব্য মাঝখানে কেটে যেত
+        $lines = array_values(array_filter(array_map('rtrim', preg_split('/\r\n|\n|\r/', $neon) ?: []), fn (string $l) => ! preg_match('/^\s*(#|$)/', $l)));
         $block = function (string $key) use ($lines): array {
             $out = [];
             $in = false;
