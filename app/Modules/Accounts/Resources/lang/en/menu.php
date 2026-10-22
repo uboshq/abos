@@ -15,6 +15,7 @@ return [
     'contra' => 'Contra',
     'money_custody' => 'Money & custody',
     'money_transfer' => 'Money Transfer',
+    'obligations' => 'Obligations',
     'cash_count' => 'Cash Count',
     'day_book' => 'Day Book',
     'cash_book' => 'Cash Book',

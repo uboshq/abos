@@ -120,6 +120,56 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ fail-closed (fe, ২২ অক্টোবর ২০২৬): ছবির মতো দেখতে ফাইল (আসল PNG মাথা, `image` নিয়ম পেরোয়) যা ইঞ্জিন পড়তে পারে না —
+     * আগে "কাঁচা ফাইলই রাখো" পথে লোগো হয়ে বসত আর প্রতিটা ছাপা কাগজে যেত। এখন ফেরত, বাংলা বার্তায়, আর আগের লোগো অক্ষত।
+     */
+    public function test_a_broken_png_that_looks_like_a_picture_is_refused_and_the_old_logo_stays(): void
+    {
+        Storage::disk('public')->put('logos/before.png', 'png');
+        $this->company->forceFill(['logo_path' => 'logos/before.png'])->save();
+
+        // ⓘ আসল PNG — তারপর ছবির তথ্য (IDAT) নষ্ট: মাথা আর মাপ ঠিক, ভেতরটা পড়া যায় না
+        $image = imagecreatetruecolor(300, 120);
+        ob_start();
+        imagepng($image);
+        $png = (string) ob_get_clean();
+        $at = (int) strpos($png, 'IDAT');
+        $length = unpack('N', substr($png, $at - 4, 4))[1];
+        $broken = substr($png, 0, $at + 4).str_repeat("\x00\xff", intdiv($length, 2)).substr($png, $at + 4 + $length);
+        $upload = $this->realUpload('logo.png', $broken);
+        $this->assertSame('image/png', $upload->getMimeType(), 'প্রস্তুতিটাই ভুল — ফাইলটা ছবি বলে চেনা যায় না, দরজার আগেই ফিরবে');
+
+        $this->send($this->owner, $upload);
+
+        $errors = session('errors');
+        $has = $errors instanceof \Illuminate\Support\ViewErrorBag
+            ? $errors->has('logo')
+            : ! empty(((array) $errors)['default']['messages']['logo'] ?? null);
+        $this->assertTrue($has, '⛔ পড়া-না-যাওয়া ছবি লোগো হিসেবে নেওয়া হল — বার্তা নেই');
+        $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ পড়া-না-যাওয়া ছবি আগের লোগো সরিয়ে বসল');
+    }
+
+    /**
+     * ⭐ দুই লোগো আলাদা (মালিক, ২২ অক্টোবর ২০২৬: "লোগো আলাদা আলাদাই ভালো") — প্রতিটা পাতা বলে অন্যটা কোথায়: কোম্পানির পাতা বলে বিলের
+     * লোগো ছাপার সেটিং থেকে, ছাপার পাতা বলে বারের লোগো কোম্পানির পাতা থেকে।
+     */
+    public function test_each_logo_page_says_where_the_other_logo_lives(): void
+    {
+        // ⓘ পরীক্ষা ইংরেজি Accept-Language পাঠায় — পাতা যে ভাষাতেই আঁকুক, সেই ভাষার লাইনটা থাকতে হবে
+        $says = fn (string $html, string $key) => str_contains($html, e(__($key, [], 'bn'))) || str_contains($html, e(__($key, [], 'en')));
+        // ⓘ এই ফাইলের setUp কাউকে ঢোকায় না (অন্য পরীক্ষা send() দিয়ে ঢোকে) — মালিক হিসেবে পাতা খোলা
+        $this->actingAs($this->owner);
+
+        $company = (string) $this->get(route('system_admin.company.edit', $this->company))->assertOk()->getContent();
+        $this->assertTrue($says($company, 'system_admin::message.logo_hint'), '⛔ কোম্পানির পাতায় লোগোর ব্যাখ্যা নেই');
+        $this->assertStringContainsString('ছাপার সেটিং', __('system_admin::message.logo_hint', [], 'bn'), '⛔ কোম্পানির পাতা বলে না বিলের লোগো কোথা থেকে');
+
+        $print = (string) $this->get(route('system_admin.print_control.invoice_info'))->assertOk()->getContent();
+        $this->assertTrue($says($print, 'system_admin::settings.invoice_logo_note'), '⛔ ছাপার পাতায় লোগোর ব্যাখ্যা নেই');
+        $this->assertStringContainsString('কোম্পানির পাতা', __('system_admin::settings.invoice_logo_note', [], 'bn'), '⛔ ছাপার পাতা বলে না বারের লোগো কোথা থেকে');
+    }
+
     public function test_only_company_manage_may_change_the_logo(): void
     {
         Storage::disk('public')->put('logos/before.png', 'png');
@@ -129,7 +179,10 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $clerk->companies()->attach($this->company, ['is_active' => true]);
         $this->assertFalse($clerk->fresh()->canInCompany((int) $this->company->id, 'system_admin.company.manage'), 'প্রস্তুতিটাই ভুল — কর্মীর হাতে চাবি আছে।');
 
-        $this->send($clerk->fresh(), UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->assertForbidden();
+        // ⓘ দরজায় দুই স্তর — রুটের চাবি (৪০৩) আর "এই কোম্পানির চাবি" (৪০৪, [[CompanyController::mustBeYourCompany()]]);
+        //   যেকোনোটা থামালেই চলে, দাবিটা "থামল আর লোগো আগেরটাই"
+        $status = $this->send($clerk->fresh(), UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->status();
+        $this->assertContains($status, [403, 404], "⛔ চাবি ছাড়া লোগো বদলের দরজা খুলল (উত্তর {$status})।");
         $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ চাবি ছাড়াই লোগো বদলে গেল।');
     }
 

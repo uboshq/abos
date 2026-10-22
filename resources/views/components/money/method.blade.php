@@ -52,6 +52,12 @@
      * সেগমেন্ট `order-1` (দুই কলাম), হোস্টের প্রাপকের ব্যাংক `order-2`, পদ্ধতির ঘর `order-3`, চার্জের লাইন `order-4`।
      */
     'inline' => false,
+
+    /*
+     * ⭐ স্লিপ/TrxID ঘরের নিচে তাৎক্ষণিক "আগে ব্যবহার হয়নি ✓" বা আগের পরিশোধের কথা (টাকা দেওয়ার মিল-তালিকা #৫)। ⓘ কেবল যে পর্দার
+     * হোস্ট `slip` জানে ([[payBills]]); অন্য পর্দায় বন্ধ, তাই কিছুই আঁকা হয় না।
+     */
+    'slipCheck' => false,
 ])
 
 @php
@@ -140,6 +146,10 @@
             <div class="{{ $twoWide }}">
                 <x-ui.field name="instrument_no" :label="__('money.field.trx_id')" :value="$was('instrument_no')"
                             :hint="__('money.hint.reference_needed')" required />
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
             </div>
             <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
                         :label="__('money.field.mfs_charge')" :value="$charge" x-model="charge" />
@@ -151,8 +161,14 @@
         <div data-method-block="transfer" @class([$fourUp, 'order-3 col-span-full' => $inline])>
             <x-ui.select name="transfer_mode_id" :label="__('money.field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
-            <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
-                        :hint="__('money.hint.reference_needed')" required />
+            <div>
+                <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
+                            :hint="__('money.hint.reference_needed')" required />
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
+            </div>
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
@@ -180,7 +196,13 @@
     <template x-if="method === 'cheque'">
         <div data-method-block="cheque" @class(['flex flex-col gap-2', 'order-3 col-span-full' => $inline])>
             <div class="{{ $threeUp }}">
-                <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
+                <div>
+                    <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
+                    @if ($slipCheck)
+                        <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                           :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                    @endif
+                </div>
                 {{-- ⓘ দেশের তারিখের ঘর ([[ui.date]]), ব্রাউজারেরটা নয়; মান `chequeDate`-এ যায় আগাম চেকের কথার জন্য --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('money.field.cheque_date') }}</span>

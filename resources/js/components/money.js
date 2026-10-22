@@ -268,9 +268,18 @@ export function payBills ({
     taxIds = {},
     bankIds = [],
     simulateUrl = '',
+    slipUrl = '',
+    paymentId = null,
 } = {}) {
+    // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
+    let slipForm = null
+
     return {
         bills: bills.map(b => ({ ...b, remaining: paisa(b.remaining), total: paisa(b.total) })),
+        /* ⭐ স্লিপ/TrxID-এর তাৎক্ষণিক উত্তর (মিল-তালিকা #৫): empty · free · used — জমার একই নিয়মে, [[PaymentController::slipCheck()]] */
+        slip: { state: 'empty', message: '' },
+        slipAsked: 0,
+        slipTimer: null,
         supplier: String(supplier ?? ''),
         amount: String(amount ?? ''),
         account: String(account ?? ''),
@@ -284,9 +293,56 @@ export function payBills ({
 
         init () {
             this.$watch('supplier', () => this.allocate())
-            this.$watch('amount', () => this.allocate())
+            // ⓘ কেবল অঙ্ক বদলালে নতুন করে বসানো — লাখ-কমা বসানো (একই অঙ্ক) হাতে বসানো প্রয়োগ মুছবে না
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.allocate() })
             this.$watch('account', () => this.refresh())
             this.$nextTick(() => this.refresh())
+
+            // ⓘ পদ্ধতির ঘরগুলো x-if-এ আসে-যায়, তাই শোনা ফর্মে — যে ঘরের নাম `instrument_no`
+            slipForm = this.$el
+            this.$el.addEventListener('input', (e) => {
+                if (e.target?.name === 'instrument_no') this.slipSoon()
+            })
+            this.$watch('supplier', () => this.slipSoon())
+        },
+
+        slipSoon () {
+            clearTimeout(this.slipTimer)
+            this.slipTimer = setTimeout(() => this.checkSlip(), 300)
+        },
+
+        /*
+         * ⓘ নম্বরটা পড়া হয় প্রশ্নের মুহূর্তে, সাজানোর মুহূর্তে নয় — সরবরাহকারী বদলালে যে প্রশ্ন যায় তার হাতে কোনো লেখা থাকে না,
+         * আর ৩০০ মিলিসেকেন্ডে ঘরের লেখা বদলেও যেতে পারে; তাই সবসময় ঘরে এখন যা আছে সেটাই।
+         */
+        async checkSlip (value = null) {
+            const no = String(value ?? slipForm?.querySelector('[name="instrument_no"]')?.value ?? '').trim()
+            // ⛔ কেবল শেষ প্রশ্নের উত্তর — দেরিতে-আসা আগের উত্তর নতুনটাকে ঢাকবে না (প্রিভিউর একই নিয়ম)
+            const ticket = ++this.slipAsked
+
+            if (!slipUrl || no === '' || this.supplier === '') {
+                this.slip = { state: 'empty', message: '' }
+                return
+            }
+
+            const query = new URLSearchParams({ supplier_id: this.supplier, instrument_no: no })
+            if (paymentId) query.set('payment', String(paymentId))
+
+            try {
+                const response = await fetch(slipUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })
+                const answer = response.ok ? await response.json() : { state: 'empty', message: '' }
+                if (ticket === this.slipAsked) this.slip = answer
+            } catch {
+                if (ticket === this.slipAsked) this.slip = { state: 'empty', message: '' }
+            }
+        },
+
+        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
+        get slipUsed () { return this.slip.state === 'used' },
+
+        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("1,20,000.00", নকশার মিল-তালিকা #৯); ফাঁকা বা শূন্য যেমন ছিল */
+        tidyAmount () {
+            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
         },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */
@@ -365,6 +421,21 @@ export function payBills ({
         /* ⓘ কাটা আর নিট — সার্ভারের প্রিভিউ থেকে ([[PaymentWithholding]]); প্রিভিউ আসার আগে কাটা শূন্য, নিট মোট */
         get aitText () { return this.preview.ait ?? '0.00' },
         get vdsText () { return this.preview.vds ?? '0.00' },
+
+        /* ⓘ সারাংশে কাটা অঙ্ক বিয়োগে — শূন্যে চিহ্ন নয় (নকশা; মিল-তালিকার ফাঁক ৬) */
+        get aitMinus () { return this.aitText === '0.00' ? '0.00' : '−' + this.aitText },
+        get vdsMinus () { return this.vdsText === '0.00' ? '0.00' : '−' + this.vdsText },
+        /* ⓘ সত্যি কিছু কাটা হলে তবেই কর-নোট (মিল-তালিকা #৩) */
+        get withheld () { return paisa(this.aitText) > 0 || paisa(this.vdsText) > 0 },
+
+        /* ⓘ নিট কোথা থেকে যায় — পদ্ধতি ধরে (ব্যাংক · MFS · নগদ), লেখা পাতার data-তে */
+        get netLabel () {
+            const label = this.$root.querySelector('[data-net-label]')?.dataset ?? {}
+            if (this.method === 'mfs') return label.netMfs ?? ''
+            if (this.method === 'cash') return label.netCash ?? ''
+
+            return label.netBank ?? ''
+        },
         get netText () { return this.preview.net ?? taka(paisa(this.amount) / 100) },
 
         /* ⓘ প্রয়োগের বাইরে যা থাকে — অগ্রিম, সরবরাহকারীর খাতায় (নকশা #৪) */

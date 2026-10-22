@@ -141,4 +141,6 @@ return [
     'bank_signed' => 'ব্যাংক তথ্যে দ্বিতীয় সই',
     'bank_rejected' => 'ব্যাংক তথ্যের বদলে না',
     'bank_withdrawn' => 'ব্যাংক তথ্যের বদল ফিরিয়ে নেওয়া',
+    'obligation_done' => 'করণীয় করা হলো',
+    'obligation_cancelled' => 'করণীয় বাতিল',
 ];
