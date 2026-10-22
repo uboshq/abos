@@ -280,6 +280,7 @@ export function payBills ({
         balances,
         preview: { rows: [], debit: '', credit: '', balanced: true },
         timer: null,
+        asked: 0,
 
         init () {
             this.$watch('supplier', () => this.allocate())
@@ -407,12 +408,21 @@ export function payBills ({
 
             const body = new FormData(form)
             body.delete('_method')
+            // ⛔ একবারের জমার টোকেন প্রিভিউতে নয় — খরচ হলে আসল "পোস্ট" দ্বিতীয় চাপ ধরা পড়ে ফিরত (সার্ভারও ছাড় দেয়: [[OneSubmitPerForm]])
+            body.delete('_once')
+
+            /*
+             * ⛔ কেবল শেষ প্রশ্নের উত্তর — আগের প্রশ্নের দেরিতে-আসা উত্তর নতুনটাকে ঢেকে দিত (মিল-তালিকার সময় ধরা, ২২ অক্টোবর
+             * ২০২৬: চার্জ লেখার পরেও প্রিভিউতে চার্জের সারি নেই, ব্যাংক থেকে ১,১৪,০০০ — চার্জ ছাড়া)।
+             */
+            const ticket = ++this.asked
 
             try {
                 const response = await fetch(simulateUrl, { method: 'POST', body, headers: { Accept: 'application/json' } })
-                this.preview = response.ok ? await response.json() : { rows: [], debit: '', credit: '', balanced: true }
+                const answer = response.ok ? await response.json() : { rows: [], debit: '', credit: '', balanced: true }
+                if (ticket === this.asked) this.preview = answer
             } catch {
-                this.preview = { rows: [], debit: '', credit: '', balanced: true }
+                if (ticket === this.asked) this.preview = { rows: [], debit: '', credit: '', balanced: true }
             }
         },
 

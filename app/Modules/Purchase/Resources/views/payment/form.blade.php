@@ -183,8 +183,11 @@
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier === ''">{{ __('money.screen.pick_supplier_first') }}</p>
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier !== '' && visible.length === 0" x-cloak>{{ __('money.screen.no_bills') }}</p>
 
+                    {{-- ⓘ সাত কলাম এক কার্ডে — ঘরের পাশের ফাঁক কম (`--grid-pad-x`)।
+                         ⭐ "এখন প্রয়োগ" ডানে আটকানো (sticky) — বাঁয়ের মডিউল-মেনু খোলা ১৩৬৬-এ টেবিল পাশে সরলেও লেখার ঘরটা সবসময়
+                         চোখে থাকে (মিল-তালিকার ফাঁক ১; fe, ২২ অক্টোবর ২০২৬: SAP/Xero-র চল)। --}}
                     <div class="table-responsive" x-show="visible.length > 0" x-cloak>
-                        <table class="ui-grid w-full text-sm">
+                        <table class="ui-grid w-full text-sm [--grid-pad-x:6px]">
                             <thead>
                                 <tr>
                                     <th class="w-8"><span class="sr-only">{{ __('money.screen.col.apply') }}</span></th>
@@ -193,22 +196,22 @@
                                     <th class="text-start">{{ __('money.screen.col.due') }}</th>
                                     <th class="num">{{ __('money.screen.col.total') }}</th>
                                     <th class="num">{{ __('money.screen.col.remaining') }}</th>
-                                    <th class="num">{{ __('money.screen.col.apply') }}</th>
+                                    <th class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-apply-col>{{ __('money.screen.col.apply') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="bill in visible" :key="bill.id">
                                     <tr data-open-bill>
                                         <td><input type="checkbox" :checked="isOn(bill.id)" @change="toggle(bill.id)" :aria-label="bill.no"></td>
-                                        <td><a :href="bill.url" class="text-(--color-link) hover:underline" x-text="bill.no"></a></td>
-                                        <td x-text="bill.ref"></td>
-                                        <td :class="bill.late ? 'text-(--color-danger) font-medium' : ''" x-text="bill.due"></td>
-                                        <td class="num" x-text="money(bill.total)"></td>
-                                        <td class="num" x-text="money(bill.remaining)"></td>
-                                        <td class="num">
+                                        <td class="whitespace-nowrap"><a :href="bill.url" class="text-(--color-link) hover:underline" x-text="bill.no"></a></td>
+                                        <td class="whitespace-nowrap" x-text="bill.ref"></td>
+                                        <td class="whitespace-nowrap" :class="bill.late ? 'text-(--color-danger) font-medium' : ''" x-text="bill.due"></td>
+                                        <td class="num whitespace-nowrap" x-text="money(bill.total)"></td>
+                                        <td class="num whitespace-nowrap" x-text="money(bill.remaining)"></td>
+                                        <td class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-apply-col>
                                             <input type="text" inputmode="decimal" :value="shown(bill.id)" @change="typed(bill.id, $event.target.value)"
-                                                   :aria-label="bill.no"
-                                                   class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                                   aria-label="{{ __('money.screen.col.apply') }}"
+                                                   class="num h-(--spacing-field-compact) w-26 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                         </td>
                                     </tr>
                                 </template>
@@ -219,7 +222,7 @@
                                     <td colspan="3">{{ __('money.screen.col.applied_total') }}</td>
                                     <td class="num" x-text="billTotalText"></td>
                                     <td class="num" x-text="remainingText"></td>
-                                    <td class="num" data-applied-total x-text="appliedText"></td>
+                                    <td class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-applied-total data-apply-col x-text="appliedText"></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -238,10 +241,11 @@
                 <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <h2 class="mb-3 font-semibold">{{ __('money.screen.attach_and_note') }}</h2>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="flex min-h-16 cursor-pointer items-center justify-center rounded-(--radius-field) border border-dashed border-(--color-border) px-3 text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)">
-                            <input type="file" name="attachment" accept="image/*,application/pdf" class="sr-only" data-pay-attachment>
-                            {{ __('money.screen.attach_hint') }}
-                        </label>
+                        {{-- ⓘ বাংলা ফাইল-বাছাই ([[ui.file-input]]) — ব্রাউজারের "Choose File" নয় (AFileIsChosenInBengaliTest) --}}
+                        <div data-pay-attachment>
+                            <span class="mb-1 block text-sm font-medium">{{ __('money.screen.attach_hint') }}</span>
+                            <x-ui.file-input name="attachment" accept="image/*,application/pdf" />
+                        </div>
                         <x-ui.field name="narration" :label="__('money.screen.narration')" :value="old('narration', $payment->narration)" />
                     </div>
                 </section>
@@ -286,7 +290,7 @@
                         <tbody>
                             <template x-for="(row, i) in preview.rows" :key="i">
                                 <tr data-ledger-row>
-                                    <td><span x-text="row.account"></span><span class="block text-2xs text-(--color-ink-muted)" x-text="row.branch"></span></td>
+                                    <td class="text-xs"><span x-text="row.account"></span><span class="block text-2xs text-(--color-ink-muted)" x-text="row.branch"></span></td>
                                     <td class="num" x-text="row.debit"></td>
                                     <td class="num" x-text="row.credit"></td>
                                 </tr>

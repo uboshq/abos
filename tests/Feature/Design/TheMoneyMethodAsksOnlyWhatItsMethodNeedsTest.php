@@ -41,6 +41,9 @@ final class TheMoneyMethodAsksOnlyWhatItsMethodNeedsTest extends TestCase
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        // ⓘ ব্লক নিজে আঁকা — দরজা ছাড়া `$errors` ভাগ হয় না, আর ঘরগুলো ([[ui.field]]) ওটা পড়ে
+        $this->withViewErrors([]);
     }
 
     public function test_item_2_five_methods_in_the_designs_order_and_each_block_holds_only_its_own_fields(): void

@@ -33,6 +33,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
      * এই তালিকায় নেই। ⚠️ নতুন প্যারামিটারহীন POST এলে এখানে বা CREATE_DOORS-এ বসাতেই হবে, নইলে দাবি লাল।
      */
     private const EXCLUDED = [
+        'purchase.payment.simulate' => 'preview of the ledger lines; writes nothing (claimed: ThePaySupplierScreenFollowsTheDesignTest, row counts and audit unchanged)',
         'accounts.asset.depreciate' => 'monthly run; each asset posts in its own branch',
         'accounts.asset.tax.run' => 'year-end tax book run over every asset, company level',
         'accounts.coa.install' => 'installs the standard chart, no paper',
