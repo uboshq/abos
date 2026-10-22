@@ -119,6 +119,8 @@ final class ARuleNobodyCouldNameOrExplainTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        // ⓘ কাঁচা লেখা মডেলের saved/deleted এড়ায় — ইঞ্জিনের জমানো ছক নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
 
         $this->assertSame(
             2,
