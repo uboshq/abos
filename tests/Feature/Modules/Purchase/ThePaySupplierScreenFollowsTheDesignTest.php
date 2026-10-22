@@ -290,6 +290,87 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertNull($bill->fresh()->withheld_at, '⛔ বাতিলের পরেও বিলে "পরিশোধে কাটা" দাগ — বিলে কাটার পথ মিথ্যে বন্ধ');
     }
 
+    /** @return array<string, array{0: string}> টাকা যাওয়ার চার পথ */
+    public static function fourWays(): array
+    {
+        return ['cash' => ['cash'], 'mfs' => ['mfs'], 'transfer' => ['transfer'], 'cheque' => ['cheque']];
+    }
+
+    /**
+     * ⭐ #৫ + #১০, চার পথই এক মাপে (fe, ২২ অক্টোবর ২০২৬): কর কাটা পরিশোধে প্রিভিউর প্রতিটা খাত = পোস্টের খাত (পরিশোধ আর চেক
+     * মিলিয়ে), কাটা ৫০০ + ২২৫ সরকারের খাতে, সরবরাহকারীর পুরো ১১,৫০০ মেটে, আর বাতিলে সব খাত শূন্যে। ⛔ একটা পথ আলাদা হয়ে গেলে
+     * (যেমন চেকের পথ কাটা জানত না, c0876ade1-এর আগে) এখানেই ধরা পড়ে।
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('fourWays')]
+    public function test_item_5_and_10_every_way_money_leaves_posts_its_preview_and_a_cancel_nets_to_zero(string $way): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5', 'vds_rate' => '15'])->save();
+        $bill = $this->bill('10000', tax: '1500');
+
+        $data = match ($way) {
+            'cash' => ['account_id' => $this->till()->id, 'instrument' => 'cash'],
+            'mfs' => ['account_id' => $this->wallet()->id, 'instrument' => 'mfs', 'instrument_no' => 'TRX4WAY0001'],
+            'transfer' => ['account_id' => $this->bank->id, 'instrument' => 'transfer', 'instrument_no' => 'BF4WAY0001'],
+            'cheque' => ['account_id' => $this->bank->id, 'instrument' => 'cheque', 'instrument_no' => 'CHQ-4WAY', 'instrument_date' => now()->toDateString()],
+        };
+        if ($way === 'transfer') {
+            $this->signBank();
+        }
+        $this->putMoneyIn(Account::query()->findOrFail($data['account_id']), '20000');
+
+        $preview = $this->post(route('purchase.payment.simulate'), $this->form($data, [[$bill->id, '11500']], '11500'))->assertOk()->json();
+        $shown = $this->previewBook($preview);
+
+        $this->pay($data, [[$bill->id, '11500']], amount: '11500');
+        $payment = $this->lastPayment();
+        $this->assertSame(DocumentStatus::CONFIRMED, $payment->status, "⛔ {$way}: কর কাটা পরিশোধ পোস্ট হল না: ".$this->errorOn('amount').$this->errorOn('lines').$this->errorOn('instrument_no'));
+
+        $posted = $this->bothPapers($payment);
+        $this->assertMoved($posted, StandardChart::TAX_DEDUCTED_AT_SOURCE, credit: '500', message: "⛔ {$way}: AIT ৫০০ ২১২১-এ বসেনি");
+        $this->assertMoved($posted, StandardChart::VDS_PAYABLE, credit: '225', message: "⛔ {$way}: VDS ২২৫ ২১২২-এ বসেনি");
+        $this->assertMoved($posted, StandardChart::PAYABLE, debit: '11500', message: "⛔ {$way}: সরবরাহকারীর পুরো ১১,৫০০ মেটেনি");
+        foreach ($posted as $code => $moved) {
+            $this->assertSame([bcadd($moved['debit'], '0', 2), bcadd($moved['credit'], '0', 2)], $shown[$code] ?? null,
+                "⛔ {$way}: প্রিভিউ যা দেখাল খাতায় তা বসেনি — খাত {$code}");
+        }
+        $this->assertSame(count($shown), count($posted), "⛔ {$way}: প্রিভিউর খাত আর খাতার খাত সংখ্যায় আলাদা");
+
+        app(\App\Modules\Purchase\Services\PaymentService::class)->cancel($payment->fresh(), 'Four ways');
+        foreach ($this->bothPapers($payment->fresh()) as $code => $moved) {
+            $this->assertSame(0, bccomp($moved['debit'], $moved['credit'], 4), "⛔ {$way}: বাতিলের পরেও খাত {$code}-এ পরিশোধের দাগ রয়ে গেল");
+        }
+        $this->assertNull($bill->fresh()->withheld_at, "⛔ {$way}: বাতিলের পরেও বিলে \"পরিশোধে কাটা\" দাগ");
+    }
+
+    /**
+     * ⓘ প্রিভিউর সারি খাত ধরে — কোড → [ডেবিট, ক্রেডিট], দুই দশমিকে
+     *
+     * @param  array<string, mixed>  $preview
+     * @return array<string, array{0: string, 1: string}>
+     */
+    private function previewBook(array $preview): array
+    {
+        $shown = [];
+        foreach ($preview['rows'] as $row) {
+            $code = strtok((string) $row['account'], ' ');
+            $shown[$code] = [
+                bcadd($shown[$code][0] ?? '0', str_replace(',', '', $row['debit'] ?: '0'), 2),
+                bcadd($shown[$code][1] ?? '0', str_replace(',', '', $row['credit'] ?: '0'), 2),
+            ];
+        }
+
+        return $shown;
+    }
+
+    /** ⓘ পরীক্ষার MFS ওয়ালেট — ১১০৫-এর নিচে */
+    private function wallet(): Account
+    {
+        return Account::query()->firstOrCreate(['company_id' => $this->company->id, 'code' => '1105-PAY'], [
+            'name_en' => 'Pay wallet', 'name_bn' => 'পরিশোধের ওয়ালেট', 'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id,
+            'type' => Account::ASSET, 'nature' => Account::DEBIT, 'money_kind' => Account::MFS,
+        ]);
+    }
+
     /** ⛔ #৫: চেক ফেরত এলে টাকা যায়নি — কাটা কর/ভ্যাটও উল্টো, সরবরাহকারীর পুরো দেনা ফেরে, বিলের দাগ ওঠে */
     public function test_item_5_a_bounced_cheque_undoes_the_tax_it_withheld(): void
     {
@@ -314,11 +395,16 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
     /** @return array<string, array{debit: string, credit: string}> পরিশোধ আর তার চেক — দুই কাগজের দাখিলা খাত ধরে */
     private function bothPapers(Payment $payment): array
     {
-        $book = $this->book($payment);
+        $book = [];
         $codes = Account::query()->pluck('code', 'id');
-        // ⓘ চেকের নিজের দাখিলা, বাতিলের উল্টো (`cheque:returned`) আর ফেরতের উল্টো (`cheque:bounced`) — [[ChequeService]]
+        // ⓘ পরিশোধের দাখিলা আর তার উল্টো (`:reversal`, [[PostingEngine::reverse()]]); চেকের দাখিলা, বাতিলের উল্টো (`cheque:returned`)
+        // আর ফেরতের উল্টো (`cheque:bounced`) — [[ChequeService]]
+        $own = Payment::drillSourceType();
         $cheque = \App\Modules\Accounts\Models\Cheque::drillSourceType();
-        LedgerEntry::query()->whereIn('source_type', [$cheque, $cheque.':returned', $cheque.':bounced'])->where('source_id', $payment->cheque_id)->get()
+        LedgerEntry::query()
+            ->where(fn ($q) => $q->whereIn('source_type', [$own, $own.':reversal'])->where('source_id', $payment->id))
+            ->orWhere(fn ($q) => $q->whereIn('source_type', [$cheque, $cheque.':returned', $cheque.':bounced'])->where('source_id', (int) $payment->cheque_id))
+            ->get()
             ->each(function (LedgerEntry $entry) use (&$book, $codes): void {
                 $code = (string) $codes[$entry->account_id];
                 $book[$code] ??= ['debit' => '0', 'credit' => '0'];
