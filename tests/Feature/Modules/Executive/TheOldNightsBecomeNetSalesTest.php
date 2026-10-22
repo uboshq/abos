@@ -37,6 +37,8 @@ use Tests\TestCase;
  *   · পুরো চাল প্রতিটা পুরনো সারি তার নিজের কোম্পানি, জায়গা (শাখা বা গোটা) আর দিনের [[SalesMetrics::net()]]-এ বসায়,
  *     আজকের (নতুন) সারি ছোঁয় না, আর চিহ্ন সরায়;
  *   · দ্বিতীয় চাল কিছুই বদলায় না।
+ *   · ⛔ চিহ্ন কোম্পানি ধরে (fe, ২২ অক্টোবর ২০২৬): এক কোম্পানির চালে কেবল তারই চিহ্ন সরে, অন্যটা নিজের পালায়; আর যে কোম্পানির
+ *     পুরনো রাত নেই সে প্রথম রাতেই নিট — অন্য কোম্পানির পুরনো সারি তার চিহ্ন ঠিক করে না।
  */
 final class TheOldNightsBecomeNetSalesTest extends TestCase
 {
@@ -82,7 +84,8 @@ final class TheOldNightsBecomeNetSalesTest extends TestCase
 
         // ── আজ: নতুন কোডের প্রথম রাত ──
         $this->artisan('abos:owner-snapshot')->assertSuccessful();
-        $this->assertSame($today, app(SalesBasis::class)->pending(), '⛔ নতুন কোডের প্রথম রাত বদলের দিনটা রাখেনি।');
+        $this->assertSame($today, app(SalesBasis::class)->pending((int) $this->alpha->id), '⛔ নতুন কোডের প্রথম রাত বদলের দিনটা রাখেনি।');
+        $this->assertSame($today, app(SalesBasis::class)->pending((int) $this->beta->id), '⛔ দ্বিতীয় কোম্পানির বদলের দিন নেই।');
         $todayRows = $this->table($today);
         $this->assertNotSame([], $todayRows);
         $this->assertGreaterThan(2, count($this->table($yesterday)), 'প্রস্তুতিটাই ভুল — গতকালের সারি নেই।');
@@ -92,21 +95,25 @@ final class TheOldNightsBecomeNetSalesTest extends TestCase
         $before = $this->table($yesterday);
         $this->artisan('abos:owner-snapshots-to-net', ['--dry-run' => true])->assertSuccessful();
         $this->assertSame($before, $this->table($yesterday), '⛔ dry-run সারি বদলেছে।');
-        $this->assertSame($today, app(SalesBasis::class)->pending(), '⛔ dry-run চিহ্ন সরিয়েছে।');
+        $this->assertSame($today, app(SalesBasis::class)->pending([(int) $this->alpha->id, (int) $this->beta->id]), '⛔ dry-run চিহ্ন সরিয়েছে।');
+        $this->assertSame($today, app(SalesBasis::class)->pending((int) $this->alpha->id), '⛔ dry-run প্রথম কোম্পানির চিহ্ন সরিয়েছে।');
 
         // ── এক কোম্পানির চাল: অন্য কোম্পানি অছোঁয়া ──
         $betaBefore = $this->table($yesterday, (int) $this->beta->id);
         $this->artisan('abos:owner-snapshots-to-net', ['--company' => (string) $this->alpha->id])->assertSuccessful();
         $this->assertSame($betaBefore, $this->table($yesterday, (int) $this->beta->id), '⛔ এক কোম্পানির চাল অন্য কোম্পানির সারি বদলেছে।');
         $this->assertNetOn($yesterday, (int) $this->alpha->id);
-        $this->assertSame($today, app(SalesBasis::class)->pending(), '⛔ এক কোম্পানির চালেই চিহ্ন সরেছে, অথচ অন্যটা তখনো পুরনো।');
+        // ⭐ কোম্পানি ধরে: আলফার নিজের চিহ্ন সরেছে, বেটা নিজের পালার অপেক্ষায় (fe, ২২ অক্টোবর ২০২৬)
+        $this->assertNull(app(SalesBasis::class)->pending((int) $this->alpha->id), '⛔ আলফার সব সারি নিট, তবু আলফার চিহ্ন রয়ে গেছে।');
+        $this->assertSame($today, app(SalesBasis::class)->pending((int) $this->beta->id), '⛔ আলফার চালে বেটার চিহ্ন সরেছে, অথচ বেটা তখনো পুরনো।');
+        $this->marker(true);
 
         // ── পুরো চাল ──
         $this->artisan('abos:owner-snapshots-to-net')->assertSuccessful();
         $this->assertNetOn($yesterday, (int) $this->alpha->id);
         $this->assertNetOn($yesterday, (int) $this->beta->id);
         $this->assertSame($todayRows, $this->table($today), '⛔ নতুন ভিত্তির সারি (আজকের) ছোঁয়া হয়েছে।');
-        $this->assertNull(app(SalesBasis::class)->pending(), '⛔ সব সারি নিট, তবু চিহ্ন রয়ে গেছে।');
+        $this->assertNull(app(SalesBasis::class)->pending([(int) $this->alpha->id, (int) $this->beta->id]), '⛔ সব সারি নিট, তবু চিহ্ন রয়ে গেছে।');
         $this->marker(false);
 
         // ── দ্বিতীয় চাল: কিছুই বদলায় না ──
@@ -114,6 +121,32 @@ final class TheOldNightsBecomeNetSalesTest extends TestCase
         $done = $this->tableWithStamps();
         $this->artisan('abos:owner-snapshots-to-net')->assertSuccessful();
         $this->assertSame($done, $this->tableWithStamps(), '⛔ দ্বিতীয় চাল সারি ছুঁয়েছে।');
+    }
+
+    /**
+     * ⭐ যার পুরনো রাত নেই, সে প্রথম রাতেই নিট — অন্য কোম্পানির পুরনো সারি তার চিহ্ন ঠিক করে না (fe, ২২ অক্টোবর ২০২৬)।
+     * ⓘ আগে চিহ্নটা গোটা টেবিলের ছিল: আলফার একটা পুরনো সারিই বেটার রূপান্তরকে "বাকি" বলত।
+     */
+    public function test_a_company_without_old_nights_is_net_at_once_while_another_waits(): void
+    {
+        $yesterday = Carbon::yesterday()->toDateString();
+        $today = Carbon::today()->toDateString();
+
+        $this->travelTo(Carbon::yesterday()->setTime(12, 0));
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+        Storage::disk('local')->delete(SalesBasis::PATH);
+        $this->travelBack();
+
+        // ⓘ বেটার পুরনো রাত মুছে — বেটা যেন সবে শুরু করা কোম্পানি; আলফার পুরনো রাত থাকে
+        DB::table(Snapshots::TABLE)->where('company_id', (int) $this->beta->id)->delete();
+        $this->assertNotSame([], $this->table($yesterday, (int) $this->alpha->id), 'প্রস্তুতিটাই ভুল — আলফার পুরনো রাত নেই।');
+        $this->assertSame([], $this->table($yesterday, (int) $this->beta->id), 'প্রস্তুতিটাই ভুল — বেটার পুরনো রাত রয়ে গেছে।');
+
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+
+        $this->assertSame($today, app(SalesBasis::class)->pending((int) $this->alpha->id), '⛔ আলফার পুরনো রাত আছে, তবু চিহ্ন নেই।');
+        $this->assertNull(app(SalesBasis::class)->pending((int) $this->beta->id),
+            '⛔ বেটার কোনো পুরনো রাত নেই, তবু আলফার সারি দেখে বেটাকেও "বাকি" ধরা হয়েছে — এক কোম্পানির তথ্য আরেকটার আচরণ ঠিক করছে।');
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
