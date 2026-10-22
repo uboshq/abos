@@ -212,6 +212,22 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
         $this->assertNull($duty->fresh()->done_at, '⛔ দেখার চাবিতেই "করা হয়েছে" বসল');
     }
 
+    /** ⭐ fe: সর্বমোট ছাঁকা সব দায়ের, পাতার নয় — ৫৫টা দায় দুই পাতায় (৫০ + ৫), প্রথম পাতাতেই ৫৫০.০০ */
+    public function test_the_grand_total_sums_every_page_not_only_the_one_shown(): void
+    {
+        $duties = app(ComplianceObligations::class);
+        for ($i = 1; $i <= 55; $i++) {
+            $duties->raise((int) $this->company->id, $this->company->defaultBranch()?->id, 'test:paper', $i, 'TP-'.$i,
+                ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, '10', now());
+        }
+
+        $html = (string) $this->get(route('accounts.obligation.index'))->assertOk()->getContent();
+
+        $this->assertSame(50, substr_count($html, 'data-obligation-done-form'), 'প্রস্তুতিটাই ভুল — প্রথম পাতায় ৫০টা সারি নেই');
+        $this->assertMatchesRegularExpression('/data-grand-total-row[\s\S]*?550\.00/', $html,
+            '⛔ সর্বমোট সব পাতার (৫৫ × ১০ = ৫৫০) নয় — কেবল দেখানো পাতার যোগ, বা নেই');
+    }
+
     public function test_an_overdue_duty_is_red_on_the_list_and_on_the_bar(): void
     {
         $payment = $this->paidWithRates('5', '15');
