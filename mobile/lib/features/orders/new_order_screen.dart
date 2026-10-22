@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -594,7 +595,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       decoration: BoxDecoration(color: o.pill, borderRadius: BorderRadius.circular(999)),
                       child: Row(
                         children: [
-                          _round('−', context.l10n.ordersNewLess, () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
+                          _round(Symbols.remove, context.l10n.ordersNewLess, () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
                               key: ValueKey('order-minus-${product.id}')),
                           // ⓘ অন্তত ৪৮ উঁচু, বাঁধা নয় (আগে ৩৮); নকশার নিয়ম ০.৪.৩৮ §২
                           Expanded(
@@ -618,7 +619,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                               ),
                             ),
                           ),
-                          _round('+', context.l10n.ordersNewMore, () => _setQty(product.id, (_qty[product.id] ?? 0) + 1),
+                          _round(Symbols.add, context.l10n.ordersNewMore, () => _setQty(product.id, (_qty[product.id] ?? 0) + 1),
                               key: ValueKey('order-plus-${product.id}')),
                         ],
                       ),
@@ -671,7 +672,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   // ⓘ − আর + বোতাম ৪৮×৪৮ (আগে ৩৮) — চাপার জায়গা অন্তত ৪৮dp (নকশার নিয়ম ০.৪.৩৮ §২); TalkBack কেবল "কমান"/"বাড়ান" বলে, চিহ্নটা নয়
-  Widget _round(String glyph, String label, VoidCallback onTap, {Key? key}) {
+  // ⛔ − আর + আগে লেখা ছিল (fontSize 20): বড় লেখায় অক্ষর বেড়ে ৪৮-এর গোল বোতামের বাইরে যেত (new_order_200, ছবি-নিরীক্ষা,
+  // ২২ অক্টোবর ২০২৬)। এখন আইকন, ২৪dp — লেখার মাপে বাড়ে না, বোতামের বৃত্তের ভেতরেই থাকে; বোতামের মানে Semantics-এর label-এ
+  Widget _round(IconData icon, String label, VoidCallback onTap, {Key? key}) {
     final o = OrderInk.of(context);
     return Semantics(
       button: true,
@@ -687,7 +690,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             width: 48,
             height: 48,
             child: Center(
-              child: ExcludeSemantics(child: Text(glyph, style: TextStyle(fontSize: 20, color: o.onPill))),
+              child: ExcludeSemantics(child: Icon(icon, size: 24, color: o.onPill)),
             ),
           ),
         ),

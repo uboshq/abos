@@ -87,6 +87,25 @@ void main() {
     _expectClearInside(tester, find.byKey(const ValueKey('login-submit')), find.byKey(const ValueKey('login-submit-label')));
   });
 
+  // ⛔ নতুন অর্ডারের − আর +: ২০০%-এ চিহ্ন তার গোল বোতামের বৃত্তের ভেতরে (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬: new_order_200-এ লেখার
+  // − আর + বৃত্তের চেয়ে বড়, কোনা বাইরে)। চিহ্নের ঘরের চার কোনাই বৃত্তের ভেতরে
+  testWidgets('new order: at 200% text the − and + glyphs lie inside their round buttons', (tester) async {
+    setScreenSize(tester, const Size(390, 844));
+    await open(tester, newOrder(textScale: 2.0));
+    for (final key in ['order-minus-$soapId', 'order-plus-$soapId']) {
+      final button = find.byKey(ValueKey(key));
+      final circle = tester.getRect(button);
+      final glyphs = find.descendant(of: button, matching: find.byWidgetPredicate((w) => w is Icon || w is Text));
+      expect(glyphs, findsOneWidget, reason: '$key: একটাই চিহ্ন');
+      final glyph = tester.getRect(glyphs);
+      final radius = circle.shortestSide / 2;
+      for (final corner in [glyph.topLeft, glyph.topRight, glyph.bottomLeft, glyph.bottomRight]) {
+        expect((corner - circle.center).distance <= radius, isTrue,
+            reason: '⛔ $key: চিহ্ন $glyph বোতামের বৃত্তের (কেন্দ্র ${circle.center}, ব্যাসার্ধ $radius) বাইরে');
+      }
+    }
+  });
+
   for (final screen in screens.entries) {
     testWidgets('${screen.key}: nothing overflows at 200% text', (tester) async {
       setScreenSize(tester, const Size(390, 844));
