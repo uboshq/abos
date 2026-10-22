@@ -433,8 +433,18 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `purchase.payment.simulate`: টাকা দেওয়ার পর্দার খাতা-প্রিভিউ,
      *       কোনো কাগজ বানায় না, কিছু লেখে না (দাবি: ThePaySupplierScreenFollowsTheDesignTest::test_item_10 — সারি গোনা আর
      *       নিরীক্ষা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়।
+     *
+     * ── ⚠️ ৪৫৭ → ৪৫৯, ২২ অক্টোবর ২০২৬ (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON; দাবি:
+     *       TheCollectionFormPostsWhatTheDesignSaysTest::test_item_10_the_preview_shows_exactly_the_lines_the_post_writes — কাগজ আর
+     *       খাতার সারি গোনা অপরিবর্তিত) আর `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়);
+     *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
+     *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
+     *       আটকাত (JSON-এ ৪০৯)।
+     *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
+     *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
      */
-    private const CEILING = 457;
+    private const CEILING = 459;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

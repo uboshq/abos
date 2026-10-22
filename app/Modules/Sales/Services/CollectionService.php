@@ -442,7 +442,7 @@ final class CollectionService
             ]));
 
             $branch = $branchId === null ? '' : (string) (Branch::query()->whereKey($branchId)->first()?->name() ?? '');
-            $accounts = Account::query()->whereIn('id', array_column($built ?? [], 'account_id'))->get()->keyBy('id');
+            $accounts = Account::query()->whereKey(array_column($built ?? [], 'account_id'))->get()->keyBy('id'); // ⓘ কেবল নাম — খাত আগেই বাছা (resolveMoneyAccount postable, বাকি চার্টের স্থির পাতা)
             $customer = Customer::query()->withoutGlobalScopes()->whereKey($in->customerId)->first();
 
             foreach ($built ?? [] as $line) {

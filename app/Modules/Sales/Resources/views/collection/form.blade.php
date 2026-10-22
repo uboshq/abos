@@ -259,7 +259,7 @@
                                                    class="size-4 accent-(--color-brand-600)">
                                         </td>
                                         <td>
-                                            <a :href="row.url" x-text="row.no" class="text-(--color-link) hover:underline"></a>
+                                            <a :href="row.url" x-text="row.no" :id="'cf-' + i + '-paper'" class="text-(--color-link) hover:underline"></a>
                                             <span x-show="row.chip !== ''" x-text="row.chip"
                                                   class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)"></span>
                                             <input type="hidden" :name="'lines[' + i + '][kind]'" :value="row.kind" :disabled="!row.on">
@@ -273,7 +273,8 @@
                                         <td class="num" x-text="row.openText"></td>
                                         <td class="num">
                                             <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" :disabled="!row.on"
-                                                   :aria-label="row.no"
+                                                   aria-label="{{ __('sales::collection_form.col_apply') }}" :id="'cf-' + i + '-apply'"
+                                                   :aria-labelledby="'cf-' + i + '-apply' + ' ' + 'cf-' + i + '-paper'"
                                                    class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                         </td>
                                     </tr>
@@ -303,12 +304,11 @@
                     <h2 id="cf-attach" class="mb-3 font-semibold">{{ __('sales::collection_form.attach_title') }}</h2>
 
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label data-slip-drop
-                               class="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-(--radius-field) border border-dashed border-(--color-border-strong) text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)">
-                            <x-ui.icon name="attachment" :size="16" />
-                            <span>{{ __('sales::collection_form.drop') }}</span>
-                            <input type="file" name="slip" class="sr-only" accept="image/jpeg,image/png,image/webp,application/pdf">
-                        </label>
+                        {{-- ⓘ বাংলা ফাইল-বাছাই ([[ui.file-input]]): ব্রাউজারের "Choose File" নয়, বাছা ফাইলের নাম পাশে (AFileIsChosenInBengaliTest) --}}
+                        <div data-slip-drop>
+                            <span class="mb-1 block text-sm text-(--color-ink-muted)">{{ __('sales::collection_form.drop') }}</span>
+                            <x-ui.file-input name="slip" id="cf-slip" accept="image/jpeg,image/png,image/webp,application/pdf" />
+                        </div>
 
                         <x-ui.field name="narration" id="cf-narration" :label="__('sales::collection_form.narration')"
                                     :value="old('narration', $collection->narration)" />

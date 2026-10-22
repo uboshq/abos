@@ -43,6 +43,36 @@ class CollectionApplication extends Model
         return 'collection';
     }
 
+    /**
+     * ⭐ অডিটের সারিটা কার খাতায় — আদায়টার কোম্পানি ([[AnAuditedModelMustSayWhoseBooksItBelongsToTest]]; ছাড়ের তালিকায় না বসে)।
+     *
+     * ⓘ এই টেবিলের নিজের `company_id` নেই; উত্তরটা আদায়ের সারির, প্রসঙ্গের নয়। ⚠️ `acrossBranches()`: আদায় বসে গ্রাহকের
+     * শাখায় (দফা ১৪), হেডারে বাছা শাখায় নয় — শাখার দেয়াল থাকলে এক শাখায় বাঁধা মানুষের হাতে আদায়টা "নেই" হত আর
+     * [[AuditEngine]] কোম্পানি না পেয়ে নিঃশব্দে কিছুই লিখত না। কোম্পানির দেয়াল থাকে।
+     */
+    public function auditCompanyId(): ?int
+    {
+        $companyId = $this->auditPaper()['company_id'] ?? null;
+
+        return $companyId === null ? null : (int) $companyId;
+    }
+
+    /** ⓘ আদায়ের শাখা — প্রয়োগটা সেই কাগজেরই সারি; হেডারের শাখা বসালে একই আদায়ের সারি দুই শাখায় দেখাত */
+    public function auditBranchId(): ?int
+    {
+        $branchId = $this->auditPaper()['branch_id'] ?? null;
+
+        return $branchId === null ? null : (int) $branchId;
+    }
+
+    /** @return array{company_id?: mixed, branch_id?: mixed} */
+    private function auditPaper(): array
+    {
+        $row = Collection::acrossBranches()->whereKey((int) $this->collection_id)->first(['company_id', 'branch_id']);
+
+        return $row === null ? [] : ['company_id' => $row->company_id, 'branch_id' => $row->branch_id];
+    }
+
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);

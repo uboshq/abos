@@ -374,6 +374,38 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame([], array_values(array_filter($open, fn ($i) => $i['id'] === $first->public_id)), '⛔ দফা ৩: খরচ হওয়া ক্রেডিট এখনো খোলা দেখায়');
     }
 
+    /**
+     * দফা ১৪, ১৬ — ক্রেডিটের প্রয়োগের অডিট-সারি আদায়টার কোম্পানি আর শাখায় বসে, হেডারের বা কর্তার শাখায় নয়
+     * ([[CollectionApplication::auditCompanyId()]] / auditBranchId(); আগে মডেলটা AnAuditedModelMustSayWhoseBooksItBelongsToTest-এর
+     * ছাড়ের তালিকায় ছিল, তাই প্রসঙ্গের শাখা বসত)। গ্রাহক অন্য শাখার, তাই আদায়ও সেখানে (দফা ১৪)।
+     */
+    public function test_item_16_a_credit_application_is_audited_in_the_collections_own_branch(): void
+    {
+        $other = $this->otherBranch();
+        $this->dealer->forceFill(['branch_id' => $other->id])->save();
+
+        $first = $this->book(['amount' => '500', 'lines_given' => '1']);
+        $bill = SalesInvoice::query()->create(['document_no' => 'INV-CF-APPA', 'customer_id' => $this->dealer->id, 'branch_id' => $other->id,
+            'trx_date' => now()->subDays(2)->toDateString(), 'due_on' => now()->addDays(10)->toDateString(),
+            'subtotal' => '900', 'discount' => '0', 'tax' => '0', 'total' => '900', 'status' => DocumentStatus::CONFIRMED]);
+        $second = $this->book(['amount' => '400', 'lines' => [
+            ['kind' => 'credit', 'id' => $first->public_id, 'amount' => '-500'],
+            ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '900'],
+        ]]);
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $second->status, 'প্রস্তুতিটাই ভুল — ক্রেডিটসহ আদায় পোস্ট হয়নি: '.json_encode($this->errors()?->all()));
+        $this->assertSame((int) $other->id, (int) $second->branch_id, 'প্রস্তুতিটাই ভুল — আদায় গ্রাহকের শাখায় বসেনি');
+        $this->assertNotSame((int) $other->id, (int) CompanyContext::branchId(), 'প্রস্তুতিটাই ভুল — হেডারের শাখাই আদায়ের শাখা, দাবিটা কিছু মাপে না');
+
+        $application = CollectionApplication::query()->where('collection_id', $second->id)->where('kind', 'credit')->firstOrFail();
+        $trail = AuditTrail::query()->where('auditable_type', CollectionApplication::class)->where('auditable_id', $application->id)
+            ->where('action', AuditTrail::CREATED)->latest('id')->first();
+
+        $this->assertNotNull($trail, '⛔ দফা ১৬: ক্রেডিটের প্রয়োগের অডিট-সারি লেখা হয়নি');
+        $this->assertSame((int) $this->company->id, (int) $trail->company_id, '⛔ দফা ১৬: প্রয়োগের অডিট আদায়ের কোম্পানির খাতায় নয়');
+        $this->assertSame((int) $other->id, (int) $trail->branch_id, '⛔ দফা ১৪/১৬: প্রয়োগের অডিট আদায়ের শাখায় নয় (হেডারের বা কর্তার শাখায় বসল)');
+    }
+
     /** দফা ৩ — নতুন পর্দায় সব টিক তুললে কোনো বিলে বসে না; সবটা অপ্রয়োগকৃত */
     public function test_item_3_no_ticked_bill_means_no_bill_is_paid(): void
     {
@@ -800,6 +832,45 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             '⛔ দফা ১৮: চাবি ছাড়া ফোনে খোলা বিল দেখা গেল');
         $this->assertSame(403, $this->postJson('/api/v1/sales/collections/preview', ['customerId' => (string) $this->dealer->public_id,
             'trxDate' => now()->toDateString(), 'amount' => '700'])->status(), '⛔ দফা ১৮: চাবি ছাড়া ফোনে প্রিভিউ খুলল');
+    }
+
+    /**
+     * দফা ১৮ — ওয়েবের খোলা কাগজ হেডারে বাছা শাখা মানে, ফোনের open-bills-এর মতো (EveryPartyListFollowsTheViewedBranchTest-এর লাল,
+     * Mac-এ 3d336ee4f): এক শাখায় বাঁধা কর্তা অন্য শাখার গ্রাহকের id দিলে খোলা কাগজ ৪০৪ — না-থাকা গ্রাহকের একই উত্তর — আর পর্দা
+     * `?customer=` ধরে তাঁর বিল আঁকে না; নিজের শাখার গ্রাহকে দুটোই খোলে (দাবিটা কিছু মাপে)।
+     */
+    public function test_item_18_the_web_open_items_follow_the_viewed_branch(): void
+    {
+        $home = (int) $this->company->defaultBranch()->id;
+        $away = $this->otherBranch();
+        $mine = Customer::query()->create(['code' => 'CF-HOME', 'name_en' => 'Home Store', 'branch_id' => $home, 'is_active' => true]);
+        $there = Customer::query()->create(['code' => 'CF-AWAY', 'name_en' => 'Away Store', 'branch_id' => $away->id, 'is_active' => true]);
+
+        foreach ([['INV-CF-HOME', $mine, $home], ['INV-CF-AWAY', $there, (int) $away->id]] as [$no, $customer, $branchId]) {
+            SalesInvoice::query()->create(['document_no' => $no, 'customer_id' => $customer->id, 'branch_id' => $branchId,
+                'trx_date' => now()->subDays(3)->toDateString(), 'due_on' => now()->addDays(10)->toDateString(),
+                'subtotal' => '800', 'discount' => '0', 'tax' => '0', 'total' => '800', 'status' => DocumentStatus::CONFIRMED]);
+        }
+
+        $this->maker->forceFill(['current_branch_id' => $home, 'view_all_branches' => false])->save();
+        $this->actingAs($this->maker->fresh());
+
+        $own = $this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]))->assertOk()->getContent();
+        $this->assertStringContainsString('INV-CF-HOME', (string) $own, 'প্রস্তুতিটাই ভুল — নিজের শাখার গ্রাহকের বিলও আসে না');
+
+        $other = $this->getJson(route('sales.collection.open_items', ['customer' => $there->id]));
+        $this->assertSame(404, $other->status(), '⛔ দফা ১৮: শাখায় বাঁধা কর্তা অন্য শাখার গ্রাহকের খোলা কাগজ পেলেন ('.$other->status().')');
+        $this->assertStringNotContainsString('INV-CF-AWAY', (string) $other->getContent(), '⛔ দফা ১৮: অন্য শাখার গ্রাহকের বিল ফাঁস হলো');
+        $this->assertSame(404, $this->getJson(route('sales.collection.open_items', ['customer' => (string) $there->public_id]))->status(),
+            '⛔ দফা ১৮: public_id ধরে অন্য শাখার গ্রাহকের খোলা কাগজ খুলল');
+        $missing = $this->getJson(route('sales.collection.open_items', ['customer' => (int) Customer::query()->withoutGlobalScopes()->max('id') + 1000]));
+        $this->assertSame([$missing->status(), $missing->json('message')], [$other->status(), $other->json('message')],
+            '⛔ দফা ১৮: অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
+
+        $this->assertStringContainsString('INV-CF-HOME', (string) $this->get(route('sales.collection.create', ['customer' => $mine->id]))->assertOk()->getContent(),
+            'প্রস্তুতিটাই ভুল — পর্দা নিজের শাখার গ্রাহকের বিল আঁকে না');
+        $this->assertStringNotContainsString('INV-CF-AWAY', (string) $this->get(route('sales.collection.create', ['customer' => $there->id]))->assertOk()->getContent(),
+            '⛔ দফা ১৮: পর্দা ?customer= ধরে অন্য শাখার গ্রাহকের বিল আঁকল');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

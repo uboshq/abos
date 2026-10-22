@@ -203,7 +203,7 @@ class CollectionController extends Controller implements HasMiddleware
     {
         $in = $request->collectionInput();
         $facts = $preview->of($in);
-        $customer = Customer::query()->with(Customer::PLACE)->find($in->customerId);
+        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)->find($in->customerId); // ⓘ পিকারের ছাঁকনি; বাইরের গ্রাহকে নামের সারি আসে না
 
         $o = ConfirmOverview::titled(__('sales::collection_form.overview_title'))
             ->head(__('sales::field.customer'), $customer?->nameWithPoint())
@@ -309,7 +309,7 @@ class CollectionController extends Controller implements HasMiddleware
             maxBytes: AttachmentEngine::SLIP_MAX_BYTES, only: AttachmentEngine::SLIP);
     }
 
-    /** গ্রাহক — এই মানুষের নাগালে থাকলে (শাখা আর ডিলারের দেয়াল মডেলের নিজের, তার উপরে ডিলারের নিয়ম) */
+    /** গ্রাহক — নাগালে থাকলে: হেডারে বাছা শাখার (পিকারের একই ছাঁকনি; Customer-এ শাখার গ্লোবাল স্কোপ ইচ্ছা করেই নেই, ফোনের open-bills-ও তাই), তার উপরে ডিলারের নিয়ম */
     private function chosenCustomer(mixed $id): ?Customer
     {
         if (blank($id) || ! is_scalar($id)) {
@@ -317,7 +317,7 @@ class CollectionController extends Controller implements HasMiddleware
         }
 
         $id = (string) $id;
-        $customer = Customer::query()->with(Customer::PLACE)
+        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)
             ->when(ctype_digit($id), fn ($q) => $q->whereKey((int) $id), fn ($q) => $q->where('public_id', $id))
             ->first();
 
