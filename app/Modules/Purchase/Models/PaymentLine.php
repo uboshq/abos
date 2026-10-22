@@ -20,12 +20,12 @@ class PaymentLine extends Model
     protected $table = 'pur_payment_lines';
 
     protected $fillable = [
-        'company_id', 'payment_id', 'purchase_bill_id', 'amount', 'line_no',
+        'company_id', 'payment_id', 'purchase_bill_id', 'amount', 'ait_amount', 'vds_amount', 'line_no',
     ];
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:4'];
+        return ['amount' => 'decimal:4', 'ait_amount' => 'decimal:4', 'vds_amount' => 'decimal:4'];
     }
 
     public function payment(): BelongsTo

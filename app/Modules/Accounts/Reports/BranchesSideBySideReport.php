@@ -40,7 +40,8 @@ final class BranchesSideBySideReport
     {
         return new ReportDefinition(
             key: self::KEY,
-            permission: ['accounts.report', 'accounts.report.final'],
+            // ⭐ কেবল চূড়ান্ত হিসাবের চাবি — মেনু আর দরজার একই নিয়ম (fe hotfix, ১৯ অক্টোবর ২০২৬)
+            permission: 'accounts.report.final',
             title: 'accounts::branches.title',
             filters: ['date_range'],
             splitByBranch: false,

@@ -32,13 +32,25 @@ use Illuminate\Console\Command;
  */
 class SyncChart extends Command
 {
-    protected $signature = 'abos:sync-chart';
+    protected $signature = 'abos:sync-chart {--dry-run : কোন কোম্পানিতে কোন খাত বসত তা দেখায়, কিছু লেখে না}';
 
     protected $description = 'প্রতিটা কোম্পানিতে মান হিসাব-ছকের অনুপস্থিত খাতগুলো বসায়';
 
     public function handle(StandardChart $chart): int
     {
         $total = 0;
+
+        /* ⓘ আগে দেখা, তারপর বসানো — যেমন ২১২২ (উৎসে ভ্যাট প্রদেয়) যোগ হওয়ার দিনে (fe, ২১ অক্টোবর ২০২৬) */
+        if ($this->option('dry-run')) {
+            foreach (Company::query()->orderBy('id')->get() as $company) {
+                $missing = CompanyContext::forCompany($company->id, fn () => $chart->missingCodes());
+                $this->line($company->code.': '.($missing === [] ? '—' : implode(', ', $missing)));
+                $total += count($missing);
+            }
+            $this->info("মোট {$total}টা খাত বসত (কিছুই লেখা হয়নি)।");
+
+            return self::SUCCESS;
+        }
 
         foreach (Company::query()->orderBy('id')->get() as $company) {
             /*

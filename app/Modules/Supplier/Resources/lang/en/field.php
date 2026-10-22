@@ -30,6 +30,9 @@ return [
 
     'bin' => 'BIN',
     'tin' => 'TIN',
+    'ait_rate' => 'AIT rate % — on the value excluding VAT',
+    'vds_rate' => 'VDS rate % — on the bill\'s VAT',
+    'rate_reason' => 'Reason for the rate change',
 
     'credit_limit' => 'Credit limit they allow us',
     'credit_days' => 'Credit days',

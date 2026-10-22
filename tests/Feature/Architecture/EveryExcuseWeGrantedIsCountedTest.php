@@ -430,8 +430,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   −২  ছবির দরজা (`users.photo`, `api.users.photo`) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeFace')` → UserPolicy::seeFace
      *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
      *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
+     *
+     * ── ⚠️ ৪৫৬ → ৪৫৭, ২২ অক্টোবর ২০২৬ (cb, fe মেনেছেন) ─────────────────
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `purchase.payment.simulate`: টাকা দেওয়ার পর্দার খাতা-প্রিভিউ,
+     *       কোনো কাগজ বানায় না, কিছু লেখে না (দাবি: ThePaySupplierScreenFollowsTheDesignTest::test_item_10 — সারি গোনা আর
+     *       নিরীক্ষা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়।
      */
-    private const CEILING = 456;
+    private const CEILING = 457;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -89,6 +89,8 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'warehouse_id', 'trx_date', 'due_on', 'supplier_bill_no',
+        // ⭐ উৎসে কর্তন — হিসাব #১, ২০ অক্টোবর ২০২৬ ([[WithheldTax]])
+        'ait_amount', 'vds_amount',
 
         /*
          * ⭐ যেদিন মাল এল — বিলের তারিখ থেকে আলাদা।
@@ -127,6 +129,8 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
         'lc_no', 'be_no', 'be_date', 'vessel', 'port_of_entry',
 
         'subtotal', 'discount', 'tax', 'total',
+        // ⭐ কর কোথায় কাটা — `bill` বা `payment`; দুবার কাটা ঠেকায় ([[PaymentWithholding]])
+        'withheld_at',
         'status', 'narration', 'created_by',
 
         /*
@@ -154,6 +158,8 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'total' => 'decimal:4',
+            'ait_amount' => 'decimal:4',
+            'vds_amount' => 'decimal:4',
 
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — নাহলে যোগ-বিয়োগে
             // এক পয়সা করে হারাত, আর ধরা পড়ত মাস শেষে
@@ -406,7 +412,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
         [$paid, $byVoucher, $returned] = self::owedParts();
 
         return $query->whereRaw(
-            'pur_bills.total - ('.$paid->toSql().') - ('.$byVoucher->toSql().') - ('.$returned->toSql().') > 0',
+            'pur_bills.total - pur_bills.ait_amount - pur_bills.vds_amount - ('.$paid->toSql().') - ('.$byVoucher->toSql().') - ('.$returned->toSql().') > 0',
             [...$paid->getBindings(), ...$byVoucher->getBindings(), ...$returned->getBindings()],
         );
     }
@@ -444,9 +450,18 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
             ->whereIn('status', DocumentStatus::POSTED)->sum('total')), '0', 4);
     }
 
+    /**
+     * ⭐ উৎসে কেটে রাখা — AIT + VDS (হিসাব #১, ২০ অক্টোবর ২০২৬)। ⓘ সরবরাহকারী এটা কোনোদিন পান না, সরকার পায় ([[WithheldTax]]);
+     * তাই সরবরাহকারীর বাকি থেকে বাদ — নাহলে কাটা অংশ চিরকাল "বাকি" দেখাত, আর কেউ সেটাও সরবরাহকারীকে দিয়ে ফেলত।
+     */
+    public function withheldAmount(): string
+    {
+        return bcadd((string) ($this->ait_amount ?? '0'), (string) ($this->vds_amount ?? '0'), 4);
+    }
+
     public function dueAmount(): string
     {
-        $due = bcsub(bcsub((string) $this->total, $this->paidAmount(), 4), $this->returnedAmount(), 4);
+        $due = bcsub(bcsub(bcsub((string) $this->total, $this->withheldAmount(), 4), $this->paidAmount(), 4), $this->returnedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }

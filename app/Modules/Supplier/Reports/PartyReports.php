@@ -207,7 +207,7 @@ final class PartyReports
                           and t.status in ({$posted}) and t.deleted_at is null and t.trx_date <= {$asOf}))";
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
-                $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
+                $due = 'GREATEST(pur_bills.total - pur_bills.ait_amount - pur_bills.vds_amount - '.$settled.', 0)';
 
                 return DB::table('pur_bills')
                     ->join('suppliers', 'suppliers.id', '=', 'pur_bills.supplier_id')

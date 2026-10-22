@@ -35,6 +35,9 @@ class PurchaseBillRequest extends FormRequest
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'due_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
             'supplier_bill_no' => ['nullable', 'string', 'max:64'],
+            // ⭐ উৎসে কর্তন (হিসাব #১) — টাকার অঙ্ক
+            'ait_amount' => ['nullable', 'numeric', 'min:0'],
+            'vds_amount' => ['nullable', 'numeric', 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1', 'max:500'],
@@ -126,6 +129,8 @@ class PurchaseBillRequest extends FormRequest
     {
         return $this->safe()->only([
             'supplier_id', 'trx_date', 'due_on', 'supplier_bill_no', 'narration',
+            // ⭐ উৎসে কর্তন — হিসাব #১
+            'ait_amount', 'vds_amount',
         ]);
     }
 
