@@ -73,6 +73,7 @@ return [
     'opening_corrected' => 'Opening stock row corrected',
     'opening_removed' => 'Opening stock row removed',
     'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
+    'withholding_rate' => 'Withholding rate changed',
     'own_claim_signed' => 'Own claim signed by the same person',
     'claim_gone_rejected' => 'Signed after the employee left: claim rejected, nothing paid',
     'own_advice_accepted' => 'Own payment advice accepted by the same person',
@@ -116,4 +117,9 @@ return [
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
     'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
+    'bank_requested' => 'Bank details change requested',
+    'bank_replaced' => 'Older bank details request replaced',
+    'bank_signed' => 'Bank details second signature',
+    'bank_rejected' => 'Bank details change refused',
+    'bank_withdrawn' => 'Bank details change withdrawn',
 ];

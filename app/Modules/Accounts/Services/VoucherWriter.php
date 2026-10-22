@@ -342,7 +342,7 @@ final class VoucherWriter
             return array_values((array) ($input['lines'] ?? []));
         }
 
-        return $this->vouchers->twoLineEntry(
+        $lines = $this->vouchers->twoLineEntry(
             $type,
             (int) ($input['from_account_id'] ?? 0),
             (int) ($input['to_account_id'] ?? 0),
@@ -350,5 +350,12 @@ final class VoucherWriter
             $input['narration'] ?? null,
             ($input['charge_amount'] ?? '') !== '' ? (string) $input['charge_amount'] : null,
         );
+
+        // ⭐ খরচে উৎসে কর্তন খাতায় — খরচ মোটে, টাকা নিটে, কর্তন সরকারের দায়ে (#১, ২০ অক্টোবর ২০২৬; [[WithheldTax]])
+        if ($type === Voucher::EXPENSE) {
+            return app(WithheldTax::class)->onExpense($lines, (int) ($input['to_account_id'] ?? 0), $input);
+        }
+
+        return $lines;
     }
 }

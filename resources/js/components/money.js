@@ -85,6 +85,361 @@ export function wayForKind (kind, current) {
     return current
 }
 
+/**
+ * ⭐ [[components.money.method]]-এর মগজ — পদ্ধতি, চার্জের লাইন, আগাম চেক, নোট গোনা (মালিক, ২১ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ব্যাংকের খাতে চারটা পথই চলে (ট্রান্সফার, নগদ জমা, চেক, পুরনো কার্ড), তাই আগে থেকে ওর একটা বাছা থাকলে সেটাই থাকে;
+ * নইলে ট্রান্সফার — [[wayForKind]]-এর একই নিয়ম, নগদ জমা যোগ করে।
+ */
+export function methodForKind (kind, current) {
+    if (kind === 'cash') return 'cash'
+    if (kind === 'mfs') return 'mfs'
+    if (kind === 'bank') return ['transfer', 'deposit', 'cheque', 'card'].includes(current) ? current : 'transfer'
+
+    return current
+}
+
+/** চার্জের লাইন — লেখার ছাঁচে অঙ্ক দুইটা বসানো (`:charge`, `:amount`, `:head`) */
+export function chargeLine (template, { charge, amount, head }) {
+    return String(template ?? '')
+        .replace(':charge', taka(charge))
+        .replace(':amount', taka(amount))
+        .replace(':head', head ?? '')
+}
+
+export function moneyMethod ({
+    method = 'cash',
+    charge = '',
+    chequeDate = '',
+    amountField = 'amount',
+    chargeField = 'charge_amount',
+    moneyField = '',
+    direction = 'in',
+    notes = {},
+} = {}) {
+    return {
+        method: method || 'cash',
+        charge: charge ?? '',
+        chequeDate: chequeDate || '',
+        amount: 0,
+        notes: (notes && typeof notes === 'object') ? { ...notes } : {},
+
+        readAmount () {
+            const field = this.$el.closest('form')?.querySelector(`[name="${amountField}"]`)
+            const raw = String(field?.value ?? '').replace(/[^0-9.]/g, '')
+
+            this.amount = raw === '' ? 0 : Number(raw)
+        },
+
+        /*
+         * ⓘ বাইরের অংশের জন্য (আদায়ের সারাংশ, a5): পদ্ধতি বা চার্জ বদলালেই `money-method` ঘটনা, `detail = { method, charge }` —
+         * চার্জ কেবল যে পদ্ধতিতে চার্জের ঘর আছে, নইলে ০ ([[chargeNumber]])।
+         */
+        announce () {
+            this.$dispatch('money-method', { method: this.method, charge: this.chargeNumber })
+        },
+
+        init () {
+            this.readAmount()
+            this.$watch('method', () => this.announce())
+            this.$watch('charge', () => this.announce())
+            this.$nextTick(() => this.announce())
+
+            const form = this.$el.closest('form')
+
+            form?.addEventListener('input', (event) => {
+                if (event.target?.name === amountField) {
+                    this.readAmount()
+                }
+            })
+
+            if (moneyField) {
+                form?.addEventListener('change', (event) => {
+                    if (event.target?.name === moneyField) {
+                        this.followAccount(event.target)
+                    }
+                })
+            }
+        },
+
+        followAccount (select) {
+            const option = [...(select?.options ?? [])].find(o => o.value === select.value)
+
+            this.method = methodForKind(option?.dataset?.kind ?? '', this.method)
+        },
+
+        /* ⓘ চার্জ কেবল যে পদ্ধতিতে চার্জের ঘর আছে — নগদে বা চেকে পুরনো সংখ্যা থেকে গেলে লাইনটা মিথ্যা বলত */
+        get chargeNumber () {
+            return ['mfs', 'transfer', 'deposit'].includes(this.method) ? (Number(this.charge) || 0) : 0
+        },
+
+        get hasCharge () {
+            return this.chargeNumber > 0
+        },
+
+        /* ⓘ `$root`, `$el` নয় — getter-এ `$el` হল যে ঘর লাইনটা আঁকে, আর ছাঁচগুলো বাক্সের মাথায় */
+        get chargeLine () {
+            const data = this.$root.dataset
+
+            return chargeLine(direction === 'out' ? data.lineOut : data.lineIn, {
+                charge: this.chargeNumber,
+                amount: this.amount,
+                head: this.method === 'mfs' ? data.headMfs : data.headBank,
+            })
+        },
+
+        get postDated () {
+            return this.method === 'cheque' && this.chequeDate !== ''
+                && this.chequeDate > new Date().toISOString().slice(0, 10)
+        },
+
+        noteTotal (note) {
+            const sum = (Number(this.notes[note]) || 0) * note
+
+            return sum ? taka(sum, { decimals: 0 }) : '—'
+        },
+
+        get counted () {
+            return countNotes(this.notes)
+        },
+
+        get countMatches () {
+            return Math.abs(this.counted - Number(this.amount || 0)) < 0.005
+        },
+
+        get countClass () {
+            return this.countMatches
+                ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                : 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'
+        },
+
+        get countText () {
+            const line = this.$root.querySelector('[data-agrees]')
+
+            return this.countMatches ? (line?.dataset?.agrees ?? '') : (line?.dataset?.differs ?? '')
+        },
+    }
+}
+
+/** লেখা টাকা → পয়সায় পূর্ণসংখ্যা — যোগ-বিয়োগে ভগ্নাংশের ভুল নয় (নকশা #২৫: পয়সা পর্যন্ত নির্ভুল) */
+export function paisa (value) {
+    const clean = String(value ?? '').replace(/[^0-9.-]/g, '')
+
+    return clean === '' || Number.isNaN(Number(clean)) ? 0 : Math.round(Number(clean) * 100)
+}
+
+/** পয়সা → লেখা ঘরের মান ("1250.50") */
+export function fromPaisa (value) {
+    return (value / 100).toFixed(2)
+}
+
+/**
+ * পুরনো বিল আগে — টাকাটা শেষ দিনের ক্রমে বিলে বিলে বসে, যতক্ষণ থাকে (নকশা #৩; SAP-এর clearing)।
+ *
+ * @param bills [{ id, remaining (পয়সা) }] — আগে থেকেই ক্রমে সাজানো
+ * @returns { [id]: পয়সা }
+ */
+export function allocateOldestFirst (bills, amount) {
+    let left = Math.max(0, amount)
+    const out = {}
+
+    for (const bill of bills) {
+        const take = Math.min(left, bill.remaining)
+        out[String(bill.id)] = take
+        left -= take
+    }
+
+    return out
+}
+
+/**
+ * ⭐ টাকা দেওয়ার পর্দা (সরবরাহকারী-পরিশোধ) — মাথার তিন অঙ্ক, খোলা বিলের টেবিল, সারাংশ, খাতে টাকা আছে কি না, আর পোস্টের আগের
+ * প্রিভিউ (নকশা #১, #৩, #৪, #১০, #২৪; মালিক, ২১ অক্টোবর ২০২৬)।
+ *
+ * ⓘ অঙ্ক দেখায় পর্দা, কিন্তু খাতায় কী যাবে বলে সার্ভার: প্রিভিউ আসে [[PaymentController::simulate()]] থেকে — পোস্টের একই নিয়মে।
+ */
+export function payBills ({
+    bills = [],
+    supplier = '',
+    amount = '',
+    account = '',
+    picks = {},
+    balances = {},
+    taxIds = {},
+    bankIds = [],
+    simulateUrl = '',
+} = {}) {
+    return {
+        bills: bills.map(b => ({ ...b, remaining: paisa(b.remaining), total: paisa(b.total) })),
+        supplier: String(supplier ?? ''),
+        amount: String(amount ?? ''),
+        account: String(account ?? ''),
+        charge: 0,
+        method: 'cash',
+        lines: Object.fromEntries(Object.entries(picks).map(([id, v]) => [String(id), paisa(v)])),
+        balances,
+        preview: { rows: [], debit: '', credit: '', balanced: true },
+        timer: null,
+        asked: 0,
+
+        init () {
+            this.$watch('supplier', () => this.allocate())
+            this.$watch('amount', () => this.allocate())
+            this.$watch('account', () => this.refresh())
+            this.$nextTick(() => this.refresh())
+        },
+
+        /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */
+        heard (detail) {
+            this.charge = paisa(detail?.charge ?? 0)
+            this.method = detail?.method ?? 'cash'
+            this.refresh()
+        },
+
+        get visible () {
+            return this.bills.filter(b => String(b.supplier) === this.supplier)
+        },
+
+        allocate () {
+            this.lines = allocateOldestFirst(this.visible, paisa(this.amount))
+            this.refresh()
+        },
+
+        lineOf (id) {
+            return this.lines[String(id)] ?? 0
+        },
+
+        isOn (id) {
+            return this.lineOf(id) > 0
+        },
+
+        shown (id) {
+            const v = this.lineOf(id)
+
+            return v > 0 ? fromPaisa(v) : ''
+        },
+
+        /* টিক — দিলে বাকি টাকা থেকে যতটা ধরে, তুললে শূন্য */
+        toggle (id) {
+            const bill = this.visible.find(b => String(b.id) === String(id))
+            if (!bill) return
+            const free = Math.max(0, paisa(this.amount) - this.applied + this.lineOf(id))
+            this.lines = { ...this.lines, [String(id)]: this.isOn(id) ? 0 : Math.min(bill.remaining, free) }
+            this.refresh()
+        },
+
+        /* হাতে লেখা — বিলের বাকির বেশি নয় */
+        typed (id, value) {
+            const bill = this.visible.find(b => String(b.id) === String(id))
+            if (!bill) return
+            this.lines = { ...this.lines, [String(id)]: Math.min(bill.remaining, Math.max(0, paisa(value))) }
+            this.refresh()
+        },
+
+        get picked () {
+            return this.visible.filter(b => this.lineOf(b.id) > 0).map(b => ({ id: b.id, amount: fromPaisa(this.lineOf(b.id)) }))
+        },
+
+        get applied () {
+            return this.visible.reduce((s, b) => s + this.lineOf(b.id), 0)
+        },
+
+        get owed () {
+            return this.visible.reduce((s, b) => s + b.remaining, 0)
+        },
+
+        get billTotal () {
+            return this.visible.reduce((s, b) => s + b.total, 0)
+        },
+
+        /* মাথার তিন অঙ্ক */
+        get owedText () { return taka(this.owed / 100) },
+        get payingText () { return taka(paisa(this.amount) / 100) },
+        get leftText () { return taka(Math.max(0, this.owed - paisa(this.amount)) / 100) },
+
+        /* সারাংশ */
+        get appliedText () { return taka(this.applied / 100) },
+        get remainingText () { return taka(this.owed / 100) },
+        get billTotalText () { return taka(this.billTotal / 100) },
+        get chargeText () { return taka(this.charge / 100) },
+        /* ⓘ কাটা আর নিট — সার্ভারের প্রিভিউ থেকে ([[PaymentWithholding]]); প্রিভিউ আসার আগে কাটা শূন্য, নিট মোট */
+        get aitText () { return this.preview.ait ?? '0.00' },
+        get vdsText () { return this.preview.vds ?? '0.00' },
+        get netText () { return this.preview.net ?? taka(paisa(this.amount) / 100) },
+
+        /* ⓘ প্রয়োগের বাইরে যা থাকে — অগ্রিম, সরবরাহকারীর খাতায় (নকশা #৪) */
+        get unapplied () {
+            return paisa(this.amount) - this.applied
+        },
+
+        get hasUnapplied () { return this.unapplied > 0 },
+        get overApplied () { return this.unapplied < 0 },
+        get unappliedText () { return taka(Math.abs(this.unapplied) / 100) },
+        get matches () { return this.unapplied === 0 && paisa(this.amount) > 0 },
+
+        /* ⭐ খাতে আছে কত, আর যথেষ্ট কি না (নকশা #২৪) */
+        get balance () {
+            return this.balances[this.account] ?? null
+        },
+
+        get hasBalance () { return this.balance !== null },
+        get balanceText () { return this.hasBalance ? taka(Number(this.balance.balance)) : '' },
+
+        get short () {
+            return this.hasBalance && paisa(this.balance.balance) < paisa(this.amount) + this.charge
+        },
+
+        get balanceClass () {
+            return this.short ? 'text-(--color-danger)' : 'text-(--color-badge-success-ink)'
+        },
+
+        /* ⭐ খাতায় যা যাবে — সার্ভারের হিসাবে, একটু থেমে (প্রতিটা অক্ষরে নয়) */
+        refresh () {
+            clearTimeout(this.timer)
+            this.timer = setTimeout(() => this.simulate(), 350)
+        },
+
+        async simulate () {
+            const form = this.$root.closest('form')
+            if (!form || !simulateUrl || this.supplier === '' || paisa(this.amount) <= 0) {
+                this.preview = { rows: [], debit: '', credit: '', balanced: true }
+                return
+            }
+
+            const body = new FormData(form)
+            body.delete('_method')
+            // ⛔ একবারের জমার টোকেন প্রিভিউতে নয় — খরচ হলে আসল "পোস্ট" দ্বিতীয় চাপ ধরা পড়ে ফিরত (সার্ভারও ছাড় দেয়: [[OneSubmitPerForm]])
+            body.delete('_once')
+
+            /*
+             * ⛔ কেবল শেষ প্রশ্নের উত্তর — আগের প্রশ্নের দেরিতে-আসা উত্তর নতুনটাকে ঢেকে দিত (মিল-তালিকার সময় ধরা, ২২ অক্টোবর
+             * ২০২৬: চার্জ লেখার পরেও প্রিভিউতে চার্জের সারি নেই, ব্যাংক থেকে ১,১৪,০০০ — চার্জ ছাড়া)।
+             */
+            const ticket = ++this.asked
+
+            try {
+                const response = await fetch(simulateUrl, { method: 'POST', body, headers: { Accept: 'application/json' } })
+                const answer = response.ok ? await response.json() : { rows: [], debit: '', credit: '', balanced: true }
+                if (ticket === this.asked) this.preview = answer
+            } catch {
+                if (ticket === this.asked) this.preview = { rows: [], debit: '', credit: '', balanced: true }
+            }
+        },
+
+        get hasPreview () { return this.preview.rows.length > 0 },
+
+        /* ⓘ বাছা সরবরাহকারীর ব্যাংক তথ্যের বাক্স আঁকা নেই — তখন "নেই" বাক্স (নকশা #৬) */
+        get noBankRecord () { return !bankIds.includes(this.supplier) },
+
+        /* ⓘ সরবরাহকারীর BIN · TIN — নকশায় নামের নিচে */
+        get taxLine () { return taxIds[this.supplier] ?? '' },
+
+        /* পয়সা → লাখ-কমার লেখা, টেবিলের ঘরে */
+        money (value) { return taka(value / 100) },
+        get unbalanced () { return this.hasPreview && !this.preview.balanced },
+    }
+}
+
 export function moneyMovement ({
     amountField,
     method = 'cash',

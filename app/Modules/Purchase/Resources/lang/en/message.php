@@ -48,6 +48,7 @@ return [
     'payment_created' => 'The payment was created.',
     'payment_updated' => 'The payment was updated.',
     'payment_confirmed' => 'The payment is posted.',
+    'payment_sent_to_sign' => 'The payment has been sent for signature — it posts once signed.',
     'payment_cancelled' => 'The payment was cancelled.',
     'no_payments' => 'No payments yet.',
     'payment_search' => 'Search by number, cheque number or supplier',
@@ -56,6 +57,7 @@ return [
     'payment_unallocated' => 'Not split across any bill — it stays on the supplier account and comes off the next bill.',
     'money_out' => ':no — money paid out',
     'against_payable' => ':no — against payable',
+    'charge_on_payment' => ':no — bank charge on the payment (our expense)',
 
     // Return
     'return_created' => 'The return was created — confirming it takes the goods out.',
@@ -179,4 +181,8 @@ return [
     'need_rate' => 'Type the purchase rate — a line cannot go into the cart at 0.',
     'need_sales_price' => 'Type the sales rate, or give a markup % or margin % — a line cannot go into the cart without one.',
     'need_priced_lines' => 'A cart line has no purchase rate or sales rate — fix it, then receive the goods.',
+
+    'withheld_ait' => ':no — income tax withheld at source (AIT), owed to the Government',
+    'withheld_vds' => ':no — VAT withheld at source (VDS), owed to the Government',
+    'withholding_undone_on_bounce' => 'Cheque :cheque bounced — the tax/VAT withheld on :no is reversed too',
 ];

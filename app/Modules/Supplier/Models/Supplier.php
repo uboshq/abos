@@ -50,6 +50,8 @@ class Supplier extends Model implements Drillable
         'phone', 'email', 'address_en', 'address_bn',
         'contact_person', 'contact_phone',
         'party_type_id', 'payment_term_id', 'bin', 'tin',
+        // ⭐ উৎসে কর আর ভ্যাটের হার — পরিশোধে কাটার উৎস ([[PaymentWithholding]]; নকশা #২৫)
+        'ait_rate', 'vds_rate',
         'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
         'status', 'is_active', 'created_by',
         // ⭐ প্রিন্সিপালের কমিশন — কেবল রিপোর্ট (মালিক, ৫ অক্টোবর ২০২৬; [[PrincipalCommission]])
@@ -59,6 +61,9 @@ class Supplier extends Model implements Drillable
     protected function casts(): array
     {
         return [
+            // ⭐ উৎসে কর আর ভ্যাটের হার — টাকার মতোই string-এ, float নয় (MoneyIsNeverAFloatTest)
+            'ait_rate' => 'decimal:4',
+            'vds_rate' => 'decimal:4',
             'credit_limit' => 'decimal:4',
             'credit_days' => 'integer',
             'opening_balance' => 'decimal:4',

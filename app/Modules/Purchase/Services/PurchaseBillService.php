@@ -237,6 +237,10 @@ final class PurchaseBillService
 
                 'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
 
+                // ⭐ উৎসে কর্তন — টাকার অঙ্ক, হার নয় (হার বদলায়); খাতায় বসে পাকা হলে ([[postToLedger()]]; হিসাব #১)
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
+
                 /*
                  * ⭐ যেদিন মাল এল — খতিয়ানের তারিখ নয়, মজুদের।
                  *
@@ -363,6 +367,8 @@ final class PurchaseBillService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
@@ -1330,6 +1336,8 @@ final class PurchaseBillService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
@@ -1645,13 +1653,39 @@ final class PurchaseBillService
                     'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])];
         }
 
+        /*
+         * ⭐ উৎসে কর্তন — সরবরাহকারী পান নিট, কাটা অংশ সরকারের দায়ে (হিসাব #১, ২০ অক্টোবর ২০২৬; [[WithheldTax]])।
+         *
+         * ⓘ আয়কর আইন ২০২৩ ধারা ৮৯: পরিশোধ বা হিসাবে জমা — যেটা আগে, তখনই কর্তন; বিল পাকা হওয়াই "হিসাবে জমা"। মূসক ও SD আইন
+         * ২০১২ ধারা ৪৯: VDS। ⓘ মাল আর খরচের দিক (উপরের সারিগুলো) মোট বিলেই থাকে — IAS 1 ¶৩২, কাটাকাটি নয়; বদলায় কেবল
+         * দেনার সারি: মোট − AIT − VDS, আর বাকিটা ২১২১-এ, দুই সারিতে।
+         */
+        $withheld = $bill->withheldAmount();
+
+        if (bccomp($withheld, $total, 4) > 0) {
+            throw ValidationException::withMessages(['ait_amount' => __('purchase::validation.withheld_over_total', [
+                'withheld' => Money::format($withheld), 'total' => Money::format($total),
+            ])]);
+        }
+
         $lines[] = [
             'account_id' => $this->account(StandardChart::PAYABLE)->id,
-            'credit' => $total,
+            'credit' => bcsub($total, $withheld, 4),
             'party_type' => 'supplier',
             'party_id' => $bill->supplier_id,
             'narration' => __('purchase::message.payable_to_supplier', ['no' => $bill->document_no]),
         ];
+
+        foreach (['ait' => (string) $bill->ait_amount, 'vds' => (string) $bill->vds_amount] as $kind => $value) {
+            if (bccomp($value, '0', 4) > 0) {
+                $lines[] = [
+                    // ⭐ AIT ২১২১, VDS ২১২২ (fe, ২১ অক্টোবর ২০২৬)
+                    'account_id' => $this->account($kind === 'vds' ? StandardChart::VDS_PAYABLE : StandardChart::TAX_DEDUCTED_AT_SOURCE)->id,
+                    'credit' => bcadd($value, '0', 4),
+                    'narration' => __('purchase::message.withheld_'.$kind, ['no' => $bill->document_no]),
+                ];
+            }
+        }
 
         $this->postBringingIn($bill, $lines);
 
@@ -2365,6 +2399,14 @@ final class PurchaseBillService
                 'status' => __('purchase::validation.only_draft_edits', ['no' => $bill->document_no]),
             ]);
         }
+    }
+
+    /** ⓘ উৎসে কর্তনের ঘর — খালি বা অ-সংখ্যা ০; ঋণাত্মক দরজার নিয়মে আগেই থামে (`min:0`) */
+    private static function withheldField(array $data, string $key): string
+    {
+        $value = trim((string) ($data[$key] ?? ''));
+
+        return preg_match('/^\d+(\.\d+)?$/', $value) === 1 ? bcadd($value, '0', 4) : '0.0000';
     }
 
     private function account(string $code): Account
