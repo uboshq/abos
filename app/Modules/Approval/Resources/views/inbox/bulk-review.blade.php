@@ -16,14 +16,14 @@
         <x-ui.page-header :title="__('approval::message.bulk_review_title')"
                           :subtitle="$count > 0
                               ? __('approval::message.bulk_will_sign', ['count' => $count, 'total' => \App\Core\Support\Money::format($total)])
-                              : __('approval::message.bulk_none')" />
+                              : __('approval::message.bulk_review_none')" />
     </x-slot:header>
 
     <div class="space-y-4" data-bulk-review>
         @if ($count > 0)
             <section data-bulk-sign class="space-y-2">
                 <x-ui.table compact
-                            :empty="__('approval::message.bulk_none')"
+                            :empty="__('approval::message.bulk_review_none')"
                             :rows="$sign"
                             :columns="[
                                 ['key' => 'what', 'label' => __('approval::field.action'),

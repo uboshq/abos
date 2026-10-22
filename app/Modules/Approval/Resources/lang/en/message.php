@@ -111,7 +111,7 @@ return [
     // Point 13 — look before signing many at once
     'bulk_review_title' => 'Sign many at once — check first',
     'bulk_will_sign' => ':count papers will be signed · total :total',
-    'bulk_none' => 'None of the chosen papers can be signed together — see why below.',
+    'bulk_review_none' => 'None of the chosen papers can be signed together — see why below.',
     'bulk_left_out' => 'Left out, with the reason',
     'bulk_sign_now' => 'Sign :count',
     'bulk_back' => 'Back to the inbox',
