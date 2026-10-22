@@ -247,6 +247,31 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertSame($before + 1, DB::table('attachments')->count(), '⛔ রসিদের সংযুক্তি কাগজের সাথে বসল না');
     }
 
+    /** ৭ক — সংযুক্তির বোতাম বাংলায়, ব্রাউজারের "Choose File" নয় (fe, ২৩ অক্টোবর ২০২৬) */
+    public function test_the_attachment_button_speaks_bengali(): void
+    {
+        $field = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/attachment-field.blade.php'));
+        $this->assertStringContainsString('<x-ui.file-input id="attachment" name="attachment"', $field, '⛔ ভাউচারের সংযুক্তি আবার কাঁচা ফাইল-ঘর — "Choose File / No file chosen" ইংরেজিতে');
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*type="file"/', $field, '⛔ ভাউচারের সংযুক্তি আবার কাঁচা ফাইল-ঘর');
+        $this->assertStringContainsString('data-file-input', $this->screen(Voucher::RECEIPT), '⛔ রসিদের পাতায় বাংলা ফাইল-বোতাম নেই');
+    }
+
+    /** ⭐ পক্ষের পাশের অঙ্ক চিহ্ন ধরে শব্দে — তিন অবস্থা, দুই দিক ([[party-voucher.test.js]]-এ আচরণ) */
+    public function test_the_partys_balance_is_named_by_its_sign_never_by_a_minus(): void
+    {
+        $words = ['due_in_owed' => 'বকেয়া', 'due_in_advance' => 'অগ্রিম', 'due_in_none' => 'বকেয়া নেই',
+            'due_out_owed' => 'দেনা', 'due_out_advance' => 'অগ্রিম দেওয়া', 'due_out_none' => 'দেনা নেই'];
+        foreach ($words as $key => $bn) {
+            $this->assertSame($bn, trans("accounts::field.{$key}", [], 'bn'), "⛔ {$key}: পাওনার শব্দ নকশার নয়");
+        }
+
+        $fields = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/party-fields.blade.php'));
+        $this->assertStringContainsString('x-text="dueWord"', $fields, '⛔ পক্ষের পাশে আবার একটাই শব্দ ("পাওনা") — চিহ্নটা শব্দে বলা হয় না');
+        $this->assertStringContainsString('x-text="dueAmount"', $fields, '⛔ অঙ্কটা আবার চিহ্নসহ ("-45,000.00")');
+        $this->assertStringNotContainsString('x-text="texts.owed"', $fields, '⛔ পুরনো "পাওনা" লেখা ফিরেছে');
+        $this->assertStringContainsString("out: @js(! \$isReceipt)", $fields, '⛔ পরিশোধের দিক ("দেনা / অগ্রিম দেওয়া") পাতা থেকে যায় না');
+    }
+
     /** ৮ — পোস্টের পরে ছাপা · PDF · WhatsApp */
     public function test_the_form_says_what_comes_after_posting_and_the_paper_can_really_be_sent(): void
     {

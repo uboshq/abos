@@ -65,8 +65,15 @@
              pickedId: @js((string) ($was('against_id') ?? '')),
              adding: @js($errors->has('party_new') || filled(old('party_new'))),
              newName: @js((string) old('party_new', '')),
+             out: @js(! $isReceipt),
              texts: @js([
                  'owed' => __('accounts::field.owed'),
+                 'dueInOwed' => __('accounts::field.due_in_owed'),
+                 'dueInAdvance' => __('accounts::field.due_in_advance'),
+                 'dueInNone' => __('accounts::field.due_in_none'),
+                 'dueOutOwed' => __('accounts::field.due_out_owed'),
+                 'dueOutAdvance' => __('accounts::field.due_out_advance'),
+                 'dueOutNone' => __('accounts::field.due_out_none'),
                  'overDue' => __('accounts::message.more_than_the_bill_owes'),
                  'noBills' => __('accounts::message.no_open_bill'),
              ]),
@@ -154,12 +161,12 @@
                      (লাল), ঋণাত্মক মানে তাঁর টাকা আমাদের কাছে জমা আছে (সবুজ) —
                      ⛔ ঋণাত্মক পাওনা দেখে আরেকবার টাকা চাইলে সেটা ভুল আদায়।
                      ⓘ রং একা কিছু বলে না, তাই লেখাটাও সাথে থাকে। --}}
-                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak
-                      x-bind:class="due > 0
-                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
-                          : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'">
-                    <span x-text="texts.owed"></span>
-                    <b class="num ms-1" x-text="dueText"></b>
+                {{-- ⭐ ২৩ অক্টোবর ২০২৬ (fe): চিহ্নটা শব্দে — "-45,000.00" সবুজে দেখে কেউ বুঝত না এটা অগ্রিম। রসিদে "বকেয়া / অগ্রিম /
+                     বকেয়া নেই", পরিশোধে "দেনা / অগ্রিম দেওয়া / দেনা নেই"; অঙ্ক কখনো ঋণাত্মক চিহ্নে নয় ([[party-voucher.js]]) --}}
+                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak data-party-due
+                      x-bind:class="dueClass">
+                    <span x-text="dueWord"></span>
+                    <b class="num ms-1" x-show="dueAmount !== ''" x-text="dueAmount"></b>
                 </span>
             </div>
 

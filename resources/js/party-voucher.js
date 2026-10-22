@@ -20,7 +20,7 @@ import { taka } from './components/money.js'
 
 export { matchParties, SHOWN_AT_ONCE }
 
-export default function partyVoucher({ partyType, partyId, parties, dueUrl, texts, pickedType = '', pickedId = '', adding = false, newName = '' }) {
+export default function partyVoucher({ partyType, partyId, parties, dueUrl, texts, pickedType = '', pickedId = '', adding = false, newName = '', out = false }) {
     return {
         partyType,
         partyId,
@@ -41,9 +41,44 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
         /** এই পক্ষের মোট বকেয়া — নামের পাশে দেখানো হয়। */
         due: null,
 
-        /** ⭐ দেখানোর লেখা লাখ-কমায় ("1,25,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — `due` হিসাবের জন্য অপরিবর্তিত */
-        get dueText() {
-            return this.due === null ? '' : taka(Number(this.due));
+        /*
+         * ⭐ পক্ষের পাশের অঙ্ক — চিহ্ন ধরে শব্দ, অঙ্ক সবসময় ধনাত্মক আর লাখ-কমায় (fe, ২৩ অক্টোবর ২০২৬)।
+         * ⓘ সার্ভারের চিহ্ন ([[AccountsFacts::dueFrom()]]): ধনাত্মক = তিনি আমাদের দেবেন, ঋণাত্মক = আমরা তাঁকে দেব।
+         *   রসিদ:   ধনাত্মক "বকেয়া" (সতর্ক রং) · ঋণাত্মক "অগ্রিম" (সবুজ) · শূন্য "বকেয়া নেই"
+         *   পরিশোধ: ঋণাত্মক "দেনা" (সতর্ক রং) · ধনাত্মক "অগ্রিম দেওয়া" (সবুজ) · শূন্য "দেনা নেই"
+         * ⛔ আগে "পাওনা -45,000.00" সবুজে — ঋণাত্মক চিহ্ন চোখ এড়ায়, আর মানুষ অগ্রিমকেও আদায়যোগ্য ভাবতেন।
+         */
+        out,
+
+        get dueSign() {
+            const n = Number(this.due ?? 0);
+            if (Math.abs(n) < 0.005) return 0;
+
+            return n > 0 ? 1 : -1;
+        },
+
+        /** এই কাগজ যে দিকটা মেটায় — রসিদে তিনি দেবেন (+), পরিশোধে আমরা দেব (−) */
+        get dueIsOwed() {
+            return this.dueSign === (this.out ? -1 : 1);
+        },
+
+        get dueWord() {
+            const side = this.out ? 'Out' : 'In';
+            if (this.dueSign === 0) return this.texts['due' + side + 'None'] ?? '';
+
+            return this.texts['due' + side + (this.dueIsOwed ? 'Owed' : 'Advance')] ?? '';
+        },
+
+        get dueAmount() {
+            return this.due === null || this.dueSign === 0 ? '' : '৳' + taka(Math.abs(Number(this.due)));
+        },
+
+        get dueClass() {
+            if (this.dueSign === 0) return 'bg-(--color-surface-sunken) text-(--color-ink-muted)';
+
+            return this.dueIsOwed
+                ? 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'
+                : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)';
         },
 
         /** এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি। */
