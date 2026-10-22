@@ -203,7 +203,7 @@ class CollectionController extends Controller implements HasMiddleware
     {
         $in = $request->collectionInput();
         $facts = $preview->of($in);
-        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)->find($in->customerId); // ⓘ পিকারের ছাঁকনি; বাইরের গ্রাহকে নামের সারি আসে না
+        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)->find($in->customerId); // ⓘ পিকারের ছাঁকনি; নাগালের বাইরের গ্রাহক অনুরোধেই ফেরে (CollectionRequest)
 
         $o = ConfirmOverview::titled(__('sales::collection_form.overview_title'))
             ->head(__('sales::field.customer'), $customer?->nameWithPoint())

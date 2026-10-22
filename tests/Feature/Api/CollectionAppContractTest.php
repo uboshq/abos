@@ -361,6 +361,104 @@ final class CollectionAppContractTest extends TestCase
         }
     }
 
+    /**
+     * দফা ১০ — কোনো প্রিভিউ-দরজা কিছু লেখে না (fe, ২২ অক্টোবর ২০২৬: ছাড়ের ছাদ ৪৫৭ → ৪৫৯-এর শর্ত, [[EveryExcuseWeGrantedIsCountedTest]])।
+     * ওয়েবের প্রিভিউ (দুবার), নিশ্চিতের আগের সারাংশ (`sales.collection.overview_new`) আর ফোনের প্রিভিউ — আগের জমা বিলে বসানো, VDS/AIT,
+     * আর মালিকের সই লাগে এমন ছাড়সহ, অর্থাৎ যে পথে আদায়, তার সারি, প্রয়োগ, খাতা, অনুমোদন, নিরীক্ষা বা নম্বর লেখা হতে পারত। প্রতিটা
+     * টেবিলের সারি গোনা আগে আর পরে একই।
+     */
+    public function test_item_10_no_preview_door_writes_anything_web_overview_or_phone(): void
+    {
+        $bill = $this->bill('INV-APP-NW', 5, '2000');
+        $prior = $this->landed($this->push('nw-0', $this->payload(['amount' => '300', 'lines' => [], 'confirm' => true])));
+
+        $tables = ['sal_collections', 'sal_collection_lines', 'sal_collection_applications', 'ledger_entries', 'approvals', 'audit_trails', 'issued_numbers'];
+        $count = fn (): array => array_combine($tables, array_map(fn (string $t) => \Illuminate\Support\Facades\DB::table($t)->count(), $tables));
+        $before = $count();
+        $this->assertGreaterThan(0, $before['sal_collections'], 'প্রস্তুতিটাই ভুল — আগের জমা বসেনি');
+
+        $web = ['customer_id' => $this->dealer->id, 'account_id' => $this->bank->id, 'trx_date' => now()->toDateString(),
+            'amount' => '1600', 'vds' => '30', 'ait' => '20', 'difference' => ['kind' => 'discount', 'amount' => '50'],
+            'lines' => [['kind' => 'credit', 'id' => $prior->public_id, 'amount' => '-300'], ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '2000']]];
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->clerk->fresh());
+        $first = $this->postJson(route('sales.collection.preview'), $web)->assertOk()->json();
+        $this->postJson(route('sales.collection.preview'), $web)->assertOk();
+        $this->post(route('sales.collection.overview_new'), $web)->assertOk();
+
+        $this->phone($this->clerk);
+        $this->postJson('/api/v1/sales/collections/preview', $this->payload(['amount' => '1600', 'vds' => '30', 'ait' => '20',
+            'difference' => ['kind' => 'discount', 'amount' => '50'],
+            'lines' => [['kind' => 'credit', 'id' => $prior->public_id, 'amount' => '-300.00'], ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '2000.00']]]))
+            ->assertOk();
+
+        $this->assertNotSame([], $first['lines'] ?? [], 'প্রস্তুতিটাই ভুল — প্রিভিউ কোনো লাইন বানায়নি, দাবিটা কিছু মাপে না');
+        $this->assertSame($before, $count(), '⛔ দফা ১০: প্রিভিউ বা সারাংশ কিছু লিখল — আদায়, সারি, প্রয়োগ, খাতা, অনুমোদন, নিরীক্ষা বা নম্বরের গোনা বদলেছে');
+    }
+
+    /**
+     * দফা ১৮ — নাগালের একটাই নিয়ম, ওয়েব আর ফোনে (fe, ২২ অক্টোবর ২০২৬)।
+     *  (ক) শাখায় বাঁধা মানুষ অন্য শাখার গ্রাহকের টাকা নিতে পারেন না: ওয়েবের প্রিভিউ, জমা আর খোলা কাগজ, ফোনের open-bills, প্রিভিউ আর
+     *      সিঙ্ক — সবখানে ফেরত, যেখানে বার্তা আছে সেখানে একই বাংলা বাক্য, আর কিছুই লেখা হয় না।
+     *  (খ) সব-শাখার মানুষ শাখা B-র গ্রাহকের টাকা নেন — হেডারে অন্য শাখা থাকলেও কাগজ আর খাতার প্রতিটা সারি শাখা B-র (দফা ১৪),
+     *      ওয়েবে আর ফোনে।
+     */
+    public function test_item_18_one_reach_rule_on_the_web_and_the_phone(): void
+    {
+        $home = (int) $this->company->defaultBranch()->id;
+        $away = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'APP-B', 'name_en' => 'Branch B', 'is_active' => true]);
+        $there = Customer::query()->create(['code' => 'APP-B1', 'name_en' => 'B Store', 'branch_id' => $away->id, 'is_active' => true]);
+        $refusal = __('sales::sync.unknown_customer');
+
+        // ── (ক) শাখায় বাঁধা
+        $this->clerk->forceFill(['current_branch_id' => $home, 'view_all_branches' => false])->save();
+        $tables = ['sal_collections', 'sal_collection_lines', 'sal_collection_applications', 'ledger_entries', 'approvals', 'audit_trails', 'issued_numbers'];
+        $count = fn (): array => array_combine($tables, array_map(fn (string $t) => \Illuminate\Support\Facades\DB::table($t)->count(), $tables));
+        $before = $count();
+        $form = ['customer_id' => $there->id, 'account_id' => $this->bank->id, 'trx_date' => now()->toDateString(), 'amount' => '600', 'lines_given' => '1'];
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->clerk->fresh());
+        $webPreview = $this->postJson(route('sales.collection.preview'), $form);
+        $this->assertSame(422, $webPreview->status(), '⛔ দফা ১৮: ওয়েবের প্রিভিউ অন্য শাখার গ্রাহক নিল ('.$webPreview->status().')');
+        $this->assertSame($refusal, $webPreview->json('errors.customer_id.0'), '⛔ দফা ১৮: ওয়েবের প্রিভিউ ফোনের বাক্যে ফেরায়নি');
+        $webSave = $this->postJson(route('sales.collection.store'), [...$form, 'post' => '1']);
+        $this->assertSame(422, $webSave->status(), '⛔ দফা ১৮: ওয়েবে অন্য শাখার গ্রাহকের আদায় জমা হলো ('.$webSave->status().')');
+        $this->assertSame($refusal, $webSave->json('errors.customer_id.0'), '⛔ দফা ১৮: ওয়েবের জমা ফোনের বাক্যে ফেরায়নি');
+        $this->assertSame(404, $this->getJson(route('sales.collection.open_items', ['customer' => $there->id]))->status(), '⛔ দফা ১৮: ওয়েবে অন্য শাখার গ্রাহকের খোলা কাগজ খুলল');
+
+        $this->phone($this->clerk);
+        $this->assertSame(404, $this->getJson('/api/v1/sales/collections/open-bills?customer='.$there->public_id)->status(), '⛔ দফা ১৮: ফোনে অন্য শাখার গ্রাহকের খোলা বিল খুলল');
+        $phonePreview = $this->postJson('/api/v1/sales/collections/preview', [...$this->payload(['amount' => '600', 'lines' => []]), 'customerId' => (string) $there->public_id]);
+        $this->assertSame(422, $phonePreview->status(), '⛔ দফা ১৮: ফোনের প্রিভিউ অন্য শাখার গ্রাহক নিল');
+        $this->assertSame($refusal, $phonePreview->json('errors.customer_id.0'), '⛔ দফা ১৮: ফোনের প্রিভিউ আর ওয়েবের বাক্য আলাদা');
+        $pushed = $this->push('reach-a', [...$this->payload(['amount' => '600', 'lines' => [], 'confirm' => true]), 'customerId' => (string) $there->public_id]);
+        $this->assertNotSame(SyncChange::APPLIED, $pushed['status'] ?? null, '⛔ দফা ১৮: ফোনের সিঙ্কে অন্য শাখার গ্রাহকের আদায় বসল');
+        $this->assertSame($refusal, $pushed['message'] ?? null, '⛔ দফা ১৮: সিঙ্কের ফেরত ওয়েবের বাক্যে নয়');
+
+        $this->assertSame($before, $count(), '⛔ দফা ১৮: ফেরত দেওয়া আদায়ের কিছু লেখা হলো');
+
+        // ── (খ) সব শাখা — হেডারে প্রধান শাখা, গ্রাহক শাখা B-র
+        $this->clerk->forceFill(['current_branch_id' => $home, 'view_all_branches' => true])->save();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->clerk->fresh());
+        $last = (int) Collection::acrossBranches()->max('id');
+        $this->post(route('sales.collection.store'), [...$form, 'post' => '1'])->assertRedirect();
+        $web = Collection::acrossBranches()->where('id', '>', $last)->where('customer_id', $there->id)->first();
+        $this->assertNotNull($web, '⛔ দফা ১৮: সব-শাখার মানুষ শাখা B-র গ্রাহকের আদায় ওয়েবে বসাতে পারলেন না');
+
+        $phone = $this->landed($this->push('reach-b', [...$this->payload(['amount' => '700', 'lines' => [], 'confirm' => true]), 'customerId' => (string) $there->public_id]));
+
+        foreach (['ওয়েব' => $web, 'ফোন' => $phone] as $door => $paper) {
+            $this->assertSame(DocumentStatus::CONFIRMED, $paper->status, "প্রস্তুতিটাই ভুল — {$door}-এর আদায় পোস্ট হয়নি");
+            $this->assertSame((int) $away->id, (int) $paper->branch_id, "⛔ দফা ১৪/১৮: {$door}-এর আদায় গ্রাহকের শাখা B-তে বসেনি (হেডারের শাখায় বসল)");
+            $branches = LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $paper->id)
+                ->pluck('branch_id')->map(fn ($b) => (int) $b)->unique()->values()->all();
+            $this->assertSame([(int) $away->id], $branches, "⛔ দফা ১৪/১৮: {$door}-এর খাতার সারি শাখা B-র বাইরে বসল");
+        }
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $extra @return array<string, mixed> — অ্যাপের `CollectionDraft.toPayload()`-এর আকারে */

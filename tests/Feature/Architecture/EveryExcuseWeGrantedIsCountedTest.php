@@ -435,9 +435,11 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       নিরীক্ষা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়।
      *
      * ── ⚠️ ৪৫৭ → ৪৫৯, ২২ অক্টোবর ২০২৬ (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
-     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON; দাবি:
-     *       TheCollectionFormPostsWhatTheDesignSaysTest::test_item_10_the_preview_shows_exactly_the_lines_the_post_writes — কাগজ আর
-     *       খাতার সারি গোনা অপরিবর্তিত) আর `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়);
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
+     *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
+     *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
+     *       ফোনের প্রিভিউ; sal_collections, sal_collection_lines, sal_collection_applications, ledger_entries, approvals,
+     *       audit_trails, issued_numbers-এর সারি আগে = পরে);
      *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
      *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
      *       আটকাত (JSON-এ ৪০৯)।

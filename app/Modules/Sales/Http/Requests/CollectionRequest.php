@@ -22,13 +22,25 @@ class CollectionRequest extends FormRequest
         $companyId = CompanyContext::id();
 
         return [
-            'customer_id' => ['required', 'integer',
+            'customer_id' => ['bail', 'required', 'integer',
                 /*
                  * ⛔ মুছে ফেলা গ্রাহকে আদায় নয় — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
                  * ⓘ `exists` কাঁচা কোয়েরি: SoftDeletes আর ডিলারের দেয়াল সেখানে চলে না, তাই দুটোই হাতে।
-                 * ⓘ নিষ্ক্রিয় গ্রাহক আটকানো হয় না — বন্ধ ডিলারও পুরনো বাকি শোধ করেন; শাখার দেয়ালও নয় — পক্ষ শাখা পেরোয় ([[Customer::scopeInViewedBranch()]])।
+                 * ⓘ নিষ্ক্রিয় গ্রাহক আটকানো হয় না — বন্ধ ডিলারও পুরনো বাকি শোধ করেন।
                  */
                 Rule::exists('customers', 'id')->where('company_id', $companyId)->whereNull('deleted_at'),
+                /*
+                 * ⭐ নাগালের একটাই নিয়ম, ওয়েব আর ফোনে (fe, ২২ অক্টোবর ২০২৬): গ্রাহকের শাখা মানুষের নাগালে থাকলে তবেই আদায়
+                 * ([[Customer::scopeInViewedBranch()]] — ফোনের [[CollectionInput::fromPhone()]] আর [[CollectionSync]]-এর একই ছাঁকনি)।
+                 * ⓘ "পক্ষ শাখা পেরোয়" (0d9cf4c8b) এখন কেবল সব-শাখা মানুষের জন্য — তাঁর কাছে ছাঁকনি কিছু বাদ দেয় না, আর টাকা বসে
+                 * গ্রাহকের শাখায় (দফা ১৪)। শাখায় বাঁধা মানুষের কাছে অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক একই কথা পায়
+                 * (`sales::sync.unknown_customer`, ফোনের সেই বাক্য) — কে আছেন জানা যায় না।
+                 */
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! \App\Modules\Customer\Models\Customer::query()->withoutGlobalScopes()->whereKey((int) $value)->inViewedBranch()->exists()) {
+                        $fail(__('sales::sync.unknown_customer'));
+                    }
+                },
                 static function (string $attribute, mixed $value, \Closure $fail): void {
                     if (! app(\App\Core\Services\DealerScope::class)->allowsCustomer((int) $value)) {
                         $fail(__('customer::binding.dealer_out_of_reach'));
@@ -66,6 +78,12 @@ class CollectionRequest extends FormRequest
             // ⭐ দফা ১৫ — স্লিপ, অ্যাডভাইস বা স্ক্রিনশট (৫ MB; ধরন AttachmentEngine দেখে)
             'slip' => ['nullable', 'file', 'max:5120'],
         ];
+    }
+
+    /** ⓘ না-থাকা (বা মোছা) গ্রাহক আর নাগালের বাইরের গ্রাহক একই কথা পান — ফোনের সেই বাক্য */
+    public function messages(): array
+    {
+        return ['customer_id.exists' => __('sales::sync.unknown_customer')];
     }
 
     /** ⭐ নকশা ১০০-এর আবেদন — সেবার একটাই দরজা ([[CollectionService::createFrom()]]) */
