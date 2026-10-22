@@ -98,9 +98,12 @@ void main() {
     expect(find.text('Awaiting signature (1)'), findsOneWidget);
     expect(find.text('Group total'), findsNWidgets(2));
     expect(find.text('Not allowed'), findsOneWidget);
-    // ⓘ বাংলা কেবল সার্ভারের নামে — কোম্পানি আর কাগজের নাম
+    // ⓘ বাংলা কেবল সার্ভারের নামে — কোম্পানি আর কাগজের নাম। "বিল INV-1" সার্ভারের: সইয়ের অপেক্ষার সারির লেখা
+    // Approval::drillLabel() — অনুরোধের কারণ (requested_reason), অনুরোধের সময় অনুরোধকারীর ভাষায় সার্ভারে লেখা ও জমা;
+    // অ্যাপ কেবল দেখায় (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)
     const server = {'টিডি ডিপো', 'ফ্রেশ মার্ট', 'বিল INV-1', 'টিডি ডিপো · 18/10/2026'};
-    final texts = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? '').where(_bengali.hasMatch).toSet();
+    // ⓘ আঁকা প্রতিটা লেখা — Text.rich আর RichText-ও (আগে কেবল Text.data দেখত)
+    final texts = tester.widgetList<RichText>(find.byType(RichText)).map((t) => t.text.toPlainText()).where(_bengali.hasMatch).toSet();
     expect(texts.difference(server), isEmpty);
     await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/owner_alerts_en.png'));
   });
