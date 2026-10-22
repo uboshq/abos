@@ -150,6 +150,24 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ পড়া-না-যাওয়া ছবি আগের লোগো সরিয়ে বসল');
     }
 
+    /**
+     * ⭐ দুই লোগো আলাদা (মালিক, ২২ অক্টোবর ২০২৬: "লোগো আলাদা আলাদাই ভালো") — প্রতিটা পাতা বলে অন্যটা কোথায়: কোম্পানির পাতা বলে বিলের
+     * লোগো ছাপার সেটিং থেকে, ছাপার পাতা বলে বারের লোগো কোম্পানির পাতা থেকে।
+     */
+    public function test_each_logo_page_says_where_the_other_logo_lives(): void
+    {
+        // ⓘ পরীক্ষা ইংরেজি Accept-Language পাঠায় — পাতা যে ভাষাতেই আঁকুক, সেই ভাষার লাইনটা থাকতে হবে
+        $says = fn (string $html, string $key) => str_contains($html, e(__($key, [], 'bn'))) || str_contains($html, e(__($key, [], 'en')));
+
+        $company = (string) $this->get(route('system_admin.company.edit', $this->company))->assertOk()->getContent();
+        $this->assertTrue($says($company, 'system_admin::message.logo_hint'), '⛔ কোম্পানির পাতায় লোগোর ব্যাখ্যা নেই');
+        $this->assertStringContainsString('ছাপার সেটিং', __('system_admin::message.logo_hint', [], 'bn'), '⛔ কোম্পানির পাতা বলে না বিলের লোগো কোথা থেকে');
+
+        $print = (string) $this->get(route('system_admin.print_control.invoice_info'))->assertOk()->getContent();
+        $this->assertTrue($says($print, 'system_admin::settings.invoice_logo_note'), '⛔ ছাপার পাতায় লোগোর ব্যাখ্যা নেই');
+        $this->assertStringContainsString('কোম্পানির পাতা', __('system_admin::settings.invoice_logo_note', [], 'bn'), '⛔ ছাপার পাতা বলে না বারের লোগো কোথা থেকে');
+    }
+
     public function test_only_company_manage_may_change_the_logo(): void
     {
         Storage::disk('public')->put('logos/before.png', 'png');
