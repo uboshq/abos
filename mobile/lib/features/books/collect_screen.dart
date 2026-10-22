@@ -241,12 +241,17 @@ class _CollectScreenState extends State<CollectScreen> {
   }
 
   bool get _newServer => _billsState == _Bills.loaded;
+
+  /// ⛔ পুরনো সার্ভার (খোলা বিল এল না) — আজকের CollectionSync ব্যাংক চার্জ, মূল্য-তারিখ আর জমার স্লিপ নম্বর পড়ে না, নীরবে ফেলে দেয়;
+  /// তাই ঘরগুলো দেখানো হয় না, পাঠানোও নয় — লেখা চার্জ খাতায় না ওঠার চেয়ে না চাওয়া ভালো (a4, ২২ অক্টোবর ২০২৬)।
+  /// ⓘ চেক/ট্রান্সফার নম্বর (`instrument_no`) পুরনো সার্ভারও পড়ে — সেটা থাকে
+  bool get _oldServer => _billsState == _Bills.absent;
   static String _kindOf(String method) => switch (method) { 'cash' => 'cash', 'mfs' => 'mfs', _ => 'bank' };
   String get _kind => _kindOf(_method);
 
   /// রেফারেন্স / TrxID — MFS, ট্রান্সফার আর চেকে (নগদে নয়; নগদ জমায় স্লিপ নম্বর)
   bool get _needsReference => _method == 'mfs' || _method == 'transfer' || _method == 'cheque';
-  bool get _needsDepositSlip => _method == 'deposit';
+  bool get _needsDepositSlip => _method == 'deposit' && !_oldServer;
   bool get _isBank => _kind == 'bank';
   bool get _slipAllowed => _newServer;
   bool get _slipRequired => _newServer && (_openBills?.attachmentRequired ?? false);
@@ -504,8 +509,8 @@ class _CollectScreenState extends State<CollectScreen> {
         instrumentNo: _needsReference ? _reference.text.trim() : null,
         transferModeId: _method == 'transfer' ? _transferModeId : null,
         depositSlipNo: _needsDepositSlip ? _depositSlip.text.trim() : null,
-        valueDate: _isBank ? _valueDate : null,
-        bankCharge: _isBank && _paisa(_charge.text) > 0 ? paisaText(_paisa(_charge.text)) : null,
+        valueDate: _isBank && !_oldServer ? _valueDate : null,
+        bankCharge: _isBank && !_oldServer && _paisa(_charge.text) > 0 ? paisaText(_paisa(_charge.text)) : null,
         vds: _vdsPaisa > 0 ? paisaText(_vdsPaisa) : null,
         ait: _aitPaisa > 0 ? paisaText(_aitPaisa) : null,
         narration: _narration.text,
@@ -1015,7 +1020,7 @@ class _CollectScreenState extends State<CollectScreen> {
             decoration: InputDecoration(labelText: w.collectDepositSlip, counterText: ''),
           ),
         ],
-        if (_isBank) _bankLine(context),
+        if (_isBank && !_oldServer) _bankLine(context),
       ]),
       // ── খোলা বিল ও ক্রেডিট ──
       _bills(context),

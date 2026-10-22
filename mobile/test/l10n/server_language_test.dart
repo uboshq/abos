@@ -88,7 +88,6 @@ void main() {
     });
 
     test('while the switch is hidden they read Bangla', () async {
-      LanguageSwitch.debugShown = false;
       LocaleChoices.instance = LocaleChoices(read: () async => 'en', write: (_) async {});
       await WidgetHub.refresh();
       expect(saved['widget_locale'], 'bn');

@@ -336,6 +336,32 @@ void main() {
     expect(p.containsKey('deposit_slip_no'), isFalse);
   });
 
+  testWidgets('new server: the bank charge and the value date are on screen and are sent (bank_charge, value_date)', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-cheque');
+    expect(find.byKey(const ValueKey('collect-bank-line')), findsOneWidget);
+    await _tap(tester, 'collect-bank-change');
+    expect(find.byKey(const ValueKey('collect-bank-charge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('collect-value-date')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), '25');
+    await tester.tap(find.byKey(const ValueKey('collect-value-date')));
+    await tester.pumpAndSettle();
+    final ok = MaterialLocalizations.of(tester.element(find.byType(DatePickerDialog))).okButtonLabel;
+    await tester.tap(find.text(ok));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+    await tester.pumpAndSettle();
+    await _type(tester, 'collect-reference', 'CHQ-77');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'cheque');
+    expect(p.containsKey('bank_charge'), isTrue, reason: '⛔ নতুন সার্ভারে ব্যাংক চার্জ গেল না');
+    expect(p.containsKey('value_date'), isTrue, reason: '⛔ নতুন সার্ভারে মূল্য-তারিখ গেল না');
+  });
+
   testWidgets('a cash deposit sends instrument "deposit" and deposit_slip_no, and refuses to post without the slip number', (tester) async {
     final api = FakeCollect();
     await _pump(tester, _screen(api));
@@ -797,24 +823,46 @@ void main() {
       expect(_opened, isEmpty);
     });
 
-    testWidgets('old server without transfer_modes: no mode in the line or the editor, no transfer_mode_id, the transfer still posts',
+    testWidgets('old server without transfer_modes: no mode, no bank line, no transfer_mode_id, the transfer still posts with its number',
         (tester) async {
       final api = FakeCollect(oldServer: true);
       await _pump(tester, _screen(api));
       await _pickShop(tester);
       await _type(tester, 'collect-amount', '45000');
       await _tap(tester, 'collect-method-transfer');
-      expect(find.text('মূল্য-তারিখ আজ · চার্জ 0'), findsOneWidget);
-      await _tap(tester, 'collect-bank-change');
       expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
-      await tester.pumpAndSettle();
       await _type(tester, 'collect-reference', 'BF1');
       await _post(tester);
       final p = api.sent.single.toPayload();
       expect(p['instrument'], 'transfer');
+      expect(p['instrument_no'], 'BF1', reason: 'পুরনো সার্ভারও নম্বর পড়ে');
       expect(p.containsKey('transfer_mode_id'), isFalse);
     });
+
+    // ⛔ আজকের লাইভ সার্ভারের CollectionSync ব্যাংক চার্জ, মূল্য-তারিখ আর জমার স্লিপ নম্বর নীরবে ফেলে দেয় — লেখা চার্জ খাতায় উঠত না
+    for (final method in ['transfer', 'cheque', 'deposit']) {
+      testWidgets('old server, $method: no bank charge, value date or deposit slip on screen, and none of the three is sent',
+          (tester) async {
+        final api = FakeCollect(oldServer: true);
+        await _pump(tester, _screen(api));
+        await _pickShop(tester);
+        await _type(tester, 'collect-amount', '45000');
+        await _tap(tester, 'collect-method-$method');
+        expect(find.byKey(const ValueKey('collect-bank-line')), findsNothing, reason: '⛔ পুরনো সার্ভারে ব্যাংক চার্জের লাইন');
+        expect(find.byKey(const ValueKey('collect-bank-change')), findsNothing);
+        expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing, reason: '⛔ পুরনো সার্ভারে ব্যাংক চার্জের ঘর');
+        expect(find.byKey(const ValueKey('collect-value-date')), findsNothing);
+        expect(find.byKey(const ValueKey('collect-deposit-slip')), findsNothing, reason: '⛔ পুরনো সার্ভারে জমার স্লিপের ঘর');
+        if (method != 'deposit') await _type(tester, 'collect-reference', 'CHQ-77');
+        await _post(tester);
+        final p = api.sent.single.toPayload();
+        expect(p['instrument'], method);
+        for (final key in ['bank_charge', 'value_date', 'deposit_slip_no']) {
+          expect(p.containsKey(key), isFalse, reason: '⛔ পুরনো সার্ভারে $key পাঠানো হলো — সার্ভার নীরবে ফেলে দেয়');
+        }
+        if (method != 'deposit') expect(p['instrument_no'], 'CHQ-77');
+      });
+    }
   });
 
   // ── ⭐ আগের পর্দার দাবি (০.৪.২১–০.৪.৪৪), নতুন পাতায় একই জোরে ──

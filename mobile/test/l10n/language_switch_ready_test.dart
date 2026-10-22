@@ -29,13 +29,24 @@ void main() {
     LocaleChoices.instance = LocaleChoices();
   });
 
-  test('the switch is on exactly when nothing is hard-coded any more', () {
+  // ⓘ ০.৪.৪৪ (fe, ২২ অক্টোবর ২০২৬): তালিকা খালি, তবু সুইচ বন্ধ — লাইভ সার্ভার এখনো ভাষা রাখতে পারে না, তাই ইংরেজি অ্যাপ
+  // মিশ্র হত; সার্ভারের অংশ লাইভ হলে পরের সংস্করণে চালু। তাই দাবি দুই ভাগে: খালি তালিকা ছাড়া ready নয়, আর তালিকা খালিই থাকে।
+  test('ready may be true only when nothing is hard-coded', () {
     final list = readList();
     final empty = list.values.every((n) => n == 0);
-    expect(LanguageSwitch.ready, empty,
-        reason: empty
-            ? '⛔ তালিকা খালি, সুইচ এখনো বন্ধ — lib/core/locale/language_switch.dart-এ ready = true'
-            : '⛔ এখনো ${list.values.fold<int>(0, (a, b) => a + b)}টা বাংলা লেখা হাতে — সুইচ চালু করা যাবে না');
+    if (LanguageSwitch.ready) {
+      expect(empty, isTrue,
+          reason: '⛔ এখনো ${list.values.fold<int>(0, (a, b) => a + b)}টা বাংলা লেখা হাতে — সুইচ চালু করা যাবে না');
+    }
+  });
+
+  test('nothing is hard-coded: the list is empty', () {
+    expect(readList().values.every((n) => n == 0), isTrue, reason: '⛔ হাতে-লেখা বাংলার তালিকা আবার ভরল');
+  });
+
+  test('the row shows exactly when ready is true (unless a test forces it)', () {
+    LanguageSwitch.debugShown = null;
+    expect(LanguageSwitch.shown, LanguageSwitch.ready);
   });
 
   /// ছবির মেনু, অ্যাপের ভাষা যেমন [appLocaleProvider] বলে
@@ -52,8 +63,6 @@ void main() {
       );
 
   testWidgets('hidden: no language row, and an English choice on an English phone still reads Bangla', (tester) async {
-    // ⓘ সুইচ এখন চালু (ready); লুকানো অবস্থাটা তবু পরখ করা — কেউ আবার বন্ধ করলে যেন বাংলাতেই থাকে
-    LanguageSwitch.debugShown = false;
     await LocaleChoices.instance.choose(LocaleChoice.en);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();

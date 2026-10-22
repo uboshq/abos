@@ -12,7 +12,7 @@ import '../support/fake_secure_storage.dart';
 
 /// ⭐ হোম-স্ক্রিনের উইজেট কোন ভাষায় — অ্যাপ `widget_locale` ([WidgetHub.localeKey]) লেখে "bn" বা "en", আর Kotlin-এর
 /// `WidgetWords.english()` কেবল "en"-এ ইংরেজি পড়ে; কিছু না থাকলে (অ্যাপ এখনো চলেনি) বাংলা (fe-র শর্ত, ২২ অক্টোবর ২০২৬)।
-/// ⓘ সুইচ চালু ([LanguageSwitch.ready]) — বাছাই না থাকলে "ফোনের মতো": বাংলা ফোনে বাংলা।
+/// ⓘ সুইচ চালু ধরে ([LanguageSwitch.debugShown]; ০.৪.৪৪-এ লুকানো) — বাছাই না থাকলে "ফোনের মতো": বাংলা ফোনে বাংলা।
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -30,6 +30,8 @@ void main() {
         const WidgetSummaryReply(200, etag: '"e1"', body: {'asOf': '2026-10-20T08:30:00Z', 'widgets': {}});
     PhonePrivacy.amountsReader = () async => true;
     AppLocale.current = AppLocale.locale;
+    // ⓘ সুইচ ০.৪.৪৪-এ লুকানো (fe) — উইজেটের পথটা সুইচ চালুর দিনের মতো পরখ করা
+    LanguageSwitch.debugShown = true;
   });
   tearDown(() {
     WidgetHub.resetForTest();
