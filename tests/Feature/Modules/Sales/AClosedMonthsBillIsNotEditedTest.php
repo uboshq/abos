@@ -152,7 +152,15 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
      */
     private function assertRefusedWithTheEditMessage(TestResponse $response, PeriodLock $lock): void
     {
-        $bag = app('session.store')->get('errors')?->getBag('default');
+        /*
+         * ⓘ সেশন JSON-এ রাখা (config session.serialization = json): অনুরোধের পরে পরীক্ষার স্মৃতিতে থলেটা কখনো array
+         * (['default' => ['messages' => […]]]), কখনো ViewErrorBag — দুই রূপই পড়া (cb-র ALogoCouldCarryAScriptTest-এর একই শিক্ষা;
+         * bundle-3b-এর Mac দৌড়ে 'getBag() on array', ২২ অক্টোবর ২০২৬)।
+         */
+        $errors = app('session.store')->get('errors');
+        $bag = $errors instanceof \Illuminate\Support\ViewErrorBag
+            ? $errors->getBag('default')
+            : (is_array($errors) ? new \Illuminate\Support\MessageBag((array) ($errors['default']['messages'] ?? [])) : null);
         $this->assertNotNull($bag, '⛔ থামেনি — সেশনে কোনো ত্রুটি নেই।');
         $seen = json_encode($bag->toArray(), JSON_UNESCAPED_UNICODE);
 

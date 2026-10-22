@@ -393,6 +393,7 @@ final class SalesMetrics implements ProvidesMetrics
             ->selectRaw('il.product_id as product_id, il.qty as qty, '.\App\Modules\Sales\Reports\LineNetSale::sql().' as amount');
 
         $back = \Illuminate\Support\Facades\DB::table('sal_return_lines as rl')
+            ->where('rl.company_id', \App\Core\Support\CompanyContext::id())
             ->whereIn('rl.sales_return_id', self::returns($from, $to)->select('sal_returns.id'))
             ->selectRaw('rl.product_id as product_id, 0 - rl.qty as qty, 0 - rl.amount as amount');
 

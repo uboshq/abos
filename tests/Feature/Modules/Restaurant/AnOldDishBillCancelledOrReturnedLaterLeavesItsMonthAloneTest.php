@@ -74,6 +74,9 @@ final class AnOldDishBillCancelledOrReturnedLaterLeavesItsMonthAloneTest extends
         $this->owner->forceFill(['locale' => 'bn'])->save();
         $this->web();
         app(SettingsService::class)->set('restaurant.enabled', true);
+        // ⓘ রেস্তোরাঁ ফোনে ডিফল্টে বন্ধ ([[PhoneModules::ON_BY_DEFAULT]]-এ নেই) — ফোনের রিপোর্ট-দরজা নইলে ৪০৩ (module_off)
+        app(SettingsService::class)->set(\App\Core\Services\PhoneModules::key('restaurant'), true);
+        $this->assertTrue(app(\App\Core\Services\PhoneModules::class)->isOn('restaurant', false), 'প্রস্তুতিটাই ভুল — ফোনে রেস্তোরাঁ চালু হয়নি।');
 
         $this->warehouse = Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('is_default', true)->firstOrFail();
         Customer::acrossDealers()->where('name_en', 'Rahim Traders')->get()
