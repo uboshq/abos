@@ -431,16 +431,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
      *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
      */
-    /*
-     * ── ⚠️ ৪৫৬ → ৪৫৭ (a5 bundle-3b, ২২ অক্টোবর ২০২৬) ────────────────────────────────────────────
-     *   +১  EveryRawQueryNamesItsCompanyTest::DECLARED — `app/Modules/Executive/Services/SalesBasis.php`: নিট বিক্রির রূপান্তরের
-     *       চিহ্ন গোটা টেবিলের (storage/app-এর এক JSON), তাই "কোনো কোম্পানির পুরনো রাতের সারি আছে কি না" ইচ্ছে করেই সব কোম্পানি
-     *       জুড়ে; শুধু exists(), কোনো অঙ্ক পড়ে না বা লেখে না। ⓘ বিকল্প ছিল চিহ্নটা কোম্পানি-প্রতি করা — একবারের রূপান্তরের
-     *       যুক্তি বদলাত, যা next-bundle-এ পুরো Mac-এ সবুজ; তাই বদলানো হয়নি। ⏳ রূপান্তর সব কোম্পানিতে শেষ হলে (converted = true)
-     *       চিহ্নের কাজ ফুরায়, তখন কোয়েরিটা মুছে এই সারি ওঠে আর ছাদ ১ কমে।
-     *   ⓘ আলাদাভাবে next-bundle-এ মোট ছাদের নিচে ছিল; main-এর নিজের সারি মেশানোর পরে ছাদ পেরোল।
-     */
-    private const CEILING = 457;
+    private const CEILING = 456;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
