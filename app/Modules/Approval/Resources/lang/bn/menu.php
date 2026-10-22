@@ -17,6 +17,6 @@ return [
     'report_by_user' => 'কে কয়টা সিদ্ধান্ত দিলেন',
     'delegation' => 'সইয়ের ভার',
     'report_bottleneck' => 'কোথায় আটকে আছে',
-    'report_why_rejected' => 'কেন বাতিল হয়',
+    'report_why_rejected' => 'কেন প্রত্যাখ্যাত হয়',
     'limits' => 'কর্তৃত্বের সীমা',
 ];

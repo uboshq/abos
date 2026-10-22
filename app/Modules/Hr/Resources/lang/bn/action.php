@@ -25,7 +25,7 @@ return [
     'save_attendance' => 'হাজিরা সংরক্ষণ',
     'monthly_sheet' => 'মাসের হিসাব',
     'apply_leave' => 'ছুটির আবেদন',
-    'approve' => 'মঞ্জুর',
+    'approve' => 'মঞ্জুর করুন',
     'reject' => 'নামঞ্জুর',
     'withdraw' => 'প্রত্যাহার',
     'only_pending' => 'শুধু অপেক্ষায় থাকাগুলো',

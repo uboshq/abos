@@ -11,7 +11,7 @@ return [
     'approved' => 'Approved.',
     'sent_back' => 'The paper went back to its writer with your note.',
     'signer_changed' => ':name changed: :fields',
-    'rejected' => 'Sent back.',
+    'rejected' => 'Rejected.',
     'withdrawn' => 'The request was withdrawn.',
     'flow_saved' => 'The rule was saved.',
     'flow_deleted' => 'The rule was deleted.',

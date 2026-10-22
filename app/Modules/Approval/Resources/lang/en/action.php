@@ -6,7 +6,7 @@ return [
     'open' => 'Open',
     'delete' => 'Delete rule',
     'approve' => 'Approve',
-    'reject' => 'Send back',
+    'reject' => 'Reject',
     'withdraw' => 'Withdraw',
     'open_document' => 'Open the document',
     'new_flow' => 'New rule',

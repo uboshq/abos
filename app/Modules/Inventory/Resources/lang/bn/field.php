@@ -182,7 +182,7 @@ return [
     'issue_paper' => 'মাল বের করা — :reason',
     'qc_inspected' => 'পরিদর্শিত',
     'qc_accepted' => 'গৃহীত',
-    'qc_rejected' => 'বাতিল',
+    'qc_rejected' => 'মান-পরীক্ষায় বাতিল',
     'qc_criteria' => 'কী দেখা হলো',
     'qc_result' => 'রায়',
     'inspected_by' => 'পরিদর্শক',
