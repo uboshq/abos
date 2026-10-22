@@ -327,8 +327,11 @@
             </aside>
         </div>
 
-        {{-- ── নিচের স্থির বোতাম-সারি (নকশা) ── --}}
-        <div data-pay-footer class="fixed inset-x-0 bottom-0 z-30 border-t border-(--color-border) bg-(--color-surface-card) px-4 py-3 md:ps-[calc(var(--spacing-sidebar-icon)+1rem)]">
+        {{-- ── নিচের বোতাম-সারি (নকশা) ──
+             ⛔ `fixed bottom-0` নয় (fe, ২২ অক্টোবর ২০২৬, cb/hf-footer-pad): তাতে সারিটা নিচের ঘোষণার বারের উপরে বসে সেটা ঢাকত, বোতাম
+             বারের ফালিতে নামত (১৩৬৬×৭৬৮-এ নিচ ৭৫৩, বার ৭৪০ থেকে), আর পুরো চওড়ায় বাঁয়ের মেনুও ঢাকত। ⭐ এখন ফর্মের মান-পট্টির মতো
+             ([[ui.form-actions]]): `sticky`, বারের ঠিক উপরে, মূল কলামের ভেতরে — আর নিজের জায়গা নেয়, তাই পাতার শেষ কিছু ঢাকে না। --}}
+        <div data-pay-footer class="print-hide sticky bottom-(--spacing-bottom-nav) md:bottom-(--spacing-status-bar) z-10 mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-3 shadow-lg">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p class="text-xs text-(--color-ink-muted)">{{ __('money.screen.after_post') }}</p>
                 <div class="flex items-center gap-2">
