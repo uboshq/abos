@@ -614,7 +614,7 @@ final class StatusNotices
             ->whereNull('cancelled_at'), 'compliance_obligations.branch_id');
 
         $today = Carbon::today()->toDateString();
-        // ⛔ কলামটা সত্যিকারের `date` — whereDate() DATE(due_on) বানিয়ে সূচক হারাত ([[TheDateFilterHidTheIndexFromMysqlTest]])
+        // ⛔ কলামটা সত্যিকারের `date` — তারিখের ফাংশনে মোড়ালে DATE(due_on) হয়ে সূচক হারাত ([[TheDateFilterHidTheIndexFromMysqlTest]])
         $overdue = $open()->where('due_on', '<', $today)->count();
         $soon = $overdue > 0 ? 0 : $open()->where('due_on', '>=', $today)->where('due_on', '<=', Carbon::today()->addDays(3)->toDateString())->count();
 
