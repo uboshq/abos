@@ -76,6 +76,10 @@
      data-head-mfs="{{ __('money.charge_line.head_mfs') }}">
 
     {{-- ── পদ্ধতি: এক সারির সেগমেন্ট (নকশার "নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক") ── --}}
+    {{-- ⛔ বাছা চিপের রং — fe, ২২ অক্টোবর ২০২৬: সাদা লেখা brand-600-এ বসত। গাঢ় থিমে brand-600 হালকা নীল (২.৬:১), আর বাছা
+         চিপে মাউস রাখলে hover-এর প্রায়-সাদা জমিন জিতত (১.০৮:১) — লেখাটা মুছে যেত। ⭐ এখন brand-700 আর brand-ink: আলোয় অ্যাকসেন্টের
+         ৭০০ নিজের কালির সাথে, গাঢ়ে অ্যাকসেন্টের গাঢ় ধাপ নিজের গাঢ় কালির সাথে — দুই জোড়াই ≥ ৪.৫:১ মাপা ([[AppearanceTest]]);
+         আর বাছা চিপে hover রং বদলায় না। --}}
     <fieldset @class(['order-1 sm:col-span-2' => $inline])>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
         <div class="inline-flex max-w-full overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
@@ -85,7 +89,8 @@
                            data-method-chip="{{ $way }}" x-model="method" @checked($chosen === $way)>
                     <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
                                  hover:bg-(--color-surface-hover)
-                                 peer-checked:bg-(--color-brand-600) peer-checked:font-medium peer-checked:text-white
+                                 peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
+                                 peer-checked:hover:bg-(--color-brand-700)
                                  peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">
                         {{ __('money.method.'.$way) }}
                     </span>

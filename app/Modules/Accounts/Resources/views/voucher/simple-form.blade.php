@@ -802,7 +802,7 @@
                 <div @class([
                         'grid items-end gap-3',
                         'sm:grid-cols-[2fr_1fr_1.4fr_2fr]' => ! $isPayment,
-                        'sm:grid-cols-2 lg:grid-cols-[1.6fr_1.6fr_1fr_1.2fr_1.6fr]' => $isPayment,
+                        'sm:grid-cols-2 lg:grid-cols-[1.4fr_1.4fr_1fr_1.6fr_1.6fr]' => $isPayment,
                      ])>
                     @if ($isPayment)
                         {{--
@@ -871,6 +871,8 @@
                         লুকানো হয়নি — এক নামে দুইটা সক্রিয় ঘর থাকলে ব্রাউজার
                         শেষেরটার মান পাঠায়, আর বাছাইটা নীরবে হারায়।
                     --}}
+                    {{-- ⓘ fe, ২২ অক্টোবর ২০২৬: "ব্যাংকে সরাসরি — কেউ যায়নি" ১৩৬৬-এ কাটা পড়ত (লেখা ১৯১px, ঘরে জায়গা রসিদে ১৮৭, পরিশোধে
+                         ১৩৭)। ⭐ লেখা ছোট ("সরাসরি — কেউ যায়নি") আর পরিশোধে কলামটা চওড়া (১.২fr → ১.৬fr, দুই খাতের ঘর থেকে নিয়ে)। --}}
                     <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
                                  :options="$carriers ?? []"
                                  :selected="old('carried_by', $voucher->carried_by)"
