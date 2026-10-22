@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../sync_engine/sync_status.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
@@ -20,7 +21,7 @@ class SyncStateWidget extends LauncherWidgetKind {
   String get key => 'sync_state';
 
   @override
-  String get title => 'সিঙ্কের অবস্থা';
+  String get title => AppLocale.l10n.launcherWidgetSyncName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x1];
@@ -36,27 +37,30 @@ class SyncStateWidget extends LauncherWidgetKind {
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {
     final pending = summary['pending'] is num ? (summary['pending'] as num).toInt() : 0;
     final last = DateTime.tryParse('${summary['lastOkAt'] ?? ''}');
+    final l = AppLocale.l10n;
     final (String words, WidgetTone tone) = summary['running'] == true
-        ? ('সিঙ্ক চলছে', WidgetTone.plain)
+        ? (l.launcherWidgetSyncRunning, WidgetTone.plain)
         : summary['offline'] == true
-            ? ('নেট নেই', WidgetTone.warn)
+            ? (l.launcherWidgetSyncOffline, WidgetTone.warn)
             : summary['failed'] == true
-                ? ('সিঙ্ক হয়নি', WidgetTone.bad)
+                ? (l.launcherWidgetSyncFailed, WidgetTone.bad)
                 : summary['stale'] == true || last == null
-                    ? ('সিঙ্ক পুরনো', WidgetTone.warn)
-                    : ('সিঙ্ক ঠিক আছে', WidgetTone.good);
+                    ? (l.launcherWidgetSyncStale, WidgetTone.warn)
+                    : (l.launcherWidgetSyncOk, WidgetTone.good);
     return WidgetDoc(
       title: title,
       asOf: asOf,
       link: '/home/sync-status',
       hero: WidgetHero(
         WidgetText(words, tone: tone),
-        caption: WidgetText(last == null ? 'শেষ সিঙ্ক: এখনো হয়নি' : 'শেষ সিঙ্ক: ${LastSyncLabel.ago(last, asOf, englishDigits: true)}'),
+        caption: WidgetText(last == null
+            ? l.launcherWidgetSyncNever
+            : l.launcherWidgetSyncLast(LastSyncLabel.ago(last, asOf, englishDigits: true))),
       ),
       rows: [
         WidgetRow(
-          title: WidgetText('জমা কাজ: $pending', tone: pending > 0 ? WidgetTone.warn : WidgetTone.plain),
-          second: const WidgetText('অফলাইনে জমা থাকে', tone: WidgetTone.muted),
+          title: WidgetText(l.launcherWidgetSyncQueued('$pending'), tone: pending > 0 ? WidgetTone.warn : WidgetTone.plain),
+          second: WidgetText(l.launcherWidgetSyncKeptOffline, tone: WidgetTone.muted),
         ),
       ],
     );

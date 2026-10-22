@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_palette.dart';
@@ -56,6 +58,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   }
 
   Future<void> _choose() async {
+    final words = context.l10n;
     if (!await ThermalFlow.explainOnce(context, _store)) return;
     if (!mounted) return;
     setState(() {
@@ -76,12 +79,13 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
     if (printer == null) return;
     await _save((await _store.read())
         .copyWith(printerAddress: printer.address, printerName: printer.name));
-    _say('প্রিন্টার রাখা হলো: ${printer.label}');
+    _say(words.printingSettingsSaved(printer.label));
   }
 
   Future<void> _test() async {
     final s = _settings;
     if (s == null || !s.hasPrinter) return;
+    final words = context.l10n;
     if (!await ThermalFlow.explainOnce(context, _store)) return;
     setState(() {
       _busy = true;
@@ -90,11 +94,11 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
     try {
       await _thermal.testPrint(
           address: s.printerAddress!, paperWidthMm: s.widthMm);
-      _say('পরীক্ষামূলক ছাপা পাঠানো হয়েছে। বাংলা লেখা ঠিক এলে প্রিন্টার তৈরি।');
+      _say(words.printingSettingsTestSent);
     } on BluetoothPrintingUnavailable catch (e) {
       _say(e.message, error: true);
     } catch (_) {
-      _say('পরীক্ষামূলক ছাপা হয়নি। আবার চেষ্টা করুন।', error: true);
+      _say(words.printingSettingsTestFailed, error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -103,16 +107,17 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = _settings;
+    final words = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'প্রিন্টার'),
+      appBar: AbosScreenBar(title: words.printingSettingsTitle),
       body: s == null
           ? const LinearProgressIndicator()
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
                 if (_busy) const LinearProgressIndicator(),
-                const Text('থার্মাল (ব্লুটুথ রসিদ) প্রিন্টার',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(words.printingSettingsThermalHeading,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
                 Card(
                   child: ListTile(
@@ -120,14 +125,14 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     leading: const Icon(Icons.bluetooth),
                     title: Text(s.hasPrinter
                         ? s.printerLabel
-                        : 'কোনো প্রিন্টার বাছা হয়নি'),
+                        : words.printingSettingsNoPrinter),
                     subtitle: Text(s.hasPrinter
                         ? s.printerAddress!
-                        : 'প্রথমে ফোনের সেটিংস → ব্লুটুথ থেকে প্রিন্টারটি জোড়া দিন'),
+                        : words.printingSettingsPairFirst),
                     trailing: TextButton(
                       key: const Key('printer-choose'),
                       onPressed: _busy ? null : _choose,
-                      child: Text(s.hasPrinter ? 'বদলান' : 'বাছুন'),
+                      child: Text(s.hasPrinter ? words.printingSettingsChange : words.printingSettingsChoose),
                     ),
                   ),
                 ),
@@ -138,17 +143,17 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         ? null
                         : () => _save(s.copyWith(clearPrinter: true)),
                     icon: const Icon(Icons.link_off),
-                    label: const Text('এই প্রিন্টার ভুলে যান'),
+                    label: Text(words.printingSettingsForget),
                   ),
                 const SizedBox(height: AppSpacing.md),
-                const Text('রোলের মাপ',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(words.printingSettingsRollWidth,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<int>(
                   key: const Key('printer-width'),
-                  segments: const [
-                    ButtonSegment(value: 58, label: Text('৫৮ মিমি')),
-                    ButtonSegment(value: 80, label: Text('৮০ মিমি')),
+                  segments: [
+                    ButtonSegment(value: 58, label: Text(words.printingSettingsWidthMm(bnDigits(58)))),
+                    ButtonSegment(value: 80, label: Text(words.printingSettingsWidthMm(bnDigits(80)))),
                   ],
                   selected: {s.widthMm},
                   onSelectionChanged: _busy
@@ -160,7 +165,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                   key: const Key('printer-test'),
                   onPressed: _busy || !s.hasPrinter ? null : _test,
                   icon: const Icon(Icons.print),
-                  label: const Text('পরীক্ষামূলক ছাপা'),
+                  label: Text(words.printingSettingsTestButton),
                 ),
                 if (_note != null) ...[
                   const SizedBox(height: AppSpacing.sm),
@@ -172,13 +177,10 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                               : context.palette.success)),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                const Text('কোন কাগজ কোথায় ছাপা হয়',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(words.printingSettingsWhereHeading,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                    'প্রতিটা কাগজ (বিল, চালান, ভাউচার …) শেষবার যে প্রিন্টারে ছাপা হয়েছিল, পরের বার '
-                    'সেটাই আগে বাছা থাকে। নরমাল প্রিন্টার মানে ফোনের নিজের প্রিন্ট ব্যবস্থা — '
-                    'ওয়াইফাই/USB প্রিন্টার বা PDF সেভ।',
+                Text(words.printingSettingsWhereBody,
                     style: TextStyle(color: context.palette.onSurfaceMuted)),
                 if (s.roads.isNotEmpty)
                   TextButton.icon(
@@ -187,7 +189,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         ? null
                         : () => _save(s.copyWith(roads: const {}, normalPapers: const {})),
                     icon: const Icon(Icons.restart_alt),
-                    label: const Text('মনে রাখা পছন্দ মুছুন'),
+                    label: Text(words.printingSettingsResetRoads),
                   ),
               ],
             ),

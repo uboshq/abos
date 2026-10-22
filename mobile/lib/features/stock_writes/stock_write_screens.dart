@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
@@ -173,7 +175,7 @@ class ServerStockWriteApi implements StockWriteApi {
           warehouse: c['warehouse']?.toString(),
           lines: [
             for (final l in (c['lines'] is List ? c['lines'] as List : const []).whereType<Map>())
-              '${l['product']}: খাতায় ${l['book']} → গোনা ${l['counted']} (পার্থক্য ${l['difference']})',
+              AppLocale.l10n.stockWriteCountLine('${l['product']}', '${l['book']}', '${l['counted']}', '${l['difference']}'),
           ],
         ),
     ];
@@ -198,18 +200,18 @@ class ServerStockWriteApi implements StockWriteApi {
 enum StockForm { adjust, issue, opening, lot }
 
 extension StockFormText on StockForm {
-  String get title => switch (this) {
-        StockForm.adjust => 'গণনা-সমন্বয়',
-        StockForm.issue => 'মাল ইস্যু',
-        StockForm.opening => 'খোলা মজুদ',
-        StockForm.lot => 'লট দেওয়া',
+  String title(AppL10n l) => switch (this) {
+        StockForm.adjust => l.stockWriteFormAdjust,
+        StockForm.issue => l.stockWriteFormIssue,
+        StockForm.opening => l.stockWriteFormOpening,
+        StockForm.lot => l.stockWriteFormLot,
       };
 
-  String get qtyLabel => switch (this) {
-        StockForm.adjust => 'গুনে পেলাম',
-        StockForm.issue => 'কতটা বের হবে',
-        StockForm.opening => 'পরিমাণ',
-        StockForm.lot => 'কতটা লটে যাবে',
+  String qtyLabel(AppL10n l) => switch (this) {
+        StockForm.adjust => l.stockWriteQtyAdjust,
+        StockForm.issue => l.stockWriteQtyIssue,
+        StockForm.opening => l.stockWriteQtyOpening,
+        StockForm.lot => l.stockWriteQtyLot,
       };
 
   String get ability => switch (this) {
@@ -251,7 +253,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'মজুদের কাজ আনা গেল না।', whenAbsent: 'এই কাজ এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.stockWriteLoadFailed, whenAbsent: context.l10n.stockWriteNotOnServer));
       }
     }
   }
@@ -261,6 +263,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
   @override
   Widget build(BuildContext context) {
     final s = _setup;
+    final l = context.l10n;
     Widget tile(String key, IconData icon, String title, String hint, Widget screen) => Card(
           margin: const EdgeInsets.only(bottom: AppSpacing.xs),
           child: ListTile(
@@ -274,7 +277,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
         );
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'মজুদের কাজ'),
+      appBar: AbosScreenBar(title: l.stockWriteWorkTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -285,7 +288,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
             if (_error != null) BooksError(_error!),
             if (s != null) ...[
               if (s.can['place'] == true)
-                tile('place', Icons.move_to_inbox_outlined, 'মাল বসানো', 'এসে পৌঁছানো মাল তাকে তোলা',
+                tile('place', Icons.move_to_inbox_outlined, l.stockWritePlaceTitle, l.stockWritePlaceHint,
                     PlacementScreen(api: widget.api, setup: s)),
               for (final form in StockForm.values)
                 if (s.can[form.ability] == true)
@@ -294,20 +297,20 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
                     StockForm.issue => Icons.outbox_outlined,
                     StockForm.opening => Icons.inventory_2_outlined,
                     StockForm.lot => Icons.qr_code_2_outlined,
-                  }, form.title, switch (form) {
-                    StockForm.adjust => 'গুনে খাতার সাথে মেলানো',
-                    StockForm.issue => 'বিক্রি ছাড়া মাল বের করা',
-                    StockForm.opening => 'শুরুর মজুদ বসানো',
-                    StockForm.lot => 'লট-ছাড়া মালকে লট',
+                  }, form.title(l), switch (form) {
+                    StockForm.adjust => l.stockWriteAdjustHint,
+                    StockForm.issue => l.stockWriteIssueHint,
+                    StockForm.opening => l.stockWriteOpeningHint,
+                    StockForm.lot => l.stockWriteLotHint,
                   }, StockFormScreen(form: form, api: widget.api, setup: s)),
               if (s.can['approve_count'] == true)
-                tile('counts', Icons.rule_outlined, 'মেনে নেওয়ার অপেক্ষার গণনা', 'অন্যের গোনা মেনে নেওয়া',
+                tile('counts', Icons.rule_outlined, l.stockWriteCountsTitle, l.stockWriteCountsHint,
                     WaitingCountsScreen(api: widget.api, setup: s)),
               if (!s.can.values.any((v) => v))
-                const EmptyState(
+                EmptyState(
                   icon: Icons.lock_outline,
-                  title: 'মজুদের কোনো লেখার অনুমতি নেই',
-                  message: 'দরকার হলে যিনি অনুমতি দেন তাঁকে বলুন।',
+                  title: l.stockWriteNoAccessTitle,
+                  message: l.stockWriteNoAccessMessage,
                 ),
             ],
           ],
@@ -322,7 +325,9 @@ void _tell(BuildContext context, StockResult result) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     key: const ValueKey('stock-result'),
     backgroundColor: result.done ? context.palette.success : context.palette.pending,
-    content: Text(result.notice.isEmpty ? (result.done ? 'বসেছে।' : 'অপেক্ষায় রাখা হলো।') : result.notice),
+    content: Text(result.notice.isEmpty
+        ? (result.done ? context.l10n.stockWriteResultDone : context.l10n.stockWriteResultWaiting)
+        : result.notice),
   ));
 }
 
@@ -403,7 +408,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
   Future<void> _send() async {
     final product = _product;
     if (product == null || _warehouse == null || _qty.text.trim().isEmpty || (_reasons.isNotEmpty && _reason == null)) {
-      setState(() => _error = 'পণ্য, গুদাম${_reasons.isNotEmpty ? ', কারণ' : ''} আর পরিমাণ লাগবেই।');
+      setState(() => _error = _reasons.isNotEmpty ? context.l10n.stockWriteNeedFieldsWithReason : context.l10n.stockWriteNeedFields);
       return;
     }
     String? text(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -442,7 +447,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
         _note.clear();
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${_form.title} বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockWriteSendFailed(_form.title(context.l10n))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -454,11 +459,12 @@ class _StockFormScreenState extends State<StockFormScreen> {
 
   Widget _screen(BuildContext context) {
     final p = _product;
+    final l = context.l10n;
     InputDecoration box(String label, {String? hint}) => InputDecoration(labelText: label, hintText: hint, isDense: true);
     const gap = SizedBox(height: AppSpacing.sm);
 
     return Scaffold(
-      appBar: AbosScreenBar(title: _form.title),
+      appBar: AbosScreenBar(title: _form.title(l)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -466,7 +472,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
             child: ListTile(
               key: const ValueKey('stock-product'),
               leading: const Icon(Icons.inventory_2_outlined),
-              title: Text(p == null ? 'পণ্য বাছুন' : p.name),
+              title: Text(p == null ? l.stockWritePickProduct : p.name),
               subtitle: p == null ? null : Text([p.code, p.unit].whereType<String>().join(' · ')),
               trailing: const Icon(Icons.search),
               onTap: _pickProduct,
@@ -476,7 +482,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
           DropdownButtonFormField<String>(
             key: const ValueKey('stock-warehouse'),
             initialValue: _warehouse,
-            decoration: box('গুদাম'),
+            decoration: box(l.stockWriteWarehouse),
             items: [for (final w in widget.setup.warehouses) DropdownMenuItem(value: w.id, child: Text(w.name))],
             onChanged: (v) => setState(() => _warehouse = v),
           ),
@@ -485,7 +491,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
             DropdownButtonFormField<String>(
               key: const ValueKey('stock-reason'),
               initialValue: _reason,
-              decoration: box('কারণ'),
+              decoration: box(l.stockWriteReason),
               items: [for (final r in _reasons) DropdownMenuItem(value: r.id, child: Text(r.name))],
               onChanged: (v) => setState(() => _reason = v),
             ),
@@ -495,13 +501,13 @@ class _StockFormScreenState extends State<StockFormScreen> {
             key: const ValueKey('stock-qty'),
             controller: _qty,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: box(_form.qtyLabel),
+            decoration: box(_form.qtyLabel(l)),
           ),
           if (_form == StockForm.adjust)
             SwitchListTile(
               key: const ValueKey('stock-free-pool'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('ফ্রি মাল গুনছি'),
+              title: Text(l.stockWriteCountingFree),
               value: _freePool,
               onChanged: (v) => setState(() => _freePool = v),
             ),
@@ -511,7 +517,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
               key: const ValueKey('stock-free'),
               controller: _free,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: box('ফ্রি (ঐচ্ছিক)'),
+              decoration: box(l.stockWriteFreeOptional),
             ),
           ],
           if (_form == StockForm.opening || (_form == StockForm.adjust && !_freePool)) ...[
@@ -520,7 +526,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
               key: const ValueKey('stock-cost'),
               controller: _cost,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: box(_form == StockForm.opening ? 'একক দর' : 'বাড়তি মালের দর (ঐচ্ছিক)'),
+              decoration: box(_form == StockForm.opening ? l.stockWriteUnitCost : l.stockWriteExtraCostOptional),
             ),
           ],
           if (_form != StockForm.issue) ...[
@@ -528,25 +534,25 @@ class _StockFormScreenState extends State<StockFormScreen> {
             TextField(
               key: const ValueKey('stock-lot'),
               controller: _lotNo,
-              decoration: box(_form == StockForm.lot ? 'লট নম্বর' : 'লট নম্বর (লট-ধরা পণ্যে)'),
+              decoration: box(_form == StockForm.lot ? l.stockWriteLotNo : l.stockWriteLotNoIfLotted),
             ),
             gap,
             TextField(
               key: const ValueKey('stock-expiry'),
               controller: _expiry,
               keyboardType: TextInputType.datetime,
-              decoration: box('মেয়াদ (ঐচ্ছিক)', hint: 'YYYY-MM-DD'),
+              decoration: box(l.stockWriteExpiryOptional, hint: 'YYYY-MM-DD'),
             ),
           ],
           gap,
-          TextField(key: const ValueKey('stock-note'), controller: _note, decoration: box('বিবরণ (ঐচ্ছিক)')),
+          TextField(key: const ValueKey('stock-note'), controller: _note, decoration: box(l.stockWriteNoteOptional)),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             key: const ValueKey('stock-send'),
             onPressed: _busy ? null : _send,
             icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check),
-            label: Text('${_form.title} পাঠান'),
+            label: Text(l.stockWriteSend(_form.title(l))),
           ),
         ],
       ),
@@ -585,13 +591,13 @@ class _ProductPickSheetState extends State<ProductPickSheet> {
               child: TextField(
                 key: const ValueKey('stock-product-search'),
                 autofocus: true,
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নাম, কোড বা বারকোড', isDense: true),
+                decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.stockWriteProductSearchHint, isDense: true),
                 onChanged: (v) => setState(() => _q = v.trim()),
               ),
             ),
             Expanded(
               child: shown.isEmpty
-                  ? const Center(child: Text('কোনো পণ্য মেলেনি'))
+                  ? Center(child: Text(context.l10n.stockWriteNoProductMatch))
                   : ListView(children: [
                       for (final p in shown)
                         ListTile(
@@ -655,7 +661,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'বসানোর অপেক্ষার মাল আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockWritePlaceLoadFailed));
     }
   }
 
@@ -678,7 +684,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
       _tell(context, result);
       await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'মাল বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockWritePlaceFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -687,11 +693,12 @@ class _PlacementScreenState extends State<PlacementScreen> {
   @override
   Widget build(BuildContext context) {
     final papers = _papers;
+    final l10n = context.l10n;
     List<StockChoice> placesOf(String warehouseId) =>
         widget.setup.warehouses.where((w) => w.id == warehouseId).expand((w) => w.places).toList(growable: false);
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'মাল বসানো'),
+      appBar: AbosScreenBar(title: l10n.stockWritePlaceTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -701,7 +708,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
             if (papers == null && _error == null) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (papers != null && papers.isEmpty)
-              const EmptyState(icon: Icons.check_circle_outline, title: 'বসানোর অপেক্ষায় কিছু নেই', message: 'নিচে টেনে আবার দেখুন।'),
+              EmptyState(icon: Icons.check_circle_outline, title: l10n.stockWritePlaceEmpty, message: l10n.stockWritePullAgain),
             for (final paper in papers ?? const <WaitingPaper>[])
               Card(
                 key: ValueKey('placement-${paper.no}'),
@@ -715,9 +722,9 @@ class _PlacementScreenState extends State<PlacementScreen> {
                       Text(l.product, style: const TextStyle(fontWeight: FontWeight.w600)),
                       Text([
                         if (l.warehouse != null) l.warehouse!,
-                        if (l.lot != null && l.lot!.isNotEmpty) 'লট ${l.lot}',
-                        'অপেক্ষায় ${l.waiting}',
-                        if (l.waitingFree != '0') 'ফ্রি ${l.waitingFree}',
+                        if (l.lot != null && l.lot!.isNotEmpty) l10n.stockWriteLot(l.lot!),
+                        l10n.stockWriteWaitingQty(l.waiting),
+                        if (l.waitingFree != '0') l10n.stockWriteFreeQty(l.waitingFree),
                       ].join(' · '), style: TextStyle(color: context.palette.onSurfaceMuted)),
                       Row(children: [
                         Expanded(
@@ -725,7 +732,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
                             key: ValueKey('placement-qty-${l.ref}'),
                             controller: _qty[l.ref],
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'বসাচ্ছি', isDense: true),
+                            decoration: InputDecoration(labelText: l10n.stockWritePlacingLabel, isDense: true),
                           ),
                         ),
                         if (placesOf(l.warehouseId).isNotEmpty) ...[
@@ -735,7 +742,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
                               key: ValueKey('placement-place-${l.ref}'),
                               initialValue: _place[l.ref],
                               isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'জায়গা', isDense: true),
+                              decoration: InputDecoration(labelText: l10n.stockWritePlaceSpot, isDense: true),
                               items: [for (final p in placesOf(l.warehouseId)) DropdownMenuItem(value: p.id, child: Text(p.name))],
                               onChanged: (v) => setState(() => _place[l.ref] = v),
                             ),
@@ -750,7 +757,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
                         key: ValueKey('placement-send-${paper.no}'),
                         onPressed: _busy ? null : () => _placeAll(paper),
                         icon: const Icon(Icons.move_to_inbox_outlined),
-                        label: const Text('বসান'),
+                        label: Text(l10n.stockWritePlaceButton),
                       ),
                     ),
                   ]),
@@ -798,14 +805,14 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'অপেক্ষার গণনা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockWriteCountsLoadFailed));
     }
   }
 
   Future<void> _approve(WaitingCount count) async {
     final reason = _reason[count.id];
     if (reason == null) {
-      setState(() => _error = 'কারণ বাছুন — পার্থক্যটা কোন খাতে যাবে তা কারণ বলে।');
+      setState(() => _error = context.l10n.stockWriteChooseReason);
       return;
     }
     setState(() {
@@ -818,7 +825,7 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
       _tell(context, result);
       await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'গণনাটা মেনে নেওয়া গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockWriteAcceptFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -827,9 +834,10 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
   @override
   Widget build(BuildContext context) {
     final counts = _counts;
+    final l = context.l10n;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'মেনে নেওয়ার অপেক্ষার গণনা'),
+      appBar: AbosScreenBar(title: l.stockWriteCountsTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -838,10 +846,10 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
           children: [
             if (counts == null && _error == null) const LinearProgressIndicator(),
             // ⭐ গোটা তালিকার গোনা — সার্ভার পাতা ভাঙে না (১০০টা, পুরোটা), তাই ফোনের হাতের সারিই সব (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
-            if (counts != null && counts.isNotEmpty) TotalStrip(label: 'অপেক্ষায় মোট', value: '${counts.length} টি'),
+            if (counts != null && counts.isNotEmpty) TotalStrip(label: l.stockWriteCountsTotal, value: l.stockWriteCountValue(counts.length)),
             if (_error != null) BooksError(_error!),
             if (counts != null && counts.isEmpty)
-              const EmptyState(icon: Icons.check_circle_outline, title: 'অপেক্ষায় কোনো গণনা নেই', message: 'নিচে টেনে আবার দেখুন।'),
+              EmptyState(icon: Icons.check_circle_outline, title: l.stockWriteCountsEmpty, message: l.stockWritePullAgain),
             for (final c in counts ?? const <WaitingCount>[])
               Card(
                 key: ValueKey('count-${c.id}'),
@@ -856,7 +864,7 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
                       key: ValueKey('count-reason-${c.id}'),
                       initialValue: _reason[c.id],
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'কারণ', isDense: true),
+                      decoration: InputDecoration(labelText: l.stockWriteReason, isDense: true),
                       items: [for (final r in widget.setup.adjustReasons) DropdownMenuItem(value: r.id, child: Text(r.name))],
                       onChanged: (v) => setState(() => _reason[c.id] = v),
                     ),
@@ -866,7 +874,7 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
                         key: ValueKey('count-approve-${c.id}'),
                         onPressed: _busy ? null : () => _approve(c),
                         icon: const Icon(Icons.check),
-                        label: const Text('মেনে নিন'),
+                        label: Text(l.stockWriteAccept),
                       ),
                     ),
                   ]),
@@ -915,7 +923,7 @@ class _StockDoorState extends State<StockDoor> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'মজুদের কাজ আনা গেল না।', whenAbsent: 'এই কাজ এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.stockWriteLoadFailed, whenAbsent: context.l10n.stockWriteNotOnServer));
       }
     }
   }
@@ -925,7 +933,7 @@ class _StockDoorState extends State<StockDoor> {
     final s = _setup;
     if (s == null) {
       return Scaffold(
-        appBar: const AbosScreenBar(title: 'মজুদের কাজ'),
+        appBar: AbosScreenBar(title: context.l10n.stockWriteWorkTitle),
         body: _error == null ? const LinearProgressIndicator() : Padding(padding: const EdgeInsets.all(AppSpacing.md), child: BooksError(_error!)),
       );
     }

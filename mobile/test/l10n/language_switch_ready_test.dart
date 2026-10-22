@@ -52,6 +52,8 @@ void main() {
       );
 
   testWidgets('hidden: no language row, and an English choice on an English phone still reads Bangla', (tester) async {
+    // ⓘ সুইচ এখন চালু (ready); লুকানো অবস্থাটা তবু পরখ করা — কেউ আবার বন্ধ করলে যেন বাংলাতেই থাকে
+    LanguageSwitch.debugShown = false;
     await LocaleChoices.instance.choose(LocaleChoice.en);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();

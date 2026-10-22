@@ -9896,6 +9896,4155 @@
   "@papersSign": {
     "description": "Paper page: the sign button"
   },
+  "financeLoadFailed": "আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@financeLoadFailed": {
+    "description": "Finance lists: loading failed, pull down to retry"
+  },
+  "financeNotOnServer": "সার্ভারে অর্থের এই অংশ এখনো আসেনি — অফিসে জানান।",
+  "@financeNotOnServer": {
+    "description": "Finance lists: the server does not have this finance part yet"
+  },
+  "financeDaysToday": "আজ",
+  "@financeDaysToday": {
+    "description": "Finance: a date that falls today"
+  },
+  "financeDaysLeft": "{days, plural, other{আর {days} দিন}}",
+  "@financeDaysLeft": {
+    "description": "Finance: days remaining until a date",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "financeDaysOverdue": "{days, plural, other{{days} দিন পেরিয়েছে}}",
+  "@financeDaysOverdue": {
+    "description": "Finance: days since a date passed",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "financeStatusActive": "চালু",
+  "@financeStatusActive": {
+    "description": "Finance: status / tab - active, running"
+  },
+  "financeStatusAwaitingSign": "সইয়ের অপেক্ষায়",
+  "@financeStatusAwaitingSign": {
+    "description": "Finance deposit status: waiting for signature"
+  },
+  "financeStatusEnded": "শেষ",
+  "@financeStatusEnded": {
+    "description": "Finance: status / tab - ended, finished"
+  },
+  "financeStatusCancelled": "বাতিল",
+  "@financeStatusCancelled": {
+    "description": "Finance: status - cancelled"
+  },
+  "financeStatusClosed": "বন্ধ",
+  "@financeStatusClosed": {
+    "description": "Finance: status / tab - closed"
+  },
+  "financeStatusDraft": "খসড়া",
+  "@financeStatusDraft": {
+    "description": "Finance loan status: draft"
+  },
+  "financeDepositMoveOpened": "টাকা রাখা",
+  "@financeDepositMoveOpened": {
+    "description": "Deposit movement: money placed in the deposit"
+  },
+  "financeDepositMovePayout": "মুনাফা তোলা",
+  "@financeDepositMovePayout": {
+    "description": "Deposit movement: profit withdrawn"
+  },
+  "financeDepositMoveClosed": "ভাঙানো / মেয়াদপূর্তি",
+  "@financeDepositMoveClosed": {
+    "description": "Deposit movement: encashed early or matured"
+  },
+  "financeLoanKindCc": "ক্যাশ ক্রেডিট (CC)",
+  "@financeLoanKindCc": {
+    "description": "Bank loan type: cash credit"
+  },
+  "financeLoanKindTerm": "মেয়াদি ঋণ",
+  "@financeLoanKindTerm": {
+    "description": "Bank loan type: term loan"
+  },
+  "financeLoanKindLease": "লিজ",
+  "@financeLoanKindLease": {
+    "description": "Bank loan type: lease"
+  },
+  "financeLoanKindGuarantee": "ব্যাংক গ্যারান্টি",
+  "@financeLoanKindGuarantee": {
+    "description": "Bank loan type: bank guarantee"
+  },
+  "financeInstalmentPaid": "দেওয়া",
+  "@financeInstalmentPaid": {
+    "description": "Loan instalment state: paid"
+  },
+  "financeInstalmentOverdue": "দিন পেরিয়েছে",
+  "@financeInstalmentOverdue": {
+    "description": "Loan instalment state: overdue"
+  },
+  "financeInstalmentToday": "আজ দিতে হবে",
+  "@financeInstalmentToday": {
+    "description": "Loan instalment state: due today"
+  },
+  "financeInstalmentUpcoming": "সামনে",
+  "@financeInstalmentUpcoming": {
+    "description": "Loan instalment state: upcoming"
+  },
+  "financeInstalmentNoDate": "তারিখ নেই",
+  "@financeInstalmentNoDate": {
+    "description": "Loan instalment state: no due date"
+  },
+  "financeRepaymentLump": "একবারে ফেরত",
+  "@financeRepaymentLump": {
+    "description": "Hand loan repayment: all at once (lump sum)"
+  },
+  "financeRepaymentMonthly": "মাসে মাসে",
+  "@financeRepaymentMonthly": {
+    "description": "Hand loan repayment: monthly"
+  },
+  "financeRepaymentWhenever": "যখন পারেন",
+  "@financeRepaymentWhenever": {
+    "description": "Hand loan repayment: whenever the borrower can"
+  },
+  "financeDepositListTitle": "জমা ও সঞ্চয়",
+  "@financeDepositListTitle": {
+    "description": "Deposit list screen title"
+  },
+  "financeDepositListEmpty": "এই ট্যাবে কোনো জমা নেই",
+  "@financeDepositListEmpty": {
+    "description": "Deposit list: no deposits in this tab"
+  },
+  "financeDepositTabMaturing": "মেয়াদ আসছে",
+  "@financeDepositTabMaturing": {
+    "description": "Deposit list tab: maturing soon"
+  },
+  "financeDepositMatures": "মেয়াদ {date}",
+  "@financeDepositMatures": {
+    "description": "Deposit list row: maturity date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "financeDepositTitle": "জমা",
+  "@financeDepositTitle": {
+    "description": "Deposit page title"
+  },
+  "financeDepositLoadFailed": "জমাটা আনা গেল না।",
+  "@financeDepositLoadFailed": {
+    "description": "Deposit page: loading failed"
+  },
+  "financeDepositAmount": "জমার অঙ্ক",
+  "@financeDepositAmount": {
+    "description": "Deposit page: principal amount label"
+  },
+  "financeFactType": "ধরন",
+  "@financeFactType": {
+    "description": "Finance page fact label: type"
+  },
+  "financeFactStatus": "অবস্থা",
+  "@financeFactStatus": {
+    "description": "Finance page fact label: status"
+  },
+  "financeDepositInstitution": "প্রতিষ্ঠান",
+  "@financeDepositInstitution": {
+    "description": "Deposit page: bank or institution label"
+  },
+  "financeDepositBankRef": "ব্যাংকের নম্বর",
+  "@financeDepositBankRef": {
+    "description": "Deposit page: the bank's reference number label"
+  },
+  "financeDepositHeldBy": "কার নামে",
+  "@financeDepositHeldBy": {
+    "description": "Deposit page: in whose name the deposit is held"
+  },
+  "financeDepositHeldOwner": "মালিকের",
+  "@financeDepositHeldOwner": {
+    "description": "Deposit page: held in the owner's name"
+  },
+  "financeDepositHeldOwnerPerson": "মালিকের — {person}",
+  "@financeDepositHeldOwnerPerson": {
+    "description": "Deposit page: held in the owner's name, with the person",
+    "placeholders": {
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "financeDepositHeldBusiness": "ব্যবসার",
+  "@financeDepositHeldBusiness": {
+    "description": "Deposit page: held in the business's name"
+  },
+  "financeDepositProfitRate": "মুনাফার হার",
+  "@financeDepositProfitRate": {
+    "description": "Deposit page: profit rate label"
+  },
+  "financeDepositOpened": "খোলা",
+  "@financeDepositOpened": {
+    "description": "Deposit page: date opened label"
+  },
+  "financeDepositMaturity": "মেয়াদ",
+  "@financeDepositMaturity": {
+    "description": "Deposit page: maturity date label"
+  },
+  "financeDepositMonthlyInstalment": "মাসের কিস্তি",
+  "@financeDepositMonthlyInstalment": {
+    "description": "Deposit page: monthly instalment label"
+  },
+  "financeDayOfMonth": "প্রতি মাসের {day} তারিখ",
+  "@financeDayOfMonth": {
+    "description": "Finance: a day of each month (instalment day, rent day)",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "financeDepositClosedOn": "শেষ হয়েছে",
+  "@financeDepositClosedOn": {
+    "description": "Deposit page: date the deposit was closed"
+  },
+  "financeDepositPledged": "বাঁধা",
+  "@financeDepositPledged": {
+    "description": "Deposit page: pledged label"
+  },
+  "financeDepositPledgedNote": "ঋণের বিপরীতে বাঁধা — ভাঙানো যাবে না",
+  "@financeDepositPledgedNote": {
+    "description": "Deposit page: pledged against a loan, cannot be encashed"
+  },
+  "financeNote": "নোট",
+  "@financeNote": {
+    "description": "Finance page: free-text note label"
+  },
+  "financeDepositMovements": "চলাচল",
+  "@financeDepositMovements": {
+    "description": "Deposit page: section title for movements"
+  },
+  "financeLoanListTitle": "ব্যাংক ঋণ ও কিস্তি",
+  "@financeLoanListTitle": {
+    "description": "Bank loan list screen title"
+  },
+  "financeLoanListEmpty": "এই ট্যাবে কোনো ঋণ নেই",
+  "@financeLoanListEmpty": {
+    "description": "Bank loan list: no loans in this tab"
+  },
+  "financeLoanLimitLine": "সীমা {amount}",
+  "@financeLoanLimitLine": {
+    "description": "Bank loan list row: sanctioned limit",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "financeLoanNextLine": "পরের কিস্তি {date} · {amount} · {state}",
+  "@financeLoanNextLine": {
+    "description": "Bank loan list row: next instalment date, amount and state",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "financeLoanTitle": "ব্যাংক ঋণ",
+  "@financeLoanTitle": {
+    "description": "Bank loan page title"
+  },
+  "financeLoanLoadFailed": "ঋণটা আনা গেল না।",
+  "@financeLoanLoadFailed": {
+    "description": "Bank loan page: loading failed"
+  },
+  "financeLoanOutstanding": "এখনকার দেনা",
+  "@financeLoanOutstanding": {
+    "description": "Bank loan page: outstanding balance now"
+  },
+  "financeLoanBank": "ব্যাংক",
+  "@financeLoanBank": {
+    "description": "Bank loan page: bank label"
+  },
+  "financeLoanLimit": "সীমা",
+  "@financeLoanLimit": {
+    "description": "Bank loan page: sanctioned limit label"
+  },
+  "financeLoanAvailable": "সীমার বাকি",
+  "@financeLoanAvailable": {
+    "description": "Bank loan page: limit still available"
+  },
+  "financeInterestRate": "সুদের হার",
+  "@financeInterestRate": {
+    "description": "Finance page: interest rate label"
+  },
+  "financeLoanSanctionNo": "মঞ্জুরির নম্বর",
+  "@financeLoanSanctionNo": {
+    "description": "Bank loan page: sanction letter number"
+  },
+  "financeLoanSanctioned": "মঞ্জুরি",
+  "@financeLoanSanctioned": {
+    "description": "Bank loan page: sanction date label"
+  },
+  "financeLoanRenewal": "নবায়ন",
+  "@financeLoanRenewal": {
+    "description": "Bank loan page: renewal date label"
+  },
+  "financeInstalment": "কিস্তি",
+  "@financeInstalment": {
+    "description": "Finance: instalment (deposit movement, loan instalments label)"
+  },
+  "financeLoanInstalmentCounts": "{paid} দেওয়া · {left} বাকি · মোট {total}",
+  "@financeLoanInstalmentCounts": {
+    "description": "Bank loan page: instalments paid, left and total",
+    "placeholders": {
+      "paid": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "financeLoanInstalmentAmount": "কিস্তির অঙ্ক",
+  "@financeLoanInstalmentAmount": {
+    "description": "Bank loan page: instalment amount label"
+  },
+  "financeLoanOverdueInstalments": "দিন পেরোনো কিস্তি",
+  "@financeLoanOverdueInstalments": {
+    "description": "Bank loan page: overdue instalments label"
+  },
+  "financeLoanOverdueCount": "{count}টি",
+  "@financeLoanOverdueCount": {
+    "description": "Bank loan page: number of overdue instalments",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "financeLoanNextInstalment": "পরের কিস্তি",
+  "@financeLoanNextInstalment": {
+    "description": "Bank loan page: next instalment card title"
+  },
+  "financeLoanSchedule": "সামনের কিস্তি",
+  "@financeLoanSchedule": {
+    "description": "Bank loan page: section title for upcoming instalments"
+  },
+  "financeLoanScheduleTitle": "{no} নম্বর কিস্তি · {date}",
+  "@financeLoanScheduleTitle": {
+    "description": "Bank loan schedule row: instalment number and due date",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "financeLoanScheduleSplit": "আসল {principal} · সুদ {interest}",
+  "@financeLoanScheduleSplit": {
+    "description": "Bank loan schedule row: principal and interest parts",
+    "placeholders": {
+      "principal": {
+        "type": "String"
+      },
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "financeRentTitle": "ভাড়া",
+  "@financeRentTitle": {
+    "description": "Rent list and rent page title"
+  },
+  "financeRentListEmpty": "এখানে কোনো ভাড়ার চুক্তি নেই",
+  "@financeRentListEmpty": {
+    "description": "Rent list: no rent agreements here"
+  },
+  "financeRentSidePay": "আমরা ভাড়া দিই",
+  "@financeRentSidePay": {
+    "description": "Rent list tab: premises we rent (we pay rent)"
+  },
+  "financeRentSideLet": "আমরা ভাড়া পাই",
+  "@financeRentSideLet": {
+    "description": "Rent list tab: premises we let out (we receive rent)"
+  },
+  "financeRentNextLine": "পরের ভাড়া {date}",
+  "@financeRentNextLine": {
+    "description": "Rent list row: next rent date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "financeRentTenantOwes": "ভাড়াটের কাছে পাওনা {amount}",
+  "@financeRentTenantOwes": {
+    "description": "Rent: the tenant owes us this amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "financeRentMonthsDue": "{months, plural, other{{months} মাসের ভাড়া বাকি · {amount}}}",
+  "@financeRentMonthsDue": {
+    "description": "Rent: months of rent we have not paid, and the amount",
+    "placeholders": {
+      "months": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "financeRentLoadFailed": "ভাড়ার চুক্তিটা আনা গেল না।",
+  "@financeRentLoadFailed": {
+    "description": "Rent page: loading failed"
+  },
+  "financeRentMonthlyWeLet": "মাসের ভাড়া (আমরা পাই)",
+  "@financeRentMonthlyWeLet": {
+    "description": "Rent page: monthly rent we receive"
+  },
+  "financeRentMonthlyWePay": "মাসের ভাড়া (আমরা দিই)",
+  "@financeRentMonthlyWePay": {
+    "description": "Rent page: monthly rent we pay"
+  },
+  "financeRentTenant": "ভাড়াটে",
+  "@financeRentTenant": {
+    "description": "Rent page: tenant label"
+  },
+  "financeRentLandlord": "বাড়িওয়ালা",
+  "@financeRentLandlord": {
+    "description": "Rent page: landlord label"
+  },
+  "financeRentPhone": "ফোন",
+  "@financeRentPhone": {
+    "description": "Rent page: phone label"
+  },
+  "financeRentPlace": "জায়গা",
+  "@financeRentPlace": {
+    "description": "Rent page: premises / place label"
+  },
+  "financeRentAgreementNo": "চুক্তির নম্বর",
+  "@financeRentAgreementNo": {
+    "description": "Rent page: agreement number label"
+  },
+  "financeRentDay": "ভাড়ার দিন",
+  "@financeRentDay": {
+    "description": "Rent page: rent day of the month label"
+  },
+  "financeRentNext": "পরের ভাড়া",
+  "@financeRentNext": {
+    "description": "Rent page: next rent date label"
+  },
+  "financeRentStarts": "শুরু",
+  "@financeRentStarts": {
+    "description": "Rent page: agreement start date label"
+  },
+  "financeRentEnds": "শেষ",
+  "@financeRentEnds": {
+    "description": "Rent page: agreement end date label"
+  },
+  "financeRentSecurity": "জামানত",
+  "@financeRentSecurity": {
+    "description": "Rent page: security deposit label"
+  },
+  "financeRentSecurityHeld": "হাতে থাকা জামানত",
+  "@financeRentSecurityHeld": {
+    "description": "Rent page: security deposit we still hold"
+  },
+  "financeRentSecurityLeft": "জামানতের বাকি",
+  "@financeRentSecurityLeft": {
+    "description": "Rent page: security deposit remaining"
+  },
+  "financeRentOldestUnpaid": "সবচেয়ে পুরনো বাকি মাস",
+  "@financeRentOldestUnpaid": {
+    "description": "Rent page: the oldest unpaid month"
+  },
+  "financeRentUnpaidMonths": "বাকি মাস",
+  "@financeRentUnpaidMonths": {
+    "description": "Rent page: section title for unpaid months"
+  },
+  "financeHandLoanListTitle": "হাতধার",
+  "@financeHandLoanListTitle": {
+    "description": "Hand loan (informal loan) list screen title"
+  },
+  "financeHandLoanListEmpty": "কোনো খোলা হাতধার নেই",
+  "@financeHandLoanListEmpty": {
+    "description": "Hand loan list: no open hand loans"
+  },
+  "financeHandLoanToUs": "আমরা পাব",
+  "@financeHandLoanToUs": {
+    "description": "Hand loan list total: others owe us"
+  },
+  "financeHandLoanWeOwe": "আমরা দেব",
+  "@financeHandLoanWeOwe": {
+    "description": "Hand loan list total: we owe others"
+  },
+  "financeHandLoanDueLine": "ফেরতের দিন {date}",
+  "@financeHandLoanDueLine": {
+    "description": "Hand loan list row: repayment date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "financeHandLoanTheyOwe": "তিনি আমাদের দেবেন",
+  "@financeHandLoanTheyOwe": {
+    "description": "Hand loan side: the person owes us"
+  },
+  "financeHandLoanWeOweThem": "আমরা তাঁকে দেব",
+  "@financeHandLoanWeOweThem": {
+    "description": "Hand loan side: we owe the person"
+  },
+  "financeHandLoanSettled": "মিটে গেছে",
+  "@financeHandLoanSettled": {
+    "description": "Hand loan side: nothing owed either way"
+  },
+  "financeHandLoanTitle": "হাতধার",
+  "@financeHandLoanTitle": {
+    "description": "Hand loan page title (one loan)"
+  },
+  "financeHandLoanLoadFailed": "হাতধারটা আনা গেল না।",
+  "@financeHandLoanLoadFailed": {
+    "description": "Hand loan page: loading failed"
+  },
+  "financeHandLoanMobile": "মোবাইল",
+  "@financeHandLoanMobile": {
+    "description": "Hand loan page: mobile number label"
+  },
+  "financeHandLoanPrincipal": "আসল",
+  "@financeHandLoanPrincipal": {
+    "description": "Hand loan page: principal label"
+  },
+  "financeHandLoanRepaymentType": "ফেরতের ধরন",
+  "@financeHandLoanRepaymentType": {
+    "description": "Hand loan page: how it is repaid"
+  },
+  "financeHandLoanDueDate": "ফেরতের দিন",
+  "@financeHandLoanDueDate": {
+    "description": "Hand loan page: repayment date label"
+  },
+  "financeHandLoanStatusSettled": "চুকে গেছে",
+  "@financeHandLoanStatusSettled": {
+    "description": "Hand loan page status: settled"
+  },
+  "financeHandLoanMoveButton": "টাকা দেওয়া / ফেরত",
+  "@financeHandLoanMoveButton": {
+    "description": "Hand loan page: button to record money given or paid back"
+  },
+  "financeHandLoanTransactions": "লেনদেন",
+  "@financeHandLoanTransactions": {
+    "description": "Hand loan page: section title for transactions"
+  },
+  "financeHandLoanGiven": "টাকা দেওয়া",
+  "@financeHandLoanGiven": {
+    "description": "Hand loan transaction: money given"
+  },
+  "financeHandLoanReceived": "টাকা পাওয়া",
+  "@financeHandLoanReceived": {
+    "description": "Hand loan transaction: money received"
+  },
+  "financeHandLoanReturnLine": "ফেরতের কথা {date}",
+  "@financeHandLoanReturnLine": {
+    "description": "Hand loan transaction: promised return date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "accountsChartLoadFailed": "হিসাবের ছক আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@accountsChartLoadFailed": {
+    "description": "Chart of accounts: loading failed, pull down to retry"
+  },
+  "accountsChartNotOnServer": "সার্ভারে ফোনের হিসাবের ছক এখনো আসেনি — অফিসে জানান।",
+  "@accountsChartNotOnServer": {
+    "description": "Chart of accounts: the server lacks the phone chart yet"
+  },
+  "accountsChartTitle": "হিসাবের ছক",
+  "@accountsChartTitle": {
+    "description": "Chart of accounts screen title"
+  },
+  "accountsChartSearchHint": "কোড বা নাম দিয়ে খুঁজুন",
+  "@accountsChartSearchHint": {
+    "description": "Chart of accounts: search box hint"
+  },
+  "accountsChartCount": "{count, plural, other{মোট {count} টি হিসাব}}",
+  "@accountsChartCount": {
+    "description": "Chart of accounts: number of accounts shown",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsChartFetchFailed": "আনা গেল না",
+  "@accountsChartFetchFailed": {
+    "description": "Chart of accounts / ledger: error card title"
+  },
+  "accountsChartNoMatch": "কোনো হিসাব মেলেনি",
+  "@accountsChartNoMatch": {
+    "description": "Chart of accounts: search found nothing"
+  },
+  "accountsChartLedgerLoadFailed": "খাতা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@accountsChartLedgerLoadFailed": {
+    "description": "Account ledger: loading failed, pull down to retry"
+  },
+  "accountsChartGroupAccount": "এটা দলের হিসাব — এন্ট্রি এর নিচের হিসাবগুলোতে। ছকে ফিরে নিচের হিসাব খুলুন।",
+  "@accountsChartGroupAccount": {
+    "description": "Account ledger: this is a group account, open a child account instead"
+  },
+  "accountsChartNoEntries": "এই হিসাবে কোনো এন্ট্রি নেই",
+  "@accountsChartNoEntries": {
+    "description": "Account ledger: no entries"
+  },
+  "accountsChartMoreEntries": "আরও এন্ট্রি",
+  "@accountsChartMoreEntries": {
+    "description": "Account ledger: load more entries button"
+  },
+  "accountsChartLedgerTotal": "{count, plural, other{সর্বমোট · {count} টি এন্ট্রি}}",
+  "@accountsChartLedgerTotal": {
+    "description": "Account ledger totals card heading with the entry count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsChartDebit": "ডেবিট",
+  "@accountsChartDebit": {
+    "description": "Account ledger: debit total label"
+  },
+  "accountsChartCredit": "ক্রেডিট",
+  "@accountsChartCredit": {
+    "description": "Account ledger: credit total label"
+  },
+  "accountsChartClosing": "শেষ জের",
+  "@accountsChartClosing": {
+    "description": "Account ledger: closing balance label"
+  },
+  "accountsChartDebitLine": "ডেবিট {amount}",
+  "@accountsChartDebitLine": {
+    "description": "Account ledger entry: debit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "accountsChartCreditLine": "ক্রেডিট {amount}",
+  "@accountsChartCreditLine": {
+    "description": "Account ledger entry: credit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersKindSuffix": " ভাউচার",
+  "@vouchersKindSuffix": {
+    "description": "Voucher list: the word 'voucher' after a voucher type name, removed to make short filter chips; keep the leading space"
+  },
+  "vouchersListLoadFailed": "ভাউচারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@vouchersListLoadFailed": {
+    "description": "Voucher list: loading failed, pull down to retry"
+  },
+  "vouchersListNotOnServer": "সার্ভারে ফোনের ভাউচার এখনো আসেনি — অফিসে জানান।",
+  "@vouchersListNotOnServer": {
+    "description": "Voucher list: the server lacks phone vouchers yet"
+  },
+  "vouchersListTitle": "ভাউচার",
+  "@vouchersListTitle": {
+    "description": "Voucher list screen title; also the voucher page title before it loads"
+  },
+  "vouchersListAllTitle": "সব ভাউচার",
+  "@vouchersListAllTitle": {
+    "description": "Voucher list title when opened as 'all vouchers' from the menu"
+  },
+  "vouchersListNew": "নতুন ভাউচার",
+  "@vouchersListNew": {
+    "description": "Voucher list: new voucher button"
+  },
+  "vouchersListAwaitingSign": "সইয়ের অপেক্ষায়",
+  "@vouchersListAwaitingSign": {
+    "description": "Voucher list filter: waiting for signature"
+  },
+  "vouchersListAllBranches": "সব শাখা",
+  "@vouchersListAllBranches": {
+    "description": "Voucher list filter: all branches"
+  },
+  "vouchersListTotal": "মোট · {kind}",
+  "@vouchersListTotal": {
+    "description": "Voucher list total strip: total for the chosen voucher type",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersListEmpty": "কোনো ভাউচার নেই।",
+  "@vouchersListEmpty": {
+    "description": "Voucher list: no vouchers"
+  },
+  "vouchersListWrittenBy": "তুলেছেন: {name}",
+  "@vouchersListWrittenBy": {
+    "description": "Voucher list row: who entered the voucher",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersPageLoadFailed": "ভাউচারটা আনা গেল না।",
+  "@vouchersPageLoadFailed": {
+    "description": "Voucher page: loading failed"
+  },
+  "vouchersPagePostFailed": "পাকা করা গেল না। আবার চেষ্টা করুন।",
+  "@vouchersPagePostFailed": {
+    "description": "Voucher page: posting failed, try again"
+  },
+  "vouchersPagePrint": "ছাপা বা শেয়ার",
+  "@vouchersPagePrint": {
+    "description": "Voucher page: print or share button tooltip"
+  },
+  "vouchersPageType": "ধরন",
+  "@vouchersPageType": {
+    "description": "Voucher page: voucher type label"
+  },
+  "vouchersAmount": "টাকা",
+  "@vouchersAmount": {
+    "description": "Voucher page and form: amount label"
+  },
+  "vouchersDate": "তারিখ",
+  "@vouchersDate": {
+    "description": "Voucher page and form: date label"
+  },
+  "vouchersTrxNo": "লেনদেন নম্বর",
+  "@vouchersTrxNo": {
+    "description": "Voucher page: mobile banking / transfer transaction number label"
+  },
+  "vouchersNarration": "বিবরণ",
+  "@vouchersNarration": {
+    "description": "Voucher page and form: narration label"
+  },
+  "vouchersPageWriter": "লেখক",
+  "@vouchersPageWriter": {
+    "description": "Voucher page: who wrote the voucher"
+  },
+  "vouchersDebitLine": "ডেবিট {amount}",
+  "@vouchersDebitLine": {
+    "description": "Voucher line: debit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersCreditLine": "ক্রেডিট {amount}",
+  "@vouchersCreditLine": {
+    "description": "Voucher line: credit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersPageAnotherHand": "নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে \"পাকা করুন\" চাপবেন।",
+  "@vouchersPageAnotherHand": {
+    "description": "Voucher page: the writer cannot post their own voucher; someone else must press Post"
+  },
+  "vouchersPageTrxLabel": "লেনদেন নম্বর (TrxID)",
+  "@vouchersPageTrxLabel": {
+    "description": "Voucher page: transaction ID field label"
+  },
+  "vouchersPagePost": "পাকা করুন",
+  "@vouchersPagePost": {
+    "description": "Voucher page: post button"
+  },
+  "vouchersFormSetupFailed": "খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।",
+  "@vouchersFormSetupFailed": {
+    "description": "Voucher form: account list failed to load; check internet and open again"
+  },
+  "vouchersFormSetupMissing": "খাতের তালিকা এখনো আসেনি।",
+  "@vouchersFormSetupMissing": {
+    "description": "Voucher form: account list not loaded yet"
+  },
+  "vouchersFormNarrationRequired": "বিবরণ লিখুন — এই কোম্পানিতে বিবরণ বাধ্যতামূলক।",
+  "@vouchersFormNarrationRequired": {
+    "description": "Voucher form: narration is required in this company"
+  },
+  "vouchersFormTwoLines": "অন্তত দুটো সারিতে খাত বাছুন।",
+  "@vouchersFormTwoLines": {
+    "description": "Journal form: choose accounts on at least two lines"
+  },
+  "vouchersFormAmountShape": "অঙ্কটা ঠিক নয় — দুই দশমিক পর্যন্ত।",
+  "@vouchersFormAmountShape": {
+    "description": "Journal form: amount not valid, up to two decimals"
+  },
+  "vouchersFormBothSides": "এক সারিতে ডেবিট আর ক্রেডিট দুটোই নয়।",
+  "@vouchersFormBothSides": {
+    "description": "Journal form: one line cannot have both debit and credit"
+  },
+  "vouchersFormUnbalanced": "ডেবিট আর ক্রেডিট মেলেনি।",
+  "@vouchersFormUnbalanced": {
+    "description": "Journal form: debit and credit totals differ"
+  },
+  "vouchersFormPickAccounts": "দুই দিকের খাত বাছুন।",
+  "@vouchersFormPickAccounts": {
+    "description": "Voucher form: choose both accounts"
+  },
+  "vouchersFormSameAccount": "দুই দিকে একই খাত হয় না।",
+  "@vouchersFormSameAccount": {
+    "description": "Voucher form: both sides cannot be the same account"
+  },
+  "vouchersFormAmountInvalid": "অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।",
+  "@vouchersFormAmountInvalid": {
+    "description": "Voucher form: amount must be above zero, up to two decimals"
+  },
+  "vouchersFormNotSaved": "ভাউচারটা বসেনি। আবার চেষ্টা করুন।",
+  "@vouchersFormNotSaved": {
+    "description": "Voucher form: the server did not save the voucher"
+  },
+  "vouchersFormMayHaveLanded": "ভাউচারের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।",
+  "@vouchersFormMayHaveLanded": {
+    "description": "Voucher form: no reply, it may have reached the server; tap again unchanged, it will not be saved twice"
+  },
+  "vouchersFormNeedsNet": "ভাউচার লিখতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।",
+  "@vouchersFormNeedsNet": {
+    "description": "Voucher form: needs internet; nothing was kept on the phone"
+  },
+  "vouchersFormSendFailed": "পাঠানো গেল না। আবার চেষ্টা করুন।",
+  "@vouchersFormSendFailed": {
+    "description": "Voucher form: sending failed"
+  },
+  "vouchersFormPartyOptional": "পক্ষ (ঐচ্ছিক — বাকিতে খরচে লাগবে)",
+  "@vouchersFormPartyOptional": {
+    "description": "Voucher form: party picker, optional but needed for an expense on credit"
+  },
+  "vouchersFormClear": "মুছুন",
+  "@vouchersFormClear": {
+    "description": "Voucher form: clear the chosen party (tooltip)"
+  },
+  "vouchersFormParty": "পক্ষ",
+  "@vouchersFormParty": {
+    "description": "Voucher form: party picker sheet title"
+  },
+  "vouchersFormFrom": "কোথা থেকে",
+  "@vouchersFormFrom": {
+    "description": "Voucher form: account the money comes from"
+  },
+  "vouchersFormTo": "কোথায়",
+  "@vouchersFormTo": {
+    "description": "Voucher form: account the money goes to"
+  },
+  "vouchersFormTrxLabel": "লেনদেন নম্বর (TrxID) — পাকা করতে লাগবে",
+  "@vouchersFormTrxLabel": {
+    "description": "Voucher form: transaction ID field, needed before posting"
+  },
+  "vouchersFormAccount": "খাত",
+  "@vouchersFormAccount": {
+    "description": "Journal form line: account picker"
+  },
+  "vouchersFormDebit": "ডেবিট",
+  "@vouchersFormDebit": {
+    "description": "Journal form line: debit field"
+  },
+  "vouchersFormCredit": "ক্রেডিট",
+  "@vouchersFormCredit": {
+    "description": "Journal form line: credit field"
+  },
+  "vouchersFormAddLine": "সারি যোগ",
+  "@vouchersFormAddLine": {
+    "description": "Journal form: add a line button"
+  },
+  "vouchersFormTotals": "ডেবিট {debit} · ক্রেডিট {credit}",
+  "@vouchersFormTotals": {
+    "description": "Journal form: debit and credit totals",
+    "placeholders": {
+      "debit": {
+        "type": "String"
+      },
+      "credit": {
+        "type": "String"
+      }
+    }
+  },
+  "vouchersFormNarrationMust": "বিবরণ (বাধ্যতামূলক)",
+  "@vouchersFormNarrationMust": {
+    "description": "Voucher form: narration field label when required"
+  },
+  "vouchersFormKeepDraft": "খসড়া রাখুন",
+  "@vouchersFormKeepDraft": {
+    "description": "Voucher form: keep as draft switch"
+  },
+  "vouchersFormKeepDraftHint": "বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে",
+  "@vouchersFormKeepDraftHint": {
+    "description": "Voucher form: when off, saving posts it; it stays a draft if signatures are needed or you wrote it"
+  },
+  "vouchersFormSave": "সংরক্ষণ",
+  "@vouchersFormSave": {
+    "description": "Voucher form: save button"
+  },
+  "vouchersPickNothing": "কিছু মেলেনি।",
+  "@vouchersPickNothing": {
+    "description": "Voucher form picker: nothing matches the search"
+  },
+  "moneyResultDone": "বসেছে।",
+  "@moneyResultDone": {
+    "description": "Money screens: snack bar when the server saved the entry and sent no message of its own"
+  },
+  "moneyResultPending": "সইয়ের অপেক্ষায়।",
+  "@moneyResultPending": {
+    "description": "Money screens: snack bar when the entry waits for a signature and the server sent no message"
+  },
+  "moneyLoadFailed": "{title} আনা গেল না।",
+  "@moneyLoadFailed": {
+    "description": "Money screens: error when a page could not be loaded; title is the page title",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyPageMissing": "এই পাতা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@moneyPageMissing": {
+    "description": "Money screens: error when the server does not have this page yet (app newer than server)"
+  },
+  "moneyCustodyTitle": "টাকা কার হাতে",
+  "@moneyCustodyTitle": {
+    "description": "Custody screen title: which person/account holds how much money"
+  },
+  "moneyCustodyOnRoad": "পথের টাকা",
+  "@moneyCustodyOnRoad": {
+    "description": "Custody screen: total strip label, money handed over but not yet received"
+  },
+  "moneyCustodyEmpty": "কোনো টাকার খাত নেই",
+  "@moneyCustodyEmpty": {
+    "description": "Custody screen: empty state, no cash/bank accounts"
+  },
+  "moneyCustodyInTransit": "পথে আছে",
+  "@moneyCustodyInTransit": {
+    "description": "Custody screen: section title for handovers still in transit"
+  },
+  "moneyTransferListTitle": "টাকা হস্তান্তর",
+  "@moneyTransferListTitle": {
+    "description": "Money handover list: screen title (handing cash from one till/person to another)"
+  },
+  "moneyTransferSend": "পাঠান",
+  "@moneyTransferSend": {
+    "description": "Money handover: button that sends a new handover"
+  },
+  "moneyTransferTotal": "মোট হাতবদল",
+  "@moneyTransferTotal": {
+    "description": "Money handover list: total strip label, total amount handed over"
+  },
+  "moneyTransferAwaitingMe": "আমার নেওয়ার অপেক্ষায়",
+  "@moneyTransferAwaitingMe": {
+    "description": "Money handover list: section of handovers waiting for me to confirm receipt"
+  },
+  "moneyTransferEmpty": "কোনো হস্তান্তর নেই",
+  "@moneyTransferEmpty": {
+    "description": "Money handover list: empty state title"
+  },
+  "moneyPullToRefresh": "নিচে টেনে আবার দেখুন।",
+  "@moneyPullToRefresh": {
+    "description": "Money screens: empty state hint, pull down to refresh"
+  },
+  "moneyTransferAll": "সব",
+  "@moneyTransferAll": {
+    "description": "Money handover list: section title for all handovers"
+  },
+  "moneyActionFailed": "করা গেল না।",
+  "@moneyActionFailed": {
+    "description": "Money handover: generic error when confirming or cancelling failed"
+  },
+  "moneyTransferCancelWhy": "কেন বাতিল?",
+  "@moneyTransferCancelWhy": {
+    "description": "Money handover: dialog title asking the reason to cancel"
+  },
+  "moneyTransferKeep": "থাক",
+  "@moneyTransferKeep": {
+    "description": "Money handover: dialog button that closes without cancelling"
+  },
+  "moneyTransferCancelConfirm": "বাতিল করুন",
+  "@moneyTransferCancelConfirm": {
+    "description": "Money handover: dialog button that cancels the handover"
+  },
+  "moneyTransferTitle": "হস্তান্তর",
+  "@moneyTransferTitle": {
+    "description": "Money handover detail: screen title"
+  },
+  "moneyFactStatus": "অবস্থা",
+  "@moneyFactStatus": {
+    "description": "Money screens: fact row label, status"
+  },
+  "moneyFactDate": "তারিখ",
+  "@moneyFactDate": {
+    "description": "Money screens: fact row label, date"
+  },
+  "moneyTransferFrom": "কোথা থেকে",
+  "@moneyTransferFrom": {
+    "description": "Money handover detail: source till"
+  },
+  "moneyTransferTo": "কোথায়",
+  "@moneyTransferTo": {
+    "description": "Money handover detail: destination till or bank"
+  },
+  "moneyFactAmount": "অঙ্ক",
+  "@moneyFactAmount": {
+    "description": "Money screens: amount label (fact row and input field)"
+  },
+  "moneyTransferGiver": "দিলেন",
+  "@moneyTransferGiver": {
+    "description": "Money handover detail: person who handed the money over"
+  },
+  "moneyTransferReceiver": "নেবেন",
+  "@moneyTransferReceiver": {
+    "description": "Money handover detail: person who is to receive the money"
+  },
+  "moneyTransferNarration": "বিবরণ",
+  "@moneyTransferNarration": {
+    "description": "Money handover detail: description / narration"
+  },
+  "moneyTransferCancelReason": "বাতিলের কারণ",
+  "@moneyTransferCancelReason": {
+    "description": "Money handover detail: reason the handover was cancelled"
+  },
+  "moneyTransferReceived": "টাকা পেলাম",
+  "@moneyTransferReceived": {
+    "description": "Money handover detail: button, receiver confirms the money arrived"
+  },
+  "moneyTransferCancel": "বাতিল",
+  "@moneyTransferCancel": {
+    "description": "Money handover detail: button that cancels the handover"
+  },
+  "moneyTillsLoadFailed": "টিলের তালিকা আনা গেল না।",
+  "@moneyTillsLoadFailed": {
+    "description": "Money screens: error when the list of cash tills could not be loaded"
+  },
+  "moneyTransferMissing": "কোথা থেকে, কোথায় আর কত — লাগবেই।",
+  "@moneyTransferMissing": {
+    "description": "Send handover: validation, source, destination and amount are required"
+  },
+  "moneyTransferSendFailed": "হস্তান্তর পাঠানো গেল না।",
+  "@moneyTransferSendFailed": {
+    "description": "Send handover: error when sending failed"
+  },
+  "moneySendTitle": "টাকা পাঠান",
+  "@moneySendTitle": {
+    "description": "Send handover: screen title"
+  },
+  "moneyTransferFromTill": "কোন টিল থেকে",
+  "@moneyTransferFromTill": {
+    "description": "Send handover: field label, source cash till"
+  },
+  "moneyTransferToLabel": "কোথায় — টিল বা ব্যাংক",
+  "@moneyTransferToLabel": {
+    "description": "Send handover: field label, destination till or bank"
+  },
+  "moneyTransferReceiverLabel": "কে নেবেন (ঐচ্ছিক)",
+  "@moneyTransferReceiverLabel": {
+    "description": "Send handover: optional field, who will receive"
+  },
+  "moneyTransferNoteLabel": "বিবরণ (ঐচ্ছিক)",
+  "@moneyTransferNoteLabel": {
+    "description": "Send handover: optional description field"
+  },
+  "moneyCashCountTitle": "নগদ গোনা",
+  "@moneyCashCountTitle": {
+    "description": "Cash count list and detail: screen title"
+  },
+  "moneyCashCountNew": "গুনুন",
+  "@moneyCashCountNew": {
+    "description": "Cash count list: button to start a new count"
+  },
+  "moneyCashCountTotal": "মোট গোনা",
+  "@moneyCashCountTotal": {
+    "description": "Cash count list: total strip label, number of counts"
+  },
+  "moneyCashCountTotalValue": "{count, plural, other{{count} টি}}",
+  "@moneyCashCountTotalValue": {
+    "description": "Cash count list: number of counts in the list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "moneyCashCountEmpty": "কোনো গোনা নেই",
+  "@moneyCashCountEmpty": {
+    "description": "Cash count list: empty state title"
+  },
+  "moneyCashCountDifference": "পার্থক্য {difference}",
+  "@moneyCashCountDifference": {
+    "description": "Cash count list row: difference between counted and book amount",
+    "placeholders": {
+      "difference": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyFactTill": "টিল",
+  "@moneyFactTill": {
+    "description": "Cash count detail: cash till"
+  },
+  "moneyFactCounted": "গোনা",
+  "@moneyFactCounted": {
+    "description": "Cash count detail: amount counted"
+  },
+  "moneyFactExpected": "খাতায়",
+  "@moneyFactExpected": {
+    "description": "Cash count detail: amount in the books"
+  },
+  "moneyFactDifference": "পার্থক্য",
+  "@moneyFactDifference": {
+    "description": "Cash count detail: difference"
+  },
+  "moneyCashCountNoteRow": "{note} টাকার নোট",
+  "@moneyCashCountNoteRow": {
+    "description": "Cash count detail: banknote denomination row, e.g. 500-taka notes",
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyCashCountNoteQty": "{qty}টা",
+  "@moneyCashCountNoteQty": {
+    "description": "Cash count detail: how many banknotes of that denomination",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyCashCountBy": "গুনেছেন",
+  "@moneyCashCountBy": {
+    "description": "Cash count detail: person who counted"
+  },
+  "moneyCashCountApprovedBy": "মেনেছেন",
+  "@moneyCashCountApprovedBy": {
+    "description": "Cash count detail: person who accepted the count"
+  },
+  "moneyCashCountAdjustment": "সমন্বয়ের ভাউচার",
+  "@moneyCashCountAdjustment": {
+    "description": "Cash count detail: adjustment voucher posted for the difference"
+  },
+  "moneyCashCountApproveFailed": "মেনে নেওয়া গেল না।",
+  "@moneyCashCountApproveFailed": {
+    "description": "Cash count detail: error when accepting failed"
+  },
+  "moneyCashCountApprove": "মেনে নিন",
+  "@moneyCashCountApprove": {
+    "description": "Cash count detail: button, accept the count"
+  },
+  "moneyCashCountPickTill": "কোন টিল — বাছুন।",
+  "@moneyCashCountPickTill": {
+    "description": "New cash count: validation, choose a till"
+  },
+  "moneyCashCountSaveFailed": "গোনা বসানো গেল না।",
+  "@moneyCashCountSaveFailed": {
+    "description": "New cash count: error when saving failed"
+  },
+  "moneyCashCountNewTitle": "নগদ গুনুন",
+  "@moneyCashCountNewTitle": {
+    "description": "New cash count: screen title"
+  },
+  "moneyCashCountTillLabel": "কোন টিল",
+  "@moneyCashCountTillLabel": {
+    "description": "New cash count: till field label"
+  },
+  "moneyCashCountTillOption": "{name} · খাতায় {balance}",
+  "@moneyCashCountTillOption": {
+    "description": "New cash count: till choice with its book balance",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyCashCountNoteLabel": "{note} টাকার নোট — কয়টা",
+  "@moneyCashCountNoteLabel": {
+    "description": "New cash count: field asking how many banknotes of this denomination",
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyCashCountSave": "গোনা বসান",
+  "@moneyCashCountSave": {
+    "description": "New cash count: button that saves the count"
+  },
+  "moneyCashCountHint": "গোনা বসলে খাতা নড়ে না — অন্য কেউ মেনে নিলে তবেই পার্থক্য খাতায় যায়।",
+  "@moneyCashCountHint": {
+    "description": "New cash count: hint, saving does not touch the books until someone else accepts"
+  },
+  "moneyAccountsLoadFailed": "টাকার খাত আনা গেল না।",
+  "@moneyAccountsLoadFailed": {
+    "description": "Hand loan: error when money accounts could not be loaded"
+  },
+  "moneyHandLoanMissing": "টাকার খাত আর অঙ্ক লাগবেই।",
+  "@moneyHandLoanMissing": {
+    "description": "Hand loan: validation, money account and amount are required"
+  },
+  "moneyHandLoanSaveFailed": "হাতধার বসানো গেল না।",
+  "@moneyHandLoanSaveFailed": {
+    "description": "Hand loan: error when saving failed"
+  },
+  "moneyHandLoanTitle": "হাতধার · {name}",
+  "@moneyHandLoanTitle": {
+    "description": "Hand loan move: screen title with the person's name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyHandLoanOut": "টাকা দিলাম",
+  "@moneyHandLoanOut": {
+    "description": "Hand loan: segment, I gave money (lent)"
+  },
+  "moneyHandLoanIn": "ফেরত পেলাম",
+  "@moneyHandLoanIn": {
+    "description": "Hand loan: segment, I got the money back (repaid)"
+  },
+  "moneyHandLoanFromAccount": "কোন খাত থেকে",
+  "@moneyHandLoanFromAccount": {
+    "description": "Hand loan: field, account the money is paid from"
+  },
+  "moneyHandLoanToAccount": "কোন খাতে",
+  "@moneyHandLoanToAccount": {
+    "description": "Hand loan: field, account the money is received into"
+  },
+  "moneyHandLoanNoteLabel": "নোট (ঐচ্ছিক)",
+  "@moneyHandLoanNoteLabel": {
+    "description": "Hand loan: optional free-text note field"
+  },
+  "moneyHandLoanSave": "বসান",
+  "@moneyHandLoanSave": {
+    "description": "Hand loan: button that saves"
+  },
+  "moneyCfoTitle": "অর্থ-প্রধানের পাতা",
+  "@moneyCfoTitle": {
+    "description": "CFO screen title"
+  },
+  "moneyCfoIn30Days": "{days} দিন পরে হাতে",
+  "@moneyCfoIn30Days": {
+    "description": "CFO screen: cash expected in hand after this many days (days already in the reader's digits)",
+    "placeholders": {
+      "days": {
+        "type": "String",
+        "example": "30"
+      }
+    }
+  },
+  "moneyBudgetExpenseMonth": "এই মাসের খরচের বাজেট",
+  "@moneyBudgetExpenseMonth": {
+    "description": "Budget: this month's expense budget"
+  },
+  "moneyBudgetMonth": "এই মাসের বাজেট",
+  "@moneyBudgetMonth": {
+    "description": "Budget: this month's budget (older server, expense and purchase together)"
+  },
+  "moneyBudgetLabel": "বাজেট",
+  "@moneyBudgetLabel": {
+    "description": "Budget card: budget amount row"
+  },
+  "moneyBudgetSpent": "খরচ হয়েছে",
+  "@moneyBudgetSpent": {
+    "description": "Budget card: amount spent"
+  },
+  "moneyBudgetUsed": "ব্যবহার",
+  "@moneyBudgetUsed": {
+    "description": "Budget card: percentage used"
+  },
+  "moneyForecastTitle": "নগদের পূর্বাভাস",
+  "@moneyForecastTitle": {
+    "description": "Cash forecast screen title"
+  },
+  "moneyForecastToday": "আজ হাতে",
+  "@moneyForecastToday": {
+    "description": "Cash forecast: cash in hand today"
+  },
+  "moneyForecastPeriod": "{when} ({until} পর্যন্ত)",
+  "@moneyForecastPeriod": {
+    "description": "Cash forecast: period name with its end date",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "until": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyForecastReceivables": "আসবে — পাওনা",
+  "@moneyForecastReceivables": {
+    "description": "Cash forecast: money coming in from receivables"
+  },
+  "moneyForecastLoansIn": "আসবে — ধার",
+  "@moneyForecastLoansIn": {
+    "description": "Cash forecast: money coming in from loans"
+  },
+  "moneyForecastPayables": "যাবে — দেনা",
+  "@moneyForecastPayables": {
+    "description": "Cash forecast: money going out to payables"
+  },
+  "moneyForecastLoansOut": "যাবে — ধার শোধ",
+  "@moneyForecastLoansOut": {
+    "description": "Cash forecast: money going out as loan repayment"
+  },
+  "moneyForecastNet": "নিট",
+  "@moneyForecastNet": {
+    "description": "Cash forecast: net"
+  },
+  "moneyIncomeTitle": "আয়",
+  "@moneyIncomeTitle": {
+    "description": "Income screen title"
+  },
+  "moneyIncomeTotal": "মোট আয় · এই মাস",
+  "@moneyIncomeTotal": {
+    "description": "Income screen: total income this month"
+  },
+  "moneyIncomeSales": "বিক্রি",
+  "@moneyIncomeSales": {
+    "description": "Income screen: sales income"
+  },
+  "moneyIncomeOther": "অন্যান্য আয়",
+  "@moneyIncomeOther": {
+    "description": "Income screen: other income"
+  },
+  "moneyIncomeByHead": "খাত ধরে",
+  "@moneyIncomeByHead": {
+    "description": "Income screen: section title, income by account head"
+  },
+  "moneyIncomeEmpty": "এই মাসে আয়ের কোনো সারি নেই",
+  "@moneyIncomeEmpty": {
+    "description": "Income screen: empty state"
+  },
+  "moneyIncomeBefore": "আগের সময়ে {amount}",
+  "@moneyIncomeBefore": {
+    "description": "Income screen row: the amount in the previous period",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyBudgetTitle": "বাজেট",
+  "@moneyBudgetTitle": {
+    "description": "Budget screen title"
+  },
+  "moneyBudgetEmpty": "এই মাসের কোনো বাজেট নেই",
+  "@moneyBudgetEmpty": {
+    "description": "Budget screen: empty state"
+  },
+  "moneyBudgetSetOnWeb": "বাজেট ওয়েবে বসান।",
+  "@moneyBudgetSetOnWeb": {
+    "description": "Budget screen: empty state hint, set the budget on the web"
+  },
+  "moneyPurchaseBudget": "ক্রয়ের বাজেট",
+  "@moneyPurchaseBudget": {
+    "description": "Purchase budget card: section title"
+  },
+  "moneyPurchaseBought": "কেনা হয়েছে",
+  "@moneyPurchaseBought": {
+    "description": "Purchase budget card: amount purchased"
+  },
+  "creditListHighRisk": "বেশি ঝুঁকি",
+  "@creditListHighRisk": {
+    "description": "Credit control: list chip, high-risk customers"
+  },
+  "creditListOverdueBills": "মেয়াদ পেরোনো বিল",
+  "@creditListOverdueBills": {
+    "description": "Credit control: list chip, overdue bills"
+  },
+  "creditOverLimit": "সীমা পার",
+  "@creditOverLimit": {
+    "description": "Credit control: over the credit limit (list chip and customer state badge)"
+  },
+  "creditListAll": "সব গ্রাহক",
+  "@creditListAll": {
+    "description": "Credit control: list chip, all customers"
+  },
+  "creditDeskLoadFailed": "বাকির হিসাব আনা গেল না।",
+  "@creditDeskLoadFailed": {
+    "description": "Credit control: error when the figures could not be loaded"
+  },
+  "creditDeskMissing": "বাকি নিয়ন্ত্রণ এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@creditDeskMissing": {
+    "description": "Credit control: error when the server does not have credit control yet"
+  },
+  "creditDeskTitle": "বাকি নিয়ন্ত্রণ",
+  "@creditDeskTitle": {
+    "description": "Credit control screen title"
+  },
+  "creditDeskSearchHint": "গ্রাহকের নাম বা কোড",
+  "@creditDeskSearchHint": {
+    "description": "Credit control: search field hint"
+  },
+  "creditDeskEmptyHighRisk": "বেশি ঝুঁকির কোনো গ্রাহক নেই",
+  "@creditDeskEmptyHighRisk": {
+    "description": "Credit control: empty high-risk list"
+  },
+  "creditDeskEmptyOverdue": "মেয়াদ পেরোনো কোনো বিল নেই",
+  "@creditDeskEmptyOverdue": {
+    "description": "Credit control: empty overdue-bills list"
+  },
+  "creditDeskEmptyOverLimit": "কেউ সীমা পার করেননি",
+  "@creditDeskEmptyOverLimit": {
+    "description": "Credit control: empty over-limit list"
+  },
+  "creditDeskEmptyAll": "কোনো গ্রাহক নেই",
+  "@creditDeskEmptyAll": {
+    "description": "Credit control: empty all-customers list"
+  },
+  "creditDeskShowingFirst": "প্রথম {shown}টা দেখানো হলো, মোট {total}টা — খুঁজে নিন।",
+  "@creditDeskShowingFirst": {
+    "description": "Credit control: only the first page is shown, search to find others",
+    "placeholders": {
+      "shown": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "creditDashUsed": "ব্যবহৃত বাকি",
+  "@creditDashUsed": {
+    "description": "Credit dashboard: credit used (exposure)"
+  },
+  "creditDashCheckOff": "এই প্রতিষ্ঠানে সীমার যাচাই বন্ধ — অঙ্কগুলো কেবল দেখার জন্য।",
+  "@creditDashCheckOff": {
+    "description": "Credit dashboard: limit checks are off in this company, figures are for viewing only"
+  },
+  "creditDashTotalLimit": "মোট সীমা",
+  "@creditDashTotalLimit": {
+    "description": "Credit dashboard: total of all credit limits"
+  },
+  "creditAvailable": "অবশিষ্ট সীমা",
+  "@creditAvailable": {
+    "description": "Credit: remaining (available) limit"
+  },
+  "creditDashUsedShare": "সীমার ব্যবহার",
+  "@creditDashUsedShare": {
+    "description": "Credit dashboard: percentage of the limit used"
+  },
+  "creditDashOverdue": "মেয়াদ পেরোনো পাওনা",
+  "@creditDashOverdue": {
+    "description": "Credit dashboard: overdue receivables"
+  },
+  "creditDashOverLimit": "সীমা পার গ্রাহক",
+  "@creditDashOverLimit": {
+    "description": "Credit dashboard: customers over their limit"
+  },
+  "creditOverdueStopped": "মেয়াদ পেরোনো বাকিতে বন্ধ",
+  "@creditOverdueStopped": {
+    "description": "Credit: customers stopped because of overdue credit (dashboard row and state badge)"
+  },
+  "creditDashBlocked": "বাকি বন্ধ গ্রাহক",
+  "@creditDashBlocked": {
+    "description": "Credit dashboard: customers on credit hold"
+  },
+  "creditDashPending": "সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)",
+  "@creditDashPending": {
+    "description": "Credit dashboard: limit increase requests awaiting signature"
+  },
+  "creditPeople": "{count} জন",
+  "@creditPeople": {
+    "description": "Credit dashboard: a number of customers",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "creditDashPendingCount": "{count}টা",
+  "@creditDashPendingCount": {
+    "description": "Credit dashboard: a number of requests",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "creditRowBill": "বিল {no}",
+  "@creditRowBill": {
+    "description": "Credit list row: bill number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "creditRowOverdueDays": "মেয়াদ পেরিয়েছে {days} দিন",
+  "@creditRowOverdueDays": {
+    "description": "Credit list row: number of days overdue",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "creditRowRisk": "ঝুঁকি: {level}",
+  "@creditRowRisk": {
+    "description": "Credit list row: risk level",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "creditRowLimit": "সীমা {limit} · অবশিষ্ট {available}",
+  "@creditRowLimit": {
+    "description": "Credit list row: limit and available limit",
+    "placeholders": {
+      "limit": {
+        "type": "String"
+      },
+      "available": {
+        "type": "String"
+      }
+    }
+  },
+  "creditCustomerLoadFailed": "গ্রাহকের বাকির পাতা আনা গেল না।",
+  "@creditCustomerLoadFailed": {
+    "description": "Customer credit page: load error"
+  },
+  "creditCustomerTitle": "বাকির পাতা",
+  "@creditCustomerTitle": {
+    "description": "Customer credit page: title before the customer's name is known"
+  },
+  "creditBlocked": "বাকি বন্ধ",
+  "@creditBlocked": {
+    "description": "Credit: credit hold (card title and state badge)"
+  },
+  "creditBouncedOwnerOnly": "চেক ফেরতের বন্ধ — খোলেন কেবল মালিক",
+  "@creditBouncedOwnerOnly": {
+    "description": "Customer credit page: a bounced-cheque hold can be lifted only by the owner"
+  },
+  "creditLift": "বাকি বন্ধ তুলুন",
+  "@creditLift": {
+    "description": "Customer credit page: button and dialog title, lift the credit hold"
+  },
+  "creditUsedPercent": "সীমার {percent}% ব্যবহৃত",
+  "@creditUsedPercent": {
+    "description": "Customer credit page: percent of the limit used",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "creditLimit": "সীমা",
+  "@creditLimit": {
+    "description": "Customer credit page: the base credit limit"
+  },
+  "creditTempLimit": "অস্থায়ী সীমা",
+  "@creditTempLimit": {
+    "description": "Credit: temporary limit (row label and request kind)"
+  },
+  "creditTempLimitValue": "{amount} ({date} পর্যন্ত)",
+  "@creditTempLimitValue": {
+    "description": "Customer credit page: temporary limit amount and its last day",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "creditCurrentLimit": "চলতি সীমা",
+  "@creditCurrentLimit": {
+    "description": "Customer credit page: the limit in force now"
+  },
+  "creditDays": "বাকির দিন",
+  "@creditDays": {
+    "description": "Customer credit page: credit days (payment terms)"
+  },
+  "creditDaysValue": "{days, plural, other{{days} দিন}}",
+  "@creditDaysValue": {
+    "description": "Customer credit page: number of credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "creditDue": "খাতার বকেয়া",
+  "@creditDue": {
+    "description": "Customer credit page: balance due in the books"
+  },
+  "creditHeld": "আটকে থাকা",
+  "@creditHeld": {
+    "description": "Customer credit page: amount held by open orders/challans"
+  },
+  "creditUncleared": "ক্লিয়ার না হওয়া চেক",
+  "@creditUncleared": {
+    "description": "Customer credit page: cheques not yet cleared"
+  },
+  "creditUsed": "ব্যবহৃত",
+  "@creditUsed": {
+    "description": "Customer credit page: total credit used"
+  },
+  "creditRiskTitle": "ঝুঁকির মাত্রা",
+  "@creditRiskTitle": {
+    "description": "Customer credit page: risk level card title"
+  },
+  "creditRiskNone": "কোনো লক্ষণ নেই",
+  "@creditRiskNone": {
+    "description": "Customer credit page: no risk signs"
+  },
+  "creditRiskNote": "মাত্রা কেবল জানায় — সীমা বা দেয়াল বদলায় না।",
+  "@creditRiskNote": {
+    "description": "Customer credit page: the risk level only informs, it does not change the limit or the credit wall"
+  },
+  "creditRequest": "সীমা বাড়ানোর অনুরোধ",
+  "@creditRequest": {
+    "description": "Customer credit page: limit increase request (button and section title)"
+  },
+  "creditOpenBills": "খোলা বিল",
+  "@creditOpenBills": {
+    "description": "Customer credit page: open (unpaid) bills section"
+  },
+  "creditNoOpenBills": "কোনো খোলা বিল নেই",
+  "@creditNoOpenBills": {
+    "description": "Customer credit page: no open bills"
+  },
+  "creditBillDueOverdue": "মেয়াদ {date} — {days} দিন পেরিয়েছে",
+  "@creditBillDueOverdue": {
+    "description": "Customer credit page: bill due date and days overdue",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "creditBillDue": "মেয়াদ {date}",
+  "@creditBillDue": {
+    "description": "Customer credit page: bill due date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "creditNoRequests": "কোনো অনুরোধ নেই",
+  "@creditNoRequests": {
+    "description": "Customer credit page: no limit requests"
+  },
+  "creditRequestTemporaryUntil": "অস্থায়ী, {date} পর্যন্ত",
+  "@creditRequestTemporaryUntil": {
+    "description": "Customer credit page: a temporary limit request and its last day",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "creditStandardLimit": "সাধারণ সীমা",
+  "@creditStandardLimit": {
+    "description": "Credit: standard (permanent) limit, as opposed to temporary"
+  },
+  "creditSheetNeedAmount": "চাওয়া সীমা লিখুন।",
+  "@creditSheetNeedAmount": {
+    "description": "Limit request: validation, enter the requested limit"
+  },
+  "creditNeedReason": "কারণ লিখুন।",
+  "@creditNeedReason": {
+    "description": "Credit: validation, enter a reason"
+  },
+  "creditSheetNeedUntil": "অস্থায়ী সীমার শেষ দিন বাছুন।",
+  "@creditSheetNeedUntil": {
+    "description": "Limit request: validation, choose the last day of the temporary limit"
+  },
+  "creditSheetSendFailed": "অনুরোধ পাঠানো গেল না।",
+  "@creditSheetSendFailed": {
+    "description": "Limit request: error when sending failed"
+  },
+  "creditSheetTitle": "সীমা বাড়ানোর অনুরোধ — {name}",
+  "@creditSheetTitle": {
+    "description": "Limit request sheet title with the customer's name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "creditSheetCurrent": "এখনকার সীমা {amount}",
+  "@creditSheetCurrent": {
+    "description": "Limit request: the current limit",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "creditSheetAmount": "চাওয়া সীমা (৳)",
+  "@creditSheetAmount": {
+    "description": "Limit request: requested limit field (in taka)"
+  },
+  "creditSheetPickUntil": "শেষ দিন বাছুন",
+  "@creditSheetPickUntil": {
+    "description": "Limit request: button to choose the last day"
+  },
+  "creditSheetUntil": "শেষ দিন {date}",
+  "@creditSheetUntil": {
+    "description": "Limit request: chosen last day",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "creditReason": "কারণ",
+  "@creditReason": {
+    "description": "Credit: reason field label"
+  },
+  "creditSheetOwnerNote": "মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।",
+  "@creditSheetOwnerNote": {
+    "description": "Limit request: it applies only after the owner signs; until then the old limit stays"
+  },
+  "creditSheetSending": "পাঠানো হচ্ছে…",
+  "@creditSheetSending": {
+    "description": "Limit request: button while sending"
+  },
+  "creditSheetSend": "সইয়ের জন্য পাঠান",
+  "@creditSheetSend": {
+    "description": "Limit request: button, send for signature"
+  },
+  "creditLiftFailed": "বাকি বন্ধ তোলা গেল না।",
+  "@creditLiftFailed": {
+    "description": "Lift credit hold: error"
+  },
+  "creditLiftKeep": "থাক",
+  "@creditLiftKeep": {
+    "description": "Lift credit hold dialog: close without lifting"
+  },
+  "creditLiftSend": "তুলুন",
+  "@creditLiftSend": {
+    "description": "Lift credit hold dialog: button, lift"
+  },
+  "creditStateActive": "চালু",
+  "@creditStateActive": {
+    "description": "Customer credit state badge: active"
+  },
+  "creditStateUnchecked": "সীমার যাচাই বন্ধ",
+  "@creditStateUnchecked": {
+    "description": "Customer credit state badge: limit check off"
+  },
+  "creditRiskLow": "কম",
+  "@creditRiskLow": {
+    "description": "Credit risk level: low"
+  },
+  "creditRiskMedium": "মাঝারি",
+  "@creditRiskMedium": {
+    "description": "Credit risk level: medium"
+  },
+  "creditRiskHigh": "বেশি",
+  "@creditRiskHigh": {
+    "description": "Credit risk level: high"
+  },
+  "creditRiskCritical": "চরম",
+  "@creditRiskCritical": {
+    "description": "Credit risk level: critical"
+  },
+  "creditRequestPending": "সইয়ের অপেক্ষায়",
+  "@creditRequestPending": {
+    "description": "Limit request status: awaiting signature"
+  },
+  "creditRequestApproved": "সই পড়েছে — বসেছে",
+  "@creditRequestApproved": {
+    "description": "Limit request status: signed and applied"
+  },
+  "creditRequestRejected": "না",
+  "@creditRequestRejected": {
+    "description": "Limit request status: rejected (owner said no)"
+  },
+  "creditRequestWithdrawn": "ফিরিয়ে নেওয়া",
+  "@creditRequestWithdrawn": {
+    "description": "Limit request status: withdrawn by the requester"
+  },
+  "creditRequestExpired": "মেয়াদ পেরিয়েছে",
+  "@creditRequestExpired": {
+    "description": "Limit request status: expired"
+  },
+  "creditRequestVoid": "মালিকের সই নেই — বসেনি",
+  "@creditRequestVoid": {
+    "description": "Limit request status: void, no owner signature, not applied"
+  },
+  "creditApiRequestSent": "অনুরোধ পাঠানো হলো।",
+  "@creditApiRequestSent": {
+    "description": "Limit request: sent (when the server sent no message)"
+  },
+  "creditApiLifted": "বাকি বন্ধ তোলা হলো।",
+  "@creditApiLifted": {
+    "description": "Credit hold lifted (when the server sent no message)"
+  },
+  "printingPaperA4": "A4 কাগজ",
+  "@printingPaperA4": {
+    "description": "Paper size name: an A4 sheet"
+  },
+  "printingPaperA5": "A5 কাগজ",
+  "@printingPaperA5": {
+    "description": "Paper size name: an A5 sheet"
+  },
+  "printingPaperRoll": "রসিদ {width}mm",
+  "@printingPaperRoll": {
+    "description": "Paper size name: a thermal receipt roll of the given width in millimetres (width is digits, e.g. 80)",
+    "placeholders": {
+      "width": {
+        "type": "String"
+      }
+    }
+  },
+  "printingBluetoothPermission": "ব্লুটুথ প্রিন্টারে ছাপতে ফোনের \"আশেপাশের ডিভাইস\" (Nearby devices) অনুমতি লাগে। অনুমতি দেওয়া হয়নি — ফোনের সেটিংস → অ্যাপ → ABOS → অনুমতি থেকে চালু করুন।",
+  "@printingBluetoothPermission": {
+    "description": "Thermal printing: Android's Nearby devices permission was refused; tells where to turn it on"
+  },
+  "printingBluetoothOff": "ফোনের ব্লুটুথ বন্ধ আছে। চালু করে আবার চেষ্টা করুন।",
+  "@printingBluetoothOff": {
+    "description": "Thermal printing: the phone's Bluetooth is switched off"
+  },
+  "printingPairedListFailed": "জোড়া দেওয়া প্রিন্টারের তালিকা পাওয়া গেল না। আবার চেষ্টা করুন।",
+  "@printingPairedListFailed": {
+    "description": "Thermal printing: the list of paired Bluetooth printers could not be read"
+  },
+  "printingRasteriseFailed": "কাগজটা ছবিতে রূপান্তর করা গেল না। নরমাল প্রিন্টারে চেষ্টা করুন।",
+  "@printingRasteriseFailed": {
+    "description": "Thermal printing: the PDF could not be turned into an image for the receipt printer"
+  },
+  "printingNoPages": "কাগজটায় ছাপার মতো কোনো পাতা নেই।",
+  "@printingNoPages": {
+    "description": "Thermal printing: the document has no pages to print"
+  },
+  "printingConnectFailed": "প্রিন্টারে সংযোগ হলো না। প্রিন্টার চালু আছে, কাছে আছে আর অন্য ফোনে যুক্ত নেই কিনা দেখুন।",
+  "@printingConnectFailed": {
+    "description": "Thermal printing: could not connect to the Bluetooth printer"
+  },
+  "printingSendFailed": "প্রিন্টারে পাঠানো গেল না — সংযোগ কেটে গেছে। প্রিন্টারের কাগজ ও চার্জ দেখে আবার চেষ্টা করুন।",
+  "@printingSendFailed": {
+    "description": "Thermal printing: the connection dropped while sending to the printer"
+  },
+  "printingTestPageTitle": "পরীক্ষামূলক ছাপা",
+  "@printingTestPageTitle": {
+    "description": "Printed test slip: its heading line"
+  },
+  "printingTestPageSize": "কাগজ {width} মিমি · {dots} ডট",
+  "@printingTestPageSize": {
+    "description": "Printed test slip: paper width in millimetres and print head width in dots",
+    "placeholders": {
+      "width": {
+        "type": "String"
+      },
+      "dots": {
+        "type": "String"
+      }
+    }
+  },
+  "printingTestPageCheck": "বাংলা লেখা ঠিকমতো এলে প্রিন্টার তৈরি।",
+  "@printingTestPageCheck": {
+    "description": "Printed test slip: if the Bengali sample (printed below this line) comes out right, the printer is ready"
+  },
+  "printingActionsLoadPapersFailed": "এই কাগজের ছাপার মাপ আনা গেল না। আবার চেষ্টা করুন।",
+  "@printingActionsLoadPapersFailed": {
+    "description": "Print sheet: the list of paper sizes for this document could not be loaded"
+  },
+  "printingActionsFetchFailed": "কাগজটা সার্ভার থেকে আনা গেল না — ছাপা হয়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।",
+  "@printingActionsFetchFailed": {
+    "description": "Print sheet: the document PDF could not be downloaded, nothing was printed"
+  },
+  "printingActionsFailed": "কাজটি সম্পন্ন হয়নি।",
+  "@printingActionsFailed": {
+    "description": "Print sheet: generic failure of view/print/share/save"
+  },
+  "printingActionsSaved": "সেভ হয়েছে: {path}",
+  "@printingActionsSaved": {
+    "description": "Print sheet: the PDF was saved on the phone at this path",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "printingActionsSentTo": "{printer}-এ পাঠানো হয়েছে।",
+  "@printingActionsSentTo": {
+    "description": "Print sheet: the document was sent to this Bluetooth printer",
+    "placeholders": {
+      "printer": {
+        "type": "String"
+      }
+    }
+  },
+  "printingActionsRetry": "আবার চেষ্টা",
+  "@printingActionsRetry": {
+    "description": "Print sheet: button to try loading again"
+  },
+  "printingActionsNormalPrinter": "নরমাল প্রিন্টার",
+  "@printingActionsNormalPrinter": {
+    "description": "Print sheet: card for the ordinary (A4/A5, Android print dialog) printer"
+  },
+  "printingActionsNoSheetLayout": "এই কাগজের A4/A5 নকশা নেই",
+  "@printingActionsNoSheetLayout": {
+    "description": "Print sheet: this document has no A4/A5 layout"
+  },
+  "printingActionsNormalSubtitle": "A4/A5 · ওয়াইফাই, USB, PDF",
+  "@printingActionsNormalSubtitle": {
+    "description": "Print sheet: what the ordinary printer road covers"
+  },
+  "printingActionsThermalPrinter": "থার্মাল প্রিন্টার",
+  "@printingActionsThermalPrinter": {
+    "description": "Print sheet: card for the Bluetooth receipt (thermal) printer"
+  },
+  "printingActionsNoReceiptLayout": "এই কাগজের রসিদ নকশা নেই",
+  "@printingActionsNoReceiptLayout": {
+    "description": "Print sheet: this document has no receipt-roll layout"
+  },
+  "printingActionsThermalSubtitle": "{narrow}/{wide} মিমি · ব্লুটুথ",
+  "@printingActionsThermalSubtitle": {
+    "description": "Print sheet: thermal road covers 58/80 mm rolls over Bluetooth (the two widths are digits)",
+    "placeholders": {
+      "narrow": {
+        "type": "String"
+      },
+      "wide": {
+        "type": "String"
+      }
+    }
+  },
+  "printingActionsView": "পর্দায় দেখুন",
+  "@printingActionsView": {
+    "description": "Print sheet: open the PDF on screen"
+  },
+  "printingActionsShare": "শেয়ার করুন",
+  "@printingActionsShare": {
+    "description": "Print sheet: share the PDF"
+  },
+  "printingActionsShareHint": "হোয়াটসঅ্যাপ, ইমেইল, ড্রাইভ",
+  "@printingActionsShareHint": {
+    "description": "Print sheet: examples of where the PDF can be shared"
+  },
+  "printingActionsSave": "ফোনে সেভ করুন",
+  "@printingActionsSave": {
+    "description": "Print sheet: save the PDF on the phone"
+  },
+  "printingActionsPrint": "ছাপুন",
+  "@printingActionsPrint": {
+    "description": "Print sheet: print on the ordinary printer"
+  },
+  "printingActionsNoPrinter": "প্রিন্টার বাছা হয়নি",
+  "@printingActionsNoPrinter": {
+    "description": "Print sheet: no Bluetooth printer chosen yet"
+  },
+  "printingActionsConnectsWhenPrinting": "ছাপার সময় যুক্ত হবে",
+  "@printingActionsConnectsWhenPrinting": {
+    "description": "Print sheet: the chosen printer is connected only when printing"
+  },
+  "printingActionsChooseOnFirstPrint": "প্রথমবার ছাপার সময় জোড়া দেওয়া প্রিন্টার থেকে বাছবেন",
+  "@printingActionsChooseOnFirstPrint": {
+    "description": "Print sheet: you will pick from the paired printers the first time you print"
+  },
+  "printingActionsSettings": "সেটিং",
+  "@printingActionsSettings": {
+    "description": "Print sheet: open the printer settings"
+  },
+  "printingActionsPrintThermal": "থার্মালে ছাপুন",
+  "@printingActionsPrintThermal": {
+    "description": "Print sheet: print on the Bluetooth receipt printer"
+  },
+  "printingSettingsSaved": "প্রিন্টার রাখা হলো: {printer}",
+  "@printingSettingsSaved": {
+    "description": "Printer settings: this printer was saved as the phone's receipt printer",
+    "placeholders": {
+      "printer": {
+        "type": "String"
+      }
+    }
+  },
+  "printingSettingsTestSent": "পরীক্ষামূলক ছাপা পাঠানো হয়েছে। বাংলা লেখা ঠিক এলে প্রিন্টার তৈরি।",
+  "@printingSettingsTestSent": {
+    "description": "Printer settings: test slip sent; if the Bengali comes out right the printer is ready"
+  },
+  "printingSettingsTestFailed": "পরীক্ষামূলক ছাপা হয়নি। আবার চেষ্টা করুন।",
+  "@printingSettingsTestFailed": {
+    "description": "Printer settings: the test slip did not print"
+  },
+  "printingSettingsTitle": "প্রিন্টার",
+  "@printingSettingsTitle": {
+    "description": "Printer settings: screen title"
+  },
+  "printingSettingsThermalHeading": "থার্মাল (ব্লুটুথ রসিদ) প্রিন্টার",
+  "@printingSettingsThermalHeading": {
+    "description": "Printer settings: section heading for the Bluetooth receipt printer"
+  },
+  "printingSettingsNoPrinter": "কোনো প্রিন্টার বাছা হয়নি",
+  "@printingSettingsNoPrinter": {
+    "description": "Printer settings: no printer chosen yet"
+  },
+  "printingSettingsPairFirst": "প্রথমে ফোনের সেটিংস → ব্লুটুথ থেকে প্রিন্টারটি জোড়া দিন",
+  "@printingSettingsPairFirst": {
+    "description": "Printer settings: pair the printer in the phone's Bluetooth settings first"
+  },
+  "printingSettingsChange": "বদলান",
+  "@printingSettingsChange": {
+    "description": "Printer settings: button to change the chosen printer"
+  },
+  "printingSettingsChoose": "বাছুন",
+  "@printingSettingsChoose": {
+    "description": "Printer settings: button to choose a printer"
+  },
+  "printingSettingsForget": "এই প্রিন্টার ভুলে যান",
+  "@printingSettingsForget": {
+    "description": "Printer settings: forget the chosen printer"
+  },
+  "printingSettingsRollWidth": "রোলের মাপ",
+  "@printingSettingsRollWidth": {
+    "description": "Printer settings: heading for the receipt roll width"
+  },
+  "printingSettingsWidthMm": "{width} মিমি",
+  "@printingSettingsWidthMm": {
+    "description": "Printer settings: a roll width in millimetres (width is digits)",
+    "placeholders": {
+      "width": {
+        "type": "String"
+      }
+    }
+  },
+  "printingSettingsTestButton": "পরীক্ষামূলক ছাপা",
+  "@printingSettingsTestButton": {
+    "description": "Printer settings: button that prints a test slip"
+  },
+  "printingSettingsWhereHeading": "কোন কাগজ কোথায় ছাপা হয়",
+  "@printingSettingsWhereHeading": {
+    "description": "Printer settings: heading — which document prints on which printer"
+  },
+  "printingSettingsWhereBody": "প্রতিটা কাগজ (বিল, চালান, ভাউচার …) শেষবার যে প্রিন্টারে ছাপা হয়েছিল, পরের বার সেটাই আগে বাছা থাকে। নরমাল প্রিন্টার মানে ফোনের নিজের প্রিন্ট ব্যবস্থা — ওয়াইফাই/USB প্রিন্টার বা PDF সেভ।",
+  "@printingSettingsWhereBody": {
+    "description": "Printer settings: each kind of document remembers the printer it was last printed on; the normal printer is the phone's own print system"
+  },
+  "printingSettingsResetRoads": "মনে রাখা পছন্দ মুছুন",
+  "@printingSettingsResetRoads": {
+    "description": "Printer settings: clear the remembered printer choice per document kind"
+  },
+  "printingThermalNotPaired": "কোনো ব্লুটুথ প্রিন্টার জোড়া দেওয়া নেই। প্রিন্টার চালু করে ফোনের সেটিংস → ব্লুটুথ থেকে একবার জোড়া দিন (পিন সাধারণত 0000 বা 1234), তারপর আবার চেষ্টা করুন।",
+  "@printingThermalNotPaired": {
+    "description": "Thermal printing: no Bluetooth printer is paired; how to pair one"
+  },
+  "printingThermalExplainTitle": "ব্লুটুথ প্রিন্টারের অনুমতি",
+  "@printingThermalExplainTitle": {
+    "description": "Dialog before Android's Nearby devices prompt: title"
+  },
+  "printingThermalExplainBody": "রসিদ প্রিন্টারে ছাপতে ABOS ফোনের ব্লুটুথ দিয়ে জোড়া দেওয়া প্রিন্টারের সাথে যুক্ত হবে। এরপর ফোন \"আশেপাশের ডিভাইস\" অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। এতে আপনার অবস্থান নেওয়া হয় না।",
+  "@printingThermalExplainBody": {
+    "description": "Dialog before Android's Nearby devices prompt: why it is asked; quote Android's own labels for Nearby devices and Allow"
+  },
+  "printingThermalNotNow": "এখন না",
+  "@printingThermalNotNow": {
+    "description": "Dialog before the Bluetooth permission: decline for now"
+  },
+  "printingThermalOk": "ঠিক আছে",
+  "@printingThermalOk": {
+    "description": "Dialog before the Bluetooth permission: go ahead"
+  },
+  "printingThermalChoosePrinter": "প্রিন্টার বাছুন",
+  "@printingThermalChoosePrinter": {
+    "description": "Dialog title: choose one of the paired printers"
+  },
+  "scanPaperOldPaper": "এটা পুরনো ছাপা কাগজ। ফোনে খোলে না — ওয়েবে খুলুন, বা কাগজটা আবার ছাপুন।",
+  "@scanPaperOldPaper": {
+    "description": "Paper scan: the QR is from an old printout that the phone cannot open"
+  },
+  "scanPaperNotOurs": "এটা ABOS-এর কাগজের QR নয়।",
+  "@scanPaperNotOurs": {
+    "description": "Paper scan: the QR is not an ABOS document QR"
+  },
+  "scanPaperNotFound": "কাগজটা পাওয়া যায়নি — বাতিল হয়েছে, বা আপনার শাখার নয়।",
+  "@scanPaperNotFound": {
+    "description": "Paper scan: the document was not found — cancelled or not in your branch"
+  },
+  "scanPaperForbidden": "এই কাগজ দেখার বা বদলানোর অনুমতি আপনার নেই।",
+  "@scanPaperForbidden": {
+    "description": "Paper scan: no permission to view or change this document"
+  },
+  "scanPaperAlreadyOut": "মাল আগেই বেরিয়ে গেছে।",
+  "@scanPaperAlreadyOut": {
+    "description": "Paper scan: the goods have already left through the gate"
+  },
+  "scanPaperBlocked": "হয়নি — গাড়ির তথ্য বসানো নেই, বা দোকানের বাকির সীমা পার। অফিসে বলুন।",
+  "@scanPaperBlocked": {
+    "description": "Paper scan: refused — no vehicle details, or the shop is over its credit limit"
+  },
+  "scanPaperFailed": "হয়নি। আবার চেষ্টা করুন।",
+  "@scanPaperFailed": {
+    "description": "Paper scan: generic failure"
+  },
+  "scanPaperGateOutTitle": "মাল বেরোল?",
+  "@scanPaperGateOutTitle": {
+    "description": "Paper scan: confirm dialog title — have the goods gone out of the gate?"
+  },
+  "scanPaperGateOutBody": "গেট পাস হবে আর বিল কাটা হবে। এটা ফেরানো যায় না।",
+  "@scanPaperGateOutBody": {
+    "description": "Paper scan: confirming gate-out issues the gate pass and the invoice; it cannot be undone"
+  },
+  "scanPaperNo": "না",
+  "@scanPaperNo": {
+    "description": "Paper scan: gate-out confirm dialog, the No button"
+  },
+  "scanPaperGateOutYes": "হ্যাঁ, বেরোল",
+  "@scanPaperGateOutYes": {
+    "description": "Paper scan: gate-out confirm dialog, the Yes button"
+  },
+  "scanPaperTitle": "কাগজ স্ক্যান",
+  "@scanPaperTitle": {
+    "description": "Paper scan: screen title"
+  },
+  "scanPaperNoCamera": "ক্যামেরা ছাড়া QR পড়া যায় না।",
+  "@scanPaperNoCamera": {
+    "description": "Paper scan: the QR cannot be read without the camera"
+  },
+  "scanPaperAskCamera": "ক্যামেরা চালু করুন",
+  "@scanPaperAskCamera": {
+    "description": "Paper scan: button to allow the camera"
+  },
+  "scanPaperHint": "চালান বা গেট পাসের QR ক্যামেরার সামনে ধরুন।",
+  "@scanPaperHint": {
+    "description": "Paper scan: hold the delivery challan or gate pass QR in front of the camera"
+  },
+  "scanPaperSaleNo": "বিক্রয় নং {number}",
+  "@scanPaperSaleNo": {
+    "description": "Paper scan: the sale number",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperDate": "তারিখ {date}",
+  "@scanPaperDate": {
+    "description": "Paper scan: the document date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperStatus": "অবস্থা: {stage}",
+  "@scanPaperStatus": {
+    "description": "Paper scan: the document's stage",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperOutAt": "বেরিয়েছে {when}",
+  "@scanPaperOutAt": {
+    "description": "Paper scan: when the goods left the gate (date and time)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperQty": "পরিমাণ {qty}",
+  "@scanPaperQty": {
+    "description": "Paper scan: line quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperFreeQty": "ফ্রি {qty}",
+  "@scanPaperFreeQty": {
+    "description": "Paper scan: free (bonus) quantity on the line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperLot": "লট {lot}",
+  "@scanPaperLot": {
+    "description": "Paper scan: the lot (batch) of the line",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperVehicleSet": "গাড়ি বসানো আছে",
+  "@scanPaperVehicleSet": {
+    "description": "Paper scan: vehicle details are filled in"
+  },
+  "scanPaperVehicleMissing": "⚠ গাড়ি বসানো নেই",
+  "@scanPaperVehicleMissing": {
+    "description": "Paper scan: warning — no vehicle details"
+  },
+  "scanPaperVehicle": "গাড়ি {vehicle}",
+  "@scanPaperVehicle": {
+    "description": "Paper scan: the vehicle",
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperDriver": "চালক {driver}",
+  "@scanPaperDriver": {
+    "description": "Paper scan: the driver",
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperBillTotal": "বিলের মোট {amount}",
+  "@scanPaperBillTotal": {
+    "description": "Paper scan: the invoice total (amount already formatted)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "scanPaperGateOut": "মাল বেরোল",
+  "@scanPaperGateOut": {
+    "description": "Paper scan: button — the goods went out of the gate"
+  },
+  "scanPaperConfirmDelivery": "ডেলিভারি নিশ্চিত",
+  "@scanPaperConfirmDelivery": {
+    "description": "Paper scan: button — confirm delivery"
+  },
+  "scanPaperScanAgain": "আরেকটা স্ক্যান",
+  "@scanPaperScanAgain": {
+    "description": "Paper scan: button — scan another QR"
+  },
+  "scanPaperStageAllocated": "বরাদ্দ হয়েছে",
+  "@scanPaperStageAllocated": {
+    "description": "Paper scan: stage — stock allocated"
+  },
+  "scanPaperStagePicking": "মাল তোলা হচ্ছে",
+  "@scanPaperStagePicking": {
+    "description": "Paper scan: stage — goods being picked"
+  },
+  "scanPaperStagePacked": "প্যাক হয়েছে",
+  "@scanPaperStagePacked": {
+    "description": "Paper scan: stage — packed"
+  },
+  "scanPaperStageDispatched": "গেট পেরিয়েছে",
+  "@scanPaperStageDispatched": {
+    "description": "Paper scan: stage — passed the gate"
+  },
+  "scanPaperStageDelivered": "পৌঁছেছে",
+  "@scanPaperStageDelivered": {
+    "description": "Paper scan: stage — delivered"
+  },
+  "scanReceiveNameMissing": "যিনি মাল নিলেন তাঁর নাম লিখুন।",
+  "@scanReceiveNameMissing": {
+    "description": "Proof of delivery: enter the name of the person who received the goods"
+  },
+  "scanReceivePhoneMissing": "যিনি নিলেন তাঁর ফোন নম্বর লিখুন — পরে জিজ্ঞেস করার পথ এটাই।",
+  "@scanReceivePhoneMissing": {
+    "description": "Proof of delivery: enter the receiver's phone number — the way to ask later"
+  },
+  "scanReceiveQtyInvalid": "{product}: পরিমাণ ঠিক নেই।",
+  "@scanReceiveQtyInvalid": {
+    "description": "Proof of delivery: a quantity on this product's line is not valid",
+    "placeholders": {
+      "product": {
+        "type": "String"
+      }
+    }
+  },
+  "scanReceiveQtyTooMuch": "{product}: নেওয়া আর ভাঙা মিলে চালানের চেয়ে বেশি।",
+  "@scanReceiveQtyTooMuch": {
+    "description": "Proof of delivery: taken plus damaged is more than the delivery challan quantity",
+    "placeholders": {
+      "product": {
+        "type": "String"
+      }
+    }
+  },
+  "scanReceiveTitle": "বুঝিয়ে দিন — {number}",
+  "@scanReceiveTitle": {
+    "description": "Proof of delivery: screen title with the delivery challan number",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "scanReceiveNameLabel": "যিনি মাল নিলেন",
+  "@scanReceiveNameLabel": {
+    "description": "Proof of delivery: field — who received the goods"
+  },
+  "scanReceivePhoneLabel": "তাঁর ফোন",
+  "@scanReceivePhoneLabel": {
+    "description": "Proof of delivery: field — the receiver's phone"
+  },
+  "scanReceiveLinesHint": "প্রতিটা পণ্য — কতটা নিলেন, কতটা ভাঙা; বাকিটা কম (ফেরত আসবে)",
+  "@scanReceiveLinesHint": {
+    "description": "Proof of delivery: for each product, how much was taken and how much damaged; the rest is short and comes back"
+  },
+  "scanReceiveLineHeader": "{product} · চালানে {qty}",
+  "@scanReceiveLineHeader": {
+    "description": "Proof of delivery: product name and the quantity on the delivery challan",
+    "placeholders": {
+      "product": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "scanReceiveTaken": "নিলেন",
+  "@scanReceiveTaken": {
+    "description": "Proof of delivery: field — quantity taken in good condition"
+  },
+  "scanReceiveDamaged": "ভাঙা",
+  "@scanReceiveDamaged": {
+    "description": "Proof of delivery: field — quantity damaged"
+  },
+  "scanReceiveShort": "কম: {qty}",
+  "@scanReceiveShort": {
+    "description": "Proof of delivery: quantity short (not taken, not damaged)",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "scanReceiveDone": "নিশ্চিত — বুঝে নিলেন",
+  "@scanReceiveDone": {
+    "description": "Proof of delivery: confirm button — the receiver took the goods"
+  },
+  "stockWriteCountLine": "{product}: খাতায় {book} → গোনা {counted} (পার্থক্য {difference})",
+  "@stockWriteCountLine": {
+    "description": "Counts awaiting acceptance: one line per product - book quantity, counted quantity and the difference",
+    "placeholders": {
+      "product": {
+        "type": "String"
+      },
+      "book": {
+        "type": "String"
+      },
+      "counted": {
+        "type": "String"
+      },
+      "difference": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWriteFormAdjust": "গণনা-সমন্বয়",
+  "@stockWriteFormAdjust": {
+    "description": "Stock form name: adjust stock after a physical count"
+  },
+  "stockWriteFormIssue": "মাল ইস্যু",
+  "@stockWriteFormIssue": {
+    "description": "Stock form name: issue goods out of stock (not a sale)"
+  },
+  "stockWriteFormOpening": "খোলা মজুদ",
+  "@stockWriteFormOpening": {
+    "description": "Stock form name: opening stock"
+  },
+  "stockWriteFormLot": "লট দেওয়া",
+  "@stockWriteFormLot": {
+    "description": "Stock form name: assign a lot (batch) to goods without one"
+  },
+  "stockWriteQtyAdjust": "গুনে পেলাম",
+  "@stockWriteQtyAdjust": {
+    "description": "Count adjustment form: quantity field - the quantity found by counting"
+  },
+  "stockWriteQtyIssue": "কতটা বের হবে",
+  "@stockWriteQtyIssue": {
+    "description": "Stock issue form: quantity field - how much goes out"
+  },
+  "stockWriteQtyOpening": "পরিমাণ",
+  "@stockWriteQtyOpening": {
+    "description": "Opening stock form: quantity field"
+  },
+  "stockWriteQtyLot": "কতটা লটে যাবে",
+  "@stockWriteQtyLot": {
+    "description": "Assign lot form: quantity field - how much goes into the lot"
+  },
+  "stockWriteLoadFailed": "মজুদের কাজ আনা গেল না।",
+  "@stockWriteLoadFailed": {
+    "description": "Stock work screen: error when the stock setup could not be loaded"
+  },
+  "stockWriteNotOnServer": "এই কাজ এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@stockWriteNotOnServer": {
+    "description": "Stock work screen: the server does not have this feature yet (the app is newer)"
+  },
+  "stockWriteWorkTitle": "মজুদের কাজ",
+  "@stockWriteWorkTitle": {
+    "description": "Stock work screen title: the stock tasks this person may do"
+  },
+  "stockWritePlaceTitle": "মাল বসানো",
+  "@stockWritePlaceTitle": {
+    "description": "Put-away: tile and screen title for shelving received goods"
+  },
+  "stockWritePlaceHint": "এসে পৌঁছানো মাল তাকে তোলা",
+  "@stockWritePlaceHint": {
+    "description": "Stock work tile subtitle: put arrived goods on the shelf"
+  },
+  "stockWriteAdjustHint": "গুনে খাতার সাথে মেলানো",
+  "@stockWriteAdjustHint": {
+    "description": "Stock work tile subtitle: count and match with the books"
+  },
+  "stockWriteIssueHint": "বিক্রি ছাড়া মাল বের করা",
+  "@stockWriteIssueHint": {
+    "description": "Stock work tile subtitle: take goods out other than by a sale"
+  },
+  "stockWriteOpeningHint": "শুরুর মজুদ বসানো",
+  "@stockWriteOpeningHint": {
+    "description": "Stock work tile subtitle: enter the starting stock"
+  },
+  "stockWriteLotHint": "লট-ছাড়া মালকে লট",
+  "@stockWriteLotHint": {
+    "description": "Stock work tile subtitle: give goods without a lot a lot"
+  },
+  "stockWriteCountsTitle": "মেনে নেওয়ার অপেক্ষার গণনা",
+  "@stockWriteCountsTitle": {
+    "description": "Tile and screen title: stock counts waiting to be accepted by an approver"
+  },
+  "stockWriteCountsHint": "অন্যের গোনা মেনে নেওয়া",
+  "@stockWriteCountsHint": {
+    "description": "Stock work tile subtitle: accept counts made by others"
+  },
+  "stockWriteNoAccessTitle": "মজুদের কোনো লেখার অনুমতি নেই",
+  "@stockWriteNoAccessTitle": {
+    "description": "Stock work screen: empty state - no permission for any stock entry"
+  },
+  "stockWriteNoAccessMessage": "দরকার হলে যিনি অনুমতি দেন তাঁকে বলুন।",
+  "@stockWriteNoAccessMessage": {
+    "description": "Stock work screen: empty state message - ask the person who grants permissions"
+  },
+  "stockWriteResultDone": "বসেছে।",
+  "@stockWriteResultDone": {
+    "description": "Snack bar after a stock or quality entry was recorded (when the server gives no message)"
+  },
+  "stockWriteResultWaiting": "অপেক্ষায় রাখা হলো।",
+  "@stockWriteResultWaiting": {
+    "description": "Snack bar after a stock entry was kept pending (awaiting acceptance or signature)"
+  },
+  "stockWriteNeedFieldsWithReason": "পণ্য, গুদাম, কারণ আর পরিমাণ লাগবেই।",
+  "@stockWriteNeedFieldsWithReason": {
+    "description": "Stock form validation: product, warehouse, reason and quantity are required"
+  },
+  "stockWriteNeedFields": "পণ্য, গুদাম আর পরিমাণ লাগবেই।",
+  "@stockWriteNeedFields": {
+    "description": "Stock form validation: product, warehouse and quantity are required"
+  },
+  "stockWriteSendFailed": "{form} বসানো গেল না।",
+  "@stockWriteSendFailed": {
+    "description": "Stock form: error when the entry could not be recorded; form is the form name, e.g. Opening stock",
+    "placeholders": {
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWritePickProduct": "পণ্য বাছুন",
+  "@stockWritePickProduct": {
+    "description": "Stock and quality forms: tile to choose a product"
+  },
+  "stockWriteWarehouse": "গুদাম",
+  "@stockWriteWarehouse": {
+    "description": "Stock forms and quality check: warehouse field label"
+  },
+  "stockWriteReason": "কারণ",
+  "@stockWriteReason": {
+    "description": "Stock forms, counts and quality disposal: reason field label"
+  },
+  "stockWriteCountingFree": "ফ্রি মাল গুনছি",
+  "@stockWriteCountingFree": {
+    "description": "Count adjustment: switch - the count is of free (promotional) goods"
+  },
+  "stockWriteFreeOptional": "ফ্রি (ঐচ্ছিক)",
+  "@stockWriteFreeOptional": {
+    "description": "Assign lot form: free (promotional) quantity, optional"
+  },
+  "stockWriteUnitCost": "একক দর",
+  "@stockWriteUnitCost": {
+    "description": "Opening stock form: unit cost field"
+  },
+  "stockWriteExtraCostOptional": "বাড়তি মালের দর (ঐচ্ছিক)",
+  "@stockWriteExtraCostOptional": {
+    "description": "Count adjustment: unit cost of surplus goods found, optional"
+  },
+  "stockWriteLotNo": "লট নম্বর",
+  "@stockWriteLotNo": {
+    "description": "Assign lot form: lot (batch) number field"
+  },
+  "stockWriteLotNoIfLotted": "লট নম্বর (লট-ধরা পণ্যে)",
+  "@stockWriteLotNoIfLotted": {
+    "description": "Stock forms: lot number, only for lot-tracked products"
+  },
+  "stockWriteExpiryOptional": "মেয়াদ (ঐচ্ছিক)",
+  "@stockWriteExpiryOptional": {
+    "description": "Stock forms: expiry date field, optional"
+  },
+  "stockWriteNoteOptional": "বিবরণ (ঐচ্ছিক)",
+  "@stockWriteNoteOptional": {
+    "description": "Stock forms: narration / description, optional"
+  },
+  "stockWriteSend": "{form} পাঠান",
+  "@stockWriteSend": {
+    "description": "Stock form: send button; form is the form name, e.g. Opening stock",
+    "placeholders": {
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWriteProductSearchHint": "নাম, কোড বা বারকোড",
+  "@stockWriteProductSearchHint": {
+    "description": "Product picker: search box hint"
+  },
+  "stockWriteNoProductMatch": "কোনো পণ্য মেলেনি",
+  "@stockWriteNoProductMatch": {
+    "description": "Product picker: nothing matches the search"
+  },
+  "stockWritePlaceLoadFailed": "বসানোর অপেক্ষার মাল আনা গেল না।",
+  "@stockWritePlaceLoadFailed": {
+    "description": "Put-away screen: error loading goods waiting to be shelved"
+  },
+  "stockWritePlaceFailed": "মাল বসানো গেল না।",
+  "@stockWritePlaceFailed": {
+    "description": "Put-away screen: error when the put-away could not be recorded"
+  },
+  "stockWritePlaceEmpty": "বসানোর অপেক্ষায় কিছু নেই",
+  "@stockWritePlaceEmpty": {
+    "description": "Put-away screen: empty state - nothing waiting to be shelved"
+  },
+  "stockWritePullAgain": "নিচে টেনে আবার দেখুন।",
+  "@stockWritePullAgain": {
+    "description": "Stock, quality and serial lists: empty state hint - pull down to check again"
+  },
+  "stockWriteLot": "লট {lot}",
+  "@stockWriteLot": {
+    "description": "Put-away line: the lot (batch) number",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWriteWaitingQty": "অপেক্ষায় {qty}",
+  "@stockWriteWaitingQty": {
+    "description": "Put-away line: quantity still waiting to be shelved",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWriteFreeQty": "ফ্রি {qty}",
+  "@stockWriteFreeQty": {
+    "description": "Put-away line: free (promotional) quantity waiting",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "stockWritePlacingLabel": "বসাচ্ছি",
+  "@stockWritePlacingLabel": {
+    "description": "Put-away line: quantity being shelved now"
+  },
+  "stockWritePlaceSpot": "জায়গা",
+  "@stockWritePlaceSpot": {
+    "description": "Put-away line: storage location (bin) in the warehouse"
+  },
+  "stockWritePlaceButton": "বসান",
+  "@stockWritePlaceButton": {
+    "description": "Put-away card: button to shelve the goods"
+  },
+  "stockWriteCountsLoadFailed": "অপেক্ষার গণনা আনা গেল না।",
+  "@stockWriteCountsLoadFailed": {
+    "description": "Counts screen: error loading counts awaiting acceptance"
+  },
+  "stockWriteChooseReason": "কারণ বাছুন — পার্থক্যটা কোন খাতে যাবে তা কারণ বলে।",
+  "@stockWriteChooseReason": {
+    "description": "Counts screen: validation - choose a reason; the reason decides which account the difference goes to"
+  },
+  "stockWriteAcceptFailed": "গণনাটা মেনে নেওয়া গেল না।",
+  "@stockWriteAcceptFailed": {
+    "description": "Counts screen: error when the count could not be accepted"
+  },
+  "stockWriteCountsTotal": "অপেক্ষায় মোট",
+  "@stockWriteCountsTotal": {
+    "description": "Counts screen: total strip label - total pending counts"
+  },
+  "stockWriteCountValue": "{count} টি",
+  "@stockWriteCountValue": {
+    "description": "Total strip value: a number of items (no noun)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stockWriteCountsEmpty": "অপেক্ষায় কোনো গণনা নেই",
+  "@stockWriteCountsEmpty": {
+    "description": "Counts screen: empty state - no counts pending"
+  },
+  "stockWriteAccept": "মেনে নিন",
+  "@stockWriteAccept": {
+    "description": "Counts screen: button to accept the count"
+  },
+  "stockQualityLoadFailed": "মান যাচাইয়ের তালিকা আনা গেল না।",
+  "@stockQualityLoadFailed": {
+    "description": "Quality check list: error loading the list"
+  },
+  "stockQualityNotOnServer": "এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@stockQualityNotOnServer": {
+    "description": "Quality and serial lists: the server does not have this list yet (the app is newer)"
+  },
+  "stockQualityTitle": "মান যাচাই",
+  "@stockQualityTitle": {
+    "description": "Quality check (QC) screen title"
+  },
+  "stockQualityNew": "নতুন যাচাই",
+  "@stockQualityNew": {
+    "description": "Quality check list: button to start a new check"
+  },
+  "stockQualityAll": "সব",
+  "@stockQualityAll": {
+    "description": "Quality check list: status filter chip - all statuses"
+  },
+  "stockQualityTotal": "মোট যাচাই",
+  "@stockQualityTotal": {
+    "description": "Quality check list: total strip label"
+  },
+  "stockQualityCountValue": "{count} টি",
+  "@stockQualityCountValue": {
+    "description": "Quality and serial lists: total strip value, a number of items (no noun)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stockQualityEmpty": "কোনো মান যাচাই নেই",
+  "@stockQualityEmpty": {
+    "description": "Quality check list: empty state"
+  },
+  "stockQualityMore": "আরও",
+  "@stockQualityMore": {
+    "description": "Quality and serial lists: button to load the next page"
+  },
+  "stockQualityOneLoadFailed": "যাচাইটা আনা গেল না।",
+  "@stockQualityOneLoadFailed": {
+    "description": "Quality check screen: error loading one check"
+  },
+  "stockQualitySaveFailed": "বসানো গেল না।",
+  "@stockQualitySaveFailed": {
+    "description": "Quality check screen: error when the decision or disposal could not be recorded"
+  },
+  "stockQualityTitleNo": "মান যাচাই · {no}",
+  "@stockQualityTitleNo": {
+    "description": "Quality check screen title with the check number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "stockQualityStatus": "অবস্থা",
+  "@stockQualityStatus": {
+    "description": "Quality check facts: status"
+  },
+  "stockQualityDate": "তারিখ",
+  "@stockQualityDate": {
+    "description": "Quality check facts: date"
+  },
+  "stockQualityLot": "লট",
+  "@stockQualityLot": {
+    "description": "Quality check facts: lot (batch)"
+  },
+  "stockQualityInspected": "যাচাই করা হলো",
+  "@stockQualityInspected": {
+    "description": "Quality check facts: quantity inspected"
+  },
+  "stockQualityAccepted": "গৃহীত",
+  "@stockQualityAccepted": {
+    "description": "Quality check: accepted quantity (fact and field)"
+  },
+  "stockQualityRejected": "বাতিল",
+  "@stockQualityRejected": {
+    "description": "Quality check: rejected quantity, units that failed the check (fact and field)"
+  },
+  "stockQualityDisposed": "সরানো",
+  "@stockQualityDisposed": {
+    "description": "Quality check facts: quantity of rejected goods disposed of"
+  },
+  "stockQualityCriteria": "যা দেখা হলো",
+  "@stockQualityCriteria": {
+    "description": "Quality check facts: what was checked (criteria)"
+  },
+  "stockQualityRemarks": "মন্তব্য",
+  "@stockQualityRemarks": {
+    "description": "Quality check facts: remarks"
+  },
+  "stockQualityVerdict": "রায়",
+  "@stockQualityVerdict": {
+    "description": "Quality check: heading of the card where the checker gives the verdict"
+  },
+  "stockQualityResult": "ফল",
+  "@stockQualityResult": {
+    "description": "Quality check: result field (pass, fail, ...)"
+  },
+  "stockQualityRemarksOptional": "মন্তব্য (ঐচ্ছিক)",
+  "@stockQualityRemarksOptional": {
+    "description": "Quality check: remarks field, optional"
+  },
+  "stockQualityGiveVerdict": "রায় দিন",
+  "@stockQualityGiveVerdict": {
+    "description": "Quality check: button to record the verdict"
+  },
+  "stockQualityDisposeTitle": "বাতিল মাল সরানো",
+  "@stockQualityDisposeTitle": {
+    "description": "Quality check: card heading - dispose of rejected goods"
+  },
+  "stockQualityDisposeQty": "কতটা",
+  "@stockQualityDisposeQty": {
+    "description": "Quality check disposal: quantity field (how much)"
+  },
+  "stockQualityDispose": "সরান",
+  "@stockQualityDispose": {
+    "description": "Quality check disposal: button to dispose of the rejected goods"
+  },
+  "stockQualityNeedFields": "পণ্য আর পরিমাণ লাগবেই।",
+  "@stockQualityNeedFields": {
+    "description": "New quality check: validation - product and quantity are required"
+  },
+  "stockQualityOpenFailed": "যাচাই খোলা গেল না।",
+  "@stockQualityOpenFailed": {
+    "description": "New quality check: error when the check could not be opened"
+  },
+  "stockQualityNewTitle": "নতুন মান যাচাই",
+  "@stockQualityNewTitle": {
+    "description": "New quality check screen title"
+  },
+  "stockQualityQtyToCheck": "কতটা যাচাই",
+  "@stockQualityQtyToCheck": {
+    "description": "New quality check: quantity to inspect"
+  },
+  "stockQualityLotOptional": "লট নম্বর (ঐচ্ছিক)",
+  "@stockQualityLotOptional": {
+    "description": "New quality check: lot number, optional"
+  },
+  "stockQualityCriteriaOptional": "কী দেখা হবে (ঐচ্ছিক)",
+  "@stockQualityCriteriaOptional": {
+    "description": "New quality check: what will be checked, optional"
+  },
+  "stockQualityOpen": "যাচাই খুলুন",
+  "@stockQualityOpen": {
+    "description": "New quality check: button to open the check"
+  },
+  "stockSerialLoadFailed": "সিরিয়ালের তালিকা আনা গেল না।",
+  "@stockSerialLoadFailed": {
+    "description": "Serial numbers screen: error loading the list"
+  },
+  "stockSerialTitle": "সিরিয়াল নম্বর",
+  "@stockSerialTitle": {
+    "description": "Serial numbers screen title"
+  },
+  "stockSerialReceive": "পিস ঢোকান",
+  "@stockSerialReceive": {
+    "description": "Serial numbers: button and screen title - receive serialised pieces into stock"
+  },
+  "stockSerialIssue": "পিস বের করুন",
+  "@stockSerialIssue": {
+    "description": "Serial numbers: button and screen title - issue serialised pieces out of stock"
+  },
+  "stockSerialSearchHint": "সিরিয়াল নম্বর",
+  "@stockSerialSearchHint": {
+    "description": "Serial numbers: search box hint"
+  },
+  "stockSerialTotal": "মোট সিরিয়াল",
+  "@stockSerialTotal": {
+    "description": "Serial numbers: total strip label"
+  },
+  "stockSerialEmpty": "কোনো সিরিয়াল মেলেনি",
+  "@stockSerialEmpty": {
+    "description": "Serial numbers: empty state - no serial found"
+  },
+  "stockSerialNeedProductAndOne": "পণ্য আর অন্তত একটা সিরিয়াল লাগবেই।",
+  "@stockSerialNeedProductAndOne": {
+    "description": "Receive pieces: validation - a product and at least one serial are required"
+  },
+  "stockSerialNeedOne": "অন্তত একটা সিরিয়াল লাগবেই।",
+  "@stockSerialNeedOne": {
+    "description": "Issue pieces: validation - at least one serial is required"
+  },
+  "stockSerialSaveFailed": "সিরিয়াল বসানো গেল না।",
+  "@stockSerialSaveFailed": {
+    "description": "Serial form: error when the serials could not be recorded"
+  },
+  "stockSerialNumbersLabel": "সিরিয়াল — প্রতি সারিতে একটা",
+  "@stockSerialNumbersLabel": {
+    "description": "Serial form: the serials box, one per line"
+  },
+  "stockSerialSoldToOptional": "কাকে (ঐচ্ছিক)",
+  "@stockSerialSoldToOptional": {
+    "description": "Issue pieces: to whom, optional"
+  },
+  "stockSerialWarrantyOptional": "ওয়ারেন্টি, মাস (ঐচ্ছিক)",
+  "@stockSerialWarrantyOptional": {
+    "description": "Issue pieces: warranty in months, optional"
+  },
+  "stockSerialReceiveButton": "ঢোকান",
+  "@stockSerialReceiveButton": {
+    "description": "Receive pieces: send button"
+  },
+  "stockSerialIssueButton": "বের করুন",
+  "@stockSerialIssueButton": {
+    "description": "Issue pieces: send button"
+  },
+  "stockListTitle": "হাতে থাকা মজুদ",
+  "@stockListTitle": {
+    "description": "Stock list screen title: stock on hand"
+  },
+  "stockListWithValue": "মূল্যসহ তালিকা",
+  "@stockListWithValue": {
+    "description": "Stock list: button - the stock list with values (report)"
+  },
+  "stockListValueReportTitle": "মজুদের মূল্য",
+  "@stockListValueReportTitle": {
+    "description": "Stock list: title of the stock value report"
+  },
+  "stockListReports": "মজুদের রিপোর্ট",
+  "@stockListReports": {
+    "description": "Stock list: button and screen title - stock reports"
+  },
+  "stockListSearchHint": "পণ্যের নাম দিয়ে খুঁজুন",
+  "@stockListSearchHint": {
+    "description": "Stock list: search box hint"
+  },
+  "stockListTotalAvailable": "মোট বিক্রয়যোগ্য",
+  "@stockListTotalAvailable": {
+    "description": "Stock list: total strip label - total quantity available for sale"
+  },
+  "stockListNothingSynced": "এখনো কোনো মজুদ সিঙ্ক হয়নি",
+  "@stockListNothingSynced": {
+    "description": "Stock list: empty state - no stock synced yet"
+  },
+  "stockListLoadFailed": "মজুদের তালিকা আনা যায়নি",
+  "@stockListLoadFailed": {
+    "description": "Stock list: empty state - the stock list could not be fetched"
+  },
+  "stockListPullRetry": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@stockListPullRetry": {
+    "description": "Stock list: empty state hint - pull down to try again"
+  },
+  "stockListNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@stockListNoMatch": {
+    "description": "Stock list: nothing matches the search"
+  },
+  "stockListClearFilters": "ফিল্টার মুছে আবার দেখুন।",
+  "@stockListClearFilters": {
+    "description": "Stock list: no match while filters are on - clear the filters"
+  },
+  "stockListProductNotSynced": "পণ্য এখনো সিঙ্ক হয়নি",
+  "@stockListProductNotSynced": {
+    "description": "Stock list row: the product of this stock row is not synced yet"
+  },
+  "stockListAvailable": "বিক্রয়যোগ্য",
+  "@stockListAvailable": {
+    "description": "Stock list row: caption under the quantity available for sale"
+  },
+  "stockListOnShelf": "তাকে {qty}",
+  "@stockListOnShelf": {
+    "description": "Stock list row: quantity on the shelf, with unit",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "stockListOnOrder": "অর্ডারে {qty}",
+  "@stockListOnOrder": {
+    "description": "Stock list row: quantity reserved for orders, with unit",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "stockListHeld": "আটকানো {qty}",
+  "@stockListHeld": {
+    "description": "Stock list row: quantity on hold, with unit",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "productsListTitle": "পণ্যের তালিকা",
+  "@productsListTitle": {
+    "description": "Product list screen title"
+  },
+  "productsListSearchHint": "পণ্যের নাম দিয়ে খুঁজুন",
+  "@productsListSearchHint": {
+    "description": "Product list: search box hint"
+  },
+  "productsListTotal": "{count, plural, other{মোট {count} টি পণ্য}}",
+  "@productsListTotal": {
+    "description": "Product list: how many products are shown",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "productsListNothingSynced": "এখনো কোনো পণ্য সিঙ্ক হয়নি",
+  "@productsListNothingSynced": {
+    "description": "Product list: empty state - no products synced yet"
+  },
+  "productsListLoadFailed": "পণ্যের তালিকা আনা যায়নি",
+  "@productsListLoadFailed": {
+    "description": "Product list: empty state - the list could not be fetched"
+  },
+  "productsListPullRetry": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@productsListPullRetry": {
+    "description": "Product list: empty state hint - pull down to try again"
+  },
+  "productsListNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@productsListNoMatch": {
+    "description": "Product list: nothing matches the search"
+  },
+  "productsListClearFilters": "ফিল্টার মুছে আবার দেখুন।",
+  "@productsListClearFilters": {
+    "description": "Product list: no match while filters are on - clear the filters"
+  },
+  "productsListAvailable": "বিক্রয়যোগ্য {qty}",
+  "@productsListAvailable": {
+    "description": "Product card: quantity available for sale, with unit",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "productsListPurchase": "ক্রয়: {amount}",
+  "@productsListPurchase": {
+    "description": "Product card: purchase price (only for people allowed to see cost)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingTripVehicle": "গাড়ি {vehicle}",
+  "@loadingTripVehicle": {
+    "description": "Loading trip crew line: the vehicle",
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingTripDriver": "চালক {driver}",
+  "@loadingTripDriver": {
+    "description": "Loading trip crew line: the driver",
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingListLoadFailed": "ট্রিপের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@loadingListLoadFailed": {
+    "description": "Loading sheet list: error loading the trips"
+  },
+  "loadingListNotOnServer": "সার্ভারে লোডিং শিট এখনো আসেনি — অফিসে জানান।",
+  "@loadingListNotOnServer": {
+    "description": "Loading sheet list: the server does not have loading sheets yet"
+  },
+  "loadingListTitle": "লোডিং শিট",
+  "@loadingListTitle": {
+    "description": "Loading sheet list screen title"
+  },
+  "loadingListTotal": "মোট লোডিং শিট",
+  "@loadingListTotal": {
+    "description": "Loading sheet list: total strip label"
+  },
+  "loadingListCountValue": "{count} টি",
+  "@loadingListCountValue": {
+    "description": "Loading sheet list: total strip value, a number of items (no noun)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadingListEmpty": "তোলার মতো কোনো খোলা ট্রিপ নেই।",
+  "@loadingListEmpty": {
+    "description": "Loading sheet list: no open trips to load"
+  },
+  "loadingListChallans": "{count, plural, other{{count}টা চালান}}",
+  "@loadingListChallans": {
+    "description": "Loading trip row: number of delivery challans on the trip",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadingListMore": "আরও দেখুন",
+  "@loadingListMore": {
+    "description": "Loading sheet list: button to load the next page"
+  },
+  "loadingSheetLoadFailed": "লোডিং শিট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@loadingSheetLoadFailed": {
+    "description": "Loading sheet: error loading the sheet"
+  },
+  "loadingSheetPackedQuestion": "প্যাক হয়েছে?",
+  "@loadingSheetPackedQuestion": {
+    "description": "Loading sheet: confirm dialog title - mark as packed?"
+  },
+  "loadingSheetPackedExplain": "ট্রিপের যে চালানগুলো এখনো তোলা বাকি, সেগুলো \"প্যাক হয়েছে\" ধাপে যাবে।",
+  "@loadingSheetPackedExplain": {
+    "description": "Loading sheet: confirm dialog text - the trip's delivery challans not yet loaded move to the Packed step"
+  },
+  "loadingSheetNo": "না",
+  "@loadingSheetNo": {
+    "description": "Loading sheet confirm dialog: No button"
+  },
+  "loadingSheetYesPacked": "হ্যাঁ, প্যাক হয়েছে",
+  "@loadingSheetYesPacked": {
+    "description": "Loading sheet confirm dialog: Yes, packed button"
+  },
+  "loadingSheetPackedNotice": "{doc} — {count, plural, other{{count}টা চালান \"প্যাক হয়েছে\" ধাপে গেল।}}",
+  "@loadingSheetPackedNotice": {
+    "description": "Loading sheet: notice after marking packed; doc is the trip number, count the delivery challans moved",
+    "placeholders": {
+      "doc": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadingSheetPackFailed": "\"প্যাক হয়েছে\" লেখা গেল না। আবার চেষ্টা করুন।",
+  "@loadingSheetPackFailed": {
+    "description": "Loading sheet: error when Packed could not be recorded"
+  },
+  "loadingSheetTitle": "লোডিং শিট {no}",
+  "@loadingSheetTitle": {
+    "description": "Loading sheet screen title with the trip number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingSheetByProduct": "পণ্য ধরে — কত তুলবেন",
+  "@loadingSheetByProduct": {
+    "description": "Loading sheet: section heading - by product, how much to load"
+  },
+  "loadingSheetLots": "লট: {lots}",
+  "@loadingSheetLots": {
+    "description": "Loading sheet product: lots and quantities to load from",
+    "placeholders": {
+      "lots": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingSheetByChallan": "চালান ধরে — কার জন্য",
+  "@loadingSheetByChallan": {
+    "description": "Loading sheet: section heading - by delivery challan, for whom"
+  },
+  "loadingSheetPacked": "প্যাক হয়েছে",
+  "@loadingSheetPacked": {
+    "description": "Loading sheet: Packed - chip on a packed delivery challan and the button that marks the trip packed"
+  },
+  "loadingSheetAllPacked": "সব চালান প্যাক হয়েছে — গাড়ি রওনার অপেক্ষায়।",
+  "@loadingSheetAllPacked": {
+    "description": "Loading sheet: all delivery challans are packed, waiting for the vehicle to leave"
+  },
+  "promoOffersTitle": "চলতি অফার",
+  "@promoOffersTitle": {
+    "description": "Running offers screen title and total strip label"
+  },
+  "promoOffersLoadFailed": "অফারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@promoOffersLoadFailed": {
+    "description": "Running offers: error loading the list"
+  },
+  "promoOffersNotOnServer": "সার্ভারে অফারের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@promoOffersNotOnServer": {
+    "description": "Running offers: the server does not have the offer list yet"
+  },
+  "promoOffersNoneRunning": "এখন কোনো চলতি অফার নেই",
+  "@promoOffersNoneRunning": {
+    "description": "Running offers: empty state - no offer running now"
+  },
+  "promoOffersOffHere": "এই শাখায় অফার এখন বন্ধ",
+  "@promoOffersOffHere": {
+    "description": "Running offers: empty state - offers are switched off in this branch"
+  },
+  "promoOffersNoMatch": "\"{query}\" — এই নামে কোনো অফার মেলেনি।",
+  "@promoOffersNoMatch": {
+    "description": "Running offers: no offer matches the searched product name",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "promoOffersSearchHint": "পণ্যের নাম লিখুন",
+  "@promoOffersSearchHint": {
+    "description": "Running offers: search box hint - type a product name"
+  },
+  "promoOffersCountValue": "{count} টি",
+  "@promoOffersCountValue": {
+    "description": "Running offers: total strip value, a number of offers (no noun)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "promoOffersGoods": "কোন মালে",
+  "@promoOffersGoods": {
+    "description": "Offer card: which goods the offer is on"
+  },
+  "promoOffersForWhom": "কার জন্য",
+  "@promoOffersForWhom": {
+    "description": "Offer card: which customers the offer is for"
+  },
+  "promoOffersUntil": "কবে পর্যন্ত",
+  "@promoOffersUntil": {
+    "description": "Offer card: until when the offer runs"
+  },
+  "promoOffersEndsToday": "আজই শেষ",
+  "@promoOffersEndsToday": {
+    "description": "Offer card: the offer ends today"
+  },
+  "promoOffersDaysLeft": "{days, plural, other{আর {days} দিন}}",
+  "@promoOffersDaysLeft": {
+    "description": "Offer card: days left until the offer ends",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "launcherWidgetMore": "আরও {count}টা",
+  "@launcherWidgetMore": {
+    "description": "Home-screen widget footer: how many more rows there are than shown (count already in the reader's digits)",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "4"
+      }
+    }
+  },
+  "launcherWidgetTotal": "মোট {value}",
+  "@launcherWidgetTotal": {
+    "description": "Home-screen widget corner: a total (an amount or a count)",
+    "placeholders": {
+      "value": {
+        "type": "String",
+        "example": "৳12,000.00"
+      }
+    }
+  },
+  "launcherWidgetAsOf": "{time} পর্যন্ত",
+  "@launcherWidgetAsOf": {
+    "description": "Home-screen widget bottom line: the figures are true up to this time",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "10:42 AM"
+      }
+    }
+  },
+  "launcherWidgetSignedOut": "সাইন আউট করা হয়েছে",
+  "@launcherWidgetSignedOut": {
+    "description": "Home-screen widget after sign-out: why the figures are gone"
+  },
+  "launcherWidgetCash": "নগদ",
+  "@launcherWidgetCash": {
+    "description": "Widget row: cash (money channel)"
+  },
+  "launcherWidgetBank": "ব্যাংক",
+  "@launcherWidgetBank": {
+    "description": "Widget row: bank (money channel)"
+  },
+  "launcherWidgetCashBankMfs": "নগদ + ব্যাংক + MFS",
+  "@launcherWidgetCashBankMfs": {
+    "description": "Widget caption: the total is cash plus bank plus mobile financial services"
+  },
+  "launcherWidgetNoStaffExpenses": "কর্মীর খরচ বাদে",
+  "@launcherWidgetNoStaffExpenses": {
+    "description": "Widget caption: the expense total leaves out staff expense claims"
+  },
+  "launcherWidgetBilledToday": "আজ বিল হয়েছে",
+  "@launcherWidgetBilledToday": {
+    "description": "Widget title: invoices raised today (gross, before returns)"
+  },
+  "launcherWidgetCollectionsToday": "আজকের আদায়",
+  "@launcherWidgetCollectionsToday": {
+    "description": "Widget title / row: money collected today"
+  },
+  "launcherWidgetNotices": "নোটিশ",
+  "@launcherWidgetNotices": {
+    "description": "Widget title and quick-action button: notices"
+  },
+  "launcherWidgetApprovalsName": "সইয়ের অপেক্ষা",
+  "@launcherWidgetApprovalsName": {
+    "description": "Widget name in the app's widget list: papers waiting for my signature"
+  },
+  "launcherWidgetApprovalsTitle": "আপনার সইয়ের অপেক্ষায়",
+  "@launcherWidgetApprovalsTitle": {
+    "description": "Approvals widget heading: papers awaiting your signature"
+  },
+  "launcherWidgetApprovalsEmpty": "কোনো সই বাকি নেই",
+  "@launcherWidgetApprovalsEmpty": {
+    "description": "Approvals widget when nothing waits for a signature"
+  },
+  "launcherWidgetApprovalsNothingNow": "এখন সইয়ের জন্য কিছু নেই।",
+  "@launcherWidgetApprovalsNothingNow": {
+    "description": "Old 2x2 approvals widget when nothing waits for a signature"
+  },
+  "launcherWidgetApprovalsMore": "আরও {count} টি",
+  "@launcherWidgetApprovalsMore": {
+    "description": "Old 2x2 approvals widget: how many more papers wait than the rows show (may end in +)",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "4+"
+      }
+    }
+  },
+  "launcherWidgetAttendanceTitle": "আমার উপস্থিতি",
+  "@launcherWidgetAttendanceTitle": {
+    "description": "Attendance widget title"
+  },
+  "launcherWidgetAttendanceNoRecord": "আপনার কর্মীর খাতা নেই",
+  "@launcherWidgetAttendanceNoRecord": {
+    "description": "Attendance widget when the user has no employee record"
+  },
+  "launcherWidgetAttendanceInAt": "আজ এসেছি: {time}",
+  "@launcherWidgetAttendanceInAt": {
+    "description": "Attendance widget: I came in today at this time",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "09:12"
+      }
+    }
+  },
+  "launcherWidgetAttendancePresent": "আজ উপস্থিত",
+  "@launcherWidgetAttendancePresent": {
+    "description": "Attendance widget: present today"
+  },
+  "launcherWidgetAttendanceAbsent": "আজ অনুপস্থিত",
+  "@launcherWidgetAttendanceAbsent": {
+    "description": "Attendance widget: absent today"
+  },
+  "launcherWidgetAttendanceLeave": "আজ ছুটি",
+  "@launcherWidgetAttendanceLeave": {
+    "description": "Attendance widget: on leave today"
+  },
+  "launcherWidgetAttendanceHoliday": "আজ সরকারি ছুটি",
+  "@launcherWidgetAttendanceHoliday": {
+    "description": "Attendance widget: public holiday today"
+  },
+  "launcherWidgetAttendanceNotMarked": "আজ হাজিরা বসেনি",
+  "@launcherWidgetAttendanceNotMarked": {
+    "description": "Attendance widget: today's attendance is not marked yet"
+  },
+  "launcherWidgetAttendanceLate": "দেরি",
+  "@launcherWidgetAttendanceLate": {
+    "description": "Attendance widget caption: came in late"
+  },
+  "launcherWidgetAttendanceLeaveLeft": "ছুটি বাকি: {days} দিন",
+  "@launcherWidgetAttendanceLeaveLeft": {
+    "description": "Attendance widget: leave days left",
+    "placeholders": {
+      "days": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "launcherWidgetAttendanceMonth": "এ মাসে: উপস্থিত {present} · অনুপস্থিত {absent}",
+  "@launcherWidgetAttendanceMonth": {
+    "description": "Attendance widget: this month's present and absent days",
+    "placeholders": {
+      "present": {
+        "type": "String"
+      },
+      "absent": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetAttendanceMonthMore": "ছুটি {leave} · দেরি {late}",
+  "@launcherWidgetAttendanceMonthMore": {
+    "description": "Attendance widget: this month's leave and late days",
+    "placeholders": {
+      "leave": {
+        "type": "String"
+      },
+      "late": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetBankReconcileTitle": "ব্যাংক মেলানো বাকি",
+  "@launcherWidgetBankReconcileTitle": {
+    "description": "Bank reconciliation widget title: bank lines still to reconcile"
+  },
+  "launcherWidgetBankReconcileOpen": "না-মেলানো সারি: {count}",
+  "@launcherWidgetBankReconcileOpen": {
+    "description": "Bank reconciliation widget: how many statement lines are unreconciled",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetBankReconcileNever": "এখনো কখনো মেলানো হয়নি",
+  "@launcherWidgetBankReconcileNever": {
+    "description": "Bank reconciliation widget: the bank was never reconciled"
+  },
+  "launcherWidgetBankReconcileLast": "শেষ মেলানো: {day}",
+  "@launcherWidgetBankReconcileLast": {
+    "description": "Bank reconciliation widget: the day of the last reconciliation",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "15 October"
+      }
+    }
+  },
+  "launcherWidgetBankReconcileAllDone": "সব মেলানো",
+  "@launcherWidgetBankReconcileAllDone": {
+    "description": "Bank reconciliation widget: everything is reconciled"
+  },
+  "launcherWidgetBankReconcileAllDoneLast": "সব মেলানো · শেষ মেলানো: {day}",
+  "@launcherWidgetBankReconcileAllDoneLast": {
+    "description": "Bank reconciliation widget: everything reconciled, with the last day",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetBigDuesName": "বড় বকেয়া",
+  "@launcherWidgetBigDuesName": {
+    "description": "Big dues widget name"
+  },
+  "launcherWidgetBigDuesTitle": "সবচেয়ে বড় বকেয়া",
+  "@launcherWidgetBigDuesTitle": {
+    "description": "Big dues widget heading: the customers who owe the most"
+  },
+  "launcherWidgetBigDuesAdvance": "অগ্রিম জমা আছে",
+  "@launcherWidgetBigDuesAdvance": {
+    "description": "Big dues widget row: the customer has paid in advance"
+  },
+  "launcherWidgetBigDuesOverdue": "বাকির {days} দিন পার",
+  "@launcherWidgetBigDuesOverdue": {
+    "description": "Big dues widget row: the due is this many days overdue",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetBigDuesEmpty": "কারো কাছে বাকি নেই",
+  "@launcherWidgetBigDuesEmpty": {
+    "description": "Big dues widget: nobody owes anything"
+  },
+  "launcherWidgetChallansTitle": "আজকের চালান",
+  "@launcherWidgetChallansTitle": {
+    "description": "Today's delivery challans widget title"
+  },
+  "launcherWidgetChallansGatePending": "গেট পাস বাকি",
+  "@launcherWidgetChallansGatePending": {
+    "description": "Challans widget row: gate pass not yet issued"
+  },
+  "launcherWidgetChallansMoving": "পথে আছে",
+  "@launcherWidgetChallansMoving": {
+    "description": "Challans widget row: on the way to the customer"
+  },
+  "launcherWidgetChallansDelivered": "পৌঁছেছে",
+  "@launcherWidgetChallansDelivered": {
+    "description": "Challans widget row: delivered"
+  },
+  "launcherWidgetChallansReturned": "ফেরত এসেছে",
+  "@launcherWidgetChallansReturned": {
+    "description": "Challans widget row: came back undelivered"
+  },
+  "launcherWidgetChallansLatest": "শেষ: {customer}",
+  "@launcherWidgetChallansLatest": {
+    "description": "Challans widget: the latest challan's customer",
+    "placeholders": {
+      "customer": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetChallansVehicle": "গাড়ি {vehicle}",
+  "@launcherWidgetChallansVehicle": {
+    "description": "Challans widget: the vehicle number",
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetChallansEmpty": "আজ এখনো কোনো চালান নেই",
+  "@launcherWidgetChallansEmpty": {
+    "description": "Challans widget: no challans yet today"
+  },
+  "launcherWidgetChequesName": "চেক — আজ ব্যাংকে জমা",
+  "@launcherWidgetChequesName": {
+    "description": "Cheques widget name: cheques to deposit in the bank today"
+  },
+  "launcherWidgetChequesTitle": "চেক — আজ ব্যাংকে জমা দিতে হবে",
+  "@launcherWidgetChequesTitle": {
+    "description": "Cheques widget heading: cheques that must be deposited today"
+  },
+  "launcherWidgetChequesTotal": "আজ জমা দেওয়ার মোট",
+  "@launcherWidgetChequesTotal": {
+    "description": "Cheques widget caption: total to deposit today"
+  },
+  "launcherWidgetChequesEmpty": "আজ জমা দেওয়ার মতো কোনো চেক নেই",
+  "@launcherWidgetChequesEmpty": {
+    "description": "Cheques widget: no cheque to deposit today"
+  },
+  "launcherWidgetChequesCheque": "{bank} চেক {number}",
+  "@launcherWidgetChequesCheque": {
+    "description": "Cheques widget: bank name and cheque number",
+    "placeholders": {
+      "bank": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetChequesBounced": "ফেরত এসেছে: {name}",
+  "@launcherWidgetChequesBounced": {
+    "description": "Cheques widget: this customer's cheque came back (bounced)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetChequesDueAgain": "{cheque} · গ্রাহকের খাতায় আবার বাকি",
+  "@launcherWidgetChequesDueAgain": {
+    "description": "Cheques widget: a bounced cheque is due again on the customer's ledger",
+    "placeholders": {
+      "cheque": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetChequesDated": "{cheque} · তারিখ {day}",
+  "@launcherWidgetChequesDated": {
+    "description": "Cheques widget: the cheque and its date",
+    "placeholders": {
+      "cheque": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetCreditLimitsTitle": "বাকির সীমার কাছে",
+  "@launcherWidgetCreditLimitsTitle": {
+    "description": "Credit-limit widget title: customers near their credit limit"
+  },
+  "launcherWidgetCreditLimitsCaption": "গ্রাহক সীমার {percent}%-এর বেশি",
+  "@launcherWidgetCreditLimitsCaption": {
+    "description": "Credit-limit widget caption under the count: customers above this share of their limit",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "90"
+      }
+    }
+  },
+  "launcherWidgetCreditLimitsEmpty": "কোনো গ্রাহক সীমার কাছে নেই",
+  "@launcherWidgetCreditLimitsEmpty": {
+    "description": "Credit-limit widget: no customer is near the limit"
+  },
+  "launcherWidgetExpensesTitle": "এই মাসের খরচ",
+  "@launcherWidgetExpensesTitle": {
+    "description": "Expenses widget title"
+  },
+  "launcherWidgetExpensesMonth": "{month} মাসের খরচ",
+  "@launcherWidgetExpensesMonth": {
+    "description": "Expenses widget heading with the month's name",
+    "placeholders": {
+      "month": {
+        "type": "String",
+        "example": "October"
+      }
+    }
+  },
+  "launcherWidgetExpensesEmpty": "এই মাসে এখনো কোনো খরচ নেই",
+  "@launcherWidgetExpensesEmpty": {
+    "description": "Expenses widget: no expenses yet this month"
+  },
+  "launcherWidgetGoodsName": "মাল আসছে",
+  "@launcherWidgetGoodsName": {
+    "description": "Goods incoming widget name"
+  },
+  "launcherWidgetGoodsTitle": "মাল আসছে — ক্রয় অর্ডার",
+  "@launcherWidgetGoodsTitle": {
+    "description": "Goods incoming widget heading: purchase orders due to arrive"
+  },
+  "launcherWidgetGoodsSupplier": "{supplier} (সরবরাহকারী){branch}",
+  "@launcherWidgetGoodsSupplier": {
+    "description": "Goods incoming row: the supplier, then ' · branch' or nothing",
+    "placeholders": {
+      "supplier": {
+        "type": "String"
+      },
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsSupplierLate": "দেরি: {supplier} (সরবরাহকারী){branch}",
+  "@launcherWidgetGoodsSupplierLate": {
+    "description": "Goods incoming row: a late delivery from this supplier",
+    "placeholders": {
+      "supplier": {
+        "type": "String"
+      },
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsWasDue": "কথা ছিল {day}",
+  "@launcherWidgetGoodsWasDue": {
+    "description": "Goods incoming row: it was expected on this day",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsWeek": "এই সপ্তাহে {count}",
+  "@launcherWidgetGoodsWeek": {
+    "description": "Goods incoming corner: orders due this week",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsWeekLate": "এই সপ্তাহে {count} · দেরি {late}",
+  "@launcherWidgetGoodsWeekLate": {
+    "description": "Goods incoming corner: orders due this week and how many are late",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "late": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsEmpty": "এই সপ্তাহে কোনো মাল আসার কথা নেই",
+  "@launcherWidgetGoodsEmpty": {
+    "description": "Goods incoming widget: nothing due this week"
+  },
+  "launcherWidgetGoodsProducts": "{count}টা পণ্য",
+  "@launcherWidgetGoodsProducts": {
+    "description": "Goods incoming row: how many products the order has",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetGoodsToday": "আসবে আজ",
+  "@launcherWidgetGoodsToday": {
+    "description": "Goods incoming row: arrives today"
+  },
+  "launcherWidgetGoodsTomorrow": "আসবে কাল",
+  "@launcherWidgetGoodsTomorrow": {
+    "description": "Goods incoming row: arrives tomorrow"
+  },
+  "launcherWidgetGoodsOn": "আসবে {day}",
+  "@launcherWidgetGoodsOn": {
+    "description": "Goods incoming row: arrives on this day",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetMoneyTitle": "টাকা হাতে",
+  "@launcherWidgetMoneyTitle": {
+    "description": "Money-in-hand widget title"
+  },
+  "launcherWidgetMoneyCashBox": "নগদ বাক্স",
+  "@launcherWidgetMoneyCashBox": {
+    "description": "Money-in-hand widget row: the cash box"
+  },
+  "launcherWidgetMoneyTransit": "পথে (ব্যাংকে যাচ্ছে)",
+  "@launcherWidgetMoneyTransit": {
+    "description": "Money-in-hand widget row: money on its way to the bank"
+  },
+  "launcherWidgetNoticesUnread": "না-পড়া",
+  "@launcherWidgetNoticesUnread": {
+    "description": "Notices widget caption under the count: unread"
+  },
+  "launcherWidgetNoticesEmpty": "কোনো নোটিশ নেই",
+  "@launcherWidgetNoticesEmpty": {
+    "description": "Notices widget: no notices"
+  },
+  "launcherWidgetNoticesNew": "নতুন",
+  "@launcherWidgetNoticesNew": {
+    "description": "Notices widget chip: a new (unread) notice"
+  },
+  "launcherWidgetOffersName": "অফার আর স্কিম",
+  "@launcherWidgetOffersName": {
+    "description": "Offers widget name"
+  },
+  "launcherWidgetOffersTitle": "চলতি অফার আর স্কিম",
+  "@launcherWidgetOffersTitle": {
+    "description": "Offers widget heading: offers and schemes running now"
+  },
+  "launcherWidgetOffersActive": "চালু {count}",
+  "@launcherWidgetOffersActive": {
+    "description": "Offers widget corner: how many are active",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOffersEmpty": "এখন কোনো চালু অফার নেই",
+  "@launcherWidgetOffersEmpty": {
+    "description": "Offers widget: no active offer now"
+  },
+  "launcherWidgetOffersEndsToday": "শেষ: আজ",
+  "@launcherWidgetOffersEndsToday": {
+    "description": "Offers widget chip: ends today"
+  },
+  "launcherWidgetOffersEndsTomorrow": "শেষ: কাল",
+  "@launcherWidgetOffersEndsTomorrow": {
+    "description": "Offers widget chip: ends tomorrow"
+  },
+  "launcherWidgetOffersEndsInDays": "শেষ: {days} দিন পর",
+  "@launcherWidgetOffersEndsInDays": {
+    "description": "Offers widget chip: ends in this many days (days already in the reader's digits)",
+    "placeholders": {
+      "days": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "launcherWidgetOffersEndsOn": "শেষ: {day}",
+  "@launcherWidgetOffersEndsOn": {
+    "description": "Offers widget chip: ends on this day",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerName": "মালিকের পূর্ণ পর্দা",
+  "@launcherWidgetOwnerName": {
+    "description": "Owner's full-board widget name"
+  },
+  "launcherWidgetOwnerAllBranches": "সব শাখা",
+  "@launcherWidgetOwnerAllBranches": {
+    "description": "Owner board heading when no single branch is chosen"
+  },
+  "launcherWidgetOwnerReceipts": "রসিদ {count}টা",
+  "@launcherWidgetOwnerReceipts": {
+    "description": "Owner board row: how many collection receipts today",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerCashAmount": "নগদ {amount}",
+  "@launcherWidgetOwnerCashAmount": {
+    "description": "Owner board row: the cash part of the money",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerDues": "মোট বকেয়া",
+  "@launcherWidgetOwnerDues": {
+    "description": "Owner board row: total dues"
+  },
+  "launcherWidgetOwnerShops": "{count}টা দোকান",
+  "@launcherWidgetOwnerShops": {
+    "description": "Owner board row: how many shops owe",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerProfit": "এ মাসের মোট লাভ",
+  "@launcherWidgetOwnerProfit": {
+    "description": "Owner board row: gross profit this month"
+  },
+  "launcherWidgetOwnerMargin": "হার {margin}%",
+  "@launcherWidgetOwnerMargin": {
+    "description": "Owner board row: gross margin percent",
+    "placeholders": {
+      "margin": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerExpenses": "এ মাসের খরচ",
+  "@launcherWidgetOwnerExpenses": {
+    "description": "Owner board row: expenses this month"
+  },
+  "launcherWidgetOwnerTarget": "{month}-এর লক্ষ্য · বাকি {days} দিন",
+  "@launcherWidgetOwnerTarget": {
+    "description": "Owner board bar: the month's sales target and days left",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerToSign": "{count} সই",
+  "@launcherWidgetOwnerToSign": {
+    "description": "Owner board button: papers waiting for my signature",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerCheques": "{count} চেক",
+  "@launcherWidgetOwnerCheques": {
+    "description": "Owner board button: cheques to deposit",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerLowStock": "{count} মজুদ কম",
+  "@launcherWidgetOwnerLowStock": {
+    "description": "Owner board button: products low in stock",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerChallansMoving": "{count} চালান পথে",
+  "@launcherWidgetOwnerChallansMoving": {
+    "description": "Owner board button: delivery challans on the road",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerNotices": "{count} নোটিশ",
+  "@launcherWidgetOwnerNotices": {
+    "description": "Owner board button: unread notices",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerBills": "{label} · {count}টা বিল",
+  "@launcherWidgetOwnerBills": {
+    "description": "Owner board caption under today's sales: the server's label and the number of invoices",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetOwnerEmpty": "এখনো দেখানোর মতো কিছু নেই",
+  "@launcherWidgetOwnerEmpty": {
+    "description": "Owner board: nothing to show yet"
+  },
+  "launcherWidgetOwnerMonth": "মাস",
+  "@launcherWidgetOwnerMonth": {
+    "description": "Owner board: a month whose name could not be read"
+  },
+  "launcherWidgetCommissionName": "প্রিন্সিপালের কমিশন",
+  "@launcherWidgetCommissionName": {
+    "description": "Principal commission widget name"
+  },
+  "launcherWidgetCommissionTotal": "মোট · {side}",
+  "@launcherWidgetCommissionTotal": {
+    "description": "Principal commission widget: the total row with its side (to pay / to receive)",
+    "placeholders": {
+      "side": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetCommissionEmpty": "এই চক্রে কোনো কমিশন নেই",
+  "@launcherWidgetCommissionEmpty": {
+    "description": "Principal commission widget: no commission in this cycle"
+  },
+  "launcherWidgetProfitTitle": "এই মাসের মোট লাভ",
+  "@launcherWidgetProfitTitle": {
+    "description": "Profit widget title: gross profit this month"
+  },
+  "launcherWidgetProfitLossThisMonth": "এই মাসের মোট লোকসান",
+  "@launcherWidgetProfitLossThisMonth": {
+    "description": "Profit widget heading: gross loss this month"
+  },
+  "launcherWidgetProfitMonth": "{month} মাসের মোট লাভ",
+  "@launcherWidgetProfitMonth": {
+    "description": "Profit widget heading with the month's name: gross profit",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetProfitLossMonth": "{month} মাসের মোট লোকসান",
+  "@launcherWidgetProfitLossMonth": {
+    "description": "Profit widget heading with the month's name: gross loss",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetProfitMargin": "মোট লাভের হার {margin}%",
+  "@launcherWidgetProfitMargin": {
+    "description": "Profit widget caption: gross margin percent",
+    "placeholders": {
+      "margin": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetProfitSales": "বিক্রি (ভ্যাট আর ফেরত বাদে)",
+  "@launcherWidgetProfitSales": {
+    "description": "Profit widget row: sales net of VAT and returns"
+  },
+  "launcherWidgetProfitCogs": "বিক্রিত মালের দাম",
+  "@launcherWidgetProfitCogs": {
+    "description": "Profit widget row: cost of goods sold"
+  },
+  "launcherWidgetQuickName": "দ্রুত কাজ",
+  "@launcherWidgetQuickName": {
+    "description": "Quick actions widget name"
+  },
+  "launcherWidgetQuickOrder": "নতুন অর্ডার",
+  "@launcherWidgetQuickOrder": {
+    "description": "Quick action button: new order"
+  },
+  "launcherWidgetQuickCollect": "টাকা আদায়",
+  "@launcherWidgetQuickCollect": {
+    "description": "Quick action button: collect money from a customer"
+  },
+  "launcherWidgetQuickVoucher": "ভাউচার",
+  "@launcherWidgetQuickVoucher": {
+    "description": "Quick action button: voucher"
+  },
+  "launcherWidgetQuickScan": "স্ক্যান",
+  "@launcherWidgetQuickScan": {
+    "description": "Quick action button: scan"
+  },
+  "launcherWidgetQuickSign": "সই",
+  "@launcherWidgetQuickSign": {
+    "description": "Quick action button: sign the papers waiting for me"
+  },
+  "launcherWidgetQuickEmpty": "আপনার জন্য কোনো দ্রুত কাজ নেই",
+  "@launcherWidgetQuickEmpty": {
+    "description": "Quick actions widget: no quick action for this user"
+  },
+  "launcherWidgetSalesBills": "বিল {count}টা",
+  "@launcherWidgetSalesBills": {
+    "description": "Sales today widget row: number of invoices",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSalesCollection": "আদায়",
+  "@launcherWidgetSalesCollection": {
+    "description": "Sales today widget row: collections"
+  },
+  "launcherWidgetSalesSameAsYesterday": "গতকালের সমান",
+  "@launcherWidgetSalesSameAsYesterday": {
+    "description": "Sales today widget caption: the same as yesterday"
+  },
+  "launcherWidgetSalesUp": "▲ গতকালের চেয়ে {percent}% বেশি",
+  "@launcherWidgetSalesUp": {
+    "description": "Sales today widget caption: up on yesterday by this percent",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSalesDown": "▼ গতকালের চেয়ে {percent}% কম",
+  "@launcherWidgetSalesDown": {
+    "description": "Sales today widget caption: down on yesterday by this percent",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSrName": "বিক্রয়কর্মীর তালিকা",
+  "@launcherWidgetSrName": {
+    "description": "Sales rep board widget name"
+  },
+  "launcherWidgetSrMine": "আজ আমার বিক্রি",
+  "@launcherWidgetSrMine": {
+    "description": "Sales rep board heading for a rep: my sales today"
+  },
+  "launcherWidgetSrYours": "আজ আপনার বিক্রি",
+  "@launcherWidgetSrYours": {
+    "description": "Sales rep board row for a rep: your sales today"
+  },
+  "launcherWidgetSrRank": "আজ আপনি {rank} নম্বরে",
+  "@launcherWidgetSrRank": {
+    "description": "Sales rep board: your rank today",
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSrOutOf": "{of} জনের মধ্যে",
+  "@launcherWidgetSrOutOf": {
+    "description": "Sales rep board: out of this many reps",
+    "placeholders": {
+      "of": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSrTitle": "আজ সবচেয়ে বেশি বিক্রি — বিক্রয়কর্মী",
+  "@launcherWidgetSrTitle": {
+    "description": "Sales rep board heading for a manager: top sales reps today"
+  },
+  "launcherWidgetSrBranch": "শাখা: {branch}",
+  "@launcherWidgetSrBranch": {
+    "description": "Sales rep board corner: the branch",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSrEmpty": "আজ এখনো কোনো বিক্রি নেই",
+  "@launcherWidgetSrEmpty": {
+    "description": "Sales rep board: no sales yet today"
+  },
+  "launcherWidgetStockName": "মজুদ সতর্কতা",
+  "@launcherWidgetStockName": {
+    "description": "Stock alerts widget name"
+  },
+  "launcherWidgetStockTitle": "মজুদ কমে গেছে",
+  "@launcherWidgetStockTitle": {
+    "description": "Stock alerts widget heading: stock running low"
+  },
+  "launcherWidgetStockEmpty": "সব মজুদ পুনঃক্রয়ের সীমার উপরে",
+  "@launcherWidgetStockEmpty": {
+    "description": "Stock alerts widget: all stock is above its reorder level"
+  },
+  "launcherWidgetStockAllWarehouses": "সব গুদাম",
+  "@launcherWidgetStockAllWarehouses": {
+    "description": "Stock alerts widget corner: all warehouses"
+  },
+  "launcherWidgetStockWarehouse": "গুদাম: {warehouse}",
+  "@launcherWidgetStockWarehouse": {
+    "description": "Stock alerts widget corner: one warehouse",
+    "placeholders": {
+      "warehouse": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSyncName": "সিঙ্কের অবস্থা",
+  "@launcherWidgetSyncName": {
+    "description": "Sync state widget name"
+  },
+  "launcherWidgetSyncRunning": "সিঙ্ক চলছে",
+  "@launcherWidgetSyncRunning": {
+    "description": "Sync state widget: syncing now"
+  },
+  "launcherWidgetSyncOffline": "নেট নেই",
+  "@launcherWidgetSyncOffline": {
+    "description": "Sync state widget: no internet"
+  },
+  "launcherWidgetSyncFailed": "সিঙ্ক হয়নি",
+  "@launcherWidgetSyncFailed": {
+    "description": "Sync state widget: the last sync failed"
+  },
+  "launcherWidgetSyncStale": "সিঙ্ক পুরনো",
+  "@launcherWidgetSyncStale": {
+    "description": "Sync state widget: the last sync is old"
+  },
+  "launcherWidgetSyncOk": "সিঙ্ক ঠিক আছে",
+  "@launcherWidgetSyncOk": {
+    "description": "Sync state widget: sync is fine"
+  },
+  "launcherWidgetSyncNever": "শেষ সিঙ্ক: এখনো হয়নি",
+  "@launcherWidgetSyncNever": {
+    "description": "Sync state widget: never synced yet"
+  },
+  "launcherWidgetSyncLast": "শেষ সিঙ্ক: {ago}",
+  "@launcherWidgetSyncLast": {
+    "description": "Sync state widget: how long ago the last sync was",
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSyncQueued": "জমা কাজ: {count}",
+  "@launcherWidgetSyncQueued": {
+    "description": "Sync state widget: how many writes wait to be sent",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetSyncKeptOffline": "অফলাইনে জমা থাকে",
+  "@launcherWidgetSyncKeptOffline": {
+    "description": "Sync state widget: writes are kept while offline"
+  },
+  "launcherWidgetTargetName": "লক্ষ্য বনাম অর্জন",
+  "@launcherWidgetTargetName": {
+    "description": "Target widget name: target against achievement"
+  },
+  "launcherWidgetTargetMineThisMonth": "এই মাসে আমার লক্ষ্য",
+  "@launcherWidgetTargetMineThisMonth": {
+    "description": "Target widget heading: my own target this month"
+  },
+  "launcherWidgetTargetThisMonth": "এই মাসের লক্ষ্য",
+  "@launcherWidgetTargetThisMonth": {
+    "description": "Target widget heading: this month's target"
+  },
+  "launcherWidgetTargetMineMonth": "{month}ে আমার লক্ষ্য",
+  "@launcherWidgetTargetMineMonth": {
+    "description": "Target widget heading: my own target for the named month",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetTargetMonth": "{month}ের লক্ষ্য",
+  "@launcherWidgetTargetMonth": {
+    "description": "Target widget heading: the target for the named month",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetTargetNotSet": "এই মাসের লক্ষ্য বসানো নেই",
+  "@launcherWidgetTargetNotSet": {
+    "description": "Target widget: no target set this month"
+  },
+  "launcherWidgetTargetDaysLeft": "বাকি {days} দিন",
+  "@launcherWidgetTargetDaysLeft": {
+    "description": "Target widget caption: days left in the month",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "launcherWidgetTargetMonthOver": "মাস শেষ",
+  "@launcherWidgetTargetMonthOver": {
+    "description": "Target widget caption: the month is over"
+  },
+  "launcherWidgetTargetCrore": "{amount} কোটি",
+  "@launcherWidgetTargetCrore": {
+    "description": "Target widget: a short amount in crore (ten million); the taka sign is added in code",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "1.36"
+      }
+    }
+  },
+  "launcherWidgetTargetLakh": "{amount} লাখ",
+  "@launcherWidgetTargetLakh": {
+    "description": "Target widget: a short amount in lakh (hundred thousand); the taka sign is added in code",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "2.5"
+      }
+    }
+  },
+  "launcherWidgetTodayNotForAccount": "এই অ্যাকাউন্টে এই হিসাব দেখানো হয় না",
+  "@launcherWidgetTodayNotForAccount": {
+    "description": "Old figures widget: this account may not see these figures"
+  },
+  "launcherWidgetTodayNotOnServer": "এই হিসাব এখনো সার্ভারে নেই",
+  "@launcherWidgetTodayNotOnServer": {
+    "description": "Old figures widget: the server does not have these figures yet"
+  },
   "collectTitle": "টাকা নেওয়া",
   "@collectTitle": {
     "description": "Collection screen 1: the bar title, the web's page name"

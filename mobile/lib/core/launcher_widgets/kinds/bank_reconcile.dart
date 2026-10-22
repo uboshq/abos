@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'money_kinds_support.dart';
@@ -11,7 +12,7 @@ class BankReconcileWidget extends LauncherWidgetKind {
   String get key => 'bank_reconcile';
 
   @override
-  String get title => 'ব্যাংক মেলানো বাকি';
+  String get title => AppLocale.l10n.launcherWidgetBankReconcileTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x1, WidgetSize.s2x2];
@@ -20,18 +21,19 @@ class BankReconcileWidget extends LauncherWidgetKind {
   WidgetDoc build(Map<String, dynamic> s, {required DateTime asOf}) {
     final open = (s['open'] as num?)?.toInt() ?? 0;
     final last = banglaDay(s['lastOn']);
+    final l = AppLocale.l10n;
 
     return WidgetDoc(
-      title: 'ব্যাংক মেলানো বাকি',
+      title: l.launcherWidgetBankReconcileTitle,
       asOf: asOf,
       link: s['link'] as String?,
       hero: open == 0
           ? null
           : WidgetHero(
-              WidgetText('না-মেলানো সারি: ${banglaNumber(open)}', tone: WidgetTone.bad),
-              caption: WidgetText(last == null ? 'এখনো কখনো মেলানো হয়নি' : 'শেষ মেলানো: $last'),
+              WidgetText(l.launcherWidgetBankReconcileOpen(banglaNumber(open)), tone: WidgetTone.bad),
+              caption: WidgetText(last == null ? l.launcherWidgetBankReconcileNever : l.launcherWidgetBankReconcileLast(last)),
             ),
-      empty: last == null ? 'সব মেলানো' : 'সব মেলানো · শেষ মেলানো: $last',
+      empty: last == null ? l.launcherWidgetBankReconcileAllDone : l.launcherWidgetBankReconcileAllDoneLast(last),
     );
   }
 }

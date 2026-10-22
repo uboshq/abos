@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
@@ -16,13 +17,14 @@ class BigDuesWidget extends LauncherWidgetKind {
   String get key => 'big_dues';
 
   @override
-  String get title => 'বড় বকেয়া';
+  String get title => AppLocale.l10n.launcherWidgetBigDuesName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2, WidgetSize.s2x2];
 
   @override
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {
+    final l = AppLocale.l10n;
     final rows = <WidgetRow>[];
     for (final r in SummaryReader.rows(summary['rows'])) {
       final customer = SummaryReader.partyLabel(r['customer']);
@@ -36,9 +38,9 @@ class BigDuesWidget extends LauncherWidgetKind {
       rows.add(WidgetRow(
         title: WidgetText(customer),
         second: advance
-            ? const WidgetText('অগ্রিম জমা আছে')
+            ? WidgetText(l.launcherWidgetBigDuesAdvance)
             : late
-                ? WidgetText('বাকির ${SummaryReader.bnDigits(overdue)} দিন পার', tone: WidgetTone.bad)
+                ? WidgetText(l.launcherWidgetBigDuesOverdue(SummaryReader.bnDigits(overdue)), tone: WidgetTone.bad)
                 : null,
         amount: balance == null
             ? null
@@ -51,13 +53,13 @@ class BigDuesWidget extends LauncherWidgetKind {
     final total = SummaryReader.decimal(summary['total']);
 
     return WidgetDoc(
-      title: 'সবচেয়ে বড় বকেয়া',
+      title: l.launcherWidgetBigDuesTitle,
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
       // নকশা: মাথার কোণে "মোট ৳…" (টাকা, গোপন-যোগ্য); বড় অঙ্ক নেই
-      corner: total == null ? null : WidgetText.money('মোট ${Money.taka(total)}'),
+      corner: total == null ? null : WidgetText.money(l.launcherWidgetTotal(Money.taka(total))),
       rows: rows,
-      empty: rows.isEmpty ? 'কারো কাছে বাকি নেই' : null,
+      empty: rows.isEmpty ? l.launcherWidgetBigDuesEmpty : null,
     );
   }
 }

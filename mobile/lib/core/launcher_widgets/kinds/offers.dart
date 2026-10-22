@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'summary_reader.dart';
@@ -15,7 +16,7 @@ class OffersWidget extends LauncherWidgetKind {
   String get key => 'offers';
 
   @override
-  String get title => 'অফার আর স্কিম';
+  String get title => AppLocale.l10n.launcherWidgetOffersName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2, WidgetSize.s2x2];
@@ -38,13 +39,13 @@ class OffersWidget extends LauncherWidgetKind {
     final count = SummaryReader.integer(summary['count']);
 
     return WidgetDoc(
-      title: 'চলতি অফার আর স্কিম',
+      title: AppLocale.l10n.launcherWidgetOffersTitle,
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
       // নকশা: মাথার কোণে "চালু 3"; বড় অঙ্ক নেই
-      corner: count == null || count == 0 ? null : WidgetText('চালু $count'),
+      corner: count == null || count == 0 ? null : WidgetText(AppLocale.l10n.launcherWidgetOffersActive('$count')),
       rows: rows,
-      empty: rows.isEmpty && (count ?? 0) == 0 ? 'এখন কোনো চালু অফার নেই' : null,
+      empty: rows.isEmpty && (count ?? 0) == 0 ? AppLocale.l10n.launcherWidgetOffersEmpty : null,
       more: SummaryReader.more(count, rows.length),
     );
   }
@@ -54,10 +55,10 @@ class OffersWidget extends LauncherWidgetKind {
     if (end == null) return null;
     final days = end.difference(today).inDays;
     return switch (days) {
-      0 => const WidgetText('শেষ: আজ', tone: WidgetTone.warn),
-      1 => const WidgetText('শেষ: কাল', tone: WidgetTone.warn),
-      2 => const WidgetText('শেষ: ২ দিন পর', tone: WidgetTone.warn),
-      _ => WidgetText('শেষ: ${SummaryReader.bnDate(end)}'),
+      0 => WidgetText(AppLocale.l10n.launcherWidgetOffersEndsToday, tone: WidgetTone.warn),
+      1 => WidgetText(AppLocale.l10n.launcherWidgetOffersEndsTomorrow, tone: WidgetTone.warn),
+      2 => WidgetText(AppLocale.l10n.launcherWidgetOffersEndsInDays(SummaryReader.bnDigits(2)), tone: WidgetTone.warn),
+      _ => WidgetText(AppLocale.l10n.launcherWidgetOffersEndsOn(SummaryReader.bnDate(end))),
     };
   }
 }

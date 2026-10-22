@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'summary_reader.dart';
@@ -17,7 +18,7 @@ class SalesTodayWidget extends LauncherWidgetKind {
 
   @override
   // ⓘ অঙ্কটা ফেরত বাদ না দেওয়া মোট বিল — তাই "আজ বিল হয়েছে" (fe, ২০ অক্টোবর ২০২৬; IFRS 15-এ বিক্রি মানে ফেরত বাদে নিট)
-  String get title => 'আজ বিল হয়েছে';
+  String get title => AppLocale.l10n.launcherWidgetBilledToday;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s2x1];
@@ -28,8 +29,8 @@ class SalesTodayWidget extends LauncherWidgetKind {
     final invoices = SummaryReader.integer(summary['invoices']);
     final collected = SummaryReader.money(summary['collections']);
     final lineTitle = [
-      if (invoices != null) 'বিল $invoicesটা',
-      if (collected != null) 'আদায়',
+      if (invoices != null) AppLocale.l10n.launcherWidgetSalesBills('$invoices'),
+      if (collected != null) AppLocale.l10n.launcherWidgetSalesCollection,
     ].join(' · ');
 
     return WidgetDoc(
@@ -51,11 +52,11 @@ class SalesTodayWidget extends LauncherWidgetKind {
     final raw = SummaryReader.decimal(value);
     if (raw == null) return null;
     final pct = double.parse(raw);
-    if (pct == 0) return const WidgetText('গতকালের সমান', tone: WidgetTone.muted);
+    if (pct == 0) return WidgetText(AppLocale.l10n.launcherWidgetSalesSameAsYesterday, tone: WidgetTone.muted);
     final rounded = pct.abs().round();
     final shown = rounded == 0 ? '<1' : '$rounded';
     return pct > 0
-        ? WidgetText('▲ গতকালের চেয়ে $shown% বেশি', tone: WidgetTone.good)
-        : WidgetText('▼ গতকালের চেয়ে $shown% কম', tone: WidgetTone.bad);
+        ? WidgetText(AppLocale.l10n.launcherWidgetSalesUp(shown), tone: WidgetTone.good)
+        : WidgetText(AppLocale.l10n.launcherWidgetSalesDown(shown), tone: WidgetTone.bad);
   }
 }

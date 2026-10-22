@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 class LanguageSwitch {
   const LanguageSwitch._();
 
-  static const bool ready = false;
+  static const bool ready = true;
 
   /// ⓘ পরীক্ষার পথ — সারিটা আজই বানিয়ে পরখ করা যায়, যাতে চালুর দিন কাজ করে
   @visibleForTesting

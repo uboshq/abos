@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -49,8 +51,8 @@ class LoadingTrip {
 
   /// গাড়ি · চালক · ফোন · বাহক — যা আছে
   String get crew => [
-        if (vehicle != null && vehicle!.isNotEmpty) 'গাড়ি $vehicle',
-        if (driver != null && driver!.isNotEmpty) 'চালক $driver',
+        if (vehicle != null && vehicle!.isNotEmpty) AppLocale.l10n.loadingTripVehicle(vehicle!),
+        if (driver != null && driver!.isNotEmpty) AppLocale.l10n.loadingTripDriver(driver!),
         if (driverPhone != null && driverPhone!.isNotEmpty) driverPhone!,
         if (carrier != null && carrier!.isNotEmpty) carrier!,
       ].join(' · ');
@@ -257,8 +259,8 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ট্রিপের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে লোডিং শিট এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.loadingListLoadFailed,
+            whenAbsent: context.l10n.loadingListNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -275,8 +277,9 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
   @override
   Widget build(BuildContext context) {
     final rows = _rows ?? const <LoadingTrip>[];
+    final l = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'লোডিং শিট'),
+      appBar: AbosScreenBar(title: l.loadingListTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -286,11 +289,11 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
             if (_error != null) _ErrorCard(_error!),
             // ⭐ গোটা তালিকার গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
             if (_count != null && rows.isNotEmpty)
-              TotalStrip(label: 'মোট লোডিং শিট', value: '$_count টি'),
+              TotalStrip(label: l.loadingListTotal, value: l.loadingListCountValue(_count!)),
             if (_rows != null && rows.isEmpty && !_busy)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Center(child: Text('তোলার মতো কোনো খোলা ট্রিপ নেই।')),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Center(child: Text(l.loadingListEmpty)),
               ),
             for (final trip in rows)
               Card(
@@ -300,7 +303,7 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text([
                     if (trip.date != null) trip.date!,
-                    '${trip.challans}টা চালান',
+                    l.loadingListChallans(trip.challans),
                     if (trip.crew.isNotEmpty) trip.crew,
                   ].join(' · ')),
                   trailing: const Icon(Icons.chevron_right),
@@ -312,7 +315,7 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
                 child: OutlinedButton(
                   key: const ValueKey('loading-more'),
                   onPressed: _busy ? null : () => _load(more: true),
-                  child: const Text('আরও দেখুন'),
+                  child: Text(l.loadingListMore),
                 ),
               ),
           ],
@@ -357,7 +360,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'লোডিং শিট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'));
+            fallback: context.l10n.loadingSheetLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -368,17 +371,16 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('প্যাক হয়েছে?'),
-        content: const Text(
-            'ট্রিপের যে চালানগুলো এখনো তোলা বাকি, সেগুলো "প্যাক হয়েছে" ধাপে যাবে।'),
+        title: Text(ctx.l10n.loadingSheetPackedQuestion),
+        content: Text(ctx.l10n.loadingSheetPackedExplain),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('না')),
+              child: Text(ctx.l10n.loadingSheetNo)),
           FilledButton(
               key: const ValueKey('loading-packed-sure'),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('হ্যাঁ, প্যাক হয়েছে')),
+              child: Text(ctx.l10n.loadingSheetYesPacked)),
         ],
       ),
     );
@@ -392,13 +394,13 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
       if (mounted) {
         setState(() => _notice = message.isNotEmpty
             ? message
-            : '${widget.trip.documentNo} — $countটা চালান "প্যাক হয়েছে" ধাপে গেল।');
+            : context.l10n.loadingSheetPackedNotice(widget.trip.documentNo, count));
       }
       await _load();
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: '"প্যাক হয়েছে" লেখা গেল না। আবার চেষ্টা করুন।'));
+            fallback: context.l10n.loadingSheetPackFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -413,8 +415,9 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
         sheet.challans.isNotEmpty &&
         sheet.challans.every((c) => c.packed);
     final muted = TextStyle(color: context.palette.onSurfaceMuted);
+    final l = context.l10n;
     return Scaffold(
-      appBar: AbosScreenBar(title: 'লোডিং শিট ${trip.documentNo}'),
+      appBar: AbosScreenBar(title: l.loadingSheetTitle(trip.documentNo)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -435,8 +438,8 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
             if (_error != null) _ErrorCard(_error!),
             if (sheet != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              const Text('পণ্য ধরে — কত তুলবেন',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(l.loadingSheetByProduct,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               for (final p in sheet.products)
                 Card(
                   key: ValueKey('loading-product-${p.product}'),
@@ -458,7 +461,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                         ]),
                         if (p.lots.isNotEmpty)
                           Text(
-                              'লট: ${p.lots.map((l) => '${l.label} ${Money.plain(l.qty)}').join(' · ')}',
+                              l.loadingSheetLots(p.lots.map((lot) => '${lot.label} ${Money.plain(lot.qty)}').join(' · ')),
                               style: muted),
                         for (final w in p.forWhom)
                           Text('• ${w.label} — ${Money.plain(w.qty)}'),
@@ -467,8 +470,8 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                   ),
                 ),
               const SizedBox(height: AppSpacing.sm),
-              const Text('চালান ধরে — কার জন্য',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(l.loadingSheetByChallan,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               for (final c in sheet.challans)
                 Card(
                   key: ValueKey('loading-challan-${c.documentNo}'),
@@ -484,7 +487,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                                       fontWeight: FontWeight.w600))),
                           if (c.packed)
                             Chip(
-                                label: const Text('প্যাক হয়েছে'),
+                                label: Text(l.loadingSheetPacked),
                                 backgroundColor: context.palette.successSurface),
                         ]),
                         for (final l in c.lines)
@@ -500,13 +503,13 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                   key: const ValueKey('loading-packed'),
                   onPressed: _busy ? null : _packed,
                   icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text('প্যাক হয়েছে'),
+                  label: Text(l.loadingSheetPacked),
                 )
               else if (allPacked)
-                const Center(
+                Center(
                     child: Text(
-                        'সব চালান প্যাক হয়েছে — গাড়ি রওনার অপেক্ষায়।',
-                        key: ValueKey('loading-all-packed'))),
+                        l.loadingSheetAllPacked,
+                        key: const ValueKey('loading-all-packed'))),
             ],
           ],
         ),

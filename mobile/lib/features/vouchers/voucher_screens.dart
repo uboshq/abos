@@ -4,6 +4,8 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/accounts/voucher_api.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/auth/session_profile.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
@@ -13,7 +15,6 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
-import '../../core/locale/l10n.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -82,12 +83,12 @@ class VoucherListScreen extends StatefulWidget {
 class _VoucherListScreenState extends State<VoucherListScreen> {
   /// ⭐ উপরের বোতাম — সব · নগদ রসিদ · MFS রসিদ · ব্যাংক রসিদ · পেমেন্ট · কন্ট্রা · জার্নাল · খরচ (মালিক, ১৫ ও ১৭ অক্টোবর
   /// ২০২৬); তারপর এমন কোনো ধরন থাকলে যার বোতাম এখনো নেই
-  static final List<VoucherView> _views = [
-    ...VoucherView.kinds,
-    for (final t in VoucherTypes.all)
-      if (!VoucherView.kinds.any((v) => v.type == t))
-        VoucherView(t, VoucherTypes.label(t).replaceAll(' ভাউচার', ''), type: t),
-  ];
+  static List<VoucherView> get _views => [
+        ...VoucherView.kinds,
+        for (final t in VoucherTypes.all)
+          if (!VoucherView.kinds.any((v) => v.type == t))
+            VoucherView(t, VoucherTypes.label(t).replaceAll(AppLocale.l10n.vouchersKindSuffix, ''), type: t),
+      ];
 
   late VoucherView _view = VoucherView.byKey(widget.view) ?? VoucherView.all;
 
@@ -139,8 +140,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ভাউচারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের ভাউচার এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.vouchersListLoadFailed, whenAbsent: context.l10n.vouchersListNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -200,13 +200,18 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     final total = _page?.total;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: !_preset ? 'ভাউচার' : _view.type == null ? 'সব ভাউচার' : _view.label),
+      appBar: AbosScreenBar(
+          title: !_preset
+              ? context.l10n.vouchersListTitle
+              : _view.type == null
+                  ? context.l10n.vouchersListAllTitle
+                  : _view.label),
       floatingActionButton: widget.canCreate
           ? FloatingActionButton.extended(
               key: const ValueKey('voucher-new'),
               onPressed: _new,
               icon: const Icon(Icons.add),
-              label: const Text('নতুন ভাউচার'),
+              label: Text(context.l10n.vouchersListNew),
             )
           : null,
       body: RefreshIndicator(
@@ -226,7 +231,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     }),
               FilterChip(
                   key: const ValueKey('voucher-awaiting'),
-                  label: const Text('সইয়ের অপেক্ষায়'),
+                  label: Text(context.l10n.vouchersListAwaitingSign),
                   selected: _awaiting,
                   onSelected: (v) {
                     setState(() => _awaiting = v);
@@ -251,7 +256,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
                 ChoiceChip(
                     key: const ValueKey('voucher-branch-all'),
-                    label: const Text('সব শাখা'),
+                    label: Text(context.l10n.vouchersListAllBranches),
                     selected: _branch == null,
                     onSelected: (_) {
                       setState(() => _branch = null);
@@ -269,11 +274,11 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               ]),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের গোনা, পুরো ফলের (পাতার নয়)
             if (total != null)
-              TotalStrip(label: 'মোট · ${_view.label}', value: Money.taka(total), count: _page?.count),
+              TotalStrip(label: context.l10n.vouchersListTotal(_view.label), value: Money.taka(total), count: _page?.count),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_page != null && _rows.isEmpty && !_busy)
-              const Padding(padding: EdgeInsets.all(AppSpacing.lg), child: Center(child: Text('কোনো ভাউচার নেই।'))),
+              Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Center(child: Text(context.l10n.vouchersListEmpty))),
             for (final v in _rows)
               Card(
                 child: ListTile(
@@ -289,7 +294,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
                     // ⭐ টাকা কোন খাতে — জমা/থেকে/দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬); পুরনো সার্ভারে কিছুই নয়
                     if (v.moneyLine case final money?) Text(money, key: ValueKey('voucher-money-${v.id}')),
-                    if (v.writtenBy.isNotEmpty) Text('তুলেছেন: ${v.writtenBy}'),
+                    if (v.writtenBy.isNotEmpty) Text(context.l10n.vouchersListWrittenBy(v.writtenBy)),
                     if (v.date != null) Text(dayOf(v.date)),
                   ]),
                   onTap: () async {
@@ -344,7 +349,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
       RecentPapers.note(kind: 'voucher', id: widget.id, number: page.row.no);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ভাউচারটা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersPageLoadFailed));
     }
   }
 
@@ -366,7 +371,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
         if (answer.page != null) _page = answer.page;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাকা করা গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersPagePostFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -381,11 +386,11 @@ class _VoucherScreenState extends State<VoucherScreen> {
   Widget build(BuildContext context) {
     final p = _page;
     return Scaffold(
-      appBar: AbosScreenBar(title: p?.row.no ?? 'ভাউচার', actions: [
+      appBar: AbosScreenBar(title: p?.row.no ?? context.l10n.vouchersListTitle, actions: [
         if (p != null)
           IconButton(
             key: const ValueKey('voucher-print'),
-            tooltip: 'ছাপা বা শেয়ার',
+            tooltip: context.l10n.vouchersPagePrint,
             icon: const Icon(Icons.print_outlined),
             onPressed: () => DocumentActionsSheet.show(context, type: 'Voucher', id: p.row.id, title: '${p.row.kindLabel} ${p.row.no}'),
           ),
@@ -403,16 +408,16 @@ class _VoucherScreenState extends State<VoucherScreen> {
                     child: Text(_notice!, key: const ValueKey('voucher-notice'), style: TextStyle(color: context.palette.success)))),
           if (p == null && _error == null) const LinearProgressIndicator(),
           if (p != null) ...[
-            FactRow('ধরন', p.row.kindLabel),
+            FactRow(context.l10n.vouchersPageType, p.row.kindLabel),
             PaperStateFact(chip: voucherStateChip(p.row, key: const ValueKey('voucher-state'))),
-            FactRow('টাকা', Money.taka(p.row.amount)),
-            if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
+            FactRow(context.l10n.vouchersAmount, Money.taka(p.row.amount)),
+            if (p.row.date != null) FactRow(context.l10n.vouchersDate, dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),
             // ⭐ টাকা কোন খাতে — আদায়ে "জমা হয়েছে", পরিশোধে "যেখান থেকে দেওয়া", কনট্রায় দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬)
             for (final (label, account) in p.moneyFacts) FactRow(label, account),
-            if ((p.instrumentNo ?? '').isNotEmpty) FactRow('লেনদেন নম্বর', p.instrumentNo!),
-            if (p.row.narration.isNotEmpty) FactRow('বিবরণ', p.row.narration),
-            if (p.writtenBy.isNotEmpty) FactRow('লেখক', p.writtenBy),
+            if ((p.instrumentNo ?? '').isNotEmpty) FactRow(context.l10n.vouchersTrxNo, p.instrumentNo!),
+            if (p.row.narration.isNotEmpty) FactRow(context.l10n.vouchersNarration, p.row.narration),
+            if (p.writtenBy.isNotEmpty) FactRow(context.l10n.vouchersPageWriter, p.writtenBy),
             const Divider(),
             for (final l in p.lines)
               ListTile(
@@ -423,12 +428,14 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 subtitle: l.narration.isEmpty && l.party == null
                     ? null
                     : Text([if (l.party != null) l.party!, if (l.narration.isNotEmpty) l.narration].join(' · ')),
-                trailing: Text(l.debit > 0 ? 'ডেবিট ${Money.taka(l.debit)}' : 'ক্রেডিট ${Money.taka(l.credit)}'),
+                trailing: Text(l.debit > 0
+                    ? context.l10n.vouchersDebitLine(Money.taka(l.debit))
+                    : context.l10n.vouchersCreditLine(Money.taka(l.credit))),
               ),
             if (p.awaitsAnotherHand)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Text('নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে "পাকা করুন" চাপবেন।',
+                child: Text(context.l10n.vouchersPageAnotherHand,
                     key: const ValueKey('voucher-another-hand'), style: TextStyle(color: context.palette.pending)),
               ),
             if (p.canPost) ...[
@@ -436,14 +443,14 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 TextField(
                   key: const ValueKey('voucher-trx'),
                   controller: _trx,
-                  decoration: const InputDecoration(labelText: 'লেনদেন নম্বর (TrxID)'),
+                  decoration: InputDecoration(labelText: context.l10n.vouchersPageTrxLabel),
                 ),
               const SizedBox(height: AppSpacing.sm),
               FilledButton.icon(
                 key: const ValueKey('voucher-post'),
                 onPressed: _busy ? null : _post,
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('পাকা করুন'),
+                label: Text(context.l10n.vouchersPagePost),
               ),
             ],
           ],
@@ -510,7 +517,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
         });
       }
     }, onError: (Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersFormSetupFailed));
     });
   }
 
@@ -538,26 +545,27 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
       cs.fold(0, (s, c) => s + (double.tryParse(c.text.trim()) ?? 0));
 
   String? _problem() {
-    if (_setup == null) return 'খাতের তালিকা এখনো আসেনি।';
-    if (_setup!.narrationRequired && _narration.text.trim().isEmpty) return 'বিবরণ লিখুন — এই কোম্পানিতে বিবরণ বাধ্যতামূলক।';
+    final t = context.l10n;
+    if (_setup == null) return t.vouchersFormSetupMissing;
+    if (_setup!.narrationRequired && _narration.text.trim().isEmpty) return t.vouchersFormNarrationRequired;
     if (_journal) {
       final filled = _lines.where((l) => l.account != null).toList();
-      if (filled.length < 2) return 'অন্তত দুটো সারিতে খাত বাছুন।';
+      if (filled.length < 2) return t.vouchersFormTwoLines;
       for (final l in filled) {
         final d = l.debit.text.trim(), c = l.credit.text.trim();
         if ((d.isNotEmpty && !_amountShape.hasMatch(d)) || (c.isNotEmpty && !_amountShape.hasMatch(c))) {
-          return 'অঙ্কটা ঠিক নয় — দুই দশমিক পর্যন্ত।';
+          return t.vouchersFormAmountShape;
         }
-        if ((double.tryParse(d) ?? 0) > 0 && (double.tryParse(c) ?? 0) > 0) return 'এক সারিতে ডেবিট আর ক্রেডিট দুটোই নয়।';
+        if ((double.tryParse(d) ?? 0) > 0 && (double.tryParse(c) ?? 0) > 0) return t.vouchersFormBothSides;
       }
       final dr = _sum(filled.map((l) => l.debit)), cr = _sum(filled.map((l) => l.credit));
-      if (dr <= 0 || (dr - cr).abs() > 0.004) return 'ডেবিট আর ক্রেডিট মেলেনি।';
+      if (dr <= 0 || (dr - cr).abs() > 0.004) return t.vouchersFormUnbalanced;
       return null;
     }
-    if (_from == null || _to == null) return 'দুই দিকের খাত বাছুন।';
-    if (_from!.id == _to!.id) return 'দুই দিকে একই খাত হয় না।';
+    if (_from == null || _to == null) return t.vouchersFormPickAccounts;
+    if (_from!.id == _to!.id) return t.vouchersFormSameAccount;
     final a = _amount.text.trim();
-    if (!_amountShape.hasMatch(a) || (double.tryParse(a) ?? 0) <= 0) return 'অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।';
+    if (!_amountShape.hasMatch(a) || (double.tryParse(a) ?? 0) <= 0) return t.vouchersFormAmountInvalid;
     return null;
   }
 
@@ -602,17 +610,17 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
         return;
       }
       setState(() {
-        _error = outcome.refusal ?? 'ভাউচারটা বসেনি। আবার চেষ্টা করুন।';
+        _error = outcome.refusal ?? context.l10n.vouchersFormNotSaved;
         _changeId = null;
       });
     } on NoNetworkForThis catch (e) {
       if (mounted) {
         setState(() => _error = e.mayHaveLanded
-            ? 'ভাউচারের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।'
-            : 'ভাউচার লিখতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+            ? context.l10n.vouchersFormMayHaveLanded
+            : context.l10n.vouchersFormNeedsNet);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাঠানো গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersFormSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -651,14 +659,14 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
   Widget _partyTile(String key, VoucherParty? value, ValueChanged<VoucherParty?> set) => Card(
         child: ListTile(
           key: ValueKey(key),
-          title: Text(value?.label ?? 'পক্ষ (ঐচ্ছিক — বাকিতে খরচে লাগবে)'),
+          title: Text(value?.label ?? context.l10n.vouchersFormPartyOptional),
           trailing: value == null
               ? const Icon(Icons.search)
-              : IconButton(tooltip: 'মুছুন', icon: const Icon(Icons.close), onPressed: () => setState(() => set(null))),
+              : IconButton(tooltip: context.l10n.vouchersFormClear, icon: const Icon(Icons.close), onPressed: () => setState(() => set(null))),
           onTap: _busy
               ? null
               : () async {
-                  final p = await _pick<VoucherParty>('পক্ষ', _setup?.parties ?? const [], (x) => x.label, key: key);
+                  final p = await _pick<VoucherParty>(context.l10n.vouchersFormParty, _setup?.parties ?? const [], (x) => x.label, key: key);
                   if (p != null) setState(() => set(p));
                 },
         ),
@@ -701,26 +709,26 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
             Text(s!.cashHiddenReason!, style: TextStyle(color: context.palette.warning, fontSize: 12.5)),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('তারিখ'),
+            title: Text(context.l10n.vouchersDate),
             subtitle: Text('${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}'),
             trailing: const Icon(Icons.calendar_today_outlined),
             onTap: _busy ? null : _pickDate,
           ),
           if (s != null && !_journal) ...[
-            _accountTile('voucher-from', s.from?.label ?? 'কোথা থেকে', _from, s.from?.accounts ?? const [], (a) => _from = a),
-            _accountTile('voucher-to', s.to?.label ?? 'কোথায়', _to, s.to?.accounts ?? const [], (a) => _to = a),
+            _accountTile('voucher-from', s.from?.label ?? context.l10n.vouchersFormFrom, _from, s.from?.accounts ?? const [], (a) => _from = a),
+            _accountTile('voucher-to', s.to?.label ?? context.l10n.vouchersFormTo, _to, s.to?.accounts ?? const [], (a) => _to = a),
             TextField(
               key: const ValueKey('voucher-amount'),
               controller: _amount,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'টাকা'),
+              decoration: InputDecoration(labelText: context.l10n.vouchersAmount),
             ),
             _partyTile('voucher-party', _party, (p) => _party = p),
             if (_needsTrx)
               TextField(
                 key: const ValueKey('voucher-form-trx'),
                 controller: _trx,
-                decoration: const InputDecoration(labelText: 'লেনদেন নম্বর (TrxID) — পাকা করতে লাগবে'),
+                decoration: InputDecoration(labelText: context.l10n.vouchersFormTrxLabel),
               ),
           ],
           if (s != null && _journal) ...[
@@ -730,14 +738,14 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   child: Column(children: [
-                    _accountTile('voucher-line-$i-account', 'খাত', _lines[i].account, s.accounts, (a) => _lines[i].account = a),
+                    _accountTile('voucher-line-$i-account', context.l10n.vouchersFormAccount, _lines[i].account, s.accounts, (a) => _lines[i].account = a),
                     Row(children: [
                       Expanded(
                           child: TextField(
                               key: ValueKey('voucher-line-$i-debit'),
                               controller: _lines[i].debit,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'ডেবিট'),
+                              decoration: InputDecoration(labelText: context.l10n.vouchersFormDebit),
                               onChanged: (_) => setState(() {}))),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -745,7 +753,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
                               key: ValueKey('voucher-line-$i-credit'),
                               controller: _lines[i].credit,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'ক্রেডিট'),
+                              decoration: InputDecoration(labelText: context.l10n.vouchersFormCredit),
                               onChanged: (_) => setState(() {}))),
                     ]),
                     _partyTile('voucher-line-$i-party', _lines[i].party, (p) => _lines[i].party = p),
@@ -757,9 +765,11 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
                   key: const ValueKey('voucher-add-line'),
                   onPressed: () => setState(() => _lines.add(_JournalLine())),
                   icon: const Icon(Icons.add),
-                  label: const Text('সারি যোগ')),
+                  label: Text(context.l10n.vouchersFormAddLine)),
               const Spacer(),
-              Text('ডেবিট ${Money.taka(_sum(_lines.map((l) => l.debit)))} · ক্রেডিট ${Money.taka(_sum(_lines.map((l) => l.credit)))}',
+              Text(
+                  context.l10n.vouchersFormTotals(
+                      Money.taka(_sum(_lines.map((l) => l.debit))), Money.taka(_sum(_lines.map((l) => l.credit)))),
                   key: const ValueKey('voucher-totals')),
             ]),
           ],
@@ -767,22 +777,22 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
             key: const ValueKey('voucher-narration'),
             controller: _narration,
             maxLength: 500,
-            decoration: InputDecoration(labelText: s?.narrationRequired == true ? 'বিবরণ (বাধ্যতামূলক)' : 'বিবরণ'),
+            decoration: InputDecoration(labelText: s?.narrationRequired == true ? context.l10n.vouchersFormNarrationMust : context.l10n.vouchersNarration),
           ),
           SwitchListTile(
             key: const ValueKey('voucher-keep-draft'),
             contentPadding: EdgeInsets.zero,
             value: _keepAsDraft,
             onChanged: _busy ? null : (v) => setState(() => _keepAsDraft = v),
-            title: const Text('খসড়া রাখুন'),
-            subtitle: const Text('বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে'),
+            title: Text(context.l10n.vouchersFormKeepDraft),
+            subtitle: Text(context.l10n.vouchersFormKeepDraftHint),
           ),
           const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
             key: const ValueKey('voucher-send'),
             onPressed: _busy || s == null ? null : _send,
             icon: const Icon(Icons.save_outlined),
-            label: const Text('সংরক্ষণ'),
+            label: Text(context.l10n.vouchersFormSave),
           ),
         ],
       ),
@@ -823,7 +833,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
             ),
             Expanded(
               child: rows.isEmpty
-                  ? const Center(child: Text('কিছু মেলেনি।'))
+                  ? Center(child: Text(context.l10n.vouchersPickNothing))
                   : ListView(children: [
                       for (var i = 0; i < rows.length; i++)
                         ListTile(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/accounts/account_ledger_api.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -49,8 +50,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'হিসাবের ছক আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের হিসাবের ছক এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.accountsChartLoadFailed, whenAbsent: context.l10n.accountsChartNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -63,7 +63,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     final searching = _search.text.trim().isNotEmpty;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'হিসাবের ছক'),
+      appBar: AbosScreenBar(title: context.l10n.accountsChartTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -73,22 +73,22 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               key: const ValueKey('chart-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'কোড বা নাম দিয়ে খুঁজুন'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.accountsChartSearchHint),
               onSubmitted: (_) => _load(),
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_rows != null && rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Text('মোট ${rows.length} টি হিসাব',
+                child: Text(context.l10n.accountsChartCount(rows.length),
                     key: const ValueKey('chart-count'),
                     style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.onSurfaceMuted)),
               ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.accountsChartFetchFailed, message: _error)
             else if (_rows != null && rows.isEmpty)
-              const EmptyState(icon: Icons.search_off, title: 'কোনো হিসাব মেলেনি'),
+              EmptyState(icon: Icons.search_off, title: context.l10n.accountsChartNoMatch),
             for (final a in rows)
               Card(
                 margin: EdgeInsets.only(bottom: AppSpacing.xs, left: searching ? 0 : (a.depth * 12.0).clamp(0, 48)),
@@ -153,7 +153,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e, fallback: 'খাতা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'));
+        setState(() => _error = errorMessageFor(e, fallback: context.l10n.accountsChartLedgerLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -173,21 +173,21 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
           children: [
             if (p != null) _LedgerTotals(page: p),
             if (_busy) const LinearProgressIndicator(),
-            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
+            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.accountsChartFetchFailed, message: _error),
             if (p != null && p.isGroup)
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text('এটা দলের হিসাব — এন্ট্রি এর নিচের হিসাবগুলোতে। ছকে ফিরে নিচের হিসাব খুলুন।',
+                child: Text(context.l10n.accountsChartGroupAccount,
                     style: TextStyle(color: context.palette.onSurfaceMuted)),
               )
             else if (p != null && _rows.isEmpty && !_busy)
-              const EmptyState(icon: Icons.receipt_long_outlined, title: 'এই হিসাবে কোনো এন্ট্রি নেই'),
+              EmptyState(icon: Icons.receipt_long_outlined, title: context.l10n.accountsChartNoEntries),
             for (final line in _rows) _LedgerCard(line: line),
             if (p?.nextPage != null)
               OutlinedButton(
                 key: const ValueKey('ledger-more'),
                 onPressed: _busy ? null : () => _load(more: true),
-                child: const Text('আরও এন্ট্রি'),
+                child: Text(context.l10n.accountsChartMoreEntries),
               ),
           ],
         ),
@@ -217,12 +217,12 @@ class _LedgerTotals extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('সর্বমোট · ${page.count} টি এন্ট্রি', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(context.l10n.accountsChartLedgerTotal(page.count), style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.xs),
           Row(children: [
-            cell('ডেবিট', page.totalDebit),
-            cell('ক্রেডিট', page.totalCredit),
-            cell('শেষ জের', page.closing, strong: true),
+            cell(context.l10n.accountsChartDebit, page.totalDebit),
+            cell(context.l10n.accountsChartCredit, page.totalCredit),
+            cell(context.l10n.accountsChartClosing, page.closing, strong: true),
           ]),
         ]),
       ),
@@ -252,9 +252,9 @@ class _LedgerCard extends StatelessWidget {
           if (line.narration.isNotEmpty)
             Text(line.narration, style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
           Row(children: [
-            if (line.debit.isNotEmpty) Text('ডেবিট ${line.debit}', style: const TextStyle(fontSize: 13)),
+            if (line.debit.isNotEmpty) Text(context.l10n.accountsChartDebitLine(line.debit), style: const TextStyle(fontSize: 13)),
             if (line.debit.isNotEmpty && line.credit.isNotEmpty) const SizedBox(width: AppSpacing.md),
-            if (line.credit.isNotEmpty) Text('ক্রেডিট ${line.credit}', style: const TextStyle(fontSize: 13)),
+            if (line.credit.isNotEmpty) Text(context.l10n.accountsChartCreditLine(line.credit), style: const TextStyle(fontSize: 13)),
           ]),
         ]),
       ),

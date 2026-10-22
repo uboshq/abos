@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
+import '../navigation/top_bar/abos_top_bar.dart' show bnDigits;
 
 /// The server's finished documents, fetched as bytes.
 ///
@@ -80,10 +82,10 @@ class DocumentsApi {
 /// would each have to keep in step — the server validates them, and an
 /// unfamiliar one is shown as it came rather than dropped.
 String paperLabel(String paper) => switch (paper) {
-      'a4' => 'A4 কাগজ',
-      'a5' => 'A5 কাগজ',
-      '80mm' => 'রসিদ ৮০mm',
-      '58mm' => 'রসিদ ৫৮mm',
+      'a4' => AppLocale.l10n.printingPaperA4,
+      'a5' => AppLocale.l10n.printingPaperA5,
+      '80mm' => AppLocale.l10n.printingPaperRoll(bnDigits(80)),
+      '58mm' => AppLocale.l10n.printingPaperRoll(bnDigits(58)),
       _ => paper,
     };
 

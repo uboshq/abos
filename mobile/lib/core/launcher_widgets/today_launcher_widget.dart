@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import '../privacy/phone_privacy.dart';
 import '../records/money.dart';
 import '../records/today_record.dart';
@@ -86,7 +87,7 @@ class TodayLauncherWidget {
         // the server said these were true, not the hour the phone wrote them
         // down: a figure fetched at nine from a cache filled at six is a six
         // o'clock figure.
-        '${banglaClock(today.asOf ?? at ?? DateTime.now())} পর্যন্ত',
+        AppLocale.l10n.launcherWidgetAsOf(clockText(today.asOf ?? at ?? DateTime.now())),
         if (today.company != null) today.company!,
         if (today.branch != null) today.branch!,
       ].join(' · '),
@@ -96,7 +97,7 @@ class TodayLauncherWidget {
   /// Wipes the figures on sign-out, so a home screen never shows one person's
   /// cash in hand after they have signed out, possibly to a different person
   /// at a different company on the same phone.
-  static Future<void> clear() => _blank('সাইন আউট করা হয়েছে');
+  static Future<void> clear() => _blank(AppLocale.l10n.launcherWidgetSignedOut);
 
   /// Says the figures are not for this account, rather than that nobody is
   /// signed in. Both look the same on a launcher, a row of dashes, and they
@@ -104,11 +105,11 @@ class TodayLauncherWidget {
   /// read the company's cash was otherwise told, on their own home screen,
   /// that they had been signed out.
   static Future<void> unavailable() =>
-      _blank('এই অ্যাকাউন্টে এই হিসাব দেখানো হয় না');
+      _blank(AppLocale.l10n.launcherWidgetTodayNotForAccount);
 
   /// The server is older than this build and has no such door yet.
   static Future<void> absentOnServer() =>
-      _blank('এই হিসাব এখনো সার্ভারে নেই');
+      _blank(AppLocale.l10n.launcherWidgetTodayNotOnServer);
 
   static Future<void> _blank(String reason) => LauncherWidgetStore.write(
         provider,

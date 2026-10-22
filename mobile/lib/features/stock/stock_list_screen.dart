@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/report_record.dart';
 import '../../core/records/money.dart';
@@ -62,9 +63,10 @@ class _StockListScreenState extends State<StockListScreen> {
     // ⭐ দেখানো পণ্যের মোট বিক্রয়যোগ্য পরিমাণ — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"; ওয়েবের মজুদ-তালিকার
     // পট্টির একই সংখ্যা ("বিক্রয়যোগ্য")। ⓘ টাকার মূল্য এখানে নয় — খরচ দেখার চাবির পেছনে, "মূল্যসহ তালিকা"-য়।
     final available = filtered.fold<double>(0, (sum, row) => sum + row.available);
+    final l = context.l10n;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'হাতে থাকা মজুদ'),
+      appBar: AbosScreenBar(title: l.stockListTitle),
       body: Column(
         children: [
           // ⭐ মজুদ মডিউল — মূল্য আর রিপোর্ট (মালিক, ৪ অক্টোবর ২০২৬: "stock qty, value, ivinno report")। মূল্য ওয়েবের রিপোর্ট
@@ -77,13 +79,13 @@ class _StockListScreenState extends State<StockListScreen> {
                 child: OutlinedButton.icon(
                   key: const Key('stock-value'),
                   icon: const Icon(Icons.payments_outlined, size: 18),
-                  label: const Text('মূল্যসহ তালিকা'),
+                  label: Text(l.stockListWithValue),
                   onPressed: () =>
                       Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => const ReportViewScreen(
+                    builder: (_) => ReportViewScreen(
                       report: ReportSummary({
                         'key': 'inventory.stock_value',
-                        'title': 'মজুদের মূল্য',
+                        'title': l.stockListValueReportTitle,
                         'module': 'inventory'
                       }),
                     ),
@@ -95,11 +97,11 @@ class _StockListScreenState extends State<StockListScreen> {
                 child: OutlinedButton.icon(
                   key: const Key('stock-reports'),
                   icon: const Icon(Icons.assessment_outlined, size: 18),
-                  label: const Text('মজুদের রিপোর্ট'),
+                  label: Text(l.stockListReports),
                   onPressed: () =>
                       Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => const ReportsScreen(
-                        module: 'inventory', title: 'মজুদের রিপোর্ট'),
+                    builder: (_) => ReportsScreen(
+                        module: 'inventory', title: l.stockListReports),
                   )),
                 ),
               ),
@@ -108,9 +110,9 @@ class _StockListScreenState extends State<StockListScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'পণ্যের নাম দিয়ে খুঁজুন',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: l.stockListSearchHint,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
@@ -126,7 +128,7 @@ class _StockListScreenState extends State<StockListScreen> {
           if (filtered.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: TotalStrip(label: 'মোট বিক্রয়যোগ্য', value: Money.plain(available), count: filtered.length),
+              child: TotalStrip(label: l.stockListTotalAvailable, value: Money.plain(available), count: filtered.length),
             ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -144,10 +146,10 @@ class _StockListScreenState extends State<StockListScreen> {
                               ? Icons.warehouse_outlined
                               : Icons.cloud_off_outlined,
                           title: trouble == null
-                              ? 'এখনো কোনো মজুদ সিঙ্ক হয়নি'
-                              : 'মজুদের তালিকা আনা যায়নি',
+                              ? l.stockListNothingSynced
+                              : l.stockListLoadFailed,
                           // See CustomerListScreen's comment on the same line.
-                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
+                          message: trouble ?? l.stockListPullRetry,
                         ),
                       ],
                     )
@@ -156,11 +158,11 @@ class _StockListScreenState extends State<StockListScreen> {
                           children: [
                             EmptyState(
                               icon: Icons.search_off,
-                              title: 'কোনো মিল পাওয়া যায়নি',
+                              title: l.stockListNoMatch,
                               // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
                               message: _filters.isEmpty
                                   ? null
-                                  : 'ফিল্টার মুছে আবার দেখুন।',
+                                  : l.stockListClearFilters,
                             ),
                           ],
                         )
@@ -191,6 +193,7 @@ class _StockTile extends StatelessWidget {
     final product = row.product;
     final unit = product?.unit;
     final suffix = unit == null ? '' : ' $unit';
+    final l = context.l10n;
 
     return Card(
       child: Padding(
@@ -210,7 +213,7 @@ class _StockTile extends StatelessWidget {
                       // stock row's own id rather than repeating its name on
                       // every row. A product that has not synced yet shows a
                       // line saying so rather than a blank.
-                      Text(product?.name ?? 'পণ্য এখনো সিঙ্ক হয়নি',
+                      Text(product?.name ?? l.stockListProductNotSynced,
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       if (product?.code != null)
                         Text(product!.code!,
@@ -232,7 +235,7 @@ class _StockTile extends StatelessWidget {
                             : context.palette.danger,
                       ),
                     ),
-                    Text('বিক্রয়যোগ্য',
+                    Text(l.stockListAvailable,
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
@@ -252,15 +255,15 @@ class _StockTile extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                        child: Text('তাকে ${Money.plain(row.floor)}$suffix')),
+                        child: Text(l.stockListOnShelf('${Money.plain(row.floor)}$suffix'))),
                     if (row.reserved != 0)
                       Expanded(
                           child: Text(
-                              'অর্ডারে ${Money.plain(row.reserved)}$suffix')),
+                              l.stockListOnOrder('${Money.plain(row.reserved)}$suffix'))),
                     if (row.hold != 0)
                       Expanded(
                           child:
-                              Text('আটকানো ${Money.plain(row.hold)}$suffix')),
+                              Text(l.stockListHeld('${Money.plain(row.hold)}$suffix'))),
                   ],
                 ),
               ),

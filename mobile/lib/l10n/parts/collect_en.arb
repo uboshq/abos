@@ -52,7 +52,7 @@
   "collectItemDebitNote": "Debit note",
   "collectAppliedTotal": "Total applied",
   "collectOverApplied": "Cannot apply more — at most {amount}.",
-  "collectCreditFloor": "Cannot take less — the ticked invoices need that amount.",
+  "collectCreditFloor": "Cannot take less — the money in hand must cover the ticked invoices.",
   "collectDifference": "Discount / Rounding",
   "collectDifferenceDiscount": "Discount",
   "collectDifferenceRounding": "Rounding",

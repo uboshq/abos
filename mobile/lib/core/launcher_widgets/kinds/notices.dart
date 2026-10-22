@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../sync_engine/sync_status.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
@@ -21,7 +22,7 @@ class NoticesWidget extends LauncherWidgetKind {
   String get key => 'notices';
 
   @override
-  String get title => 'নোটিশ';
+  String get title => AppLocale.l10n.launcherWidgetNotices;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2, WidgetSize.s4x1, WidgetSize.s2x2];
@@ -36,10 +37,10 @@ class NoticesWidget extends LauncherWidgetKind {
       title: title,
       asOf: asOf,
       link: '/notifications',
-      hero: unread > 0 ? WidgetHero(WidgetText('$unread'), caption: const WidgetText('না-পড়া')) : null,
+      hero: unread > 0 ? WidgetHero(WidgetText('$unread'), caption: WidgetText(AppLocale.l10n.launcherWidgetNoticesUnread)) : null,
       rows: [for (final r in shown) _row(r, asOf)],
-      empty: all.isEmpty ? 'কোনো নোটিশ নেই' : null,
-      more: more > 0 ? 'আরও $moreটা' : null,
+      empty: all.isEmpty ? AppLocale.l10n.launcherWidgetNoticesEmpty : null,
+      more: more > 0 ? AppLocale.l10n.launcherWidgetMore('$more') : null,
     );
   }
 
@@ -57,13 +58,13 @@ class NoticesWidget extends LauncherWidgetKind {
       title: WidgetText(heading, secret: _hasMoney(heading), tone: tone),
       second: second.isEmpty ? null : WidgetText(second, secret: moneyBody, tone: WidgetTone.muted),
       amount: moneyBody && ago != null ? WidgetText(ago, tone: WidgetTone.muted) : null,
-      chip: unread ? const WidgetText('নতুন', tone: WidgetTone.good) : null,
+      chip: unread ? WidgetText(AppLocale.l10n.launcherWidgetNoticesNew, tone: WidgetTone.good) : null,
       link: r['link'] as String?,
     );
   }
 
   /// ⛔ নোটিশের লেখা মুক্ত — "চেক ফেরত ৳ 85,000" হতে পারে; টাকা থাকলে পুরো লেখাটাই গোপন-যোগ্য, তালাবন্ধ ফোনে ঢাকা
-  static bool _hasMoney(String text) => text.contains('৳');
+  static bool _hasMoney(String text) => text.contains('৳'); // l10n-ok: the taka sign, looked for in server text
 
   static int _int(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}') ?? 0;
 }

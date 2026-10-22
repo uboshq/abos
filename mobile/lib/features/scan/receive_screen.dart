@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -87,21 +88,22 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   void _done() {
     final name = _name.text.trim();
     final phone = _phone.text.trim();
+    final words = context.l10n;
     String? why;
     if (name.isEmpty) {
-      why = 'যিনি মাল নিলেন তাঁর নাম লিখুন।';
+      why = words.scanReceiveNameMissing;
     } else if (!RegExp(r'^\+?[0-9][0-9\- ]{5,19}$').hasMatch(phone)) {
-      why = 'যিনি নিলেন তাঁর ফোন নম্বর লিখুন — পরে জিজ্ঞেস করার পথ এটাই।';
+      why = words.scanReceivePhoneMissing;
     } else {
       for (final l in widget.lines) {
         final took = _num(_taken[l.line]!);
         final bad = _num(_damaged[l.line]!);
         if (took < 0 || bad < 0) {
-          why = '${l.product}: পরিমাণ ঠিক নেই।';
+          why = words.scanReceiveQtyInvalid(l.product);
           break;
         }
         if (took + bad > l.qty + 0.00001) {
-          why = '${l.product}: নেওয়া আর ভাঙা মিলে চালানের চেয়ে বেশি।';
+          why = words.scanReceiveQtyTooMuch(l.product);
           break;
         }
       }
@@ -128,7 +130,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
 
   Widget _screen(BuildContext context) => Scaffold(
-        appBar: AbosScreenBar(title: 'বুঝিয়ে দিন — ${widget.documentNo}'),
+        appBar: AbosScreenBar(title: context.l10n.scanReceiveTitle(widget.documentNo)),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -138,17 +140,16 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             TextField(
               key: const ValueKey('receive-name'),
               controller: _name,
-              decoration: const InputDecoration(labelText: 'যিনি মাল নিলেন'),
+              decoration: InputDecoration(labelText: context.l10n.scanReceiveNameLabel),
             ),
             TextField(
               key: const ValueKey('receive-phone'),
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'তাঁর ফোন'),
+              decoration: InputDecoration(labelText: context.l10n.scanReceivePhoneLabel),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
-                'প্রতিটা পণ্য — কতটা নিলেন, কতটা ভাঙা; বাকিটা কম (ফেরত আসবে)',
+            Text(context.l10n.scanReceiveLinesHint,
                 style: TextStyle(color: context.palette.onSurfaceMuted)),
             for (final l in widget.lines)
               Card(
@@ -157,7 +158,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${l.product} · চালানে ${Money.plain(l.qty)}',
+                      Text(context.l10n.scanReceiveLineHeader(l.product, Money.plain(l.qty)),
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       Row(children: [
                         Expanded(
@@ -167,7 +168,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
                             decoration:
-                                const InputDecoration(labelText: 'নিলেন'),
+                                InputDecoration(labelText: context.l10n.scanReceiveTaken),
                             onChanged: (_) => setState(() {}),
                           ),
                         ),
@@ -179,7 +180,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
                             decoration:
-                                const InputDecoration(labelText: 'ভাঙা'),
+                                InputDecoration(labelText: context.l10n.scanReceiveDamaged),
                             onChanged: (_) => setState(() {}),
                           ),
                         ),
@@ -189,7 +190,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                             _num(_taken[l.line]!) -
                             _num(_damaged[l.line]!);
                         return short > 0.00001
-                            ? Text('কম: ${Money.plain(short)}',
+                            ? Text(context.l10n.scanReceiveShort(Money.plain(short)),
                                 key: ValueKey('receive-short-${l.line}'),
                                 style: TextStyle(color: context.palette.danger))
                             : const SizedBox.shrink();
@@ -208,7 +209,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             FilledButton(
               key: const ValueKey('receive-done'),
               onPressed: _done,
-              child: const Text('নিশ্চিত — বুঝে নিলেন'),
+              child: Text(context.l10n.scanReceiveDone),
             ),
           ],
         ),

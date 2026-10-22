@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -46,7 +48,7 @@ class MoneyResult {
 void _tell(BuildContext context, MoneyResult r) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       key: const ValueKey('money-result'),
       backgroundColor: r.done ? context.palette.success : context.palette.pending,
-      content: Text(r.notice.isEmpty ? (r.done ? 'বসেছে।' : 'সইয়ের অপেক্ষায়।') : r.notice),
+      content: Text(r.notice.isEmpty ? (r.done ? context.l10n.moneyResultDone : context.l10n.moneyResultPending) : r.notice),
     ));
 
 List<Map> _maps(Object? raw) => raw is List ? raw.whereType<Map>().toList() : const [];
@@ -159,7 +161,7 @@ class _LoadedState extends State<_Loaded> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: '${widget.title} আনা গেল না।', whenAbsent: 'এই পাতা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.moneyLoadFailed(widget.title), whenAbsent: context.l10n.moneyPageMissing));
       }
     }
   }
@@ -195,11 +197,11 @@ class CustodyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'টাকা কার হাতে',
+        title: context.l10n.moneyCustodyTitle,
         load: () => api.get('/accounts/custody'),
         build: (context, d, _) => [
-          TotalStrip(label: 'পথের টাকা', value: Money.taka(d['on_the_road'] ?? '0')),
-          if (_maps(d['rows']).isEmpty) const EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'কোনো টাকার খাত নেই', message: ''),
+          TotalStrip(label: context.l10n.moneyCustodyOnRoad, value: Money.taka(d['on_the_road'] ?? '0')),
+          if (_maps(d['rows']).isEmpty) EmptyState(icon: Icons.account_balance_wallet_outlined, title: context.l10n.moneyCustodyEmpty, message: ''),
           for (final r in _maps(d['rows']))
             Card(
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -209,7 +211,7 @@ class CustodyScreen extends StatelessWidget {
                 trailing: Text(r['balance']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
-          if (_maps(d['transfers']).isNotEmpty) const SectionTitle('পথে আছে'),
+          if (_maps(d['transfers']).isNotEmpty) SectionTitle(context.l10n.moneyCustodyInTransit),
           for (final t in _maps(d['transfers']).map(TransferRow.fromJson))
             Card(child: ListTile(title: Text(t.no), subtitle: Text('${t.from ?? ''} → ${t.to ?? ''}'), trailing: Text(Money.taka(t.amount)))),
         ],
@@ -225,7 +227,7 @@ class TransferListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'টাকা হস্তান্তর',
+        title: context.l10n.moneyTransferListTitle,
         load: () => api.get('/accounts/transfers'),
         floating: (reload) => FloatingActionButton.extended(
           key: const ValueKey('transfer-new'),
@@ -234,7 +236,7 @@ class TransferListScreen extends StatelessWidget {
             await reload();
           },
           icon: const Icon(Icons.send_outlined),
-          label: const Text('পাঠান'),
+          label: Text(context.l10n.moneyTransferSend),
         ),
         build: (context, d, reload) {
           Widget row(TransferRow t) => Card(
@@ -256,11 +258,11 @@ class TransferListScreen extends StatelessWidget {
           // ⭐ গোটা তালিকার মোট — সার্ভারের, বাতিল বাদ; পুরনো সার্ভার না পাঠালে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
           final total = PaperTotal.fromJson(d);
           return [
-            if (total != null && (rows.isNotEmpty || awaiting.isNotEmpty)) TotalStrip(label: 'মোট হাতবদল', value: Money.taka(total.sum), count: total.count),
-            if (awaiting.isNotEmpty) ...[const SectionTitle('আমার নেওয়ার অপেক্ষায়'), for (final t in awaiting) row(t)],
+            if (total != null && (rows.isNotEmpty || awaiting.isNotEmpty)) TotalStrip(label: context.l10n.moneyTransferTotal, value: Money.taka(total.sum), count: total.count),
+            if (awaiting.isNotEmpty) ...[SectionTitle(context.l10n.moneyTransferAwaitingMe), for (final t in awaiting) row(t)],
             if (rows.isEmpty && awaiting.isEmpty)
-              const EmptyState(icon: Icons.swap_horiz, title: 'কোনো হস্তান্তর নেই', message: 'নিচে টেনে আবার দেখুন।'),
-            if (rows.isNotEmpty) ...[const SectionTitle('সব'), for (final t in rows) row(t)],
+              EmptyState(icon: Icons.swap_horiz, title: context.l10n.moneyTransferEmpty, message: context.l10n.moneyPullToRefresh),
+            if (rows.isNotEmpty) ...[SectionTitle(context.l10n.moneyTransferAll), for (final t in rows) row(t)],
           ];
         },
       );
@@ -293,7 +295,7 @@ class _TransferScreenState extends State<TransferScreen> {
       _tell(context, r);
       await reload();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'করা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyActionFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -304,11 +306,11 @@ class _TransferScreenState extends State<TransferScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('কেন বাতিল?'),
+        title: Text(context.l10n.moneyTransferCancelWhy),
         content: TextField(key: const ValueKey('transfer-cancel-reason'), controller: c, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('থাক')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('বাতিল করুন')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.moneyTransferKeep)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.moneyTransferCancelConfirm)),
         ],
       ),
     );
@@ -319,7 +321,7 @@ class _TransferScreenState extends State<TransferScreen> {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'হস্তান্তর',
+        title: context.l10n.moneyTransferTitle,
         load: () => widget.api.get('/accounts/transfers/${Uri.encodeComponent(widget.id)}'),
         build: (context, d, reload) {
           final t = TransferRow.fromJson(d);
@@ -329,15 +331,15 @@ class _TransferScreenState extends State<TransferScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(t.no, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  FactRow('অবস্থা', t.statusLabel),
-                  FactRow('তারিখ', t.date),
-                  FactRow('কোথা থেকে', t.from ?? ''),
-                  FactRow('কোথায়', t.to ?? ''),
-                  FactRow('অঙ্ক', Money.taka(t.amount)),
-                  if (d['giver'] != null) FactRow('দিলেন', d['giver'].toString()),
-                  if (d['receiver'] != null) FactRow('নেবেন', d['receiver'].toString()),
-                  if (d['narration'] != null) FactRow('বিবরণ', d['narration'].toString()),
-                  if (d['cancel_reason'] != null) FactRow('বাতিলের কারণ', d['cancel_reason'].toString()),
+                  FactRow(context.l10n.moneyFactStatus, t.statusLabel),
+                  FactRow(context.l10n.moneyFactDate, t.date),
+                  FactRow(context.l10n.moneyTransferFrom, t.from ?? ''),
+                  FactRow(context.l10n.moneyTransferTo, t.to ?? ''),
+                  FactRow(context.l10n.moneyFactAmount, Money.taka(t.amount)),
+                  if (d['giver'] != null) FactRow(context.l10n.moneyTransferGiver, d['giver'].toString()),
+                  if (d['receiver'] != null) FactRow(context.l10n.moneyTransferReceiver, d['receiver'].toString()),
+                  if (d['narration'] != null) FactRow(context.l10n.moneyTransferNarration, d['narration'].toString()),
+                  if (d['cancel_reason'] != null) FactRow(context.l10n.moneyTransferCancelReason, d['cancel_reason'].toString()),
                 ]),
               ),
             ),
@@ -350,7 +352,7 @@ class _TransferScreenState extends State<TransferScreen> {
                       key: const ValueKey('transfer-confirm'),
                       onPressed: _busy ? null : () => _act(_confirmOnce, '/accounts/transfers/${widget.id}/confirm', const {}, reload),
                       icon: const Icon(Icons.call_received),
-                      label: const Text('টাকা পেলাম'),
+                      label: Text(context.l10n.moneyTransferReceived),
                     ),
                   ),
                 if (t.mine) const SizedBox(width: AppSpacing.sm),
@@ -364,7 +366,7 @@ class _TransferScreenState extends State<TransferScreen> {
                             if (reason != null) await _act(_cancelOnce, '/accounts/transfers/${widget.id}/cancel', {'cancel_reason': reason}, reload);
                           },
                     icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('বাতিল'),
+                    label: Text(context.l10n.moneyTransferCancel),
                   ),
                 ),
               ]),
@@ -411,7 +413,7 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
         _loaded = true;
       });
     }).catchError((Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'টিলের তালিকা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyTillsLoadFailed));
     });
   }
 
@@ -424,7 +426,7 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
 
   Future<void> _send() async {
     if (_from == null || _to == null || _amount.text.trim().isEmpty) {
-      setState(() => _error = 'কোথা থেকে, কোথায় আর কত — লাগবেই।');
+      setState(() => _error = context.l10n.moneyTransferMissing);
       return;
     }
     setState(() {
@@ -444,7 +446,7 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
       _tell(context, r);
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'হস্তান্তর পাঠানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyTransferSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -480,22 +482,22 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
         );
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'টাকা পাঠান'),
+      appBar: AbosScreenBar(title: context.l10n.moneySendTitle),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         if (!_loaded && _error == null) const LinearProgressIndicator(),
-        pick('transfer-from', 'কোন টিল থেকে', _from, _tills, (v) => setState(() => _from = v)),
+        pick('transfer-from', context.l10n.moneyTransferFromTill, _from, _tills, (v) => setState(() => _from = v)),
         gap,
-        pick('transfer-to', 'কোথায় — টিল বা ব্যাংক', _to, _destinations.where((d) => d.id != 'till:$_from').toList(), (v) => setState(() => _to = v)),
+        pick('transfer-to', context.l10n.moneyTransferToLabel, _to, _destinations.where((d) => d.id != 'till:$_from').toList(), (v) => setState(() => _to = v)),
         gap,
-        pick('transfer-receiver', 'কে নেবেন (ঐচ্ছিক)', _receiver, _people, (v) => setState(() => _receiver = v)),
+        pick('transfer-receiver', context.l10n.moneyTransferReceiverLabel, _receiver, _people, (v) => setState(() => _receiver = v)),
         gap,
         TextField(key: const ValueKey('transfer-amount'), controller: _amount, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'অঙ্ক', isDense: true)),
+            decoration: InputDecoration(labelText: context.l10n.moneyFactAmount, isDense: true)),
         gap,
-        TextField(key: const ValueKey('transfer-note'), controller: _note, decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)', isDense: true)),
+        TextField(key: const ValueKey('transfer-note'), controller: _note, decoration: InputDecoration(labelText: context.l10n.moneyTransferNoteLabel, isDense: true)),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(key: const ValueKey('transfer-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.send), label: const Text('পাঠান')),
+        FilledButton.icon(key: const ValueKey('transfer-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.send), label: Text(context.l10n.moneyTransferSend)),
       ]),
     );
   }
@@ -510,7 +512,7 @@ class CashCountListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'নগদ গোনা',
+        title: context.l10n.moneyCashCountTitle,
         load: () => api.get('/accounts/cash-counts'),
         floating: (reload) => FloatingActionButton.extended(
           key: const ValueKey('count-new'),
@@ -519,22 +521,22 @@ class CashCountListScreen extends StatelessWidget {
             await reload();
           },
           icon: const Icon(Icons.calculate_outlined),
-          label: const Text('গুনুন'),
+          label: Text(context.l10n.moneyCashCountNew),
         ),
         build: (context, d, reload) {
           final rows = _maps(d['rows']).map(CountRow.fromJson).toList();
           // ⭐ কেবল গোনা — গোনা এক মুহূর্তের ছবি, টাকা যোগ হয় না; ⛔ পুরনো সার্ভার না পাঠালে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
           final count = (d['count'] as num?)?.toInt();
           return [
-            if (count != null && rows.isNotEmpty) TotalStrip(label: 'মোট গোনা', value: '$count টি'),
-            if (rows.isEmpty) const EmptyState(icon: Icons.calculate_outlined, title: 'কোনো গোনা নেই', message: 'নিচে টেনে আবার দেখুন।'),
+            if (count != null && rows.isNotEmpty) TotalStrip(label: context.l10n.moneyCashCountTotal, value: context.l10n.moneyCashCountTotalValue(count)),
+            if (rows.isEmpty) EmptyState(icon: Icons.calculate_outlined, title: context.l10n.moneyCashCountEmpty, message: context.l10n.moneyPullToRefresh),
             for (final c in rows)
               Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: ListTile(
                   key: ValueKey('count-${c.id}'),
                   title: Text(c.no, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${c.till ?? ''}\n${[c.date, c.statusLabel, 'পার্থক্য ${c.difference}'].join(' · ')}'),
+                  subtitle: Text('${c.till ?? ''}\n${[c.date, c.statusLabel, context.l10n.moneyCashCountDifference(c.difference)].join(' · ')}'),
                   isThreeLine: true,
                   trailing: Text(c.counted, style: const TextStyle(fontWeight: FontWeight.w700)),
                   onTap: () async {
@@ -565,7 +567,7 @@ class _CashCountScreenState extends State<CashCountScreen> {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'নগদ গোনা',
+        title: context.l10n.moneyCashCountTitle,
         load: () => widget.api.get('/accounts/cash-counts/${Uri.encodeComponent(widget.id)}'),
         build: (context, d, reload) {
           final c = CountRow.fromJson(d);
@@ -575,16 +577,16 @@ class _CashCountScreenState extends State<CashCountScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(c.no, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  FactRow('অবস্থা', c.statusLabel),
-                  FactRow('টিল', c.till ?? ''),
-                  FactRow('তারিখ', c.date),
-                  FactRow('গোনা', c.counted),
-                  FactRow('খাতায়', c.expected),
-                  FactRow('পার্থক্য', c.difference),
-                  for (final n in _maps(d['notes']).where((n) => (n['qty'] as num? ?? 0) > 0)) FactRow('${n['note']} টাকার নোট', '${n['qty']}টা'),
-                  if (d['counted_by'] != null) FactRow('গুনেছেন', d['counted_by'].toString()),
-                  if (d['approved_by'] != null) FactRow('মেনেছেন', d['approved_by'].toString()),
-                  if (d['adjustment'] != null) FactRow('সমন্বয়ের ভাউচার', d['adjustment'].toString()),
+                  FactRow(context.l10n.moneyFactStatus, c.statusLabel),
+                  FactRow(context.l10n.moneyFactTill, c.till ?? ''),
+                  FactRow(context.l10n.moneyFactDate, c.date),
+                  FactRow(context.l10n.moneyFactCounted, c.counted),
+                  FactRow(context.l10n.moneyFactExpected, c.expected),
+                  FactRow(context.l10n.moneyFactDifference, c.difference),
+                  for (final n in _maps(d['notes']).where((n) => (n['qty'] as num? ?? 0) > 0)) FactRow(context.l10n.moneyCashCountNoteRow('${n['note']}'), context.l10n.moneyCashCountNoteQty('${n['qty']}')),
+                  if (d['counted_by'] != null) FactRow(context.l10n.moneyCashCountBy, d['counted_by'].toString()),
+                  if (d['approved_by'] != null) FactRow(context.l10n.moneyCashCountApprovedBy, d['approved_by'].toString()),
+                  if (d['adjustment'] != null) FactRow(context.l10n.moneyCashCountAdjustment, d['adjustment'].toString()),
                 ]),
               ),
             ),
@@ -605,13 +607,13 @@ class _CashCountScreenState extends State<CashCountScreen> {
                           _tell(context, r);
                           await reload();
                         } catch (e) {
-                          if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'মেনে নেওয়া গেল না।'));
+                          if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyCashCountApproveFailed));
                         } finally {
                           if (mounted) setState(() => _busy = false);
                         }
                       },
                 icon: const Icon(Icons.verified_outlined),
-                label: const Text('মেনে নিন'),
+                label: Text(context.l10n.moneyCashCountApprove),
               ),
           ];
         },
@@ -648,7 +650,7 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
         }
       });
     }).catchError((Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'টিলের তালিকা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyTillsLoadFailed));
     });
   }
 
@@ -662,7 +664,7 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
 
   Future<void> _send() async {
     if (_till == null) {
-      setState(() => _error = 'কোন টিল — বাছুন।');
+      setState(() => _error = context.l10n.moneyCashCountPickTill);
       return;
     }
     setState(() {
@@ -679,7 +681,7 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
       _tell(context, r);
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'গোনা বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyCashCountSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -699,14 +701,14 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নগদ গুনুন'),
+      appBar: AbosScreenBar(title: context.l10n.moneyCashCountNewTitle),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         DropdownButtonFormField<String>(
           key: const ValueKey('count-till'),
           initialValue: _till,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'কোন টিল', isDense: true),
-          items: [for (final t in _tills) DropdownMenuItem(value: t.id, child: Text('${t.name} · খাতায় ${t.note ?? ''}'))],
+          decoration: InputDecoration(labelText: context.l10n.moneyCashCountTillLabel, isDense: true),
+          items: [for (final t in _tills) DropdownMenuItem(value: t.id, child: Text(context.l10n.moneyCashCountTillOption(t.name, t.note ?? '')))],
           onChanged: (v) => setState(() => _till = v),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -717,15 +719,15 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
               key: ValueKey('count-note-${e.key}'),
               controller: e.value,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: '${e.key} টাকার নোট — কয়টা', isDense: true),
+              decoration: InputDecoration(labelText: context.l10n.moneyCashCountNoteLabel('${e.key}'), isDense: true),
             ),
           ),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(key: const ValueKey('count-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.check), label: const Text('গোনা বসান')),
+        FilledButton.icon(key: const ValueKey('count-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.check), label: Text(context.l10n.moneyCashCountSave)),
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: Text('গোনা বসলে খাতা নড়ে না — অন্য কেউ মেনে নিলে তবেই পার্থক্য খাতায় যায়।', style: TextStyle(color: context.palette.onSurfaceMuted)),
+          child: Text(context.l10n.moneyCashCountHint, style: TextStyle(color: context.palette.onSurfaceMuted)),
         ),
       ]),
     );
@@ -763,7 +765,7 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
     widget.api.get('/finance/hand-loans/money-accounts').then((d) {
       if (mounted) setState(() => _accounts = [for (final a in _maps(d['rows'])) MoneyChoice(a['id'].toString(), a['name'].toString())]);
     }).catchError((Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'টাকার খাত আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyAccountsLoadFailed));
     });
   }
 
@@ -776,7 +778,7 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
 
   Future<void> _send() async {
     if (_account == null || _amount.text.trim().isEmpty) {
-      setState(() => _error = 'টাকার খাত আর অঙ্ক লাগবেই।');
+      setState(() => _error = context.l10n.moneyHandLoanMissing);
       return;
     }
     setState(() {
@@ -795,7 +797,7 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
       _tell(context, r);
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'হাতধার বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.moneyHandLoanSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -815,13 +817,13 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
-      appBar: AbosScreenBar(title: 'হাতধার · ${widget.name}'),
+      appBar: AbosScreenBar(title: context.l10n.moneyHandLoanTitle(widget.name)),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         SegmentedButton<String>(
           key: const ValueKey('handloan-direction'),
-          segments: const [
-            ButtonSegment(value: 'out', label: Text('টাকা দিলাম'), icon: Icon(Icons.north_east)),
-            ButtonSegment(value: 'in', label: Text('ফেরত পেলাম'), icon: Icon(Icons.south_west)),
+          segments: [
+            ButtonSegment(value: 'out', label: Text(context.l10n.moneyHandLoanOut), icon: const Icon(Icons.north_east)),
+            ButtonSegment(value: 'in', label: Text(context.l10n.moneyHandLoanIn), icon: const Icon(Icons.south_west)),
           ],
           selected: {_direction},
           onSelectionChanged: (s) => setState(() => _direction = s.first),
@@ -831,18 +833,18 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
           key: const ValueKey('handloan-account'),
           initialValue: _account,
           isExpanded: true,
-          decoration: InputDecoration(labelText: _direction == 'out' ? 'কোন খাত থেকে' : 'কোন খাতে', isDense: true),
+          decoration: InputDecoration(labelText: _direction == 'out' ? context.l10n.moneyHandLoanFromAccount : context.l10n.moneyHandLoanToAccount, isDense: true),
           items: [for (final a in _accounts) DropdownMenuItem(value: a.id, child: Text(a.name))],
           onChanged: (v) => setState(() => _account = v),
         ),
         gap,
         TextField(key: const ValueKey('handloan-amount'), controller: _amount, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'অঙ্ক', isDense: true)),
+            decoration: InputDecoration(labelText: context.l10n.moneyFactAmount, isDense: true)),
         gap,
-        TextField(key: const ValueKey('handloan-note'), controller: _note, decoration: const InputDecoration(labelText: 'নোট (ঐচ্ছিক)', isDense: true)),
+        TextField(key: const ValueKey('handloan-note'), controller: _note, decoration: InputDecoration(labelText: context.l10n.moneyHandLoanNoteLabel, isDense: true)),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(key: const ValueKey('handloan-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.check), label: const Text('বসান')),
+        FilledButton.icon(key: const ValueKey('handloan-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.check), label: Text(context.l10n.moneyHandLoanSave)),
       ]),
     );
   }
@@ -857,7 +859,7 @@ class CfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'অর্থ-প্রধানের পাতা',
+        title: context.l10n.moneyCfoTitle,
         load: () => api.get('/finance/cfo'),
         build: (context, d, _) {
           final liquidity = d['liquidity'] is Map ? d['liquidity'] as Map : const {};
@@ -866,7 +868,7 @@ class CfoScreen extends StatelessWidget {
           // ⓘ নতুন সার্ভার ক্রয়কে আলাদা পাঠায় — তখন "budget" কেবল খরচের; পুরনো সার্ভারে দুটো একসাথে, নাম আগের মতো
           final expenseOnly = d.containsKey('purchase_budget');
           return [
-            TotalStrip(label: '৩০ দিন পরে হাতে', value: Money.taka(d['in_30_days'])),
+            TotalStrip(label: context.l10n.moneyCfoIn30Days(bnDigits(30, Localizations.localeOf(context))), value: Money.taka(d['in_30_days'])),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
@@ -879,19 +881,19 @@ class CfoScreen extends StatelessWidget {
               ),
             ),
             if (budget != null) ...[
-              SectionTitle(expenseOnly ? 'এই মাসের খরচের বাজেট' : 'এই মাসের বাজেট'),
+              SectionTitle(expenseOnly ? context.l10n.moneyBudgetExpenseMonth : context.l10n.moneyBudgetMonth),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(children: [
-                    FactRow('বাজেট', budget['budget'].toString()),
-                    FactRow('খরচ হয়েছে', budget['actual'].toString()),
-                    if (budget['used_pct'] != null) FactRow('ব্যবহার', '${budget['used_pct']}%'),
+                    FactRow(context.l10n.moneyBudgetLabel, budget['budget'].toString()),
+                    FactRow(context.l10n.moneyBudgetSpent, budget['actual'].toString()),
+                    if (budget['used_pct'] != null) FactRow(context.l10n.moneyBudgetUsed, '${budget['used_pct']}%'),
                   ]),
                 ),
               ),
             ],
-            if (purchase != null) ...PurchaseBudgetCard.parts(purchase),
+            if (purchase != null) ...PurchaseBudgetCard.parts(context.l10n, purchase),
           ];
         },
       );
@@ -904,22 +906,22 @@ class CashForecastScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'নগদের পূর্বাভাস',
+        title: context.l10n.moneyForecastTitle,
         load: () => api.get('/finance/cash-forecast'),
         build: (context, d, _) => [
-          TotalStrip(label: 'আজ হাতে', value: Money.taka(d['opening'])),
+          TotalStrip(label: context.l10n.moneyForecastToday, value: Money.taka(d['opening'])),
           for (final r in _maps(d['rows']))
             Card(
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(children: [
-                  FactRow('${r['when']} (${r['until']} পর্যন্ত)', r['closing'].toString()),
-                  FactRow('আসবে — পাওনা', r['receivables'].toString()),
-                  FactRow('আসবে — ধার', r['loans_in'].toString()),
-                  FactRow('যাবে — দেনা', r['payables'].toString()),
-                  FactRow('যাবে — ধার শোধ', r['loans_out'].toString()),
-                  FactRow('নিট', r['net'].toString()),
+                  FactRow(context.l10n.moneyForecastPeriod('${r['when']}', '${r['until']}'), r['closing'].toString()),
+                  FactRow(context.l10n.moneyForecastReceivables, r['receivables'].toString()),
+                  FactRow(context.l10n.moneyForecastLoansIn, r['loans_in'].toString()),
+                  FactRow(context.l10n.moneyForecastPayables, r['payables'].toString()),
+                  FactRow(context.l10n.moneyForecastLoansOut, r['loans_out'].toString()),
+                  FactRow(context.l10n.moneyForecastNet, r['net'].toString()),
                 ]),
               ),
             ),
@@ -936,18 +938,18 @@ class IncomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'আয়',
+        title: context.l10n.moneyIncomeTitle,
         load: () => api.get('/finance/income'),
         build: (context, d, _) => [
-          TotalStrip(label: 'মোট আয় · এই মাস', value: Money.taka(d['total'])),
-          FactRow('বিক্রি', d['sales']?.toString() ?? ''),
-          FactRow('অন্যান্য আয়', d['other']?.toString() ?? ''),
-          const SectionTitle('খাত ধরে'),
-          if (_maps(d['rows']).isEmpty) const EmptyState(icon: Icons.trending_up, title: 'এই মাসে আয়ের কোনো সারি নেই', message: ''),
+          TotalStrip(label: context.l10n.moneyIncomeTotal, value: Money.taka(d['total'])),
+          FactRow(context.l10n.moneyIncomeSales, d['sales']?.toString() ?? ''),
+          FactRow(context.l10n.moneyIncomeOther, d['other']?.toString() ?? ''),
+          SectionTitle(context.l10n.moneyIncomeByHead),
+          if (_maps(d['rows']).isEmpty) EmptyState(icon: Icons.trending_up, title: context.l10n.moneyIncomeEmpty, message: ''),
           for (final r in _maps(d['rows']))
             Card(
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: ListTile(title: Text(r['head'].toString()), subtitle: Text('আগের সময়ে ${r['before']}'), trailing: Text(r['now'].toString())),
+              child: ListTile(title: Text(r['head'].toString()), subtitle: Text(context.l10n.moneyIncomeBefore('${r['before']}')), trailing: Text(r['now'].toString())),
             ),
         ],
       );
@@ -960,22 +962,22 @@ class BudgetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Loaded(
-        title: 'বাজেট',
+        title: context.l10n.moneyBudgetTitle,
         load: () => api.get('/finance/budget'),
         build: (context, d, _) {
           final s = d['status'] is Map ? d['status'] as Map : null;
           final purchase = d['purchase'] is Map ? d['purchase'] as Map : null;
           if (s == null && purchase == null) {
-            return const [EmptyState(icon: Icons.pie_chart_outline, title: 'এই মাসের কোনো বাজেট নেই', message: 'বাজেট ওয়েবে বসান।')];
+            return [EmptyState(icon: Icons.pie_chart_outline, title: context.l10n.moneyBudgetEmpty, message: context.l10n.moneyBudgetSetOnWeb)];
           }
           return [
             if (s != null) ...[
               TotalStrip(
-                  label: d.containsKey('purchase') ? 'এই মাসের খরচের বাজেট' : 'এই মাসের বাজেট', value: Money.taka(s['budget'])),
-              FactRow('খরচ হয়েছে', s['actual'].toString()),
-              if (s['used_pct'] != null) FactRow('ব্যবহার', '${s['used_pct']}%'),
+                  label: d.containsKey('purchase') ? context.l10n.moneyBudgetExpenseMonth : context.l10n.moneyBudgetMonth, value: Money.taka(s['budget'])),
+              FactRow(context.l10n.moneyBudgetSpent, s['actual'].toString()),
+              if (s['used_pct'] != null) FactRow(context.l10n.moneyBudgetUsed, '${s['used_pct']}%'),
             ],
-            if (purchase != null) ...PurchaseBudgetCard.parts(purchase),
+            if (purchase != null) ...PurchaseBudgetCard.parts(context.l10n, purchase),
           ];
         },
       );
@@ -987,16 +989,16 @@ class BudgetScreen extends StatelessWidget {
 class PurchaseBudgetCard {
   const PurchaseBudgetCard._();
 
-  static List<Widget> parts(Map p) => [
-        const SectionTitle('ক্রয়ের বাজেট'),
+  static List<Widget> parts(AppL10n l, Map p) => [
+        SectionTitle(l.moneyPurchaseBudget),
         Card(
           key: const ValueKey('purchase-budget'),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(children: [
-              FactRow('বাজেট', p['budget'].toString()),
-              FactRow('কেনা হয়েছে', p['purchased'].toString()),
-              if (p['used_pct'] != null) FactRow('ব্যবহার', '${p['used_pct']}%'),
+              FactRow(l.moneyBudgetLabel, p['budget'].toString()),
+              FactRow(l.moneyPurchaseBought, p['purchased'].toString()),
+              if (p['used_pct'] != null) FactRow(l.moneyBudgetUsed, '${p['used_pct']}%'),
             ]),
           ),
         ),

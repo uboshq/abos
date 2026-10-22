@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 
@@ -13,12 +14,15 @@ class ChallansTodayWidget extends LauncherWidgetKind {
   const ChallansTodayWidget();
 
   /// ঘর → (লেখা, ওয়েবের ডেলিভারির পাতার ধাপ)
-  static const boxes = <String, (String, String)>{
-    'gate_pending': ('গেট পাস বাকি', 'allocated'),
-    'moving': ('পথে আছে', 'dispatched'),
-    'delivered': ('পৌঁছেছে', 'delivered'),
-    'returned': ('ফেরত এসেছে', 'failed'),
-  };
+  static Map<String, (String, String)> get boxes {
+    final l = AppLocale.l10n;
+    return <String, (String, String)>{
+      'gate_pending': (l.launcherWidgetChallansGatePending, 'allocated'),
+      'moving': (l.launcherWidgetChallansMoving, 'dispatched'),
+      'delivered': (l.launcherWidgetChallansDelivered, 'delivered'),
+      'returned': (l.launcherWidgetChallansReturned, 'failed'),
+    };
+  }
 
   static String stageLink(String stage) => '/sales/deliveries?stage=$stage';
 
@@ -26,7 +30,7 @@ class ChallansTodayWidget extends LauncherWidgetKind {
   String get key => 'challans_today';
 
   @override
-  String get title => 'আজকের চালান';
+  String get title => AppLocale.l10n.launcherWidgetChallansTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2];
@@ -36,6 +40,7 @@ class ChallansTodayWidget extends LauncherWidgetKind {
     int n(Object? v) => num.tryParse('${v ?? 0}')?.toInt() ?? 0;
     final total = n(summary['total']);
     final latest = (summary['latest'] as Map?)?.cast<String, dynamic>();
+    final l = AppLocale.l10n;
 
     final rows = <WidgetRow>[
       for (final MapEntry(key: box, value: (label, stage)) in boxes.entries)
@@ -47,22 +52,22 @@ class ChallansTodayWidget extends LauncherWidgetKind {
         ),
       if (latest != null)
         WidgetRow(
-          title: WidgetText('শেষ: ${latest['customer'] ?? '—'}'),
+          title: WidgetText(l.launcherWidgetChallansLatest('${latest['customer'] ?? '—'}')),
           second: WidgetText([
             '${latest['no'] ?? '—'}',
-            if (latest['vehicle'] != null && '${latest['vehicle']}'.isNotEmpty) 'গাড়ি ${latest['vehicle']}',
+            if (latest['vehicle'] != null && '${latest['vehicle']}'.isNotEmpty) l.launcherWidgetChallansVehicle('${latest['vehicle']}'),
           ].join(' · '), tone: WidgetTone.muted),
           link: latest['link'] == null ? null : '${latest['link']}',
         ),
     ];
 
     return WidgetDoc(
-      title: 'আজকের চালান',
+      title: l.launcherWidgetChallansTitle,
       asOf: asOf,
       link: '${summary['link'] ?? stageLink('dispatched')}',
-      corner: WidgetText('মোট $total'),
+      corner: WidgetText(l.launcherWidgetTotal('$total')),
       rows: total == 0 ? const [] : rows,
-      empty: total == 0 ? 'আজ এখনো কোনো চালান নেই' : null,
+      empty: total == 0 ? l.launcherWidgetChallansEmpty : null,
     );
   }
 }

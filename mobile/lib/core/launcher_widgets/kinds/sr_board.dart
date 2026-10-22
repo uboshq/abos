@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'summary_reader.dart';
@@ -16,7 +17,7 @@ class SrBoardWidget extends LauncherWidgetKind {
   String get key => 'sr_board';
 
   @override
-  String get title => 'বিক্রয়কর্মীর তালিকা';
+  String get title => AppLocale.l10n.launcherWidgetSrName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2];
@@ -25,17 +26,18 @@ class SrBoardWidget extends LauncherWidgetKind {
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {
     final self = SummaryReader.map(summary['self']);
     final link = SummaryReader.link(summary['link']);
+    final l = AppLocale.l10n;
     if (self != null) {
       final rank = SummaryReader.integer(self['rank']);
       final of = SummaryReader.integer(self['of']);
       return WidgetDoc(
-        title: 'আজ আমার বিক্রি',
+        title: l.launcherWidgetSrMine,
         asOf: asOf,
         link: link,
         rows: [
           WidgetRow(
-            title: WidgetText(rank == null ? 'আজ আপনার বিক্রি' : 'আজ আপনি $rank নম্বরে'),
-            second: rank != null && of != null ? WidgetText('$of জনের মধ্যে') : null,
+            title: WidgetText(rank == null ? l.launcherWidgetSrYours : l.launcherWidgetSrRank('$rank')),
+            second: rank != null && of != null ? WidgetText(l.launcherWidgetSrOutOf('$of')) : null,
             amount: SummaryReader.money(self['amount']),
           ),
         ],
@@ -57,13 +59,13 @@ class SrBoardWidget extends LauncherWidgetKind {
     final branch = SummaryReader.text(summary['branch_label']);
 
     return WidgetDoc(
-      title: 'আজ সবচেয়ে বেশি বিক্রি — বিক্রয়কর্মী',
+      title: l.launcherWidgetSrTitle,
       // নকশা: মাথার কোণে "শাখা: সব"
-      corner: branch == null ? null : WidgetText('শাখা: $branch'),
+      corner: branch == null ? null : WidgetText(l.launcherWidgetSrBranch(branch)),
       asOf: asOf,
       link: link,
       rows: rows,
-      empty: rows.isEmpty ? 'আজ এখনো কোনো বিক্রি নেই' : null,
+      empty: rows.isEmpty ? l.launcherWidgetSrEmpty : null,
     );
   }
 }

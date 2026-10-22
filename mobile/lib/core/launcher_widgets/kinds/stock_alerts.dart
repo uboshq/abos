@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 
@@ -24,7 +25,7 @@ class StockAlertsWidget extends LauncherWidgetKind {
   String get key => 'stock_alerts';
 
   @override
-  String get title => 'মজুদ সতর্কতা';
+  String get title => AppLocale.l10n.launcherWidgetStockName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2];
@@ -57,19 +58,21 @@ class StockAlertsWidget extends LauncherWidgetKind {
     ];
 
     return WidgetDoc(
-      title: 'মজুদ কমে গেছে',
+      title: AppLocale.l10n.launcherWidgetStockTitle,
       asOf: asOf,
       link: '${summary['link'] ?? stockPage}',
       corner: WidgetText(_where(summary['warehouse'], summary['branch'])),
       bars: bars,
-      empty: count == 0 ? 'সব মজুদ পুনঃক্রয়ের সীমার উপরে' : null,
-      more: count > bars.length ? 'আরও ${count - bars.length}টা' : null,
+      empty: count == 0 ? AppLocale.l10n.launcherWidgetStockEmpty : null,
+      more: count > bars.length ? AppLocale.l10n.launcherWidgetMore('${count - bars.length}') : null,
     );
   }
 
   /// "গুদাম: প্রধান · SL-Super Group" — একটা গুদাম না হলে "সব গুদাম", শাখা থাকলে পাশে
   static String _where(Object? warehouse, Object? branch) {
-    final place = warehouse == null || '$warehouse'.isEmpty ? 'সব গুদাম' : 'গুদাম: $warehouse';
+    final place = warehouse == null || '$warehouse'.isEmpty
+        ? AppLocale.l10n.launcherWidgetStockAllWarehouses
+        : AppLocale.l10n.launcherWidgetStockWarehouse('$warehouse');
     return branch == null || '$branch'.isEmpty ? place : '$place · $branch';
   }
 }

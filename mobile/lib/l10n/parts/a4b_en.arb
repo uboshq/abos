@@ -237,7 +237,7 @@
   "homeMe": "Me",
   "homeModuleComingSoon": "The {module} screens have not reached the phone yet — the rows below are coming soon.",
   "homeSyncStatus": "Sync status",
-  "homeSyncStatusHint": "What went, what did not, what was sent back",
+  "homeSyncStatusHint": "What went, what did not, what was returned",
   "homePrinter": "Printer",
   "homePrinterHint": "Bluetooth receipt printer, roll size, test print",
   "homeSignOut": "Sign out",
