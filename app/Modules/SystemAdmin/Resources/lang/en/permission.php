@@ -15,6 +15,7 @@ return [
         'accounts.coa' => 'Chart of accounts',
         'accounts.count' => 'Cash count',
         'accounts.loan' => 'Loans',
+        'accounts.obligation' => 'Obligations (treasury deposits, Mushak-6.6)',
         'accounts.period' => 'Period lock',
         'accounts.reconciliation' => 'Bank reconciliation',
         'accounts.report' => 'Accounts reports',

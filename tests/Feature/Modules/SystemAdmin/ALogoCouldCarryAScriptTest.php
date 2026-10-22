@@ -158,6 +158,8 @@ final class ALogoCouldCarryAScriptTest extends TestCase
     {
         // ⓘ পরীক্ষা ইংরেজি Accept-Language পাঠায় — পাতা যে ভাষাতেই আঁকুক, সেই ভাষার লাইনটা থাকতে হবে
         $says = fn (string $html, string $key) => str_contains($html, e(__($key, [], 'bn'))) || str_contains($html, e(__($key, [], 'en')));
+        // ⓘ এই ফাইলের setUp কাউকে ঢোকায় না (অন্য পরীক্ষা send() দিয়ে ঢোকে) — মালিক হিসেবে পাতা খোলা
+        $this->actingAs($this->owner);
 
         $company = (string) $this->get(route('system_admin.company.edit', $this->company))->assertOk()->getContent();
         $this->assertTrue($says($company, 'system_admin::message.logo_hint'), '⛔ কোম্পানির পাতায় লোগোর ব্যাখ্যা নেই');
