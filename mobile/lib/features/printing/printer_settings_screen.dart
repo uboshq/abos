@@ -7,6 +7,7 @@ import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/amount_text.dart';
 import 'thermal_flow.dart';
 
 /// "আমি → প্রিন্টার" — this phone's receipt printer (owner, 14 Oct 2026).
@@ -120,21 +121,38 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
                 Card(
-                  child: ListTile(
-                    key: const Key('printer-current'),
-                    leading: const Icon(Icons.bluetooth),
-                    title: Text(s.hasPrinter
-                        ? s.printerLabel
-                        : words.printingSettingsNoPrinter),
-                    subtitle: Text(s.hasPrinter
-                        ? s.printerAddress!
-                        : words.printingSettingsPairFirst),
-                    trailing: TextButton(
+                  // ⭐ প্রিন্টারের নাম আর ঠিকানা কখনো ৯০px-এ চাপা পড়ে না (WCAG 1.4.4; fe, ২২ অক্টোবর ২০২৬): বোতাম সারির এক-চতুর্থাংশে
+                  // ধরলে ডানে, নইলে নিচে ডানে নিজের লাইনে। ⛔ আগে ডানের বোতাম কথার ঘর চেপে ১৩০%-এ ১৬ লাইন, ২০০%-এ বোতাম পর্দার বাইরে।
+                  child: LayoutBuilder(builder: (context, box) {
+                    final label = s.hasPrinter ? words.printingSettingsChange : words.printingSettingsChoose;
+                    final button = TextButton(
                       key: const Key('printer-choose'),
                       onPressed: _busy ? null : _choose,
-                      child: Text(s.hasPrinter ? words.printingSettingsChange : words.printingSettingsChoose),
-                    ),
-                  ),
+                      child: Text(label),
+                    );
+                    final labelStyle = Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+                    // ⓘ TextButton-এর দুই পাশে ১২dp করে
+                    final beside = Amounts.widthOf(context, [(label, labelStyle)]) + 24 <= box.maxWidth / 4;
+                    final tile = ListTile(
+                      key: const Key('printer-current'),
+                      leading: const Icon(Icons.bluetooth),
+                      title: Text(s.hasPrinter
+                          ? s.printerLabel
+                          : words.printingSettingsNoPrinter),
+                      subtitle: Text(s.hasPrinter
+                          ? s.printerAddress!
+                          : words.printingSettingsPairFirst),
+                      trailing: beside ? button : null,
+                    );
+                    if (beside) return tile;
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                      tile,
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm, bottom: AppSpacing.xs),
+                        child: Align(alignment: AlignmentDirectional.centerEnd, child: button),
+                      ),
+                    ]);
+                  }),
                 ),
                 if (s.hasPrinter)
                   TextButton.icon(

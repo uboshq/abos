@@ -11,6 +11,7 @@ import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
+import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/day_part.dart';
 
 /// ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬: *"app e customer list e Customar ledger zate dekha zay sohoze
@@ -206,61 +207,66 @@ class _Row extends StatelessWidget {
 
     // ⓘ বড় লেখায় (দেড়গুণের বেশি) অঙ্ক ডানে নয়, তারিখের নিচে নিজের লাইনে, পুরো মাপে; ডানে থাকলে সারির ৪০%-এর বেশি নেয় না
     // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে অঙ্ক পুরো সারি খেয়ে ফেলত।
+    // ⭐ অঙ্ক আর জের সারির লেখার চেয়ে ছোট নয় (১৬ আর ১৪), লেখার মাপের সাথে বাড়ে, এক লাইনে, কখনো ছোট হয় না; ডানে সারির
+    // ৪০%-এ না ধরলে তারিখের নিচে, ডানে, পুরো মাপে (WCAG 1.4.4; fe, ২২ অক্টোবর ২০২৬)। ⛔ আগে FittedBox আর ListTile-এর ডানের
+    // ঘরের ১১-র লেখা অঙ্ক ৬–৭px-এ নামাত, আর ডানের ঘর কথার ঘরকে ৯০px-এ চেপে তারিখ তিন লাইনে ভাঙত।
     final big = isLargeText(context);
-    final amountText = Text('${took ? '+' : '−'}${Money.taka(amount)}',
+    final amountWords = '${took ? '+' : '−'}${Money.taka(amount)}';
+    final amountStyle = Amounts.main(context, color: colour);
+    final balanceWords = dueWords(row.balance);
+    final balanceStyle = Amounts.second(context, color: context.palette.onSurfaceMuted);
+    final amountText = AmountText(amountWords,
+        key: const ValueKey('ledger-row-amount'),
         semanticsLabel: took ? context.l10n.customersLedgerSpokenGoods('${Money.spoken(amount)}') : context.l10n.customersLedgerSpokenPaid('${Money.spoken(amount)}'),
-        maxLines: 1,
-        style: TextStyle(fontWeight: FontWeight.w700, color: colour));
-    final balanceText = Text(dueWords(row.balance),
-        maxLines: 1, style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted));
+        style: amountStyle);
+    final balanceText = AmountText(balanceWords, key: const ValueKey('ledger-row-balance'), style: balanceStyle);
+    final figures = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [amountText, balanceText],
+    );
+    final theme = Theme.of(context);
+    final details = [
+      [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
+      if (row.narration.isNotEmpty) row.narration,
+    ].join('\n');
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(took ? context.l10n.customersLedgerTookGoods : context.l10n.customersLedgerPaidMoney,
+            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+        Text(details,
+            key: const ValueKey('ledger-row-details'),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      ],
+    );
+    final avatar = CircleAvatar(
+      backgroundColor: colour.withValues(alpha: 0.12),
+      child: Icon(took ? Icons.shopping_bag_outlined : Icons.payments_outlined, color: colour, size: 20),
+    );
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: LayoutBuilder(
-        builder: (context, constraints) => ListTile(
-        leading: CircleAvatar(
-          backgroundColor: colour.withValues(alpha: 0.12),
-          child: Icon(took ? Icons.shopping_bag_outlined : Icons.payments_outlined,
-              color: colour, size: 20),
-        ),
-        title: Text(took ? context.l10n.customersLedgerTookGoods : context.l10n.customersLedgerPaidMoney,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: big
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    [
-                      [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
-                      if (row.narration.isNotEmpty) row.narration,
-                    ].join('\n'),
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: amountText),
-                  Text(dueWords(row.balance), style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
-                ],
-              )
-            : Text(
-                [
-                  [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
-                  if (row.narration.isNotEmpty) row.narration,
-                ].join('\n'),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-        isThreeLine: !big && row.narration.isNotEmpty,
-        trailing: big ? null : ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerEnd, child: amountText),
-              FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerEnd, child: balanceText),
-            ],
-          ),
-        ),
-      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: LayoutBuilder(builder: (context, box) {
+          // ⓘ কথার ঘর (ছবি ৪০ + ফাঁক ১৬ আর অঙ্কের আগে ১২ বাদে) সারির ৪০%-এর কম হলে অঙ্ক নিচে নামে
+          const lead = 40.0 + 16, gap = 12.0;
+          final figuresWidth = Amounts.widthOf(context, [(amountWords, amountStyle), (balanceWords, balanceStyle)]);
+          final rowWidth = box.maxWidth + 32;
+          final stack = big || box.maxWidth - lead - gap - figuresWidth < rowWidth * 0.4;
+          if (!stack) {
+            return Row(children: [avatar, const SizedBox(width: 16), Expanded(child: words), const SizedBox(width: gap), figures]);
+          }
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [avatar, const SizedBox(width: 16), Expanded(child: words)]),
+            const SizedBox(height: 4),
+            Align(alignment: AlignmentDirectional.centerEnd, child: figures),
+          ]);
+        }),
       ),
     );
   }

@@ -100,10 +100,17 @@ bool appFrameInDark = false;
 /// ⓘ ছবি-টেস্টের জন্য — true হলে আলোতেও অ্যাপের নিজের থিম (নইলে Flutter-এর সাধারণ থিম, আগের মতো)
 bool appFrameAppTheme = false;
 
+/// ⓘ আসল ফন্টের পরীক্ষার জন্য (fe, ২২ অক্টোবর ২০২৬) — দিলে [appFrame] অ্যাপের আলোর থিম এটা দিয়ে মুড়ে পরে (যেমন realFontTheme)
+ThemeData Function(ThemeData)? appFrameFont;
+
 /// [child]-কে অ্যাপের মতো মোড়ে — লেখার মাপ [textScale]।
 Widget appFrame(Widget child, {double textScale = 1}) => MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: appFrameInDark || appFrameAppTheme ? AppTheme.light() : null,
+      theme: appFrameFont != null
+          ? appFrameFont!(AppTheme.light())
+          : appFrameInDark || appFrameAppTheme
+              ? AppTheme.light()
+              : null,
       darkTheme: appFrameInDark || appFrameAppTheme ? AppTheme.dark() : null,
       themeMode: appFrameInDark ? ThemeMode.dark : ThemeMode.system,
       builder: (context, inner) => MediaQuery(

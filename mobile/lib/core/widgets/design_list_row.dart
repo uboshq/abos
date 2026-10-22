@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../records/money.dart';
+import 'amount_text.dart';
 import 'customer_line.dart';
 import 'row_icon.dart';
 
@@ -58,40 +59,46 @@ class DesignListRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 72),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: LayoutBuilder(
-              builder: (context, box) => Row(children: [
+            child: LayoutBuilder(builder: (context, box) {
+              // ⭐ টাকা কখনো মোড়ে না, ছোটও হয় না (WCAG 1.4.4; fe, ২২ অক্টোবর ২০২৬): ১৫ মোটা, সমান-চওড়া অঙ্ক, লেখার মাপের সাথে
+              // বাড়ে; সারির ৪৫%-এ না ধরলে সারি দুই তলা — ওপরে নাম, নিচে ডানে টাকা। ⛔ আগে ৪৫%-এর ঘরে অঙ্ক মাঝখানে ভেঙে দুই লাইন হত।
+              final money = amount == null ? null : Money.taka(amount!);
+              final moneyStyle = Amounts.main(context, size: 15, color: amountColor ?? cs.onSurface);
+              final stack = money != null && !Amounts.fitsBeside(context, box.maxWidth, [(money, moneyStyle)], share: 0.45);
+              final words = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomerLine(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(second, key: secondKey, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                  if (below != null) ...[const SizedBox(height: 4), below!],
+                ],
+              );
+              final figures = Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (money != null) AmountText(money, key: const ValueKey('row-amount'), style: moneyStyle),
+                  if (pill != null) ...[if (money != null) const SizedBox(height: 4), pill!],
+                ],
+              );
+              final head = Row(children: [
                 RowIcon(icon, tone: tone),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CustomerLine(name,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                      const SizedBox(height: 2),
-                      Text(second, key: secondKey, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-                      if (below != null) ...[const SizedBox(height: 4), below!],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (amount != null)
-                        Text(Money.taka(amount!),
-                            textAlign: TextAlign.end,
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: amountColor ?? cs.onSurface)),
-                      if (pill != null) ...[if (amount != null) const SizedBox(height: 4), pill!],
-                    ],
-                  ),
-                ),
-              ]),
-            ),
+                Expanded(child: words),
+                if (!stack) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45), child: figures),
+                ],
+              ]);
+              if (!stack) return head;
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                head,
+                const SizedBox(height: 4),
+                Align(alignment: AlignmentDirectional.centerEnd, child: figures),
+              ]);
+            }),
           ),
         ),
       ),
