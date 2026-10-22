@@ -91,7 +91,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $collection = $this->book(['amount' => '9000', 'vds' => '750', 'ait' => '250',
             'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৫: আদায়টা পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৫: আদায়টা পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame('750.0000', $this->dr(StandardChart::VDS_RECEIVABLE, $collection), '⛔ দফা ৫: গ্রাহকের কাটা VDS ১১৩৮-এ Dr হয়নি');
         $this->assertSame('250.0000', $this->dr(StandardChart::ADVANCE_INCOME_TAX, $collection), '⛔ দফা ৫: গ্রাহকের কাটা AIT ১১৩৫-এ Dr হয়নি');
         $this->assertSame('9000.0000', $this->drOn($this->bank->id, $collection), '⛔ দফা ৫: ব্যাংকে যা এল খাতায় তা Dr হয়নি');
@@ -108,7 +108,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $collection = $this->book(['amount' => '5000', 'instrument' => 'transfer', 'instrument_no' => 'NP-CF-9', 'bank_charge' => '25',
             'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '5000']]]);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৯: আদায়টা পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৯: আদায়টা পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame('4975.0000', $this->drOn($this->bank->id, $collection), '⛔ দফা ৯: ব্যাংকে চার্জ বাদে আসেনি');
         $this->assertSame('25.0000', $this->dr(StandardChart::BANK_CHARGES, $collection), '⛔ দফা ৯: চার্জ ব্যাংক চার্জের খাতে নয়');
         $this->assertSame('5000.0000', $this->customerCr($collection), '⛔ দফা ৯: গ্রাহকের পাওনা পুরো অঙ্কে কমেনি');
@@ -120,7 +120,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     {
         $collection = $this->book(['amount' => '1000.1234', 'vds' => '0.0001', 'lines_given' => '1']);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ২৫: আদায়টা পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ২৫: আদায়টা পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame('1000.1234', $this->drOn($this->bank->id, $collection), '⛔ দফা ২৫: ব্যাংকের অঙ্ক চার ঘর পর্যন্ত হুবহু নয় (float-এর গোলমাল?)');
         $this->assertSame('1000.1235', $this->customerCr($collection), '⛔ দফা ২৫: গ্রাহকের Cr = টাকা + VDS, পয়সা পর্যন্ত হুবহু নয়');
         $this->balanced($collection);
@@ -140,7 +140,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $collection = $this->book(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '0.50'],
             'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.50']]]);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: ৳০.৫০ রাউন্ডিং সই ছাড়া পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: ৳০.৫০ রাউন্ডিং সই ছাড়া পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame(0, Approval::query()->where('action', 'discount')->count(), '⛔ দফা ৪: ৳০.৫০ রাউন্ডিংয়ে সই চাওয়া হলো — ৳০.৫০ পর্যন্ত সই-মুক্ত');
         $this->assertSame('0.5000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: রাউন্ডিং ৫৩০৫-এ Dr হয়নি');
         $this->assertSame('0.0000', $this->dr(StandardChart::COLLECTION_DISCOUNT, $collection), '⛔ দফা ৪: রাউন্ডিং ছাড়ের খাতে (৪১২০) গেল');
@@ -364,7 +364,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1200'],
         ]]);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $second->status, '⛔ দফা ৩: ক্রেডিটসহ আদায় পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $second->status, '⛔ দফা ৩: ক্রেডিটসহ আদায় পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '0', 4), '⛔ দফা ৩: ক্রেডিট (৫০০) আর টাকায় (৭০০) বিলটা শোধ দেখায় না');
         $this->assertSame('700.0000', $this->customerCr($second), '⛔ দফা ৩: ক্রেডিটের কাটাকাটি নতুন টাকা হিসেবে খাতায় বসল');
         $this->assertSame(1, CollectionApplication::query()->where('collection_id', $second->id)->where('kind', 'credit')
@@ -515,7 +515,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     {
         $collection = $this->book(['amount' => '600', 'instrument' => 'cash', 'instrument_no' => 'LEFT-OVER', 'bank_charge' => '20', 'lines_given' => '1']);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ২: নগদের আদায় পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ২: নগদের আদায় পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertNull($collection->instrument_no, '⛔ দফা ২: নগদে অন্য পদ্ধতির TrxID রয়ে গেল');
         $this->assertSame(0, bccomp((string) $collection->bank_charge, '0', 4), '⛔ দফা ২: নগদে ব্যাংক চার্জ রয়ে গেল');
         $this->assertSame('600.0000', $this->drOn($this->bank->id, $collection), '⛔ দফা ২: নগদে চার্জ কেটে খাতে কম এল');
@@ -607,7 +607,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
         $collection = $this->book(['amount' => '450', 'lines_given' => '1']);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১৪: আদায়টা পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১৪: আদায়টা পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertSame((int) $other->id, (int) $collection->branch_id, '⛔ দফা ১৪: আদায় গ্রাহকের শাখায় বসেনি');
         $branches = LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
             ->pluck('branch_id')->map(fn ($b) => (int) $b)->unique()->values()->all();
@@ -636,10 +636,10 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
         $without = $this->bookAllowingStops(['amount' => '350', 'lines_given' => '1']);
         $this->assertSame(DocumentStatus::DRAFT, $without->status, '⛔ দফা ১৫: স্লিপ ছাড়া পোস্ট হলো');
-        $this->assertSame(__('sales::collection_rules.attachment_required'), (string) session('errors')?->first('slip'), '⛔ দফা ১৫: স্লিপ লাগবে — বলেনি');
+        $this->assertSame(__('sales::collection_rules.attachment_required'), (string) $this->errors()?->first('slip'), '⛔ দফা ১৫: স্লিপ লাগবে — বলেনি');
 
         $with = $this->book(['amount' => '360', 'lines_given' => '1', 'slip' => UploadedFile::fake()->image('slip.png', 40, 30)]);
-        $this->assertSame(DocumentStatus::CONFIRMED, $with->status, '⛔ দফা ১৫: স্লিপসহও পোস্ট হলো না — '.json_encode(session('errors')?->all()));
+        $this->assertSame(DocumentStatus::CONFIRMED, $with->status, '⛔ দফা ১৫: স্লিপসহও পোস্ট হলো না — '.json_encode($this->errors()?->all()));
         $this->assertTrue(\App\Models\Attachment::query()->where('source_entity', Collection::drillSourceType())->where('source_entity_id', $with->id)->exists(),
             '⛔ দফা ১৫: স্লিপটা কাগজের সাথে রইল না');
     }
@@ -811,7 +811,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
         // ⓘ শাখা পেরিয়ে — আদায় বসে গ্রাহকের শাখায় (দফা ১৪), মাথার শাখায় নয়
         $paper = Collection::acrossBranches()->where('id', '>', $last)->latest('id')->first();
-        $this->assertNotNull($paper, '⛔ আদায়ের কাগজটাই বসেনি — '.json_encode(session('errors')?->all(), JSON_UNESCAPED_UNICODE));
+        $this->assertNotNull($paper, '⛔ আদায়ের কাগজটাই বসেনি — '.json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
 
         return $paper;
     }
@@ -824,7 +824,22 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
     private function said(string $field): string
     {
-        return (string) session('errors')?->first($field);
+        return (string) $this->errors()?->first($field);
+    }
+
+    /**
+     * শেষ অনুরোধের ভুলের থলে। ⚠️ `session('errors')` সরাসরি নয়: সেশন JSON-এ সাজানো (`config/session.php` serialization = json),
+     * তাই অনুরোধ শেষে `Store::save()` থলেটাকে array বানিয়ে রাখে — `->all()`/`->first()` তখন "on array" Error (Mac, ২২ অক্টোবর ২০২৬,
+     * ১৪টা দাবি)। সেশন আবার চালু করলে `marshalErrorBag()` থলে ফেরায় — TestResponse::session()-ও ঠিক এটাই করে।
+     */
+    private function errors(): ?\Illuminate\Support\ViewErrorBag
+    {
+        $store = app('session.store');
+        if (! $store->isStarted()) {
+            $store->start();
+        }
+
+        return $store->get('errors');
     }
 
     /** "পোস্ট" — থামলে (সই, বন্ধ মাস, স্লিপ) খসড়াটাই ফেরে; থামার কারণ `session('errors')`-এ */
