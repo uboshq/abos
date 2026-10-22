@@ -438,6 +438,29 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         /*
+         * ⛔ ওয়েবের JSON প্রশ্নের ভুল-যাচাই ৪২২ JSON-এ, ফেরত-পাঠানো (৩০২) নয় — a6, ২৩ অক্টোবর ২০২৬ (Mac-এর লাল a59a63dc2,
+         * CollectionAppContractTest::test_item_18_one_reach_rule_on_the_web_and_the_phone: ওয়েবের প্রিভিউ ৩০২)।
+         *
+         * ⓘ উপরের নিয়ম JSON কেবল `api/*`-এ দেয়, তাই পাতার নিজের fetch (Accept: application/json, যেমন টাকা নেওয়ার প্রিভিউ,
+         * [[collection.js]]) ভুল-যাচাইয়ে ৩০২ পেত, fetch আগের পাতার HTML-এ যেত, আর `response.json()` ভেঙে পাতা কেবল "প্রিভিউ
+         * আনা গেল না" দেখাত — কারণটা ("গ্রাহক চেনা নেই" …) কখনো নয়। ⓘ কেবল ভুল-যাচাই বদলায়: সাধারণ ফর্ম-জমা (JSON চায় না)
+         * আগের মতো ফেরত-পাঠানো আর সেশনে ভুল পায়; বাকি ভুলের (৪০৩/৪০৪/৫০০) পাতা অপরিবর্তিত।
+         * ⓘ `message` প্রথম ভুলের বাক্য (বাংলা), Laravel-এর ইংরেজি সারাংশ নয়; `errors` ঘর ধরে, ফোনের ৪২২-এর একই আকার।
+         */
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+            if ($e->response !== null || $request->is('api/*') || ! $request->expectsJson()) {
+                return null;
+            }
+
+            $errors = $e->errors();
+
+            return response()->json([
+                'message' => (string) (collect($errors)->flatten()->first() ?? $e->getMessage()),
+                'errors' => $errors,
+            ], $e->status);
+        });
+
+        /*
          * ⭐ "বসানো যাবে না" একটা উত্তর, ভাঙা নয় — ২১ সেপ্টেম্বর ২০২৬।
          *
          * ── ⛔ মালিক যা দেখেছেন ─────────────────────────────────────

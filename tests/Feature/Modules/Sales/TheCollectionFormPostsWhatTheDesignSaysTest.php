@@ -910,6 +910,46 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             '⛔ দফা ১৮: পর্দা ?customer= ধরে অন্য শাখার গ্রাহকের বিল আঁকল');
     }
 
+    /**
+     * দফা ১০, ১৮ — পাতার আসল পথে প্রিভিউ, শাখায় বাঁধা কর্তার: আগে পর্দা খোলা (GET), তারপর পাতার নিজের fetch-এর মতো প্রিভিউ
+     * ([[collection.js]]: `Accept: application/json`, `X-Requested-With: XMLHttpRequest`, `X-CSRF-TOKEN`, ফর্মের ঘরগুলো)।
+     * নাগালের গ্রাহকে ২০০ আর খাতার লাইন; নাগালের বাইরে ৪২২ আর ফোনের বাক্য — কখনো ৩০২ নয়।
+     * ⓘ কেন (a6, ২৩ অক্টোবর ২০২৬; Mac-এর লাল a59a63dc2): ভুল-যাচাই JSON হত কেবল `api/*`-এ, তাই ওয়েবের প্রিভিউ ৩০২ দিত, fetch
+     * আগের পাতার HTML পেত আর পাতা কারণের বদলে "প্রিভিউ আনা গেল না" দেখাত — bootstrap/app.php-এর ওয়েব-JSON ভুল-যাচাইয়ের সারাই।
+     */
+    public function test_item_18_the_pages_own_preview_answers_json_for_a_branch_bound_clerk_never_a_redirect(): void
+    {
+        $home = (int) $this->company->defaultBranch()->id;
+        $away = $this->otherBranch();
+        $mine = Customer::query()->create(['code' => 'CF-PH', 'name_en' => 'Page Home Store', 'branch_id' => $home, 'is_active' => true]);
+        $there = Customer::query()->create(['code' => 'CF-PA', 'name_en' => 'Page Away Store', 'branch_id' => $away->id, 'is_active' => true]);
+
+        $this->maker->forceFill(['current_branch_id' => $home, 'view_all_branches' => false])->save();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker->fresh());
+
+        $page = (string) $this->get(route('sales.collection.create'))->assertOk()->getContent();
+        $hidden = [];
+        foreach (['_token', '_branch'] as $name) {
+            if (preg_match('/<input[^>]*name="'.$name.'"[^>]*value="([^"]*)"|<input[^>]*value="([^"]*)"[^>]*name="'.$name.'"/', $page, $m) === 1) {
+                $hidden[$name] = html_entity_decode($m[1] !== '' ? $m[1] : ($m[2] ?? ''));
+            }
+        }
+        $headers = ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest', 'X-CSRF-TOKEN' => (string) ($hidden['_token'] ?? '')];
+        $ask = fn (Customer $customer) => $this->post(route('sales.collection.preview'), [...$hidden, 'customer_id' => $customer->id,
+            'account_id' => $this->bank->id, 'trx_date' => now()->toDateString(), 'amount' => '600', 'lines_given' => '1'], $headers);
+
+        $inReach = $ask($mine);
+        $this->assertSame(200, $inReach->status(), '⛔ দফা ১০: নিজের শাখার গ্রাহকে পাতার প্রিভিউ খুলল না ('.$inReach->status().')');
+        $this->assertNotSame([], (array) $inReach->json('lines'), '⛔ দফা ১০: নিজের শাখার গ্রাহকের প্রিভিউতে খাতার লাইন নেই');
+
+        $outOfReach = $ask($there);
+        $this->assertSame(422, $outOfReach->status(),
+            '⛔ দফা ১৮: অন্য শাখার গ্রাহকে পাতার প্রিভিউ ৪২২ নয় ('.$outOfReach->status().') — ৩০২ হলে পাতা কারণ দেখাতে পারে না');
+        $this->assertSame(__('sales::sync.unknown_customer'), $outOfReach->json('errors.customer_id.0'), '⛔ দফা ১৮: পাতার প্রিভিউ ফোনের বাক্যে ফেরায়নি');
+        $this->assertSame(__('sales::sync.unknown_customer'), $outOfReach->json('message'), '⛔ দফা ১৮: ৪২২-এর `message` বাংলা কারণ নয়');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $extra @return array<string, mixed> */
