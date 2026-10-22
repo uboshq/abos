@@ -151,7 +151,6 @@
                     'no' => $voucher->document_no,
                     'share' => ['route' => 'accounts.voucher.print', 'params' => ['voucher' => $voucher->id]],
                 ]]" />
-                <x-ui.shared-link :message="$voucher->document_no" />
 
                 @unless ($voucher->isCancelled())
                     @can('accounts.voucher.delete')
@@ -171,6 +170,12 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+
+    {{-- ⭐ পাঠানোর লিংক (WhatsApp) পাতার স্তরে — মাথার বোতামের সারিতে নয়, বিক্রয়ের ইনভয়েসের মতো (fe, ২৩ অক্টোবর ২০২৬): সারিতে বসে
+         "ছাপুন" আর "ভাউচার বাতিল"-এর মাঝখানে চেপে বসত --}}
+    <div data-voucher-shared-link>
+        <x-ui.shared-link :message="$voucher->document_no" />
+    </div>
 
     {{-- ⭐ উল্টো কাগজের সূত্র (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬) --}}
     @include('accounts::partials.reversal-reference', ['type' => 'voucher', 'id' => $voucher->id])
@@ -255,6 +260,23 @@
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
 
             <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3">
+                {{-- ⭐ পক্ষ প্রথম ঘরে — নাম আর কোড, তার পাতার লিংক (fe, ২৩ অক্টোবর ২০২৬: বিবরণে কার কাছ থেকে বা কাকে, তা-ই ছিল না) --}}
+                @if ($party !== null)
+                    <div data-voucher-party>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ app(\App\Core\Services\PartyRegistry::class)->labelFor((string) $voucher->party_type) ?? __('accounts::field.party') }}</dt>
+                        @php
+                            [$partyRoute, $partyParams] = $party->drillRoute();
+                        @endphp
+                        <dd class="text-sm">
+                            @if (\Illuminate\Support\Facades\Route::has($partyRoute))
+                                <a href="{{ route($partyRoute, $partyParams) }}" class="text-(--color-link) hover:underline">{{ $party->drillLabel() }}</a>
+                            @else
+                                {{ $party->drillLabel() }}
+                            @endif
+                            <span class="num text-2xs text-(--color-ink-muted)">· {{ $party->drillDocumentNo() }}</span>
+                        </dd>
+                    </div>
+                @endif
                 @foreach ([
                     'accounts::field.date' => \App\Core\Support\DateFormat::format($voucher->trx_date),
                     'core.company.branch' => $voucher->branch?->name(),

@@ -272,6 +272,37 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertStringContainsString("out: @js(! \$isReceipt)", $fields, '⛔ পরিশোধের দিক ("দেনা / অগ্রিম দেওয়া") পাতা থেকে যায় না');
     }
 
+    /** ⭐ পদ্ধতির নাম একটাই — ফর্মের চিপ (money.method) আর দেখার পাতা/তালিকা/ছাপা (accounts::instrument) একই শব্দ, দুই ভাষায় (fe, ২৩ অক্টোবর ২০২৬) */
+    public function test_a_method_has_one_name_on_the_form_the_page_and_the_print(): void
+    {
+        foreach (['bn', 'en'] as $locale) {
+            $chips = (array) trans('money.method', [], $locale);
+            unset($chips['legend']);
+            foreach ($chips as $way => $word) {
+                $this->assertSame($word, trans('accounts::instrument.'.$way, [], $locale),
+                    "⛔ {$locale}/{$way}: ফর্মে \"{$word}\", অথচ দেখার পাতা আর ছাপায় অন্য নাম");
+            }
+        }
+        $this->assertSame('ব্যাংক ট্রান্সফার', trans('accounts::instrument.transfer', [], 'bn'), '⛔ দেখার পাতায় আবার "ব্যাংক অনলাইন"');
+    }
+
+    /** ⭐ দেখার পাতার বিবরণের প্রথম ঘরে পক্ষ — নাম আর কোড; আর পাঠানোর লিংক মাথার সারিতে নয় (fe, ২৩ অক্টোবর ২০২৬) */
+    public function test_the_voucher_page_names_its_party_first_and_keeps_the_share_box_out_of_the_header(): void
+    {
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $this->postReceipt();
+        $voucher = Voucher::query()->latest('id')->firstOrFail();
+
+        $page = (string) $this->get(route('accounts.voucher.show', $voucher))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<div data-voucher-party>.*?'.preg_quote(e($customer->name()), '/').'.*?'.preg_quote(e((string) $customer->code), '/').'/s', $page,
+            '⛔ দেখার পাতার বিবরণে পক্ষের নাম আর কোড নেই');
+
+        $show = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/show.blade.php'));
+        $actions = (string) strstr((string) strstr($show, '<x-slot:actions>'), '</x-slot:actions>', true);
+        $this->assertStringNotContainsString('x-ui.shared-link', $actions, '⛔ পাঠানোর লিংকের বাক্স আবার মাথার বোতামের সারিতে — "ছাপুন" আর "বাতিল"-এর মাঝে চেপে বসে');
+        $this->assertStringContainsString("<div data-voucher-shared-link>\n        <x-ui.shared-link", $show, '⛔ পাঠানোর লিংকের বাক্স পাতার স্তরে নেই');
+    }
+
     /** ৮ — পোস্টের পরে ছাপা · PDF · WhatsApp */
     public function test_the_form_says_what_comes_after_posting_and_the_paper_can_really_be_sent(): void
     {
