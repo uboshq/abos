@@ -570,6 +570,13 @@ parameters:
 			count: 1
 			path: tests/Feature/Modules/Executive/EveryReportLeavesInEveryFormatWithATraceTest.php
 
+		# খাতের কোড চাবি ('2111', '2121'…) PHP-তে int হয় — phpstan string চাবি ভাবে; চলার সময় চাবি মেলে
+		-
+			message: '#^Offset ''2111''\|''2121''\|''2122'' on array\<string, array\{debit\: string, credit\: string\}\> on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: tests/Feature/Modules/Purchase/ThePaySupplierScreenFollowsTheDesignTest.php
+
 		# পরীক্ষায় কয়েকটা সারির সংগ্রহ গোনা বা কাটা — কোয়েরির খরচের প্রশ্ন নয়
 		-
 			message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
