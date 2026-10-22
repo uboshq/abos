@@ -151,6 +151,21 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertSame($posted, $shown, '⛔ "খাতায় যা যাবে" আর পোস্টের খাতা আলাদা — প্রিভিউ মিথ্যা বলছে');
     }
 
+    /** ৫ক — পোস্ট যা ফেরাত, প্রিভিউ সারি দেখায় না, সেই কারণটাই বলে */
+    public function test_the_preview_refuses_what_the_post_refuses(): void
+    {
+        $cash = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
+        $payload = $this->receiptPayload(['to_account_id' => $cash->id, 'instrument' => 'mfs', 'instrument_no' => 'BKPREVIEW9']);
+
+        $preview = $this->post(route('accounts.voucher.simulate'), $payload)->assertOk()->json();
+        $this->assertSame([], $preview['rows'], '⛔ নগদের খাতে "MFS" — পোস্ট ফেরাবে, অথচ প্রিভিউ খাতার সারি দেখায়');
+        $this->assertNotSame('', (string) ($preview['message'] ?? ''), '⛔ প্রিভিউ চুপ — পোস্ট কেন ফেরাবে তা বলে না');
+
+        $before = Voucher::query()->count();
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), $payload);
+        $this->assertSame($before, Voucher::query()->count(), 'প্রস্তুতিটাই ভুল — পোস্টও এটা মেনে নিল, তাহলে প্রিভিউর থামাটাই ভুল');
+    }
+
     /** ৬ — রেফারেন্সের চলতি উত্তর; সব শাখা জুড়ে, কিন্তু কেবল নিজের কোম্পানিতে */
     public function test_the_reference_answer_is_the_posts_question_and_stays_inside_the_company(): void
     {

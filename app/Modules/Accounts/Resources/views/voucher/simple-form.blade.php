@@ -815,7 +815,7 @@
                     <h2 class="font-semibold">{{ __('money.screen.ledger') }}</h2>
                     <span class="text-2xs text-(--color-ink-muted)">{{ __('money.screen.ledger_hint') }}</span>
                 </div>
-                <p class="text-sm text-(--color-ink-muted)" x-show="! hasPreview && ! previewBlocked">{{ __('money.screen.ledger_empty') }}</p>
+                <p class="text-sm text-(--color-ink-muted)" x-show="! hasPreview && ! previewBlocked">{{ __('accounts::message.ledger_empty') }}</p>
                 {{-- ⛔ পোস্ট যে কারণে থামত (যেমন অন্য শাখার পক্ষ), প্রিভিউ সেই বার্তাই দেখায় --}}
                 <p class="text-sm text-(--color-danger)" data-ledger-blocked x-show="previewBlocked" x-cloak x-text="preview.message"></p>
                 <table class="ui-grid w-full text-sm" x-show="hasPreview" x-cloak>

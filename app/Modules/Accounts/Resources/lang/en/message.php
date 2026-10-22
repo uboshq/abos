@@ -256,6 +256,7 @@ return [
     'voucher_awaits_another_hand' => ':no is kept as a draft. You cannot post your own voucher; someone else must open it and press Post.',
     'reference_free' => 'Not used on this account before ✓',
     'ledger_matches' => 'Matches: debit = credit ✓',
+    'ledger_empty' => 'Shows here once the party, amount, account and narration are filled.',
     'after_post_receipt' => 'After posting: print the money receipt · PDF · WhatsApp (from the "Print" menu on its page)',
     'after_post_payment' => 'After posting: print the payment paper · PDF · WhatsApp (from the "Print" menu on its page)',
 ];

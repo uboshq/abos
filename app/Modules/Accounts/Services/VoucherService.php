@@ -1799,8 +1799,15 @@ final class VoucherService
             'party_type' => $header['party_type'] ?? null,
             'party_id' => $header['party_id'] ?? null,
             'narration' => $header['narration'] ?? null,
+            'instrument' => $header['instrument'] ?? null,
+            'instrument_no' => $header['instrument_no'] ?? null,
         ]);
-        $paper->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->forceFill([
+        // ⓘ সম্পাদনায় নিজের নম্বর নিজের সাথে "আগে বসেছে" নয়
+        if (filled($header['voucher_id'] ?? null)) {
+            $paper->id = (int) $header['voucher_id'];
+        }
+        $accounts = Account::query()->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+        $paper->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))->forceFill([
             'account_id' => (int) ($l['account_id'] ?? 0),
             'debit' => (string) ($l['debit'] ?? '0'),
             'credit' => (string) ($l['credit'] ?? '0'),
@@ -1810,10 +1817,41 @@ final class VoucherService
             'narration' => $l['narration'] ?? null,
         ])));
 
-        return ['branch_id' => $branchId, 'lines' => $this->ledgerLines($paper, $this->accountsThatHoldAParty())];
+        /*
+         * ⛔ পোস্ট যে কারণে থামত, প্রিভিউও সেই কারণে থামে — পোস্টের একই পাহারা, যেগুলো কেবল ফর্মের উপর দাঁড়ায় ([[post()]]):
+         * আদায়ে চেক নয়, সারি পোস্টযোগ্য, হাতের চেক নয়, নগদ নিজের বাক্সে, পদ্ধতি খাতের সাথে মেলে, পক্ষ নিজের শাখায়, আর
+         * রেফারেন্সের নিয়ম। ⓘ নাহলে "MFS" বেছে নগদের খাতে প্রিভিউ সুন্দর সারি দেখাত, অথচ পোস্ট ফেরাত।
+         */
+        $ownable = $this->accountsThatHoldAParty();
+        $this->assertNoChequeReceived((string) $paper->type, $paper->instrument);
+        $this->assertLinesArePostable($paper);
+        $this->assertNoChequeInHandByHand($paper);
+        $this->assertCashLandsInOwnTill($paper);
+        $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPartyInItsBranch($paper, $ownable);
+        $this->bankReferenceAccount($paper);
+
+        return ['branch_id' => $branchId, 'lines' => $this->ledgerLines($paper, $ownable)];
     }
 
     private function assertBankReferenceIsFree(Voucher $voucher): void
+    {
+        $account = $this->bankReferenceAccount($voucher);
+
+        if ($account === null) {
+            return;
+        }
+
+        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
+        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
+        $voucher->forceFill(['money_account_id' => $account->id])->save();
+    }
+
+    /**
+     * ⭐ রেফারেন্সের নিয়ম, কিছু না লিখে — থাকতেই হবে, অর্থপূর্ণ হতে হবে, আর একই খাতে আগে বসেনি (পোস্ট আর "খাতায় যা যাবে"
+     * একই কথা বলে; cb, ২৩ অক্টোবর ২০২৬)। ⓘ ফেরে নম্বরের টাকার খাত, নগদ বা জাবেদায় null।
+     */
+    private function bankReferenceAccount(Voucher $voucher): ?Account
     {
         $account = $voucher->lines
             ->map(fn (VoucherLine $line) => $line->account)
@@ -1821,7 +1859,7 @@ final class VoucherService
 
         // নগদ, বা টাকার কোনো ব্যাংক-খাত নেই (জাবেদা) — প্রশ্নই ওঠে না
         if ($account === null) {
-            return;
+            return null;
         }
 
         $reference = trim((string) $voucher->instrument_no);
@@ -1867,9 +1905,7 @@ final class VoucherService
             ]);
         }
 
-        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
-        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
-        $voucher->forceFill(['money_account_id' => $account->id])->save();
+        return $account;
     }
 
     /**

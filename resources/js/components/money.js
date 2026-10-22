@@ -368,6 +368,8 @@ export function voucherMoney ({
             body.delete('_once')
             // ⓘ ফাইল প্রিভিউতে যায় না — খাতার সারি তার উপর দাঁড়ায় না
             body.delete('attachment')
+            // ⓘ সম্পাদনায় নিজের রেফারেন্স নিজের সাথে "আগে বসেছে" নয়
+            if (voucherId) body.set('voucher_id', String(voucherId))
 
             const ticket = ++this.asked
 

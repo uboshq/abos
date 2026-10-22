@@ -684,7 +684,7 @@ class VoucherController extends Controller implements HasMiddleware
             return response()->json(['rows' => [], 'message' => '', 'missing' => array_keys($e->errors())]);
         }
 
-        $data = [...$request->validated(), 'type' => $type];
+        $data = [...$request->validated(), 'type' => $type, 'voucher_id' => $request->integer('voucher_id') ?: null];
         $lines = $this->writer->linesFor($type, $request->all());
 
         try {
