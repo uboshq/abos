@@ -113,6 +113,8 @@ final class StatusNotices
                 $this->approvalNotice(),
                 $this->draftNotice(),
                 $this->transferNotice(),
+                // ⭐ করণীয়ের সময় — পেরোলে লাল (বারেও), তিন দিনের মধ্যে হলে হলুদ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+                $this->obligationNotice(),
 
                 /*
                  * ⭐ মেয়াদ ফুরিয়ে আসছে — ২৪ সেপ্টেম্বর ২০২৬।
@@ -591,6 +593,42 @@ final class StatusNotices
                 ? route('accounts.transfer.index')
                 : null,
             'tone' => 'info',
+        ];
+    }
+
+    /**
+     * ⭐ আইনের দায় — কোষাগারে জমা, মূসক-৬.৬ ([[ComplianceObligations]]); কেবল যিনি করণীয় দেখেন, হেডারে বাছা শাখা ধরে।
+     *
+     * ⓘ সময় পেরোনো দায় `danger` — বারের ওপরে ওঠে, কারণ জরিমানা দিন গুনে বাড়ে; তিন দিনের মধ্যে শেষ তারিখ হলে `warning`। ⛔ দুটো
+     * একসাথে নয় — পেরোনোটাই বড় কথা, আর একই বিষয়ের দুই বার্তা মানুষ একটা ভেবে পড়েন (ব্যাকআপের একই শিক্ষা)।
+     */
+    private function obligationNotice(): ?array
+    {
+        if (! Schema::hasTable('compliance_obligations') || ! (auth()->user()?->can('accounts.obligation.view') ?? false)) {
+            return null;
+        }
+
+        $open = fn () => \App\Core\Support\ViewedBranch::narrow(DB::table('compliance_obligations')
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('done_at')
+            ->whereNull('cancelled_at'), 'compliance_obligations.branch_id');
+
+        $today = Carbon::today()->toDateString();
+        $overdue = $open()->whereDate('due_on', '<', $today)->count();
+        $soon = $overdue > 0 ? 0 : $open()->whereDate('due_on', '>=', $today)->whereDate('due_on', '<=', Carbon::today()->addDays(3)->toDateString())->count();
+
+        if ($overdue === 0 && $soon === 0) {
+            return null;
+        }
+
+        return [
+            'text' => $overdue > 0
+                ? trans_choice('accounts::obligation.notice_overdue', $overdue, ['count' => $overdue])
+                : trans_choice('accounts::obligation.notice_soon', $soon, ['count' => $soon]),
+            'url' => Route::has('accounts.obligation.index')
+                ? route('accounts.obligation.index', ['tab' => $overdue > 0 ? 'overdue' : 'open'])
+                : null,
+            'tone' => $overdue > 0 ? 'danger' : 'warning',
         ];
     }
 }

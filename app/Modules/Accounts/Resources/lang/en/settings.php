@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 return [
     'opening_to_capital' => 'Opening balances (customer dues, opening stock, account balances) go to the owner capital — off sends them to retained earnings',
+    'ait_deposit_day' => 'Withheld income tax (AIT) treasury deposit due — day of the next month',
+    'vds_deposit_day' => 'Withheld VAT (VDS) treasury deposit due — day of the next month',
+    'mushak_66_issue_day' => 'Mushak-6.6 certificate to the supplier due — day of the next month',
     'backdate_days' => 'How many days back an entry may be dated',
     'cash_ceiling_enabled' => 'Cash ceiling per person',
     'cash_ceiling_blocks' => 'Block money in over the ceiling (otherwise only warn)',

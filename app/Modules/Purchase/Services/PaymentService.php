@@ -23,6 +23,8 @@ use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PaymentLine;
+use App\Modules\Accounts\Models\ComplianceObligation;
+use App\Modules\Accounts\Services\ComplianceObligations;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -313,6 +315,7 @@ final class PaymentService
 
             $payment->update(['status' => DocumentStatus::CONFIRMED]);
             $this->markWithheldOnPayment($payment);
+            $this->raiseTaxDuties($payment);
 
             return $payment->fresh(['lines']);
         });
@@ -362,6 +365,27 @@ final class PaymentService
         }
 
         $this->unmarkWithheldOnPayment($payment);
+        app(ComplianceObligations::class)->cancelFor(Payment::drillSourceType(), (int) $payment->id, $reason);
+    }
+
+    /**
+     * ⭐ কাটা কর/ভ্যাটের করণীয় — কোষাগারে জমা (AIT আর VDS আলাদা, শেষ তারিখও আলাদা সেটিংয়ে) আর VDS কাটলে সরবরাহকারীকে মূসক-৬.৬
+     * (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)। ⓘ কেবল সত্যি কাটা হলে; একই পরিশোধে দ্বিতীয়বার ডাকলেও নতুন সারি নয়।
+     */
+    private function raiseTaxDuties(Payment $payment): void
+    {
+        $duties = app(ComplianceObligations::class);
+        $ait = (string) ($payment->ait_amount ?? '0');
+        $vds = (string) ($payment->vds_amount ?? '0');
+        $raise = fn (string $kind, string $subject, string $amount) => $duties->raise(
+            (int) $payment->company_id, $payment->branch_id === null ? null : (int) $payment->branch_id,
+            Payment::drillSourceType(), (int) $payment->id, (string) $payment->document_no,
+            $kind, $subject, $amount, $payment->trx_date,
+        );
+
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, $ait);
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, $vds);
+        $raise(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, $vds);
     }
 
     /**
@@ -502,6 +526,8 @@ final class PaymentService
                 'cancel_reason' => $reason,
             ]);
             $this->unmarkWithheldOnPayment($payment);
+            // ⛔ কাটা বাতিল, তাই জমা আর ৬.৬-এর খোলা করণীয়ও ([[ComplianceObligations::cancelFor()]])
+            app(ComplianceObligations::class)->cancelFor(Payment::drillSourceType(), (int) $payment->id, $reason);
 
             return $payment->fresh(['lines']);
         });
@@ -584,6 +610,7 @@ final class PaymentService
             'status' => DocumentStatus::CONFIRMED,
         ])->save();
         $this->markWithheldOnPayment($payment);
+        $this->raiseTaxDuties($payment);
 
         return $payment->fresh(['lines', 'cheque']);
     }
