@@ -310,7 +310,8 @@ final class ImageEngine
             }
         }
 
-        return $smallest ?? throw new RuntimeException('image.not_an_image');
+        // ⓘ ধাপের তালিকা খালি নয়, তাই প্রথম ঘুরেই হয় ফেরে, নয় $smallest বসে — এখানে সেটা কখনো null নয় (phpstan L1, ২২ অক্টোবর ২০২৬)
+        return $smallest;
     }
 
     /**

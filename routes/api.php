@@ -223,6 +223,8 @@ Route::prefix('v1')
          * প্রতিটা দরজা নিজে নিজের অনুমতি দেখে ([[MeController]])।
          */
         Route::get('/me', MeController::class)->name('me');
+        // ⭐ নিজের ভাষা — ওয়েবের একই নিয়মে ([[UserLocale]], ০.৪.৪৩)
+        Route::patch('/me/locale', \App\Http\Controllers\Api\MeLocaleController::class)->name('me.locale');
 
         /*
          * ⭐ প্রোফাইল মেনু — আমার ছবি আর আমার ফোনগুলো (অ্যাপ ০.৪.৪১; a6, ২০ অক্টোবর ২০২৬)।
