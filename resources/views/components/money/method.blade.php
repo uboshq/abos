@@ -66,9 +66,21 @@
     $valueDate = $dateOf($was('value_date', $record === null ? today() : null));
     $charge = (string) $was($chargeField, '');
     $notes = \App\Modules\Accounts\Models\CashCount::DENOMINATIONS;
+
+    /*
+     * ⛔ পদ্ধতির ঘরের কলাম বাক্সের নিজের চওড়া ধরে, পর্দার চওড়া ধরে নয় — fe, ২২ অক্টোবর ২০২৬ (চূড়ান্ত ছবি, ১৩৬৬)।
+     * খরচের ভাউচারে বাক্সটা অর্ধেক কলামে (~৫১০px), অথচ `lg:grid-cols-4` পর্দা দেখে চারটা ঘর এক সারিতে বসাত: TrxID
+     * "NP26102104", মূল্য-তারিখ "22-10-2" — কাটা। ⭐ বাক্স নিজে container; ঘর চারটা কেবল ৪৮rem-এর বেশি জায়গায়, ২০rem-এর
+     * বেশিতে দুইটা। ⚠️ rem এখানে মূলের ফন্ট ধরে, আর মূল ফন্ট বড় পর্দায় ২০px ([[app.css]] html) — তাই ২৮rem মানে ৫৬০px, খরচের
+     * ৫১২px বাক্সে দুই কলামও আসত না (মাপা)। ⓘ `inline` (টাকা নেওয়া/দেওয়ার পর্দা) `contents` — container হতে পারে না, তাই
+     * সেখানে আগের নিয়ম অক্ষত।
+     */
+    $fourUp = $inline ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4' : 'grid gap-3 @xs:grid-cols-2 @3xl:grid-cols-4';
+    $twoWide = $inline ? 'lg:col-span-2' : '@3xl:col-span-2';
+    $threeUp = $inline ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-3 @xs:grid-cols-2 @2xl:grid-cols-3';
 @endphp
 
-<div @class(['contents' => $inline, 'flex flex-col gap-3' => ! $inline]) data-money-method
+<div @class(['contents' => $inline, '@container flex flex-col gap-3' => ! $inline]) data-money-method
      x-data="moneyMethod({ method: @js($chosen), charge: @js($charge), chequeDate: @js($dateOf($was('instrument_date'))), amountField: @js($amountField), chargeField: @js($chargeField), moneyField: @js($moneyField ?? ''), direction: @js($direction), notes: @js((array) ($was('note_counts') ?? [])) })"
      data-line-in="{{ __('money.charge_line.in') }}"
      data-line-out="{{ __('money.charge_line.out') }}"
@@ -124,8 +136,8 @@
 
     {{-- ── MFS: TrxID আর চার্জ ── --}}
     <template x-if="method === 'mfs'">
-        <div data-method-block="mfs" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
-            <div class="lg:col-span-2">
+        <div data-method-block="mfs" @class([$fourUp, 'order-3 col-span-full' => $inline])>
+            <div class="{{ $twoWide }}">
                 <x-ui.field name="instrument_no" :label="__('money.field.trx_id')" :value="$was('instrument_no')"
                             :hint="__('money.hint.reference_needed')" required />
             </div>
@@ -136,7 +148,7 @@
 
     {{-- ── ব্যাংক ট্রান্সফার: মোড · রেফারেন্স · মূল্য-তারিখ · চার্জ (নকশার এক সারি) ── --}}
     <template x-if="method === 'transfer'">
-        <div data-method-block="transfer" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
+        <div data-method-block="transfer" @class([$fourUp, 'order-3 col-span-full' => $inline])>
             <x-ui.select name="transfer_mode_id" :label="__('money.field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
             <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
@@ -152,7 +164,7 @@
 
     {{-- ── ব্যাংকে নগদ জমা: জমা স্লিপ আর মূল্য-তারিখ ── --}}
     <template x-if="method === 'deposit'">
-        <div data-method-block="deposit" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
+        <div data-method-block="deposit" @class([$fourUp, 'order-3 col-span-full' => $inline])>
             <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
                         :hint="__('money.hint.reference_needed')" required />
             <label class="block">
@@ -167,7 +179,7 @@
     {{-- ── চেক: নম্বর · তারিখ · ব্যাংক ── --}}
     <template x-if="method === 'cheque'">
         <div data-method-block="cheque" @class(['flex flex-col gap-2', 'order-3 col-span-full' => $inline])>
-            <div class="grid gap-3 sm:grid-cols-3">
+            <div class="{{ $threeUp }}">
                 <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
                 {{-- ⓘ দেশের তারিখের ঘর ([[ui.date]]), ব্রাউজারেরটা নয়; মান `chequeDate`-এ যায় আগাম চেকের কথার জন্য --}}
                 <label class="block">

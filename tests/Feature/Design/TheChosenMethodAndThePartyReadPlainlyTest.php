@@ -51,6 +51,23 @@ final class TheChosenMethodAndThePartyReadPlainlyTest extends TestCase
         $this->assertSame('Party', trans('accounts::field.payee_name_party', [], 'en'), '⛔ ইংরেজিতে পক্ষ আলাদা নামে');
     }
 
+    /**
+     * ⛔ খরচের ভাউচারে বাক্সটা অর্ধেক কলামে (৫১২px), অথচ ঘরের কলাম পর্দার চওড়া (`lg:`) ধরত — ট্রান্সফারের চার ঘর এক সারিতে,
+     * TrxID "NP26102104" আর মূল্য-তারিখ "22-10-2" কাটা (চূড়ান্ত ছবি, ২২ অক্টোবর ২০২৬)। ⭐ এখন বাক্স নিজে container, আর কলাম
+     * বাক্সের চওড়া ধরে; মাপা: খরচে দুই কলাম (২৪৮px), রসিদ-পরিশোধে চার (১,০৮৬px বাক্স), কোনো ঘরের লেখা কাটা নয়।
+     */
+    public function test_the_method_fields_count_their_own_room_not_the_screens(): void
+    {
+        $box = File::get(resource_path('views/components/money/method.blade.php'));
+
+        $this->assertStringContainsString("'@container flex flex-col gap-3' => ! \$inline", $box,
+            '⛔ টাকার বাক্স আর container নয় — অর্ধেক কলামেও ঘরগুলো পর্দার চওড়া ধরে চারটা এক সারিতে বসে, লেখা কাটা পড়ে');
+        $this->assertStringContainsString("'grid gap-3 @xs:grid-cols-2 @3xl:grid-cols-4'", $box,
+            '⛔ পদ্ধতির ঘরের কলাম আর বাক্সের চওড়া ধরে না');
+        $this->assertSame(3, substr_count($box, '@class([$fourUp,'),
+            '⛔ MFS, ট্রান্সফার আর নগদ জমার তিন বাক্স একই নিয়মে নেই — কোনোটা আবার পর্দার চওড়া ধরছে');
+    }
+
     public function test_who_carried_it_fits_its_box(): void
     {
         $this->assertSame('সরাসরি — কেউ যায়নি', trans('accounts::field.carried_by_none', [], 'bn'),
