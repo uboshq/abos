@@ -1744,6 +1744,10 @@ class _Section extends StatelessWidget {
 }
 
 /// চাপলে বাছাই খোলে — লেবেলসহ ঘর (গ্রাহক, তারিখ)
+///
+/// <p>⛔ ফাঁকা ঘরে কেবল লেবেল (Material 3-এর ঘর): লেবেল তখন ঘরের ভেতরে বসে, তাই সেখানে আর কোনো লেখা আঁকা নয় — 0.4.45-এ
+/// "বাছুন" লেখাটা লেবেলের উপরেই আঁকা হত, মালিকের ফোনে "Customer *" আর "Choose a customer" একটার উপর আরেকটা (fe, ২২ অক্টোবর
+/// ২০২৬)। বাছার পরে লেবেল উপরে ওঠে, নাম নিচে। [placeholder] পর্দা-পাঠকের ইঙ্গিত হয়ে থাকে, আঁকা হয় না।
 class _Tappable extends StatelessWidget {
   const _Tappable({super.key, required this.label, this.value, this.placeholder, required this.icon, this.onTap});
 
@@ -1756,6 +1760,7 @@ class _Tappable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
+        hint: value == null ? placeholder : null,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(4),
@@ -1764,7 +1769,7 @@ class _Tappable extends StatelessWidget {
             child: InputDecorator(
               decoration: InputDecoration(labelText: label, suffixIcon: Icon(icon), enabled: onTap != null),
               isEmpty: value == null,
-              child: value ?? Text(placeholder ?? '', style: TextStyle(color: context.palette.onSurfaceMuted)),
+              child: value ?? const SizedBox.shrink(),
             ),
           ),
         ),

@@ -39,7 +39,8 @@ Future<void> _open(WidgetTester tester,
     bool review = false,
     bool posted = false,
     double textScale = 1,
-    String? rounding}) async {
+    String? rounding,
+    bool empty = false}) async {
   tester.view.physicalSize = Size(412, (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -75,6 +76,7 @@ Future<void> _open(WidgetTester tester,
     ),
   ));
   await tester.pumpAndSettle();
+  if (empty) return;
   await tester.tap(find.byKey(const ValueKey('collect-customer')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('collect-pick-cus-1')));
@@ -160,6 +162,37 @@ void main() {
       await _open(tester, locale: locale, review: true, rounding: '0.51');
       expect(find.text(tag == 'bn' ? 'সইয়ে পাঠান' : 'Send for signature'), findsOneWidget);
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_review_sign_412_light_$tag.png'));
+    });
+  }
+
+  // ⛔ ফাঁকা পর্দা — গ্রাহক এখনো বাছা হয়নি (0.4.45-এ মালিকের ফোনে "Customer *" আর "Choose a customer" একটার উপর আরেকটা;
+  // আগের ছবিগুলোয় গ্রাহক আগেই বাছা ছিল, তাই ধরা পড়েনি — fe, ২২ অক্টোবর ২০২৬)
+  for (final (locale, tag, label, pick) in [
+    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন'),
+    (AppLocale.english, 'en', 'Customer *', 'Choose a customer'),
+  ]) {
+    testWidgets('the empty customer field draws its label alone, never the label and a placeholder on one line, $tag', (tester) async {
+      await _open(tester, locale: locale, empty: true);
+      final field = find.byKey(const ValueKey('collect-customer'));
+      final decorator = tester.widget<InputDecorator>(find.descendant(of: field, matching: find.byType(InputDecorator)));
+      expect(decorator.isEmpty, isTrue, reason: 'ফাঁকা ঘরে লেবেল ভেতরে বসে');
+      expect(find.descendant(of: field, matching: find.text(label)), findsOneWidget);
+      expect(find.descendant(of: field, matching: find.text(pick)), findsNothing,
+          reason: '⛔ ফাঁকা ঘরে লেবেলের উপর "বাছুন" লেখাও আঁকা — দুটো একটার উপর আরেকটা');
+      expect(find.descendant(of: field, matching: find.byType(Text)).evaluate().length, 1,
+          reason: '⛔ ঘরের ভেতরে লেবেল ছাড়া আরও লেখা');
+      expect(tester.getSemantics(field), isSemantics(hint: pick, isButton: true, hasTapAction: true, label: label),
+          reason: 'পর্দা-পাঠক "বাছুন" শোনে, যদিও আঁকা নয়');
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_empty_412_light_$tag.png'));
+
+      // বাছার পরে লেবেল উপরে, নাম নিচে
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('collect-pick-cus-1')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<InputDecorator>(find.descendant(of: field, matching: find.byType(InputDecorator))).isEmpty, isFalse);
+      expect(find.descendant(of: field, matching: find.text(label)), findsOneWidget);
+      expect(find.descendant(of: field, matching: find.textContaining('করিম স্টোর', findRichText: true)), findsWidgets);
     });
   }
 
