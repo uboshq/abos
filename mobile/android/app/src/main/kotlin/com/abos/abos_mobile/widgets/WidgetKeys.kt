@@ -42,31 +42,11 @@ object WidgetKeys {
 
     val ALL: List<String> = RECEIVERS.keys.toList()
 
-    /** The picker's name for each widget — the same words as res/values/strings.xml (widget_<key>_name). */
-    val LABELS: Map<String, String> = mapOf(
-        "sales_today" to "আজকের বিক্রি",
-        "money_in_hand" to "টাকা হাতে",
-        "approvals" to "সইয়ের অপেক্ষা",
-        "big_dues" to "বড় বকেয়া",
-        "stock_alerts" to "মজুদ সতর্কতা",
-        "challans_today" to "আজকের চালান",
-        "notices" to "নোটিশ",
-        "quick_actions" to "দ্রুত কাজ",
-        "target" to "লক্ষ্য বনাম অর্জন",
-        "sync_state" to "সিঙ্কের অবস্থা",
-        "collections_today" to "আজকের আদায়",
-        "credit_limits" to "বাকির সীমা",
-        "cheques" to "চেক",
-        "sr_board" to "SR তালিকা",
-        "goods_incoming" to "মাল আসছে",
-        "expenses" to "খরচ",
-        "profit" to "লাভ",
-        "offers" to "অফার",
-        "attendance" to "উপস্থিতি",
-        "bank_reconcile" to "ব্যাংক মেলানো",
-        "principal_commission" to "প্রিন্সিপালের কমিশন",
-        "owner_board" to "মালিকের পূর্ণ পর্দা",
-    )
+    /*
+     * The widget's own name (drawn before its first sync) lives with the other
+     * widget words in res/values/widget_words.xml, Bangla and English
+     * (WidgetWords.TITLES); the picker's name in strings.xml points at it.
+     */
 
     /** SharedPreferences (home_widget's own store, HomeWidgetPlugin.getData) — what Dart writes. */
     const val DOC_PREFIX = "doc_"

@@ -91,6 +91,8 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val snapshot = currentState<DocSnapshot>()
+            // ⭐ মানুষের ভাষা (0.4.43) — অ্যাপের বাছাই `widget_locale`; না থাকলে বাংলা ([WidgetWords])
+            val words = Words.of(context, key, snapshot.english)
             // ⭐ মানুষের বাছাই — "ফোনের মতো" হলে ফোনের নিজের রং (Material You, দিন/রাত); "আলো" বা "অন্ধকার" হলে সেই
             // পরিবারই, ফোন যা-ই বলুক (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
             val forced = snapshot.theme.takeIf { it == "light" || it == "dark" }
@@ -99,7 +101,7 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
                 "dark" -> fixedColors(context, dark = true)
                 else -> null
             }
-            CompositionLocalProvider(LocalForcedTheme provides forced) {
+            CompositionLocalProvider(LocalForcedTheme provides forced, LocalWords provides words) {
                 if (colors == null) {
                     GlanceTheme { Body(key, snapshot) }
                 } else {
@@ -125,8 +127,6 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
 
         const val STALE_MILLIS = 60L * 60L * 1000L
         const val HIDDEN = "••••"
-        const val PLACEHOLDER = "খুলে একবার সিঙ্ক করুন"
-        const val STALE_CHIP = "পুরনো"
     }
 }
 
@@ -135,7 +135,15 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
  * Deliberately no equals(): every read is a new value, so Glance recomposes on
  * every update even when the JSON is the same (the lock may have changed).
  */
-class DocSnapshot(val json: String?, val amountsHidden: Boolean, val locked: Boolean, val now: Long, val theme: String? = null)
+class DocSnapshot(
+    val json: String?,
+    val amountsHidden: Boolean,
+    val locked: Boolean,
+    val now: Long,
+    val theme: String? = null,
+    /** The app's language is English (`widget_locale` = "en"); else Bangla. */
+    val english: Boolean = false,
+)
 
 /**
  * The snapshot comes straight from home_widget's SharedPreferences on every
@@ -164,6 +172,7 @@ class DocStateDefinition(private val key: String) : GlanceStateDefinition<DocSna
             locked = LockWatch.locked(context),
             now = System.currentTimeMillis(),
             theme = prefs.getString(WidgetKeys.THEME, null),
+            english = WidgetWords.english(prefs),
         )
     } catch (t: Throwable) {
         DocSnapshot(null, amountsHidden = true, locked = true, now = System.currentTimeMillis())
@@ -198,6 +207,9 @@ private fun openAction(context: Context, key: String, link: String?): Action =
 // ---------------------------------------------------------------- colours
 
 private data class Look(val stale: Boolean, val hide: Boolean, val now: Long = 0L, val wide: Boolean = false)
+
+/** The renderer's own words for this draw, in the person's language — set in provideGlance; Bangla if unset. */
+private val LocalWords = staticCompositionLocalOf<Words?> { null }
 
 /** "light" / "dark" যখন মানুষ বেছে নিয়েছেন; null মানে ফোনের মতো */
 private val LocalForcedTheme = staticCompositionLocalOf<String?> { null }
@@ -308,8 +320,9 @@ private fun Body(key: String, snap: DocSnapshot) {
 @Composable
 private fun Placeholder(key: String, root: GlanceModifier) {
     Column(modifier = root, verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-        PlainText(WidgetKeys.LABELS[key] ?: "ABOS", 13, GlanceTheme.colors.onSurface, bold = true)
-        PlainText(DocWidget.PLACEHOLDER, 12, GlanceTheme.colors.onSurfaceVariant)
+        val words = words()
+        PlainText(words.title ?: "ABOS", 13, GlanceTheme.colors.onSurface, bold = true)
+        PlainText(words.placeholder, 12, GlanceTheme.colors.onSurfaceVariant)
     }
 }
 
@@ -322,7 +335,7 @@ private fun Header(doc: WidgetDocModel, look: Look) {
             bold = true, modifier = GlanceModifier.defaultWeight(),
         )
         if (look.stale) {
-            Chip(DocText(DocWidget.STALE_CHIP, false, Tone.WARN), Look(stale = false, hide = false))
+            Chip(DocText(words().stale, false, Tone.WARN), Look(stale = false, hide = false))
             Spacer(GlanceModifier.width(4.dp))
         }
         /* The corner ("7", "চালু 3") sits right; on a two-column widget it takes
@@ -332,7 +345,7 @@ private fun Header(doc: WidgetDocModel, look: Look) {
         }
         val showTime = doc.asOf != null && (doc.corner == null || look.wide)
         if (showTime && doc.corner != null) Spacer(GlanceModifier.width(6.dp))
-        if (showTime) PlainText(BnTime.short(doc.asOf!!, look.now), 11, GlanceTheme.colors.onSurfaceVariant)
+        if (showTime) PlainText(BnTime.short(doc.asOf!!, look.now, words()), 11, GlanceTheme.colors.onSurfaceVariant)
     }
 }
 
@@ -444,8 +457,12 @@ private fun EmptyOrMore(text: String) {
     PlainText(text, 11, GlanceTheme.colors.onSurfaceVariant, modifier = GlanceModifier.padding(top = 2.dp))
 }
 
-private fun moreText(doc: WidgetDocModel, cut: Int): String? =
-    doc.more ?: if (cut > 0) "আরও ${BnTime.digits(cut.toString())}টা" else null
+private fun moreText(doc: WidgetDocModel, cut: Int, words: Words): String? =
+    doc.more ?: if (cut > 0) words.more(cut) else null
+
+/** This draw's words; Bangla when nothing set them (never in practice: provideGlance always does). */
+@Composable
+private fun words(): Words = LocalWords.current ?: Words.of(LocalContext.current, "", english = false)
 
 /** 2x1 and 4x1: one line — the hero, else the first row, else the first bar, else the actions. */
 @Composable
@@ -458,7 +475,7 @@ private fun OneLine(key: String, doc: WidgetDocModel, look: Look, wide: Boolean,
             hero != null -> Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 PlainText(doc.title, 11, GlanceTheme.colors.onSurfaceVariant, modifier = GlanceModifier.defaultWeight())
                 if (look.stale && wide) {
-                    Chip(DocText(DocWidget.STALE_CHIP, false, Tone.WARN), Look(false, false))
+                    Chip(DocText(words().stale, false, Tone.WARN), Look(false, false))
                     Spacer(GlanceModifier.width(4.dp))
                 }
                 DText(hero.figure, look, 16, bold = true, align = TextAlign.End)
@@ -484,7 +501,7 @@ private fun Boxed(key: String, doc: WidgetDocModel, look: Look, maxRows: Int, ro
             doc.rows.isNotEmpty() -> {
                 val fit = doc.rows.take(maxRows)
                 fit.forEach { RowLine(key, it, look, withSecond = false) }
-                moreText(doc, doc.rows.size - fit.size)?.let { EmptyOrMore(it) }
+                moreText(doc, doc.rows.size - fit.size, words())?.let { EmptyOrMore(it) }
             }
             doc.bars.isNotEmpty() -> doc.bars.take(if (doc.hero == null) maxRows else maxRows - 1).forEach { BarLine(it, look) }
             doc.actions.isNotEmpty() && doc.hero == null -> Actions(key, doc.actions, if (maxRows >= 3) 4 else 2, 40, withLabels = maxRows >= 3)
@@ -503,7 +520,7 @@ private fun Tall(key: String, doc: WidgetDocModel, look: Look, root: GlanceModif
         val fit = doc.rows.take(8)
         fit.forEach { RowLine(key, it, look, withSecond = true) }
         if (doc.rows.isEmpty()) doc.empty?.let { EmptyOrMore(it) }
-        moreText(doc, doc.rows.size - fit.size)?.let { EmptyOrMore(it) }
+        moreText(doc, doc.rows.size - fit.size, words())?.let { EmptyOrMore(it) }
         if (doc.bars.isNotEmpty()) {
             Spacer(GlanceModifier.height(4.dp))
             doc.bars.take(4).forEach { BarLine(it, look) }

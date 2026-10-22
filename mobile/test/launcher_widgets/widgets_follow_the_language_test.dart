@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/launcher_widgets/approvals_launcher_widget.dart';
+import 'package:abos_mobile/core/launcher_widgets/hub/widget_hub.dart';
 import 'package:abos_mobile/core/launcher_widgets/kinds/all_kinds.dart';
 import 'package:abos_mobile/core/launcher_widgets/kinds/credit_limits.dart';
 import 'package:abos_mobile/core/launcher_widgets/kinds/offers.dart';
@@ -184,6 +186,86 @@ void main() {
     expect(bn[ApprovalsLauncherWidget.asOf], 'সকাল 10:00 পর্যন্ত');
   });
 
-  // ⓘ the Kotlin side (WidgetWords.kt, widget_words.xml) comes with the Android commit after fe's review
+  group('the Kotlin side', () {
+    const kotlin = 'android/app/src/main/kotlin/com/abos/abos_mobile';
+    const res = 'android/app/src/main/res';
+    String read(String path) => File(path).readAsStringSync();
 
+    Map<String, String> strings(String path) => {
+          for (final m in RegExp(r'<string name="([a-z0-9_]+)">(.*?)</string>', dotAll: true).allMatches(read(path)))
+            m[1]!: m[2]!,
+        };
+
+    test('it reads the language Dart writes, and only "en" is English', () {
+      final words = read('$kotlin/widgets/WidgetWords.kt');
+      expect(words, contains('const val LOCALE = "${WidgetHub.localeKey}"'));
+      expect(words, contains('getString(LOCALE, null) == "en"'), reason: 'missing or anything else = Bangla');
+      expect(read('$kotlin/widgets/DocWidget.kt'), contains('english = WidgetWords.english(prefs)'));
+      expect(read('$kotlin/TodayWidgetProvider.kt'), contains('WidgetWords.english(widgetData)'));
+      expect(read('$kotlin/ApprovalsWidgetProvider.kt'), contains('WidgetWords.english(widgetData)'));
+    });
+
+    test('every word has its English twin, the English has no Bengali, and there is no values-en folder', () {
+      final words = strings('$res/values/widget_words.xml');
+      final all = {...strings('$res/values/strings.xml'), ...words};
+      final twins = words.keys.where((k) => k.endsWith('_en')).toList();
+      expect(twins.length, greaterThan(40));
+      for (final en in twins) {
+        final bn = en.substring(0, en.length - 3);
+        expect(all[bn], isNotNull, reason: '$en has no Bangla word $bn');
+        expect(bengali.hasMatch(all[bn]!), isTrue, reason: '$bn should be the Bangla word');
+        expect(bengali.hasMatch(words[en]!), isFalse, reason: en);
+        expect(words[en]!.trim(), isNotEmpty, reason: en);
+      }
+      for (final bn in words.keys.where((k) => !k.endsWith('_en'))) {
+        expect(words['${bn}_en'], isNotNull, reason: '$bn has no English twin');
+      }
+      expect(Directory('$res/values-en').existsSync(), isFalse,
+          reason: 'Android would pick values-en by the phone\'s language, not the app\'s');
+    });
+
+    test('every kit widget has its title in both languages, and the picker name points at the Bangla one', () {
+      final words = strings('$res/values/widget_words.xml');
+      final names = strings('$res/values/strings.xml');
+      final kotlinWords = read('$kotlin/widgets/WidgetWords.kt');
+      for (final key in allKinds.map((k) => k.key)) {
+        expect(words['widget_${key}_title'], isNotNull, reason: key);
+        expect(words['widget_${key}_title_en'], isNotNull, reason: key);
+        expect(names['widget_${key}_name'], '@string/widget_${key}_title', reason: key);
+        expect(kotlinWords, contains('"$key" to Word(R.string.widget_${key}_title, R.string.widget_${key}_title_en)'), reason: key);
+      }
+    });
+
+    test('every fixed label of the two older widgets is set from Kotlin in the language', () {
+      final kotlinWords = read('$kotlin/widgets/WidgetWords.kt') + read('$kotlin/ApprovalsWidgetProvider.kt');
+      for (final layout in ['today_widget.xml', 'approvals_widget.xml']) {
+        final ids = RegExp(r'@\+id/(label_[a-z_]+)').allMatches(read('$res/layout/$layout')).map((m) => m[1]!).toList();
+        expect(ids, isNotEmpty, reason: layout);
+        for (final id in ids) {
+          expect(kotlinWords, contains('R.id.$id'), reason: '$layout: $id is never set');
+        }
+      }
+    });
+
+    test('no Kotlin widget source writes Bengali by hand — it comes from widget_words.xml', () {
+      final digitTable = RegExp(r'const val DIGITS = "[০-৯]{10}"');
+      for (final f in [
+        ...Directory('$kotlin/widgets').listSync().whereType<File>(),
+        File('$kotlin/TodayWidgetProvider.kt'),
+        File('$kotlin/ApprovalsWidgetProvider.kt'),
+      ]) {
+        final lines = f.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          final code = line.trimLeft();
+          if (code.startsWith('//') || code.startsWith('*') || code.startsWith('/*')) continue;
+          if (digitTable.hasMatch(line)) continue;
+          final beforeComment = line.split('//').first;
+          for (final s in RegExp(r'"([^"]*)"').allMatches(beforeComment)) {
+            expect(bengali.hasMatch(s[1]!), isFalse, reason: '${f.path}:${i + 1}: ${line.trim()}');
+          }
+        }
+      }
+    });
+  });
 }

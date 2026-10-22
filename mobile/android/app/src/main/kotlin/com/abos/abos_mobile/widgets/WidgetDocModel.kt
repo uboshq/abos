@@ -3,6 +3,7 @@ package com.abos.abos_mobile.widgets
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 
 /**
@@ -119,26 +120,30 @@ data class WidgetDocModel(
     }
 }
 
-/** Bengali words for numbers and times on the widget (money stays as Dart wrote it, English digits). */
+/**
+ * Numbers and times on the widget in the person's language (money stays as
+ * Dart wrote it, English digits): Bangla digits in Bangla, as before; English
+ * digits in English (0.4.43).
+ */
 object BnTime {
     private const val DIGITS = "০১২৩৪৫৬৭৮৯"
 
-    fun digits(s: String): String = buildString {
+    fun digits(s: String, english: Boolean = false): String = if (english) s else buildString {
         s.forEach { c -> append(if (c in '0'..'9') DIGITS[c - '0'] else c) }
     }
 
-    /** "১০:৪২" today (12-hour, as clocks are read here), "গতকাল", else "১৮/১০". */
-    fun short(asOf: Long, now: Long): String {
+    /** "১০:৪২" / "10:42" today (12-hour, as clocks are read here), the word for yesterday, else "১৮/১০" / "18/10". */
+    fun short(asOf: Long, now: Long, words: Words): String {
         val then = Calendar.getInstance().apply { timeInMillis = asOf }
         val today = Calendar.getInstance().apply { timeInMillis = now }
         fun sameDay(a: Calendar, b: Calendar) =
             a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
         if (sameDay(then, today)) {
             val h = then.get(Calendar.HOUR).let { if (it == 0) 12 else it }
-            return digits("%d:%02d".format(h, then.get(Calendar.MINUTE)))
+            return digits(String.format(Locale.ROOT, "%d:%02d", h, then.get(Calendar.MINUTE)), words.english)
         }
         val yesterday = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
-        if (sameDay(then, yesterday)) return "গতকাল"
-        return digits("%d/%d".format(then.get(Calendar.DAY_OF_MONTH), then.get(Calendar.MONTH) + 1))
+        if (sameDay(then, yesterday)) return words.yesterday
+        return digits(String.format(Locale.ROOT, "%d/%d", then.get(Calendar.DAY_OF_MONTH), then.get(Calendar.MONTH) + 1), words.english)
     }
 }

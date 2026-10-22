@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import android.widget.RemoteViews
+import com.abos.abos_mobile.widgets.WidgetWords
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
@@ -49,6 +50,12 @@ class TodayWidgetProvider : HomeWidgetProvider() {
                     }
                     setTextViewText(R.id.widget_company, widgetData.getString(KEY_COMPANY, ""))
                     setTextViewText(R.id.widget_asof, widgetData.getString(KEY_AS_OF, ""))
+
+                    // The fixed labels in the app's language (widget_locale; Bangla when unset), 0.4.43
+                    val english = WidgetWords.english(widgetData)
+                    WidgetWords.TODAY_LABELS.forEach { (viewId, word) ->
+                        setTextViewText(viewId, word.get(context, english))
+                    }
 
                     // The whole widget opens the day's page, not just one number.
                     // Opening the app refreshes these figures on the way, so the
