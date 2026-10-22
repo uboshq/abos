@@ -41,7 +41,7 @@ final class TheApprovalAsksBeforeEveryHardActionTest extends TestCase
         'approval.inbox.send_back' => 'confirm_send_back',
         'approval.inbox.forward' => 'confirm_forward',
         'approval.inbox.withdraw' => 'confirm_withdraw',
-        'approval.inbox.bulk' => 'confirm_bulk',
+        'approval.inbox.bulk' => 'confirm_bulk_counted',
         'approval.flow.destroy' => 'confirm_flow_delete',
         'approval.delegation.destroy' => 'confirm_delegation_stop',
         'approval.limit.destroy' => 'limit_remove_confirm',

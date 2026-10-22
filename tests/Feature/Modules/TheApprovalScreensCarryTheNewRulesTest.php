@@ -292,6 +292,12 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
             ->assertSee('name="ids[]" value="'.$paper->id.'"', escape: false)
             ->assertDontSee('name="ids[]" value="'.$money->id.'"', escape: false);
 
+        // ⓘ দফা ১৩ (fe, ২২ অক্টোবর ২০২৬): একসাথে সইয়ে সইদাতার টাকার সীমা থাকতেই হয় — নইলে কড়া দিকে বাদ ('no_limit')
+        $bulkRole = \Spatie\Permission\Models\Role::findOrCreate('bulk-signer');
+        $this->boss->assignRole($bulkRole);
+        \App\Models\ApprovalLimit::query()->create(['company_id' => $this->company->id, 'role_id' => $bulkRole->id,
+            'module' => 'sales', 'max_amount' => '100000000']);
+
         $this->actingAs($this->boss)
             ->post(route('approval.inbox.bulk'), ['ids' => [$paper->id, $money->id]])
             ->assertRedirect(route('approval.inbox.index'));

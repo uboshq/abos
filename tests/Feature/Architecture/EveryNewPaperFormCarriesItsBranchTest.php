@@ -41,6 +41,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'accounts.period.close' => 'company period lock, no paper',
         'appearance.save' => 'personal appearance',
         'approval.inbox.bulk' => 'signs existing papers in their own branch',
+        'approval.inbox.bulk_review' => 'shows which papers a bulk signature would take and why others are left out; writes nothing',
         'branch.switch' => 'the header switch itself',
         'company.switch' => 'the header switch itself',
         'customer.binding.handover' => 'moves dealers between salesmen, no paper',

@@ -24,6 +24,8 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
 
     /* ⭐ একসাথে অনেকগুলো — স্থির পথ, `{approval}`-এর আগে */
     Route::post('/bulk-approve', [ApprovalInboxController::class, 'bulkApprove'])->name('inbox.bulk');
+    // ⭐ দফা ১৩: সইয়ের আগে দেখা — কয়টা, মোট কত, কোনগুলো কেন বাদ (কিছু লেখে না)
+    Route::post('/bulk-review', [ApprovalInboxController::class, 'bulkReview'])->name('inbox.bulk_review');
 
     /*
      * রিপোর্ট — `{approval}` ধরার আগে, স্থির পথ আগে (সেকশন ১৯.৬)।
