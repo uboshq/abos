@@ -614,17 +614,29 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame([(int) $other->id], $branches, '⛔ দফা ১৪: খাতার সারি গ্রাহকের শাখার বাইরে বসল');
     }
 
-    /** দফা ২২ (বানানো হয়নি, D4) — অন্য শাখার টিলে আদায় আজকের মতো বাংলায় কারণসহ ফেরত; আন্তঃশাখার কোনো সারি নয় */
+    /**
+     * দফা ২২ (বানানো হয়নি, D4) — অন্য শাখার টিলে আদায় আজকের মতো বাংলায় কারণসহ ফেরত; আন্তঃশাখার কোনো সারি নয়।
+     * ⓘ দুই পা (Mac, ২২ অক্টোবর ২০২৬): (১) কর্তার কাজের শাখা নেই আর গ্রাহক শাখাহীন — আদায়ের শাখাই নেই; আগে নিয়মটা তখন বাদ পড়ত
+     * আর আদায় শাখাহীন হয়ে অন্য শাখার টিলে বসত (Mac-এর লাল); (২) কর্তার কাজের শাখা প্রধান শাখা — গ্রাহকের শাখা সেটাই, টিল অন্য শাখার।
+     * ⓘ সব আদায়ের কাগজ গোনা হয় শাখা পেরিয়ে — শাখাহীন কাগজ যেন গোনার বাইরে না পড়ে।
+     */
     public function test_item_22_is_not_built_so_another_branchs_till_is_refused_in_bengali(): void
     {
         $other = $this->otherBranch();
         $till = app(CashTillService::class)->create(['name_en' => 'Other branch box', 'holder_id' => $this->owner->id]);
         $till->forceFill(['branch_id' => $other->id])->save();
-        $before = Collection::query()->count();
+        $before = Collection::acrossBranches()->count();
 
+        $this->assertNull($this->maker->current_branch_id, 'প্রস্তুতিটাই ভুল — কর্তার কাজের শাখা আছে');
         $this->send(['account_id' => $till->account_id, 'amount' => '250', 'lines_given' => '1', 'post' => '1']);
 
-        $this->assertSame($before, Collection::query()->count(), '⛔ দফা ২২: অন্য শাখার টিলে আদায় বসল — আন্তঃশাখার হিসাব মালিকের সিদ্ধান্তের অপেক্ষায়');
+        $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ দফা ২২: শাখাহীন আদায় অন্য শাখার টিলে বসল — আদায়ের শাখা না থাকলে নিয়মটাই বাদ পড়ল');
+        $this->assertSame(__('sales::collection_rules.other_branch_account'), $this->said('account_id'), '⛔ দফা ২২: শাখাহীন আদায়, অন্য শাখার খাত — বাংলায় কারণ বলেনি');
+
+        $this->maker->forceFill(['current_branch_id' => $this->company->defaultBranch()->id])->save();
+        $this->send(['account_id' => $till->account_id, 'amount' => '250', 'lines_given' => '1', 'post' => '1']);
+
+        $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ দফা ২২: প্রধান শাখার আদায় অন্য শাখার টিলে বসল — আন্তঃশাখার হিসাব মালিকের সিদ্ধান্তের অপেক্ষায়');
         $this->assertSame(__('sales::collection_rules.other_branch_account'), $this->said('account_id'), '⛔ দফা ২২: অন্য শাখার খাত — বাংলায় কারণ বলেনি');
     }
 

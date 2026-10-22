@@ -901,13 +901,11 @@ final class CollectionService
      *
      * ⓘ আদায় বসে গ্রাহকের শাখায় (দফা ১৪)। টাকার খাতটা অন্য শাখার টিল হলে দুই শাখার খাতা মেলাতে আন্তঃশাখার হিসাব লাগত — সেটা
      * চালু না হওয়া পর্যন্ত বাংলায় কারণসহ ফেরত। ⓘ ব্যাংক আর MFS খাত কোম্পানির, কোনো শাখার নয়; শাখাহীন টিলও সবার।
+     * ⛔ শাখাহীন আদায়ও (গ্রাহক শাখাহীন, আর যিনি নিচ্ছেন তাঁর কাজের শাখাও নেই — `users.current_branch_id` null) শাখার টিলে নয় — আগে `$branchId === null` হলে নিয়মটাই বাদ পড়ত, আর
+     * আদায় শাখাহীন খাতায় বসে টাকা ঢুকত এক শাখার টিলে: সেই শাখার খাতায় টিলের টাকা দেখা যেত না (Mac, ২২ অক্টোবর ২০২৬, দফা ২২)।
      */
     private function assertMoneyInTheCustomersBranch(Account $account, ?int $branchId): void
     {
-        if ($branchId === null) {
-            return;
-        }
-
         $tillBranch = \App\Modules\Accounts\Models\CashTill::query()->withoutGlobalScopes()
             ->where('company_id', CompanyContext::id())
             ->where('account_id', $account->id)->whereNotNull('branch_id')->value('branch_id');
