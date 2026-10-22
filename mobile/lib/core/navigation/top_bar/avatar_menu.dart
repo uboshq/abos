@@ -353,12 +353,11 @@ class _ThemeRow extends StatelessWidget {
                   ButtonSegment(
                     value: t,
                     // ⓘ নমুনার মতো: "ফোনের মতো · ☀ আলো · 🌙 অন্ধকার" — বাছা ঘর রঙিন পট আর মোটা লেখায় (শুধু রঙে নয়, WCAG 1.4.1)
-                    icon: _icons[t] == null ? null : Icon(_icons[t], size: 16),
-                    // ⓘ শব্দ মাঝখানে ভাঙে না — জায়গা কম হলে একটু ছোট হয় (বড় লেখায় তো ঘরগুলো একটার নিচে একটা)
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(_label(context, t), key: ValueKey('theme-${t.name}'), maxLines: 1, softWrap: false),
-                    ),
+                    // ⛔ লেখা কখনো ছোট হয় না — আগে FittedBox(scaleDown) "অন্ধকার"-কে পাশের ঘরের চেয়ে ছোট আর সরু আঁকত
+                    // (avatar_menu_light/dark, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। জায়গা কম হলে শব্দের ফাঁকে দুই লাইনে ভাঙে; বড় লেখায়
+                    // ঘরগুলো তো একটার নিচে একটা। ⓘ আইকন লেখার ভেতরে, ButtonSegment.icon-এ নয়: সেখানে দিলে Flutter ঘরের ফাঁক নিজে
+                    // বসায় (বাঁয়ে ১২, ডানে ১৬, আইকনের পরে ৮) আর এই সারির ফাঁক মানে না — "অন্ধকার"-এর জন্য ২৮dp-ও থাকত না
+                    label: _SegmentLabel(_label(context, t), icon: _icons[t], textKey: ValueKey('theme-${t.name}')),
                   ),
               ],
               selected: {choice},
@@ -422,10 +421,8 @@ class _LanguageRow extends StatelessWidget {
                 for (final t in LocaleChoice.values)
                   ButtonSegment(
                     value: t,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(_label(context, t), key: ValueKey('language-${t.name}'), maxLines: 1, softWrap: false),
-                    ),
+                    // ⛔ "ফোনের মতো" আগে FittedBox-এ ছোট হত — এখন পাশের ঘরের সমান মাপে, দরকারে দুই লাইনে ([_SegmentLabel])
+                    label: _SegmentLabel(_label(context, t), textKey: ValueKey('language-${t.name}')),
                   ),
               ],
               selected: {choice},
@@ -435,5 +432,29 @@ class _LanguageRow extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// ⭐ রং আর ভাষার ঘরের লেখা — সব ঘরে একই মাপ, কখনো ছোট করা নয়; জায়গা কম হলে শব্দের ফাঁকে দুই লাইনে, মাঝখানে
+class _SegmentLabel extends StatelessWidget {
+  const _SegmentLabel(this.text, {this.icon, this.textKey});
+
+  final String text;
+
+  /// লেখার আগে ছোট আইকন (☀ আলো, 🌙 অন্ধকার) — না থাকলে কেবল লেখা
+  final IconData? icon;
+
+  /// লেখার নিজের চাবি — টেস্ট লেখার মাপ পড়ে
+  final Key? textKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(text, key: textKey, maxLines: 2, textAlign: TextAlign.center);
+    if (icon == null) return label;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 16),
+      const SizedBox(width: 4),
+      Flexible(child: label),
+    ]);
   }
 }

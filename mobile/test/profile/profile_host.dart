@@ -1,5 +1,6 @@
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/me_features.dart';
+import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/navigation/top_bar/top_bar_context.dart';
 import 'package:abos_mobile/core/profile/face_image.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
@@ -8,12 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'profile_fakes.dart';
 
-/// হোম যা লেখে — কোম্পানি, শাখা, পদবি (নমুনার নাম)
+/// হোম যা লেখে — কোম্পানি, শাখা, পদবি (নমুনার নাম)। ⓘ "সব শাখা" অ্যাপের নিজের কথা (হোম ARB-এর homeAllBranches বসায়),
+/// তাই চলতি ভাষায়; পদবি সার্ভারের, সার্ভার মানুষের ভাষায় পাঠায় — ইংরেজিতে "Owner"। ⛔ আগে বাঁধা বাংলা: ইংরেজির ছবিতে
+/// "ADI · সব শাখা" (phones_360_light_en, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)
 TopBarContext topBar() => TopBarContext(
       company: 'ADI Wholesale',
       companyCode: 'ADI',
-      branch: 'সব শাখা',
-      designation: 'মালিক',
+      branch: AppLocale.l10n.homeAllBranches,
+      designation: AppLocale.isEnglish() ? 'Owner' : 'মালিক',
       search: (_) async {},
       openNotifications: (_) async {},
       openMenu: (_, __) async {},

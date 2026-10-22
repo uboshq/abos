@@ -3167,6 +3167,10 @@
   "@reportModuleSystemAdmin": {
     "description": "Reports list: the module name under a report, the web's module name (server code system_admin)"
   },
+  "counterReturnNoReasons": "ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।",
+  "@counterReturnNoReasons": {
+    "description": "Sales return: shown in place of the reason picker when the server sends no return reasons; the confirm button stays off"
+  },
   "ordersModuleSales": "বিক্রয়",
   "@ordersModuleSales": {
     "description": "Screen bar: the module name above the title on the order and tracking screens"

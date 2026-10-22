@@ -363,12 +363,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ],
             gap,
-            // ⓘ অন্তত ৫৬, বড় লেখায় বোতাম নিজে বাড়ে — লেখা কাটে না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+            // ⓘ অন্তত ৫৬, বড় লেখায় বোতাম নিজে বাড়ে — লেখা কাটে না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+            // ⛔ ২০০%-এ লেখা দুই লাইনে ভাঙলে উপরের লাইন বোতামের কিনারায় লাগত: Material 3-এর FilledButton-এর ভেতরে উপর-নিচে
+            // কোনো ফাঁক নেই। এখন উপর-নিচে ১২ — বোতাম লেখার সাথে বাড়ে, লেখা কিনারা ছোঁয় না; পাশে ১২ (Material ২০০%-এ যা নামায়), বোতাম পুরো চওড়া, তাই ১৩০%-এ লেখা এক লাইনেই (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)
             ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 56),
               child: FilledButton(
                 key: const ValueKey('login-submit'),
                 style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   backgroundColor: _Palette.ink,
                   foregroundColor: Colors.white, // dark-ok
                   disabledBackgroundColor: _Palette.ink.withValues(alpha: 0.6),
@@ -382,7 +385,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: 22,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white), // dark-ok
                       )
-                    : Text(_mfaStage ? w.verify : w.signIn),
+                    : Text(_mfaStage ? w.verify : w.signIn, key: const ValueKey('login-submit-label'), textAlign: TextAlign.center),
               ),
             ),
             if (_mfaStage)

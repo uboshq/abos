@@ -97,6 +97,22 @@ void main() {
         await tester.runAsync(seedMainData);
         await tester.pumpWidget(RepaintBoundary(key: const ValueKey('shot'), child: screen.value(dark)));
         await tester.pumpAndSettle();
+        if (screen.key == 'login') {
+          // ⛔ লোগো আর পেছনের "A" ছবি — ফাইল থেকে পড়া অ্যাসিঙ্ক, আগে পড়া শেষের আগেই ছবি তোলা হত, তাই login_light-এ লোগো
+          // নেই (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। পড়া শেষ করে তারপর ছবি
+          final images = find.byType(Image).evaluate().toList();
+          expect(images, hasLength(2), reason: 'লোগো আর পেছনের "A"');
+          await tester.runAsync(() async {
+            for (final e in images) {
+              await precacheImage((e.widget as Image).image, e);
+            }
+          });
+          await tester.pumpAndSettle();
+          for (final e in images) {
+            expect(tester.widget<RawImage>(find.descendant(of: find.byWidget(e.widget), matching: find.byType(RawImage))).image,
+                isNotNull, reason: '⛔ ছবি আঁকা হয়নি: ${(e.widget as Image).image}');
+          }
+        }
         await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens/${screen.key}_$mode.png'));
         // ⭐ FAB-ওয়ালা পাতা তালিকার একেবারে শেষেও — শেষ সারি আর মোট বোতামের ওপরে (fab_never_hides_data_test-এর দাবির ছবি)
         if (screen.key == 'vouchers') {

@@ -653,6 +653,7 @@
   "reportModuleMasterData": "Master Data",
   "reportModuleRestaurant": "Restaurant",
   "reportModuleSystemAdmin": "System Administration",
+  "counterReturnNoReasons": "No reasons for returns are set up. Ask the office to add one on the web; returns cannot be confirmed without a reason.",
   "ordersModuleSales": "Sales",
   "ordersUnknownCustomer": "Unknown customer",
   "ordersRejectedFailed": "Failed",

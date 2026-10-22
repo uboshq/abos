@@ -111,6 +111,16 @@ Future<void> _open(WidgetTester tester,
   }
 }
 
+/// বোতাম [key]-এর লেখা বোতামের ঘরের ভেতরে, প্রতিটা কিনারা থেকে অন্তত ৮dp দূরে
+void _clearInside(WidgetTester tester, String key) {
+  final button = find.byKey(ValueKey(key));
+  final o = tester.getRect(button);
+  final i = tester.getRect(find.descendant(of: button, matching: find.byType(Text)));
+  final room = (top: i.top - o.top, bottom: o.bottom - i.bottom, left: i.left - o.left, right: o.right - i.right);
+  expect(room.top >= 8 && room.bottom >= 8 && room.left >= 8 && room.right >= 8, isTrue,
+      reason: '⛔ $key: লেখা $i বোতামের $o কিনারায় লাগে — ফাঁক $room');
+}
+
 List<String> _texts(WidgetTester tester) => [
       for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? t.textSpan?.toPlainText() ?? '',
       for (final d in tester.widgetList<InputDecorator>(find.byType(InputDecorator))) d.decoration.labelText ?? '',
@@ -156,6 +166,38 @@ void main() {
     });
   }
 
+  // ⛔ বড় লেখায় (১৩০%, ২০০%): খাতার প্রতিটা অঙ্ক ডানে, নিজের লাইনের প্রথম সারিতে — আগে Wrap, অঙ্ক নেমে বাঁয়ে নামের নিচে বসত;
+  // আর নিচের বোতামের লেখা বোতামের ভেতরে, প্রতিটা কিনারা থেকে অন্তত ৮dp — আগে দুই লাইনে ভাঙলে শেষ অক্ষর নিচের কিনারা ছুঁত
+  // (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)
+  for (final scale in [1.3, 2.0]) {
+    final pct = (scale * 100).round();
+    testWidgets('at $pct% text the ledger amounts stay right-aligned and the bottom buttons hold their labels clear of every edge',
+        (tester) async {
+      await _open(tester, textScale: scale);
+      _clearInside(tester, 'collect-draft');
+      _clearInside(tester, 'collect-post');
+      await tester.tap(find.byKey(const ValueKey('collect-post')));
+      await tester.pumpAndSettle();
+      _clearInside(tester, 'collect-check-back');
+      _clearInside(tester, 'collect-check-post');
+      final lines = find.byWidgetPredicate((w) => w.key is ValueKey<String> && RegExp(r'^collect-journal-\d+$').hasMatch((w.key! as ValueKey<String>).value));
+      expect(lines, findsWidgets);
+      for (var i = 0; i < lines.evaluate().length; i++) {
+        await tester.ensureVisible(find.byKey(ValueKey('collect-journal-$i')));
+        await tester.pumpAndSettle();
+        final line = tester.getRect(find.byKey(ValueKey('collect-journal-$i')));
+        final account = tester.getRect(find.byKey(ValueKey('collect-journal-account-$i')));
+        final amount = tester.getRect(find.byKey(ValueKey('collect-journal-amount-$i')));
+        expect((line.right - amount.right).abs() < 1, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount ডানে নয় (লাইন $line)');
+        expect(amount.left > account.left, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount নামের $account নিচে বাঁয়ে নেমেছে');
+        expect((amount.top - account.top).abs() < 1, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount নামের $account প্রথম সারিতে নয়');
+      }
+      final total = tester.getRect(find.byKey(const ValueKey('collect-journal-total')));
+      final widest = tester.getRect(find.byKey(const ValueKey('collect-journal-0')));
+      expect((widest.right - total.right).abs() < 1, isTrue, reason: '⛔ মোট $total ডানে নয়');
+    });
+  }
+
   // ⓘ পর্দা ২, মালিকের সই লাগবে (রাউন্ডিং ৳0.51): নিয়ন্ত্রণের নোট আর "সইয়ে পাঠান"
   for (final (locale, tag) in [(AppLocale.locale, 'bn'), (AppLocale.english, 'en')]) {
     testWidgets('4 · screen 2 when the owner must sign (rounding ৳0.51), light, $tag', (tester) async {
@@ -167,13 +209,25 @@ void main() {
 
   // ⛔ ফাঁকা পর্দা — গ্রাহক এখনো বাছা হয়নি (0.4.45-এ মালিকের ফোনে "Customer *" আর "Choose a customer" একটার উপর আরেকটা;
   // আগের ছবিগুলোয় গ্রাহক আগেই বাছা ছিল, তাই ধরা পড়েনি — fe, ২২ অক্টোবর ২০২৬)
-  for (final (locale, tag, label, pick) in [
-    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন'),
-    (AppLocale.english, 'en', 'Customer *', 'Choose a customer'),
+  // ⓘ ২২ অক্টোবর: অন্ধকারে আর ১৩০%/২০০% লেখাতেও (বড় লেখায় লেবেল ভাঙলে ঘর বাড়ে, কিছু উপরে চাপে না)
+  for (final (locale, tag, label, pick, dark, scale, shot) in [
+    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন', false, 1.0, 'collect_empty_412_light_bn'),
+    (AppLocale.english, 'en', 'Customer *', 'Choose a customer', false, 1.0, 'collect_empty_412_light_en'),
+    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন', true, 1.0, 'collect_empty_412_dark_bn'),
+    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন', false, 1.3, 'collect_empty_412_light_bn_130'),
+    (AppLocale.locale, 'bn', 'গ্রাহক *', 'গ্রাহক বাছুন', false, 2.0, 'collect_empty_412_light_bn_200'),
   ]) {
-    testWidgets('the empty customer field draws its label alone, never the label and a placeholder on one line, $tag', (tester) async {
-      await _open(tester, locale: locale, empty: true);
+    testWidgets(
+        'the empty customer field draws its label alone, never the label and a placeholder on one line, $tag'
+        '${dark ? ', dark' : ''}${scale > 1 ? ', ${(scale * 100).round()}% text' : ''}', (tester) async {
+      await _open(tester, locale: locale, empty: true, dark: dark, textScale: scale);
+      expect(tester.takeException(), isNull, reason: '⛔ ফাঁকা পর্দা উপচে পড়ল');
       final field = find.byKey(const ValueKey('collect-customer'));
+      // ⓘ লেবেল পুরোটা ঘরের ভেতরে (বড় লেখায় ঘরের কিনারায় কাটা পড়ে না)
+      final box = tester.getRect(find.descendant(of: field, matching: find.byType(InputDecorator)));
+      final text = tester.getRect(find.descendant(of: field, matching: find.text(label)));
+      expect(box.contains(text.topLeft) && box.contains(text.bottomRight - const Offset(0.01, 0.01)), isTrue,
+          reason: '⛔ লেবেল $text ঘরের $box বাইরে');
       final decorator = tester.widget<InputDecorator>(find.descendant(of: field, matching: find.byType(InputDecorator)));
       expect(decorator.isEmpty, isTrue, reason: 'ফাঁকা ঘরে লেবেল ভেতরে বসে');
       expect(find.descendant(of: field, matching: find.text(label)), findsOneWidget);
@@ -183,7 +237,7 @@ void main() {
           reason: '⛔ ঘরের ভেতরে লেবেল ছাড়া আরও লেখা');
       expect(tester.getSemantics(field), isSemantics(hint: pick, isButton: true, hasTapAction: true, label: label),
           reason: 'পর্দা-পাঠক "বাছুন" শোনে, যদিও আঁকা নয়');
-      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_empty_412_light_$tag.png'));
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/$shot.png'));
 
       // বাছার পরে লেবেল উপরে, নাম নিচে
       await tester.tap(field);

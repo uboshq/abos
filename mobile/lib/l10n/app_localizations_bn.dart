@@ -2324,6 +2324,10 @@ class AppL10nBn extends AppL10n {
   String get reportModuleSystemAdmin => 'সিস্টেম প্রশাসন';
 
   @override
+  String get counterReturnNoReasons =>
+      'ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।';
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override

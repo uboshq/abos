@@ -740,7 +740,7 @@ class _CollectScreenState extends State<CollectScreen> {
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
                   key: const ValueKey('collect-bank-done'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
                   onPressed: () => Navigator.of(sheet).pop(),
                   child: Text(w.collectBankDone),
                 ),
@@ -1251,7 +1251,7 @@ class _CollectScreenState extends State<CollectScreen> {
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
             onPressed: _busy || _notAllowed || _party != 'customer' || _billsState == _Bills.outOfReach ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
@@ -1261,7 +1261,7 @@ class _CollectScreenState extends State<CollectScreen> {
           flex: 2,
           child: FilledButton(
             key: const ValueKey('collect-post'),
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
             onPressed:
                 _busy || _notAllowed || _party != 'customer' || _roundingTooBig || _billsState == _Bills.outOfReach ? null : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
@@ -1271,7 +1271,7 @@ class _CollectScreenState extends State<CollectScreen> {
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-close'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
             onPressed: () => Navigator.of(context).maybePop(),
             child: Text(w.collectClose, textAlign: TextAlign.center),
           ),
@@ -1281,7 +1281,7 @@ class _CollectScreenState extends State<CollectScreen> {
           Expanded(
             child: FilledButton.icon(
               key: const ValueKey('collect-open-receipt'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
               onPressed: () => widget.openReceipt(context, saved, ReceiptAction.pdf),
               icon: const Icon(Symbols.receipt_long),
               label: Text(w.collectOpenReceipt, textAlign: TextAlign.center),
@@ -1292,6 +1292,11 @@ class _CollectScreenState extends State<CollectScreen> {
     ]);
   }
 }
+
+/// ⛔ বোতামের ভেতরে উপর-নিচে ১২, পাশে ১২ — Material 3-এর বোতামে উপর-নিচে কোনো ফাঁক নেই, তাই ১৩০%/২০০% লেখায় লেবেল দুই লাইনে
+/// ভাঙলে শেষ অক্ষর বোতামের নিচের কিনারা ছুঁত (collection_130/200, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। উচ্চতা বাঁধা নয়: অন্তত ৪৮,
+/// লেখার সাথে বাড়ে
+const _buttonPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 12);
 
 /// ⭐ নিচের বোতামের লেখা — Material 3-এর labelLarge: 14, w600 (fe, ২২ অক্টোবর ২০২৬; থিমের মাপ নিচে নামলেও 14)
 TextStyle _buttonText(BuildContext context) =>
@@ -1409,7 +1414,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-back'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
               child: Text(w.collectCheckBack, textAlign: TextAlign.center),
             ),
@@ -1418,7 +1423,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: FilledButton(
               key: const ValueKey('collect-check-post'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
               onPressed: _busy || stops.isNotEmpty ? null : _post,
               // ⓘ সই লাগলে বোতামের কথাই বলে কী হবে — "সইয়ে পাঠান"
               child: Text(sign ? w.collectSendForSign : w.collectCheckPost, textAlign: TextAlign.center),
@@ -1428,7 +1433,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-close'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
               onPressed: () => Navigator.of(context).pop(),
               child: Text(w.collectClose, textAlign: TextAlign.center),
             ),
@@ -2057,17 +2062,29 @@ class JournalLines extends StatelessWidget {
         Padding(
           key: ValueKey('collect-journal-$i'),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-          child: Wrap(alignment: WrapAlignment.spaceBetween, spacing: AppSpacing.sm, children: [
+          // ⛔ অঙ্ক সবসময় ডানে, খাতার মতো — আগে Wrap ছিল: ১৩০% লেখায় অঙ্ক নতুন লাইনে নেমে বাঁয়ে, খাতার নামের নিচে বসত
+          // (collect_review_412_light_bn_130, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। এখন নাম বাঁয়ে মোড়ায়, অঙ্ক ডানের কলামে প্রথম লাইনে
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // ⓘ Dr/Cr — হিসাবের আন্তর্জাতিক চিহ্ন, ওয়েবের মতো, সব ভাষায় একই
-            Text('${l.dr > 0 ? 'Dr' : 'Cr'} ${l.account}${l.branch.isEmpty ? '' : ' · ${l.branch}'}'),
-            Text(Money.amount((l.dr > 0 ? l.dr : l.cr) / 100)),
+            Expanded(
+              child: Text('${l.dr > 0 ? 'Dr' : 'Cr'} ${l.account}${l.branch.isEmpty ? '' : ' · ${l.branch}'}',
+                  key: ValueKey('collect-journal-account-$i')),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(Money.amount((l.dr > 0 ? l.dr : l.cr) / 100),
+                key: ValueKey('collect-journal-amount-$i'), textAlign: TextAlign.end),
           ]),
         ),
       ],
       const Divider(height: AppSpacing.md),
-      Wrap(alignment: WrapAlignment.spaceBetween, spacing: AppSpacing.sm, children: [
+      // ⓘ মোটও একই: অঙ্ক ডানে; জায়গা না হলে ডানেই মোড়ায়
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(w.collectJournalTotal, style: const TextStyle(fontWeight: FontWeight.w700)),
-        Text('Dr ${Money.amount(totalDr / 100)} · Cr ${Money.amount(totalCr / 100)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text('Dr ${Money.amount(totalDr / 100)} · Cr ${Money.amount(totalCr / 100)}',
+              key: const ValueKey('collect-journal-total'), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
       ]),
       Padding(
         padding: const EdgeInsets.only(top: AppSpacing.xs),

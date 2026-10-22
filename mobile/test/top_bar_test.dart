@@ -14,6 +14,7 @@ import 'package:abos_mobile/core/theme/app_colors.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/core/theme/bar_palette.dart';
 import 'package:abos_mobile/core/theme/theme_choice.dart';
+import 'package:abos_mobile/core/locale/locale_choice.dart';
 import 'package:abos_mobile/core/widgets/unsaved_guard.dart';
 
 import 'support/bar_fonts.dart';
@@ -401,6 +402,52 @@ void main() {
       expect(tester.getRect(find.byKey(const ValueKey('avatar-menu'))).right, lessThanOrEqualTo(320));
     });
   });
+
+  // ⛔ রং আর ভাষার ঘরের লেখা সব ঘরে একই আঁকা মাপে — কোনোটা ছোট করে আঁটানো নয় (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬: FittedBox
+  // "অন্ধকার" আর "ফোনের মতো"-কে পাশের ঘরের চেয়ে ছোট আর সরু আঁকত)। আঁকা মাপ = লেখার মাপ × পর্দায় যতটা বড়/ছোট দেখায়
+  // ⓘ বাছা ঘরের লেখা মোটা, তাই চওড়া — প্রতিটা রং বাছা অবস্থায়
+  for (final width in [320.0, 360.0, 412.0]) {
+    for (final picked in ThemeChoice.values) {
+    for (final scale in [1.0, 1.3]) {
+    testWidgets(
+        'avatar menu at ${width.toInt()} dp, ${(scale * 100).round()}% text, ${picked.name} picked: '
+        'every colour and language label is drawn at the size of its neighbours', (tester) async {
+      await themes.choose(picked);
+      await _pump(tester, _owner(), width: width, height: 900, scale: scale);
+      await tester.tap(find.byKey(const ValueKey('header-avatar')));
+      await tester.pumpAndSettle();
+      for (final (row, keys) in [
+        ('colour', [for (final c in ThemeChoice.values) 'theme-${c.name}']),
+        ('language', [for (final c in LocaleChoice.values) 'language-${c.name}']),
+      ]) {
+        final drawn = <String, double>{};
+        for (final key in keys) {
+          final f = find.byKey(ValueKey(key));
+          expect(f, findsOneWidget, reason: '$row: $key');
+          final p = tester.renderObject<RenderParagraph>(f);
+          final shown = tester.getRect(f).width / p.size.width;
+          drawn[key] = p.textScaler.scale(p.text.style!.fontSize!) * shown;
+          expect(p.didExceedMaxLines, isFalse, reason: '⛔ $row: "$key" কাটা গেল');
+          // ⓘ দুই লাইনে ভাঙে কেবল শব্দের ফাঁকে — লাইন শব্দের চেয়ে বেশি মানে কোনো শব্দ মাঝখানে ভেঙেছে ("অন্ধকা / র")
+          final words = p.text.toPlainText().trim().split(RegExp(r'\s+')).length;
+          final lines = (TextPainter(text: p.text, textDirection: TextDirection.ltr, textScaler: p.textScaler, maxLines: 2)
+                ..layout(maxWidth: p.size.width))
+              .computeLineMetrics()
+              .length;
+          expect(lines <= words, isTrue, reason: '⛔ $row: "${p.text.toPlainText()}" শব্দের মাঝখানে ভাঙল');
+          // ⓘ লেখা নিজের ঘরের ভেতরে, পাশের ঘরে বা কিনারার বাইরে নয়
+          final segment = tester.getRect(find.ancestor(of: f, matching: find.byType(InkWell)).first);
+          final label = tester.getRect(f);
+          expect(label.left >= segment.left - 0.5 && label.right <= segment.right + 0.5, isTrue,
+              reason: '⛔ $row: "$key" $label ঘরের $segment বাইরে');
+        }
+        final first = drawn.values.first;
+        expect(drawn.values.every((s) => (s - first).abs() < 0.01), isTrue, reason: '⛔ $row: ঘরের লেখার আঁকা মাপ আলাদা — $drawn');
+      }
+    });
+    }
+    }
+  }
 
   // ⭐ ছবি — বার (মালিক আর বিক্রয়কর্মী, আলো আর অন্ধকার) ৩২০, ৩৬০, ৪১২ dp আর ট্যাবলেট (৮৪০ dp); আর খোলা মেনু
   group('goldens', () {
