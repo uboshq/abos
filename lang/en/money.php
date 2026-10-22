@@ -32,8 +32,8 @@ return [
     ],
 
     'charge_line' => [
-        'in' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party is credited the full ৳:amount.',
-        'out' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party\'s balance drops by the full ৳:amount.',
+        'in' => 'The charge ৳:charge is our expense — it goes to ":head"; the party is credited the full ৳:amount.',
+        'out' => 'The charge ৳:charge is our expense — it goes to ":head"; the party\'s balance drops by the full ৳:amount.',
         'head_bank' => 'Bank charges',
         'head_mfs' => 'Mobile banking charges',
     ],

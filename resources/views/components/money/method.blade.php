@@ -181,8 +181,15 @@
     {{-- ── ব্যাংকে নগদ জমা: জমা স্লিপ আর মূল্য-তারিখ ── --}}
     <template x-if="method === 'deposit'">
         <div data-method-block="deposit" @class([$fourUp, 'order-3 col-span-full' => $inline])>
-            <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
-                        :hint="__('money.hint.reference_needed')" required />
+            <div>
+                <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
+                            :hint="__('money.hint.reference_needed')" required />
+                {{-- ⓘ নগদ জমার স্লিপই ব্যাংকের রেফারেন্স ([[VoucherRequest]]) — তাই তারও চলতি উত্তর --}}
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
+            </div>
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />

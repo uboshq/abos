@@ -61,6 +61,16 @@ class VoucherRequest extends FormRequest
         }
 
         /*
+         * ⛔ নগদ জমার স্লিপই ব্যাংকের রেফারেন্স — cb, ২৩ অক্টোবর ২০২৬ (চূড়ান্ত ছবি নিতে গিয়ে ধরা)। ⓘ পদ্ধতির বাক্সে নগদ জমা কেবল
+         * স্লিপ নম্বর চায়, অথচ ব্যাংকের খাতে পোস্ট লেনদেন নম্বর (`instrument_no`) চায় ([[VoucherService::bankReferenceAccount()]]) —
+         * তাই নগদ জমার রসিদ কখনো পোস্টই হত না। ⭐ নম্বর না থাকলে স্লিপটাই নম্বর: একই খাতে একই স্লিপ দুইবার ওঠে না (ইনডেক্স আর
+         * চলতি উত্তর দুটোই), আর স্লিপের নিজের কলামেও থাকে।
+         */
+        if ($this->input('instrument') === 'deposit' && trim((string) $this->input('instrument_no', '')) === '' && filled($this->input('deposit_slip_no'))) {
+            $this->merge(['instrument_no' => trim((string) $this->input('deposit_slip_no'))]);
+        }
+
+        /*
          * হেডারের পক্ষ — সহজ ফর্মের `party` ঘরটা।
          *
          * ⓘ সারির পক্ষ নিচে ভাঙা হয়, একই `type:id` নিয়মে। হেডারেরটা

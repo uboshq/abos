@@ -292,10 +292,10 @@ export function voucherMoney ({
 
             // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
             form?.addEventListener('input', (e) => {
-                if (e.target?.name === 'instrument_no') this.slipSoon()
+                if (e.target?.name === 'instrument_no' || e.target?.name === 'deposit_slip_no') this.slipSoon()
             })
             form?.addEventListener('change', (e) => {
-                if (e.target?.name !== 'instrument_no') this.refresh()
+                if (e.target?.name !== 'instrument_no' && e.target?.name !== 'deposit_slip_no') this.refresh()
             })
             this.$nextTick(() => { this.tidyAmount(); this.refresh() })
         },
@@ -326,7 +326,8 @@ export function voucherMoney ({
 
         /* ⓘ নম্বর পড়া হয় প্রশ্নের মুহূর্তে; ⛔ কেবল শেষ প্রশ্নের উত্তর — দেরিতে-আসা আগেরটা নতুনটাকে ঢাকে না */
         async checkSlip () {
-            const no = String(form?.querySelector('[name="instrument_no"]')?.value ?? '').trim()
+            // ⓘ নগদ জমায় স্লিপই রেফারেন্স ([[VoucherRequest]]) — যে ঘরটা এখন পর্দায়, সেটাই
+            const no = String(form?.querySelector('[name="instrument_no"]')?.value || form?.querySelector('[name="deposit_slip_no"]')?.value || '').trim()
             const ticket = ++this.slipAsked
 
             if (!referenceUrl || no === '' || this.account === '') {

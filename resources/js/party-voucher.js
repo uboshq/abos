@@ -16,6 +16,7 @@
  * হয়, যাতে পুরনো `import` ভাঙে না।
  */
 import { matchParties, SHOWN_AT_ONCE } from './party-search.js'
+import { taka } from './components/money.js'
 
 export { matchParties, SHOWN_AT_ONCE }
 
@@ -39,6 +40,11 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
 
         /** এই পক্ষের মোট বকেয়া — নামের পাশে দেখানো হয়। */
         due: null,
+
+        /** ⭐ দেখানোর লেখা লাখ-কমায় ("1,25,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — `due` হিসাবের জন্য অপরিবর্তিত */
+        get dueText() {
+            return this.due === null ? '' : taka(Number(this.due));
+        },
 
         /** এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি। */
         bills: [],

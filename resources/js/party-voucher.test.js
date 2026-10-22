@@ -134,6 +134,9 @@ describe('partyVoucher — খোঁজা যায় এমন নামে�
         box.search = 'mirpur'
         box.pickCursor()
         await vi.waitFor(() => expect(box.due).toBe('500.00'))
+        // ⭐ দেখানো লেখা লাখ-কমায় — নকশার মতো
+        box.due = '125000.00'
+        expect(box.dueText).toBe('1,25,000.00')
 
         expect(globalThis.fetch).toHaveBeenCalledWith(
             '/accounts/voucher/due?party_type=customer&party_id=12',

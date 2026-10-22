@@ -166,6 +166,27 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertSame($before, Voucher::query()->count(), 'প্রস্তুতিটাই ভুল — পোস্টও এটা মেনে নিল, তাহলে প্রিভিউর থামাটাই ভুল');
     }
 
+    /** ⛔ নগদ জমার রসিদ — স্লিপই ব্যাংকের রেফারেন্স; আগে কখনো পোস্টই হত না (চূড়ান্ত ছবি নিতে গিয়ে ধরা, ২৩ অক্টোবর ২০২৬) */
+    public function test_a_cash_deposit_receipt_posts_on_its_slip_and_the_same_slip_cannot_post_twice(): void
+    {
+        $bank = $this->bank();
+        $deposit = ['to_account_id' => $bank->id, 'instrument' => 'deposit', 'deposit_slip_no' => 'DS-55120'];
+
+        $before = Voucher::query()->count();
+        $this->postReceipt($deposit);
+        $this->assertSame($before + 1, Voucher::query()->count(), '⛔ নগদ জমার রসিদ জমা হল না — স্লিপ নম্বর ব্যাংকের রেফারেন্স হিসেবে গোনা হয় না');
+        $voucher = Voucher::query()->latest('id')->firstOrFail();
+        if (! $voucher->isPosted()) {
+            app(VoucherService::class)->post($voucher->fresh(), byHand: true);
+        }
+        $this->assertTrue($voucher->fresh()->isPosted(), '⛔ নগদ জমার রসিদ খাতায় উঠল না');
+        $this->assertSame('DS-55120', $voucher->fresh()->deposit_slip_no, '⛔ স্লিপের নিজের কলাম ফাঁকা');
+
+        $again = $this->post(route('accounts.voucher.simulate'), $this->receiptPayload($deposit))->assertOk()->json();
+        $this->assertSame([], $again['rows'], '⛔ একই খাতে একই স্লিপ আবার — প্রিভিউ আটকায় না');
+        $this->assertStringContainsString((string) $voucher->fresh()->document_no, (string) $again['message'], '⛔ একই স্লিপ কোন রসিদে আগে বসেছে তা বলে না');
+    }
+
     /** ৬ — রেফারেন্সের চলতি উত্তর; সব শাখা জুড়ে, কিন্তু কেবল নিজের কোম্পানিতে */
     public function test_the_reference_answer_is_the_posts_question_and_stays_inside_the_company(): void
     {

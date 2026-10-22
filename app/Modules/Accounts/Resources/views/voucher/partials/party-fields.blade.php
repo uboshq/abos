@@ -159,7 +159,7 @@
                           ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
                           : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'">
                     <span x-text="texts.owed"></span>
-                    <b class="num ms-1" x-text="due"></b>
+                    <b class="num ms-1" x-text="dueText"></b>
                 </span>
             </div>
 
