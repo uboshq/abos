@@ -56,8 +56,9 @@ void main() {
         final bengali = RegExp('[ঀ-৿]');
         final texts = tester.widgetList<RichText>(find.byType(RichText)).map((t) => t.text.toPlainText())
             .where(bengali.hasMatch)
-            // ⓘ সার্ভারের ডেটা, ARB নয়: শাখার নাম আর নামের প্রথম অক্ষর (নমুনার 'আল-আমিন শুভ'); ফোনের নাম নমুনায় ইংরেজিতে
-            .where((t) => t != 'সব শাখা' && t != 'আ');
+            // ⓘ সার্ভারের ডেটা, ARB নয়: নামের প্রথম অক্ষর (নমুনার 'আল-আমিন শুভ'); ফোনের নাম নমুনায় ইংরেজিতে। ⛔ "সব শাখা" আর
+            // ছাড় নয় — ওটা অ্যাপের নিজের কথা (homeAllBranches), ইংরেজিতে "All branches"
+            .where((t) => t != 'আ');
         expect(texts, isEmpty, reason: 'Bengali left on the English screen: $texts');
       }
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('../goldens/profile/$name.png'));
