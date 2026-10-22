@@ -39,7 +39,7 @@ final class OwnerSignsDiscounts implements ProvisionsCompany
 
     public const ACTION = 'discount';
 
-    /** @return array{company: string, done: bool, problem: string|null} */
+    /** @return array{company: string, done: bool, problem: string|null, before?: list<array{threshold: string|null, active: bool, steps: list<string>}>} */
     public function ensure(Company $company): array
     {
         return CompanyContext::forCompany(

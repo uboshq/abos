@@ -29,7 +29,7 @@ final class AccountLedger
      * ⭐ শাখা হেডারে বাছা শাখাই — সেবা নিজে পড়ে, ডাকা জায়গা ভুলতে পারে না (ওয়েব আর ফোন দুটোই; [[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]])।
      * ⓘ "সব শাখা"-তে null = গোটা কোম্পানি ([[ViewedBranch::one()]])।
      *
-     * @return array{entries: LengthAwarePaginator, grand: array{debit: string, credit: string}, closing: string}
+     * @return array{entries: LengthAwarePaginator, grand: array{debit: string, credit: string}, closing: string, parties: array<int, string>}
      */
     public function page(Account $account, int $page): array
     {
