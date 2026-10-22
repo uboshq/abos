@@ -192,6 +192,72 @@ final class ThePhoneHomeCarriesTheOwnersNewBoxesTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ MFS-এ চাপলে প্রতিটা খাত আর তার জের — মালিক, ২০ অক্টোবর ২০২৬: "অ্যাপের হোমে MFS-এ কত আছে দেখায় না"।
+     * দুটো খাত, পয়সাসহ অঙ্ক — যোগফল ঠিক `mfs`, আর `mfs` ঠিক ওয়েবের।
+     */
+    public function test_the_mfs_part_lists_each_mfs_account_and_they_add_up_to_the_mfs_figure(): void
+    {
+        $this->grant('accounts.till.view');
+        $till = Account::query()->findOrFail(app(CashTillService::class)->ensurePrimaryTill()->account_id);
+        $parent = Account::query()->where('code', StandardChart::MOBILE_MONEY)->value('id');
+
+        $bkash = $till->replicate(['public_id']);
+        $bkash->forceFill(['code' => 'TST-MFS1', 'name_en' => 'Probe bKash', 'name_bn' => 'প্রোব বিকাশ', 'parent_id' => $parent,
+            'money_kind' => Account::MFS])->save();
+        $nagad = $till->replicate(['public_id']);
+        $nagad->forceFill(['code' => 'TST-MFS2', 'name_en' => 'Probe Nagad', 'name_bn' => 'প্রোব নগদ', 'parent_id' => $parent,
+            'money_kind' => Account::MFS])->save();
+        $this->moneyIn($bkash, '1234.56', 'test:mfs-1', 11);
+        $this->moneyIn($nagad, '78.9', 'test:mfs-2', 12);
+
+        $money = $this->today()->json('money');
+        $rows = collect($money['mfsAccounts'])->keyBy('name');
+
+        $this->assertSame(0, bccomp($rows['প্রোব বিকাশ']['balance'] ?? '-1', '1234.56', 4), '⛔ বিকাশের জের ভুল বা নেই।');
+        $this->assertSame(0, bccomp($rows['প্রোব নগদ']['balance'] ?? '-1', '78.9', 4), '⛔ নগদ-খাতের জের ভুল বা নেই।');
+        $sum = array_reduce($money['mfsAccounts'], fn (string $c, array $r) => bcadd($c, $r['balance'], 4), '0');
+        $this->assertSame($money['mfs'], $sum, '⛔ খাতগুলোর যোগফল হোমের MFS-এর সাথে মেলে না।');
+
+        $this->actAsTheUser();
+        $this->assertSame(bcadd(AccountsWidgets::mfsBalance(), '0', 4), $money['mfs'], '⛔ ফোনের MFS ওয়েবের হিরোর MFS নয়।');
+    }
+
+    /** ⭐ আজ যত টাকা গেল — ইনফ্লোর একই নিয়মে: টাকার খাত থেকে বাইরে যা গেল; নিজের মধ্যে স্থানান্তর নয় (২০ অক্টোবর ২০২৬) */
+    public function test_outflow_is_todays_money_out_and_a_move_between_our_own_accounts_is_not(): void
+    {
+        $this->today()->assertOk()->assertJsonMissingPath('outflow');
+        $this->grant('accounts.view');
+        $before = $this->today()->json('outflow.amount');
+        $this->assertNotNull($before, '⛔ accounts.view দেওয়ার পরেও outflow আসেনি।');
+
+        $till = Account::query()->findOrFail(app(CashTillService::class)->ensurePrimaryTill()->account_id);
+        $this->moneyIn($till, '5000', 'test:float', 21);
+
+        // ⓘ টাকা বাইরে গেল ১২০০.২৫ (মালিকের তোলা)
+        $capital = Account::query()->where('code', StandardChart::OWNER_CAPITAL)->firstOrFail();
+        app(PostingEngine::class)->post('test:drawing', 22, Carbon::today()->toDateString(), [
+            ['account_id' => $capital->id, 'debit' => '1200.25', 'credit' => '0'],
+            ['account_id' => $till->id, 'debit' => '0', 'credit' => '1200.25'],
+        ], 'TST-OUT');
+        $this->assertSame(bcadd($before, '1200.25', 4), $this->today()->json('outflow.amount'), '⛔ আজ যাওয়া টাকা "আজ গেছে"-তে নেই।');
+
+        // ⓘ নগদ থেকে ব্যাংকে জমা — যাওয়া নয়
+        $bankLeaf = $till->replicate(['public_id']);
+        $bankLeaf->forceFill(['code' => 'TST-BNK2', 'name_en' => 'Probe bank 2', 'name_bn' => 'Probe bank 2',
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'), 'money_kind' => Account::BANK])->save();
+        app(PostingEngine::class)->post('test:deposit2', 23, Carbon::today()->toDateString(), [
+            ['account_id' => $bankLeaf->id, 'debit' => '700', 'credit' => '0'],
+            ['account_id' => $till->id, 'debit' => '0', 'credit' => '700'],
+        ], 'TST-DEP2');
+        $this->assertSame(bcadd($before, '1200.25', 4), $this->today()->json('outflow.amount'),
+            '⛔ নিজের মধ্যে স্থানান্তর "আজ গেছে" হয়ে গোনা হলো।');
+
+        $this->actAsTheUser();
+        $today = Carbon::today()->toDateString();
+        $this->assertSame(bcadd(app(AccountsFacts::class)->moneyFlowBetween($today, $today)['out'], '0', 4), $this->today()->json('outflow.amount'));
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────────────
 
     /** হাতধারে নেওয়া — আমাদের দেনা, মালিকের হাতে আসল পথে */

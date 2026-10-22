@@ -108,8 +108,13 @@
      * ডানে, কখনো একসাথে নয়। তবু আইডিটা মোডসহ বানানো: একই আইডির দুইটা
      * ফর্ম থাকলে `form=` অ্যাট্রিবিউট প্রথমটাকেই ধরত, আর দ্বিতীয়
      * মেনুটার সংরক্ষণ **নীরবে ভুল ফর্মে** যেত।
+     *
+     * ⛔ "কখনো একসাথে নয়" সত্যি ছিল না — দুই তালিকার পাতায় (ডিপোর যাচাই) একই মোডের মেনু দুইবার বসে, আর আইডি দুটোই
+     * `view-store-button` (লাইভ নিরীক্ষা, ২০ অক্টোবর ২০২৬)। ⓘ এখন অনুরোধে দ্বিতীয়বার থেকে আইডির শেষে ক্রম — প্রথমটা অপরিবর্তিত।
      */
-    $formId = $mode;
+    $menuCount = (int) request()->attributes->get('abos.view_menu_count', 0) + 1;
+    request()->attributes->set('abos.view_menu_count', $menuCount);
+    $formId = $menuCount === 1 ? $mode : $mode.'-'.$menuCount;
 @endphp
 
 @if ($addressable && $user)
@@ -265,6 +270,7 @@
                 <input type="text" name="name" required maxlength="80"
                        form="view-store-{{ $formId }}"
                        x-ref="viewName"
+                       aria-label="{{ __('core.view.name_placeholder') }}"
                        placeholder="{{ __('core.view.name_placeholder') }}"
                        class="min-h-(--spacing-field) w-full rounded-(--radius-field)
                               border border-(--color-border) bg-(--color-surface-app) px-2

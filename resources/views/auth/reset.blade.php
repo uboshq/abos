@@ -71,7 +71,7 @@
                 <button type="button" @click="show = ! show"
                         class="absolute inset-y-0 end-0 flex w-12 items-center justify-center
                                text-(--color-ink-muted)"
-                        :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
+                        aria-label="{{ __('auth.show_password') }}" :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
                     <span x-show="! show"><x-ui.icon name="eye" :size="18" /></span>
                     <span x-show="show" x-cloak><x-ui.icon name="eye_off" :size="18" /></span>
                 </button>

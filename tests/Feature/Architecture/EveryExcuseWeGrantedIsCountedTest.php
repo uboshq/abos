@@ -420,7 +420,16 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET — Sales-এর POS পর্দার গ্রাহক-পিকার: POS মালিকের আদেশে ২১ অক্টোবর
      *       পর্যন্ত বন্ধ; খুললে nameWithPoint() আর with(Customer::PLACE), তখন সারি ওঠে আর ছাদ কমে
      */
-    private const CEILING = 454;
+    /*
+     * ── ⚠️ ৪৫৪ → ৪৫৬ (fe বান্ডেল ২১ অক্টোবর; শাখায় ছিল ৩৭১ → ৩৭৩), ২০ অক্টোবর ২০২৬ (অ্যাপের প্রোফাইল মেনু ০.৪.৪১ — fe; a6) ────────────────────────────────────────────
+     *   +৪  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.photo.store / .destroy, api.me.devices.index / .destroy: নিজের ছবি আর
+     *       নিজের ফোন, `/me`-র মতোই কোনো চাবি নেই (ঢুকতে পারা মানুষকে নিজের ছবি বদলাতে বা চুরি যাওয়া ফোন বের করতে বাধা নয়);
+     *       পাহারা নিয়ামকে — কেবল নিজের সারি আর নিজের টোকেন, অন্যের ফোনের id ৪০৪ (AStolenPhoneStayedSignedInTest)
+     *   −২  ছবির দরজা (`users.photo`, `api.users.photo`) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeFace')` → UserPolicy::seeFace
+     *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
+     *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
+     */
+    private const CEILING = 456;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

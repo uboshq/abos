@@ -105,7 +105,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
-                                        <select :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
+                                        <select :id="'rq-' + i + '-product'" aria-label="{{ __('purchase::field.product') }}" :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                        border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -117,7 +117,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.quantity') }}" :id="'rq-' + i + '-qty'" :aria-labelledby="'rq-' + i + '-qty' + ' ' + 'rq-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + i + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-28
                                                       rounded-(--radius-field) border border-(--color-border)
@@ -125,7 +125,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('purchase::field.estimated_rate') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.estimated_rate') }}" :id="'rq-' + i + '-estimated_rate'" :aria-labelledby="'rq-' + i + '-estimated_rate' + ' ' + 'rq-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + i + '][estimated_rate]'"
                                                x-model="row.estimated_rate"
                                                class="num h-(--spacing-field-compact) w-full sm:w-28

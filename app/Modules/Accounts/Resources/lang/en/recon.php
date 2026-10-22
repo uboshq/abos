@@ -53,6 +53,7 @@ return [
     'does_not_agree' => 'Still :difference unexplained — a reconciliation cannot be closed until the difference is zero.',
     'already_confirmed' => 'This reconciliation is closed. Reopen it first.',
     'not_confirmed' => 'This reconciliation is not closed.',
+    'needs_another_hand' => 'Whoever opened a reconciliation cannot close it. Someone else checks it and closes it.',
     'statement_file' => 'Bank statement (CSV)',
     'load_statement' => 'Load the statement',
     'statement_sample' => 'Sample file',

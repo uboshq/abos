@@ -105,6 +105,7 @@
                             x-on:pointerdown.prevent="$store.scanner.grab(index)"
                             x-bind:style="{ left: corner.x + 'px', top: corner.y + 'px' }"
                             class="absolute -ml-5.5 -mt-5.5 flex h-11 w-11 items-center justify-center rounded-full"
+                            aria-label="{{ __('core.scan.corner') }}"
                             x-bind:aria-label="'{{ __('core.scan.corner') }} ' + (index + 1)"
                         >
                             <span class="block h-4 w-4 rounded-full border-2 border-white bg-[rgb(37,99,235)] shadow"></span>

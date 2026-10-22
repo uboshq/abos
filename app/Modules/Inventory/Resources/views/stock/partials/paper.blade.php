@@ -169,7 +169,7 @@
                             @foreach (['block' => 1, 'rack' => 2, 'shelf' => 3] as $slot => $depth)
                                 <td>
                                     <template x-if="hasPlaces(w)">
-                                        <select x-model="{{ $slot }}"
+                                        <select x-model="{{ $slot }}" aria-label="{{ __('inventory::field.depth_'.$depth) }} — {{ $line['product_name'] }}"
                                                 x-on:change="rowChanged($data, '{{ $slot }}')"
                                                 class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
                                                        border border-(--color-border)
@@ -200,7 +200,7 @@
                                 @if (bccomp($line['waiting'], '0', 4) > 0)
                                     <input type="number" step="0.0001" min="0"
                                            max="{{ $line['waiting'] }}"
-                                           name="{{ $name }}[qty]"
+                                           name="{{ $name }}[qty]" aria-label="{{ __('inventory::field.unplaced') }} — {{ $line['product_name'] }}"
                                            value="{{ $line['waiting'] }}" x-model="qty"
                                            class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border)
@@ -215,7 +215,7 @@
                                 @if (bccomp($line['waiting_free'], '0', 4) > 0)
                                     <input type="number" step="0.0001" min="0"
                                            max="{{ $line['waiting_free'] }}"
-                                           name="{{ $name }}[free_qty]"
+                                           name="{{ $name }}[free_qty]" aria-label="{{ __('inventory::field.unplaced_free') }} — {{ $line['product_name'] }}"
                                            value="{{ $line['waiting_free'] }}" x-model="free"
                                            class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border)
@@ -271,7 +271,7 @@
 
                                     <td>
                                         <template x-if="hasPlaces(w)">
-                                            <select x-model="s.block"
+                                            <select x-model="s.block" aria-label="{{ __('inventory::field.depth_1') }} — {{ $line['product_name'] }}"
                                                     x-on:change="rowChanged(s, 'block')"
                                                     class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
                                                            border border-(--color-border)
@@ -288,7 +288,7 @@
                                     </td>
                                     <td>
                                         <template x-if="hasPlaces(w)">
-                                            <select x-model="s.rack"
+                                            <select x-model="s.rack" aria-label="{{ __('inventory::field.depth_2') }} — {{ $line['product_name'] }}"
                                                     x-on:change="rowChanged(s, 'rack')"
                                                     class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
                                                            border border-(--color-border)
@@ -305,7 +305,7 @@
                                     </td>
                                     <td>
                                         <template x-if="hasPlaces(w)">
-                                            <select x-model="s.shelf"
+                                            <select x-model="s.shelf" aria-label="{{ __('inventory::field.depth_3') }} — {{ $line['product_name'] }}"
                                                     x-on:change="rowChanged(s, 'shelf')"
                                                     class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
                                                            border border-(--color-border)
@@ -324,7 +324,7 @@
                                 <td class="text-end">
                                     @if (bccomp($line['waiting'], '0', 4) > 0)
                                         <input type="number" step="0.0001" min="0" max="{{ $line['waiting'] }}"
-                                               :name="splitName({{ $i }}, n, 'qty')" x-model="s.qty"
+                                               :name="splitName({{ $i }}, n, 'qty')" x-model="s.qty" aria-label="{{ __('inventory::field.unplaced') }} — {{ $line['product_name'] }}"
                                                class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
@@ -336,7 +336,7 @@
                                 <td class="text-end">
                                     @if (bccomp($line['waiting_free'], '0', 4) > 0)
                                         <input type="number" step="0.0001" min="0" max="{{ $line['waiting_free'] }}"
-                                               :name="splitName({{ $i }}, n, 'free_qty')" x-model="s.free"
+                                               :name="splitName({{ $i }}, n, 'free_qty')" x-model="s.free" aria-label="{{ __('inventory::field.unplaced_free') }} — {{ $line['product_name'] }}"
                                                class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">

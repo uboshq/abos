@@ -43,7 +43,8 @@ final class ThePhoneRunsTheWebsNoticeLineTest extends TestCase
         $settings = app(SettingsService::class);
         $settings->set('notice.creator_cannot_approve', false);
         $settings->flush();
-        Notice::query()->update(['in_ticker' => false]);
+        // ⓘ শুরুতে খালি বার (`in_ticker` আর কেউ পড়ে না, ২১ অক্টোবর ২০২৬)
+        Notice::query()->update(['is_active' => false]);
     }
 
     public function test_the_bar_carries_the_webs_notice_titles_in_the_webs_order(): void
@@ -79,7 +80,7 @@ final class ThePhoneRunsTheWebsNoticeLineTest extends TestCase
             app(SettingsService::class)->flush();
             $this->published('অন্য কোম্পানির কথা', NoticePriority::EMERGENCY);
         });
-        $this->assertSame(1, Notice::query()->withoutGlobalScopes()->where('company_id', $other->id)->where('title', 'অন্য কোম্পানির কথা')->where('in_ticker', true)->count(),
+        $this->assertSame(1, Notice::query()->withoutGlobalScopes()->where('company_id', $other->id)->where('title', 'অন্য কোম্পানির কথা')->where('status', 'published')->where('is_active', true)->count(),
             'দাবির ভিত্তি নেই — অন্য কোম্পানির নোটিশ বারে ওঠেনি।');
 
         $this->assertSame(['আমাদের খবর'], array_column($this->bar(), 'title'), '⛔ অন্য কোম্পানির নোটিশ এল।');

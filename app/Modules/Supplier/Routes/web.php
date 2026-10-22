@@ -39,6 +39,9 @@ Route::middleware('auth')->prefix('suppliers')->group(function () {
 
     Route::get('/{supplier}', [SupplierController::class, 'show'])
         ->whereNumber('supplier')->name('show');
+    // ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি — ISA 505 (হিসাবের ফাঁক #১৯, ২০ অক্টোবর ২০২৬)
+    Route::get('/{supplier}/balance-confirmation', \App\Modules\Supplier\Http\Controllers\SupplierBalanceConfirmationController::class)
+        ->whereNumber('supplier')->name('balance_confirmation');
     Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])
         ->whereNumber('supplier')->name('edit');
     Route::put('/{supplier}', [SupplierController::class, 'update'])

@@ -3,6 +3,7 @@ import morph from '@alpinejs/morph'
 import { wireActions } from './components/actions.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
+import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
@@ -171,3 +172,6 @@ guardOneSubmit()
 
 window.Alpine = Alpine
 Alpine.start()
+
+// ⭐ "ফোনের মতো" রং — বান্ডেল লোড হওয়ামাত্র ([[followTheDevice]])
+followTheDevice()

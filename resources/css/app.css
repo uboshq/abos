@@ -1152,6 +1152,14 @@
     display: var(--topbar-label, inline);
 }
 
+/* ⛔ ফোনে (sm-এর নিচে) লেখা নয়, কেবল আইকন — এই নিয়ম স্তরের বাইরে, তাই Tailwind-এর `hidden sm:inline` একে হারাতে পারত না:
+   ৩৭৫px-এ "＋ তৈরি করুন" পুরো লেখায় বসত আর কোম্পানির নাম ঢেকে দিত (লাইভ-পরখ, ২১ অক্টোবর ২০২৬) */
+@media (width < 40rem) {
+    .topbar .topbar-label {
+        display: none;
+    }
+}
+
 .topbar :is(a, button):not(.pops-onto-page a, .pops-onto-page button) {
     min-height: var(--topbar-control-h, 36px);
     height: var(--topbar-control-h, 36px);
@@ -1490,4 +1498,74 @@ input[type='number'] {
 
 .bottom-nav-item-on .bottom-nav-pill {
     background: rgb(255 255 255 / 0.22);
+}
+
+/* ⭐ টপবারের খোঁজা, ফোনে (sm-এর নিচে) — কেবল আইকন; চাপলে পুরো-প্রস্থের ঘর বারের উপরে নামে, ফল তার নিচে
+   (লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬; [[shell.topbar]], shell.js-এর commandCenter.expanded)।
+   ⓘ স্তরের বাইরে, ইচ্ছাকৃত: ঘরের `flex` ইউটিলিটিকে হারাতে হবে; প্যানেলের প্রস্থ inline, তাই !important। */
+@media (width < 40rem) {
+    [data-shell-search] [data-search-field] {
+        display: none;
+    }
+
+    [data-shell-search][data-expanded="true"] {
+        position: fixed;
+        inset-inline: 0;
+        top: 0;
+        z-index: 70;
+        max-width: none;
+        padding: 8px;
+        background: var(--color-topbar);
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-field] {
+        display: flex;
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-icon] {
+        display: none;
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-panel] {
+        /* ⓘ ঘরের তল থেকে ৪px — ফালির নিজের ৮px নিচের ফাঁক বাদ দিয়ে (নইলে প্যানেল ১২px নিচে ঝুলত) */
+        top: calc(100% - 4px) !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ নিচের চলন্ত ঘোষণা — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*
+   ([[shell.statusbar]])।
+
+   ⓘ এক কপির সমান সরে (-৫০%) — দুইটা কপি পাশাপাশি, তাই লুপে ফাঁক নেই। চলাটা বসে কেবল `motion-safe:`-এ (মার্কআপে),
+   থামে মাউসে, ফোকাসে আর ⏸-এ। গতি `--ticker-duration`, লেখার দৈর্ঘ্য ধরে ([[noticeTicker]])।
+   ───────────────────────────────────────────────────────────────────── */
+@keyframes abos-ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* ⓘ গতির ডিফল্ট — JS মাপার আগে আর JS ছাড়া; [[noticeTicker]] নিজের ঘরে বসালে সেটাই জেতে (মূলে বসানো, তাই নিচের কেউ ঢাকে না) */
+:root {
+    --ticker-duration: 40s;
+}
+
+/* ⭐ মোবাইলে ঘোষণা থাকলে ফুটার-সারিটা নিচের মেনুর ঠিক উপরে, আর নিচে আটকানো সবকিছু এক সারি উপরে।
+   ⓘ স্তরের বাইরে, ইচ্ছাকৃত — `h-(--spacing-bottom-nav)` আর `bottom-0` utility, আর স্তরবিহীন নিয়ম utility-কে হারায়।
+   ⛔ ফুটারটা কেবল মেনুর উপরে বসালে সংরক্ষণের পট্টি আর পাতার শেষ সারি ঘোষণার নিচে চাপা পড়ত। */
+@media (max-width: 767px) {
+    :root:has(footer[data-has-ticker]) {
+        --spacing-bottom-nav: calc(var(--spacing-bottom-nav-bar) + var(--spacing-status-bar));
+    }
+
+    :root:has(footer[data-has-ticker]) .bottom-nav {
+        height: var(--spacing-bottom-nav-bar);
+    }
+
+    footer[data-has-ticker] {
+        bottom: var(--spacing-bottom-nav-bar);
+    }
 }

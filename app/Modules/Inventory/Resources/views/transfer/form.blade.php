@@ -82,7 +82,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('inventory::field.product') }}">
-                                        <select :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
+                                        <select :id="'tr-' + i + '-product'" aria-label="{{ __('inventory::field.product') }}" :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -93,7 +93,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('inventory::field.quantity') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('inventory::field.quantity') }}" :id="'tr-' + i + '-qty'" :aria-labelledby="'tr-' + i + '-qty' + ' ' + 'tr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + i + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field)
                                                       border border-(--color-border)

@@ -329,16 +329,16 @@
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.mfs') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
-                <x-ui.field name="bank_name" :label="__('accounts::field.mfs_provider')"
+                <x-ui.field name="bank_name" id="bank_name-2" :label="__('accounts::field.mfs_provider')"
                                    :hint="__('accounts::message.mfs_provider_hint')"
                                    :value="old('bank_name', $account->bank_name)" />
-                <x-ui.field name="account_number" :label="__('accounts::field.mfs_wallet')"
+                <x-ui.field name="account_number" id="account_number-2" :label="__('accounts::field.mfs_wallet')"
                                    :value="old('account_number', $account->account_number)" numeric />
 
                 {{-- ⓘ অন্য মডিউলের ঘর — যেমন অর্থ চালু থাকলে "কোন প্রতিষ্ঠান"
                      ([[App\Modules\Accounts\Events\AccountFormOpened]])। --}}
                 @foreach ($extras ?? [] as [$extraView, $extraData])
-                    @include($extraView, $extraData)
+                    @include($extraView, $extraData + ['idSuffix' => '-2'])
                 @endforeach
             </div>
         </section>

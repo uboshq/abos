@@ -269,6 +269,8 @@ final class PromotionDashboard implements ProvidesDashboard
             points: array_map(fn (array $r) => ['label' => $r['label'], 'first' => $r['first'], 'second' => $r['second']], array_slice($rows, 0, 6)),
             firstLabel: __('promotion::dashboard.budget_ceiling'),
             secondLabel: __('promotion::dashboard.budget_spent'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             chart: 'bars',
         )];
     }

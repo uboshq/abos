@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Support\UnchangedAnswer;
 use App\Core\Widgets\WidgetSummaries;
 use App\Core\Widgets\WidgetSummary;
 use App\Http\Controllers\Controller;
@@ -42,15 +43,8 @@ class WidgetSummaryController extends Controller
             $widgets[$key] = $summary->data($user);
         }
 
-        $etag = '"'.sha1((string) json_encode($widgets)).'"';
-        if ($request->header('If-None-Match') === $etag) {
-            return response('', 304)->header('ETag', $etag)->header('Cache-Control', self::NO_STORE);
-        }
-
-        return response()
-            ->json(['asOf' => now()->toIso8601String(), 'widgets' => (object) $widgets])
-            ->header('ETag', $etag)
-            ->header('Cache-Control', self::NO_STORE);
+        // ⓘ ETag কেবল উইজেটের তথ্যে, `asOf` বাইরে — নিয়মটা এক সহায়কে, আজকের পাতা আর কমিশনের পর্দার সাথে ভাগ করা ([[UnchangedAnswer]])
+        return UnchangedAnswer::json($request, $widgets, ['asOf' => now()->toIso8601String(), 'widgets' => (object) $widgets]);
     }
 
     /**
@@ -58,5 +52,5 @@ class WidgetSummaryController extends Controller
      * ব্যাংকের জের, লাভ আর গ্রাহকের নাম — মাঝের proxy বা ফোনের HTTP ক্যাশে থাকা চলে না। ETag আর ৩০৪ তবু চলে: ফোন নিজে
      * `If-None-Match` পাঠায়, ক্যাশ লাগে না।
      */
-    public const NO_STORE = 'no-store, private';
+    public const NO_STORE = UnchangedAnswer::NO_STORE;
 }

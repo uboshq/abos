@@ -217,4 +217,15 @@ return [
     'branch_pin' => [
         'grace_until' => (string) env('ABOS_BRANCH_PIN_GRACE_UNTIL', ''),
     ],
+
+    /*
+     * ⭐ ফাইল তোলার সীমা — সাধারণত খালি, তখন PHP-র ini-ই সত্য ([[UploadLimit]]; fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল পরীক্ষা বা বিশেষ সার্ভারের জন্য: ini-র মতো লেখা ("8M")। চলমান PHP-তে upload-এর ini নামানো যায় না, তাই
+     * পরীক্ষা লাইভের ৮ MB-র মতো ছোট সীমা এখানেই বসায়। ⛔ ini-র চেয়ে বড় লিখলে লাভ নেই — PHP তার আগেই POST ফেলে দেয়।
+     */
+    'uploads' => [
+        'post_max_size' => env('ABOS_POST_MAX_SIZE'),
+        'upload_max_filesize' => env('ABOS_UPLOAD_MAX_FILESIZE'),
+    ],
 ];

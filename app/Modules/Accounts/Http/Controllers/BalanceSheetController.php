@@ -9,11 +9,13 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\FinancialYear;
 use App\Models\UserDataScope;
 use App\Modules\Accounts\Services\BalanceSheetService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -67,7 +69,11 @@ class BalanceSheetController extends Controller implements HasMiddleware
         return view('accounts::report.balance-sheet', [
             'menu' => $this->menu->forUser($request->user()),
             // ⓘ না চাইলে শাখাটা সার্ভিস নিজেই হেডার থেকে নেয় — নিয়ম এক জায়গায় ([[BalanceSheetService::build()]])
-            'sheet' => $this->sheet->build(is_string($asOf) ? $asOf : null, $asked),
+            /*
+             * ⭐ পাশে আগের অর্থবছরের শেষ দিনের অঙ্ক, একই শাখায় — IAS 1.38 (ERP ১০০%-এর হিসাবের ফাঁক #৭, ২০ অক্টোবর ২০২৬;
+             * [[TheBalanceSheetHadNoLastYearTest]])। আগে স্থিতিপত্রে কেবল এক দিনের অঙ্ক ছিল।
+             */
+            'sheet' => $this->comparedSheet(is_string($asOf) && $asOf !== '' ? $asOf : now()->toDateString(), $asked),
             'branchId' => $asked ?? ViewedBranch::one($request->user()),
 
             /*
@@ -78,6 +84,46 @@ class BalanceSheetController extends Controller implements HasMiddleware
              * "নেত্রকোনায় কত মজুদ আর কত বকেয়া" প্রশ্নটা সত্যিকারের —
              * কেবল ওটাকে স্থিতিপত্র বলা যায় না।
              */
+            'branches' => Branch::query()
+                ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach))
+                ->orderBy('name_en')
+                ->get(),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function comparedSheet(string $asOf, ?int $branchId): array
+    {
+        $now = $this->sheet->build($asOf, $branchId);
+
+        return $this->sheet->withComparative($now, $this->sheet->build($this->sheet->priorDate($asOf), $branchId));
+    }
+
+    /**
+     * ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী — IAS 1.106 (ERP ১০০%-এর হিসাবের ফাঁক #৬, ২০ অক্টোবর ২০২৬;
+     * [[TheEquityStatementWasMissingTest]])। ⓘ "থেকে" না দিলে শেষ দিনের অর্থবছরের শুরু; শাখার নিয়ম স্থিতিপত্রের অবিকল।
+     */
+    public function equity(Request $request): View
+    {
+        $request->validate(['from' => ['nullable', 'date_format:Y-m-d'], 'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from']]);
+
+        $to = is_string($request->query('to')) && $request->query('to') !== '' ? (string) $request->query('to') : now()->toDateString();
+        $from = is_string($request->query('from')) && $request->query('from') !== ''
+            ? (string) $request->query('from')
+            : Carbon::parse(FinancialYear::forDate($to)?->starts_on ?? Carbon::parse($to)->startOfYear())->toDateString();
+
+        // ⓘ "থেকে" নিজে না দিলে বছরের শুরু; শেষের তারিখ তার আগে হলে খালি সময় — শুরুটা শেষের দিনে নামে
+        $from = min($from, $to);
+
+        $asked = $request->integer('branch_id') ?: null;
+        $scope = app(DataScope::class);
+        abort_if($asked !== null && ! $scope->allows($request->user(), UserDataScope::BRANCH, $asked), 404);
+        $reach = $scope->idsFor($request->user(), UserDataScope::BRANCH);
+
+        return view('accounts::report.equity-statement', [
+            'menu' => $this->menu->forUser($request->user()),
+            'statement' => $this->sheet->equityStatement($from, $to, $asked),
+            'branchId' => $asked ?? ViewedBranch::one($request->user()),
             'branches' => Branch::query()
                 ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach))
                 ->orderBy('name_en')

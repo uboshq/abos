@@ -20,7 +20,7 @@
         @csrf
         <input type="hidden" name="year" value="{{ $month['year'] }}">
         <input type="hidden" name="month" value="{{ $month['month'] }}">
-        <input type="text" name="reason" placeholder="{{ __('accounts::field.reason') }}"
+        <input type="text" name="reason" aria-label="{{ __('accounts::field.reason') }}" placeholder="{{ __('accounts::field.reason') }}"
                class="h-(--spacing-field) w-56 rounded-(--radius-field)
                       border border-(--color-border) bg-(--color-surface-app) px-2">
         <x-ui.button type="submit" tone="primary">{{ __('accounts::action.close_month') }}</x-ui.button>

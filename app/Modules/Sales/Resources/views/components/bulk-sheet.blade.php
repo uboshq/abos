@@ -158,12 +158,14 @@
                         <tr :class="hasSomething(row.id) ? 'bg-(--color-surface-hover)' : ''">
                             <td class="pad-wide">
                                 <span class="text-(--color-ink-muted)" x-text="row.code"></span>
-                                <span x-text="' ' + row.name"></span>
+                                <span :id="'bs-' + row.id + '-product'" x-text="' ' + row.name"></span>
                                 <span class="text-2xs text-(--color-ink-muted)" x-text="row.unit ? ' · ' + row.unit : ''"></span>
                             </td>
 
                             <td>
                                 <input type="number" step="0.01" inputmode="decimal" min="0"
+                                       aria-label="{{ __('sales::field.quantity') }}" :id="'bs-' + row.id + '-qty'"
+                                       :aria-labelledby="'bs-' + row.id + '-qty bs-' + row.id + '-product'"
                                        x-model="box(row.id).qty"
                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-1.5 text-end">
@@ -172,6 +174,8 @@
                             @if ($freeQty)
                                 <td>
                                     <input type="number" step="0.01" inputmode="decimal" min="0"
+                                           aria-label="{{ __('sales::bulk.free') }}" :id="'bs-' + row.id + '-free'"
+                                           :aria-labelledby="'bs-' + row.id + '-free bs-' + row.id + '-product'"
                                            x-model="box(row.id).free"
                                            class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-card) px-1.5 text-end">

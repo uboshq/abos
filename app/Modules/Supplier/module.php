@@ -186,6 +186,14 @@ return [
         SupplierWidgets::class,
     ],
 
+    /*
+     * ⭐ ফোনের হোম-স্ক্রিন উইজেট — প্রিন্সিপালের কমিশন (মালিক, fe-র মারফত, ২০ অক্টোবর ২০২৬: *"app e dekhate hobe"*)।
+     * ⓘ সংখ্যা ওয়েবের বাক্সের হুবহু ([[PrincipalCommissionFigures]]), চাবি `supplier.report`।
+     */
+    'phone_widgets' => [
+        \App\Modules\Supplier\Widgets\PrincipalCommissionSummary::class,
+    ],
+
     'settings' => [
         [
             'key' => 'supplier.require_bn_name',

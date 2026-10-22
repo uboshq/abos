@@ -187,6 +187,7 @@ return [
     'invoice_has_live_return' => ':no has a confirmed return (:return) against it. Cancel the return first, then the bill — otherwise the returned part is reversed twice.',
     'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
     'scheme_target_unknown' => 'The chosen target was not found in this company. Pick it again from the list.',
+    'scheme_target_mismatch' => 'The target came twice with two different values, so it is unclear which is meant. Reopen the page and pick the target again.',
     'target_unknown_staff' => 'One of the staff on the targets is not in this company. Reload the page and set them again.',
     'qty_first' => 'Enter a quantity — nothing goes to the cart at 0 or blank.',
     'discount_over_line_cap' => 'The discount on :product is :given%, above the line limit of :cap%. Lower the discount.',

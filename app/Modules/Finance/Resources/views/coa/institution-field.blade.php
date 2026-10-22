@@ -3,6 +3,7 @@
     ⓘ নাম `ext[...]`-এ: হিসাব ঘরটার মানে জানে না, কেবল বয়ে নেয়।
 --}}
 <x-ui.select name="ext[institution_id]"
+             :id="isset($idSuffix) ? 'ext[institution_id]'.$idSuffix : null"
              :label="__('finance::institution.which')"
              :options="$options"
              :selected="old('ext.institution_id', $selected)"

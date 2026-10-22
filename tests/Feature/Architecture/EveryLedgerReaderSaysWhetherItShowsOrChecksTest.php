@@ -71,6 +71,9 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Services/SalesCustomerTrade.php' => 'গ্রাহকের কেনাবেচার পর্দা',
         'app/Modules/Supplier/Dashboard/SupplierWidgets.php' => 'ড্যাশবোর্ডের পাওনা',
         'app/Modules/Supplier/Http/Controllers/SupplierController.php' => 'সরবরাহকারীর পাতার পাওনা',
+        // ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি (ISA 505) — পক্ষের পাতার খাতার একই ভিত্তি, তাই পাতার মতোই দেখার শাখা ধরে (হিসাবের ফাঁক #১৯)
+        'app/Modules/Customer/Http/Controllers/CustomerBalanceConfirmationController.php' => 'গ্রাহকের জের নিশ্চিতকরণের চিঠি — গ্রাহকের পাতার একই খাতা, দেখার শাখা ধরে',
+        'app/Modules/Supplier/Http/Controllers/SupplierBalanceConfirmationController.php' => 'সরবরাহকারীর জের নিশ্চিতকরণের চিঠি — সরবরাহকারীর পাতার একই দেনার খাতা, দেখার শাখা ধরে',
     ];
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */

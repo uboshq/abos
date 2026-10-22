@@ -151,6 +151,10 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
      * ⚠️ SVG-তে স্ক্রিপ্ট বসানো যায়, আর ফাইলটা পরে সরাসরি ব্রাউজারে
      * পরিবেশিত হয়। ⓘ একজন গ্রাহকের কর্মী একটা লোগো আপলোড করে অন্য
      * ব্যবহারকারীর পর্দায় কোড চালাতে পারতেন।
+     *
+     * ⓘ ২১ অক্টোবর ২০২৬ থেকে (মালিক) SVG নেওয়া হয়, কিন্তু স্ক্রিপ্ট ছেঁটে ([[SafeSvg]]) — সেই দাবিগুলো
+     * [[TheBarWearsTheCustomersOwnLogoTest]]-এ। ⭐ এই দাবিটা বদলায়নি: এই ফাইল SVG হিসেবে পড়াই যায় না (ভেতরে কেবল
+     * শূন্য বাইট), তাই এখনো ফেরত যায়, আর পুরনো লোগো অক্ষত থাকে।
      */
     public function test_a_script_bearing_image_is_refused(): void
     {

@@ -7,6 +7,9 @@
 
     <b>শূন্যে ব্যাজ নেই</b> — পাশের সিলের একই নিয়ম; আইকনটা থাকে, যাতে মানুষ জানেন খোঁজার জায়গা কোথায়।
 --}}
+{{-- ⓘ `bar` — উপরের বারে, অনুমোদনের সিলের পাশে (মালিকের নিজের চাওয়া আইকন; লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬: ওয়েবের মান ধাপ ২ এটাকে
+     ঘণ্টার ভেতরে নিয়ে গিয়েছিল, আর মালিক বারে খুঁজে পাননি)। বারের রঙে, পাশের সিলের মতো; ঘণ্টার প্যানেলেরটা পাতার রঙে। --}}
+@props(['bar' => false])
 @php
     $stuck = auth()->check()
         ? app(\App\Core\Engines\Approval\SignedButNotPosted::class)->count(auth()->user())
@@ -14,9 +17,12 @@
 @endphp
 
 @auth
-    <a href="{{ route('approval.inbox.signed_unposted') }}" data-signed-unposted data-live="signed-unposted"
-       class="relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
-              text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)"
+    <a href="{{ route('approval.inbox.signed_unposted') }}" data-signed-unposted @if ($bar) data-signed-unposted-bar="{{ $stuck }}" @endif data-live="signed-unposted"
+       @class([
+           'relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field) transition-colors',
+           'text-(--color-topbar-ink-muted) hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)' => $bar,
+           'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => ! $bar,
+       ])
        title="{{ __('core.notice.signed_unposted') }}"
        aria-label="{{ __('core.notice.signed_unposted') }}">
         <x-ui.icon name="receipt" :size="18" />

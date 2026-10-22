@@ -129,6 +129,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
 
     /*
+     * ⭐ একজনের মুখ — কেবল সহকর্মীর চোখে (মালিক, a6, ২০ অক্টোবর ২০২৬)। ⚠️ আগে `/storage/avatars/…`, লগইন ছাড়াই খোলা।
+     * ⓘ `can:` নেই: পাহারা নিয়ামকে — একই চালু কোম্পানির চালু সদস্য না হলে ৪০৪ ([[UserPhotoController]])। ফোনের যমজ `api.users.photo`।
+     */
+    Route::get('/users/{user}/photo', [\App\Http\Controllers\UserPhotoController::class, 'show'])
+        ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
+
+    /*
      * পাসওয়ার্ড বদল — নিজের, আর তাই নিজের পথ।
      *
      * ⚠️ পরিচয়ের ফর্মটার সাথে জোড়া হয়নি, আর সেটা ইচ্ছাকৃত: নাম ঠিক

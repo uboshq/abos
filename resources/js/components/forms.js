@@ -1180,6 +1180,15 @@ export function imagePreview ({ current = '' } = {}) {
 }
 
 /*
+ * ⓘ বাইট → "7.7" — MB, ইংরেজি অঙ্কে, বড়জোর এক দশমিক, নিচের দিকে; সার্ভারের [[UploadLimit::megabytes()]]-এর হুবহু একই।
+ */
+export function megabytesLabel (bytes) {
+    const tenths = Math.floor((Number(bytes) * 10) / (1024 * 1024))
+
+    return tenths % 10 === 0 ? String(tenths / 10) : `${Math.floor(tenths / 10)}.${tenths % 10}`
+}
+
+/*
  * ⭐ ফাইল তোলার বাংলা বোতাম — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: *"ব্রাউজারের ইংরেজি 'Choose File' আর
  * দেখাবে না"*।
  *
@@ -1187,13 +1196,32 @@ export function imagePreview ({ current = '' } = {}) {
  * লুকানো, আর বাংলা বোতাম তার `<label>`; বাছা ফাইলের নাম (বা কয়টা) এখানে রাখা হয়, পর্দা `label` দেখায়।
  * ব্যবহার: `x-data="filePick({ none: '…', many: '… :count …' })"`, ঘরে `@change="pick($event)"`, নামে `x-text="label"`।
  */
-export function filePick ({ none = '', many = ':count' } = {}) {
+export function filePick ({ none = '', many = ':count', max = 0, svgMax = 0, tooBig = '' } = {}) {
+    /* ⓘ এই ফাইলের সীমা — `.svg` হলে তার নিজেরটা (থাকলে), নইলে সাধারণটা; ০ মানে সীমা নেই */
+    const limitOf = (file) => (svgMax > 0 && /\.svg$/i.test(file.name) ? svgMax : max)
+
     return {
         label: none,
         picked: false,
+        refused: '',
 
+        /*
+         * ⭐ বড় ফাইল বাছার মুহূর্তেই ফেরানো (fe, ২১ অক্টোবর ২০২৬): ঘর খালি করা হয় (তাই জমায় যায় না), পাশে বাংলা বার্তা।
+         * ⛔ নইলে লাইভে ৮ MB-র বেশি ফাইল পাঠালে PHP গোটা ফর্ম ফেলে দিত — মানুষ জানতেন না কী হলো।
+         */
         pick (event) {
             const files = event.target.files ? Array.from(event.target.files) : []
+            const over = files.find(file => limitOf(file) > 0 && file.size > limitOf(file))
+
+            this.refused = over ? tooBig.replace(':mb', megabytesLabel(limitOf(over))) : ''
+
+            if (over) {
+                event.target.value = ''
+                this.picked = false
+                this.label = none
+
+                return
+            }
 
             this.picked = files.length > 0
             this.label = files.length === 0

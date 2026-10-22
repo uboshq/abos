@@ -287,6 +287,8 @@ final class PurchaseDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('purchase::dashboard.bought'),
             secondLabel: __('purchase::dashboard.paid'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             // ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬)
             range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
         );

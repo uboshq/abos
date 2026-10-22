@@ -89,7 +89,55 @@ final class NoticeBoard
      */
     public function forTicker(User $user, ?Carbon $day = null): Collection
     {
-        $wanted = $this->forUser($user, $day)->where('in_ticker', true);
+        /*
+         * ⭐ জরুরিটা এখানে নয় — মালিক, ২১ অক্টোবর ২০২৬: *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
+         * ⓘ জরুরি টিক দেওয়া নোটিশ উপরের স্থির ফিতায় ([[forStrip()]]); একই নোটিশ দুই জায়গায় কখনো নয়।
+         *
+         * ⭐ বাকি প্রতিটা প্রকাশিত ঘোষণা এখানে — সাধারণ অগ্রাধিকারেরও (fe, ২১ অক্টোবর ২০২৬; মালিকের নিয়ম: কিছুই না করা
+         * বোতাম থাকবে না)। ⛔ আগে বারে উঠত কেবল "গুরুত্বপূর্ণ" বা তার উপরে (`in_ticker`, অগ্রাধিকার দেখে বসানো), আর ফর্মের
+         * "নিচের চলন্ত বারেও দেখান" টিকটা কিছুই করত না — লেখক টিক দিতেন, নোটিশ বারে উঠত না। ⓘ টিক উঠে গেছে, ফটকও; ঘরটা
+         * টেবিলে রইল, কেউ পড়ে না। ভিড় সামলায় ক্রম (অগ্রাধিকার, তারপর নতুনটা) আর সীমা ([[howManyFitOnTheBar()]])।
+         */
+        return $this->riding($this->forUser($user, $day)->where('is_urgent', false), $user);
+    }
+
+    /**
+     * ⭐ উপরের স্থির ফিতায় যেগুলো যাবে — লেখক নিজে "জরুরি" টিক দিয়েছেন (মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অগ্রাধিকার যা-ই হোক — জায়গা ঠিক করে কেবল লেখকের টিক।
+     *
+     * @return Collection<int, Notice>
+     */
+    public function forStrip(User $user, ?Carbon $day = null): Collection
+    {
+        return $this->riding($this->forUser($user, $day)->where('is_urgent', true), $user);
+    }
+
+    /**
+     * ⓘ দুই বারের সব — জরুরিগুলো আগে। ফোনের বারের জন্য ([[NoticeApiController::bar()]]): ফোনে একটাই লাইন, তাই সেখানে
+     * দুইটাই যায়, আর ভাগটা ফোনের নিজের পর্দার।
+     *
+     * @return Collection<int, Notice>
+     */
+    public function onTheBars(User $user, ?Carbon $day = null): Collection
+    {
+        return $this->forStrip($user, $day)->concat($this->forTicker($user, $day))->values();
+    }
+
+    /**
+     * ⓘ বারে ওঠার বাকি নিয়ম — দুই বারের একই: সরানো বাদ, মেয়াদ পেরোনো বাদ, অগ্রাধিকার ধরে সাজানো, সীমা মেনে।
+     *
+     * @param  Collection<int, Notice>  $wanted
+     * @return Collection<int, Notice>
+     */
+    private function riding(Collection $wanted, User $user): Collection
+    {
+        /*
+         * ⛔ মেয়াদের ঘড়ি পেরোলে বারে নয় — নিজে থেকেই (মালিক, ২১ অক্টোবর ২০২৬: মেয়াদ পেরোলে নিজে থেকে উধাও)।
+         * ⓘ শেষ তারিখ (`ends_on`) [[Notice::scopeLiveOn()]] আগেই ধরে; `expires_at` ঘণ্টা ধরে, আর ওটাকে অবস্থায় বদলায় সময়ের
+         * কাজ — সেটা চলার আগের ফাঁকে বারে একটা মেয়াদ পেরোনো ঘোষণা ঘুরত।
+         */
+        $wanted = $wanted->reject(fn (Notice $notice) => $notice->expires_at !== null && $notice->expires_at->isPast());
 
         /*
          * ⭐ ক্রমটা অগ্রাধিকার ধরে, তারপর নতুনটা আগে।
@@ -119,7 +167,8 @@ final class NoticeBoard
         return $wanted
             ->reject(fn (Notice $notice) => in_array($notice->id, $pushedAside, true)
                 && ($notice->priority?->canBeDismissed() ?? true))
-            ->sortByDesc(fn (Notice $notice) => $notice->priority?->rank() ?? 0)
+            // ⭐ অগ্রাধিকার আগে (বেশিটা আগে), তারপর নতুনটা আগে — সমান অগ্রাধিকারে নতুন লেখা পুরনোকে বার থেকে ঠেলে নামায়
+            ->sort(fn (Notice $a, Notice $b) => [$b->priority?->rank() ?? 0, $b->id] <=> [$a->priority?->rank() ?? 0, $a->id])
             ->take($this->howManyFitOnTheBar())
             ->values();
     }

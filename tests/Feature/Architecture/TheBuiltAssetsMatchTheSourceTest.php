@@ -141,7 +141,13 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
         );
 
         foreach ($walker as $file) {
-            if ($file->isFile() && ! str_contains($file->getPathname(), 'node_modules')) {
+            /*
+             * ⓘ পরীক্ষার ফাইল (`*.test.js`, `*.spec.js`) বিল্ডে যায় না — বদলালেও বান্ডেল একই থাকে, তাই নতুন বিল্ডে কমিট করার মতো কিছুই
+             * থাকে না, অথচ পাহারা লাল হত (লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬: shell.test.js বদলাতেই, shell.js না বদলানো সত্ত্বেও)। পাহারা
+             * কেবল সেই ফাইলগুলো দেখে যা বান্ডেলে ঢোকে — বাকি সব আগের মতোই।
+             */
+            if ($file->isFile() && ! str_contains($file->getPathname(), 'node_modules')
+                && preg_match('/\.(test|spec)\.[cm]?js$/', $file->getFilename()) !== 1) {
                 $out[] = $file->getPathname();
             }
         }

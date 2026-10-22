@@ -307,6 +307,11 @@ class EveryRouteIsGuardedTest extends TestCase
          * তাই চুরি যাওয়া refresh টোকেনে এটা খোলে না।
          */
         'api.me' => 'নিজের পরিচয় ও মেনু — ব্যবসার ডেটা নয়, আর abilities:app চায়',
+        // ⭐ প্রোফাইল মেনু — নিজের ছবি আর নিজের ফোন (অ্যাপ ০.৪.৪১; a6, ২০ অক্টোবর ২০২৬)
+        'api.me.photo.store' => 'নিজের ছবি — কেবল নিজের সারিতে, JPG/PNG বাইট দেখে; abilities:app চায় ([[MePhotoController]])',
+        'api.me.photo.destroy' => 'নিজের ছবি সরানো — কেবল নিজের সারিতে; abilities:app চায়',
+        'api.me.devices.index' => 'নিজের ফোনের তালিকা — কেবল নিজের টোকেন; abilities:app চায় ([[MeDevicesController]])',
+        'api.me.devices.destroy' => 'নিজের একটা ফোন বের করা — কেবল নিজের টোকেনে খোঁজা, অন্যের id ৪০৪; abilities:app চায়',
         'api.web-handoff' => 'নিজের জন্য অ্যাপের ভিতরে ওয়েব খোলার চাবি — ওয়েবে নিজের চেয়ে বেশি কিছু দেয় না (প্রতিটা পর্দা নিজের চাবি দেখে); কোম্পানির সুইচ, হ্যান্ডসেট, গন্তব্য আর দুই ধাপ নিয়ামকে; abilities:app চায় ([[WebHandoffApiController]])',
         'api.workspace' => 'নিজের কোম্পানি/শাখা বদল — ওয়েবের company.switch-এর মতো; সদস্যপদ ও শাখার নাগাল User::switchCompany() দেখে; abilities:app চায়',
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',

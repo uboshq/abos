@@ -48,6 +48,11 @@ final class Listing
          * @var array<string, string>|null
          */
         public readonly ?array $total = null,
+        /*
+         * ⭐ হোমের কার্ডে চার্টের বদলে এই তালিকা — প্রথম কলাম আর শেষ কলাম, ছোট করে (মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬:
+         * অনুমোদনের কার্ডে "কাগজ · পক্ষ" আর অবস্থার চিপ)। ⓘ মডিউল একটাই চিহ্নিত করে; না করলে হোমে আগের মতো প্রথম চার্ট।
+         */
+        public readonly bool $onHome = false,
     ) {
         if ($columns === []) {
             throw new InvalidArgumentException("Listing '{$label}' has no columns.");

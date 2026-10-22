@@ -315,15 +315,21 @@
              আর বাকি ন'টায় চিহ্নটা একেবারেই নেই — শিরোনাম কেবল শিরোনাম,
              আর দৃশ্য বাছার বোতামটা নিচে ডান দিকের নিয়ন্ত্রণগুলোর সাথে। --}}
         @if ($title)
+            {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — page-header আগে থাকলে এটা h2 ([[PageHeading]]) --}}
+            {{-- ⛔ এক-লাইনের রূপ নয়, পুরো ব্লক — Blade আগে সব "php … endphp" জোড়া তুলে রাখে, আর এক-লাইনেরটা থেকে শুরু করে
+                 পরের endphp পর্যন্ত গিলে ফেলত (মাঝের সব if সহ): টুলবারওয়ালা প্রতিটা পাতা ৫০০ (cbws2-এর Mac দৌড়, ২০ অক্টোবর ২০২৬) --}}
+            @php
+                $headingTag = \App\Core\Support\PageHeading::tag();
+            @endphp
             @if ($viewMode === 'dropdown')
-                <h1 class="contents">
+                <{{ $headingTag }} class="contents">
                     <x-ui.view-menu :label="$title" mode="heading" />
-                </h1>
+                </{{ $headingTag }}>
             @else
-                <h1 data-view-selector
+                <{{ $headingTag }} data-view-selector
                     class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
                     {{ $title }}
-                </h1>
+                </{{ $headingTag }}>
             @endif
 
             @if ($count !== null || $subtitle)

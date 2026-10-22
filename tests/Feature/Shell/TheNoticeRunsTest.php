@@ -27,6 +27,13 @@ use Tests\TestCase;
  * কোনোদিন দেখত না।
  *
  * তাই এই পরীক্ষাটা "নোটিশ আছে কি না" দেখে না — দেখে **চলে কি না**।
+ *
+ * ── ⭐ ফিরে এল, ২১ অক্টোবর ২০২৬ ──────────────────────────────────────
+ * ২০ অক্টোবর (ওয়েবের মান ধাপ ২, 14e5b506c) চলন্ত বার উঠে গিয়েছিল আর এই ফাইলটা মোছা হয়েছিল। মালিক, ২১ অক্টোবর ২০২৬
+ * (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"* — তাই ccc065138-এর দাবিগুলো ফিরল, কেবল মানুষের লেখা
+ * ঘোষণার জন্য (যন্ত্রের সতর্কতা উপরের ফিতায়: [[AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest]])।
+ * ⓘ যা বদলাল: চলার নিয়ম (`@keyframes abos-ticker`) এখন app.css-এ, পাতার `<style>`-এ নয়; তাই সেটা উৎস-ফাইলে খোঁজা হয়,
+ * আর পাতায় খোঁজা হয় চলন্ত বারটা (`data-ticker`) — যন্ত্রের ঘণ্টা বা ফিতা যেন গোনায় না ঢোকে।
  */
 class TheNoticeRunsTest extends TestCase
 {
@@ -55,7 +62,7 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->actingAs($this->owner);
         $life = app(NoticeLifecycle::class);
-        // ⓘ "জরুরি" আর তার উপরে বারে যায় ([[NoticePriority::goesToTheBar()]])
+        // ⓘ জরুরি টিক ছাড়া প্রতিটা প্রকাশিত ঘোষণা চলন্ত বারে, অগ্রাধিকারের ক্রমে ([[NoticeBoard::forTicker()]], ২১ অক্টোবর ২০২৬)
         $notice = $life->draft(['title' => $text, 'body' => $text, 'priority' => NoticePriority::IMPORTANT->value]);
         $life->publish($life->approve($life->submit($notice)));
 
@@ -66,6 +73,20 @@ class TheNoticeRunsTest extends TestCase
     private function page(): string
     {
         return $this->actingAs($this->owner)->get(route('dashboard'))->assertOk()->getContent();
+    }
+
+    /** ⓘ কেবল চলন্ত বারটা — ঘণ্টা আর উপরের ফিতা বাদ */
+    private function ticker(string $html): string
+    {
+        $start = strpos($html, '<div data-ticker');
+        $this->assertNotFalse($start, 'চলন্ত বারটাই পাতায় নেই।');
+
+        return substr($html, $start, strpos($html, '</footer>', $start) - $start);
+    }
+
+    private function css(): string
+    {
+        return (string) file_get_contents(resource_path('css/app.css'));
     }
 
     // ── চলাটা ───────────────────────────────────────────────────────
@@ -81,11 +102,11 @@ class TheNoticeRunsTest extends TestCase
 
         $html = $this->page();
 
-        $this->assertStringContainsString('abos-ticker', $html,
+        $this->assertStringContainsString('motion-safe:animate-[abos-ticker', $this->ticker($html),
             'নোটিশটা স্থির — মালিক বলেছিলেন এটা চলবে।');
 
-        $this->assertStringContainsString('@keyframes abos-ticker', $html,
-            'চলার নিয়মটাই পাতায় নেই, তাই কিছু নড়বে না।');
+        $this->assertStringContainsString('@keyframes abos-ticker', $this->css(),
+            'চলার নিয়মটাই নেই, তাই কিছু নড়বে না।');
     }
 
     /**
@@ -106,15 +127,12 @@ class TheNoticeRunsTest extends TestCase
          * আছে। প্রথমে পুরো পাতায় গুনে ফেলেছিলাম, আর পরীক্ষাটা ভুল
          * কারণে লাল হয়েছিল।
          */
-        $html = $this->page();
-
-        $start = strpos($html, 'abos-ticker');
-        $ticker = substr($html, $start, strpos($html, '@keyframes') - $start);
+        $ticker = $this->ticker($this->page());
 
         $this->assertSame(2, substr_count($ticker, 'বগুড়ার রুট আজ বন্ধ'),
             'একটাই কপি — লুপে ফাঁক থাকবে।');
 
-        $this->assertStringContainsString('translateX(-50%)', $html);
+        $this->assertStringContainsString('translateX(-50%)', $this->css());
     }
 
     /**
@@ -141,12 +159,15 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->notice('বগুড়ার রুট আজ বন্ধ');
 
-        $html = $this->page();
+        $ticker = $this->ticker($this->page());
 
-        $start = strpos($html, 'abos-ticker');
-        $ticker = substr($html, $start, strpos($html, '@keyframes') - $start);
-
-        $this->assertSame(2, substr_count($ticker, 'min-w-full'),
+        /*
+         * ⛔ ২১ অক্টোবর ২০২৬: `min-w-full` একা যথেষ্ট ছিল না — কপির ১০০% মাপা হয় চলন্ত সারির চওড়া ধরে, আর সারিটা লেখার
+         * মাপে; ছবিতে একই ঘোষণা পাশাপাশি দুইবার দেখা গেল। ⭐ এখন সারি অন্তত বারের দ্বিগুণ, আর প্রতিটা কপি সারির অর্ধেক।
+         */
+        $this->assertStringContainsString('inline-flex min-w-[200%]', $ticker,
+            'চলন্ত সারিটা বারের দ্বিগুণ নয় — কপির মাপ লেখার মাপে নামবে।');
+        $this->assertSame(2, substr_count($ticker, 'min-w-1/2 shrink-0'),
             'কপিগুলো পর্দার সমান চওড়া নয় — একটা নোটিশ থাকলে দুইটা কপিই '
             .'একসাথে চোখে পড়বে, আর পাঠক ভাববেন বার্তাটা দুইবার লেখা হয়েছে।');
     }
@@ -161,8 +182,14 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->notice('রবিবার থেকে দাম বাড়বে');
 
-        $this->assertStringContainsString('animation-play-state:paused', $this->page(),
+        $ticker = $this->ticker($this->page());
+
+        $this->assertStringContainsString('group-hover:[animation-play-state:paused]', $ticker,
             'মাউস রাখলে থামে না — চলন্ত নোটিশে ক্লিক করা যাবে না।');
+
+        // ⭐ কী-বোর্ডেও (২১ অক্টোবর ২০২৬, WCAG 2.2.2) — Tab-এ লিংকে এলে লেখা থামে, নইলে ফোকাসের ঘরটা সরে যেত
+        $this->assertStringContainsString('group-focus-within:[animation-play-state:paused]', $ticker,
+            'ফোকাস এলে থামে না — কী-বোর্ডে চলন্ত লিংক ধরা যায় না।');
     }
 
     /**
@@ -176,8 +203,14 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->notice('রবিবার থেকে দাম বাড়বে');
 
-        $this->assertStringContainsString('motion-safe:animate-', $this->page(),
+        $ticker = $this->ticker($this->page());
+
+        $this->assertStringContainsString('motion-safe:animate-', $ticker,
             'চলন্ত জিনিস বন্ধ রাখা পাঠকের পর্দাতেও নড়বে।');
+
+        // ⛔ শর্ত ছাড়া কোনো চলা নয় — একটাও `animate-` থাকলে সেটা `motion-safe:`-এর বাইরে নড়ত
+        $this->assertSame(substr_count($ticker, 'animate-['), substr_count($ticker, 'motion-safe:animate-['),
+            'চলাটা motion-safe-এর বাইরে বসেছে।');
     }
 
     // ── কী দেখায়, আর কখন চুপ থাকে ───────────────────────────────────
@@ -187,7 +220,7 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->notice('বাকি দেওয়া আজ বন্ধ');
 
-        $this->assertStringContainsString('বাকি দেওয়া আজ বন্ধ', $this->page());
+        $this->assertStringContainsString('বাকি দেওয়া আজ বন্ধ', $this->ticker($this->page()));
     }
 
     /**
@@ -218,12 +251,8 @@ class TheNoticeRunsTest extends TestCase
 
         $html = $this->page();
 
-        /*
-         * চলার নিয়মটা পাতায় থাকতেই পারে (`@once`), কিন্তু ঘোরার মতো
-         * কোনো সারি থাকা চলবে না। তাই খোঁজা হয় ডটটা — প্রতিটা নোটিশের
-         * সামনে যেটা বসে।
-         */
-        $this->assertStringNotContainsString('size-1.5 rounded-full bg-current', $html,
+        // ⓘ ২১ অক্টোবর ২০২৬: কিছু না থাকলে চলন্ত বারটাই আঁকা হয় না — ঘোরার মতো সারি তো নয়ই
+        $this->assertStringNotContainsString('data-ticker', $html,
             'কোনো নোটিশ নেই, তবু বারে সারি ঘুরছে।');
     }
 
@@ -237,10 +266,11 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->notice('রবিবার থেকে দাম বাড়বে');
 
-        $html = $this->page();
+        $ticker = $this->ticker($this->page());
 
-        $this->assertStringContainsString('aria-hidden="true"', $html);
-        $this->assertStringContainsString('tabindex="-1"', $html,
+        $this->assertMatchesRegularExpression('/<span class="inline-flex min-w-1\/2[^"]*"\s+aria-hidden="true"\s*>/', $ticker,
+            'দ্বিতীয় কপিটা পর্দা-পাঠকের কাছে খোলা — প্রতিটা নোটিশ দুইবার পড়বে।');
+        $this->assertStringContainsString('tabindex="-1"', $ticker,
             'দ্বিতীয় কপির লিংকগুলো Tab-এ ধরা পড়বে।');
     }
 }

@@ -475,6 +475,8 @@ final class FinanceDashboard implements ProvidesDashboard
             ], $facts->moneyFlowByMonth(6)),
             firstLabel: __('finance::dashboard.cash_in'),
             secondLabel: __('finance::dashboard.cash_out'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             // ⓘ ছয় মাসের প্রথম দিন থেকে আজ — [[AccountsFacts::moneyFlowByMonth()]]-এর একই শুরু (৫ অক্টোবর ২০২৬)
             range: DateRange::label(Carbon::today()->startOfMonth()->subMonths(5), Carbon::today()),
         )];

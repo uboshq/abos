@@ -280,6 +280,7 @@ return [
         'delete' => 'Delete',
         'search' => 'Search',
         'search_anything' => 'Search anything…',
+        'search_everything' => 'Search anything: pages, customers, products, paper numbers…',
         'switch_language' => 'Switch language',
         'logout' => 'Log out',
         'more' => 'More',
@@ -346,9 +347,10 @@ return [
         'against_last' => 'against last :day',
         // ⓘ দণ্ডের মাথার ছোট মান ([[Series::short()]], ৪ অক্টোবর ২০২৬)
         'chart_total' => 'Total',
-        'short_thousand' => 'K',
-        'short_lakh' => 'L',
-        'short_crore' => 'Cr',
+        'short_thousand' => 'thousand',
+        'short_lakh' => 'lakh',
+        'short_crore' => 'crore',
+        'taka' => 'Tk',
         // ⓘ মাস্টার তালিকার স্বাস্থ্য ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
         'health_hint' => 'incomplete :missing · same phone/name :same · inactive :off',
         'oldest_is' => 'oldest is :days days old',
@@ -429,6 +431,8 @@ return [
         'theme_note' => 'Light or dark background.',
         'light' => 'Light',
         'dark' => 'Dark',
+        'system' => 'Like the device',
+        'colour' => 'Colour',
         'language' => 'Language',
         'saved' => 'Saved.',
 
@@ -495,6 +499,10 @@ return [
         'area_switch' => 'Change area',
         'launcher' => 'Pick an app',
         'launcher_search' => 'Search apps…',
+        'all_modules' => 'All modules',
+        'all_modules_search' => 'Find a module — Bangla or English…',
+        'all_modules_none' => 'No module by that name',
+        'waiting_signature' => ':count waiting for signature',
         'classic' => 'Classic',
         'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',
@@ -915,7 +923,16 @@ return [
         'code_auto_hint' => 'Leave it empty and one will be given. Type one only to keep a code from your old books.',
     ],
     'notice' => [
+        // ⭐ সতর্কবাণীর ফিতা ([[shell.notice-banner]], ওয়েবের মান ধাপ ২)
+        'details' => 'Details',
+        'close' => 'Close',
+        'more_in_bell' => ':count more notices in the bell',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'Announcements',
+        'ticker_pause' => 'Pause announcements',
+        'ticker_play' => 'Play announcements',
         'awaiting_mine' => 'Waiting for your decision',
+        'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Signed, not posted',
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
         'title' => 'Needs attention',
@@ -1136,6 +1153,8 @@ return [
         'main_navigation' => 'Main navigation',
         // The path row — "Home / Module / Screen"
         'breadcrumb' => 'Where you are',
+        'menu' => 'Menu',
+        'home' => 'Home',
     ],
 
     'company' => [
@@ -1212,6 +1231,8 @@ return [
 
     'profile' => [
         'title' => 'My profile',
+        'menu' => ':name — profile and settings',
+        'language' => 'Language',
         'subtitle' => 'Your details, your photo and your password',
         'identity' => 'Identity',
         'name' => 'Name',
@@ -1279,6 +1300,15 @@ return [
     'avatar' => [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
+        // the phone's profile menu takes JPG and PNG only (a6, 20 Oct 2026)
+        'phone_jpg_png_only' => 'Use a JPG or PNG photo.',
+    ],
+
+    // "My phones" on the app's profile menu ([[MeDevicesController]])
+    'devices' => [
+        'android' => 'Android phone',
+        'ios' => 'iPhone',
+        'phone' => 'Phone',
     ],
 
     // ছবির ইঞ্জিন যা ছুঁড়তে পারে। ⚠️ `avatar.*` থেকে আলাদা রাখা হয়েছে,
@@ -1344,6 +1374,7 @@ return [
 
     // বিজ্ঞপ্তি — একজনের জন্য একটা খবর
     'notify' => [
+        'signed_unposted' => 'Signed, not yet posted',
         'title' => 'For you',
         'none' => 'Nothing new.',
         'mark_all' => 'Mark all read',

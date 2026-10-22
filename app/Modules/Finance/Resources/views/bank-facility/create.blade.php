@@ -158,7 +158,7 @@
             {{-- ⭐ গ্যারান্টির তারিখটা নবায়ন নয়, **মেয়াদ শেষ** — গ্যারান্টি
                  ফুরায়, গড়ায় না। কলাম একটাই, কিন্তু নামটা আলাদা। --}}
             <template x-if="hasExpiry">
-                <x-ui.field name="renews_on" type="date" :label="__('finance::field.expires_on')"
+                <x-ui.field name="renews_on" id="renews_on-2" type="date" :label="__('finance::field.expires_on')"
                             :value="old('renews_on')" />
             </template>
 
@@ -286,7 +286,7 @@
 
             {{-- LTR ও গ্যারান্টি — মার্জিন --}}
             <template x-if="kind === 'ltr' || kind === 'bg'">
-                <x-ui.field name="margin_percent" type="number" step="0.01" inputmode="decimal"
+                <x-ui.field name="margin_percent" id="margin_percent-2" type="number" step="0.01" inputmode="decimal"
                             :label="__('finance::field.margin_percent')"
                             :value="old('margin_percent', '15')" numeric />
             </template>
@@ -415,7 +415,7 @@
                         কিস্তিগুলোর বর্তমান মূল্য। ⛔ গুণ করলে ভবিষ্যতের সুদটাও আজকের
                         বকেয়ায় ঢুকত, আর খাতায় দায়টা ব্যাংকের কাগজের চেয়ে বড় হয়ে বসত।
                     --}}
-                    <x-ui.field name="opening_drawn" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="opening_drawn" id="opening_drawn-2" type="number" step="0.01" inputmode="decimal"
                                 :label="__('finance::field.outstanding_today')"
                                 :value="old('opening_drawn')" numeric
                                 :hint="__('finance::message.opening_touches_no_bank')"

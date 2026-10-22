@@ -23,4 +23,5 @@ return [
     'not_yet' => 'Not arrived yet',
     'days_late' => 'Days late',
     'nothing_late' => 'No late delivery in this period.',
+    'late_total' => 'Grand total: :count late',
 ];

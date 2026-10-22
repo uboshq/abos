@@ -87,7 +87,7 @@
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('inventory::pack.unit') }}">
-                            <select :name="'packs[' + i + '][unit_id]'" x-model="row.unit_id"
+                            <select :id="'pk-' + i + '-product'" aria-label="{{ __('inventory::pack.unit') }}" :name="'packs[' + i + '][unit_id]'" x-model="row.unit_id"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
                                            border-(--color-border) bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
@@ -100,7 +100,7 @@
                         </td>
 
                         <td class="cell-input" data-label="{{ __('inventory::pack.per_qty') }}">
-                            <input type="number" step="0.000001" inputmode="decimal"
+                            <input aria-label="{{ __('inventory::pack.per_qty') }}" :id="'pk-' + i + '-per_qty'" :aria-labelledby="'pk-' + i + '-per_qty' + ' ' + 'pk-' + i + '-product'" type="number" step="0.000001" inputmode="decimal"
                                    :name="'packs[' + i + '][per_qty]'" x-model="row.per_qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                           border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
@@ -117,7 +117,7 @@
                                  ⓘ সব একক আগে থেকে থাকলে বাছাইটা সবসময় জায়গা পায়;
                                  কোনটা চলবে না, সেটা সার্ভার বলে
                                  ([[ProductPackService::clean()]])। --}}
-                            <select :name="'packs[' + i + '][per_unit_id]'" x-model="row.per_unit_id"
+                            <select aria-label="{{ __('inventory::pack.per_unit') }}" :id="'pk-' + i + '-per_unit_id'" :aria-labelledby="'pk-' + i + '-per_unit_id' + ' ' + 'pk-' + i + '-product'" :name="'packs[' + i + '][per_unit_id]'" x-model="row.per_unit_id"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
                                            border-(--color-border) bg-(--color-surface-card) px-2">
                                 {{-- ⛔ base-এর জন্য আলাদা কোনো বিকল্প নেই — ২১ সেপ্টেম্বর ২০২৬।
@@ -140,7 +140,7 @@
                             x-text="inBase(row)"></td>
 
                         <td class="cell-input" data-label="{{ __('inventory::pack.barcode') }}">
-                            <input type="text" maxlength="64"
+                            <input aria-label="{{ __('inventory::pack.barcode') }}" :id="'pk-' + i + '-barcode'" :aria-labelledby="'pk-' + i + '-barcode' + ' ' + 'pk-' + i + '-product'" type="text" maxlength="64"
                                    :name="'packs[' + i + '][barcode]'" x-model="row.barcode"
                                    class="h-(--spacing-field-compact) w-full sm:w-40 rounded-(--radius-field)
                                           border border-(--color-border) bg-(--color-surface-card) px-2">

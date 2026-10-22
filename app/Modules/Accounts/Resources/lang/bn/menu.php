@@ -51,6 +51,7 @@ return [
     'inter_company' => 'ভাই-কোম্পানির টাকা',
     'inter_company_new' => 'নতুন — ভাই-কোম্পানিকে টাকা',
     'balance_sheet' => 'স্থিতিপত্র',
+    'equity_statement' => 'মালিকানা-স্বত্বের পরিবর্তন',
     'cash_flow' => 'নগদ প্রবাহ',
     'settings' => 'সেটিংস',
     'loans' => 'ঋণ',

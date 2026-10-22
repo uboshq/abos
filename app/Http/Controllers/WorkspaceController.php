@@ -446,7 +446,8 @@ class WorkspaceController extends Controller
     public function switchTheme(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'theme' => ['required', 'string', 'in:light,dark'],
+            // ⭐ `system` — ফোনের মতো (যন্ত্রের আলো/অন্ধকার মানে), অ্যাপের একই তিনটা (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬; [[followTheDevice]])
+            'theme' => ['required', 'string', 'in:light,dark,system'],
         ]);
 
         $request->user()->forceFill(['theme' => $validated['theme']])->save();

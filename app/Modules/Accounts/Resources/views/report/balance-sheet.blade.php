@@ -86,10 +86,12 @@
         {{-- ── বাঁ পক্ষ · সম্পদ ─────────────────────────────────────── --}}
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
-            <h2 class="flex items-baseline justify-between border-b border-(--color-border)
+            @include('accounts::report.partials.sheet-columns')
+            <h2 class="flex items-baseline justify-between gap-3 border-b border-(--color-border)
                        bg-(--color-section-head) px-4 py-3 font-semibold">
-                <span>{{ __('accounts::field.assets') }}</span>
-                <span class="tabular-nums">{{ $money($sheet['totals']['assets']) }}</span>
+                <span class="flex-1">{{ __('accounts::field.assets') }}</span>
+                <span class="w-32 text-end tabular-nums">{{ $money($sheet['totals']['assets']) }}</span>
+                <span data-prior class="w-32 text-end tabular-nums text-(--color-ink-muted)">{{ $money($sheet['prior']['totals']['assets']) }}</span>
             </h2>
 
             @include('accounts::report.partials.sheet-side', ['groups' => $sheet['assets']])
@@ -98,10 +100,12 @@
         {{-- ── ডান পক্ষ · দায় ও মূলধন ───────────────────────────────── --}}
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
-            <h2 class="flex items-baseline justify-between border-b border-(--color-border)
+            @include('accounts::report.partials.sheet-columns')
+            <h2 class="flex items-baseline justify-between gap-3 border-b border-(--color-border)
                        bg-(--color-section-head) px-4 py-3 font-semibold">
-                <span>{{ __('accounts::field.liabilities_and_equity') }}</span>
-                <span class="tabular-nums">{{ $money($sheet['totals']['funding']) }}</span>
+                <span class="flex-1">{{ __('accounts::field.liabilities_and_equity') }}</span>
+                <span class="w-32 text-end tabular-nums">{{ $money($sheet['totals']['funding']) }}</span>
+                <span data-prior class="w-32 text-end tabular-nums text-(--color-ink-muted)">{{ $money($sheet['prior']['totals']['funding']) }}</span>
             </h2>
 
             @include('accounts::report.partials.sheet-side', ['groups' => $sheet['liabilities']])
@@ -116,6 +120,7 @@
                     bccomp($sheet['profit_earlier'], '0', 4) !== 0 ? [
                         'label' => __('accounts::field.profit_earlier_years'),
                         'amount' => $sheet['profit_earlier'],
+                        'prior' => $sheet['prior']['profit_earlier'],
                     ] : null,
                     [
                     /*
@@ -128,6 +133,7 @@
                      */
                     'label' => __('accounts::field.profit_this_year'),
                     'amount' => $sheet['profit_this_year'],
+                    'prior' => $sheet['prior']['profit_this_year'],
                     ],
                 ])),
             ])

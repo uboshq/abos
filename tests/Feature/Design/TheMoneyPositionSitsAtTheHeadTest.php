@@ -79,9 +79,23 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
         foreach ($rows as $row) {
             $door = route('module.dashboard', ['module' => $row['module']]);
             $this->assertStringContainsString('href="'.e($door).'"', $pictures, "\"{$row['module']}\"-এর চার্টে নিজের পর্দার দরজা নেই।");
-            $this->assertStringContainsString(e($row['panel']->label), $pictures, "\"{$row['module']}\"-এর চার্টের নাম হোমে নেই।");
-
             $own = $this->actingAs($owner)->get($door)->assertOk()->viewData('dashboard');
+
+            /*
+             * ⭐ মডিউল হোমের জন্য একটা তালিকা চিহ্নিত করলে ([[Listing::$onHome]], মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬ — অনুমোদনের
+             * কার্ডে কাগজের তালিকা আর চিপ) কার্ডটা সেই তালিকার। ⓘ যাচাই একই কড়া: নামটা হোমে আছে, আর ওটা মডিউলের নিজের পাতারই
+             * হোম-তালিকা — অন্য কোথাও থেকে নয়।
+             */
+            if (($row['listing'] ?? null) !== null) {
+                $this->assertStringContainsString(e($row['listing']->label), $pictures, "\"{$row['module']}\"-এর হোম-তালিকার নাম হোমে নেই।");
+                $ownHome = collect($own->listings)->first(fn ($l) => $l->onHome);
+                $this->assertNotNull($ownHome, "\"{$row['module']}\": হোমে তালিকা, অথচ নিজের পাতায় হোমের জন্য চিহ্নিত তালিকা নেই।");
+                $this->assertSame($ownHome->label, $row['listing']->label, "\"{$row['module']}\": হোমের তালিকা আর নিজের পাতার হোম-তালিকা আলাদা।");
+
+                continue;
+            }
+
+            $this->assertStringContainsString(e($row['panel']->label), $pictures, "\"{$row['module']}\"-এর চার্টের নাম হোমে নেই।");
             $this->assertSame($own->panels[0]->label, $row['panel']->label, "\"{$row['module']}\": হোমের চার্ট আর নিজের পর্দার প্রথম চার্ট আলাদা।");
         }
 

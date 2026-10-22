@@ -111,7 +111,7 @@
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('sales::field.product') }}">
-                            <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
+                            <select :id="'sl-' + i + '-product'" aria-label="{{ __('sales::field.product') }}" :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
                                     @change="productChosen(row)"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
@@ -142,7 +142,7 @@
 
                         @if ($linkField)
                             <td class="cell-input" data-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
-                                <select :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
+                                <select aria-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}" :id="'sl-' + i + '-link'" :aria-labelledby="'sl-' + i + '-link' + ' ' + 'sl-' + i + '-product'" :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
@@ -154,7 +154,7 @@
                         @endif
 
                         <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
-                            <input type="number" step="0.01" inputmode="decimal" required
+                            <input aria-label="{{ __('sales::field.quantity') }}" :id="'sl-' + i + '-qty'" :aria-labelledby="'sl-' + i + '-qty' + ' ' + 'sl-' + i + '-product'" type="number" step="0.01" inputmode="decimal" required
                                    :name="'lines[' + (i) + '][{{ $qtyField }}]'" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
@@ -174,7 +174,7 @@
                                 সার্ভার অনুরোধটা ফিরিয়ে দিত।
                             --}}
                             <td class="cell-input" data-label="{{ __('sales::field.unit') }}">
-                                <select :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
+                                <select aria-label="{{ __('sales::field.unit') }}" :id="'sl-' + i + '-unit_id'" :aria-labelledby="'sl-' + i + '-unit_id' + ' ' + 'sl-' + i + '-product'" :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -187,7 +187,7 @@
                         @endif
 
                         <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
-                            <input type="number" step="0.0001" inputmode="decimal" required
+                            <input aria-label="{{ __('sales::field.rate') }}" :id="'sl-' + i + '-rate'" :aria-labelledby="'sl-' + i + '-rate' + ' ' + 'sl-' + i + '-product'" type="number" step="0.0001" inputmode="decimal" required
                                    :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
@@ -195,14 +195,14 @@
 
                         @if ($showDiscount)
                             <td class="cell-input" data-label="{{ __('sales::field.discount') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input aria-label="{{ __('sales::field.discount') }}" :id="'sl-' + i + '-discount'" :aria-labelledby="'sl-' + i + '-discount' + ' ' + 'sl-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                        :name="'lines[' + (i) + '][discount]'" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             @if ($showTax)
                             <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input aria-label="{{ __('sales::field.tax') }}" :id="'sl-' + i + '-tax'" :aria-labelledby="'sl-' + i + '-tax' + ' ' + 'sl-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                        :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">

@@ -93,7 +93,7 @@
       ->values();
 @endphp
 
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-shell-create>
     <button type="button"
             @click="open = ! open" @click.outside="open = false"
             @keydown.escape.window="open = false"

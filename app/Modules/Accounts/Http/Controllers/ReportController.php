@@ -151,7 +151,13 @@ class ReportController extends Controller implements HasMiddleware
     {
         // ⓘ লাভ-ক্ষতি আর নগদ প্রবাহের নিজের দরজা ([[FinalAccountsReportController]], `accounts.report.final`) চাবি দেখে তবে এখানে
         // পাঠায়; ঠিকানাটা আগে ঐ রুটেই মেলে — আবার `accounts.report` চাইলে কেবল চূড়ান্ত হিসাবের চাবিওয়ালা আটকাতেন
-        if (in_array($slug, FinalAccountsReportController::SLUGS, true)) {
+        /*
+         * ⭐ চূড়ান্ত হিসাবের সব পাতা (লাভ-ক্ষতি, নগদ প্রবাহ, রেওয়ামিল, খাতওয়ারি আয়-খরচ, শাখা পাশাপাশি) কেবল চূড়ান্ত হিসাবের চাবি
+         * দেখে — মেনু ঐ চাবিতেই সারি দেখায় (fe hotfix, ১৯ অক্টোবর ২০২৬)। ⛔ আগে রেওয়ামিল, খাতওয়ারি আয়-খরচ আর শাখা পাশাপাশি
+         * এখানে `accounts.report`-ও চাইত: কেবল `.final` থাকলে মেনুতে সারি, খুললে ৪০৩। ⓘ এই অঙ্কগুলো লাভ-ক্ষতিতেও আছে, যা আগে
+         * থেকেই কেবল `.final`-এ খোলে — তাই নতুন কিছু খোলে না।
+         */
+        if (in_array($slug, FinalAccountsReportController::SLUGS, true) || in_array($slug, self::FINAL_ACCOUNTS, true)) {
             abort_unless((bool) $request->user()?->can('accounts.report.final'), 403);
 
             return;

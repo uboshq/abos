@@ -10,17 +10,17 @@
     $columns = [
         ['key' => 'bucket', 'label' => __('finance::forecast.when'),
          'render' => fn ($r) => __('finance::forecast.bucket_'.$r['bucket'])],
-        ['key' => 'receivables', 'label' => __('finance::forecast.receivables'), 'numeric' => true,
+        ['key' => 'receivables', 'label' => __('finance::forecast.receivables'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => $money($r['receivables'])],
-        ['key' => 'loans_in', 'label' => __('finance::forecast.loans_in'), 'numeric' => true,
+        ['key' => 'loans_in', 'label' => __('finance::forecast.loans_in'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => $money($r['loans_in'])],
-        ['key' => 'payables', 'label' => __('finance::forecast.payables'), 'numeric' => true,
+        ['key' => 'payables', 'label' => __('finance::forecast.payables'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => $money($r['payables'])],
-        ['key' => 'loans_out', 'label' => __('finance::forecast.loans_out'), 'numeric' => true,
+        ['key' => 'loans_out', 'label' => __('finance::forecast.loans_out'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => $money($r['loans_out'])],
-        ['key' => 'net', 'label' => __('finance::forecast.net'), 'numeric' => true,
+        ['key' => 'net', 'label' => __('finance::forecast.net'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => $money($r['net'])],
-        ['key' => 'closing', 'label' => __('finance::forecast.closing'), 'numeric' => true,
+        ['key' => 'closing', 'label' => __('finance::forecast.closing'), 'numeric' => true, 'total' => 'money',
          'render' => fn ($r) => view('finance::forecast.partials.closing', ['amount' => $r['closing']])],
     ];
 @endphp
@@ -40,7 +40,17 @@
             <span class="num">{{ $money($forecast['opening']) }}</span>
         </h2>
 
-        <x-ui.table :compact="true" :empty="''" :rows="$forecast['rows']" :columns="$columns" />
+        {{-- ⭐ সর্বমোট — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬: ঘরগুলো আলাদা, তাই আসা-যাওয়ার যোগ নব্বই দিনের মোট; শেষের জের
+             যোগ নয়, শেষ ঘরের জের ([[CashForecast::build()]]) --}}
+        @php
+            $grand = [];
+            foreach (['receivables', 'loans_in', 'payables', 'loans_out', 'net'] as $k) {
+                $grand[$k] = array_reduce($forecast['rows'], fn ($sum, $r) => bcadd($sum, (string) $r[$k], 4), '0');
+            }
+            $grand['closing'] = $forecast['rows'] === [] ? $forecast['opening'] : (string) end($forecast['rows'])['closing'];
+        @endphp
+        <x-ui.table :compact="true" :empty="''" :rows="$forecast['rows']" :columns="$columns"
+                    :grand="$forecast['rows'] === [] ? [] : $grand" />
 
         <p class="border-t border-(--color-border) px-4 py-3 text-xs text-(--color-ink-muted)">
             {{ __('finance::forecast.caveat') }}

@@ -109,7 +109,7 @@
                                 <template x-for="(row, i) in rows" :key="i">
                                     <tr class="border-b border-(--color-border)">
                                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
-                                            <select :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
+                                            <select :id="'rf-' + i + '-product'" aria-label="{{ __('purchase::field.product') }}" :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
                                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                            border border-(--color-border)
                                                            bg-(--color-surface-card) px-2">
@@ -121,7 +121,7 @@
                                         </td>
 
                                         <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
-                                            <input type="number" step="0.01" inputmode="decimal"
+                                            <input aria-label="{{ __('purchase::field.quantity') }}" :id="'rf-' + i + '-qty'" :aria-labelledby="'rf-' + i + '-qty' + ' ' + 'rf-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                    :name="'lines[' + i + '][qty]'" x-model="row.qty"
                                                    class="num h-(--spacing-field-compact) w-full sm:w-28
                                                           rounded-(--radius-field) border border-(--color-border)
@@ -132,7 +132,7 @@
                                              লিখলে তিনজন তিন জিনিসের দর দেবেন, আর
                                              তুলনাটা অর্থহীন হয়ে যাবে। --}}
                                         <td class="cell-input" data-label="{{ __('purchase::field.specification') }}">
-                                            <input type="text"
+                                            <input aria-label="{{ __('purchase::field.specification') }}" :id="'rf-' + i + '-specification'" :aria-labelledby="'rf-' + i + '-specification' + ' ' + 'rf-' + i + '-product'" type="text"
                                                    :name="'lines[' + i + '][specification]'"
                                                    x-model="row.specification"
                                                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field)

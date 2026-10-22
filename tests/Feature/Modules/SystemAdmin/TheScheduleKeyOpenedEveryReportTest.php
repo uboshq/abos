@@ -41,8 +41,11 @@ final class TheScheduleKeyOpenedEveryReportTest extends TestCase
 
     private const PROFIT_LOSS = 'accounts.profit_loss';
 
-    /** দরজা সত্যিই দুই চাবি চায় — `accounts.report` আর চূড়ান্ত হিসাব ([[BranchesSideBySideReport]])। */
-    private const TWO_KEYS = 'accounts.branches_side_by_side';
+    /**
+     * শাখা পাশাপাশি — ১৯ অক্টোবরের হটফিক্স থেকে দরজা কেবল চূড়ান্ত হিসাবের চাবি চায়, সংজ্ঞাও তাই ([[BranchesSideBySideReport]])।
+     * ⓘ আগে এটা "দুই চাবি"-র উদাহরণ ছিল; এখন কোনো রিপোর্ট দুটোই একসাথে চায় না (দলের লক্ষ্য রিপোর্ট যেকোনো একটা চায়, `anyKey`)।
+     */
+    private const SIDE_BY_SIDE = 'accounts.branches_side_by_side';
 
     private const UNDECLARED = 'ec_report_with_no_key';
 
@@ -83,22 +86,24 @@ final class TheScheduleKeyOpenedEveryReportTest extends TestCase
     }
 
     /**
-     * ③ দুই-চাবির রিপোর্টে একটা চাবি যথেষ্ট নয় — যেকোনোটা একা।
+     * ③ সূচি ওয়েবের দরজার কথাই বলে — চূড়ান্ত হিসাবের পাতায় সাধারণ রিপোর্টের চাবি একা যথেষ্ট নয়, চূড়ান্ত চাবি একাই যথেষ্ট।
      *
      * ⓘ ১০ অক্টোবর ২০২৬: লাভ-ক্ষতির ওয়েবের দরজা ৬ অক্টোবর থেকে কেবল চূড়ান্ত হিসাবের চাবি চায়
-     * ([[FinalAccountsReportController]], cec88dd3) — তাই সেখানে চূড়ান্ত চাবি একাই যথেষ্ট, সাধারণ চাবি একা নয়।
-     * দুই-চাবির নিয়মটা মাপা হয় যে রিপোর্টের দরজা সত্যিই দুটো চায় তাতে: শাখা পাশাপাশি।
+     * ([[FinalAccountsReportController]], cec88dd3)।
+     * ⓘ ২২ অক্টোবর ২০২৬ (a6): শাখা পাশাপাশিও ১৯ অক্টোবরের হটফিক্স থেকে তাই (দরজা আর সংজ্ঞা দুটোই) — আগে এই দাবি ধরে নিত
+     * এটা দুটো চাবিই চায়, তাই Mac দৌড়ে লাল হলো; কোড ঠিক, প্রত্যাশা পুরনো ছিল। এখন দুটো পাতাই একই নিয়মে মাপা হয়।
      */
-    public function test_one_of_the_two_keys_is_not_enough(): void
+    public function test_the_schedule_follows_the_final_accounts_door(): void
     {
         $clerk = $this->member(['system_admin.reports.schedule', 'accounts.report']);
         $this->assertRefused($clerk, self::PROFIT_LOSS);
-        $this->assertRefused($clerk, self::TWO_KEYS);
+        $this->assertRefused($clerk, self::SIDE_BY_SIDE);
 
         $this->take($clerk, 'accounts.report');
         $this->give($clerk, 'accounts.report.final');
-        $this->assertRefused($clerk, self::TWO_KEYS);
-        $this->assertNotNull($this->scheduleAs($clerk, self::PROFIT_LOSS),
+        $this->assertAllowed($clerk, self::SIDE_BY_SIDE,
+            '⛔ চূড়ান্ত হিসাবের চাবিতে ওয়েবে শাখা পাশাপাশি খোলে, অথচ সূচি হলো না — দুই দরজা দুই কথা বলছে।');
+        $this->assertAllowed($clerk, self::PROFIT_LOSS,
             '⛔ চূড়ান্ত হিসাবের চাবিতে ওয়েবে লাভ-ক্ষতি খোলে, অথচ সূচি হলো না — দুই দরজা দুই কথা বলছে।');
     }
 
@@ -202,6 +207,18 @@ final class TheScheduleKeyOpenedEveryReportTest extends TestCase
         $schedule->forceFill(['next_run_at' => now()->subMinute()])->save();
 
         return $schedule->fresh();
+    }
+
+    /** ⓘ ফেরানো হলে দাবির নিজের বার্তায় ব্যর্থ — ValidationException-এ নয় */
+    private function assertAllowed(User $user, string $report, string $message): void
+    {
+        try {
+            $this->scheduleAs($user, $report);
+        } catch (ValidationException) {
+            $this->fail($message);
+        }
+
+        $this->assertSame(1, ReportSchedule::query()->withoutGlobalScopes()->where('report_key', $report)->where('created_by', $user->id)->count(), $message);
     }
 
     private function assertRefused(User $user, string $report): void

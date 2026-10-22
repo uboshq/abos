@@ -231,14 +231,25 @@
     {{-- সবকিছুর উপরে — Redwood-এর ৪px ইটরঙা পটি। --}}
     <x-shell.chrome region="above-all" :menu="$menu ?? []" />
 
-    <div class="flex min-h-dvh flex-1">
+    {{-- ⭐ পুরো চওড়া বার — SAP Fiori shell bar (ওয়েবের মান ধাপ ২, মালিকের আদেশ "100% int. standard", ২০ অক্টোবর ২০২৬)।
+         `rail` রূপে বারটা সাইডবারের উপরে, পর্দার এক প্রান্ত থেকে অন্য প্রান্ত; লোগো বারের ভেতরে, রেলে আর নয়।
+         ⛔ আগে বারটা পাতার কলামের ভেতরে ছিল, তাই রেলের পাশে কাটা দেখাত আর লোগো দুই জায়গায় ভাগ হত। --}}
+    @php $fullBar = $navPlacement === 'rail'; @endphp
+    @if ($fullBar)
+        {{-- ⓘ `over-rail` — "≡" রেলের কলামে, আর ⊞ সব মডিউল বারে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]) --}}
+        <x-shell.topbar :menu="$menu ?? []" over-rail />
+        {{-- সতর্কবাণীর ফিতা — বারের ঠিক নিচে, পুরো চওড়া (Fiori Message Strip; ভুল ৮) --}}
+        <x-shell.notice-banner />
+    @endif
+
+    <div @class(['flex flex-1', 'min-h-dvh' => ! $fullBar])>
         {{-- বাঁ পাশের তালিকা — `rail` আর `quiet`, দুইটাতেই।
 
              দুইটার তফাত তালিকায় নয়, **উপরে**: `rail` তালিকার সাথে
              একটা টপবারও রাখে, `quiet` রাখে না। তাই শর্তটা "রেল কি না"
              নয়, "উপরে বার আছে কি না" — আর সেটা নিচে আলাদা করে বলা। --}}
         @if (in_array($navPlacement, ['rail', 'quiet'], true))
-            <x-shell.sidebar :menu="$menu ?? []" />
+            <x-shell.sidebar :menu="$menu ?? []" :under-bar="$fullBar" />
         @endif
 
         <div class="flex min-w-0 flex-1 flex-col">
@@ -263,9 +274,14 @@
                  নিজেও সরু পর্দায় হেডার দেখায়, তাই নকলটা ভাঙে না। --}}
             @if ($navPlacement === 'quiet')
                 <x-shell.topbar :menu="$menu ?? []" narrow />
-            @else
+            @elseif (! $fullBar)
                 <x-shell.topbar :menu="$menu ?? []" />
             @endif
+
+            {{-- অন্য রূপে ফিতা পাতার কলামের মাথায় — নোটিশ সব রূপেই উপরে, ফুটারে আর নয় --}}
+            @unless ($fullBar)
+                <x-shell.notice-banner />
+            @endunless
 
             @if ($topnavShape !== 'none')
                 <x-shell.topnav :menu="$menu ?? []" :shape="$topnavShape" />
@@ -422,6 +438,12 @@
                          রাখে, ফলে তালিকার পর্দাগুলোয় কিছুই বসে না। --}}
                     <x-ui.anchor-nav />
 
+                    {{-- ⭐ পাতায় কোনো h1 না থাকলে অদৃশ্য একটা, পাতার নামে — প্রতিটা পাতায় ঠিক একটা মূল শিরোনাম
+                         (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬; [[PageHeading]])। ⓘ স্লট আগেই আঁকা, তাই দেখে বলা যায়। --}}
+                    @unless (\App\Core\Support\PageHeading::present((string) ($header ?? ''), (string) $slot))
+                        <h1 class="sr-only">{{ $title ?? 'ABOS' }}</h1>
+                    @endunless
+
                     {{-- ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — থামলে কারণ আর "X-এই জমা দিন" বোতাম, একবারই, সব পাতায়
                          ([[shell.branch-pin]], RCV-0143, ec, ১৯ অক্টোবর ২০২৬) --}}
                     <x-shell.branch-pin />
@@ -456,10 +478,8 @@
          লেআউটের একদম বাইরে, কারণ ওটা গোটা পাতা ঢাকে। --}}
     <x-shell.chrome region="overlay" :menu="$menu ?? []" />
 
-    {{-- খোঁজার প্যালেট — টপবার ও নিচের নেভ দুইটাই `open-command-center`
-         পাঠায়, আর এতদিন কেউ শুনত না। ⓘ সব রূপেই বসে, কারণ বোতামটাও
-         সব রূপে আছে; এটা ABOS-এর আলাদা সাজ নয়, একটা অনুপস্থিত তার। --}}
-    <x-shell.command-center />
+    {{-- ⓘ খোঁজা এখন টপবারের ঘরেই, ফল তার নিচে ([[shell.topbar]]; লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬) — নিচের নেভ আর
+         Ctrl+K/"/" একই `open-command-center` পাঠায়, টপবারের ঘর শোনে। আলাদা পুরো-পাতার প্যালেট আর নেই। --}}
 
     {{-- পিকের জানালা — একবারই, গোটা অ্যাপের জন্য। ⓘ [[command-center]]-এর
          পাশে, কারণ দুইটাই পাতার নয়, খোলসের অংশ। --}}
@@ -476,7 +496,7 @@
 
     <x-shell.statusbar />
 
-    <x-shell.bottom-nav :menu="$menu ?? []" />
+    <x-shell.bottom-nav :menu="$menu ?? []" :launcher="$fullBar" />
 
     {{-- স্ক্রিনের নিজের স্ক্রিপ্ট — Alpine লোড হওয়ার পরে।
 

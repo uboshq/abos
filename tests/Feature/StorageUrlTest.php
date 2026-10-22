@@ -55,6 +55,11 @@ class StorageUrlTest extends TestCase
 
         $user = User::factory()->create(['avatar_path' => 'avatars/1.jpg']);
 
-        $this->assertSame('/storage/avatars/1.jpg', $user->avatarUrl());
+        /*
+         * ⛔ ২০ অক্টোবর ২০২৬ (a6): ঠিকানা আর `/storage/…` নয় — পাহারা-দেওয়া দরজা, যাতে কেবল সহকর্মী দেখেন
+         * ([[UserPhotoController]])। ⓘ দাবির মূলটা একই থাকে: মূল-আপেক্ষিক, পরম নয়। পুরনো public ফাইলও একই দরজায় পড়া হয়।
+         */
+        $this->assertSame('/users/'.$user->public_id.'/photo?v='.substr(sha1('avatars/1.jpg'), 0, 12), $user->avatarUrl());
+        $this->assertStringStartsNotWith('http', (string) $user->avatarUrl());
     }
 }

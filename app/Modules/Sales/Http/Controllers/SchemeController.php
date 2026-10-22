@@ -207,6 +207,25 @@ class SchemeController extends Controller implements HasMiddleware
      */
     private function validated(Request $request, ?int $ignore = null): array
     {
+        /*
+         * ⭐ লক্ষ্য আসে বাছা ধরনের ঘর থেকে — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬ ([[TheSchemeTookTheWrongTargetTest]])।
+         *
+         * ⛔ আগে ফর্মের পাঁচটা select-এর নামই `target_id`, আর লুকানোগুলোও জমা পড়ত: PHP শেষেরটা নিত, তাই "পণ্য" বেছে
+         * পণ্য দিলেও শেষ ধরনের খালি বা পুরনো নম্বরটা বসত — সেটা কাকতালে পণ্যের নম্বর হিসেবেও মিলে যেতে পারত।
+         * ⓘ এখন প্রতিটা ধরনের ঘর `targets[ধরন]`; নেওয়া হয় কেবল `applies_to`-র ঘরটা, বাকিগুলো উপেক্ষা। পুরনো ডাক
+         * (`target_id`, ফোন/API) আগের মতোই চলে; দুটোই এলে আর না মিললে থামে — কোনটা ঠিক, আন্দাজ নয়।
+         */
+        if (is_array($request->input('targets'))) {
+            $chosen = $request->input('targets.'.$request->input('applies_to'));
+            $given = $request->input('target_id');
+
+            if (filled($given) && filled($chosen) && (string) $given !== (string) $chosen) {
+                throw ValidationException::withMessages(['target_id' => __('sales::validation.scheme_target_mismatch')]);
+            }
+
+            $request->merge(['target_id' => filled($chosen) ? $chosen : $given]);
+        }
+
         $data = $request->validate([
             // খালি রাখা যায় — [[SchemeService::create()]] তখন নাম থেকে বসায়
             'code' => ['nullable', 'string', 'max:40',
@@ -226,6 +245,7 @@ class SchemeController extends Controller implements HasMiddleware
              * দিত না — অথচ তালিকায় চালু লেখা থাকত।
              */
             'target_id' => ['nullable', 'integer', 'required_unless:applies_to,'.Scheme::ALL],
+            'targets' => ['nullable', 'array'],
 
             'valid_from' => ['required', 'date'],
             'valid_to' => ['required', 'date', 'after_or_equal:valid_from'],

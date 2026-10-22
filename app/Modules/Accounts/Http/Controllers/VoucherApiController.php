@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Models\Approval;
+use App\Core\Engines\Approval\PaperSigningFacts;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
@@ -54,6 +55,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
         private readonly PartyRegistry $parties,
         private readonly VoucherService $vouchers,
         private readonly VoucherWriter $writer,
+        private readonly PaperSigningFacts $signing,
     ) {}
 
     /** `GET /vouchers/setup?type=` — ওয়েবের ফর্মের একই তালিকা, ধরনের দুই দিক আগে থেকে ভাগ করা */
@@ -144,10 +146,12 @@ final class VoucherApiController extends Controller implements HasMiddleware
         $names = $this->partyNames($rows);
         $awaiting = $this->awaitingIds($rows->modelKeys());
         $moneyAccounts = $this->moneyAccountsOf($rows);
+        // ⭐ ধাপ আর আটকে থাকার কারণ — পাতায় দুই ডাকে, সারি ধরে নয় ([[signing()]])
+        $signing = $this->signing($rows, $awaiting);
 
         return response()->json([
             'rows' => $rows->map(fn (Voucher $v) => [
-                ...$this->row($v, $names, $awaiting),
+                ...$this->row($v, $names, $awaiting, $signing),
                 // ⭐ টাকা কোথায় জমা / কোথা থেকে — তালিকাতেই (মালিক, ১৭ অক্টোবর ২০২৬: "kon account e recived hoto ta dekhayna")
                 ...$this->moneySide($v, $moneyAccounts),
             ])->values(),
@@ -357,14 +361,44 @@ final class VoucherApiController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⭐ চিপের দুই কথা, পাতা ধরে — a6, ২০ অক্টোবর ২০২৬ ([[PaperSigningFacts]])।
+     *
+     * ⓘ ধাপ কেবল সইয়ের অপেক্ষার ভাউচারে (`awaiting` — একই হিসাবের সই, [[awaitingIds()]]); কারণ কেবল যে খসড়ায় কোনো সই ঝুলে
+     * নেই — ⛔ ঝুলে থাকা সইয়ের কাগজ "আটকে" নয়, সে এখনো সইয়ের অপেক্ষায়।
+     *
+     * @param  iterable<Voucher>  $vouchers
+     * @param  list<int>  $awaiting
+     * @return array{standing: array<int, array{level: int, levels: int}>, problems: array<int, string>}
+     */
+    private function signing(iterable $vouchers, array $awaiting): array
+    {
+        $drafts = collect($vouchers)
+            ->filter(fn (Voucher $v) => $v->isDraft() && ! in_array((int) $v->id, $awaiting, true))
+            ->map(fn (Voucher $v) => (int) $v->id)->values()->all();
+
+        return [
+            'standing' => $this->signing->standing(Voucher::class, $awaiting, VoucherApproval::MODULE),
+            'problems' => $this->signing->postProblems(Voucher::class, $drafts),
+        ];
+    }
+
+    /**
      * ⓘ "সইয়ের অপেক্ষায়" অবস্থা নয় — খসড়ার উপর ঝুলে থাকা সই ([[VoucherApproval]])। ফোনে চারটা নাম:
      * খসড়া · সইয়ের অপেক্ষায় · পাকা · বাতিল।
      *
+     * ⭐ চিপের দুই কথা (a6, ২০ অক্টোবর ২০২৬; [[signing()]]):
+     *  - `approval_level` / `approval_levels` — সইয়ের অপেক্ষায় থাকলে কোন ধাপে, কয় ধাপের মধ্যে ("২-এর ১"); নইলে দুটোই null।
+     *  - `posting_failed` + `post_problem` — সই শেষ, পোস্ট আটকে আছে ([[SignedButNotPosted]]): true আর ওয়েবের ঘণ্টার বাংলা
+     *    কারণ; নইলে false আর null।
+     * ⛔ `state` বদলায় না — আটকে থাকা কাগজ আগের মতোই `draft`: পুরনো অ্যাপ চার নামের বাইরে কিছু চেনে না, `status=` ছাঁকনি
+     *   আর `can_post` ওই নামেই চলে (কারণ মিটিয়ে হাতে পোস্ট — খসড়ারই কাজ)। নতুন অ্যাপ `posting_failed` দেখে "পোস্ট হয়নি" দেখায়।
+     *
      * @param  array<string, string>  $names
      * @param  list<int>  $awaiting
+     * @param  array{standing?: array<int, array{level: int, levels: int}>, problems?: array<int, string>}  $signing
      * @return array<string, mixed>
      */
-    private function row(Voucher $v, array $names, array $awaiting): array
+    private function row(Voucher $v, array $names, array $awaiting, array $signing = []): array
     {
         $state = match (true) {
             $v->isCancelled() => 'cancelled',
@@ -382,6 +416,10 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'amount' => bcadd((string) $v->amount, '0', 2),
             'state' => $state,
             'state_label' => (string) __('accounts::phone_voucher.state_'.$state),
+            'approval_level' => $state === 'awaiting' ? ($signing['standing'][(int) $v->id]['level'] ?? null) : null,
+            'approval_levels' => $state === 'awaiting' ? ($signing['standing'][(int) $v->id]['levels'] ?? null) : null,
+            'posting_failed' => $state === 'draft' && isset($signing['problems'][(int) $v->id]),
+            'post_problem' => $state === 'draft' ? ($signing['problems'][(int) $v->id] ?? null) : null,
             'party' => $this->partyOf($v, $names),
             // ⭐ পক্ষের ঘরের নাম, ধরন ধরে: আদায়ে "কার কাছ থেকে", পরিশোধ আর খরচে "কাকে" — দিক বোঝা যায়
             'party_label' => (string) __('accounts::phone_voucher.party_'.match ($v->type) {
@@ -413,7 +451,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
     {
         $names = $this->partyNames(collect([$v]));
         $awaiting = $v->isDraft() ? $this->awaitingIds([(int) $v->id]) : [];
-        $row = $this->row($v, $names, $awaiting);
+        $row = $this->row($v, $names, $awaiting, $this->signing([$v], $awaiting));
 
         return [
             ...$row,

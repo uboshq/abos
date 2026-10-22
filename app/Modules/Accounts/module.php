@@ -282,6 +282,8 @@ return [
              */
             ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.final.cash_flow', 'permission' => 'accounts.report.final'],
+            // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী — IAS 1.10(c), 1.106 (ERP ১০০%-এর হিসাবের ফাঁক #৬, ২০ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.equity_statement', 'icon' => 'grid', 'route' => 'accounts.equity_statement', 'permission' => 'accounts.report.final'],
             /*
              * ⓘ চূড়ান্ত হিসাবগুলোর পরেই, আর সেটা ইচ্ছাকৃত: গ্রুপের ছবিটা
              * এক কোম্পানির লাভ-ক্ষতি ও স্থিতিপত্র পড়ার **পরের** প্রশ্ন,

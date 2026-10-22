@@ -1,5 +1,7 @@
 @props([
     'name',
+    // ⓘ ঘরের id — না দিলে নামই; একই নামের দুটো ঘর এক পাতায় থাকলে আলাদা দিন (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬)
+    'id' => null,
     'label',
     'value' => null,
     'type' => 'text',
@@ -34,16 +36,17 @@
     দাঁড়াত, সরানো নয়।
 --}}
 @php
+    $fid = $id ?? $name;
     $key = $errorKey ?? $name;
     $hasError = $errors->has($key);
     $describedBy = collect([
-        $hint ? "{$name}-hint" : null,
-        $hasError ? "{$name}-error" : null,
+        $hint ? "{$fid}-hint" : null,
+        $hasError ? "{$fid}-error" : null,
     ])->filter()->implode(' ');
 @endphp
 
 <div>
-    <label for="{{ $name }}" class="mb-1 block text-sm font-medium">
+    <label for="{{ $fid }}" class="mb-1 block text-sm font-medium">
         {{ $label }}
         @if ($required)
             {{-- তারকাটা সাজসজ্জা নয়, তাই স্ক্রিন রিডারেও বোঝা যায় এমন
@@ -66,18 +69,18 @@
 
             এখানে ধরায় বলে ৪২টা ফর্ম একসাথে ঠিক হলো, একটাও না ছুঁয়ে।
         --}}
-        <x-ui.date :name="$name" :id="$name" :value="$value"
+        <x-ui.date :name="$name" :id="$fid" :value="$value"
                    :required="$required" :readonly="$readonly"
                    :hasError="$hasError" :describedBy="$describedBy ?: null"
                    {{ $attributes }} />
     @elseif ($type === 'month')
         {{-- ⭐ মাসও ব্রাউজারের ঘরে নয় — একই কারণ ("October 2026" ইংরেজিতে); [[x-ui.month]] বাংলায় (পাতা সাজানো ধাপ ১,
              ১০ অক্টোবর ২০২৬) --}}
-        <x-ui.month :name="$name" :id="$name" :value="$value" :required="$required"
+        <x-ui.month :name="$name" :id="$fid" :value="$value" :required="$required"
                     :class="'h-(--spacing-field) w-full rounded-(--radius-field) border bg-(--color-surface-card) px-3 '
                         .($hasError ? 'border-(--color-danger)' : 'border-(--color-border)')" />
     @else
-    <input id="{{ $name }}"
+    <input id="{{ $fid }}"
            name="{{ $name }}"
            type="{{ $type }}"
            value="{{ $value }}"
@@ -100,12 +103,12 @@
     @endif
 
     @if ($hint)
-        <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
+        <p id="{{ $fid }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
     @endif
 
     @error($key)
         {{-- ভুলটা ঘরের পাশেই — উপরের তালিকায় থাকলে লম্বা ফর্মে কোন ঘরটা
              ভুল সেটা খুঁজতে হয় (সেকশন ১৫.২৩)। --}}
-        <p id="{{ $name }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+        <p id="{{ $fid }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
     @enderror
 </div>

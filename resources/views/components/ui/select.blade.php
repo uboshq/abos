@@ -1,5 +1,7 @@
 @props([
     'name',
+    // ⓘ ঘরের id — না দিলে নামই; একই নামের দুটো ঘর এক পাতায় থাকলে আলাদা দিন (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬)
+    'id' => null,
     'label',
     'options' => [],
     'selected' => null,
@@ -58,11 +60,12 @@
     প্রতিটা নতুন মডেলের জন্য এখানে একটা শর্ত জুড়ত।
 --}}
 @php
+    $fid = $id ?? $name;
     $key = $errorKey ?? $name;
     $hasError = $errors->has($key);
     $describedBy = collect([
-        $hint ? "{$name}-hint" : null,
-        $hasError ? "{$name}-error" : null,
+        $hint ? "{$fid}-hint" : null,
+        $hasError ? "{$fid}-error" : null,
     ])->filter()->implode(' ');
 
     // পুরনো মান স্ট্রিং হিসেবে আসে, id হিসেবে নয় — তাই তুলনাটা ঢিলা
@@ -70,7 +73,7 @@
 @endphp
 
 <div>
-    <label for="{{ $name }}" class="mb-1 block text-sm font-medium">
+    <label for="{{ $fid }}" class="mb-1 block text-sm font-medium">
         {{ $label }}
         @if ($required)
             <span class="text-(--color-danger)" aria-hidden="true">*</span>
@@ -85,7 +88,7 @@
         @endif
     </label>
 
-    <select id="{{ $name }}"
+    <select id="{{ $fid }}"
             name="{{ $name }}"
             @if ($required) required @endif
             @if (! $required && $requiredWhen) x-bind:required="{{ $requiredWhen }}" @endif
@@ -120,10 +123,10 @@
     </select>
 
     @if ($hint)
-        <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
+        <p id="{{ $fid }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
     @endif
 
     @error($key)
-        <p id="{{ $name }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+        <p id="{{ $fid }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
     @enderror
 </div>
