@@ -80,6 +80,7 @@ final class AnotherCompanysReturnNeverLowersOurNetSalesTest extends TestCase
     /** একটা পাকা ফেরত, এক সারি — কোম্পানির নিজের গ্রাহক, পণ্য আর গুদাম। @return int পণ্যের আইডি */
     private function returnIn(Company $company, string $no, int $qty, string $amount, string $day): int
     {
+        $this->basicsIn($company);
         $customer = (int) Customer::query()->withoutGlobalScopes()->where('company_id', $company->id)->orderBy('id')->value('id');
         $product = (int) Product::query()->withoutGlobalScopes()->where('company_id', $company->id)->orderBy('id')->value('id');
         $warehouse = (int) Warehouse::query()->withoutGlobalScopes()->where('company_id', $company->id)->orderBy('id')->value('id');
@@ -97,6 +98,29 @@ final class AnotherCompanysReturnNeverLowersOurNetSalesTest extends TestCase
         ]);
 
         return $product;
+    }
+
+    /**
+     * ⓘ ডেমোর দ্বিতীয় কোম্পানি (FMART) খালি — গ্রাহক, পণ্য, গুদাম কিছুই নেই (bundle-3b-এর দৌড়ে প্রস্তুতির পাহারা ধরেছে,
+     * ২২ অক্টোবর ২০২৬)। তাই যার নেই, তার জন্য সেই কোম্পানির নিজের প্রসঙ্গে একটা করে বানানো।
+     */
+    private function basicsIn(Company $company): void
+    {
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $tag = strtoupper(substr($company->code, 0, 3));
+
+        if (! Customer::query()->withoutGlobalScopes()->where('company_id', $company->id)->exists()) {
+            Customer::query()->create(['code' => $tag.'-RTN-C', 'name_en' => $tag.' return shop', 'name_bn' => $tag.' ফেরতের দোকান',
+                'credit_limit' => 0, 'credit_days' => 0, 'is_active' => true]);
+        }
+        if (! Product::query()->withoutGlobalScopes()->where('company_id', $company->id)->exists()) {
+            Product::query()->create(['code' => $tag.'-RTN-P', 'name_en' => $tag.' return item', 'sale_price' => '100',
+                'purchase_price' => '70', 'is_active' => true]);
+        }
+        if (! Warehouse::query()->withoutGlobalScopes()->where('company_id', $company->id)->exists()) {
+            Warehouse::query()->create(['branch_id' => $company->defaultBranch()?->id, 'code' => $tag.'-RTN-W',
+                'name_en' => $tag.' store', 'name_bn' => $tag.' গুদাম', 'is_active' => true]);
+        }
     }
 
     /** @return array<int, array{qty: string, amount: string}> পণ্য → নিট পরিমাণ আর টাকা, সেই কোম্পানির চোখে */
