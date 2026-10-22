@@ -83,8 +83,13 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
         $this->assertSame(0, bccomp($deposits, bcadd((string) $payment->ait_amount, (string) $payment->vds_amount, 2), 2),
             '⛔ কোষাগারে জমার যোগফল পরিশোধে কাটা AIT + VDS-এর সমান নয়');
 
+        foreach (['kosagar_deposit|ait', 'kosagar_deposit|vds'] as $key) {
+            $this->assertSame('2026-11-15', $duties[$key]->due_on->toDateString(), "⛔ {$key}: কোষাগারে জমার শেষ তারিখ পরের মাসের ১৫ নয় (ডিফল্ট)");
+        }
+        // ⭐ fe: মূসক-৬.৬ কর্তনের দিন থেকে গোনা — পোস্টের তারিখ + ৩ দিন (ডিফল্ট)
+        $this->assertSame('2026-10-25', $duties['mushak_6_6_issue|vds']->due_on->toDateString(), '⛔ মূসক-৬.৬-এর শেষ তারিখ কর্তনের দিন + ৩ নয়');
+
         foreach ($duties as $duty) {
-            $this->assertSame('2026-11-15', $duty->due_on->toDateString(), '⛔ শেষ তারিখ পরের মাসের ১৫ নয় (ডিফল্ট)');
             $this->assertSame((string) $payment->document_no, (string) $duty->source_no, '⛔ করণীয়ে কাগজের নম্বর নেই');
         }
     }
@@ -161,8 +166,11 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
             '⛔ AIT জমার শেষ দিন সেটিং মানল না');
         $this->assertSame('2027-02-28', $duties->dueOn(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, '2027-01-31')->toDateString(),
             '⛔ ৩১ লিখলে ফেব্রুয়ারির বাইরে বা মার্চে গেল — কিনারা ২৮ নয়');
-        $this->assertSame('2026-11-15', $duties->dueOn(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, '2026-10-01')->toDateString(),
-            '⛔ মূসক-৬.৬-এর শেষ দিন ডিফল্ট ১৫ নয়');
+        $this->assertSame('2026-10-04', $duties->dueOn(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, '2026-10-01')->toDateString(),
+            '⛔ মূসক-৬.৬-এর শেষ দিন কর্তনের দিন + ৩ (ডিফল্ট) নয়');
+        $settings->set('accounts.tax.mushak_66_issue_days', 7);
+        $this->assertSame('2026-11-04', $duties->dueOn(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, '2026-10-28')->toDateString(),
+            '⛔ মূসক-৬.৬-এর দিনের সেটিং মানল না, বা মাস পেরোতে পারল না');
     }
 
     public function test_the_list_marks_done_only_with_a_number_and_the_audit_keeps_it(): void

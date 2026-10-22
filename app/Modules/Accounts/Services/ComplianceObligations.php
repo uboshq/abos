@@ -22,12 +22,14 @@ use Illuminate\Validation\ValidationException;
  */
 final class ComplianceObligations
 {
-    /** কোন দায়ের শেষ তারিখ কোন সেটিং থেকে — পরের মাসের কত তারিখ */
+    /** কোষাগারে জমার শেষ তারিখ কোন সেটিং থেকে — পরের মাসের কত তারিখ */
     private const DUE_DAY = [
         ComplianceObligation::KOSAGAR_DEPOSIT.'|'.ComplianceObligation::AIT => 'accounts.tax.ait_deposit_day',
         ComplianceObligation::KOSAGAR_DEPOSIT.'|'.ComplianceObligation::VDS => 'accounts.tax.vds_deposit_day',
-        ComplianceObligation::MUSHAK_66_ISSUE.'|'.ComplianceObligation::VDS => 'accounts.tax.mushak_66_issue_day',
     ];
+
+    /** মূসক-৬.৬ — কর্তনের কত দিন পরের মধ্যে (fe, ২২ অক্টোবর ২০২৬: বিধিতে কর্তনের দিন থেকে গোনা) */
+    private const MUSHAK_66_DAYS = 'accounts.tax.mushak_66_issue_days';
 
     public function __construct(private readonly SettingsService $settings) {}
 
@@ -65,10 +67,17 @@ final class ComplianceObligations
     }
 
     /**
-     * ⓘ পরের মাসের নির্দিষ্ট তারিখ — সেটিং থেকে (ডিফল্ট ১৫), ১ থেকে ২৮-এর বাইরে গেলে কিনারায়; মাস ছোট হলে মাসের শেষ দিন।
+     * ⓘ কোষাগারে জমা: পরের মাসের নির্দিষ্ট তারিখ — সেটিং থেকে (ডিফল্ট ১৫), ১ থেকে ২৮-এর বাইরে গেলে কিনারায়; মাস ছোট হলে মাসের শেষ দিন।
+     * ⓘ মূসক-৬.৬: কর্তনের দিন + N দিন (ডিফল্ট ৩, ০ থেকে ৬০) — ভুল হলেও আগে মনে করায়, দেরিতে নয় (fe)।
      */
     public function dueOn(string $kind, string $subject, Carbon|string $arisedOn): Carbon
     {
+        if ($kind === ComplianceObligation::MUSHAK_66_ISSUE) {
+            $days = max(0, min(60, (int) $this->settings->get(self::MUSHAK_66_DAYS, 3)));
+
+            return Carbon::parse($arisedOn)->startOfDay()->addDays($days);
+        }
+
         $key = self::DUE_DAY[$kind.'|'.$subject] ?? null;
         $day = $key === null ? 15 : (int) $this->settings->get($key, 15);
         $day = max(1, min(28, $day));

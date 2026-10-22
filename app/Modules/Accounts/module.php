@@ -912,8 +912,9 @@ return [
             'group' => 'entry',
         ],
         /*
-         * ⭐ করণীয়ের শেষ তারিখ — পরের মাসের কোন তারিখের মধ্যে (fe, ২২ অক্টোবর ২০২৬; ডিফল্ট ১৫)। ⓘ আইন বদলালে এখানেই বদলায়, কোডে নয়।
-         * ⓘ ১ থেকে ২৮ — মাসের শেষ দিন ছোট হলে মাসের শেষ দিনই ([[ComplianceObligations::dueOn()]])।
+         * ⭐ করণীয়ের শেষ তারিখ (fe, ২২ অক্টোবর ২০২৬) — কোষাগারে জমা পরের মাসের কোন তারিখের মধ্যে (ডিফল্ট ১৫, ১ থেকে ২৮); মূসক-৬.৬
+         * কর্তনের কত দিন পরের মধ্যে (ডিফল্ট ৩ — বিধিতে কর্তনের দিন থেকে গোনা, মাসের তারিখ থেকে নয়)। ⓘ আইন বদলালে এখানেই বদলায়, কোডে
+         * নয়; ⚠️ তিনটাই হিসাবরক্ষকের সাথে মিলিয়ে নেওয়ার কথা লেবেলেই লেখা।
          */
         [
             'key' => 'accounts.tax.ait_deposit_day',
@@ -932,11 +933,11 @@ return [
             'group' => 'general',
         ],
         [
-            'key' => 'accounts.tax.mushak_66_issue_day',
+            'key' => 'accounts.tax.mushak_66_issue_days',
             'super_admin_only' => true,
-            'label' => 'accounts::settings.mushak_66_issue_day',
+            'label' => 'accounts::settings.mushak_66_issue_days',
             'type' => 'integer',
-            'default' => 15,
+            'default' => 3,
             'group' => 'general',
         ],
         [
