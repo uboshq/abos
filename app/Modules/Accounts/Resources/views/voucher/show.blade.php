@@ -144,7 +144,12 @@
                     'type' => 'accounts_voucher',
                     'id' => $voucher->id,
                     'no' => $voucher->document_no,
+                    /* ⭐ PDF আর পক্ষকে পাঠানো (WhatsApp) — ভাউচারের নকশার "পোস্টের পরে: ছাপা · PDF · WhatsApp" (fe, ২৩ অক্টোবর ২০২৬)।
+                       ⓘ দরজাটা আগে থেকেই ছিল আর পাহারা দেওয়া ([[PaperTrail::DOCUMENT_ROUTES]], [[ASharedLinkCrossedTheBranchWallTest]]),
+                       কেবল এই পাতা তাকে ডাকত না। */
+                    'share' => ['route' => 'accounts.voucher.print', 'params' => ['voucher' => $voucher->id]],
                 ]]" />
+                <x-ui.shared-link :message="$voucher->document_no" />
 
                 @unless ($voucher->isCancelled())
                     @can('accounts.voucher.delete')

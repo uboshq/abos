@@ -51,6 +51,15 @@ class VoucherRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // ⭐ টাকার ঘর লাখ-কমায় ("45,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — কমা ছেঁটে পড়া, টাকা দেওয়ার পর্দার একই নিয়মে ([[PaymentRequest]])
+        foreach (['amount', 'charge_amount'] as $field) {
+            $value = $this->input($field);
+
+            if (is_string($value) && str_contains($value, ',')) {
+                $this->merge([$field => str_replace(',', '', trim($value))]);
+            }
+        }
+
         /*
          * হেডারের পক্ষ — সহজ ফর্মের `party` ঘরটা।
          *
@@ -116,7 +125,11 @@ class VoucherRequest extends FormRequest
          */
         $typed = trim((string) $this->input('party_new', ''));
 
-        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0) {
+        /*
+         * ⛔ প্রিভিউতে নাম থেকে মানুষ বানানো নয় — "খাতায় যা যাবে" কিছুই লেখে না ([[VoucherController::simulate()]]); নাহলে নাম
+         * টাইপ করার সময় প্রতিটা থামায় একজন করে নতুন মানুষ বসত। ⓘ তখন পক্ষ ফাঁকা থাকে, যাচাই আটকায়, আর প্রিভিউ চুপ।
+         */
+        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate')) {
             /*
              * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
              *

@@ -87,11 +87,13 @@
         নামের দুইটা সক্রিয় ঘর থাকলে ব্রাউজার শেষেরটার মান পাঠাত, আর
         উপরের বাছাইটা নীরবে হারাত।
     --}}
-    <div class="grid gap-3 sm:grid-cols-4">
-        <x-ui.field name="trx_date" type="date"
-                    :label="__('accounts::field.trx_date_long')"
-                    :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
-                    required />
+    {{--
+        ⭐ ২৩ অক্টোবর ২০২৬ — চূড়ান্ত নকশার ক্রম: পক্ষের ধরন · পক্ষ · তারিখ · টাকা (fe; মালিক: *"নকশা অনুযায়ী, লাইভের আগে
+        মিলিয়ে নাও"*)। ⓘ আগে তারিখ প্রথমে আর টাকা একদম নিচের সারিতে ছিল; নকশায় টাকা পক্ষের পাশেই, কারণ "কত" আর "কার কাছ
+        থেকে" এক নজরে মেলানোর জিনিস। ঘরের নাম বদলায়নি, তাই জমা, ফোন আর পুরনো কাগজ অক্ষত।
+    --}}
+    {{-- ⓘ পক্ষের কলাম দ্বিগুণ — ১৩৬৬-এ সমান চার কলামে "আকিজ ফুড অ্যা…" কাটা পড়ত (মাপা, ২৩ অক্টোবর ২০২৬); নকশাতেও নামের ঘর সবচেয়ে চওড়া --}}
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr_1fr]" data-voucher-head>
 
         {{-- ⓘ "কখন" (moved_at) আর চাওয়া হয় না — মালিকের ২১ অক্টোবরের রায় ([[x-money.method]]); কলাম থাকে, পুরনো কাগজে দেখায় --}}
 
@@ -316,6 +318,19 @@
                 </div>
             </div>
         </div>
+
+        <x-ui.field name="trx_date" type="date"
+                    :label="__('accounts::field.trx_date_long')"
+                    :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
+                    required />
+
+        {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — লেখার ঘর, কারণ `type="number"` কমা দেখাতে পারে
+             না; সার্ভার কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])। ⓘ `?? $voucher->amount` — অর্থের খাতার
+             "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
+        <x-ui.field name="amount" type="text" inputmode="decimal" numeric required data-voucher-amount
+                    :label="$isReceipt ? __('accounts::field.amount_received') : __('accounts::field.amount_paid')"
+                    :value="old('amount', $typedAmount ?? $voucher->amount)"
+                    x-model="amount" @change="tidyAmount()" />
     </div>
 
     {{--

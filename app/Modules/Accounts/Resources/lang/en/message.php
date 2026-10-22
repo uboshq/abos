@@ -254,4 +254,8 @@ return [
     'till_opening_awaiting' => 'The till is open; its opening balance awaits the signature and reaches the books on the last one.',
     'inter_company_reversed' => 'Both sides of the inter-company transfer have been reversed.',
     'voucher_awaits_another_hand' => ':no is kept as a draft. You cannot post your own voucher; someone else must open it and press Post.',
+    'reference_free' => 'Not used on this account before ✓',
+    'ledger_matches' => 'Matches: debit = credit ✓',
+    'after_post_receipt' => 'After posting: print the money receipt · PDF · WhatsApp (from the "Print" menu on its page)',
+    'after_post_payment' => 'After posting: print the payment paper · PDF · WhatsApp (from the "Print" menu on its page)',
 ];

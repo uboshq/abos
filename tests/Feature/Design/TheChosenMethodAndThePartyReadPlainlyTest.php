@@ -73,9 +73,11 @@ final class TheChosenMethodAndThePartyReadPlainlyTest extends TestCase
         $this->assertSame('সরাসরি — কেউ যায়নি', trans('accounts::field.carried_by_none', [], 'bn'),
             '⛔ "কার মাধ্যমে"-র খালি লেখা আবার লম্বা — ১৩৬৬-এ কাটা পড়ে (১৯১px লেখা, ১৩৭px ঘর)');
 
+        // ⓘ ২৩ অক্টোবর ২০২৬: পাঁচ ঘরের সারি আর নেই — "কার মাধ্যমে" এখন বিবরণের বাক্সে, পূর্ণ-চওড়া স্তম্ভে (৫২০px-এর বেশি জায়গা;
+        // [[TheReceiptAndPaymentFollowTheFinalDesignTest]])। দাবির কথা একই: ঘরটা লেখার চেয়ে সরু নয়।
         $form = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php'));
-        $this->assertStringContainsString("lg:grid-cols-[1.4fr_1.4fr_1fr_1.6fr_1.6fr]' => \$isPayment", $form,
-            '⛔ পরিশোধে "কার মাধ্যমে"-র কলাম আবার সরু — ১৩৬৬-এ লেখা কাটা পড়ে');
+        $this->assertMatchesRegularExpression('/data-voucher-details.*?<div class="flex flex-col gap-3">.*?name="carried_by"/s', $form,
+            '⛔ "কার মাধ্যমে" আবার কোনো সরু কলামে — ১৩৬৬-এ লেখা কাটা পড়ে');
     }
 
     /** @param string $a "r g b" */

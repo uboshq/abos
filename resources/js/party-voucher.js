@@ -281,7 +281,8 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
          */
         get overDue() {
             const bill = this.pickedBill;
-            const amount = Number(this.$root.closest('form')?.querySelector('[name="amount"]')?.value || 0);
+            // ⓘ ঘরটা এখন লাখ-কমায় ("45,000.00") — কমা ছেঁটে পড়া, নাহলে NaN আর "বিলের বাকির বেশি" কখনো বলত না
+            const amount = Number(String(this.$root.closest('form')?.querySelector('[name="amount"]')?.value || 0).replace(/,/g, ''));
 
             return bill !== null && amount - Number(bill.outstanding) > 0.0001;
         },

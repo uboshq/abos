@@ -184,6 +184,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          * ভাউচারের ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
          */
         Route::get('due', [VoucherController::class, 'due'])->name('due');
+        // ⭐ খাতায় যা যাবে আর রেফারেন্সের চলতি উত্তর — রসিদ ও পরিশোধের পর্দা (fe, ২৩ অক্টোবর ২০২৬); স্থির পথ, তাই /{type}-এর আগে
+        Route::post('simulate', [VoucherController::class, 'simulate'])->name('simulate');
+        Route::get('reference-check', [VoucherController::class, 'referenceCheck'])->name('reference_check');
 
         // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
         // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
