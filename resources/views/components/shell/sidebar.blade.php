@@ -123,8 +123,10 @@
            পাতার চেহারা ভাঙে না, শুধু গুটানো থাকলে খুলতে এক পলক লাগে।
        --}}
        {{-- ⭐ পুরো চওড়া বারের নিচে — বারের উচ্চতা বাদ দিয়ে আটকে থাকে, যাতে মেনুর শেষটা পর্দার বাইরে না যায় --}}
-       @if ($underBar) style="top: var(--spacing-header); height: calc(100dvh - var(--spacing-header))" data-under-bar @endif
-       class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
+       {{-- ⛔ নিচের স্থির বারের উচ্চতাও বাদ (md থেকে বারটা সবসময় দেখা যায়, [[shell.statusbar]]) — নইলে মেনুর শেষ সারি বারের নিচে
+            চাপা পড়ত (fe, ২২ অক্টোবর ২০২৬, cb/hf-footer-pad) --}}
+       @if ($underBar) style="top: var(--spacing-header); height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar))" data-under-bar @endif
+       class="relative sticky top-0 hidden h-[calc(100dvh-var(--spacing-status-bar))] shrink-0 md:flex
               md:w-(--spacing-sidebar-icon)
               lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
        :class="$store.sidebar.collapsed
@@ -590,7 +592,7 @@
                  নাম ধরে খুঁজলে গার্ডটা হয় ভঙ্গুর হত নয় সবসময় সবুজ। --}}
             <div data-site-map
                  @if ($activeModule) data-active-module="{{ $activeModule['code'] }}" @endif
-                 class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
+                 class="menu-panel hidden min-h-0 min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
                  x-show="! $store.sidebar.collapsed">
 
@@ -665,7 +667,9 @@
                         {{ __('core.empty.no_results') }}
                     </p>
 
-                    <nav class="flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
+                    {{-- ⛔ `min-h-0` — না থাকলে flex-কলামে তালিকাটা নিজের পুরো উচ্চতা নিত, ভেতরে স্ক্রল না করে বাক্সের বাইরে উপচে পড়ত:
+                         পাতা অকারণে লম্বা হত (রসিদে ১,৭০০px), স্টিকি সাইডবার পাতার সাথে সরে যেত আর মেনু নিচের বারের তলায় যেত (fe, ২২ অক্টোবর ২০২৬) --}}
+                    <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @foreach ($activeModule['groups'] as $group => $items)

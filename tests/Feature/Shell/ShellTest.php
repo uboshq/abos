@@ -649,8 +649,11 @@ class ShellTest extends TestCase
         // উচ্চতা ভিউপোর্টে বাঁধা না থাকলে সেটা কনটেন্টের সাথে লম্বা হয়ে
         // যায় আর পুরো পাতার সাথে উপরে উঠে যায় — লোগো ও মেনু চোখের
         // বাইরে চলে যায়।
+        // ⓘ ২২ অক্টোবর ২০২৬ (cb/hf-footer-pad): উচ্চতা এখনও ভিউপোর্টে বাঁধা, কেবল নিচের ঘোষণার বারটুকু বাদ — পুরো h-dvh হলে
+        // মেনুর শেষ সারি বারের নিচে চাপা পড়ত ([[NothingHidesUnderTheBottomBarTest]])
         $this->assertStringContainsString('sticky', $markup);
-        $this->assertStringContainsString('h-dvh', $markup);
+        $this->assertStringContainsString('h-[calc(100dvh-var(--spacing-status-bar))]', $markup,
+            '⛔ সাইডবারের উচ্চতা আর ভিউপোর্টে বাঁধা নয় — সে পাতার সাথে লম্বা হয়ে উপরে উঠে যায়');
         $this->assertStringContainsString('overflow-y-auto', $markup);
     }
 
