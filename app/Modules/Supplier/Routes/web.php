@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Supplier\Http\Controllers\SupplierBankController;
 use App\Modules\Supplier\Http\Controllers\SupplierController;
 use App\Modules\Supplier\Http\Controllers\SupplierReportController;
 use Illuminate\Support\Facades\Route;
@@ -50,4 +51,14 @@ Route::middleware('auth')->prefix('suppliers')->group(function () {
         ->whereNumber('supplier')->name('destroy');
     Route::post('/{supplier}/activate', [SupplierController::class, 'activate'])
         ->whereNumber('supplier')->name('activate');
+
+    // ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SupplierBank]])
+    Route::post('/{supplier}/bank', [SupplierBankController::class, 'store'])
+        ->whereNumber('supplier')->name('bank.store');
+    Route::post('/{supplier}/bank/{bank}/sign', [SupplierBankController::class, 'sign'])
+        ->whereNumber(['supplier', 'bank'])->name('bank.sign');
+    Route::post('/{supplier}/bank/{bank}/reject', [SupplierBankController::class, 'reject'])
+        ->whereNumber(['supplier', 'bank'])->name('bank.reject');
+    Route::post('/{supplier}/bank/{bank}/withdraw', [SupplierBankController::class, 'withdraw'])
+        ->whereNumber(['supplier', 'bank'])->name('bank.withdraw');
 });

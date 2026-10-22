@@ -67,7 +67,8 @@
 
     {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
          "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
-    <div x-data="{ open: false }" @party-eye.window="open = true" @keydown.escape.window="open = false">
+    {{-- ⓘ `?bank=1` — অনুমোদনের বাক্স আর ঘণ্টার খবর থেকে এলে পপ-আপটা ব্যাংক কার্ডসহ খোলা ([[SupplierBank::cardUrl()]]) --}}
+    <div x-data="{ open: {{ request()->boolean('bank') ? 'true' : 'false' }} }" @party-eye.window="open = true" @keydown.escape.window="open = false">
     <div x-show="open" x-cloak @click.self="open = false" data-party-details
          class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
     <div class="w-full max-w-5xl rounded-(--radius-card) bg-(--color-surface-app) p-4 shadow-lg">
@@ -164,6 +165,95 @@
                     @endif
                 @endforeach
             </dl>
+        </section>
+
+        {{-- ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SupplierBank]])।
+             ⓘ চালু = সই-পাওয়া সারি; বদল চাইলে "সইয়ের অপেক্ষায়", আর অন্য একজন সই না দেওয়া পর্যন্ত পুরনোটাই চালু।
+             ⓘ হিসাব নম্বর পুরো কেবল `supplier.bank.view`-এ, নাহলে ••••শেষ চার — কন্ট্রোলার ঠিক করে ([[SupplierBank::accountShown()]])। --}}
+        <section id="supplier-bank" data-boxed data-supplier-bank class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+                        lg:col-span-3">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('supplier::bank.title') }}</h2>
+                @if ($bankPending)
+                    <x-ui.badge tone="pending" data-bank-pending>{{ __('supplier::bank.pending_badge') }}</x-ui.badge>
+                @endif
+            </div>
+
+            @if ($bankSigned)
+                <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3" data-bank-active>
+                    @foreach ([
+                        'supplier::bank.bank_name' => $bankSigned->bank_name,
+                        'supplier::bank.branch_name' => $bankSigned->branch_name,
+                        'supplier::bank.account_name' => $bankSigned->account_name,
+                        'supplier::bank.account_no' => $bankSignedAccount,
+                        'supplier::bank.routing_no' => $bankSigned->routing_no,
+                    ] as $label => $value)
+                        @if (filled($value))
+                            <div>
+                                <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                                <dd class="text-sm">{{ $value }}</dd>
+                            </div>
+                        @endif
+                    @endforeach
+                </dl>
+                <p class="mt-2 text-2xs text-(--color-ink-muted)">
+                    <x-ui.badge tone="success">{{ __('supplier::bank.verified') }}</x-ui.badge>
+                    {{ __('supplier::bank.signed_by_line', ['maker' => $bankSigned->requester?->name ?? '—', 'signer' => $bankSigned->signer?->name ?? '—']) }}
+                </p>
+            @else
+                <p class="text-sm text-(--color-ink-muted)" data-bank-none>{{ __('supplier::bank.none') }}</p>
+            @endif
+
+            @if ($bankPending)
+                <div class="mt-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) p-3 text-sm text-(--color-badge-pending-ink)" data-bank-request>
+                    <p class="font-medium">{{ __('supplier::bank.pending_line', ['who' => $bankPending->requester?->name ?? '—']) }}</p>
+                    <p>
+                        {{ collect([$bankPending->bank_name, $bankPending->branch_name, $bankPending->account_name, $bankPendingAccount, $bankPending->routing_no])->filter()->implode(' · ') }}
+                    </p>
+                    @if (filled($bankPending->reason))
+                        <p class="text-2xs">{{ __('supplier::bank.reason') }}: {{ $bankPending->reason }}</p>
+                    @endif
+
+                    <div class="mt-2 flex flex-wrap items-end gap-2">
+                        @if ($bankCanSign)
+                            <form method="POST" action="{{ route('supplier.bank.sign', [$supplier, $bankPending]) }}">
+                                @csrf
+                                <x-ui.button type="submit" tone="success" data-bank-sign>{{ __('supplier::bank.sign') }}</x-ui.button>
+                            </form>
+                            <form method="POST" action="{{ route('supplier.bank.reject', [$supplier, $bankPending]) }}" class="flex items-end gap-2">
+                                @csrf
+                                <x-ui.field name="note" :label="__('supplier::bank.note')" required />
+                                <x-ui.button type="submit" tone="secondary" data-bank-reject>{{ __('supplier::bank.reject') }}</x-ui.button>
+                            </form>
+                        @endif
+                        @if ($bankIsMaker)
+                            <form method="POST" action="{{ route('supplier.bank.withdraw', [$supplier, $bankPending]) }}">
+                                @csrf
+                                <x-ui.button type="submit" tone="secondary" data-bank-withdraw>{{ __('supplier::bank.withdraw') }}</x-ui.button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            @can('update', $supplier)
+                <form method="POST" action="{{ route('supplier.bank.store', $supplier) }}" class="mt-4" data-bank-request-form>
+                    @csrf
+                    <h3 class="mb-1 text-sm font-semibold">{{ __('supplier::bank.request_title') }}</h3>
+                    <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('supplier::bank.request_hint') }}</p>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <x-ui.field name="bank_name" :value="old('bank_name')" :label="__('supplier::bank.bank_name')" required />
+                        <x-ui.field name="branch_name" :value="old('branch_name')" :label="__('supplier::bank.branch_name')" />
+                        <x-ui.field name="account_name" :value="old('account_name')" :label="__('supplier::bank.account_name')" required />
+                        <x-ui.field name="account_no" :label="__('supplier::bank.account_no')" required />
+                        <x-ui.field name="routing_no" :value="old('routing_no')" :label="__('supplier::bank.routing_no')" />
+                        <x-ui.field name="reason" :value="old('reason')" :label="__('supplier::bank.reason')" />
+                    </div>
+                    <div class="mt-3">
+                        <x-ui.button type="submit" tone="secondary">{{ __('supplier::bank.request') }}</x-ui.button>
+                    </div>
+                </form>
+            @endcan
         </section>
     </div>
 

@@ -275,6 +275,9 @@ class SchemeController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['target_id' => __('sales::validation.scheme_target_unknown')]);
         }
 
+        // ⛔ `targets` কেবল ফর্মের ঘর — বাছা ধরনেরটা উপরে `target_id`-এ বসেছে; স্কিমের সারিতে ঢালা নয় ([[SchemeService::create()]])
+        unset($data['targets']);
+
         return $data;
     }
 

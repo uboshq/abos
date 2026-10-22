@@ -1,0 +1,132 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'method' => [
+        'legend' => 'Method',
+        'cash' => 'Cash',
+        'mfs' => 'MFS',
+        'transfer' => 'Bank transfer',
+        'deposit' => 'Cash deposit',
+        'cheque' => 'Cheque',
+        'card' => 'Card',
+    ],
+
+    'field' => [
+        'transfer_mode' => 'Transfer mode',
+        'reference' => 'Reference / TrxID',
+        'trx_id' => 'TrxID',
+        'value_date' => 'Value date',
+        'bank_charge' => 'Bank charge (৳)',
+        'mfs_charge' => 'MFS charge (৳)',
+        'deposit_slip' => 'Deposit slip no.',
+        'cheque_no' => 'Cheque no.',
+        'cheque_date' => 'Cheque date',
+        'cheque_bank' => 'Cheque bank',
+    ],
+
+    'hint' => [
+        'reference_needed' => 'Needed to post',
+        'value_date' => 'The day the bank actually moved the money',
+    ],
+
+    'charge_line' => [
+        'in' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party is credited the full ৳:amount.',
+        'out' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party\'s balance drops by the full ৳:amount.',
+        'head_bank' => 'Bank charges',
+        'head_mfs' => 'Mobile banking charges',
+    ],
+
+    'validation' => [
+        'reference_needed' => 'Posting by ":method" needs its reference — it is how the bank statement is matched and the same money is never taken twice.',
+    ],
+
+    'pdc' => [
+        'in' => 'Post-dated cheque — it stays "in clearing" and reaches the bank only when it clears.',
+        'out' => 'Post-dated cheque — no money leaves the bank before the cheque date.',
+    ],
+    'screen' => [
+        'title_pay' => 'Pay money',
+        'title_receive' => 'Receive money',
+        'general' => 'General',
+        'party_type' => 'Party type',
+        'party' => [
+            'customer' => 'Customer',
+            'supplier' => 'Supplier',
+            'staff' => 'Staff',
+            'other' => 'Other (direct account)',
+        ],
+        'party_type_elsewhere' => 'This kind of payment is made on the Accounts payment voucher',
+        'supplier' => 'Supplier',
+        'date' => 'Date',
+        'gross' => 'Total amount (৳)',
+        'from_account' => 'Paid from',
+        'in_account' => 'In the account ৳',
+        'short' => 'less than this payment and its charge',
+        'payee_bank' => "Payee's bank (from the supplier record — not changed here)",
+        'payee_bank_soon' => "The supplier record's bank details will show here once two people have verified them.",
+        'open_bills' => 'Open bills and debit notes',
+        'due_order' => 'By due date',
+        'col' => [
+            'bill' => 'Bill',
+            'ref' => "Supplier's no.",
+            'due' => 'Due',
+            'total' => 'Original',
+            'remaining' => 'Remaining',
+            'apply' => 'Apply now',
+            'applied_total' => 'Total applied',
+        ],
+        'pick_supplier_first' => "Choose a supplier to see their open bills.",
+        'no_bills' => 'This supplier has no open bill — the money will sit as an advance.',
+        'attach_and_note' => 'Attachments and narration',
+        'attach_hint' => 'Bank advice / copy of the bill',
+        'narration' => 'Narration',
+        'head' => [
+            'owed' => 'Owed to supplier',
+            'this' => 'This payment (gross)',
+            'left' => 'Left after',
+        ],
+        'meta' => [
+            'number' => 'No.: :no',
+            'number_on_save' => 'No.: assigned on save (SP-…)',
+            'maker' => 'Made by: :name',
+            'month_open' => 'Month open ✓',
+            'month_closed' => 'Month closed — will not post',
+        ],
+        'summary' => 'Summary',
+        'sum' => [
+            'applied' => 'Applied to bills (gross)',
+            'ait' => 'Income tax withheld (AIT)',
+            'vds' => 'VAT withheld (VDS)',
+            'net' => 'Leaves the account (net)',
+            'charge' => 'Bank charge (our expense)',
+            'unapplied' => "Unapplied (advance — on the supplier's account)",
+            'over' => 'Applied to bills is more than the total',
+            'matches' => 'Balanced: applied + unapplied = total',
+        ],
+        'ledger' => 'What goes to the books',
+        'ledger_hint' => 'Check before posting',
+        'ledger_col' => [
+            'account' => 'Account',
+            'branch' => 'Branch',
+            'debit' => 'Debit',
+            'credit' => 'Credit',
+            'total' => 'Total',
+        ],
+        'ledger_empty' => 'Shows here once a supplier and an amount are given.',
+        'ledger_unbalanced' => 'Debit and credit do not match — it will not post.',
+        'controls' => 'Controls',
+        'control' => [
+            'signatures_on' => 'Payments need a signature here: "Send for signature" — the maker cannot sign their own. It posts after signing.',
+            'signatures_off' => 'Payments need no signature in this company — posting writes to the books at once. A posted paper cannot be edited; reverse it with a reason.',
+            'three_hands' => 'Three-hand rule on: whoever made or signed it cannot post it.',
+            'bank_unsigned' => "A bank payment stops while the payee's bank details are unsigned.",
+        ],
+        'after_post' => 'After posting: payment advice (email/PDF to the supplier) · VDS certificate list',
+        'cancel' => 'Cancel',
+        'draft' => 'Save draft',
+        'post' => 'Post',
+        'send' => 'Send for signature',
+    ],
+];

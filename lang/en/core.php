@@ -1527,6 +1527,7 @@ return [
             'adjusting_reversal_stuck' => 'When an adjusting journal could not reverse on its date',
             'cheque_bounce_block' => 'When a bounced cheque blocks a customer\'s credit',
             'limit_request_waiting' => 'When a credit-limit raise waits for my signature',
+            'bank_change_waiting' => 'When a supplier bank details change waits for my signature',
             'temporary_limit_ending' => 'When a temporary credit limit ends within three days',
             'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],

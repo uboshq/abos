@@ -95,6 +95,8 @@ final class NotificationKinds
             // ⭐ নতুন সীমা বাড়ানোর অনুরোধ মালিকের সইয়ের অপেক্ষায়; অস্থায়ী সীমা তিন দিনে শেষ (বাকি নিয়ন্ত্রণ ধাপ ৩.৪)
             'customer.limit_request_waiting' => 'core.notify.kind.limit_request_waiting',
             'credit_control.temporary_limit_ending' => 'core.notify.kind.temporary_limit_ending',
+            // ⭐ সরবরাহকারীর ব্যাংক তথ্যের বদল দ্বিতীয় সইয়ের অপেক্ষায় — সইকারীদের, যিনি চাইলেন তাঁকে নয় (নকশা দফা #৬, ২১ অক্টোবর ২০২৬)
+            'supplier.bank_change_waiting' => 'core.notify.kind.bank_change_waiting',
 
             /*
              * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
@@ -154,6 +156,7 @@ final class NotificationKinds
             $type === 'approval.rejected' => ['approval', 'normal'],
             str_starts_with($type, 'approval.') => ['approval', 'high'],
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
+            $type === 'supplier.bank_change_waiting' => ['approval', 'high'],
             in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],

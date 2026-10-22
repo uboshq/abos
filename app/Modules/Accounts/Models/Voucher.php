@@ -91,7 +91,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      *
      * @var list<string>
      */
-    public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card'];
+    public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card', 'deposit'];
 
     /**
      * ⭐ মাধ্যমের ঘরে যা-ই থাক, পর্দায় একটা শব্দ — কাঁচা চাবি কখনো নয়।
