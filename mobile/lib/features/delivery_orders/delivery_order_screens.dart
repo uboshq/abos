@@ -12,6 +12,7 @@ import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
@@ -174,11 +175,10 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     return Scaffold(
       appBar: AbosScreenBar(title: widget.title ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule),
       floatingActionButton: widget.canWrite
-          ? FloatingActionButton.extended(
+          ? BarFab(
               key: const ValueKey('do-new'),
               onPressed: _new,
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.deliveryOrdersNew(_kind(widget.api))),
+              label: context.l10n.deliveryOrdersNew(_kind(widget.api)),
             )
           : null,
       // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;

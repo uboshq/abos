@@ -8,6 +8,7 @@ import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
@@ -259,11 +260,10 @@ class _QualityListScreenState extends State<QualityListScreen> {
     return Scaffold(
       appBar: AbosScreenBar(title: l.stockQualityTitle),
       floatingActionButton: widget.canCreate
-          ? FloatingActionButton.extended(
+          ? BarFab(
               key: const ValueKey('qc-new'),
               onPressed: () => _open(NewInspectionScreen(api: widget.api, products: widget.products)),
-              icon: const Icon(Icons.add),
-              label: Text(l.stockQualityNew),
+              label: l.stockQualityNew,
             )
           : null,
       body: RefreshIndicator(

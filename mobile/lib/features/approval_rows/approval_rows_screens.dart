@@ -7,6 +7,7 @@ import '../../core/approvals/approvals_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -103,11 +104,10 @@ class _DelegationScreenState extends State<DelegationScreen> {
       appBar: AbosScreenBar(title: context.l10n.approvalsDelegationTitle),
       floatingActionButton: s == null
           ? null
-          : FloatingActionButton.extended(
+          : BarFab(
               key: const ValueKey('delegation-new'),
               onPressed: _new,
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.approvalsDelegationNew),
+              label: context.l10n.approvalsDelegationNew,
             ),
       body: RefreshIndicator(
         onRefresh: _load,

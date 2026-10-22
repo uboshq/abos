@@ -14,6 +14,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
 import '../printing/document_actions_sheet.dart';
@@ -208,11 +209,10 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                   ? context.l10n.vouchersListAllTitle
                   : _view.label),
       floatingActionButton: widget.canCreate
-          ? FloatingActionButton.extended(
+          ? BarFab(
               key: const ValueKey('voucher-new'),
               onPressed: _new,
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.vouchersListNew),
+              label: context.l10n.vouchersListNew,
             )
           : null,
       body: RefreshIndicator(

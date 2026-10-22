@@ -16,6 +16,7 @@ import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/core/sync_engine/sync_status.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/core/widgets/totals_bar.dart';
+import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:abos_mobile/features/home/nav_bottom_bar.dart';
 import 'package:abos_mobile/features/orders/order_list_screen.dart';
 import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
@@ -82,6 +83,20 @@ GoRouter _ownerRouter(String initial) => GoRouter(initialLocation: initial, rout
             path: 'orders',
             builder: (context, state) => ScreenFrame(location: state.matchedLocation, child: const OrderListScreen()),
           ),
+          GoRoute(
+            path: 'collections',
+            builder: (context, state) => ScreenFrame(
+              location: state.matchedLocation,
+              child: MoneyInListScreen(
+                  api: SampleBooks(),
+                  today: DateTime(2026, 10, 20),
+                  dues: sampleDues,
+                  unsent: () => const [],
+                  canCollect: true,
+                  collect: () => const Scaffold(body: Text('COLLECT SCREEN'))),
+            ),
+          ),
+          GoRoute(path: 'new-order', builder: (context, state) => const Scaffold(body: Text('NEW ORDER SCREEN'))),
         ],
       ),
     ]);
@@ -92,7 +107,7 @@ Widget _ownerApp({String initial = '/home'}) => ProviderScope(
             id: 'u1', name: ownerUser.name, email: ownerUser.email, roles: ownerUser.roles, permissions: rolePermissions['owner']!))),
         topBarContextProvider.overrideWith((ref) => sampleTopBar()),
         navBadgesProvider.overrideWith((ref) => const NavBadges(unread: 3, pending: 3)),
-        mayCollectProvider.overrideWith((ref) => false),
+        mayCollectProvider.overrideWith((ref) => true),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
@@ -132,6 +147,7 @@ void main() {
       expect(_underFab(tester, find.byKey(const ValueKey('money-in-new')), keyed: ['shop-dues-total', 'shop-dues']), isEmpty);
     });
 
+    if (size == 'tablet_wide') continue; // ⓘ চওড়ায় কাঠামোর বোতাম খাড়া বারের মাথায় — নিচের দলে
     testWidgets('owner home $size: at the end the branch sales sit above the frame\'s "+ new"', (tester) async {
       setScreenSize(tester, dp);
       await tester.pumpWidget(_ownerApp());
@@ -162,6 +178,65 @@ void main() {
       await tester.pumpAndSettle();
       await _scrollToEnd(tester);
       expect(_underFab(tester, find.byKey(const ValueKey('voucher-new'))), isEmpty);
+    });
+  }
+
+  // ⭐ চওড়া পর্দায় (খাড়া বার) বোতাম পাতার ওপরে ভাসে না — বারের মাথায় বসে, একই নাম, একই আইকন, একই কাজ (Material 3: রেলের
+  // leading; fe, ২২ অক্টোবর ২০২৬)। গড়ানোর আগেই কিছু ঢাকা পড়ে না।
+  Finder floating() => find.byWidgetPredicate((w) => w is FloatingActionButton && w.key != const ValueKey('rail-fab'));
+  final screens = <String, ({String initial, String label, Future<void> Function(WidgetTester) opened})>{
+    'owner home': (
+      initial: '/home',
+      label: 'নতুন',
+      opened: (tester) async => expect(find.byKey(const ValueKey('fab-choice-/home/new-order')), findsOneWidget),
+    ),
+    'collections': (
+      initial: '/home/collections',
+      label: 'নতুন আদায়',
+      opened: (tester) async => expect(find.text('COLLECT SCREEN'), findsOneWidget),
+    ),
+    'orders': (
+      initial: '/home/orders',
+      label: 'নতুন অর্ডার',
+      opened: (tester) async => expect(find.text('NEW ORDER SCREEN'), findsOneWidget),
+    ),
+  };
+  for (final MapEntry(key: name, value: s) in screens.entries) {
+    for (final MapEntry(key: size, value: dp) in {'1280x800': const Size(1280, 800), '800x1280': const Size(800, 1280)}.entries) {
+      testWidgets('$name $size: no floating button, nothing covered before any scroll; the rail carries the action', (tester) async {
+        setScreenSize(tester, dp);
+        await tester.runAsync(seedMainData);
+        await tester.pumpWidget(_ownerApp(initial: s.initial));
+        await tester.pumpAndSettle();
+        expect(floating(), findsNothing, reason: 'a FAB floats over the page');
+        final rail = find.byKey(const ValueKey('rail-fab'));
+        expect(rail, findsOneWidget);
+        expect(find.ancestor(of: rail, matching: find.byType(RoleRail)), findsOneWidget);
+        // ⓘ একই নাম — চওড়া বারে লেখায়, সরু বারে ছুঁয়ে-ধরার লেখায়; একই আইকন
+        final railFab = tester.widget<FloatingActionButton>(rail);
+        expect(railFab.tooltip == s.label || find.descendant(of: rail, matching: find.text(s.label)).evaluate().isNotEmpty, isTrue,
+            reason: 'the rail does not say "${s.label}"');
+        final screenFab = find.byType(BarFab);
+        if (screenFab.evaluate().isNotEmpty) {
+          final b = tester.widget<BarFab>(screenFab);
+          expect(b.label, s.label);
+          expect(find.descendant(of: rail, matching: find.byIcon(b.icon)), findsOneWidget);
+        }
+        await tester.tap(rail);
+        await tester.pumpAndSettle();
+        await s.opened(tester);
+      });
+    }
+  }
+
+  for (final name in screens.keys) {
+    testWidgets('$name 412: the button still floats on the phone, no rail button', (tester) async {
+      setScreenSize(tester, const Size(412, 915));
+      await tester.runAsync(seedMainData);
+      await tester.pumpWidget(_ownerApp(initial: screens[name]!.initial));
+      await tester.pumpAndSettle();
+      expect(floating(), findsOneWidget);
+      expect(find.byKey(const ValueKey('rail-fab')), findsNothing);
     });
   }
 }

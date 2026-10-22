@@ -8,6 +8,7 @@ import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -89,11 +90,10 @@ class _LeadListScreenState extends State<LeadListScreen> {
     final w = context.l10n;
     return Scaffold(
       appBar: AbosScreenBar(title: w.leadsTitle),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: BarFab(
         key: const Key('lead-new'),
         onPressed: () => _open(),
-        icon: const Icon(Icons.add),
-        label: Text(w.leadsNew),
+        label: w.leadsNew,
       ),
       body: RefreshIndicator(
         onRefresh: _load,

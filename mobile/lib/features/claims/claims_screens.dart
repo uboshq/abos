@@ -10,6 +10,7 @@ import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
@@ -72,15 +73,14 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
     final page = _page;
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.claimsListTitle),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: BarFab(
         key: const ValueKey('claim-new'),
         onPressed: () async {
           final sent = await Navigator.of(context).push<Claim>(MaterialPageRoute(
               builder: (_) => NewClaimScreen(api: widget.api, picker: widget.picker)));
           if (sent != null && mounted) await _load();
         },
-        icon: const Icon(Icons.add),
-        label: Text(context.l10n.claimsNew),
+        label: context.l10n.claimsNew,
       ),
       body: RefreshIndicator(
         onRefresh: _load,

@@ -95,23 +95,123 @@ Map<BarTab, TabBadge> _badgesOf(NavBadges b) => {
 /// ⭐ "＋ নতুন …" — বারের নকশা আর পুরো পাতার নমুনার বোতাম (মালিক, ২০ অক্টোবর ২০২৬): ডান-নিচে ভাসে, ১৬dp গোল কোণ,
 /// থিমের মূল রঙের পট, মোটা লেখা। আইকন Material Symbols-এর ＋। যে পর্দা নিজে বোতাম আঁকে (আদায়, ভাউচার, দাবি), সে-ও
 /// এটাই বসাবে, যাতে সব পাতায় একই চেহারা।
-class BarFab extends StatelessWidget {
-  const BarFab({super.key, required this.label, required this.onPressed});
+///
+/// <p>⭐ খাড়া বারের পাশে (ট্যাবলেট, আড়াআড়ি ফোন) বোতাম পাতার ওপরে ভাসে না: নিজের নাম আর কাজ কাঠামোর বারের মাথায় রাখে
+/// ([FrameFab.railSlotOf]), বার সেটা আঁকে, এখানে কিছু আঁকে না (Material 3: মাঝারি আর চওড়া জানালায় FAB রেলের leading-এ;
+/// fe, ২২ অক্টোবর ২০২৬)। ফোনে আগের মতো ভাসে, তালিকা [FabClearance]-এ নিচে জায়গা রাখে।
+class BarFab extends StatefulWidget {
+  const BarFab({super.key, required this.label, required this.onPressed, this.icon = Symbols.add});
 
   final String label;
   final VoidCallback onPressed;
 
+  /// সাধারণত ＋; টাকা পাঠানো বা গোনার মতো কাজে নিজের আইকন
+  final IconData icon;
+
+  @override
+  State<BarFab> createState() => _BarFabState();
+}
+
+class _BarFabState extends State<BarFab> {
+  ValueNotifier<RailAction?>? _slot;
+
+  void _leave() {
+    final slot = _slot;
+    if (slot != null && slot.value?.owner == this) slot.value = null;
+    _slot = null;
+  }
+
+  @override
+  void dispose() {
+    final slot = _slot;
+    _slot = null;
+    // ⓘ বার এখন আঁকার মাঝে থাকতে পারে — পরের ফ্রেমে সরানো
+    if (slot != null && slot.value?.owner == this) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          if (slot.value?.owner == this) slot.value = null;
+        } on FlutterError {
+          // ⓘ কাঠামোও চলে গেছে — ঘরটাই নেই
+        }
+      });
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final slot = FrameFab.railSlotOf(context);
+    if (slot != _slot) _leave();
+    if (slot != null) {
+      _slot = slot;
+      final label = widget.label;
+      final icon = widget.icon;
+      if (slot.value?.owner != this || slot.value?.label != label || slot.value?.icon != icon) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _slot != slot) return;
+          slot.value = RailAction(label: label, icon: icon, onPressed: () => widget.onPressed(), owner: this);
+        });
+      }
+      return const SizedBox.shrink();
+    }
+    return barFabButton(context, label: widget.label, icon: widget.icon, onPressed: widget.onPressed);
+  }
+}
+
+/// [BarFab]-এর চেহারা — পাতার ওপরে ভাসা, বা খাড়া বারের মাথায় ([railed]: হিরো ছাড়া, যাতে দুই পাতার বোতাম না জড়ায়)
+Widget barFabButton(BuildContext context,
+    {required String label, required VoidCallback onPressed, IconData icon = Symbols.add, Key? key, bool railed = false}) {
     // ⓘ বোতামের রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১: "বোতাম: primary") — আলো আর অন্ধকারে দুটোতেই
     final cs = Theme.of(context).colorScheme;
+    if (railed) {
+      return FloatingActionButton.extended(
+        key: key,
+        heroTag: null,
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      );
+    }
     return FloatingActionButton.extended(
+      key: key,
       backgroundColor: cs.primary,
       foregroundColor: cs.onPrimary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       onPressed: onPressed,
-      icon: const Icon(Symbols.add),
+      icon: Icon(icon),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+    );
+}
+
+/// খাড়া বারের মাথার বোতাম — চওড়া বারে নাম-সহ, সরু বারে কেবল ＋ (নাম TalkBack আর ছুঁয়ে-ধরার লেখায়)
+class _RailFab extends StatelessWidget {
+  const _RailFab({required this.action, required this.extended});
+
+  final RailAction action;
+  final bool extended;
+
+  @override
+  Widget build(BuildContext context) {
+    if (extended) {
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: barFabButton(context,
+            key: const ValueKey('rail-fab'), label: action.label, icon: action.icon, onPressed: action.onPressed, railed: true),
+      );
+    }
+    final cs = Theme.of(context).colorScheme;
+    return FloatingActionButton(
+      key: const ValueKey('rail-fab'),
+      heroTag: null,
+      tooltip: action.label,
+      backgroundColor: cs.primary,
+      foregroundColor: cs.onPrimary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      onPressed: action.onPressed,
+      child: Icon(action.icon),
     );
   }
 }
@@ -194,6 +294,7 @@ class RoleRail extends StatelessWidget {
     required this.badges,
     required this.onSelect,
     required this.extended,
+    this.action,
   });
 
   final List<BarTab> tabs;
@@ -201,6 +302,9 @@ class RoleRail extends StatelessWidget {
   final Map<BarTab, TabBadge> badges;
   final ValueChanged<BarTab> onSelect;
   final bool extended;
+
+  /// পাতার মূল কাজ ("＋ নতুন …") — Material 3-এর রেলের leading: ঘরগুলোর ওপরে
+  final RailAction? action;
 
   @override
   Widget build(BuildContext context) {
@@ -221,6 +325,11 @@ class RoleRail extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 child: Column(
                   children: [
+                    if (action != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 16),
+                        child: _RailFab(action: action!, extended: extended),
+                      ),
                     for (final tab in tabs)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
@@ -374,6 +483,15 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
   /// যে ঘর থেকে এই পাতা খোলা হয়েছিল
   late final BarTab _openedFrom;
 
+  /// খাড়া বারের মাথার বোতাম — পর্দার নিজের "＋ নতুন" (BarFab) এখানে নিজের নাম আর কাজ রাখে
+  final _railSlot = ValueNotifier<RailAction?>(null);
+
+  @override
+  void dispose() {
+    _railSlot.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -497,10 +615,15 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
           );
     // ⭐ বোতাম কখনো তথ্য ঢাকে না ([FabClearance]): কাঠামো আঁকলে পাতার তালিকা নিচে জায়গা রাখে; যে পর্দা নিজে বসায়
     // ([FabSpec.drawnByScreen] আর পথ আছে — অর্ডার), সে নিজের Scaffold-এ বসায়, নিজের মোটের বারের ওপরে
-    final fabButton = fab != null && fab.drawnByScreen ? null : built;
+    // ⭐ খাড়া বার দেখানো হলে বোতাম কোথাও ভাসে না — বারের মাথায় বসে (Material 3; fe, ২২ অক্টোবর ২০২৬)
+    final inRail = layout != BarLayout.bottom && tabs.length >= 2;
+    final fabButton = inRail || (fab != null && fab.drawnByScreen) ? null : built;
     final child = _InFrame(
         child: FrameFab(
-            drawn: fabButton != null, offered: fab != null && fab.drawnByScreen ? built : null, child: widget.child));
+            drawn: fabButton != null,
+            offered: !inRail && fab != null && fab.drawnByScreen ? built : null,
+            railSlot: inRail ? _railSlot : null,
+            child: widget.child));
     if (layout == BarLayout.bottom) {
       return Scaffold(
         body: child,
@@ -513,13 +636,20 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     return Scaffold(
       floatingActionButton: fabButton,
       body: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (tabs.length >= 2)
-          RoleRail(
-            tabs: tabs,
-            selected: shown,
-            badges: badges,
-            onSelect: onSelect,
-            extended: layout == BarLayout.extendedRail,
+        if (inRail)
+          ValueListenableBuilder<RailAction?>(
+            valueListenable: _railSlot,
+            builder: (context, fromScreen, _) => RoleRail(
+              tabs: tabs,
+              selected: shown,
+              badges: badges,
+              onSelect: onSelect,
+              extended: layout == BarLayout.extendedRail,
+              // ⓘ কাঠামোর নিজের বোতাম (হোম, অর্ডার) আগে; নইলে পর্দার নিজের (আদায়, ভাউচার, দাবি …)
+              action: built == null
+                  ? fromScreen
+                  : RailAction(label: built.label, icon: built.icon, onPressed: built.onPressed, owner: this),
+            ),
           ),
         Expanded(child: child),
       ]),

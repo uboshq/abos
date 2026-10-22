@@ -11,6 +11,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -230,14 +231,14 @@ class TransferListScreen extends StatelessWidget {
   Widget build(BuildContext context) => _Loaded(
         title: context.l10n.moneyTransferListTitle,
         load: () => api.get('/accounts/transfers'),
-        floating: (reload) => FloatingActionButton.extended(
+        floating: (reload) => BarFab(
           key: const ValueKey('transfer-new'),
           onPressed: () async {
             await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SendTransferScreen(api: api)));
             await reload();
           },
-          icon: const Icon(Icons.send_outlined),
-          label: Text(context.l10n.moneyTransferSend),
+          icon: Icons.send_outlined,
+          label: context.l10n.moneyTransferSend,
         ),
         build: (context, d, reload) {
           Widget row(TransferRow t) => Card(
@@ -515,14 +516,14 @@ class CashCountListScreen extends StatelessWidget {
   Widget build(BuildContext context) => _Loaded(
         title: context.l10n.moneyCashCountTitle,
         load: () => api.get('/accounts/cash-counts'),
-        floating: (reload) => FloatingActionButton.extended(
+        floating: (reload) => BarFab(
           key: const ValueKey('count-new'),
           onPressed: () async {
             await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => NewCashCountScreen(api: api)));
             await reload();
           },
-          icon: const Icon(Icons.calculate_outlined),
-          label: Text(context.l10n.moneyCashCountNew),
+          icon: Icons.calculate_outlined,
+          label: context.l10n.moneyCashCountNew,
         ),
         build: (context, d, reload) {
           final rows = _maps(d['rows']).map(CountRow.fromJson).toList();

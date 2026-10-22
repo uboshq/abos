@@ -8,6 +8,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -73,7 +74,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.hrLeaveTitle),
       floatingActionButton: canApply
-          ? FloatingActionButton.extended(
+          ? BarFab(
               key: const ValueKey('leave-new'),
               onPressed: () async {
                 final sent = await Navigator.of(context).push<LeaveRequest>(
@@ -84,8 +85,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                   await _load();
                 }
               },
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.hrLeaveApply),
+              label: context.l10n.hrLeaveApply,
             )
           : null,
       body: RefreshIndicator(

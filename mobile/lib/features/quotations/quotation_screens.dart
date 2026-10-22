@@ -11,6 +11,7 @@ import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -88,11 +89,10 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.quotationsListTitle),
       floatingActionButton: widget.canWrite
-          ? FloatingActionButton.extended(
+          ? BarFab(
               key: const Key('quotation-new'),
               onPressed: _new,
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.quotationsListNew),
+              label: context.l10n.quotationsListNew,
             )
           : null,
       body: RefreshIndicator(
