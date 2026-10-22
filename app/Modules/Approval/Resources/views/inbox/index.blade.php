@@ -228,7 +228,7 @@
                      ? view('approval::inbox.partials.pick', ['approval' => $a])
                      : ''],
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                 'render' => fn ($a) => $a->requested_at?->format('d M Y, H:i')],
+                 'render' => fn ($a) => \App\Core\Support\DateFormat::spoken($a->requested_at)],
                 ['key' => 'sla', 'label' => __('approval::field.sla'), 'width' => '9rem',
                  'render' => fn ($a) => view('approval::inbox.partials.clock', [
                      'approval' => $a, 'state' => $sla[$a->id] ?? 'none',

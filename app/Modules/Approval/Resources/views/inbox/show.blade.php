@@ -11,7 +11,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action)"
-            :subtitle="$approval->requested_at?->format('d M Y, H:i')">
+            :subtitle="\App\Core\Support\DateFormat::spoken($approval->requested_at)">
             <x-slot:actions>
                 {{-- ⭐ ঘড়িটা অবস্থার পাশে — ২৪ সেপ্টেম্বর ২০২৬।
 
@@ -262,7 +262,7 @@
                                  : __('approval::status.'.$d->decision)],
                             ['key' => 'remarks', 'label' => __('approval::field.remarks')],
                             ['key' => 'decided_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                             'render' => fn ($d) => $d->decided_at?->format('d M Y, H:i')],
+                             'render' => fn ($d) => \App\Core\Support\DateFormat::spoken($d->decided_at)],
                         ]" />
                 </div>
             @endif

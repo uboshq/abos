@@ -36,7 +36,7 @@
      * ফাইলটা parse error হয়ে যায়।
      */
     $due = $approval->due_at
-        ? __('approval::message.sla_due', ['when' => $approval->due_at->format('d M Y, H:i')])
+        ? __('approval::message.sla_due', ['when' => \App\Core\Support\DateFormat::spoken($approval->due_at)])
         : null;
 @endphp
 
