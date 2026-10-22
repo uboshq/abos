@@ -273,7 +273,7 @@
   "homeCashInHand": "Cash in hand",
   "homeInBank": "In bank",
   "homeInTransit": "In transit",
-  "homeCameInToday": "In today",
+  "homeCameInToday": "Received today",
   "homeCollectionAmount": "Collection {amount}",
   "homeWentOutToday": "Out today",
   "homeMarketDues": "Market dues",

@@ -1950,7 +1950,7 @@ class AppL10nEn extends AppL10n {
   String get homeInTransit => 'In transit';
 
   @override
-  String get homeCameInToday => 'In today';
+  String get homeCameInToday => 'Received today';
 
   @override
   String homeCollectionAmount(String amount) {
