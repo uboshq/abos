@@ -377,5 +377,11 @@
   "updateWallTitle": "This version can no longer be used",
   "updateWallBody": "Download and install the new version of the app. The old version may show wrong figures.",
   "updateWallPending": "{count, plural, one{{count} order on this phone has not been sent yet} other{{count} orders on this phone have not been sent yet}}",
-  "updateWallKeepOrders": "Uninstalling the app loses them. Do not remove the old version when installing the new one — install over it, and the orders stay."
+  "updateWallKeepOrders": "Uninstalling the app loses them. Do not remove the old version when installing the new one — install over it, and the orders stay.",
+  "reportModuleBackup": "Backup & Recovery",
+  "reportModuleFixedAssets": "Fixed Assets",
+  "reportModuleGovernance": "Governance",
+  "reportModuleMasterData": "Master Data",
+  "reportModuleRestaurant": "Restaurant",
+  "reportModuleSystemAdmin": "System Administration"
 }

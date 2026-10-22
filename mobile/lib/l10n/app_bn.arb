@@ -3143,6 +3143,30 @@
   "@updateWallKeepOrders": {
     "description": "Update wall: how not to lose queued orders"
   },
+  "reportModuleBackup": "ব্যাকআপ ও পুনরুদ্ধার",
+  "@reportModuleBackup": {
+    "description": "Reports list: the module name under a report, the web's module name (server code backup)"
+  },
+  "reportModuleFixedAssets": "স্থায়ী সম্পদ",
+  "@reportModuleFixedAssets": {
+    "description": "Reports list: the module name under a report, the web's module name (server code fixed_assets)"
+  },
+  "reportModuleGovernance": "নিয়ন্ত্রণ ও নিরীক্ষা",
+  "@reportModuleGovernance": {
+    "description": "Reports list: the module name under a report, the web's module name (server code governance)"
+  },
+  "reportModuleMasterData": "মাস্টার ডাটা",
+  "@reportModuleMasterData": {
+    "description": "Reports list: the module name under a report, the web's module name (server code master_data)"
+  },
+  "reportModuleRestaurant": "রেস্টুরেন্ট",
+  "@reportModuleRestaurant": {
+    "description": "Reports list: the module name under a report, the web's module name (server code restaurant)"
+  },
+  "reportModuleSystemAdmin": "সিস্টেম প্রশাসন",
+  "@reportModuleSystemAdmin": {
+    "description": "Reports list: the module name under a report, the web's module name (server code system_admin)"
+  },
   "ordersModuleSales": "বিক্রয়",
   "@ordersModuleSales": {
     "description": "Screen bar: the module name above the title on the order and tracking screens"

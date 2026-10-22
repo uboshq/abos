@@ -3979,6 +3979,42 @@ abstract class AppL10n {
   /// **'অ্যাপ মুছে ফেললে ওগুলো চলে যাবে। নতুন সংস্করণ বসানোর সময় পুরনোটা মুছবেন না — উপরে বসিয়ে দিন, অর্ডারগুলো থেকে যাবে।'**
   String get updateWallKeepOrders;
 
+  /// Reports list: the module name under a report, the web's module name (server code backup)
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যাকআপ ও পুনরুদ্ধার'**
+  String get reportModuleBackup;
+
+  /// Reports list: the module name under a report, the web's module name (server code fixed_assets)
+  ///
+  /// In bn, this message translates to:
+  /// **'স্থায়ী সম্পদ'**
+  String get reportModuleFixedAssets;
+
+  /// Reports list: the module name under a report, the web's module name (server code governance)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিয়ন্ত্রণ ও নিরীক্ষা'**
+  String get reportModuleGovernance;
+
+  /// Reports list: the module name under a report, the web's module name (server code master_data)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাস্টার ডাটা'**
+  String get reportModuleMasterData;
+
+  /// Reports list: the module name under a report, the web's module name (server code restaurant)
+  ///
+  /// In bn, this message translates to:
+  /// **'রেস্টুরেন্ট'**
+  String get reportModuleRestaurant;
+
+  /// Reports list: the module name under a report, the web's module name (server code system_admin)
+  ///
+  /// In bn, this message translates to:
+  /// **'সিস্টেম প্রশাসন'**
+  String get reportModuleSystemAdmin;
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

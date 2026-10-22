@@ -2353,6 +2353,24 @@ class AppL10nEn extends AppL10n {
       'Uninstalling the app loses them. Do not remove the old version when installing the new one — install over it, and the orders stay.';
 
   @override
+  String get reportModuleBackup => 'Backup & Recovery';
+
+  @override
+  String get reportModuleFixedAssets => 'Fixed Assets';
+
+  @override
+  String get reportModuleGovernance => 'Governance';
+
+  @override
+  String get reportModuleMasterData => 'Master Data';
+
+  @override
+  String get reportModuleRestaurant => 'Restaurant';
+
+  @override
+  String get reportModuleSystemAdmin => 'System Administration';
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

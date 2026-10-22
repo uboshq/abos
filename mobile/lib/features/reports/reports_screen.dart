@@ -13,6 +13,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../printing/document_actions_sheet.dart';
+import 'report_module_name.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// Every report this person may run — docs/Contract §৯.
@@ -129,7 +130,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           child: ListTile(
                             leading: const Icon(Icons.bar_chart_outlined),
                             title: Text(r.title),
-                            subtitle: r.module == null ? null : Text(r.module!),
+                            subtitle: r.module == null ? null : Text(reportModuleName(r.module!, context.l10n)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(

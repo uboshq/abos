@@ -2306,6 +2306,24 @@ class AppL10nBn extends AppL10n {
       'অ্যাপ মুছে ফেললে ওগুলো চলে যাবে। নতুন সংস্করণ বসানোর সময় পুরনোটা মুছবেন না — উপরে বসিয়ে দিন, অর্ডারগুলো থেকে যাবে।';
 
   @override
+  String get reportModuleBackup => 'ব্যাকআপ ও পুনরুদ্ধার';
+
+  @override
+  String get reportModuleFixedAssets => 'স্থায়ী সম্পদ';
+
+  @override
+  String get reportModuleGovernance => 'নিয়ন্ত্রণ ও নিরীক্ষা';
+
+  @override
+  String get reportModuleMasterData => 'মাস্টার ডাটা';
+
+  @override
+  String get reportModuleRestaurant => 'রেস্টুরেন্ট';
+
+  @override
+  String get reportModuleSystemAdmin => 'সিস্টেম প্রশাসন';
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override
