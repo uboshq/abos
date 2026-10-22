@@ -61,7 +61,9 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
 
     /**
      * ⭐ অনুমোদন মডিউলে মালিকের শব্দ — দফা ১৫ (মালিক, ২১ অক্টোবর ২০২৬)। ⓘ কেবল এই মডিউলে: "স্তর" অন্য জায়গায় অন্য মানে
-     * (মালের খরচের স্তর), আর ছাপা কাগজের "অনুমোদনকারী" সারি আলাদা সিদ্ধান্তের অপেক্ষায় (fe-কে জানানো)।
+     * (মালের খরচের স্তর)। ⛔ ছাপা কাগজের সইয়ের সারি "প্রস্তুতকারী · যাচাইকারী · অনুমোদনকারী" ইচ্ছে করেই থাকে — আন্তর্জাতিক
+     * "Prepared · Checked · Approved by", নিরীক্ষকেরা এটাই খোঁজেন (fe, ২২ অক্টোবর ২০২৬); পর্দায় সই চাওয়ার জায়গায় "সইদাতা"।
+     * তাই নিয়মটা কেবল অনুমোদন মডিউলের লেখায়, ছাপার ফাইলে নয়।
      *
      * @var array<string, array{0: string, 1: string}>
      */
@@ -313,6 +315,9 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $this->assertSame('কেন '.$rejected.' হয়', __('approval::menu.report_why_rejected', [], 'bn'), '⛔ রিপোর্টের নাম এখনো "কেন বাতিল হয়"।');
         $this->assertSame('ডকুমেন্ট '.$rejected, __('governance::action.document_rejected', [], 'bn'), '⛔ audit-এর লেখা এখনো "ডকুমেন্ট বাতিল"।');
         $this->assertSame($rejected, __('governance::action.rejected', [], 'bn'));
+
+        // ⓘ দফা ১৫ (fe-র অনুমতি, ২২ অক্টোবর ২০২৬): মাথার নোটিশও সইয়ের অপেক্ষা বলে, সিদ্ধান্তের নয়
+        $this->assertSame('আপনার সইয়ের অপেক্ষায়', __('core.notice.awaiting_mine', [], 'bn'), '⛔ মাথার নোটিশ এখনো "সিদ্ধান্তের অপেক্ষায়"।');
 
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);
