@@ -22,6 +22,7 @@
             'key' => 'amount',
             'label' => __('accounts::obligation.col.amount'),
             'numeric' => true,
+            'total' => 'money',
             'width' => '9rem',
             'render' => fn ($o) => \App\Core\Support\Money::format((string) $o->amount),
         ],
@@ -67,9 +68,21 @@
 
     <x-ui.list-tabs :tabs="$tabs" :label="__('accounts::menu.obligations')" />
 
-    <div data-obligations>
-        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::obligation.empty.'.$tab)" />
+    {{-- ⓘ তালিকার মান: টুলবার (খোঁজা), সর্বমোট আর যোগফলের পট্টি — অন্য তালিকার মতোই --}}
+    <div data-boxed data-obligations class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <x-ui.toolbar :title="__('accounts::menu.obligations')"
+                          :search-placeholder="__('accounts::obligation.search')"
+                          :columns="$columns" />
+        </form>
+
+        <x-ui.table :rows="$rows"
+                    :grand="$grand ?? []"
+                    :columns="$columns"
+                    :empty="$q ? __('core.empty.no_results') : __('accounts::obligation.empty.'.$tab)" />
     </div>
 
     <div class="mt-3">{{ $rows->links() }}</div>
+    <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

@@ -35,4 +35,5 @@ return [
     ],
     'notice_overdue' => '{1} :count obligation is overdue — a treasury deposit or Mushak-6.6 is pending|[2,*] :count obligations are overdue — treasury deposits or Mushak-6.6 are pending',
     'notice_soon' => '{1} :count obligation falls due within three days|[2,*] :count obligations fall due within three days',
+    'search' => 'Paper no. or challan/certificate no.',
 ];

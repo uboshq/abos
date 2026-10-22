@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\ComplianceObligation;
@@ -23,6 +24,8 @@ use Illuminate\View\View;
  */
 final class ComplianceObligationController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /** ট্যাব — খোলা (ডিফল্ট), সময় পেরোনো, করা হয়েছে, বাতিল */
     private const TABS = ['open', 'overdue', 'done', 'cancelled'];
 
@@ -44,16 +47,20 @@ final class ComplianceObligationController extends Controller implements HasMidd
         $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : 'open';
         $base = fn () => ComplianceObligation::query()->inViewedBranch();
 
-        $rows = $base()
+        $term = trim((string) $request->query('q'));
+        $query = $base()
             ->when($tab === 'open', fn ($q) => $q->open())
             ->when($tab === 'overdue', fn ($q) => $q->overdue())
             ->when($tab === 'done', fn ($q) => $q->whereNotNull('done_at'))
             ->when($tab === 'cancelled', fn ($q) => $q->whereNotNull('cancelled_at')->whereNull('done_at'))
-            ->with('doneBy')
+            // ⓘ খোঁজা — কাগজের নম্বর বা চালান/সনদের নম্বর ধরে
+            ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('source_no', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $term).'%')
+                ->orWhere('ref_no', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $term).'%')))
             ->orderBy($tab === 'done' ? 'done_at' : 'due_on', $tab === 'done' ? 'desc' : 'asc')
-            ->orderBy('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderBy('id');
+
+        $rows = (clone $query)->with('doneBy')->paginate(50)->withQueryString();
 
         $counts = [
             'open' => $base()->open()->count(),
@@ -63,6 +70,9 @@ final class ComplianceObligationController extends Controller implements HasMidd
         return view('accounts::obligation.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            // ⭐ সর্বমোট — ছাঁকা সব দায়ের টাকা, পাতার নয় ([[GrandTotals]])
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
+            'q' => $term,
             'tab' => $tab,
             'tabs' => collect(self::TABS)->map(fn (string $key) => [
                 'key' => $key,
