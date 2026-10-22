@@ -7,6 +7,7 @@ import '../../core/locale/l10n.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
@@ -269,7 +270,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCreate),
           children: [
             if (_statuses.isNotEmpty)
               Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [

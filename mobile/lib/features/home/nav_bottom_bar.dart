@@ -10,6 +10,7 @@ import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/role_tabs.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/widgets/fab_clearance.dart';
 
 /// The home's own pages, as [HomeShell] names them for its [IndexedStack].
 /// ⓘ বিজ্ঞপ্তি আর "আমি" আর নিচের বারে নেই (বারের নকশা ৩, অংশ ৪): ঘণ্টা আর ছবি ওপরের বারে (a4)। পথ দুটো আগের মতোই আছে।
@@ -487,15 +488,19 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
         ? null
         : RoleTabs.fabFor(widget.location, permissions,
             modulesOn: modulesOn, mayCollect: ref.watch(mayCollectProvider));
-    final fabButton = fab == null || fab.drawnByScreen
+    final built = fab == null || (fab.route == null && fab.choices.isEmpty)
         ? null
         : BarFab(
             key: const ValueKey('frame-fab'),
             label: fab.label,
             onPressed: () => fab.choices.isEmpty ? context.push(fab.route!) : _chooseNew(fab.choices),
           );
-
-    final child = _InFrame(child: widget.child);
+    // ⭐ বোতাম কখনো তথ্য ঢাকে না ([FabClearance]): কাঠামো আঁকলে পাতার তালিকা নিচে জায়গা রাখে; যে পর্দা নিজে বসায়
+    // ([FabSpec.drawnByScreen] আর পথ আছে — অর্ডার), সে নিজের Scaffold-এ বসায়, নিজের মোটের বারের ওপরে
+    final fabButton = fab != null && fab.drawnByScreen ? null : built;
+    final child = _InFrame(
+        child: FrameFab(
+            drawn: fabButton != null, offered: fab != null && fab.drawnByScreen ? built : null, child: widget.child));
     if (layout == BarLayout.bottom) {
       return Scaffold(
         body: child,

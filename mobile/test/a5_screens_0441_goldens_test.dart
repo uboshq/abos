@@ -74,6 +74,15 @@ void main() {
           await tester.pumpAndSettle();
           await s.value.$2(tester);
           await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens_0441/$name.png'));
+          // ⭐ FAB-ওয়ালা পাতা তালিকার একেবারে শেষেও — শেষ সারি আর মোট বোতামের ওপরে (fab_never_hides_data_test-এর দাবির ছবি)
+          if (s.key == 'screen_sr_collect') {
+            for (final st in tester.stateList<ScrollableState>(find.byType(Scrollable))) {
+              final p = st.position;
+              if (p.axis == Axis.vertical && p.hasContentDimensions) p.jumpTo(p.maxScrollExtent);
+            }
+            await tester.pumpAndSettle();
+            await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens_0441/${name}_end.png'));
+          }
         });
       }
     }

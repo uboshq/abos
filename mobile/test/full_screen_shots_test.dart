@@ -136,6 +136,14 @@ void main() {
               expect(find.byKey(const ValueKey('screen-bar')), findsOneWidget);
             }
             await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/full_screen/$name.png'));
+            // ⭐ তালিকার একেবারে শেষে — শেষ সারি আর মোট "＋ নতুন" বোতামের ওপরে পুরো দেখা যায় (fe, ২২ অক্টোবর ২০২৬; Material 3:
+            // স্ক্রল করা লেখা FAB-এর নিচে আটকে থাকে না)। দাবি fab_never_hides_data_test-এ; এই ছবি চোখে দেখার জন্য।
+            for (final s in tester.stateList<ScrollableState>(find.byType(Scrollable))) {
+              final p = s.position;
+              if (p.axis == Axis.vertical && p.hasContentDimensions) p.jumpTo(p.maxScrollExtent);
+            }
+            await tester.pumpAndSettle();
+            await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/full_screen/${name}_end.png'));
           } finally {
             debugDisableShadows = true;
           }

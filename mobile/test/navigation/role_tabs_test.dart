@@ -124,7 +124,8 @@ void main() {
       final fab = RoleTabs.fabFor('/home/orders', rolePermissions['sr']!);
       expect(fab?.label, 'নতুন অর্ডার');
       expect(fab?.route, '/home/new-order');
-      expect(fab?.drawnByScreen, isFalse);
+      // ⓘ অর্ডারের পাতা কাঠামোর বোতাম নিজের Scaffold-এ বসায় (মোটের বারের ওপরে) — FrameFab.offeredTo
+      expect(fab?.drawnByScreen, isTrue);
       expect(RoleTabs.fabFor('/home/orders', const ['sales.order.view']), isNull);
     });
 

@@ -16,6 +16,7 @@ import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
 import 'package:abos_mobile/core/navigation/nav_state.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
+import 'package:abos_mobile/core/widgets/fab_clearance.dart';
 import 'package:abos_mobile/core/widgets/state_views.dart';
 import 'package:abos_mobile/features/home/nav_bottom_bar.dart';
 
@@ -45,8 +46,10 @@ AuthUser userFor(String role, {List<String>? permissions}) => AuthUser(
     );
 
 /// একটা সাদামাটা তালিকার পর্দা — শিরোনাম আর ৬০টা সারি (ওপরে ফেরার পরীক্ষার জন্য)
-Widget stubScreen(String title, {bool loading = false}) => Scaffold(
+/// ⓘ আসল অর্ডারের পাতার মতো কাঠামোর দেওয়া "＋ নতুন" ([FrameFab.offeredTo]) নিজের Scaffold-এ বসায়
+Widget stubScreen(String title, {bool loading = false}) => Builder(builder: (context) => Scaffold(
       appBar: AppBar(title: Text(title)),
+      floatingActionButton: FrameFab.offeredTo(context),
       body: loading
           ? const SingleChildScrollView(child: LoadingSkeleton())
           : ListView.builder(
@@ -54,7 +57,7 @@ Widget stubScreen(String title, {bool loading = false}) => Scaffold(
               itemCount: 60,
               itemBuilder: (_, i) => SizedBox(height: 56, child: Text('$title row $i')),
             ),
-    );
+    ));
 
 /// হোম — [HomeShell]-এর মতোই: কোন পাতা তা দেখায়, আর তার পিছনের নিয়ম (সব মডিউল → হোম, হোমে বন্ধ)
 class StubHome extends ConsumerWidget {

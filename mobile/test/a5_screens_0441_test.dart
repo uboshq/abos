@@ -180,7 +180,8 @@ void main() {
 
     testWidgets('a chip on every row, read as "অবস্থা: পোস্ট হয়েছে" (chip v5, the word fe chose); the last row clears the FAB', (tester) async {
       final handle = tester.ensureSemantics();
-      await pump(tester, srCollectBody());
+      // ⓘ বোতাম থাকলে তবেই তার জায়গা (FabClearance) — তাই "＋ নতুন আদায়" সহ
+      await pump(tester, srCollectBody(canCollect: true));
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
       expect(chips, hasLength(3));
       expect(chips.every((c) => c.state == PaperState.posted && c.dense && c.kind == PaperKind.money), isTrue,

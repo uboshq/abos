@@ -6,6 +6,7 @@ import '../../core/approvals/approval_rows_api.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -111,7 +112,7 @@ class _DelegationScreenState extends State<DelegationScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: s != null),
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)

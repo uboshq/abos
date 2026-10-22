@@ -7,6 +7,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -91,7 +92,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: canApply),
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),

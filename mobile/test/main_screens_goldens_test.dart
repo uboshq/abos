@@ -98,6 +98,15 @@ void main() {
         await tester.pumpWidget(RepaintBoundary(key: const ValueKey('shot'), child: screen.value(dark)));
         await tester.pumpAndSettle();
         await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens/${screen.key}_$mode.png'));
+        // ⭐ FAB-ওয়ালা পাতা তালিকার একেবারে শেষেও — শেষ সারি আর মোট বোতামের ওপরে (fab_never_hides_data_test-এর দাবির ছবি)
+        if (screen.key == 'vouchers') {
+          for (final st in tester.stateList<ScrollableState>(find.byType(Scrollable))) {
+            final p = st.position;
+            if (p.axis == Axis.vertical && p.hasContentDimensions) p.jumpTo(p.maxScrollExtent);
+          }
+          await tester.pumpAndSettle();
+          await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens/${screen.key}_end_$mode.png'));
+        }
       });
     }
   }

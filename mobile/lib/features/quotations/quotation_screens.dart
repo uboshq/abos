@@ -10,6 +10,7 @@ import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -97,7 +98,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canWrite),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
               for (final tab in _tabs)

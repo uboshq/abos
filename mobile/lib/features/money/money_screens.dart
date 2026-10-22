@@ -10,6 +10,7 @@ import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -176,7 +177,7 @@ class _LoadedState extends State<_Loaded> {
         onRefresh: _reload,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.floating != null),
           children: [
             if (data == null && _error == null) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),

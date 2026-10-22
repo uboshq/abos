@@ -13,6 +13,7 @@ import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
 import '../printing/document_actions_sheet.dart';
@@ -217,7 +218,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCreate),
           children: [
             Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
               for (final v in _views)

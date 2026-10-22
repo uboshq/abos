@@ -11,6 +11,7 @@ import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
@@ -130,8 +131,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          // ⓘ নিচে ৯৬dp ফাঁকা — "＋ নতুন আদায়" বোতাম শেষ সারি ঢাকে না (০.৪.৪১ নমুনা)
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 96),
+          // ⓘ নিচে বোতামের জায়গা ([FabClearance]) — "＋ নতুন আদায়" শেষ সারি আর মোট ঢাকে না (০.৪.৪১ নমুনা)
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCollect),
           children: [
             DateRangeBar(
               from: _from,

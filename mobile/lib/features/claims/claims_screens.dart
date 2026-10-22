@@ -9,6 +9,7 @@ import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
@@ -84,7 +85,7 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: true),
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),

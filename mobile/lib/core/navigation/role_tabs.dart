@@ -211,7 +211,8 @@ class RoleTabs {
     final l = AppLocale.l10n;
     final FabSpec? spec = switch (rest) {
       'orders' when p.contains('sales.order.create') =>
-        FabSpec(label: l.navFabNewOrder, route: '/home/new-order', drawnByScreen: false),
+        // ⓘ অর্ডারের পাতা কাঠামোর বোতাম নিজের Scaffold-এ বসায় ([ScreenFrame.fabOf]) — মোটের বারের ওপরে ভাসে
+        FabSpec(label: l.navFabNewOrder, route: '/home/new-order', drawnByScreen: true),
       'collections' when mayCollect => FabSpec(label: l.navFabNewCollection, drawnByScreen: true),
       'claims' when p.contains('hr.claim.self') => FabSpec(label: l.navFabNewClaim, drawnByScreen: true),
       _ when (rest == 'vouchers' || rest.startsWith('vouchers/')) && p.contains('accounts.voucher.create') =>
@@ -270,7 +271,8 @@ class RoleTabs {
 
 enum BarLayout { bottom, rail, extendedRail }
 
-/// ＋ নতুন বোতাম। [drawnByScreen]: পর্দা নিজেই বোতামটা আঁকে (আদায়, ভাউচার, দাবি) — কাঠামো তখন দ্বিতীয়টা আঁকে না।
+/// ＋ নতুন বোতাম। [drawnByScreen]: পর্দা নিজেই বোতামটা আঁকে (আদায়, ভাউচার, দাবি), বা কাঠামোর বোতাম নিজের Scaffold-এ
+/// বসায় (অর্ডার, [route] সহ) — কাঠামো তখন দ্বিতীয়টা আঁকে না।
 @immutable
 class FabSpec {
   const FabSpec({required this.label, this.route, required this.drawnByScreen, this.choices = const []});

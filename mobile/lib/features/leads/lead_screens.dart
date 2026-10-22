@@ -7,6 +7,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -97,7 +98,7 @@ class _LeadListScreenState extends State<LeadListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: true),
           children: [
             TextField(
               key: const Key('lead-search'),

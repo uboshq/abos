@@ -11,6 +11,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
@@ -189,7 +190,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canWrite),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(

@@ -10,6 +10,7 @@ import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
@@ -77,8 +78,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final nothingAtAll =
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
+    final newOrder = FrameFab.offeredTo(context);
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.ordersListTitle, module: context.l10n.ordersModuleSales),
+      // ⭐ কাঠামোর "＋ নতুন অর্ডার" এখানে বসে ([FrameFab.offeredTo]) — তাই মোটের বারের ওপরে ভাসে, "সর্বমোট" ঢাকে না
+      floatingActionButton: newOrder,
       bottomNavigationBar: synced.isEmpty
           ? null
           : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),
@@ -99,7 +103,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: newOrder != null),
                 children: [
                   // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): টানার সময় খসড়া সারি; শেষ টান ব্যর্থ হলে কারণসহ "আবার চেষ্টা করুন";
                   // সত্যিই খালি হলে "নতুন অর্ডার"
@@ -133,7 +137,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
           : RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: newOrder != null),
                 children: [
                   if (_refreshing) const LinearProgressIndicator(),
                   if (pendingCount > 0) ...[
