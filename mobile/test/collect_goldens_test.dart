@@ -111,6 +111,16 @@ Future<void> _open(WidgetTester tester,
   }
 }
 
+/// বোতাম [key]-এর লেখা বোতামের ঘরের ভেতরে, প্রতিটা কিনারা থেকে অন্তত ৮dp দূরে
+void _clearInside(WidgetTester tester, String key) {
+  final button = find.byKey(ValueKey(key));
+  final o = tester.getRect(button);
+  final i = tester.getRect(find.descendant(of: button, matching: find.byType(Text)));
+  final room = (top: i.top - o.top, bottom: o.bottom - i.bottom, left: i.left - o.left, right: o.right - i.right);
+  expect(room.top >= 8 && room.bottom >= 8 && room.left >= 8 && room.right >= 8, isTrue,
+      reason: '⛔ $key: লেখা $i বোতামের $o কিনারায় লাগে — ফাঁক $room');
+}
+
 List<String> _texts(WidgetTester tester) => [
       for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? t.textSpan?.toPlainText() ?? '',
       for (final d in tester.widgetList<InputDecorator>(find.byType(InputDecorator))) d.decoration.labelText ?? '',
@@ -153,6 +163,38 @@ void main() {
       await _open(tester, review: review, textScale: 1.3);
       expect(tester.takeException(), isNull, reason: '⛔ ১৩০% লেখায় উপচে পড়ল');
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/${name}_412_light_bn_130.png'));
+    });
+  }
+
+  // ⛔ বড় লেখায় (১৩০%, ২০০%): খাতার প্রতিটা অঙ্ক ডানে, নিজের লাইনের প্রথম সারিতে — আগে Wrap, অঙ্ক নেমে বাঁয়ে নামের নিচে বসত;
+  // আর নিচের বোতামের লেখা বোতামের ভেতরে, প্রতিটা কিনারা থেকে অন্তত ৮dp — আগে দুই লাইনে ভাঙলে শেষ অক্ষর নিচের কিনারা ছুঁত
+  // (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)
+  for (final scale in [1.3, 2.0]) {
+    final pct = (scale * 100).round();
+    testWidgets('at $pct% text the ledger amounts stay right-aligned and the bottom buttons hold their labels clear of every edge',
+        (tester) async {
+      await _open(tester, textScale: scale);
+      _clearInside(tester, 'collect-draft');
+      _clearInside(tester, 'collect-post');
+      await tester.tap(find.byKey(const ValueKey('collect-post')));
+      await tester.pumpAndSettle();
+      _clearInside(tester, 'collect-check-back');
+      _clearInside(tester, 'collect-check-post');
+      final lines = find.byWidgetPredicate((w) => w.key is ValueKey<String> && RegExp(r'^collect-journal-\d+$').hasMatch((w.key! as ValueKey<String>).value));
+      expect(lines, findsWidgets);
+      for (var i = 0; i < lines.evaluate().length; i++) {
+        await tester.ensureVisible(find.byKey(ValueKey('collect-journal-$i')));
+        await tester.pumpAndSettle();
+        final line = tester.getRect(find.byKey(ValueKey('collect-journal-$i')));
+        final account = tester.getRect(find.byKey(ValueKey('collect-journal-account-$i')));
+        final amount = tester.getRect(find.byKey(ValueKey('collect-journal-amount-$i')));
+        expect((line.right - amount.right).abs() < 1, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount ডানে নয় (লাইন $line)');
+        expect(amount.left > account.left, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount নামের $account নিচে বাঁয়ে নেমেছে');
+        expect((amount.top - account.top).abs() < 1, isTrue, reason: '⛔ লাইন $i: অঙ্ক $amount নামের $account প্রথম সারিতে নয়');
+      }
+      final total = tester.getRect(find.byKey(const ValueKey('collect-journal-total')));
+      final widest = tester.getRect(find.byKey(const ValueKey('collect-journal-0')));
+      expect((widest.right - total.right).abs() < 1, isTrue, reason: '⛔ মোট $total ডানে নয়');
     });
   }
 

@@ -87,6 +87,19 @@ void main() {
     _expectClearInside(tester, find.byKey(const ValueKey('login-submit')), find.byKey(const ValueKey('login-submit-label')));
   });
 
+  // ⛔ টাকা নেওয়ার নিচের দুই বোতাম: ১৩০% আর ২০০%-এ লেখা দুই লাইনে ভাঙলেও বোতামের ভেতরে (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬:
+  // collection_130/200-এ শেষ অক্ষর বোতামের নিচের কিনারা ছুঁত)
+  for (final scale in [1.3, 2.0]) {
+    testWidgets('collection: at ${(scale * 100).round()}% text the bottom buttons hold their labels clear of every edge', (tester) async {
+      setScreenSize(tester, const Size(390, 844));
+      await open(tester, collect(textScale: scale));
+      for (final key in ['collect-draft', 'collect-post']) {
+        final button = find.byKey(ValueKey(key));
+        _expectClearInside(tester, button, find.descendant(of: button, matching: find.byType(Text)));
+      }
+    });
+  }
+
   // ⛔ নতুন অর্ডারের − আর +: ২০০%-এ চিহ্ন তার গোল বোতামের বৃত্তের ভেতরে (ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬: new_order_200-এ লেখার
   // − আর + বৃত্তের চেয়ে বড়, কোনা বাইরে)। চিহ্নের ঘরের চার কোনাই বৃত্তের ভেতরে
   testWidgets('new order: at 200% text the − and + glyphs lie inside their round buttons', (tester) async {
