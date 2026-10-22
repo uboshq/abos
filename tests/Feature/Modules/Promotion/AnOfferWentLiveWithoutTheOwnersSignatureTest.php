@@ -218,9 +218,9 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
     {
         $this->approvalSwitch(true);
         $this->flow([1 => [$this->manager]]);
-        $this->assertFalse(ApprovalFlowStep::query()->get()
+        $this->assertFalse(ApprovalFlowStep::query()
             ->where('approval_flow_id', ApprovalFlow::query()->where('module', PromotionApprovalChain::MODULE)->value('id'))
-            ->contains(fn (ApprovalFlowStep $step) => $step->allows($this->owner)), 'ছকের শেষ স্তরে মালিক আছেন — দাবিটা অন্য কিছু মাপত।');
+            ->get()->contains(fn (ApprovalFlowStep $step) => $step->allows($this->owner)), 'ছকের শেষ স্তরে মালিক আছেন — দাবিটা অন্য কিছু মাপত।');
 
         $offer = $this->submitted();
         $this->actingAs($this->manager)->post(route('promotion.approve', $offer));
