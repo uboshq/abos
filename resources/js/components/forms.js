@@ -616,6 +616,18 @@ export function expenseFields (config) {
             return Math.max(0, this.gross - this.ait - this.vds)
         },
 
+        /*
+         * ⛔ লেখাগুলো এখানে, পর্দার প্রকাশে নয় — CSP-র Alpine `(ait + vds).toFixed(2)` বোঝে না ("Value is not a function"),
+         * তাই খরচের ভাউচারে উৎসে কর্তনের সারাংশটা কখনো আঁকা হত না (২২ অক্টোবর ২০২৬, নতুন ভাউচারের কাজে ধরা)।
+         */
+        get deductedText () {
+            return (Number(this.ait || 0) + Number(this.vds || 0)).toFixed(2)
+        },
+
+        get netText () {
+            return this.net.toFixed(2)
+        },
+
         /* একটাও চালান বাছা হয়নি মানে পরোক্ষ খরচ — মালিকের নিয়ম */
         get isDirect () {
             return this.tagged > 0

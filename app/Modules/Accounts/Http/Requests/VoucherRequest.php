@@ -447,6 +447,8 @@ class VoucherRequest extends FormRequest
             'from_account_name' => ['nullable', 'string', 'max:120'],
             'deposit_slip_no' => ['nullable', 'string', 'max:64'],
             'lands_on' => ['nullable', 'date'],
+            // ⭐ মূল্য-তারিখ — নতুন টাকার বাক্স ([[x-money.method]]) এটাই পাঠায়, lands_on-এর জায়গায় (মালিকের ২১ অক্টোবরের রায়, fe; কলাম 2027_03_05)
+            'value_date' => ['nullable', 'date'],
 
             /*
              * ⭐ উল্টো দাখিলার তারিখ — সাময়িক জাবেদা নিজেকে যেদিন উল্টাবে।

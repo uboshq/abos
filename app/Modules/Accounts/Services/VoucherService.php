@@ -166,6 +166,7 @@ final class VoucherService
                 'from_account_name' => $data['from_account_name'] ?? null,
                 'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
                 'lands_on' => $data['lands_on'] ?? null,
+                'value_date' => $data['value_date'] ?? null,
                 'reverse_on' => $data['reverse_on'] ?? null,
                 // ⭐ মাসশেষের সমন্বয় — কেবল জাবেদায়; অন্য ধরনে দাগ বসে না (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'is_adjusting' => $type === Voucher::JOURNAL && (bool) ($data['is_adjusting'] ?? false),

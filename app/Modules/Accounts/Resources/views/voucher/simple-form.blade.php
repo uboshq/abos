@@ -627,7 +627,9 @@
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             <option value="">&mdash;</option>
                             @foreach ($optionsFor($sides['from']['source']) as $account)
+                                {{-- ⓘ খাতের ধরন — টাকার বাক্স ([[x-money.method]]) দেখে পদ্ধতি নিজে সরায়, রসিদ আর পরিশোধের মতোই (২২ অক্টোবর ২০২৬) --}}
                                 <option value="{{ $account->id }}"
+                                        @if (filled($account->money_kind ?? null)) data-kind="{{ $account->money_kind }}" @endif
                                         @selected(old('from_account_id', $creditLine?->account_id) == $account->id)>
                                     {{ in_array((int) $account->id, $creditIds, true)
                                         ? __('accounts::field.on_credit_option', ['account' => $account->label()])
@@ -735,15 +737,24 @@
                 অর্থের খাতাগুলোরও হুবহু এই প্রশ্নগুলো লাগে। দুই জায়গায়
                 লিখলে একদিন একটায় চেকের ব্রাঞ্চ চাওয়া হত, অন্যটায় না —
                 আর তখন "কোন ব্যাংক থেকে কত এল" প্রশ্নের উত্তর অর্ধেক
-                লেনদেনে থাকত না। ⓘ তাই [[resources/views/components/ui/money-movement]]
-                একটাই, আর দুইজনেই সেটা ডাকে।
+                লেনদেনে থাকত না।
+
+                ── ⭐ ২২ অক্টোবর ২০২৬: আঠারো থেকে পদ্ধতির নিজের ঘরে ─────────
+                মালিক ভাউচারের ছবি দেখিয়ে জিজ্ঞেস করেছিলেন *"এতগুলো দেওয়া কি international standard?"*, তারপর নমুনা দেখে
+                অনুমোদন: *"ok ekoni kaj kore live e daw"* (২১ অক্টোবর)। ⭐ এখন টাকার পর্দার একই বাক্স ([[x-money.method]]):
+                প্রতিটা পদ্ধতি কেবল নিজের ঘর চায় — ব্যাংক: মোড, TrxID, মূল্য-তারিখ, চার্জ; MFS: TrxID, চার্জ; চেক: নম্বর, তারিখ,
+                ব্যাংক; নগদ জমা: স্লিপ। ⓘ প্রেরকের ব্যাংক-শাখা-হিসাবধারী-হিসাব নম্বর, ওয়ালেট আর মাধ্যম, প্রেরকের মোবাইল, "কবে
+                পৌঁছাবে", "কখন" আর "চার্জ কে বহন করে" আর চাওয়া হয় না (চার্জ আমাদের খরচ — মালিক)। ⛔ কলামগুলো মোছা হয়নি: পুরনো
+                কাগজে আর পুরনো ফোন যা পাঠায় তা আগের মতোই থাকে আর দেখায়। "কার মাধ্যমে" নিচের সারিতে থাকে (মালিকের আলাদা আদেশ)।
             --}}
-            <x-ui.money-movement
+            {{-- ⓘ নতুন ভাউচারে record নয় — তখন মূল্য-তারিখ আজ দিয়ে শুরু, টাকার পর্দার মতোই ([[x-money.method]]) --}}
+            <x-money.method
                 :direction="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'out' : 'in'"
-                :carriers="$carriers ?? []"
+                :record="$voucher->exists ? $voucher : null"
                 :modes="$transferModes ?? []"
-                :carrier-here="! $partyAbove"
-                :record="$voucher" />
+                :methods="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? ['cash', 'mfs', 'transfer', 'cheque'] : ['cash', 'mfs', 'transfer', 'deposit']"
+                :money-field="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'from_account_id' : 'to_account_id'"
+                counting />
 
             {{--
                 ⛔ রসিদ ও পরিশোধে "বিবরণ" নিচের সারিতে বসে — নমুনার মতো।

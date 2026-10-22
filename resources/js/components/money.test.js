@@ -37,7 +37,7 @@ async function mount (html) {
     return host
 }
 
-/** পর্দার মতোই: উপরে টাকার খাত, নিচে মাধ্যমের চিপ আর তার ঘর */
+/** পর্দার মতোই: উপরে টাকার খাত, নিচে মাধ্যমের চিপ আর তার ঘর — ২২ অক্টোবর ২০২৬ থেকে ভাউচারও টাকার বাক্স ([[moneyMethod]]) ব্যবহার করে, পুরনো moneyMovement সরানো */
 const form = (config) => `
     <form>
         <input name="amount" value="1000">
@@ -47,7 +47,7 @@ const form = (config) => `
             <option value="12" data-kind="bank">Dutch-Bangla</option>
             <option value="13" data-kind="mfs">bKash</option>
         </select>
-        <div x-data="moneyMovement(${config})">
+        <div x-data="moneyMethod(${config})">
             <input type="radio" name="instrument" value="cash" x-model="method">
             <input type="radio" name="instrument" value="mfs" x-model="method">
             <input type="radio" name="instrument" value="transfer" x-model="method">

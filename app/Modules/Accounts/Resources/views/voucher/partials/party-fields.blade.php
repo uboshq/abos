@@ -93,9 +93,7 @@
                     :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                     required />
 
-        <x-ui.field name="moved_at" type="time"
-                    :label="__('accounts::field.moved_at')"
-                    :value="$was('moved_at')" />
+        {{-- ⓘ "কখন" (moved_at) আর চাওয়া হয় না — মালিকের ২১ অক্টোবরের রায় ([[x-money.method]]); কলাম থাকে, পুরনো কাগজে দেখায় --}}
 
 
         {{--
