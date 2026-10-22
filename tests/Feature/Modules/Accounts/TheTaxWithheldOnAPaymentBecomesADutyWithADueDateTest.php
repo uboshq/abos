@@ -218,8 +218,11 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
         $this->dutiesOf($payment)->each(fn ($o) => $o->forceFill(['due_on' => Carbon::yesterday()->toDateString()])->save());
         Cache::flush();
 
-        $notice = collect(app(StatusNotices::class)->all())->firstWhere('tone', 'danger');
-        $this->assertNotNull($notice, '⛔ সময় পেরোনো করণীয়ের লাল নোটিশ নেই');
+        // ⓘ করণীয়ের নোটিশটা তার ঠিকানা ধরে খোঁজা — বারে অন্য লাল নোটিশও থাকে (যেমন ব্যাকআপ আর খাতা একই ডিস্কে), প্রথম লালটা আমাদের নাও হতে পারে
+        $notice = collect(app(StatusNotices::class)->all())
+            ->first(fn (array $n) => str_contains((string) ($n['url'] ?? ''), route('accounts.obligation.index', [], false)));
+        $this->assertNotNull($notice, '⛔ সময় পেরোনো করণীয়ের নোটিশ নেই');
+        $this->assertSame('danger', $notice['tone'], '⛔ সময় পেরোনো করণীয়ের নোটিশ লাল নয় — বারে ওঠে না');
         $this->assertSame(trans_choice('accounts::obligation.notice_overdue', 3, ['count' => 3]), $notice['text'], '⛔ নোটিশ সময় পেরোনো করণীয় গোনে না');
 
         $this->get(route('accounts.obligation.index', ['tab' => 'overdue']))->assertOk()->assertSee('data-obligation-overdue', false);
