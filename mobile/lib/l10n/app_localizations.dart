@@ -4015,6 +4015,12 @@ abstract class AppL10n {
   /// **'সিস্টেম প্রশাসন'**
   String get reportModuleSystemAdmin;
 
+  /// Sales return: shown in place of the reason picker when the server sends no return reasons; the confirm button stays off
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।'**
+  String get counterReturnNoReasons;
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

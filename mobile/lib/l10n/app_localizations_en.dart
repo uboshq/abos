@@ -2371,6 +2371,10 @@ class AppL10nEn extends AppL10n {
   String get reportModuleSystemAdmin => 'System Administration';
 
   @override
+  String get counterReturnNoReasons =>
+      'No reasons for returns are set up. Ask the office to add one on the web; returns cannot be confirmed without a reason.';
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

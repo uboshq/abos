@@ -277,6 +277,17 @@ class _ReturnScreenState extends State<ReturnScreen> {
                     DropdownMenuItem(value: r.id, child: Text(r.label))
                 ],
                 onChanged: (v) => setState(() => _reasonId = v),
+              )
+            else
+              // ⛔ সার্ভারে ফেরতের কোনো কারণ বসানো নেই — আগে ঘরটা চুপচাপ উধাও, আর "নিশ্চিত" চাপলে "কারণ বাছুন" অথচ বাছার ঘরই নেই
+              // (ফাঁকা পর্দার ছবি, fe-র নিরীক্ষা, ২২ অক্টোবর ২০২৬)। এখন কারণ-নেই কথা, আর "নিশ্চিত" বন্ধ
+              Card(
+                color: context.palette.warningSurface,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(context.l10n.counterReturnNoReasons,
+                      key: const ValueKey('return-no-reasons'), style: TextStyle(color: context.palette.warning)),
+                ),
               ),
             TextField(
                 controller: _note,
@@ -285,7 +296,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
             const SizedBox(height: AppSpacing.md),
             FilledButton(
               key: const ValueKey('return-go'),
-              onPressed: _busy ? null : _go,
+              onPressed: _busy || setup.reasons.isEmpty ? null : _go,
               child: Text(context.l10n.counterConfirm),
             ),
             TextButton(
