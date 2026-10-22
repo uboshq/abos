@@ -1103,7 +1103,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $collection->narration,
         );
 
-        $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection));
+        $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection, $extra));
 
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
             type: PrintJob::RECEIPT, id: (int) $collection->id,

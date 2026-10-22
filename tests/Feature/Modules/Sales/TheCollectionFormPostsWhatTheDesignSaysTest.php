@@ -677,7 +677,12 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             '⛔ দফা ১৬: অবস্থার আগের আর পরের মান অডিটে নেই');
     }
 
-    /** দফা ১৭ — টাকার রসিদ: টাকা কথায়, কোন বিলে কত, গ্রাহকের কাটা VDS/AIT আর অপ্রয়োগকৃত */
+    /**
+     * দফা ১৭ — টাকার রসিদ: টাকা কথায়, কোন বিলে কত, গ্রাহকের কাটা VDS/AIT আর অপ্রয়োগকৃত।
+     * ⓘ মাপা হয় যে ছাঁচে রসিদ সত্যিই ছাপে — কোম্পানি কিছু না বাছলে ডিফল্ট নকশা ট্যালি ক্লাসিক ([[PaperDesigns::defaultFor()]]),
+     * চলতি `print.document` নয় (Mac, ২২ অক্টোবর ২০২৬: আগের দাবি কেবল `print.document` শুনত, তাই "ছাঁচ ডাকাই হয়নি" — আর
+     * নকশার কাগজে কাটা অঙ্ক আর অপ্রয়োগকৃত সত্যিই ছাপা হত না)।
+     */
     public function test_item_17_the_receipt_prints_words_bills_withheld_and_unapplied(): void
     {
         $bill = $this->bill('INV-CF-RCPT', 10, '8000');
@@ -685,21 +690,20 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '8000']]]);
         $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১৭: আদায়টা পোস্ট হয়নি');
 
-        $seen = [];
-        View::composer('print.document', function ($view) use (&$seen) {
-            $seen = $view->getData();
-        });
-        $this->actingAs($this->owner)->get(route('sales.print.receipt', $collection))->assertOk();
-        $this->assertNotSame([], $seen, 'রসিদের ছাঁচ ডাকাই হয়নি');
-        $html = view('print.document', $seen)->render();
+        [$template, $html] = $this->receiptAs($this->owner, $collection);
+        $this->assertNotSame('', $html, 'রসিদের ছাঁচ ডাকাই হয়নি');
+        $this->assertStringStartsWith('sales::print.receipt-', $template, 'প্রস্তুতিটাই ভুল — রসিদ নকশার ছাঁচে ছাপেনি (ডিফল্ট নকশা আছে)');
 
         $this->assertTrue(str_contains($html, AmountInWords::of('9000.0000', 'bn')) || str_contains($html, AmountInWords::of('9000.0000', 'en')),
             '⛔ দফা ১৭: রসিদে টাকা কথায় নেই');
         $this->assertStringContainsString('INV-CF-RCPT', $html, '⛔ দফা ১৭: রসিদে কোন বিলে বসল তা নেই');
         $this->assertStringContainsString('8,000.00', $html, '⛔ দফা ১৭: রসিদে বিলের অঙ্ক নেই');
-        $this->assertStringContainsString(__('sales::collection_form.receipt.vds'), $html, '⛔ দফা ১৭: রসিদে গ্রাহকের কাটা VDS নেই');
-        $this->assertStringContainsString(__('sales::collection_form.receipt.ait'), $html, '⛔ দফা ১৭: রসিদে গ্রাহকের কাটা AIT নেই');
-        $this->assertStringContainsString(__('sales::collection_form.receipt.unapplied'), $html, '⛔ দফা ১৭: রসিদে অপ্রয়োগকৃত (২,০০০) নেই');
+        $label = fn (string $key) => str_contains($html, e(__($key, [], 'bn'))) || str_contains($html, e(__($key, [], 'en')));
+        $this->assertTrue($label('sales::collection_form.receipt.vds'), '⛔ দফা ১৭: রসিদে গ্রাহকের কাটা VDS নেই');
+        $this->assertStringContainsString('750.00', $html, '⛔ দফা ১৭: রসিদে VDS-এর অঙ্ক নেই');
+        $this->assertTrue($label('sales::collection_form.receipt.ait'), '⛔ দফা ১৭: রসিদে গ্রাহকের কাটা AIT নেই');
+        $this->assertStringContainsString('250.00', $html, '⛔ দফা ১৭: রসিদে AIT-এর অঙ্ক নেই');
+        $this->assertTrue($label('sales::collection_form.receipt.unapplied'), '⛔ দফা ১৭: রসিদে অপ্রয়োগকৃত (২,০০০) নেই');
         $this->assertStringContainsString('2,000.00', $html, '⛔ দফা ১৭: রসিদে অপ্রয়োগকৃতের অঙ্ক নেই');
     }
 
@@ -764,12 +768,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $paper = Collection::acrossBranches()->latest('id')->firstOrFail();
-        $seen = [];
-        View::composer('print.document', function ($view) use (&$seen) {
-            $seen = $view->getData();
-        });
-        $this->actingAs($this->maker)->get(route('sales.print.receipt', $paper));
-        $doors['টাকার রসিদ'] = $seen === [] ? '' : view('print.document', $seen)->render();
+        $doors['টাকার রসিদ'] = $this->receiptAs($this->maker, $paper)[1];
 
         foreach ($doors as $door => $body) {
             $this->assertNotSame('', $body, "প্রস্তুতিটাই ভুল — {$door} খোলেনি");
@@ -854,6 +853,23 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         }
 
         return $store->get('errors');
+    }
+
+    /**
+     * রসিদ যে ছাঁচে সত্যিই ছাপে তার HTML — চলতি কাগজ (`print.document`) বা রসিদের কোনো নকশা (`sales::print.receipt-*`, কোম্পানি কিছু
+     * না বাছলে ডিফল্ট ট্যালি ক্লাসিক)। ⓘ PDF-এর বাইট পড়া যায় না, তাই ছাঁচের তথ্য ধরে আবার আঁকা।
+     *
+     * @return array{0: string, 1: string} [ছাঁচের নাম, HTML]; ছাঁচ না ডাকলে ['', '']
+     */
+    private function receiptAs(User $user, Collection $collection): array
+    {
+        $seen = ['', []];
+        View::composer(['print.document', 'sales::print.receipt-*'], function ($view) use (&$seen) {
+            $seen = [$view->name(), $view->getData()];
+        });
+        $this->actingAs($user)->get(route('sales.print.receipt', $collection))->assertOk();
+
+        return $seen[0] === '' ? ['', ''] : [$seen[0], view($seen[0], $seen[1])->render()];
     }
 
     /** "পোস্ট" — থামলে (সই, বন্ধ মাস, স্লিপ) খসড়াটাই ফেরে; থামার কারণ `session('errors')`-এ */
