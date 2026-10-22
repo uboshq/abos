@@ -27,7 +27,7 @@
 
     <!-- The kit widget's name, drawn before its first sync; the picker name (strings.xml, widget_KEY_name) points here -->
     <string name="widget_sales_today_title">আজকের বিক্রি</string>
-    <string name="widget_sales_today_title_en">Today's sales</string>
+    <string name="widget_sales_today_title_en">Today\'s sales</string>
     <string name="widget_money_in_hand_title">টাকা হাতে</string>
     <string name="widget_money_in_hand_title_en">Money in hand</string>
     <string name="widget_approvals_title">সইয়ের অপেক্ষা</string>
@@ -37,7 +37,7 @@
     <string name="widget_stock_alerts_title">মজুদ সতর্কতা</string>
     <string name="widget_stock_alerts_title_en">Stock alerts</string>
     <string name="widget_challans_today_title">আজকের চালান</string>
-    <string name="widget_challans_today_title_en">Today's challans</string>
+    <string name="widget_challans_today_title_en">Today\'s challans</string>
     <string name="widget_notices_title">নোটিশ</string>
     <string name="widget_notices_title_en">Notices</string>
     <string name="widget_quick_actions_title">দ্রুত কাজ</string>
@@ -47,7 +47,7 @@
     <string name="widget_sync_state_title">সিঙ্কের অবস্থা</string>
     <string name="widget_sync_state_title_en">Sync status</string>
     <string name="widget_collections_today_title">আজকের আদায়</string>
-    <string name="widget_collections_today_title_en">Today's collections</string>
+    <string name="widget_collections_today_title_en">Today\'s collections</string>
     <string name="widget_credit_limits_title">বাকির সীমা</string>
     <string name="widget_credit_limits_title_en">Credit limits</string>
     <string name="widget_cheques_title">চেক</string>
@@ -69,7 +69,7 @@
     <string name="widget_principal_commission_title">প্রিন্সিপালের কমিশন</string>
     <string name="widget_principal_commission_title_en">Principal commission</string>
     <string name="widget_owner_board_title">মালিকের পূর্ণ পর্দা</string>
-    <string name="widget_owner_board_title_en">Owner's full board</string>
+    <string name="widget_owner_board_title_en">Owner\'s full board</string>
 
     <!-- English twins of the two older widgets' labels (Bangla in strings.xml) -->
     <string name="approvals_title_en">Awaiting signature</string>
