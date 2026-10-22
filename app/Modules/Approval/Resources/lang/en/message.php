@@ -100,4 +100,12 @@ return [
     'bundle_remark' => 'Confirmed together on one page',
     'escalation_fallback' => 'With no target: Manager → super admin',
     'amount_changed_since_seen' => 'The amount of the paper changed after you opened the card — the list was reloaded; sign after seeing the new amount.',
+    // Point 12 — ask before every action that is hard to undo (approval module design, owner 21 Oct 2026)
+    'confirm_reject' => 'Rejection is final — the paper goes no further. Reject?',
+    'confirm_send_back' => 'The paper goes back to its writer to fix. Send back?',
+    'confirm_forward' => 'The paper goes to another signer and leaves your list. Hand it over?',
+    'confirm_withdraw' => 'Withdraw the request? The wait for signatures stops.',
+    'confirm_bulk' => 'Sign all the chosen papers at once?',
+    'confirm_flow_delete' => 'Delete this signing rule? It cannot be undone.',
+    'confirm_delegation_stop' => 'This hand-over stops now. Stop it?',
 ];

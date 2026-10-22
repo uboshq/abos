@@ -131,7 +131,7 @@
                                 {{ __('core.action.edit') }}
                             </x-ui.button>
 
-                            <form method="POST" action="{{ route('approval.flow.destroy', $flow->id) }}">
+                            <form method="POST" action="{{ route('approval.flow.destroy', $flow->id) }}" data-confirm="{{ __('approval::message.confirm_flow_delete') }}">
                                 @csrf
                                 @method('DELETE')
                                 {{-- "বাতিল" নয় — ওটা ফর্ম ছেড়ে বেরোনোর

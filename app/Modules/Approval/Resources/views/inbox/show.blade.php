@@ -343,7 +343,7 @@
                      প্রথমেই জানতে চান কেন, আর না জানলে একই অনুরোধ আবার
                      আসে। --}}
                 <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
-                      x-show="act === 'reject'" x-cloak>
+                      x-show="act === 'reject'" x-cloak data-confirm="{{ __('approval::message.confirm_reject') }}">
                     @csrf
 
                     {{-- ⭐ কারণটা বাছাই করা হয়, শুধু লেখা নয় — ধাপ ১০।
@@ -393,7 +393,7 @@
                      যেখানে বাড়ানো হত না সেখানে কাগজটা **নীরবে অদৃশ্য** হত। --}}
                 {{-- ⭐ খসড়া কাগজে "সংশোধনে ফেরত" আলাদা অবস্থায় যায় (১৪ অক্টোবর ২০২৬, [[ApprovalEngine::sendBack()]]); বাকিতে আগের পথ --}}
                 <form method="POST" action="{{ ($canSendBack ?? false) ? route('approval.inbox.send_back', $approval->id) : route('approval.inbox.reject', $approval->id) }}"
-                      x-show="act === 'fix'" x-cloak>
+                      x-show="act === 'fix'" x-cloak data-confirm="{{ __('approval::message.confirm_send_back') }}">
                     @csrf
 
                     {{-- ⓘ কারণ-কোডটা লুকানো ঘরে, বাহিরে নয়।
@@ -429,7 +429,7 @@
                      তাই সহজ পথটা যেন উপরে থাকে। --}}
                 @if ($forwardTo !== [])
                     <form method="POST" action="{{ route('approval.inbox.forward', $approval->id) }}"
-                          x-show="act === 'forward'" x-cloak>
+                          x-show="act === 'forward'" x-cloak data-confirm="{{ __('approval::message.confirm_forward') }}">
                         @csrf
 
                         <x-ui.select name="to"
@@ -474,7 +474,7 @@
             @endif
 
             @if ($approval->status === \App\Models\Approval::PENDING && $approval->requested_by === auth()->id())
-                <form method="POST" action="{{ route('approval.inbox.withdraw', $approval->id) }}">
+                <form method="POST" action="{{ route('approval.inbox.withdraw', $approval->id) }}" data-confirm="{{ __('approval::message.confirm_withdraw') }}">
                     @csrf
                     <x-ui.button type="submit" tone="secondary" class="w-full">
                         {{ __('approval::action.withdraw') }}

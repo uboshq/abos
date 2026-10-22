@@ -207,7 +207,7 @@
              ⚠️ ফর্মটা টেবিলের **বাইরে** মোড়ানো, কারণ `x-ui.table` নিজে
              একটা টেবিল আঁকে — ভেতরে `<form>` বসালে HTML ওটাকে
              টেবিলের বাইরে ঠেলে দিত, আর চেকবক্সগুলো কোনো ফর্মেই থাকত না। --}}
-        <form method="POST" action="{{ route('approval.inbox.bulk') }}">
+        <form method="POST" action="{{ route('approval.inbox.bulk') }}" data-confirm="{{ __('approval::message.confirm_bulk') }}">
             @csrf
 
             @php
