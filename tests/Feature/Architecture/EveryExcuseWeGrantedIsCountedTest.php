@@ -434,7 +434,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       কোনো কাগজ বানায় না, কিছু লেখে না (দাবি: ThePaySupplierScreenFollowsTheDesignTest::test_item_10 — সারি গোনা আর
      *       নিরীক্ষা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়।
      *
-     * ── ⚠️ ৪৫৭ → ৪৫৯, ২২ অক্টোবর ২০২৬ (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     * ── ⚠️ ৪৫৭ → ৪৫৮, ২২ অক্টোবর ২০২৬ (a4, ০.৪.৪৫ ভাষা বদল, fe মেনেছেন) ──────
+     *   +১  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.locale: নিজের ভাষা, `/me` আর নিজের ছবির মতোই কোনো চাবি নেই (নিজের
+     *       পছন্দ, ব্যবসার তথ্য নয়); পাহারা — কেবল নিজের সারি, কেবল bn বা en ([[UserLocale]]), বদল নিরীক্ষায় একবার
+     *       (TheAppAndTheWebShareOneLanguageTest)। ⛔ সাজানো authorize বসানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্ন ফাঁপা হত।
+     *
+     * ── ⚠️ ৪৫৮ → ৪৬০ (মূলের ৪৫৮ + আমাদের ২; শাখায় ছিল ৪৫৭ → ৪৫৯), ২২ অক্টোবর ২০২৬ (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
      *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
      *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
      *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
@@ -446,7 +451,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
      *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
      */
-    private const CEILING = 459;
+    private const CEILING = 460;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

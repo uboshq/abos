@@ -1,0 +1,599 @@
+# level 1-এর ছাড় — phpstan.l1.neon-এর নিজের (ec, ২২ অক্টোবর ২০২৬)। প্রতিটার উপরে এক লাইনের কারণ।
+# ⛔ নতুন সারি হাতে নয়: আসল ভুল আগে সারান; বিশ্লেষকের ভুল হলে --generate-baseline, তারপর কারণ লিখুন।
+# ⓘ reportUnmatchedIgnoredErrors চালু — কোনো ছাড় আর না লাগলে phpstan নিজেই বলে, তখন সারিটা তুলুন।
+parameters:
+	ignoreErrors:
+		# সারির গড়নের docblock-এ route/vouched/address নেই — চলার সময় আছে, দেখানোর আগে তোলা হয়
+		-
+			message: '#^Cannot unset offset ''address'' on array\{label\: string, url\: string\|null, note\: string\|null, done\: bool\}\.$#'
+			identifier: unset.offset
+			count: 1
+			path: app/Core/Engines/Map/MapEngine.php
+
+		# অকারণ ?? — ক্ষতিহীন; খাতার ইঞ্জিন বিশ্লেষকের খাতিরে বদলানো হয় না
+		-
+			message: '#^Variable \$rowBranch on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: app/Core/Engines/Posting/PostingEngine.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Accounts/Models/CostCenter.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Accounts/Models/MoneyCategory.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Documents/Models/DocumentCategory.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Documents/Models/DocumentType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Documents/Models/MetadataField.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Hr/Models/Employee.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Hr/Models/LeaveType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Hr/Models/SalaryHead.php
+
+		# ${$bucket} (debits/credits) — নাম-বদলানো চলক phpstan ধরে না, তাই খালি array ভাবে
+		-
+			message: '#^Offset non\-falsy\-string on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Hr/Services/PayrollService.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Inventory/Models/StockTransferLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Inventory/Models/StockTransferLine.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Inventory/Models/StorageLocation.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Inventory/Models/Warehouse.php
+
+		# ইচ্ছাকৃত: having-সহ count() কোয়েরি সাব-কোয়েরি হয়, লাইভের ONLY_FULL_GROUP_BY-তে ৫০০ — গোনা PHP-তে (কারণ ফাইলে)
+		-
+			message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
+			identifier: larastan.noUnnecessaryCollectionCall
+			count: 1
+			path: app/Modules/Inventory/Services/GoodsWaitingToBePlaced.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Brand\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/MasterData/Models/Brand.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Brand\:\:\$name_bn\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Brand.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Brand\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Brand.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Brand.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Currency.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Department\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/MasterData/Models/Department.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Department\:\:\$name_bn\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Department.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Department\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Department.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Department.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Designation\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/MasterData/Models/Designation.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Designation\:\:\$name_bn\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Designation.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\Designation\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/Designation.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Designation.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\EmploymentType\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/MasterData/Models/EmploymentType.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\EmploymentType\:\:\$name_bn\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/EmploymentType.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\EmploymentType\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/EmploymentType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/EmploymentType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Location.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/OpportunityStage.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/PartyType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/PaymentMethod.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/PaymentTerm.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Person.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/PriceList.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\ProductCategory\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/MasterData/Models/ProductCategory.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\ProductCategory\:\:\$name_bn\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/ProductCategory.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\MasterData\\Models\\ProductCategory\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/MasterData/Models/ProductCategory.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/ProductCategory.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/ReasonCode.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/SalesChannel.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Tax.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/TransferMode.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Unit.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/Vehicle.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/MasterData/Models/VehicleType.php
+
+		# trait বা বিমূর্ত শ্রেণিতে new static — প্রতিটা উপশ্রেণি Eloquent/ফিল্টারের একই constructor নেয়, তাই নিরাপদ
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Modules/Notification/Reports/Filters/FixedListFilter.php
+
+		# larastan DB::transaction()-কে void ধরে; closure অফারটা ফেরত দেয়, আর সেটাই ফেরে
+		-
+			message: '#^Result of static method Illuminate\\Database\\Connection\:\:transaction\(\) \(void\) is used\.$#'
+			identifier: staticMethod.void
+			count: 1
+			path: app/Modules/Promotion/Services/PromotionLifecycle.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseBillLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Purchase/Models/PurchaseBillLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseBillLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Purchase/Models/PurchaseBillLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseOrderLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseOrderLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReceiptLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReceiptLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
+
+		# অনুমোদনের payload JSON-cast array; (array) কাস্টে phpstan string ধরে নেয়
+		-
+			message: '#^Offset ''direct_purchase'' on array\{\}\|array\{string\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Purchase/Services/DirectPurchaseService.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\CommissionClaim\:\:\$public_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/CommissionClaim.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanGiftLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanGiftLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Sales/Models/DeliveryChallanLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/DeliveryChallanLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesInvoiceLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Sales/Models/SalesInvoiceLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesInvoiceLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/SalesInvoiceLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesOrderLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Sales/Models/SalesOrderLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesOrderLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/SalesOrderLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_qty\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Modules/Sales/Models/SalesReturnLine.php
+
+		# ঘরটা আছে — অনেক টেবিলে এক লুপে বসানো মাইগ্রেশন বা ভাগের trait-এর ঘর larastan ধরে না; নামটা মাইগ্রেশনে মিলিয়ে দেখা (২২ অক্টোবর ২০২৬)
+		-
+			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_unit_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Sales/Models/SalesReturnLine.php
+
+		# সংখ্যার মতো string চাবি PHP-তে int হয় — phpstan-এর ধরনের প্রশ্ন, চলার সময় চাবি মেলে
+		-
+			message: '#^Offset decimal\-int\-string on array\<string, array\{paid\: string, free\: string\}\> on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Sales/Services/DirectSaleOptions.php
+
+		# নির্ধারিত রিপোর্টের filters JSON-cast array; (array) কাস্টে phpstan গড়ন হারায়
+		-
+			message: '#^Cannot unset offset ''_period'' on array\{\}\|array\{string\}\.$#'
+			identifier: unset.offset
+			count: 1
+			path: app/Modules/SystemAdmin/Services/ScheduledReportRunner.php
+
+		# পরীক্ষার ধরা-ঘর শুরুতে [] — নকলটা চলার সময় ভরে, phpstan কেবল খালি শুরুটা দেখে
+		-
+			message: '#^Offset 0 on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: tests/Feature/Api/ThePhoneCouldNotPrintWhatItSawTest.php
+
+		# Facade::spy()-এর পরে Mockery-র shouldHaveReceived/shouldNotHaveReceived — larastan facade-এর spy চেনে না
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Log\:\:shouldNotHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: tests/Feature/Core/AFormLandsInTheBranchItWasOpenedInTest.php
+
+		# Facade::spy()-এর পরে Mockery-র shouldHaveReceived/shouldNotHaveReceived — larastan facade-এর spy চেনে না
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Hash\:\:shouldHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: tests/Feature/Core/ThePortalDoorHadNoLockTest.php
+
+		# Facade::spy()-এর পরে Mockery-র shouldHaveReceived/shouldNotHaveReceived — larastan facade-এর spy চেনে না
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Hash\:\:shouldNotHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: tests/Feature/Core/ThePortalDoorHadNoLockTest.php
+
+		# Facade::spy()-এর পরে Mockery-র shouldHaveReceived/shouldNotHaveReceived — larastan facade-এর spy চেনে না
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Log\:\:shouldHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: tests/Feature/Core/TheRestoreLeftNoTraceTest.php
+
+		# পরীক্ষায় কয়েকটা সারির সংগ্রহ গোনা বা কাটা — কোয়েরির খরচের প্রশ্ন নয়
+		-
+			message: '#^Called ''slice'' on Laravel collection, but could have been retrieved as a query\.$#'
+			identifier: larastan.noUnnecessaryCollectionCall
+			count: 1
+			path: tests/Feature/Modules/Executive/EveryReportLeavesInEveryFormatWithATraceTest.php
+
+		# খাতের কোড চাবি ('2111', '2121'…) PHP-তে int হয় — phpstan string চাবি ভাবে; চলার সময় চাবি মেলে
+		-
+			message: '#^Offset ''2111''\|''2121''\|''2122'' on array\<string, array\{debit\: string, credit\: string\}\> on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: tests/Feature/Modules/Purchase/ThePaySupplierScreenFollowsTheDesignTest.php
+
+		# পরীক্ষায় কয়েকটা সারির সংগ্রহ গোনা বা কাটা — কোয়েরির খরচের প্রশ্ন নয়
+		-
+			message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
+			identifier: larastan.noUnnecessaryCollectionCall
+			count: 1
+			path: tests/Feature/Modules/Purchase/TheRequisitionTookTheReturnsNumberTest.php
+
+		# Facade::spy()-এর পরে Mockery-র shouldHaveReceived/shouldNotHaveReceived — larastan facade-এর spy চেনে না
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Log\:\:shouldNotHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: tests/Feature/Modules/Sales/TheSaleWaitedForAButtonAfterItsLastSignatureTest.php
+
+		# phase0-র বড়-ডেটার পরখ-স্ক্রিপ্ট, phpunit-এর পরীক্ষা নয়; নিজের Kernel হাতে তোলে
+		-
+			message: '#^Class Kernel not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: tests/phase0/big_data_report_test.php

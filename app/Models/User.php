@@ -50,6 +50,9 @@ use Spatie\Permission\Traits\HasRoles;
  * সংরক্ষিত হয় না, আর ব্যর্থতাটা **নীরব নয় — ৫০০**, তাই অন্তত সেটা
  * চোখে পড়ে।
  */
+/**
+ * @property string $public_id বাইরের চাবি ([[HasPublicId]]) — ছবির ঠিকানা আর API এটা দিয়েই মানুষ চেনে
+ */
 #[Fillable([
     'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active',
     'login_id', 'mobile', 'remarks',
