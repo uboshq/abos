@@ -56,7 +56,8 @@ void main() {
   });
 
   test('⛔ while the switch is hidden the app is Bangla whatever was chosen or the phone speaks', () async {
-    LanguageSwitch.debugShown = null;
+    // ⓘ ০.৪.৪৫ থেকে ready চালু — লুকানো পথ জোর করে
+    LanguageSwitch.debugShown = false;
     device = const Locale('en', 'US');
     final s = store();
     await s.choose(LocaleChoice.en);

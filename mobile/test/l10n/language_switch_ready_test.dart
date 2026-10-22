@@ -63,6 +63,8 @@ void main() {
       );
 
   testWidgets('hidden: no language row, and an English choice on an English phone still reads Bangla', (tester) async {
+    // ⓘ ০.৪.৪৫ থেকে ready চালু — লুকানো পথটা (ফেরত নেওয়ার দিনের জন্য) জোর করে লুকিয়ে পরখ
+    LanguageSwitch.debugShown = false;
     await LocaleChoices.instance.choose(LocaleChoice.en);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -70,6 +72,19 @@ void main() {
     expect(find.byKey(const ValueKey('avatar-language')), findsNothing, reason: '⛔ অর্ধেক-অনুবাদের অ্যাপে ভাষার সারি');
     expect(AppLocale.current, AppLocale.locale);
     expect(find.text('বের হওয়া'), findsOneWidget);
+  });
+
+  // ⭐ ০.৪.৪৫ (fe, ২২ অক্টোবর ২০২৬): সার্ভার মানুষের ভাষা রাখে (`PATCH /me/locale`, লাইভ cfec6c2f4) আর তালিকা খালি — তাই
+  // সুইচ চালু, আর অনুমোদিত নিয়মে প্রথম চালু ফোনের ভাষা মানে। ⛔ ভুলে বন্ধ রইলে এই দাবি লাল, শুধু ছবি নয়।
+  testWidgets('switched on in 0.4.45: the menu offers the language, and an English phone opens in English', (tester) async {
+    expect(LanguageSwitch.ready, isTrue, reason: '⛔ ০.৪.৪৫-এ ভাষার সুইচ বন্ধ রয়ে গেল');
+    tester.view.physicalSize = const Size(412, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('avatar-language')), findsOneWidget, reason: '⛔ মেনুতে ভাষার সারি নেই');
+    expect(AppLocale.current, AppLocale.english, reason: 'ইংরেজি ফোনে প্রথম চালু ইংরেজি (অনুমোদিত পরিকল্পনা)');
   });
 
   testWidgets('switched on: the row offers phone · বাংলা · English, and a tap turns the whole app at once', (tester) async {
