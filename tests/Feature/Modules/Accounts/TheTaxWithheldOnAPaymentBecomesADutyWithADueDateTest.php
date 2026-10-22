@@ -64,7 +64,9 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
             'party_type_id' => Supplier::query()->orderBy('id')->value('party_type_id'),
         ]);
         app(SettingsService::class)->set('purchase.vat_enabled', true);
-        $this->putMoneyIn($this->till(), '50000');
+        // ⓘ ১ অক্টোবরে — নিচের দাবি ২২ অক্টোবরের পরিশোধ ধরে, আর আজকের তারিখে রাখা টাকা ২২ তারিখে বাক্সে থাকে না: ২২ অক্টোবরে সবুজ, ২৩-এ
+        // "প্রধান কাউন্টার-এ আছে 0.00" (cb_c7, ২৩ অক্টোবর ২০২৬ — দিন বদলালে লাল হওয়া দাবি)
+        $this->putMoneyIn($this->till(), '50000', '2026-10-01');
     }
 
     public function test_a_real_cut_raises_two_deposits_and_one_mushak_6_6_whose_deposits_sum_to_the_cut(): void
