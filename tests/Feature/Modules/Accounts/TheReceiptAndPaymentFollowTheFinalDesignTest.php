@@ -85,7 +85,9 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertStringContainsString('@change="tidyAmount()"', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/party-fields.blade.php')),
             '⛔ ঘর ছাড়লে অঙ্ক লাখ-কমায় সাজে না');
 
-        $this->postReceipt(['amount' => '45,000.00'])->assertSessionHasNoErrors();
+        $before = Voucher::query()->count();
+        $this->postReceipt(['amount' => '45,000.00']);
+        $this->assertSame($before + 1, Voucher::query()->count(), '⛔ "45,000.00" লেখা রসিদ জমাই হল না — কমা ছাঁটা হয় না');
         $voucher = Voucher::query()->latest('id')->firstOrFail();
         $this->assertSame(0, bccomp((string) $voucher->amount, '45000', 2), '⛔ "45,000.00" ঠিক অঙ্কে বসল না: '.$voucher->amount);
     }
@@ -100,8 +102,9 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
             '⛔ কাকে দেওয়া হল · কার মাধ্যমে · বিবরণ আর আলাদা পূর্ণ-চওড়া স্তম্ভে নয়');
 
         $payment = $this->screen(Voucher::PAYMENT);
-        $this->assertStringContainsString(e(trans('money.screen.from_account', [], app()->getLocale())), $payment,
-            '⛔ পরিশোধে "যে খাত থেকে" লেখা নেই');
+        // ⓘ উৎস ধরে — পরীক্ষা ইংরেজিতে আঁকে, আর সেখানে পুরনো আর নতুন দুই লেখাই "Paid from"
+        $this->assertMatchesRegularExpression('/name="from_account_id" data-money-account x-model="account"\s+:label="__\(\'money\.screen\.from_account\'\)"/', $form,
+            '⛔ পরিশোধে "যে খাত থেকে" লেখা নেই (নকশার লেখা; আগে "কোথা থেকে দেওয়া হল")');
         $this->assertStringContainsString('data-account-balance', $payment, '⛔ খাতের স্থিতির লাইন নেই');
         $balance = bcadd($this->bank()->balanceInView(), '0', 2);
         $this->assertStringContainsString('&quot;'.$this->bank()->id.'&quot;:&quot;'.$balance.'&quot;', $payment,
