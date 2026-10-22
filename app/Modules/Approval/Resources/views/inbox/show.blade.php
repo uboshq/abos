@@ -72,43 +72,9 @@
          মানুষ ফিরে উপরে যেতেন — ঠিক যখন তিনি সিদ্ধান্ত নিয়ে
          ফেলেছেন। ⓘ ছোট পর্দায় কলামগুলো একের পর এক, তাই
          `lg:` থেকেই — ফোনে sticky বসালে ওটা কাগজটা ঢেকে দিত। --}}
-    <div class="grid gap-4 lg:grid-cols-[16rem_1fr_20rem] lg:items-start">
-        {{-- ── বাঁ কলাম: যাত্রাপথ ──────────────────── --}}
-        @if ($timeline !== [])
-            <aside data-boxed
-                   class="order-last min-w-0 rounded-(--radius-card) border border-(--color-border)
-                          bg-(--color-surface-card) p-4 lg:order-first lg:sticky lg:top-4">
-                <h2 class="mb-2 text-sm font-semibold">{{ __('approval::field.journey') }}</h2>
-
-                @include('approval::inbox.partials.timeline', ['timeline' => $timeline])
-
-                {{-- ⭐ পাশের তথ্য — কার, কী বাবদ, কোথায়।
-
-                     ── ⛔ কেন এগুলো এই পাতায়ই ───────────────────────
-                     ⓘ যিনি সই দিতে বসেছেন তাঁর পরের প্রশ্ন সবসময়
-                     একটাই: *"কার কাগজ, কী বাবদ"*। ⚠️ উত্তরটা অন্য
-                     পর্দায় থাকলে তিনি হয় সেখানে যান, নয় **না দেখেই
-                     সই দেন** — আর দ্বিতীয়টাই বেশি হয়। --}}
-                @if (array_filter($facts))
-                    <dl class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
-                        @foreach ([
-                            'party' => __('approval::field.party'),
-                            'about' => __('approval::field.what_for'),
-                            'where' => __('approval::field.where_money'),
-                        ] as $key => $label)
-                            @if (($facts[$key] ?? null))
-                                <div>
-                                    <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
-                                        {{ $label }}
-                                    </dt>
-                                    <dd class="text-sm">{{ $facts[$key] }}</dd>
-                                </div>
-                            @endif
-                        @endforeach
-                    </dl>
-                @endif
-            </aside>
-        @endif
+    {{-- ⭐ দফা ৯ (মালিক, ২১ অক্টোবর ২০২৬): তিন কলামে মাঝেরটা ১৩৬৬-এ ~৩২০px — সারির টেবিল কেটে যেত (তাই "সর্বমোট" ফাঁকা দেখাত),
+         পক্ষের মোবাইল আর পয়েন্ট একটার উপরে আরেকটা। এখন দুই কলাম: বাঁয়ে কাগজ চওড়া, ডানে কাজ আর তার নিচে যাত্রাপথ। --}}
+    <div class="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
 
         <div class="min-w-0 space-y-4">
             <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -268,7 +234,7 @@
             @endif
         </div>
 
-        <div class="min-w-0 space-y-3 lg:sticky lg:top-4">
+        <div class="min-w-0 space-y-3">
             @if ($approval->status === \App\Models\Approval::PENDING && $canDecide)
                 {{-- ⭐ চারটা কাজ এক কার্ডে, ট্যাবে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
                      *"Scrol kore dekte hoy, egulo … guciye sundor kore daw"*। ⓘ আগে চারটা
@@ -480,6 +446,43 @@
                         {{ __('approval::action.withdraw') }}
                     </x-ui.button>
                 </form>
+            @endif
+
+            {{-- ── যাত্রাপথ, ডান কলামে কাজের নিচে (দফা ৯) ──────────────────── --}}
+            @if ($timeline !== [])
+                <aside data-boxed
+                       class="min-w-0 rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) p-4">
+                    <h2 class="mb-2 text-sm font-semibold">{{ __('approval::field.journey') }}</h2>
+
+                    @include('approval::inbox.partials.timeline', ['timeline' => $timeline])
+
+                    {{-- ⭐ পাশের তথ্য — কার, কী বাবদ, কোথায়।
+
+                         ── ⛔ কেন এগুলো এই পাতায়ই ───────────────────────
+                         ⓘ যিনি সই দিতে বসেছেন তাঁর পরের প্রশ্ন সবসময়
+                         একটাই: *"কার কাগজ, কী বাবদ"*। ⚠️ উত্তরটা অন্য
+                         পর্দায় থাকলে তিনি হয় সেখানে যান, নয় **না দেখেই
+                         সই দেন** — আর দ্বিতীয়টাই বেশি হয়। --}}
+                    @if (array_filter($facts))
+                        <dl class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                            @foreach ([
+                                'party' => __('approval::field.party'),
+                                'about' => __('approval::field.what_for'),
+                                'where' => __('approval::field.where_money'),
+                            ] as $key => $label)
+                                @if (($facts[$key] ?? null))
+                                    <div>
+                                        <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                                            {{ $label }}
+                                        </dt>
+                                        <dd class="text-sm">{{ $facts[$key] }}</dd>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </dl>
+                    @endif
+                </aside>
             @endif
         </div>
     </div>
