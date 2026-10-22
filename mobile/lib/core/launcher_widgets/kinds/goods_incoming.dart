@@ -1,6 +1,8 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
+import 'summary_reader.dart';
 
 /// ⭐ মাল আসছে (৪×২) — এই সপ্তাহের ক্রয় অর্ডার আর দেরির অর্ডার (মালিকের উইজেট-নকশা ১৫, ২০ অক্টোবর ২০২৬; সার্ভারের
 /// [[GoodsIncomingSummary]], চাবি `goods_incoming`)।
@@ -13,13 +15,11 @@ import '../kit/widget_kind.dart';
 class GoodsIncomingWidget extends LauncherWidgetKind {
   const GoodsIncomingWidget();
 
-  static const _months = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-
   @override
   String get key => 'goods_incoming';
 
   @override
-  String get title => 'মাল আসছে';
+  String get title => AppLocale.l10n.launcherWidgetGoodsName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2];
@@ -31,6 +31,7 @@ class GoodsIncomingWidget extends LauncherWidgetKind {
     final count = summary.containsKey('count') ? n(summary['count']) : list.length;
     final late = n(summary['late']);
     final today = _dhakaDay(asOf);
+    final l = AppLocale.l10n;
 
     final rows = <WidgetRow>[
       for (final r in list)
@@ -40,10 +41,12 @@ class GoodsIncomingWidget extends LauncherWidgetKind {
           final branch = r['supplier_branch'] == null || '${r['supplier_branch']}'.isEmpty ? '' : ' · ${r['supplier_branch']}';
           final expected = DateTime.tryParse('${r['expected'] ?? ''}');
           return WidgetRow(
-            title: WidgetText('${isLate ? 'দেরি: ' : ''}${r['supplier'] ?? '—'} (সরবরাহকারী)$branch', tone: tone),
+            title: WidgetText(
+                (isLate ? l.launcherWidgetGoodsSupplierLate : l.launcherWidgetGoodsSupplier)('${r['supplier'] ?? '—'}', branch),
+                tone: tone),
             second: WidgetText([
               '${r['no'] ?? '—'}',
-              if (expected != null) isLate ? 'কথা ছিল ${_day(expected)}' : _when(expected, today),
+              if (expected != null) isLate ? l.launcherWidgetGoodsWasDue(_day(expected)) : _when(expected, today),
               if (!isLate && _goods(r) != null) _goods(r)!,
             ].join(' · '), tone: isLate ? WidgetTone.bad : WidgetTone.muted),
             amount: r['amount'] == null ? null : WidgetText.money(Money.taka(num.tryParse('${r['amount']}') ?? 0), tone: tone),
@@ -53,13 +56,13 @@ class GoodsIncomingWidget extends LauncherWidgetKind {
     ];
 
     return WidgetDoc(
-      title: 'মাল আসছে — ক্রয় অর্ডার',
+      title: l.launcherWidgetGoodsTitle,
       asOf: asOf,
       link: '${summary['link'] ?? '/purchase/orders'}',
-      corner: WidgetText('এই সপ্তাহে $count${late > 0 ? ' · দেরি $late' : ''}', tone: late > 0 ? WidgetTone.bad : WidgetTone.plain),
+      corner: WidgetText(late > 0 ? l.launcherWidgetGoodsWeekLate('$count', '$late') : l.launcherWidgetGoodsWeek('$count'), tone: late > 0 ? WidgetTone.bad : WidgetTone.plain),
       rows: rows,
-      empty: count == 0 ? 'এই সপ্তাহে কোনো মাল আসার কথা নেই' : null,
-      more: count > rows.length ? 'আরও ${count - rows.length}টা' : null,
+      empty: count == 0 ? l.launcherWidgetGoodsEmpty : null,
+      more: count > rows.length ? l.launcherWidgetMore('${count - rows.length}') : null,
     );
   }
 
@@ -74,7 +77,7 @@ class GoodsIncomingWidget extends LauncherWidgetKind {
       ].join(' ');
     }
     final products = num.tryParse('${r['products'] ?? ''}')?.toInt() ?? 0;
-    return products > 0 ? '$productsটা পণ্য' : null;
+    return products > 0 ? AppLocale.l10n.launcherWidgetGoodsProducts('$products') : null;
   }
 
   /// বাংলাদেশের দিন (UTC+6, গ্রীষ্মকাল নেই)
@@ -86,11 +89,11 @@ class GoodsIncomingWidget extends LauncherWidgetKind {
   static String _when(DateTime expected, DateTime today) {
     final day = DateTime.utc(expected.year, expected.month, expected.day);
     return switch (day.difference(today).inDays) {
-      0 => 'আসবে আজ',
-      1 => 'আসবে কাল',
-      _ => 'আসবে ${_day(day)}',
+      0 => AppLocale.l10n.launcherWidgetGoodsToday,
+      1 => AppLocale.l10n.launcherWidgetGoodsTomorrow,
+      _ => AppLocale.l10n.launcherWidgetGoodsOn(_day(day)),
     };
   }
 
-  static String _day(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+  static String _day(DateTime d) => '${d.day} ${SummaryReader.monthWord(d.month)}';
 }

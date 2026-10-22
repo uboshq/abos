@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 
@@ -8,9 +10,7 @@ import '../../core/printing/thermal_printer.dart';
 class ThermalFlow {
   const ThermalFlow._();
 
-  static const String notPaired =
-      'কোনো ব্লুটুথ প্রিন্টার জোড়া দেওয়া নেই। প্রিন্টার চালু করে ফোনের সেটিংস → ব্লুটুথ থেকে '
-      'একবার জোড়া দিন (পিন সাধারণত 0000 বা 1234), তারপর আবার চেষ্টা করুন।';
+  static String get notPaired => AppLocale.l10n.printingThermalNotPaired;
 
   /// Before Android's own "nearby devices" prompt, once per phone: what it
   /// is for, in Bengali. False when the person backs out.
@@ -23,19 +23,16 @@ class ThermalFlow {
       context: context,
       builder: (context) => AlertDialog(
         key: const Key('bt-explain'),
-        title: const Text('ব্লুটুথ প্রিন্টারের অনুমতি'),
-        content: const Text(
-            'রসিদ প্রিন্টারে ছাপতে ABOS ফোনের ব্লুটুথ দিয়ে জোড়া দেওয়া প্রিন্টারের সাথে যুক্ত হবে। '
-            'এরপর ফোন "আশেপাশের ডিভাইস" অনুমতি চাইবে — "অনুমতি দিন" চাপুন। '
-            'এতে আপনার অবস্থান নেওয়া হয় না।'),
+        title: Text(context.l10n.printingThermalExplainTitle),
+        content: Text(context.l10n.printingThermalExplainBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('এখন না')),
+              child: Text(context.l10n.printingThermalNotNow)),
           FilledButton(
               key: const Key('bt-explain-ok'),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('ঠিক আছে')),
+              child: Text(context.l10n.printingThermalOk)),
         ],
       ),
     );
@@ -50,7 +47,7 @@ class ThermalFlow {
   static Future<List<BluetoothPrinter>> list(ThermalPrinting thermal) async {
     final printers = await thermal.pairedPrinters();
     if (printers.isEmpty) {
-      throw const BluetoothPrintingUnavailable(notPaired);
+      throw BluetoothPrintingUnavailable(notPaired);
     }
     return printers;
   }
@@ -64,7 +61,7 @@ class ThermalFlow {
     return showDialog<BluetoothPrinter>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('প্রিন্টার বাছুন'),
+        title: Text(context.l10n.printingThermalChoosePrinter),
         children: [
           for (final p in printers)
             SimpleDialogOption(

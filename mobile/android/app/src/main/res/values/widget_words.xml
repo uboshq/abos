@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The words the widgets draw themselves (Kotlin: widgets/WidgetWords.kt), in the
+  language the person chose in the app, not the phone's (0.4.43, cb).
+
+  Every word is a pair: name (Bangla, the default) and name_en (English).
+  WidgetWords picks one by the home_widget value widget_locale that Dart
+  writes (WidgetHub.localeKey): "en" is English, anything else or nothing
+  (an app that never ran) is Bangla. There is deliberately no values-en
+  folder: Android would pick that by the phone's language, and the widget
+  picker and the launcher's own labels would turn English on every English
+  phone while the app is still Bangla.
+
+  Dart's words (titles, rows, every figure) come from the ARB files and arrive
+  already written inside each widget's JSON; nothing here repeats them.
+-->
+<resources>
+    <!-- Drawn by DocWidget (the widget kit) -->
+    <string name="widget_word_placeholder">খুলে একবার সিঙ্ক করুন</string>
+    <string name="widget_word_placeholder_en">Open the app and sync once</string>
+    <string name="widget_word_stale">পুরনো</string>
+    <string name="widget_word_stale_en">Old</string>
+    <string name="widget_word_yesterday">গতকাল</string>
+    <string name="widget_word_yesterday_en">Yesterday</string>
+    <string name="widget_word_more">আরও %1$sটা</string>
+    <string name="widget_word_more_en">%1$s more</string>
+
+    <!-- The kit widget's name, drawn before its first sync; the picker name (strings.xml, widget_KEY_name) points here -->
+    <string name="widget_sales_today_title">আজকের বিক্রি</string>
+    <string name="widget_sales_today_title_en">Today's sales</string>
+    <string name="widget_money_in_hand_title">টাকা হাতে</string>
+    <string name="widget_money_in_hand_title_en">Money in hand</string>
+    <string name="widget_approvals_title">সইয়ের অপেক্ষা</string>
+    <string name="widget_approvals_title_en">Waiting for signature</string>
+    <string name="widget_big_dues_title">বড় বকেয়া</string>
+    <string name="widget_big_dues_title_en">Big dues</string>
+    <string name="widget_stock_alerts_title">মজুদ সতর্কতা</string>
+    <string name="widget_stock_alerts_title_en">Stock alerts</string>
+    <string name="widget_challans_today_title">আজকের চালান</string>
+    <string name="widget_challans_today_title_en">Today's challans</string>
+    <string name="widget_notices_title">নোটিশ</string>
+    <string name="widget_notices_title_en">Notices</string>
+    <string name="widget_quick_actions_title">দ্রুত কাজ</string>
+    <string name="widget_quick_actions_title_en">Quick actions</string>
+    <string name="widget_target_title">লক্ষ্য বনাম অর্জন</string>
+    <string name="widget_target_title_en">Target vs achieved</string>
+    <string name="widget_sync_state_title">সিঙ্কের অবস্থা</string>
+    <string name="widget_sync_state_title_en">Sync status</string>
+    <string name="widget_collections_today_title">আজকের আদায়</string>
+    <string name="widget_collections_today_title_en">Today's collections</string>
+    <string name="widget_credit_limits_title">বাকির সীমা</string>
+    <string name="widget_credit_limits_title_en">Credit limits</string>
+    <string name="widget_cheques_title">চেক</string>
+    <string name="widget_cheques_title_en">Cheques</string>
+    <string name="widget_sr_board_title">SR তালিকা</string>
+    <string name="widget_sr_board_title_en">SR board</string>
+    <string name="widget_goods_incoming_title">মাল আসছে</string>
+    <string name="widget_goods_incoming_title_en">Goods incoming</string>
+    <string name="widget_expenses_title">খরচ</string>
+    <string name="widget_expenses_title_en">Expenses</string>
+    <string name="widget_profit_title">লাভ</string>
+    <string name="widget_profit_title_en">Profit</string>
+    <string name="widget_offers_title">অফার</string>
+    <string name="widget_offers_title_en">Offers</string>
+    <string name="widget_attendance_title">উপস্থিতি</string>
+    <string name="widget_attendance_title_en">Attendance</string>
+    <string name="widget_bank_reconcile_title">ব্যাংক মেলানো</string>
+    <string name="widget_bank_reconcile_title_en">Bank reconciliation</string>
+    <string name="widget_principal_commission_title">প্রিন্সিপালের কমিশন</string>
+    <string name="widget_principal_commission_title_en">Principal commission</string>
+    <string name="widget_owner_board_title">মালিকের পূর্ণ পর্দা</string>
+    <string name="widget_owner_board_title_en">Owner's full board</string>
+
+    <!-- English twins of the two older widgets' labels (Bangla in strings.xml) -->
+    <string name="approvals_title_en">Awaiting signature</string>
+    <string name="widget_col_today_en">Today</string>
+    <string name="widget_col_month_en">This month</string>
+    <string name="widget_col_change_en">Last month</string>
+    <string name="widget_row_sales_en">Sales</string>
+    <string name="widget_row_expense_en">Expense</string>
+    <string name="widget_row_purchase_en">Purchase</string>
+    <string name="widget_row_inflow_en">Collection</string>
+    <string name="widget_cash_en">Cash</string>
+    <string name="widget_mfs_en">Mobile banking</string>
+    <string name="widget_bank_en">Bank</string>
+    <string name="widget_in_transit_en">In transit</string>
+    <string name="widget_total_money_en">Total money</string>
+    <string name="widget_receivable_en">Total receivable</string>
+    <string name="widget_payable_en">Total payable</string>
+    <string name="widget_stock_value_en">Stock value</string>
+</resources>

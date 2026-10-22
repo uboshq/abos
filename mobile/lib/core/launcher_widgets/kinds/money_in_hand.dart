@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'money_kinds_support.dart';
@@ -12,24 +13,24 @@ class MoneyInHandWidget extends LauncherWidgetKind {
   String get key => 'money_in_hand';
 
   @override
-  String get title => 'টাকা হাতে';
+  String get title => AppLocale.l10n.launcherWidgetMoneyTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s4x1];
 
   @override
   WidgetDoc build(Map<String, dynamic> s, {required DateTime asOf}) => WidgetDoc(
-        title: 'টাকা হাতে',
+        title: AppLocale.l10n.launcherWidgetMoneyTitle,
         asOf: asOf,
         link: s['link'] as String?,
-        hero: WidgetHero(takaText(s['total']), caption: const WidgetText('নগদ + ব্যাংক + MFS')),
+        hero: WidgetHero(takaText(s['total']), caption: WidgetText(AppLocale.l10n.launcherWidgetCashBankMfs)),
         rows: [
-          WidgetRow(title: const WidgetText('নগদ বাক্স'), amount: takaText(s['cash']), link: s['cashLink'] as String?),
-          WidgetRow(title: const WidgetText('ব্যাংক'), amount: takaText(s['bank']), link: s['bankLink'] as String?),
+          WidgetRow(title: WidgetText(AppLocale.l10n.launcherWidgetMoneyCashBox), amount: takaText(s['cash']), link: s['cashLink'] as String?),
+          WidgetRow(title: WidgetText(AppLocale.l10n.launcherWidgetBank), amount: takaText(s['bank']), link: s['bankLink'] as String?),
           WidgetRow(title: const WidgetText('bKash / MFS'), amount: takaText(s['mfs']), link: s['mfsLink'] as String?),
           // ⓘ পথে থাকা টাকা কেবল থাকলে — শূন্যের সারি জায়গা খায়
           if (isPositive(s['transit']))
-            WidgetRow(title: const WidgetText('পথে (ব্যাংকে যাচ্ছে)'), amount: takaText(s['transit'], tone: WidgetTone.muted)),
+            WidgetRow(title: WidgetText(AppLocale.l10n.launcherWidgetMoneyTransit), amount: takaText(s['transit'], tone: WidgetTone.muted)),
         ],
       );
 }

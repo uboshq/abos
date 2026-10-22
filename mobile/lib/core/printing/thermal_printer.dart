@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:printing/printing.dart';
 
+import '../locale/app_locale.dart';
 import 'escpos_raster.dart';
 
 /// A paired Bluetooth printer, as Android lists it.
@@ -101,9 +102,7 @@ class ThermalPrinting {
   final BluetoothPort port;
   final PdfRasteriser rasterise;
 
-  static const String permissionText =
-      'ব্লুটুথ প্রিন্টারে ছাপতে ফোনের "আশেপাশের ডিভাইস" (Nearby devices) অনুমতি লাগে। '
-      'অনুমতি দেওয়া হয়নি — ফোনের সেটিংস → অ্যাপ → ABOS → অনুমতি থেকে চালু করুন।';
+  static String get permissionText => AppLocale.l10n.printingBluetoothPermission;
 
   /// Permission and Bluetooth-on, in that order, each with its own sentence.
   /// Without the permission Android answers "Bluetooth off" to every
@@ -116,7 +115,7 @@ class ThermalPrinting {
       allowed = false;
     }
     if (!allowed) {
-      throw const BluetoothPrintingUnavailable(permissionText, permissionDenied: true);
+      throw BluetoothPrintingUnavailable(permissionText, permissionDenied: true);
     }
     bool on;
     try {
@@ -125,8 +124,7 @@ class ThermalPrinting {
       on = false;
     }
     if (!on) {
-      throw const BluetoothPrintingUnavailable(
-          'ফোনের ব্লুটুথ বন্ধ আছে। চালু করে আবার চেষ্টা করুন।');
+      throw BluetoothPrintingUnavailable(AppLocale.l10n.printingBluetoothOff);
     }
   }
 
@@ -137,8 +135,7 @@ class ThermalPrinting {
     try {
       return await port.paired();
     } on PlatformException {
-      throw const BluetoothPrintingUnavailable(
-          'জোড়া দেওয়া প্রিন্টারের তালিকা পাওয়া গেল না। আবার চেষ্টা করুন।');
+      throw BluetoothPrintingUnavailable(AppLocale.l10n.printingPairedListFailed);
     }
   }
 
@@ -153,11 +150,10 @@ class ThermalPrinting {
     try {
       pages = await rasterise(pdf, dots, paperWidthMm);
     } catch (_) {
-      throw const BluetoothPrintingUnavailable(
-          'কাগজটা ছবিতে রূপান্তর করা গেল না। নরমাল প্রিন্টারে চেষ্টা করুন।');
+      throw BluetoothPrintingUnavailable(AppLocale.l10n.printingRasteriseFailed);
     }
     if (pages.isEmpty) {
-      throw const BluetoothPrintingUnavailable('কাগজটায় ছাপার মতো কোনো পাতা নেই।');
+      throw BluetoothPrintingUnavailable(AppLocale.l10n.printingNoPages);
     }
     await sendBytes(EscPosRaster.receipt(pages, dots: dots), address: address);
   }
@@ -179,8 +175,7 @@ class ThermalPrinting {
       connected = false;
     }
     if (!connected) {
-      throw const BluetoothPrintingUnavailable(
-          'প্রিন্টারে সংযোগ হলো না। প্রিন্টার চালু আছে, কাছে আছে আর অন্য ফোনে যুক্ত নেই কিনা দেখুন।');
+      throw BluetoothPrintingUnavailable(AppLocale.l10n.printingConnectFailed);
     }
     try {
       bool sent;
@@ -190,8 +185,7 @@ class ThermalPrinting {
         sent = false;
       }
       if (!sent) {
-        throw const BluetoothPrintingUnavailable(
-            'প্রিন্টারে পাঠানো গেল না — সংযোগ কেটে গেছে। প্রিন্টারের কাগজ ও চার্জ দেখে আবার চেষ্টা করুন।');
+        throw BluetoothPrintingUnavailable(AppLocale.l10n.printingSendFailed);
       }
     } finally {
       // Left disconnected on every path: a held connection is a printer the
@@ -216,6 +210,7 @@ Future<List<img.Image>> rasterisePdf(Uint8List pdf, int dots, int paperWidthMm) 
 
 /// The test page: Bengali text painted by Flutter onto a white bitmap.
 Future<img.Image> drawTestPage(int dots, int paperWidthMm) async {
+  final words = AppLocale.l10n;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   final painter = TextPainter(
@@ -224,10 +219,10 @@ Future<img.Image> drawTestPage(int dots, int paperWidthMm) async {
       style: const TextStyle(color: Color(0xFF000000), fontSize: 24, height: 1.4),
       children: [
         const TextSpan(text: 'ABOS\n', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700)),
-        const TextSpan(text: 'পরীক্ষামূলক ছাপা\n'),
-        TextSpan(text: 'কাগজ $paperWidthMm মিমি · $dots ডট\n'),
-        const TextSpan(text: 'বাংলা লেখা ঠিকমতো এলে প্রিন্টার তৈরি।\n'),
-        const TextSpan(text: '১২৩৪৫৬৭৮৯০ ৳'),
+        TextSpan(text: '${words.printingTestPageTitle}\n'),
+        TextSpan(text: '${words.printingTestPageSize('$paperWidthMm', '$dots')}\n'),
+        TextSpan(text: '${words.printingTestPageCheck}\n'),
+        const TextSpan(text: '১২৩৪৫৬৭৮৯০ ৳'), // l10n-ok: Bengali glyph sample the test slip prints in every language, to prove the printer prints Bengali
       ],
     ),
   )..layout(maxWidth: dots - 16.0);

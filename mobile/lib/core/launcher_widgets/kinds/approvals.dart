@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'summary_reader.dart';
@@ -16,7 +17,7 @@ class ApprovalsWidget extends LauncherWidgetKind {
   String get key => 'approvals';
 
   @override
-  String get title => 'সইয়ের অপেক্ষা';
+  String get title => AppLocale.l10n.launcherWidgetApprovalsName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2, WidgetSize.s2x2];
@@ -39,13 +40,13 @@ class ApprovalsWidget extends LauncherWidgetKind {
     final count = SummaryReader.integer(summary['count']);
 
     return WidgetDoc(
-      title: 'আপনার সইয়ের অপেক্ষায়',
+      title: AppLocale.l10n.launcherWidgetApprovalsTitle,
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
       // নকশা: মাথার কোণে কতটা ("7"); বড় অঙ্ক নেই, তালিকা মাথার ঠিক নিচে
       corner: count == null || count == 0 ? null : WidgetText('$count'),
       rows: rows,
-      empty: rows.isEmpty && (count ?? 0) == 0 ? 'কোনো সই বাকি নেই' : null,
+      empty: rows.isEmpty && (count ?? 0) == 0 ? AppLocale.l10n.launcherWidgetApprovalsEmpty : null,
       more: SummaryReader.more(count, rows.length),
     );
   }

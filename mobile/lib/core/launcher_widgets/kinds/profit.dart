@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'money_kinds_support.dart';
@@ -13,7 +14,7 @@ class ProfitWidget extends LauncherWidgetKind {
   String get key => 'profit';
 
   @override
-  String get title => 'এই মাসের মোট লাভ';
+  String get title => AppLocale.l10n.launcherWidgetProfitTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s4x1];
@@ -21,19 +22,22 @@ class ProfitWidget extends LauncherWidgetKind {
   @override
   WidgetDoc build(Map<String, dynamic> s, {required DateTime asOf}) {
     final loss = isNegative(s['gross']);
-    final month = banglaMonth(s['month']) ?? 'এই';
+    final month = banglaMonth(s['month']);
+    final l = AppLocale.l10n;
 
     return WidgetDoc(
-      title: loss ? '$month মাসের মোট লোকসান' : '$month মাসের মোট লাভ',
+      title: month == null
+          ? (loss ? l.launcherWidgetProfitLossThisMonth : l.launcherWidgetProfitTitle)
+          : (loss ? l.launcherWidgetProfitLossMonth(month) : l.launcherWidgetProfitMonth(month)),
       asOf: asOf,
       link: s['link'] as String?,
       hero: WidgetHero(
         takaText(loss ? _abs(s['gross']) : s['gross'], tone: loss ? WidgetTone.bad : WidgetTone.good),
-        caption: WidgetText('মোট লাভের হার ${s['margin'] ?? '—'}%', tone: loss ? WidgetTone.bad : WidgetTone.plain),
+        caption: WidgetText(l.launcherWidgetProfitMargin('${s['margin'] ?? '—'}'), tone: loss ? WidgetTone.bad : WidgetTone.plain),
       ),
       rows: [
-        WidgetRow(title: const WidgetText('বিক্রি (ভ্যাট আর ফেরত বাদে)'), amount: takaText(s['sales'])),
-        WidgetRow(title: const WidgetText('বিক্রিত মালের দাম'), amount: takaText(s['cogs'])),
+        WidgetRow(title: WidgetText(l.launcherWidgetProfitSales), amount: takaText(s['sales'])),
+        WidgetRow(title: WidgetText(l.launcherWidgetProfitCogs), amount: takaText(s['cogs'])),
       ],
     );
   }

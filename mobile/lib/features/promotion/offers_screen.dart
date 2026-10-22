@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/promotion/offers_api.dart';
 import '../../core/theme/app_palette.dart';
@@ -31,8 +32,10 @@ class _OffersScreenState extends State<OffersScreen> {
   int _shown = 0;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'চলতি অফার'),
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Scaffold(
+        appBar: AbosScreenBar(title: l.promoOffersTitle),
         body: PagedList<Offer>(
           reloadKey: _q,
           load: (_) async {
@@ -47,25 +50,26 @@ class _OffersScreenState extends State<OffersScreen> {
             if (mounted && rows.length != _shown) setState(() => _shown = rows.length);
             return (rows, null);
           },
-          failed: 'অফারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-          whenAbsent: 'সার্ভারে অফারের তালিকা এখনো আসেনি — অফিসে জানান।',
+          failed: l.promoOffersLoadFailed,
+          whenAbsent: l.promoOffersNotOnServer,
           emptyIcon: Icons.local_offer_outlined,
-          emptyTitle: _enabled ? 'এখন কোনো চলতি অফার নেই' : 'এই শাখায় অফার এখন বন্ধ',
-          emptyMessage: _enabled && _q.isNotEmpty ? '"$_q" — এই নামে কোনো অফার মেলেনি।' : null,
+          emptyTitle: _enabled ? l.promoOffersNoneRunning : l.promoOffersOffHere,
+          emptyMessage: _enabled && _q.isNotEmpty ? l.promoOffersNoMatch(_q) : null,
           header: [
             TextField(
               key: const ValueKey('offer-search'),
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'পণ্যের নাম লিখুন'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l.promoOffersSearchHint),
               onSubmitted: (v) => setState(() => _q = v.trim()),
             ),
             const SizedBox(height: AppSpacing.sm),
             // ⭐ গোটা তালিকার গোনা — পাতা ভাঙে না, তাই ফোনের দেখানো সারিই সব (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
-            if (_shown > 0) TotalStrip(label: 'চলতি অফার', value: '$_shown টি'),
+            if (_shown > 0) TotalStrip(label: l.promoOffersTitle, value: l.promoOffersCountValue(_shown)),
           ],
           item: (context, o) => _OfferCard(offer: o, today: widget.today),
         ),
       );
+  }
 }
 
 class _OfferCard extends StatelessWidget {
@@ -80,6 +84,7 @@ class _OfferCard extends StatelessWidget {
     final now = today ?? DateTime.now();
     final left = end?.difference(DateTime(now.year, now.month, now.day)).inDays;
     final whom = offer.forWhom;
+    final l = context.l10n;
 
     return Card(
       key: ValueKey('offer-${offer.id}'),
@@ -102,19 +107,19 @@ class _OfferCard extends StatelessWidget {
                 child: Text(offer.summary, style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             const SizedBox(height: AppSpacing.xs),
-            FactRow('কোন মালে', offer.goods),
+            FactRow(l.promoOffersGoods, offer.goods),
             for (final rule in offer.rules)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text('• $rule', style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.success)),
               ),
-            if (whom != null) FactRow('কার জন্য', whom),
+            if (whom != null) FactRow(l.promoOffersForWhom, whom),
             FactRow(
-              'কবে পর্যন্ত',
+              l.promoOffersUntil,
               [
                 dayOf(offer.endsOn),
                 if (offer.endsAt != null) offer.endsAt!,
-                if (left != null) left == 0 ? 'আজই শেষ' : 'আর $left দিন',
+                if (left != null) left == 0 ? l.promoOffersEndsToday : l.promoOffersDaysLeft(left),
               ].join(' · '),
               colour: left != null && left <= 3 ? context.palette.danger : null,
             ),

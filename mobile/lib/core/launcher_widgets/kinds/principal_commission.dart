@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../../records/principal_commission.dart';
 import '../kit/widget_doc.dart';
@@ -26,7 +27,7 @@ class PrincipalCommissionWidget extends LauncherWidgetKind {
   String get key => 'principal_commission';
 
   @override
-  String get title => 'প্রিন্সিপালের কমিশন';
+  String get title => AppLocale.l10n.launcherWidgetCommissionName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x2, WidgetSize.s4x6];
@@ -50,7 +51,7 @@ class PrincipalCommissionWidget extends LauncherWidgetKind {
     final totalText = total?.balance == null ? null : Money.taka(unsigned(total!.balance));
     if (rows.isNotEmpty && totalText != null) {
       rows.add(WidgetRow(
-        title: WidgetText('মোট · ${total!.side.word}'),
+        title: WidgetText(AppLocale.l10n.launcherWidgetCommissionTotal(total!.side.word)),
         amount: WidgetText.money(totalText, tone: _tone(total.side)),
         link: link,
       ));
@@ -59,10 +60,10 @@ class PrincipalCommissionWidget extends LauncherWidgetKind {
       title: title,
       asOf: asOf,
       link: link,
-      corner: totalText == null ? null : WidgetText.money('মোট $totalText'),
+      corner: totalText == null ? null : WidgetText.money(AppLocale.l10n.launcherWidgetTotal(totalText)),
       rows: rows,
       more: SummaryReader.more(all.length, rows.isEmpty ? 0 : rows.length - (totalText == null ? 0 : 1)),
-      empty: all.isEmpty ? 'এই চক্রে কোনো কমিশন নেই' : null,
+      empty: all.isEmpty ? AppLocale.l10n.launcherWidgetCommissionEmpty : null,
     );
   }
 

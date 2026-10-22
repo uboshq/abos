@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import '../privacy/phone_privacy.dart';
 import '../records/approval_record.dart';
 import '../records/money.dart';
@@ -63,11 +64,11 @@ class ApprovalsLauncherWidget {
       // A sentence somebody can act on. Blank lines are a widget that looks
       // broken, and the difference matters most on the morning when there
       // really is nothing to sign.
-      empty: waiting.isEmpty ? 'এখন সইয়ের জন্য কিছু নেই।' : '',
+      empty: waiting.isEmpty ? AppLocale.l10n.launcherWidgetApprovalsNothingNow : '',
       more: hidden > 0 || hasMore
-          ? 'আরও ${hidden > 0 ? '$hidden' : ''}${hasMore ? '+' : ''} টি'
+          ? AppLocale.l10n.launcherWidgetApprovalsMore('${hidden > 0 ? '$hidden' : ''}${hasMore ? '+' : ''}')
           : '',
-      asOf: '${banglaClock(at ?? DateTime.now())} পর্যন্ত',
+      asOf: AppLocale.l10n.launcherWidgetAsOf(clockText(at ?? DateTime.now())),
     };
   }
 
@@ -81,7 +82,7 @@ class ApprovalsLauncherWidget {
         for (final row in rows) row: '',
         empty: '',
         more: '',
-        asOf: 'সাইন আউট করা হয়েছে',
+        asOf: AppLocale.l10n.launcherWidgetSignedOut,
       });
 }
 

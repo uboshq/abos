@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
@@ -14,7 +15,7 @@ class CreditLimitsWidget extends LauncherWidgetKind {
   String get key => 'credit_limits';
 
   @override
-  String get title => 'বাকির সীমার কাছে';
+  String get title => AppLocale.l10n.launcherWidgetCreditLimitsTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s4x2];
@@ -23,16 +24,17 @@ class CreditLimitsWidget extends LauncherWidgetKind {
   WidgetDoc build(Map<String, dynamic> s, {required DateTime asOf}) {
     final rows = rowsOf(s);
     final count = (s['count'] as num?)?.toInt() ?? rows.length;
+    final l = AppLocale.l10n;
 
     return WidgetDoc(
-      title: 'বাকির সীমার কাছে',
+      title: l.launcherWidgetCreditLimitsTitle,
       asOf: asOf,
       link: s['link'] as String?,
       hero: count == 0
           ? null
           : WidgetHero(
               WidgetText(banglaNumber(count), tone: WidgetTone.bad),
-              caption: const WidgetText('গ্রাহক সীমার ৯০%-এর বেশি'),
+              caption: WidgetText(l.launcherWidgetCreditLimitsCaption(banglaNumber(90))),
             ),
       rows: [
         for (final r in rows)
@@ -44,7 +46,7 @@ class CreditLimitsWidget extends LauncherWidgetKind {
             link: r['link'] as String?,
           ),
       ],
-      empty: 'কোনো গ্রাহক সীমার কাছে নেই',
+      empty: l.launcherWidgetCreditLimitsEmpty,
       more: moreOf(count, rows.length),
     );
   }

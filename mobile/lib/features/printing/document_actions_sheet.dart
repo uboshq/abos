@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../../core/printing/document_delivery.dart';
 import '../../core/printing/documents_api.dart';
 import '../../core/printing/printer_settings.dart';
@@ -155,7 +157,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
-          fallback: 'এই কাগজের ছাপার মাপ আনা গেল না। আবার চেষ্টা করুন।'));
+          fallback: context.l10n.printingActionsLoadPapersFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -194,6 +196,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
   Future<void> _run(
       String? paper, Future<String?> Function(Uint8List pdf) action) async {
     if (paper == null || _busy) return;
+    final words = context.l10n;
     setState(() {
       _busy = true;
       _note = null;
@@ -204,8 +207,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
     } catch (error) {
       _say(
           errorMessageFor(error,
-              fallback: 'কাগজটা সার্ভার থেকে আনা গেল না — ছাপা হয়নি। '
-                  'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।'),
+              fallback: words.printingActionsFetchFailed),
           error: true);
       if (mounted) setState(() => _busy = false);
       return;
@@ -216,7 +218,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
     } on BluetoothPrintingUnavailable catch (error) {
       _say(error.message, error: true);
     } catch (error) {
-      _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'),
+      _say(errorMessageFor(error, fallback: words.printingActionsFailed),
           error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -244,10 +246,13 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
         return null;
       });
 
-  Future<void> _save() => _run(_currentPaper, (pdf) async {
-        final path = await widget.delivery.save(pdf: pdf, fileName: _fileName);
-        return 'সেভ হয়েছে: $path';
-      });
+  Future<void> _save() {
+    final words = context.l10n;
+    return _run(_currentPaper, (pdf) async {
+      final path = await widget.delivery.save(pdf: pdf, fileName: _fileName);
+      return words.printingActionsSaved(path);
+    });
+  }
 
   /// Chooses (and remembers) a printer when none is set yet.
   Future<bool> _ensurePrinter() async {
@@ -278,6 +283,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
 
   Future<void> _printThermal() async {
     if (_busy) return;
+    final words = context.l10n;
     if (!await ThermalFlow.explainOnce(context, _store)) return;
     if (!mounted || !await _ensurePrinter()) return;
     final roll = _roll;
@@ -288,7 +294,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
         address: _settings.printerAddress!,
         paperWidthMm: thermalWidthMm(roll!),
       );
-      return '${_settings.printerLabel}-এ পাঠানো হয়েছে।';
+      return words.printingActionsSentTo(_settings.printerLabel);
     });
   }
 
@@ -309,6 +315,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
   @override
   Widget build(BuildContext context) {
     final papers = _papers;
+    final words = context.l10n;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -324,17 +331,17 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
             if (_error != null) ...[
               Text(_error!, style: TextStyle(color: context.palette.danger)),
               const SizedBox(height: AppSpacing.sm),
-              TextButton(onPressed: _load, child: const Text('আবার চেষ্টা')),
+              TextButton(onPressed: _load, child: Text(words.printingActionsRetry)),
             ] else if (papers != null) ...[
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                   child: _RoadCard(
                     key: const Key('road-normal'),
                     icon: Icons.print_outlined,
-                    title: 'নরমাল প্রিন্টার',
+                    title: words.printingActionsNormalPrinter,
                     subtitle: _sheets.isEmpty
-                        ? 'এই কাগজের A4/A5 নকশা নেই'
-                        : 'A4/A5 · ওয়াইফাই, USB, PDF',
+                        ? words.printingActionsNoSheetLayout
+                        : words.printingActionsNormalSubtitle,
                     selected: _road == PrintRoad.normal,
                     enabled: _sheets.isNotEmpty,
                     onTap: () => setState(() {
@@ -348,10 +355,10 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
                   child: _RoadCard(
                     key: const Key('road-thermal'),
                     icon: Icons.receipt_long_outlined,
-                    title: 'থার্মাল প্রিন্টার',
+                    title: words.printingActionsThermalPrinter,
                     subtitle: _rolls.isEmpty
-                        ? 'এই কাগজের রসিদ নকশা নেই'
-                        : '৫৮/৮০ মিমি · ব্লুটুথ',
+                        ? words.printingActionsNoReceiptLayout
+                        : words.printingActionsThermalSubtitle(bnDigits(58), bnDigits(80)),
                     selected: _road == PrintRoad.thermal,
                     enabled: _rolls.isNotEmpty,
                     onTap: () => setState(() {
@@ -380,20 +387,20 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
               ListTile(
                 key: const Key('document-view'),
                 leading: const Icon(Icons.visibility_outlined),
-                title: const Text('পর্দায় দেখুন'),
+                title: Text(words.printingActionsView),
                 onTap: _busy || _currentPaper == null ? null : _view,
               ),
               ListTile(
                 key: const Key('document-share'),
                 leading: const Icon(Icons.share_outlined),
-                title: const Text('শেয়ার করুন'),
-                subtitle: const Text('হোয়াটসঅ্যাপ, ইমেইল, ড্রাইভ'),
+                title: Text(words.printingActionsShare),
+                subtitle: Text(words.printingActionsShareHint),
                 onTap: _busy || _currentPaper == null ? null : _share,
               ),
               ListTile(
                 key: const Key('document-save'),
                 leading: const Icon(Icons.download_outlined),
-                title: const Text('ফোনে সেভ করুন'),
+                title: Text(words.printingActionsSave),
                 onTap: _busy || _currentPaper == null ? null : _save,
               ),
             ],
@@ -420,7 +427,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
             key: const Key('print-normal'),
             onPressed: _busy || _sheet == null ? null : _printNormal,
             icon: const Icon(Icons.print),
-            label: const Text('ছাপুন'),
+            label: Text(context.l10n.printingActionsPrint),
           ),
         ),
       ];
@@ -432,14 +439,14 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
           leading: const Icon(Icons.bluetooth),
           title: Text(_settings.hasPrinter
               ? _settings.printerLabel
-              : 'প্রিন্টার বাছা হয়নি'),
+              : context.l10n.printingActionsNoPrinter),
           subtitle: Text(_settings.hasPrinter
-              ? 'ছাপার সময় যুক্ত হবে'
-              : 'প্রথমবার ছাপার সময় জোড়া দেওয়া প্রিন্টার থেকে বাছবেন'),
+              ? context.l10n.printingActionsConnectsWhenPrinting
+              : context.l10n.printingActionsChooseOnFirstPrint),
           trailing: TextButton(
             key: const Key('thermal-settings'),
             onPressed: _busy ? null : _openSettings,
-            child: const Text('সেটিং'),
+            child: Text(context.l10n.printingActionsSettings),
           ),
         ),
         Wrap(spacing: AppSpacing.sm, children: [
@@ -458,7 +465,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
             key: const Key('print-thermal'),
             onPressed: _busy || _roll == null ? null : _printThermal,
             icon: const Icon(Icons.print),
-            label: const Text('থার্মালে ছাপুন'),
+            label: Text(context.l10n.printingActionsPrintThermal),
           ),
         ),
       ];

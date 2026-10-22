@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/permissions/permission_rationale.dart';
 import 'receive_screen.dart';
@@ -77,8 +78,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
     final token = PaperToken.from(raw);
     if (token == null) {
       setState(() => _error = PaperToken.isOldPaper(raw)
-          ? 'এটা পুরনো ছাপা কাগজ। ফোনে খোলে না — ওয়েবে খুলুন, বা কাগজটা আবার ছাপুন।'
-          : 'এটা ABOS-এর কাগজের QR নয়।');
+          ? context.l10n.scanPaperOldPaper
+          : context.l10n.scanPaperNotOurs);
       return;
     }
     await _camera.stop();
@@ -100,7 +101,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
             e,
             fallback: _fallbackFor(e),
             whenAbsent: _paper == null
-                ? 'কাগজটা পাওয়া যায়নি — বাতিল হয়েছে, বা আপনার শাখার নয়।'
+                ? context.l10n.scanPaperNotFound
                 : null,
           ));
     } finally {
@@ -109,12 +110,12 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
   }
 
   String _fallbackFor(Object e) {
+    final words = context.l10n;
     return switch (_statusOf(e)) {
-      403 => 'এই কাগজ দেখার বা বদলানোর অনুমতি আপনার নেই।',
-      409 => 'মাল আগেই বেরিয়ে গেছে।',
-      422 =>
-        'হয়নি — গাড়ির তথ্য বসানো নেই, বা দোকানের বাকির সীমা পার। অফিসে বলুন।',
-      _ => 'হয়নি। আবার চেষ্টা করুন।',
+      403 => words.scanPaperForbidden,
+      409 => words.scanPaperAlreadyOut,
+      422 => words.scanPaperBlocked,
+      _ => words.scanPaperFailed,
     };
   }
 
@@ -130,15 +131,15 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('মাল বেরোল?'),
-        content: const Text('গেট পাস হবে আর বিল কাটা হবে। এটা ফেরানো যায় না।'),
+        title: Text(context.l10n.scanPaperGateOutTitle),
+        content: Text(context.l10n.scanPaperGateOutBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('না')),
+              child: Text(context.l10n.scanPaperNo)),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('হ্যাঁ, বেরোল')),
+              child: Text(context.l10n.scanPaperGateOutYes)),
         ],
       ),
     );
@@ -177,7 +178,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'কাগজ স্ক্যান'),
+      appBar: AbosScreenBar(title: context.l10n.scanPaperTitle),
       body: _token != null
           ? _sheet(context)
           : _cameraAllowed
@@ -193,12 +194,12 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('ক্যামেরা ছাড়া QR পড়া যায় না।', textAlign: TextAlign.center),
+          Text(context.l10n.scanPaperNoCamera, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
               key: const Key('scan-ask-camera'),
               onPressed: _askCamera,
-              child: const Text('ক্যামেরা চালু করুন')),
+              child: Text(context.l10n.scanPaperAskCamera)),
         ]),
       ),
     );
@@ -215,7 +216,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
             color: Colors.black54,
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Text(
-              _error ?? 'চালান বা গেট পাসের QR ক্যামেরার সামনে ধরুন।',
+              _error ?? context.l10n.scanPaperHint,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 15), // dark-ok
             ),
@@ -227,6 +228,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
 
   Widget _sheet(BuildContext context) {
     final paper = _paper;
+    final words = context.l10n;
     const bold = TextStyle(fontWeight: FontWeight.w700);
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -243,65 +245,65 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
           ),
         if (paper != null) ...[
           Text(paper.documentNo, style: Theme.of(context).textTheme.titleLarge),
-          if (paper.saleNo != null) Text('বিক্রয় নং ${paper.saleNo}'),
-          if (paper.date != null) Text('তারিখ ${paper.date}'),
+          if (paper.saleNo != null) Text(words.scanPaperSaleNo('${paper.saleNo}')),
+          if (paper.date != null) Text(words.scanPaperDate('${paper.date}')),
           Text(paper.customer, style: bold),
           const SizedBox(height: AppSpacing.md),
-          Text('অবস্থা: ${_stageLabel(paper.stage)}', style: bold),
+          Text(words.scanPaperStatus(_stageLabel(words, paper.stage)), style: bold),
           if (paper.outAt != null)
             Text(
-                'বেরিয়েছে ${DateFormat('dd/MM/yyyy HH:mm').format(paper.outAt!)}'
+                '${words.scanPaperOutAt(DateFormat('dd/MM/yyyy HH:mm').format(paper.outAt!))}'
                 '${paper.outBy == null ? '' : ' · ${paper.outBy}'}'),
           const Divider(),
           for (final line in paper.lines) ...[
             Text(line.product, style: bold),
-            Text('পরিমাণ ${Money.plain(line.qty)}'),
-            if (line.freeQty > 0) Text('ফ্রি ${Money.plain(line.freeQty)}'),
-            if (line.lot != null) Text('লট ${line.lot}'),
+            Text(words.scanPaperQty(Money.plain(line.qty))),
+            if (line.freeQty > 0) Text(words.scanPaperFreeQty(Money.plain(line.freeQty))),
+            if (line.lot != null) Text(words.scanPaperLot('${line.lot}')),
             const SizedBox(height: AppSpacing.sm),
           ],
           const Divider(),
-          Text(paper.transportNamed ? 'গাড়ি বসানো আছে' : '⚠ গাড়ি বসানো নেই',
+          Text(paper.transportNamed ? words.scanPaperVehicleSet : words.scanPaperVehicleMissing,
               style: TextStyle(
                   color: paper.transportNamed
                       ? context.palette.success
                       : context.palette.warning)),
-          if (paper.vehicle != null) Text('গাড়ি ${paper.vehicle}'),
-          if (paper.driver != null) Text('চালক ${paper.driver}'),
+          if (paper.vehicle != null) Text(words.scanPaperVehicle('${paper.vehicle}')),
+          if (paper.driver != null) Text(words.scanPaperDriver('${paper.driver}')),
           if (paper.billTotal != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text('বিলের মোট ${Money.taka(paper.billTotal)}', style: bold),
+            Text(words.scanPaperBillTotal(Money.taka(paper.billTotal)), style: bold),
           ],
           const SizedBox(height: AppSpacing.lg),
           if (paper.canGateOut)
             FilledButton.icon(
               onPressed: _busy ? null : _gateOut,
               icon: const Icon(Icons.local_shipping_outlined),
-              label: const Text('মাল বেরোল'),
+              label: Text(words.scanPaperGateOut),
             ),
           if (paper.canDeliver)
             FilledButton.icon(
               onPressed: _busy ? null : _deliver,
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('ডেলিভারি নিশ্চিত'),
+              label: Text(words.scanPaperConfirmDelivery),
             ),
         ],
         const SizedBox(height: AppSpacing.md),
         OutlinedButton.icon(
           onPressed: _busy ? null : _again,
           icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('আরেকটা স্ক্যান'),
+          label: Text(words.scanPaperScanAgain),
         ),
       ],
     );
   }
 
-  static String _stageLabel(String stage) => switch (stage) {
-        'allocated' => 'বরাদ্দ হয়েছে',
-        'picking' => 'মাল তোলা হচ্ছে',
-        'packed' => 'প্যাক হয়েছে',
-        'dispatched' => 'গেট পেরিয়েছে',
-        'delivered' => 'পৌঁছেছে',
+  static String _stageLabel(AppL10n words, String stage) => switch (stage) {
+        'allocated' => words.scanPaperStageAllocated,
+        'picking' => words.scanPaperStagePicking,
+        'packed' => words.scanPaperStagePacked,
+        'dispatched' => words.scanPaperStageDispatched,
+        'delivered' => words.scanPaperStageDelivered,
         _ => stage,
       };
 }

@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'summary_reader.dart';
@@ -14,12 +15,13 @@ class CollectionsTodayWidget extends LauncherWidgetKind {
   String get key => 'collections_today';
 
   @override
-  String get title => 'আজকের আদায়';
+  String get title => AppLocale.l10n.launcherWidgetCollectionsToday;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s2x1];
 
-  static const _channels = [('cash', 'নগদ'), ('bank', 'ব্যাংক'), ('mfs', 'bKash / MFS')];
+  static List<(String, String)> get _channels =>
+      [('cash', AppLocale.l10n.launcherWidgetCash), ('bank', AppLocale.l10n.launcherWidgetBank), ('mfs', 'bKash / MFS')];
 
   @override
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {

@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
@@ -14,7 +15,7 @@ class ExpensesWidget extends LauncherWidgetKind {
   String get key => 'expenses';
 
   @override
-  String get title => 'এই মাসের খরচ';
+  String get title => AppLocale.l10n.launcherWidgetExpensesTitle;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s4x2];
@@ -25,12 +26,13 @@ class ExpensesWidget extends LauncherWidgetKind {
     double amountOf(Map<String, dynamic> r) => Money.value(r['amount'])?.toDouble() ?? 0;
     final largest = rows.fold<double>(0, (m, r) => amountOf(r) > m ? amountOf(r) : m);
     final month = banglaMonth(s['month']);
+    final l = AppLocale.l10n;
 
     return WidgetDoc(
-      title: month == null ? 'এই মাসের খরচ' : '$month মাসের খরচ',
+      title: month == null ? l.launcherWidgetExpensesTitle : l.launcherWidgetExpensesMonth(month),
       asOf: asOf,
       link: s['link'] as String?,
-      hero: WidgetHero(takaText(s['total']), caption: const WidgetText('কর্মীর খরচ বাদে')),
+      hero: WidgetHero(takaText(s['total']), caption: WidgetText(l.launcherWidgetNoStaffExpenses)),
       bars: [
         for (final r in rows)
           WidgetBar(
@@ -39,7 +41,7 @@ class ExpensesWidget extends LauncherWidgetKind {
             value: takaText(r['amount']),
           ),
       ],
-      empty: 'এই মাসে এখনো কোনো খরচ নেই',
+      empty: l.launcherWidgetExpensesEmpty,
     );
   }
 }

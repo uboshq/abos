@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
+import com.abos.abos_mobile.widgets.WidgetWords
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
@@ -74,6 +75,12 @@ class ApprovalsWidgetProvider : HomeWidgetProvider() {
                     )
 
                     setTextViewText(R.id.approvals_asof, widgetData.getString(KEY_AS_OF, ""))
+
+                    // The heading in the app's language (widget_locale; Bangla when unset), 0.4.43
+                    setTextViewText(
+                        R.id.label_approvals_title,
+                        WidgetWords.APPROVALS_TITLE.get(context, WidgetWords.english(widgetData)),
+                    )
 
                     // Straight to the inbox: the person tapping a queue wants the
                     // queue, not the home tab with a tile for it.

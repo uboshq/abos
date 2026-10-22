@@ -1,3 +1,4 @@
+import '../../locale/app_locale.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 
@@ -10,26 +11,30 @@ class QuickActionsWidget extends LauncherWidgetKind {
   const QuickActionsWidget();
 
   /// key → বোতামের লেখা; key-ই আঁকিয়ের ছবির নাম ([WidgetAction.icon])
-  static const Map<String, String> labels = {
-    'order': 'নতুন অর্ডার',
-    'collect': 'টাকা আদায়',
-    'voucher': 'ভাউচার',
-    'scan': 'স্ক্যান',
-    'approve': 'সই',
-    'notice': 'নোটিশ',
-  };
+  static Map<String, String> get labels {
+    final l = AppLocale.l10n;
+    return {
+      'order': l.launcherWidgetQuickOrder,
+      'collect': l.launcherWidgetQuickCollect,
+      'voucher': l.launcherWidgetQuickVoucher,
+      'scan': l.launcherWidgetQuickScan,
+      'approve': l.launcherWidgetQuickSign,
+      'notice': l.launcherWidgetNotices,
+    };
+  }
 
   @override
   String get key => 'quick_actions';
 
   @override
-  String get title => 'দ্রুত কাজ';
+  String get title => AppLocale.l10n.launcherWidgetQuickName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s4x1, WidgetSize.s2x1];
 
   @override
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {
+    final labels = QuickActionsWidget.labels;
     final actions = <WidgetAction>[
       for (final a in (summary['actions'] as List? ?? const []))
         if (a is Map && labels.containsKey(a['key']) && (a['link'] ?? '').toString().isNotEmpty)
@@ -39,7 +44,7 @@ class QuickActionsWidget extends LauncherWidgetKind {
       title: title,
       asOf: asOf,
       actions: actions,
-      empty: actions.isEmpty ? 'আপনার জন্য কোনো দ্রুত কাজ নেই' : null,
+      empty: actions.isEmpty ? AppLocale.l10n.launcherWidgetQuickEmpty : null,
     );
   }
 }

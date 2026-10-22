@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/finance/finance_api.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
@@ -16,14 +18,12 @@ import '../money/money_screens.dart';
 /// <p>প্রতিটা তালিকা ওয়েবের তালিকার একই ট্যাব আর ক্রম; প্রতিটা কাগজে সামনের দিন — মেয়াদ, পরের কিস্তি, পরের ভাড়া, ফেরতের দিন —
 /// সার্ভারের সেবা থেকে। ⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস, কোনো টেবিল নয়।
 
-const _failed = 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
-const _absent = 'সার্ভারে অর্থের এই অংশ এখনো আসেনি — অফিসে জানান।';
-
 /// "আর ২০ দিন" · "আজ" · "১২ দিন পেরিয়েছে"
 String daysWords(int? days) {
   if (days == null) return '';
-  if (days == 0) return 'আজ';
-  return days > 0 ? 'আর $days দিন' : '${-days} দিন পেরিয়েছে';
+  final l = AppLocale.l10n;
+  if (days == 0) return l.financeDaysToday;
+  return days > 0 ? l.financeDaysLeft(days) : l.financeDaysOverdue(-days);
 }
 
 Color _dayColour(BuildContext context, int? days) =>
@@ -37,44 +37,44 @@ int? _daysUntil(String? iso, [DateTime? today]) {
 }
 
 String depositStatus(String s) => switch (s) {
-      'active' => 'চালু',
-      'awaiting' => 'সইয়ের অপেক্ষায়',
-      'closed' => 'শেষ',
-      'cancelled' => 'বাতিল',
+      'active' => AppLocale.l10n.financeStatusActive,
+      'awaiting' => AppLocale.l10n.financeStatusAwaitingSign,
+      'closed' => AppLocale.l10n.financeStatusEnded,
+      'cancelled' => AppLocale.l10n.financeStatusCancelled,
       _ => s,
     };
 
 String depositMove(String k) => switch (k) {
-      'opened' => 'টাকা রাখা',
-      'instalment' => 'কিস্তি',
-      'payout' => 'মুনাফা তোলা',
-      'closed' => 'ভাঙানো / মেয়াদপূর্তি',
+      'opened' => AppLocale.l10n.financeDepositMoveOpened,
+      'instalment' => AppLocale.l10n.financeInstalment,
+      'payout' => AppLocale.l10n.financeDepositMovePayout,
+      'closed' => AppLocale.l10n.financeDepositMoveClosed,
       _ => k,
     };
 
 String loanKind(String k) => switch (k) {
-      'cc' => 'ক্যাশ ক্রেডিট (CC)',
-      'term' => 'মেয়াদি ঋণ',
+      'cc' => AppLocale.l10n.financeLoanKindCc,
+      'term' => AppLocale.l10n.financeLoanKindTerm,
       'ltr' => 'LTR',
-      'lease' => 'লিজ',
-      'bg' => 'ব্যাংক গ্যারান্টি',
+      'lease' => AppLocale.l10n.financeLoanKindLease,
+      'bg' => AppLocale.l10n.financeLoanKindGuarantee,
       _ => k,
     };
 
 String loanStatus(String s) => switch (s) {
-      'confirmed' => 'চালু',
-      'closed' => 'বন্ধ',
-      'draft' => 'খসড়া',
-      'cancelled' => 'বাতিল',
+      'confirmed' => AppLocale.l10n.financeStatusActive,
+      'closed' => AppLocale.l10n.financeStatusClosed,
+      'draft' => AppLocale.l10n.financeStatusDraft,
+      'cancelled' => AppLocale.l10n.financeStatusCancelled,
       _ => s,
     };
 
 String instalmentState(String s) => switch (s) {
-      'paid' => 'দেওয়া',
-      'overdue' => 'দিন পেরিয়েছে',
-      'today' => 'আজ দিতে হবে',
-      'upcoming' => 'সামনে',
-      _ => 'তারিখ নেই',
+      'paid' => AppLocale.l10n.financeInstalmentPaid,
+      'overdue' => AppLocale.l10n.financeInstalmentOverdue,
+      'today' => AppLocale.l10n.financeInstalmentToday,
+      'upcoming' => AppLocale.l10n.financeInstalmentUpcoming,
+      _ => AppLocale.l10n.financeInstalmentNoDate,
     };
 
 Color _instalmentColour(BuildContext context, String s) => switch (s) {
@@ -85,9 +85,9 @@ Color _instalmentColour(BuildContext context, String s) => switch (s) {
     };
 
 String repaymentWords(String r) => switch (r) {
-      'lump' => 'একবারে ফেরত',
-      'monthly' => 'মাসে মাসে',
-      'whenever' => 'যখন পারেন',
+      'lump' => AppLocale.l10n.financeRepaymentLump,
+      'monthly' => AppLocale.l10n.financeRepaymentMonthly,
+      'whenever' => AppLocale.l10n.financeRepaymentWhenever,
       _ => r,
     };
 
@@ -147,20 +147,24 @@ class _DepositListScreenState extends State<DepositListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'জমা ও সঞ্চয়'),
+        appBar: AbosScreenBar(title: context.l10n.financeDepositListTitle),
         body: PagedList<Deposit>(
           reloadKey: _tab,
           load: (page) async {
             final p = await widget.api.deposits(tab: _tab, page: page);
             return (p.rows, p.nextPage);
           },
-          failed: _failed,
-          whenAbsent: _absent,
+          failed: context.l10n.financeLoadFailed,
+          whenAbsent: context.l10n.financeNotOnServer,
           emptyIcon: Icons.savings_outlined,
-          emptyTitle: 'এই ট্যাবে কোনো জমা নেই',
+          emptyTitle: context.l10n.financeDepositListEmpty,
           header: [
             TabChips(
-              tabs: const {'active': 'চালু', 'maturing': 'মেয়াদ আসছে', 'closed': 'শেষ'},
+              tabs: {
+                'active': context.l10n.financeStatusActive,
+                'maturing': context.l10n.financeDepositTabMaturing,
+                'closed': context.l10n.financeStatusEnded,
+              },
               selected: _tab,
               onSelected: (t) => setState(() => _tab = t),
             ),
@@ -168,7 +172,7 @@ class _DepositListScreenState extends State<DepositListScreen> {
           item: (context, d) => _Row(
             key: ValueKey('deposit-${d.id}'),
             title: '${d.no} · ${d.kind}',
-            lines: [d.institution, if (d.maturesOn != null) 'মেয়াদ ${dayOf(d.maturesOn)}'],
+            lines: [d.institution, if (d.maturesOn != null) context.l10n.financeDepositMatures(dayOf(d.maturesOn))],
             amount: Money.taka(d.principal),
             foot: d.status == 'active' ? daysWords(d.daysToMaturity) : depositStatus(d.status),
             footColour: d.status == 'active' ? _dayColour(context, d.daysToMaturity) : context.palette.onSurfaceMuted,
@@ -187,30 +191,34 @@ class DepositScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperPage<Deposit>(
-        title: 'জমা',
+        title: context.l10n.financeDepositTitle,
         titleOf: (d) => d.no,
         load: () => api.deposit(id),
-        failed: 'জমাটা আনা গেল না।',
+        failed: context.l10n.financeDepositLoadFailed,
         onLoaded: (d) => RecentPapers.note(kind: 'deposit', id: id, number: d.no),
         body: (context, d) => [
-          TotalStrip(label: 'জমার অঙ্ক', value: Money.taka(d.principal)),
-          FactRow('ধরন', d.kind),
-          FactRow('অবস্থা', depositStatus(d.status)),
-          FactRow('প্রতিষ্ঠান', [d.institution, d.branchName].where((s) => s.isNotEmpty).join(' · ')),
-          if (d.referenceNo.isNotEmpty) FactRow('ব্যাংকের নম্বর', d.referenceNo),
-          FactRow('কার নামে', d.heldBy == 'owner' ? 'মালিকের${d.person.isEmpty ? '' : ' — ${d.person}'}' : 'ব্যবসার'),
-          if (d.profitRate != null) FactRow('মুনাফার হার', '${d.profitRate}%'),
-          FactRow('খোলা', dayOf(d.openedOn)),
+          TotalStrip(label: context.l10n.financeDepositAmount, value: Money.taka(d.principal)),
+          FactRow(context.l10n.financeFactType, d.kind),
+          FactRow(context.l10n.financeFactStatus, depositStatus(d.status)),
+          FactRow(context.l10n.financeDepositInstitution, [d.institution, d.branchName].where((s) => s.isNotEmpty).join(' · ')),
+          if (d.referenceNo.isNotEmpty) FactRow(context.l10n.financeDepositBankRef, d.referenceNo),
+          FactRow(
+              context.l10n.financeDepositHeldBy,
+              d.heldBy == 'owner'
+                  ? (d.person.isEmpty ? context.l10n.financeDepositHeldOwner : context.l10n.financeDepositHeldOwnerPerson(d.person))
+                  : context.l10n.financeDepositHeldBusiness),
+          if (d.profitRate != null) FactRow(context.l10n.financeDepositProfitRate, '${d.profitRate}%'),
+          FactRow(context.l10n.financeDepositOpened, dayOf(d.openedOn)),
           if (d.maturesOn != null)
-            FactRow('মেয়াদ', '${dayOf(d.maturesOn)}${d.status == 'active' ? ' · ${daysWords(d.daysToMaturity)}' : ''}',
+            FactRow(context.l10n.financeDepositMaturity, '${dayOf(d.maturesOn)}${d.status == 'active' ? ' · ${daysWords(d.daysToMaturity)}' : ''}',
                 colour: d.status == 'active' ? _dayColour(context, d.daysToMaturity) : null),
           if (d.instalmentAmount != null)
-            FactRow('মাসের কিস্তি',
-                '${Money.taka(d.instalmentAmount)}${d.instalmentDay == null ? '' : ' · প্রতি মাসের ${d.instalmentDay} তারিখ'}'),
-          if (d.closedOn != null) FactRow('শেষ হয়েছে', dayOf(d.closedOn)),
-          if (d.pledged) FactRow('বাঁধা', 'ঋণের বিপরীতে বাঁধা — ভাঙানো যাবে না', colour: context.palette.warning),
-          if (d.note.isNotEmpty) FactRow('নোট', d.note),
-          if (d.movements.isNotEmpty) const SectionTitle('চলাচল'),
+            FactRow(context.l10n.financeDepositMonthlyInstalment,
+                '${Money.taka(d.instalmentAmount)}${d.instalmentDay == null ? '' : ' · ${context.l10n.financeDayOfMonth('${d.instalmentDay}')}'}'),
+          if (d.closedOn != null) FactRow(context.l10n.financeDepositClosedOn, dayOf(d.closedOn)),
+          if (d.pledged) FactRow(context.l10n.financeDepositPledged, context.l10n.financeDepositPledgedNote, colour: context.palette.warning),
+          if (d.note.isNotEmpty) FactRow(context.l10n.financeNote, d.note),
+          if (d.movements.isNotEmpty) SectionTitle(context.l10n.financeDepositMovements),
           for (final m in d.movements)
             _Row(title: depositMove(m.kind), lines: [dayOf(m.date)], amount: Money.taka(m.amount)),
         ],
@@ -233,20 +241,20 @@ class _LoanListScreenState extends State<LoanListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ব্যাংক ঋণ ও কিস্তি'),
+        appBar: AbosScreenBar(title: context.l10n.financeLoanListTitle),
         body: PagedList<BankLoan>(
           reloadKey: _tab,
           load: (page) async {
             final p = await widget.api.loans(tab: _tab, page: page);
             return (p.rows, p.nextPage);
           },
-          failed: _failed,
-          whenAbsent: _absent,
+          failed: context.l10n.financeLoadFailed,
+          whenAbsent: context.l10n.financeNotOnServer,
           emptyIcon: Icons.account_balance_outlined,
-          emptyTitle: 'এই ট্যাবে কোনো ঋণ নেই',
+          emptyTitle: context.l10n.financeLoanListEmpty,
           header: [
             TabChips(
-              tabs: const {'open': 'চালু', 'closed': 'বন্ধ'},
+              tabs: {'open': context.l10n.financeStatusActive, 'closed': context.l10n.financeStatusClosed},
               selected: _tab,
               onSelected: (t) => setState(() => _tab = t),
             ),
@@ -254,12 +262,12 @@ class _LoanListScreenState extends State<LoanListScreen> {
           item: (context, l) => _Row(
             key: ValueKey('loan-${l.id}'),
             title: '${l.bank} · ${loanKind(l.kind)}',
-            lines: [l.no, 'সীমা ${Money.taka(l.limit)}'],
+            lines: [l.no, context.l10n.financeLoanLimitLine(Money.taka(l.limit))],
             amount: Money.taka(l.outstanding),
             amountColour: context.palette.danger,
             foot: l.next == null
                 ? null
-                : 'পরের কিস্তি ${dayOf(l.next!.dueOn)} · ${Money.taka(l.next!.amount)} · ${instalmentState(l.next!.state)}',
+                : context.l10n.financeLoanNextLine(dayOf(l.next!.dueOn), Money.taka(l.next!.amount), instalmentState(l.next!.state)),
             footColour: l.next == null ? null : _instalmentColour(context, l.next!.state),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => LoanScreen(id: l.id, api: widget.api))),
@@ -276,42 +284,43 @@ class LoanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperPage<BankLoan>(
-        title: 'ব্যাংক ঋণ',
+        title: context.l10n.financeLoanTitle,
         titleOf: (l) => l.no,
         load: () => api.loan(id),
-        failed: 'ঋণটা আনা গেল না।',
+        failed: context.l10n.financeLoanLoadFailed,
         onLoaded: (l) => RecentPapers.note(kind: 'bank-loan', id: id, number: l.no),
         body: (context, l) => [
-          TotalStrip(label: 'এখনকার দেনা', value: Money.taka(l.outstanding)),
-          FactRow('ব্যাংক', [l.bank, l.branchName].where((s) => s.isNotEmpty).join(' · ')),
-          FactRow('ধরন', loanKind(l.kind)),
-          FactRow('অবস্থা', loanStatus(l.status)),
-          FactRow('সীমা', Money.taka(l.limit)),
-          FactRow('সীমার বাকি', Money.taka(l.available)),
-          if (l.interestRate != null) FactRow('সুদের হার', '${l.interestRate}%'),
-          if (l.sanctionNo.isNotEmpty) FactRow('মঞ্জুরির নম্বর', l.sanctionNo),
-          FactRow('মঞ্জুরি', dayOf(l.sanctionedOn)),
-          if (l.renewsOn != null) FactRow('নবায়ন', dayOf(l.renewsOn)),
+          TotalStrip(label: context.l10n.financeLoanOutstanding, value: Money.taka(l.outstanding)),
+          FactRow(context.l10n.financeLoanBank, [l.bank, l.branchName].where((s) => s.isNotEmpty).join(' · ')),
+          FactRow(context.l10n.financeFactType, loanKind(l.kind)),
+          FactRow(context.l10n.financeFactStatus, loanStatus(l.status)),
+          FactRow(context.l10n.financeLoanLimit, Money.taka(l.limit)),
+          FactRow(context.l10n.financeLoanAvailable, Money.taka(l.available)),
+          if (l.interestRate != null) FactRow(context.l10n.financeInterestRate, '${l.interestRate}%'),
+          if (l.sanctionNo.isNotEmpty) FactRow(context.l10n.financeLoanSanctionNo, l.sanctionNo),
+          FactRow(context.l10n.financeLoanSanctioned, dayOf(l.sanctionedOn)),
+          if (l.renewsOn != null) FactRow(context.l10n.financeLoanRenewal, dayOf(l.renewsOn)),
           if (l.instalments != null)
-            FactRow('কিস্তি', '${l.instalmentsPaid ?? 0} দেওয়া · ${l.instalmentsLeft ?? 0} বাকি · মোট ${l.instalments}'),
-          if (l.instalmentAmount != null) FactRow('কিস্তির অঙ্ক', Money.taka(l.instalmentAmount)),
+            FactRow(context.l10n.financeInstalment,
+                context.l10n.financeLoanInstalmentCounts('${l.instalmentsPaid ?? 0}', '${l.instalmentsLeft ?? 0}', '${l.instalments}')),
+          if (l.instalmentAmount != null) FactRow(context.l10n.financeLoanInstalmentAmount, Money.taka(l.instalmentAmount)),
           if (l.overdue > 0)
-            FactRow('দিন পেরোনো কিস্তি', '${l.overdue}টি', colour: context.palette.danger),
+            FactRow(context.l10n.financeLoanOverdueInstalments, context.l10n.financeLoanOverdueCount('${l.overdue}'), colour: context.palette.danger),
           if (l.next != null)
             Card(
               key: const ValueKey('loan-next'),
               color: l.next!.state == 'overdue' ? context.palette.dangerSurface : context.palette.warningSurface,
               child: ListTile(
-                title: const Text('পরের কিস্তি'),
+                title: Text(context.l10n.financeLoanNextInstalment),
                 subtitle: Text('${dayOf(l.next!.dueOn)} · ${instalmentState(l.next!.state)}'),
                 trailing: Text(Money.taka(l.next!.amount), style: const TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
-          if (l.schedule.isNotEmpty) const SectionTitle('সামনের কিস্তি'),
+          if (l.schedule.isNotEmpty) SectionTitle(context.l10n.financeLoanSchedule),
           for (final r in l.schedule)
             _Row(
-              title: '${r.month ?? ''} নম্বর কিস্তি · ${dayOf(r.dueOn)}',
-              lines: ['আসল ${Money.taka(r.principal)} · সুদ ${Money.taka(r.interest)}'],
+              title: context.l10n.financeLoanScheduleTitle('${r.month ?? ''}', dayOf(r.dueOn)),
+              lines: [context.l10n.financeLoanScheduleSplit(Money.taka(r.principal), Money.taka(r.interest))],
               amount: Money.taka(r.amount),
               foot: instalmentState(r.state),
               footColour: _instalmentColour(context, r.state),
@@ -337,25 +346,25 @@ class _RentListScreenState extends State<RentListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ভাড়া'),
+        appBar: AbosScreenBar(title: context.l10n.financeRentTitle),
         body: PagedList<Rent>(
           reloadKey: '$_side/$_tab',
           load: (page) async {
             final p = await widget.api.rents(side: _side, tab: _tab, page: page);
             return (p.rows, p.nextPage);
           },
-          failed: _failed,
-          whenAbsent: _absent,
+          failed: context.l10n.financeLoadFailed,
+          whenAbsent: context.l10n.financeNotOnServer,
           emptyIcon: Icons.home_work_outlined,
-          emptyTitle: 'এখানে কোনো ভাড়ার চুক্তি নেই',
+          emptyTitle: context.l10n.financeRentListEmpty,
           header: [
             TabChips(
-              tabs: const {'pay': 'আমরা ভাড়া দিই', 'let': 'আমরা ভাড়া পাই'},
+              tabs: {'pay': context.l10n.financeRentSidePay, 'let': context.l10n.financeRentSideLet},
               selected: _side,
               onSelected: (s) => setState(() => _side = s),
             ),
             TabChips(
-              tabs: const {'running': 'চালু', 'closed': 'শেষ'},
+              tabs: {'running': context.l10n.financeStatusActive, 'closed': context.l10n.financeStatusEnded},
               selected: _tab,
               onSelected: (t) => setState(() => _tab = t),
             ),
@@ -365,10 +374,10 @@ class _RentListScreenState extends State<RentListScreen> {
             title: r.party.isEmpty ? r.no : r.party,
             lines: [
               [r.place, r.no].where((s) => s.isNotEmpty).join(' · '),
-              if (r.nextDueOn != null) 'পরের ভাড়া ${dayOf(r.nextDueOn)}',
+              if (r.nextDueOn != null) context.l10n.financeRentNextLine(dayOf(r.nextDueOn)),
             ],
             amount: Money.taka(r.monthlyRent),
-            foot: _rentDue(r),
+            foot: _rentDue(context.l10n, r),
             footColour: _rentDueOwed(r) ? context.palette.danger : null,
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => RentScreen(side: r.side, id: r.id, api: widget.api))),
@@ -380,11 +389,11 @@ class _RentListScreenState extends State<RentListScreen> {
 bool _rentDueOwed(Rent r) => r.weLet ? r.outstanding > 0.004 : r.overdueCount > 0;
 
 /// "৩ মাসের ভাড়া বাকি · ৳৩৬,০০০" — আমরা দিলে আমাদের বাকি, আমরা পেলে ভাড়াটের কাছে পাওনা
-String? _rentDue(Rent r) {
+String? _rentDue(AppL10n l, Rent r) {
   if (r.weLet) {
-    return r.outstanding > 0.004 ? 'ভাড়াটের কাছে পাওনা ${Money.taka(r.outstanding)}' : null;
+    return r.outstanding > 0.004 ? l.financeRentTenantOwes(Money.taka(r.outstanding)) : null;
   }
-  return r.overdueCount > 0 ? '${r.overdueCount} মাসের ভাড়া বাকি · ${Money.taka(r.overdueAmount)}' : null;
+  return r.overdueCount > 0 ? l.financeRentMonthsDue(r.overdueCount, Money.taka(r.overdueAmount)) : null;
 }
 
 class RentScreen extends StatelessWidget {
@@ -396,36 +405,38 @@ class RentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperPage<Rent>(
-        title: 'ভাড়া',
+        title: context.l10n.financeRentTitle,
         titleOf: (r) => r.party.isEmpty ? r.no : r.party,
         load: () => api.rent(side, id),
-        failed: 'ভাড়ার চুক্তিটা আনা গেল না।',
+        failed: context.l10n.financeRentLoadFailed,
         onLoaded: (r) => RecentPapers.note(kind: 'rent', id: id, number: r.no, extra: side),
         body: (context, r) => [
-          TotalStrip(label: r.weLet ? 'মাসের ভাড়া (আমরা পাই)' : 'মাসের ভাড়া (আমরা দিই)', value: Money.taka(r.monthlyRent)),
-          if (_rentDue(r) != null)
+          TotalStrip(
+              label: r.weLet ? context.l10n.financeRentMonthlyWeLet : context.l10n.financeRentMonthlyWePay,
+              value: Money.taka(r.monthlyRent)),
+          if (_rentDue(context.l10n, r) != null)
             Card(
               key: const ValueKey('rent-due'),
               color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(_rentDue(r)!, style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w700)),
+                child: Text(_rentDue(context.l10n, r)!, style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w700)),
               ),
             ),
-          FactRow(r.weLet ? 'ভাড়াটে' : 'বাড়িওয়ালা', r.party),
-          if (r.phone.isNotEmpty) FactRow('ফোন', r.phone),
-          if (r.place.isNotEmpty) FactRow('জায়গা', r.place),
-          FactRow('চুক্তির নম্বর', r.no),
-          if (r.rentDay != null) FactRow('ভাড়ার দিন', 'প্রতি মাসের ${r.rentDay} তারিখ'),
-          if (r.nextDueOn != null) FactRow('পরের ভাড়া', dayOf(r.nextDueOn), colour: _dayColour(context, _daysUntil(r.nextDueOn))),
-          FactRow('শুরু', dayOf(r.startsOn)),
-          FactRow('শেষ', '${dayOf(r.endsOn)}${r.daysLeft == null ? '' : ' · ${daysWords(r.daysLeft)}'}',
+          FactRow(r.weLet ? context.l10n.financeRentTenant : context.l10n.financeRentLandlord, r.party),
+          if (r.phone.isNotEmpty) FactRow(context.l10n.financeRentPhone, r.phone),
+          if (r.place.isNotEmpty) FactRow(context.l10n.financeRentPlace, r.place),
+          FactRow(context.l10n.financeRentAgreementNo, r.no),
+          if (r.rentDay != null) FactRow(context.l10n.financeRentDay, context.l10n.financeDayOfMonth('${r.rentDay}')),
+          if (r.nextDueOn != null) FactRow(context.l10n.financeRentNext, dayOf(r.nextDueOn), colour: _dayColour(context, _daysUntil(r.nextDueOn))),
+          FactRow(context.l10n.financeRentStarts, dayOf(r.startsOn)),
+          FactRow(context.l10n.financeRentEnds, '${dayOf(r.endsOn)}${r.daysLeft == null ? '' : ' · ${daysWords(r.daysLeft)}'}',
               colour: _dayColour(context, r.daysLeft)),
-          FactRow('জামানত', Money.taka(r.deposit)),
-          if (r.depositLeft != null) FactRow(r.weLet ? 'হাতে থাকা জামানত' : 'জামানতের বাকি', Money.taka(r.depositLeft)),
-          if (r.weLet && r.oldestUnpaid != null) FactRow('সবচেয়ে পুরনো বাকি মাস', monthWords(r.oldestUnpaid)),
-          if (r.note.isNotEmpty) FactRow('নোট', r.note),
-          if (r.overdueMonths.isNotEmpty) const SectionTitle('বাকি মাস'),
+          FactRow(context.l10n.financeRentSecurity, Money.taka(r.deposit)),
+          if (r.depositLeft != null) FactRow(r.weLet ? context.l10n.financeRentSecurityHeld : context.l10n.financeRentSecurityLeft, Money.taka(r.depositLeft)),
+          if (r.weLet && r.oldestUnpaid != null) FactRow(context.l10n.financeRentOldestUnpaid, monthWords(r.oldestUnpaid)),
+          if (r.note.isNotEmpty) FactRow(context.l10n.financeNote, r.note),
+          if (r.overdueMonths.isNotEmpty) SectionTitle(context.l10n.financeRentUnpaidMonths),
           for (final m in r.overdueMonths)
             _Row(title: monthWords(m.month), lines: const [], amount: Money.taka(m.amount), amountColour: context.palette.danger),
         ],
@@ -457,27 +468,27 @@ class _HandLoanListScreenState extends State<HandLoanListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'হাতধার'),
+        appBar: AbosScreenBar(title: context.l10n.financeHandLoanListTitle),
         body: PagedList<HandLoan>(
           load: (page) async {
             final book = await widget.api.handLoans();
             if (mounted) setState(() => _book = book);
             return (book.rows, null);
           },
-          failed: _failed,
-          whenAbsent: _absent,
+          failed: context.l10n.financeLoadFailed,
+          whenAbsent: context.l10n.financeNotOnServer,
           emptyIcon: Icons.handshake_outlined,
-          emptyTitle: 'কোনো খোলা হাতধার নেই',
+          emptyTitle: context.l10n.financeHandLoanListEmpty,
           header: [
             if (_book != null) ...[
-              TotalStrip(key: const ValueKey('hand-to-us'), label: 'আমরা পাব', value: Money.taka(_book!.owedToUs)),
-              TotalStrip(key: const ValueKey('hand-we-owe'), label: 'আমরা দেব', value: Money.taka(_book!.weOwe)),
+              TotalStrip(key: const ValueKey('hand-to-us'), label: context.l10n.financeHandLoanToUs, value: Money.taka(_book!.owedToUs)),
+              TotalStrip(key: const ValueKey('hand-we-owe'), label: context.l10n.financeHandLoanWeOwe, value: Money.taka(_book!.weOwe)),
             ],
           ],
           item: (context, h) => _Row(
             key: ValueKey('hand-${h.id}'),
             title: h.name,
-            lines: [if (h.dueOn != null) 'ফেরতের দিন ${dayOf(h.dueOn)}', repaymentWords(h.repayment)],
+            lines: [if (h.dueOn != null) context.l10n.financeHandLoanDueLine(dayOf(h.dueOn)), repaymentWords(h.repayment)],
             amount: Money.taka(h.balance.abs()),
             amountColour: h.balance > 0.004 ? context.palette.success : h.balance < -0.004 ? context.palette.danger : null,
             foot: handLoanSide(h.balance),
@@ -490,10 +501,10 @@ class _HandLoanListScreenState extends State<HandLoanListScreen> {
 
 /// জেরের দিক — কে কাকে দেবেন
 String handLoanSide(double balance) => balance > 0.004
-    ? 'তিনি আমাদের দেবেন'
+    ? AppLocale.l10n.financeHandLoanTheyOwe
     : balance < -0.004
-        ? 'আমরা তাঁকে দেব'
-        : 'মিটে গেছে';
+        ? AppLocale.l10n.financeHandLoanWeOweThem
+        : AppLocale.l10n.financeHandLoanSettled;
 
 class HandLoanScreen extends StatelessWidget {
   const HandLoanScreen({super.key, required this.id, this.api = const ServerFinanceApi(), this.canMove = false});
@@ -506,22 +517,23 @@ class HandLoanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperPage<HandLoan>(
-        title: 'হাতধার',
+        title: context.l10n.financeHandLoanTitle,
         titleOf: (h) => h.name,
         load: () => api.handLoan(id),
-        failed: 'হাতধারটা আনা গেল না।',
+        failed: context.l10n.financeHandLoanLoadFailed,
         onLoaded: (h) => RecentPapers.note(kind: 'hand-loan', id: id, number: h.name),
         body: (context, h) => [
           TotalStrip(label: handLoanSide(h.balance), value: Money.taka(h.balance.abs())),
-          if (h.mobile.isNotEmpty) FactRow('মোবাইল', h.mobile),
-          if (h.principal != null) FactRow('আসল', Money.taka(h.principal)),
-          if (h.interestRate != null) FactRow('সুদের হার', '${h.interestRate}%'),
-          if (h.repayment.isNotEmpty) FactRow('ফেরতের ধরন', repaymentWords(h.repayment)),
+          if (h.mobile.isNotEmpty) FactRow(context.l10n.financeHandLoanMobile, h.mobile),
+          if (h.principal != null) FactRow(context.l10n.financeHandLoanPrincipal, Money.taka(h.principal)),
+          if (h.interestRate != null) FactRow(context.l10n.financeInterestRate, '${h.interestRate}%'),
+          if (h.repayment.isNotEmpty) FactRow(context.l10n.financeHandLoanRepaymentType, repaymentWords(h.repayment)),
           if (h.dueOn != null)
-            FactRow('ফেরতের দিন', '${dayOf(h.dueOn)} · ${daysWords(_daysUntil(h.dueOn))}',
+            FactRow(context.l10n.financeHandLoanDueDate, '${dayOf(h.dueOn)} · ${daysWords(_daysUntil(h.dueOn))}',
                 colour: _dayColour(context, _daysUntil(h.dueOn))),
-          FactRow('অবস্থা', h.status == 'settled' ? 'চুকে গেছে' : 'চালু'),
-          if (h.note.isNotEmpty) FactRow('নোট', h.note),
+          FactRow(context.l10n.financeFactStatus,
+              h.status == 'settled' ? context.l10n.financeHandLoanStatusSettled : context.l10n.financeStatusActive),
+          if (h.note.isNotEmpty) FactRow(context.l10n.financeNote, h.note),
           // ⭐ টাকা দেওয়া-নেওয়া — হাতধারের লেখার চাবিতে (১৭ অক্টোবর ২০২৬; [[HandLoanMoveScreen]])
           if (canMove && h.status != 'settled')
             Padding(
@@ -530,14 +542,14 @@ class HandLoanScreen extends StatelessWidget {
                 key: const ValueKey('handloan-move'),
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HandLoanMoveScreen(id: id, name: h.name))),
                 icon: const Icon(Icons.swap_vert),
-                label: const Text('টাকা দেওয়া / ফেরত'),
+                label: Text(context.l10n.financeHandLoanMoveButton),
               ),
             ),
-          if (h.movements.isNotEmpty) const SectionTitle('লেনদেন'),
+          if (h.movements.isNotEmpty) SectionTitle(context.l10n.financeHandLoanTransactions),
           for (final m in h.movements)
             _Row(
-              title: m.kind == 'out' ? 'টাকা দেওয়া' : 'টাকা পাওয়া',
-              lines: [dayOf(m.date), if (m.returnOn != null) 'ফেরতের কথা ${dayOf(m.returnOn)}'],
+              title: m.kind == 'out' ? context.l10n.financeHandLoanGiven : context.l10n.financeHandLoanReceived,
+              lines: [dayOf(m.date), if (m.returnOn != null) context.l10n.financeHandLoanReturnLine(dayOf(m.returnOn))],
               amount: Money.taka(m.amount),
               amountColour: m.kind == 'out' ? context.palette.danger : context.palette.success,
             ),

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -29,12 +31,12 @@ class CreditDeskScreen extends StatefulWidget {
 }
 
 class _CreditDeskScreenState extends State<CreditDeskScreen> {
-  static const Map<String, String> _lists = {
-    'high-risk': 'বেশি ঝুঁকি',
-    'overdue-bills': 'মেয়াদ পেরোনো বিল',
-    'over-limit': 'সীমা পার',
-    'positions': 'সব গ্রাহক',
-  };
+  static Map<String, String> _lists(AppL10n l) => {
+        'high-risk': l.creditListHighRisk,
+        'overdue-bills': l.creditListOverdueBills,
+        'over-limit': l.creditOverLimit,
+        'positions': l.creditListAll,
+      };
 
   String _list = 'high-risk';
   CreditDashboardFigures? _dash;
@@ -71,8 +73,8 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'বাকির হিসাব আনা গেল না।',
-            whenAbsent: 'বাকি নিয়ন্ত্রণ এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.creditDeskLoadFailed,
+            whenAbsent: context.l10n.creditDeskMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -94,7 +96,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'বাকি নিয়ন্ত্রণ'),
+      appBar: AbosScreenBar(title: context.l10n.creditDeskTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -108,7 +110,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
             Wrap(
               spacing: AppSpacing.xs,
               children: [
-                for (final l in _lists.entries)
+                for (final l in _lists(context.l10n).entries)
                   ChoiceChip(
                     key: ValueKey('credit-list-${l.key}'),
                     label: Text(l.value),
@@ -123,9 +125,9 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
                 key: const ValueKey('credit-search'),
                 controller: _search,
                 textInputAction: TextInputAction.search,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'গ্রাহকের নাম বা কোড',
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: context.l10n.creditDeskSearchHint,
                   isDense: true,
                 ),
                 onSubmitted: (_) => _load(listOnly: true),
@@ -135,19 +137,19 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
               EmptyState(
                 icon: Icons.verified_outlined,
                 title: _list == 'high-risk'
-                    ? 'বেশি ঝুঁকির কোনো গ্রাহক নেই'
+                    ? context.l10n.creditDeskEmptyHighRisk
                     : _list == 'overdue-bills'
-                        ? 'মেয়াদ পেরোনো কোনো বিল নেই'
+                        ? context.l10n.creditDeskEmptyOverdue
                         : _list == 'over-limit'
-                            ? 'কেউ সীমা পার করেননি'
-                            : 'কোনো গ্রাহক নেই',
+                            ? context.l10n.creditDeskEmptyOverLimit
+                            : context.l10n.creditDeskEmptyAll,
               ),
             if (page != null)
               for (final row in page.rows) _ListRow(list: _list, row: row),
             if (page != null && page.lastPage > 1)
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Text('প্রথম ${page.rows.length}টা দেখানো হলো, মোট ${page.totalRows}টা — খুঁজে নিন।',
+                child: Text(context.l10n.creditDeskShowingFirst('${page.rows.length}', '${page.totalRows}'),
                     style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               ),
           ],
@@ -170,22 +172,22 @@ class _DashboardCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ব্যবহৃত বাকি', style: TextStyle(color: context.palette.onSurfaceMuted)),
+              Text(context.l10n.creditDashUsed, style: TextStyle(color: context.palette.onSurfaceMuted)),
               Text(Money.taka(dash.exposure),
                   key: const ValueKey('credit-exposure'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
               if (!dash.on)
-                Text('এই প্রতিষ্ঠানে সীমার যাচাই বন্ধ — অঙ্কগুলো কেবল দেখার জন্য।',
+                Text(context.l10n.creditDashCheckOff,
                     style: TextStyle(fontSize: 12, color: context.palette.warning)),
               const SizedBox(height: AppSpacing.xs),
-              creditPair(context, 'মোট সীমা', Money.taka(dash.limit)),
-              creditPair(context, 'অবশিষ্ট সীমা', Money.taka(dash.available)),
-              creditPair(context, 'সীমার ব্যবহার', dash.usedPercent == null ? '—' : '${dash.usedPercent}%'),
-              creditPair(context, 'মেয়াদ পেরোনো পাওনা', Money.taka(dash.overdue), danger: dash.overdueValue > 0.004),
-              creditPair(context, 'সীমা পার গ্রাহক', '${dash.overLimit} জন', danger: dash.overLimit > 0),
-              creditPair(context, 'মেয়াদ পেরোনো বাকিতে বন্ধ', '${dash.overdueStopped} জন', danger: dash.overdueStopped > 0),
-              creditPair(context, 'বাকি বন্ধ গ্রাহক', '${dash.blocked} জন', danger: dash.blocked > 0),
-              creditPair(context, 'সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)', '${dash.pendingRequests}টা'),
+              creditPair(context, context.l10n.creditDashTotalLimit, Money.taka(dash.limit)),
+              creditPair(context, context.l10n.creditAvailable, Money.taka(dash.available)),
+              creditPair(context, context.l10n.creditDashUsedShare, dash.usedPercent == null ? '—' : '${dash.usedPercent}%'),
+              creditPair(context, context.l10n.creditDashOverdue, Money.taka(dash.overdue), danger: dash.overdueValue > 0.004),
+              creditPair(context, context.l10n.creditDashOverLimit, context.l10n.creditPeople('${dash.overLimit}'), danger: dash.overLimit > 0),
+              creditPair(context, context.l10n.creditOverdueStopped, context.l10n.creditPeople('${dash.overdueStopped}'), danger: dash.overdueStopped > 0),
+              creditPair(context, context.l10n.creditDashBlocked, context.l10n.creditPeople('${dash.blocked}'), danger: dash.blocked > 0),
+              creditPair(context, context.l10n.creditDashPending, context.l10n.creditDashPendingCount('${dash.pendingRequests}')),
             ],
           ),
         ),
@@ -214,15 +216,15 @@ class _ListRow extends StatelessWidget {
     final lines = <String>[
       if (row.code.isNotEmpty) row.code,
       if (list == 'overdue-bills') ...[
-        if ((row.fields['document_no'] ?? '').isNotEmpty) 'বিল ${row.fields['document_no']}',
-        'মেয়াদ পেরিয়েছে ${Money.plain(row.fields['days_overdue'])} দিন',
+        if ((row.fields['document_no'] ?? '').isNotEmpty) context.l10n.creditRowBill('${row.fields['document_no']}'),
+        context.l10n.creditRowOverdueDays(Money.plain(row.fields['days_overdue'])),
       ],
       if (list == 'high-risk') ...[
-        'ঝুঁকি: ${row.fields['level'] ?? ''}',
+        context.l10n.creditRowRisk(row.fields['level'] ?? ''),
         if ((row.fields['reasons'] ?? '').isNotEmpty) row.fields['reasons']!,
       ],
       if (list == 'over-limit' || list == 'positions') ...[
-        'সীমা ${Money.taka(row.fields['credit_limit'])} · অবশিষ্ট ${Money.taka(row.fields['available'])}',
+        context.l10n.creditRowLimit(Money.taka(row.fields['credit_limit']), Money.taka(row.fields['available'])),
         if ((row.fields['state'] ?? '').isNotEmpty) row.fields['state']!,
       ],
     ];
@@ -277,7 +279,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
       if (!mounted) return;
       setState(() => _data = data);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'গ্রাহকের বাকির পাতা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.creditCustomerLoadFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -310,7 +312,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
     final p = d?.position;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: d?.name ?? 'বাকির পাতা'),
+      appBar: AbosScreenBar(title: d?.name ?? context.l10n.creditCustomerTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -328,10 +330,10 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('বাকি বন্ধ', style: TextStyle(fontWeight: FontWeight.w800, color: context.palette.danger)),
+                      Text(context.l10n.creditBlocked, style: TextStyle(fontWeight: FontWeight.w800, color: context.palette.danger)),
                       Text(d.block!.reason),
                       if (d.block!.bouncedCheque)
-                        Text('চেক ফেরতের বন্ধ — খোলেন কেবল মালিক',
+                        Text(context.l10n.creditBouncedOwnerOnly,
                             style: TextStyle(fontSize: 12, color: context.palette.danger)),
                       if (d.mayLift)
                         Align(
@@ -340,7 +342,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                             key: const ValueKey('credit-lift'),
                             onPressed: () => _lift(d),
                             icon: const Icon(Icons.lock_open_outlined),
-                            label: const Text('বাকি বন্ধ তুলুন'),
+                            label: Text(context.l10n.creditLift),
                           ),
                         ),
                     ],
@@ -358,29 +360,29 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                       Row(
                         children: [
                           Expanded(child: Text(d.code, style: TextStyle(color: context.palette.onSurfaceMuted))),
-                          _Badge(text: CreditLabels.state[p.state] ?? p.stateLabel, danger: p.state != 'active'),
+                          _Badge(text: CreditLabels.state(context.l10n)[p.state] ?? p.stateLabel, danger: p.state != 'active'),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      Text('অবশিষ্ট সীমা', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                      Text(context.l10n.creditAvailable, style: TextStyle(color: context.palette.onSurfaceMuted)),
                       Text(Money.taka(p.available),
                           key: const ValueKey('credit-available'),
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                       if (p.usedPercent != null)
-                        Text('সীমার ${Money.plain(p.usedPercent)}% ব্যবহৃত',
+                        Text(context.l10n.creditUsedPercent(Money.plain(p.usedPercent)),
                             style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                       if (p.stop != null && p.stop!.isNotEmpty)
                         Text(p.stop!, style: TextStyle(color: context.palette.danger)),
                       const SizedBox(height: AppSpacing.xs),
-                      creditPair(context, 'সীমা', Money.taka(p.baseLimit)),
+                      creditPair(context, context.l10n.creditLimit, Money.taka(p.baseLimit)),
                       if (p.tempLimit != null)
-                        creditPair(context, 'অস্থায়ী সীমা', '${Money.taka(p.tempLimit)} (${dayOf(p.tempUntil)} পর্যন্ত)'),
-                      creditPair(context, 'চলতি সীমা', Money.taka(p.limit)),
-                      if (d.creditDays != null) creditPair(context, 'বাকির দিন', '${d.creditDays} দিন'),
-                      creditPair(context, 'খাতার বকেয়া', Money.taka(p.due)),
-                      creditPair(context, 'আটকে থাকা', Money.taka(p.held)),
-                      creditPair(context, 'ক্লিয়ার না হওয়া চেক', Money.taka(p.uncleared)),
-                      creditPair(context, 'ব্যবহৃত', Money.taka(p.exposure)),
+                        creditPair(context, context.l10n.creditTempLimit, context.l10n.creditTempLimitValue(Money.taka(p.tempLimit), dayOf(p.tempUntil))),
+                      creditPair(context, context.l10n.creditCurrentLimit, Money.taka(p.limit)),
+                      if (d.creditDays != null) creditPair(context, context.l10n.creditDays, context.l10n.creditDaysValue(d.creditDays!)),
+                      creditPair(context, context.l10n.creditDue, Money.taka(p.due)),
+                      creditPair(context, context.l10n.creditHeld, Money.taka(p.held)),
+                      creditPair(context, context.l10n.creditUncleared, Money.taka(p.uncleared)),
+                      creditPair(context, context.l10n.creditUsed, Money.taka(p.exposure)),
                     ],
                   ),
                 ),
@@ -395,17 +397,17 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
-                              child: Text('ঝুঁকির মাত্রা', style: TextStyle(fontWeight: FontWeight.w700))),
+                          Expanded(
+                              child: Text(context.l10n.creditRiskTitle, style: const TextStyle(fontWeight: FontWeight.w700))),
                           _Badge(
-                              text: CreditLabels.risk[d.risk.level] ?? d.risk.label,
+                              text: CreditLabels.risk(context.l10n)[d.risk.level] ?? d.risk.label,
                               danger: d.risk.level == 'high' || d.risk.level == 'critical'),
                         ],
                       ),
                       if (d.risk.reasons.isEmpty)
-                        Text('কোনো লক্ষণ নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                        Text(context.l10n.creditRiskNone, style: TextStyle(color: context.palette.onSurfaceMuted)),
                       for (final r in d.risk.reasons) Text('• $r'),
-                      Text('মাত্রা কেবল জানায় — সীমা বা দেয়াল বদলায় না।',
+                      Text(context.l10n.creditRiskNote,
                           style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
                     ],
                   ),
@@ -418,42 +420,42 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                   key: const ValueKey('credit-request'),
                   onPressed: () => _request(d),
                   icon: const Icon(Icons.trending_up),
-                  label: const Text('সীমা বাড়ানোর অনুরোধ'),
+                  label: Text(context.l10n.creditRequest),
                 ),
               ),
             if (d != null) ...[
-              const _SectionTitle('খোলা বিল'),
+              _SectionTitle(context.l10n.creditOpenBills),
               if (d.bills.isEmpty)
-                Text('কোনো খোলা বিল নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                Text(context.l10n.creditNoOpenBills, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final b in d.bills)
                 Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
                     title: Text(b.no),
                     subtitle: Text(b.daysOverdue > 0
-                        ? 'মেয়াদ ${dayOf(b.dueOn)} — ${b.daysOverdue} দিন পেরিয়েছে'
-                        : 'মেয়াদ ${dayOf(b.dueOn)}'),
+                        ? context.l10n.creditBillDueOverdue(dayOf(b.dueOn), b.daysOverdue)
+                        : context.l10n.creditBillDue(dayOf(b.dueOn))),
                     trailing: Text(Money.taka(b.unpaid),
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: b.daysOverdue > 0 ? context.palette.danger : context.palette.onSurface)),
                   ),
                 ),
-              const _SectionTitle('সীমা বাড়ানোর অনুরোধ'),
+              _SectionTitle(context.l10n.creditRequest),
               if (d.requests.isEmpty)
-                Text('কোনো অনুরোধ নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                Text(context.l10n.creditNoRequests, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in d.requests)
                 Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
                     title: Text('${Money.taka(r.currentLimit)} → ${Money.taka(r.requestedLimit)}'),
                     subtitle: Text([
-                      r.kind == 'temporary' ? 'অস্থায়ী, ${dayOf(r.tempUntil)} পর্যন্ত' : 'সাধারণ সীমা',
+                      r.kind == 'temporary' ? context.l10n.creditRequestTemporaryUntil(dayOf(r.tempUntil)) : context.l10n.creditStandardLimit,
                       if (r.reason.isNotEmpty) r.reason,
                       [r.requestedBy, dayOf(r.requestedAt)].where((s) => s.isNotEmpty).join(' · '),
                     ].join('\n')),
                     isThreeLine: true,
-                    trailing: Text(CreditLabels.request[r.status] ?? r.status,
+                    trailing: Text(CreditLabels.request(context.l10n)[r.status] ?? r.status,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -525,15 +527,15 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
   Future<void> _send() async {
     final amount = double.tryParse(_amount.text.trim());
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'চাওয়া সীমা লিখুন।');
+      setState(() => _error = context.l10n.creditSheetNeedAmount);
       return;
     }
     if (_reason.text.trim().isEmpty) {
-      setState(() => _error = 'কারণ লিখুন।');
+      setState(() => _error = context.l10n.creditNeedReason);
       return;
     }
     if (_kind == 'temporary' && _until == null) {
-      setState(() => _error = 'অস্থায়ী সীমার শেষ দিন বাছুন।');
+      setState(() => _error = context.l10n.creditSheetNeedUntil);
       return;
     }
     setState(() {
@@ -550,7 +552,7 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
           ));
       if (mounted) Navigator.of(context).pop(message);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'অনুরোধ পাঠানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.creditSheetSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -565,15 +567,15 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('সীমা বাড়ানোর অনুরোধ — ${widget.customer.name}',
+              Text(context.l10n.creditSheetTitle(widget.customer.name),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              Text('এখনকার সীমা ${Money.taka(widget.customer.position.baseLimit)}',
+              Text(context.l10n.creditSheetCurrent(Money.taka(widget.customer.position.baseLimit)),
                   style: TextStyle(color: context.palette.onSurfaceMuted)),
               const SizedBox(height: AppSpacing.sm),
               SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'limit', label: Text('সাধারণ সীমা')),
-                  ButtonSegment(value: 'temporary', label: Text('অস্থায়ী সীমা')),
+                segments: [
+                  ButtonSegment(value: 'limit', label: Text(context.l10n.creditStandardLimit)),
+                  ButtonSegment(value: 'temporary', label: Text(context.l10n.creditTempLimit)),
                 ],
                 selected: {_kind},
                 onSelectionChanged: (s) => setState(() => _kind = s.first),
@@ -582,7 +584,7 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
                 key: const ValueKey('request-amount'),
                 controller: _amount,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'চাওয়া সীমা (৳)'),
+                decoration: InputDecoration(labelText: context.l10n.creditSheetAmount),
               ),
               if (_kind == 'temporary')
                 TextButton.icon(
@@ -599,17 +601,17 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
                   },
                   icon: const Icon(Icons.event_outlined),
                   label: Text(_until == null
-                      ? 'শেষ দিন বাছুন'
-                      : 'শেষ দিন ${DateFormat('dd/MM/yyyy').format(_until!)}'),
+                      ? context.l10n.creditSheetPickUntil
+                      : context.l10n.creditSheetUntil(DateFormat('dd/MM/yyyy').format(_until!))),
                 ),
               TextField(
                 key: const ValueKey('request-reason'),
                 controller: _reason,
                 maxLength: 500,
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'কারণ'),
+                decoration: InputDecoration(labelText: context.l10n.creditReason),
               ),
-              Text('মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।',
+              Text(context.l10n.creditSheetOwnerNote,
                   style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               if (_error != null)
                 Padding(
@@ -620,7 +622,7 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
               FilledButton(
                 key: const ValueKey('request-send'),
                 onPressed: _busy ? null : _send,
-                child: Text(_busy ? 'পাঠানো হচ্ছে…' : 'সইয়ের জন্য পাঠান'),
+                child: Text(_busy ? context.l10n.creditSheetSending : context.l10n.creditSheetSend),
               ),
             ],
           ),
@@ -653,7 +655,7 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
 
   Future<void> _send() async {
     if (_reason.text.trim().isEmpty) {
-      setState(() => _error = 'কারণ লিখুন।');
+      setState(() => _error = context.l10n.creditNeedReason);
       return;
     }
     setState(() {
@@ -664,7 +666,7 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
       final message = await _once.send(() => widget.api.liftBlock(widget.customerId, _reason.text.trim()));
       if (mounted) Navigator.of(context).pop(message);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'বাকি বন্ধ তোলা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.creditLiftFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -672,7 +674,7 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('বাকি বন্ধ তুলুন'),
+        title: Text(context.l10n.creditLift),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -680,17 +682,17 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
               key: const ValueKey('lift-reason'),
               controller: _reason,
               maxLength: 500,
-              decoration: const InputDecoration(labelText: 'কারণ'),
+              decoration: InputDecoration(labelText: context.l10n.creditReason),
             ),
             if (_error != null) Text(_error!, style: TextStyle(color: context.palette.danger)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('থাক')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.creditLiftKeep)),
           FilledButton(
             key: const ValueKey('lift-send'),
             onPressed: _busy ? null : _send,
-            child: const Text('তুলুন'),
+            child: Text(context.l10n.creditLiftSend),
           ),
         ],
       );
@@ -699,29 +701,29 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
 class CreditLabels {
   const CreditLabels._();
 
-  static const Map<String, String> state = {
-    'active': 'চালু',
-    'over_limit': 'সীমা পার',
-    'overdue': 'মেয়াদ পেরোনো বাকিতে বন্ধ',
-    'blocked': 'বাকি বন্ধ',
-    'unchecked': 'সীমার যাচাই বন্ধ',
-  };
+  static Map<String, String> state(AppL10n l) => {
+        'active': l.creditStateActive,
+        'over_limit': l.creditOverLimit,
+        'overdue': l.creditOverdueStopped,
+        'blocked': l.creditBlocked,
+        'unchecked': l.creditStateUnchecked,
+      };
 
-  static const Map<String, String> risk = {
-    'low': 'কম',
-    'medium': 'মাঝারি',
-    'high': 'বেশি',
-    'critical': 'চরম',
-  };
+  static Map<String, String> risk(AppL10n l) => {
+        'low': l.creditRiskLow,
+        'medium': l.creditRiskMedium,
+        'high': l.creditRiskHigh,
+        'critical': l.creditRiskCritical,
+      };
 
-  static const Map<String, String> request = {
-    'pending': 'সইয়ের অপেক্ষায়',
-    'approved': 'সই পড়েছে — বসেছে',
-    'rejected': 'না',
-    'cancelled': 'ফিরিয়ে নেওয়া',
-    'expired': 'মেয়াদ পেরিয়েছে',
-    'void': 'মালিকের সই নেই — বসেনি',
-  };
+  static Map<String, String> request(AppL10n l) => {
+        'pending': l.creditRequestPending,
+        'approved': l.creditRequestApproved,
+        'rejected': l.creditRequestRejected,
+        'cancelled': l.creditRequestWithdrawn,
+        'expired': l.creditRequestExpired,
+        'void': l.creditRequestVoid,
+      };
 }
 
 class CreditDashboardFigures {
@@ -1016,13 +1018,13 @@ class ServerCreditControlApi implements CreditControlApi {
       {required String kind, required String amount, String? until, required String reason}) async {
     final response = await ApiClient.dio.post<Map<String, dynamic>>('/credit-control/customers/$id/limit-requests',
         data: {'kind': kind, 'amount': amount, if (until != null) 'temp_until': until, 'reason': reason});
-    return response.data?['message']?.toString() ?? 'অনুরোধ পাঠানো হলো।';
+    return response.data?['message']?.toString() ?? AppLocale.l10n.creditApiRequestSent;
   }
 
   @override
   Future<String> liftBlock(String id, String reason) async {
     final response =
         await ApiClient.dio.post<Map<String, dynamic>>('/credit-control/customers/$id/lift-block', data: {'reason': reason});
-    return response.data?['message']?.toString() ?? 'বাকি বন্ধ তোলা হলো।';
+    return response.data?['message']?.toString() ?? AppLocale.l10n.creditApiLifted;
   }
 }

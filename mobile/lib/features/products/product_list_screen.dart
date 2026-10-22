@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
@@ -57,17 +58,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final all = ProductRecord.all();
     final filtered = ProductListQuery.apply(all,
         query: _query, sort: _sort, filters: _filters);
+    final l = context.l10n;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'পণ্যের তালিকা'),
+      appBar: AbosScreenBar(title: l.productsListTitle),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'পণ্যের নাম দিয়ে খুঁজুন',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: l.productsListSearchHint,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
@@ -87,7 +89,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.xs),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('মোট ${filtered.length} টি পণ্য',
+                child: Text(l.productsListTotal(filtered.length),
                     style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.onSurfaceMuted)),
               ),
             ),
@@ -108,13 +110,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               ? Icons.inventory_2_outlined
                               : Icons.cloud_off_outlined,
                           title: trouble == null
-                              ? 'এখনো কোনো পণ্য সিঙ্ক হয়নি'
-                              : 'পণ্যের তালিকা আনা যায়নি',
+                              ? l.productsListNothingSynced
+                              : l.productsListLoadFailed,
                           // See CustomerListScreen's comment on the same line.
                           // This screen carries it twice over: নতুন অর্ডার
                           // sends people here to pull, so a silent failure
                           // here stalls the order screen too.
-                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
+                          message: trouble ?? l.productsListPullRetry,
                         ),
                       ],
                     )
@@ -123,11 +125,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           children: [
                             EmptyState(
                               icon: Icons.search_off,
-                              title: 'কোনো মিল পাওয়া যায়নি',
+                              title: l.productsListNoMatch,
                               // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
                               message: _filters.isEmpty
                                   ? null
-                                  : 'ফিল্টার মুছে আবার দেখুন।',
+                                  : l.productsListClearFilters,
                             ),
                           ],
                         )
@@ -184,8 +186,8 @@ class _ProductTile extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.xs),
                       child: Text(
-                        'বিক্রয়যোগ্য ${Money.plain(stock.available)}'
-                        '${product.unit == null ? '' : ' ${product.unit}'}',
+                        context.l10n.productsListAvailable('${Money.plain(stock.available)}'
+                            '${product.unit == null ? '' : ' ${product.unit}'}'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -208,7 +210,7 @@ class _ProductTile extends StatelessWidget {
                 // Absent, not null and not zero — see this file's own class
                 // comment.
                 if (product.hasPurchasePrice)
-                  Text('ক্রয়: ${Money.taka(product.purchasePrice)}',
+                  Text(context.l10n.productsListPurchase(Money.taka(product.purchasePrice)),
                       style: Theme.of(context).textTheme.bodySmall),
               ],
             ),

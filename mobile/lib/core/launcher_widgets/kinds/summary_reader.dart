@@ -1,4 +1,7 @@
+import '../../locale/app_locale.dart';
+import '../../navigation/top_bar/abos_top_bar.dart' as top_bar;
 import '../../records/money.dart';
+import '../../widgets/day_part.dart' show banglaMonths, englishMonths;
 import '../kit/widget_doc.dart';
 
 /// ⭐ a5-এর ছয় উইজেটের সারাংশ পড়ার ছোট সাহায্য (২০ অক্টোবর ২০২৬) — ভিত্তির (kit) বাইরে, কেবল পড়া।
@@ -69,21 +72,17 @@ class SummaryReader {
   static String? more(Object? count, int shown) {
     final n = integer(count);
     if (n == null || n <= shown) return null;
-    return 'আরও ${n - shown}টা';
+    return AppLocale.l10n.launcherWidgetMore('${n - shown}');
   }
 
-  static String bnDigits(int n) {
-    const bangla = '০১২৩৪৫৬৭৮৯';
-    return n.toString().split('').map((d) => d == '-' ? d : bangla[int.parse(d)]).join();
-  }
+  /// অঙ্ক মানুষের ভাষায় — বাংলায় বাংলা অঙ্ক, ইংরেজিতে যেমন আছে ([AppLocale.current]; a4-এর [top_bar.bnDigits])
+  static String bnDigits(int n) => top_bar.bnDigits(n);
 
-  static const _months = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-  ];
+  /// মাসের নাম মানুষের ভাষায় — ১ = জানুয়ারি / January
+  static String monthWord(int month) => (AppLocale.isEnglish() ? englishMonths : banglaMonths)[month - 1];
 
   /// "৩১ অক্টোবর"
-  static String bnDate(DateTime day) => '${bnDigits(day.day)} ${_months[day.month - 1]}';
+  static String bnDate(DateTime day) => '${bnDigits(day.day)} ${monthWord(day.month)}';
 
   /// "2026-10-22" → তারিখ (দিনটুকুই), পড়া না গেলে null
   static DateTime? day(Object? value) {

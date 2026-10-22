@@ -1,6 +1,8 @@
+import '../../locale/app_locale.dart';
 import '../../records/money.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
+import 'summary_reader.dart';
 
 /// ⭐ ৯ · "লক্ষ্য বনাম অর্জন" — এই মাসের লক্ষ্যের কত ভাগ হলো, কত দিন বাকি (a6, ২০ অক্টোবর ২০২৬; চুক্তি
 /// `E:\ABOS\app-widgets-ভিত্তি.md` §২)।
@@ -14,16 +16,11 @@ import '../kit/widget_kind.dart';
 class TargetWidget extends LauncherWidgetKind {
   const TargetWidget();
 
-  static const List<String> _months = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-  ];
-
   @override
   String get key => 'target';
 
   @override
-  String get title => 'লক্ষ্য বনাম অর্জন';
+  String get title => AppLocale.l10n.launcherWidgetTargetName;
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x1, WidgetSize.s2x2];
@@ -32,13 +29,14 @@ class TargetWidget extends LauncherWidgetKind {
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf}) {
     final month = monthName(summary['month'] as String?);
     final own = summary['own'] == true;
+    final l = AppLocale.l10n;
     final heading = month == null
-        ? (own ? 'এই মাসে আমার লক্ষ্য' : 'এই মাসের লক্ষ্য')
-        : (own ? '$monthে আমার লক্ষ্য' : '$monthের লক্ষ্য');
+        ? (own ? l.launcherWidgetTargetMineThisMonth : l.launcherWidgetTargetThisMonth)
+        : (own ? l.launcherWidgetTargetMineMonth(month) : l.launcherWidgetTargetMonth(month));
     final link = summary['link'] as String?;
     final target = Money.value(summary['target']);
     if (target == null || target <= 0) {
-      return WidgetDoc(title: heading, asOf: asOf, link: link, empty: 'এই মাসের লক্ষ্য বসানো নেই');
+      return WidgetDoc(title: heading, asOf: asOf, link: link, empty: l.launcherWidgetTargetNotSet);
     }
     final achieved = Money.valueOrZero(summary['achieved']);
     final fraction = achieved / target;
@@ -51,7 +49,9 @@ class TargetWidget extends LauncherWidgetKind {
       link: link,
       hero: WidgetHero(
         WidgetText('$percent%', tone: tone),
-        caption: daysLeft == null ? null : WidgetText(daysLeft > 0 ? 'বাকি $daysLeft দিন' : 'মাস শেষ'),
+        caption: daysLeft == null
+            ? null
+            : WidgetText(daysLeft > 0 ? l.launcherWidgetTargetDaysLeft('$daysLeft') : l.launcherWidgetTargetMonthOver),
       ),
       bars: [
         WidgetBar(
@@ -67,7 +67,7 @@ class TargetWidget extends LauncherWidgetKind {
   static String? monthName(String? ym) {
     final m = RegExp(r'^\d{4}-(\d{2})$').firstMatch(ym ?? '');
     final n = m == null ? 0 : int.parse(m[1]!);
-    return n >= 1 && n <= 12 ? _months[n - 1] : null;
+    return n >= 1 && n <= 12 ? SummaryReader.monthWord(n) : null;
   }
 
   /// ছোট টাকা, ইংরেজি অঙ্কে: 13600000 → "৳ 1.36 কোটি", 250000 → "৳ 2.5 লাখ", 8500 → "৳8,500.00"
@@ -77,8 +77,9 @@ class TargetWidget extends LauncherWidgetKind {
       return s.replaceFirst(RegExp(r'\.?0+$'), '');
     }
 
-    if (v.abs() >= 10000000) return '৳ ${two(v / 10000000)} কোটি';
-    if (v.abs() >= 100000) return '৳ ${two(v / 100000)} লাখ';
+    const taka = '৳ '; // l10n-ok: the taka sign, the same in every language
+    if (v.abs() >= 10000000) return taka + AppLocale.l10n.launcherWidgetTargetCrore(two(v / 10000000));
+    if (v.abs() >= 100000) return taka + AppLocale.l10n.launcherWidgetTargetLakh(two(v / 100000));
     return Money.taka(v);
   }
 }

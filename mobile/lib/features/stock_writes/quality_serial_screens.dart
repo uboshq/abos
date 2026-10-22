@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -24,7 +25,7 @@ String _today() {
 }
 
 void _tell(BuildContext context, String notice) =>
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: context.palette.success, content: Text(notice.isEmpty ? 'বসেছে।' : notice)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: context.palette.success, content: Text(notice.isEmpty ? context.l10n.stockWriteResultDone : notice)));
 
 // ── সার্ভার ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -239,7 +240,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'মান যাচাইয়ের তালিকা আনা গেল না।', whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.stockQualityLoadFailed, whenAbsent: context.l10n.stockQualityNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -253,14 +254,15 @@ class _QualityListScreenState extends State<QualityListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'মান যাচাই'),
+      appBar: AbosScreenBar(title: l.stockQualityTitle),
       floatingActionButton: widget.canCreate
           ? FloatingActionButton.extended(
               key: const ValueKey('qc-new'),
               onPressed: () => _open(NewInspectionScreen(api: widget.api, products: widget.products)),
               icon: const Icon(Icons.add),
-              label: const Text('নতুন যাচাই'),
+              label: Text(l.stockQualityNew),
             )
           : null,
       body: RefreshIndicator(
@@ -273,7 +275,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
               Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
                 ChoiceChip(
                     key: const ValueKey('qc-status-all'),
-                    label: const Text('সব'),
+                    label: Text(l.stockQualityAll),
                     selected: _status == null,
                     onSelected: (_) {
                       setState(() => _status = null);
@@ -290,11 +292,11 @@ class _QualityListScreenState extends State<QualityListScreen> {
                       }),
               ]),
             // ⭐ গোটা ছাঁকনির গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
-            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট যাচাই', value: '$_count টি'),
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: l.stockQualityTotal, value: l.stockQualityCountValue(_count!)),
             if (_busy && !_loaded) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_loaded && _rows.isEmpty)
-              const EmptyState(icon: Icons.verified_outlined, title: 'কোনো মান যাচাই নেই', message: 'নিচে টেনে আবার দেখুন।'),
+              EmptyState(icon: Icons.verified_outlined, title: l.stockQualityEmpty, message: l.stockWritePullAgain),
             for (final r in _rows)
               Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -308,7 +310,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
                 ),
               ),
             if (_next != null)
-              Center(child: TextButton.icon(onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: const Text('আরও'))),
+              Center(child: TextButton.icon(onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: Text(l.stockQualityMore))),
           ],
         ),
       ),
@@ -363,7 +365,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
         if (_accepted.text.isEmpty) _accepted.text = paper.row.qty.split(' ').first;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'যাচাইটা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockQualityOneLoadFailed));
     }
   }
 
@@ -378,7 +380,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
       _tell(context, notice);
       await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockQualitySaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -387,10 +389,11 @@ class _InspectionScreenState extends State<InspectionScreen> {
   @override
   Widget build(BuildContext context) {
     final p = _paper;
+    final l = context.l10n;
     const gap = SizedBox(height: AppSpacing.sm);
 
     return Scaffold(
-      appBar: AbosScreenBar(title: p == null ? 'মান যাচাই' : 'মান যাচাই · ${p.row.no}'),
+      appBar: AbosScreenBar(title: p == null ? l.stockQualityTitle : l.stockQualityTitleNo(p.row.no)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -405,16 +408,16 @@ class _InspectionScreenState extends State<InspectionScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(p.row.product, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                    FactRow('অবস্থা', p.row.statusLabel),
-                    if (p.row.dateLabel != null) FactRow('তারিখ', p.row.dateLabel!),
-                    if (p.row.warehouse != null) FactRow('গুদাম', p.row.warehouse!),
-                    if (p.batch != null) FactRow('লট', p.batch!),
-                    FactRow('যাচাই করা হলো', p.row.qty),
-                    FactRow('গৃহীত', p.accepted),
-                    FactRow('বাতিল', p.rejected),
-                    if (p.disposed != '0') FactRow('সরানো', p.disposed),
-                    if (p.criteria != null && p.criteria!.isNotEmpty) FactRow('যা দেখা হলো', p.criteria!),
-                    if (p.remarks != null && p.remarks!.isNotEmpty) FactRow('মন্তব্য', p.remarks!),
+                    FactRow(l.stockQualityStatus, p.row.statusLabel),
+                    if (p.row.dateLabel != null) FactRow(l.stockQualityDate, p.row.dateLabel!),
+                    if (p.row.warehouse != null) FactRow(l.stockWriteWarehouse, p.row.warehouse!),
+                    if (p.batch != null) FactRow(l.stockQualityLot, p.batch!),
+                    FactRow(l.stockQualityInspected, p.row.qty),
+                    FactRow(l.stockQualityAccepted, p.accepted),
+                    FactRow(l.stockQualityRejected, p.rejected),
+                    if (p.disposed != '0') FactRow(l.stockQualityDisposed, p.disposed),
+                    if (p.criteria != null && p.criteria!.isNotEmpty) FactRow(l.stockQualityCriteria, p.criteria!),
+                    if (p.remarks != null && p.remarks!.isNotEmpty) FactRow(l.stockQualityRemarks, p.remarks!),
                   ]),
                 ),
               ),
@@ -424,22 +427,22 @@ class _InspectionScreenState extends State<InspectionScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      const Text('রায়', style: TextStyle(fontWeight: FontWeight.w700)),
+                      Text(l.stockQualityVerdict, style: const TextStyle(fontWeight: FontWeight.w700)),
                       DropdownButtonFormField<String>(
                         key: const ValueKey('qc-result'),
                         initialValue: _result,
-                        decoration: const InputDecoration(labelText: 'ফল', isDense: true),
+                        decoration: InputDecoration(labelText: l.stockQualityResult, isDense: true),
                         items: [for (final r in p.results) DropdownMenuItem(value: r.id, child: Text(r.name))],
                         onChanged: (v) => setState(() => _result = v),
                       ),
                       gap,
                       TextField(key: const ValueKey('qc-accepted'), controller: _accepted, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'গৃহীত', isDense: true)),
+                          decoration: InputDecoration(labelText: l.stockQualityAccepted, isDense: true)),
                       gap,
                       TextField(key: const ValueKey('qc-rejected'), controller: _rejected, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'বাতিল', isDense: true)),
+                          decoration: InputDecoration(labelText: l.stockQualityRejected, isDense: true)),
                       gap,
-                      TextField(key: const ValueKey('qc-remarks'), controller: _remarks, decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)', isDense: true)),
+                      TextField(key: const ValueKey('qc-remarks'), controller: _remarks, decoration: InputDecoration(labelText: l.stockQualityRemarksOptional, isDense: true)),
                       gap,
                       FilledButton(
                         key: const ValueKey('qc-decide'),
@@ -451,7 +454,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
                                   'rejected_qty': _rejected.text.trim(),
                                   if (_remarks.text.trim().isNotEmpty) 'remarks': _remarks.text.trim(),
                                 })),
-                        child: const Text('রায় দিন'),
+                        child: Text(l.stockQualityGiveVerdict),
                       ),
                     ]),
                   ),
@@ -462,14 +465,14 @@ class _InspectionScreenState extends State<InspectionScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      const Text('বাতিল মাল সরানো', style: TextStyle(fontWeight: FontWeight.w700)),
+                      Text(l.stockQualityDisposeTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                       TextField(key: const ValueKey('qc-dispose-qty'), controller: _disposeQty, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'কতটা', isDense: true)),
+                          decoration: InputDecoration(labelText: l.stockQualityDisposeQty, isDense: true)),
                       gap,
                       DropdownButtonFormField<String>(
                         key: const ValueKey('qc-dispose-reason'),
                         initialValue: _reason,
-                        decoration: const InputDecoration(labelText: 'কারণ', isDense: true),
+                        decoration: InputDecoration(labelText: l.stockWriteReason, isDense: true),
                         items: [for (final r in p.writeOffReasons) DropdownMenuItem(value: r.id, child: Text(r.name))],
                         onChanged: (v) => setState(() => _reason = v),
                       ),
@@ -479,7 +482,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
                         onPressed: _busy || _reason == null || _disposeQty.text.trim().isEmpty
                             ? null
                             : () => _act(_disposeOnce, () => widget.api.dispose(widget.id, {'qty': _disposeQty.text.trim(), 'reason': _reason})),
-                        child: const Text('সরান'),
+                        child: Text(l.stockQualityDispose),
                       ),
                     ]),
                   ),
@@ -541,7 +544,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
 
   Future<void> _send() async {
     if (_product == null || _qty.text.trim().isEmpty) {
-      setState(() => _error = 'পণ্য আর পরিমাণ লাগবেই।');
+      setState(() => _error = context.l10n.stockQualityNeedFields);
       return;
     }
     setState(() {
@@ -560,7 +563,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
       _tell(context, notice);
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'যাচাই খোলা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockQualityOpenFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -572,28 +575,29 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
 
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নতুন মান যাচাই'),
+      appBar: AbosScreenBar(title: l.stockQualityNewTitle),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         Card(
           child: ListTile(
             key: const ValueKey('qc-product'),
             leading: const Icon(Icons.inventory_2_outlined),
-            title: Text(_product?.name ?? 'পণ্য বাছুন'),
+            title: Text(_product?.name ?? l.stockWritePickProduct),
             trailing: const Icon(Icons.search),
             onTap: _pick,
           ),
         ),
         gap,
         TextField(key: const ValueKey('qc-qty'), controller: _qty, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'কতটা যাচাই', isDense: true)),
+            decoration: InputDecoration(labelText: l.stockQualityQtyToCheck, isDense: true)),
         gap,
-        TextField(key: const ValueKey('qc-batch'), controller: _batch, decoration: const InputDecoration(labelText: 'লট নম্বর (ঐচ্ছিক)', isDense: true)),
+        TextField(key: const ValueKey('qc-batch'), controller: _batch, decoration: InputDecoration(labelText: l.stockQualityLotOptional, isDense: true)),
         gap,
-        TextField(key: const ValueKey('qc-criteria'), controller: _criteria, decoration: const InputDecoration(labelText: 'কী দেখা হবে (ঐচ্ছিক)', isDense: true)),
+        TextField(key: const ValueKey('qc-criteria'), controller: _criteria, decoration: InputDecoration(labelText: l.stockQualityCriteriaOptional, isDense: true)),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
-        FilledButton(key: const ValueKey('qc-send'), onPressed: _busy ? null : _send, child: const Text('যাচাই খুলুন')),
+        FilledButton(key: const ValueKey('qc-send'), onPressed: _busy ? null : _send, child: Text(l.stockQualityOpen)),
       ]),
     );
   }
@@ -653,7 +657,7 @@ class _SerialScreenState extends State<SerialScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'সিরিয়ালের তালিকা আনা গেল না।', whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.stockSerialLoadFailed, whenAbsent: context.l10n.stockQualityNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -667,8 +671,9 @@ class _SerialScreenState extends State<SerialScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'সিরিয়াল নম্বর'),
+      appBar: AbosScreenBar(title: l.stockSerialTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -677,24 +682,24 @@ class _SerialScreenState extends State<SerialScreen> {
           children: [
             if (widget.canManage)
               Row(children: [
-                Expanded(child: OutlinedButton.icon(key: const ValueKey('serial-receive'), onPressed: () => _open(true), icon: const Icon(Icons.login), label: const Text('পিস ঢোকান'))),
+                Expanded(child: OutlinedButton.icon(key: const ValueKey('serial-receive'), onPressed: () => _open(true), icon: const Icon(Icons.login), label: Text(l.stockSerialReceive))),
                 const SizedBox(width: AppSpacing.sm),
-                Expanded(child: OutlinedButton.icon(key: const ValueKey('serial-issue'), onPressed: () => _open(false), icon: const Icon(Icons.logout), label: const Text('পিস বের করুন'))),
+                Expanded(child: OutlinedButton.icon(key: const ValueKey('serial-issue'), onPressed: () => _open(false), icon: const Icon(Icons.logout), label: Text(l.stockSerialIssue))),
               ]),
             const SizedBox(height: AppSpacing.sm),
             TextField(
               key: const ValueKey('serial-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.qr_code_scanner), hintText: 'সিরিয়াল নম্বর', isDense: true),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.qr_code_scanner), hintText: l.stockSerialSearchHint, isDense: true),
               onSubmitted: (_) => _load(),
             ),
             const SizedBox(height: AppSpacing.sm),
             // ⭐ গোটা খোঁজের গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
-            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট সিরিয়াল', value: '$_count টি'),
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: l.stockSerialTotal, value: l.stockQualityCountValue(_count!)),
             if (_busy && !_loaded) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
-            if (_loaded && _rows.isEmpty) const EmptyState(icon: Icons.qr_code_2, title: 'কোনো সিরিয়াল মেলেনি', message: 'নিচে টেনে আবার দেখুন।'),
+            if (_loaded && _rows.isEmpty) EmptyState(icon: Icons.qr_code_2, title: l.stockSerialEmpty, message: l.stockWritePullAgain),
             for (final s in _rows)
               Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -706,7 +711,7 @@ class _SerialScreenState extends State<SerialScreen> {
                 ),
               ),
             if (_next != null)
-              Center(child: TextButton.icon(onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: const Text('আরও'))),
+              Center(child: TextButton.icon(onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: Text(l.stockQualityMore))),
           ],
         ),
       ),
@@ -765,7 +770,7 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
 
   Future<void> _send() async {
     if (_serials.text.trim().isEmpty || (widget.receive && _product == null)) {
-      setState(() => _error = widget.receive ? 'পণ্য আর অন্তত একটা সিরিয়াল লাগবেই।' : 'অন্তত একটা সিরিয়াল লাগবেই।');
+      setState(() => _error = widget.receive ? context.l10n.stockSerialNeedProductAndOne : context.l10n.stockSerialNeedOne);
       return;
     }
     setState(() {
@@ -785,7 +790,7 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
       _tell(context, notice);
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'সিরিয়াল বসানো গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.stockSerialSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -797,15 +802,16 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
 
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
+    final l = context.l10n;
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.receive ? 'পিস ঢোকান' : 'পিস বের করুন'),
+      appBar: AbosScreenBar(title: widget.receive ? l.stockSerialReceive : l.stockSerialIssue),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         if (widget.receive) ...[
           Card(
             child: ListTile(
               key: const ValueKey('serial-product'),
               leading: const Icon(Icons.inventory_2_outlined),
-              title: Text(_product?.name ?? 'পণ্য বাছুন'),
+              title: Text(_product?.name ?? l.stockWritePickProduct),
               trailing: const Icon(Icons.search),
               onTap: _pick,
             ),
@@ -817,18 +823,18 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
           controller: _serials,
           minLines: 4,
           maxLines: 12,
-          decoration: const InputDecoration(labelText: 'সিরিয়াল — প্রতি সারিতে একটা', alignLabelWithHint: true),
+          decoration: InputDecoration(labelText: l.stockSerialNumbersLabel, alignLabelWithHint: true),
         ),
         if (!widget.receive) ...[
           gap,
-          TextField(key: const ValueKey('serial-sold-to'), controller: _soldTo, decoration: const InputDecoration(labelText: 'কাকে (ঐচ্ছিক)', isDense: true)),
+          TextField(key: const ValueKey('serial-sold-to'), controller: _soldTo, decoration: InputDecoration(labelText: l.stockSerialSoldToOptional, isDense: true)),
           gap,
           TextField(key: const ValueKey('serial-warranty'), controller: _warranty, keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'ওয়ারেন্টি, মাস (ঐচ্ছিক)', isDense: true)),
+              decoration: InputDecoration(labelText: l.stockSerialWarrantyOptional, isDense: true)),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
-        FilledButton(key: const ValueKey('serial-send'), onPressed: _busy ? null : _send, child: Text(widget.receive ? 'ঢোকান' : 'বের করুন')),
+        FilledButton(key: const ValueKey('serial-send'), onPressed: _busy ? null : _send, child: Text(widget.receive ? l.stockSerialReceiveButton : l.stockSerialIssueButton)),
       ]),
     );
   }

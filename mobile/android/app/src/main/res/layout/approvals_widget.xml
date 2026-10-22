@@ -28,6 +28,7 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
+            android:id="@+id/label_approvals_title"
             android:text="@string/approvals_title"
             android:textColor="#BFE0E5"
             android:textSize="11sp"
