@@ -499,6 +499,10 @@ return [
         'area_switch' => 'Change area',
         'launcher' => 'Pick an app',
         'launcher_search' => 'Search apps…',
+        'all_modules' => 'All modules',
+        'all_modules_search' => 'Find a module — Bangla or English…',
+        'all_modules_none' => 'No module by that name',
+        'waiting_signature' => ':count waiting for signature',
         'classic' => 'Classic',
         'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',
@@ -923,6 +927,10 @@ return [
         'details' => 'Details',
         'close' => 'Close',
         'more_in_bell' => ':count more notices in the bell',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'Announcements',
+        'ticker_pause' => 'Pause announcements',
+        'ticker_play' => 'Play announcements',
         'awaiting_mine' => 'Waiting for your decision',
         'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Signed, not posted',
@@ -1145,6 +1153,8 @@ return [
         'main_navigation' => 'Main navigation',
         // The path row — "Home / Module / Screen"
         'breadcrumb' => 'Where you are',
+        'menu' => 'Menu',
+        'home' => 'Home',
     ],
 
     'company' => [

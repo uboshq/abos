@@ -38,16 +38,25 @@
      * গোনা নয়: একই উৎস ([[CustomerMetrics::dues()]], হোমের ছাঁকনিসহ), একই চাবি (customer.report), চাবি না থাকলে ঘরটাই নেই।
      * ⛔ একই সংখ্যা দুইবার নয় — বাক্সে উঠলে মূল সূচকের সারি থেকে বাদ। টাকার বাক্স না থাকলে আগের মতো সূচকের সারিতেই।
      */
+    /*
+     * ⭐ "মজুদের মূল্য" "বাজারে বকেয়া"-র পাশে, টাকার বাক্সে (মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬: মালিক আর হিসাবরক্ষক এক নজরে
+     * চলতি পুঁজি দেখবেন — IAS 1-এর চলতি সম্পদ)। ⓘ বকেয়ার হুবহু পথ: মূল সূচকের সেই ঘরটাই সরে আসে ([[InventoryWidgets]] →
+     * [[StockFacts::value()]], মজুদের খাত ১১২০-এর জের, কেনা দরে, হেডারে বাছা শাখা মেনে), একই চাবি (inventory.cost.view) —
+     * চাবি না থাকলে ঘরটাই নেই, বিক্রয়কর্মীর হোমেও নেই। ⛔ বাক্সে উঠলে সূচকের সারি থেকে বাদ — একই সংখ্যা দুই জায়গায় নয়।
+     */
     $owed = null;
+    $stockValue = null;
     if ($position) {
         foreach ($kpis as $k => $candidate) {
             if ($candidate->label === __('customer::dashboard.kpi_owed')) {
                 $owed = $candidate;
                 unset($kpis[$k]);
-                $kpis = array_values($kpis);
-                break;
+            } elseif ($candidate->label === __('inventory::overview.stock_value')) {
+                $stockValue = $candidate;
+                unset($kpis[$k]);
             }
         }
+        $kpis = array_values($kpis);
     }
 
     // ⛔ পাতায় যা আগেই আছে তার নাম — ব্যতিক্রম কেন্দ্রে আবার নয়
@@ -57,6 +66,9 @@
     }
     if ($owed) {
         $shown[] = $owed->label;
+    }
+    if ($stockValue) {
+        $shown[] = $stockValue->label;
     }
 
     $todo = collect($groups['todo'] ?? [])->reject(fn ($w) => in_array($w->label, $shown, true));
@@ -213,11 +225,15 @@
         </div>
 
         @if ($position)
-            <a href="{{ $position->href }}" data-money-position
-               class="block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-ink-inverse) shadow-lg
+            <div data-money-position
+               class="relative block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-on-brand-ink) shadow-lg
                       transition-shadow hover:shadow-xl"
-               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900))"
-               @if ($position->definition) title="{{ $position->definition }}" @endif>
+               style="background: linear-gradient(135deg, var(--color-on-brand-from), var(--color-on-brand-to))">
+                {{-- ⓘ বাক্সের দরজা পুরো বাক্স জুড়ে (absolute inset-0), বাক্স নিজে লিংক নয় — ⛔ লিংকের ভেতরে লিংক HTML-এ চলে না
+                     (ব্রাউজার বাইরেরটা ভেঙে দেয়), আর "মজুদের মূল্য" ঘরের নিজের দরজা লাগে: মজুদের পাতা (২১ অক্টোবর ২০২৬)।
+                     বাকি ঘরে চাপ দিলে আগের মতোই বাক্সের দরজা; মজুদের ঘর তার উপরে (z-10)। --}}
+                <a href="{{ $position->href }}" data-money-door class="absolute inset-0 rounded-(--radius-card)"
+                   aria-label="{{ $position->label }}" @if ($position->definition) title="{{ $position->definition }}" @endif></a>
                 <p class="flex items-center gap-1.5 text-sm text-white/70">
                     @if ($position->icon)
                         <x-ui.icon :name="$position->icon" :size="15" />
@@ -242,12 +258,25 @@
                         // ⓘ ঘরের পুরো কথা সাথে — অগ্রিমের ইঙ্গিতও ("… অগ্রিম"), সূচকের সারিতে যেমন ছিল; সরে আসায় হারায় না
                         $heroTiles[] = ['label' => $owed->label, 'value' => $owed->value, 'sign' => '', 'tone' => 'plain', 'hint' => $owed->hint, 'mark' => 'owed'];
                     }
+                    if ($stockValue) {
+                        // ⭐ "খরচ-দামে · খাতা অনুযায়ী" — সূচকের ঘরের নিজের ইঙ্গিত; চাপলে মজুদের পাতা (ঘরের নিজের দরজা)
+                        $heroTiles[] = ['label' => $stockValue->label, 'value' => $stockValue->value, 'sign' => '', 'tone' => 'plain', 'hint' => $stockValue->hint,
+                            'mark' => 'stock', 'href' => $stockValue->href];
+                    }
                 @endphp
                 @if ($heroTiles !== [])
-                    <div data-money-today class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div data-money-today @class([
+                        'mt-2 grid grid-cols-1 gap-2',
+                        'sm:grid-cols-3' => count($heroTiles) <= 3,
+                        'sm:grid-cols-2 lg:grid-cols-4' => count($heroTiles) > 3,
+                    ])>
                         @foreach ($heroTiles as $heroTile)
-                            <div data-money-tile="{{ $heroTile['tone'] }}" @if (($heroTile['mark'] ?? null) === 'owed') data-home-owed @endif
-                                 class="min-w-0 rounded-(--radius-field) px-2.5 py-1.5" style="background: var(--color-on-brand-surface)">
+                            @php $tileTag = filled($heroTile['href'] ?? null) ? 'a' : 'div'; @endphp
+                            <{{ $tileTag }} data-money-tile="{{ $heroTile['tone'] }}" @if (($heroTile['mark'] ?? null) === 'owed') data-home-owed @endif
+                                 @if (($heroTile['mark'] ?? null) === 'stock') data-home-stock @endif
+                                 @if ($tileTag === 'a') href="{{ $heroTile['href'] }}" @endif
+                                 @class(['min-w-0 rounded-(--radius-field) px-2.5 py-1.5', 'relative z-10 block' => $tileTag === 'a'])
+                                 style="background: var(--color-on-brand-surface)">
                                 <p class="text-xs text-white/70">{{ $heroTile['label'] }}</p>
                                 {{-- ⓘ রং টোকেন থেকে (tokens.css: --color-on-brand-in/out), হাতে লেখা নয় — নকশার নিয়ম --}}
                                 <p data-money-tile-value class="tabular text-base font-semibold"
@@ -255,11 +284,11 @@
                                 @if (filled($heroTile['hint'] ?? null))
                                     <p data-money-tile-hint class="text-xs text-white/70">{{ $heroTile['hint'] }}</p>
                                 @endif
-                            </div>
+                            </{{ $tileTag }}>
                         @endforeach
                     </div>
                 @endif
-            </a>
+            </div>
         @endif
     </section>
     </x-slot:header>

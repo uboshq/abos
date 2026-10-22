@@ -342,6 +342,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(NormalizeUnicodeInput::class);
 
         /*
+         * ⭐ POST-এর মাপ — ini-র বদলে [[UploadLimit::postMax()]] পড়ে (fe, ২১ অক্টোবর ২০২৬): একই সংখ্যা যা ফর্মের পাশে লেখা,
+         * আর পরীক্ষা `abos.uploads.post_max_size` দিয়ে লাইভের ৮ MB-র মতো সীমা বসাতে পারে। ⓘ কাজ একই — বড় হলে PostTooLargeException,
+         * সেশন আর CSRF-এর আগেই; নিচে `withExceptions` তাকে ফর্মে ফেরায়।
+         */
+        $middleware->replace(\Illuminate\Http\Middleware\ValidatePostSize::class, \App\Http\Middleware\ValidatePostSizeFromLimit::class);
+
+        /*
          * ⛔ নিরাপত্তার হেডার **প্রতিটা** উত্তরে — ২৭ সেপ্টেম্বর ২০২৬, নিরীক্ষা §৯।
          *
          * ⓘ আগে এটা `web` গোষ্ঠীর শেষে ছিল। ⚠️ কিন্তু যে ঠিকানা কোনো রুটের সাথে
@@ -398,6 +405,32 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $exceptions->report(function (Throwable $e): void {
             app(ErrorJournal::class)->record($e);
+        });
+
+        /*
+         * ⭐ বড় ফাইলের POST — ৪১৯ নয়, নীরব ফেরাও নয় (fe, ২১ অক্টোবর ২০২৬)।
+         *
+         * ⛔ লাইভে post_max_size ৮ MB: তার বেশি পাঠালে PHP গোটা দেহ ফেলে দেয়, `_token`-সহ — CSRF তখন ৪১৯ দিত, আর মানুষ জানতেন
+         * না কী হলো। ⓘ এই ভুলটা সেশন আর CSRF-এর আগেই ওঠে ([[ValidatePostSizeFromLimit]]), তাই সেশনে বার্তা রাখা যায় না —
+         * ফর্মে ফেরানো হয় ঠিকানায় `?file_too_big=1` বসিয়ে, আর ফর্ম বাংলা বার্তাটা দেখায়।
+         * ⓘ কেবল কোম্পানির ফর্ম (তৈরি আর সম্পাদনা), যেখানে লোগো তোলা হয়; বাকি জায়গায় আগের মতো ৪১৩-এর পাতা।
+         */
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, Request $request) {
+            $path = trim($request->path(), '/');
+
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            if ($path === 'system/companies') {
+                return redirect()->to(url('system/companies/create').'?file_too_big=1');
+            }
+
+            if (preg_match('#^system/companies/([A-Za-z0-9-]+)$#', $path, $company) === 1) {
+                return redirect()->to(url('system/companies/'.$company[1].'/edit').'?file_too_big=1');
+            }
+
+            return null;
         });
 
         $exceptions->shouldRenderJsonWhen(

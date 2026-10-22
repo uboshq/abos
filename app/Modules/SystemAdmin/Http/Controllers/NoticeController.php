@@ -237,7 +237,7 @@ class NoticeController extends Controller
     {
         return view('system_admin::notice.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'notice' => new Notice(['is_active' => true, 'in_ticker' => false]),
+            'notice' => new Notice(['is_active' => true, 'is_urgent' => false]),
             'roles' => $this->roles(),
             'chosen' => [],
         ]);
@@ -326,7 +326,7 @@ class NoticeController extends Controller
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'body' => ['nullable', 'string', 'max:4000'],
             'starts_on' => ['nullable', 'date'],
@@ -338,7 +338,7 @@ class NoticeController extends Controller
             'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
 
             'is_active' => ['nullable', 'boolean'],
-            'in_ticker' => ['nullable', 'boolean'],
+            'is_urgent' => ['nullable', 'boolean'],
             'roles' => ['array'],
             'roles.*' => ['string', 'max:125'],
 
@@ -357,6 +357,16 @@ class NoticeController extends Controller
             'ack_deadline' => ['nullable', 'date'],
             'change_note' => ['nullable', 'string', 'max:300'],
         ]);
+
+        /*
+         * ⭐ জরুরি টিক — সবসময় একটা মান, না থাকলে মিথ্যা (মালিক, ২১ অক্টোবর ২০২৬)।
+         *
+         * ⛔ ফাঁকা টিকবক্স ফর্মে কিছুই পাঠায় না। ⚠️ মান না বসালে টিক তুলে দিয়ে সংরক্ষণ করলেও নোটিশটা উপরের ফিতায়
+         * থেকে যেত — লেখক ভাবতেন নামানো হয়েছে, আর নিরীক্ষায় কোনো বদলই বসত না।
+         */
+        $data['is_urgent'] = $request->boolean('is_urgent');
+
+        return $data;
     }
 
     /**

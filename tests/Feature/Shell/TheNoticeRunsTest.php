@@ -1,0 +1,276 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Shell;
+
+use App\Core\Services\NoticeLifecycle;
+use App\Core\Services\StatusNotices;
+use App\Core\Support\NoticePriority;
+use App\Core\Support\CompanyContext;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\User;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Tests\TestCase;
+
+/**
+ * ফুটারের নোটিশটা চলে।
+ *
+ * ── কেন এই পরীক্ষাটা লেখা হলো ───────────────────────────────────────
+ * মালিকের নির্দেশ ছিল স্পষ্ট: *"footer e notice cholbe dms er moto"*।
+ * নোটিশটা বানানো হয়েছিল, কিন্তু **স্থির** — আর কারণটা কোডের মন্তব্যে
+ * লিখে সিদ্ধান্তটা নিজেই নেওয়া হয়েছিল। সেটা ভুল ছিল দুইভাবে:
+ * সিদ্ধান্তটা মালিকের, আর স্থির বারে দ্বিতীয় নোটিশটা কেটে গিয়ে কেউ
+ * কোনোদিন দেখত না।
+ *
+ * তাই এই পরীক্ষাটা "নোটিশ আছে কি না" দেখে না — দেখে **চলে কি না**।
+ *
+ * ── ⭐ ফিরে এল, ২১ অক্টোবর ২০২৬ ──────────────────────────────────────
+ * ২০ অক্টোবর (ওয়েবের মান ধাপ ২, 14e5b506c) চলন্ত বার উঠে গিয়েছিল আর এই ফাইলটা মোছা হয়েছিল। মালিক, ২১ অক্টোবর ২০২৬
+ * (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"* — তাই ccc065138-এর দাবিগুলো ফিরল, কেবল মানুষের লেখা
+ * ঘোষণার জন্য (যন্ত্রের সতর্কতা উপরের ফিতায়: [[AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest]])।
+ * ⓘ যা বদলাল: চলার নিয়ম (`@keyframes abos-ticker`) এখন app.css-এ, পাতার `<style>`-এ নয়; তাই সেটা উৎস-ফাইলে খোঁজা হয়,
+ * আর পাতায় খোঁজা হয় চলন্ত বারটা (`data-ticker`) — যন্ত্রের ঘণ্টা বা ফিতা যেন গোনায় না ঢোকে।
+ */
+class TheNoticeRunsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $owner;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+    }
+
+    /**
+     * প্রতিষ্ঠানের নিজের একটা নোটিশ — যোগাযোগ কেন্দ্রে লেখা, সই করা, প্রকাশ করা, চলন্ত বারে।
+     *
+     * ⓘ ১০ অক্টোবর ২০২৬: আগে এখানে `system.notice` সেটিং বসানো হত। a6072a34 (২৪ সেপ্টেম্বর) থেকে ঐ সেটিং ঘোষিত নয় আর
+     * পড়ার পথটাও সরানো হয়েছে ([[StatusNotices]]) — বারে মানুষের লেখা খবর কেবল প্রকাশিত নোটিশ থেকে আসে।
+     */
+    private function notice(string $text): void
+    {
+        $this->actingAs($this->owner);
+        $life = app(NoticeLifecycle::class);
+        // ⓘ জরুরি টিক ছাড়া প্রতিটা প্রকাশিত ঘোষণা চলন্ত বারে, অগ্রাধিকারের ক্রমে ([[NoticeBoard::forTicker()]], ২১ অক্টোবর ২০২৬)
+        $notice = $life->draft(['title' => $text, 'body' => $text, 'priority' => NoticePriority::IMPORTANT->value]);
+        $life->publish($life->approve($life->submit($notice)));
+
+        // নোটিশগুলো ক্যাশ হয়, তাই পরের অনুরোধে নতুনটাই যেন আসে
+        Cache::flush();
+    }
+
+    private function page(): string
+    {
+        return $this->actingAs($this->owner)->get(route('dashboard'))->assertOk()->getContent();
+    }
+
+    /** ⓘ কেবল চলন্ত বারটা — ঘণ্টা আর উপরের ফিতা বাদ */
+    private function ticker(string $html): string
+    {
+        $start = strpos($html, '<div data-ticker');
+        $this->assertNotFalse($start, 'চলন্ত বারটাই পাতায় নেই।');
+
+        return substr($html, $start, strpos($html, '</footer>', $start) - $start);
+    }
+
+    private function css(): string
+    {
+        return (string) file_get_contents(resource_path('css/app.css'));
+    }
+
+    // ── চলাটা ───────────────────────────────────────────────────────
+
+    /**
+     * লেখাটা সত্যিই চলে।
+     *
+     * এটাই মূল দাবি, আর আগের রূপে এটা মিথ্যা ছিল।
+     */
+    public function test_the_notice_actually_moves(): void
+    {
+        $this->notice('রবিবার থেকে দাম বাড়বে');
+
+        $html = $this->page();
+
+        $this->assertStringContainsString('motion-safe:animate-[abos-ticker', $this->ticker($html),
+            'নোটিশটা স্থির — মালিক বলেছিলেন এটা চলবে।');
+
+        $this->assertStringContainsString('@keyframes abos-ticker', $this->css(),
+            'চলার নিয়মটাই নেই, তাই কিছু নড়বে না।');
+    }
+
+    /**
+     * লুপটা নির্বিঘ্ন — দুইটা কপি, এক কপির সমান সরে।
+     *
+     * এক কপিতে লেখাটা বাঁ দিকে বেরিয়ে গিয়ে ডান দিক থেকে ফেরার আগে
+     * একটা ফাঁকা বার দেখা যেত, আর প্রতি চক্রে ওই ফাঁকটাই চোখে পড়ত।
+     */
+    public function test_the_loop_has_no_gap(): void
+    {
+        $this->notice('বগুড়ার রুট আজ বন্ধ');
+
+        /*
+         * কেবল চলন্ত বারের ভেতরটা গোনা।
+         *
+         * পুরো পাতায় গুনলে সংখ্যাটা ৩ আসে, কারণ নোটিশের ঘণ্টাও একই
+         * তালিকা দেখায় (নতুন কোনো অনুসন্ধান ছাড়াই) — আর সেটা ঠিকই
+         * আছে। প্রথমে পুরো পাতায় গুনে ফেলেছিলাম, আর পরীক্ষাটা ভুল
+         * কারণে লাল হয়েছিল।
+         */
+        $ticker = $this->ticker($this->page());
+
+        $this->assertSame(2, substr_count($ticker, 'বগুড়ার রুট আজ বন্ধ'),
+            'একটাই কপি — লুপে ফাঁক থাকবে।');
+
+        $this->assertStringContainsString('translateX(-50%)', $this->css());
+    }
+
+    /**
+     * একই বার্তা একসাথে দুইবার চোখে পড়ে না।
+     *
+     * ---- HP-র রিপোর্ট, ২৫ আগস্ট ২০২৬ ----
+     * *"ফুটারে ব্যাকআপ সতর্কবার্তা দুইবার ওভারল্যাপ করে দেখাচ্ছে"* --
+     * স্ক্রিনশট সহ। কথাটা সত্যি ছিল, যদিও কারণটা রেন্ডারিং-এর ভুল নয়।
+     *
+     * লুপ নির্বিঘ্ন করতে বারটা ইচ্ছাকৃতভাবে **দুইটা কপি** আঁকে
+     * (উপরের পরীক্ষাটা সেটাই পাহারা দেয়)। কিন্তু নোটিশ যখন একটা বা
+     * দুইটা, কপি দুইটা এত ছোট হত যে দুইটাই একসাথে পর্দায় থাকত --
+     * অর্থাৎ পাঠক একই বাক্য পাশাপাশি দুইবার দেখতেন।
+     *
+     * পাঠকের কাছে ওটা লুপের কৌশল নয়, একটা ভুল -- আর ভুল দেখানো বার
+     * থেকে মানুষ চোখ সরিয়ে নেয়, তারপর আসল সতর্কবার্তাটাও আর পড়ে না।
+     *
+     * ---- কেন `min-w-full` ----
+     * প্রতিটা কপি অন্তত পর্দার সমান চওড়া হলে দ্বিতীয়টা শুরুতেই বাইরে
+     * থাকে, আর প্রথমটা বেরিয়ে যেতে যেতে ভেতরে আসে -- যেভাবে চলন্ত
+     * লেখা পড়ার কথা।
+     */
+    public function test_one_notice_is_never_shown_twice_side_by_side(): void
+    {
+        $this->notice('বগুড়ার রুট আজ বন্ধ');
+
+        $ticker = $this->ticker($this->page());
+
+        /*
+         * ⛔ ২১ অক্টোবর ২০২৬: `min-w-full` একা যথেষ্ট ছিল না — কপির ১০০% মাপা হয় চলন্ত সারির চওড়া ধরে, আর সারিটা লেখার
+         * মাপে; ছবিতে একই ঘোষণা পাশাপাশি দুইবার দেখা গেল। ⭐ এখন সারি অন্তত বারের দ্বিগুণ, আর প্রতিটা কপি সারির অর্ধেক।
+         */
+        $this->assertStringContainsString('inline-flex min-w-[200%]', $ticker,
+            'চলন্ত সারিটা বারের দ্বিগুণ নয় — কপির মাপ লেখার মাপে নামবে।');
+        $this->assertSame(2, substr_count($ticker, 'min-w-1/2 shrink-0'),
+            'কপিগুলো পর্দার সমান চওড়া নয় — একটা নোটিশ থাকলে দুইটা কপিই '
+            .'একসাথে চোখে পড়বে, আর পাঠক ভাববেন বার্তাটা দুইবার লেখা হয়েছে।');
+    }
+
+    /**
+     * মাউস রাখলে থামে।
+     *
+     * যে সংখ্যা কার্সারের নিচ থেকে সরে যাচ্ছে, সেটা কেউ ক্লিক করতে
+     * পারে না — আর নোটিশগুলো ক্লিকযোগ্য বলেই বানানো (নিয়ম ১)।
+     */
+    public function test_it_stops_under_the_pointer(): void
+    {
+        $this->notice('রবিবার থেকে দাম বাড়বে');
+
+        $ticker = $this->ticker($this->page());
+
+        $this->assertStringContainsString('group-hover:[animation-play-state:paused]', $ticker,
+            'মাউস রাখলে থামে না — চলন্ত নোটিশে ক্লিক করা যাবে না।');
+
+        // ⭐ কী-বোর্ডেও (২১ অক্টোবর ২০২৬, WCAG 2.2.2) — Tab-এ লিংকে এলে লেখা থামে, নইলে ফোকাসের ঘরটা সরে যেত
+        $this->assertStringContainsString('group-focus-within:[animation-play-state:paused]', $ticker,
+            'ফোকাস এলে থামে না — কী-বোর্ডে চলন্ত লিংক ধরা যায় না।');
+    }
+
+    /**
+     * যিনি চলন্ত জিনিস বন্ধ রেখেছেন, তাঁর পর্দায় নড়ে না।
+     *
+     * স্ক্রল করা লেখা ঠিক সেই জিনিসগুলোর একটা যার জন্য
+     * `prefers-reduced-motion` সেটিংটা আছে। তখনও তালিকাটা থাকে, শুধু
+     * স্থির — তথ্যটা হারায় না।
+     */
+    public function test_it_respects_reduced_motion(): void
+    {
+        $this->notice('রবিবার থেকে দাম বাড়বে');
+
+        $ticker = $this->ticker($this->page());
+
+        $this->assertStringContainsString('motion-safe:animate-', $ticker,
+            'চলন্ত জিনিস বন্ধ রাখা পাঠকের পর্দাতেও নড়বে।');
+
+        // ⛔ শর্ত ছাড়া কোনো চলা নয় — একটাও `animate-` থাকলে সেটা `motion-safe:`-এর বাইরে নড়ত
+        $this->assertSame(substr_count($ticker, 'animate-['), substr_count($ticker, 'motion-safe:animate-['),
+            'চলাটা motion-safe-এর বাইরে বসেছে।');
+    }
+
+    // ── কী দেখায়, আর কখন চুপ থাকে ───────────────────────────────────
+
+    /** প্রতিষ্ঠানের নিজের নোটিশটা সত্যিই পর্দায় আসে। */
+    public function test_the_company_notice_reaches_the_bar(): void
+    {
+        $this->notice('বাকি দেওয়া আজ বন্ধ');
+
+        $this->assertStringContainsString('বাকি দেওয়া আজ বন্ধ', $this->ticker($this->page()));
+    }
+
+    /**
+     * কিছু না থাকলে বারটা চুপ।
+     *
+     * "সব ঠিক আছে" ঘুরতে থাকলে দুই সপ্তাহে মানুষ তাকানো বন্ধ করে দেয়,
+     * আর যেদিন সত্যিই কিছু ঘটে সেদিনও দেখে না।
+     */
+    public function test_it_says_nothing_when_there_is_nothing_to_say(): void
+    {
+        /*
+         * তালিকাটা খালি করে দেখা — সেটিং মুছে নয়।
+         *
+         * `system.notice` মুছলেও ডেমো কোম্পানিতে সত্যিকারের নোটিশ থেকে
+         * যায় (অপেক্ষমাণ অনুমোদন, খসড়া) — আর সেগুলো থাকাই ঠিক। দাবিটা
+         * সেটিং নিয়ে নয়, পর্দাটা নিয়ে: **কিছু না থাকলে বার চুপ**।
+         * তাই ক্যাশের চাবিটাই আগে থেকে খালি বসিয়ে দেওয়া হয় — আসল
+         * কোডপথ ধরেই, কারণ `all()` ওই চাবিটাই পড়ে।
+         */
+        Cache::flush();
+
+        // ⓘ চাবিতে হেডারের শাখাও (১৪ অক্টোবর ২০২৬, [[StatusNotices::cacheKey()]]) — কোম্পানির প্রতিটা শাখা আর "শাখা নেই", সবগুলোয় খালি
+        $company = (int) $this->owner->current_company_id;
+        foreach ([null, ...Branch::query()->withoutGlobalScopes()->where('company_id', $company)->pluck('id')->all()] as $branch) {
+            CompanyContext::set($company, $branch === null ? null : (int) $branch);
+            Cache::put(StatusNotices::cacheKey($company, (int) $this->owner->id), [], 60);
+        }
+
+        $html = $this->page();
+
+        // ⓘ ২১ অক্টোবর ২০২৬: কিছু না থাকলে চলন্ত বারটাই আঁকা হয় না — ঘোরার মতো সারি তো নয়ই
+        $this->assertStringNotContainsString('data-ticker', $html,
+            'কোনো নোটিশ নেই, তবু বারে সারি ঘুরছে।');
+    }
+
+    /**
+     * পুনরাবৃত্ত কপিটা পর্দা-পাঠকের কাছে লুকানো।
+     *
+     * দুইটা কপি কেবল চোখের জন্য। না লুকালে পর্দা-পাঠক প্রতিটা নোটিশ
+     * দুইবার পড়ত, আর কী-বোর্ডে Tab চাপলে একই লিংকে দুইবার থামত।
+     */
+    public function test_the_second_copy_is_hidden_from_screen_readers(): void
+    {
+        $this->notice('রবিবার থেকে দাম বাড়বে');
+
+        $ticker = $this->ticker($this->page());
+
+        $this->assertMatchesRegularExpression('/<span class="inline-flex min-w-1\/2[^"]*"\s+aria-hidden="true"\s*>/', $ticker,
+            'দ্বিতীয় কপিটা পর্দা-পাঠকের কাছে খোলা — প্রতিটা নোটিশ দুইবার পড়বে।');
+        $this->assertStringContainsString('tabindex="-1"', $ticker,
+            'দ্বিতীয় কপির লিংকগুলো Tab-এ ধরা পড়বে।');
+    }
+}

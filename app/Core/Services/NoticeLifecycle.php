@@ -92,7 +92,8 @@ final class NoticeLifecycle
                 'starts_on' => $data['starts_on'] ?? null,
                 'ends_on' => $data['ends_on'] ?? null,
                 'is_active' => true,
-                'in_ticker' => $priority->goesToTheBar(),
+                // ⭐ লেখকের "জরুরি" টিক — উপরের স্থির ফিতায় (মালিক, ২১ অক্টোবর ২০২৬; [[NoticeBoard::forStrip()]])
+                'is_urgent' => (bool) ($data['is_urgent'] ?? false),
                 'read_required' => (bool) ($data['read_required'] ?? false),
 
                 /*
@@ -299,26 +300,25 @@ final class NoticeLifecycle
             'recalled_at' => now(),
             'recalled_by' => \App\Core\Support\Actor::userId(),
             'recall_reason' => $why,
-            'in_ticker' => false,
         ]);
     }
 
     /** মেয়াদ ফুরাল — সময়ের কাজ এটা ডাকে। */
     public function expire(Notice $notice): Notice
     {
-        return $this->moveTo($notice, NoticeStatus::EXPIRED, ['in_ticker' => false]);
+        return $this->moveTo($notice, NoticeStatus::EXPIRED);
     }
 
     /** সাময়িক থামানো — পরে আবার চালু হতে পারে। */
     public function suspend(Notice $notice): Notice
     {
-        return $this->moveTo($notice, NoticeStatus::SUSPENDED, ['in_ticker' => false]);
+        return $this->moveTo($notice, NoticeStatus::SUSPENDED);
     }
 
     /** তুলে রাখা — খোঁজা যায়, দেখা যায় না। */
     public function archive(Notice $notice): Notice
     {
-        return $this->moveTo($notice, NoticeStatus::ARCHIVED, ['is_active' => false, 'in_ticker' => false]);
+        return $this->moveTo($notice, NoticeStatus::ARCHIVED, ['is_active' => false]);
     }
 
     /** লেখকের নিজের থামানো, প্রকাশের আগে। */
@@ -424,6 +424,8 @@ final class NoticeLifecycle
             $notice->fill(array_intersect_key($data, array_flip([
                 'title', 'summary', 'body', 'priority',
                 'starts_on', 'ends_on', 'ack_required', 'ack_deadline',
+                // ⓘ জরুরি টিক প্রকাশিত নোটিশেও বদলায় — জায়গা বদলায়, লেখা নয়; বদলটা নিরীক্ষায় আগে/পরে সহ বসে ([[IsAudited]])
+                'is_urgent',
             ])))->save();
 
             return $notice->fresh();

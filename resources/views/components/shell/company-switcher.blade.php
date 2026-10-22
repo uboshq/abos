@@ -1,4 +1,15 @@
-@props(['company', 'branch' => null])
+@props([
+    'company',
+    'branch' => null,
+    /**
+     * ⭐ বারে, কোম্পানির নিজের লোগোর পাশে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]-এর `data-shell-logo`):
+     *  · বোতামে লোগো নেই — লোগোটা বাঁয়ের চিহ্নেই, একই লোগো পাশাপাশি দুইবার নয়;
+     *  · ফোনে (sm-এর নিচে) বোতামটাই নেই — "কেবল লোগো বা ব্যাজ"; নাম আর ▾ জায়গা না পেয়ে খোঁজার আইকনের উপর চেপে বসত
+     *    (ছবিতে মাপা)। ⓘ তালিকাটা তবু খোলে: ছবির মেনুর "কোম্পানি" সারি `open-company-switcher` পাঠায়, তালিকাটা এই বাক্সেই।
+     * ⓘ যে রূপে বারের চিহ্ন নেই (Linear-এর পা), সেখানে আগের মতোই লোগোসহ বোতাম।
+     */
+    'besideMark' => false,
+])
 
 {{--
     কোম্পানি ও শাখা সুইচার — সেকশন ১৫.১৫।
@@ -45,7 +56,8 @@
     $branchLabel = $shell->branchLabel($user, $branch);
 @endphp
 
-<div x-data="{ open: false }" class="relative" data-company-branch
+{{-- ⓘ min-w-0 আর বোতামের max-w-full — ৩৭৫px-এ নামটা কেটে "…" হয়, পাশের "＋ তৈরি" বোতামের নিচে গড়িয়ে পড়ে না (লাইভ-পরখ, ২১ অক্টোবর ২০২৬) --}}
+<div x-data="{ open: false }" class="relative min-w-0" data-company-branch
      @open-company-switcher.window="open = true">
     <button type="button"
             @click="open = !open"
@@ -54,7 +66,8 @@
             aria-haspopup="menu"
             aria-label="{{ __('core.company.switch') }}"
             @class([
-                'flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 transition-colors',
+                'flex min-h-(--spacing-touch) min-w-0 max-w-full items-center gap-2 rounded-(--radius-field) px-2 transition-colors',
+                'max-sm:hidden' => $besideMark,
                 'hover:bg-(--color-surface-hover)' => $canSwitch,
                 'cursor-default' => ! $canSwitch,
             ])
@@ -67,8 +80,8 @@
              ঘরটা ৪০px — টপবার ৬৪px, পাশের নাম+শাখা ব্লকও প্রায় ততটাই।
              max-w ১২৮px, ৬৪px নয়: চওড়া লকআপ (৬:১ বা তার বেশি) সরু ঘরে
              উচ্চতা পায় না, তখন লেখাটা দাগ হয়ে যায়। --}}
-        @if ($logo = $company->logoUrl())
-            <img src="{{ $logo }}" alt=""
+        @if (! $besideMark && ($logoUrl = $company->logoUrl()))
+            <img src="{{ $logoUrl }}" alt=""
                  class="h-10 w-auto max-w-32 shrink-0 object-contain" aria-hidden="true">
         @endif
 
@@ -109,8 +122,13 @@
              x-cloak
              @click.outside="open = false"
              role="menu"
-             class="pops-onto-page absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border
-                    border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)">
+             {{-- ⓘ ফোনে বারের পাশে বোতামটা নেই (`besideMark`), তাই তালিকা বারের ঠিক নিচে, পর্দার দুই কিনারা ধরে — নইলে শূন্য-উঁচু
+                  বাক্স থেকে ঝুলে বারের মাঝখানে বসত --}}
+             @class([
+                 'pops-onto-page absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border',
+                 'border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)',
+                 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(var(--spacing-header)_+_4px)] max-sm:mt-0 max-sm:w-auto' => $besideMark,
+             ])>
 
             {{-- ── কোম্পানি ── --}}
             @if ($companies->count() > 1)
