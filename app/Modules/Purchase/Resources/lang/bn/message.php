@@ -197,4 +197,5 @@ return [
     // ⭐ উৎসে কর্তন — হিসাব #১, ২০ অক্টোবর ২০২৬ ([[WithheldTax]])
     'withheld_ait' => ':no — উৎসে কর্তিত আয়কর (AIT), সরকারের পাওনা',
     'withheld_vds' => ':no — উৎসে কর্তিত মূসক (VDS), সরকারের পাওনা',
+    'withholding_undone_on_bounce' => ':cheque নম্বর চেক ফেরত — :no-এর কাটা কর/ভ্যাটও উল্টো',
 ];

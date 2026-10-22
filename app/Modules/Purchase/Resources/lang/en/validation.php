@@ -131,4 +131,5 @@ return [
 
     'withheld_over_total' => 'Tax withheld at source (:withheld) cannot exceed the bill total (:total).',
     'withheld_twice' => 'Tax was already withheld on bill :no — it cannot be withheld again on the payment.',
+    'withheld_takes_all' => 'The tax and VAT withheld on :no equal or exceed the whole amount — nothing is left to pay by cheque. Check the amount or the rates.',
 ];
