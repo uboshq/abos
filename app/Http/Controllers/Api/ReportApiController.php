@@ -96,7 +96,7 @@ final class ReportApiController extends Controller
             $definition = $this->reports->get($key);
             $module = $modules[$key] ?? null;
 
-            if ($this->switchedOff($module) || ! $this->mayRun($user, $definition)) {
+            if ($this->switchedOff($module) || ! $this->mayRun($user, $definition) || $this->hidesStock($user, $key, $module?->code)) {
                 continue;
             }
 
@@ -310,7 +310,20 @@ final class ReportApiController extends Controller
 
         abort_unless($this->mayRun($user, $definition), 403);
 
+        abort_if($this->hidesStock($user, $key, ($this->moduleOfEachReport()[$key] ?? null)?->code), 403);
+
         return $definition;
+    }
+
+    /**
+     * ⛔ মজুদ দেখার চাবি (`inventory.stock.view`) যাঁর নেই, ফোনে মজুদের রিপোর্টও নয় — অ্যাপের ভিতরের ওয়েবের একই নিয়ম
+     * ([[WebInsideApp::STOCK_SCREENS]]: গোটা মজুদ মডিউল আর নামে "stock"; মালিক, ১ ও ১৩ অক্টোবর ২০২৬ "SR মজুদ দেখেন না")।
+     * ⓘ আগে মেনু এই সারিগুলো লুকাত, অথচ ফোনের রিপোর্ট-তালিকা আর দরজা কেবল রিপোর্টের নিজের চাবি দেখত — `inventory.report`
+     * আছে কিন্তু মজুদ-দেখা নেই এমন বিক্রয়কর্মী ফোনের রিপোর্ট-তালিকা থেকে মজুদের রিপোর্ট খুলতে পারতেন (a6, ১৯ অক্টোবর ২০২৬)।
+     */
+    private function hidesStock(User $user, string $key, ?string $module): bool
+    {
+        return ($module === 'inventory' || str_contains($key, 'stock')) && ! $user->can('inventory.stock.view');
     }
 
     /** @return list<Branch> এই মানুষের নাগালের সক্রিয় শাখা — `/me`-র একই তালিকা */
