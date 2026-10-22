@@ -381,6 +381,8 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->pay($data, [[$bill->id, '11500']], amount: '11500');
         $payment = $this->lastPayment()->fresh(['cheque']);
         $this->assertSame(DocumentStatus::CONFIRMED, $payment->status, 'প্রস্তুতিটাই ভুল — চেকের পরিশোধ পোস্ট হয়নি');
+        // ⛔ ফেরতের আগে কাটাটা খাতায় বসেছিল — নইলে "উল্টানো" দেখার কিছুই থাকে না (আর উল্টোনোর চেষ্টা ব্যতিক্রমে মরে, দাবিতে নয়)
+        $this->assertMoved($this->bothPapers($payment), StandardChart::TAX_DEDUCTED_AT_SOURCE, credit: '500', message: '⛔ #৫: চেকের পথে AIT ২১২১-এ বসেনি — ফেরতের আগেই');
 
         app(\App\Modules\Accounts\Services\ChequeService::class)->bounce($payment->cheque()->firstOrFail(), 'তহবিল নেই');
 

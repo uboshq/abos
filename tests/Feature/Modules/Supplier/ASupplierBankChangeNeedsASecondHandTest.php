@@ -117,8 +117,9 @@ final class ASupplierBankChangeNeedsASecondHandTest extends TestCase
         $mine = $this->pending();
 
         $this->actingAs($this->clerk)
-            ->post(route('supplier.bank.sign', [$this->supplier, $mine]))
-            ->assertSessionHasErrors('bank');
+            ->post(route('supplier.bank.sign', [$this->supplier, $mine]));
+        // ⓘ থামার কারণটাই দাবি — "চাবি নেই" দিয়ে থামলেও থামা, কিন্তু নিয়মটা (যিনি চাইলেন তিনি নন) তখন কেউ দেখছে না
+        $this->assertSame(__('supplier::bank.maker_cannot_sign'), $this->bankError(), '⛔ যিনি চাইলেন তাঁর নিজের সই "নিজের চাওয়ায় নয়" বলে থামল না।');
         $this->assertSame('pending', $mine->fresh()->status, '⛔ যিনি চাইলেন তিনিই সই দিলেন।');
         $this->assertNull(app(SupplierBank::class)->signedFor($this->supplier));
 
@@ -131,9 +132,10 @@ final class ASupplierBankChangeNeedsASecondHandTest extends TestCase
         $owners = $this->pending();
         $this->assertSame($this->owner->id, (int) $owners->requested_by);
 
+        $this->flushSession();
         $this->actingAs($this->owner)
-            ->post(route('supplier.bank.sign', [$this->supplier, $owners]))
-            ->assertSessionHasErrors('bank');
+            ->post(route('supplier.bank.sign', [$this->supplier, $owners]));
+        $this->assertSame(__('supplier::bank.maker_cannot_sign'), $this->bankError(), '⛔ মালিকের নিজের চাওয়ায় সই "নিজের চাওয়ায় নয়" বলে থামল না।');
         $this->assertSame('pending', $owners->fresh()->status, '⛔ মালিক নিজের চাওয়া বদলে নিজে সই দিলেন।');
 
         // ⓘ চাবিহীন মানুষও নন
@@ -248,8 +250,22 @@ final class ASupplierBankChangeNeedsASecondHandTest extends TestCase
     {
         $bank = app(SupplierBank::class);
         $detail = $bank->request($this->supplier, $this->form($number), $this->clerk);
+        // ⛔ নতুন চাওয়া দ্বিতীয় সইয়ের অপেক্ষায় জন্মায় — আগেই "সই-পাওয়া" হয়ে জন্মালে দ্বিতীয় হাতের নিয়মটাই নেই
+        $this->assertTrue($detail->fresh()->isPending(), '⛔ ব্যাংক তথ্যের নতুন চাওয়া অপেক্ষায় না থেকে সরাসরি চালু হয়ে জন্মাল।');
 
         return $bank->sign($detail, $this->signer);
+    }
+
+    /** ⓘ সেশনের `bank` ভুলের প্রথম লেখা — থলেটা পরীক্ষায় কখনো ViewErrorBag, কখনো JSON থেকে ফেরা array */
+    private function bankError(): string
+    {
+        $errors = session('errors');
+
+        if ($errors instanceof \Illuminate\Support\ViewErrorBag) {
+            return (string) $errors->first('bank');
+        }
+
+        return (string) ($errors['default']['messages']['bank'][0] ?? '');
     }
 
     private function pending(): SupplierBankDetail
