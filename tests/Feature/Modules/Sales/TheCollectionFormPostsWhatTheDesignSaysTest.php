@@ -752,7 +752,8 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
         $clerk = $this->person(['sales.collection.create', 'sales.collection.view', 'accounts.voucher.create']);
         $this->app['auth']->forgetGuards();
-        \Laravel\Sanctum\Sanctum::actingAs($clerk, [\App\Http\Controllers\Api\AuthController::APP]);
+        // ⓘ আসল ফোনের টোকেনের দুই চাবিই ([[AuthController]]: ACCESS = sync, APP) — শুধু APP দিলে সিঙ্কের দরজা `abilities:sync`-এ ৪০৩ দিত
+        \Laravel\Sanctum\Sanctum::actingAs($clerk, [\App\Http\Controllers\Api\AuthController::ACCESS, \App\Http\Controllers\Api\AuthController::APP]);
         $doors['ফোনের open-bills'] = $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->assertOk()->getContent();
         $doors['সিঙ্কের উত্তর'] = $this->postJson('/api/v1/sync/sales/push?deviceId=phone-cost', [[
             'changeId' => 'cost-1', 'entityType' => 'Collection', 'entityId' => null, 'operation' => 'CREATE', 'clientVersion' => 1,
@@ -794,7 +795,8 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             '⛔ দফা ১৮: চাবি ছাড়া খাতার প্রিভিউ খুলল');
 
         $this->app['auth']->forgetGuards();
-        \Laravel\Sanctum\Sanctum::actingAs($viewer, [\App\Http\Controllers\Api\AuthController::APP]);
+        // ⓘ আসল ফোনের টোকেন (দুই চাবি) — ৪০৩ যেন টোকেনের নয়, আদায়ের চাবির
+        \Laravel\Sanctum\Sanctum::actingAs($viewer, [\App\Http\Controllers\Api\AuthController::ACCESS, \App\Http\Controllers\Api\AuthController::APP]);
         $this->assertSame(403, $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->status(),
             '⛔ দফা ১৮: চাবি ছাড়া ফোনে খোলা বিল দেখা গেল');
         $this->assertSame(403, $this->postJson('/api/v1/sales/collections/preview', ['customerId' => (string) $this->dealer->public_id,

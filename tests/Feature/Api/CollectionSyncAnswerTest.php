@@ -162,7 +162,7 @@ final class CollectionSyncAnswerTest extends TestCase
             array_map(fn (string $k) => \Spatie\Permission\Models\Permission::findOrCreate($k, 'web'), ['sales.collection.create', 'accounts.voucher.create'])));
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         $this->app['auth']->forgetGuards();
-        Sanctum::actingAs($stranger->fresh(), [AuthController::APP]);
+        Sanctum::actingAs($stranger->fresh(), [AuthController::ACCESS, AuthController::APP]);
         $this->get($url, ['Accept' => 'application/json'])->assertForbidden();
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
@@ -291,9 +291,13 @@ final class CollectionSyncAnswerTest extends TestCase
             'subtotal' => $total, 'discount' => '0', 'tax' => '0', 'total' => $total, 'status' => DocumentStatus::CONFIRMED]);
     }
 
+    /**
+     * ⓘ আসল ফোনের টোকেন — লগইনে access টোকেন দুই চাবি পায় ([[AuthController]]: `ACCESS` = `sync` আর `APP`)। আগে শুধু `APP`
+     * দেওয়া হত, আর সিঙ্কের দরজা (`routes/api.php`-এর `abilities:sync`) ৪০৩ দিত — Mac-এ সাত দাবি লাল, কোডের দোষ নয়।
+     */
     private function phone(): void
     {
         $this->app['auth']->forgetGuards();
-        Sanctum::actingAs($this->clerk->fresh(), [AuthController::APP]);
+        Sanctum::actingAs($this->clerk->fresh(), [AuthController::ACCESS, AuthController::APP]);
     }
 }
