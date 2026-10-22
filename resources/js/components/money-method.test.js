@@ -72,29 +72,29 @@ async function choose (host, value) {
 
 describe('দফা #২ — খাতের ধরন দেখে পদ্ধতি', () => {
     it('নগদে নগদ, MFS-এ MFS, ব্যাংকে ট্রান্সফার — আর ব্যাংকের অন্য পথ (নগদ জমা, চেক) বাছা থাকলে সেটাই থাকে', () => {
-        expect(methodForKind('cash', 'transfer')).toBe('cash')
-        expect(methodForKind('mfs', 'cash')).toBe('mfs')
-        expect(methodForKind('bank', 'cash')).toBe('transfer')
-        expect(methodForKind('bank', 'deposit')).toBe('deposit')
-        expect(methodForKind('bank', 'cheque')).toBe('cheque')
-        expect(methodForKind('', 'mfs')).toBe('mfs')
+        expect(methodForKind('cash', 'transfer'), '⛔ খাতের ধরন 'cash' হলে পদ্ধতি 'cash' নয়').toBe('cash')
+        expect(methodForKind('mfs', 'cash'), '⛔ খাতের ধরন 'mfs' হলে পদ্ধতি 'mfs' নয়').toBe('mfs')
+        expect(methodForKind('bank', 'cash'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'transfer' নয়').toBe('transfer')
+        expect(methodForKind('bank', 'deposit'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'deposit' নয়').toBe('deposit')
+        expect(methodForKind('bank', 'cheque'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'cheque' নয়').toBe('cheque')
+        expect(methodForKind('', 'mfs'), '⛔ খাতের ধরন '' হলে পদ্ধতি 'mfs' নয়').toBe('mfs')
     })
 
     it('পর্দায়: ব্যাংক বাছলে চিপ ট্রান্সফারে, MFS বাছলে MFS-এ', async () => {
         const host = await mount(form())
 
         await choose(host, '12')
-        expect(picked(host)).toBe('transfer')
+        expect(picked(host), '⛔ ব্যাংকের খাত বাছার পরেও পদ্ধতি ট্রান্সফারে সরেনি').toBe('transfer')
         await choose(host, '13')
-        expect(picked(host)).toBe('mfs')
-        expect(warnings).toEqual([])
+        expect(picked(host), '⛔ MFS-এর খাত বাছার পরেও পদ্ধতি MFS-এ সরেনি').toBe('mfs')
+        expect(warnings, '⛔ পর্দায় Alpine-এর সতর্কতা').toEqual([])
         host.remove()
     })
 })
 
 describe('দফা #৯ — চার্জ আমাদের খরচ, এক লাইনে', () => {
     it('লাইনে চার্জ, চার্জের খাত আর পক্ষের পুরো টাকা — লাখ-কমায়', () => {
-        expect(chargeLine('৳:charge → :head; ৳:amount', { charge: 25, amount: 120000, head: 'Bank charges' }))
+        expect(chargeLine('৳:charge → :head; ৳:amount', { charge: 25, amount: 120000, head: 'Bank charges' }), '⛔ #৯: চার্জের লাইনে চার্জ, খাত বা লাখ-কমার পুরো টাকা নেই')
             .toBe('৳25.00 → Bank charges; ৳1,20,000.00')
     })
 
@@ -102,25 +102,25 @@ describe('দফা #৯ — চার্জ আমাদের খরচ, এ�
         const host = await mount(form('transfer'))
         const line = host.querySelector('[data-charge-line]')
 
-        expect(line.style.display).toBe('none')
+        expect(line.style.display, '⛔ #৯: চার্জ না দিয়েই চার্জের লাইন দেখা গেল').toBe('none')
 
         const charge = host.querySelector('#charge')
         charge.value = '25'
         charge.dispatchEvent(new Event('input', { bubbles: true }))
         await Alpine.nextTick()
 
-        expect(line.style.display).not.toBe('none')
-        expect(line.textContent).toBe('OUT ৳25.00 → Bank charges; party ৳1,20,000.00')
+        expect(line.style.display, '⛔ #৯: ট্রান্সফারে চার্জ দিলেও চার্জের লাইন এল না').not.toBe('none')
+        expect(line.textContent, '⛔ #৯: চার্জের লাইন ব্যাংক চার্জের খাত বা পক্ষের পুরো টাকা বলে না').toBe('OUT ৳25.00 → Bank charges; party ৳1,20,000.00')
 
         data(host).method = 'mfs'
         await Alpine.nextTick()
-        expect(line.textContent).toContain('MFS charges')
+        expect(line.textContent, '⛔ #৯: MFS-এ চার্জ গেল ব্যাংক চার্জের খাতে').toContain('MFS charges')
 
         // ⛔ নগদে চার্জের ঘর নেই — পুরনো ২৫ লাইনে থেকে গেলে পর্দা মিথ্যা বলত
         data(host).method = 'cash'
         await Alpine.nextTick()
-        expect(line.style.display).toBe('none')
-        expect(warnings).toEqual([])
+        expect(line.style.display, '⛔ #৯: নগদে ফিরলেও পুরনো চার্জের লাইন রয়ে গেল').toBe('none')
+        expect(warnings, '⛔ পর্দায় Alpine-এর সতর্কতা').toEqual([])
         host.remove()
     })
 
@@ -141,8 +141,8 @@ describe('দফা #৯ — চার্জ আমাদের খরচ, এ�
         await Alpine.nextTick()
 
         window.removeEventListener('money-method', listen)
-        expect(heard.some(d => d.method === 'transfer' && d.charge === 40)).toBe(true)
-        expect(heard.at(-1)).toEqual({ method: 'cash', charge: 0 })
+        expect(heard.some(d => d.method === 'transfer' && d.charge === 40), '⛔ চার্জ বদলেও `money-method` ঘটনা গেল না').toBe(true)
+        expect(heard.at(-1), '⛔ নগদে ফিরলে ঘটনা চার্জ শূন্য আর পদ্ধতি নগদ বলে না').toEqual({ method: 'cash', charge: 0 })
         host.remove()
     })
 })

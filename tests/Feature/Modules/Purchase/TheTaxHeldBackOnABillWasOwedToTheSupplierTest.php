@@ -95,9 +95,11 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
             'supplier_id' => $this->supplier->id, 'account_id' => $bank->id, 'trx_date' => now()->toDateString(), 'amount' => '9000',
             'instrument' => 'cheque', 'instrument_no' => 'CHQ-AIT-1',
             'lines' => [['purchase_bill_id' => $bill->id, 'amount' => '9000']],
-        ])->assertSessionHasNoErrors();
+        ]);
+        $this->assertNoErrors('⛔ বিলে কর কাটা থাকলে নিট ৯,০০০-এর পরিশোধ নেওয়া হল না');
         $payment = \App\Modules\Purchase\Models\Payment::query()->latest('id')->firstOrFail();
-        $this->post(route('purchase.payment.confirm', $payment))->assertSessionHasNoErrors();
+        $this->post(route('purchase.payment.confirm', $payment));
+        $this->assertNoErrors('⛔ বিলে কর কাটা থাকলে নিট পরিশোধ পোস্ট হল না');
 
         $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '0', 4), '⛔ নিট শোধের পরেও বাকি আছে');
         $this->assertFalse(PurchaseBill::query()->whereKey($bill->id)->stillOwed()->exists(), '⛔ কাটা অংশ "বাকি" ধরে বিলটা তালিকায় রইল');
@@ -109,7 +111,8 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
         $entries = LedgerEntry::query()->count();
         $bill = $this->draftBill(['ait_amount' => '9000', 'vds_amount' => '2000']);
 
-        $this->post(route('purchase.bill.confirm', $bill))->assertSessionHasErrors('ait_amount');
+        $this->post(route('purchase.bill.confirm', $bill));
+        $this->assertArrayHasKey('ait_amount', $this->sessionErrors(), '⛔ মোটের (১০,০০০) চেয়ে বেশি কর্তনের (১১,০০০) বিল থামেনি');
 
         $this->assertNotSame(DocumentStatus::CONFIRMED, $bill->fresh()->status);
         $this->assertSame($entries, LedgerEntry::query()->count(), '⛔ মোটের বেশি কর্তনের বিল খতিয়ানে বসল');
@@ -128,6 +131,30 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
 
     // ── প্রস্তুতি ──
 
+
+    /**
+     * ⓘ সেশনের ভুল, ঘর ধরে — থলেটা পরীক্ষায় কখনো ViewErrorBag, কখনো JSON থেকে ফেরা array; দুই রূপই পড়া হয়। ⛔ দরজার দাবি নিজের
+     * বার্তায় — framework-এর বার্তাহীন assert-এ মরা মিউট্যান্ট গোনা হয় না (fe, ২২ অক্টোবর ২০২৬); বার্তায় আসল ভুলটাও থাকে।
+     *
+     * @return array<string, list<string>>
+     */
+    private function sessionErrors(): array
+    {
+        $errors = session('errors');
+
+        if ($errors instanceof \Illuminate\Support\ViewErrorBag) {
+            return $errors->getBag('default')->toArray();
+        }
+
+        return (array) ($errors['default']['messages'] ?? []);
+    }
+
+    private function assertNoErrors(string $why): void
+    {
+        $errors = $this->sessionErrors();
+        $this->assertSame([], $errors, $why.' — '.json_encode($errors, JSON_UNESCAPED_UNICODE));
+    }
+
     /** @param array<string, string> $withheld */
     private function draftBill(array $withheld): PurchaseBill
     {
@@ -141,7 +168,8 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
             'supplier_bill_no' => 'AIT-'.random_int(10000, 99999),
             'lines' => [['product_id' => $product->id, 'qty' => '10', 'rate' => '1000']],
             ...$withheld,
-        ])->assertSessionHasNoErrors();
+        ]);
+        $this->assertNoErrors('⛔ বিলের খসড়া নেওয়া হল না');
 
         $bill = PurchaseBill::query()->latest('id')->firstOrFail();
         $this->assertSame(0, bccomp((string) $bill->total, '10000', 4), 'পরীক্ষার ছক: বিলের মোট ১০,০০০ নয়');
@@ -153,7 +181,8 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
     private function confirmedBill(array $withheld): PurchaseBill
     {
         $bill = $this->draftBill($withheld);
-        $this->post(route('purchase.bill.confirm', $bill))->assertSessionHasNoErrors();
+        $this->post(route('purchase.bill.confirm', $bill));
+        $this->assertNoErrors('⛔ কর কাটা বিল পাকা হল না — দেনা বা কর্তনের দাখিলা মেলে না');
         $this->assertSame(DocumentStatus::CONFIRMED, $bill->fresh()->status, 'বিলটা পাকা হলো না');
 
         return $bill->fresh();
