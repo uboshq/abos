@@ -173,10 +173,13 @@ describe('মিল-তালিকা #৩ — কাটা কর/ভ্যা
         expect(note.style.display, '⛔ #৩: কিছু কাটা হয়নি, তবু কর-নোট').toBe('none')
 
         pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '15,652.17', net: '1.00' }
+        // ⓘ x-show-এর বদল Alpine-এর কাজের সারিতে বসে — এক টিকে না-ও পৌঁছাতে পারে; একটা পুরো ঘুরতি অপেক্ষা
+        await new Promise(r => setTimeout(r, 0))
         await Alpine.nextTick()
         expect(note.style.display, '⛔ #৩: ভ্যাট কাটা হল, অথচ জমা আর মূসক-৬.৬-এর কথা নেই').toBe('')
 
         pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' }
+        await new Promise(r => setTimeout(r, 0))
         await Alpine.nextTick()
         expect(note.style.display, '⛔ #৩: কাটা শূন্যে ফিরল, তবু কর-নোট রইল').toBe('none')
         host.remove()

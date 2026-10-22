@@ -72,12 +72,12 @@ async function choose (host, value) {
 
 describe('দফা #২ — খাতের ধরন দেখে পদ্ধতি', () => {
     it('নগদে নগদ, MFS-এ MFS, ব্যাংকে ট্রান্সফার — আর ব্যাংকের অন্য পথ (নগদ জমা, চেক) বাছা থাকলে সেটাই থাকে', () => {
-        expect(methodForKind('cash', 'transfer'), '⛔ খাতের ধরন 'cash' হলে পদ্ধতি 'cash' নয়').toBe('cash')
-        expect(methodForKind('mfs', 'cash'), '⛔ খাতের ধরন 'mfs' হলে পদ্ধতি 'mfs' নয়').toBe('mfs')
-        expect(methodForKind('bank', 'cash'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'transfer' নয়').toBe('transfer')
-        expect(methodForKind('bank', 'deposit'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'deposit' নয়').toBe('deposit')
-        expect(methodForKind('bank', 'cheque'), '⛔ খাতের ধরন 'bank' হলে পদ্ধতি 'cheque' নয়').toBe('cheque')
-        expect(methodForKind('', 'mfs'), '⛔ খাতের ধরন '' হলে পদ্ধতি 'mfs' নয়').toBe('mfs')
+        expect(methodForKind('cash', 'transfer'), '⛔ খাতের ধরন cash হলে পদ্ধতি cash নয়').toBe('cash')
+        expect(methodForKind('mfs', 'cash'), '⛔ খাতের ধরন mfs হলে পদ্ধতি mfs নয়').toBe('mfs')
+        expect(methodForKind('bank', 'cash'), '⛔ খাতের ধরন bank হলে পদ্ধতি transfer নয়').toBe('transfer')
+        expect(methodForKind('bank', 'deposit'), '⛔ খাতের ধরন bank হলে পদ্ধতি deposit নয়').toBe('deposit')
+        expect(methodForKind('bank', 'cheque'), '⛔ খাতের ধরন bank হলে পদ্ধতি cheque নয়').toBe('cheque')
+        expect(methodForKind('', 'mfs'), '⛔ খাতের ধরন  হলে পদ্ধতি mfs নয়').toBe('mfs')
     })
 
     it('পর্দায়: ব্যাংক বাছলে চিপ ট্রান্সফারে, MFS বাছলে MFS-এ', async () => {

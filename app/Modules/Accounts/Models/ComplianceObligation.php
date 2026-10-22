@@ -67,7 +67,8 @@ class ComplianceObligation extends Model
 
     public function scopeOverdue(Builder $query): Builder
     {
-        return $query->open()->whereDate($this->qualifyColumn('due_on'), '<', now()->toDateString());
+        // ⛔ `due_on` সত্যিকারের `date` — সাধারণ where(), whereDate() নয় (সূচক থাকে; [[TheDateFilterHidTheIndexFromMysqlTest]])
+        return $query->open()->where($this->qualifyColumn('due_on'), '<', now()->toDateString());
     }
 
     public function isOpen(): bool
