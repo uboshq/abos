@@ -136,7 +136,12 @@
                      ⚠️ রুটটা (`accounts.voucher.print`) অনেক আগে থেকেই ছিল,
                      কিন্তু কোনো পর্দা থেকে সেখানে যাওয়ার পথ ছিল না: ভাউচার
                      ছাপতে হলে ঠিকানা হাতে লিখতে হত। ⓘ তাই মাপ, ফাইল আর
-                     গোনা — তিনটাই এখানে একসাথে এল। --}}
+                     গোনা — তিনটাই এখানে একসাথে এল।
+
+                     ⭐ `share` — PDF আর পক্ষকে পাঠানো (WhatsApp), ভাউচারের নকশার «পোস্টের পরে: ছাপা · PDF · WhatsApp» (fe, ২৩ অক্টোবর
+                     ২০২৬)। ⓘ দরজাটা আগে থেকেই ছিল আর পাহারা দেওয়া ([[PaperTrail::DOCUMENT_ROUTES]], [[ASharedLinkCrossedTheBranchWallTest]]),
+                     কেবল এই পাতা তাকে ডাকত না। ⛔ ব্যাখ্যা এখানে, অ্যাট্রিবিউটের ভিতরে নয় — ভিতরের ডবল কোট অ্যাট্রিবিউট আগেই শেষ করে দিত
+                     আর পুরো ছাপার মেনু কাঁচা লেখা হয়ে যেত ([[NoBladeTagIsQuietlyLeftAsTextTest]], cb_v9)। --}}
                 <x-ui.print-menu :documents="[[
                     'label' => $voucher->document_no,
                     'url' => route('accounts.voucher.print', $voucher),
@@ -144,9 +149,6 @@
                     'type' => 'accounts_voucher',
                     'id' => $voucher->id,
                     'no' => $voucher->document_no,
-                    /* ⭐ PDF আর পক্ষকে পাঠানো (WhatsApp) — ভাউচারের নকশার "পোস্টের পরে: ছাপা · PDF · WhatsApp" (fe, ২৩ অক্টোবর ২০২৬)।
-                       ⓘ দরজাটা আগে থেকেই ছিল আর পাহারা দেওয়া ([[PaperTrail::DOCUMENT_ROUTES]], [[ASharedLinkCrossedTheBranchWallTest]]),
-                       কেবল এই পাতা তাকে ডাকত না। */
                     'share' => ['route' => 'accounts.voucher.print', 'params' => ['voucher' => $voucher->id]],
                 ]]" />
                 <x-ui.shared-link :message="$voucher->document_no" />
