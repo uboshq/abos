@@ -61,6 +61,8 @@ final class BulkSigningLooksFirstAndKeepsItsRulesTest extends TestCase
         $role = CompanyContext::forCompany($this->company->id, fn () => Role::findOrCreate('bulk-limit', 'web'));
         CompanyContext::forCompany($this->company->id, fn () => $this->signer->assignRole($role));
         ApprovalLimit::query()->create(['company_id' => $this->company->id, 'role_id' => $role->id, 'module' => 'sales', 'max_amount' => '1000']);
+        // ⓘ টাকার কাগজের মডিউলেও সীমা — যাতে পরিশোধটা কেবল 'টাকা নড়ার কাজ' নিয়মে বাদ পড়ে, সীমা না থাকার কারণে নয়
+        ApprovalLimit::query()->create(['company_id' => $this->company->id, 'role_id' => $role->id, 'module' => 'accounts', 'max_amount' => '1000']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->paper = [
