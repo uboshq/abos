@@ -224,22 +224,26 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     }
 
     /**
-     * দফা ৪ — পার্থক্যের চিহ্ন যাই আসুক, অঙ্কটাই মাপা হয় (fe, ২২ অক্টোবর ২০২৬; মালিকের নিয়ম: যেকোনো দিকে ৳০.৫০-এর বেশি হলে সই)।
-     * ⓘ অ্যাপ ক্রেডিট ঋণাত্মক পাঠায় — পার্থক্য −০.৫১ এলেও তা ০.৫১, মালিকের সইয়ের অপেক্ষায় ([[CollectionInput::difference()]]-এর abs)।
+     * দফা ৪ — ওয়েবের পা: ঋণাত্মক পার্থক্য (−৳০.৫১) [[CollectionRequest]]-এই ফেরত (`difference.amount` `min:0`), বাংলায় কারণ বলে;
+     * কাগজ, খাতার সারি বা সইয়ের অনুরোধ — কিছুই বসে না, তাই চিহ্ন বদলে মালিকের সই এড়ানোর পথ নেই (fe, ২২ অক্টোবর ২০২৬)।
+     * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬; Mac-এর লাল 21c633e60): আগের দাবি ধরে নিত ওয়েবও −০.৫১-কে ০.৫১ পড়ে সইয়ের অপেক্ষায় রাখে — ওটা
+     * ফোনের প্রিভিউর পথ ([[CollectionInput::difference()]]-এর abs); সেই পা এখন
+     * [[CollectionAppContractTest::test_item_4_a_negative_rounding_on_the_phone_is_read_as_its_size_and_needs_the_owner]]।
      */
-    public function test_item_4_a_negative_rounding_of_fifty_one_paisa_still_waits_for_the_owner(): void
+    public function test_item_4_a_negative_rounding_of_fifty_one_paisa_is_refused_on_the_web_and_writes_nothing(): void
     {
         app(OwnerSignsDiscounts::class)->ensure($this->company);
         $bill = $this->bill('INV-CF-RN51', 10, '1000.51');
+        $before = [Collection::acrossBranches()->count(), LedgerEntry::query()->count(), Approval::query()->count()];
 
-        $collection = $this->bookAllowingStops(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '-0.51'],
+        $this->send(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '-0.51'], 'post' => '1',
             'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
 
-        $this->assertSame(DocumentStatus::DRAFT, $collection->status, '⛔ দফা ৪: −৳০.৫১ রাউন্ডিং মালিকের সই ছাড়াই পোস্ট হলো — চিহ্ন বদলে নিয়ম এড়ানো গেল');
-        $this->assertSame('0.0000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: −৳০.৫১ সইয়ের আগেই খাতায় উঠল');
-        $approval = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->latest('id')->first();
-        $this->assertNotNull($approval, '⛔ দফা ৪: −৳০.৫১ রাউন্ডিংয়ে সইয়ের অনুরোধ যায়নি');
-        $this->assertSame(0, bccomp((string) $approval->amount, '0.51', 4), '⛔ দফা ৪: −৳০.৫১-এর সইয়ের অনুরোধ ঠিক অঙ্কের (৳০.৫১) নয়');
+        // ⓘ বার্তাটা Mac-এর লগের হুবহু (validation.min.numeric, ঘরের নাম অনুবাদহীন)
+        $this->assertSame('difference.amount 0-এর কম হতে পারবে না।', $this->said('difference.amount'),
+            '⛔ দফা ৪: ওয়েবে −৳০.৫১ রাউন্ডিং বাংলায় কারণসহ ফেরত হয়নি');
+        $this->assertSame($before, [Collection::acrossBranches()->count(), LedgerEntry::query()->count(), Approval::query()->count()],
+            '⛔ দফা ৪: ফেরত −৳০.৫১ রাউন্ডিং তবু কাগজ, খাতার সারি বা সইয়ের অনুরোধ লিখল');
     }
 
     /**
@@ -582,12 +586,26 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
     // ══ দফা ১২, ১৩, ১৪, ১৫, ১৬, ১৭, ১৮, ২২ ═══════════════════════════
 
-    /** দফা ১২ — নিজের বানানো পাকা আদায় নিজে উল্টানো যায় না; দ্বিতীয় জন কারণ লিখে উল্টান; উল্টো দাখিলা উল্টানোর দিনে, আগের সারি অক্ষত */
+    /**
+     * দফা ১২ — নিজের বানানো পাকা আদায় নিজে উল্টানো যায় না; দ্বিতীয় জন কারণ লিখে উল্টান; উল্টো দাখিলা উল্টানোর দিনে, আগের সারি অক্ষত।
+     * ⓘ আদায় গত মাসে, আর সেই মাস বন্ধ (দফা ১৩-এর একই তালা): উল্টানো তবু হয়, আজকের খোলা মাসে — বন্ধ মাস ছোঁয়া হয় না (fe, ২২ অক্টোবর ২০২৬)।
+     * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬; Mac-এর লাল 21c633e60): উল্টো সারি বসে নিজের উৎসে `<আদায়>:reversal` ([[PostingEngine::reverse()]]),
+     * আদায়ের উৎসে নয় — আগের দাবি কেবল আদায়ের উৎস গুনত, তাই "আজ ০ সারি" বলত; কোডের তারিখ ঠিকই ছিল (আজ, [[CollectionService::cancel()]])।
+     */
     public function test_item_12_the_maker_cannot_reverse_a_posted_collection_and_a_second_person_reverses_on_the_day(): void
     {
-        $day = now()->subDays(3)->toDateString();
+        $day = now()->subMonthNoOverflow()->startOfMonth()->addDays(4)->toDateString();
         $collection = $this->book(['amount' => '600', 'lines_given' => '1', 'trx_date' => $day]);
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১২: আদায়টাই পোস্ট হয়নি');
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ১২: আদায়টাই পোস্ট হয়নি — '.json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
+        $original = fn () => LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
+            ->orderBy('id')->get()->map(fn ($r) => [(int) $r->id, $r->trx_date->toDateString(), (int) $r->account_id,
+                bcadd((string) $r->debit, '0', 4), bcadd((string) $r->credit, '0', 4)])->all();
+        $posted = $original();
+        $this->assertCount(2, $posted, 'প্রস্তুতিটাই ভুল — আদায়ের খাতায় দুই সারি নেই');
+        PeriodLock::query()->create([
+            'company_id' => $this->company->id, 'year' => (int) \Illuminate\Support\Carbon::parse($day)->year, 'month' => (int) \Illuminate\Support\Carbon::parse($day)->month,
+            'reason' => 'গত মাসের হিসাব জমা', 'locked_by' => $this->owner->id, 'locked_at' => now(),
+        ]);
 
         $this->actingAs($this->maker)->post(route('sales.collection.cancel', $collection), ['reason' => 'ভুল খাত']);
         $this->assertSame(DocumentStatus::CONFIRMED, $collection->fresh()->status, '⛔ দফা ১২: যিনি বানালেন তিনিই উল্টে দিলেন');
@@ -599,14 +617,20 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame(0, bccomp((string) $collection->fresh()->amount, '600', 4), '⛔ দফা ১২: পোস্টের পরে আদায় বদলানো গেল');
 
         $checker = $this->person(['sales.collection.view', 'sales.collection.cancel']);
-        $this->actingAs($checker)->post(route('sales.collection.cancel', $collection), ['reason' => 'ভুল খাত'])->assertSessionHasNoErrors();
+        $this->actingAs($checker)->post(route('sales.collection.cancel', $collection), ['reason' => 'ভুল খাত']);
 
-        $this->assertSame(DocumentStatus::CANCELLED, $collection->fresh()->status, '⛔ দফা ১২: দ্বিতীয় জনও উল্টাতে পারলেন না');
-        $rows = LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)->get();
+        $this->assertSame(DocumentStatus::CANCELLED, $collection->fresh()->status,
+            '⛔ দফা ১২: দ্বিতীয় জনও উল্টাতে পারলেন না (মূল মাস বন্ধ, আজকের মাস খোলা) — '.json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
+        $this->assertSame($posted, $original(), '⛔ দফা ১২: আগের দিনের সারি বদলে গেল বা সরল (একই সারি, একই তারিখ, একই অঙ্ক নয়)');
+
+        $reversal = LedgerEntry::query()->where('source_type', Collection::drillSourceType().':reversal')->where('source_id', $collection->id)->get();
+        $this->assertSame([now()->toDateString(), now()->toDateString()], $reversal->map(fn ($r) => $r->trx_date->toDateString())->values()->all(),
+            '⛔ দফা ১২: উল্টো দাখিলা উল্টানোর দিনে বসেনি (দুই সারি, দুটোই আজ)');
+        $rows = LedgerEntry::query()->whereIn('source_type', [Collection::drillSourceType(), Collection::drillSourceType().':reversal'])
+            ->where('source_id', $collection->id)->get();
         $this->assertSame(0, bccomp((string) $rows->sum('debit'), (string) $rows->sum('credit'), 4), '⛔ দফা ১২: উল্টানোর পরে কাগজের Dr ≠ Cr');
-        $this->assertSame(2, $rows->filter(fn ($r) => $r->trx_date->toDateString() === $day)->count(), '⛔ দফা ১২: আগের দিনের সারি বদলে গেল বা সরল');
-        $this->assertSame(2, $rows->filter(fn ($r) => $r->trx_date->toDateString() === now()->toDateString())->count(), '⛔ দফা ১২: উল্টো দাখিলা উল্টানোর দিনে বসেনি');
-        $this->assertSame(0, bccomp($this->drOn($this->bank->id, $collection), '0', 4), '⛔ দফা ১২: উল্টানোর পরে ব্যাংকে টাকা রয়ে গেল');
+        $bank = $rows->where('account_id', $this->bank->id);
+        $this->assertSame(0, bccomp(bcsub((string) $bank->sum('debit'), (string) $bank->sum('credit'), 4), '0', 4), '⛔ দফা ১২: উল্টানোর পরে ব্যাংকে টাকা রয়ে গেল');
     }
 
     /** দফা ১৩ — বন্ধ মাসে পোস্ট হয় না: প্রিভিউ কারণ বলে, পোস্ট খসড়ায় থামে, খাতায় কিছু নয়, খোলা কাগজ বলে মাস বন্ধ */
@@ -863,9 +887,18 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertStringNotContainsString('INV-CF-AWAY', (string) $other->getContent(), '⛔ দফা ১৮: অন্য শাখার গ্রাহকের বিল ফাঁস হলো');
         $this->assertSame(404, $this->getJson(route('sales.collection.open_items', ['customer' => (string) $there->public_id]))->status(),
             '⛔ দফা ১৮: public_id ধরে অন্য শাখার গ্রাহকের খোলা কাগজ খুলল');
+        /*
+         * ⓘ উত্তর মাপা হয় অবস্থা আর ভুলের ধরন-কথায়, JSON-এর `message`-এ নয় (a6, ২২ অক্টোবর ২০২৬; Mac-এর লাল 21c633e60): ওয়েবের
+         * ভুল কেবল `api/*`-এ JSON হয় (bootstrap/app.php-এর shouldRenderJsonWhen), তাই এখানে ৪০৪ HTML-এর পাতা — আর TestResponse::json()
+         * অ-JSON দেহে জমা ৪০৪-টাই আবার ছোঁড়ে। দরজা ঠিক ছিল (৪০৪ যেখানে চাওয়া), দাবির পড়াটা ভুল।
+         */
+        $answer = fn ($r) => [$r->status(), $r->exception === null ? null : $r->exception::class, (string) $r->exception?->getMessage()];
         $missing = $this->getJson(route('sales.collection.open_items', ['customer' => (int) Customer::query()->withoutGlobalScopes()->max('id') + 1000]));
-        $this->assertSame([$missing->status(), $missing->json('message')], [$other->status(), $other->json('message')],
+        $this->assertSame([404, \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class, ''], $answer($other),
+            '⛔ দফা ১৮: অন্য শাখার গ্রাহকের উত্তর খালি ৪০৪ নয়');
+        $this->assertSame($answer($missing), $answer($other),
             '⛔ দফা ১৮: অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
+        $this->assertStringNotContainsString('Away Store', (string) $other->getContent(), '⛔ দফা ১৮: ৪০৪-এর পাতায় অন্য শাখার গ্রাহকের নাম');
 
         $this->assertStringContainsString('INV-CF-HOME', (string) $this->get(route('sales.collection.create', ['customer' => $mine->id]))->assertOk()->getContent(),
             'প্রস্তুতিটাই ভুল — পর্দা নিজের শাখার গ্রাহকের বিল আঁকে না');

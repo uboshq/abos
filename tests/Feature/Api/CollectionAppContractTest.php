@@ -236,6 +236,31 @@ final class CollectionAppContractTest extends TestCase
         $this->assertSame($web['applied'], $phone['applied'], '⛔ দফা ১৯: ফোন আর ওয়েবের প্রয়োগ আলাদা');
     }
 
+    /**
+     * দফা ৪ — ফোনের পা: পার্থক্যের চিহ্ন যাই আসুক, অঙ্কটাই মাপা হয় (fe, ২২ অক্টোবর ২০২৬; মালিকের নিয়ম: যেকোনো দিকে ৳০.৫০-এর বেশি হলে সই)।
+     * ফোনের প্রিভিউ −৳০.৫১ রাউন্ডিংকে ৳০.৫১ পড়ে ([[CollectionInput::difference()]]-এর abs) আর বলে মালিকের সই লাগবে; কিছু লেখে না।
+     * সিঙ্কের পুশ ঋণাত্মক পার্থক্য ওয়েবের মতোই ফেরায় ([[CollectionSync]]-এর `difference.amount` নিয়ম) — কাগজ বসে না, তাই চিহ্ন বদলে সই
+     * এড়ানোর পথ নেই। ⓘ ওয়েবের পা: [[TheCollectionFormPostsWhatTheDesignSaysTest::test_item_4_a_negative_rounding_of_fifty_one_paisa_is_refused_on_the_web_and_writes_nothing]]।
+     */
+    public function test_item_4_a_negative_rounding_on_the_phone_is_read_as_its_size_and_needs_the_owner(): void
+    {
+        $bill = $this->bill('INV-APP-RN51', 5, '1000.51');
+        $before = [Collection::acrossBranches()->count(), LedgerEntry::query()->count()];
+        $negative = $this->payload(['amount' => '1000', 'confirm' => true, 'difference' => ['kind' => 'rounding', 'amount' => '-0.51'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
+
+        $this->phone($this->clerk);
+        $preview = $this->postJson('/api/v1/sales/collections/preview', $negative)->assertOk()->json();
+
+        $this->assertSame('0.5100', $preview['summary']['difference'] ?? null, '⛔ দফা ৪: ফোনের প্রিভিউ −৳০.৫১ রাউন্ডিংকে ৳০.৫১ পড়েনি');
+        $this->assertTrue($preview['needs_signature'] ?? null, '⛔ দফা ৪: −৳০.৫১ রাউন্ডিংয়ে ফোনের প্রিভিউ মালিকের সই চায়নি — চিহ্ন বদলে নিয়ম এড়ানো গেল');
+        $this->assertTrue($preview['summary']['balanced'] ?? null, '⛔ দফা ৪: ৳১,০০০ + ৳০.৫১ রাউন্ডিং = ৳১,০০০.৫১ বিল — প্রিভিউ মিলেছে বলেনি');
+
+        $this->assertSame(SyncChange::REJECTED, $this->push('neg-r51', $negative)['status'] ?? null, '⛔ দফা ৪: সিঙ্কের পুশ ঋণাত্মক পার্থক্য নিল');
+        $this->assertSame($before, [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ দফা ৪: −৳০.৫১ রাউন্ডিং — প্রিভিউ বা ফেরত পুশ কাগজ বা খাতার সারি লিখল');
+    }
+
     /** প্রিভিউর কথায় টাকাও যিনি চাইছেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — ইংরেজির মানুষ ইংরেজি, বাংলার মানুষ বাংলা */
     public function test_the_preview_words_follow_the_askers_own_language(): void
     {
