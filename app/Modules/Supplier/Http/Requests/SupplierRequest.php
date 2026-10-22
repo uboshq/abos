@@ -98,6 +98,10 @@ class SupplierRequest extends FormRequest
 
             'bin' => ['nullable', 'string', 'max:32'],
             'tin' => ['nullable', 'string', 'max:32'],
+            // ⭐ উৎসে কর (ভ্যাট বাদে মূল্যের %) আর উৎসে ভ্যাট (বিলের ভ্যাটের %) — নকশা #২৫; হাতে বদলালে কারণ ([[SupplierService::update()]])
+            'ait_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'vds_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'rate_reason' => ['nullable', 'string', 'max:255'],
 
             // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে সীমা বলা নেই
             // ⛔ decimal, numeric নয় — "1e5" `numeric` পেরিয়ে শুরুর দেনার bccomp-এ ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;

@@ -308,6 +308,7 @@ class EveryRouteIsGuardedTest extends TestCase
          */
         'api.me' => 'নিজের পরিচয় ও মেনু — ব্যবসার ডেটা নয়, আর abilities:app চায়',
         // ⭐ প্রোফাইল মেনু — নিজের ছবি আর নিজের ফোন (অ্যাপ ০.৪.৪১; a6, ২০ অক্টোবর ২০২৬)
+        'api.me.locale' => 'নিজের ভাষা — কেবল নিজের সারিতে, bn বা en ([[UserLocale]]); abilities:app চায়',
         'api.me.photo.store' => 'নিজের ছবি — কেবল নিজের সারিতে, JPG/PNG বাইট দেখে; abilities:app চায় ([[MePhotoController]])',
         'api.me.photo.destroy' => 'নিজের ছবি সরানো — কেবল নিজের সারিতে; abilities:app চায়',
         'api.me.devices.index' => 'নিজের ফোনের তালিকা — কেবল নিজের টোকেন; abilities:app চায় ([[MeDevicesController]])',

@@ -15,6 +15,7 @@ use App\Core\Contracts\LinkedDocuments;
 use App\Core\Contracts\PartyOpenBills;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Contracts\SalesOffers;
+use App\Core\Contracts\SignaturesWaitingElsewhere;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
@@ -29,6 +30,7 @@ use App\Core\Services\NoLinkedDocuments;
 use App\Core\Services\NoPartyOpenBills;
 use App\Core\Services\NoRecipeBook;
 use App\Core\Services\NoSalesOffers;
+use App\Core\Services\NoSignaturesWaitingElsewhere;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -94,6 +96,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(KnowsAUsersEmployee::class, NoKnowsAUsersEmployee::class);
         // ⓘ জোড়া কাগজ — ডকুমেন্ট মডিউল বন্ধ থাকলে খালি ([[NoLinkedDocuments]])
         $this->app->bind(LinkedDocuments::class, NoLinkedDocuments::class);
+        // ⓘ ছকের বাইরের সই — কোনো মডিউল না দিলে অনুমোদনের বাক্সে বাড়তি কিছু নেই ([[SignaturesWaitingElsewhere]])
+        $this->app->bind(SignaturesWaitingElsewhere::class, NoSignaturesWaitingElsewhere::class);
     }
 
     /**

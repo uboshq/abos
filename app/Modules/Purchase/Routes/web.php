@@ -194,6 +194,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('index');
         Route::get('/create', [PaymentController::class, 'create'])->name('create');
         Route::post('/', [PaymentController::class, 'store'])->name('store');
+        // ⭐ খাতায় যা যাবে — পোস্টের আগে, কিছু না লিখে (নকশা #১০; মালিক, ২১ অক্টোবর ২০২৬)
+        Route::post('/simulate', [PaymentController::class, 'simulate'])->name('simulate');
         Route::get('/{payment}', [PaymentController::class, 'show'])->whereNumber('payment')->name('show');
         Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->whereNumber('payment')->name('edit');
         Route::put('/{payment}', [PaymentController::class, 'update'])->whereNumber('payment')->name('update');

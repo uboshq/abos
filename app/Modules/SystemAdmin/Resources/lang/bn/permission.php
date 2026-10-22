@@ -113,6 +113,7 @@ return [
         'sales.target' => 'লক্ষ্যমাত্রা',
 
         'supplier' => 'সরবরাহকারী',
+        'supplier.bank' => 'সরবরাহকারীর ব্যাংক তথ্য',
 
         'system_admin.audit' => 'অডিট',
         'system_admin.backup' => 'ব্যাকআপের সেটিং',
