@@ -98,6 +98,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
         // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
         'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
+        // ⓘ দেনা: ফোনের তালিকা আজও নিজে মোট যোগ করে — ListSummary-তে সরবে, তালিকা কেবল ছোট হয় (cb, ২৪ অক্টোবর ২০২৬)
+        'EveryListSummaryAddsDecimalsTest::KNOWN',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -446,8 +448,15 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       `purchase.payment.simulate`-এর (৪৫৬ → ৪৫৭) একই সিদ্ধান্ত।
      *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
      *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
+     *
+     * ── ⚠️ ৪৫৯ → ৪৬৯, ২৪ অক্টোবর ২০২৬ (cb, তালিকার মোট — ListSummary; fe-র চাওয়া পাহারা) ────────────
+     *   +১০ EveryListSummaryAddsDecimalsTest::KNOWN — ফোনের API-তে আজও নিজে যোগ করা দশটা ফাইল, মালিক আর কারণসহ: নয়টা ফাইলের কাগজের
+     *       তালিকা ListSummary-তে সরবে (cb তিনটা; a6 ছয়টা — আদায়, DO, SO, বিল-চালান, আর fe-র কথায় বিক্রির ডেস্ক ও দরপত্র) —
+     *       সরলেই সারি কমবে; দুইটা (খতিয়ানের বাকি, সরবরাহকারীর দেনা) "স্থায়ী — কাগজের তালিকা নয়"। ⛔ নতুন ছাড় নয়, পুরনো দেনা
+     *       প্রথমবার গোনা (fe গ্রহণ করেছেন, কেবল এই কারণে আর তালিকা কেবল কমে বলে)।
+     *   ⓘ মাপা: প্রতিফলনে গোনা ৪৬৯, অশ্রেণিবদ্ধ শূন্য (count_excuses.php)।
      */
-    private const CEILING = 459;
+    private const CEILING = 469;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

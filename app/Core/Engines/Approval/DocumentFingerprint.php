@@ -70,6 +70,57 @@ final class DocumentFingerprint
     }
 
     /**
+     * ⭐ অনেক কাগজের ছাপ একসাথে — [[of()]]-এর হুবহু একই ছাপ, কাগজ ধরে প্রশ্ন ছাড়া (তালিকার মোট, [[ClassifiesDrafts]]; ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[asStored()]] প্রতিটা কাগজ আলাদা করে আবার তোলে, আর তার সম্পর্কও আলাদা — শয়ে শয়ে খসড়ায় শয়ে শয়ে প্রশ্ন। এখানে এক
+     * whereIn আর প্রতিটা সম্পর্ক এক প্রশ্নে; বাকি নিয়ম হুবহু [[asStored()]]-এর: দেখার শাখার ছাঁকনি ছাড়া, তুলতে না পারলে হাতের
+     * কপি, না-সংরক্ষিত প্রস্তাব রাখা, আর একই [[shapeOf()]]।
+     *
+     * @param  iterable<Model>  $documents  একই ধরনের কাগজ — ডাকার জন CHUNK করে দেয়
+     * @return array<int|string, string>  চাবি = কাগজের আইডি
+     */
+    public function ofMany(iterable $documents): array
+    {
+        $documents = collect($documents);
+        $first = $documents->first();
+
+        if ($first === null) {
+            return [];
+        }
+
+        $saved = $documents->filter(fn (Model $document) => $document->exists);
+        $stored = $saved->isEmpty()
+            ? new \Illuminate\Database\Eloquent\Collection
+            : $first->newQuery()->withoutGlobalScope('user-branch')->whereKey($saved->map(fn (Model $d) => $d->getKey())->all())->get();
+
+        $stored->each(fn (Model $row) => $row->setRelations([]));
+        $stored->load($this->relationsOf($first));
+        $byKey = $stored->keyBy(fn (Model $row) => $row->getKey());
+
+        $out = [];
+
+        foreach ($documents as $document) {
+            if ($document::class !== $first::class) {
+                throw new \LogicException('⛔ ছাপ একসাথে: একই ধরনের কাগজ চাই — '.$first::class.' আর '.$document::class);
+            }
+
+            $copy = $document->exists ? ($byKey[$document->getKey()] ?? $document) : $document;
+
+            if ($copy !== $document) {
+                foreach ($document->getRelations() as $name => $related) {
+                    if ($related instanceof Model && ! $related->exists) {
+                        $copy->setRelation($name, $related);
+                    }
+                }
+            }
+
+            $out[$document->getKey()] = hash('sha256', json_encode($this->shapeOf($copy), JSON_THROW_ON_ERROR));
+        }
+
+        return $out;
+    }
+
+    /**
      * ⭐ একটা নির্দিষ্ট সইয়ের ছাপ — কাগজের মাথার কিছু ঘর বাদে (১৩ অক্টোবর ২০২৬)।
      *
      * ⓘ কিছু সই গোটা কাগজের নয়, কাগজের একটা অংশের: বিলের ছাড়ের সই ([[SalesInvoiceService::assertDiscountApproved()]])
