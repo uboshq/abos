@@ -378,7 +378,6 @@ class NobodyCouldSayWhoMadeThisUserTest extends TestCase
         $before = $this->trails($rahim)->count();
 
         $this->actingAs($rahim)->post(route('theme.switch'), ['theme' => 'dark']);
-        $this->actingAs($rahim)->post(route('locale.switch'), ['locale' => 'en']);
 
         /*
          * ⓘ এই দুইটা হুবহু যেভাবে সেবাগুলো লেখে — `CredentialCheck`
@@ -390,12 +389,37 @@ class NobodyCouldSayWhoMadeThisUserTest extends TestCase
         $fresh = $rahim->fresh();
 
         $this->assertSame('dark', $fresh->theme, 'বদলগুলো আদৌ ঘটেনি — পরীক্ষাটা তখন কিছুই দেখছে না।');
-        $this->assertSame('en', $fresh->locale);
         $this->assertNotNull($fresh->last_login_at);
         $this->assertSame('avatars/rahim.png', $fresh->avatar_path);
 
         $this->assertSame($before, $this->trails($rahim)->count(),
             'রুচি বা যন্ত্রের একটা ঘর বদলাতেই খাতায় নতুন সারি বসেছে।');
+    }
+
+    /**
+     * ⭐ ভাষা বদল খাতায় ঠিক একটা সারি — `locale_changed`, পুরনো আর নতুন সহ ([[UserLocale]], ০.৪.৪৩; fe ২১ অক্টোবর
+     * ২০২৬) — আর একই ভাষা আবার দিলে কিছুই নয়।
+     *
+     * ⓘ থিমের মতো এটা "রুচির ঘর" নয়: ভাষা ঠিক করে মানুষ ইমেইল, বার্তা আর সার্ভারের লেখা কোন ভাষায় পাবেন, তাই বদলটা
+     * নিজের নামে একবার লেখা হয়। `locale` [[User::auditIgnores()]]-এ, তাই সাধারণ সম্পাদনার দ্বিতীয় সারি বসে না। আগে এই
+     * দুই পা এক দাবিতে ছিল আর ভাষা বদলেও শূন্য সারি ধরে নিত (a4, ২৩ অক্টোবর ২০২৬)।
+     */
+    public function test_a_language_change_writes_exactly_one_locale_changed_row_and_the_same_language_none(): void
+    {
+        $rahim = $this->makeUser();
+        $rahim->forceFill(['locale' => 'bn'])->save();
+
+        $before = $this->trails($rahim)->count();
+
+        $this->actingAs($rahim)->post(route('locale.switch'), ['locale' => 'en']);
+
+        $this->assertSame('en', $rahim->fresh()->locale, 'বদলটা আদৌ ঘটেনি — পরীক্ষাটা তখন কিছুই দেখছে না।');
+        $this->assertSame($before + 1, $this->trails($rahim)->count(), 'ভাষা বদলে খাতায় ঠিক একটা সারি বসার কথা।');
+        $this->assertCount(1, $this->trails($rahim, 'locale_changed'), 'সারিটা locale_changed নামে নয়।');
+
+        $this->actingAs($rahim)->post(route('locale.switch'), ['locale' => 'en']);
+
+        $this->assertSame($before + 1, $this->trails($rahim)->count(), 'একই ভাষা আবার দিতেই খাতায় নতুন সারি বসেছে।');
     }
 
     /**
