@@ -844,6 +844,31 @@ final class StandardChart implements ProvisionsCompany
     }
 
     /**
+     * ⛔ কোডের খাতটা কি সত্যিই মান ছকের সেই খাত — একই ধরন, আর টাকার খাত কেবল টাকার কোডে (fe, ২৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ লাইভে UB-তে মান ছকের ১১৫১ আসার আগেই ঐ কোডে "Star Line Accounts" ব্যাংক খোলা ছিল; [[install()]] থাকা কোড ছোঁয় না,
+     * তাই ড্যামেজ দাবি সেখানে কখনো বসেনি, আর কোড ধরে খোঁজায় ব্যাংকটাই "ড্যামেজ দাবি" হয়ে নোটের তালিকায় আসত
+     * (CN-0017 থেকে CN-0020, ৩–৪ অক্টোবর, ৳৫৩,৮৬৮ ব্যাংকে Dr)। কোড ধরে খাত বাছার আগে এটা দেখা।
+     */
+    public function holdsItsMeaning(Account $account): bool
+    {
+        $rows = array_column($this->definition(), null, 0);
+        $row = $rows[(string) $account->code] ?? null;
+
+        if ($row === null || $account->type !== $row[3]) {
+            return false;
+        }
+
+        // ⓘ মান ছকে টাকার খাত কেবল হাতে নগদ, ব্যাংক আর মোবাইল ব্যাংকিং, আর তাদের নিচে ([[AccountService::moneyKindFor()]])
+        $money = false;
+        for ($code = (string) $row[0]; $code !== null && ! $money; $code = $rows[$code][4] ?? null) {
+            $money = in_array($code, [self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY], true);
+        }
+
+        return ($account->money_kind !== null) === $money;
+    }
+
+    /**
      * ছকটা নিজে।
      *
      * ক্রম গুরুত্বপূর্ণ: বাবা সবসময় সন্তানের আগে, কারণ parent_id
