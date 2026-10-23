@@ -102,12 +102,14 @@ return [
     'controls_title' => 'Controls',
     'controls_off' => 'Collections need no signature in this company — posting goes straight to the books. A posted paper cannot be edited; if wrong, write the reason and "Reverse" (a second person\'s signature).',
     'controls_on' => 'Collections need a signature in this company — posting goes for signature and reaches the books once signed. A posted paper cannot be edited; if wrong, write the reason and "Reverse" (a second person\'s signature).',
+    'controls_owner_signs' => 'This collection has a discount or a rounding above ৳0.50 — "Send for signature" saves it as a draft for the owner\'s signature; it reaches the books once signed. A posted paper cannot be edited; if wrong, write the reason and "Reverse" (a second person\'s signature).',
     'controls_bounce' => 'Marking a cheque bounced reverses it by itself.',
 
     'after_post' => 'After posting: money receipt (amount in words) print · PDF · WhatsApp',
     'cancel' => 'Cancel',
     'draft' => 'Keep draft',
     'post' => 'Post',
+    'post_for_signature' => 'Send for signature',
 
     'overview_title' => 'Receive money — what goes to the books',
     'dr' => 'Debit',

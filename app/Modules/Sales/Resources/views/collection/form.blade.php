@@ -441,8 +441,14 @@
                 <section data-boxed data-collection-controls aria-labelledby="cf-controls"
                          class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <h2 id="cf-controls" class="mb-3 font-semibold">{{ __('sales::collection_form.controls_title') }}</h2>
-                    <p class="rounded-(--radius-field) border-s-4 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-sm text-(--color-badge-info-ink)">
+                    <p class="rounded-(--radius-field) border-s-4 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-sm text-(--color-badge-info-ink)"
+                       x-show="postsNow" data-controls-company>
                         {{ $collectionSigned ? __('sales::collection_form.controls_on') : __('sales::collection_form.controls_off') }}
+                    </p>
+                    {{-- ⓘ ছাড় বা ৳0.50-এর বেশি রাউন্ডিং — তখন "সই বন্ধ, সাথে সাথে খাতায়" কথাটা ভুল; কাগজ মালিকের সইয়ে যায় (fe, ২৪ অক্টোবর ২০২৬) --}}
+                    <p class="rounded-(--radius-field) border-s-4 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)"
+                       x-show="ownerSigns" x-cloak data-controls-owner-signs>
+                        {{ __('sales::collection_form.controls_owner_signs') }}
                     </p>
                     <p class="mt-2 flex items-center gap-1.5 text-sm" data-controls-bounce>
                         <x-ui.icon name="undo" :size="16" />
@@ -461,7 +467,9 @@
                     {{ __('sales::collection_form.draft') }}
                 </x-ui.button>
                 <x-ui.button type="submit" tone="primary" name="post" value="1" data-overview-trigger data-collection-post>
-                    {{ __('sales::collection_form.post') }}
+                    <span x-show="postsNow">{{ __('sales::collection_form.post') }}</span>
+                    {{-- ⓘ একই দরজা, একই "post" — সার্ভার খসড়া রেখে সই চায় ([[CollectionService::assertDiscountSigned()]]); কেবল কথাটা সত্যি --}}
+                    <span x-show="ownerSigns" x-cloak data-collection-post-for-signature>{{ __('sales::collection_form.post_for_signature') }}</span>
                 </x-ui.button>
             </x-slot:submit>
         </x-ui.form-actions>

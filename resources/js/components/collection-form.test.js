@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { amountOf, balanceOf, fillOldestFirst, roundingNeedsOwner, rowOf, shortDate, signedApply } from './collection-math.js'
+import { amountOf, balanceOf, fillOldestFirst, ownerSignNeeded, roundingNeedsOwner, rowOf, shortDate, signedApply } from './collection-math.js'
 
 /*
  * ⭐ টাকা নেওয়ার পর্দার হিসাব — মালিকের নকশা ১০০, পাতা ২ (২১ অক্টোবর ২০২৬)।
@@ -106,6 +106,15 @@ describe('টাকা নেওয়া — দফা ৪, ৫: সারা�
         expect(roundingNeedsOwner('0.51')).toBe(true)
         expect(roundingNeedsOwner('10')).toBe(true)
         expect(roundingNeedsOwner('')).toBe(false)
+    })
+
+    it('দফা ৪ — ছাড় বা ৳0.50-এর বেশি রাউন্ডিং থাকলে বোতাম "সইয়ে পাঠান" (পোস্ট মালিকের সইয়ে যায়), নইলে "পোস্ট"', () => {
+        expect(ownerSignNeeded('', '0.50')).toBe(false)
+        expect(ownerSignNeeded('', '0.51')).toBe(true)
+        expect(ownerSignNeeded('50', '')).toBe(true)
+        expect(ownerSignNeeded('0.01', '')).toBe(true)
+        expect(ownerSignNeeded('0', '0')).toBe(false)
+        expect(ownerSignNeeded('', '')).toBe(false)
     })
 
     it('দফা ৪ — ছাড় আর রাউন্ডিং একসাথে নয়', () => {

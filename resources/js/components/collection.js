@@ -7,7 +7,7 @@
  * প্রতিটা বদলে [[recalc]] সাধারণ ঘরগুলো নতুন করে লেখে।
  * ⓘ টাকা ইংরেজি অঙ্কে, লাখ-কোটির কমায় ([[taka]] — সার্ভারের Money::format-এর একই লেখা)।
  */
-import { amountOf, balanceOf, cents, fillOldestFirst, roundingNeedsOwner, rowOf, signedApply } from './collection-math.js'
+import { amountOf, balanceOf, cents, fillOldestFirst, ownerSignNeeded, roundingNeedsOwner, rowOf, signedApply } from './collection-math.js'
 import { taka } from './money.js'
 
 export function collectionForm (config = {}) {
@@ -45,6 +45,9 @@ export function collectionForm (config = {}) {
         both: false,
         // ⓘ রাউন্ডিং ৳0.50-এর বেশি — মালিকের সই লাগবে (সার্ভারের CollectionService::differenceNeedsOwner()-এর একই সীমা)
         roundingSigned: false,
+        // ⓘ পোস্ট মালিকের সইয়ে যাবে (যেকোনো ছাড়, বা ৳0.50-এর বেশি রাউন্ডিং) — বোতাম আর নিয়ন্ত্রণের কথা বদলায়; CSP-র জন্য উল্টোটাও আলাদা ঘরে
+        ownerSigns: false,
+        postsNow: true,
         short: false,
         over: false,
         diffKind: '',
@@ -198,6 +201,8 @@ export function collectionForm (config = {}) {
             this.balanced = b.balanced
             this.both = b.both
             this.roundingSigned = roundingNeedsOwner(this.rounding)
+            this.ownerSigns = ownerSignNeeded(this.discount, this.rounding)
+            this.postsNow = !this.ownerSigns
             this.short = b.unapplied < -0.004
             this.over = this.customerId !== '' && b.gross > this.due + 0.004
 
@@ -259,6 +264,9 @@ export function collectionForm (config = {}) {
                 this.ledgerCr = taka(amountOf(body.total_cr))
                 this.stops = (body.stops ?? []).map(String)
                 this.referenceFree = body.reference_free === true
+                // ⓘ সার্ভারের কথাই শেষ — একই নিয়ম, তবে পার্থক্যের ধরন সার্ভার ঠিক করে
+                this.ownerSigns = body.needs_signature === true
+                this.postsNow = !this.ownerSigns
             } catch (e) {
                 this.previewFailed = true
             }

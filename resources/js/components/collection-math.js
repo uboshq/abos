@@ -102,6 +102,14 @@ export function roundingNeedsOwner (value) {
 }
 
 /**
+ * পোস্ট কি মালিকের সইয়ে যাবে — যেকোনো ছাড়, বা ৳0.50-এর বেশি রাউন্ডিং (সার্ভারের Settlement::differenceNeedsOwner()-এর একই নিয়ম;
+ * প্রিভিউর `needs_signature` এলে সেটাই শেষ কথা)। তখন বোতাম "সইয়ে পাঠান", নিয়ন্ত্রণে "মালিকের সইয়ে যাবে" (fe, ২৪ অক্টোবর ২০২৬)।
+ */
+export function ownerSignNeeded (discount, rounding) {
+    return cents(Math.abs(amountOf(discount))) > 0 || roundingNeedsOwner(rounding)
+}
+
+/**
  * সারাংশের হিসাব — দফা ৪। প্রয়োগ = বাছা সারির যোগ (ক্রেডিট ঋণাত্মক), অপ্রয়োগকৃত = পাওনা থেকে যা কমবে − প্রয়োগ।
  */
 export function balanceOf ({ amount, vds, ait, discount, rounding }, rows) {
