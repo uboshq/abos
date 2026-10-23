@@ -360,7 +360,7 @@ class CollectionSaved {
   final String id;
   final String? no;
 
-  /// paper_states-এর চাবি (draft · awaiting · posted …)
+  /// paper_states-এর চাবি — সার্ভার পাঠায় draft · waiting · posted · cancelled (CollectionApiController::answer)
   final String? state;
   final String? amountWords;
 
@@ -450,8 +450,8 @@ class CollectionSetup {
   final List<CollectionAccount> accounts;
   final List<TransferMode> transferModes;
 
-  /// ⭐ রাউন্ডিংয়ের সীমা আর যার বেশি হলে মালিকের সই — সার্ভারের কোম্পানির নিয়ম, পয়সায় (a6 8006bd78e: `rounding_limit`,
-  /// `rounding_sign_above`, "10.0000"/"0.5000"); পুরনো সার্ভারে null — তখন মালিকের ৳10 আর ৳0.50
+  /// ⭐ রাউন্ডিংয়ের সীমা আর যার বেশি হলে মালিকের সই — সার্ভারের কোম্পানির নিয়ম, পয়সায়, নিচের দিকে ([bandPaisa]; a6 8006bd78e:
+  /// `rounding_limit`, `rounding_sign_above`, "10.0000"/"0.5000"); পুরনো সার্ভারে null — তখন মালিকের ৳10 আর ৳0.50
   final int? roundingLimit;
   final int? roundingSignAbove;
 
@@ -464,9 +464,22 @@ class CollectionSetup {
           for (final m in (j['transfer_modes'] as List?) ?? const [])
             if (m is Map) TransferMode.fromJson(Map<String, dynamic>.from(m)),
         ],
-        roundingLimit: j['rounding_limit'] == null ? null : paisaOf(j['rounding_limit']),
-        roundingSignAbove: j['rounding_sign_above'] == null ? null : paisaOf(j['rounding_sign_above']),
+        roundingLimit: j['rounding_limit'] == null ? null : bandPaisa(j['rounding_limit']),
+        roundingSignAbove: j['rounding_sign_above'] == null ? null : bandPaisa(j['rounding_sign_above']),
       );
+
+  /// ⭐ সীমা পয়সায়, নিচের দিকে (চার দশমিকের লেখা থেকে, লেখা ধরে — double নয়)।
+  ///
+  /// <p>সার্ভার bcmath-এ মাপে: রাউন্ডিং `> rounding_limit` হলে ফেরত, `> rounding_sign_above` হলে মালিকের সই
+  /// ([[Settlement]], CollectionService)। পর্দার অঙ্ক পুরো পয়সা, তাই "p পয়সা > সীমা" ঠিক তখনই যখন p > ⌊সীমা × 100⌋।
+  /// ⚠️ আগে গোল করা হত ([paisaOf]): কোম্পানির সীমা "10.0050" হলে ফোন ১০০১ পয়সা ধরত আর ৳10.01 ছেড়ে দিত, অথচ সার্ভার
+  /// ফেরায়; সইয়ের সীমা "0.5050" হলে ৳0.51-এ ফোন সই চাইত না, সার্ভার চায়। ঋণাত্মক বা পড়া না গেলে null — তখন ডিফল্ট।
+  static int? bandPaisa(Object? value) {
+    final m = RegExp(r'^\s*(\d+)(?:\.(\d*))?\s*$').firstMatch(value?.toString() ?? '');
+    if (m == null) return null;
+    final cents = (m[2] ?? '').padRight(2, '0').substring(0, 2);
+    return int.parse(m[1]!) * 100 + int.parse(cents);
+  }
 
   Map<String, dynamic> toJson() => {
         'accounts': [for (final a in accounts) a.toJson()],

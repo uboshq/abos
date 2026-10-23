@@ -89,35 +89,53 @@ Map<String, dynamic> previewJson({List<String> stops = const [], bool needsSigna
   final charge = paisaOf(d.bankCharge);
   final vds = paisaOf(d.vds);
   final ait = paisaOf(d.ait);
-  final difference = paisaOf(d.difference?.amount);
+  // ⓘ সার্ভার পার্থক্যের চিহ্ন ফেলে অঙ্কটাই নেয় (CollectionInput::difference()-এর abs) — −0.51 মানে 0.51
+  final difference = paisaOf(d.difference?.amount).abs();
   final gross = amount + vds + ait + difference;
   final money = accounts.where((a) => a.id == d.accountId).firstOrNull;
-  String text(int paisa) => paisaText(paisa);
+  String text(int paisa) => serverMoney(paisa);
   final lines = <Map<String, String>>[
-    {'account': '${money?.code ?? ''} ${money?.name ?? ''}'.trim(), 'branch': 'ময়মনসিংহ', 'dr': text(amount - charge), 'cr': '0.00'},
+    {'account': '${money?.code ?? ''} ${money?.name ?? ''}'.trim(), 'branch': 'ময়মনসিংহ', 'dr': text(amount - charge), 'cr': '0.0000'},
     if (charge > 0)
-      {'account': money?.kind == 'mfs' ? '5211 মোবাইল ব্যাংকিং চার্জ' : '5210 ব্যাংক চার্জ', 'branch': 'ময়মনসিংহ', 'dr': text(charge), 'cr': '0.00'},
-    if (vds > 0) {'account': '1138 উৎসে কাটা ভ্যাট পাওনা', 'branch': 'ময়মনসিংহ', 'dr': text(vds), 'cr': '0.00'},
-    if (ait > 0) {'account': '1135 অগ্রিম আয়কর', 'branch': 'ময়মনসিংহ', 'dr': text(ait), 'cr': '0.00'},
+      {'account': money?.kind == 'mfs' ? '5211 মোবাইল ব্যাংকিং চার্জ' : '5210 ব্যাংক চার্জ', 'branch': 'ময়মনসিংহ', 'dr': text(charge), 'cr': '0.0000'},
+    if (vds > 0) {'account': '1138 উৎসে কাটা ভ্যাট পাওনা', 'branch': 'ময়মনসিংহ', 'dr': text(vds), 'cr': '0.0000'},
+    if (ait > 0) {'account': '1135 অগ্রিম আয়কর', 'branch': 'ময়মনসিংহ', 'dr': text(ait), 'cr': '0.0000'},
     if (difference > 0)
       {
         'account': d.difference!.kind == 'discount' ? '4120 আদায়ে বিক্রয় ছাড়' : '5305 রাউন্ডিং পার্থক্য',
         'branch': 'ময়মনসিংহ',
         'dr': text(difference),
-        'cr': '0.00',
+        'cr': '0.0000',
       },
-    {'account': '1110 প্রাপ্য হিসাব · করিম স্টোর', 'branch': 'ময়মনসিংহ', 'dr': '0.00', 'cr': text(unbalanced ? gross - 1 : gross)},
+    {'account': '1110 প্রাপ্য হিসাব · করিম স্টোর', 'branch': 'ময়মনসিংহ', 'dr': '0.0000', 'cr': text(unbalanced ? gross - 1 : gross)},
   ];
   final dr = lines.fold(0, (s, l) => s + paisaOf(l['dr']));
   final cr = lines.fold(0, (s, l) => s + paisaOf(l['cr']));
   return (lines: lines, dr: dr, cr: cr);
 }
 
-/// সার্ভারের সইয়ের নিয়ম (Settlement::differenceNeedsOwner): ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে
+/// সার্ভারের টাকার লেখা — bcmath-এর চার দশমিক ("45000.0000", "-2000.0000")
+String serverMoney(int paisa) => '${paisaText(paisa)}00';
+
+/// সার্ভারের সইয়ের নিয়ম (Settlement::differenceNeedsOwner): ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে — অঙ্কটা চিহ্ন ছাড়া
+/// (প্রিভিউ −0.51-কে 0.51 পড়ে আর সই চায়; a6 5d6c6bac0 CollectionAppContractTest::test_item_4_…)
 bool serverNeedsOwner(CollectionDraft d, {int above = 50}) {
-  final amount = paisaOf(d.difference?.amount);
+  final amount = paisaOf(d.difference?.amount).abs();
   if (amount <= 0) return false;
   return d.difference!.kind == 'discount' || amount > above;
+}
+
+/// ⛔ সার্ভারের পুশ ফেরানোর কথা — CollectionSync::apply-এর Validator (a6 5d6c6bac0): `amount`, `vds`, `ait`, `bank_charge`,
+/// `difference.amount` সাধারণ দশমিক `^\d{1,14}(\.\d{1,4})?$` (চিহ্ন নেই); না মিললে lang/bn/validation.php-এর `regex` কথা,
+/// ঘরের কাঁচা নামে (ঘরের বাংলা নাম `attributes`-এ নেই)। ঠিক থাকলে null।
+String? serverRefusal(Map<String, dynamic> p) {
+  final plain = RegExp(r'^\d{1,14}(\.\d{1,4})?$');
+  final difference = p['difference'] is Map ? (p['difference'] as Map)['amount'] : null;
+  for (final (key, value) in [('amount', p['amount']), ('vds', p['vds']), ('ait', p['ait']), ('bank_charge', p['bank_charge']), ('difference.amount', difference)]) {
+    if (value == null && key != 'amount') continue;
+    if (!plain.hasMatch(value?.toString() ?? '')) return '${key.replaceAll('_', ' ')}-এর গড়নটা ঠিক নয়।';
+  }
+  return null;
 }
 
 class FakeCollect implements CollectionEntryApi {
@@ -244,11 +262,19 @@ class FakeCollect implements CollectionEntryApi {
     final json = <String, dynamic>{
       ...previewData,
       'lines': j.lines,
-      'total_dr': paisaText(j.dr),
-      'total_cr': paisaText(j.cr),
+      'total_dr': serverMoney(j.dr),
+      'total_cr': serverMoney(j.cr),
       'needs_signature': previewData['needs_signature'] == true ||
           serverNeedsOwner(draft, above: roundingSignAbove == null ? 50 : paisaOf(roundingSignAbove)),
-      'summary': {...summary, 'balanced': !unbalancedPreview && j.dr == j.cr},
+      // ⓘ সারাংশের অঙ্ক পাঠানো আদায় থেকে, সার্ভারের মতো চার দশমিকে আর পার্থক্য চিহ্ন ছাড়া (CollectionService::preview)
+      'summary': {
+        ...summary,
+        'received': serverMoney(paisaOf(draft.amount)),
+        'vds': serverMoney(paisaOf(draft.vds)),
+        'ait': serverMoney(paisaOf(draft.ait)),
+        'difference': serverMoney(paisaOf(draft.difference?.amount).abs()),
+        'balanced': !unbalancedPreview && j.dr == j.cr,
+      },
     };
     return lastPreview = CollectionPreview.fromJson(json);
   }
@@ -261,6 +287,8 @@ class FakeCollect implements CollectionEntryApi {
       throw const NoNetworkForThis();
     }
     if (refusal != null) return PushOutcome(refusal: refusal);
+    // ⛔ সার্ভারের পুশ-নিয়ম (CollectionSync::apply-এর Validator): টাকার ঘর সাধারণ দশমিক, চিহ্ন ছাড়া — না মিললে প্রথম ভুলের কথায় ফেরত
+    if (serverRefusal(draft.toPayload()) case final reason?) return PushOutcome(refusal: reason);
     final id = receipts.putIfAbsent(changeId, () {
       sent.add(draft);
       return 'col-${receipts.length + 1}';

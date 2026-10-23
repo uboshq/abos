@@ -81,6 +81,17 @@ void main() {
       expect([setup.roundingLimit, setup.roundingSignAbove], [1000, 50]);
     });
 
+    /// ⭐ সীমা নিচের দিকে, পয়সায় — সার্ভার bcmath-এ `>` মাপে (Settlement), তাই পুরো পয়সার অঙ্ক p "সীমার বেশি" ঠিক তখন যখন
+    /// p > ⌊সীমা × 100⌋। গোল করলে "10.0050"-এ ফোন ৳10.01 ছাড়ত (সার্ভার ফেরায়), "0.5050"-এ ৳0.51-এ সই চাইত না (সার্ভার চায়)।
+    test('setup bands with sub-paisa digits are read downwards, as the server compares: "10.0050" → 1000, "0.5050" → 50', () async {
+      server.setupBody = {'accounts': [], 'transfer_modes': [], 'rounding_limit': '10.0050', 'rounding_sign_above': '0.5050'};
+      final setup = await const ServerCollectionEntryApi().setup();
+      expect([setup.roundingLimit, setup.roundingSignAbove], [1000, 50],
+          reason: '⛔ সীমা গোল করে পড়া — ফোন আর সার্ভার এক পয়সায় আলাদা কথা বলে');
+      expect([CollectionSetup.bandPaisa('0.29'), CollectionSetup.bandPaisa('25'), CollectionSetup.bandPaisa('-1'), CollectionSetup.bandPaisa('x')],
+          [29, 2500, null, null]);
+    });
+
     test('17 · the receipt\'s PDF comes through /documents/{type}/{id}/pdf with the sign-in token', () async {
       await TokenStorage.instance.saveTokens(accessToken: 'tok-41', refreshToken: 'r');
       const saved = CollectionSaved(id: 'col-9', receipt: 'https://erp.test/api/v1/documents/Collection/col-9/pdf');
