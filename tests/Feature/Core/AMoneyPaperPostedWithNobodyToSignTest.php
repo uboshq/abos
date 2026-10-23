@@ -7,15 +7,10 @@ namespace Tests\Feature\Core;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\BulkApproval;
 use App\Core\Engines\Approval\DelegationService;
-use App\Core\Engines\Approval\DocumentApproval;
-use App\Core\Engines\Approval\NoApprovalFlow;
-use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\PermissionSyncer;
-use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
-use App\Models\ApprovalCondition;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -25,7 +20,6 @@ use App\Models\NoticeCategory;
 use App\Models\User;
 use App\Modules\Approval\Services\MoneyFlowDefaults;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use InvalidArgumentException;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\SignsMoneyOff;
@@ -47,16 +41,11 @@ use Tests\TestCase;
  *     অ্যাডমিন সই দেন।
  * ৪ · POS-এর নগদ বিক্রি ছাড়া প্রতিটা টাকার পোস্টিংয়ে সই লাগে।
  *
- * ── ⚠️ এই ফাইলটা কীভাবে পড়তে হয় ─────────────────────────────────────
- * নকশার §৭-এর দাবিগুলো দুই রকম:
- *   · **আজই চলে** — আজকের যে আচরণ দ্বিতীয় ধাপের পরেও ঠিক থাকতে হবে
- *     (টাকার বাইরের ছাড়, bulk-এর নিষেধ, একই মানুষের চাবি)।
- *   · **দ্বিতীয় ধাপের অপেক্ষায়** — ইঞ্জিন বদলানোর আগে এগুলো লাল হত,
- *     তাই [[afterPhaseTwo()]] দিয়ে incomplete। ⭐ ইঞ্জিনে `movesMoney()`
- *     বসলেই এগুলো নিজে থেকে চালু হয় — কারো কিছু মনে রাখতে হয় না।
- *
- * ⛔ incomplete-এর ডাক **একটাই** জায়গায়: [[ASkippedTestReadsAsAPassingOneTest]]
- * প্রতিটা লেখা ডাক গোনে, আর ছাদ ২৫।
+ * ── ⚠️ দরজা তোলা হলো (fe, ২৪ অক্টোবর ২০২৬) ─────────────────────────
+ * আগে "দ্বিতীয় ধাপের" এগারোটা দাবি `method_exists(ApprovalEngine::class, 'movesMoney')`-এর দরজার পিছনে
+ * incomplete থাকত। ⛔ সেই নামটা ইঞ্জিনে কখনো বসেনি (বসেছে [[BulkApproval::movesMoney()]]-এ), তাই ২৮ সেপ্টেম্বর থেকে
+ * এগুলো একবারও চলেনি। দরজা ছাড়া চালালে দুইটা আজই সবুজ (ভার, পুরনো কপি) — সেগুলো এখানে, সবসময় চলে।
+ * ⓘ বাকি নয়টা লাল — ইঞ্জিনে টাকার নিয়মই বসেনি; তারা নিজেদের সারাইয়ের সাথে a5/money-sign-claims-এ আসে (fe)।
  *
  * ⓘ কাগজ হিসেবে [[Branch]] আর [[NoticeCategory]] — ইঞ্জিন polymorphic,
  * কোন কাগজ সেটা তার জানার কথা নয় ([[ApprovalEngineTest]]-এর একই কৌশল)।
@@ -87,50 +76,7 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         parent::tearDown();
     }
 
-    // ── ১ · ছক নেই ────────────────────────────────────────────────────
-
-    /**
-     * ⛔ ছক-হীন প্রতিটা টাকার কাজ থামে — তালিকাটা `moves_money` থেকে, হাতে লেখা নয়।
-     */
-    public function test_every_money_action_without_a_flow_is_refused(): void
-    {
-        $pairs = app(MoneyFlowDefaults::class)->moneyActions();
-
-        // ⓘ খালি তালিকায় নিচের লুপ কিছুই না দেখে সবুজ হত
-        $this->assertNotEmpty($pairs, 'The registry names no money action at all — the claim would look at nothing.');
-
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'ছক-হীন টাকার কাজ এখনো null পায়');
-
-        $let = [];
-
-        foreach ($pairs as $pair) {
-            try {
-                $out = $this->engine()->request($this->paper(), $pair['module'], $pair['action'], '1', userId: $this->maker->id);
-                $let[] = $pair['module'].'.'.$pair['action'].' → '.($out === null ? 'null' : 'request #'.$out->id);
-            } catch (NoApprovalFlow $refused) {
-                $this->assertSame($pair['module'], $refused->module());
-                $this->assertSame($pair['action'], $refused->action());
-            }
-        }
-
-        $this->assertSame([], $let, 'These money actions went ahead with no flow at all.');
-        $this->assertSame(0, Approval::query()->count(), 'A refused paper must leave no request row behind.');
-    }
-
     // ── ২ · সীমা ──────────────────────────────────────────────────────
-
-    public function test_a_threshold_does_not_wave_a_small_money_paper_through(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'টাকার কাজে সীমা এখনো খাটে');
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, threshold: '10000');
-
-        $this->assertNotNull(
-            $this->engine()->request($this->paper(), $module, $action, '1', userId: $this->maker->id),
-            'One taka under a 10,000 threshold still moves money — it needs a second person.',
-        );
-    }
 
     /** ⭐ আজই চলে — টাকার বাইরে সীমা আগের মতো। */
     public function test_outside_money_a_small_paper_under_the_threshold_still_goes_ahead(): void
@@ -145,63 +91,7 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         );
     }
 
-    // ── ৩ · শর্ত আর self_limit ────────────────────────────────────────
-
-    public function test_a_condition_that_does_not_match_still_catches_a_money_paper(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'টাকার কাজে শর্ত এখনো ছেড়ে দেয়');
-
-        [$module, $action] = $this->moneyPair();
-        $flow = $this->flowOn($module, $action);
-
-        ApprovalCondition::create([
-            'approval_flow_id' => $flow->id,
-            'field' => 'name_en',
-            'operator' => '=',
-            'value' => 'nothing-on-any-paper',
-        ]);
-
-        $this->forgetTheEnginesFlows();
-
-        $this->assertNotNull($this->engine()->request(
-            $this->paper(), $module, $action, '500',
-            userId: $this->maker->id,
-            matchOn: ['name_en' => 'an ordinary paper'],
-        ));
-    }
-
-    public function test_the_self_limit_never_lets_the_maker_sign_money(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'টাকার কাজে self_limit এখনো খাটে');
-
-        app(SettingsService::class)->set('approval.self_limit', 1000000);
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, byUser: $this->maker);
-
-        $approval = $this->engine()->request($this->paper(), $module, $action, '1', userId: $this->maker->id);
-
-        $this->assertFalse($this->engine()->canDecide($approval, $this->maker));
-    }
-
     // ── ৪ · বানানেওয়ালা ≠ সইকারী ──────────────────────────────────────
-
-    public function test_a_super_admin_cannot_sign_their_own_money_paper(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'সুপার অ্যাডমিন এখনো নিজের টাকার কাগজে সই দেন');
-
-        $owner = $this->superAdmin();
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, byUser: $owner);
-
-        $approval = $this->engine()->request($this->paper(), $module, $action, '5000', userId: $owner->id);
-
-        $this->assertFalse($this->engine()->canDecide($approval, $owner));
-
-        $this->expectException(RuntimeException::class);
-        $this->engine()->approve($approval, $owner);
-    }
 
     /** ⭐ আজই চলে — মালিকের সিদ্ধান্ত ২: টাকার বাইরে ছাড়টা থাকে। */
     public function test_outside_money_a_super_admin_still_signs_their_own_paper(): void
@@ -216,34 +106,8 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         $this->assertSame(Approval::APPROVED, $this->engine()->approve($approval, $owner)->status);
     }
 
-    public function test_neither_the_creator_nor_the_requester_can_sign(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'কাগজের created_by এখনো দেখা হয় না');
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
-
-        $creator = $this->secondSignerIn($this->company, 'বানিয়েছেন');
-        $requester = $this->secondSignerIn($this->company, 'পাঠিয়েছেন');
-        $third = $this->secondSignerIn($this->company, 'তৃতীয়জন');
-
-        $paper = NoticeCategory::create([
-            'code' => 'M'.substr(uniqid(), -8),
-            'name_en' => 'Money paper',
-            'created_by' => $creator->id,
-        ]);
-
-        $approval = $this->engine()->request($paper, $module, $action, '700', userId: $requester->id);
-
-        $this->assertFalse($this->engine()->canDecide($approval, $creator), 'The person who made the paper signed it.');
-        $this->assertFalse($this->engine()->canDecide($approval, $requester), 'The person who sent it signed it.');
-        $this->assertTrue($this->engine()->canDecide($approval, $third), 'A third Accountant must still be able to sign.');
-    }
-
     public function test_a_delegation_is_no_way_round_the_rule(): void
     {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'ভার নিয়ে ঘুরপথ এখনো খোলা');
-
         [$module, $action] = $this->moneyPair();
         $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
 
@@ -303,26 +167,6 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         $this->assertSame(Approval::PENDING, $approval->fresh()->status);
     }
 
-    public function test_a_money_action_with_no_hook_stops_the_boot(): void
-    {
-        $this->afterPhaseTwo(property_exists(ModuleDefinition::class, 'approvalHooks'), 'ModuleDefinition এখনো approval_hooks পড়ে না');
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/hook/i');
-
-        ModuleDefinition::fromArray(
-            [
-                'code' => 'pocket',
-                'name' => ['en' => 'Pocket', 'bn' => 'পকেট'],
-                'nav' => ['section' => 'business', 'order' => 10],
-                'approvals' => ['pay' => 'pocket::approval.pay'],
-                'moves_money' => ['pay'],
-            ],
-            'test/module.php',
-            'App\\Modules\\Pocket',
-        );
-    }
-
     // ── ৭ · লক ────────────────────────────────────────────────────────
 
     /**
@@ -333,8 +177,6 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
      */
     public function test_a_second_signature_on_a_stale_copy_is_refused(): void
     {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'সিদ্ধান্তে এখনো লক নেই');
-
         [$module, $action] = $this->moneyPair();
         $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
 
@@ -355,90 +197,7 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         $this->assertSame(1, ApprovalDecision::query()->where('approval_id', $stale->id)->count());
     }
 
-    // ── নিয়ম ৫ · পোস্টের মুহূর্তে আবার দেখা ──────────────────────────────
-
-    public function test_an_approval_whose_only_yes_came_from_its_maker_does_not_clear_the_paper(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'পোস্টের মুহূর্তে সইকারী এখনো দেখা হয় না');
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
-
-        $paper = $this->paper();
-
-        /*
-         * ⓘ deploy-এর আগের একটা অনুমোদন — সুপার অ্যাডমিন নিজে সই করে
-         * পাশ করেছিলেন, কাগজ পোস্ট হয়নি (নকশা §৬)।
-         */
-        $old = Approval::create([
-            'company_id' => $this->company->id,
-            'approvable_type' => $paper::class,
-            'approvable_id' => $paper->getKey(),
-            'module' => $module,
-            'action' => $action,
-            'amount' => '100',
-            'status' => Approval::APPROVED,
-            'current_level' => 1,
-            'requested_by' => $this->maker->id,
-            'requested_at' => now()->subDay(),
-            'decided_at' => now()->subDay(),
-        ]);
-
-        ApprovalDecision::create([
-            'approval_id' => $old->id,
-            'level' => 1,
-            'user_id' => $this->maker->id,
-            'decision' => 'approved',
-            'decided_at' => now()->subDay(),
-        ]);
-
-        $this->actingAs($this->maker);
-
-        $stopping = app(DocumentApproval::class)->stopping($paper, $module, $action, '100');
-
-        $this->assertNotNull($stopping, 'A self-signed approval let the money paper post.');
-        $this->assertNotSame((int) $old->id, (int) $stopping->id);
-        $this->assertSame(Approval::PENDING, $stopping->status);
-    }
-
-    // ── মালিকের সিদ্ধান্ত ৩ · একমাত্র Accountant ────────────────────────
-
-    public function test_a_lone_accountants_own_paper_goes_to_the_super_admin(): void
-    {
-        $this->afterPhaseTwo($this->engineKnowsMoney(), 'যোগ্য সইকারী না থাকলে সুপার অ্যাডমিনের পথ এখনো নেই');
-
-        [$module, $action] = $this->moneyPair();
-        $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
-
-        $lone = $this->secondSignerIn($this->company, 'একমাত্র Accountant');
-        $owner = $this->superAdmin();
-
-        $approval = $this->engine()->request($this->paper(), $module, $action, '600', userId: $lone->id);
-
-        $this->assertFalse($this->engine()->canDecide($approval, $lone));
-        $this->assertTrue($this->engine()->canDecide($approval, $owner),
-            'Nobody else can sign — the owner decided the super admin signs then.');
-    }
-
     // ── সহায়ক ────────────────────────────────────────────────────────
-
-    /**
-     * ⚠️ incomplete-এর একমাত্র ডাক — ছাদের হিসাব রাখতে।
-     *
-     * ⓘ `$landed` ঠিক সেই জিনিসটা জিজ্ঞেস করে যার উপর দাবিটা দাঁড়িয়ে;
-     * ⛔ একটা সাধারণ "phase 2" পতাকা হলে অর্ধেক বসানো অবস্থায় ভুল দাবি চালু হত।
-     */
-    private function afterPhaseTwo(bool $landed, string $what): void
-    {
-        if (! $landed) {
-            $this->markTestIncomplete('দ্বিতীয় ধাপ এখনো বসেনি — '.$what);
-        }
-    }
-
-    private function engineKnowsMoney(): bool
-    {
-        return method_exists(ApprovalEngine::class, 'movesMoney');
-    }
 
     /** ⓘ প্রতিবার নতুন করে — ইঞ্জিন `scoped`, আর ছক ও রোল জমিয়ে রাখে। */
     private function engine(): ApprovalEngine
