@@ -31,6 +31,8 @@ return [
     // label as ten other role edits, that answer takes opening every row.
     'ownership_transferred' => 'Ownership transferred',
     'companies_changed' => 'Company access changed',
+    // The owner brought back into an ownerless company — abos:restore-owner (24 Oct 2026)
+    'owner_restored' => 'Owner restored',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',

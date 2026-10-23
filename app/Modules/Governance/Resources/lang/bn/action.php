@@ -36,6 +36,8 @@ return [
      */
     'ownership_transferred' => 'মালিকানা হস্তান্তর',
     'companies_changed' => 'কোম্পানির অধিকার বদল',
+    // ⓘ মালিকহীন কোম্পানিতে মালিক ফিরলেন — abos:restore-owner (২৪ অক্টোবর ২০২৬)
+    'owner_restored' => 'মালিককে ফেরানো',
     'scopes_changed' => 'দেখার সীমা বদল',
     'look_published' => 'রূপ প্রকাশ',
     'look_reverted' => 'রূপ ফেরানো',
