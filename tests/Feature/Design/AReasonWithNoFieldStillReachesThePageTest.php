@@ -125,6 +125,38 @@ final class AReasonWithNoFieldStillReachesThePageTest extends TestCase
         $this->assertSame(1, substr_count($html, 'খাতের কারণ'), '⛔ কারণটা দুবার আঁকা হল');
     }
 
+    /**
+     * ⛔ হাতে লেখা তালিকার পাতা (~১৫০টা, x-ui.errors ছাড়া) — উদ্ধৃতি আর & থাকা কারণও পাতা যেভাবে escape করে আঁকে সেভাবেই
+     * মেলে, তাই layout-এর বাক্স তা আবার দেখায় না: ঠিক একবার (fe, ২৪ অক্টোবর ২০২৬)।
+     */
+    public function test_a_reason_with_quotes_and_an_ampersand_in_a_hand_written_list_shows_once(): void
+    {
+        $reason = 'খাত "Cash & Bank" নতুন সারি নেয় না — অন্য খাত বাছুন';
+        View::share('errors', (new ViewErrorBag)->put('default', new MessageBag(['posting' => [$reason]])));
+
+        // ⓘ পাতার নিজের হাতের তালিকা, যেমন voucher/show আঁকে — তারপর layout-এর বাক্স, পাতার আঁকা লেখা দিয়ে
+        $page = Blade::render('<ul class="list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>');
+        $box = Blade::render('<x-ui.errors :shown="$shown" />', ['shown' => new \Illuminate\Support\HtmlString($page)]);
+
+        $this->assertSame(1, substr_count($page.$box, e($reason)),
+            '⛔ উদ্ধৃতি আর &-সহ কারণ হাতে লেখা তালিকায় আছে, তবু layout-এর বাক্স আবার দেখাল (escape না মিলিয়ে তুলনা)');
+    }
+
+    /**
+     * ⛔ ছোট একটা কারণ পাতার অন্য লেখার ভিতরে অংশ হিসেবে আছে — সেটা "দেখানো" নয়; layout-এর বাক্স তবুও দেখায়, হারায় না।
+     */
+    public function test_a_short_reason_inside_other_text_is_still_shown(): void
+    {
+        $reason = 'খাত নেই';
+        View::share('errors', (new ViewErrorBag)->put('default', new MessageBag(['account' => [$reason]])));
+
+        $page = '<p class="text-sm">এই তালিকায় খাত নেই এমন সারি বাদ দেওয়া হয়</p>';
+        $box = Blade::render('<x-ui.errors :shown="$shown" />', ['shown' => new \Illuminate\Support\HtmlString($page)]);
+
+        $this->assertStringContainsString('role="alert"', $box, '⛔ ছোট কারণটা পাতার অন্য বাক্যের ভিতরে মিলল বলে layout-এর বাক্স দেখাল না — কারণ হারাল');
+        $this->assertStringContainsString(e($reason), $box, '⛔ layout-এর বাক্সে কারণটা নেই');
+    }
+
     /** ⭐ পাহারা: প্রতিটা layout পাতার উপরে বাক্স বসায়, পাতার আঁকা লেখা দিয়ে — নতুন layout ভুলে গেলে লাল */
     public function test_every_layout_carries_the_box(): void
     {

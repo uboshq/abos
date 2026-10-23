@@ -33,12 +33,18 @@
     ② layout পাতার আঁকা লেখা দেয় (`shown`) — পাতার slot layout-এর আগে আঁকা
        হয়, তাই জানা যায় কোন কারণ পাতা নিজে (হাতে লেখা তালিকায় বা ঘরের নিচে)
        দেখিয়েছে। layout কেবল বাকিগুলো দেখায় — কোনো কারণ দুবার নয়, হারায়ও না।
+    ⛔ "দেখানো" মানে পুরো লেখাটা নিজের ঘরে — দুই ট্যাগের মাঝে একা (`<li>…</li>`,
+       ঘরের নিচের `<p>…</p>`), পাতা যেভাবে আঁকে সেভাবে escape করে (e()), ফাঁকা
+       জায়গা এক করে। বড় কোনো লেখার অংশ হিসেবে থাকলে সেটা দেখানো নয় — নইলে
+       ছোট একটা কারণ ("খাত নেই") অন্য বাক্যের ভিতরে মিলে হারিয়ে যেত (fe)।
 --}}
 @props(['shown' => null])
 @php
     $errorsAlreadyShown = (bool) request()->attributes->get('ui.errors.drawn', false);
+    $pageText = $shown === null ? null : (string) preg_replace('/\s+/u', ' ', (string) $shown);
     $errorsToShow = $errorsAlreadyShown ? [] : array_values(array_filter($errors->all(),
-        fn ($message) => $shown === null || ! str_contains((string) $shown, e($message))));
+        fn ($message) => $pageText === null || ! preg_match(
+            '/>\s?'.preg_quote(trim((string) preg_replace('/\s+/u', ' ', e($message))), '/').'\s?</u', $pageText)));
 @endphp
 @if ($errorsToShow !== [])
     @php(request()->attributes->set('ui.errors.drawn', true))
