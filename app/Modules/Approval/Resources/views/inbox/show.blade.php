@@ -234,7 +234,8 @@
             @endif
         </div>
 
-        <div class="min-w-0 space-y-3">
+        {{-- ⛔ ডান কলাম sticky থাকে — লম্বা কাগজ পড়তে পড়তে নামলেও সইয়ের বোতাম চোখের সামনে (আগের নিয়ম; দফা ৯-এর বদলে হারিয়েছিল, TheApprovalScreensCarryTheNewRulesTest ধরেছে) --}}
+        <div class="min-w-0 space-y-3 lg:sticky lg:top-4">
             @if ($approval->status === \App\Models\Approval::PENDING && $canDecide)
                 {{-- ⭐ চারটা কাজ এক কার্ডে, ট্যাবে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
                      *"Scrol kore dekte hoy, egulo … guciye sundor kore daw"*। ⓘ আগে চারটা
