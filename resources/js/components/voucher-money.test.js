@@ -23,9 +23,11 @@ afterEach(() => {
 })
 
 async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' } } = {}) {
+    // ⛔ JSON-এর ডবল কোট অ্যাট্রিবিউট আগেই শেষ করে দিত (cb_v15: বাক্সটা জোড়াই লাগেনি, পাঁচটা দাবি "not a function") — একক কোটে লেখা
+    const balanceText = JSON.stringify(balances).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${JSON.stringify(balances)}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out} })">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out} })">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
