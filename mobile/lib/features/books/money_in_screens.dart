@@ -13,6 +13,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../home/nav_bottom_bar.dart' show BarFab;
@@ -115,8 +116,9 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
   @override
   Widget build(BuildContext context) {
     final page = _page;
-    // ⭐ এই পাতা = এ পর্যন্ত আনা সারি; সর্বমোট = সার্ভারের গোটা ছাঁকনির `count` আর `total` (নকশা ৩, পাতা ৩)
-    final shownSum = _rows.fold<double>(0, (sum, r) => sum + r.amount);
+    // ⭐ এই পাতা = দেখানো সারি, "আরও দেখুন"-এর সব খেপ ([ShownRows], অ্যাপজুড়ে এক মানে); সর্বমোট = সার্ভারের গোটা ছাঁকনির
+    // `count` আর `total` (নকশা ৩, পাতা ৩)। ⓘ ফোনে আটকে থাকা আদায় সারিতে থাকে, এই যোগে নয় — সার্ভারে এখনো পৌঁছায়নি।
+    final shown = ShownRows.of(_rows, (r) => r.amount);
     final unsent = (widget.unsent ?? unsentCollections)();
     return Scaffold(
       // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › আদায়" (০.৪.৪১ নমুনা, পাতা ২); অফলাইনের হলুদ পট্টি বার নিজে আঁকে
@@ -127,7 +129,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
           : null,
       bottomNavigationBar: page == null || _rows.isEmpty
           ? null
-          : TotalsBar(pageCount: _rows.length, pageSum: shownSum, allCount: page.count, allSum: page.total),
+          : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

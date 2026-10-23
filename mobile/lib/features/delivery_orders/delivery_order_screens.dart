@@ -19,6 +19,8 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/design_list_row.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/row_icon.dart';
+import '../../core/widgets/shown_rows.dart';
+import '../books/books_widgets.dart' show MoreButton;
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -35,9 +37,6 @@ String _qty(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStr
 String _kind(DeliveryOrderApi api) => api.forOrders ? 'order' : 'do';
 
 String _title(BuildContext context, DeliveryOrderApi api) => context.l10n.deliveryOrdersTitle(_kind(api));
-
-/// ⭐ মোটে না পড়া অবস্থা — ফেরত আর বাতিল কাগজ সারিতে থাকে, মোটে নয় (সার্ভারের UNCOUNTED-এর একই নিয়ম; fe, ১৭ অক্টোবর ২০২৬)
-const _uncounted = {'rejected', 'cancelled'};
 
 /// ⭐ অবস্থার রঙের মানে — চিপের একই চার রং ([AppStatusPill]); না চিনলে নীল "চলছে"
 AppStatusKind orderStatusKind(String status) => switch (status) {
@@ -117,6 +116,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   bool _awaitingMe = false;
   List<DeliveryOrder>? _rows;
   PaperTotal? _total;
+
+  /// সার্ভারের পরের পাতা — null মানে শেষ
+  int? _next;
   bool _busy = false;
   String? _error;
 
@@ -126,17 +128,19 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  /// [more] — "আরও দেখুন": পরের পাতা এনে আগের সারির পিছনে জোড়ে; নাহলে প্রথম পাতা থেকে নতুন করে
+  Future<void> _load({bool more = false}) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final (rows, total) = await widget.api.list(awaitingMe: _awaitingMe);
+      final (rows, total, next) = await widget.api.list(awaitingMe: _awaitingMe, page: more ? (_next ?? 1) : 1);
       if (mounted) {
         setState(() {
-          _rows = rows;
+          _rows = [if (more) ...?_rows, ...rows];
           _total = total;
+          _next = next;
         });
       }
     } catch (e) {
@@ -170,8 +174,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryOrder>[];
     final total = _total;
-    // ⭐ এই পাতার মোট — হাতে আসা সারির; ফেরত আর বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের একই নিয়ম)
-    final pageSum = rows.fold<double>(0, (sum, o) => _uncounted.contains(o.status) ? sum : sum + o.total);
+    // ⭐ এই পাতার মোট — দেখানো সব সারি, "আরও দেখুন"-এর সব পাতা মিলে ([ShownRows], অ্যাপজুড়ে এক মানে); প্রত্যাখ্যাত আর
+    // বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের `DeliveryOrderStatus::UNCOUNTED`, [PaperTotal.counts])
+    final page = ShownRows.of(rows, (o) => o.total, counts: (o) => PaperTotal.counts(o.status));
     return Scaffold(
       appBar: AbosScreenBar(title: widget.title ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule),
       floatingActionButton: widget.canWrite
@@ -184,7 +189,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;
       // নকশা ৩, পাতা ৩)। ⓘ পুরনো সার্ভার মোট না পাঠালে পট্টিই নেই — পাতার যোগফলকে সর্বমোট বলা মিথ্যা হত।
       bottomNavigationBar: total != null && rows.isNotEmpty
-          ? TotalsBar(pageCount: rows.length, pageSum: pageSum, allCount: total.count, allSum: total.sum)
+          ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum)
           : null,
       body: RefreshIndicator(
         onRefresh: _load,
@@ -249,6 +254,8 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
                 below: order.chips.isEmpty ? null : OrderChips(order.chips),
                 onTap: () => _open(order),
               ),
+            // ⭐ পরের পাতা — বাকি তালিকার একই "আরও দেখুন" (সার্ভার পাতায় ৫০টা দেয়)
+            if (_next != null && rows.isNotEmpty) MoreButton(busy: _busy, onPressed: () => _load(more: true)),
           ],
         ),
       ),

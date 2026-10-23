@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../../core/widgets/design_list_row.dart';
@@ -73,16 +74,15 @@ class _DueListScreenState extends State<DueListScreen> {
     final total =
         rows.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
 
-    // ⭐ নিচের স্থির পট্টি (নকশা ৩, পাতা ৩): "এই পাতা" = খোঁজ আর ফিল্টারের পরে যা দেখা যাচ্ছে; "সর্বমোট" = পুরো তালিকা —
-    // খোঁজায় কটা দোকান লুকালেও সর্বমোট বদলায় না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন
-    final shown =
-        filtered.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
+    // ⭐ নিচের স্থির পট্টি (নকশা ৩, পাতা ৩): "এই পাতা" = খোঁজ আর ফিল্টারের পরে যা দেখা যাচ্ছে ([ShownRows], অ্যাপজুড়ে এক মানে);
+    // "সর্বমোট" = পুরো তালিকা — খোঁজায় কটা দোকান লুকালেও সর্বমোট বদলায় না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন
+    final shown = ShownRows.of(filtered, (row) => row.due.outstandingInView);
 
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.customersDueTitle, module: context.l10n.customersTitle),
       bottomNavigationBar: rows.isEmpty
           ? null
-          : TotalsBar(pageCount: filtered.length, pageSum: shown, allCount: rows.length, allSum: total),
+          : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: rows.length, allSum: total),
       body: Column(
         children: [
           Padding(

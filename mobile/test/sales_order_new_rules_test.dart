@@ -17,8 +17,8 @@ class _FakeApi implements DeliveryOrderApi {
   bool get forOrders => true;
 
   @override
-  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async =>
-      ([current], null);
+  Future<(List<DeliveryOrder>, PaperTotal?, int?)> list({bool awaitingMe = false, int page = 1}) async =>
+      ([current], null, null);
 
   @override
   Future<DeliveryOrder> show(String id) async => current;

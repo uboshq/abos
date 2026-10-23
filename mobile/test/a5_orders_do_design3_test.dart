@@ -62,13 +62,13 @@ class _DoApi implements DeliveryOrderApi {
   bool get forOrders => false;
 
   @override
-  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async {
+  Future<(List<DeliveryOrder>, PaperTotal?, int?)> list({bool awaitingMe = false, int page = 1}) async {
     calls++;
     if (gate != null) await gate!.future;
     if (failFirst && calls == 1) {
       throw DioException(requestOptions: RequestOptions(path: '/sales/delivery-orders'), type: DioExceptionType.connectionError);
     }
-    return (rows, total);
+    return (rows, total, null);
   }
 
   @override
