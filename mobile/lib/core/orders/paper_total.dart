@@ -10,6 +10,14 @@ class PaperTotal {
   final double sum;
   final int count;
 
+  /// ⭐ মোটে না পড়া অবস্থা — প্রত্যাখ্যাত আর বাতিল আদেশ সারিতে থাকে, মোটে নয়। সার্ভারের `SalesOrderStatus::UNCOUNTED` আর
+  /// `DeliveryOrderStatus::UNCOUNTED`-এর হুবহু (ওয়েবের আদেশের তালিকা `SalesOrderController` আর ফোনের দরজা একই নিয়ম পড়ে),
+  /// তাই ফোনে কষা মোট আর ওয়েবের মোট এক কথা বলে।
+  static const Set<String> uncounted = {'rejected', 'cancelled'};
+
+  /// এই অবস্থার কাগজ মোটে পড়ে কি না ([uncounted]-এ নেই তো পড়ে)
+  static bool counts(String? status) => !uncounted.contains(status);
+
   static PaperTotal? fromJson(Map<String, dynamic> data) {
     if (!data.containsKey('total')) return null;
     return PaperTotal(

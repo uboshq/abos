@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/orders/paper_total.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -64,13 +65,15 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final synced = SalesOrderRecord.all();
     final shown =
         OrderListQuery.apply(synced, sort: _sort, filters: _filters);
-    // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ বাতিল আদেশ সারিতে থাকে, মোটে নয়
-    // (ওয়েবের ভাউচার আর আদেশের তালিকার একই নিয়ম)।
+    // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ প্রত্যাখ্যাত আর বাতিল আদেশ সারিতে
+    // থাকে, মোটে নয় — ওয়েবের আদেশের তালিকার হুবহু নিয়ম ([PaperTotal.uncounted], সার্ভারের `SalesOrderStatus::UNCOUNTED`)।
+    // ⛔ আগে কেবল বাতিল বাদ যেত, প্রত্যাখ্যাত আদেশ মোটে ঢুকত (fe-র মোটের নিরীক্ষা, ২৪ অক্টোবর ২০২৬)।
     double sumOf(List<SalesOrderRecord> list) =>
-        list.fold<double>(0, (sum, order) => order.status == 'cancelled' ? sum : sum + (order.total ?? 0));
+        list.fold<double>(0, (sum, order) => PaperTotal.counts(order.status) ? sum + (order.total ?? 0) : sum);
     final shownTotal = sumOf(shown);
-    // ⭐ সর্বমোট — ফোনে সিঙ্ক হওয়া পুরো তালিকা, ছাঁকনির আগে; "এই পাতা" যা এখন দেখা যাচ্ছে (নকশা ৩, পাতা ৩)
-    final allTotal = sumOf(synced);
+    // ⭐ সর্বমোট — ছাঁকনি মেনে: ওয়েবের তালিকার সর্বমোট ছাঁকা ফলের, তাই এখানেও। ⛔ আগে ছাঁকনির আগের পুরো তালিকা যোগ হত — একটা
+    // অবস্থা বাছলেও সর্বমোট বদলাত না, পাশের গোনার সাথে মিলত না। ⓘ ফোনের তালিকা পাতায় ভাগ হয় না, তাই এখানে দুটো একই সারির।
+    final allTotal = shownTotal;
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -85,7 +88,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
       floatingActionButton: newOrder,
       bottomNavigationBar: synced.isEmpty
           ? null
-          : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),
+          : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: shown.length, allSum: allTotal),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState
