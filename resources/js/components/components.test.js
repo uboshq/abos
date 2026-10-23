@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import Alpine from '@alpinejs/csp'
+import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { registerComponents } from './index.js'
 import { bankFacilityForm } from './forms.js'
@@ -148,6 +149,49 @@ describe('নতুন জমা', () => {
         expect(host.querySelector('b').textContent).toBe('owner')
         expect(host.querySelector('i').textContent).toBe('dps')
         expect(warnings).toEqual([])
+    })
+})
+
+/*
+ * ⛔ খরচের ভাউচারের "কাটা · হাতে যাবে" লাইন (a6, ২৪ অক্টোবর ২০২৬): পাতা টাকা লেখা হিসেবে পাঠায় ('0'), আর `ait + vds`
+ * জুড়ে '00' হত — `.toFixed` নেই, পাতা খুলতেই "Value is not a function", লাইনটা ফাঁকা। ⓘ এক্সপ্রেশনটা হাতে লেখা নয়,
+ * ব্লেড থেকেই পড়া — পর্দা যা বলে, ঠিক সেটাই এখানে চলে।
+ */
+describe('খরচের ভাউচারের কাটা আর হাতে যাবে', () => {
+    // ⓘ happy-dom-এ import.meta.url ফাইলের ঠিকানা নয় — vitest চলে প্রকল্পের মূলে, তাই সেখান থেকে
+    const blade = readFileSync('app/Modules/Accounts/Resources/views/voucher/partials/expense-fields.blade.php', 'utf8')
+    const expression = blade.match(/x-text="('\{\{ __\('accounts::field\.deducted'\) \}\} '[^"]*)"/)[1]
+        .replace("{{ __('accounts::field.deducted') }}", 'কাটা')
+        .replace("{{ __('accounts::field.net_payable') }}", 'হাতে যাবে')
+
+    it('পাতার মতো লেখা-টাকায় (০, ৫০ আর ২৫, মুছে ফেলা ঘর) লাইনটা অঙ্ক দেখায়, ভুল নয়', async () => {
+        for (const [ait, vds, said] of [['0', '0', 'কাটা 0.00 · হাতে যাবে 1000.00'], ['50', '25', 'কাটা 75.00 · হাতে যাবে 925.00'], ['', '25', 'কাটা 25.00 · হাতে যাবে 975.00']]) {
+            const host = await mount(`<div x-data="expenseFields({ gross: '1000', ait: '${ait}', vds: '${vds}' })"><span x-text="${expression}"></span></div>`)
+
+            expect(host.querySelector('span').textContent.replace(/\s+/g, ' ')).toBe(said)
+            expect(warnings).toEqual([])
+        }
+    })
+
+    /*
+     * ⛔ ঘরে লেখার পরেও (cb, মেশানো fae9d7623): `x-model.number` সংখ্যা দেয় কেবল লেখা থাকলে — ঘর মুছলে দেয় ''। শুরুর মান
+     * সংখ্যায় বদলালেও তাই ভুলটা ফিরত: AIT মুছে VDS-এ ২৫ লিখলে '' + 25 = '25', `.toFixed` নেই, লাইন ফাঁকা।
+     */
+    it('AIT মুছে VDS-এ ২৫ লিখলে লাইনটা অঙ্কে যোগ করে', async () => {
+        const host = await mount(`<div x-data="expenseFields({ gross: '1000', ait: '50', vds: '0' })">
+            <input id="ait" type="text" x-model.number="ait"><input id="vds" type="text" x-model.number="vds">
+            <span x-text="${expression}"></span></div>`)
+
+        for (const [id, value] of [['ait', ''], ['vds', '25']]) {
+            const input = host.querySelector('#' + id)
+            input.value = value
+            input.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        await Alpine.nextTick()
+
+        expect(warnings, '⛔ ঘর মুছে লিখতেই কাটার লাইন ভাঙল — যোগের বদলে লেখা জুড়েছে').toEqual([])
+        expect(host.querySelector('span').textContent.replace(/\s+/g, ' '), '⛔ AIT মুছে VDS ২৫ — কাটা ২৫.০০ আর হাতে যাবে ৯৭৫.০০ নয়')
+            .toBe('কাটা 25.00 · হাতে যাবে 975.00')
     })
 })
 
