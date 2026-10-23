@@ -439,6 +439,40 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertSame(DocumentStatus::CONFIRMED, $this->lastPayment()->status);
     }
 
+    /** ⭐ #১০: প্রিভিউর সারি নকশার ক্রমে — দেনা (সরবরাহকারীর নামসহ), AIT, VDS, চার্জ, টাকার খাত (মিল-তালিকার ফাঁক ৮) */
+    public function test_item_10_the_preview_lists_the_lines_in_the_designs_order_and_names_the_supplier(): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5', 'vds_rate' => '15'])->save();
+        $bill = $this->bill('10000', tax: '1500');
+
+        $rows = $this->post(route('purchase.payment.simulate'),
+            $this->form(['instrument' => 'transfer', 'instrument_no' => 'BF261022001', 'charge_amount' => '25'], [[$bill->id, '11500']], '11500'))
+            ->assertOk()->json('rows');
+
+        $codes = array_map(fn (array $r) => strtok($r['account'], ' '), $rows);
+        $this->assertSame([StandardChart::PAYABLE, StandardChart::TAX_DEDUCTED_AT_SOURCE, StandardChart::VDS_PAYABLE, StandardChart::BANK_CHARGES, '1102-PAY'], $codes,
+            '⛔ #১০: প্রিভিউর সারি নকশার ক্রমে নয় (দেনা, AIT, VDS, চার্জ, ব্যাংক)');
+        $this->assertStringEndsWith(' · '.$this->supplier->name(), $rows[0]['account'], '⛔ #১০: দেনার সারিতে সরবরাহকারীর নাম নেই');
+    }
+
+    /** ⭐ #৫, #২: সারাংশে কাটা বিয়োগে আর হারের ট্যাগ; নিটের নাম পদ্ধতি ধরে; পক্ষের ধরন বাধ্যতামূলক তারকা; খাতে যথেষ্ট টাকায় ✓ (মিল-তালিকার ফাঁক ৬, ৭, ১০) */
+    public function test_item_5_and_2_the_summary_wears_the_designs_words(): void
+    {
+        $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+
+        foreach (['tag.ait', 'tag.vds', 'sum.net_bank', 'sum.net_mfs', 'sum.net_cash'] as $key) {
+            $this->assertStringContainsString(e(__('money.screen.'.$key)), $html, "⛔ #৫: সারাংশে নকশার লেখা নেই: {$key}");
+        }
+        $this->assertStringContainsString('x-text="aitMinus"', $html, '⛔ #৫: AIT বিয়োগ চিহ্নে দেখানো হয় না');
+        $this->assertStringContainsString('x-text="vdsMinus"', $html, '⛔ #৫: VDS বিয়োগ চিহ্নে দেখানো হয় না');
+        $this->assertMatchesRegularExpression('/'.preg_quote(e(__('money.screen.party_type')), '/').'\s*<span class="text-\(--color-danger\)">\*<\/span>/u', $html,
+            '⛔ #২: পক্ষের ধরনে বাধ্যতামূলক তারকা নেই');
+        $this->assertStringContainsString('data-balance-ok', $html, '⛔ #২৪: খাতে যথেষ্ট টাকায় ✓ নেই');
+        // ⭐ মিল-তালিকা #৩ — কর-নোট, কেবল কাটা হলে (কখন দেখায় তার দাবি pay-bills.test.js-এ)
+        $this->assertMatchesRegularExpression('/<p[^>]*x-show="withheld"[^>]*data-sum-tax-note[^>]*>\s*'.preg_quote(e(__('money.screen.sum.tax_note')), '/').'\s*<\/p>/u', $html,
+            '⛔ #৩: কাটা কর/ভ্যাটের জমা আর মূসক-৬.৬-এর নোট সারাংশে নেই');
+    }
+
     /**
      * ⭐ #১০: প্রিভিউ কিছুই লেখে না — পরিশোধ, খাতা, নিরীক্ষা, নম্বরের সিরিজ সবই আগের মতো (fe, ২২ অক্টোবর ২০২৬; তাই শাখার
      * ছাপের পাহারা থেকে বাদ: [[EveryNewPaperFormCarriesItsBranchTest::EXCLUDED]])।
@@ -502,6 +536,43 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertMatchesRegularExpression('/data-pay-primary[^>]*>\s*'.preg_quote(e(__('money.screen.post')), '/').'\s*</u', $html,
             '⛔ #১১: সই বন্ধ কোম্পানিতে মূল বোতাম "পোস্ট" নয়');
         $this->assertStringContainsString(e(__('money.screen.draft')), $html);
+        $this->assertStringNotContainsString('data-pay-signer', $html, '⛔ #৪: সই বন্ধ, অথচ মাথায় "সই দেবেন" লেখা');
+        $this->assertSameVerdict(false);
+    }
+
+    /** ⭐ #৪ (fe): মাথার কথা আর পোস্টের আটকানো একই রায় — [[ApprovalEngine::firstSigner()]] আর [[ApprovalEngine::requires()]] */
+    private function assertSameVerdict(bool $expected): void
+    {
+        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $requires = $engine->requires('purchase', 'payment', null, class_basename(Payment::class));
+        $first = $engine->firstSigner('purchase', 'payment', null, class_basename(Payment::class));
+
+        $this->assertSame($expected, $requires, 'প্রস্তুতিটাই ভুল — সইয়ের ছক প্রত্যাশামতো নয়');
+        $this->assertSame($requires, $first !== null, '⛔ #৪: মাথা আর পোস্ট দুই রায় দিল — সই লাগে কি না');
+    }
+
+    /** ⭐ মিল-তালিকা #৪ — সই চালু থাকলে মাথায় প্রথম সইকারী আর মোট ধাপ, পোস্টের একই ছক থেকে */
+    public function test_gap_4_the_head_names_who_signs_first_and_how_many_steps(): void
+    {
+        $role = \Spatie\Permission\Models\Role::query()->create(['name' => 'Payment manager', 'guard_name' => 'web', 'company_id' => $this->company->id]);
+        // ⓘ নমুনা-তথ্যে বন্ধ ছক থাকতে পারে (একই চাবি অনন্য) — তাই সেটাকেই চালু করা, ধাপ নতুন করে
+        $flow = \App\Models\ApprovalFlow::query()->updateOrCreate(
+            ['company_id' => $this->company->id, 'module' => 'purchase', 'action' => 'payment', 'document_type' => ''],
+            ['threshold_amount' => null, 'is_active' => true],
+        );
+        \App\Models\ApprovalFlowStep::query()->where('approval_flow_id', $flow->id)->delete();
+        $flow->conditions()->delete();
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'role', 'approver_id' => $role->id]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 2, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<span data-pay-signer>\s*'.preg_quote(e(__('money.screen.meta.signer', ['who' => 'Payment manager', 'levels' => 2])), '/').'\s*<\/span>/u', $html,
+            '⛔ #৪: সই চালু, অথচ মাথায় "সই দেবেন: Payment manager (ধাপ 1/2)" নেই');
+        $this->assertMatchesRegularExpression('/data-pay-primary[^>]*>\s*'.preg_quote(e(__('money.screen.send')), '/').'\s*</u', $html,
+            '⛔ #৪: মাথা সই বলছে, অথচ বোতাম "পোস্ট"');
+        $this->assertSameVerdict(true);
     }
 
     public function test_item_24_the_paying_accounts_balance_is_on_the_screen(): void
@@ -513,6 +584,85 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertStringContainsString('"'.$this->till()->id.'":{"kind":"cash","balance":"8420.00"}', html_entity_decode($html),
             '⛔ #২৪: যে খাত থেকে দেওয়া হবে তাতে কত আছে, পর্দা জানে না');
         $this->assertStringContainsString('data-account-balance', $html);
+    }
+
+    /** ⭐ মিল-তালিকা #৯ — মোট টাকার ঘর লাখ-কমায় ("1,20,000.00"), আর কমাসহ লেখা হুবহু সেই অঙ্কেই খাতায় যায় */
+    public function test_gap_9_the_amount_reads_in_lakh_commas_and_posts_the_same_figure(): void
+    {
+        $bill = $this->bill('120000');
+
+        $html = (string) $this->get(route('purchase.payment.create', ['purchase_bill_id' => $bill->id]))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<input[^>]*name="amount"[^>]*value="1,20,000\.00"|<input[^>]*value="1,20,000\.00"[^>]*name="amount"/', $html,
+            '⛔ #৯: মোট টাকার ঘর লাখ-কমা ছাড়া ("120000") দেখায়');
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="amount"[^>]*type="number"|<input[^>]*type="number"[^>]*name="amount"/', $html,
+            '⛔ #৯: সংখ্যার ঘর কমা দেখাতে পারে না');
+        // ⓘ তারিখ আর কোটির অঙ্ক ("1,23,45,678.90") ১৩৬৬-এ মেনু খোলা রেখেও না কেটে — ঘরের নিচের সীমা (ব্রাউজারে মাপা, ২২ অক্টোবর ২০২৬)
+        $this->assertStringContainsString('lg:grid-cols-[minmax(0,1.6fr)_minmax(9.5rem,1fr)_minmax(9.5rem,1fr)]', $html,
+            '⛔ তারিখ আর টাকার ঘরের নিচের সীমা নেই — ১৩৬৬-এ "22-10-202" কাটা পড়ে');
+
+        $this->putMoneyIn($this->till(), '200000');
+        $this->pay(['account_id' => $this->till()->id], [[$bill->id, '120000']], amount: '1,20,000.00');
+        $this->assertSame('', $this->errorOn('amount'), '⛔ #৯: লাখ-কমায় লেখা অঙ্ক ফেরত এল');
+        $this->assertSame(0, bccomp((string) $this->lastPayment()->amount, '120000', 4), '⛔ #৯: কমাসহ লেখা অঙ্কটা অন্য অঙ্কে বসল');
+        $this->assertMoved($this->book($this->lastPayment()), StandardChart::PAYABLE, debit: '120000', message: '⛔ #৯: খাতায় কমাসহ অঙ্কটা ঠিক যায়নি');
+
+        // ⛔ কেবল কমা ছাঁটা — অক্ষর থাকলে আগের মতোই থামে
+        $this->pay(['account_id' => $this->till()->id], [], amount: '1,20,0x0');
+        $this->assertNotSame('', $this->errorOn('amount'), '⛔ #৯: অক্ষরসহ অঙ্ক কমা ছাঁটার ফাঁকে ঢুকে গেল');
+    }
+
+    /** ⭐ মিল-তালিকা #৫ — স্লিপ/TrxID লেখার সাথে সাথে "আগে ব্যবহার হয়নি ✓" বা আগের পরিশোধের কথা, জমার একই নিয়মে */
+    public function test_gap_5_the_slip_is_checked_as_it_is_typed_by_the_same_rule_as_the_post(): void
+    {
+        $bill = $this->bill('1000');
+        $ask = fn (array $q) => $this->getJson(route('purchase.payment.slip_check', ['supplier_id' => $this->supplier->id, ...$q]));
+
+        $ask(['instrument_no' => 'TT-77'])->assertOk()->assertJson(['state' => 'free', 'message' => __('money.screen.slip_free')]);
+        $ask(['instrument_no' => '  '])->assertOk()->assertJson(['state' => 'empty']);
+
+        $first = app(\App\Modules\Purchase\Services\PaymentService::class)->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '100', 'instrument_no' => 'TT-77'],
+            [['purchase_bill_id' => $bill->id, 'amount' => '100']],
+        );
+
+        $this->assertSame('used', $ask(['instrument_no' => ' tt-77 '])->assertOk()->json('state'), '⛔ #৫: আগের পরিশোধের স্লিপ পর্দা "নতুন" বলল');
+        $this->assertSame(__('purchase::validation.slip_used_twice', ['no' => 'tt-77']), $ask(['instrument_no' => 'tt-77'])->json('message'),
+            '⛔ #৫: পর্দার কথা জমার কথার সাথে মেলে না');
+        // ⓘ সম্পাদনায় নিজের স্লিপ নিজের বিরুদ্ধে নয় — জমার একই ছাড়
+        $this->assertSame('free', $ask(['instrument_no' => 'TT-77', 'payment' => $first->id])->json('state'), '⛔ #৫: সম্পাদনায় নিজের স্লিপকেই "আগে ব্যবহৃত" বলল');
+
+        // ⛔ শাখায় সীমিত মানুষ অন্য শাখার সরবরাহকারীর স্লিপ জিজ্ঞেস করতে পারেন না (প্রিভিউর মতোই ৪০৪)
+        $mine = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'MMS')->firstOrFail();
+        $theirs = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
+        $far = app(SupplierService::class)->create(['name_en' => 'Far Five', 'branch_id' => $theirs->id, 'credit_limit' => 0, 'credit_days' => 0,
+            'party_type_id' => $this->supplier->party_type_id]);
+        $clerk = $this->someone(['purchase.payment.view', 'purchase.payment.create']);
+        $clerk->forceFill(['current_branch_id' => $mine->id])->save();
+        \App\Models\UserDataScope::query()->withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'user_id' => $clerk->id, 'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $mine->id,
+        ]);
+        CompanyContext::set($this->company->id, $mine->id);
+        $this->actingAs($clerk->fresh());
+
+        $response = $this->getJson(route('purchase.payment.slip_check', ['supplier_id' => $far->id, 'instrument_no' => 'TT-77']));
+        $this->assertContains($response->status(), [403, 404], '⛔ #৫: অন্য শাখার সরবরাহকারীর স্লিপের খবর খুলল');
+        $this->assertStringNotContainsString('state', (string) $response->getContent(), '⛔ #৫: অন্য শাখার সরবরাহকারীর স্লিপের উত্তর ফাঁস হল');
+    }
+
+    /** ⭐ মিল-তালিকা #১১ — প্রাপকের ব্যাংক এক লাইনে: ব্যাংক · শাখা · নাম · হিসাব ••••শেষ চার · রাউটিং · ✓ */
+    public function test_gap_11_the_payees_bank_reads_on_one_line(): void
+    {
+        $this->signBank();
+
+        $box = \Illuminate\Support\Facades\Blade::render('<x-supplier::payee-bank :supplier="$s" />', ['s' => $this->supplier->fresh()]);
+
+        $this->assertSame(1, substr_count($box, '<p'), '⛔ #১১: প্রাপকের ব্যাংক আবার কয়েক লাইনে ভাঙল');
+        $this->assertMatchesRegularExpression('/<p[^>]*data-payee-bank-line[^>]*>.*Sonali Bank.*Motijheel.*Jabed Agro Food Processing Ltd.*'
+            .preg_quote(e(__('supplier::bank.account_short')), '/').'.*••••4521.*'
+            .preg_quote(e(__('supplier::bank.routing_short')), '/').'.*200274466.*'
+            .preg_quote(e(__('supplier::bank.verified')), '/').'.*<\/p>/s', $box,
+            '⛔ #১১: এক লাইনে নকশার ক্রমে ব্যাংক · শাখা · নাম · হিসাব · রাউটিং · ✓ নেই');
+        $this->assertStringNotContainsString('0012345674521', $box, '⛔ পুরো হিসাব নম্বর পরিশোধের পর্দায় এল');
     }
 
     // ── সহায়ক ────────────────────────────────────────────────────────────

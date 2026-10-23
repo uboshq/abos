@@ -523,8 +523,9 @@ class CompanyController extends Controller implements HasMiddleware
          * আপলোড। ⚠️ আর এই একটা ফাইলের ওজন সবচেয়ে বেশি ছড়ায়, কারণ ওটা
          * **প্রতিটা ছাপা কাগজে** base64 হয়ে যায়।
          *
-         * ⛔ ব্যর্থ হলে কাঁচা ফাইলটাই বসে — একটা বড় লোগো থাকা, কোম্পানির
-         * লোগো না থাকার চেয়ে ভালো।
+         * ⛔ ব্যর্থ হলে ফেরত — fail-closed (fe, ২২ অক্টোবর ২০২৬)। আগে কাঁচা ফাইলটাই বসত ("লোগো না থাকার চেয়ে ভালো"), কিন্তু
+         * ইঞ্জিন যে ফাইল পড়তে পারে না সেটা যে ছবি, কেউ প্রমাণ করেনি — PNG/HTML-মেশানো ফাইল একটা জানা আক্রমণের পথ, আর ভাঙা
+         * ফাইলটা প্রতিটা ছাপা কাগজে বসত। ⓘ পুরনো লোগো অক্ষত থাকে।
          */
         $source = $file->getRealPath();
 
@@ -539,27 +540,13 @@ class CompanyController extends Controller implements HasMiddleware
 
                 return ['logo_path' => $path];
             } catch (\Throwable) {
-                // নিচে পড়ে যায়।
+                // নিচে — ফেরত।
             }
         }
 
-        /*
-         * ⛔ প্রক্রিয়া হয়নি, অথচ ফাইলটা বড় — নীরবে রাখা যায় না।
-         *
-         * ⚠️ দরজার সীমা ১২ MB করা হয়েছে এই ভরসায় যে আমরাই ছোট করব।
-         * ⓘ সেই কাজটা না হলে ভরসাটা মিথ্যা, আর তখন একটা ১২ MB লোগো
-         * **প্রতিটা ছাপা কাগজে** base64 হয়ে বসত (≈১৬ MB)।
-         */
-        /* ⭐ ২১ অক্টোবর ২০২৬: সীমা ২ MB থেকে রাখা লোগোর সীমায় (৫০০KB, [[ImageEngine::MARK_STORED_MAX]]) — রাখা ফাইল কখনো তার বেশি নয় */
-        if ((int) $file->getSize() > ImageEngine::MARK_STORED_MAX) {
-            throw ValidationException::withMessages([
-                'logo' => __('core.image.logo_not_processed'),
-            ]);
-        }
-
-        $name = $code.'-'.now()->format('Ymd-His').'.'.$file->extension();
-
-        return ['logo_path' => $file->storeAs('logos', $name, ['disk' => 'public'])];
+        throw ValidationException::withMessages([
+            'logo' => __('core.image.logo_unreadable'),
+        ]);
     }
 
     /**

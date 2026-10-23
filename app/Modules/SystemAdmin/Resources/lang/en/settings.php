@@ -60,7 +60,7 @@ return [
     'invoice_logo_remove' => 'Remove the invoice logo (the profile logo prints instead)',
     'invoice_logo_remove_branch' => 'Remove the logo of this branch (the company invoice logo prints instead)',
     'invoice_logo_using_profile' => 'No separate invoice logo — the company profile logo is printing now.',
-    'invoice_logo_note' => 'Printed on bills and papers only; the profile logo stays as it is. Large pictures are made smaller automatically.',
+    'invoice_logo_note' => 'Printed on bills and papers only; the top bar logo comes from the company page (System › Company) and does not change here. Large pictures are made smaller automatically.',
     'invoice_info_saved' => 'Invoice information saved',
     'invoice_info_logo' => 'Logo',
     'invoice_info_no_logo' => 'No logo uploaded',

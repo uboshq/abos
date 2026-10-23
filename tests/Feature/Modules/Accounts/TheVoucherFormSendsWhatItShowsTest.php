@@ -225,7 +225,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
             ->get(route('accounts.voucher.create', ['type' => 'receipt']))
             ->assertOk()->getContent();
 
-        preg_match('/x-data="(moneyMovement\([^"]*)"/', $html, $block);
+        // ⓘ ২২ অক্টোবর ২০২৬ থেকে ভাউচারের বাক্স টাকার পর্দার একই [[x-money.method]] — Alpine-এর নাম moneyMethod
+        preg_match('/x-data="(moneyMethod\([^"]*)"/', $html, $block);
 
         $this->assertNotEmpty($block, 'পাতায় মাধ্যমের ব্লকটাই নেই।');
 

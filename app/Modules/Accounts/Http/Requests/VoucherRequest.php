@@ -51,6 +51,25 @@ class VoucherRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // ⭐ টাকার ঘর লাখ-কমায় ("45,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — কমা ছেঁটে পড়া, টাকা দেওয়ার পর্দার একই নিয়মে ([[PaymentRequest]])
+        foreach (['amount', 'charge_amount'] as $field) {
+            $value = $this->input($field);
+
+            if (is_string($value) && str_contains($value, ',')) {
+                $this->merge([$field => str_replace(',', '', trim($value))]);
+            }
+        }
+
+        /*
+         * ⛔ নগদ জমার স্লিপই ব্যাংকের রেফারেন্স — cb, ২৩ অক্টোবর ২০২৬ (চূড়ান্ত ছবি নিতে গিয়ে ধরা)। ⓘ পদ্ধতির বাক্সে নগদ জমা কেবল
+         * স্লিপ নম্বর চায়, অথচ ব্যাংকের খাতে পোস্ট লেনদেন নম্বর (`instrument_no`) চায় ([[VoucherService::bankReferenceAccount()]]) —
+         * তাই নগদ জমার রসিদ কখনো পোস্টই হত না। ⭐ নম্বর না থাকলে স্লিপটাই নম্বর: একই খাতে একই স্লিপ দুইবার ওঠে না (ইনডেক্স আর
+         * চলতি উত্তর দুটোই), আর স্লিপের নিজের কলামেও থাকে।
+         */
+        if ($this->input('instrument') === 'deposit' && trim((string) $this->input('instrument_no', '')) === '' && filled($this->input('deposit_slip_no'))) {
+            $this->merge(['instrument_no' => trim((string) $this->input('deposit_slip_no'))]);
+        }
+
         /*
          * হেডারের পক্ষ — সহজ ফর্মের `party` ঘরটা।
          *
@@ -116,7 +135,11 @@ class VoucherRequest extends FormRequest
          */
         $typed = trim((string) $this->input('party_new', ''));
 
-        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0) {
+        /*
+         * ⛔ প্রিভিউতে নাম থেকে মানুষ বানানো নয় — "খাতায় যা যাবে" কিছুই লেখে না ([[VoucherController::simulate()]]); নাহলে নাম
+         * টাইপ করার সময় প্রতিটা থামায় একজন করে নতুন মানুষ বসত। ⓘ তখন পক্ষ ফাঁকা থাকে, যাচাই আটকায়, আর প্রিভিউ চুপ।
+         */
+        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate')) {
             /*
              * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
              *
@@ -447,6 +470,8 @@ class VoucherRequest extends FormRequest
             'from_account_name' => ['nullable', 'string', 'max:120'],
             'deposit_slip_no' => ['nullable', 'string', 'max:64'],
             'lands_on' => ['nullable', 'date'],
+            // ⭐ মূল্য-তারিখ — নতুন টাকার বাক্স ([[x-money.method]]) এটাই পাঠায়, lands_on-এর জায়গায় (মালিকের ২১ অক্টোবরের রায়, fe; কলাম 2027_03_05)
+            'value_date' => ['nullable', 'date'],
 
             /*
              * ⭐ উল্টো দাখিলার তারিখ — সাময়িক জাবেদা নিজেকে যেদিন উল্টাবে।

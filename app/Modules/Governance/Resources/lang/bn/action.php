@@ -143,4 +143,6 @@ return [
     'bank_withdrawn' => 'ব্যাংক তথ্যের বদল ফিরিয়ে নেওয়া',
     // ⓘ অফারে মালিক নিজের বানানো অফারে নিজেই সই দিলেন — নিজে-অনুমোদিত ছাড় ([[PromotionApprovalChain::OWNER_SELF_SIGNED]])
     'owner_self_signed' => 'মালিক নিজের অফারে নিজে সই দিলেন',
+    'obligation_done' => 'করণীয় করা হলো',
+    'obligation_cancelled' => 'করণীয় বাতিল',
 ];

@@ -124,4 +124,6 @@ return [
     'bank_withdrawn' => 'Bank details change withdrawn',
     // The owner signed an offer they created — a self-approved discount (PromotionApprovalChain::OWNER_SELF_SIGNED)
     'owner_self_signed' => 'Owner signed their own offer',
+    'obligation_done' => 'Obligation done',
+    'obligation_cancelled' => 'Obligation cancelled',
 ];

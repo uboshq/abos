@@ -207,4 +207,6 @@ return [
     'gross_is_paid_plus_withheld' => 'বিলের মোট (:gross) = হাতে দেওয়া (:paid) + AIT (:ait) + VDS (:vds) হতে হবে।',
     'withheld_needs_expense_head' => 'উৎসে কর্তন বসাতে খরচের খাত লাগবে।',
     'missing_account' => 'হিসাবের ছকে :code খাত নেই — আগে খাতটা বসান।',
+    'obligation_needs_ref' => 'চালান বা সনদের নম্বর লিখুন — নম্বরই প্রমাণ যে কাজটা হয়েছে।',
+    'obligation_not_open' => 'এই করণীয় আর খোলা নেই — আগেই করা বা বাতিল হয়েছে।',
 ];

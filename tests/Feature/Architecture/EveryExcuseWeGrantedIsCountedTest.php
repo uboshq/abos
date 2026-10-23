@@ -440,8 +440,16 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.locale: নিজের ভাষা, `/me` আর নিজের ছবির মতোই কোনো চাবি নেই (নিজের
      *       পছন্দ, ব্যবসার তথ্য নয়); পাহারা — কেবল নিজের সারি, কেবল bn বা en ([[UserLocale]]), বদল নিরীক্ষায় একবার
      *       (TheAppAndTheWebShareOneLanguageTest)। ⛔ সাজানো authorize বসানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্ন ফাঁপা হত।
+     *
+     * ── ⚠️ ৪৫৮ → ৪৫৯, ২৩ অক্টোবর ২০২৬ (cb, ভাউচার চূড়ান্ত নকশা; fe-কে জানানো) ────────────
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `accounts.voucher.simulate`: রসিদ/পরিশোধ ভাউচারের খাতা-প্রিভিউ,
+     *       কোনো কাগজ বানায় না, কিছু লেখে না, হাতে লেখা নাম থেকে মানুষও বানায় না (দাবি: TheReceiptAndPaymentFollowTheFinalDesignTest
+     *       — ভাউচার, খাতা আর মানুষের সংখ্যা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়;
+     *       `purchase.payment.simulate`-এর (৪৫৬ → ৪৫৭) একই সিদ্ধান্ত।
+     *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
+     *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
      */
-    private const CEILING = 458;
+    private const CEILING = 459;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

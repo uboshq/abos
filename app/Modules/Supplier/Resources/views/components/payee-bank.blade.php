@@ -19,20 +19,19 @@
     $bankState = $signedBank !== null ? 'signed' : ($pendingBank !== null ? 'pending' : 'none');
 @endphp
 
-<div {{ $attributes->merge(['class' => 'rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) p-3 text-sm']) }}
+{{-- ⓘ শুধু-পড়ার বাক্স, তাই পাতার ধূসর জমিন — লেখার ঘরের সাদা নয় (নকশা পাতা ৪) --}}
+<div {{ $attributes->merge(['class' => 'rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-3 py-2 text-sm']) }}
      data-payee-bank-signed="{{ $signedBank !== null ? '1' : '0' }}" data-payee-bank-state="{{ $bankState }}">
     @if ($signedBank !== null)
-        <p class="font-medium">
-            {{ collect([$signedBank->bank_name, $signedBank->branch_name])->filter()->implode(' · ') }}
-        </p>
-        <p>
-            {{ $signedBank->account_name }} · <span class="num" data-payee-bank-account>{{ $signedBank->maskedAccount() }}</span>
+        {{-- ⭐ এক লাইনে, নকশার মতো: ব্যাংক · শাখা · নাম · হিসাব ••••শেষ চার · রাউটিং … · ✓ (টাকা দেওয়ার মিল-তালিকা #১১, ২২ অক্টোবর ২০২৬);
+             সরু পর্দায় টুকরো ধরে ভাঙে, কথার মাঝে নয় --}}
+        <p class="flex flex-wrap items-baseline gap-x-1" data-payee-bank-line>
+            <span>{{ collect([$signedBank->bank_name, $signedBank->branch_name, $signedBank->account_name])->filter()->implode(' · ') }}</span>
+            <span>· {{ __('supplier::bank.account_short') }} <span class="num" data-payee-bank-account>{{ $signedBank->maskedAccount() }}</span></span>
             @if (filled($signedBank->routing_no))
-                · <span class="num">{{ $signedBank->routing_no }}</span>
+                <span>· {{ __('supplier::bank.routing_short') }} <span class="num">{{ $signedBank->routing_no }}</span></span>
             @endif
-        </p>
-        <p class="mt-1">
-            <x-ui.badge tone="success">{{ __('supplier::bank.verified') }}</x-ui.badge>
+            <span class="font-semibold text-(--color-success)">· {{ __('supplier::bank.verified') }}</span>
         </p>
     @else
         <p class="text-(--color-ink-muted)">{{ __('supplier::bank.payee_none') }}</p>

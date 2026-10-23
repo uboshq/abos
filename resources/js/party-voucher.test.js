@@ -134,6 +134,25 @@ describe('partyVoucher — খোঁজা যায় এমন নামে�
         box.search = 'mirpur'
         box.pickCursor()
         await vi.waitFor(() => expect(box.due).toBe('500.00'))
+        // ⭐ চিহ্ন ধরে শব্দ, অঙ্ক লাখ-কমায় আর কখনো "−" নয় — রসিদে তিন অবস্থা
+        box.texts = { ...box.texts, dueInOwed: 'বকেয়া', dueInAdvance: 'অগ্রিম', dueInNone: 'বকেয়া নেই', dueOutOwed: 'দেনা', dueOutAdvance: 'অগ্রিম দেওয়া', dueOutNone: 'দেনা নেই' }
+        box.due = '125000.00'
+        expect([box.dueWord, box.dueAmount]).toEqual(['বকেয়া', '৳1,25,000.00'])
+        expect(box.dueClass).toContain('warning')
+        box.due = '-45000.00'
+        expect([box.dueWord, box.dueAmount]).toEqual(['অগ্রিম', '৳45,000.00'])
+        expect(box.dueClass).toContain('success')
+        box.due = '0.00'
+        expect([box.dueWord, box.dueAmount]).toEqual(['বকেয়া নেই', ''])
+
+        // ⭐ পরিশোধে উল্টো দিক — আমরা দেব (−) মানে "দেনা", তিনি দেবেন (+) মানে "অগ্রিম দেওয়া"
+        box.out = true
+        box.due = '-80000.00'
+        expect([box.dueWord, box.dueAmount]).toEqual(['দেনা', '৳80,000.00'])
+        box.due = '2500.00'
+        expect([box.dueWord, box.dueAmount]).toEqual(['অগ্রিম দেওয়া', '৳2,500.00'])
+        box.due = '0'
+        expect([box.dueWord, box.dueAmount]).toEqual(['দেনা নেই', ''])
 
         expect(globalThis.fetch).toHaveBeenCalledWith(
             '/accounts/voucher/due?party_type=customer&party_id=12',
