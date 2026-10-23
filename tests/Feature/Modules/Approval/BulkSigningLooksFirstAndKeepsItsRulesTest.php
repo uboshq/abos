@@ -84,6 +84,11 @@ final class BulkSigningLooksFirstAndKeepsItsRulesTest extends TestCase
         foreach (['over_limit', 'own', 'multi_step', 'money'] as $why) {
             $page->assertSee(__('approval::message.bulk_why_'.$why, [], 'bn'));
         }
+        // ⓘ বাদ পড়াগুলোর তালিকাও মোটে শেষ: ৫০০০ + ৩০০ + ২০০ + ১০০
+        $html = (string) $page->getContent();
+        $left = substr($html, (int) strpos($html, 'data-bulk-skip'));
+        $left = substr($left, 0, (int) strpos($left, '</section>'));
+        $this->assertStringContainsString(\App\Core\Support\Money::format('5600'), $left, '⛔ বাদ পড়া কাগজের তালিকায় মোট নেই।');
         $page->assertSee('name="ids[]" value="'.$this->paper['small']->id.'"', false);
         $page->assertDontSee('name="ids[]" value="'.$this->paper['big']->id.'"', false);
 

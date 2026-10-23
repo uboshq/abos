@@ -8,6 +8,8 @@
     $labels = app(\App\Core\Engines\Approval\ApprovalLabel::class);
     $money = fn ($a) => $a === null ? '—' : \App\Core\Support\Money::format((string) $a);
     $count = count($sign);
+    // ⓘ বাদ পড়াগুলোর মোটও — কত টাকার কাগজ একটা একটা করে দেখতে হবে (টাকার তালিকা মোটে শেষ হয়)
+    $skipTotal = array_reduce($skip, fn (string $sum, array $r) => bcadd($sum, (string) ($r['approval']->amount ?? '0'), 4), '0');
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::message.bulk_review_title') }}</x-slot:title>
@@ -70,7 +72,9 @@
                                  'render' => fn ($r) => $money($r['approval']->amount)],
                                 ['key' => 'why', 'label' => __('approval::field.reason'),
                                  'render' => fn ($r) => __('approval::message.bulk_why_'.$r['why'])],
-                            ]" />
+                            ]"
+                            :totals="['amount' => \App\Core\Support\Money::format($skipTotal)]"
+                            :totalsLabel="__('core.print.total')" />
             </section>
         @endif
     </div>
