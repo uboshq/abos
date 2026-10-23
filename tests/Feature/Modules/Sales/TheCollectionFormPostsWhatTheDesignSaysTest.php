@@ -239,13 +239,11 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
         $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ দফা ৪: কর্তা নিজে আবার চেপে সই ছাড়া রাউন্ডিং পার করলেন');
 
+        // ⭐ কেউ আবার চাপে না — পর্দা আর বার্তা বলে "সই পেলে নিজেই খাতায় উঠবে" (মালিক ১১ অক্টোবর; fe ২৩ অক্টোবর, সইয়ে পাঠান)
         app(ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
-        if ($collection->fresh()->status === DocumentStatus::DRAFT) {
-            $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
-        }
 
         $collection = $collection->fresh();
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: মালিকের সইয়ের পরেও রাউন্ডিংয়ের আদায় পোস্ট হলো না');
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: মালিক সই দিলেন, কিন্তু আদায় নিজে খাতায় উঠল না — অথচ পর্দা বলে "সই পেলে নিজেই খাতায় উঠবে"');
         $this->assertSame('0.5100', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: সইয়ের পরে রাউন্ডিং ৫৩০৫-এ Dr হয়নি');
         $this->balanced($collection);
     }

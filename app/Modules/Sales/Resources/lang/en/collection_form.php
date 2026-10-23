@@ -115,5 +115,5 @@ return [
     'dr' => 'Debit',
     'cr' => 'Credit',
     'unapplied' => 'Unapplied (credit in the customer\'s ledger)',
-    'owner_signs' => 'There is a discount, or rounding above ৳0.50 — posting sends it for the owner\'s signature; press "Post" again once signed.',
+    'owner_signs' => 'There is a discount, or rounding above ৳0.50 — confirming sends it as a draft for the owner\'s signature; once signed it reaches the books by itself.',
 ];
