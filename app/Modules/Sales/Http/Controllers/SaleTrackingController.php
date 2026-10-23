@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
+use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
@@ -49,13 +51,7 @@ class SaleTrackingController extends Controller
     {
         $this->mayTrack($request);
 
-        $sale = match ($kind) {
-            'challan' => DeliveryChallan::query()->where('public_id', $id)->firstOrFail(),
-            'order' => SalesOrder::query()->where('public_id', $id)->firstOrFail(),
-            default => abort(404),
-        };
-
-        return response()->json($this->tracking->story($sale));
+        return response()->json($this->tracking->story($this->inReach($request, $kind, $id)));
     }
 
     /**
@@ -111,16 +107,33 @@ class SaleTrackingController extends Controller
     {
         $this->mayTrack($request);
 
-        $sale = match ($kind) {
-            'challan' => DeliveryChallan::query()->where('public_id', $id)->firstOrFail(),
-            'order' => SalesOrder::query()->where('public_id', $id)->firstOrFail(),
+        return view('sales::tracking.show', [
+            'menu' => $menu->forUser($request->user()),
+            'sale' => $this->tracking->story($this->inReach($request, $kind, $id)),
+        ]);
+    }
+
+    /**
+     * ⛔ বিক্রিটা মানুষের শাখার নাগাল ধরে খোঁজা, হেডারে বাছা শাখা ধরে নয় — লাইভ-হটফিক্স, ২৩ অক্টোবর ২০২৬ (মালিকের অভিযোগ:
+     * "নোটিফিকেশনে ক্লিক করলে দেখা যায় না")। ⓘ ডেলিভারির ধাপের নোটিফিকেশন এই ঠিকানায় আনে; আগে খোঁজা হত শাখার দেয়াল দিয়ে
+     * ([[ScopedToUserBranch]] — হেডারে এক শাখা বাছা থাকলে কেবল সেই শাখা), তাই মালিক হেডারে এক শাখায় থাকলে অন্য শাখার চালান ৪০৪
+     * দিত। ভাউচারের একই ভুল একই নিয়মে সারানো ([[OpensInReach::opensFor()]]): মালিক ও সীমাহীন মানুষ সব শাখা, শাখায় সীমিত মানুষ
+     * নিজের শাখা, শাখাহীন কাগজ সবাই; নাগালের বাইরে আগের মতো ৪০৪। ⓘ ডিলারের দেয়াল ([[ScopedToUserDealers]]) আলাদা স্কোপ, খাটে।
+     */
+    private function inReach(Request $request, string $kind, string $id): DeliveryChallan|SalesOrder
+    {
+        $class = match ($kind) {
+            'challan' => DeliveryChallan::class,
+            'order' => SalesOrder::class,
             default => abort(404),
         };
 
-        return view('sales::tracking.show', [
-            'menu' => $menu->forUser($request->user()),
-            'sale' => $this->tracking->story($sale),
-        ]);
+        $sale = $class::acrossBranches()->where('public_id', $id)->first();
+        $branch = $sale?->getAttribute('branch_id');
+
+        abort_unless($sale !== null && app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH, $branch === null ? null : (int) $branch), 404);
+
+        return $sale;
     }
 
     private function mayTrack(Request $request): void
