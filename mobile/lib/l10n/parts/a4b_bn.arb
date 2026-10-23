@@ -1983,5 +1983,47 @@
   "counterReturnNoReasons": "ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।",
   "@counterReturnNoReasons": {
     "description": "Sales return: shown in place of the reason picker when the server sends no return reasons; the confirm button stays off"
+  },
+  "customersTotalNet": "নিট বকেয়া",
+  "@customersTotalNet": {
+    "description": "Customer list total: what the shown shops owe minus their advances, as the web's customer list sums it"
+  },
+  "customersTotalAdvances": "মোট অগ্রিম",
+  "@customersTotalAdvances": {
+    "description": "Customer list total: the advances the shown shops have paid, on their own line under the net"
+  },
+  "totalsPeriodAllDates": "সব তারিখ",
+  "@totalsPeriodAllDates": {
+    "description": "Beside a total: the list is not limited to any dates, so the total covers all of them"
+  },
+  "totalsPeriodRange": "{from} – {to}",
+  "@totalsPeriodRange": {
+    "description": "Beside a total: the chosen date range the total covers, first and last day as dd/MM/yyyy",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "totalsPeriodSpoken": "সময়কাল: {period}",
+  "@totalsPeriodSpoken": {
+    "description": "Screen reader: which dates the total next to it covers, e.g. 'Period: This month'",
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "totalsRejectedLeftOut": "প্রত্যাখ্যাত, মোটে নেই · {count}টি",
+  "@totalsRejectedLeftOut": {
+    "description": "Totals bar: a separate line for the rejected rows shown on screen, which the total leaves out, with how many; the amount sits beside it",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   }
 }

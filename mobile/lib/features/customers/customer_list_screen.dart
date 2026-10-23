@@ -75,12 +75,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     final all = CustomerRecord.all();
     final filtered = CustomerListQuery.apply(all,
         query: _query, sort: _sort, filters: _filters);
-    // ⭐ দেখানো দোকানগুলোর মোট বকেয়া — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। বকেয়ার তালিকার একই নিয়ম:
-    // কেবল যাঁর কাছে পাওনা (অগ্রিম মোট থেকে কাটে না), দেখার শাখার অঙ্কে ([[CustomerDueRecord.outstandingInView]])।
-    final owed = filtered.fold<double>(0, (sum, customer) {
-      final due = CustomerDueRecord.forCustomer(customer.id)?.outstandingInView ?? 0;
-      return due > 0 ? sum + due : sum;
-    });
+    // ⭐ দেখানো দোকানগুলোর মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"; দেখার শাখার অঙ্কে
+    // ([[CustomerDueRecord.outstandingInView]])।
+    final owed = CustomerTotals.of(filtered.map((c) => CustomerDueRecord.forCustomer(c.id)?.outstandingInView ?? 0));
 
     // ⭐ চওড়া পর্দায় দুই ঘর — বাঁয়ে তালিকা, ডানে গ্রাহকের পাতা; ফোনে আগের মতো এক ঘর, চাপলে নিজের পাতা
     // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
@@ -115,7 +112,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     });
   }
 
-  Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, double owed,
+  Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, CustomerTotals owed,
       String? trouble, bool twoPane) {
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.customersTitle),
@@ -142,7 +139,16 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           if (filtered.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: TotalStrip(label: context.l10n.customersTotalDue, value: Money.taka(owed), count: filtered.length),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                // ⭐ নিট = বকেয়া − অগ্রিম, ওয়েবের গ্রাহক-তালিকার সর্বমোটের হুবহু (CustomerController: `outstanding_in_view`-এর
+                // চিহ্নসহ যোগ); নিচে বকেয়া আর অগ্রিম নিজের নিজের লাইনে (fe-র মোটের নিরীক্ষা, ২৪ অক্টোবর ২০২৬)।
+                // ⛔ আগে কেবল বকেয়া যোগ হত — অগ্রিম বাদ পড়ত, ওয়েবের চেয়ে বড় অঙ্ক বলত।
+                TotalStrip(label: context.l10n.customersTotalNet, value: Money.taka(owed.net), count: filtered.length),
+                TotalLine(context.l10n.customersTotalDue, Money.taka(owed.dues),
+                    key: const ValueKey('customers-total-dues')),
+                TotalLine(context.l10n.customersTotalAdvances, Money.taka(owed.advances),
+                    key: const ValueKey('customers-total-advances')),
+              ]),
             ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -300,6 +306,39 @@ class _CustomerTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// ⭐ দেখানো দোকানগুলোর মোট — ওয়েবের গ্রাহক-তালিকার মতো নিট (বকেয়া − অগ্রিম), সাথে বকেয়া আর অগ্রিম আলাদা।
+///
+/// <p>ⓘ ধনাত্মক বকেয়া মানে দোকান দেবে, ঋণাত্মক মানে অগ্রিম ([CustomerDueRecord.outstanding]); ওয়েব চিহ্নসহ যোগ করে, তাই নিট।
+/// ⓘ পয়সায় যোগ — দশমিকের ভাসমান ভুল জমে না।
+class CustomerTotals {
+  const CustomerTotals._(this._duePaisa, this._advancePaisa);
+
+  factory CustomerTotals.of(Iterable<double> balances) {
+    var due = 0, advance = 0;
+    for (final b in balances) {
+      final paisa = (b * 100).round();
+      if (paisa > 0) {
+        due += paisa;
+      } else {
+        advance -= paisa;
+      }
+    }
+    return CustomerTotals._(due, advance);
+  }
+
+  final int _duePaisa;
+  final int _advancePaisa;
+
+  /// যাঁদের কাছে পাওনা, তাঁদের যোগ
+  double get dues => _duePaisa / 100;
+
+  /// যাঁরা আগে দিয়ে রেখেছেন, তাঁদের যোগ (ধনাত্মক)
+  double get advances => _advancePaisa / 100;
+
+  /// বকেয়া − অগ্রিম — ওয়েবের সর্বমোট
+  double get net => (_duePaisa - _advancePaisa) / 100;
 }
 
 /// ⓘ ফোনের লেখা দেড়গুণের বেশি বড় — তখন সারির ডানের অঙ্ক নিচে নামে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)

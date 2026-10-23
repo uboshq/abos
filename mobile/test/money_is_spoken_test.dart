@@ -47,7 +47,8 @@ void main() {
 
       expect(find.bySemanticsLabel(RegExp('বকেয়া ১২ লাখ ৪৮ হাজার ১২৫ টাকা ৫০ পয়সা')), findsOneWidget,
           reason: '⛔ বকেয়ার অঙ্ক কমায় ভাঙা সংখ্যা হয়ে পড়া হয়');
-      expect(find.bySemanticsLabel(RegExp('মোট বকেয়া.*১২ লাখ ৪৮ হাজার ১২৫ টাকা ৫০ পয়সা', dotAll: true)), findsOneWidget,
+      // ⓘ মোটের পট্টি এখন নিট (বকেয়া − অগ্রিম), ওয়েবের মতো (০.৪.৪৮); এখানে অগ্রিম নেই, তাই অঙ্ক একই
+      expect(find.bySemanticsLabel(RegExp('নিট বকেয়া.*১২ লাখ ৪৮ হাজার ১২৫ টাকা ৫০ পয়সা', dotAll: true)), findsOneWidget,
           reason: '⛔ মোটের পট্টি অঙ্কটা কমায় ভাঙা সংখ্যা হয়ে বলে');
       handle.dispose();
     });

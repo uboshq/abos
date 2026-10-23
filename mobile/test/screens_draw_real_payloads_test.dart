@@ -229,7 +229,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: CustomerListScreen()));
     await tester.pump();
     final customers = find.byKey(const ValueKey('books-total'));
-    expect(find.descendant(of: customers, matching: find.text('মোট বকেয়া')), findsOneWidget);
+    // ⓘ নিট (বকেয়া − অগ্রিম), ওয়েবের মতো — এখানে অগ্রিম নেই, তাই বকেয়ার সমান (০.৪.৪৮)
+    expect(find.descendant(of: customers, matching: find.text('নিট বকেয়া')), findsOneWidget);
     expect(find.descendant(of: customers, matching: find.text('৳8,125.50')), findsOneWidget);
     expect(find.descendant(of: customers, matching: find.text('· 1 টি')), findsOneWidget);
 

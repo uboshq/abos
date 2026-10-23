@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/totals_bar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client/api_client.dart';
@@ -13,6 +14,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/shown_rows.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
 
@@ -129,6 +131,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
     final page = _page;
     final filters = page?.filters;
     final w = context.l10n;
+    final shown = ShownRows.of(_rows, (r) => r.total);
 
     return Scaffold(
       appBar: AbosScreenBar(title: _title),
@@ -212,14 +215,21 @@ class _PaperListScreenState extends State<PaperListScreen> {
               ),
             if (_busy && page == null) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
-            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সার্ভারের গোনা; নিচে এই পাতার মোট
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সার্ভারের গোনা; নিচে এই পাতার মোট = দেখানো সব সারি ([ShownRows])।
+            // ⛔ আগে সার্ভারের `page_sum` — কেবল শেষ খেপের সারি: "আরও দেখুন"-এর পর ৪২টা সারি দেখিয়ে শেষ ১২টার যোগ বলত।
+            // ⓘ সার্ভার `page_sum` পাঠায় কেবল টাকা দেখার চাবিতে — তখনই লাইনটা, আর যোগ সারির নিজের টাকা থেকে
             if (page != null && page.sum != null && _rows.isNotEmpty) ...[
-              TotalStrip(label: w.papersGrandTotal, value: Money.taka(page.sum), count: page.count),
+              TotalStrip(
+                  label: w.papersGrandTotal,
+                  value: Money.taka(page.sum),
+                  count: page.count,
+                  // ⓘ তারিখের কাগজে বাছা পরিসর, তারিখহীন কাগজে সব তারিখ — সার্ভার যেমন ছেঁকেছে
+                  period: page.filters.dated ? TotalsPeriod.range(_from, _to, today: widget.today) : const TotalsPeriod.allDates()),
               if (page.pageSum != null)
                 Padding(
                   key: const ValueKey('paper-page-sum'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: FactRow(w.papersPageTotal(page.rows.length), Money.taka(page.pageSum)),
+                  child: FactRow(w.papersPageTotal(shown.count), Money.taka(shown.sum)),
                 ),
             ],
             if (page != null && page.sum == null && _rows.isNotEmpty)

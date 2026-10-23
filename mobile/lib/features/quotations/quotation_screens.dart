@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/totals_bar.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
@@ -115,7 +116,9 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
             const SizedBox(height: AppSpacing.sm),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; বাতিল, ফেরত আর পুরনো সংস্করণ বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
             if (_total != null && _rows.isNotEmpty)
-              TotalStrip(label: context.l10n.quotationsListTotal, value: Money.taka(_total!.sum), count: _total!.count),
+              TotalStrip(label: context.l10n.quotationsListTotal, value: Money.taka(_total!.sum), count: _total!.count,
+                  // ⓘ দরপত্রের তালিকায় তারিখের ছাঁকনি নেই — সব তারিখ
+                  period: const TotalsPeriod.allDates()),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.quotationsListErrorTitle, message: _error),
             if (_loaded && _rows.isEmpty && _error == null)

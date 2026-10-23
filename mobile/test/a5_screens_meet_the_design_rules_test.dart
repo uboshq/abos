@@ -128,8 +128,8 @@ class _Orders implements DeliveryOrderApi {
   );
 
   @override
-  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async =>
-      ([current], const PaperTotal(sum: 125000, count: 1));
+  Future<(List<DeliveryOrder>, PaperTotal?, int?)> list({bool awaitingMe = false, int page = 1}) async =>
+      ([current], const PaperTotal(sum: 125000, count: 1), null);
 
   @override
   Future<DeliveryOrder> show(String id) async => current;

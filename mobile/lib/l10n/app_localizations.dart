@@ -4021,6 +4021,42 @@ abstract class AppL10n {
   /// **'ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।'**
   String get counterReturnNoReasons;
 
+  /// Customer list total: what the shown shops owe minus their advances, as the web's customer list sums it
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট বকেয়া'**
+  String get customersTotalNet;
+
+  /// Customer list total: the advances the shown shops have paid, on their own line under the net
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট অগ্রিম'**
+  String get customersTotalAdvances;
+
+  /// Beside a total: the list is not limited to any dates, so the total covers all of them
+  ///
+  /// In bn, this message translates to:
+  /// **'সব তারিখ'**
+  String get totalsPeriodAllDates;
+
+  /// Beside a total: the chosen date range the total covers, first and last day as dd/MM/yyyy
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} – {to}'**
+  String totalsPeriodRange(String from, String to);
+
+  /// Screen reader: which dates the total next to it covers, e.g. 'Period: This month'
+  ///
+  /// In bn, this message translates to:
+  /// **'সময়কাল: {period}'**
+  String totalsPeriodSpoken(String period);
+
+  /// Totals bar: a separate line for the rejected rows shown on screen, which the total leaves out, with how many; the amount sits beside it
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যাত, মোটে নেই · {count}টি'**
+  String totalsRejectedLeftOut(String count);
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

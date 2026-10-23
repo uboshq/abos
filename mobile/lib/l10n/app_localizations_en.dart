@@ -2375,6 +2375,30 @@ class AppL10nEn extends AppL10n {
       'No reasons for returns are set up. Ask the office to add one on the web; returns cannot be confirmed without a reason.';
 
   @override
+  String get customersTotalNet => 'Net due';
+
+  @override
+  String get customersTotalAdvances => 'Total advance';
+
+  @override
+  String get totalsPeriodAllDates => 'All dates';
+
+  @override
+  String totalsPeriodRange(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String totalsPeriodSpoken(String period) {
+    return 'Period: $period';
+  }
+
+  @override
+  String totalsRejectedLeftOut(String count) {
+    return 'Rejected, not in the total · $count';
+  }
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

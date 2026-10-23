@@ -169,8 +169,10 @@ abstract class DeliveryOrderApi {
   bool get forOrders;
 
   /// `awaitingMe` সত্যি হলে কেবল যেগুলো এখন আমার সইয়ের অপেক্ষায়।
-  /// সারি, আর ছাঁকা তালিকার পুরো মোট ([[PaperTotal]]; পুরনো সার্ভারে `null`)
-  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false});
+  /// সারি, ছাঁকা তালিকার পুরো মোট ([[PaperTotal]]; পুরনো সার্ভারে `null`), আর পরের পাতা (শেষ হলে `null`)।
+  /// ⭐ [page] — সার্ভার পাতায় ৫০টা দেয় (`next_page`); তালিকা "আরও দেখুন"-এ পরেরটা চায়, বাকি তালিকার মতো (০.৪.৪৮)।
+  /// ⛔ আগে কেবল প্রথম পাতা — ৫১তম আদেশ ফোনে কখনো দেখা যেত না।
+  Future<(List<DeliveryOrder>, PaperTotal?, int?)> list({bool awaitingMe = false, int page = 1});
 
   Future<DeliveryOrder> show(String id);
 
@@ -202,10 +204,11 @@ class ServerDeliveryOrderApi implements DeliveryOrderApi {
   bool get forOrders => orders;
 
   @override
-  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async {
+  Future<(List<DeliveryOrder>, PaperTotal?, int?)> list({bool awaitingMe = false, int page = 1}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(_base, queryParameters: {
       if (awaitingMe) 'scope': 'awaiting_me',
       if (tab != null && !orders) 'tab': tab,
+      if (page > 1) 'page': page,
     });
     final data = response.data ?? const <String, dynamic>{};
     return (
@@ -214,6 +217,7 @@ class ServerDeliveryOrderApi implements DeliveryOrderApi {
           if (row is Map) DeliveryOrder.fromJson(Map<String, dynamic>.from(row)),
       ],
       PaperTotal.fromJson(data),
+      (data['next_page'] as num?)?.toInt(),
     );
   }
 

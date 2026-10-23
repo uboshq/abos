@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/orders/paper_total.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -14,6 +15,7 @@ import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../delivery_orders/delivery_order_screens.dart' show PaperListRow, orderStatusKind;
@@ -64,13 +66,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final synced = SalesOrderRecord.all();
     final shown =
         OrderListQuery.apply(synced, sort: _sort, filters: _filters);
-    // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ বাতিল আদেশ সারিতে থাকে, মোটে নয়
-    // (ওয়েবের ভাউচার আর আদেশের তালিকার একই নিয়ম)।
-    double sumOf(List<SalesOrderRecord> list) =>
-        list.fold<double>(0, (sum, order) => order.status == 'cancelled' ? sum : sum + (order.total ?? 0));
-    final shownTotal = sumOf(shown);
-    // ⭐ সর্বমোট — ফোনে সিঙ্ক হওয়া পুরো তালিকা, ছাঁকনির আগে; "এই পাতা" যা এখন দেখা যাচ্ছে (নকশা ৩, পাতা ৩)
-    final allTotal = sumOf(synced);
+    // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ প্রত্যাখ্যাত আর বাতিল আদেশ সারিতে
+    // থাকে, মোটে নয় — ওয়েবের আদেশের তালিকার হুবহু নিয়ম ([PaperTotal.uncounted], সার্ভারের `SalesOrderStatus::UNCOUNTED`)।
+    // ⛔ আগে কেবল বাতিল বাদ যেত, প্রত্যাখ্যাত আদেশ মোটে ঢুকত (fe-র মোটের নিরীক্ষা, ২৪ অক্টোবর ২০২৬)।
+    // ⓘ "এই পাতা" = দেখানো সারি ([ShownRows], অ্যাপজুড়ে এক মানে)
+    final page = ShownRows.of(shown, (order) => order.total, counts: (order) => PaperTotal.counts(order.status));
+    // ⭐ সর্বমোট — ছাঁকনি মেনে: ওয়েবের তালিকার সর্বমোট ছাঁকা ফলের, তাই এখানেও। ⛔ আগে ছাঁকনির আগের পুরো তালিকা যোগ হত — একটা
+    // অবস্থা বাছলেও সর্বমোট বদলাত না, পাশের গোনার সাথে মিলত না। ⓘ ফোনের তালিকা পাতায় ভাগ হয় না, তাই এখানে দুটো একই সারির।
+    final all = page;
+    // ⭐ প্রত্যাখ্যাত আদেশ মোটে নেই — দেখানো থাকলে নিজের আলাদা লাইনে (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬)
+    final rejectedRows = ShownRows.of(shown.where((order) => order.status == 'rejected'), (order) => order.total);
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -85,7 +90,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
       floatingActionButton: newOrder,
       bottomNavigationBar: synced.isEmpty
           ? null
-          : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),
+          : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum,
+              // ⓘ ফোনে যত আদেশ আছে, তারিখের ছাঁকনি নেই — সব তারিখ
+              period: const TotalsPeriod.allDates(),
+              rejectedCount: rejectedRows.count,
+              rejectedSum: rejectedRows.sum),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState

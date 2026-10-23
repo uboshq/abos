@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/totals_bar.dart';
 import '../../core/locale/l10n.dart';
 
 /// টাকা আদায়, প্রিন্সিপাল আর ক্রয়ের পাতার একসাথের টুকরো — তারিখের পরিসর, মোটের পট্টি, ভুলের ঘর।
@@ -80,11 +81,14 @@ class DateRangeBar extends StatelessWidget {
 /// "মোট ৳… · n টি" — তালিকার মাথায়, সার্ভারের গোটা ছাঁকনির যোগ (কেবল এই পাতার নয়)
 class TotalStrip extends StatelessWidget {
   const TotalStrip(
-      {super.key, required this.label, required this.value, this.count});
+      {super.key, required this.label, required this.value, this.count, this.period});
 
   final String label;
   final String value;
   final int? count;
+
+  /// ⭐ মোটের সময়কাল — নামের নিচে ([TotalsPeriodLabel], নিচের মোটের পট্টির একই লেখা); null কেবল তারিখহীন মোটে
+  final TotalsPeriod? period;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -99,7 +103,15 @@ class TotalStrip extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: AppSpacing.sm,
             children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              if (period case final p?)
+                // ⓘ নামের নিচে, অঙ্কের পাশে — একই লাইনে বসালে ৪১২dp-তেই অঙ্ক নিচের লাইনে নামত (পট্টি আরও উঁচু হত); এই পট্টি
+                // তালিকার মাথায়, তালিকার সাথে সরে, নিচের স্থির পট্টির মতো "＋ নতুন" বোতামের নিচে বসে না
+                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  TotalsPeriodLabel(p),
+                ])
+              else
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
               Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: AppSpacing.sm,
@@ -115,6 +127,28 @@ class TotalStrip extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      );
+}
+
+/// মোটের পট্টির নিচের এক লাইন — বাঁয়ে নাম, ডানে অঙ্ক; জায়গা না হলে অঙ্ক নিচের লাইনে ডানে নামে, ⛔ অঙ্ক মাঝখানে ভাঙে না
+/// (যেমন গ্রাহকের তালিকার "মোট বকেয়া" আর "মোট অগ্রিম", ০.৪.৪৮)
+class TotalLine extends StatelessWidget {
+  const TotalLine(this.label, this.value, {super.key});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+        child: OverflowBar(
+          alignment: MainAxisAlignment.spaceBetween,
+          overflowAlignment: OverflowBarAlignment.end,
+          children: [
+            Text(label, style: TextStyle(color: context.palette.onSurfaceMuted)),
+            Text(value, semanticsLabel: Money.speakable(value), style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
         ),
       );
 }
