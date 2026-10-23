@@ -108,13 +108,17 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertMatchesRegularExpression('/data-voucher-details.*?<div class="flex flex-col gap-3">.*?name="to_account_id".*?name="carried_by".*?name="narration"/s', $form,
             '⛔ কাকে দেওয়া হল · কার মাধ্যমে · বিবরণ আর আলাদা পূর্ণ-চওড়া স্তম্ভে নয়');
 
+        // ⓘ ব্যাংক খাত আগে — ডেমোর ছকে নেই, বানানো হয়; পাতা আঁকার পরে বানালে পাতায় তার স্থিতি থাকেই না (cb_v14 ফটক)
+        $bank = $this->bank();
         $payment = $this->screen(Voucher::PAYMENT);
         // ⓘ উৎস ধরে — পরীক্ষা ইংরেজিতে আঁকে, আর সেখানে পুরনো আর নতুন দুই লেখাই "Paid from"
         $this->assertMatchesRegularExpression('/name="from_account_id" data-money-account x-model="account"\s+:label="__\(\'money\.screen\.from_account\'\)"/', $form,
             '⛔ পরিশোধে "যে খাত থেকে" লেখা নেই (নকশার লেখা; আগে "কোথা থেকে দেওয়া হল")');
         $this->assertStringContainsString('data-account-balance', $payment, '⛔ খাতের স্থিতির লাইন নেই');
-        $balance = bcadd($this->bank()->balanceInView(), '0', 2);
-        $this->assertStringContainsString('&quot;'.$this->bank()->id.'&quot;:&quot;'.$balance.'&quot;', $payment,
+        $balance = bcadd($bank->balanceInView(), '0', 2);
+        // ⓘ @js লেখে JSON.parse('…')-এর ভিতরে, উদ্ধৃতি " হয়ে — তাই যেকোনো রূপের উদ্ধৃতি মানা
+        $q = '(?:"|&quot;|\\\\u0022)';
+        $this->assertMatchesRegularExpression('/'.$q.$bank->id.$q.'\s*:\s*'.$q.preg_quote($balance, '/').$q.'/', $payment,
             '⛔ ব্যাংক খাতের স্থিতি পর্দায় পাঠানো হয় না');
         $this->assertSame('যে খাত থেকে', trans('money.screen.from_account', [], 'bn'), '⛔ নকশার লেখা বদলেছে');
     }
