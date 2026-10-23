@@ -239,7 +239,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               ),
             if (page?.nextPage != null)
               MoreButton(busy: _busy, onPressed: () => _load(more: true)),
-            const SizedBox(height: AppSpacing.sm),
+            // ⓘ কার্ডের ফাঁক কার্ডের নিজের নিচের মার্জিন (৮dp), অন্য কার্ডের মতো — ⛔ আগে এখানে আরও ৮dp, তাতে ৪১২dp ফোনে স্থির অবস্থায়
+            // "＋ নতুন আদায়" "মোট · nটি দোকান"-এর সারির নিচের ৬dp ঢাকত (সমন্বয়ক, ২৪ অক্টোবর ২০২৬; totals_bar_keeps_its_height_test)
             ShopDuesCard(dues: (widget.dues ?? shopDuesInCache)()),
           ],
         ),

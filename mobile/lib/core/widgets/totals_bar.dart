@@ -96,7 +96,7 @@ class TotalsBar extends StatelessWidget {
   /// [TotalsBar.grand]-এর লেখা; null হলে দুই লাইন ("এই পাতা" আর "সর্বমোট")
   final String? grandLabel;
 
-  /// ⭐ মোটের সময়কাল — পট্টির মাথায় ([TotalsPeriodLabel]); null কেবল যে তালিকা তারিখের নয় (যেমন আজকের বকেয়া)
+  /// ⭐ মোটের সময়কাল — প্রথম লাইনের শুরুতে ([TotalsPeriodLabel]), নিজের লাইন নয়; null কেবল যে তালিকা তারিখের নয় (যেমন আজকের বকেয়া)
   final TotalsPeriod? period;
 
   /// ⭐ দেখানো প্রত্যাখ্যাত সারি — মোটে নেই, তাই নিজের আলাদা লাইনে ("প্রত্যাখ্যাত, মোটে নেই · ২টি  ৳…"); fe-র নিয়ম, ২৪ অক্টোবর
@@ -107,7 +107,11 @@ class TotalsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    Widget line(String label, Object sum, bool grand, Key key) => Padding(
+    Widget line(String label, Object sum, bool grand, Key key, {TotalsPeriod? lead}) {
+      final text = Text(label,
+          style: TextStyle(fontSize: grand ? 15 : 13, fontWeight: grand ? FontWeight.w700 : FontWeight.w500,
+              color: grand ? cs.onSurface : cs.onSurfaceVariant));
+      return Padding(
           key: key,
           padding: const EdgeInsets.symmetric(vertical: 2),
           // ⓘ পাশাপাশি না ধরলে (২০০% অক্ষর, ছোট ফোন) টাকা নিচের লাইনে ডানে নামে — কাটা পড়ে না, উপচেও পড়ে না
@@ -115,14 +119,22 @@ class TotalsBar extends StatelessWidget {
             alignment: MainAxisAlignment.spaceBetween,
             overflowAlignment: OverflowBarAlignment.end,
             children: [
-              Text(label,
-                  style: TextStyle(fontSize: grand ? 15 : 13, fontWeight: grand ? FontWeight.w700 : FontWeight.w500,
-                      color: grand ? cs.onSurface : cs.onSurfaceVariant)),
+              // ⭐ সময়কাল প্রথম লাইনের শুরুতে, ছোট চিপের মতো — ⛔ নিজের লাইন নয়: পট্টি এক লাইন উঁচু হলে "＋ নতুন" বোতাম ওপরে উঠে
+              // পাতার মোট ঢাকত (সমন্বয়ক, ২৪ অক্টোবর ২০২৬; totals_bar_keeps_its_height_test)
+              if (lead == null)
+                text
+              else
+                Wrap(spacing: AppSpacing.sm, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  TotalsPeriodLabel(lead),
+                  text,
+                ]),
               Text(Money.taka(sum),
                   style: TextStyle(fontSize: grand ? 17 : 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
             ],
           ),
         );
+    }
+
     return Material(
       key: const ValueKey('totals-bar'),
       color: cs.surfaceContainer,
@@ -132,11 +144,10 @@ class TotalsBar extends StatelessWidget {
           decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
           padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (period case final p?) Align(alignment: AlignmentDirectional.centerStart, child: TotalsPeriodLabel(p)),
             if (grandLabel case final label?)
-              line(label, allSum, true, const ValueKey('totals-all'))
+              line(label, allSum, true, const ValueKey('totals-all'), lead: period)
             else ...[
-              line(context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page')),
+              line(context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page'), lead: period),
               if (rejectedCount > 0)
                 line(context.l10n.totalsRejectedLeftOut('$rejectedCount'), rejectedSum, false,
                     const ValueKey('totals-rejected')),

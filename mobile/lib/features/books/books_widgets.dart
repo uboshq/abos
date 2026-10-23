@@ -104,6 +104,8 @@ class TotalStrip extends StatelessWidget {
             spacing: AppSpacing.sm,
             children: [
               if (period case final p?)
+                // ⓘ নামের নিচে, অঙ্কের পাশে — একই লাইনে বসালে ৪১২dp-তেই অঙ্ক নিচের লাইনে নামত (পট্টি আরও উঁচু হত); এই পট্টি
+                // তালিকার মাথায়, তালিকার সাথে সরে, নিচের স্থির পট্টির মতো "＋ নতুন" বোতামের নিচে বসে না
                 Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
                   TotalsPeriodLabel(p),
