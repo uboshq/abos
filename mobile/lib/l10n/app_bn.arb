@@ -14240,6 +14240,10 @@
   "@collectBankChargeHint": {
     "description": "Collection: what the bank charge does (item 9)"
   },
+  "collectSignDropped": "চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক",
+  "@collectSignDropped": {
+    "description": "Collection: under a money field when a pasted sign (-, +, ৳) was removed, and announced to the screen reader (fe, 23 Oct 2026)"
+  },
   "collectBillsTitle": "খোলা বিল ও ক্রেডিট",
   "@collectBillsTitle": {
     "description": "Collection: the open items table title (item 3)"

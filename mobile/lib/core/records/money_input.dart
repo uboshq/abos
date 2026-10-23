@@ -12,11 +12,18 @@ import 'package:flutter/services.dart';
 /// লেখা থাকে: "1e5" থেকে চুপচাপ "15" বা "12.345" থেকে "12.34" বানালে মানুষ যা লেখেননি সেই টাকা যেত।
 /// কমা থাকে (বিন্দুর আগে), কারণ ঘর ছাড়লে পর্দা টাকার রূপে সাজায় ("45,000.00") আর তারপরের সম্পাদনাও চলতে হবে।
 /// বাংলা অঙ্ক থাকে — [Money.typedText] পড়ে।
+///
+/// <p>⭐ চুপচাপ নয় (fe, ২৩ অক্টোবর ২০২৬): প্রতিটা নেওয়া বদলে [onEdit] জানায় কোনো চিহ্ন ঝরল কি না — পর্দা তখন ঘরের নিচে
+/// "চিহ্ন বাদ দেওয়া হয়েছে" লেখে আর পর্দা-পাঠককে ঘোষণা দেয়, যাতে মানুষ জানেন লেখাটা বদলেছে। ফাঁকা ঝরলে কিছু বলা হয় না।
 class MoneyInputFormatter extends TextInputFormatter {
-  const MoneyInputFormatter();
+  const MoneyInputFormatter({this.onEdit});
+
+  /// নেওয়া প্রতিটা লেখা-বদলে: চিহ্ন (-, −, +, ৳) ঝরল কি না। ফেরানো লেখায় ডাকা হয় না।
+  final void Function(bool signDropped)? onEdit;
 
   static const _bangla = '০১২৩৪৫৬৭৮৯'; // l10n-ok: the Bengali digit table, not text
   static final _dropped = RegExp(r'[-−+৳\s]'); // l10n-ok: the sign, taka-sign and space characters a money field drops, not text
+  static final _signs = RegExp(r'[-−+৳]'); // l10n-ok: the sign characters whose dropping is told to the person, not text
 
   static bool _digit(String ch) => (ch.codeUnitAt(0) >= 0x30 && ch.codeUnitAt(0) <= 0x39) || _bangla.contains(ch);
 
@@ -43,6 +50,7 @@ class MoneyInputFormatter extends TextInputFormatter {
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     final text = newValue.text.replaceAll(_dropped, '');
     if (!isMoney(text)) return oldValue;
+    if (newValue.text != oldValue.text) onEdit?.call(_signs.hasMatch(newValue.text));
     if (text == newValue.text) return newValue;
     final at = newValue.selection.isValid ? newValue.selection.extentOffset.clamp(0, newValue.text.length) : newValue.text.length;
     final offset = newValue.text.substring(0, at).replaceAll(_dropped, '').length;

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -143,6 +144,21 @@ class _CollectScreenState extends State<CollectScreen> {
   final _difference = TextEditingController();
   final _vds = TextEditingController();
   final _ait = TextEditingController();
+
+  /// ⭐ যে টাকার ঘরে পেস্টের চিহ্ন এইমাত্র ঝরেছে — ঘরের নিচে লেখা থাকে পরের চিহ্নহীন বদল পর্যন্ত (fe, ২৩ অক্টোবর ২০২৬)
+  final Set<String> _signDropped = {};
+
+  /// ঘরের টাকার ছাঁকনি, চিহ্ন ঝরলে জানায় আর পর্দা-পাঠককে বলে; [also] — নিচের শিটের নিজের নতুন আঁকা
+  MoneyInputFormatter _money(String field, {VoidCallback? also}) => MoneyInputFormatter(onEdit: (dropped) {
+        if (dropped) {
+          SemanticsService.sendAnnouncement(View.of(context), context.l10n.collectSignDropped, Directionality.of(context));
+        }
+        if (dropped == _signDropped.contains(field)) return;
+        setState(() => dropped ? _signDropped.add(field) : _signDropped.remove(field));
+        also?.call();
+      });
+
+  String? _signNote(String field) => _signDropped.contains(field) ? context.l10n.collectSignDropped : null;
   final _narration = TextEditingController();
 
   final _amountFocus = FocusNode(debugLabel: 'amount');
@@ -736,8 +752,9 @@ class _CollectScreenState extends State<CollectScreen> {
                   key: const ValueKey('collect-bank-charge'),
                   controller: _charge,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: const [MoneyInputFormatter()],
-                  decoration: InputDecoration(labelText: w.collectBankCharge, helperText: w.collectBankChargeHint, helperMaxLines: 3),
+                  inputFormatters: [_money('charge', also: () => refresh(() {}))],
+                  decoration: InputDecoration(
+                      labelText: w.collectBankCharge, helperText: _signNote('charge') ?? w.collectBankChargeHint, helperMaxLines: 3),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
@@ -943,13 +960,17 @@ class _CollectScreenState extends State<CollectScreen> {
           textAlign: TextAlign.end,
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: const [MoneyInputFormatter()],
+          inputFormatters: [_money('amount')],
           textInputAction: TextInputAction.next,
           onEditingComplete: () {
             _formatAmount();
             _nextFrom(_amountFocus);
           },
-          decoration: InputDecoration(labelText: w.collectAmount, prefixText: '৳ '), // l10n-ok: the taka sign, the same in every language
+          decoration: InputDecoration(
+              labelText: w.collectAmount,
+              prefixText: '৳ ', // l10n-ok: the taka sign, the same in every language
+              helperText: _signNote('amount'),
+              helperMaxLines: 2),
         ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
@@ -1159,6 +1180,8 @@ class _CollectScreenState extends State<CollectScreen> {
               onTick: (on) => _tick(r, on),
               onTap: () => setState(() => _editing = identical(_editing, r) ? null : r),
               onChanged: (text) => _typeApplied(r, text),
+              formatter: _money('item:${r.item.no}'),
+              signNote: _signNote('item:${r.item.no}'),
             ),
           ],
           const Divider(height: AppSpacing.md),
@@ -1211,8 +1234,8 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _difference,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: const [MoneyInputFormatter()],
-            decoration: InputDecoration(labelText: w.collectDifferenceAmount),
+            inputFormatters: [_money('difference')],
+            decoration: InputDecoration(labelText: w.collectDifferenceAmount, helperText: _signNote('difference'), helperMaxLines: 2),
           ),
           if (_differenceKind == 'discount' && _differencePaisa > 0)
             _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
@@ -1232,8 +1255,8 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _vds,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: const [MoneyInputFormatter()],
-            decoration: InputDecoration(labelText: w.collectVds),
+            inputFormatters: [_money('vds')],
+            decoration: InputDecoration(labelText: w.collectVds, helperText: _signNote('vds'), helperMaxLines: 2),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
@@ -1241,8 +1264,8 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _ait,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: const [MoneyInputFormatter()],
-            decoration: InputDecoration(labelText: w.collectAit),
+            inputFormatters: [_money('ait')],
+            decoration: InputDecoration(labelText: w.collectAit, helperText: _signNote('ait'), helperMaxLines: 2),
           ),
         ],
       ),
@@ -1938,9 +1961,15 @@ class _ItemRow extends StatelessWidget {
     required this.onTick,
     required this.onTap,
     required this.onChanged,
+    required this.formatter,
+    this.signNote,
   });
 
   final PlanRow row;
+  final MoneyInputFormatter formatter;
+
+  /// পেস্টের চিহ্ন এইমাত্র ঝরলে ঘরের নিচের লেখা
+  final String? signNote;
   final bool editing;
   final TextEditingController controller;
   final String? error;
@@ -2015,11 +2044,13 @@ class _ItemRow extends StatelessWidget {
               enabled: enabled,
               textAlign: TextAlign.end,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: const [MoneyInputFormatter()],
+              inputFormatters: [formatter],
               onChanged: onChanged,
               decoration: InputDecoration(
                 labelText: w.collectItemApplyOf(item.no),
                 prefixText: item.isCredit ? '−' : null,
+                helperText: signNote,
+                helperMaxLines: 2,
                 errorText: error,
                 errorMaxLines: 3,
                 isDense: true,

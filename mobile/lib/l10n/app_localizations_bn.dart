@@ -10264,6 +10264,10 @@ class AppL10nBn extends AppL10n {
       'চার্জ যায় ব্যাংক চার্জ খাতে; গ্রাহকের খাতায় পুরো টাকা।';
 
   @override
+  String get collectSignDropped =>
+      'চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক';
+
+  @override
   String get collectBillsTitle => 'খোলা বিল ও ক্রেডিট';
 
   @override

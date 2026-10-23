@@ -17060,6 +17060,12 @@ abstract class AppL10n {
   /// **'চার্জ যায় ব্যাংক চার্জ খাতে; গ্রাহকের খাতায় পুরো টাকা।'**
   String get collectBankChargeHint;
 
+  /// Collection: under a money field when a pasted sign (-, +, ৳) was removed, and announced to the screen reader (fe, 23 Oct 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক'**
+  String get collectSignDropped;
+
   /// Collection: the open items table title (item 3)
   ///
   /// In bn, this message translates to:

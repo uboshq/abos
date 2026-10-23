@@ -33,6 +33,7 @@
   "collectChequeDate": "Cheque date",
   "collectBankCharge": "Bank charge (Tk)",
   "collectBankChargeHint": "The charge goes to the bank charge account; the customer is credited the full amount.",
+  "collectSignDropped": "Sign removed — amounts are always positive",
   "collectBillsTitle": "Open invoices and credits",
   "collectBillsAuto": "Automatic: oldest invoices first",
   "collectBillsAutoWith": "Automatic: oldest invoices first — {list}",

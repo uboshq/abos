@@ -1594,4 +1594,52 @@ void main() {
         CollectionDraft(customerId: 'cus-1', amount: '1000', date: DateTime(2026, 10, 21), accountId: 'acc-dbbl', difference: (kind: 'rounding', amount: '-0.51')));
     expect(preview!.needsSignature, isTrue, reason: '⛔ সার্ভারের প্রিভিউ −0.51-কে 0.51 পড়ে আর সই চায়');
   });
+
+  /// ⭐ চিহ্ন ঝরলে চুপচাপ নয় (fe, ২৩ অক্টোবর ২০২৬): ঘরের নিচে "চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক", পর্দা-পাঠকে
+  /// ঘোষণা, আর পরের চিহ্নহীন বদলে লেখাটা চলে যায়। টাকার ঘর, ছাড়/রাউন্ডিং, VDS, AIT আর বিলের সারি।
+  testWidgets('a dropped sign is told under the field and announced, and the note goes with the next clean edit', (tester) async {
+    const note = 'চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক';
+    await _pump(tester, _screen(FakeCollect()));
+    await _pickShop(tester);
+    tester.takeAnnouncements();
+
+    Finder under(String key) => find.descendant(of: find.byKey(ValueKey(key)), matching: find.text(note));
+
+    await _type(tester, 'collect-amount', '-45000');
+    expect(under('collect-amount'), findsOneWidget, reason: '⛔ চিহ্ন ঝরল, অথচ ঘরের নিচে কিছু বলা নেই');
+    expect(tester.takeAnnouncements().map((a) => a.message), contains(note), reason: '⛔ পর্দা-পাঠককে বলা হয়নি');
+    // ⓘ ঝরার পরে ঘরে "45000" — একই লেখা আবার বদল নয়, তাই অন্য অঙ্ক
+    await _type(tester, 'collect-amount', '46000');
+    expect(under('collect-amount'), findsNothing, reason: '⛔ চিহ্নহীন বদলের পরেও পুরনো লেখা রয়ে গেল');
+    expect(tester.takeAnnouncements(), isEmpty, reason: '⛔ চিহ্নহীন বদলেও ঘোষণা');
+
+    await _type(tester, 'collect-amount', '৳ 45000');
+    expect(under('collect-amount'), findsOneWidget, reason: '⛔ ৳ ঝরল, অথচ বলা নেই');
+    await _type(tester, 'collect-amount', ' 45000 ');
+    expect(under('collect-amount'), findsNothing, reason: 'কেবল ফাঁকা ঝরলে কিছু বলা হয় না');
+
+    await _tap(tester, 'collect-adjust');
+    await _tap(tester, 'collect-difference-rounding');
+    for (final key in ['collect-difference', 'collect-vds', 'collect-ait']) {
+      await _type(tester, key, '-5');
+      expect(under(key), findsOneWidget, reason: '⛔ $key-এ চিহ্ন ঝরল, অথচ বলা নেই');
+    }
+    await _tap(tester, 'collect-item-INV-0094');
+    await _type(tester, 'collect-apply-INV-0094', '-100');
+    expect(under('collect-apply-INV-0094'), findsOneWidget, reason: '⛔ বিলের সারিতে চিহ্ন ঝরল, অথচ বলা নেই');
+  });
+
+  test('the formatter reports every accepted edit and whether a sign dropped; a refused paste reports nothing', () {
+    final seen = <bool>[];
+    final f = MoneyInputFormatter(onEdit: seen.add);
+    TextEditingValue type(String old, String next) => f.formatEditUpdate(
+        TextEditingValue(text: old, selection: TextSelection.collapsed(offset: old.length)),
+        TextEditingValue(text: next, selection: TextSelection.collapsed(offset: next.length)));
+    type('', '-0.51');
+    type('0.51', '0.512'); // ফেরানো
+    type('', '৳5');
+    type('', '12');
+    type('12', '12'); // লেখা একই — কেবল কার্সর
+    expect(seen, [true, true, false], reason: '⛔ চিহ্ন ঝরার খবর ভুল');
+  });
 }

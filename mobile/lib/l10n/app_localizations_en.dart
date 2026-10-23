@@ -10430,6 +10430,9 @@ class AppL10nEn extends AppL10n {
       'The charge goes to the bank charge account; the customer is credited the full amount.';
 
   @override
+  String get collectSignDropped => 'Sign removed — amounts are always positive';
+
+  @override
   String get collectBillsTitle => 'Open invoices and credits';
 
   @override
