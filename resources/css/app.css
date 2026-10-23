@@ -1092,13 +1092,26 @@
    রাখত, আর তার নিচের বোতামে ক্লিক করা যেত না। দুইটা একসাথে বদলানো
    হয়, আর visibility-তে দেরি দেওয়া হয় যাতে ফেড-আউটটা দেখা যায়।
    ───────────────────────────────────────────────────────────────── */
+/* ⛔ বন্ধ অবস্থায় `display: none`, কেবল `invisible` নয় (fe, ২২ অক্টোবর ২০২৬, cb/hf-footer-pad) — অদৃশ্য হলেও তালিকাগুলো জায়গা
+   নিত: প্রতিটা ~৬০০px, রেলের টাইলের মাথা থেকে নিচে, তাই নিচের টাইলের তালিকা পাতাটাকে ১,৭০০px লম্বা করত — ছোট পাতাতেও
+   স্ক্রল, ফাঁকা নিচ, আর স্টিকি সাইডবার পাতার সাথে সরে যেত। ⓘ ফেড থাকে: `allow-discrete` আর `@starting-style` দিয়ে
+   (যে ব্রাউজার জানে না সেখানে ফেড ছাড়া খোলে-বন্ধ হয়, কাজ একই)। */
 .rail-flyout {
-    transition: opacity 120ms ease, visibility 0s linear 120ms;
+    display: none;
+    transition: opacity 120ms ease, visibility 120ms allow-discrete, display 120ms allow-discrete;
 }
 
 .group\/rail:hover .rail-flyout,
 .group\/rail:focus-within .rail-flyout {
-    transition: opacity 120ms ease, visibility 0s;
+    display: block;
+    transition: opacity 120ms ease, visibility 0s allow-discrete, display 0s allow-discrete;
+}
+
+@starting-style {
+    .group\/rail:hover .rail-flyout,
+    .group\/rail:focus-within .rail-flyout {
+        opacity: 0;
+    }
 }
 
 /* মাউস টাইল থেকে তালিকায় যাওয়ার পথে ৪px ফাঁক পেরোতে হয়; ওই ফাঁকে
