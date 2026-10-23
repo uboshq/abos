@@ -44,6 +44,7 @@ return [
     'checks' => [
         'drafts' => ['No draft vouchers left in the month', 'A draft never reaches the books, so the month does not include it.'],
         'awaiting' => ['No voucher in the month awaits approval', 'Until approved, the voucher is not in the books.'],
+        'stale' => ['No draft changed after its signature was asked for', 'A changed draft: post it again and it goes for signature afresh.'],
         'bank_reconciled' => ['Every bank account is reconciled for the month', 'Only accounts that moved this month.'],
         'cash_counted' => ['Every cash till was counted at least once', 'Only confirmed counts count.'],
         'depreciated' => ['Depreciation posted for active assets', 'Assets acquired before month end.'],

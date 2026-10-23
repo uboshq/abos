@@ -246,20 +246,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
      */
     private function awaitingIds(): array
     {
-        $candidates = Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->where('module', VoucherApproval::MODULE)
-            ->pending()
-            ->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
-
-        $out = [];
-
-        foreach (array_chunk($candidates, ListSummary::CHUNK) as $ids) {
-            $drafts = Voucher::query()->whereKey($ids)->where('status', DocumentStatus::DRAFT)->get();
-            $out = [...$out, ...$this->awaitingAmong($this->approval->signingOf($drafts, false))];
-        }
-
-        return $out;
+        return $this->approval->waitingIds()['awaiting'];
     }
 
     /**

@@ -100,6 +100,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
         // ⓘ দেনা: ফোনের তালিকা আজও নিজে মোট যোগ করে — ListSummary-তে সরবে, তালিকা কেবল ছোট হয় (cb, ২৪ অক্টোবর ২০২৬)
         'EveryListSummaryAddsDecimalsTest::KNOWN',
+        // ⓘ দেনা: ভাউচারের অপেক্ষা নিজে গোনা — decide()-এর বাইরে, তালিকা কেবল ছোট হয় (cb, ২৪ অক্টোবর ২০২৬)
+        'EveryVoucherWaitIsDecidedOnceTest::KNOWN',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -459,8 +461,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * ── ⭐ ৪৬৯ → ৪৬৮, ২৪ অক্টোবর ২০২৬ (cb, ভাউচারের মোট ListSummary-তে) ────────────
      *   −১  EveryListSummaryAddsDecimalsTest::KNOWN — VoucherApiController আর নিজে যোগ করে না: summary আর পুরনো total দুটোই
      *       ListSummary থেকে, শুধু পাকা কাগজ।
+     *
+     * ── ⚠️ ৪৬৮ → ৪৭২, ২৪ অক্টোবর ২০২৬ (cb, ভাউচারের অপেক্ষা এক জায়গায়; fe-র চাওয়া পাহারা) ────────────
+     *   +৪  EveryVoucherWaitIsDecidedOnceTest::KNOWN — PENDING নিজে পড়া চার ফাইল (ছয় জায়গা), মালিক আর কারণসহ: VoucherWriter
+     *       (cb, পোস্টের নিজের পথ — stopping()-এর ঠিক পরের অনুরোধ) আর কাউন্টার-বিক্রির তিন ফাইল (a5; বাসি অনুরোধে কাউন্টার কী
+     *       দেখাবে a5 ঠিক করবে)। বাকি ছয় জায়গা এই কমিটেই decide()-এ সরেছে। ⛔ নতুন ছাড় নয়, পুরনো দেনা প্রথমবার গোনা।
      */
-    private const CEILING = 468;
+    private const CEILING = 472;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

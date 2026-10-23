@@ -442,7 +442,8 @@ final class InsuranceClaimService
     {
         $own = array_values(array_filter([(int) $claim->approval_voucher_id, (int) $claim->close_voucher_id]));
 
-        $asked = Approval::query()->where('approvable_type', Voucher::class)->where('status', Approval::PENDING)->select('approvable_id');
+        // ⓘ সই চাওয়া মানে টাটকা অনুরোধ — বাসিটা (চাওয়ার পরে বদলানো) সাধারণ খসড়ার মতোই, আটকায় না ([[VoucherApproval::waitingIds()]])
+        $asked = app(\App\Modules\Accounts\Services\VoucherApproval::class)->waitingIds()['awaiting'];
 
         $waiting = Voucher::query()->withoutGlobalScope('user-branch')
             ->where('status', DocumentStatus::DRAFT)

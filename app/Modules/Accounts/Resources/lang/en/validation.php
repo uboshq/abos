@@ -136,6 +136,8 @@ return [
     'cannot_close_future_month' => 'A month that has not come yet cannot be closed.',
     'month_has_unposted' => 'This month has :count confirmed paper(s) that never reached the books — post or cancel them from the posting monitor, then close.',
     'month_has_open_papers' => 'This month still has :drafts draft(s) and :awaiting voucher(s) awaiting signature — post or cancel them first, or they could never reach the books.',
+    // ⓘ A stale request is not waiting: it is a changed draft ([[VoucherApproval::waitingIds()]], fe, 24 Oct 2026)
+    'month_has_changed_drafts' => 'Of these, :stale draft(s) changed after the signature was asked for — post them again and they go for signature afresh.',
     'party_types_owner_only' => 'Only the owner can change which parties an account holds.',
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
 

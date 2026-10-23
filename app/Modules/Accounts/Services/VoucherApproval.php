@@ -410,6 +410,40 @@ final class VoucherApproval implements ClassifiesDrafts
         }
     }
 
+    /**
+     * ⭐ PENDING অনুরোধের খসড়াগুলো — টাটকা আর বাসি আলাদা ([[decide()]]); কোম্পানির প্রতিটা "সইয়ের অপেক্ষায়" গোনা এটাই পড়ে
+     * (তালিকা, ফোন, ড্যাশবোর্ড, পোস্টিং মনিটর, খরচের পাতা, বিমার দাবি, মাস-শেষ; fe, ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে প্রত্যেকে নিজে `pending()` গুনত — বাসি অনুরোধও "অপেক্ষা", অথচ পরের পোস্টে সেটা তুলে নতুন চাওয়া হয় ([[stopping()]])।
+     * ⓘ আইডি কেবল — শাখার দেয়াল ডাকার জনের নিজের কোয়েরিতে (কেউ দেয়ালসহ গোনে, কেউ সব শাখা); প্রার্থী ৫০০ করে, একসাথে ভাগ।
+     *
+     * @param  string|null  $action  কেবল এই কাজের অনুরোধ (খরচ, রসিদ…); null = সব
+     * @return array{awaiting: list<int>, stale: list<int>}
+     */
+    public function waitingIds(?string $action = null): array
+    {
+        $candidates = Approval::query()
+            ->where('approvable_type', Voucher::class)
+            ->where('module', self::MODULE)
+            ->when($action !== null, fn ($q) => $q->where('action', $action))
+            ->where('status', Approval::PENDING)
+            ->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        $out = [self::AWAITING => [], self::STALE => []];
+
+        foreach (array_chunk($candidates, ListSummary::CHUNK) as $ids) {
+            $drafts = Voucher::query()->withoutGlobalScope('user-branch')->whereKey($ids)->where('status', \App\Core\Support\DocumentStatus::DRAFT)->get();
+
+            foreach ($this->signingOf($drafts, false) as $id => $signing) {
+                if (isset($out[$signing])) {
+                    $out[$signing][] = $id;
+                }
+            }
+        }
+
+        return ['awaiting' => $out[self::AWAITING], 'stale' => $out[self::STALE]];
+    }
+
     public function groups(): array
     {
         return [ListSummary::PENDING, ListSummary::DRAFT, ListSummary::REJECTED];
