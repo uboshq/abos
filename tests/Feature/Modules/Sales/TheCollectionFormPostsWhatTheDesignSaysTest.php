@@ -135,6 +135,29 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame(DocumentStatus::CONFIRMED, $plain->status, '⛔ দফা ৫: AIT ছাড়া আদায়ও থেমে গেল — পাহারা অদরকারি খাতও দেখছে');
     }
 
+    /**
+     * দফা ৫ — ১১৩৫ কোডের খাতটা দল-খাত (একই ধরন, তাই মানে মেলে, কিন্তু দলে লেনদেন বসে না): AIT-সহ আদায় একই বাংলা কারণে ফেরে, কিছু লেখা
+     * হয় না (fe, ২৩ অক্টোবর ২০২৬)। ⓘ [[StandardChart::holdsItsMeaning()]] দল দেখে না — এই পরখ CollectionService::account()-এর postable।
+     */
+    public function test_item_5_ait_never_lands_on_a_group_that_has_the_advance_tax_code(): void
+    {
+        $bill = $this->bill('INV-CF-AITG', 10, '10000');
+        $tax = StandardChart::find(StandardChart::ADVANCE_INCOME_TAX);
+        $this->assertNotNull($tax, 'প্রস্তুতিটাই ভুল — ডেমো ছকে ১১৩৫ নেই');
+        \Illuminate\Support\Facades\DB::table('accounts')->where('id', $tax->id)->update(['is_group' => true]);
+        $this->assertTrue(app(StandardChart::class)->holdsItsMeaning($tax->fresh()), 'প্রস্তুতিটাই ভুল — দল-খাতের মানে না মিললে দাবিটা postable মাপে না');
+        $papers = Collection::acrossBranches()->count();
+        $rows = LedgerEntry::query()->count();
+
+        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form(['amount' => '9750', 'ait' => '250',
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]), 'post' => '1']);
+
+        $this->assertSame(__('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']), $this->said('status'),
+            '⛔ দফা ৫: দল-খাত ১১৩৫-এ AIT — বাংলায় কারণ বলে ফেরায়নি');
+        $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ দফা ৫: দল-খাত ১১৩৫ থাকতেও কাগজ বা খাতার সারি বসল');
+    }
+
     /** দফা ৯ — চার্জ টাকার ভিতরে: ব্যাংকে অঙ্ক − চার্জ, চার্জ ৫২১০-এ, গ্রাহক পুরো অঙ্কে */
     public function test_item_9_the_bank_charge_sits_inside_the_amount(): void
     {
