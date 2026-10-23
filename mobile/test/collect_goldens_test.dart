@@ -5,6 +5,7 @@ import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,8 +41,9 @@ Future<void> _open(WidgetTester tester,
     bool posted = false,
     double textScale = 1,
     String? rounding,
-    bool empty = false}) async {
-  tester.view.physicalSize = Size(412, (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
+    bool empty = false,
+    double? height}) async {
+  tester.view.physicalSize = Size(412, height ?? (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   AppLocale.current = locale;
@@ -83,7 +85,11 @@ Future<void> _open(WidgetTester tester,
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const ValueKey('collect-amount')), '45000');
   await tester.pumpAndSettle();
-  // ⓘ নকশার নমুনা: ডাচ্-বাংলা ব্যাংক, "ব্যাংক" পদ্ধতি, TrxID লেখা
+  // ⓘ নকশার নমুনা: ডাচ্-বাংলা ব্যাংক, "ব্যাংক" পদ্ধতি, TrxID লেখা; আসল উচ্চতার পর্দায় ([height]) ঘর আগে চোখে আনা
+  if (height != null) {
+    await tester.ensureVisible(find.byKey(const ValueKey('collect-method-transfer')));
+    await tester.pumpAndSettle();
+  }
   await tester.tap(find.byKey(const ValueKey('collect-method-transfer')));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const ValueKey('collect-reference')), 'NP2610210457812');
@@ -119,6 +125,53 @@ void _clearInside(WidgetTester tester, String key) {
   final room = (top: i.top - o.top, bottom: o.bottom - i.bottom, left: i.left - o.left, right: o.right - i.right);
   expect(room.top >= 8 && room.bottom >= 8 && room.left >= 8 && room.right >= 8, isTrue,
       reason: '⛔ $key: লেখা $i বোতামের $o কিনারায় লাগে — ফাঁক $room');
+}
+
+Rect _screenRect(WidgetTester tester) => Offset.zero & (tester.view.physicalSize / tester.view.devicePixelRatio);
+
+/// [field]-এর নিচের লেখা [note] পুরোটা আঁকা ("…"-এ কাটা নয়) আর পুরোটা পর্দার ভেতরে
+void _noteWhole(WidgetTester tester, String field, String note) {
+  final text = find.descendant(of: find.byKey(ValueKey(field)), matching: find.text(note));
+  expect(text, findsOneWidget, reason: '⛔ $field: চিহ্ন ঝরল, অথচ নিচে লেখা নেই');
+  final paragraph = tester.renderObject<RenderParagraph>(text);
+  expect(paragraph.didExceedMaxLines, isFalse, reason: '⛔ $field: লেখাটা "…"-এ কাটা — সব লাইন ধরে না');
+  final r = tester.getRect(text);
+  final screen = _screenRect(tester);
+  expect(screen.contains(r.topLeft) && screen.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+      reason: '⛔ $field: লেখা $r পর্দার $screen বাইরে');
+}
+
+/// লেখাটা উপরের তিন অঙ্ক আর "মোট বসানো"-র উপর পড়ে না
+void _clearOfTotals(WidgetTester tester, String field, String note) {
+  final r = tester.getRect(find.descendant(of: find.byKey(ValueKey(field)), matching: find.text(note)));
+  for (final key in ['collect-figure-due', 'collect-figure-this', 'collect-figure-left', 'collect-applied-total']) {
+    final f = find.byKey(ValueKey(key));
+    if (f.evaluate().isEmpty) continue;
+    final t = tester.getRect(f);
+    expect(r.overlaps(t), isFalse, reason: '⛔ লেখা $r $key-এর $t ঢাকে');
+  }
+}
+
+Future<void> _openBankSheet(WidgetTester tester) async {
+  await tester.ensureVisible(find.byKey(const ValueKey('collect-bank-change')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('collect-bank-change')));
+  await tester.pumpAndSettle();
+}
+
+/// শিটে চার্জের ঘর, তার লেখা আর "ঠিক আছে" — তিনটাই পর্দার ভেতরে, শিটের ভেতরে, একটা আরেকটার উপর নয়
+void _sheetFits(WidgetTester tester) {
+  final screen = _screenRect(tester);
+  final sheet = tester.getRect(find.byType(BottomSheet));
+  final field = tester.getRect(find.byKey(const ValueKey('collect-bank-charge')));
+  final done = tester.getRect(find.byKey(const ValueKey('collect-bank-done')));
+  for (final (name, r) in [('charge', field), ('done', done)]) {
+    expect(screen.contains(r.topLeft) && screen.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+        reason: '⛔ শিটের $name $r পর্দার $screen বাইরে');
+    expect(sheet.contains(r.topLeft) && sheet.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+        reason: '⛔ শিটের $name $r শিটের $sheet বাইরে');
+  }
+  expect(field.bottom <= done.top, isTrue, reason: '⛔ চার্জের ঘর $field "ঠিক আছে"-র $done উপর পড়ে');
 }
 
 List<String> _texts(WidgetTester tester) => [
@@ -249,6 +302,118 @@ void main() {
       expect(find.descendant(of: field, matching: find.textContaining('করিম স্টোর', findRichText: true)), findsWidgets);
     });
   }
+
+  // ⭐ "চিহ্ন বাদ দেওয়া হয়েছে" লেখার ছবি (fe, ২৩ অক্টোবর ২০২৬): টাকার ঘরে "-45000", বিলের সারিতে "-100", ব্যাংকের শিটে
+  // চার্জে "-50" পেস্ট; ১০০% আর ২০০% লেখায়। প্রতিটায়: লেখাটা পুরো (কাটা বা "…" নয়), পর্দার/শিটের ভেতরে, উপরের তিন অঙ্ক
+  // (প্রাপ্য / এই আদায় / বাকি) আর "মোট বসানো" ঢাকে না। শিট আসল ফোনের উচ্চতায় (৯১৫dp) — লম্বা ছবিতে শিট সবসময় ধরে যেত।
+  for (final (locale, tag) in [(AppLocale.locale, 'bn'), (AppLocale.english, 'en')]) {
+    final note = tag == 'bn' ? 'চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক' : 'Sign removed — amounts are always positive';
+    for (final scale in [1.0, 2.0]) {
+      final pct = scale > 1 ? '_${(scale * 100).round()}' : '';
+      for (final dark in [false, true]) {
+        testWidgets('the sign-dropped note under the amount, $tag, ${dark ? 'dark' : 'light'}, ${(scale * 100).round()}% text',
+            (tester) async {
+          await _open(tester, locale: locale, dark: dark, textScale: scale);
+          await tester.enterText(find.byKey(const ValueKey('collect-amount')), '-45000');
+          await tester.pumpAndSettle();
+          FocusManager.instance.primaryFocus?.unfocus();
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: '⛔ লেখাটা দেখাতে পর্দা উপচে পড়ল');
+          _noteWhole(tester, 'collect-amount', note);
+          _clearOfTotals(tester, 'collect-amount', note);
+          await expectLater(find.byKey(const ValueKey('shot')),
+              matchesGoldenFile('goldens/collect/collect_sign_amount_412_${dark ? 'dark' : 'light'}_$tag$pct.png'));
+        });
+      }
+
+      testWidgets('the sign-dropped note under a bill row, $tag, light, ${(scale * 100).round()}% text', (tester) async {
+        await _open(tester, locale: locale, textScale: scale);
+        await tester.ensureVisible(find.byKey(const ValueKey('collect-item-INV-0094')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('collect-item-INV-0094')));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byKey(const ValueKey('collect-apply-INV-0094')), '-100');
+        await tester.pumpAndSettle();
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '⛔ লেখাটা দেখাতে পর্দা উপচে পড়ল');
+        _noteWhole(tester, 'collect-apply-INV-0094', note);
+        _clearOfTotals(tester, 'collect-apply-INV-0094', note);
+        await expectLater(
+            find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_sign_item_412_light_$tag$pct.png'));
+      });
+
+      testWidgets('the sign-dropped note on the bank charge in its sheet, $tag, light, ${(scale * 100).round()}% text',
+          (tester) async {
+        await _open(tester, locale: locale, textScale: scale, height: 915);
+        await _openBankSheet(tester);
+        await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), '-50');
+        await tester.pumpAndSettle();
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '⛔ শিট উপচে পড়ল');
+        _noteWhole(tester, 'collect-bank-charge', note);
+        _sheetFits(tester);
+        await expectLater(
+            find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_sign_charge_412_light_$tag$pct.png'));
+      });
+    }
+  }
+
+  // ⛔ ২০০% লেখায় বিলের সারির অঙ্ক এক লাইনে, পুরোটা পর্দার ভেতরে — আগে "30,000.0" আর "0" দুই লাইনে ভাঙত (ছবি-নিরীক্ষা,
+  // ২৩ অক্টোবর ২০২৬)
+  for (final (locale, tag) in [(AppLocale.locale, 'bn'), (AppLocale.english, 'en')]) {
+    testWidgets('at 200% text every bill row\'s amount stays on one line, $tag', (tester) async {
+      await _open(tester, locale: locale, textScale: 2);
+      expect(tester.takeException(), isNull);
+      final amounts = find.byWidgetPredicate(
+          (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('collect-row-amount-'));
+      expect(amounts.evaluate().length, 4);
+      final screen = _screenRect(tester);
+      for (final e in amounts.evaluate()) {
+        final p = e.renderObject! as RenderParagraph;
+        final key = (e.widget.key! as ValueKey<String>).value;
+        expect(p.size.width >= p.getMaxIntrinsicWidth(double.infinity) - 0.5, isTrue,
+            reason: '⛔ $key: অঙ্ক ${p.text.toPlainText()} ${p.size.width}dp-এ ভেঙে দুই লাইনে');
+        final r = tester.getRect(find.byKey(ValueKey(key)));
+        expect(screen.contains(r.topLeft) && screen.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+            reason: '⛔ $key: অঙ্ক $r পর্দার বাইরে');
+      }
+    });
+  }
+
+  // ⛔ শিট সরে (ছবি-নিরীক্ষা, ২৩ অক্টোবর ২০২৬): ২০০% লেখায়, ছোট ফোনে (৩৬০×৬৪০) কীবোর্ড খোলা (৩০০dp) — চার্জের ঘর, তার
+  // লেখা আর "ঠিক আছে" সরিয়ে দেখা যায়, কিছু উপচে পড়ে না। আগে শিট এক সোজা Column — জায়গা না থাকলে নিচটা কাটা পড়ত
+  testWidgets('at 200% text with the keyboard up on a small phone the bank sheet scrolls to its charge note and its done button',
+      (tester) async {
+    await _open(tester, textScale: 2, height: 915);
+    await _openBankSheet(tester);
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), '-50');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: '⛔ কীবোর্ড খোলায় শিট উপচে পড়ল — সরে না');
+    final visible = Offset.zero & const Size(360, 340);
+    const note = 'চিহ্ন বাদ দেওয়া হয়েছে — টাকা সবসময় ধনাত্মক';
+    for (final target in [
+      find.descendant(of: find.byKey(const ValueKey('collect-bank-charge')), matching: find.text(note)),
+      find.byKey(const ValueKey('collect-bank-done')),
+    ]) {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      final r = tester.getRect(target);
+      expect(visible.contains(r.topLeft) && visible.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+          reason: '⛔ শিট সরিয়েও $r কীবোর্ডের উপরের $visible-এ আসে না');
+    }
+    expect(tester.renderObject<RenderParagraph>(
+            find.descendant(of: find.byKey(const ValueKey('collect-bank-charge')), matching: find.text(note))).didExceedMaxLines,
+        isFalse);
+    await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('collect-bank-editor')), findsNothing, reason: '"ঠিক আছে" চাপা গেল না');
+  });
 
   test('the sample shows the design\'s figures (page 6): due 51,200, this 45,000, left 6,200', () {
     final b = OpenBills.fromJson(openBillsJson());

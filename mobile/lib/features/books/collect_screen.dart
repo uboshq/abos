@@ -710,8 +710,11 @@ class _CollectScreenState extends State<CollectScreen> {
       isScrollControlled: true,
       builder: (sheet) => StatefulBuilder(builder: (sheet, refresh) {
         final w = sheet.l10n;
+        // ⛔ শিট সরে: ২০০% লেখায় ছোট ফোনে কীবোর্ড খুললে সোজা Column ১৬৩px উপচে পড়ত, "ঠিক আছে" আর চার্জের লেখা কাটা
+        // (ছবি-নিরীক্ষা, ২৩ অক্টোবর ২০২৬)। জায়গা থাকলে আগের মতোই আঁকা।
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
+            key: const ValueKey('collect-bank-scroll'),
             padding: EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.md, AppSpacing.md, MediaQuery.of(sheet).viewInsets.bottom + AppSpacing.md),
             child: Column(
@@ -754,7 +757,7 @@ class _CollectScreenState extends State<CollectScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [_money('charge', also: () => refresh(() {}))],
                   decoration: InputDecoration(
-                      labelText: w.collectBankCharge, helperText: _signNote('charge') ?? w.collectBankChargeHint, helperMaxLines: 3),
+                      labelText: w.collectBankCharge, helperText: _signNote('charge') ?? w.collectBankChargeHint, helperMaxLines: _noteLines),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
@@ -970,7 +973,7 @@ class _CollectScreenState extends State<CollectScreen> {
               labelText: w.collectAmount,
               prefixText: '৳ ', // l10n-ok: the taka sign, the same in every language
               helperText: _signNote('amount'),
-              helperMaxLines: 2),
+              helperMaxLines: _noteLines),
         ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
@@ -1235,7 +1238,7 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('difference')],
-            decoration: InputDecoration(labelText: w.collectDifferenceAmount, helperText: _signNote('difference'), helperMaxLines: 2),
+            decoration: InputDecoration(labelText: w.collectDifferenceAmount, helperText: _signNote('difference'), helperMaxLines: _noteLines),
           ),
           if (_differenceKind == 'discount' && _differencePaisa > 0)
             _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
@@ -1256,7 +1259,7 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('vds')],
-            decoration: InputDecoration(labelText: w.collectVds, helperText: _signNote('vds'), helperMaxLines: 2),
+            decoration: InputDecoration(labelText: w.collectVds, helperText: _signNote('vds'), helperMaxLines: _noteLines),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
@@ -1265,7 +1268,7 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('ait')],
-            decoration: InputDecoration(labelText: w.collectAit, helperText: _signNote('ait'), helperMaxLines: 2),
+            decoration: InputDecoration(labelText: w.collectAit, helperText: _signNote('ait'), helperMaxLines: _noteLines),
           ),
         ],
       ),
@@ -1326,6 +1329,11 @@ class _CollectScreenState extends State<CollectScreen> {
 /// ভাঙলে শেষ অক্ষর বোতামের নিচের কিনারা ছুঁত (collection_130/200, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। উচ্চতা বাঁধা নয়: অন্তত ৪৮,
 /// লেখার সাথে বাড়ে
 const _buttonPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 12);
+
+/// ⛔ টাকার ঘরের নিচের লেখা ("চিহ্ন বাদ দেওয়া হয়েছে …", ব্যাংক চার্জের কথা) চার লাইন পর্যন্ত — দুই লাইনে ২০০% লেখায়
+/// বিলের সারির সরু ঘরে (বাঁয়ে ৪৮dp সরানো) ইংরেজি লেখাটা "…"-এ কাটা পড়ত (collect_sign_item_412_light_en_200, ছবি-নিরীক্ষা,
+/// ২৩ অক্টোবর ২০২৬)। সব টাকার ঘরে একই সীমা
+const _noteLines = 4;
 
 /// ⭐ নিচের বোতামের লেখা — Material 3-এর labelLarge: 14, w600 (fe, ২২ অক্টোবর ২০২৬; থিমের মাপ নিচে নামলেও 14)
 TextStyle _buttonText(BuildContext context) =>
@@ -2002,21 +2010,46 @@ class _ItemRow extends StatelessWidget {
               semanticLabel: w.collectItemTick(item.no),
               onChanged: enabled ? (v) => onTick(v ?? false) : null,
             ),
+            // ⛔ অঙ্ক এক লাইনে, নামের পাশে — আগে ২:৩ ভাগের সরু ঘরে ২০০% লেখায় "30,000.0" আর "0" দুই লাইনে ভাঙত
+            // (collect_sign_amount_412_light_bn_200, ছবি-নিরীক্ষা, ২৩ অক্টোবর ২০২৬)। বিলের নম্বর আর পুরো অঙ্ক পাশাপাশি না ধরলে
+            // অঙ্ক নিজের লাইনে, নামের নিচে ডানে — কখনো উপচে পড়ে না
             Expanded(
-              flex: 3,
-              child: Wrap(spacing: AppSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Text(item.no),
-                if (tag != null) Text(tag, style: muted),
-                if ((item.overdueDays ?? 0) > 0)
-                  Text(w.collectItemLate(item.overdueDays!),
-                      key: ValueKey('collect-late-${item.no}'), style: TextStyle(color: context.palette.danger, fontSize: 13)),
-              ]),
-            ),
-            Flexible(
-              flex: 2,
-              fit: FlexFit.tight,
-              child: Text(Money.amount(sign * row.applied / 100),
-                  key: ValueKey('collect-row-amount-${item.no}'), textAlign: TextAlign.end),
+              child: LayoutBuilder(builder: (context, box) {
+                final name = Wrap(spacing: AppSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text(item.no),
+                  if (tag != null) Text(tag, style: muted),
+                  if ((item.overdueDays ?? 0) > 0)
+                    Text(w.collectItemLate(item.overdueDays!),
+                        key: ValueKey('collect-late-${item.no}'), style: TextStyle(color: context.palette.danger, fontSize: 13)),
+                ]);
+                final figure = Money.amount(sign * row.applied / 100);
+                double width(String text) {
+                  final p = TextPainter(
+                      text: TextSpan(text: text, style: DefaultTextStyle.of(context).style),
+                      textScaler: MediaQuery.textScalerOf(context),
+                      textDirection: Directionality.of(context),
+                      maxLines: 1)
+                    ..layout();
+                  final wide = p.width;
+                  p.dispose();
+                  return wide;
+                }
+
+                final key = ValueKey('collect-row-amount-${item.no}');
+                if (width(item.no) + AppSpacing.sm + width(figure) <= box.maxWidth) {
+                  return Row(children: [
+                    Expanded(child: name),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: AppSpacing.sm),
+                      child: Text(figure, key: key, textAlign: TextAlign.end, softWrap: false),
+                    ),
+                  ]);
+                }
+                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  name,
+                  Text(figure, key: key, textAlign: TextAlign.end),
+                ]);
+              }),
             ),
             ExcludeSemantics(
               child: Icon(editing ? Symbols.expand_less : Symbols.expand_more, size: 18, color: context.palette.onSurfaceMuted),
@@ -2050,7 +2083,7 @@ class _ItemRow extends StatelessWidget {
                 labelText: w.collectItemApplyOf(item.no),
                 prefixText: item.isCredit ? '−' : null,
                 helperText: signNote,
-                helperMaxLines: 2,
+                helperMaxLines: _noteLines,
                 errorText: error,
                 errorMaxLines: 3,
                 isDense: true,
