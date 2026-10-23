@@ -139,7 +139,8 @@ final class InsurancePrepaymentService
         return DB::transaction(function () use ($month, $start, $end): array {
             $reversed = $this->reverseBefore($start);
             $prepaid = 0;
-            $asset = $this->account(StandardChart::PREPAID_INSURANCE);
+            // ⓘ খাতটা কেবল সারি লেখার মুহূর্তে — কিছু বসার না থাকলে খাতের অভাবে চাল থামে না
+            $asset = null;
 
             foreach ($this->preview($month) as $row) {
                 if ($row['done']) {
@@ -155,6 +156,7 @@ final class InsurancePrepaymentService
                 }
 
                 $policy = $row['policy'];
+                $asset ??= $this->account(StandardChart::PREPAID_INSURANCE);
                 $paper = InsurancePrepayment::query()->create([
                     'company_id' => CompanyContext::id(),
                     'branch_id' => $policy->branch_id,
@@ -285,21 +287,13 @@ final class InsurancePrepaymentService
     }
 
     /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয়; [[StandardChart::install()]] কেবল যা নেই তা-ই বসায় */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function account(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
+        if (StandardChart::find($code) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find($code);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'month' => __('finance::validation.chart_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 }

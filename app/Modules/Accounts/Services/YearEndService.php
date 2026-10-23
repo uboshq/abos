@@ -6,7 +6,6 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Posting\PostingEngine;
-use App\Core\Engines\Posting\PostingException;
 use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -659,13 +658,7 @@ final class YearEndService
             return [];
         }
 
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
-
-        if ($equity === null) {
-            throw new PostingException(
-                'Closing a year needs the standard chart — retained earnings is missing.'
-            );
-        }
+        $equity = null;
 
         /*
          * ভারসাম্যের লাইনটা।
@@ -678,6 +671,9 @@ final class YearEndService
             if (bccomp($sum, '0', 4) === 0) {
                 continue;
             }
+
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            $equity ??= StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
 
             $lines[] = (bccomp($sum, '0', 4) > 0
                 ? ['account_id' => $equity->id, 'debit' => $sum]

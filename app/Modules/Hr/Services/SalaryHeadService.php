@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Models\SalaryStructure;
@@ -159,7 +158,8 @@ final class SalaryHeadService
                 'kind' => $kind,
                 'calculation' => $calculation,
                 'is_basic' => $isBasic,
-                'account_id' => Account::query()->where('code', $accountCode)->value('id'),
+                // ⛔ খাত কোড ধরে, মানে ধরেই — অন্য খাত বসা থাকলে null, তখন বেতন নিশ্চিতে [[StandardChart::accountFor()]] থামায়
+                'account_id' => StandardChart::find($accountCode)?->id,
 
                 /*
                  * ভবিষ্য তহবিল ও অগ্রিম অনুপস্থিতির ভাগে কমে না।

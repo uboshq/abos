@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * নতুন কোম্পানির প্রমিত হিসাব-ছক।
@@ -56,6 +57,9 @@ final class StandardChart implements ProvisionsCompany
      * এক মাথায় থাকলে "ব্যাংকে কত আছে" সংখ্যাটাই মিথ্যা বলত।
      */
     public const BANK = '1102';
+
+    /** দীর্ঘমেয়াদি দায় — দল; ঋণের মূল টাকার খাতগুলো এর নিচে ([[LoanController]]) */
+    public const LONG_TERM_LIABILITIES = '2200';
 
     /** মোবাইল ব্যাংকিং — বিকাশ, নগদ, রকেট, উপায়। */
     public const MOBILE_MONEY = '1105';
@@ -765,7 +769,7 @@ final class StandardChart implements ProvisionsCompany
                      * স্পষ্ট করে বসানো, কারণ ছকের সারিগুলো একদিন বদলাতে
                      * পারে, আর তখন ইনস্টল নীরবে থেমে যেত।
                      */
-                    withAKeeper: true);
+                    withAKeeper: true, chartRow: true);
 
                 if (in_array($code, self::SYSTEM_CODES, true)) {
                     $this->accounts->markAsSystem($account);
@@ -837,10 +841,52 @@ final class StandardChart implements ProvisionsCompany
         return $changed;
     }
 
-    /** কোড দিয়ে একটা খাত — না পেলে null, কারণ কোম্পানি ছকটা বদলাতে পারে। */
+    /**
+     * কোড দিয়ে একটা খাত — না পেলে null, কারণ কোম্পানি ছকটা বদলাতে পারে।
+     *
+     * ⛔ মান ছকের কোডে অন্য খাত বসে থাকলে (ধরন বা টাকার ধরন আলাদা — [[holdsItsMeaning()]]) সেটাও null: খাতটা "নেই", ভুল খাত
+     * নয় (fe, ২৩ অক্টোবর ২০২৬; লাইভে UB-র ১১৩৫ "Depot Bank A/C" ডিপোজিটের উৎসে করের খাত হয়ে বসত)। লেখার পথ ডাকে
+     * [[accountFor()]], যা তখন থামে; শুধু-পড়ার পথ ফাঁকা দেখায়। ⓘ মান ছকের বাইরের কোড (কোম্পানির নিজের খাত) আগের মতোই।
+     */
     public static function find(string $code): ?Account
     {
-        return Account::query()->where('code', $code)->first();
+        $account = Account::query()->where('code', $code)->first();
+
+        return $account !== null && self::isStandardCode($code) && ! self::holdsItsMeaning($account) ? null : $account;
+    }
+
+    /**
+     * ⭐ লেখার পথের খাত — মান ছকের কোডে পোস্টযোগ্য সেই খাতটাই, নইলে থামা (fe, ২৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ না পেলে, দল হলে, বা কোডে অন্য খাত বসে থাকলে বাংলা বার্তায় ValidationException — কখনো ভুল খাতে বা অর্ধেক জাবেদায় নয়।
+     * ⓘ আদায় (a6) আর পরিশোধ (cb) এটাই ডাকে; নিয়ম এক জায়গায়।
+     */
+    public static function accountFor(string $code): Account
+    {
+        $account = Account::query()->postable()->where('code', $code)->first();
+
+        if ($account === null || (self::isStandardCode($code) && ! self::holdsItsMeaning($account))) {
+            throw ValidationException::withMessages(['account' => __('accounts::validation.chart_account_wrong', [
+                'name' => self::standardName($code) ?? $code,
+                'code' => $code,
+            ])]);
+        }
+
+        return $account;
+    }
+
+    /** কোডটা কি মান ছকের — কোম্পানির নিজের খোলা খাতের নয় */
+    public static function isStandardCode(string $code): bool
+    {
+        return isset(self::rows()[$code]);
+    }
+
+    /** মান ছকে কোডটার নাম — চলতি ভাষায়; ছকের বাইরের কোডে null */
+    public static function standardName(string $code): ?string
+    {
+        $row = self::rows()[$code] ?? null;
+
+        return $row === null ? null : (app()->getLocale() === 'bn' ? $row[2] : $row[1]);
     }
 
     /**
@@ -850,22 +896,50 @@ final class StandardChart implements ProvisionsCompany
      * তাই ড্যামেজ দাবি সেখানে কখনো বসেনি, আর কোড ধরে খোঁজায় ব্যাংকটাই "ড্যামেজ দাবি" হয়ে নোটের তালিকায় আসত
      * (CN-0017 থেকে CN-0020, ৩–৪ অক্টোবর, ৳৫৩,৮৬৮ ব্যাংকে Dr)। কোড ধরে খাত বাছার আগে এটা দেখা।
      */
-    public function holdsItsMeaning(Account $account): bool
+    public static function holdsItsMeaning(Account $account): bool
     {
-        $rows = array_column($this->definition(), null, 0);
-        $row = $rows[(string) $account->code] ?? null;
+        return self::meaningFits((string) $account->code, (string) $account->type, $account->money_kind !== null);
+    }
 
-        if ($row === null || $account->type !== $row[3]) {
+    /**
+     * ধরন আর টাকার ধরন মান ছকের কোডের সঙ্গে মেলে কিনা — খাত তৈরি বা বদলের আগেও ([[AccountService]]) একই নিয়ম।
+     */
+    public static function meaningFits(string $code, string $type, bool $isMoney): bool
+    {
+        $rows = self::rows();
+        $row = $rows[$code] ?? null;
+
+        if ($row === null || $type !== $row[3]) {
             return false;
         }
 
         // ⓘ মান ছকে টাকার খাত কেবল হাতে নগদ, ব্যাংক আর মোবাইল ব্যাংকিং, আর তাদের নিচে ([[AccountService::moneyKindFor()]])
         $money = false;
-        for ($code = (string) $row[0]; $code !== null && ! $money; $code = $rows[$code][4] ?? null) {
-            $money = in_array($code, [self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY], true);
+        for ($at = (string) $row[0]; $at !== null && ! $money; $at = $rows[$at][4] ?? null) {
+            $money = in_array($at, [self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY], true);
         }
 
-        return ($account->money_kind !== null) === $money;
+        return $isMoney === $money;
+    }
+
+    /** @var array<string, array{0:string,1:string,2:string,3:string,4:?string,5:bool,6:array<string,mixed>}>|null */
+    private static ?array $rows = null;
+
+    /**
+     * ছকের সারিগুলো কোড ধরে — একবার বানানো, কারণ [[find()]] প্রতিটা পোস্টে ডাকা হয়।
+     *
+     * @return array<string, array{0:string,1:string,2:string,3:string,4:?string,5:bool,6:array<string,mixed>}>
+     */
+    private static function rows(): array
+    {
+        if (self::$rows === null) {
+            self::$rows = [];
+            foreach (self::definition() as $row) {
+                self::$rows[(string) $row[0]] = $row;
+            }
+        }
+
+        return self::$rows;
     }
 
     /**
@@ -876,7 +950,7 @@ final class StandardChart implements ProvisionsCompany
      *
      * @return list<array{0:string,1:string,2:string,3:string,4:?string,5:bool,6:array<string,mixed>}>
      */
-    private function definition(): array
+    private static function definition(): array
     {
         $A = Account::ASSET;
         $L = Account::LIABILITY;

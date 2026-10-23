@@ -830,18 +830,11 @@ final class DeliveryChallanService
             }
         }
 
-        $expense = StandardChart::find(StandardChart::VEHICLE_HIRE);
-
         /*
-         * খাতটা না থাকলে চুপচাপ ছেড়ে দেওয়া — চালান আটকানো নয়।
-         *
-         * ⚠️ এমন হতে পারে কেবল যদি কোম্পানি খাতটা নিজে মুছে ফেলে থাকে।
-         * তখন মাল আটকে রাখার চেয়ে খরচটা না লেখা কম ক্ষতি — মাল তো
-         * সত্যিই বেরিয়ে যাচ্ছে, আর সেটা আটকানো ব্যবসা থামায়।
+         * ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])।
+         * ⓘ আগে খাত না পেলে ভাড়াটা চুপচাপ বাদ যেত — খরচ খাতায় উঠত না, কেউ টের পেত না (fe, ২৩ অক্টোবর ২০২৬)।
          */
-        if ($expense === null) {
-            return;
-        }
+        $expense = StandardChart::accountFor(StandardChart::VEHICLE_HIRE);
 
         $carrierId = $challan->carrier_id;
 
@@ -858,7 +851,7 @@ final class DeliveryChallanService
          * বদলায় কেবল এইটুকু: ভেতরে কে কার কাছে দেনা, সেটা এখন পড়া যায়।
          */
         $credit = $carrierId !== null
-            ? StandardChart::find(StandardChart::TRANSPORT_PAYABLE)
+            ? StandardChart::accountFor(StandardChart::TRANSPORT_PAYABLE)
             : $this->tills->ensurePrimaryTill()->account;
 
         if ($credit === null) {

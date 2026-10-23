@@ -736,17 +736,11 @@ final class DepositService
             : StandardChart::DRAWINGS);
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+    // ⓘ ১১৩৫-এ অন্য খাত বসা থাকলে (লাইভ UB) কেবল উৎসে কর কাটা থাকলেই থামে — শূন্য কাটায় [[deductionLines()]] খোঁজেই না
     private function head(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'account_id' => __('finance::validation.chart_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 
     /**

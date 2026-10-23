@@ -14,6 +14,10 @@ return [
     'orphan_entries' => 'Every entry has an account',
     'orphan_entries_q' => 'Whether any ledger row points at an account that no longer exists.',
     'orphan_entries_broken' => 'Money on an account-less row is counted in no balance, yet sits in the trial balance total — it is invisible.',
+    'chart_meaning' => 'Every standard code holds its own account',
+    'chart_meaning_q' => 'Whether an account of another kind (a bank, another type) sits on a code of the standard chart.',
+    'chart_meaning_broken' => 'Papers that find their account by code stop here instead of posting; move the stranger to a new code, then install the chart.',
+    'chart_meaning_detail' => ':name (:type:money) sits on the code of :standard',
 
     'the_whole_ledger' => 'The whole ledger',
     'dr_cr_detail' => 'Debit :debit · credit :credit · difference :diff',

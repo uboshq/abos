@@ -1024,16 +1024,8 @@ final class PurchaseReceiptService
 
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            // ছকটা বসানো হয়নি — চুপচাপ অন্য খাতে বসানোর চেয়ে থেমে যাওয়া ভালো
-            throw ValidationException::withMessages([
-                'status' => __('purchase::validation.missing_account', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor($code);
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear

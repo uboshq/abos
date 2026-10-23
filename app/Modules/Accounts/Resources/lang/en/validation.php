@@ -192,4 +192,6 @@ return [
     'gross_is_paid_plus_withheld' => 'The bill total (:gross) must equal the amount paid (:paid) + AIT (:ait) + VDS (:vds).',
     'withheld_needs_expense_head' => 'Tax withheld at source needs an expense head.',
     'missing_account' => 'Account :code is missing from the chart — add it first.',
+    'chart_account_wrong' => 'The chart of this company has no :name account, or another account sits on its code (:code) — tell the accountant.',
+    'code_kept_for_chart' => 'Code :code belongs to the standard chart and is kept for another kind of account — choose another code.',
 ];

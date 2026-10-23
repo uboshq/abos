@@ -218,17 +218,8 @@ final class MoneyTransferService
      */
     private function transitAccount(): Account
     {
-        $account = StandardChart::find(StandardChart::CASH_IN_TRANSIT);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'amount' => __('accounts::validation.no_transit_account', [
-                    'code' => StandardChart::CASH_IN_TRANSIT,
-                ]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor(StandardChart::CASH_IN_TRANSIT);
     }
 
     /**

@@ -106,6 +106,7 @@ final class CommissionClaimService
                 trxDate: $claim->trx_date,
                 documentNo: $claim->document_no,
                 branchId: $this->branchOf($claim),
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 lines: [
                     /*
                      * দাবির লাইনে কোনো পক্ষ বসে না — ইচ্ছাকৃত।
@@ -123,12 +124,12 @@ final class CommissionClaimService
                      * ধরে খতিয়ানে বসানোর দরকার নেই।
                      */
                     [
-                        'account_id' => StandardChart::find(StandardChart::COMMISSION_CLAIM)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::COMMISSION_CLAIM)->id,
                         'debit' => $amount,
                         'narration' => __('sales::message.commission_claim_on', ['name' => $customer->name()]),
                     ],
                     [
-                        'account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::RECEIVABLE)->id,
                         'party_type' => Customer::drillSourceType(),
                         'party_id' => $customer->id,
                         'credit' => $amount,
@@ -163,15 +164,16 @@ final class CommissionClaimService
                 trxDate: $date,
                 documentNo: $claim->document_no,
                 branchId: $this->branchOf($claim),
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 lines: [
                     [
-                        'account_id' => StandardChart::find(StandardChart::PAYABLE)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::PAYABLE)->id,
                         'party_type' => Supplier::drillSourceType(),
                         'party_id' => $claim->supplier_id,
                         'debit' => (string) $claim->amount,
                     ],
                     [
-                        'account_id' => StandardChart::find(StandardChart::COMMISSION_CLAIM)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::COMMISSION_CLAIM)->id,
                         'credit' => (string) $claim->amount,
                     ],
                 ],
@@ -217,14 +219,15 @@ final class CommissionClaimService
                 trxDate: $date,
                 documentNo: $claim->document_no,
                 branchId: $this->branchOf($claim),
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 lines: [
                     [
-                        'account_id' => StandardChart::find(StandardChart::COMMISSION_WRITTEN_OFF)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::COMMISSION_WRITTEN_OFF)->id,
                         'debit' => (string) $claim->amount,
                         'narration' => $reason,
                     ],
                     [
-                        'account_id' => StandardChart::find(StandardChart::COMMISSION_CLAIM)->id,
+                        'account_id' => StandardChart::accountFor(StandardChart::COMMISSION_CLAIM)->id,
                         'credit' => (string) $claim->amount,
                     ],
                 ],
