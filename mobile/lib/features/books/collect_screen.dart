@@ -15,6 +15,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/permissions/camera_shot.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/records/money_input.dart';
 import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -735,6 +736,7 @@ class _CollectScreenState extends State<CollectScreen> {
                   key: const ValueKey('collect-bank-charge'),
                   controller: _charge,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: const [MoneyInputFormatter()],
                   decoration: InputDecoration(labelText: w.collectBankCharge, helperText: w.collectBankChargeHint, helperMaxLines: 3),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -941,6 +943,7 @@ class _CollectScreenState extends State<CollectScreen> {
           textAlign: TextAlign.end,
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: const [MoneyInputFormatter()],
           textInputAction: TextInputAction.next,
           onEditingComplete: () {
             _formatAmount();
@@ -1208,6 +1211,7 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _difference,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: const [MoneyInputFormatter()],
             decoration: InputDecoration(labelText: w.collectDifferenceAmount),
           ),
           if (_differenceKind == 'discount' && _differencePaisa > 0)
@@ -1228,6 +1232,7 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _vds,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: const [MoneyInputFormatter()],
             decoration: InputDecoration(labelText: w.collectVds),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1236,6 +1241,7 @@ class _CollectScreenState extends State<CollectScreen> {
             controller: _ait,
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: const [MoneyInputFormatter()],
             decoration: InputDecoration(labelText: w.collectAit),
           ),
         ],
@@ -2009,6 +2015,7 @@ class _ItemRow extends StatelessWidget {
               enabled: enabled,
               textAlign: TextAlign.end,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: const [MoneyInputFormatter()],
               onChanged: onChanged,
               decoration: InputDecoration(
                 labelText: w.collectItemApplyOf(item.no),

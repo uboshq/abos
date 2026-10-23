@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/books/collection_plan.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
+import 'package:abos_mobile/core/records/money_input.dart';
 import 'package:abos_mobile/core/navigation/role_tabs.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
@@ -887,8 +888,12 @@ void main() {
       expect(find.text('গ্রাহক বাছুন।'), findsOneWidget);
 
       await _pickShop(tester);
+      // ⓘ "1e5", "12.345", "abc" ঘরেই ঢোকে না (MoneyInputFormatter) — খালি ঘরে লিখলে ঘর খালিই থাকে, আর খালি বা শূন্য পাঠানো যায় না
       for (final bad in ['1e5', '0', '12.345', 'abc']) {
+        // ⓘ প্রতিবার খালি ঘর থেকে — ফেরানো লেখা আগের লেখা রাখে, তাই আগের "0" থেকে গেলে দাবিটা অন্য কিছু মাপত
+        await _type(tester, 'collect-amount', '');
         await _type(tester, 'collect-amount', bad);
+        if (bad != '0') expect(_field(tester, 'collect-amount'), '', reason: '⛔ "$bad" টাকার ঘরে ঢুকল');
         await _review(tester);
         expect(find.byKey(const ValueKey('collect-error')), findsOneWidget, reason: '"$bad"');
         expect(find.byType(CollectReviewScreen), findsNothing);
@@ -1510,5 +1515,83 @@ void main() {
         expect(lastCard.bottom <= tester.getRect(find.byKey(const ValueKey('collect-check-post'))).top, isTrue);
       });
     }
+  });
+  /// ⛔ টাকার ঘরে বিয়োগ চিহ্ন ঢোকে না (a4, ২৩ অক্টোবর ২০২৬): কিবোর্ডে নেই, তবু পেস্ট করা "-0.51" আগে ঢুকত — ছাড়/রাউন্ডিং নীরবে
+  /// বাদ পড়ত, অথচ বিলের বণ্টন সেই ঋণাত্মক অঙ্কে কষা; আর সার্ভার (a6 5d6c6bac0) ঋণাত্মক পার্থক্য পুশে ফেরায়। এখন পেস্টের
+  /// চিহ্ন ঝরে যায় ("-0.51" → "0.51"), আর পাঠানো আদায়ে কোনো টাকার ঘর ঋণাত্মক নয় (ক্রেডিটের সারি ছাড়া — সেটার চিহ্ন চুক্তির)।
+  testWidgets('a pasted "-0.51" leaves no minus sign in the amount, the difference, VDS, AIT or a bill row, and nothing negative is sent',
+      (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '-0.51');
+    expect(_field(tester, 'collect-amount'), '0.51', reason: '⛔ টাকার ঘরে বিয়োগ চিহ্ন ঢুকল');
+    // ⭐ fe-র আরও দুই পেস্ট: টাকার চিহ্নসহ আর বাংলা অঙ্কে
+    await _type(tester, 'collect-amount', '৳-5');
+    expect(_field(tester, 'collect-amount'), '5', reason: '⛔ "৳-5" টাকার ঘরে বিয়োগ চিহ্নসহ ঢুকল');
+    await _type(tester, 'collect-amount', '-৫০');
+    expect(_field(tester, 'collect-amount'), '৫০', reason: '⛔ বাংলা অঙ্কের "-৫০" বিয়োগ চিহ্নসহ ঢুকল');
+    await _type(tester, 'collect-amount', '-45000');
+    expect(_field(tester, 'collect-amount'), '45000', reason: '⛔ টাকার ঘরে বিয়োগ চিহ্ন ঢুকল');
+    await _tap(tester, 'collect-adjust');
+    await _tap(tester, 'collect-difference-rounding');
+    await _type(tester, 'collect-difference', '-0.51');
+    expect(_field(tester, 'collect-difference'), '0.51', reason: '⛔ ছাড়/রাউন্ডিংয়ের ঘরে বিয়োগ চিহ্ন ঢুকল');
+    for (final key in ['collect-vds', 'collect-ait']) {
+      await _type(tester, key, '−5'); // ⓘ ইউনিকোডের বিয়োগ চিহ্নও
+      expect(_field(tester, key), '5', reason: '⛔ $key-এ বিয়োগ চিহ্ন ঢুকল');
+    }
+    await _tap(tester, 'collect-item-INV-0094');
+    await _type(tester, 'collect-apply-INV-0094', '-100');
+    expect(_field(tester, 'collect-apply-INV-0094'), isNot(contains('-')), reason: '⛔ বিলের সারির ঘরে বিয়োগ চিহ্ন ঢুকল');
+
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['amount'], '45000.00');
+    expect(p['difference'], {'kind': 'rounding', 'amount': '0.51'}, reason: '⛔ রাউন্ডিং ৳0.51 পাঠানো হয়নি (ঋণাত্মক হয়ে বাদ পড়ল?)');
+    expect([p['vds'], p['ait']], ['5.00', '5.00']);
+    for (final (key, value) in [('amount', p['amount']), ('vds', p['vds']), ('ait', p['ait']), ('bank_charge', p['bank_charge']),
+      ('difference', (p['difference'] as Map?)?['amount'])]) {
+      expect(value?.toString().startsWith('-') ?? false, isFalse, reason: '⛔ $key ঋণাত্মক গেল: $value');
+    }
+    for (final line in (p['lines'] as List).cast<Map>()) {
+      final credit = line['kind'] == 'credit' || line['kind'] == 'credit_note';
+      expect(line['amount'].toString().startsWith('-'), credit, reason: '⛔ সারির চিহ্ন তার ধরনের নয়: $line');
+    }
+  });
+
+  test('the money formatter drops signs and spaces, keeps Bengali digits and the formatted commas, and refuses anything else whole', () {
+    const f = MoneyInputFormatter();
+    TextEditingValue type(String old, String next) => f.formatEditUpdate(
+        TextEditingValue(text: old, selection: TextSelection.collapsed(offset: old.length)),
+        TextEditingValue(text: next, selection: TextSelection.collapsed(offset: next.length)));
+    expect(type('', '-0.51').text, '0.51');
+    expect(type('', '+৪৫০০০.৫').text, '৪৫০০০.৫');
+    // ⭐ fe-র তিন পেস্ট (২৩ অক্টোবর ২০২৬): কোনোটাতেই বিয়োগ চিহ্ন থাকে না
+    expect(type('', '৳-5').text, '5', reason: '⛔ "৳-5" থেকে চিহ্ন ঝরেনি');
+    expect(type('', '-৫০').text, '৫০', reason: '⛔ বাংলা অঙ্কের "-৫০" থেকে চিহ্ন ঝরেনি');
+    expect(type('', '৳ 1,250.50').text, '1,250.50');
+    expect(type('', '- 1 250').text, '1250');
+    expect(type('1.5', '1.5.').text, '1.5', reason: 'দ্বিতীয় বিন্দু নেওয়া হয় না');
+    expect(type('1.52', '1.529').text, '1.52', reason: 'তৃতীয় দশমিক নেওয়া হয় না');
+    expect(type('7', '12.345').text, '7', reason: '⛔ পেস্টের বাড়তি দশমিক চুপচাপ কাটা নয় — পুরো পেস্ট বাদ');
+    expect(type('7', '1e5').text, '7', reason: '⛔ "1e5" থেকে চুপচাপ "15" নয়');
+    expect(type('45,000.00', '45,000.0').text, '45,000.0', reason: 'সাজানো অঙ্কের সম্পাদনা চলে');
+    final mid = f.formatEditUpdate(const TextEditingValue(text: '100'),
+        const TextEditingValue(text: '-100', selection: TextSelection.collapsed(offset: 1)));
+    expect(mid.selection.extentOffset, 0, reason: 'ঝরানো চিহ্নের পরে কার্সর সরে আসে');
+  });
+
+  test('the fake speaks the server: a negative difference on the push is refused with the server\'s own regex text', () async {
+    // ⓘ সার্ভারের নিয়ম নিজেই — কাঁচা পুশে ঋণাত্মক পার্থক্য ফেরত, সাধারণ দশমিক চলে
+    expect(serverRefusal({'amount': '1000.00', 'difference': {'kind': 'rounding', 'amount': '-0.51'}}), 'difference.amount-এর গড়নটা ঠিক নয়।');
+    expect(serverRefusal({'amount': '1000.00', 'difference': {'kind': 'rounding', 'amount': '0.51'}}), isNull);
+    // ⓘ অ্যাপ ঋণাত্মক পার্থক্য পাঠায়ই না (toPayload কেবল ধনাত্মক রাখে; আর MoneyInputFormatter ঘরেই চিহ্ন ঢুকতে দেয় না)
+    final draft = CollectionDraft(customerId: 'cus-1', amount: '1000', date: DateTime(2026, 10, 21), difference: (kind: 'rounding', amount: '-0.51'));
+    expect(draft.toPayload().containsKey('difference'), isFalse, reason: '⛔ ঋণাত্মক পার্থক্য পুশে গেল');
+    final api = FakeCollect();
+    final preview = await api.preview(
+        CollectionDraft(customerId: 'cus-1', amount: '1000', date: DateTime(2026, 10, 21), accountId: 'acc-dbbl', difference: (kind: 'rounding', amount: '-0.51')));
+    expect(preview!.needsSignature, isTrue, reason: '⛔ সার্ভারের প্রিভিউ −0.51-কে 0.51 পড়ে আর সই চায়');
   });
 }
