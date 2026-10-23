@@ -77,7 +77,7 @@ final class BulkSigningLooksFirstAndKeepsItsRulesTest extends TestCase
     public function test_the_review_counts_totals_and_explains_and_signs_nothing(): void
     {
         $page = $this->actingAs($this->signer->fresh())
-            ->post(route('approval.inbox.bulk_review'), ['ids' => $this->ids()])
+            ->get(route('approval.inbox.bulk_review', ['ids' => $this->ids()]))
             ->assertOk();
 
         $page->assertSee(__('approval::message.bulk_will_sign', ['count' => 1, 'total' => '500.00'], 'bn'));

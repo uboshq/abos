@@ -207,8 +207,8 @@
              ⚠️ ফর্মটা টেবিলের **বাইরে** মোড়ানো, কারণ `x-ui.table` নিজে
              একটা টেবিল আঁকে — ভেতরে `<form>` বসালে HTML ওটাকে
              টেবিলের বাইরে ঠেলে দিত, আর চেকবক্সগুলো কোনো ফর্মেই থাকত না। --}}
-        <form method="POST" action="{{ route('approval.inbox.bulk_review') }}">
-            @csrf
+        {{-- ⓘ আগে-দেখা কিছু লেখে না, তাই GET (দফা ১৩) — csrf-চিহ্ন ঠিকানায় যায় না --}}
+        <form method="GET" action="{{ route('approval.inbox.bulk_review') }}">
 
             @php
                 /*
