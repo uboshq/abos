@@ -119,6 +119,28 @@ class TotalStrip extends StatelessWidget {
       );
 }
 
+/// মোটের পট্টির নিচের এক লাইন — বাঁয়ে নাম, ডানে অঙ্ক; জায়গা না হলে অঙ্ক নিচের লাইনে ডানে নামে, ⛔ অঙ্ক মাঝখানে ভাঙে না
+/// (যেমন গ্রাহকের তালিকার "মোট বকেয়া" আর "মোট অগ্রিম", ০.৪.৪৮)
+class TotalLine extends StatelessWidget {
+  const TotalLine(this.label, this.value, {super.key});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+        child: OverflowBar(
+          alignment: MainAxisAlignment.spaceBetween,
+          overflowAlignment: OverflowBarAlignment.end,
+          children: [
+            Text(label, style: TextStyle(color: context.palette.onSurfaceMuted)),
+            Text(value, semanticsLabel: Money.speakable(value), style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+}
+
 class BooksError extends StatelessWidget {
   const BooksError(this.text, {super.key});
 

@@ -4021,6 +4021,18 @@ abstract class AppL10n {
   /// **'ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।'**
   String get counterReturnNoReasons;
 
+  /// Customer list total: what the shown shops owe minus their advances, as the web's customer list sums it
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট বকেয়া'**
+  String get customersTotalNet;
+
+  /// Customer list total: the advances the shown shops have paid, on their own line under the net
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট অগ্রিম'**
+  String get customersTotalAdvances;
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

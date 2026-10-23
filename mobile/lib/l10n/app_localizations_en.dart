@@ -2375,6 +2375,12 @@ class AppL10nEn extends AppL10n {
       'No reasons for returns are set up. Ask the office to add one on the web; returns cannot be confirmed without a reason.';
 
   @override
+  String get customersTotalNet => 'Net due';
+
+  @override
+  String get customersTotalAdvances => 'Total advance';
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

@@ -2328,6 +2328,12 @@ class AppL10nBn extends AppL10n {
       'ফেরতের কোনো কারণ বসানো নেই। অফিসকে ওয়েবে একটা কারণ যোগ করতে বলুন — কারণ ছাড়া ফেরত নিশ্চিত হয় না।';
 
   @override
+  String get customersTotalNet => 'নিট বকেয়া';
+
+  @override
+  String get customersTotalAdvances => 'মোট অগ্রিম';
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override
