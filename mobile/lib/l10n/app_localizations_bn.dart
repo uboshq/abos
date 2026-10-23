@@ -10343,6 +10343,16 @@ class AppL10nBn extends AppL10n {
   String get collectAppliedTotal => 'মোট প্রয়োগ';
 
   @override
+  String collectUnappliedLine(String amount) {
+    return 'প্রয়োগ হয়নি — গ্রাহকের খাতায় জমা (Cr) থাকবে: $amount';
+  }
+
+  @override
+  String collectAppliedOverGross(String extra) {
+    return 'প্রয়োগ আদায়ের চেয়ে $extra বেশি — কমান';
+  }
+
+  @override
   String collectOverApplied(String amount) {
     return 'এর বেশি বসানো যায় না — সর্বোচ্চ $amount।';
   }

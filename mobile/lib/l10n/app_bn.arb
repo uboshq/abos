@@ -14351,6 +14351,24 @@
   "@collectAppliedTotal": {
     "description": "Collection: total of the bills table"
   },
+  "collectUnappliedLine": "প্রয়োগ হয়নি — গ্রাহকের খাতায় জমা (Cr) থাকবে: {amount}",
+  "@collectUnappliedLine": {
+    "description": "Collection screen 1: under the bills' total, the money not applied to any bill (received + VDS + AIT + discount/rounding − applied); the server credits it to the customer's own ledger, no advance account (fe, 23 Oct 2026)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectAppliedOverGross": "প্রয়োগ আদায়ের চেয়ে {extra} বেশি — কমান",
+  "@collectAppliedOverGross": {
+    "description": "Collection screen 1: red stop under the bills' total when more is applied to the bills than the collection covers; posting is off until it is reduced (the server refuses it, allocation_over_amount)",
+    "placeholders": {
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
   "collectOverApplied": "এর বেশি বসানো যায় না — সর্বোচ্চ {amount}।",
   "@collectOverApplied": {
     "description": "Collection: an allocation was capped",

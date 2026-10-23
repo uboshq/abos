@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:abos_mobile/core/books/collection_entry.dart';
+import 'package:abos_mobile/core/books/collection_plan.dart';
 import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
@@ -42,7 +43,8 @@ Future<void> _open(WidgetTester tester,
     double textScale = 1,
     String? rounding,
     bool empty = false,
-    double? height}) async {
+    double? height,
+    void Function(CollectionPlan plan)? fault}) async {
   tester.view.physicalSize = Size(412, height ?? (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -74,6 +76,7 @@ Future<void> _open(WidgetTester tester,
         openReceipt: (_, __, ___) async {},
         otherParty: (_, __) async {},
         pickSlip: (_, {required camera}) async => null,
+        debugAfterAllocate: fault,
       ),
     ),
   ));
@@ -358,6 +361,49 @@ void main() {
             find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_sign_charge_412_light_$tag$pct.png'));
       });
     }
+  }
+
+  // ⭐ মোট প্রয়োগের নিচে প্রয়োগ না হওয়া টাকা (fe, ২৩ অক্টোবর ২০২৬): ৳45,000, INV-0094-এ ৳100 — প্রয়োগ ৳15,100, লাইনে ৳29,900;
+  // আর ভুল ঢোকানো "বেশি প্রয়োগ" (৳500) — লাল লাইন। লাইন পুরোটা পর্দায়, উপরের তিন অঙ্ক আর "মোট প্রয়োগ" ঢাকে না
+  for (final (locale, tag, scale, over) in [
+    (AppLocale.locale, 'bn', 1.0, false),
+    (AppLocale.english, 'en', 1.0, false),
+    (AppLocale.locale, 'bn', 2.0, false),
+    (AppLocale.english, 'en', 2.0, false),
+    (AppLocale.locale, 'bn', 1.0, true),
+  ]) {
+    final pct = scale > 1 ? '_${(scale * 100).round()}' : '';
+    final shot = over ? 'collect_over_applied_412_light_$tag' : 'collect_remainder_412_light_$tag$pct';
+    testWidgets('$shot: the line under the total is whole, on screen and clear of the totals', (tester) async {
+      await _open(tester, locale: locale, textScale: scale, fault: over ? (plan) => plan.bills.first.applied += 50000 : null);
+      if (!over) {
+        await tester.ensureVisible(find.byKey(const ValueKey('collect-item-INV-0094')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('collect-item-INV-0094')));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byKey(const ValueKey('collect-apply-INV-0094')), '100');
+        await tester.pumpAndSettle();
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+      final key = over ? 'collect-over-applied' : 'collect-unapplied-line';
+      final line = find.byKey(ValueKey(key));
+      expect(line, findsOneWidget);
+      final r = tester.getRect(line);
+      final screen = _screenRect(tester);
+      expect(screen.contains(r.topLeft) && screen.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue,
+          reason: '⛔ লাইন $r পর্দার বাইরে');
+      for (final k in ['collect-figure-due', 'collect-figure-this', 'collect-figure-left', 'collect-applied-total']) {
+        final t = tester.getRect(find.byKey(ValueKey(k)));
+        expect(r.overlaps(t), isFalse, reason: '⛔ লাইন $r $k-এর $t ঢাকে');
+        expect(screen.contains(t.topLeft) && screen.contains(t.bottomRight - const Offset(0.01, 0.01)), isTrue,
+            reason: '⛔ $k $t পর্দার বাইরে');
+      }
+      expect(tester.getRect(find.byKey(const ValueKey('collect-applied-total'))).bottom <= r.top, isTrue,
+          reason: 'লাইন মোটের নিচে');
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/$shot.png'));
+    });
   }
 
   // ⛔ ২০০% লেখায় বিলের সারির অঙ্ক এক লাইনে, পুরোটা পর্দার ভেতরে — আগে "30,000.0" আর "0" দুই লাইনে ভাঙত (ছবি-নিরীক্ষা,

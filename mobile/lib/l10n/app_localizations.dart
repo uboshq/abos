@@ -17174,6 +17174,18 @@ abstract class AppL10n {
   /// **'মোট প্রয়োগ'**
   String get collectAppliedTotal;
 
+  /// Collection screen 1: under the bills' total, the money not applied to any bill (received + VDS + AIT + discount/rounding − applied); the server credits it to the customer's own ledger, no advance account (fe, 23 Oct 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রয়োগ হয়নি — গ্রাহকের খাতায় জমা (Cr) থাকবে: {amount}'**
+  String collectUnappliedLine(String amount);
+
+  /// Collection screen 1: red stop under the bills' total when more is applied to the bills than the collection covers; posting is off until it is reduced (the server refuses it, allocation_over_amount)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রয়োগ আদায়ের চেয়ে {extra} বেশি — কমান'**
+  String collectAppliedOverGross(String extra);
+
   /// Collection: an allocation was capped
   ///
   /// In bn, this message translates to:

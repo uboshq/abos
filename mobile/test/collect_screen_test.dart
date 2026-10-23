@@ -1642,4 +1642,100 @@ void main() {
     type('12', '12'); // লেখা একই — কেবল কার্সর
     expect(seen, [true, true, false], reason: '⛔ চিহ্ন ঝরার খবর ভুল');
   });
+
+  /// ⭐ মোট প্রয়োগের নিচে প্রয়োগ না হওয়া টাকা (fe, ২৩ অক্টোবর ২০২৬): "এই আদায়" ৳45,000, "মোট প্রয়োগ" ৳15,100 — ৳29,900 পর্দা ১-এ
+  /// কোথাও ছিল না। সার্ভার (a6 5d6c6bac0): unapplied = gross − applied, gross = পাওয়া + VDS + AIT + ছাড়/রাউন্ডিং, গ্রাহকের
+  /// নিজের খাতায় Cr; applied > gross হলে ফেরায় (allocation_over_amount)।
+  group('what is not applied shows under the total', () {
+    const left = 'প্রয়োগ হয়নি — গ্রাহকের খাতায় জমা (Cr) থাকবে: ৳29,900.00';
+
+    testWidgets('৳45,000 with ৳15,100 applied: the line says ৳29,900.00, the same figure screen 2 calls অপ্রয়োগকৃত', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      expect(_shown('collect-unapplied-line'), isFalse, reason: 'পুরো প্রয়োগে লাইন নেই');
+      await _tap(tester, 'collect-item-INV-0094');
+      await _type(tester, 'collect-apply-INV-0094', '100');
+      expect(_texts(tester, 'collect-applied-total'), contains('৳15,100.00'));
+      expect(_shown('collect-unapplied-line'), isTrue, reason: '⛔ ৳29,900 প্রয়োগ হয়নি, অথচ মোটের নিচে বলা নেই');
+      expect(_texts(tester, 'collect-unapplied-line'), left);
+      expect(_texts(tester, 'collect-unapplied-line'), isNot(contains('অগ্রিম')));
+      expect(_shown('collect-over-applied'), isFalse);
+      await _review(tester);
+      expect(_texts(tester, 'collect-unapplied'), contains('৳29,900.00'), reason: '⛔ পর্দা ১ আর ২ আলাদা অঙ্ক বলে');
+    });
+
+    testWidgets('fully applied: no line', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      expect(_texts(tester, 'collect-applied-total'), contains('৳45,000.00'));
+      expect(_shown('collect-unapplied-line'), isFalse, reason: '⛔ সব প্রয়োগ হলো, তবু "প্রয়োগ হয়নি"');
+      expect(_shown('collect-over-applied'), isFalse);
+    });
+
+    testWidgets('the figure counts VDS, AIT and the discount as the server\'s gross does', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-adjust');
+      await _type(tester, 'collect-vds', '500');
+      // ⓘ ৳45,000 + VDS ৳500, নিজে বসানো ৳45,500 — কিছু বাকি নেই, কিছু বেশিও নয়
+      expect(_texts(tester, 'collect-applied-total'), contains('৳45,500.00'));
+      expect(_shown('collect-unapplied-line') || _shown('collect-over-applied'), isFalse,
+          reason: '⛔ ৳45,000 + VDS ৳500 = ৳45,500 প্রয়োগ — অঙ্কে VDS ধরা হয়নি');
+      expect(tester.widget<FilledButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNotNull);
+      await _type(tester, 'collect-ait', '200');
+      await _type(tester, 'collect-difference', '300');
+      expect(_texts(tester, 'collect-applied-total'), contains('৳46,000.00'));
+      expect(_shown('collect-unapplied-line') || _shown('collect-over-applied'), isFalse,
+          reason: '⛔ ৳45,000 + VDS ৳500 + AIT ৳200 + ছাড় ৳300 = ৳46,000 প্রয়োগ — অঙ্কে কাটা বা ছাড় ধরা হয়নি');
+      await _tap(tester, 'collect-item-INV-0094');
+      await _type(tester, 'collect-apply-INV-0094', '100');
+      expect(_texts(tester, 'collect-applied-total'), contains('৳16,100.00'));
+      expect(_texts(tester, 'collect-unapplied-line'), left, reason: '⛔ ৳46,000 − ৳16,100 = ৳29,900 নয়');
+    });
+
+    testWidgets('over-applied: a red line, posting and the draft off, nothing previewed or sent', (tester) async {
+      final api = FakeCollect();
+      await _pump(
+          tester,
+          CollectScreen(
+            api: api,
+            books: FakeBooks(),
+            newChangeId: _key,
+            today: DateTime(2026, 10, 21),
+            openReceipt: _receipt,
+            otherParty: _party,
+            pickSlip: _picker(null),
+            slipSize: (_) async => 1000,
+            // ⛔ ভুল ঢোকানো: নিজে-বসানোর পরে প্রথম বিলে ৳500 বেশি — আজ পর্দার কোনো পথে এটা হয় না
+            debugAfterAllocate: (plan) => plan.bills.first.applied += 50000,
+          ));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      expect(_shown('collect-over-applied'), isTrue, reason: '⛔ প্রয়োগ আদায়ের বেশি, অথচ লাল লাইন নেই');
+      expect(_texts(tester, 'collect-over-applied'), 'প্রয়োগ আদায়ের চেয়ে ৳500.00 বেশি — কমান');
+      expect(_shown('collect-unapplied-line'), isFalse);
+      expect(tester.widget<FilledButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull,
+          reason: '⛔ বেশি প্রয়োগে "দেখে পোস্ট" চালু');
+      expect(tester.widget<OutlinedButton>(find.byKey(const ValueKey('collect-draft'))).onPressed, isNull,
+          reason: '⛔ বেশি প্রয়োগে খসড়া চালু — সার্ভার ফেরাবে');
+      await tester.tap(find.byKey(const ValueKey('collect-post')), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('collect-draft')), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(api.sent, isEmpty, reason: '⛔ বেশি প্রয়োগ পাঠানো হলো');
+      expect(api.previewed, isEmpty);
+    });
+
+    testWidgets('old server (no bills list): neither line', (tester) async {
+      await _pump(tester, _screen(FakeCollect(oldServer: true)));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      expect(_shown('collect-bills-auto'), isTrue);
+      expect(_shown('collect-unapplied-line'), isFalse);
+      expect(_shown('collect-over-applied'), isFalse);
+    });
+  });
 }

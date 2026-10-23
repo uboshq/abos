@@ -10510,6 +10510,16 @@ class AppL10nEn extends AppL10n {
   String get collectAppliedTotal => 'Total applied';
 
   @override
+  String collectUnappliedLine(String amount) {
+    return 'Not applied — stays as a credit (Cr) in the customer\'s ledger: $amount';
+  }
+
+  @override
+  String collectAppliedOverGross(String extra) {
+    return 'Applied is $extra more than collected — reduce it';
+  }
+
+  @override
   String collectOverApplied(String amount) {
     return 'Cannot apply more — at most $amount.';
   }

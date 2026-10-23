@@ -2846,6 +2846,8 @@
   "collectItemCreditNote": "Returned",
   "collectItemDebitNote": "Debit note",
   "collectAppliedTotal": "Total applied",
+  "collectUnappliedLine": "Not applied — stays as a credit (Cr) in the customer's ledger: {amount}",
+  "collectAppliedOverGross": "Applied is {extra} more than collected — reduce it",
   "collectOverApplied": "Cannot apply more — at most {amount}.",
   "collectCreditFloor": "Cannot take less — the money in hand must cover the ticked invoices.",
   "collectDifference": "Discount / Rounding",

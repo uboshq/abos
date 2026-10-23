@@ -84,6 +84,7 @@ class CollectScreen extends StatefulWidget {
     this.openReceipt = _openReceipt,
     this.otherParty = _otherParty,
     this.slipSize = _fileSize,
+    this.debugAfterAllocate,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
@@ -98,6 +99,11 @@ class CollectScreen extends StatefulWidget {
   final ReceiptOpener openReceipt;
   final OtherPartyOpener otherParty;
   final Future<int> Function(String path) slipSize;
+
+  /// ⛔ পরীক্ষার ভুল-ঢোকানো পথ — প্রতিবার নিজে-বসানোর পরে বণ্টনে হাত দেয়। আজ পর্দার কোনো পথে বিলে প্রয়োগ আদায়ের বেশি হয় না
+  /// ([CollectionPlan.setBill] হাতের টাকায় থামে, অঙ্ক বদলালে আবার "পুরনো আগে"), তাই "বেশি প্রয়োগ" পাহারা এখানেই দেখা যায়
+  @visibleForTesting
+  final void Function(CollectionPlan plan)? debugAfterAllocate;
 
   /// সার্ভারের ছবির সীমা — 5 MB
   static const slipLimit = 5 * 1024 * 1024;
@@ -313,11 +319,19 @@ class _CollectScreenState extends State<CollectScreen> {
         ..withheld = _withheldPaisa;
       // ⓘ টাকা বা ছাড় বদলালে আবার "পুরনো বিল আগে" — হাতে বদলানো বণ্টন তখন নতুন অঙ্কে আর মেলে না
       _plan.autoAllocate();
+      widget.debugAfterAllocate?.call(_plan);
       _manual = false;
       _rowError.clear();
       _syncRowText();
     });
   }
+
+  /// ⭐ প্রয়োগ হয়নি — মোট (পাওয়া + VDS + AIT + ছাড়/রাউন্ডিং) − বিলে প্রয়োগ, পয়সায়; সার্ভারের `unapplied = gross − applied`
+  /// (a6 5d6c6bac0, CollectionService), গ্রাহকের নিজের খাতায় জমা (Cr) — পর্দা ২-এর "অপ্রয়োগকৃত" একই অঙ্ক
+  int get _remainder => _newServer ? _plan.unapplied : 0;
+
+  /// ⛔ বিলে প্রয়োগ আদায়ের বেশি — সার্ভার ফেরায় (allocation_over_amount); পাঠানো বন্ধ
+  int get _overApplied => _remainder < 0 ? -_remainder : 0;
 
   void _textChanged() => setState(() {});
 
@@ -546,6 +560,7 @@ class _CollectScreenState extends State<CollectScreen> {
     if (_needsDepositSlip && _depositSlip.text.trim().isEmpty) return w.collectDepositSlipMissing;
     if (_differencePaisa + _withheldPaisa > _received) return w.collectDifferenceTooBig;
     if (_roundingTooBig) return w.collectRoundingTooBig(Money.taka(_roundingLimit / 100));
+    if (_overApplied > 0) return w.collectAppliedOverGross(Money.taka(_overApplied / 100));
     if (post && _slipRequired && _slipPath == null) return w.collectSlipMissing;
     return null;
   }
@@ -1191,6 +1206,18 @@ class _CollectScreenState extends State<CollectScreen> {
         ],
         if (table)
           _AmountRow(key: const ValueKey('collect-applied-total'), label: w.collectAppliedTotal, paisa: _plan.netApplied, strong: true),
+        // ⭐ মোট প্রয়োগের নিচে বাকিটা কোথায় গেল (fe, ২৩ অক্টোবর ২০২৬): "এই আদায়" ৳45,000, প্রয়োগ ৳15,100 — ৳29,900 পর্দা ১-এ
+        // কোথাও ছিল না। ⛔ "অগ্রিম" নয় — মালিকের নিয়মে গ্রাহকের নিজের খাতা। পুরনো সার্ভারে (তালিকা নেই) কোনো লাইন নয়
+        if (table && _remainder > 0)
+          _Note(
+              key: const ValueKey('collect-unapplied-line'),
+              text: w.collectUnappliedLine(Money.taka(_remainder / 100)),
+              tone: _Tone.info),
+        if (table && _overApplied > 0)
+          _Note(
+              key: const ValueKey('collect-over-applied'),
+              text: w.collectAppliedOverGross(Money.taka(_overApplied / 100)),
+              tone: _Tone.stop),
         if (table && _manual && !_folded)
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -1284,7 +1311,8 @@ class _CollectScreenState extends State<CollectScreen> {
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
-            onPressed: _busy || _notAllowed || _party != 'customer' || _billsState == _Bills.outOfReach ? null : _saveDraft,
+            onPressed:
+                _busy || _notAllowed || _party != 'customer' || _billsState == _Bills.outOfReach || _overApplied > 0 ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
         ),
@@ -1294,8 +1322,14 @@ class _CollectScreenState extends State<CollectScreen> {
           child: FilledButton(
             key: const ValueKey('collect-post'),
             style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
-            onPressed:
-                _busy || _notAllowed || _party != 'customer' || _roundingTooBig || _billsState == _Bills.outOfReach ? null : _review,
+            onPressed: _busy ||
+                    _notAllowed ||
+                    _party != 'customer' ||
+                    _roundingTooBig ||
+                    _billsState == _Bills.outOfReach ||
+                    _overApplied > 0
+                ? null
+                : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
           ),
         ),
