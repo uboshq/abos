@@ -27,4 +27,16 @@ return [
     'rounding_awaiting' => 'Rounding ৳:amount — above ৳:free, so it needs the owner\'s signature; the request is sent. The collection stays a draft; press "Post" again once signed.',
     'rounding_no_signer' => 'Rounding ৳:amount — rounding above ৳:free needs the owner\'s signature, and nobody is set to sign (the discount approval flow is off or missing). Round by ৳:free at most, or switch the flow on.',
     'sign_mismatch' => 'The line\'s sign does not match its kind (:kind ৳:amount) — credit notes and prior credits are negative, bills and debit notes positive.',
+    // ⛔ a standard head found by code is missing from this company's chart, or its code holds an account of another nature (live UB's 1135 is a bank, 23 Oct 2026) — the collection is refused, nothing is written
+    'head_not_in_chart' => 'This company\'s chart has no :name account, or that code holds another account (:code) — tell the accountant',
+    // ⓘ the standard chart's names, not the company account's (that may be the wrong account)
+    'head_names' => [
+        '1110' => 'Accounts Receivable',
+        '1135' => 'Advance Income Tax',
+        '1138' => 'VAT Deducted at Source Receivable',
+        '4120' => 'Collection Discount',
+        '5210' => 'Bank Charges',
+        '5211' => 'Mobile Banking Charges',
+        '5305' => 'Rounding Difference',
+    ],
 ];

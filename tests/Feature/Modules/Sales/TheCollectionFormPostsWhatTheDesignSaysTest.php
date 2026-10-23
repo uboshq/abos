@@ -100,6 +100,41 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->balanced($collection);
     }
 
+    /**
+     * দফা ৫ — কোম্পানির ছকে ১১৩৫ কোডে অগ্রিম আয়কর নয়, একটা ব্যাংক (লাইভ UB-র "Depot Bank A/C", fe, ২৩ অক্টোবর ২০২৬): গ্রাহকের কাটা
+     * AIT সেই ব্যাংকে বসে না — আদায় বাংলা কারণে ফেরে, খসড়াও নয়, খাতায় কিছু নয়; প্রিভিউ একই কারণে থামে। ⓘ কোড মিললেই নয়, খাতটা
+     * মান ছকের সেই খাত কি না ([[StandardChart::holdsItsMeaning()]])। ফোনের পথ [[CollectionAppContractTest]]-এ।
+     */
+    public function test_item_5_ait_never_lands_on_a_bank_that_merely_has_the_advance_tax_code(): void
+    {
+        $bill = $this->bill('INV-CF-AITB', 10, '10000');
+        $tax = StandardChart::find(StandardChart::ADVANCE_INCOME_TAX);
+        $this->assertNotNull($tax, 'প্রস্তুতিটাই ভুল — ডেমো ছকে ১১৩৫ নেই');
+        \Illuminate\Support\Facades\DB::table('accounts')->where('id', $tax->id)->update([
+            'name_en' => 'Depot Bank A/C', 'money_kind' => Account::BANK,
+            'parent_id' => (int) StandardChart::find(StandardChart::BANK)->id,
+        ]);
+        $refusal = __('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']);
+        $papers = Collection::acrossBranches()->count();
+        $rows = LedgerEntry::query()->count();
+        $onTheBank = LedgerEntry::query()->where('account_id', $tax->id)->count();
+        $form = ['amount' => '9750', 'ait' => '250', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]];
+
+        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form($form), 'post' => '1']);
+        $this->assertSame($refusal, $this->said('status'), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫-এ AIT — বাংলায় কারণ বলে ফেরায়নি');
+        $this->assertSame($papers, Collection::acrossBranches()->count(), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫ থাকতেও আদায়ের কাগজ (খসড়াও) বসল');
+        $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫ থাকতেও খাতায় সারি বসল');
+        $this->assertSame($onTheBank, LedgerEntry::query()->where('account_id', $tax->id)->count(), '⛔ দফা ৫: গ্রাহকের কাটা AIT ডিপোর ব্যাংকে বসল');
+
+        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form($form))->assertOk()->json();
+        $this->assertContains($refusal, (array) $preview['stops'], '⛔ দফা ৫: প্রিভিউ ব্যাংকে-বসা ১১৩৫-এর কথা থামার কারণে বলেনি');
+        $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ৫: প্রিভিউ খাতায় কিছু লিখল');
+
+        // ⓘ AIT ছাড়া একই আদায় চলে — পাহারা কেবল যে খাতটা লাগে তাকেই দেখে
+        $plain = $this->book(['amount' => '1000', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000']]]);
+        $this->assertSame(DocumentStatus::CONFIRMED, $plain->status, '⛔ দফা ৫: AIT ছাড়া আদায়ও থেমে গেল — পাহারা অদরকারি খাতও দেখছে');
+    }
+
     /** দফা ৯ — চার্জ টাকার ভিতরে: ব্যাংকে অঙ্ক − চার্জ, চার্জ ৫২১০-এ, গ্রাহক পুরো অঙ্কে */
     public function test_item_9_the_bank_charge_sits_inside_the_amount(): void
     {

@@ -299,6 +299,7 @@ final class CollectionService
 
             // ⓘ নম্বর নেওয়ার আগে — আটকালে সিরিজে ফাঁক পড়ত
             $plan = $this->plan($in, $branchId);
+            $this->assertTheHeadsFit($in, $account);
 
             $documentNo = $this->numbers->next('COL', $branchId);
 
@@ -364,6 +365,7 @@ final class CollectionService
             $branchId = $collection->branch_id === null ? null : (int) $collection->branch_id;
             $this->assertMoneyInTheCustomersBranch($account, $branchId);
             $plan = $this->plan($in, $branchId);
+            $this->assertTheHeadsFit($in, $account);
 
             $collection->update([
                 'account_id' => $account->id,
@@ -1713,17 +1715,46 @@ final class CollectionService
         }
     }
 
+    /**
+     * ⛔ কোড-ধরা প্রমিত খাত (১১১০, ১১৩৫, ১১৩৮, ৪১২০, ৫৩০৫, ৫২১০, ৫২১১) — কোড মিললেই নয়: খাতটা সত্যিই সেই প্রমিত খাত কি না
+     * ([[StandardChart::holdsItsMeaning()]] — ec-র একমাত্র নিয়ম: একই ধরন, আর টাকার খাত কেবল টাকার কোডে) আর পাতা-খাত কি না।
+     * লাইভ UB-তে ১১৩৫ "Depot Bank A/C" (ব্যাংক) — আগের সরল কোড-খোঁজায় গ্রাহকের কাটা AIT ডিপোর ব্যাংকে বসত (fe, ২৩ অক্টোবর ২০২৬)।
+     * না মিললে ফেরত (fail-closed), কখনো ভুল খাতে নয়। ⓘ ব্যবহারকারীর বাছা টাকার খাত এখানে আসে না ([[resolveMoneyAccount()]])।
+     * ⓘ ec-র StandardChart::accountFor() main-এ এলে এই দেহ তার এক লাইনের ডাক হবে; find() নিজে পাহারা দিলেও এই পরখ বাড়তি, ক্ষতি নেই।
+     */
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
+        $account = StandardChart::find($code);
 
-        if ($account === null) {
+        if ($account === null
+            || ! app(StandardChart::class)->holdsItsMeaning($account)
+            || ! Account::query()->postable()->whereKey($account->id)->exists()) {
+            $names = (array) __('sales::collection_rules.head_names');
             throw ValidationException::withMessages([
-                'status' => __('sales::validation.missing_account', ['code' => $code]),
+                'status' => __('sales::collection_rules.head_not_in_chart', ['name' => $names[$code] ?? $code, 'code' => $code]),
             ]);
         }
 
         return $account;
+    }
+
+    /**
+     * ⛔ কাগজ লেখার আগেই — খাতার লাইনগুলো ঠিক যেভাবে পোস্ট বানাবে ([[ledgerLines()]]) সেভাবে বানিয়ে, যাতে কোনো প্রমিত খাত না মিললে
+     * খসড়াও না বসে (ফোনের সিঙ্ক আর ওয়েবের "পোস্ট" দুটোই আগে খসড়া লেখে)। কিছু লেখে না।
+     */
+    private function assertTheHeadsFit(CollectionInput $in, Account $account): void
+    {
+        $this->ledgerLines([
+            'account' => $account,
+            'amount' => $in->amount,
+            'charge' => $in->paperFields()['bank_charge'],
+            'vds' => $in->vds,
+            'ait' => $in->ait,
+            'difference_kind' => $in->differenceKind(),
+            'difference_amount' => $in->differenceAmount(),
+            'customer_id' => $in->customerId,
+            'no' => '',
+        ]);
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear

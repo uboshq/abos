@@ -150,6 +150,37 @@ final class CollectionAppContractTest extends TestCase
         $this->assertSame(0, bccomp($other->fresh()->dueAmount(), '300', 4), '⛔ দফা ৩: `lines: []`-এ বিলের বাকি কমল');
     }
 
+    /**
+     * দফা ৫, ফোন — ছকের ১১৩৫ কোডে অগ্রিম আয়কর নয়, একটা ব্যাংক (লাইভ UB-র "Depot Bank A/C", fe, ২৩ অক্টোবর ২০২৬): ফোনের AIT-সহ আদায়
+     * ফেরত (REJECTED) বাংলা কারণে, ফোনের প্রিভিউও একই কারণে থামে; কাগজ বা খাতার সারি কিছুই নয়। ওয়েবের পথ
+     * [[TheCollectionFormPostsWhatTheDesignSaysTest::test_item_5_ait_never_lands_on_a_bank_that_merely_has_the_advance_tax_code]]-এ।
+     */
+    public function test_item_5_the_phone_never_posts_ait_to_a_bank_that_merely_has_the_advance_tax_code(): void
+    {
+        $bill = $this->bill('INV-APP-AITB', 5, '10000');
+        $tax = StandardChart::find(StandardChart::ADVANCE_INCOME_TAX);
+        $this->assertNotNull($tax, 'প্রস্তুতিটাই ভুল — ডেমো ছকে ১১৩৫ নেই');
+        \Illuminate\Support\Facades\DB::table('accounts')->where('id', $tax->id)->update([
+            'name_en' => 'Depot Bank A/C', 'money_kind' => Account::BANK,
+            'parent_id' => (int) StandardChart::find(StandardChart::BANK)->id,
+        ]);
+        $refusal = __('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']);
+        $papers = Collection::query()->count();
+        $rows = LedgerEntry::query()->count();
+        $payload = $this->payload(['amount' => '9750', 'ait' => '250', 'confirm' => true,
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000.00']]]);
+
+        $this->phone($this->clerk);
+        $preview = $this->postJson('/api/v1/sales/collections/preview', $payload)->assertOk()->json();
+        $this->assertContains($refusal, (array) $preview['stops'], '⛔ দফা ৫: ফোনের প্রিভিউ ব্যাংকে-বসা ১১৩৫-এর কথা থামার কারণে বলেনি');
+
+        $out = $this->push('ait-on-bank', $payload);
+        $this->assertSame(SyncChange::REJECTED, $out['status'] ?? null, '⛔ দফা ৫: ফোন থেকে ব্যাংকে-বসা ১১৩৫-এ AIT-সহ আদায় নেওয়া হলো');
+        $this->assertSame($refusal, $out['message'] ?? null, '⛔ দফা ৫: ফোনের ফেরতে বাংলা কারণ নেই');
+        $this->assertSame([$papers, $rows], [Collection::query()->count(), LedgerEntry::query()->count()],
+            '⛔ দফা ৫: ফেরত সত্ত্বেও কাগজ বা খাতার সারি বসল');
+    }
+
     /** দফা ৩ (a5-র উত্তর ১) — ক্রেডিটের সারি ঋণাত্মক চলে আর বিল ঢাকে; ধনাত্মক ক্রেডিট বাংলায় ফেরত (REJECTED), কিছুই বসে না */
     public function test_item_3_credit_lines_are_negative_and_a_plus_credit_is_refused(): void
     {
