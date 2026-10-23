@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/totals_bar.dart';
 import '../../core/locale/l10n.dart';
 
 /// টাকা আদায়, প্রিন্সিপাল আর ক্রয়ের পাতার একসাথের টুকরো — তারিখের পরিসর, মোটের পট্টি, ভুলের ঘর।
@@ -80,11 +81,14 @@ class DateRangeBar extends StatelessWidget {
 /// "মোট ৳… · n টি" — তালিকার মাথায়, সার্ভারের গোটা ছাঁকনির যোগ (কেবল এই পাতার নয়)
 class TotalStrip extends StatelessWidget {
   const TotalStrip(
-      {super.key, required this.label, required this.value, this.count});
+      {super.key, required this.label, required this.value, this.count, this.period});
 
   final String label;
   final String value;
   final int? count;
+
+  /// ⭐ মোটের সময়কাল — নামের নিচে ([TotalsPeriodLabel], নিচের মোটের পট্টির একই লেখা); null কেবল তারিখহীন মোটে
+  final TotalsPeriod? period;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -99,7 +103,13 @@ class TotalStrip extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: AppSpacing.sm,
             children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              if (period case final p?)
+                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  TotalsPeriodLabel(p),
+                ])
+              else
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
               Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: AppSpacing.sm,

@@ -129,7 +129,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
           : null,
       bottomNavigationBar: page == null || _rows.isEmpty
           ? null
-          : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total),
+          : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total,
+              period: TotalsPeriod.range(_from, _to, today: widget.today)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

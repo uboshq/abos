@@ -88,7 +88,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
       floatingActionButton: newOrder,
       bottomNavigationBar: synced.isEmpty
           ? null
-          : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum),
+          : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum,
+              // ⓘ ফোনে যত আদেশ আছে, তারিখের ছাঁকনি নেই — সব তারিখ
+              period: const TotalsPeriod.allDates()),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState

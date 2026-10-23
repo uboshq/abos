@@ -2334,6 +2334,19 @@ class AppL10nBn extends AppL10n {
   String get customersTotalAdvances => 'মোট অগ্রিম';
 
   @override
+  String get totalsPeriodAllDates => 'সব তারিখ';
+
+  @override
+  String totalsPeriodRange(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String totalsPeriodSpoken(String period) {
+    return 'সময়কাল: $period';
+  }
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override

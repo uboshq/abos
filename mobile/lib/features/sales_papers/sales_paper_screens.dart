@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/totals_bar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client/api_client.dart';
@@ -146,7 +147,8 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
             if (_busy && page == null) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (page != null && _rows.isNotEmpty)
-              TotalStrip(label: context.l10n.salesPapersTotal(widget.kind.word), value: Money.taka(page.sum), count: page.count),
+              TotalStrip(label: context.l10n.salesPapersTotal(widget.kind.word), value: Money.taka(page.sum), count: page.count,
+                  period: TotalsPeriod.range(_from, _to, today: widget.today)),
             if (page != null && _rows.isEmpty)
               EmptyState(
                 icon: Icons.receipt_long_outlined,

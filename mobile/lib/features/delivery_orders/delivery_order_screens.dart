@@ -189,7 +189,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;
       // নকশা ৩, পাতা ৩)। ⓘ পুরনো সার্ভার মোট না পাঠালে পট্টিই নেই — পাতার যোগফলকে সর্বমোট বলা মিথ্যা হত।
       bottomNavigationBar: total != null && rows.isNotEmpty
-          ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum)
+          ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum,
+              // ⓘ ডেস্কে তারিখের ছাঁকনি নেই (সার্ভারও তারিখে ছাঁকে না) — সব তারিখ
+              period: const TotalsPeriod.allDates())
           : null,
       body: RefreshIndicator(
         onRefresh: _load,

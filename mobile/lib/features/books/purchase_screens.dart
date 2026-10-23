@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/totals_bar.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
@@ -170,7 +171,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
                   label: _kind == 'bill' ? context.l10n.booksPurchaseTotalBills : context.l10n.booksPurchaseTotalReceipts,
                   // ⓘ দামের চাবি ছাড়া অঙ্ক আসে না — কেবল কয়টা
                   value: page.total == null ? '—' : Money.taka(page.total),
-                  count: page.count),
+                  count: page.count,
+                  period: TotalsPeriod.range(_from, _to, today: widget.today)),
             if (page != null && _rows.isEmpty && !_busy)
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),

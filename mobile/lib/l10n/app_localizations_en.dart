@@ -2381,6 +2381,19 @@ class AppL10nEn extends AppL10n {
   String get customersTotalAdvances => 'Total advance';
 
   @override
+  String get totalsPeriodAllDates => 'All dates';
+
+  @override
+  String totalsPeriodRange(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String totalsPeriodSpoken(String period) {
+    return 'Period: $period';
+  }
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

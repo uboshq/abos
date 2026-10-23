@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/totals_bar.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/accounts/voucher_api.dart';
 import '../../core/api_client/network_errors.dart';
@@ -275,7 +276,8 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               ]),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের গোনা, পুরো ফলের (পাতার নয়)
             if (total != null)
-              TotalStrip(label: context.l10n.vouchersListTotal(_view.label), value: Money.taka(total), count: _page?.count),
+              TotalStrip(label: context.l10n.vouchersListTotal(_view.label), value: Money.taka(total), count: _page?.count,
+                  period: TotalsPeriod.range(_from, _to, today: widget.today)),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_page != null && _rows.isEmpty && !_busy)

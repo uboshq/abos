@@ -3179,6 +3179,31 @@
   "@customersTotalAdvances": {
     "description": "Customer list total: the advances the shown shops have paid, on their own line under the net"
   },
+  "totalsPeriodAllDates": "সব তারিখ",
+  "@totalsPeriodAllDates": {
+    "description": "Beside a total: the list is not limited to any dates, so the total covers all of them"
+  },
+  "totalsPeriodRange": "{from} – {to}",
+  "@totalsPeriodRange": {
+    "description": "Beside a total: the chosen date range the total covers, first and last day as dd/MM/yyyy",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "totalsPeriodSpoken": "সময়কাল: {period}",
+  "@totalsPeriodSpoken": {
+    "description": "Screen reader: which dates the total next to it covers, e.g. 'Period: This month'",
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "ordersModuleSales": "বিক্রয়",
   "@ordersModuleSales": {
     "description": "Screen bar: the module name above the title on the order and tracking screens"

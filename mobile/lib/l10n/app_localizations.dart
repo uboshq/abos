@@ -4033,6 +4033,24 @@ abstract class AppL10n {
   /// **'মোট অগ্রিম'**
   String get customersTotalAdvances;
 
+  /// Beside a total: the list is not limited to any dates, so the total covers all of them
+  ///
+  /// In bn, this message translates to:
+  /// **'সব তারিখ'**
+  String get totalsPeriodAllDates;
+
+  /// Beside a total: the chosen date range the total covers, first and last day as dd/MM/yyyy
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} – {to}'**
+  String totalsPeriodRange(String from, String to);
+
+  /// Screen reader: which dates the total next to it covers, e.g. 'Period: This month'
+  ///
+  /// In bn, this message translates to:
+  /// **'সময়কাল: {period}'**
+  String totalsPeriodSpoken(String period);
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:
