@@ -11,8 +11,7 @@ import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -89,17 +88,18 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.quotationsListTitle),
-      floatingActionButton: widget.canWrite
-          ? BarFab(
-              key: const Key('quotation-new'),
-              onPressed: _new,
-              label: context.l10n.quotationsListNew,
-            )
-          : null,
+      bottomNavigationBar: ActionBottomBar.maybe(
+          action: widget.canWrite
+              ? BarFab(
+                  key: const Key('quotation-new'),
+                  onPressed: _new,
+                  label: context.l10n.quotationsListNew,
+                )
+              : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canWrite),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
               for (final tab in _tabs)

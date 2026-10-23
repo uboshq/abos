@@ -11,12 +11,11 @@ import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
@@ -126,19 +125,20 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     return Scaffold(
       // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › আদায়" (০.৪.৪১ নমুনা, পাতা ২); অফলাইনের হলুদ পট্টি বার নিজে আঁকে
       appBar: AbosScreenBar(title: context.l10n.booksMoneyInTitle, module: context.l10n.booksModuleSales),
-      // ⭐ "＋ নতুন আদায়" — সব পাতার একই [BarFab], কেবল আদায় নেওয়ার চাবি থাকলে
-      floatingActionButton: widget.canCollect
-          ? BarFab(key: const ValueKey('money-in-new'), label: context.l10n.booksMoneyInNew, onPressed: _collect)
-          : null,
-      bottomNavigationBar: page == null || _rows.isEmpty
-          ? null
-          : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total,
-              period: TotalsPeriod.range(_from, _to, today: widget.today)),
+      // ⭐ "＋ নতুন আদায়" — সব পাতার একই [BarFab], কেবল আদায় নেওয়ার চাবি থাকলে; নিচের বারে মোটের পাশে
+      // ([ActionBottomBar]) — তালিকার কোনো সারি বা মোট কখনো ঢাকে না
+      bottomNavigationBar: ActionBottomBar.maybe(
+          totals: page == null || _rows.isEmpty
+              ? null
+              : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total,
+                  period: TotalsPeriod.range(_from, _to, today: widget.today)),
+          action: widget.canCollect
+              ? BarFab(key: const ValueKey('money-in-new'), label: context.l10n.booksMoneyInNew, onPressed: _collect)
+              : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          // ⓘ নিচে বোতামের জায়গা ([FabClearance]) — "＋ নতুন আদায়" শেষ সারি আর মোট ঢাকে না (০.৪.৪১ নমুনা)
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCollect),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             DateRangeBar(
               from: _from,

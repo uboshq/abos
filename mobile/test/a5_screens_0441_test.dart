@@ -178,17 +178,20 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('a chip on every row, read as "অবস্থা: পোস্ট হয়েছে" (chip v5, the word fe chose); the last row clears the FAB', (tester) async {
+    testWidgets('a chip on every row, read as "অবস্থা: পোস্ট হয়েছে" (chip v5, the word fe chose); the FAB sits in the bottom bar, below the list', (tester) async {
       final handle = tester.ensureSemantics();
-      // ⓘ বোতাম থাকলে তবেই তার জায়গা (FabClearance) — তাই "＋ নতুন আদায়" সহ
+      // ⓘ "＋ নতুন আদায়" সহ — বোতাম নিচের বারে (০.৪.৪৮), তালিকার নিচে আর ৮৮dp ফাঁক লাগে না
       await pump(tester, srCollectBody(canCollect: true));
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
       expect(chips, hasLength(3));
       expect(chips.every((c) => c.state == PaperState.posted && c.dense && c.kind == PaperKind.money), isTrue,
           reason: 'চিপ v4: আদায় টাকার কাগজ');
       expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে'), findsNWidgets(3));
-      final list = tester.widget<ListView>(find.byType(ListView).first);
-      expect((list.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(88), reason: 'FAB ৫৬dp + ফাঁক');
+      final fab = find.byKey(const ValueKey('money-in-new'));
+      expect(find.ancestor(of: fab, matching: find.byKey(const ValueKey('action-bar'))), findsOneWidget,
+          reason: 'বোতাম নিচের বারে, তালিকার ওপরে ভাসে না');
+      expect(tester.getRect(fab).top, greaterThanOrEqualTo(tester.getRect(find.byType(ListView).first).bottom),
+          reason: 'তালিকা বোতামের ওপরেই শেষ');
       handle.dispose();
     });
 

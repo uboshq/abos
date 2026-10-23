@@ -87,4 +87,29 @@ void main() {
       }
     }
   }
+
+  // ⭐ সরু ফোন (৩২০dp) আর ২০০% অক্ষরে SR-এর আদায় (০.৪.৪৮; fe, ২৪ অক্টোবর ২০২৬) — "＋ নতুন আদায়" নিচের বারে মোটের পাশে,
+  // জায়গা কম বলে কেবল আইকন; কোনো সারি বা মোট ঢাকে না, কোনো টাকা কাটা নয়। স্থির অবস্থায় আর একেবারে শেষে।
+  for (final (name, size, scale) in [
+    ('screen_sr_collect_320_light', const Size(320, 640), 1.0),
+    ('screen_sr_collect_360_light_200', const Size(360, 800), 2.0),
+  ]) {
+    testWidgets('$name looks as approved', (tester) async {
+      setScreenSize(tester, size);
+      await tester.pumpWidget(RepaintBoundary(
+        key: const ValueKey('shot'),
+        child: inSession(framed(srCollectBody(canCollect: true), textScale: scale, font: _realFonts)),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('range-today')));
+      await tester.pumpAndSettle();
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens_0441/$name.png'));
+      for (final st in tester.stateList<ScrollableState>(find.byType(Scrollable))) {
+        final p = st.position;
+        if (p.axis == Axis.vertical && p.hasContentDimensions) p.jumpTo(p.maxScrollExtent);
+      }
+      await tester.pumpAndSettle();
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/screens_0441/${name}_end.png'));
+    });
+  }
 }

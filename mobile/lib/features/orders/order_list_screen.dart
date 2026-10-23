@@ -19,6 +19,7 @@ import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../delivery_orders/delivery_order_screens.dart' show PaperListRow, orderStatusKind;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar;
 import 'rejected_order_card.dart';
 
 /// Three states an order taken on this phone can be in, all in one list
@@ -86,15 +87,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final newOrder = FrameFab.offeredTo(context);
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.ordersListTitle, module: context.l10n.ordersModuleSales),
-      // ⭐ কাঠামোর "＋ নতুন অর্ডার" এখানে বসে ([FrameFab.offeredTo]) — তাই মোটের বারের ওপরে ভাসে, "সর্বমোট" ঢাকে না
-      floatingActionButton: newOrder,
-      bottomNavigationBar: synced.isEmpty
-          ? null
-          : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum,
-              // ⓘ ফোনে যত আদেশ আছে, তারিখের ছাঁকনি নেই — সব তারিখ
-              period: const TotalsPeriod.allDates(),
-              rejectedCount: rejectedRows.count,
-              rejectedSum: rejectedRows.sum),
+      // ⭐ কাঠামোর "＋ নতুন অর্ডার" এখানে বসে ([FrameFab.offeredTo]) — নিচের বারে মোটের পাশে ([ActionBottomBar]), তালিকার
+      // ওপরে ভাসে না, কোনো আদেশ বা "সর্বমোট" ঢাকে না
+      bottomNavigationBar: ActionBottomBar.maybe(
+          totals: synced.isEmpty
+              ? null
+              : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum,
+                  // ⓘ ফোনে যত আদেশ আছে, তারিখের ছাঁকনি নেই — সব তারিখ
+                  period: const TotalsPeriod.allDates(),
+                  rejectedCount: rejectedRows.count,
+                  rejectedSum: rejectedRows.sum),
+          action: newOrder),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState
@@ -112,7 +115,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: newOrder != null),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): টানার সময় খসড়া সারি; শেষ টান ব্যর্থ হলে কারণসহ "আবার চেষ্টা করুন";
                   // সত্যিই খালি হলে "নতুন অর্ডার"
@@ -146,7 +149,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
           : RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: newOrder != null),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   if (_refreshing) const LinearProgressIndicator(),
                   if (pendingCount > 0) ...[

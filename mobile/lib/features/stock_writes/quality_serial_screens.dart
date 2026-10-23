@@ -7,8 +7,7 @@ import '../../core/locale/l10n.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
@@ -259,18 +258,19 @@ class _QualityListScreenState extends State<QualityListScreen> {
     final l = context.l10n;
     return Scaffold(
       appBar: AbosScreenBar(title: l.stockQualityTitle),
-      floatingActionButton: widget.canCreate
-          ? BarFab(
-              key: const ValueKey('qc-new'),
-              onPressed: () => _open(NewInspectionScreen(api: widget.api, products: widget.products)),
-              label: l.stockQualityNew,
-            )
-          : null,
+      bottomNavigationBar: ActionBottomBar.maybe(
+          action: widget.canCreate
+              ? BarFab(
+                  key: const ValueKey('qc-new'),
+                  onPressed: () => _open(NewInspectionScreen(api: widget.api, products: widget.products)),
+                  label: l.stockQualityNew,
+                )
+              : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCreate),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (_statuses.isNotEmpty)
               Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [

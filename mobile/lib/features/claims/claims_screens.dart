@@ -9,8 +9,7 @@ import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
@@ -73,7 +72,8 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
     final page = _page;
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.claimsListTitle),
-      floatingActionButton: BarFab(
+      bottomNavigationBar: ActionBottomBar(
+          action: BarFab(
         key: const ValueKey('claim-new'),
         onPressed: () async {
           final sent = await Navigator.of(context).push<Claim>(MaterialPageRoute(
@@ -81,11 +81,11 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
           if (sent != null && mounted) await _load();
         },
         label: context.l10n.claimsNew,
-      ),
+      )),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: true),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),

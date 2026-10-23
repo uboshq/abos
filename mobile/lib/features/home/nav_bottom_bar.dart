@@ -10,7 +10,9 @@ import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/role_tabs.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
+import '../../core/widgets/totals_bar.dart';
 
 /// The home's own pages, as [HomeShell] names them for its [IndexedStack].
 /// ⓘ বিজ্ঞপ্তি আর "আমি" আর নিচের বারে নেই (বারের নকশা ৩, অংশ ৪): ঘণ্টা আর ছবি ওপরের বারে (a4)। পথ দুটো আগের মতোই আছে।
@@ -98,7 +100,7 @@ Map<BarTab, TabBadge> _badgesOf(NavBadges b) => {
 ///
 /// <p>⭐ খাড়া বারের পাশে (ট্যাবলেট, আড়াআড়ি ফোন) বোতাম পাতার ওপরে ভাসে না: নিজের নাম আর কাজ কাঠামোর বারের মাথায় রাখে
 /// ([FrameFab.railSlotOf]), বার সেটা আঁকে, এখানে কিছু আঁকে না (Material 3: মাঝারি আর চওড়া জানালায় FAB রেলের leading-এ;
-/// fe, ২২ অক্টোবর ২০২৬)। ফোনে আগের মতো ভাসে, তালিকা [FabClearance]-এ নিচে জায়গা রাখে।
+/// fe, ২২ অক্টোবর ২০২৬)। ⭐ ফোনে পাতার ওপরে ভাসে না: পর্দার নিচের বারে ([ActionBottomBar]) মোটের পাশে বসে (০.৪.৪৮)।
 class BarFab extends StatefulWidget {
   const BarFab({super.key, required this.label, required this.onPressed, this.icon = Symbols.add});
 
@@ -154,36 +156,167 @@ class _BarFabState extends State<BarFab> {
       }
       return const SizedBox.shrink();
     }
-    return barFabButton(context, label: widget.label, icon: widget.icon, onPressed: widget.onPressed);
+    final bar = _InActionBar.of(context);
+    return barFabButton(context,
+        label: widget.label, icon: widget.icon, onPressed: widget.onPressed, contained: bar != null, compact: bar?.compact ?? false);
   }
 }
 
-/// [BarFab]-এর চেহারা — পাতার ওপরে ভাসা, বা খাড়া বারের মাথায় ([railed]: হিরো ছাড়া, যাতে দুই পাতার বোতাম না জড়ায়)
+/// [BarFab]-এর চেহারা — নিচের বারের ভেতরে ([contained]: ছায়া নেই, Material 3-এর বারে-বসা বোতাম), বা খাড়া বারের মাথায়
+/// ([railed]: হিরো ছাড়া, যাতে দুই পাতার বোতাম না জড়ায়)। [compact]: জায়গা কম (৩২০dp, ২০০% অক্ষর) — কেবল আইকন, নাম
+/// ছুঁয়ে-ধরার লেখায় আর TalkBack-এ।
 Widget barFabButton(BuildContext context,
-    {required String label, required VoidCallback onPressed, IconData icon = Symbols.add, Key? key, bool railed = false}) {
-    // ⓘ বোতামের রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১: "বোতাম: primary") — আলো আর অন্ধকারে দুটোতেই
-    final cs = Theme.of(context).colorScheme;
-    if (railed) {
-      return FloatingActionButton.extended(
-        key: key,
-        heroTag: null,
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-      );
-    }
-    return FloatingActionButton.extended(
+    {required String label,
+    required VoidCallback onPressed,
+    IconData icon = Symbols.add,
+    Key? key,
+    bool railed = false,
+    bool contained = false,
+    bool compact = false}) {
+  // ⓘ বোতামের রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১: "বোতাম: primary") — আলো আর অন্ধকারে দুটোতেই
+  final cs = Theme.of(context).colorScheme;
+  final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+  if (compact) {
+    return FloatingActionButton(
       key: key,
+      heroTag: railed ? null : const _BarFabHero(),
+      tooltip: label,
+      elevation: contained ? 0 : null,
       backgroundColor: cs.primary,
       foregroundColor: cs.onPrimary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: shape,
       onPressed: onPressed,
-      icon: Icon(icon),
-      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      child: Icon(icon, semanticLabel: label),
     );
+  }
+  return FloatingActionButton.extended(
+    key: key,
+    heroTag: railed ? null : const _BarFabHero(),
+    elevation: contained ? 0 : null,
+    backgroundColor: cs.primary,
+    foregroundColor: cs.onPrimary,
+    shape: shape,
+    onPressed: onPressed,
+    icon: Icon(icon),
+    label: Text(label, style: _fabLabel),
+  );
+}
+
+const _fabLabel = TextStyle(fontWeight: FontWeight.w700, fontSize: 14);
+
+/// FloatingActionButton-এর নিজের হিরো চিহ্নের মতোই — একটা পাতায় একটাই বোতাম, পাতা বদলে বোতাম উড়ে যায়
+class _BarFabHero {
+  const _BarFabHero();
+
+  @override
+  String toString() => '<bar fab hero>';
+}
+
+/// [ActionBottomBar]-এর ভেতরে — বোতাম ছোট রূপে কি না
+class _InActionBar extends InheritedWidget {
+  const _InActionBar({required this.compact, required super.child});
+
+  final bool compact;
+
+  static _InActionBar? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_InActionBar>();
+
+  @override
+  bool updateShouldNotify(_InActionBar oldWidget) => compact != oldWidget.compact;
+}
+
+/// ⭐ পর্দার নিচের বার — মোট ([totals]) আর পাতার মূল কাজ ([action], "＋ নতুন …") এক বারে, বোতাম বারের ভেতরে শেষ প্রান্তে
+/// (Material 3: BottomAppBar + FloatingActionButtonLocation.endContained)। পাতার তালিকা বারের ওপরেই শেষ হয়, তাই বোতাম
+/// কোনো সারি বা মোট কখনো ঢাকে না — স্থির অবস্থায়, স্ক্রলের মাঝে, শেষে (মালিকের নিয়ম ০.৪.৪৭ থেকে; fe, ২৪ অক্টোবর ২০২৬)।
+///
+/// <p>মোট না থাকলে সরু বার, কেবল বোতাম। বোতাম পুরো রূপে (＋ আর নাম) বসে যদি মোটের প্রতিটা লাইন তবুও এক লাইনে ধরে; নইলে
+/// কেবল আইকন (নাম ছুঁয়ে-ধরার লেখায় আর TalkBack-এ) — বার উপচে পড়ে না, মোট কাটা পড়ে না। কেবল-আইকনের পাশেও কোনো টাকা না
+/// ধরলে (যেমন ৩২০dp-তে ২০০% অক্ষর) বোতাম বারের ওপরের সারিতে, মোট নিচে পুরো চওড়ায় — টাকা কখনো মাঝখানে ভাঙে না, "…" হয় না।
+///
+/// <p>খাড়া বার দেখানো হলে (ট্যাবলেট) আগের মতো: বোতাম বারের মাথায় ([BarFab]), এখানে কেবল মোট।
+class ActionBottomBar extends StatelessWidget {
+  const ActionBottomBar({super.key, this.totals, this.action});
+
+  /// দুটোই না থাকলে null — Scaffold-এর `bottomNavigationBar`-এ সোজা বসানো যায়
+  static Widget? maybe({TotalsBar? totals, Widget? action}) =>
+      totals == null && action == null ? null : ActionBottomBar(totals: totals, action: action);
+
+  final TotalsBar? totals;
+
+  /// সাধারণত [BarFab] (বা কাঠামোর দেওয়া [FrameFab.offeredTo])
+  final Widget? action;
+
+  /// বোতাম আর মোটের মাঝে
+  static const double gap = AppSpacing.sm;
+
+  /// পুরো রূপের বোতামের চওড়া — Material 3: শুরুতে ১৬, আইকন ২৪, ফাঁক ৮, নাম, শেষে ২০ (আর মাপের গোলমালে ২)
+  static double extendedWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+        text: TextSpan(text: label, style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).merge(_fabLabel)),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1)
+      ..layout();
+    final w = painter.width;
+    painter.dispose();
+    return 16 + 24 + 8 + w + 20 + 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = this.totals, action = this.action;
+    // ⓘ ট্যাবলেট: বোতাম খাড়া বারের মাথায় নিজেকে রাখে (কিছু আঁকে না) — মোটের বার আগের মতো
+    if (FrameFab.railSlotOf(context) != null || action == null) {
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        if (totals != null) totals,
+        if (action != null) action,
+      ]);
+    }
+    final cs = Theme.of(context).colorScheme;
+    final label = action is BarFab ? action.label : null;
+    return Material(
+      key: const ValueKey('action-bar'),
+      color: cs.surfaceContainer,
+      child: DecoratedBox(
+        decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
+        child: SafeArea(
+          top: false,
+          child: LayoutBuilder(builder: (context, box) {
+            final width = box.maxWidth;
+            const fab = 56.0, end = AppSpacing.md;
+            final full = label == null ? 0.0 : extendedWidth(context, label);
+            var compact = false, stacked = false;
+            if (totals == null) {
+              compact = full + 2 * end > width;
+            } else {
+              final need = totals.widthsIn(context);
+              if (need.oneLine + gap + full + end > width) {
+                compact = true;
+                stacked = need.narrowest + gap + fab + end > width;
+              }
+            }
+            final button = Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(0, AppSpacing.sm, end, AppSpacing.sm),
+              child: _InActionBar(compact: compact, child: action),
+            );
+            // ⓘ heightFactor: 1 — বার কেবল বোতামের সমান উঁচু; নইলে Align পুরো পাতা জুড়ে বসত
+            if (totals == null) return Align(alignment: AlignmentDirectional.centerEnd, heightFactor: 1, child: button);
+            final hosted = TotalsBarHost(child: totals);
+            if (stacked) {
+              return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Align(alignment: AlignmentDirectional.centerEnd, heightFactor: 1, child: button),
+                Padding(padding: const EdgeInsetsDirectional.only(end: end), child: hosted),
+              ]);
+            }
+            return Row(children: [
+              Expanded(child: hosted),
+              const SizedBox(width: gap),
+              button,
+            ]);
+          }),
+        ),
+      ),
+    );
+  }
 }
 
 /// খাড়া বারের মাথার বোতাম — চওড়া বারে নাম-সহ, সরু বারে কেবল ＋ (নাম TalkBack আর ছুঁয়ে-ধরার লেখায়)
@@ -561,8 +694,9 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final route = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      // ⓘ ছোট ফোনে ২০০% অক্ষরে সব বাছাই না ধরলে গড়ায় — নিচের সারি কাটা পড়ে না
       builder: (sheet) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           for (final c in choices)
             ListTile(
               key: ValueKey('fab-choice-${c.route}'),
@@ -571,7 +705,7 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
               title: Text(c.label),
               onTap: () => Navigator.of(sheet).pop(c.route),
             ),
-        ]),
+        ])),
       ),
     );
     if (route != null && mounted) await context.push(route);
@@ -613,28 +747,36 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
             label: fab.label,
             onPressed: () => fab.choices.isEmpty ? context.push(fab.route!) : _chooseNew(fab.choices),
           );
-    // ⭐ বোতাম কখনো তথ্য ঢাকে না ([FabClearance]): কাঠামো আঁকলে পাতার তালিকা নিচে জায়গা রাখে; যে পর্দা নিজে বসায়
-    // ([FabSpec.drawnByScreen] আর পথ আছে — অর্ডার), সে নিজের Scaffold-এ বসায়, নিজের মোটের বারের ওপরে
-    // ⭐ খাড়া বার দেখানো হলে বোতাম কোথাও ভাসে না — বারের মাথায় বসে (Material 3; fe, ২২ অক্টোবর ২০২৬)
+    // ⭐ বোতাম কখনো তথ্য ঢাকে না: পাতার ওপরে ভাসে না — কাঠামোর নিজের বোতাম (হোম) নিচের বারের ওপরে নিজের সরু বারে
+    // ([ActionBottomBar]); যে পর্দা নিজে বসায় ([FabSpec.drawnByScreen] আর পথ আছে — অর্ডার), সে নিজের নিচের বারে মোটের পাশে
+    // ⭐ খাড়া বার দেখানো হলে বারের মাথায় বসে (Material 3; fe, ২২ অক্টোবর ২০২৬)
     final inRail = layout != BarLayout.bottom && tabs.length >= 2;
     final fabButton = inRail || (fab != null && fab.drawnByScreen) ? null : built;
     final child = _InFrame(
         child: FrameFab(
-            drawn: fabButton != null,
             offered: !inRail && fab != null && fab.drawnByScreen ? built : null,
             railSlot: inRail ? _railSlot : null,
             child: widget.child));
+    final actionBar = fabButton == null ? null : ActionBottomBar(action: fabButton);
     if (layout == BarLayout.bottom) {
+      final nav = keyboardOpen || tabs.length < 2
+          ? null
+          : RoleBottomBar(tabs: tabs, selected: shown, badges: badges, onSelect: onSelect);
       return Scaffold(
         body: child,
-        floatingActionButton: fabButton,
-        bottomNavigationBar: keyboardOpen || tabs.length < 2
-            ? null
-            : RoleBottomBar(tabs: tabs, selected: shown, badges: badges, onSelect: onSelect),
+        bottomNavigationBar: actionBar == null
+            ? nav
+            : nav == null
+                ? actionBar
+                : Column(mainAxisSize: MainAxisSize.min, children: [
+                    // ⓘ ফোনের নিচের কিনারা নিচের বারের — বোতামের বার তার ওপরে, নিজে ফাঁক রাখে না
+                    MediaQuery.removePadding(context: context, removeBottom: true, child: actionBar),
+                    nav,
+                  ]),
       );
     }
     return Scaffold(
-      floatingActionButton: fabButton,
+      bottomNavigationBar: actionBar,
       body: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (inRail)
           ValueListenableBuilder<RailAction?>(

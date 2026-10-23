@@ -7,8 +7,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -73,7 +72,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
     final canApply = book != null && book.employee && book.types.isNotEmpty;
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.hrLeaveTitle),
-      floatingActionButton: canApply
+      bottomNavigationBar: ActionBottomBar.maybe(
+          action: canApply
           ? BarFab(
               key: const ValueKey('leave-new'),
               onPressed: () async {
@@ -87,12 +87,12 @@ class _LeaveScreenState extends State<LeaveScreen> {
               },
               label: context.l10n.hrLeaveApply,
             )
-          : null,
+          : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: canApply),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),

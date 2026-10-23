@@ -46,10 +46,10 @@ AuthUser userFor(String role, {List<String>? permissions}) => AuthUser(
     );
 
 /// একটা সাদামাটা তালিকার পর্দা — শিরোনাম আর ৬০টা সারি (ওপরে ফেরার পরীক্ষার জন্য)
-/// ⓘ আসল অর্ডারের পাতার মতো কাঠামোর দেওয়া "＋ নতুন" ([FrameFab.offeredTo]) নিজের Scaffold-এ বসায়
+/// ⓘ আসল অর্ডারের পাতার মতো কাঠামোর দেওয়া "＋ নতুন" ([FrameFab.offeredTo]) নিজের নিচের বারে বসায় ([ActionBottomBar])
 Widget stubScreen(String title, {bool loading = false}) => Builder(builder: (context) => Scaffold(
       appBar: AppBar(title: Text(title)),
-      floatingActionButton: FrameFab.offeredTo(context),
+      bottomNavigationBar: ActionBottomBar.maybe(action: FrameFab.offeredTo(context)),
       body: loading
           ? const SingleChildScrollView(child: LoadingSkeleton())
           : ListView.builder(

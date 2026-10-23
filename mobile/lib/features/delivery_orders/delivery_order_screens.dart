@@ -11,8 +11,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
@@ -181,27 +180,29 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     final rejectedRows = ShownRows.of(rows.where((o) => o.status == 'rejected'), (o) => o.total);
     return Scaffold(
       appBar: AbosScreenBar(title: widget.title ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule),
-      floatingActionButton: widget.canWrite
-          ? BarFab(
-              key: const ValueKey('do-new'),
-              onPressed: _new,
-              label: context.l10n.deliveryOrdersNew(_kind(widget.api)),
-            )
-          : null,
       // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;
       // নকশা ৩, পাতা ৩)। ⓘ পুরনো সার্ভার মোট না পাঠালে পট্টিই নেই — পাতার যোগফলকে সর্বমোট বলা মিথ্যা হত।
-      bottomNavigationBar: total != null && rows.isNotEmpty
-          ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum,
-              // ⓘ ডেস্কে তারিখের ছাঁকনি নেই (সার্ভারও তারিখে ছাঁকে না) — সব তারিখ
-              period: const TotalsPeriod.allDates(),
-              rejectedCount: rejectedRows.count,
-              rejectedSum: rejectedRows.sum)
-          : null,
+      // ⭐ "＋ নতুন" একই বারে মোটের পাশে ([ActionBottomBar]) — তালিকার ওপরে ভাসে না
+      bottomNavigationBar: ActionBottomBar.maybe(
+          totals: total != null && rows.isNotEmpty
+              ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum,
+                  // ⓘ ডেস্কে তারিখের ছাঁকনি নেই (সার্ভারও তারিখে ছাঁকে না) — সব তারিখ
+                  period: const TotalsPeriod.allDates(),
+                  rejectedCount: rejectedRows.count,
+                  rejectedSum: rejectedRows.sum)
+              : null,
+          action: widget.canWrite
+              ? BarFab(
+                  key: const ValueKey('do-new'),
+                  onPressed: _new,
+                  label: context.l10n.deliveryOrdersNew(_kind(widget.api)),
+                )
+              : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canWrite),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(

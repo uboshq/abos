@@ -8,7 +8,6 @@ import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/day_part.dart';
 
 /// The day's figures as cards, without a Scaffold around them — docs/Contract
@@ -160,8 +159,7 @@ class _TodayPanelState extends State<TodayPanel> {
           child: RefreshIndicator(
             onRefresh: _pull,
             child: ListView(
-              // ⓘ কাঠামোর "＋ নতুন" (হোম) শেষ সারি ঢাকে না — নিচে বোতামের জায়গা ([FabClearance])
-              padding: FabClearance.pad(context, widget.padding),
+              padding: widget.padding,
               children: [
                 ...leading,
                 if (today == null)

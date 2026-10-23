@@ -14,8 +14,7 @@ import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
 import '../printing/document_actions_sheet.dart';
@@ -158,8 +157,9 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     final preset = _preset ? _view.type : null;
     final type = preset ?? await showModalBottomSheet<String>(
       context: context,
+      // ⓘ ছোট ফোনে ২০০% অক্ষরে সব ধরন না ধরলে গড়ায় — নিচের ধরন কাটা পড়ে না
       builder: (sheet) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           for (final t in VoucherTypes.all) ...[
             if (t != VoucherTypes.receipt || widget.mayCollect)
               ListTile(
@@ -177,7 +177,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                 onTap: () => Navigator.of(sheet).pop(_otherIncome),
               ),
           ],
-        ]),
+        ])),
       ),
     );
     if (type == null || !mounted) return;
@@ -209,17 +209,18 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               : _view.type == null
                   ? context.l10n.vouchersListAllTitle
                   : _view.label),
-      floatingActionButton: widget.canCreate
-          ? BarFab(
-              key: const ValueKey('voucher-new'),
-              onPressed: _new,
-              label: context.l10n.vouchersListNew,
-            )
-          : null,
+      bottomNavigationBar: ActionBottomBar.maybe(
+          action: widget.canCreate
+              ? BarFab(
+                  key: const ValueKey('voucher-new'),
+                  onPressed: _new,
+                  label: context.l10n.vouchersListNew,
+                )
+              : null),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: widget.canCreate),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
               for (final v in _views)

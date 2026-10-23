@@ -43,6 +43,9 @@ class TotalsPeriodLabel extends StatelessWidget {
 
   final TotalsPeriod period;
 
+  /// সময়কালের লেখার রূপ (রং ছাড়া) — [TotalsBar.widthsIn] একই রূপে মাপে
+  static const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+
   @override
   Widget build(BuildContext context) {
     final text = period.label(context);
@@ -53,7 +56,7 @@ class TotalsPeriodLabel extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.event_outlined, size: 14, color: colour),
         const SizedBox(width: 4),
-        Flexible(child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: colour))),
+        Flexible(child: Text(text, style: style.copyWith(color: colour))),
       ]),
     );
   }
@@ -104,13 +107,70 @@ class TotalsBar extends StatelessWidget {
   final int rejectedCount;
   final num rejectedSum;
 
+  static TextStyle _labelStyle(bool grand) =>
+      TextStyle(fontSize: grand ? 15 : 13, fontWeight: grand ? FontWeight.w700 : FontWeight.w500);
+
+  static TextStyle _amountStyle(bool grand) => TextStyle(fontSize: grand ? 17 : 14, fontWeight: FontWeight.w700);
+
+  /// লেখা আর টাকার মাঝে অন্তত এতটা ফাঁক
+  static const double _gap = AppSpacing.sm;
+
+  /// পট্টির লাইনগুলো — (লেখা, টাকা, সর্বমোট কি না, চাবি, মাথার সময়কাল)
+  List<(String, Object, bool, Key, TotalsPeriod?)> _lines(BuildContext context) => [
+        if (grandLabel case final label?)
+          (label, allSum, true, const ValueKey('totals-all'), period)
+        else ...[
+          (context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page'), period),
+          if (rejectedCount > 0)
+            (context.l10n.totalsRejectedLeftOut('$rejectedCount'), rejectedSum, false, const ValueKey('totals-rejected'), null),
+          (context.l10n.totalsAll('$allCount'), allSum, true, const ValueKey('totals-all'), null),
+        ],
+      ];
+
+  /// ⭐ নিচের বারে বোতামের পাশে বসলে পট্টির কতটা চওড়া লাগে ([context] পট্টির ভেতরের লেখার রূপ দেয় — বারের Material-এর
+  /// নিচে): [oneLine] — প্রতিটা লাইন এক লাইনেই (লেখা আর টাকা পাশাপাশি); [narrowest] — সবচেয়ে চওড়া একটানা টুকরো (একটা টাকা
+  /// বা সময়কাল), এর কমে টাকা ভাঙত। দুটোতেই পট্টির বাঁয়ের ফাঁক ধরা।
+  ({double oneLine, double narrowest}) widthsIn(BuildContext context) {
+    final base = DefaultTextStyle.of(context).style;
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    double measure(String text, TextStyle style) {
+      final painter = TextPainter(
+          text: TextSpan(text: text, style: base.merge(style)), textDirection: direction, textScaler: scaler, maxLines: 1)
+        ..layout();
+      final w = painter.width;
+      painter.dispose();
+      return w;
+    }
+
+    var oneLine = 0.0, narrowest = 0.0;
+    for (final (label, sum, grand, _, lead) in _lines(context)) {
+      final amount = measure(Money.taka(sum), _amountStyle(grand));
+      final text = measure(label, _labelStyle(grand));
+      var head = text;
+      if (lead != null) {
+        final chip = 14 + 4 + measure(lead.label(context), TotalsPeriodLabel.style);
+        head += AppSpacing.sm + chip;
+        narrowest = narrowest < chip ? chip : narrowest;
+      }
+      final words = label.split(' ').map((w) => measure(w, _labelStyle(grand)));
+      for (final w in [amount, ...words]) {
+        if (w > narrowest) narrowest = w;
+      }
+      final whole = head + _gap + amount;
+      if (whole > oneLine) oneLine = whole;
+    }
+    // ⓘ মাপের গোলমালের জন্য ২dp বেশি
+    return (oneLine: oneLine + AppSpacing.md + 2, narrowest: narrowest + AppSpacing.md + 2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // ⭐ নিচের বারের ভেতরে ([TotalsBarHost]) — বোতাম পাশে, পট বার আঁকে; পট্টি কেবল লাইনগুলো
+    final hosted = TotalsBarHost.hosts(context);
     Widget line(String label, Object sum, bool grand, Key key, {TotalsPeriod? lead}) {
-      final text = Text(label,
-          style: TextStyle(fontSize: grand ? 15 : 13, fontWeight: grand ? FontWeight.w700 : FontWeight.w500,
-              color: grand ? cs.onSurface : cs.onSurfaceVariant));
+      final text = Text(label, style: _labelStyle(grand).copyWith(color: grand ? cs.onSurface : cs.onSurfaceVariant));
       return Padding(
           key: key,
           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -118,6 +178,7 @@ class TotalsBar extends StatelessWidget {
           child: OverflowBar(
             alignment: MainAxisAlignment.spaceBetween,
             overflowAlignment: OverflowBarAlignment.end,
+            spacing: hosted ? _gap : 0,
             children: [
               // ⭐ সময়কাল প্রথম লাইনের শুরুতে, ছোট চিপের মতো — ⛔ নিজের লাইন নয়: পট্টি এক লাইন উঁচু হলে "＋ নতুন" বোতাম ওপরে উঠে
               // পাতার মোট ঢাকত (সমন্বয়ক, ২৪ অক্টোবর ২০২৬; totals_bar_keeps_its_height_test)
@@ -128,13 +189,24 @@ class TotalsBar extends StatelessWidget {
                   TotalsPeriodLabel(lead),
                   text,
                 ]),
-              Text(Money.taka(sum),
-                  style: TextStyle(fontSize: grand ? 17 : 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              // ⭐ টাকা কখনো মাঝখানে ভাঙে না (softWrap: false) — জায়গা না হলে বার বোতাম সরিয়ে পুরো চওড়া দেয় ([ActionBottomBar])
+              Text(Money.taka(sum), softWrap: false, style: _amountStyle(grand).copyWith(color: cs.onSurface)),
             ],
           ),
         );
     }
 
+    final lines = Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final (label, sum, grand, key, lead) in _lines(context)) line(label, sum, grand, key, lead: lead),
+    ]);
+    if (hosted) {
+      // ⓘ বারের ভেতরে: বাঁয়ে বারের ফাঁক, ডানে বোতামের দিকে ফাঁক বার নিজে রাখে
+      return Padding(
+        key: const ValueKey('totals-bar'),
+        padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.sm, 0, AppSpacing.sm),
+        child: lines,
+      );
+    }
     return Material(
       key: const ValueKey('totals-bar'),
       color: cs.surfaceContainer,
@@ -143,19 +215,20 @@ class TotalsBar extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
           padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (grandLabel case final label?)
-              line(label, allSum, true, const ValueKey('totals-all'), lead: period)
-            else ...[
-              line(context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page'), lead: period),
-              if (rejectedCount > 0)
-                line(context.l10n.totalsRejectedLeftOut('$rejectedCount'), rejectedSum, false,
-                    const ValueKey('totals-rejected')),
-              line(context.l10n.totalsAll('$allCount'), allSum, true, const ValueKey('totals-all')),
-            ],
-          ]),
+          child: lines,
         ),
       ),
     );
   }
+}
+
+/// ⭐ [TotalsBar]-কে নিচের বারের ভেতরে বসায় ([ActionBottomBar], বোতাম পাশে) — তখন পট্টি নিজের পট, দাগ আর SafeArea আঁকে না,
+/// সেগুলো বারের
+class TotalsBarHost extends InheritedWidget {
+  const TotalsBarHost({super.key, required super.child});
+
+  static bool hosts(BuildContext context) => context.dependOnInheritedWidgetOfExactType<TotalsBarHost>() != null;
+
+  @override
+  bool updateShouldNotify(TotalsBarHost oldWidget) => false;
 }

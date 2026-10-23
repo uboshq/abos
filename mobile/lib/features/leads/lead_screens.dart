@@ -7,8 +7,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/fab_clearance.dart';
-import '../home/nav_bottom_bar.dart' show BarFab;
+import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -90,15 +89,16 @@ class _LeadListScreenState extends State<LeadListScreen> {
     final w = context.l10n;
     return Scaffold(
       appBar: AbosScreenBar(title: w.leadsTitle),
-      floatingActionButton: BarFab(
+      bottomNavigationBar: ActionBottomBar(
+          action: BarFab(
         key: const Key('lead-new'),
         onPressed: () => _open(),
         label: w.leadsNew,
-      ),
+      )),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: FabClearance.pad(context, const EdgeInsets.all(AppSpacing.md), own: true),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             TextField(
               key: const Key('lead-search'),
