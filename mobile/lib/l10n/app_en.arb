@@ -659,6 +659,7 @@
   "totalsPeriodAllDates": "All dates",
   "totalsPeriodRange": "{from} – {to}",
   "totalsPeriodSpoken": "Period: {period}",
+  "totalsRejectedLeftOut": "Rejected, not in the total · {count}",
   "ordersModuleSales": "Sales",
   "ordersUnknownCustomer": "Unknown customer",
   "ordersRejectedFailed": "Failed",

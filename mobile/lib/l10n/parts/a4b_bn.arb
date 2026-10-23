@@ -2016,5 +2016,14 @@
         "type": "String"
       }
     }
+  },
+  "totalsRejectedLeftOut": "প্রত্যাখ্যাত, মোটে নেই · {count}টি",
+  "@totalsRejectedLeftOut": {
+    "description": "Totals bar: a separate line for the rejected rows shown on screen, which the total leaves out, with how many; the amount sits beside it",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -4051,6 +4051,12 @@ abstract class AppL10n {
   /// **'সময়কাল: {period}'**
   String totalsPeriodSpoken(String period);
 
+  /// Totals bar: a separate line for the rejected rows shown on screen, which the total leaves out, with how many; the amount sits beside it
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যাত, মোটে নেই · {count}টি'**
+  String totalsRejectedLeftOut(String count);
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

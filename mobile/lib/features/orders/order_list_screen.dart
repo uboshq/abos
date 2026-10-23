@@ -74,6 +74,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
     // ⭐ সর্বমোট — ছাঁকনি মেনে: ওয়েবের তালিকার সর্বমোট ছাঁকা ফলের, তাই এখানেও। ⛔ আগে ছাঁকনির আগের পুরো তালিকা যোগ হত — একটা
     // অবস্থা বাছলেও সর্বমোট বদলাত না, পাশের গোনার সাথে মিলত না। ⓘ ফোনের তালিকা পাতায় ভাগ হয় না, তাই এখানে দুটো একই সারির।
     final all = page;
+    // ⭐ প্রত্যাখ্যাত আদেশ মোটে নেই — দেখানো থাকলে নিজের আলাদা লাইনে (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬)
+    final rejectedRows = ShownRows.of(shown.where((order) => order.status == 'rejected'), (order) => order.total);
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -90,7 +92,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
           ? null
           : TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: all.count, allSum: all.sum,
               // ⓘ ফোনে যত আদেশ আছে, তারিখের ছাঁকনি নেই — সব তারিখ
-              period: const TotalsPeriod.allDates()),
+              period: const TotalsPeriod.allDates(),
+              rejectedCount: rejectedRows.count,
+              rejectedSum: rejectedRows.sum),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState

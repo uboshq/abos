@@ -2394,6 +2394,11 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String totalsRejectedLeftOut(String count) {
+    return 'Rejected, not in the total · $count';
+  }
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

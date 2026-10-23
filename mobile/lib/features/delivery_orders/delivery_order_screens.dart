@@ -177,6 +177,8 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     // ⭐ এই পাতার মোট — দেখানো সব সারি, "আরও দেখুন"-এর সব পাতা মিলে ([ShownRows], অ্যাপজুড়ে এক মানে); প্রত্যাখ্যাত আর
     // বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের `DeliveryOrderStatus::UNCOUNTED`, [PaperTotal.counts])
     final page = ShownRows.of(rows, (o) => o.total, counts: (o) => PaperTotal.counts(o.status));
+    // ⭐ দেখানো প্রত্যাখ্যাত আদেশ — মোটে নেই, নিজের আলাদা লাইনে (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬)
+    final rejectedRows = ShownRows.of(rows.where((o) => o.status == 'rejected'), (o) => o.total);
     return Scaffold(
       appBar: AbosScreenBar(title: widget.title ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule),
       floatingActionButton: widget.canWrite
@@ -191,7 +193,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       bottomNavigationBar: total != null && rows.isNotEmpty
           ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum,
               // ⓘ ডেস্কে তারিখের ছাঁকনি নেই (সার্ভারও তারিখে ছাঁকে না) — সব তারিখ
-              period: const TotalsPeriod.allDates())
+              period: const TotalsPeriod.allDates(),
+              rejectedCount: rejectedRows.count,
+              rejectedSum: rejectedRows.sum)
           : null,
       body: RefreshIndicator(
         onRefresh: _load,

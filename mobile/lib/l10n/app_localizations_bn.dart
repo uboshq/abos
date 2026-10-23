@@ -2347,6 +2347,11 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
+  String totalsRejectedLeftOut(String count) {
+    return 'প্রত্যাখ্যাত, মোটে নেই · $countটি';
+  }
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override

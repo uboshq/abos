@@ -71,6 +71,8 @@ class TotalsBar extends StatelessWidget {
     required this.allCount,
     required this.allSum,
     this.period,
+    this.rejectedCount = 0,
+    this.rejectedSum = 0,
   }) : grandLabel = null;
 
   /// ⭐ কেবল সর্বমোটের এক লাইন — পাতা ভাগ নেই এমন তালিকার জন্য, যার মোট সার্ভার কষে দেয় (যেমন প্রিন্সিপালের কমিশন; cb,
@@ -80,7 +82,9 @@ class TotalsBar extends StatelessWidget {
       : grandLabel = label,
         pageCount = 0,
         pageSum = 0,
-        allCount = 0;
+        allCount = 0,
+        rejectedCount = 0,
+        rejectedSum = 0;
 
   final int pageCount;
   final num pageSum;
@@ -94,6 +98,11 @@ class TotalsBar extends StatelessWidget {
 
   /// ⭐ মোটের সময়কাল — পট্টির মাথায় ([TotalsPeriodLabel]); null কেবল যে তালিকা তারিখের নয় (যেমন আজকের বকেয়া)
   final TotalsPeriod? period;
+
+  /// ⭐ দেখানো প্রত্যাখ্যাত সারি — মোটে নেই, তাই নিজের আলাদা লাইনে ("প্রত্যাখ্যাত, মোটে নেই · ২টি  ৳…"); fe-র নিয়ম, ২৪ অক্টোবর
+  /// ২০২৬: মোটে কেবল পাকা কাগজ, বাদ পড়াগুলো দরকারে আলাদা লাইনে। ০ হলে লাইনটাই নেই।
+  final int rejectedCount;
+  final num rejectedSum;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +137,9 @@ class TotalsBar extends StatelessWidget {
               line(label, allSum, true, const ValueKey('totals-all'))
             else ...[
               line(context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page')),
+              if (rejectedCount > 0)
+                line(context.l10n.totalsRejectedLeftOut('$rejectedCount'), rejectedSum, false,
+                    const ValueKey('totals-rejected')),
               line(context.l10n.totalsAll('$allCount'), allSum, true, const ValueKey('totals-all')),
             ],
           ]),

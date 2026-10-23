@@ -389,5 +389,6 @@
   "customersTotalAdvances": "Total advance",
   "totalsPeriodAllDates": "All dates",
   "totalsPeriodRange": "{from} – {to}",
-  "totalsPeriodSpoken": "Period: {period}"
+  "totalsPeriodSpoken": "Period: {period}",
+  "totalsRejectedLeftOut": "Rejected, not in the total · {count}"
 }
