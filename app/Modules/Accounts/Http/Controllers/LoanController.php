@@ -386,12 +386,15 @@ class LoanController extends Controller implements HasMiddleware
     {
         $parent = StandardChart::find($parentCode);
 
+        // ⓘ গাছটা কেবল কয়েকটা ঘর আনে ([[Account::selfAndDescendants()]]), নাম নয় — তাই id ধরে পুরো সারি আবার
         return $parent === null || ! $parent->is_group
             ? collect()
-            : $parent->selfAndDescendants()
-                ->filter(fn (Account $a) => ! $a->is_group && $a->money_kind === null)
-                ->sortBy('code')
-                ->values()
+            : Account::query()
+                ->whereIn('id', $parent->selfAndDescendants()->pluck('id'))
+                ->where('is_group', false)
+                ->whereNull('money_kind')
+                ->orderBy('code')
+                ->get()
                 ->toBase();
     }
 
