@@ -34,7 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * ধরনটা শুধু ঠিক করে কোন ফর্মে লেখা হবে ও কী ছাপা হবে। সংরক্ষণ ও
  * পোস্টিং সবার এক, কারণ সবগুলোই শেষমেশ ডেবিট-ক্রেডিটের কয়েকটা সারি।
  */
-class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsItselfForSigning
+class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsItselfForSigning, \App\Core\Contracts\SummarisesItsList
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -569,6 +569,20 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     public function countedAmount(): string
     {
         return in_array($this->status, \App\Core\Support\DocumentStatus::POSTED, true) ? (string) $this->amount : '0';
+    }
+
+    /**
+     * ⭐ তালিকার মোট ([[ListSummary]]) — counted [[countedAmountSql()]]-এর একই status; খসড়ার দল সই-সেবা বলে
+     * ([[VoucherApproval::standing()]]), কারণ ভাউচারের সই status-এ বসে না (তালিকার মোটের চুক্তি v6, ২৪ অক্টোবর ২০২৬)।
+     */
+    public static function listSummary(): \App\Core\Support\SummaryShape
+    {
+        return new \App\Core\Support\SummaryShape(self::class, 'amount', [
+            DocumentStatus::DRAFT => \App\Core\Support\ListSummary::CLASSIFY,
+            DocumentStatus::CONFIRMED => \App\Core\Support\ListSummary::COUNTED,
+            DocumentStatus::CLOSED => \App\Core\Support\ListSummary::COUNTED,
+            DocumentStatus::CANCELLED => \App\Core\Support\ListSummary::CANCELLED,
+        ], classifier: \App\Modules\Accounts\Services\VoucherApproval::class);
     }
 
     /** ⓘ একই নিয়ম সর্বমোটের SQL-এ ([[GrandTotals]]); `$alias` — উপ-কোয়েরির নাম */

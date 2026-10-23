@@ -15,5 +15,8 @@ return [
     'unbalanced' => 'Debit and credit totals do not match. It will not post like this.',
     'signed' => 'Already signed.',
     'rejected' => 'The signature was refused and the voucher has not changed since. It will not post; settle the reason first.',
-    'awaiting' => 'This voucher needs a signature. Posting sends it for signature; it reaches the books only once signed.',
+    // ⓘ The five signing states ([[VoucherApproval::decide()]]); the list and the phone say the same (24 Oct 2026)
+    'awaiting' => 'Awaiting signature. It reaches the books only once signed.',
+    'stale' => 'The voucher changed after the signature was asked for. Posting sends it for signature again.',
+    'needs' => 'This voucher needs a signature. Posting sends it for signature; it reaches the books only once signed.',
 ];

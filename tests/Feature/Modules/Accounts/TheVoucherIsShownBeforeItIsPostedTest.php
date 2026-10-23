@@ -64,8 +64,9 @@ final class TheVoucherIsShownBeforeItIsPostedTest extends TestCase
         DB::table('approval_flows')->where('module', 'accounts')->where('action', 'expense')->delete();
         $voucher = $this->draftExpense();
 
+        // ⓘ অনুরোধ হয়নি, ছক বলছে সই লাগবে — "needs" (২৪ অক্টোবর ২০২৬ থেকে; "awaiting" মানে অনুরোধ গেছে)
         $this->post(route('accounts.voucher.overview', $voucher))->assertOk()
-            ->assertDontSee(__('accounts::overview_confirm.awaiting'));
+            ->assertDontSee(__('accounts::overview_confirm.needs'));
 
         $approver = User::query()->where('id', '!=', $voucher->created_by)->firstOrFail();
         $this->flowRequiring((int) $voucher->company_id, $approver->id);
@@ -73,7 +74,7 @@ final class TheVoucherIsShownBeforeItIsPostedTest extends TestCase
         app()->forgetInstance(\App\Modules\Accounts\Services\VoucherApproval::class);
 
         $this->post(route('accounts.voucher.overview', $voucher))->assertOk()
-            ->assertSee(__('accounts::overview_confirm.awaiting'));
+            ->assertSee(__('accounts::overview_confirm.needs'));
 
         $this->assertSame(0, Approval::query()->where('approvable_id', $voucher->id)->count(),
             '⛔ সারাংশ দেখতে গিয়েই সইয়ের অনুরোধ লেখা হয়ে গেল — ভাউচারটা ইনবক্সে চলে গেছে।');

@@ -35,7 +35,6 @@ final class EveryListSummaryAddsDecimalsTest extends TestCase
      */
     private const KNOWN = [
         'app/Http/Controllers/Api/PhonePaperApiController.php' => [1, 'cb — ফেরত, কেনার কাগজ আর ট্রান্সফারের যোগফল; ListSummary-তে সরবে (তালিকার মোটের শাখা)'],
-        'app/Modules/Accounts/Http/Controllers/VoucherApiController.php' => [1, 'cb — ভাউচারের মোট (status <> cancelled); ListSummary-তে সরবে (তালিকার মোটের শাখা, পরের কমিট)'],
         'app/Modules/Purchase/Http/Controllers/PurchaseApiController.php' => [2, 'cb — কেনার তালিকা (status != cancelled) ListSummary-তে সরবে; অন্যটা সরবরাহকারীর দেনা: স্থায়ী — কাগজের তালিকা নয়'],
         'app/Modules/Sales/Http/Controllers/CollectionApiController.php' => [1, 'a6 — আদায়ের মোট; ListSummary-তে সরবে (কমিট ১-এর উপর)'],
         'app/Modules/Sales/Http/Controllers/CustomerLedgerApiController.php' => [2, 'স্থায়ী — কাগজের তালিকা নয়: খতিয়ানের বাকি (SUM ডেবিট − SUM ক্রেডিট, এক লাইনে দুটো)'],
@@ -79,6 +78,7 @@ final class EveryListSummaryAddsDecimalsTest extends TestCase
         }
 
         $this->assertCount(count($said), $this->summarisers(), '⛔ SummarisesItsList ঘোষণা করা ক্লাসের সংখ্যা আর পাহারার খুঁজে পাওয়া সংখ্যা আলাদা — পাহারা কাউকে না দেখেই সবুজ হত');
+        $this->assertContains(\App\Modules\Accounts\Models\Voucher::class, $this->summarisers(), '⛔ পাহারা ভাউচারের তালিকার মোটই দেখল না');
     }
 
     public function test_a_phone_list_does_not_add_its_own_total(): void

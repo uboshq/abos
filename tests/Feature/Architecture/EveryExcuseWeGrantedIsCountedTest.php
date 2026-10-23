@@ -455,8 +455,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       সরলেই সারি কমবে; দুইটা (খতিয়ানের বাকি, সরবরাহকারীর দেনা) "স্থায়ী — কাগজের তালিকা নয়"। ⛔ নতুন ছাড় নয়, পুরনো দেনা
      *       প্রথমবার গোনা (fe গ্রহণ করেছেন, কেবল এই কারণে আর তালিকা কেবল কমে বলে)।
      *   ⓘ মাপা: প্রতিফলনে গোনা ৪৬৯, অশ্রেণিবদ্ধ শূন্য (count_excuses.php)।
+     *
+     * ── ⭐ ৪৬৯ → ৪৬৮, ২৪ অক্টোবর ২০২৬ (cb, ভাউচারের মোট ListSummary-তে) ────────────
+     *   −১  EveryListSummaryAddsDecimalsTest::KNOWN — VoucherApiController আর নিজে যোগ করে না: summary আর পুরনো total দুটোই
+     *       ListSummary থেকে, শুধু পাকা কাগজ।
      */
-    private const CEILING = 469;
+    private const CEILING = 468;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

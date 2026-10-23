@@ -63,7 +63,7 @@ final class ListSummary
     private static array $columnTypes = [];
 
     /**
-     * @param  array{from: string, to: string}|null  $period
+     * @param  array{from: ?string, to: ?string}|null  $period
      * @return array<string, mixed>
      */
     public static function of(Builder $query, SummaryShape $shape, ?array $period = null): array
@@ -113,7 +113,8 @@ final class ListSummary
             }
         }
 
-        $summary = ['period' => $period === null ? null : ['from' => (string) $period['from'], 'to' => (string) $period['to']]];
+        // ⓘ এক দিকের সীমা হলে অন্য দিক null — "থেকে ১ অক্টোবর", শেষ খোলা
+        $summary = ['period' => $period === null ? null : ['from' => $period['from'] ?? null, 'to' => $period['to'] ?? null]];
 
         foreach ($out as $group => $sum) {
             $summary[$group] = ['count' => $sum['count'], 'total' => bcadd($sum['total'], '0', 4)];

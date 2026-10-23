@@ -6,6 +6,12 @@ declare(strict_types=1);
 return [
     'state_draft' => 'খসড়া',
     'state_awaiting' => 'সইয়ের অপেক্ষায়',
+    // ⓘ খসড়ার সইয়ের অবস্থা — অ্যাপের কাছে অচেনা মানের fallback (a4-এর সঙ্গে চুক্তি, ২৪ অক্টোবর ২০২৬)
+    'signing_awaiting' => 'সইয়ের অপেক্ষায়',
+    'signing_stale' => 'সই চাওয়ার পরে বদলেছে — পোস্ট চাপলে নতুন করে সইয়ে যাবে',
+    'signing_needs' => 'পোস্টে সই লাগবে',
+    'signing_signed' => 'সই হয়েছে — পোস্ট বাকি',
+    'signing_rejected' => 'সই ফেরানো',
     'state_posted' => 'পাকা',
     'state_cancelled' => 'বাতিল',
     'edit_needs_network' => 'ফোন থেকে কেবল নতুন ভাউচার লেখা যায়। বদলাতে হলে নেট চালু করে ভাউচারের পাতা থেকে করুন।',

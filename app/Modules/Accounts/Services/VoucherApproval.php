@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Contracts\ClassifiesDrafts;
+use App\Core\Contracts\SignedBeforeItIsPaid;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentFingerprint;
+use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Support\ListSummary;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * ভাউচার পোস্ট করার আগে অনুমোদন লাগে কি না।
@@ -33,10 +38,41 @@ use App\Modules\Accounts\Models\VoucherLine;
  * এটা সুবিধা নয়, **শর্ত**: এই ফাইলটা যোগ করার পর যেন এমন একটাও
  * প্রতিষ্ঠান না থাকে যেখানে খরচ পোস্ট করা বন্ধ হয়ে গেল।
  */
-final class VoucherApproval
+final class VoucherApproval implements ClassifiesDrafts
 {
     /** অনুমোদনের ছকে মডিউলের নাম — `module.php`-র `code`। */
     public const MODULE = 'accounts';
+
+    /*
+     * ⭐ খসড়ার সইয়ের অবস্থা — পাতার নোট ([[waitFor()]]), ফোনের সারি, অপেক্ষার তালিকা আর তালিকার মোট ([[standing()]]) সবাই
+     * এই এক উত্তর পড়ে ([[decide()]]; তালিকার মোটের চুক্তি v6 — fe, a4, a6, ২৪ অক্টোবর ২০২৬)।
+     *   awaiting — অনুরোধ গেছে, আর তারপর ভাউচার বদলায়নি: সিদ্ধান্তের অপেক্ষা;
+     *   stale    — অনুরোধের পরে ভাউচার বদলেছে: "পোস্ট" চাপলে পুরনোটা তুলে নতুন করে সইয়ে যাবে ([[stopping()]]);
+     *   needs    — অনুরোধ হয়নি, কিন্তু ছক বলছে পোস্টে সই লাগবে;
+     *   signed   — সই আছে, ঢাকে — লেখক পোস্ট করবেন;
+     *   rejected — ফেরানো, আর তারপর ভাউচার বদলায়নি;
+     *   null     — সই লাগেই না।
+     * ⛔ আগে ফোন আর ওয়েবের অপেক্ষার তালিকা যেকোনো PENDING-কেই "সইয়ের অপেক্ষায়" বলত — বাসি অনুরোধও, যেটা পরের পোস্টে তুলে নেওয়া হয়।
+     */
+    public const AWAITING = 'awaiting';
+
+    public const STALE = 'stale';
+
+    public const NEEDS = 'needs';
+
+    public const SIGNED = 'signed';
+
+    public const REJECTED = 'rejected';
+
+    /** সইয়ের অবস্থা থেকে তালিকার মোটের দল — বাকি সব (stale, needs, signed, null) খসড়া */
+    public const GROUP_OF = [self::AWAITING => ListSummary::PENDING, self::REJECTED => ListSummary::REJECTED];
+
+    /**
+     * বিপরীতের কাগজগুলো আগে থেকে তোলা — [[signingOf()]]-এর সময়টুকু, নইলে null ([[paperAlreadySigned()]])।
+     *
+     * @var array<string, bool>|null
+     */
+    private ?array $signedPapers = null;
 
     /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
     public const COUNTER_DEPOSIT = 'counter_deposit';
@@ -170,7 +206,7 @@ final class VoucherApproval
          * ⛔ আগে অপেক্ষার অনুরোধটাই ফিরত: ৩৯,৯৯০-এ চাওয়া সই, অথচ খসড়া তখন ২৪,৯১৩ নতুন বিবরণে — সইকারী পুরনো অঙ্ক দেখে নতুন কাগজে সই
          * দিতেন। ⓘ এখন পুরনোটা "বাতিল" ([[ApprovalEngine::withdrawStale()]]), নতুনটা নতুন অঙ্কে আর পুরনোটার কথা বলে; পুরনোয় সই আর পড়ে না।
          */
-        if ($latest?->status === Approval::PENDING && $latest->state_hash !== null && ! hash_equals((string) $latest->state_hash, $hash)) {
+        if ($latest?->status === Approval::PENDING && $this->isStale($latest, $hash)) {
             $this->approvals->withdrawStale($latest);
             $superseded = $latest;
         }
@@ -281,7 +317,14 @@ final class VoucherApproval
             return false;
         }
 
-        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()[$type] ?? null;
+        // ⓘ তালিকা একসাথে ভাগ করার সময় কাগজগুলো আগেই তোলা ([[primeSignedPapers()]]) — সারি ধরে প্রশ্ন নয়
+        $known = $this->signedPapers[$type.':'.(int) $voucher->against_id] ?? null;
+
+        if ($known !== null) {
+            return $known;
+        }
+
+        $class = app(DrillResolver::class)->map()[$type] ?? null;
 
         if ($class === null || ! is_subclass_of($class, \App\Core\Contracts\SignedBeforeItIsPaid::class)) {
             return false;
@@ -298,7 +341,10 @@ final class VoucherApproval
      * ⓘ [[stopping()]]-এর একই ধাপ, একই ক্রমে; কেবল শেষের `request()`-এর বদলে [[ApprovalEngine::requires()]] — কারণ
      * `request()` অনুরোধ লেখে, আর সারাংশ দেখতে গিয়ে সইয়ের সারিতে কাগজ চলে যাওয়া চলে না।
      *
-     * @return 'signed'|'rejected'|'awaiting'|null  `null` = সই লাগে না
+     * ⓘ ২৪ অক্টোবর ২০২৬ থেকে উত্তর পাঁচ রকম ([[AWAITING]] … [[REJECTED]]) — আগে বাসি অনুরোধ আর "অনুরোধই হয়নি" দুটোই 'awaiting'
+     * বলত, অথচ তালিকার মোট ওদের খসড়ায় গোনে; এখন সবাই [[decide()]] পড়ে, তাই পাতা আর তালিকা এক কথা বলে।
+     *
+     * @return 'signed'|'rejected'|'awaiting'|'stale'|'needs'|null  `null` = সই লাগে না
      */
     public function waitFor(Voucher $voucher): ?string
     {
@@ -309,22 +355,151 @@ final class VoucherApproval
         }
 
         $latest = $this->approvals->latestFor($voucher, $action);
+        $hash = $latest?->state_hash === null ? null : app(DocumentFingerprint::class)->of($voucher);
 
-        if ($latest?->status === Approval::APPROVED
-            && $latest->stillCovers((string) $voucher->amount, app(DocumentFingerprint::class)->of($voucher))) {
-            return 'signed';
+        return $this->decide($voucher, $action, $latest, $hash, true);
+    }
+
+    /**
+     * ⭐ অনেক ভাউচারের সইয়ের অবস্থা একসাথে — [[waitFor()]]-এর একই উত্তর, সারি ধরে প্রশ্ন ছাড়া (তালিকা, ফোন, তালিকার মোট)।
+     *
+     * ⓘ একসাথে তোলা: সারি আর খাত ([[landsInCash()]]-এর জন্য), বিপরীতের কাগজ (প্রতিটা ধরনে এক প্রশ্ন), শেষ অনুরোধগুলো (এক
+     * প্রশ্ন), আর যার ছাপ লাগে তার ছাপ ([[DocumentFingerprint::ofMany()]])। ডাকার জন ৫০০-র মতো করে দেয় ([[ListSummary::CHUNK]])।
+     *
+     * @param  Collection<int, Voucher>  $vouchers
+     * @param  bool  $withNeeds  false হলে "অনুরোধ হয়নি"-র ছক দেখা হয় না — needs আর null দুটোই খসড়া, তাই মোটের কাজে লাগে না
+     * @return array<int, ?string>  ভাউচারের আইডি => অবস্থা
+     */
+    public function signingOf(Collection $vouchers, bool $withNeeds = true): array
+    {
+        if ($vouchers->isEmpty()) {
+            return [];
         }
 
-        if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
-            return 'rejected';
+        $vouchers->loadMissing('lines.account');
+        $this->primeSignedPapers($vouchers);
+
+        try {
+            $actions = [];
+
+            foreach ($vouchers as $voucher) {
+                $actions[(int) $voucher->id] = $this->actionFor($voucher);
+            }
+
+            $latest = $this->latestOf(array_map('intval', $vouchers->modelKeys()));
+            $hashed = $vouchers->filter(function (Voucher $v) use ($actions, $latest) {
+                $action = $actions[(int) $v->id];
+
+                return $action !== null && ($latest[(int) $v->id][$action] ?? null)?->state_hash !== null;
+            });
+            $hashes = app(DocumentFingerprint::class)->ofMany($hashed);
+
+            $out = [];
+
+            foreach ($vouchers as $voucher) {
+                $id = (int) $voucher->id;
+                $action = $actions[$id];
+                $out[$id] = $action === null
+                    ? null
+                    : $this->decide($voucher, $action, $latest[$id][$action] ?? null, $hashes[$id] ?? null, $withNeeds);
+            }
+
+            return $out;
+        } finally {
+            $this->signedPapers = null;
+        }
+    }
+
+    public function groups(): array
+    {
+        return [ListSummary::PENDING, ListSummary::DRAFT, ListSummary::REJECTED];
+    }
+
+    /** তালিকার মোটের দল ([[ClassifiesDrafts]]) — [[signingOf()]]-এর উত্তর থেকে, [[GROUP_OF]] দিয়ে */
+    public function standing(Collection $drafts): array
+    {
+        return array_map(fn (?string $signing) => self::GROUP_OF[$signing ?? ''] ?? ListSummary::DRAFT, $this->signingOf($drafts, false));
+    }
+
+    /**
+     * ⭐ এক ভাউচারের সইয়ের অবস্থা — [[waitFor()]] আর [[signingOf()]] দুজনেই এটা ডাকে, তাই দুই পথ কখনো আলাদা কথা বলে না।
+     *
+     * @param  string|null  $hash  ভাউচারের এখনকার ছাপ — শেষ অনুরোধে ছাপ থাকলে দিতে হয়
+     */
+    private function decide(Voucher $voucher, string $action, ?Approval $latest, ?string $hash, bool $withNeeds): ?string
+    {
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers((string) $voucher->amount, $hash)) {
+            return self::SIGNED;
         }
 
+        if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest, $hash)) {
+            return self::REJECTED;
+        }
+
+        // ⛔ বাসি অনুরোধ অপেক্ষা নয় — পরের পোস্টে [[stopping()]] সেটা তুলে নতুন চায় (RCV-0090, ১৩–১৪ অক্টোবর ২০২৬)
         if ($latest?->status === Approval::PENDING) {
-            return 'awaiting';
+            return $this->isStale($latest, $hash) ? self::STALE : self::AWAITING;
+        }
+
+        if (! $withNeeds) {
+            return null;
         }
 
         return $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount, class_basename(Voucher::class),
-            ApprovalEngine::fieldsOf($voucher)) ? 'awaiting' : null;
+            ApprovalEngine::fieldsOf($voucher)) ? self::NEEDS : null;
+    }
+
+    /** অপেক্ষার অনুরোধটা কি আগের কাগজের — ছাপ না মিললে; ছাপ নেই এমন পুরনো অনুরোধ বাসি নয় (আগের আচরণ) */
+    private function isStale(Approval $pending, ?string $hash): bool
+    {
+        return $pending->state_hash !== null && $hash !== null && ! hash_equals((string) $pending->state_hash, $hash);
+    }
+
+    /**
+     * শেষ অনুরোধ — ভাউচার আর কাজ ধরে, এক প্রশ্নে ([[ApprovalEngine::latestFor()]]-এর একই নিয়ম: সবচেয়ে বড় আইডি)।
+     *
+     * @param  list<int>  $ids
+     * @return array<int, array<string, Approval>>
+     */
+    private function latestOf(array $ids): array
+    {
+        $out = [];
+
+        foreach (Approval::query()->where('approvable_type', Voucher::class)->whereIn('approvable_id', $ids)->orderByDesc('id')->get() as $approval) {
+            $out[(int) $approval->approvable_id][(string) $approval->action] ??= $approval;
+        }
+
+        return $out;
+    }
+
+    /**
+     * বিপরীতের কাগজ শেষ সই পেয়েছে কি — প্রতিটা ধরনের কাগজ এক প্রশ্নে, [[paperAlreadySigned()]]-এর একই নিয়মে।
+     *
+     * @param  Collection<int, Voucher>  $vouchers
+     */
+    private function primeSignedPapers(Collection $vouchers): void
+    {
+        $map = app(DrillResolver::class)->map();
+        $this->signedPapers = [];
+
+        $against = $vouchers->filter(fn (Voucher $v) => (string) ($v->against_type ?? '') !== '' && (int) ($v->against_id ?? 0) > 0)
+            ->groupBy(fn (Voucher $v) => (string) $v->against_type);
+
+        foreach ($against as $type => $group) {
+            $class = $map[$type] ?? null;
+
+            if ($class === null || ! is_subclass_of($class, SignedBeforeItIsPaid::class)) {
+                continue;
+            }
+
+            $papers = $class::query()->whereKey($group->map(fn (Voucher $v) => (int) $v->against_id)->unique()->values()->all())
+                ->get()->keyBy(fn ($paper) => (int) $paper->getKey());
+
+            foreach ($group as $voucher) {
+                $paper = $papers[(int) $voucher->against_id] ?? null;
+                $this->signedPapers[$type.':'.(int) $voucher->against_id] = $paper instanceof SignedBeforeItIsPaid && $paper->signedBeforeItIsPaid();
+            }
+        }
     }
 
     /**
@@ -334,7 +509,7 @@ final class VoucherApproval
      * — অর্থাৎ **আটকে থাকাই ডিফল্ট**। উল্টোটা ধরলে একটা অসম্পূর্ণ সারি
      * প্রত্যাখ্যানটাকে নীরবে অকেজো করে দিত।
      */
-    private function changedSince(Voucher $voucher, Approval $approval): bool
+    private function changedSince(Voucher $voucher, Approval $approval, ?string $hash = null): bool
     {
         /*
          * ⭐ প্রশ্নটা ছাপকে, ঘড়িকে নয় — নিয়মটা
@@ -347,9 +522,10 @@ final class VoucherApproval
          * আবার পাঠানো যেত, বাকি সব কাগজ যেত না — বা উল্টোটা।
          */
         if ($approval->state_hash !== null) {
+            // ⓘ ছাপ আগে নেওয়া থাকলে সেটাই ([[signingOf()]] একসাথে নেয়) — একই কাগজের একই ছাপ
             return ! hash_equals(
                 (string) $approval->state_hash,
-                app(DocumentFingerprint::class)->of($voucher),
+                $hash ?? app(DocumentFingerprint::class)->of($voucher),
             );
         }
 
