@@ -75,8 +75,10 @@ final class AnOldVoucherPrintsWhatItHadAndANewOneNoEmptyPieceTest extends TestCa
                 $this->voucher->forceFill($new)->save();
                 $now = $this->html($size, $code);
 
-                // ① পুরনোর মাধ্যমের সারি যে নকশা ছাপে, তাতে ওয়ালেট থাকে
-                if (str_contains($then, 'TRXOLD77')) {
+                // ① পুরনোর মাধ্যমের সারি ("পদ্ধতি · ওয়ালেট · নম্বর") যে নকশা ছাপে, তাতে ওয়ালেট থাকে। ⓘ সারিটা চেনা যায় নম্বরের
+                //    আগের "·" দিয়ে — যে নকশা নম্বরটা কেবল "রেফারেন্স" ঘরে একা ছাপে (a4/sap_document), সে কখনো ওয়ালেট ছাপেনি,
+                //    আগেও না (cb_v11-এ ধরা: দাবির অনুমান ভুল ছিল, কাগজ নয়)
+                if (preg_match('/·\s*TRXOLD77/u', $then) === 1) {
                     $this->assertStringContainsString('bkash', $then, "⛔ {$size}/{$code}: পুরনো ভাউচারের ওয়ালেট কাগজ থেকে হারাল");
                 }
                 // ① প্রেরকের ব্যাংক যে নকশা ছাপে, তাতে "ব্যাংক · হিসাব নম্বর" অক্ষত

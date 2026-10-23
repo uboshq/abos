@@ -61,12 +61,19 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
     {
         foreach ([Voucher::RECEIPT => 'to_account_id', Voucher::PAYMENT => 'from_account_id'] as $type => $money) {
             $html = $this->screen($type);
+            // ⓘ ঘর ধরে খোঁজা, অ্যাট্রিবিউটের ক্রম ধরে নয় — select-এর অ্যাট্রিবিউট উপাদান নিজের ক্রমে আঁকে (cb_v11)
             $order = ['name="party_type"', 'data-party-picker', 'name="trx_date"', 'data-voucher-amount',
-                'name="'.$money.'" data-money-account', 'name="instrument"', 'name="attachment"', 'name="carried_by"', 'name="narration"'];
+                $money.' (data-money-account)', 'name="instrument"', 'name="attachment"', 'name="carried_by"', 'name="narration"'];
+            $patterns = [$money.' (data-money-account)' => '/<select\b(?=[^>]*\bname="'.$money.'")(?=[^>]*\bdata-money-account\b)[^>]*>/'];
 
             $at = [];
             foreach ($order as $mark) {
-                $pos = strpos($html, $mark);
+                if (isset($patterns[$mark])) {
+                    $found = preg_match($patterns[$mark], $html, $m, PREG_OFFSET_CAPTURE) === 1;
+                    $pos = $found ? $m[0][1] : false;
+                } else {
+                    $pos = strpos($html, $mark);
+                }
                 $this->assertNotFalse($pos, "⛔ {$type}: পর্দায় {$mark} নেই");
                 $at[$mark] = $pos;
             }
@@ -328,9 +335,19 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         return (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
     }
 
+    /**
+     * ⓘ একটা সত্যিকারের ব্যাংক খাত — ডেমোর ছকে `money_kind = bank` বসানো খাত নেই, তাই না থাকলে বানানো
+     * ([[TheReceiptAskedTwelveQuestionsAndKnewSixTest::aBankAccount()]]-এর একই পথ)। ⛔ cb_v11: firstOrFail ছয়টা দাবিকে
+     * "No query results" দিয়ে লাল রাখত — দাবি যা মাপে তার আগেই।
+     */
     private function bank(): Account
     {
-        return Account::query()->where('money_kind', Account::BANK)->postable()->active()->orderBy('code')->firstOrFail();
+        return Account::query()->where('money_kind', Account::BANK)->postable()->active()->orderBy('code')->first()
+            ?? app(\App\Modules\Accounts\Services\AccountService::class)->create([
+                'code' => StandardChart::BANK.'-01',
+                'name_en' => 'Test bank account',
+                'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            ]);
     }
 
     /** @return array<string, mixed> */
