@@ -90,7 +90,8 @@ final class AReasonWithNoFieldStillReachesThePageTest extends TestCase
             'fare_paid_by' => 'us', 'transport_cost' => '250', 'fare_when' => 'now', 'fare_account_id' => $till->account_id,
         ])->assertRedirect(route('sales.challan.transport', $challan));
         $this->assertNull(DeliveryChallan::query()->findOrFail($challan->id)->fare_voucher_id, 'প্রস্তুতিটাই ভুল — ভাড়ার ভাউচার বসে গেল');
-        $reason = $this->reasonOn('posting');
+        // ⓘ ভাউচারের লাইন-পাহারা নিষ্ক্রিয় খাত আগেই ধরে, "lines" ঘরে — পরিবহন পর্দায় ঐ নামের কোনো ঘর নেই (Mac, ২৪ অক্টোবর ২০২৬)
+        $reason = $this->reasonOn('lines');
 
         $this->assertOnceInTheBox(route('sales.challan.transport', $challan), $reason,
             '⛔ ভাড়ার ভাউচার খাতায় আটকাল, আর পরিবহন পর্দা কারণটা দেখাল না');
