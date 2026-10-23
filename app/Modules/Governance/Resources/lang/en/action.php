@@ -122,4 +122,6 @@ return [
     'bank_signed' => 'Bank details second signature',
     'bank_rejected' => 'Bank details change refused',
     'bank_withdrawn' => 'Bank details change withdrawn',
+    // The owner signed an offer they created — a self-approved discount (PromotionApprovalChain::OWNER_SELF_SIGNED)
+    'owner_self_signed' => 'Owner signed their own offer',
 ];
