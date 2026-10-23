@@ -223,8 +223,7 @@
         <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold">
             <span>{{ __('accounts::field.deduction_at_source') }}</span>
             <span class="num text-xs font-normal text-(--color-ink-muted)"
-                  x-text="'{{ __('accounts::field.deducted') }} ' + deducted.toFixed(2)
-                      + ' · {{ __('accounts::field.net_payable') }} ' + net.toFixed(2)"></span>
+                  x-text="'{{ __('accounts::field.deducted') }} ' + deductedText + ' · {{ __('accounts::field.net_payable') }} ' + netText"></span>
         </summary>
 
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -246,7 +245,7 @@
 
         <p class="mt-3 flex items-center justify-between text-sm">
             <span class="text-(--color-ink-muted)">{{ __('accounts::field.net_payable') }}</span>
-            <span class="num font-semibold" x-text="net.toFixed(2)"></span>
+            <span class="num font-semibold" x-text="netText"></span>
         </p>
         </details>
         </div>
@@ -268,11 +267,13 @@
             দুইটাই — ফলে সে বামে নেমে যেত, ওই ফাঁকাটা অক্ষত রেখেই।
         --}}
         <div class="min-w-0 space-y-4">
-        <x-ui.money-movement direction="out"
-                             :carriers="$carriers ?? []"
-                             :modes="$transferModes ?? []"
-                             :carrier-here="false"
-                             :record="$voucher" />
+        {{-- ⭐ টাকার পর্দার একই বাক্স ([[x-money.method]]) — পদ্ধতির নিজের ঘর কেবল (মালিকের রায়, ২১ অক্টোবর ২০২৬; রসিদ আর পরিশোধের মতোই) --}}
+        <x-money.method direction="out"
+                        :record="$voucher->exists ? $voucher : null"
+                        :modes="$transferModes ?? []"
+                        :methods="['cash', 'mfs', 'transfer', 'cheque']"
+                        money-field="from_account_id"
+                        counting />
 
         {{--
             সংযুক্তি — ছবির লাল ঘরটায়, চেকের ঘরগুলোর ঠিক নিচে।

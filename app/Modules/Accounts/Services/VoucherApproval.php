@@ -379,6 +379,8 @@ final class VoucherApproval
          * ⓘ এখন কোনো নগদ সারিতে ক্রেডিট নয় (টাকা কেবল ঢোকে), আর প্রতিটা বাক্সই এই মানুষটার
          * নিজের ([[CashTill::mayUse()]] — পোস্টের পাহারার সাথে একই নিয়ম)।
          */
+        // ⓘ খাত একবারে — সারি প্রতি একটা প্রশ্ন নয়; লোকাল পরিবেশে অলস-লোড বন্ধ, তাই এখানে রসিদ পোস্টই ৫০০ দিত (cb, ২৩ অক্টোবর ২০২৬)
+        $voucher->loadMissing('lines.account');
         $cash = $voucher->lines->filter(fn (VoucherLine $line) => $line->account !== null && $line->account->isCash());
 
         if ($cash->isEmpty()) {

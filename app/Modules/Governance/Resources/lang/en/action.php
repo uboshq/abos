@@ -122,4 +122,6 @@ return [
     'bank_signed' => 'Bank details second signature',
     'bank_rejected' => 'Bank details change refused',
     'bank_withdrawn' => 'Bank details change withdrawn',
+    'obligation_done' => 'Obligation done',
+    'obligation_cancelled' => 'Obligation cancelled',
 ];

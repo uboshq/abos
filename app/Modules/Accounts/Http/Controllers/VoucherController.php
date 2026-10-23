@@ -63,7 +63,7 @@ class VoucherController extends Controller implements HasMiddleware
              */
             new Middleware('can:viewAny,'.Voucher::class, only: ['index']),
             new Middleware('can:view,voucher', only: ['show']),
-            new Middleware('can:create,'.Voucher::class, only: ['create', 'store']),
+            new Middleware('can:create,'.Voucher::class, only: ['create', 'store', 'simulate', 'referenceCheck']),
             new Middleware('can:update,voucher', only: ['edit', 'update', 'post']),
             new Middleware('can:delete,voucher', only: ['cancel']),
 
@@ -658,6 +658,108 @@ class VoucherController extends Controller implements HasMiddleware
         abort_unless($voucher->isEditable(), 403, __('accounts::validation.posted_cannot_edit', [
             'no' => $voucher->document_no,
         ]));
+    }
+
+    /**
+     * ⭐ পোস্টের আগে খাতায় যা যাবে — রসিদ ও পরিশোধ (fe, ২৩ অক্টোবর ২০২৬; নকশার "খাতায় যা যাবে")।
+     *
+     * ⓘ কিছুই লেখা হয় না: জমার একই যাচাই ([[VoucherRequest]]), একই সারি ([[VoucherWriter::linesFor()]]), একই পক্ষ-নামা আর
+     * শাখা ([[VoucherService::ledgerPreview()]]) — তাই প্রিভিউ আর খাতা কখনো আলাদা নয়। ⛔ পোস্ট যে কারণে থামত (অন্য শাখার পক্ষ
+     * ইত্যাদি) প্রিভিউও সেই বার্তায় থামে — সারি খালি আর `message`-এ বার্তা, পর্দা সেটা দেখায়।
+     */
+    public function simulate(Request $request): JsonResponse
+    {
+        $type = $this->assertType((string) $request->input('type'));
+        abort_unless(in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true), 404);
+
+        /*
+         * ⓘ যাচাই এখানে হাতে ধরা — ওয়েবের পথে যাচাইয়ের ভুল JSON হয় না, ফর্মে ফেরত পাঠায় ([[bootstrap/app.php]]-এর
+         * shouldRenderJsonWhen কেবল api/*)। ⓘ অর্ধেক ভরা ফর্ম ভুল নয়, কেবল এখনো প্রিভিউর সময় হয়নি: সারি খালি, বার্তা নেই,
+         * আর কোন ঘর বাকি তা `missing`-এ (পর্দা চুপ থাকে; জমার সময় সেই ঘরের পাশেই ভুল দেখায়)।
+         */
+        try {
+            $request = app(VoucherRequest::class);
+        } catch (ValidationException $e) {
+            // ⓘ ২০০, ৪২২ নয় — প্রতিটা থামায় ব্রাউজার ৪২২-কে কনসোলের ভুল লেখে, অথচ এটা ভুল নয়
+            return response()->json(['rows' => [], 'message' => '', 'missing' => array_keys($e->errors())]);
+        }
+
+        $data = [...$request->validated(), 'type' => $type, 'voucher_id' => $request->integer('voucher_id') ?: null];
+        $lines = $this->writer->linesFor($type, $request->all());
+
+        try {
+            $ledger = $this->vouchers->ledgerPreview($data, $lines);
+        } catch (ValidationException $e) {
+            return response()->json(['rows' => [], 'message' => (string) collect($e->errors())->flatten()->first()]);
+        }
+
+        $pairs = collect($ledger['lines'])
+            ->filter(fn (array $l) => filled($l['party_type'] ?? null) && (int) ($l['party_id'] ?? 0) > 0)
+            ->map(fn (array $l) => [(string) $l['party_type'], (int) $l['party_id']])->values()->all();
+        $names = app(PartyRegistry::class)->labelsOf($pairs);
+        $accounts = \App\Modules\Accounts\Models\Account::query()
+            ->whereKey(array_map(fn (array $l) => (int) $l['account_id'], $ledger['lines']))->get()->keyBy('id');
+        $branch = \App\Models\Branch::query()->find($ledger['branch_id']);
+
+        $rows = [];
+        $debit = '0';
+        $credit = '0';
+        foreach ($ledger['lines'] as $line) {
+            $account = $accounts->get((int) $line['account_id']);
+            $d = (string) ($line['debit'] ?? '0');
+            $c = (string) ($line['credit'] ?? '0');
+            $rows[] = [
+                'account' => $account === null ? '—' : $account->code.' '.$account->name(),
+                'party' => $names[($line['party_type'] ?? '').':'.(int) ($line['party_id'] ?? 0)] ?? null,
+                'branch' => $branch?->name(),
+                'debit' => bccomp($d, '0', 4) > 0 ? \App\Core\Support\Money::format($d) : '',
+                'credit' => bccomp($c, '0', 4) > 0 ? \App\Core\Support\Money::format($c) : '',
+            ];
+            $debit = bcadd($debit, $d, 4);
+            $credit = bcadd($credit, $c, 4);
+        }
+
+        return response()->json([
+            'rows' => $rows,
+            'debit' => \App\Core\Support\Money::format($debit),
+            'credit' => \App\Core\Support\Money::format($credit),
+            'balanced' => bccomp($debit, $credit, 4) === 0,
+        ]);
+    }
+
+    /**
+     * ⭐ রেফারেন্সের চলতি উত্তর — "আগে ব্যবহার হয়নি ✓" বা "আগে ব্যবহার হয়েছে" (fe, ২৩ অক্টোবর ২০২৬; নকশার মিল-তালিকা)।
+     *
+     * ⓘ পোস্টের পাহারার একই প্রশ্ন ([[VoucherService::referenceTwin()]]): একই টাকার খাত আর একই নম্বর, সব শাখা জুড়ে। ⛔ কেবল
+     * নিজের কোম্পানিতে — খাতটা কোম্পানির দেয়ালের ভিতরে খোঁজা হয় (অন্য কোম্পানির খাত হলে ৪০৪), আর জোড়ার খোঁজও তাই; অন্য
+     * কোম্পানির একই নম্বর কিছুই বলে না, তার কাগজের নম্বরও না।
+     */
+    public function referenceCheck(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'account_id' => ['required', 'integer'],
+            'instrument_no' => ['nullable', 'string', 'max:64'],
+            'voucher' => ['nullable', 'integer'],
+        ]);
+
+        $account = \App\Modules\Accounts\Models\Account::query()->find((int) $data['account_id']);
+        abort_if($account === null, 404);
+
+        $no = trim((string) ($data['instrument_no'] ?? ''));
+
+        // ⓘ নগদে নম্বরের প্রশ্নই নেই — পোস্টের পাহারার একই কথা ([[VoucherService::assertBankReferenceIsFree()]])
+        if ($no === '' || ! ($account->isBank() || $account->isMfs())) {
+            return response()->json(['state' => 'empty', 'message' => '']);
+        }
+
+        $twin = $this->vouchers->referenceTwin((int) $account->id, $no, isset($data['voucher']) ? (int) $data['voucher'] : null);
+
+        return response()->json([
+            'state' => $twin === null ? 'free' : 'used',
+            'message' => $twin === null
+                ? __('accounts::message.reference_free')
+                : __('accounts::validation.bank_reference_used', ['reference' => $no, 'no' => $twin->document_no]),
+        ]);
     }
 
     private function assertType(string $type): string

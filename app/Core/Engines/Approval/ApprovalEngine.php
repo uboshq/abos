@@ -217,6 +217,47 @@ final class ApprovalEngine
     }
 
     /**
+     * ⭐ কাগজ বানানোর আগেই — প্রথম সই কে দেবেন আর মোট কয় ধাপ ("সই দেবেন: ম্যানেজার (ধাপ ১/১)"; টাকা দেওয়ার মিল-তালিকা #৪,
+     * ২২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই ছক আর একই শর্ত [[requires()]]-এর — সই না লাগলে `null`, তাই পর্দা আর পোস্ট কখনো আলাদা কথা বলে না। নাম: ধাপের নাম
+     * থাকলে সেটা, নাহলে রোলের বা মানুষের নাম (ছকের পর্দার মতোই); ধাপ গোনা স্তর ধরে ([[standingOf()]]-এর নিয়মে, N-of-M এক ধাপ)।
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array{who: string, levels: int}|null
+     */
+    public function firstSigner(string $module, string $action, ?string $amount, string $documentType, array $fields = []): ?array
+    {
+        $flow = $this->flowFor($module, $action, $documentType);
+
+        if ($flow === null || ! $flow->catches($amount, $fields)) {
+            return null;
+        }
+
+        $steps = collect($flow->steps)->sortBy('level')->values();
+
+        if ($steps->isEmpty()) {
+            return null;
+        }
+
+        $first = $steps->where('level', $steps->first()->level);
+        $who = $first->map(function (ApprovalFlowStep $step): string {
+            if (($step->step_name ?? '') !== '') {
+                return (string) $step->step_name;
+            }
+
+            return (string) ($step->approver_type === ApprovalFlowStep::BY_USER
+                ? User::query()->whereKey($step->approver_id)->value('name')
+                : \Spatie\Permission\Models\Role::query()->whereKey($step->approver_id)->value('name'));
+        })->filter()->unique()->implode(' / ');
+
+        return [
+            'who' => $who,
+            'levels' => $steps->pluck('level')->unique()->count(),
+        ];
+    }
+
+    /**
      * এক স্তরের অনুমোদন। সব স্তর শেষ হলে অনুরোধটাই approved হয়।
      */
     public function approve(Approval $approval, User $user, ?string $remarks = null): Approval

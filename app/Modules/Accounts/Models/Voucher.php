@@ -220,6 +220,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         'carried_by', 'moved_at', 'note_counts', 'wallet', 'wallet_medium',
         'counterparty_phone', 'charge_borne_by', 'transfer_mode_id',
         'from_branch', 'from_account_name', 'deposit_slip_no', 'lands_on',
+        // ⭐ মূল্য-তারিখ — নতুন টাকার বাক্সের ঘর (২২ অক্টোবর ২০২৬)
+        'value_date',
         'reverse_on',
         // ⭐ মাসশেষের সমন্বয় — ভাউচারের পরিকল্পনা ৩ঘ (৭ অক্টোবর ২০২৬); কেবল জাবেদায় ([[VoucherService::create()]])
         'is_adjusting',
@@ -245,6 +247,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'reverse_on' => 'date',
             'is_adjusting' => 'boolean',
             'instrument_date' => 'date',
+            'value_date' => 'date',
             'amount' => 'decimal:4',
             'charge_amount' => 'decimal:4',
             'gross_amount' => 'decimal:4',

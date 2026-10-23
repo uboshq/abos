@@ -168,8 +168,8 @@ describe('খরচের ভাউচারের কাটা আর হাত
         for (const [ait, vds, said] of [['0', '0', 'কাটা 0.00 · হাতে যাবে 1000.00'], ['50', '25', 'কাটা 75.00 · হাতে যাবে 925.00'], ['', '25', 'কাটা 25.00 · হাতে যাবে 975.00']]) {
             const host = await mount(`<div x-data="expenseFields({ gross: '1000', ait: '${ait}', vds: '${vds}' })"><span x-text="${expression}"></span></div>`)
 
-            expect(host.querySelector('span').textContent.replace(/\s+/g, ' ')).toBe(said)
-            expect(warnings).toEqual([])
+            expect(warnings, `⛔ লেখা-টাকা ('${ait}', '${vds}') পেয়ে কাটার লাইন ভাঙল — যোগের বদলে লেখা জুড়েছে`).toEqual([])
+            expect(host.querySelector('span').textContent.replace(/\s+/g, ' '), `⛔ লেখা-টাকা ('${ait}', '${vds}') — কাটার লাইন অঙ্ক দেখাল না`).toBe(said)
         }
     })
 })
@@ -450,5 +450,31 @@ describe('ব্যাংকের সুবিধা', () => {
         expect([cc.hasRenewal, cc.hasInstalments, cc.hasExpiry]).toEqual([true, false, false])
         expect([term.hasRenewal, term.hasInstalments, term.hasInterest]).toEqual([false, true, true])
         expect([bg.hasExpiry, bg.hasInstalments, bg.hasInterest]).toEqual([true, false, false])
+    })
+})
+
+describe('খরচের উৎসে কর্তনের সারাংশ', () => {
+    it('পাতা লেখা হিসেবে পাঠালেও (’0’) কর্তন যোগ হয়, জোড়া নয়, আর সারাংশ আঁকা হয়', async () => {
+        const host = await mount(`
+            <div x-data="expenseFields({ gross: '1000', ait: '0', vds: '0' })">
+                <span id="cut" x-text="deductedText"></span>
+                <span id="net" x-text="netText"></span>
+                <input id="ait" x-model.number="ait">
+                <input id="vds" x-model.number="vds">
+            </div>`)
+
+        expect(host.querySelector('#cut').textContent, '⛔ লেখা হিসেবে আসা শূন্য জোড়া লেগে সারাংশ ভাঙল').toBe('0.00')
+        expect(host.querySelector('#net').textContent, '⛔ কর্তন ছাড়া হাতে যাবে বিলের মোট নয়').toBe('1000.00')
+
+        for (const [id, value] of [['ait', '50'], ['vds', '30']]) {
+            const input = host.querySelector('#' + id)
+            input.value = value
+            input.dispatchEvent(new Event('input'))
+        }
+        await Alpine.nextTick()
+
+        expect(host.querySelector('#cut').textContent, '⛔ AIT আর VDS যোগ না হয়ে জোড়া লাগল').toBe('80.00')
+        expect(host.querySelector('#net').textContent, '⛔ হাতে যাবে বিলের মোট বিয়োগ কর্তন নয়').toBe('920.00')
+        expect(warnings, '⛔ খরচের সারাংশে Alpine-এর ভুল').toEqual([])
     })
 })

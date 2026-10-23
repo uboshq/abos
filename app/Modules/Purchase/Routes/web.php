@@ -196,6 +196,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::post('/', [PaymentController::class, 'store'])->name('store');
         // ⭐ খাতায় যা যাবে — পোস্টের আগে, কিছু না লিখে (নকশা #১০; মালিক, ২১ অক্টোবর ২০২৬)
         Route::post('/simulate', [PaymentController::class, 'simulate'])->name('simulate');
+        // ⭐ স্লিপ/TrxID আগে এই সরবরাহকারীকে দেওয়া পরিশোধে আছে কি না — লেখার সাথে সাথে, কিছু না লিখে (মিল-তালিকা #৫)
+        Route::get('/slip-check', [PaymentController::class, 'slipCheck'])->name('slip_check');
         Route::get('/{payment}', [PaymentController::class, 'show'])->whereNumber('payment')->name('show');
         Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->whereNumber('payment')->name('edit');
         Route::put('/{payment}', [PaymentController::class, 'update'])->whereNumber('payment')->name('update');

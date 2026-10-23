@@ -62,6 +62,40 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
      * ফাঁদে এই রিপো একবার পড়েছে, আর ব্যর্থতাটা তখন একটা **নির্দোষ
      * পথের** দিকে আঙুল তুলেছিল।
      */
+    /**
+     * ⭐ নতুন বাক্সের রসিদ ([[x-money.method]]; মালিকের ২১ অক্টোবরের রায়) — পোস্টে কিছু হারায় না: পদ্ধতি, TrxID, ট্রান্সফার মোড,
+     * মূল্য-তারিখ (নতুন — আগে নীরবে বাদ পড়ত), চার্জ আর "কার মাধ্যমে" কলামে বসে; মালিকের বাদ দেওয়া ঘরগুলো ফাঁকাই থাকে।
+     */
+    public function test_a_receipt_from_the_new_money_box_keeps_everything_it_asked(): void
+    {
+        $mode = \App\Modules\MasterData\Models\TransferMode::query()->orderBy('id')->firstOrFail();
+        $carrier = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        $this->postReceipt([
+            'to_account_id' => $this->aBankAccount()->id,
+            'instrument' => 'transfer',
+            'transfer_mode_id' => $mode->id,
+            'instrument_no' => 'BF26102200991',
+            'value_date' => now()->subDay()->toDateString(),
+            'charge_amount' => '10',
+            'carried_by' => $carrier->id,
+        ]);
+
+        $errors = session('errors');
+        $errors = $errors instanceof \Illuminate\Support\ViewErrorBag ? $errors->getBag('default')->toArray() : (array) ($errors['default']['messages'] ?? []);
+        $this->assertSame([], $errors, '⛔ নতুন বাক্সের রসিদ ফেরত এল — '.json_encode($errors, JSON_UNESCAPED_UNICODE));
+
+        $voucher = Voucher::query()->latest('id')->firstOrFail();
+        $this->assertSame(
+            ['transfer', 'BF26102200991', (int) $mode->id, now()->subDay()->toDateString(), (int) $carrier->id],
+            [$voucher->instrument, $voucher->instrument_no, (int) $voucher->transfer_mode_id, $voucher->value_date?->toDateString(), (int) $voucher->carried_by],
+            '⛔ নতুন বাক্সের কোনো ঘর কলামে পৌঁছায়নি (পদ্ধতি, TrxID, মোড, মূল্য-তারিখ বা "কার মাধ্যমে")');
+        $this->assertSame(0, bccomp((string) $voucher->charge_amount, '10', 4), '⛔ চার্জ কলামে পৌঁছায়নি');
+        foreach (['wallet', 'wallet_medium', 'counterparty_phone', 'from_branch', 'from_account_name', 'lands_on', 'moved_at'] as $dropped) {
+            $this->assertNull($voucher->{$dropped}, "⛔ মালিকের বাদ দেওয়া ঘর {$dropped} কোথা থেকে ভরল");
+        }
+    }
+
     private function moneyAccount(string $kind): Account
     {
         return Account::query()
