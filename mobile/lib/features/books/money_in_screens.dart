@@ -52,6 +52,9 @@ class MoneyInListScreen extends StatefulWidget {
   /// ⭐ "＋ নতুন আদায়" খোলে আদায়ের এক পাতা ([CollectScreen]) — এক পথ (মালিক, ২১ অক্টোবর ২০২৬); টেস্ট নিজের পাতা দেয়
   final Widget Function()? collect;
 
+  /// অ্যাপের আসল "＋ নতুন আদায়" পাতা — পরীক্ষাও এটা দেখে যে পরীক্ষার পথ এখানে কখনো বসে না
+  static Widget defaultCollect(BooksApi books) => CollectScreen(books: books);
+
   @override
   State<MoneyInListScreen> createState() => _MoneyInListScreenState();
 }
@@ -251,7 +254,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
   }
 
   Future<void> _collect() async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => widget.collect?.call() ?? CollectScreen(books: widget.api)));
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => widget.collect?.call() ?? MoneyInListScreen.defaultCollect(widget.api)));
     if (mounted) await _load();
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:image_picker/image_picker.dart';
@@ -85,7 +86,7 @@ class CollectScreen extends StatefulWidget {
     this.otherParty = _otherParty,
     this.slipSize = _fileSize,
     this.debugAfterAllocate,
-  });
+  }) : assert(debugAfterAllocate == null || !kReleaseMode, 'debugAfterAllocate is a test hook; never in a release build (fe, 24 Oct 2026)');
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
 
@@ -100,7 +101,8 @@ class CollectScreen extends StatefulWidget {
   final OtherPartyOpener otherParty;
   final Future<int> Function(String path) slipSize;
 
-  /// ⛔ পরীক্ষার ভুল-ঢোকানো পথ — প্রতিবার নিজে-বসানোর পরে বণ্টনে হাত দেয়। আজ পর্দার কোনো পথে বিলে প্রয়োগ আদায়ের বেশি হয় না
+  /// ⛔ পরীক্ষার ভুল-ঢোকানো পথ — release-এ কখনো নয় (constructor-এর assert; অ্যাপের আসল তিন পথ এটা দেয় না, দাবি
+  /// collect_screen_test-এ: "no real path sets the test hook") — প্রতিবার নিজে-বসানোর পরে বণ্টনে হাত দেয়। আজ পর্দার কোনো পথে বিলে প্রয়োগ আদায়ের বেশি হয় না
   /// ([CollectionPlan.setBill] হাতের টাকায় থামে, অঙ্ক বদলালে আবার "পুরনো আগে"), তাই "বেশি প্রয়োগ" পাহারা এখানেই দেখা যায়
   @visibleForTesting
   final void Function(CollectionPlan plan)? debugAfterAllocate;

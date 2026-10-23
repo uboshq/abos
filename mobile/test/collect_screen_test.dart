@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/books/collection_plan.dart';
+import 'package:abos_mobile/core/menu/module_gate.dart';
+import 'package:abos_mobile/core/router/native_for_web.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/money_input.dart';
 import 'package:abos_mobile/core/navigation/role_tabs.dart';
@@ -10,6 +12,7 @@ import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
+import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1311,6 +1314,21 @@ void main() {
       const none = CollectionSaved(id: 'col-7');
       expect(none.receiptDoor, (type: 'Collection', id: 'col-7'), reason: 'পথ না এলে আদায়ের নিজের আইডি');
     });
+  });
+
+  /// ⛔ পরীক্ষার ভুল-ঢোকানো পথ (debugAfterAllocate) অ্যাপের আসল কোনো পথে বসে না (fe, ২৪ অক্টোবর ২০২৬): ওয়েবের ঠিকানা থেকে
+  /// খোলা পাতা (NativeForWeb, `/sales/collections/create`), আদায় তালিকার "＋ নতুন আদায়" আর ভাউচার তালিকার "আদায় ভাউচার" —
+  /// তিনটার তৈরি করা উইজেট নিজে দেখা, grep নয়। release-এ বসানো constructor-এর assert-এ থামে।
+  test('no real path sets the test hook: the web-path page, the collections list and the voucher list build it null', () {
+    final routed = NativeForWeb.screenFor('/sales/collections/create');
+    expect(routed, isA<ModuleGateView>(), reason: 'ওয়েবের ঠিকানাটা আর আদায়ের পাতায় যায় না');
+    final fromWeb = (routed! as ModuleGateView).child;
+    final fromList = MoneyInListScreen.defaultCollect(FakeBooks());
+    final fromVouchers = const VoucherListScreen().collect();
+    for (final (path, screen) in [('web path', fromWeb), ('collections list', fromList), ('voucher list', fromVouchers)]) {
+      expect(screen, isA<CollectScreen>(), reason: '$path আদায়ের পাতা খোলে না');
+      expect((screen as CollectScreen).debugAfterAllocate, isNull, reason: '⛔ $path পরীক্ষার পথ বসিয়েছে');
+    }
   });
 
   testWidgets('the collections list\'s "＋ নতুন আদায়" opens this screen', (tester) async {
