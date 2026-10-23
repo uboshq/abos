@@ -186,6 +186,27 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ চাবি ছাড়াই লোগো বদলে গেল।');
     }
 
+    /**
+     * ⭐ চাবি ছাড়া কোম্পানির কোনো দরজা খোলে না — তালিকা, নতুনের ফর্ম আর নতুন কোম্পানি বানানো (cb_v16: s_anyone বাঁচত)।
+     * ⓘ লোগোর দরজায় দ্বিতীয় স্তর আছে ([[CompanyController::mustBeYourCompany()]], ৪০৪), কিন্তু তালিকা আর "নতুন"-এ থামানোর কেউ
+     *    কেবল রুটের চাবি — সেটা উঠলে কর্মী নতুন কোম্পানিই বানাতে পারতেন।
+     */
+    public function test_without_company_manage_no_company_door_opens(): void
+    {
+        $clerk = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $clerk->companies()->attach($this->company, ['is_active' => true]);
+        $this->assertFalse($clerk->fresh()->canInCompany((int) $this->company->id, 'system_admin.company.manage'), 'প্রস্তুতিটাই ভুল — কর্মীর হাতে চাবি আছে।');
+        $this->actingAs($clerk->fresh());
+
+        $this->assertSame(403, $this->get(route('system_admin.company.index'))->status(), '⛔ চাবি ছাড়া কোম্পানির তালিকা খুলল');
+        $this->assertSame(403, $this->get(route('system_admin.company.create'))->status(), '⛔ চাবি ছাড়া নতুন কোম্পানির ফর্ম খুলল');
+
+        $before = \App\Models\Company::query()->count();
+        $status = $this->post(route('system_admin.company.store'), ['code' => 'NOKEY', 'name_en' => 'No Key Ltd', 'name_bn' => 'চাবিহীন'])->status();
+        $this->assertSame(403, $status, "⛔ চাবি ছাড়া নতুন কোম্পানি বানানোর দরজা খুলল (উত্তর {$status})");
+        $this->assertSame($before, \App\Models\Company::query()->count(), '⛔ চাবি ছাড়াই নতুন কোম্পানি বসল');
+    }
+
     public function test_the_audit_keeps_the_file_before_and_after(): void
     {
         Storage::disk('public')->put('logos/before.png', 'png');

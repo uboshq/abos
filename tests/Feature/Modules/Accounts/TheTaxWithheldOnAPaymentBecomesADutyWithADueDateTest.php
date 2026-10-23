@@ -113,8 +113,13 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
         } catch (\Illuminate\Validation\ValidationException) {
             // ⓘ পোস্ট হয়ে যাওয়া পরিশোধ আবার পোস্ট হয় না — প্রত্যাশিত
         }
-        app(ComplianceObligations::class)->raise((int) $this->company->id, null, Payment::drillSourceType(), (int) $payment->id,
-            (string) $payment->document_no, ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, '500', now());
+        // ⓘ দ্বিতীয়বার তোলা নিরীহ হতে হবে — ভাঙা নয় (cb_v16: create() হলে অনন্যতার ইনডেক্সে ভেঙে পড়ত, দাবির কথা নয়)
+        try {
+            app(ComplianceObligations::class)->raise((int) $this->company->id, null, Payment::drillSourceType(), (int) $payment->id,
+                (string) $payment->document_no, ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, '500', now());
+        } catch (\Throwable $e) {
+            $this->fail('⛔ একই পরিশোধের একই দায় আবার তুলতে গেলে ভেঙে পড়ল — আগেরটাই ফেরার কথা: '.$e->getMessage());
+        }
 
         $this->assertSame($before, ComplianceObligation::query()->count(), '⛔ একই পরিশোধের একই দায় দুবার বসল');
     }
@@ -168,6 +173,8 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
             '⛔ AIT জমার শেষ দিন সেটিং মানল না');
         $this->assertSame('2027-02-28', $duties->dueOn(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, '2027-01-31')->toDateString(),
             '⛔ ৩১ লিখলে ফেব্রুয়ারির বাইরে বা মার্চে গেল — কিনারা ২৮ নয়');
+        $this->assertSame('2027-01-28', $duties->dueOn(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, '2026-12-10')->toDateString(),
+            '⛔ ৩১ লিখলে ৩১ দিনের মাসে ৩১ তারিখ — কিনারা সব মাসে ২৮ নয় (ফেব্রুয়ারির সাথে এক নিয়ম রইল না)');
         $this->assertSame('2026-10-04', $duties->dueOn(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, '2026-10-01')->toDateString(),
             '⛔ মূসক-৬.৬-এর শেষ দিন কর্তনের দিন + ৩ (ডিফল্ট) নয়');
         $settings->set('accounts.tax.mushak_66_issue_days', 7);
@@ -185,6 +192,16 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
 
         $this->from(route('accounts.obligation.index'))->post(route('accounts.obligation.done', $duty->id), ['ref_no' => ' ']);
         $this->assertNull($duty->fresh()->done_at, '⛔ নম্বর ছাড়াই "করা হয়েছে" হল');
+
+        // ⓘ ফর্মের required ফাঁকা নম্বর আগেই থামায় — তাই সেবার নিজের পাহারা আলাদা করে (ফর্ম ছাড়া পথের জন্য; cb_v16-এ মিউট্যান্ট বাঁচত)
+        $refused = false;
+        try {
+            app(ComplianceObligations::class)->markDone($duty->fresh(), $this->owner, '   ');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $refused = true;
+        }
+        $this->assertTrue($refused, '⛔ সেবা নম্বর ছাড়াই "করা হয়েছে" মেনে নিল — ফর্মের বাইরের পথে প্রমাণ ছাড়া দায় বন্ধ হবে');
+        $this->assertNull($duty->fresh()->done_at, '⛔ নম্বর ছাড়াই "করা হয়েছে" হল (সেবার পথে)');
 
         $this->from(route('accounts.obligation.index'))->post(route('accounts.obligation.done', $duty->id), ['ref_no' => 'CH-1102-55']);
         $duty = $duty->fresh();
@@ -204,13 +221,14 @@ final class TheTaxWithheldOnAPaymentBecomesADutyWithADueDateTest extends TestCas
         $clerk = $this->someone(['accounts.view']);
 
         $this->actingAs($clerk);
-        $this->get(route('accounts.obligation.index'))->assertForbidden();
-        $this->post(route('accounts.obligation.done', $duty->id), ['ref_no' => 'X'])->assertForbidden();
+        $this->assertSame(403, $this->get(route('accounts.obligation.index'))->status(), '⛔ চাবি ছাড়া করণীয়ের তালিকা খুলল');
+        $this->assertSame(403, $this->post(route('accounts.obligation.done', $duty->id), ['ref_no' => 'X'])->status(), '⛔ চাবি ছাড়া "করা হয়েছে" খুলল');
 
         $viewer = $this->someone(['accounts.obligation.view']);
         $this->actingAs($viewer);
         $this->get(route('accounts.obligation.index'))->assertOk();
-        $this->post(route('accounts.obligation.done', $duty->id), ['ref_no' => 'X'])->assertForbidden();
+        $this->assertSame(403, $this->post(route('accounts.obligation.done', $duty->id), ['ref_no' => 'X'])->status(),
+            '⛔ দেখার চাবিতেই "করা হয়েছে"-র দরজা খুলল — বদলের চাবি লাগে');
         $this->assertNull($duty->fresh()->done_at, '⛔ দেখার চাবিতেই "করা হয়েছে" বসল');
     }
 
