@@ -22,6 +22,19 @@ afterEach(() => {
 
 const answer = (rows) => ({ rows, debit: '1', credit: '1', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' })
 
+/*
+ * ⛔ x-show দেখায় এক ফ্রেম পরে — Alpine দেখানোটা পিছিয়ে দেয় (`_x_toggleAndCascadeWithTransitions`: পাতা দৃশ্যমান হলে
+ * requestAnimationFrame, নইলে setTimeout), লুকানো তৎক্ষণাৎ। ⓘ তাই কেবল Alpine.nextTick()-এর পরে "দেখা যায়" মাপলে দাবি সময়ের
+ * উপর নির্ভর করত: একা চালালে প্রতিবার লাল, পুরো suite-এ কখনো সবুজ (fe/a6, ২৪ অক্টোবর ২০২৬: money-method.test.js:112)।
+ * ⭐ দেখার আগে টিক, একটা টাইমার আর একটা ফ্রেম — দুই পথই ঢাকা।
+ */
+async function painted () {
+    await Alpine.nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    await new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(() => r()))
+    await Alpine.nextTick()
+}
+
 async function mount () {
     const host = document.createElement('div')
     host.innerHTML = `
@@ -173,9 +186,8 @@ describe('মিল-তালিকা #৩ — কাটা কর/ভ্যা
         expect(note.style.display, '⛔ #৩: কিছু কাটা হয়নি, তবু কর-নোট').toBe('none')
 
         pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '15,652.17', net: '1.00' }
-        // ⓘ x-show-এর বদল Alpine-এর কাজের সারিতে বসে — এক টিকে না-ও পৌঁছাতে পারে; একটা পুরো ঘুরতি অপেক্ষা
-        await new Promise(r => setTimeout(r, 0))
-        await Alpine.nextTick()
+        // ⓘ x-show দেখায় এক ফ্রেম পরে (Alpine-এর requestAnimationFrame) — টাইমারের এক ঘুরতি তার আগে আসতে পারে
+        await painted()
         expect(note.style.display, '⛔ #৩: ভ্যাট কাটা হল, অথচ জমা আর মূসক-৬.৬-এর কথা নেই').toBe('')
 
         pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' }

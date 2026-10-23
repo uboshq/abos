@@ -24,6 +24,19 @@ beforeAll(() => {
     Alpine.start()
 })
 
+/*
+ * ⛔ x-show দেখায় এক ফ্রেম পরে — Alpine দেখানোটা পিছিয়ে দেয় (`_x_toggleAndCascadeWithTransitions`: পাতা দৃশ্যমান হলে
+ * requestAnimationFrame, নইলে setTimeout), লুকানো তৎক্ষণাৎ। ⓘ তাই কেবল Alpine.nextTick()-এর পরে "দেখা যায়" মাপলে দাবি সময়ের
+ * উপর নির্ভর করত: একা চালালে প্রতিবার লাল, পুরো suite-এ কখনো সবুজ (fe/a6, ২৪ অক্টোবর ২০২৬: money-method.test.js:112)।
+ * ⭐ দেখার আগে টিক, একটা টাইমার আর একটা ফ্রেম — দুই পথই ঢাকা।
+ */
+async function painted () {
+    await Alpine.nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    await new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(() => r()))
+    await Alpine.nextTick()
+}
+
 async function mount (html) {
     warnings.length = 0
     const host = document.createElement('div')
@@ -107,18 +120,18 @@ describe('দফা #৯ — চার্জ আমাদের খরচ, এ�
         const charge = host.querySelector('#charge')
         charge.value = '25'
         charge.dispatchEvent(new Event('input', { bubbles: true }))
-        await Alpine.nextTick()
+        await painted()
 
         expect(line.style.display, '⛔ #৯: ট্রান্সফারে চার্জ দিলেও চার্জের লাইন এল না').not.toBe('none')
         expect(line.textContent, '⛔ #৯: চার্জের লাইন ব্যাংক চার্জের খাত বা পক্ষের পুরো টাকা বলে না').toBe('OUT ৳25.00 → Bank charges; party ৳1,20,000.00')
 
         data(host).method = 'mfs'
-        await Alpine.nextTick()
+        await painted()
         expect(line.textContent, '⛔ #৯: MFS-এ চার্জ গেল ব্যাংক চার্জের খাতে').toContain('MFS charges')
 
         // ⛔ নগদে চার্জের ঘর নেই — পুরনো ২৫ লাইনে থেকে গেলে পর্দা মিথ্যা বলত
         data(host).method = 'cash'
-        await Alpine.nextTick()
+        await painted()
         expect(line.style.display, '⛔ #৯: নগদে ফিরলেও পুরনো চার্জের লাইন রয়ে গেল').toBe('none')
         expect(warnings, '⛔ পর্দায় Alpine-এর সতর্কতা').toEqual([])
         host.remove()
