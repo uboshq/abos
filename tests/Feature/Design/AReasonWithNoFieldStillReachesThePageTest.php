@@ -143,6 +143,34 @@ final class AReasonWithNoFieldStillReachesThePageTest extends TestCase
     }
 
     /**
+     * ⛔ কারণে regex-এর অক্ষর ("(2120)", "/", ".", "?", "+", "*") থাকলেও মেলানো ঠিক — বার্তা ঠিক একবার; আর একা "(" থাকলেও পাতা
+     * ভাঙে না, বাক্স দেখায় (fe, ২৪ অক্টোবর ২০২৬; মেলানোর লেখা preg_quote করা)।
+     */
+    public function test_a_reason_with_pattern_characters_is_matched_as_text_and_never_breaks_the_page(): void
+    {
+        $reason = 'ভ্যাট প্রদেয় (2120) খাত নতুন সারি নেয় না — ১/২ অংশ? আবার চেষ্টা করুন + দেখুন *';
+        View::share('errors', (new ViewErrorBag)->put('default', new MessageBag(['posting' => [$reason]])));
+        $page = Blade::render('<ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>');
+
+        try {
+            $box = Blade::render('<x-ui.errors :shown="$shown" />', ['shown' => new \Illuminate\Support\HtmlString($page)]);
+        } catch (\Throwable $e) {
+            $this->fail('⛔ কারণের "(2120)" বা "/" মেলাতে গিয়ে বাক্সটাই ভাঙল: '.$e->getMessage());
+        }
+        $this->assertSame(1, substr_count($page.$box, e($reason)), '⛔ "(2120)" আর "/"-সহ কারণ হাতে লেখা তালিকায় আছে, তবু layout-এর বাক্স আবার দেখাল');
+
+        request()->attributes->remove('ui.errors.drawn');
+        $lone = 'খাতের নাম ( ঠিক নয়';
+        View::share('errors', (new ViewErrorBag)->put('default', new MessageBag(['account' => [$lone]])));
+        try {
+            $box = Blade::render('<x-ui.errors :shown="$shown" />', ['shown' => new \Illuminate\Support\HtmlString('<p>অন্য কিছু</p>')]);
+        } catch (\Throwable $e) {
+            $this->fail('⛔ একা "("-ওয়ালা কারণে পাতা ভেঙে গেল (৫০০ হত): '.$e->getMessage());
+        }
+        $this->assertStringContainsString(e($lone), $box, '⛔ একা "("-ওয়ালা কারণটা বাক্সে নেই');
+    }
+
+    /**
      * ⛔ ছোট একটা কারণ পাতার অন্য লেখার ভিতরে অংশ হিসেবে আছে — সেটা "দেখানো" নয়; layout-এর বাক্স তবুও দেখায়, হারায় না।
      */
     public function test_a_short_reason_inside_other_text_is_still_shown(): void
