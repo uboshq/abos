@@ -1,6 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
+import Alpine from '@alpinejs/csp'
+import morph from '@alpinejs/morph'
 import { EVERY_MS, isFresh, isTouched, placeFresh } from './live.js'
+
+Alpine.plugin(morph)
 
 // ⭐ রিয়েল-টাইম সিঙ্ক — খোলা পাতা কখন নতুন তথ্য আনবে (মালিক, ১০ অক্টোবর ২০২৬)
 describe('isFresh', () => {
@@ -80,6 +84,40 @@ describe('placeFresh', () => {
         expect(doc.querySelector('[data-live="approvals"] span').textContent).toBe('১')
         expect(doc.querySelector('[data-live="signed-unposted"] span').textContent).toBe('৪')
     })
+})
+
+/**
+ * ⛔ a6, ২৩ অক্টোবর ২০২৬: আদায়ের "সইয়ে পাঠান"-এর সারাংশ-পপ-আপ খোলার দেড় সেকেন্ড পরে বন্ধ আর খালি — দশ সেকেন্ডের
+ * নতুন পাতায় পপ-আপটা বন্ধ, আর morph সেটাই বসাত। ⓘ নকল নয়, আসল Alpine.morph — `open` খুলে নেওয়াটা আসলটাই করে।
+ */
+it('leaves an open popup open with what it shows, and still updates the page around it', () => {
+    document.body.innerHTML = '<main id="main"><p id="due">১,০০০</p><dialog data-confirm-overview-dialog><div data-confirm-overview-body>খাতায় যা যাবে</div></dialog></main>'
+    document.querySelector('dialog').setAttribute('open', '')
+    const fresh = page('<main id="main"><p id="due">৫,০০০</p><dialog data-confirm-overview-dialog><div data-confirm-overview-body></div></dialog></main>')
+
+    placeFresh(document, fresh, (from, to, options) => Alpine.morph(from, to, options))
+
+    expect(document.querySelector('dialog').open).toBe(true)
+    expect(document.querySelector('[data-confirm-overview-body]').textContent).toBe('খাতায় যা যাবে')
+    expect(document.querySelector('#due').textContent).toBe('৫,০০০')
+})
+
+/**
+ * ⛔ a6, ২৪ অক্টোবর ২০২৬, আসল ব্রাউজারে মাপা: খরচের ভাউচারে হাতে খোলা ভাঁজ দশ সেকেন্ডে বন্ধ হত। ভাঁজ মানুষের, ভিতরের লেখা
+ * সার্ভারের — খোলা থাকে খোলা, বন্ধ থাকে বন্ধ, লেখা নতুন হয়। ⓘ আসল Alpine.morph।
+ */
+it('keeps a fold the person opened or shut as it is, and still updates what is inside', () => {
+    document.body.innerHTML = '<main id="main"><details id="opened"><summary>কর</summary><p>পুরনো</p></details><details id="shut" open><summary>নোট</summary><p>পুরনো</p></details></main>'
+    document.querySelector('#opened').open = true
+    document.querySelector('#shut').open = false
+    const fresh = page('<main id="main"><details id="opened"><summary>কর</summary><p>নতুন</p></details><details id="shut" open><summary>নোট</summary><p>নতুন</p></details></main>')
+
+    placeFresh(document, fresh, (from, to, options) => Alpine.morph(from, to, options))
+
+    expect(document.querySelector('#opened').open).toBe(true)
+    expect(document.querySelector('#shut').open).toBe(false)
+    expect(document.querySelector('#opened p').textContent).toBe('নতুন')
+    expect(document.querySelector('#shut p').textContent).toBe('নতুন')
 })
 
 describe('isTouched', () => {
