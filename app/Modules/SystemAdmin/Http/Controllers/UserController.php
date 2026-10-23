@@ -496,11 +496,16 @@ class UserController extends Controller implements HasMiddleware
             ]);
         }
 
+        // ⓘ মোছার আগে — প্রতিটা হারানো কোম্পানিতে মানুষটার কী ছিল (খাতার জন্য)
+        $losing = $this->whatTheyHadIn($user, $gone);
+
         if ($gone !== []) {
             $user->companies()->detach($gone);
         }
 
         $this->rolesInEveryCompany($user, $after, array_keys($companies), $gone);
+
+        $this->tellTheCompaniesTheyLeft($user, $losing);
 
         $afterCompanies = $this->companyCodesOf($user);
 
@@ -543,6 +548,74 @@ class UserController extends Controller implements HasMiddleware
      * @param  list<int>  $companyIds
      * @param  list<int>  $gone  নাগালের ভেতরের যে কোম্পানিগুলোর টিক উঠল
      */
+    /**
+     * প্রতিটা হারানো কোম্পানিতে মানুষটার সদস্যপদ (সক্রিয় কি না, ডিফল্ট শাখা) আর সেখানকার ভূমিকার নাম — মোছার আগে পড়া।
+     *
+     * @param  list<int>  $gone
+     * @return array<int, array{member: object|null, roles: list<string>}>
+     */
+    private function whatTheyHadIn(User $user, array $gone): array
+    {
+        $had = [];
+
+        foreach ($gone as $companyId) {
+            $member = DB::table('company_user')->where('company_id', $companyId)->where('user_id', $user->getKey())
+                ->first(['is_active', 'default_branch_id']);
+            $roles = DB::table('model_has_roles as mhr')->join('roles as r', 'r.id', '=', 'mhr.role_id')
+                ->where('mhr.model_type', $user->getMorphClass())->where('mhr.model_id', $user->getKey())
+                ->where('mhr.company_id', $companyId)->orderBy('r.name')->pluck('r.name')->map(fn ($n) => (string) $n)->all();
+
+            if ($member !== null || $roles !== []) {
+                $had[(int) $companyId] = ['member' => $member, 'roles' => $roles];
+            }
+        }
+
+        return $had;
+    }
+
+    /**
+     * ⛔ যে কোম্পানি মানুষটাকে হারাল, তার নিজের খাতাতেও সারি — fe, ২৪ অক্টোবর ২০২৬।
+     *
+     * ── কী ঘটেছিল ─────────────────────────────────────────────────────
+     * ১০ অক্টোবর মালিক ADI-তে দাঁড়িয়ে নিজের ফর্ম save করলেন, AVA-র টিক বাদ পড়ল: AVA-র সদস্যপদ আর super admin মুছে গেল
+     * (লাইভ audit_trails #384878)। ⚠️ `companies_changed` সারিটা বসেছিল কেবল ADI-র খাতায় (সম্পাদক যেখানে দাঁড়িয়ে —
+     * [[User::auditCompanyId()]]), আর ভূমিকা মোছার কোনো সারিই ছিল না — AVA-র খাতায় কিছু নেই, কেউ জানত না কেন মালিক ঢুকতে পারেন না।
+     *
+     * ⭐ এখন প্রতিটা হারানো কোম্পানির খাতায়: `member_removed` (কে করলেন — খাতার user_id, কোথায় দাঁড়িয়ে, আগে কী ছিল) আর
+     * ভূমিকা থাকলে `roles_removed` (নামসহ)। ⓘ সম্পাদকের নিজের খাতার `companies_changed` আগের মতোই থাকে।
+     *
+     * @param  array<int, array{member: object|null, roles: list<string>}>  $losing
+     */
+    private function tellTheCompaniesTheyLeft(User $user, array $losing): void
+    {
+        if ($losing === []) {
+            return;
+        }
+
+        $standing = CompanyContext::id();
+        $from = $standing === null ? '—' : (string) (DB::table('companies')->where('id', $standing)->value('code') ?? $standing);
+
+        foreach ($losing as $companyId => $had) {
+            CompanyContext::forCompany($companyId, function () use ($user, $had, $from): void {
+                $member = $had['member'];
+                $state = $member === null ? __('system_admin::message.member_was_none')
+                    : __('system_admin::message.member_was', [
+                        'state' => (int) $member->is_active === 1 ? __('system_admin::message.member_active') : __('system_admin::message.member_inactive'),
+                        'branch' => $member->default_branch_id === null ? '—'
+                            : (string) (DB::table('branches')->where('id', $member->default_branch_id)->value('code') ?? $member->default_branch_id),
+                    ]);
+
+                $this->audit->recordAction($user, 'member_removed',
+                    __('system_admin::message.member_removed_from', ['from' => $from, 'was' => $state]));
+
+                if ($had['roles'] !== []) {
+                    $this->audit->recordAction($user, 'roles_removed',
+                        __('system_admin::message.roles_removed_from', ['from' => $from, 'roles' => implode(', ', $had['roles'])]));
+                }
+            });
+        }
+    }
+
     private function rolesInEveryCompany(User $user, array $roles, array $companyIds, array $gone): void
     {
         $was = CompanyContext::id();

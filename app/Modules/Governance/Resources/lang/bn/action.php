@@ -36,6 +36,9 @@ return [
      */
     'ownership_transferred' => 'মালিকানা হস্তান্তর',
     'companies_changed' => 'কোম্পানির অধিকার বদল',
+    // ⓘ যে কোম্পানি মানুষটাকে হারাল, তার নিজের খাতায় (২৪ অক্টোবর ২০২৬)
+    'member_removed' => 'সদস্যপদ তুলে নেওয়া',
+    'roles_removed' => 'রোল তুলে নেওয়া',
     'scopes_changed' => 'দেখার সীমা বদল',
     'look_published' => 'রূপ প্রকাশ',
     'look_reverted' => 'রূপ ফেরানো',
