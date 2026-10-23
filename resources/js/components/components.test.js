@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import Alpine from '@alpinejs/csp'
+import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { registerComponents } from './index.js'
 import { bankFacilityForm } from './forms.js'
@@ -148,6 +149,28 @@ describe('নতুন জমা', () => {
         expect(host.querySelector('b').textContent).toBe('owner')
         expect(host.querySelector('i').textContent).toBe('dps')
         expect(warnings).toEqual([])
+    })
+})
+
+/*
+ * ⛔ খরচের ভাউচারের "কাটা · হাতে যাবে" লাইন (a6, ২৪ অক্টোবর ২০২৬): পাতা টাকা লেখা হিসেবে পাঠায় ('0'), আর `ait + vds`
+ * জুড়ে '00' হত — `.toFixed` নেই, পাতা খুলতেই "Value is not a function", লাইনটা ফাঁকা। ⓘ এক্সপ্রেশনটা হাতে লেখা নয়,
+ * ব্লেড থেকেই পড়া — পর্দা যা বলে, ঠিক সেটাই এখানে চলে।
+ */
+describe('খরচের ভাউচারের কাটা আর হাতে যাবে', () => {
+    // ⓘ happy-dom-এ import.meta.url ফাইলের ঠিকানা নয় — vitest চলে প্রকল্পের মূলে, তাই সেখান থেকে
+    const blade = readFileSync('app/Modules/Accounts/Resources/views/voucher/partials/expense-fields.blade.php', 'utf8')
+    const expression = blade.match(/x-text="('\{\{ __\('accounts::field\.deducted'\) \}\} '[^"]*)"/)[1]
+        .replace("{{ __('accounts::field.deducted') }}", 'কাটা')
+        .replace("{{ __('accounts::field.net_payable') }}", 'হাতে যাবে')
+
+    it('পাতার মতো লেখা-টাকায় (০, ৫০ আর ২৫, মুছে ফেলা ঘর) লাইনটা অঙ্ক দেখায়, ভুল নয়', async () => {
+        for (const [ait, vds, said] of [['0', '0', 'কাটা 0.00 · হাতে যাবে 1000.00'], ['50', '25', 'কাটা 75.00 · হাতে যাবে 925.00'], ['', '25', 'কাটা 25.00 · হাতে যাবে 975.00']]) {
+            const host = await mount(`<div x-data="expenseFields({ gross: '1000', ait: '${ait}', vds: '${vds}' })"><span x-text="${expression}"></span></div>`)
+
+            expect(host.querySelector('span').textContent.replace(/\s+/g, ' ')).toBe(said)
+            expect(warnings).toEqual([])
+        }
     })
 })
 

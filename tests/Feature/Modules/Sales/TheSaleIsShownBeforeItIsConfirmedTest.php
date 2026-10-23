@@ -197,6 +197,22 @@ final class TheSaleIsShownBeforeItIsConfirmedTest extends TestCase
             ->assertSee('data-overview-trigger', false);
     }
 
+    /**
+     * ⛔ পপ-আপ পর্দার মাঝখানে (a6, ২৩ অক্টোবর ২০২৬, ১৩৬৬-এর ছবি): Tailwind-এর গোড়ার নিয়ম সব margin শূন্য করে, তাই
+     * `<dialog>` ব্রাউজারের নিজের মাঝখানে-বসানো হারিয়ে বাঁ-উপরের কোণে বসত। `m-auto` পাতায়, আর বিল্ড করা CSS-এ।
+     */
+    public function test_the_popup_stands_in_the_middle_of_the_screen(): void
+    {
+        $page = (string) $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail())
+            ->get(route('sales.direct.create'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<dialog data-confirm-overview-dialog[^>]*class="[^"]*\bm-auto\b/', $page,
+            '⛔ সারাংশের পপ-আপে m-auto নেই — পর্দার মাঝখানে নয়, বাঁ-উপরের কোণে বসে');
+        $manifest = json_decode((string) file_get_contents(public_path('build/manifest.json')), true);
+        $css = (string) file_get_contents(public_path('build/'.$manifest['resources/css/app.css']['file']));
+        $this->assertStringContainsString('.m-auto{margin:auto}', $css, '⛔ m-auto বিল্ড করা CSS-এ নেই — পপ-আপ তবুও কোণে');
+    }
+
     /** @param  array<string, mixed>  $line */
     private function sale(array $line = []): array
     {

@@ -223,7 +223,7 @@
         <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold">
             <span>{{ __('accounts::field.deduction_at_source') }}</span>
             <span class="num text-xs font-normal text-(--color-ink-muted)"
-                  x-text="'{{ __('accounts::field.deducted') }} ' + (ait + vds).toFixed(2)
+                  x-text="'{{ __('accounts::field.deducted') }} ' + deducted.toFixed(2)
                       + ' · {{ __('accounts::field.net_payable') }} ' + net.toFixed(2)"></span>
         </summary>
 
