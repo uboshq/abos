@@ -611,6 +611,16 @@ export function expenseFields (config) {
             return this.payeesByType[this.payeeType] ?? []
         },
 
+        /*
+         * কাটা — উৎসে কর আর উৎসে ভ্যাট একসাথে, সংখ্যায়।
+         * ⛔ পাতা দুটো টাকা লেখা হিসেবে পাঠায় ('0', ভাসমান সংখ্যা নয়), আর মুছে ফেলা ঘরও লেখা ('')। তাই `ait + vds`
+         * জুড়ে '00' হত, `.toFixed` থাকত না, আর খরচের ভাউচার খুলতেই "Value is not a function", সারাংশের লাইন ফাঁকা
+         * (bd9447f88, ১৯ সেপ্টেম্বর থেকে; a6, ২৪ অক্টোবর ২০২৬)।
+         */
+        get deducted () {
+            return (Number(this.ait) || 0) + (Number(this.vds) || 0)
+        },
+
         /* হাতে যাবে — বিলের মোট থেকে কর্তন বাদ */
         get net () {
             return Math.max(0, this.gross - this.ait - this.vds)

@@ -195,7 +195,7 @@ final class SaleTracking
     {
         $events = collect();
         // ⓘ চালানের আদেশ-সম্পর্কের নাম `order` — আগে `salesOrder` পড়া হত, যা নেই, তাই চালানের দাগে আদেশের ঘটনা আসত না
-        $order = $sale instanceof SalesOrder ? $sale : $sale->order;
+        $order = $sale instanceof SalesOrder ? $sale : $this->orderOf($sale);
 
         if ($order !== null) {
             $order->loadMissing('creator');
@@ -505,7 +505,7 @@ final class SaleTracking
             ->where('i.company_id', CompanyContext::id()) // ⓘ লাইনে কোম্পানি নেই — বিলের কোম্পানি ধরে
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
-        return $invoiceIds->isNotEmpty() && SalesInvoice::query()->whereIn('id', $invoiceIds)
+        return $invoiceIds->isNotEmpty() && SalesInvoice::acrossBranches()->whereIn('id', $invoiceIds)
             ->whereNotNull('draft_paused_at')->exists();
     }
 
@@ -613,9 +613,13 @@ final class SaleTracking
     }
 
     /** @return Collection<int, SalesInvoice> */
+    /**
+     * চালানের পাকা বিল। ⓘ শাখার দেয়াল ছাড়া (২৩ অক্টোবর ২০২৬): চালানটা নাগালে বলেই এখানে আসা ([[SaleTrackingController::inReach()]]),
+     * আর তার বিল একই বিক্রির — হেডারে অন্য শাখা বাছা থাকলে দেয়াল বিলটা লুকাত, গল্পে "বিল হয়নি" দেখাত।
+     */
     private function invoicesOf(DeliveryChallan $challan): Collection
     {
-        return SalesInvoice::query()
+        return SalesInvoice::acrossBranches()
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
             ->with('creator')->orderBy('id')->get();
@@ -729,7 +733,13 @@ final class SaleTracking
             'step' => $step,
             'category' => self::CATEGORY_OF_STEP[$step],
             'billed' => $billed,
-            'back_order' => $sale instanceof DeliveryChallan && $this->hasBackOrder($sale->order),
+            'back_order' => $sale instanceof DeliveryChallan && $this->hasBackOrder($this->orderOf($sale)),
         ];
+    }
+
+    /** চালানের আদেশ — শাখার দেয়াল ছাড়া, একই বিক্রির বলে ([[invoicesOf()]]-এর একই কারণ; ২৩ অক্টোবর ২০২৬) */
+    private function orderOf(DeliveryChallan $challan): ?SalesOrder
+    {
+        return $challan->sales_order_id === null ? null : SalesOrder::acrossBranches()->find($challan->sales_order_id);
     }
 }
