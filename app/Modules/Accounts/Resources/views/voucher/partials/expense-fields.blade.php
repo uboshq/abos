@@ -227,20 +227,20 @@
         </summary>
 
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
-            <x-ui.field name="gross_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="gross_amount" type="money" model="gross"
                         :label="__('accounts::field.bill_gross')"
-                        :value="$was('gross_amount')" numeric
-                        x-model.number="gross" />
+                        :value="$was('gross_amount')"
+                        />
 
-            <x-ui.field name="ait_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="ait_amount" type="money" model="ait"
                         :label="__('accounts::field.ait')"
-                        :value="$was('ait_amount')" numeric
-                        x-model.number="ait" />
+                        :value="$was('ait_amount')"
+                        />
 
-            <x-ui.field name="vds_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="vds_amount" type="money" model="vds"
                         :label="__('accounts::field.vds')"
-                        :value="$was('vds_amount')" numeric
-                        x-model.number="vds" />
+                        :value="$was('vds_amount')"
+                        />
         </div>
 
         <p class="mt-3 flex items-center justify-between text-sm">

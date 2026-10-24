@@ -87,10 +87,11 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
     public function test_the_amount_is_written_with_lakh_commas_and_lands_exactly(): void
     {
         $html = $this->screen(Voucher::RECEIPT);
-        $this->assertMatchesRegularExpression('/<input[^>]*type="text"[^>]*name="amount"|<input[^>]*name="amount"[^>]*type="text"/', $html,
-            '⛔ টাকার ঘর আবার type="number" — কমা দেখাতে পারে না');
-        $this->assertStringContainsString('@change="tidyAmount()"', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/party-fields.blade.php')),
-            '⛔ ঘর ছাড়লে অঙ্ক লাখ-কমায় সাজে না');
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর আর পাঠানোর ঘর আলাদা (x-ui.field type="money") — দেখানোর ঘর লেখার, name ছাড়া
+        $this->assertMatchesRegularExpression('/<input[^>]*type="text"[^>]*data-money-shown="amount"[^>]*x-money-display="amount"/', $html,
+            '⛔ টাকার ঘর আবার type="number" বা লাখ-কমার directive ছাড়া — কমা দেখাতে পারে না');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="amount"[^>]*:value="amount"/', $html,
+            '⛔ টাকার কাঁচা অঙ্ক পাঠানোর লুকানো ঘর নেই');
 
         $before = Voucher::query()->count();
         $this->postReceipt(['amount' => '45,000.00']);

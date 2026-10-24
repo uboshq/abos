@@ -43,11 +43,18 @@ async function mount ({ out = false, amount = '', account = '229', balances = { 
 }
 
 describe('অঙ্ক আর খাতের স্থিতি', () => {
-    it('ঘর ছাড়লে অঙ্ক লাখ-কমায় আর দুই দশমিকে সাজে', async () => {
+    it('ঘর ছাড়লে অঙ্ক লাখ-কমায় আর দুই দশমিকে দেখায়, কিন্তু মান কাঁচা অঙ্কই থাকে', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
         const data = await mount({ amount: '4500000' })
-        data.tidyAmount()
-        expect(data.amount).toBe('45,00,000.00')
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর আলাদা ([[registerMoneyDisplay]]) — আগে tidyAmount() মানটাতেই কমা বসাত
+        const shown = document.createElement('input')
+        shown.setAttribute('x-money-display', 'amount')
+        document.querySelector('form').appendChild(shown)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        expect(shown.value, '⛔ ঘরে লাখ-কমা আর দুই দশমিক নেই').toBe('45,00,000.00')
+        expect(data.amount, '⛔ দেখানোর কমা মানে ঢুকল — পাঠানো অঙ্ক কাঁচা থাকার কথা').toBe('4500000')
     })
 
     it('পরিশোধে খাতের চেয়ে বেশি দিলে "কম" — রসিদে নয়', async () => {

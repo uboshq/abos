@@ -24,9 +24,10 @@
 
     $supplierId = (string) old('supplier_id', $bill?->supplier_id ?? $payment->supplier_id ?? '');
     $amount = (string) old('amount', $isNew ? ($bill?->dueAmount() ?? '') : (string) $payment->amount);
-    // ⭐ লাখ-কমায় দেখানো ("1,20,000.00", নকশার মিল-তালিকা #৯); ফেরত-আসা অচল লেখা যেমন ছিল তেমন — ভুলটা চোখে থাকে
+    // ⭐ কাঁচা অঙ্ক — লাখ-কমায় দেখায় ঘর নিজেই ("1,20,000.00", নকশার মিল-তালিকা #৯; x-ui.field type="money", ২৪ অক্টোবর ২০২৬);
+    //    ফেরত-আসা অচল লেখা যেমন ছিল তেমন — ভুলটা চোখে থাকে
     $plainAmount = str_replace(',', '', trim($amount));
-    $amount = $plainAmount !== '' && is_numeric($plainAmount) ? \App\Core\Support\Money::format($plainAmount) : $amount;
+    $amount = $plainAmount !== '' && is_numeric($plainAmount) ? $plainAmount : $amount;
     $accountId = (string) old('account_id', $payment->account_id ?? '');
 
     $billRows = $openBills->map(fn ($b) => [
@@ -137,9 +138,9 @@
                         </div>
                         <x-ui.field name="trx_date" type="date" :label="__('money.screen.date')" required
                                     :value="old('trx_date', $payment->trx_date?->toDateString() ?? now()->toDateString())" />
-                        {{-- ⓘ লেখার ঘর, সংখ্যার নয় — `type="number"` কমা দেখাতে পারে না; সার্ভার কমা ছেঁটে পড়ে ([[PaymentRequest::prepareForValidation()]]) --}}
-                        <x-ui.field name="amount" type="text" inputmode="decimal" numeric required data-pay-amount
-                                    :label="__('money.screen.gross')" :value="$amount" x-model="amount" @change="tidyAmount()" />
+                        {{-- ⓘ দেখানোর ঘরে লাখ-কমা, পাঠানো মান কাঁচা অঙ্ক (type="money"); সার্ভার তবু কমা ছেঁটে পড়ে ([[PaymentRequest::prepareForValidation()]]) --}}
+                        <x-ui.field name="amount" type="money" model="amount" required data-pay-amount
+                                    :label="__('money.screen.gross')" :value="$amount" />
                     </div>
 
                     {{-- যে খাত থেকে | পদ্ধতি; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}

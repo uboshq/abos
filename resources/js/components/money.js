@@ -297,12 +297,7 @@ export function voucherMoney ({
             form?.addEventListener('change', (e) => {
                 if (e.target?.name !== 'instrument_no' && e.target?.name !== 'deposit_slip_no') this.refresh()
             })
-            this.$nextTick(() => { this.tidyAmount(); this.refresh() })
-        },
-
-        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("45,000.00"); ফাঁকা বা শূন্য যেমন ছিল — সার্ভার কমা ছেঁটে পড়ে ([[VoucherRequest]]) */
-        tidyAmount () {
-            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
+            this.$nextTick(() => this.refresh())
         },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ "খাতে আছে কি না"-য়, আর প্রিভিউ নতুন করে */
@@ -479,11 +474,6 @@ export function payBills ({
 
         get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
         get slipUsed () { return this.slip.state === 'used' },
-
-        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("1,20,000.00", নকশার মিল-তালিকা #৯); ফাঁকা বা শূন্য যেমন ছিল */
-        tidyAmount () {
-            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
-        },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */
         heard (detail) {

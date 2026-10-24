@@ -331,13 +331,12 @@
                     :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                     required />
 
-        {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — লেখার ঘর, কারণ `type="number"` কমা দেখাতে পারে
-             না; সার্ভার কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])। ⓘ `?? $voucher->amount` — অর্থের খাতার
-             "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
-        <x-ui.field name="amount" type="text" inputmode="decimal" numeric required data-voucher-amount
+        {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর পাঠানোর ঘর আলাদা, পাঠানো মান কাঁচা
+             অঙ্ক (type="money", fe, ২৪ অক্টোবর ২০২৬); সার্ভার তবু কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])।
+             ⓘ `?? $voucher->amount` — অর্থের খাতার "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
+        <x-ui.field name="amount" type="money" model="amount" required data-voucher-amount
                     :label="$isReceipt ? __('accounts::field.amount_received') : __('accounts::field.amount_paid')"
-                    :value="old('amount', $typedAmount ?? $voucher->amount)"
-                    x-model="amount" @change="tidyAmount()" />
+                    :value="old('amount', $typedAmount ?? $voucher->amount)" />
     </div>
 
     {{--

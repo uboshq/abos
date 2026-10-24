@@ -151,8 +151,8 @@
                        :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
                 @endif
             </div>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.mfs_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.mfs_charge')" :value="$charge" />
         </div>
     </template>
 
@@ -173,8 +173,8 @@
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
             </label>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.bank_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.bank_charge')" :value="$charge" />
         </div>
     </template>
 
@@ -194,8 +194,8 @@
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
             </label>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.bank_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.bank_charge')" :value="$charge" />
         </div>
     </template>
 
