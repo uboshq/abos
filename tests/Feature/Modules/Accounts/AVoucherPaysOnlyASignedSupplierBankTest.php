@@ -29,7 +29,8 @@ use Tests\TestCase;
  * ব্যাংক ট্রান্সফারে টাকা এমন হিসাবে যেত যার তথ্য দুই হাতে সই-পাওয়া নয় (SAP vendor master dual control-এর ঠিক উল্টো)।
  *
  * দাবি:
- *   ১. ওয়েব: সই-না-পাওয়া সরবরাহকারীকে ট্রান্সফারের পরিশোধ ভাউচার ফেরে, `payee_bank`-এ নিজের বার্তায়; কিছু পোস্ট হয় না
+ *   ১. ওয়েব: সই-না-পাওয়া সরবরাহকারীকে ট্রান্সফারের পরিশোধ ভাউচার ফেরে, `payee_bank`-এ নিজের বার্তায়; কিছু পোস্ট হয় না;
+ *      প্রিভিউও একই বার্তায় থামে
  *   ২. ফোন: একই খসড়া ফোনের "পোস্ট" দরজায় ৪২২, একই বার্তায়
  *   ৩. খরচের ভাউচারেও (সরবরাহকারী পক্ষ, ট্রান্সফার) একই
  *   ৪. সই-পাওয়া ব্যাংক থাকলে ট্রান্সফার চলে; নগদে সই লাগে না
@@ -82,6 +83,16 @@ final class AVoucherPaysOnlyASignedSupplierBankTest extends TestCase
         $this->assertContains($this->refusalOn('payee_bank'), $this->unsignedMessages(),
             '⛔ সই-না-পাওয়া সরবরাহকারী-ব্যাংকে ভাউচারের ট্রান্সফার থামল না, বা অন্য কারণে থামল: '.json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
         $this->assertSame($before, $this->postedCount(), '⛔ থামানো পরিশোধ খাতায় বসে গেল');
+    }
+
+    /** ১ক — প্রিভিউও পোস্টের একই কারণে থামে, নিজের বার্তায় (fe, ২৪ অক্টোবর) */
+    public function test_the_preview_says_the_same_refusal(): void
+    {
+        $preview = $this->post(route('accounts.voucher.simulate'), $this->payment('transfer', 'TT-UNSIGNED-P'))->assertOk()->json();
+
+        $this->assertSame([], $preview['rows'], '⛔ সই-না-পাওয়া ব্যাংকে ট্রান্সফারের প্রিভিউ খাতার সারি দেখায় — পোস্ট ফেরাবে');
+        $this->assertContains((string) ($preview['message'] ?? ''), $this->unsignedMessages(),
+            '⛔ প্রিভিউ সই-না-পাওয়া ব্যাংকের কারণ বলে না: '.json_encode($preview, JSON_UNESCAPED_UNICODE));
     }
 
     /** ২ — ফোন */

@@ -1848,6 +1848,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($paper);
         $this->assertCashLandsInOwnTill($paper);
         $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPayeeBankIsSigned($paper);
         $this->assertPartyInItsBranch($paper, $ownable);
         $this->bankReferenceAccount($paper);
 
