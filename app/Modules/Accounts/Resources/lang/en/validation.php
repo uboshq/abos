@@ -194,4 +194,6 @@ return [
     'missing_account' => 'Account :code is missing from the chart — add it first.',
     'chart_account_wrong' => 'The chart of this company has no :name account, or another account sits on its code (:code) — tell the accountant.',
     'code_kept_for_chart' => 'Code :code belongs to the standard chart and is kept for another kind of account — choose another code.',
+    'loan_principal_taken' => 'The loan principal must sit on a liability account — not a group, cash, bank or expense account.',
+    'loan_principal_given' => 'A hand loan given must sit on an asset account — not a group, cash or bank account.',
 ];
