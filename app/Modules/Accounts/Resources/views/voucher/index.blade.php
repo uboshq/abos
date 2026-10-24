@@ -90,7 +90,9 @@
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('accounts::voucher.' . $type)" :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])"
                 :sort="$sortOptions"
-                :columns="$columns">
+                :columns="$columns"
+                :filter-labels="$filterLabels ?? []"
+                :filter-values="$filterValues ?? []">
         <x-slot:actions>
             @can('accounts.voucher.create')
                     <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
@@ -101,16 +103,50 @@
                 {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
                      ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
                 <x-ui.date name="from"
-                           value="{{ request('from') }}"
+                           value="{{ $filters['from'] ?? '' }}"
                            aria-label="{{ __('accounts::field.from_date') }}"
                            :submit-on-change="true"
                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                           <x-ui.date name="to"
-                           value="{{ request('to') }}"
+                <x-ui.date name="to"
+                           value="{{ $filters['to'] ?? '' }}"
                            aria-label="{{ __('accounts::field.to_date') }}"
                            :submit-on-change="true"
                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                           </x-ui.toolbar>
+
+                {{--
+                    ⭐ বাকি ছাঁকনি — পক্ষ (খোঁজাসহ), খাত, পদ্ধতি, অবস্থা, টাকার পরিসর, কে বানালেন, শাখা (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬;
+                    [[VoucherListFilters]])। ⓘ প্যানেল যেকোনো ঘর বদলালেই জমা দেয় (`data-action="submit-form"`), বাছা ছাঁকনি চিপ হয়ে
+                    ✕-সহ ওঠে ([[x-ui.toolbar]]), আর সব ঠিকানায় — share আর ছাপা একই তালিকা।
+                --}}
+                @php
+                    $compact = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
+                    $pick = fn (string $key, array $options, string $all) => ['key' => $key, 'options' => $options, 'all' => $all];
+                @endphp
+                <div class="min-w-56" data-filter="party">
+                    <x-ui.party-search name="party" :groups="$filterOptions['parties'] ?? []" :selected="$filters['party'] ?? null"
+                                       clearable :aria-label="$filterLabels['party'] ?? ''" />
+                </div>
+                @foreach ([
+                    $pick('account', $filterOptions['accounts'] ?? [], $filterLabels['account'] ?? ''),
+                    $pick('method', $filterOptions['methods'] ?? [], $filterLabels['method'] ?? ''),
+                    $pick('state', $filterOptions['states'] ?? [], $filterLabels['state'] ?? ''),
+                    $pick('by', $filterOptions['makers'] ?? [], $filterLabels['by'] ?? ''),
+                    $pick('branch_id', $filterOptions['branches'] ?? [], $filterLabels['branch_id'] ?? ''),
+                ] as $f)
+                    {{-- ⓘ এক শাখা হলে শাখার ঘরের কিছু বলার নেই --}}
+                    @continue($f['key'] === 'branch_id' && count($f['options']) < 2)
+                    <select name="{{ $f['key'] }}" aria-label="{{ $f['all'] }}" class="{{ $compact }}" data-filter="{{ $f['key'] }}">
+                        <option value="">{{ $f['all'] }}: {{ __('accounts::voucher.filter.all') }}</option>
+                        @foreach ($f['options'] as $value => $text)
+                            <option value="{{ $value }}" @selected((string) ($filters[$f['key']] ?? '') === (string) $value)>{{ $text }}</option>
+                        @endforeach
+                    </select>
+                @endforeach
+                <input type="text" inputmode="decimal" name="min" value="{{ $filters['min'] ?? '' }}" data-filter="min"
+                       placeholder="{{ $filterLabels['min'] ?? '' }}" aria-label="{{ $filterLabels['min'] ?? '' }}" class="{{ $compact }} w-28 text-right">
+                <input type="text" inputmode="decimal" name="max" value="{{ $filters['max'] ?? '' }}" data-filter="max"
+                       placeholder="{{ $filterLabels['max'] ?? '' }}" aria-label="{{ $filterLabels['max'] ?? '' }}" class="{{ $compact }} w-28 text-right">
+            </x-ui.toolbar>
         </form>
 
         {{--

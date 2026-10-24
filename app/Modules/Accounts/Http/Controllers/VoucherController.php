@@ -20,6 +20,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\DepositFormOptions;
 use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherListFilters;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Accounts\Services\VoucherWriter;
 use Illuminate\Http\JsonResponse;
@@ -109,12 +110,18 @@ class VoucherController extends Controller implements HasMiddleware
          */
         $awaitingIds = collect(app(VoucherApproval::class)->waitingIds($type)['awaiting']);
 
+        /*
+         * ⭐ ছাঁকনি — তারিখ, পক্ষ, খাত, পদ্ধতি, অবস্থা, টাকার পরিসর, কে বানালেন, শাখা ([[VoucherListFilters]]; মালিকের প্রশ্ন, ২৪ অক্টোবর
+         * ২০২৬: "+ Filter" কেবল তারিখ খুলত)। ⓘ সব ঠিকানায়, আর মোট এই একই কোয়েরি থেকে — তাই share, ছাপা আর মোট একই তালিকা।
+         */
+        $filters = app(VoucherListFilters::class);
+        $chosen = $filters->withHeaderBranch($filters->read($request), $request->user());
+
         $query = Voucher::query()
             ->ofType($type)
-            ->search($request->query('q'))
-            ->when($request->query('from'), fn ($q, $d) => $q->where('trx_date', '>=', $d))
-            ->when($request->query('to'), fn ($q, $d) => $q->where('trx_date', '<=', $d))
-            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
+            ->search(is_string($request->query('q')) ? $request->query('q') : null)
+            // ⓘ পুরনো লিংক (`?status=draft`, হিসাবের ড্যাশবোর্ড) — কাঁচা status, অবস্থার ছাঁকনির পাশে
+            ->when(is_string($request->query('status')) ? $request->query('status') : null, fn ($q, $s) => $q->where('status', $s))
             /*
              * ⛔ খালি তালিকায় `whereIn` দিলে শূন্য সারি আসে, আর সেটাই
              * ঠিক: ঝুলে থাকা কিছু না থাকলে ছাঁকনিটাও খালি দেখাবে।
@@ -122,6 +129,10 @@ class VoucherController extends Controller implements HasMiddleware
             ->when($request->boolean('awaiting'), fn ($q) => $q->whereIn('id', $awaitingIds))
             // ⭐ কেবল মাসশেষের সমন্বয় — জাবেদার তালিকায় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
             ->when($type === Voucher::JOURNAL && $request->boolean('adjusting'), fn ($q) => $q->where('is_adjusting', true));
+
+        $filters->apply($query, $chosen);
+        $filterOptions = $filters->options($type, $request->user());
+        $chips = $filters->chips($type, $filterOptions, $chosen);
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -155,6 +166,10 @@ class VoucherController extends Controller implements HasMiddleware
             'awaitingIds' => $awaitingIds->map(fn ($id) => (int) $id)->all(),
             'awaiting' => $request->boolean('awaiting'),
             'adjusting' => $type === Voucher::JOURNAL && $request->boolean('adjusting'),
+            'filters' => $chosen,
+            'filterOptions' => $filterOptions,
+            'filterLabels' => $chips['labels'],
+            'filterValues' => $chips['values'],
 
             // ⭐ "সংশোধিত" দাগ — এই পাতার ভাউচারগুলোর, একটা প্রশ্নে (পাকা ভাউচার সম্পাদনা, ৫ অক্টোবর ২০২৬)
             'revisedIds' => DocumentRevision::query()
