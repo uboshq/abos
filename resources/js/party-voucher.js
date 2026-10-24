@@ -75,6 +75,16 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         /** এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি। */
         bills: [],
 
+        /*
+         * ⭐ এক টাকা, বহু বিল — কোন বিলে কত (`allocs`: বিলের public_id → অঙ্ক; cb-ma-4, ২৫ অক্টোবর ২০২৬; পরিশোধে-মোট-টাকা-চুক্তি §৩)।
+         * ⓘ টিক দিলে পুরো বকেয়া বসে, আর টাকার ঘরে বসে টিক-দেওয়া বিলগুলোর যোগফল — যতক্ষণ লেখক নিজে টাকার ঘর বদলাননি (`lastFill`:
+         * শেষবার এই বাক্স যা বসিয়েছিল; ঘরের মান তার থেকে আলাদা হলে আর ছোঁয়া নয়)। `grossSeen` ফর্মের মোট (পয়সায়, [[voucherMoney]]-এর
+         * `money-gross` ঘটনা): যোগফলের বাইরে যা থাকে তা অগ্রিম, বেশি হলে লাল। সার্ভার একই নিয়মে আবার মাপে ([[VoucherAllocations]])।
+         */
+        allocs: {},
+        lastFill: null,
+        grossSeen: null,
+
         /**
          * ⭐ রসিদ **একটা** বিলের বিপরীতে — `against_type` / `against_id` (Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬)।
          *
@@ -103,6 +113,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             this.partyId = id;
             this.due = null;
             this.bills = [];
+            this.clearAllocs();
             this.unpick();
             this.loadDue();
         },
@@ -180,11 +191,169 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             }
         },
 
+        /** "নির্বাচিত বিল" — টিক-দেওয়া বিলগুলোর যোগফল; টিক না থাকলে অন্য মডিউলের আগাম-বাছা একক বিলের বাকি */
         fillPickedBill() {
+            if (this.hasTicked) {
+                this.$dispatch('fill-amount', (this.allocSumPaisa / 100).toFixed(2));
+
+                return;
+            }
+
             const bill = this.pickedBill;
 
             if (bill !== null) {
                 this.$dispatch('fill-amount', Number(bill.outstanding).toFixed(2));
+            }
+        },
+
+        get hasTicked() {
+            return this.pickedRows.length > 0 || this.pickedBill !== null;
+        },
+
+        // ── বহু বিল ─────────────────────────────────────────────────────
+
+        billKey(b) {
+            return String(b.against_type) + '-' + String(b.id);
+        },
+
+        isTicked(b) {
+            return Object.prototype.hasOwnProperty.call(this.allocs, String(b.public_id));
+        },
+
+        /** টিক — পুরো বকেয়া বসে; টিক তুললে সারিটা যায় */
+        toggle(b) {
+            const key = String(b.public_id);
+            const next = { ...this.allocs };
+
+            if (Object.prototype.hasOwnProperty.call(next, key)) {
+                delete next[key];
+            } else {
+                next[key] = Number(b.outstanding).toFixed(2);
+            }
+
+            this.allocs = next;
+            this.refill();
+        },
+
+        rowAmount(b) {
+            return this.allocs[String(b.public_id)] ?? '';
+        },
+
+        /** সারির অঙ্ক বদলানো — লাখ-কমা ছেঁটে; অ-সংখ্যা হলে ফাঁকা (সার্ভার থামাবে, চুপচাপ ০ নয়) */
+        setRow(b, value) {
+            const clean = String(value ?? '').replace(/,/g, '').trim();
+
+            this.allocs = { ...this.allocs, [String(b.public_id)]: /^\d+(\.\d+)?$/.test(clean) ? clean : '' };
+            this.refill();
+        },
+
+        /** পাঠানোর সারি — বিলের তালিকার ক্রমে (পুরনো আগে) */
+        get pickedRows() {
+            return this.bills.filter((b) => this.isTicked(b)).map((b) => ({ id: String(b.public_id), amount: this.allocs[String(b.public_id)] }));
+        },
+
+        billField(i, key) {
+            return 'bills[' + i + '][' + key + ']';
+        },
+
+        get allocSumPaisa() {
+            return this.pickedRows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0) * 100), 0);
+        },
+
+        get allocSumText() {
+            return '৳' + taka(this.allocSumPaisa / 100);
+        },
+
+        /** টাকার ঘরে যোগফল — কেবল লেখক নিজে ঘরটা না বদলালে (ফাঁকা, বা শেষবার এই বাক্সের বসানো অঙ্কই আছে) */
+        refill() {
+            const sum = this.allocSumPaisa;
+
+            if (this.grossSeen === null || this.grossSeen === 0 || this.grossSeen === this.lastFill) {
+                this.lastFill = sum;
+                this.$dispatch('fill-amount', (sum / 100).toFixed(2));
+            }
+        },
+
+        /** ⓘ ফর্মের মোট — পয়সায় ([[voucherMoney]] `money-gross`) */
+        heardGross(paisa) {
+            const value = Number(paisa);
+
+            this.grossSeen = Number.isFinite(value) ? value : null;
+        },
+
+        /**
+         * যোগফলের বাইরে যা থাকে — বিলে প্রয়োগ হয় না, পক্ষের নিজের খাতায় থাকে: পরিশোধে Dr, রসিদে Cr (চুক্তি §৭.৬)।
+         * ⛔ "অগ্রিম" নয় — সরবরাহকারীর আলাদা অগ্রিম খাত নেই (১১৩০ দল, ১১৩১ কেবল কর্মীর); খাতায় টাকা পক্ষের নিজের খাতেই বসে।
+         */
+        get unappliedText() {
+            const sum = this.allocSumPaisa;
+
+            if (sum <= 0 || this.grossSeen === null || this.grossSeen <= sum || !this.texts?.unapplied) {
+                return '';
+            }
+
+            const party = this.texts?.partyOf?.[this.partyType] ?? this.texts?.partyOf?.[''] ?? '';
+
+            return this.texts.unapplied
+                .replace(':sum', '৳' + taka(sum / 100))
+                .replace(':amount', taka((this.grossSeen - sum) / 100))
+                .replace(':party', party)
+                .replace(':side', this.out ? 'Dr' : 'Cr');
+        },
+
+        /** যোগফল টাকার বেশি — লালে (সার্ভারও থামায়, `bills_over_gross`) */
+        get overText() {
+            const sum = this.allocSumPaisa;
+
+            if (sum <= 0 || this.grossSeen === null || this.grossSeen >= sum || !this.texts?.over) {
+                return '';
+            }
+
+            return this.texts.over.replace(':sum', taka(sum / 100)).replace(':gross', taka(this.grossSeen / 100));
+        },
+
+        /** দেরি — শেষ দিন পেরোলে "N দিন" (লালে), নইলে "—" */
+        lateText(b) {
+            const days = Number(b.days_late ?? 0);
+
+            return days > 0 && this.texts?.lateDays ? this.texts.lateDays.replace(':n', String(days)) : '—';
+        },
+
+        lateClass(b) {
+            return Number(b.days_late ?? 0) > 0 ? 'font-medium text-(--color-danger)' : 'text-(--color-ink-muted)';
+        },
+
+        /** টাকা লাখ-কমায় দুই দশমিকে — নকশার "30,000.00" */
+        lakh(value) {
+            return taka(Number(value ?? 0));
+        },
+
+        /** "2026-10-17" → "17-10" (নকশার মতো) */
+        dayMonth(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ''));
+
+            return m ? m[3] + '-' + m[2] : String(value ?? '');
+        },
+
+        clearAllocs() {
+            this.allocs = {};
+            this.lastFill = null;
+        },
+
+        /**
+         * ⓘ অন্য মডিউলের আগাম-বাছা একক "বিপরীতে" (যেমন অর্থের খাতার "টাকা নিন") যদি এই পক্ষের খোলা বিল হয় — সেটাকে বিলের সারিতে টিক,
+         * আর একক ঘর খালি: একই বিল দুই পথে দুবার বসত না।
+         */
+        adoptPicked() {
+            if (this.pickedId === '') {
+                return;
+            }
+
+            const bill = this.bills.find((b) => String(b.id) === this.pickedId && b.against_type === this.pickedType);
+
+            if (bill && bill.public_id) {
+                this.allocs = { ...this.allocs, [String(bill.public_id)]: Number(bill.outstanding).toFixed(2) };
+                this.unpick();
             }
         },
 
@@ -205,6 +374,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             this.partyId = this.partyType === this.firstType ? this.firstId : '';
             this.due = null;
             this.bills = [];
+            this.clearAllocs();
             this.unpick();
             this.loadDue();
         },
@@ -241,6 +411,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
                 this.due = data.known ? Number(data.amount).toFixed(2) : null;
                 this.bills = data.bills || [];
+                this.adoptPicked();
             } catch (e) {
                 /*
                  * ⚠️ নেট গেলে পর্দাটা অচল হয় না — বকেয়া আর বিলের তালিকা

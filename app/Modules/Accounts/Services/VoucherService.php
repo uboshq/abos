@@ -198,6 +198,7 @@ final class VoucherService
             ]);
 
             $this->replaceLines($voucher, $lines);
+            $this->allocate($voucher, $data);
 
             // ইস্যু করা নম্বরটা কোন ভাউচারে বসল — "RV-০০০৭ কার" প্রশ্নের উত্তর
             IssuedNumber::query()
@@ -454,6 +455,8 @@ final class VoucherService
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
             $this->assertAgainstFits($voucher);
+            // ⭐ বহু বিলের প্রতিটা সারি — একই পাঁচ প্রশ্ন, তালাসহ, আর যোগফল ≤ মোট ([[VoucherAllocations::assertFit()]])
+            app(VoucherAllocations::class)->assertFit($voucher);
 
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
@@ -1031,8 +1034,37 @@ final class VoucherService
         ]);
 
         $this->replaceLines($voucher, $lines);
+        $this->allocate($voucher, $data);
 
         return $voucher->fresh(['lines']);
+    }
+
+    /**
+     * ⭐ এক টাকা, বহু বিল — `bills` এলে কোন বিলে কত, সারিতে লেখা ([[VoucherAllocations]]; cb-ma-4, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সারি পক্ষের নিজের খোলা বিল থেকে মেলানো হয়, ভুল হলে ঘর ধরে থামে (`bills.{i}.id`, `bills.{i}.amount`)। ⓘ বহু বিল থাকলে একক
+     * "বিপরীতে" (অডিট ম১-এর পুরনো ঘর) খালি — একই বিল দুই পথে দুবার বসত। ⓘ `bills` না এলে কিছুই বদলায় না (পুরনো ফোন, অন্য মডিউল)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function allocate(Voucher $voucher, array $data): void
+    {
+        if (! array_key_exists('bills', $data)) {
+            return;
+        }
+
+        $allocations = app(VoucherAllocations::class);
+        $result = $allocations->resolve($voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, (array) ($data['bills'] ?? []));
+
+        if ($result['errors'] !== []) {
+            throw ValidationException::withMessages($result['errors']);
+        }
+
+        $allocations->write($voucher, $result['rows']);
+
+        if ($result['rows'] !== [] && filled($voucher->against_type)) {
+            $voucher->forceFill(['against_type' => null, 'against_id' => null])->save();
+        }
     }
 
     /**

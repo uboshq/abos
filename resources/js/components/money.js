@@ -414,9 +414,10 @@ export function voucherMoney ({
         init () {
             form = this.$el.closest('form')
             this.$watch('account', () => { this.slipSoon(); this.refresh() })
-            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
-            this.$watch('ait', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
-            this.$watch('vds', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('ait', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('vds', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$nextTick(() => this.tellGross())
 
             // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
             form?.addEventListener('input', (e) => {
@@ -440,6 +441,14 @@ export function voucherMoney ({
             this.hasParty = detail?.hasParty !== false
             this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null
             this.headPartyType = String(detail?.partyType ?? '')
+        },
+
+        /*
+         * ⓘ ফর্মের মোট (পক্ষের খাতা যতটা কমে) পক্ষের বাক্সকে — বিলের যোগফলের বাইরে অগ্রিম কত, বেশি কি না ([[party-voucher.js]] `heardGross`)।
+         * ⓘ জানালায়, কারণ পক্ষের বাক্স এই ফর্মের ভিতরে — ভিতরের দিকে ঘটনা নামে না।
+         */
+        tellGross () {
+            window.dispatchEvent(new CustomEvent('money-gross', { detail: this.headGrossPaisa }))
         },
 
         /* ⓘ পক্ষের বাক্সের "পুরো বকেয়া" / "নির্বাচিত বিল" — অঙ্কটা টাকার ঘরে (কাঁচা অঙ্ক; দেখানোর ঘর নিজে লাখ-কমায় সাজায়) */

@@ -305,6 +305,16 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         return $this->billShares()->exists();
     }
 
+    /**
+     * ⭐ এক টাকা, বহু বিল — কোন বিলে কত (cb-ma-4; [[VoucherAllocations]])।
+     *
+     * @return HasMany<VoucherAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(VoucherAllocation::class)->orderBy('id');
+    }
+
     public function lines(): HasMany
     {
         return $this->hasMany(VoucherLine::class)->orderBy('sort_order')->orderBy('id');

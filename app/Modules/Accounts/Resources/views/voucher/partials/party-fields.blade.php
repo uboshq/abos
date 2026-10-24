@@ -56,6 +56,7 @@
     আর পক্ষের ঘর একই অবস্থা দেখে।
 --}}
 <div class="space-y-4" data-party-box
+         @money-gross.window="heardGross($event.detail)"
          x-data="partyVoucher({
              partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
@@ -78,6 +79,10 @@
                  'typeLabels' => collect($parties)->pluck('label', 'type')->all(),
                  'partyWord' => $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party'),
                  'oldestDue' => __('money.screen.oldest_due'),
+                 'lateDays' => __('money.screen.late_days'),
+                 'unapplied' => __('money.screen.bills_unapplied'),
+                 'partyOf' => __('money.screen.party_of'),
+                 'over' => __('money.screen.bills_over'),
              ]),
          })">
 <section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -252,7 +257,7 @@
                     <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-due
                             x-show="canFillDue" x-cloak x-on:click="fillWholeDue()">{{ __('money.screen.fill.whole_due') }}</button>
                     <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-bill
-                            x-show="pickedBill" x-cloak x-on:click="fillPickedBill()">{{ __('money.screen.fill.picked_bill') }}</button>
+                            x-show="hasTicked" x-cloak x-on:click="fillPickedBill()">{{ __('money.screen.fill.picked_bill') }}</button>
                 </p>
             @endif
         </div>
@@ -355,71 +360,87 @@
 
         ⓘ ভাঁজটা নিজে থেকেই খোলে যখন পক্ষ বাছা হয় আর বিল আছে।
     --}}
-    {{-- ⓘ বাছা বিল রসিদের "বিপরীতে" ঘরে — বাছা না থাকলে ঘর দুটো যায়ই না --}}
+    {{--
+        ⓘ একক "বিপরীতে" — কেবল অন্য মডিউল আগে থেকে ভরে দিলে (অর্থের খাতার "টাকা নিন", ঋণ, দাবি); সেটা খোলা বিলের তালিকায় থাকলে বাক্সটা
+        তাকে বিলের সারিতে টিক দিয়ে এই ঘর খালি করে ([[party-voucher.js]] `adoptPicked`)। নইলে ঘর দুটো যায়ই না।
+    --}}
     <input type="hidden" name="against_type" x-bind:value="pickedType" x-bind:disabled="pickedId === ''">
     <input type="hidden" name="against_id" x-bind:value="pickedId" x-bind:disabled="pickedId === ''">
 
     {{--
-        ⭐ একটা বিলই বাছা যায় — Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬।
-        ⛔ আগে প্রতিটা বিলে টিক আর অঙ্কের ঘর ছিল, অথচ সার্ভার ভাগগুলো কোথাও রাখত না — আর তালিকাটাই সবসময় খালি আসত।
-        ⓘ এক টাকায় বহু বিল আর "পুরনো বিল আগে" বিক্রয়ের "আদায়" পর্দায়; এখানে বাছা বিলের অঙ্ক, পক্ষ আর খোলা থাকা
-        পোস্টের মুহূর্তে মাপা হয় ([[VoucherService::assertAgainstFits()]])।
-    --}}
-    {{--
-        ⭐ খোলা বিল — খোলা টেবিল, ভাঁজ নয় (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ পক্ষ বাছলে আর তাঁর খোলা বিল থাকলে তবেই;
-        খোলা বিল না থাকলে টেবিলটাই নেই, পক্ষ ছাড়া কাগজেও নেই (তখন উপরের এক লাইনের কারণ)।
+        ⭐ এক টাকা, বহু বিল — নকশার "খোলা বিল" টেবিল (পাতা ২ আর ৪; cb-ma-4, ২৫ অক্টোবর ২০২৬; পরিশোধে-মোট-টাকা-চুক্তি §৩)।
+        কলাম: কাগজ · তারিখ · শেষ দিন · দেরি (শেষ দিন পেরোলে লালে "N দিন", নইলে —) · মূল টাকা · বাকি · এই রসিদে কত।
+        ⓘ টিক দিলে সারিতে পুরো বকেয়া বসে আর টাকার ঘরে বসে টিক-দেওয়া বিলগুলোর যোগফল (লেখক বদলাতে পারেন; নিজে বদলালে আর ছোঁয়া হয় না)।
+        যোগফল টাকার কম হলে বাকিটা বিলে প্রয়োগ হয় না — পক্ষের নিজের খাতায় থাকে (পরিশোধে Dr, রসিদে Cr), কথায় বলা; বেশি হলে লালে (সার্ভারও থামায়)। পাঠানো হয় `bills[i][id]` (বিলের public_id) আর
+        `bills[i][amount]`; প্রতিটা সারি সার্ভারে পক্ষের নিজের খোলা বিল থেকে মেলে আর পোস্টে তালাসহ আবার মাপা হয় ([[VoucherAllocations]])।
+        ⛔ আগের এক-বিলের রেডিও (অডিট ম১-এর সময়ে সার্ভার ভাগ রাখত না) এখন নেই — ভাগ রাখার টেবিল আছে, আর ম১-এর পাঁচ প্রশ্ন প্রতিটা সারিতে।
     --}}
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" data-open-bills
              x-show="! noParty && bills.length > 0" x-cloak>
-        <h3 class="font-semibold">
-            {{ $isReceipt ? __('money.screen.open_bills_in') : __('money.screen.open_bills') }}
-            <span class="ms-2 text-xs font-normal text-(--color-ink-muted)"
-                  x-show="pickedBill" x-cloak x-text="pickedBill ? pickedBill.no : ''"></span>
-        </h3>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 class="font-semibold">
+                {{ $isReceipt ? __('money.screen.open_bills_in') : __('money.screen.open_bills') }}
+            </h3>
+            <span class="text-2xs text-(--color-ink-muted)" data-bills-hint>{{ __('money.screen.bills_hint') }}</span>
+        </div>
 
         <template x-if="bills.length > 0">
             <div>
                 <div class="mt-3 overflow-x-auto">
-                    <table class="ui-grid w-full text-sm">
+                    <table class="ui-grid w-full text-sm" data-bills-table>
                         <thead class="text-xs text-(--color-ink-muted)">
                             <tr class="border-b border-(--color-border)">
-                                <th class="w-8"></th>
-                                <th class="text-start">{{ __('accounts::field.invoice') }}</th>
-                                <th class="text-start">{{ __('accounts::field.date') }}</th>
-                                <th class="text-end">{{ __('accounts::field.age') }}</th>
-                                <th class="text-end">{{ __('accounts::field.outstanding') }}</th>
+                                <th class="w-8"><span class="sr-only">{{ __('money.screen.col.apply') }}</span></th>
+                                <th class="text-start">{{ __('money.screen.col.paper') }}</th>
+                                <th class="text-start">{{ __('money.screen.col.date') }}</th>
+                                <th class="text-start">{{ __('money.screen.col.due') }}</th>
+                                <th class="num">{{ __('money.screen.col.late') }}</th>
+                                <th class="num">{{ __('money.screen.col.total') }}</th>
+                                <th class="num">{{ __('money.screen.col.remaining') }}</th>
+                                <th class="num" data-bill-amount-col>{{ $isReceipt ? __('money.screen.col.this_in') : __('money.screen.col.this_out') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="b in bills" :key="b.against_type + '-' + b.id">
-                                <tr class="border-b border-(--color-border)">
+                            <template x-for="b in bills" :key="billKey(b)">
+                                <tr class="border-b border-(--color-border)" data-bill-row>
                                     <td>
-                                        <input type="radio" name="bill_pick"
-                                               :aria-label="b.no"
-                                               :checked="isBillPicked(b)"
-                                               x-on:change="pick(b)">
+                                        <input type="checkbox" data-bill-tick :aria-label="b.no"
+                                               :checked="isTicked(b)" x-on:change="toggle(b)">
                                     </td>
                                     <td class="font-medium" x-text="b.no"></td>
-                                    <td x-text="b.date"></td>
-                                    <td class="num text-end" x-text="b.age"></td>
-                                    <td class="num text-end" x-text="$fixed(b.outstanding)"></td>
+                                    <td class="num" x-text="dayMonth(b.date)"></td>
+                                    <td class="num" data-bill-due-date x-text="dayMonth(b.due_date)"></td>
+                                    <td class="num" data-bill-late x-bind:class="lateClass(b)" x-text="lateText(b)"></td>
+                                    <td class="num" data-bill-total x-text="lakh(b.total)"></td>
+                                    <td class="num" data-bill-outstanding x-text="lakh(b.outstanding)"></td>
+                                    <td class="num">
+                                        <input type="text" inputmode="decimal" data-bill-amount :aria-label="b.no"
+                                               class="h-(--spacing-field-dense) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50"
+                                               :value="rowAmount(b)" :disabled="! isTicked(b)" x-on:change="setRow(b, $event.target.value)">
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
+                        <tfoot>
+                            <tr class="font-semibold">
+                                <td colspan="7">{{ __('money.screen.col.applied_total') }}</td>
+                                <td class="num" data-bills-sum x-text="allocSumText"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <button type="button" x-show="pickedId !== ''" x-cloak
-                            class="rounded-full border border-(--color-border) px-3 py-1 text-xs"
-                            x-on:click="unpick()">
-                        {{ __('accounts::field.no_bill') }}
-                    </button>
-                    <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::message.many_bills_on_collection') }}</span>
-                </div>
+                {{-- ⓘ টিক-দেওয়া সারিগুলোই যায় — ক্রমিক নম্বরে (`bills[0]`, `bills[1]` …) --}}
+                <template x-for="(row, i) in pickedRows" :key="row.id">
+                    <span>
+                        <input type="hidden" x-bind:name="billField(i, 'id')" x-bind:value="row.id">
+                        <input type="hidden" x-bind:name="billField(i, 'amount')" x-bind:value="row.amount">
+                    </span>
+                </template>
 
-                {{-- ⚠️ গৃহীত টাকা বাছা বিলের বাকির চেয়ে বেশি — পোস্টে সার্ভার থামাবে, আগেই বলা --}}
-                <p class="mt-1 text-xs text-(--color-danger)" x-show="overDue" x-cloak x-text="texts.overDue"></p>
+                {{-- ⓘ বিলের বাইরের টাকা পক্ষের নিজের খাতায় — পরিশোধে Dr, রসিদে Cr; "অগ্রিম" নয় (আলাদা অগ্রিম খাত নেই; চুক্তি §৭.৬) --}}
+                <p class="mt-2 text-xs text-(--color-ink-muted)" data-bills-unapplied x-show="unappliedText !== ''" x-cloak x-text="unappliedText"></p>
+                <p class="mt-2 text-xs text-(--color-danger)" data-bills-over x-show="overText !== ''" x-cloak x-text="overText"></p>
             </div>
         </template>
     </section>

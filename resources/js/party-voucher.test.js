@@ -356,3 +356,76 @@ describe('partyVoucher — নকশার নাম, বয়স আর এক
             .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer' })
     })
 })
+
+/*
+ * ⭐ এক টাকা, বহু বিল (cb-ma-4, ২৫ অক্টোবর ২০২৬) — নকশার খোলা বিলের কলাম আর "এই রসিদে কত": টিকে পুরো বকেয়া, টাকার ঘরে যোগফল (লেখক না
+ * বদলালে), যোগফলের বাইরে অগ্রিম কথায়, বেশি হলে লাল; দেরি কেবল > ০ হলে লালে।
+ */
+describe('partyVoucher — বহু বিল', () => {
+    const texts = { lateDays: ':n দিন', unapplied: 'বিলে বসল :sum; ৳:amount বিলে প্রয়োগ হয়নি — :party খাতায় থাকবে (:side)', partyOf: { customer: 'গ্রাহকের', supplier: 'সরবরাহকারীর', '': 'পক্ষের' }, over: 'বিলে ৳:sum, টাকা ৳:gross' }
+    const bills = () => [
+        { against_type: 'sales_invoice', id: 1, public_id: 'p-1', no: 'INV-1', date: '2026-10-02', due_date: '2026-10-17', days_late: 4, total: '30000', outstanding: '30000' },
+        { against_type: 'sales_invoice', id: 2, public_id: 'p-2', no: 'INV-2', date: '2026-10-09', due_date: '2026-10-24', days_late: 0, total: '25200', outstanding: '15200' },
+    ]
+
+    it('টিকে পুরো বকেয়া বসে, টাকার ঘরে যোগফল যায়, আর পাঠানোর সারি public_id আর অঙ্কে', () => {
+        const box = make({ texts })
+        box.$dispatch = vi.fn()
+        box.bills = bills()
+
+        box.toggle(box.bills[0])
+        box.toggle(box.bills[1])
+
+        expect(box.rowAmount(box.bills[1]), '⛔ টিকে বিলের পুরো বকেয়া বসেনি').toBe('15200.00')
+        expect(box.pickedRows, '⛔ পাঠানোর সারি বিলের public_id আর অঙ্কে নয়').toEqual([{ id: 'p-1', amount: '30000.00' }, { id: 'p-2', amount: '15200.00' }])
+        expect(box.billField(1, 'amount'), '⛔ সারির ঘরের নাম চুক্তির নয়').toBe('bills[1][amount]')
+        expect(box.$dispatch, '⛔ বিল বাছলেও টাকার ঘরে যোগফল বসেনি').toHaveBeenLastCalledWith('fill-amount', '45200.00')
+        expect(box.allocSumText).toBe('৳45,200.00')
+    })
+
+    it('লেখক নিজে টাকা বদলালে বাক্স আর ছোঁয় না; যোগফলের বাইরে "বিলে প্রয়োগ হয়নি — পক্ষের খাতায়" কথায়, বেশি হলে লাল', () => {
+        const box = make({ texts })
+        box.$dispatch = vi.fn()
+        box.bills = bills()
+        box.toggle(box.bills[1])
+        box.heardGross(1520000)
+
+        box.heardGross(2000000)
+        box.$dispatch.mockClear()
+        box.setRow(box.bills[1], '10,000')
+        expect(box.$dispatch, '⛔ লেখকের নিজের লেখা টাকা বাক্স মুছে দিল').not.toHaveBeenCalled()
+        expect(box.unappliedText, '⛔ রসিদে বিলের বাইরের টাকা "গ্রাহকের খাতায় থাকবে (Cr)" বলা হয় না').toBe('বিলে বসল ৳10,000.00; ৳10,000.00 বিলে প্রয়োগ হয়নি — গ্রাহকের খাতায় থাকবে (Cr)')
+        expect(box.unappliedText, '⛔ বিলের বাইরের টাকাকে "অগ্রিম" বলা — সরবরাহকারীর অগ্রিম খাতই নেই').not.toContain('অগ্রিম')
+        box.out = true
+        box.partyType = 'supplier'
+        expect(box.unappliedText, '⛔ পরিশোধে বিলের বাইরের টাকা "সরবরাহকারীর খাতায় থাকবে (Dr)" বলা হয় না').toBe('বিলে বসল ৳10,000.00; ৳10,000.00 বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr)')
+        box.out = false
+        box.partyType = 'customer'
+
+        box.heardGross(500000)
+        expect(box.overText, '⛔ বিলের যোগফল টাকার বেশি, অথচ লালে বলা হয় না').toBe('বিলে ৳10,000.00, টাকা ৳5,000.00')
+        expect(box.unappliedText).toBe('')
+    })
+
+    it('দেরি কেবল শেষ দিন পেরোলে লালে "N দিন" — ০ হলে "—", লাল নয়; তারিখ নকশার "17-10"', () => {
+        const box = make({ texts })
+        const [late, onTime] = bills()
+
+        expect(box.lateText(late)).toBe('4 দিন')
+        expect(box.lateClass(late), '⛔ শেষ দিন পেরোনো বিল লালে নয়').toContain('text-(--color-danger)')
+        expect(box.lateText(onTime), '⛔ সময়ের বিলে দেরি লেখা').toBe('—')
+        expect(box.lateClass(onTime), '⛔ দেরি ০ হলেও লাল').not.toContain('danger')
+        expect(box.dayMonth(late.due_date)).toBe('17-10')
+        expect(box.lakh(onTime.total), '⛔ মূল টাকা লাখ-কমায় নয়').toBe('25,200.00')
+    })
+
+    it('অন্য মডিউলের আগাম-বাছা একক বিল তালিকায় থাকলে সারিতে টিক, একক ঘর খালি', () => {
+        const box = make({ texts, pickedType: 'sales_invoice', pickedId: '2' })
+        box.bills = bills()
+
+        box.adoptPicked()
+
+        expect(box.pickedId, '⛔ আগাম-বাছা বিল একক ঘরেও রয়ে গেল — দুই পথে দুবার বসত').toBe('')
+        expect(box.isTicked(box.bills[1]), '⛔ আগাম-বাছা বিল সারিতে টিক পেল না').toBe(true)
+    })
+})

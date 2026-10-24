@@ -402,6 +402,13 @@ class VoucherRequest extends FormRequest
     {
         $rules = [
             'type' => ['required', Rule::in(Voucher::TYPES)],
+            /*
+             * ⭐ এক টাকা, বহু বিল — `bills[i][id]` বিলের public_id, `bills[i][amount]` এই কাগজে কত (cb-ma-4; পরিশোধে-মোট-টাকা-চুক্তি §৩)।
+             * ⓘ বিলটা পক্ষের নিজের খোলা বিল কি না, বাকির বেশি কি না আর যোগফল মোটের বেশি কি না — [[after()]]-এ, সেবার একই হিসাবে।
+             */
+            'bills' => ['nullable', 'array', 'max:200'],
+            'bills.*.id' => ['required', 'string', 'max:64'],
+            'bills.*.amount' => ['required', 'numeric', 'gt:0'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             /*
              * ⭐ বিবরণ বাধ্যতামূলক, সব ধরনে — কেন টাকা নড়ল, কাগজেই লেখা (ভাউচারের পরিকল্পনা, অংশ ৩খ, ৭ অক্টোবর ২০২৬)।
@@ -699,6 +706,28 @@ class VoucherRequest extends FormRequest
     public function after(): array
     {
         return [
+            /*
+             * ⭐ বিলের সারি (চুক্তি §৪): প্রতিটা পক্ষের খোলা বিল, ≤ তার বকেয়া; যোগফল ≤ মোট (টাকা + AIT + VDS — পক্ষের খাতা যতটা কমে)।
+             * ⓘ হিসাব [[VoucherAllocations::resolve()]]-এর, যে সেবা লেখার আগে আবার চালায়; পোস্টে তালাসহ আরেকবার।
+             */
+            function (Validator $validator): void {
+                $rows = $this->input('bills');
+
+                if (! is_array($rows) || $rows === [] || $validator->errors()->hasAny(['bills', 'bills.*', 'amount', 'gross_amount'])) {
+                    return;
+                }
+
+                $gross = bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
+                    self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+                $partyId = (int) $this->input('party_id', 0);
+                $result = app(\App\Modules\Accounts\Services\VoucherAllocations::class)
+                    ->resolve($this->input('party_type'), $partyId > 0 ? $partyId : null, $rows, $gross);
+
+                foreach ($result['errors'] as $field => $message) {
+                    $validator->errors()->add($field, $message);
+                }
+            },
+
             /*
              * ⭐ মোট টাকার চার নিয়ম (চুক্তি §৪): মোট আছে আর শূন্যের বেশি; AIT + VDS মোটের কম (নিট > ০); মোট আর নিট একসাথে নয় —
              * দুটো এলে কোনটা মানা হবে বলা যায় না, আর দুটো না মিললে পক্ষের খাতা আর হাতের টাকা আলাদা গল্প বলত।

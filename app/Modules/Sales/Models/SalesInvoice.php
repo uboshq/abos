@@ -14,6 +14,7 @@ use App\Core\Contracts\ShowsItselfForSigning;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherAllocation;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Support\SalesSigningSheet;
@@ -220,9 +221,17 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      */
     public function receiptVouchers(): HasMany
     {
-        return $this->hasMany(Voucher::class, 'against_id')
+        /*
+         * ⭐ এক রসিদে বহু বিল (cb-ma-4, ২৫ অক্টোবর ২০২৬) — একক "বিপরীতে" আর বিলের সারি ([[VoucherAllocation]]) দুই পথের রসিদই।
+         * ⓘ সম্পর্কটা কোম্পানি ধরে, তারপর দুই শর্তের যেকোনো একটা — বিলের পাতা একটা একটা করে খোলে (আগে থেকে টেনে আনা নয়)।
+         */
+        $type = static::drillSourceType();
+        $id = $this->getKey();
+
+        return $this->hasMany(Voucher::class, 'company_id', 'company_id')
             ->where('type', Voucher::RECEIPT)
-            ->where('against_type', static::drillSourceType())
+            ->where(fn ($q) => $q->where(fn ($single) => $single->where('against_type', $type)->where('against_id', $id))
+                ->orWhereHas('allocations', fn ($row) => $row->where('against_type', $type)->where('against_id', $id)))
             ->posted()
             ->orderBy('trx_date')
             ->orderBy('id');
@@ -230,12 +239,21 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
 
     public function paidByReceiptVouchers(): string
     {
-        return (string) (Voucher::query()
+        $single = (string) (Voucher::query()
             ->where('type', Voucher::RECEIPT)
             ->where('against_type', static::drillSourceType())
             ->where('against_id', $this->getKey())
             ->posted()
             ->sum('amount') ?: '0');
+
+        // ⭐ বহু বিলের রসিদ — এই বিলের সারিতে যতটা বসল, কেবল পাকা রসিদের ([[VoucherAllocation]]; cb-ma-4)
+        $rows = (string) (VoucherAllocation::query()
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->whereHas('voucher', fn ($v) => $v->where('type', Voucher::RECEIPT)->posted())
+            ->sum('amount') ?: '0');
+
+        return bcadd($single, $rows, 4);
     }
 
     /**
@@ -278,8 +296,15 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          * ⚠️ এখানে বাদ পড়লে আদায়ের পর্দার তালিকায় বিলটা পুরো বকেয়া দেখাত,
          * আর একক পাতায় শোধ — ঠিক যে দুই-অঙ্কের ভুলটা উপরের মন্তব্য বলে।
          */
+        /*
+         * ⭐ আর বহু বিলের রসিদের সারি — [[paidByReceiptVouchers()]]-এর হুবহু দ্বিতীয় অংশ, একই ঘরে (`voucher_total`), যাতে এই ঘর পড়া
+         * প্রতিটা তালিকা আর রিপোর্ট (আদায়ের পর্দা, বকেয়ার রিপোর্ট, ড্যাশবোর্ড, নগদের পূর্বাভাস) নিজে থেকেই মেলে (cb-ma-4)।
+         */
         $byVoucher = Voucher::query()
-            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->selectRaw('COALESCE(SUM(amount), 0) + (SELECT COALESCE(SUM(a.amount), 0) FROM acc_voucher_allocations a'
+                .' JOIN vouchers v ON v.id = a.voucher_id'
+                .' WHERE a.against_type = ? AND a.against_id = sal_invoices.id AND v.type = ? AND v.status = ?)',
+                [static::drillSourceType(), Voucher::RECEIPT, \App\Core\Support\DocumentStatus::CONFIRMED])
             ->where('type', Voucher::RECEIPT)
             ->where('against_type', static::drillSourceType())
             ->whereColumn('against_id', 'sal_invoices.id')
