@@ -98,13 +98,7 @@ final class NoApprovalFlow extends ValidationException
      */
     private static function labelOf(string $module, string $action): string
     {
-        $m = __('core.module.'.$module);
-        $a = __('core.approval.action.'.$action);
-
-        return trim(
-            (is_string($m) && ! str_starts_with($m, 'core.') ? $m : $module)
-            .' · '.
-            (is_string($a) && ! str_starts_with($a, 'core.') ? $a : $action)
-        );
+        // ⭐ দফা ৪ — ইনবক্সের একই নাম, কোড কখনো নয় ([[ApprovalFlowService::labelOf()]])
+        return app(\App\Core\Engines\Approval\ApprovalLabel::class)->of($module, $action);
     }
 }

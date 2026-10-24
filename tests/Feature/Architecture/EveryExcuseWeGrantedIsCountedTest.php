@@ -137,6 +137,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
         // ⓘ চাহিদা: মালিকের বাদ দেওয়া শব্দ — পর্দার লেখায় থাকতেই পারবে না; ছাড় নয়, নিষেধের তালিকা (web-terms, fe ২১ অক্টোবর ২০২৬)
         'TheOwnersWordsAreTheOnlyWordsTest::RETIRED',
+        // ⓘ চাহিদা: অনুমোদন মডিউলের নিষেধের শব্দ (দফা ১৫) — ছাড় নয়
+        'TheOwnersWordsAreTheOnlyWordsTest::APPROVAL_ONLY',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
         'TheOtherNineLooksWereNotTouchedTest::AS_SHIPPED',

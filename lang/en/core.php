@@ -931,7 +931,7 @@ return [
         'ticker_label' => 'Announcements',
         'ticker_pause' => 'Pause announcements',
         'ticker_play' => 'Play announcements',
-        'awaiting_mine' => 'Waiting for your decision',
+        'awaiting_mine' => 'Waiting for your signature',
         'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Signed, not posted',
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',

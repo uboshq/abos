@@ -1074,7 +1074,7 @@ return [
         'ticker_label' => 'ঘোষণা',
         'ticker_pause' => 'ঘোষণা থামান',
         'ticker_play' => 'ঘোষণা চালান',
-        'awaiting_mine' => 'আপনার সিদ্ধান্তের অপেক্ষায়',
+        'awaiting_mine' => 'আপনার সইয়ের অপেক্ষায়',
         'approvals_waiting' => 'অনুমোদন, :countটা অপেক্ষায়',
         'signed_unposted' => 'সই হয়েছে, পোস্ট হয়নি',
         'approvals_later' => 'অনুমোদন — যে মডিউল অনুমোদন চায়, পর্দাটা তার সাথেই আসবে।',

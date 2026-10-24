@@ -49,6 +49,8 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         'sent_back_draft' => ['/খসড়ায় ফেরত গেছে/u', 'সইকারী সংশোধনে ফেরালে "সংশোধনে ফেরত গেছে" (লেখক নিজে খসড়ায় ফেরালে সেটা আলাদা কাজ)'],
         'notification_en' => ['/নোটিফিকেশন/u', 'বিজ্ঞপ্তি "বিজ্ঞপ্তি"'],
         'attendance_old' => ['/উপস্থিতি/u', 'হাজিরা "হাজিরা"'],
+        // ⓘ দফা ১৫ (অনুমোদন মডিউলের নকশা, মালিক ২১ অক্টোবর ২০২৬): অপেক্ষাটা সইয়ের, "সিদ্ধান্তের" নয়
+        'decision_wait' => ['/সিদ্ধান্তের অপেক্ষায়/u', 'অপেক্ষার লেখা "সইয়ের অপেক্ষায়"'],
     ];
 
     /**
@@ -56,6 +58,21 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
      * মেশানো কিছু নয় ("সই দিন" বা "মঞ্জুর" একা নয়)।
      */
     private const LEAVE_APPROVE = 'মঞ্জুর করুন';
+
+    /**
+     * ⭐ অনুমোদন মডিউলে মালিকের শব্দ — দফা ১৫ (মালিক, ২১ অক্টোবর ২০২৬)। ⓘ কেবল এই মডিউলে: "স্তর" অন্য জায়গায় অন্য মানে
+     * (মালের খরচের স্তর)। ⛔ ছাপা কাগজের সইয়ের সারি "প্রস্তুতকারী · যাচাইকারী · অনুমোদনকারী" ইচ্ছে করেই থাকে — আন্তর্জাতিক
+     * "Prepared · Checked · Approved by", নিরীক্ষকেরা এটাই খোঁজেন (fe, ২২ অক্টোবর ২০২৬); পর্দায় সই চাওয়ার জায়গায় "সইদাতা"।
+     * তাই নিয়মটা কেবল অনুমোদন মডিউলের লেখায়, ছাপার ফাইলে নয়।
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const APPROVAL_ONLY = [
+        'approval_level' => ['/স্তর/u', 'সইয়ের ধাপ "ধাপ" ("ধাপ 2 / 3")'],
+        'approval_signer' => ['/অনুমোদনকারী/u', 'যিনি সই দেন তিনি "সইদাতা"'],
+        'approval_flow_name' => ['/অনুমোদনের ছক/u', 'ছকের নাম "সইয়ের নিয়ম"'],
+        'approval_bengali_digit' => ['/[০-৯]/u', 'অঙ্ক সবসময় ইংরেজিতে (মালিকের নিয়ম "খ")'],
+    ];
 
     /** বিজ্ঞপ্তি মডিউলে "খবর" মানে বিজ্ঞপ্তিই — সেখানে আলাদা নিয়ম */
     private const NOTIFICATION_NEWS = '/খবর/u';
@@ -135,6 +152,9 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $found = [];
         foreach ($files as $file) {
             $rules = self::RETIRED;
+            if (str_starts_with($file, 'app/Modules/Approval/')) {
+                $rules += self::APPROVAL_ONLY;
+            }
             if (str_starts_with($file, 'app/Modules/Notification/')) {
                 $rules['notification_news'] = [self::NOTIFICATION_NEWS, 'বিজ্ঞপ্তি মডিউলে "খবর" নয়, "বিজ্ঞপ্তি"'];
             }
@@ -295,6 +315,9 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $this->assertSame('কেন '.$rejected.' হয়', __('approval::menu.report_why_rejected', [], 'bn'), '⛔ রিপোর্টের নাম এখনো "কেন বাতিল হয়"।');
         $this->assertSame('ডকুমেন্ট '.$rejected, __('governance::action.document_rejected', [], 'bn'), '⛔ audit-এর লেখা এখনো "ডকুমেন্ট বাতিল"।');
         $this->assertSame($rejected, __('governance::action.rejected', [], 'bn'));
+
+        // ⓘ দফা ১৫ (fe-র অনুমতি, ২২ অক্টোবর ২০২৬): মাথার নোটিশও সইয়ের অপেক্ষা বলে, সিদ্ধান্তের নয়
+        $this->assertSame('আপনার সইয়ের অপেক্ষায়', __('core.notice.awaiting_mine', [], 'bn'), '⛔ মাথার নোটিশ এখনো "সিদ্ধান্তের অপেক্ষায়"।');
 
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);
