@@ -390,6 +390,43 @@ void main() {
     });
   });
 
+  // ⭐ সই লাগবে কি না — কেবল সার্ভারের প্রিভিউর `needs_signature` (চুক্তির §৫); ফোন আন্দাজ করে না (cb-র will_wait, 76c7d5283)
+  group("the signature forecast is the server's", () {
+    Map<String, dynamic> answer(bool? sign) => {
+          'net_amount': '116500.0000',
+          'ledger': const [],
+          if (sign != null) 'needs_signature': sign,
+        };
+    String postLabel(WidgetTester tester) =>
+        tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('pay-post')), matching: find.byType(Text))).data!;
+
+    testWidgets('needs_signature true: "সইয়ের অপেক্ষায় হবে" before saving, and the button reads "সইয়ে পাঠান"', (tester) async {
+      await _pump(tester, _Fake(previewAnswer: answer(true)));
+      await _fill(tester);
+      expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভারের উত্তরের আগেই "সইয়ের অপেক্ষায় হবে"');
+      expect(postLabel(tester), 'পোস্ট');
+      await _tap(tester, 'pay-preview');
+      expect(_shown('pay-state-will-wait'), isTrue, reason: '⛔ সার্ভার সই চায়, তবু "সইয়ের অপেক্ষায় হবে" নেই');
+      expect(postLabel(tester), 'সইয়ে পাঠান', reason: '⛔ সই লাগবে, তবু বোতাম "পোস্ট"');
+      await _type(tester, 'pay-ait', '2500');
+      expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ লেখা বদলেছে, তবু পুরনো রায়');
+    });
+
+    for (final (what, api) in [
+      ('needs_signature false', () => _Fake(previewAnswer: answer(false))),
+      ('needs_signature absent', () => _Fake(previewAnswer: answer(null))),
+      ('no preview door', () => _Fake(previewAbsent: true)),
+    ]) {
+      testWidgets('$what: no forecast chip, and the button reads "পোস্ট"', (tester) async {
+        await _pump(tester, api());
+        await _fill(tester);
+        await _tap(tester, 'pay-preview');
+        expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভার সই চায়নি, তবু "সইয়ের অপেক্ষায় হবে"');
+        expect(postLabel(tester), 'পোস্ট');
+      });
+    }
+  });
+
   group('layout: nothing cut, nothing covered', () {
     for (final width in [320.0, 360.0, 412.0]) {
       for (final scale in [1.0, 2.0]) {

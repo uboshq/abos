@@ -170,7 +170,11 @@ class VoucherBill {
 
 /// ⭐ সার্ভারের হিসাব — নিট আর খাতার সারি (চুক্তি ২, অংশ ৫: ফোন নিট নিজে গোনে না)
 class VoucherPreview {
-  const VoucherPreview({required this.netAmount, this.ledger = const [], this.totalDr, this.totalCr});
+  const VoucherPreview({required this.netAmount, this.ledger = const [], this.totalDr, this.totalCr, this.needsSignature});
+
+  /// ⭐ সই লাগবে কি না — সার্ভারের `needs_signature` (পোস্টের একই ApprovalEngine::requires, মোট টাকায়; চুক্তির §৫); না পাঠালে null।
+  /// ⛔ ফোন কখনো আন্দাজ করে না
+  final bool? needsSignature;
 
   final double netAmount;
   final List<VoucherLineView> ledger;
@@ -201,6 +205,7 @@ class VoucherPreview {
       ],
       totalDr: raw['total_dr'] == null ? null : Money.value(raw['total_dr']),
       totalCr: raw['total_cr'] == null ? null : Money.value(raw['total_cr']),
+      needsSignature: raw['needs_signature'] is bool ? raw['needs_signature'] as bool : null,
     );
   }
 }

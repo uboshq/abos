@@ -83,6 +83,8 @@ void main() {
         'reason_title_bn', 'reason_missing_bn', 'reason_close_bn',
         'label_en', 'label_en_without_level', 'label_en_short', 'label_en_short_without_level', 'semantics_en',
         'semantics_en_without_level', 'semantics_hint_en', 'reason_title_en', 'reason_missing_en', 'reason_close_en',
+        // ⓘ লেখকের টীকা — চিপে আঁকা হয় না, তাই অ্যাপে আয়না নেই (cb-র will_wait-এ প্রথম, 76c7d5283)
+        'about',
       };
       expect(j.keys.where((k) => !known.contains(k) && !kindKeys.hasMatch(k)), isEmpty,
           reason: 'a JSON key the Dart side does not mirror');

@@ -18,8 +18,10 @@ void main() {
     expect(paperStateIcons.keys.toSet(), PaperState.values.map((s) => s.spec.icon).toSet());
   });
 
-  test('no two states share an icon (shape tells them apart without colour)', () {
-    final icons = PaperState.values.map(paperStateIcon).toList();
-    expect(icons.toSet().length, icons.length);
+  // ⓘ cb-র will_wait (76c7d5283) "সইয়ের অপেক্ষায়"-এর একই বালুঘড়ি নেয় — একই কথার পূর্বাভাস; তখন ধারটা আলাদা (ভাঙা বনাম টানা),
+  // তাই রং ছাড়াও আকারে চেনা যায়। আইকন আর ধার — দুটো মিলে কখনো একই নয়।
+  test('no two states share an icon and a border (shape tells them apart without colour)', () {
+    final looks = PaperState.values.map((s) => (paperStateIcon(s), s.spec.dashed)).toList();
+    expect(looks.toSet().length, looks.length);
   });
 }

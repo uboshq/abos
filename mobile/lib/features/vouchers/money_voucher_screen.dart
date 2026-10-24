@@ -11,6 +11,8 @@ import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/records/money_input.dart';
+import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -455,6 +457,9 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     }
   }
 
+  /// ⭐ সই লাগবে — কেবল সার্ভারের প্রিভিউ বললে, আর এখনকার লেখারই হলে ("সইয়ের অপেক্ষায় হবে", বোতামে "সইয়ে পাঠান")
+  bool get _willWait => _currentPreview?.needsSignature == true;
+
   /// সার্ভারের হিসাব, কেবল যদি এখনকার লেখারই হয়
   VoucherPreview? get _currentPreview => _preview != null && _previewFor == _payloadOf(_draft(keep: false)) ? _preview : null;
 
@@ -536,6 +541,15 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         key: const ValueKey('pay-list'),
         padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xl),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // ⭐ সংরক্ষণের আগে: সই লাগবে (cb-র will_wait, ভাঙা ধার) — কেবল সার্ভারের কথায়
+          if (_willWait)
+            const Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AppStatusChip(key: ValueKey('pay-state-will-wait'), state: PaperState.willWait),
+              ),
+            ),
           if (_payment)
             MoneyFigures(
               keyPrefix: 'pay',
@@ -1108,7 +1122,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
           key: const ValueKey('pay-post'),
           style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
           onPressed: ready && !_bankBlocked ? () => _send(keep: false) : null,
-          child: Text(w.payPost, textAlign: TextAlign.center),
+          child: Text(_willWait ? w.collectSendForSign : w.payPost, textAlign: TextAlign.center),
         ),
       ),
     ]);

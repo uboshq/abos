@@ -12,6 +12,10 @@ import 'dart:ui' show Brightness, Color;
 /// `paper_state_icons.dart`-এ।
 enum PaperState {
   draft('draft'),
+
+  /// ⭐ সংরক্ষণের আগে: এই কাগজে সই লাগবে — একটা পূর্বাভাস, এখনো সত্যি নয়, তাই ভাঙা ধার (cb 76c7d5283, ২৫ অক্টোবর ২০২৬);
+  /// কেবল সার্ভারের কথায় বসে (প্রিভিউর `needs_signature`), সার্ভারের কোনো অবস্থার লেখা নয়
+  willWait('will_wait'),
   waiting('waiting'),
   sentBack('sent_back'),
   posting('posting'),
@@ -261,6 +265,23 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     labelEnShortWithoutLevel: 'Draft',
     icon: 'edit_note',
     role: PaperRole.neutral,
+  ),
+  PaperState.willWait: PaperStateSpec(
+    labelBn: 'সইয়ের অপেক্ষায় হবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Will await signature',
+    labelBnWithoutLevel: 'সইয়ের অপেক্ষায় হবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Will await signature',
+    semanticsBn: 'অবস্থা: খসড়া, পাঠালে সইয়ের অপেক্ষায় যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: draft, goes to awaiting signature when sent',
+    semanticsBnWithoutLevel: 'অবস্থা: খসড়া, পাঠালে সইয়ের অপেক্ষায় যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: draft, goes to awaiting signature when sent',
+    labelBnShort: 'সইয়ের অপেক্ষায় হবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Will await signature',
+    labelBnShortWithoutLevel: 'সইয়ের অপেক্ষায় হবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Will await signature',
+    icon: 'hourglass_top',
+    role: PaperRole.critical,
+    dashed: true,
   ),
   PaperState.waiting: PaperStateSpec(
     labelBn: 'সইয়ের অপেক্ষায় · {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it

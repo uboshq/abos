@@ -1508,6 +1508,15 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           key: const ValueKey('collect-summary'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ⭐ পোস্টের আগে: সই লাগবে — "সইয়ের অপেক্ষায় হবে" (cb-র will_wait, ভাঙা ধার); বোতামের একই রায়
+            if (sign && saved == null)
+              const Padding(
+                padding: EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: AppStatusChip(key: ValueKey('collect-state-will-wait'), state: PaperState.willWait),
+                ),
+              ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) MoneyErrorCard(_error!),
             // ── হিসাবের সারাংশ ──
