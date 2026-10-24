@@ -450,6 +450,8 @@ class EveryRouteIsGuardedTest extends TestCase
          * একটা করে চাবি দিতে হত।
          */
         'notifications.settings' => 'নিজের পছন্দ — কোন খবর পাবেন',
+        // ⓘ রেপোর নোট ছাড়া কিছু নেই — কোনো কোম্পানির তথ্য নয় (মালিক, ২৪ অক্টোবর ২০২৬: "এখন থেকেই v. দেওয়া হোক")
+        'release.notes' => 'নতুন কী এল — সংস্করণের নোট, সবার জন্য',
         'notifications.settings.update' => 'নিজের পছন্দ সংরক্ষণ',
 
         'dashboard' => 'হোম পর্দা — সংখ্যাগুলো নিজেরাই অনুমতি দেখে ছাঁকা হয় (DashboardRegistry)',
