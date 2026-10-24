@@ -1621,4 +1621,11 @@ return [
     'linked_documents' => [
         'title' => 'Linked documents',
     ],
+
+    // Version and "what's new" (24 Oct 2026)
+    'release' => [
+        'whats_new' => 'What\'s new',
+        'running' => 'Running now: :label',
+        'no_notes' => 'No notes written yet.',
+    ],
 ];

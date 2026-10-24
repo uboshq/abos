@@ -120,6 +120,9 @@ Route::middleware('auth')->group(function () {
      */
     Route::get('/notifications/settings', [NotificationController::class, 'settings'])
         ->name('notifications.settings');
+
+    // ⭐ নতুন কী এল — নিচের বারের সংস্করণে চাপলে; লগইন করা সবার, চাবি ছাড়া (মালিক, ২৪ অক্টোবর ২০২৬)
+    Route::get('/whats-new', \App\Http\Controllers\ReleaseNotesController::class)->name('release.notes');
     Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])
         ->name('notifications.settings.update');
 
