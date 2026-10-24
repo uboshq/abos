@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/widgets/customer_line.dart';
 import 'package:abos_mobile/core/approvals/approvals_api.dart';
 import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/theme/app_colors.dart';
@@ -90,7 +91,7 @@ void main() {
       await pump(tester, ownerHomeBody());
       expect(find.text('সইয়ের অপেক্ষায় · 3টি'), findsOneWidget);
       // ⓘ নমুনার মতো: প্রথম লাইনে নম্বর · নাম, নিচে পয়েন্ট · শাখা · টাকা
-      expect(find.text('RCV-0190 · রহিম স্টোর'), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0190' && w.name == 'রহিম স্টোর'), findsOneWidget);
       expect(find.text('কেন্দুয়া · ময়মনসিংহ · ৳50,000.00'), findsOneWidget);
       expect(find.text('ময়মনসিংহ · ৳4,87,900.00'), findsOneWidget);
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
@@ -134,7 +135,7 @@ void main() {
     testWidgets('a row reads number · party on the left and the chip on the right, on one row', (tester) async {
       await pump(tester, ownerHomeBody());
       final row = find.byKey(const ValueKey('waiting-a1'));
-      final line = tester.getRect(find.descendant(of: row, matching: find.text('RCV-0190 · রহিম স্টোর')));
+      final line = tester.getRect(find.descendant(of: row, matching: find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0190' && w.name == 'রহিম স্টোর')));
       final chip = tester.getRect(find.descendant(of: row, matching: find.byType(AppStatusChip)));
       expect(chip.left, greaterThan(line.left));
       expect(chip.right, closeTo(tester.getRect(row).right, 1), reason: 'চিপ ডানের কিনারে');
@@ -169,7 +170,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await pump(tester, srCollectBody());
       // আদায়: প্রথম লাইনে নম্বর · নাম, নিচে পয়েন্ট · শাখা; TalkBack পুরো নাম বলে
-      expect(find.text('RCV-0191 · মুসকান এন্টারপ্রাইজ'), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0191' && w.name == 'মুসকান এন্টারপ্রাইজ'), findsOneWidget);
       expect(find.textContaining('ফুলবাড়িয়া · ময়মনসিংহ ·'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp(r'^RCV-0193 · নূর ট্রেডার্স · ত্রিশাল · ময়মনসিংহ, ')), findsOneWidget);
       // বকেয়া: এক লাইনে পুরো নাম

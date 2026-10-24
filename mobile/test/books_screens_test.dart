@@ -1,3 +1,4 @@
+import 'package:abos_mobile/core/widgets/customer_line.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/books/books_api.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
@@ -175,9 +176,9 @@ void main() {
         reason: 'মোট সার্ভারের গোটা ছাঁকনির');
     expect(find.text('সর্বমোট · 2টি'), findsOneWidget);
     // ⓘ ০.৪.৪১ নমুনা: প্রথম লাইনে "নম্বর · নাম", নিচে তারিখ · পদ্ধতি
-    expect(find.text('RCV-0001 · করিম ট্রেডার্স'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0001' && w.name == 'করিম ট্রেডার্স'), findsOneWidget);
     expect(find.textContaining('05/10/2026 · চেক'), findsOneWidget);
-    expect(find.text('RCV-0002 · রহিম স্টোর'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0002' && w.name == 'রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('06/10/2026 · নগদ'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('method-cash')));

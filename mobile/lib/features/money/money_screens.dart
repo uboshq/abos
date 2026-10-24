@@ -11,6 +11,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
+import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -241,19 +242,37 @@ class TransferListScreen extends StatelessWidget {
           label: context.l10n.moneyTransferSend,
         ),
         build: (context, d, reload) {
+          // ⭐ নম্বর কখনো ভাঙে না, টাকাও না (fe, ২৪ অক্টোবর ২০২৬, ০.৪.৪৮; [Amounts]): টাকা সারির ৪০%-এ ধরলে ডানে; না ধরলে
+          // (সরু ফোন, ২০০% অক্ষর) নিচে ডানে নিজের লাইনে — ⛔ আগে ডানের টাকা নম্বরের জায়গা খেয়ে "TR-26-" / "001" ভাঙত
           Widget row(TransferRow t) => Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: ListTile(
-                  key: ValueKey('transfer-${t.id}'),
-                  title: Text(t.no, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${t.from ?? ''} → ${t.to ?? ''}\n${[t.date, t.statusLabel].where((s) => s.isNotEmpty).join(' · ')}'),
-                  isThreeLine: true,
-                  trailing: Text(Money.taka(t.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                  onTap: () async {
-                    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => TransferScreen(id: t.id, api: api)));
-                    await reload();
-                  },
-                ),
+                child: LayoutBuilder(builder: (context, box) {
+                  final money = Money.taka(t.amount);
+                  final moneyStyle = Amounts.main(context, size: 14);
+                  // ⓘ পাশাপাশি কেবল যদি টাকা সারির ৪০%-এ ধরে আর নম্বরও টাকার পাশে পুরো ধরে (Material 3 ListTile: শুরুতে ১৬, শেষে ২৪,
+                  // মাঝে ১৬; আর ৮ বাড়তি)
+                  final numberWidth = Amounts.widthOf(context,
+                      [(t.no, (Theme.of(context).textTheme.bodyLarge ?? const TextStyle()).copyWith(fontWeight: FontWeight.w700))]);
+                  final beside = Amounts.fitsBeside(context, box.maxWidth, [(money, moneyStyle)], share: 0.4) &&
+                      numberWidth + Amounts.widthOf(context, [(money, moneyStyle)]) + 16 + 24 + 16 + 8 <= box.maxWidth;
+                  final words = Text('${t.from ?? ''} → ${t.to ?? ''}\n${[t.date, t.statusLabel].where((s) => s.isNotEmpty).join(' · ')}');
+                  return ListTile(
+                    key: ValueKey('transfer-${t.id}'),
+                    title: Text(t.no, softWrap: false, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: beside
+                        ? words
+                        : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                            words,
+                            Align(alignment: AlignmentDirectional.centerEnd, child: AmountText(money, style: moneyStyle)),
+                          ]),
+                    isThreeLine: true,
+                    trailing: beside ? AmountText(money, style: moneyStyle) : null,
+                    onTap: () async {
+                      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => TransferScreen(id: t.id, api: api)));
+                      await reload();
+                    },
+                  );
+                }),
               );
           final awaiting = _maps(d['awaiting']).map(TransferRow.fromJson).toList();
           final rows = _maps(d['rows']).map(TransferRow.fromJson).toList();

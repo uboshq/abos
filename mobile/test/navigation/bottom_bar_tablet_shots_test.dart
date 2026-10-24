@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:abos_mobile/core/widgets/customer_line.dart';
 import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
@@ -116,9 +117,9 @@ void main() {
           expect(find.byType(NavigationRail).evaluate().isNotEmpty || find.byType(RoleRail).evaluate().isNotEmpty, isTrue,
               reason: 'ট্যাবলেটে খাড়া বার');
           if (role == 'sr') {
-            expect(find.text('RCV-0191 · মুসকান এন্টারপ্রাইজ'), findsOneWidget);
+            expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0191' && w.name == 'মুসকান এন্টারপ্রাইজ'), findsOneWidget);
           } else {
-            expect(find.text('RCV-0190 · রহিম স্টোর'), findsOneWidget);
+            expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0190' && w.name == 'রহিম স্টোর'), findsOneWidget);
           }
           await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/shots/$name.png'));
         } finally {

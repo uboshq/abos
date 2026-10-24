@@ -181,8 +181,10 @@ void _expectPaperRow(WidgetTester tester, Key rowKey, String label, String no) {
   final row = find.byKey(rowKey);
   expect(row, findsOneWidget);
   final at = label.indexOf(' · ');
-  final line = find.descendant(of: row, matching: find.byType(CustomerLine));
-  expect(tester.widget<CustomerLine>(line).text, '$no · ${at < 0 ? label : label.substring(0, at)}');
+  // ⓘ প্রথম লাইন: নম্বর নিজের লেখা (কখনো কাটে না), নাম পাশে ([NumberAndName])
+  final line = find.descendant(of: row, matching: find.byType(NumberAndName));
+  expect(tester.widget<NumberAndName>(line).number, no);
+  expect(tester.widget<NumberAndName>(line).name, at < 0 ? label : label.substring(0, at));
   if (at >= 0) {
     final place = find.descendant(of: row, matching: find.textContaining(label.substring(at + 3)));
     expect(place, findsOneWidget, reason: '⛔ পয়েন্ট · শাখা বাদ নয়');

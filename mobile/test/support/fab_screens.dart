@@ -62,6 +62,18 @@ Map<String, FabScreen> fabScreens() => {
       'delegations': (screen: () => DelegationScreen(api: _Delegations(), today: DateTime(2026, 10, 17)), fab: 'delegation-new'),
     };
 
+/// প্রতিটা পর্দার নমুনার কাগজের নম্বর — নম্বর কখনো না-কাটার দাবি এগুলো খোঁজে (যে পর্দার সারিতে নম্বর নেই, সেটা এখানে নেই)
+const fabScreenNumbers = <String, List<String>>{
+  'vouchers': ['RV-2610-0142', 'PV-2610-0057', 'EV-2610-0031', 'RV-2610-0143', 'PV-2610-0058', 'EV-2610-0032'],
+  'claims': ['EXC-0001', 'EXC-0002', 'EXC-0003', 'EXC-0004', 'EXC-0005', 'EXC-0006', 'EXC-0007', 'EXC-0008', 'EXC-0009', 'EXC-00010'],
+  'leads': ['LD-1', 'LD-2', 'LD-3', 'LD-4', 'LD-5', 'LD-6', 'LD-7', 'LD-8', 'LD-9', 'LD-10', 'LD-11', 'LD-12'],
+  'quotations': ['QTN-0001', 'QTN-0002', 'QTN-0003', 'QTN-0004', 'QTN-0005', 'QTN-0006', 'QTN-0007', 'QTN-0008', 'QTN-0009', 'QTN-00010'],
+  'DOs': ['DO-0001', 'DO-0002', 'DO-0003', 'DO-0004', 'DO-0005', 'DO-0006', 'DO-0007', 'DO-0008', 'DO-0009', 'DO-00010'],
+  'transfers': ['TR-26-001', 'TR-26-002', 'TR-26-003', 'TR-26-004', 'TR-26-005', 'TR-26-006', 'TR-26-007', 'TR-26-008', 'TR-26-009', 'TR-26-0010', 'TR-26-0011', 'TR-26-0012'],
+  'cash counts': ['CC-26-001', 'CC-26-002', 'CC-26-003', 'CC-26-004', 'CC-26-005', 'CC-26-006', 'CC-26-007', 'CC-26-008', 'CC-26-009', 'CC-26-0010', 'CC-26-0011', 'CC-26-0012'],
+  'quality': ['QC-0001', 'QC-0002', 'QC-0003', 'QC-0004', 'QC-0005', 'QC-0006', 'QC-0007', 'QC-0008', 'QC-0009', 'QC-00010', 'QC-00011', 'QC-00012'],
+};
+
 class FakeVouchers implements VoucherApi {
   const FakeVouchers();
 

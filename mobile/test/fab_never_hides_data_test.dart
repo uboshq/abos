@@ -13,6 +13,7 @@ import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/navigation/nav_state.dart';
 import 'package:abos_mobile/core/navigation/top_bar/top_bar_context.dart';
+import 'package:abos_mobile/core/records/sales_order_record.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/core/sync_engine/sync_status.dart';
@@ -161,6 +162,14 @@ List<String> _dropped(List<String> old, List<String> now) {
   final left = [...now];
   return [for (final s in old) if (!left.remove(s)) s];
 }
+
+/// প্রতিটা পর্দার সারির তথ্যের কাগজের নম্বর (নমুনা থেকে, আঁকা লেখা থেকে নয়)
+List<String> _numbersOf(String screen) => switch (screen) {
+      'SR collections' => [for (final r in collectionRows) r.no],
+      'owner home' => const ['RCV-0190', 'PBL-0010', 'EXP-0044'],
+      'orders' => [for (final o in SalesOrderRecord.all()) o.documentNo].whereType<String>().where((n) => n.isNotEmpty).toList(),
+      _ => fabScreenNumbers[screen] ?? const [],
+    };
 
 const _longShop = 'মেসার্স ভাই ভাই এন্টারপ্রাইজ অ্যান্ড জেনারেল স্টোর · ফুলপুর বাজার · ময়মনসিংহ';
 
@@ -461,6 +470,67 @@ void main() {
           look();
           if (amounts == 0) return; // ⓘ এই পর্দার সারিতে টাকা নেই (গোনা, ছুটি, যাচাই, দায়িত্ব, লিড)
           expect(broken, isEmpty, reason: '⛔ an amount in the list breaks, is cut or leaves the screen on $at');
+        });
+      }
+    }
+  }
+
+  // ⭐ কাগজের নম্বর কখনো কাটা পড়ে না (fe, ২৪ অক্টোবর ২০২৬, ০.৪.৪৮): কাটা যায় কেবল নাম। নম্বর ("RCV-0193", "SO-…", "DO-…",
+  // "RV-…") যে লেখায় আছে সেটা "…"-এ কাটা নয়, নম্বর এক লাইনে, পুরো আঁকা, পর্দার ভেতরে। নম্বর সারির তথ্য থেকে
+  // ([_numbersOf]); প্রতিটা পর্দায় তথ্যের অন্তত একটা নম্বর আঁকা থাকতে হবে।
+  for (final MapEntry(key: name, value: c) in cases.entries) {
+    for (final MapEntry(key: width, value: size) in _widths.entries) {
+      for (final scale in [1.0, 2.0]) {
+        final at = '$name ${width}dp ${(scale * 100).round()}%';
+        testWidgets('$at: every paper number in the list is whole, on one line, inside the screen', (tester) async {
+          await open(tester, c, size, scale);
+          final numbers = _numbersOf(name);
+          final broken = <String>{};
+          final seen = <String>{};
+          var namesCut = 0;
+          void look() {
+            for (final e in find.byType(RichText).evaluate()) {
+              if (Scrollable.maybeOf(e) == null) continue;
+              final p = e.renderObject! as RenderParagraph;
+              if (!p.hasSize || !p.attached) continue;
+              final text = p.text.toPlainText();
+              if (p.didExceedMaxLines && e.findAncestorWidgetOfExactType<CustomerLine>() != null) namesCut++;
+              for (final n in numbers) {
+                final at = text.indexOf(n);
+                if (at < 0) continue;
+                seen.add(n);
+                if (p.didExceedMaxLines) broken.add('"$n" shares a cut text "$text"');
+                final boxes = p.getBoxesForSelection(TextSelection(baseOffset: at, extentOffset: at + n.length));
+                final lines = _boxLines(boxes);
+                if (lines != 1) broken.add('"$n" on $lines lines');
+                if (boxes.any((b) => b.left < -0.5 || b.right > p.size.width + 0.5 || b.bottom > p.size.height + 0.5)) {
+                  broken.add('"$n" not drawn whole');
+                }
+                for (final b in boxes) {
+                  final r = MatrixUtils.transformRect(p.getTransformTo(null), b.toRect());
+                  if (r.left < -0.5 || r.right > size.width + 0.5) broken.add('"$n" $r outside the screen');
+                }
+              }
+            }
+          }
+
+          // ⓘ ওপর থেকে শেষ পর্যন্ত ধাপে ধাপে — সরু পর্দায় শেষে গেলে ওপরের সারি আর আঁকা থাকে না
+          look();
+          for (var step = 0; step < 40; step++) {
+            final more = tester.stateList<ScrollableState>(find.byType(Scrollable)).any((st) {
+              final q = st.position;
+              return q.axis == Axis.vertical && q.hasContentDimensions && q.pixels < q.maxScrollExtent - 0.5;
+            });
+            if (!more) break;
+            await _scrollOneStep(tester);
+            look();
+          }
+          expect(broken, isEmpty, reason: '⛔ a paper number is cut, broken or off the screen on $at');
+          if (numbers.isNotEmpty) expect(seen, isNotEmpty, reason: 'no paper number of the data is drawn on $at');
+          // ⓘ দাবি যেন আসল অবস্থায় পরীক্ষা হয়: ৩২০dp ২০০%-এ আদায়ের অন্তত একটা নাম সত্যিই কাটা
+          if (name == 'SR collections' && width == 320 && scale == 2) {
+            expect(namesCut, greaterThan(0), reason: 'no name is cut on $at — the number claim is not tested where it matters');
+          }
         });
       }
     }

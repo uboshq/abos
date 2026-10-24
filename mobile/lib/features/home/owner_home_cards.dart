@@ -471,7 +471,6 @@ class PaperRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final (name, place) = splitPlace(party);
-    final first = [no, name].where((s) => s.isNotEmpty).join(' · ');
     final second = [if (place != null) place, if (detail != null) detail!].where((s) => s.isNotEmpty).join(' · ');
     final spoken = [
       [no, party].where((s) => s.isNotEmpty).join(' · '),
@@ -497,8 +496,11 @@ class PaperRow extends StatelessWidget {
               label: spoken,
               excludeSemantics: true,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                // ⓘ প্রথম লাইনে কেবল "নম্বর · নাম" — টুলটিপ পুরো "নম্বর · নাম · পয়েন্ট · শাখা" (সারির TalkBack-ও পুরোটা, [spoken])
-                CustomerLine(first,
+                // ⓘ প্রথম লাইনে "নম্বর · নাম" — নম্বর কখনো কাটে না, কাটে কেবল নাম ([NumberAndName]); টুলটিপ পুরো
+                // "নম্বর · নাম · পয়েন্ট · শাখা" (সারির TalkBack-ও পুরোটা, [spoken])
+                NumberAndName(
+                    number: no,
+                    name: name,
                     full: [no, party].where((s) => s.isNotEmpty).join(' · '),
                     style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
                 if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
