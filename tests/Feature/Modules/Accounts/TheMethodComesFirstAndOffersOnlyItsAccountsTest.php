@@ -83,8 +83,9 @@ final class TheMethodComesFirstAndOffersOnlyItsAccountsTest extends TestCase
             $this->assertNotFalse($reference, "⛔ {$screen}: পদ্ধতির ঘর (রেফারেন্স, চার্জ) নেই");
             $this->assertTrue($method < $account && $account < $reference,
                 "⛔ {$screen}: ক্রম পদ্ধতি → খাত → রেফারেন্স → চার্জ নয় (পদ্ধতি {$method}, খাত {$account}, রেফারেন্স {$reference})");
-            $this->assertSame(1, preg_match_all('/<select\b[^>]*\bname="'.$name.'"/', $html),
-                "⛔ {$screen}: খাতের ঘর দুবার — হোস্টের পুরনো ঘরটা রয়ে গেছে");
+            // ⓘ জমা যায় এমন ঘর গোনা — রসিদের পুরনো নমুনা-বিন্যাসের ঘর `hidden` আর `disabled` হয়ে আঁকা থাকে, জমা যায় না (cb-ma-1)
+            $this->assertSame(1, preg_match_all('/<select\b(?=[^>]*\bname="'.$name.'")(?![^>]*\bdisabled\b)[^>]*>/', $html),
+                "⛔ {$screen}: জমা যায় এমন খাতের ঘর দুবার — হোস্টের পুরনো ঘরটা রয়ে গেছে");
         }
     }
 
@@ -202,7 +203,9 @@ final class TheMethodComesFirstAndOffersOnlyItsAccountsTest extends TestCase
     /** @return array<string, string> তালিকায় আঁকা খাত — id => ধরন */
     private function listed(string $html, string $name): array
     {
-        $this->assertSame(1, preg_match('/<select\b[^>]*\bname="'.$name.'"[^>]*>(.*?)<\/select>/s', $html, $select), "দৃশ্যটাই ঠিক নয় — {$name}-এর ঘর নেই");
+        // ⓘ পদ্ধতির বাক্সের ঘর (`data-money-account`) — রসিদে একই নামের পুরনো, লুকানো আর বন্ধ ঘরও আঁকা থাকে (cb-ma-1)
+        $this->assertSame(1, preg_match('/<select\b(?=[^>]*\bname="'.$name.'")(?=[^>]*\bdata-money-account\b)[^>]*>(.*?)<\/select>/s', $html, $select),
+            "দৃশ্যটাই ঠিক নয় — {$name}-এর বাক্সের ঘর নেই");
         preg_match_all('/<option value="(\d+)"[^>]*data-kind="([a-z]*)"/', $select[1], $rows, PREG_SET_ORDER);
 
         return collect($rows)->mapWithKeys(fn (array $r) => [$r[1] => $r[2]])->all();

@@ -267,8 +267,12 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
     private function boxAccounts(string $html): array
     {
         preg_match('/x-data="(moneyMethod\([^"]*)"/', $html, $block);
-        preg_match("/accounts: JSON\\.parse\\('(.*?)'\\)/", html_entity_decode($block[1] ?? '', ENT_QUOTES), $list);
-        $rows = json_decode((string) json_decode('"'.($list[1] ?? '').'"'), true);
+        // ⓘ `@js` কখনো সরাসরি JSON লেখে (`accounts: [{…}]`), কখনো `JSON.parse('…')` — দুই রূপই পড়া (cb-ma-1-এ প্রথমটা এল)
+        preg_match('/accounts: (.*?), methodNames:/', html_entity_decode($block[1] ?? '', ENT_QUOTES), $list);
+        $raw = $list[1] ?? '';
+        $rows = preg_match("/^JSON\\.parse\\('(.*)'\\)$/s", $raw, $wrapped) === 1
+            ? json_decode((string) json_decode('"'.$wrapped[1].'"'), true)
+            : json_decode($raw, true);
 
         return collect(is_array($rows) ? $rows : [])->mapWithKeys(fn (array $r) => [(string) $r['id'] => (string) $r['kind']])->all();
     }
