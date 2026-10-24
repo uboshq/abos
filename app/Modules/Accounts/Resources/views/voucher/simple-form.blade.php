@@ -962,7 +962,18 @@
 
             {{-- ⭐ নিয়ন্ত্রণ — টাকা দেওয়ার পর্দার একই কার্ড ([[x-money.controls]]): সই চালু/বন্ধ, লেখক ≠ পাকাকারী --}}
             <x-money.controls data-voucher-controls :signatures="$moneySignatures ?? false" :three-hands="$moneyThreeHands ?? false"
-                              :direction="$isPayment ? 'out' : 'in'" />
+                              :direction="$isPayment ? 'out' : 'in'">
+                {{--
+                    ⭐ নকশার "বাউন্স চিহ্ন দিলে নিজে উল্টাবে" — সত্যি করে: গৃহীত চেক এই পর্দায় ঢোকে না (মালিকের ২৬ সেপ্টেম্বরের নিয়ম), চেকের খাতায়;
+                    সেখানে বাউন্স চিহ্ন দিলে খাতা নিজে উল্টায়, গ্রাহকের বকেয়া ফেরে ([[ChequeService::bounce()]])। তাই লাইনটা সেই খাতায় নিয়ে যায় (cb-ma-4)।
+                --}}
+                @unless ($isPayment)
+                    <p class="px-1 text-xs text-(--color-ink-muted)" data-control="bounce">
+                        {{ __('money.screen.bounce_note') }}
+                        <a href="{{ route('accounts.cheque.index') }}" class="text-(--color-brand-700) underline" data-bounce-register>{{ __('money.screen.cheque_register') }}</a>
+                    </p>
+                @endunless
+            </x-money.controls>
             </aside>
             </div>{{-- data-voucher-columns --}}
 
@@ -974,6 +985,10 @@
                     {{-- ⭐ পোস্টের পরে কী পাওয়া যায় — নকশার নিচের লাইন; দেখার পাতার ছাপার মেনুতে ছাপা, PDF আর WhatsApp ([[voucher.show]]) --}}
                     <p class="text-xs text-(--color-ink-muted)" data-after-post>
                         {{ $isPayment ? __('accounts::message.after_post_payment') : __('accounts::message.after_post_receipt') }}
+                        {{-- ⭐ নকশার "VDS সার্টিফিকেট তালিকা" — এখন সত্য: পরিশোধ ভাউচারের কাটা VDS-এ মূসক-৬.৬-এর করণীয় ওঠে ([[VoucherService::raiseTaxDuties()]]) --}}
+                        @if ($isPayment)
+                            · <a href="{{ route('accounts.obligation.index') }}" class="underline" data-after-post-vds>{{ __('money.screen.vds_list') }}</a>
+                        @endif
                     </p>
                     @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type,
                         'primaryLabel' => ($moneySignatures ?? false) ? 'money.screen.send' : 'money.screen.post'])

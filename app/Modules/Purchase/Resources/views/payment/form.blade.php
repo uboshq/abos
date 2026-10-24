@@ -340,7 +340,10 @@
              ([[ui.form-actions]]): `sticky`, বারের ঠিক উপরে, মূল কলামের ভেতরে — আর নিজের জায়গা নেয়, তাই পাতার শেষ কিছু ঢাকে না। --}}
         <div data-pay-footer class="print-hide sticky bottom-(--spacing-bottom-nav) md:bottom-(--spacing-status-bar) z-10 mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-3 shadow-lg">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <p class="text-xs text-(--color-ink-muted)">{{ __('money.screen.after_post') }}</p>
+                {{-- ⛔ আগে "পরিশোধের অ্যাডভাইস (সরবরাহকারীকে ইমেইল/PDF)" বলত — অথচ এই কাগজের ছাপা বা ইমেইল ব্যবস্থাতেই নেই (cb-ma-4-এ ধরা); এখন
+                     যা সত্যি তাই: কাটা কর আর ভ্যাট করণীয় হয়, আর মূসক-৬.৬ সেই তালিকায় --}}
+                <p class="text-xs text-(--color-ink-muted)" data-pay-after-post>{{ __('money.screen.after_post') }}
+                    · <a href="{{ route('accounts.obligation.index') }}" class="underline">{{ __('money.screen.vds_list') }}</a></p>
                 <div class="flex items-center gap-2">
                     <x-ui.button tone="ghost" :href="route('purchase.payment.index')">{{ __('money.screen.cancel') }}</x-ui.button>
                     <x-ui.button type="submit" tone="secondary" name="intent" value="draft">{{ __('money.screen.draft') }}</x-ui.button>

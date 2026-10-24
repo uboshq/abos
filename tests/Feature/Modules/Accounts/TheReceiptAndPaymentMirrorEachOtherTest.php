@@ -637,6 +637,35 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             '⛔ মাথার তথ্যের সারিতে পক্ষের শাখা আর "পোস্ট হবে" নেই');
     }
 
+    /**
+     * ২৭ — নকশার তিন লাইন সত্যি করে (cb-ma-4): রসিদে "বাউন্স চিহ্ন দিলে নিজে উল্টাবে" চেকের খাতায় নিয়ে যায়; পরিশোধে "VDS সার্টিফিকেট তালিকা"
+     * করণীয়ে নিয়ে যায়; হাতে লেখা AIT/VDS-এ হারের ব্যাজ নয়; সরবরাহকারী-পরিশোধ আর অস্তিত্বহীন "অ্যাডভাইস (ইমেইল/PDF)" বলে না
+     */
+    public function test_the_designs_promises_point_at_what_really_happens(): void
+    {
+        $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $bounce = $receipt->query('//*[@data-voucher-controls]//*[@data-control="bounce"]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $bounce, '⛔ রসিদের নিয়ন্ত্রণে নকশার বাউন্সের লাইন নেই');
+        $this->assertSame(route('accounts.cheque.index'), $receipt->query('.//a[@data-bounce-register]', $bounce)->item(0)?->getAttribute('href'),
+            '⛔ বাউন্সের লাইন চেকের খাতায় নিয়ে যায় না — গৃহীত চেক সেখানেই উল্টায়');
+        $this->assertSame(0, $receipt->query('//*[@data-after-post-vds]')->length, '⛔ রসিদে VDS সার্টিফিকেটের লিংক — পক্ষের কাটা আমাদের সনদ নয়');
+
+        $paymentHtml = $this->screen(Voucher::PAYMENT);
+        $payment = $this->dom($paymentHtml);
+        $this->assertSame(route('accounts.obligation.index'), $payment->query('//*[@data-after-post]//a[@data-after-post-vds]')->item(0)?->getAttribute('href'),
+            '⛔ পরিশোধের "পোস্টের পরে" লাইনে VDS সার্টিফিকেট তালিকার লিংক নেই');
+        $this->assertSame(0, $payment->query('//*[@data-control="bounce"]')->length, '⛔ পরিশোধে গৃহীত চেকের বাউন্সের লাইন');
+        foreach (['ait', 'vds'] as $tag) {
+            $said = array_filter(['bn', 'en'], fn (string $l) => str_contains($paymentHtml, e(trans('money.screen.tag.'.$tag, [], $l))));
+            $this->assertSame([], $said, "⛔ পরিশোধ ভাউচারে হাতে লেখা {$tag}-এর পাশে হারের ব্যাজ — হার থেকে গোনা নয়, মিথ্যা");
+        }
+
+        $this->bank();
+        $supplier = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('অ্যাডভাইস (সরবরাহকারীকে ইমেইল/PDF)', $supplier, '⛔ সরবরাহকারী-পরিশোধ এখনো এমন অ্যাডভাইসের কথা বলে যা ব্যবস্থায় নেই');
+        $this->assertStringNotContainsString('payment advice (email/PDF', $supplier, '⛔ সরবরাহকারী-পরিশোধ এখনো এমন অ্যাডভাইসের কথা বলে যা ব্যবস্থায় নেই');
+    }
+
     /** ২৩ — নতুন নাম আর মোবাইল পাশাপাশি কেবল ঘরের নিজের জায়গায় কুলালে; সরু পক্ষের ঘরে (১৩৬৬-এ ~২৪০px) একটার নিচে আরেকটা */
     public function test_the_new_name_and_mobile_stack_in_a_narrow_party_cell(): void
     {
