@@ -552,8 +552,26 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'instrument_no',
             ...($this->is_adjusting ? [] : ['is_adjusting']),
             ...($this->reversal_of_id === null ? ['reversal_of_id'] : []),
+            ...self::EXPENSE_SNAPSHOTS,
+            ...array_values(array_filter(self::EXPENSE_HEAD_FIELDS, fn (string $c) => $this->getAttribute($c) === null)),
         ];
     }
+
+    /**
+     * ⓘ খরচের ১০০% (অংশ খ, ২০২৭_০৪_০২_১০০১০০) মাথায় যা যোগ করে, আর ছাপে তার জায়গা (ec, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⛔ ফাঁকা অবস্থায়ও ছাপে ঢুকলে মাইগ্রেশনের দিন সইয়ের অপেক্ষার প্রতিটা ভাউচারের ছাপ বদলাত: সই "পুরনো" হয়ে আবার চাওয়া হত,
+     * ADI-র পুরো সারিতে ([[is_adjusting]]-এর একই ফাঁদ)। তাই ফাঁকা থাকলে বাইরে, ভরলে কাগজের অংশ, আর সইকারী সেটা দেখে সই দেন।
+     */
+    public const EXPENSE_HEAD_FIELDS = [
+        'bill_date', 'due_date', 'employee_id', 'currency_id', 'fx_rate', 'fx_date', 'fx_rate_reason', 'budget_reason', 'template_id',
+    ];
+
+    /**
+     * ⓘ সার্ভারের লেখা ছবি, কাগজ নয় — বাজেটের হিসাব আর সতর্কতা কখনো ছাপে নয়: পোস্টের সময় বাজেটের হিসাব (ec-র অংশ ছ) লেখা হয়,
+     * আর ছাপে থাকলে বাজেটের সই কখনো আর ভাউচারকে "ঢাকত" না।
+     */
+    public const EXPENSE_SNAPSHOTS = ['budget_check', 'warnings'];
 
     /**
      * ⭐ ছাপে কোন সারিগুলো — সবসময় এগুলো, হাতে যা তোলা আছে তা নয় (২৮ সেপ্টেম্বর ২০২৬)।
