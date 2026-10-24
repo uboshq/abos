@@ -158,6 +158,9 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
         }
 
         $this->assertMatchesRegularExpression('/x-model="row\.apply"[^>]*@blur="tidyApply\(row\)"/', $form, '⛔ "এখন প্রয়োগ" ঘর ছাড়লে লাখ-কমায় বসে না');
+        // ⓘ রেফারেন্স লিখে ঘর ছাড়লে প্রিভিউ নতুন — নইলে "রেফারেন্স লাগবে" থামা লেখার পরেও থেকে যেত (ছবি ১১)
+        $this->assertMatchesRegularExpression('/<form\b[^>]*data-collection-form[^>]*@change="later\(\)"/s', $this->screen(),
+            '⛔ ঘর ছাড়লে "খাতায় যা যাবে" নতুন হয় না — লেখা রেফারেন্সের পরেও পুরনো থামা দেখায়');
         $this->assertStringContainsString(':name="\'lines[\' + i + \'][amount]\'" :value="sent(row)"', $form, '⛔ সারির টাকা কাঁচা অঙ্কে পাঠানো হয় না');
     }
 

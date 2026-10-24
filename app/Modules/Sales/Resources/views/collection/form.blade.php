@@ -115,6 +115,9 @@
           data-confirm-overview="{{ route('sales.collection.overview_new') }}"
           x-data="collectionForm(@js($config))"
           @money-method.window="moneyChanged($event.detail)"
+          {{-- ⓘ কোনো ঘর ছাড়লে (change) "খাতায় যা যাবে" আবার — পদ্ধতির ব্লকের রেফারেন্স/TrxID নিজে প্রিভিউ ডাকে না, তাই লিখে ফেলার পরেও
+               "রেফারেন্স লাগবে" থামাটা থেকে যেত (১৩৬৬-এর ছবি ১১, ২৫ অক্টোবর ২০২৬); later() ৩০০ms থেমে একবারই ডাকে --}}
+          @change="later()"
           class="flex flex-col gap-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
