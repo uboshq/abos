@@ -226,16 +226,44 @@ final class VoucherApiController extends Controller implements HasMiddleware
         $paper->validateResolved();
 
         $data = [...$paper->validated(), 'type' => $type];
-        $ledger = $this->vouchers->ledgerPreview($data, $this->writer->linesFor($type, $paper->all()));
+        $lines = $this->writer->linesFor($type, $paper->all());
+        $ledger = $this->vouchers->ledgerPreview($data, $lines);
 
         return response()->json([
             'type' => $type,
             'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
+            // ⭐ পোস্টে সইয়ের অপেক্ষায় যাবে কি না — পোস্টের নিজের প্রশ্নে ([[VoucherApproval::wouldWait()]]); ফোনের "সইয়ের অপেক্ষায় হবে" চিপ
+            'needs_signature' => app(VoucherApproval::class)->wouldWait($data, $lines),
             ...$this->ledgerOf(collect($ledger['lines'])->map(fn (array $l) => [
                 'account_id' => (int) ($l['account_id'] ?? 0),
                 'debit' => (string) ($l['debit'] ?? '0'),
                 'credit' => (string) ($l['credit'] ?? '0'),
             ])->all()),
+        ]);
+    }
+
+    /**
+     * `GET /parties/{type}/{id}/open-bills` — এই পক্ষের খোলা বিল, ওয়েবের কার্ডের একই উৎস ([[\App\Core\Contracts\PartyOpenBills]]; চুক্তি §৭.১)।
+     *
+     * ⓘ পক্ষটা আগে নাগালে কি না — [[PartyRegistry::exists()]] মডেলের নিজের কোয়েরিতে, তাই কোম্পানির দেয়াল আর বিক্রয়কর্মীর ডিলারের দেয়াল
+     * (ScopedToUserDealers) দুটোই খাটে: অন্যের ডিলার বা অন্য কোম্পানির পক্ষে ৪০৪, তালিকা নয়। বিলের তালিকাও একই দেয়ালে ছাঁকা।
+     * ⓘ `id` বিলের public_id (চুক্তি §৩-এর `bills[i][id]`), `outstanding` = বাকি; ক্রমিক আইডি বাইরে যায় না।
+     */
+    public function openBills(Request $request, string $type, int $id): JsonResponse
+    {
+        $this->writer($request);
+        abort_unless($this->parties->knows($type) && $this->parties->exists($type, $id), 404);
+
+        return response()->json([
+            'bills' => collect(app(\App\Core\Contracts\PartyOpenBills::class)->openBills($type, $id))->map(fn (array $b) => [
+                'id' => (string) $b['public_id'],
+                'no' => (string) $b['no'],
+                'date' => (string) $b['date'],
+                'due_date' => (string) $b['due_date'],
+                'days_late' => (int) $b['days_late'],
+                'total' => bcadd((string) $b['total'], '0', 4),
+                'outstanding' => bcadd((string) $b['outstanding'], '0', 4),
+            ])->values(),
         ]);
     }
 
@@ -263,7 +291,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
     }
 
     /**
-     * ⭐ খাতার সারি ফোনের চুক্তির আকারে — `account` {id, code, name}, `dr`, `cr` (৪ দশমিকের string), আর মোট দুই পাশ।
+     * ⭐ খাতার সারি ফোনের চুক্তির আকারে — `account` {id, code, name}, `debit`, `credit` (৪ দশমিকের string; a4-এর নাম, চুক্তি §৭.৩ —
+     * dr/cr নয়), আর মোট দুই পাশ `total_dr`, `total_cr`।
      * ⓘ preview আর ভাউচারের পাতা একই রূপে বলে, যাতে ফোন দুটো পাশাপাশি মেলাতে পারে (চুক্তি §৫)।
      *
      * @param  list<array{account_id: int, debit: string, credit: string}>  $lines
@@ -282,8 +311,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
             $cr = bcadd($cr, $line['credit'], 4);
             $rows[] = [
                 'account' => ['id' => (int) $line['account_id'], 'code' => (string) ($account?->code ?? ''), 'name' => (string) ($account?->name() ?? '')],
-                'dr' => bcadd($line['debit'], '0', 4),
-                'cr' => bcadd($line['credit'], '0', 4),
+                'debit' => bcadd($line['debit'], '0', 4),
+                'credit' => bcadd($line['credit'], '0', 4),
             ];
         }
 
@@ -570,6 +599,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'awaits_another_hand' => $v->isDraft() && $this->vouchers->writerMayNotPost($v),
             // ⭐ নিট আর খাতা সার্ভারের — ফোন নিজে গোনে না (চুক্তি §৫); preview-এর একই রূপ ([[ledgerOf()]])
             'net_amount' => $this->netOf($v),
+            // ⭐ মোট — পক্ষের খাতা যতটা নড়ে: নিট + AIT + VDS (চুক্তি §৭.৪; পরিশোধে নকশার "মোট টাকা", রসিদে পাওয়া + পক্ষের কাটা অংশ)
+            'gross_amount' => bcadd(bcadd($this->netOf($v), (string) ($v->ait_amount ?? '0'), 4), (string) ($v->vds_amount ?? '0'), 4),
             ...$this->ledgerOf($v->lines->map(fn (VoucherLine $l) => [
                 'account_id' => (int) $l->account_id,
                 'debit' => (string) $l->debit,

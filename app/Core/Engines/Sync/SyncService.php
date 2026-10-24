@@ -37,6 +37,9 @@ use Throwable;
  */
 final class SyncService
 {
+    /** ⓘ ফেরানো সারির ঘরহীন কারণের চাবি — কোনো ঘরে বাঁধা নয় (চাবি নেই, অফলাইনে চলে না, খাতা থামাল); চুক্তি §৭.২ */
+    public const NO_FIELD = '_';
+
     public function __construct(private readonly SyncRegistry $registry) {}
 
     /**
@@ -203,12 +206,19 @@ final class SyncService
                     'message' => __('sync.same_key_other_content'), 'entityId' => $existing->applied_entity_id];
             }
 
-            return array_filter([
+            $answer = array_filter([
                 'changeId' => $change->changeId,
                 'status' => $existing->isSettled() ? SyncChange::DUPLICATE : $existing->status,
                 'message' => $existing->message,
                 'entityId' => $existing->applied_entity_id,
             ], fn ($value) => $value !== null);
+
+            // ⓘ আগে ফেরানো সারি আবার এলে — ঘর আর রাখা নেই, কেবল প্রথম কথা; তাই ঘরহীন চাবিতে (প্রতিটা ফেরানো সারির একই আকার, চুক্তি §৭.২)
+            if (($answer['status'] ?? null) === SyncChange::REJECTED) {
+                $answer['errors'] = [self::NO_FIELD => [(string) $existing->message]];
+            }
+
+            return $answer;
         }
 
         $handler = $this->registry->forEntityType($change->entityType);
@@ -324,7 +334,8 @@ final class SyncService
                 serverSnapshot: $rejection->serverSnapshot,
             );
         } catch (ValidationException $refused) {
-            return $this->refuse($user, $deviceId, $module, $change, $this->firstMessage($refused));
+            // ⭐ ঘর ধরে সব কারণ — ওয়েবের ৪২২-এর একই ঘর আর কথা (চুক্তি §৪, §৭.২), প্রথম কথার পাশে
+            return $this->refuse($user, $deviceId, $module, $change, $this->firstMessage($refused), errors: $refused->errors());
         } catch (\App\Core\Engines\Posting\PostingException $refused) {
             /*
              * ⛔ খাতার "না" একটা উত্তর, ক্ষণিকের ব্যর্থতা নয় — বন্ধ মাস, অন্য শাখার পক্ষ, অমিল দাখিলা; আবার পাঠালেও একই উত্তর।
@@ -804,6 +815,7 @@ final class SyncService
         string $message,
         bool $isConflict = false,
         ?array $serverSnapshot = null,
+        array $errors = [],
     ): array {
         $status = $isConflict ? SyncChange::CONFLICT : SyncChange::REJECTED;
 
@@ -834,6 +846,12 @@ final class SyncService
             'changeId' => $change->changeId,
             'status' => $status,
             'message' => $message,
+            /*
+             * ⭐ প্রতিটা ফেরানো সারিতে `errors: {ঘর: [কথা, …]}` — পুরনো প্রথম কথার পাশে (a4-এর চাওয়া, পরিশোধে-মোট-টাকা-চুক্তি §৭.২)।
+             * ⓘ যাচাইয়ের ভুলে ঘরের নাম ওয়েবের ৪২২-এর মতোই (`gross_amount`, `bills.0.amount` …); ঘরহীন কারণে (চাবি নেই, অফলাইনে চলে না,
+             * খাতা থামাল) [[NO_FIELD]]। ⓘ গ্রহণ করা সারির উত্তর বদলায় না।
+             */
+            ...($status === SyncChange::REJECTED ? ['errors' => $errors !== [] ? $errors : [self::NO_FIELD => [$message]]] : []),
         ];
     }
 

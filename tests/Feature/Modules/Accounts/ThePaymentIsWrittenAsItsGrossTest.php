@@ -64,7 +64,8 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
             'money_kind' => Account::MFS, 'is_active' => true, 'status' => DocumentStatus::CONFIRMED,
         ]);
-        $this->putMoneyIn($this->mfs, '5000');
+        // ⓘ সইয়ের সীমার উপরের preview (৬,০০০, ৯,০০,০০০) খাতে টাকা না থাকায় থামবে না — যথেষ্ট রাখা
+        $this->putMoneyIn($this->mfs, '1000000');
         $this->supplier = Supplier::query()->orderBy('id')->firstOrFail();
     }
 
@@ -103,6 +104,12 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         $this->moved($book, $this->mfs, credit: '900', why: '⛔ টাকার খাত থেকে নিট + চার্জ (৮৭৫ + ২৫) বেরোয়নি');
         $this->moved($book, StandardChart::find(StandardChart::MFS_CHARGES), debit: '25', why: '⛔ চার্জ কোম্পানির খরচে বসেনি');
         $this->assertSame(0, bccomp((string) $voucher->amount, '875', 4), '⛔ নিট = মোট − AIT − VDS নয়: '.$voucher->amount);
+
+        // ⭐ বিলে বসেনি এমন পুরো মোট সরবরাহকারীর নিজের খাতায় (২১১১) Dr, তাঁর নামে — আলাদা অগ্রিম খাত নেই (চুক্তি §৭.৬)
+        $own = (string) LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])->where('source_id', $voucher->id)
+            ->where('account_id', StandardChart::find(StandardChart::PAYABLE)->id)->where('party_type', 'supplier')->where('party_id', $this->supplier->id)
+            ->sum('debit');
+        $this->assertSame(0, bccomp($own, '1000', 4), '⛔ বিলে না বসা টাকা সরবরাহকারীর নিজের খাতায় (২১১১, তাঁর নামে) Dr হয়ে বসেনি: '.$own);
     }
 
     /** ৩ — পুরনো ফোন: `gross_amount` নেই, `amount` = নিট → আগের হুবহু খাতা */
@@ -160,6 +167,11 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
         $page = $this->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
         $this->assertSame($preview['net_amount'], $page['net_amount'] ?? null, '⛔ preview-এর নিট পরের পোস্টের নিট নয়');
+        $this->assertSame('1000.0000', $page['gross_amount'] ?? null, '⛔ ভাউচারের পাতায় মোট (নিট + AIT + VDS) নেই বা ভুল');
+        // ⓘ a4-এর ঘরের নাম (চুক্তি §৭.৩): debit আর credit — dr/cr নয়
+        $first = $preview['ledger'][0] ?? [];
+        $this->assertSame(['account', 'debit', 'credit'], array_keys($first), '⛔ preview-এর খাতার সারির ঘর a4-এর নামে নয় (account, debit, credit)');
+        $this->assertSame(['id', 'code', 'name'], array_keys($first['account'] ?? []), '⛔ preview-এর খাতের ঘর {id, code, name} নয়');
         $this->assertEqualsCanonicalizing($this->rows($preview['ledger'] ?? []), $this->rows($page['ledger'] ?? []),
             '⛔ preview-এর খাতা পরের পোস্টের খাতা নয়');
 
@@ -187,6 +199,34 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
 
         $receipt = (string) $this->get(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))->assertOk()->getContent();
         $this->assertMatchesRegularExpression('/<input[^>]*type="hidden"[^>]*name="amount"/', $receipt, '⛔ রসিদের টাকার ঘর বদলে গেল');
+    }
+
+    /** ৮ — `needs_signature`: পোস্টের নিজের প্রশ্ন — সইয়ের ছকের সীমার নিচে না, উপরে হ্যাঁ; ফোনের preview আর ওয়েবের simulate একই কথা */
+    public function test_the_preview_says_whether_posting_will_wait_for_a_signature_at_the_flows_threshold(): void
+    {
+        $flow = \App\Models\ApprovalFlow::create(['company_id' => CompanyContext::id(), 'module' => \App\Modules\Accounts\Services\VoucherApproval::MODULE,
+            'action' => Voucher::PAYMENT, 'threshold_amount' => '5000', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+        $below = $this->postJson('/api/v1/accounts/vouchers/preview', $this->payload(['gross_amount' => '1000', 'instrument_no' => 'SIG-LO-1']))->assertOk();
+        $above = $this->postJson('/api/v1/accounts/vouchers/preview', $this->payload(['gross_amount' => '6000', 'instrument_no' => 'SIG-HI-1']))->assertOk();
+
+        $this->assertFalse($below->json('needs_signature'), '⛔ সইয়ের সীমার নিচের পরিশোধে preview "সই লাগবে" বলল');
+        $this->assertTrue($above->json('needs_signature'), '⛔ সইয়ের সীমার উপরের পরিশোধে preview "সই লাগবে" বলল না — ফোনে "সইয়ের অপেক্ষায় হবে" চিপ আসবে না');
+
+        $this->actingAs($this->owner);
+        $web = $this->postJson(route('accounts.voucher.simulate'), $this->payload(['gross_amount' => '6000', 'instrument_no' => 'SIG-HI-2']))->assertOk();
+        $this->assertTrue($web->json('needs_signature'), '⛔ ওয়েবের simulate আর ফোনের preview সইয়ের প্রশ্নে আলাদা কথা বলে');
+    }
+
+    /** ৯ — সই বন্ধ (কোনো ছক নেই) — সবসময় না */
+    public function test_with_approvals_off_the_preview_never_says_a_signature_is_needed(): void
+    {
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+        $answer = $this->postJson('/api/v1/accounts/vouchers/preview', $this->payload(['gross_amount' => '900000', 'instrument_no' => 'SIG-OFF-1']))->assertOk();
+
+        $this->assertFalse($answer->json('needs_signature'), '⛔ সই বন্ধ, অথচ preview "সই লাগবে" বলল');
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
@@ -257,7 +297,7 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
     /** @param  list<array<string, mixed>>  $ledger  @return list<string> */
     private function rows(array $ledger): array
     {
-        return array_map(fn (array $r) => ($r['account']['id'] ?? '').'|'.($r['dr'] ?? '').'|'.($r['cr'] ?? ''), $ledger);
+        return array_map(fn (array $r) => ($r['account']['id'] ?? '').'|'.($r['debit'] ?? '').'|'.($r['credit'] ?? ''), $ledger);
     }
 
     /** @param  array<string, string>  $with  @return array<string, string> */

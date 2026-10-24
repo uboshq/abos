@@ -293,6 +293,37 @@ final class VoucherApproval
     }
 
     /**
+     * ⭐ লেখার আগেই — এই কাগজ পোস্টে সইয়ের অপেক্ষায় যাবে কি না (ফোনের preview আর ওয়েবের simulate-এর `needs_signature`; a4-এর
+     * "সইয়ের অপেক্ষায় হবে" চিপ, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ পোস্টের নিজের প্রশ্ন, একই ক্রমে: [[actionFor()]] (নিজের বাক্সে নগদ রসিদ, আগে সই-পাওয়া কাগজ, কাউন্টার) তারপর
+     * [[ApprovalEngine::requires()]] — অঙ্ক সেটাই যা লেখক পোস্টের সময় ভাউচারে থাকবে: সারির ডেবিটের যোগ (লেখার সময় সেবা `amount`
+     * তাই বসায়; পরিশোধে মোট + চার্জ)। ⛔ আলাদা হিসাব করলে চিপ এক কথা বলত আর পোস্ট আরেক কাজ করত। কিছুই লেখে না।
+     *
+     * @param  array<string, mixed>  $header  যাচাই-করা মাথা (`type` সহ)
+     * @param  list<array<string, mixed>>  $lines  [[VoucherWriter::linesFor()]]-এর সারি
+     */
+    public function wouldWait(array $header, array $lines): bool
+    {
+        $accounts = \App\Modules\Accounts\Models\Account::query()
+            ->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+
+        $voucher = (new Voucher)->forceFill(array_intersect_key($header, array_flip((new Voucher)->getFillable())));
+        $voucher->setAttribute('type', (string) ($header['type'] ?? ''));
+        $voucher->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->forceFill([
+            'account_id' => (int) ($l['account_id'] ?? 0),
+            'debit' => (string) ($l['debit'] ?? '0'),
+            'credit' => (string) ($l['credit'] ?? '0'),
+        ])->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))));
+        $voucher->setAttribute('amount', $voucher->totals()['debit']);
+
+        $action = $this->actionFor($voucher);
+
+        return $action !== null && $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount,
+            class_basename(Voucher::class), ApprovalEngine::fieldsOf($voucher));
+    }
+
+    /**
      * ⭐ "পোস্ট" চাপলে সই কী বলবে — কিছু না লিখে (৪ অক্টোবর ২০২৬; [[VoucherOverview]])।
      *
      * ⓘ [[stopping()]]-এর একই ধাপ, একই ক্রমে; কেবল শেষের `request()`-এর বদলে [[ApprovalEngine::requires()]] — কারণ

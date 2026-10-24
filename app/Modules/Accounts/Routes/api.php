@@ -28,6 +28,8 @@ Route::prefix('v1/accounts')
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
         // ⭐ পোস্টের আগে খাতার ছবি — কিছুই লেখে না; ওয়েবের simulate-এর একই হিসাব (চুক্তি §৫, a4-এর চাওয়া, ২৫ অক্টোবর ২০২৬)
         Route::post('/vouchers/preview', [VoucherApiController::class, 'preview'])->name('voucher.preview');
+        // ⭐ এক পক্ষের খোলা বিল — ওয়েবের কার্ডের একই উৎস (Core PartyOpenBills), পক্ষ বাছার পরে (চুক্তি §৭.১; setup-এ নয়, পক্ষ শত শত)
+        Route::get('/parties/{type}/{id}/open-bills', [VoucherApiController::class, 'openBills'])->whereNumber('id')->name('party.open_bills');
         Route::get('/vouchers/{id}', [VoucherApiController::class, 'show'])->whereUuid('id')->name('voucher.show');
         Route::post('/vouchers/{id}/post', [VoucherApiController::class, 'post'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('voucher.post');
 
