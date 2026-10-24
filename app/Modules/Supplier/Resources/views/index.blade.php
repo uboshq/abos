@@ -150,9 +150,10 @@
             পড়লেই অ্যাট্রিবিউট ওখানে শেষ হয়ে যায় আর বাকি অংশ কাঁচা
             লেখা হিসেবে পাতায় ছাপা হয়। তাই ব্যাখ্যাটা এখানে, বাইরে।
         --}}
+        {{-- ⓘ চোখ একটাই — কাজের কলামে, মালিকের ২১ সেপ্টেম্বরের ছকে (দেখা আর সম্পাদনা); টেবিলের :view-url নেই, নইলে একই সারিতে
+             চোখ দুবার (মালিক, ২৪ অক্টোবর ২০২৬)। টাকার তালিকার পাহারা কাজের কলামের চোখকেই "দেখুন" ধরে ([[EveryMoneyListShowsAGrandTotalTest]]) --}}
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('supplier.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('supplier::message.none_yet')"
             :rows="$suppliers"
             :compact="request()->boolean('compact')"
