@@ -22,12 +22,13 @@ afterEach(() => {
     document.body.innerHTML = ''
 })
 
-async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' } } = {}) {
+async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' }, owedLabels = {} } = {}) {
     // ⛔ JSON-এর ডবল কোট অ্যাট্রিবিউট আগেই শেষ করে দিত (cb_v15: বাক্সটা জোড়াই লাগেনি, পাঁচটা দাবি "not a function") — একক কোটে লেখা
     const balanceText = JSON.stringify(balances).replace(/"/g, "'")
+    const labelText = JSON.stringify(owedLabels).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out} })">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText} })">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
@@ -155,5 +156,52 @@ describe('রেফারেন্সের চলতি উত্তর', () =>
 
         expect(data.slipUsed).toBe(true)
         expect(data.slip.message).toBe('আগে বসেছে')
+    })
+})
+
+/*
+ * ⭐ নকশার মাথা (পাতা ২ আর ৪; fe, ২৫ অক্টোবর ২০২৬): প্রথম অঙ্কের নাম পক্ষের ধরনে, রং — বকেয়া লাল, অগ্রিম সবুজ, শূন্য রং ছাড়া;
+ * আর পক্ষের বাক্সের "পুরো বকেয়া · নির্বাচিত বিল" টাকার ঘরে পৌঁছায় (`heardFill`)।
+ */
+describe('মাথার নাম, রং আর এক চাপের অঙ্ক', () => {
+    const owedLabels = { customer: 'গ্রাহকের বকেয়া', supplier: 'সরবরাহকারীর বকেয়া', '': 'পক্ষের বকেয়া' }
+
+    it('প্রথম অঙ্কের নাম পক্ষের ধরনে, অজানায় সাধারণ নাম', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ owedLabels })
+        clearTimeout(data.timer)
+
+        data.heardParty({ due: '500', hasParty: true, partyType: 'customer' })
+        expect(data.headOwedLabel, '⛔ গ্রাহকের রসিদে মাথার নাম "গ্রাহকের বকেয়া" নয়').toBe('গ্রাহকের বকেয়া')
+        data.heardParty({ due: '500', hasParty: true, partyType: 'supplier' })
+        expect(data.headOwedLabel, '⛔ ধরন বদলালেও মাথার নাম বদলায়নি').toBe('সরবরাহকারীর বকেয়া')
+        data.heardParty({ due: '500', hasParty: true, partyType: 'employee' })
+        expect(data.headOwedLabel, '⛔ অজানা ধরনে মাথার নাম ফাঁকা').toBe('পক্ষের বকেয়া')
+    })
+
+    it('বকেয়া লাল, অগ্রিম সবুজ, শূন্য রং ছাড়া', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ owedLabels })
+        clearTimeout(data.timer)
+
+        data.heardParty({ due: '500', hasParty: true, partyType: 'customer' })
+        expect(data.headOwedClass, '⛔ বকেয়া লালে নয়').toBe('text-(--color-danger)')
+        data.heardParty({ due: '-500', hasParty: true, partyType: 'customer' })
+        expect(data.headOwedClass, '⛔ অগ্রিম লালে — সবুজে "অগ্রিম"-এর কথা').toBe('text-(--color-badge-success-ink)')
+        data.heardParty({ due: '0', hasParty: true, partyType: 'customer' })
+        expect(data.headOwedClass, '⛔ শূন্য বকেয়া রঙিন — নকশায় "৳0.00" রং ছাড়া').toBe('')
+    })
+
+    it('এক চাপের অঙ্ক টাকার ঘরে কাঁচা অঙ্কে বসে; অ-সংখ্যা কিছু বদলায় না', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ amount: '100' })
+        clearTimeout(data.timer)
+
+        data.heardFill('6,860.00')
+        expect(data.amount, '⛔ "পুরো বকেয়া" টাকার ঘরে বসেনি, বা কমাসহ বসল').toBe('6860.00')
+        data.heardFill('abc')
+        expect(data.amount, '⛔ অ-সংখ্যা এসে টাকার ঘর বদলাল').toBe('6860.00')
+        data.heardFill('')
+        expect(data.amount, '⛔ ফাঁকা খবরে টাকার ঘর মুছল').toBe('6860.00')
     })
 })

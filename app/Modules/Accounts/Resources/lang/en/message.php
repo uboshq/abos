@@ -259,6 +259,6 @@ return [
     'reference_free' => 'Not used on this account before ✓',
     'ledger_matches' => 'Matches: debit = credit ✓',
     'ledger_empty' => 'Shows here once the party, amount, account and narration are filled.',
-    'after_post_receipt' => 'After posting: print the money receipt · PDF · WhatsApp (from the "Print" menu on its page)',
+    'after_post_receipt' => 'After posting: money receipt (amount in words) print · PDF · WhatsApp',
     'after_post_payment' => 'After posting: print the payment paper · PDF · WhatsApp (from the "Print" menu on its page)',
 ];

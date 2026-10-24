@@ -141,7 +141,50 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         },
 
         tellDue() {
-            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '' });
+            // ⓘ ধরনও যায় — মাথার অঙ্কের নাম তাতে ("গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা"; [[voucherMoney]] `headOwedLabel`)
+            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '', partyType: this.partyType });
+        },
+
+        /** ⭐ পক্ষের ঘরের নাম ধরনে — "গ্রাহক", "সরবরাহকারী" (নকশা পাতা ২ আর ৪); অজানা ধরনে সাধারণ "পক্ষ" */
+        get partyLabel() {
+            return this.texts?.typeLabels?.[this.partyType] ?? this.texts?.partyWord ?? '';
+        },
+
+        /**
+         * ⭐ পক্ষের ঘরের নিচে "সবচেয়ে পুরনো বাকি N দিন" (নকশা পাতা ২) — খোলা বিলের বয়স থেকে, যে বিলে এখনো বাকি আছে।
+         * ⓘ বিল না থাকলে কিছুই নয় (ফাঁকা লেখা, ঘরটা লুকানো)।
+         */
+        get oldestDueText() {
+            const ages = this.bills.filter((b) => Number(b.outstanding) > 0.005).map((b) => Number(b.age)).filter((n) => Number.isFinite(n));
+
+            if (ages.length === 0 || !this.texts?.oldestDue) {
+                return '';
+            }
+
+            return this.texts.oldestDue.replace(':days', String(Math.max(...ages)));
+        },
+
+        /** ⭐ "পুরো বকেয়া" — কেবল রসিদের দিকে সত্যিকারের বকেয়া থাকলে (অগ্রিম বা শূন্যে নয়) */
+        get canFillDue() {
+            return this.dueIsOwed && this.dueSign !== 0;
+        },
+
+        /*
+         * ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে। ⓘ অঙ্কটা ফর্মের ([[voucherMoney]]), এই বাক্সের নয় — তাই ঘটনা
+         * (`fill-amount`), দুই x-data একে অপরের অবস্থা দেখে না। অঙ্ক কাঁচা, দুই দশমিকে ("45000.00")।
+         */
+        fillWholeDue() {
+            if (this.canFillDue) {
+                this.$dispatch('fill-amount', Math.abs(Number(this.due)).toFixed(2));
+            }
+        },
+
+        fillPickedBill() {
+            const bill = this.pickedBill;
+
+            if (bill !== null) {
+                this.$dispatch('fill-amount', Number(bill.outstanding).toFixed(2));
+            }
         },
 
         /** "অন্য (সরাসরি খাত)" — পক্ষ নেই, তাই বিলের তালিকা আর পাওনার অঙ্কও নেই */

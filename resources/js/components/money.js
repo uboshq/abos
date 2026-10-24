@@ -380,6 +380,7 @@ export function voucherMoney ({
     out = false,
     ait = '',
     vds = '',
+    owedLabels = {},
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -399,6 +400,8 @@ export function voucherMoney ({
          */
         partyDue: null,
         hasParty: true,
+        // ⓘ পক্ষের ধরন — মাথার প্রথম অঙ্কের নাম তাতে (`owedLabels`, ধরন → "গ্রাহকের বকেয়া"; অজানায় '' → সাধারণ নাম)
+        headPartyType: '',
         charge: 0,
         balances,
         slip: { state: 'empty', message: '' },
@@ -436,6 +439,21 @@ export function voucherMoney ({
         heardParty (detail) {
             this.hasParty = detail?.hasParty !== false
             this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null
+            this.headPartyType = String(detail?.partyType ?? '')
+        },
+
+        /* ⓘ পক্ষের বাক্সের "পুরো বকেয়া" / "নির্বাচিত বিল" — অঙ্কটা টাকার ঘরে (কাঁচা অঙ্ক; দেখানোর ঘর নিজে লাখ-কমায় সাজায়) */
+        heardFill (value) {
+            const amount = String(value ?? '').replace(/,/g, '').trim()
+            if (amount !== '' && Number.isFinite(Number(amount))) this.amount = amount
+        },
+
+        /* ⭐ মাথার প্রথম অঙ্কের নাম পক্ষের ধরনে (নকশা: "গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা") */
+        get headOwedLabel () { return owedLabels[this.headPartyType] ?? owedLabels[''] ?? '' },
+        // ⓘ বকেয়া লালে (নকশা); পক্ষের অগ্রিম হলে সবুজ, "অগ্রিম" শব্দের সাথে; শূন্যে সাধারণ রং — নকশায় "৳0.00" রং ছাড়া
+        get headOwedClass () {
+            if (this.headOwedPaisa === 0) return ''
+            return this.headOwedIsAdvance ? 'text-(--color-badge-success-ink)' : 'text-(--color-danger)'
         },
 
         /*

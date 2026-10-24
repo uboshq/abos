@@ -50,8 +50,12 @@
     }
 @endphp
 
-<section data-boxed
-         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
+{{--
+    ⭐ নকশার কার্ড — "সাধারণ তথ্য" (পক্ষের ধরন · পক্ষ · তারিখ · টাকা, তারপর পদ্ধতি → খাত → পদ্ধতির ঘর, উৎসে কাটা), তার নিচে
+    "খোলা বিল" নিজের কার্ডে (নকশা পাতা ২ আর ৪; fe, ২৫ অক্টোবর ২০২৬)। ⓘ পক্ষের বাক্স (`partyVoucher`) দুই কার্ড জুড়ে — বিলের টেবিল
+    আর পক্ষের ঘর একই অবস্থা দেখে।
+--}}
+<div class="space-y-4" data-party-box
          x-data="partyVoucher({
              partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
@@ -70,8 +74,14 @@
                  'dueOutNone' => __('accounts::field.due_out_none'),
                  'overDue' => __('accounts::message.more_than_the_bill_owes'),
                  'noBills' => __('accounts::message.no_open_bill'),
+                 // ⭐ পক্ষের ঘরের নাম ধরনে — "গ্রাহক", "সরবরাহকারী" (নকশা); "অন্য"-তে ঘরটাই নেই
+                 'typeLabels' => collect($parties)->pluck('label', 'type')->all(),
+                 'partyWord' => $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party'),
+                 'oldestDue' => __('money.screen.oldest_due'),
              ]),
          })">
+<section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+    <h2 class="mb-3 font-semibold">{{ __('money.screen.general') }}</h2>
 
     {{--
         ── সারি ১ — তারিখ · কখন · ডিপোজিটরের ধরন · ডিপোজিটরের নাম ───────
@@ -166,8 +176,9 @@
         {{-- ⓘ "অন্য (সরাসরি খাত)"-এ পক্ষের ঘর নেই — নিচে এক লাইনে কারণ --}}
         <div x-show="! noParty" data-party-name-cell>
             <div class="mb-1 flex items-baseline justify-between gap-2">
-                <span class="text-sm font-medium">
-                    {{ $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party') }}
+                <span class="text-sm font-medium" data-party-label>
+                    <span x-text="partyLabel">{{ collect($parties)->firstWhere('type', $partyType)['label'] ?? ($isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party')) }}</span>
+                    <span class="text-(--color-danger)" aria-hidden="true">*</span>
                 </span>
 
                 {{-- পাওনা — নামের পাশে, রঙিন পটভূমিতে।
@@ -217,19 +228,32 @@
             @error('party_id')
                 <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
             @enderror
+            {{-- ⓘ খোলা বিলের বয়স থেকে, পক্ষ বাছলে ([[party-voucher.js]] `oldestDueText`); বাকির সীমা গ্রাহক মডিউলের — হিসাব সেটা পড়ে না --}}
+            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-party-hint x-show="oldestDueText !== ''" x-cloak x-text="oldestDueText"></p>
         </div>
 
         <x-ui.field name="trx_date" type="date"
-                    :label="__('accounts::field.trx_date_long')"
+                    :label="__('money.screen.date')"
                     :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                     required />
 
         {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর পাঠানোর ঘর আলাদা, পাঠানো মান কাঁচা
              অঙ্ক (type="money", fe, ২৪ অক্টোবর ২০২৬); সার্ভার তবু কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])।
              ⓘ `?? $voucher->amount` — অর্থের খাতার "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
-        <x-ui.field name="amount" type="money" model="amount" required data-voucher-amount
-                    :label="$isReceipt ? __('accounts::field.amount_received') : __('accounts::field.amount_paid')"
-                    :value="old('amount', $typedAmount ?? $voucher->amount)" />
+        <div>
+            <x-ui.field name="amount" type="money" model="amount" required data-voucher-amount
+                        :label="$isReceipt ? __('money.screen.amount_in') : __('accounts::field.amount_paid')"
+                        :value="old('amount', $typedAmount ?? $voucher->amount)" />
+            {{-- ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে (বকেয়া থাকলে, বিল বাছা থাকলে); ঘটনায় ফর্মের টাকায় যায় ([[voucherMoney]] `heardFill`) --}}
+            @if ($isReceipt)
+                <p class="mt-1 flex flex-wrap gap-x-2 text-2xs" data-amount-fill>
+                    <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-due
+                            x-show="canFillDue" x-cloak x-on:click="fillWholeDue()">{{ __('money.screen.fill.whole_due') }}</button>
+                    <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-bill
+                            x-show="pickedBill" x-cloak x-on:click="fillPickedBill()">{{ __('money.screen.fill.picked_bill') }}</button>
+                </p>
+            @endif
+        </div>
     </div>
 
     {{-- ⭐ পক্ষ ছাড়া কাগজে এক লাইনে কারণ — বিলের তালিকা আর পাওনার অঙ্ক কেন নেই (fe, ২৪ অক্টোবর ২০২৬) --}}
@@ -316,6 +340,9 @@
         </div>
     @endif
 
+    @include('accounts::voucher.partials.money-fields')
+</section>
+
     {{--
         ── কোন বিলের বিপরীতে ──────────────────────────────────────────
         ⭐ রসিদের সবচেয়ে বড় প্রশ্ন, আর এতদিন পর্দায় ছিলই না।
@@ -340,10 +367,10 @@
         ⭐ খোলা বিল — খোলা টেবিল, ভাঁজ নয় (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ পক্ষ বাছলে আর তাঁর খোলা বিল থাকলে তবেই;
         খোলা বিল না থাকলে টেবিলটাই নেই, পক্ষ ছাড়া কাগজেও নেই (তখন উপরের এক লাইনের কারণ)।
     --}}
-    <section class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3" data-open-bills
+    <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" data-open-bills
              x-show="! noParty && bills.length > 0" x-cloak>
-        <h3 class="text-sm font-semibold">
-            {{ __('accounts::field.against_which_invoice') }}
+        <h3 class="font-semibold">
+            {{ $isReceipt ? __('money.screen.open_bills_in') : __('money.screen.open_bills') }}
             <span class="ms-2 text-xs font-normal text-(--color-ink-muted)"
                   x-show="pickedBill" x-cloak x-text="pickedBill ? pickedBill.no : ''"></span>
         </h3>
@@ -394,4 +421,4 @@
             </div>
         </template>
     </section>
-</section>
+</div>

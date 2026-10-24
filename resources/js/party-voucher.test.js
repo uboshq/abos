@@ -283,3 +283,76 @@ describe('partyVoucher — বাছা বিলের দাগ', () => {
         expect(box.isBillPicked(invoice)).toBe(false)
     })
 })
+
+/*
+ * ⭐ নকশার মিল-তালিকা (পাতা ২ আর ৪; fe, ২৫ অক্টোবর ২০২৬): পক্ষের ঘরের নাম ধরনে, নিচে "সবচেয়ে পুরনো বাকি N দিন", আর টাকার নিচে
+ * "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক, ঘটনায় ফর্মের টাকায় ([[voucherMoney]] `heardFill`)।
+ */
+describe('partyVoucher — নকশার নাম, বয়স আর এক চাপের অঙ্ক', () => {
+    const texts = { typeLabels: { customer: 'গ্রাহক', supplier: 'সরবরাহকারী' }, partyWord: 'পক্ষ', oldestDue: 'সবচেয়ে পুরনো বাকি :days দিন' }
+
+    it('পক্ষের ঘরের নাম ধরনে, অজানা ধরনে সাধারণ "পক্ষ"', () => {
+        const box = make({ texts })
+        expect(box.partyLabel, '⛔ গ্রাহকের রসিদে ঘরের নাম "গ্রাহক" নয়').toBe('গ্রাহক')
+        box.partyType = 'supplier'
+        expect(box.partyLabel, '⛔ ধরন বদলালেও ঘরের নাম বদলায়নি').toBe('সরবরাহকারী')
+        box.partyType = 'employee'
+        expect(box.partyLabel, '⛔ অজানা ধরনে ঘরের নাম ফাঁকা').toBe('পক্ষ')
+    })
+
+    it('সবচেয়ে পুরনো বাকি — যে বিলে এখনো বাকি আছে তার বয়স; বিল না থাকলে কিছুই নয়', () => {
+        const box = make({ texts })
+        expect(box.oldestDueText, '⛔ বিল ছাড়াই বয়সের লাইন').toBe('')
+
+        box.bills = [
+            { against_type: 'sales_invoice', id: 1, age: 3, outstanding: '100' },
+            { against_type: 'sales_invoice', id: 2, age: 19, outstanding: '250.50' },
+            { against_type: 'sales_invoice', id: 3, age: 40, outstanding: '0' },
+        ]
+        expect(box.oldestDueText, '⛔ পুরনো বাকির বয়স ভুল — শোধ হওয়া বিলও গোনা হলো, বা সবচেয়ে পুরনোটা নয়').toBe('সবচেয়ে পুরনো বাকি 19 দিন')
+    })
+
+    it('"পুরো বকেয়া" কেবল সত্যিকারের বকেয়ায়, অঙ্ক দুই দশমিকে; অগ্রিম বা শূন্যে কিছুই নয়', () => {
+        const box = make({ texts })
+        box.$dispatch = vi.fn()
+
+        box.due = '1250.5'
+        expect(box.canFillDue).toBe(true)
+        box.fillWholeDue()
+        expect(box.$dispatch, '⛔ "পুরো বকেয়া" অঙ্কটা ফর্মে পাঠায়নি').toHaveBeenCalledWith('fill-amount', '1250.50')
+
+        box.$dispatch.mockClear()
+        for (const due of ['-500', '0', '0.001']) {
+            box.due = due
+            expect(box.canFillDue, `⛔ ${due}-এ "পুরো বকেয়া" দেখায় — অগ্রিম বা শূন্যে আদায়ের কিছু নেই`).toBe(false)
+            box.fillWholeDue()
+        }
+        expect(box.$dispatch, '⛔ অগ্রিম বা শূন্যে অঙ্ক বসাল').not.toHaveBeenCalled()
+
+        box.out = true
+        box.due = '-8000'
+        expect(box.canFillDue, '⛔ পরিশোধে দেনায় "পুরো বকেয়া" চলে না — দিক উল্টো').toBe(true)
+    })
+
+    it('"নির্বাচিত বিল" বাছা বিলের বাকি বসায়; বিল বাছা না থাকলে কিছুই নয়', () => {
+        const box = make({ texts })
+        box.$dispatch = vi.fn()
+
+        box.fillPickedBill()
+        expect(box.$dispatch, '⛔ বিল ছাড়াই অঙ্ক বসাল').not.toHaveBeenCalled()
+
+        box.bills = [{ against_type: 'sales_invoice', id: 7, age: 2, outstanding: '250' }]
+        box.pick(box.bills[0])
+        box.fillPickedBill()
+        expect(box.$dispatch, '⛔ "নির্বাচিত বিল" বাছা বিলের বাকি বসায়নি').toHaveBeenCalledWith('fill-amount', '250.00')
+    })
+
+    it('পাওনার খবরে ধরনও যায় — মাথার অঙ্কের নাম তাতে', () => {
+        const box = make({ texts })
+        box.$dispatch = vi.fn()
+        box.due = '10.00'
+        box.tellDue()
+        expect(box.$dispatch, '⛔ পাওনার খবরে পক্ষের ধরন নেই — মাথার নাম "গ্রাহকের বকেয়া" হতে পারে না')
+            .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer' })
+    })
+})

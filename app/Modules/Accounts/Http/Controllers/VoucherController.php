@@ -564,6 +564,18 @@ class VoucherController extends Controller implements HasMiddleware
             'moneySignatures' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
                 && app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires(VoucherApproval::MODULE, $type, null, class_basename(Voucher::class)),
             'moneyThreeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get(VoucherService::MAKER_CHECKER, true),
+
+            /*
+             * ⭐ মাথার তথ্যের সারি — "নম্বর: সংরক্ষণে বসবে (RCV-…) · বানালেন · সই দেবেন: … (ধাপ 1/N) · মাস খোলা ✓" (নকশা পাতা ২ আর ৪;
+             * টাকা দেওয়ার পর্দার একই সারি, [[PaymentController]])। ⓘ উপসর্গ নম্বর সিরিজের নিজের, কিছু খরচ না করে
+             * ([[NumberSeriesEngine::prefixOf()]]); প্রথম সই একই ছক থেকে ([[ApprovalEngine::firstSigner()]])।
+             */
+            'moneyPrefix' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                ? app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->prefixOf(Voucher::DOC_TYPES[$type])
+                : '',
+            'moneyFirstSigner' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                ? app(\App\Core\Engines\Approval\ApprovalEngine::class)->firstSigner(VoucherApproval::MODULE, $type, null, class_basename(Voucher::class))
+                : null,
         ];
     }
 

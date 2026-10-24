@@ -36,6 +36,10 @@ use Tests\TestCase;
  *   ১০. উৎসে কর্তন দুই দিকে: খাতার দুই পাশ সমান, সারাংশ = খাতা (পরিশোধে ২১২১ / ২১২২ ক্রেডিট, রসিদে ১১৩৮ / ১১৩৫ ডেবিট)
  *   ১১–১২. কর্তনের খাত কোডে অন্য খাত হলে থামা, নিজের কারণে (পরিশোধে ২১২১, রসিদে ব্যাংক হয়ে যাওয়া ১১৩৫)
  *   ১৩. নাম বাছা ভাগ করা পিকারে ([[x-ui.party-search]] stacked addable), নতুন নামের ঘর আগের নামে
+ *   ১৪–২২. নকশার পুরো মিল-তালিকা (২৫ অক্টোবর ২০২৬): মাথা (শিরোনাম · চিপ · নম্বরের উপসর্গ · বানালেন · সই দেবেন · মাস খোলা, ডানে ধরনের
+ *       নামে তিন অঙ্ক) · "সাধারণ তথ্য" কার্ডে পক্ষ থেকে উৎসে কাটা পর্যন্ত, খোলা বিল আলাদা কার্ডে · সংযুক্তি ও বিবরণ · রসিদে চেকের চিপ
+ *       চেকের খাতায় · পদ্ধতির চিপ ভাঁজ হয় (min-w-0) · রসিদের খাতায় শাখার কলাম আর VDS-এর "যদি থাকে" · স্থির বোতাম-সারি "পোস্ট" /
+ *       "সইয়ে পাঠান" · এক চাপে অঙ্ক · সরবরাহকারী-পরিশোধের মাথায় কাঁচা চাবি নয়
  */
 final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
 {
@@ -64,21 +68,23 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $this->assertInstanceOf(DOMElement::class, $aside, "⛔ {$type}: ডানের কলামটাই নেই");
             $this->assertNotNull($xpath->query('ancestor::*[@data-voucher-columns]', $aside)->item(0), "⛔ {$type}: ডানের কলাম দুই কলামের গ্রিডে নেই");
 
-            // ⭐ ক্রম a6-এর আসন্ন দুই-কলামের ফর্মের `right` খণ্ডের: মাথার তিন অঙ্ক → সারাংশ → খাতায় যা যাবে → নিয়ন্ত্রণ
+            // ⭐ ডানের খণ্ড: সারাংশ → খাতায় যা যাবে → নিয়ন্ত্রণ; তিন অঙ্ক পাতার মাথায়, ডান কোণে (নকশা পাতা ২ আর ৪; ২৫ অক্টোবর ২০২৬)
             $children = array_values(array_filter(iterator_to_array($aside->childNodes), fn ($n) => $n instanceof DOMElement));
             $this->assertSame('right', $aside->getAttribute('data-part'), "⛔ {$type}: ডানের কলাম একটা খণ্ড (data-part=\"right\") নয়");
-            $this->assertTrue(isset($children[0]) && $children[0]->hasAttribute('data-voucher-head-figures'), "⛔ {$type}: ডানের কলামের মাথায় তিন অঙ্ক নেই");
-            $this->assertTrue(isset($children[1]) && $children[1]->hasAttribute('data-voucher-summary'), "⛔ {$type}: ডানের কলামে তিন অঙ্কের নিচে হিসাবের সারাংশ নেই");
-            $this->assertTrue(isset($children[2]) && $children[2]->hasAttribute('data-voucher-ledger'), "⛔ {$type}: সারাংশের নিচে খাতায় যা যাবে নেই");
-            $this->assertTrue(isset($children[3]) && $children[3]->hasAttribute('data-voucher-controls'), "⛔ {$type}: খাতার নিচে নিয়ন্ত্রণের কার্ড নেই");
+            $this->assertTrue(isset($children[0]) && $children[0]->hasAttribute('data-voucher-summary'), "⛔ {$type}: ডানের কলামের মাথায় হিসাবের সারাংশ নেই");
+            $this->assertTrue(isset($children[1]) && $children[1]->hasAttribute('data-voucher-ledger'), "⛔ {$type}: সারাংশের নিচে খাতায় যা যাবে নেই");
+            $this->assertTrue(isset($children[2]) && $children[2]->hasAttribute('data-voucher-controls'), "⛔ {$type}: খাতার নিচে নিয়ন্ত্রণের কার্ড নেই");
 
             foreach (['data-sum-amount', 'data-sum-charge', 'data-sum-net', 'data-sum-words', 'data-sum-matches'] as $mark) {
-                $this->assertSame(1, $xpath->query('.//*[@'.$mark.']', $children[1])->length, "⛔ {$type}: সারাংশে {$mark} নেই");
+                $this->assertSame(1, $xpath->query('.//*[@'.$mark.']', $children[0])->length, "⛔ {$type}: সারাংশে {$mark} নেই");
             }
+            $figures = $xpath->query('//*[@data-voucher-header]//*[@data-voucher-head-figures]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $figures, "⛔ {$type}: তিন অঙ্ক পাতার মাথায় নেই");
+            $this->assertNull($xpath->query('ancestor::*[@data-voucher-aside]', $figures)->item(0), "⛔ {$type}: তিন অঙ্ক আবার ডানের কলামে");
             foreach (['data-head-owed', 'data-head-this', 'data-head-left', 'data-head-none'] as $mark) {
-                $this->assertSame(1, $xpath->query('.//*[@'.$mark.']', $children[0])->length, "⛔ {$type}: মাথার তিন অঙ্কে {$mark} নেই");
+                $this->assertSame(1, $xpath->query('.//*[@'.$mark.']', $figures)->length, "⛔ {$type}: মাথার তিন অঙ্কে {$mark} নেই");
             }
-            $this->assertSame(1, $xpath->query('.//*[@data-control="signatures"]', $children[3])->length, "⛔ {$type}: নিয়ন্ত্রণে সইয়ের লাইন নেই");
+            $this->assertSame(1, $xpath->query('.//*[@data-control="signatures"]', $children[2])->length, "⛔ {$type}: নিয়ন্ত্রণে সইয়ের লাইন নেই");
             $this->assertSame('left', $xpath->query('//*[@data-voucher-main]')->item(0)?->getAttribute('data-part'), "⛔ {$type}: বাঁয়ের খণ্ড (data-part=\"left\") নেই");
             $this->assertSame(1, $xpath->query('//*[@data-part="bar"]//*[@data-save-buttons]')->length, "⛔ {$type}: নিচের বোতাম-সারি আলাদা খণ্ডে (data-part=\"bar\") নেই");
         }
@@ -385,6 +391,179 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $this->assertSame(0, $xpath->query('//input[@name="party_id"][ancestor::template]')->length,
                 "⛔ {$type}: পিকারের ভিতরেও party_id — দুই ঘর একই নামে জমা যেত");
         }
+    }
+
+    /** ১৪ — মাথা: শিরোনাম · চিপ · "নম্বর: সংরক্ষণে বসবে (RCV-…) · বানালেন · মাস খোলা ✓", ডানে ধরনের নামে তিন অঙ্ক (নকশা পাতা ২ আর ৪) */
+    public function test_the_head_names_the_paper_its_number_series_its_maker_and_the_open_month(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        foreach ([Voucher::RECEIPT => ['title_receive', 'owed_by_in', 'customer'], Voucher::PAYMENT => ['title_pay', 'owed_by_out', 'supplier']] as $type => [$title, $owed, $start]) {
+            $xpath = $this->dom($this->screen($type));
+            $head = $xpath->query('//form//*[@data-voucher-header]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $head, "⛔ {$type}: নকশার মাথা ফর্মে নেই");
+
+            $h1 = trim((string) $xpath->query('.//h1', $head)->item(0)?->textContent);
+            $this->assertContains($h1, [trans('money.screen.'.$title, [], 'bn'), trans('money.screen.'.$title, [], 'en')], "⛔ {$type}: শিরোনাম নকশার নয়: {$h1}");
+            $this->assertSame(1, $xpath->query('.//*[@data-paper-state="draft"]', $head)->length, "⛔ {$type}: মাথায় \"খসড়া\" চিপ নেই");
+
+            $meta = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('.//*[@data-voucher-meta]', $head)->item(0)?->textContent));
+            $prefix = rtrim(app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->prefixOf(Voucher::DOC_TYPES[$type]), '-');
+            $this->assertNotSame('', $prefix, 'দৃশ্যটাই ঠিক নয় — নম্বর সিরিজের উপসর্গ নেই');
+            $said = array_filter(['bn', 'en'], fn (string $l) => str_contains($meta, trans('money.screen.meta.number_on_save_as', ['prefix' => $prefix], $l)));
+            $this->assertNotEmpty($said, "⛔ {$type}: মাথায় নম্বর সিরিজের উপসর্গ ({$prefix}-…) নেই: {$meta}");
+            $this->assertStringContainsString((string) $owner->name, $meta, "⛔ {$type}: মাথায় \"বানালেন\" নেই");
+            $month = array_filter(['bn', 'en'], fn (string $l) => str_contains($meta, trans('money.screen.meta.month_open', [], $l)));
+            $this->assertNotEmpty($month, "⛔ {$type}: খোলা মাসে মাথায় \"মাস খোলা ✓\" নেই: {$meta}");
+            $this->assertSame(0, $xpath->query('.//*[@data-voucher-signer]', $head)->length, "⛔ {$type}: সইয়ের ছক ছাড়াই \"সই দেবেন\" লেখা");
+
+            $label = trim((string) $xpath->query('.//*[@data-voucher-head-figures]//dt', $head)->item(0)?->textContent);
+            $this->assertContains($label, [trans("money.screen.head.{$owed}.{$start}", [], 'bn'), trans("money.screen.head.{$owed}.{$start}", [], 'en')],
+                "⛔ {$type}: প্রথম অঙ্কের নাম পক্ষের ধরনে নয় (\"গ্রাহকের বকেয়া\" / \"সরবরাহকারীর পাওনা\"): {$label}");
+        }
+    }
+
+    /** ১৫ — সইয়ের ছক থাকলে মাথায় "সই দেবেন: … (ধাপ 1/N)", আর মূল বোতাম "সইয়ে পাঠান" */
+    public function test_with_a_signing_flow_the_head_names_the_first_signer_and_the_button_sends_for_signing(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $flow = \App\Models\ApprovalFlow::create(['company_id' => $this->company->id, 'module' => \App\Modules\Accounts\Services\VoucherApproval::MODULE,
+            'action' => Voucher::RECEIPT, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $owner->id]);
+        \App\Models\ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 2, 'approver_type' => 'user', 'approver_id' => $owner->id]);
+
+        $xpath = $this->dom($this->screen(Voucher::RECEIPT));
+        $signer = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('//*[@data-voucher-header]//*[@data-voucher-signer]')->item(0)?->textContent));
+        $expected = array_map(fn (string $l) => trans('money.screen.meta.signer', ['who' => $owner->name, 'levels' => 2], $l), ['bn', 'en']);
+        $this->assertContains($signer, $expected, '⛔ সইয়ের ছক থাকলেও মাথায় প্রথম সইদাতা আর ধাপ নেই: '.$signer);
+
+        $primary = trim((string) $xpath->query('//*[@data-part="bar"]//*[@data-page-primary]')->item(0)?->textContent);
+        $this->assertContains($primary, [trans('money.screen.send', [], 'bn'), trans('money.screen.send', [], 'en')], '⛔ সই চালু, অথচ মূল বোতাম "সইয়ে পাঠান" নয়: '.$primary);
+
+        $plain = $this->dom($this->screen(Voucher::PAYMENT));
+        $post = trim((string) $plain->query('//*[@data-part="bar"]//*[@data-page-primary]')->item(0)?->textContent);
+        $this->assertContains($post, [trans('money.screen.post', [], 'bn'), trans('money.screen.post', [], 'en')], '⛔ সই বন্ধ, অথচ মূল বোতাম "পোস্ট" নয়: '.$post);
+    }
+
+    /** ১৬ — "সাধারণ তথ্য" এক কার্ডে: পক্ষের ধরন · পক্ষ · তারিখ · টাকা · পদ্ধতি · খাত · উৎসে কাটা; খোলা বিল তার পরে নিজের কার্ডে; সংযুক্তি ও বিবরণ */
+    public function test_the_general_card_holds_party_to_withholding_and_the_bills_follow_in_their_own_card(): void
+    {
+        foreach ([Voucher::RECEIPT => ['to_account_id', 'attach_hint_in', 'open_bills_in'], Voucher::PAYMENT => ['from_account_id', 'attach_hint', 'open_bills']] as $type => [$money, $attach, $bills]) {
+            $xpath = $this->dom($this->screen($type));
+            $card = $xpath->query('//*[@data-voucher-main]//section[@data-voucher-general]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $card, "⛔ {$type}: \"সাধারণ তথ্য\" কার্ড নেই");
+            $this->assertContains(trim((string) $xpath->query('./h2', $card)->item(0)?->textContent), [trans('money.screen.general', [], 'bn'), trans('money.screen.general', [], 'en')],
+                "⛔ {$type}: কার্ডের মাথায় \"সাধারণ তথ্য\" নেই");
+
+            foreach ([
+                'পক্ষের ধরন' => './/input[@name="party_type"]', 'পক্ষ' => './/*[@data-party-picker-cell]', 'তারিখ' => './/input[@name="trx_date"]',
+                'টাকা' => './/*[@data-voucher-amount]', 'পদ্ধতি' => './/*[@data-voucher-money]//input[@name="instrument"]',
+                'খাত' => './/*[@data-voucher-money]//select[@name="'.$money.'"]', 'উৎসে কাটা' => './/*[@data-voucher-withheld]',
+            ] as $what => $path) {
+                $this->assertGreaterThan(0, $xpath->query($path, $card)->length, "⛔ {$type}: {$what} \"সাধারণ তথ্য\" কার্ডে নেই");
+            }
+
+            $open = $xpath->query('//section[@data-open-bills]')->item(0);
+            $this->assertNull($xpath->query('ancestor::*[@data-voucher-general]', $open)->item(0), "⛔ {$type}: খোলা বিল \"সাধারণ তথ্য\" কার্ডের ভিতরে — নকশায় নিজের কার্ডে, তার পরে");
+            $this->assertTrue($open->hasAttribute('data-boxed'), "⛔ {$type}: খোলা বিল নিজের কার্ডে নয়");
+            $this->assertContains(trim((string) $xpath->query('.//h3', $open)->item(0)?->firstChild?->textContent), [trans('money.screen.'.$bills, [], 'bn'), trans('money.screen.'.$bills, [], 'en')],
+                "⛔ {$type}: খোলা বিলের মাথা নকশার নয়");
+
+            $details = $xpath->query('//section[@data-voucher-details]')->item(0);
+            $this->assertContains(trim((string) $xpath->query('./h2', $details)->item(0)?->textContent), [trans('money.screen.attach_and_note', [], 'bn'), trans('money.screen.attach_and_note', [], 'en')],
+                "⛔ {$type}: \"সংযুক্তি ও বিবরণ\" মাথা নেই");
+            $this->assertContains(trim((string) $xpath->query('.//label[@for="attachment"]', $details)->item(0)?->textContent), [trans('money.screen.'.$attach, [], 'bn'), trans('money.screen.'.$attach, [], 'en')],
+                "⛔ {$type}: সংযুক্তির নাম নকশার নয়");
+        }
+    }
+
+    /** ১৭ — রসিদে নকশার পঞ্চম চিপ "চেক" চেকের খাতায় নিয়ে যায় (গৃহীত চেক রসিদে নয়, মালিকের নিয়ম); পরিশোধে চেক আসল পদ্ধতি */
+    public function test_the_receipts_cheque_chip_leads_to_the_cheque_register(): void
+    {
+        $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $link = $receipt->query('//*[@data-method-chips]//a[@data-method-elsewhere="cheque"]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $link, '⛔ রসিদে নকশার "চেক" চিপ নেই');
+        $this->assertSame(route('accounts.cheque.create'), $link->getAttribute('href'), '⛔ রসিদের "চেক" চিপ চেকের খাতায় নিয়ে যায় না');
+        $this->assertContains($link->getAttribute('title'), [trans('money.screen.cheque_elsewhere', [], 'bn'), trans('money.screen.cheque_elsewhere', [], 'en')],
+            '⛔ রসিদের "চেক" চিপ কেন অন্য পাতায় নেয়, তা বলে না');
+        $this->assertSame(0, $receipt->query('//input[@name="instrument"][@value="cheque"]')->length, '⛔ রসিদে চেক আবার পদ্ধতি — গৃহীত চেক কেবল চেকের খাতা দিয়ে');
+
+        $payment = $this->dom($this->screen(Voucher::PAYMENT));
+        $this->assertSame(0, $payment->query('//a[@data-method-elsewhere]')->length, '⛔ পরিশোধে চেক আবার লিংক — সেখানে চেক আসল পদ্ধতি');
+        $this->assertSame(1, $payment->query('//input[@name="instrument"][@value="cheque"]')->length, '⛔ পরিশোধে চেক পদ্ধতি হারাল');
+    }
+
+    /** ১৮ — পদ্ধতির চিপ জায়গা না পেলে ভাঁজ হয়, খাতের ঘরে ঢোকে না (fieldset `min-w-0`; a6, আদায়ে ৩৬৩px চিপ বনাম ৩৩৫px অর্ধেক) */
+    public function test_the_method_chips_wrap_inside_their_half_instead_of_pushing_into_the_account(): void
+    {
+        foreach ([
+            'receipt' => route('accounts.voucher.create', ['type' => Voucher::RECEIPT]),
+            'payment' => route('accounts.voucher.create', ['type' => Voucher::PAYMENT]),
+            'supplier payment' => route('purchase.payment.create'),
+        ] as $screen => $url) {
+            $this->bank();
+            $xpath = $this->dom((string) $this->get($url)->assertOk()->getContent());
+            $fieldset = $xpath->query('//fieldset[@data-method-chips]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $fieldset, "দৃশ্যটাই ঠিক নয় — {$screen}: পদ্ধতির চিপ নেই");
+            $this->assertContains('min-w-0', preg_split('/\s+/', $fieldset->getAttribute('class')),
+                "⛔ {$screen}: পদ্ধতির fieldset-এ min-w-0 নেই — পাঁচ চিপ নিজের মাপে দাঁড়িয়ে খাতের ঘরে ঢুকে যায়");
+            $row = $xpath->query('./div[@role="radiogroup"]', $fieldset)->item(0);
+            $this->assertContains('flex-wrap', preg_split('/\s+/', (string) $row?->getAttribute('class')), "⛔ {$screen}: চিপের সারি ভাঁজ হয় না — জায়গা না পেলে কাটা পড়ে");
+        }
+    }
+
+    /** ১৯ — রসিদের খাতায় শাখার নিজের কলাম, আর সারাংশে VDS-এর পাশে "যদি থাকে" (নকশা পাতা ২); পরিশোধে নয় (পাতা ৪) */
+    public function test_the_receipts_ledger_has_a_branch_column_and_its_vds_row_says_if_any(): void
+    {
+        $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $this->assertSame(1, $receipt->query('//*[@data-voucher-ledger]//th[@data-ledger-branch-col]')->length, '⛔ রসিদের খাতায় শাখার কলাম নেই');
+        $this->assertSame(1, $receipt->query('//*[@data-voucher-ledger]//td[@x-text="row.branch"]')->length, '⛔ রসিদের খাতার সারিতে শাখা নিজের ঘরে নয়');
+        $tag = trim((string) $receipt->query('//*[@data-voucher-summary]//*[@data-sum-vds-tag]')->item(0)?->textContent);
+        $this->assertContains($tag, [trans('money.screen.tag.if_any', [], 'bn'), trans('money.screen.tag.if_any', [], 'en')], '⛔ রসিদের VDS সারিতে "যদি থাকে" নেই');
+
+        $payment = $this->dom($this->screen(Voucher::PAYMENT));
+        $this->assertSame(0, $payment->query('//th[@data-ledger-branch-col]')->length, '⛔ পরিশোধের খাতায় শাখার কলাম — নকশা পাতা ৪-এ নেই');
+    }
+
+    /** ২০ — বোতামের সারি স্থির, বারের ঠিক উপরে (টাকা দেওয়ার পর্দার একই সারি); "পোস্টের পরে" লাইন নকশার হুবহু */
+    public function test_the_button_row_stays_in_sight_and_says_what_comes_after_posting(): void
+    {
+        foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
+            $bar = $this->dom($this->screen($type))->query('//*[@data-part="bar"]')->item(0);
+            $classes = preg_split('/\s+/', (string) $bar?->getAttribute('class'));
+            $this->assertContains('sticky', $classes, "⛔ {$type}: বোতামের সারি স্থির নয় — লম্বা পাতায় নিচে হারিয়ে যায়");
+            $this->assertContains('md:bottom-(--spacing-status-bar)', $classes, "⛔ {$type}: বোতামের সারি নিচের বারের উপরে বসে না");
+        }
+
+        $this->assertSame('পোস্টের পরে: টাকার রসিদ (টাকা কথায়) ছাপা · PDF · WhatsApp', trans('accounts::message.after_post_receipt', [], 'bn'),
+            '⛔ রসিদের "পোস্টের পরে" লাইন নকশার হুবহু নয়');
+    }
+
+    /** ২১ — রসিদের টাকার ঘরের নিচে "পুরো বকেয়া · নির্বাচিত বিল" (নকশা পাতা ২); পরিশোধে নেই (পাতা ৪) — আচরণ party-voucher.test.js-এ */
+    public function test_the_receipt_offers_the_two_quick_fills_under_its_amount(): void
+    {
+        $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $fill = $receipt->query('//*[@data-voucher-general]//*[@data-amount-fill]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $fill, '⛔ রসিদের টাকার নিচে এক চাপের অঙ্ক নেই');
+        $this->assertSame('fillWholeDue()', $receipt->query('.//button[@data-fill-due]', $fill)->item(0)?->getAttribute('x-on:click'), '⛔ "পুরো বকেয়া" অঙ্ক বসায় না');
+        $this->assertSame('fillPickedBill()', $receipt->query('.//button[@data-fill-bill]', $fill)->item(0)?->getAttribute('x-on:click'), '⛔ "নির্বাচিত বিল" অঙ্ক বসায় না');
+        $this->assertMatchesRegularExpression('/<form\b[^>]*@fill-amount="heardFill\(\$event\.detail\)"/', $this->screen(Voucher::RECEIPT),
+            '⛔ এক চাপের অঙ্ক ফর্মের টাকায় পৌঁছায় না');
+
+        $this->assertSame(0, $this->dom($this->screen(Voucher::PAYMENT))->query('//*[@data-amount-fill]')->length, '⛔ পরিশোধে এক চাপের অঙ্ক — নকশায় নেই');
+    }
+
+    /** ২২ — ⛔ সরবরাহকারী-পরিশোধের মাথায় কাঁচা চাবি ("money.screen.head.owed") — 'head' দুবার থাকায় শেষেরটা আগেরটাকে মুছত (1806c40b2 থেকে) */
+    public function test_the_supplier_payment_head_reads_words_not_translation_keys(): void
+    {
+        $this->bank();
+        $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('money.screen.', $html, '⛔ সরবরাহকারী-পরিশোধের পাতায় অনুবাদ না হওয়া চাবি দেখা যায়');
+
+        $xpath = $this->dom($html);
+        $labels = array_map(fn (DOMElement $dt) => trim($dt->textContent), iterator_to_array($xpath->query('//*[@data-pay-head]//dt')));
+        $this->assertContains($labels[0] ?? null, [trans('money.screen.head.owed', [], 'bn'), trans('money.screen.head.owed', [], 'en')], '⛔ মাথার প্রথম অঙ্কের নাম নেই');
+        $this->assertContains($labels[1] ?? null, [trans('money.screen.head.this', [], 'bn'), trans('money.screen.head.this', [], 'en')], '⛔ মাথার দ্বিতীয় অঙ্কের নাম নেই');
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
