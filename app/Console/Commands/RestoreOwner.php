@@ -100,7 +100,7 @@ class RestoreOwner extends Command
 
         $membership = $member === null ? 'নতুন সদস্যপদ' : ((int) $member->is_active === 1 ? 'সদস্যপদ আছে' : 'বন্ধ সদস্যপদ চালু');
         $branchId = $member?->default_branch_id ?? $main->id;
-        $branchCode = (string) (DB::table('branches')->where('id', $branchId)->value('code') ?? $branchId);
+        $branchCode = (string) (DB::table('branches')->where('company_id', $company->id)->where('id', $branchId)->value('code') ?? $branchId);
         $super = in_array((int) $user->id, $holders, true) ? 'super_admin আছে' : 'super_admin দেওয়া';
 
         $this->line(sprintf('%s · %d %s · %s · ডিফল্ট শাখা %s · %s%s', $company->code, $user->id, $user->name,
