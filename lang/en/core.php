@@ -1143,6 +1143,12 @@ return [
         'incident' => 'Incident',
     ],
 
+    // The trail's last part: "New" on a create page, the record's own number on an edit page, else "Edit" (tick-list #6, 25 Oct 2026)
+    'crumb' => [
+        'new' => 'New',
+        'edit' => 'Edit',
+    ],
+
     'a11y' => [
         'skip_to_content' => 'Skip to content',
         'module_navigation' => 'Switch module',
