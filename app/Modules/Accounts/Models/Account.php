@@ -135,6 +135,8 @@ class Account extends Model implements Drillable
         'status', 'is_active', 'created_by',
         // ⭐ পক্ষ রাখে — কোন ধরনের পক্ষ এই খাতে বসে (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬; [[holdsParty()]])
         'party_types',
+        // ⭐ এখানে সম্পদ কেনা হতে পারে — খরচের লাইনে IAS 16-এর সতর্কতা (খরচের ভাউচার ১০০%, ভাগ J — ec; আটকায় না)
+        'capex_hint',
     ];
 
     protected function casts(): array
@@ -142,6 +144,7 @@ class Account extends Model implements Drillable
         return [
             'is_group' => 'boolean',
             'is_system' => 'boolean',
+            'capex_hint' => 'boolean',
             'is_active' => 'boolean',
             'opening_balance' => 'decimal:4',
             'opening_date' => 'date',

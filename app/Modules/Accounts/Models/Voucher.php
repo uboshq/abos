@@ -237,6 +237,11 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
 
         // ১৯ সেপ্টেম্বর — কোথা থেকে এল (কাউন্টারের ডিপোজিটের নিজের নিয়ম)
         'origin',
+
+        // ⭐ খরচের ভাউচার ১০০% (ভাগ B, fe অনুমোদিত §১, ২৪ অক্টোবর ২০২৬) — বিলের তারিখ, শেষ দিন, কর্মী, মুদ্রা, বাজেট, সতর্কতা, নমুনা
+        'bill_date', 'due_date', 'employee_id',
+        'currency_id', 'fx_rate', 'fx_date', 'fx_rate_reason',
+        'budget_reason', 'budget_check', 'warnings', 'template_id',
     ];
 
     protected function casts(): array
@@ -277,7 +282,25 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
              * বাকি সব জায়গায় `array` লেখা, তাই এখানেও তাই।
              */
             'note_counts' => 'array',
+
+            // ⭐ খরচের ভাউচার ১০০% (ভাগ B) — `array`, প্রকল্পের নিয়মে (উপরে কারণ)
+            'bill_date' => 'date',
+            'due_date' => 'date',
+            'fx_date' => 'date',
+            'fx_rate' => 'decimal:6',
+            'budget_check' => 'array',
+            'warnings' => 'array',
         ];
+    }
+
+    /**
+     * ⭐ খরচের ব্যবসার লাইন (খরচের ভাউচার ১০০%, ভাগ B) — জাবেদার সারি এখান থেকে বানানো। ⓘ পুরনো খরচে খালি — তখন এক-লাইনের পথ।
+     *
+     * @return HasMany<VoucherExpenseLine, $this>
+     */
+    public function expenseLines(): HasMany
+    {
+        return $this->hasMany(VoucherExpenseLine::class)->orderBy('sort')->orderBy('id');
     }
 
     /**

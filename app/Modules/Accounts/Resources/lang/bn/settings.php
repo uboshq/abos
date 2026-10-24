@@ -12,6 +12,13 @@ return [
     'cash_ceiling_enabled' => 'ব্যক্তিপ্রতি নগদ সীমা চালু',
     'cash_ceiling_blocks' => 'সীমা ছাড়ালে টাকা নেওয়া আটকে দাও (নাহলে শুধু সতর্ক করবে)',
     'require_narration' => 'ভাউচারে বিবরণ বাধ্যতামূলক',
+    // ⓘ খরচের ভাউচার ১০০% (২৪ অক্টোবর ২০২৬)
+    'expense_attachment_over' => 'খরচের ভাউচারে এর বেশি অঙ্কে বিলের ছবি বাধ্যতামূলক (৳)',
+    'expense_budget_sign_over_pct' => 'বাজেট এত শতাংশের বেশি ছাড়ালে মালিকের সই লাগবে',
+    'expense_budget_reason_over' => 'বাজেট ছাড়ালে কারণ লেখা বাধ্যতামূলক',
+    'expense_employee_refund' => 'কর্মী নিজে টাকা দিলে তাঁকে ফেরত',
+    'expense_employee_refund_separate_voucher' => 'আলাদা পরিশোধ ভাউচারে',
+    'expense_capitalise_warn_over' => 'এর বেশি অঙ্কের খরচে "সম্পদ হতে পারে" সতর্কতা (৳)',
     'asset_capitalisation_threshold' => 'স্থায়ী সম্পদের সর্বনিম্ন দাম — এর কম দামের জিনিস খরচে যাবে (০ মানে কোনো সীমা নেই)',
     'asset_prorata' => 'প্রথম মাসের অবচয়',
     'asset_prorata_full_month' => 'পুরো মাস',
