@@ -24,9 +24,10 @@
 
     $supplierId = (string) old('supplier_id', $bill?->supplier_id ?? $payment->supplier_id ?? '');
     $amount = (string) old('amount', $isNew ? ($bill?->dueAmount() ?? '') : (string) $payment->amount);
-    // ⭐ লাখ-কমায় দেখানো ("1,20,000.00", নকশার মিল-তালিকা #৯); ফেরত-আসা অচল লেখা যেমন ছিল তেমন — ভুলটা চোখে থাকে
+    // ⭐ কাঁচা অঙ্ক — লাখ-কমায় দেখায় ঘর নিজেই ("1,20,000.00", নকশার মিল-তালিকা #৯; x-ui.field type="money", ২৪ অক্টোবর ২০২৬);
+    //    ফেরত-আসা অচল লেখা যেমন ছিল তেমন — ভুলটা চোখে থাকে
     $plainAmount = str_replace(',', '', trim($amount));
-    $amount = $plainAmount !== '' && is_numeric($plainAmount) ? \App\Core\Support\Money::format($plainAmount) : $amount;
+    $amount = $plainAmount !== '' && is_numeric($plainAmount) ? $plainAmount : $amount;
     $accountId = (string) old('account_id', $payment->account_id ?? '');
 
     $billRows = $openBills->map(fn ($b) => [
@@ -137,30 +138,13 @@
                         </div>
                         <x-ui.field name="trx_date" type="date" :label="__('money.screen.date')" required
                                     :value="old('trx_date', $payment->trx_date?->toDateString() ?? now()->toDateString())" />
-                        {{-- ⓘ লেখার ঘর, সংখ্যার নয় — `type="number"` কমা দেখাতে পারে না; সার্ভার কমা ছেঁটে পড়ে ([[PaymentRequest::prepareForValidation()]]) --}}
-                        <x-ui.field name="amount" type="text" inputmode="decimal" numeric required data-pay-amount
-                                    :label="__('money.screen.gross')" :value="$amount" x-model="amount" @change="tidyAmount()" />
+                        {{-- ⓘ দেখানোর ঘরে লাখ-কমা, পাঠানো মান কাঁচা অঙ্ক (type="money"); সার্ভার তবু কমা ছেঁটে পড়ে ([[PaymentRequest::prepareForValidation()]]) --}}
+                        <x-ui.field name="amount" type="money" model="amount" required data-pay-amount
+                                    :label="__('money.screen.gross')" :value="$amount" />
                     </div>
 
-                    {{-- যে খাত থেকে | পদ্ধতি; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
+                    {{-- পদ্ধতি | যে খাত থেকে; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
                     <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="order-0 sm:col-span-2">
-                            <label class="block">
-                                <span class="mb-1 block text-sm font-medium">{{ __('money.screen.from_account') }} <span class="text-(--color-danger)">*</span></span>
-                                <select name="account_id" x-model="account" required data-money-account
-                                        class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
-                                    <option value="">—</option>
-                                    @foreach ($accounts as $a)
-                                        <option value="{{ $a->id }}" data-kind="{{ $a->money_kind }}" @selected($accountId === (string) $a->id)>{{ $a->code }} · {{ $a->name() }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
-                            <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
-                                {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                                <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
-                            </p>
-                        </div>
 
                         {{-- ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার জন্য (নকশা #৬; fe-র [[supplier::components.payee-bank]])।
                              ⓘ কেবল যাঁদের ব্যাংক তথ্য আছে তাঁদের বাক্স আঁকা হয় (একটা প্রশ্নে খোঁজা), বাছা সরবরাহকারীরটা দেখায়; বাকিদের "নেই" --}}
@@ -176,8 +160,23 @@
                             </template>
                         </div>
 
+                        {{--
+                            ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত — খাতের ঘর বাক্সের ভিতরে, পদ্ধতির ঠিক পরে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)।
+                            ⓘ ঘর `x-model="account"`-এ বাঁধা — স্থিতি, বিলে বসানো আর খাতায় যা যাবে আগের মতোই এটা দেখে।
+                        --}}
                         <x-money.method direction="out" inline slip-check :record="$isNew ? null : $payment" :modes="$modes"
-                                        :methods="['cash', 'mfs', 'transfer', 'cheque']" money-field="account_id" />
+                                        :methods="['cash', 'mfs', 'transfer', 'cheque']"
+                                        :accounts="$accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->code.' · '.$a->name(), 'kind' => (string) $a->money_kind])->values()->all()"
+                                        account-name="account_id" account-model="account" :account-label="__('money.screen.from_account')"
+                                        :account-selected="$accountId">
+                            <x-slot:account-note>
+                                {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
+                                <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
+                                    {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
+                                    <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
+                                </p>
+                            </x-slot:account-note>
+                        </x-money.method>
                     </div>
                 </section>
 
