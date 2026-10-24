@@ -111,6 +111,34 @@ final class ThePhoneNoticeSaysWhereItLeadsTest extends TestCase
             '⛔ খোলা যায় না এমন কাগজের public_id বাইরে গেল।');
         $this->assertSame('list', $item['destination'] ?? null, '⛔ খোলা যায় না এমন খবর অ্যাপকে কোথাও নিয়ে যেতে বলল।');
         $this->assertSame((string) $bell->public_id, $item['id'] ?? null, '⛔ খবরটাই তালিকা থেকে হারাল।');
+
+        // ⭐ কেন খোলা যায় না — চাবিটাই, লেখা নয় (a4, fe, ২৪ অক্টোবর ২০২৬); ফোনের পুশেও একই
+        $this->assertSame('gone', $item['closed'] ?? null, '⛔ মোছা কাগজের খবর ফোনকে বলল না "কাগজটা আর নেই" (closed = gone)');
+        $this->assertSame('gone', app(\App\Core\Notifications\PhoneNoticeTarget::class)->pushFields($bell->fresh(), $writer->fresh())['closed'] ?? null,
+            '⛔ মোছা কাগজের পুশ বলল না "কাগজটা আর নেই"');
+    }
+
+    /** ⭐ খোলা গেলে কারণ নেই; নাগালের বাইরে গেলে "reach" — `may_open` মিথ্যা হলে `closed` কখনো ফাঁকা নয় */
+    public function test_the_phone_is_told_why_a_notice_does_not_open(): void
+    {
+        [$writer, $challan, $bell] = $this->dispatchedNotice();
+
+        Sanctum::actingAs($writer->fresh(), [AuthController::APP]);
+        $item = $this->itemOf($bell);
+        $this->assertTrue($item['may_open'] ?? null, 'প্রস্তুতিটাই ভুল — কাগজ থাকতেই খবরটা খোলা যায় না বলছে।');
+        $this->assertArrayHasKey('closed', $item, '⛔ ফোনের খবরে closed ঘরটাই নেই');
+        $this->assertNull($item['closed'], '⛔ খোলা যায় এমন খবরেও ফোনকে বন্ধের কারণ বলা হল');
+
+        // ⓘ লেখককে চালানের শাখার বাইরের এক শাখায় সীমিত করা — কাগজ আছে, কিন্তু নাগালের বাইরে
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
+            ->where('id', '<>', (int) $challan->branch_id)->orderBy('id')->firstOrFail();
+        \App\Models\UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $writer->id,
+            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $other->id]);
+        app(\App\Core\Services\DataScope::class)->forget();
+
+        $item = $this->itemOf($bell);
+        $this->assertFalse($item['may_open'] ?? null, 'প্রস্তুতিটাই ভুল — শাখার বাইরে সীমিত লেখক তবু কাগজ খুলতে পারেন বলছে।');
+        $this->assertSame('reach', $item['closed'] ?? null, '⛔ নাগালের বাইরের কাগজের খবর ফোনকে বলল না "নাগালের বাইরে" (closed = reach)');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

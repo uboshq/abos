@@ -32,9 +32,9 @@
 
 ---
 
-## ১ · ঘণ্টার তালিকা আর বিস্তারিত — নতুন তিন ঘর
+## ১ · ঘণ্টার তালিকা আর বিস্তারিত — নতুন চার ঘর
 
-`GET /api/v1/notifications` (প্রতিটা `data[]`) আর `GET /api/v1/notifications/{id}` (`data`) — দুইটাতেই একই তিন ঘর, একই মানে।
+`GET /api/v1/notifications` (প্রতিটা `data[]`) আর `GET /api/v1/notifications/{id}` (`data`) — দুইটাতেই একই চার ঘর, একই মানে।
 
 | ঘর | ধরন | মানে |
 |---|---|---|
@@ -43,6 +43,7 @@
 | `paper.type` | string\|null | কাগজের ধরন — ড্রিলের উৎস-নাম (মডিউলের `module.php` → `drillSources`, যেমন `delivery_challan`, `sales_order`)। কাগজহীন খবরে `null`। |
 | `paper.public_id` | string\|null | কাগজের `public_id`। ⛔ `may_open = false` হলে **সবসময় `null`** — খোলা যায় না এমন কাগজের চিহ্ন বাইরে যায় না। |
 | `destination` | string | চাপলে অ্যাপ কোথায় যাবে — নিচের চার মানের একটা, কখনো `null` নয় |
+| `closed` | string\|null | খোলা না গেলে কেন — `gone` (কাগজটা আর নেই, মুছে ফেলা হয়েছে) বা `reach` (কাগজ আছে, আপনার নাগালের বাইরে); খোলা গেলে `null`। ⛔ `may_open = false` ⇔ `closed ≠ null` — একই উত্তর থেকে (সার্ভারের `NotificationService::whyClosed()`), তাই কখনো দুই কথা বলে না। ⓘ কেবল চাবি, লেখা নয় — অ্যাপ নিজের ভাষার ফাইল থেকে দেখায় (নিচে, ওয়েবের হুবহু বাক্য)। অচেনা চাবি এলে `reach`-এর মতো আচরণ। (a4-এর অনুরোধ, fe, ২৪ অক্টোবর ২০২৬) |
 
 ### `destination`-এর চার মান
 
@@ -55,6 +56,18 @@
 
 ⛔ অ্যাপ ওয়েবের `url` ভেঙে পথ বের করবে না — `destination` আর `paper` দেখে চলবে।
 ⛔ অচেনা `destination` মান এলে `list`-এর মতো আচরণ (সার্ভার ভবিষ্যতে মান যোগ করতে পারে)।
+
+### `closed`-এর বাক্য — ওয়েবের হুবহু (অ্যাপ এটাই দেখাবে)
+
+ওয়েবের পাতা (`notifications.no-access`) ঠিক এই কথা বলে (`lang/bn/core.php`, `lang/en/core.php`, `core.notify.*`); অ্যাপ একই
+শিরোনাম আর লেখা দেখাবে, যাতে ফোন আর ওয়েব একই কথা বলে:
+
+| `closed` | শিরোনাম (বাংলা) | লেখা (বাংলা) | English (title — text) |
+|---|---|---|---|
+| `gone` | কাগজটা আর নেই | যে কাগজের খবর, সেটা মুছে ফেলা হয়েছে — খোলার মতো কিছু আর নেই। খবরটা পড়া হিসেবে রাখা হলো। | The paper is gone — The paper this notification is about was deleted, so there is nothing left to open. The notification is marked read. |
+| `reach` | এই কাগজটা আর আপনার নাগালে নেই | যে কাগজের খবর, সেটা আছে, কিন্তু যে শাখার কাগজ সেখানে আপনার অনুমতি নেই। খবরটা পড়া হিসেবে রাখা হলো। দরকার হলে প্রশাসককে জানান। | This paper is no longer within your reach — The paper this notification is about still exists, but you have no access to its branch. The notification is marked read. Tell an administrator if you need it. |
+
+ⓘ ওয়েবের চাবি: `core.notify.gone_title`/`gone_body`, `core.notify.no_access_title`/`no_access_body` — বদলালে এই সারণিও।
 
 ### উদাহরণ — তালিকার একটা খবর
 
@@ -93,9 +106,9 @@
 
 ---
 
-## ২ · পুশের `data` — নতুন পাঁচ ঘর
+## ২ · পুশের `data` — নতুন ছয় ঘর
 
-দুই ধরনের পুশেই একই পাঁচ ঘর যোগ হয়। ⛔ **সব মান লেখা (string)** — FCM-এর নিয়ম; না থাকলে `""`, কখনো `null` নয়।
+দুই ধরনের পুশেই একই ছয় ঘর যোগ হয়। ⛔ **সব মান লেখা (string)** — FCM-এর নিয়ম; না থাকলে `""`, কখনো `null` নয়।
 
 | ঘর | মানে |
 |---|---|
@@ -104,6 +117,7 @@
 | `paper_type` | তালিকার `paper.type`, না থাকলে `""` |
 | `paper_id` | তালিকার `paper.public_id`, না থাকলে বা খোলা না গেলে `""` |
 | `destination` | তালিকার `destination` — একই চার মান |
+| `closed` | তালিকার `closed` — `gone`, `reach`, বা খোলা গেলে `""` |
 
 ### বিজ্ঞপ্তির পুশ (নিয়ম বা জরুরি খবর, `MobilePushChannel`)
 
@@ -267,3 +281,4 @@
 | `tests/Feature/Api/ATrackingNoticePushesOnceTest.php` | নিয়মে মোবাইল পুশ চালু থাকলেও একটা ধাপ-বদলে একটাই পুশ, `open/kind/id` যেমন ছিল, আর নতুন পাঁচ ঘর |
 | `tests/Feature/Api/TheMobilePushKeepsItsOldWordsAndSaysWhereItLeadsTest.php` | বিজ্ঞপ্তির পুশে `open/id` যেমন ছিল, নতুন পাঁচ ঘর, সব মান লেখা; কাগজহীন খবরে `""` আর `list` |
 | `tests/Feature/Api/TheContractNamesEveryPaperTypeTest.php` | চুক্তির `paper.type` সারণি = `DrillResolver::map()`-এর নাম, একটাও কম-বেশি নয় |
+| `tests/Feature/Api/ThePhoneNoticeSaysWhereItLeadsTest.php` (`test_the_phone_is_told_why_a_notice_does_not_open`) | খোলা গেলে `closed = null`; নাগালের বাইরে `reach`; মোছা কাগজে তালিকা আর পুশ দুইটাতেই `gone` |

@@ -61,6 +61,8 @@ class NotificationApiController extends Controller
                     'may_open' => $where['may_open'],
                     'paper' => $where['paper'],
                     'destination' => $where['destination'],
+                    // ⓘ খোলা না গেলে কেন — gone | reach | null ([[PhoneNoticeTarget::of()]])
+                    'closed' => $where['closed'],
                 ];
             })->values(),
             'meta' => ['unread' => $this->notifications->unreadCount($user)],

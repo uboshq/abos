@@ -55,16 +55,22 @@ final class PhoneNoticeTarget
     /**
      * ঘণ্টার তালিকার নতুন ঘরগুলো।
      *
-     * @return array{may_open: bool, paper: array{type: ?string, public_id: ?string}, destination: string}
+     * ⭐ `closed` — খোলা না গেলে কেন: `gone` (কাগজটা আর নেই) বা `reach` (নাগালের বাইরে), খোলা গেলে `null` (a4-এর অনুরোধ, fe,
+     * ২৪ অক্টোবর ২০২৬)। ⓘ কেবল চাবি, লেখা নয় — অ্যাপ নিজের ভাষার ফাইল থেকে ওয়েবের একই বাক্য দেখায়। ⛔ `may_open` আর `closed`
+     * একই উত্তর থেকে ([[NotificationService::whyClosed()]]), তাই কখনো দুই কথা বলে না।
+     *
+     * @return array{may_open: bool, closed: ?string, paper: array{type: ?string, public_id: ?string}, destination: string}
      */
     public function of(Notification $notice, User $user): array
     {
-        $mayOpen = $this->notices->mayOpen($notice, $user);
+        $closed = $this->notices->whyClosed($notice, $user);
+        $mayOpen = $closed === null;
         $type = $this->paperType($notice);
         $publicId = $mayOpen ? $this->paperPublicId($notice) : null;
 
         return [
             'may_open' => $mayOpen,
+            'closed' => $closed,
             'paper' => ['type' => $type, 'public_id' => $publicId],
             'destination' => $this->destination($notice, $mayOpen, $publicId),
         ];
@@ -73,13 +79,13 @@ final class PhoneNoticeTarget
     /**
      * ⭐ পুশের নতুন `data` ঘর — ⛔ সব মান লেখা (FCM-এর নিয়ম), না থাকলে ফাঁকা লেখা, `null` নয়।
      *
-     * @return array{notification_id: string, type: string, paper_type: string, paper_id: string, destination: string}
+     * @return array{notification_id: string, type: string, paper_type: string, paper_id: string, destination: string, closed: string}
      */
     public function pushFields(Notification $notice, ?User $user = null): array
     {
         $user ??= User::query()->withoutGlobalScope('company')->find($notice->user_id);
         $target = $user === null
-            ? ['paper' => ['type' => $this->paperType($notice), 'public_id' => null], 'destination' => self::LIST]
+            ? ['closed' => null, 'paper' => ['type' => $this->paperType($notice), 'public_id' => null], 'destination' => self::LIST]
             : $this->of($notice, $user);
 
         return [
@@ -89,6 +95,8 @@ final class PhoneNoticeTarget
             'paper_type' => (string) ($target['paper']['type'] ?? ''),
             'paper_id' => (string) ($target['paper']['public_id'] ?? ''),
             'destination' => $target['destination'],
+            // ⓘ খোলা গেলে ফাঁকা লেখা — FCM-এ null চলে না
+            'closed' => (string) ($target['closed'] ?? ''),
         ];
     }
 

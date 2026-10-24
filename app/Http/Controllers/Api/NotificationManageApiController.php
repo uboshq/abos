@@ -78,6 +78,7 @@ class NotificationManageApiController extends Controller
             'may_open' => $where['may_open'],
             'paper' => $where['paper'],
             'destination' => $where['destination'],
+            'closed' => $where['closed'],
         ]]);
     }
 

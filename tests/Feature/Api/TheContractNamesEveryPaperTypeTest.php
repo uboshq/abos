@@ -37,4 +37,18 @@ final class TheContractNamesEveryPaperTypeTest extends TestCase
             '⛔ চুক্তির সারণিতে এই ধরন আছে, কোডে আর নেই — সারণি পুরনো');
         $this->assertSame(count($inContract), count(array_unique($inContract)), '⛔ চুক্তির সারণিতে একই নাম দুবার');
     }
+
+    /** ⭐ `closed`-এর বাক্য — ফোন আর ওয়েব একই কথা বলে: চুক্তিতে ওয়েবের হুবহু বাংলা আর ইংরেজি (a4, fe, ২৪ অক্টোবর ২০২৬) */
+    public function test_the_contract_quotes_the_web_s_words_for_a_closed_notice(): void
+    {
+        $text = (string) file_get_contents((glob(base_path('docs/Contract*ফোনের*')) ?: [''])[0]);
+
+        foreach (['gone_title', 'gone_body', 'no_access_title', 'no_access_body'] as $key) {
+            foreach (['bn', 'en'] as $locale) {
+                $words = (string) __('core.notify.'.$key, [], $locale);
+                $this->assertStringContainsString($words, $text,
+                    "⛔ ওয়েবের core.notify.{$key} ({$locale}) চুক্তিতে হুবহু নেই — ফোন আর ওয়েব আলাদা কথা বলবে");
+            }
+        }
+    }
 }

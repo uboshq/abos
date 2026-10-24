@@ -1445,7 +1445,7 @@ return [
         'bulk_done' => ':count notifications changed.',
         'selected' => 'Selected',
         'no_access_title' => 'This paper is no longer within your reach',
-        'no_access_body' => 'The paper this notification is about was deleted, or you no longer have access to its branch. The notification is marked read. Tell an administrator if you need it.',
+        'no_access_body' => 'The paper this notification is about still exists, but you have no access to its branch. The notification is marked read. Tell an administrator if you need it.',
         'gone_title' => 'The paper is gone',
         'gone_body' => 'The paper this notification is about was deleted, so there is nothing left to open. The notification is marked read.',
         'tab' => ['all' => 'All', 'unread' => 'Unread', 'read' => 'Read', 'archived' => 'Archived'],
