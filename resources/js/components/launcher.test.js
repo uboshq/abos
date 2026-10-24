@@ -91,8 +91,8 @@ describe('launcherMatches — খোঁজার নিয়ম', () => {
         const composed = 'বিক্রয়'
         const decomposed = 'বিক্রয়'
 
-        expect(launcherMatches('sales ' + decomposed, composed)).toBe(true)
-        expect(launcherMatches('sales ' + composed, decomposed)).toBe(true)
+        expect(launcherMatches('sales ' + decomposed, composed), '⛔ এক অক্ষরের "য়" লিখলে দুই অক্ষরের নামের মডিউল মিলল না — খোঁজা NFC-তে মেলানো হয়নি').toBe(true)
+        expect(launcherMatches('sales ' + composed, decomposed), '⛔ দুই অক্ষরের "য়" লিখলে এক অক্ষরের নামের মডিউল মিলল না — খোঁজা NFC-তে মেলানো হয়নি').toBe(true)
     })
 
     it('ইংরেজি নাম আর বড়-ছোট হাত — "SALES" বিক্রয়ে মেলে', () => {
@@ -115,11 +115,11 @@ describe('⊞ পাতা, আসল CSP-Alpine-এ', () => {
         await mount()
         await type('বিক্রয়')
 
-        expect(shown()).toEqual(['sales'])
+        expect(shown(), '⛔ "বিক্রয়" লেখার পরেও অন্য মডিউলের টাইল দেখা যাচ্ছে — না-মেলা টাইল লুকায়নি').toEqual(['sales'])
         expect(host.querySelector('[data-launcher-none]').style.display).toBe('none')
 
         await type('')
-        expect(shown()).toEqual(Object.keys(KEYS))
+        expect(shown(), '⛔ খোঁজা মুছলে সব টাইল ফিরল না').toEqual(Object.keys(KEYS))
         expect(warnings).toEqual([])
     })
 

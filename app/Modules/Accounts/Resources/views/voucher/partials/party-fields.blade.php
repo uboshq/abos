@@ -65,8 +65,15 @@
              pickedId: @js((string) ($was('against_id') ?? '')),
              adding: @js($errors->has('party_new') || filled(old('party_new'))),
              newName: @js((string) old('party_new', '')),
+             out: @js(! $isReceipt),
              texts: @js([
                  'owed' => __('accounts::field.owed'),
+                 'dueInOwed' => __('accounts::field.due_in_owed'),
+                 'dueInAdvance' => __('accounts::field.due_in_advance'),
+                 'dueInNone' => __('accounts::field.due_in_none'),
+                 'dueOutOwed' => __('accounts::field.due_out_owed'),
+                 'dueOutAdvance' => __('accounts::field.due_out_advance'),
+                 'dueOutNone' => __('accounts::field.due_out_none'),
                  'overDue' => __('accounts::message.more_than_the_bill_owes'),
                  'noBills' => __('accounts::message.no_open_bill'),
              ]),
@@ -87,15 +94,15 @@
         নামের দুইটা সক্রিয় ঘর থাকলে ব্রাউজার শেষেরটার মান পাঠাত, আর
         উপরের বাছাইটা নীরবে হারাত।
     --}}
-    <div class="grid gap-3 sm:grid-cols-4">
-        <x-ui.field name="trx_date" type="date"
-                    :label="__('accounts::field.trx_date_long')"
-                    :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
-                    required />
+    {{--
+        ⭐ ২৩ অক্টোবর ২০২৬ — চূড়ান্ত নকশার ক্রম: পক্ষের ধরন · পক্ষ · তারিখ · টাকা (fe; মালিক: *"নকশা অনুযায়ী, লাইভের আগে
+        মিলিয়ে নাও"*)। ⓘ আগে তারিখ প্রথমে আর টাকা একদম নিচের সারিতে ছিল; নকশায় টাকা পক্ষের পাশেই, কারণ "কত" আর "কার কাছ
+        থেকে" এক নজরে মেলানোর জিনিস। ঘরের নাম বদলায়নি, তাই জমা, ফোন আর পুরনো কাগজ অক্ষত।
+    --}}
+    {{-- ⓘ পক্ষের কলাম দ্বিগুণ — ১৩৬৬-এ সমান চার কলামে "আকিজ ফুড অ্যা…" কাটা পড়ত (মাপা, ২৩ অক্টোবর ২০২৬); নকশাতেও নামের ঘর সবচেয়ে চওড়া --}}
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr_1fr]" data-voucher-head>
 
-        <x-ui.field name="moved_at" type="time"
-                    :label="__('accounts::field.moved_at')"
-                    :value="$was('moved_at')" />
+        {{-- ⓘ "কখন" (moved_at) আর চাওয়া হয় না — মালিকের ২১ অক্টোবরের রায় ([[x-money.method]]); কলাম থাকে, পুরনো কাগজে দেখায় --}}
 
 
         {{--
@@ -154,12 +161,12 @@
                      (লাল), ঋণাত্মক মানে তাঁর টাকা আমাদের কাছে জমা আছে (সবুজ) —
                      ⛔ ঋণাত্মক পাওনা দেখে আরেকবার টাকা চাইলে সেটা ভুল আদায়।
                      ⓘ রং একা কিছু বলে না, তাই লেখাটাও সাথে থাকে। --}}
-                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak
-                      x-bind:class="due > 0
-                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
-                          : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'">
-                    <span x-text="texts.owed"></span>
-                    <b class="num ms-1" x-text="due"></b>
+                {{-- ⭐ ২৩ অক্টোবর ২০২৬ (fe): চিহ্নটা শব্দে — "-45,000.00" সবুজে দেখে কেউ বুঝত না এটা অগ্রিম। রসিদে "বকেয়া / অগ্রিম /
+                     বকেয়া নেই", পরিশোধে "দেনা / অগ্রিম দেওয়া / দেনা নেই"; অঙ্ক কখনো ঋণাত্মক চিহ্নে নয় ([[party-voucher.js]]) --}}
+                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak data-party-due
+                      x-bind:class="dueClass">
+                    <span x-text="dueWord"></span>
+                    <b class="num ms-1" x-show="dueAmount !== ''" x-text="dueAmount"></b>
                 </span>
             </div>
 
@@ -318,6 +325,19 @@
                 </div>
             </div>
         </div>
+
+        <x-ui.field name="trx_date" type="date"
+                    :label="__('accounts::field.trx_date_long')"
+                    :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
+                    required />
+
+        {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — লেখার ঘর, কারণ `type="number"` কমা দেখাতে পারে
+             না; সার্ভার কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])। ⓘ `?? $voucher->amount` — অর্থের খাতার
+             "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
+        <x-ui.field name="amount" type="text" inputmode="decimal" numeric required data-voucher-amount
+                    :label="$isReceipt ? __('accounts::field.amount_received') : __('accounts::field.amount_paid')"
+                    :value="old('amount', $typedAmount ?? $voucher->amount)"
+                    x-model="amount" @change="tidyAmount()" />
     </div>
 
     {{--

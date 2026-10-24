@@ -45,6 +45,8 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
     private const NO_PAGE = [
         // ⓘ চেকের কাজ (জমা, পাস, ফেরত) সারিতেই; আলাদা পাতা কখনো ছিল না
         'Accounts/Resources/views/cheque/index.blade.php',
+        // ⓘ কর জমা আর মূসক-৬.৬-এর দায়িত্ব — "জমা হয়েছে" সারিতেই; দায়িত্বের নিজের পাতা নেই ([[ComplianceObligationController]])
+        'Accounts/Resources/views/obligation/index.blade.php',
         // ⓘ কমিশনের দাবি — পাস/বাতিল সারিতেই, আলাদা পাতা নেই
         'Sales/Resources/views/commission/index.blade.php',
         // ⓘ আজকের বন্ধ শিফট — সারির নিজের "দেখুন" আগে থেকেই আছে ([[shift/partials/view]])
