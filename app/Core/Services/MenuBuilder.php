@@ -80,6 +80,9 @@ final class MenuBuilder
             }
 
             $groups = [];
+            // ⓘ রেলের শুরুর ক্রমের জন্য — মডিউলের কতগুলো পাতা এই মানুষ খুলতে পারেন ([[arranged()]])
+            $offered = 0;
+            $open = 0;
 
             foreach ($module->menu as $group => $items) {
                 $visible = [];
@@ -115,6 +118,10 @@ final class MenuBuilder
                      * নেই — ভাঙে; planned অথচ রুট আছে — সেটাও ভাঙে,
                      * যাতে পতাকাটা নামাতে ভুল না হয়।
                      */
+                    if (! $planned && $this->switches->itemIsOn($this->settings, $module, (string) $group, $item)) {
+                        $offered++;
+                    }
+
                     if (! $this->allowed($user, $item['permission'] ?? null)) {
                         continue;
                     }
@@ -255,6 +262,10 @@ final class MenuBuilder
                          */
                         'badge' => $planned ? null : $this->badge($item),
                     ];
+
+                    if (! $planned) {
+                        $open++;
+                    }
                 }
 
                 if ($visible !== []) {
@@ -272,6 +283,9 @@ final class MenuBuilder
                 'icon' => $module->code,
                 'section' => $module->nav['section'],
                 'order' => $module->nav['order'],
+                // ⓘ খোলা পাতার অনুপাত (০–১) — রেলের শুরুর ক্রম ([[arranged()]]); মালিক সব খোলেন, তাই সবার ১, ক্রম আগের মতোই
+                // ⓘ কিছুই দেওয়া নেই (কেবল "শীঘ্রই" পাতা) মানে কিছুই আটকানো নয় — তাই ১, নইলে মালিকের রেলেও এমন মডিউল শেষে সরত
+                'reach' => $offered > 0 ? $open / $offered : 1.0,
 
                 /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
@@ -423,6 +437,45 @@ final class MenuBuilder
         });
 
         return $menu;
+    }
+
+    /**
+     * ⭐ বাঁ রেলের ক্রম এই মানুষের জন্য — পিন আর নিজের ক্রম, নইলে খোলা পাতার অনুপাতে (মালিক আর fe, ২৪ অক্টোবর ২০২৬)।
+     *
+     *   · নিজের সাজ (`users.nav_layout.order`) থাকলে সেটাই; তাতে নেই এমন মডিউল (নতুন চাবি, নতুন মডিউল) পরে, আগের ক্রমে।
+     *   · না থাকলে খোলা পাতার অনুপাত (`reach`) বেশি আগে, সমান হলে আগের ক্রম — বিক্রয়কর্মীর বিক্রয় আর গ্রাহক উপরে; মালিক সব
+     *     খোলেন, সবার অনুপাত ১, তাই তাঁর রেল আগের মতোই।
+     *   · `pinned` — রেল জায়গা না পেলেও এগুলো বারে থাকে ([[rail-fit.js]]); `grouped` — ক্রম দলে দলে আগের মতো কি না, দলের
+     *     সোনালি রেখা কেবল তখন ([[shell.sidebar]]), নিজের বা হিসাব-করা ক্রমে দল মিশে যায়, রেখার মানে থাকে না।
+     * ⓘ কেবল রেল ডাকে — ফোনের `/me` আর পাতার নিজের মেনু আগের মতোই। ⛔ চাবিহীন মডিউল এখানে আসেই না ([[forUser()]] আগেই ছাঁকে)।
+     *
+     * @param  list<array<string, mixed>>  $menu  [[forUser()]]-এর ফল
+     * @return list<array<string, mixed>>
+     */
+    public function arranged(array $menu, ?User $user): array
+    {
+        $layout = is_array($user?->nav_layout) ? $user->nav_layout : [];
+        $order = array_values(array_filter((array) ($layout['order'] ?? []), 'is_string'));
+        $pinned = array_values(array_filter((array) ($layout['pinned'] ?? []), 'is_string'));
+        $before = array_column($menu, 'code');
+        $at = array_flip($before);
+
+        if ($order !== []) {
+            $rank = array_flip($order);
+            usort($menu, fn (array $a, array $b): int => [$rank[$a['code']] ?? PHP_INT_MAX, $at[$a['code']]]
+                <=> [$rank[$b['code']] ?? PHP_INT_MAX, $at[$b['code']]]);
+        } else {
+            usort($menu, fn (array $a, array $b): int => [-(float) ($a['reach'] ?? 0), $at[$a['code']]]
+                <=> [-(float) ($b['reach'] ?? 0), $at[$b['code']]]);
+        }
+
+        $grouped = array_column($menu, 'code') === $before;
+
+        return array_map(fn (array $m): array => [
+            ...$m,
+            'pinned' => in_array($m['code'], $pinned, true),
+            'grouped' => $grouped,
+        ], $menu);
     }
 
     /**

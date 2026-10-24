@@ -85,8 +85,11 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
             // সাধারণ তথ্য — দফা ১, ২
             $w('general'), $w('party_kind'), $w('kind_customer'), $w('kind_supplier'), $w('kind_employee'), $w('kind_other'),
             $w('customer'), $this->dealer->fresh()->load(Customer::PLACE)->pickerName(), $w('date'), $w('amount'), $w('full_due'), $w('chosen_bills'),
-            $w('into'), '1102-SCR', __('money.method.legend'),
+            // ⭐ পদ্ধতি আগে, তারপর "যে খাতে জমা" (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; রসিদ-পরিশোধের একই নিয়ম) — খাতের তালিকা পদ্ধতির
+            //   খাতে সীমিত, তাই নতুন কাগজে (নগদ) ব্যাংকের 1102-SCR আঁকা হয় না; পদ্ধতি বদলালে আসে ([[TheCollectionFormPostsWhatTheDesignSaysTest]])
+            __('money.method.legend'),
             __('money.method.cash'), __('money.method.mfs'), __('money.method.transfer'), __('money.method.deposit'), __('money.method.cheque'),
+            $w('into'),
             __('money.field.transfer_mode'), __('money.field.reference'), __('money.field.value_date'), __('money.field.bank_charge'),
             $w('reference_free'),
             // খোলা বিল ও ক্রেডিট — দফা ৩

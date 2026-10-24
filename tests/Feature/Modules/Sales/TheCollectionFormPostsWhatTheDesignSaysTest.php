@@ -11,6 +11,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\MoneyMethod;
 use App\Models\Approval;
 use App\Models\ApprovalFlow;
 use App\Models\AuditFieldChange;
@@ -133,6 +134,63 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         // ⓘ AIT ছাড়া একই আদায় চলে — পাহারা কেবল যে খাতটা লাগে তাকেই দেখে
         $plain = $this->book(['amount' => '1000', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000']]]);
         $this->assertSame(DocumentStatus::CONFIRMED, $plain->status, '⛔ দফা ৫: AIT ছাড়া আদায়ও থেমে গেল — পাহারা অদরকারি খাতও দেখছে');
+    }
+
+    /**
+     * কমাসহ টাকা সার্ভার কখনো ভুল পড়ে না (cb আর fe, ২৪ অক্টোবর ২০২৬): পর্দা এখন ঘর ছাড়লে "48,440.49" দেখায়, আর পাঠায় কমা ছাড়া।
+     * তবু পুরনো খোলা ট্যাব বা হাতে-বানানো অনুরোধ কমাসহ পাঠাতে পারে — তখন হয় ঠিক পড়া, নয় ফেরানো; কখনো ৪৮ নয়। আদায়ের অনুরোধ
+     * কমা ছাঁটে না, তাই ফেরায়: টাকার ঘরে আর বিলের সারির ঘরে, আর কিছুই বসে না।
+     */
+    /**
+     * ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; cb-র নিয়ম [[MoneyMethod::KIND_OF]], রসিদ-পরিশোধের
+     * সাথে এক): পর্দায় "যে খাতে জমা" পদ্ধতির ব্লকের ভিতরে, পদ্ধতির পরে, একটাই ঘর; আর "নগদ" বা "MFS" বেছে ব্যাংকের খাত পাঠালে
+     * সার্ভার কারণসহ ফেরায় — প্রিভিউও আগেই বলে — খাতায় কিছু ওঠে না। ⓘ মিলে গেলে (ট্রান্সফার → ব্যাংক) আগের মতোই চলে।
+     */
+    public function test_the_method_comes_first_and_its_account_must_match(): void
+    {
+        $page = (string) $this->actingAs($this->maker)->get(route('sales.collection.create', ['customer' => $this->dealer->id]))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($page, 'name="account_id"'), '⛔ "যে খাতে জমা" ঘর একটার বেশি (বা নেই) — পুরনো খাতের ঘর রয়ে গেল');
+        $legend = strpos($page, e(__('money.method.legend')));
+        $account = strpos($page, 'data-money-account-row');
+        $this->assertNotFalse($legend, 'প্রস্তুতিটাই ভুল — পদ্ধতির ব্লক নেই');
+        $this->assertTrue($account !== false && $account > $legend, '⛔ খাতের ঘর পদ্ধতির আগে, বা পদ্ধতির ব্লকের বাইরে — পদ্ধতি আগে, খাত পরে');
+
+        $rows = LedgerEntry::query()->count();
+        $papers = Collection::acrossBranches()->count();
+        foreach (['cash', 'mfs'] as $method) {
+            $this->send(['amount' => '500', 'instrument' => $method, 'instrument_no' => 'TRX-FIT-'.$method, 'account_id' => $this->bank->id,
+                'lines_given' => '1', 'post' => '1']);
+            $this->assertSame(__('money.validation.account_not_for_method', ['account' => $this->bank->label(),
+                'method' => __('money.method.'.$method), 'kind' => __('money.kind.'.MoneyMethod::KIND_OF[$method])]), $this->said('account_id'),
+                "⛔ \"{$method}\" বেছে ব্যাংকের খাতে পোস্টে কারণ বলেনি — ".json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
+        }
+        $this->assertSame([$rows, $papers], [LedgerEntry::query()->count(), Collection::acrossBranches()->count()],
+            '⛔ পদ্ধতির সাথে না-মেলা খাতে আদায় বা খাতার সারি বসল');
+
+        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form(['amount' => '500', 'instrument' => 'cash',
+            'lines_given' => '1']))->assertOk()->json('stops');
+        $this->assertContains(__('money.validation.account_not_for_method', ['account' => $this->bank->label(), 'method' => __('money.method.cash'),
+            'kind' => __('money.kind.cash')]), (array) $preview, '⛔ "খাতায় যা যাবে" আগে বলে না যে নগদ ব্যাংকের খাতে বসে না — পোস্টে গিয়ে তবে জানা যেত');
+
+        $fits = $this->book(['amount' => '500', 'instrument' => 'transfer', 'instrument_no' => 'TRX-FIT-OK', 'lines_given' => '1']);
+        $this->assertSame(DocumentStatus::CONFIRMED, $fits->status, '⛔ মিলে যাওয়া পদ্ধতি আর খাত (ট্রান্সফার → ব্যাংক) আর পোস্ট হয় না');
+    }
+
+    public function test_money_with_commas_is_refused_never_misread(): void
+    {
+        $bill = $this->bill('INV-CF-COMMA', 10, '50000');
+        $papers = Collection::acrossBranches()->count();
+        $rows = LedgerEntry::query()->count();
+
+        $this->send(['amount' => '48,440.49', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '48440.49']]]);
+        $this->assertNotSame('', $this->said('amount'), '⛔ "48,440.49" টাকার ঘরে ফেরেনি — কমাসহ টাকা ভুল পড়া হতে পারে');
+        $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ কমাসহ টাকায় আদায় বা খাতার সারি বসল');
+
+        $this->send(['amount' => '1000', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1,000.00']]]);
+        $this->assertNotSame('', $this->said('lines.0.amount'), '⛔ বিলের সারির "1,000.00" ফেরেনি — কমাসহ প্রয়োগ ভুল পড়া হতে পারে');
+        $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ কমাসহ সারির টাকায় আদায় বা খাতার সারি বসল');
     }
 
     /**
@@ -685,12 +743,85 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     /** দফা ২ — পদ্ধতি বাছলে কেবল তার ঘর থাকে: নগদে TrxID আর চার্জ সার্ভারেই মুছে যায় */
     public function test_item_2_cash_keeps_no_reference_and_no_charge(): void
     {
-        $collection = $this->book(['amount' => '600', 'instrument' => 'cash', 'instrument_no' => 'LEFT-OVER', 'bank_charge' => '20', 'lines_given' => '1']);
+        // ⓘ নগদ নগদের খাতেই — পদ্ধতি আর খাত এক ধরনের (২৪ অক্টোবর ২০২৬; [[test_the_method_comes_first_and_its_account_must_match]])
+        $cash = $this->cashBox();
+        $collection = $this->book(['amount' => '600', 'instrument' => 'cash', 'account_id' => $cash->id, 'instrument_no' => 'LEFT-OVER', 'bank_charge' => '20', 'lines_given' => '1']);
 
         $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ২: নগদের আদায় পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
         $this->assertNull($collection->instrument_no, '⛔ দফা ২: নগদে অন্য পদ্ধতির TrxID রয়ে গেল');
         $this->assertSame(0, bccomp((string) $collection->bank_charge, '0', 4), '⛔ দফা ২: নগদে ব্যাংক চার্জ রয়ে গেল');
-        $this->assertSame('600.0000', $this->drOn($this->bank->id, $collection), '⛔ দফা ২: নগদে চার্জ কেটে খাতে কম এল');
+        $this->assertSame('600.0000', $this->drOn($cash->id, $collection), '⛔ দফা ২: নগদে চার্জ কেটে খাতে কম এল');
+    }
+
+    private function cashBox(): Account
+    {
+        return Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1101-CF', 'name_en' => 'Collection cash', 'name_bn' => 'আদায়ের নগদ',
+            'parent_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'money_kind' => Account::CASH,
+        ]);
+    }
+
+    /**
+     * দফা ২ — MFS, ব্যাংক ট্রান্সফার আর নগদ জমা রেফারেন্স ছাড়া খাতায় ওঠে না (fe-র আন্তর্জাতিক মানের নিরীক্ষা, ফাঁক ১; ২৪
+     * অক্টোবর ২০২৬: main-এ আদায় TrxID ছাড়াই নিত)। ⓘ ওয়েবের পোস্ট — প্রতিটা পদ্ধতিতে নিজের ঘরে কারণ, খাতায় কিছু নয়।
+     */
+    public function test_item_2_mfs_transfer_and_deposit_never_post_without_their_reference(): void
+    {
+        $mfs = Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1105-CF', 'name_en' => 'Collection bKash', 'name_bn' => 'আদায়ের বিকাশ',
+            'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'money_kind' => Account::MFS,
+        ]);
+        $rows = LedgerEntry::query()->count();
+        $posted = Collection::acrossBranches()->where('status', DocumentStatus::CONFIRMED)->count();
+
+        foreach ([['mfs', $mfs->id, 'instrument_no'], ['transfer', $this->bank->id, 'instrument_no'], ['deposit', $this->bank->id, 'deposit_slip_no']] as [$method, $account, $field]) {
+            $this->send(['amount' => '500', 'instrument' => $method, 'account_id' => $account, 'lines_given' => '1', 'post' => '1']);
+            $this->assertSame(__('money.validation.reference_needed', ['method' => __('money.method.'.$method)]), $this->said($field),
+                "⛔ দফা ২: \"{$method}\"-এ রেফারেন্স ছাড়া পোস্টে কারণ বলেনি — ".json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
+        }
+
+        $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ২: রেফারেন্স ছাড়া আদায় খাতায় উঠল');
+        $this->assertSame($posted, Collection::acrossBranches()->where('status', DocumentStatus::CONFIRMED)->count(),
+            '⛔ দফা ২: রেফারেন্স ছাড়া আদায় পাকা হলো');
+    }
+
+    /**
+     * দফা ২ — সইয়ের পথেও রেফারেন্স ছাড়া খাতায় নয় (fe-র নিরীক্ষা, ফাঁক ১)। আদায়ে সই চালু কোম্পানিতে:
+     *   · রেফারেন্স ছাড়া পোস্ট মালিকের সইয়ে **যায়ই না** — কারণসহ তখনই ফেরে, কোনো অনুরোধ লেখা হয় না (খাতায় উঠতে পারে না এমন
+     *     কাগজে মালিককে সই করানো নয়);
+     *   · কোনোভাবে সই পড়ে গেলেও (পুরনো অনুরোধ), শেষ সইয়ের পরের নিজে-পোস্ট ([[ConfirmTheCollectionOnTheLastSignature]]) রেফারেন্সে
+     *     থামে — খসড়াই থাকে, খাতায় কিছু নয়।
+     */
+    public function test_item_2_the_signing_path_never_posts_without_a_reference_either(): void
+    {
+        $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'collection',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user',
+            'approver_id' => $this->owner->id]);
+        $requests = Approval::query()->where('action', 'collection')->count();
+        $rows = LedgerEntry::query()->count();
+
+        $this->send(['amount' => '500', 'instrument' => 'transfer', 'lines_given' => '1', 'post' => '1']);
+        $this->assertSame(__('money.validation.reference_needed', ['method' => __('money.method.transfer')]), $this->said('instrument_no'),
+            '⛔ দফা ২: সই চালু কোম্পানিতে রেফারেন্স ছাড়া পোস্ট কারণ বলে ফেরেনি');
+        $this->assertSame($requests, Approval::query()->where('action', 'collection')->count(),
+            '⛔ দফা ২: রেফারেন্স ছাড়া আদায় মালিকের সইয়ে গেল — খাতায় উঠতে পারে না এমন কাগজে সই চাওয়া হলো');
+
+        // ⓘ পুরনো অনুরোধ: রেফারেন্স ছাড়া খসড়া (কেবল রাখা, পোস্ট নয়) আগে থেকে সইয়ে আছে, তারপর মালিক সই দিলেন — নিজে-পোস্ট রেফারেন্সে থামে
+        $last = (int) Collection::acrossBranches()->max('id');
+        $this->send(['amount' => '500', 'instrument' => 'transfer', 'lines_given' => '1']);
+        $draft = Collection::acrossBranches()->where('id', '>', $last)->latest('id')->first();
+        $this->assertNotNull($draft, 'প্রস্তুতিটাই ভুল — রেফারেন্স ছাড়া খসড়া রাখা গেল না: '.json_encode($this->errors()?->all(), JSON_UNESCAPED_UNICODE));
+        $this->assertSame(DocumentStatus::DRAFT, $draft->status, 'প্রস্তুতিটাই ভুল — রেফারেন্স ছাড়া আদায়ের খসড়া নেই');
+        $approval = app(\App\Core\Engines\Approval\ApprovalEngine::class)->request(document: $draft, module: 'sales', action: 'collection',
+            amount: (string) $draft->amount, stateHash: null, matchOn: [], reason: $draft->narration);
+        $this->assertNotNull($approval, 'প্রস্তুতিটাই ভুল — পুরনো অনুরোধ বসানো গেল না');
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
+
+        $this->assertSame(DocumentStatus::DRAFT, $draft->fresh()->status, '⛔ দফা ২: সই পড়ার পরে রেফারেন্স ছাড়া আদায় নিজে পাকা হলো');
+        $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ২: সইয়ের পথে রেফারেন্স ছাড়া আদায় খাতায় উঠল');
     }
 
     /** দফা ৭ — একই খাতে একই রেফারেন্স (বড়-ছোট হাতের অক্ষর আর ফাঁকা বাদে) দ্বিতীয়বার নয়; আগের কাগজের নম্বর আর ঠিকানা বলে */

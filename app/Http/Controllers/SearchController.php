@@ -96,6 +96,15 @@ class SearchController extends Controller
         $out = [];
 
         foreach (app(\App\Core\Services\MenuBuilder::class)->forUser($user) as $module) {
+            /*
+             * ⭐ মডিউলের নামেও — লিখলে সরাসরি তার প্রথম পাতায় (মালিক, ২৪ অক্টোবর ২০২৬): বাঁ রেলে সব মডিউল ধরে না, বাকিগুলো
+             * "⋯ আরও"-তে; নাম জানা থাকলে খোঁজার ঘর থেকেই এক চালে। ⓘ চাবিহীন মডিউল এখানে আসেই না (forUser ছেঁকে দেয়)।
+             */
+            $first = collect($module['groups'] ?? [])->flatten(1)->firstWhere('url', '!==', null);
+            if ($first !== null && str_contains(mb_strtolower((string) $module['label']), $needle)) {
+                $out[$first['url']] = ['type' => __('core.search.module'), 'no' => '', 'label' => (string) $module['label'], 'url' => (string) $first['url']];
+            }
+
             foreach (collect($module['groups'] ?? [])->flatten(1) as $item) {
                 $label = (string) ($item['label'] ?? '');
 
@@ -103,7 +112,8 @@ class SearchController extends Controller
                     continue;
                 }
 
-                $out[$item['url']] = ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
+                // ⓘ একই ঠিকানায় মডিউলের ফল আগে বসলে সেটাই থাকে — নইলে "মডিউল" ফলটা প্রথম পাতার নামে চাপা পড়ত
+                $out[$item['url']] ??= ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
 
                 if (count($out) >= 8) {
                     return array_values($out);

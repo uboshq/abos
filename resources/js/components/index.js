@@ -6,6 +6,7 @@ import * as pos from '../pos.js'
 import * as documents from './documents.js'
 import * as collection from './collection.js'
 import { registerMoneyDisplay } from '../money-display.js'
+import { railFit } from '../rail-fit.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -15,7 +16,8 @@ import { registerMoneyDisplay } from '../money-display.js'
  * (যেমন `countNotes`) রপ্তানি করলেও ক্ষতি নেই — কেউ ডাকে না, আর পরীক্ষা
  * ওটাকে সরাসরি পায়।
  */
-const modules = [shell, money, forms, screens, pos, documents, collection]
+// ⓘ rail-fit.js-এর সাহায্যকারীগুলো (hideOrder, fitRail…) x-data নয় — তাই কেবল কম্পোনেন্টটা
+const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }]
 
 /*
  * ব্রাউজারের কয়েকটা ফাংশন, পর্দা থেকে ডাকার মতো করে।

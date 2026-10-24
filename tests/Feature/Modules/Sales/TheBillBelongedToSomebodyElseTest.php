@@ -88,12 +88,15 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
         $form = strpos($html, 'x-data="collectionForm(');
         $select = null;
 
-        if (preg_match('/<select[^>]*name="customer_id"[^>]*>/s', $html, $m, PREG_OFFSET_CAPTURE) === 1) {
+        // ⓘ গ্রাহকের ঘর এখন খোঁজা যায় এমন পিকার (x-ui.party-search; fe, ২৪ অক্টোবর ২০২৬): `@change` পিকারের গায়ে, আর বাছলে তার
+        // ভিতরের লুকানো `customer_id` ঘর `change` ছাড়ে — তাই শোনার ঘর সেই গা, আর তার ভিতরেই পাঠানোর ঘর
+        if (preg_match('/<[a-z]+[^>]*pickCustomer\(\$event\.target\.value\)[^>]*>/s', $html, $m, PREG_OFFSET_CAPTURE) === 1) {
             $select = $m[0];
         }
 
         $this->assertNotFalse($form, 'টাকা নেওয়ার ফর্মে `collectionForm` নেই।');
         $this->assertNotNull($select, 'গ্রাহকের ঘরটাই পাওয়া যায়নি।');
+        $this->assertNotFalse(strpos($html, 'name="customer_id"', $select[1]), 'গ্রাহকের পিকারের ভিতরে পাঠানোর ঘর (`customer_id`) নেই।');
         $this->assertGreaterThan($form, $select[1], 'গ্রাহকের ঘর ফর্মের `x-data`-র বাইরে — বদলটা কেউ শোনে না।');
         $this->assertStringContainsString('pickCustomer($event.target.value)', $select[0],
             'গ্রাহক বদলালে তাঁর খোলা কাগজ আনার ডাক নেই — আগের গ্রাহকের বিল থেকে যেত।');

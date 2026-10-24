@@ -248,3 +248,73 @@ describe('partySearch — জাবেদার সারি', () => {
         expect(make().shown.some((p) => p.id === '')).toBe(false)
     })
 })
+
+describe('partySearch — "লেখা নাম যোগ" (addable; মালিক, ৩ অক্টোবর ২০২৬ — রসিদের পুরনো পিকারের হুবহু আচরণ)', () => {
+    const adding = (overrides = {}) => {
+        const box = make({ addable: true, ...overrides })
+        box.$refs.newMobile = { focus: vi.fn() }
+
+        return box
+    }
+
+    it('কিছু না মিললে Enter লেখাটাকেই নতুন নাম করে, বাছাই ছাড়ে, পাতাকে জানায়, মোবাইলের ঘরে যায়', () => {
+        const box = adding({ value: 11 })
+
+        box.openList()
+        box.search = '  Rahim Traders '
+        box.searched()
+        expect(box.noMatch).toBe(true)
+        expect(box.canAddTyped).toBe(true)
+
+        box.pickCursor()
+        expect([box.adding, box.newName, box.value, box.listOpen]).toEqual([true, 'Rahim Traders', '', false])
+        expect(box.$refs.input.dispatchEvent).toHaveBeenCalledTimes(1)
+        expect(box.$refs.newMobile.focus).toHaveBeenCalled()
+    })
+
+    it('তালিকার নাম বাছলে নতুন নামের ঘর বন্ধ আর খালি — দুইটা একসাথে যায় না', () => {
+        const box = adding()
+
+        box.openList()
+        box.search = 'Rahim'
+        box.addTyped()
+        expect(box.adding).toBe(true)
+
+        box.pick(13)
+        expect([box.value, box.adding, box.newName]).toEqual(['13', false, ''])
+    })
+
+    it('নতুন নামের ঘরে লিখলে বাছা পক্ষ ছেড়ে দেওয়া হয়; খালি থাকলে কিছু বদলায় না', () => {
+        const box = adding({ value: 12 })
+
+        box.newName = '   '
+        box.newNameTyped()
+        expect(box.value).toBe('12')
+
+        box.newName = 'Karim'
+        box.newNameTyped()
+        expect(box.value).toBe('')
+    })
+
+    it('"+" খোলা-বন্ধ করে; addable না হলে লেখা নাম যোগের কোনো পথই নেই — Enter কিছুই করে না, আগের মতো', () => {
+        const box = adding()
+        box.toggleAdding()
+        expect(box.adding).toBe(true)
+        box.toggleAdding()
+        expect(box.adding).toBe(false)
+
+        const plain = make({ value: 11 })
+        plain.openList()
+        plain.search = 'Rahim Traders'
+        expect(plain.canAddTyped).toBe(false)
+        plain.pickCursor()
+        plain.addTyped()
+        plain.toggleAdding()
+        expect([plain.adding, plain.newName, plain.value]).toEqual([false, '', '11'])
+    })
+
+    it('ফেরানো জমায় আগের লেখা নাম খোলা থাকে (old())', () => {
+        expect([adding({ adding: true, newName: 'Rahim' }).adding, adding({ adding: true, newName: 'Rahim' }).newName]).toEqual([true, 'Rahim'])
+        expect(make({ adding: true }).adding).toBe(false)
+    })
+})
