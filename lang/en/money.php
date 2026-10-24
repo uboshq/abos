@@ -114,6 +114,8 @@ return [
         'bounce_note' => 'A received cheque goes in through the cheque register — marking it bounced there reverses the books by itself and the customer owes again.',
         'cheque_register' => 'Cheque register',
         'vds_list' => 'VDS certificate list',
+        'bank_file' => 'Bank file (BEFTN)',
+        'bank_file_note' => 'Today’s transfer payments from this account, to the payees’ signed accounts:',
         'open_bills_in' => 'Open bills',
         'bills_hint' => 'Ticking a bill puts its whole due — change the amount to adjust',
         'late_days' => ':n days',

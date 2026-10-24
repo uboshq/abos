@@ -382,6 +382,7 @@ export function voucherMoney ({
     vds = '',
     owedLabels = {},
     branchLabels = {},
+    bankFileUrl = '',
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -470,6 +471,14 @@ export function voucherMoney ({
             return label + ' (' + this.headPartyBranch + ')'
         },
         get postBranchText () { return String(this.preview?.branch ?? '') },
+
+        /* ⭐ এই খাতের আজকের ব্যাংক ফাইল (BEFTN) — খাত বাছা থাকলে; সার্ভার নিজে দেখে খাতটা ব্যাংক কি না */
+        get bankFileHref () {
+            if (bankFileUrl === '' || this.account === '') return ''
+            const today = new Date()
+            const day = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+            return bankFileUrl + '?account=' + encodeURIComponent(this.account) + '&date=' + day
+        },
 
         /* ⭐ মাথার প্রথম অঙ্কের নাম পক্ষের ধরনে (নকশা: "গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা") */
         get headOwedLabel () { return owedLabels[this.headPartyType] ?? owedLabels[''] ?? '' },

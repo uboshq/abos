@@ -81,6 +81,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(\App\Core\Contracts\PartyCreditLimit::class, \App\Core\Services\NoPartyCreditLimit::class);
         $this->app->bind(\App\Core\Contracts\PartyTaxIds::class, \App\Core\Services\NoPartyTaxIds::class);
         $this->app->bind(\App\Core\Contracts\PayeeBankView::class, \App\Core\Services\NoPayeeBankView::class);
+        // ⭐ ব্যাংক ফাইলের পুরো হিসাব — সরবরাহকারী মডিউল না থাকলে কিছুই নয় (cb-ma-4)
+        $this->app->bind(\App\Core\Contracts\PayeeBankAccount::class, \App\Core\Services\NoPayeeBankAccount::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
         $this->app->bind(CustomerTrade::class, NoCustomerTrade::class);

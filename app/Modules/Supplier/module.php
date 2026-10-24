@@ -106,6 +106,8 @@ return [
         \App\Core\Contracts\SignaturesWaitingElsewhere::class => \App\Modules\Supplier\Services\SupplierBankWaiting::class,
         // ⛔ ভাউচারেও সই-না-পাওয়া ব্যাংকে টাকা নয় (a4, ২৪ অক্টোবর ২০২৬)
         \App\Core\Contracts\PayeeBankGuard::class => \App\Modules\Supplier\Services\SupplierPayeeBankGuard::class,
+        // ⭐ ব্যাংক ফাইলে (BEFTN) সই-পাওয়া পুরো হিসাব (cb-ma-4)
+        \App\Core\Contracts\PayeeBankAccount::class => \App\Modules\Supplier\Services\SupplierPayeeBankAccount::class,
         // ⭐ হিসাবের পর্দায় BIN · TIN আর প্রাপকের ব্যাংক (ঢাকা নম্বরে) — মিল-তালিকা #৬০, #৬৬ (২৫ অক্টোবর ২০২৬)
         \App\Core\Contracts\PartyTaxIds::class => \App\Modules\Supplier\Services\SupplierTaxIds::class,
         \App\Core\Contracts\PayeeBankView::class => \App\Modules\Supplier\Services\SupplierPayeeBankView::class,

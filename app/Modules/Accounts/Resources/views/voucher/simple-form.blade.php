@@ -185,6 +185,7 @@
                   vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
                   owedLabels: @js($headOwedLabels),
                   branchLabels: @js(__('money.screen.meta.party_branch_by')),
+                  bankFileUrl: @js(route('accounts.voucher.bank_file')),
               })"
               @money-method="heard($event.detail)"
               @party-due="heardParty($event.detail)"
@@ -967,6 +968,13 @@
                     ⭐ নকশার "বাউন্স চিহ্ন দিলে নিজে উল্টাবে" — সত্যি করে: গৃহীত চেক এই পর্দায় ঢোকে না (মালিকের ২৬ সেপ্টেম্বরের নিয়ম), চেকের খাতায়;
                     সেখানে বাউন্স চিহ্ন দিলে খাতা নিজে উল্টায়, গ্রাহকের বকেয়া ফেরে ([[ChequeService::bounce()]])। তাই লাইনটা সেই খাতায় নিয়ে যায় (cb-ma-4)।
                 --}}
+                {{-- ⭐ নিয়ন্ত্রণের "ব্যাংক ফাইলে (BEFTN) যাবে" — সত্যি করে: এই খাতের আজকের ট্রান্সফার-পরিশোধের ফাইল ([[VoucherBankFile]]) --}}
+                @if ($isPayment)
+                    <p class="px-1 text-xs text-(--color-ink-muted)" data-control="bank-file" x-show="bankFileHref !== ''" x-cloak>
+                        {{ __('money.screen.bank_file_note') }}
+                        <a x-bind:href="bankFileHref" class="text-(--color-brand-700) underline" data-bank-file>{{ __('money.screen.bank_file') }}</a>
+                    </p>
+                @endif
                 @unless ($isPayment)
                     <p class="px-1 text-xs text-(--color-ink-muted)" data-control="bounce">
                         {{ __('money.screen.bounce_note') }}

@@ -225,6 +225,32 @@ class VoucherController extends Controller implements HasMiddleware
      * ঘর, আর একটা সহায়ক ঘরের জন্য ফর্ম ভাঙা উচিত নয়। তবে চুপচাপ শূন্যও
      * নয়: `known` মিথ্যা হলে পর্দা "—" দেখায়, "০.০০" নয়।
      */
+    /**
+     * ⭐ ব্যাংক ফাইল (BEFTN) — `?account=<ব্যাংক খাতের id>&date=YYYY-MM-DD` ([[VoucherBankFile]]; cb-ma-4)।
+     *
+     * ⓘ চাবি: রিপোর্ট বা পাকা করার (টাকা ছাড়ার মানুষ); খাতটা এই কোম্পানির ব্যাংক খাত হতে হবে — নগদ বা MFS-এর ব্যাংক ফাইল হয় না।
+     * ⓘ যে প্রাপকের সই-পাওয়া হিসাব নেই, তার সারি যায় না — সংখ্যাটা উত্তরের মাথায় (`X-Skipped`), যাতে ফাইলটা পুরো ভাবা না হয়।
+     */
+    public function bankFile(Request $request): \Illuminate\Http\Response
+    {
+        abort_unless($request->user()?->canAny(['accounts.report', 'accounts.voucher.update']) ?? false, 403);
+
+        $account = \App\Modules\Accounts\Models\Account::query()->whereKey((int) $request->query('account', 0))
+            ->where('money_kind', \App\Modules\Accounts\Models\Account::BANK)->first();
+        abort_if($account === null, 404);
+
+        $date = (string) $request->query('date', now()->toDateString());
+        abort_unless(preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1, 422);
+
+        $file = app(\App\Modules\Accounts\Services\VoucherBankFile::class)->of($account, $date);
+
+        return response($file['content'], 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$file['name'].'"',
+            'X-Skipped' => (string) $file['skipped'],
+        ]);
+    }
+
     public function due(Request $request): JsonResponse
     {
         /*
