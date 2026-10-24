@@ -238,7 +238,7 @@
                                         charge-field="bank_charge" />
 
                         {{-- ⓘ order-3 — ব্লকের ঘরগুলোর (order-3) ঠিক পরে, রেফারেন্সের নিচে; চার্জের লাইন (order-4) তার পরে --}}
-                        <p class="order-3 text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
+                        <p class="order-3 whitespace-nowrap text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
                            x-show="referenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
                     </div>
 
@@ -287,7 +287,7 @@
                                         </td>
                                         <td x-text="row.date"></td>
                                         <td x-text="row.dueDate"></td>
-                                        <td class="num" :class="row.lateOn ? 'font-semibold text-(--color-danger)' : ''" x-text="row.late"></td>
+                                        <td class="num whitespace-nowrap" :class="row.lateOn ? 'font-semibold text-(--color-danger)' : ''" x-text="row.late"></td>
                                         <td class="num" x-text="row.amountText"></td>
                                         <td class="num" x-text="row.openText"></td>
                                         <td class="num">
