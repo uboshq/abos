@@ -182,8 +182,9 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
     {
         $bill = $this->aBillWithBalance();
 
-        $money = (int) Account::query()
-            ->money()->postable()->active()->orderBy('code')->value('id');
+        $money = ($extra['instrument'] ?? null) === 'cheque'
+            ? (int) $this->chequeBank()->id
+            : (int) Account::query()->money()->postable()->active()->orderBy('code')->value('id');
 
         /*
          * ⓘ নগদ শূন্যের নিচে নামে না (CashOnHand, ২৭ সেপ্টেম্বর ২০২৬) — চেক
@@ -203,6 +204,19 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
             'trx_date' => now()->toDateString(),
             'amount' => '200',
         ] + $extra, [['purchase_bill_id' => $bill->id, 'amount' => '200']]));
+    }
+
+    /**
+     * চেকের ব্যাংক — ⓘ চেক কেবল ব্যাংকের খাতে (পদ্ধতি আগে, খাত পরে; [[MoneyMethod::KIND_OF]], fe, ২৪ অক্টোবর ২০২৬)। ⛔ আগে এই দাবি
+     * নগদের খাত থেকে চেক লিখত, সার্ভার ধরন মেলাত না।
+     */
+    private function chequeBank(): Account
+    {
+        return Account::query()->firstOrCreate(['code' => '1102-CHQBANK'], [
+            'company_id' => CompanyContext::id(), 'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Cheque bank', 'name_bn' => 'চেকের ব্যাংক', 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'is_group' => false, 'money_kind' => Account::BANK,
+        ]);
     }
 
     /**

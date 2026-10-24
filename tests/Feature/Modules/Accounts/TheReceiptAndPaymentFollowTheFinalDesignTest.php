@@ -24,7 +24,9 @@ use Tests\TestCase;
  * (টাকা-নেওয়া-দেওয়া-চূড়ান্ত-নকশা-১০০-সংশোধিত-২২-অক্টোবর.pdf, পাতা ২ আর ৪)।
  *
  * মিল-তালিকার আটটা ✗, প্রতিটার দাবি:
- *   ১. ক্রম: পক্ষের ধরন → পক্ষ → তারিখ → টাকা → টাকার খাত → পদ্ধতি → সংযুক্তি · কার মাধ্যমে · বিবরণ
+ *   ১. ক্রম: পক্ষের ধরন → পক্ষ → তারিখ → টাকা → পদ্ধতি → টাকার খাত → সংযুক্তি · কার মাধ্যমে · বিবরণ
+ *      ⓘ পদ্ধতি আগে, খাত পরে — মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬ (fe; SAP/Oracle-এর payment method → house bank)। নকশার পাতায় খাত
+ *      আগে আঁকা ছিল, মালিকের নতুন রায় সেটা উল্টাল ([[TheMethodComesFirstAndOffersOnlyItsAccountsTest]])।
  *   ২. টাকা লাখ-কমায় লেখা যায় ("45,000.00") আর ঠিক অঙ্কে বসে
  *   ৩. পাঁচ ঘরের এক সারি নেই — নিচের ঘরগুলো আলাদা বাক্সে, পূর্ণ চওড়ায় (মাপ ১৩৬৬-এ, কমিটে)
  *   ৪. পরিশোধে "যে খাত থেকে", আর খাতের স্থিতি পর্দায় যায়
@@ -63,7 +65,7 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
             $html = $this->screen($type);
             // ⓘ ঘর ধরে খোঁজা, অ্যাট্রিবিউটের ক্রম ধরে নয় — select-এর অ্যাট্রিবিউট উপাদান নিজের ক্রমে আঁকে (cb_v11)
             $order = ['name="party_type"', 'data-party-picker', 'name="trx_date"', 'data-voucher-amount',
-                $money.' (data-money-account)', 'name="instrument"', 'name="attachment"', 'name="carried_by"', 'name="narration"'];
+                'name="instrument"', $money.' (data-money-account)', 'name="attachment"', 'name="carried_by"', 'name="narration"'];
             $patterns = [$money.' (data-money-account)' => '/<select\b(?=[^>]*\bname="'.$money.'")(?=[^>]*\bdata-money-account\b)[^>]*>/'];
 
             $at = [];
@@ -79,7 +81,7 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
             }
             $sorted = $at;
             asort($sorted);
-            $this->assertSame($order, array_keys($sorted), "⛔ {$type}: ঘরের ক্রম নকশার মতো নয় (পক্ষ → তারিখ → টাকা → খাত → পদ্ধতি → সংযুক্তি · কার মাধ্যমে · বিবরণ)");
+            $this->assertSame($order, array_keys($sorted), "⛔ {$type}: ঘরের ক্রম নকশার মতো নয় (পক্ষ → তারিখ → টাকা → পদ্ধতি → খাত → সংযুক্তি · কার মাধ্যমে · বিবরণ)");
         }
     }
 
@@ -87,10 +89,11 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
     public function test_the_amount_is_written_with_lakh_commas_and_lands_exactly(): void
     {
         $html = $this->screen(Voucher::RECEIPT);
-        $this->assertMatchesRegularExpression('/<input[^>]*type="text"[^>]*name="amount"|<input[^>]*name="amount"[^>]*type="text"/', $html,
-            '⛔ টাকার ঘর আবার type="number" — কমা দেখাতে পারে না');
-        $this->assertStringContainsString('@change="tidyAmount()"', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/party-fields.blade.php')),
-            '⛔ ঘর ছাড়লে অঙ্ক লাখ-কমায় সাজে না');
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর আর পাঠানোর ঘর আলাদা (x-ui.field type="money") — দেখানোর ঘর লেখার, name ছাড়া
+        $this->assertMatchesRegularExpression('/<input[^>]*type="text"[^>]*data-money-shown="amount"[^>]*x-money-display="amount"/', $html,
+            '⛔ টাকার ঘর আবার type="number" বা লাখ-কমার directive ছাড়া — কমা দেখাতে পারে না');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="amount"[^>]*:value="amount"/', $html,
+            '⛔ টাকার কাঁচা অঙ্ক পাঠানোর লুকানো ঘর নেই');
 
         $before = Voucher::query()->count();
         $this->postReceipt(['amount' => '45,000.00']);
@@ -112,7 +115,8 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $bank = $this->bank();
         $payment = $this->screen(Voucher::PAYMENT);
         // ⓘ উৎস ধরে — পরীক্ষা ইংরেজিতে আঁকে, আর সেখানে পুরনো আর নতুন দুই লেখাই "Paid from"
-        $this->assertMatchesRegularExpression('/name="from_account_id" data-money-account x-model="account"\s+:label="__\(\'money\.screen\.from_account\'\)"/', $form,
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে খাতের ঘর পদ্ধতির বাক্সে ([[x-money.method]] `accounts`) — লেবেলটা বাক্সকে দেওয়া হয়
+        $this->assertMatchesRegularExpression('/:account-label="\$isPayment \? __\(\'money\.screen\.from_account\'\)/', $form,
             '⛔ পরিশোধে "যে খাত থেকে" লেখা নেই (নকশার লেখা; আগে "কোথা থেকে দেওয়া হল")');
         $this->assertStringContainsString('data-account-balance', $payment, '⛔ খাতের স্থিতির লাইন নেই');
         $balance = bcadd($bank->balanceInView(), '0', 2);

@@ -99,6 +99,39 @@ export function methodForKind (kind, current) {
     return current
 }
 
+/**
+ * ⭐ পদ্ধতি আগে, খাত পরে — পদ্ধতিই ঠিক করে কোন ধরনের খাত চলে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)। ⓘ সার্ভারের একই তালিকা
+ * ([[MoneyMethod::KIND_OF]]) — পর্দা যা দেখায়, সার্ভার তা-ই মানে।
+ */
+export const KIND_OF = { cash: 'cash', mfs: 'mfs', transfer: 'bank', deposit: 'bank', cheque: 'bank', card: 'bank' }
+
+/** খাতটা এই পদ্ধতির কি না — পদ্ধতি না জানা বা খাতের ধরন খালি হলে প্রশ্ন নেই */
+export function fitsMethod (method, kind) {
+    if (!(method in KIND_OF) || !kind) return true
+
+    return KIND_OF[method] === kind
+}
+
+/**
+ * পদ্ধতি বদলালে খাতের নতুন অবস্থা — কোন খাতগুলো তালিকায়, কোনটা বাছা, আগেরটা সরল কি না।
+ *
+ * ⓘ আগের খাত মিললে থাকে; না মিললে ফাঁকা (`dropped` = আগের খাত); একটাই খাত থাকলে সেটা নিজে বসে (fe)।
+ *
+ * @param accounts [{ id, label, kind }]
+ * @returns { list, picked, dropped }
+ */
+export function accountsForMethod (accounts, method, current) {
+    const list = (accounts ?? []).filter(a => fitsMethod(method, a.kind))
+    const now = String(current ?? '')
+    const keeps = now !== '' && list.some(a => String(a.id) === now)
+    const dropped = now !== '' && !keeps ? (accounts ?? []).find(a => String(a.id) === now) ?? null : null
+    let picked = keeps ? now : ''
+
+    if (picked === '' && list.length === 1) picked = String(list[0].id)
+
+    return { list, picked, dropped }
+}
+
 /** চার্জের লাইন — লেখার ছাঁচে অঙ্ক দুইটা বসানো (`:charge`, `:amount`, `:head`) */
 export function chargeLine (template, { charge, amount, head }) {
     return String(template ?? '')
@@ -116,13 +149,81 @@ export function moneyMethod ({
     moneyField = '',
     direction = 'in',
     notes = {},
+    accounts = null,
+    methodNames = {},
+    cleared = '',
 } = {}) {
+    // ⓘ খাতের তালিকা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — বদলায় না, কেবল পড়া হয়
+    const picking = Array.isArray(accounts)
+
     return {
         method: method || 'cash',
         charge: charge ?? '',
         chequeDate: chequeDate || '',
         amount: 0,
         notes: (notes && typeof notes === 'object') ? { ...notes } : {},
+        // ⓘ চলতি পদ্ধতির খাত কয়টা — শূন্য হলে তালিকার জায়গায় কারণ, আর জমার বোতাম বন্ধ
+        accountCount: picking ? accounts.filter(a => fitsMethod(method || 'cash', a.kind)).length : 1,
+        clearedLine: cleared || '',
+        startPick: '',
+
+        get hasAccounts () {
+            return this.accountCount > 0
+        },
+
+        get noAccountsLine () {
+            return String(this.$root.dataset.accountNoneLine ?? '').replace(':method', methodNames[this.method] ?? this.method)
+        },
+
+        /*
+         * ⭐ পদ্ধতি বদলালে খাতের তালিকা নতুন করে — কেবল মিলে যাওয়া খাত, বাকিগুলো তালিকায় থাকেই না (fe, ২৪ অক্টোবর ২০২৬)।
+         * ⓘ বাছা মান বদলালে `change` ছাড়া হয় — হোস্টের `x-model` (স্থিতি, প্রিভিউ, রেফারেন্সের উত্তর) নিজের পথেই খবর পায়।
+         */
+        fillAccounts (start = false) {
+            const select = this.$root.querySelector('select[data-money-account]')
+
+            if (!picking || !select) return
+
+            const { list, picked, dropped } = accountsForMethod(accounts, this.method, start ? (this.startPick ?? select.value) : select.value)
+
+            for (const option of [...select.options]) {
+                if (option.value !== '') option.remove()
+            }
+
+            for (const row of list) {
+                const option = document.createElement('option')
+                option.value = String(row.id)
+                option.textContent = row.label
+                option.dataset.kind = row.kind ?? ''
+                select.add(option)
+            }
+
+            this.accountCount = list.length
+            if (!start) {
+                this.clearedLine = dropped
+                    ? String(this.$root.dataset.accountClearedLine ?? '').replace(':account', dropped.label).replace(':method', methodNames[this.method] ?? this.method)
+                    : ''
+            }
+
+            select.value = picked
+            select.dispatchEvent(new Event('change', { bubbles: true }))
+            this.blockSubmit(list.length === 0)
+        },
+
+        /* ⛔ খাত ছাড়া জমা নয় — যে বোতাম এই বাক্স বন্ধ করেছে, কেবল সেটাই খোলে (হোস্টের নিজের `:disabled` ছোঁয়া হয় না) */
+        blockSubmit (on) {
+            const buttons = this.$el.closest('form')?.querySelectorAll('button[type="submit"], button:not([type])') ?? []
+
+            for (const button of buttons) {
+                if (on && !button.disabled) {
+                    button.disabled = true
+                    button.dataset.moneyBlocked = '1'
+                } else if (!on && button.dataset.moneyBlocked) {
+                    button.disabled = false
+                    delete button.dataset.moneyBlocked
+                }
+            }
+        },
 
         readAmount () {
             const field = this.$el.closest('form')?.querySelector(`[name="${amountField}"]`)
@@ -144,6 +245,16 @@ export function moneyMethod ({
             this.$watch('method', () => this.announce())
             this.$watch('charge', () => this.announce())
             this.$nextTick(() => this.announce())
+
+            if (picking) {
+                /*
+                 * ⓘ সার্ভারের বাছা খাত এখনই পড়া — হোস্টের `x-model` একটু পরে বসে নিজের পুরনো মান চাপাত (সার্ভার না-মেলা খাত সরালে বা
+                 * একমাত্র খাত বসালে হোস্ট তা জানত না)। তাই পরের ধাপে আবার বসিয়ে `change` ছাড়া হয়।
+                 */
+                this.startPick = this.$root.querySelector('select[data-money-account]')?.value ?? ''
+                this.$watch('method', () => this.fillAccounts())
+                this.$nextTick(() => this.fillAccounts(true))
+            }
 
             const form = this.$el.closest('form')
 
@@ -297,12 +408,7 @@ export function voucherMoney ({
             form?.addEventListener('change', (e) => {
                 if (e.target?.name !== 'instrument_no' && e.target?.name !== 'deposit_slip_no') this.refresh()
             })
-            this.$nextTick(() => { this.tidyAmount(); this.refresh() })
-        },
-
-        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("45,000.00"); ফাঁকা বা শূন্য যেমন ছিল — সার্ভার কমা ছেঁটে পড়ে ([[VoucherRequest]]) */
-        tidyAmount () {
-            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
+            this.$nextTick(() => this.refresh())
         },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ "খাতে আছে কি না"-য়, আর প্রিভিউ নতুন করে */
@@ -479,11 +585,6 @@ export function payBills ({
 
         get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
         get slipUsed () { return this.slip.state === 'used' },
-
-        /* ⭐ ঘর ছাড়লে লাখ-কমায় ("1,20,000.00", নকশার মিল-তালিকা #৯); ফাঁকা বা শূন্য যেমন ছিল */
-        tidyAmount () {
-            if (paisa(this.amount) > 0) this.amount = taka(paisa(this.amount) / 100)
-        },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */
         heard (detail) {

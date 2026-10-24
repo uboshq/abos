@@ -725,55 +725,43 @@
             @php
                 /*
                  * ⭐ টাকার খাতের ধরন প্রতিটা সারির গায়ে — ২৭ সেপ্টেম্বর ২০২৬।
-                 * ⓘ পদ্ধতির বাক্স এটা পড়ে খাত বদলালে পদ্ধতি বদলায় ([[money.js]])।
+                 * ⓘ ২৪ অক্টোবর ২০২৬ থেকে উল্টো দিকে: পদ্ধতি আগে, আর বাক্স কেবল সেই পদ্ধতির খাত দেখায় ([[x-money.method]] `accounts`, [[money.js]])।
                  */
                 $isPayment = $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT;
-                $moneyKinds = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => (string) $a->money_kind])->all();
-                $moneyOptions = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all();
+                $moneyRows = collect($moneyAccounts)->map(fn ($a) => ['id' => $a->id, 'label' => $a->label(), 'kind' => (string) $a->money_kind])->values()->all();
             @endphp
 
             <section data-boxed data-voucher-money
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                {{-- যে খাত | পদ্ধতি, তার নিচে পদ্ধতির ঘর — টাকা দেওয়ার পর্দার একই গ্রিড ([[x-money.method]]-এর `inline`) --}}
+                {{--
+                    ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত, তারপর রেফারেন্স আর চার্জ (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; SAP/Oracle-এর
+                    payment method → house bank)। ⓘ খাতের ঘর এখন [[x-money.method]]-এর ভিতরে, পদ্ধতির ঠিক পরে — তিন পর্দায় (রসিদ-পরিশোধ,
+                    সরবরাহকারী-পরিশোধ, আদায়) একই নিয়ম এক জায়গায়। ⛔ আগে খাত আগে ছিল, আর "Roket"-এর মতো MFS খাত বেছে "নগদ" চাপা যেত।
+                    ⓘ ঘর `x-model="account"`-এ বাঁধা — স্থিতি, প্রিভিউ আর রেফারেন্সের উত্তর আগের মতোই এটা দেখে।
+                --}}
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="order-0 sm:col-span-2">
-                        @if ($isPayment)
-                            {{--
-                                ⛔ পরিশোধে এই ঘরটা একসময় ছিলই না — লাইভে একটাও পরিশোধ পোস্ট হয়নি, প্রতিবার "যে খাত থেকে দিতেই হবে"
-                                (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)। ⭐ লেখা নকশার: "যে খাত থেকে" (আগে "কোথা থেকে দেওয়া হল")।
-                            --}}
-                            <x-ui.select name="from_account_id" data-money-account x-model="account"
-                                         :label="__('money.screen.from_account')"
-                                         :options="$moneyOptions"
-                                         :kinds="$moneyKinds"
-                                         :selected="old('from_account_id', $creditLine?->account_id)"
-                                         :hint="$cashHiddenReason ?? null"
-                                         :placeholder="'—'"
-                                         required />
-                        @else
-                            <x-ui.select name="to_account_id" data-money-account x-model="account"
-                                         :label="__($sides['to']['label'])"
-                                         :options="$moneyOptions"
-                                         :kinds="$moneyKinds"
-                                         :selected="old('to_account_id', $debitLine?->account_id)"
-                                         :hint="$cashHiddenReason ?? null"
-                                         required />
-                        @endif
-                        {{-- ⭐ খাতে আছে কত — নকশার "খাতে আছে ৳…"; পরিশোধে পরিশোধ আর চার্জের চেয়ে কম হলে লাল --}}
-                        <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
-                            {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                            <span x-show="short">— {{ __('money.screen.short') }}</span>
-                        </p>
-                    </div>
-
                     {{-- ⓘ নতুন ভাউচারে record নয় — তখন মূল্য-তারিখ আজ দিয়ে শুরু। ⭐ `slip-check`: রেফারেন্সের নিচে চলতি "একই খাতে আগে ব্যবহার হয়নি ✓" --}}
+                    {{-- ⛔ পরিশোধে খাতের ঘরটা একসময় ছিলই না — লাইভে একটাও পরিশোধ পোস্ট হয়নি (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)। ⭐ লেখা নকশার: "যে খাত থেকে" --}}
                     <x-money.method inline slip-check
                         :direction="$isPayment ? 'out' : 'in'"
                         :record="$voucher->exists ? $voucher : null"
                         :modes="$transferModes ?? []"
                         :methods="$isPayment ? ['cash', 'mfs', 'transfer', 'cheque'] : ['cash', 'mfs', 'transfer', 'deposit']"
-                        :money-field="$isPayment ? 'from_account_id' : 'to_account_id'"
-                        counting />
+                        :accounts="$moneyRows"
+                        :account-name="$isPayment ? 'from_account_id' : 'to_account_id'"
+                        account-model="account"
+                        :account-label="$isPayment ? __('money.screen.from_account') : __($sides['to']['label'])"
+                        :account-selected="$isPayment ? old('from_account_id', $creditLine?->account_id) : old('to_account_id', $debitLine?->account_id)"
+                        :account-hint="$cashHiddenReason ?? null"
+                        counting>
+                        <x-slot:account-note>
+                            {{-- ⭐ খাতে আছে কত — নকশার "খাতে আছে ৳…"; পরিশোধে পরিশোধ আর চার্জের চেয়ে কম হলে লাল --}}
+                            <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
+                                {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
+                                <span x-show="short">— {{ __('money.screen.short') }}</span>
+                            </p>
+                        </x-slot:account-note>
+                    </x-money.method>
                 </div>
             </section>
 
