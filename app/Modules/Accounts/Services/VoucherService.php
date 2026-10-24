@@ -182,6 +182,10 @@ final class VoucherService
                 'cost_centre_id' => $data['cost_centre_id'] ?? null,
                 'expense_account_id' => $data['expense_account_id'] ?? null,
                 'bill_no' => $data['bill_no'] ?? null,
+                // ⭐ খরচের ভাউচার ১০০% (ভাগ C) — বিলের তারিখ, বাকির শেষ দিন, যে কর্মী টাকা দিলেন
+                'bill_date' => $data['bill_date'] ?? null,
+                'due_date' => $data['due_date'] ?? null,
+                'employee_id' => $data['employee_id'] ?? null,
 
                 /*
                  * ⛔ এই দুইটা তিন দিন পর্দায় ছিল আর কখনো সেভ হত না —
@@ -1306,8 +1310,9 @@ final class VoucherService
      * চার্জের খরচের খাত — টাকার খাত ব্যাংক হলে ৫২১০, MFS হলে ৫২১১।
      *
      * ⛔ নগদে চার্জ হয় না ([[withCharge()]]-এর মন্তব্য), তাই অন্য সব খাতে থামে।
+     * ⓘ public — খরচের লাইনের জাবেদাও একই খাত বাছে ([[ExpenseLedger]]); নিয়ম এক জায়গায়।
      */
-    private function chargeAccountFor(?Account $money): Account
+    public function chargeAccountFor(?Account $money): Account
     {
         $code = match (true) {
             $money?->isMfs() === true => StandardChart::MFS_CHARGES,
@@ -2108,8 +2113,9 @@ final class VoucherService
             }
         }
 
-        // ⓘ দেনার পরিবারে ক্রেডিট — খরচের "বাকিতে" পথ (ক১)
-        $owed = $this->controlAccounts([StandardChart::PAYABLE_GROUP]);
+        // ⓘ দেনার পরিবারে ক্রেডিট — খরচের "বাকিতে" পথ (ক১); ⭐ আর 1131-এ ক্রেডিট — "কর্মী দিলেন" (খরচের ভাউচার ১০০%, fe-র সিদ্ধান্ত ৩:
+        // কর্মীর অগ্রিম আর পাওনা এক খাতে, নিট অবস্থান)
+        $owed = $this->controlAccounts([StandardChart::PAYABLE_GROUP, StandardChart::EMPLOYEE_ADVANCE]);
         $owesSomeone = collect($lines)->contains(fn (array $l) => in_array((int) ($l['account_id'] ?? 0), $owed, true)
             && bccomp($this->money($l['credit'] ?? 0), '0', 4) > 0);
 

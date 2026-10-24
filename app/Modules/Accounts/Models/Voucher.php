@@ -93,6 +93,20 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      */
     public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card', 'deposit'];
 
+    /*
+     * ⭐ খরচের নিজের দুই পদ্ধতি — টাকা নড়ে না, তাই `MoneyMethod::METHODS`-এ নয় (খরচের ভাউচার ১০০%, fe-র সিদ্ধান্ত ১, ২৪ অক্টোবর
+     * ২০২৬)। ⓘ বাকিতে: অন্য পাশ পক্ষের দেনার খাত; কর্মী দিলেন: 1131 কর্মীর অগ্রিম, পক্ষ কর্মী। ⛔ দুটোতেই `money_account_id` বসে না।
+     */
+    public const ON_CREDIT = 'credit';
+
+    public const BY_EMPLOYEE = 'employee';
+
+    /** @var list<string> */
+    public const EXPENSE_ONLY_INSTRUMENTS = [self::ON_CREDIT, self::BY_EMPLOYEE];
+
+    /** বাকিতে খরচের পক্ষ — কেবল সরবরাহকারী বা কর্মী (fe-র সিদ্ধান্ত ১) */
+    public const ON_CREDIT_PARTIES = ['supplier', 'employee'];
+
     /**
      * ⭐ মাধ্যমের ঘরে যা-ই থাক, পর্দায় একটা শব্দ — কাঁচা চাবি কখনো নয়।
      *

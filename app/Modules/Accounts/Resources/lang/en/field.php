@@ -355,4 +355,5 @@ return [
 
     'withheld_ait' => 'Income tax withheld at source (AIT)',
     'withheld_vds' => 'VAT withheld at source (VDS)',
+    'input_vat_recoverable' => 'Input VAT recoverable',
 ];

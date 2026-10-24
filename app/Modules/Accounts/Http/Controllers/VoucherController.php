@@ -670,7 +670,8 @@ class VoucherController extends Controller implements HasMiddleware
     public function simulate(Request $request): JsonResponse
     {
         $type = $this->assertType((string) $request->input('type'));
-        abort_unless(in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true), 404);
+        // ⭐ খরচেও — পোস্টের আগে খাতায় যা যাবে (খরচের ভাউচার ১০০%, ভাগ C; ⛔ আগে ৪০৪, §০-এর ফাঁক ৫)। লাইন একই [[VoucherWriter::linesFor()]] থেকে
+        abort_unless(in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT, Voucher::EXPENSE], true), 404);
 
         /*
          * ⓘ যাচাই এখানে হাতে ধরা — ওয়েবের পথে যাচাইয়ের ভুল JSON হয় না, ফর্মে ফেরত পাঠায় ([[bootstrap/app.php]]-এর
