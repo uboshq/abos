@@ -72,4 +72,12 @@ return [
 
     // ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১)
     'only_owner_companies' => 'Only the owner — super admin in every company — opens a company or switches one on or off.',
+
+    // The company that lost the person, in its own book (24 Oct 2026)
+    'member_removed_from' => 'Unticked from :from — before: :was',
+    'member_was' => 'member (:state, default branch :branch)',
+    'member_was_none' => 'no membership',
+    'member_active' => 'active',
+    'member_inactive' => 'inactive',
+    'roles_removed_from' => 'Unticked from :from, so the roles in this company went: :roles',
 ];

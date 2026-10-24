@@ -31,6 +31,9 @@ return [
     // label as ten other role edits, that answer takes opening every row.
     'ownership_transferred' => 'Ownership transferred',
     'companies_changed' => 'Company access changed',
+    // The company that lost the person, in its own book (24 Oct 2026)
+    'member_removed' => 'Membership removed',
+    'roles_removed' => 'Roles removed',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',
