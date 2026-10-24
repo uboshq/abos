@@ -274,6 +274,9 @@ class _CollectScreenState extends State<CollectScreen> {
   /// তাই ঘরগুলো দেখানো হয় না, পাঠানোও নয় — লেখা চার্জ খাতায় না ওঠার চেয়ে না চাওয়া ভালো (a4, ২২ অক্টোবর ২০২৬)।
   /// ⓘ চেক/ট্রান্সফার নম্বর (`instrument_no`) পুরনো সার্ভারও পড়ে — সেটা থাকে
   bool get _oldServer => _billsState == _Bills.absent;
+  /// ⭐ খাতের তালিকা — কেবল চলতি পদ্ধতির ধরনের খাত (নিজের নগদ আগে, [CollectionAccount.ownCashFirst]-এর ক্রমে)
+  List<CollectionAccount> get _methodAccounts => _accounts.where((a) => a.kind == _kind).toList();
+
   static String _kindOf(String method) => switch (method) { 'cash' => 'cash', 'mfs' => 'mfs', _ => 'bank' };
   String get _kind => _kindOf(_method);
 
@@ -561,6 +564,8 @@ class _CollectScreenState extends State<CollectScreen> {
     if (_customer == null) return w.booksCollectPickCustomerError;
     if (!_amountValid) return w.booksCollectAmountWrong;
     if (_account == null) return w.booksCollectPickAccountError;
+    // ⛔ শেষ পাহারা — পর্দা না-মেলা জোড়া বানাতে দেয় না, তবু পাঠানোর আগে আবার দেখা (সার্ভার ফেরাত)
+    if (_account!.kind != _kind) return w.payMismatch(_account!.label, moneyMethodLabel(context, _method));
     if (_needsReference && _reference.text.trim().isEmpty) return w.collectReferenceMissing;
     if (_needsDepositSlip && _depositSlip.text.trim().isEmpty) return w.collectDepositSlipMissing;
     if (_differencePaisa + _withheldPaisa > _received) return w.collectDifferenceTooBig;
@@ -1023,21 +1028,8 @@ class _CollectScreenState extends State<CollectScreen> {
             tone: MoneyTone.warn,
           ),
         const SizedBox(height: AppSpacing.sm),
-        DropdownButtonFormField<CollectionAccount>(
-          key: const ValueKey('collect-account'),
-          initialValue: _accounts.contains(_account) ? _account : null,
-          isExpanded: true,
-          decoration: InputDecoration(labelText: w.collectAccount),
-          items: [
-            for (final a in _accounts)
-              DropdownMenuItem(
-                value: a,
-                child: Text(a.mine ? w.collectAccountMine(a.label) : a.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _busy ? null : _chooseAccount,
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        // ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত — ওয়েবের ক্রম (cb 2bddefbb0, লাইভ 95a60587b; মালিকের নিয়ম: ওয়েব আর অ্যাপে একই ঘর,
+        // একই ক্রম) আর পরিশোধ-খরচের পর্দার একই আচরণ ([MoneyVoucherScreen]); নগদে নিজের নগদ আগে বাছা
         MoneyLabel(w.collectMethod),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           for (final m in CollectScreen.methods)
@@ -1048,6 +1040,21 @@ class _CollectScreenState extends State<CollectScreen> {
               onSelected: _busy || !_accounts.any((a) => a.kind == _kindOf(m)) ? null : (_) => _chooseMethod(m),
             ),
         ]),
+        const SizedBox(height: AppSpacing.sm),
+        DropdownButtonFormField<CollectionAccount>(
+          key: const ValueKey('collect-account'),
+          initialValue: _methodAccounts.contains(_account) ? _account : null,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: w.collectAccount),
+          items: [
+            for (final a in _methodAccounts)
+              DropdownMenuItem(
+                value: a,
+                child: Text(a.mine ? w.collectAccountMine(a.label) : a.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: _busy ? null : _chooseAccount,
+        ),
         if (_needsReference) ...[
           const SizedBox(height: AppSpacing.sm),
           TextField(

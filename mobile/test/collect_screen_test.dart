@@ -1399,10 +1399,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
     await tester.pumpAndSettle();
 
-    // ⓘ নকশার ক্রম: পক্ষের ধরন → গ্রাহক → টাকা → যে খাতে জমা → পদ্ধতি → রেফারেন্স → ব্যাংকের লাইন → বিল → কাটা ও ছাড় → সংযুক্তি
+    // ⓘ নকশার ক্রম: পক্ষের ধরন → গ্রাহক → টাকা → পদ্ধতি → যে খাতে জমা → রেফারেন্স → ব্যাংকের লাইন → বিল → কাটা ও ছাড় → সংযুক্তি
+    // (পদ্ধতি আগে — ওয়েবের ২৪ অক্টোবরের ক্রম, cb 2bddefbb0)
     double y(String key) => tester.getTopLeft(find.byKey(ValueKey(key))).dy;
     final order = [
-      'collect-party-customer', 'collect-customer', 'collect-amount', 'collect-account', 'collect-method-cash', 'collect-reference',
+      'collect-party-customer', 'collect-customer', 'collect-amount', 'collect-method-cash', 'collect-account', 'collect-reference',
       'collect-bank-line', 'collect-bills', 'collect-adjust', 'collect-narration',
     ];
     final ys = [for (final k in order) y(k)];
@@ -1540,6 +1541,73 @@ void main() {
       });
     }
   });
+  /// ⭐ পদ্ধতি আগে, খাত পরে — ওয়েবের ক্রম (cb 2bddefbb0, লাইভ 95a60587b) আর পরিশোধ-খরচের পর্দার একই ক্রম (মালিকের নিয়ম: ওয়েব আর
+  /// অ্যাপে একই ঘর, একই ক্রম; fe, ২৪ অক্টোবর ২০২৬)
+  group('method first, then only its accounts (web 2bddefbb0)', () {
+    testWidgets('the order: party, date, amount, method, then account — as on payment and expense', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      await _pickShop(tester);
+      double y(String key) => tester.getTopLeft(find.byKey(ValueKey(key))).dy;
+      final order = ['collect-customer', 'collect-date', 'collect-amount', 'collect-method-cash', 'collect-account'];
+      for (var i = 1; i < order.length; i++) {
+        expect(y(order[i - 1]) < y(order[i]), isTrue, reason: '⛔ ${order[i - 1]} আর ${order[i]} ওয়েবের ক্রমে নয় — পদ্ধতি আগে, খাত পরে');
+      }
+    });
+
+    testWidgets('own cash first; each method lists only its own kind of account', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      List<String> listed() => tester
+          .widget<DropdownButton<CollectionAccount>>(find.byWidgetPredicate((w) => w is DropdownButton<CollectionAccount>))
+          .items!
+          .map((i) => i.value!.id)
+          .toList();
+      String? chosen() =>
+          tester.widget<DropdownButton<CollectionAccount>>(find.byWidgetPredicate((w) => w is DropdownButton<CollectionAccount>)).value?.id;
+      expect(chosen(), ownCash.id, reason: '⛔ নিজের নগদ আগে থেকে বাছা নয়');
+      for (final (m, want) in [('mfs', [bkash]), ('transfer', [dbbl]), ('deposit', [dbbl]), ('cheque', [dbbl]), ('cash', [ownCash, cash])]) {
+        await _tap(tester, 'collect-method-$m');
+        expect(listed(), [for (final a in want) a.id], reason: '⛔ $m-এর তালিকায় অন্য ধরনের খাত');
+        expect(chosen(), want.first.id, reason: '⛔ $m বাছার পরেও না-মেলা খাত রয়ে গেল');
+      }
+    });
+
+    // ⓘ আগে খাত বাছা, তারপর অন্য পদ্ধতি — পুরনো পথে ঠিক এখানে "নগদ"-এ বিকাশের খাত যেতে পারত
+    const kindOf = {'cash': 'cash', 'mfs': 'mfs', 'transfer': 'bank', 'deposit': 'bank', 'cheque': 'bank'};
+    for (final (pick, then) in [
+      ('প্রধান নগদ', 'transfer'),
+      ('প্রধান নগদ', 'mfs'),
+      ('প্রধান নগদ', 'deposit'),
+      (null, 'cheque'),
+      (null, 'mfs'),
+    ]) {
+      testWidgets('no tap sequence sends a mismatch: ${pick ?? 'own cash'} then $then, then back and forth', (tester) async {
+        final api = FakeCollect();
+        await _pump(tester, _screen(api));
+        await _pickShop(tester);
+        await _type(tester, 'collect-amount', '45000');
+        if (pick != null) {
+          await tester.tap(find.byKey(const ValueKey('collect-account')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('1101 · $pick').last);
+          await tester.pumpAndSettle();
+        }
+        await _tap(tester, 'collect-method-$then');
+        await _tap(tester, 'collect-method-cash');
+        await _tap(tester, 'collect-method-$then');
+        if (then != 'cash') {
+          await _type(tester, then == 'deposit' ? 'collect-deposit-slip' : 'collect-reference', 'REF-1234');
+        }
+        await tester.tap(find.byKey(const ValueKey('collect-draft')));
+        await tester.pumpAndSettle();
+        expect(api.sent, hasLength(1), reason: '⛔ ${pick ?? 'own cash'} → $then: কিছুই গেল না — পদ্ধতি বদলের পরে খাত মেলেনি, তাই পাঠানো আটকাল');
+        final d = api.sent.single;
+        final account = [cash, ownCash, bkash, dbbl].firstWhere((a) => a.id == d.accountId);
+        expect(account.kind, kindOf[d.instrument],
+            reason: '⛔ ${pick ?? 'own cash'} → $then: "${d.instrument}" পাঠাল "${account.label}" খাত দিয়ে — সার্ভার ফেরাত');
+      });
+    }
+  });
+
   /// ⛔ টাকার ঘরে বিয়োগ চিহ্ন ঢোকে না (a4, ২৩ অক্টোবর ২০২৬): কিবোর্ডে নেই, তবু পেস্ট করা "-0.51" আগে ঢুকত — ছাড়/রাউন্ডিং নীরবে
   /// বাদ পড়ত, অথচ বিলের বণ্টন সেই ঋণাত্মক অঙ্কে কষা; আর সার্ভার (a6 5d6c6bac0) ঋণাত্মক পার্থক্য পুশে ফেরায়। এখন পেস্টের
   /// চিহ্ন ঝরে যায় ("-0.51" → "0.51"), আর পাঠানো আদায়ে কোনো টাকার ঘর ঋণাত্মক নয় (ক্রেডিটের সারি ছাড়া — সেটার চিহ্ন চুক্তির)।
