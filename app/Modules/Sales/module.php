@@ -1230,6 +1230,38 @@ return [
             'default_text' => 'sales::print.classic.footnote_thermal',
         ],
         [
+            // ⭐ ইংরেজি কাগজের নোট (ভা-১৬ ধাপ ২, ২৪ অক্টোবর ২০২৬; [[InvoicePrintLook::footnote()]]) — খালি আর বাংলা নোট নিজের লেখা
+            // হলে ইংরেজি কাগজে কোনো নোট নয়, পাতায় "ইংরেজি নোট নেই"; বাংলা নোট কখনো ইংরেজি কাগজে নীরবে বসে না
+            'key' => 'sales.print.invoice_footnote_en',
+            'label' => 'sales::settings.invoice_footnote_en',
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'per_branch' => true,
+            'part' => 'note',
+            'default_text' => 'sales::print.classic.footnote',
+            // ⓘ সাধারণ লেখাটা ইংরেজিতে ভরা, আর কোন বাংলা ঘরের জোড়া — সতর্কবার্তার জন্য
+            'text_locale' => 'en',
+            'pairs_with' => 'sales.print.invoice_footnote',
+            'missing_text' => 'sales::settings.english_note_missing',
+        ],
+        [
+            // ⭐ ইংরেজি কাগজের নোট (ভা-১৬ ধাপ ২, ২৪ অক্টোবর ২০২৬; [[InvoicePrintLook::footnote()]]) — খালি আর বাংলা নোট নিজের লেখা
+            // হলে ইংরেজি কাগজে কোনো নোট নয়, পাতায় "ইংরেজি নোট নেই"; বাংলা নোট কখনো ইংরেজি কাগজে নীরবে বসে না
+            'key' => 'sales.print.invoice_footnote_thermal_en',
+            'label' => 'sales::settings.invoice_footnote_thermal_en',
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'per_branch' => true,
+            'part' => 'note',
+            'default_text' => 'sales::print.classic.footnote_thermal',
+            // ⓘ সাধারণ লেখাটা ইংরেজিতে ভরা, আর কোন বাংলা ঘরের জোড়া — সতর্কবার্তার জন্য
+            'text_locale' => 'en',
+            'pairs_with' => 'sales.print.invoice_footnote_thermal',
+            'missing_text' => 'sales::settings.english_note_missing',
+        ],
+        [
             /*
              * ⭐ বিলের ACCOUNT MOVEMENT-এ কয়টা লেনদেন — মালিক, ৩ অক্টোবর ২০২৬: *"koyta ba ki ki tranjecton print hobe
              * mane koyta line print hobe"*। ০ = বিলের মাসের সব; ১–৫০ = মাসের শেষ এতগুলো (শুরুর জের তখন তার আগের যোগ)।

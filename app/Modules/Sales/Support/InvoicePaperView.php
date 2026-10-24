@@ -76,8 +76,10 @@ final class InvoicePaperView
 
         $this->head = $this->look->header($company);
         $this->signatures = $this->look->signatures();
-        $this->footnote = $this->look->footnote();
-        $this->footnoteThermal = $this->look->footnote(true);
+        // ⭐ কাগজের ভাষার নোট ([[PrintsInThePaperLanguage]]; ভা-১৬ ধাপ ২) — ভাষা না বসলে আগের মতো বাংলা
+        $language = (string) (request()->attributes->get(\App\Http\Middleware\PrintsInThePaperLanguage::ATTRIBUTE) ?? \App\Core\Support\PaperLanguage::BN);
+        $this->footnote = $this->look->footnote(false, $language);
+        $this->footnoteThermal = $this->look->footnote(true, $language);
 
         $mark = $doc->duplicateNotice();
         $all = $doc->notices();

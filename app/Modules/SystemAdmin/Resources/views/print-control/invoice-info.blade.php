@@ -183,6 +183,10 @@
                                 @error('settings.'.$field['key'])
                                     <span class="mt-1 block text-xs text-(--color-danger)">{{ $message }}</span>
                                 @enderror
+                                {{-- ⭐ ইংরেজি নোট নেই — বাংলা নোট নিজের লেখা, তাই ইংরেজি কাগজে কোনো নোট ছাপা হয় না (ভা-১৬ ধাপ ২) --}}
+                                @if (! empty($field['missing']) && isset($field['missing_text']))
+                                    <span class="mt-1 block text-xs text-(--color-warning-ink)" data-english-note-missing>{{ __($field['missing_text']) }}</span>
+                                @endif
                             </label>
                         @else
                             <label @class(['block text-sm', 'sm:col-span-2' => $part === 'note'])>

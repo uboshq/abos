@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Support;
 
 use App\Core\Services\BranchSettings;
+use App\Core\Support\PaperLanguage;
 use App\Models\Company;
 
 /**
@@ -141,11 +142,72 @@ final class InvoicePrintLook
     }
 
     /** নিচের লাল বাক্য — খালি থাকলে ভাষার ফাইলেরটা */
-    public function footnote(bool $thermal = false): string
+    public function footnote(bool $thermal = false, string $language = PaperLanguage::BN): string
     {
+        if ($language === PaperLanguage::EN) {
+            return $this->englishFootnote($thermal);
+        }
+
         /* ⭐ মালিক, ৩ অক্টোবর ২০২৬: A4/A5-এ তিন দফা, সরু রোলে এক লাইন — দুইটাই বিলের তথ্যের পাতায় বদলানো যায় */
         $set = trim((string) $this->settings->get($thermal ? 'sales.print.invoice_footnote_thermal' : 'sales.print.invoice_footnote'));
+        $bengali = $set !== '' ? $set : (string) __(self::footnoteText($thermal), [], 'bn');
 
-        return $set !== '' ? $set : (string) __($thermal ? 'sales::print.classic.footnote_thermal' : 'sales::print.classic.footnote', [], 'bn');
+        // ⓘ দুই ভাষার কাগজে দুটোই, বাংলা আগে — ইংরেজি না থাকলে কেবল বাংলা
+        if ($language === PaperLanguage::BOTH) {
+            return implode("\n", array_filter([$bengali, $this->englishFootnote($thermal)], fn (string $t) => $t !== ''));
+        }
+
+        return $bengali;
+    }
+
+    /**
+     * ⭐ ইংরেজি কাগজের নোট (ভা-১৬ ধাপ ২, ২৪ অক্টোবর ২০২৬; [[PaperLanguage]])।
+     *
+     * ⛔ বাংলা নোট কখনো ইংরেজি কাগজে নীরবে বসে না। ক্রম: ইংরেজি ঘরে লেখা থাকলে সেটা; নইলে বাংলা নোট যদি কোম্পানির নিজের লেখা হয়
+     * (সাধারণ লেখা নয়), তাহলে কোনো নোট নয় — ভুল শর্ত ছাপার চেয়ে না ছাপা ভালো, আর বিলের তথ্যের পাতা "ইংরেজি নোট নেই" বলে
+     * ([[englishFootnoteMissing()]]); নইলে সাধারণ ইংরেজি লেখা।
+     */
+    private function englishFootnote(bool $thermal): string
+    {
+        $set = trim((string) $this->settings->get(($thermal ? 'sales.print.invoice_footnote_thermal' : 'sales.print.invoice_footnote').'_en'));
+
+        if ($set !== '') {
+            return $set;
+        }
+
+        return $this->ownBengaliFootnote($thermal) ? '' : (string) __(self::footnoteText($thermal), [], 'en');
+    }
+
+    /**
+     * ⭐ বাংলা নোট কোম্পানির নিজের, অথচ ইংরেজি নোট নেই বা কেবল সাধারণ লেখা — বিলের তথ্যের পাতার সতর্কবার্তার জন্য।
+     */
+    public function englishFootnoteMissing(bool $thermal = false): bool
+    {
+        if (! $this->ownBengaliFootnote($thermal)) {
+            return false;
+        }
+
+        $english = self::lines((string) $this->settings->get(($thermal ? 'sales.print.invoice_footnote_thermal' : 'sales.print.invoice_footnote').'_en'));
+
+        return $english === '' || $english === self::lines((string) __(self::footnoteText($thermal), [], 'en'));
+    }
+
+    /** বাংলা নোট বসানো আর সাধারণ লেখা থেকে আলাদা — ⓘ বিলের তথ্যের পাতা খালি ঘরে সাধারণ লেখা ভরে সেভ করে, তাই "বসানো" যথেষ্ট নয় */
+    private function ownBengaliFootnote(bool $thermal): bool
+    {
+        $set = self::lines((string) $this->settings->get($thermal ? 'sales.print.invoice_footnote_thermal' : 'sales.print.invoice_footnote'));
+
+        return $set !== '' && $set !== self::lines((string) __(self::footnoteText($thermal), [], 'bn'));
+    }
+
+    private static function footnoteText(bool $thermal): string
+    {
+        return $thermal ? 'sales::print.classic.footnote_thermal' : 'sales::print.classic.footnote';
+    }
+
+    /** লাইনের শেষ এক রকম, দুই পাশের ফাঁকা বাদ — ফর্মের CRLF আর ভাষার ফাইলের LF এক */
+    private static function lines(string $text): string
+    {
+        return trim(str_replace("\r\n", "\n", $text));
     }
 }
