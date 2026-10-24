@@ -122,7 +122,9 @@
                     $compact = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
                     $pick = fn (string $key, array $options, string $all) => ['key' => $key, 'options' => $options, 'all' => $all];
                 @endphp
-                <div class="min-w-56" data-filter="party">
+                {{-- ⓘ পক্ষের ঘর খালি থাকলে কেবল "—" দেখায় — নামটা পাশে, বাকি ঘরের "নাম: সব"-এর মতো চেনা যায় --}}
+                <div class="flex min-w-64 items-center gap-2" data-filter="party">
+                    <span class="shrink-0 text-xs text-(--color-ink-muted)">{{ $filterLabels['party'] ?? '' }}</span>
                     <x-ui.party-search name="party" :groups="$filterOptions['parties'] ?? []" :selected="$filters['party'] ?? null"
                                        clearable :aria-label="$filterLabels['party'] ?? ''" />
                 </div>

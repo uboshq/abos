@@ -170,7 +170,8 @@ final class VoucherListFilters
     public function chips(string $type, array $options, array $f): array
     {
         $labels = [
-            'party' => __($type === Voucher::RECEIPT ? 'accounts::field.received_from' : 'accounts::field.paid_to'),
+            // ⛔ পরিশোধে "কাকে দেওয়া হল" নয় — ফর্মে ঐ লেখা খাতের ঘরের, পক্ষের নয়; এক লেখার দুই মানে হত
+            'party' => __($type === Voucher::RECEIPT ? 'accounts::field.received_from' : 'accounts::field.party'),
             'account' => __(match ($type) {
                 Voucher::RECEIPT => 'accounts::field.paid_into',
                 Voucher::JOURNAL => 'accounts::voucher.filter.account',

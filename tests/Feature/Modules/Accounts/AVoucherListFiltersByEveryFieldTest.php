@@ -198,6 +198,11 @@ final class AVoucherListFiltersByEveryFieldTest extends TestCase
         foreach (['party', 'account', 'method', 'state', 'by', 'min', 'max'] as $key) {
             $this->assertStringContainsString('data-filter="'.$key.'"', $html, "⛔ পরিশোধের তালিকায় '{$key}'-এর ছাঁকনি নেই");
         }
+
+        // ⛔ পরিশোধে পক্ষের নাম "পক্ষ" — "কাকে দেওয়া হল" ফর্মে খাতের ঘরের লেখা, এক লেখার দুই মানে হত
+        $label = $this->get(route('accounts.voucher.index', ['type' => Voucher::PAYMENT]))->viewData('filterLabels')['party'] ?? null;
+        $this->assertContains($label, [trans('accounts::field.party', [], 'bn'), trans('accounts::field.party', [], 'en')],
+            '⛔ পরিশোধের তালিকায় পক্ষের ছাঁকনির নাম "পক্ষ" নয়: '.$label);
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
