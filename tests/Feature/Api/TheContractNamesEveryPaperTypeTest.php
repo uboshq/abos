@@ -24,7 +24,10 @@ final class TheContractNamesEveryPaperTypeTest extends TestCase
 
         $this->assertSame(1, preg_match('/<!-- paper-types:start -->(.*?)<!-- paper-types:end -->/s', $text, $m),
             'প্রস্তুতিটাই ভুল — চুক্তিতে paper.type-এর সারণির চিহ্ন নেই');
-        preg_match_all('/^\| `([^`]+)` \|/m', $m[1], $rows);
+        // ⓘ সারণির মাথার সারি (`paper.type` | মডিউল | মডেল) নাম নয় — কেবল |---| দাগের নিচের সারিগুলো (Mac, ২৪ অক্টোবর ২০২৬)
+        $parts = preg_split('/^\|(?:-+\|)+\s*$/m', $m[1], 2);
+        $this->assertCount(2, $parts, 'প্রস্তুতিটাই ভুল — চুক্তির সারণিতে |---| দাগ নেই');
+        preg_match_all('/^\| `([^`]+)` \|/m', $parts[1], $rows);
         $inContract = $rows[1];
         sort($inContract);
 
