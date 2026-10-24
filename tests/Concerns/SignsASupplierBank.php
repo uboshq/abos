@@ -17,7 +17,8 @@ trait SignsASupplierBank
 {
     protected function supplierBankIsSigned(Supplier $supplier): SupplierBankDetail
     {
-        $signer = auth()->id();
+        // ⓘ লগইনের আগে প্রস্তুতিতে ডাকলেও চলে — তখন মালিক সই দেন
+        $signer = auth()->id() ?? \App\Models\User::query()->where('email', 'owner@abos.test')->value('id');
 
         return SupplierBankDetail::query()->create([
             'company_id' => $supplier->company_id, 'supplier_id' => $supplier->id, 'bank_name' => 'Dutch-Bangla',
