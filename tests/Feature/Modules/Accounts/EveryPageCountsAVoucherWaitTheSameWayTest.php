@@ -80,11 +80,12 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
     public function test_the_month_will_not_close_either_way_and_says_which(): void
     {
         [$fresh] = $this->freshAndStale();
+        $this->lockTheMonthsBefore();
 
         $both = $this->closeErrors();
         $this->assertNotEmpty($both, '⛔ টাটকা আর বাসি অনুরোধ থাকতেও মাস বন্ধ হয়ে গেল');
-        $this->assertContains(__('accounts::validation.month_has_changed_drafts', ['stale' => 1]), $both,
-            '⛔ মাস বন্ধের বাধায় বদলানো খসড়ার কথা নেই — বাসি অনুরোধ "অপেক্ষা" হয়েই রইল');
+        $this->assertTrue($this->sawChangedDrafts($both, 1),
+            '⛔ মাস বন্ধের বাধায় বদলানো খসড়ার কথা নেই — বাসি অনুরোধ "অপেক্ষা" হয়েই রইল: '.implode(' | ', $both));
 
         // ⓘ টাটকাটা চলে গেলে কেবল বাসিটা থাকে — তবু মাস আটকায়, নিজের কথায়
         $fresh->forceFill(['status' => DocumentStatus::CANCELLED])->save();
@@ -92,8 +93,8 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
 
         $onlyStale = $this->closeErrors();
         $this->assertNotEmpty($onlyStale, '⛔ কেবল বাসি অনুরোধের খসড়া থাকতে মাস বন্ধ হয়ে গেল — খসড়া খাতায় উঠবে না');
-        $this->assertContains(__('accounts::validation.month_has_changed_drafts', ['stale' => 1]), $onlyStale,
-            '⛔ কেবল বাসি অনুরোধে মাস আটকাল, কিন্তু "আবার পোস্ট করুন" বলল না');
+        $this->assertTrue($this->sawChangedDrafts($onlyStale, 1),
+            '⛔ কেবল বাসি অনুরোধে মাস আটকাল, কিন্তু "আবার পোস্ট করুন" বলল না: '.implode(' | ', $onlyStale));
     }
 
     /** @return array{0: Voucher, 1: Voucher} */
@@ -128,6 +129,23 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
         ];
     }
 
+    /**
+     * ⓘ বছরের আগের মাসগুলো তালাবন্ধ — নইলে বন্ধ করা "আগের মাস খোলা" বলে আগেই থামত, আর খসড়ার প্রশ্ন পর্যন্ত পৌঁছাতই না
+     * (cb-s-3-এর দ্বিতীয় লাল, ২৪ অক্টোবর ২০২৬)।
+     */
+    private function lockTheMonthsBefore(): void
+    {
+        $year = \App\Models\FinancialYear::forDate($this->month->toDateString());
+        $this->assertNotNull($year, 'নমুনা: মাসটা কোনো অর্থবছরে নেই');
+
+        for ($cursor = CarbonImmutable::parse($year->starts_on)->startOfMonth(); $cursor->lessThan($this->month); $cursor = $cursor->addMonthNoOverflow()) {
+            \App\Models\PeriodLock::query()->firstOrCreate(
+                ['company_id' => CompanyContext::id(), 'year' => $cursor->year, 'month' => $cursor->month],
+                ['reason' => 'নমুনা — আগের মাস বন্ধ', 'locked_by' => $this->owner->id, 'locked_at' => now()],
+            );
+        }
+    }
+
     /** @return list<string> */
     private function closeErrors(): array
     {
@@ -138,8 +156,31 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
         $month = $errors instanceof \Illuminate\Support\ViewErrorBag
             ? $errors->getBag('default')->get('month')
             : (is_array($errors) ? ($errors['default']['messages']['month'] ?? []) : []);
+        $month = array_values(array_map('strval', (array) $month));
 
-        return array_values(array_map('strval', (array) $month));
+        // ⓘ বন্ধ হয়ে গেলে কোনো বাধাই নেই — তখন দাবির নিজের ⛔ বার্তাই বলুক, দৃশ্যের নয়
+        if ($month === []) {
+            return [];
+        }
+
+        // ⓘ দৃশ্যটাই ঠিক কি — খোলা কাগজের বাধাতেই থামল, অন্য কোনো বাধায় (আগের মাস খোলা, ভবিষ্যৎ মাস) নয়; ভাষা যেকোনোটা
+        $open = array_map(fn (string $l) => (string) strstr((string) __('accounts::validation.month_has_open_papers', [], $l), ':', true), ['bn', 'en']);
+        $this->assertNotEmpty(array_filter($month, fn (string $m) => str_starts_with($m, $open[0]) || str_starts_with($m, $open[1])),
+            'নমুনা: মাস বন্ধ খোলা কাগজের আগেই অন্য বাধায় থামল — '.implode(' | ', $month));
+
+        return $month;
+    }
+
+    /** বদলানো খসড়ার বাক্য — দুই ভাষাতেই, কারণ পরীক্ষার অনুরোধের ভাষা অ্যাপের ভাষা না-ও হতে পারে */
+    private function sawChangedDrafts(array $messages, int $stale): bool
+    {
+        foreach (['bn', 'en'] as $locale) {
+            if (in_array((string) __('accounts::validation.month_has_changed_drafts', ['stale' => $stale], $locale), $messages, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function expense(string $narration): Voucher
