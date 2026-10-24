@@ -45,6 +45,8 @@ final class SalesPartyOpenBills implements PartyOpenBills
             }
 
             $date = Carbon::parse($invoice->trx_date)->startOfDay();
+            // ⓘ শেষ দিন না থাকলে বিলের দিনই — ঋণ নিয়ন্ত্রণের বকেয়া রিপোর্টের একই নিয়ম (COALESCE(due_on, trx_date))
+            $dueDate = $invoice->due_on !== null ? Carbon::parse($invoice->due_on)->startOfDay() : $date;
 
             $open[] = [
                 'against_type' => SalesInvoice::drillSourceType(),
@@ -54,6 +56,11 @@ final class SalesPartyOpenBills implements PartyOpenBills
                 // ⓘ বয়স সার্ভারে — ফোনের ঘড়ি ভুল থাকলে ব্রাউজারে গোনা বয়সও ভুল হত
                 'age' => (int) $date->diffInDays($today),
                 'outstanding' => $due,
+                // ⭐ শেষ দিন, দেরি আর মূল টাকা (মালিকের রসিদ-পরিশোধ নকশা, মিল-তালিকা দফা ৩৪, ২৪ অক্টোবর ২০২৬); দেরি সার্ভারে, বয়সের মতো
+                'due_date' => $dueDate->toDateString(),
+                'days_late' => $dueDate->lessThan($today) ? (int) $dueDate->diffInDays($today) : 0,
+                'total' => (string) $invoice->total,
+                'public_id' => (string) $invoice->public_id,
             ];
 
             if (count($open) >= $limit) {
