@@ -19,6 +19,7 @@ use DOMDocument;
 use DOMElement;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -44,6 +45,7 @@ use Tests\TestCase;
 final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsASupplierBank;
 
     private Company $company;
 
@@ -180,6 +182,8 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $bank = $this->bank();
         $customer = Customer::query()->orderBy('id')->firstOrFail();
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        // ⓘ সরবরাহকারীর ব্যাংকে ট্রান্সফার — সই-পাওয়া ব্যাংক তথ্য পূর্বশর্ত ([[AVoucherPaysOnlyASignedSupplierBankTest]]), নাহলে প্রিভিউ সেই কারণেই থামত
+        $this->supplierBankIsSigned($supplier);
 
         foreach ([
             Voucher::RECEIPT => [['party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id], '975.00', 'debit'],
@@ -263,6 +267,8 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $bank = $this->bank();
         $customer = Customer::query()->orderBy('id')->firstOrFail();
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        // ⓘ সরবরাহকারীর ব্যাংকে ট্রান্সফার — সই-পাওয়া ব্যাংক তথ্য পূর্বশর্ত ([[AVoucherPaysOnlyASignedSupplierBankTest]]), নাহলে প্রিভিউ সেই কারণেই থামত
+        $this->supplierBankIsSigned($supplier);
 
         foreach ([
             'receipt' => [Voucher::RECEIPT, ['party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id], '0', '0'],
@@ -317,6 +323,8 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
     {
         $bank = $this->bank();
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        // ⓘ সরবরাহকারীর ব্যাংকে ট্রান্সফার — সই-পাওয়া ব্যাংক তথ্য পূর্বশর্ত ([[AVoucherPaysOnlyASignedSupplierBankTest]]), নাহলে প্রিভিউ সেই কারণেই থামত
+        $this->supplierBankIsSigned($supplier);
         $ait = Account::query()->where('code', StandardChart::TAX_DEDUCTED_AT_SOURCE)->firstOrFail();
         $ait->forceFill(['type' => Account::ASSET])->save();
 
