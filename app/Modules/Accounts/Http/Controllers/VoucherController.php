@@ -748,6 +748,8 @@ class VoucherController extends Controller implements HasMiddleware
             'credit' => \App\Core\Support\Money::format($credit),
             'balanced' => bccomp($debit, $credit, 4) === 0,
             'summary' => $this->summaryOf($type, $data, $ledger['lines'], $accounts),
+            // ⭐ নিট — পক্ষের হাতে যা যায়, সার্ভারের হিসাবে (পরিশোধে মোট − AIT − VDS; চুক্তি §৫) — ফোনের preview-এর একই ঘর
+            'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
         ]);
     }
 

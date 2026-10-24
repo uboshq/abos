@@ -464,7 +464,10 @@ export function voucherMoney ({
         get hasHeadFigures () { return this.hasParty && this.partyDue !== null },
         get headOwedPaisa () { return (out ? -1 : 1) * paisa(this.partyDue ?? 0) },
         // ⓘ পক্ষের খাত কমে মোটে — দুই দিকেই (রসিদে পক্ষ কাটেন, পরিশোধে আমরা কাটি): টাকা + AIT + VDS
-        get headGrossPaisa () { return paisa(this.amount) + paisa(this.ait) + paisa(this.vds) },
+        // ⭐ পরিশোধে লেখা ঘরটাই মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি) — রসিদে লেখা পাওয়া টাকা, মোট তার সাথে পক্ষের কাটা অংশ
+        get headGrossPaisa () { return out ? paisa(this.amount) : paisa(this.amount) + paisa(this.ait) + paisa(this.vds) },
+        // ⓘ নিট — পক্ষের হাতে যা যায়: পরিশোধে মোট − AIT − VDS, রসিদে লেখা টাকাই
+        get netPaisa () { return out ? this.headGrossPaisa - paisa(this.ait) - paisa(this.vds) : paisa(this.amount) },
         // ⓘ "এই আদায়" নকশার মতো হাতে পাওয়া টাকা; "এই পরিশোধ (মোট)" মোট
         get headThisPaisa () { return out ? this.headGrossPaisa : paisa(this.amount) },
         get headLeftPaisa () { return this.headOwedPaisa - this.headGrossPaisa },
@@ -479,7 +482,8 @@ export function voucherMoney ({
         get balance () { return this.balances[this.account] ?? null },
         get hasBalance () { return this.balance !== null },
         get balanceText () { return this.hasBalance ? taka(Number(this.balance)) : '' },
-        get short () { return out && this.hasBalance && paisa(this.balance) < paisa(this.amount) + this.charge },
+        // ⓘ খাত থেকে বেরোয় নিট + চার্জ (চার্জ মোটের বাইরে, কোম্পানির খরচ)
+        get short () { return out && this.hasBalance && paisa(this.balance) < this.netPaisa + this.charge },
         get balanceClass () { return this.short ? 'text-(--color-danger)' : 'text-(--color-ink-muted)' },
 
         slipSoon () {

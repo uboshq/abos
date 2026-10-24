@@ -26,6 +26,16 @@ use Illuminate\Validation\Validator;
  */
 class VoucherRequest extends FormRequest
 {
+    /*
+     * ⭐ পরিশোধে "মোট টাকা" — নকশার ঘর (চুক্তি: পরিশোধে-মোট-টাকা-চুক্তি-২৫-অক্টোবর.md; fe-র সিদ্ধান্ত ক, ২৫ অক্টোবর ২০২৬)।
+     * `gross_amount` এলে সেটাই পক্ষের খাতা যতটা কমে; নিট = মোট − AIT − VDS সার্ভার গোনে আর `amount`-এ বসায়, তাই খাতার পথ
+     * ([[WithheldTax::onPayment()]], চার্জ মোটের বাইরে — ২৮ সেপ্টেম্বরের সিদ্ধান্ত) একটুও বদলায় না। ⓘ `gross_amount` না এলে
+     * পুরনো নিয়ম: `amount` = নিট (পুরনো ফোন, ভাঙে না)।
+     */
+    private bool $grossPath = false;
+
+    private bool $netAlsoSent = false;
+
     public function authorize(): bool
     {
         return true;
@@ -52,11 +62,24 @@ class VoucherRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // ⭐ টাকার ঘর লাখ-কমায় ("45,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — কমা ছেঁটে পড়া, টাকা দেওয়ার পর্দার একই নিয়মে ([[PaymentRequest]])
-        foreach (['amount', 'charge_amount'] as $field) {
+        foreach (['amount', 'charge_amount', 'gross_amount', 'ait_amount', 'vds_amount'] as $field) {
             $value = $this->input($field);
 
             if (is_string($value) && str_contains($value, ',')) {
                 $this->merge([$field => str_replace(',', '', trim($value))]);
+            }
+        }
+
+        if ($this->input('type') === Voucher::PAYMENT && $this->exists('gross_amount')) {
+            $this->grossPath = true;
+            $this->netAlsoSent = filled($this->input('amount'));
+
+            if (! $this->netAlsoSent) {
+                $net = $this->netOfGross();
+
+                if ($net !== null && bccomp($net, '0', 4) > 0) {
+                    $this->merge(['amount' => $net]);
+                }
             }
         }
 
@@ -139,7 +162,7 @@ class VoucherRequest extends FormRequest
          * ⛔ প্রিভিউতে নাম থেকে মানুষ বানানো নয় — "খাতায় যা যাবে" কিছুই লেখে না ([[VoucherController::simulate()]]); নাহলে নাম
          * টাইপ করার সময় প্রতিটা থামায় একজন করে নতুন মানুষ বসত। ⓘ তখন পক্ষ ফাঁকা থাকে, যাচাই আটকায়, আর প্রিভিউ চুপ।
          */
-        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate')) {
+        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate', 'api.accounts.voucher.preview')) {
             /*
              * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
              *
@@ -590,7 +613,8 @@ class VoucherRequest extends FormRequest
             'to_account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')
                     ->where('company_id', CompanyContext::id())],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            // ⓘ মোট এলে নিট সার্ভারের — ভুলের কথা `gross_amount`-এর ঘরে ([[after()]]), "amount" দরকারি বলে নয়
+            'amount' => $this->grossPath ? ['nullable', 'numeric'] : ['required', 'numeric', 'gt:0'],
 
             /*
              * পক্ষ — ঐচ্ছিক, `type:id` আকারে।
@@ -675,6 +699,37 @@ class VoucherRequest extends FormRequest
     public function after(): array
     {
         return [
+            /*
+             * ⭐ মোট টাকার চার নিয়ম (চুক্তি §৪): মোট আছে আর শূন্যের বেশি; AIT + VDS মোটের কম (নিট > ০); মোট আর নিট একসাথে নয় —
+             * দুটো এলে কোনটা মানা হবে বলা যায় না, আর দুটো না মিললে পক্ষের খাতা আর হাতের টাকা আলাদা গল্প বলত।
+             */
+            function (Validator $validator): void {
+                if (! $this->grossPath) {
+                    return;
+                }
+
+                if ($this->netAlsoSent) {
+                    $validator->errors()->add('amount', __('accounts::validation.gross_or_net_not_both'));
+
+                    return;
+                }
+
+                $gross = self::moneyOf($this->input('gross_amount'));
+
+                if ($gross === null || bccomp($gross, '0', 4) <= 0) {
+                    $validator->errors()->add('gross_amount', __('accounts::validation.gross_required'));
+
+                    return;
+                }
+
+                if (bccomp((string) $this->netOfGross(), '0', 4) <= 0) {
+                    $validator->errors()->add('gross_amount', __('accounts::validation.withheld_not_below_gross', [
+                        'gross' => Money::format($gross),
+                        'withheld' => Money::format(bcadd(self::moneyOf($this->input('ait_amount')) ?? '0', self::moneyOf($this->input('vds_amount')) ?? '0', 4)),
+                    ]));
+                }
+            },
+
             /*
              * বাকিতে খরচ হলে পক্ষ ছাড়া চলে না।
              *
@@ -896,6 +951,26 @@ class VoucherRequest extends FormRequest
      *
      * @param  array<string, mixed>  $line
      */
+    /** নিট = মোট − AIT − VDS, পয়সায় নির্ভুল (bcmath); মোট সংখ্যা না হলে `null` */
+    private function netOfGross(): ?string
+    {
+        $gross = self::moneyOf($this->input('gross_amount'));
+
+        if ($gross === null) {
+            return null;
+        }
+
+        return bcsub(bcsub($gross, self::moneyOf($this->input('ait_amount')) ?? '0', 4), self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+    }
+
+    /** ⓘ টাকার ঘর → ৪ দশমিকের string; ফাঁকা বা অ-সংখ্যা `null` (তখন নিয়মই বলে কী ভুল) */
+    private static function moneyOf(mixed $value): ?string
+    {
+        $value = str_replace(',', '', trim((string) ($value ?? '')));
+
+        return preg_match('/^-?\d+(\.\d+)?$/', $value) === 1 ? bcadd($value, '0', 4) : null;
+    }
+
     private function checkParty(Validator $validator, int|string $index, array $line): void
     {
         $type = trim((string) ($line['party_type'] ?? ''));

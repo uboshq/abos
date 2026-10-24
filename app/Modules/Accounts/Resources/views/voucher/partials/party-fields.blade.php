@@ -241,9 +241,11 @@
              অঙ্ক (type="money", fe, ২৪ অক্টোবর ২০২৬); সার্ভার তবু কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])।
              ⓘ `?? $voucher->amount` — অর্থের খাতার "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
         <div>
-            <x-ui.field name="amount" type="money" model="amount" required data-voucher-amount
-                        :label="$isReceipt ? __('money.screen.amount_in') : __('accounts::field.amount_paid')"
-                        :value="old('amount', $typedAmount ?? $voucher->amount)" />
+            {{-- ⭐ পরিশোধে নকশার "মোট টাকা" — `gross_amount`, পক্ষের খাতা যতটা কমে; নিট (মোট − AIT − VDS) সার্ভার গোনে (পরিশোধে-মোট-টাকা-চুক্তি,
+                 fe-র সিদ্ধান্ত ক, ২৫ অক্টোবর ২০২৬)। ⓘ সম্পাদনায় পক্ষের ডেবিট সারিই মোট; আগাম-ভরা অঙ্কে কাটা নেই, তাই মোট = অঙ্ক --}}
+            <x-ui.field :name="$isReceipt ? 'amount' : 'gross_amount'" type="money" model="amount" required data-voucher-amount
+                        :label="$isReceipt ? __('money.screen.amount_in') : __('money.screen.gross')"
+                        :value="$isReceipt ? old('amount', $typedAmount ?? $voucher->amount) : old('gross_amount', $typedAmount ?? $voucher->amount)" />
             {{-- ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে (বকেয়া থাকলে, বিল বাছা থাকলে); ঘটনায় ফর্মের টাকায় যায় ([[voucherMoney]] `heardFill`) --}}
             @if ($isReceipt)
                 <p class="mt-1 flex flex-wrap gap-x-2 text-2xs" data-amount-fill>

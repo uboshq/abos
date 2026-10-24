@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\VoucherLine;
 use App\Modules\Accounts\Services\DepositFormOptions;
 use App\Modules\Accounts\Services\VoucherApproval;
@@ -82,6 +83,11 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'narration_required' => (bool) app(SettingsService::class)->get('accounts.require_narration', false),
             'cash_hidden_reason' => $o['cashHiddenReason'],
             'instruments' => Voucher::INSTRUMENTS,
+            /*
+             * ⭐ চুক্তির সংস্করণ — ২: পরিশোধে `gross_amount` (মোট) চলে, নিট সার্ভার গোনে, আর `POST /vouchers/preview` আছে (পরিশোধে-মোট-টাকা-চুক্তি
+             * §৬)। ⓘ পুরনো সার্ভারে ঘরটাই নেই — ফোন তখন পুরনো `amount` (নিট) পাঠায়।
+             */
+            'voucher_contract' => 2,
             ...($type === Voucher::JOURNAL
                 ? ['accounts' => $this->accounts($o['allAccounts'])]
                 : ['from' => $side($o['sides']['from']), 'to' => $side($o['sides']['to'])]),
@@ -201,7 +207,68 @@ final class VoucherApiController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * `POST /vouchers/preview` — খসড়ার একই payload, খাতায় যা যাবে তার ছবি (চুক্তি §৫, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ যাচাই খসড়ার হুবহু ([[VoucherRequest]] — ভুল হলে খসড়ার একই ঘর আর চাবিতে ৪২২); হিসাব ওয়েবের simulate-এর একই
+     * [[VoucherService::ledgerPreview()]]। ⛔ কিছুই লেখে না: ভাউচার, নম্বর বা হাতে লেখা নামের মানুষ — কিছুই নয় (মানুষ বানানো এই
+     * দরজার নামে বন্ধ, [[VoucherRequest::prepareForValidation()]])। ⓘ ফোন নিট নিজে গোনে না — `net_amount` সার্ভারের।
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $user = $this->writer($request);
+        $type = $this->type($request->input('type'));
+
+        $paper = VoucherRequest::create($request->getPathInfo(), 'POST', $request->all());
+        $paper->setContainer(app())->setRedirector(app(\Illuminate\Routing\Redirector::class));
+        $paper->setUserResolver(fn () => $user);
+        $paper->setRouteResolver(fn () => $request->route());
+        $paper->validateResolved();
+
+        $data = [...$paper->validated(), 'type' => $type];
+        $ledger = $this->vouchers->ledgerPreview($data, $this->writer->linesFor($type, $paper->all()));
+
+        return response()->json([
+            'type' => $type,
+            'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
+            ...$this->ledgerOf(collect($ledger['lines'])->map(fn (array $l) => [
+                'account_id' => (int) ($l['account_id'] ?? 0),
+                'debit' => (string) ($l['debit'] ?? '0'),
+                'credit' => (string) ($l['credit'] ?? '0'),
+            ])->all()),
+        ]);
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⭐ খাতার সারি ফোনের চুক্তির আকারে — `account` {id, code, name}, `dr`, `cr` (৪ দশমিকের string), আর মোট দুই পাশ।
+     * ⓘ preview আর ভাউচারের পাতা একই রূপে বলে, যাতে ফোন দুটো পাশাপাশি মেলাতে পারে (চুক্তি §৫)।
+     *
+     * @param  list<array{account_id: int, debit: string, credit: string}>  $lines
+     * @return array{ledger: list<array<string, mixed>>, total_dr: string, total_cr: string}
+     */
+    private function ledgerOf(array $lines): array
+    {
+        $accounts = Account::query()->whereKey(array_column($lines, 'account_id'))->get()->keyBy('id');
+        $dr = '0';
+        $cr = '0';
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $account = $accounts->get($line['account_id']);
+            $dr = bcadd($dr, $line['debit'], 4);
+            $cr = bcadd($cr, $line['credit'], 4);
+            $rows[] = [
+                'account' => ['id' => (int) $line['account_id'], 'code' => (string) ($account?->code ?? ''), 'name' => (string) ($account?->name() ?? '')],
+                'dr' => bcadd($line['debit'], '0', 4),
+                'cr' => bcadd($line['credit'], '0', 4),
+            ];
+        }
+
+        return ['ledger' => $rows, 'total_dr' => $dr, 'total_cr' => $cr];
+    }
+
 
     private function type(mixed $type): string
     {
@@ -480,6 +547,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'can_post' => $row['state'] === 'draft' && $user->can('accounts.voucher.update')
                 && ! $this->vouchers->writerMayNotPost($v),
             'awaits_another_hand' => $v->isDraft() && $this->vouchers->writerMayNotPost($v),
+            // ⭐ নিট আর খাতা সার্ভারের — ফোন নিজে গোনে না (চুক্তি §৫); preview-এর একই রূপ ([[ledgerOf()]])
+            'net_amount' => bcadd((string) ($v->amount ?? '0'), '0', 4),
+            ...$this->ledgerOf($v->lines->map(fn (VoucherLine $l) => [
+                'account_id' => (int) $l->account_id,
+                'debit' => (string) $l->debit,
+                'credit' => (string) $l->credit,
+            ])->values()->all()),
         ];
     }
 

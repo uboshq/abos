@@ -205,3 +205,33 @@ describe('মাথার নাম, রং আর এক চাপের অঙ
         expect(data.amount, '⛔ ফাঁকা খবরে টাকার ঘর মুছল').toBe('6860.00')
     })
 })
+
+/*
+ * ⭐ পরিশোধে লেখা ঘরটা মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি, ২৫ অক্টোবর ২০২৬): মাথার "এই পরিশোধ (মোট)" ঠিক লেখা অঙ্কটাই,
+ * আর খাত থেকে বেরোয় নিট (মোট − AIT − VDS) + চার্জ — "কম" সেটাই মাপে।
+ */
+describe('পরিশোধে মোট টাকা', () => {
+    it('মাথার "এই পরিশোধ (মোট)" লেখা মোটই — কাটা আবার যোগ হয় না', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, amount: '1000' })
+        clearTimeout(data.timer)
+        data.ait = '50'
+        data.vds = '75'
+        data.heardParty({ due: '-1000', hasParty: true, partyType: 'supplier' })
+
+        expect(data.headThisText, '⛔ পরিশোধের মোটে কাটা আবার যোগ হলো — লেখা মোট ১,০০০, অথচ মাথায় বেশি').toBe('৳1,000.00')
+        expect(data.headLeftText, '⛔ পুরো মোট দিলে বাকি শূন্য নয়').toBe('৳0.00')
+    })
+
+    it('খাতে কম কি না নিট দেখে — মোট নয়', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, amount: '1100', balances: { 229: '1000.00' } })
+        clearTimeout(data.timer)
+        data.ait = '60'
+        data.vds = '40'
+
+        expect(data.short, '⛔ পরিশোধে কাটা বাদে নিটই খাত থেকে যায় — মোট দেখে "কম" বলল').toBe(false)
+        data.vds = '0'
+        expect(data.short, '⛔ নিট খাতের চেয়ে বেশি, অথচ "কম" বলল না').toBe(true)
+    })
+})

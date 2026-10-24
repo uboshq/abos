@@ -26,6 +26,8 @@ Route::prefix('v1/accounts')
     ->group(function (): void {
         Route::get('/vouchers/setup', [VoucherApiController::class, 'setup'])->name('voucher.setup');
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
+        // ⭐ পোস্টের আগে খাতার ছবি — কিছুই লেখে না; ওয়েবের simulate-এর একই হিসাব (চুক্তি §৫, a4-এর চাওয়া, ২৫ অক্টোবর ২০২৬)
+        Route::post('/vouchers/preview', [VoucherApiController::class, 'preview'])->name('voucher.preview');
         Route::get('/vouchers/{id}', [VoucherApiController::class, 'show'])->whereUuid('id')->name('voucher.show');
         Route::post('/vouchers/{id}/post', [VoucherApiController::class, 'post'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('voucher.post');
 

@@ -170,7 +170,10 @@
           action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher)) }}"
           @if ($partyAbove)
               x-data="voucherMoney({
-                  amount: @js((string) old('amount', $typedAmount ?? $voucher->amount ?? '')),
+                  // ⓘ পরিশোধে ঘরটা মোট (`gross_amount`) — ফর্মের `amount` তখন মোট ধরে, নিট গোনা হয় নিচে ([[voucherMoney]])
+                  amount: @js((string) ($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT
+                      ? old('gross_amount', $typedAmount ?? $voucher->amount ?? '')
+                      : old('amount', $typedAmount ?? $voucher->amount ?? ''))),
                   account: @js((string) old($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'from_account_id' : 'to_account_id',
                       $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? $creditLine?->account_id : $debitLine?->account_id)),
                   balances: @js(collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => bcadd($a->balanceInView(), '0', 2)])->all()),

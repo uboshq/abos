@@ -95,7 +95,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
             'from_account_id' => (string) $this->bank->id,
             'instrument' => 'transfer',
             'instrument_no' => 'NPSB-7001',
-            'amount' => '700',
+            // ⓘ পরিশোধের ফর্ম ২৫ অক্টোবর ২০২৬ থেকে মোট পাঠায় (নকশার "মোট টাকা"; পরিশোধে-মোট-টাকা-চুক্তি) — নিট সার্ভারের
+            'gross_amount' => '700',
         ])->assertSessionHasNoErrors();
 
         $voucher = Voucher::query()->where('type', Voucher::PAYMENT)->latest('id')->firstOrFail();

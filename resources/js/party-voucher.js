@@ -121,7 +121,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         get overDue() {
             const bill = this.pickedBill;
             // ⓘ ঘরটা এখন লাখ-কমায় ("45,000.00") — কমা ছেঁটে পড়া, নাহলে NaN আর "বিলের বাকির বেশি" কখনো বলত না
-            const amount = Number(String(this.$root.closest('form')?.querySelector('[name="amount"]')?.value || 0).replace(/,/g, ''));
+            // ⓘ পরিশোধে ঘরটা মোট (`gross_amount`, ২৫ অক্টোবর ২০২৬) — রসিদে `amount`
+            const amount = Number(String(this.$root.closest('form')?.querySelector('[name="amount"], [name="gross_amount"]')?.value || 0).replace(/,/g, ''));
 
             return bill !== null && amount - Number(bill.outstanding) > 0.0001;
         },
@@ -264,8 +265,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
              * মান পড়ে। ⛔ লুকানো ঘরে বসালে পর্দার অঙ্ক বদলাত না, আর পরের টিকে Alpine সেটা মুছে দিত। পুরনো পাতায় নামের ঘরটাই।
              */
             const form = this.$root.closest('form');
-            const sent = form?.querySelector('[name="amount"]');
-            const amount = form?.querySelector('[data-money-shown="amount"]') ?? sent;
+            const sent = form?.querySelector('[name="amount"], [name="gross_amount"]');
+            const amount = form?.querySelector('[data-money-shown="amount"], [data-money-shown="gross_amount"]') ?? sent;
 
             if (amount && String(sent?.value ?? amount.value ?? '').trim() === '') {
                 amount.value = Number(bill.outstanding).toFixed(2);
