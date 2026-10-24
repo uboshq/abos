@@ -39,6 +39,8 @@ use Tests\TestCase;
  *   ঙ) বাকিতে খরচ গ্রাহকের নামে — ফেরে (fe-র সিদ্ধান্ত ১)
  *   চ) পুরনো এক-লাইনের খরচ — আগের মতোই, কোনো ব্যবসার লাইন ছাড়া
  *   ছ) 1139 নিজের মানে না ধরলে — ফেরে
+ *   জ) অন্য শাখার লাইন — নিজের বার্তায় ফেরে (fe: এক ভাউচারে এক শাখা, ২৪ অক্টোবর)
+ *   ঝ) আগাম লাইন — নিজের বার্তায় ফেরে (ec-এর ভাগ H-এর আগে)
  */
 final class AnExpensePostsFromItsLinesTest extends TestCase
 {
@@ -190,6 +192,42 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $this->assertSame($before, Voucher::query()->count(), '⛔ ঙ: ফেরানো খরচ লেখা রইল');
     }
 
+    /** জ — অন্য শাখার লাইন (fe: এক ভাউচারে এক শাখা) */
+    public function test_a_line_on_another_branch_is_refused_with_its_own_message(): void
+    {
+        $other = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
+        $before = Voucher::query()->count();
+
+        $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
+            'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
+            'expense_lines' => [
+                ['expense_account_id' => $this->head(StandardChart::FUEL), 'amount' => '400', 'branch_id' => $this->a->id],
+                ['expense_account_id' => $this->head(StandardChart::RENT), 'amount' => '600', 'branch_id' => $other->id],
+            ],
+        ]));
+
+        $this->assertContains($this->refusalOn('expense_lines.1.branch_id'), $this->bothLocales('expense_one_branch_per_voucher'),
+            '⛔ জ: অন্য শাখার লাইন নেওয়া হলো, বা অন্য কারণে ফিরল — শাখার দেনা-পাওনা ছাড়া এক শাখার টাকায় অন্য শাখার খরচ বসত: '
+            .json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
+        $this->assertSame($before, Voucher::query()->count(), '⛔ জ: ফেরানো খরচ লেখা রইল');
+    }
+
+    /** ঝ — আগাম লাইন (ec-এর ভাগ H-এর আগে) */
+    public function test_a_prepaid_line_is_refused_with_its_own_message(): void
+    {
+        $before = Voucher::query()->count();
+
+        $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
+            'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
+            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::RENT), 'amount' => '12000', 'is_prepaid' => '1']],
+        ]));
+
+        $this->assertContains($this->refusalOn('expense_lines.0.is_prepaid'), $this->bothLocales('expense_prepaid_not_taken'),
+            '⛔ ঝ: আগাম লাইন নেওয়া হলো, বা অন্য কারণে ফিরল — বছরের ভাড়া এক মাসের খরচ হয়ে বসত: '
+            .json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
+        $this->assertSame($before, Voucher::query()->count(), '⛔ ঝ: ফেরানো খরচ লেখা রইল');
+    }
+
     /** চ — পুরনো এক-লাইনের খরচ */
     public function test_an_old_single_line_expense_posts_exactly_as_before(): void
     {
@@ -288,6 +326,12 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
     private function creditOn($rows, int $account): string
     {
         return $rows->where('account_id', $account)->reduce(fn ($s, $r) => bcadd($s, (string) $r->credit, 4), '0.0000');
+    }
+
+    /** @return list<string> */
+    private function bothLocales(string $key): array
+    {
+        return array_map(fn (string $l) => trans('accounts::validation.'.$key, [], $l), ['bn', 'en']);
     }
 
     private function head(string $code): int

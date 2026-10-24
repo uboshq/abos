@@ -26,9 +26,9 @@ use Illuminate\Validation\ValidationException;
  * ⓘ ওয়েবের জমা, প্রিভিউ (simulate) আর ফোন — তিনজনই [[VoucherWriter::linesFor()]] ডাকে, যা এটাকে ডাকে; তাই প্রিভিউ যা দেখায়, পোস্ট
  * ঠিক তা-ই লেখে। ⓘ খাতার প্রতিটা সারির বিবরণ "পক্ষ · বিল নম্বর · লাইনের বিবরণ" — বাইরের রেফারেন্স কেবল, নিজের কাগজের নম্বর কখনো নয়।
  *
- * ⛔ যা এখনো আসেনি, আর তাই থামে (নিজে থেকে নিয়ম বানানো নয়):
- *   · আগাম লাইন — আগামের খাত আর মাসিক সরানোর সূচি ec-এর ভাগ H-এ
- *   · লাইনে আলাদা শাখা — খাতার সারির শাখা `voucher_lines`-এ রাখার ঘর নেই (§১-এ ছিল না)
+ * ⛔ যা নেওয়া হয় না, নিজের বার্তায় ফেরে (fe-র সিদ্ধান্ত, ২৪ অক্টোবর ২০২৬; পর্দায় এ দুটোর ঘরই থাকবে না — ভাগ F):
+ *   · আগাম লাইন — আগামের খাত আর মাসিক সরানোর সূচি ec-এর ভাগ H-এ; তার আগে পুরো খরচ হয়ে বসত
+ *   · অন্য শাখার লাইন — এক ভাউচারে এক শাখা, শাখার মধ্যে দেনা-পাওনা (due-to/due-from) আসার আগে; লাইনের `branch_id` ঘর থাকে, খালি বা মাথার শাখা
  */
 final class ExpenseLedger
 {
@@ -68,13 +68,13 @@ final class ExpenseLedger
         foreach ($rows as $index => $row) {
             if (filter_var($row['is_prepaid'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 throw ValidationException::withMessages([
-                    "expense_lines.{$index}.is_prepaid" => __('accounts::validation.expense_prepaid_coming'),
+                    "expense_lines.{$index}.is_prepaid" => __('accounts::validation.expense_prepaid_not_taken'),
                 ]);
             }
 
             if (filled($row['branch_id'] ?? null) && $headBranch !== null && (int) $row['branch_id'] !== $headBranch) {
                 throw ValidationException::withMessages([
-                    "expense_lines.{$index}.branch_id" => __('accounts::validation.expense_line_branch_coming'),
+                    "expense_lines.{$index}.branch_id" => __('accounts::validation.expense_one_branch_per_voucher'),
                 ]);
             }
 
