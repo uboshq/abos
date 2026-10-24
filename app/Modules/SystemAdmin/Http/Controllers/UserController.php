@@ -602,7 +602,7 @@ class UserController extends Controller implements HasMiddleware
                     : __('system_admin::message.member_was', [
                         'state' => (int) $member->is_active === 1 ? __('system_admin::message.member_active') : __('system_admin::message.member_inactive'),
                         'branch' => $member->default_branch_id === null ? '—'
-                            : (string) (DB::table('branches')->where('id', $member->default_branch_id)->value('code') ?? $member->default_branch_id),
+                            : (string) (DB::table('branches')->where('company_id', CompanyContext::id())->where('id', $member->default_branch_id)->value('code') ?? $member->default_branch_id),
                     ]);
 
                 $this->audit->recordAction($user, 'member_removed',
