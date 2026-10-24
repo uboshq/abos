@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -94,7 +96,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   final _chequeBank = TextEditingController();
   final _payee = TextEditingController();
   final _billNo = TextEditingController();
-  final _gross = TextEditingController();
+  final _grossText = TextEditingController();
   final _ait = TextEditingController();
   final _vds = TextEditingController();
   final _narration = TextEditingController();
@@ -103,7 +105,30 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   /// ⭐ যে টাকার ঘরে পেস্টের চিহ্ন এইমাত্র ঝরেছে — আদায়ের পর্দার একই নিয়ম
   final Set<String> _signDropped = {};
 
+  // ── ⭐ চুক্তি ২ (cb, ২৫ অক্টোবর ২০২৬: পরিশোধে মোট টাকা) ──
+
+  /// টিক দেওয়া বিল (public_id) আর তাদের অঙ্কের ঘর; বিলের সারির নিজের ভুল
+  final Set<String> _ticked = {};
+  final Map<String, TextEditingController> _billText = {};
+  final Map<String, String> _billError = {};
+
+  /// শেষ পাঠানো বা দেখা payload-এর বিলের ক্রম — `bills.{i}.amount` এই ক্রম ধরে সারিতে ফেরে
+  List<String> _sentBills = const [];
+
+  /// ⭐ সার্ভারের ৪২২ — ঘরের চাবি → কথা ([voucherFieldErrors])
+  Map<String, String> _fieldErrors = const {};
+
+  /// সার্ভারের হিসাব (নিট, খাতা) আর কোন payload-এর — payload বদলালে আর দেখানো নয়
+  VoucherPreview? _preview;
+  String? _previewFor;
+
+  /// হিসাবের দরজা নেই (৪০৪/৪০৫) — বোতাম আর দেখানো নয়
+  bool _previewAbsent = false;
+
   bool get _payment => widget.type == VoucherTypes.payment;
+
+  /// ⭐ নতুন সার্ভার (`voucher_contract` ২): পরিশোধের টাকা মোট, AIT/VDS আর বিল; পুরনোয় সব আগের মতো
+  bool get _gross => _payment && (_setup?.contract ?? 1) >= 2;
 
   DateTime get _today {
     final now = widget.today ?? _setup?.today ?? DateTime.now();
@@ -114,7 +139,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   void initState() {
     super.initState();
     _date = _today;
-    for (final c in [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _gross, _ait, _vds, _narration]) {
+    for (final c in [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _grossText, _ait, _vds, _narration]) {
       c.addListener(_typed);
     }
     _amountFocus.addListener(() {
@@ -127,7 +152,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
 
   @override
   void dispose() {
-    for (final c in [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _gross, _ait, _vds, _narration]) {
+    for (final c in [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _grossText, _ait, _vds, _narration, ..._billText.values]) {
       c.dispose();
     }
     _amountFocus.dispose();
@@ -233,6 +258,48 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   /// না — তখন আটকায় না, সার্ভারের নিয়মই চলে
   bool get _bankBlocked => _toSupplier && _isTransfer && _party?.bank != null && !_party!.bank!.signed;
 
+  // ── ⭐ বিল (চুক্তি ২, অংশ ৩) ──
+
+  List<VoucherBill> get _bills => _gross ? (_party?.bills ?? const []) : const [];
+
+  int _billAmount(VoucherBill b) => _ticked.contains(b.id) ? _paisa(_billText[b.id]?.text ?? '') : 0;
+
+  int get _billsSum => _bills.fold(0, (sum, b) => sum + _billAmount(b));
+
+  /// ⛔ বিলের যোগফল মোটের বেশি — সার্ভার ফেরায় (`bills_over_gross`); পাঠানো বন্ধ
+  bool get _billsOverGross => _billsSum > _amountPaisa;
+
+  /// ⭐ বিল বাছলে মোট টাকায় বাছা বিলগুলোর বকেয়ার যোগফল; সারির অঙ্ক তার বকেয়া
+  void _tickBill(VoucherBill b, bool on) {
+    setState(() {
+      _billError.remove(b.id);
+      final c = _billText.putIfAbsent(b.id, TextEditingController.new);
+      if (on) {
+        _ticked.add(b.id);
+        c.text = Money.amount(b.due / 100);
+      } else {
+        _ticked.remove(b.id);
+        c.text = '';
+      }
+      final dues = _bills.where((x) => _ticked.contains(x.id)).fold(0, (sum, x) => sum + x.due);
+      _amount.text = dues == 0 ? '' : Money.amount(dues / 100);
+    });
+  }
+
+  /// ⛔ বিলের অঙ্ক বিলের বকেয়ার বেশি নয় — বেশি লিখলে বকেয়াতেই থামে, কারণসহ (সার্ভারের `bill_over_due`)
+  void _typeBill(VoucherBill b, String text) {
+    final want = _paisa(text);
+    setState(() {
+      _billError.remove(b.id);
+      if (want > b.due) {
+        _billError[b.id] = context.l10n.payBillOverDue(Money.taka(b.due / 100));
+        final c = _billText[b.id]!;
+        final capped = Money.amount(b.due / 100);
+        c.value = TextEditingValue(text: capped, selection: TextSelection.collapsed(offset: capped.length));
+      }
+    });
+  }
+
   VoucherDraft _draft({required bool keep}) => VoucherDraft(
         type: widget.type,
         date: _date,
@@ -241,7 +308,8 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         // ⓘ পরিশোধে সরবরাহকারী হলে ফাঁকা — সার্ভার দেনার খাত (২১১১) নিজে বসায় ([[VoucherRequest::fillAccountFromParty()]])
         toAccountId: _payment ? (_toSupplier ? null : _toAccount?.id) : _head?.id,
         expenseAccountId: _payment ? null : _head?.id,
-        amount: Money.typedText(_amount.text),
+        // ⭐ চুক্তি ২: টাকার ঘর মোট (`gross_amount`), পুরনো `amount` কখনো নয় — দুটো একসাথে সার্ভার ফেরায় (`gross_or_net_not_both`)
+        amount: _gross ? null : Money.typedText(_amount.text),
         partyType: _party?.type,
         partyId: _party?.id,
         instrument: _movesMoney ? _method : null,
@@ -253,9 +321,17 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         fromBank: _isCheque ? _chequeBank.text : null,
         payeeName: _payment ? null : _payee.text,
         billNo: _payment ? null : _billNo.text,
-        grossAmount: !_payment && _paisa(_gross.text) > 0 ? paisaText(_paisa(_gross.text)) : null,
-        aitAmount: !_payment && _paisa(_ait.text) > 0 ? paisaText(_paisa(_ait.text)) : null,
-        vdsAmount: !_payment && _paisa(_vds.text) > 0 ? paisaText(_paisa(_vds.text)) : null,
+        grossAmount: _gross
+            ? Money.typedText(_amount.text)
+            : (!_payment && _paisa(_grossText.text) > 0 ? paisaText(_paisa(_grossText.text)) : null),
+        aitAmount: (!_payment || _gross) && _paisa(_ait.text) > 0 ? paisaText(_paisa(_ait.text)) : null,
+        vdsAmount: (!_payment || _gross) && _paisa(_vds.text) > 0 ? paisaText(_paisa(_vds.text)) : null,
+        bills: _gross
+            ? [
+                for (final b in _bills)
+                  if (_billAmount(b) > 0) {'id': b.id, 'amount': paisaText(_billAmount(b))},
+              ]
+            : null,
         keepAsDraft: keep,
       );
 
@@ -278,8 +354,86 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
       return _method == 'cheque' ? w.payChequeNoMissing : w.collectReferenceMissing;
     }
     if (post && _bankBlocked) return w.payUnsignedBlocks;
+    if (_gross && _billsOverGross) return w.payBillsOverGross;
     return null;
   }
+
+  /// ⭐ সার্ভারের ৪২২ ঘরে ঘরে: চেনা চাবি তার ঘরের নিচে, `bills.{i}.amount` সেই বিলের সারিতে, অচেনা চাবি উপরে পুরোটা
+  void _showFieldErrors(Map<String, String> errors, {String? fallback}) {
+    final unknown = <String>[];
+    final placed = <String, String>{};
+    for (final e in errors.entries) {
+      final bill = RegExp(r'^bills\.(\d+)\.amount$').firstMatch(e.key);
+      if (bill != null) {
+        final i = int.parse(bill.group(1)!);
+        if (i < _sentBills.length) {
+          _billError[_sentBills[i]] = e.value;
+          continue;
+        }
+      } else if (_fieldOf(e.key) != null) {
+        placed[_fieldOf(e.key)!] = e.value;
+        continue;
+      }
+      unknown.add(e.value);
+    }
+    _fieldErrors = placed;
+    _error = unknown.isNotEmpty ? unknown.join('\n') : (placed.isEmpty && _billError.isEmpty ? fallback : null);
+  }
+
+  /// সার্ভারের চাবি → পর্দার ঘর (চুক্তি ২, অংশ ৪; আর ভাউচারের চেনা ঘর)
+  static String? _fieldOf(String key) => switch (key) {
+        'gross_amount' || 'amount' => 'pay-amount',
+        'ait_amount' => 'pay-ait',
+        'vds_amount' => 'pay-vds',
+        'charge_amount' => 'pay-charge',
+        'instrument_no' => 'pay-reference',
+        'bills' => 'pay-bills-total',
+        _ => null,
+      };
+
+  String _payloadOf(VoucherDraft d) => jsonEncode({...d.toPayload()..remove('save_as_draft')});
+
+  /// ⭐ "হিসাব দেখুন" — সার্ভারের নিট আর খাতা, কিছু না লিখে; দরজা না থাকলে চুপচাপ নেই হয়ে যায়
+  Future<void> _askPreview() async {
+    final Object api = widget.api;
+    if (api is! VoucherPreviewer) return;
+    final problem = _problem(post: false);
+    if (problem != null) {
+      setState(() => _error = problem);
+      return;
+    }
+    final draft = _draft(keep: false);
+    setState(() {
+      _busy = true;
+      _error = null;
+      _fieldErrors = const {};
+      _billError.clear();
+      _sentBills = [for (final b in draft.bills ?? const <Map<String, String>>[]) b['id']!];
+    });
+    try {
+      final answer = await api.preview(draft);
+      if (!mounted) return;
+      setState(() {
+        if (answer == null) {
+          _previewAbsent = true;
+        } else {
+          _preview = answer;
+          _previewFor = _payloadOf(draft);
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final fields = voucherFieldErrors(e);
+      setState(() => fields.isEmpty
+          ? _error = voucherRefusal(e) ?? errorMessageFor(e, fallback: context.l10n.vouchersFormSendFailed)
+          : _showFieldErrors(fields, fallback: voucherRefusal(e)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// সার্ভারের হিসাব, কেবল যদি এখনকার লেখারই হয়
+  VoucherPreview? get _currentPreview => _preview != null && _previewFor == _payloadOf(_draft(keep: false)) ? _preview : null;
 
   Future<void> _send({required bool keep}) async {
     final problem = _problem(post: !keep);
@@ -287,20 +441,30 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
       setState(() => _error = problem);
       return;
     }
+    final draft = _draft(keep: keep);
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors = const {};
+      _billError.clear();
+      _sentBills = [for (final b in draft.bills ?? const <Map<String, String>>[]) b['id']!];
     });
     final changeId = _changeId ??= widget.newChangeId();
     try {
-      final outcome = await widget.api.send(_draft(keep: keep), changeId);
+      final outcome = await widget.api.send(draft, changeId);
       if (!mounted) return;
       if (outcome.landedId != null) {
         Navigator.of(context).pop(outcome.landedId);
         return;
       }
       setState(() {
-        _error = outcome.refusal ?? context.l10n.vouchersFormNotSaved;
+        // ⓘ সিঙ্কের ফেরানো সারিতে সার্ভার `errors` দিলে ঘরে ঘরে; নইলে তার কথা উপরে, পুরোটা
+        final fields = voucherFieldErrors(outcome.details);
+        if (fields.isEmpty) {
+          _error = outcome.refusal ?? context.l10n.vouchersFormNotSaved;
+        } else {
+          _showFieldErrors(fields, fallback: outcome.refusal);
+        }
         _changeId = null;
       });
     } on NoNetworkForThis catch (e) {
@@ -333,7 +497,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
       (_party != null ||
           _head != null ||
           _toAccount != null ||
-          [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _gross, _ait, _vds, _narration].any((c) => c.text.trim().isNotEmpty));
+          [_amount, _reference, _charge, _chequeBank, _payee, _billNo, _grossText, _ait, _vds, _narration].any((c) => c.text.trim().isNotEmpty));
 
   @override
   Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
@@ -418,7 +582,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         const SizedBox(height: AppSpacing.sm),
         _dateField(),
         const SizedBox(height: AppSpacing.sm),
-        _amountField(w.collectAmount),
+        _amountField(_gross ? w.payGross : w.collectAmount),
         const SizedBox(height: AppSpacing.xs),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           MoneyTonalChip(
@@ -427,9 +591,18 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
             onPressed: due == null || due <= 0 || _busy ? null : () => _amount.text = Money.amount(due / 100),
           ),
         ]),
+        // ⭐ চুক্তি ২: উৎসে কাটা আয়কর আর ভ্যাট — মোটের ভিতর থেকে কাটে
+        if (_gross) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _withheldField('pay-ait', _ait, w.payAit),
+          const SizedBox(height: AppSpacing.sm),
+          _withheldField('pay-vds', _vds, w.payVds),
+        ],
         const SizedBox(height: AppSpacing.sm),
         ..._moneyBox(context, s),
       ]),
+      if (_gross && _bills.isNotEmpty) _billsSection(context),
+      if (_gross) _summary(context),
       MoneySection(title: null, children: [
         // ⓘ সরবরাহকারী নয় এমন পক্ষ (কর্মী, ব্যক্তি …) — সার্ভার এখনো খাত চায়; সরবরাহকারীতে ঘরটাই নেই
         if (!_toSupplier) ...[
@@ -445,6 +618,122 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         _narrationField(s),
       ]),
     ];
+  }
+
+  Widget _withheldField(String key, TextEditingController c, String label) => TextField(
+        key: ValueKey(key),
+        controller: c,
+        enabled: !_busy,
+        textAlign: TextAlign.end,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [_money(key)],
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: _signNote(key),
+          helperMaxLines: moneyNoteLines,
+          errorText: _fieldErrors[key],
+          errorMaxLines: moneyNoteLines,
+        ),
+      );
+
+  /// ⭐ খোলা বিল — পুরনো আগে, টিক আর অঙ্ক (প্রতিটা ≤ তার বকেয়া), নিচে মোট বসানো আর বাকিটা অগ্রিম (চুক্তি ২, অংশ ৩)
+  Widget _billsSection(BuildContext context) {
+    final w = context.l10n;
+    final bills = [..._bills]..sort((a, b) => a.date.compareTo(b.date));
+    final sum = _billsSum;
+    final left = _amountPaisa - sum;
+    return MoneySection(key: const ValueKey('pay-bills'), title: w.payBillsTitle, children: [
+      for (final (i, b) in bills.indexed) ...[
+        if (i > 0) const Divider(height: 1),
+        Padding(
+          key: ValueKey('pay-bill-${b.no}'),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Checkbox(
+                key: ValueKey('pay-bill-tick-${b.no}'),
+                value: _ticked.contains(b.id),
+                onChanged: _busy ? null : (on) => _tickBill(b, on ?? false),
+              ),
+              Expanded(
+                child: Wrap(spacing: AppSpacing.sm, alignment: WrapAlignment.spaceBetween, children: [
+                  Text(b.no, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(w.payBillDue(Money.taka(b.due / 100)), key: ValueKey('pay-bill-due-${b.no}')),
+                ]),
+              ),
+            ]),
+            if (_ticked.contains(b.id))
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 48),
+                child: TextField(
+                  key: ValueKey('pay-bill-amount-${b.no}'),
+                  controller: _billText.putIfAbsent(b.id, TextEditingController.new),
+                  enabled: !_busy,
+                  textAlign: TextAlign.end,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [_money('bill:${b.id}')],
+                  onChanged: (t) => _typeBill(b, t),
+                  decoration: InputDecoration(
+                    labelText: w.payBillApply,
+                    helperText: _signNote('bill:${b.id}'),
+                    helperMaxLines: moneyNoteLines,
+                    errorText: _billError[b.id],
+                    errorMaxLines: moneyNoteLines,
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      ],
+      const Divider(height: AppSpacing.md),
+      MoneyAmountRow(key: const ValueKey('pay-bills-total'), label: w.payBillsApplied, paisa: sum, strong: true),
+      if (_fieldErrors['pay-bills-total'] case final e?) MoneyNote(key: const ValueKey('pay-bills-error'), text: e, tone: MoneyTone.stop),
+      if (_billsOverGross)
+        MoneyNote(key: const ValueKey('pay-bills-over'), text: w.payBillsOverGross, tone: MoneyTone.stop)
+      else if (sum > 0 && left > 0)
+        // ⭐ বিলের বাইরে যা থাকে তা পক্ষের অগ্রিম — নিজের লাইনে (চুক্তির "অগ্রিম ৳…")
+        MoneyNote(key: const ValueKey('pay-bills-advance'), text: w.payBillsAdvance(Money.taka(left / 100)), tone: MoneyTone.info),
+    ]);
+  }
+
+  /// ⭐ হিসাব — লেখা মোট, AIT, VDS আর চার্জ যেমন লেখা; নিট আর খাতা কেবল সার্ভারের উত্তর থেকে (চুক্তি ২, অংশ ৫: ফোন নিট গোনে না)
+  Widget _summary(BuildContext context) {
+    final w = context.l10n;
+    final preview = _currentPreview;
+    final canAsk = widget.api is VoucherPreviewer && !_previewAbsent;
+    return MoneySection(key: const ValueKey('pay-summary'), title: w.paySummaryTitle, children: [
+      MoneyAmountRow(key: const ValueKey('pay-sum-gross'), label: w.payGrossShort, paisa: _amountValid ? _amountPaisa : 0, strong: true),
+      if (_paisa(_ait.text) > 0) MoneyAmountRow(key: const ValueKey('pay-sum-ait'), label: w.payAit, paisa: _paisa(_ait.text)),
+      if (_paisa(_vds.text) > 0) MoneyAmountRow(key: const ValueKey('pay-sum-vds'), label: w.payVds, paisa: _paisa(_vds.text)),
+      if (_showsCharge && _paisa(_charge.text) > 0)
+        MoneyAmountRow(key: const ValueKey('pay-sum-charge'), label: w.payChargeOutside, paisa: _paisa(_charge.text)),
+      const Divider(height: AppSpacing.md),
+      if (preview != null) ...[
+        MoneyAmountRow(key: const ValueKey('pay-sum-net'), label: w.payNetFromServer, paisa: (preview.netAmount * 100).round(), strong: true),
+        for (final (i, l) in preview.ledger.indexed)
+          Padding(
+            key: ValueKey('pay-ledger-$i'),
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Wrap(alignment: WrapAlignment.spaceBetween, spacing: AppSpacing.sm, children: [
+              Text(l.account, style: TextStyle(color: context.palette.onSurfaceMuted)),
+              Text(l.debit > 0 ? w.payLedgerDr(Money.taka(l.debit)) : w.payLedgerCr(Money.taka(l.credit))),
+            ]),
+          ),
+      ] else
+        Text(canAsk ? w.payNetAsk : w.payNetLater,
+            key: const ValueKey('pay-net-from-server'), style: TextStyle(color: context.palette.onSurfaceMuted)),
+      if (canAsk)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            key: const ValueKey('pay-preview'),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: _busy ? null : _askPreview,
+            icon: const Icon(Symbols.receipt_long),
+            label: Text(w.payPreview),
+          ),
+        ),
+    ]);
   }
 
   // ── খরচ ──
@@ -486,7 +775,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   /// ⭐ উৎসে কর্তন — গুটানো (ওয়েবের `<details>`), বিলের মোট · AIT · VDS, নিচে হাতে যাবে
   Widget _deduction(BuildContext context) {
     final w = context.l10n;
-    final net = _paisa(_gross.text) - _paisa(_ait.text) - _paisa(_vds.text);
+    final net = _paisa(_grossText.text) - _paisa(_ait.text) - _paisa(_vds.text);
     return Card(
       margin: const EdgeInsets.only(top: AppSpacing.sm),
       child: ExpansionTile(
@@ -498,7 +787,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         title: Text(w.payDeductionTitle, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final (key, c, label) in [('pay-gross', _gross, w.payBillGross), ('pay-ait', _ait, w.payAit), ('pay-vds', _vds, w.payVds)]) ...[
+          for (final (key, c, label) in [('pay-gross', _grossText, w.payBillGross), ('pay-ait', _ait, w.payAit), ('pay-vds', _vds, w.payVds)]) ...[
             TextField(
               key: ValueKey(key),
               controller: c,
@@ -510,7 +799,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          if (_paisa(_gross.text) > 0)
+          if (_paisa(_grossText.text) > 0)
             MoneyAmountRow(key: const ValueKey('pay-net'), label: w.payNetPayable, paisa: net < 0 ? 0 : net, strong: true),
         ],
       ),
@@ -634,6 +923,8 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         decoration: InputDecoration(
           labelText: switch (_method) { 'mfs' => w.payTrxId, 'cheque' => w.payChequeNo, _ => w.collectReference },
           counterText: '',
+          errorText: _fieldErrors['pay-reference'],
+          errorMaxLines: moneyNoteLines,
         ),
       ),
       if (_isTransfer) ...[
@@ -681,6 +972,8 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
             labelText: _method == 'mfs' ? w.payMfsCharge : w.collectBankCharge,
             helperText: _signNote('charge'),
             helperMaxLines: moneyNoteLines,
+            errorText: _fieldErrors['pay-charge'],
+            errorMaxLines: moneyNoteLines,
           ),
         ),
         // ⭐ চার্জ কোথায় যাবে — এক লাইনে (নকশা #৯); চার্জ আমাদের খরচ, "কে দিল" প্রশ্ন নেই
@@ -715,6 +1008,8 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
           prefixText: '৳ ', // l10n-ok: the taka sign, the same in every language
           helperText: _signNote('amount'),
           helperMaxLines: moneyNoteLines,
+          errorText: _fieldErrors['pay-amount'],
+          errorMaxLines: moneyNoteLines,
         ),
       );
 

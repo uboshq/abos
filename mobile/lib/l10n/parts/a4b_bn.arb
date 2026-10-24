@@ -2221,5 +2221,102 @@
         "type": "String"
       }
     }
+  },
+  "payGross": "মোট টাকা *",
+  "@payGross": {
+    "description": "Payment voucher (contract 2): the gross amount, what the party's ledger goes down by"
+  },
+  "payGrossShort": "মোট টাকা",
+  "@payGrossShort": {
+    "description": "Payment voucher summary: the gross amount as typed"
+  },
+  "payBillsTitle": "খোলা বিল — পুরনো আগে",
+  "@payBillsTitle": {
+    "description": "Payment voucher (contract 2): the open bills section title"
+  },
+  "payBillDue": "বাকি {amount}",
+  "@payBillDue": {
+    "description": "Payment voucher bill row: what is still due on the bill",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payBillApply": "এই বিলে (৳)",
+  "@payBillApply": {
+    "description": "Payment voucher bill row: the amount set against this bill"
+  },
+  "payBillsApplied": "বিলে বসল",
+  "@payBillsApplied": {
+    "description": "Payment voucher: the sum set against the ticked bills"
+  },
+  "payBillsAdvance": "অগ্রিম {amount} — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে",
+  "@payBillsAdvance": {
+    "description": "Payment voucher: the gross left over after the bills, kept as an advance",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payBillOverDue": "বিলের বাকি {amount}-এর বেশি বসে না।",
+  "@payBillOverDue": {
+    "description": "Payment voucher bill row: the typed amount was above the bill's due and was capped",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payBillsOverGross": "বিলে বসানো টাকা মোট টাকার বেশি — মোট বাড়ান বা বিলের অঙ্ক কমান।",
+  "@payBillsOverGross": {
+    "description": "Payment voucher: the bills add up to more than the gross; nothing is sent"
+  },
+  "paySummaryTitle": "হিসাব",
+  "@paySummaryTitle": {
+    "description": "Payment voucher (contract 2): the summary section title"
+  },
+  "payChargeOutside": "চার্জ — মোটের বাইরে, কোম্পানির খরচ",
+  "@payChargeOutside": {
+    "description": "Payment voucher summary: the bank or MFS charge, booked as our expense"
+  },
+  "payNetFromServer": "নিট — সার্ভারের হিসাবে",
+  "@payNetFromServer": {
+    "description": "Payment voucher summary: the net amount, only as the server returned it"
+  },
+  "payLedgerDr": "ডেবিট {amount}",
+  "@payLedgerDr": {
+    "description": "Payment voucher summary: a ledger line's debit from the server",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payLedgerCr": "ক্রেডিট {amount}",
+  "@payLedgerCr": {
+    "description": "Payment voucher summary: a ledger line's credit from the server",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payNetAsk": "নিট সার্ভার গোনে — দেখতে \"হিসাব দেখুন\" চাপুন।",
+  "@payNetAsk": {
+    "description": "Payment voucher summary: no net yet; the server can show it"
+  },
+  "payNetLater": "নিট সার্ভার গোনে — খসড়া রাখলে বা পোস্টের পরে ভাউচারে দেখাবে।",
+  "@payNetLater": {
+    "description": "Payment voucher summary: no net yet and no preview door on this server"
+  },
+  "payPreview": "হিসাব দেখুন",
+  "@payPreview": {
+    "description": "Payment voucher: ask the server for the net and the ledger, nothing is saved"
+  },
+  "vouchersPageNet": "নিট",
+  "@vouchersPageNet": {
+    "description": "Voucher page: the net amount the server counted"
   }
 }

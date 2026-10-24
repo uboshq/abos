@@ -424,6 +424,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
             FactRow(context.l10n.vouchersPageType, p.row.kindLabel),
             PaperStateFact(chip: voucherStateChip(p.row, key: const ValueKey('voucher-state'))),
             FactRow(context.l10n.vouchersAmount, Money.taka(p.row.amount)),
+            // ⭐ নিট — সার্ভারের হিসাব (চুক্তি ২), পুরনো সার্ভারে নেই, ফোন নিজে গোনে না
+            if (p.netAmount case final net?) FactRow(context.l10n.vouchersPageNet, Money.taka(net), key: const ValueKey('voucher-net')),
             if (p.row.date != null) FactRow(context.l10n.vouchersDate, dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),
             // ⭐ টাকা কোন খাতে — আদায়ে "জমা হয়েছে", পরিশোধে "যেখান থেকে দেওয়া", কনট্রায় দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬)

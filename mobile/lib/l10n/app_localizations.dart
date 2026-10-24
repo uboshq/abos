@@ -4309,6 +4309,114 @@ abstract class AppL10n {
   /// **'\"{account}\" {method}-এর খাত নয় — পদ্ধতির খাত বাছুন।'**
   String payMismatch(String account, String method);
 
+  /// Payment voucher (contract 2): the gross amount, what the party's ledger goes down by
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট টাকা *'**
+  String get payGross;
+
+  /// Payment voucher summary: the gross amount as typed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট টাকা'**
+  String get payGrossShort;
+
+  /// Payment voucher (contract 2): the open bills section title
+  ///
+  /// In bn, this message translates to:
+  /// **'খোলা বিল — পুরনো আগে'**
+  String get payBillsTitle;
+
+  /// Payment voucher bill row: what is still due on the bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String payBillDue(String amount);
+
+  /// Payment voucher bill row: the amount set against this bill
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বিলে (৳)'**
+  String get payBillApply;
+
+  /// Payment voucher: the sum set against the ticked bills
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলে বসল'**
+  String get payBillsApplied;
+
+  /// Payment voucher: the gross left over after the bills, kept as an advance
+  ///
+  /// In bn, this message translates to:
+  /// **'অগ্রিম {amount} — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে'**
+  String payBillsAdvance(String amount);
+
+  /// Payment voucher bill row: the typed amount was above the bill's due and was capped
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলের বাকি {amount}-এর বেশি বসে না।'**
+  String payBillOverDue(String amount);
+
+  /// Payment voucher: the bills add up to more than the gross; nothing is sent
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলে বসানো টাকা মোট টাকার বেশি — মোট বাড়ান বা বিলের অঙ্ক কমান।'**
+  String get payBillsOverGross;
+
+  /// Payment voucher (contract 2): the summary section title
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাব'**
+  String get paySummaryTitle;
+
+  /// Payment voucher summary: the bank or MFS charge, booked as our expense
+  ///
+  /// In bn, this message translates to:
+  /// **'চার্জ — মোটের বাইরে, কোম্পানির খরচ'**
+  String get payChargeOutside;
+
+  /// Payment voucher summary: the net amount, only as the server returned it
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট — সার্ভারের হিসাবে'**
+  String get payNetFromServer;
+
+  /// Payment voucher summary: a ledger line's debit from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেবিট {amount}'**
+  String payLedgerDr(String amount);
+
+  /// Payment voucher summary: a ledger line's credit from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেডিট {amount}'**
+  String payLedgerCr(String amount);
+
+  /// Payment voucher summary: no net yet; the server can show it
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট সার্ভার গোনে — দেখতে \"হিসাব দেখুন\" চাপুন।'**
+  String get payNetAsk;
+
+  /// Payment voucher summary: no net yet and no preview door on this server
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট সার্ভার গোনে — খসড়া রাখলে বা পোস্টের পরে ভাউচারে দেখাবে।'**
+  String get payNetLater;
+
+  /// Payment voucher: ask the server for the net and the ledger, nothing is saved
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাব দেখুন'**
+  String get payPreview;
+
+  /// Voucher page: the net amount the server counted
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট'**
+  String get vouchersPageNet;
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

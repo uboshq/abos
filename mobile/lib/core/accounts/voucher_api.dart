@@ -90,6 +90,7 @@ class VoucherParty {
     this.typeLabel = '',
     this.due,
     this.bank,
+    this.bills = const [],
   });
 
   final String type;
@@ -108,6 +109,9 @@ class VoucherParty {
 
   /// ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার (`bank`: {state, line}); সার্ভার না পাঠালে null
   final PayeeBank? bank;
+
+  /// ⭐ খোলা বিল, পুরনো আগে — চুক্তি ২-এর পরিশোধে বিল বাছার জন্য (`bills`: [{id, no, date, due}]); সার্ভার না পাঠালে খালি
+  final List<VoucherBill> bills;
 
   /// ওয়েবের ফর্মের একটা ঘর — `type:id` ([[VoucherRequest::prepareForValidation]])
   String get key => '$type:$id';
@@ -135,6 +139,59 @@ class PayeeBank {
   }
 }
 
+/// ⭐ পক্ষের একটা খোলা বিল — `id` বিলের public_id (চুক্তি ২-এর `bills[i][id]`), `due` বাকি, পয়সায়
+class VoucherBill {
+  const VoucherBill({required this.id, required this.no, this.date = '', required this.due});
+
+  final String id;
+  final String no;
+  final String date;
+  final int due;
+
+  static VoucherBill? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['id']?.toString() ?? '';
+    if (id.isEmpty) return null;
+    return VoucherBill(
+      id: id,
+      no: raw['no']?.toString() ?? id,
+      date: raw['date']?.toString() ?? '',
+      due: ((Money.value(raw['due']) ?? 0) * 100).round(),
+    );
+  }
+}
+
+/// ⭐ সার্ভারের হিসাব — নিট আর খাতার সারি (চুক্তি ২, অংশ ৫: ফোন নিট নিজে গোনে না)
+class VoucherPreview {
+  const VoucherPreview({required this.netAmount, this.ledger = const [], this.totalDr, this.totalCr});
+
+  final double netAmount;
+  final List<VoucherLineView> ledger;
+  final double? totalDr;
+  final double? totalCr;
+
+  /// `net_amount` না থাকলে null — নিট কখনো আন্দাজে নয়
+  static VoucherPreview? fromJson(Object? raw) {
+    if (raw is! Map || raw['net_amount'] == null) return null;
+    final net = Money.value(raw['net_amount']);
+    if (net == null) return null;
+    return VoucherPreview(
+      netAmount: net,
+      ledger: [
+        for (final l in (raw['ledger'] as List?) ?? const [])
+          if (l is Map)
+            VoucherLineView(
+              account: l['account']?.toString() ?? '',
+              debit: Money.valueOrZero(l['debit']),
+              credit: Money.valueOrZero(l['credit']),
+            ),
+      ],
+      totalDr: raw['total_dr'] == null ? null : Money.value(raw['total_dr']),
+      totalCr: raw['total_cr'] == null ? null : Money.value(raw['total_cr']),
+    );
+  }
+}
+
 /// ব্যাংক ট্রান্সফারের মোড (BEFTN · NPSB · RTGS) — `transfer_mode_id` সংখ্যায় ([[VoucherRequest]])
 class VoucherTransferMode {
   const VoucherTransferMode({required this.id, required this.name});
@@ -155,6 +212,7 @@ class VoucherSetup {
     this.parties = const [],
     this.partyTypes = const [],
     this.transferModes,
+    this.contract = 1,
   });
 
   final String type;
@@ -173,6 +231,10 @@ class VoucherSetup {
 
   /// ⓘ সার্ভার `transfer_modes` পাঠালে তবেই মোডের ঘর; না পাঠালে null (2bddefbb0 পর্যন্ত ভাউচারের সেটআপে নেই)
   final List<VoucherTransferMode>? transferModes;
+
+  /// ⭐ ভাউচারের চুক্তি — `voucher_contract` (cb, ২৫ অক্টোবর ২০২৬): ২ মানে পরিশোধে মোট টাকা (`gross_amount`), AIT/VDS আর বিল;
+  /// না পাঠালে ১ (লাইভ 95a60587b), তখন সব আগের মতো
+  final int contract;
 
   factory VoucherSetup.fromJson(Map<String, dynamic> j) => VoucherSetup(
         type: j['type']?.toString() ?? '',
@@ -199,6 +261,10 @@ class VoucherSetup {
                     typeLabel: g['label']?.toString() ?? '',
                     due: p['due'] == null ? null : ((Money.value(p['due']) ?? 0) * 100).round(),
                     bank: PayeeBank.fromJson(p['bank']),
+                    bills: [
+                      for (final b in (p['bills'] as List?) ?? const [])
+                        if (VoucherBill.fromJson(b) case final bill?) bill,
+                    ],
                   ),
         ],
         partyTypes: [
@@ -212,6 +278,7 @@ class VoucherSetup {
                     VoucherTransferMode(id: (m['id'] as num).toInt(), name: m['name']?.toString() ?? ''),
               ]
             : null,
+        contract: (j['voucher_contract'] as num?)?.toInt() ?? 1,
       );
 }
 
@@ -403,9 +470,13 @@ class VoucherPage {
     this.awaitsAnotherHand = false,
     this.moneyAccount,
     this.moneyLabel,
+    this.netAmount,
   });
 
   final VoucherRow row;
+
+  /// ⭐ নিট — সার্ভারের হিসাব (চুক্তি ২, `net_amount`); পুরনো সার্ভারে null, তখন কিছুই দেখানো নয়
+  final double? netAmount;
 
   /// ⭐ টাকার খাত, পক্ষের উল্টো দিক — আদায়ে "কোথায় জমা হলো", পরিশোধে "কোথা থেকে গেল" (মালিক, ৭ অক্টোবর ২০২৬)।
   /// পুরনো সার্ভারে null।
@@ -442,6 +513,7 @@ class VoucherPage {
         awaitsAnotherHand: j['awaits_another_hand'] == true,
         moneyAccount: j['money_account']?.toString(),
         moneyLabel: j['money_label']?.toString(),
+        netAmount: j['net_amount'] == null ? null : Money.value(j['net_amount']),
         lines: [
           for (final l in (j['lines'] as List?) ?? const [])
             if (l is Map)
@@ -565,6 +637,7 @@ class VoucherDraft {
     this.grossAmount,
     this.aitAmount,
     this.vdsAmount,
+    this.bills,
   });
 
   final String type;
@@ -605,6 +678,9 @@ class VoucherDraft {
   final String? aitAmount;
   final String? vdsAmount;
 
+  /// ⭐ চুক্তি ২-এর বিল — [{id: বিলের public_id, amount}]; null হলে ঘরটাই যায় না
+  final List<Map<String, String>>? bills;
+
   static String _day(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -619,7 +695,7 @@ class VoucherDraft {
         else ...{
           'from_account_id': fromAccountId,
           'to_account_id': toAccountId,
-          'amount': amount,
+          if (amount != null) 'amount': amount,
           if (party != null && party!.isNotEmpty) 'party': party,
           if (_filled(partyType) && partyId != null) ...{'party_type': partyType, 'party_id': partyId},
           if (instrument != null) 'instrument': instrument,
@@ -635,9 +711,16 @@ class VoucherDraft {
           if (_filled(grossAmount)) 'gross_amount': grossAmount!.trim(),
           if (_filled(aitAmount)) 'ait_amount': aitAmount!.trim(),
           if (_filled(vdsAmount)) 'vds_amount': vdsAmount!.trim(),
+          if (bills != null && bills!.isNotEmpty) 'bills': bills,
         },
         if (keepAsDraft) 'save_as_draft': true,
       };
+}
+
+/// ⭐ সার্ভারের হিসাব আগে দেখা — `POST /accounts/vouchers/preview` (একই payload; net_amount, ledger, total_dr, total_cr)। ⓘ a4 চেয়েছে,
+/// cb এখনো বানায়নি: দরজা না থাকলে (৪০৪/৪০৫) null, পর্দা তখন নিট দেখায় না; ৪২২ হলে DioException, পর্দা ঘরে ঘরে বসায়
+abstract class VoucherPreviewer {
+  Future<VoucherPreview?> preview(VoucherDraft draft);
 }
 
 abstract class VoucherApi {
@@ -661,8 +744,20 @@ abstract class VoucherApi {
   Future<PushOutcome> send(VoucherDraft draft, String changeId);
 }
 
-class ServerVoucherApi implements VoucherApi {
+class ServerVoucherApi implements VoucherApi, VoucherPreviewer {
   const ServerVoucherApi();
+
+  @override
+  Future<VoucherPreview?> preview(VoucherDraft draft) async {
+    try {
+      final r = await ApiClient.dio.post<Map<String, dynamic>>('/accounts/vouchers/preview', data: draft.toPayload());
+      return VoucherPreview.fromJson(r.data);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 404 || status == 405) return null;
+      rethrow;
+    }
+  }
 
   @override
   Future<VoucherSetup> setup(String type) async {
@@ -753,4 +848,23 @@ String? voucherRefusal(Object error) {
     }
   }
   return serverSentence(error);
+}
+
+/// ⭐ ৪২২-এর ঘর ধরে কথা — `errors`-এর চাবি → তার প্রথম বাক্য (চুক্তি ২, অংশ ৪: gross_amount, bills.{i}.amount, bills, amount …)।
+/// ⓘ ডিও-র ৪২২ বা সিঙ্কের ফেরানো সারির `errors` (সার্ভার পাঠালে); কিছু না থাকলে খালি
+Map<String, String> voucherFieldErrors(Object source) {
+  Object? errors;
+  if (source is DioException) {
+    final status = source.response?.statusCode ?? 0;
+    final body = source.response?.data;
+    if (status >= 400 && status < 500 && body is Map) errors = body['errors'];
+  } else if (source is Map) {
+    errors = source['errors'];
+  }
+  if (errors is! Map) return const {};
+  return {
+    for (final e in errors.entries)
+      if ((e.value is List ? (e.value as List).firstOrNull : e.value)?.toString().trim() case final text? when text.isNotEmpty)
+        e.key.toString(): text,
+  };
 }

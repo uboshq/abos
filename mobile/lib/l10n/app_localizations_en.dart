@@ -2540,6 +2540,74 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String get payGross => 'Total amount *';
+
+  @override
+  String get payGrossShort => 'Total amount';
+
+  @override
+  String get payBillsTitle => 'Open bills — oldest first';
+
+  @override
+  String payBillDue(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String get payBillApply => 'On this bill';
+
+  @override
+  String get payBillsApplied => 'Set against bills';
+
+  @override
+  String payBillsAdvance(String amount) {
+    return 'Advance $amount — beyond the bills, kept as an advance in the party\'s ledger';
+  }
+
+  @override
+  String payBillOverDue(String amount) {
+    return 'No more than the bill\'s due $amount can be set.';
+  }
+
+  @override
+  String get payBillsOverGross =>
+      'The bills add up to more than the total amount — raise the total or lower a bill.';
+
+  @override
+  String get paySummaryTitle => 'Summary';
+
+  @override
+  String get payChargeOutside =>
+      'Charge — outside the total, the company\'s expense';
+
+  @override
+  String get payNetFromServer => 'Net — as the server counts it';
+
+  @override
+  String payLedgerDr(String amount) {
+    return 'Debit $amount';
+  }
+
+  @override
+  String payLedgerCr(String amount) {
+    return 'Credit $amount';
+  }
+
+  @override
+  String get payNetAsk =>
+      'The server counts the net — tap \"See the summary\" to see it.';
+
+  @override
+  String get payNetLater =>
+      'The server counts the net — it shows on the voucher once it is saved as a draft or posted.';
+
+  @override
+  String get payPreview => 'See the summary';
+
+  @override
+  String get vouchersPageNet => 'Net';
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override

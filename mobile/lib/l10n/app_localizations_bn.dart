@@ -2493,6 +2493,72 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
+  String get payGross => 'মোট টাকা *';
+
+  @override
+  String get payGrossShort => 'মোট টাকা';
+
+  @override
+  String get payBillsTitle => 'খোলা বিল — পুরনো আগে';
+
+  @override
+  String payBillDue(String amount) {
+    return 'বাকি $amount';
+  }
+
+  @override
+  String get payBillApply => 'এই বিলে (৳)';
+
+  @override
+  String get payBillsApplied => 'বিলে বসল';
+
+  @override
+  String payBillsAdvance(String amount) {
+    return 'অগ্রিম $amount — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে';
+  }
+
+  @override
+  String payBillOverDue(String amount) {
+    return 'বিলের বাকি $amount-এর বেশি বসে না।';
+  }
+
+  @override
+  String get payBillsOverGross =>
+      'বিলে বসানো টাকা মোট টাকার বেশি — মোট বাড়ান বা বিলের অঙ্ক কমান।';
+
+  @override
+  String get paySummaryTitle => 'হিসাব';
+
+  @override
+  String get payChargeOutside => 'চার্জ — মোটের বাইরে, কোম্পানির খরচ';
+
+  @override
+  String get payNetFromServer => 'নিট — সার্ভারের হিসাবে';
+
+  @override
+  String payLedgerDr(String amount) {
+    return 'ডেবিট $amount';
+  }
+
+  @override
+  String payLedgerCr(String amount) {
+    return 'ক্রেডিট $amount';
+  }
+
+  @override
+  String get payNetAsk => 'নিট সার্ভার গোনে — দেখতে \"হিসাব দেখুন\" চাপুন।';
+
+  @override
+  String get payNetLater =>
+      'নিট সার্ভার গোনে — খসড়া রাখলে বা পোস্টের পরে ভাউচারে দেখাবে।';
+
+  @override
+  String get payPreview => 'হিসাব দেখুন';
+
+  @override
+  String get vouchersPageNet => 'নিট';
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override
