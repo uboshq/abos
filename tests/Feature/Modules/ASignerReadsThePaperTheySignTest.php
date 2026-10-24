@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -133,7 +134,48 @@ final class ASignerReadsThePaperTheySignTest extends TestCase
             '⛔ নাগালের বাইরের সইকারীর হাতে বিল পাকা হয়ে গেল');
     }
 
+    /**
+     * ⭐ টিল নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় ([[CashTill]]-এর নিজের `viewed-branch` ছাঁকনি তালিকায় থাকে, বাঁধনে নয়;
+     * [[OpensInReach]])। ⓘ মালিক হেডারে MMS রেখে NTK-র টিল খোলেন (২০০); MMS-এ সীমিত কর্মী একই টিলে ৪০৪, নিজের শাখারটায় ২০০।
+     */
+    public function test_a_till_opens_in_reach_not_in_the_header(): void
+    {
+        $mms = $this->branch('MMS');
+        $ntk = $this->branch('NTK');
+        $north = app(CashTillService::class)->create(['code' => 'REACH-N', 'name_en' => 'North Box', 'name_bn' => 'উত্তরের বাক্স', 'branch_id' => $ntk->id]);
+        $home = app(CashTillService::class)->create(['code' => 'REACH-M', 'name_en' => 'Home Box', 'name_bn' => 'ঘরের বাক্স', 'branch_id' => $mms->id]);
+        $this->assertSame((int) $ntk->id, (int) $north->branch_id, 'প্রস্তুতিটাই ভুল — বাক্সটা NTK-তে বসেনি');
+
+        $this->asUser($this->owner, $mms);
+        $this->assertNull(CashTill::query()->find($north->id),
+            'প্রস্তুতিটাই ভুল — হেডারে MMS বাছা, তবু টিলের নিজের ছাঁকনি NTK-র বাক্স দেখায়; তাহলে পুরনো বাঁধনও খুলত');
+        $this->assertSame(200, $this->get(route('accounts.till.show', $north->id))->status(),
+            '⛔ মালিক হেডারে MMS রেখে NTK-র টিল খুলতে পারলেন না — বাঁধন হেডারের শাখা দেখে, নাগাল নয়');
+
+        $clerk = $this->tillReader(reach: $mms);
+        $this->asUser($clerk, $mms);
+        $this->assertSame(200, $this->get(route('accounts.till.show', $home->id))->status(),
+            'প্রস্তুতিটাই ভুল — MMS-এর কর্মী নিজের শাখার টিলই খুলতে পারেন না');
+        $this->assertSame(404, $this->get(route('accounts.till.show', $north->id))->status(),
+            '⛔ MMS-এ সীমিত কর্মী NTK-র টিল খুলে ফেললেন — নাগাল ভাঙল');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
+
+    /** টিল দেখার চাবি — আর নাগাল একটা শাখায় সীমিত */
+    private function tillReader(Branch $reach): User
+    {
+        $user = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $user->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo(Permission::findOrCreate('accounts.till.view', 'web')));
+        UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $user->id,
+            'scope_type' => UserDataScope::BRANCH, 'scope_id' => $reach->id]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        app(DataScope::class)->forget();
+
+        return $user->fresh();
+    }
 
     private function assertSignerReadsOnly(string $show, Model $signed, Model $stranger, string $what, string $edit, string $confirm): void
     {

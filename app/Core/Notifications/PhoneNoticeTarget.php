@@ -60,7 +60,7 @@ final class PhoneNoticeTarget
     public function of(Notification $notice, User $user): array
     {
         $mayOpen = $this->notices->mayOpen($notice, $user);
-        $type = $notice->subject_type === null ? null : (string) $notice->subject_type;
+        $type = $this->paperType($notice);
         $publicId = $mayOpen ? $this->paperPublicId($notice) : null;
 
         return [
@@ -79,7 +79,7 @@ final class PhoneNoticeTarget
     {
         $user ??= User::query()->withoutGlobalScope('company')->find($notice->user_id);
         $target = $user === null
-            ? ['paper' => ['type' => $notice->subject_type, 'public_id' => null], 'destination' => self::LIST]
+            ? ['paper' => ['type' => $this->paperType($notice), 'public_id' => null], 'destination' => self::LIST]
             : $this->of($notice, $user);
 
         return [
@@ -111,6 +111,17 @@ final class PhoneNoticeTarget
             $publicId !== null => self::PAPER,
             default => self::LIST,
         };
+    }
+
+    /**
+     * ⛔ কাগজের ধরন কেবল ড্রিলের নাম — খবরে ড্রিল-ছাড়া কাগজের (ডকুমেন্ট, বীমা পলিসি) মডেলের নাম বসে কেবল "কাগজটা আছে কি"
+     * দেখার জন্য ([[NotificationService::whyClosed()]]); সেটা ফোনের চুক্তির নাম নয়, তাই বাইরে যায় না (২৪ অক্টোবর ২০২৬)।
+     */
+    private function paperType(Notification $notice): ?string
+    {
+        $type = $notice->subject_type === null ? null : (string) $notice->subject_type;
+
+        return $type !== null && $this->drill->knows($type) ? $type : null;
     }
 
     /** কাগজের `public_id` — কোম্পানির দেয়াল মেনে, মাথার শাখা না মেনে ([[NotificationService::mayOpen()]]-এর একই খোঁজ) */

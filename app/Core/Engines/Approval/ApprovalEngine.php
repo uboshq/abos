@@ -1694,6 +1694,15 @@ final class ApprovalEngine
      * ⛔ দুই জায়গায় দুই রকম হলে পার্থক্যটা নীরব হত: খবর যেত
      * একজনের কাছে, আর সই দিতে পারতেন অন্য কেউ।
      */
+    /**
+     * ⭐ কাগজটা উপরে পাঠানো হয়েছে আর গন্তব্য ইনি — [[canDecide()]]-এর উপরে-পাঠানোর পথের একই প্রশ্ন, পাহারা ছাড়া। ⓘ সইয়ের পাতা
+     * "কেন পারছেন না" বলতে এটা দেখে: উপরের মানুষের পালা, কিন্তু অঙ্ক তাঁর সীমার বাইরে (fe, ২৪ অক্টোবর ২০২৬)।
+     */
+    public function escalatedHere(Approval $approval, User $user): bool
+    {
+        return $approval->escalated_at !== null && $this->escalatedTo($approval, $user);
+    }
+
     private function escalatedTo(Approval $approval, User $user): bool
     {
         $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());
