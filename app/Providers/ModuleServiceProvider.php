@@ -77,6 +77,11 @@ class ModuleServiceProvider extends ServiceProvider
         // ⓘ সরবরাহকারী বন্ধ থাকলে কারো ব্যাংক তথ্য নেই — ভাউচারের ব্যাংকে-পাঠানো আটকানোর মতো কিছু নেই ([[PayeeBankGuard]])
         $this->app->bind(\App\Core\Contracts\PayeeBankGuard::class, \App\Core\Services\NoPayeeBankGuard::class);
 
+        // ⓘ পক্ষের তথ্য হিসাবের পর্দায় — মালিক মডিউল বন্ধ থাকলে বলার কিছু নেই (মিল-তালিকা #১৯, #৬০, #৬৬; ২৫ অক্টোবর ২০২৬)
+        $this->app->bind(\App\Core\Contracts\PartyCreditLimit::class, \App\Core\Services\NoPartyCreditLimit::class);
+        $this->app->bind(\App\Core\Contracts\PartyTaxIds::class, \App\Core\Services\NoPartyTaxIds::class);
+        $this->app->bind(\App\Core\Contracts\PayeeBankView::class, \App\Core\Services\NoPayeeBankView::class);
+
         // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
         $this->app->bind(CustomerTrade::class, NoCustomerTrade::class);
 

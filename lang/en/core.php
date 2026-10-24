@@ -1135,12 +1135,23 @@ return [
         'choose_many' => 'Choose files',
         'none' => 'No file chosen',
         'many' => ':count files chosen',
+        // Drop box (tick-list #37, 25 Oct 2026)
+        'drop' => 'or drop it here',
+        'remove' => 'Remove',
+        'wrong_type' => '“:name” is not a file type this box takes — choose another file.',
+        'one_only' => 'This box takes one file — drop just one.',
     ],
 
     'status_bar' => [
         'operational' => 'Operational',
         'maintenance' => 'Maintenance',
         'incident' => 'Incident',
+    ],
+
+    // The trail's last part: "New" on a create page, the record's own number on an edit page, else "Edit" (tick-list #6, 25 Oct 2026)
+    'crumb' => [
+        'new' => 'New',
+        'edit' => 'Edit',
     ],
 
     'a11y' => [

@@ -67,6 +67,19 @@
       "border_style": "solid",
       "tappable": false
     },
+    "will_wait": {
+      "about": "Before saving: a draft or a paper being written whose type needs a signature in this company (ApprovalEngine::requires, the same verdict the post uses). Dashed border: a forecast, not yet true. Web: x-ui.paper-state state=draft with :approval. Mirror in paper_state.dart when the phone writes papers (cb, 25 Oct 2026).",
+      "label_bn": "সইয়ের অপেক্ষায় হবে",
+      "label_bn_without_level": "সইয়ের অপেক্ষায় হবে",
+      "semantics_bn": "অবস্থা: খসড়া, পাঠালে সইয়ের অপেক্ষায় যাবে",
+      "semantics_bn_without_level": "অবস্থা: খসড়া, পাঠালে সইয়ের অপেক্ষায় যাবে",
+      "label_bn_short": "সইয়ের অপেক্ষায় হবে",
+      "label_bn_short_without_level": "সইয়ের অপেক্ষায় হবে",
+      "icon": "hourglass_top",
+      "role": "critical",
+      "border_style": "dashed",
+      "tappable": false
+    },
     "waiting": {
       "label_bn": "সইয়ের অপেক্ষায় · {levels}-এর {level}",
       "label_bn_without_level": "সইয়ের অপেক্ষায়",
