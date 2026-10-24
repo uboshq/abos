@@ -843,6 +843,44 @@ final class StandardChart implements ProvisionsCompany
         return $changed;
     }
 
+    /**
+     * ⭐ যে খরচের খাতে কেবল সফটওয়্যার নিজে বসায় — খরচের ভাউচারে হাতে বাছা যায় না (মালিক, ২৪ অক্টোবর ২০২৬, fe: "খরচের তালিকা
+     * থেকে COGS আর সফটওয়্যারের নিজের খাত সরানো, সার্ভারের পাহারাসহ — এখন লাইভে ভুল খাতে খরচ বসতে পারে")।
+     *
+     *   ৫১০০ বিক্রিত মালের খরচ — বিক্রির পোস্টে মজুদ থেকে (IAS 2); হাতে বসালে মজুদ আর লাভ দুটোর হিসাব ভাঙে
+     *   ৫১৫০ কেনা দামের পার্থক্য, ৫১৬০ মজুদের ঘাটতি/বাড়তি — কেনা আর গণনার পোস্ট থেকে
+     *   ৫২১২ অবচয় — সম্পদের সূচি থেকে (IAS 16)
+     *   ৫৩০০ দেওয়া ছাড় — বিলের ছাড়, মালিকের সইয়ের পথে ([[any-discount-needs-owner]]); হাতে খরচ লিখলে সেই সই এড়ানো যেত
+     *   ৫৩২০ সম্পদ বিক্রির ক্ষতি, ৫৩২৫ আগে ভাঙার জরিমানা — নিজের সেবার পোস্ট থেকে
+     *
+     * ⓘ সুদের খরচ (৫৩১০) তালিকায় নেই — ব্যাংক নিজে কেটে নিলে হাতে লেখার পথ খোলা থাকে (fe-র সিদ্ধান্তের অপেক্ষায়)।
+     * ⓘ জাবেদায় হিসাবরক্ষক এগুলো ঠিক করতে পারেন — নিষেধ কেবল খরচের ভাউচারে।
+     */
+    public const ENGINE_ONLY_EXPENSES = [
+        self::COST_OF_GOODS_SOLD, self::PURCHASE_PRICE_VARIANCE, self::INVENTORY_SHORTAGE_SURPLUS,
+        self::DEPRECIATION_EXPENSE, self::DISCOUNT_GIVEN, self::ASSET_DISPOSAL_LOSS, self::EARLY_BREAK_PENALTY,
+    ];
+
+    /**
+     * খাতটা (বা তার কোনো পূর্বপুরুষ) কেবল-সফটওয়্যারের খরচের খাত কি না — কোড আর মান ছকের ধরন দুটোই মিলিয়ে ([[holdsItsMeaning()]]-এর
+     * সতর্কতা: কোম্পানির নিজের খাত ঐ কোডে থাকলে কোড একা মিথ্যা বলে)।
+     *
+     * @param  array<int, Account|null>  $seen  একই অনুরোধে পূর্বপুরুষ আবার না তোলা
+     */
+    public function isEngineOnlyExpense(Account $account, array &$seen = []): bool
+    {
+        for ($node = $account, $depth = 0; $node !== null && $depth < 8; $depth++) {
+            if (in_array((string) $node->code, self::ENGINE_ONLY_EXPENSES, true) && $node->type === Account::EXPENSE) {
+                return true;
+            }
+
+            $parent = $node->parent_id === null ? null : (int) $node->parent_id;
+            $node = $parent === null ? null : ($seen[$parent] ??= Account::query()->find($parent));
+        }
+
+        return false;
+    }
+
     /** কোড দিয়ে একটা খাত — না পেলে null, কারণ কোম্পানি ছকটা বদলাতে পারে। */
     public static function find(string $code): ?Account
     {
