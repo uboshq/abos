@@ -1135,6 +1135,11 @@ return [
         'choose_many' => 'Choose files',
         'none' => 'No file chosen',
         'many' => ':count files chosen',
+        // Drop box (tick-list #37, 25 Oct 2026)
+        'drop' => 'or drop it here',
+        'remove' => 'Remove',
+        'wrong_type' => '“:name” is not a file type this box takes — choose another file.',
+        'one_only' => 'This box takes one file — drop just one.',
     ],
 
     'status_bar' => [
