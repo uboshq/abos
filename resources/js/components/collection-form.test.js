@@ -132,3 +132,19 @@ describe('টাকা নেওয়া — দফা ৪, ৫: সারা�
         expect(amountOf('')).toBe(0)
     })
 })
+
+describe('টাকা নেওয়া — "একই খাতে আগে ব্যবহার হয়নি ✓" কেবল রেফারেন্সের পদ্ধতিতে', () => {
+    it('নগদে রেফারেন্সই নেই, তাই লেখাটাও নেই; MFS, ট্রান্সফার, জমা আর চেকে সার্ভার "মুক্ত" বললে দেখায়', async () => {
+        const { collectionForm } = await import('./collection.js')
+        const form = collectionForm({})
+
+        form.referenceFree = true
+        for (const [method, shown] of [['cash', false], ['mfs', true], ['transfer', true], ['deposit', true], ['cheque', true]]) {
+            form.method = method
+            expect([method, form.showsReferenceFree]).toEqual([method, shown])
+        }
+        form.referenceFree = false
+        form.method = 'mfs'
+        expect(form.showsReferenceFree).toBe(false)
+    })
+})

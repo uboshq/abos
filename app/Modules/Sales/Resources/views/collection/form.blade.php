@@ -239,7 +239,7 @@
 
                         {{-- ⓘ order-3 — ব্লকের ঘরগুলোর (order-3) ঠিক পরে, রেফারেন্সের নিচে; চার্জের লাইন (order-4) তার পরে --}}
                         <p class="order-3 whitespace-nowrap text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
-                           x-show="referenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
+                           x-show="showsReferenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
                     </div>
 
                     <p role="status" data-over-due x-show="over" x-cloak

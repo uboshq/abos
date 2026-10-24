@@ -65,6 +65,11 @@ export function collectionForm (config = {}) {
         previewFailed: false,
         timer: null,
 
+        /** "একই খাতে আগে ব্যবহার হয়নি ✓" — কেবল যে পদ্ধতির রেফারেন্স আছে (MFS, ট্রান্সফার, জমা, চেক); নগদে রেফারেন্সই নেই */
+        get showsReferenceFree () {
+            return this.referenceFree && this.method !== 'cash'
+        },
+
         init () {
             this.load(config.open ?? null, config.lines ?? [])
             // ⓘ খাত বদলালে (মানুষ বাছলে, বা পদ্ধতি বদলে ব্লক নিজে বসালে/খালি করলে) প্রিভিউ নতুন — আগের `<select @change>`-এর কাজ
