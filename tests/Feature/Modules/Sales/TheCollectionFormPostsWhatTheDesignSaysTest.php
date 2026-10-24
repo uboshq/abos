@@ -136,6 +136,31 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     }
 
     /**
+     * ফেরানোর কারণ আদায়ের পাতায় একবারই (fe, ২৪ অক্টোবর ২০২৬, main 2c026a303 মেশানো): layout এখন নিজেও কারণের বাক্স বসায়,
+     * পাতা আগে না দেখালে। আদায়ের ফর্ম নিজের বাক্স আঁকে — তাই একই বাক্য পাতার বাক্সে আর layout-এর বাক্সে দুবার আসতে পারত।
+     * ⓘ ঘরহীন কারণ (`status`) দিয়ে, যেটা কেবল বাক্সেই দেখা যায়: ফেরানো পোস্টের পরে ফিরে-আসা পাতা যা আঁকে, তাতে গোনা।
+     */
+    public function test_a_refusal_reason_shows_once_on_the_collection_page(): void
+    {
+        $bill = $this->bill('INV-CF-ONCE', 10, '10000');
+        $tax = StandardChart::find(StandardChart::ADVANCE_INCOME_TAX);
+        $this->assertNotNull($tax, 'প্রস্তুতিটাই ভুল — ডেমো ছকে ১১৩৫ নেই');
+        \Illuminate\Support\Facades\DB::table('accounts')->where('id', $tax->id)->update([
+            'money_kind' => Account::BANK, 'parent_id' => (int) StandardChart::find(StandardChart::BANK)->id,
+        ]);
+        $refusal = __('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']);
+        $back = route('sales.collection.create', ['customer' => $this->dealer->id]);
+
+        $page = (string) $this->actingAs($this->maker)->followingRedirects()->from($back)
+            ->post(route('sales.collection.store'), [...$this->form(['amount' => '9750', 'ait' => '250',
+                'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]), 'post' => '1'])
+            ->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($page, e($refusal)), '⛔ ফেরানোর কারণ আদায়ের পাতায় '.substr_count($page, e($refusal))
+            .' বার — একবারই দেখানোর কথা (পাতার বাক্স আর layout-এর বাক্স দুজনেই দেখালে দুবার, কেউ না দেখালে শূন্য)');
+    }
+
+    /**
      * দফা ৫ — ১১৩৫ কোডের খাতটা দল-খাত (একই ধরন, তাই মানে মেলে, কিন্তু দলে লেনদেন বসে না): AIT-সহ আদায় একই বাংলা কারণে ফেরে, কিছু লেখা
      * হয় না (fe, ২৩ অক্টোবর ২০২৬)। ⓘ [[StandardChart::holdsItsMeaning()]] দল দেখে না — এই পরখ CollectionService::account()-এর postable।
      */
