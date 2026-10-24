@@ -133,9 +133,11 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
     {
         $this->post(route('accounts.period.close'), ['year' => $this->month->year, 'month' => $this->month->month])->assertRedirect();
 
-        // ⓘ পরীক্ষায় সেশনের errors কখনো অ্যারে, কখনো ব্যাগ — দুই রূপই পড়া
+        // ⓘ পরীক্ষায় সেশনের errors দুই অনুরোধের মাঝে অ্যারে (json সেশন), আর সেটা বাসা-বাঁধা: ['default']['messages'][ঘর]
         $errors = session('errors');
-        $month = is_array($errors) ? ($errors['month'] ?? []) : ($errors?->getBag('default')->get('month') ?? []);
+        $month = $errors instanceof \Illuminate\Support\ViewErrorBag
+            ? $errors->getBag('default')->get('month')
+            : (is_array($errors) ? ($errors['default']['messages']['month'] ?? []) : []);
 
         return array_values(array_map('strval', (array) $month));
     }
