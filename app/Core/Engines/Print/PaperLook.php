@@ -38,9 +38,14 @@ final class PaperLook
         return (string) ($this->look['ink'] ?? '#1b1f24');
     }
 
+    /**
+     * ⭐ নকশা নিজের ভাষা না বললে কাগজের ভাষা (ভা-১৬ ধাপ ৩, ২৪ অক্টোবর ২০২৬; [[PaperLanguage]]) — ছাপার ইঞ্জিন আঁকার সময়
+     * locale-এ কাগজের ভাষাই বসায় ([[PrintEngine::render()]])।
+     * ⛔ আগে সবসময় 'en': লাইভের ভাউচার (ট্যালি ক্লাসিক) শিরোনাম বাংলায় আর ঘরের নাম ইংরেজিতে — এক কাগজে দুই ভাষা।
+     */
     public function lang(): string
     {
-        return (string) ($this->look['lang'] ?? 'en');
+        return (string) ($this->look['lang'] ?? (app()->getLocale() === 'en' ? 'en' : 'bn'));
     }
 
     /**

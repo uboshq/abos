@@ -76,8 +76,9 @@ final class InvoicePaperView
 
         $this->head = $this->look->header($company);
         $this->signatures = $this->look->signatures();
-        // ⭐ কাগজের ভাষার নোট ([[PrintsInThePaperLanguage]]; ভা-১৬ ধাপ ২) — ভাষা না বসলে আগের মতো বাংলা
-        $language = (string) (request()->attributes->get(\App\Http\Middleware\PrintsInThePaperLanguage::ATTRIBUTE) ?? \App\Core\Support\PaperLanguage::BN);
+        // ⭐ কাগজের ভাষার নোট (ভা-১৬ ধাপ ২) — কাগজ যে ভাষায় আঁকা হচ্ছে সেটাই: [[PrintEngine]] আঁকার সময় locale বসায়
+        // কাগজের ভাষায় ([[PaperLanguage::for()]] — এবারের বাছাই, নয়তো পক্ষের, নয়তো পর্দার)
+        $language = app()->getLocale() === \App\Core\Support\PaperLanguage::EN ? \App\Core\Support\PaperLanguage::EN : \App\Core\Support\PaperLanguage::BN;
         $this->footnote = $this->look->footnote(false, $language);
         $this->footnoteThermal = $this->look->footnote(true, $language);
 
