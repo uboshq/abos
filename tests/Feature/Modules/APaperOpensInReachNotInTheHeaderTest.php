@@ -124,6 +124,8 @@ final class APaperOpensInReachNotInTheHeaderTest extends TestCase
         $this->assertSame((int) $this->main->id, (int) $here->branch_id, 'প্রস্তুতিটাই ভুল — MMS-এর ডকুমেন্ট MMS-এ বসেনি');
 
         $this->pinTo($this->owner, $this->main);
+        $this->assertNull(Document::query()->find($there->id),
+            'প্রস্তুতিটাই ভুল — হেডারে MMS বাছা, তবু শাখার ছাঁকনি NTK-র ডকুমেন্ট দেখায়; তাহলে পুরনো বাঁধনও খুলত');
         $page = $this->get(route('documents.show', $there->id));
         $this->assertSame(200, $page->status(), '⛔ হেডারে MMS বাছা মালিক NTK-র ডকুমেন্ট খুলতে পারলেন না (নোটিশের ৪০৪)');
         $this->assertStringContainsString('Netrakona lease', (string) $page->getContent(), '⛔ মালিক ডকুমেন্টের পাতা পেলেন, কিন্তু সেই ডকুমেন্টটা নয়');
@@ -172,6 +174,8 @@ final class APaperOpensInReachNotInTheHeaderTest extends TestCase
         $this->assertNotSame('', $number, 'প্রস্তুতিটাই ভুল — '.$what.'-এর নম্বর নেই');
 
         $this->pinTo($this->owner, $this->main);
+        $this->assertNull($there::query()->find($there->getKey()),
+            'প্রস্তুতিটাই ভুল — হেডারে MMS বাছা, তবু শাখার ছাঁকনি NTK-র '.$what.' দেখায়; তাহলে পুরনো বাঁধনও খুলত');
         $page = $this->get(route($route, $there->getKey()));
         $this->assertSame(200, $page->status(), '⛔ হেডারে MMS বাছা মালিক NTK-র '.$what.' খুলতে পারলেন না (নোটিশের ৪০৪)');
         $this->assertStringContainsString(e($number), (string) $page->getContent(), '⛔ মালিক '.$what.'-এর পাতা পেলেন, কিন্তু সেই কাগজটা নয়');

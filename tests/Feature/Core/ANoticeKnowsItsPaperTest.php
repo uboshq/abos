@@ -121,18 +121,21 @@ final class ANoticeKnowsItsPaperTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $voucher = $this->journalIn($ntk);
+        $this->assertTrue($holder->fresh()->can('view', $voucher), 'প্রস্তুতিটাই ভুল — দুই চাবির মানুষও জাবেদাটা খুলতে পারেন না');
+        $this->assertFalse($closesOnly->fresh()->can('view', $voucher), 'প্রস্তুতিটাই ভুল — কেবল মাস বন্ধের চাবির মানুষও জাবেদাটা খোলেন, তাহলে তাঁর না-পাওয়া কিছুই মাপে না');
         $this->morning(function () use ($voucher): void {
             (new \ReflectionMethod(AdjustingReversals::class, 'tellStuck'))
                 ->invoke(app(AdjustingReversals::class), (int) $voucher->id, 'the month is closed');
         });
 
-        $count = fn (User $u) => Notification::query()->where('user_id', $u->id)->where('type', AdjustingReversals::STUCK)->count();
-        $this->assertSame(0, $count($closesOnly),
-            '⛔ যিনি জাবেদাটা খুলতে পারেন না, তিনিও আটকে থাকা উল্টোর খবর পেলেন — চাপলে ৪০৩।');
-        $this->assertSame(1, $count($this->owner), '⛔ মালিক আটকে থাকা উল্টোর খবর পাননি।');
-
+        // ⓘ আগে যাঁর পাওয়ার কথা — খবরটা আদৌ লেখা না হলে (tellStuck নিজের ভুল গিলে ফেলে) "০" কিছুই মাপে না
         $note = Notification::query()->where('user_id', $holder->id)->where('type', AdjustingReversals::STUCK)->first();
         $this->assertNotNull($note, '⛔ মাস বন্ধের আর ভাউচার দেখার চাবিওয়ালা খবর পাননি।');
+
+        $count = fn (User $u) => Notification::query()->where('user_id', $u->id)->where('type', AdjustingReversals::STUCK)->count();
+        $this->assertSame(1, $count($this->owner), '⛔ মালিক আটকে থাকা উল্টোর খবর পাননি।');
+        $this->assertSame(0, $count($closesOnly),
+            '⛔ যিনি জাবেদাটা খুলতে পারেন না, তিনিও আটকে থাকা উল্টোর খবর পেলেন — চাপলে ৪০৩।');
         $this->assertSame(Voucher::drillSourceType(), $note->subject_type, '⛔ উল্টোর খবরে কাগজের ধরন নেই।');
         $this->assertSame((int) $voucher->id, (int) $note->subject_id, '⛔ উল্টোর খবরে কাগজের আইডি নেই।');
         $this->assertSame((int) $ntk->id, (int) $note->branch_id, '⛔ উল্টোর খবরে জাবেদার শাখা নেই।');
@@ -163,6 +166,8 @@ final class ANoticeKnowsItsPaperTest extends TestCase
     /** নাগালের বাইরে — "দেখার অধিকার নেই" পাতা, কাগজ নয় */
     private function refused(Notification $note): void
     {
+        $this->assertFalse(app(DataScope::class)->allows(auth()->user(), UserDataScope::BRANCH, (int) $note->branch_id),
+            'প্রস্তুতিটাই ভুল — নাগাল সরেনি, খবরের শাখা এখনো মানুষটার নাগালে');
         $opened = $this->call('GET', route('notifications.open', $note));
         $this->assertSame(200, $opened->status(), '⛔ নাগালের বাইরের খবর খুলতে গিয়ে পাতা ভাঙল বা কাগজে পাঠাল।');
         $this->assertSame('notifications.no-access', $opened->original instanceof View ? $opened->original->name() : null,

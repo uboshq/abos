@@ -123,6 +123,10 @@ final class ASignerReadsThePaperTheySignTest extends TestCase
         $signer = $this->signer(reach: $this->branch('NTK'));
         $this->signedBy($signed, $signer);
         $this->asUser($signer, $this->branch('NTK'));
+        $this->assertFalse(app(DataScope::class)->allows($signer, UserDataScope::BRANCH, (int) $mms->id),
+            'প্রস্তুতিটাই ভুল — সইকারীর নাগাল NTK-তে সীমিত হয়নি, MMS তাঁর নাগালেই');
+        $this->assertTrue(\App\Core\Engines\Approval\PaperSigners::isSigner($signer, $signed),
+            'প্রস্তুতিটাই ভুল — সইয়ের সারি বসেনি, মানুষটা এই বিলের সইকারী নন');
 
         $this->assertSame(200, $this->get(route('purchase.bill.show', $signed->id))->status(),
             '⛔ NTK-তে সীমিত সইকারী MMS-এর যে বিলে সই দিলেন, সেটা পড়তে পারলেন না');
@@ -182,6 +186,13 @@ final class ASignerReadsThePaperTheySignTest extends TestCase
         $signer = $this->signer();
         $this->signedBy($signed, $signer);
         $this->asUser($signer);
+        // ⓘ দেখার চাবি পাতার নাম থেকে (`purchase.bill.show` → `purchase.bill.view`)
+        $viewKey = preg_replace('/\.show$/', '.view', $show);
+        $this->assertFalse($signer->fresh()->can($viewKey), 'প্রস্তুতিটাই ভুল — সইকারীর হাতে '.$viewKey.' চাবি আছে, তাহলে ছাড় কিছুই মাপে না');
+        $this->assertTrue(\App\Core\Engines\Approval\PaperSigners::isSigner($signer, $signed),
+            'প্রস্তুতিটাই ভুল — সইয়ের সারি বসেনি, মানুষটা এই '.$what.'-এর সইকারী নন');
+        $this->assertFalse(\App\Core\Engines\Approval\PaperSigners::isSigner($signer, $stranger),
+            'প্রস্তুতিটাই ভুল — অন্য '.$what.'-এও মানুষটা সইকারী, তাহলে ৪০৩ কিছুই মাপে না');
 
         $this->assertSame(200, $this->get(route($show, $signed->getKey()))->status(),
             '⛔ দেখার চাবি ছাড়া সইকারী নিজের সই করা '.$what.' পড়তে পারলেন না (সইয়ের পাতা/নোটিশের ৪০৩)');

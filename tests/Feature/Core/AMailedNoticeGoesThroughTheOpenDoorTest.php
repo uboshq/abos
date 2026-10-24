@@ -80,7 +80,8 @@ final class AMailedNoticeGoesThroughTheOpenDoorTest extends TestCase
         $bell = app(NotificationService::class)->send($this->her, 'approval.rejected', 'ফেরত এল');
         $this->assertNotNull($bell, 'প্রস্তুতিটাই ভুল — খবরটাই বসেনি।');
 
-        $this->assertNull((new NewsByMail($bell))->toMail($this->her->fresh())->viewData['url'] ?? null,
-            '⛔ ঠিকানা নেই এমন খবরের চিঠিতেও বোতাম বসল।');
+        $view = (new NewsByMail($bell))->toMail($this->her->fresh())->viewData;
+        $this->assertArrayHasKey('url', $view, 'প্রস্তুতিটাই ভুল — চিঠির ছাঁচে url-এর ঘরই নেই, তাহলে "খালি" কিছুই মাপে না।');
+        $this->assertNull($view['url'], '⛔ ঠিকানা নেই এমন খবরের চিঠিতেও বোতাম বসল।');
     }
 }

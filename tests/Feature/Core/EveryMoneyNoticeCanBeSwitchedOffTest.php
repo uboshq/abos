@@ -102,10 +102,16 @@ final class EveryMoneyNoticeCanBeSwitchedOffTest extends TestCase
         $saved = $this->call('PUT', route('notifications.settings.update'), ['kinds' => $keep]);
         $this->assertSame(302, $saved->status(), 'প্রস্তুতিটাই ভুল — সেটিংস সংরক্ষণ হয়নি।');
 
+        // ⓘ একই চাবির আরেকজন, সুইচ চালু — প্রতিটা ধরনে তাঁর কাছে যাওয়া প্রমাণ করে কর্মীর কাছে না যাওয়াটা সুইচের কারণেই
+        $listener = $this->person(['finance.rental.view']);
+
         $this->app['auth']->forgetGuards();
         $this->actingAs($this->owner);
 
         foreach (self::ADDED as $type) {
+            app(NotificationService::class)->send($listener, $type, 'পরীক্ষার খবর');
+            $this->assertSame(1, Notification::query()->where('user_id', $listener->id)->where('type', $type)->count(),
+                "প্রস্তুতিটাই ভুল — {$type} সুইচ চালু রাখা মানুষের কাছেও যায়নি, তাহলে \"বন্ধ\" কিছুই মাপে না।");
             app(NotificationService::class)->send($this->clerk, $type, 'পরীক্ষার খবর');
             $this->assertSame(0, Notification::query()->where('user_id', $this->clerk->id)->where('type', $type)->count(),
                 "⛔ {$type} বন্ধ করা সত্ত্বেও খবরটা লেখা হয়েছে।");
@@ -146,8 +152,8 @@ final class EveryMoneyNoticeCanBeSwitchedOffTest extends TestCase
         app(RentalNotices::class)->anniversaries();
 
         $told = fn (User $u) => Notification::query()->where('user_id', $u->id)->where('type', RentalNotices::ANNIVERSARY)->count();
-        $this->assertSame(1, $told($this->owner), '⛔ বর্ষপূর্তির খবর মালিকের কাছে একবার যায়নি (যায়নি, নয়তো দুইবার)।');
         $this->assertSame(1, $told($listener), 'প্রস্তুতিটাই ভুল — সুইচ চালু রাখা একই চাবির মানুষও খবর পাননি, তাহলে কর্মীর না-পাওয়া কিছুই মাপে না।');
+        $this->assertSame(1, $told($this->owner), '⛔ বর্ষপূর্তির খবর মালিকের কাছে একবার যায়নি (যায়নি, নয়তো দুইবার)।');
         $this->assertSame(0, $told($this->clerk), '⛔ বর্ষপূর্তির খবর বন্ধ করা সত্ত্বেও কর্মীর কাছে গেল।');
     }
 
