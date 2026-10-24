@@ -100,18 +100,14 @@
 <x-layouts.app :menu="$menu" :two-column-form="true">
     <x-slot:title>{{ $isNew ? __('sales::collection_form.title') : $collection->document_no }}</x-slot:title>
 
-    {{-- ⓘ cb-র পদ্ধতির ব্লক নিজের মোড়কে আসে; এখানে তার ঘরগুলো সাধারণ তথ্যের চার কলামের গ্রিডে বসে — পদ্ধতি "যে খাতে জমা"-র
-         পাশে, পদ্ধতির ঘরগুলো নিচের সারিতে, নকশার মতো --}}
+    {{-- ⓘ cb-র পদ্ধতির ব্লক `inline` — তার ঘরগুলো সাধারণ তথ্যের চার কলামের গ্রিডেই বসে: পদ্ধতি আর "যে খাতে জমা" এক সারিতে, পদ্ধতির
+         চার ঘর (মোড · রেফারেন্স · মূল্য-তারিখ · চার্জ) নিচের এক সারিতে, নকশার মতো। ⛔ আগে মোড়কটা `display: contents` করা ছিল — তাতে
+         ব্লকের নিজের @container হারাত, আর চার ঘর এক-একটা পুরো সারিতে নামত (১৩৬৬-এ মাপা, ২৫ অক্টোবর ২০২৬)।
+         ⓘ <fieldset>-এর ব্রাউজারের নিজের min-inline-size = ভিতরের মাপ: পাঁচ চিপ ৩৬৩px, অর্ধেক সারি ৩৩৫px — তাই fieldset পাশের খাতের ঘরে
+         ৩২px ঢুকত ("চেক" ঢাকা পড়ত)। এখানে min-width 0, আর চিপের পাশের ফাঁক একটু কম — পাঁচটাই অর্ধেক সারিতে ধরে, কিছু কাটে না। --}}
     <style @nonce>
-        [data-collection-general] [data-money-method] { display: contents; }
-        [data-collection-general] [data-money-method] > fieldset,
-        [data-collection-general] [data-money-method] > [data-money-account-row] { grid-column: span 2 / span 2; }
-        [data-collection-general] [data-money-method] > [data-method-block],
-        [data-collection-general] [data-money-method] > [data-charge-line] { grid-column: 1 / -1; }
-        @media (max-width: 1023px) {
-            [data-collection-general] [data-money-method] > fieldset,
-            [data-collection-general] [data-money-method] > [data-money-account-row] { grid-column: 1 / -1; }
-        }
+        [data-collection-general] [data-money-method] > fieldset { min-width: 0; }
+        [data-collection-general] [data-money-method] > fieldset [role="radiogroup"] > label > span { padding-inline: 0.4rem; }
     </style>
 
     <form method="POST" enctype="multipart/form-data" data-collection-form
@@ -234,14 +230,15 @@
                              ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; রসিদ-পরিশোধের একই নিয়ম): "যে খাতে
                              জমা" এখন এই ব্লকের ভিতরে, পদ্ধতির ঠিক পরে; ⛔ আগে খাত আগে ছিল, আর বিকাশের খাত বেছে "নগদ" চাপা যেত। সার্ভারও
                              একই কথা বলে ([[MoneyMethod::assertFits()]], [[CollectionService]])। ঘর `x-model="account"` — [[collectionForm]] শোনে --}}
-                        <x-money.method direction="in" :record="$isNew ? null : $collection" :modes="$transferModes"
+                        <x-money.method inline direction="in" :record="$isNew ? null : $collection" :modes="$transferModes"
                                         :methods="['cash', 'mfs', 'transfer', 'deposit', 'cheque']"
                                         :accounts="$accountRows" account-name="account_id" account-model="account"
                                         :account-label="__('sales::collection_form.into')"
                                         :account-selected="old('account_id', $collection->account_id)"
                                         charge-field="bank_charge" />
 
-                        <p class="text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
+                        {{-- ⓘ order-3 — ব্লকের ঘরগুলোর (order-3) ঠিক পরে, রেফারেন্সের নিচে; চার্জের লাইন (order-4) তার পরে --}}
+                        <p class="order-3 text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
                            x-show="referenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
                     </div>
 

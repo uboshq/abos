@@ -35,7 +35,8 @@
      * ⭐ "লেখা নাম যোগ" — তালিকায় নেই এমন নাম হাতে লেখা (মালিক, ৩ অক্টোবর ২০২৬; রসিদ/পরিশোধের পুরনো পিকারের হুবহু আচরণ, fe আর
      * cb, ২৪ অক্টোবর ২০২৬): খোঁজার প্যানেলে "+ নতুন নাম হিসেবে রাখুন", কিছু না মিললে Enter-ও তাই; নামের পাশে "+"; নিচে নতুন
      * নাম আর মোবাইলের ঘর। ⓘ ঘরের নাম `addName` / `addMobile` — রসিদ/পরিশোধে `party_new` / `party_mobile`, সার্ভার সেখান থেকেই
-     * তাঁকে ব্যক্তি বানায় ([[VoucherRequest]] · [[TurnsATypedNameIntoAParty]])। `addMobile` = null দিলে মোবাইলের ঘর নেই।
+     * তাঁকে ব্যক্তি বানায় ([[VoucherRequest]] · [[TurnsATypedNameIntoAParty]])। `addMobile` = false দিলে মোবাইলের ঘর নেই।
+     * ⛔ null নয় — @props-এ পাঠানো null আগের মানে ('party_mobile') ফেরে, তাই null দিয়ে ঘরটা বন্ধ হত না (cb ধরেছে, ২৫ অক্টোবর ২০২৬)।
      */
     'addable' => false,
     'addName' => 'party_new',
@@ -222,14 +223,14 @@
     @if ($addable)
         {{-- ⓘ নামটা বসে ব্যক্তি হিসেবে (`mdm_people`) — পরের বার তালিকাতেই পাওয়া যায়; একই মানুষ তিন বানানে তিনজন হন না --}}
         <div class="mt-2" x-show="adding" x-cloak data-party-new>
-            <div @class(['grid gap-2', 'sm:grid-cols-2' => $addMobile !== null])>
+            <div @class(['grid gap-2', 'sm:grid-cols-2' => $addMobile !== false])>
                 <x-ui.field :name="$addName" :id="$uid.'-new'"
                             :label="__('accounts::field.party_new_name')"
                             :value="old($addName)"
                             :hint="__('accounts::field.party_new_hint')"
                             x-model="newName" x-on:input="newNameTyped()" />
 
-                @if ($addMobile !== null)
+                @if ($addMobile !== false)
                     <x-ui.field :name="$addMobile" :id="$uid.'-mobile'"
                                 :label="__('master_data::field.mobile')"
                                 :value="old($addMobile)"

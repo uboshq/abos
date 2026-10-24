@@ -44,7 +44,7 @@ class APartySearchCanTakeATypedNameTest extends TestCase
         $this->assertStringContainsString('addable: true', $html, '⛔ খোঁজার যুক্তি জানে না ঘরটা নাম নিতে পারে — Enter কিছুই করত না');
         $this->assertStringContainsString('name="party_id"', $html, 'প্রস্তুতিটাই ভুল — পিকার আঁকা হয়নি');
 
-        $named = $this->draw('addable add-name="payee_new" :add-mobile="null"');
+        $named = $this->draw('addable add-name="payee_new" :add-mobile="false"');
         $this->assertStringContainsString('name="payee_new"', $named, '⛔ নতুন নামের ঘর পাতার দেওয়া নামে নয়');
         $this->assertStringNotContainsString('name="party_mobile"', $named, '⛔ মোবাইল না চাইলেও মোবাইলের ঘর আঁকা হলো');
     }
