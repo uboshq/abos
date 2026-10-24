@@ -194,7 +194,8 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
             // ⓘ এটাই চাওয়া
         }
 
-        $this->assertSame(1, ApprovalDecision::query()->where('approval_id', $stale->id)->count());
+        $this->assertSame(1, ApprovalDecision::query()->where('approval_id', $stale->id)->count(),
+            '⛔ পুরনো কপিতে দ্বিতীয় একটা সিদ্ধান্ত বসে গেছে।');
     }
 
     // ── সহায়ক ────────────────────────────────────────────────────────
