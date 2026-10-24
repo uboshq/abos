@@ -21,12 +21,14 @@ describe('টাকা নেওয়া — দফা ৩: পুরনো আ
     it('দফা ৩ — নকশার নমুনা: ক্রেডিট নোট বিল ঢাকে, শেষ বিলে ১,৮০০, মোট ৪৫,০০০', () => {
         const rows = fillOldestFirst(design(), 45000)
 
+        // ⓘ "এখন প্রয়োগ" নকশার মতো লাখ-কমায় ("30,000.00"); পাঠানো হয় কাঁচা অঙ্ক — নিচের signedApply
         expect(rows.map(r => [r.no, r.on, r.apply])).toEqual([
-            ['INV-0094', true, '30000.00'],
-            ['INV-0101', true, '15200.00'],
-            ['CN-0007', true, '-2000.00'],
-            ['INV-0112', true, '1800.00'],
+            ['INV-0094', true, '30,000.00'],
+            ['INV-0101', true, '15,200.00'],
+            ['CN-0007', true, '-2,000.00'],
+            ['INV-0112', true, '1,800.00'],
         ])
+        expect(rows.map(signedApply)).toEqual(['30000.00', '15200.00', '-2000.00', '1800.00'])
 
         const b = balanceOf({ amount: '45000', vds: '', ait: '', discount: '', rounding: '' }, rows)
         expect(b.applied).toBe(45000)
@@ -39,8 +41,8 @@ describe('টাকা নেওয়া — দফা ৩: পুরনো আ
         const rows = fillOldestFirst([design()[0], design()[1], design()[3]], 35000)
 
         expect(rows.map(r => [r.no, r.on, r.apply])).toEqual([
-            ['INV-0094', true, '30000.00'],
-            ['INV-0101', true, '5000.00'],
+            ['INV-0094', true, '30,000.00'],
+            ['INV-0101', true, '5,000.00'],
             ['INV-0112', false, ''],
         ])
     })

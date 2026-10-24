@@ -219,8 +219,10 @@
                                     required />
 
                         <div>
-                            <x-ui.field name="amount" id="cf-amount" inputmode="decimal" :label="__('sales::collection_form.amount')"
-                                        numeric required :value="$amount" x-model="amount" @input="changed()" />
+                            {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর কাঁচা অঙ্কের লুকানো ঘর আলাদা
+                                 (cb-র type="money", fe, ২৪ অক্টোবর ২০২৬; আদায়, ভাউচার আর পরিশোধ একসাথে) --}}
+                            <x-ui.field name="amount" id="cf-amount" type="money" model="amount" :label="__('sales::collection_form.amount')"
+                                        required :value="$amount" @input="changedSoon()" />
                             <p class="mt-1 text-2xs text-(--color-ink-muted)">
                                 <button type="button" class="text-(--color-link) hover:underline" @click="fillDue()" data-fill-due>{{ __('sales::collection_form.full_due') }}</button>
                                 ·
@@ -292,7 +294,7 @@
                                         <td class="num" x-text="row.amountText"></td>
                                         <td class="num" x-text="row.openText"></td>
                                         <td class="num">
-                                            <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" :disabled="!row.on"
+                                            <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" @blur="tidyApply(row)" :disabled="!row.on"
                                                    aria-label="{{ __('sales::collection_form.col_apply') }}" :id="'cf-' + i + '-apply'"
                                                    :aria-labelledby="'cf-' + i + '-apply' + ' ' + 'cf-' + i + '-paper'"
                                                    class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
@@ -354,12 +356,12 @@
                                 <label for="cf-vds">{{ __('sales::collection_form.summary.vds') }}</label>
                                 <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 text-2xs text-(--color-badge-warning-ink)">{{ __('sales::collection_form.summary.vds_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-vds" name="vds" type="text" inputmode="decimal" x-model="vds" @input="changed()" placeholder="0.00"
+                            <dd><input type="hidden" name="vds" :value="vds"><input id="cf-vds" type="text" inputmode="decimal" x-money-display="vds" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
                             <dt><label for="cf-ait">{{ __('sales::collection_form.summary.ait') }}</label></dt>
-                            <dd><input id="cf-ait" name="ait" type="text" inputmode="decimal" x-model="ait" @input="changed()" placeholder="0.00"
+                            <dd><input type="hidden" name="ait" :value="ait"><input id="cf-ait" type="text" inputmode="decimal" x-money-display="ait" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
@@ -367,7 +369,7 @@
                                 <label for="cf-discount">{{ __('sales::collection_form.summary.discount') }}</label>
                                 <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)" data-owner-signs>{{ __('sales::collection_form.summary.owner_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-discount" type="text" inputmode="decimal" x-model="discount" @input="changed()" placeholder="0.00"
+                            <dd><input id="cf-discount" type="text" inputmode="decimal" x-money-display="discount" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
@@ -377,7 +379,7 @@
                                 <span x-show="roundingSigned" x-cloak data-rounding-signs
                                       class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)">{{ __('sales::collection_form.summary.rounding_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-rounding" type="text" inputmode="decimal" x-model="rounding" @input="changed()" placeholder="0.00"
+                            <dd><input id="cf-rounding" type="text" inputmode="decimal" x-money-display="rounding" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         {{-- ⓘ সার্ভার একটাই পার্থক্য নেয় — ছাড় বা রাউন্ডিং ([[CollectionInput]]) --}}

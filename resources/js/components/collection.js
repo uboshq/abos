@@ -86,7 +86,7 @@ export function collectionForm (config = {}) {
 
                 if (row) {
                     row.on = true
-                    row.apply = (row.credit ? -Math.abs(amountOf(line.amount)) : amountOf(line.amount)).toFixed(2)
+                    row.apply = taka(row.credit ? -Math.abs(amountOf(line.amount)) : amountOf(line.amount))
                 }
             }
 
@@ -154,10 +154,25 @@ export function collectionForm (config = {}) {
             if (row && !row.on) {
                 row.apply = ''
             } else if (row && row.on && amountOf(row.apply) === 0) {
-                row.apply = row.open.toFixed(2)
+                row.apply = taka(row.open)
             }
 
             this.recalc()
+        },
+
+        /**
+         * টাকার ঘরে লেখা — [[registerMoneyDisplay]] মান বসায় নিজের `input`-এ; কোনটা আগে চলে তার উপর নির্ভর না করে, পরের টিকে হিসাব
+         * (নইলে আগের অঙ্কে হিসাব হত, এক অক্ষর পিছিয়ে)
+         */
+        changedSoon () {
+            this.$nextTick(() => this.changed())
+        },
+
+        /** সারির "এখন প্রয়োগ" ছাড়লে লাখ-কমায় ("30,000.00", নকশার মতো); ফাঁকা থাকলে ফাঁকা — পাঠানো হয় কাঁচা অঙ্ক ([[sent()]]) */
+        tidyApply (row) {
+            if (String(row.apply ?? '').trim() !== '') {
+                row.apply = taka(amountOf(row.apply))
+            }
         },
 
         /** সারির "এখন প্রয়োগ" হাতে লেখা — লেখার মাঝপথে ঘরটা ফেরানো হয় না, কেবল হিসাব নতুন */

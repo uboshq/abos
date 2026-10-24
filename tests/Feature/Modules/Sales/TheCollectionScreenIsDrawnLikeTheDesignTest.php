@@ -135,6 +135,32 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
         $this->assertMatchesRegularExpression('/<table class="ui-grid" data-ledger-table>/', $html, '⛔ দফা ১০: খাতার টেবিল থিমের ui-grid নয়');
     }
 
+    /**
+     * টাকা লাখ-কমায় আর দুই দশমিকে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর পাঠানোর ঘর আলাদা (cb-র type="money", fe, ২৪ অক্টোবর
+     * ২০২৬; আদায়, ভাউচার আর পরিশোধ একসাথে)। ⓘ পাঠানো হয় কেবল কাঁচা অঙ্ক — কমা কোনো পথেই সার্ভারে যায় না; ফাঁকা কাটার ঘরে "0.00"।
+     */
+    public function test_every_money_box_shows_lakh_commas_and_sends_only_the_plain_figure(): void
+    {
+        $form = $this->part($this->screen());
+
+        $this->assertMatchesRegularExpression('/<input\b[^>]*id="cf-amount"[^>]*data-money-shown="amount"[^>]*x-money-display="amount"/s', $form,
+            '⛔ টাকার ঘর লাখ-কমায় দেখায় না — "45000" লেখাই থাকে, নকশায় "45,000.00"');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="amount"[^>]*:value="amount"/', $form, '⛔ টাকার কাঁচা অঙ্কের ঘর নেই');
+        $this->assertDoesNotMatchRegularExpression('/<input\b[^>]*id="cf-amount"[^>]*\bname=/s', $form, '⛔ দেখানোর ঘরও নাম নিয়ে পাঠায় — কমাসহ লেখা সার্ভারে যেত');
+
+        foreach (['vds', 'ait', 'discount', 'rounding'] as $key) {
+            $this->assertMatchesRegularExpression('/<input\b[^>]*id="cf-'.$key.'"[^>]*x-money-display="'.$key.'"[^>]*data-money-empty="0\.00"/s', $form,
+                "⛔ {$key}-এর ঘর লাখ-কমায় নয়, বা ফাঁকায় \"0.00\" নয়");
+            $this->assertDoesNotMatchRegularExpression('/<input\b[^>]*id="cf-'.$key.'"[^>]*\bname=/s', $form, "⛔ {$key}-এর দেখানোর ঘর নাম নিয়ে পাঠায়");
+        }
+        foreach (['vds', 'ait'] as $key) {
+            $this->assertStringContainsString('<input type="hidden" name="'.$key.'" :value="'.$key.'">', $form, "⛔ {$key}-এর কাঁচা অঙ্ক পাঠানো হয় না");
+        }
+
+        $this->assertMatchesRegularExpression('/x-model="row\.apply"[^>]*@blur="tidyApply\(row\)"/', $form, '⛔ "এখন প্রয়োগ" ঘর ছাড়লে লাখ-কমায় বসে না');
+        $this->assertStringContainsString(':name="\'lines[\' + i + \'][amount]\'" :value="sent(row)"', $form, '⛔ সারির টাকা কাঁচা অঙ্কে পাঠানো হয় না');
+    }
+
     /** দফা ২০ — কীবোর্ড আর পর্দা-পাঠক: প্রতিটা ঘরের নাম আছে, টিকের কলামের নাম পর্দা-পাঠকের জন্য; টাকা ইংরেজি অঙ্কে */
     public function test_item_20_every_field_has_a_name_for_a_screen_reader_and_figures_are_english_digits(): void
     {

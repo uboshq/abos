@@ -67,7 +67,8 @@ export function fillOldestFirst (rows, gross) {
         const take = cents(Math.min(pool, Math.max(0, row.open)))
 
         row.on = take > 0
-        row.apply = take > 0 ? take.toFixed(2) : ''
+        // ⓘ লাখ-কমায়, নকশার মতো ("30,000.00"); পাঠানো হয় কাঁচা অঙ্ক ([[signedApply]])
+        row.apply = take > 0 ? taka(take) : ''
         pool = cents(pool - take)
         bills = cents(bills + (row.kind === 'bill' ? take : 0))
     }
@@ -76,7 +77,7 @@ export function fillOldestFirst (rows, gross) {
         const take = cents(Math.min(bills, Math.abs(row.open)))
 
         row.on = take > 0
-        row.apply = take > 0 ? (-take).toFixed(2) : ''
+        row.apply = take > 0 ? taka(-take) : ''
         bills = cents(bills - take)
     }
 
