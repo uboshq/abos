@@ -388,6 +388,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -985,6 +986,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
         // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])
@@ -1728,6 +1730,24 @@ final class VoucherService
      * এই ঘরে পেমেন্ট-পদ্ধতির **কোড** বসায় (যেমন `CHQ`, `BKASH`) — ওগুলো এই
      * তালিকায় নেই, তাই কাউন্টারের পথ অপরিবর্তিত।
      */
+    /**
+     * ⛔ সরবরাহকারীর ব্যাংকে ট্রান্সফার বা নগদ জমা — তাঁর ব্যাংক তথ্য দুই হাতে সই-পাওয়া না হলে নয় (a4, ২৪ অক্টোবর ২০২৬, লাইভে ধরা)।
+     *
+     * ⓘ সরবরাহকারী-পরিশোধ এটা আগে থেকেই আটকাত; ভাউচারের পরিশোধ আর খরচ দিয়ে — ওয়েবে বা ফোনে — একই টাকা সই-না-পাওয়া হিসাবে চলে
+     * যেত। নিয়ম সরবরাহকারীর ([[PayeeBankGuard]] → SupplierBank), এখানে কেবল ডাক: টাকা যেখানে বেরোয় (পরিশোধ, খরচ), আর পোস্টের
+     * একই পথে, যা ওয়েব, ফোন আর সংশোধনের পরে আবার-পোস্ট সবাই নেয়।
+     */
+    private function assertPayeeBankIsSigned(Voucher $voucher): void
+    {
+        if (! in_array($voucher->type, [Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            return;
+        }
+
+        app(\App\Core\Contracts\PayeeBankGuard::class)->assertBankPayable(
+            $voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, $voucher->instrument,
+        );
+    }
+
     private function assertTheWayMatchesTheAccount(Voucher $voucher): void
     {
         $way = (string) $voucher->instrument;
@@ -1828,6 +1848,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($paper);
         $this->assertCashLandsInOwnTill($paper);
         $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPayeeBankIsSigned($paper);
         $this->assertPartyInItsBranch($paper, $ownable);
         $this->bankReferenceAccount($paper);
 

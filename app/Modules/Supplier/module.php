@@ -104,6 +104,8 @@ return [
      */
     'bindings' => [
         \App\Core\Contracts\SignaturesWaitingElsewhere::class => \App\Modules\Supplier\Services\SupplierBankWaiting::class,
+        // ⛔ ভাউচারেও সই-না-পাওয়া ব্যাংকে টাকা নয় (a4, ২৪ অক্টোবর ২০২৬)
+        \App\Core\Contracts\PayeeBankGuard::class => \App\Modules\Supplier\Services\SupplierPayeeBankGuard::class,
     ],
 
     'form_choices' => [
