@@ -99,7 +99,8 @@ final class TheMethodComesFirstAndOffersOnlyItsAccountsTest extends TestCase
         foreach ([Voucher::RECEIPT => 'to_account_id', Voucher::PAYMENT => 'from_account_id'] as $type => $name) {
             $kinds = $this->listed($this->screenWith($type, ['instrument' => 'mfs']), $name);
 
-            $this->assertContains((string) $mfs->id, array_keys($kinds), "দৃশ্যটাই ঠিক নয় — {$type}: MFS-এর খাতই তালিকায় নেই");
+            // ⓘ চাবি ধরে — PHP সংখ্যার মতো চাবি ("690") পূর্ণসংখ্যা করে, আর assertContains কড়া তুলনা করে (cb-ma-1-এ এতেই লাল হয়েছিল)
+            $this->assertArrayHasKey((int) $mfs->id, $kinds, "দৃশ্যটাই ঠিক নয় — {$type}: MFS-এর খাতই তালিকায় নেই");
             $this->assertSame(['mfs'], array_values(array_unique($kinds)),
                 "⛔ {$type}: MFS বাছার পরেও তালিকায় নগদ বা ব্যাংকের খাত আছে: ".json_encode($kinds));
         }
