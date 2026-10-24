@@ -34,6 +34,8 @@ return [
     // The company that lost the person, in its own book (24 Oct 2026)
     'member_removed' => 'Membership removed',
     'roles_removed' => 'Roles removed',
+    // The owner brought back into an ownerless company — abos:restore-owner (24 Oct 2026)
+    'owner_restored' => 'Owner restored',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',
