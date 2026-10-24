@@ -260,7 +260,30 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
 
   // ── ⭐ বিল (চুক্তি ২, অংশ ৩) ──
 
-  List<VoucherBill> get _bills => _gross ? (_party?.bills ?? const []) : const [];
+  /// ⭐ পক্ষের খোলা বিল — পক্ষ বাছলে দরজা থেকে ([VoucherBillsSource]); দরজা নেই বা পুরনো সার্ভার হলে খালি
+  List<VoucherBill> _partyBills = const [];
+
+  List<VoucherBill> get _bills => _gross ? _partyBills : const [];
+
+  /// ⭐ পক্ষ বাছা — বিল আর টিক নতুন করে; চুক্তি ২-এ তার খোলা বিল আনা (৪০৪/৪০৫ হলে বিল নেই)
+  Future<void> _chooseParty(VoucherParty? p) async {
+    setState(() {
+      _party = p;
+      _partyBills = const [];
+      _ticked.clear();
+      _billError.clear();
+    });
+    final api = widget.api;
+    final Object source = api;
+    if (p == null || !_gross || source is! VoucherBillsSource) return;
+    try {
+      final bills = await source.openBills(p.type, p.id);
+      if (!mounted || !identical(_party, p)) return;
+      setState(() => _partyBills = [...?bills]..sort((a, b) => a.date.compareTo(b.date)));
+    } catch (e) {
+      if (mounted && identical(_party, p)) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersFormSetupFailed));
+    }
+  }
 
   int _billAmount(VoucherBill b) => _ticked.contains(b.id) ? _paisa(_billText[b.id]?.text ?? '') : 0;
 
@@ -276,12 +299,12 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
       final c = _billText.putIfAbsent(b.id, TextEditingController.new);
       if (on) {
         _ticked.add(b.id);
-        c.text = Money.amount(b.due / 100);
+        c.text = Money.amount(b.outstanding / 100);
       } else {
         _ticked.remove(b.id);
         c.text = '';
       }
-      final dues = _bills.where((x) => _ticked.contains(x.id)).fold(0, (sum, x) => sum + x.due);
+      final dues = _bills.where((x) => _ticked.contains(x.id)).fold(0, (sum, x) => sum + x.outstanding);
       _amount.text = dues == 0 ? '' : Money.amount(dues / 100);
     });
   }
@@ -291,10 +314,10 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     final want = _paisa(text);
     setState(() {
       _billError.remove(b.id);
-      if (want > b.due) {
-        _billError[b.id] = context.l10n.payBillOverDue(Money.taka(b.due / 100));
+      if (want > b.outstanding) {
+        _billError[b.id] = context.l10n.payBillOverDue(Money.taka(b.outstanding / 100));
         final c = _billText[b.id]!;
-        final capped = Money.amount(b.due / 100);
+        final capped = Money.amount(b.outstanding / 100);
         c.value = TextEditingValue(text: capped, selection: TextSelection.collapsed(offset: capped.length));
       }
     });
@@ -522,7 +545,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
               dueLabel: w.payFigureOwed,
               thisLabel: w.payFigureThis,
               leftLabel: w.collectFigureLeft,
-              creditLabel: w.payFigureAdvance,
+              creditLabel: w.payFigureStays,
             ),
           if (_busy || (s == null && _error == null)) const Padding(padding: EdgeInsets.only(top: AppSpacing.sm), child: LinearProgressIndicator()),
           if (_error != null) MoneyErrorCard(_error!, textKey: const ValueKey('pay-error')),
@@ -552,7 +575,11 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
                 onSelected: _busy
                     ? null
                     : (_) => setState(() {
-                          if (_partyType != type) _party = null;
+                          if (_partyType != type) {
+                            _party = null;
+                            _partyBills = const [];
+                            _ticked.clear();
+                          }
                           _partyType = type;
                         }),
               ),
@@ -569,7 +596,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
               ? null
               : () async {
                   final p = await _pick<VoucherParty>('pay-party', w.payParty, parties, (x) => x.shownName);
-                  if (p != null) setState(() => _party = p);
+                  if (p != null) await _chooseParty(p);
                 },
         ),
         // ⭐ পাওনা নামের পাশে (নকশার "নাম · পয়েন্ট · শাখা", পাশে পাওনা) — সার্ভার পাঠালে তবেই
@@ -658,7 +685,11 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
               Expanded(
                 child: Wrap(spacing: AppSpacing.sm, alignment: WrapAlignment.spaceBetween, children: [
                   Text(b.no, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(w.payBillDue(Money.taka(b.due / 100)), key: ValueKey('pay-bill-due-${b.no}')),
+                  // ⓘ দেরি — আদায়ের পর্দার একই লেখা আর রং
+                  if ((b.daysLate ?? 0) > 0)
+                    Text(w.collectItemLate(b.daysLate!),
+                        key: ValueKey('pay-bill-late-${b.no}'), style: TextStyle(color: context.palette.danger, fontSize: 13)),
+                  Text(w.payBillDue(Money.taka(b.outstanding / 100)), key: ValueKey('pay-bill-due-${b.no}')),
                 ]),
               ),
             ]),
@@ -692,7 +723,11 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         MoneyNote(key: const ValueKey('pay-bills-over'), text: w.payBillsOverGross, tone: MoneyTone.stop)
       else if (sum > 0 && left > 0)
         // ⭐ বিলের বাইরে যা থাকে তা পক্ষের অগ্রিম — নিজের লাইনে (চুক্তির "অগ্রিম ৳…")
-        MoneyNote(key: const ValueKey('pay-bills-advance'), text: w.payBillsAdvance(Money.taka(left / 100)), tone: MoneyTone.info),
+        // ⛔ "অগ্রিম" নয় — সরবরাহকারীর আলাদা অগ্রিম খাত নেই, বাড়তিটা তাঁর নিজের খাতায় (২১১১) ডেবিট হয়ে থাকে (চুক্তির §৭.৬)
+        MoneyNote(
+            key: const ValueKey('pay-bills-unapplied'),
+            text: _toSupplier ? w.payBillsUnappliedSupplier(Money.taka(left / 100)) : w.payBillsUnappliedParty(Money.taka(left / 100)),
+            tone: MoneyTone.info),
     ]);
   }
 

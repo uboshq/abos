@@ -1,4 +1,5 @@
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
+import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/vouchers/money_voucher_screen.dart';
@@ -11,15 +12,18 @@ import 'support/real_fonts.dart';
 
 /// ⭐ পরিশোধে মোট টাকা — cb-র চুক্তি, খসড়া ১ (E:\ABOS\পরিশোধে-মোট-টাকা-চুক্তি-২৫-অক্টোবর.md; cb/money-display, cb-ma-4): নতুন সার্ভারে
 /// (`voucher_contract: 2`) `gross_amount` + AIT/VDS/চার্জ, `amount` কখনো নয়; বিল বাছলে মোটে বকেয়ার যোগফল, প্রতিটা ≤ বকেয়া, যোগফল ≤
-/// মোট, বাকিটা অগ্রিম; ৪২২ ঘরে ঘরে; নিট কেবল সার্ভারের। পুরনো সার্ভারে সব আগের মতো।
+/// মোট, বাকিটা পক্ষের নিজের খাতায় (Dr, কখনো "অগ্রিম" নয়); ৪২২ ঘরে ঘরে; নিট কেবল সার্ভারের। পুরনো সার্ভারে সব আগের মতো।
 
 const _cash = VoucherAccount(id: 11, code: '1101-01', name: 'প্রধান নগদ', kind: 'cash');
 const _bkash = VoucherAccount(id: 13, code: '1105-01', name: 'বিকাশ এজেন্ট', kind: 'mfs');
 const _bank = VoucherAccount(id: 12, code: '1102', name: 'ডাচ-বাংলা ব্যাংক চলতি', kind: 'bank');
 
 // ⓘ সার্ভারের ক্রমে নতুন আগে — পর্দা নিজে পুরনো আগে সাজায়
-const _b61 = VoucherBill(id: 'bill-61', no: 'PB-0061', date: '2026-10-20', due: 4000000);
-const _b57 = VoucherBill(id: 'bill-57', no: 'PB-0057', date: '2026-10-15', due: 8000000);
+// ⓘ খোলা বিলের দরজার উত্তর (চুক্তির §৭.১) — `total` ইচ্ছা করে বড়: বিল বাছায় চলে `outstanding`, বিলের মোট নয়
+const _openBills = [
+  {'id': 'bill-61', 'no': 'PB-0061', 'date': '2026-10-20', 'due_date': '2026-11-19', 'days_late': 0, 'total': '45000.0000', 'outstanding': '40000.0000'},
+  {'id': 'bill-57', 'no': 'PB-0057', 'date': '2026-10-15', 'due_date': '2026-10-20', 'days_late': 5, 'total': '95000.0000', 'outstanding': '80000.0000'},
+];
 
 const _supplier = VoucherParty(
   type: 'supplier',
@@ -28,14 +32,26 @@ const _supplier = VoucherParty(
   name: 'জাবেদ অ্যাগ্রো ফুড প্রসেসিং লিমিটেড · SUP-0003',
   due: 12000000,
   bank: PayeeBank(state: 'signed', line: 'সোনালী ব্যাংক · হিসাব ••••4521'),
-  bills: [_b61, _b57],
 );
+
+const _staff = VoucherParty(type: 'staff', id: 8, label: 'রহিম উদ্দিন · কর্মী', name: 'রহিম উদ্দিন');
 
 const _longUnknown = 'জাবেদ অ্যাগ্রো ফুড প্রসেসিং লিমিটেড-এর ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে (ট্রান্সফার বা জমা) দেওয়া যাবে না। '
     'করণীয়: সরবরাহকারীর পাতায় ব্যাংক তথ্য দিন। পাতা: https://adi.abos.app/suppliers/3';
 
-class _Fake implements VoucherApi, VoucherPreviewer {
-  _Fake({this.contract = 2, this.previewAnswer, this.previewAbsent = false, this.preview422, this.rejectDetails});
+class _Fake implements VoucherApi, VoucherPreviewer, VoucherBillsSource {
+  _Fake({this.contract = 2, this.previewAnswer, this.previewAbsent = false, this.preview422, this.rejectDetails, this.billsDoor = true});
+
+  /// খোলা বিলের দরজা আছে কি না — না থাকলে ৪০৪ (পুরনো সার্ভার)
+  final bool billsDoor;
+  final List<(String, int)> billsAsked = [];
+
+  @override
+  Future<List<VoucherBill>?> openBills(String type, int id) async {
+    billsAsked.add((type, id));
+    if (!billsDoor) return null;
+    return [for (final b in _openBills) VoucherBill.fromJson(b)!];
+  }
 
   final int contract;
   final Map<String, dynamic>? previewAnswer;
@@ -51,8 +67,8 @@ class _Fake implements VoucherApi, VoucherPreviewer {
         today: DateTime(2026, 10, 25),
         from: const VoucherSide(label: '', accounts: [_cash, _bkash, _bank]),
         to: const VoucherSide(label: '', accounts: []),
-        parties: const [_supplier],
-        partyTypes: const [('supplier', 'সরবরাহকারী')],
+        parties: const [_supplier, _staff],
+        partyTypes: const [('supplier', 'সরবরাহকারী'), ('staff', 'কর্মী')],
         transferModes: const [VoucherTransferMode(id: 1, name: 'BEFTN')],
         contract: contract,
       );
@@ -88,13 +104,20 @@ class _Fake implements VoucherApi, VoucherPreviewer {
   Future<PostAnswer> post(String id, {String? instrumentNo}) => throw UnimplementedError();
 }
 
-Future<void> _pump(WidgetTester tester, _Fake api, {Size size = const Size(412, 5000), double textScale = 1, ThemeData? theme}) async {
+Future<void> _pump(WidgetTester tester, _Fake api, {Size size = const Size(412, 5000), double textScale = 1, ThemeData? theme, Locale? locale}) async {
+  if (locale != null) {
+    AppLocale.current = locale;
+    addTearDown(() => AppLocale.current = AppLocale.locale);
+  }
   await tester.pumpWidget(const SizedBox());
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
     theme: theme,
+    locale: locale ?? AppLocale.locale,
+    supportedLocales: AppLocale.supported,
+    localizationsDelegates: AppLocale.delegates,
     home: MediaQuery.withClampedTextScaling(
       minScaleFactor: textScale,
       maxScaleFactor: textScale,
@@ -170,8 +193,8 @@ void main() {
         'ait_amount': '2000.00',
         'vds_amount': '1000.00',
         'bills': [
-          {'id': 'bill-61', 'amount': '40000.00'},
           {'id': 'bill-57', 'amount': '80000.00'},
+          {'id': 'bill-61', 'amount': '40000.00'},
         ],
         'save_as_draft': true,
       });
@@ -214,13 +237,71 @@ void main() {
       expect(_errorUnder(tester, 'pay-bill-amount-PB-0057'), 'বিলের বাকি ৳80,000.00-এর বেশি বসে না।');
 
       await _type(tester, 'pay-amount', '150000');
-      expect(find.byKey(const ValueKey('pay-bills-advance')), findsOneWidget, reason: '⛔ বিলের বাইরের টাকা অগ্রিম বলে দেখানো নয়');
-      expect(find.textContaining('অগ্রিম ৳30,000.00'), findsOneWidget);
+      expect(find.text('বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr): ৳30,000.00'), findsOneWidget,
+          reason: '⛔ বিলের বাইরের টাকা সরবরাহকারীর খাতায় থাকে বলে দেখানো নয়');
 
       await _type(tester, 'pay-amount', '100000');
       expect(_shown('pay-bills-over'), isTrue, reason: '⛔ বিলের যোগফল মোটের বেশি, তবু বলা নেই');
       await _tap(tester, 'pay-draft');
       expect(api.sent, isEmpty, reason: '⛔ বিলের যোগফল মোটের বেশি — তবু পাঠাল');
+    });
+  });
+
+  group('the open-bills door and the unapplied line (contract §7)', () {
+    testWidgets('picking the party asks its open bills by type and id; the bill uses outstanding, not its total; days late shown',
+        (tester) async {
+      final api = _Fake();
+      await _pump(tester, api);
+      await _party(tester);
+      expect(api.billsAsked, [('supplier', 3)], reason: '⛔ খোলা বিলের দরজা ভুল পক্ষে, বা ডাকা হয়নি');
+      expect(find.text('বাকি ৳80,000.00'), findsOneWidget, reason: '⛔ বিলের বাকি outstanding থেকে নয়');
+      expect(find.textContaining('95,000'), findsNothing, reason: '⛔ বিলের মোট টাকা বাকি বলে দেখাল');
+      expect(find.byKey(const ValueKey('pay-bill-late-PB-0057')), findsOneWidget);
+      expect(find.byKey(const ValueKey('pay-bill-late-PB-0061')), findsNothing);
+      await _tap(tester, 'pay-bill-tick-PB-0057');
+      expect(_field(tester, 'pay-amount'), '80,000.00', reason: '⛔ বিল বাছায় outstanding বসল না');
+    });
+
+    testWidgets('no open-bills door (404): no bills, and the form still sends the total', (tester) async {
+      final api = _Fake(billsDoor: false);
+      await _pump(tester, api);
+      await _party(tester);
+      expect(_shown('pay-bills'), isFalse, reason: '⛔ দরজা নেই, তবু বিলের অংশ');
+      await _type(tester, 'pay-amount', '5000');
+      await _tap(tester, 'pay-draft');
+      expect(api.sent.single.toPayload()['gross_amount'], '5000');
+      expect(api.sent.single.toPayload().containsKey('bills'), isFalse);
+    });
+
+    for (final locale in [AppLocale.locale, AppLocale.english]) {
+      testWidgets("overpaying a supplier never says advance (${locale.languageCode}): it stays in the supplier's ledger (Dr)", (tester) async {
+        final api = _Fake();
+        await _pump(tester, api, locale: locale);
+        await _party(tester);
+        await _tap(tester, 'pay-bill-tick-PB-0057');
+        await _type(tester, 'pay-amount', '130000');
+        final line = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('pay-bills-unapplied')), matching: find.byType(Text))).data!;
+        expect(
+            line,
+            locale.languageCode == 'bn'
+                ? 'বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr): ৳50,000.00'
+                : "Not applied to bills — stays in the supplier's ledger (Dr): ৳50,000.00");
+        final texts = [for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? ''];
+        expect(texts.where((t) => t.contains('অগ্রিম') || t.toLowerCase().contains('advance')), isEmpty,
+            reason: '⛔ পরিশোধের পর্দায় "অগ্রিম"/"advance" — সরবরাহকারীর আলাদা অগ্রিম খাত নেই');
+      });
+    }
+
+    testWidgets("a non-supplier party's bills come by its own type and id", (tester) async {
+      final api = _Fake();
+      await _pump(tester, api);
+      await _tap(tester, 'pay-party-type-staff');
+      await _party(tester);
+      expect(api.billsAsked, [('staff', 8)]);
+      await _tap(tester, 'pay-bill-tick-PB-0061');
+      await _type(tester, 'pay-amount', '50000');
+      expect(find.text('বিলে প্রয়োগ হয়নি — পক্ষের খাতায় থাকবে (Dr): ৳10,000.00'), findsOneWidget,
+          reason: '⛔ সরবরাহকারী নয় এমন পক্ষে তাঁর নিজের খাতার কথা নয়');
     });
   });
 
@@ -231,7 +312,7 @@ void main() {
       'vds_amount': ['VDS ভুল।'],
       'charge_amount': ['চার্জ ভুল।'],
       'instrument_no': ['TrxID আগে ব্যবহার হয়েছে।'],
-      'bills.1.amount': ['PB-0057-এর বাকি ৳80,000-এর বেশি।'],
+      'bills.0.amount': ['PB-0057-এর বাকি ৳80,000-এর বেশি।'],
       'bills': ['বিলের যোগফল মোটের বেশি।'],
       'payee_bank': [_longUnknown],
     };
@@ -242,9 +323,9 @@ void main() {
       expect(_errorUnder(tester, 'pay-vds'), 'VDS ভুল।', reason: '⛔ vds_amount VDS-এর ঘরে নয়');
       expect(_errorUnder(tester, 'pay-charge'), 'চার্জ ভুল।', reason: '⛔ charge_amount চার্জের ঘরে নয়');
       expect(_errorUnder(tester, 'pay-reference'), 'TrxID আগে ব্যবহার হয়েছে।', reason: '⛔ instrument_no রেফারেন্সের ঘরে নয়');
-      // ⓘ পাঠানো ক্রমে bills.1 = PB-0057 (সার্ভারের ক্রম: PB-0061, PB-0057)
-      expect(_errorUnder(tester, 'pay-bill-amount-PB-0057'), 'PB-0057-এর বাকি ৳80,000-এর বেশি।', reason: '⛔ bills.1.amount তার বিলের সারিতে নয়');
-      expect(_errorUnder(tester, 'pay-bill-amount-PB-0061'), isNull, reason: '⛔ bills.1.amount ভুল বিলে বসল');
+      // ⓘ পাঠানো ক্রমে (পুরনো আগে) bills.0 = PB-0057
+      expect(_errorUnder(tester, 'pay-bill-amount-PB-0057'), 'PB-0057-এর বাকি ৳80,000-এর বেশি।', reason: '⛔ bills.0.amount তার বিলের সারিতে নয়');
+      expect(_errorUnder(tester, 'pay-bill-amount-PB-0061'), isNull, reason: '⛔ bills.0.amount ভুল বিলে বসল');
       expect(find.descendant(of: find.byKey(const ValueKey('pay-bills-error')), matching: find.text('বিলের যোগফল মোটের বেশি।')), findsOneWidget,
           reason: '⛔ bills বিলের মোটের নিচে নয়');
       expect(tester.widget<Text>(find.byKey(const ValueKey('pay-error'))).data, _longUnknown, reason: '⛔ অচেনা চাবির কথা উপরে পুরোটা নয়');
@@ -272,8 +353,8 @@ void main() {
       final api = _Fake(previewAnswer: {
         'net_amount': '116500.0000',
         'ledger': [
-          {'account': '2111 সরবরাহকারীর দেনা', 'debit': '120000.0000', 'credit': '0'},
-          {'account': '1102 ডাচ-বাংলা ব্যাংক চলতি', 'debit': '0', 'credit': '116525.0000'},
+          {'account': {'id': 211, 'code': '2111', 'name': 'সরবরাহকারীর দেনা'}, 'debit': '120000.0000', 'credit': '0'},
+          {'account': {'id': 12, 'code': '1102', 'name': 'ডাচ-বাংলা ব্যাংক চলতি'}, 'debit': '0', 'credit': '116525.0000'},
         ],
         'total_dr': '120025.0000',
         'total_cr': '120025.0000',
@@ -289,6 +370,8 @@ void main() {
       expect(tester.widgetList<Text>(find.descendant(of: find.byKey(const ValueKey('pay-sum-net')), matching: find.byType(Text))).last.data,
           '৳1,16,500.00', reason: '⛔ সার্ভারের নিট নয়');
       expect(_shown('pay-ledger-1'), isTrue);
+      // ⓘ খাত বস্তু হয়ে আসে ({id, code, name}, চুক্তির §৭.৩) — পর্দায় "কোড নাম"
+      expect(find.text('2111 সরবরাহকারীর দেনা'), findsOneWidget, reason: '⛔ preview-এর খাতের বস্তু পড়া গেল না');
       expect(find.textContaining('1,17,000.00'), findsNothing, reason: '⛔ ফোন নিজে নিট গুনল');
 
       await _type(tester, 'pay-ait', '2500');
@@ -314,8 +397,8 @@ void main() {
           final api = _Fake(previewAnswer: {
             'net_amount': '116500.0000',
             'ledger': [
-              {'account': '2111 সরবরাহকারীর দেনা', 'debit': '120000.0000', 'credit': '0'},
-              {'account': '1102 ডাচ-বাংলা ব্যাংক চলতি', 'debit': '0', 'credit': '116525.0000'},
+              {'account': {'id': 211, 'code': '2111', 'name': 'সরবরাহকারীর দেনা'}, 'debit': '120000.0000', 'credit': '0'},
+              {'account': {'id': 12, 'code': '1102', 'name': 'ডাচ-বাংলা ব্যাংক চলতি'}, 'debit': '0', 'credit': '116525.0000'},
             ],
           });
           await _pump(tester, api, size: Size(width, 760), textScale: scale, theme: withRealFonts(AppTheme.light()));

@@ -2358,7 +2358,7 @@ class AppL10nBn extends AppL10n {
   String get payFigureThis => 'এই পরিশোধ';
 
   @override
-  String get payFigureAdvance => 'অগ্রিম দেওয়া হবে';
+  String get payFigureStays => 'খাতায় থাকবে (Dr)';
 
   @override
   String get payPartyType => 'পক্ষের ধরন *';
@@ -2513,8 +2513,13 @@ class AppL10nBn extends AppL10n {
   String get payBillsApplied => 'বিলে বসল';
 
   @override
-  String payBillsAdvance(String amount) {
-    return 'অগ্রিম $amount — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে';
+  String payBillsUnappliedSupplier(String amount) {
+    return 'বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr): $amount';
+  }
+
+  @override
+  String payBillsUnappliedParty(String amount) {
+    return 'বিলে প্রয়োগ হয়নি — পক্ষের খাতায় থাকবে (Dr): $amount';
   }
 
   @override

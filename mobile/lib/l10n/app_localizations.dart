@@ -4069,11 +4069,11 @@ abstract class AppL10n {
   /// **'এই পরিশোধ'**
   String get payFigureThis;
 
-  /// Payment voucher, top figures: what is paid beyond what we owe (an advance)
+  /// Payment voucher, top figures: paid beyond what is owed; it stays as a debit in the party's own ledger (never called an advance)
   ///
   /// In bn, this message translates to:
-  /// **'অগ্রিম দেওয়া হবে'**
-  String get payFigureAdvance;
+  /// **'খাতায় থাকবে (Dr)'**
+  String get payFigureStays;
 
   /// Payment voucher: label over the party type chips (supplier, customer, staff …)
   ///
@@ -4345,11 +4345,17 @@ abstract class AppL10n {
   /// **'বিলে বসল'**
   String get payBillsApplied;
 
-  /// Payment voucher: the gross left over after the bills, kept as an advance
+  /// Payment voucher: the total above the ticked bills; it stays as a debit in the supplier's own ledger (2111) — never called an advance
   ///
   /// In bn, this message translates to:
-  /// **'অগ্রিম {amount} — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে'**
-  String payBillsAdvance(String amount);
+  /// **'বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr): {amount}'**
+  String payBillsUnappliedSupplier(String amount);
+
+  /// Payment voucher to a non-supplier party: the total above the ticked bills stays as a debit in the party's own ledger — never called an advance
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলে প্রয়োগ হয়নি — পক্ষের খাতায় থাকবে (Dr): {amount}'**
+  String payBillsUnappliedParty(String amount);
 
   /// Payment voucher bill row: the typed amount was above the bill's due and was capped
   ///

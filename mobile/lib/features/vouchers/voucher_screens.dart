@@ -425,6 +425,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
             PaperStateFact(chip: voucherStateChip(p.row, key: const ValueKey('voucher-state'))),
             FactRow(context.l10n.vouchersAmount, Money.taka(p.row.amount)),
             // ⭐ নিট — সার্ভারের হিসাব (চুক্তি ২), পুরনো সার্ভারে নেই, ফোন নিজে গোনে না
+            if (p.grossAmount case final gross?) FactRow(context.l10n.payGrossShort, Money.taka(gross), key: const ValueKey('voucher-gross')),
             if (p.netAmount case final net?) FactRow(context.l10n.vouchersPageNet, Money.taka(net), key: const ValueKey('voucher-net')),
             if (p.row.date != null) FactRow(context.l10n.vouchersDate, dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),

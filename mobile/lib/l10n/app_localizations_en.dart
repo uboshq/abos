@@ -2405,7 +2405,7 @@ class AppL10nEn extends AppL10n {
   String get payFigureThis => 'This payment';
 
   @override
-  String get payFigureAdvance => 'Paid in advance';
+  String get payFigureStays => 'Stays in the ledger (Dr)';
 
   @override
   String get payPartyType => 'Party type *';
@@ -2560,8 +2560,13 @@ class AppL10nEn extends AppL10n {
   String get payBillsApplied => 'Set against bills';
 
   @override
-  String payBillsAdvance(String amount) {
-    return 'Advance $amount — beyond the bills, kept as an advance in the party\'s ledger';
+  String payBillsUnappliedSupplier(String amount) {
+    return 'Not applied to bills — stays in the supplier\'s ledger (Dr): $amount';
+  }
+
+  @override
+  String payBillsUnappliedParty(String amount) {
+    return 'Not applied to bills — stays in the party\'s ledger (Dr): $amount';
   }
 
   @override

@@ -90,7 +90,6 @@ class VoucherParty {
     this.typeLabel = '',
     this.due,
     this.bank,
-    this.bills = const [],
   });
 
   final String type;
@@ -109,9 +108,6 @@ class VoucherParty {
 
   /// ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার (`bank`: {state, line}); সার্ভার না পাঠালে null
   final PayeeBank? bank;
-
-  /// ⭐ খোলা বিল, পুরনো আগে — চুক্তি ২-এর পরিশোধে বিল বাছার জন্য (`bills`: [{id, no, date, due}]); সার্ভার না পাঠালে খালি
-  final List<VoucherBill> bills;
 
   /// ওয়েবের ফর্মের একটা ঘর — `type:id` ([[VoucherRequest::prepareForValidation]])
   String get key => '$type:$id';
@@ -139,14 +135,22 @@ class PayeeBank {
   }
 }
 
-/// ⭐ পক্ষের একটা খোলা বিল — `id` বিলের public_id (চুক্তি ২-এর `bills[i][id]`), `due` বাকি, পয়সায়
+/// ⭐ পক্ষের একটা খোলা বিল — `GET /accounts/parties/{type}/{id}/open-bills` (cb, চুক্তির §৭.১): `id` বিলের public_id (চুক্তি ২-এর
+/// `bills[i][id]`), `outstanding` বাকি (পয়সায় [outstanding]) — বিল বাছায় এটাই, ওয়েবের কার্ডের একই সংখ্যা ([[PartyOpenBills]])
 class VoucherBill {
-  const VoucherBill({required this.id, required this.no, this.date = '', required this.due});
+  const VoucherBill({required this.id, required this.no, this.date = '', this.dueDate, this.daysLate, this.total = 0, required this.outstanding});
 
   final String id;
   final String no;
   final String date;
-  final int due;
+  final String? dueDate;
+
+  /// শেষ দিন পেরিয়ে কত দিন — না পেরোলে null বা ০
+  final int? daysLate;
+  final int total;
+  final int outstanding;
+
+  static int _paisa(Object? v) => ((Money.value(v) ?? 0) * 100).round();
 
   static VoucherBill? fromJson(Object? raw) {
     if (raw is! Map) return null;
@@ -156,7 +160,10 @@ class VoucherBill {
       id: id,
       no: raw['no']?.toString() ?? id,
       date: raw['date']?.toString() ?? '',
-      due: ((Money.value(raw['due']) ?? 0) * 100).round(),
+      dueDate: raw['due_date']?.toString(),
+      daysLate: (raw['days_late'] as num?)?.toInt(),
+      total: _paisa(raw['total']),
+      outstanding: _paisa(raw['outstanding']),
     );
   }
 }
@@ -170,6 +177,12 @@ class VoucherPreview {
   final double? totalDr;
   final double? totalCr;
 
+  /// খাত — সার্ভারের বস্তু {id, code, name} (চুক্তির §৭.৩) থেকে "কোড নাম"; পুরনো লেখা এলে যেমন আছে
+  static String _accountWords(Object? a) {
+    if (a is Map) return [a['code'], a['name']].where((x) => (x?.toString() ?? '').isNotEmpty).join(' ');
+    return a?.toString() ?? '';
+  }
+
   /// `net_amount` না থাকলে null — নিট কখনো আন্দাজে নয়
   static VoucherPreview? fromJson(Object? raw) {
     if (raw is! Map || raw['net_amount'] == null) return null;
@@ -181,7 +194,7 @@ class VoucherPreview {
         for (final l in (raw['ledger'] as List?) ?? const [])
           if (l is Map)
             VoucherLineView(
-              account: l['account']?.toString() ?? '',
+              account: _accountWords(l['account']),
               debit: Money.valueOrZero(l['debit']),
               credit: Money.valueOrZero(l['credit']),
             ),
@@ -261,10 +274,6 @@ class VoucherSetup {
                     typeLabel: g['label']?.toString() ?? '',
                     due: p['due'] == null ? null : ((Money.value(p['due']) ?? 0) * 100).round(),
                     bank: PayeeBank.fromJson(p['bank']),
-                    bills: [
-                      for (final b in (p['bills'] as List?) ?? const [])
-                        if (VoucherBill.fromJson(b) case final bill?) bill,
-                    ],
                   ),
         ],
         partyTypes: [
@@ -471,9 +480,13 @@ class VoucherPage {
     this.moneyAccount,
     this.moneyLabel,
     this.netAmount,
+    this.grossAmount,
   });
 
   final VoucherRow row;
+
+  /// ⭐ মোট — পক্ষের খাতা যতটা কমল (চুক্তি ২, `gross_amount`); পুরনো সার্ভারে null
+  final double? grossAmount;
 
   /// ⭐ নিট — সার্ভারের হিসাব (চুক্তি ২, `net_amount`); পুরনো সার্ভারে null, তখন কিছুই দেখানো নয়
   final double? netAmount;
@@ -514,6 +527,7 @@ class VoucherPage {
         moneyAccount: j['money_account']?.toString(),
         moneyLabel: j['money_label']?.toString(),
         netAmount: j['net_amount'] == null ? null : Money.value(j['net_amount']),
+        grossAmount: j['gross_amount'] == null ? null : Money.value(j['gross_amount']),
         lines: [
           for (final l in (j['lines'] as List?) ?? const [])
             if (l is Map)
@@ -723,6 +737,11 @@ abstract class VoucherPreviewer {
   Future<VoucherPreview?> preview(VoucherDraft draft);
 }
 
+/// ⭐ পক্ষের খোলা বিল — `GET /accounts/parties/{type}/{id}/open-bills` (cb, চুক্তির §৭.১); দরজা না থাকলে (৪০৪/৪০৫) null, পর্দা তখন বিল দেখায় না
+abstract class VoucherBillsSource {
+  Future<List<VoucherBill>?> openBills(String type, int id);
+}
+
 abstract class VoucherApi {
   Future<VoucherSetup> setup(String type);
 
@@ -744,8 +763,23 @@ abstract class VoucherApi {
   Future<PushOutcome> send(VoucherDraft draft, String changeId);
 }
 
-class ServerVoucherApi implements VoucherApi, VoucherPreviewer {
+class ServerVoucherApi implements VoucherApi, VoucherPreviewer, VoucherBillsSource {
   const ServerVoucherApi();
+
+  @override
+  Future<List<VoucherBill>?> openBills(String type, int id) async {
+    try {
+      final r = await ApiClient.dio.get<Map<String, dynamic>>('/accounts/parties/$type/$id/open-bills');
+      return [
+        for (final b in (r.data?['bills'] as List?) ?? const [])
+          if (VoucherBill.fromJson(b) case final bill?) bill,
+      ];
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 404 || status == 405) return null;
+      rethrow;
+    }
+  }
 
   @override
   Future<VoucherPreview?> preview(VoucherDraft draft) async {

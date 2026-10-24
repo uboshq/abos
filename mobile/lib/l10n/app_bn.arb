@@ -3221,9 +3221,9 @@
   "@payFigureThis": {
     "description": "Payment voucher, top figures: the amount of this payment"
   },
-  "payFigureAdvance": "অগ্রিম দেওয়া হবে",
-  "@payFigureAdvance": {
-    "description": "Payment voucher, top figures: what is paid beyond what we owe (an advance)"
+  "payFigureStays": "খাতায় থাকবে (Dr)",
+  "@payFigureStays": {
+    "description": "Payment voucher, top figures: paid beyond what is owed; it stays as a debit in the party's own ledger (never called an advance)"
   },
   "payPartyType": "পক্ষের ধরন *",
   "@payPartyType": {
@@ -3438,9 +3438,18 @@
   "@payBillsApplied": {
     "description": "Payment voucher: the sum set against the ticked bills"
   },
-  "payBillsAdvance": "অগ্রিম {amount} — বিলের বাইরে, পক্ষের খাতায় অগ্রিম হিসেবে থাকবে",
-  "@payBillsAdvance": {
-    "description": "Payment voucher: the gross left over after the bills, kept as an advance",
+  "payBillsUnappliedSupplier": "বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr): {amount}",
+  "payBillsUnappliedParty": "বিলে প্রয়োগ হয়নি — পক্ষের খাতায় থাকবে (Dr): {amount}",
+  "@payBillsUnappliedSupplier": {
+    "description": "Payment voucher: the total above the ticked bills; it stays as a debit in the supplier's own ledger (2111) — never called an advance",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@payBillsUnappliedParty": {
+    "description": "Payment voucher to a non-supplier party: the total above the ticked bills stays as a debit in the party's own ledger — never called an advance",
     "placeholders": {
       "amount": {
         "type": "String"
