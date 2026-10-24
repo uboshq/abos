@@ -114,13 +114,23 @@ class SearchController extends Controller
 
                 // ⓘ একই ঠিকানায় মডিউলের ফল আগে বসলে সেটাই থাকে — নইলে "মডিউল" ফলটা প্রথম পাতার নামে চাপা পড়ত
                 $out[$item['url']] ??= ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
-
-                if (count($out) >= 8) {
-                    return array_values($out);
-                }
             }
         }
 
-        return array_values($out);
+        /*
+         * ⭐ শব্দের শুরুতে মিল আগে, মাঝখানের মিল পরে (fe, ২৫ অক্টোবর ২০২৬; আন্তর্জাতিক মান — Fiori, Spotlight)। ⛔ আগে মেনুর ক্রমেই
+         * আসত: "স্থায়ী" লিখলে "বাকি নিয়ন্ত্রণ · অস্থায়ী সীমা…" (মাঝখানে মিল) "মডিউল · স্থায়ী সম্পদ"-এর আগে বসত। ⓘ সমান হলে আগের
+         * ক্রম (usort স্থির) — তাই মডিউলের ফল তার নিজের পাতাগুলোর আগেই থাকে। আটটা বাছা হয় সাজানোর পরে, যাতে পরে আসা শুরুর-মিল কাটা না পড়ে।
+         */
+        $hits = array_values($out);
+        usort($hits, fn (array $a, array $b): int => $this->startsAWord($a['label'], $needle) <=> $this->startsAWord($b['label'], $needle));
+
+        return array_slice($hits, 0, 8);
+    }
+
+    /** ০ — লেখার শুরুতে বা কোনো শব্দের শুরুতে মেলে; ১ — কেবল শব্দের মাঝখানে */
+    private function startsAWord(string $label, string $needle): int
+    {
+        return preg_match('/(?:^|[\s·,\-—\/(])'.preg_quote($needle, '/').'/u', mb_strtolower($label)) === 1 ? 0 : 1;
     }
 }

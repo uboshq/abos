@@ -131,6 +131,19 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $this->assertContains(['type' => __('core.search.module'), 'no' => '', 'label' => (string) $module['label'], 'url' => (string) $first['url']], $hits,
             '⛔ উপরের খোঁজায় মডিউলের নাম লিখলে মডিউলটা আসে না — "আরও"-তে থাকা মডিউলে পৌঁছানোর সোজা পথ নেই');
 
+        /*
+         * ⭐ শব্দের শুরুতে মিল আগে, মাঝখানের মিল পরে (fe, ২৫ অক্টোবর ২০২৬): "স্থায়ী" লিখলে প্রথম ফল "মডিউল · স্থায়ী সম্পদ" — "অস্থায়ী"-ওয়ালা
+         * পাতা (বাকি নিয়ন্ত্রণ · অস্থায়ী সীমা) তার পরে। ⓘ খোঁজার শব্দ মডিউলের নামের প্রথম শব্দ, পরীক্ষার ভাষা যা-ই হোক।
+         */
+        $word = mb_strtolower((string) preg_split('/\s+/u', trim((string) $module['label']))[0]);
+        $midWord = collect($menu)->flatMap(fn (array $m) => collect($m['groups'] ?? [])->flatten(1))
+            ->filter(fn (array $i) => ($i['url'] ?? null) !== null)
+            ->contains(fn (array $i) => preg_match('/\p{L}'.preg_quote($word, '/').'/u', mb_strtolower((string) ($i['label'] ?? ''))) === 1);
+        $this->assertTrue($midWord, "প্রস্তুতিটাই ভুল — মেনুতে \"{$word}\" শব্দের মাঝখানে মেলে এমন পাতা নেই, ক্রমের দাবি অর্থহীন");
+        $ranked = $this->getJson(route('search', ['q' => $word]))->assertOk()->json('hits');
+        $this->assertSame(['type' => __('core.search.module'), 'label' => (string) $module['label']], ['type' => $ranked[0]['type'] ?? null, 'label' => $ranked[0]['label'] ?? null],
+            "⛔ \"{$word}\" লিখলে প্রথম ফল মডিউলটা নয় — শব্দের মাঝখানের মিল (\"অস্থায়ী\") আগে বসেছে");
+
         $sr = $this->person(['customer.view']);
         $this->assertNotContains('fixed_assets', $this->menuCodes($sr), 'প্রস্তুতিটাই ভুল — বিক্রয়কর্মীর স্থায়ী সম্পদের চাবি আছে');
         $theirs = $this->actingAs($sr)->getJson(route('search', ['q' => mb_substr((string) $module['label'], 0, 4)]))->assertOk()->json('hits');
