@@ -444,6 +444,8 @@ export function payBills ({
                 if (e.target?.name === 'instrument_no') this.slipSoon()
             })
             this.$watch('supplier', () => this.slipSoon())
+            // ⭐ খাত বদলালেও আবার — প্রশ্নটা এখন খাত ধরে (নিরীক্ষা ৮, ২৪ অক্টোবর ২০২৬; [[SlipIsNotUsedTwice]])
+            this.$watch('account', () => this.slipSoon())
         },
 
         slipSoon () {
@@ -467,6 +469,8 @@ export function payBills ({
 
             const query = new URLSearchParams({ supplier_id: this.supplier, instrument_no: no })
             if (paymentId) query.set('payment', String(paymentId))
+            // ⓘ জমার একই প্রশ্ন — একই খাতে একই নম্বর, সরবরাহকারী যে-ই হোন
+            if (String(this.account ?? '') !== '') query.set('account_id', String(this.account))
 
             try {
                 const response = await fetch(slipUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })

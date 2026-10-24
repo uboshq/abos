@@ -58,6 +58,9 @@ final class PaymentService
      */
     private const CHEQUE = 'cheque';
 
+    /** ⓘ একই খাতে একই চালু রেফারেন্স একবারই — মাইগ্রেশনের নাম ([[SlipIsNotUsedTwice::guarded()]] এই নাম ধরে চেনে) */
+    public const LIVE_REF_INDEX = 'pur_payments_live_ref_unique';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -85,7 +88,9 @@ final class PaymentService
      */
     public function create(array $data, array $lines): Payment
     {
-        return DB::transaction(function () use ($data, $lines) {
+        // ⓘ দুই হাত একসাথে পেরোলে দ্বিতীয়টা ইউনিক ইনডেক্সে থামে — একই বার্তায়, ৫০০ নয় ([[SlipIsNotUsedTwice::guarded()]])
+        return $this->slips->guarded(self::LIVE_REF_INDEX, __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            fn () => DB::transaction(function () use ($data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
@@ -103,6 +108,7 @@ final class PaymentService
              * ⓘ নম্বরটা নেওয়ার **আগে**, ইচ্ছাকৃতভাবে: আটকালে সিরিজের
              * একটা নম্বর খরচ হয়ে যেত আর কাগজে ফাঁক পড়ত।
              */
+            // ⭐ খাত ধরে — একই খাতে একই নম্বর মানে একই টাকা, সরবরাহকারী যে-ই হোন (নিরীক্ষা ৮, ২৪ অক্টোবর ২০২৬; [[SlipIsNotUsedTwice]])
             $this->slips->check(
                 table: 'pur_payments',
                 slipNo: $data['instrument_no'] ?? null,
@@ -111,6 +117,7 @@ final class PaymentService
                 message: __('purchase::validation.slip_used_twice', [
                     'no' => trim((string) ($data['instrument_no'] ?? '')),
                 ]),
+                accountId: (int) $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
             );
 
             /*
@@ -153,7 +160,7 @@ final class PaymentService
                 ]);
 
             return $payment->fresh(['lines']);
-        });
+        }));
     }
 
     /**
@@ -173,9 +180,12 @@ final class PaymentService
             party: 'supplier_id',
             message: __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
             exceptId: (int) $payment->id,
+            accountId: (int) $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
         );
 
-        return DB::transaction(function () use ($payment, $data, $lines) {
+        // ⓘ দুই হাত একসাথে পেরোলে দ্বিতীয়টা ইউনিক ইনডেক্সে থামে — একই বার্তায়, ৫০০ নয় ([[SlipIsNotUsedTwice::guarded()]])
+        return $this->slips->guarded(self::LIVE_REF_INDEX, __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            fn () => DB::transaction(function () use ($payment, $data, $lines) {
             // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
             // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
             $this->lockFresh($payment);
@@ -195,7 +205,7 @@ final class PaymentService
             $this->replaceLines($payment, $lines);
 
             return $payment->fresh(['lines']);
-        });
+        }));
     }
 
     public function confirm(Payment $payment): Payment
