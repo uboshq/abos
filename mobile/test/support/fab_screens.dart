@@ -148,7 +148,7 @@ class FakeDos implements DeliveryOrderApi {
         [
           for (var i = 1; i <= 10; i++)
             DeliveryOrder(
-                id: 'do-$i', no: 'DO-000$i', date: '2026-10-03', customer: 'রহিম স্টোর $i', status: i == 3 ? 'rejected' : 'approved',
+                id: 'do-$i', no: 'DO-000$i', date: '2026-10-03', customer: 'মেসার্স রহমান ট্রেডার্স অ্যান্ড সন্স $i · ফুলবাড়িয়া · ময়মনসিংহ', status: i == 3 ? 'rejected' : 'approved',
                 statusLabel: i == 3 ? 'প্রত্যাখ্যাত' : 'অনুমোদিত', total: i * 12500.0, editable: false, awaitingMe: false),
         ],
         const PaperTotal(sum: 1842650.5, count: 37),

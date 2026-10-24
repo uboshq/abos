@@ -9,6 +9,7 @@ import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/locale/l10n.dart';
@@ -358,20 +359,27 @@ class AmountLine extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(children: [
-            Expanded(flex: 3, child: labelIsName ? CustomerLine(label, style: style) : Text(label, style: style)),
-            const SizedBox(width: AppSpacing.sm),
-            // ⓘ টাকা ডানে (নকশার নিয়ম §৩), সারির ৪০%-এর বেশি নেয় না; বড় অক্ষরে মোড়ে, কাটে না
-            Flexible(
-              flex: 2,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(figureText(amount),
-                    textAlign: TextAlign.end,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
-              ),
-            ),
-          ]),
+          // ⭐ টাকা কখনো মাঝখানে ভাঙে না, ছোটও হয় না (মালিকের নিয়ম ০.৪.৪৭ থেকে; [Amounts]): সারির ৪০%-এ ধরলে নামের পাশে ডানে;
+          // না ধরলে (সরু ফোন, ২০০% অক্ষর) সারি দুই তলা — ওপরে নাম, নিচে ডানে পুরো টাকা, এক লাইনে। ⛔ আগে ৪০%-এর ঘরে মুড়ত:
+          // "৳47,835." / "57"
+          child: LayoutBuilder(builder: (context, box) {
+            final money = figureText(amount);
+            final moneyStyle = Amounts.main(context, size: 14, color: cs.onSurface);
+            final name = labelIsName ? CustomerLine(label, style: style) : Text(label, style: style);
+            final figure = AmountText(money, key: const ValueKey('line-amount'), style: moneyStyle);
+            if (Amounts.fitsBeside(context, box.maxWidth, [(money, moneyStyle)], share: 0.4)) {
+              return Row(children: [
+                Expanded(child: name),
+                const SizedBox(width: AppSpacing.sm),
+                figure,
+              ]);
+            }
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              name,
+              const SizedBox(height: 2),
+              Align(alignment: AlignmentDirectional.centerEnd, child: figure),
+            ]);
+          }),
         ),
       ),
     );
@@ -476,39 +484,45 @@ class PaperRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 56),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: LayoutBuilder(
-            builder: (context, box) => Row(children: [
-              Expanded(
-                child: Semantics(
-                  container: true,
-                  button: onTap != null,
-                  label: spoken,
-                  excludeSemantics: true,
-                  child:
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    CustomerLine(first,
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                    if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                  ]),
-                ),
-              ),
+          child: LayoutBuilder(builder: (context, box) {
+            // ⭐ টাকা কখনো মাঝখানে ভাঙে না, ছোটও হয় না (মালিকের নিয়ম ০.৪.৪৭ থেকে; [Amounts], [DesignListRow]-এর একই নিয়ম):
+            // সারির ৪৫%-এ ধরলে ডানে; না ধরলে সারি দুই তলা — ওপরে কথা, নিচে ডানে পুরো টাকা আর চিপ। ⛔ আগে ৪৫%-এর ঘরে মুড়ত:
+            // "৳30,000.0" / "0" (৩৬০dp, ২০০%)
+            final money = amount == null ? null : Money.taka(amount);
+            final moneyStyle = Amounts.main(context, size: 14, color: cs.onSurface);
+            final stack = money != null && !Amounts.fitsBeside(context, box.maxWidth, [(money, moneyStyle)], share: 0.45);
+            final words = Semantics(
+              container: true,
+              button: onTap != null,
+              label: spoken,
+              excludeSemantics: true,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                // ⓘ প্রথম লাইনে কেবল "নম্বর · নাম" — টুলটিপ পুরো "নম্বর · নাম · পয়েন্ট · শাখা" (সারির TalkBack-ও পুরোটা, [spoken])
+                CustomerLine(first,
+                    full: [no, party].where((s) => s.isNotEmpty).join(' · '),
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+              ]),
+            );
+            final figures = Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+              if (money != null) ExcludeSemantics(child: AmountText(money, key: const ValueKey('row-amount'), style: moneyStyle)),
+              if (money != null) const SizedBox(height: 2),
+              chip,
+            ]);
+            if (stack) {
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                words,
+                const SizedBox(height: 4),
+                Align(alignment: AlignmentDirectional.centerEnd, child: figures),
+              ]);
+            }
+            return Row(children: [
+              Expanded(child: words),
               const SizedBox(width: AppSpacing.sm),
-              // ⓘ টাকা আর চিপ ডানের কিনারে, সারির ৪৫%-এর বেশি নয় — বড় অক্ষরে মোড়ে, ছাপায় না
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                  if (amount != null)
-                    ExcludeSemantics(
-                      child: Text(Money.taka(amount),
-                          textAlign: TextAlign.end,
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                    ),
-                  if (amount != null) const SizedBox(height: 2),
-                  chip,
-                ]),
-              ),
-            ]),
-          ),
+              // ⓘ টাকা আর চিপ ডানের কিনারে, সারির ৪৫%-এর বেশি নয়
+              ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45), child: figures),
+            ]);
+          }),
         ),
       ),
     );

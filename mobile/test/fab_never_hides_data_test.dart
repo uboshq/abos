@@ -17,9 +17,12 @@ import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/core/sync_engine/sync_status.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
+import 'package:abos_mobile/core/widgets/customer_line.dart';
+import 'package:abos_mobile/core/widgets/design_list_row.dart';
 import 'package:abos_mobile/core/widgets/totals_bar.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:abos_mobile/features/home/nav_bottom_bar.dart';
+import 'package:abos_mobile/features/home/owner_home_cards.dart' show AmountLine, PaperRow;
 import 'package:abos_mobile/features/orders/order_list_screen.dart';
 
 import 'navigation/bar_harness.dart' show rolePermissions, loadRealFonts, realFontTheme;
@@ -122,9 +125,14 @@ int _listTextsShown(WidgetTester tester) {
 
 /// লেখা কয় লাইনে — অক্ষরের ঘরগুলো খাড়া ভাবে একে অপরের সাথে মিললে এক লাইন (৳ বাংলা ফন্টে, অঙ্ক Roboto-তে: এক লাইনেই
 /// দুই উচ্চতার ঘর)
-int _lineCount(RenderParagraph p, String text) {
-  final boxes = p.getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: text.length))
-    ..sort((a, b) => a.top.compareTo(b.top));
+int _lineCount(RenderParagraph p, String text) =>
+    _boxLines(p.getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: text.length)));
+
+/// একটা টাকা: "৳", চিহ্ন, অঙ্ক, কমা আর দশমিক
+final _taka = RegExp(r'৳\s?-?[0-9০-৯][0-9০-৯,]*(?:\.[0-9০-৯]+)?');
+
+int _boxLines(List<TextBox> found) {
+  final boxes = [...found]..sort((a, b) => a.top.compareTo(b.top));
   var lines = 0;
   var bottom = double.negativeInfinity;
   for (final b in boxes) {
@@ -153,6 +161,8 @@ List<String> _dropped(List<String> old, List<String> now) {
   final left = [...now];
   return [for (final s in old) if (!left.remove(s)) s];
 }
+
+const _longShop = 'মেসার্স ভাই ভাই এন্টারপ্রাইজ অ্যান্ড জেনারেল স্টোর · ফুলপুর বাজার · ময়মনসিংহ';
 
 final _sr = AuthUser(id: 'u2', name: 'করিম উদ্দিন', email: 'sr@x', roles: const ['SR'], permissions: rolePermissions['sr']!);
 final _owner =
@@ -187,7 +197,8 @@ Widget _app(String initial, {required double scale, AuthUser? user, NavigatorObs
                   child: MoneyInListScreen(
                       api: SampleBooks(),
                       today: DateTime(2026, 10, 20),
-                      dues: sampleDues,
+                      // ⓘ নমুনার দুই দোকান আর একটা লম্বা নামের — ৩৬০dp-তে নাম "…"-এ কাটে (কাটা নামের দাবি)
+                      dues: () => [...sampleDues(), const ShopDue(_longShop, 5250)],
                       unsent: () => const [],
                       canCollect: true,
                       collect: () => const Scaffold(body: Text('COLLECT SCREEN'))),
@@ -403,6 +414,109 @@ void main() {
         await tester.pumpAndSettle();
         await opened(tester);
       }
+    });
+  }
+
+  // ⭐ তালিকার সারির টাকাও কখনো ভাঙে না, কাটে না, পর্দার বাইরে যায় না (মালিকের নিয়ম ০.৪.৪৭ থেকে; fe, ২৪ অক্টোবর ২০২৬,
+  // ০.৪.৪৮): সরু সারি অঙ্ক ছোট করে না — দুই তলা হয়, অঙ্ক নিচে ডানে, পুরো মাপে ([Amounts], amount_text.dart)।
+  // ⓘ টাকা = "৳"-ওয়ালা লেখা; স্থির অবস্থায় আর শেষে, যত সারি আঁকা হয়েছে সব
+  for (final MapEntry(key: name, value: c) in cases.entries) {
+    for (final MapEntry(key: width, value: size) in _widths.entries) {
+      for (final scale in [1.0, 2.0]) {
+        final at = '$name ${width}dp ${(scale * 100).round()}%';
+        testWidgets('$at: every amount in the list is whole, on one line, inside the screen', (tester) async {
+          await open(tester, c, size, scale);
+          final broken = <String>{};
+          var amounts = 0;
+          void look() {
+            for (final e in find.byType(RichText).evaluate()) {
+              if (Scrollable.maybeOf(e) == null) continue;
+              final p = e.renderObject! as RenderParagraph;
+              if (!p.hasSize || !p.attached) continue;
+              final text = p.text.toPlainText();
+              if (!text.contains('৳')) continue;
+              final rect = _globalRect(p);
+              if (p.didExceedMaxLines) broken.add('"$text" cut ("…")');
+              // ⓘ প্রতিটা টাকার টুকরো ("৳" থেকে অঙ্কের শেষ) — লেখার বাকিটা (পয়েন্ট · শাখা) ফাঁকে মুড়তে পারে, টাকা নয়
+              for (final m in _taka.allMatches(text)) {
+                amounts++;
+                final amount = m.group(0)!;
+                final boxes = p.getBoxesForSelection(TextSelection(baseOffset: m.start, extentOffset: m.end));
+                final lines = _boxLines(boxes);
+                if (lines != 1) broken.add('"$amount" in "$text" on $lines lines');
+                if (boxes.any((b) => b.left < -0.5 || b.right > p.size.width + 0.5 || b.bottom > p.size.height + 0.5)) {
+                  broken.add('"$amount" in "$text" not drawn whole');
+                }
+                for (final b in boxes) {
+                  final r = MatrixUtils.transformRect(p.getTransformTo(null), b.toRect());
+                  if (r.left < -0.5 || r.right > size.width + 0.5) broken.add('"$amount" $r outside the screen');
+                }
+              }
+              if (rect.left < -0.5 || rect.right > size.width + 0.5) broken.add('"$text" $rect outside the screen');
+            }
+          }
+
+          look();
+          await _scrollToEnd(tester);
+          look();
+          if (amounts == 0) return; // ⓘ এই পর্দার সারিতে টাকা নেই (গোনা, ছুটি, যাচাই, দায়িত্ব, লিড)
+          expect(broken, isEmpty, reason: '⛔ an amount in the list breaks, is cut or leaves the screen on $at');
+        });
+      }
+    }
+  }
+
+  // ⭐ কাটা নাম কখনো হারায় না (fe, ২৪ অক্টোবর ২০২৬, ০.৪.৪৮): তালিকার যে সারিতে "নাম · পয়েন্ট · শাখা" "…"-এ কাটে, সেখানে
+  // TalkBack পুরো লেখা পড়ে, আর ছুঁয়ে ধরে রাখলে টুলটিপে পুরোটা ([CustomerLine])। পুরো লেখা সারির নিজের তথ্য থেকে নেওয়া
+  // (PaperRow.party, AmountLine.label, DesignListRow.name) — লাইনের নিজের লেখা থেকে নয়।
+  for (final name in _withTotals) {
+    testWidgets('$name 360dp 100%: a cut name is read in full by TalkBack and shown in full on a long-press', (tester) async {
+      final handle = tester.ensureSemantics();
+      await open(tester, cases[name]!, _widths[360]!, 1);
+      // ⓘ শেষে — নিচের সারিগুলোও (দোকানের বকেয়া) আঁকা থাকে
+      await _scrollToEnd(tester);
+      String? fullOf(Element e) {
+        String? found;
+        e.visitAncestorElements((a) {
+          found = switch (a.widget) {
+            PaperRow(:final party) => party,
+            AmountLine(:final label) => label,
+            DesignListRow(name: final n) => n,
+            _ => null,
+          };
+          return found == null;
+        });
+        return found;
+      }
+
+      final cut = <Element>[];
+      for (final e in find.byType(CustomerLine).evaluate()) {
+        if (Scrollable.maybeOf(e) == null) continue;
+        final p = tester.renderObject<RenderParagraph>(find.descendant(of: find.byElementPredicate((x) => x == e), matching: find.byType(RichText)).first);
+        if (p.didExceedMaxLines) cut.add(e);
+      }
+      expect(cut, isNotEmpty, reason: 'no name is cut on $name at 360dp — the claim would be empty');
+      final missing = <String>[];
+      for (final e in cut) {
+        final full = fullOf(e);
+        expect(full, isNotNull, reason: 'a cut name outside the known rows');
+        final line = find.byElementPredicate((x) => x == e);
+        final spoken = tester.getSemantics(line).label;
+        if (!spoken.contains(full!)) missing.add('TalkBack says "$spoken", not the full "$full"');
+        await tester.ensureVisible(line);
+        await tester.pumpAndSettle();
+        // ⓘ টুলটিপ নতুন একটা লেখা আঁকে — ছোঁয়ার আগে আর পরে পুরো লেখার গোনা
+        final before = find.textContaining(full).evaluate().length;
+        await tester.longPress(line);
+        await tester.pump(const Duration(milliseconds: 300));
+        if (find.textContaining(full).evaluate().length <= before) {
+          missing.add('a long-press shows no tooltip with the full "$full"');
+        }
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+      }
+      expect(missing, isEmpty, reason: '⛔ a cut name on $name cannot be reached in full');
+      handle.dispose();
     });
   }
 
