@@ -47,7 +47,7 @@ return [
     'scope_house_note' => 'Warehouse limit. Tick nothing and they see stock in every warehouse. Tick some and they see only those.',
     'scope_kind_note' => 'Which :kind they may see. Tick nothing and they see them all.',
     'unsaved' => 'unsaved changes',
-    'logo_hint' => 'PNG, JPG, WebP or SVG (any script inside an SVG is stripped; pictures are shrunk for you). This shows at the left of the top bar and prints on invoices and bills, so use a clear, wide image rather than a tall one.',
+    'logo_hint' => 'PNG, JPG, WebP or SVG (any script inside an SVG is stripped; pictures are shrunk for you). This shows at the left of the top bar; the bill logo comes from the print settings (if none is set there, this one is printed). Use a clear, wide image rather than a tall one.',
     'logo_limit' => 'Up to :mb MB (SVG :svg MB)',
     'logo_too_big' => 'The file is over :mb MB — make it smaller and try again',
     'code_still_free' => 'Nothing has been printed yet, so the code can still change. It locks when the first number is issued.',

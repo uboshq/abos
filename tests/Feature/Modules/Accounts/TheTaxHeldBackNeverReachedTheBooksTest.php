@@ -61,8 +61,8 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
         // ⭐ VDS নিজের খাতে (২১২২) — মূসক আর আয়কর আলাদা রিটার্ন (fe, ২১ অক্টোবর ২০২৬)
         $vds = $this->account(StandardChart::VDS_PAYABLE);
 
-        $this->expense(['amount' => '9000', 'gross_amount' => '10000', 'ait_amount' => '500', 'vds_amount' => '500'])
-            ->assertSessionHasNoErrors();
+        $this->expense(['amount' => '9000', 'gross_amount' => '10000', 'ait_amount' => '500', 'vds_amount' => '500']);
+        $this->assertNoErrors('⛔ কর কেটে রাখা খরচ নেওয়া হল না');
 
         $voucher = $this->lastConfirmed(Voucher::EXPENSE);
         $book = $this->ledgerOf($voucher);
@@ -77,8 +77,8 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
 
         // ⓘ সরকারকে জমা — দায় শূন্যে। ⛔ ব্যাংক থেকে, তাই রেফারেন্স (চালানের নম্বর) লাগে — ব্যাংকের খাতের পুরনো নিয়ম, Mac-এ ধরা
         $this->submit(Voucher::PAYMENT, ['from_account_id' => $this->bank->id, 'to_account_id' => $withheld->id, 'amount' => '500',
-            'instrument' => 'transfer', 'instrument_no' => 'A-CHALLAN-2026-0001'])
-            ->assertSessionHasNoErrors();
+            'instrument' => 'transfer', 'instrument_no' => 'A-CHALLAN-2026-0001']);
+        $this->assertNoErrors('⛔ সরকারকে কাটা করের জমা নেওয়া হল না');
         $this->lastConfirmed(Voucher::PAYMENT);
         $this->assertSame('0.0000', $this->owed($withheld), '⛔ সরকারকে জমার পরেও দায় রইল');
     }
@@ -87,15 +87,16 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
     {
         $entries = LedgerEntry::query()->count();
 
-        $this->expense(['amount' => '9000', 'gross_amount' => '10500', 'ait_amount' => '500', 'vds_amount' => '500'])
-            ->assertSessionHasErrors('gross_amount');
+        $this->expense(['amount' => '9000', 'gross_amount' => '10500', 'ait_amount' => '500', 'vds_amount' => '500']);
+        $this->assertArrayHasKey('gross_amount', $this->sessionErrors(), '⛔ মোট (১০,৫০০) নিট + কর্তনের (১০,০০০) সমান নয়, তবু খরচ থামেনি');
 
         $this->assertSame($entries, LedgerEntry::query()->count(), '⛔ মোট না মেলা খরচ খতিয়ানে বসল');
     }
 
     public function test_without_withholding_the_expense_is_two_lines_as_before(): void
     {
-        $this->expense(['amount' => '9000'])->assertSessionHasNoErrors();
+        $this->expense(['amount' => '9000']);
+        $this->assertNoErrors('⛔ কর ছাড়া সাধারণ খরচ নেওয়া হল না');
 
         $voucher = $this->lastConfirmed(Voucher::EXPENSE);
         $book = $this->ledgerOf($voucher);
@@ -108,6 +109,30 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
     // ── প্রস্তুতি ──
 
     /** @param array<string, string> $fields */
+
+    /**
+     * ⓘ সেশনের ভুল, ঘর ধরে — থলেটা পরীক্ষায় কখনো ViewErrorBag, কখনো JSON থেকে ফেরা array; দুই রূপই পড়া হয়। ⛔ দরজার দাবি নিজের
+     * বার্তায় — framework-এর বার্তাহীন assert-এ মরা মিউট্যান্ট গোনা হয় না (fe, ২২ অক্টোবর ২০২৬); বার্তায় আসল ভুলটাও থাকে।
+     *
+     * @return array<string, list<string>>
+     */
+    private function sessionErrors(): array
+    {
+        $errors = session('errors');
+
+        if ($errors instanceof \Illuminate\Support\ViewErrorBag) {
+            return $errors->getBag('default')->toArray();
+        }
+
+        return (array) ($errors['default']['messages'] ?? []);
+    }
+
+    private function assertNoErrors(string $why): void
+    {
+        $errors = $this->sessionErrors();
+        $this->assertSame([], $errors, $why.' — '.json_encode($errors, JSON_UNESCAPED_UNICODE));
+    }
+
     private function expense(array $fields): TestResponse
     {
         return $this->submit(Voucher::EXPENSE, [

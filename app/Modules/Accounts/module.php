@@ -174,6 +174,8 @@ return [
              */
             ['label' => 'accounts::menu.inter_company', 'icon' => 'handover', 'route' => 'accounts.inter_company.index', 'permission' => 'accounts.inter_company'],
             ['label' => 'accounts::menu.cash_count', 'icon' => 'cash', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
+            // ⭐ করণীয় — কোষাগারে জমা, মূসক-৬.৬, শেষ তারিখসহ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.obligations', 'icon' => 'clock', 'route' => 'accounts.obligation.index', 'permission' => 'accounts.obligation.view'],
         ],
         'reports' => [
             ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
@@ -451,6 +453,9 @@ return [
         'accounts.transfer.manage',
         'accounts.count.create',
         'accounts.count.approve',
+        // ⭐ করণীয় — দেখা, আর "করা হয়েছে" (চালান বা সনদের নম্বরসহ, নিরীক্ষায়)
+        'accounts.obligation.view',
+        'accounts.obligation.update',
     ],
 
     /* নতুন ইনস্টলে (§৫): Manager হিসাব দেখা ও রিপোর্ট (ভাউচার বানানো accountant-এর)। */
@@ -490,6 +495,8 @@ return [
             'accounts.note.view',
             'accounts.loan.view',
             'accounts.asset.view',
+            'accounts.obligation.view',
+            'accounts.obligation.update',
         ],
         'Manager' => ['accounts.view', 'accounts.report'],
     ],
@@ -903,6 +910,35 @@ return [
             'type' => 'integer',
             'default' => 7,
             'group' => 'entry',
+        ],
+        /*
+         * ⭐ করণীয়ের শেষ তারিখ (fe, ২২ অক্টোবর ২০২৬) — কোষাগারে জমা পরের মাসের কোন তারিখের মধ্যে (ডিফল্ট ১৫, ১ থেকে ২৮); মূসক-৬.৬
+         * কর্তনের কত দিন পরের মধ্যে (ডিফল্ট ৩ — বিধিতে কর্তনের দিন থেকে গোনা, মাসের তারিখ থেকে নয়)। ⓘ আইন বদলালে এখানেই বদলায়, কোডে
+         * নয়; ⚠️ তিনটাই হিসাবরক্ষকের সাথে মিলিয়ে নেওয়ার কথা লেবেলেই লেখা।
+         */
+        [
+            'key' => 'accounts.tax.ait_deposit_day',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.ait_deposit_day',
+            'type' => 'integer',
+            'default' => 15,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'accounts.tax.vds_deposit_day',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.vds_deposit_day',
+            'type' => 'integer',
+            'default' => 15,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'accounts.tax.mushak_66_issue_days',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.mushak_66_issue_days',
+            'type' => 'integer',
+            'default' => 3,
+            'group' => 'general',
         ],
         [
             'key' => 'accounts.cash_ceiling_enabled',

@@ -36,6 +36,7 @@ return [
     'contra' => 'কন্ট্রা',
     'money_custody' => 'টাকা ও হেফাজত',
     'money_transfer' => 'টাকা হস্তান্তর',
+    'obligations' => 'করণীয়',
     'cash_count' => 'নগদ গণনা',
     'day_book' => 'দৈনিক খতিয়ান',
     'cash_book' => 'ক্যাশ বই',

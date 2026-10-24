@@ -166,6 +166,7 @@ final class VoucherService
                 'from_account_name' => $data['from_account_name'] ?? null,
                 'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
                 'lands_on' => $data['lands_on'] ?? null,
+                'value_date' => $data['value_date'] ?? null,
                 'reverse_on' => $data['reverse_on'] ?? null,
                 // ⭐ মাসশেষের সমন্বয় — কেবল জাবেদায়; অন্য ধরনে দাগ বসে না (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'is_adjusting' => $type === Voucher::JOURNAL && (bool) ($data['is_adjusting'] ?? false),
@@ -1760,7 +1761,97 @@ final class VoucherService
         }
     }
 
+    /**
+     * ⭐ একই টাকার খাতে একই রেফারেন্সের আগের ভাউচার — পোস্টের পাহারা আর পর্দার চলতি "আগে ব্যবহার হয়নি ✓" একই প্রশ্ন করে
+     * (fe, ২৩ অক্টোবর ২০২৬; নকশার "একই খাতে আগে ব্যবহার হয়নি")। ⓘ দুই জায়গায় লিখলে একদিন পর্দা "✓" বলত আর পোস্ট আটকাত।
+     *
+     * ⛔ সব শাখা জুড়ে, কিন্তু কেবল নিজের কোম্পানিতে: `acrossBranches()` শুধু শাখার দেয়াল তোলে, কোম্পানির দেয়াল
+     * ([[BelongsToCompany]]) থাকে — অন্য কোম্পানির একই নম্বর এখানে আসেই না, তাই তার কাগজের অস্তিত্বও কোথাও ফাঁস হয় না।
+     */
+    public function referenceTwin(int $accountId, string $reference, ?int $exceptId = null): ?Voucher
+    {
+        return Voucher::acrossBranches()
+            ->where('money_account_id', $accountId)
+            ->where('instrument_no', trim($reference))
+            ->when($exceptId !== null, fn ($q) => $q->whereKeyNot($exceptId))
+            ->first();
+    }
+
+    /**
+     * ⭐ পোস্টের আগে খাতায় যা যাবে — কিছু না লিখে (fe, ২৩ অক্টোবর ২০২৬; নকশার "খাতায় যা যাবে")।
+     *
+     * ⓘ না-রাখা একটা ভাউচারে সারিগুলো বসিয়ে পোস্টের একই [[ledgerLines()]] — মাথার পক্ষ কোন সারিতে নামে সেই নিয়মসহ। সারিগুলো
+     * আসে [[VoucherWriter::linesFor()]] থেকে, যা জমা আর ফোনও ডাকে; তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
+     *
+     * ⓘ শাখাও পোস্টের একই [[branchOfTheVoucher()]] থেকে — পক্ষ বা বাক্স অন্য শাখার হলে পোস্ট যে বার্তায় থামত, প্রিভিউও সেই
+     * ValidationException ছোড়ে।
+     *
+     * @param  array<string, mixed>  $header
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{branch_id: int|null, lines: list<array<string, mixed>>}
+     */
+    public function ledgerPreview(array $header, array $lines): array
+    {
+        $branchId = $this->branchOfTheVoucher($header, $lines, true);
+
+        $paper = (new Voucher)->forceFill([
+            'type' => $header['type'] ?? null,
+            'party_type' => $header['party_type'] ?? null,
+            'party_id' => $header['party_id'] ?? null,
+            'narration' => $header['narration'] ?? null,
+            'instrument' => $header['instrument'] ?? null,
+            'instrument_no' => $header['instrument_no'] ?? null,
+        ]);
+        // ⓘ সম্পাদনায় নিজের নম্বর নিজের সাথে "আগে বসেছে" নয়
+        if (filled($header['voucher_id'] ?? null)) {
+            $paper->id = (int) $header['voucher_id'];
+        }
+        $accounts = Account::query()->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+        $paper->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))->forceFill([
+            'account_id' => (int) ($l['account_id'] ?? 0),
+            'debit' => (string) ($l['debit'] ?? '0'),
+            'credit' => (string) ($l['credit'] ?? '0'),
+            'party_type' => $l['party_type'] ?? null,
+            'party_id' => $l['party_id'] ?? null,
+            'cost_center_id' => $l['cost_center_id'] ?? null,
+            'narration' => $l['narration'] ?? null,
+        ])));
+
+        /*
+         * ⛔ পোস্ট যে কারণে থামত, প্রিভিউও সেই কারণে থামে — পোস্টের একই পাহারা, যেগুলো কেবল ফর্মের উপর দাঁড়ায় ([[post()]]):
+         * আদায়ে চেক নয়, সারি পোস্টযোগ্য, হাতের চেক নয়, নগদ নিজের বাক্সে, পদ্ধতি খাতের সাথে মেলে, পক্ষ নিজের শাখায়, আর
+         * রেফারেন্সের নিয়ম। ⓘ নাহলে "MFS" বেছে নগদের খাতে প্রিভিউ সুন্দর সারি দেখাত, অথচ পোস্ট ফেরাত।
+         */
+        $ownable = $this->accountsThatHoldAParty();
+        $this->assertNoChequeReceived((string) $paper->type, $paper->instrument);
+        $this->assertLinesArePostable($paper);
+        $this->assertNoChequeInHandByHand($paper);
+        $this->assertCashLandsInOwnTill($paper);
+        $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPartyInItsBranch($paper, $ownable);
+        $this->bankReferenceAccount($paper);
+
+        return ['branch_id' => $branchId, 'lines' => $this->ledgerLines($paper, $ownable)];
+    }
+
     private function assertBankReferenceIsFree(Voucher $voucher): void
+    {
+        $account = $this->bankReferenceAccount($voucher);
+
+        if ($account === null) {
+            return;
+        }
+
+        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
+        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
+        $voucher->forceFill(['money_account_id' => $account->id])->save();
+    }
+
+    /**
+     * ⭐ রেফারেন্সের নিয়ম, কিছু না লিখে — থাকতেই হবে, অর্থপূর্ণ হতে হবে, আর একই খাতে আগে বসেনি (পোস্ট আর "খাতায় যা যাবে"
+     * একই কথা বলে; cb, ২৩ অক্টোবর ২০২৬)। ⓘ ফেরে নম্বরের টাকার খাত, নগদ বা জাবেদায় null।
+     */
+    private function bankReferenceAccount(Voucher $voucher): ?Account
     {
         $account = $voucher->lines
             ->map(fn (VoucherLine $line) => $line->account)
@@ -1768,7 +1859,7 @@ final class VoucherService
 
         // নগদ, বা টাকার কোনো ব্যাংক-খাত নেই (জাবেদা) — প্রশ্নই ওঠে না
         if ($account === null) {
-            return;
+            return null;
         }
 
         $reference = trim((string) $voucher->instrument_no);
@@ -1803,11 +1894,7 @@ final class VoucherService
          * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৩)। ⓘ টাকার খাতা আর অনন্যতার ইনডেক্স গোটা কোম্পানির, অথচ খোঁজ
          * ছিল দেখার শাখার দেয়ালে: অন্য শাখার ভাউচারে একই TrxID থাকলে পরিষ্কার বার্তার বদলে ডেটাবেসের ভাঙা ভুল আসত।
          */
-        $twin = Voucher::acrossBranches()
-            ->where('money_account_id', $account->id)
-            ->where('instrument_no', $reference)
-            ->whereKeyNot($voucher->id)
-            ->first();
+        $twin = $this->referenceTwin((int) $account->id, $reference, $voucher->id === null ? null : (int) $voucher->id);
 
         if ($twin !== null) {
             throw ValidationException::withMessages([
@@ -1818,9 +1905,7 @@ final class VoucherService
             ]);
         }
 
-        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
-        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
-        $voucher->forceFill(['money_account_id' => $account->id])->save();
+        return $account;
     }
 
     /**

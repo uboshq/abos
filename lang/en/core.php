@@ -1317,6 +1317,7 @@ return [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large_to_process' => 'That photo has too many pixels for the server to process. Please take it at a smaller camera size.',
         'logo_not_processed' => 'The logo could not be processed, and a file that size cannot be kept as it is. Please use an image under 2 MB.',
+        'logo_unreadable' => 'The picture could not be read — the file is damaged, or is not really an image despite its name. The previous logo is unchanged; please use another PNG, JPG or WebP.',
     ],
 
     // ছবি তোলার পর্দা ([[components/shell/scanner]])

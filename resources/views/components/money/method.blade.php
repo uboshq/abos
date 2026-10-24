@@ -52,6 +52,12 @@
      * সেগমেন্ট `order-1` (দুই কলাম), হোস্টের প্রাপকের ব্যাংক `order-2`, পদ্ধতির ঘর `order-3`, চার্জের লাইন `order-4`।
      */
     'inline' => false,
+
+    /*
+     * ⭐ স্লিপ/TrxID ঘরের নিচে তাৎক্ষণিক "আগে ব্যবহার হয়নি ✓" বা আগের পরিশোধের কথা (টাকা দেওয়ার মিল-তালিকা #৫)। ⓘ কেবল যে পর্দার
+     * হোস্ট `slip` জানে ([[payBills]]); অন্য পর্দায় বন্ধ, তাই কিছুই আঁকা হয় না।
+     */
+    'slipCheck' => false,
 ])
 
 @php
@@ -66,9 +72,21 @@
     $valueDate = $dateOf($was('value_date', $record === null ? today() : null));
     $charge = (string) $was($chargeField, '');
     $notes = \App\Modules\Accounts\Models\CashCount::DENOMINATIONS;
+
+    /*
+     * ⛔ পদ্ধতির ঘরের কলাম বাক্সের নিজের চওড়া ধরে, পর্দার চওড়া ধরে নয় — fe, ২২ অক্টোবর ২০২৬ (চূড়ান্ত ছবি, ১৩৬৬)।
+     * খরচের ভাউচারে বাক্সটা অর্ধেক কলামে (~৫১০px), অথচ `lg:grid-cols-4` পর্দা দেখে চারটা ঘর এক সারিতে বসাত: TrxID
+     * "NP26102104", মূল্য-তারিখ "22-10-2" — কাটা। ⭐ বাক্স নিজে container; ঘর চারটা কেবল ৪৮rem-এর বেশি জায়গায়, ২০rem-এর
+     * বেশিতে দুইটা। ⚠️ rem এখানে মূলের ফন্ট ধরে, আর মূল ফন্ট বড় পর্দায় ২০px ([[app.css]] html) — তাই ২৮rem মানে ৫৬০px, খরচের
+     * ৫১২px বাক্সে দুই কলামও আসত না (মাপা)। ⓘ `inline` (টাকা নেওয়া/দেওয়ার পর্দা) `contents` — container হতে পারে না, তাই
+     * সেখানে আগের নিয়ম অক্ষত।
+     */
+    $fourUp = $inline ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4' : 'grid gap-3 @xs:grid-cols-2 @3xl:grid-cols-4';
+    $twoWide = $inline ? 'lg:col-span-2' : '@3xl:col-span-2';
+    $threeUp = $inline ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-3 @xs:grid-cols-2 @2xl:grid-cols-3';
 @endphp
 
-<div @class(['contents' => $inline, 'flex flex-col gap-3' => ! $inline]) data-money-method
+<div @class(['contents' => $inline, '@container flex flex-col gap-3' => ! $inline]) data-money-method
      x-data="moneyMethod({ method: @js($chosen), charge: @js($charge), chequeDate: @js($dateOf($was('instrument_date'))), amountField: @js($amountField), chargeField: @js($chargeField), moneyField: @js($moneyField ?? ''), direction: @js($direction), notes: @js((array) ($was('note_counts') ?? [])) })"
      data-line-in="{{ __('money.charge_line.in') }}"
      data-line-out="{{ __('money.charge_line.out') }}"
@@ -76,6 +94,10 @@
      data-head-mfs="{{ __('money.charge_line.head_mfs') }}">
 
     {{-- ── পদ্ধতি: এক সারির সেগমেন্ট (নকশার "নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক") ── --}}
+    {{-- ⛔ বাছা চিপের রং — fe, ২২ অক্টোবর ২০২৬: সাদা লেখা brand-600-এ বসত। গাঢ় থিমে brand-600 হালকা নীল (২.৬:১), আর বাছা
+         চিপে মাউস রাখলে hover-এর প্রায়-সাদা জমিন জিতত (১.০৮:১) — লেখাটা মুছে যেত। ⭐ এখন brand-700 আর brand-ink: আলোয় অ্যাকসেন্টের
+         ৭০০ নিজের কালির সাথে, গাঢ়ে অ্যাকসেন্টের গাঢ় ধাপ নিজের গাঢ় কালির সাথে — দুই জোড়াই ≥ ৪.৫:১ মাপা ([[AppearanceTest]]);
+         আর বাছা চিপে hover রং বদলায় না। --}}
     <fieldset @class(['order-1 sm:col-span-2' => $inline])>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
         <div class="inline-flex max-w-full overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
@@ -85,7 +107,8 @@
                            data-method-chip="{{ $way }}" x-model="method" @checked($chosen === $way)>
                     <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
                                  hover:bg-(--color-surface-hover)
-                                 peer-checked:bg-(--color-brand-600) peer-checked:font-medium peer-checked:text-white
+                                 peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
+                                 peer-checked:hover:bg-(--color-brand-700)
                                  peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">
                         {{ __('money.method.'.$way) }}
                     </span>
@@ -119,10 +142,14 @@
 
     {{-- ── MFS: TrxID আর চার্জ ── --}}
     <template x-if="method === 'mfs'">
-        <div data-method-block="mfs" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
-            <div class="lg:col-span-2">
+        <div data-method-block="mfs" @class([$fourUp, 'order-3 col-span-full' => $inline])>
+            <div class="{{ $twoWide }}">
                 <x-ui.field name="instrument_no" :label="__('money.field.trx_id')" :value="$was('instrument_no')"
                             :hint="__('money.hint.reference_needed')" required />
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
             </div>
             <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
                         :label="__('money.field.mfs_charge')" :value="$charge" x-model="charge" />
@@ -131,11 +158,17 @@
 
     {{-- ── ব্যাংক ট্রান্সফার: মোড · রেফারেন্স · মূল্য-তারিখ · চার্জ (নকশার এক সারি) ── --}}
     <template x-if="method === 'transfer'">
-        <div data-method-block="transfer" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
+        <div data-method-block="transfer" @class([$fourUp, 'order-3 col-span-full' => $inline])>
             <x-ui.select name="transfer_mode_id" :label="__('money.field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
-            <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
-                        :hint="__('money.hint.reference_needed')" required />
+            <div>
+                <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
+                            :hint="__('money.hint.reference_needed')" required />
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
+            </div>
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
@@ -147,9 +180,16 @@
 
     {{-- ── ব্যাংকে নগদ জমা: জমা স্লিপ আর মূল্য-তারিখ ── --}}
     <template x-if="method === 'deposit'">
-        <div data-method-block="deposit" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
-            <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
-                        :hint="__('money.hint.reference_needed')" required />
+        <div data-method-block="deposit" @class([$fourUp, 'order-3 col-span-full' => $inline])>
+            <div>
+                <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
+                            :hint="__('money.hint.reference_needed')" required />
+                {{-- ⓘ নগদ জমার স্লিপই ব্যাংকের রেফারেন্স ([[VoucherRequest]]) — তাই তারও চলতি উত্তর --}}
+                @if ($slipCheck)
+                    <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                       :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                @endif
+            </div>
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
@@ -162,8 +202,14 @@
     {{-- ── চেক: নম্বর · তারিখ · ব্যাংক ── --}}
     <template x-if="method === 'cheque'">
         <div data-method-block="cheque" @class(['flex flex-col gap-2', 'order-3 col-span-full' => $inline])>
-            <div class="grid gap-3 sm:grid-cols-3">
-                <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
+            <div class="{{ $threeUp }}">
+                <div>
+                    <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
+                    @if ($slipCheck)
+                        <p class="mt-1 text-2xs" data-slip-state role="status" aria-live="polite" x-show="slipShown" x-cloak
+                           :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
+                    @endif
+                </div>
                 {{-- ⓘ দেশের তারিখের ঘর ([[ui.date]]), ব্রাউজারেরটা নয়; মান `chequeDate`-এ যায় আগাম চেকের কথার জন্য --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('money.field.cheque_date') }}</span>

@@ -28,6 +28,7 @@ return [
         'accounts.coa' => 'হিসাবের ছক',
         'accounts.count' => 'নগদ গণনা',
         'accounts.loan' => 'ঋণ',
+        'accounts.obligation' => 'করণীয় (কোষাগারে জমা, মূসক-৬.৬)',
         'accounts.period' => 'মাসের তালা',
         'accounts.reconciliation' => 'ব্যাংক মিলকরণ',
         'accounts.report' => 'হিসাবের রিপোর্ট',

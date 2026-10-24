@@ -146,7 +146,21 @@
     --}}
     <form method="POST" enctype="multipart/form-data"
           action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher)) }}"
-          x-data="{ busy: false }"
+          @if ($partyAbove)
+              x-data="voucherMoney({
+                  amount: @js((string) old('amount', $typedAmount ?? $voucher->amount ?? '')),
+                  account: @js((string) old($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'from_account_id' : 'to_account_id',
+                      $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? $creditLine?->account_id : $debitLine?->account_id)),
+                  balances: @js(collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => bcadd($a->balanceInView(), '0', 2)])->all()),
+                  simulateUrl: @js(route('accounts.voucher.simulate')),
+                  referenceUrl: @js(route('accounts.voucher.reference_check')),
+                  voucherId: @js($voucher->exists ? $voucher->id : null),
+                  out: @js($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT),
+              })"
+              @money-method="heard($event.detail)"
+          @else
+              x-data="{ busy: false }"
+          @endif
           @submit="busy ? $event.preventDefault() : (busy = true)"
           {{-- ⛔ রসিদ ও পরিশোধও চওড়া — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"bame faka jayga
                komale box e sari vange na"*। ⓘ `max-w-3xl`-এ পাতাটা মাঝখানে সরু বসত,
@@ -627,7 +641,9 @@
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             <option value="">&mdash;</option>
                             @foreach ($optionsFor($sides['from']['source']) as $account)
+                                {{-- ⓘ খাতের ধরন — টাকার বাক্স ([[x-money.method]]) দেখে পদ্ধতি নিজে সরায়, রসিদ আর পরিশোধের মতোই (২২ অক্টোবর ২০২৬) --}}
                                 <option value="{{ $account->id }}"
+                                        @if (filled($account->money_kind ?? null)) data-kind="{{ $account->money_kind }}" @endif
                                         @selected(old('from_account_id', $creditLine?->account_id) == $account->id)>
                                     {{ in_array((int) $account->id, $creditIds, true)
                                         ? __('accounts::field.on_credit_option', ['account' => $account->label()])
@@ -692,191 +708,155 @@
             @endif
         </section>
 
-        {{-- ⓘ রসিদ ও পরিশোধে এই ব্লকটার নিজস্ব বাক্স নেই — ভিতরের
-             সবকিছু লুকানো থাকায় পর্দায় একটা খালি বাক্স দেখা যেত। --}}
         {{--
-            ⛔ খরচে গোটা সেকশনটাই নেই: নকশায় "কীভাবে দেওয়া হলো"
-            উৎসে কর্তনের **পাশে** বসে (দুই কলাম), আর "বিবরণ" শেষ সারিতে।
-            ⓘ তাই খরচে টাকা-চলাচলের ব্লকটা expense-fields থেকে ডাকা হয়।
-        --}}
-        @unless ($expenseLayout || $contraLayout)
-        <section @if (! $partyAbove) data-boxed
-                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
-                 @endif>
-            {{--
-                ⛔ "বিবরণ" শিরোনামটা নমুনায় নেই — ১৫ সেপ্টেম্বর ২০২৬।
-
-                ⓘ নমুনায় "বিবরণ" কেবল সবচেয়ে নিচের **ঘরটা** (p-nar),
-                কোনো সেকশনের নাম নয়। ⚠️ এখানে শিরোনাম থাকায় "পেমেন্ট
-                মেথড" চিপগুলো একটা "বিবরণ" ঘরের ভিতরে বসে আছে বলে মনে
-                হত — মালিক সেটাই ধরিয়ে দেন।
-
-                ⓘ খরচ ও কন্ট্রায় থাকে, কারণ ঐ দুইটার নমুনায় ব্লকটা
-                সত্যিই আলাদা একটা দল।
-            --}}
-            @unless ($partyAbove)
-                <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
-            @endunless
-
-            {{--
-                ⭐ টাকাটা কীভাবে হাতবদল হলো — একটাই ব্লক, ১৪ সেপ্টেম্বর ২০২৬।
-
-                ── ⛔ আগে এখানে কী ছিল ─────────────────────────────────
-                পাঁচটা ছড়ানো ঘর: মাধ্যম, লেনদেন নম্বর, তারিখ, প্রেরকের
-                ব্যাংক ও হিসাব নম্বর, আর চার্জ। ⓘ কাজ করত, কিন্তু মালিকের
-                তালিকার **আঠারোটার মধ্যে ছয়টা** — মিল ৩৩.৩%।
-
-                যা চাওয়া হত না: নোট গুনে মেলানো · MFS-এর ওয়ালেট ও মাধ্যম ·
-                প্রেরকের মোবাইল নম্বর · চার্জটা কে দিয়েছে · BEFTN/RTGS/NPSB ·
-                ব্রাঞ্চ ও হিসাবধারীর নাম · জমা স্লিপ · কবে পৌঁছাবে ·
-                কে বহন করল · কখন।
-
-                ── ⚠️ আর কেন ব্লকটা এই ফাইলে লেখা নেই ──────────────────
-                অর্থের খাতাগুলোরও হুবহু এই প্রশ্নগুলো লাগে। দুই জায়গায়
-                লিখলে একদিন একটায় চেকের ব্রাঞ্চ চাওয়া হত, অন্যটায় না —
-                আর তখন "কোন ব্যাংক থেকে কত এল" প্রশ্নের উত্তর অর্ধেক
-                লেনদেনে থাকত না। ⓘ তাই [[resources/views/components/ui/money-movement]]
-                একটাই, আর দুইজনেই সেটা ডাকে।
-            --}}
-            <x-ui.money-movement
-                :direction="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'out' : 'in'"
-                :carriers="$carriers ?? []"
-                :modes="$transferModes ?? []"
-                :carrier-here="! $partyAbove"
-                :record="$voucher" />
-
-            {{--
-                ⛔ রসিদ ও পরিশোধে "বিবরণ" নিচের সারিতে বসে — নমুনার মতো।
-                ⓘ খরচ ও কন্ট্রায় এখানেই থাকে, কারণ ঐ দুইটার নমুনায়
-                কাঠামোটা আলাদা।
-            --}}
-            <label class="mt-3 block" @if ($sampled) hidden @endif>
-                <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
-                <textarea name="narration" rows="2" @disabled($sampled)
-                          class="w-full rounded-(--radius-field) border border-(--color-border)
-                                 bg-(--color-surface-card) px-3 py-2">{{ old('narration', $voucher->narration) }}</textarea>
-            </label>
-        </section>
-        @endunless
-
-        {{--
-            ── নমুনার শেষ সারি, ১৬ সেপ্টেম্বর ২০২৬ ──────────────────────
-            নমুনায় রসিদের একদম নিচে তিনটা ঘর এক সারিতে, আর পাশে বোতাম:
-
-                যে খাতে জমা · গৃহীত টাকা · বিবরণ · [সংরক্ষণ ও পোস্ট]
-
-            ⛔ আগে এগুলো ছড়িয়ে ছিল: "কার কাছ থেকে" ও "যে খাতে জমা"
-            মাঝখানে একটা আলাদা বাক্সে, "গৃহীত টাকা" একদম উপরে, আর
-            "বিবরণ" টাকা-চলাচলের ব্লকের ভিতরে।
-
-            ⚠️ আর "কার কাছ থেকে" ঘরটা **দ্বিত্ব**: উপরে ডিপোজিটর বাছা
-            হয়েই গেছে। ⓘ দুইটা আলাদা উত্তর দিলে খাতায় কোনটা বসত তা
-            বলা যেত না, তাই সেটা লুকানো ও নিষ্ক্রিয়।
+            ── ⭐ ২৩ অক্টোবর ২০২৬: রসিদ ও পরিশোধ চূড়ান্ত নকশার ক্রমে ─────────────────────────────────────────────
+            fe, মালিকের কথায়: *"নকশা অনুযায়ী, লাইভের আগে মিলিয়ে নাও"*
+            (টাকা-নেওয়া-দেওয়া-চূড়ান্ত-নকশা, পাতা ২ আর ৪)। ক্রম এখন:
+                পক্ষের ধরন · পক্ষ · তারিখ · টাকা  (উপরের বাক্সে, [[party-fields]])
+                যে খাতে জমা / যে খাত থেকে (খাতে আছে ৳…) · পদ্ধতি → পদ্ধতির ঘর
+                সংযুক্তি | কাকে দেওয়া হল · কার মাধ্যমে · বিবরণ
+                খাতায় যা যাবে (পোস্টের আগে, সার্ভারের হিসাবে)
+                বোতাম, আর পোস্টের পরে কী পাওয়া যায়
+            ⓘ আগে পদ্ধতি আগে আসত, আর খাত, টাকা, কার মাধ্যমে আর বিবরণ নিচের এক সারিতে পাঁচটা ঘর — ১৩৬৬-এ লম্বা খাতের নাম কাটা
+            পড়ত ("1102-DBBL — ডাচ-বা…")। ⛔ ঘরের নাম একটাও বদলায়নি: জমা, ফোন, পুরনো কাগজ আর ছাপা অক্ষত।
+            ⓘ টাকার অংশের যুক্তি ফর্মের [[voucherMoney]]-এ (money.js) — অঙ্ক লাখ-কমায়, খাতের স্থিতি, রেফারেন্সের চলতি উত্তর আর প্রিভিউ।
         --}}
         @if ($partyAbove)
             @php
                 /*
                  * ⭐ টাকার খাতের ধরন প্রতিটা সারির গায়ে — ২৭ সেপ্টেম্বর ২০২৬।
-                 *
-                 * ⓘ মাধ্যমের ব্লক এটা পড়ে খাত বদলালে মাধ্যম বদলায়, আর তখনই
-                 * ব্যাংক বা MFS-এ লেনদেন-নম্বরের ঘর আসে ([[money.js]])। ⛔ আগে
-                 * ঘরটা কেবল চিপ দেখত, আর ব্যাংক বাছার পরেও নম্বর চাওয়ার ঘর ছিল না।
+                 * ⓘ পদ্ধতির বাক্স এটা পড়ে খাত বদলালে পদ্ধতি বদলায় ([[money.js]])।
                  */
                 $isPayment = $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT;
                 $moneyKinds = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => (string) $a->money_kind])->all();
                 $moneyOptions = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all();
             @endphp
+
+            <section data-boxed data-voucher-money
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                {{-- যে খাত | পদ্ধতি, তার নিচে পদ্ধতির ঘর — টাকা দেওয়ার পর্দার একই গ্রিড ([[x-money.method]]-এর `inline`) --}}
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="order-0 sm:col-span-2">
+                        @if ($isPayment)
+                            {{--
+                                ⛔ পরিশোধে এই ঘরটা একসময় ছিলই না — লাইভে একটাও পরিশোধ পোস্ট হয়নি, প্রতিবার "যে খাত থেকে দিতেই হবে"
+                                (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)। ⭐ লেখা নকশার: "যে খাত থেকে" (আগে "কোথা থেকে দেওয়া হল")।
+                            --}}
+                            <x-ui.select name="from_account_id" data-money-account x-model="account"
+                                         :label="__('money.screen.from_account')"
+                                         :options="$moneyOptions"
+                                         :kinds="$moneyKinds"
+                                         :selected="old('from_account_id', $creditLine?->account_id)"
+                                         :hint="$cashHiddenReason ?? null"
+                                         :placeholder="'—'"
+                                         required />
+                        @else
+                            <x-ui.select name="to_account_id" data-money-account x-model="account"
+                                         :label="__($sides['to']['label'])"
+                                         :options="$moneyOptions"
+                                         :kinds="$moneyKinds"
+                                         :selected="old('to_account_id', $debitLine?->account_id)"
+                                         :hint="$cashHiddenReason ?? null"
+                                         required />
+                        @endif
+                        {{-- ⭐ খাতে আছে কত — নকশার "খাতে আছে ৳…"; পরিশোধে পরিশোধ আর চার্জের চেয়ে কম হলে লাল --}}
+                        <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
+                            {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
+                            <span x-show="short">— {{ __('money.screen.short') }}</span>
+                        </p>
+                    </div>
+
+                    {{-- ⓘ নতুন ভাউচারে record নয় — তখন মূল্য-তারিখ আজ দিয়ে শুরু। ⭐ `slip-check`: রেফারেন্সের নিচে চলতি "একই খাতে আগে ব্যবহার হয়নি ✓" --}}
+                    <x-money.method inline slip-check
+                        :direction="$isPayment ? 'out' : 'in'"
+                        :record="$voucher->exists ? $voucher : null"
+                        :modes="$transferModes ?? []"
+                        :methods="$isPayment ? ['cash', 'mfs', 'transfer', 'cheque'] : ['cash', 'mfs', 'transfer', 'deposit']"
+                        :money-field="$isPayment ? 'from_account_id' : 'to_account_id'"
+                        counting />
+                </div>
+            </section>
+
+            <section data-boxed data-voucher-details
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div class="grid gap-4 lg:grid-cols-2">
+                    {{-- ⭐ সংযুক্তি — ব্যাংক স্লিপ, স্ক্রিনশট বা অ্যাডভাইস (নকশার "সংযুক্তি ও বিবরণ"); লেখক আগে থেকেই নেয় ([[VoucherWriter::store()]]) --}}
+                    <div data-voucher-attachment>
+                        @include('accounts::voucher.partials.attachment-field')
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        @if ($isPayment)
+                            {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
+                            <x-ui.select name="to_account_id"
+                                         :label="__($sides['to']['label'])"
+                                         :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
+                                         :selected="old('to_account_id', $debitLine?->account_id)"
+                                         :placeholder="__('accounts::field.paid_to_from_party')" />
+                        @endif
+
+                        {{-- ⭐ কার মাধ্যমে — মালিকের আলাদা আদেশ (১৮ সেপ্টেম্বর ২০২৬: *"বিবরণ er age niye aso"*); বিবরণের ঠিক আগে --}}
+                        <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
+                                     :options="$carriers ?? []"
+                                     :selected="old('carried_by', $voucher->carried_by)"
+                                     :placeholder="__('accounts::field.carried_by_none')" />
+
+                        <x-ui.field name="narration"
+                                    :label="__('core.table.narration')"
+                                    :value="old('narration', $voucher->narration)" />
+                    </div>
+                </div>
+            </section>
+
+            {{-- ── ⭐ খাতায় যা যাবে — পোস্টের আগে, সার্ভারের হিসাবে ([[VoucherController::simulate()]]); কিছুই লেখা হয় না ── --}}
+            <section data-boxed data-voucher-ledger
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div class="mb-3 flex items-baseline justify-between">
+                    <h2 class="font-semibold">{{ __('money.screen.ledger') }}</h2>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('money.screen.ledger_hint') }}</span>
+                </div>
+                <p class="text-sm text-(--color-ink-muted)" x-show="! hasPreview && ! previewBlocked">{{ __('accounts::message.ledger_empty') }}</p>
+                {{-- ⛔ পোস্ট যে কারণে থামত (যেমন অন্য শাখার পক্ষ), প্রিভিউ সেই বার্তাই দেখায় --}}
+                <p class="text-sm text-(--color-danger)" data-ledger-blocked x-show="previewBlocked" x-cloak x-text="preview.message"></p>
+                <table class="ui-grid w-full text-sm" x-show="hasPreview" x-cloak>
+                    <thead>
+                        <tr>
+                            <th class="text-start">{{ __('money.screen.ledger_col.account') }}</th>
+                            <th class="num">{{ __('money.screen.ledger_col.debit') }}</th>
+                            <th class="num">{{ __('money.screen.ledger_col.credit') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(row, i) in preview.rows" :key="i">
+                            <tr data-ledger-row>
+                                <td class="text-xs">
+                                    <span x-text="row.account"></span>
+                                    <span class="block text-2xs text-(--color-ink-muted)"><span x-text="row.party"></span> <span x-text="row.branch"></span></span>
+                                </td>
+                                <td class="num" x-text="row.debit"></td>
+                                <td class="num" x-text="row.credit"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td>{{ __('money.screen.ledger_col.total') }}</td>
+                            <td class="num" x-text="preview.debit"></td>
+                            <td class="num" x-text="preview.credit"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <p class="mt-2 text-xs text-(--color-badge-success-ink)" data-ledger-matches x-show="previewMatches" x-cloak>{{ __('accounts::message.ledger_matches') }}</p>
+                <p class="mt-2 text-xs text-(--color-danger)" x-show="unbalanced" x-cloak>{{ __('money.screen.ledger_unbalanced') }}</p>
+            </section>
+
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <div @class([
-                        'grid items-end gap-3',
-                        'sm:grid-cols-[2fr_1fr_1.4fr_2fr]' => ! $isPayment,
-                        'sm:grid-cols-2 lg:grid-cols-[1.6fr_1.6fr_1fr_1.2fr_1.6fr]' => $isPayment,
-                     ])>
-                    @if ($isPayment)
-                        {{--
-                            ⛔ পরিশোধে এই ঘরটা ছিলই না — উপরের পুরনো ঘরটা নমুনা মেনে
-                            লুকানো ও নিষ্ক্রিয়, আর বদলি বসানো হয়েছিল কেবল রসিদে।
-                            ⚠️ ফল লাইভে: একটাও পরিশোধ পোস্ট হয়নি, প্রতিবার
-                            "যে খাত থেকে দিতেই হবে" (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)।
-                        --}}
-                        <x-ui.select name="from_account_id" data-money-account
-                                     :label="__('accounts::field.paid_from')"
-                                     :options="$moneyOptions"
-                                     :kinds="$moneyKinds"
-                                     :selected="old('from_account_id', $creditLine?->account_id)"
-                                     :hint="$cashHiddenReason ?? null"
-                                     :placeholder="'—'"
-                                     required />
-
-                        {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
-                        <x-ui.select name="to_account_id"
-                                     :label="__($sides['to']['label'])"
-                                     :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
-                                     :selected="old('to_account_id', $debitLine?->account_id)"
-                                     :placeholder="__('accounts::field.paid_to_from_party')" />
-                    @else
-                        <x-ui.select name="to_account_id" data-money-account
-                                     :label="__($sides['to']['label'])"
-                                     :options="$moneyOptions"
-                                     :kinds="$moneyKinds"
-                                     :selected="old('to_account_id', $debitLine?->account_id)"
-                                     :hint="$cashHiddenReason ?? null"
-                                     required />
-                    @endif
-
-                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
-                                :label="$voucher->type === \App\Modules\Accounts\Models\Voucher::RECEIPT
-                                    ? __('accounts::field.amount_received')
-                                    : __('accounts::field.amount_paid')"
-                                {{-- ⭐ `?? $voucher->amount` — ১৮ সেপ্টেম্বর ২০২৬, অর্থের খাতার কারণে।
-
-                                     ⓘ [[VoucherController::prefill()]] ঠিকানা থেকে `amount`
-                                     নিয়ে `new Voucher([...])`-এ বসায়, আর ঘরটা এতদিন কেবল
-                                     **দাখিলার লাইন** পড়ত। ⛔ নতুন ফর্মে লাইনই নেই, তাই
-                                     সংখ্যাটা মডেলে বসেও পর্দায় পৌঁছাত না।
-
-                                     ⚠️ ফল: অর্থের খাতা থেকে "টাকা নিন — রসিদ ভাউচার" চাপলে
-                                     নাম ও বিবরণ বসত, **টাকাটা বসত না**, আর অঙ্কটা দুইবার
-                                     টাইপ করতে হত। ⓘ মালিকের প্রশ্নটাই ছিল *"আবার Accounts-এ
-                                     গেলে খাতা আলাদা রেখে লাভ কী"*।
-
-                                     ⭐ যোগ করা, কেড়ে নেওয়া নয়: লাইন থাকলে আগের মতোই সেটাই
-                                     জেতে, তাই সম্পাদনার আচরণ অপরিবর্তিত।
-
-                                     ⚠️ তিন জায়গায় একই লাইন (২১৫ · ৬৩৬ · ৭৬১) — পক্ষ উপরে
-                                     না নিচে, আর ধরন অনুযায়ী তিনটা শাখা। ⛔ একটা বদলে বাকি
-                                     দুইটা ভুলে গেলে একই বোতাম এক ভাউচারে কাজ করত, অন্যটায়
-                                     নীরবে করত না। --}}
-                                :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric />
-
-                    {{--
-                        ⭐ কার মাধ্যমে — বিবরণের ঠিক আগে, ১৮ সেপ্টেম্বর ২০২৬।
-
-                        মালিকের নির্দেশ: *"কার মাধ্যমে ei boxta বিবরণ er
-                        age niye aso"*। ⓘ ঘরটা আগে সবার উপরে বসত, তারিখের পাশে।
-
-                        ⛔ ঘরটা party-fields থেকে **মুছে** ফেলা হয়েছে, কেবল
-                        লুকানো হয়নি — এক নামে দুইটা সক্রিয় ঘর থাকলে ব্রাউজার
-                        শেষেরটার মান পাঠায়, আর বাছাইটা নীরবে হারায়।
-                    --}}
-                    <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
-                                 :options="$carriers ?? []"
-                                 :selected="old('carried_by', $voucher->carried_by)"
-                                 :placeholder="__('accounts::field.carried_by_none')" />
-
-                    <x-ui.field name="narration"
-                                :label="__('core.table.narration')"
-                                :value="old('narration', $voucher->narration)" />
-                </div>
-
-                {{--
-                    ⓘ বোতাম তিনটা এক লাইন নিচে — মালিকের নির্দেশ।
-
-                    ⚠️ ঘরগুলোর সাথে এক সারিতে থাকায় চারটা ঘর আর তিনটা
-                    বোতাম একসাথে চাপাচাপি হয়ে যেত।
-                --}}
-                <div class="mt-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    {{-- ⭐ পোস্টের পরে কী পাওয়া যায় — নকশার নিচের লাইন; দেখার পাতার ছাপার মেনুতে ছাপা, PDF আর WhatsApp ([[voucher.show]]) --}}
+                    <p class="text-xs text-(--color-ink-muted)" data-after-post>
+                        {{ $isPayment ? __('accounts::message.after_post_payment') : __('accounts::message.after_post_receipt') }}
+                    </p>
                     @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
                 </div>
             </section>

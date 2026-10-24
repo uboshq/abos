@@ -23,17 +23,40 @@
     ── কেন কম্পোনেন্ট, প্রতিটা পর্দায় হাতে লেখা নয় ─────────────────────
     ⭐ হাতে লেখা ছিল বলেই ২৩ জায়গায় বাদ পড়েছে। ⓘ এক জায়গায় থাকলে
     চেহারাটাও এক থাকে, আর নতুন পর্দায় এক লাইনেই আসে।
+
+    ── ⭐ প্রতি অনুরোধে একবারই — layout-ও বসায় (fe, ২৪ অক্টোবর ২০২৬) ────
+    ⛔ ১৪টা কাগজের পাতায় (বিলের তালিকা, চালানের ভাড়া …) এই বাক্স ছিলই না;
+    ঘরহীন কারণ (`posting`, `account`, `status`) চুপচাপ হারাত। তাই
+    [[layouts.app]] পাতার উপরে এটা বসায়, দুই নিয়মে:
+    ① পাতার নিজের বাক্স (এই কম্পোনেন্ট) আগে আঁকা হলে সে-ই দেখায় — চিহ্ন
+       অনুরোধে (`ui.errors.drawn`); পরের কোনো বাক্স কিছু দেখায় না।
+    ② layout পাতার আঁকা লেখা দেয় (`shown`) — পাতার slot layout-এর আগে আঁকা
+       হয়, তাই জানা যায় কোন কারণ পাতা নিজে (হাতে লেখা তালিকায় বা ঘরের নিচে)
+       দেখিয়েছে। layout কেবল বাকিগুলো দেখায় — কোনো কারণ দুবার নয়, হারায়ও না।
+    ⛔ "দেখানো" মানে পুরো লেখাটা নিজের ঘরে — দুই ট্যাগের মাঝে একা (`<li>…</li>`,
+       ঘরের নিচের `<p>…</p>`), পাতা যেভাবে আঁকে সেভাবে escape করে (e()), ফাঁকা
+       জায়গা এক করে। বড় কোনো লেখার অংশ হিসেবে থাকলে সেটা দেখানো নয় — নইলে
+       ছোট একটা কারণ ("খাত নেই") অন্য বাক্যের ভিতরে মিলে হারিয়ে যেত (fe)।
 --}}
-@if ($errors->any())
+@props(['shown' => null])
+@php
+    $errorsAlreadyShown = (bool) request()->attributes->get('ui.errors.drawn', false);
+    $pageText = $shown === null ? null : (string) preg_replace('/\s+/u', ' ', (string) $shown);
+    $errorsToShow = $errorsAlreadyShown ? [] : array_values(array_filter($errors->all(),
+        fn ($message) => $pageText === null || ! preg_match(
+            '/>\s?'.preg_quote(trim((string) preg_replace('/\s+/u', ' ', e($message))), '/').'\s?</u', $pageText)));
+@endphp
+@if ($errorsToShow !== [])
+    @php(request()->attributes->set('ui.errors.drawn', true))
     <div role="alert"
          class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
                 text-(--color-badge-danger-ink)">
         {{-- ⓘ একটা কারণ হলে বুলেট নয় — একটা তালিকা যার একটাই সারি, সেটা তালিকা নয় --}}
-        @if ($errors->count() === 1)
-            {{ $errors->all()[0] }}
+        @if (count($errorsToShow) === 1)
+            {{ $errorsToShow[0] }}
         @else
             <ul class="list-inside list-disc">
-                @foreach ($errors->all() as $error)
+                @foreach ($errorsToShow as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>

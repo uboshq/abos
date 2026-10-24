@@ -192,4 +192,6 @@ return [
     'gross_is_paid_plus_withheld' => 'The bill total (:gross) must equal the amount paid (:paid) + AIT (:ait) + VDS (:vds).',
     'withheld_needs_expense_head' => 'Tax withheld at source needs an expense head.',
     'missing_account' => 'Account :code is missing from the chart — add it first.',
+    'obligation_needs_ref' => 'Enter the challan or certificate number — the number is the proof it was done.',
+    'obligation_not_open' => 'This obligation is no longer open — it was already done or cancelled.',
 ];
