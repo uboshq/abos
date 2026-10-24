@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
@@ -26,12 +27,19 @@ use Illuminate\Support\Facades\DB;
  *
  * ── হিসাবের নিয়ম — [[SalesReports::byCustomer()]]-এর সাথে এক ─────────
  *   · খাতায় বসা বিল (`POSTED`) — খসড়া নয়, বাতিল নয়
- *   · বিক্রয় = মোট − ভ্যাট (ভ্যাট সরকারের টাকা, আমাদের আয় নয়)
+ *   · বিল = [[SalesMetrics::billNetSql()]] — মোট − ভ্যাট − বিলে যোগ করা গাড়িভাড়া (ভ্যাট সরকারের টাকা, ভাড়া ৪৩৬০-এর আয়)
  *   · ফেরত — খাতায় বসা ফেরত, **নিজের তারিখে** (যে মাসে মাল ফিরল সে মাসেই
  *     বিক্রি কমে), আর পথ ফেরতের নিজের ঘর থেকে (যেটা বিলের পথই বয়)
  *
  * ⓘ ফেরত আলাদা কলামে, বিক্রি থেকে কেটে নয় — "কত বেচলাম" আর "কত ফিরল"
  * দুইটা আলাদা প্রশ্ন; শেষ কলামে নিট।
+ *
+ * ── ⭐ ক্রম নিট বিক্রিতে (fe, ২১ অক্টোবর ২০২৬; IFRS 15.51) ──────────────
+ * "সবচেয়ে বড় পথ", অবদান % আর Top N — সব `net_after_returns` ("নিট বিক্রি (ভ্যাট ও ফেরত বাদে)") ধরে। আগে ফেরতের আগের বিল
+ * ধরে সাজানো হত, তাই বেশি ফেরতের পথ উপরে বসত — ঠিক যে পথটা এই রিপোর্ট ধরতে চায়। ফেরতের আগের ঘরের চাবি `billed`
+ * ("বিল (ভ্যাট বাদে, ফেরতের আগে)") — আগে তার নাম ছিল `net_sales`, অথচ অঙ্কটা নিট নয়।
+ * ⓘ `gross` ("দাম (ছাড়ের আগে)") থাকে: ওটা ভ্যাটসহ মোট বিল নয়, দর × পরিমাণ — দাম − ছাড় দেখায় কোন পথের ছাড় লাভ খায়,
+ * এই রিপোর্টের প্রশ্নটাই তাই।
  *
  * ⛔ পথহীন কাগজ বাদ পড়ে না — এক সারিতে জড়ো হয়। বাদ দিলে এই রিপোর্টের
  * যোগফল আর গ্রাহক-রিপোর্টের যোগফল আলাদা হত, আর মেলাতে গিয়ে কেউ ভাবত
@@ -56,14 +64,14 @@ final class SalesChannelReports
             title: 'sales::channel.report_title',
             filters: ['date_range', 'branch'],
             groupBy: 'channel_id',
-            rankBy: 'net_sales',
+            rankBy: 'net_after_returns',
             permission: self::PERMISSION,
             query: fn (array $f) => DB::query()
                 ->fromSub(self::movements($f), 'm')
                 ->leftJoin('mdm_sales_channels as ch', 'ch.id', '=', 'm.channel_id')
                 // ⚠️ লাইভ ONLY_FULL_GROUP_BY — নির্বাচিত প্রতিটা অ-যোগফল ঘর এখানে
                 ->groupBy('m.channel_id', 'ch.name_en', 'ch.name_bn')
-                ->orderByRaw('SUM(m.net_sales) desc')
+                ->orderByRaw('SUM(m.billed) - SUM(m.return_value) desc')
                 ->select([
                     'm.channel_id',
                     self::channelName(),
@@ -71,10 +79,10 @@ final class SalesChannelReports
                     DB::raw('SUM(m.qty) as qty'),
                     DB::raw('SUM(m.gross) as gross'),
                     DB::raw('SUM(m.discount) as discount'),
-                    DB::raw('SUM(m.net_sales) as net_sales'),
+                    DB::raw('SUM(m.billed) as billed'),
                     DB::raw('SUM(m.returned_qty) as returned_qty'),
                     DB::raw('SUM(m.return_value) as returns_value'),
-                    DB::raw('SUM(m.net_sales) - SUM(m.return_value) as net_after_returns'),
+                    DB::raw('SUM(m.billed) - SUM(m.return_value) as net_after_returns'),
                 ]),
             columns: [
                 ['key' => 'channel_name', 'label' => 'sales::channel.channel'],
@@ -82,7 +90,7 @@ final class SalesChannelReports
                 ['key' => 'qty', 'label' => 'sales::channel.qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'gross', 'label' => 'sales::channel.gross', 'type' => ReportColumn::MONEY],
                 ['key' => 'discount', 'label' => 'sales::channel.discount', 'type' => ReportColumn::MONEY],
-                ['key' => 'net_sales', 'label' => 'sales::channel.net_sales', 'type' => ReportColumn::MONEY],
+                ['key' => 'billed', 'label' => 'sales::channel.billed', 'type' => ReportColumn::MONEY],
                 ['key' => 'returned_qty', 'label' => 'sales::channel.returned_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'returns_value', 'label' => 'sales::channel.returns', 'type' => ReportColumn::MONEY],
                 ['key' => 'net_after_returns', 'label' => 'sales::channel.net_after_returns', 'type' => ReportColumn::MONEY],
@@ -121,7 +129,7 @@ final class SalesChannelReports
                 DB::raw("{$invoiceQty} as qty"),
                 DB::raw('i.subtotal as gross'),
                 DB::raw('i.discount as discount'),
-                DB::raw('i.total - i.tax as net_sales'),
+                DB::raw(SalesMetrics::billNetSql('i').' as billed'),
                 DB::raw('0 as returned_qty'),
                 DB::raw('0 as return_value'),
             ]);
@@ -139,9 +147,9 @@ final class SalesChannelReports
                 DB::raw('0 as qty'),
                 DB::raw('0 as gross'),
                 DB::raw('0 as discount'),
-                DB::raw('0 as net_sales'),
+                DB::raw('0 as billed'),
                 DB::raw("{$returnQty} as returned_qty"),
-                DB::raw('r.total - r.tax as return_value'),
+                DB::raw(SalesMetrics::returnNetSql('r').' as return_value'),
             ]);
 
         return $invoices->unionAll($returns);

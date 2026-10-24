@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Engines\Approval\ApprovalEngine;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,13 @@ class ApprovalFlowStep extends Model
         'sla_hours', 'warn_hours', 'escalate_hours', 'escalate_to_type', 'escalate_to_id',
         'min_approvals',
     ];
+
+    /** ⛔ ইঞ্জিনের জমানো ছক পুরনো হয় — যে পথেই সারি বদলাক ([[ApprovalEngine::flowsChanged()]]) */
+    protected static function booted(): void
+    {
+        static::saved(fn () => ApprovalEngine::flowsChanged());
+        static::deleted(fn () => ApprovalEngine::flowsChanged());
+    }
 
     protected function casts(): array
     {

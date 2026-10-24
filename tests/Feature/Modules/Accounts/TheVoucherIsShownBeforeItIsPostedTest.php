@@ -62,6 +62,8 @@ final class TheVoucherIsShownBeforeItIsPostedTest extends TestCase
     {
         // ⓘ ডেমোর নিজের ছক থাকলে "ছক নেই" অবস্থাটা দেখাই যেত না
         DB::table('approval_flows')->where('module', 'accounts')->where('action', 'expense')->delete();
+        // ⓘ কাঁচা লেখা মডেলের saved/deleted এড়ায় — ইঞ্জিনের জমানো ছক নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
         $voucher = $this->draftExpense();
 
         $this->post(route('accounts.voucher.overview', $voucher))->assertOk()
@@ -119,5 +121,7 @@ final class TheVoucherIsShownBeforeItIsPostedTest extends TestCase
             'approval_flow_id' => $flowId, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $approverId,
             'requires_all' => false, 'created_at' => now(), 'updated_at' => now(), 'public_id' => (string) Str::uuid(),
         ]);
+        // ⓘ কাঁচা লেখা মডেলের saved/deleted এড়ায় — ইঞ্জিনের জমানো ছক নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
     }
 }

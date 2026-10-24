@@ -45,6 +45,7 @@ use Tests\TestCase;
  */
 final class TheTrackingFollowsTheNewOrderTest extends TestCase
 {
+    use HoldsAnOrderAsBeforeGap28;
     use RefreshDatabase;
 
     private Company $company;
@@ -113,7 +114,12 @@ final class TheTrackingFollowsTheNewOrderTest extends TestCase
     {
         $this->customer->forceFill(['credit_limit' => '1'])->save();
 
-        $order = $this->submitted('4');
+        // ⓘ ফাঁক ২৮: সীমা না কুলোলে জমাই ফেরে — আগে আটকে থাকা আদেশের ধাপ থাকে, সেটাই এখানে
+        $orders = app(SalesOrderService::class);
+        $draft = $orders->create($this->header(), [$this->row('4')]);
+        $this->assertRefusedAtSubmit(fn () => $orders->submit($draft->fresh(['lines'])), $draft);
+        $this->assertSame(0, $this->told($this->owner, TrackingNotices::ORDER_HELD), '⛔ ফেরানো জমায় "সীমায় আটকে" খবর গেল — আদেশ আটকায়নি, ফিরেছে।');
+        $order = $this->heldAsBeforeGap28($draft);
         $this->assertSame(S::CREDIT_HELD, $order->status, 'প্রস্তুতিটাই ভুল — সীমায় আটকায়নি।');
 
         $row = $this->rowOf($order);
@@ -121,9 +127,9 @@ final class TheTrackingFollowsTheNewOrderTest extends TestCase
         $this->assertSame('hold', $row['category'], 'আটকে থাকা কালো রঙে — মালিকের নয় রঙের "hold"');
         $this->assertContains(__('sales::tracking.credit_held'), array_column(app(SaleTracking::class)->story($order->fresh())['events'], 'text'));
 
-        $this->assertSame(1, $this->told($this->owner, TrackingNotices::ORDER_HELD), '⛔ মালিক জানলেন না যে আদেশ সীমায় আটকে।');
+        // ⓘ খবর যায় প্রথম আটকানোয় — আগে আটকে থাকা আদেশের আবার-যাচাই নতুন খবর দেয় না
         app(SalesOrderService::class)->recheckCredit($order->fresh());
-        $this->assertSame(1, $this->told($this->owner, TrackingNotices::ORDER_HELD), '⛔ প্রতিটা আবার-যাচাইয়ে নতুন খবর — এক রাতে শত খবর যেত।');
+        $this->assertSame(0, $this->told($this->owner, TrackingNotices::ORDER_HELD), '⛔ প্রতিটা আবার-যাচাইয়ে নতুন খবর — এক রাতে শত খবর যেত।');
     }
 
     public function test_a_draft_reads_as_today_with_the_switch_off_and_as_a_draft_with_it_on(): void

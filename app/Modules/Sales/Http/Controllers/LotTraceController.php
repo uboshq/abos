@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Sales\Services\BatchTrace;
@@ -31,6 +32,7 @@ class LotTraceController extends Controller implements HasMiddleware
     public function show(Request $request, BatchTrace $trace): View
     {
         $batch = Batch::query()->with('product')->find($request->integer('batch'));
+        $recipients = $batch === null ? collect() : $trace->recipients($batch);
 
         return view('sales::lot.trace', [
             'menu' => app(MenuBuilder::class)->forUser($request->user()),
@@ -50,7 +52,15 @@ class LotTraceController extends Controller implements HasMiddleware
 
             'batch' => $batch,
             'onHand' => $batch === null ? null : $trace->onHand($batch),
-            'recipients' => $batch === null ? collect() : $trace->recipients($batch),
+            'recipients' => $recipients,
+
+            /*
+             * ⭐ ক্রেতা "নাম · পয়েন্ট · শাখা" — মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬ (সব জায়গায়)। ⓘ পক্ষের এক উৎস থেকে, গোটা পাতার
+             * একবারে ([[PartyRegistry::labelsOf()]]) — সারি ধরে প্রশ্ন নয়; [[TheLotRecallNamesTheBuyerWithPointAndBranchTest]]।
+             */
+            'buyers' => app(PartyRegistry::class)->labelsOf($recipients
+                ->filter(fn ($r) => $r->customer_id !== null)
+                ->map(fn ($r) => ['customer', (int) $r->customer_id])),
         ]);
     }
 }

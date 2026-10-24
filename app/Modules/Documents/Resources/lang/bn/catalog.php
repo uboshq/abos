@@ -48,7 +48,7 @@ return [
         'under_review' => 'পর্যালোচনায়',
         'changes_requested' => 'বদল চাওয়া হয়েছে',
         'approved' => 'অনুমোদিত',
-        'rejected' => 'বাতিল',
+        'rejected' => 'প্রত্যাখ্যাত',
         'published' => 'প্রকাশিত',
         'published_unapproved' => 'অনুমোদন ছাড়া প্রকাশিত',
         'expired' => 'মেয়াদোত্তীর্ণ',

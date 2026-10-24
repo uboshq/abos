@@ -12,7 +12,7 @@ return [
     'confirmed' => 'নিশ্চিত',
     'cancelled' => 'বাতিল',
     'approved' => 'অনুমোদিত',
-    'rejected' => 'নামঞ্জুর',
+    'rejected' => 'প্রত্যাখ্যাত',
     'end_session' => 'বের করে দিন',
     'end_other_sessions' => 'বাকি সব জায়গা থেকে বেরোন',
     'only_failed' => 'কেবল ব্যর্থ',
@@ -60,7 +60,7 @@ return [
     'repriced' => 'লটের দাম বদল',
     'expiry_corrected' => 'মেয়াদ সংশোধন',
     'shift_closed' => 'শিফট বন্ধ',
-    'sent_back' => 'ফেরত পাঠানো',
+    'sent_back' => 'সংশোধনে ফেরত',
     // ⭐ বাকি বন্ধ বসানো-তোলা, কারণসহ (বাকি ও আদায়, ৫ অক্টোবর ২০২৬; [[CustomerService::blockCredit()]])
     'credit_blocked' => 'বাকি বন্ধ',
     'credit_unblocked' => 'বাকি আবার চালু',
@@ -119,7 +119,7 @@ return [
     'document_withdrawn' => 'ডকুমেন্টের অনুমোদন-অনুরোধ ফেরত',
     'document_published' => 'ডকুমেন্ট প্রকাশিত',
     'document_returned' => 'ডকুমেন্ট সংশোধনে ফেরত',
-    'document_rejected' => 'ডকুমেন্ট বাতিল',
+    'document_rejected' => 'ডকুমেন্ট প্রত্যাখ্যাত',
     'document_expired' => 'ডকুমেন্টের মেয়াদ শেষ',
     'document_renewed' => 'ডকুমেন্ট নবায়ন',
     'signature_requested' => 'ডকুমেন্টে সই চাওয়া',
@@ -141,6 +141,8 @@ return [
     'bank_signed' => 'ব্যাংক তথ্যে দ্বিতীয় সই',
     'bank_rejected' => 'ব্যাংক তথ্যের বদলে না',
     'bank_withdrawn' => 'ব্যাংক তথ্যের বদল ফিরিয়ে নেওয়া',
+    // ⓘ অফারে মালিক নিজের বানানো অফারে নিজেই সই দিলেন — নিজে-অনুমোদিত ছাড় ([[PromotionApprovalChain::OWNER_SELF_SIGNED]])
+    'owner_self_signed' => 'মালিক নিজের অফারে নিজে সই দিলেন',
     'obligation_done' => 'করণীয় করা হলো',
     'obligation_cancelled' => 'করণীয় বাতিল',
 ];

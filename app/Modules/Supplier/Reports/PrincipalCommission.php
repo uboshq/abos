@@ -186,9 +186,13 @@ final class PrincipalCommission
      *
      * ⓘ খরচের স্তর জানে সে কোন কেনা থেকে জন্মেছে (`inv_cost_layers.source_type/source_id` — ক্রয় বিল বা মাল-গ্রহণ, আর
      * তার সরবরাহকারী)। বিক্রি স্তর থেকে টানে (`inv_cost_layer_uses`), তাই টানের `amount` হুবহু সেই মালের কেনা দাম:
-     *   · বিক্রি = `sales_invoice` টান, আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক) — বিলের তারিখ আর
-     *     শাখা ধরে; বাতিল বিক্রি তাই শূন্যে মেলে, সম্পাদনায় দুইবার গোনা হয় না।
-     *   · ফেরত = `sales_return` টান (ঋণাত্মক, একই স্তরে ফেরা) — ফেরতের তারিখ আর শাখা ধরে, বাতিল ফেরত বাদ (কাগজের অবস্থা ধরে; তার উল্টো সারি `sales_return:cancel`, এখানে গোনা হয় না)।
+     *   · বিক্রি = `sales_invoice` টান (বিলের দিনে), আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক, **বাতিলের
+     *     দিনে**) — বিলের শাখা ধরে; সম্পাদনায় দুইবার গোনা হয় না।
+     *   · ফেরত = `sales_return` টান (ঋণাত্মক, একই স্তরে ফেরা, ফেরতের দিনে) আর ফেরত বাতিলের উল্টো টান (`sales_return:cancel`,
+     *     ধনাত্মক, বাতিলের দিনে) — ফেরতের শাখা ধরে।
+     * ⭐ প্রতিটা টান **নিজের তারিখে** (`u.trx_date`), কাগজের তারিখে নয় — IFRS 15 আর IAS 8: ফেরত বা বাতিল চলতি চক্রের ঘটনা, তাই বন্ধ
+     * চক্রের অংশ কখনো বদলায় না (fe, ২১ অক্টোবর ২০২৬)। ⛔ আগে বিলের তারিখ ধরে: আগস্টের বিল অক্টোবরে বাতিল হলে আগস্টের অংশ পেছনে
+     * কমত, আর বাতিল ফেরত অবস্থা ধরে বাদ পড়ায় ফেরতের চক্রও পেছনে বাড়ত।
      * ⛔ যে স্তর কোনো কেনা থেকে নয় (খোলা মজুদ, সমন্বয়, রান্না) তার সরবরাহকারী নেই — গোনা হয় না।
      */
     public function costOfSales(int $company, int $branch, int $supplier, string $from, string $to): string
@@ -204,7 +208,7 @@ final class PrincipalCommission
             ->where('d.company_id', $company)
             ->where('d.branch_id', $branch)
             ->whereNull('d.deleted_at')
-            ->whereBetween('d.trx_date', [$from, $to])
+            ->whereBetween('u.trx_date', [$from, $to])
             ->tap($fromSupplier)
             ->selectRaw('COALESCE(SUM(u.amount), 0) as v')
             ->value('v');
@@ -213,12 +217,11 @@ final class PrincipalCommission
             ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
             ->join('sal_returns as d', 'd.id', '=', 'u.source_id')
             ->where('u.company_id', $company)
-            ->where('u.source_type', 'sales_return')
+            ->whereIn('u.source_type', ['sales_return', 'sales_return:cancel'])
             ->where('d.company_id', $company)
             ->where('d.branch_id', $branch)
             ->whereNull('d.deleted_at')
-            ->where('d.status', '<>', 'cancelled')
-            ->whereBetween('d.trx_date', [$from, $to])
+            ->whereBetween('u.trx_date', [$from, $to])
             ->tap($fromSupplier)
             ->selectRaw('COALESCE(SUM(u.amount), 0) as v')
             ->value('v');

@@ -130,4 +130,6 @@ return [
 
     'closed_cannot_cancel' => ':no is closed — a closed order cannot be cancelled.',
     'rejected_cannot_cancel' => '⛔ :no was rejected. A rejected order is not cancelled again: its goods and offers came back when it was rejected.',
+
+    'over_credit_limit' => '⛔ The order was not submitted — :customer has a credit limit of :limit, :used is already used and this order is :order: it goes :short past the limit. Take a payment or reduce the order. Nobody may cross the limit, not even the owner.',
 ];

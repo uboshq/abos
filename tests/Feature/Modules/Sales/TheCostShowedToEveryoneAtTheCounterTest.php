@@ -339,7 +339,8 @@ final class TheCostShowedToEveryoneAtTheCounterTest extends TestCase
             'export' => $csv ? 'csv' : null,
         ]));
 
-        $productLabel = __('sales::field.revenue');
+        // ⓘ ব্র্যান্ডের রিপোর্টের কলাম এখন নিট বিক্রি (IFRS 15, a5 ২০ অক্টোবর ২০২৬) — 'বিক্রয়' আর ছাপা হয় না, তাই চিহ্নটা কলামের নিজের লেখা
+        $productLabel = __('sales::field.net_sales');
 
         // ⓘ ক্রেতার নাম পাতার ভাষায় — কর্মীর ভাষা অ্যাপের ডিফল্ট (বাংলা); ইংরেজি 'Rahim' খুঁজলে চিহ্নটা অন্ধ হত
         $buyer = Customer::query()->findOrFail($this->invoice->customer_id)->name(config('app.locale'));

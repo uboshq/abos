@@ -149,7 +149,8 @@ final class PromotionReversal
                     ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => '0', 'credit' => $value],
                 ],
                 documentNo: $gift->code,
-                branchId: \App\Core\Support\CompanyContext::branchId(),
+                // ⭐ উপহারের খরচ যে শাখায় বসেছিল সেখানেই উল্টো — গুদামের শাখা, হেডারের নয় (বিক্রয় ফাঁক ১২; [[GiftIssuer::bookTheCost()]])
+                branchId: ($wb = \App\Modules\Inventory\Models\Warehouse::acrossWarehouses()->whereKey($gift->warehouse_id)->value('branch_id')) === null ? null : (int) $wb,
             );
         }
 

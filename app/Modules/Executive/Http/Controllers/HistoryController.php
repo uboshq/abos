@@ -73,6 +73,8 @@ final class HistoryController extends Controller implements HasMiddleware
             'monthBefore' => $this->snapshots->series($user, $companies, $figure,
                 Carbon::parse($date)->subDays(self::DAYS - 1)->subMonthNoOverflow()->toDateString(),
                 Carbon::parse($date)->subMonthNoOverflow()->toDateString()),
+            // ⭐ পুরনো সারি নিট না হওয়া পর্যন্ত বিক্রির ধারায় বদলের দিনের চিহ্ন ([[SalesBasis]], ২১ অক্টোবর ২০২৬)
+            'basisSince' => $figure === Figures::SALES ? app(\App\Modules\Executive\Services\SalesBasis::class)->pending(array_map(fn (array $c) => (int) $c['id'], $companies)) : null,
         ]);
     }
 }

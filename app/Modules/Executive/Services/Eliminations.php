@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Cache;
  * ঐ বিক্রি সত্যিই বাইরের কাছে বিক্রি।
  *
  * ── ⭐ সংখ্যাটা মডিউলের নিজের ──────────────────────────────────────────
- * বাদের অঙ্ক ঐ ঘরের একই সংজ্ঞা, কেবল জোড়া পক্ষগুলোর জন্য: বিক্রি [[SalesMetrics::invoiceTotal()]],
+ * বাদের অঙ্ক ঐ ঘরের একই সংজ্ঞা, কেবল জোড়া পক্ষগুলোর জন্য: বিক্রি [[SalesMetrics::net()]] (নিট, ২০ অক্টোবর ২০২৬),
  * পাওনা আর দেনা [[AccountsFacts::controlBalanceOf()]] — একই কোম্পানিতে, একই শাখার দৃষ্টিতে।
  */
 final class Eliminations
@@ -87,7 +87,7 @@ final class Eliminations
                         }
 
                         $part[$figure] = bcadd($figure === Figures::SALES
-                            ? SalesMetrics::invoiceTotal($from, $to, $parties)
+                            ? SalesMetrics::net($from, $to, $parties) // ⭐ ঘরটা নিট, তাই বাদও নিট (২০ অক্টোবর ২০২৬)
                             : $accounts->controlBalanceOf($rule['code'], $rule['type'], $parties), '0', 4);
                     }
 

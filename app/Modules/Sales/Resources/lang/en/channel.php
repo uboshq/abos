@@ -8,10 +8,10 @@ return [
     'none' => 'Channel not set',
     'invoice_count' => 'Invoices',
     'qty' => 'Quantity',
-    'gross' => 'Before discount',
+    'gross' => 'Price (before discount)',
     'discount' => 'Discount',
-    'net_sales' => 'Sales (excl. VAT)',
+    'billed' => 'Billed (excl. VAT, before returns)',
     'returned_qty' => 'Returned qty',
     'returns' => 'Returns (excl. VAT)',
-    'net_after_returns' => 'Net after returns',
+    'net_after_returns' => 'Net sales (excl. VAT and returns)',
 ];

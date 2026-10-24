@@ -28,7 +28,7 @@ use Tests\TestCase;
  * আর মেয়াদ-পেরোনোর দেয়াল দুই মাস দেরিতে জাগত।
  *
  * দাবি:
- *  - ছক না থাকলে বাড়ানো থামে, দিন যা ছিল তাই।
+ *  - কোনো ছক না থাকলে (সই বন্ধ) বাড়ানো আজকের মতো বসে; সীমার সই চালু অথচ দিনের ছক নেই → সীমার ছকে সই চায়, দিন যা ছিল তাই (গ্যাপ ২৬)।
  *  - মালিক নন এমন সইকারীর "হ্যাঁ"-তে বাড়ে না; মালিকের সইয়ে বাড়ে।
  *  - ৬০ দিনের সই ৯০ ঢাকে না; একবার খাটা সই আবার খাটে না (কমিয়ে আবার তুললে নতুন সই)।
  *  - কমাতে সই লাগে না; দিন না ছুঁয়ে অন্য ঘর বদলালেও না।
@@ -74,16 +74,34 @@ final class TheCreditDaysRoseWithoutASignatureTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_without_a_flow_a_raise_stops_and_the_days_stay(): void
+    /**
+     * ⓘ fe-র গ্যাপ ২৬ (২০ অক্টোবর ২০২৬): সুইচ = সীমার সইয়ের পথ বা দিনের ছক। কোনোটাই নেই (সই বন্ধ কোম্পানি, যেমন UB) → আজকের
+     * মতো সরাসরি বসে। ⓘ আগে এখানে থামত — তাতে সই বন্ধ কোম্পানিও আটকাত। সীমার পথ চালু অথচ দিনের ছক নেই → সীমার ছকে সইয়ে যায়।
+     */
+    public function test_without_any_flow_a_raise_lands_and_with_the_limit_path_on_it_waits_for_a_signature(): void
     {
+        $this->update(['credit_days' => 45]);
+        $this->assertSame(45, $this->days(), '⛔ সই বন্ধ কোম্পানিতে দিন বাড়ানো আটকে গেল।');
+
+        $flow = ApprovalFlow::create(['module' => 'customer', 'action' => 'credit_limit']);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $this->owner->id]);
+        app()->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        app()->forgetInstance(\App\Core\Engines\Approval\DocumentApproval::class);
+        app()->forgetInstance(\App\Modules\Customer\Services\CustomerService::class);
+
         try {
             $this->update(['credit_days' => 90]);
-            $this->fail('⛔ সই ছাড়া বাকির দিন ৩০ থেকে ৯০ হলো।');
+            $this->fail('⛔ সীমার সই চালু, অথচ বাকির দিন ৪৫ থেকে ৯০ হলো সই ছাড়া।');
         } catch (ValidationException $e) {
+            // ⓘ fe, ২০ অক্টোবর: দিনের ছক নেই → সীমার ছকেই সইয়ে যায়, "ছক বসান" বলে থামে না
             $this->assertArrayHasKey('credit_days', $e->errors());
+            $this->assertNotSame([__('customer::validation.days_need_a_flow')], $e->errors()['credit_days']);
         }
 
-        $this->assertSame(30, $this->days());
+        $this->assertSame(45, $this->days());
+        $this->assertTrue(Approval::query()->where('action', 'credit_days')->where('status', Approval::PENDING)
+            ->where('approvable_id', $this->customer->id)->exists(), 'সীমার ছকে দিনের অনুরোধ বসেনি।');
     }
 
     public function test_only_the_owners_signature_raises_the_days_and_only_as_far_as_signed(): void

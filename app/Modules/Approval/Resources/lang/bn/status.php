@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 return [
-    'pending' => 'অপেক্ষমাণ',
+    'pending' => 'সইয়ের অপেক্ষায়',
     'approved' => 'অনুমোদিত',
-    'rejected' => 'ফেরত',
+    'rejected' => 'প্রত্যাখ্যাত',
     'returned' => 'সংশোধনে ফেরত',
     'cancelled' => 'প্রত্যাহৃত',
     'forwarded' => 'অন্যের কাছে পাঠানো',

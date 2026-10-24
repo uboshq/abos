@@ -155,7 +155,7 @@ final class GiftIssuer
                 ]);
             }
 
-            $this->bookTheCost($issue, $product, $qty, $batch, $date ?? Carbon::now());
+            $this->bookTheCost($issue, $product, $warehouse, $qty, $batch, $date ?? Carbon::now());
 
             return $issue;
         });
@@ -356,7 +356,7 @@ final class GiftIssuer
      * এককের দামও সেই খরচ। ⛔ স্তর না কুলালে উপহার থামে, `no_cost_layer` বার্তায় (fe-র সিদ্ধান্ত (গ), ১৩ অক্টোবর ২০২৬) —
      * আগে ঘাটতিটুকু কেনা দামে ধরে পুরো খরচ ১১২০ থেকে কাটা হত, স্তর না ছুঁয়ে: খাত আর স্তর আলাদা কথা বলত।
      */
-    private function bookTheCost(PromotionGiftIssue $issue, Product $product, string $qty, ?Batch $batch, Carbon $date): void
+    private function bookTheCost(PromotionGiftIssue $issue, Product $product, Warehouse $warehouse, string $qty, ?Batch $batch, Carbon $date): void
     {
         $layers = app(CostLayerService::class);
 
@@ -389,7 +389,14 @@ final class GiftIssuer
                 ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'debit' => '0', 'credit' => $cost],
             ],
             documentNo: $issue->code,
-            branchId: CompanyContext::branchId(),
+
+            /*
+             * ⭐ খরচ যে গুদাম থেকে মাল বেরোল তার শাখায়, হেডারের শাখায় নয় (fe-র বিক্রয় ফাঁক ১২, ২০ অক্টোবর ২০২৬;
+             * [[AGiftsCostLandsInItsWarehousesBranchTest]])। ⛔ আগে হেডারে ময়মনসিংহ আর গুদাম নেত্রকোনার হলে খরচ আর মজুদের
+             * খাত ময়মনসিংহে বসত — নেত্রকোনার মজুদ খাতায় বেশি থাকত। ⓘ শাখাহীন গুদামে `null`, মানে আগের মতো হেডারের শাখা
+             * ([[PostingEngine::post()]]) — খোলা মজুদের একই নিয়ম ([[OpeningStockService]])।
+             */
+            branchId: $warehouse->branch_id === null ? null : (int) $warehouse->branch_id,
         );
     }
 

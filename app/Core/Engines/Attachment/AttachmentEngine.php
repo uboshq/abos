@@ -427,7 +427,7 @@ final class AttachmentEngine
         $extension = strtolower($file->getClientOriginalExtension());
 
         if (in_array($extension, self::FORBIDDEN, true)) {
-            throw new AttachmentException("Files of type .{$extension} cannot be attached.");
+            throw new NotAllowedType("Files of type .{$extension} cannot be attached.");
         }
 
         // নাম বদলে দেওয়া ফাইল ধরার জন্য বিষয়বস্তু দেখতে হয়। invoice.php-কে
@@ -442,18 +442,18 @@ final class AttachmentEngine
 
         if (str_contains($sniffed, 'php') || str_contains($sniffed, 'x-httpd')
             || str_contains($sniffed, 'executable') || str_contains($sniffed, 'x-dosexec')) {
-            throw new AttachmentException('That file type cannot be attached.');
+            throw new NotAllowedType('That file type cannot be attached.');
         }
 
         $guessed = strtolower((string) $file->guessExtension());
 
         if ($guessed !== '' && in_array($guessed, self::FORBIDDEN, true)) {
-            throw new AttachmentException('That file type cannot be attached.');
+            throw new NotAllowedType('That file type cannot be attached.');
         }
 
         // ⭐ অনুমতি-তালিকা — বাইটের ধরন তালিকায়, আর নামের লেজ সেই ধরনের ([[GENERAL]])
         if (! isset(self::GENERAL[$sniffed]) || ! in_array($extension, self::GENERAL[$sniffed], true)) {
-            throw new AttachmentException(sprintf(
+            throw new NotAllowedType(sprintf(
                 'Files of type .%s cannot be attached. Allowed: %s.',
                 $extension === '' ? '?' : $extension,
                 implode(', ', array_values(array_unique(array_merge(...array_values(self::GENERAL))))),

@@ -2614,6 +2614,13 @@ final class DirectSaleService
     /**
      * ⛔ যে পথেই আসুক (লেখা তারিখ, দিনের সংখ্যা, মাসের শেষ) — ফল গ্রাহকের বাকির দিনের ভিতরে (পূর্ণ নিরীক্ষা §৫, [[DueWithinTerms]])।
      * ⓘ সম্পাদনায় খসড়ার আগের তারিখ রাখা যায় ($kept)।
+     *
+     * ⓘ দ্বিতীয় স্তর, বাইরে থেকে দেখা যায় না (মিউট্যান্ট g27_2 বাঁচে, ইচ্ছা করে — fe, ২১ অক্টোবর ২০২৬): এখানে বাদ দিলেও
+     * কোনো দরজা বিলের সেবার যাচাই এড়ায় না — প্রতিটা কাউন্টার-বিল [[SalesInvoiceService::create()]] বা [[SalesInvoiceService::update()]]
+     * দিয়ে জন্মায়, আর দুইটাই একই গ্রাহকের দিন আর একই বার্তায় [[DueWithinTerms]] ডাকে। দেখা দরজা: ওয়েবের কাউন্টার
+     * ([[DirectSaleController]] → complete), ফোনের কাউন্টার ([[DirectSaleApiController]] → complete), ধরা বিক্রি শেষ করা
+     * ([[SalesInvoiceController]] → finishHeld), বিক্রি সম্পাদনা ([[SaleEditor]] → complete), আর ধরা/পার্ক করা বিল
+     * (createForHeldCounterSale → create, updateForHeldCounterSale → update)। এই স্তর কেবল আগে থামায় — বিক্রি শুরুর আগেই।
      */
     private function dueOn(array $data, Customer $customer, ?string $kept = null): ?string
     {

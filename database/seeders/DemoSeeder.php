@@ -558,6 +558,8 @@ class DemoSeeder extends Seeder
     private function clearTheApprovalFlows(Company $company): void
     {
         DB::table('approval_flows')->where('company_id', $company->id)->delete();
+        // ⓘ DB::table মডেলের ঘটনা চালায় না — ইঞ্জিনের জমানো ছক নিজে পুরনো করা
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
     }
 
     /**

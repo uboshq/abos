@@ -7,7 +7,7 @@ declare(strict_types=1);
 return [
     'title' => 'শাখা পাশাপাশি',
     'branch' => 'শাখা',
-    'sales' => 'বিক্রি',
+    'sales' => 'নিট বিক্রি (ভ্যাট ও ফেরত বাদে)',
     'income' => 'মোট আয়',
     'expense' => 'মোট খরচ',
     'profit' => 'লাভ',
