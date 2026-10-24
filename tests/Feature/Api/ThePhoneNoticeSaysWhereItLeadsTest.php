@@ -131,11 +131,13 @@ final class ThePhoneNoticeSaysWhereItLeadsTest extends TestCase
         $this->assertArrayHasKey('closed', $item, '⛔ ফোনের খবরে closed ঘরটাই নেই');
         $this->assertNull($item['closed'], '⛔ খোলা যায় এমন খবরেও ফোনকে বন্ধের কারণ বলা হল');
 
-        // ⓘ লেখককে চালানের শাখার বাইরের এক শাখায় সীমিত করা — কাগজ আছে, কিন্তু নাগালের বাইরে
+        // ⓘ খবরটা নাগালে থাকুক (তালিকা শাখার দেয়াল মানে), কাগজটা নয়: লেখক খবরের শাখায় সীমিত, চালানটা অন্য শাখায় সরে যায়
         $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
-            ->where('id', '<>', (int) $challan->branch_id)->orderBy('id')->firstOrFail();
+            ->where('id', '<>', (int) $bell->branch_id)->orderBy('id')->firstOrFail();
+        $this->assertNotNull($bell->branch_id, 'প্রস্তুতিটাই ভুল — চালানের খবরে শাখা নেই');
         \App\Models\UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $writer->id,
-            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $other->id]);
+            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => (int) $bell->branch_id]);
+        \Illuminate\Support\Facades\DB::table('sal_challans')->where('id', $challan->id)->update(['branch_id' => $other->id]);
         app(\App\Core\Services\DataScope::class)->forget();
 
         $item = $this->itemOf($bell);
