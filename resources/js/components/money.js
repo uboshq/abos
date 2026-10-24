@@ -445,8 +445,11 @@ export function voucherMoney ({
          */
         get hasHeadFigures () { return this.hasParty && this.partyDue !== null },
         get headOwedPaisa () { return (out ? -1 : 1) * paisa(this.partyDue ?? 0) },
-        get headThisPaisa () { return paisa(this.amount) + (out ? paisa(this.ait) + paisa(this.vds) : 0) },
-        get headLeftPaisa () { return this.headOwedPaisa - this.headThisPaisa },
+        // ⓘ পক্ষের খাত কমে মোটে — দুই দিকেই (রসিদে পক্ষ কাটেন, পরিশোধে আমরা কাটি): টাকা + AIT + VDS
+        get headGrossPaisa () { return paisa(this.amount) + paisa(this.ait) + paisa(this.vds) },
+        // ⓘ "এই আদায়" নকশার মতো হাতে পাওয়া টাকা; "এই পরিশোধ (মোট)" মোট
+        get headThisPaisa () { return out ? this.headGrossPaisa : paisa(this.amount) },
+        get headLeftPaisa () { return this.headOwedPaisa - this.headGrossPaisa },
         get headOwedText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headOwedPaisa) / 100) : '—' },
         get headThisText () { return '৳' + taka(this.headThisPaisa / 100) },
         get headLeftText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headLeftPaisa) / 100) : '—' },
@@ -543,6 +546,9 @@ export function voucherMoney ({
         get sumWords () { return this.summary?.words ?? '' },
         get sumMatches () { return this.summary?.matches === true },
         get sumGross () { return this.summary?.gross ?? '—' },
+        // ⓘ রসিদে পক্ষ কাটেন — অঙ্ক যোগে, চিহ্ন ছাড়া (পক্ষের খাতে মোট = পাওয়া + VDS + AIT)
+        get sumAitText () { return this.summary?.ait ?? '—' },
+        get sumVdsText () { return this.summary?.vds ?? '—' },
         // ⓘ বিয়োগ চিহ্ন কেবল সত্যি কাটলে — "−0.00" চোখে ভুল পড়ে
         get sumAitMinus () { return this.summary ? (paisa(this.summary.ait) > 0 ? '−' : '') + this.summary.ait : '—' },
         get sumVdsMinus () { return this.summary ? (paisa(this.summary.vds) > 0 ? '−' : '') + this.summary.vds : '—' },

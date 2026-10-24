@@ -52,6 +52,43 @@ final class WithheldTax
     }
 
     /**
+     * ⭐ রসিদ ভাউচারে — পক্ষ যা কেটে রাখলেন (fe, ২৪ অক্টোবর ২০২৬; আদায়ের দফা ৫-এর একই নিয়ম, [[WithheldAtSource]])।
+     *
+     * ⓘ লেখা টাকা = হাতে পাওয়া। Dr টাকার খাত = পাওয়া − চার্জ (আগের মতোই) · Dr ১১৩৮ = VDS · Dr ১১৩৫ = AIT · Cr পক্ষের খাত = পাওয়া +
+     * VDS + AIT — পক্ষের পাওনা কাটা অংশসহ পুরোটা কমে, কারণ তিনি সেটা সরকারকে দিয়েছেন।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $input
+     * @return list<array<string, mixed>>
+     */
+    public function onReceipt(array $lines, int $payerAccountId, array $input): array
+    {
+        $debits = \App\Modules\Accounts\Support\WithheldAtSource::debits(
+            (string) ($input['vds_amount'] ?? ''), (string) ($input['ait_amount'] ?? ''), (string) ($input['narration'] ?? ''),
+        );
+
+        if ($debits === []) {
+            return $lines;
+        }
+
+        $withheld = array_reduce($debits, fn (string $sum, array $line) => bcadd($sum, $line['debit'], 4), '0');
+        $grown = false;
+
+        foreach ($lines as $i => $line) {
+            if (! $grown && (int) $line['account_id'] === $payerAccountId && bccomp((string) $line['credit'], '0', 4) > 0) {
+                $lines[$i]['credit'] = bcadd((string) $line['credit'], $withheld, 4);
+                $grown = true;
+            }
+        }
+
+        if (! $grown) {
+            throw ValidationException::withMessages(['from_account_id' => __('accounts::validation.withheld_needs_payer_account')]);
+        }
+
+        return [...$lines, ...$debits];
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $lines
      * @param  array<string, mixed>  $input
      * @return list<array<string, mixed>>

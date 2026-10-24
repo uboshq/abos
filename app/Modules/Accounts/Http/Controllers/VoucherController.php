@@ -751,7 +751,8 @@ class VoucherController extends Controller implements HasMiddleware
      * @param  list<array<string, mixed>>  $lines
      * @param  \Illuminate\Support\Collection<int, \App\Modules\Accounts\Models\Account>  $accounts
      * ⭐ উৎসে কর্তন (পরিশোধে, [[WithheldTax::onPayment()]]) — AIT আর VDS খাতার ২১২১/২১২২-এর সারি থেকে; মোট = দেওয়া + AIT + VDS,
-     * পক্ষের খাতে যতটা কমে (নকশা পাতা ৪-এর "বিলে প্রয়োগ (মোট) − AIT − VDS = নিট")। রসিদে এখনো কর্তন নেই, তাই শূন্য।
+     * পক্ষের খাতে যতটা কমে (নকশা পাতা ৪-এর "বিলে প্রয়োগ (মোট) − AIT − VDS = নিট")। রসিদে পক্ষ যা কেটে রাখলেন — ১১৩৮/১১৩৫-এর ডেবিট
+     * সারি থেকে ([[WithheldAtSource]]); মোট = পাওয়া + VDS + AIT, পক্ষের খাত যতটা কমে (নকশা পাতা ২-এর "বিলে প্রয়োগ")।
      *
      * @return array{amount: string, gross: string, ait: string, vds: string, charge: string, net: string, words: string, matches: bool}
      */
@@ -760,7 +761,11 @@ class VoucherController extends Controller implements HasMiddleware
         $receipt = $type === Voucher::RECEIPT;
         $moneyId = (int) ($data[$receipt ? 'to_account_id' : 'from_account_id'] ?? 0);
         $chargeCodes = [\App\Modules\Accounts\Services\StandardChart::BANK_CHARGES, \App\Modules\Accounts\Services\StandardChart::MFS_CHARGES];
-        $withheldCodes = ['ait' => \App\Modules\Accounts\Services\StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_PAYABLE];
+        // ⓘ পরিশোধে আমরা কাটি (Cr ২১২১/২১২২), রসিদে পক্ষ কাটেন (Dr ১১৩৫/১১৩৮, [[WithheldAtSource]])
+        $withheldCodes = $receipt
+            ? ['ait' => \App\Modules\Accounts\Services\StandardChart::ADVANCE_INCOME_TAX, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_RECEIVABLE]
+            : ['ait' => \App\Modules\Accounts\Services\StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_PAYABLE];
+        $withheldSide = $receipt ? 'debit' : 'credit';
         $amount = bcadd(is_numeric($data['amount'] ?? null) ? (string) $data['amount'] : '0', '0', 4);
         $net = '0';
         $charge = '0';
@@ -770,8 +775,8 @@ class VoucherController extends Controller implements HasMiddleware
             $code = $accounts->get((int) $line['account_id'])?->code;
             $kind = array_search($code, $withheldCodes, true);
 
-            if ($kind !== false && ! $receipt) {
-                $cut[$kind] = bcadd($cut[$kind], (string) ($line['credit'] ?? '0'), 4);
+            if ($kind !== false) {
+                $cut[$kind] = bcadd($cut[$kind], (string) ($line[$withheldSide] ?? '0'), 4);
 
                 continue;
             }

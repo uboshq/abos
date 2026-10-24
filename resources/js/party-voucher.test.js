@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import partyVoucher, { matchParties, SHOWN_AT_ONCE } from './party-voucher.js'
+import partyVoucher, { matchParties } from './party-voucher.js'
 
 /*
  * ⭐ ডিপোজিটর / প্রাপকের নামে খোঁজা — মালিক, ৩ অক্টোবর ২০২৬।
@@ -41,8 +41,6 @@ function make(overrides = {}) {
     return box
 }
 
-const key = (k, extra = {}) => ({ key: k, preventDefault: vi.fn(), ...extra })
-
 describe('matchParties', () => {
     it('খালি লেখায় সবাই', () => {
         expect(matchParties(parties, '  ')).toHaveLength(4)
@@ -69,7 +67,11 @@ describe('matchParties', () => {
     })
 })
 
-describe('partyVoucher — খোঁজা যায় এমন নামের তালিকা', () => {
+/*
+ * ⭐ নাম বাছা এখন ভাগ করা পিকারে ([[x-ui.party-search]] `stacked addable`; খোঁজা, ↑ ↓ Enter আর "+ নতুন নাম"-এর দাবি
+ * party-search.test.js-এ) — এখানে কেবল এই বাক্সের কাজ: পিকারের `change` শুনে বকেয়া আর বিল আনা বা মোছা (২৪ অক্টোবর ২০২৬)।
+ */
+describe('partyVoucher — ভাগ করা পিকারের খবর', () => {
     beforeEach(() => {
         globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ known: true, amount: 500, bills: [] }) }))
     })
@@ -79,61 +81,19 @@ describe('partyVoucher — খোঁজা যায় এমন নামে�
         delete globalThis.fetch
     })
 
-    it('তালিকা কেবল বাছা ধরনের নাম দেখায়', () => {
+    const changed = (value, name = 'party_id') => ({ target: { name, value } })
+
+    it('পিকারে নাম বাছলে partyId বসে আর পাওনা সত্যিই সার্ভার থেকে চাওয়া হয় — একই ঠিকানায়, একই নামে', async () => {
         const box = make()
 
-        expect(box.shown.map((p) => p.id)).toEqual([11, 12, 13])
-
-        box.partyType = 'supplier'
-        expect(box.shown.map((p) => p.id)).toEqual([21])
-    })
-
-    it('লিখলে তালিকা ছোট হয়, আর আলো প্রথম সারিতে ফেরে', () => {
-        const box = make()
-
-        box.openList()
-        box.moveDown()
-        expect(box.cursor).toBe(1)
-
-        box.search = 'afia'
-        box.searched()
-
-        expect(box.shown.map((p) => p.id)).toEqual([13])
-        expect(box.cursor).toBe(0)
-    })
-
-    it('খুললেই খোঁজার ঘরে ফোকাস', () => {
-        const box = make()
-
-        box.openList()
-
-        expect(box.listOpen).toBe(true)
-        expect(box.$refs.search.focus).toHaveBeenCalled()
-    })
-
-    it('↓ ↓ Enter — দ্বিতীয় নামটা বাছা হয়, partyId বসে, আর loadDue চলে', async () => {
-        const box = make()
-        const due = vi.spyOn(box, 'loadDue')
-
-        box.openList()
-        box.moveDown()
-        box.moveDown()
-        box.moveUp()
-        box.pickCursor()
-
-        expect(box.partyId).toBe('12')
-        expect(due).toHaveBeenCalledOnce()
-        expect(box.listOpen).toBe(false)
-        expect(box.search).toBe('')
-        expect(box.$refs.trigger.focus).toHaveBeenCalled()
-    })
-
-    it('বাছার পরে পাওনা সত্যিই সার্ভার থেকে চাওয়া হয় — একই ঠিকানায়, একই নামে', async () => {
-        const box = make()
-
-        box.search = 'mirpur'
-        box.pickCursor()
+        box.partyPicked(changed('12'))
+        expect(box.partyId, '⛔ পিকারে বাছা নাম partyId-তে বসেনি').toBe('12')
         await vi.waitFor(() => expect(box.due).toBe('500.00'))
+        expect(globalThis.fetch, '⛔ বাছা পক্ষের পাওনা সার্ভার থেকে চাওয়া হয়নি').toHaveBeenCalledWith(
+            '/accounts/voucher/due?party_type=customer&party_id=12',
+            expect.anything(),
+        )
+
         // ⭐ চিহ্ন ধরে শব্দ, অঙ্ক লাখ-কমায় আর কখনো "−" নয় — রসিদে তিন অবস্থা
         box.texts = { ...box.texts, dueInOwed: 'বকেয়া', dueInAdvance: 'অগ্রিম', dueInNone: 'বকেয়া নেই', dueOutOwed: 'দেনা', dueOutAdvance: 'অগ্রিম দেওয়া', dueOutNone: 'দেনা নেই' }
         box.due = '125000.00'
@@ -153,146 +113,71 @@ describe('partyVoucher — খোঁজা যায় এমন নামে�
         expect([box.dueWord, box.dueAmount]).toEqual(['অগ্রিম দেওয়া', '৳2,500.00'])
         box.due = '0'
         expect([box.dueWord, box.dueAmount]).toEqual(['দেনা নেই', ''])
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-            '/accounts/voucher/due?party_type=customer&party_id=12',
-            expect.anything(),
-        )
     })
 
-    it('↓ শেষ সারির পরে যায় না, ↑ প্রথমের আগে যায় না', () => {
+    it('হাতে লেখা নতুন নামে (পিকারের মান ফাঁকা) বকেয়া, বিল আর বাছা বিল মোছে — সার্ভারকে আর জিজ্ঞেস নয়', () => {
+        const box = make({ partyId: '11', pickedType: 'sales_invoice', pickedId: '7' })
+        box.due = '500.00'
+        box.bills = [{ against_type: 'sales_invoice', id: 7, outstanding: '250' }]
+
+        box.partyPicked(changed(''))
+
+        expect(box.partyId, '⛔ নতুন নাম লেখার পরেও পুরনো বাছাই রয়ে গেল').toBe('')
+        expect(box.due, '⛔ নতুন নাম লেখার পরেও পুরনো পক্ষের বকেয়া দেখায়').toBe(null)
+        expect(box.bills, '⛔ নতুন নাম লেখার পরেও পুরনো পক্ষের বিল দেখায়').toEqual([])
+        expect(box.pickedId, '⛔ নতুন নাম লেখার পরেও পুরনো বিলের বিপরীতে রয়ে গেল').toBe('')
+        expect(globalThis.fetch, '⛔ পক্ষ ছাড়া সার্ভারে পাওনা চাওয়া হলো').not.toHaveBeenCalled()
+    })
+
+    it('দেরিতে আসা পুরনো পক্ষের উত্তর নতুন নাম লেখার পরে মোছা বকেয়া আবার ভরায় না', async () => {
+        let answer
+        globalThis.fetch = vi.fn(() => new Promise((resolve) => { answer = resolve }))
         const box = make()
 
-        box.openList()
-        for (let i = 0; i < 10; i++) box.moveDown()
-        expect(box.cursor).toBe(2)
+        box.partyPicked(changed('12'))
+        box.partyPicked(changed(''))
+        answer({ ok: true, json: async () => ({ known: true, amount: -45000, bills: [{ against_type: 'sales_invoice', id: 3, outstanding: '9' }] }) })
+        await new Promise((r) => setTimeout(r, 0))
 
-        for (let i = 0; i < 10; i++) box.moveUp()
-        expect(box.cursor).toBe(0)
+        expect(box.due, '⛔ নতুন নাম লেখার পরে পুরনো পক্ষের দেরির উত্তর বকেয়া ফেরাল').toBe(null)
+        expect(box.bills, '⛔ নতুন নাম লেখার পরে পুরনো পক্ষের দেরির উত্তর বিল ফেরাল').toEqual([])
     })
 
-    it('ক্লিকে বাছাও একই কাজ করে', () => {
-        const box = make()
-        const due = vi.spyOn(box, 'loadDue')
-
-        box.pickParty(13)
-
-        expect(box.partyId).toBe('13')
-        expect(due).toHaveBeenCalledOnce()
-        expect(box.pickedLabel).toBe('Afia Enterprise')
-        expect(box.pickedHint).toBe('C-0103 · Uttara')
-    })
-
-    it('Esc — তালিকা বন্ধ, বাছাই অটুট, ফোকাস বোতামে', () => {
+    it('অন্য ঘরের change কিছু ছোঁয় না', () => {
         const box = make({ partyId: '11' })
 
-        box.openList()
-        box.search = 'afia'
-        box.escape()
+        box.partyPicked(changed('', 'narration'))
 
-        expect(box.listOpen).toBe(false)
-        expect(box.search).toBe('')
-        expect(box.partyId).toBe('11')
-        expect(box.$refs.trigger.focus).toHaveBeenCalled()
+        expect(box.partyId, '⛔ অন্য ঘরের change পক্ষের বাছাই মুছে দিল').toBe('11')
     })
 
-    it('আগে বাছা নাম থাকলে খুললে আলো তার উপরেই', () => {
-        const box = make({ partyId: '13' })
-
-        box.openList()
-
-        expect(box.cursor).toBe(2)
-    })
-
-    it('বোতামে অক্ষর টাইপ করলে তালিকা খোলে, আর অক্ষরটাই খোঁজা শুরু করে', () => {
-        const box = make()
-        const e = key('a')
-
-        box.triggerKey(e)
-
-        expect(e.preventDefault).toHaveBeenCalled()
-        expect(box.listOpen).toBe(true)
-        expect(box.search).toBe('a')
-    })
-
-    it('বোতামে ↓ — তালিকা খোলে; Ctrl-যুক্ত চাপ ছোঁয় না', () => {
-        const box = make()
-
-        box.triggerKey(key('c', { ctrlKey: true }))
-        expect(box.listOpen).toBe(false)
-
-        box.triggerKey(key('ArrowDown'))
-        expect(box.listOpen).toBe(true)
-        expect(box.search).toBe('')
-    })
-
-    it('ধরন বদলালে তালিকা বন্ধ আর বাছাই খালি', () => {
+    it('ধরন বদলালে বাছাই, বকেয়া আর বিল খালি', () => {
         const box = make({ partyId: '11' })
+        box.due = '10.00'
+        box.bills = [{ against_type: 'sales_invoice', id: 1, outstanding: '10' }]
 
-        box.openList()
         box.partyType = 'supplier'
         box.resetParty()
 
-        expect(box.listOpen).toBe(false)
-        expect(box.partyId).toBe('')
+        expect([box.partyId, box.due, box.bills], '⛔ ধরন বদলালেও আগের পক্ষের বাছাই বা বকেয়া রইল').toEqual(['', null, []])
     })
 
-    it('বেশি নাম হলে একবারে কেবল প্রথম অংশ আঁকা হয়, আর বলা হয় আরও আছে', () => {
-        const many = Array.from({ length: SHOWN_AT_ONCE + 5 }, (_, i) => ({ type: 'customer', id: i + 1, label: 'Shop ' + i, hint: '' }))
-        const box = make({ parties: many })
-
-        expect(box.shown).toHaveLength(SHOWN_AT_ONCE)
-        expect(box.moreHidden).toBe(true)
-
-        box.search = 'shop 104'
-        expect(box.moreHidden).toBe(false)
-        expect(box.shown.map((p) => p.id)).toEqual([105])
-    })
-
-    it('কিছু না মিললে Enter লেখাটাকে নতুন নাম বানায় — "+" ঘর খোলে, পুরনো বাছাই মোছে', () => {
-        const box = make({ partyId: '11' })
-        const due = vi.spyOn(box, 'loadDue')
-
-        box.openList()
-        box.search = 'Walk-in Karim'
-        box.searched()
-
-        expect(box.noMatch).toBe(true)
-        expect(box.hasSearch).toBe(true)
-
-        box.pickCursor()
-
-        expect(box.adding).toBe(true)
-        expect(box.newName).toBe('Walk-in Karim')
-        expect(box.partyId).toBe('')
-        expect(box.pickedLabel).toBe('+ Walk-in Karim')
-        expect(due).not.toHaveBeenCalled()
-        expect(box.$refs.newMobile.focus).toHaveBeenCalled()
-    })
-
-    it('"+" ঘরে নাম লিখলে তালিকার বাছাই ছেড়ে দেয় — নাহলে সার্ভার লেখাটা ফেলে দিত', () => {
+    it('শুরুর ধরনে ফিরলে শুরুর নামই — পিকার সেই বাছাই নিয়ে আবার জন্মায়, তাই তার বকেয়াও আবার আসে', async () => {
         const box = make({ partyId: '11' })
 
-        box.toggleAdding()
-        box.newName = 'Karim'
-        box.newNameTyped()
+        box.partyType = 'supplier'
+        box.resetParty()
+        box.partyType = 'customer'
+        box.resetParty()
 
-        expect(box.partyId).toBe('')
-        expect(box.pickedLabel).toBe('+ Karim')
+        expect(box.partyId, '⛔ শুরুর ধরনে ফিরে পিকার নাম দেখায় অথচ বাক্স ফাঁকা ভাবে').toBe('11')
+        await vi.waitFor(() => expect(box.due, '⛔ শুরুর ধরনে ফিরেও শুরুর নামের বকেয়া আসেনি').toBe('500.00'))
+        expect(globalThis.fetch).toHaveBeenCalledWith('/accounts/voucher/due?party_type=customer&party_id=11', expect.anything())
     })
 
-    it('তালিকা থেকে বাছলে নতুন নামের ঘর বন্ধ ও খালি', () => {
-        const box = make({ adding: true, newName: 'Karim' })
-
-        box.pickParty(11)
-
-        expect(box.adding).toBe(false)
-        expect(box.newName).toBe('')
-        expect(box.partyId).toBe('11')
-    })
-
-    it('খালি বাছাইয়ে বোতামে "—"', () => {
-        expect(make().pickedLabel).toBe('—')
+    it('"অন্য (সরাসরি খাত)" — পক্ষ নেই', () => {
+        expect(make({ partyType: '' }).noParty, '⛔ ফাঁকা ধরনকে পক্ষ ছাড়া কাগজ ধরা হয় না').toBe(true)
+        expect(make().noParty).toBe(false)
     })
 })
 

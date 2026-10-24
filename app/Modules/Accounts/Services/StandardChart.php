@@ -356,6 +356,12 @@ final class StandardChart implements ProvisionsCompany
     public const ADVANCE_INCOME_TAX = '1135';
 
     /*
+     * ⭐ উৎসে কাটা ভ্যাট পাওনা — গ্রাহক বিল থেকে যে ভ্যাট (VDS) কেটে রাখেন, মূসক-৬.৬ সনদ না আসা পর্যন্ত চলতি সম্পদ (fe-র D2,
+     * ২১ অক্টোবর ২০২৬; টাকা নেওয়া, দফা ৫)। গ্রাহকের পাওনা কমে পুরো অঙ্কে ([[CollectionService]])।
+     */
+    public const VDS_RECEIVABLE = '1138';
+
+    /*
      * ⭐ অগ্রিম বীমা — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৬.৩, ৬ অক্টোবর ২০২৬; সমন্বয়কের উত্তর প্র২)। দেওয়া প্রিমিয়ামের
      * মেয়াদের যে অংশ মাস শেষে এখনো আসেনি, সেটা খরচ থেকে এখানে সরে, পরের মাসের প্রথম দিনে ফেরে
      * ([[InsurancePrepaymentService]])। ⓘ 1135 অগ্রিম আয়কর আগেই নেওয়া, তাই 1136।
@@ -1025,6 +1031,7 @@ final class StandardChart implements ProvisionsCompany
             ['1135', 'Advance Income Tax', 'অগ্রিম আয়কর', $A, '1100', false, []],
             ['1136', 'Prepaid Insurance', 'অগ্রিম বীমা', $A, '1100', false, []],
             ['1137', 'Prepaid Rent', 'অগ্রিম ভাড়া', $A, '1100', false, []],
+            ['1138', 'VAT Deducted at Source Receivable', 'উৎসে কাটা ভ্যাট পাওনা', $A, '1100', false, []],
 
             /*
              * আমদানির পণ্য জাহাজে — আমাদের, কিন্তু গুদামে নয়।

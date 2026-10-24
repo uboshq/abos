@@ -361,6 +361,11 @@ final class VoucherWriter
             return app(WithheldTax::class)->onPayment($lines, (int) ($input['to_account_id'] ?? 0), $input);
         }
 
+        // ⭐ রসিদে পক্ষ যা কেটে রাখলেন — ১১৩৮ VDS, ১১৩৫ AIT; পক্ষের খাত কমে পুরোটায় (আদায়ের দফা ৫-এর নিয়ম, [[WithheldAtSource]])
+        if ($type === Voucher::RECEIPT) {
+            return app(WithheldTax::class)->onReceipt($lines, (int) ($input['from_account_id'] ?? 0), $input);
+        }
+
         return $lines;
     }
 }

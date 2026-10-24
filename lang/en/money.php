@@ -133,6 +133,8 @@ return [
             'matches_in' => 'Balanced: received = into the account + charge',
             'matches_out' => 'Balanced: leaves the account = paid + charge',
             'gross_party' => "On the party's account (gross)",
+            'vds_in' => 'Withheld by the party: VAT at source (VDS)',
+            'ait_in' => 'Withheld by the party: income tax at source (AIT)',
         ],
         'tag' => [
             'ait' => "on the value excluding VAT, supplier's rate",

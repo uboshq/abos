@@ -32,6 +32,10 @@ use Tests\TestCase;
  *   ৪. নোট গোনা ভাঁজে, ঐচ্ছিক — খোলা নয়
  *   ৫. পরিশোধের ঐচ্ছিক খাতের নাম "যে খাতে বসবে", নিচে "না বাছলে পক্ষের দেনা" — "কাকে দেওয়া হল" নয়
  *   ৬. সারাংশের অঙ্ক = খাতার সারি, আর টাকা কথায় = [[AmountInWords]] — রসিদে খাতে টাকা − চার্জ, পরিশোধে খাত থেকে টাকা + চার্জ
+ *   ৭–৯. পক্ষের ধরন চিপে · খোলা বিল খোলা, পক্ষ ছাড়া কাগজে কারণ · চার টাকার পর্দায় Enter কিছু পাঠায় না
+ *   ১০. উৎসে কর্তন দুই দিকে: খাতার দুই পাশ সমান, সারাংশ = খাতা (পরিশোধে ২১২১ / ২১২২ ক্রেডিট, রসিদে ১১৩৮ / ১১৩৫ ডেবিট)
+ *   ১১–১২. কর্তনের খাত কোডে অন্য খাত হলে থামা, নিজের কারণে (পরিশোধে ২১২১, রসিদে ব্যাংক হয়ে যাওয়া ১১৩৫)
+ *   ১৩. নাম বাছা ভাগ করা পিকারে ([[x-ui.party-search]] stacked addable), নতুন নামের ঘর আগের নামে
  */
 final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
 {
@@ -101,14 +105,14 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $receipt = array_values(array_diff($receipt, ['from_account_id']));
 
         /*
-         * ⚠️ জানা ফাঁক, ইচ্ছাকৃত নয়: উৎসে কর্তনের ঘর (AIT, VDS) এখন কেবল পরিশোধে। রসিদের দিকে খাতা লাগে ১১৩৮ "উৎসে কাটা ভ্যাট
-         * পাওনা" — সেটা a6-এর আদায়ের শাখায় (`StandardChart::VDS_RECEIVABLE`, মাইগ্রেশনসহ), এই শাখায় নেই; মিশলে রসিদেও আসবে, আর তখন
-         * এই দুই নাম এখান থেকে উঠে যাবে।
+         * ⭐ উৎসে কর্তনের ঘর (VDS, AIT) দুই পর্দাতেই — রসিদে পক্ষ কেটে রাখেন (১১৩৮ / ১১৩৫ ডেবিট), পরিশোধে আমরা কাটি (২১২২ / ২১২১
+         * ক্রেডিট); ২৪ অক্টোবর ২০২৬। ⓘ টাকার ঘর পাঠায় লুকানো ঘরে (x-ui.field type="money"), তাই উপরের তালিকায় আসে না — আলাদা করে মাপা
          */
-        // ⓘ টাকার ঘর পাঠায় লুকানো ঘরে (x-ui.field type="money"), তাই উপরের তালিকায় আসে না — আলাদা করে মাপা
-        $paying = $this->dom($this->screen(Voucher::PAYMENT));
-        foreach (['ait_amount', 'vds_amount'] as $name) {
-            $this->assertSame(1, $paying->query('//*[@data-voucher-withheld]//input[@name="'.$name.'"]')->length, "⛔ পরিশোধে উৎসে কর্তনের ঘর {$name} নেই");
+        foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
+            $xpath = $this->dom($this->screen($type));
+            foreach (['ait_amount', 'vds_amount'] as $name) {
+                $this->assertSame(1, $xpath->query('//*[@data-voucher-withheld]//input[@name="'.$name.'"]')->length, "⛔ {$type}: উৎসে কর্তনের ঘর {$name} নেই");
+            }
         }
 
         $this->assertSame($receipt, $payment, "⛔ রসিদ আর পরিশোধ একই ঘর একই ক্রমে চায় না:\nরসিদ: ".implode(' · ', $receipt)."\nপরিশোধ: ".implode(' · ', $payment));
@@ -258,6 +262,7 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             'receipt' => [Voucher::RECEIPT, ['party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id], '0', '0'],
             'payment' => [Voucher::PAYMENT, ['party_type' => 'supplier', 'party_id' => $supplier->id, 'from_account_id' => $bank->id], '0', '0'],
             'payment with AIT and VDS' => [Voucher::PAYMENT, ['party_type' => 'supplier', 'party_id' => $supplier->id, 'from_account_id' => $bank->id], '50', '75'],
+            'receipt with VDS and AIT' => [Voucher::RECEIPT, ['party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id], '60', '40'],
         ] as $case => [$type, $head, $ait, $vds]) {
             $answer = $this->postJson(route('accounts.voucher.simulate'), [
                 'type' => $type, 'narration' => 'কর্তনের দাবি', 'trx_date' => now()->toDateString(), 'amount' => '1000',
@@ -281,9 +286,21 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
                 $this->assertSame('1,125.00', $summary['gross'] ?? null, "⛔ {$case}: পক্ষের খাতে মোট দেওয়া + AIT + VDS নয়");
                 $this->assertSame('1,125.00', $amountOf(StandardChart::PAYABLE, 'debit'), "⛔ {$case}: সরবরাহকারীর দেনা মোটে কমেনি");
                 $this->assertSame('1,025.00', $summary['net'] ?? null, "⛔ {$case}: টাকার খাত থেকে দেওয়া + চার্জের বাইরে কিছু গেল");
+            } elseif ($ait !== '0') {
+                // ⭐ রসিদ: পক্ষ কেটে রাখলেন — ১১৩৮ আর ১১৩৫ ডেবিট, গ্রাহকের পাওনা কমে টাকা + VDS + AIT-এ, টাকার খাতে কেবল টাকা − চার্জ
+                $this->assertSame('40.00', $amountOf(StandardChart::VDS_RECEIVABLE, 'debit'), "⛔ {$case}: VDS ১১৩৮-এ ডেবিট হয়নি");
+                $this->assertSame('60.00', $amountOf(StandardChart::ADVANCE_INCOME_TAX, 'debit'), "⛔ {$case}: AIT ১১৩৫-এ ডেবিট হয়নি");
+                $this->assertSame('40.00', $summary['vds'] ?? null, "⛔ {$case}: সারাংশের VDS খাতার ১১৩৮ নয়");
+                $this->assertSame('60.00', $summary['ait'] ?? null, "⛔ {$case}: সারাংশের AIT খাতার ১১৩৫ নয়");
+                $this->assertSame('1,100.00', $summary['gross'] ?? null, "⛔ {$case}: পক্ষের খাতে মোট পাওয়া + VDS + AIT নয়");
+                $this->assertSame('1,100.00', $amountOf(StandardChart::RECEIVABLE, 'credit'), "⛔ {$case}: গ্রাহকের পাওনা মোটে কমেনি");
+                $this->assertSame('975.00', $summary['net'] ?? null, "⛔ {$case}: টাকার খাতে পাওয়া − চার্জের বাইরে কিছু এল");
+                $this->assertSame('', $amountOf(StandardChart::TAX_DEDUCTED_AT_SOURCE, 'credit'), "⛔ {$case}: রসিদের কর্তন আমাদের দেনায় (২১২১) বসল");
             } else {
                 $this->assertSame('0.00', $summary['ait'] ?? null, "⛔ {$case}: কর্তন ছাড়া সারাংশে AIT");
+                $this->assertSame('0.00', $summary['vds'] ?? null, "⛔ {$case}: কর্তন ছাড়া সারাংশে VDS");
                 $this->assertSame('', $amountOf(StandardChart::TAX_DEDUCTED_AT_SOURCE, 'credit'), "⛔ {$case}: কর্তন ছাড়া খাতায় ২১২১-এর সারি");
+                $this->assertSame('', $amountOf(StandardChart::VDS_RECEIVABLE, 'debit'), "⛔ {$case}: কর্তন ছাড়া খাতায় ১১৩৮-এর সারি");
             }
             $this->assertTrue($summary['matches'] ?? false, "⛔ {$case}: সারাংশ বলে মেলেনি");
         }
@@ -307,6 +324,51 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $expected = array_map(fn (string $l) => trans('accounts::validation.withheld_account_not_its_meaning',
             ['code' => StandardChart::TAX_DEDUCTED_AT_SOURCE, 'account' => $ait->fresh()->label()], $l), ['bn', 'en']);
         $this->assertContains($answer['message'] ?? null, $expected, '⛔ কর্তন থামল, কিন্তু খাতের অর্থের কারণে নয়: '.($answer['message'] ?? ''));
+    }
+
+    /** ১২ — রসিদে ছকের ১১৩৫ কোডে ব্যাংক বসে থাকলে পক্ষের কাটা AIT থামে, নিজের কারণে — নাহলে কাটা কর "ব্যাংকে টাকা" হয়ে দেখা দিত */
+    public function test_a_receipt_whose_ait_account_turned_into_a_bank_refuses(): void
+    {
+        $bank = $this->bank();
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $ait = Account::query()->where('code', StandardChart::ADVANCE_INCOME_TAX)->firstOrFail();
+        $ait->forceFill(['money_kind' => Account::BANK])->save();
+
+        $answer = $this->postJson(route('accounts.voucher.simulate'), [
+            'type' => Voucher::RECEIPT, 'narration' => 'ব্যাংক হয়ে যাওয়া ১১৩৫', 'trx_date' => now()->toDateString(), 'amount' => '1000',
+            'instrument' => 'transfer', 'instrument_no' => 'WH-1135', 'ait_amount' => '60', 'vds_amount' => '40',
+            'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
+        ])->assertOk()->json();
+
+        $this->assertSame([], $answer['rows'] ?? null, '⛔ ব্যাংক হয়ে যাওয়া ১১৩৫-এ পক্ষের কাটা AIT খাতায় বসতে যাচ্ছিল');
+        $expected = array_map(fn (string $l) => trans('accounts::validation.withheld_by_party_not_its_meaning',
+            ['code' => StandardChart::ADVANCE_INCOME_TAX, 'account' => $ait->fresh()->label()], $l), ['bn', 'en']);
+        $this->assertContains($answer['message'] ?? null, $expected, '⛔ রসিদ থামল, কিন্তু ১১৩৫-এর অর্থের কারণে নয়: '.($answer['message'] ?? ''));
+    }
+
+    /** ১৩ — দুই পর্দায় নাম বাছা ভাগ করা পিকারে, দুই লাইনে আর "+ নতুন নাম"-সহ; নতুন নামের ঘর আগের নামেই */
+    public function test_both_vouchers_pick_the_party_with_the_shared_stacked_addable_picker(): void
+    {
+        foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
+            $xpath = $this->dom($this->screen($type));
+            $cell = $xpath->query('//*[@data-party-name-cell]//*[@data-party-picker-cell]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $cell, "⛔ {$type}: নামের ঘরে ভাগ করা পিকারের বাক্স নেই");
+            $this->assertSame('partyPicked($event)', $cell->getAttribute('x-on:change'), "⛔ {$type}: পিকারের বদল বকেয়া / বিল / মাথার অঙ্কে পৌঁছায় না");
+
+            // ⓘ ধরন ধরে একটা করে পিকার, `<template x-if>`-এ — DOMDocument টেমপ্লেটের ভিতরও পড়ে
+            $pickers = $xpath->query('.//template//button[@data-party-picker]', $cell);
+            $this->assertGreaterThanOrEqual(4, $pickers->length, "⛔ {$type}: প্রতিটা পক্ষের ধরনের নিজের পিকার নেই");
+            foreach ($pickers as $button) {
+                /** @var DOMElement $button */
+                $this->assertTrue($button->hasAttribute('data-party-stacked'), "⛔ {$type}: পিকার দুই লাইনের (stacked) নয় — সরু ঘরে নাম কাটে");
+            }
+            foreach (['party_id', 'party_new', 'party_mobile'] as $name) {
+                $this->assertSame($pickers->length, $xpath->query('.//template//input[@name="'.$name.'"]', $cell)->length,
+                    "⛔ {$type}: প্রতিটা পিকারে {$name} ঘর নেই — নতুন নাম আগের নামে সার্ভারে যায় না");
+            }
+            $this->assertSame(0, $xpath->query('//input[@name="party_id"][not(ancestor::template)]')->length,
+                "⛔ {$type}: পুরনো পিকারের party_id এখনো পাতায় — দুই ঘর একই নামে জমা যেত");
+        }
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────

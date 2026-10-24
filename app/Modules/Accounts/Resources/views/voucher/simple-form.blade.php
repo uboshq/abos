@@ -784,19 +784,27 @@
                     </x-money.method>
                 </div>
 
-                @if ($isPayment)
-                    {{--
-                        ⭐ উৎসে কর্তন — নকশা পাতা ৪-এর AIT আর VDS (fe, ২৪ অক্টোবর ২০২৬)। ⓘ লিখলে খাতায় পক্ষের খাত মোটে, টাকার খাত দেওয়া
-                        অঙ্কে, আর কর্তন ২১২১ (AIT) আর ২১২২ (VDS)-এ — খরচের ভাউচারের একই পথ ([[WithheldTax::onPayment()]])। ডানের সারাংশে
-                        বিয়োগ চিহ্নে।
-                    --}}
-                    <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-withheld>
-                        <x-ui.field name="ait_amount" type="money" model="ait" empty-shows="0.00"
-                                    :label="__('money.screen.sum.ait')" :value="old('ait_amount', (float) ($voucher->ait_amount ?? 0) > 0 ? $voucher->ait_amount : '')" />
-                        <x-ui.field name="vds_amount" type="money" model="vds" empty-shows="0.00"
-                                    :label="__('money.screen.sum.vds')" :value="old('vds_amount', (float) ($voucher->vds_amount ?? 0) > 0 ? $voucher->vds_amount : '')" />
-                    </div>
-                @endif
+                {{--
+                    ⭐ উৎসে কাটা — দুই ভাউচারেই (fe, ২৪ অক্টোবর ২০২৬)।
+                    · পরিশোধ (নকশা পাতা ৪, AIT আগে): আমরা কাটি — পক্ষের খাত মোটে, টাকার খাত দেওয়া অঙ্কে, কর্তন ২১২১ (AIT) আর ২১২২ (VDS)-এ;
+                      খরচের ভাউচারের একই পথ ([[WithheldTax::onPayment()]])।
+                    · রসিদ (নকশা পাতা ২, VDS আগে): পক্ষ কাটেন — টাকার খাতে পাওয়া − চার্জ, ১১৩৮ (VDS) আর ১১৩৫ (AIT)-এ ডেবিট, পক্ষের খাত কমে
+                      পুরোটায়; আদায়ের দফা ৫-এর একই নিয়ম ([[WithheldAtSource]], [[WithheldTax::onReceipt()]])।
+                --}}
+                @php
+                    $withheldFields = [
+                        'ait' => ['ait_amount', $isPayment ? __('money.screen.sum.ait') : __('money.screen.sum.ait_in')],
+                        'vds' => ['vds_amount', $isPayment ? __('money.screen.sum.vds') : __('money.screen.sum.vds_in')],
+                    ];
+                    $withheldOrder = $isPayment ? ['ait', 'vds'] : ['vds', 'ait'];
+                @endphp
+                <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-withheld>
+                    @foreach ($withheldOrder as $kind)
+                        <x-ui.field :name="$withheldFields[$kind][0]" type="money" :model="$kind" empty-shows="0.00"
+                                    :label="$withheldFields[$kind][1]"
+                                    :value="old($withheldFields[$kind][0], (float) ($voucher->{$withheldFields[$kind][0]} ?? 0) > 0 ? $voucher->{$withheldFields[$kind][0]} : '')" />
+                    @endforeach
+                </div>
             </section>
 
             <section data-boxed data-voucher-details
@@ -885,6 +893,15 @@
                 @endif
                 <dt>{{ $isPayment ? __('money.screen.sum.paid') : __('money.screen.sum.received') }}</dt>
                 <dd class="num" data-sum-amount x-text="sumAmount"></dd>
+                @unless ($isPayment)
+                    {{-- ⭐ নকশা পাতা ২-এর ক্রম: পাওয়া টাকা → পক্ষ কেটে রেখেছেন VDS → AIT → পক্ষের খাতে (মোট); তারপর চার্জ, নিট --}}
+                    <dt>{{ __('money.screen.sum.vds_in') }}</dt>
+                    <dd class="num" data-sum-vds x-text="sumVdsText"></dd>
+                    <dt>{{ __('money.screen.sum.ait_in') }}</dt>
+                    <dd class="num" data-sum-ait x-text="sumAitText"></dd>
+                    <dt class="font-semibold">{{ __('money.screen.sum.gross_party') }}</dt>
+                    <dd class="num font-semibold" data-sum-gross x-text="sumGross"></dd>
+                @endunless
                 <dt>{{ __('money.screen.sum.charge_any') }}</dt>
                 <dd class="num" data-sum-charge x-text="sumCharge"></dd>
                 <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ $isPayment ? __('money.screen.sum.net') : __('money.screen.sum.into') }}</dt>

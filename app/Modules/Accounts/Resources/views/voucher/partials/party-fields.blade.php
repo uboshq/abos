@@ -55,16 +55,10 @@
          x-data="partyVoucher({
              partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
-             parties: @js(collect($parties)->flatMap(fn (array $g) => collect($g['options'])
-                 ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label'],
-                     'hint' => $o['hint'] ?? '', 'find' => $o['find'] ?? '']))
-                 ->values()),
              dueUrl: @js(route('accounts.voucher.due')),
              // ⓘ কোন বিলের বিপরীতে — একটাই (অডিট ম১); অন্য মডিউলের আগাম-ভরা “বিপরীতে”-ও এখান দিয়েই যায়
              pickedType: @js((string) ($was('against_type') ?? '')),
              pickedId: @js((string) ($was('against_id') ?? '')),
-             adding: @js($errors->has('party_new') || filled(old('party_new'))),
-             newName: @js((string) old('party_new', '')),
              out: @js(! $isReceipt),
              texts: @js([
                  'owed' => __('accounts::field.owed'),
@@ -195,159 +189,23 @@
                 </span>
             </div>
 
-            {{-- ⓘ `aria-label` — ঘরটার নিজের `<label for>` নেই, কারণ নামটা
-                 উপরের সারিতে পাওনার সাথে এক লাইনে বসে। ⚠️ চোখে নামটা
-                 দেখা যায়, কিন্তু স্ক্রিন-রিডার কেবল "combo box" বলত। --}}
-            {{-- ⭐ নামের পাশে "+" — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"তালিকায় নেই? নাম লিখুন
-                 eta ডিপোজিটরের নাম er box er pase + bosalei hoy"*। ⓘ চাপলে নিচে নতুন
-                 নাম আর মোবাইলের ঘর খোলে; আবার চাপলে বন্ধ। --}}
             {{--
-                ── ⭐ খোঁজা যায় এমন নামের তালিকা — ৩ অক্টোবর ২০২৬ ─────────────
-
-                মালিকের অভিযোগ: রসিদের "ডিপোজিটরের নাম" আর পরিশোধের "প্রাপকের
-                নাম" একটা লম্বা সাধারণ `<select>` — খোঁজার ঘর নেই, আর ইউবি-র ৪১৪
-                জন গ্রাহকের ভিতরে *নাম খুঁজে পাওয়া যায় না*। ⚠️ একই নামের দুইটা
-                দোকানও ছিল (দুইটা "M/S. Bismillah Store"), আর তালিকা তাঁদের আলাদা
-                করার কোনো উপায় দিত না।
-
-                ⓘ ছাঁচ কাউন্টারের ক্রেতা বাছাই থেকে ([[sales::direct.partials.party]]):
-                বোতাম → ভাসমান প্যানেল → উপরে খোঁজার ঘর → নিচে নাম, আর প্রতিটা
-                নামের নিচে কোড · পয়েন্ট · মোবাইল। ⭐ কীবোর্ড: ↑ ↓ সরায়, Enter বাছে,
-                Esc বন্ধ করে; বোতামে কোনো অক্ষর টাইপ করলে সরাসরি খোঁজা শুরু।
-                মোবাইলে এক চাপে তালিকা খোলে, খোঁজার ঘর উপরে।
-
-                ⛔ সার্ভারের দিকে কিছু বদলায়নি: `party_id` আগের নামেই যায়, এখন
-                লুকানো ঘরে। ⚠️ খোঁজার ঘরের কোনো `name` নেই — থাকলে লেখাটাও ফর্মের
-                সাথে চলে যেত।
+                ⭐ নাম বাছা ভাগ করা পিকারে — [[x-ui.party-search]] `stacked addable` (a6 d8005fa00; fe, ২৪ অক্টোবর ২০২৬): খোঁজা, ↑ ↓ Enter,
+                নামের নিচে কোড · পয়েন্ট · শাখা (দুই লাইনে, সরু ঘরেও নাম কাটে না), আর তালিকায় না থাকলে "+ নতুন নাম" — মালিকের ৩ অক্টোবরের
+                আচরণ হুবহু। ⓘ ঘরের নাম আগের মতোই: `party_id`, আর নতুন নামে `party_new` / `party_mobile` — সার্ভার সেখান থেকেই তাঁকে
+                ব্যক্তি বানায় ([[VoucherRequest]] · [[TurnsATypedNameIntoAParty]]), কিছুই বদলায়নি।
+                ⓘ তালিকা ধরন ধরে — প্রতিটা ধরনের নিজের পিকার, `x-if`-এ: একসাথে একটাই পাতায় থাকে, তাই একই নামের দুই ঘর জমা যায় না।
+                ধরন বদলালে নতুন পিকার খালি শুরু করে ([[party-voucher.js]] `resetParty`)। পিকার লুকানো ঘরে `change` ছাড়ে — বাছলে id,
+                নতুন নাম লিখলে ফাঁকা — আর এই বাক্স তা শুনে বকেয়া, বিল আর মাথার তিন অঙ্ক আনে বা মোছে (`partyPicked`)।
             --}}
-            <div class="relative flex gap-2"
-                 x-on:click.outside="closeList()"
-                 x-on:keydown.escape.prevent.stop="escape()">
-                <input type="hidden" name="party_id"
-                       value="{{ (string) ($was('party_id') ?? '') }}"
-                       x-bind:value="partyId">
-
-                <button type="button" x-ref="trigger"
-                        x-on:click="toggleList()"
-                        x-on:keydown="triggerKey($event)"
-                        aria-haspopup="listbox"
-                        x-bind:aria-expanded="listOpen ? 'true' : 'false'"
-                        aria-label="{{ __('accounts::field.party') }}"
-                        x-bind:title="pickedHint"
-                        data-party-picker
-                        class="flex h-(--spacing-field) min-w-0 flex-1 items-center gap-2 rounded-(--radius-field)
-                               border border-(--color-border) bg-(--color-surface-card) px-3 text-start">
-                    {{-- ⓘ কোড · পয়েন্ট বোতামে কেবল `title`-এ: ঘরটা সারির এক-চতুর্থাংশ, আর
-                         পাশে বসালে নামটাই কেটে যেত — নামই এখানে আসল কথা। --}}
-                    <span class="min-w-0 flex-1 truncate" x-text="pickedLabel">—</span>
-                    <span class="text-(--color-ink-muted)" aria-hidden="true">▾</span>
-                </button>
-
-                <x-ui.button type="button" tone="secondary" icon="plus"
-                             x-on:click="toggleAdding()"
-                             title="{{ __('accounts::field.party_not_listed') }}"
-                             aria-label="{{ __('accounts::field.party_not_listed') }}" />
-
-                {{-- ⓘ ভাসমান, প্রবাহের ভিতরে নয় — কাউন্টারের একই পাঠ: জায়গা দখল করলে
-                     খুলতেই নিচের সব ঘর ঠেলে নামত। ⚠️ `inset-x-0` — ঘরটার সমান চওড়া,
-                     তাই ১৯২০×১০৮০-তে চতুর্থ কলামে বসেও ডান দিকে কাটা পড়ে না। --}}
-                <div x-show="listOpen" x-cloak
-                     class="absolute inset-x-0 top-full z-30 mt-1 rounded-(--radius-card)
-                            border-2 border-(--color-brand-500) bg-(--color-surface-card)
-                            p-1.5 text-(--color-ink) shadow-lg">
-                    <input type="search" x-ref="search" x-model="search"
-                           x-on:input="searched()"
-                           x-on:keydown.arrow-down.prevent="moveDown()"
-                           x-on:keydown.arrow-up.prevent="moveUp()"
-                           x-on:keydown.enter.prevent="pickCursor()"
-                           role="combobox" aria-autocomplete="list" aria-controls="party-options"
-                           x-bind:aria-expanded="listOpen ? 'true' : 'false'"
-                           x-bind:aria-activedescendant="activeOption"
-                           autocomplete="off" data-party-search
-                           placeholder="{{ __('accounts::field.party_search') }}"
-                           aria-label="{{ __('accounts::field.party_search') }}"
-                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field)
-                                  border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-
-                    <ul id="party-options" role="listbox" x-ref="list"
-                        aria-label="{{ __('accounts::field.party') }}"
-                        class="mt-1.5 max-h-72 overflow-y-auto">
-                        <template x-for="(p, i) in shown" :key="p.id">
-                            <li role="option" :id="'party-opt-' + i"
-                                :aria-selected="isPicked(p) ? 'true' : 'false'"
-                                x-on:click="pickParty(p.id)"
-                                x-on:mousemove="hover(i)"
-                                :class="isCursor(i) ? 'bg-(--color-surface-hover)' : ''"
-                                class="cursor-pointer rounded-(--radius-field) px-2 py-1.5">
-                                <span class="block truncate text-sm"
-                                      :class="isPicked(p) ? 'font-semibold' : ''"
-                                      x-text="p.label"></span>
-                                <span class="num block truncate text-2xs text-(--color-ink-muted)"
-                                      x-show="p.hint !== ''" x-text="p.hint"></span>
-                            </li>
-                        </template>
-
-                        <li x-show="moreHidden" x-cloak
-                            class="px-2 py-1.5 text-2xs text-(--color-ink-muted)">
-                            {{ __('accounts::message.party_more') }}
-                        </li>
-
-                        <li x-show="noMatch" x-cloak
-                            class="px-2 py-1.5 text-2xs text-(--color-ink-muted)">
-                            {{ __('accounts::message.party_no_match') }}
-                        </li>
-                    </ul>
-
-                    {{-- ⭐ তালিকায় নেই — লেখাটাই নতুন নাম হয়ে "+" ঘরে বসে, সমন্বয়কের মাধ্যমে
-                         মালিকের চাওয়া (৩ অক্টোবর ২০২৬)। ⓘ কিছু না মিললে Enter-ও তাই করে। --}}
-                    <button type="button" x-show="hasSearch" x-cloak
-                            x-on:click="addTyped()"
-                            class="mt-1 w-full truncate rounded-(--radius-field) border border-dashed
-                                   border-(--color-border) px-2 py-1.5 text-start text-xs
-                                   hover:bg-(--color-surface-hover)">
-                        + {{ __('accounts::field.party_add_typed') }}
-                        <b x-text="search"></b>
-                    </button>
-                </div>
-            </div>
-
-            @error('party_id')
-                <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
-            @enderror
-
-            {{-- ⭐ তালিকায় নেই? নাম লিখুন — ১৮ সেপ্টেম্বর ২০২৬।
-
-                 ── ⛔ কেন দরকার ────────────────────────────────────────
-                 মালিকের কথা: *"ডিপোজিটরের নাম / প্রাপকের নাম হাতে লিখতে
-                 পারতে হবে।"* ⚠️ এতদিন ঘরটা কেবল ড্রপডাউন ছিল, তাই
-                 কাউন্টারে একজন অচেনা লোক টাকা দিয়ে গেলে **রসিদই কাটা
-                 যেত না** — আগে মাস্টার ডেটায় গিয়ে তাঁকে বসিয়ে আসতে হত।
-
-                 ── ⚠️ কেন পঞ্চম একটা "অন্যান্য" ধরন বানানো হয়নি ────────
-                 ⛔ তাহলে ঐ নামগুলো কোনো তালিকায় থাকত না, পরের বার আবার
-                 টাইপ করতে হত, আর একই মানুষ তিন বানানে তিনজন হয়ে যেতেন।
-
-                 ⭐ বদলে নামটা **ব্যক্তি** হিসেবে বসে (`mdm_people`) —
-                 মালিকের নিজের নির্দেশে ওখানেই ঋণদাতা, বাড়িওয়ালা, বাহক
-                 সবাই থাকেন। ⓘ তাই পরের বার নামটা তালিকাতেই পাওয়া যায়।
-
-                 ⓘ ছাঁচটা Finance-এর [[finance::components.person-picker]]
-                 থেকে নেওয়া, আর পিছনে একই [[PersonResolver]]। --}}
-            <div class="mt-2" x-show="adding" x-cloak>
-                <div class="grid gap-2 sm:grid-cols-2">
-                    {{-- ⓘ `x-model` — তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে লেখাটা
-                         এখানে বসে, আর এখানে লিখলে বোতামেও "+ নাম" দেখা যায়। --}}
-                    <x-ui.field name="party_new"
-                                :label="__('accounts::field.party_new_name')"
-                                :value="old('party_new')"
-                                :hint="__('accounts::field.party_new_hint')"
-                                x-model="newName" x-on:input="newNameTyped()" />
-
-                    <x-ui.field name="party_mobile"
-                                :label="__('master_data::field.mobile')"
-                                :value="old('party_mobile')"
-                                x-ref="newMobile" />
-                </div>
+            <div x-on:change="partyPicked($event)" data-party-picker-cell>
+                @foreach ($parties as $group)
+                    <template x-if="partyType === @js((string) $group['type'])">
+                        <x-ui.party-search name="party_id" :options="$group['options']"
+                                           :selected="$partyType === (string) $group['type'] ? ($was('party_id') ?? null) : null"
+                                           :aria-label="__('accounts::field.party')" stacked addable />
+                    </template>
+                @endforeach
             </div>
         </div>
 
