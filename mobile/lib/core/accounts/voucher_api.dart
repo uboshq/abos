@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart';
+
 import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
+import '../api_client/network_errors.dart';
 import '../locale/app_locale.dart';
 import '../records/money.dart';
 import '../sync_engine/sync_engine.dart';
@@ -724,4 +727,30 @@ class ServerVoucherApi implements VoucherApi {
         changeId: changeId,
         payload: draft.toPayload(),
       );
+}
+
+/// ⭐ সার্ভারের ফেরানোর পুরো কথা — `errors`-এর প্রতিটা চাবির প্রতিটা বাক্য, যে চাবিই হোক (cb 81674fcc2, ২৫ অক্টোবর ২০২৬: সই-না-পাওয়া
+/// ব্যাংকে পরিশোধ ৪২২ `errors.payee_bank[0]`, সরবরাহকারীর নাম, করণীয় আর পাতার ঠিকানাসহ)।
+///
+/// <p>⛔ কোনো চাবি ফর্মের ঘর না হলেও বাদ নয় — `payee_bank`-এর মতো কথা কোনো ঘরের নিচে বসে না, তাই পর্দার উপরে পুরোটা দেখানো হয়;
+/// কাটা নয়, ছাঁটা নয়। `errors` না থাকলে বা বাংলা কিছু না থাকলে আগের মতো সার্ভারের `message` ([serverSentence]), নইলে null।
+String? voucherRefusal(Object error) {
+  if (error is DioException) {
+    final status = error.response?.statusCode ?? 0;
+    final body = error.response?.data;
+    final errors = body is Map ? body['errors'] : null;
+    if (status >= 400 && status < 500 && errors is Map) {
+      final lines = <String>[];
+      for (final entry in errors.entries) {
+        final said = entry.value;
+        for (final line in said is List ? said : [said]) {
+          final text = line?.toString().trim() ?? '';
+          if (text.isNotEmpty && !lines.contains(text)) lines.add(text);
+        }
+      }
+      final joined = lines.join('\n');
+      if (joined.runes.any((r) => r >= 0x0980 && r <= 0x09FF)) return joined;
+    }
+  }
+  return serverSentence(error);
 }

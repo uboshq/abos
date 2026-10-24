@@ -379,7 +379,12 @@ class _VoucherScreenState extends State<VoucherScreen> {
         if (answer.page != null) _page = answer.page;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersPagePostFailed));
+      // ⭐ সার্ভারের পুরো কথা, ফর্মের ঘরের নয় এমন চাবিরও (সই-না-পাওয়া ব্যাংক: `payee_bank`); খসড়া খসড়াই থাকে, পাতা যেমন ছিল
+      if (mounted) {
+        setState(() => _error = isNetworkError(e)
+            ? errorMessageFor(e, fallback: context.l10n.vouchersPagePostFailed)
+            : voucherRefusal(e) ?? context.l10n.vouchersPagePostFailed);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
