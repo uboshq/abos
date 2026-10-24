@@ -141,18 +141,36 @@
             আর ঘরটা সত্যিই ছিল। ⓘ **অপশন গোনা হয়নি।** মালিক পর্দা দেখে
             ধরিয়ে দেন।
         --}}
-        <div class="sm:col-span-2 lg:col-span-full lg:max-w-xs" data-party-type-row>
-            <x-ui.select name="party_type"
-                         :label="$isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type')"
-                         :options="collect($parties)->pluck('label', 'type')->all()"
-                         :selected="$partyType"
-                         x-model="partyType" x-on:change="resetParty()" />
-        </div>
+        {{--
+            ⭐ পক্ষের ধরন চিপে, ড্রপডাউন নয় — নকশা পাতা ২ আর ৪ ("গ্রাহক · সরবরাহকারী · কর্মী · অন্য (সরাসরি খাত)"; fe, ২৪ অক্টোবর ২০২৬)।
+            ⓘ নাম আগের `party_type`-ই, তাই জমা, ফোন আর পুরনো কাগজ অক্ষত। ⭐ "অন্য (সরাসরি খাত)" = ফাঁকা ধরন — পক্ষ ছাড়া কাগজ (যেমন
+            ভাড়ার আয়); সার্ভার আগে থেকেই পক্ষ ছাড়া চলে ([[VoucherRequest::fillAccountFromParty()]] তখন কিছু বসায় না, খাত বাছতে হয়)।
+        --}}
+        <fieldset class="sm:col-span-2 lg:col-span-full" data-party-type-row>
+            <legend class="mb-1 block text-sm font-medium">{{ $isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type') }}</legend>
+            <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+                @foreach ([...collect($parties)->pluck('label', 'type')->all(), '' => __('accounts::field.party_other')] as $value => $text)
+                    <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
+                        <input type="radio" name="party_type" value="{{ $value }}" class="peer sr-only"
+                               data-party-type-chip="{{ $value === '' ? 'other' : $value }}"
+                               x-model="partyType" x-on:change="resetParty()" @checked($partyType === (string) $value)>
+                        <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
+                                     hover:bg-(--color-surface-hover)
+                                     peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
+                                     peer-checked:hover:bg-(--color-brand-700)
+                                     peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">
+                            {{ $text }}
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+        </fieldset>
 
         {{-- ⓘ `adding` এখন [[party-voucher.js]]-এ, আলাদা ছোট x-data-য় নয় — খোঁজার
              তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে "+" ঘরটা খুলতে হয়, আর
              দুইটা আলাদা x-data একে অন্যের অবস্থা দেখে না। --}}
-        <div>
+        {{-- ⓘ "অন্য (সরাসরি খাত)"-এ পক্ষের ঘর নেই — নিচে এক লাইনে কারণ --}}
+        <div x-show="! noParty" data-party-name-cell>
             <div class="mb-1 flex items-baseline justify-between gap-2">
                 <span class="text-sm font-medium">
                     {{ $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party') }}
@@ -346,6 +364,10 @@
                     :value="old('amount', $typedAmount ?? $voucher->amount)" />
     </div>
 
+    {{-- ⭐ পক্ষ ছাড়া কাগজে এক লাইনে কারণ — বিলের তালিকা আর পাওনার অঙ্ক কেন নেই (fe, ২৪ অক্টোবর ২০২৬) --}}
+    <p class="mt-3 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-xs text-(--color-ink-muted)"
+       data-no-party-note x-show="noParty" x-cloak>{{ $isReceipt ? __('accounts::message.no_party_note_in') : __('accounts::message.no_party_note_out') }}</p>
+
     {{--
         ── কোন খাতের টাকা — গ্রাহক ছাড়া অন্য কারও কাছ থেকে রসিদ ────────
         ⛔ কী ঘটছিল, ১৯ সেপ্টেম্বর ২০২৬: মালিক একজন ব্যক্তির কাছ থেকে
@@ -365,7 +387,8 @@
         কোনো খাত ভুল করে জমা পড়ে না।
     --}}
     @if ($isReceipt)
-        <div class="mt-3 max-w-xl" x-show="partyType !== '' && partyType !== 'customer'" x-cloak>
+        {{-- ⓘ "অন্য (সরাসরি খাত)"-এও (ফাঁকা ধরন) — পক্ষ ছাড়া রসিদে খাতটা বাছতেই হয়; ঘরের নাম আর বাধ্যতা মালিকের ১৯ সেপ্টেম্বরের কথামতো --}}
+        <div class="mt-3 max-w-xl" x-show="partyType !== 'customer'" x-cloak>
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">
                     {{ __('accounts::field.received_on_account') }}
@@ -405,7 +428,7 @@
                             ->filter(fn ($a) => in_array(substr((string) $a->code, 0, 3), $returnable, true)),
                     ], fn ($group) => $group->isNotEmpty());
                 @endphp
-                <select name="from_account_id" x-bind:disabled="partyType === '' || partyType === 'customer'"
+                <select name="from_account_id" x-bind:disabled="partyType === 'customer'"
                         x-bind:value="partyType === 'person' && @js($contributors).includes(partyId) ? @js($capitalAccount) : $el.value"
                         class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                border-(--color-border) bg-(--color-surface-card) px-3">
@@ -445,18 +468,17 @@
         ⓘ এক টাকায় বহু বিল আর "পুরনো বিল আগে" বিক্রয়ের "আদায়" পর্দায়; এখানে বাছা বিলের অঙ্ক, পক্ষ আর খোলা থাকা
         পোস্টের মুহূর্তে মাপা হয় ([[VoucherService::assertAgainstFits()]])।
     --}}
-    <details class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3"
-             x-bind:open="bills.length > 0">
-        <summary class="cursor-pointer text-sm font-semibold">
+    {{--
+        ⭐ খোলা বিল — খোলা টেবিল, ভাঁজ নয় (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ পক্ষ বাছলে আর তাঁর খোলা বিল থাকলে তবেই;
+        খোলা বিল না থাকলে টেবিলটাই নেই, পক্ষ ছাড়া কাগজেও নেই (তখন উপরের এক লাইনের কারণ)।
+    --}}
+    <section class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3" data-open-bills
+             x-show="! noParty && bills.length > 0" x-cloak>
+        <h3 class="text-sm font-semibold">
             {{ __('accounts::field.against_which_invoice') }}
             <span class="ms-2 text-xs font-normal text-(--color-ink-muted)"
                   x-show="pickedBill" x-cloak x-text="pickedBill ? pickedBill.no : ''"></span>
-        </summary>
-
-        <template x-if="bills.length === 0">
-            <p class="mt-3 rounded-(--radius-field) bg-(--color-surface-app) p-3 text-sm text-(--color-ink-muted)"
-               x-text="texts.noBills"></p>
-        </template>
+        </h3>
 
         <template x-if="bills.length > 0">
             <div>
@@ -503,5 +525,5 @@
                 <p class="mt-1 text-xs text-(--color-danger)" x-show="overDue" x-cloak x-text="texts.overDue"></p>
             </div>
         </template>
-    </details>
+    </section>
 </section>

@@ -5,6 +5,7 @@ import * as screens from './screens.js'
 import * as pos from '../pos.js'
 import * as documents from './documents.js'
 import { registerMoneyDisplay } from '../money-display.js'
+import { registerMoneyKeys } from '../money-keys.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -68,6 +69,8 @@ export function registerComponents (Alpine) {
 
     // ⭐ টাকার ঘর — দেখায় লাখ-কমায়, পাঠায় কাঁচা অঙ্ক ([[registerMoneyDisplay]], x-ui.field type="money")
     registerMoneyDisplay(Alpine)
+    // ⭐ টাকার পর্দায় Enter কিছু পাঠায় না, Ctrl+Enter মূল বোতাম ([[registerMoneyKeys]], ফর্মে x-money-keys)
+    registerMoneyKeys(Alpine)
 
     for (const module of modules) {
         for (const [name, factory] of Object.entries(module)) {

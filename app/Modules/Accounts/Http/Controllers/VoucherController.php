@@ -553,7 +553,18 @@ class VoucherController extends Controller implements HasMiddleware
      */
     private function formOptions(string $type): array
     {
-        return app(DepositFormOptions::class)->all($type);
+        return [
+            ...app(DepositFormOptions::class)->all($type),
+
+            /*
+             * ⭐ নিয়ন্ত্রণের কার্ড ([[x-money.controls]]) — রসিদ আর পরিশোধে, টাকা দেওয়ার পর্দার একই কার্ড (নকশা পাতা ২ আর ৪; fe, ২৪
+             * অক্টোবর ২০২৬)। ⓘ সই: এই কোম্পানিতে এই ধরনের ভাউচারে সইয়ের ছক আছে কি না ([[VoucherApproval::actionFor()]]-এর একই কাজ —
+             * ধরনটাই); তিন হাত: লেখক ≠ পাকাকারী ([[VoucherService::MAKER_CHECKER]])।
+             */
+            'moneySignatures' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                && app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires(VoucherApproval::MODULE, $type, null, class_basename(Voucher::class)),
+            'moneyThreeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get(VoucherService::MAKER_CHECKER, true),
+        ];
     }
 
     /**
@@ -739,18 +750,32 @@ class VoucherController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      * @param  \Illuminate\Support\Collection<int, \App\Modules\Accounts\Models\Account>  $accounts
-     * @return array{amount: string, charge: string, net: string, words: string, matches: bool}
+     * ⭐ উৎসে কর্তন (পরিশোধে, [[WithheldTax::onPayment()]]) — AIT আর VDS খাতার ২১২১/২১২২-এর সারি থেকে; মোট = দেওয়া + AIT + VDS,
+     * পক্ষের খাতে যতটা কমে (নকশা পাতা ৪-এর "বিলে প্রয়োগ (মোট) − AIT − VDS = নিট")। রসিদে এখনো কর্তন নেই, তাই শূন্য।
+     *
+     * @return array{amount: string, gross: string, ait: string, vds: string, charge: string, net: string, words: string, matches: bool}
      */
     private function summaryOf(string $type, array $data, array $lines, \Illuminate\Support\Collection $accounts): array
     {
         $receipt = $type === Voucher::RECEIPT;
         $moneyId = (int) ($data[$receipt ? 'to_account_id' : 'from_account_id'] ?? 0);
         $chargeCodes = [\App\Modules\Accounts\Services\StandardChart::BANK_CHARGES, \App\Modules\Accounts\Services\StandardChart::MFS_CHARGES];
+        $withheldCodes = ['ait' => \App\Modules\Accounts\Services\StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_PAYABLE];
         $amount = bcadd(is_numeric($data['amount'] ?? null) ? (string) $data['amount'] : '0', '0', 4);
         $net = '0';
         $charge = '0';
+        $cut = ['ait' => '0', 'vds' => '0'];
 
         foreach ($lines as $line) {
+            $code = $accounts->get((int) $line['account_id'])?->code;
+            $kind = array_search($code, $withheldCodes, true);
+
+            if ($kind !== false && ! $receipt) {
+                $cut[$kind] = bcadd($cut[$kind], (string) ($line['credit'] ?? '0'), 4);
+
+                continue;
+            }
+
             if ((int) $line['account_id'] === $moneyId) {
                 $net = bcadd($net, (string) ($line[$receipt ? 'debit' : 'credit'] ?? '0'), 4);
             } elseif (in_array($accounts->get((int) $line['account_id'])?->code, $chargeCodes, true)) {
@@ -758,12 +783,16 @@ class VoucherController extends Controller implements HasMiddleware
             }
         }
 
+        $gross = bcadd($amount, bcadd($cut['ait'], $cut['vds'], 4), 4);
         $matches = $receipt
             ? bccomp($amount, bcadd($net, $charge, 4), 4) === 0
             : bccomp($net, bcadd($amount, $charge, 4), 4) === 0;
 
         return [
             'amount' => \App\Core\Support\Money::format($amount),
+            'gross' => \App\Core\Support\Money::format($gross),
+            'ait' => \App\Core\Support\Money::format($cut['ait']),
+            'vds' => \App\Core\Support\Money::format($cut['vds']),
             'charge' => \App\Core\Support\Money::format($charge),
             'net' => \App\Core\Support\Money::format($net),
             'words' => \App\Core\Support\AmountInWords::of($amount, app()->getLocale()),

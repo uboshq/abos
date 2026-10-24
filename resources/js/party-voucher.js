@@ -332,6 +332,23 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
             if (this.partyId) {
                 this.loadDue();
             }
+
+            /*
+             * ⭐ বকেয়া আর "পক্ষ আছে কি না" ফর্মকে জানানো — মাথার তিন অঙ্ক ডানের কলামে, এই বাক্সের বাইরে ([[voucherMoney]] `heardParty`;
+             * fe, ২৪ অক্টোবর ২০২৬)। ⓘ ঘটনা, ভাগ করা অবস্থা নয় — দুই x-data একে অপরের অবস্থা দেখে না।
+             */
+            this.$watch('due', () => this.tellDue());
+            this.$watch('partyType', () => this.tellDue());
+            this.$nextTick(() => this.tellDue());
+        },
+
+        tellDue() {
+            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '' });
+        },
+
+        /** "অন্য (সরাসরি খাত)" — পক্ষ নেই, তাই বিলের তালিকা আর পাওনার অঙ্কও নেই */
+        get noParty() {
+            return this.partyType === '';
         },
 
         resetParty() {

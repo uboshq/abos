@@ -240,6 +240,8 @@ return [
     'party_more' => 'More names - type a name, code or point to narrow the list.',
     'party_no_match' => 'No name matches what you typed.',
     'received_on_account_hint' => 'Capital, a loan, income, a deposit — what the money came in for. "Deposited to" below is where it was put (cash or which bank). Choose capital and it also appears on the Capital & investment page by itself.',
+    'no_party_note_in' => 'Other (direct account): no party, so no bills list and no amount due. Choose the account in "What the money is for".',
+    'no_party_note_out' => 'Other (direct account): no party, so no bills list and no amount payable. Choose "Account it lands in".',
 
     // What each list's search box looks in — the toolbar shows it as the placeholder.
     'cheque_search' => 'Cheque no, bank, document no or note',

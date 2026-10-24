@@ -378,6 +378,8 @@ export function voucherMoney ({
     referenceUrl = '',
     voucherId = null,
     out = false,
+    ait = '',
+    vds = '',
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -387,6 +389,16 @@ export function voucherMoney ({
         busy: false,
         amount: String(amount ?? ''),
         account: String(account ?? ''),
+        // ⭐ উৎসে কর্তন — পরিশোধে (x-ui.field type="money", model ait/vds); খাতায় কী যায় সার্ভার বলে ([[WithheldTax::onPayment()]])
+        ait: String(ait ?? ''),
+        vds: String(vds ?? ''),
+        /*
+         * ⭐ মাথার তিন অঙ্ক — পক্ষের বকেয়া/পাওনা · এই কাগজ · বাকি থাকবে (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ বকেয়া আসে পক্ষের
+         * বাক্স থেকে (`party-due` ঘটনা, [[party-voucher.js]]) — সার্ভারের একই উত্তর ([[VoucherController::due()]]); চিহ্ন: ধনাত্মক = তিনি
+         * আমাদের দেবেন। পক্ষ না থাকলে (`null`) অঙ্কগুলো নেই, এক লাইনের কারণ।
+         */
+        partyDue: null,
+        hasParty: true,
         charge: 0,
         balances,
         slip: { state: 'empty', message: '' },
@@ -400,6 +412,8 @@ export function voucherMoney ({
             form = this.$el.closest('form')
             this.$watch('account', () => { this.slipSoon(); this.refresh() })
             this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
+            this.$watch('ait', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
+            this.$watch('vds', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
 
             // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
             form?.addEventListener('input', (e) => {
@@ -417,6 +431,28 @@ export function voucherMoney ({
             this.slipSoon()
             this.refresh()
         },
+
+        /* ⓘ পক্ষের বাক্সের ঘটনা — বকেয়া (সার্ভারের চিহ্নে) আর পক্ষ আছে কি না ("অন্য (সরাসরি খাত)"-এ নেই) */
+        heardParty (detail) {
+            this.hasParty = detail?.hasParty !== false
+            this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null
+        },
+
+        /*
+         * ⭐ মাথার তিন অঙ্ক। রসিদ: বকেয়া (তিনি দেবেন) · এই আদায় · বাকি থাকবে = বকেয়া − আদায়। পরিশোধ: পাওনা (আমরা দেব, তাই চিহ্ন
+         * উল্টো) · এই পরিশোধ (মোট = দেওয়া + AIT + VDS — পক্ষের খাতে যতটা কমে) · বাকি থাকবে = পাওনা − মোট। ⓘ পয়সায় গোনা; ঋণাত্মক
+         * বাকি মানে অগ্রিম — চিহ্নে নয়, কথায় ([[party-voucher.js]]-এর একই নিয়ম)।
+         */
+        get hasHeadFigures () { return this.hasParty && this.partyDue !== null },
+        get headOwedPaisa () { return (out ? -1 : 1) * paisa(this.partyDue ?? 0) },
+        get headThisPaisa () { return paisa(this.amount) + (out ? paisa(this.ait) + paisa(this.vds) : 0) },
+        get headLeftPaisa () { return this.headOwedPaisa - this.headThisPaisa },
+        get headOwedText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headOwedPaisa) / 100) : '—' },
+        get headThisText () { return '৳' + taka(this.headThisPaisa / 100) },
+        get headLeftText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headLeftPaisa) / 100) : '—' },
+        get headLeftIsAdvance () { return this.hasHeadFigures && this.headLeftPaisa < 0 },
+        // ⛔ পক্ষের আগে থেকে অগ্রিম থাকলে বকেয়ার অঙ্ক চিহ্ন ছাড়া "বকেয়া" পড়াত — কথায় "অগ্রিম" (মাপা: ২৪ অক্টোবর ২০২৬, আলম স্টোর)
+        get headOwedIsAdvance () { return this.hasHeadFigures && this.headOwedPaisa < 0 },
 
         /* ⭐ খাতে আছে কত — পরিশোধে যথেষ্ট কি না (নকশার "খাতে আছে ৳…") */
         get balance () { return this.balances[this.account] ?? null },
@@ -506,6 +542,10 @@ export function voucherMoney ({
         get sumNet () { return this.summary?.net ?? '—' },
         get sumWords () { return this.summary?.words ?? '' },
         get sumMatches () { return this.summary?.matches === true },
+        get sumGross () { return this.summary?.gross ?? '—' },
+        // ⓘ বিয়োগ চিহ্ন কেবল সত্যি কাটলে — "−0.00" চোখে ভুল পড়ে
+        get sumAitMinus () { return this.summary ? (paisa(this.summary.ait) > 0 ? '−' : '') + this.summary.ait : '—' },
+        get sumVdsMinus () { return this.summary ? (paisa(this.summary.vds) > 0 ? '−' : '') + this.summary.vds : '—' },
     }
 }
 

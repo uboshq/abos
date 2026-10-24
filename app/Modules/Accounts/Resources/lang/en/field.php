@@ -130,6 +130,7 @@ return [
     'paid_to' => 'Paid to',
     'lands_in' => 'Account it lands in',
     'lands_in_hint' => "Left empty: the party's payable",
+    'party_other' => 'Other (direct account)',
     'paid_to_from_party' => '— from the payee (a supplier\'s payable) —',
     'expense_head' => 'Expense head',
     'income_by_head' => 'Income by head',

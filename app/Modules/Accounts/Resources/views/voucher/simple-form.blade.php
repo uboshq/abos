@@ -144,7 +144,8 @@
         ভাউচারটা সেভ হয়েছে, কেবল ছবিটা নেই — আর কেন, তার কোনো চিহ্নও
         থাকত না।
     --}}
-    <form method="POST" enctype="multipart/form-data"
+    {{-- ⭐ `x-money-keys` — Enter কিছু পাঠায় না, Ctrl+Enter মূল বোতাম ([[money-keys.js]]; রসিদ, পরিশোধ, খরচ — একই ফর্ম) --}}
+    <form method="POST" enctype="multipart/form-data" x-money-keys
           action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher)) }}"
           @if ($partyAbove)
               x-data="voucherMoney({
@@ -156,8 +157,11 @@
                   referenceUrl: @js(route('accounts.voucher.reference_check')),
                   voucherId: @js($voucher->exists ? $voucher->id : null),
                   out: @js($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT),
+                  ait: @js((string) old('ait_amount', (float) ($voucher->ait_amount ?? 0) > 0 ? $voucher->ait_amount : '')),
+                  vds: @js((string) old('vds_amount', (float) ($voucher->vds_amount ?? 0) > 0 ? $voucher->vds_amount : '')),
               })"
               @money-method="heard($event.detail)"
+              @party-due="heardParty($event.detail)"
           @else
               x-data="{ busy: false }"
           @endif
@@ -258,7 +262,8 @@
         --}}
         @if ($partyAbove)
             <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]" data-voucher-columns>
-            <div class="min-w-0 space-y-4" data-voucher-main>
+            {{-- ⓘ বাঁয়ের খণ্ড (a6-এর আসন্ন ফর্মের `left`): পক্ষ আর খোলা বিল, টাকা আর পদ্ধতি, সংযুক্তি ও বিবরণ --}}
+            <div class="min-w-0 space-y-4" data-voucher-main data-part="left">
         @endif
 
         @if (in_array($voucher->type, [
@@ -778,6 +783,20 @@
                         </x-slot:account-note>
                     </x-money.method>
                 </div>
+
+                @if ($isPayment)
+                    {{--
+                        ⭐ উৎসে কর্তন — নকশা পাতা ৪-এর AIT আর VDS (fe, ২৪ অক্টোবর ২০২৬)। ⓘ লিখলে খাতায় পক্ষের খাত মোটে, টাকার খাত দেওয়া
+                        অঙ্কে, আর কর্তন ২১২১ (AIT) আর ২১২২ (VDS)-এ — খরচের ভাউচারের একই পথ ([[WithheldTax::onPayment()]])। ডানের সারাংশে
+                        বিয়োগ চিহ্নে।
+                    --}}
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-withheld>
+                        <x-ui.field name="ait_amount" type="money" model="ait" empty-shows="0.00"
+                                    :label="__('money.screen.sum.ait')" :value="old('ait_amount', (float) ($voucher->ait_amount ?? 0) > 0 ? $voucher->ait_amount : '')" />
+                        <x-ui.field name="vds_amount" type="money" model="vds" empty-shows="0.00"
+                                    :label="__('money.screen.sum.vds')" :value="old('vds_amount', (float) ($voucher->vds_amount ?? 0) > 0 ? $voucher->vds_amount : '')" />
+                    </div>
+                @endif
             </section>
 
             <section data-boxed data-voucher-details
@@ -815,14 +834,55 @@
 
             </div>{{-- data-voucher-main --}}
 
-            {{-- ═══ ডানের কলাম — হিসাবের সারাংশ, তার নিচে খাতায় যা যাবে (টাকা দেওয়ার পর্দার একই ক্রম) ═══ --}}
-            <aside class="flex min-w-0 flex-col gap-4" data-voucher-aside>
+            {{--
+                ═══ ডানের কলাম — একটাই খণ্ড: মাথার তিন অঙ্ক → হিসাবের সারাংশ → খাতায় যা যাবে → নিয়ন্ত্রণ (নকশা পাতা ২ আর ৪; a6-এর আসন্ন
+                Core দুই-কলামের ফর্মের `right` খণ্ডের হুবহু ক্রম — তখন পুরো খণ্ডটা সরে বসবে, নতুন করে লেখা নয়) ═══
+            --}}
+            <aside class="flex min-w-0 flex-col gap-4" data-voucher-aside data-part="right">
+            {{--
+                ⭐ মাথার তিন অঙ্ক — পক্ষের বকেয়া/পাওনা · এই কাগজ · বাকি থাকবে, চলতি (fe, ২৪ অক্টোবর ২০২৬)। ⓘ বকেয়া সার্ভারের একই উত্তর
+                ([[VoucherController::due()]]), পক্ষের বাক্স থেকে ঘটনায় ([[voucherMoney]] `heardParty`); পরিশোধে "এই কাগজ" মোট — দেওয়া +
+                AIT + VDS, পক্ষের খাতে যতটা কমে। পক্ষ না থাকলে অঙ্ক নেই, এক লাইনে কেন।
+            --}}
+            <section data-boxed data-voucher-head-figures class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <dl class="grid grid-cols-3 gap-2 text-center" x-show="hasHeadFigures" x-cloak>
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ $isPayment ? __('money.screen.head.owed_out') : __('money.screen.head.owed_in') }}</dt>
+                        <dd class="num text-base font-semibold" data-head-owed>
+                            <span x-text="headOwedText"></span>
+                            <span class="block text-2xs font-normal text-(--color-badge-success-ink)" x-show="headOwedIsAdvance" x-cloak>{{ __('money.screen.head.advance') }}</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ $isPayment ? __('money.screen.head.this_out') : __('money.screen.head.this_in') }}</dt>
+                        <dd class="num text-base font-semibold" data-head-this x-text="headThisText"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ __('money.screen.head.left') }}</dt>
+                        <dd class="num text-base font-semibold" data-head-left>
+                            <span x-text="headLeftText"></span>
+                            <span class="block text-2xs font-normal text-(--color-badge-success-ink)" x-show="headLeftIsAdvance" x-cloak>{{ __('money.screen.head.advance') }}</span>
+                        </dd>
+                    </div>
+                </dl>
+                <p class="text-xs text-(--color-ink-muted)" data-head-none x-show="! hasHeadFigures">{{ __('money.screen.head.none') }}</p>
+            </section>
+
             {{--
                 ⭐ হিসাবের সারাংশ — তিন পর্দার একই কার্ড ([[x-money.summary]])। রসিদ: পাওয়া টাকা → চার্জ → খাতে উঠবে (নিট) → কথায় → মিলেছে;
                 পরিশোধ আয়নায়: দেওয়া টাকা → চার্জ → খাত থেকে যাবে (নিট) → কথায় → মিলেছে। ⓘ অঙ্ক আর কথা সার্ভারের, খাতার একই সারি থেকে
                 ([[VoucherController::summaryOf()]])। ⓘ উৎসে কাটার ঘর রসিদ-পরিশোধ ভাউচারে নেই (আছে আদায় আর সরবরাহকারী-পরিশোধে), তাই সারিও নেই।
             --}}
             <x-money.summary data-voucher-summary words="sumWords">
+                @if ($isPayment)
+                    {{-- ⭐ নকশা পাতা ৪-এর ক্রম: মোট (পক্ষের খাতে কমে) − AIT − VDS; তারপর দেওয়া, চার্জ, নিট --}}
+                    <dt>{{ __('money.screen.sum.gross_party') }}</dt>
+                    <dd class="num" data-sum-gross x-text="sumGross"></dd>
+                    <dt>{{ __('money.screen.sum.ait') }}</dt>
+                    <dd class="num" data-sum-ait x-text="sumAitMinus"></dd>
+                    <dt>{{ __('money.screen.sum.vds') }}</dt>
+                    <dd class="num" data-sum-vds x-text="sumVdsMinus"></dd>
+                @endif
                 <dt>{{ $isPayment ? __('money.screen.sum.paid') : __('money.screen.sum.received') }}</dt>
                 <dd class="num" data-sum-amount x-text="sumAmount"></dd>
                 <dt>{{ __('money.screen.sum.charge_any') }}</dt>
@@ -876,10 +936,15 @@
                 <p class="mt-2 text-xs text-(--color-badge-success-ink)" data-ledger-matches x-show="previewMatches" x-cloak>{{ __('accounts::message.ledger_matches') }}</p>
                 <p class="mt-2 text-xs text-(--color-danger)" x-show="unbalanced" x-cloak>{{ __('money.screen.ledger_unbalanced') }}</p>
             </section>
+
+            {{-- ⭐ নিয়ন্ত্রণ — টাকা দেওয়ার পর্দার একই কার্ড ([[x-money.controls]]): সই চালু/বন্ধ, লেখক ≠ পাকাকারী --}}
+            <x-money.controls data-voucher-controls :signatures="$moneySignatures ?? false" :three-hands="$moneyThreeHands ?? false"
+                              :direction="$isPayment ? 'out' : 'in'" />
             </aside>
             </div>{{-- data-voucher-columns --}}
 
-            <section data-boxed
+            {{-- ⓘ নিচের বোতাম-সারি — দুই কলামের বাইরে, পুরো চওড়ায় (a6-এর আসন্ন ফর্মের `bar` খণ্ড) --}}
+            <section data-boxed data-part="bar"
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     {{-- ⭐ পোস্টের পরে কী পাওয়া যায় — নকশার নিচের লাইন; দেখার পাতার ছাপার মেনুতে ছাপা, PDF আর WhatsApp ([[voucher.show]]) --}}

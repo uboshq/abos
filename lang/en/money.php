@@ -132,6 +132,7 @@ return [
             'into' => 'Lands in the account (net)',
             'matches_in' => 'Balanced: received = into the account + charge',
             'matches_out' => 'Balanced: leaves the account = paid + charge',
+            'gross_party' => "On the party's account (gross)",
         ],
         'tag' => [
             'ait' => "on the value excluding VAT, supplier's rate",
@@ -149,9 +150,20 @@ return [
         'ledger_empty' => 'Shows here once a supplier and an amount are given.',
         'ledger_unbalanced' => 'Debit and credit do not match — it will not post.',
         'controls' => 'Controls',
+        'head' => [
+            'owed_in' => 'Party owes',
+            'owed_out' => 'We owe the party',
+            'this_in' => 'This receipt',
+            'this_out' => 'This payment (gross)',
+            'left' => 'Will remain',
+            'advance' => 'advance',
+            'none' => 'Pick a party to see what they owe, this paper and what will remain; a paper without a party (other, direct account) has no such figures.',
+        ],
         'control' => [
             'signatures_on' => 'Payments need a signature here: "Send for signature" — the maker cannot sign their own. It posts after signing.',
             'signatures_off' => 'Payments need no signature in this company — posting writes to the books at once. A posted paper cannot be edited; reverse it with a reason.',
+            'signatures_on_in' => 'Receipts need a signature in this company: the maker cannot sign their own. It posts after the signature.',
+            'signatures_off_in' => 'Receipts need no signature in this company — posting writes to the books at once. A posted paper cannot be edited; reverse it with a reason.',
             'three_hands' => 'Three-hand rule on: whoever made or signed it cannot post it.',
             'bank_unsigned' => "A bank payment stops while the payee's bank details are unsigned.",
         ],

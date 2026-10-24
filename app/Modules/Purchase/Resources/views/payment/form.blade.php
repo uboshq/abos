@@ -52,7 +52,8 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('money.screen.title_pay') }}</x-slot:title>
 
-    <form method="POST" data-pay-screen
+    {{-- ⭐ `x-money-keys` — Enter কিছু পাঠায় না, Ctrl+Enter মূল বোতাম ([[money-keys.js]]) --}}
+    <form method="POST" data-pay-screen x-money-keys
           action="{{ $isNew ? route('purchase.payment.store') : route('purchase.payment.update', $payment) }}"
           enctype="multipart/form-data"
           x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')), slipUrl: @js(route('purchase.payment.slip_check')), paymentId: @js($isNew ? null : $payment->id) })"
@@ -324,22 +325,12 @@
                 </section>
 
                 {{-- ── নিয়ন্ত্রণ (#১১, #২৩, #৬) ── --}}
-                <section data-boxed data-pay-controls class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                    <h2 class="mb-3 font-semibold">{{ __('money.screen.controls') }}</h2>
-                    <div class="flex flex-col gap-2 text-xs">
-                        <p class="border-s-2 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-(--color-badge-info-ink)" data-control="signatures">
-                            {{ $signatures ? __('money.screen.control.signatures_on') : __('money.screen.control.signatures_off') }}
-                        </p>
-                        @if ($threeHands)
-                            <p class="border-s-2 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-(--color-badge-info-ink)" data-control="three-hands">
-                                {{ __('money.screen.control.three_hands') }}
-                            </p>
-                        @endif
-                        <p class="border-s-2 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-(--color-badge-danger-ink)" data-control="bank">
-                            {{ __('money.screen.control.bank_unsigned') }}
-                        </p>
-                    </div>
-                </section>
+                {{-- ⓘ তিন পর্দার একই কার্ড ([[x-money.controls]]); প্রাপকের ব্যাংকের সতর্কতা কেবল এই পর্দার, তাই slot-এ --}}
+                <x-money.controls data-pay-controls :signatures="$signatures" :three-hands="$threeHands" direction="out">
+                    <p class="border-s-2 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-(--color-badge-danger-ink)" data-control="bank">
+                        {{ __('money.screen.control.bank_unsigned') }}
+                    </p>
+                </x-money.controls>
             </aside>
         </div>
 

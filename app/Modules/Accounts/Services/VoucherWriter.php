@@ -356,6 +356,11 @@ final class VoucherWriter
             return app(WithheldTax::class)->onExpense($lines, (int) ($input['to_account_id'] ?? 0), $input);
         }
 
+        // ⭐ পরিশোধেও — পক্ষের খাত মোটে, টাকা নিটে, কর্তন ২১২১/২১২২-এ (খরচের একই পথ; fe, ২৪ অক্টোবর ২০২৬, নকশা পাতা ৪)
+        if ($type === Voucher::PAYMENT) {
+            return app(WithheldTax::class)->onPayment($lines, (int) ($input['to_account_id'] ?? 0), $input);
+        }
+
         return $lines;
     }
 }
