@@ -119,9 +119,14 @@ final class AnExpenseNeverLandsOnTheSoftwaresOwnHeadsTest extends TestCase
             ['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'মজুদ গণনার সংশোধন'],
             [['account_id' => $cogs->id, 'debit' => '300'], ['account_id' => $inventory->id, 'credit' => '300']],
         );
-        app(VoucherService::class)->post($voucher);
+        // ⓘ থামাটা ধরে দাবির নিজের বার্তায় বলা — নইলে আটকানো জাবেদা ভুল (Error) হয়ে ধরা পড়ত, দাবির কারণে নয় (cb-eh-1-এর eh_journal_blocked)
+        try {
+            app(VoucherService::class)->post($voucher);
+        } catch (ValidationException $e) {
+            $this->fail('⛔ হিসাবরক্ষকের জাবেদাও আটকে গেল — নিষেধ কেবল খরচের ভাউচারে হওয়ার কথা: '.json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+        }
 
-        $this->assertTrue($voucher->fresh()->isPosted(), '⛔ হিসাবরক্ষকের জাবেদাও আটকে গেল — নিষেধ কেবল খরচের ভাউচারে হওয়ার কথা');
+        $this->assertTrue($voucher->fresh()->isPosted(), '⛔ হিসাবরক্ষকের জাবেদা পোস্ট হলো না — নিষেধ কেবল খরচের ভাউচারে হওয়ার কথা');
     }
 
     /** @return array<string, int>  কোড => id */
