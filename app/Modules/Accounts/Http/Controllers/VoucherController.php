@@ -271,6 +271,9 @@ class VoucherController extends Controller implements HasMiddleware
             'credit' => app(\App\Core\Contracts\PartyCreditLimit::class)->creditOf($type, $id),
             'tax_ids' => app(\App\Core\Contracts\PartyTaxIds::class)->taxIdsOf($type, $id),
             'payee_bank' => app(\App\Core\Contracts\PayeeBankView::class)->bankOf($type, $id),
+            // ⓘ পক্ষের নিজের শাখা — কেবল তথ্য (নকশার "শাখা: গ্রাহকের শাখা"); টাকা বসে বাক্সের শাখায় (মালিক, ১৯ অক্টোবর ২০২৬)
+            'party_branch' => ($branchId = app(PartyRegistry::class)->branchesOf([[$type, $id]])[$type.':'.$id] ?? null) === null
+                ? null : \App\Models\Branch::query()->find($branchId)?->name(),
         ]);
     }
 
@@ -758,6 +761,8 @@ class VoucherController extends Controller implements HasMiddleware
             'summary' => $this->summaryOf($type, $data, $ledger['lines'], $accounts),
             // ⭐ নিট — পক্ষের হাতে যা যায়, সার্ভারের হিসাবে (পরিশোধে মোট − AIT − VDS; চুক্তি §৫) — ফোনের preview-এর একই ঘর
             'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
+            // ⭐ খাতা যে শাখায় বসবে — বাক্সের শাখা (মালিকের ১৯ অক্টোবরের নিয়ম, RCV-0143); মাথার "পোস্ট হবে: …"
+            'branch' => $branch?->name(),
             // ⭐ পোস্টে সইয়ের অপেক্ষায় যাবে কি না — পোস্টের নিজের প্রশ্নে ([[VoucherApproval::wouldWait()]]), ফোনের preview-এর একই ঘর
             'needs_signature' => app(VoucherApproval::class)->wouldWait($data, $lines),
         ]);

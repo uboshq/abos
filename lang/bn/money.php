@@ -150,6 +150,9 @@ return [
             'number' => 'নম্বর: :no',
             'number_on_save' => 'নম্বর: সংরক্ষণে বসবে (SP-…)',
             // ⓘ রসিদ-পরিশোধ ভাউচারে উপসর্গ নম্বর সিরিজের নিজের ([[NumberSeriesEngine::prefixOf()]])
+            'branch' => 'শাখা:',
+            'posts_in' => 'পোস্ট হবে:',
+            'party_branch_by' => ['customer' => 'গ্রাহকের শাখা', 'supplier' => 'সরবরাহকারীর শাখা', 'employee' => 'কর্মীর শাখা', 'person' => 'ব্যক্তির শাখা', '' => 'পক্ষের শাখা'],
             'number_on_save_as' => 'নম্বর: সংরক্ষণে বসবে (:prefix-…)',
             'maker' => 'বানালেন: :name',
             'signer' => 'সই দেবেন: :who (ধাপ 1/:levels)',

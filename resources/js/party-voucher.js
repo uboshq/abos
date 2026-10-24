@@ -94,6 +94,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         taxIds: null,
         payeeBank: null,
         method: '',
+        // ⓘ পক্ষের নিজের শাখা — কেবল তথ্য, মাথায় "শাখা: গ্রাহকের শাখা (…)"; টাকা বসে বাক্সের শাখায়
+        partyBranch: '',
 
         /**
          * ⭐ রসিদ **একটা** বিলের বিপরীতে — `against_type` / `against_id` (Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬)।
@@ -167,7 +169,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         tellDue() {
             // ⓘ ধরনও যায় — মাথার অঙ্কের নাম তাতে ("গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা"; [[voucherMoney]] `headOwedLabel`)
-            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '', partyType: this.partyType });
+            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '', partyType: this.partyType, partyBranch: this.partyBranch });
         },
 
         /** ⭐ পক্ষের ঘরের নাম ধরনে — "গ্রাহক", "সরবরাহকারী" (নকশা পাতা ২ আর ৪); অজানা ধরনে সাধারণ "পক্ষ" */
@@ -354,6 +356,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             this.credit = null;
             this.taxIds = null;
             this.payeeBank = null;
+            this.partyBranch = '';
         },
 
         /** পদ্ধতির চিপ বদলালে — এই বাক্সের ভিতরের `change` (চিপ "সাধারণ তথ্য" কার্ডে) */
@@ -473,6 +476,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
                 this.credit = data.credit ?? null;
                 this.taxIds = data.tax_ids ?? null;
                 this.payeeBank = data.payee_bank ?? null;
+                this.partyBranch = String(data.party_branch ?? '');
+                this.tellDue();
                 this.adoptPicked();
             } catch (e) {
                 /*

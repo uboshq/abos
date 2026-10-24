@@ -381,6 +381,7 @@ export function voucherMoney ({
     ait = '',
     vds = '',
     owedLabels = {},
+    branchLabels = {},
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -402,6 +403,7 @@ export function voucherMoney ({
         hasParty: true,
         // ⓘ পক্ষের ধরন — মাথার প্রথম অঙ্কের নাম তাতে (`owedLabels`, ধরন → "গ্রাহকের বকেয়া"; অজানায় '' → সাধারণ নাম)
         headPartyType: '',
+        headPartyBranch: '',
         charge: 0,
         balances,
         slip: { state: 'empty', message: '' },
@@ -441,6 +443,7 @@ export function voucherMoney ({
             this.hasParty = detail?.hasParty !== false
             this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null
             this.headPartyType = String(detail?.partyType ?? '')
+            this.headPartyBranch = String(detail?.partyBranch ?? '')
         },
 
         /*
@@ -456,6 +459,17 @@ export function voucherMoney ({
             const amount = String(value ?? '').replace(/,/g, '').trim()
             if (amount !== '' && Number.isFinite(Number(amount))) this.amount = amount
         },
+
+        /*
+         * ⭐ মাথার "শাখা: গ্রাহকের শাখা (ময়মনসিংহ)" — কেবল তথ্য, নকশার লেখা; পাশে "পোস্ট হবে: <শাখা>" — খাতা যে শাখায় বসবে, সার্ভারের
+         * প্রিভিউ থেকে (বাক্সের শাখা — মালিকের ১৯ অক্টোবরের নিয়ম; দুটো আলাদা হলে চোখে পড়ে)।
+         */
+        get partyBranchText () {
+            if (this.headPartyBranch === '') return ''
+            const label = branchLabels[this.headPartyType] ?? branchLabels[''] ?? ''
+            return label + ' (' + this.headPartyBranch + ')'
+        },
+        get postBranchText () { return String(this.preview?.branch ?? '') },
 
         /* ⭐ মাথার প্রথম অঙ্কের নাম পক্ষের ধরনে (নকশা: "গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা") */
         get headOwedLabel () { return owedLabels[this.headPartyType] ?? owedLabels[''] ?? '' },
@@ -475,6 +489,8 @@ export function voucherMoney ({
         // ⓘ পক্ষের খাত কমে মোটে — দুই দিকেই (রসিদে পক্ষ কাটেন, পরিশোধে আমরা কাটি): টাকা + AIT + VDS
         // ⭐ পরিশোধে লেখা ঘরটাই মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি) — রসিদে লেখা পাওয়া টাকা, মোট তার সাথে পক্ষের কাটা অংশ
         get headGrossPaisa () { return out ? paisa(this.amount) : paisa(this.amount) + paisa(this.ait) + paisa(this.vds) },
+        // ⓘ উৎসে কাটা আছে কি না — পরিশোধে কমলা "করণীয় তালিকায় উঠবে" লাইন এতে
+        get hasWithheld () { return paisa(this.ait) + paisa(this.vds) > 0 },
         // ⓘ নিট — পক্ষের হাতে যা যায়: পরিশোধে মোট − AIT − VDS, রসিদে লেখা টাকাই
         get netPaisa () { return out ? this.headGrossPaisa - paisa(this.ait) - paisa(this.vds) : paisa(this.amount) },
         // ⓘ "এই আদায়" নকশার মতো হাতে পাওয়া টাকা; "এই পরিশোধ (মোট)" মোট

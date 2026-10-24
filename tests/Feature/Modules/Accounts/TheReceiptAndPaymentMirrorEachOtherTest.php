@@ -613,6 +613,30 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $this->assertContains($said, [trans('money.screen.payee_bank_unsigned', [], 'bn'), trans('money.screen.payee_bank_unsigned', [], 'en')], '⛔ লাল নিয়মের কথা নিজের নয়');
     }
 
+    /** ২৬ — "শাখা: গ্রাহকের শাখা (…)" কেবল তথ্য; "পোস্ট হবে" খাতার নিজের শাখা — বাক্সের (মালিকের ১৯ অক্টোবরের নিয়ম; cb-ma-4) */
+    public function test_the_head_tells_the_partys_branch_and_where_the_money_posts(): void
+    {
+        $bank = $this->bank();
+        // ⓘ ডেমোর গ্রাহকের শাখা বসানো থাকে না — দাবির জন্য একটা বসানো (কোম্পানির মূল শাখা)
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $branch = $this->company->defaultBranch();
+        $customer->forceFill(['branch_id' => $branch->id])->save();
+
+        $due = $this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $customer->id]))->assertOk()->json();
+        $this->assertSame($branch->name(), $due['party_branch'] ?? null, '⛔ বকেয়ার উত্তরে পক্ষের নিজের শাখা নেই — মাথার "গ্রাহকের শাখা" আসবে না');
+
+        $answer = $this->postJson(route('accounts.voucher.simulate'), [
+            'type' => Voucher::RECEIPT, 'narration' => 'শাখার দাবি', 'trx_date' => now()->toDateString(), 'amount' => '100',
+            'instrument' => 'transfer', 'instrument_no' => 'BR-1', 'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
+        ])->assertOk()->json();
+        $this->assertNotEmpty($answer['rows'] ?? [], 'দৃশ্যটাই ঠিক নয় — প্রিভিউ খালি: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
+        $this->assertSame($answer['rows'][0]['branch'] ?? null, $answer['branch'] ?? null, '⛔ "পোস্ট হবে" খাতার নিজের শাখা নয় — মাথা আর খাতা দুই শাখা বলে');
+
+        $html = $this->screen(Voucher::RECEIPT);
+        $this->assertMatchesRegularExpression('/data-voucher-meta.*?data-voucher-branch.*?x-text="partyBranchText".*?x-text="postBranchText"/s', $html,
+            '⛔ মাথার তথ্যের সারিতে পক্ষের শাখা আর "পোস্ট হবে" নেই');
+    }
+
     /** ২৩ — নতুন নাম আর মোবাইল পাশাপাশি কেবল ঘরের নিজের জায়গায় কুলালে; সরু পক্ষের ঘরে (১৩৬৬-এ ~২৪০px) একটার নিচে আরেকটা */
     public function test_the_new_name_and_mobile_stack_in_a_narrow_party_cell(): void
     {

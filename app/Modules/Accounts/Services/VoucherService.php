@@ -34,6 +34,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\ComplianceObligation;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
@@ -475,6 +476,7 @@ final class VoucherService
             ])->save();
 
             $this->settle($voucher, settled: true);
+            $this->raiseTaxDuties($voucher);
 
             /*
              * ⓘ অন্য মডিউলকে জানানো — লেনদেন পাকা হওয়ার পরে, আগে নয়।
@@ -486,6 +488,35 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ পরিশোধ ভাউচারে কাটা কর আর ভ্যাটের করণীয় — কোষাগারে জমা (AIT, VDS আলাদা) আর VDS কাটলে সরবরাহকারীকে মূসক-৬.৬ (cb-ma-4, ২৫ অক্টোবর
+     * ২০২৬; সরবরাহকারী-পরিশোধের হুবহু [[\App\Modules\Purchase\Services\PaymentService::raiseTaxDuties()]])।
+     *
+     * ⛔ আগে পরিশোধ ভাউচারে AIT/VDS কাটলে খাতায় ২১২১/২১২২ বসত, অথচ কোনো করণীয় উঠত না — জমার শেষ দিন কেউ মনে করাত না, আর নকশার কমলা
+     * লাইন ("দুটোই করণীয় তালিকায় উঠবে") ভাউচারে মিথ্যা হত। ⓘ কেবল সত্যি কাটা হলে (শূন্যে দায় নেই); একই ভাউচারে আবার ডাকলে নতুন সারি
+     * নয় ([[ComplianceObligations::raise()]] আগেরটাই ফেরায়); বাতিলে খোলা করণীয় ফেরে ([[cancel()]])।
+     */
+    private function raiseTaxDuties(Voucher $voucher): void
+    {
+        if ($voucher->type !== Voucher::PAYMENT) {
+            return;
+        }
+
+        $duties = app(ComplianceObligations::class);
+        $raise = fn (string $kind, string $subject, string $amount) => $duties->raise(
+            (int) $voucher->company_id, $voucher->branch_id === null ? null : (int) $voucher->branch_id,
+            Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, (string) $voucher->document_no,
+            $kind, $subject, $amount, $voucher->trx_date,
+        );
+
+        $ait = (string) ($voucher->ait_amount ?? '0');
+        $vds = (string) ($voucher->vds_amount ?? '0');
+
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, $ait);
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, $vds);
+        $raise(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, $vds);
     }
 
     /**
@@ -1161,6 +1192,11 @@ final class VoucherService
             }
 
             $this->cancelItsAutoReversal($voucher, $reason, $onDate);
+
+            // ⭐ কাটা কর ফিরল, তাই কোষাগারে জমা আর মূসক-৬.৬-এর খোলা করণীয়ও — সরবরাহকারী-পরিশোধের একই পথ ([[raiseTaxDuties()]])
+            if ($voucher->type === Voucher::PAYMENT) {
+                app(ComplianceObligations::class)->cancelFor(Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, $reason);
+            }
 
             $voucher->forceFill([
                 'status' => DocumentStatus::CANCELLED,

@@ -123,6 +123,9 @@ return [
         'meta' => [
             'number' => 'No.: :no',
             'number_on_save' => 'No.: assigned on save (SP-…)',
+            'branch' => 'Branch:',
+            'posts_in' => 'Posts in:',
+            'party_branch_by' => ['customer' => 'the customer’s branch', 'supplier' => 'the supplier’s branch', 'employee' => 'the employee’s branch', 'person' => 'the person’s branch', '' => 'the party’s branch'],
             'number_on_save_as' => 'No.: assigned on save (:prefix-…)',
             'maker' => 'Made by: :name',
             'signer' => 'Signs: :who (step 1/:levels)',

@@ -184,6 +184,7 @@
                   ait: @js((string) old('ait_amount', bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 ? $voucher->ait_amount : '')),
                   vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
                   owedLabels: @js($headOwedLabels),
+                  branchLabels: @js(__('money.screen.meta.party_branch_by')),
               })"
               @money-method="heard($event.detail)"
               @party-due="heardParty($event.detail)"
@@ -229,6 +230,8 @@
                     <p data-voucher-meta class="mt-1 text-xs text-(--color-ink-muted)">
                         {{ $isNew ? __('money.screen.meta.number_on_save_as', ['prefix' => $headPrefix !== '' ? $headPrefix : '—']) : __('money.screen.meta.number', ['no' => $voucher->document_no]) }}
                         · {{ __('money.screen.meta.maker', ['name' => $headMaker ?? '—']) }}
+                        {{-- ⭐ নকশার "শাখা: গ্রাহকের শাখা (…)" কেবল তথ্য; পাশে "পোস্ট হবে: …" — টাকা বাক্সের শাখায় (মালিকের ১৯ অক্টোবরের নিয়ম; cb-ma-4) --}}
+                        <span data-voucher-branch x-show="partyBranchText !== ''" x-cloak>· {{ __('money.screen.meta.branch') }} <span data-voucher-party-branch x-text="partyBranchText"></span><span x-show="postBranchText !== ''"> · {{ __('money.screen.meta.posts_in') }} <b class="font-medium" data-voucher-post-branch x-text="postBranchText"></b></span></span>
                         @if (($moneyFirstSigner ?? null) !== null)
                             · <span data-voucher-signer>{{ __('money.screen.meta.signer', ['who' => $moneyFirstSigner['who'] !== '' ? $moneyFirstSigner['who'] : '—', 'levels' => $moneyFirstSigner['levels']]) }}</span>
                         @endif
@@ -900,6 +903,12 @@
                 <x-slot:after>
                     <p class="mt-3 border-s-2 border-(--color-badge-success-ink) bg-(--color-badge-success-bg) px-3 py-2 text-xs text-(--color-badge-success-ink)"
                        x-show="sumMatches" x-cloak data-sum-matches>{{ $isPayment ? __('money.screen.sum.matches_out') : __('money.screen.sum.matches_in') }}</p>
+                    {{-- ⭐ নকশার কমলা লাইন — পরিশোধে AIT/VDS কাটলে পোস্টে সত্যিই কোষাগারে জমা আর মূসক-৬.৬-এর করণীয় ওঠে
+                         ([[VoucherService::raiseTaxDuties()]], cb-ma-4); তাই লাইনটা এখন সত্য, টাকা দেওয়ার পর্দার একই কথা --}}
+                    @if ($isPayment)
+                        <p class="mt-3 border-s-2 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-xs text-(--color-badge-warning-ink)"
+                           x-show="hasWithheld" x-cloak data-sum-tax-note>{{ __('money.screen.sum.tax_note') }}</p>
+                    @endif
                 </x-slot:after>
             </x-money.summary>
 

@@ -22,13 +22,14 @@ afterEach(() => {
     document.body.innerHTML = ''
 })
 
-async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' }, owedLabels = {} } = {}) {
+async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' }, owedLabels = {}, branchLabels = {} } = {}) {
     // ⛔ JSON-এর ডবল কোট অ্যাট্রিবিউট আগেই শেষ করে দিত (cb_v15: বাক্সটা জোড়াই লাগেনি, পাঁচটা দাবি "not a function") — একক কোটে লেখা
     const balanceText = JSON.stringify(balances).replace(/"/g, "'")
     const labelText = JSON.stringify(owedLabels).replace(/"/g, "'")
+    const branchText = JSON.stringify(branchLabels).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText} })">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText} })">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
@@ -233,5 +234,31 @@ describe('পরিশোধে মোট টাকা', () => {
         expect(data.short, '⛔ পরিশোধে কাটা বাদে নিটই খাত থেকে যায় — মোট দেখে "কম" বলল').toBe(false)
         data.vds = '0'
         expect(data.short, '⛔ নিট খাতের চেয়ে বেশি, অথচ "কম" বলল না').toBe(true)
+    })
+})
+
+describe('কমলা করণীয়ের লাইন', () => {
+    it('কাটা থাকলেই দেখায় — না থাকলে নয়', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, amount: '1000' })
+        clearTimeout(data.timer)
+
+        expect(data.hasWithheld, '⛔ কাটা ছাড়াই "করণীয় তালিকায় উঠবে" বলে').toBe(false)
+        data.vds = '75'
+        expect(data.hasWithheld, '⛔ VDS কাটলেও করণীয়ের লাইন আসে না').toBe(true)
+    })
+})
+
+describe('মাথার শাখা — তথ্য আর যেখানে পোস্ট হবে', () => {
+    it('"শাখা: গ্রাহকের শাখা (ময়মনসিংহ)" কেবল তথ্য; "পোস্ট হবে" সার্ভারের প্রিভিউর শাখা', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ branchLabels: { customer: 'গ্রাহকের শাখা', '': 'পক্ষের শাখা' } })
+        clearTimeout(data.timer)
+
+        data.heardParty({ due: '0', hasParty: true, partyType: 'customer', partyBranch: 'ময়মনসিংহ' })
+        expect(data.partyBranchText, '⛔ মাথায় নকশার "গ্রাহকের শাখা (…)" নেই').toBe('গ্রাহকের শাখা (ময়মনসিংহ)')
+
+        data.preview = { ...data.preview, branch: 'প্রধান' }
+        expect(data.postBranchText, '⛔ "পোস্ট হবে" সার্ভারের প্রিভিউর শাখা নয় — বাক্সের শাখা দেখায় না').toBe('প্রধান')
     })
 })

@@ -353,7 +353,7 @@ describe('partyVoucher — নকশার নাম, বয়স আর এক
         box.due = '10.00'
         box.tellDue()
         expect(box.$dispatch, '⛔ পাওনার খবরে পক্ষের ধরন নেই — মাথার নাম "গ্রাহকের বকেয়া" হতে পারে না')
-            .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer' })
+            .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer', partyBranch: '' })
     })
 })
 
@@ -475,5 +475,17 @@ describe('partyVoucher — বাকির সীমা, BIN/TIN, প্রা�
         box.out = false
         box.payeeBank = { state: 'pending', line: 'x' }
         expect(box.bankBlocks, '⛔ রসিদে প্রাপকের ব্যাংকের লাল নিয়ম').toBe(false)
+    })
+})
+
+describe('partyVoucher — পক্ষের শাখা, কেবল তথ্য', () => {
+    it('বকেয়ার উত্তরের শাখা খবরে যায় — মাথার "শাখা: গ্রাহকের শাখা (…)"', () => {
+        const box = make()
+        box.$dispatch = vi.fn()
+        box.partyBranch = 'ময়মনসিংহ'
+        box.due = '10.00'
+        box.tellDue()
+        expect(box.$dispatch, '⛔ পক্ষের শাখা মাথায় পৌঁছায় না')
+            .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer', partyBranch: 'ময়মনসিংহ' })
     })
 })

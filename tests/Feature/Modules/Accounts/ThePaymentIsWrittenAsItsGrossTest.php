@@ -229,6 +229,37 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         $this->assertFalse($answer->json('needs_signature'), '⛔ সই বন্ধ, অথচ preview "সই লাগবে" বলল');
     }
 
+    /** ১০ — পরিশোধ ভাউচারে কাটা কর আর ভ্যাট পোস্টে করণীয় হয় (সরবরাহকারী-পরিশোধের একই তিন সারি); বাতিলে খোলা করণীয় ফেরে */
+    public function test_a_posted_payment_voucher_raises_its_tax_duties_and_a_cancel_withdraws_them(): void
+    {
+        $this->accepted($this->pay(['gross_amount' => '1000', 'ait_amount' => '50', 'vds_amount' => '75', 'instrument_no' => 'DUTY-1']), 'কাটাসহ পরিশোধ');
+        $voucher = $this->lastPayment();
+        $duties = fn () => \App\Modules\Accounts\Models\ComplianceObligation::query()
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])->where('source_id', $voucher->id);
+
+        $rows = $duties()->get()->map(fn ($o) => $o->kind.'|'.$o->subject.'|'.bcadd((string) $o->amount, '0', 2))->sort()->values()->all();
+        $this->assertSame(['kosagar_deposit|ait|50.00', 'kosagar_deposit|vds|75.00', 'mushak_6_6_issue|vds|75.00'], $rows,
+            '⛔ পরিশোধ ভাউচারের কাটা কর আর ভ্যাট করণীয় হয়নি — কোষাগারে জমা আর মূসক-৬.৬ কেউ মনে করাবে না: '.json_encode($rows));
+        $this->assertSame(0, $duties()->whereNull('due_on')->count(), '⛔ করণীয়ের শেষ দিন নেই');
+
+        app(\App\Modules\Accounts\Services\VoucherService::class)->cancel($voucher->fresh(), 'ভুল পরিশোধ');
+        $this->assertSame(0, $duties()->whereNull('cancelled_at')->count(), '⛔ বাতিল পরিশোধের করণীয় খোলা রইল — না-কাটা কর জমার তাগাদা');
+    }
+
+    /** ১১ — কাটা না থাকলে করণীয় নেই; কমলা লাইন কেবল পরিশোধে, কাটা থাকলে */
+    public function test_a_payment_without_withholding_raises_nothing_and_the_note_follows_the_withholding(): void
+    {
+        $this->accepted($this->pay(['gross_amount' => '1000', 'instrument_no' => 'DUTY-0']), 'কাটা ছাড়া পরিশোধ');
+        $voucher = $this->lastPayment();
+        $this->assertSame(0, \App\Modules\Accounts\Models\ComplianceObligation::query()
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])->where('source_id', $voucher->id)->count(), '⛔ কাটা ছাড়া পরিশোধেও করণীয় উঠল');
+
+        $payment = (string) $this->get(route('accounts.voucher.create', ['type' => Voucher::PAYMENT]))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/x-show="hasWithheld"[^>]*data-sum-tax-note/', $payment, '⛔ পরিশোধের সারাংশে নকশার কমলা "করণীয় তালিকায় উঠবে" লাইন নেই');
+        $receipt = (string) $this->get(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-sum-tax-note', $receipt, '⛔ রসিদে কমলা করণীয়ের লাইন — পক্ষের কাটা আমাদের জমার দায় নয়');
+    }
+
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
 
     /** @param  array<string, string>  $fields  @return array<string, mixed> */
