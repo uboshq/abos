@@ -240,15 +240,37 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
         /*
          * ⓘ খাতের ধরনটাই বলে লেনদেন-নম্বর লাগবে কি না। ⚠️ option-এ ধরন না
          * থাকলে পর্দা ব্যাংক বাছার পরেও নম্বরের ঘর আনতে পারে না।
+         *
+         * ⭐ ২৪ অক্টোবর ২০২৬ থেকে পদ্ধতি আগে (মালিকের প্রশ্ন, fe): পাতায় কেবল চলতি পদ্ধতির খাত আঁকা হয়, আর পদ্ধতির বাক্স
+         * ([[x-money.method]] `accounts`) সব খাতের ধরন জানে — পদ্ধতি বদলালে তালিকা সেখান থেকে আঁকে। ⓘ তাই দুই জায়গাই মাপা: আঁকা
+         * প্রতিটা option নিজের ধরন বলে, আর বাক্সের তালিকায় ব্যাংক আর MFS নিজের ধরনে।
          */
         foreach (['receipt' => 'to_account_id', 'payment' => 'from_account_id'] as $type => $name) {
-            $kinds = $this->optionKinds($type, $name);
+            foreach ($this->optionKinds($type, $name) as $id => $kind) {
+                $this->assertNotSame('', (string) $kind, "{$type}: খাত {$id}-এর option ধরন (data-kind) বলে না।");
+            }
 
-            $this->assertSame(Account::BANK, $kinds[(string) $this->bank->id] ?? null,
-                "{$type}: ব্যাংক খাতের option ধরন (data-kind) বলে না।");
-            $this->assertSame(Account::MFS, $kinds[(string) $this->mfs->id] ?? null,
-                "{$type}: MFS খাতের option ধরন (data-kind) বলে না।");
+            $box = $this->boxAccounts((string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent());
+
+            $this->assertSame(Account::BANK, $box[(string) $this->bank->id] ?? null,
+                "{$type}: পদ্ধতির বাক্সের তালিকায় ব্যাংক খাত নিজের ধরনে নেই।");
+            $this->assertSame(Account::MFS, $box[(string) $this->mfs->id] ?? null,
+                "{$type}: পদ্ধতির বাক্সের তালিকায় MFS খাত নিজের ধরনে নেই।");
         }
+    }
+
+    /**
+     * পদ্ধতির বাক্সের খাতের তালিকা — id => ধরন। ⓘ `@js` লেখে `JSON.parse('…')`, ভিতরে JS-এর `\u0022` — JSON-এর একই নিয়ম, তাই দুবার পড়া।
+     *
+     * @return array<string, string>
+     */
+    private function boxAccounts(string $html): array
+    {
+        preg_match('/x-data="(moneyMethod\([^"]*)"/', $html, $block);
+        preg_match("/accounts: JSON\\.parse\\('(.*?)'\\)/", html_entity_decode($block[1] ?? '', ENT_QUOTES), $list);
+        $rows = json_decode((string) json_decode('"'.($list[1] ?? '').'"'), true);
+
+        return collect(is_array($rows) ? $rows : [])->mapWithKeys(fn (array $r) => [(string) $r['id'] => (string) $r['kind']])->all();
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────

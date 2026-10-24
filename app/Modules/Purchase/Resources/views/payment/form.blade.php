@@ -143,25 +143,8 @@
                                     :label="__('money.screen.gross')" :value="$amount" />
                     </div>
 
-                    {{-- যে খাত থেকে | পদ্ধতি; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
+                    {{-- পদ্ধতি | যে খাত থেকে; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
                     <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="order-0 sm:col-span-2">
-                            <label class="block">
-                                <span class="mb-1 block text-sm font-medium">{{ __('money.screen.from_account') }} <span class="text-(--color-danger)">*</span></span>
-                                <select name="account_id" x-model="account" required data-money-account
-                                        class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
-                                    <option value="">—</option>
-                                    @foreach ($accounts as $a)
-                                        <option value="{{ $a->id }}" data-kind="{{ $a->money_kind }}" @selected($accountId === (string) $a->id)>{{ $a->code }} · {{ $a->name() }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
-                            <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
-                                {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                                <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
-                            </p>
-                        </div>
 
                         {{-- ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার জন্য (নকশা #৬; fe-র [[supplier::components.payee-bank]])।
                              ⓘ কেবল যাঁদের ব্যাংক তথ্য আছে তাঁদের বাক্স আঁকা হয় (একটা প্রশ্নে খোঁজা), বাছা সরবরাহকারীরটা দেখায়; বাকিদের "নেই" --}}
@@ -177,8 +160,23 @@
                             </template>
                         </div>
 
+                        {{--
+                            ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত — খাতের ঘর বাক্সের ভিতরে, পদ্ধতির ঠিক পরে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)।
+                            ⓘ ঘর `x-model="account"`-এ বাঁধা — স্থিতি, বিলে বসানো আর খাতায় যা যাবে আগের মতোই এটা দেখে।
+                        --}}
                         <x-money.method direction="out" inline slip-check :record="$isNew ? null : $payment" :modes="$modes"
-                                        :methods="['cash', 'mfs', 'transfer', 'cheque']" money-field="account_id" />
+                                        :methods="['cash', 'mfs', 'transfer', 'cheque']"
+                                        :accounts="$accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->code.' · '.$a->name(), 'kind' => (string) $a->money_kind])->values()->all()"
+                                        account-name="account_id" account-model="account" :account-label="__('money.screen.from_account')"
+                                        :account-selected="$accountId">
+                            <x-slot:account-note>
+                                {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
+                                <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
+                                    {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
+                                    <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
+                                </p>
+                            </x-slot:account-note>
+                        </x-money.method>
                     </div>
                 </section>
 
