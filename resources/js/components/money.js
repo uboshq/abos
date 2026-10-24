@@ -435,6 +435,7 @@ export function voucherMoney ({
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ "খাতে আছে কি না"-য়, আর প্রিভিউ নতুন করে */
         heard (detail) {
             this.charge = paisa(detail?.charge ?? 0)
+            this.way = String(detail?.method ?? '')
             this.slipSoon()
             this.refresh()
         },
@@ -472,9 +473,13 @@ export function voucherMoney ({
         },
         get postBranchText () { return String(this.preview?.branch ?? '') },
 
-        /* ⭐ এই খাতের আজকের ব্যাংক ফাইল (BEFTN) — খাত বাছা থাকলে; সার্ভার নিজে দেখে খাতটা ব্যাংক কি না */
+        /*
+         * ⭐ এই খাতের আজকের ব্যাংক ফাইল (BEFTN) — কেবল ব্যাংক ট্রান্সফারে, খাত বাছা থাকলে (পদ্ধতি আসে `money-method` ঘটনায়)।
+         * ⛔ নগদ বা চেকে লিংক দিলে ক্যাশ খাতের ফাইল চাইত — ৪০৪ (২৫ অক্টোবরের ছবিতে ধরা)
+         */
+        way: '',
         get bankFileHref () {
-            if (bankFileUrl === '' || this.account === '') return ''
+            if (bankFileUrl === '' || this.account === '' || this.way !== 'transfer') return ''
             const today = new Date()
             const day = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             return bankFileUrl + '?account=' + encodeURIComponent(this.account) + '&date=' + day

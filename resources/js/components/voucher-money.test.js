@@ -22,14 +22,14 @@ afterEach(() => {
     document.body.innerHTML = ''
 })
 
-async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' }, owedLabels = {}, branchLabels = {} } = {}) {
+async function mount ({ out = false, amount = '', account = '229', balances = { 229: '1000.00' }, owedLabels = {}, branchLabels = {}, bankFileUrl = '' } = {}) {
     // ⛔ JSON-এর ডবল কোট অ্যাট্রিবিউট আগেই শেষ করে দিত (cb_v15: বাক্সটা জোড়াই লাগেনি, পাঁচটা দাবি "not a function") — একক কোটে লেখা
     const balanceText = JSON.stringify(balances).replace(/"/g, "'")
     const labelText = JSON.stringify(owedLabels).replace(/"/g, "'")
     const branchText = JSON.stringify(branchLabels).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText} })">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText}, bankFileUrl: '${bankFileUrl}' })">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
@@ -260,5 +260,19 @@ describe('মাথার শাখা — তথ্য আর যেখান�
 
         data.preview = { ...data.preview, branch: 'প্রধান' }
         expect(data.postBranchText, '⛔ "পোস্ট হবে" সার্ভারের প্রিভিউর শাখা নয় — বাক্সের শাখা দেখায় না').toBe('প্রধান')
+    })
+})
+
+describe('ব্যাংক ফাইলের লিংক', () => {
+    it('কেবল ব্যাংক ট্রান্সফারে, বাছা খাতের আজকের ফাইল', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, bankFileUrl: '/accounts/vouchers/bank-file' })
+        clearTimeout(data.timer)
+
+        data.heard({ method: 'cash', charge: 0 })
+        expect(data.bankFileHref, '⛔ নগদে ব্যাংক ফাইলের লিংক — ক্যাশ খাতের ফাইল চাইত').toBe('')
+
+        data.heard({ method: 'transfer', charge: 0 })
+        expect(data.bankFileHref, '⛔ ট্রান্সফারে বাছা খাতের ব্যাংক ফাইলের লিংক নেই').toMatch(/^\/accounts\/vouchers\/bank-file\?account=229&date=\d{4}-\d{2}-\d{2}$/)
     })
 })
