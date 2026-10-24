@@ -314,16 +314,22 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $ait = Account::query()->where('code', StandardChart::TAX_DEDUCTED_AT_SOURCE)->firstOrFail();
         $ait->forceFill(['type' => Account::ASSET])->save();
 
-        $answer = $this->postJson(route('accounts.voucher.simulate'), [
+        $vouchers = Voucher::query()->count();
+
+        // ⓘ প্রিভিউ থামে ৪২২-এ, কারণ ঘর ধরে JSON-এর `errors`-এ (cb-ma-2-এ মাপা, ২৪ অক্টোবর ২০২৬)
+        $response = $this->postJson(route('accounts.voucher.simulate'), [
             'type' => Voucher::PAYMENT, 'narration' => 'অর্থ হারানো খাত', 'trx_date' => now()->toDateString(), 'amount' => '1000',
             'instrument' => 'transfer', 'instrument_no' => 'WH-LOST', 'ait_amount' => '50',
             'party_type' => 'supplier', 'party_id' => $supplier->id, 'from_account_id' => $bank->id,
-        ])->assertOk()->json();
+        ]);
 
-        $this->assertSame([], $answer['rows'] ?? null, '⛔ অর্থ হারানো ২১২১-এ কর্তন খাতায় বসতে যাচ্ছিল');
+        $this->assertSame(422, $response->status(), '⛔ অর্থ হারানো ২১২১-এ কর্তন থামেনি: '.$response->getContent());
+        $this->assertArrayNotHasKey('rows', (array) $response->json(), '⛔ অর্থ হারানো ২১২১-এ কর্তন খাতায় বসতে যাচ্ছিল');
+        $this->assertSame($vouchers, Voucher::query()->count(), '⛔ থামা প্রিভিউ ভাউচার লিখল');
+        $said = (string) $response->json('errors.ait_amount.0');
         $expected = array_map(fn (string $l) => trans('accounts::validation.withheld_account_not_its_meaning',
             ['code' => StandardChart::TAX_DEDUCTED_AT_SOURCE, 'account' => $ait->fresh()->label()], $l), ['bn', 'en']);
-        $this->assertContains($answer['message'] ?? null, $expected, '⛔ কর্তন থামল, কিন্তু খাতের অর্থের কারণে নয়: '.($answer['message'] ?? ''));
+        $this->assertContains($said, $expected, '⛔ কর্তন থামল, কিন্তু খাতের অর্থের কারণে নয়: '.$said);
     }
 
     /** ১২ — রসিদে ছকের ১১৩৫ কোডে ব্যাংক বসে থাকলে পক্ষের কাটা AIT থামে, নিজের কারণে — নাহলে কাটা কর "ব্যাংকে টাকা" হয়ে দেখা দিত */
@@ -334,16 +340,21 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $ait = Account::query()->where('code', StandardChart::ADVANCE_INCOME_TAX)->firstOrFail();
         $ait->forceFill(['money_kind' => Account::BANK])->save();
 
-        $answer = $this->postJson(route('accounts.voucher.simulate'), [
+        $vouchers = Voucher::query()->count();
+
+        $response = $this->postJson(route('accounts.voucher.simulate'), [
             'type' => Voucher::RECEIPT, 'narration' => 'ব্যাংক হয়ে যাওয়া ১১৩৫', 'trx_date' => now()->toDateString(), 'amount' => '1000',
             'instrument' => 'transfer', 'instrument_no' => 'WH-1135', 'ait_amount' => '60', 'vds_amount' => '40',
             'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
-        ])->assertOk()->json();
+        ]);
 
-        $this->assertSame([], $answer['rows'] ?? null, '⛔ ব্যাংক হয়ে যাওয়া ১১৩৫-এ পক্ষের কাটা AIT খাতায় বসতে যাচ্ছিল');
+        $this->assertSame(422, $response->status(), '⛔ ব্যাংক হয়ে যাওয়া ১১৩৫-এ পক্ষের কাটা AIT থামেনি: '.$response->getContent());
+        $this->assertArrayNotHasKey('rows', (array) $response->json(), '⛔ ব্যাংক হয়ে যাওয়া ১১৩৫-এ পক্ষের কাটা AIT খাতায় বসতে যাচ্ছিল');
+        $this->assertSame($vouchers, Voucher::query()->count(), '⛔ থামা প্রিভিউ ভাউচার লিখল');
+        $said = (string) $response->json('errors.ait_amount.0');
         $expected = array_map(fn (string $l) => trans('accounts::validation.withheld_by_party_not_its_meaning',
             ['code' => StandardChart::ADVANCE_INCOME_TAX, 'account' => $ait->fresh()->label()], $l), ['bn', 'en']);
-        $this->assertContains($answer['message'] ?? null, $expected, '⛔ রসিদ থামল, কিন্তু ১১৩৫-এর অর্থের কারণে নয়: '.($answer['message'] ?? ''));
+        $this->assertContains($said, $expected, '⛔ রসিদ থামল, কিন্তু ১১৩৫-এর অর্থের কারণে নয়: '.$said);
     }
 
     /** ১৩ — দুই পর্দায় নাম বাছা ভাগ করা পিকারে, দুই লাইনে আর "+ নতুন নাম"-সহ; নতুন নামের ঘর আগের নামেই */
