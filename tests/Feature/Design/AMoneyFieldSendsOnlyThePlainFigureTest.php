@@ -65,6 +65,12 @@ final class AMoneyFieldSendsOnlyThePlainFigureTest extends TestCase
                 $this->assertMatchesRegularExpression(
                     '/<input\b[^>]*data-money-shown="'.preg_quote($name, '/').'"[^>]*x-money-display="'.preg_quote($model, '/').'"[^>]*>/', $html,
                     "⛔ {$screen}: {$name}-এর দেখানোর ঘর (লাখ-কমার directive) নেই");
+
+                // ⭐ লেবেল দেখানোর ঘরকে নির্দেশ করে — পর্দা-পাঠক আর চাপলে ঘরে ঢোকা দুটোই এর উপর (fe, ২৪ অক্টোবর ২০২৬)
+                $id = $this->shownId($html, $name);
+                $this->assertNotNull($id, "⛔ {$screen}: {$name}-এর দেখানোর ঘরের id নেই — লেবেল কোনো ঘরে বাঁধা নয়");
+                $this->assertMatchesRegularExpression('/<label\b[^>]*\bfor="'.preg_quote((string) $id, '/').'"/', $html,
+                    "⛔ {$screen}: {$name}-এর লেবেল দেখানোর ঘরকে ({$id}) নির্দেশ করে না");
             }
 
             preg_match_all('/<input\b[^>]*data-money-shown="[^"]*"[^>]*>/', $html, $shown);
@@ -72,6 +78,34 @@ final class AMoneyFieldSendsOnlyThePlainFigureTest extends TestCase
                 $this->assertDoesNotMatchRegularExpression('/\bname="/', $tag, "⛔ {$screen}: দেখানোর ঘরের নাম আছে — কমা পাঠানো হত: {$tag}");
             }
         }
+    }
+
+    public function test_a_wrong_figure_is_marked_on_the_field_people_see_not_the_hidden_one(): void
+    {
+        // ⓘ ফেরত-আসা ভুল — দরজা যেমন রাখে তেমন, সেশনের errors-এ
+        $bag = (new \Illuminate\Support\ViewErrorBag)->put('default', new \Illuminate\Support\MessageBag(['amount' => ['⛔ টাকা ভুল']]));
+        $html = (string) $this->withSession(['errors' => $bag])->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk()->getContent();
+
+        $id = $this->shownId($html, 'amount');
+        $this->assertNotNull($id, 'পর্দাটাই ঠিক নয় — টাকার দেখানোর ঘর নেই');
+
+        preg_match('/<input\b[^>]*data-money-shown="amount"[^>]*>/', $html, $shown);
+        preg_match('/<input\b[^>]*type="hidden"[^>]*name="amount"[^>]*>/', $html, $hidden);
+
+        $this->assertStringContainsString('aria-invalid="true"', $shown[0] ?? '', '⛔ ভুলের দাগ দেখানোর ঘরে নেই — পর্দা-পাঠক ভুলটা বলত না');
+        $this->assertMatchesRegularExpression('/aria-describedby="[^"]*\b'.preg_quote((string) $id, '/').'-error\b/', $shown[0] ?? '',
+            '⛔ দেখানোর ঘর ভুলের বার্তাকে নির্দেশ করে না');
+        $this->assertStringContainsString('id="'.$id.'-error"', $html, '⛔ ভুলের বার্তা ঘরের পাশে আসেনি');
+        $this->assertStringContainsString('⛔ টাকা ভুল', $html, '⛔ ভুলের বার্তাটাই দেখা গেল না');
+        $this->assertStringNotContainsString('aria-invalid', $hidden[0] ?? '', '⛔ ভুলের দাগ লুকানো ঘরে — কেউ দেখত না');
+    }
+
+    /** দেখানোর ঘরের id — লেবেল আর ভুলের বার্তা এটাই নির্দেশ করে */
+    private function shownId(string $html, string $name): ?string
+    {
+        preg_match('/<input\b[^>]*data-money-shown="'.preg_quote($name, '/').'"[^>]*>/', $html, $tag);
+
+        return isset($tag[0]) && preg_match('/\bid="([^"]+)"/', $tag[0], $id) ? $id[1] : null;
     }
 
     private function screen(string $screen): string
