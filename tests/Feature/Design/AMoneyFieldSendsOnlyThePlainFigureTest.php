@@ -82,9 +82,13 @@ final class AMoneyFieldSendsOnlyThePlainFigureTest extends TestCase
 
     public function test_a_wrong_figure_is_marked_on_the_field_people_see_not_the_hidden_one(): void
     {
-        // ⓘ ফেরত-আসা ভুল — দরজা যেমন রাখে তেমন, সেশনের errors-এ
-        $bag = (new \Illuminate\Support\ViewErrorBag)->put('default', new \Illuminate\Support\MessageBag(['amount' => ['⛔ টাকা ভুল']]));
-        $html = (string) $this->withSession(['errors' => $bag])->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk()->getContent();
+        /*
+         * ⓘ ফেরত-আসা ভুল — সেশনের errors-এ, json সেশনের নিজের আকারে (['default' => ['format', 'messages']])। ⛔ ViewErrorBag বস্তু
+         * দিলে সেশন শুরুতে সেটা নতুন করে গড়ে (marshalErrorBag) আর খালি ব্যাগ পায় — ভুলটা পাতায় পৌঁছাতই না (cb-md-1-এর প্রথম লাল)।
+         */
+        $errors = ['default' => ['format' => ':message', 'messages' => ['amount' => ['⛔ টাকা ভুল']]]];
+        $html = (string) $this->withSession(['errors' => $errors])->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk()->getContent();
+        $this->assertStringContainsString('⛔ টাকা ভুল', $html, 'দৃশ্যটাই ঠিক নয় — ফেরত-আসা ভুল পাতায় পৌঁছায়নি');
 
         $id = $this->shownId($html, 'amount');
         $this->assertNotNull($id, 'পর্দাটাই ঠিক নয় — টাকার দেখানোর ঘর নেই');
