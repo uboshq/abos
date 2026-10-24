@@ -222,8 +222,10 @@
 
     @if ($addable)
         {{-- ⓘ নামটা বসে ব্যক্তি হিসেবে (`mdm_people`) — পরের বার তালিকাতেই পাওয়া যায়; একই মানুষ তিন বানানে তিনজন হন না --}}
-        <div class="mt-2" x-show="adding" x-cloak data-party-new>
-            <div @class(['grid gap-2', 'sm:grid-cols-2' => $addMobile !== false])>
+        {{-- ⓘ নাম আর মোবাইল পাশাপাশি কেবল ঘরের নিজের জায়গায় কুলালে (`@container`, ২০rem = ১৩৬৬-এ ৪০০px) — রসিদ-পরিশোধের সরু পক্ষের
+             ঘরে (~২৪০px) পর্দা-মাপের `sm:` দুই কলাম দিত, আর "নতুন দোকান রহিম" কাটা পড়ত, মোবাইলের ঘর আঙুলের মাপও নয় (মাপা, ২৫ অক্টোবর ২০২৬) --}}
+        <div class="@container mt-2" x-show="adding" x-cloak data-party-new>
+            <div @class(['grid gap-2', '@xs:grid-cols-2' => $addMobile !== false])>
                 <x-ui.field :name="$addName" :id="$uid.'-new'"
                             :label="__('accounts::field.party_new_name')"
                             :value="old($addName)"

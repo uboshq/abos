@@ -566,6 +566,21 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $this->assertContains($labels[1] ?? null, [trans('money.screen.head.this', [], 'bn'), trans('money.screen.head.this', [], 'en')], '⛔ মাথার দ্বিতীয় অঙ্কের নাম নেই');
     }
 
+    /** ২৩ — নতুন নাম আর মোবাইল পাশাপাশি কেবল ঘরের নিজের জায়গায় কুলালে; সরু পক্ষের ঘরে (১৩৬৬-এ ~২৪০px) একটার নিচে আরেকটা */
+    public function test_the_new_name_and_mobile_stack_in_a_narrow_party_cell(): void
+    {
+        foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
+            $xpath = $this->dom($this->screen($type));
+            $box = $xpath->query('//*[@data-party-picker-cell]//*[@data-party-new]')->item(0);
+            $this->assertInstanceOf(DOMElement::class, $box, "দৃশ্যটাই ঠিক নয় — {$type}: নতুন নামের ঘর নেই");
+            $this->assertContains('@container', preg_split('/\s+/', $box->getAttribute('class')), "⛔ {$type}: নতুন নামের ঘর নিজের চওড়া মাপে না — পর্দার মাপে দুই কলাম হয়");
+
+            $grid = preg_split('/\s+/', (string) $xpath->query('./div', $box)->item(0)?->getAttribute('class'));
+            $this->assertContains('@xs:grid-cols-2', $grid, "⛔ {$type}: জায়গা থাকলেও নাম আর মোবাইল পাশাপাশি নয়");
+            $this->assertNotContains('sm:grid-cols-2', $grid, "⛔ {$type}: সরু পক্ষের ঘরেও নাম আর মোবাইল পাশাপাশি — \"নতুন দোকান রহিম\" কাটা পড়ে");
+        }
+    }
+
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
 
     private function screen(string $type): string
