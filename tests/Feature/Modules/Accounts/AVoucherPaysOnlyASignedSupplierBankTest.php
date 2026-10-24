@@ -156,10 +156,15 @@ final class AVoucherPaysOnlyASignedSupplierBankTest extends TestCase
         ], fn ($v) => $v !== null);
     }
 
-    /** @return list<string> */
+    /**
+     * ⓘ কার ব্যাংক আর কোন পাতা — দুটোই বার্তায় (fe, ২৫ অক্টোবর ২০২৬)।
+     *
+     * @return list<string>
+     */
     private function unsignedMessages(): array
     {
-        return array_map(fn (string $l) => trans('supplier::bank.unsigned_blocks_payment', [], $l), ['bn', 'en']);
+        return array_map(fn (string $l) => trans('supplier::bank.unsigned_blocks_voucher',
+            ['supplier' => $this->supplier->name($l), 'url' => route('supplier.show', $this->supplier->id)], $l), ['bn', 'en']);
     }
 
     private function postedCount(): int
