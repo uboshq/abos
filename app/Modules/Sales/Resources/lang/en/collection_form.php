@@ -111,6 +111,11 @@ return [
     'post' => 'Post',
     'post_for_signature' => 'Send for signature',
 
+    'list_posted' => 'Posted collections',
+    'list_drafts' => 'Drafts',
+    'list_waiting' => 'Awaiting signature',
+    'list_count_money' => ':count · ৳:money',
+
     'overview_title' => 'Receive money — what goes to the books',
     'dr' => 'Debit',
     'cr' => 'Credit',

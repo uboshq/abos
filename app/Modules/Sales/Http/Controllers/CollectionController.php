@@ -12,6 +12,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\StandardChart;
@@ -34,6 +35,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -102,13 +104,29 @@ class CollectionController extends Controller implements HasMiddleware
          */
         $totalled = (clone $query)->reorder();
 
+        /*
+         * ⛔ মোটে কেবল পাকা আদায় — নিশ্চিত আর বন্ধ, ফোনের মোটের মতোই ([[CollectionApiController::index()]]; a4-এর নিরীক্ষা,
+         * fe ২৪ অক্টোবর ২০২৬)। আগে খসড়াও গোনা হত, তাই ওয়েব আর ফোন একই দিনের আদায়ে আলাদা মোট বলত, আর খাতায় না-ওঠা
+         * টাকা "আদায়" হয়ে দেখাত। খসড়া আর সইয়ের অপেক্ষা আলাদা লাইনে — সংখ্যা আর টাকা।
+         */
+        $posted = (clone $totalled)->whereIn('sal_collections.status', DocumentStatus::POSTED);
+        $drafts = (clone $totalled)->where('sal_collections.status', DocumentStatus::DRAFT);
+        $signing = fn ($q) => $q->select(DB::raw(1))->from('approvals')
+            ->where('approvals.approvable_type', Collection::class)
+            ->whereColumn('approvals.approvable_id', 'sal_collections.id')
+            ->where('approvals.status', Approval::PENDING);
+        $waiting = (clone $drafts)->whereExists($signing);
+        $plain = (clone $drafts)->whereNotExists($signing);
+
         return view('sales::collection.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
+            'grand' => $this->grandTotals((clone $query)->whereIn('sal_collections.status', DocumentStatus::POSTED), ['amount' => 't.amount']),
             'collections' => $query->paginate(50)->withQueryString(),
             'totals' => [
                 'rows' => (clone $totalled)->count(),
-                'money' => (clone $totalled)->sum('amount'),
+                'money' => (string) (clone $posted)->sum('sal_collections.amount'),
+                'drafts' => ['count' => (clone $plain)->count(), 'money' => (string) (clone $plain)->sum('sal_collections.amount')],
+                'waiting' => ['count' => (clone $waiting)->count(), 'money' => (string) (clone $waiting)->sum('sal_collections.amount')],
             ],
             'q' => $request->query('q'),
             'dates' => $dates,

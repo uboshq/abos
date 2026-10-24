@@ -248,6 +248,61 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->balanced($collection);
     }
 
+    /**
+     * তালিকার মোট — কেবল পাকা আদায়, ওয়েবে আর ফোনে একই (a4-এর নিরীক্ষা, fe ২৪ অক্টোবর ২০২৬): ওয়েব খসড়াও গুনত, ফোন গুনত
+     * কেবল নিশ্চিত আর বন্ধ। একটা পাকা (৳১,০০০), একটা সইয়ের অপেক্ষায় (৳০.৫১ রাউন্ডিং), একটা সাধারণ খসড়া (৳৭৭৭) — মোটে
+     * কেবল পাকারা; খসড়া আর সইয়ের অপেক্ষা নিজের লাইনে, সংখ্যা আর টাকায়। ⓘ ডেমোর আদায়ও আছে, আর ওয়েবে মাথার শাখার
+     * ছাঁকনি — তাই প্রতিটা দরজা তিন কাগজের আগে আর পরে মাপা হয়, আর বদলটাই দাবি।
+     */
+    public function test_the_list_total_counts_only_posted_collections_on_the_web_and_the_phone_alike(): void
+    {
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        $first = $this->bill('INV-CF-TOT1', 5, '1000');
+        $second = $this->bill('INV-CF-TOT2', 5, '1000.51');
+        $day = now()->toDateString();
+        $two = fn (string|int|float|null $money): string => bcadd((string) ($money ?? '0'), '0', 2);
+        $web = function () use ($day, $two): array {
+            $page = $this->actingAs($this->owner)->get(route('sales.collection.index', ['from' => $day, 'to' => $day]))->assertOk();
+            $totals = $page->viewData('totals');
+
+            return ['money' => $two($totals['money']), 'grand' => $two($page->viewData('grand')['amount'] ?? '0'),
+                'drafts' => [$totals['drafts']['count'], $two($totals['drafts']['money'])],
+                'waiting' => [$totals['waiting']['count'], $two($totals['waiting']['money'])], 'page' => $page];
+        };
+        $phone = function () use ($day, $two): string {
+            \Laravel\Sanctum\Sanctum::actingAs($this->owner, [\App\Http\Controllers\Api\AuthController::APP]);
+
+            return $two($this->getJson('/api/v1/sales/collections?from='.$day.'&to='.$day)->assertOk()->json('total'));
+        };
+        $webBefore = $web();
+        $phoneBefore = $phone();
+
+        $posted = $this->book(['amount' => '1000', 'lines' => [['kind' => 'bill', 'id' => $first->public_id, 'amount' => '1000']]]);
+        $waiting = $this->bookAllowingStops(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '0.51'],
+            'lines' => [['kind' => 'bill', 'id' => $second->public_id, 'amount' => '1000.51']]]);
+        $last = (int) Collection::acrossBranches()->max('id');
+        $this->send(['amount' => '777']);
+        $draft = Collection::acrossBranches()->where('id', '>', $last)->latest('id')->firstOrFail();
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $posted->status, '⛔ পাকা আদায়টাই বসেনি');
+        $this->assertSame(DocumentStatus::DRAFT, $waiting->status, '⛔ রাউন্ডিংয়ের আদায় সইয়ের অপেক্ষায় থামেনি');
+        $this->assertSame(DocumentStatus::DRAFT, $draft->status, '⛔ খসড়াটা খসড়া নয়');
+
+        $after = $web();
+        $grew = fn (string $then, string $now): string => bcsub($now, $then, 2);
+        $this->assertSame('1000.00', $grew($webBefore['money'], $after['money']),
+            '⛔ ওয়েবের মোট পাকা আদায়ের ৳১,০০০ বাড়েনি, বা খসড়া/সইয়ের অপেক্ষার টাকা ঢুকেছে — মোট কেবল পাকা আদায়ের');
+        $this->assertSame('1000.00', $grew($webBefore['grand'], $after['grand']), '⛔ তালিকার টাকার কলামের যোগে খসড়া বা সইয়ের অপেক্ষা ঢুকেছে');
+        $this->assertSame([1, '777.00'], [$after['drafts'][0] - $webBefore['drafts'][0], $grew($webBefore['drafts'][1], $after['drafts'][1])],
+            '⛔ খসড়ার লাইন নতুন খসড়াটা (১টি, ৳৭৭৭) বলেনি');
+        $this->assertSame([1, '1000.00'], [$after['waiting'][0] - $webBefore['waiting'][0], $grew($webBefore['waiting'][1], $after['waiting'][1])],
+            '⛔ সইয়ের অপেক্ষার লাইন রাউন্ডিংয়ের আদায়টা (১টি, ৳১,০০০) বলেনি');
+        $after['page']->assertSee(__('sales::collection_form.list_posted'))->assertSee(__('sales::collection_form.list_waiting'));
+
+        $this->assertSame('1000.00', $grew($phoneBefore, $phone()), '⛔ ফোনের মোট পাকা আদায়ের ৳১,০০০ বাড়েনি, বা খসড়া ঢুকেছে');
+        $this->assertSame($after['money'], $phone(), '⛔ ওয়েব আর ফোন একই দিনের আদায়ে আলাদা মোট বলল');
+    }
+
     /** দফা ৪ — অনুমোদন বন্ধ কোম্পানিতে ৳০.৫১ রাউন্ডিং ফেরত (fail-closed, ছাড়ের মতোই): খসড়া, খাতায় কিছু নয়, বাংলায় কারণ */
     public function test_item_4_rounding_above_fifty_paisa_with_approvals_off_is_refused(): void
     {
