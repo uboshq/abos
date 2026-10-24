@@ -17,6 +17,7 @@ import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
+import 'money_voucher_screen.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -189,8 +190,11 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       return;
     }
     final formType = type == _otherIncome ? VoucherTypes.receipt : type;
+    // ⭐ পরিশোধ আর খরচ — ওয়েবের টাকা দেওয়ার পর্দার গড়নে ([MoneyVoucherScreen]; মালিক, ২১ ও ২৪ অক্টোবর ২০২৬); বাকিরা আগের ফর্মে
     final landed = await Navigator.of(context).push<String>(MaterialPageRoute(
-        builder: (_) => VoucherFormScreen(type: formType, api: widget.api, newChangeId: widget.newChangeId)));
+        builder: (_) => formType == VoucherTypes.payment || formType == VoucherTypes.expense
+            ? MoneyVoucherScreen(type: formType, api: widget.api, newChangeId: widget.newChangeId)
+            : VoucherFormScreen(type: formType, api: widget.api, newChangeId: widget.newChangeId)));
     if (!mounted) return;
     await _load();
     if (landed != null && mounted) {
@@ -634,7 +638,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
       showModalBottomSheet<T>(
         context: context,
         isScrollControlled: true,
-        builder: (_) => _PickSheet<T>(title: title, options: options, label: label, keyPrefix: key),
+        builder: (_) => VoucherPickSheet<T>(title: title, options: options, label: label, keyPrefix: key),
       );
 
   Future<void> _pickDate() async {
@@ -804,8 +808,8 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
   }
 }
 
-class _PickSheet<T> extends StatefulWidget {
-  const _PickSheet({required this.title, required this.options, required this.label, this.keyPrefix});
+class VoucherPickSheet<T> extends StatefulWidget {
+  const VoucherPickSheet({super.key, required this.title, required this.options, required this.label, this.keyPrefix});
 
   final String title;
   final List<T> options;
@@ -813,10 +817,10 @@ class _PickSheet<T> extends StatefulWidget {
   final String? keyPrefix;
 
   @override
-  State<_PickSheet<T>> createState() => _PickSheetState<T>();
+  State<VoucherPickSheet<T>> createState() => _VoucherPickSheetState<T>();
 }
 
-class _PickSheetState<T> extends State<_PickSheet<T>> {
+class _VoucherPickSheetState<T> extends State<VoucherPickSheet<T>> {
   String _q = '';
 
   @override

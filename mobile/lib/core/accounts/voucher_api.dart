@@ -78,15 +78,66 @@ class VoucherSide {
 }
 
 class VoucherParty {
-  const VoucherParty({required this.type, required this.id, required this.label, this.hint});
+  const VoucherParty({
+    required this.type,
+    required this.id,
+    required this.label,
+    this.hint,
+    this.name,
+    this.typeLabel = '',
+    this.due,
+    this.bank,
+  });
 
   final String type;
   final int id;
+
+  /// পুরনো ফর্মের লেখা — "নাম · ধরন"
   final String label;
   final String? hint;
 
+  /// সার্ভারের নিজের নাম ("নাম · পয়েন্ট · শাখা"); না এলে [label]
+  final String? name;
+  final String typeLabel;
+
+  /// ⭐ এখন পক্ষের বকেয়া/পাওনা, পয়সায় — সার্ভার পাঠালে (`due`); ⓘ 2bddefbb0 পর্যন্ত পাঠায় না, তখন null আর মাথায় "—"
+  final int? due;
+
+  /// ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার (`bank`: {state, line}); সার্ভার না পাঠালে null
+  final PayeeBank? bank;
+
   /// ওয়েবের ফর্মের একটা ঘর — `type:id` ([[VoucherRequest::prepareForValidation]])
   String get key => '$type:$id';
+
+  String get shownName => (name ?? '').trim().isNotEmpty ? name! : label;
+}
+
+/// ⭐ সরবরাহকারীর ব্যাংক — ওয়েবের `x-supplier::payee-bank`-এর একই তিন অবস্থা: `signed` (দুজনের সইয়ে যাচাই-করা), `pending`
+/// (বদল সইয়ের অপেক্ষায়), `none`। ⛔ `signed` ছাড়া ব্যাংকে পরিশোধ নয় ([[SupplierBank::assertBankPayable()]])।
+class PayeeBank {
+  const PayeeBank({required this.state, this.line = ''});
+
+  final String state;
+
+  /// "ব্যাংক · শাখা · নাম · হিসাব ••••4521 · রাউটিং …" — সার্ভারের লেখা, পুরো নম্বর কখনো নয়
+  final String line;
+
+  bool get signed => state == 'signed';
+
+  static PayeeBank? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final state = raw['state']?.toString() ?? '';
+    if (state.isEmpty) return null;
+    return PayeeBank(state: state, line: raw['line']?.toString() ?? '');
+  }
+}
+
+/// ব্যাংক ট্রান্সফারের মোড (BEFTN · NPSB · RTGS) — `transfer_mode_id` সংখ্যায় ([[VoucherRequest]])
+class VoucherTransferMode {
+  const VoucherTransferMode({required this.id, required this.name});
+
+  final int id;
+  final String name;
 }
 
 class VoucherSetup {
@@ -99,6 +150,8 @@ class VoucherSetup {
     this.to,
     this.accounts = const [],
     this.parties = const [],
+    this.partyTypes = const [],
+    this.transferModes,
   });
 
   final String type;
@@ -111,6 +164,12 @@ class VoucherSetup {
   /// জাবেদার সারির খাত
   final List<VoucherAccount> accounts;
   final List<VoucherParty> parties;
+
+  /// পক্ষের ধরন, সার্ভারের ক্রমে — (ধরন, নাম)
+  final List<(String, String)> partyTypes;
+
+  /// ⓘ সার্ভার `transfer_modes` পাঠালে তবেই মোডের ঘর; না পাঠালে null (2bddefbb0 পর্যন্ত ভাউচারের সেটআপে নেই)
+  final List<VoucherTransferMode>? transferModes;
 
   factory VoucherSetup.fromJson(Map<String, dynamic> j) => VoucherSetup(
         type: j['type']?.toString() ?? '',
@@ -133,8 +192,23 @@ class VoucherSetup {
                     id: (p['id'] as num?)?.toInt() ?? 0,
                     label: '${p['label'] ?? ''} · ${g['label'] ?? ''}',
                     hint: p['hint']?.toString(),
+                    name: p['label']?.toString(),
+                    typeLabel: g['label']?.toString() ?? '',
+                    due: p['due'] == null ? null : ((Money.value(p['due']) ?? 0) * 100).round(),
+                    bank: PayeeBank.fromJson(p['bank']),
                   ),
         ],
+        partyTypes: [
+          for (final g in (j['parties'] as List?) ?? const [])
+            if (g is Map && (g['type']?.toString() ?? '').isNotEmpty) (g['type'].toString(), g['label']?.toString() ?? ''),
+        ],
+        transferModes: j['transfer_modes'] is List
+            ? [
+                for (final m in j['transfer_modes'] as List)
+                  if (m is Map && (m['id'] as num?) != null)
+                    VoucherTransferMode(id: (m['id'] as num).toInt(), name: m['name']?.toString() ?? ''),
+              ]
+            : null,
       );
 }
 
@@ -475,6 +549,19 @@ class VoucherDraft {
     this.instrumentNo,
     this.lines = const [],
     this.keepAsDraft = false,
+    this.partyType,
+    this.partyId,
+    this.transferModeId,
+    this.valueDate,
+    this.chargeAmount,
+    this.instrumentDate,
+    this.fromBank,
+    this.expenseAccountId,
+    this.payeeName,
+    this.billNo,
+    this.grossAmount,
+    this.aitAmount,
+    this.vdsAmount,
   });
 
   final String type;
@@ -491,10 +578,38 @@ class VoucherDraft {
   final List<Map<String, dynamic>> lines;
   final bool keepAsDraft;
 
+  // ── ⭐ টাকা দেওয়ার পর্দার ঘর — ওয়েবের পরিশোধ আর খরচের একই নাম (cb 2bddefbb0: simple-form, party-fields,
+  // expense-fields, x-money.method; [[VoucherRequest::rules()]]) ──
+
+  /// পক্ষ দুই ঘরে, ওয়েবের মতো (`party_type`, `party_id`) — [party]-র `type:id`-এর বদলে
+  final String? partyType;
+  final int? partyId;
+  final int? transferModeId;
+  final DateTime? valueDate;
+
+  /// ব্যাংক বা MFS-এর চার্জ — আমাদের খরচ, চার্জের খাতে ("কে দিল" নেই)
+  final String? chargeAmount;
+  final DateTime? instrumentDate;
+
+  /// চেকের ব্যাংক
+  final String? fromBank;
+
+  /// খরচের খাত — ওয়েব একই খাত `to_account_id`-তেও পাঠায়
+  final int? expenseAccountId;
+  final String? payeeName;
+  final String? billNo;
+  final String? grossAmount;
+  final String? aitAmount;
+  final String? vdsAmount;
+
+  static String _day(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  static bool _filled(String? s) => (s ?? '').trim().isNotEmpty;
+
   Map<String, dynamic> toPayload() => {
         'type': type,
-        'trx_date':
-            '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+        'trx_date': _day(date),
         if (narration.trim().isNotEmpty) 'narration': narration.trim(),
         if (type == VoucherTypes.journal)
           'lines': lines
@@ -503,8 +618,20 @@ class VoucherDraft {
           'to_account_id': toAccountId,
           'amount': amount,
           if (party != null && party!.isNotEmpty) 'party': party,
+          if (_filled(partyType) && partyId != null) ...{'party_type': partyType, 'party_id': partyId},
           if (instrument != null) 'instrument': instrument,
-          if ((instrumentNo ?? '').trim().isNotEmpty) 'instrument_no': instrumentNo!.trim(),
+          if (_filled(instrumentNo)) 'instrument_no': instrumentNo!.trim(),
+          if (transferModeId != null) 'transfer_mode_id': transferModeId,
+          if (valueDate != null) 'value_date': _day(valueDate!),
+          if (_filled(chargeAmount)) 'charge_amount': chargeAmount!.trim(),
+          if (instrumentDate != null) 'instrument_date': _day(instrumentDate!),
+          if (_filled(fromBank)) 'from_bank': fromBank!.trim(),
+          if (expenseAccountId != null) 'expense_account_id': expenseAccountId,
+          if (_filled(payeeName)) 'payee_name': payeeName!.trim(),
+          if (_filled(billNo)) 'bill_no': billNo!.trim(),
+          if (_filled(grossAmount)) 'gross_amount': grossAmount!.trim(),
+          if (_filled(aitAmount)) 'ait_amount': aitAmount!.trim(),
+          if (_filled(vdsAmount)) 'vds_amount': vdsAmount!.trim(),
         },
         if (keepAsDraft) 'save_as_draft': true,
       };

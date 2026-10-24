@@ -3213,6 +3213,202 @@
       }
     }
   },
+  "payFigureOwed": "পাওনা",
+  "@payFigureOwed": {
+    "description": "Payment voucher, top figures: what we owe the party now"
+  },
+  "payFigureThis": "এই পরিশোধ",
+  "@payFigureThis": {
+    "description": "Payment voucher, top figures: the amount of this payment"
+  },
+  "payFigureAdvance": "অগ্রিম দেওয়া হবে",
+  "@payFigureAdvance": {
+    "description": "Payment voucher, top figures: what is paid beyond what we owe (an advance)"
+  },
+  "payPartyType": "পক্ষের ধরন *",
+  "@payPartyType": {
+    "description": "Payment voucher: label over the party type chips (supplier, customer, staff …)"
+  },
+  "payParty": "পক্ষ *",
+  "@payParty": {
+    "description": "Payment voucher: the party field (name · point · branch)"
+  },
+  "payPickParty": "পক্ষ বাছুন",
+  "@payPickParty": {
+    "description": "Payment voucher: screen-reader hint on the empty party field"
+  },
+  "payDueBeside": "পাওনা {amount}",
+  "@payDueBeside": {
+    "description": "Payment voucher: what we owe the chosen party, beside the name",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payFromAccount": "যে খাত থেকে *",
+  "@payFromAccount": {
+    "description": "Payment and expense voucher: the money account the money leaves (only the chosen method's accounts)"
+  },
+  "payAccountNone": "এই কোম্পানিতে {method}-এর কোনো খাত নেই — হিসাবরক্ষককে বলুন।",
+  "@payAccountNone": {
+    "description": "Payment and expense voucher: the chosen method has no account",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "payOnCredit": "বাকিতে — {account} (দেনা তৈরি হবে)",
+  "@payOnCredit": {
+    "description": "Expense voucher: a payable account in the paid-from list",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "payOnCreditNote": "টাকা এখন যাচ্ছে না — এই খরচটা দেনা হিসেবে বসবে, আর পরে পরিশোধ করতে হবে।",
+  "@payOnCreditNote": {
+    "description": "Expense voucher: note when the expense is on credit"
+  },
+  "payCreditParty": "কার কাছে দেনা *",
+  "@payCreditParty": {
+    "description": "Expense voucher on credit: the party the payable is owed to"
+  },
+  "payTrxId": "TrxID *",
+  "@payTrxId": {
+    "description": "Payment and expense voucher, MFS: the transaction ID"
+  },
+  "payChequeNo": "চেক নম্বর *",
+  "@payChequeNo": {
+    "description": "Payment and expense voucher, cheque: the cheque number"
+  },
+  "payChequeBank": "চেকের ব্যাংক",
+  "@payChequeBank": {
+    "description": "Payment and expense voucher, cheque: the bank of the cheque"
+  },
+  "payMfsCharge": "MFS চার্জ (৳)",
+  "@payMfsCharge": {
+    "description": "Payment and expense voucher, MFS: the charge the MFS took"
+  },
+  "payChargeOurs": "চার্জ {charge} আমাদের খরচ — চার্জের খাতে যাবে।",
+  "@payChargeOurs": {
+    "description": "Payment and expense voucher: where the bank or MFS charge goes",
+    "placeholders": {
+      "charge": {
+        "type": "String"
+      }
+    }
+  },
+  "payPayeeBank": "প্রাপকের ব্যাংক (সরবরাহকারীর রেকর্ড থেকে — এখানে বদলায় না)",
+  "@payPayeeBank": {
+    "description": "Payment voucher to a supplier: the read-only bank box"
+  },
+  "payPayeeBankVerified": "দুজনের সইয়ে যাচাই-করা",
+  "@payPayeeBankVerified": {
+    "description": "Payment voucher: the supplier bank details carry both signatures (a tick icon stands before it)"
+  },
+  "payPayeeBankNone": "প্রাপকের ব্যাংক তথ্য নেই",
+  "@payPayeeBankNone": {
+    "description": "Payment voucher: the supplier has no signed bank details"
+  },
+  "payPayeeBankPending": "সইয়ের অপেক্ষায়",
+  "@payPayeeBankPending": {
+    "description": "Payment voucher: a change to the supplier bank details waits for the second signature"
+  },
+  "payUnsignedBlocks": "প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় সই দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।",
+  "@payUnsignedBlocks": {
+    "description": "Payment voucher: an unsigned supplier bank blocks a bank transfer (the web words)"
+  },
+  "payToAccount": "কোন খাতে যাবে *",
+  "@payToAccount": {
+    "description": "Payment voucher to a party that is not a supplier: the account the payment is booked to"
+  },
+  "payExpenseHead": "খরচের খাত *",
+  "@payExpenseHead": {
+    "description": "Expense voucher: the expense account"
+  },
+  "payPayee": "কাকে দেওয়া হলো",
+  "@payPayee": {
+    "description": "Expense voucher: the payee name, typed"
+  },
+  "payBillNo": "বিল / ভাউচার নম্বর",
+  "@payBillNo": {
+    "description": "Expense voucher: the bill or voucher number on the paper"
+  },
+  "payDeductionTitle": "উৎসে কর্তন",
+  "@payDeductionTitle": {
+    "description": "Expense voucher: the folded AIT/VDS section"
+  },
+  "payBillGross": "বিলের মোট (৳)",
+  "@payBillGross": {
+    "description": "Expense voucher: the bill total before AIT and VDS"
+  },
+  "payAit": "AIT (৳)",
+  "@payAit": {
+    "description": "Expense voucher: advance income tax deducted"
+  },
+  "payVds": "VDS (৳)",
+  "@payVds": {
+    "description": "Expense voucher: VAT deducted at source"
+  },
+  "payNetPayable": "হাতে যাবে",
+  "@payNetPayable": {
+    "description": "Expense voucher: the bill total less AIT and VDS"
+  },
+  "payHowPaid": "কীভাবে দেওয়া হলো",
+  "@payHowPaid": {
+    "description": "Expense voucher: the method and paid-from section title"
+  },
+  "payCancel": "বাতিল",
+  "@payCancel": {
+    "description": "Payment and expense voucher, bottom bar: leave without saving"
+  },
+  "payKeepDraft": "খসড়া রাখুন",
+  "@payKeepDraft": {
+    "description": "Payment and expense voucher, bottom bar: keep as a draft"
+  },
+  "payPost": "পোস্ট",
+  "@payPost": {
+    "description": "Payment and expense voucher, bottom bar: post (or send for signature when signatures are on)"
+  },
+  "payPickPartyError": "পক্ষ বাছুন।",
+  "@payPickPartyError": {
+    "description": "Payment voucher: refused without a party"
+  },
+  "payPickHeadError": "খরচের খাত বাছুন।",
+  "@payPickHeadError": {
+    "description": "Expense voucher: refused without an expense head"
+  },
+  "payPickAccountError": "যে খাত থেকে দেওয়া হচ্ছে বাছুন।",
+  "@payPickAccountError": {
+    "description": "Payment and expense voucher: refused without the paid-from account"
+  },
+  "payPickToAccountError": "কোন খাতে যাবে বাছুন।",
+  "@payPickToAccountError": {
+    "description": "Payment voucher to a non-supplier: refused without the account"
+  },
+  "payCreditNeedsParty": "বাকিতে খরচ লিখতে হলে কার কাছে দেনা হচ্ছে সেটা বলতে হবে।",
+  "@payCreditNeedsParty": {
+    "description": "Expense voucher on credit: refused without the party"
+  },
+  "payChequeNoMissing": "চেক নম্বর লিখুন — চেক নম্বর ছাড়া পোস্ট হয় না।",
+  "@payChequeNoMissing": {
+    "description": "Payment and expense voucher: post refused without the cheque number"
+  },
+  "payMismatch": "\"{account}\" {method}-এর খাত নয় — পদ্ধতির খাত বাছুন।",
+  "@payMismatch": {
+    "description": "Payment and expense voucher: the account does not fit the method (the web words)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      }
+    }
+  },
   "ordersModuleSales": "বিক্রয়",
   "@ordersModuleSales": {
     "description": "Screen bar: the module name above the title on the order and tracking screens"

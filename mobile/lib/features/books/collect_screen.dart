@@ -27,7 +27,10 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../printing/document_actions_sheet.dart';
 import '../vouchers/voucher_screens.dart';
+import 'money_form_parts.dart';
 import 'money_in_screens.dart';
+
+export 'money_form_parts.dart' show CollectChipColors;
 
 /// স্লিপের ছবি বাছাই — ক্যামেরা বা গ্যালারি; ফাইলের পথ, না বাছলে null
 typedef SlipPicker = Future<String?> Function(BuildContext context, {required bool camera});
@@ -631,7 +634,7 @@ class _CollectScreenState extends State<CollectScreen> {
 
   CollectReview _reviewData(CollectionPreview? preview) => CollectReview(
         customer: _customer!.label,
-        account: _account == null ? '' : '${_methodLabel(context, _method)} · ${_account!.label}',
+        account: _account == null ? '' : '${moneyMethodLabel(context, _method)} · ${_account!.label}',
         received: _received,
         withheld: _withheldPaisa,
         discount: _differenceKind == 'discount' ? _differencePaisa : 0,
@@ -757,10 +760,10 @@ class _CollectScreenState extends State<CollectScreen> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
-                _Tappable(
+                MoneyTappable(
                   key: const ValueKey('collect-value-date'),
                   label: _method == 'cheque' ? w.collectChequeDate : w.collectValueDate,
-                  value: Text(_dayText(_valueDate ?? _date)),
+                  value: Text(moneyDayText(_valueDate ?? _date)),
                   icon: Symbols.event,
                   onTap: () async {
                     await _pickDate(value: true);
@@ -774,12 +777,12 @@ class _CollectScreenState extends State<CollectScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [_money('charge', also: () => refresh(() {}))],
                   decoration: InputDecoration(
-                      labelText: w.collectBankCharge, helperText: _signNote('charge') ?? w.collectBankChargeHint, helperMaxLines: _noteLines),
+                      labelText: w.collectBankCharge, helperText: _signNote('charge') ?? w.collectBankChargeHint, helperMaxLines: moneyNoteLines),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
                   key: const ValueKey('collect-bank-done'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
                   onPressed: () => Navigator.of(sheet).pop(),
                   child: Text(w.collectBankDone),
                 ),
@@ -821,10 +824,17 @@ class _CollectScreenState extends State<CollectScreen> {
         padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xl),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (big) Wrap(spacing: AppSpacing.sm, crossAxisAlignment: WrapCrossAlignment.center, children: _stateMarks(saved)),
-          _Figures(due: _due, received: _received, settled: _differencePaisa + _withheldPaisa),
+          MoneyFigures(
+              due: _due,
+              received: _received,
+              settled: _differencePaisa + _withheldPaisa,
+              dueLabel: w.collectFigureDue,
+              thisLabel: w.collectFigureThis,
+              leftLabel: w.collectFigureLeft,
+              creditLabel: w.collectFigureCredit),
           _header(context),
           if (_busy) const Padding(padding: EdgeInsets.only(top: AppSpacing.sm), child: LinearProgressIndicator()),
-          if (_error != null) _ErrorCard(_error!),
+          if (_error != null) MoneyErrorCard(_error!),
           if (saved != null) ..._done(context, saved) else ..._form(context),
         ]),
       ),
@@ -880,14 +890,14 @@ class _CollectScreenState extends State<CollectScreen> {
     final w = context.l10n;
     final words = saved.amountWords ?? Money.spoken(_received / 100, englishDigits: true);
     return [
-      _Section(
+      MoneySection(
         key: const ValueKey('collect-done'),
         title: w.collectDone(saved.no!),
         children: [
           Text(Money.taka(_received / 100), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
           if (words != null) Text(w.collectDoneWords(words), key: const ValueKey('collect-done-words')),
           if (_customer != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.xs), child: Text(_customer!.label)),
-          for (final (no, paisa) in saved.applied) _AmountRow(label: no.isEmpty ? w.booksMoneyInAdvance : no, paisa: paisa),
+          for (final (no, paisa) in saved.applied) MoneyAmountRow(label: no.isEmpty ? w.booksMoneyInAdvance : no, paisa: paisa),
           if (_slipFailed)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -913,11 +923,11 @@ class _CollectScreenState extends State<CollectScreen> {
     ];
     return [
       // ── সাধারণ তথ্য ──
-      _Section(title: w.collectGeneralTitle, children: [
-        _Label(w.collectPartyKind),
+      MoneySection(title: w.collectGeneralTitle, children: [
+        MoneyLabel(w.collectPartyKind),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           for (final k in CollectScreen.partyKinds)
-            _Segment(
+            MoneySegment(
               key: ValueKey('collect-party-$k'),
               label: Text(switch (k) {
                 'customer' => w.collectPartyCustomer,
@@ -950,7 +960,7 @@ class _CollectScreenState extends State<CollectScreen> {
             ]),
           ),
         const SizedBox(height: AppSpacing.sm),
-        _Tappable(
+        MoneyTappable(
           key: const ValueKey('collect-customer'),
           label: w.collectCustomer,
           value: _customer == null ? null : CustomerLine(_customer!.label),
@@ -964,10 +974,10 @@ class _CollectScreenState extends State<CollectScreen> {
             child: Text(facts.join(' · '), key: const ValueKey('collect-customer-facts'), style: muted),
           ),
         const SizedBox(height: AppSpacing.sm),
-        _Tappable(
+        MoneyTappable(
           key: const ValueKey('collect-date'),
           label: w.collectDate,
-          value: Text(_dayText(_date)),
+          value: Text(moneyDayText(_date)),
           icon: Symbols.calendar_today,
           onTap: _busy ? null : _pickDate,
         ),
@@ -990,27 +1000,27 @@ class _CollectScreenState extends State<CollectScreen> {
               labelText: w.collectAmount,
               prefixText: '৳ ', // l10n-ok: the taka sign, the same in every language
               helperText: _signNote('amount'),
-              helperMaxLines: _noteLines),
+              helperMaxLines: moneyNoteLines),
         ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
-          _TonalChip(
+          MoneyTonalChip(
             key: const ValueKey('collect-full-due'),
             label: w.collectFullDue,
             onPressed: due == null || due <= 0 || _busy ? null : () => _setAmount(due),
           ),
           if (_newServer)
-            _TonalChip(
+            MoneyTonalChip(
               key: const ValueKey('collect-selected-bills'),
               label: w.collectSelectedBills,
               onPressed: !anySelected || _busy ? null : _fillSelected,
             ),
         ]),
         if (over)
-          _Note(
+          MoneyNote(
             key: const ValueKey('collect-over-due'),
             text: w.collectOverDue(Money.taka((_received + _differencePaisa + _withheldPaisa - due) / 100)),
-            tone: _Tone.warn,
+            tone: MoneyTone.warn,
           ),
         const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<CollectionAccount>(
@@ -1028,12 +1038,12 @@ class _CollectScreenState extends State<CollectScreen> {
           onChanged: _busy ? null : _chooseAccount,
         ),
         const SizedBox(height: AppSpacing.sm),
-        _Label(w.collectMethod),
+        MoneyLabel(w.collectMethod),
         Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
           for (final m in CollectScreen.methods)
-            _Segment(
+            MoneySegment(
               key: ValueKey('collect-method-$m'),
-              label: Text(_methodLabel(context, m)),
+              label: Text(moneyMethodLabel(context, m)),
               selected: _method == m,
               onSelected: _busy || !_accounts.any((a) => a.kind == _kindOf(m)) ? null : (_) => _chooseMethod(m),
             ),
@@ -1071,9 +1081,9 @@ class _CollectScreenState extends State<CollectScreen> {
       // ── কাটা ও ছাড় (গুটানো) ──
       if (_newServer) _adjustSection(context),
       // ── সংযুক্তি ও বিবরণ ──
-      _Section(title: w.collectAttachTitle, children: [
+      MoneySection(title: w.collectAttachTitle, children: [
         if (_slipAllowed) ...[
-          if (_slipRequired) _Label(w.collectSlipNeeded, key: const ValueKey('collect-slip-required')),
+          if (_slipRequired) MoneyLabel(w.collectSlipNeeded, key: const ValueKey('collect-slip-required')),
           if (_slipPath == null)
             _DashedBox(
               key: const ValueKey('collect-slip-box'),
@@ -1129,7 +1139,7 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget _bankLine(BuildContext context) {
     final w = context.l10n;
     final mode = _transferModes.where((m) => m.id == _transferModeId).firstOrNull?.name;
-    final day = _valueDate == null || _valueDate == _today ? w.collectToday : _dayText(_valueDate!);
+    final day = _valueDate == null || _valueDate == _today ? w.collectToday : moneyDayText(_valueDate!);
     final parts = [
       if (_method == 'transfer' && mode != null) w.collectBankMode(mode),
       _method == 'cheque' ? w.collectBankChequeDate(day) : w.collectBankValueDate(day),
@@ -1159,7 +1169,7 @@ class _CollectScreenState extends State<CollectScreen> {
         if (r.applied > 0) '${r.item.no} ${Money.taka((r.item.isCredit ? -r.applied : r.applied) / 100)}',
     ];
     final table = _billsState == _Bills.loaded && ordered.isNotEmpty;
-    return _Section(
+    return MoneySection(
       key: const ValueKey('collect-bills'),
       title: w.collectBillsTitle,
       trailing: table
@@ -1207,19 +1217,19 @@ class _CollectScreenState extends State<CollectScreen> {
           const Divider(height: AppSpacing.md),
         ],
         if (table)
-          _AmountRow(key: const ValueKey('collect-applied-total'), label: w.collectAppliedTotal, paisa: _plan.netApplied, strong: true),
+          MoneyAmountRow(key: const ValueKey('collect-applied-total'), label: w.collectAppliedTotal, paisa: _plan.netApplied, strong: true),
         // ⭐ মোট প্রয়োগের নিচে বাকিটা কোথায় গেল (fe, ২৩ অক্টোবর ২০২৬): "এই আদায়" ৳45,000, প্রয়োগ ৳15,100 — ৳29,900 পর্দা ১-এ
         // কোথাও ছিল না। ⛔ "অগ্রিম" নয় — মালিকের নিয়মে গ্রাহকের নিজের খাতা। পুরনো সার্ভারে (তালিকা নেই) কোনো লাইন নয়
         if (table && _remainder > 0)
-          _Note(
+          MoneyNote(
               key: const ValueKey('collect-unapplied-line'),
               text: w.collectUnappliedLine(Money.taka(_remainder / 100)),
-              tone: _Tone.info),
+              tone: MoneyTone.info),
         if (table && _overApplied > 0)
-          _Note(
+          MoneyNote(
               key: const ValueKey('collect-over-applied'),
               text: w.collectAppliedOverGross(Money.taka(_overApplied / 100)),
-              tone: _Tone.stop),
+              tone: MoneyTone.stop),
         if (table && _manual && !_folded)
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -1250,10 +1260,10 @@ class _CollectScreenState extends State<CollectScreen> {
         initiallyExpanded: _differencePaisa > 0 || _withheldPaisa > 0,
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Label(w.collectDifference),
+          MoneyLabel(w.collectDifference),
           Wrap(spacing: AppSpacing.xs, children: [
             for (final (kind, label) in [('discount', w.collectDifferenceDiscount), ('rounding', w.collectDifferenceRounding)])
-              _Segment(
+              MoneySegment(
                 key: ValueKey('collect-difference-$kind'),
                 label: Text(label),
                 selected: _differenceKind == kind,
@@ -1267,20 +1277,20 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('difference')],
-            decoration: InputDecoration(labelText: w.collectDifferenceAmount, helperText: _signNote('difference'), helperMaxLines: _noteLines),
+            decoration: InputDecoration(labelText: w.collectDifferenceAmount, helperText: _signNote('difference'), helperMaxLines: moneyNoteLines),
           ),
           if (_differenceKind == 'discount' && _differencePaisa > 0)
-            _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
+            MoneyNote(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: MoneyTone.info),
           if (_differenceKind == 'rounding' && CollectScreen.roundingNeedsSign(_differencePaisa, above: _signAbove) && !_roundingTooBig)
-            _Note(
+            MoneyNote(
                 key: const ValueKey('collect-rounding-sign-1'),
                 text: w.collectRoundingSign(Money.taka(_differencePaisa / 100)),
-                tone: _Tone.info),
+                tone: MoneyTone.info),
           if (_roundingTooBig)
-            _Note(
+            MoneyNote(
                 key: const ValueKey('collect-rounding-warning'),
                 text: w.collectRoundingTooBig(Money.taka(_roundingLimit / 100)),
-                tone: _Tone.stop),
+                tone: MoneyTone.stop),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             key: const ValueKey('collect-vds'),
@@ -1288,7 +1298,7 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('vds')],
-            decoration: InputDecoration(labelText: w.collectVds, helperText: _signNote('vds'), helperMaxLines: _noteLines),
+            decoration: InputDecoration(labelText: w.collectVds, helperText: _signNote('vds'), helperMaxLines: moneyNoteLines),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
@@ -1297,7 +1307,7 @@ class _CollectScreenState extends State<CollectScreen> {
             enabled: !_busy,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_money('ait')],
-            decoration: InputDecoration(labelText: w.collectAit, helperText: _signNote('ait'), helperMaxLines: _noteLines),
+            decoration: InputDecoration(labelText: w.collectAit, helperText: _signNote('ait'), helperMaxLines: moneyNoteLines),
           ),
         ],
       ),
@@ -1307,12 +1317,12 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget _bottomBar(BuildContext context) {
     final w = context.l10n;
     final saved = _saved;
-    return _BottomBar(children: [
+    return MoneyBottomBar(children: [
       if (saved == null) ...[
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
             onPressed:
                 _busy || _notAllowed || _party != 'customer' || _billsState == _Bills.outOfReach || _overApplied > 0 ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
@@ -1323,7 +1333,7 @@ class _CollectScreenState extends State<CollectScreen> {
           flex: 2,
           child: FilledButton(
             key: const ValueKey('collect-post'),
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
             onPressed: _busy ||
                     _notAllowed ||
                     _party != 'customer' ||
@@ -1339,7 +1349,7 @@ class _CollectScreenState extends State<CollectScreen> {
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-close'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
             onPressed: () => Navigator.of(context).maybePop(),
             child: Text(w.collectClose, textAlign: TextAlign.center),
           ),
@@ -1349,7 +1359,7 @@ class _CollectScreenState extends State<CollectScreen> {
           Expanded(
             child: FilledButton.icon(
               key: const ValueKey('collect-open-receipt'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
               onPressed: () => widget.openReceipt(context, saved, ReceiptAction.pdf),
               icon: const Icon(Symbols.receipt_long),
               label: Text(w.collectOpenReceipt, textAlign: TextAlign.center),
@@ -1359,34 +1369,6 @@ class _CollectScreenState extends State<CollectScreen> {
       ],
     ]);
   }
-}
-
-/// ⛔ বোতামের ভেতরে উপর-নিচে ১২, পাশে ১২ — Material 3-এর বোতামে উপর-নিচে কোনো ফাঁক নেই, তাই ১৩০%/২০০% লেখায় লেবেল দুই লাইনে
-/// ভাঙলে শেষ অক্ষর বোতামের নিচের কিনারা ছুঁত (collection_130/200, ছবি-নিরীক্ষা, ২২ অক্টোবর ২০২৬)। উচ্চতা বাঁধা নয়: অন্তত ৪৮,
-/// লেখার সাথে বাড়ে
-const _buttonPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 12);
-
-/// ⛔ টাকার ঘরের নিচের লেখা ("চিহ্ন বাদ দেওয়া হয়েছে …", ব্যাংক চার্জের কথা) চার লাইন পর্যন্ত — দুই লাইনে ২০০% লেখায়
-/// বিলের সারির সরু ঘরে (বাঁয়ে ৪৮dp সরানো) ইংরেজি লেখাটা "…"-এ কাটা পড়ত (collect_sign_item_412_light_en_200, ছবি-নিরীক্ষা,
-/// ২৩ অক্টোবর ২০২৬)। সব টাকার ঘরে একই সীমা
-const _noteLines = 4;
-
-/// ⭐ নিচের বোতামের লেখা — Material 3-এর labelLarge: 14, w600 (fe, ২২ অক্টোবর ২০২৬; থিমের মাপ নিচে নামলেও 14)
-TextStyle _buttonText(BuildContext context) =>
-    (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(fontSize: 14, fontWeight: FontWeight.w600);
-
-String _dayText(DateTime d) =>
-    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-
-String _methodLabel(BuildContext context, String method) {
-  final w = context.l10n;
-  return switch (method) {
-    'cash' => w.collectMethodCash,
-    'mfs' => 'MFS',
-    'transfer' => w.collectMethodTransfer,
-    'deposit' => w.collectMethodDeposit,
-    _ => w.collectMethodCheque,
-  };
 }
 
 /// পর্দা ২-এর তথ্য — পর্দা ১ যা জানে
@@ -1482,12 +1464,12 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
     final sign = d.discount > 0 || CollectScreen.roundingNeedsSign(d.rounding, above: d.signAbove) || p?.needsSignature == true;
     return Scaffold(
       appBar: AbosScreenBar(title: w.collectCheckTitle),
-      bottomNavigationBar: _BottomBar(children: [
+      bottomNavigationBar: MoneyBottomBar(children: [
         if (saved == null) ...[
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-back'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
               child: Text(w.collectCheckBack, textAlign: TextAlign.center),
             ),
@@ -1496,7 +1478,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: FilledButton(
               key: const ValueKey('collect-check-post'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
               onPressed: _busy || stops.isNotEmpty ? null : _post,
               // ⓘ সই লাগলে বোতামের কথাই বলে কী হবে — "সইয়ে পাঠান"
               child: Text(sign ? w.collectSendForSign : w.collectCheckPost, textAlign: TextAlign.center),
@@ -1506,7 +1488,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-close'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: _buttonPadding, textStyle: _buttonText(context)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), padding: moneyButtonPadding, textStyle: moneyButtonText(context)),
               onPressed: () => Navigator.of(context).pop(),
               child: Text(w.collectClose, textAlign: TextAlign.center),
             ),
@@ -1520,28 +1502,28 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_busy) const LinearProgressIndicator(),
-            if (_error != null) _ErrorCard(_error!),
+            if (_error != null) MoneyErrorCard(_error!),
             // ── হিসাবের সারাংশ ──
-            _Section(key: const ValueKey('collect-summary-card'), title: w.collectSummaryTitle, children: [
+            MoneySection(key: const ValueKey('collect-summary-card'), title: w.collectSummaryTitle, children: [
               Text('${d.customer} · ${d.account}',
                   key: const ValueKey('collect-review-who'),
                   style: TextStyle(color: context.palette.onSurfaceMuted, fontSize: 12.5)),
               const SizedBox(height: AppSpacing.xs),
-              _AmountRow(key: const ValueKey('collect-sum-received'), label: w.collectSumReceived, paisa: d.received),
+              MoneyAmountRow(key: const ValueKey('collect-sum-received'), label: w.collectSumReceived, paisa: d.received),
               if (d.netApplied != null) ...[
-                _AmountRow(key: const ValueKey('collect-sum-withheld'), label: w.collectSumWithheld, paisa: d.withheld),
-                _AmountRow(key: const ValueKey('collect-sum-discount'), label: w.collectSumDiscount, paisa: d.discount),
-                _AmountRow(
+                MoneyAmountRow(key: const ValueKey('collect-sum-withheld'), label: w.collectSumWithheld, paisa: d.withheld),
+                MoneyAmountRow(key: const ValueKey('collect-sum-discount'), label: w.collectSumDiscount, paisa: d.discount),
+                MoneyAmountRow(
                     key: const ValueKey('collect-sum-rounding'), label: w.collectSumRounding(Money.taka(d.signAbove / 100)), paisa: d.rounding),
                 Divider(thickness: 2, color: Theme.of(context).colorScheme.onSurface),
-                _AmountRow(key: const ValueKey('collect-net-applied'), label: w.collectSumApplied, paisa: d.netApplied!, strong: true),
+                MoneyAmountRow(key: const ValueKey('collect-net-applied'), label: w.collectSumApplied, paisa: d.netApplied!, strong: true),
                 if (d.bills case final bills? when bills.isNotEmpty)
                   Text(
                     [for (final (no, paisa) in bills) '$no ${Money.amount(paisa / 100)}'].join(' · '),
                     key: const ValueKey('collect-summary-bills'),
                     style: TextStyle(color: context.palette.onSurfaceMuted, fontSize: 12.5),
                   ),
-                _AmountRow(key: const ValueKey('collect-unapplied'), label: w.collectSumUnapplied, paisa: d.unapplied!),
+                MoneyAmountRow(key: const ValueKey('collect-unapplied'), label: w.collectSumUnapplied, paisa: d.unapplied!),
               ] else
                 // ⛔ পুরনো সার্ভার — বিল সার্ভার নিজে বসাবে
                 Text(w.collectBillsAuto, key: const ValueKey('collect-summary-bills')),
@@ -1553,7 +1535,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
             ]),
             // ── খাতায় যা যাবে ──
             if (p != null && p.lines.isNotEmpty)
-              _Section(key: const ValueKey('collect-journal'), title: w.collectJournalTitle, children: [
+              MoneySection(key: const ValueKey('collect-journal'), title: w.collectJournalTitle, children: [
                 JournalLines(
                   lines: p.lines,
                   totalDr: p.totalDr,
@@ -1564,16 +1546,16 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
                 ),
               ]),
             // ── নিয়ন্ত্রণ ──
-            _Section(key: const ValueKey('collect-controls'), title: w.collectControlsTitle, children: [
-              for (final (i, stop) in stops.indexed) _Note(key: ValueKey('collect-stop-$i'), text: stop, tone: _Tone.stop),
-              if (stops.isNotEmpty) _Note(text: w.collectControlStops, tone: _Tone.stop),
-              if (d.monthClosed) _Note(key: const ValueKey('collect-month-closed'), text: w.collectMonthClosed, tone: _Tone.stop),
-              if (sign) _Note(key: const ValueKey('collect-needs-signature'), text: w.collectOwnerSign, tone: _Tone.info),
+            MoneySection(key: const ValueKey('collect-controls'), title: w.collectControlsTitle, children: [
+              for (final (i, stop) in stops.indexed) MoneyNote(key: ValueKey('collect-stop-$i'), text: stop, tone: MoneyTone.stop),
+              if (stops.isNotEmpty) MoneyNote(text: w.collectControlStops, tone: MoneyTone.stop),
+              if (d.monthClosed) MoneyNote(key: const ValueKey('collect-month-closed'), text: w.collectMonthClosed, tone: MoneyTone.stop),
+              if (sign) MoneyNote(key: const ValueKey('collect-needs-signature'), text: w.collectOwnerSign, tone: MoneyTone.info),
               if (!sign && p?.needsSignature == false)
-                _Note(key: const ValueKey('collect-no-signature'), text: w.collectControlNoSignature, tone: _Tone.info),
-              if (d.slipRequired) _Note(text: w.collectControlSlip, tone: _Tone.info),
-              _Note(text: w.collectControlNoUndo, tone: _Tone.info),
-              _Note(text: w.collectControlNet, tone: _Tone.warn),
+                MoneyNote(key: const ValueKey('collect-no-signature'), text: w.collectControlNoSignature, tone: MoneyTone.info),
+              if (d.slipRequired) MoneyNote(text: w.collectControlSlip, tone: MoneyTone.info),
+              MoneyNote(text: w.collectControlNoUndo, tone: MoneyTone.info),
+              MoneyNote(text: w.collectControlNet, tone: MoneyTone.warn),
             ]),
             // ── পোস্টের পরে ──
             if (saved != null) _after(context, saved),
@@ -1586,7 +1568,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
   Widget _after(BuildContext context, CollectionSaved saved) {
     final w = context.l10n;
     final words = saved.amountWords ?? widget.data.words;
-    return _Section(key: const ValueKey('collect-after'), title: w.collectAfterTitle, children: [
+    return MoneySection(key: const ValueKey('collect-after'), title: w.collectAfterTitle, children: [
       Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
@@ -1614,293 +1596,13 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
             (ReceiptAction.sms, 'SMS'),
             (ReceiptAction.print, w.collectReceiptPrint),
           ])
-            _TonalChip(
+            MoneyTonalChip(
               key: ValueKey('collect-receipt-${action.name}'),
               label: label,
               onPressed: () => widget.openReceipt(context, saved, action),
             ),
         ]),
     ]);
-  }
-}
-
-/// ⭐ বাছা চিপের রং — বাছা আর না-বাছা স্পষ্ট আলাদা (fe, ২২ অক্টোবর ২০২৬; WCAG 2.2: সীমানা ৩:১, লেখা ৪.৫:১): বাছা চিপ থিমের
-/// primary-তে ভরা, লেখা onPrimary, চারপাশে ২dp primary; না-বাছা চিপ কার্ডের রঙের উপর। অ্যাপের নীলচে-সবুজ (teal) থাকে।
-class CollectChipColors {
-  const CollectChipColors({required this.selectedFill, required this.selectedBorder, required this.selectedLabel, required this.unselectedSurface});
-
-  final Color selectedFill;
-  final Color selectedBorder;
-  final Color selectedLabel;
-
-  /// না-বাছা চিপ যার উপর বসে — কার্ডের রং
-  final Color unselectedSurface;
-
-  static CollectChipColors of(ThemeData theme) => CollectChipColors(
-        selectedFill: theme.colorScheme.primary,
-        selectedBorder: theme.colorScheme.primary,
-        selectedLabel: theme.colorScheme.onPrimary,
-        unselectedSurface: theme.cardTheme.color ?? theme.colorScheme.surfaceContainerLow,
-      );
-}
-
-/// বেছে নেওয়ার চিপ — পক্ষের ধরন, পদ্ধতি, ছাড়/রাউন্ডিং; বাছা অবস্থা [CollectChipColors]-এ
-class _Segment extends StatelessWidget {
-  const _Segment({super.key, required this.label, required this.selected, required this.onSelected});
-
-  final Widget label;
-  final bool selected;
-  final ValueChanged<bool>? onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = CollectChipColors.of(Theme.of(context));
-    return ChoiceChip(
-      label: label,
-      selected: selected,
-      onSelected: onSelected,
-      selectedColor: c.selectedFill,
-      checkmarkColor: c.selectedLabel,
-      labelStyle: selected ? TextStyle(color: c.selectedLabel, fontWeight: FontWeight.w600) : null,
-      side: selected ? BorderSide(color: c.selectedBorder, width: 2) : null,
-    );
-  }
-}
-
-/// নকশার হালকা-ভরা চিপ — "পুরো বকেয়া", "নির্বাচিত বিল", রসিদের চার পথ
-class _TonalChip extends StatelessWidget {
-  const _TonalChip({super.key, required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => ActionChip(
-        label: Text(label),
-        onPressed: onPressed,
-        side: BorderSide.none,
-        backgroundColor: context.palette.primarySoft,
-        labelStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
-      );
-}
-
-class _BottomBar extends StatelessWidget {
-  const _BottomBar({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Material(
-        elevation: 3,
-        color: Theme.of(context).colorScheme.surface,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-            child: Row(children: children),
-          ),
-        ),
-      );
-}
-
-class _Label extends StatelessWidget {
-  const _Label(this.text, {super.key});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-        child: Text(text, style: TextStyle(color: context.palette.onSurfaceMuted, fontSize: 12.5)),
-      );
-}
-
-/// ⭐ তিন অঙ্ক — বকেয়া (লাল) · এই আদায় (সবুজ) · বাকি থাকবে, এক সারিতে (ঋণাত্মক হলে "গ্রাহকের খাতায় জমা থাকবে")
-class _Figures extends StatelessWidget {
-  const _Figures({required this.due, required this.received, required this.settled});
-
-  /// পয়সায়; না জানা গেলে null
-  final int? due;
-  final int received;
-
-  /// ছাড় আর উৎসে কাটা — বকেয়া থেকে এরাও কমে
-  final int settled;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = context.l10n;
-    final left = due == null ? null : due! - received - settled;
-    final figures = [
-      _Figure(key: const ValueKey('collect-figure-due'), label: w.collectFigureDue, value: due, colour: context.palette.danger),
-      _Figure(key: const ValueKey('collect-figure-this'), label: w.collectFigureThis, value: received, colour: context.palette.success, align: 1),
-      _Figure(
-        key: const ValueKey('collect-figure-left'),
-        label: left != null && left < 0 ? w.collectFigureCredit : w.collectFigureLeft,
-        value: left?.abs(),
-        colour: Theme.of(context).colorScheme.onSurface,
-        align: 2,
-      ),
-    ];
-    return LayoutBuilder(builder: (context, c) {
-      final scale = MediaQuery.textScalerOf(context).scale(1);
-      final wide = c.maxWidth / 3 >= 104 * scale;
-      return Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-          child: wide
-              ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final f in figures) Expanded(child: f)])
-              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: figures),
-        ),
-      );
-    });
-  }
-}
-
-class _Figure extends StatelessWidget {
-  const _Figure({super.key, required this.label, required this.value, required this.colour, this.align = 0});
-
-  final String label;
-  final int? value;
-  final Color colour;
-
-  /// 0 বাঁয়ে, 1 মাঝে, 2 ডানে — নকশার এক সারি
-  final int align;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = value == null ? '—' : Money.taka(value! / 100);
-    final cross = switch (align) { 1 => CrossAxisAlignment.center, 2 => CrossAxisAlignment.end, _ => CrossAxisAlignment.start };
-    return Semantics(
-      container: true,
-      label: '$label, ${value == null ? '—' : Money.speakable(text)}',
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xs),
-        child: Column(crossAxisAlignment: cross, children: [
-          Text(label, style: TextStyle(fontSize: 12.5, color: context.palette.onSurfaceMuted)),
-          Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colour)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({super.key, required this.title, required this.children, this.trailing});
-
-  final String? title;
-  final Widget? trailing;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(top: AppSpacing.sm),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            if (title != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                // ⓘ Wrap — বড় লেখায় পাশের বোতাম নিচের লাইনে নামে, ডানে উপচে পড়ে না
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(title!, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    ),
-                    if (trailing != null) trailing!,
-                  ],
-                ),
-              ),
-            ...children,
-          ]),
-        ),
-      );
-}
-
-/// চাপলে বাছাই খোলে — লেবেলসহ ঘর (গ্রাহক, তারিখ)
-///
-/// <p>⛔ ফাঁকা ঘরে কেবল লেবেল (Material 3-এর ঘর): লেবেল তখন ঘরের ভেতরে বসে, তাই সেখানে আর কোনো লেখা আঁকা নয় — 0.4.45-এ
-/// "বাছুন" লেখাটা লেবেলের উপরেই আঁকা হত, মালিকের ফোনে "Customer *" আর "Choose a customer" একটার উপর আরেকটা (fe, ২২ অক্টোবর
-/// ২০২৬)। বাছার পরে লেবেল উপরে ওঠে, নাম নিচে। [placeholder] পর্দা-পাঠকের ইঙ্গিত হয়ে থাকে, আঁকা হয় না।
-class _Tappable extends StatelessWidget {
-  const _Tappable({super.key, required this.label, this.value, this.placeholder, required this.icon, this.onTap});
-
-  final String label;
-  final Widget? value;
-  final String? placeholder;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        hint: value == null ? placeholder : null,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(4),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: InputDecorator(
-              decoration: InputDecoration(labelText: label, suffixIcon: Icon(icon), enabled: onTap != null),
-              isEmpty: value == null,
-              child: value ?? const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      );
-}
-
-class _AmountRow extends StatelessWidget {
-  const _AmountRow({super.key, required this.label, required this.paisa, this.strong = false});
-
-  final String label;
-  final int paisa;
-  final bool strong;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = TextStyle(fontWeight: strong ? FontWeight.w700 : FontWeight.w400);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Wrap(alignment: WrapAlignment.spaceBetween, spacing: AppSpacing.sm, children: [
-        Text(label, style: style),
-        Text(Money.taka(paisa / 100), style: style),
-      ]),
-    );
-  }
-}
-
-enum _Tone { info, warn, stop }
-
-class _Note extends StatelessWidget {
-  const _Note({super.key, required this.text, required this.tone});
-
-  final String text;
-  final _Tone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final (fg, bg, icon) = switch (tone) {
-      _Tone.info => (p.pending, p.pendingSurface, Symbols.info),
-      _Tone.warn => (p.warning, p.warningSurface, Symbols.warning),
-      _Tone.stop => (p.danger, p.dangerSurface, Symbols.block),
-    };
-    return Container(
-      margin: const EdgeInsets.only(top: AppSpacing.xs),
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-          color: bg, borderRadius: BorderRadius.circular(6), border: BorderDirectional(start: BorderSide(color: fg, width: 3))),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ExcludeSemantics(child: Icon(icon, size: 18, color: fg)),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: p.onSurface))),
-      ]),
-    );
   }
 }
 
@@ -1971,25 +1673,6 @@ class _DashPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashPainter old) => old.colour != colour;
-}
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(top: AppSpacing.sm),
-        color: context.palette.dangerSurface,
-        child: Semantics(
-          liveRegion: true,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Text(text, key: const ValueKey('collect-error'), style: TextStyle(color: context.palette.danger)),
-          ),
-        ),
-      );
 }
 
 /// খোলা টেবিলের এক ছোট সারি — টিক, নম্বর, দেরি (লাল), ডানে বসানো টাকা; চাপলে নিচে খোলে: তারিখ, শেষ দিন, মূল টাকা, বাকি আর
@@ -2119,7 +1802,7 @@ class _ItemRow extends StatelessWidget {
                 labelText: w.collectItemApplyOf(item.no),
                 prefixText: item.isCredit ? '−' : null,
                 helperText: signNote,
-                helperMaxLines: _noteLines,
+                helperMaxLines: moneyNoteLines,
                 errorText: error,
                 errorMaxLines: 3,
                 isDense: true,
@@ -2133,7 +1816,7 @@ class _ItemRow extends StatelessWidget {
 
 String _isoDay(String iso) {
   final d = DateTime.tryParse(iso);
-  return d == null ? iso : _dayText(d);
+  return d == null ? iso : moneyDayText(d);
 }
 
 /// ⭐ খাতায় যা যাবে — "Dr 1102 ডাচ্-বাংলা ব্যাংক · ময়মনসিংহ  45,000.00"; নিচে মোট মেলে কি না (বিষয় ১০)

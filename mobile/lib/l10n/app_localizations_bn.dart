@@ -2352,6 +2352,147 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
+  String get payFigureOwed => 'পাওনা';
+
+  @override
+  String get payFigureThis => 'এই পরিশোধ';
+
+  @override
+  String get payFigureAdvance => 'অগ্রিম দেওয়া হবে';
+
+  @override
+  String get payPartyType => 'পক্ষের ধরন *';
+
+  @override
+  String get payParty => 'পক্ষ *';
+
+  @override
+  String get payPickParty => 'পক্ষ বাছুন';
+
+  @override
+  String payDueBeside(String amount) {
+    return 'পাওনা $amount';
+  }
+
+  @override
+  String get payFromAccount => 'যে খাত থেকে *';
+
+  @override
+  String payAccountNone(String method) {
+    return 'এই কোম্পানিতে $method-এর কোনো খাত নেই — হিসাবরক্ষককে বলুন।';
+  }
+
+  @override
+  String payOnCredit(String account) {
+    return 'বাকিতে — $account (দেনা তৈরি হবে)';
+  }
+
+  @override
+  String get payOnCreditNote =>
+      'টাকা এখন যাচ্ছে না — এই খরচটা দেনা হিসেবে বসবে, আর পরে পরিশোধ করতে হবে।';
+
+  @override
+  String get payCreditParty => 'কার কাছে দেনা *';
+
+  @override
+  String get payTrxId => 'TrxID *';
+
+  @override
+  String get payChequeNo => 'চেক নম্বর *';
+
+  @override
+  String get payChequeBank => 'চেকের ব্যাংক';
+
+  @override
+  String get payMfsCharge => 'MFS চার্জ (৳)';
+
+  @override
+  String payChargeOurs(String charge) {
+    return 'চার্জ $charge আমাদের খরচ — চার্জের খাতে যাবে।';
+  }
+
+  @override
+  String get payPayeeBank =>
+      'প্রাপকের ব্যাংক (সরবরাহকারীর রেকর্ড থেকে — এখানে বদলায় না)';
+
+  @override
+  String get payPayeeBankVerified => 'দুজনের সইয়ে যাচাই-করা';
+
+  @override
+  String get payPayeeBankNone => 'প্রাপকের ব্যাংক তথ্য নেই';
+
+  @override
+  String get payPayeeBankPending => 'সইয়ের অপেক্ষায়';
+
+  @override
+  String get payUnsignedBlocks =>
+      'প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় সই দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।';
+
+  @override
+  String get payToAccount => 'কোন খাতে যাবে *';
+
+  @override
+  String get payExpenseHead => 'খরচের খাত *';
+
+  @override
+  String get payPayee => 'কাকে দেওয়া হলো';
+
+  @override
+  String get payBillNo => 'বিল / ভাউচার নম্বর';
+
+  @override
+  String get payDeductionTitle => 'উৎসে কর্তন';
+
+  @override
+  String get payBillGross => 'বিলের মোট (৳)';
+
+  @override
+  String get payAit => 'AIT (৳)';
+
+  @override
+  String get payVds => 'VDS (৳)';
+
+  @override
+  String get payNetPayable => 'হাতে যাবে';
+
+  @override
+  String get payHowPaid => 'কীভাবে দেওয়া হলো';
+
+  @override
+  String get payCancel => 'বাতিল';
+
+  @override
+  String get payKeepDraft => 'খসড়া রাখুন';
+
+  @override
+  String get payPost => 'পোস্ট';
+
+  @override
+  String get payPickPartyError => 'পক্ষ বাছুন।';
+
+  @override
+  String get payPickHeadError => 'খরচের খাত বাছুন।';
+
+  @override
+  String get payPickAccountError => 'যে খাত থেকে দেওয়া হচ্ছে বাছুন।';
+
+  @override
+  String get payPickToAccountError => 'কোন খাতে যাবে বাছুন।';
+
+  @override
+  String get payCreditNeedsParty =>
+      'বাকিতে খরচ লিখতে হলে কার কাছে দেনা হচ্ছে সেটা বলতে হবে।';
+
+  @override
+  String get payChequeNoMissing =>
+      'চেক নম্বর লিখুন — চেক নম্বর ছাড়া পোস্ট হয় না।';
+
+  @override
+  String payMismatch(String account, String method) {
+    return '\"$account\" $method-এর খাত নয় — পদ্ধতির খাত বাছুন।';
+  }
+
+  @override
   String get ordersModuleSales => 'বিক্রয়';
 
   @override

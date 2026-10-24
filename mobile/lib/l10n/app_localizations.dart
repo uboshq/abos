@@ -4057,6 +4057,258 @@ abstract class AppL10n {
   /// **'প্রত্যাখ্যাত, মোটে নেই · {count}টি'**
   String totalsRejectedLeftOut(String count);
 
+  /// Payment voucher, top figures: what we owe the party now
+  ///
+  /// In bn, this message translates to:
+  /// **'পাওনা'**
+  String get payFigureOwed;
+
+  /// Payment voucher, top figures: the amount of this payment
+  ///
+  /// In bn, this message translates to:
+  /// **'এই পরিশোধ'**
+  String get payFigureThis;
+
+  /// Payment voucher, top figures: what is paid beyond what we owe (an advance)
+  ///
+  /// In bn, this message translates to:
+  /// **'অগ্রিম দেওয়া হবে'**
+  String get payFigureAdvance;
+
+  /// Payment voucher: label over the party type chips (supplier, customer, staff …)
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষের ধরন *'**
+  String get payPartyType;
+
+  /// Payment voucher: the party field (name · point · branch)
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষ *'**
+  String get payParty;
+
+  /// Payment voucher: screen-reader hint on the empty party field
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষ বাছুন'**
+  String get payPickParty;
+
+  /// Payment voucher: what we owe the chosen party, beside the name
+  ///
+  /// In bn, this message translates to:
+  /// **'পাওনা {amount}'**
+  String payDueBeside(String amount);
+
+  /// Payment and expense voucher: the money account the money leaves (only the chosen method's accounts)
+  ///
+  /// In bn, this message translates to:
+  /// **'যে খাত থেকে *'**
+  String get payFromAccount;
+
+  /// Payment and expense voucher: the chosen method has no account
+  ///
+  /// In bn, this message translates to:
+  /// **'এই কোম্পানিতে {method}-এর কোনো খাত নেই — হিসাবরক্ষককে বলুন।'**
+  String payAccountNone(String method);
+
+  /// Expense voucher: a payable account in the paid-from list
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকিতে — {account} (দেনা তৈরি হবে)'**
+  String payOnCredit(String account);
+
+  /// Expense voucher: note when the expense is on credit
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা এখন যাচ্ছে না — এই খরচটা দেনা হিসেবে বসবে, আর পরে পরিশোধ করতে হবে।'**
+  String get payOnCreditNote;
+
+  /// Expense voucher on credit: the party the payable is owed to
+  ///
+  /// In bn, this message translates to:
+  /// **'কার কাছে দেনা *'**
+  String get payCreditParty;
+
+  /// Payment and expense voucher, MFS: the transaction ID
+  ///
+  /// In bn, this message translates to:
+  /// **'TrxID *'**
+  String get payTrxId;
+
+  /// Payment and expense voucher, cheque: the cheque number
+  ///
+  /// In bn, this message translates to:
+  /// **'চেক নম্বর *'**
+  String get payChequeNo;
+
+  /// Payment and expense voucher, cheque: the bank of the cheque
+  ///
+  /// In bn, this message translates to:
+  /// **'চেকের ব্যাংক'**
+  String get payChequeBank;
+
+  /// Payment and expense voucher, MFS: the charge the MFS took
+  ///
+  /// In bn, this message translates to:
+  /// **'MFS চার্জ (৳)'**
+  String get payMfsCharge;
+
+  /// Payment and expense voucher: where the bank or MFS charge goes
+  ///
+  /// In bn, this message translates to:
+  /// **'চার্জ {charge} আমাদের খরচ — চার্জের খাতে যাবে।'**
+  String payChargeOurs(String charge);
+
+  /// Payment voucher to a supplier: the read-only bank box
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রাপকের ব্যাংক (সরবরাহকারীর রেকর্ড থেকে — এখানে বদলায় না)'**
+  String get payPayeeBank;
+
+  /// Payment voucher: the supplier bank details carry both signatures (a tick icon stands before it)
+  ///
+  /// In bn, this message translates to:
+  /// **'দুজনের সইয়ে যাচাই-করা'**
+  String get payPayeeBankVerified;
+
+  /// Payment voucher: the supplier has no signed bank details
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রাপকের ব্যাংক তথ্য নেই'**
+  String get payPayeeBankNone;
+
+  /// Payment voucher: a change to the supplier bank details waits for the second signature
+  ///
+  /// In bn, this message translates to:
+  /// **'সইয়ের অপেক্ষায়'**
+  String get payPayeeBankPending;
+
+  /// Payment voucher: an unsigned supplier bank blocks a bank transfer (the web words)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় সই দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।'**
+  String get payUnsignedBlocks;
+
+  /// Payment voucher to a party that is not a supplier: the account the payment is booked to
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাতে যাবে *'**
+  String get payToAccount;
+
+  /// Expense voucher: the expense account
+  ///
+  /// In bn, this message translates to:
+  /// **'খরচের খাত *'**
+  String get payExpenseHead;
+
+  /// Expense voucher: the payee name, typed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাকে দেওয়া হলো'**
+  String get payPayee;
+
+  /// Expense voucher: the bill or voucher number on the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল / ভাউচার নম্বর'**
+  String get payBillNo;
+
+  /// Expense voucher: the folded AIT/VDS section
+  ///
+  /// In bn, this message translates to:
+  /// **'উৎসে কর্তন'**
+  String get payDeductionTitle;
+
+  /// Expense voucher: the bill total before AIT and VDS
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলের মোট (৳)'**
+  String get payBillGross;
+
+  /// Expense voucher: advance income tax deducted
+  ///
+  /// In bn, this message translates to:
+  /// **'AIT (৳)'**
+  String get payAit;
+
+  /// Expense voucher: VAT deducted at source
+  ///
+  /// In bn, this message translates to:
+  /// **'VDS (৳)'**
+  String get payVds;
+
+  /// Expense voucher: the bill total less AIT and VDS
+  ///
+  /// In bn, this message translates to:
+  /// **'হাতে যাবে'**
+  String get payNetPayable;
+
+  /// Expense voucher: the method and paid-from section title
+  ///
+  /// In bn, this message translates to:
+  /// **'কীভাবে দেওয়া হলো'**
+  String get payHowPaid;
+
+  /// Payment and expense voucher, bottom bar: leave without saving
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get payCancel;
+
+  /// Payment and expense voucher, bottom bar: keep as a draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get payKeepDraft;
+
+  /// Payment and expense voucher, bottom bar: post (or send for signature when signatures are on)
+  ///
+  /// In bn, this message translates to:
+  /// **'পোস্ট'**
+  String get payPost;
+
+  /// Payment voucher: refused without a party
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষ বাছুন।'**
+  String get payPickPartyError;
+
+  /// Expense voucher: refused without an expense head
+  ///
+  /// In bn, this message translates to:
+  /// **'খরচের খাত বাছুন।'**
+  String get payPickHeadError;
+
+  /// Payment and expense voucher: refused without the paid-from account
+  ///
+  /// In bn, this message translates to:
+  /// **'যে খাত থেকে দেওয়া হচ্ছে বাছুন।'**
+  String get payPickAccountError;
+
+  /// Payment voucher to a non-supplier: refused without the account
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাতে যাবে বাছুন।'**
+  String get payPickToAccountError;
+
+  /// Expense voucher on credit: refused without the party
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকিতে খরচ লিখতে হলে কার কাছে দেনা হচ্ছে সেটা বলতে হবে।'**
+  String get payCreditNeedsParty;
+
+  /// Payment and expense voucher: post refused without the cheque number
+  ///
+  /// In bn, this message translates to:
+  /// **'চেক নম্বর লিখুন — চেক নম্বর ছাড়া পোস্ট হয় না।'**
+  String get payChequeNoMissing;
+
+  /// Payment and expense voucher: the account does not fit the method (the web words)
+  ///
+  /// In bn, this message translates to:
+  /// **'\"{account}\" {method}-এর খাত নয় — পদ্ধতির খাত বাছুন।'**
+  String payMismatch(String account, String method);
+
   /// Screen bar: the module name above the title on the order and tracking screens
   ///
   /// In bn, this message translates to:

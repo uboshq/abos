@@ -12,6 +12,7 @@ import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
 import 'package:abos_mobile/core/navigation/nav_catalog.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
+import 'package:abos_mobile/features/vouchers/money_voucher_screen.dart';
 import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -518,6 +519,10 @@ void main() {
           // ⭐ এক পথ (মালিক, ২১ অক্টোবর ২০২৬): রসিদের ধরন থেকে "নতুন" খোলে আদায়ের পাতা
           expect(find.byType(_CollectPage), findsOneWidget, reason: '⛔ রসিদ থেকে নতুন — আদায়ের পাতা নয়');
           expect(find.byType(VoucherFormScreen), findsNothing);
+        } else if (type == 'payment' || type == 'expense') {
+          // ⭐ পরিশোধ আর খরচ — ওয়েবের টাকা দেওয়ার পর্দার গড়নে (মালিক, ২১ ও ২৪ অক্টোবর ২০২৬)
+          expect(find.byType(VoucherFormScreen), findsNothing, reason: '⛔ পরিশোধ/খরচ এখনো পুরনো ফর্মে');
+          expect(tester.widget<MoneyVoucherScreen>(find.byType(MoneyVoucherScreen)).type, type);
         } else {
           expect(find.byType(VoucherFormScreen), findsOneWidget);
           expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, type);

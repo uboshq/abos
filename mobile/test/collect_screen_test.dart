@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/collect_fake.dart';
+import 'support/real_fonts.dart';
 
 /// ⭐ টাকা নেওয়া — এক পথ, দুই পর্দা (০.৪.৪৫) — মালিক, ২১ অক্টোবর ২০২৬: "ok ekoni kaj kore live e daw", "100% quality";
 /// চূড়ান্ত নকশা ১০০ (পাতা ৫ বিষয়ের তালিকা, পাতা ৬ অ্যাপের ছবি: পর্দা ১ আর ২)। প্রতিটা দাবির নামে বিষয়ের নম্বর। সব নকল
@@ -45,12 +46,13 @@ CollectScreen _screen(FakeCollect api, {int slipBytes = 1000}) => CollectScreen(
       slipSize: (_) async => slipBytes,
     );
 
-Future<void> _pump(WidgetTester tester, Widget screen, {Size size = const Size(412, 4000), double textScale = 1}) async {
+Future<void> _pump(WidgetTester tester, Widget screen, {Size size = const Size(412, 4000), double textScale = 1, ThemeData? theme}) async {
   await tester.pumpWidget(const SizedBox());
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
+    theme: theme,
     home: MediaQuery.withClampedTextScaling(minScaleFactor: textScale, maxScaleFactor: textScale, child: screen),
   ));
   await tester.pumpAndSettle();
@@ -107,6 +109,8 @@ Future<void> _back(WidgetTester tester) async {
 }
 
 void main() {
+  setUpAll(loadRealFonts);
+
   setUp(() {
     _opened.clear();
     _parties.clear();
@@ -114,7 +118,9 @@ void main() {
 
   testWidgets('1 · 13 · 14 · the three figures, the party "name · point · branch" with limit and oldest days, the month and the branch',
       (tester) async {
-    await _pump(tester, _screen(FakeCollect()));
+    // ⓘ আসল ফন্টে — "এক সারিতে" মাপা অর্থপূর্ণ কেবল সেখানে: পরীক্ষার ফন্টে "৳51,200.00" ঘরের চেয়ে চওড়া, আর তিন অঙ্ক তখন ঠিকই
+    // একটার নিচে একটা নামে (অঙ্ক ভাঙার বদলে; MoneyFigures, a4, ২৪ অক্টোবর ২০২৬)
+    await _pump(tester, _screen(FakeCollect()), theme: withRealFonts(ThemeData()));
     expect(find.text('টাকা নেওয়া'), findsOneWidget, reason: 'ওয়েবের পাতার নাম');
     expect(find.byKey(const ValueKey('collect-state-draft')), findsOneWidget, reason: 'বসার আগে বারে "খসড়া"');
     await _pickShop(tester);

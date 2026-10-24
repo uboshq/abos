@@ -2399,6 +2399,147 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String get payFigureOwed => 'Owed';
+
+  @override
+  String get payFigureThis => 'This payment';
+
+  @override
+  String get payFigureAdvance => 'Paid in advance';
+
+  @override
+  String get payPartyType => 'Party type *';
+
+  @override
+  String get payParty => 'Party *';
+
+  @override
+  String get payPickParty => 'Choose the party';
+
+  @override
+  String payDueBeside(String amount) {
+    return 'Owed $amount';
+  }
+
+  @override
+  String get payFromAccount => 'Paid from *';
+
+  @override
+  String payAccountNone(String method) {
+    return 'This company has no $method account — ask the accountant.';
+  }
+
+  @override
+  String payOnCredit(String account) {
+    return 'On credit — $account (creates a payable)';
+  }
+
+  @override
+  String get payOnCreditNote =>
+      'No amount is paid now — this expense becomes a payable, settled later by a payment.';
+
+  @override
+  String get payCreditParty => 'Owed to *';
+
+  @override
+  String get payTrxId => 'TrxID *';
+
+  @override
+  String get payChequeNo => 'Cheque no. *';
+
+  @override
+  String get payChequeBank => 'Cheque bank';
+
+  @override
+  String get payMfsCharge => 'MFS charge';
+
+  @override
+  String payChargeOurs(String charge) {
+    return 'The charge $charge is our expense — it goes to the charge account.';
+  }
+
+  @override
+  String get payPayeeBank =>
+      'Payee\'s bank (from the supplier record — not changed here)';
+
+  @override
+  String get payPayeeBankVerified => 'Verified by two signatures';
+
+  @override
+  String get payPayeeBankNone => 'No payee bank details';
+
+  @override
+  String get payPayeeBankPending => 'Awaiting signature';
+
+  @override
+  String get payUnsignedBlocks =>
+      'The payee\'s bank details have no second signature yet — a bank payment cannot be made. Next: enter the bank details on the supplier\'s page, then a second person signs them. Cash, MFS or cheque can be paid now.';
+
+  @override
+  String get payToAccount => 'Account it goes to *';
+
+  @override
+  String get payExpenseHead => 'Expense head *';
+
+  @override
+  String get payPayee => 'Paid to';
+
+  @override
+  String get payBillNo => 'Bill / voucher no.';
+
+  @override
+  String get payDeductionTitle => 'Deduction at source';
+
+  @override
+  String get payBillGross => 'Bill total';
+
+  @override
+  String get payAit => 'AIT';
+
+  @override
+  String get payVds => 'VDS';
+
+  @override
+  String get payNetPayable => 'Net payable';
+
+  @override
+  String get payHowPaid => 'How it was paid';
+
+  @override
+  String get payCancel => 'Cancel';
+
+  @override
+  String get payKeepDraft => 'Save draft';
+
+  @override
+  String get payPost => 'Post';
+
+  @override
+  String get payPickPartyError => 'Choose the party.';
+
+  @override
+  String get payPickHeadError => 'Choose the expense head.';
+
+  @override
+  String get payPickAccountError => 'Choose the account it is paid from.';
+
+  @override
+  String get payPickToAccountError => 'Choose the account it goes to.';
+
+  @override
+  String get payCreditNeedsParty =>
+      'An expense on credit needs the party it is owed to.';
+
+  @override
+  String get payChequeNoMissing =>
+      'Enter the cheque number — it cannot be posted without it.';
+
+  @override
+  String payMismatch(String account, String method) {
+    return '\"$account\" is not a $method account — choose an account of the method.';
+  }
+
+  @override
   String get ordersModuleSales => 'Sales';
 
   @override
