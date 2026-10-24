@@ -8,20 +8,39 @@
 --}}
 @php
     $value = $row[$column->key] ?? null;
+    // ⭐ অঙ্কে চাপলে উৎস ([[ReportColumn::$drill]]; মালিক, ২৪ অক্টোবর ২০২৬) — শূন্যও খোলে (ফাঁকা তালিকা), তাই শূন্যও দেখায়
+    $href = $column->hasDrill() ? $column->drillHref($row, $filters ?? []) : null;
 @endphp
 
 @switch ($column->type)
     @case (\App\Core\Engines\Report\ReportColumn::MONEY)
         {{-- শূন্য দেখানো হয় না: একটা কলামে অর্ধেক সারিতে "0.00" থাকলে
-             চোখ প্রতিটাতে থামে, অথচ ওগুলোর কোনো মানে নেই --}}
-        {{ $value !== null && bccomp((string) $value, '0', 4) !== 0
-            ? \App\Core\Support\Money::format($value) : '' }}
+             চোখ প্রতিটাতে থামে, অথচ ওগুলোর কোনো মানে নেই — ⓘ যে ঘরে চাপলে উৎস খোলে, সেখানে বাদে --}}
+        @php
+            // ⓘ আগের মতোই Money::format — কেবল ৳ যোগ হয় যে কলাম চায় ([[ReportColumn::$currency]]); অন্য রিপোর্টের ঘর অপরিবর্তিত
+            $shown = $value !== null && ($href !== null || bccomp((string) $value, '0', 4) !== 0)
+                ? ($column->currency ? '৳' : '').\App\Core\Support\Money::format($value) : '';
+        @endphp
+        @if ($href !== null && $shown !== '')
+            <a href="{{ $href }}" class="underline decoration-dotted underline-offset-2 hover:text-(--color-brand-700)"
+               aria-label="{{ $column->drillLabel($shown) }}" data-report-drill="{{ $column->key }}">{{ $shown }}</a>
+        @else
+            {{ $shown }}
+        @endif
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::DR_CR)
         {{-- ⓘ জের — "(Dr) 250.79" / "(Cr) 22,958.21", খালি বিয়োগ নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
         {{-- ⓘ ঘোষিত শব্দ থাকলে "দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…" ([[ReportColumn::signed()]]) --}}
-        {{ $value === null || $value === '' ? '' : $column->signed($value) }}
+        @php
+            $shown = $value === null || $value === '' ? '' : $column->signed($value);
+        @endphp
+        @if ($href !== null && $shown !== '')
+            <a href="{{ $href }}" class="underline decoration-dotted underline-offset-2 hover:text-(--color-brand-700)"
+               aria-label="{{ $column->drillLabel($shown) }}" data-report-drill="{{ $column->key }}">{{ $shown }}</a>
+        @else
+            {{ $shown }}
+        @endif
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::QUANTITY)

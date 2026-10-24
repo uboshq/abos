@@ -120,6 +120,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ নিজের ছাদ, পাহারার ভিতরেই (রিপোর্ট ১৩৪, কলাম ৪৫২; কেবল কমে) — পুরনো দেনার বিশাল তালিকা সাধারণ ছাদে নয় (fe, ২৪ অক্টোবর ২০২৬)
+        'EveryReportFigureOpensItsSourceTest::KNOWN',
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
         // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)

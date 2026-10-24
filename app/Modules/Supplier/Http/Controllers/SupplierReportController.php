@@ -9,7 +9,9 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\Supplier\Reports\PrincipalCommission;
 use App\Modules\Supplier\Reports\PrincipalCommissionReport;
+use App\Modules\Supplier\Reports\PrincipalLinesReport;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -50,6 +52,9 @@ class SupplierReportController extends Controller implements HasMiddleware
 
         // ⭐ প্রিন্সিপালের কমিশন — মালিক, ৫ অক্টোবর ২০২৬ ([[PrincipalCommissionReport]])
         'principal-commission' => PrincipalCommissionReport::KEY,
+        // ⭐ কমিশনের অঙ্কের উৎস — চাপলে খোলে (মালিক, ২৪ অক্টোবর ২০২৬; [[PrincipalLinesReport]])
+        'principal-collections' => PrincipalLinesReport::COLLECTIONS,
+        'principal-payments' => PrincipalLinesReport::PAYMENTS,
     ];
 
     public function __construct(
@@ -89,11 +94,14 @@ class SupplierReportController extends Controller implements HasMiddleware
 
         /* ⭐ প্রিন্সিপালের কমিশন — মাস বাছার নিজের ঘর আর "কেবল রিপোর্ট" কথাটা; বাকি রিপোর্টে কিছুই বদলায় না */
         $principal = $key === PrincipalCommissionReport::KEY;
+        // ⭐ অঙ্কের উৎসের পাতা — মাথায় সূত্রের বাক্স, রিপোর্টের নিজের সারি থেকে (হার রিপোর্টের মান, আন্দাজ নয়)
+        $lines = in_array($key, [PrincipalLinesReport::COLLECTIONS, PrincipalLinesReport::PAYMENTS], true);
 
         return view('accounts::report.show', [
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
             ...($principal ? ['extraFilters' => 'supplier::reports.month-filter', 'notice' => __('supplier::principal.notice')] : []),
+            ...($lines ? ['explain' => $this->explain($result->filters)] : []),
             'report' => $definition,
             'result' => $result,
             'branches' => $definition->hasFilter('branch')
@@ -125,5 +133,33 @@ class SupplierReportController extends Controller implements HasMiddleware
                 ? PartyType::query()->active()->for(PartyType::SUPPLIER)->orderBy('code')->get()
                 : collect(),
         ]);
+    }
+
+    /**
+     * ⭐ সূত্রের বাক্স — প্রতিটা প্রিন্সিপালের এক লাইন, রিপোর্টের নিজের সারি থেকে ([[PrincipalCommission::rows()]], একই ছাঁকনি)।
+     *
+     * ⓘ "Star Line · ২৬/০৯/২০২৬ – ২৫/১০/২০২৬ · আদায় ৳১৫,৪৪,১৮৪.৯৯ × Margin 4% = কমিশন ৳৬১,৭৬৭.৪০ · অংশ = ৳১৫,৪৪,১৮৪.৯৯ − ৳৬১,৭৬৭.৪০
+     * = ৳১৪,৮২,৪১৭.৫৯ · দেওয়া ৳০.০০ · জের ৳১৪,৮২,৪১৭.৫৯" — হার রিপোর্টের ঘরের লেখাই, আন্দাজ নয়; "আসল" ভিত্তিতে অংশ আগে, কমিশন পরে।
+     *
+     * @param  array<string, mixed>  $filters  ইঞ্জিনের গোছানো ছাঁকনি (কোম্পানি, শাখার দেয়াল)
+     * @return list<string>
+     */
+    private function explain(array $filters): array
+    {
+        $taka = fn (string $v) => '৳'.\App\Core\Support\Money::format($v);
+
+        return array_map(fn (array $r) => (string) __(
+            $r['basis_rate'] === (string) __('supplier::principal.basis_actual_short') ? 'supplier::principal.explain_actual' : 'supplier::principal.explain',
+            [
+                'name' => $r['supplier_name'],
+                'period' => $r['period'],
+                'inflow' => $taka($r['inflow']),
+                'rate' => $r['basis_rate'],
+                'commission' => $taka($r['commission']),
+                'share' => $taka($r['share']),
+                'paid' => $taka($r['paid']),
+                'balance' => $taka($r['balance']),
+            ],
+        ), app(PrincipalCommission::class)->rows($filters));
     }
 }
