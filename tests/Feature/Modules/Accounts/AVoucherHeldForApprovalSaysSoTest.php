@@ -279,7 +279,9 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
 
     private function anyExpenseAccount(): int
     {
+        // ⓘ কেবল-সফটওয়্যারের খাত বাদ — খরচের ভাউচারে ওগুলো বাছা যায় না (প্রথমটা ৫১০০, বিক্রিত মালের খরচ; StandardChart::ENGINE_ONLY_EXPENSES)
         return (int) Account::query()->postable()->active()
-            ->where('type', Account::EXPENSE)->orderBy('code')->value('id');
+            ->where('type', Account::EXPENSE)->whereNotIn('code', \App\Modules\Accounts\Services\StandardChart::ENGINE_ONLY_EXPENSES)
+            ->orderBy('code')->value('id');
     }
 }

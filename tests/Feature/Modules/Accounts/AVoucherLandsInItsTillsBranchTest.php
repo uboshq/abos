@@ -163,6 +163,8 @@ final class AVoucherLandsInItsTillsBranchTest extends TestCase
 
     private function expense(): Account
     {
-        return Account::query()->postable()->active()->ofType([Account::EXPENSE])->whereNull('money_kind')->orderBy('code')->firstOrFail();
+        // ⓘ কেবল-সফটওয়্যারের খাত বাদ — খরচের ভাউচারে ওগুলো বাছা যায় না (প্রথমটা ৫১০০; StandardChart::ENGINE_ONLY_EXPENSES)
+        return Account::query()->postable()->active()->ofType([Account::EXPENSE])->whereNull('money_kind')
+            ->whereNotIn('code', \App\Modules\Accounts\Services\StandardChart::ENGINE_ONLY_EXPENSES)->orderBy('code')->firstOrFail();
     }
 }
