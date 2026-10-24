@@ -219,8 +219,8 @@ final class DepositFormOptions
             // ⛔ কেবল-সফটওয়্যারের খাত বাদ — বিক্রিত মালের খরচ, অবচয়, দেওয়া ছাড় … ([[StandardChart::ENGINE_ONLY_EXPENSES]]; ২৪ অক্টোবর ২০২৬)
             'expenseAccounts' => (function () use ($all) {
                 $chart = app(StandardChart::class);
-                // ⓘ দলসহ সব খাত একবারে — পূর্বপুরুষ খুঁজতে খাত ধরে আলাদা প্রশ্ন নয়
-                $seen = Account::query()->get(['id', 'code', 'type', 'parent_id'])->keyBy('id')->all();
+                // ⓘ পূর্বপুরুষ সবাই দল-খাত — দলগুলো একবারে তোলা, খাত ধরে আলাদা প্রশ্ন নয়; ⛔ এটা বাছাইয়ের তালিকা নয়, কেবল খোঁজার মানচিত্র
+                $seen = Account::query()->where('is_group', true)->get(['id', 'code', 'type', 'parent_id'])->keyBy('id')->all();
 
                 return $all->where('type', Account::EXPENSE)->reject(fn (Account $a) => $chart->isEngineOnlyExpense($a, $seen))->values();
             })(),
