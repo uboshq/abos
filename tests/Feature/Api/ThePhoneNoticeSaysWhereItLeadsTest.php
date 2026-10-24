@@ -105,7 +105,9 @@ final class ThePhoneNoticeSaysWhereItLeadsTest extends TestCase
         DeliveryChallan::query()->withoutGlobalScopes()->whereKey($challan->id)->update(['deleted_at' => now()]);
 
         $item = $this->itemOf($bell);
-        $this->assertNull($item['url'] ?? 'missing', '⛔ খোলা যায় না এমন কাগজের ঠিকানা ফোনে গেল।');
+        // ⓘ `??` নয় — null মান থাকলে `??` সেটাকে "নেই" ধরে অন্য মান দিত, আর দাবি ঠিক উত্তরেই লাল হত (Mac, ২৪ অক্টোবর ২০২৬)
+        $this->assertArrayHasKey('url', $item, 'প্রস্তুতিটাই ভুল — ফোনের খবরে url ঘরটাই নেই');
+        $this->assertNull($item['url'], '⛔ খোলা যায় না এমন কাগজের ঠিকানা ফোনে গেল।');
         $this->assertFalse($item['may_open'] ?? null, '⛔ মোছা কাগজের খবর বলল খোলা যায়।');
         $this->assertSame(['type' => 'delivery_challan', 'public_id' => null], $item['paper'] ?? null,
             '⛔ খোলা যায় না এমন কাগজের public_id বাইরে গেল।');
