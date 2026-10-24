@@ -147,8 +147,8 @@ final class VoucherListFilters
         $reach = $user !== null ? $this->scope->viewBranchIds($user) : null;
         $branches = Branch::query()->where('company_id', CompanyContext::id())
             ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach))
-            ->orderBy('name')->get()
-            ->mapWithKeys(fn (Branch $b) => [(string) $b->id => (string) $b->name])->all();
+            ->orderBy('sort_order')->orderBy('name_en')->get()
+            ->mapWithKeys(fn (Branch $b) => [(string) $b->id => $b->name()])->all();
 
         return [
             'parties' => $this->parties->forPicker(evenInactiveWithABalance: true),
