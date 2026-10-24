@@ -24,6 +24,22 @@
 
     /* ⓘ খোঁজার ঘরের লেখা — না দিলে পক্ষের ("নাম, কোড, মোবাইল…"); গ্রাহকের পয়েন্টে নিজের (মালিক, ৬ অক্টোবর ২০২৬) */
     'placeholder' => null,
+
+    /*
+     * ⓘ দুই লাইনে — বাছা নাম উপরে, তার নিচে ছোট লাইনে hint (গ্রাহকের পয়েন্ট · শাখা)। সরু ঘরে এক লাইনে লেখা তীরের নিচে কাটত
+     * (আদায়ের ১৩৬৬-এর ছবি, ২৪ অক্টোবর ২০২৬); মালিকের ১৯ অক্টোবরের নিয়মে নামের সাথে পয়েন্ট আর শাখা থাকেই।
+     */
+    'stacked' => false,
+
+    /*
+     * ⭐ "লেখা নাম যোগ" — তালিকায় নেই এমন নাম হাতে লেখা (মালিক, ৩ অক্টোবর ২০২৬; রসিদ/পরিশোধের পুরনো পিকারের হুবহু আচরণ, fe আর
+     * cb, ২৪ অক্টোবর ২০২৬): খোঁজার প্যানেলে "+ নতুন নাম হিসেবে রাখুন", কিছু না মিললে Enter-ও তাই; নামের পাশে "+"; নিচে নতুন
+     * নাম আর মোবাইলের ঘর। ⓘ ঘরের নাম `addName` / `addMobile` — রসিদ/পরিশোধে `party_new` / `party_mobile`, সার্ভার সেখান থেকেই
+     * তাঁকে ব্যক্তি বানায় ([[VoucherRequest]] · [[TurnsATypedNameIntoAParty]])। `addMobile` = null দিলে মোবাইলের ঘর নেই।
+     */
+    'addable' => false,
+    'addName' => 'party_new',
+    'addMobile' => 'party_mobile',
 ])
 
 {{--
@@ -73,10 +89,12 @@
 
     $value = $selected === null ? '' : (string) $selected;
     $hasError = $errors->has($name);
+    // ⓘ ফেরানো জমায় আগের লেখা নাম খোলা থাকে — ভুলের কারণ ঐ ঘরেই দেখা যায়
+    $addingNow = $addable && ($errors->has($addName) || filled(old($addName)));
 @endphp
 
 <div {{ $attributes->class('min-w-0') }}
-     x-data="partySearch({ value: @js($value), options: @js($rows), uid: @js($uid), clearable: @js((bool) $clearable) })">
+     x-data="partySearch({ value: @js($value), options: @js($rows), uid: @js($uid), clearable: @js((bool) $clearable), addable: @js((bool) $addable), adding: @js($addingNow), newName: @js($addable ? (string) old($addName, '') : '') })">
     @if ($label)
         <span id="{{ $uid }}-label" class="mb-1 block text-sm font-medium">
             {{ $label }}
@@ -87,7 +105,7 @@
         </span>
     @endif
 
-    <div class="relative"
+    <div @class(['relative', 'flex gap-2' => $addable])
          x-on:click.outside="closeList()"
          x-on:keydown.escape.prevent.stop="escape()">
         <input type="hidden" name="{{ $name }}" value="{{ $value }}"
@@ -99,23 +117,37 @@
                 x-on:keydown="triggerKey($event)"
                 aria-haspopup="listbox"
                 x-bind:aria-expanded="listOpen ? 'true' : 'false'"
-                @if ($label) aria-labelledby="{{ $uid }}-label" @elseif ($ariaLabel) aria-label="{{ $ariaLabel }}" @endif
+                {{-- ⓘ নামে লেবেল আর বাছা লেখা দুটোই — কেবল লেবেল দিলে পর্দা-পাঠক "গ্রাহক" পড়ত, কাকে বাছা হলো তা নয় --}}
+                @if ($label) aria-labelledby="{{ $uid }}-label {{ $uid }}-picked" @elseif ($ariaLabel) aria-label="{{ $ariaLabel }}" @endif
                 @if ($hasError) aria-invalid="true" @endif
                 x-bind:title="pickedHint"
                 data-party-picker
+                @if ($stacked) data-party-stacked @endif
                 @class([
-                    'flex h-(--spacing-field) w-full min-w-0 items-center gap-2 rounded-(--radius-field)
+                    'flex min-w-0 items-center gap-2 rounded-(--radius-field)
                      border bg-(--color-surface-card) px-3 text-start text-sm',
+                    'w-full' => ! $addable,
+                    'flex-1' => $addable,
+                    'h-(--spacing-field)' => ! $stacked,
+                    'min-h-(--spacing-field) py-1' => $stacked,
                     'border-(--color-danger)' => $hasError,
                     'border-(--color-border)' => ! $hasError,
                 ])>
-            <span class="min-w-0 flex-1 truncate">
-                <span x-text="pickedLabel">—</span>
-                <span class="num ms-2 text-2xs text-(--color-ink-muted)"
+            <span id="{{ $uid }}-picked" @class(['min-w-0 flex-1', 'truncate' => ! $stacked, 'flex flex-col leading-tight' => $stacked])>
+                <span x-text="pickedLabel" @class(['truncate' => $stacked])>—</span>
+                <span @class(['num text-2xs text-(--color-ink-muted)', 'ms-2' => ! $stacked, 'truncate' => $stacked])
                       x-show="hasPickedHint" x-cloak x-text="pickedHint"></span>
             </span>
             <span class="text-(--color-ink-muted)" aria-hidden="true">▾</span>
         </button>
+
+        @if ($addable)
+            {{-- ⭐ নামের পাশে "+" — মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"তালিকায় নেই? নাম লিখুন … + bosalei hoy"* --}}
+            <x-ui.button type="button" tone="secondary" icon="plus" data-party-add-toggle
+                         x-on:click="toggleAdding()"
+                         title="{{ __('accounts::field.party_not_listed') }}"
+                         aria-label="{{ __('accounts::field.party_not_listed') }}" />
+        @endif
 
         {{-- ⓘ ভাসমান, প্রবাহের ভিতরে নয় — খুললে নিচের ঘরগুলো ঠেলে নামে না। ⚠️ `inset-x-0`
              — ঘরটার সমান চওড়া, তাই ১৯২০×১০৮০-তে ডান কলামে বসেও কিছু কাটা পড়ে না
@@ -169,10 +201,41 @@
                     {{ __('accounts::message.party_no_match') }}
                 </li>
             </ul>
+
+            @if ($addable)
+                {{-- ⓘ তালিকায় নেই — লেখাটাই নতুন নাম হয়ে নিচের ঘরে বসে; কিছু না মিললে Enter-ও তাই করে --}}
+                <button type="button" x-show="canAddTyped" x-cloak data-party-add-typed
+                        x-on:click="addTyped()"
+                        class="mt-1 w-full truncate rounded-(--radius-field) border border-dashed border-(--color-border)
+                               px-2 py-1.5 text-start text-xs hover:bg-(--color-surface-hover)">
+                    + {{ __('accounts::field.party_add_typed') }}
+                    <b x-text="search"></b>
+                </button>
+            @endif
         </div>
     </div>
 
     @error($name)
         <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
     @enderror
+
+    @if ($addable)
+        {{-- ⓘ নামটা বসে ব্যক্তি হিসেবে (`mdm_people`) — পরের বার তালিকাতেই পাওয়া যায়; একই মানুষ তিন বানানে তিনজন হন না --}}
+        <div class="mt-2" x-show="adding" x-cloak data-party-new>
+            <div @class(['grid gap-2', 'sm:grid-cols-2' => $addMobile !== null])>
+                <x-ui.field :name="$addName" :id="$uid.'-new'"
+                            :label="__('accounts::field.party_new_name')"
+                            :value="old($addName)"
+                            :hint="__('accounts::field.party_new_hint')"
+                            x-model="newName" x-on:input="newNameTyped()" />
+
+                @if ($addMobile !== null)
+                    <x-ui.field :name="$addMobile" :id="$uid.'-mobile'"
+                                :label="__('master_data::field.mobile')"
+                                :value="old($addMobile)"
+                                x-ref="newMobile" />
+                @endif
+            </div>
+        </div>
+    @endif
 </div>
