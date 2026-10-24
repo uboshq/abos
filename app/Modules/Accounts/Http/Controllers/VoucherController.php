@@ -724,7 +724,51 @@ class VoucherController extends Controller implements HasMiddleware
             'debit' => \App\Core\Support\Money::format($debit),
             'credit' => \App\Core\Support\Money::format($credit),
             'balanced' => bccomp($debit, $credit, 4) === 0,
+            'summary' => $this->summaryOf($type, $data, $ledger['lines'], $accounts),
         ]);
+    }
+
+    /**
+     * ⭐ হিসাবের সারাংশ — খাতার একই সারি থেকে (fe, ২৪ অক্টোবর ২০২৬; মালিকের প্রশ্ন: "হিসাবের সারাংশ ভাউচারে এখন নেই কেন?")।
+     *
+     * ⓘ রসিদে খাতে ওঠে টাকা − চার্জ (ব্যাংক কেটে রাখে), পরিশোধে খাত থেকে যায় টাকা + চার্জ ([[VoucherService::twoLineEntry()]])।
+     * নিট আর চার্জ দুটোই খাতার সারি থেকে পড়া — টাকার খাতের সারি আর চার্জের খাতের (৫২১০ ব্যাংক চার্জ, MFS চার্জ) সারি; কাগজের টাকা
+     * মাথা থেকে। তাই "মিলেছে" সত্যিই খাতা আর কাগজের মিল মাপে, হাতে গোনা যোগফল নয়।
+     * ⓘ টাকা কথায় [[AmountInWords]] থেকে — ছাপা রসিদের একই লেখা; পর্দায় দ্বিতীয় কোনো হিসাব নেই।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @param  \Illuminate\Support\Collection<int, \App\Modules\Accounts\Models\Account>  $accounts
+     * @return array{amount: string, charge: string, net: string, words: string, matches: bool}
+     */
+    private function summaryOf(string $type, array $data, array $lines, \Illuminate\Support\Collection $accounts): array
+    {
+        $receipt = $type === Voucher::RECEIPT;
+        $moneyId = (int) ($data[$receipt ? 'to_account_id' : 'from_account_id'] ?? 0);
+        $chargeCodes = [\App\Modules\Accounts\Services\StandardChart::BANK_CHARGES, \App\Modules\Accounts\Services\StandardChart::MFS_CHARGES];
+        $amount = bcadd(is_numeric($data['amount'] ?? null) ? (string) $data['amount'] : '0', '0', 4);
+        $net = '0';
+        $charge = '0';
+
+        foreach ($lines as $line) {
+            if ((int) $line['account_id'] === $moneyId) {
+                $net = bcadd($net, (string) ($line[$receipt ? 'debit' : 'credit'] ?? '0'), 4);
+            } elseif (in_array($accounts->get((int) $line['account_id'])?->code, $chargeCodes, true)) {
+                $charge = bcadd($charge, (string) ($line['debit'] ?? '0'), 4);
+            }
+        }
+
+        $matches = $receipt
+            ? bccomp($amount, bcadd($net, $charge, 4), 4) === 0
+            : bccomp($net, bcadd($amount, $charge, 4), 4) === 0;
+
+        return [
+            'amount' => \App\Core\Support\Money::format($amount),
+            'charge' => \App\Core\Support\Money::format($charge),
+            'net' => \App\Core\Support\Money::format($net),
+            'words' => \App\Core\Support\AmountInWords::of($amount, app()->getLocale()),
+            'matches' => $matches,
+        ];
     }
 
     /**

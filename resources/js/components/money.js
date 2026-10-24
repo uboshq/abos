@@ -495,6 +495,17 @@ export function voucherMoney ({
         get previewBlocked () { return this.preview.message !== '' },
         get previewMatches () { return this.hasPreview && this.preview.balanced },
         get unbalanced () { return this.hasPreview && !this.preview.balanced },
+
+        /*
+         * ⭐ হিসাবের সারাংশ ([[x-money.summary]]) — অঙ্ক আর কথা সার্ভারের, খাতার একই সারি থেকে ([[VoucherController::summaryOf()]]);
+         * পর্দা কিছু গোনে না। প্রিভিউর আগে "—", কথা ফাঁকা।
+         */
+        get summary () { return this.hasPreview ? (this.preview.summary ?? null) : null },
+        get sumAmount () { return this.summary?.amount ?? '—' },
+        get sumCharge () { return this.summary?.charge ?? '—' },
+        get sumNet () { return this.summary?.net ?? '—' },
+        get sumWords () { return this.summary?.words ?? '' },
+        get sumMatches () { return this.summary?.matches === true },
     }
 }
 

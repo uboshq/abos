@@ -260,10 +260,8 @@
 
             {{-- ═══ ডানের কলাম ═══ --}}
             <aside class="flex min-w-0 flex-col gap-4">
-                {{-- ── হিসাবের সারাংশ (#৪, #৫, #৯) ── --}}
-                <section data-boxed data-pay-summary class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                    <h2 class="mb-3 font-semibold">{{ __('money.screen.summary') }}</h2>
-                    <dl class="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
+                {{-- ── হিসাবের সারাংশ (#৪, #৫, #৯) — তিন পর্দার একই কার্ড ([[x-money.summary]], ২৪ অক্টোবর ২০২৬) ── --}}
+                <x-money.summary data-pay-summary>
                         <dt>{{ __('money.screen.sum.applied') }}</dt><dd class="num" x-text="appliedText"></dd>
                         {{-- ⭐ কাটা অঙ্ক বিয়োগ চিহ্নে, পাশে হারের ছোট ট্যাগ (নকশা; মিল-তালিকার ফাঁক ৬) --}}
                         <dt>{{ __('money.screen.sum.ait') }} <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">{{ __('money.screen.tag.ait') }}</span></dt>
@@ -278,7 +276,7 @@
                         <dt>{{ __('money.screen.sum.charge') }}</dt><dd class="num" data-sum-charge x-text="chargeText"></dd>
                         <dt x-show="hasUnapplied" x-cloak>{{ __('money.screen.sum.unapplied') }}</dt>
                         <dd class="num" x-show="hasUnapplied" x-cloak data-sum-unapplied x-text="unappliedText"></dd>
-                    </dl>
+                    <x-slot:after>
                     <p class="mt-3 border-s-2 border-(--color-badge-success-ink) bg-(--color-badge-success-bg) px-3 py-2 text-xs text-(--color-badge-success-ink)"
                        x-show="matches || hasUnapplied" x-cloak data-sum-matches>{{ __('money.screen.sum.matches') }}</p>
                     <p class="mt-3 border-s-2 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-xs text-(--color-badge-danger-ink)"
@@ -287,7 +285,8 @@
                          উঠবে" অংশটা তালিকা বানানোর পরে — আগে লিখলে পর্দা এমন কিছু কথা দিত যা ব্যবস্থায় নেই --}}
                     <p class="mt-3 border-s-2 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-xs text-(--color-badge-warning-ink)"
                        x-show="withheld" x-cloak data-sum-tax-note>{{ __('money.screen.sum.tax_note') }}</p>
-                </section>
+                    </x-slot:after>
+                </x-money.summary>
 
                 {{-- ── খাতায় যা যাবে (#১০) — সার্ভারের হিসাবে ── --}}
                 <section data-boxed data-pay-ledger class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">

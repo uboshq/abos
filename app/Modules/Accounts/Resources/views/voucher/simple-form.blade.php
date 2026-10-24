@@ -251,6 +251,16 @@
             </details>
         @endif
 
+        {{--
+            ⭐ রসিদ আর পরিশোধ দুই কলামে — টাকা দেওয়ার পর্দার একই গড়ন (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬, মালিকের প্রশ্ন: "হিসাবের
+            সারাংশ ভাউচারে এখন নেই কেন?")। বাঁয়ে পক্ষ, টাকা, পদ্ধতি → খাত, সংযুক্তি ও বিবরণ; ডানে হিসাবের সারাংশ আর খাতায় যা যাবে।
+            ⓘ `lg`-এর নিচে (মোবাইল, সরু জানালা) ডানের কলাম নিচে নামে; নিচের বোতাম-সারি দুই কলামের বাইরে, পুরো চওড়ায়।
+        --}}
+        @if ($partyAbove)
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]" data-voucher-columns>
+            <div class="min-w-0 space-y-4" data-voucher-main>
+        @endif
+
         @if (in_array($voucher->type, [
             \App\Modules\Accounts\Models\Voucher::RECEIPT,
             \App\Modules\Accounts\Models\Voucher::PAYMENT,
@@ -739,7 +749,12 @@
                     সরবরাহকারী-পরিশোধ, আদায়) একই নিয়ম এক জায়গায়। ⛔ আগে খাত আগে ছিল, আর "Roket"-এর মতো MFS খাত বেছে "নগদ" চাপা যেত।
                     ⓘ ঘর `x-model="account"`-এ বাঁধা — স্থিতি, প্রিভিউ আর রেফারেন্সের উত্তর আগের মতোই এটা দেখে।
                 --}}
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {{--
+                    ⓘ পদ্ধতির চিপের কলাম চিপের নিজের মাপে (`auto auto`), খাত বাকিটা — ডানে সারাংশ আসায় বাক্স সরু (১৩৬৬, মেনু খোলা: ~৬০০px),
+                    আর সমান চার কলামে রসিদের চার চিপ ("নগদ জমা") খাতের ঘরের নিচে ঢুকে যেত (মাপা, ২৪ অক্টোবর ২০২৬)। পদ্ধতির ঘরগুলো
+                    (`col-span-full`) আগের মতোই পুরো চওড়ায়।
+                --}}
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)]">
                     {{-- ⓘ নতুন ভাউচারে record নয় — তখন মূল্য-তারিখ আজ দিয়ে শুরু। ⭐ `slip-check`: রেফারেন্সের নিচে চলতি "একই খাতে আগে ব্যবহার হয়নি ✓" --}}
                     {{-- ⛔ পরিশোধে খাতের ঘরটা একসময় ছিলই না — লাইভে একটাও পরিশোধ পোস্ট হয়নি (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)। ⭐ লেখা নকশার: "যে খাত থেকে" --}}
                     <x-money.method inline slip-check
@@ -776,11 +791,13 @@
                     <div class="flex flex-col gap-3">
                         @if ($isPayment)
                             {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
+                            {{-- ⭐ নামে খাত, পক্ষ নয় — "যে খাতে বসবে", নিচে "না বাছলে পক্ষের দেনা" (fe, ২৪ অক্টোবর ২০২৬: "কাকে দেওয়া হল" শুনে পক্ষ মনে হত) --}}
                             <x-ui.select name="to_account_id"
-                                         :label="__($sides['to']['label'])"
+                                         :label="__('accounts::field.lands_in')"
+                                         :hint="__('accounts::field.lands_in_hint')"
                                          :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
                                          :selected="old('to_account_id', $debitLine?->account_id)"
-                                         :placeholder="__('accounts::field.paid_to_from_party')" />
+                                         placeholder="—" />
                         @endif
 
                         {{-- ⭐ কার মাধ্যমে — মালিকের আলাদা আদেশ (১৮ সেপ্টেম্বর ২০২৬: *"বিবরণ er age niye aso"*); বিবরণের ঠিক আগে --}}
@@ -795,6 +812,28 @@
                     </div>
                 </div>
             </section>
+
+            </div>{{-- data-voucher-main --}}
+
+            {{-- ═══ ডানের কলাম — হিসাবের সারাংশ, তার নিচে খাতায় যা যাবে (টাকা দেওয়ার পর্দার একই ক্রম) ═══ --}}
+            <aside class="flex min-w-0 flex-col gap-4" data-voucher-aside>
+            {{--
+                ⭐ হিসাবের সারাংশ — তিন পর্দার একই কার্ড ([[x-money.summary]])। রসিদ: পাওয়া টাকা → চার্জ → খাতে উঠবে (নিট) → কথায় → মিলেছে;
+                পরিশোধ আয়নায়: দেওয়া টাকা → চার্জ → খাত থেকে যাবে (নিট) → কথায় → মিলেছে। ⓘ অঙ্ক আর কথা সার্ভারের, খাতার একই সারি থেকে
+                ([[VoucherController::summaryOf()]])। ⓘ উৎসে কাটার ঘর রসিদ-পরিশোধ ভাউচারে নেই (আছে আদায় আর সরবরাহকারী-পরিশোধে), তাই সারিও নেই।
+            --}}
+            <x-money.summary data-voucher-summary words="sumWords">
+                <dt>{{ $isPayment ? __('money.screen.sum.paid') : __('money.screen.sum.received') }}</dt>
+                <dd class="num" data-sum-amount x-text="sumAmount"></dd>
+                <dt>{{ __('money.screen.sum.charge_any') }}</dt>
+                <dd class="num" data-sum-charge x-text="sumCharge"></dd>
+                <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ $isPayment ? __('money.screen.sum.net') : __('money.screen.sum.into') }}</dt>
+                <dd class="num border-t border-(--color-border) pt-2 font-semibold" data-sum-net x-text="sumNet"></dd>
+                <x-slot:after>
+                    <p class="mt-3 border-s-2 border-(--color-badge-success-ink) bg-(--color-badge-success-bg) px-3 py-2 text-xs text-(--color-badge-success-ink)"
+                       x-show="sumMatches" x-cloak data-sum-matches>{{ $isPayment ? __('money.screen.sum.matches_out') : __('money.screen.sum.matches_in') }}</p>
+                </x-slot:after>
+            </x-money.summary>
 
             {{-- ── ⭐ খাতায় যা যাবে — পোস্টের আগে, সার্ভারের হিসাবে ([[VoucherController::simulate()]]); কিছুই লেখা হয় না ── --}}
             <section data-boxed data-voucher-ledger
@@ -837,6 +876,8 @@
                 <p class="mt-2 text-xs text-(--color-badge-success-ink)" data-ledger-matches x-show="previewMatches" x-cloak>{{ __('accounts::message.ledger_matches') }}</p>
                 <p class="mt-2 text-xs text-(--color-danger)" x-show="unbalanced" x-cloak>{{ __('money.screen.ledger_unbalanced') }}</p>
             </section>
+            </aside>
+            </div>{{-- data-voucher-columns --}}
 
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">

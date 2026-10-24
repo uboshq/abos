@@ -4,13 +4,18 @@
     "সেভ" মানে লেজারে বসে যাওয়া। খসড়া রাখতে হলে আলাদা করে চাপতে হয়,
     কারণ ডিফল্ট খসড়া হলে দিনের শেষে একগাদা ভাউচার পড়ে থাকত যেগুলো
     কোনো হিসাবে নেই, আর কেউ জানত না সেগুলো ভুলে যাওয়া নাকি ইচ্ছাকৃত।
+
+    ⭐ ক্রম: বাতিল · খসড়া রাখুন · [মূল] — মূলটা সবসময় শেষে আর ডানে (fe, ২৪ অক্টোবর ২০২৬: পুরো ERP-তে একটাই ক্রম; নকশা পাতা ২
+    আর ৪-এর নিচের সারি, টাকা দেওয়ার পর্দার মতো)। ⛔ আগে মূল বোতাম সবার আগে ছিল, আদায়ের অনুমোদিত নকশার উল্টো।
+    ⓘ DOM-এর ক্রমও এটাই, তাই Tab পর্দার ক্রমে চলে। ⚠️ ঘরে Enter চাপলে ফর্মের প্রথম জমার বোতাম চলে — এখন "খসড়া রাখুন", পোস্ট
+    নয়; টাকা দেওয়ার পর্দাতেও আগে থেকেই তাই। ভুলে Enter চাপলে খাতায় কিছু বসে না, খসড়া থাকে।
 --}}
 @php
     /*
-     * ⭐ প্রধান বোতামের নাম বাইরে থেকে দেওয়া যায় — ১৮ সেপ্টেম্বর ২০২৬।
+     * ⭐ প্রধান বোতামের নাম বাইরে থেকে দেওয়া যায় — ১৮ সেপ্টেম্বর ২০২৬।
      *
-     * ⓘ খরচের নকশায় লেখা "অনুমোদনে পাঠান", আর আদায়-পরিশোধে
-     * "সংরক্ষণ ও পোস্ট"। ⚠️ একটাই নাম হার্ডকোড করলে একটা পর্দায়
+     * ⓘ খরচের নকশায় লেখা "অনুমোদনে পাঠান", আর আদায়-পরিশোধে
+     * "সংরক্ষণ ও পোস্ট"। ⚠️ একটাই নাম হার্ডকোড করলে একটা পর্দায়
      * নকশা মিলত না — আর মালিক ওটাই ধরেন।
      */
     $primaryLabel ??= 'accounts::action.save_and_post';
@@ -23,10 +28,12 @@
     }
 @endphp
 
-<div class="flex flex-wrap gap-2">
-    <x-ui.button type="submit" tone="primary"
-                 ::class="busy && 'pointer-events-none opacity-70'">
-        {{ __($primaryLabel) }}
+<div class="flex flex-wrap gap-2" data-save-buttons>
+    <x-ui.button tone="secondary"
+                 :href="$voucher->exists
+                     ? route('accounts.voucher.show', $voucher)
+                     : route('accounts.voucher.index', $type)">
+        {{ __('core.action.cancel') }}
     </x-ui.button>
 
     @unless ($revising)
@@ -39,10 +46,8 @@
         </button>
     @endunless
 
-    <x-ui.button tone="secondary"
-                 :href="$voucher->exists
-                     ? route('accounts.voucher.show', $voucher)
-                     : route('accounts.voucher.index', $type)">
-        {{ __('core.action.cancel') }}
+    <x-ui.button type="submit" tone="primary"
+                 ::class="busy && 'pointer-events-none opacity-70'">
+        {{ __($primaryLabel) }}
     </x-ui.button>
 </div>

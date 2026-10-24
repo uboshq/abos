@@ -100,7 +100,12 @@
         থেকে" এক নজরে মেলানোর জিনিস। ঘরের নাম বদলায়নি, তাই জমা, ফোন আর পুরনো কাগজ অক্ষত।
     --}}
     {{-- ⓘ পক্ষের কলাম দ্বিগুণ — ১৩৬৬-এ সমান চার কলামে "আকিজ ফুড অ্যা…" কাটা পড়ত (মাপা, ২৩ অক্টোবর ২০২৬); নকশাতেও নামের ঘর সবচেয়ে চওড়া --}}
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr_1fr]" data-voucher-head>
+    {{--
+        ⭐ ২৪ অক্টোবর ২০২৬ — ডানে সারাংশের কলাম আসায় এই বাক্স সরু (১৩৬৬, মেনু খোলা: ~৬০০px); চার কলামে তারিখ "24-10-" কাটা পড়ত
+        (মাপা)। ⓘ টাকা দেওয়ার পর্দার একই গড়ন, নকশা পাতা ২ আর ৪: পক্ষের ধরন নিজের সারিতে, তার নিচে পক্ষ · তারিখ · টাকা তিন কলামে
+        (`data-pay-general-row`-এর মতো; পক্ষের কলাম বেশি — নামের পাশে "অগ্রিম ৳…" বসে, আর ৯.৫rem-এর তারিখ-টাকায় নাম "আল…" হয়ে কাটত)।
+    --}}
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)]" data-voucher-head>
 
         {{-- ⓘ "কখন" (moved_at) আর চাওয়া হয় না — মালিকের ২১ অক্টোবরের রায় ([[x-money.method]]); কলাম থাকে, পুরনো কাগজে দেখায় --}}
 
@@ -136,11 +141,13 @@
             আর ঘরটা সত্যিই ছিল। ⓘ **অপশন গোনা হয়নি।** মালিক পর্দা দেখে
             ধরিয়ে দেন।
         --}}
-        <x-ui.select name="party_type"
-                     :label="$isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type')"
-                     :options="collect($parties)->pluck('label', 'type')->all()"
-                     :selected="$partyType"
-                     x-model="partyType" x-on:change="resetParty()" />
+        <div class="sm:col-span-2 lg:col-span-full lg:max-w-xs" data-party-type-row>
+            <x-ui.select name="party_type"
+                         :label="$isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type')"
+                         :options="collect($parties)->pluck('label', 'type')->all()"
+                         :selected="$partyType"
+                         x-model="partyType" x-on:change="resetParty()" />
+        </div>
 
         {{-- ⓘ `adding` এখন [[party-voucher.js]]-এ, আলাদা ছোট x-data-য় নয় — খোঁজার
              তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে "+" ঘরটা খুলতে হয়, আর

@@ -49,6 +49,10 @@ return [
         'cleared' => '":account" is not a :method account, so it was taken off.',
     ],
 
+    'counting' => [
+        'fold' => 'Count the notes — optional',
+    ],
+
     'validation' => [
         'account_not_for_method' => '":account" is not a :method account — with :method only :kind accounts can be used.',
         'reference_needed' => 'Posting by ":method" needs its reference — it is how the bank statement is matched and the same money is never taken twice.',
@@ -122,6 +126,12 @@ return [
             'over' => 'Applied to bills is more than the total',
             'tax_note' => 'Withheld tax and VAT must be deposited to the government treasury within the legal deadline, and the supplier must be given a Mushak-6.6 certificate — both go on the obligations list, with due dates.',
             'matches' => 'Balanced: applied + unapplied = total',
+            'received' => 'Received',
+            'paid' => 'Paid',
+            'charge_any' => 'Bank or MFS charge (our expense)',
+            'into' => 'Lands in the account (net)',
+            'matches_in' => 'Balanced: received = into the account + charge',
+            'matches_out' => 'Balanced: leaves the account = paid + charge',
         ],
         'tag' => [
             'ait' => "on the value excluding VAT, supplier's rate",

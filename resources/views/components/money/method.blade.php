@@ -205,8 +205,14 @@
     {{-- ── নগদ: চাইলে নোট গোনা ── --}}
     @if ($counting)
         <template x-if="method === 'cash'">
-            <div data-method-block="cash" @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
-                <div class="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            {{--
+                ⭐ ভাঁজ করা, ঐচ্ছিক — "▸ নোট গুনে মেলান — ঐচ্ছিক" (fe, ২৪ অক্টোবর ২০২৬; খরচের পরিকল্পনার একই ভাঁজ)। ⓘ নোট গোনা ক্যাশ
+                কাউন্টারের কাজ, রসিদ-পরিশোধে রোজ লাগে না; খোলা থাকলে দশটা ঘর পর্দার অর্ধেক নিত। ⓘ `<details>`: বন্ধ থাকলেও ঘরগুলো একবারই
+                আছে, তাই খুলে গুনে বন্ধ করলেও গোনা মান জমা যায় — একই নামের দুই ঘর নেই, তাই ফাঁকা ঘর ভরা ঘরকে মোছে না।
+            --}}
+            <details data-method-block="cash" data-notes-fold @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
+                <summary class="cursor-pointer text-sm font-medium">{{ __('money.counting.fold') }}</summary>
+                <div class="mt-2 grid gap-x-5 gap-y-1 sm:grid-cols-2">
                     @foreach ($notes as $note)
                         <label class="grid grid-cols-[3.5rem_0.75rem_3.5rem_1fr] items-center gap-1.5 font-mono text-xs tabular-nums">
                             <span class="text-right text-(--color-ink-muted)">{{ number_format($note) }}</span>
@@ -221,7 +227,7 @@
                 </div>
                 <p class="mt-2 rounded px-2 py-1 text-xs" :class="countClass" x-text="countText"
                    data-agrees="{{ __('accounts::message.count_agrees') }}" data-differs="{{ __('accounts::message.count_differs') }}"></p>
-            </div>
+            </details>
         </template>
     @endif
 
