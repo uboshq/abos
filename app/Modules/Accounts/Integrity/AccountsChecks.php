@@ -60,8 +60,13 @@ final class AccountsChecks implements ChecksItsOwnBooks
             permission: 'accounts.report',
             run: function (): array {
                 $out = [];
+                $columns = ['id', 'code', 'name_en', 'name_bn', 'type', 'money_kind'];
 
-                foreach (Account::query()->orderBy('code')->get(['id', 'code', 'name_en', 'name_bn', 'type', 'money_kind']) as $account) {
+                // ⓘ পোস্টযোগ্য খাত আর দল — দুটোই, ইচ্ছা করে: মান ছকের দলের কোডেও (১১০১, ১১০২ …) অন্য খাত বসতে পারে
+                $leaves = Account::query()->postable()->get($columns);
+                $groups = Account::query()->where('is_group', true)->get($columns);
+
+                foreach ($leaves->concat($groups)->sortBy('code') as $account) {
                     $code = (string) $account->code;
 
                     if (! StandardChart::isStandardCode($code) || StandardChart::holdsItsMeaning($account)) {

@@ -90,8 +90,6 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
         'AccountsFacts.php' => 'একই কারণে — পরিবারের যোগফল',
         'BalanceSheetService.php' => 'স্থিতিপত্র দল ধরেই সাজানো',
         'FixedAssetController.php' => 'সম্পদের বাবা-খাত বাছা হয়, আর ওটা দল',
-        // ⓘ ২৪ অক্টোবর ২০২৬ (ec) — মান ছকের কোডে অন্য খাত বসে আছে কিনা, দল-খাতসহ সবার পরখ; কোনো খাত বাছে না, টাকা বসায় না
-        'AccountsChecks.php' => 'খাতার পরখ — মান ছকের প্রতিটা কোডের খাত, দলসহ, পড়ে দেখে; কোনো বাছাই নয়',
     ];
 
     public function test_every_account_picker_leaves_groups_out(): void
