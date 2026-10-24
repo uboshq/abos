@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -28,6 +29,25 @@ return new class extends Migration
 {
     public function up(): void
     {
+        /*
+         * ⛔ আগাম পরখ — দ্বৈত থাকলে কিছু ছোঁয়ার আগেই থামা (fe, ২৪ অক্টোবর ২০২৬)। ⓘ MySQL/MariaDB-তে DDL লেনদেনে ফেরে না: ঘর যোগ হয়ে
+         * ইনডেক্সে থামলে টেবিল অর্ধেক বদলানো থাকত। গড়া ঘরের একই নিয়মে গোনা (চালু, ছাঁটা-ছোট হাত, খালি নয়)।
+         */
+        $twins = DB::table('pur_payments')
+            ->selectRaw('company_id, account_id, LOWER(TRIM(instrument_no)) as ref, COUNT(*) as n, GROUP_CONCAT(document_no) as papers')
+            ->whereNull('deleted_at')
+            ->where('status', '<>', 'cancelled')
+            ->whereNotNull('instrument_no')
+            ->whereRaw("TRIM(instrument_no) <> ''")
+            ->groupByRaw('company_id, account_id, LOWER(TRIM(instrument_no))')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+
+        if ($twins->isNotEmpty()) {
+            throw new RuntimeException('⛔ একই খাতে একই রেফারেন্সে একাধিক চালু পরিশোধ আছে — ইনডেক্স বসানো হলো না, টেবিল অপরিবর্তিত। আগে এগুলো মেলান: '
+                .$twins->map(fn ($t) => "কোম্পানি {$t->company_id}, খাত {$t->account_id}, \"{$t->ref}\": {$t->papers}")->implode(' | '));
+        }
+
         Schema::table('pur_payments', function (Blueprint $table): void {
             $table->string('live_ref', 64)->nullable()->storedAs(
                 "CASE WHEN status <> 'cancelled' AND deleted_at IS NULL AND TRIM(instrument_no) <> '' THEN LOWER(TRIM(instrument_no)) END"
