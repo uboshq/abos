@@ -207,6 +207,7 @@
 | `collection` | Sales | Collection |
 | `commission_claim` | Sales | CommissionClaim |
 | `contra_voucher` | Accounts | Voucher |
+| `credit_profile` | CreditControl | CreditProfile |
 | `currency` | MasterData | Currency |
 | `customer` | Customer | Customer |
 | `delivery_challan` | Sales | DeliveryChallan |
