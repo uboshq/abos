@@ -242,6 +242,27 @@ final class VoucherApiController extends Controller implements HasMiddleware
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /**
+     * ⭐ নিট — পক্ষের হাতে যা গেল বা এল, খাতার সারি থেকে (চুক্তি §৫)।
+     *
+     * ⛔ মাথার `amount` নয়: পোস্টের সময় সেবা সেটা ডেবিটের মোটে বদলায় ([[VoucherService::post()]]) — পরিশোধে তখন মোট + চার্জ (১,০২৫),
+     * নিট (৮৭৫) নয়। ⓘ তাই টাকার খাতের সারি থেকে: পরিশোধে টাকার খাতের ক্রেডিট − চার্জ (চার্জ মোটের বাইরে), রসিদে টাকার খাতের ডেবিট
+     * + চার্জ (ব্যাংক চার্জ কেটে রাখে)। খসড়া আর পাকা দুই অবস্থায় একই উত্তর; অন্য ধরনে লেখা অঙ্কই।
+     */
+    private function netOf(Voucher $v): string
+    {
+        if (! in_array($v->type, [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+            return bcadd((string) ($v->amount ?? '0'), '0', 4);
+        }
+
+        $money = $v->lines
+            ->filter(fn (VoucherLine $l) => $l->account?->money_kind !== null)
+            ->reduce(fn (string $sum, VoucherLine $l) => bcadd($sum, (string) ($v->type === Voucher::RECEIPT ? $l->debit : $l->credit), 4), '0');
+        $charge = (string) ($v->charge_amount ?? '0');
+
+        return $v->type === Voucher::PAYMENT ? bcsub($money, $charge, 4) : bcadd($money, $charge, 4);
+    }
+
+    /**
      * ⭐ খাতার সারি ফোনের চুক্তির আকারে — `account` {id, code, name}, `dr`, `cr` (৪ দশমিকের string), আর মোট দুই পাশ।
      * ⓘ preview আর ভাউচারের পাতা একই রূপে বলে, যাতে ফোন দুটো পাশাপাশি মেলাতে পারে (চুক্তি §৫)।
      *
@@ -548,7 +569,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
                 && ! $this->vouchers->writerMayNotPost($v),
             'awaits_another_hand' => $v->isDraft() && $this->vouchers->writerMayNotPost($v),
             // ⭐ নিট আর খাতা সার্ভারের — ফোন নিজে গোনে না (চুক্তি §৫); preview-এর একই রূপ ([[ledgerOf()]])
-            'net_amount' => bcadd((string) ($v->amount ?? '0'), '0', 4),
+            'net_amount' => $this->netOf($v),
             ...$this->ledgerOf($v->lines->map(fn (VoucherLine $l) => [
                 'account_id' => (int) $l->account_id,
                 'debit' => (string) $l->debit,
