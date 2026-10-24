@@ -12,6 +12,7 @@ use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -53,9 +54,10 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
 
     public function test_dry_names_what_would_be_set_and_writes_nothing(): void
     {
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id, '--dry' => true])
-            ->expectsOutputToContain('FMART · '.$this->owner->id.' '.$this->owner->name.' · নতুন সদস্যপদ · ডিফল্ট শাখা '.$this->main()->code.' · super_admin দেওয়া · (বসত')
-            ->assertSuccessful();
+        [$code, $out] = $this->restore(['--dry' => true]);
+        $this->assertSame(0, $code, '⛔ --dry ব্যর্থ হলো।');
+        $this->assertStringContainsString('FMART · '.$this->owner->id.' '.$this->owner->name.' · নতুন সদস্যপদ · ডিফল্ট শাখা '.$this->main()->code.' · super_admin দেওয়া · (বসত', $out,
+            '⛔ --dry বলে না কী বসত আর কোন শাখা।');
 
         $this->assertFalse($this->isMember(), '⛔ --dry সদস্যপদ বসিয়ে ফেলল।');
         $this->assertFalse($this->isOwnerHere(), '⛔ --dry super_admin দিয়ে ফেলল।');
@@ -64,7 +66,7 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
 
     public function test_the_owner_comes_back_on_the_main_branch_as_super_admin_and_the_book_says_so_once(): void
     {
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id])->assertSuccessful();
+        $this->assertSame(0, $this->restore()[0], '⛔ মালিকহীন কোম্পানিতে মালিক ফেরানো ব্যর্থ হলো।');
 
         $row = DB::table('company_user')->where('company_id', $this->company->id)->where('user_id', $this->owner->id)->first();
         $this->assertNotNull($row, '⛔ মালিকের সদস্যপদ বসেনি।');
@@ -73,9 +75,9 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
         $this->assertTrue($this->isOwnerHere(), '⛔ মালিক এই কোম্পানির super_admin হননি (বা permission cache পুরনো)।');
         $this->assertSame(1, $this->restoredRows(), '⛔ এই কোম্পানির খাতায় owner_restored সারি নেই।');
 
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id])
-            ->expectsOutputToContain('আগে থেকেই')
-            ->assertSuccessful();
+        [$again, $said] = $this->restore();
+        $this->assertSame(0, $again, '⛔ দ্বিতীয়বার চালানো ব্যর্থ হলো।');
+        $this->assertStringContainsString('আগে থেকেই', $said, '⛔ দ্বিতীয়বার চালালে "আগে থেকেই আছে" বলে না — আবার বসাতে গেছে।');
         $this->assertSame(1, $this->restoredRows(), '⛔ দ্বিতীয়বার চালাতে আবার খাতায় লিখল — কিছু বদলানোর কথা ছিল না।');
     }
 
@@ -83,7 +85,7 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
     {
         config(['abos.owner_emails' => ['someone-else@abos.test']]);
 
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id])->assertFailed();
+        $this->assertNotSame(0, $this->restore()[0], '⛔ মালিক-তালিকার বাইরের মানুষের জন্য কমান্ড চলে গেল।');
 
         $this->assertFalse($this->isMember(), '⛔ মালিক-তালিকার বাইরের মানুষকে সদস্য করা হলো।');
         $this->assertFalse($this->isOwnerHere(), '⛔ মালিক-তালিকার বাইরের মানুষকে super_admin করা হলো।');
@@ -94,7 +96,7 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
         $other = User::factory()->create(['is_active' => true]);
         CompanyContext::forCompany((int) $this->company->id, fn () => $other->assignRole($this->superRole()->first()));
 
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id])->assertFailed();
+        $this->assertNotSame(0, $this->restore()[0], '⛔ মালিক-আছে কোম্পানিতে কমান্ড চলে গেল — পথ হস্তান্তর।');
 
         $this->assertFalse($this->isOwnerHere(), '⛔ মালিক-আছে কোম্পানিতে দ্বিতীয় মালিক বসানো হলো — পথ হস্তান্তর।');
     }
@@ -103,9 +105,20 @@ final class AnOwnerlessCompanyGetsItsOwnerBackTest extends TestCase
     {
         Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->update(['is_default' => false]);
 
-        $this->artisan('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id])->assertFailed();
+        $this->assertNotSame(0, $this->restore()[0], '⛔ প্রধান শাখা ছাড়াই কমান্ড চলে গেল — শাখা অনুমানে।');
 
         $this->assertFalse($this->isMember(), '⛔ প্রধান শাখা ছাড়াই অনুমানের শাখায় সদস্যপদ বসল।');
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     * @return array{0: int, 1: string} exit code আর লেখা
+     */
+    private function restore(array $extra = []): array
+    {
+        $code = Artisan::call('abos:restore-owner', ['--company' => 'FMART', '--user' => $this->owner->id] + $extra);
+
+        return [$code, Artisan::output()];
     }
 
     private function superRole()
