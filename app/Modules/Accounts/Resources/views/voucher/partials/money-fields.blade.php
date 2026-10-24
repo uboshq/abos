@@ -46,7 +46,7 @@
                             {{-- ⭐ খাতে আছে কত — নকশার "খাতে আছে ৳…"; পরিশোধে পরিশোধ আর চার্জের চেয়ে কম হলে লাল --}}
                             <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
                                 {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                                <span x-show="short">— {{ __('money.screen.short') }}</span>
+                                <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
                             </p>
                         </x-slot:account-note>
                     </x-money.method>

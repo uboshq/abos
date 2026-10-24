@@ -463,6 +463,10 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
                 $this->assertGreaterThan(0, $xpath->query($path, $card)->length, "⛔ {$type}: {$what} \"সাধারণ তথ্য\" কার্ডে নেই");
             }
 
+            // ⭐ নকশার "খাতে আছে ৳8,42,000 ✓" — যথেষ্ট থাকলে ✓, কম থাকলে লাল কারণ (টাকা দেওয়ার পর্দার একই লাইন)
+            $this->assertSame('! short', $xpath->query('.//*[@data-account-balance]//*[@data-balance-ok]', $card)->item(0)?->getAttribute('x-show'),
+                "⛔ {$type}: খাতের স্থিতির পাশে ✓ নেই — যথেষ্ট আছে কি না এক নজরে বোঝা যায় না");
+
             $open = $xpath->query('//section[@data-open-bills]')->item(0);
             $this->assertNull($xpath->query('ancestor::*[@data-voucher-general]', $open)->item(0), "⛔ {$type}: খোলা বিল \"সাধারণ তথ্য\" কার্ডের ভিতরে — নকশায় নিজের কার্ডে, তার পরে");
             $this->assertTrue($open->hasAttribute('data-boxed'), "⛔ {$type}: খোলা বিল নিজের কার্ডে নয়");
