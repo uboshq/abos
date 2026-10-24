@@ -576,7 +576,11 @@ final class ApprovalEngine
                 'document' => $this->noticeLabel($approval),
             ]),
             $remarks,
-            Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            /*
+             * ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় (২৪ অক্টোবর ২০২৬): তালিকা খোলে কেবল `approval.decide`/`approval.report`
+             * থাকলে, তাই সাধারণ লেখক নিজের কাগজের ফল খুলতে গিয়ে ৪০৩ পেতেন। পাতাটা অনুরোধকারীকে নিজের বলে খোলে।
+             */
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,

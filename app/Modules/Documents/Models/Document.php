@@ -215,15 +215,24 @@ class Document extends Model implements \App\Core\Contracts\NothingToPostAfterSi
     {
         $user = auth()->user();
 
-        $query = $this->resolveRouteBindingQuery($this->newQuery(), $value, $field);
+        /*
+         * ⭐ শাখা নাগাল ধরে, মাথায় বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬) — আগে
+         * `newQuery()`-এর শাখার দেয়াল হেডারে বাছা একটা শাখাই দেখত, তাই মালিক হেডারে MMS রেখে NTK-র কাগজের নোটিশ চাপলে ৪০৪।
+         * ⓘ এখন সব শাখা জুড়ে খোঁজা, তারপর [[DataScope::allows()]] — ভাউচারের [[OpensInReach]]-এর একই নিয়ম; কোম্পানির দেয়াল
+         * আর গোপনীয়তার দেয়াল (visibleTo) আগের মতোই।
+         */
+        $query = $this->resolveRouteBindingQuery(static::acrossBranches(), $value, $field);
 
         if (! $user instanceof User) {
             return null;
         }
 
         $visible = (clone $query)->visibleTo($user)->first();
+        $branch = $visible?->getAttribute('branch_id');
 
-        if ($visible !== null) {
+        if ($visible !== null && app(\App\Core\Services\DataScope::class)->allows(
+            $user, \App\Models\UserDataScope::BRANCH, $branch === null ? null : (int) $branch,
+        )) {
             return $visible;
         }
 

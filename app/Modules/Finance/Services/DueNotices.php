@@ -15,6 +15,7 @@ use App\Models\UserDataScope;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Reports\DepositReports;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -131,6 +132,7 @@ final class DueNotices
                 quietDays: null,
                 data: $this->facts($deposit->document_no, null, $deposit->matures_on),
                 branchId: $deposit->branch_id,
+                about: $deposit,
             );
         }
 
@@ -164,6 +166,7 @@ final class DueNotices
                     : __('finance::message.notice_maturing_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => $days]),
                 data: $this->facts($deposit->document_no, null, $deposit->matures_on),
                 branchId: $deposit->branch_id,
+                about: $deposit,
             );
         }
 
@@ -207,6 +210,7 @@ final class DueNotices
                 ]),
                 data: $this->facts($deposit->document_no, $owed[$deposit->id]['amount'], null),
                 branchId: $deposit->branch_id,
+                about: $deposit,
             );
         }
 
@@ -264,6 +268,7 @@ final class DueNotices
                 ]),
                 data: $this->facts(null, $this->balanceOf($account), $due, $account->person?->name()),
                 branchId: $account->branch_id,
+                about: $account,
             );
         }
 
@@ -300,6 +305,7 @@ final class DueNotices
                 ]),
                 data: $this->facts($facility->document_no, (string) $due['amount'], Carbon::parse($due['due_on']), $facility->bank),
                 branchId: $facility->branch_id,
+                about: $facility,
             );
         }
 
@@ -322,6 +328,7 @@ final class DueNotices
                 __('finance::bank_loan_report.notice_renewal_body', ['date' => $facility->renews_on->translatedFormat('j M Y')]),
                 data: $this->facts($facility->document_no, null, $facility->renews_on, $facility->bank),
                 branchId: $facility->branch_id,
+                about: $facility,
             );
         }
 
@@ -344,6 +351,7 @@ final class DueNotices
                 __('finance::insurance_alert.notice_renewal_body', ['date' => $policy->ends_on->translatedFormat('j M Y'), 'days' => $policy->daysLeft()]),
                 data: $this->facts($policy->policy_no, null, $policy->ends_on, $policy->institution?->name()),
                 branchId: $policy->branch_id,
+                about: $policy,
             );
         }
 
@@ -369,6 +377,8 @@ final class DueNotices
                 ]),
                 data: $this->facts($premium->policy?->policy_no, (string) $premium->amount, $premium->period_from),
                 branchId: $premium->policy?->branch_id,
+                // ⓘ পলিসি, প্রিমিয়ামের সারি নয় — শাখা পলিসির ঘরে, প্রিমিয়ামের নিজের শাখা নেই
+                about: $premium->policy,
             );
         }
 
@@ -400,9 +410,13 @@ final class DueNotices
      * আগে সবার কাছেই যেত — এক শাখায় আটকানো মানুষ অন্য শাখার "করিম, ৮০,০০০" পড়তেন, আর লিংকে ৪০৪। ⓘ শাখাহীন কাগজ
      * সবার নাগালে, [[DataScope::allows()]]-এর নিয়মে।
      *
+     * ⛔ `$about` — কোন কাগজের খবর (২৪ অক্টোবর ২০২৬): আগে খবরে কাগজ বসত না, তাই খোলার সময় [[NotificationService::mayOpen()]]
+     * কিছুই দেখত না — পাঠানোর পরে শাখা সরানো হলে বা কাগজ মুছে গেলেও খবরটা খুলত, আর পাতা ৪০৪/৪০৩ দিত। এখন শাখা খবরে বসে
+     * (ঘণ্টার দেয়াল), আর খোলার আগে কাগজটা আছে ও নাগালে কি না দেখা হয়।
+     *
      * @return int কয়জনের কাছে সত্যিই গেল
      */
-    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS, array $data = [], int|string|null $branchId = null): int
+    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS, array $data = [], int|string|null $branchId = null, ?Model $about = null): int
     {
         $sent = 0;
         $scope = app(DataScope::class);
@@ -418,7 +432,7 @@ final class DueNotices
 
             // ⭐ একই কাগজের একই দিনের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             // ⓘ নিয়মের শর্ত আর টেমপ্লেটের মান — কাগজ, টাকা, শেষ তারিখ, আর কত দিন (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
-            if ($this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString(), data: $data) !== null) {
+            if ($this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString(), about: $about, data: $data) !== null) {
                 $sent++;
             }
         }

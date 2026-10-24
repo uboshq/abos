@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Notifications\PhoneNoticeTarget;
 use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
 use App\Http\Controllers\Controller;
@@ -36,20 +37,32 @@ class NotificationApiController extends Controller
             ->when($archived, fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
             ->latest('id')->limit(self::LIMIT)->get();
 
+        $target = app(PhoneNoticeTarget::class);
+
         return response()->json([
-            'data' => $rows->map(fn (Notification $n) => [
-                'id' => (string) $n->public_id,
-                'type' => (string) $n->type,
-                'title' => (string) $n->title,
-                'body' => (string) ($n->body ?? ''),
-                'url' => $n->url,
-                'read' => ! $n->isUnread(),
-                'at' => $n->created_at?->toIso8601String(),
-                'priority' => (string) $n->priority,
-                'category' => (string) $n->category,
-                'module' => $n->module,
-                'archived' => $n->isArchived(),
-            ])->values(),
+            'data' => $rows->map(function (Notification $n) use ($target, $user): array {
+                // ⭐ চাপলে কোথায় — কাগজ, সইয়ের তালিকা, ট্র্যাকিং, নয়তো খবরটাই ([[PhoneNoticeTarget]]; চুক্তি
+                // `docs/Contract — ফোনের খবর কোথায় খোলে.md`)। ⛔ কেবল যোগ — পুরনো ঘরগুলো যেমন ছিল, পুরনো অ্যাপ এগুলো পড়ে
+                $where = $target->of($n, $user);
+
+                return [
+                    'id' => (string) $n->public_id,
+                    'type' => (string) $n->type,
+                    'title' => (string) $n->title,
+                    'body' => (string) ($n->body ?? ''),
+                    // ⛔ কাগজ আর নাগালে না থাকলে ঠিকানা নয় — বিস্তারিতের দরজার মতোই ([[NotificationManageApiController::show()]])
+                    'url' => $where['may_open'] ? $n->url : null,
+                    'read' => ! $n->isUnread(),
+                    'at' => $n->created_at?->toIso8601String(),
+                    'priority' => (string) $n->priority,
+                    'category' => (string) $n->category,
+                    'module' => $n->module,
+                    'archived' => $n->isArchived(),
+                    'may_open' => $where['may_open'],
+                    'paper' => $where['paper'],
+                    'destination' => $where['destination'],
+                ];
+            })->values(),
             'meta' => ['unread' => $this->notifications->unreadCount($user)],
         ]);
     }

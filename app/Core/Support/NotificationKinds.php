@@ -51,6 +51,23 @@ final class NotificationKinds
             'finance.hand_loan_due' => 'core.notify.kind.hand_loan_due',
 
             /*
+             * ⛔ অর্থের বাকি খবরগুলো — পাঠানো হত, অথচ তালিকায় ছিল না, তাই কেউ বন্ধ করতে পারতেন না (২৪ অক্টোবর ২০২৬)।
+             * ⓘ জমার শেষ সাত দিন আর DPS কিস্তি, ব্যাংক ঋণ, বীমা ([[DueNotices]]); ভাড়া ([[RentalNotices]])।
+             * ⓘ ধরন হুবহু মেলে — বন্ধ রাখা, চিঠির পছন্দ, নিয়ম তিনটাই — তাই ভাড়া শেষের দুই ধাপ আলাদা দুই সারি, আর বর্ষপূর্তি একটাই ধরন
+             * (আগে বছর ধরে আলাদা ছিল, তাই কোনো সারিই তাকে ধরত না)।
+             */
+            'finance.deposit_maturing_soon' => 'core.notify.kind.deposit_maturing_soon',
+            'finance.dps_instalment_due' => 'core.notify.kind.dps_instalment_due',
+            'finance.bank_instalment_due' => 'core.notify.kind.bank_instalment_due',
+            'finance.bank_renewal_due' => 'core.notify.kind.bank_renewal_due',
+            'finance.insurance_renewal_due' => 'core.notify.kind.insurance_renewal_due',
+            'finance.insurance_premium_due' => 'core.notify.kind.insurance_premium_due',
+            'finance.rental_ending_60' => 'core.notify.kind.rental_ending_60',
+            'finance.rental_ending_30' => 'core.notify.kind.rental_ending_30',
+            'finance.rent_overdue' => 'core.notify.kind.rent_overdue',
+            'finance.rental_anniversary' => 'core.notify.kind.rental_anniversary',
+
+            /*
              * ⛔ ব্যাকআপ ব্যর্থ হলে — ২২ সেপ্টেম্বর ২০২৬।
              *
              * ⚠️ এতদিন ব্যর্থতাটা কেবল `backup_runs`-এ একটা লাল সারি
