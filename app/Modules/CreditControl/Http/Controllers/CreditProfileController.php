@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\CreditControl\Http\Controllers;
 
-use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\CreditControl\Services\CreditRisk;
 use App\Models\AuditTrail;
-use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\Customer\Models\CustomerCreditRequest;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Sales\Models\CreditDecision;
 use App\Modules\Sales\Services\CreditExposure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -39,15 +38,10 @@ class CreditProfileController extends Controller
         /*
          * ⭐ শাখা নাগাল ধরে, হেডারে বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬) — বাকির
          * সীমা ফুরোনোর নোটিশ (`credit_control.temporary_limit_ending`) এই পাতায় আনে; আগে `inViewedBranch()` হেডারের এক শাখাই
-         * দেখত, তাই হেডারে MMS রাখা মালিক NTK-র গ্রাহকের নোটিশে ৪০৪ পেতেন। ⓘ এখন [[DataScope::allows()]] — ভাউচারের
-         * [[OpensInReach]]-এর একই নিয়ম: নাগালের বাইরে ৪০৪, আগের মতোই; কোম্পানি আর ডিলারের দেয়াল মডেলের নিজের স্কোপে।
+         * দেখত, তাই হেডারে MMS রাখা মালিক NTK-র গ্রাহকের নোটিশে ৪০৪ পেতেন। ⓘ এখন [[Customer::openInReach()]] — একজন গ্রাহক,
+         * তালিকা নয়; নাগালের বাইরে ৪০৪, আগের মতোই।
          */
-        $customer = Customer::query()->withOutstanding()->whereKey($customer)->firstOrFail();
-        $branch = $customer->getAttribute('branch_id');
-
-        abort_unless(app(DataScope::class)->allows(
-            $request->user(), UserDataScope::BRANCH, $branch === null ? null : (int) $branch,
-        ), 404);
+        $customer = Customer::openInReach($customer, $request->user(), fn (Builder $query) => $query->withOutstanding());
 
         $history = CustomerCreditChange::query()
             ->where('customer_id', $customer->id)
