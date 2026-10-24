@@ -157,8 +157,8 @@
                   referenceUrl: @js(route('accounts.voucher.reference_check')),
                   voucherId: @js($voucher->exists ? $voucher->id : null),
                   out: @js($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT),
-                  ait: @js((string) old('ait_amount', (float) ($voucher->ait_amount ?? 0) > 0 ? $voucher->ait_amount : '')),
-                  vds: @js((string) old('vds_amount', (float) ($voucher->vds_amount ?? 0) > 0 ? $voucher->vds_amount : '')),
+                  ait: @js((string) old('ait_amount', bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 ? $voucher->ait_amount : '')),
+                  vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
               })"
               @money-method="heard($event.detail)"
               @party-due="heardParty($event.detail)"
@@ -802,7 +802,7 @@
                     @foreach ($withheldOrder as $kind)
                         <x-ui.field :name="$withheldFields[$kind][0]" type="money" :model="$kind" empty-shows="0.00"
                                     :label="$withheldFields[$kind][1]"
-                                    :value="old($withheldFields[$kind][0], (float) ($voucher->{$withheldFields[$kind][0]} ?? 0) > 0 ? $voucher->{$withheldFields[$kind][0]} : '')" />
+                                    :value="old($withheldFields[$kind][0], bccomp((string) ($voucher->{$withheldFields[$kind][0]} ?? '0'), '0', 4) > 0 ? $voucher->{$withheldFields[$kind][0]} : '')" />
                     @endforeach
                 </div>
             </section>

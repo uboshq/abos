@@ -106,6 +106,37 @@ describe('খাতায় যা যাবে', () => {
     })
 })
 
+/*
+ * ⭐ শূন্যে নকশার "৳0.00" — কোনো শব্দ নয়, কোনো চিহ্ন নয় (নকশা পাতা ৪: "বাকি থাকবে ৳0.00"; fe, ২৪ অক্টোবর ২০২৬)।
+ * ⓘ "অগ্রিম" কেবল সত্যিই উল্টো দিকে গেলে — যেমন দেনা ৳0 আর দেওয়া ৳45,000 (তখন বাকি থাকবে ৳45,000 অগ্রিম)।
+ */
+describe('মাথার তিন অঙ্ক — শূন্যে শূন্যই', () => {
+    const cases = [
+        // [বর্ণনা, out, পক্ষের উত্তরের বকেয়া, লেখা অঙ্ক, পাওনা দেখায়, পাওনা অগ্রিম?, বাকি দেখায়, বাকি অগ্রিম?]
+        ['রসিদ: বকেয়া শূন্য, অঙ্ক নেই', false, '0.0000', '', '৳0.00', false, '৳0.00', false],
+        ['রসিদ: বকেয়া পুরো শোধ', false, '45000.0000', '45000', '৳45,000.00', false, '৳0.00', false],
+        ['পরিশোধ: দেনা শূন্য, অঙ্ক নেই', true, '0', '', '৳0.00', false, '৳0.00', false],
+        ['পরিশোধ: দেনা পুরো শোধ', true, '-120000.0000', '120000', '৳1,20,000.00', false, '৳0.00', false],
+        ['পরিশোধ: পয়সার ভগ্নাংশেও শূন্য', true, '-0.001', '', '৳0.00', false, '৳0.00', false],
+        ['পরিশোধ: দেনা শূন্য, দেওয়া ৳45,000 — সত্যিই অগ্রিম', true, '0', '45000', '৳0.00', false, '৳45,000.00', true],
+    ]
+
+    for (const [what, out, due, amount, owedText, owedAdvance, leftText, leftAdvance] of cases) {
+        it(what, async () => {
+            vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+            const data = await mount({ out, amount })
+            clearTimeout(data.timer)
+            data.heardParty({ due, hasParty: true })
+
+            expect(data.headOwedText, `⛔ ${what}: পাওনার অঙ্ক নকশার মতো নয়`).toBe(owedText)
+            expect(data.headOwedIsAdvance, `⛔ ${what}: শূন্য বা পাওনাকে "অগ্রিম" বলল`).toBe(owedAdvance)
+            expect(data.headLeftText, `⛔ ${what}: বাকির অঙ্ক নকশার মতো নয়`).toBe(leftText)
+            expect(data.headLeftIsAdvance, `⛔ ${what}: শূন্য বাকিকে "অগ্রিম" বলল`).toBe(leftAdvance)
+            expect(`${data.headOwedText}${data.headLeftText}`, `⛔ ${what}: অঙ্কে চিহ্ন (−) বসল`).not.toMatch(/[-−]/)
+        })
+    }
+})
+
 describe('রেফারেন্সের চলতি উত্তর', () => {
     it('কেবল শেষ প্রশ্নের উত্তর বসে — দেরিতে আসা পুরনো "free" নতুন "used"-কে ঢাকে না', async () => {
         const pending = []

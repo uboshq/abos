@@ -81,7 +81,7 @@ describe('partyVoucher — ভাগ করা পিকারের খবর',
         delete globalThis.fetch
     })
 
-    const changed = (value, name = 'party_id') => ({ target: { name, value } })
+    const changed = (value, name = 'party_pick') => ({ target: { name, value } })
 
     it('পিকারে নাম বাছলে partyId বসে আর পাওনা সত্যিই সার্ভার থেকে চাওয়া হয় — একই ঠিকানায়, একই নামে', async () => {
         const box = make()

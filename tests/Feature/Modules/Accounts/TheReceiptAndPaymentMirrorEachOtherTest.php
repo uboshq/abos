@@ -373,12 +373,17 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
                 /** @var DOMElement $button */
                 $this->assertTrue($button->hasAttribute('data-party-stacked'), "⛔ {$type}: পিকার দুই লাইনের (stacked) নয় — সরু ঘরে নাম কাটে");
             }
-            foreach (['party_id', 'party_new', 'party_mobile'] as $name) {
+            foreach (['party_pick', 'party_new', 'party_mobile'] as $name) {
                 $this->assertSame($pickers->length, $xpath->query('.//template//input[@name="'.$name.'"]', $cell)->length,
                     "⛔ {$type}: প্রতিটা পিকারে {$name} ঘর নেই — নতুন নাম আগের নামে সার্ভারে যায় না");
             }
-            $this->assertSame(0, $xpath->query('//input[@name="party_id"][not(ancestor::template)]')->length,
-                "⛔ {$type}: পুরনো পিকারের party_id এখনো পাতায় — দুই ঘর একই নামে জমা যেত");
+
+            // ⛔ cb-ma-2: `party_id` কেবল টেমপ্লেটের ভিতরে থাকলে সার্ভারের আঁকা ফর্মে ঘরটাই নেই — একটাই, পাতায়, বাক্সের `partyId`-এ বাঁধা
+            $sent = $xpath->query('//form//input[@name="party_id"][not(ancestor::template)]');
+            $this->assertSame(1, $sent->length, "⛔ {$type}: পাতায় ঠিক একটা party_id নেই — না থাকলে পক্ষ যায় না, দুইটা থাকলে একটা আরেকটাকে ঢাকে");
+            $this->assertSame('partyId', $sent->item(0)?->getAttribute('x-bind:value'), "⛔ {$type}: party_id পিকারের বাছাই ধরে না");
+            $this->assertSame(0, $xpath->query('//input[@name="party_id"][ancestor::template]')->length,
+                "⛔ {$type}: পিকারের ভিতরেও party_id — দুই ঘর একই নামে জমা যেত");
         }
     }
 

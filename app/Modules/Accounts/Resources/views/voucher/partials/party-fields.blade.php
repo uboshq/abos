@@ -198,15 +198,25 @@
                 ধরন বদলালে নতুন পিকার খালি শুরু করে ([[party-voucher.js]] `resetParty`)। পিকার লুকানো ঘরে `change` ছাড়ে — বাছলে id,
                 নতুন নাম লিখলে ফাঁকা — আর এই বাক্স তা শুনে বকেয়া, বিল আর মাথার তিন অঙ্ক আনে বা মোছে (`partyPicked`)।
             --}}
+            {{--
+                ⛔ `party_id` পাতায় নিজে আঁকা, পিকারের ভিতরে নয় — cb-ma-2 (৪৯dae790c, ২৪ অক্টোবর ২০২৬): পিকারগুলো `<template x-if>`-এ,
+                আর টেমপ্লেটের ভিতরের ঘর সার্ভারের আঁকা ফর্মে নেই (TheVoucherFormSendsWhatItShowsTest: "party_id ঘরটাই পাঠানো হয় না")।
+                ⭐ এখন একটাই `party_id`, সবসময় পাতায়, মান বাক্সের `partyId` থেকে; পিকারের নিজের ঘর `party_pick` — সার্ভার সেটা পড়ে না,
+                কেবল তার `change` এই বাক্সকে খবর দেয়। ⓘ একই নামের দুই ঘর তাই কখনো জমা যায় না।
+            --}}
+            <input type="hidden" name="party_id" value="{{ (string) ($was('party_id') ?? '') }}" x-bind:value="partyId" data-party-id>
             <div x-on:change="partyPicked($event)" data-party-picker-cell>
                 @foreach ($parties as $group)
                     <template x-if="partyType === @js((string) $group['type'])">
-                        <x-ui.party-search name="party_id" :options="$group['options']"
+                        <x-ui.party-search name="party_pick" :options="$group['options']"
                                            :selected="$partyType === (string) $group['type'] ? ($was('party_id') ?? null) : null"
                                            :aria-label="__('accounts::field.party')" stacked addable />
                     </template>
                 @endforeach
             </div>
+            @error('party_id')
+                <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+            @enderror
         </div>
 
         <x-ui.field name="trx_date" type="date"

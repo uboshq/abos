@@ -98,11 +98,6 @@ return [
         'attach_and_note' => 'Attachments and narration',
         'attach_hint' => 'Bank advice / copy of the bill',
         'narration' => 'Narration',
-        'head' => [
-            'owed' => 'Owed to supplier',
-            'this' => 'This payment (gross)',
-            'left' => 'Left after',
-        ],
         'slip_free' => 'Not used for this supplier before ✓',
         'meta' => [
             'number' => 'No.: :no',
@@ -152,7 +147,11 @@ return [
         'ledger_empty' => 'Shows here once a supplier and an amount are given.',
         'ledger_unbalanced' => 'Debit and credit do not match — it will not post.',
         'controls' => 'Controls',
+        // ⛔ একটাই 'head' — দুটো থাকলে PHP শেষেরটা রাখে, আর সরবরাহকারী-পরিশোধের মাথায় কাঁচা চাবি দেখা যেত
+        //    ("money.screen.head.owed", 1806c40b2 থেকে; ২৪ অক্টোবর ২০২৬)
         'head' => [
+            'owed' => 'Owed to supplier',
+            'this' => 'This payment (gross)',
             'owed_in' => 'Party owes',
             'owed_out' => 'We owe the party',
             'this_in' => 'This receipt',
