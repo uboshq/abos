@@ -1965,6 +1965,18 @@ final class VoucherService
             }
 
             /*
+             * ⛔ খরচের ভাউচারে কেবল-সফটওয়্যারের খাত নয় — বিক্রিত মালের খরচ, অবচয়, দেওয়া ছাড় … ([[StandardChart::ENGINE_ONLY_EXPENSES]];
+             * মালিক, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দার তালিকা থেকে সরানো হয়েছে; এখানে ফোন, পুরনো খসড়া আর হাতে-বানানো ডাকের জন্য।
+             * ⓘ কেবল খরচের দিক (ডেবিট) — জাবেদায় হিসাবরক্ষকের সংশোধন খোলা।
+             */
+            if ($voucher->type === Voucher::EXPENSE && bccomp((string) $line->debit, '0', 4) > 0
+                && app(StandardChart::class)->isEngineOnlyExpense($account)) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.engine_only_expense', ['name' => $account->label()]),
+                ]);
+            }
+
+            /*
              * ⛔ হাতধারে মানুষের নাম বাধ্য — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ (AVA RCV-0001: টাকা-গ্রহণের ভাউচারে ১১৭০ বেছে নাম
              * ছাড়া ৯,০০০; [[AHandLoanLineNamesItsPersonTest]])। ⓘ নাম ছাড়া হাতধার কার কাছে পাওনা কেউ বলতে পারে না, আর হাতধার খাতের জের
              * মানুষদের যোগের সাথে আর মেলে না। নাম সারিতে, নয়তো মাথার পক্ষ "ব্যক্তি" হলে সেটা।

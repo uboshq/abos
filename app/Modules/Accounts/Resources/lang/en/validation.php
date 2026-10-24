@@ -58,6 +58,7 @@ return [
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'engine_only_expense' => '":name" is posted by the software itself (from sales, stock, depreciation or discounts) and cannot be chosen on an expense voucher. If it needs correcting, the accountant uses a journal.',
     'opening_needs_party' => '":name" keeps party balances — its opening balance goes on each customer or supplier, through their own opening balance (their page or import), not on the account.',
     'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
     'inter_company_side_missing' => 'One side of this inter-company transfer could not be found — nothing was reversed; tell the accountant.',
