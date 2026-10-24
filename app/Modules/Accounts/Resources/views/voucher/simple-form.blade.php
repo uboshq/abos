@@ -223,7 +223,8 @@
                         {{-- ⓘ ট্যাগ [[PageHeading]] থেকে (পাতার প্রথম শিরোনাম h1) — এই ব্লেডে অন্য ভাউচারের page-header আছে, হাতে লেখা h1 নয় --}}
                         @php $headTag = \App\Core\Support\PageHeading::tag(); @endphp
                         <{{ $headTag }} class="text-2xl font-semibold">{{ $headPaying ? __('money.screen.title_pay') : __('money.screen.title_receive') }}</{{ $headTag }}>
-                        <x-ui.paper-state state="draft" />
+                        {{-- ⭐ সইয়ের ছক থাকলে খসড়াতেই "সইয়ের অপেক্ষায় হবে" (Core-এর will_wait; অঙ্ক এখনো লেখা হয়নি, তাই null — ছক নিজে বলে) --}}
+                        <x-ui.paper-state state="draft" :approval="[\App\Modules\Accounts\Services\VoucherApproval::MODULE, $voucher->type, null, 'Voucher']" />
                     </div>
                     <p data-voucher-meta class="mt-1 text-xs text-(--color-ink-muted)">
                         {{ $isNew ? __('money.screen.meta.number_on_save_as', ['prefix' => $headPrefix !== '' ? $headPrefix : '—']) : __('money.screen.meta.number', ['no' => $voucher->document_no]) }}

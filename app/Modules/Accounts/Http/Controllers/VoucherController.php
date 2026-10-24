@@ -263,6 +263,14 @@ class VoucherController extends Controller implements HasMiddleware
             'known' => true,
             'amount' => app(AccountsFacts::class)->dueFrom($type, $id),
             'bills' => $this->openBillsOf($type, $id),
+            /*
+             * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর — Core চুক্তি দিয়ে, মডিউল না চিনে (cb-ma-4; হিসাব গ্রাহক বা সরবরাহকারী মডিউল পড়ে না):
+             * বাকির সীমা (গ্রাহক; সুইচ বন্ধ হলে null, ০.০০ মানে বাকি নেই), BIN/TIN (সরবরাহকারী), প্রাপকের ব্যাংক {state, line}।
+             * ⓘ পক্ষ বাছা হয় ব্রাউজারে, তাই পাতায় আগে থেকে নয় — এই উত্তরেই।
+             */
+            'credit' => app(\App\Core\Contracts\PartyCreditLimit::class)->creditOf($type, $id),
+            'tax_ids' => app(\App\Core\Contracts\PartyTaxIds::class)->taxIdsOf($type, $id),
+            'payee_bank' => app(\App\Core\Contracts\PayeeBankView::class)->bankOf($type, $id),
         ]);
     }
 

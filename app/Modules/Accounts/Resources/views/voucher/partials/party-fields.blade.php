@@ -57,6 +57,7 @@
 --}}
 <div class="space-y-4" data-party-box
          @money-gross.window="heardGross($event.detail)"
+         x-on:change="heardChange($event)"
          x-data="partyVoucher({
              partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
@@ -83,6 +84,9 @@
                  'unapplied' => __('money.screen.bills_unapplied'),
                  'partyOf' => __('money.screen.party_of'),
                  'over' => __('money.screen.bills_over'),
+                 'creditLimit' => __('money.screen.credit_limit'),
+                 'creditNone' => __('money.screen.credit_none'),
+                 'bankNone' => __('money.screen.payee_bank_none'),
              ]),
          })">
 <section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -233,8 +237,14 @@
             @error('party_id')
                 <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
             @enderror
-            {{-- ⓘ খোলা বিলের বয়স থেকে, পক্ষ বাছলে ([[party-voucher.js]] `oldestDueText`); বাকির সীমা গ্রাহক মডিউলের — হিসাব সেটা পড়ে না --}}
-            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-party-hint x-show="oldestDueText !== ''" x-cloak x-text="oldestDueText"></p>
+            {{--
+                ⭐ নকশার নিচের লাইন — "বাকির সীমা ৳1,00,000 · সবচেয়ে পুরনো বাকি 19 দিন" (রসিদ) / "BIN … · TIN …" (পরিশোধ)। বাকির সীমা আর
+                BIN/TIN পক্ষের মালিক মডিউলের, Core চুক্তি দিয়ে বকেয়ার একই উত্তরে আসে (হিসাব নিজে গ্রাহক বা সরবরাহকারী পড়ে না; cb-ma-4);
+                পুরনো বাকি খোলা বিলের বয়স থেকে ([[party-voucher.js]])।
+            --}}
+            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-party-hint x-show="creditText !== '' || oldestDueText !== '' || taxText !== ''" x-cloak>
+                <span data-party-credit x-text="creditText"></span><span x-show="creditText !== '' && oldestDueText !== ''"> · </span><span data-party-oldest x-text="oldestDueText"></span><span x-show="taxText !== '' && (creditText !== '' || oldestDueText !== '')"> · </span><span data-party-tax x-text="taxText"></span>
+            </p>
         </div>
 
         <x-ui.field name="trx_date" type="date"
@@ -262,6 +272,21 @@
             @endif
         </div>
     </div>
+
+    @unless ($isReceipt)
+        {{--
+            ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার জন্য (নকশা পাতা ৪; Core চুক্তি PayeeBankView, cb-ma-4)। ⓘ দুজনের সই পেলে সবুজ
+            দাগ; না পেলে আর পদ্ধতি ট্রান্সফার বা নগদ জমা হলে লালে কারণ — পোস্টের পাহারার একই কথা ([[PayeeBankGuard]]), আগে থেকে।
+        --}}
+        <div class="mt-3" data-payee-bank-row x-show="payeeBank !== null" x-cloak>
+            <span class="mb-1 block text-xs text-(--color-ink-muted)">{{ __('money.screen.payee_bank') }}</span>
+            <p class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) px-3 py-2 text-sm" data-payee-bank-line>
+                <span x-text="bankLineText"></span>
+                <b class="ms-1 font-medium text-(--color-badge-success-ink)" data-payee-bank-signed x-show="bankSigned" x-cloak>{{ __('money.screen.payee_bank_signed') }}</b>
+            </p>
+            <p class="mt-1 text-xs text-(--color-danger)" data-payee-bank-blocks x-show="bankBlocks" x-cloak>{{ __('money.screen.payee_bank_unsigned') }}</p>
+        </div>
+    @endunless
 
     {{-- ⭐ পক্ষ ছাড়া কাগজে এক লাইনে কারণ — বিলের তালিকা আর পাওনার অঙ্ক কেন নেই (fe, ২৪ অক্টোবর ২০২৬) --}}
     <p class="mt-3 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-xs text-(--color-ink-muted)"

@@ -85,6 +85,16 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         lastFill: null,
         grossSeen: null,
 
+        /*
+         * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর — বকেয়ার একই উত্তরে আসে (Core চুক্তি PartyCreditLimit, PartyTaxIds, PayeeBankView; cb-ma-4):
+         * বাকির সীমা (গ্রাহক), BIN/TIN (সরবরাহকারী), প্রাপকের ব্যাংক {state, line}। `method` — বাছা পদ্ধতি; ব্যাংকে যায় এমন পদ্ধতিতে
+         * (ট্রান্সফার, নগদ জমা) সই-না-পাওয়া ব্যাংক লালে, পোস্টের পাহারার একই কথা ([[PayeeBankGuard]])।
+         */
+        credit: null,
+        taxIds: null,
+        payeeBank: null,
+        method: '',
+
         /**
          * ⭐ রসিদ **একটা** বিলের বিপরীতে — `against_type` / `against_id` (Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬)।
          *
@@ -139,6 +149,9 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         },
 
         init() {
+            // ⓘ শুরুর পদ্ধতি — সার্ভারের বাছা চিপ (পুরনো কাগজ, ভুল নিয়ে ফেরা)
+            this.method = String(this.$root?.querySelector?.('input[name="instrument"]:checked')?.value ?? '');
+
             if (this.partyId) {
                 this.loadDue();
             }
@@ -338,6 +351,52 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         clearAllocs() {
             this.allocs = {};
             this.lastFill = null;
+            this.credit = null;
+            this.taxIds = null;
+            this.payeeBank = null;
+        },
+
+        /** পদ্ধতির চিপ বদলালে — এই বাক্সের ভিতরের `change` (চিপ "সাধারণ তথ্য" কার্ডে) */
+        heardChange(event) {
+            if (event?.target?.name === 'instrument') {
+                this.method = String(event.target.value ?? '');
+            }
+        },
+
+        /** বাকির সীমা — সুইচ বন্ধ হলে কিছুই নয়; ০.০০ মানে বাকি নেই (নগদে) */
+        get creditText() {
+            if (this.credit === null || this.credit === undefined) {
+                return '';
+            }
+
+            return Number(this.credit.limit ?? 0) > 0.005
+                ? (this.texts?.creditLimit ?? '').replace(':limit', taka(Number(this.credit.limit)))
+                : (this.texts?.creditNone ?? '');
+        },
+
+        /** BIN · TIN — যা আছে তাই, নেই তো কিছুই নয় */
+        get taxText() {
+            const ids = this.taxIds ?? {};
+
+            return [ids.bin ? 'BIN ' + ids.bin : '', ids.tin ? 'TIN ' + ids.tin : ''].filter((x) => x !== '').join(' · ');
+        },
+
+        get bankLineText() {
+            if (this.payeeBank === null || this.payeeBank === undefined) {
+                return '';
+            }
+
+            return this.payeeBank.line ? String(this.payeeBank.line) : (this.texts?.bankNone ?? '');
+        },
+
+        get bankSigned() {
+            return this.payeeBank?.state === 'signed';
+        },
+
+        /** সই-না-পাওয়া ব্যাংক আর ব্যাংকে যায় এমন পদ্ধতি — পরিশোধে লালে (পোস্টও থামবে) */
+        get bankBlocks() {
+            return this.out && this.payeeBank !== null && this.payeeBank !== undefined && this.payeeBank.state !== 'signed'
+                && (this.method === 'transfer' || this.method === 'deposit');
         },
 
         /**
@@ -411,6 +470,9 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
                 this.due = data.known ? Number(data.amount).toFixed(2) : null;
                 this.bills = data.bills || [];
+                this.credit = data.credit ?? null;
+                this.taxIds = data.tax_ids ?? null;
+                this.payeeBank = data.payee_bank ?? null;
                 this.adoptPicked();
             } catch (e) {
                 /*

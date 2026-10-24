@@ -429,3 +429,51 @@ describe('partyVoucher — বহু বিল', () => {
         expect(box.isTicked(box.bills[1]), '⛔ আগাম-বাছা বিল সারিতে টিক পেল না').toBe(true)
     })
 })
+
+/*
+ * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর (Core চুক্তি, cb-ma-4): বাকির সীমা, BIN/TIN, প্রাপকের ব্যাংক — আর সই-না-পাওয়া ব্যাংকে কেবল
+ * ব্যাংকে যায় এমন পদ্ধতিতে লাল।
+ */
+describe('partyVoucher — বাকির সীমা, BIN/TIN, প্রাপকের ব্যাংক', () => {
+    const texts = { creditLimit: 'বাকির সীমা ৳:limit', creditNone: 'বাকির সীমা নেই — কেবল নগদে', bankNone: 'প্রাপকের ব্যাংক তথ্য নেই' }
+
+    it('বাকির সীমা লাখ-কমায়; ০ মানে কেবল নগদে; সুইচ বন্ধ (null) হলে কিছুই নয়', () => {
+        const box = make({ texts })
+        expect(box.creditText, '⛔ সুইচ বন্ধে বাকির সীমা দেখায়').toBe('')
+        box.credit = { limit: '100000.00', used: '0', available: '100000.00' }
+        expect(box.creditText, '⛔ বাকির সীমা নকশার মতো নয়').toBe('বাকির সীমা ৳1,00,000.00')
+        box.credit = { limit: '0.00', used: '0', available: '0' }
+        expect(box.creditText, '⛔ ০ সীমায় "কেবল নগদে" বলা হয় না').toBe('বাকির সীমা নেই — কেবল নগদে')
+    })
+
+    it('BIN · TIN — যা আছে তাই', () => {
+        const box = make({ texts })
+        box.taxIds = { bin: '000123456-0101', tin: null }
+        expect(box.taxText, '⛔ BIN দেখায় না, বা নেই এমন TIN দেখায়').toBe('BIN 000123456-0101')
+        box.taxIds = { bin: '000123456-0101', tin: '1234567890' }
+        expect(box.taxText).toBe('BIN 000123456-0101 · TIN 1234567890')
+    })
+
+    it('সই-না-পাওয়া ব্যাংক লালে কেবল পরিশোধে আর ট্রান্সফার বা নগদ জমায়', () => {
+        const box = make({ texts, out: true })
+        box.payeeBank = { state: 'pending', line: 'সোনালী ব্যাংক · ••••4521' }
+
+        box.heardChange({ target: { name: 'instrument', value: 'cash' } })
+        expect(box.bankBlocks, '⛔ নগদে প্রাপকের ব্যাংকের লাল নিয়ম — নগদে ব্যাংক লাগে না').toBe(false)
+        box.heardChange({ target: { name: 'instrument', value: 'transfer' } })
+        expect(box.bankBlocks, '⛔ সই-না-পাওয়া ব্যাংকে ট্রান্সফার, অথচ লাল নিয়ম নেই').toBe(true)
+        box.heardChange({ target: { name: 'instrument', value: 'deposit' } })
+        expect(box.bankBlocks, '⛔ সই-না-পাওয়া ব্যাংকে নগদ জমা, অথচ লাল নিয়ম নেই').toBe(true)
+
+        box.payeeBank = { state: 'signed', line: 'সোনালী ব্যাংক · ••••4521' }
+        expect(box.bankBlocks, '⛔ সই-পাওয়া ব্যাংকেও লাল').toBe(false)
+        expect(box.bankSigned).toBe(true)
+
+        box.payeeBank = { state: 'none', line: null }
+        expect(box.bankLineText, '⛔ ব্যাংক তথ্য না থাকলে কারণ বলা হয় না').toBe('প্রাপকের ব্যাংক তথ্য নেই')
+
+        box.out = false
+        box.payeeBank = { state: 'pending', line: 'x' }
+        expect(box.bankBlocks, '⛔ রসিদে প্রাপকের ব্যাংকের লাল নিয়ম').toBe(false)
+    })
+})

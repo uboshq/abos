@@ -440,6 +440,10 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $primary = trim((string) $xpath->query('//*[@data-part="bar"]//*[@data-page-primary]')->item(0)?->textContent);
         $this->assertContains($primary, [trans('money.screen.send', [], 'bn'), trans('money.screen.send', [], 'en')], '⛔ সই চালু, অথচ মূল বোতাম "সইয়ে পাঠান" নয়: '.$primary);
 
+        // ⭐ ছক থাকলে খসড়াতেই "সইয়ের অপেক্ষায় হবে" (Core-এর will_wait, cb-core4 e35e7099e)
+        $this->assertSame(1, $xpath->query('//*[@data-voucher-header]//*[@data-paper-state="will_wait"]')->length,
+            '⛔ সইয়ের ছক থাকলেও মাথার চিপ "সইয়ের অপেক্ষায় হবে" বলে না');
+
         $plain = $this->dom($this->screen(Voucher::PAYMENT));
         $post = trim((string) $plain->query('//*[@data-part="bar"]//*[@data-page-primary]')->item(0)?->textContent);
         $this->assertContains($post, [trans('money.screen.post', [], 'bn'), trans('money.screen.post', [], 'en')], '⛔ সই বন্ধ, অথচ মূল বোতাম "পোস্ট" নয়: '.$post);
@@ -568,6 +572,45 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $labels = array_map(fn (DOMElement $dt) => trim($dt->textContent), iterator_to_array($xpath->query('//*[@data-pay-head]//dt')));
         $this->assertContains($labels[0] ?? null, [trans('money.screen.head.owed', [], 'bn'), trans('money.screen.head.owed', [], 'en')], '⛔ মাথার প্রথম অঙ্কের নাম নেই');
         $this->assertContains($labels[1] ?? null, [trans('money.screen.head.this', [], 'bn'), trans('money.screen.head.this', [], 'en')], '⛔ মাথার দ্বিতীয় অঙ্কের নাম নেই');
+    }
+
+    /** ২৪ — বকেয়ার উত্তরে পক্ষের মালিক মডিউলের তিন কথা (Core চুক্তি; cb-ma-4): বাকির সীমা, BIN/TIN, প্রাপকের ব্যাংক */
+    public function test_the_due_answer_carries_the_partys_credit_tax_ids_and_payee_bank(): void
+    {
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $this->app->instance(\App\Core\Contracts\PartyCreditLimit::class, new class implements \App\Core\Contracts\PartyCreditLimit {
+            public function creditOf(string $partyType, int $partyId): ?array { return ['limit' => '100000.00', 'used' => '25000.00', 'available' => '75000.00']; }
+        });
+        $this->app->instance(\App\Core\Contracts\PartyTaxIds::class, new class implements \App\Core\Contracts\PartyTaxIds {
+            public function taxIdsOf(string $partyType, int $partyId): ?array { return ['bin' => '000123456-0101', 'tin' => '1234567890']; }
+        });
+        $this->app->instance(\App\Core\Contracts\PayeeBankView::class, new class implements \App\Core\Contracts\PayeeBankView {
+            public function bankOf(string $partyType, int $partyId): ?array { return ['state' => 'pending', 'line' => 'সোনালী ব্যাংক · মতিঝিল · ••••4521']; }
+        });
+
+        $answer = $this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $customer->id]))->assertOk()->json();
+
+        $this->assertSame('100000.00', $answer['credit']['limit'] ?? null, '⛔ বকেয়ার উত্তরে বাকির সীমা নেই — রসিদের পিকারের নিচে আসবে না');
+        $this->assertSame('000123456-0101', $answer['tax_ids']['bin'] ?? null, '⛔ বকেয়ার উত্তরে BIN/TIN নেই — পরিশোধে আসবে না');
+        $this->assertSame('pending', $answer['payee_bank']['state'] ?? null, '⛔ বকেয়ার উত্তরে প্রাপকের ব্যাংক নেই — পরিশোধে লাইন আসবে না');
+    }
+
+    /** ২৫ — পর্দা: পিকারের নিচে বাকির সীমা আর BIN/TIN, পরিশোধে প্রাপকের ব্যাংকের লাইন আর লাল নিয়ম; রসিদে ব্যাংকের লাইন নেই */
+    public function test_the_screens_show_credit_tax_ids_and_the_payee_bank_where_the_design_puts_them(): void
+    {
+        $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $hint = $receipt->query('//*[@data-party-name-cell]//*[@data-party-hint]')->item(0);
+        $this->assertSame('creditText', $receipt->query('.//*[@data-party-credit]', $hint)->item(0)?->getAttribute('x-text'), '⛔ রসিদের পিকারের নিচে বাকির সীমা নেই');
+        $this->assertSame('taxText', $receipt->query('.//*[@data-party-tax]', $hint)->item(0)?->getAttribute('x-text'), '⛔ পিকারের নিচে BIN/TIN নেই');
+        $this->assertSame(0, $receipt->query('//*[@data-payee-bank-row]')->length, '⛔ রসিদে প্রাপকের ব্যাংকের লাইন — নকশায় কেবল পরিশোধে');
+
+        $payment = $this->dom($this->screen(Voucher::PAYMENT));
+        $row = $payment->query('//*[@data-voucher-general]//*[@data-payee-bank-row]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $row, '⛔ পরিশোধের "সাধারণ তথ্য"-তে প্রাপকের ব্যাংকের লাইন নেই');
+        $this->assertSame('bankBlocks', $payment->query('.//*[@data-payee-bank-blocks]', $row)->item(0)?->getAttribute('x-show'),
+            '⛔ সই-না-পাওয়া ব্যাংকে ট্রান্সফারের লাল নিয়ম নেই');
+        $said = trim((string) $payment->query('.//*[@data-payee-bank-blocks]', $row)->item(0)?->textContent);
+        $this->assertContains($said, [trans('money.screen.payee_bank_unsigned', [], 'bn'), trans('money.screen.payee_bank_unsigned', [], 'en')], '⛔ লাল নিয়মের কথা নিজের নয়');
     }
 
     /** ২৩ — নতুন নাম আর মোবাইল পাশাপাশি কেবল ঘরের নিজের জায়গায় কুলালে; সরু পক্ষের ঘরে (১৩৬৬-এ ~২৪০px) একটার নিচে আরেকটা */
