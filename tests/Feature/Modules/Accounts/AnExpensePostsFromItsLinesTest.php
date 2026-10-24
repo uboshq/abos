@@ -86,7 +86,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $payload = $this->payload([
             'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
             'party_type' => 'supplier', 'party_id' => $supplier->id, 'bill_no' => 'MBS-4471',
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::FUEL), 'cost_center_id' => $this->plant->id, 'amount' => '12450', 'description' => 'অক্টোবরের বিদ্যুৎ']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::FUEL), 'cost_center_id' => $this->plant->id, 'amount' => '12450', 'description' => 'অক্টোবরের বিদ্যুৎ']],
         ]);
 
         $preview = $this->simulate($payload);
@@ -94,7 +94,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $rows = $this->ledger($voucher);
 
         $this->assertBalanced($rows, 'ক');
-        $expense = $rows->firstWhere('account_id', $this->head(StandardChart::FUEL));
+        $expense = $rows->firstWhere('account_id', $this->headId(StandardChart::FUEL));
         $this->assertSame((int) $this->plant->id, (int) $expense->cost_center_id, '⛔ ক: খরচ-কেন্দ্র খাতার সারিতে নামেনি — বাজেটের "আসল" শূন্য দেখাত');
         $party = app(PartyRegistry::class)->labelsOf([['supplier', (int) $supplier->id]])['supplier:'.$supplier->id];
         $this->assertSame($party.' · MBS-4471 · অক্টোবরের বিদ্যুৎ', $expense->narration, '⛔ ক: খাতার বিবরণ "পক্ষ · বিল · লাইন" নয়');
@@ -106,11 +106,11 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
     public function test_credit_rent_with_ait_and_vds_owes_the_supplier_the_net_and_moves_no_money(): void
     {
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
-        $payable = $this->head(StandardChart::PAYABLE);
+        $payable = $this->headId(StandardChart::PAYABLE);
         $payload = $this->payload([
             'instrument' => Voucher::ON_CREDIT, 'from_account_id' => $payable, 'due_date' => now()->addDays(30)->toDateString(),
             'party_type' => 'supplier', 'party_id' => $supplier->id, 'bill_no' => 'RNT-10', 'ait_amount' => '1500', 'vds_amount' => '4500',
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::RENT), 'cost_center_id' => $this->office->id, 'amount' => '30000']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::RENT), 'cost_center_id' => $this->office->id, 'amount' => '30000']],
         ]);
 
         $preview = $this->simulate($payload);
@@ -120,8 +120,8 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $this->assertBalanced($rows, 'খ');
         $this->assertSame('24000.0000', $this->creditOn($rows, $payable), '⛔ খ: দেনা নিট (৩০,০০০ − ১,৫০০ − ৪,৫০০) নয়');
         $this->assertSame((int) $supplier->id, (int) $rows->firstWhere('account_id', $payable)->party_id, '⛔ খ: দেনা সরবরাহকারীর নামে বসেনি');
-        $this->assertSame('1500.0000', $this->creditOn($rows, $this->head(StandardChart::TAX_DEDUCTED_AT_SOURCE)), '⛔ খ: AIT ২১২১-এ নয়');
-        $this->assertSame('4500.0000', $this->creditOn($rows, $this->head(StandardChart::VDS_PAYABLE)), '⛔ খ: VDS ২১২২-এ নয়');
+        $this->assertSame('1500.0000', $this->creditOn($rows, $this->headId(StandardChart::TAX_DEDUCTED_AT_SOURCE)), '⛔ খ: AIT ২১২১-এ নয়');
+        $this->assertSame('4500.0000', $this->creditOn($rows, $this->headId(StandardChart::VDS_PAYABLE)), '⛔ খ: VDS ২১২২-এ নয়');
         $this->assertNull($voucher->money_account_id, '⛔ খ: বাকিতে খরচে টাকার খাত বসল — টাকা তো নড়েনি (fe-র সিদ্ধান্ত ১)');
         $this->assertSame($this->shape($rows), $preview, '⛔ খ: simulate যা দেখাল, পোস্ট তা লিখল না');
     }
@@ -132,8 +132,8 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $payload = $this->payload([
             'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
             'expense_lines' => [
-                ['expense_account_id' => $this->head(StandardChart::FUEL), 'cost_center_id' => $this->plant->id, 'amount' => '1000', 'vat_amount' => '150', 'vat_recoverable' => '1'],
-                ['expense_account_id' => $this->head(StandardChart::RENT), 'cost_center_id' => $this->office->id, 'amount' => '2000', 'vat_amount' => '300', 'vat_recoverable' => '0'],
+                ['expense_account_id' => $this->headId(StandardChart::FUEL), 'cost_center_id' => $this->plant->id, 'amount' => '1000', 'vat_amount' => '150', 'vat_recoverable' => '1'],
+                ['expense_account_id' => $this->headId(StandardChart::RENT), 'cost_center_id' => $this->office->id, 'amount' => '2000', 'vat_amount' => '300', 'vat_recoverable' => '0'],
             ],
         ]);
 
@@ -142,10 +142,10 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $rows = $this->ledger($voucher);
 
         $this->assertBalanced($rows, 'গ');
-        $this->assertSame('1000.0000', $this->debitOn($rows, $this->head(StandardChart::FUEL)), '⛔ গ: সমন্বয়যোগ্য ভ্যাট খরচে মিশল');
-        $this->assertSame('150.0000', $this->debitOn($rows, $this->head(StandardChart::INPUT_VAT_RECOVERABLE)), '⛔ গ: সমন্বয়যোগ্য ভ্যাট 1139-এ আলাদা বসেনি');
-        $this->assertSame('2300.0000', $this->debitOn($rows, $this->head(StandardChart::RENT)), '⛔ গ: অসমন্বয়যোগ্য ভ্যাট খরচের সাথে বসেনি');
-        $this->assertSame((int) $this->office->id, (int) $rows->firstWhere('account_id', $this->head(StandardChart::RENT))->cost_center_id,
+        $this->assertSame('1000.0000', $this->debitOn($rows, $this->headId(StandardChart::FUEL)), '⛔ গ: সমন্বয়যোগ্য ভ্যাট খরচে মিশল');
+        $this->assertSame('150.0000', $this->debitOn($rows, $this->headId(StandardChart::INPUT_VAT_RECOVERABLE)), '⛔ গ: সমন্বয়যোগ্য ভ্যাট 1139-এ আলাদা বসেনি');
+        $this->assertSame('2300.0000', $this->debitOn($rows, $this->headId(StandardChart::RENT)), '⛔ গ: অসমন্বয়যোগ্য ভ্যাট খরচের সাথে বসেনি');
+        $this->assertSame((int) $this->office->id, (int) $rows->firstWhere('account_id', $this->headId(StandardChart::RENT))->cost_center_id,
             '⛔ গ: দ্বিতীয় লাইনের খরচ-কেন্দ্র খাতায় নামেনি');
         $this->assertSame(2, Voucher::query()->findOrFail($voucher->id)->expenseLines()->count(), '⛔ গ: ব্যবসার লাইন রাখা হয়নি');
         $this->assertSame($this->shape($rows), $preview, '⛔ গ: simulate যা দেখাল, পোস্ট তা লিখল না');
@@ -157,7 +157,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $employee = Employee::query()->create(['branch_id' => $this->a->id, 'code' => 'EMP-EXP1', 'name_en' => 'Paying Employee', 'joining_date' => '2026-01-01']);
         $payload = $this->payload([
             'instrument' => Voucher::BY_EMPLOYEE, 'employee_id' => $employee->id,
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::FUEL), 'amount' => '500']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::FUEL), 'amount' => '500']],
         ]);
 
         $preview = $this->simulate($payload);
@@ -165,7 +165,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $rows = $this->ledger($voucher);
 
         $this->assertBalanced($rows, 'ঘ');
-        $advance = $rows->firstWhere('account_id', $this->head(StandardChart::EMPLOYEE_ADVANCE));
+        $advance = $rows->firstWhere('account_id', $this->headId(StandardChart::EMPLOYEE_ADVANCE));
         $this->assertNotNull($advance, '⛔ ঘ: কর্মী দিলেন, অথচ 1131-এ কিছু বসেনি');
         $this->assertSame(['employee', (int) $employee->id, '500.0000'], [(string) $advance->party_type, (int) $advance->party_id, bcadd((string) $advance->credit, '0', 4)],
             '⛔ ঘ: কর্মীর পাওনা তাঁর নামে ক্রেডিট নয়');
@@ -181,9 +181,9 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $before = Voucher::query()->count();
 
         $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
-            'instrument' => Voucher::ON_CREDIT, 'from_account_id' => $this->head(StandardChart::PAYABLE), 'due_date' => now()->addDays(7)->toDateString(),
+            'instrument' => Voucher::ON_CREDIT, 'from_account_id' => $this->headId(StandardChart::PAYABLE), 'due_date' => now()->addDays(7)->toDateString(),
             'party_type' => 'customer', 'party_id' => $customer->id,
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::FUEL), 'amount' => '800']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::FUEL), 'amount' => '800']],
         ]));
 
         $said = $this->refusalOn('party');
@@ -201,8 +201,8 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
             'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
             'expense_lines' => [
-                ['expense_account_id' => $this->head(StandardChart::FUEL), 'amount' => '400', 'branch_id' => $this->a->id],
-                ['expense_account_id' => $this->head(StandardChart::RENT), 'amount' => '600', 'branch_id' => $other->id],
+                ['expense_account_id' => $this->headId(StandardChart::FUEL), 'amount' => '400', 'branch_id' => $this->a->id],
+                ['expense_account_id' => $this->headId(StandardChart::RENT), 'amount' => '600', 'branch_id' => $other->id],
             ],
         ]));
 
@@ -219,7 +219,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
 
         $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
             'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::RENT), 'amount' => '12000', 'is_prepaid' => '1']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::RENT), 'amount' => '12000', 'is_prepaid' => '1']],
         ]));
 
         $this->assertContains($this->refusalOn('expense_lines.0.is_prepaid'), $this->bothLocales('expense_prepaid_not_taken'),
@@ -233,11 +233,11 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
     {
         $voucher = $this->postExpense([
             'type' => Voucher::EXPENSE, 'trx_date' => now()->toDateString(), 'narration' => 'পুরনো পথ',
-            'amount' => '700', 'to_account_id' => $this->head(StandardChart::FUEL), 'from_account_id' => $this->till->account_id,
+            'amount' => '700', 'to_account_id' => $this->headId(StandardChart::FUEL), 'from_account_id' => $this->till->account_id,
         ]);
         $rows = $this->ledger($voucher);
 
-        $this->assertSame([[$this->head(StandardChart::FUEL), '700.0000', '0.0000'], [(int) $this->till->account_id, '0.0000', '700.0000']],
+        $this->assertSame([[$this->headId(StandardChart::FUEL), '700.0000', '0.0000'], [(int) $this->till->account_id, '0.0000', '700.0000']],
             $rows->map(fn ($r) => [(int) $r->account_id, bcadd((string) $r->debit, '0', 4), bcadd((string) $r->credit, '0', 4)])->values()->all(),
             '⛔ চ: পুরনো এক-লাইনের খরচ আগের দুই সারিতে বসে না — পুরনো অ্যাপ আর পুরনো খসড়া ভাঙত');
         $this->assertSame(0, $voucher->expenseLines()->count(), '⛔ চ: পুরনো পথে ব্যবসার লাইন বানানো হলো');
@@ -251,7 +251,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
 
         $this->post(route('accounts.voucher.store', 'expense'), $this->payload([
             'instrument' => 'cash', 'from_account_id' => $this->till->account_id,
-            'expense_lines' => [['expense_account_id' => $this->head(StandardChart::FUEL), 'amount' => '1000', 'vat_amount' => '150', 'vat_recoverable' => '1']],
+            'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::FUEL), 'amount' => '1000', 'vat_amount' => '150', 'vat_recoverable' => '1']],
         ]));
 
         $vat = StandardChart::find(StandardChart::INPUT_VAT_RECOVERABLE);
@@ -334,7 +334,7 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
         return array_map(fn (string $l) => trans('accounts::validation.'.$key, [], $l), ['bn', 'en']);
     }
 
-    private function head(string $code): int
+    private function headId(string $code): int
     {
         return (int) (StandardChart::find($code)?->id ?? $this->fail("দৃশ্যটাই ঠিক নয় — মান ছকে {$code} নেই"));
     }
