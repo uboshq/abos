@@ -26,6 +26,15 @@ use Tests\TestCase;
  * ডাটাবেজের কলাম, পর্দার ঘর, আর দুই ভাষার লেখা। ⛔ যেকোনো একটা না থাকলে
  * জিনিসটা অর্ধেক, আর অর্ধেক মানে একদিন নীরবে হারিয়ে যাওয়া।
  *
+ * ── ⭐ ২১ অক্টোবর ২০২৬: মালিকের নতুন রায় — পর্দায় কেবল পদ্ধতির নিজের ঘর ──────────
+ * মালিক ভাউচারের ছবি দেখিয়ে জিজ্ঞেস করেন: *"এতগুলো দেওয়া কি int. standard?"* — তারপর আন্তর্জাতিক নমুনা দেখে
+ * অনুমোদন: *"ok ekoni kaj kore live e daw"*। ⭐ তাই এখন নিয়ম তিন ভাগে:
+ *   · আঠারোটার কলাম থাকে (পুরনো কাগজ আর পুরনো ফোন যা পাঠায় তা হারায় না) — নিচের প্রথম দাবি, অপরিবর্তিত;
+ *   · পর্দায় টাকার বাক্স ([[x-money.method]]) কেবল পদ্ধতির নিজের ঘর চায় — প্রেরকের ব্যাংক-শাখা-হিসাবধারী-হিসাব নম্বর,
+ *     ওয়ালেট, মাধ্যম, প্রেরকের মোবাইল, "কবে পৌঁছাবে", "কখন" আর "চার্জ কে বহন করে" আর চাওয়া হয় না (চার্জ আমাদের খরচ — মালিক);
+ *   · "কার মাধ্যমে" (carried_by) থাকে — ওটা মালিকের আলাদা আদেশ, বিবরণের ঠিক আগে।
+ * ⛔ দাবি দুর্বল করা নয় — মালিকের রায়ে প্রশ্নের তালিকা বদলেছে, পাহারা সেই তালিকাই পাহারা দেয়।
+ *
  * ── ⓘ শুরুর সংখ্যাটা লিখে রাখা ──────────────────────────────────────
  * কাজ শুরুর দিন মিল ছিল **৩৩.৩%** (১৮টার ৬টা)। সংখ্যাটা এখানে লেখা
  * থাকল যাতে "হয়ে গেছে" দাবিটা প্রমাণযোগ্য থাকে।
@@ -101,36 +110,48 @@ final class MoneyMovementHasEveryFieldTheOwnerAskedForTest extends TestCase
     }
 
     /**
+     * ⭐ ২১ অক্টোবরের রায়: টাকার বাক্সে পদ্ধতির নিজের ঘর আছে, মালিকের বাদ দেওয়া দশটা নেই।
+     *
+     * @var list<string>
+     */
+    private const ASKED_BY_THE_METHOD = [
+        'instrument', 'instrument_no', 'instrument_date', 'from_bank', 'transfer_mode_id', 'value_date', 'deposit_slip_no',
+    ];
+
+    /** @var list<string> */
+    private const DROPPED_BY_THE_OWNER = [
+        'wallet', 'wallet_medium', 'counterparty_phone', 'from_branch', 'from_account_name', 'from_account_no',
+        'lands_on', 'moved_at', 'charge_borne_by',
+    ];
+
+    /**
      * ⭐ প্রতিটা ঘর সত্যিই পর্দায় আছে — কম্পোনেন্টে।
      *
      * ⓘ কলাম থাকা আর ঘর থাকা দুইটা আলাদা সত্য। ⚠️ আজ একাধিকবার দেখা
      * গেছে কলামটা এক মাস ধরে বসানো অথচ কোনো ফর্মে ঘরটা নেই —
      * `mdm_transfer_modes` ঠিক সেটাই ছিল।
      */
-    public function test_every_field_is_actually_on_the_screen(): void
+    public function test_the_money_box_asks_each_methods_own_fields_and_not_the_ten_the_owner_dropped(): void
     {
-        $blades = collect([
-            'money-movement',
-            'charge-bearer',
-        ])->map(fn (string $f) => File::get(resource_path("views/components/ui/{$f}.blade.php")))
-            ->implode("\n");
+        $box = File::get(resource_path('views/components/money/method.blade.php'));
 
-        $missing = [];
+        $missing = array_values(array_filter(self::ASKED_BY_THE_METHOD, fn (string $f) => ! str_contains($box, "name=\"{$f}\"")));
+        $this->assertSame([], $missing, "⛔ টাকার বাক্সে পদ্ধতির এই ঘরগুলো নেই — প্রশ্নটা কেউ করবে না:\n".implode("\n", $missing));
+        $this->assertStringContainsString(':name="$chargeField"', $box, '⛔ টাকার বাক্সে চার্জের ঘর নেই');
+        $this->assertStringContainsString('name="note_counts[', $box, '⛔ টাকার বাক্সে নোট গোনার ঘর নেই');
 
-        foreach (array_keys(self::FIELDS) as $field) {
-            // note_counts[1000] আকারে বসে, তাই নামটা দিয়ে খোঁজা
-            if (! str_contains($blades, "name=\"{$field}\"") && ! str_contains($blades, "\"{$field}[")) {
-                $missing[] = $field;
-            }
+        $asked = array_values(array_filter(self::DROPPED_BY_THE_OWNER, fn (string $f) => str_contains($box, "name=\"{$f}\"")));
+        $this->assertSame([], $asked, "⛔ মালিক ২১ অক্টোবর যে ঘর বাদ দিয়েছেন, টাকার বাক্স আবার তা চায়:\n".implode("\n", $asked));
+
+        foreach (['voucher/simple-form', 'voucher/partials/expense-fields'] as $view) {
+            $blade = File::get(base_path("app/Modules/Accounts/Resources/views/{$view}.blade.php"));
+            $this->assertStringContainsString('<x-money.method', $blade, "⛔ {$view} টাকার বাক্স ([[x-money.method]]) ডাকে না");
+            $this->assertStringNotContainsString('<x-ui.money-movement', $blade, "⛔ {$view} আবার পুরনো আঠারো-ঘরের বাক্স ডাকে");
         }
 
-        $this->assertSame([], $missing, implode("\n", [
-            'এই ঘরগুলো কম্পোনেন্টে নেই:',
-            '',
-            '⚠️ কলামটা থাকলেও প্রশ্নটা কেউ করবে না, আর উত্তরটা কোথাও থাকবে না।',
-            '',
-            ...$missing,
-        ]));
+        // ⭐ "কার মাধ্যমে" — মালিকের আলাদা আদেশ, থাকে
+        $this->assertStringContainsString('name="carried_by"', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php')),
+            '⛔ রসিদ আর পরিশোধ থেকে "কার মাধ্যমে" হারাল — ওটা মালিকের আলাদা আদেশ');
     }
 
     /**
@@ -167,7 +188,7 @@ final class MoneyMovementHasEveryFieldTheOwnerAskedForTest extends TestCase
      */
     public function test_the_note_list_is_the_same_one_the_cash_count_uses(): void
     {
-        $blade = File::get(resource_path('views/components/ui/money-movement.blade.php'));
+        $blade = File::get(resource_path('views/components/money/method.blade.php'));
 
         $this->assertStringContainsString('CashCount::DENOMINATIONS', $blade,
             'নোটের তালিকা হাতে লেখা হয়েছে — CashCount-এর তালিকাটাই ব্যবহার করতে হবে।');

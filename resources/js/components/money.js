@@ -99,6 +99,39 @@ export function methodForKind (kind, current) {
     return current
 }
 
+/**
+ * ⭐ পদ্ধতি আগে, খাত পরে — পদ্ধতিই ঠিক করে কোন ধরনের খাত চলে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)। ⓘ সার্ভারের একই তালিকা
+ * ([[MoneyMethod::KIND_OF]]) — পর্দা যা দেখায়, সার্ভার তা-ই মানে।
+ */
+export const KIND_OF = { cash: 'cash', mfs: 'mfs', transfer: 'bank', deposit: 'bank', cheque: 'bank', card: 'bank' }
+
+/** খাতটা এই পদ্ধতির কি না — পদ্ধতি না জানা বা খাতের ধরন খালি হলে প্রশ্ন নেই */
+export function fitsMethod (method, kind) {
+    if (!(method in KIND_OF) || !kind) return true
+
+    return KIND_OF[method] === kind
+}
+
+/**
+ * পদ্ধতি বদলালে খাতের নতুন অবস্থা — কোন খাতগুলো তালিকায়, কোনটা বাছা, আগেরটা সরল কি না।
+ *
+ * ⓘ আগের খাত মিললে থাকে; না মিললে ফাঁকা (`dropped` = আগের খাত); একটাই খাত থাকলে সেটা নিজে বসে (fe)।
+ *
+ * @param accounts [{ id, label, kind }]
+ * @returns { list, picked, dropped }
+ */
+export function accountsForMethod (accounts, method, current) {
+    const list = (accounts ?? []).filter(a => fitsMethod(method, a.kind))
+    const now = String(current ?? '')
+    const keeps = now !== '' && list.some(a => String(a.id) === now)
+    const dropped = now !== '' && !keeps ? (accounts ?? []).find(a => String(a.id) === now) ?? null : null
+    let picked = keeps ? now : ''
+
+    if (picked === '' && list.length === 1) picked = String(list[0].id)
+
+    return { list, picked, dropped }
+}
+
 /** চার্জের লাইন — লেখার ছাঁচে অঙ্ক দুইটা বসানো (`:charge`, `:amount`, `:head`) */
 export function chargeLine (template, { charge, amount, head }) {
     return String(template ?? '')
@@ -116,13 +149,81 @@ export function moneyMethod ({
     moneyField = '',
     direction = 'in',
     notes = {},
+    accounts = null,
+    methodNames = {},
+    cleared = '',
 } = {}) {
+    // ⓘ খাতের তালিকা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — বদলায় না, কেবল পড়া হয়
+    const picking = Array.isArray(accounts)
+
     return {
         method: method || 'cash',
         charge: charge ?? '',
         chequeDate: chequeDate || '',
         amount: 0,
         notes: (notes && typeof notes === 'object') ? { ...notes } : {},
+        // ⓘ চলতি পদ্ধতির খাত কয়টা — শূন্য হলে তালিকার জায়গায় কারণ, আর জমার বোতাম বন্ধ
+        accountCount: picking ? accounts.filter(a => fitsMethod(method || 'cash', a.kind)).length : 1,
+        clearedLine: cleared || '',
+        startPick: '',
+
+        get hasAccounts () {
+            return this.accountCount > 0
+        },
+
+        get noAccountsLine () {
+            return String(this.$root.dataset.accountNoneLine ?? '').replace(':method', methodNames[this.method] ?? this.method)
+        },
+
+        /*
+         * ⭐ পদ্ধতি বদলালে খাতের তালিকা নতুন করে — কেবল মিলে যাওয়া খাত, বাকিগুলো তালিকায় থাকেই না (fe, ২৪ অক্টোবর ২০২৬)।
+         * ⓘ বাছা মান বদলালে `change` ছাড়া হয় — হোস্টের `x-model` (স্থিতি, প্রিভিউ, রেফারেন্সের উত্তর) নিজের পথেই খবর পায়।
+         */
+        fillAccounts (start = false) {
+            const select = this.$root.querySelector('select[data-money-account]')
+
+            if (!picking || !select) return
+
+            const { list, picked, dropped } = accountsForMethod(accounts, this.method, start ? (this.startPick ?? select.value) : select.value)
+
+            for (const option of [...select.options]) {
+                if (option.value !== '') option.remove()
+            }
+
+            for (const row of list) {
+                const option = document.createElement('option')
+                option.value = String(row.id)
+                option.textContent = row.label
+                option.dataset.kind = row.kind ?? ''
+                select.add(option)
+            }
+
+            this.accountCount = list.length
+            if (!start) {
+                this.clearedLine = dropped
+                    ? String(this.$root.dataset.accountClearedLine ?? '').replace(':account', dropped.label).replace(':method', methodNames[this.method] ?? this.method)
+                    : ''
+            }
+
+            select.value = picked
+            select.dispatchEvent(new Event('change', { bubbles: true }))
+            this.blockSubmit(list.length === 0)
+        },
+
+        /* ⛔ খাত ছাড়া জমা নয় — যে বোতাম এই বাক্স বন্ধ করেছে, কেবল সেটাই খোলে (হোস্টের নিজের `:disabled` ছোঁয়া হয় না) */
+        blockSubmit (on) {
+            const buttons = this.$el.closest('form')?.querySelectorAll('button[type="submit"], button:not([type])') ?? []
+
+            for (const button of buttons) {
+                if (on && !button.disabled) {
+                    button.disabled = true
+                    button.dataset.moneyBlocked = '1'
+                } else if (!on && button.dataset.moneyBlocked) {
+                    button.disabled = false
+                    delete button.dataset.moneyBlocked
+                }
+            }
+        },
 
         readAmount () {
             const field = this.$el.closest('form')?.querySelector(`[name="${amountField}"]`)
@@ -144,6 +245,16 @@ export function moneyMethod ({
             this.$watch('method', () => this.announce())
             this.$watch('charge', () => this.announce())
             this.$nextTick(() => this.announce())
+
+            if (picking) {
+                /*
+                 * ⓘ সার্ভারের বাছা খাত এখনই পড়া — হোস্টের `x-model` একটু পরে বসে নিজের পুরনো মান চাপাত (সার্ভার না-মেলা খাত সরালে বা
+                 * একমাত্র খাত বসালে হোস্ট তা জানত না)। তাই পরের ধাপে আবার বসিয়ে `change` ছাড়া হয়।
+                 */
+                this.startPick = this.$root.querySelector('select[data-money-account]')?.value ?? ''
+                this.$watch('method', () => this.fillAccounts())
+                this.$nextTick(() => this.fillAccounts(true))
+            }
 
             const form = this.$el.closest('form')
 
@@ -253,6 +364,141 @@ export function allocateOldestFirst (bills, amount) {
 }
 
 /**
+ * ⭐ রসিদ ও পরিশোধ ভাউচারের টাকার অংশ — অঙ্ক লাখ-কমায়, খাতে কত আছে, রেফারেন্সের চলতি উত্তর আর পোস্টের আগে খাতায় যা যাবে
+ * (fe, ২৩ অক্টোবর ২০২৬; চূড়ান্ত নকশার মিল-তালিকা)। ⓘ টাকা দেওয়ার পর্দার ([[payBills]]) একই আচরণ, বিলের টেবিল ছাড়া।
+ *
+ * ⓘ খাতায় কী যাবে বলে সার্ভার ([[VoucherController::simulate()]]) — জমার একই সারি আর শাখায়; রেফারেন্সের উত্তর পোস্টের একই
+ * প্রশ্নে ([[VoucherController::referenceCheck()]])।
+ */
+export function voucherMoney ({
+    amount = '',
+    account = '',
+    balances = {},
+    simulateUrl = '',
+    referenceUrl = '',
+    voucherId = null,
+    out = false,
+} = {}) {
+    // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
+    let form = null
+
+    return {
+        // ⓘ ফর্মের দুইবার-জমা ঠেকানো ([[simple-form]]-এর @submit) — আগের `{ busy: false }`-এর জায়গায়
+        busy: false,
+        amount: String(amount ?? ''),
+        account: String(account ?? ''),
+        charge: 0,
+        balances,
+        slip: { state: 'empty', message: '' },
+        slipAsked: 0,
+        slipTimer: null,
+        preview: { rows: [], debit: '', credit: '', balanced: true, message: '' },
+        asked: 0,
+        timer: null,
+
+        init () {
+            form = this.$el.closest('form')
+            this.$watch('account', () => { this.slipSoon(); this.refresh() })
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
+
+            // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
+            form?.addEventListener('input', (e) => {
+                if (e.target?.name === 'instrument_no' || e.target?.name === 'deposit_slip_no') this.slipSoon()
+            })
+            form?.addEventListener('change', (e) => {
+                if (e.target?.name !== 'instrument_no' && e.target?.name !== 'deposit_slip_no') this.refresh()
+            })
+            this.$nextTick(() => this.refresh())
+        },
+
+        /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ "খাতে আছে কি না"-য়, আর প্রিভিউ নতুন করে */
+        heard (detail) {
+            this.charge = paisa(detail?.charge ?? 0)
+            this.slipSoon()
+            this.refresh()
+        },
+
+        /* ⭐ খাতে আছে কত — পরিশোধে যথেষ্ট কি না (নকশার "খাতে আছে ৳…") */
+        get balance () { return this.balances[this.account] ?? null },
+        get hasBalance () { return this.balance !== null },
+        get balanceText () { return this.hasBalance ? taka(Number(this.balance)) : '' },
+        get short () { return out && this.hasBalance && paisa(this.balance) < paisa(this.amount) + this.charge },
+        get balanceClass () { return this.short ? 'text-(--color-danger)' : 'text-(--color-ink-muted)' },
+
+        slipSoon () {
+            clearTimeout(this.slipTimer)
+            this.slipTimer = setTimeout(() => this.checkSlip(), 300)
+        },
+
+        /* ⓘ নম্বর পড়া হয় প্রশ্নের মুহূর্তে; ⛔ কেবল শেষ প্রশ্নের উত্তর — দেরিতে-আসা আগেরটা নতুনটাকে ঢাকে না */
+        async checkSlip () {
+            // ⓘ নগদ জমায় স্লিপই রেফারেন্স ([[VoucherRequest]]) — যে ঘরটা এখন পর্দায়, সেটাই
+            const no = String(form?.querySelector('[name="instrument_no"]')?.value || form?.querySelector('[name="deposit_slip_no"]')?.value || '').trim()
+            const ticket = ++this.slipAsked
+
+            if (!referenceUrl || no === '' || this.account === '') {
+                this.slip = { state: 'empty', message: '' }
+                return
+            }
+
+            const query = new URLSearchParams({ account_id: this.account, instrument_no: no })
+            if (voucherId) query.set('voucher', String(voucherId))
+
+            try {
+                const response = await fetch(referenceUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })
+                const answer = response.ok ? await response.json() : { state: 'empty', message: '' }
+                if (ticket === this.slipAsked) this.slip = answer
+            } catch {
+                if (ticket === this.slipAsked) this.slip = { state: 'empty', message: '' }
+            }
+        },
+
+        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
+        get slipUsed () { return this.slip.state === 'used' },
+
+        /* ⭐ খাতায় যা যাবে — সার্ভারের হিসাবে, একটু থেমে (প্রতিটা অক্ষরে নয়) */
+        refresh () {
+            clearTimeout(this.timer)
+            this.timer = setTimeout(() => this.simulate(), 350)
+        },
+
+        async simulate () {
+            const empty = { rows: [], debit: '', credit: '', balanced: true, message: '' }
+            if (!form || !simulateUrl || paisa(this.amount) <= 0 || this.account === '') {
+                this.preview = empty
+                return
+            }
+
+            const body = new FormData(form)
+            body.delete('_method')
+            // ⛔ একবারের জমার টোকেন প্রিভিউতে নয় — খরচ হলে আসল "পোস্ট" দ্বিতীয় চাপ ধরা পড়ে ফিরত ([[OneSubmitPerForm]])
+            body.delete('_once')
+            // ⓘ ফাইল প্রিভিউতে যায় না — খাতার সারি তার উপর দাঁড়ায় না
+            body.delete('attachment')
+            // ⓘ সম্পাদনায় নিজের রেফারেন্স নিজের সাথে "আগে বসেছে" নয়
+            if (voucherId) body.set('voucher_id', String(voucherId))
+
+            const ticket = ++this.asked
+
+            try {
+                const response = await fetch(simulateUrl, { method: 'POST', body, headers: { Accept: 'application/json' } })
+                const answer = await response.json().catch(() => null)
+                if (ticket !== this.asked) return
+                // ⓘ সারি থাকলে খাতার ছবি; সারি খালি আর `message` থাকলে পোস্ট যে কারণে থামত; ঘর অর্ধেক ভরা হলে দুইটাই খালি — চুপ
+                this.preview = response.ok && answer && Array.isArray(answer.rows) ? { ...empty, ...answer } : empty
+            } catch {
+                if (ticket === this.asked) this.preview = empty
+            }
+        },
+
+        get hasPreview () { return this.preview.rows.length > 0 },
+        get previewBlocked () { return this.preview.message !== '' },
+        get previewMatches () { return this.hasPreview && this.preview.balanced },
+        get unbalanced () { return this.hasPreview && !this.preview.balanced },
+    }
+}
+
+/**
  * ⭐ টাকা দেওয়ার পর্দা (সরবরাহকারী-পরিশোধ) — মাথার তিন অঙ্ক, খোলা বিলের টেবিল, সারাংশ, খাতে টাকা আছে কি না, আর পোস্টের আগের
  * প্রিভিউ (নকশা #১, #৩, #৪, #১০, #২৪; মালিক, ২১ অক্টোবর ২০২৬)।
  *
@@ -268,9 +514,18 @@ export function payBills ({
     taxIds = {},
     bankIds = [],
     simulateUrl = '',
+    slipUrl = '',
+    paymentId = null,
 } = {}) {
+    // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
+    let slipForm = null
+
     return {
         bills: bills.map(b => ({ ...b, remaining: paisa(b.remaining), total: paisa(b.total) })),
+        /* ⭐ স্লিপ/TrxID-এর তাৎক্ষণিক উত্তর (মিল-তালিকা #৫): empty · free · used — জমার একই নিয়মে, [[PaymentController::slipCheck()]] */
+        slip: { state: 'empty', message: '' },
+        slipAsked: 0,
+        slipTimer: null,
         supplier: String(supplier ?? ''),
         amount: String(amount ?? ''),
         account: String(account ?? ''),
@@ -284,10 +539,52 @@ export function payBills ({
 
         init () {
             this.$watch('supplier', () => this.allocate())
-            this.$watch('amount', () => this.allocate())
+            // ⓘ কেবল অঙ্ক বদলালে নতুন করে বসানো — লাখ-কমা বসানো (একই অঙ্ক) হাতে বসানো প্রয়োগ মুছবে না
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.allocate() })
             this.$watch('account', () => this.refresh())
             this.$nextTick(() => this.refresh())
+
+            // ⓘ পদ্ধতির ঘরগুলো x-if-এ আসে-যায়, তাই শোনা ফর্মে — যে ঘরের নাম `instrument_no`
+            slipForm = this.$el
+            this.$el.addEventListener('input', (e) => {
+                if (e.target?.name === 'instrument_no') this.slipSoon()
+            })
+            this.$watch('supplier', () => this.slipSoon())
         },
+
+        slipSoon () {
+            clearTimeout(this.slipTimer)
+            this.slipTimer = setTimeout(() => this.checkSlip(), 300)
+        },
+
+        /*
+         * ⓘ নম্বরটা পড়া হয় প্রশ্নের মুহূর্তে, সাজানোর মুহূর্তে নয় — সরবরাহকারী বদলালে যে প্রশ্ন যায় তার হাতে কোনো লেখা থাকে না,
+         * আর ৩০০ মিলিসেকেন্ডে ঘরের লেখা বদলেও যেতে পারে; তাই সবসময় ঘরে এখন যা আছে সেটাই।
+         */
+        async checkSlip (value = null) {
+            const no = String(value ?? slipForm?.querySelector('[name="instrument_no"]')?.value ?? '').trim()
+            // ⛔ কেবল শেষ প্রশ্নের উত্তর — দেরিতে-আসা আগের উত্তর নতুনটাকে ঢাকবে না (প্রিভিউর একই নিয়ম)
+            const ticket = ++this.slipAsked
+
+            if (!slipUrl || no === '' || this.supplier === '') {
+                this.slip = { state: 'empty', message: '' }
+                return
+            }
+
+            const query = new URLSearchParams({ supplier_id: this.supplier, instrument_no: no })
+            if (paymentId) query.set('payment', String(paymentId))
+
+            try {
+                const response = await fetch(slipUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })
+                const answer = response.ok ? await response.json() : { state: 'empty', message: '' }
+                if (ticket === this.slipAsked) this.slip = answer
+            } catch {
+                if (ticket === this.slipAsked) this.slip = { state: 'empty', message: '' }
+            }
+        },
+
+        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
+        get slipUsed () { return this.slip.state === 'used' },
 
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ সারাংশে, আর প্রিভিউ নতুন করে */
         heard (detail) {
@@ -365,6 +662,21 @@ export function payBills ({
         /* ⓘ কাটা আর নিট — সার্ভারের প্রিভিউ থেকে ([[PaymentWithholding]]); প্রিভিউ আসার আগে কাটা শূন্য, নিট মোট */
         get aitText () { return this.preview.ait ?? '0.00' },
         get vdsText () { return this.preview.vds ?? '0.00' },
+
+        /* ⓘ সারাংশে কাটা অঙ্ক বিয়োগে — শূন্যে চিহ্ন নয় (নকশা; মিল-তালিকার ফাঁক ৬) */
+        get aitMinus () { return this.aitText === '0.00' ? '0.00' : '−' + this.aitText },
+        get vdsMinus () { return this.vdsText === '0.00' ? '0.00' : '−' + this.vdsText },
+        /* ⓘ সত্যি কিছু কাটা হলে তবেই কর-নোট (মিল-তালিকা #৩) */
+        get withheld () { return paisa(this.aitText) > 0 || paisa(this.vdsText) > 0 },
+
+        /* ⓘ নিট কোথা থেকে যায় — পদ্ধতি ধরে (ব্যাংক · MFS · নগদ), লেখা পাতার data-তে */
+        get netLabel () {
+            const label = this.$root.querySelector('[data-net-label]')?.dataset ?? {}
+            if (this.method === 'mfs') return label.netMfs ?? ''
+            if (this.method === 'cash') return label.netCash ?? ''
+
+            return label.netBank ?? ''
+        },
         get netText () { return this.preview.net ?? taka(paisa(this.amount) / 100) },
 
         /* ⓘ প্রয়োগের বাইরে যা থাকে — অগ্রিম, সরবরাহকারীর খাতায় (নকশা #৪) */
@@ -437,112 +749,5 @@ export function payBills ({
         /* পয়সা → লাখ-কমার লেখা, টেবিলের ঘরে */
         money (value) { return taka(value / 100) },
         get unbalanced () { return this.hasPreview && !this.preview.balanced },
-    }
-}
-
-export function moneyMovement ({
-    amountField,
-    method = 'cash',
-    charge = 0,
-    chequeDate = '',
-    notes = {},
-    moneyField = '',
-} = {}) {
-    return {
-        /*
-         * ⛔ শুরুর মান সার্ভার থেকে — ২৭ সেপ্টেম্বর ২০২৬।
-         *
-         * আগে এখানে `method: 'cash'`, `charge: 0`, `notes: {}` আর
-         * `chequeDate: ''` লেখা ছিল। ⚠️ `x-model` তখন সার্ভারের পুরনো মানের
-         * উপরে এগুলো বসাত, তাই ভুল নিয়ে ফর্ম ফিরলে বা সম্পাদনায় মাধ্যম আবার
-         * "নগদ" হত, আর লেনদেন-নম্বর, চার্জ, নোট গোনা, চেকের তারিখ হারাত।
-         */
-        method: method || 'cash',
-        charge: Number(charge) || 0,
-        chargeBy: 'us',
-        amount: 0,
-        notes: (notes && typeof notes === 'object') ? { ...notes } : {},
-        chequeDate: chequeDate || '',
-
-        /*
-         * ⛔ অঙ্কটা একবার নয়, প্রতিবার — ২১ সেপ্টেম্বর ২০২৬।
-         *
-         * ── ⚠️ মালিক যা দেখেছেন ────────────────────────────────────
-         * নোট গুনে ১০,০০০, ঘরে লেখা ১০০০০, তবু পর্দা বলত *"গোনা টাকা
-         * আর লেখা টাকা মিলছে না"*।
-         *
-         * ⓘ কারণ এই ব্লকটা আগে কেবল `init()`-এ চলত — পাতা খোলার সময়,
-         * যখন ঘরটা **খালি**। ⛔ তাই `amount` চিরকাল ০ হয়ে বসে থাকত,
-         * আর পরে যত টাকাই লেখা হোক কম্পোনেন্ট জানতই না।
-         *
-         * ⚠️ ফল সবচেয়ে খারাপ ধরনের: সংখ্যা দুইটা চোখের সামনে সমান,
-         * অথচ ব্যবস্থা "মিলছে না" বলে আটকে দেয় — মানুষ ভাবেন নিজে ভুল
-         * করেছেন আর বারবার গোনেন।
-         *
-         * ⭐ এখন ঘরটা শোনা হয় (`input`), তাই টাইপ করার সাথে সাথেই
-         * সংখ্যাটা মেলে। ⓘ `init()`-এর প্রথম পড়াটাও থাকে — সম্পাদনার
-         * সময় ঘরটা আগে থেকেই ভরা থাকতে পারে।
-         */
-        readAmount () {
-            const field = this.$el.closest('form')?.querySelector(`[name="${amountField}"]`)
-            const raw = String(field?.value ?? '').replace(/[^0-9.]/g, '')
-
-            this.amount = raw === '' ? 0 : raw
-        },
-
-        init () {
-            this.readAmount()
-
-            /*
-             * ⓘ শ্রোতাটা ফর্মে, ঘরে নয়: টাকার ঘরটা Alpine-এর `x-model`
-             * দিয়ে চলে আর পর্দার অংশ পরে বসতেও পারে। ⚠️ ঘরে সরাসরি
-             * বসালে ঐ দেরিতে আসা ঘরগুলো বাদ পড়ত।
-             */
-            this.$el.closest('form')?.addEventListener('input', (event) => {
-                if (event.target?.name === amountField) {
-                    this.readAmount()
-                }
-            })
-
-            /*
-             * ⭐ টাকার খাত বদলালে মাধ্যমও — ২৭ সেপ্টেম্বর ২০২৬।
-             *
-             * ⛔ লাইভে: ব্যাংক বাছার পরেও চিপ "নগদ"-এ থাকত, তাই লেনদেন-নম্বরের
-             * ঘরটা আসতই না, অথচ সার্ভার সেটা চাইত। ⓘ এখন খাতের ধরন
-             * (`data-kind`) দেখে চিপটা নিজে সরে, আর চিপের সাথে ঘরগুলোও আসে।
-             */
-            if (moneyField) {
-                this.$el.closest('form')?.addEventListener('change', (event) => {
-                    if (event.target?.name === moneyField) {
-                        this.followAccount(event.target)
-                    }
-                })
-            }
-        },
-
-        followAccount (select) {
-            /*
-             * ⓘ ধরনটা মান ধরে খোঁজা option থেকে, `selectedOptions` থেকে নয় —
-             * দ্বিতীয়বার বদলালে কিছু পরিবেশে (happy-dom) ওটা পুরনো সারিই দিত,
-             * আর মাধ্যম আগের খাতেই আটকে থাকত।
-             */
-            const option = [...(select?.options ?? [])].find(o => o.value === select.value)
-            const kind = option?.dataset?.kind ?? ''
-
-            this.method = wayForKind(kind, this.method)
-        },
-
-        get counted () {
-            return countNotes(this.notes)
-        },
-
-        get countMatches () {
-            return Math.abs(this.counted - Number(this.amount || 0)) < 0.005
-        },
-
-        get postDated () {
-            return this.method === 'cheque' && this.chequeDate
-                && this.chequeDate > new Date().toISOString().slice(0, 10)
-        },
     }
 }

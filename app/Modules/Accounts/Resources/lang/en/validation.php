@@ -58,6 +58,7 @@ return [
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'engine_only_expense' => '":name" is posted by the software itself (from sales, stock, depreciation or discounts) and cannot be chosen on an expense voucher. If it needs correcting, the accountant uses a journal.',
     'opening_needs_party' => '":name" keeps party balances — its opening balance goes on each customer or supplier, through their own opening balance (their page or import), not on the account.',
     'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
     'inter_company_side_missing' => 'One side of this inter-company transfer could not be found — nothing was reversed; tell the accountant.',
@@ -196,4 +197,6 @@ return [
     'code_kept_for_chart' => 'Code :code belongs to the standard chart and is kept for another kind of account — choose another code.',
     'loan_principal_taken' => 'The loan principal must sit on a liability account — not a group, cash, bank or expense account.',
     'loan_principal_given' => 'A hand loan given must sit on an asset account — not a group, cash or bank account.',
+    'obligation_needs_ref' => 'Enter the challan or certificate number — the number is the proof it was done.',
+    'obligation_not_open' => 'This obligation is no longer open — it was already done or cancelled.',
 ];

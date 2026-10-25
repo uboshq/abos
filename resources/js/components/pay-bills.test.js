@@ -22,6 +22,19 @@ afterEach(() => {
 
 const answer = (rows) => ({ rows, debit: '1', credit: '1', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' })
 
+/*
+ * ⛔ x-show দেখায় এক ফ্রেম পরে — Alpine দেখানোটা পিছিয়ে দেয় (`_x_toggleAndCascadeWithTransitions`: পাতা দৃশ্যমান হলে
+ * requestAnimationFrame, নইলে setTimeout), লুকানো তৎক্ষণাৎ। ⓘ তাই কেবল Alpine.nextTick()-এর পরে "দেখা যায়" মাপলে দাবি সময়ের
+ * উপর নির্ভর করত: একা চালালে প্রতিবার লাল, পুরো suite-এ কখনো সবুজ (fe/a6, ২৪ অক্টোবর ২০২৬: money-method.test.js:112)।
+ * ⭐ দেখার আগে টিক, একটা টাইমার আর একটা ফ্রেম — দুই পথই ঢাকা।
+ */
+async function painted () {
+    await Alpine.nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    await new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(() => r()))
+    await Alpine.nextTick()
+}
+
 async function mount () {
     const host = document.createElement('div')
     host.innerHTML = `
@@ -75,6 +88,117 @@ describe('দফা #১০ — প্রিভিউতে কেবল শে�
 
         expect(bodies.at(-1).has('_once'), '⛔ #১০: প্রিভিউ একবারের টোকেন খরচ করল — পরে আসল "পোস্ট" ফিরে আসত').toBe(false)
         expect(bodies.at(-1).get('_token')).toBe('t')
+        host.remove()
+    })
+})
+
+describe('মিল-তালিকা #৯ — মোট টাকার ঘর লাখ-কমায়', () => {
+    it('ঘর ছাড়লে ১,২০,০০০.০০ দেখায়, আর হাতে বসানো প্রয়োগ মুছে যায় না', async () => {
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [{ id: 1, supplier: '7', remaining: '120000', total: '120000' }], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '' })">
+                <input data-shown x-money-display="amount">
+                <input type="hidden" name="amount" :value="amount">
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর আর পাঠানোর ঘর আলাদা ([[registerMoneyDisplay]]) — কমা কেবল চোখে, পাঠানো মানে নয়
+        const form = host.querySelector('form')
+        const field = host.querySelector('[data-shown]')
+        const sent = host.querySelector('[name="amount"]')
+        const pay = Alpine.$data(form)
+
+        field.focus()
+        field.value = '120000'
+        field.dispatchEvent(new Event('input'))
+        await Alpine.nextTick()
+        expect(pay.shown(1), 'অঙ্ক লিখলে বিলে বসেনি').toBe('120000.00')
+
+        pay.typed(1, '50000')
+        field.blur()
+        await Alpine.nextTick()
+        await Alpine.nextTick()
+
+        expect(field.value, '⛔ #৯: ঘর ছাড়ার পরেও লাখ-কমা নেই').toBe('1,20,000.00')
+        expect(sent.value, '⛔ #৯: পাঠানো মানে কমা গেল — দেখানোর লেখা নয়, কাঁচা অঙ্ক যাবে').toBe('120000')
+        expect(pay.shown(1), '⛔ #৯: কমা বসাতে গিয়ে হাতে বসানো প্রয়োগ মুছে গেল').toBe('50000.00')
+        host.remove()
+    })
+})
+
+describe('মিল-তালিকা #৫ — স্লিপ/TrxID লেখার সাথে সাথে যাচাই', () => {
+    it('লিখলে সরবরাহকারী আর নম্বর নিয়ে জিজ্ঞেস করে, উত্তরটা দেখায়, আর কেবল শেষ প্রশ্নের উত্তর রাখে', async () => {
+        const asked = []
+        let release
+        vi.stubGlobal('fetch', vi.fn((url) => {
+            asked.push(url)
+            const no = new URL(url, 'http://x').searchParams.get('instrument_no')
+            const body = no === 'OLD-1'
+                ? { state: 'used', message: 'আগে দেওয়া' }
+                : { state: 'free', message: 'নতুন ✓' }
+            // ⓘ প্রথম প্রশ্নের উত্তর দেরিতে আসে
+            if (no === 'OLD-1') return new Promise(r => { release = () => r({ ok: true, json: async () => body }) })
+            return Promise.resolve({ ok: true, json: async () => body })
+        }))
+
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '', slipUrl: '/purchase/payments/slip-check', paymentId: 41 })">
+                <input name="instrument_no">
+                <p data-slip-state x-show="slipShown" x-text="slip.message"></p>
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        const field = host.querySelector('[name="instrument_no"]')
+        field.value = 'OLD-1'
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+        await new Promise(r => setTimeout(r, 350))
+
+        expect(asked.length, '⛔ #৫: লিখলেও যাচাইয়ের প্রশ্ন যায়নি').toBe(1)
+        const q = new URL(asked[0], 'http://x').searchParams
+        expect([q.get('supplier_id'), q.get('instrument_no'), q.get('payment')], '⛔ #৫: প্রশ্নে সরবরাহকারী, নম্বর বা নিজের কাগজ নেই').toEqual(['7', 'OLD-1', '41'])
+
+        field.value = 'NEW-2'
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+        await new Promise(r => setTimeout(r, 350))
+        await Alpine.nextTick()
+        release()
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        expect(host.querySelector('[data-slip-state]').textContent, '⛔ #৫: আগের প্রশ্নের দেরিতে-আসা উত্তর নতুনটাকে ঢেকে দিল').toBe('নতুন ✓')
+        host.remove()
+    })
+})
+
+describe('মিল-তালিকা #৩ — কাটা কর/ভ্যাটের নোট', () => {
+    it('কেবল সত্যি কিছু কাটা হলে দেখায়', async () => {
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '' })">
+                <p data-sum-tax-note x-show="withheld">নোট</p>
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        const pay = Alpine.$data(host.querySelector('form'))
+        const note = host.querySelector('[data-sum-tax-note]')
+        expect(note.style.display, '⛔ #৩: কিছু কাটা হয়নি, তবু কর-নোট').toBe('none')
+
+        pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '15,652.17', net: '1.00' }
+        // ⓘ x-show দেখায় এক ফ্রেম পরে (Alpine-এর requestAnimationFrame) — টাইমারের এক ঘুরতি তার আগে আসতে পারে
+        await painted()
+        expect(note.style.display, '⛔ #৩: ভ্যাট কাটা হল, অথচ জমা আর মূসক-৬.৬-এর কথা নেই').toBe('')
+
+        pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' }
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+        expect(note.style.display, '⛔ #৩: কাটা শূন্যে ফিরল, তবু কর-নোট রইল').toBe('none')
         host.remove()
     })
 })

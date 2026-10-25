@@ -22,7 +22,8 @@ class CashTillPolicy
 
     public function view(User $user, CashTill $till): bool
     {
-        return $user->can('accounts.till.view');
+        // ⭐ এই কাগজের সইকারীও — সইয়ের পাতা/নোটিশ যে কাগজে তাঁর সই চায় বা চেয়েছিল, সেটা পড়তে পারেন; অন্য কাগজ নয়, আর বদল/পাকা করা নয় (fe, ২৪ অক্টোবর ২০২৬; [[VoucherPolicy::view()]]-এর একই নিয়ম)
+        return $user->can('accounts.till.view') || \App\Core\Engines\Approval\PaperSigners::isSigner($user, $till);
     }
 
     public function create(User $user): bool

@@ -217,6 +217,47 @@ final class ApprovalEngine
     }
 
     /**
+     * ⭐ কাগজ বানানোর আগেই — প্রথম সই কে দেবেন আর মোট কয় ধাপ ("সই দেবেন: ম্যানেজার (ধাপ ১/১)"; টাকা দেওয়ার মিল-তালিকা #৪,
+     * ২২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই ছক আর একই শর্ত [[requires()]]-এর — সই না লাগলে `null`, তাই পর্দা আর পোস্ট কখনো আলাদা কথা বলে না। নাম: ধাপের নাম
+     * থাকলে সেটা, নাহলে রোলের বা মানুষের নাম (ছকের পর্দার মতোই); ধাপ গোনা স্তর ধরে ([[standingOf()]]-এর নিয়মে, N-of-M এক ধাপ)।
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array{who: string, levels: int}|null
+     */
+    public function firstSigner(string $module, string $action, ?string $amount, string $documentType, array $fields = []): ?array
+    {
+        $flow = $this->flowFor($module, $action, $documentType);
+
+        if ($flow === null || ! $flow->catches($amount, $fields)) {
+            return null;
+        }
+
+        $steps = collect($flow->steps)->sortBy('level')->values();
+
+        if ($steps->isEmpty()) {
+            return null;
+        }
+
+        $first = $steps->where('level', $steps->first()->level);
+        $who = $first->map(function (ApprovalFlowStep $step): string {
+            if (($step->step_name ?? '') !== '') {
+                return (string) $step->step_name;
+            }
+
+            return (string) ($step->approver_type === ApprovalFlowStep::BY_USER
+                ? User::query()->whereKey($step->approver_id)->value('name')
+                : \Spatie\Permission\Models\Role::query()->whereKey($step->approver_id)->value('name'));
+        })->filter()->unique()->implode(' / ');
+
+        return [
+            'who' => $who,
+            'levels' => $steps->pluck('level')->unique()->count(),
+        ];
+    }
+
+    /**
      * এক স্তরের অনুমোদন। সব স্তর শেষ হলে অনুরোধটাই approved হয়।
      */
     public function approve(Approval $approval, User $user, ?string $remarks = null): Approval
@@ -535,7 +576,11 @@ final class ApprovalEngine
                 'document' => $this->noticeLabel($approval),
             ]),
             $remarks,
-            Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            /*
+             * ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় (২৪ অক্টোবর ২০২৬): তালিকা খোলে কেবল `approval.decide`/`approval.report`
+             * থাকলে, তাই সাধারণ লেখক নিজের কাগজের ফল খুলতে গিয়ে ৪০৩ পেতেন। পাতাটা অনুরোধকারীকে নিজের বলে খোলে।
+             */
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
@@ -1649,6 +1694,15 @@ final class ApprovalEngine
      * ⛔ দুই জায়গায় দুই রকম হলে পার্থক্যটা নীরব হত: খবর যেত
      * একজনের কাছে, আর সই দিতে পারতেন অন্য কেউ।
      */
+    /**
+     * ⭐ কাগজটা উপরে পাঠানো হয়েছে আর গন্তব্য ইনি — [[canDecide()]]-এর উপরে-পাঠানোর পথের একই প্রশ্ন, পাহারা ছাড়া। ⓘ সইয়ের পাতা
+     * "কেন পারছেন না" বলতে এটা দেখে: উপরের মানুষের পালা, কিন্তু অঙ্ক তাঁর সীমার বাইরে (fe, ২৪ অক্টোবর ২০২৬)।
+     */
+    public function escalatedHere(Approval $approval, User $user): bool
+    {
+        return $approval->escalated_at !== null && $this->escalatedTo($approval, $user);
+    }
+
     private function escalatedTo(Approval $approval, User $user): bool
     {
         $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());

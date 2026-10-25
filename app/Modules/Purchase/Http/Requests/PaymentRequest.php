@@ -15,6 +15,22 @@ use Illuminate\Validation\Rule;
  */
 class PaymentRequest extends FormRequest
 {
+    /**
+     * ⭐ টাকার ঘর লাখ-কমায় আসে ("1,20,000.00", নকশার মিল-তালিকা #৯) — কেবল কমা ছাঁটা, আর কিছু নয়।
+     *
+     * ⓘ অক্ষর বা অন্য চিহ্ন থাকলে লেখাটা যেমন তেমন থাকে, আর `numeric` নিয়ম আগের মতোই থামায়।
+     */
+    protected function prepareForValidation(): void
+    {
+        foreach (['amount', 'charge_amount'] as $field) {
+            $value = $this->input($field);
+
+            if (is_string($value) && str_contains($value, ',')) {
+                $this->merge([$field => str_replace(',', '', trim($value))]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         $companyId = CompanyContext::id();

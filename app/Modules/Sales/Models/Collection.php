@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
@@ -36,6 +37,7 @@ class Collection extends Model implements Drillable
     use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices; // ⭐ বিজ্ঞপ্তিতে গ্রাহক · পয়েন্ট (মালিক, ১৯ অক্টোবর ২০২৬)
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
     use \App\Core\Concerns\ScopedToUserDealers;
+    use OpensInReach; // ⭐ নোটিফিকেশন/সইয়ের লিংক নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬)
     use ScopedToUserBranch;
     use SoftDeletes;
 

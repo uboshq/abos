@@ -597,9 +597,14 @@ export function expenseFields (config) {
         head: config.head ?? '',
         payeeType: config.payeeType ?? '',
         payeesByType: config.payeesByType ?? {},
-        gross: config.gross ?? 0,
-        ait: config.ait ?? 0,
-        vds: config.vds ?? 0,
+        /*
+         * ⛔ সংখ্যা হিসেবে শুরু — পাতা এগুলো লেখা হিসেবে পাঠায় ('0'), আর `(ait + vds)` তখন জোড়া লাগাত ('00'), গুণ নয়; তার উপর
+         * `.toFixed(2)` → "Value is not a function", উৎসে কর্তনের সারাংশ কখনো আঁকা হত না (২২ অক্টোবর ২০২৬)। ⓘ কারণটা CSP নয় —
+         * a5 মেপেছে, CSP-র Alpine `(a * b).toFixed(2)` ঠিকই আঁকে; ভুলটা লেখার যোগে।
+         */
+        gross: Number(config.gross ?? 0) || 0,
+        ait: Number(config.ait ?? 0) || 0,
+        vds: Number(config.vds ?? 0) || 0,
         tagged: config.tagged ?? 0,
         bills: config.bills ?? [],
         basis: config.basis ?? 'qty',
@@ -611,9 +616,28 @@ export function expenseFields (config) {
             return this.payeesByType[this.payeeType] ?? []
         },
 
+        /*
+         * কাটা — উৎসে কর আর উৎসে ভ্যাট একসাথে, সংখ্যায়।
+         * ⛔ পাতা দুটো টাকা লেখা হিসেবে পাঠায় ('0', ভাসমান সংখ্যা নয়), আর মুছে ফেলা ঘরও লেখা ('')। তাই `ait + vds`
+         * জুড়ে '00' হত, `.toFixed` থাকত না, আর খরচের ভাউচার খুলতেই "Value is not a function", সারাংশের লাইন ফাঁকা
+         * (bd9447f88, ১৯ সেপ্টেম্বর থেকে; a6, ২৪ অক্টোবর ২০২৬)।
+         */
+        get deducted () {
+            return (Number(this.ait) || 0) + (Number(this.vds) || 0)
+        },
+
         /* হাতে যাবে — বিলের মোট থেকে কর্তন বাদ */
         get net () {
             return Math.max(0, this.gross - this.ait - this.vds)
+        },
+
+        /* ⓘ লেখাগুলো এখানে, পর্দার প্রকাশে নয় — যোগ একটাই জায়গায়, [[deducted]] */
+        get deductedText () {
+            return this.deducted.toFixed(2)
+        },
+
+        get netText () {
+            return this.net.toFixed(2)
         },
 
         /* একটাও চালান বাছা হয়নি মানে পরোক্ষ খরচ — মালিকের নিয়ম */

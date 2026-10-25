@@ -15,6 +15,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Supplier\Models\Supplier;
+use Tests\Concerns\SignsASupplierBank;
 use Database\Seeders\DemoSeeder;
 use DOMDocument;
 use DOMElement;
@@ -47,6 +48,7 @@ use Tests\TestCase;
  */
 final class TheVoucherFormSendsWhatItShowsTest extends TestCase
 {
+    use SignsASupplierBank;
     use RefreshDatabase;
 
     private Company $company;
@@ -88,6 +90,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
     public function test_a_supplier_payment_posts_with_exactly_what_the_form_sends(): void
     {
         $supplier = Supplier::query()->firstOrFail();
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($supplier);
 
         $this->submit('payment', [
             'party_type' => 'supplier',
@@ -225,7 +229,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
             ->get(route('accounts.voucher.create', ['type' => 'receipt']))
             ->assertOk()->getContent();
 
-        preg_match('/x-data="(moneyMovement\([^"]*)"/', $html, $block);
+        // ⓘ ২২ অক্টোবর ২০২৬ থেকে ভাউচারের বাক্স টাকার পর্দার একই [[x-money.method]] — Alpine-এর নাম moneyMethod
+        preg_match('/x-data="(moneyMethod\([^"]*)"/', $html, $block);
 
         $this->assertNotEmpty($block, 'পাতায় মাধ্যমের ব্লকটাই নেই।');
 
@@ -239,15 +244,41 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
         /*
          * ⓘ খাতের ধরনটাই বলে লেনদেন-নম্বর লাগবে কি না। ⚠️ option-এ ধরন না
          * থাকলে পর্দা ব্যাংক বাছার পরেও নম্বরের ঘর আনতে পারে না।
+         *
+         * ⭐ ২৪ অক্টোবর ২০২৬ থেকে পদ্ধতি আগে (মালিকের প্রশ্ন, fe): পাতায় কেবল চলতি পদ্ধতির খাত আঁকা হয়, আর পদ্ধতির বাক্স
+         * ([[x-money.method]] `accounts`) সব খাতের ধরন জানে — পদ্ধতি বদলালে তালিকা সেখান থেকে আঁকে। ⓘ তাই দুই জায়গাই মাপা: আঁকা
+         * প্রতিটা option নিজের ধরন বলে, আর বাক্সের তালিকায় ব্যাংক আর MFS নিজের ধরনে।
          */
         foreach (['receipt' => 'to_account_id', 'payment' => 'from_account_id'] as $type => $name) {
-            $kinds = $this->optionKinds($type, $name);
+            foreach ($this->optionKinds($type, $name) as $id => $kind) {
+                $this->assertNotSame('', (string) $kind, "{$type}: খাত {$id}-এর option ধরন (data-kind) বলে না।");
+            }
 
-            $this->assertSame(Account::BANK, $kinds[(string) $this->bank->id] ?? null,
-                "{$type}: ব্যাংক খাতের option ধরন (data-kind) বলে না।");
-            $this->assertSame(Account::MFS, $kinds[(string) $this->mfs->id] ?? null,
-                "{$type}: MFS খাতের option ধরন (data-kind) বলে না।");
+            $box = $this->boxAccounts((string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent());
+
+            $this->assertSame(Account::BANK, $box[(string) $this->bank->id] ?? null,
+                "{$type}: পদ্ধতির বাক্সের তালিকায় ব্যাংক খাত নিজের ধরনে নেই।");
+            $this->assertSame(Account::MFS, $box[(string) $this->mfs->id] ?? null,
+                "{$type}: পদ্ধতির বাক্সের তালিকায় MFS খাত নিজের ধরনে নেই।");
         }
+    }
+
+    /**
+     * পদ্ধতির বাক্সের খাতের তালিকা — id => ধরন। ⓘ `@js` লেখে `JSON.parse('…')`, ভিতরে JS-এর `\u0022` — JSON-এর একই নিয়ম, তাই দুবার পড়া।
+     *
+     * @return array<string, string>
+     */
+    private function boxAccounts(string $html): array
+    {
+        preg_match('/x-data="(moneyMethod\([^"]*)"/', $html, $block);
+        // ⓘ `@js` কখনো সরাসরি JSON লেখে (`accounts: [{…}]`), কখনো `JSON.parse('…')` — দুই রূপই পড়া (cb-ma-1-এ প্রথমটা এল)
+        preg_match('/accounts: (.*?), methodNames:/', html_entity_decode($block[1] ?? '', ENT_QUOTES), $list);
+        $raw = $list[1] ?? '';
+        $rows = preg_match("/^JSON\\.parse\\('(.*)'\\)$/s", $raw, $wrapped) === 1
+            ? json_decode((string) json_decode('"'.$wrapped[1].'"'), true)
+            : json_decode($raw, true);
+
+        return collect(is_array($rows) ? $rows : [])->mapWithKeys(fn (array $r) => [(string) $r['id'] => (string) $r['kind']])->all();
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────

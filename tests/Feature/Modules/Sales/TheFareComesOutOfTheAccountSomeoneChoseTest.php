@@ -25,6 +25,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\PutsMoneyInTheTill;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -42,6 +43,7 @@ use Tests\TestCase;
  */
 final class TheFareComesOutOfTheAccountSomeoneChoseTest extends TestCase
 {
+    use SignsASupplierBank;
     use PutsMoneyInTheTill;
     use RefreshDatabase;
 
@@ -173,6 +175,8 @@ final class TheFareComesOutOfTheAccountSomeoneChoseTest extends TestCase
 
         $carrier = Supplier::query()->create(['code' => 'TR-FARE', 'name_en' => 'Rahim Transport',
             'party_type_id' => PartyType::query()->where('code', 'TRANSPORT')->firstOrFail()->id]);
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($carrier);
         $challan->forceFill(['carrier_id' => $carrier->id])->save();
         app(FarePayment::class)->stamp($challan->fresh(), ['fare_when' => 'later']);
 

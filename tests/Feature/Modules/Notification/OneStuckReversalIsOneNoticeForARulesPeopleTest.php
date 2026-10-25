@@ -41,7 +41,9 @@ final class OneStuckReversalIsOneNoticeForARulesPeopleTest extends TestCase
         $holders = collect(['a', 'b', 'c'])->map(function (string $tag) use ($company): User {
             $user = User::factory()->create(['name' => 'holder '.$tag, 'current_company_id' => $company->id, 'is_active' => true]);
             $user->companies()->attach($company->id, ['is_active' => true]);
-            CompanyContext::forCompany($company->id, fn () => $user->givePermissionTo(Permission::findOrCreate(AdjustingReversals::WHO_HEARS, 'web')));
+            // ⓘ খবর যায় কেবল যিনি জাবেদাটা খুলতে পারেন — মাসের চাবি আর ভাউচার দেখার চাবি দুটোই ([[ANoticeKnowsItsPaperTest]], ২৪ অক্টোবর ২০২৬)
+            CompanyContext::forCompany($company->id, fn () => $user->givePermissionTo(
+                Permission::findOrCreate(AdjustingReversals::WHO_HEARS, 'web'), Permission::findOrCreate('accounts.report', 'web')));
 
             return $user;
         });

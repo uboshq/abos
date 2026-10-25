@@ -223,30 +223,29 @@
         <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold">
             <span>{{ __('accounts::field.deduction_at_source') }}</span>
             <span class="num text-xs font-normal text-(--color-ink-muted)"
-                  x-text="'{{ __('accounts::field.deducted') }} ' + (ait + vds).toFixed(2)
-                      + ' · {{ __('accounts::field.net_payable') }} ' + net.toFixed(2)"></span>
+                  x-text="'{{ __('accounts::field.deducted') }} ' + deductedText + ' · {{ __('accounts::field.net_payable') }} ' + netText"></span>
         </summary>
 
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
-            <x-ui.field name="gross_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="gross_amount" type="money" model="gross"
                         :label="__('accounts::field.bill_gross')"
-                        :value="$was('gross_amount')" numeric
-                        x-model.number="gross" />
+                        :value="$was('gross_amount')"
+                        />
 
-            <x-ui.field name="ait_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="ait_amount" type="money" model="ait"
                         :label="__('accounts::field.ait')"
-                        :value="$was('ait_amount')" numeric
-                        x-model.number="ait" />
+                        :value="$was('ait_amount')"
+                        />
 
-            <x-ui.field name="vds_amount" type="number" step="0.01" inputmode="decimal"
+            <x-ui.field name="vds_amount" type="money" model="vds"
                         :label="__('accounts::field.vds')"
-                        :value="$was('vds_amount')" numeric
-                        x-model.number="vds" />
+                        :value="$was('vds_amount')"
+                        />
         </div>
 
         <p class="mt-3 flex items-center justify-between text-sm">
             <span class="text-(--color-ink-muted)">{{ __('accounts::field.net_payable') }}</span>
-            <span class="num font-semibold" x-text="net.toFixed(2)"></span>
+            <span class="num font-semibold" x-text="netText"></span>
         </p>
         </details>
         </div>
@@ -268,11 +267,13 @@
             দুইটাই — ফলে সে বামে নেমে যেত, ওই ফাঁকাটা অক্ষত রেখেই।
         --}}
         <div class="min-w-0 space-y-4">
-        <x-ui.money-movement direction="out"
-                             :carriers="$carriers ?? []"
-                             :modes="$transferModes ?? []"
-                             :carrier-here="false"
-                             :record="$voucher" />
+        {{-- ⭐ টাকার পর্দার একই বাক্স ([[x-money.method]]) — পদ্ধতির নিজের ঘর কেবল (মালিকের রায়, ২১ অক্টোবর ২০২৬; রসিদ আর পরিশোধের মতোই) --}}
+        <x-money.method direction="out"
+                        :record="$voucher->exists ? $voucher : null"
+                        :modes="$transferModes ?? []"
+                        :methods="['cash', 'mfs', 'transfer', 'cheque']"
+                        money-field="from_account_id"
+                        counting />
 
         {{--
             সংযুক্তি — ছবির লাল ঘরটায়, চেকের ঘরগুলোর ঠিক নিচে।

@@ -26,6 +26,7 @@ use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\NotePrintController;
+use App\Modules\Accounts\Http\Controllers\ComplianceObligationController;
 use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
@@ -183,6 +184,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          * ভাউচারের ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
          */
         Route::get('due', [VoucherController::class, 'due'])->name('due');
+        // ⭐ খাতায় যা যাবে আর রেফারেন্সের চলতি উত্তর — রসিদ ও পরিশোধের পর্দা (fe, ২৩ অক্টোবর ২০২৬); স্থির পথ, তাই /{type}-এর আগে
+        Route::post('simulate', [VoucherController::class, 'simulate'])->name('simulate');
+        Route::get('reference-check', [VoucherController::class, 'referenceCheck'])->name('reference_check');
 
         // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
         // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
@@ -501,6 +505,12 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             Route::get('/{category}/edit', [AssetCategoryController::class, 'edit'])->whereNumber('category')->name('edit');
             Route::put('/{category}', [AssetCategoryController::class, 'update'])->whereNumber('category')->name('update');
         });
+    });
+
+    // ⭐ করণীয় — কোষাগারে জমা আর মূসক-৬.৬, শেষ তারিখসহ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+    Route::prefix('obligations')->name('obligation.')->group(function () {
+        Route::get('/', [ComplianceObligationController::class, 'index'])->name('index');
+        Route::post('/{obligation}/done', [ComplianceObligationController::class, 'done'])->whereNumber('obligation')->name('done');
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

@@ -32,13 +32,25 @@ return [
     ],
 
     'charge_line' => [
-        'in' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party is credited the full ৳:amount.',
-        'out' => 'Bank charge ৳:charge is our expense — it goes to ":head"; the party\'s balance drops by the full ৳:amount.',
+        'in' => 'The charge ৳:charge is our expense — it goes to ":head"; the party is credited the full ৳:amount.',
+        'out' => 'The charge ৳:charge is our expense — it goes to ":head"; the party\'s balance drops by the full ৳:amount.',
         'head_bank' => 'Bank charges',
         'head_mfs' => 'Mobile banking charges',
     ],
 
+    'kind' => [
+        'cash' => 'cash',
+        'mfs' => 'MFS',
+        'bank' => 'bank',
+    ],
+
+    'account' => [
+        'none' => 'This company has no :method account — ask the accountant.',
+        'cleared' => '":account" is not a :method account, so it was taken off.',
+    ],
+
     'validation' => [
+        'account_not_for_method' => '":account" is not a :method account — with :method only :kind accounts can be used.',
         'reference_needed' => 'Posting by ":method" needs its reference — it is how the bank statement is matched and the same money is never taken twice.',
     ],
 
@@ -87,10 +99,12 @@ return [
             'this' => 'This payment (gross)',
             'left' => 'Left after',
         ],
+        'slip_free' => 'Not used for this supplier before ✓',
         'meta' => [
             'number' => 'No.: :no',
             'number_on_save' => 'No.: assigned on save (SP-…)',
             'maker' => 'Made by: :name',
+            'signer' => 'Signs: :who (step 1/:levels)',
             'month_open' => 'Month open ✓',
             'month_closed' => 'Month closed — will not post',
         ],
@@ -99,11 +113,19 @@ return [
             'applied' => 'Applied to bills (gross)',
             'ait' => 'Income tax withheld (AIT)',
             'vds' => 'VAT withheld (VDS)',
+            'net_bank' => 'Leaves the bank (net)',
+            'net_mfs' => 'Leaves MFS (net)',
+            'net_cash' => 'Leaves cash (net)',
             'net' => 'Leaves the account (net)',
             'charge' => 'Bank charge (our expense)',
             'unapplied' => "Unapplied (advance — on the supplier's account)",
             'over' => 'Applied to bills is more than the total',
+            'tax_note' => 'Withheld tax and VAT must be deposited to the government treasury within the legal deadline, and the supplier must be given a Mushak-6.6 certificate — both go on the obligations list, with due dates.',
             'matches' => 'Balanced: applied + unapplied = total',
+        ],
+        'tag' => [
+            'ait' => "on the value excluding VAT, supplier's rate",
+            'vds' => "from the bill's VAT, at the legal rate",
         ],
         'ledger' => 'What goes to the books',
         'ledger_hint' => 'Check before posting',

@@ -23,6 +23,8 @@ use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PaymentLine;
+use App\Modules\Accounts\Models\ComplianceObligation;
+use App\Modules\Accounts\Services\ComplianceObligations;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -130,7 +132,7 @@ final class PaymentService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null, $data['instrument'] ?? null)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
                 ...$this->methodFields($data),
@@ -182,7 +184,7 @@ final class PaymentService
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
             $payment->update([
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id, $data['instrument'] ?? $payment->instrument)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $this->money($data['amount'] ?? $payment->amount),
                 ...$this->methodFields($data),
@@ -313,6 +315,7 @@ final class PaymentService
 
             $payment->update(['status' => DocumentStatus::CONFIRMED]);
             $this->markWithheldOnPayment($payment);
+            $this->raiseTaxDuties($payment);
 
             return $payment->fresh(['lines']);
         });
@@ -362,6 +365,27 @@ final class PaymentService
         }
 
         $this->unmarkWithheldOnPayment($payment);
+        app(ComplianceObligations::class)->cancelFor(Payment::drillSourceType(), (int) $payment->id, $reason);
+    }
+
+    /**
+     * ⭐ কাটা কর/ভ্যাটের করণীয় — কোষাগারে জমা (AIT আর VDS আলাদা, শেষ তারিখও আলাদা সেটিংয়ে) আর VDS কাটলে সরবরাহকারীকে মূসক-৬.৬
+     * (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)। ⓘ কেবল সত্যি কাটা হলে; একই পরিশোধে দ্বিতীয়বার ডাকলেও নতুন সারি নয়।
+     */
+    private function raiseTaxDuties(Payment $payment): void
+    {
+        $duties = app(ComplianceObligations::class);
+        $ait = (string) ($payment->ait_amount ?? '0');
+        $vds = (string) ($payment->vds_amount ?? '0');
+        $raise = fn (string $kind, string $subject, string $amount) => $duties->raise(
+            (int) $payment->company_id, $payment->branch_id === null ? null : (int) $payment->branch_id,
+            Payment::drillSourceType(), (int) $payment->id, (string) $payment->document_no,
+            $kind, $subject, $amount, $payment->trx_date,
+        );
+
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, $ait);
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, $vds);
+        $raise(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, $vds);
     }
 
     /**
@@ -502,6 +526,8 @@ final class PaymentService
                 'cancel_reason' => $reason,
             ]);
             $this->unmarkWithheldOnPayment($payment);
+            // ⛔ কাটা বাতিল, তাই জমা আর ৬.৬-এর খোলা করণীয়ও ([[ComplianceObligations::cancelFor()]])
+            app(ComplianceObligations::class)->cancelFor(Payment::drillSourceType(), (int) $payment->id, $reason);
 
             return $payment->fresh(['lines']);
         });
@@ -584,6 +610,7 @@ final class PaymentService
             'status' => DocumentStatus::CONFIRMED,
         ])->save();
         $this->markWithheldOnPayment($payment);
+        $this->raiseTaxDuties($payment);
 
         return $payment->fresh(['lines', 'cheque']);
     }
@@ -775,15 +802,7 @@ final class PaymentService
             'narration' => __('purchase::message.against_payable', ['no' => $no]),
         ]];
 
-        if (bccomp($charge, '0', 4) > 0) {
-            $lines[] = [
-                'account_id' => $this->chargeHead((int) $payment->account_id)->id,
-                'debit' => $charge,
-                'narration' => __('purchase::message.charge_on_payment', ['no' => $no]),
-            ];
-        }
-
-        // ⭐ কেটে রাখা কর সরকারের দায় — AIT ২১২১, VDS ২১২২ (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)
+        // ⭐ কেটে রাখা কর সরকারের দায় — AIT ২১২১, VDS ২১২২ (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)। ⓘ ক্রম নকশার: দেনা, AIT, VDS, চার্জ, টাকার খাত
         foreach (['ait' => [$ait, StandardChart::TAX_DEDUCTED_AT_SOURCE], 'vds' => [$vds, StandardChart::VDS_PAYABLE]] as $kind => [$value, $code]) {
             if (bccomp($value, '0', 4) > 0) {
                 $lines[] = [
@@ -792,6 +811,14 @@ final class PaymentService
                     'narration' => __('purchase::message.withheld_'.$kind, ['no' => $no]),
                 ];
             }
+        }
+
+        if (bccomp($charge, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->chargeHead((int) $payment->account_id)->id,
+                'debit' => $charge,
+                'narration' => __('purchase::message.charge_on_payment', ['no' => $no]),
+            ];
         }
 
         // ⓘ টাকার খাত থেকে যায় নিট আর চার্জ: মোট − AIT − VDS + চার্জ
@@ -904,7 +931,7 @@ final class PaymentService
         }
     }
 
-    private function resolveMoneyAccount(mixed $accountId): Account
+    private function resolveMoneyAccount(mixed $accountId, mixed $method = null): Account
     {
         $account = blank($accountId)
             ? $this->tills->ensurePrimaryTill()->account
@@ -956,6 +983,13 @@ final class PaymentService
                     : __('accounts::validation.no_till_of_your_own'),
             ]);
         }
+
+        /*
+         * ⛔ পদ্ধতি আর খাত এক ধরনের — "নগদ" বেছে বিকাশের খাত, বা "MFS" বেছে ব্যাংক নয় (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দা
+         * কেবল মিলে যাওয়া খাত দেখায় ([[components.money.method]]); এখানে ফোন, পুরনো ফর্ম আর হাতে-বানানো ডাকের জন্য। ভাউচারের একই
+         * প্রশ্ন [[VoucherService::assertTheWayMatchesTheAccount()]]-এ, নিয়মের তালিকা একটাই ([[MoneyMethod::KIND_OF]])।
+         */
+        MoneyMethod::assertFits(is_string($method) ? $method : null, $account->money_kind, $account->label());
 
         return $account;
     }

@@ -50,7 +50,7 @@ class PaymentController extends Controller implements HasMiddleware
             ...static::resourcePermissions(Payment::class, 'payment'),
             new Middleware('can:purchase.payment.create', only: ['confirm']),
             // ⓘ প্রিভিউ ফর্মেরই অংশ — যিনি পরিশোধ লিখতে পারেন, কেবল তিনিই
-            new Middleware('can:purchase.payment.create', only: ['simulate']),
+            new Middleware('can:purchase.payment.create', only: ['simulate', 'slipCheck']),
             new Middleware('can:purchase.payment.cancel', only: ['cancel']),
         ];
     }
@@ -123,6 +123,37 @@ class PaymentController extends Controller implements HasMiddleware
      * ⭐ পোস্টের আগে খাতায় যা যাবে — Dr/Cr, খাত আর শাখা (নকশা #১০, SAP-এর "Simulate")। ⓘ কিছুই লেখা হয় না: ফর্মের মান থেকে
      * একটা না-রাখা পরিশোধ বানিয়ে পোস্টের একই [[PaymentService::linesFor()]] ডাকা হয় — তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
      */
+    /**
+     * ⭐ স্লিপ/TrxID-এর তাৎক্ষণিক উত্তর — জমার একই নিয়মে ([[SlipIsNotUsedTwice::isUsed()]]: এই সরবরাহকারী, বাতিল বাদে, সম্পাদনায়
+     * নিজেকে বাদ)। ⓘ কিছু লেখে না, আর হেডারে বাছা শাখার বাইরের সরবরাহকারী ৪০৪ — প্রিভিউর মতোই।
+     */
+    public function slipCheck(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'supplier_id' => ['required', 'integer'],
+            'instrument_no' => ['nullable', 'string', 'max:64'],
+            'payment' => ['nullable', 'integer'],
+        ]);
+
+        $supplier = Supplier::query()->inViewedBranch()->find((int) $data['supplier_id']);
+        abort_if($supplier === null, 404);
+
+        $no = trim((string) ($data['instrument_no'] ?? ''));
+
+        if ($no === '') {
+            return response()->json(['state' => 'empty', 'message' => '']);
+        }
+
+        $used = app(\App\Core\Services\SlipIsNotUsedTwice::class)->isUsed(
+            'pur_payments', $no, (int) $supplier->id, 'supplier_id', isset($data['payment']) ? (int) $data['payment'] : null,
+        );
+
+        return response()->json([
+            'state' => $used ? 'used' : 'free',
+            'message' => $used ? __('purchase::validation.slip_used_twice', ['no' => $no]) : __('money.screen.slip_free'),
+        ]);
+    }
+
     public function simulate(PaymentRequest $request): JsonResponse
     {
         $data = $request->documentData();
@@ -149,7 +180,9 @@ class PaymentController extends Controller implements HasMiddleware
             $d = (string) ($line['debit'] ?? '0');
             $c = (string) ($line['credit'] ?? '0');
             $rows[] = [
-                'account' => $account === null ? '—' : $account->code.' '.$account->name(),
+                // ⭐ দেনার সারিতে সরবরাহকারীর নাম — নকশার "২১১০ দেনা · জাবেদ অ্যাগ্রো" (মিল-তালিকার ফাঁক ৮)
+                'account' => ($account === null ? '—' : $account->code.' '.$account->name())
+                    .(($line['party_type'] ?? null) === 'supplier' && $supplier !== null ? ' · '.$supplier->name() : ''),
                 'party' => ($line['party_type'] ?? null) === 'supplier' ? $supplier?->name() : null,
                 'branch' => $branch?->name(),
                 'debit' => bccomp($d, '0', 4) > 0 ? Money::format($d) : '',
@@ -293,6 +326,8 @@ class PaymentController extends Controller implements HasMiddleware
              * (নকশা #১১)। ⓘ পোস্টের মুহূর্তে আসল বিচার [[DocumentApproval::assertClear()]]-এর; এটা কেবল বোতামের নাম।
              */
             'signatures' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires('purchase', 'payment', null, class_basename(Payment::class)),
+            // ⭐ মাথায় "সই দেবেন: … (ধাপ 1/N)" — একই ছক, একই শর্ত (মিল-তালিকা #৪; [[ApprovalEngine::firstSigner()]])
+            'firstSigner' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->firstSigner('purchase', 'payment', null, class_basename(Payment::class)),
             'threeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true),
             'modes' => \App\Modules\MasterData\Models\TransferMode::query()->orderBy('code')->get()
                 ->mapWithKeys(fn ($m) => [$m->id => $m->name_en ?: $m->code])->all(),

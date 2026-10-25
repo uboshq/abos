@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -33,6 +34,13 @@ class CashTill extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    /*
+     * ⭐ টিলের নিজের পাতা নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (fe, ২৪ অক্টোবর ২০২৬; ভাউচারের [[OpensInReach]]-এর একই নিয়ম):
+     * আগে route-বাঁধন `viewed-branch` ছাঁকনি মানত, তাই মালিক হেডারে MMS রেখে NTK-র টিলের খবর বা সইয়ের পাতার লিংক চাপলে ৪০৪।
+     * ⓘ তালিকা আর বাকি সব খোঁজ নিজের ছাঁকনিতেই থাকে — বদল কেবল বাঁধনে ([[acrossBranches()]])। নাগালের বাইরের মানুষ ৪০৪ পান,
+     * কেবল এই টিলের সইকারী পড়ার পাতা (GET) পান।
+     */
+    use OpensInReach;
     use SoftDeletes;
 
     /**
@@ -61,6 +69,16 @@ class CashTill extends Model implements Drillable
                 $builder->where(fn (Builder $q) => $q->whereIn($table.'.branch_id', $ids)->orWhereNull($table.'.branch_id'));
             }
         });
+    }
+
+    /**
+     * হেডারের শাখা না মেনে — কোম্পানির দেয়াল আর মোছার নিয়ম থাকে ([[OpensInReach]]-এর বাঁধন এটাই খোঁজে; নাগাল দেখা হয় তার পরে)।
+     *
+     * @return Builder<static>
+     */
+    public static function acrossBranches(): Builder
+    {
+        return static::query()->withoutGlobalScope('viewed-branch');
     }
 
     /**

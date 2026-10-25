@@ -11,10 +11,12 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
+use App\Core\Services\DataScope;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Customer\Support\ConductType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
@@ -652,6 +654,29 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function scopeInViewedBranch(Builder $query): Builder
     {
         return ViewedBranch::narrow($query, $query->getModel()->getTable().'.branch_id');
+    }
+
+    /**
+     * ⭐ একজন গ্রাহক, চাবি ধরে — ব্যবহারকারীর **নাগাল** দেখে, হেডারে বাছা শাখা নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায়
+     * না", ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নোটিশ বা লিংক একজন গ্রাহকের পাতায় আনে — সেটা তালিকা নয়, তাই [[scopeInViewedBranch()]] নয়: হেডারে MMS রাখা মালিক
+     * NTK-র গ্রাহকের নোটিশে ৪০৪ পেতেন। ভাউচারের [[OpensInReach]]-এর একই নিয়ম ([[DataScope::allows()]]): নাগালের বাইরে ৪০৪;
+     * কোম্পানি আর ডিলারের দেয়াল মডেলের নিজের স্কোপে, আগের মতোই।
+     *
+     * @param  (\Closure(Builder): Builder)|null  $shape  বাড়তি ঘর, যেমন `withOutstanding()`
+     */
+    public static function openInReach(int $id, ?User $user, ?\Closure $shape = null): self
+    {
+        $query = static::query()->whereKey($id);
+        $customer = ($shape === null ? $query : $shape($query))->firstOrFail();
+        $branch = $customer->getAttribute('branch_id');
+
+        abort_unless(app(DataScope::class)->allows(
+            $user, UserDataScope::BRANCH, $branch === null ? null : (int) $branch,
+        ), 404);
+
+        return $customer;
     }
 
     /**

@@ -120,9 +120,11 @@ final class TheBankSaidDrawnAndTheBookSaidNothingTest extends TestCase
 
         // ⓘ ব্যাংক থেকে ২ লাখ খরচে গেল — হিসাবটা ঋণাত্মক হলো
         $vouchers = app(VoucherService::class);
-        // ⓘ সক্রিয় খাত — নিষ্ক্রিয়তে নতুন লেনদেন বসে না, আর ডেমো ছকে পুরনো খাতও আছে
-        $expense = (int) Account::query()->postable()->active()
-            ->where('type', Account::EXPENSE)->value('id');
+        /*
+         * ⓘ একটা সত্যিকারের খরচের খাত (৫২১৬ জ্বালানি)। ⛔ আগে "প্রথম সক্রিয় খরচের খাত" নিত — সেটা ৫১০০ (বিক্রীত পণ্যের ব্যয়),
+         * যেটায় খরচের ভাউচার আর বসতে পারে না (ভা-৯, মালিক ২৪ অক্টোবর ২০২৬; [[AnExpenseNeverLandsOnTheSoftwaresOwnHeadsTest]])।
+         */
+        $expense = (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::FUEL)->id;
 
         $vouchers->post($vouchers->create(
             ['type' => 'expense', 'trx_date' => now()->toDateString(),

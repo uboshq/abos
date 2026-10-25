@@ -24,6 +24,10 @@
 
     $supplierId = (string) old('supplier_id', $bill?->supplier_id ?? $payment->supplier_id ?? '');
     $amount = (string) old('amount', $isNew ? ($bill?->dueAmount() ?? '') : (string) $payment->amount);
+    // ⭐ কাঁচা অঙ্ক — লাখ-কমায় দেখায় ঘর নিজেই ("1,20,000.00", নকশার মিল-তালিকা #৯; x-ui.field type="money", ২৪ অক্টোবর ২০২৬);
+    //    ফেরত-আসা অচল লেখা যেমন ছিল তেমন — ভুলটা চোখে থাকে
+    $plainAmount = str_replace(',', '', trim($amount));
+    $amount = $plainAmount !== '' && is_numeric($plainAmount) ? $plainAmount : $amount;
     $accountId = (string) old('account_id', $payment->account_id ?? '');
 
     $billRows = $openBills->map(fn ($b) => [
@@ -51,7 +55,7 @@
     <form method="POST" data-pay-screen
           action="{{ $isNew ? route('purchase.payment.store') : route('purchase.payment.update', $payment) }}"
           enctype="multipart/form-data"
-          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')) })"
+          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')), slipUrl: @js(route('purchase.payment.slip_check')), paymentId: @js($isNew ? null : $payment->id) })"
           @money-method="heard($event.detail)"
           class="pb-20">
         @csrf
@@ -67,6 +71,9 @@
                 <p data-pay-meta class="mt-1 text-xs text-(--color-ink-muted)">
                     {{ $isNew ? __('money.screen.meta.number_on_save') : __('money.screen.meta.number', ['no' => $payment->document_no]) }}
                     · {{ __('money.screen.meta.maker', ['name' => $maker ?? '—']) }}
+                    @if ($firstSigner !== null)
+                        · <span data-pay-signer>{{ __('money.screen.meta.signer', ['who' => $firstSigner['who'] !== '' ? $firstSigner['who'] : '—', 'levels' => $firstSigner['levels']]) }}</span>
+                    @endif
                     · <span @class(['text-(--color-danger)' => $year !== null && ! $year->isOpen()])>{{ $year !== null && ! $year->isOpen() ? __('money.screen.meta.month_closed') : __('money.screen.meta.month_open') }}</span>
                 </p>
             </div>
@@ -106,7 +113,7 @@
 
                     {{-- ⭐ পক্ষের ধরন — প্রথম ঘর (fe, ২১ অক্টোবর ২০২৬)। এই পথে সরবরাহকারী স্থির; বাকি ধরন হিসাবের পরিশোধ ভাউচারে যায় --}}
                     <fieldset class="mb-3" data-party-type>
-                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.party_type') }}</legend>
+                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.party_type') }} <span class="text-(--color-danger)">*</span></legend>
                         <div class="inline-flex overflow-hidden rounded-(--radius-field) border border-(--color-border)">
                             @foreach (['customer', 'supplier', 'staff', 'other'] as $type)
                                 @if ($type === 'supplier')
@@ -121,8 +128,9 @@
                         </div>
                     </fieldset>
 
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="sm:col-span-2">
+                    {{-- ⓘ তারিখের ঘরের নিচের সীমা — ১৩৬৬-এ মডিউল-মেনু খোলা থাকলে সমান চার ভাগে "22-10-202" কাটা পড়ত (২২ অক্টোবর ২০২৬) --}}
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_minmax(9.5rem,1fr)_minmax(9.5rem,1fr)]" data-pay-general-row>
+                        <div class="sm:col-span-2 lg:col-span-1">
                             <x-ui.select name="supplier_id" :label="__('money.screen.supplier')" x-model="supplier"
                                          :options="$suppliers->mapWithKeys(fn ($s) => [$s->id => $s->pickerName()])"
                                          :selected="$supplierId" placeholder="—" required />
@@ -130,29 +138,13 @@
                         </div>
                         <x-ui.field name="trx_date" type="date" :label="__('money.screen.date')" required
                                     :value="old('trx_date', $payment->trx_date?->toDateString() ?? now()->toDateString())" />
-                        <x-ui.field name="amount" type="number" step="0.01" min="0" inputmode="decimal" numeric required
-                                    :label="__('money.screen.gross')" :value="$amount" x-model="amount" />
+                        {{-- ⓘ দেখানোর ঘরে লাখ-কমা, পাঠানো মান কাঁচা অঙ্ক (type="money"); সার্ভার তবু কমা ছেঁটে পড়ে ([[PaymentRequest::prepareForValidation()]]) --}}
+                        <x-ui.field name="amount" type="money" model="amount" required data-pay-amount
+                                    :label="__('money.screen.gross')" :value="$amount" />
                     </div>
 
-                    {{-- যে খাত থেকে | পদ্ধতি; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
+                    {{-- পদ্ধতি | যে খাত থেকে; প্রাপকের ব্যাংক; পদ্ধতির ঘর — এক গ্রিডে ([[components.money.method]]-এর `inline`) --}}
                     <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="order-0 sm:col-span-2">
-                            <label class="block">
-                                <span class="mb-1 block text-sm font-medium">{{ __('money.screen.from_account') }} <span class="text-(--color-danger)">*</span></span>
-                                <select name="account_id" x-model="account" required data-money-account
-                                        class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
-                                    <option value="">—</option>
-                                    @foreach ($accounts as $a)
-                                        <option value="{{ $a->id }}" data-kind="{{ $a->money_kind }}" @selected($accountId === (string) $a->id)>{{ $a->code }} · {{ $a->name() }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
-                            <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
-                                {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                                <span x-show="short">— {{ __('money.screen.short') }}</span>
-                            </p>
-                        </div>
 
                         {{-- ⭐ প্রাপকের ব্যাংক — সরবরাহকারীর রেকর্ড থেকে, কেবল পড়ার জন্য (নকশা #৬; fe-র [[supplier::components.payee-bank]])।
                              ⓘ কেবল যাঁদের ব্যাংক তথ্য আছে তাঁদের বাক্স আঁকা হয় (একটা প্রশ্নে খোঁজা), বাছা সরবরাহকারীরটা দেখায়; বাকিদের "নেই" --}}
@@ -168,8 +160,23 @@
                             </template>
                         </div>
 
-                        <x-money.method direction="out" inline :record="$isNew ? null : $payment" :modes="$modes"
-                                        :methods="['cash', 'mfs', 'transfer', 'cheque']" money-field="account_id" />
+                        {{--
+                            ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত — খাতের ঘর বাক্সের ভিতরে, পদ্ধতির ঠিক পরে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)।
+                            ⓘ ঘর `x-model="account"`-এ বাঁধা — স্থিতি, বিলে বসানো আর খাতায় যা যাবে আগের মতোই এটা দেখে।
+                        --}}
+                        <x-money.method direction="out" inline slip-check :record="$isNew ? null : $payment" :modes="$modes"
+                                        :methods="['cash', 'mfs', 'transfer', 'cheque']"
+                                        :accounts="$accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->code.' · '.$a->name(), 'kind' => (string) $a->money_kind])->values()->all()"
+                                        account-name="account_id" account-model="account" :account-label="__('money.screen.from_account')"
+                                        :account-selected="$accountId">
+                            <x-slot:account-note>
+                                {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
+                                <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
+                                    {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
+                                    <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
+                                </p>
+                            </x-slot:account-note>
+                        </x-money.method>
                     </div>
                 </section>
 
@@ -258,9 +265,15 @@
                     <h2 class="mb-3 font-semibold">{{ __('money.screen.summary') }}</h2>
                     <dl class="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
                         <dt>{{ __('money.screen.sum.applied') }}</dt><dd class="num" x-text="appliedText"></dd>
-                        <dt>{{ __('money.screen.sum.ait') }}</dt><dd class="num" data-sum-ait x-text="aitText"></dd>
-                        <dt>{{ __('money.screen.sum.vds') }}</dt><dd class="num" data-sum-vds x-text="vdsText"></dd>
-                        <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ __('money.screen.sum.net') }}</dt>
+                        {{-- ⭐ কাটা অঙ্ক বিয়োগ চিহ্নে, পাশে হারের ছোট ট্যাগ (নকশা; মিল-তালিকার ফাঁক ৬) --}}
+                        <dt>{{ __('money.screen.sum.ait') }} <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">{{ __('money.screen.tag.ait') }}</span></dt>
+                        <dd class="num" data-sum-ait x-text="aitMinus"></dd>
+                        <dt>{{ __('money.screen.sum.vds') }} <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">{{ __('money.screen.tag.vds') }}</span></dt>
+                        <dd class="num" data-sum-vds x-text="vdsMinus"></dd>
+                        {{-- ⭐ নিটের নাম পদ্ধতি ধরে — ব্যাংক / MFS / নগদ থেকে যাবে (মিল-তালিকার ফাঁক ৭) --}}
+                        <dt class="border-t border-(--color-border) pt-2 font-semibold" data-net-label x-text="netLabel"
+                            data-net-bank="{{ __('money.screen.sum.net_bank') }}" data-net-mfs="{{ __('money.screen.sum.net_mfs') }}"
+                            data-net-cash="{{ __('money.screen.sum.net_cash') }}">{{ __('money.screen.sum.net') }}</dt>
                         <dd class="num border-t border-(--color-border) pt-2 font-semibold" x-text="netText"></dd>
                         <dt>{{ __('money.screen.sum.charge') }}</dt><dd class="num" data-sum-charge x-text="chargeText"></dd>
                         <dt x-show="hasUnapplied" x-cloak>{{ __('money.screen.sum.unapplied') }}</dt>
@@ -270,6 +283,10 @@
                        x-show="matches || hasUnapplied" x-cloak data-sum-matches>{{ __('money.screen.sum.matches') }}</p>
                     <p class="mt-3 border-s-2 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-xs text-(--color-badge-danger-ink)"
                        x-show="overApplied" x-cloak data-sum-over>{{ __('money.screen.sum.over') }}</p>
+                    {{-- ⭐ কাটা কর/ভ্যাটের দায় মনে করানো — কেবল সত্যি কাটা হলে (টাকা দেওয়ার মিল-তালিকা #৩, ২২ অক্টোবর ২০২৬)। ⓘ "করণীয় তালিকায়
+                         উঠবে" অংশটা তালিকা বানানোর পরে — আগে লিখলে পর্দা এমন কিছু কথা দিত যা ব্যবস্থায় নেই --}}
+                    <p class="mt-3 border-s-2 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-xs text-(--color-badge-warning-ink)"
+                       x-show="withheld" x-cloak data-sum-tax-note>{{ __('money.screen.sum.tax_note') }}</p>
                 </section>
 
                 {{-- ── খাতায় যা যাবে (#১০) — সার্ভারের হিসাবে ── --}}

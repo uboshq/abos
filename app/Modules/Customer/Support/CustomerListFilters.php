@@ -41,6 +41,9 @@ final class CustomerListFilters
 {
     public const RANK_DEFAULT = 10;
 
+    /** ⓘ অবস্থার ডিফল্ট — ছাঁকনিও এটা ধরে, টুলবারও (`defaults`): এই মানে থাকলে চালু ছাঁকনি নয়, প্যানেল খোলে না */
+    public const DEFAULT_STATUS = 'active';
+
     public const SALES_DAYS = 90;
 
     public function __construct(private readonly CustomerSalesFilters $sales) {}
@@ -90,7 +93,7 @@ final class CustomerListFilters
 
     private function status(Builder $query, Request $request): void
     {
-        $status = $request->boolean('inactive') ? 'all' : (string) $request->query('status', 'active');
+        $status = $request->boolean('inactive') ? 'all' : (string) $request->query('status', self::DEFAULT_STATUS);
 
         match ($status) {
             'inactive' => $query->where('customers.is_active', false),
