@@ -43,6 +43,10 @@ final class TheBankFileKeyIsGivenOnceAndSaysToWhomTest extends TestCase
         $this->app['events']->listen(MessageLogged::class, function (MessageLogged $logged): void {
             $this->lines[] = $logged->message;
         });
+        // ⓘ লগারের নিজের শোনার পথেও — দুই পথের যেকোনোটায় এলেই ধরা (একই লাইন দুইবার এলেও "আছে" একই)
+        \Illuminate\Support\Facades\Log::listen(function (MessageLogged $logged): void {
+            $this->lines[] = $logged->message;
+        });
     }
 
     public function test_the_key_is_given_once_and_the_log_says_to_whom(): void
@@ -64,7 +68,7 @@ final class TheBankFileKeyIsGivenOnceAndSaysToWhomTest extends TestCase
         $this->assertSame($payers->pluck('id')->sort()->values()->all(), $this->holders(), '⛔ পরিশোধ পাকা করে এমন প্রতিটা ভূমিকা, আর কেবল তারাই, চাবি পায়নি');
         foreach ($payers as $role) {
             $line = sprintf('Bank file key given: company=%s role=%s team_id=%s', (string) ($role->code ?? '?'), (string) $role->name, (string) $role->company_id);
-            $this->assertContains($line, $this->lines, '⛔ লগে কোম্পানি, ভূমিকা আর team id-র লাইন নেই: '.$line);
+            $this->assertContains($line, $this->lines, '⛔ লগে কোম্পানি, ভূমিকা আর team id-র লাইন নেই: '.$line.' — ধরা লাইন: '.json_encode(array_values(array_unique($this->lines)), JSON_UNESCAPED_UNICODE));
         }
         $this->assertContains(sprintf('Bank file key: %d role(s) given accounts.voucher.bank_file (those that post payments)', $payers->count()), $this->lines,
             '⛔ লগে সারাংশের লাইন নেই, বা গোনা ভুল');

@@ -635,7 +635,7 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
 
         $answer = $this->postJson(route('accounts.voucher.simulate'), [
             'type' => Voucher::RECEIPT, 'narration' => 'শাখার দাবি', 'trx_date' => now()->toDateString(), 'amount' => '100',
-            'instrument' => 'transfer', 'instrument_no' => 'BR-1', 'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
+            'instrument' => 'transfer', 'instrument_no' => 'BR-0001', 'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
         ])->assertOk()->json();
         // ⛔ প্রিভিউর কাগজে পোস্টের শাখা না থাকলে পক্ষের শাখার পাহারা "#0" শাখার সাথে মেলাত (cb-ma-5s ফটকে ধরা)
         $this->assertNotEmpty($answer['rows'] ?? [], '⛔ শাখাওয়ালা পক্ষের প্রিভিউ ফিরল — প্রিভিউর কাগজে পোস্টের শাখা নেই: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
