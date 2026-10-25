@@ -366,6 +366,19 @@ export function allocateOldestFirst (bills, amount) {
     return out
 }
 
+/** ⓘ পক্ষের খাতের দিক — Dr ধনাত্মক; শূন্যে কিছু নয় (পয়সায় গোনা) */
+export function sideOf (paise) {
+    if (paise > 0) return 'Dr'
+    if (paise < 0) return 'Cr'
+    return ''
+}
+
+/** ⓘ অঙ্কের পাশে দিক — " (Dr)" / " (Cr)", শূন্যে কিছু নয় (নকশার "৳0.00") */
+export function sideSuffix (paise) {
+    const side = sideOf(paise)
+    return side === '' ? '' : ' (' + side + ')'
+}
+
 /**
  * ⭐ রসিদ ও পরিশোধ ভাউচারের টাকার অংশ — অঙ্ক লাখ-কমায়, খাতে কত আছে, রেফারেন্সের চলতি উত্তর আর পোস্টের আগে খাতায় যা যাবে
  * (fe, ২৩ অক্টোবর ২০২৬; চূড়ান্ত নকশার মিল-তালিকা)। ⓘ টাকা দেওয়ার পর্দার ([[payBills]]) একই আচরণ, বিলের টেবিল ছাড়া।
@@ -510,7 +523,19 @@ export function voucherMoney ({
         },
 
         /* ⭐ মাথার প্রথম অঙ্কের নাম পক্ষের ধরনে (নকশা: "গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা") */
-        get headOwedLabel () { return owedLabels[this.headPartyType] ?? owedLabels[''] ?? '' },
+        get headOwedLabel () {
+            // ⭐ নাম অঙ্কের নিজের চিহ্নে (fe, ২৫ অক্টোবর ২০২৬): রসিদে Cr মানে "… খাতায় জমা", পরিশোধে Dr মানে "… খাতায়" — "বকেয়া"/"পাওনা" নয়
+            const side = sideOf(this.headBeforePaisa)
+            if (this.hasHeadFigures && !out && side === 'Cr') return this.sideText('owedIn')
+            if (this.hasHeadFigures && out && side === 'Dr') return this.sideText('owedOut')
+            return owedLabels[this.headPartyType] ?? owedLabels[''] ?? ''
+        },
+        get headLeftLabel () {
+            const side = sideOf(this.headAfterPaisa)
+            if (this.hasHeadFigures && !out && side === 'Cr') return this.sideText('leftIn')
+            if (this.hasHeadFigures && out && side === 'Dr') return this.sideText('leftOut')
+            return String(sideTexts?.left ?? '')
+        },
         // ⓘ বকেয়া লালে (নকশা); পক্ষের অগ্রিম হলে সবুজ, "অগ্রিম" শব্দের সাথে; শূন্যে সাধারণ রং — নকশায় "৳0.00" রং ছাড়া
         get headOwedClass () {
             if (this.headOwedPaisa === 0) return ''
@@ -548,9 +573,12 @@ export function voucherMoney ({
         // ⓘ "এই আদায়" নকশার মতো হাতে পাওয়া টাকা; "এই পরিশোধ (মোট)" মোট
         get headThisPaisa () { return out ? this.headGrossPaisa : paisa(this.amount) },
         get headLeftPaisa () { return this.headOwedPaisa - this.headGrossPaisa },
-        get headOwedText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headOwedPaisa) / 100) : '—' },
+        /* ⓘ পক্ষের খাতের স্থিতি, Dr ধনাত্মক — আগে (সার্ভারের উত্তর) আর পরে (রসিদে মোট Cr, পরিশোধে মোট Dr) */
+        get headBeforePaisa () { return paisa(this.partyDue ?? 0) },
+        get headAfterPaisa () { return out ? this.headBeforePaisa + this.headGrossPaisa : this.headBeforePaisa - this.headGrossPaisa },
+        get headOwedText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headBeforePaisa) / 100) + sideSuffix(this.headBeforePaisa) : '—' },
         get headThisText () { return '৳' + taka(this.headThisPaisa / 100) },
-        get headLeftText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headLeftPaisa) / 100) : '—' },
+        get headLeftText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headAfterPaisa) / 100) + sideSuffix(this.headAfterPaisa) : '—' },
         get headLeftIsAdvance () { return this.hasHeadFigures && this.headLeftPaisa < 0 },
         // ⛔ পক্ষের আগে থেকে অগ্রিম থাকলে বকেয়ার অঙ্ক চিহ্ন ছাড়া "বকেয়া" পড়াত — কথায় "অগ্রিম" (মাপা: ২৪ অক্টোবর ২০২৬, আলম স্টোর)
         get headOwedIsAdvance () { return this.hasHeadFigures && this.headOwedPaisa < 0 },
@@ -559,8 +587,6 @@ export function voucherMoney ({
          * ⭐ শূন্য পেরোনো অঙ্কের নিচের কথা — "অগ্রিম" নয়: আলাদা অগ্রিম খাত নেই, বাড়তি পক্ষের নিজের খাতেই থাকে (মালিকের নিয়ম, fe ২৫ অক্টোবর
          * ২০২৬; ফোনের "বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে")। পক্ষের ধরন বাক্সের খবর থেকে (`headPartyType`)।
          */
-        get headOwedNote () { return this.headOwedIsAdvance ? this.sideText(out ? 'owedOut' : 'owedIn') : '' },
-        get headLeftNote () { return this.headLeftIsAdvance ? this.sideText(out ? 'leftOut' : 'leftIn') : '' },
         sideText (key) {
             const party = sideTexts?.partyOf?.[this.headPartyType] ?? sideTexts?.partyOf?.[''] ?? ''
             return String(sideTexts?.[key] ?? '').replace(':party', party)

@@ -188,7 +188,7 @@
                   sideTexts: @js([
                       'owedIn' => __('money.screen.head.owed_in_credit'), 'owedOut' => __('money.screen.head.owed_out_debit'),
                       'leftIn' => __('money.screen.head.left_in_credit'), 'leftOut' => __('money.screen.head.left_out_debit'),
-                      'partyOf' => __('money.screen.party_of'),
+                      'partyOf' => __('money.screen.party_of'), 'left' => __('money.screen.head.left'),
                   ]),
                   difference: @js((string) old('difference.amount', bccomp((string) ($voucher->difference_amount ?? '0'), '0', 4) > 0 ? $voucher->difference_amount : '')),
                   owedLabels: @js($headOwedLabels),
@@ -256,7 +256,6 @@
                             <dt class="text-2xs text-(--color-ink-muted)" x-text="headOwedLabel">{{ $headOwedLabels[$headStartType] ?? $headOwedLabels[''] }}</dt>
                             <dd class="num text-xl font-semibold" data-head-owed x-bind:class="headOwedClass">
                                 <span x-text="headOwedText"></span>
-                                <span class="block text-2xs font-normal text-(--color-ink-muted)" x-show="headOwedIsAdvance" x-cloak data-head-owed-note x-text="headOwedNote"></span>
                             </dd>
                         </div>
                         <div>
@@ -264,10 +263,10 @@
                             <dd @class(['num text-xl font-semibold', 'text-(--color-badge-success-ink)' => ! $headPaying]) data-head-this x-text="headThisText"></dd>
                         </div>
                         <div>
-                            <dt class="text-2xs text-(--color-ink-muted)">{{ __('money.screen.head.left') }}</dt>
+                            {{-- ⭐ শেষ অঙ্কের নাম তার নিজের চিহ্নে — রসিদে Cr হলে "জমা থাকবে", পরিশোধে Dr হলে "… খাতায় থাকবে" ([[voucherMoney]] headLeftLabel) --}}
+                            <dt class="text-2xs text-(--color-ink-muted)" data-head-left-label x-text="headLeftLabel">{{ __('money.screen.head.left') }}</dt>
                             <dd class="num text-xl font-semibold" data-head-left>
                                 <span x-text="headLeftText"></span>
-                                <span class="block text-2xs font-normal text-(--color-ink-muted)" x-show="headLeftIsAdvance" x-cloak data-head-left-note x-text="headLeftNote"></span>
                             </dd>
                         </div>
                     </dl>

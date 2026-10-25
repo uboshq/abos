@@ -32,6 +32,7 @@ use Tests\TestCase;
  *   ১. তিন পর্দার ফর্মে (খাতের তালিকা বাদে) "অগ্রিম" নেই — কাঁচা বা JSON-এ ঢাকা কোনো রূপে
  *   ২. নতুন কথা আছে: পরিশোধে "বিলে প্রয়োগ হয়নি — … খাতায় থাকবে (Dr)", সরবরাহকারী-পরিশোধে খোলা বিল না থাকার কথা
  *   ৩. পর্দার প্রতিটা চাবি — বাংলায় "অগ্রিম" নেই, ইংরেজিতে "advance" নেই; পক্ষের ধরনে বসার :party আছে
+ *   ৫. মাথার দুই নাম চিহ্নে বাঁধা — প্রথম `headOwedLabel`, শেষ `headLeftLabel` (পাতা আঁকে "বাকি থাকবে", তারপর JS চিহ্ন দেখে বদলায়)
  *   ৪. শূন্য পেরোনো দুই পক্ষের বকেয়ার উত্তরে (আগে থেকে জমা থাকা গ্রাহক, আগে থেকে দেওয়া সরবরাহকারী) "অগ্রিম" নেই
  */
 final class TheMoneyScreensNeverSayAdvanceTest extends TestCase
@@ -74,8 +75,8 @@ final class TheMoneyScreensNeverSayAdvanceTest extends TestCase
             foreach ($this->spellings(self::WORD) as $spelling) {
                 $this->assertStringNotContainsString($spelling, $form, "⛔ {$screen}: পর্দায় এখনো \"অগ্রিম\" — অগ্রিম খাত নেই, বাড়তি পক্ষের নিজের খাতে");
             }
-            $text = trans($said, [], 'bn');
-            $this->assertTrue(collect($this->spellings(explode(':party', $text)[0]))->contains(fn (string $s) => str_contains($form, $s)),
+            $text = trim(str_replace(':party', '', trans($said, [], 'bn')));
+            $this->assertTrue(collect($this->spellings($text))->contains(fn (string $s) => str_contains($form, $s)),
                 "⛔ {$screen}: পক্ষের খাতে থাকার নতুন কথা পর্দায় নেই ({$said})");
         }
     }
@@ -89,7 +90,10 @@ final class TheMoneyScreensNeverSayAdvanceTest extends TestCase
 
             $this->assertStringNotContainsString(self::WORD, $bn, "⛔ {$key}: বাংলায় এখনো \"অগ্রিম\"");
             $this->assertStringNotContainsStringIgnoringCase('advance', $en, "⛔ {$key}: ইংরেজিতে এখনো \"advance\"");
-            $this->assertMatchesRegularExpression('/\((Cr|Dr|:side)\)/', $bn, "⛔ {$key}: কোন পাশে থাকে (Cr/Dr) বলে না");
+            // ⓘ মাথার নামগুলোর Dr/Cr অঙ্কের পাশে বসে (money.js sideSuffix), নামে নয়
+            if (! str_starts_with($key, 'money.screen.head.')) {
+                $this->assertMatchesRegularExpression('/\((Cr|Dr|:side)\)/', $bn, "⛔ {$key}: কোন পাশে থাকে (Cr/Dr) বলে না");
+            }
         }
 
         foreach (['money.screen.head.owed_in_credit', 'money.screen.head.left_out_debit', 'accounts::field.due_in_advance', 'accounts::field.due_out_advance'] as $key) {
@@ -112,6 +116,22 @@ final class TheMoneyScreensNeverSayAdvanceTest extends TestCase
             $this->assertTrue((bool) $answer->json('known'), "দৃশ্যটাই ঠিক নয় — {$type}-এর বকেয়া জানা নেই");
             foreach ($this->spellings(self::WORD) as $spelling) {
                 $this->assertStringNotContainsString($spelling, (string) $answer->getContent(), "⛔ {$type}: শূন্য পেরোনো বকেয়ার উত্তরে \"অগ্রিম\"");
+            }
+        }
+    }
+
+    /** ৫ */
+    public function test_both_head_labels_follow_their_own_sign(): void
+    {
+        foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
+            $html = (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
+
+            $this->assertStringContainsString('x-text="headOwedLabel"', $html, "⛔ {$type}: প্রথম অঙ্কের নাম চিহ্ন দেখে বদলায় না");
+            $this->assertMatchesRegularExpression('/data-head-left-label x-text="headLeftLabel">\s*'.preg_quote(e(trans('money.screen.head.left', [], 'bn')), '/').'/', $html,
+                "⛔ {$type}: শেষ অঙ্কের নাম চিহ্ন দেখে বদলায় না, বা শুরুতে \"বাকি থাকবে\" নয়");
+            foreach (['owed_in_credit', 'owed_out_debit', 'left_in_credit', 'left_out_debit'] as $key) {
+                $text = trim(str_replace(':party', '', trans('money.screen.head.'.$key, [], 'bn')));
+                $this->assertTrue(collect($this->spellings($text))->contains(fn (string $s) => str_contains($html, $s)), "⛔ {$type}: চিহ্নের নাম \"{$text}\" পাতায় যায় না");
             }
         }
     }
