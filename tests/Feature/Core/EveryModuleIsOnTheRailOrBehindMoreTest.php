@@ -77,14 +77,34 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
 
     public function test_a_module_without_a_key_appears_nowhere_and_a_limited_persons_rail_follows_what_they_can_open(): void
     {
-        $sr = $this->person(['customer.view', 'sales.order.view', 'sales.order.create']);
+        /*
+         * ⓘ এমন মানুষ, যার ক্রম অনুপাতে সত্যিই বদলায়: মেনুর শেষের দিকের একটা মডিউলের সব চাবি (অনুপাত ১), আর শুরুর দিকের একটার
+         * কেবল একটা চাবি (অনুপাত ১-এর কম)। ⛔ আগে তিনটা হাতে-বাছা চাবি দেওয়া ছিল, তাতে ক্রম বদলাতই না — দাবিটা প্রস্তুতিতেই লাল
+         * (a6-one9, ২৫ অক্টোবর ২০২৬)।
+         */
+        $keysOf = fn (string $code): array => collect(app(\App\Core\Module\ModuleRegistry::class)->get($code)?->menu ?? [])->flatten(1)
+            ->reject(fn ($i) => ! is_array($i) || (bool) ($i['planned'] ?? false))->pluck('permission')->filter()->unique()->values()->all();
+        $codes = $this->menuCodes($this->owner);
+        $late = collect($codes)->reverse()->first(fn (string $c) => count($keysOf($c)) >= 2);
+        $early = collect($codes)->first(fn (string $c) => $c !== $late && count($keysOf($c)) >= 2);
+        $this->assertNotNull($late, 'প্রস্তুতিটাই ভুল — দুই বা বেশি চাবির মডিউল নেই');
+        $this->assertNotNull($early, 'প্রস্তুতিটাই ভুল — দুই বা বেশি চাবির দ্বিতীয় মডিউল নেই');
+        $sr = $this->person([...$keysOf($late), $keysOf($early)[0]]);
+        $reachOf = array_column(app(MenuBuilder::class)->forUser($sr), 'reach', 'code');
+        $this->assertGreaterThan($reachOf[$early] ?? 1.0, $reachOf[$late] ?? 0.0,
+            "প্রস্তুতিটাই ভুল — {$late}-এর অনুপাত {$early}-এর চেয়ে বেশি নয়, ক্রম বদলানোর দাবি অর্থহীন");
+
         $page = (string) $this->actingAs($sr)->get(route('customer.index'))->assertOk()->getContent();
         $rail = $this->rail($page);
         $mine = $this->menuCodes($sr);
 
         $this->assertEqualsCanonicalizing($mine, $rail, '⛔ রেলে চাবিহীন মডিউল এল, বা নিজের একটা হারাল');
-        $this->assertNotSame($mine, $rail, '⛔ বিক্রয়কর্মীর রেল মেনুর আগের ক্রমেই — যে মডিউলের পাতা তিনি খুলতে পারেন তা উপরে আসার কথা');
-        $this->assertNotContains('accounts', $rail, '⛔ হিসাবের চাবি নেই, তবু রেলে হিসাব');
+        $this->assertNotSame($mine, $rail, '⛔ মেনুর আগের ক্রমেই রেল — যে মডিউলের পাতা মানুষটি বেশি খুলতে পারেন তা উপরে আসার কথা');
+        $this->assertLessThan(array_search($early, $rail, true), array_search($late, $rail, true),
+            "⛔ {$late} (সব পাতা খোলা) {$early}-এর (একটা পাতা) নিচে — খোলা পাতার অনুপাতে সাজানো নয়");
+        if (! in_array('accounts', [$late, $early], true)) {
+            $this->assertNotContains('accounts', $rail, '⛔ হিসাবের চাবি নেই, তবু রেলে হিসাব');
+        }
 
         $reach = array_column(app(MenuBuilder::class)->forUser($sr), 'reach', 'code');
         $ordered = array_map(fn (string $c) => $reach[$c], $rail);
@@ -102,7 +122,8 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $sr = $this->person(['customer.view']);
         $saved = $this->actingAs($this->owner)->postJson(route('rail.layout'), ['order' => [$last, 'not_a_module'], 'pinned' => [$last, 'not_a_module']])
             ->assertOk()->json('nav_layout');
-        $this->assertSame(['pinned' => [$last], 'order' => [$last]], $saved, '⛔ রাখা সাজে মেনুর বাইরের কোড ঢুকল, বা নিজেরটা হারাল');
+        // ⓘ assertEquals, assertSame নয় — MySQL-এর JSON ঘর চাবিগুলো নিজের ক্রমে রাখে ("order" আগে), ক্রমটা কোনো কথা নয় (a6-one9)
+        $this->assertEquals(['pinned' => [$last], 'order' => [$last]], $saved, '⛔ রাখা সাজে মেনুর বাইরের কোড ঢুকল, বা নিজেরটা হারাল');
 
         $page = (string) $this->get(route('customer.index'))->getContent();
         $rail = $this->rail($page);
@@ -113,7 +134,7 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
 
         // ⓘ অন্যের সারিতে লেখা হয় না — বিক্রয়কর্মী নিজের পাঠালে মালিকেরটা অটুট
         $theirs = $this->actingAs($sr)->postJson(route('rail.layout'), ['order' => ['accounts'], 'pinned' => ['accounts']])->assertOk()->json('nav_layout');
-        $this->assertSame(['pinned' => [], 'order' => []], $theirs, '⛔ চাবিহীন মডিউল (হিসাব) বিক্রয়কর্মীর রাখা সাজে ঢুকল');
+        $this->assertEquals(['pinned' => [], 'order' => []], $theirs, '⛔ চাবিহীন মডিউল (হিসাব) বিক্রয়কর্মীর রাখা সাজে ঢুকল');
         $this->assertSame([$last], $this->owner->fresh()->nav_layout['order'] ?? null, '⛔ একজনের সাজ আরেকজনের সারিতে পড়ল');
 
         $this->actingAs($this->owner)->postJson(route('rail.layout'), ['reset' => true])->assertOk();
