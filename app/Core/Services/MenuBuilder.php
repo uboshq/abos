@@ -283,9 +283,11 @@ final class MenuBuilder
                 'icon' => $module->code,
                 'section' => $module->nav['section'],
                 'order' => $module->nav['order'],
-                // ⓘ খোলা পাতার অনুপাত (০–১) — রেলের শুরুর ক্রম ([[arranged()]]); মালিক সব খোলেন, তাই সবার ১, ক্রম আগের মতোই
-                // ⓘ কিছুই দেওয়া নেই (কেবল "শীঘ্রই" পাতা) মানে কিছুই আটকানো নয় — তাই ১, নইলে মালিকের রেলেও এমন মডিউল শেষে সরত
-                'reach' => $offered > 0 ? $open / $offered : 1.0,
+                // ⓘ খোলা পাতার অনুপাত, দশ-হাজার ভাগে পূর্ণসংখ্যা (০–১০০০০) — রেলের শুরুর ক্রম ([[arranged()]]); মালিক সব খোলেন, তাই
+                //   সবার ১০০০০, ক্রম আগের মতোই। ⓘ কিছুই দেওয়া নেই (কেবল "শীঘ্রই" পাতা) মানে কিছুই আটকানো নয় — তাই ১০০০০।
+                // ⛔ ভগ্নাংশ (float) নয় — টাকার পাহারা যেকোনো float ধরে ([[MoneyIsNeverAFloatTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬); intdiv-এ
+                //   ক্রম একই থাকে, আর সমান অনুপাত সমানই থাকে
+                'reach' => $offered > 0 ? intdiv($open * 10000, $offered) : 10000,
 
                 /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
@@ -465,8 +467,8 @@ final class MenuBuilder
             usort($menu, fn (array $a, array $b): int => [$rank[$a['code']] ?? PHP_INT_MAX, $at[$a['code']]]
                 <=> [$rank[$b['code']] ?? PHP_INT_MAX, $at[$b['code']]]);
         } else {
-            usort($menu, fn (array $a, array $b): int => [-(float) ($a['reach'] ?? 0), $at[$a['code']]]
-                <=> [-(float) ($b['reach'] ?? 0), $at[$b['code']]]);
+            usort($menu, fn (array $a, array $b): int => [-(int) ($a['reach'] ?? 0), $at[$a['code']]]
+                <=> [-(int) ($b['reach'] ?? 0), $at[$b['code']]]);
         }
 
         $grouped = array_column($menu, 'code') === $before;
