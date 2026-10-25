@@ -117,6 +117,19 @@ final class ThePhoneGetsItsBillsAndItsReasonsTest extends TestCase
         $this->assertContains($row['message'] ?? null, $expected, '⛔ পুরনো প্রথম কথাটা হারাল — পুরনো ফোন কিছু দেখাবে না');
     }
 
+    /** ৪ — ব্যাখ্যাই করা গেল না এমন সারিও একই আকারে: ঘর ধরে কারণ, আর পুরনো প্রথম কথা (a4-এর পরখ, 1de6b0897) */
+    public function test_an_unreadable_push_row_names_its_field_too(): void
+    {
+        $answer = $this->push([['changeId' => 'no-entity-1', 'operation' => 'CREATE', 'payloadJson' => '{}']]);
+        $row = $answer[0] ?? [];
+
+        $this->assertSame('rejected', strtolower((string) ($row['status'] ?? '')), 'দৃশ্যটাই ঠিক নয় — সারিটা ফেরেনি: '.json_encode($row, JSON_UNESCAPED_UNICODE));
+        $expected = [trans('sync.change_needs_entity_type', [], 'bn'), trans('sync.change_needs_entity_type', [], 'en')];
+        $this->assertContains($row['errors']['entityType'][0] ?? null, $expected, '⛔ ব্যাখ্যা-না-হওয়া সারিতে ঘর ধরে কারণ নেই: '.json_encode($row, JSON_UNESCAPED_UNICODE));
+        $this->assertContains($row['message'] ?? null, $expected, '⛔ পুরনো প্রথম কথাটা হারাল — পুরনো ফোন কিছু দেখাবে না');
+        $this->assertSame('no-entity-1', $row['changeId'] ?? null, '⛔ ফেরানো সারির changeId হারাল — ফোন উত্তর মেলাতে পারে না');
+    }
+
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
 
     /** @param  list<array<string, mixed>>  $rows  @return array<int|string, mixed> */

@@ -139,6 +139,11 @@ final class SyncService
                         : '',
                     'status' => SyncChange::REJECTED,
                     'message' => $this->firstMessage($refused),
+                    /*
+                     * ⭐ ফেরানো সারির একই আকার — ঘর ধরে কারণ (`changeId`, `entityType`, `operation` …), ঘর না জানা গেলে [[NO_FIELD]]
+                     * (a4-এর পরখ, 1de6b0897; [[refuse()]]-এর একই চুক্তি)। ⓘ পুরনো `message` থাকে — পুরনো ফোন সেটাই পড়ে।
+                     */
+                    'errors' => $refused->errors() !== [] ? $refused->errors() : [self::NO_FIELD => [$this->firstMessage($refused)]],
                 ];
 
                 continue;
