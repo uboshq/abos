@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -71,6 +72,10 @@ class ApprovalFlow extends Model
 
             $flow->code = 'AN'.str_pad((string) ((int) $last + 1), 3, '0', STR_PAD_LEFT);
         });
+
+        // ⛔ ইঞ্জিনের জমানো ছক পুরনো হয় — যে পথেই সারি বদলাক ([[ApprovalEngine::flowsChanged()]])
+        static::saved(fn () => ApprovalEngine::flowsChanged());
+        static::deleted(fn () => ApprovalEngine::flowsChanged());
     }
 
     public function conditions(): HasMany

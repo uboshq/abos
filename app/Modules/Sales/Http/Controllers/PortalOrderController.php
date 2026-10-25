@@ -101,17 +101,22 @@ class PortalOrderController extends Controller
             ];
         }
 
-        $order = $this->orders->create([
-            'customer_id' => $customer->id,
-            'trx_date' => $today, // ⓘ দরটা যে দিনের, আদেশও সেই দিনের
-            'narration' => $data['narration'] ?? null,
-            'source' => SalesOrderStatus::SOURCE_PORTAL,
-            'created_by_customer_id' => $customer->id,
-        ], $lines);
+        // ⛔ বানানো আর জমা এক লেনদেনে — সীমায় জমা ফিরলে (ফাঁক ২৮) খসড়াও থাকে না; নইলে আবার চাপায় দ্বিতীয় খসড়া (ফোনের একই নিয়ম)
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $customer, $today, $data, $lines) {
+            $order = $this->orders->create([
+                'customer_id' => $customer->id,
+                'trx_date' => $today, // ⓘ দরটা যে দিনের, আদেশও সেই দিনের
+                'narration' => $data['narration'] ?? null,
+                'source' => SalesOrderStatus::SOURCE_PORTAL,
+                'created_by_customer_id' => $customer->id,
+            ], $lines);
 
-        if ($request->boolean('submit')) {
-            $this->orders->submit($order);
-        }
+            if ($request->boolean('submit')) {
+                $this->orders->submit($order);
+            }
+
+            return $order;
+        });
 
         return redirect()->route('sales.portal.order.show', $order->public_id)
             ->with('status', __($request->boolean('submit') ? 'sales::portal_order.submitted' : 'sales::portal_order.saved'));

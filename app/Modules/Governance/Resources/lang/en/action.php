@@ -31,6 +31,11 @@ return [
     // label as ten other role edits, that answer takes opening every row.
     'ownership_transferred' => 'Ownership transferred',
     'companies_changed' => 'Company access changed',
+    // The company that lost the person, in its own book (24 Oct 2026)
+    'member_removed' => 'Membership removed',
+    'roles_removed' => 'Roles removed',
+    // The owner brought back into an ownerless company — abos:restore-owner (24 Oct 2026)
+    'owner_restored' => 'Owner restored',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',
@@ -122,6 +127,8 @@ return [
     'bank_signed' => 'Bank details second signature',
     'bank_rejected' => 'Bank details change refused',
     'bank_withdrawn' => 'Bank details change withdrawn',
+    // The owner signed an offer they created — a self-approved discount (PromotionApprovalChain::OWNER_SELF_SIGNED)
+    'owner_self_signed' => 'Owner signed their own offer',
     'obligation_done' => 'Obligation done',
     'obligation_cancelled' => 'Obligation cancelled',
 ];

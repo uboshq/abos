@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'held_deposits' => 'ডিপোজিট অনুমোদনের অপেক্ষায়',
+    'held_deposits' => 'ডিপোজিট সইয়ের অপেক্ষায়',
     'deposit_state' => [
         'pending' => 'সইয়ের অপেক্ষায়',
         'approved' => 'অনুমোদিত',
@@ -22,7 +22,7 @@ return [
     'editing_sale' => 'সম্পাদনা হচ্ছে',
     'edit_sale' => 'বিক্রি সম্পাদনা',
     'pending_group_drafts' => 'খসড়া',
-    'pending_group_held' => 'অনুমোদনের অপেক্ষায়',
+    'pending_group_held' => 'সইয়ের অপেক্ষায়',
     'held_open_approval' => 'অনুমোদনের পাতা',
     'held_withdraw' => 'খসড়ায় ফিরিয়ে আনুন',
     'pending_group_delivery' => 'ডেলিভারির অপেক্ষায়',
@@ -81,6 +81,9 @@ return [
     'invoice_count' => 'বিল সংখ্যা',
     'gross_profit' => 'মোট মুনাফা',
     'revenue' => 'বিক্রয়',
+    // ⭐ নিট বিক্রি — VAT আর ফেরত বাদে (IFRS 15; ২০ অক্টোবর ২০২৬)
+    'net_sales' => 'নিট বিক্রি (ভ্যাট ও ফেরত বাদে)',
+    'returned_net' => 'ফেরত (VAT বাদে)',
     'cost' => 'ক্রয়মূল্য',
     'margin_percent' => 'মার্জিন %',
     'product_count' => 'পণ্য সংখ্যা',
@@ -228,7 +231,7 @@ return [
     'return_hint' => 'আগের বিল ধরে ফেরত — ফেরতের পাতায় বিলটা বাছুন।',
     'return_go' => 'ফেরতের পাতা খুলুন',
     'cancel_reason' => 'কারণ (লাগবেই)',
-    'cancel_hint' => 'পাকা হওয়ার আগে — কারণ না দিলে বাতিল হয় না।',
+    'cancel_hint' => 'পোস্ট হওয়ার আগে — কারণ না দিলে বাতিল হয় না।',
     'cancel_go' => 'বাতিল করুন',
     'cancel_back' => 'ফিরে যান',
     'cancel_reasons' => 'গ্রাহক কিনবেন না|ভুল পণ্য বা পরিমাণ|দাম নিয়ে মতভেদ|অন্য কারণ',
@@ -453,5 +456,5 @@ return [
     'collected_by' => 'যিনি নিলেন',
     'no_lot' => 'লট নেই',
     'tab_drafts' => 'খসড়া',
-    'tab_awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
+    'tab_awaiting_approval' => 'সইয়ের অপেক্ষায়',
 ];

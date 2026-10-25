@@ -274,6 +274,27 @@ final class RouteMetrics
             $out[(int) $row->route_id]['achieved'] = bcadd((string) $row->achieved, '0', 4);
         }
 
+        /*
+         * ⭐ ফেরত বাদ — অর্জন নিট বিক্রিতে (IFRS 15; fe, ২০ অক্টোবর ২০২৬): এই মাসের পাকা ফেরত, **ফেরতের তারিখে**, ফেরতের নিট
+         * অঙ্কে ([[SalesMetrics::returnNetSql()]]), উপরের একই দুই দেয়াল (শাখা, বিক্রয়কর্মীর ডিলার)।
+         */
+        $returned = DB::table('sal_returns as r')
+            ->join('customers as cu', 'cu.id', '=', 'r.customer_id')
+            ->where('r.company_id', CompanyContext::id())
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.status', DocumentStatus::POSTED)
+            ->whereBetween('r.trx_date', [$first->toDateString(), $last->toDateString()])
+            ->whereIn('cu.location_id', $routeIds)
+            ->tap(fn ($q) => ViewedBranch::narrow($q, 'r.branch_id'))
+            ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'cu.id'))
+            ->groupBy('cu.location_id')
+            ->selectRaw('cu.location_id as route_id, SUM('.\App\Modules\Sales\Metrics\SalesMetrics::returnNetSql('r').') as returned')
+            ->get();
+
+        foreach ($returned as $row) {
+            $out[(int) $row->route_id]['achieved'] = bcsub($out[(int) $row->route_id]['achieved'], (string) $row->returned, 4);
+        }
+
         foreach ($out as $id => $row) {
             $out[$id]['percent'] = $this->targets->percent($row['achieved'], $row['target']);
         }

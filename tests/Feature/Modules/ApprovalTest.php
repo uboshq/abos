@@ -307,6 +307,8 @@ class ApprovalTest extends TestCase
     public function test_without_a_rule_a_discount_is_refused_and_a_plain_bill_still_confirms(): void
     {
         ApprovalFlow::query()->delete();
+        // ⓘ কোয়েরি-মোছা মডেলের ঘটনা চালায় না — ইঞ্জিনের জমানো ছক (ধাপ মুছে যাওয়া) নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
         $this->actingAs($this->seller);
 
         try {

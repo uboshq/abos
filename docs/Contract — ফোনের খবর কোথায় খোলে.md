@@ -64,8 +64,8 @@
 
 | `closed` | শিরোনাম (বাংলা) | লেখা (বাংলা) | English (title — text) |
 |---|---|---|---|
-| `gone` | কাগজটা আর নেই | যে কাগজের খবর, সেটা মুছে ফেলা হয়েছে — খোলার মতো কিছু আর নেই। খবরটা পড়া হিসেবে রাখা হলো। | The paper is gone — The paper this notification is about was deleted, so there is nothing left to open. The notification is marked read. |
-| `reach` | এই কাগজটা আর আপনার নাগালে নেই | যে কাগজের খবর, সেটা আছে, কিন্তু যে শাখার কাগজ সেখানে আপনার অনুমতি নেই। খবরটা পড়া হিসেবে রাখা হলো। দরকার হলে প্রশাসককে জানান। | This paper is no longer within your reach — The paper this notification is about still exists, but you have no access to its branch. The notification is marked read. Tell an administrator if you need it. |
+| `gone` | কাগজটা আর নেই | যে কাগজের বিজ্ঞপ্তি, সেটা মুছে ফেলা হয়েছে — খোলার মতো কিছু আর নেই। বিজ্ঞপ্তিটা পড়া হিসেবে রাখা হলো। | The paper is gone — The paper this notification is about was deleted, so there is nothing left to open. The notification is marked read. |
+| `reach` | এই কাগজটা আর আপনার নাগালে নেই | যে কাগজের বিজ্ঞপ্তি, সেটা আছে, কিন্তু যে শাখার কাগজ সেখানে আপনার অনুমতি নেই। বিজ্ঞপ্তিটা পড়া হিসেবে রাখা হলো। দরকার হলে প্রশাসককে জানান। | This paper is no longer within your reach — The paper this notification is about still exists, but you have no access to its branch. The notification is marked read. Tell an administrator if you need it. |
 
 ⓘ ওয়েবের চাবি: `core.notify.gone_title`/`gone_body`, `core.notify.no_access_title`/`no_access_body` — বদলালে এই সারণিও।
 

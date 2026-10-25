@@ -215,6 +215,8 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             'updated_at' => now(),
             'public_id' => (string) Str::uuid(),
         ]);
+        // ⓘ কাঁচা লেখা মডেলের saved/deleted এড়ায় — ইঞ্জিনের জমানো ছক নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
     }
 
     /**

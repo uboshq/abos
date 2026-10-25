@@ -10,10 +10,12 @@ use App\Core\Panels\TradeGlance;
 use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -40,13 +42,22 @@ final class SalesCustomerTrade implements CustomerTrade
             ->where('customer_id', $customerId)
             ->posted();
 
-        $month = $posted()->whereBetween('trx_date', [$monthStart, $today])
-            ->selectRaw('COUNT(*) AS n, COALESCE(SUM(total), 0) AS amount')
-            ->toBase()->first();
+        /*
+         * ⭐ টাকা নিট বিক্রি — বিলের [[SalesMetrics::billNetSql()]] বাদ পাকা ফেরতের [[SalesMetrics::returnNetSql()]]: VAT, গাড়িভাড়া আর
+         * ফেরত বাদে, এই মাসে ফেরতের নিজের তারিখে (fe, ২১ অক্টোবর ২০২৬)। ⓘ সংখ্যা আগের মতো পাকা বিলের; শেষ কেনা বিলের মোট।
+         */
+        $sale = 'COUNT(*) AS n, COALESCE(SUM('.SalesMetrics::billNetSql('sal_invoices').'), 0) AS amount';
+        $back = 'COALESCE(SUM('.SalesMetrics::returnNetSql('sal_returns').'), 0) AS amount';
+        $returned = fn (): Builder => SalesReturn::query()->where('customer_id', $customerId)->posted();
 
-        $lifetime = $posted()
-            ->selectRaw('COUNT(*) AS n, COALESCE(SUM(total), 0) AS amount')
-            ->toBase()->first();
+        $month = $posted()->whereBetween('trx_date', [$monthStart, $today])->selectRaw($sale)->toBase()->first();
+        $monthBack = $returned()->whereBetween('trx_date', [$monthStart, $today])->selectRaw($back)->toBase()->first();
+
+        $lifetime = $posted()->selectRaw($sale)->toBase()->first();
+        $lifetimeBack = $returned()->selectRaw($back)->toBase()->first();
+
+        $net = fn (?object $sold, ?object $returnedRow): string => bcsub(
+            bcadd((string) ($sold->amount ?? '0'), '0', 4), bcadd((string) ($returnedRow->amount ?? '0'), '0', 4), 4);
 
         $pendingIds = $this->pendingInvoiceIds($posted());
 
@@ -56,9 +67,9 @@ final class SalesCustomerTrade implements CustomerTrade
 
         return new TradeGlance(
             monthCount: (int) ($month->n ?? 0),
-            monthAmount: bcadd((string) ($month->amount ?? '0'), '0', 4),
+            monthAmount: $net($month, $monthBack),
             lifetimeCount: (int) ($lifetime->n ?? 0),
-            lifetimeAmount: bcadd((string) ($lifetime->amount ?? '0'), '0', 4),
+            lifetimeAmount: $net($lifetime, $lifetimeBack),
             pendingCount: count($pendingIds),
             pendingItems: $pendingIds === []
                 ? 0

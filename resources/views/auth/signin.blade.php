@@ -216,7 +216,7 @@
 
                 <p>{{ __('core.brand.developed_by') }}</p>
 
-                <p class="mt-1">{{ __('core.brand.name') }} · v{{ config('app.version', '0.1.0') }}</p>
+                <p class="mt-1">{{ __('core.brand.name') }} · v{{ \App\Core\Support\Release::version() }}</p>
             </div>
         </footer>
     </div>

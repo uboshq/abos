@@ -941,7 +941,7 @@ return [
         'backup_mirror_stale' => 'Nothing has reached the second destination for two days — the copy has stopped.',
         'expiring_batches' => '{1} One lot expires within :days days|[2,*] :count lots expire within :days days',
         'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
-        'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
+        'awaiting_decision' => '{1} 1 waiting for a signature|[2,*] :count waiting for signatures',
 
         // The screen is switched off in Control Panel, so knowing the address does not open it
         'screen_switched_off' => 'This screen is switched off for this company. To turn it on: System Management → Control Panel.',
@@ -1642,5 +1642,12 @@ return [
     // ⭐ রেকর্ডের সাথে জোড়া কাগজ — ডকুমেন্ট পরিকল্পনা §১৫ ([[x-ui.linked-documents]])
     'linked_documents' => [
         'title' => 'Linked documents',
+    ],
+
+    // Version and "what's new" (24 Oct 2026)
+    'release' => [
+        'whats_new' => 'What\'s new',
+        'running' => 'Running now: :label',
+        'no_notes' => 'No notes written yet.',
     ],
 ];

@@ -171,7 +171,7 @@ return [
         'cancel' => 'বাতিল',
         'manage' => 'পরিচালনা',
         'report' => 'রিপোর্ট',
-        'approve' => 'অনুমোদন',
+        'approve' => 'সই দেওয়া',
         'override' => 'নিয়ম পেরোনো',
         'close' => 'বন্ধ করা',
         'request_limit' => 'সীমা বাড়ানোর অনুরোধ',
@@ -240,7 +240,7 @@ return [
         'restricted' => 'সংরক্ষিত দেখা',
 
         /* ⭐ বিজ্ঞপ্তির ক্রিয়া — fe-র Mac রান, ad1ac9f3, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
-        'center' => 'খবরের কেন্দ্র',
+        'center' => 'বিজ্ঞপ্তি কেন্দ্র',
         'channels' => 'পাঠানোর মাধ্যম',
         'deliveries' => 'পাঠানোর খাতা',
         'retry' => 'আবার পাঠানো',

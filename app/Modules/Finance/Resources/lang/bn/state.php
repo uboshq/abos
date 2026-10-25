@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'draft' => 'টাকা আসেনি',
-    'posted' => 'খাতায় বসেছে',
+    'posted' => 'পোস্ট হয়েছে · খাতায় উঠেছে',
     'active' => 'চালু',
     'closed' => 'শেষ',
     'overdue' => 'মেয়াদ পেরিয়েছে',

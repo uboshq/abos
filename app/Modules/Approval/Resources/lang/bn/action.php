@@ -5,8 +5,8 @@ declare(strict_types=1);
 return [
     'open' => 'দেখুন',
     'delete' => 'ছক মুছুন',
-    'approve' => 'অনুমোদন',
-    'reject' => 'ফেরত পাঠান',
+    'approve' => 'সই দিন',
+    'reject' => 'প্রত্যাখ্যান করুন',
     'withdraw' => 'প্রত্যাহার',
     'open_document' => 'ডকুমেন্ট খুলুন',
     'new_flow' => 'নতুন ছক',

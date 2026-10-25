@@ -74,6 +74,9 @@ return [
     'invoice_count' => 'Invoices',
     'gross_profit' => 'Gross profit',
     'revenue' => 'Revenue',
+    // net sales — excl. VAT and returns (IFRS 15; 20 Oct 2026)
+    'net_sales' => 'Net sales (excl. VAT and returns)',
+    'returned_net' => 'Returned (excl. VAT)',
     'cost' => 'Cost of goods',
     'margin_percent' => 'Margin %',
     'product_count' => 'Products',

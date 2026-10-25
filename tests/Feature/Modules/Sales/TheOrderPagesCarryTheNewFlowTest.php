@@ -36,6 +36,7 @@ use Tests\TestCase;
  */
 final class TheOrderPagesCarryTheNewFlowTest extends TestCase
 {
+    use HoldsAnOrderAsBeforeGap28;
     use RefreshDatabase;
 
     private Company $company;
@@ -94,7 +95,10 @@ final class TheOrderPagesCarryTheNewFlowTest extends TestCase
 
         $poor = Customer::query()->create(['code' => 'OS8-POOR', 'name_en' => 'Short Limit', 'name_bn' => 'কম সীমা', 'is_active' => true]);
         Customer::query()->whereKey($poor->id)->update(['credit_limit' => '0']);
-        $held = $orders->submit($this->draft('4', $poor)->fresh(['lines']));
+        // ⓘ ফাঁক ২৮: সীমা না কুলোলে জমাই ফেরে — আগে আটকে থাকা আদেশের ট্যাব থাকে, সেটাই এখানে
+        $poorDraft = $this->draft('4', $poor);
+        $this->assertRefusedAtSubmit(fn () => $orders->submit($poorDraft->fresh(['lines'])), $poorDraft);
+        $held = $this->heldAsBeforeGap28($poorDraft);
 
         $this->assertSame([S::DRAFT, S::AWAITING_APPROVAL, S::CREDIT_HELD, S::CONFIRMED],
             [$draft->fresh()->status, $awaiting->fresh()->status, $held->fresh()->status, $depot->fresh()->status],
@@ -237,7 +241,9 @@ final class TheOrderPagesCarryTheNewFlowTest extends TestCase
             $page->getContent(), '⛔ নতুন ধারায় বোতাম "জমা দিন" বলে না।');
 
         Customer::query()->whereKey($this->customer->id)->update(['credit_limit' => '0']);
-        $held = app(SalesOrderService::class)->submit($this->draft('4')->fresh(['lines']));
+        $heldDraft = $this->draft('4');
+        $this->assertRefusedAtSubmit(fn () => app(SalesOrderService::class)->submit($heldDraft->fresh(['lines'])), $heldDraft);
+        $held = $this->heldAsBeforeGap28($heldDraft);
         $this->assertSame(S::CREDIT_HELD, $held->status, 'প্রস্তুতিটাই ভুল — আদেশ সীমায় আটকায়নি।');
         $this->get(route('sales.order.show', $held))->assertOk()->assertSee('data-credit-held', false);
     }

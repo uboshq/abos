@@ -23,14 +23,18 @@ final class LineNetSale
 {
     /**
      * বিল-প্রতি ভাগের ভিত `ib` জোড়া — `$invoice` বিলের টেবিলের নাম (যেমন `i`)।
+     *
+     * ⓘ `$narrow` (ঐচ্ছিক) ভিতের বিলগুলো আরও ছাঁটে (`bi`-র উপর) — যেমন কেবল যে বিলের ফেরত বা বাতিল এই সময়ে পড়েছে,
+     * বিলের তারিখ যা-ই হোক ([[SettlementReport::lineRates()]], ২১ অক্টোবর ২০২৬)।
      */
-    public static function joinBasis(Builder $q, int $companyId, string $from, string $to, string $invoice = 'i'): Builder
+    public static function joinBasis(Builder $q, int $companyId, string $from, string $to, string $invoice = 'i', ?\Closure $narrow = null): Builder
     {
         return $q->leftJoinSub(
             DB::table('sal_invoice_lines as bl')
                 ->join('sal_invoices as bi', 'bi.id', '=', 'bl.sales_invoice_id')
                 ->where('bi.company_id', $companyId)
                 ->whereBetween('bi.trx_date', [$from, $to])
+                ->when($narrow !== null, $narrow)
                 ->groupBy('bl.sales_invoice_id')
                 ->selectRaw('bl.sales_invoice_id, SUM(bl.qty * bl.rate - bl.discount) as basis'),
             'ib',

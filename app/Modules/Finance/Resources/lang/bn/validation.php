@@ -31,7 +31,7 @@ return [
     'withdrawal_needs_a_name' => 'কে তুলছেন, সেটা লিখতে হবে',
     'withdrawal_must_be_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে',
     'withdrawal_already_posted' => ':no আগেই খাতায় বসেছে',
-    'withdrawal_awaits_approval' => ':no এখনো অনুমোদনের অপেক্ষায় — অনুমোদনের আগে টাকা যাবে না',
+    'withdrawal_awaits_approval' => ':no এখনো সইয়ের অপেক্ষায় — সইয়ের আগে টাকা যাবে না',
     'withdrawal_was_rejected' => ':no প্রত্যাখ্যান করা হয়েছে — "না" বলা অনুরোধের টাকা খাতায় বসে না। এখনো দরকার হলে নতুন করে অনুরোধ করুন',
     'withdrawal_over_cap' => 'মাসিক সীমা :cap — এই মাসে আর :left তোলা যাবে। বেশি লাগলে সীমাটা বদলান',
     'rental_closed' => 'চুক্তিটা শেষ হয়ে গেছে — শেষ হওয়া চুক্তিতে আর কিছু বসানো যায় না।',

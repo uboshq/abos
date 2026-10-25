@@ -269,7 +269,8 @@ class WhichProductActuallyPaysTest extends TestCase
         $this->actingAs($this->clerk())
             ->get(route('sales.report.show', ['slug' => 'by-product']))
             ->assertOk()
-            ->assertSee(__('sales::field.revenue'))
+            // ⓘ পণ্যের রিপোর্টের কলাম নিট বিক্রি (ভ্যাট ও ফেরত বাদে; a8d0c6536, ২১ অক্টোবর ২০২৬) — 'বিক্রয়' মেনুতেও থাকে, তাই চিহ্ন কলামের নিজের লেখা
+            ->assertSee(__('sales::field.net_sales'))
             ->assertDontSee(__('sales::field.cost'))
             ->assertDontSee(__('sales::field.gross_profit'))
             ->assertDontSee(__('sales::field.margin_percent'));
@@ -365,6 +366,8 @@ class WhichProductActuallyPaysTest extends TestCase
 
         // ফাইলটা সত্যিই বেরিয়েছে — নাহলে উপরের দাবিগুলো খালি স্ট্রিং
         // দেখেও পাশ করত, আর পরীক্ষাটা কিছুই প্রমাণ করত না
-        $this->assertStringContainsString(__('sales::field.revenue'), $csv);
+        // ⓘ কলামটা এখন নিট বিক্রি (a8d0c6536) — ব্র্যান্ডের দাবির একই সারাই (5989a206e)
+        $this->assertStringContainsString(__('sales::field.net_sales'), $csv,
+            'রপ্তানির ফাইলে বিক্রির কলামটাই নেই — তাহলে উপরের "ঢাকা" দাবিগুলো খালি ফাইল দেখে পাশ করছে।');
     }
 }

@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'sales' => 'Sales',
+    'sales' => 'Net sales',
+    'sales_parts' => 'Billed :billed − returned :returned',
     'collections' => 'Collections',
     'receivable' => 'Receivables',
     'payable' => 'Supplier payables',
@@ -14,7 +15,7 @@ return [
     'expenses' => 'Expenses',
     'cash_flow' => 'Net cash flow',
 
-    'sales_hint' => 'Posted bills, by bill date — the same figure as the sales dashboard',
+    'sales_hint' => 'Net sales: posted bills less posted sales returns, excl. VAT (returns by their own date) — the same figure as the sales dashboard',
     'collections_hint' => 'Posted collections and customer receipt vouchers — the same figure as the sales dashboard',
     'receivable_hint' => 'What customers owe in the books, as of today — the same figure as the accounts dashboard',
     'payable_hint' => 'What we owe suppliers in the books, as of today — the same figure as the accounts dashboard',

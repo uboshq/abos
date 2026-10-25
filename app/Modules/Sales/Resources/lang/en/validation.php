@@ -60,6 +60,8 @@ return [
     'edit_after_gate_pass' => ':no has passed the gate — only a return or a credit note now, with the owner\'s signature.',
     'edit_after_return' => ':no has a return or a credit note against it — it cannot be edited.',
     'edit_while_cancelling' => ':no has an open cancellation request (:cxl) — the bill cannot change before the owner decides.',
+    // ⛔ no edit of a bill in a closed month, nor onto a closed month's date — fe, 21 Oct 2026 (IAS 8; [[SaleEditor::assertEditable()]])
+    'edit_month_closed' => 'This month is closed — cancel the bill and make a new one',
     'edit_no_draft' => 'A confirmed sale does not go back to draft — press "Update".',
     'edit_no_new_money' => 'No new deposit while editing — take money on the collection page.',
     'edit_could_not_finish' => ':no could not be edited — nothing changed.',
@@ -130,7 +132,7 @@ return [
     'cheque_not_from_receipt' => 'This cheque was not taken on a receipt — its bounce is handled differently.',
     'no_cheques_in_hand_account' => 'This company has no "Cheques in Hand" account to hold the cheque.',
     'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
-    'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
+    'discount_rejected' => 'The discount was rejected. Lower it and confirm again.',
     'discount_no_signer' => 'Nobody is set to sign this discount — the discount approval flow is off or missing. By the rule of the owner, no discount goes through unsigned; switch the discount flow on in the approval settings.',
     'approver_unknown' => 'That email and password do not match.',
     'approver_not_allowed' => ':name cannot approve this discount — either they are not an approver, or they asked for it themselves.',

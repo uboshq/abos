@@ -135,6 +135,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryChallanConfirmAsksHowTheGoodsTravelTest::KNOWN',
         'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
+        // ⓘ চাহিদা: মালিকের বাদ দেওয়া শব্দ — পর্দার লেখায় থাকতেই পারবে না; ছাড় নয়, নিষেধের তালিকা (web-terms, fe ২১ অক্টোবর ২০২৬)
+        'TheOwnersWordsAreTheOnlyWordsTest::RETIRED',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
         'TheOtherNineLooksWereNotTouchedTest::AS_SHIPPED',
@@ -447,7 +449,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
      *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
      */
-    private const CEILING = 459;
+    // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
+    private const CEILING = 460;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

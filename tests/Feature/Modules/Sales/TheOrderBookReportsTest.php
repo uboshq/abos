@@ -35,6 +35,7 @@ use Tests\TestCase;
  */
 final class TheOrderBookReportsTest extends TestCase
 {
+    use HoldsAnOrderAsBeforeGap28;
     use RefreshDatabase;
 
     private Company $company;
@@ -137,7 +138,9 @@ final class TheOrderBookReportsTest extends TestCase
             'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
             'trx_date' => now()->toDateString(),
         ], [['product_id' => $this->biscuit->id, 'ordered_qty' => '10000', 'rate' => (string) $this->biscuit->sale_price]]);
-        $so = $orders->submit($so->fresh(['lines']));
+        // ⓘ ফাঁক ২৮: সীমা না কুলোলে জমাই ফেরে — আগে আটকে থাকা আদেশ তালিকায় থাকে, সেটাই এখানে
+        $this->assertRefusedAtSubmit(fn () => $orders->submit($so->fresh(['lines'])), $so);
+        $so = $this->heldAsBeforeGap28($so);
         $this->assertSame(SalesOrderStatus::CREDIT_HELD, $so->status, 'প্রস্তুতিটাই ভুল — আদেশ সীমায় আটকায়নি।');
 
         $rows = collect($this->book(SalesOrderBookReports::CREDIT_BLOCKED))->keyBy('document_no');

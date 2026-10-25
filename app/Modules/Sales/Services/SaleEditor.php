@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -30,6 +31,7 @@ use Illuminate\Validation\ValidationException;
  *
  * ── ⛔ কখন নয় (সমন্বয়কের অনুমোদিত শর্ত, ৩ অক্টোবর ২০২৬) ───────────────
  *   গেট পাস হয়ে গেছে · বিলের বিপরীতে ফেরত বা ক্রেডিট নোট আছে · কাউন্টারের বিক্রি নয় (এই পাতার বাইরের বিল)
+ *   বিলের মাস বন্ধ, বা নতুন তারিখের মাস বন্ধ — বিলটা বাতিল করে নতুন বিল (fe, ২১ অক্টোবর ২০২৬; IAS 8: বন্ধ মাসের অঙ্ক বদলায় না)
  * ⓘ আদায় হওয়া টাকা আটকায় না: রসিদ যেমন আছে থাকে; নতুন মোট কমলে বাড়তিটা খাতাতেই ক্রেতার অগ্রিম হয়।
  * ⚠️ সম্পাদনায় নতুন জমা নয় — টাকা আদায়ের পাতা থেকে; আর "খসড়া রাখুন" নয় — নিশ্চিত বিক্রি খসড়ায় ফেরে না।
  */
@@ -50,6 +52,15 @@ final class SaleEditor
 
         if ($invoice->status !== DocumentStatus::CONFIRMED) {
             throw ValidationException::withMessages(['edit' => __('sales::validation.edit_only_confirmed', $no)]);
+        }
+
+        /*
+         * ⛔ বন্ধ মাসের বিল সম্পাদনা নয় — fe, ২১ অক্টোবর ২০২৬ (IAS 8; [[AClosedMonthsBillIsNotEditedTest]])।
+         * ⓘ মাসের তালা একটাই নিয়ম ([[OpenPeriod::lockOn()]], খাতার ইঞ্জিন আর বাতিল-ইনভয়েস যা দেখে)। ⚠️ আগে উল্টানো বসত আজ, নতুন
+         * বিল আজকের তারিখে — বন্ধ মাসের বিক্রিটা চুপচাপ এ মাসে সরে যেত। বন্ধ মাসের ভুল বিলের পথ বাতিল-ইনভয়েস, তারপর নতুন বিল।
+         */
+        if (app(OpenPeriod::class)->lockOn($invoice->trx_date->format('Y-m-d')) !== null) {
+            throw ValidationException::withMessages(['edit' => __('sales::validation.edit_month_closed', $no)]);
         }
 
         if ($invoice->counter_screen === null) {
@@ -121,6 +132,16 @@ final class SaleEditor
 
         if (collect($data['deposits'] ?? [])->contains(fn ($row) => is_array($row) && bccomp($this->num($row['amount'] ?? '0'), '0', 4) > 0)) {
             throw ValidationException::withMessages(['edit' => __('sales::validation.edit_no_new_money')]);
+        }
+
+        /*
+         * ⛔ নতুন রূপের তারিখও খোলা মাসে — ফাঁকা তারিখ মানে আজ, কাউন্টারের নিজের নিয়মে ([[DirectSaleService::complete()]])।
+         * ⓘ পর্দা পুরনো তারিখ পাঠালে সেটাই বসত; বন্ধ মাসে পড়লে এখানেই থামে, কিছু উল্টানোর আগে (fe, ২১ অক্টোবর ২০২৬)।
+         */
+        $on = filled($data['trx_date'] ?? null) ? Carbon::parse((string) $data['trx_date']) : Carbon::today();
+
+        if (app(OpenPeriod::class)->lockOn($on->format('Y-m-d')) !== null) {
+            throw ValidationException::withMessages(['edit' => __('sales::validation.edit_month_closed', ['no' => $invoice->document_no])]);
         }
 
         return DB::transaction(function () use ($invoice, $data, $lines, $gifts) {
