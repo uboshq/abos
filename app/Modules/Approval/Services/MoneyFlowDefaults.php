@@ -271,7 +271,7 @@ final class MoneyFlowDefaults implements ProvisionsCompany
                     'threshold_amount' => null,
                     'remarks' => $this->words(
                         'approval::message.money_flow_default',
-                        'টাকার কাজ — প্রতিটা কাগজে বানানেওয়ালা ছাড়া আরেকজনের সই লাগে (স্বয়ংক্রিয়ভাবে বসানো)।',
+                        'টাকার কাজ — প্রতিটা কাগজে বানানেওয়ালা ছাড়া আরেকজনের অনুমোদন লাগে (স্বয়ংক্রিয়ভাবে বসানো)।',
                     ),
                     'is_active' => true,
                 ],

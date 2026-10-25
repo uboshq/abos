@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'nothing_held_here' => 'Invoice :no has no deposit waiting for approval.',
-    'deposit_still_waiting' => 'Deposit :no is not approved yet — the sale is confirmed only once it is signed.',
+    'deposit_still_waiting' => 'Deposit :no is not approved yet — the sale is confirmed only once it is approved.',
     'held_use_finish' => 'Invoice :no is waiting on a counter deposit approval — finish it with the "Approved, confirm the sale" button on the invoice page.',
     'held_no_edit' => 'Invoice :no is waiting on a deposit approval — it cannot be changed now.',
     'held_no_print' => 'Invoice :no is waiting on a deposit approval — it is not printed before that.',
@@ -57,7 +57,7 @@ return [
     // ⭐ নিশ্চিত বিক্রি গেট পাসের আগে সম্পাদনা — [[SaleEditor]] (মালিক, ২ অক্টোবর ২০২৬)
     'edit_only_confirmed' => 'Only a confirmed invoice (:no) is edited this way; open a draft from the counter.',
     'edit_only_counter' => ':no is not a counter sale — it cannot be edited on this page.',
-    'edit_after_gate_pass' => ':no has passed the gate — only a return or a credit note now, with the owner\'s signature.',
+    'edit_after_gate_pass' => ':no has passed the gate — only a return or a credit note now, with the owner\'s approval.',
     'edit_after_return' => ':no has a return or a credit note against it — it cannot be edited.',
     'edit_while_cancelling' => ':no has an open cancellation request (:cxl) — the bill cannot change before the owner decides.',
     // ⛔ no edit of a bill in a closed month, nor onto a closed month's date — fe, 21 Oct 2026 (IAS 8; [[SaleEditor::assertEditable()]])
@@ -65,7 +65,7 @@ return [
     'edit_no_draft' => 'A confirmed sale does not go back to draft — press "Update".',
     'edit_no_new_money' => 'No new deposit while editing — take money on the collection page.',
     'edit_could_not_finish' => ':no could not be edited — nothing changed.',
-    'edit_awaiting_signature' => 'the new version waits for a signature — it is posted under the same number on the last signature',
+    'edit_awaiting_signature' => 'the new version waits for an approval — it is posted under the same number on the last approval',
     'edited_after_confirm' => ':no edited after confirmation — earlier entries reversed',
     'edited_totals' => 'Total was :before, now :after',
     'unknown_product' => 'That product is not in this company\'s list.',
@@ -133,7 +133,7 @@ return [
     'no_cheques_in_hand_account' => 'This company has no "Cheques in Hand" account to hold the cheque.',
     'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
     'discount_rejected' => 'The discount was rejected. Lower it and confirm again.',
-    'discount_no_signer' => 'Nobody is set to sign this discount — the discount approval flow is off or missing. By the rule of the owner, no discount goes through unsigned; switch the discount flow on in the approval settings.',
+    'discount_no_signer' => 'Nobody is set to approve this discount — the discount approval flow is off or missing. By the rule of the owner, no discount goes through unsigned; switch the discount flow on in the approval settings.',
     'approver_unknown' => 'That email and password do not match.',
     'approver_not_allowed' => ':name cannot approve this discount — either they are not an approver, or they asked for it themselves.',
     'approver_too_many' => 'Too many failed tries. Try again in :seconds seconds.',
@@ -187,7 +187,7 @@ return [
     'return_free_over' => 'Line :line: only :room free :product was given on bill :no and has not come back yet.',
     'return_free_needs_bill' => 'Free goods come back only against the bill that gave them — choose the bill.',
     'invoice_has_live_return' => ':no has a confirmed return (:return) against it. Cancel the return first, then the bill — otherwise the returned part is reversed twice.',
-    'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
+    'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for an approval.',
     'scheme_target_unknown' => 'The chosen target was not found in this company. Pick it again from the list.',
     'scheme_target_mismatch' => 'The target came twice with two different values, so it is unclear which is meant. Reopen the page and pick the target again.',
     'target_unknown_staff' => 'One of the staff on the targets is not in this company. Reload the page and set them again.',

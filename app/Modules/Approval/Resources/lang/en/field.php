@@ -40,7 +40,7 @@ return [
     'where_money' => 'Where',
     'deposited_to' => 'Into: :place',
     'in_branch' => 'Branch: :branch',
-    'changed_after_request' => '⚠️ Amount changed after the signature was asked — asked for :amount',
+    'changed_after_request' => '⚠️ Amount changed after the approval was asked — asked for :amount',
 
     // Only people named in an active flow — the owner's rule, 22 September 2026.
     'forward_to' => 'Pass it to',
@@ -57,7 +57,7 @@ return [
     'waiting_count' => 'Waiting',
     'worst_days' => 'Oldest (days)',
     'reason_code' => 'Reason',
-    'min_approvals' => 'Signatures needed',
+    'min_approvals' => 'Approvals needed',
     'sla_hours' => 'Time limit (hours)',
     'warn_hours' => 'Warn after (hours)',
     'escalate_hours' => 'Escalate after (hours)',

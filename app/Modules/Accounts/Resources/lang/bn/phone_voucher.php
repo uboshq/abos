@@ -5,7 +5,7 @@ declare(strict_types=1);
 // ⭐ ফোনের ভাউচার — চার অবস্থার নাম (মালিক, ৭ অক্টোবর ২০২৬; [[VoucherApiController]])
 return [
     'state_draft' => 'খসড়া',
-    'state_awaiting' => 'সইয়ের অপেক্ষায়',
+    'state_awaiting' => 'অনুমোদনের অপেক্ষায়',
     'state_posted' => 'পোস্ট হয়েছে',
     'state_cancelled' => 'বাতিল',
     'edit_needs_network' => 'ফোন থেকে কেবল নতুন ভাউচার লেখা যায়। বদলাতে হলে নেট চালু করে ভাউচারের পাতা থেকে করুন।',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'state_draft' => 'Draft',
-    'state_awaiting' => 'Awaiting signature',
+    'state_awaiting' => 'Awaiting approval',
     'state_posted' => 'Posted',
     'state_cancelled' => 'Cancelled',
     'edit_needs_network' => 'Only new vouchers can be written offline. To change one, go online and use its page.',

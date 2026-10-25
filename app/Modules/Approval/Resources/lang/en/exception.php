@@ -9,13 +9,13 @@ return [
 
     'step' => 'Step :level',
     'waiting_since' => 'Waiting since :date',
-    'signed_on' => 'Signed on :date',
-    'passes_unsigned' => 'Going through with no signature at all',
+    'signed_on' => 'Approved on :date',
+    'passes_unsigned' => 'Going through with no approval at all',
 
     'kind' => [
         'no_escalation_target' => 'A time limit is set, but nobody is named to receive it',
         'sla_breached' => 'Past its time and still with nobody',
-        'changed_after_approval' => 'The paper changed after it was signed',
+        'changed_after_approval' => 'The paper changed after it was approved',
         'delegation_expired' => 'A delegation has run out',
         'condition_never_matches' => 'The condition names a field this work never sends',
         'no_flow' => 'Approval is asked for, and no flow exists',

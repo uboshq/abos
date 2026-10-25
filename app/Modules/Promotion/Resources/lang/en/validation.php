@@ -37,8 +37,8 @@ return [
     'budget_below_used' => ':used is already spent — the ceiling cannot go below it. '
         .'The page would show over 100% and that money cannot be taken back. To allow nothing more, set :used.',
 
-    'budget_raise_needs_signature' => 'A signed offer\'s budget cannot go above :ceiling — the signature was given on that amount. '
-        .'If more is needed, submit a new offer for a new signature. Lowering is allowed.',
+    'budget_raise_needs_signature' => 'An approved offer\'s budget cannot go above :ceiling — the approval was given on that amount. '
+        .'If more is needed, submit a new offer for a new approval. Lowering is allowed.',
 
     'gift_over_owed' => ':owed owed, :issued already given — no more than :left can go. '
         .'Giving more would send stock out as a gift no bill carries.',

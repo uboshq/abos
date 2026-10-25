@@ -33,8 +33,8 @@ return [
     'receive' => 'গ্রহণ করলাম',
     'new_count' => 'নতুন গণনা',
     'save_count' => 'গণনা সংরক্ষণ',
-    'approve_count' => 'সই দিন',
-    'approve_and_adjust' => 'সই দিন ও সমন্বয় করুন',
+    'approve_count' => 'অনুমোদন দিন',
+    'approve_and_adjust' => 'অনুমোদন দিন ও সমন্বয় করুন',
     'deactivate' => 'নিষ্ক্রিয় করুন',
     'activate' => 'সক্রিয় করুন',
     'new_loan' => 'নতুন ঋণ',
@@ -48,7 +48,7 @@ return [
 
     // মাস বন্ধ ও খোলা
     'close_month' => 'মাসটা বন্ধ করুন',
-    'reopen' => 'খুলুন',
+    'reopen' => 'আবার খুলুন',
 
     // তালিকার উপরের "+ নতুন …" বোতামগুলো
     'new_cheque' => 'নতুন চেক',

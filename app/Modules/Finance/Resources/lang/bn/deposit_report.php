@@ -33,11 +33,11 @@ return [
     'due_on' => 'কিস্তির দিন',
     'due' => 'দেয়',
     'paid' => 'দেওয়া',
-    'waiting' => 'সইয়ের অপেক্ষায়',
+    'waiting' => 'অনুমোদনের অপেক্ষায়',
     'outstanding' => 'বাকি',
     'overdue' => 'বকেয়া',
     'instalments_summary' => 'বকেয়া কিস্তি',
-    'instalments_text' => 'বকেয়া ৳:overdue (সইয়ের অপেক্ষায় ৳:waiting)',
+    'instalments_text' => 'বকেয়া ৳:overdue (অনুমোদনের অপেক্ষায় ৳:waiting)',
 
     // গ — ঘণ্টির খবর
     'notice_soon' => ':institution-এর :document — মেয়াদ এই সপ্তাহে',
@@ -61,7 +61,7 @@ return [
     'accrual_month' => 'কোন মাস',
     'accrual_run' => 'মাসের অর্জিত মুনাফা খাতায় বসান',
     'accrual_note' => 'মাসের শেষ দিনে বসে, পরের মাসের প্রথম দিনে নিজে উল্টায়; এক মাস একবারই।',
-    'accrual_done' => ':accrued জমায় মুনাফা বসল, :reversed আগের জমা উল্টাল, :held সইয়ের অপেক্ষায়।',
+    'accrual_done' => ':accrued জমায় মুনাফা বসল, :reversed আগের জমা উল্টাল, :held অনুমোদনের অপেক্ষায়।',
     'accrual_month_not_over' => 'মাসটা এখনো শেষ হয়নি — শেষ হওয়া মাসই কেবল বসানো যায়।',
     'accrual_month_closed' => ':month বন্ধ — বন্ধ মাসে অর্জিত মুনাফা বসে না। খাতায় কিছুই বসেনি।',
     'accrual_narration' => ':month-এর অর্জিত মুনাফা — :deposit (:institution)',

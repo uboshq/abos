@@ -19,10 +19,10 @@ return [
     'rent_due' => 'দেয় ভাড়া',
     'paid_cash' => 'নগদে দেওয়া',
     'from_deposit' => 'জামানত থেকে',
-    'waiting' => 'সইয়ের অপেক্ষায়',
+    'waiting' => 'অনুমোদনের অপেক্ষায়',
     'outstanding' => 'বাকি',
     'schedule_summary' => 'বাকি ভাড়া',
-    'schedule_text' => 'দেয় ৳:due, বাকি ৳:outstanding (সইয়ের অপেক্ষায় ৳:waiting)',
+    'schedule_text' => 'দেয় ৳:due, বাকি ৳:outstanding (অনুমোদনের অপেক্ষায় ৳:waiting)',
 
     // খ — অগ্রিম সমন্বয়
     'advance_short' => 'অগ্রিম সমন্বয়',

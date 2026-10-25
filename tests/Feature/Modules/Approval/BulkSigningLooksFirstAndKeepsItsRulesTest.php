@@ -116,7 +116,7 @@ final class BulkSigningLooksFirstAndKeepsItsRulesTest extends TestCase
         $review = app(BulkApproval::class)->review([(int) $this->paper['small']->id], $this->signer->fresh());
         $this->assertSame([], $review['sign'], '⛔ সীমা ঠিক না থাকা সইদাতা একসাথে সই দিতে পারছেন।');
         $this->assertSame('no_limit', $review['skip'][0]['why'] ?? null);
-        $this->assertSame('আপনার টাকার সীমা ঠিক করা নেই — একটা একটা করে সই দিন', __('approval::message.bulk_why_no_limit', [], 'bn'));
+        $this->assertSame('আপনার টাকার সীমা ঠিক করা নেই — একটা একটা করে অনুমোদন দিন', __('approval::message.bulk_why_no_limit', [], 'bn'));
 
         CompanyContext::forCompany($this->company->id, fn () => $this->signer->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE));
         app(PermissionRegistrar::class)->forgetCachedPermissions();

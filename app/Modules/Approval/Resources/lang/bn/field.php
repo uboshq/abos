@@ -27,7 +27,7 @@ return [
     'reason' => 'কারণ',
     'status' => 'অবস্থা',
     'level' => 'ধাপ',
-    'approver' => 'সইদাতা',
+    'approver' => 'অনুমোদনকারী',
     'approver_type' => 'ধরন',
     'requires_all' => 'সবার সম্মতি লাগবে',
     'remarks' => 'মন্তব্য',
@@ -41,7 +41,7 @@ return [
     'where_money' => 'কোথায়',
     'deposited_to' => 'জমা: :place',
     'in_branch' => 'শাখা: :branch',
-    'changed_after_request' => '⚠️ সই চাওয়ার পরে অঙ্ক বদলেছে — চাওয়া হয়েছিল :amount',
+    'changed_after_request' => '⚠️ অনুমোদন চাওয়ার পরে অঙ্ক বদলেছে — চাওয়া হয়েছিল :amount',
 
     // ⓘ কেবল ছকে নাম থাকা সইকারীরা — মালিকের সিদ্ধান্ত, ২২ সেপ্টেম্বর ২০২৬।
     'forward_to' => 'কার কাছে পাঠাবেন',
@@ -58,7 +58,7 @@ return [
     'waiting_count' => 'অপেক্ষায়',
     'worst_days' => 'সবচেয়ে পুরনো (দিন)',
     'reason_code' => 'কারণ',
-    'min_approvals' => 'কয়জনের সই',
+    'min_approvals' => 'কয়জনের অনুমোদন',
     'sla_hours' => 'সময়সীমা (ঘণ্টা)',
     'warn_hours' => 'সতর্ক (ঘণ্টা)',
     'escalate_hours' => 'উপরে পাঠাও (ঘণ্টা)',

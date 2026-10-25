@@ -205,7 +205,7 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
         }
 
         $this->assertSame('সীমায় আটকে', __('sales::order_status.state.credit_held', [], 'bn'));
-        $this->assertSame('সইয়ের অপেক্ষায়', __('sales::order_status.state.awaiting_approval', [], 'bn'));
+        $this->assertSame('অনুমোদনের অপেক্ষায়', __('sales::order_status.state.awaiting_approval', [], 'bn'));
 
         $history = collect($this->get(route('sales.order.index', ['tab' => OrderTracking::LIST_HISTORY]))->viewData('orders')->items())->pluck('id')->all();
         foreach (S::FINISHED as $status) {

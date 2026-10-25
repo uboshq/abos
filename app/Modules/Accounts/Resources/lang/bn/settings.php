@@ -62,7 +62,7 @@ return [
         'expense_claim' => 'খরচের দাবি',
         'petty_cash' => 'পেটি ক্যাশ',
         'roll_receipt' => 'রোল রসিদ',
-        'approval_trail' => 'সইয়ের ধারাসহ',
+        'approval_trail' => 'অনুমোদনের ধারাসহ',
         'bilingual' => 'দ্বিভাষিক',
         'posting_report' => 'পোস্টিং প্রতিবেদন',
         'premium_paid' => 'প্রিমিয়াম পরিশোধিত',

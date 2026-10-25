@@ -17,7 +17,7 @@ declare(strict_types=1);
  */
 return [
     'requisition_waiting' => 'অপেক্ষায়',
-    'requisition_approved' => 'মঞ্জুর',
+    'requisition_approved' => 'অনুমোদিত',
     'requisition_ordered' => 'আদেশ হয়েছে',
     'requisition_cancelled' => 'বাতিল',
     'rfq_draft' => 'পাঠানো হয়নি',

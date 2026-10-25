@@ -30,7 +30,7 @@ return [
     'new' => 'After',
     'who' => 'Who',
     'reason' => 'Reason',
-    'signature' => 'Signature',
+    'signature' => 'Approval',
     'credit_blocked' => 'Credit blocked',
     'credit_unblocked' => 'Block released',
     'decisions' => 'Latest wall decisions',

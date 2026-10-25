@@ -39,7 +39,7 @@ return [
     'delivered' => 'বুঝিয়ে দেওয়া হয়েছে',
     'returned' => 'ফেরত এসেছে',
     'short' => 'আংশিক ফেরত',
-    'settle' => 'লিখুন',
+    'settle' => 'নিষ্পত্তি করুন',
     'on_the_road' => 'পথে',
     'on_the_road_first' => 'পথে থাকাগুলো আগে',
     'lines_count' => ':count টি চালান',

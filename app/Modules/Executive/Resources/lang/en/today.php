@@ -35,8 +35,8 @@ return [
     'open' => 'Open :what',
 
     'alerts_title' => 'Alerts',
-    'waiting_title' => 'Waiting for signature',
-    'nothing_waiting' => 'No paper is waiting for a signature.',
+    'waiting_title' => 'Waiting for approval',
+    'nothing_waiting' => 'No paper is waiting for an approval.',
     'trend_title' => 'Sales vs collections, last :days days',
     'top_customers' => 'Top 5 customers this month',
     'top_products' => 'Top 5 products this month',
