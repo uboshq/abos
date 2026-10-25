@@ -1816,6 +1816,8 @@ final class VoucherService
 
         $paper = (new Voucher)->forceFill([
             'type' => $header['type'] ?? null,
+            // ⛔ পোস্টের একই শাখা — না দিলে পক্ষের শাখার পাহারা ০ শাখার সাথে মেলাত, আর শাখাওয়ালা প্রতিটা পক্ষের প্রিভিউ ফিরত (লাইভে ধরা, ২৫ অক্টোবর ২০২৬)
+            'branch_id' => $branchId,
             'party_type' => $header['party_type'] ?? null,
             'party_id' => $header['party_id'] ?? null,
             'narration' => $header['narration'] ?? null,
