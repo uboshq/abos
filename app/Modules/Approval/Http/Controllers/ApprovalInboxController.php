@@ -499,7 +499,16 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $canDecide = $this->engine->canDecide($entry, $user);
         $auditing = $user->can('approval.report');
 
-        abort_unless($mine || $canDecide || $auditing, 403);
+        /*
+         * ⭐ চতুর্থ দল — খবর যাঁকে এই পাতায় পাঠিয়েছে (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬: "খবর যাঁকে কাগজে পাঠায় তিনি সেটা খোলেন;
+         * না পারলে কারণটা বাংলায় দেখেন — খালি ৪০৩ কখনো নয়")। ⛔ আগে উপরে-পাঠানোর গন্তব্য যাঁর সীমা ছোট, মনে-করানো পাওয়া
+         * সইকারী যাঁর কাগজ অন্যজনের হাতে, বা সীমার বাইরের সইকারী খবর চাপলেই ৪০৩ পেতেন — কেন, কেউ বলত না।
+         * ⓘ পড়ার ছাড় কেবল **নিজের খবরে** — `approval.view` থাকলেই নয়; আর সই দেওয়া আগের মতোই কেবল [[ApprovalEngine::canDecide()]]।
+         * কাগজটা (`$document`) এঁরা নিরীক্ষকের মতোই দেখেন না — রেকর্ড আর "কেন পারছেন না", এটুকুই।
+         */
+        $sentHere = ! ($mine || $canDecide || $auditing) && $this->sentHere($entry, $user);
+
+        abort_unless($mine || $canDecide || $auditing || $sentHere, 403);
 
         $mayReadDocument = $mine || $canDecide;
 
@@ -663,6 +672,22 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⭐ এই মানুষের ঘণ্টায় এমন খবর আছে যা এই অনুরোধের পাতায় পাঠায় — মনে করানো, উপরে পাঠানো, অনুরোধের ফল, নিয়মের যোগ করা
+     * প্রাপক, যে-ই হোক।
+     *
+     * ⓘ ঠিকানার শেষটা মিলিয়ে (`/approvals/{id}`), পুরো ঠিকানা নয় — খবর লেখে কখনো সময়সূচি (APP_URL), কখনো ব্রাউজারের অনুরোধ
+     * (তার নিজের ঠিকানা); দুইটার শুরু আলাদা হতে পারে। ⓘ খবর নিজের আর দেখার মতো ([[NotificationService::mine()]] — শাখার দেয়ালসহ)।
+     */
+    private function sentHere(Approval $approval, User $user): bool
+    {
+        $path = route('approval.inbox.show', $approval->id, false);
+
+        return app(\App\Core\Services\NotificationService::class)->mine($user)
+            ->where('url', 'like', '%'.$path)
+            ->exists();
+    }
+
+    /**
      * ⭐ সই দিতে পারছেন না — তিনটা কারণের মধ্যে কোনটায়।
      *
      * ── ⚠️ ক্রমটা গুরুত্বপূর্ণ ──────────────────────────────
@@ -683,9 +708,22 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             return __('approval::message.own_request');
         }
 
-        $atThisLevel = $this->engine->stepsFor($approval)
-            ->where('level', (int) $approval->current_level)
-            ->contains(fn ($step) => $step->allows($user));
+        /*
+         * ⭐ কাগজটা অন্যজনের হাতে দেওয়া (`assigned_to`) — তখন ধাপের সইকারীরাও সই দেন না, যতক্ষণ না ফেরত আসে
+         * ([[ApprovalEngine::canDecide()]])। ⛔ আগে এঁরা "এই স্তরে ছকে আপনি নেই" পড়তেন — মিথ্যা: ছকে আছেন, কাগজটা অন্যের কাছে।
+         */
+        if ($approval->assigned_to !== null && (int) $approval->assigned_to !== (int) $user->id) {
+            return __('approval::message.forwarded_to_other', [
+                'name' => (string) ($approval->assignee?->name ?? '—'),
+            ]);
+        }
+
+        // ⓘ পালা যাঁর — ধাপের সইকারী, হাতে দেওয়া কাগজের মানুষ, বা উপরে-পাঠানোর গন্তব্য; সীমার কথা কেবল এঁদেরই বলা হয়
+        $atThisLevel = (int) $approval->assigned_to === (int) $user->id
+            || $this->engine->escalatedHere($approval, $user)
+            || $this->engine->stepsFor($approval)
+                ->where('level', (int) $approval->current_level)
+                ->contains(fn ($step) => $step->allows($user));
 
         if ($atThisLevel && ! app(AuthorityService::class)->allows($user, $approval)) {
             return __('approval::message.beyond_your_authority');

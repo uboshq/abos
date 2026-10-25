@@ -381,9 +381,15 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
             this.pickedType = String(bill.against_type);
             this.pickedId = String(bill.id);
 
-            const amount = this.$root.closest('form')?.querySelector('[name="amount"]');
+            /*
+             * ⓘ টাকার ঘর দুই ভাগে (x-ui.field type="money", ২৪ অক্টোবর ২০২৬) — লেখা যায় দেখানোর ঘরে, পাঠানোর ঘর লুকানো আর কেবল
+             * মান পড়ে। ⛔ লুকানো ঘরে বসালে পর্দার অঙ্ক বদলাত না, আর পরের টিকে Alpine সেটা মুছে দিত। পুরনো পাতায় নামের ঘরটাই।
+             */
+            const form = this.$root.closest('form');
+            const sent = form?.querySelector('[name="amount"]');
+            const amount = form?.querySelector('[data-money-shown="amount"]') ?? sent;
 
-            if (amount && String(amount.value || '').trim() === '') {
+            if (amount && String(sent?.value ?? amount.value ?? '').trim() === '') {
                 amount.value = Number(bill.outstanding).toFixed(2);
                 amount.dispatchEvent(new Event('input', { bubbles: true }));
             }

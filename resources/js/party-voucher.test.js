@@ -323,6 +323,21 @@ describe('partyVoucher — কোন বিলের বিপরীতে', () 
         expect(input.value).toBe('250.00')
     })
 
+    // ⓘ ২৪ অক্টোবর ২০২৬ থেকে টাকার ঘর দুই ভাগে (x-ui.field type="money") — লেখা যায় দেখানোর ঘরে, পাঠানোর ঘর লুকানো
+    it('দুই-ভাগের টাকার ঘরে বিলের বাকি বসে দেখানোর ঘরে — লুকানো পাঠানোর ঘরে সরাসরি নয়', () => {
+        const shown = { value: '', dispatchEvent: vi.fn() }
+        const sent = { value: '', dispatchEvent: vi.fn() }
+        const box = make()
+        box.$root = { closest: () => ({ querySelector: (q) => (q === '[data-money-shown="amount"]' ? shown : (q === '[name="amount"]' ? sent : null)) }) }
+        box.bills = [bill]
+
+        box.pick(bill)
+
+        expect(shown.value, '⛔ বিলের বাকি দেখানোর ঘরে বসল না — পর্দার অঙ্ক বদলাত না').toBe('250.00')
+        expect(shown.dispatchEvent, '⛔ দেখানোর ঘর জানল না যে অঙ্ক বসেছে — পর্দার মান বাসি থাকত').toHaveBeenCalled()
+        expect(sent.value, '⛔ লুকানো পাঠানোর ঘরে সরাসরি বসল — পরের টিকে Alpine মুছে দিত').toBe('')
+    })
+
     it('টাকার ঘরে আগে থেকে অঙ্ক থাকলে বদলায় না — আংশিক টাকা', () => {
         const { box, input } = withAmount('100')
 

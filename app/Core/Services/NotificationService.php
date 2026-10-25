@@ -25,6 +25,7 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -289,8 +290,7 @@ final class NotificationService
             'title' => mb_substr($title, 0, 191),
             'body' => $body === null ? null : mb_substr($body, 0, 500),
             'url' => $url,
-            'subject_type' => $about instanceof Drillable ? $about::drillSourceType() : null,
-            'subject_id' => $about instanceof Drillable ? (int) $about->getKey() : null,
+            ...$this->subjectOf($about),
             'actor_id' => Actor::userId(),
             // ⭐ ধাপ ৩
             'template_version_id' => $template?->id,
@@ -309,6 +309,31 @@ final class NotificationService
             ['company_id' => $values['company_id'], 'idempotency_key' => mb_substr($key, 0, 191)],
             $values,
         );
+    }
+
+    /**
+     * ⭐ খবরের কাগজ — খোঁজা যায় এমন কাগজের ([[Drillable]]) ড্রিলের নাম; বাকি কাগজের (ডকুমেন্ট, বীমা পলিসি) মডেলের নিজের নাম
+     * (fe, ২৪ অক্টোবর ২০২৬: "কাগজটা আর নেই")।
+     *
+     * ⓘ ড্রিল-ছাড়া কাগজের নামটা কেবল খোলার আগে "কাগজটা এখনো আছে কি" দেখার জন্য ([[whyClosed()]]) — ড্রিলের তালিকায় ওঠে না,
+     * তাই খোঁজ, ফোনের সিঙ্ক বা ফোনের `paper.type`-এ যায় না ([[PhoneNoticeTarget]] কেবল ড্রিলের নাম বলে)। ⚠️ ঘরটা ৬৪ অক্ষরের;
+     * নাম তার চেয়ে লম্বা হলে কাগজ বসে না (আগের মতো) — ব্যবসার লেনদেনের ভিতরে খবর লিখতে গিয়ে লেনদেন ভাঙা চলে না।
+     *
+     * @return array{subject_type: ?string, subject_id: ?int}
+     */
+    private function subjectOf(?Model $about): array
+    {
+        $type = match (true) {
+            $about instanceof Drillable => $about::drillSourceType(),
+            $about !== null => $about->getMorphClass(),
+            default => null,
+        };
+
+        if ($type === null || mb_strlen($type) > 64 || $about?->getKey() === null) {
+            return ['subject_type' => null, 'subject_id' => null];
+        }
+
+        return ['subject_type' => $type, 'subject_id' => (int) $about->getKey()];
     }
 
     /**
@@ -550,34 +575,83 @@ final class NotificationService
      */
     public function mayOpen(Notification $notification, User $user): bool
     {
+        return $this->whyClosed($notification, $user) === null;
+    }
+
+    /** কাগজটা আর নেই — মোছা হয়েছে (নরম মোছাও) */
+    public const GONE = 'gone';
+
+    /** কাগজ আছে, কিন্তু প্রাপকের নাগালে নেই (বা খবরটাই অন্যের) */
+    public const OUT_OF_REACH = 'reach';
+
+    /** মাথায় বাছা শাখার ছাঁকনি — খোলার প্রশ্নে খাটে না, নাগাল দেখা হয় কাগজের নিজের শাখা ধরে */
+    private const HEADER_SCOPES = ['user-branch', 'viewed-branch'];
+
+    /**
+     * ⭐ খবরটা কেন খোলে না — `null` মানে খোলে; নয়তো [[GONE]] বা [[OUT_OF_REACH]] (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬: "খবর যাঁকে কাগজে
+     * পাঠায় তিনি সেটা খোলেন; না পারলে কারণটা বাংলায় দেখেন — খালি ৪০৩/৪০৪ কখনো নয়")।
+     *
+     * ⓘ "নেই" আর "নাগালে নেই" আলাদা: মুছে যাওয়া কাগজের খবরে "অনুমতি নেই" বললে মানুষ প্রশাসকের কাছে অনুমতি চাইতে যান — অথচ
+     * খোলার মতো কিছুই নেই। ⓘ "নেই" বলা হয় কেবল যখন কোম্পানির দেয়াল আর মোছার নিয়ম বাদে কোনো ছাঁকনি ছাড়াও কাগজটা পাওয়া যায় না;
+     * কাগজের নিজের অন্য দেয়ালে ঢাকা পড়লে সেটা "নাগালে নেই", আগের মতো।
+     */
+    public function whyClosed(Notification $notification, User $user): ?string
+    {
         if ($notification->user_id !== $user->id) {
-            return false;
+            return self::OUT_OF_REACH;
         }
 
         $scope = app(DataScope::class);
 
         if (! $scope->allows($user, UserDataScope::BRANCH, $notification->branch_id === null ? null : (int) $notification->branch_id)) {
-            return false;
+            return self::OUT_OF_REACH;
         }
 
         if ($notification->subject_type === null || $notification->subject_id === null) {
-            return true;
+            return null;
         }
 
-        $class = app(DrillResolver::class)->map()[$notification->subject_type] ?? null;
+        $type = (string) $notification->subject_type;
+        $drill = app(DrillResolver::class)->map()[$type] ?? null;
+        // ⓘ ড্রিল-ছাড়া কাগজ — খবরে মডেলের নিজের নাম ([[subjectOf()]])
+        $class = $drill ?? (is_a($type, Model::class, true) ? $type : null);
 
         if ($class === null) {
-            return true;
+            return null;
         }
 
-        $paper = $class::query()->withoutGlobalScope('user-branch')->find($notification->subject_id);
+        $id = (int) $notification->subject_id;
+        $paper = $drill === null ? null : $drill::query()->withoutGlobalScopes(self::HEADER_SCOPES)->find($id);
 
         if ($paper === null) {
-            return false;
+            $paper = $this->bare($class)->find($id);
+
+            if ($paper === null) {
+                return self::GONE;
+            }
+
+            // ⓘ খোঁজা যায় এমন কাগজ নিজের অন্য দেয়ালে ঢাকা — আছে, কিন্তু এই মানুষের জন্য নয়
+            if ($drill !== null) {
+                return self::OUT_OF_REACH;
+            }
         }
 
         $branch = array_key_exists('branch_id', $paper->getAttributes()) ? $paper->getAttribute('branch_id') : null;
 
-        return $scope->allows($user, UserDataScope::BRANCH, $branch === null ? null : (int) $branch);
+        return $scope->allows($user, UserDataScope::BRANCH, $branch === null ? null : (int) $branch) ? null : self::OUT_OF_REACH;
+    }
+
+    /**
+     * কাগজটা আছে কি না দেখার খোঁজ — কোম্পানির দেয়াল আর মোছার নিয়ম থাকে, বাকি সব ছাঁকনি (শাখা, গুদাম, গোপনীয়তা) সরে।
+     *
+     * @param  class-string<Model>  $class
+     * @return Builder<Model>
+     */
+    private function bare(string $class): Builder
+    {
+        $query = $class::query();
+        $others = array_diff(array_keys($query->getModel()->getGlobalScopes()), ['company', SoftDeletingScope::class]);
+
+        return $query->withoutGlobalScopes(array_values($others));
     }
 }

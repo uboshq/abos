@@ -246,7 +246,12 @@ final class DocumentNotices
 
             $url ??= $document !== null ? route('documents.show', $document) : null;
 
-            if ($this->notifications->send($user, $type, $title, $body, $url) !== null) {
+            /*
+             * ⛔ কোন কাগজের খবর (২৪ অক্টোবর ২০২৬): আগে খবরে কাগজ বসত না, তাই খবরের শাখা খালি — শাখায় আটকানো মানুষের ঘণ্টাতেও
+             * উঠত, আর খোলার সময় [[NotificationService::mayOpen()]] কিছুই দেখত না। এখন কাগজের শাখা খবরে বসে, আর খোলার আগে
+             * সেটা প্রাপকের নাগালে কি না দেখা হয়।
+             */
+            if ($this->notifications->send($user, $type, $title, $body, $url, about: $document) !== null) {
                 $sent++;
             }
         }

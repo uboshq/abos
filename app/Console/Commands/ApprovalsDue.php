@@ -167,7 +167,8 @@ final class ApprovalsDue extends Command
                 'approval.reminder',
                 __('core.notify.approval_reminder', ['document' => app(ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
-                Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+                // ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় — সইকারী আর উপরে-পাঠানোর গন্তব্য সেখানে সই দেন ([[ApprovalEngine::canDecide()]])
+                Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':reminder:'.$approval->current_level,
                 about: $approval->approvable instanceof Model ? $approval->approvable : null,
@@ -209,7 +210,8 @@ final class ApprovalsDue extends Command
                 'approval.escalated',
                 __('core.notify.approval_escalated', ['document' => app(ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
-                Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+                // ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় — সইকারী আর উপরে-পাঠানোর গন্তব্য সেখানে সই দেন ([[ApprovalEngine::canDecide()]])
+                Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':escalated:'.$approval->current_level,
                 about: $approval->approvable instanceof Model ? $approval->approvable : null,

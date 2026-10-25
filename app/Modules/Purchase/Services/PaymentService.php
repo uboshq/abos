@@ -132,7 +132,7 @@ final class PaymentService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null, $data['instrument'] ?? null)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
                 ...$this->methodFields($data),
@@ -184,7 +184,7 @@ final class PaymentService
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
             $payment->update([
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id, $data['instrument'] ?? $payment->instrument)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $this->money($data['amount'] ?? $payment->amount),
                 ...$this->methodFields($data),
@@ -931,7 +931,7 @@ final class PaymentService
         }
     }
 
-    private function resolveMoneyAccount(mixed $accountId): Account
+    private function resolveMoneyAccount(mixed $accountId, mixed $method = null): Account
     {
         $account = blank($accountId)
             ? $this->tills->ensurePrimaryTill()->account
@@ -983,6 +983,13 @@ final class PaymentService
                     : __('accounts::validation.no_till_of_your_own'),
             ]);
         }
+
+        /*
+         * ⛔ পদ্ধতি আর খাত এক ধরনের — "নগদ" বেছে বিকাশের খাত, বা "MFS" বেছে ব্যাংক নয় (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দা
+         * কেবল মিলে যাওয়া খাত দেখায় ([[components.money.method]]); এখানে ফোন, পুরনো ফর্ম আর হাতে-বানানো ডাকের জন্য। ভাউচারের একই
+         * প্রশ্ন [[VoucherService::assertTheWayMatchesTheAccount()]]-এ, নিয়মের তালিকা একটাই ([[MoneyMethod::KIND_OF]])।
+         */
+        MoneyMethod::assertFits(is_string($method) ? $method : null, $account->money_kind, $account->label());
 
         return $account;
     }

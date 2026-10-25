@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
@@ -37,6 +38,7 @@ class PurchaseOrder extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
+    use OpensInReach; // ⭐ নোটিফিকেশন/সইয়ের লিংক নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬)
     use ScopedToUserBranch;
     use SoftDeletes;
 

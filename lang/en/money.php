@@ -38,7 +38,19 @@ return [
         'head_mfs' => 'Mobile banking charges',
     ],
 
+    'kind' => [
+        'cash' => 'cash',
+        'mfs' => 'MFS',
+        'bank' => 'bank',
+    ],
+
+    'account' => [
+        'none' => 'This company has no :method account — ask the accountant.',
+        'cleared' => '":account" is not a :method account, so it was taken off.',
+    ],
+
     'validation' => [
+        'account_not_for_method' => '":account" is not a :method account — with :method only :kind accounts can be used.',
         'reference_needed' => 'Posting by ":method" needs its reference — it is how the bank statement is matched and the same money is never taken twice.',
     ],
 

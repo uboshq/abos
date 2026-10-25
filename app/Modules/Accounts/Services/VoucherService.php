@@ -388,6 +388,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -985,6 +986,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
         // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])
@@ -1728,6 +1730,24 @@ final class VoucherService
      * এই ঘরে পেমেন্ট-পদ্ধতির **কোড** বসায় (যেমন `CHQ`, `BKASH`) — ওগুলো এই
      * তালিকায় নেই, তাই কাউন্টারের পথ অপরিবর্তিত।
      */
+    /**
+     * ⛔ সরবরাহকারীর ব্যাংকে ট্রান্সফার বা নগদ জমা — তাঁর ব্যাংক তথ্য দুই হাতে সই-পাওয়া না হলে নয় (a4, ২৪ অক্টোবর ২০২৬, লাইভে ধরা)।
+     *
+     * ⓘ সরবরাহকারী-পরিশোধ এটা আগে থেকেই আটকাত; ভাউচারের পরিশোধ আর খরচ দিয়ে — ওয়েবে বা ফোনে — একই টাকা সই-না-পাওয়া হিসাবে চলে
+     * যেত। নিয়ম সরবরাহকারীর ([[PayeeBankGuard]] → SupplierBank), এখানে কেবল ডাক: টাকা যেখানে বেরোয় (পরিশোধ, খরচ), আর পোস্টের
+     * একই পথে, যা ওয়েব, ফোন আর সংশোধনের পরে আবার-পোস্ট সবাই নেয়।
+     */
+    private function assertPayeeBankIsSigned(Voucher $voucher): void
+    {
+        if (! in_array($voucher->type, [Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            return;
+        }
+
+        app(\App\Core\Contracts\PayeeBankGuard::class)->assertBankPayable(
+            $voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, $voucher->instrument,
+        );
+    }
+
     private function assertTheWayMatchesTheAccount(Voucher $voucher): void
     {
         $way = (string) $voucher->instrument;
@@ -1796,6 +1816,8 @@ final class VoucherService
 
         $paper = (new Voucher)->forceFill([
             'type' => $header['type'] ?? null,
+            // ⛔ পোস্টের একই শাখা — না দিলে পক্ষের শাখার পাহারা ০ শাখার সাথে মেলাত, আর শাখাওয়ালা প্রতিটা পক্ষের প্রিভিউ ফিরত (লাইভে ধরা, ২৫ অক্টোবর ২০২৬)
+            'branch_id' => $branchId,
             'party_type' => $header['party_type'] ?? null,
             'party_id' => $header['party_id'] ?? null,
             'narration' => $header['narration'] ?? null,
@@ -1828,6 +1850,7 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($paper);
         $this->assertCashLandsInOwnTill($paper);
         $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPayeeBankIsSigned($paper);
         $this->assertPartyInItsBranch($paper, $ownable);
         $this->bankReferenceAccount($paper);
 
@@ -1961,6 +1984,18 @@ final class VoucherService
             if (! $account->is_active) {
                 throw ValidationException::withMessages([
                     'lines' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            /*
+             * ⛔ খরচের ভাউচারে কেবল-সফটওয়্যারের খাত নয় — বিক্রিত মালের খরচ, অবচয়, দেওয়া ছাড় … ([[StandardChart::ENGINE_ONLY_EXPENSES]];
+             * মালিক, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দার তালিকা থেকে সরানো হয়েছে; এখানে ফোন, পুরনো খসড়া আর হাতে-বানানো ডাকের জন্য।
+             * ⓘ কেবল খরচের দিক (ডেবিট) — জাবেদায় হিসাবরক্ষকের সংশোধন খোলা।
+             */
+            if ($voucher->type === Voucher::EXPENSE && bccomp((string) $line->debit, '0', 4) > 0
+                && app(StandardChart::class)->isEngineOnlyExpense($account)) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.engine_only_expense', ['name' => $account->label()]),
                 ]);
             }
 
