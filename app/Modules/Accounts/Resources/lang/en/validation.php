@@ -207,6 +207,7 @@ return [
     // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
     'difference_needs_kind' => 'Choose the kind of difference — discount or rounding.',
     'difference_only_money' => 'A discount or rounding belongs only on a receipt or a payment voucher.',
+    'difference_over_due' => 'The difference is too large — what this paper settles is due ৳:due; after the money and the withheld tax the difference can be at most ৳:room. A discount or rounding never turns the party\'s balance to the other side.',
     'difference_over_limit' => 'Rounding ৳:amount is above the limit of ৳:limit. Give a difference this large as a discount (the owner signs it), or correct the amount.',
     'difference_head_missing' => 'Account :code is missing from the chart, holds another meaning, or cannot be posted to — the discount or rounding could not be booked.',
     'difference_needs_party_account' => "The party's account line was not found — there is no telling whose account the discount or rounding belongs to.",

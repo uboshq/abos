@@ -46,7 +46,7 @@ final class PostTheVoucherOnTheLastSignature
          */
         // ⭐ ভাউচারের নিজের সই, বা তার কম-বেশির মালিকের সই (`sales.discount`; cb-ma-5) — দুটোই শেষ হলে নিজে পোস্ট
         $module = $event->payload['module'] ?? null;
-        $difference = $module === VoucherApproval::DIFFERENCE_MODULE && ($event->payload['action'] ?? null) === VoucherApproval::DIFFERENCE_ACTION;
+        $difference = $module === \App\Modules\Accounts\Support\DifferenceSignature::MODULE && ($event->payload['action'] ?? null) === \App\Modules\Accounts\Support\DifferenceSignature::ACTION;
 
         if ($module !== VoucherApproval::MODULE && ! $difference) {
             return;

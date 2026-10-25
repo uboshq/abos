@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -775,6 +776,38 @@ class VoucherRequest extends FormRequest
                 if ($kind === 'rounding' && bccomp($amount, $limit, 4) > 0) {
                     $validator->errors()->add('difference.amount', __('accounts::validation.difference_over_limit', [
                         'amount' => Money::format($amount), 'limit' => Money::format($limit),
+                    ]));
+
+                    return;
+                }
+
+                /*
+                 * ⛔ হিসাবের সীমা — কম-বেশি যা মেটায় তার বেশি নয় (fe, ২৫ অক্টোবর ২০২৬; শতাংশের সীমা নেই, প্রতিটা ছাড়ে মালিকের সই-ই সীমা):
+                 * পক্ষের খাত যতটা নড়ে (টাকা + AIT + VDS) আর কম-বেশি মিলে বাছা বিলগুলোর বাকি ছাড়ায় না; বিল না বাছলে পক্ষের মোট বকেয়া
+                 * (মাথার অঙ্কের একই উৎস, [[AccountsFacts::dueFrom()]])। ⓘ ছাড় দিয়ে পক্ষের স্থিতি কখনো উল্টো দিকে যায় না।
+                 * ⓘ বিলের বাকি বিলের মালিক মডিউলের একমাত্র নিয়মে (চুক্তির `outstanding` = dueAmount()/dueSql())।
+                 */
+                $moved = bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
+                    self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+                $partyType = (string) $this->input('party_type', '');
+                $partyId = (int) $this->input('party_id', 0);
+                $rows = $this->input('bills');
+
+                if (is_array($rows) && $rows !== []) {
+                    $resolved = app(\App\Modules\Accounts\Services\VoucherAllocations::class)->resolve($partyType, $partyId > 0 ? $partyId : null, $rows);
+                    $settles = array_reduce($resolved['rows'], fn (string $sum, array $row) => bcadd($sum, (string) $row['due'], 4), '0');
+                } else {
+                    $due = $partyId > 0 && $partyType !== '' ? (string) app(AccountsFacts::class)->dueFrom($partyType, $partyId) : '0';
+                    // ⓘ রসিদ মেটায় তিনি যা দেবেন (ধনাত্মক), পরিশোধ মেটায় আমরা যা দেব (ঋণাত্মকের আকার)
+                    $settles = $this->input('type') === Voucher::RECEIPT ? $due : bcmul($due, '-1', 4);
+                }
+
+                $settles = bccomp($settles, '0', 4) > 0 ? $settles : '0';
+
+                if (bccomp(bcadd($moved, $amount, 4), $settles, 4) > 0) {
+                    $room = bcsub($settles, $moved, 4);
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_over_due', [
+                        'room' => Money::format(bccomp($room, '0', 4) > 0 ? $room : '0'), 'due' => Money::format($settles),
                     ]));
                 }
             },

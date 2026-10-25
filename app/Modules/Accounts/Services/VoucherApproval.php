@@ -40,13 +40,6 @@ final class VoucherApproval
     /** অনুমোদনের ছকে মডিউলের নাম — `module.php`-র `code`। */
     public const MODULE = 'accounts';
 
-    /**
-     * ⭐ কম-বেশির সইয়ের ছক — আদায় আর বিলের ছাড়ের একই `sales.discount` (মালিকের একটাই ধাপ, [[OwnerSignsDiscounts]]); নিয়ম Core-এর
-     * [[\App\Core\Support\Settlement]]। ⓘ আলাদা ছক বানালে মালিককে দুই জায়গায় একই সই বসাতে হত, আর একটা ভুলে বন্ধ থাকত (cb-ma-5)।
-     */
-    public const DIFFERENCE_MODULE = 'sales';
-
-    public const DIFFERENCE_ACTION = 'discount';
 
     /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
     public const COUNTER_DEPOSIT = 'counter_deposit';
@@ -88,7 +81,7 @@ final class VoucherApproval
         $this->assertWithinLimit($kind, $amount);
 
         $hash = $this->differenceFingerprint($voucher);
-        $decided = $this->approvals->latestFor($voucher, self::DIFFERENCE_ACTION);
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
 
         if ($decided?->status === Approval::APPROVED && $decided->stillCovers($amount, $hash)) {
             return null;
@@ -104,9 +97,14 @@ final class VoucherApproval
 
         $approval = $this->approvals->request(
             document: $voucher,
-            module: self::DIFFERENCE_MODULE,
-            action: self::DIFFERENCE_ACTION,
+            module: \App\Modules\Accounts\Support\DifferenceSignature::MODULE,
+            action: \App\Modules\Accounts\Support\DifferenceSignature::ACTION,
             amount: $amount,
+            // ⓘ কোন সইয়ের জায়গা নিল — বিক্রির বিলের ছাড়ের হুবহু ([[SalesInvoiceService::assertDiscountApproved()]]); শর্ত মাপা হয় না (`matchOn: []`)
+            payload: array_filter([
+                'supersedes' => $decided?->status === Approval::APPROVED ? (int) $decided->id : null,
+                'was_amount' => $decided?->status === Approval::APPROVED && $decided->amount !== null ? (string) $decided->amount : null,
+            ], fn ($v) => $v !== null),
             reason: $voucher->narration,
             stateHash: $hash,
             matchOn: [],
@@ -134,7 +132,7 @@ final class VoucherApproval
 
         $this->assertWithinLimit($kind, $amount);
 
-        $decided = $this->approvals->latestFor($voucher, self::DIFFERENCE_ACTION);
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
 
         if ($decided?->status !== Approval::APPROVED || ! $decided->stillCovers($amount, $this->differenceFingerprint($voucher))) {
             throw ValidationException::withMessages(['difference.amount' => $kind === 'rounding'

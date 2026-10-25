@@ -715,7 +715,7 @@ final class VoucherService
             ->where('approvable_id', $voucher->id)
             ->where('module', '<>', VoucherApproval::MODULE)
             // ⓘ এই ভাউচারের নিজের কম-বেশির মালিকের সই অন্য কাগজের নয় — সেটা নিজের পথেই পোস্ট পর্যন্ত যায় ([[VoucherApproval::differenceStopping()]]; cb-ma-5)
-            ->where(fn ($q) => $q->where('module', '<>', VoucherApproval::DIFFERENCE_MODULE)->orWhere('action', '<>', VoucherApproval::DIFFERENCE_ACTION))
+            ->where(fn ($q) => $q->where('module', '<>', \App\Modules\Accounts\Support\DifferenceSignature::MODULE)->orWhere('action', '<>', \App\Modules\Accounts\Support\DifferenceSignature::ACTION))
             ->whereIn('status', [Approval::PENDING, Approval::APPROVED])
             ->get()
             ->contains(fn (Approval $a) => ! $posting

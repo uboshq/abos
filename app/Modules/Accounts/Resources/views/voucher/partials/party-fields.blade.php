@@ -76,7 +76,7 @@
                  'dueOutNone' => __('accounts::field.due_out_none'),
                  'overDue' => __('accounts::message.more_than_the_bill_owes'),
                  'noBills' => __('accounts::message.no_open_bill'),
-                 // ⭐ পক্ষের ঘরের নাম ধরনে — "গ্রাহক", "সরবরাহকারী" (নকশা); "অন্য"-তে ঘরটাই নেই
+                 // ⭐ পক্ষের ঘরের নাম ধরনে — “গ্রাহক”, “সরবরাহকারী” (নকশা); “অন্য”-তে ঘরটাই নেই
                  'typeLabels' => collect($parties)->pluck('label', 'type')->all(),
                  'partyWord' => $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party'),
                  'oldestDue' => __('money.screen.oldest_due'),
@@ -450,7 +450,7 @@
                                     <td class="num" data-bill-outstanding x-text="lakh(b.outstanding)"></td>
                                     <td class="num">
                                         <template x-if="isBill(b)">
-                                            <input type="text" inputmode="decimal" data-bill-amount :aria-label="b.no"
+                                            <input type="text" inputmode="decimal" data-bill-amount aria-label="{{ $isReceipt ? __('money.screen.col.this_in') : __('money.screen.col.this_out') }}" :title="b.no"
                                                    class="h-(--spacing-field-dense) w-16 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50"
                                                    :value="rowAmount(b)" :disabled="! isTicked(b)" x-on:change="setRow(b, $event.target.value)">
                                         </template>

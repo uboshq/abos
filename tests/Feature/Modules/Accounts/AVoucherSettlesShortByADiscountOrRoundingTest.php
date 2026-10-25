@@ -21,6 +21,10 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Approval\Services\OwnerSignsDiscounts;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Services\CustomerService;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,6 +45,8 @@ use Tests\TestCase;
  *   ৫. নিয়ম নিজের ঘরে নিজের কথায়: সীমার বেশি রাউন্ডিং, ধরন ছাড়া অঙ্ক, সইদাতা নেই — কিছু লেখা হয় না
  *   ৬. প্রিভিউ: ছাড়ে `needs_signature` হ্যাঁ, আর খাতার সারিতে ৪১২০
  *   ৭. পর্দা: ছাড়/রাউন্ডিং চিপ আর অঙ্কের ঘর ফর্মে যায়, সারাংশে মালিকের সইয়ের চিপ, বোতাম "সইয়ে পাঠান"-এ বদলায়
+ *   ৯. হিসাবের সীমা, বিল বাছা: পাওয়া + কম-বেশি ঠিক বিলের বাকিতে পার, এক পয়সা বেশিতে `difference.amount`-এ ফেরত (fe, ২৫ অক্টোবর ২০২৬)
+ *  ১০. বিল না বাছলে একই সীমা পক্ষের মোট বকেয়ায় — ছাড় দিয়ে স্থিতি উল্টো দিকে যায় না
  *   ৮. ছকের ৫৩০৫ কোডে অন্য অর্থের খাত (ব্যাংক) বসে থাকলে রাউন্ডিং থামে, নিজের ঘরে নিজের কথায় — রাউন্ডিং "ব্যাংকে টাকা" হয়ে দেখা দিত না
  */
 final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
@@ -72,6 +78,10 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
             [['account_id' => $this->till->id, 'debit' => '100000'], ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'credit' => '100000']],
         );
         app(VoucherService::class)->post($fund);
+
+        // ⓘ কম-বেশির হিসাবের সীমা (দাবি ৯–১০) — দুই পক্ষেরই ৳৫,০০০ বকেয়া, নইলে ছাড় মেটানোর কিছুই থাকত না
+        $this->owes('customer', (int) Customer::acrossDealers()->orderBy('id')->firstOrFail()->id, '5000');
+        $this->owes('supplier', (int) Supplier::query()->orderBy('id')->firstOrFail()->id, '5000');
     }
 
     /** ১ */
@@ -218,6 +228,57 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         $this->assertContains($said, $this->both('accounts::validation.difference_head_missing', ['code' => StandardChart::ROUNDING_DIFFERENCE]),
             '⛔ অর্থ হারানো ৫৩০৫-এ রাউন্ডিং থামেনি, বা অন্য কারণে থামল: '.$said);
         $this->assertSame($before, Voucher::query()->count(), '⛔ থামা রসিদ লেখা হলো');
+    }
+
+    /** ৯ */
+    public function test_with_a_bill_the_difference_stops_at_the_bills_due(): void
+    {
+        $customer = app(CustomerService::class)->create(['name_en' => 'Cap Bill Customer', 'credit_limit' => 0, 'credit_days' => 0]);
+        $customer->forceFill(['credit_limit' => '1000000000'])->save();
+        $invoice = app(SalesInvoiceService::class)->confirm(app(SalesInvoiceService::class)->create(
+            ['customer_id' => $customer->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '1', 'rate' => '100']],
+        ))->fresh();
+        $due = $invoice->dueAmount();
+        $bills = [['id' => (string) $invoice->public_id, 'amount' => $due]];
+
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt(bcsub($due, '10.01', 2)), 'party_id' => $customer->id,
+            'difference' => ['kind' => 'rounding', 'amount' => '10.01'], 'bills' => $bills]);
+        $this->assertContains($this->refusalOn('difference.amount'), $this->both('accounts::validation.difference_over_due', ['room' => Money::format('10.00'), 'due' => Money::format($due)]),
+            '⛔ বিলের বাকির এক পয়সা বেশি কম-বেশি থামল না, বা difference.amount-এ নিজের কথায় নয়: '.json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
+
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt(bcsub($due, '0.50', 2)), 'party_id' => $customer->id,
+            'difference' => ['kind' => 'rounding', 'amount' => '0.50'], 'bills' => $bills]);
+        $this->assertNull($this->refusalOn('difference.amount'), '⛔ ঠিক বিলের বাকি পর্যন্ত কম-বেশিও থামল');
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '0', 4), '⛔ সীমার ভিতরের কম-বেশিতে বিল পুরো মেটেনি');
+    }
+
+    /** ১০ */
+    public function test_without_a_bill_the_difference_stops_at_the_partys_due(): void
+    {
+        $customer = app(CustomerService::class)->create(['name_en' => 'Cap Due Customer', 'credit_limit' => 0, 'credit_days' => 0]);
+        $this->owes('customer', (int) $customer->id, '500');
+
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt('499.49'), 'party_id' => $customer->id,
+            'difference' => ['kind' => 'rounding', 'amount' => '0.52']]);
+        $this->assertContains($this->refusalOn('difference.amount'), $this->both('accounts::validation.difference_over_due', ['room' => Money::format('0.51'), 'due' => Money::format('500')]),
+            '⛔ পক্ষের বকেয়ার এক পয়সা বেশি কম-বেশি থামল না — স্থিতি উল্টো দিকে যেত: '.json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
+
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt('499.50'), 'party_id' => $customer->id,
+            'difference' => ['kind' => 'rounding', 'amount' => '0.50']]);
+        $this->assertNull($this->refusalOn('difference.amount'), '⛔ ঠিক পক্ষের বকেয়া পর্যন্ত কম-বেশিও থামল');
+    }
+
+    /** ⓘ পক্ষের বকেয়া — জাবেদায়, নির্দিষ্ট আগের দিনে (গ্রাহক তাঁর পাওনা খাতে Dr, সরবরাহকারী দেনায় Cr) */
+    private function owes(string $type, int $id, string $amount): void
+    {
+        $lines = $type === 'customer'
+            ? [['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'party_type' => $type, 'party_id' => $id],
+                ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'credit' => $amount]]
+            : [['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'debit' => $amount],
+                ['account_id' => StandardChart::find(StandardChart::PAYABLE)->id, 'credit' => $amount, 'party_type' => $type, 'party_id' => $id]];
+        $journal = app(VoucherService::class)->create(['type' => Voucher::JOURNAL, 'trx_date' => now()->subDays(3)->toDateString(), 'narration' => 'আগের বকেয়া'], $lines);
+        app(VoucherService::class)->post($journal);
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
