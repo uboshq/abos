@@ -26,7 +26,7 @@ use Tests\TestCase;
  *
  * দাবি:
  *   ১. নিজের শাখার পক্ষ — প্রিভিউ খাতার সারি দেখায়, কোনো বাধা নয়
- *   ২. পাহারা হারায়নি — অন্য শাখার পক্ষ এখনো নিজের বার্তায় ফেরে, আর বার্তায় আসল শাখার নাম ("#0" নয়)
+ *   ২. পাহারা হারায়নি — লেখক অন্য শাখা দিলে অন্য শাখার পক্ষ এখনো নিজের বার্তায় ফেরে, আর বার্তায় দুই শাখার আসল নাম ("#0" নয়)
  */
 final class ThePreviewKnowsThePartysBranchTest extends TestCase
 {
@@ -75,21 +75,29 @@ final class ThePreviewKnowsThePartysBranchTest extends TestCase
         $other = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'PVB', 'name_en' => 'Preview Other Branch']);
         $this->customer->forceFill(['branch_id' => $other->id])->save();
 
-        $answer = $this->preview();
+        /*
+         * ⓘ শাখা না দিলে ভাউচার পক্ষের শাখাতেই বসে ([[VoucherService::branchOfTheVoucher()]]) — তখন ফেরানোর কিছু নেই। পাহারা ধরে যখন
+         * লেখক নিজে অন্য শাখা দেন: সেটাই "#0" দেখাত, কারণ প্রিভিউর কাগজে শাখা ছিল না।
+         */
+        $answer = $this->preview(['branch_id' => $this->home->id]);
 
         $this->assertSame([], $answer['rows'] ?? null, '⛔ অন্য শাখার পক্ষের প্রিভিউ খাতার সারি দেখাল — শাখার পাহারা হারাল');
         $message = (string) ($answer['message'] ?? '');
         $this->assertStringContainsString('Preview Other Branch', $message, '⛔ পক্ষের শাখার পাহারা থামাল না, বা অন্য কারণে থামল: '.$message);
+        $this->assertStringContainsString($this->home->name(), $message, '⛔ বার্তায় যে শাখায় লেখা হচ্ছিল তার নাম নেই: '.$message);
         $this->assertStringNotContainsString('#0', $message, '⛔ বার্তায় "#0" — প্রিভিউর কাগজে এখনো শাখা নেই: '.$message);
     }
 
-    /** @return array<string, mixed> */
-    private function preview(): array
+    /**
+     * @param  array<string, mixed>  $extra
+     * @return array<string, mixed>
+     */
+    private function preview(array $extra = []): array
     {
         return $this->postJson(route('accounts.voucher.simulate'), [
             'type' => Voucher::RECEIPT, 'narration' => 'প্রিভিউর শাখা', 'trx_date' => now()->toDateString(), 'amount' => '100',
             'instrument' => 'transfer', 'instrument_no' => 'PVB-1', 'party_type' => 'customer', 'party_id' => $this->customer->id,
-            'to_account_id' => $this->bank->id,
+            'to_account_id' => $this->bank->id, ...$extra,
         ])->assertOk()->json();
     }
 }
