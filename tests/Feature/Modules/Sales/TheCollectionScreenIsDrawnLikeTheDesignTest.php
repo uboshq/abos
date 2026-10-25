@@ -84,7 +84,8 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
             $w('fig_due'), $w('fig_this'), $w('fig_left'),
             // সাধারণ তথ্য — দফা ১, ২
             $w('general'), $w('party_kind'), $w('kind_customer'), $w('kind_supplier'), $w('kind_employee'), $w('kind_other'),
-            $w('customer'), $this->dealer->fresh()->load(Customer::PLACE)->pickerName(), $w('date'), $w('amount'), $w('full_due'), $w('chosen_bills'),
+            // ⓘ গ্রাহক দুই লাইনে (x-ui.party-search stacked): নাম, তার নিচে পয়েন্ট · শাখা — সার্ভারেই আঁকা, Alpine-এর আগেও
+            $w('customer'), $this->dealer->fresh()->name(), (string) $this->dealer->fresh()->load(Customer::PLACE)->placeName(), $w('date'), $w('amount'), $w('full_due'), $w('chosen_bills'),
             // ⭐ পদ্ধতি আগে, তারপর "যে খাতে জমা" (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; রসিদ-পরিশোধের একই নিয়ম) — খাতের তালিকা পদ্ধতির
             //   খাতে সীমিত, তাই নতুন কাগজে (নগদ) ব্যাংকের 1102-SCR আঁকা হয় না; পদ্ধতি বদলালে আসে ([[TheCollectionFormPostsWhatTheDesignSaysTest]])
             __('money.method.legend'),

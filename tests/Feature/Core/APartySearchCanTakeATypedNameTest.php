@@ -89,4 +89,22 @@ class APartySearchCanTakeATypedNameTest extends TestCase
         $this->assertStringNotContainsString('data-party-stacked', $plain, '⛔ stacked ছাড়াও দুই লাইন — অন্য পিকার বদলে গেল');
         $this->assertMatchesRegularExpression('/data-party-picker[^>]*\bh-\(--spacing-field\)/s', $plain, '⛔ সাধারণ পিকারের এক লাইনের উচ্চতা হারাল');
     }
+
+    /**
+     * ⭐ বাছা নাম সার্ভারেই আঁকা — Alpine চালু হওয়ার আগেও ঘরে বাছা নাম আর তার পয়েন্ট-শাখা, "—" নয় (cb-ma-5-এর আদায়ের নকশার দাবি
+     * লাল, ২৫ অক্টোবর ২০২৬)। ⓘ কিছু বাছা না থাকলে "—", আর ফাঁকা ছোট লাইন Alpine-এর আগে লুকানো (x-cloak)।
+     */
+    public function test_the_picked_name_is_drawn_by_the_server_before_alpine(): void
+    {
+        $picked = $this->draw('stacked :selected="11"');
+        $this->assertMatchesRegularExpression('/<span[^>]*data-party-picked-label[^>]*>Afia Enterprise<\/span>/', $picked,
+            '⛔ বাছা নাম সার্ভারের পাতায় নেই — Alpine চালু হওয়ার আগে ঘরে "—" দেখায়');
+        $this->assertMatchesRegularExpression('/<span(?:(?!x-cloak)[^>])*data-party-picked-hint[^>]*>C-0103 · Uttara<\/span>/', $picked,
+            '⛔ বাছা নামের পয়েন্ট-শাখা সার্ভারে আঁকা নয়, বা x-cloak-এ লুকানো');
+
+        $none = $this->draw('stacked');
+        $this->assertMatchesRegularExpression('/data-party-picked-label[^>]*>—<\/span>/', $none, '⛔ কিছু বাছা না থাকলেও "—" নয়');
+        $this->assertMatchesRegularExpression('/<span[^>]*x-cloak[^>]*data-party-picked-hint[^>]*><\/span>/', $none,
+            '⛔ ফাঁকা ছোট লাইন Alpine-এর আগে লুকানো নয়');
+    }
 }

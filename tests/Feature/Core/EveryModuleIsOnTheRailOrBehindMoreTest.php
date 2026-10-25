@@ -94,7 +94,11 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $this->assertGreaterThan($reachOf[$early] ?? 1.0, $reachOf[$late] ?? 0.0,
             "প্রস্তুতিটাই ভুল — {$late}-এর অনুপাত {$early}-এর চেয়ে বেশি নয়, ক্রম বদলানোর দাবি অর্থহীন");
 
-        $page = (string) $this->actingAs($sr)->get(route('customer.index'))->assertOk()->getContent();
+        // ⓘ মানুষটির নিজের একটা পাতা — শেষের দিকের মডিউলের প্রথম পাতা; গ্রাহকের তালিকা নয়, ওর চাবি তাঁর নেই (cb-ma-5-এ 403)
+        $ownPage = collect(collect(app(MenuBuilder::class)->forUser($sr))->firstWhere('code', $late)['groups'] ?? [])->flatten(1)
+            ->firstWhere('url', '!==', null)['url'] ?? null;
+        $this->assertNotNull($ownPage, "প্রস্তুতিটাই ভুল — {$late}-এর খোলা যায় এমন পাতা নেই");
+        $page = (string) $this->actingAs($sr)->get($ownPage)->assertOk()->getContent();
         $rail = $this->rail($page);
         $mine = $this->menuCodes($sr);
 
@@ -117,9 +121,9 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
     {
         $before = $this->rail((string) $this->get(route('customer.index'))->getContent());
         $last = end($before);
-        $trails = AuditTrail::query()->where('auditable_type', User::class)->count();
-
         $sr = $this->person(['customer.view']);
+        // ⓘ গোনা দ্বিতীয় মানুষ বানানোর পরে — নতুন মানুষ বানানো নিজেই একটা নিরীক্ষার সারি লেখে (cb-ma-5-এ +১)
+        $trails = AuditTrail::query()->where('auditable_type', User::class)->count();
         $saved = $this->actingAs($this->owner)->postJson(route('rail.layout'), ['order' => [$last, 'not_a_module'], 'pinned' => [$last, 'not_a_module']])
             ->assertOk()->json('nav_layout');
         // ⓘ assertEquals, assertSame নয় — MySQL-এর JSON ঘর চাবিগুলো নিজের ক্রমে রাখে ("order" আগে), ক্রমটা কোনো কথা নয় (a6-one9)

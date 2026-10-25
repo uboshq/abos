@@ -89,6 +89,12 @@
             ->values();
 
     $value = $selected === null ? '' : (string) $selected;
+    /*
+     * ⭐ বাছা নাম সার্ভারেই আঁকা — Alpine চালু হওয়ার আগে (ধীর নেট, প্রথম খোলা) ঘরে "—" দেখাত, যদিও নাম বাছা আছে; নামটা কেবল
+     * x-data-র JSON-এ থাকত (cb-ma-5-এ আদায়ের নকশার দাবি লাল, ২৫ অক্টোবর ২০২৬)। Alpine এলে x-text একই লেখাই বসায়।
+     */
+    $pickedRow = $rows->first(fn (array $r) => (string) $r['id'] === $value);
+    $pickedHint = (string) ($pickedRow['hint'] ?? '');
     $hasError = $errors->has($name);
     // ⓘ ফেরানো জমায় আগের লেখা নাম খোলা থাকে — ভুলের কারণ ঐ ঘরেই দেখা যায়
     $addingNow = $addable && ($errors->has($addName) || filled(old($addName)));
@@ -135,9 +141,9 @@
                     'border-(--color-border)' => ! $hasError,
                 ])>
             <span id="{{ $uid }}-picked" @class(['min-w-0 flex-1', 'truncate' => ! $stacked, 'flex flex-col leading-tight' => $stacked])>
-                <span x-text="pickedLabel" @class(['truncate' => $stacked])>—</span>
+                <span x-text="pickedLabel" @class(['truncate' => $stacked]) data-party-picked-label>{{ $pickedRow['label'] ?? '—' }}</span>
                 <span @class(['num text-2xs text-(--color-ink-muted)', 'ms-2' => ! $stacked, 'truncate' => $stacked])
-                      x-show="hasPickedHint" x-cloak x-text="pickedHint"></span>
+                      x-show="hasPickedHint" @if ($pickedHint === '') x-cloak @endif x-text="pickedHint" data-party-picked-hint>{{ $pickedHint }}</span>
             </span>
             <span class="text-(--color-ink-muted)" aria-hidden="true">▾</span>
         </button>
