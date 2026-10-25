@@ -1784,7 +1784,7 @@
   "@ownerReportProfitByCustomer": {
     "description": "Owner's centre report title"
   },
-  "ownerReportProfitByCustomerHint": "প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পাকা হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।",
+  "ownerReportProfitByCustomerHint": "প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পোস্ট হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।",
   "@ownerReportProfitByCustomerHint": {
     "description": "Owner's centre report hint"
   },

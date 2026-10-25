@@ -719,7 +719,7 @@
   "@vouchersPageLoadFailed": {
     "description": "Voucher page: loading failed"
   },
-  "vouchersPagePostFailed": "পাকা করা গেল না। আবার চেষ্টা করুন।",
+  "vouchersPagePostFailed": "পোস্ট করা গেল না। আবার চেষ্টা করুন।",
   "@vouchersPagePostFailed": {
     "description": "Voucher page: posting failed, try again"
   },
@@ -769,7 +769,7 @@
       }
     }
   },
-  "vouchersPageAnotherHand": "নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে \"পাকা করুন\" চাপবেন।",
+  "vouchersPageAnotherHand": "নিজের লেখা ভাউচার নিজে পোস্ট হয় না — অন্য কেউ খুলে \"পোস্ট করুন\" চাপবেন।",
   "@vouchersPageAnotherHand": {
     "description": "Voucher page: the writer cannot post their own voucher; someone else must press Post"
   },
@@ -777,7 +777,7 @@
   "@vouchersPageTrxLabel": {
     "description": "Voucher page: transaction ID field label"
   },
-  "vouchersPagePost": "পাকা করুন",
+  "vouchersPagePost": "পোস্ট করুন",
   "@vouchersPagePost": {
     "description": "Voucher page: post button"
   },
@@ -857,7 +857,7 @@
   "@vouchersFormTo": {
     "description": "Voucher form: account the money goes to"
   },
-  "vouchersFormTrxLabel": "লেনদেন নম্বর (TrxID) — পাকা করতে লাগবে",
+  "vouchersFormTrxLabel": "লেনদেন নম্বর (TrxID) — পোস্ট করতে লাগবে",
   "@vouchersFormTrxLabel": {
     "description": "Voucher form: transaction ID field, needed before posting"
   },
@@ -897,7 +897,7 @@
   "@vouchersFormKeepDraft": {
     "description": "Voucher form: keep as draft switch"
   },
-  "vouchersFormKeepDraftHint": "বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে",
+  "vouchersFormKeepDraftHint": "বন্ধ থাকলে সংরক্ষণেই পোস্ট — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে",
   "@vouchersFormKeepDraftHint": {
     "description": "Voucher form: when off, saving posts it; it stays a draft if signatures are needed or you wrote it"
   },

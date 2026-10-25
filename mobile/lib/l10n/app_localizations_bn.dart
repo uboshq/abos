@@ -6827,7 +6827,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get ownerReportProfitByCustomerHint =>
-      'প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পাকা হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।';
+      'প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পোস্ট হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।';
 
   @override
   String get ownerReportsTitle => 'রিপোর্ট';
@@ -8028,7 +8028,7 @@ class AppL10nBn extends AppL10n {
   String get vouchersPageLoadFailed => 'ভাউচারটা আনা গেল না।';
 
   @override
-  String get vouchersPagePostFailed => 'পাকা করা গেল না। আবার চেষ্টা করুন।';
+  String get vouchersPagePostFailed => 'পোস্ট করা গেল না। আবার চেষ্টা করুন।';
 
   @override
   String get vouchersPagePrint => 'ছাপা বা শেয়ার';
@@ -8063,13 +8063,13 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get vouchersPageAnotherHand =>
-      'নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে \"পাকা করুন\" চাপবেন।';
+      'নিজের লেখা ভাউচার নিজে পোস্ট হয় না — অন্য কেউ খুলে \"পোস্ট করুন\" চাপবেন।';
 
   @override
   String get vouchersPageTrxLabel => 'লেনদেন নম্বর (TrxID)';
 
   @override
-  String get vouchersPagePost => 'পাকা করুন';
+  String get vouchersPagePost => 'পোস্ট করুন';
 
   @override
   String get vouchersFormSetupFailed =>
@@ -8134,7 +8134,7 @@ class AppL10nBn extends AppL10n {
   String get vouchersFormTo => 'কোথায়';
 
   @override
-  String get vouchersFormTrxLabel => 'লেনদেন নম্বর (TrxID) — পাকা করতে লাগবে';
+  String get vouchersFormTrxLabel => 'লেনদেন নম্বর (TrxID) — পোস্ট করতে লাগবে';
 
   @override
   String get vouchersFormAccount => 'খাত';
@@ -8161,7 +8161,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get vouchersFormKeepDraftHint =>
-      'বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে';
+      'বন্ধ থাকলে সংরক্ষণেই পোস্ট — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে';
 
   @override
   String get vouchersFormSave => 'সংরক্ষণ';

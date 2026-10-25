@@ -11188,7 +11188,7 @@ abstract class AppL10n {
   /// Owner's centre report hint
   ///
   /// In bn, this message translates to:
-  /// **'প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পাকা হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।'**
+  /// **'প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পোস্ট হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।'**
   String get ownerReportProfitByCustomerHint;
 
   /// Owner's centre Reports: title
@@ -13264,7 +13264,7 @@ abstract class AppL10n {
   /// Voucher page: posting failed, try again
   ///
   /// In bn, this message translates to:
-  /// **'পাকা করা গেল না। আবার চেষ্টা করুন।'**
+  /// **'পোস্ট করা গেল না। আবার চেষ্টা করুন।'**
   String get vouchersPagePostFailed;
 
   /// Voucher page: print or share button tooltip
@@ -13324,7 +13324,7 @@ abstract class AppL10n {
   /// Voucher page: the writer cannot post their own voucher; someone else must press Post
   ///
   /// In bn, this message translates to:
-  /// **'নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে \"পাকা করুন\" চাপবেন।'**
+  /// **'নিজের লেখা ভাউচার নিজে পোস্ট হয় না — অন্য কেউ খুলে \"পোস্ট করুন\" চাপবেন।'**
   String get vouchersPageAnotherHand;
 
   /// Voucher page: transaction ID field label
@@ -13336,7 +13336,7 @@ abstract class AppL10n {
   /// Voucher page: post button
   ///
   /// In bn, this message translates to:
-  /// **'পাকা করুন'**
+  /// **'পোস্ট করুন'**
   String get vouchersPagePost;
 
   /// Voucher form: account list failed to load; check internet and open again
@@ -13456,7 +13456,7 @@ abstract class AppL10n {
   /// Voucher form: transaction ID field, needed before posting
   ///
   /// In bn, this message translates to:
-  /// **'লেনদেন নম্বর (TrxID) — পাকা করতে লাগবে'**
+  /// **'লেনদেন নম্বর (TrxID) — পোস্ট করতে লাগবে'**
   String get vouchersFormTrxLabel;
 
   /// Journal form line: account picker
@@ -13504,7 +13504,7 @@ abstract class AppL10n {
   /// Voucher form: when off, saving posts it; it stays a draft if signatures are needed or you wrote it
   ///
   /// In bn, this message translates to:
-  /// **'বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে'**
+  /// **'বন্ধ থাকলে সংরক্ষণেই পোস্ট — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে'**
   String get vouchersFormKeepDraftHint;
 
   /// Voucher form: save button
