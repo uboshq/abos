@@ -304,6 +304,7 @@ describe('কম-বেশি — ছাড় বা রাউন্ডিং',
         data.difference = '0.50'
         expect(data.hasRounding, '⛔ রাউন্ডিং দিলেও সারাংশে রাউন্ডিংয়ের সারি নেই').toBe(true)
         expect(data.ownerSigns, '⛔ ৳০.৫০ রাউন্ডিংয়ে সই চাওয়া হলো — ৳০.৫০ পর্যন্ত সই-মুক্ত').toBe(false)
+        expect(data.roundingOwner, '⛔ ৳০.৫০ রাউন্ডিংয়ে "মালিকের সই" চিপ — ৳০.৫০ পর্যন্ত সই-মুক্ত').toBe(false)
         expect(data.headGrossPaisa, '⛔ রাউন্ডিংসহ পক্ষের খাতের অঙ্ক নয়').toBe(100050)
 
         data.difference = '0.60'
