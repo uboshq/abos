@@ -61,10 +61,14 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
 
         foreach ($lists as $rel => $src) {
             $pending = in_array($rel, self::PENDING, true) || array_key_exists($rel, self::NOT_A_SUM);
-            $has = $this->hasGrand($src, in_array($rel, self::NO_PAGE, true));
+            $has = $this->hasGrand($src, in_array($rel, self::NO_PAGE, true), $this->eyeInActions($src));
+
+            // ⛔ সারি খোলার পথ একটাই — টেবিলের "দেখুন" আর সারির কাজের চোখ দুটোই থাকলে একই সারিতে চোখ দুবার (মালিক, ২৪ অক্টোবর ২০২৬)
+            $this->assertFalse(str_contains($this->code($src), ':view-url=') && $this->eyeInActions($src),
+                "⛔ {$rel}: সারিতে চোখ দুবার — টেবিলের `:view-url` আর কাজের কলামের চোখ দুটোই; একটা রাখুন।");
 
             $this->assertFalse(! $has && ! $pending,
-                "⛔ {$rel} টাকা দেখায়, অথচ নিচে সর্বমোট বা সারিতে \"দেখুন\" নেই — `:grand` আর `:view-url` দিন ([[GrandTotals]])।");
+                "⛔ {$rel} টাকা দেখায়, অথচ নিচে সর্বমোট বা সারিতে \"দেখুন\" নেই — `:grand` দিন, আর `:view-url` বা কাজের কলামে চোখ ([[GrandTotals]])।");
             $this->assertFalse($has && $pending,
                 "{$rel}-এ সর্বমোট বসেছে — PENDING থেকে নামটা কাটুন, যাতে বাকির খাতা সত্যি থাকে।");
         }
@@ -118,11 +122,35 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
         return str_contains($code, 'Money::format') || str_contains($code, 'ui.amount-link');
     }
 
-    private function hasGrand(string $src, bool $noPage = false): bool
+    /**
+     * ⭐ নিয়ম ২-এর মানে "প্রতিটা সারি তার কাগজ খোলে" (fe, ২৪ অক্টোবর ২০২৬) — টেবিলের `:view-url`, নয়তো সারির কাজের কলামে চোখ
+     * ([[eyeInActions()]]): মালিকের ২১ সেপ্টেম্বরের ছকে সরবরাহকারীর "Action" কলামে দেখা আর সম্পাদনা, গ্রাহকের চোখে এক নজরের সারাংশ।
+     */
+    private function hasGrand(string $src, bool $noPage = false, bool $eye = false): bool
     {
         $code = $this->code($src);
 
-        return str_contains($code, ':grand=') && ($noPage || str_contains($code, ':view-url='));
+        return str_contains($code, ':grand=') && ($noPage || str_contains($code, ':view-url=') || $eye);
+    }
+
+    /**
+     * সারির কাজের কলামে চোখ — তালিকা যে `…row-actions` অংশ আঁকে, তাতে সরাসরি একটা লিংক (`<a href="{{ route(...) }}"`) যার ভিতরে
+     * চোখের ছবি (একই রেখা, `M12 5c-5 0-9 4.5-10 7`)। ⓘ "⋯" মেনুর "দেখুন" সারি (বিক্রয়ের বিল, বীমা) চোখ নয় — সেখানে টেবিলের
+     * `:view-url`-ই চোখ, তাই দুটো একসাথে থাকা চলে।
+     */
+    private function eyeInActions(string $src): bool
+    {
+        preg_match_all('/view\(\s*\'([a-z_]+)::([a-z0-9_.\-]*row-actions)\'/', $this->code($src), $views, PREG_SET_ORDER);
+
+        foreach ($views as [, $ns, $name]) {
+            $path = app_path('Modules/'.\Illuminate\Support\Str::studly($ns).'/Resources/views/'.str_replace('.', '/', $name).'.blade.php');
+            if (is_file($path)
+                && preg_match('/<a\s+href="\{\{\s*route\(\'[a-z0-9_.]+\'[^>]*>(?:(?!<\/a>).)*M12 5c-5 0-9 4\.5-10 7/s', $this->code((string) file_get_contents($path))) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function code(string $src): string

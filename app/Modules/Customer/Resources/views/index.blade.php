@@ -167,7 +167,7 @@
                     array_merge(request()->except(['page', 'inactive', ...array_keys($set)]), $set),
                     fn ($v) => $v !== null && $v !== '',
                 ));
-                $status = request()->boolean('inactive') ? 'all' : (string) request('status', 'active');
+                $status = request()->boolean('inactive') ? 'all' : (string) request('status', \App\Modules\Customer\Support\CustomerListFilters::DEFAULT_STATUS);
             @endphp
 
             <x-ui.toolbar :title="$rankTitle ?? ($distributorType && (string) $partyTypeFilter === (string) $distributorType->id
@@ -176,6 +176,7 @@
                 :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
+                :defaults="['status' => \App\Modules\Customer\Support\CustomerListFilters::DEFAULT_STATUS]"
                 :filter-labels="$filterLabels"
                 :filter-values="$filterValues"
                 view>
@@ -272,9 +273,10 @@
             </x-ui.toolbar>
         </form>
 
+        {{-- ⓘ :view-url নেই — সারির কাজে চোখের আইকন একটাই (এক নজরের সারাংশ, row-actions); পুরো পাতা নামের লিংকে।
+             দুটো থাকলে একই সারিতে চোখ, কলম, চোখ — মালিক, ২৪ অক্টোবর ২০২৬ --}}
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('customer.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('customer::message.none_yet')"
             :rows="$customers"
             :compact="request()->boolean('compact')"
