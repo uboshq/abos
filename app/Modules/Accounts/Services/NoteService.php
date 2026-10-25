@@ -68,6 +68,14 @@ final class NoteService
             $data['against_type'] = $target->noteTargetType();
             $data['against_id'] = (int) $target->getKey();
             $data['against_no'] = $target->noteTargetNumber();
+        } else {
+            /*
+             * ⛔ বাঁধন কেবল খুঁজে পাওয়া বিল থেকে — ডাকনেওয়ালার পাঠানো `against_type`/`against_id` নয় (fe, ২৫ অক্টোবর ২০২৬)। ⓘ নোট এখন
+             * বাঁধা বিলের বাকি কমায় ([[SalesInvoice::notedAmount()]]); বানানো আইডি দিয়ে অন্য কারো বিলের বাকি কমানো যেত। বিল না মিললে
+             * `against_no`-এর লেখা কেবল রেফারেন্স (গ্রাহক নয় এমন পক্ষে), কিছুতে বাঁধা নয়।
+             */
+            $data['against_type'] = null;
+            $data['against_id'] = null;
         }
 
         // ⓘ ভ্যাট কেবল কেনা-বেচার পক্ষে (গ্রাহক, সরবরাহকারী) — সেবাদাতা আর ব্যক্তির সমন্বয়ে ভ্যাটের খাত নেই

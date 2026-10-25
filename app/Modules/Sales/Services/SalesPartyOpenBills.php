@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\PartyOpenBills;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Note;
 use App\Modules\Sales\Models\SalesInvoice;
 use Carbon\Carbon;
 
@@ -20,7 +21,7 @@ use Carbon\Carbon;
  */
 final class SalesPartyOpenBills implements PartyOpenBills
 {
-    public function openBills(string $partyType, int $partyId, int $limit = 50): array
+    public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
     {
         if ($partyType !== 'customer' || $partyId <= 0) {
             return [];
@@ -49,6 +50,7 @@ final class SalesPartyOpenBills implements PartyOpenBills
             $dueDate = $invoice->due_on !== null ? Carbon::parse($invoice->due_on)->startOfDay() : $date;
 
             $open[] = [
+                'kind' => 'invoice',
                 'against_type' => SalesInvoice::drillSourceType(),
                 'id' => (int) $invoice->id,
                 'no' => (string) $invoice->document_no,
@@ -68,6 +70,47 @@ final class SalesPartyOpenBills implements PartyOpenBills
             }
         }
 
-        return $open;
+        if (! $withNotes) {
+            return $open;
+        }
+
+        /*
+         * ⭐ বিল ছাড়া নোট — কোনো বিলে বাঁধা নয় (`against_id` খালি), তাই কোনো বিলের বাকিতে নেই; খাতায় পাওনা বদলেছে, তাই তালিকায়
+         * নিজের সারি (SAP-এর open item)। ⓘ লেখা `against_no` (যেমন UB-র "Damage Bill") বাঁধন নয় — fe, ২৫ অক্টোবর ২০২৬।
+         */
+        $notes = Note::query()
+            ->where('party_type', 'customer')
+            ->where('party_id', $partyId)
+            ->whereNull('against_id')
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->orderBy('trx_date')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($notes as $note) {
+            $date = Carbon::parse($note->trx_date)->startOfDay();
+            $credit = $note->direction === Note::CREDIT;
+            $amount = $credit ? bcsub('0', (string) $note->total, 4) : bcadd((string) $note->total, '0', 4);
+
+            $open[] = [
+                'kind' => $credit ? 'credit_note' : 'debit_note',
+                'against_type' => Note::drillSourceType(),
+                'id' => (int) $note->id,
+                'no' => (string) $note->document_no,
+                'date' => $date->toDateString(),
+                'age' => (int) $date->diffInDays($today),
+                'outstanding' => $amount,
+                'due_date' => $date->toDateString(),
+                // ⓘ ক্রেডিট নোট গ্রাহকের পাওনা — দেরির কিছু নেই; ডেবিট নোট বিলের মতো নিজের দিনে পাওনা
+                'days_late' => $credit || ! $date->lessThan($today) ? 0 : (int) $date->diffInDays($today),
+                'total' => $amount,
+                'public_id' => (string) $note->public_id,
+            ];
+        }
+
+        // ⓘ পুরনো আগে — বিল আর নোট এক ক্রমে, তারপর সীমা
+        usort($open, fn (array $a, array $b) => [$a['date'], $a['kind'] !== 'invoice', $a['id']] <=> [$b['date'], $b['kind'] !== 'invoice', $b['id']]);
+
+        return array_slice($open, 0, $limit);
     }
 }
