@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
@@ -305,6 +308,70 @@ void main() {
     });
   });
 
+  // ⭐ cb-র আসল সার্ভার (1de6b0897), খসড়ার ফেক নয়: ফোন যে নাম পাঠায় তার প্রতিটা সার্ভারের যাচাইয়ের নিয়মে আছে — নিয়ম ফাইল থেকেই পড়া
+  // (app/Modules/Accounts/Http/Requests/VoucherRequest.php rules(); `save_as_draft` VoucherSync.php:97-এর)
+  group('the payload names are in cb 1de6b0897\'s own rules', () {
+    late Set<String> rules;
+    String show(String path) {
+      final r = Process.runSync('git', ['-C', '..', 'show', '1de6b0897:$path'], stdoutEncoding: utf8, stderrEncoding: utf8);
+      if (r.exitCode != 0) fail('⛔ cb 1de6b0897 পড়া গেল না: ${r.stderr}');
+      return r.stdout as String;
+    }
+
+    setUpAll(() {
+      final request = show('app/Modules/Accounts/Http/Requests/VoucherRequest.php');
+      final body = request.substring(request.indexOf('public function rules(): array'), request.indexOf('public function after(): array'));
+      rules = {for (final m in RegExp(r"^\s*'([a-z_]+(?:\.\*\.[a-z_]+)?)'\s*=>", multiLine: true).allMatches(body)) m.group(1)!};
+      if (show('app/Modules/Accounts/Sync/VoucherSync.php').contains("boolean('save_as_draft')")) rules.add('save_as_draft');
+    });
+
+    test('the rules are read: the contract\'s fields are there', () {
+      expect(rules, containsAll(['gross_amount', 'ait_amount', 'vds_amount', 'charge_amount', 'bills', 'bills.*.id', 'bills.*.amount', 'instrument']));
+    });
+
+    /// payload-এর নাম, ভিতরের সারিসহ — `bills` → `bills.*.id`, `bills.*.amount`
+    Set<String> names(Map<String, dynamic> p) => {
+          for (final e in p.entries) ...[
+            e.key,
+            if (e.value is List)
+              for (final row in e.value as List)
+                if (row is Map)
+                  for (final k in row.keys) '${e.key}.*.$k',
+          ],
+        };
+
+    for (final (what, contract, fill) in [
+      ('contract 2, bank with bills, AIT, VDS and charge', 2, _fill),
+      ('contract 1 (old server), cash', 1, (WidgetTester t) async {
+        await _party(t);
+        await _type(t, 'pay-amount', '5000');
+      }),
+    ]) {
+      testWidgets('$what: every name the phone sends is in the server\'s rules', (tester) async {
+        final api = _Fake(contract: contract);
+        await _pump(tester, api);
+        await fill(tester);
+        await _tap(tester, 'pay-draft');
+        final sent = names(api.sent.single.toPayload());
+        expect(sent.difference(rules), isEmpty, reason: '⛔ ফোন এমন নাম পাঠায় যা cb 1de6b0897-এর নিয়মে নেই: ${sent.difference(rules)}');
+      });
+    }
+
+    testWidgets('a refused sync row with only the fieldless "_" key shows its words on top', (tester) async {
+      final api = _Fake(rejectDetails: {
+        'status': 'REJECTED',
+        'message': 'খাতা থামাল — মাস বন্ধ।',
+        'errors': {
+          '_': ['খাতা থামাল — মাস বন্ধ।'],
+        },
+      });
+      await _pump(tester, api);
+      await _fill(tester);
+      await _tap(tester, 'pay-draft');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('pay-error'))).data, 'খাতা থামাল — মাস বন্ধ।');
+    });
+  });
+
   group('the server\'s 422, field by field', () {
     const errors = {
       'gross_amount': ['মোট টাকা দিন।'],
@@ -313,6 +380,8 @@ void main() {
       'charge_amount': ['চার্জ ভুল।'],
       'instrument_no': ['TrxID আগে ব্যবহার হয়েছে।'],
       'bills.0.amount': ['PB-0057-এর বাকি ৳80,000-এর বেশি।'],
+      // ⓘ cb 1de6b0897 VoucherAllocations.php:59 — অচেনা বিল `bills.{i}.id`
+      'bills.1.id': ['বিলটা এই পক্ষের খোলা বিল নয়।'],
       'bills': ['বিলের যোগফল মোটের বেশি।'],
       'payee_bank': [_longUnknown],
     };
@@ -325,7 +394,7 @@ void main() {
       expect(_errorUnder(tester, 'pay-reference'), 'TrxID আগে ব্যবহার হয়েছে।', reason: '⛔ instrument_no রেফারেন্সের ঘরে নয়');
       // ⓘ পাঠানো ক্রমে (পুরনো আগে) bills.0 = PB-0057
       expect(_errorUnder(tester, 'pay-bill-amount-PB-0057'), 'PB-0057-এর বাকি ৳80,000-এর বেশি।', reason: '⛔ bills.0.amount তার বিলের সারিতে নয়');
-      expect(_errorUnder(tester, 'pay-bill-amount-PB-0061'), isNull, reason: '⛔ bills.0.amount ভুল বিলে বসল');
+      expect(_errorUnder(tester, 'pay-bill-amount-PB-0061'), 'বিলটা এই পক্ষের খোলা বিল নয়।', reason: '⛔ bills.1.id তার বিলের সারিতে নয়');
       expect(find.descendant(of: find.byKey(const ValueKey('pay-bills-error')), matching: find.text('বিলের যোগফল মোটের বেশি।')), findsOneWidget,
           reason: '⛔ bills বিলের মোটের নিচে নয়');
       expect(tester.widget<Text>(find.byKey(const ValueKey('pay-error'))).data, _longUnknown, reason: '⛔ অচেনা চাবির কথা উপরে পুরোটা নয়');

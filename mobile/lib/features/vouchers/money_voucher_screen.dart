@@ -383,12 +383,13 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     return null;
   }
 
-  /// ⭐ সার্ভারের ৪২২ ঘরে ঘরে: চেনা চাবি তার ঘরের নিচে, `bills.{i}.amount` সেই বিলের সারিতে, অচেনা চাবি উপরে পুরোটা
+  /// ⭐ সার্ভারের ৪২২ ঘরে ঘরে: চেনা চাবি তার ঘরের নিচে, `bills.{i}.amount` আর `bills.{i}.id` সেই বিলের সারিতে (cb 1de6b0897,
+  /// VoucherAllocations.php:59 `bills.{i}.id` against_unknown, :69 `bills.{i}.amount` bill_over_due), অচেনা চাবি (সিঙ্কের ঘরহীন `_`-ও) উপরে পুরোটা
   void _showFieldErrors(Map<String, String> errors, {String? fallback}) {
     final unknown = <String>[];
     final placed = <String, String>{};
     for (final e in errors.entries) {
-      final bill = RegExp(r'^bills\.(\d+)\.amount$').firstMatch(e.key);
+      final bill = RegExp(r'^bills\.(\d+)\.(amount|id)$').firstMatch(e.key);
       if (bill != null) {
         final i = int.parse(bill.group(1)!);
         if (i < _sentBills.length) {
