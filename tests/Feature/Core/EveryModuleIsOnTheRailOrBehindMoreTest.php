@@ -91,7 +91,7 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $this->assertNotNull($early, 'প্রস্তুতিটাই ভুল — দুই বা বেশি চাবির দ্বিতীয় মডিউল নেই');
         $sr = $this->person([...$keysOf($late), $keysOf($early)[0]]);
         $reachOf = array_column(app(MenuBuilder::class)->forUser($sr), 'reach', 'code');
-        $this->assertGreaterThan($reachOf[$early] ?? 1.0, $reachOf[$late] ?? 0.0,
+        $this->assertGreaterThan($reachOf[$early] ?? 10000, $reachOf[$late] ?? 0,
             "প্রস্তুতিটাই ভুল — {$late}-এর অনুপাত {$early}-এর চেয়ে বেশি নয়, ক্রম বদলানোর দাবি অর্থহীন");
 
         // ⓘ মানুষটির নিজের একটা পাতা — শেষের দিকের মডিউলের প্রথম পাতা; গ্রাহকের তালিকা নয়, ওর চাবি তাঁর নেই (cb-ma-5-এ 403)
