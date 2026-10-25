@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\LedgerEntry;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
