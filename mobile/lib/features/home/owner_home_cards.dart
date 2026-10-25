@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/accounts/net_worth_api.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/locale/app_locale.dart';
 import '../../core/records/approval_record.dart';
@@ -13,6 +14,7 @@ import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/locale/l10n.dart';
+import 'net_worth_card.dart';
 
 /// ⭐ মালিকের হোম, ০.৪.৪১ — মালিকের অনুমোদিত পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬, পাতা ২: "ok ei planei kore felo")।
 /// ভিতরের কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · MFS · ব্যাংক · পথে · আজ এসেছে · আজ গেছে · বকেয়া), সইয়ের
@@ -745,6 +747,7 @@ List<Widget> ownerHomeCards(
   VoidCallback? onOpenMoney,
   VoidCallback? onOpenPrincipals,
   VoidCallback? onOpenStock,
+  NetWorthApi? netWorth,
 }) {
   final payable = today.payable;
   final principals = today.principals;
@@ -754,6 +757,8 @@ List<Widget> ownerHomeCards(
       : PrincipalsHomeCard(lines: principals, total: today.principalsTotal, onOpenAll: onOpenPrincipals);
   return [
     OwnerMoneyCard(today: today, onTap: onOpenMoney, onOpenStock: onOpenStock),
+    // ⭐ নিট সম্পদ বিবরণী — টাকার কার্ডের ঠিক নিচে, কেবল মালিক (মালিক, ২৫ অক্টোবর ২০২৬); টেনে আনলে নতুন করে
+    if (netWorth != null) NetWorthHomeCard(key: ValueKey('net-worth-${today.asOf}'), api: netWorth),
     WidePair(
       first: today.pendingApprovals == null ? null : _waitingCard(today, loadWaiting, onOpenApprovals),
       second: BranchSalesCard(today: today, onOpen: onOpenSales),

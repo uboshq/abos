@@ -1,0 +1,84 @@
+{
+  "@@locale": "bn",
+  "netWorthTitle": "নিট সম্পদ বিবরণী",
+  "@netWorthTitle": {
+    "description": "Owner-only Net Worth Statement: the home card title and the screen title"
+  },
+  "netWorthAsOf": "{date} পর্যন্ত",
+  "@netWorthAsOf": {
+    "description": "Net Worth Statement: the date the figures stand at",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "netWorthNet": "নিট সম্পদ",
+  "@netWorthNet": {
+    "description": "Net Worth Statement: assets less liabilities, the big figure"
+  },
+  "netWorthThisYear": "এ বছরের লাভ",
+  "@netWorthThisYear": {
+    "description": "Net Worth Statement: this financial year's profit"
+  },
+  "netWorthAgrees": "দুই দিক মেলে — খাতা ঠিক আছে",
+  "@netWorthAgrees": {
+    "description": "Net Worth Statement: assets less liabilities equals capital plus profit"
+  },
+  "netWorthDoesNotAgree": "দুই দিক মেলে না — খাতায় ভুল আছে",
+  "@netWorthDoesNotAgree": {
+    "description": "Net Worth Statement: the two sides differ, the books hold an error"
+  },
+  "netWorthLoadFailed": "নিট সম্পদ বিবরণী আনা গেল না",
+  "@netWorthLoadFailed": {
+    "description": "Net Worth Statement: the server could not be reached"
+  },
+  "netWorthCash": "নগদ · MFS · ব্যাংক",
+  "@netWorthCash": {
+    "description": "Net Worth Statement tile: cash, mobile money and bank"
+  },
+  "netWorthReceivable": "পাওনা (গ্রাহকের কাছে)",
+  "@netWorthReceivable": {
+    "description": "Net Worth Statement tile: trade receivables"
+  },
+  "netWorthStock": "মজুদ",
+  "@netWorthStock": {
+    "description": "Net Worth Statement tile: inventory at cost"
+  },
+  "netWorthOtherAssets": "অন্য সম্পদ",
+  "@netWorthOtherAssets": {
+    "description": "Net Worth Statement tile: fixed and other assets"
+  },
+  "netWorthPosition": "সম্পদ − দায়",
+  "@netWorthPosition": {
+    "description": "Net Worth Statement: the assets less liabilities side"
+  },
+  "netWorthEquity": "মূলধন + লাভ",
+  "@netWorthEquity": {
+    "description": "Net Worth Statement: the owner's equity side"
+  },
+  "netWorthAssets": "মোট সম্পদ",
+  "@netWorthAssets": {
+    "description": "Net Worth Statement: total assets"
+  },
+  "netWorthLessPayable": "বাদ: দেনা (সরবরাহকারীর)",
+  "@netWorthLessPayable": {
+    "description": "Net Worth Statement: less trade payables"
+  },
+  "netWorthLessOtherLiabilities": "বাদ: অন্য দায়",
+  "@netWorthLessOtherLiabilities": {
+    "description": "Net Worth Statement: less other liabilities"
+  },
+  "netWorthCapital": "মূলধন",
+  "@netWorthCapital": {
+    "description": "Net Worth Statement: owner's capital"
+  },
+  "netWorthDrawings": "উত্তোলন",
+  "@netWorthDrawings": {
+    "description": "Net Worth Statement: owner's drawings"
+  },
+  "netWorthEarlier": "আগের বছরগুলোর লাভ",
+  "@netWorthEarlier": {
+    "description": "Net Worth Statement: retained earnings of earlier years"
+  }
+}

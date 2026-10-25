@@ -2994,5 +2994,31 @@
   "collectNotAllowed": "You don't have permission to take collections",
   "collectOtherIncome": "Other income",
   "collectOtherIncomeHint": "From someone who is not a customer, such as rent",
-  "collectFromCustomerHint": "From a customer — on one page"
+  "collectFromCustomerHint": "From a customer — on one page",
+  "netWorthTitle": "Net Worth Statement",
+  "netWorthAsOf": "As of {date}",
+  "@netWorthAsOf": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "netWorthNet": "Net worth",
+  "netWorthThisYear": "Profit this year",
+  "netWorthAgrees": "Both sides agree — the books balance",
+  "netWorthDoesNotAgree": "The sides differ — the books hold an error",
+  "netWorthLoadFailed": "Could not load the Net Worth Statement",
+  "netWorthCash": "Cash · MFS · Bank",
+  "netWorthReceivable": "Receivables (customers)",
+  "netWorthStock": "Stock",
+  "netWorthOtherAssets": "Other assets",
+  "netWorthPosition": "Assets − liabilities",
+  "netWorthEquity": "Capital + profit",
+  "netWorthAssets": "Total assets",
+  "netWorthLessPayable": "Less: payables (suppliers)",
+  "netWorthLessOtherLiabilities": "Less: other liabilities",
+  "netWorthCapital": "Capital",
+  "netWorthDrawings": "Drawings",
+  "netWorthEarlier": "Earlier years' profit"
 }

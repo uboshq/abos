@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/accounts/net_worth_api.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/auth_user.dart';
@@ -87,6 +88,7 @@ class HomeShell extends ConsumerStatefulWidget {
     this.fetchNotifications,
     this.fetchNoticeBar,
     this.fetchPending,
+    this.netWorth,
     this.syncNow,
     this.prefs,
     this.openPath,
@@ -118,6 +120,9 @@ class HomeShell extends ConsumerStatefulWidget {
 
   /// Seam for the approval tab's count — the real one needs a server.
   final Future<ApprovalPage> Function()? fetchPending;
+
+  /// Seam for the owner's Net Worth Statement card — the real one needs a server.
+  final NetWorthApi? netWorth;
 
   /// Where favourites and recents are kept — the encrypted box by default.
   final NavPrefsStore? prefs;
@@ -658,6 +663,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   onUnfavourite: _toggleFavourite,
                   // ⭐ মালিকের হোমের "সইয়ের অপেক্ষায়" — অনুমোদনের ঘরের একই সারি (০.৪.৪১)
                   loadWaiting: widget.fetchPending ?? () => ApprovalsApi.pending(limit: 3),
+                  // ⭐ নিট সম্পদ বিবরণী — টাকার কার্ডের নিচে, কেবল মালিক (সার্ভার অন্যকে ৪০৪ দেয়)
+                  netWorth: widget.netWorth ?? const ServerNetWorthApi(),
                 ),
                 _modulesArea(page, module, counts),
                 _MoreTab(

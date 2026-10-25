@@ -11044,4 +11044,64 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get collectFromCustomerHint => 'From a customer — on one page';
+
+  @override
+  String get netWorthTitle => 'Net Worth Statement';
+
+  @override
+  String netWorthAsOf(String date) {
+    return 'As of $date';
+  }
+
+  @override
+  String get netWorthNet => 'Net worth';
+
+  @override
+  String get netWorthThisYear => 'Profit this year';
+
+  @override
+  String get netWorthAgrees => 'Both sides agree — the books balance';
+
+  @override
+  String get netWorthDoesNotAgree =>
+      'The sides differ — the books hold an error';
+
+  @override
+  String get netWorthLoadFailed => 'Could not load the Net Worth Statement';
+
+  @override
+  String get netWorthCash => 'Cash · MFS · Bank';
+
+  @override
+  String get netWorthReceivable => 'Receivables (customers)';
+
+  @override
+  String get netWorthStock => 'Stock';
+
+  @override
+  String get netWorthOtherAssets => 'Other assets';
+
+  @override
+  String get netWorthPosition => 'Assets − liabilities';
+
+  @override
+  String get netWorthEquity => 'Capital + profit';
+
+  @override
+  String get netWorthAssets => 'Total assets';
+
+  @override
+  String get netWorthLessPayable => 'Less: payables (suppliers)';
+
+  @override
+  String get netWorthLessOtherLiabilities => 'Less: other liabilities';
+
+  @override
+  String get netWorthCapital => 'Capital';
+
+  @override
+  String get netWorthDrawings => 'Drawings';
+
+  @override
+  String get netWorthEarlier => 'Earlier years\' profit';
 }

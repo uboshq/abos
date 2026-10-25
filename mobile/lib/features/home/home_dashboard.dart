@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/accounts/net_worth_api.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/menu/menu_item.dart';
@@ -41,6 +42,7 @@ class HomeDashboard extends StatelessWidget {
     this.onOpen,
     this.onUnfavourite,
     this.loadWaiting,
+    this.netWorth,
   });
 
   final AuthUser user;
@@ -81,6 +83,9 @@ class HomeDashboard extends StatelessWidget {
   /// ⭐ মালিকের হোমের "সইয়ের অপেক্ষায়" সারি (০.৪.৪১) — সাধারণত `ApprovalsApi.pending(limit: 3)`। null হলে কেবল সার্ভারের গোনা।
   final Future<ApprovalPage> Function()? loadWaiting;
 
+  /// ⭐ নিট সম্পদ বিবরণীর কার্ড (মালিক, ২৫ অক্টোবর ২০২৬) — সার্ভার মালিক ছাড়া কাউকে ৪০৪ দেয়, তখন কার্ড নেই। null হলে কার্ডই নেই।
+  final NetWorthApi? netWorth;
+
   @override
   Widget build(BuildContext context) {
     // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
@@ -119,6 +124,7 @@ class HomeDashboard extends StatelessWidget {
           ? ownerHomeCards(
               today,
               loadWaiting: loadWaiting,
+              netWorth: netWorth,
               onOpenApprovals: () => _go(context, 'approvals', context.l10n.homeApprovals),
               onOpenSales: () => _go(context, 'orders', context.l10n.homeOrderStatus),
               onOpenMoney: () => _go(context, 'dues', context.l10n.homeDueList),

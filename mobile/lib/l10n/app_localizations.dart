@@ -18067,6 +18067,120 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'গ্রাহকের কাছ থেকে — এক পাতায়'**
   String get collectFromCustomerHint;
+
+  /// Owner-only Net Worth Statement: the home card title and the screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট সম্পদ বিবরণী'**
+  String get netWorthTitle;
+
+  /// Net Worth Statement: the date the figures stand at
+  ///
+  /// In bn, this message translates to:
+  /// **'{date} পর্যন্ত'**
+  String netWorthAsOf(String date);
+
+  /// Net Worth Statement: assets less liabilities, the big figure
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট সম্পদ'**
+  String get netWorthNet;
+
+  /// Net Worth Statement: this financial year's profit
+  ///
+  /// In bn, this message translates to:
+  /// **'এ বছরের লাভ'**
+  String get netWorthThisYear;
+
+  /// Net Worth Statement: assets less liabilities equals capital plus profit
+  ///
+  /// In bn, this message translates to:
+  /// **'দুই দিক মেলে — খাতা ঠিক আছে'**
+  String get netWorthAgrees;
+
+  /// Net Worth Statement: the two sides differ, the books hold an error
+  ///
+  /// In bn, this message translates to:
+  /// **'দুই দিক মেলে না — খাতায় ভুল আছে'**
+  String get netWorthDoesNotAgree;
+
+  /// Net Worth Statement: the server could not be reached
+  ///
+  /// In bn, this message translates to:
+  /// **'নিট সম্পদ বিবরণী আনা গেল না'**
+  String get netWorthLoadFailed;
+
+  /// Net Worth Statement tile: cash, mobile money and bank
+  ///
+  /// In bn, this message translates to:
+  /// **'নগদ · MFS · ব্যাংক'**
+  String get netWorthCash;
+
+  /// Net Worth Statement tile: trade receivables
+  ///
+  /// In bn, this message translates to:
+  /// **'পাওনা (গ্রাহকের কাছে)'**
+  String get netWorthReceivable;
+
+  /// Net Worth Statement tile: inventory at cost
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ'**
+  String get netWorthStock;
+
+  /// Net Worth Statement tile: fixed and other assets
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্য সম্পদ'**
+  String get netWorthOtherAssets;
+
+  /// Net Worth Statement: the assets less liabilities side
+  ///
+  /// In bn, this message translates to:
+  /// **'সম্পদ − দায়'**
+  String get netWorthPosition;
+
+  /// Net Worth Statement: the owner's equity side
+  ///
+  /// In bn, this message translates to:
+  /// **'মূলধন + লাভ'**
+  String get netWorthEquity;
+
+  /// Net Worth Statement: total assets
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট সম্পদ'**
+  String get netWorthAssets;
+
+  /// Net Worth Statement: less trade payables
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ: দেনা (সরবরাহকারীর)'**
+  String get netWorthLessPayable;
+
+  /// Net Worth Statement: less other liabilities
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ: অন্য দায়'**
+  String get netWorthLessOtherLiabilities;
+
+  /// Net Worth Statement: owner's capital
+  ///
+  /// In bn, this message translates to:
+  /// **'মূলধন'**
+  String get netWorthCapital;
+
+  /// Net Worth Statement: owner's drawings
+  ///
+  /// In bn, this message translates to:
+  /// **'উত্তোলন'**
+  String get netWorthDrawings;
+
+  /// Net Worth Statement: retained earnings of earlier years
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের বছরগুলোর লাভ'**
+  String get netWorthEarlier;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

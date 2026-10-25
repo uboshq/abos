@@ -10870,4 +10870,63 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get collectFromCustomerHint => 'গ্রাহকের কাছ থেকে — এক পাতায়';
+
+  @override
+  String get netWorthTitle => 'নিট সম্পদ বিবরণী';
+
+  @override
+  String netWorthAsOf(String date) {
+    return '$date পর্যন্ত';
+  }
+
+  @override
+  String get netWorthNet => 'নিট সম্পদ';
+
+  @override
+  String get netWorthThisYear => 'এ বছরের লাভ';
+
+  @override
+  String get netWorthAgrees => 'দুই দিক মেলে — খাতা ঠিক আছে';
+
+  @override
+  String get netWorthDoesNotAgree => 'দুই দিক মেলে না — খাতায় ভুল আছে';
+
+  @override
+  String get netWorthLoadFailed => 'নিট সম্পদ বিবরণী আনা গেল না';
+
+  @override
+  String get netWorthCash => 'নগদ · MFS · ব্যাংক';
+
+  @override
+  String get netWorthReceivable => 'পাওনা (গ্রাহকের কাছে)';
+
+  @override
+  String get netWorthStock => 'মজুদ';
+
+  @override
+  String get netWorthOtherAssets => 'অন্য সম্পদ';
+
+  @override
+  String get netWorthPosition => 'সম্পদ − দায়';
+
+  @override
+  String get netWorthEquity => 'মূলধন + লাভ';
+
+  @override
+  String get netWorthAssets => 'মোট সম্পদ';
+
+  @override
+  String get netWorthLessPayable => 'বাদ: দেনা (সরবরাহকারীর)';
+
+  @override
+  String get netWorthLessOtherLiabilities => 'বাদ: অন্য দায়';
+
+  @override
+  String get netWorthCapital => 'মূলধন';
+
+  @override
+  String get netWorthDrawings => 'উত্তোলন';
+
+  @override
+  String get netWorthEarlier => 'আগের বছরগুলোর লাভ';
 }
