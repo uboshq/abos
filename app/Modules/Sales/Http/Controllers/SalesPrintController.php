@@ -1063,7 +1063,20 @@ class SalesPrintController extends Controller implements HasMiddleware
     /** টাকার রসিদ — আদায়ের কাগজ। */
     public function receipt(Request $request, Collection $collection): Response
     {
-        $collection->load(['lines.invoice', 'customer', 'customer.location.parent', 'customer.branch', 'account']);
+        $collection->load(['lines.invoice', 'applications', 'customer', 'customer.location.parent', 'customer.branch', 'account']);
+
+        /*
+         * ⭐ রসিদে কোন কাগজে কত, গ্রাহক কী কেটে রাখলেন, ছাড়/রাউন্ডিং আর অপ্রয়োগকৃত — দফা ১৭ (মালিকের নকশা ১০০, ২১ অক্টোবর ২০২৬)।
+         * ⓘ সারিগুলো ফোনের উত্তরের একই তালিকা ([[CollectionApiController::answer()]]); শূন্যের ঘর ছাপা হয় না।
+         */
+        $answer = \App\Modules\Sales\Http\Controllers\CollectionApiController::answer($collection);
+        $extra = array_filter([
+            'sales::collection_form.receipt.vds' => (string) ($collection->vds ?? '0'),
+            'sales::collection_form.receipt.ait' => (string) ($collection->ait ?? '0'),
+            ($collection->difference_kind === 'rounding' ? 'sales::collection_form.receipt.rounding' : 'sales::collection_form.receipt.discount')
+                => (string) ($collection->difference_amount ?? '0'),
+            'sales::collection_form.receipt.unapplied' => (string) $answer['unapplied'],
+        ], fn (string $v) => bccomp($v, '0', 4) > 0);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.collection'),
@@ -1074,19 +1087,23 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'sales::field.account' => $collection->account?->name() ?? '',
                 'sales::field.instrument_no' => $collection->instrument_no ?? '',
             ],
-            lines: $collection->lines->map(fn ($line) => [
-                'name' => $line->invoice?->document_no ?? '',
+            lines: array_map(fn (array $row) => [
+                'name' => $row['no'],
                 'qty' => '',
                 'unit' => '',
                 'rate' => '',
-                'amount' => $this->money($line->amount),
-            ])->all(),
-            totals: ['core.print.total' => $this->money($collection->amount)],
+                'amount' => $this->money($row['amount']),
+            ], $answer['applied']),
+            // ⓘ শেষ সারিটা মোটা ("grand") — তাই পাওয়া টাকা শেষে, কাটা আর অপ্রয়োগকৃত তার উপরে
+            totals: [
+                ...array_map(fn (string $v) => $this->money($v), $extra),
+                'core.print.total' => $this->money($collection->amount),
+            ],
             signatures: ['core.print.received_by'],
             narration: $collection->narration,
         );
 
-        $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection));
+        $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection, $extra));
 
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
             type: PrintJob::RECEIPT, id: (int) $collection->id,

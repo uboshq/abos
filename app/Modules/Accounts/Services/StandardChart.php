@@ -267,6 +267,16 @@ final class StandardChart implements ProvisionsCompany
      */
     public const SALES_RETURN = '4110';
 
+    /**
+     * ⭐ নিট বিক্রয়ের খাতগুলো — ৪১০০ − ৪১১০ − ৪১২০ (fe-র D3, IFRS 15; টাকা নেওয়ার নকশা দফা ৪, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আদায়ে দেওয়া ছাড় (৪১২০) বিক্রয়েরই বিপরীত, খরচ নয় — তাই নিট বিক্রয় যেখানে খাতা থেকে গোনা হয় (লাভ-ক্ষতির বিক্রয় ভাগ,
+     * আয়ের পাতা, ফোনের আয়, লাভের ছোট কার্ড) সবাই এই একটা তালিকা পড়ে। ⛔ এক জায়গায় ৪১২০ বাদ পড়লে দুই পর্দা দুই নিট বলত।
+     *
+     * @var list<string>
+     */
+    public const NET_SALES = [self::SALES, self::SALES_RETURN, self::COLLECTION_DISCOUNT];
+
     public const COST_OF_GOODS_SOLD = '5100';
 
     /**
@@ -360,6 +370,15 @@ final class StandardChart implements ProvisionsCompany
      * ২১ অক্টোবর ২০২৬; টাকা নেওয়া, দফা ৫)। গ্রাহকের পাওনা কমে পুরো অঙ্কে ([[CollectionService]])।
      */
     public const VDS_RECEIVABLE = '1138';
+
+    /*
+     * ⭐ আদায়ে বিক্রয় ছাড় — বিক্রয়ের বিপরীত-আয় (IFRS 15 ¶৫১, পরিবর্তনশীল মূল্য), খরচ নয়; নিট বিক্রয় = ৪১০০ − ৪১১০ − ৪১২০
+     * (fe-র D3, ২১ অক্টোবর ২০২৬)। ⛔ প্রতিটা ছাড়ে মালিকের সই ([[OwnerSignsDiscounts]])।
+     */
+    public const COLLECTION_DISCOUNT = '4120';
+
+    /* ⭐ রাউন্ডিং পার্থক্য — অন্য খরচ, কোম্পানির সীমা `sales.collection.rounding_limit` পর্যন্ত (fe-র D3, ২১ অক্টোবর ২০২৬) */
+    public const ROUNDING_DIFFERENCE = '5305';
 
     /*
      * ⭐ অগ্রিম বীমা — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৬.৩, ৬ অক্টোবর ২০২৬; সমন্বয়কের উত্তর প্র২)। দেওয়া প্রিমিয়ামের
@@ -1289,6 +1308,7 @@ final class StandardChart implements ProvisionsCompany
             ['4000', 'Income', 'আয়', $I, null, true, []],
             ['4100', 'Sales', 'বিক্রয়', $I, '4000', false, []],
             ['4110', 'Sales Return', 'বিক্রয় ফেরত', $I, '4000', false, []],
+            ['4120', 'Sales Discount on Collection', 'আদায়ে বিক্রয় ছাড়', $I, '4000', false, []],
             ['4200', 'Discount Received', 'প্রাপ্ত ছাড়', $I, '4000', false, []],
             ['4300', 'Other Income', 'অন্যান্য আয়', $I, '4000', false, []],
 
@@ -1394,6 +1414,7 @@ final class StandardChart implements ProvisionsCompany
             ['5299', 'Miscellaneous Expenses', 'বিবিধ খরচ', $X, '5200', false, []],
 
             ['5300', 'Discount Given', 'প্রদত্ত ছাড়', $X, '5000', false, []],
+            ['5305', 'Rounding Difference', 'রাউন্ডিং পার্থক্য', $X, '5000', false, []],
 
             /*
              * সুদ ব্যয় — ব্যাংক চার্জ থেকে আলাদা, আর সেটাই মূল কথা।

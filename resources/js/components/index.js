@@ -6,6 +6,7 @@ import * as pos from '../pos.js'
 import * as documents from './documents.js'
 import { registerMoneyDisplay } from '../money-display.js'
 import { registerMoneyKeys } from '../money-keys.js'
+import * as collection from './collection.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -15,7 +16,7 @@ import { registerMoneyKeys } from '../money-keys.js'
  * (যেমন `countNotes`) রপ্তানি করলেও ক্ষতি নেই — কেউ ডাকে না, আর পরীক্ষা
  * ওটাকে সরাসরি পায়।
  */
-const modules = [shell, money, forms, screens, pos, documents]
+const modules = [shell, money, forms, screens, pos, documents, collection]
 
 /*
  * ব্রাউজারের কয়েকটা ফাংশন, পর্দা থেকে ডাকার মতো করে।

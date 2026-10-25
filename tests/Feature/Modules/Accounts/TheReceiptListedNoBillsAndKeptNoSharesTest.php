@@ -110,10 +110,16 @@ final class TheReceiptListedNoBillsAndKeptNoSharesTest extends TestCase
         $this->assertStringContainsString("billField(i, 'amount')", $html, '⛔ টিক-দেওয়া বিলের অঙ্ক ফর্মের সাথে যায় না');
     }
 
+    /**
+     * ⓘ টাকা নেওয়ার নকশা ১০০-এর পর্দায় (a6, ২১ অক্টোবর ২০২৬) পুরনো বিল আগে নিজে থেকেই বসে — আলাদা বোতাম নেই; পর্দা সেটা
+     * বলে ("পুরনো আগে নিজে বসেছে"), আর "পুরো বকেয়া" টাকার ঘরে বকেয়া বসিয়ে আবার পুরনো আগে বসায়। হিসাবটা নিজে
+     * [[TheCollectionFormPostsWhatTheDesignSaysTest]] আর collection-form.test.js মাপে।
+     */
     public function test_the_collection_screen_offers_oldest_bills_first(): void
     {
         $this->get(route('sales.collection.create'))->assertOk()
-            ->assertSee(__('sales::action.oldest_bills_first'));
+            ->assertSee(__('sales::collection_form.open_hint'))
+            ->assertSee('data-fill-due', false);
     }
 
     /** ⓘ বিক্রয় বন্ধ থাকলে খালি তালিকা — মিথ্যা তালিকা নয় */

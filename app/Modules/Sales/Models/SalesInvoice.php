@@ -11,6 +11,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\ShowsItselfForSigning;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * বিক্রয় বিল — টাকা পাওনা হলো।
@@ -182,7 +184,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->whereHas('collection', fn ($q) => $q->posted())
             ->sum('amount');
 
-        return bcadd($collected ?: '0', $this->paidByReceiptVouchers(), 4);
+        return bcadd(bcadd($collected ?: '0', $this->clearedByCredits(), 4), $this->paidByReceiptVouchers(), 4);
     }
 
     /**
@@ -237,6 +239,24 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->orderBy('id');
     }
 
+    /**
+     * ⭐ খোলা ক্রেডিট (ক্রেডিট নোট, আগের আদায়ের অপ্রয়োগকৃত) যা এই বিলে বসেছে — দফা ৩ (মালিকের নকশা ১০০, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল পাকা আদায়ের প্রয়োগ ([[CollectionApplication]]); শর্ত [[scopeWithCollected()]]-এর হুবহু, যাতে বিলের পাতা, আদায়ের
+     * পর্দা, বাকির দেয়াল ([[CreditExposure]]) আর হিসাবের খোলা বিল ([[SalesPartyOpenBills]]) একই বাকি বলে।
+     */
+    public function clearedByCredits(): string
+    {
+        return bcadd((string) (DB::table('sal_collection_applications as a')
+            ->join('sal_collections as c', 'c.id', '=', 'a.collection_id')
+            // ⛔ কাঁচা প্রশ্নে কোম্পানির নাম নিজে — বিলের নিজের কোম্পানি ([[EveryRawQueryNamesItsCompanyTest]])
+            ->where('c.company_id', (int) $this->company_id)
+            ->where('a.target_invoice_id', $this->getKey())
+            ->whereNull('c.deleted_at')
+            ->whereIn('c.status', DocumentStatus::POSTED)
+            ->sum('a.amount') ?: '0'), '0', 4);
+    }
+
     public function paidByReceiptVouchers(): string
     {
         $single = (string) (Voucher::query()
@@ -286,8 +306,15 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
 
     public function scopeWithCollected(Builder $query): Builder
     {
+        /*
+         * ⭐ খোলা ক্রেডিটের প্রয়োগও আদায়ের যোগে — দফা ৩ ([[clearedByCredits()]]-এর হুবহু শর্ত)। ⓘ `collected_total` যে সব জায়গা
+         * পড়ে (বাকির দেয়াল, রিপোর্ট, ড্যাশবোর্ড) সবাই একসাথে মানে, আলাদা করে কাউকে বদলাতে হয় না।
+         */
+        $in = implode(', ', array_fill(0, count(DocumentStatus::POSTED), '?'));
         $collected = CollectionLine::query()
-            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->selectRaw('COALESCE(SUM(amount), 0) + (SELECT COALESCE(SUM(a.amount), 0) FROM sal_collection_applications a'
+                .' JOIN sal_collections c ON c.id = a.collection_id'
+                ." WHERE a.target_invoice_id = sal_invoices.id AND c.deleted_at IS NULL AND c.status IN ({$in}))", DocumentStatus::POSTED)
             ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
             ->whereHas('collection', fn ($q) => $q->posted());
 

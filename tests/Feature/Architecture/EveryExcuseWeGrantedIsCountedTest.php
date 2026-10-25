@@ -446,8 +446,20 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       `purchase.payment.simulate`-এর (৪৫৬ → ৪৫৭) একই সিদ্ধান্ত।
      *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
      *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
+     *
+     * ── ⚠️ ৪৫৯ → ৪৬১ (মূলের ৪৫৯ + আমাদের ২; শাখায় ছিল ৪৫৭ → ৪৫৯ → ৪৬০), ২২ অক্টোবর ২০২৬, main 2c026a303 মেশানো ২৪ অক্টোবর (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
+     *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
+     *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
+     *       ফোনের প্রিভিউ; sal_collections, sal_collection_lines, sal_collection_applications, ledger_entries, approvals,
+     *       audit_trails, issued_numbers-এর সারি আগে = পরে);
+     *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
+     *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
+     *       আটকাত (JSON-এ ৪০৯)।
+     *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
+     *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
      */
-    private const CEILING = 459;
+    private const CEILING = 461;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
