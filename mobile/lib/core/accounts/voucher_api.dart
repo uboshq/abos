@@ -883,7 +883,8 @@ String? voucherRefusal(Object error) {
         }
       }
       final joined = lines.join('\n');
-      if (joined.runes.any((r) => r >= 0x0980 && r <= 0x09FF)) return joined;
+      // ⓘ বাংলায় বলা কথা মানুষের জন্য; ইংরেজিতে চলা অ্যাপে সার্ভার মানুষের কথাও ইংরেজিতে বলে (মানুষের ভাষায় উত্তর) — তখন সেটাও
+      if (joined.isNotEmpty && (AppLocale.isEnglish() || joined.runes.any((r) => r >= 0x0980 && r <= 0x09FF))) return joined;
     }
   }
   return serverSentence(error);

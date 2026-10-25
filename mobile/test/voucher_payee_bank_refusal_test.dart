@@ -1,4 +1,5 @@
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
+import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
@@ -105,5 +106,13 @@ void main() {
     })), 'লেনদেন নম্বর লিখুন।\n$_message');
     expect(voucherRefusal(refusal({'message': 'The given data was invalid.', 'errors': {'x': ['The x field is required.']}})), isNull);
     expect(voucherRefusal(refusal({'message': 'ভাউচারটা আর খসড়া নয়।'})), 'ভাউচারটা আর খসড়া নয়।');
+    // ⓘ ইংরেজিতে চলা অ্যাপ: সার্ভার মানুষের কথা ইংরেজিতে বলে — সেটাও পুরোটা
+    AppLocale.current = AppLocale.english;
+    addTearDown(() => AppLocale.current = AppLocale.locale);
+    expect(voucherRefusal(refusal({
+      'errors': {
+        'payee_bank': ["The supplier's bank details have no second signature yet."],
+      },
+    })), "The supplier's bank details have no second signature yet.");
   });
 }
