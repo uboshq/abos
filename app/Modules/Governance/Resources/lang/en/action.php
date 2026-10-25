@@ -85,6 +85,7 @@ return [
     'free_stock_adjusted' => 'Free goods adjusted',
     'document_viewed' => 'Document viewed',
     'document_previewed' => 'Document file opened on the page',
+    'bank_file_downloaded' => 'Bank file (BEFTN) downloaded',
     'document_downloaded' => 'Document downloaded',
     'document_printed' => 'Document opened for printing',
     'document_version_added' => 'New document version',

@@ -6,6 +6,8 @@ namespace Tests\Feature\Modules\Accounts;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\AuditTrail;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -13,11 +15,13 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Accounts\Services\VoucherWriter;
+use App\Modules\Approval\Services\OwnerSignsDiscounts;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Models\SupplierBankDetail;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Js;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -32,9 +36,15 @@ use Tests\TestCase;
  *   ৪. সূত্রের মতো শুরু হওয়া নাম এক্সেলে সূত্র হয়ে চলে না — আগে '
  *   ৫. ব্যাংক নয় এমন খাত (নগদ) → ৪০৪; ভুল তারিখ → ৪২২
  *   ৬. পরিশোধের পর্দার নিয়ন্ত্রণে ফাইলের লিংক (বাছা খাতের, আজকের); রসিদে নেই — রসিদে টাকা আসে, ফাইল যায় না
+ *   ৭. নিজের চাবি (`accounts.voucher.bank_file`) ছাড়া ৪০৩ — ভাউচার দেখা আর পাকা করার চাবি থাকলেও
+ *   ৮. শাখা-সীমিত মানুষ অন্য শাখার পরিশোধ ফাইলে পান না
+ *   ৯. সইয়ের অপেক্ষার পরিশোধ (মালিকের ছাড়ের সই বাকি) ফাইলে নেই
+ *  ১০. পোস্টের পরে প্রাপকের সই-পাওয়া হিসাব ফেরত গেলে সারি নেই, গোনা আছে
+ *  ১১. প্রতিটা নামানো ঠিক একটা নিরীক্ষার সারি — খাত, দিন, কোন ভাউচার, কয় সারি, কয়টা বাদ
  */
 final class TheBankFileCarriesOnlySignedTransfersTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -64,6 +74,7 @@ final class TheBankFileCarriesOnlySignedTransfersTest extends TestCase
         SupplierBankDetail::query()->where('supplier_id', $this->supplier->id)->delete();
         $this->bank = $this->bankAccount('-01', 'BEFTN bank');
         $this->moneyIn($this->bank, '100000');
+        $this->putMoneyIn($this->till(), '100000', now()->subDays(3)->toDateString());
     }
 
     public function test_the_ground_is_there(): void
@@ -167,9 +178,115 @@ final class TheBankFileCarriesOnlySignedTransfersTest extends TestCase
 
         $this->assertMatchesRegularExpression('/data-control="bank-file"[^>]*>[^<]*<a x-bind:href="bankFileHref"[^>]*data-bank-file/', $payment,
             '⛔ পরিশোধের নিয়ন্ত্রণে ব্যাংক ফাইলের লিংক নেই');
-        $this->assertStringContainsString((string) Js::from(route('accounts.voucher.bank_file')), $payment,
+        // ⓘ পাতা @js লেখে উদ্ধৃতিসহ, কাঁচা স্ল্যাশে (কাঁচা উত্তরে মাপা: &quot;http://…/bank-file&quot;)
+        $this->assertStringContainsString(e(json_encode(route('accounts.voucher.bank_file'), JSON_UNESCAPED_SLASHES)), $payment,
             '⛔ পরিশোধের পর্দা ব্যাংক ফাইলের ঠিকানা জানে না');
         $this->assertStringNotContainsString('data-bank-file', $receipt, '⛔ রসিদে ব্যাংক ফাইলের লিংক — রসিদে টাকা আসে, ফাইল যায় না');
+    }
+
+    /** ৭ */
+    public function test_without_its_own_key_the_file_is_refused(): void
+    {
+        $clerk = $this->person(['accounts.view', 'accounts.report', 'accounts.voucher.create', 'accounts.voucher.update']);
+
+        $this->actingAs($clerk)->get($this->url($this->bank))->assertForbidden();
+        $this->assertSame(0, AuditTrail::query()->where('action', 'bank_file_downloaded')->count(), '⛔ ফেরানো অনুরোধও নামানো বলে লেখা হলো');
+
+        $clerk->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('accounts.voucher.bank_file', 'web'));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->actingAs($clerk->fresh())->get($this->url($this->bank))->assertOk();
+    }
+
+    /** ৮ */
+    public function test_a_branch_limited_person_gets_no_other_branchs_rows(): void
+    {
+        $this->sign('Mollah Traders');
+        $home = (int) $this->company->defaultBranch()->id;
+        $other = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->whereKeyNot($home)->orderBy('id')->firstOrFail();
+
+        $this->pay('100', '0', 'transfer', 'TT-HOME-1');
+        CompanyContext::set($this->company->id, (int) $other->id);
+        $this->moneyIn($this->bank, '5000');
+        $away = $this->pay('200', '0', 'transfer', 'TT-AWAY-1');
+        $this->assertSame((int) $other->id, (int) $away->branch_id, 'দৃশ্যটাই ঠিক নয় — অন্য শাখার পরিশোধ অন্য শাখায় বসেনি');
+
+        $limited = $this->person(['accounts.view', 'accounts.report', 'accounts.voucher.bank_file']);
+        $limited->forceFill(['view_all_branches' => false, 'current_branch_id' => $home])->save();
+        CompanyContext::set($this->company->id, $home);
+        app(\App\Core\Services\DataScope::class)->forget();
+
+        $rows = $this->rows((string) $this->actingAs($limited->fresh())->get($this->url($this->bank))->assertOk()->getContent());
+
+        $this->assertSame(['100.00'], array_column(array_slice($rows, 1), 2), '⛔ শাখা-সীমিত মানুষের ব্যাংক ফাইলে অন্য শাখার পরিশোধ: '.json_encode($rows, JSON_UNESCAPED_UNICODE));
+    }
+
+    /** ৯ */
+    public function test_a_payment_still_waiting_for_a_signature_stays_out(): void
+    {
+        $this->sign('Mollah Traders');
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        $data = ['type' => Voucher::PAYMENT, 'trx_date' => $this->day, 'narration' => 'ছাড়সহ', 'party_type' => 'supplier', 'party_id' => $this->supplier->id,
+            'from_account_id' => $this->bank->id, 'to_account_id' => StandardChart::find(StandardChart::PAYABLE)->id, 'instrument' => 'transfer',
+            'instrument_no' => 'TT-WAIT-1', 'amount' => '900', 'difference_kind' => 'discount', 'difference_amount' => '10'];
+        $writer = app(VoucherWriter::class);
+        [$waiting, $held] = $writer->store($data, $writer->linesFor(Voucher::PAYMENT, $data), false);
+        $this->assertTrue($held !== false && $waiting->fresh()->isDraft(), 'দৃশ্যটাই ঠিক নয় — পরিশোধ সইয়ের অপেক্ষায় নেই');
+        $this->pay('700', '0', 'transfer', 'TT-SIGNED-OK');
+
+        $rows = $this->rows((string) $this->get($this->url($this->bank))->assertOk()->getContent());
+
+        $this->assertSame(['700.00'], array_column(array_slice($rows, 1), 2), '⛔ সইয়ের অপেক্ষার পরিশোধ ব্যাংক ফাইলে গেল: '.json_encode($rows, JSON_UNESCAPED_UNICODE));
+    }
+
+    /** ১০ */
+    public function test_a_payee_whose_signed_account_was_withdrawn_gets_no_row(): void
+    {
+        $this->sign('Mollah Traders');
+        $this->pay('400', '0', 'transfer', 'TT-LATER-OFF');
+        SupplierBankDetail::query()->where('supplier_id', $this->supplier->id)->update(['status' => SupplierBankDetail::REJECTED]);
+
+        $response = $this->get($this->url($this->bank))->assertOk();
+
+        $this->assertCount(1, $this->rows((string) $response->getContent()), '⛔ সই-পাওয়া নয় এমন প্রাপকের হিসাবে সারি গেল');
+        $this->assertSame('1', $response->headers->get('X-Skipped'), '⛔ বাদ পড়া প্রাপক গোনা হয়নি');
+    }
+
+    /** ১১ */
+    public function test_every_download_leaves_exactly_one_audit_row_with_its_counts(): void
+    {
+        $this->sign('Mollah Traders');
+        $paid = $this->pay('500', '0', 'transfer', 'TT-AUDIT-1');
+        $voucher = app(VoucherService::class)->create(
+            ['type' => Voucher::PAYMENT, 'trx_date' => $this->day, 'narration' => 'পক্ষ ছাড়া', 'instrument' => 'transfer', 'instrument_no' => 'TT-AUDIT-NOBODY'],
+            [['account_id' => StandardChart::find(StandardChart::ENTERTAINMENT)->id, 'debit' => '60'], ['account_id' => $this->bank->id, 'credit' => '60']],
+        );
+        app(VoucherService::class)->post($voucher);
+
+        $this->get($this->url($this->bank))->assertOk();
+        $trails = AuditTrail::query()->where('action', 'bank_file_downloaded')->get();
+        $this->assertCount(1, $trails, '⛔ একটা নামানো, অথচ নিরীক্ষার সারি ঠিক একটা নয়');
+
+        $trail = $trails->first();
+        $this->assertSame([Account::class, (int) $this->bank->id], [$trail->auditable_type, (int) $trail->auditable_id], '⛔ নিরীক্ষা কোন খাতের ফাইল বলে না');
+        $this->assertSame((int) $this->owner->id, (int) $trail->user_id, '⛔ নিরীক্ষা কে নামাল বলে না');
+        $changes = $trail->changes()->pluck('new_value', 'field')->all();
+        $this->assertSame(['date' => $this->day, 'rows' => '1', 'skipped' => '1', 'vouchers' => (string) $paid->id],
+            array_intersect_key($changes, array_flip(['date', 'rows', 'skipped', 'vouchers'])), '⛔ নিরীক্ষায় দিন, সারি, বাদ বা ভাউচারের হিসাব ভুল: '.json_encode($changes));
+
+        $this->get($this->url($this->bank))->assertOk();
+        $this->assertSame(2, AuditTrail::query()->where('action', 'bank_file_downloaded')->count(), '⛔ দ্বিতীয় নামানো নিরীক্ষায় উঠল না');
+    }
+
+    /** @param  list<string>  $keys */
+    private function person(array $keys): User
+    {
+        $user = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $user->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany((int) $this->company->id, fn () => $user->givePermissionTo(
+            array_map(fn (string $k) => \Spatie\Permission\Models\Permission::findOrCreate($k, 'web'), $keys)));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
     }
 
     // ── প্রস্তুতি ────────────────────────────────────────────────────────

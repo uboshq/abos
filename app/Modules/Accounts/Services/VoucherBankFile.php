@@ -24,7 +24,7 @@ final class VoucherBankFile
     public function __construct(private readonly PayeeBankAccount $banks) {}
 
     /**
-     * @return array{name: string, content: string, rows: int, skipped: int}
+     * @return array{name: string, content: string, rows: int, skipped: int, voucher_ids: list<int>}
      */
     public function of(Account $from, string $date): array
     {
@@ -40,6 +40,7 @@ final class VoucherBankFile
 
         $rows = [['Account No', 'Account Name', 'Amount', 'Routing No', 'Bank', 'Payee Code', 'Reference']];
         $skipped = 0;
+        $ids = [];
 
         foreach ($vouchers as $voucher) {
             $bank = $voucher->party_type === null || $voucher->party_id === null
@@ -61,6 +62,7 @@ final class VoucherBankFile
                 continue;
             }
 
+            $ids[] = (int) $voucher->id;
             $rows[] = [
                 $bank['account_no'],
                 $bank['account_name'],
@@ -83,6 +85,8 @@ final class VoucherBankFile
             'content' => $csv,
             'rows' => count($rows) - 1,
             'skipped' => $skipped,
+            // ⓘ নিরীক্ষার জন্য — ফাইলে কোন কোন ভাউচার গেল
+            'voucher_ids' => $ids,
         ];
     }
 

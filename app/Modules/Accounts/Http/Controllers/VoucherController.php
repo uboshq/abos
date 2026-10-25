@@ -62,6 +62,9 @@ class VoucherController extends Controller implements HasMiddleware
              * জায়গা থেকে উত্তর পায়, তাই কোনোদিন দুই রকম বলতে পারে না।
              */
             new Middleware('can:viewAny,'.Voucher::class, only: ['index']),
+            // ⛔ ব্যাংক ফাইলে প্রাপকের পুরো হিসাব নম্বর — নিজের চাবি, দরজায় (নিরাপত্তা, fe ২৫ অক্টোবর ২০২৬; SAP F110-এর payment medium;
+            // [[EveryRouteIsGuardedTest]]); শাখার নাগাল ভাউচারের নিজের দেয়ালে ([[VoucherBankFile]])
+            new Middleware('can:accounts.voucher.bank_file', only: ['bankFile']),
             new Middleware('can:view,voucher', only: ['show']),
             new Middleware('can:create,'.Voucher::class, only: ['create', 'store', 'simulate', 'referenceCheck']),
             new Middleware('can:update,voucher', only: ['edit', 'update', 'post']),
@@ -228,13 +231,13 @@ class VoucherController extends Controller implements HasMiddleware
     /**
      * ⭐ ব্যাংক ফাইল (BEFTN) — `?account=<ব্যাংক খাতের id>&date=YYYY-MM-DD` ([[VoucherBankFile]]; cb-ma-4)।
      *
-     * ⓘ চাবি: রিপোর্ট বা পাকা করার (টাকা ছাড়ার মানুষ); খাতটা এই কোম্পানির ব্যাংক খাত হতে হবে — নগদ বা MFS-এর ব্যাংক ফাইল হয় না।
+     * ⛔ চাবি দরজায় — নিজের `accounts.voucher.bank_file` ([[middleware()]]); শাখা-সীমিত মানুষ কেবল নিজের শাখার পরিশোধ পান (ভাউচারের শাখার
+     * দেয়াল)। খাতটা এই কোম্পানির ব্যাংক খাত হতে হবে — নগদ বা MFS-এর ব্যাংক ফাইল হয় না।
+     * ⭐ প্রতিটা নামানো নিরীক্ষায় — কে, কখন (খাতা নিজে), কোন খাত, কোন দিন, কোন ভাউচার, কয় সারি, কয়টা বাদ (`bank_file_downloaded`)।
      * ⓘ যে প্রাপকের সই-পাওয়া হিসাব নেই, তার সারি যায় না — সংখ্যাটা উত্তরের মাথায় (`X-Skipped`), যাতে ফাইলটা পুরো ভাবা না হয়।
      */
     public function bankFile(Request $request): \Illuminate\Http\Response
     {
-        abort_unless($request->user()?->canAny(['accounts.report', 'accounts.voucher.update']) ?? false, 403);
-
         $account = \App\Modules\Accounts\Models\Account::query()->whereKey((int) $request->query('account', 0))
             ->where('money_kind', \App\Modules\Accounts\Models\Account::BANK)->first();
         abort_if($account === null, 404);
@@ -243,6 +246,13 @@ class VoucherController extends Controller implements HasMiddleware
         abort_unless(preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1, 422);
 
         $file = app(\App\Modules\Accounts\Services\VoucherBankFile::class)->of($account, $date);
+
+        app(\App\Core\Engines\Audit\AuditEngine::class)->record($account, 'bank_file_downloaded', [
+            'date' => [null, $date],
+            'rows' => [null, (string) $file['rows']],
+            'skipped' => [null, (string) $file['skipped']],
+            'vouchers' => [null, implode(',', $file['voucher_ids'])],
+        ]);
 
         return response($file['content'], 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
