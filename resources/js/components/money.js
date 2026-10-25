@@ -441,6 +441,19 @@ export function voucherMoney ({
         },
 
         /* ⓘ পক্ষের বাক্সের ঘটনা — বকেয়া (সার্ভারের চিহ্নে) আর পক্ষ আছে কি না ("অন্য (সরাসরি খাত)"-এ নেই) */
+        /*
+         * ⭐ বিলে প্রয়োগ — বিলের বাক্সের যোগফল (পয়সা, `bills-applied`); বাকিটা "বিলে প্রয়োগ হয়নি", পক্ষের নিজের খাতায় (cb-ma-5)।
+         * ⓘ মোট = পক্ষের খাতা যতটা নড়ে — মাথার "এই কাগজ" ([[headGrossPaisa]]), সার্ভারের যোগফল-নিয়মের একই মাপ (`bills_over_gross`)।
+         */
+        applied: 0,
+        heardApplied (detail) {
+            const value = Number(detail?.paisa ?? 0)
+            this.applied = Number.isFinite(value) && value > 0 ? value : 0
+        },
+        get hasApplied () { return this.applied > 0 },
+        get sumApplied () { return taka(this.applied / 100) },
+        get sumUnapplied () { return taka(Math.max(this.headGrossPaisa - this.applied, 0) / 100) },
+
         heardParty (detail) {
             this.hasParty = detail?.hasParty !== false
             this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null

@@ -276,3 +276,20 @@ describe('ব্যাংক ফাইলের লিংক', () => {
         expect(data.bankFileHref, '⛔ ট্রান্সফারে বাছা খাতের ব্যাংক ফাইলের লিংক নেই').toMatch(/^\/accounts\/vouchers\/bank-file\?account=229&date=\d{4}-\d{2}-\d{2}$/)
     })
 })
+
+describe('সারাংশে বিলে প্রয়োগ আর অপ্রয়োগকৃত', () => {
+    it('বিলের যোগফল আর মোটের বাকিটা — টিক না থাকলে সারি নেই', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, amount: '1000' })
+        clearTimeout(data.timer)
+
+        expect(data.hasApplied, '⛔ বিল টিক ছাড়াই সারাংশে "বিলে প্রয়োগ"').toBe(false)
+
+        data.heardApplied({ paisa: 75000 })
+        expect(data.sumApplied, '⛔ সারাংশের "বিলে প্রয়োগ" বিলের কার্ডের যোগফল নয়').toBe('750.00')
+        expect(data.sumUnapplied, '⛔ সারাংশের "বিলে প্রয়োগ হয়নি" মোট − প্রয়োগ নয়').toBe('250.00')
+
+        data.heardApplied({ paisa: 0 })
+        expect(data.hasApplied, '⛔ টিক তুলে নিলেও সারাংশে "বিলে প্রয়োগ" থেকে গেল').toBe(false)
+    })
+})

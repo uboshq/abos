@@ -189,6 +189,7 @@
               })"
               @money-method="heard($event.detail)"
               @party-due="heardParty($event.detail)"
+              @bills-applied="heardApplied($event.detail)"
               @fill-amount="heardFill($event.detail)"
           @else
               x-data="{ busy: false }"
@@ -881,6 +882,11 @@
                     {{-- ⭐ নকশা পাতা ৪-এর ক্রম: মোট (পক্ষের খাতে কমে) − AIT − VDS; তারপর দেওয়া, চার্জ, নিট --}}
                     <dt>{{ __('money.screen.sum.gross_party') }}</dt>
                     <dd class="num" data-sum-gross x-text="sumGross"></dd>
+                    {{-- ⭐ নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" — বিলের কার্ডের যোগফল (`bills-applied` ঘটনা), টিক থাকলে কেবল; বাকিটা পক্ষের নিজের খাতায় (চুক্তি §৭.৬) --}}
+                    <dt x-show="hasApplied" x-cloak>{{ __('money.screen.sum.applied_bills') }}</dt>
+                    <dd class="num" x-show="hasApplied" x-cloak data-sum-applied x-text="sumApplied"></dd>
+                    <dt x-show="hasApplied" x-cloak>{{ __('money.screen.sum.unapplied_on_'.($isPayment ? 'out' : 'in')) }}</dt>
+                    <dd class="num" x-show="hasApplied" x-cloak data-sum-unapplied x-text="sumUnapplied"></dd>
                     <dt>{{ __('money.screen.sum.ait') }}</dt>
                     <dd class="num" data-sum-ait x-text="sumAitMinus"></dd>
                     <dt>{{ __('money.screen.sum.vds') }}</dt>
@@ -896,6 +902,11 @@
                     <dd class="num" data-sum-ait x-text="sumAitText"></dd>
                     <dt class="font-semibold">{{ __('money.screen.sum.gross_party') }}</dt>
                     <dd class="num font-semibold" data-sum-gross x-text="sumGross"></dd>
+                    {{-- ⭐ নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" — বিলের কার্ডের যোগফল (`bills-applied` ঘটনা), টিক থাকলে কেবল; বাকিটা পক্ষের নিজের খাতায় (চুক্তি §৭.৬) --}}
+                    <dt x-show="hasApplied" x-cloak>{{ __('money.screen.sum.applied_bills') }}</dt>
+                    <dd class="num" x-show="hasApplied" x-cloak data-sum-applied x-text="sumApplied"></dd>
+                    <dt x-show="hasApplied" x-cloak>{{ __('money.screen.sum.unapplied_on_'.($isPayment ? 'out' : 'in')) }}</dt>
+                    <dd class="num" x-show="hasApplied" x-cloak data-sum-unapplied x-text="sumUnapplied"></dd>
                 @endunless
                 <dt>{{ __('money.screen.sum.charge_any') }}</dt>
                 <dd class="num" data-sum-charge x-text="sumCharge"></dd>

@@ -38,6 +38,7 @@ use Tests\TestCase;
  *   ৩. যোগফলের বাইরের টাকা বিলে বসে না, সরবরাহকারীর নিজের খাতায় (Dr) — দেনা পুরো টাকায় কমে
  *   ৪. নিয়ম নিজের ঘরে নিজের কথায়: বিলের বাকির বেশি, যোগফল মোটের বেশি, অন্য সরবরাহকারীর বিল
  *   ৫. পোস্টের মুহূর্তে পাহারা: খসড়ার পরে বিল মিটে গেলে খসড়া আর পোস্ট হয় না
+ *   ৬. সারাংশের কার্ডে নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" — দুই ভাউচারে, বিলের বাক্সের ঘটনায় বাঁধা, পাশ নিজের (Cr/Dr)
  */
 final class APaymentSettlesTheSuppliersBillsTest extends TestCase
 {
@@ -164,6 +165,21 @@ final class APaymentSettlesTheSuppliersBillsTest extends TestCase
             $this->fail('⛔ মিটে যাওয়া সরবরাহকারী-বিলের খসড়া পরিশোধ পোস্ট হলো — বিলে একই টাকা দুবার বসল');
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->assertArrayHasKey('bills', $e->errors(), '⛔ খসড়া থামল, কিন্তু বিলের সারির কারণে নয়: '.json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+        }
+    }
+
+    /** ৬ */
+    public function test_the_summary_card_shows_applied_and_unapplied_on_both_vouchers(): void
+    {
+        foreach ([Voucher::RECEIPT => 'unapplied_on_in', Voucher::PAYMENT => 'unapplied_on_out'] as $type => $key) {
+            $html = (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
+            $summary = (string) strstr($html, 'data-voucher-summary');
+
+            $this->assertStringContainsString('data-sum-applied x-text="sumApplied"', $summary, "⛔ {$type}: সারাংশে \"বিলে প্রয়োগ\" নেই");
+            $this->assertStringContainsString('data-sum-unapplied x-text="sumUnapplied"', $summary, "⛔ {$type}: সারাংশে \"বিলে প্রয়োগ হয়নি\" নেই");
+            $this->assertNotEmpty(array_filter(['bn', 'en'], fn (string $l) => str_contains($summary, e(trans('money.screen.sum.'.$key, [], $l)))),
+                "⛔ {$type}: অপ্রয়োগকৃতের নাম নিজের পাশের (Cr/Dr) নয়");
+            $this->assertStringContainsString('@bills-applied="heardApplied($event.detail)"', $html, "⛔ {$type}: সারাংশ বিলের বাক্সের যোগফল শোনে না");
         }
     }
 

@@ -165,6 +165,12 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             this.$watch('due', () => this.tellDue());
             this.$watch('partyType', () => this.tellDue());
             this.$nextTick(() => this.tellDue());
+            // ⭐ বিলে প্রয়োগের যোগফল সারাংশকে — নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" ([[voucherMoney]] `heardApplied`; cb-ma-5)
+            this.$watch('allocSumPaisa', () => this.tellApplied());
+        },
+
+        tellApplied() {
+            this.$dispatch('bills-applied', { paisa: this.allocSumPaisa });
         },
 
         tellDue() {

@@ -489,3 +489,14 @@ describe('partyVoucher — পক্ষের শাখা, কেবল তথ�
             .toHaveBeenCalledWith('party-due', { due: '10.00', hasParty: true, partyType: 'customer', partyBranch: 'ময়মনসিংহ' })
     })
 })
+
+describe('বিলে প্রয়োগের খবর সারাংশকে', () => {
+    it('টিকের যোগফল পয়সায় যায়', () => {
+        const box = make()
+        box.$dispatch = vi.fn()
+        box.bills = [{ public_id: 'b1', outstanding: '300' }, { public_id: 'b2', outstanding: '150.50' }]
+        box.allocs = { b1: '300.00', b2: '150.50' }
+        box.tellApplied()
+        expect(box.$dispatch, '⛔ বিলে প্রয়োগের যোগফল সারাংশে যায় না').toHaveBeenCalledWith('bills-applied', { paisa: 45050 })
+    })
+})
