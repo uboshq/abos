@@ -500,3 +500,21 @@ describe('বিলে প্রয়োগের খবর সারাংশ�
         expect(box.$dispatch, '⛔ বিলে প্রয়োগের যোগফল সারাংশে যায় না').toHaveBeenCalledWith('bills-applied', { paisa: 45050 })
     })
 })
+
+describe('খোলা বিলে নোটের সারি', () => {
+    it('নোট দেখায়, নিজের নামে, কিন্তু টিক হয় না', () => {
+        const box = make({ texts: { kinds: { credit_note: 'ক্রেডিট নোট', debit_note: 'ডেবিট নোট' } } })
+        box.$dispatch = vi.fn()
+        const bill = { kind: 'invoice', public_id: 'inv-1', outstanding: '500' }
+        const note = { kind: 'credit_note', public_id: 'cn-9', outstanding: '-80.0000' }
+        box.bills = [bill, note]
+
+        expect(box.isBill(bill), '⛔ বিলের সারি বিল ধরা হয় না').toBe(true)
+        expect(box.isBill(note), '⛔ নোটের সারি বিল ধরা হলো — টিক আর অঙ্কের ঘর পেত').toBe(false)
+        expect(box.kindText(note), '⛔ নোটের সারিতে ধরনের নাম নেই').toBe('ক্রেডিট নোট')
+        expect(box.hasNotes, '⛔ নোট থাকলেও কথার লাইন নেই').toBe(true)
+
+        box.toggle(note)
+        expect(box.pickedRows, '⛔ ক্রেডিট নোট টিক হয়ে প্রয়োগের সারিতে গেল').toEqual([])
+    })
+})

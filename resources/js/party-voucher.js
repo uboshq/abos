@@ -188,7 +188,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
          * ⓘ বিল না থাকলে কিছুই নয় (ফাঁকা লেখা, ঘরটা লুকানো)।
          */
         get oldestDueText() {
-            const ages = this.bills.filter((b) => Number(b.outstanding) > 0.005).map((b) => Number(b.age)).filter((n) => Number.isFinite(n));
+            const ages = this.bills.filter((b) => this.isBill(b) && Number(b.outstanding) > 0.005).map((b) => Number(b.age)).filter((n) => Number.isFinite(n));
 
             if (ages.length === 0 || !this.texts?.oldestDue) {
                 return '';
@@ -233,6 +233,19 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         // ── বহু বিল ─────────────────────────────────────────────────────
 
+        /** ⓘ বিল না নোট — a5-এর চুক্তির `kind`; পুরনো সারিতে (ঘর নেই) বিল */
+        isBill(b) {
+            return String(b?.kind ?? 'invoice') === 'invoice';
+        },
+
+        kindText(b) {
+            return this.isBill(b) ? '' : String(this.texts?.kinds?.[b.kind] ?? b.kind ?? '');
+        },
+
+        get hasNotes() {
+            return this.bills.some((b) => !this.isBill(b));
+        },
+
         billKey(b) {
             return String(b.against_type) + '-' + String(b.id);
         },
@@ -243,6 +256,11 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         /** টিক — পুরো বকেয়া বসে; টিক তুললে সারিটা যায় */
         toggle(b) {
+            // ⛔ নোট টিক হয় না — এই কাগজে প্রয়োগ নয়
+            if (!this.isBill(b)) {
+                return;
+            }
+
             const key = String(b.public_id);
             const next = { ...this.allocs };
 

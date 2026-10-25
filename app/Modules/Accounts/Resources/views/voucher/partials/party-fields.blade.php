@@ -87,6 +87,8 @@
                  'creditLimit' => __('money.screen.credit_limit'),
                  'creditNone' => __('money.screen.credit_none'),
                  'bankNone' => __('money.screen.payee_bank_none'),
+                 // ⭐ বিলে না-বাঁধা নোটের সারি — ধরনের নাম (a5-এর চুক্তি `kind`)
+                 'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note')],
              ]),
          })">
 <section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -412,9 +414,10 @@
         <template x-if="bills.length > 0">
             <div>
                 <div class="mt-3 overflow-x-auto">
-                    <table class="ui-grid w-full text-sm" data-bills-table>
+                    <table class="ui-grid is-sheet w-full whitespace-nowrap text-xs" data-bills-table>
                         <thead class="text-xs text-(--color-ink-muted)">
-                            <tr class="border-b border-(--color-border)">
+                            {{-- ⓘ মাথার লেখা দুই লাইনে যেতে পারে, ঘরের অঙ্ক-তারিখ নয় — ১৩৬৬-এ মেনু খোলা অবস্থায় সাত কলাম কার্ডের ভিতরে (cb-ma-5-এর মাপ) --}}
+                            <tr class="whitespace-normal border-b border-(--color-border)">
                                 <th class="w-8"><span class="sr-only">{{ __('money.screen.col.apply') }}</span></th>
                                 <th class="text-start">{{ __('money.screen.col.paper') }}</th>
                                 <th class="text-start">{{ __('money.screen.col.date') }}</th>
@@ -428,20 +431,29 @@
                         <tbody>
                             <template x-for="b in bills" :key="billKey(b)">
                                 <tr class="border-b border-(--color-border)" data-bill-row>
+                                    {{-- ⓘ নোটের সারিতে টিক আর অঙ্ক নেই — নোট এই কাগজে প্রয়োগ হয় না (আলাদা কাজ); কেবল দেখায় পক্ষের বকেয়া কত কমেছে/বেড়েছে --}}
                                     <td>
-                                        <input type="checkbox" data-bill-tick :aria-label="b.no"
-                                               :checked="isTicked(b)" x-on:change="toggle(b)">
+                                        <template x-if="isBill(b)">
+                                            <input type="checkbox" data-bill-tick :aria-label="b.no"
+                                                   :checked="isTicked(b)" x-on:change="toggle(b)">
+                                        </template>
                                     </td>
-                                    <td class="font-medium" x-text="b.no"></td>
+                                    <td class="whitespace-normal font-medium">
+                                        <span x-text="b.no"></span>
+                                        <span class="mt-0.5 block w-fit whitespace-nowrap rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)"
+                                              data-bill-kind x-show="! isBill(b)" x-text="kindText(b)"></span>
+                                    </td>
                                     <td class="num" x-text="dayMonth(b.date)"></td>
                                     <td class="num" data-bill-due-date x-text="dayMonth(b.due_date)"></td>
                                     <td class="num" data-bill-late x-bind:class="lateClass(b)" x-text="lateText(b)"></td>
                                     <td class="num" data-bill-total x-text="lakh(b.total)"></td>
                                     <td class="num" data-bill-outstanding x-text="lakh(b.outstanding)"></td>
                                     <td class="num">
-                                        <input type="text" inputmode="decimal" data-bill-amount :aria-label="b.no"
-                                               class="h-(--spacing-field-dense) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50"
-                                               :value="rowAmount(b)" :disabled="! isTicked(b)" x-on:change="setRow(b, $event.target.value)">
+                                        <template x-if="isBill(b)">
+                                            <input type="text" inputmode="decimal" data-bill-amount :aria-label="b.no"
+                                                   class="h-(--spacing-field-dense) w-16 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50"
+                                                   :value="rowAmount(b)" :disabled="! isTicked(b)" x-on:change="setRow(b, $event.target.value)">
+                                        </template>
                                     </td>
                                 </tr>
                             </template>
@@ -464,6 +476,7 @@
                 </template>
 
                 {{-- ⓘ বিলের বাইরের টাকা পক্ষের নিজের খাতায় — পরিশোধে Dr, রসিদে Cr; "অগ্রিম" নয় (আলাদা অগ্রিম খাত নেই; চুক্তি §৭.৬) --}}
+                <p class="mt-2 text-xs text-(--color-ink-muted)" data-bills-notes x-show="hasNotes" x-cloak>{{ __('money.screen.notes_line') }}</p>
                 <p class="mt-2 text-xs text-(--color-ink-muted)" data-bills-unapplied x-show="unappliedText !== ''" x-cloak x-text="unappliedText"></p>
                 <p class="mt-2 text-xs text-(--color-danger)" data-bills-over x-show="overText !== ''" x-cloak x-text="overText"></p>
             </div>

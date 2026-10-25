@@ -42,11 +42,14 @@ final class VoucherAllocations
      * ⭐ পক্ষের খোলা বিল — গ্রাহকের বিক্রয় বিল ([[PartyOpenBills]]) আর সরবরাহকারীর ক্রয় বিল ([[PayableOpenBills]]; cb-ma-5)। ⓘ ওয়েবের
      * কার্ড, ফোনের দরজা আর লেখার যাচাই — তিনজনেই এখান থেকে, তাই যা দেখায় তা-ই বাছা যায়।
      *
+     * ⓘ `$withNotes` — বিলে না-বাঁধা ক্রেডিট/ডেবিট নোট নিজের সারিতে (a5-এর চুক্তি 56f7e0e15, `kind`); কেবল ওয়েবের কার্ড চায়, দেখানোর জন্য।
+     * ⛔ লেখার যাচাই চায় না — নোট এই কাগজে প্রয়োগ হয় না (আলাদা কাজ), তাই নোটের public_id পাঠালে "অজানা বিল"।
+     *
      * @return list<array<string, mixed>>
      */
-    public function openBillsOf(string $partyType, int $partyId, int $limit = 50): array
+    public function openBillsOf(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
     {
-        return [...$this->openBills->openBills($partyType, $partyId, $limit), ...$this->payableBills->openBills($partyType, $partyId, $limit)];
+        return [...$this->openBills->openBills($partyType, $partyId, $limit, $withNotes), ...$this->payableBills->openBills($partyType, $partyId, $limit)];
     }
 
     /**

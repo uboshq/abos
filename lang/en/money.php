@@ -117,6 +117,8 @@ return [
         'bank_file' => 'Bank file (BEFTN)',
         'bank_file_note' => 'Today’s transfer payments from this account, to the payees’ signed accounts:',
         'open_bills_in' => 'Open bills',
+        'kind' => ['credit_note' => 'Credit note', 'debit_note' => 'Debit note'],
+        'notes_line' => "A credit note lowers the party's due and a debit note raises it — the due already counts them; applying a note on this paper is separate work.",
         'bills_hint' => 'Ticking a bill puts its whole due — change the amount to adjust',
         'late_days' => ':n days',
         'bills_unapplied' => 'Bills take :sum; ৳:amount is not applied to a bill — it stays on :party account (:side).',
