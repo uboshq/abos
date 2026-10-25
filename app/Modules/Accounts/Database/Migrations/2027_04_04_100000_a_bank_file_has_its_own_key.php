@@ -23,20 +23,34 @@ return new class extends Migration
         $guard = 'web';
         $from = DB::table('permissions')->where('name', 'accounts.voucher.update')->where('guard_name', $guard)->value('id');
         $to = $this->permission('accounts.voucher.bank_file', $guard);
-        $given = [];
+        $given = 0;
 
         if ($from !== null) {
-            foreach (DB::table('role_has_permissions')->where('permission_id', $from)->pluck('role_id') as $roleId) {
-                if (DB::table('role_has_permissions')->where('role_id', $roleId)->where('permission_id', $to)->exists()) {
+            // ⓘ ভূমিকার দল (team) = তার কোম্পানি (`roles.company_id`, permission.php team_foreign_key)
+            $roles = DB::table('role_has_permissions as rp')
+                ->join('roles as r', 'r.id', '=', 'rp.role_id')
+                ->leftJoin('companies as c', 'c.id', '=', 'r.company_id')
+                ->where('rp.permission_id', $from)
+                ->orderBy('r.company_id')->orderBy('r.id')
+                ->get(['r.id', 'r.name', 'r.company_id', 'c.code']);
+
+            foreach ($roles as $role) {
+                // ⛔ আগেই থাকলে আবার নয় — দুইবার চালালেও একটা জোড়া (fe-র শর্ত ১)
+                if (DB::table('role_has_permissions')->where('role_id', $role->id)->where('permission_id', $to)->exists()) {
                     continue;
                 }
 
-                DB::table('role_has_permissions')->insert(['permission_id' => $to, 'role_id' => $roleId]);
-                $given[] = (int) $roleId;
+                DB::table('role_has_permissions')->insert(['permission_id' => $to, 'role_id' => $role->id]);
+                $given++;
+
+                // ⭐ প্রতিটা কোম্পানি আর ভূমিকার এক লাইন — লাইভে tinker দিয়ে মেলানো যায় (fe-র শর্ত ২)
+                Log::info(sprintf('Bank file key given: company=%s role=%s team_id=%s', (string) ($role->code ?? '?'), (string) $role->name, (string) $role->company_id), [
+                    'company' => $role->code, 'role' => $role->name, 'team_id' => (int) $role->company_id,
+                ]);
             }
         }
 
-        Log::info('Bank file: roles given accounts.voucher.bank_file (those that post payments)', ['roles' => $given]);
+        Log::info(sprintf('Bank file key: %d role(s) given accounts.voucher.bank_file (those that post payments)', $given), ['given' => $given]);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
