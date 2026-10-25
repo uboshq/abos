@@ -402,6 +402,7 @@ export function voucherMoney ({
     differenceKind = '',
     difference = '',
     sideTexts = {},
+    buttonTexts = {},
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -566,6 +567,8 @@ export function voucherMoney ({
             return ownerSignNeeded(this.hasDiscount ? this.differencePaisa / 100 : 0, this.hasRounding ? this.differencePaisa / 100 : 0)
         },
         get sumDifference () { return taka(this.differencePaisa / 100) },
+        // ⓘ মূল বোতামের নাম — সার্ভারের আঁকা নামই, কেবল মালিকের সই লাগলে "সইয়ে পাঠান"
+        get buttonLabel () { return String((this.ownerSigns ? buttonTexts?.signs : buttonTexts?.plain) ?? '') },
         // ⓘ উৎসে কাটা আছে কি না — পরিশোধে কমলা "করণীয় তালিকায় উঠবে" লাইন এতে
         get hasWithheld () { return paisa(this.ait) + paisa(this.vds) > 0 },
         // ⓘ নিট — পক্ষের হাতে যা যায়: পরিশোধে মোট − AIT − VDS, রসিদে লেখা টাকাই

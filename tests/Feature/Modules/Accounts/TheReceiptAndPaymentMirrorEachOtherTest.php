@@ -629,10 +629,6 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $customer = Customer::query()->orderBy('id')->firstOrFail();
         $branch = $this->company->defaultBranch();
         $customer->forceFill(['branch_id' => $branch->id])->save();
-        // ⓘ হেডারে সেই শাখা বাছা — মালিকের "সব শাখা"-য় পোস্টের শাখাই নেই, আর পক্ষের শাখার নিয়ম ফেরায় (cb-ma-5 ফটক: "#0" শাখা)
-        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $owner->forceFill(['current_branch_id' => $branch->id])->save();
-        $this->actingAs($owner->fresh());
 
         $due = $this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $customer->id]))->assertOk()->json();
         $this->assertSame($branch->name(), $due['party_branch'] ?? null, '⛔ বকেয়ার উত্তরে পক্ষের নিজের শাখা নেই — মাথার "গ্রাহকের শাখা" আসবে না');
@@ -641,7 +637,8 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             'type' => Voucher::RECEIPT, 'narration' => 'শাখার দাবি', 'trx_date' => now()->toDateString(), 'amount' => '100',
             'instrument' => 'transfer', 'instrument_no' => 'BR-1', 'party_type' => 'customer', 'party_id' => $customer->id, 'to_account_id' => $bank->id,
         ])->assertOk()->json();
-        $this->assertNotEmpty($answer['rows'] ?? [], 'দৃশ্যটাই ঠিক নয় — প্রিভিউ খালি: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
+        // ⛔ প্রিভিউর কাগজে পোস্টের শাখা না থাকলে পক্ষের শাখার পাহারা "#0" শাখার সাথে মেলাত (cb-ma-5s ফটকে ধরা)
+        $this->assertNotEmpty($answer['rows'] ?? [], '⛔ শাখাওয়ালা পক্ষের প্রিভিউ ফিরল — প্রিভিউর কাগজে পোস্টের শাখা নেই: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
         $this->assertSame($answer['rows'][0]['branch'] ?? null, $answer['branch'] ?? null, '⛔ "পোস্ট হবে" খাতার নিজের শাখা নয় — মাথা আর খাতা দুই শাখা বলে');
 
         $html = $this->screen(Voucher::RECEIPT);

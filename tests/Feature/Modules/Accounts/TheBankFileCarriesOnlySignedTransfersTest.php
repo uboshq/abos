@@ -57,6 +57,9 @@ final class TheBankFileCarriesOnlySignedTransfersTest extends TestCase
 
     private string $day;
 
+    /** ⓘ প্রতিটা মূলধনের জাবেদার নিজের লেনদেন নম্বর — একই খাতে একই নম্বর দুইবার বসে না (cb-ma-5s ফটক) */
+    private int $funded = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -323,7 +326,7 @@ final class TheBankFileCarriesOnlySignedTransfersTest extends TestCase
     private function moneyIn(Account $bank, string $amount): void
     {
         $voucher = app(VoucherService::class)->create(
-            ['type' => Voucher::JOURNAL, 'trx_date' => now()->subDays(2)->toDateString(), 'narration' => 'ব্যাংকে মূলধন', 'instrument_no' => 'CAP-'.$bank->code],
+            ['type' => Voucher::JOURNAL, 'trx_date' => now()->subDays(2)->toDateString(), 'narration' => 'ব্যাংকে মূলধন', 'instrument_no' => 'CAP-'.$bank->code.'-'.(++$this->funded)],
             [['account_id' => $bank->id, 'debit' => $amount], ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'credit' => $amount]],
         );
         app(VoucherService::class)->post($voucher);

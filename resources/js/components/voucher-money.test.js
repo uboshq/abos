@@ -29,7 +29,7 @@ async function mount ({ out = false, amount = '', account = '229', balances = { 
     const branchText = JSON.stringify(branchLabels).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText}, bankFileUrl: '${bankFileUrl}', sideTexts: { owedIn: ':party খাতায় জমা', owedOut: ':party খাতায়', leftIn: 'জমা থাকবে', leftOut: ':party খাতায় থাকবে', left: 'বাকি থাকবে', partyOf: { customer: 'গ্রাহকের', supplier: 'সরবরাহকারীর', '': 'পক্ষের' } }})">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText}, bankFileUrl: '${bankFileUrl}', sideTexts: { owedIn: ':party খাতায় জমা', owedOut: ':party খাতায়', leftIn: 'জমা থাকবে', leftOut: ':party খাতায় থাকবে', left: 'বাকি থাকবে', partyOf: { customer: 'গ্রাহকের', supplier: 'সরবরাহকারীর', '': 'পক্ষের' } }, buttonTexts: { plain: 'পোস্ট', signs: 'সইয়ে পাঠান' }})">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
@@ -358,4 +358,17 @@ describe('মাথার অঙ্কের নাম তার নিজের
             expect(`${data.headOwedLabel}${data.headLeftLabel}`, `⛔ ${what}: এখনো "অগ্রিম"`).not.toContain('অগ্রিম')
         })
     }
+})
+
+describe('মূল বোতামের নাম একটাই', () => {
+    it('সাধারণে সার্ভারের নাম, ছাড়ে "সইয়ে পাঠান"', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: false, amount: '1000' })
+        clearTimeout(data.timer)
+
+        expect(data.buttonLabel, '⛔ সই না লাগলেও বোতাম সার্ভারের নাম নয়').toBe('পোস্ট')
+        data.differenceKind = 'discount'
+        data.difference = '5'
+        expect(data.buttonLabel, '⛔ ছাড়ে বোতাম "সইয়ে পাঠান" হয় না').toBe('সইয়ে পাঠান')
+    })
 })

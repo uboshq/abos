@@ -184,6 +184,8 @@
                   ait: @js((string) old('ait_amount', bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 ? $voucher->ait_amount : '')),
                   vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
                   differenceKind: @js((string) old('difference.kind', $voucher->difference_kind ?? '')),
+                  // ⓘ মূল বোতামের দুই নাম — সার্ভারের জানা নাম, আর মালিকের সই লাগলে "সইয়ে পাঠান"
+                  buttonTexts: @js(['plain' => __(($moneySignatures ?? false) ? 'money.screen.send' : 'money.screen.post'), 'signs' => __('money.screen.send')]),
                   // ⭐ শূন্য পেরোলে বাড়তি পক্ষের নিজের খাতে, আলাদা খাত নেই (মালিকের নিয়ম; fe, ২৫ অক্টোবর ২০২৬)
                   sideTexts: @js([
                       'owedIn' => __('money.screen.head.owed_in_credit'), 'owedOut' => __('money.screen.head.owed_out_debit'),

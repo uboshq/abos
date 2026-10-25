@@ -202,7 +202,7 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
             $this->assertStringContainsString('data-money-shown="difference[amount]"', $html, "⛔ {$type}: কম-বেশির অঙ্কের ঘর নেই");
             $this->assertStringContainsString($mark.' x-text="sumDifference"', $html, "⛔ {$type}: সারাংশে ছাড়ের সারি নেই");
             $this->assertStringContainsString('x-show="roundingOwner" data-sum-rounding-owner', $html, "⛔ {$type}: রাউন্ডিংয়ে মালিকের সইয়ের চিপ নেই");
-            $this->assertStringContainsString('x-show="ownerSigns" x-cloak data-owner-signs-label', $html, "⛔ {$type}: সই লাগলে বোতাম \"সইয়ে পাঠান\" হয় না");
+            $this->assertStringContainsString('x-text="buttonLabel" data-owner-signs-label', $html, "⛔ {$type}: সই লাগলে বোতাম \"সইয়ে পাঠান\" হয় না");
         }
     }
 

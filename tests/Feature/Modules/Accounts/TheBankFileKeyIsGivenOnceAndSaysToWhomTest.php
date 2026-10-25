@@ -8,7 +8,6 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 use Throwable;
 
@@ -35,7 +34,13 @@ final class TheBankFileKeyIsGivenOnceAndSaysToWhomTest extends TestCase
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
-        Event::listen(MessageLogged::class, function (MessageLogged $logged): void {
+    }
+
+    /** ⓘ লগ শোনা — লগার যে dispatcher-এ ঘটনা ছাড়ে ঠিক সেটাতেই, চালানোর ঠিক আগে */
+    private function listen(): void
+    {
+        $this->lines = [];
+        $this->app['events']->listen(MessageLogged::class, function (MessageLogged $logged): void {
             $this->lines[] = $logged->message;
         });
     }
@@ -43,14 +48,17 @@ final class TheBankFileKeyIsGivenOnceAndSaysToWhomTest extends TestCase
     public function test_the_key_is_given_once_and_the_log_says_to_whom(): void
     {
         // ⓘ মাইগ্রেশনের আগের দশা — চাবির জোড়া নেই (মাইগ্রেশন আর বীজ দুজনেই আগে দিয়ে রেখেছে)
-        DB::table('role_has_permissions')->whereIn('permission_id', DB::table('permissions')->where('name', self::KEY)->select('id'))->delete();
+        $keyIds = DB::table('permissions')->where('name', self::KEY)->pluck('id')->all();
+        DB::table('role_has_permissions')->whereIn('permission_id', $keyIds)->delete();
+        // ⓘ প্রস্তুতি নিজে প্রমাণ করে — চাবির কোনো জোড়া নেই (নাহলে up() কিছুই দিত না, কেবল "0 role(s)" লিখত)
+        $this->assertSame([], $this->holders(), 'দৃশ্যটাই ঠিক নয় — চাবির জোড়া মোছা যায়নি');
         $payers = DB::table('role_has_permissions as rp')->join('permissions as p', 'p.id', '=', 'rp.permission_id')
             ->join('roles as r', 'r.id', '=', 'rp.role_id')->leftJoin('companies as c', 'c.id', '=', 'r.company_id')
             ->where('p.name', 'accounts.voucher.update')->get(['r.id', 'r.name', 'r.company_id', 'c.code']);
         $this->assertGreaterThan(0, $payers->count(), 'দৃশ্যটাই ঠিক নয় — পরিশোধ পাকা করার কোনো ভূমিকা নেই');
 
         $migration = require base_path('app/Modules/Accounts/Database/Migrations/2027_04_04_100000_a_bank_file_has_its_own_key.php');
-        $this->lines = [];
+        $this->listen();
         $migration->up();
 
         $this->assertSame($payers->pluck('id')->sort()->values()->all(), $this->holders(), '⛔ পরিশোধ পাকা করে এমন প্রতিটা ভূমিকা, আর কেবল তারাই, চাবি পায়নি');

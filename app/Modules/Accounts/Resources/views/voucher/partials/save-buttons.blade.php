@@ -52,8 +52,9 @@
                  ::class="busy && 'pointer-events-none opacity-70'">
         {{-- ⓘ সই আগে থেকেই চালু হলে মূল নামটাই "সইয়ে পাঠান" — তখন একটাই নাম, দুইবার নয় (cb-ma-5 ফটক: "সইয়ে পাঠান সইয়ে পাঠান") --}}
         @if ($ownerSignsLabel !== null && ! $revising && $ownerSignsLabel !== $primaryLabel)
-            <span x-show="! ownerSigns">{{ __($primaryLabel) }}</span>
-            <span x-show="ownerSigns" x-cloak data-owner-signs-label>{{ __($ownerSignsLabel) }}</span>
+            {{-- ⓘ সার্ভার আঁকে কেবল নিজের জানা নাম (সইয়ের ছক থাকলে "সইয়ে পাঠান", নাহলে "পোস্ট"); কম-বেশিতে মালিকের সই লাগলে JS বদলায়
+                 ([[voucherMoney]] buttonLabel) — দুই নাম কখনো একসাথে আঁকা নয়, Alpine আসার আগেও না (cb-ma-5s ফটক) --}}
+            <span x-text="buttonLabel" data-owner-signs-label>{{ __($primaryLabel) }}</span>
         @else
             {{ __($primaryLabel) }}
         @endif
