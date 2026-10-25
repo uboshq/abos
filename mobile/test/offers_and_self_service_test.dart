@@ -129,7 +129,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('4.0 দিন বাকি · মোট 5'), findsOneWidget);
-      expect(find.text('সইয়ের অপেক্ষায়'), findsOneWidget);
+      expect(find.text('অনুমোদনের অপেক্ষায়'), findsOneWidget);
       expect(find.byKey(const ValueKey('leave-new')), findsOneWidget);
     });
 

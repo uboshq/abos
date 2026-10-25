@@ -108,9 +108,9 @@ void main() {
 
   test('the English reads in English: the level as step N of M, the claim words as paid/approved', () {
     final w = PaperState.waiting.spec;
-    expect(w.label(level: 1, levels: 2, english: true), 'Awaiting signature · step 1 of 2');
+    expect(w.label(level: 1, levels: 2, english: true), 'Awaiting approval · step 1 of 2');
     expect(w.shortLabel(level: 1, levels: 2, english: true), 'Step 1 of 2');
-    expect(w.label(english: true), 'Awaiting signature');
+    expect(w.label(english: true), 'Awaiting approval');
     expect(PaperState.posted.spec.label(english: true), 'Posted · in the books');
     expect(PaperState.posted.spec.label(kind: PaperKind.stock, english: true), 'Posted · in stock');
     expect(PaperState.posted.spec.label(kind: PaperKind.claim, english: true), 'Paid');

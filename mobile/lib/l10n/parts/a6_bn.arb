@@ -46,7 +46,7 @@
   "@claimsKindExpense": {
     "description": "Claims: the kind of a request — money already spent, with receipts"
   },
-  "claimsStateSubmitted": "সইয়ের অপেক্ষায়",
+  "claimsStateSubmitted": "অনুমোদনের অপেক্ষায়",
   "@claimsStateSubmitted": {
     "description": "Claims: fallback state word when the server sends no label — submitted"
   },
@@ -66,7 +66,7 @@
   "@claimsStateOther": {
     "description": "Claims: fallback state word for a state the app does not know"
   },
-  "hrLeaveStatePending": "সইয়ের অপেক্ষায়",
+  "hrLeaveStatePending": "অনুমোদনের অপেক্ষায়",
   "@hrLeaveStatePending": {
     "description": "Leave: state of an application — waiting for its signature (fe 21 Oct: was 'অনুমোদনের অপেক্ষায়')"
   },
@@ -118,7 +118,7 @@
   "@approvalsInboxServerMissing": {
     "description": "Approvals inbox: the server has no approvals door (404)"
   },
-  "approvalsInboxSigned": "সই দেওয়া হলো।",
+  "approvalsInboxSigned": "অনুমোদন দেওয়া হলো।",
   "@approvalsInboxSigned": {
     "description": "Approvals inbox: snack bar after signing (fe 21 Oct: the act is 'সই দিন')"
   },
@@ -138,7 +138,7 @@
   "@approvalsInboxNotYours": {
     "description": "Approvals inbox: the person may not decide this paper"
   },
-  "approvalsInboxAmountChanged": "কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।",
+  "approvalsInboxAmountChanged": "কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার অনুমোদন দিন।",
   "@approvalsInboxAmountChanged": {
     "description": "Approvals inbox: the amount changed between opening and signing; nothing was signed"
   },
@@ -154,11 +154,11 @@
   "@approvalsInboxMoreFailed": {
     "description": "Approvals inbox: the next page did not load"
   },
-  "approvalsInboxSignTitle": "সই দেবেন?",
+  "approvalsInboxSignTitle": "অনুমোদন দেবেন?",
   "@approvalsInboxSignTitle": {
     "description": "Approvals inbox: title of the sign dialog (fe 21 Oct: was 'অনুমোদন করবেন?')"
   },
-  "approvalsInboxSignButton": "সই দিন",
+  "approvalsInboxSignButton": "অনুমোদন দিন",
   "@approvalsInboxSignButton": {
     "description": "Approvals inbox: the button that signs the paper (fe 21 Oct: 'সই দিন', was 'অনুমোদন')"
   },
@@ -227,7 +227,7 @@
   "@approvalsInboxNoDetails": {
     "description": "Approvals inbox: the server sent no lines for this paper"
   },
-  "approvalsDelegationTitle": "সইয়ের ভার",
+  "approvalsDelegationTitle": "দায়িত্ব অর্পণ",
   "@approvalsDelegationTitle": {
     "description": "Delegation screen: title (signing handed to someone else for a while)"
   },
@@ -243,7 +243,7 @@
   "@approvalsDelegationRevokeTitle": {
     "description": "Delegation: title of the revoke dialog"
   },
-  "approvalsDelegationRevokeBody": "{person} আর আপনার হয়ে সই দিতে পারবেন না।",
+  "approvalsDelegationRevokeBody": "{person} আর আপনার হয়ে অনুমোদন দিতে পারবেন না।",
   "@approvalsDelegationRevokeBody": {
     "description": "Delegation: what revoking means; person is the delegate's name",
     "placeholders": {
@@ -302,7 +302,7 @@
   "@approvalsDelegationEmptyTitle": {
     "description": "Delegation: empty state title"
   },
-  "approvalsDelegationEmptyMessage": "ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে সই দিতে দিন।",
+  "approvalsDelegationEmptyMessage": "ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে অনুমোদন দিতে দিন।",
   "@approvalsDelegationEmptyMessage": {
     "description": "Delegation: empty state message"
   },
@@ -572,7 +572,7 @@
       }
     }
   },
-  "approvalsMyRequestsPending": "{count, plural, other{এখনো সইয়ের অপেক্ষায়: {count} টি}}",
+  "approvalsMyRequestsPending": "{count, plural, other{এখনো অনুমোদনের অপেক্ষায়: {count} টি}}",
   "@approvalsMyRequestsPending": {
     "description": "My requests: how many still wait for a signature",
     "placeholders": {
@@ -585,7 +585,7 @@
   "@approvalsMyRequestsEmptyTitle": {
     "description": "My requests: empty state title"
   },
-  "approvalsMyRequestsEmptyMessage": "কোনো কাগজ সইয়ের জন্য পাঠালে এখানে দেখা যাবে।",
+  "approvalsMyRequestsEmptyMessage": "কোনো কাগজ অনুমোদনের জন্য পাঠালে এখানে দেখা যাবে।",
   "@approvalsMyRequestsEmptyMessage": {
     "description": "My requests: empty state message"
   },
@@ -918,11 +918,11 @@
   "@noticesEmptyMessage": {
     "description": "Notice board: empty state message"
   },
-  "noticesSigned": "সই দেওয়া হলো।",
+  "noticesSigned": "স্বীকৃতি দেওয়া হলো।",
   "@noticesSigned": {
     "description": "Notice: snack bar after the person signs (acknowledges) the notice"
   },
-  "noticesSignFailed": "সই দেওয়া গেল না।",
+  "noticesSignFailed": "স্বীকৃতি দেওয়া গেল না।",
   "@noticesSignFailed": {
     "description": "Notice: signing failed"
   },
@@ -939,7 +939,7 @@
       }
     }
   },
-  "noticesSignBy": "সইয়ের শেষ সময় {date}",
+  "noticesSignBy": "স্বীকৃতির শেষ সময় {date}",
   "@noticesSignBy": {
     "description": "Notice: the deadline for signing; date is a date and time",
     "placeholders": {
@@ -948,7 +948,7 @@
       }
     }
   },
-  "noticesYouSigned": "আপনি সই দিয়েছেন",
+  "noticesYouSigned": "আপনি স্বীকৃতি দিয়েছেন",
   "@noticesYouSigned": {
     "description": "Notice: the person has signed it"
   },
@@ -956,7 +956,7 @@
   "@noticesSending": {
     "description": "Notice: the sign button while sending"
   },
-  "noticesReadAndAgree": "পড়েছি ও মানছি — সই দিন",
+  "noticesReadAndAgree": "পড়েছি ও মানছি — স্বীকৃতি দিন",
   "@noticesReadAndAgree": {
     "description": "Notice: the button that signs (acknowledges) the notice"
   },
@@ -1061,7 +1061,7 @@
   "@hrRegisterLeaveRejectReasonNeeded": {
     "description": "Leave register: no reason was written"
   },
-  "hrRegisterLeaveSigned": "ছুটিতে সই দেওয়া হলো।",
+  "hrRegisterLeaveSigned": "ছুটিতে অনুমোদন দেওয়া হলো।",
   "@hrRegisterLeaveSigned": {
     "description": "Leave register: snack bar after signing (fe 21 Oct: 'সই দিন', not 'মঞ্জুর')"
   },
@@ -1069,7 +1069,7 @@
   "@hrRegisterLeaveRejected": {
     "description": "Leave register: snack bar after rejecting"
   },
-  "hrRegisterLeaveSignFailed": "সই দেওয়া গেল না।",
+  "hrRegisterLeaveSignFailed": "অনুমোদন দেওয়া গেল না।",
   "@hrRegisterLeaveSignFailed": {
     "description": "Leave register: signing failed"
   },
@@ -1137,7 +1137,7 @@
   "@hrRegisterLeaveReject": {
     "description": "Leave register row: the reject button (was 'ফেরত')"
   },
-  "hrRegisterLeaveSign": "সই দিন",
+  "hrRegisterLeaveSign": "অনুমোদন দিন",
   "@hrRegisterLeaveSign": {
     "description": "Leave register row: the sign button (fe 21 Oct: 'সই দিন', was 'মঞ্জুর')"
   },
@@ -1157,7 +1157,7 @@
   "@hrLeaveTitle": {
     "description": "My leave: screen title"
   },
-  "hrLeaveSent": "ছুটির আবেদন গেছে — সইয়ের অপেক্ষায়।",
+  "hrLeaveSent": "ছুটির আবেদন গেছে — অনুমোদনের অপেক্ষায়।",
   "@hrLeaveSent": {
     "description": "My leave: snack bar after applying (fe 21 Oct: 'সইয়ের অপেক্ষায়')"
   },
@@ -1473,7 +1473,7 @@
   "@claimsSendFailed": {
     "description": "New claim: sending failed"
   },
-  "claimsHowItWorks": "সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।",
+  "claimsHowItWorks": "অনুমোদন আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।",
   "@claimsHowItWorks": {
     "description": "New claim: what happens after sending"
   },
@@ -1533,11 +1533,11 @@
   "@ownerAlerts": {
     "description": "Owner's centre: alerts heading and the Alerts page title"
   },
-  "ownerAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "ownerAwaitingSignature": "অনুমোদনের অপেক্ষায়",
   "@ownerAwaitingSignature": {
     "description": "Owner's centre: papers awaiting signature (heading and the figure's label)"
   },
-  "ownerNothingAwaitingNow": "এখন কোনো কাগজ সইয়ের অপেক্ষায় নেই।",
+  "ownerNothingAwaitingNow": "এখন কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।",
   "@ownerNothingAwaitingNow": {
     "description": "Owner's centre Today: nothing awaits signature"
   },
@@ -1710,7 +1710,7 @@
       }
     }
   },
-  "ownerAwaitingSignatureCount": "সইয়ের অপেক্ষায় ({count}টা)",
+  "ownerAwaitingSignatureCount": "অনুমোদনের অপেক্ষায় ({count}টা)",
   "@ownerAwaitingSignatureCount": {
     "description": "Owner's centre Alerts: heading with the number of papers",
     "placeholders": {
@@ -1719,7 +1719,7 @@
       }
     }
   },
-  "ownerNothingAwaiting": "কোনো কাগজ সইয়ের অপেক্ষায় নেই।",
+  "ownerNothingAwaiting": "কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।",
   "@ownerNothingAwaiting": {
     "description": "Owner's centre Alerts: nothing awaits signature"
   },
@@ -2695,7 +2695,7 @@
       }
     }
   },
-  "papersSignatures": "সই",
+  "papersSignatures": "অনুমোদন",
   "@papersSignatures": {
     "description": "Paper page: section"
   },
@@ -2717,7 +2717,7 @@
       }
     }
   },
-  "papersSign": "সই দিন",
+  "papersSign": "অনুমোদন দিন",
   "@papersSign": {
     "description": "Paper page: the sign button"
   }

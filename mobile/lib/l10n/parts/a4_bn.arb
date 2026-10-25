@@ -775,7 +775,7 @@
   "@permissionNotificationsTitle": {
     "description": "Before Android's own notification question: title"
   },
-  "permissionNotificationsBody": "সই চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।",
+  "permissionNotificationsBody": "অনুমোদন চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।",
   "@permissionNotificationsBody": {
     "description": "Before Android's own notification question: why"
   },
@@ -1183,7 +1183,7 @@
   "@commonLoadFailed": {
     "description": "Error title: the list or page could not be fetched"
   },
-  "commonSign": "সই দিন",
+  "commonSign": "অনুমোদন দিন",
   "@commonSign": {
     "description": "Button: sign (approve) a paper — fe: the action is \"সই দিন\""
   }

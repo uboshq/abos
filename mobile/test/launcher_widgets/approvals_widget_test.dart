@@ -64,9 +64,9 @@ void main() {
     expect(w.build({'rows': []}, asOf: asOf).corner, isNull);
   });
 
-  test('an empty list reads "কোনো সই বাকি নেই"', () {
+  test('an empty list reads "কোনো অনুমোদন বাকি নেই"', () {
     final doc = w.build({'count': 0, 'rows': [], 'link': '/home/approvals'}, asOf: asOf);
-    expect(doc.empty, 'কোনো সই বাকি নেই');
+    expect(doc.empty, 'কোনো অনুমোদন বাকি নেই');
     expect(doc.rows, isEmpty);
     expect(doc.more, isNull);
   });

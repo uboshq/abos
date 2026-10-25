@@ -86,7 +86,7 @@ void main() {
       expect(await verifies('test/fixtures/pins/live-leaf.pem', between: ['yr2.pem', 'root-yr-by-x1.pem']), isTrue,
           reason: '⛔ আজকের লাইভ শৃঙ্খল মেলে না — সব ফোন লাইভ হারাবে');
       expect(await verifies('test/fixtures/pins/live-leaf.pem', between: ['yr2.pem']), isTrue,
-          reason: '⛔ ক্রস-সই ছাড়া নতুন শৃঙ্খল মেলে না — LE ক্রস-সই ছাড়লে সব ফোন লাইভ হারাবে (Root YR নেই)');
+          reason: '⛔ ক্রস-অনুমোদন ছাড়া নতুন শৃঙ্খল মেলে না — LE ক্রস-অনুমোদন ছাড়লে সব ফোন লাইভ হারাবে (Root YR নেই)');
       expect(await verifies('test/fixtures/pins/ye2.pem'), isTrue,
           reason: '⛔ ECDSA শৃঙ্খল (YE2 ← Root YE) মেলে না — Root YE নেই');
       expect(await verifies('test/fixtures/pins/ye2.pem', between: ['root-ye-by-x2.pem']), isTrue);

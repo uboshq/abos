@@ -151,7 +151,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DeliveryOrderScreen(id: 'do-1', api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('do-approve')), findsNothing, reason: 'লেখকের পাতায় সইয়ের বোতাম');
+    expect(find.byKey(const ValueKey('do-approve')), findsNothing, reason: 'লেখকের পাতায় অনুমোদনের বোতাম');
     expect(find.byKey(const ValueKey('order-print')), findsNothing,
         reason: 'ⓘ DO-র নিজের কাগজ সার্ভারের ছাপার দরজায় নেই — বোতাম দেখালে চাপলে ৪০৪');
     await tester.tap(find.byKey(const ValueKey('do-send')));
@@ -170,7 +170,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('do-approve')));
     await tester.pumpAndSettle();
 
-    expect(api.sentQty, {7: 6}, reason: 'যা ঘরে দেখছেন তাতেই সই — আগে পরিমাণ যায়');
+    expect(api.sentQty, {7: 6}, reason: 'যা ঘরে দেখছেন তাতেই অনুমোদন — আগে পরিমাণ যায়');
     expect(api.calls, ['submit', 'qty', 'approve:ap-1']);
     expect(find.text('অবস্থা: অনুমোদিত'), findsOneWidget);
   });

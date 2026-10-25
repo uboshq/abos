@@ -85,7 +85,7 @@ void main() {
     expect(find.text('সতর্কতা'), findsOneWidget);
     expect(find.text('মেয়াদ পেরোনো বাকি'), findsOneWidget);
     expect(find.text('দেরির চালান (7 দিন)'), findsOneWidget);
-    expect(find.text('সইয়ের অপেক্ষায় (1টা)'), findsOneWidget);
+    expect(find.text('অনুমোদনের অপেক্ষায় (1টা)'), findsOneWidget);
     expect(find.text('গ্রুপের মোট'), findsNWidgets(2));
     await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/owner_alerts_bn.png'));
   });
@@ -95,7 +95,7 @@ void main() {
     expect(find.text('Alerts'), findsOneWidget);
     expect(find.text('Overdue dues'), findsOneWidget);
     expect(find.text('Late delivery challans (7 days)'), findsOneWidget);
-    expect(find.text('Awaiting signature (1)'), findsOneWidget);
+    expect(find.text('Awaiting approval (1)'), findsOneWidget);
     expect(find.text('Group total'), findsNWidgets(2));
     expect(find.text('Not allowed'), findsOneWidget);
     // ⓘ বাংলা কেবল সার্ভারের নামে — কোম্পানি আর কাগজের নাম। "বিল INV-1" সার্ভারের: সইয়ের অপেক্ষার সারির লেখা

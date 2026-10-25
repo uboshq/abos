@@ -464,7 +464,7 @@ void main() {
     expect(find.byKey(const ValueKey('collect-difference')), findsNothing, reason: 'কাটা ও ছাড় গুটানো থাকার কথা');
     await _tap(tester, 'collect-adjust');
     await _type(tester, 'collect-difference', '1000');
-    expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: '⛔ ছাড়ে মালিকের সইয়ের কথা নেই');
+    expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: '⛔ ছাড়ে মালিকের অনুমোদনের কথা নেই');
     await _type(tester, 'collect-vds', '500');
     await _type(tester, 'collect-ait', '200');
     expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳9,500.00', reason: 'বকেয়া − আদায় − ছাড় − কাটা');
@@ -472,14 +472,14 @@ void main() {
     await _review(tester);
     expect(_texts(tester, 'collect-sum-received'), 'পাওয়া টাকা | ৳40,000.00');
     expect(_texts(tester, 'collect-sum-withheld'), 'গ্রাহক কেটেছে (VDS/AIT) | ৳700.00');
-    expect(_texts(tester, 'collect-sum-discount'), 'আদায়ে ছাড় (সই লাগবে) | ৳1,000.00');
-    expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই) | ৳0.00');
+    expect(_texts(tester, 'collect-sum-discount'), 'আদায়ে ছাড় (অনুমোদন লাগবে) | ৳1,000.00');
+    expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের অনুমোদন) | ৳0.00');
     // ⓘ 40,000 + 1,000 + 700 + ক্রেডিট 2,000 = 43,700 বিলে; ক্রেডিট বাদে প্রয়োগ 41,700
     expect(_texts(tester, 'collect-net-applied'), 'বিলে প্রয়োগ | ৳41,700.00');
     expect(_texts(tester, 'collect-unapplied'), 'অপ্রয়োগকৃত | ৳0.00');
     expect(find.text('পাওয়া + কাটা + ছাড় = বিলে প্রয়োগ + অপ্রয়োগকৃত'), findsOneWidget);
-    expect(find.text('এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'), findsOneWidget, reason: 'নিয়ন্ত্রণে সইয়ের কথা');
-    expect(find.text('সইয়ে পাঠান'), findsOneWidget, reason: '⛔ ছাড়ে সই লাগে, তবু বোতাম "পোস্ট"');
+    expect(find.text('এই আদায়ে মালিকের অনুমোদন লাগবে — অনুমোদনের পর খাতায় উঠবে'), findsOneWidget, reason: 'নিয়ন্ত্রণে অনুমোদনের কথা');
+    expect(find.text('অনুমোদনে পাঠান'), findsOneWidget, reason: '⛔ ছাড়ে অনুমোদন লাগে, তবু বোতাম "পোস্ট"');
 
     await _post(tester);
     final p = api.sent.single.toPayload();
@@ -526,11 +526,11 @@ void main() {
       }
       await _review(tester);
       expect(find.byType(CollectReviewScreen), findsOneWidget);
-      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই) | ৳$typed');
-      expect(find.text('এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'), sign ? findsOneWidget : findsNothing,
-          reason: sign ? '⛔ ৳0.50-এর বেশি রাউন্ডিংয়ে সইয়ের কথা নেই' : '⛔ ৳0.50 পর্যন্ত রাউন্ডিংয়েও সই চাওয়া হলো');
-      expect(_texts(tester, 'collect-check-post'), sign ? 'সইয়ে পাঠান' : 'পোস্ট',
-          reason: sign ? '⛔ সই লাগে, তবু বোতাম "পোস্ট"' : '⛔ সই লাগে না, তবু বোতাম "সইয়ে পাঠান"');
+      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের অনুমোদন) | ৳$typed');
+      expect(find.text('এই আদায়ে মালিকের অনুমোদন লাগবে — অনুমোদনের পর খাতায় উঠবে'), sign ? findsOneWidget : findsNothing,
+          reason: sign ? '⛔ ৳0.50-এর বেশি রাউন্ডিংয়ে অনুমোদনের কথা নেই' : '⛔ ৳0.50 পর্যন্ত রাউন্ডিংয়েও অনুমোদন চাওয়া হলো');
+      expect(_texts(tester, 'collect-check-post'), sign ? 'অনুমোদনে পাঠান' : 'পোস্ট',
+          reason: sign ? '⛔ অনুমোদন লাগে, তবু বোতাম "পোস্ট"' : '⛔ অনুমোদন লাগে না, তবু বোতাম "অনুমোদনে পাঠান"');
       await _post(tester);
       expect(api.sent.single.toPayload()['difference'], {'kind': 'rounding', 'amount': typed});
     });
@@ -571,7 +571,7 @@ void main() {
     expect(find.text('Dr 1101-07 আল-আমিনের নগদ · ময়মনসিংহ'), findsOneWidget);
     expect(find.text('Cr 1110 প্রাপ্য হিসাব · করিম স্টোর · ময়মনসিংহ'), findsOneWidget);
     expect(find.text('মোট মিলেছে'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-needs-signature')), findsOneWidget, reason: 'বিষয় ৪/১১: সইয়ে যাবে বলা নেই');
+    expect(find.byKey(const ValueKey('collect-needs-signature')), findsOneWidget, reason: 'বিষয় ৪/১১: অনুমোদনে যাবে বলা নেই');
     expect(find.text('নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।'), findsOneWidget);
 
     await _back(tester);
@@ -1083,7 +1083,7 @@ void main() {
       buttons(tester, screen: 'পর্দা ১', labels: ['খসড়া', 'দেখে পোস্ট ›']);
       await _review(tester);
       floor(tester, screen: 'পর্দা ২');
-      buttons(tester, screen: 'পর্দা ২', labels: ['ফিরে যান', 'সইয়ে পাঠান']);
+      buttons(tester, screen: 'পর্দা ২', labels: ['ফিরে যান', 'অনুমোদনে পাঠান']);
       await tester.tap(find.byKey(const ValueKey('collect-check-post')));
       await tester.pumpAndSettle();
       floor(tester, screen: 'পর্দা ২, পোস্টের পরে');
@@ -1276,8 +1276,8 @@ void main() {
       await _tap(tester, 'collect-difference-rounding');
       await _type(tester, 'collect-difference', '0.51');
       await _review(tester);
-      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳1.00-এর বেশি হলে মালিকের সই) | ৳0.51');
-      expect(_texts(tester, 'collect-check-post'), 'পোস্ট', reason: '⛔ সার্ভারের সীমার নিচে, তবু সই চাওয়া হলো');
+      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳1.00-এর বেশি হলে মালিকের অনুমোদন) | ৳0.51');
+      expect(_texts(tester, 'collect-check-post'), 'পোস্ট', reason: '⛔ সার্ভারের সীমার নিচে, তবু অনুমোদন চাওয়া হলো');
     });
 
     for (final (typed, sign, blocked) in [('0.51', true, false), ('10.00', true, false), ('10.01', false, true)]) {
@@ -1294,7 +1294,7 @@ void main() {
           return;
         }
         await _review(tester);
-        expect(_texts(tester, 'collect-check-post'), sign ? 'সইয়ে পাঠান' : 'পোস্ট');
+        expect(_texts(tester, 'collect-check-post'), sign ? 'অনুমোদনে পাঠান' : 'পোস্ট');
       });
     }
 

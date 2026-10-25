@@ -1174,7 +1174,7 @@ abstract class AppL10n {
   /// Before Android's own notification question: why
   ///
   /// In bn, this message translates to:
-  /// **'সই চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।'**
+  /// **'অনুমোদন চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।'**
   String get permissionNotificationsBody;
 
   /// Permission explanation: do not ask now
@@ -1708,7 +1708,7 @@ abstract class AppL10n {
   /// Button: sign (approve) a paper — fe: the action is "সই দিন"
   ///
   /// In bn, this message translates to:
-  /// **'সই দিন'**
+  /// **'অনুমোদন দিন'**
   String get commonSign;
 
   /// Voucher type name when the server sends none: receipt
@@ -1804,7 +1804,7 @@ abstract class AppL10n {
   /// Voucher status when the server sends no label; anything unknown reads as draft
   ///
   /// In bn, this message translates to:
-  /// **'{state, select, awaiting{সইয়ের অপেক্ষায়} posted{পোস্ট হয়েছে} cancelled{বাতিল} other{খসড়া}}'**
+  /// **'{state, select, awaiting{অনুমোদনের অপেক্ষায়} posted{পোস্ট হয়েছে} cancelled{বাতিল} other{খসড়া}}'**
   String voucherState(String state);
 
   /// Voucher list filter button: every voucher
@@ -3394,13 +3394,13 @@ abstract class AppL10n {
   /// Home card title: papers waiting for a signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get homeAwaitingSignature;
 
   /// Home card title: papers waiting for a signature, and how many
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায় · {count}টি'**
+  /// **'অনুমোদনের অপেক্ষায় · {count}টি'**
   String homeAwaitingSignatureCount(String count);
 
   /// Home card: opens the full list
@@ -3412,13 +3412,13 @@ abstract class AppL10n {
   /// Home card: the waiting papers failed to load
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'**
+  /// **'অনুমোদনের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'**
   String get homeWaitingLoadFailed;
 
   /// Home card: no paper waits for a signature
   ///
   /// In bn, this message translates to:
-  /// **'এখন কিছু সইয়ের অপেক্ষায় নেই।'**
+  /// **'এখন কিছু অনুমোদনের অপেক্ষায় নেই।'**
   String get homeNothingWaiting;
 
   /// Home card: opens the detail page
@@ -4336,7 +4336,7 @@ abstract class AppL10n {
   /// Counter and sales return: popup title when the paper waits for a signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get counterAwaitingSignature;
 
   /// Sales return: popup title when the return could not be made
@@ -5398,7 +5398,7 @@ abstract class AppL10n {
   /// Counter: the discount box; any discount needs the owner to sign
   ///
   /// In bn, this message translates to:
-  /// **'ছাড় % (দিলে মালিকের সই লাগবে)'**
+  /// **'ছাড় % (দিলে মালিকের অনুমোদন লাগবে)'**
   String get counterDiscountLabel;
 
   /// Counter: the free quantity box
@@ -7870,7 +7870,7 @@ abstract class AppL10n {
   /// Delivery orders: filter chip, papers waiting for my signature
   ///
   /// In bn, this message translates to:
-  /// **'আমার সইয়ের অপেক্ষায়'**
+  /// **'আমার অনুমোদনের অপেক্ষায়'**
   String get deliveryOrdersFilterMine;
 
   /// Delivery orders: empty list title
@@ -7882,7 +7882,7 @@ abstract class AppL10n {
   /// Delivery orders: empty list when filtered to my signature
   ///
   /// In bn, this message translates to:
-  /// **'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।'**
+  /// **'এখন আপনার অনুমোদনের অপেক্ষায় কিছু নেই।'**
   String get deliveryOrdersEmptyMine;
 
   /// Delivery orders: a paper without a customer
@@ -8662,7 +8662,7 @@ abstract class AppL10n {
   /// Claims: fallback state word when the server sends no label — submitted
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get claimsStateSubmitted;
 
   /// Claims: fallback state word — approved, the cashier has not paid yet
@@ -8692,7 +8692,7 @@ abstract class AppL10n {
   /// Leave: state of an application — waiting for its signature (fe 21 Oct: was 'অনুমোদনের অপেক্ষায়')
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get hrLeaveStatePending;
 
   /// Leave: state — approved (fe 21 Oct: 'অনুমোদিত', not 'মঞ্জুর')
@@ -8770,7 +8770,7 @@ abstract class AppL10n {
   /// Approvals inbox: snack bar after signing (fe 21 Oct: the act is 'সই দিন')
   ///
   /// In bn, this message translates to:
-  /// **'সই দেওয়া হলো।'**
+  /// **'অনুমোদন দেওয়া হলো।'**
   String get approvalsInboxSigned;
 
   /// Approvals inbox: snack bar after rejecting
@@ -8800,7 +8800,7 @@ abstract class AppL10n {
   /// Approvals inbox: the amount changed between opening and signing; nothing was signed
   ///
   /// In bn, this message translates to:
-  /// **'কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।'**
+  /// **'কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার অনুমোদন দিন।'**
   String get approvalsInboxAmountChanged;
 
   /// Approvals inbox: no network
@@ -8824,13 +8824,13 @@ abstract class AppL10n {
   /// Approvals inbox: title of the sign dialog (fe 21 Oct: was 'অনুমোদন করবেন?')
   ///
   /// In bn, this message translates to:
-  /// **'সই দেবেন?'**
+  /// **'অনুমোদন দেবেন?'**
   String get approvalsInboxSignTitle;
 
   /// Approvals inbox: the button that signs the paper (fe 21 Oct: 'সই দিন', was 'অনুমোদন')
   ///
   /// In bn, this message translates to:
-  /// **'সই দিন'**
+  /// **'অনুমোদন দিন'**
   String get approvalsInboxSignButton;
 
   /// Approvals inbox: title of the reject dialog
@@ -8926,7 +8926,7 @@ abstract class AppL10n {
   /// Delegation screen: title (signing handed to someone else for a while)
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের ভার'**
+  /// **'দায়িত্ব অর্পণ'**
   String get approvalsDelegationTitle;
 
   /// Delegation: the list did not load
@@ -8950,7 +8950,7 @@ abstract class AppL10n {
   /// Delegation: what revoking means; person is the delegate's name
   ///
   /// In bn, this message translates to:
-  /// **'{person} আর আপনার হয়ে সই দিতে পারবেন না।'**
+  /// **'{person} আর আপনার হয়ে অনুমোদন দিতে পারবেন না।'**
   String approvalsDelegationRevokeBody(String person);
 
   /// Delegation: the 'no' button of the revoke dialog
@@ -9016,7 +9016,7 @@ abstract class AppL10n {
   /// Delegation: empty state message
   ///
   /// In bn, this message translates to:
-  /// **'ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে সই দিতে দিন।'**
+  /// **'ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে অনুমোদন দিতে দিন।'**
   String get approvalsDelegationEmptyMessage;
 
   /// Delegation: I have not handed signing to anyone
@@ -9340,7 +9340,7 @@ abstract class AppL10n {
   /// My requests: how many still wait for a signature
   ///
   /// In bn, this message translates to:
-  /// **'{count, plural, other{এখনো সইয়ের অপেক্ষায়: {count} টি}}'**
+  /// **'{count, plural, other{এখনো অনুমোদনের অপেক্ষায়: {count} টি}}'**
   String approvalsMyRequestsPending(int count);
 
   /// My requests: empty state title
@@ -9352,7 +9352,7 @@ abstract class AppL10n {
   /// My requests: empty state message
   ///
   /// In bn, this message translates to:
-  /// **'কোনো কাগজ সইয়ের জন্য পাঠালে এখানে দেখা যাবে।'**
+  /// **'কোনো কাগজ অনুমোদনের জন্য পাঠালে এখানে দেখা যাবে।'**
   String get approvalsMyRequestsEmptyMessage;
 
   /// My requests: load the next page
@@ -9754,13 +9754,13 @@ abstract class AppL10n {
   /// Notice: snack bar after the person signs (acknowledges) the notice
   ///
   /// In bn, this message translates to:
-  /// **'সই দেওয়া হলো।'**
+  /// **'স্বীকৃতি দেওয়া হলো।'**
   String get noticesSigned;
 
   /// Notice: signing failed
   ///
   /// In bn, this message translates to:
-  /// **'সই দেওয়া গেল না।'**
+  /// **'স্বীকৃতি দেওয়া গেল না।'**
   String get noticesSignFailed;
 
   /// Notice: screen title when the notice has no number
@@ -9778,13 +9778,13 @@ abstract class AppL10n {
   /// Notice: the deadline for signing; date is a date and time
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের শেষ সময় {date}'**
+  /// **'স্বীকৃতির শেষ সময় {date}'**
   String noticesSignBy(String date);
 
   /// Notice: the person has signed it
   ///
   /// In bn, this message translates to:
-  /// **'আপনি সই দিয়েছেন'**
+  /// **'আপনি স্বীকৃতি দিয়েছেন'**
   String get noticesYouSigned;
 
   /// Notice: the sign button while sending
@@ -9796,7 +9796,7 @@ abstract class AppL10n {
   /// Notice: the button that signs (acknowledges) the notice
   ///
   /// In bn, this message translates to:
-  /// **'পড়েছি ও মানছি — সই দিন'**
+  /// **'পড়েছি ও মানছি — স্বীকৃতি দিন'**
   String get noticesReadAndAgree;
 
   /// Notice: where the person stands with it — the server's code picks the word (fe 21 Oct: 'পড়েছেন', 'মেনে নিয়েছেন')
@@ -9904,7 +9904,7 @@ abstract class AppL10n {
   /// Leave register: snack bar after signing (fe 21 Oct: 'সই দিন', not 'মঞ্জুর')
   ///
   /// In bn, this message translates to:
-  /// **'ছুটিতে সই দেওয়া হলো।'**
+  /// **'ছুটিতে অনুমোদন দেওয়া হলো।'**
   String get hrRegisterLeaveSigned;
 
   /// Leave register: snack bar after rejecting
@@ -9916,7 +9916,7 @@ abstract class AppL10n {
   /// Leave register: signing failed
   ///
   /// In bn, this message translates to:
-  /// **'সই দেওয়া গেল না।'**
+  /// **'অনুমোদন দেওয়া গেল না।'**
   String get hrRegisterLeaveSignFailed;
 
   /// Leave register: rejecting failed
@@ -9982,7 +9982,7 @@ abstract class AppL10n {
   /// Leave register row: the sign button (fe 21 Oct: 'সই দিন', was 'মঞ্জুর')
   ///
   /// In bn, this message translates to:
-  /// **'সই দিন'**
+  /// **'অনুমোদন দিন'**
   String get hrRegisterLeaveSign;
 
   /// Leave register: load the next page
@@ -10012,7 +10012,7 @@ abstract class AppL10n {
   /// My leave: snack bar after applying (fe 21 Oct: 'সইয়ের অপেক্ষায়')
   ///
   /// In bn, this message translates to:
-  /// **'ছুটির আবেদন গেছে — সইয়ের অপেক্ষায়।'**
+  /// **'ছুটির আবেদন গেছে — অনুমোদনের অপেক্ষায়।'**
   String get hrLeaveSent;
 
   /// My leave: the button and the screen title for a new application
@@ -10408,7 +10408,7 @@ abstract class AppL10n {
   /// New claim: what happens after sending
   ///
   /// In bn, this message translates to:
-  /// **'সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।'**
+  /// **'অনুমোদন আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।'**
   String get claimsHowItWorks;
 
   /// New claim: the money is already spent (expense claim)
@@ -10498,13 +10498,13 @@ abstract class AppL10n {
   /// Owner's centre: papers awaiting signature (heading and the figure's label)
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get ownerAwaitingSignature;
 
   /// Owner's centre Today: nothing awaits signature
   ///
   /// In bn, this message translates to:
-  /// **'এখন কোনো কাগজ সইয়ের অপেক্ষায় নেই।'**
+  /// **'এখন কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।'**
   String get ownerNothingAwaitingNow;
 
   /// Owner's centre: a figure misses companies the user may not see
@@ -10714,13 +10714,13 @@ abstract class AppL10n {
   /// Owner's centre Alerts: heading with the number of papers
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায় ({count}টা)'**
+  /// **'অনুমোদনের অপেক্ষায় ({count}টা)'**
   String ownerAwaitingSignatureCount(int count);
 
   /// Owner's centre Alerts: nothing awaits signature
   ///
   /// In bn, this message translates to:
-  /// **'কোনো কাগজ সইয়ের অপেক্ষায় নেই।'**
+  /// **'কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।'**
   String get ownerNothingAwaiting;
 
   /// Owner's centre: total over all group companies
@@ -11956,7 +11956,7 @@ abstract class AppL10n {
   /// Paper page: section
   ///
   /// In bn, this message translates to:
-  /// **'সই'**
+  /// **'অনুমোদন'**
   String get papersSignatures;
 
   /// Paper page: who asked for the signature
@@ -11974,7 +11974,7 @@ abstract class AppL10n {
   /// Paper page: the sign button
   ///
   /// In bn, this message translates to:
-  /// **'সই দিন'**
+  /// **'অনুমোদন দিন'**
   String get papersSign;
 
   /// Finance lists: loading failed, pull down to retry
@@ -12016,7 +12016,7 @@ abstract class AppL10n {
   /// Finance deposit status: waiting for signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get financeStatusAwaitingSign;
 
   /// Finance: status / tab - ended, finished
@@ -12826,7 +12826,7 @@ abstract class AppL10n {
   /// Voucher list filter: waiting for signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get vouchersListAwaitingSign;
 
   /// Voucher list filter: all branches
@@ -13102,7 +13102,7 @@ abstract class AppL10n {
   /// Voucher form: when off, saving posts it; it stays a draft if signatures are needed or you wrote it
   ///
   /// In bn, this message translates to:
-  /// **'বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে'**
+  /// **'বন্ধ থাকলে সংরক্ষণেই পাকা — অনুমোদন লাগলে বা নিজের লেখা হলে খসড়াই থাকবে'**
   String get vouchersFormKeepDraftHint;
 
   /// Voucher form: save button
@@ -13126,7 +13126,7 @@ abstract class AppL10n {
   /// Money screens: snack bar when the entry waits for a signature and the server sent no message
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়।'**
+  /// **'অনুমোদনের অপেক্ষায়।'**
   String get moneyResultPending;
 
   /// Money screens: error when a page could not be loaded; title is the page title
@@ -13858,7 +13858,7 @@ abstract class AppL10n {
   /// Credit dashboard: limit increase requests awaiting signature
   ///
   /// In bn, this message translates to:
-  /// **'সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)'**
+  /// **'সীমা বাড়ানোর অনুরোধ (অনুমোদনের অপেক্ষায়)'**
   String get creditDashPending;
 
   /// Credit dashboard: a number of customers
@@ -14122,7 +14122,7 @@ abstract class AppL10n {
   /// Limit request: it applies only after the owner signs; until then the old limit stays
   ///
   /// In bn, this message translates to:
-  /// **'মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।'**
+  /// **'মালিকের অনুমোদন হলে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।'**
   String get creditSheetOwnerNote;
 
   /// Limit request: button while sending
@@ -14134,7 +14134,7 @@ abstract class AppL10n {
   /// Limit request: button, send for signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের জন্য পাঠান'**
+  /// **'অনুমোদনের জন্য পাঠান'**
   String get creditSheetSend;
 
   /// Lift credit hold: error
@@ -14194,13 +14194,13 @@ abstract class AppL10n {
   /// Limit request status: awaiting signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষায়'**
+  /// **'অনুমোদনের অপেক্ষায়'**
   String get creditRequestPending;
 
   /// Limit request status: signed and applied
   ///
   /// In bn, this message translates to:
-  /// **'সই পড়েছে — বসেছে'**
+  /// **'অনুমোদন হয়েছে — বসেছে'**
   String get creditRequestApproved;
 
   /// Limit request status: rejected (owner said no)
@@ -14224,7 +14224,7 @@ abstract class AppL10n {
   /// Limit request status: void, no owner signature, not applied
   ///
   /// In bn, this message translates to:
-  /// **'মালিকের সই নেই — বসেনি'**
+  /// **'মালিকের অনুমোদন নেই — বসেনি'**
   String get creditRequestVoid;
 
   /// Limit request: sent (when the server sent no message)
@@ -15959,25 +15959,25 @@ abstract class AppL10n {
   /// Widget name in the app's widget list: papers waiting for my signature
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ের অপেক্ষা'**
+  /// **'অনুমোদনের অপেক্ষা'**
   String get launcherWidgetApprovalsName;
 
   /// Approvals widget heading: papers awaiting your signature
   ///
   /// In bn, this message translates to:
-  /// **'আপনার সইয়ের অপেক্ষায়'**
+  /// **'আপনার অনুমোদনের অপেক্ষায়'**
   String get launcherWidgetApprovalsTitle;
 
   /// Approvals widget when nothing waits for a signature
   ///
   /// In bn, this message translates to:
-  /// **'কোনো সই বাকি নেই'**
+  /// **'কোনো অনুমোদন বাকি নেই'**
   String get launcherWidgetApprovalsEmpty;
 
   /// Old 2x2 approvals widget when nothing waits for a signature
   ///
   /// In bn, this message translates to:
-  /// **'এখন সইয়ের জন্য কিছু নেই।'**
+  /// **'এখন অনুমোদনের জন্য কিছু নেই।'**
   String get launcherWidgetApprovalsNothingNow;
 
   /// Old 2x2 approvals widget: how many more papers wait than the rows show (may end in +)
@@ -16475,7 +16475,7 @@ abstract class AppL10n {
   /// Owner board button: papers waiting for my signature
   ///
   /// In bn, this message translates to:
-  /// **'{count} সই'**
+  /// **'{count} অনুমোদন'**
   String launcherWidgetOwnerToSign(String count);
 
   /// Owner board button: cheques to deposit
@@ -16613,7 +16613,7 @@ abstract class AppL10n {
   /// Quick action button: sign the papers waiting for me
   ///
   /// In bn, this message translates to:
-  /// **'সই'**
+  /// **'অনুমোদন'**
   String get launcherWidgetQuickSign;
 
   /// Quick actions widget: no quick action for this user
@@ -17207,7 +17207,7 @@ abstract class AppL10n {
   /// Collection: a discount or rounding needs the owner's signature (item 4)
   ///
   /// In bn, this message translates to:
-  /// **'মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।'**
+  /// **'মালিকের অনুমোদন লাগবে — পোস্ট করলে অনুমোদনে যাবে।'**
   String get collectDifferenceSign;
 
   /// Collection: the folded card with discount, rounding, VDS and AIT
@@ -17291,7 +17291,7 @@ abstract class AppL10n {
   /// Collection control: no signature needed
   ///
   /// In bn, this message translates to:
-  /// **'এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।'**
+  /// **'এই আদায়ে অনুমোদন লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।'**
   String get collectControlNoSignature;
 
   /// Collection control: slip required (item 15)
@@ -17303,7 +17303,7 @@ abstract class AppL10n {
   /// Collection control: posted papers are immutable
   ///
   /// In bn, this message translates to:
-  /// **'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় সই)।'**
+  /// **'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় অনুমোদন)।'**
   String get collectControlNoUndo;
 
   /// Collection control: the server's stops block posting
@@ -17453,13 +17453,13 @@ abstract class AppL10n {
   /// Collection summary: the discount, which needs the owner's signature
   ///
   /// In bn, this message translates to:
-  /// **'আদায়ে ছাড় (সই লাগবে)'**
+  /// **'আদায়ে ছাড় (অনুমোদন লাগবে)'**
   String get collectSumDiscount;
 
   /// Collection summary: rounding; above the company's threshold (server setup rounding_sign_above, else Tk 0.50) the owner signs, in the style of the discount line
   ///
   /// In bn, this message translates to:
-  /// **'রাউন্ডিং ({amount}-এর বেশি হলে মালিকের সই)'**
+  /// **'রাউন্ডিং ({amount}-এর বেশি হলে মালিকের অনুমোদন)'**
   String collectSumRounding(String amount);
 
   /// Collection: rounding above the company limit (server setup rounding_limit, else Tk 10)
@@ -17603,19 +17603,19 @@ abstract class AppL10n {
   /// Collection control: rounding above Tk 0.50 and up to Tk 10 needs the owner's signature (owner, 2 Oct 2026)
   ///
   /// In bn, this message translates to:
-  /// **'রাউন্ডিং {amount} — মালিকের সইয়ের পর পোস্ট হবে'**
+  /// **'রাউন্ডিং {amount} — মালিকের অনুমোদনের পর পোস্ট হবে'**
   String collectRoundingSign(String amount);
 
   /// Collection screen 2 control: a discount, rounding above Tk 0.50 or the server says it needs the owner
   ///
   /// In bn, this message translates to:
-  /// **'এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'**
+  /// **'এই আদায়ে মালিকের অনুমোদন লাগবে — অনুমোদনের পর খাতায় উঠবে'**
   String get collectOwnerSign;
 
   /// Collection screen 2: the post button when the owner must sign first
   ///
   /// In bn, this message translates to:
-  /// **'সইয়ে পাঠান'**
+  /// **'অনুমোদনে পাঠান'**
   String get collectSendForSign;
 
   /// Collection: the server answers 404 for a customer outside this person's reach (on purpose, so existence is not revealed)

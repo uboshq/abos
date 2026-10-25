@@ -198,11 +198,11 @@ void main() {
     });
   }
 
-  // ⓘ পর্দা ২, মালিকের সই লাগবে (রাউন্ডিং ৳0.51): নিয়ন্ত্রণের নোট আর "সইয়ে পাঠান"
+  // ⓘ পর্দা ২, মালিকের সই লাগবে (রাউন্ডিং ৳0.51): নিয়ন্ত্রণের নোট আর "অনুমোদনে পাঠান"
   for (final (locale, tag) in [(AppLocale.locale, 'bn'), (AppLocale.english, 'en')]) {
     testWidgets('4 · screen 2 when the owner must sign (rounding ৳0.51), light, $tag', (tester) async {
       await _open(tester, locale: locale, review: true, rounding: '0.51');
-      expect(find.text(tag == 'bn' ? 'সইয়ে পাঠান' : 'Send for signature'), findsOneWidget);
+      expect(find.text(tag == 'bn' ? 'অনুমোদনে পাঠান' : 'Send for approval'), findsOneWidget);
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_review_sign_412_light_$tag.png'));
     });
   }

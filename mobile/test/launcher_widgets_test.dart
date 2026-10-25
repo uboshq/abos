@@ -183,7 +183,7 @@ void main() {
       final values = ApprovalsLauncherWidget.valuesFor(const []);
 
       expect(values['approvals_count'], '0');
-      expect(values['approvals_empty'], 'এখন সইয়ের জন্য কিছু নেই।');
+      expect(values['approvals_empty'], 'এখন অনুমোদনের জন্য কিছু নেই।');
       expect(values['approvals_row_1'], isEmpty);
       expect(values['approvals_more'], isEmpty);
     });

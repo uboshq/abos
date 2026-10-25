@@ -236,7 +236,7 @@
   "@counterReturnDone": {
     "description": "Sales return: popup title after the return is confirmed"
   },
-  "counterAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "counterAwaitingSignature": "অনুমোদনের অপেক্ষায়",
   "@counterAwaitingSignature": {
     "description": "Counter and sales return: popup title when the paper waits for a signature"
   },
@@ -1118,7 +1118,7 @@
   "@counterRate": {
     "description": "Counter: the rate box"
   },
-  "counterDiscountLabel": "ছাড় % (দিলে মালিকের সই লাগবে)",
+  "counterDiscountLabel": "ছাড় % (দিলে মালিকের অনুমোদন লাগবে)",
   "@counterDiscountLabel": {
     "description": "Counter: the discount box; any discount needs the owner to sign"
   },
@@ -3333,7 +3333,7 @@
   "@deliveryOrdersFilterAll": {
     "description": "Delivery orders: filter chip, every paper"
   },
-  "deliveryOrdersFilterMine": "আমার সইয়ের অপেক্ষায়",
+  "deliveryOrdersFilterMine": "আমার অনুমোদনের অপেক্ষায়",
   "@deliveryOrdersFilterMine": {
     "description": "Delivery orders: filter chip, papers waiting for my signature"
   },
@@ -3346,7 +3346,7 @@
       }
     }
   },
-  "deliveryOrdersEmptyMine": "এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।",
+  "deliveryOrdersEmptyMine": "এখন আপনার অনুমোদনের অপেক্ষায় কিছু নেই।",
   "@deliveryOrdersEmptyMine": {
     "description": "Delivery orders: empty list when filtered to my signature"
   },

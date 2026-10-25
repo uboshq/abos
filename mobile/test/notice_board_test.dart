@@ -70,7 +70,7 @@ void main() {
     expect(api.read, ['n-rule']);
     expect(find.text('সবাইকে সকাল ৯টার মধ্যে হাজিরা দিতে হবে।'), findsOneWidget);
     expect(find.textContaining('মালিক'), findsOneWidget);
-    expect(find.textContaining('সইয়ের শেষ সময়'), findsOneWidget);
+    expect(find.textContaining('স্বীকৃতির শেষ সময়'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -100,7 +100,7 @@ void main() {
         response: Response(
           requestOptions: RequestOptions(path: '/notices/n-rule/acknowledge'),
           statusCode: 422,
-          data: {'message': 'এই নোটিশে সই চাওয়া হয়নি।'},
+          data: {'message': 'এই নোটিশে অনুমোদন চাওয়া হয়নি।'},
         ),
         type: DioExceptionType.badResponse,
       );
@@ -109,7 +109,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('notice-sign')));
     await tester.pumpAndSettle();
-    expect(find.text('এই নোটিশে সই চাওয়া হয়নি।'), findsOneWidget);
+    expect(find.text('এই নোটিশে অনুমোদন চাওয়া হয়নি।'), findsOneWidget);
     expect(find.byKey(const ValueKey('notice-signed')), findsNothing);
   });
 

@@ -90,7 +90,7 @@ class _Vouchers implements VoucherApi {
             type: 'receipt',
             state: 'awaiting',
             amount: 48500,
-            stateLabel: en ? 'Awaiting signature' : 'সইয়ের অপেক্ষায়',
+            stateLabel: en ? 'Awaiting signature' : 'অনুমোদনের অপেক্ষায়',
             party: 'রহিম ট্রেডার্স'),
         VoucherRow(
             id: 'v2',

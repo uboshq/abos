@@ -25,7 +25,7 @@ enum PaperState {
   /// সইদাতা "না" বলেছেন — শেষ অবস্থা; বাতিল থেকে আলাদা (বাতিল মানে কাগজটা নিজেই তুলে নেওয়া)
   rejected('rejected'),
 
-  /// সই শেষ, অনুমোদিত — খরচের দাবিতে "টাকার অপেক্ষায়" ([PaperKind.claim])
+  /// অনুমোদিত, অনুমোদিত — খরচের দাবিতে "টাকার অপেক্ষায়" ([PaperKind.claim])
   approved('approved');
 
   const PaperState(this.key);
@@ -41,9 +41,9 @@ enum PaperState {
   /// <p>যেসব লেখা পাওয়া গেছে (চাবি — কোথা থেকে):
   /// <ul>
   /// <li>`draft` — ভাউচার (core/accounts/voucher_api.dart, `state`), বিক্রয় বিল/চালান (sales_paper_screens.dart `_status`)
-  /// <li>`awaiting` — ভাউচার, সইয়ের অপেক্ষায় (voucher_api.dart; সার্ভার VoucherApiController::row)
+  /// <li>`awaiting` — ভাউচার, অনুমোদনের অপেক্ষায় (voucher_api.dart; সার্ভার VoucherApiController::row)
   /// <li>`awaiting_approval` — বিক্রয় বিল/চালান (sales_paper_screens.dart `_status`)
-  /// <li>`submitted` — খরচের দাবি/অগ্রিম, সইয়ের অপেক্ষায় (core/hr/claims_api.dart; সার্ভার ExpenseClaim::SUBMITTED)
+  /// <li>`submitted` — খরচের দাবি/অগ্রিম, অনুমোদনের অপেক্ষায় (core/hr/claims_api.dart; সার্ভার ExpenseClaim::SUBMITTED)
   /// <li>`pending` — নিজের পাঠানো সইয়ের অনুরোধ, অপেক্ষায় (approvals/my_requests_screen.dart)
   /// <li>`returned` · `sent_back` — সই না দিয়ে ফেরত (approvals/my_requests_screen.dart `returned`)
   /// <li>`posting` — শেষ সই পড়েছে, খাতায় উঠছে
@@ -263,18 +263,18 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     role: PaperRole.neutral,
   ),
   PaperState.waiting: PaperStateSpec(
-    labelBn: 'সইয়ের অপেক্ষায় · {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
-    labelEn: 'Awaiting signature · step {level} of {levels}',
-    labelBnWithoutLevel: 'সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
-    labelEnWithoutLevel: 'Awaiting signature',
-    semanticsBn: 'অবস্থা: সইয়ের অপেক্ষায়, {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
-    semanticsEn: 'Status: awaiting signature, step {level} of {levels}',
-    semanticsBnWithoutLevel: 'অবস্থা: সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
-    semanticsEnWithoutLevel: 'Status: awaiting signature',
+    labelBn: 'অনুমোদনের অপেক্ষায় · {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Awaiting approval · step {level} of {levels}',
+    labelBnWithoutLevel: 'অনুমোদনের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Awaiting approval',
+    semanticsBn: 'অবস্থা: অনুমোদনের অপেক্ষায়, {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: awaiting approval, step {level} of {levels}',
+    semanticsBnWithoutLevel: 'অবস্থা: অনুমোদনের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: awaiting approval',
     labelBnShort: '{levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
     labelEnShort: 'Step {level} of {levels}',
-    labelBnShortWithoutLevel: 'সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
-    labelEnShortWithoutLevel: 'Awaiting signature',
+    labelBnShortWithoutLevel: 'অনুমোদনের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Awaiting approval',
     icon: 'hourglass_top',
     role: PaperRole.critical,
   ),
@@ -295,14 +295,14 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     role: PaperRole.critical,
   ),
   PaperState.posting: PaperStateSpec(
-    labelBn: 'সই শেষ · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-    labelEn: 'Fully signed · posting to the books',
-    labelBnWithoutLevel: 'সই শেষ · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-    labelEnWithoutLevel: 'Fully signed · posting to the books',
-    semanticsBn: 'অবস্থা: সই শেষ, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-    semanticsEn: 'Status: fully signed, posting to the books',
-    semanticsBnWithoutLevel: 'অবস্থা: সই শেষ, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-    semanticsEnWithoutLevel: 'Status: fully signed, posting to the books',
+    labelBn: 'অনুমোদিত · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Approved · posting to the books',
+    labelBnWithoutLevel: 'অনুমোদিত · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Approved · posting to the books',
+    semanticsBn: 'অবস্থা: অনুমোদিত, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: fully approved, posting to the books',
+    semanticsBnWithoutLevel: 'অবস্থা: অনুমোদিত, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: fully approved, posting to the books',
     labelBnShort: 'খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
     labelEnShort: 'Posting to the books',
     labelBnShortWithoutLevel: 'খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
@@ -310,10 +310,10 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     icon: 'draw',
     role: PaperRole.information,
     byKind: {
-      'label_bn_stock': 'সই শেষ · মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-      'label_en_stock': 'Fully signed · posting to stock',
-      'semantics_bn_stock': 'অবস্থা: সই শেষ, মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
-      'semantics_en_stock': 'Status: fully signed, posting to stock',
+      'label_bn_stock': 'অনুমোদিত · মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_stock': 'Approved · posting to stock',
+      'semantics_bn_stock': 'অবস্থা: অনুমোদিত, মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'semantics_en_stock': 'Status: fully approved, posting to stock',
       'label_bn_short_stock': 'মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
       'label_en_short_stock': 'Posting to stock',
     },

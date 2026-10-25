@@ -34,7 +34,7 @@
   "@financeStatusActive": {
     "description": "Finance: status / tab - active, running"
   },
-  "financeStatusAwaitingSign": "সইয়ের অপেক্ষায়",
+  "financeStatusAwaitingSign": "অনুমোদনের অপেক্ষায়",
   "@financeStatusAwaitingSign": {
     "description": "Finance deposit status: waiting for signature"
   },
@@ -685,7 +685,7 @@
   "@vouchersListNew": {
     "description": "Voucher list: new voucher button"
   },
-  "vouchersListAwaitingSign": "সইয়ের অপেক্ষায়",
+  "vouchersListAwaitingSign": "অনুমোদনের অপেক্ষায়",
   "@vouchersListAwaitingSign": {
     "description": "Voucher list filter: waiting for signature"
   },
@@ -897,7 +897,7 @@
   "@vouchersFormKeepDraft": {
     "description": "Voucher form: keep as draft switch"
   },
-  "vouchersFormKeepDraftHint": "বন্ধ থাকলে সংরক্ষণেই পাকা — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে",
+  "vouchersFormKeepDraftHint": "বন্ধ থাকলে সংরক্ষণেই পাকা — অনুমোদন লাগলে বা নিজের লেখা হলে খসড়াই থাকবে",
   "@vouchersFormKeepDraftHint": {
     "description": "Voucher form: when off, saving posts it; it stays a draft if signatures are needed or you wrote it"
   },
@@ -913,7 +913,7 @@
   "@moneyResultDone": {
     "description": "Money screens: snack bar when the server saved the entry and sent no message of its own"
   },
-  "moneyResultPending": "সইয়ের অপেক্ষায়।",
+  "moneyResultPending": "অনুমোদনের অপেক্ষায়।",
   "@moneyResultPending": {
     "description": "Money screens: snack bar when the entry waits for a signature and the server sent no message"
   },
@@ -1471,7 +1471,7 @@
   "@creditDashBlocked": {
     "description": "Credit dashboard: customers on credit hold"
   },
-  "creditDashPending": "সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)",
+  "creditDashPending": "সীমা বাড়ানোর অনুরোধ (অনুমোদনের অপেক্ষায়)",
   "@creditDashPending": {
     "description": "Credit dashboard: limit increase requests awaiting signature"
   },
@@ -1731,7 +1731,7 @@
   "@creditReason": {
     "description": "Credit: reason field label"
   },
-  "creditSheetOwnerNote": "মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।",
+  "creditSheetOwnerNote": "মালিকের অনুমোদন হলে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।",
   "@creditSheetOwnerNote": {
     "description": "Limit request: it applies only after the owner signs; until then the old limit stays"
   },
@@ -1739,7 +1739,7 @@
   "@creditSheetSending": {
     "description": "Limit request: button while sending"
   },
-  "creditSheetSend": "সইয়ের জন্য পাঠান",
+  "creditSheetSend": "অনুমোদনের জন্য পাঠান",
   "@creditSheetSend": {
     "description": "Limit request: button, send for signature"
   },
@@ -1779,11 +1779,11 @@
   "@creditRiskCritical": {
     "description": "Credit risk level: critical"
   },
-  "creditRequestPending": "সইয়ের অপেক্ষায়",
+  "creditRequestPending": "অনুমোদনের অপেক্ষায়",
   "@creditRequestPending": {
     "description": "Limit request status: awaiting signature"
   },
-  "creditRequestApproved": "সই পড়েছে — বসেছে",
+  "creditRequestApproved": "অনুমোদন হয়েছে — বসেছে",
   "@creditRequestApproved": {
     "description": "Limit request status: signed and applied"
   },
@@ -1799,7 +1799,7 @@
   "@creditRequestExpired": {
     "description": "Limit request status: expired"
   },
-  "creditRequestVoid": "মালিকের সই নেই — বসেনি",
+  "creditRequestVoid": "মালিকের অনুমোদন নেই — বসেনি",
   "@creditRequestVoid": {
     "description": "Limit request status: void, no owner signature, not applied"
   },
@@ -3229,19 +3229,19 @@
   "@launcherWidgetNotices": {
     "description": "Widget title and quick-action button: notices"
   },
-  "launcherWidgetApprovalsName": "সইয়ের অপেক্ষা",
+  "launcherWidgetApprovalsName": "অনুমোদনের অপেক্ষা",
   "@launcherWidgetApprovalsName": {
     "description": "Widget name in the app's widget list: papers waiting for my signature"
   },
-  "launcherWidgetApprovalsTitle": "আপনার সইয়ের অপেক্ষায়",
+  "launcherWidgetApprovalsTitle": "আপনার অনুমোদনের অপেক্ষায়",
   "@launcherWidgetApprovalsTitle": {
     "description": "Approvals widget heading: papers awaiting your signature"
   },
-  "launcherWidgetApprovalsEmpty": "কোনো সই বাকি নেই",
+  "launcherWidgetApprovalsEmpty": "কোনো অনুমোদন বাকি নেই",
   "@launcherWidgetApprovalsEmpty": {
     "description": "Approvals widget when nothing waits for a signature"
   },
-  "launcherWidgetApprovalsNothingNow": "এখন সইয়ের জন্য কিছু নেই।",
+  "launcherWidgetApprovalsNothingNow": "এখন অনুমোদনের জন্য কিছু নেই।",
   "@launcherWidgetApprovalsNothingNow": {
     "description": "Old 2x2 approvals widget when nothing waits for a signature"
   },
@@ -3764,7 +3764,7 @@
       }
     }
   },
-  "launcherWidgetOwnerToSign": "{count} সই",
+  "launcherWidgetOwnerToSign": "{count} অনুমোদন",
   "@launcherWidgetOwnerToSign": {
     "description": "Owner board button: papers waiting for my signature",
     "placeholders": {
@@ -3909,7 +3909,7 @@
   "@launcherWidgetQuickScan": {
     "description": "Quick action button: scan"
   },
-  "launcherWidgetQuickSign": "সই",
+  "launcherWidgetQuickSign": "অনুমোদন",
   "@launcherWidgetQuickSign": {
     "description": "Quick action button: sign the papers waiting for me"
   },

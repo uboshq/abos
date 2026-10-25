@@ -72,7 +72,7 @@ class _FakeCredit implements CreditControlApi {
   Future<String> requestLimit(String id,
       {required String kind, required String amount, String? until, required String reason}) async {
     requests.add({'id': id, 'kind': kind, 'amount': amount, 'until': until, 'reason': reason});
-    return 'অনুরোধ মালিকের সইয়ের জন্য পাঠানো হলো — সই পড়ার আগে সীমা বদলায় না।';
+    return 'অনুরোধ মালিকের অনুমোদনের জন্য পাঠানো হলো — অনুমোদন হওয়ার আগে সীমা বদলায় না।';
   }
 
   @override
@@ -180,8 +180,8 @@ void main() {
     expect(find.text('• গত ১৮০ দিনে ২টা চেক ফেরত'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('INV-0091'), 200);
     expect(find.text('INV-0091'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('সইয়ের অপেক্ষায়'), 200);
-    expect(find.text('সইয়ের অপেক্ষায়'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('অনুমোদনের অপেক্ষায়'), 200);
+    expect(find.text('অনুমোদনের অপেক্ষায়'), findsOneWidget);
     expect(find.byKey(const ValueKey('credit-lift')), findsNothing, reason: 'not blocked');
   });
 
@@ -203,7 +203,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.requests.single, {'id': 'c-late', 'kind': 'limit', 'amount': '40000', 'until': null, 'reason': 'ঈদের মৌসুম'});
-    expect(find.textContaining('মালিকের সইয়ের জন্য পাঠানো হলো'), findsOneWidget);
+    expect(find.textContaining('মালিকের অনুমোদনের জন্য পাঠানো হলো'), findsOneWidget);
   });
 
   testWidgets('without the request key there is no request button', (tester) async {

@@ -25,7 +25,7 @@ void main() {
     final doc = kind.build(full, asOf: asOf);
     expectWidgetRules(doc);
     expect([for (final a in doc.actions) a.icon], ['order', 'collect', 'voucher', 'scan', 'approve', 'notice']);
-    expect([for (final a in doc.actions) a.label], ['নতুন অর্ডার', 'টাকা আদায়', 'ভাউচার', 'স্ক্যান', 'সই', 'নোটিশ']);
+    expect([for (final a in doc.actions) a.label], ['নতুন অর্ডার', 'টাকা আদায়', 'ভাউচার', 'স্ক্যান', 'অনুমোদন', 'নোটিশ']);
     expect([for (final a in doc.actions) a.link],
         ['/sales/orders/create', '/home/collections', '/accounts/voucher-list', '/home/scan', '/approvals', '/home/notices']);
     expect(doc.empty, isNull);
