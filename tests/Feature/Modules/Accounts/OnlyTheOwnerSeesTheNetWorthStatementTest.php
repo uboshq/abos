@@ -60,6 +60,19 @@ final class OnlyTheOwnerSeesTheNetWorthStatementTest extends TestCase
         $this->assertTrue($statement->mayView($owner, (int) $this->company->id), 'দৃশ্যটাই ভুল — ডেমোর মালিক এই কোম্পানির মালিক নন।');
         $this->assertFalse($statement->mayView($clerk, (int) $this->company->id), '⛔ হিসাবরক্ষককে মালিকের নিট সম্পদ দেখানোর অনুমতি দেওয়া হলো।');
 
+        /*
+         * ⓘ "মালিক" = কোম্পানির super admin ভূমিকা ([[Ownership::role()]]), আর কোম্পানিতে মালিক একজনই: দ্বিতীয়জন বসানো ব্যবহারকারীর
+         * ফর্ম আর কোম্পানি খোলা — দুই পথেই আটকানো ([[Ownership::assertMayBecomeOwner()]])। ⛔ তাই দরজা ঠিক মালিকদের তালিকা — কোম্পানির
+         * প্রতিটা সদস্যকে মেপে দেখা: দেখেন কেবল যিনি সেই তালিকায়, আর তালিকায় একজনই।
+         */
+        $owners = app(\App\Core\Services\Ownership::class)->activeOwnersIn((int) $this->company->id);
+        $this->assertCount(1, $owners, 'দৃশ্যটাই ভুল — ডেমোর কোম্পানিতে মালিক ঠিক একজন নন।');
+
+        foreach (User::query()->whereHas('companies', fn ($q) => $q->whereKey($this->company->id))->get() as $member) {
+            $this->assertSame($owners->contains('id', $member->id), $statement->mayView($member, (int) $this->company->id),
+                "⛔ {$member->email}: নিট সম্পদ দেখার দরজা মালিকের তালিকার সাথে মেলে না।");
+        }
+
         Sanctum::actingAs($clerk, [AuthController::APP]);
         $this->assertSame(404, $this->getJson('/api/v1/accounts/net-worth')->status(),
             '⛔ মালিক নন এমন কেউ ফোনের দরজায় নিট সম্পদ পেলেন (বা দরজাটা আছে বলে জানলেন)।');
