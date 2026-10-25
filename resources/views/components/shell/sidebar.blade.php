@@ -599,9 +599,11 @@
 
                 {{-- ⭐ "⋯ আরও" — রেলে যা ধরে না (WAI-ARIA menu button): বোতামে ↓/Enter খোলে, তালিকায় ↑ ↓ Home End, Esc বন্ধ করে
                      ফোকাস বোতামে ফেরায়; খোঁজার ঘর, মডিউলের রঙের দাগ আর নাম। দেখায় কেবল কিছু সরলে ([[rail-fit.js]]) --}}
+                {{-- ⓘ বোতামের নিজের উচ্চতা লেখা নেই — ভেতরের size-8 চিহ্নটাই মাপ (টাইলের সমান ৪০px); হাতে লেখা উচ্চতা ঘন থিমে একা পুরনো
+                     মাপে থাকত ([[EveryScreenObeysTheThemeTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬) --}}
                 <div data-rail-more class="relative w-full">
                     <button type="button" x-ref="moreButton" data-rail-more-button
-                            class="relative flex h-8 w-full items-center justify-center rounded-(--radius-field)
+                            class="relative flex w-full items-center justify-center rounded-(--radius-field)
                                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
                             aria-haspopup="menu" aria-controls="rail-more-menu"
                             :aria-expanded="moreOpen ? 'true' : 'false'"
