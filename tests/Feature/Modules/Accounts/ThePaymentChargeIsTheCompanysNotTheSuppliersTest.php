@@ -19,6 +19,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\PutsMoneyInTheTill;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -45,6 +46,7 @@ use Tests\TestCase;
  */
 final class ThePaymentChargeIsTheCompanysNotTheSuppliersTest extends TestCase
 {
+    use SignsASupplierBank;
     use PutsMoneyInTheTill;
     use RefreshDatabase;
 
@@ -130,6 +132,8 @@ final class ThePaymentChargeIsTheCompanysNotTheSuppliersTest extends TestCase
     public function test_the_same_payment_from_a_bank_books_the_charge_to_bank_charges(): void
     {
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($supplier);
 
         $this->pay('900', '5', $this->bank, 'transfer', 'NPSB-CHG-2001', $supplier)
             ->assertSessionHasNoErrors();
