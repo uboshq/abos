@@ -212,11 +212,13 @@
                  ⚠️ শূন্য করা হয়নি: উপরের মন্তব্যের কারণটা এখনো খাটে —
                  ফাঁক না থাকলে টাইলগুলো জোড়া লেগে একটা লম্বা ফিতা হত। --}}
             {{-- ⭐ রেল নিজে মাপে, যা ধরে না তা "⋯ আরও"-তে — কোনো মডিউল পর্দার বাইরে কাটে না ([[rail-fit.js]]; মালিক, ২৪ অক্টোবর ২০২৬) --}}
-            <nav x-data="railFit" data-rail data-save="{{ route('rail.layout') }}"
-                 data-up-label="{{ __('core.rail.up') }}" data-down-label="{{ __('core.rail.down') }}"
-                 class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
+            {{-- ⓘ class আর aria-label আগে, রেলের নিজের ঘরগুলো পরে — "≡"-এর কেন্দ্রের দাবি ([[TheMenuButtonSitsOnTheRailsCentreTest]]) ট্যাগটা
+                 এই ক্রমেই পড়ে (cb-ma-5, ২৫ অক্টোবর ২০২৬); ব্রাউজারের কাছে ক্রমের কোনো মানে নেই --}}
+            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
                         overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
-                 aria-label="{{ __('core.a11y.module_navigation') }}">
+                 aria-label="{{ __('core.a11y.module_navigation') }}"
+                 x-data="railFit" data-rail data-save="{{ route('rail.layout') }}"
+                 data-up-label="{{ __('core.rail.up') }}" data-down-label="{{ __('core.rail.down') }}">
 
                 {{-- ⭐ `A` চিহ্নটা রেলের মাথায় — মালিকের নির্দেশ,
                      ১৩ সেপ্টেম্বর ২০২৬: *"a icon thakbe"*।
@@ -599,9 +601,11 @@
 
                 {{-- ⭐ "⋯ আরও" — রেলে যা ধরে না (WAI-ARIA menu button): বোতামে ↓/Enter খোলে, তালিকায় ↑ ↓ Home End, Esc বন্ধ করে
                      ফোকাস বোতামে ফেরায়; খোঁজার ঘর, মডিউলের রঙের দাগ আর নাম। দেখায় কেবল কিছু সরলে ([[rail-fit.js]]) --}}
+                {{-- ⓘ বোতামের নিজের উচ্চতা লেখা নেই — ভেতরের size-8 চিহ্নটাই মাপ (টাইলের সমান ৪০px); হাতে লেখা উচ্চতা ঘন থিমে একা পুরনো
+                     মাপে থাকত ([[EveryScreenObeysTheThemeTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬) --}}
                 <div data-rail-more class="relative w-full">
                     <button type="button" x-ref="moreButton" data-rail-more-button
-                            class="relative flex h-8 w-full items-center justify-center rounded-(--radius-field)
+                            class="relative flex w-full items-center justify-center rounded-(--radius-field)
                                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
                             aria-haspopup="menu" aria-controls="rail-more-menu"
                             :aria-expanded="moreOpen ? 'true' : 'false'"
