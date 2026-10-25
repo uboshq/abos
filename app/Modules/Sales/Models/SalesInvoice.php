@@ -295,6 +295,12 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                 ->selectRaw('COALESCE(SUM(total), 0)')
                 ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
                 ->posted(),
+            // ⓘ বিলের বিপরীতে পাকা নোট, ক্রেডিট − ডেবিট — [[notedAmount()]]-এর হুবহু শর্ত
+            'noted_total' => self::notesOnTheBill()
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'credit' THEN total ELSE -total END), 0)")
+                ->whereColumn('acc_notes.company_id', 'sal_invoices.company_id')
+                ->whereColumn('acc_notes.party_id', 'sal_invoices.customer_id')
+                ->whereColumn('acc_notes.against_id', 'sal_invoices.id'),
             // ⓘ কমিশন দাবি — [[claimedAmount()]]-এর হুবহু শর্ত
             'claimed_total' => CommissionClaim::query()
                 ->selectRaw('COALESCE(SUM(amount), 0)')
@@ -394,6 +400,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          */
         $due = bcsub(bcsub((string) $this->total, $this->collectedAmount(), 4), $this->returnedAmount(), 4);
         $due = bcsub($due, $this->claimedAmount(), 4);
+        // ⭐ বিলের বিপরীতে পাকা নোট — ক্রেডিট কমায়, ডেবিট বাড়ায় (মিল-তালিকা দফা ৩৫, fe ২৫ অক্টোবর ২০২৬; [[notedAmount()]])
+        $due = bcsub($due, $this->notedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }
@@ -405,6 +413,51 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      * দাবির টাকাও আবার নিত। ⓘ বাতিল দাবি বাদ (দাখিলা উল্টানো); মানা বা না-মানা দাবি থাকে — দুইটাতেই গ্রাহকের
      * জমাটা থেকে যায়। ⓘ তালিকা withCollected() দিয়ে এলে অঙ্কটা সারির সাথেই (`claimed_total`)।
      */
+    /**
+     * ⭐ বিলের বিপরীতে পাকা নোটের নিট — ক্রেডিট (ফেরত ছাড়া দাম কমানো, কুপনের ছাড়) বাকি কমায়, ডেবিট বাড়ায় (মিল-তালিকা দফা ৩৫;
+     * fe, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে নোট খাতায় পাওনা কমাত ([[NoteService::confirm()]]), অথচ বিলের বাকি থেকে বাদ যেত না — ৳10,000-এর বিলে ৳2,000-এর
+     * ক্রেডিট নোটের পরে খাতা বলত 8,000, বিল, আদায়ের পর্দা আর ঋণ নিয়ন্ত্রণ বলত 10,000: রসিদে টাকা দুবার নেওয়ার দরজা।
+     * ⓘ ফেরত নোট বানায় না (নিজের পথে [[returnedAmount()]]), তাই দুবার কাটা হয় না।
+     * ⛔ বিল চেনা হয় বাঁধন দিয়ে (`against_type` + `against_id`, কোম্পানি আর গ্রাহকসহ), লেখা নম্বর দিয়ে নয় — লাইভে UB-র ২১টা পুরনো
+     * নোটের `against_no`-তে মুক্ত লেখা ("Damage Bill"), বাঁধন খালি; সেগুলো বিল ছাড়া নোট (fe, ২৫ অক্টোবর ২০২৬)।
+     */
+    public function notedAmount(): string
+    {
+        $preloaded = $this->getAttribute('noted_total');
+
+        if ($preloaded !== null) {
+            return bcadd((string) ($preloaded ?: '0'), '0', 4);
+        }
+
+        return self::notesOnTheBill()
+            ->where('company_id', $this->company_id)
+            ->where('party_id', $this->customer_id)
+            ->where('against_id', $this->getKey())
+            ->get(['direction', 'total'])
+            ->reduce(fn (string $sum, $n) => $n->direction === \App\Modules\Accounts\Models\Note::CREDIT
+                ? bcadd($sum, (string) $n->total, 4) : bcsub($sum, (string) $n->total, 4), '0.0000');
+    }
+
+    /** পাকা গ্রাহক-নোট — দেয়াল ছাড়া (বাকি গ্রাহকের, শাখার নয়); কোম্পানি ডাকনেওয়ালা নিজে মেলায় */
+    private static function notesOnTheBill(): Builder
+    {
+        return \App\Modules\Accounts\Models\Note::query()->withoutGlobalScopes()
+            ->where('party_type', 'customer')
+            ->where('against_type', 'sales_invoice')
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+    }
+
+    /**
+     * ⭐ বাকির SQL — [[dueAmount()]]-এর হুবহু সূত্র, [[scopeWithCollected()]]-এর কলাম দিয়ে। ⛔ আগে সাতটা জায়গায় নিজের হাতে লেখা ছিল;
+     * নোট যোগ হলে একটা বাদ পড়লে সেই পর্দা আবার দুই কথা বলত। এখন সবাই এটা ডাকে।
+     */
+    public static function dueSql(string $alias): string
+    {
+        return "({$alias}.total - {$alias}.collected_total - {$alias}.voucher_total - {$alias}.returned_total - {$alias}.claimed_total - {$alias}.noted_total)";
+    }
+
     public function claimedAmount(): string
     {
         $preloaded = $this->getAttribute('claimed_total');
