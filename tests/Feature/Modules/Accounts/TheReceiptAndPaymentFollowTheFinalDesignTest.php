@@ -274,8 +274,9 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
     /** ⭐ পক্ষের পাশের অঙ্ক চিহ্ন ধরে শব্দে — তিন অবস্থা, দুই দিক ([[party-voucher.test.js]]-এ আচরণ) */
     public function test_the_partys_balance_is_named_by_its_sign_never_by_a_minus(): void
     {
-        $words = ['due_in_owed' => 'বকেয়া', 'due_in_advance' => 'অগ্রিম', 'due_in_none' => 'বকেয়া নেই',
-            'due_out_owed' => 'দেনা', 'due_out_advance' => 'অগ্রিম দেওয়া', 'due_out_none' => 'দেনা নেই'];
+        // ⓘ উল্টো দিক "অগ্রিম" নয় — পক্ষের নিজের খাতে, পক্ষের ধরনে (মালিকের নিয়ম, fe ২৫ অক্টোবর ২০২৬; [[TheMoneyScreensNeverSayAdvanceTest]])
+        $words = ['due_in_owed' => 'বকেয়া', 'due_in_advance' => 'আগে থেকে :party খাতায় জমা (Cr)', 'due_in_none' => 'বকেয়া নেই',
+            'due_out_owed' => 'দেনা', 'due_out_advance' => 'আগে থেকে :party খাতায় (Dr)', 'due_out_none' => 'দেনা নেই'];
         foreach ($words as $key => $bn) {
             $this->assertSame($bn, trans("accounts::field.{$key}", [], 'bn'), "⛔ {$key}: পাওনার শব্দ নকশার নয়");
         }
@@ -284,7 +285,7 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $this->assertStringContainsString('x-text="dueWord"', $fields, '⛔ পক্ষের পাশে আবার একটাই শব্দ ("পাওনা") — চিহ্নটা শব্দে বলা হয় না');
         $this->assertStringContainsString('x-text="dueAmount"', $fields, '⛔ অঙ্কটা আবার চিহ্নসহ ("-45,000.00")');
         $this->assertStringNotContainsString('x-text="texts.owed"', $fields, '⛔ পুরনো "পাওনা" লেখা ফিরেছে');
-        $this->assertStringContainsString("out: @js(! \$isReceipt)", $fields, '⛔ পরিশোধের দিক ("দেনা / অগ্রিম দেওয়া") পাতা থেকে যায় না');
+        $this->assertStringContainsString("out: @js(! \$isReceipt)", $fields, '⛔ পরিশোধের দিক ("দেনা / আগে থেকে পক্ষের খাতায়") পাতা থেকে যায় না');
     }
 
     /** ⭐ পদ্ধতির নাম একটাই — ফর্মের চিপ (money.method) আর দেখার পাতা/তালিকা/ছাপা (accounts::instrument) একই শব্দ, দুই ভাষায় (fe, ২৩ অক্টোবর ২০২৬) */

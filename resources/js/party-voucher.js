@@ -57,7 +57,10 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             const side = this.out ? 'Out' : 'In';
             if (this.dueSign === 0) return this.texts['due' + side + 'None'] ?? '';
 
-            return this.texts['due' + side + (this.dueIsOwed ? 'Owed' : 'Advance')] ?? '';
+            // ⓘ উল্টো দিকের স্থিতি — "অগ্রিম" নয়, পক্ষের নিজের খাতে (Cr/Dr); :party পক্ষের ধরনে (মালিকের নিয়ম, ২৫ অক্টোবর ২০২৬)
+            const party = this.texts?.partyOf?.[this.partyType] ?? this.texts?.partyOf?.[''] ?? '';
+
+            return String(this.texts['due' + side + (this.dueIsOwed ? 'Owed' : 'Advance')] ?? '').replace(':party', party);
         },
 
         get dueAmount() {

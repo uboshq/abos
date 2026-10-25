@@ -184,6 +184,12 @@
                   ait: @js((string) old('ait_amount', bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 ? $voucher->ait_amount : '')),
                   vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
                   differenceKind: @js((string) old('difference.kind', $voucher->difference_kind ?? '')),
+                  // ⭐ শূন্য পেরোলে বাড়তি পক্ষের নিজের খাতে, আলাদা খাত নেই (মালিকের নিয়ম; fe, ২৫ অক্টোবর ২০২৬)
+                  sideTexts: @js([
+                      'owedIn' => __('money.screen.head.owed_in_credit'), 'owedOut' => __('money.screen.head.owed_out_debit'),
+                      'leftIn' => __('money.screen.head.left_in_credit'), 'leftOut' => __('money.screen.head.left_out_debit'),
+                      'partyOf' => __('money.screen.party_of'),
+                  ]),
                   difference: @js((string) old('difference.amount', bccomp((string) ($voucher->difference_amount ?? '0'), '0', 4) > 0 ? $voucher->difference_amount : '')),
                   owedLabels: @js($headOwedLabels),
                   branchLabels: @js(__('money.screen.meta.party_branch_by')),
@@ -250,7 +256,7 @@
                             <dt class="text-2xs text-(--color-ink-muted)" x-text="headOwedLabel">{{ $headOwedLabels[$headStartType] ?? $headOwedLabels[''] }}</dt>
                             <dd class="num text-xl font-semibold" data-head-owed x-bind:class="headOwedClass">
                                 <span x-text="headOwedText"></span>
-                                <span class="block text-2xs font-normal text-(--color-badge-success-ink)" x-show="headOwedIsAdvance" x-cloak>{{ __('money.screen.head.advance') }}</span>
+                                <span class="block text-2xs font-normal text-(--color-ink-muted)" x-show="headOwedIsAdvance" x-cloak data-head-owed-note x-text="headOwedNote"></span>
                             </dd>
                         </div>
                         <div>
@@ -261,7 +267,7 @@
                             <dt class="text-2xs text-(--color-ink-muted)">{{ __('money.screen.head.left') }}</dt>
                             <dd class="num text-xl font-semibold" data-head-left>
                                 <span x-text="headLeftText"></span>
-                                <span class="block text-2xs font-normal text-(--color-badge-success-ink)" x-show="headLeftIsAdvance" x-cloak>{{ __('money.screen.head.advance') }}</span>
+                                <span class="block text-2xs font-normal text-(--color-ink-muted)" x-show="headLeftIsAdvance" x-cloak data-head-left-note x-text="headLeftNote"></span>
                             </dd>
                         </div>
                     </dl>

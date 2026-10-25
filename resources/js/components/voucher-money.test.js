@@ -29,7 +29,7 @@ async function mount ({ out = false, amount = '', account = '229', balances = { 
     const branchText = JSON.stringify(branchLabels).replace(/"/g, "'")
     const host = document.createElement('div')
     host.innerHTML = `
-        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText}, bankFileUrl: '${bankFileUrl}' })">
+        <form x-data="voucherMoney({ amount: '${amount}', account: '${account}', balances: ${balanceText}, simulateUrl: '/accounts/vouchers/simulate', referenceUrl: '/accounts/vouchers/reference-check', out: ${out}, owedLabels: ${labelText}, branchLabels: ${branchText}, bankFileUrl: '${bankFileUrl}', sideTexts: { owedIn: 'আগে থেকে :party খাতায় জমা (Cr)', owedOut: 'আগে থেকে :party খাতায় (Dr)', leftIn: 'বিলে প্রয়োগ হয়নি — :party খাতায় জমা থাকবে (Cr)', leftOut: 'বিলে প্রয়োগ হয়নি — :party খাতায় থাকবে (Dr)', partyOf: { customer: 'গ্রাহকের', supplier: 'সরবরাহকারীর', '': 'পক্ষের' } } })">
             <input name="_token" value="t">
             <input name="amount" x-model="amount">
             <input name="instrument_no" value="">
@@ -319,5 +319,28 @@ describe('কম-বেশি — ছাড় বা রাউন্ডিং',
         data.differenceKind = ''
         expect(data.differencePaisa, '⛔ ধরন তুলে নিলেও পার্থক্য গোনা হলো').toBe(0)
         expect(data.ownerSigns, '⛔ পার্থক্য ছাড়াই সই চাওয়া হলো').toBe(false)
+    })
+})
+
+describe('শূন্য পেরোলে "অগ্রিম" নয়', () => {
+    it('পরিশোধের বাকি শূন্যের নিচে — পক্ষের নিজের খাতে (Dr), পক্ষের ধরনে; শূন্যে কিছু নয়', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: true, amount: '45000' })
+        clearTimeout(data.timer)
+        data.heardParty({ due: '0', hasParty: true, partyType: 'supplier' })
+
+        expect(data.headLeftIsAdvance, 'দৃশ্যটাই ঠিক নয় — বাকি শূন্যের নিচে নয়').toBe(true)
+        expect(data.headLeftNote, '⛔ পরিশোধের বাকি শূন্য পেরোলে পক্ষের খাতের কথা নয়').toBe('বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে (Dr)')
+        expect(data.headLeftNote, '⛔ এখনো "অগ্রিম"').not.toContain('অগ্রিম')
+        expect(data.headOwedNote, '⛔ শূন্য বকেয়ায় নিচের কথা').toBe('')
+    })
+
+    it('রসিদে গ্রাহকের আগে থেকে জমা — Cr, পক্ষের ধরনে', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: false, amount: '' })
+        clearTimeout(data.timer)
+        data.heardParty({ due: '-500.00', hasParty: true, partyType: 'customer' })
+
+        expect(data.headOwedNote, '⛔ গ্রাহকের আগে থেকে জমা পক্ষের খাতের কথায় নয়').toBe('আগে থেকে গ্রাহকের খাতায় জমা (Cr)')
     })
 })

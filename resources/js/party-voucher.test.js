@@ -95,12 +95,14 @@ describe('partyVoucher — ভাগ করা পিকারের খবর',
         )
 
         // ⭐ চিহ্ন ধরে শব্দ, অঙ্ক লাখ-কমায় আর কখনো "−" নয় — রসিদে তিন অবস্থা
-        box.texts = { ...box.texts, dueInOwed: 'বকেয়া', dueInAdvance: 'অগ্রিম', dueInNone: 'বকেয়া নেই', dueOutOwed: 'দেনা', dueOutAdvance: 'অগ্রিম দেওয়া', dueOutNone: 'দেনা নেই' }
+        // ⓘ উল্টো দিকে "অগ্রিম" নয় — পক্ষের নিজের খাতে, পক্ষের ধরনে (মালিকের নিয়ম, ২৫ অক্টোবর ২০২৬)
+        box.texts = { ...box.texts, dueInOwed: 'বকেয়া', dueInAdvance: 'আগে থেকে :party খাতায় জমা (Cr)', dueInNone: 'বকেয়া নেই', dueOutOwed: 'দেনা', dueOutAdvance: 'আগে থেকে :party খাতায় (Dr)', dueOutNone: 'দেনা নেই',
+            partyOf: { customer: 'গ্রাহকের', supplier: 'সরবরাহকারীর', '': 'পক্ষের' } }
         box.due = '125000.00'
         expect([box.dueWord, box.dueAmount]).toEqual(['বকেয়া', '৳1,25,000.00'])
         expect(box.dueClass).toContain('warning')
         box.due = '-45000.00'
-        expect([box.dueWord, box.dueAmount]).toEqual(['অগ্রিম', '৳45,000.00'])
+        expect([box.dueWord, box.dueAmount], '⛔ গ্রাহকের আগে থেকে জমা "অগ্রিম" বলা, বা পক্ষের ধরন বসেনি').toEqual(['আগে থেকে গ্রাহকের খাতায় জমা (Cr)', '৳45,000.00'])
         expect(box.dueClass).toContain('success')
         box.due = '0.00'
         expect([box.dueWord, box.dueAmount]).toEqual(['বকেয়া নেই', ''])
@@ -110,7 +112,7 @@ describe('partyVoucher — ভাগ করা পিকারের খবর',
         box.due = '-80000.00'
         expect([box.dueWord, box.dueAmount]).toEqual(['দেনা', '৳80,000.00'])
         box.due = '2500.00'
-        expect([box.dueWord, box.dueAmount]).toEqual(['অগ্রিম দেওয়া', '৳2,500.00'])
+        expect([box.dueWord, box.dueAmount], '⛔ পক্ষকে আগে থেকে দেওয়া "অগ্রিম" বলা, বা পক্ষের ধরন বসেনি').toEqual(['আগে থেকে গ্রাহকের খাতায় (Dr)', '৳2,500.00'])
         box.due = '0'
         expect([box.dueWord, box.dueAmount]).toEqual(['দেনা নেই', ''])
     })

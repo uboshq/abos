@@ -355,10 +355,10 @@ return [
     'owed' => 'পাওনা',
     // ⭐ পক্ষের পাশের অঙ্ক চিহ্ন ধরে শব্দে — কোনো সংখ্যার আগে "−" নয় (fe, ২৩ অক্টোবর ২০২৬; [[party-voucher.js]] dueWord)
     'due_in_owed' => 'বকেয়া',
-    'due_in_advance' => 'অগ্রিম',
+    'due_in_advance' => 'আগে থেকে :party খাতায় জমা (Cr)',
     'due_in_none' => 'বকেয়া নেই',
     'due_out_owed' => 'দেনা',
-    'due_out_advance' => 'অগ্রিম দেওয়া',
+    'due_out_advance' => 'আগে থেকে :party খাতায় (Dr)',
     'due_out_none' => 'দেনা নেই',
     'paid_into' => 'যে খাতে জমা',
     'amount_received' => 'গৃহীত টাকা',

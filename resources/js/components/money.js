@@ -388,6 +388,7 @@ export function voucherMoney ({
     bankFileUrl = '',
     differenceKind = '',
     difference = '',
+    sideTexts = {},
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -553,6 +554,17 @@ export function voucherMoney ({
         get headLeftIsAdvance () { return this.hasHeadFigures && this.headLeftPaisa < 0 },
         // ⛔ পক্ষের আগে থেকে অগ্রিম থাকলে বকেয়ার অঙ্ক চিহ্ন ছাড়া "বকেয়া" পড়াত — কথায় "অগ্রিম" (মাপা: ২৪ অক্টোবর ২০২৬, আলম স্টোর)
         get headOwedIsAdvance () { return this.hasHeadFigures && this.headOwedPaisa < 0 },
+
+        /*
+         * ⭐ শূন্য পেরোনো অঙ্কের নিচের কথা — "অগ্রিম" নয়: আলাদা অগ্রিম খাত নেই, বাড়তি পক্ষের নিজের খাতেই থাকে (মালিকের নিয়ম, fe ২৫ অক্টোবর
+         * ২০২৬; ফোনের "বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে")। পক্ষের ধরন বাক্সের খবর থেকে (`headPartyType`)।
+         */
+        get headOwedNote () { return this.headOwedIsAdvance ? this.sideText(out ? 'owedOut' : 'owedIn') : '' },
+        get headLeftNote () { return this.headLeftIsAdvance ? this.sideText(out ? 'leftOut' : 'leftIn') : '' },
+        sideText (key) {
+            const party = sideTexts?.partyOf?.[this.headPartyType] ?? sideTexts?.partyOf?.[''] ?? ''
+            return String(sideTexts?.[key] ?? '').replace(':party', party)
+        },
 
         /* ⭐ খাতে আছে কত — পরিশোধে যথেষ্ট কি না (নকশার "খাতে আছে ৳…") */
         get balance () { return this.balances[this.account] ?? null },
