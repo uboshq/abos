@@ -183,6 +183,8 @@
                   out: @js($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT),
                   ait: @js((string) old('ait_amount', bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 ? $voucher->ait_amount : '')),
                   vds: @js((string) old('vds_amount', bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0 ? $voucher->vds_amount : '')),
+                  differenceKind: @js((string) old('difference.kind', $voucher->difference_kind ?? '')),
+                  difference: @js((string) old('difference.amount', bccomp((string) ($voucher->difference_amount ?? '0'), '0', 4) > 0 ? $voucher->difference_amount : '')),
                   owedLabels: @js($headOwedLabels),
                   branchLabels: @js(__('money.screen.meta.party_branch_by')),
                   bankFileUrl: @js(route('accounts.voucher.bank_file')),
@@ -891,6 +893,11 @@
                     <dd class="num" data-sum-ait x-text="sumAitMinus"></dd>
                     <dt>{{ __('money.screen.sum.vds') }}</dt>
                     <dd class="num" data-sum-vds x-text="sumVdsMinus"></dd>
+                    {{-- ⭐ দফা ৪ — সরবরাহকারীর ছাড় (৫১৫০, কেনার খরচ কমে — IAS 2) মালিকের সইয়ে; রাউন্ডিং (৫৩০৫) ৳০.৫০-এর বেশি হলে সইয়ে --}}
+                    <dt x-show="hasDiscount" x-cloak>{{ __('money.screen.sum.discount_out') }} <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-warning-ink)" data-sum-owner-tag>{{ __('money.screen.tag.owner_signs') }}</span></dt>
+                    <dd class="num" x-show="hasDiscount" x-cloak data-sum-discount x-text="sumDifference"></dd>
+                    <dt x-show="hasRounding" x-cloak>{{ __('money.screen.sum.rounding', ['limit' => \App\Core\Support\Money::format(\App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class)))]) }} <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-warning-ink)" x-show="roundingOwner" data-sum-rounding-owner>{{ __('money.screen.tag.owner_signs') }}</span></dt>
+                    <dd class="num" x-show="hasRounding" x-cloak data-sum-rounding x-text="sumDifference"></dd>
                 @endif
                 <dt>{{ $isPayment ? __('money.screen.sum.paid') : __('money.screen.sum.received') }}</dt>
                 <dd class="num" data-sum-amount x-text="sumAmount"></dd>
@@ -900,6 +907,11 @@
                     <dd class="num" data-sum-vds x-text="sumVdsText"></dd>
                     <dt>{{ __('money.screen.sum.ait_in') }}</dt>
                     <dd class="num" data-sum-ait x-text="sumAitText"></dd>
+                    {{-- ⭐ দফা ৪ — আদায়ে ছাড় (৪১২০) মালিকের সইয়ে; রাউন্ডিং (৫৩০৫) ৳০.৫০-এর বেশি হলে সইয়ে --}}
+                    <dt x-show="hasDiscount" x-cloak>{{ __('money.screen.sum.discount_in') }} <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-warning-ink)" data-sum-owner-tag>{{ __('money.screen.tag.owner_signs') }}</span></dt>
+                    <dd class="num" x-show="hasDiscount" x-cloak data-sum-discount x-text="sumDifference"></dd>
+                    <dt x-show="hasRounding" x-cloak>{{ __('money.screen.sum.rounding', ['limit' => \App\Core\Support\Money::format(\App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class)))]) }} <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-warning-ink)" x-show="roundingOwner" data-sum-rounding-owner>{{ __('money.screen.tag.owner_signs') }}</span></dt>
+                    <dd class="num" x-show="hasRounding" x-cloak data-sum-rounding x-text="sumDifference"></dd>
                     <dt class="font-semibold">{{ __('money.screen.sum.gross_party') }}</dt>
                     <dd class="num font-semibold" data-sum-gross x-text="sumGross"></dd>
                     {{-- ⭐ নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" — বিলের কার্ডের যোগফল (`bills-applied` ঘটনা), টিক থাকলে কেবল; বাকিটা পক্ষের নিজের খাতায় (চুক্তি §৭.৬) --}}
@@ -1010,7 +1022,9 @@
                         @endif
                     </p>
                     @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type,
-                        'primaryLabel' => ($moneySignatures ?? false) ? 'money.screen.send' : 'money.screen.post'])
+                        'primaryLabel' => ($moneySignatures ?? false) ? 'money.screen.send' : 'money.screen.post',
+                        // ⭐ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — বোতাম "সইয়ে পাঠান" (মালিকের সই; cb-ma-5)
+                        'ownerSignsLabel' => 'money.screen.send'])
                 </div>
             </section>
         @endif

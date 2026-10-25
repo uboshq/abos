@@ -28,6 +28,7 @@ use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Support\WithheldAtSource;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Events\CollectionConfirmed;
@@ -991,15 +992,15 @@ final class CollectionService
             ];
         }
 
-        // ⭐ দফা ৪ — ছাড় বিক্রয়ের বিপরীতে (৪১২০, IFRS 15), রাউন্ডিং অন্য খরচে (৫৩০৫)
-        if (bccomp($difference, '0', 4) > 0) {
-            $discount = $f['difference_kind'] === 'discount';
-            $lines[] = [
-                'account_id' => $this->account($discount ? StandardChart::COLLECTION_DISCOUNT : StandardChart::ROUNDING_DIFFERENCE)->id,
-                'debit' => $difference,
-                'narration' => __($discount ? 'sales::collection_rules.discount_on' : 'sales::collection_rules.rounding_on', ['no' => $f['no']]),
-            ];
-        }
+        // ⭐ দফা ৪ — ছাড় বিক্রয়ের বিপরীতে (৪১২০, IFRS 15), রাউন্ডিং অন্য খরচে (৫৩০৫); সারির নিয়ম রসিদ-পরিশোধ ভাউচারের সাথে ভাগ করা
+        // ([[WithheldAtSource::difference()]], cb-ma-5) — খাত খোঁজা এখানকারই, নিজের পাহারা আর নিজের কথায় ([[account()]])
+        $discount = $f['difference_kind'] === 'discount';
+        array_push($lines, ...WithheldAtSource::difference(
+            (string) $f['difference_kind'],
+            $difference,
+            __($discount ? 'sales::collection_rules.discount_on' : 'sales::collection_rules.rounding_on', ['no' => $f['no']]),
+            fn (string $code) => $this->account($code),
+        ));
 
         $lines[] = [
             'account_id' => $this->account(StandardChart::RECEIVABLE)->id,

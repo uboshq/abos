@@ -70,6 +70,19 @@ class VoucherRequest extends FormRequest
             }
         }
 
+        /*
+         * ⭐ কম-বেশি — `difference[kind]` (discount|rounding) আর `difference[amount]` (দফা ৪; cb-ma-5; আদায়ের একই আকার)। ⓘ মাথার দুই ঘরে
+         * নামানো, লাখ-কমা ছেঁটে; ঋণাত্মক লিখলে আকারটাই ধরা (ফোনের আদায়ের একই নিয়ম — চিহ্ন দিক বোঝায় না, ধরন বোঝায়)।
+         */
+        $difference = $this->input('difference');
+        if (is_array($difference)) {
+            $amount = str_replace([',', '-'], '', trim((string) ($difference['amount'] ?? '')));
+            $this->merge([
+                'difference_kind' => ($difference['kind'] ?? '') === '' ? null : $difference['kind'],
+                'difference_amount' => $amount === '' ? null : $amount,
+            ]);
+        }
+
         if ($this->input('type') === Voucher::PAYMENT && $this->exists('gross_amount')) {
             $this->grossPath = true;
             $this->netAlsoSent = filled($this->input('amount'));
@@ -553,6 +566,9 @@ class VoucherRequest extends FormRequest
             'gross_amount' => ['nullable', 'numeric', 'min:0'],
             'ait_amount' => ['nullable', 'numeric', 'min:0'],
             'vds_amount' => ['nullable', 'numeric', 'min:0'],
+            // ⭐ কম-বেশি — কেবল রসিদ আর পরিশোধে (দফা ৪; cb-ma-5)
+            'difference_kind' => ['nullable', Rule::in(['discount', 'rounding'])],
+            'difference_amount' => ['nullable', 'numeric', 'min:0'],
 
             /*
              * ⭐ কোন চালানের জন্য — এক খরচ, একাধিক চালান।
@@ -717,14 +733,49 @@ class VoucherRequest extends FormRequest
                     return;
                 }
 
-                $gross = bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
-                    self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+                // ⓘ কম-বেশিও পক্ষের খাত নড়ায় — ছাড় বা রাউন্ডিংয়ের অঙ্কটুকু বিলেও বসতে পারে (cb-ma-5)
+                $gross = bcadd(bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
+                    self::moneyOf($this->input('vds_amount')) ?? '0', 4), self::moneyOf($this->input('difference_amount')) ?? '0', 4);
                 $partyId = (int) $this->input('party_id', 0);
                 $result = app(\App\Modules\Accounts\Services\VoucherAllocations::class)
                     ->resolve($this->input('party_type'), $partyId > 0 ? $partyId : null, $rows, $gross);
 
                 foreach ($result['errors'] as $field => $message) {
                     $validator->errors()->add($field, $message);
+                }
+            },
+
+            /*
+             * ⭐ কম-বেশির নিয়ম (দফা ৪; Core [[\App\Core\Support\Settlement]], আদায়ের একই): অঙ্ক থাকলে ধরন লাগে; কেবল রসিদ আর পরিশোধে; রাউন্ডিং
+             * কোম্পানির সীমার (`sales.collection.rounding_limit`, ডিফল্ট ৳১০) বেশি নয় — বেশি হলে সেটা ছাড়, মালিকের সইয়ে।
+             */
+            function (Validator $validator): void {
+                $amount = self::moneyOf($this->input('difference_amount'));
+
+                if ($amount === null || bccomp($amount, '0', 4) <= 0 || $validator->errors()->hasAny(['difference_kind', 'difference_amount'])) {
+                    return;
+                }
+
+                if (! in_array($this->input('type'), [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_only_money'));
+
+                    return;
+                }
+
+                $kind = $this->input('difference_kind');
+
+                if ($kind === null) {
+                    $validator->errors()->add('difference.kind', __('accounts::validation.difference_needs_kind'));
+
+                    return;
+                }
+
+                $limit = \App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class));
+
+                if ($kind === 'rounding' && bccomp($amount, $limit, 4) > 0) {
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_over_limit', [
+                        'amount' => Money::format($amount), 'limit' => Money::format($limit),
+                    ]));
                 }
             },
 

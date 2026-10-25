@@ -44,7 +44,11 @@ final class PostTheVoucherOnTheLastSignature
          * ⛔ কেবল হিসাবের নিজের ভাউচার-সই ([[VoucherApproval::MODULE]]) — fe, ১২ অক্টোবর ২০২৬। ⓘ "অর্থ বাদ" লিখলে কাল অন্য কোনো
          * মডিউল (HR-এর দাবি, বা নতুন কোনো মডিউল) নিজের শেষকারী দিয়ে ভাউচার বানালে একই ফাঁদ ফিরত; তাই তালিকা উল্টো — যা আমাদের, শুধু তাই।
          */
-        if (($event->payload['module'] ?? null) !== VoucherApproval::MODULE) {
+        // ⭐ ভাউচারের নিজের সই, বা তার কম-বেশির মালিকের সই (`sales.discount`; cb-ma-5) — দুটোই শেষ হলে নিজে পোস্ট
+        $module = $event->payload['module'] ?? null;
+        $difference = $module === VoucherApproval::DIFFERENCE_MODULE && ($event->payload['action'] ?? null) === VoucherApproval::DIFFERENCE_ACTION;
+
+        if ($module !== VoucherApproval::MODULE && ! $difference) {
             return;
         }
 

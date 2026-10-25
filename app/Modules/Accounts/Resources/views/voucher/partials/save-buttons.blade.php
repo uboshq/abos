@@ -22,6 +22,8 @@
 
     // ⓘ সংশোধনে একটাই বোতাম — পোস্ট হওয়া কাগজ খসড়া হয় না ([[VoucherController::saveRevision()]])
     $revising ??= false;
+    // ⓘ কম-বেশিতে মালিকের সই লাগলে মূল বোতামের নাম — ফর্মের `ownerSigns` (রসিদ-পরিশোধ; cb-ma-5)
+    $ownerSignsLabel ??= null;
 
     if ($revising) {
         $primaryLabel = 'accounts::revision.save';
@@ -48,6 +50,11 @@
 
     <x-ui.button type="submit" tone="primary"
                  ::class="busy && 'pointer-events-none opacity-70'">
-        {{ __($primaryLabel) }}
+        @if ($ownerSignsLabel !== null && ! $revising)
+            <span x-show="! ownerSigns">{{ __($primaryLabel) }}</span>
+            <span x-show="ownerSigns" x-cloak data-owner-signs-label>{{ __($ownerSignsLabel) }}</span>
+        @else
+            {{ __($primaryLabel) }}
+        @endif
     </x-ui.button>
 </div>

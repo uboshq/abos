@@ -73,4 +73,33 @@
                                     :value="old($withheldFields[$kind][0], bccomp((string) ($voucher->{$withheldFields[$kind][0]} ?? '0'), '0', 4) > 0 ? $voucher->{$withheldFields[$kind][0]} : '')" />
                     @endforeach
                 </div>
+
+                {{--
+                    ⭐ কম-বেশি — ছাড় বা রাউন্ডিং, কাগজে একটা (মালিকের নকশা ১০০, দফা ৪; cb-ma-5, ২৫ অক্টোবর ২০২৬; আদায়ের একই `difference[kind]` আর
+                    `difference[amount]`)। ⓘ রসিদ: ছাড় ৪১২০ (বিক্রয়ের বিপরীত), রাউন্ডিং ৫৩০৫; পরিশোধ: সরবরাহকারীর ছাড় ৫১৫০ (কেনার খরচ কমে, IAS 2),
+                    রাউন্ডিং ৫৩০৫ — পক্ষের খাত পুরোটায় নড়ে ([[WithheldTax::difference()]])। ⛔ ছাড় যেকোনো অঙ্কে আর ৳০.৫০-এর বেশি রাউন্ডিং মালিকের সইয়ে,
+                    সীমার বেশি রাউন্ডিং নয় ([[VoucherApproval::differenceStopping()]])।
+                --}}
+                <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-difference>
+                    <fieldset class="min-w-0">
+                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.difference.label') }}</legend>
+                        <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+                            @foreach (['' => __('money.screen.difference.none'), 'discount' => __('money.screen.difference.discount'), 'rounding' => __('money.screen.difference.rounding')] as $value => $text)
+                                <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
+                                    <input type="radio" name="difference[kind]" value="{{ $value }}" class="peer sr-only" data-difference-chip="{{ $value === '' ? 'none' : $value }}"
+                                           x-model="differenceKind" @checked((string) old('difference.kind', $voucher->difference_kind ?? '') === (string) $value)>
+                                    <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
+                                             hover:bg-(--color-surface-hover)
+                                             peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
+                                             peer-checked:hover:bg-(--color-brand-700)
+                                             peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">{{ $text }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </fieldset>
+                    <div x-show="differenceKind !== ''" x-cloak>
+                        <x-ui.field name="difference[amount]" type="money" model="difference" empty-shows="0.00" :label="__('money.screen.difference.amount')"
+                                    :value="old('difference.amount', bccomp((string) ($voucher->difference_amount ?? '0'), '0', 4) > 0 ? $voucher->difference_amount : '')" />
+                    </div>
+                </div>
             </div>

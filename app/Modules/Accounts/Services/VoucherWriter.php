@@ -358,12 +358,14 @@ final class VoucherWriter
 
         // ⭐ পরিশোধেও — পক্ষের খাত মোটে, টাকা নিটে, কর্তন ২১২১/২১২২-এ (খরচের একই পথ; fe, ২৪ অক্টোবর ২০২৬, নকশা পাতা ৪)
         if ($type === Voucher::PAYMENT) {
-            return app(WithheldTax::class)->onPayment($lines, (int) ($input['to_account_id'] ?? 0), $input);
+            // ⭐ আর কম-বেশি — সরবরাহকারীর ছাড় বা রাউন্ডিং, দেনা পুরো বিলে কমে (দফা ৪; cb-ma-5)
+            return app(WithheldTax::class)->difference(app(WithheldTax::class)->onPayment($lines, (int) ($input['to_account_id'] ?? 0), $input), $type, $input);
         }
 
         // ⭐ রসিদে পক্ষ যা কেটে রাখলেন — ১১৩৮ VDS, ১১৩৫ AIT; পক্ষের খাত কমে পুরোটায় (আদায়ের দফা ৫-এর নিয়ম, [[WithheldAtSource]])
         if ($type === Voucher::RECEIPT) {
-            return app(WithheldTax::class)->onReceipt($lines, (int) ($input['from_account_id'] ?? 0), $input);
+            // ⭐ আর কম-বেশি — আদায়ে ছাড় (৪১২০) বা রাউন্ডিং (৫৩০৫), গ্রাহকের পাওনা পুরো বিলে কমে (দফা ৪; cb-ma-5)
+            return app(WithheldTax::class)->difference(app(WithheldTax::class)->onReceipt($lines, (int) ($input['from_account_id'] ?? 0), $input), $type, $input);
         }
 
         return $lines;

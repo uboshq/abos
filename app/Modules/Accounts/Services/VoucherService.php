@@ -193,6 +193,9 @@ final class VoucherService
                 'gross_amount' => $data['gross_amount'] ?? null,
                 'ait_amount' => $data['ait_amount'] ?? 0,
                 'vds_amount' => $data['vds_amount'] ?? 0,
+                // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5); অঙ্ক না থাকলে ধরনও নয়
+                'difference_kind' => bccomp((string) ($data['difference_amount'] ?? '0'), '0', 4) > 0 ? ($data['difference_kind'] ?? null) : null,
+                'difference_amount' => $data['difference_amount'] ?? 0,
 
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
@@ -391,6 +394,8 @@ final class VoucherService
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -709,6 +714,8 @@ final class VoucherService
             ->where('approvable_type', $voucher::class)
             ->where('approvable_id', $voucher->id)
             ->where('module', '<>', VoucherApproval::MODULE)
+            // ⓘ এই ভাউচারের নিজের কম-বেশির মালিকের সই অন্য কাগজের নয় — সেটা নিজের পথেই পোস্ট পর্যন্ত যায় ([[VoucherApproval::differenceStopping()]]; cb-ma-5)
+            ->where(fn ($q) => $q->where('module', '<>', VoucherApproval::DIFFERENCE_MODULE)->orWhere('action', '<>', VoucherApproval::DIFFERENCE_ACTION))
             ->whereIn('status', [Approval::PENDING, Approval::APPROVED])
             ->get()
             ->contains(fn (Approval $a) => ! $posting
@@ -1021,6 +1028,8 @@ final class VoucherService
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
         // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])

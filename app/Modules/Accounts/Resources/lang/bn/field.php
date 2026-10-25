@@ -382,4 +382,7 @@ return [
 
     'withheld_ait' => 'উৎসে কর্তিত আয়কর (AIT)',
     'withheld_vds' => 'উৎসে কর্তিত মূসক (VDS)',
+    // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
+    'difference_discount' => 'ছাড়',
+    'difference_rounding' => 'রাউন্ডিং',
 ];

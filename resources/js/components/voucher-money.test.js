@@ -293,3 +293,30 @@ describe('সারাংশে বিলে প্রয়োগ আর অপ
         expect(data.hasApplied, '⛔ টিক তুলে নিলেও সারাংশে "বিলে প্রয়োগ" থেকে গেল').toBe(false)
     })
 })
+
+describe('কম-বেশি — ছাড় বা রাউন্ডিং', () => {
+    it('৳০.৫০ পর্যন্ত রাউন্ডিং সই ছাড়া, বেশি হলে আর যেকোনো ছাড়ে মালিকের সই; পক্ষের খাত পার্থক্যসহ', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ rows: [] }) })))
+        const data = await mount({ out: false, amount: '1000' })
+        clearTimeout(data.timer)
+
+        data.differenceKind = 'rounding'
+        data.difference = '0.50'
+        expect(data.hasRounding, '⛔ রাউন্ডিং দিলেও সারাংশে রাউন্ডিংয়ের সারি নেই').toBe(true)
+        expect(data.ownerSigns, '⛔ ৳০.৫০ রাউন্ডিংয়ে সই চাওয়া হলো — ৳০.৫০ পর্যন্ত সই-মুক্ত').toBe(false)
+        expect(data.headGrossPaisa, '⛔ রাউন্ডিংসহ পক্ষের খাতের অঙ্ক নয়').toBe(100050)
+
+        data.difference = '0.60'
+        expect(data.roundingOwner, '⛔ ৳০.৫০-এর বেশি রাউন্ডিংয়ে মালিকের সইয়ের চিপ নেই').toBe(true)
+        expect(data.ownerSigns, '⛔ ৳০.৫০-এর বেশি রাউন্ডিংয়েও বোতাম "সইয়ে পাঠান" হয় না').toBe(true)
+
+        data.differenceKind = 'discount'
+        data.difference = '1'
+        expect(data.hasDiscount, '⛔ ছাড় দিলেও সারাংশে ছাড়ের সারি নেই').toBe(true)
+        expect(data.ownerSigns, '⛔ ছাড়ে মালিকের সই চাওয়া হয় না').toBe(true)
+
+        data.differenceKind = ''
+        expect(data.differencePaisa, '⛔ ধরন তুলে নিলেও পার্থক্য গোনা হলো').toBe(0)
+        expect(data.ownerSigns, '⛔ পার্থক্য ছাড়াই সই চাওয়া হলো').toBe(false)
+    })
+})

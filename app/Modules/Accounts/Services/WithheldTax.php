@@ -89,6 +89,51 @@ final class WithheldTax
     }
 
     /**
+     * ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (মালিকের নকশা ১০০, দফা ৪; cb-ma-5, ২৫ অক্টোবর ২০২৬)। সারির নিয়ম আদায়ের সাথে ভাগ করা
+     * ([[\App\Modules\Accounts\Support\WithheldAtSource::difference()]]); এখানে কেবল পক্ষের সারি পুরোটায় বাড়ে।
+     *
+     * ⓘ রসিদ: Dr ৪১২০/৫৩০৫ = পার্থক্য, Cr পক্ষ = পাওয়া + VDS + AIT + পার্থক্য — গ্রাহকের পাওনা পুরো বিলে কমে।
+     * ⓘ পরিশোধ: Dr পক্ষ = মোট + পার্থক্য, Cr ৫১৫০/৫৩০৫ = পার্থক্য — সরবরাহকারীর দেনা পুরো বিলে কমে; ছাড় কেনার খরচ কমায় (IAS 2 ¶১১)।
+     * ⛔ পক্ষের সারি না পেলে থামা — পার্থক্য কার খাতে বসবে বলা যায় না।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $input
+     * @return list<array<string, mixed>>
+     */
+    public function difference(array $lines, string $type, array $input): array
+    {
+        $paying = $type === \App\Modules\Accounts\Models\Voucher::PAYMENT;
+        $kind = isset($input['difference_kind']) ? (string) $input['difference_kind'] : null;
+        $narration = (string) ($input['narration'] ?? '');
+        $label = __('accounts::field.difference_'.($kind === 'discount' ? 'discount' : 'rounding'));
+        $extra = \App\Modules\Accounts\Support\WithheldAtSource::difference(
+            $kind, (string) ($input['difference_amount'] ?? ''), trim($label.' — '.$narration, ' —'), paying: $paying,
+        );
+
+        if ($extra === []) {
+            return $lines;
+        }
+
+        $amount = $paying ? $extra[0]['credit'] : $extra[0]['debit'];
+        $partyAccountId = (int) ($paying ? ($input['to_account_id'] ?? 0) : ($input['from_account_id'] ?? 0));
+        $side = $paying ? 'debit' : 'credit';
+        $grown = false;
+
+        foreach ($lines as $i => $line) {
+            if (! $grown && (int) $line['account_id'] === $partyAccountId && bccomp((string) ($line[$side] ?? '0'), '0', 4) > 0) {
+                $lines[$i][$side] = bcadd((string) $line[$side], $amount, 4);
+                $grown = true;
+            }
+        }
+
+        if (! $grown) {
+            throw ValidationException::withMessages(['difference.amount' => __('accounts::validation.difference_needs_party_account')]);
+        }
+
+        return [...$lines, ...$extra];
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $lines
      * @param  array<string, mixed>  $input
      * @return list<array<string, mixed>>

@@ -6,6 +6,9 @@
  * `Object` পড়তে পারে না। কারণের বিস্তার [[shell.js]]-এর মাথায়।
  */
 
+// ⓘ কম-বেশির মালিকের সই — আদায়ের একই যমজ (সার্ভার: Settlement::differenceNeedsOwner(); cb-ma-5)
+import { ownerSignNeeded, roundingNeedsOwner } from './collection-math.js'
+
 /**
  * খাত বাছাই — বাছা খাতটা কোন ধরনের, আর নম্বরের ঘর লাগবে কি না।
  *
@@ -383,6 +386,8 @@ export function voucherMoney ({
     owedLabels = {},
     branchLabels = {},
     bankFileUrl = '',
+    differenceKind = '',
+    difference = '',
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -395,6 +400,9 @@ export function voucherMoney ({
         // ⭐ উৎসে কর্তন — পরিশোধে (x-ui.field type="money", model ait/vds); খাতায় কী যায় সার্ভার বলে ([[WithheldTax::onPayment()]])
         ait: String(ait ?? ''),
         vds: String(vds ?? ''),
+        // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5); ধরন না থাকলে অঙ্ক গোনা হয় না
+        differenceKind: String(differenceKind ?? ''),
+        difference: String(difference ?? ''),
         /*
          * ⭐ মাথার তিন অঙ্ক — পক্ষের বকেয়া/পাওনা · এই কাগজ · বাকি থাকবে (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ বকেয়া আসে পক্ষের
          * বাক্স থেকে (`party-due` ঘটনা, [[party-voucher.js]]) — সার্ভারের একই উত্তর ([[VoucherController::due()]]); চিহ্ন: ধনাত্মক = তিনি
@@ -420,6 +428,8 @@ export function voucherMoney ({
             this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
             this.$watch('ait', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
             this.$watch('vds', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('difference', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('differenceKind', () => { this.refresh(); this.tellGross() })
             this.$nextTick(() => this.tellGross())
 
             // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
@@ -515,7 +525,21 @@ export function voucherMoney ({
         get headOwedPaisa () { return (out ? -1 : 1) * paisa(this.partyDue ?? 0) },
         // ⓘ পক্ষের খাত কমে মোটে — দুই দিকেই (রসিদে পক্ষ কাটেন, পরিশোধে আমরা কাটি): টাকা + AIT + VDS
         // ⭐ পরিশোধে লেখা ঘরটাই মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি) — রসিদে লেখা পাওয়া টাকা, মোট তার সাথে পক্ষের কাটা অংশ
-        get headGrossPaisa () { return out ? paisa(this.amount) : paisa(this.amount) + paisa(this.ait) + paisa(this.vds) },
+        get headGrossPaisa () { return (out ? paisa(this.amount) : paisa(this.amount) + paisa(this.ait) + paisa(this.vds)) + this.differencePaisa },
+
+        /*
+         * ⭐ কম-বেশি — পক্ষের খাত এটুকু বেশি নড়ে (রসিদে পাওনা, পরিশোধে দেনা কমে); মালিকের সই সার্ভারের নিয়মে
+         * ([[ownerSignNeeded]] = Settlement::differenceNeedsOwner(); প্রিভিউর `needs_signature` এলে সেটাই শেষ কথা)।
+         */
+        get differencePaisa () { return this.differenceKind === '' ? 0 : paisa(this.difference) },
+        get hasDiscount () { return this.differenceKind === 'discount' && this.differencePaisa > 0 },
+        get hasRounding () { return this.differenceKind === 'rounding' && this.differencePaisa > 0 },
+        get roundingOwner () { return this.hasRounding && roundingNeedsOwner(this.differencePaisa / 100) },
+        get ownerSigns () {
+            if (this.preview?.needs_signature === true && (this.hasDiscount || this.roundingOwner)) return true
+            return ownerSignNeeded(this.hasDiscount ? this.differencePaisa / 100 : 0, this.hasRounding ? this.differencePaisa / 100 : 0)
+        },
+        get sumDifference () { return taka(this.differencePaisa / 100) },
         // ⓘ উৎসে কাটা আছে কি না — পরিশোধে কমলা "করণীয় তালিকায় উঠবে" লাইন এতে
         get hasWithheld () { return paisa(this.ait) + paisa(this.vds) > 0 },
         // ⓘ নিট — পক্ষের হাতে যা যায়: পরিশোধে মোট − AIT − VDS, রসিদে লেখা টাকাই

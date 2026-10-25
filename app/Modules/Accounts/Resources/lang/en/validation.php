@@ -204,4 +204,15 @@ return [
     'missing_account' => 'Account :code is missing from the chart — add it first.',
     'obligation_needs_ref' => 'Enter the challan or certificate number — the number is the proof it was done.',
     'obligation_not_open' => 'This obligation is no longer open — it was already done or cancelled.',
+    // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
+    'difference_needs_kind' => 'Choose the kind of difference — discount or rounding.',
+    'difference_only_money' => 'A discount or rounding belongs only on a receipt or a payment voucher.',
+    'difference_over_limit' => 'Rounding ৳:amount is above the limit of ৳:limit. Give a difference this large as a discount (the owner signs it), or correct the amount.',
+    'difference_head_missing' => 'Account :code is missing from the chart, holds another meaning, or cannot be posted to — the discount or rounding could not be booked.',
+    'difference_needs_party_account' => "The party's account line was not found — there is no telling whose account the discount or rounding belongs to.",
+    'difference_discount_awaiting' => 'This voucher carries a discount — the owner must sign, and the request has gone out. The voucher stays a draft; it posts itself once the owner signs, and you will be told if anything stops it.',
+    'difference_rounding_awaiting' => 'Rounding ৳:amount is above ৳:free, so the owner must sign; the request has gone out. The voucher stays a draft; it posts itself once the owner signs, and you will be told if anything stops it.',
+    'difference_discount_no_signer' => 'A discount needs the owner\'s signature, but nobody is set up to sign (the discount approval flow is off or missing). Remove the discount, or turn the flow on.',
+    'difference_rounding_no_signer' => 'Rounding ৳:amount — rounding above ৳:free needs the owner\'s signature, but nobody is set up to sign (the discount approval flow is off or missing). Round by ৳:free at most, or turn the flow on.',
+    'difference_rejected' => 'The discount or rounding request was turned down. Change the amount and send it again.',
 ];
