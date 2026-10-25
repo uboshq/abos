@@ -25,6 +25,7 @@ use App\Modules\Supplier\Services\SupplierTaxIds;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -43,6 +44,7 @@ use Tests\TestCase;
 final class TheAccountsScreenReadsPartyFactsThroughCoreTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsASupplierBank;
 
     private Company $company;
 
@@ -143,8 +145,11 @@ final class TheAccountsScreenReadsPartyFactsThroughCoreTest extends TestCase
     /** ২ — BIN · TIN সরবরাহকারীর মাস্টার থেকে */
     public function test_the_tax_ids_come_from_the_suppliers_master(): void
     {
+        // ⓘ প্রস্তুতি নিজের — phpunit-এর নমুনায় BIN আর TIN-সহ সরবরাহকারী নেই (cb-ma-5 ফটক); মাস্টারের নিজের ঘরে বসানো
+        $first = Supplier::query()->orderBy('id')->firstOrFail();
+        DB::table('suppliers')->where('id', $first->id)->update(['bin' => '000123456-0101', 'tin' => '1234567890']);
         $seeded = Supplier::query()->whereNotNull('bin')->whereNotNull('tin')->orderBy('id')->first();
-        $this->assertNotNull($seeded, 'প্রস্তুতিটাই ভুল — নমুনায় BIN আর TIN-সহ কোনো সরবরাহকারী নেই');
+        $this->assertNotNull($seeded, 'প্রস্তুতিটাই ভুল — BIN আর TIN-সহ কোনো সরবরাহকারী নেই');
 
         $this->assertSame(['bin' => (string) $seeded->bin, 'tin' => (string) $seeded->tin], app(PartyTaxIds::class)->taxIdsOf('supplier', $seeded->id),
             '⛔ পরিশোধ ভাউচারের BIN · TIN সরবরাহকারীর মাস্টারের নয়');
@@ -162,8 +167,10 @@ final class TheAccountsScreenReadsPartyFactsThroughCoreTest extends TestCase
     /** ৩ — প্রাপকের ব্যাংক: অবস্থা আর ঢাকা লাইন */
     public function test_the_payee_bank_says_its_state_and_a_masked_line(): void
     {
+        // ⓘ প্রস্তুতি নিজের — phpunit-এর নমুনায় সই-পাওয়া ব্যাংক তথ্য নেই (cb-ma-5 ফটক); দুই হাতের সইয়ের ভাগ করা প্রস্তুতি
+        $this->supplierBankIsSigned(Supplier::query()->orderBy('id')->firstOrFail());
         $signed = SupplierBankDetail::query()->where('status', SupplierBankDetail::SIGNED)->orderBy('id')->first();
-        $this->assertNotNull($signed, 'প্রস্তুতিটাই ভুল — নমুনায় সই-পাওয়া কোনো ব্যাংক তথ্য নেই');
+        $this->assertNotNull($signed, 'প্রস্তুতিটাই ভুল — সই-পাওয়া কোনো ব্যাংক তথ্য নেই');
 
         $view = app(PayeeBankView::class)->bankOf('supplier', (int) $signed->supplier_id);
         $this->assertSame(['state' => 'signed', 'line' => $signed->bank_name.' ••••'.$signed->account_last4], $view,

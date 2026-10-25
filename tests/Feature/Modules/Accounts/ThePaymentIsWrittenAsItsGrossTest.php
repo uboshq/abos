@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\PutsMoneyInTheTill;
+use Tests\Concerns\ReadsTheRefusal;
 use Tests\TestCase;
 
 /**
@@ -39,6 +40,7 @@ use Tests\TestCase;
 final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
 {
     use PutsMoneyInTheTill;
+    use ReadsTheRefusal;
     use RefreshDatabase;
 
     private User $owner;
@@ -87,7 +89,8 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         $this->moved($book, StandardChart::find(StandardChart::MFS_CHARGES), debit: '5', why: '⛔ চার্জ ৫ টাকা ৫২১১-এ বসেনি');
         $this->moved($book, $this->mfs, credit: '905', why: '⛔ বিকাশ থেকে ৯০৫ বেরোয়নি — চার্জ মোটের বাইরে নয়');
         $this->assertCount(3, $book, '⛔ বিকাশের উদাহরণে ঠিক তিনটা খাত নড়ার কথা: '.json_encode($book));
-        $this->assertSame(0, bccomp((string) $voucher->amount, '900', 4), '⛔ কাটা ছাড়া নিট মোটের সমান নয়');
+        // ⓘ মাথার `amount` ব্যবস্থার পুরনো নিয়মে ডেবিটের যোগ (সেবা লেখে); নিট চুক্তির নিজের ঘরে — ভাউচারের পাতার `net_amount` ([[VoucherApiController::netOf()]])
+        $this->assertSame('900.0000', $this->netOnThePage($voucher), '⛔ কাটা ছাড়া নিট মোটের সমান নয়');
     }
 
     /** ২ — মোট = নিট + কাটা; পক্ষ পুরো মোটে কমে */
@@ -103,7 +106,7 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         $this->moved($book, StandardChart::find(StandardChart::VDS_PAYABLE), credit: '75', why: '⛔ VDS ২১২২-এ বসেনি');
         $this->moved($book, $this->mfs, credit: '900', why: '⛔ টাকার খাত থেকে নিট + চার্জ (৮৭৫ + ২৫) বেরোয়নি');
         $this->moved($book, StandardChart::find(StandardChart::MFS_CHARGES), debit: '25', why: '⛔ চার্জ কোম্পানির খরচে বসেনি');
-        $this->assertSame(0, bccomp((string) $voucher->amount, '875', 4), '⛔ নিট = মোট − AIT − VDS নয়: '.$voucher->amount);
+        $this->assertSame('875.0000', $this->netOnThePage($voucher), '⛔ নিট = মোট − AIT − VDS নয়: '.$this->netOnThePage($voucher));
 
         // ⭐ বিলে বসেনি এমন পুরো মোট সরবরাহকারীর নিজের খাতায় (২১১১) Dr, তাঁর নামে — আলাদা অগ্রিম খাত নেই (চুক্তি §৭.৬)
         $own = (string) LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])->where('source_id', $voucher->id)
@@ -135,7 +138,7 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         ] as $case => [$fields, $field, $key, $with]) {
             $before = Voucher::query()->count();
             $this->pay([...$fields, 'instrument_no' => 'GRS-NO-'.md5($case)]);
-            $said = (string) (session('errors')?->getBag('default')->first($field) ?? '');
+            $said = (string) ($this->refusalOn($field) ?? '');
 
             $this->assertContains($said, [trans($key, $this->formatted($with), 'bn'), trans($key, $this->formatted($with), 'en')],
                 "⛔ {$case}: থামেনি, বা {$field}-এর ঘরে নিজের কথায় নয়: ".$said);
@@ -272,6 +275,14 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
         ];
     }
 
+    /** ⓘ ফোনের ভাউচারের পাতা যে নিট বলে — চুক্তির নিট (টাকার সারি − চার্জ) */
+    private function netOnThePage(Voucher $voucher): string
+    {
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+
+        return (string) $this->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json('net_amount');
+    }
+
     /** @param  array<string, string>  $fields */
     private function pay(array $fields, bool $withGross = true, bool $raw = false): \Illuminate\Testing\TestResponse
     {
@@ -287,7 +298,7 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
     /** ⓘ ফেরত এল কি না — নিজের ⛔ কথায় (Laravel-এর সাধারণ বার্তায় নয়), কোন ঘরে কী বলল সহ */
     private function accepted(\Illuminate\Testing\TestResponse $response, string $case): void
     {
-        $said = session('errors')?->getBag('default')->toArray() ?? [];
+        $said = $this->refusalMessages();
         $this->assertSame([], $said, "⛔ {$case}: মোট টাকার পরিশোধ ফিরে এল: ".json_encode($said, JSON_UNESCAPED_UNICODE));
     }
 

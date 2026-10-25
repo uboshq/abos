@@ -629,6 +629,10 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $customer = Customer::query()->orderBy('id')->firstOrFail();
         $branch = $this->company->defaultBranch();
         $customer->forceFill(['branch_id' => $branch->id])->save();
+        // ⓘ হেডারে সেই শাখা বাছা — মালিকের "সব শাখা"-য় পোস্টের শাখাই নেই, আর পক্ষের শাখার নিয়ম ফেরায় (cb-ma-5 ফটক: "#0" শাখা)
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['current_branch_id' => $branch->id])->save();
+        $this->actingAs($owner->fresh());
 
         $due = $this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $customer->id]))->assertOk()->json();
         $this->assertSame($branch->name(), $due['party_branch'] ?? null, '⛔ বকেয়ার উত্তরে পক্ষের নিজের শাখা নেই — মাথার "গ্রাহকের শাখা" আসবে না');

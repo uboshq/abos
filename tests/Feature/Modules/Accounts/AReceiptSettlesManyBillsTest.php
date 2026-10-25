@@ -24,6 +24,7 @@ use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\ReadsTheRefusal;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,7 @@ use Tests\TestCase;
  */
 final class AReceiptSettlesManyBillsTest extends TestCase
 {
+    use ReadsTheRefusal;
     use RefreshDatabase;
 
     private Customer $customer;
@@ -114,7 +116,7 @@ final class AReceiptSettlesManyBillsTest extends TestCase
         ] as $case => [$amount, $rows, $field, $key, $with]) {
             $before = Voucher::query()->count();
             $this->receive($amount, $rows);
-            $said = (string) (session('errors')?->getBag('default')->first($field) ?? '');
+            $said = (string) ($this->refusalOn($field) ?? '');
 
             $this->assertContains($said, [trans($key, $with, 'bn'), trans($key, $with, 'en')], "⛔ {$case}: থামেনি, বা {$field}-এর ঘরে নিজের কথায় নয়: ".$said);
             $this->assertSame($before, Voucher::query()->count(), "⛔ {$case}: থামা রসিদ লেখা হলো");
@@ -185,7 +187,7 @@ final class AReceiptSettlesManyBillsTest extends TestCase
 
     private function accepted(\Illuminate\Testing\TestResponse $response, string $case): void
     {
-        $said = session('errors')?->getBag('default')->toArray() ?? [];
+        $said = $this->refusalMessages();
         $this->assertSame([], $said, "⛔ {$case}: রসিদ ফিরে এল: ".json_encode($said, JSON_UNESCAPED_UNICODE));
     }
 

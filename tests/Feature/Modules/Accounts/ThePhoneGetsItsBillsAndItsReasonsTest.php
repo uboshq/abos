@@ -73,7 +73,10 @@ final class ThePhoneGetsItsBillsAndItsReasonsTest extends TestCase
             '⛔ ফোনের বাকি ওয়েবের কার্ডের বাকি নয়');
     }
 
-    /** ২ — দেয়াল: অজানা পক্ষে ৪০৪; বিক্রয়কর্মী কেবল নিজের ডিলারে */
+    /**
+     * ২ — দেয়াল: অজানা পক্ষে ৪০৪; বিক্রয়কর্মী টাকার দরজায় ঢোকেনই না — নিজের ডিলারেও নয় (মালিকের নিয়ম "খ": আদায় নেয় কেবল অফিস,
+     * দেয়ালের বিক্রয়কর্মী কেবল অর্ডার লেখেন; ফোনে হিসাব মডিউল তাঁর জন্য বন্ধ — cb-ma-5 ফটকে ধরা, আগের দাবি ২০০ চাইত)
+     */
     public function test_the_open_bills_door_keeps_the_company_and_the_dealer_walls(): void
     {
         Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
@@ -89,9 +92,9 @@ final class ThePhoneGetsItsBillsAndItsReasonsTest extends TestCase
         app(DealerScope::class)->forget();
         Sanctum::actingAs($sr->fresh(), [AuthController::APP]);
 
-        $this->assertSame(200, $this->getJson('/api/v1/accounts/parties/customer/'.$own->id.'/open-bills')->status(),
-            '⛔ বিক্রয়কর্মী নিজের ডিলারের খোলা বিল পান না');
-        $this->assertSame(404, $this->getJson('/api/v1/accounts/parties/customer/'.$stranger->id.'/open-bills')->status(),
+        $this->assertSame(403, $this->getJson('/api/v1/accounts/parties/customer/'.$own->id.'/open-bills')->status(),
+            '⛔ বিক্রয়কর্মী টাকার দরজায় ঢুকলেন — মালিকের নিয়মে আদায় নেয় কেবল অফিস');
+        $this->assertSame(403, $this->getJson('/api/v1/accounts/parties/customer/'.$stranger->id.'/open-bills')->status(),
             '⛔ বিক্রয়কর্মী অন্যের ডিলারের খোলা বিল দেখেন — দেয়াল ভাঙা');
     }
 

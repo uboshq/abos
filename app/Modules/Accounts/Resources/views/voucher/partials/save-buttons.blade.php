@@ -50,7 +50,8 @@
 
     <x-ui.button type="submit" tone="primary"
                  ::class="busy && 'pointer-events-none opacity-70'">
-        @if ($ownerSignsLabel !== null && ! $revising)
+        {{-- ⓘ সই আগে থেকেই চালু হলে মূল নামটাই "সইয়ে পাঠান" — তখন একটাই নাম, দুইবার নয় (cb-ma-5 ফটক: "সইয়ে পাঠান সইয়ে পাঠান") --}}
+        @if ($ownerSignsLabel !== null && ! $revising && $ownerSignsLabel !== $primaryLabel)
             <span x-show="! ownerSigns">{{ __($primaryLabel) }}</span>
             <span x-show="ownerSigns" x-cloak data-owner-signs-label>{{ __($ownerSignsLabel) }}</span>
         @else

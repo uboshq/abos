@@ -20,6 +20,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ReadsTheRefusal;
 use Tests\TestCase;
 
 /**
@@ -34,6 +35,7 @@ use Tests\TestCase;
  */
 final class TheBillsCardShowsANoteButAppliesOnlyBillsTest extends TestCase
 {
+    use ReadsTheRefusal;
     use RefreshDatabase;
 
     private Customer $customer;
@@ -84,7 +86,7 @@ final class TheBillsCardShowsANoteButAppliesOnlyBillsTest extends TestCase
                 'bills' => [['id' => (string) $note->public_id, 'amount' => '10']],
             ]);
 
-        $said = (string) (session('errors')?->getBag('default')->first('bills.0.id') ?? '');
+        $said = (string) ($this->refusalOn('bills.0.id') ?? '');
         $this->assertContains($said, [trans('accounts::validation.against_unknown', [], 'bn'), trans('accounts::validation.against_unknown', [], 'en')],
             '⛔ ক্রেডিট নোট রসিদে বিলের মতো প্রয়োগ হতে গেল: '.$said);
         $this->assertSame($before, Voucher::query()->count(), '⛔ নোট প্রয়োগের রসিদ লেখা হলো');
@@ -119,7 +121,8 @@ final class TheBillsCardShowsANoteButAppliesOnlyBillsTest extends TestCase
         $notes = app(NoteService::class);
         $note = $notes->create([
             'direction' => Note::CREDIT, 'party_kind' => Note::KIND_CUSTOMER, 'party_id' => $this->customer->id,
-            'other_account_id' => StandardChart::find(StandardChart::DISCOUNT_GIVEN)?->id, 'trx_date' => now()->toDateString(),
+            // ⓘ অন্য দিকের খাত সেবা নিজে বাছে, দিক ধরে (a5-এর 6f5848263-এর একই কারণ — ৫৩০০ ছাড়ের খাত এখানে মানা নয়)
+            'trx_date' => now()->toDateString(),
             'amount' => $amount, 'tax_amount' => '0', 'reason' => 'price_correction',
         ]);
         $notes->confirm($note);

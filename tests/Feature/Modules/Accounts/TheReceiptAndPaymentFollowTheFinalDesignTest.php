@@ -116,7 +116,9 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $payment = $this->screen(Voucher::PAYMENT);
         // ⓘ উৎস ধরে — পরীক্ষা ইংরেজিতে আঁকে, আর সেখানে পুরনো আর নতুন দুই লেখাই "Paid from"
         // ⓘ ২৪ অক্টোবর ২০২৬ থেকে খাতের ঘর পদ্ধতির বাক্সে ([[x-money.method]] `accounts`) — লেবেলটা বাক্সকে দেওয়া হয়
-        $this->assertMatchesRegularExpression('/:account-label="\$isPayment \? __\(\'money\.screen\.from_account\'\)/', $form,
+        // ⓘ বাক্সটা c0ac7aec2 থেকে টাকার অংশের নিজের ফাইলে (party-fields-এর ভিতরে `partials.money-fields`) — লেবেল সেখানেই খোঁজা, একই কথা
+        $money = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/money-fields.blade.php'));
+        $this->assertMatchesRegularExpression('/:account-label="\$isPayment \? __\(\'money\.screen\.from_account\'\)/', $money,
             '⛔ পরিশোধে "যে খাত থেকে" লেখা নেই (নকশার লেখা; আগে "কোথা থেকে দেওয়া হল")');
         $this->assertStringContainsString('data-account-balance', $payment, '⛔ খাতের স্থিতির লাইন নেই');
         $balance = bcadd($bank->balanceInView(), '0', 2);

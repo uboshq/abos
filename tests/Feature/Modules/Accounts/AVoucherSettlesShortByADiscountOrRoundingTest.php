@@ -25,6 +25,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\ReadsTheRefusal;
 use Tests\TestCase;
 
 /**
@@ -44,6 +45,7 @@ use Tests\TestCase;
  */
 final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
 {
+    use ReadsTheRefusal;
     use RefreshDatabase;
 
     private Company $company;
@@ -161,7 +163,7 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         ] as $case => [$extra, $field, $key, $with]) {
             $before = Voucher::query()->count();
             $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt('1000'), ...$extra]);
-            $said = (string) (session('errors')?->getBag('default')->first($field) ?? '');
+            $said = (string) ($this->refusalOn($field) ?? '');
 
             $this->assertContains($said, $this->both($key, $with), "⛔ {$case}: থামেনি, বা {$field}-এর ঘরে নিজের কথায় নয়: ".$said);
             $this->assertSame($before, Voucher::query()->count(), "⛔ {$case}: থামা রসিদ লেখা হলো");
@@ -170,7 +172,7 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         ApprovalFlow::query()->where('module', 'sales')->where('action', 'discount')->update(['is_active' => false]);
         $before = Voucher::query()->count();
         $this->receive('950', 'discount', '50');
-        $said = (string) (session('errors')?->getBag('default')->first('difference.amount') ?? '');
+        $said = (string) ($this->refusalOn('difference.amount') ?? '');
 
         $this->assertContains($said, $this->both('accounts::validation.difference_discount_no_signer'), '⛔ সইদাতা নেই, তবু ছাড় থামল না বা অন্য কারণে থামল: '.$said);
         $this->assertSame($before, Voucher::query()->count(), '⛔ সইদাতা ছাড়া ছাড়ের রসিদ খসড়া হয়ে পড়ে রইল');
@@ -211,7 +213,7 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         $before = Voucher::query()->count();
 
         $this->receive('1000', 'rounding', '0.50');
-        $said = (string) (session('errors')?->getBag('default')->first('difference.amount') ?? '');
+        $said = (string) ($this->refusalOn('difference.amount') ?? '');
 
         $this->assertContains($said, $this->both('accounts::validation.difference_head_missing', ['code' => StandardChart::ROUNDING_DIFFERENCE]),
             '⛔ অর্থ হারানো ৫৩০৫-এ রাউন্ডিং থামেনি, বা অন্য কারণে থামল: '.$said);
@@ -249,7 +251,7 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
 
     private function accepted(\Illuminate\Testing\TestResponse $response, string $case): void
     {
-        $said = session('errors')?->getBag('default')->toArray() ?? [];
+        $said = $this->refusalMessages();
         $this->assertSame([], $said, "⛔ {$case}: ফিরে এল: ".json_encode($said, JSON_UNESCAPED_UNICODE));
     }
 
