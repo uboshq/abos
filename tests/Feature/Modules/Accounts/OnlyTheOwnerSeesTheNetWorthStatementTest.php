@@ -165,5 +165,35 @@ final class OnlyTheOwnerSeesTheNetWorthStatementTest extends TestCase
         $clerk = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
         $theirs = app(NetWorthStatement::class)->forOwner($clerk);
         $this->assertSame([], $theirs['companies'], '⛔ মালিক নন এমন কেউ "সব কোম্পানি মিলিয়ে" বিবরণী পেলেন।');
+        $this->assertSame([], $theirs['missing'], '⛔ মালিক নন এমন কাউকে কোম্পানির নাম "দেখা যাচ্ছে না" তালিকায় জানানো হলো।');
+    }
+
+    /**
+     * ⛔ যে কোম্পানিতে মালিক ভূমিকায় নেই (লাইভে AVA, ১০ অক্টোবর থেকে), সেটা "সব মিলিয়ে"-তে যোগ হয় না — আর নামটা বলা হয়, চুপচাপ বাদ নয়
+     * (fe, ২৫ অক্টোবর ২০২৬)।
+     */
+    public function test_a_company_the_owner_is_no_longer_owner_of_is_named_and_not_summed(): void
+    {
+        config(['abos.owner_emails' => ['owner@abos.test']]);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $before = app(NetWorthStatement::class)->forOwner($owner);
+        $this->assertGreaterThanOrEqual(2, count($before['companies']), 'দৃশ্যটাই ভুল — ডেমোর মালিক দুই কোম্পানির মালিক নন।');
+
+        // ⓘ দ্বিতীয় কোম্পানিতে মালিকের ভূমিকা সরানো — লাইভের AVA-র মতো
+        $lost = $before['companies'][1];
+        DB::table('model_has_roles')->where('model_type', User::class)->where('model_id', $owner->id)->where('company_id', $lost['id'])->delete();
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $after = app(NetWorthStatement::class)->forOwner($owner->fresh());
+
+        $this->assertNotContains($lost['code'], array_column($after['companies'], 'code'), 'দৃশ্যটাই ভুল — ভূমিকা সরানোর পরেও কোম্পানিটা দেখা যায়।');
+        $this->assertContains($lost['code'], array_column($after['missing'], 'code'),
+            '⛔ যে কোম্পানিতে মালিক আর মালিক নন, সেটা চুপচাপ বাদ পড়ল — "দেখা যাচ্ছে না" তালিকায় নাম নেই।');
+
+        foreach (NetWorthStatement::LINES as $line) {
+            $sum = array_reduce($after['companies'], fn (string $s, array $c) => bcadd($s, $c['figures'][$line], 4), '0');
+            $this->assertSame(0, bccomp((string) $after['all'][$line], $sum, 4),
+                "⛔ মালিক নন এমন কোম্পানির অঙ্ক «{$line}» \"সব মিলিয়ে\"-তে যোগ হলো।");
+        }
     }
 }

@@ -43,21 +43,29 @@ final class NetWorthStatement
     /**
      * মালিক যেসব কোম্পানির মালিক — প্রতিটা আলাদা, আর সব মিলিয়ে। ⓘ কোনো কোম্পানির মালিক না হলে খালি তালিকা।
      *
-     * @return array{companies: list<array<string, mixed>>, all: array<string, string>|null}
+     * ⛔ যে কোম্পানিতে তিনি মালিক নন, সেটা "সব মিলিয়ে"-তে যোগ হয় না — আর চুপচাপ বাদও নয়: গ্রুপের মালিকের
+     * ([[Ownership::isGroupOwner()]]) জন্য সেগুলো `missing`-এ, পর্দা নিচে লেখে "… দেখা যাচ্ছে না — আপনি সেখানে মালিক হিসেবে
+     * নেই" (fe, ২৫ অক্টোবর ২০২৬: লাইভে AVA-তে ১০ অক্টোবর থেকে মালিক নেই, ফেরানো batch-24-এর restore-owner-এ)।
+     *
+     * @return array{companies: list<array<string, mixed>>, all: array<string, string>|null, missing: list<array{code: string, name: string}>}
      */
     public function forOwner(User $user, ?string $asOf = null): array
     {
         $companies = [];
+        $missing = [];
+        $groupOwner = $this->ownership->isGroupOwner($user);
 
         foreach (Company::query()->where('is_active', true)->orderBy('id')->get() as $company) {
             if ($this->mayView($user, (int) $company->id)) {
                 $companies[] = ['id' => (int) $company->id, 'code' => (string) $company->code, 'name' => $company->name(),
                     ...$this->forCompany((int) $company->id, $asOf)];
+            } elseif ($groupOwner) {
+                $missing[] = ['code' => (string) $company->code, 'name' => $company->name()];
             }
         }
 
         if ($companies === []) {
-            return ['companies' => [], 'all' => null];
+            return ['companies' => [], 'all' => null, 'missing' => $missing];
         }
 
         $all = [];
@@ -65,7 +73,7 @@ final class NetWorthStatement
             $all[$line] = array_reduce($companies, fn (string $sum, array $c) => bcadd($sum, $c['figures'][$line], 4), '0.0000');
         }
 
-        return ['companies' => $companies, 'all' => $all];
+        return ['companies' => $companies, 'all' => $all, 'missing' => $missing];
     }
 
     /**
