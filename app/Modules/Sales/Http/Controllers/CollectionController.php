@@ -421,10 +421,23 @@ class CollectionController extends Controller implements HasMiddleware
         $mine = \App\Modules\Accounts\Models\CashTill::query()->heldBy((int) auth()->id())->pluck('account_id')
             ->map(fn ($id) => (int) $id)->all();
 
+        // ⭐ জের-থাকা নিষ্ক্রিয় গ্রাহকও — বকেয়া রেখে বন্ধ দোকানের টাকা আদায়ের পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
+        // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; একবারে, সারি ধরে নয় ([[Customer::PLACE]])
+        $customers = Customer::query()->inViewedBranch()->activeOrOwing()->with(Customer::PLACE)->orderBy('name_en')->get();
+
         return [
-            // ⭐ জের-থাকা নিষ্ক্রিয় গ্রাহকও — বকেয়া রেখে বন্ধ দোকানের টাকা আদায়ের পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
-            // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; একবারে, সারি ধরে নয় ([[Customer::PLACE]])
-            'customers' => Customer::query()->inViewedBranch()->activeOrOwing()->with(Customer::PLACE)->orderBy('name_en')->get(),
+            'customers' => $customers,
+            /*
+             * ⭐ গ্রাহকের পিকারের সারি — নাম, আর তার নিচের ছোট লাইনে পয়েন্ট · শাখা (x-ui.party-search stacked; fe, ২৪ অক্টোবর ২০২৬):
+             * সাধারণ select বন্ধ অবস্থায় "নাম · পয়েন্ট · শাখা" তীরের নিচে কাটত। খোঁজা যায় নাম, পয়েন্ট, শাখা আর কোডে।
+             * ⓘ নিষ্ক্রিয়-কিন্তু-জের-থাকা গ্রাহকের নামে আগের মতোই চিহ্ন ([[Customer::pickerName()]])।
+             */
+            'customerRows' => $customers->map(fn (Customer $c): array => [
+                'id' => (int) $c->id,
+                'label' => $c->is_active ? $c->name() : $c->name().' — '.__('core.inactive_with_balance'),
+                'hint' => (string) ($c->placeName() ?? ''),
+                'find' => mb_strtolower(trim($c->name().' '.($c->placeName() ?? '').' '.$c->code)),
+            ])->values()->all(),
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
             'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()

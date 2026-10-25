@@ -293,6 +293,12 @@ final class CollectionService
             );
 
             $account = $this->resolveMoneyAccount($in->accountId);
+            /*
+             * ⛔ পদ্ধতি আর খাত এক ধরনের — "নগদ" বেছে বিকাশের খাত, বা "MFS" বেছে ব্যাংক নয় (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; cb-র
+             * নিয়ম [[MoneyMethod::KIND_OF]])। ⓘ পর্দা কেবল মিলে যাওয়া খাত দেখায় ([[components.money.method]]); এখানে ফোন, পুরনো ফর্ম আর
+             * হাতে-বানানো ডাকের জন্য। ⓘ পুরনো [[create()]] (POS-এর নগদ, জমার দাবি) মানুষের বাছা পদ্ধতি নেয় না — সেখানে প্রশ্ন নেই।
+             */
+            MoneyMethod::assertFits($in->method, $account->money_kind, $account->label());
             $this->assertReferenceFreshOnAccount($in, (int) $account->id);
 
             $branchId = $this->customerBranch($in->customerId);
@@ -361,6 +367,7 @@ final class CollectionService
 
             $trxDate = Carbon::parse($in->trxDate);
             $account = $this->resolveMoneyAccount($in->accountId ?? $collection->account_id);
+            MoneyMethod::assertFits($in->method, $account->money_kind, $account->label());
             $this->assertReferenceFreshOnAccount($in, (int) $account->id, (int) $collection->id);
 
             $branchId = $collection->branch_id === null ? null : (int) $collection->branch_id;
@@ -414,6 +421,11 @@ final class CollectionService
         $catch(fn () => $this->periods->assertOpen($in->trxDate));
         $catch(fn () => MoneyMethod::assertReadyToPost($in->paperFields()));
         $account = $catch(fn () => $this->resolveMoneyAccount($in->accountId));
+
+        // ⓘ প্রিভিউও একই কথা বলে — পোস্ট যা ফেরাবে, "খাতায় যা যাবে" আগেই তা দেখায়; রেফারেন্সের গোনার (`$before`) বাইরে
+        if ($account !== null) {
+            $catch(fn () => MoneyMethod::assertFits($in->method, $account->money_kind, $account->label()));
+        }
 
         $before = count($stops);
         if ($account !== null) {
@@ -1111,6 +1123,16 @@ final class CollectionService
         $this->assertStillFits($collection);
 
         /*
+         * ⭐ খাতায় তোলার শর্ত — পদ্ধতির রেফারেন্স (TrxID, ব্যাংকের রেফারেন্স, জমার স্লিপ), রাউন্ডিংয়ের সীমা, স্লিপ বাধ্যতামূলক
+         * হলে স্লিপ — সইয়ের অনুরোধের **আগে** (fe-র আন্তর্জাতিক মানের নিরীক্ষা, ফাঁক ১; ২৪ অক্টোবর ২০২৬)।
+         * ⛔ আগে অনুমোদন আগে চাওয়া হত: রেফারেন্স ছাড়া বিকাশের আদায় মালিকের সইয়ে যেত, আর সই পড়ার পরে নিজে পোস্ট হতে গিয়ে
+         * তবেই রেফারেন্সে আটকাত — মালিককে এমন কাগজে সই করানো যা কখনো খাতায় উঠতে পারে না। এখন কাগজটা তখনই ফেরে,
+         * কারণসহ, আর কোনো অনুরোধ যায় না। ⓘ সই পড়ার পরের পথেও (ConfirmTheCollectionOnTheLastSignature → এই confirm())
+         * একই পাহারা — যা আটকায় তা সব দরজায় আটকায়।
+         */
+        $this->assertReadyForTheBooks($collection);
+
+        /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
          *
          * ── ⓘ কেন আদায়েও সই লাগতে পারে ──────────────────────────────
@@ -1131,8 +1153,7 @@ final class CollectionService
             reason: $collection->narration,
         );
 
-        // ⭐ টাকা নেওয়ার নকশা ১০০ — পদ্ধতির রেফারেন্স, রাউন্ডিংয়ের সীমা, স্লিপ বাধ্যতামূলক হলে স্লিপ, আর ছাড়ে মালিকের সই
-        $this->assertReadyForTheBooks($collection);
+        // ⭐ টাকা নেওয়ার নকশা ১০০ — ছাড়ে (আর ৳০.৫০-এর বেশি রাউন্ডিংয়ে) মালিকের সই
         $this->assertDiscountSigned($collection);
 
         return DB::transaction(function () use ($collection) {

@@ -61,6 +61,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'finance.withdrawal.cap' => 'a setting',
         'governance.error.acknowledge_all' => 'marks error rows seen',
         'home.layout' => 'personal home layout',
+        'rail.layout' => 'personal left-rail layout (pins and order), no paper',
         'hr.leave_type.install' => 'installs default leave types, no paper',
         'hr.salary_head.install' => 'installs default salary heads, no paper',
         'inventory.stock.hold' => 'hold on a warehouse stock, the branch is the warehouse',

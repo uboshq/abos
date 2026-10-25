@@ -85,8 +85,11 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
             // সাধারণ তথ্য — দফা ১, ২
             $w('general'), $w('party_kind'), $w('kind_customer'), $w('kind_supplier'), $w('kind_employee'), $w('kind_other'),
             $w('customer'), $this->dealer->fresh()->load(Customer::PLACE)->pickerName(), $w('date'), $w('amount'), $w('full_due'), $w('chosen_bills'),
-            $w('into'), '1102-SCR', __('money.method.legend'),
+            // ⭐ পদ্ধতি আগে, তারপর "যে খাতে জমা" (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; রসিদ-পরিশোধের একই নিয়ম) — খাতের তালিকা পদ্ধতির
+            //   খাতে সীমিত, তাই নতুন কাগজে (নগদ) ব্যাংকের 1102-SCR আঁকা হয় না; পদ্ধতি বদলালে আসে ([[TheCollectionFormPostsWhatTheDesignSaysTest]])
+            __('money.method.legend'),
             __('money.method.cash'), __('money.method.mfs'), __('money.method.transfer'), __('money.method.deposit'), __('money.method.cheque'),
+            $w('into'),
             __('money.field.transfer_mode'), __('money.field.reference'), __('money.field.value_date'), __('money.field.bank_charge'),
             $w('reference_free'),
             // খোলা বিল ও ক্রেডিট — দফা ৩
@@ -130,6 +133,35 @@ final class TheCollectionScreenIsDrawnLikeTheDesignTest extends TestCase
         $this->assertStringContainsString('data-open-items-table', $html, '⛔ দফা ৩: খোলা বিলের টেবিল নেই');
         $this->assertMatchesRegularExpression('/<table class="ui-grid" data-open-items-table>/', $html, '⛔ দফা ৩: খোলা বিলের টেবিল থিমের ui-grid নয়');
         $this->assertMatchesRegularExpression('/<table class="ui-grid" data-ledger-table>/', $html, '⛔ দফা ১০: খাতার টেবিল থিমের ui-grid নয়');
+    }
+
+    /**
+     * টাকা লাখ-কমায় আর দুই দশমিকে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর পাঠানোর ঘর আলাদা (cb-র type="money", fe, ২৪ অক্টোবর
+     * ২০২৬; আদায়, ভাউচার আর পরিশোধ একসাথে)। ⓘ পাঠানো হয় কেবল কাঁচা অঙ্ক — কমা কোনো পথেই সার্ভারে যায় না; ফাঁকা কাটার ঘরে "0.00"।
+     */
+    public function test_every_money_box_shows_lakh_commas_and_sends_only_the_plain_figure(): void
+    {
+        $form = $this->part($this->screen());
+
+        $this->assertMatchesRegularExpression('/<input\b[^>]*id="cf-amount"[^>]*data-money-shown="amount"[^>]*x-money-display="amount"/s', $form,
+            '⛔ টাকার ঘর লাখ-কমায় দেখায় না — "45000" লেখাই থাকে, নকশায় "45,000.00"');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="amount"[^>]*:value="amount"/', $form, '⛔ টাকার কাঁচা অঙ্কের ঘর নেই');
+        $this->assertDoesNotMatchRegularExpression('/<input\b[^>]*id="cf-amount"[^>]*\bname=/s', $form, '⛔ দেখানোর ঘরও নাম নিয়ে পাঠায় — কমাসহ লেখা সার্ভারে যেত');
+
+        foreach (['vds', 'ait', 'discount', 'rounding'] as $key) {
+            $this->assertMatchesRegularExpression('/<input\b[^>]*id="cf-'.$key.'"[^>]*x-money-display="'.$key.'"[^>]*data-money-empty="0\.00"/s', $form,
+                "⛔ {$key}-এর ঘর লাখ-কমায় নয়, বা ফাঁকায় \"0.00\" নয়");
+            $this->assertDoesNotMatchRegularExpression('/<input\b[^>]*id="cf-'.$key.'"[^>]*\bname=/s', $form, "⛔ {$key}-এর দেখানোর ঘর নাম নিয়ে পাঠায়");
+        }
+        foreach (['vds', 'ait'] as $key) {
+            $this->assertStringContainsString('<input type="hidden" name="'.$key.'" :value="'.$key.'">', $form, "⛔ {$key}-এর কাঁচা অঙ্ক পাঠানো হয় না");
+        }
+
+        $this->assertMatchesRegularExpression('/x-model="row\.apply"[^>]*@blur="tidyApply\(row\)"/', $form, '⛔ "এখন প্রয়োগ" ঘর ছাড়লে লাখ-কমায় বসে না');
+        // ⓘ রেফারেন্স লিখে ঘর ছাড়লে প্রিভিউ নতুন — নইলে "রেফারেন্স লাগবে" থামা লেখার পরেও থেকে যেত (ছবি ১১)
+        $this->assertMatchesRegularExpression('/<form\b[^>]*data-collection-form[^>]*@change="later\(\)"/s', $this->screen(),
+            '⛔ ঘর ছাড়লে "খাতায় যা যাবে" নতুন হয় না — লেখা রেফারেন্সের পরেও পুরনো থামা দেখায়');
+        $this->assertStringContainsString(':name="\'lines[\' + i + \'][amount]\'" :value="sent(row)"', $form, '⛔ সারির টাকা কাঁচা অঙ্কে পাঠানো হয় না');
     }
 
     /** দফা ২০ — কীবোর্ড আর পর্দা-পাঠক: প্রতিটা ঘরের নাম আছে, টিকের কলামের নাম পর্দা-পাঠকের জন্য; টাকা ইংরেজি অঙ্কে */

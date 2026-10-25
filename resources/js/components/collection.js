@@ -29,6 +29,8 @@ export function collectionForm (config = {}) {
         discount: String(config.discount ?? ''),
         rounding: String(config.rounding ?? ''),
         method: String(config.method ?? 'cash'),
+        // ⓘ "যে খাতে জমা" — cb-র পদ্ধতির ব্লকের খাতের ঘর `x-model="account"` দিয়ে এখানে বাঁধা ([[x-money.method]])
+        account: String(config.account ?? ''),
         charge: 0,
 
         // ⓘ হাতে বদলালে নিজে থেকে বসানো থামে — মানুষের সিদ্ধান্ত মুছে যায় না
@@ -42,6 +44,8 @@ export function collectionForm (config = {}) {
         unappliedText: taka(0),
         openTotalText: taka(0),
         balanced: false,
+        // ⓘ সারাংশ-পট্টির "মেলেনি" — CSP-তে `! balanced` চলে না, তাই উল্টোটা আলাদা ঘরে
+        unbalanced: true,
         both: false,
         // ⓘ রাউন্ডিং ৳0.50-এর বেশি — মালিকের সই লাগবে (সার্ভারের CollectionService::differenceNeedsOwner()-এর একই সীমা)
         roundingSigned: false,
@@ -61,8 +65,15 @@ export function collectionForm (config = {}) {
         previewFailed: false,
         timer: null,
 
+        /** "একই খাতে আগে ব্যবহার হয়নি ✓" — কেবল যে পদ্ধতির রেফারেন্স আছে (MFS, ট্রান্সফার, জমা, চেক); নগদে রেফারেন্সই নেই */
+        get showsReferenceFree () {
+            return this.referenceFree && this.method !== 'cash'
+        },
+
         init () {
             this.load(config.open ?? null, config.lines ?? [])
+            // ⓘ খাত বদলালে (মানুষ বাছলে, বা পদ্ধতি বদলে ব্লক নিজে বসালে/খালি করলে) প্রিভিউ নতুন — আগের `<select @change>`-এর কাজ
+            this.$watch('account', () => this.changed())
         },
 
         /** সার্ভারের খোলা-কাগজের উত্তর ([[CollectionOpenItems]]) পর্দায় */
@@ -80,7 +91,7 @@ export function collectionForm (config = {}) {
 
                 if (row) {
                     row.on = true
-                    row.apply = (row.credit ? -Math.abs(amountOf(line.amount)) : amountOf(line.amount)).toFixed(2)
+                    row.apply = taka(row.credit ? -Math.abs(amountOf(line.amount)) : amountOf(line.amount))
                 }
             }
 
@@ -148,10 +159,25 @@ export function collectionForm (config = {}) {
             if (row && !row.on) {
                 row.apply = ''
             } else if (row && row.on && amountOf(row.apply) === 0) {
-                row.apply = row.open.toFixed(2)
+                row.apply = taka(row.open)
             }
 
             this.recalc()
+        },
+
+        /**
+         * টাকার ঘরে লেখা — [[registerMoneyDisplay]] মান বসায় নিজের `input`-এ; কোনটা আগে চলে তার উপর নির্ভর না করে, পরের টিকে হিসাব
+         * (নইলে আগের অঙ্কে হিসাব হত, এক অক্ষর পিছিয়ে)
+         */
+        changedSoon () {
+            this.$nextTick(() => this.changed())
+        },
+
+        /** সারির "এখন প্রয়োগ" ছাড়লে লাখ-কমায় ("30,000.00", নকশার মতো); ফাঁকা থাকলে ফাঁকা — পাঠানো হয় কাঁচা অঙ্ক ([[sent()]]) */
+        tidyApply (row) {
+            if (String(row.apply ?? '').trim() !== '') {
+                row.apply = taka(amountOf(row.apply))
+            }
         },
 
         /** সারির "এখন প্রয়োগ" হাতে লেখা — লেখার মাঝপথে ঘরটা ফেরানো হয় না, কেবল হিসাব নতুন */
@@ -199,6 +225,7 @@ export function collectionForm (config = {}) {
             this.unappliedText = taka(b.unapplied)
             this.openTotalText = taka(b.openTotal)
             this.balanced = b.balanced
+            this.unbalanced = !b.balanced
             this.both = b.both
             this.roundingSigned = roundingNeedsOwner(this.rounding)
             this.ownerSigns = ownerSignNeeded(this.discount, this.rounding)

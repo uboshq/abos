@@ -13,7 +13,8 @@
     $money = fn ($v) => $v === null || $v === '' ? '' : \App\Core\Support\Money::round((string) $v, 2);
 
     // ⓘ টাকার খাতের ধরন — `data-kind`, cb-র পদ্ধতির ব্লক খাত দেখে পদ্ধতি সরায় ([[moneyMethod]])
-    $kinds = $accounts->mapWithKeys(fn ($a) => [$a->id => in_array($a->money_kind, ['cash', 'bank', 'mfs'], true) ? $a->money_kind : 'cash'])->all();
+    // ⓘ খাতের সারি cb-র পদ্ধতির ব্লকের জন্য ([[x-money.method]] `accounts`): পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত
+    $accountRows = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->code.' · '.$a->name(), 'kind' => (string) $a->money_kind])->values()->all();
 
     /*
      * ⓘ আগে বাছা সারি — public_id ধরে (পর্দার খোলা কাগজের `id`): ভুল নিয়ে ফেরা ফর্মে old(), খসড়া খুললে কাগজের নিজের সারি
@@ -75,6 +76,7 @@
         'discount' => $differenceKind === 'discount' ? (string) $differenceAmount : '',
         'rounding' => $differenceKind === 'rounding' ? (string) $differenceAmount : '',
         'method' => (string) old('instrument', $collection->instrument ?? 'cash'),
+        'account' => (string) old('account_id', $collection->account_id ?? ''),
         'monthOpen' => (bool) $monthOpen,
         'branch' => $branchName,
         'urls' => [
@@ -95,19 +97,17 @@
     ];
 @endphp
 
-<x-layouts.app :menu="$menu">
+<x-layouts.app :menu="$menu" :two-column-form="true">
     <x-slot:title>{{ $isNew ? __('sales::collection_form.title') : $collection->document_no }}</x-slot:title>
 
-    {{-- ⓘ cb-র পদ্ধতির ব্লক নিজের মোড়কে আসে; এখানে তার ঘরগুলো সাধারণ তথ্যের চার কলামের গ্রিডে বসে — পদ্ধতি "যে খাতে জমা"-র
-         পাশে, পদ্ধতির ঘরগুলো নিচের সারিতে, নকশার মতো --}}
+    {{-- ⓘ cb-র পদ্ধতির ব্লক `inline` — তার ঘরগুলো সাধারণ তথ্যের চার কলামের গ্রিডেই বসে: পদ্ধতি আর "যে খাতে জমা" এক সারিতে, পদ্ধতির
+         চার ঘর (মোড · রেফারেন্স · মূল্য-তারিখ · চার্জ) নিচের এক সারিতে, নকশার মতো। ⛔ আগে মোড়কটা `display: contents` করা ছিল — তাতে
+         ব্লকের নিজের @container হারাত, আর চার ঘর এক-একটা পুরো সারিতে নামত (১৩৬৬-এ মাপা, ২৫ অক্টোবর ২০২৬)।
+         ⓘ <fieldset>-এর ব্রাউজারের নিজের min-inline-size = ভিতরের মাপ: পাঁচ চিপ ৩৬৩px, অর্ধেক সারি ৩৩৫px — তাই fieldset পাশের খাতের ঘরে
+         ৩২px ঢুকত ("চেক" ঢাকা পড়ত)। এখানে min-width 0, আর চিপের পাশের ফাঁক একটু কম — পাঁচটাই অর্ধেক সারিতে ধরে, কিছু কাটে না। --}}
     <style @nonce>
-        [data-collection-general] [data-money-method] { display: contents; }
-        [data-collection-general] [data-money-method] > fieldset { grid-column: span 2 / span 2; }
-        [data-collection-general] [data-money-method] > [data-method-block],
-        [data-collection-general] [data-money-method] > [data-charge-line] { grid-column: 1 / -1; }
-        @media (max-width: 1023px) {
-            [data-collection-general] [data-money-method] > fieldset { grid-column: 1 / -1; }
-        }
+        [data-collection-general] [data-money-method] > fieldset { min-width: 0; }
+        [data-collection-general] [data-money-method] > fieldset [role="radiogroup"] > label > span { padding-inline: 0.4rem; }
     </style>
 
     <form method="POST" enctype="multipart/form-data" data-collection-form
@@ -115,6 +115,9 @@
           data-confirm-overview="{{ route('sales.collection.overview_new') }}"
           x-data="collectionForm(@js($config))"
           @money-method.window="moneyChanged($event.detail)"
+          {{-- ⓘ কোনো ঘর ছাড়লে (change) "খাতায় যা যাবে" আবার — পদ্ধতির ব্লকের রেফারেন্স/TrxID নিজে প্রিভিউ ডাকে না, তাই লিখে ফেলার পরেও
+               "রেফারেন্স লাগবে" থামাটা থেকে যেত (১৩৬৬-এর ছবি ১১, ২৫ অক্টোবর ২০২৬); later() ৩০০ms থেমে একবারই ডাকে --}}
+          @change="later()"
           class="flex flex-col gap-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
@@ -154,9 +157,23 @@
 
         <x-ui.errors />
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-            {{-- ════ বাঁ কলাম ════ --}}
-            <div class="flex min-w-0 flex-col gap-4">
+        {{-- ⭐ নকশার দুই কলাম মালিকের ১৩৬৬-এর পর্দা থেকেই (মালিক আর fe, ২৪ অক্টোবর ২০২৬, ছবি ১৩): ১৫৩৬-এর নিচে মেনু রেলে বা
+             ভাসমান (`two-column-form`, [[sidebar-state.js]]; ছাঁচ [[ui.money-form]]), আর রেলের পাশে বিলের টেবিল ঠিক ধরে (৬৮৫/৬৮৫px, আসল ব্রাউজারে মাপা) --}}
+        <x-ui.money-form>
+            {{-- ⭐ সারাংশ-পট্টি — ১৩৬৬-এর নিচে এক কলামে পুরো সারাংশ নিচে নামে, তাই উপরে ছোট পট্টি, আটকানো; কোনো পর্দায় সারাংশ
+                 চোখের বাইরে যায় না (fe, ২৪ অক্টোবর ২০২৬)। দুই কলামে লুকানো — তখন ডান কলামের পুরো সারাংশ চোখের সামনেই। --}}
+            <x-slot:strip>
+                <span>{{ __('sales::collection_form.strip.received') }} <span class="num font-semibold" x-text="receivedText"></span></span>
+                <span aria-hidden="true">·</span>
+                <span>{{ __('sales::collection_form.strip.applied') }} <span class="num font-semibold" x-text="appliedText"></span></span>
+                <span aria-hidden="true">·</span>
+                <span>{{ __('sales::collection_form.strip.unapplied') }} <span class="num font-semibold" x-text="unappliedText"></span></span>
+                <span aria-hidden="true">·</span>
+                <span class="font-semibold text-(--color-success)" x-show="balanced">{{ __('sales::collection_form.strip.balanced') }}</span>
+                <span class="font-semibold text-(--color-danger)" x-show="unbalanced" x-cloak>{{ __('sales::collection_form.strip.unbalanced') }}</span>
+            </x-slot:strip>
+
+            {{-- ════ বাঁ কলাম ════ (ছাঁচের মূল slot) --}}
 
                 {{-- ── সাধারণ তথ্য (দফা ১, ২) ── --}}
                 <section data-boxed data-collection-general aria-labelledby="cf-general"
@@ -186,10 +203,13 @@
                         </fieldset>
 
                         <div class="sm:col-span-2">
-                            <x-ui.select name="customer_id" id="cf-customer" :label="__('sales::collection_form.customer')"
-                                         :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->pickerName()])"
-                                         :selected="$config['customerId']" placeholder="-" required
-                                         @change="pickCustomer($event.target.value)" />
+                            {{-- ⭐ খোঁজা যায় এমন পিকার, ভাউচারের পক্ষ-খোঁজার একই (fe, ২৪ অক্টোবর ২০২৬): নাম উপরে, তার নিচে ছোট লাইনে
+                                 পয়েন্ট · শাখা — মালিকের ১৯ অক্টোবরের নিয়ম থাকে, আর দুই কলামে তীরের নিচে কিছু কাটে না। Tab, তীর, Enter, Esc
+                                 চলে; পর্দা-পাঠক নাম, পয়েন্ট আর শাখা পড়ে। পাঠানো মান আগের মতো `customer_id`; বাছলে hidden ঘর `change` ছাড়ে,
+                                 তাই `pickCustomer` আগের পথেই খবর পায়। --}}
+                            <x-ui.party-search name="customer_id" id="cf-customer" :label="__('sales::collection_form.customer')"
+                                               :options="$customerRows" :selected="$config['customerId']" required stacked
+                                               @change="pickCustomer($event.target.value)" />
                             <p class="mt-1 text-2xs text-(--color-ink-muted)" data-customer-facts x-text="facts"></p>
                         </div>
 
@@ -198,8 +218,10 @@
                                     required />
 
                         <div>
-                            <x-ui.field name="amount" id="cf-amount" inputmode="decimal" :label="__('sales::collection_form.amount')"
-                                        numeric required :value="$amount" x-model="amount" @input="changed()" />
+                            {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর কাঁচা অঙ্কের লুকানো ঘর আলাদা
+                                 (cb-র type="money", fe, ২৪ অক্টোবর ২০২৬; আদায়, ভাউচার আর পরিশোধ একসাথে) --}}
+                            <x-ui.field name="amount" id="cf-amount" type="money" model="amount" :label="__('sales::collection_form.amount')"
+                                        required :value="$amount" @input="changedSoon()" />
                             <p class="mt-1 text-2xs text-(--color-ink-muted)">
                                 <button type="button" class="text-(--color-link) hover:underline" @click="fillDue()" data-fill-due>{{ __('sales::collection_form.full_due') }}</button>
                                 ·
@@ -207,20 +229,20 @@
                             </p>
                         </div>
 
-                        <div class="sm:col-span-2">
-                            <x-ui.select name="account_id" id="cf-account" :label="__('sales::collection_form.into')"
-                                         :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->code.' · '.$a->name()])"
-                                         :kinds="$kinds" :selected="old('account_id', $collection->account_id)" placeholder="-" required
-                                         @change="changed()" />
-                        </div>
-
-                        {{-- ⭐ cb-র পদ্ধতির ব্লক (দফা ২, ৯) — নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক; প্রতিটার কেবল নিজের ঘর --}}
-                        <x-money.method direction="in" :record="$isNew ? null : $collection" :modes="$transferModes"
+                        {{-- ⭐ cb-র পদ্ধতির ব্লক (দফা ২, ৯) — নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক; প্রতিটার কেবল নিজের ঘর।
+                             ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; রসিদ-পরিশোধের একই নিয়ম): "যে খাতে
+                             জমা" এখন এই ব্লকের ভিতরে, পদ্ধতির ঠিক পরে; ⛔ আগে খাত আগে ছিল, আর বিকাশের খাত বেছে "নগদ" চাপা যেত। সার্ভারও
+                             একই কথা বলে ([[MoneyMethod::assertFits()]], [[CollectionService]])। ঘর `x-model="account"` — [[collectionForm]] শোনে --}}
+                        <x-money.method inline direction="in" :record="$isNew ? null : $collection" :modes="$transferModes"
                                         :methods="['cash', 'mfs', 'transfer', 'deposit', 'cheque']"
-                                        money-field="account_id" charge-field="bank_charge" />
+                                        :accounts="$accountRows" account-name="account_id" account-model="account"
+                                        :account-label="__('sales::collection_form.into')"
+                                        :account-selected="old('account_id', $collection->account_id)"
+                                        charge-field="bank_charge" />
 
-                        <p class="text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
-                           x-show="referenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
+                        {{-- ⓘ order-3 — ব্লকের ঘরগুলোর (order-3) ঠিক পরে, রেফারেন্সের নিচে; চার্জের লাইন (order-4) তার পরে --}}
+                        <p class="order-3 whitespace-nowrap text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
+                           x-show="showsReferenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
                     </div>
 
                     <p role="status" data-over-due x-show="over" x-cloak
@@ -268,11 +290,11 @@
                                         </td>
                                         <td x-text="row.date"></td>
                                         <td x-text="row.dueDate"></td>
-                                        <td class="num" :class="row.lateOn ? 'font-semibold text-(--color-danger)' : ''" x-text="row.late"></td>
+                                        <td class="num whitespace-nowrap" :class="row.lateOn ? 'font-semibold text-(--color-danger)' : ''" x-text="row.late"></td>
                                         <td class="num" x-text="row.amountText"></td>
                                         <td class="num" x-text="row.openText"></td>
                                         <td class="num">
-                                            <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" :disabled="!row.on"
+                                            <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" @blur="tidyApply(row)" :disabled="!row.on"
                                                    aria-label="{{ __('sales::collection_form.col_apply') }}" :id="'cf-' + i + '-apply'"
                                                    :aria-labelledby="'cf-' + i + '-apply' + ' ' + 'cf-' + i + '-paper'"
                                                    class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
@@ -314,10 +336,10 @@
                                     :value="old('narration', $collection->narration)" />
                     </div>
                 </section>
-            </div>
 
-            {{-- ════ ডান কলাম ════ --}}
-            <div class="flex min-w-0 flex-col gap-4">
+            {{-- ════ ডান কলাম ════ — দুই কলামে আটকানো: বিল টিক দেওয়ার সময় সারাংশ চোখের সামনে (fe, ২৪ অক্টোবর ২০২৬)।
+                 ⓘ পর্দার চেয়ে লম্বা হলে নিজের ভিতরে সরে — নইলে আটকানো কলামের নিচের নিয়ন্ত্রণ পাতার শেষ না আসা পর্যন্ত দেখা যেত না --}}
+            <x-slot:right>
 
                 {{-- ── হিসাবের সারাংশ (দফা ৪, ৫) ── --}}
                 <section data-boxed data-collection-summary aria-labelledby="cf-summary"
@@ -334,12 +356,12 @@
                                 <label for="cf-vds">{{ __('sales::collection_form.summary.vds') }}</label>
                                 <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 text-2xs text-(--color-badge-warning-ink)">{{ __('sales::collection_form.summary.vds_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-vds" name="vds" type="text" inputmode="decimal" x-model="vds" @input="changed()" placeholder="0.00"
+                            <dd><input type="hidden" name="vds" :value="vds"><input id="cf-vds" type="text" inputmode="decimal" x-money-display="vds" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
                             <dt><label for="cf-ait">{{ __('sales::collection_form.summary.ait') }}</label></dt>
-                            <dd><input id="cf-ait" name="ait" type="text" inputmode="decimal" x-model="ait" @input="changed()" placeholder="0.00"
+                            <dd><input type="hidden" name="ait" :value="ait"><input id="cf-ait" type="text" inputmode="decimal" x-money-display="ait" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
@@ -347,7 +369,7 @@
                                 <label for="cf-discount">{{ __('sales::collection_form.summary.discount') }}</label>
                                 <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)" data-owner-signs>{{ __('sales::collection_form.summary.owner_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-discount" type="text" inputmode="decimal" x-model="discount" @input="changed()" placeholder="0.00"
+                            <dd><input id="cf-discount" type="text" inputmode="decimal" x-money-display="discount" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
@@ -357,7 +379,7 @@
                                 <span x-show="roundingSigned" x-cloak data-rounding-signs
                                       class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)">{{ __('sales::collection_form.summary.rounding_chip') }}</span>
                             </dt>
-                            <dd><input id="cf-rounding" type="text" inputmode="decimal" x-model="rounding" @input="changed()" placeholder="0.00"
+                            <dd><input id="cf-rounding" type="text" inputmode="decimal" x-money-display="rounding" data-money-empty="0.00" @input="changedSoon()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         {{-- ⓘ সার্ভার একটাই পার্থক্য নেয় — ছাড় বা রাউন্ডিং ([[CollectionInput]]) --}}
@@ -455,24 +477,26 @@
                         <span>{{ __('sales::collection_form.controls_bounce') }}</span>
                     </p>
                 </section>
-            </div>
-        </div>
+            </x-slot:right>
 
-        {{-- ── নিচের স্থির পট্টি: বাতিল · খসড়া রাখুন · পোস্ট; পোস্টের পরে রসিদ (দফা ১৭) ── --}}
-        <x-ui.form-actions :cancel="route('sales.collection.index')">
-            <p class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.after_post') }}</p>
+            {{-- ── নিচের স্থির পট্টি: বাতিল · খসড়া রাখুন · পোস্ট; পোস্টের পরে রসিদ (দফা ১৭) ── --}}
+            <x-slot:bar>
+            <x-ui.form-actions :cancel="route('sales.collection.index')">
+                <p class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.after_post') }}</p>
 
-            <x-slot:submit>
-                <x-ui.button type="submit" tone="secondary" name="save_as_draft" value="1" data-collection-draft>
-                    {{ __('sales::collection_form.draft') }}
-                </x-ui.button>
-                <x-ui.button type="submit" tone="primary" name="post" value="1" data-overview-trigger data-collection-post>
-                    <span x-show="postsNow">{{ __('sales::collection_form.post') }}</span>
-                    {{-- ⓘ একই দরজা, একই "post" — সার্ভার খসড়া রেখে সই চায় ([[CollectionService::assertDiscountSigned()]]); কেবল কথাটা সত্যি --}}
-                    <span x-show="ownerSigns" x-cloak data-collection-post-for-signature>{{ __('sales::collection_form.post_for_signature') }}</span>
-                </x-ui.button>
-            </x-slot:submit>
-        </x-ui.form-actions>
+                <x-slot:submit>
+                    <x-ui.button type="submit" tone="secondary" name="save_as_draft" value="1" data-collection-draft>
+                        {{ __('sales::collection_form.draft') }}
+                    </x-ui.button>
+                    <x-ui.button type="submit" tone="primary" name="post" value="1" data-overview-trigger data-collection-post>
+                        <span x-show="postsNow">{{ __('sales::collection_form.post') }}</span>
+                        {{-- ⓘ একই দরজা, একই "post" — সার্ভার খসড়া রেখে সই চায় ([[CollectionService::assertDiscountSigned()]]); কেবল কথাটা সত্যি --}}
+                        <span x-show="ownerSigns" x-cloak data-collection-post-for-signature>{{ __('sales::collection_form.post_for_signature') }}</span>
+                    </x-ui.button>
+                </x-slot:submit>
+            </x-ui.form-actions>
+            </x-slot:bar>
+        </x-ui.money-form>
     </form>
 
     <x-ui.confirm-overview :draft="true" />

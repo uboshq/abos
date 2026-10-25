@@ -65,6 +65,7 @@ return [
     'drop' => 'Drag the bank slip / screenshot here or choose it',
     'narration' => 'Narration',
 
+    'strip' => ['received' => 'Received', 'applied' => 'Applied', 'unapplied' => 'Unapplied', 'balanced' => 'Balanced ✓', 'unbalanced' => 'Not balanced ✕'],
     'summary_title' => 'Summary',
     'summary' => [
         'received' => 'Money received',

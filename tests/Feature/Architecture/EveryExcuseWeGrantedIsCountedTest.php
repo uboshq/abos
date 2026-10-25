@@ -458,8 +458,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       আটকাত (JSON-এ ৪০৯)।
      *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
      *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
+     *
+     * ── ⚠️ ৪৬১ → ৪৬৩, ২৪ অক্টোবর ২০২৬ (বাঁ মডিউল-রেলের নিজের সাজ; মালিক, fe-র অনুমোদন; a6) ─────────────────
+     *   +১  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — rail.layout: কেবল নিজের users.nav_layout (পিন আর ক্রম), অন্যের মডিউল
+     *       কোড ফেলা হয়, নিরীক্ষায় যায় না (দাবি: EveryModuleIsOnTheRailOrBehindMoreTest); home.layout-এর একই জাত।
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — rail.layout: কোনো কাগজ বানায় না, শাখার ছাপ লাগে না।
      */
-    private const CEILING = 461;
+    private const CEILING = 463;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

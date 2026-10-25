@@ -847,6 +847,8 @@ return [
      * comes here, through App\Core\Support\RoleLabel.
      */
     'search' => [
+        // ⓘ উপরের খোঁজায় মডিউলের নাম — সরাসরি তার প্রথম পাতায় (২৪ অক্টোবর ২০২৬)
+        'module' => 'Module',
         'type_to_find' => 'Type what you are looking for — a name, a number or a code.',
         'nothing_found' => 'Nothing found.',
         'recent' => 'Recent papers',
@@ -1632,4 +1634,8 @@ return [
     'linked_documents' => [
         'title' => 'Linked documents',
     ],
+    'rail' => ['more' => 'More modules', 'search' => 'Find a module', 'none' => 'No module by that name',
+        'arrange' => 'Arrange', 'reset' => 'Reset to default', 'arrange_title' => 'Arrange the left bar',
+        'arrange_hint' => 'Pinned modules always stay on the bar. Drag or press ↑ ↓ to reorder; saved for all your devices.',
+        'pin' => 'Pin', 'up' => 'Move up:', 'down' => 'Move down:', 'cancel' => 'Back', 'save' => 'Save'],
 ];

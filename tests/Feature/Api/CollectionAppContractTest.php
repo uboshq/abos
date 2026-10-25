@@ -268,6 +268,26 @@ final class CollectionAppContractTest extends TestCase
     }
 
     /**
+     * দফা ২ — ফোনের পা: রেফারেন্স ছাড়া MFS বা ব্যাংকের আদায় "এখনই নিশ্চিত" চাইলেও খাতায় ওঠে না (fe-র আন্তর্জাতিক মানের নিরীক্ষা,
+     * ফাঁক ১; ২৪ অক্টোবর ২০২৬)। প্রিভিউ থামার কারণে বলে; পুশে কাগজ খসড়াই থাকে ([[CollectionSync]] ওয়েবের মতো), খাতায় কিছু নয়।
+     * ⓘ ওয়েব আর সইয়ের পা: [[TheCollectionFormPostsWhatTheDesignSaysTest::test_item_2_mfs_transfer_and_deposit_never_post_without_their_reference]]।
+     */
+    public function test_item_2_the_phone_never_posts_money_without_its_reference(): void
+    {
+        $this->phone($this->clerk);
+        $rows = LedgerEntry::query()->count();
+        $said = __('money.validation.reference_needed', ['method' => __('money.method.transfer')]);
+
+        $preview = $this->postJson('/api/v1/sales/collections/preview', $this->payload(['amount' => '500', 'lines' => [], 'instrument' => 'transfer']))
+            ->assertOk()->json();
+        $this->assertContains($said, (array) $preview['stops'], '⛔ দফা ২: ফোনের প্রিভিউ রেফারেন্স ছাড়া ব্যাংকের আদায়ে থামার কারণ বলেনি');
+
+        $c = $this->landed($this->push('noref-1', $this->payload(['amount' => '500', 'lines' => [], 'instrument' => 'transfer', 'confirm' => true])));
+        $this->assertSame(DocumentStatus::DRAFT, $c->status, '⛔ দফা ২: ফোনে রেফারেন্স ছাড়া ব্যাংকের আদায় পাকা হলো');
+        $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ২: ফোনে রেফারেন্স ছাড়া আদায় খাতায় উঠল');
+    }
+
+    /**
      * দফা ৪ — ফোনের পা: পার্থক্যের চিহ্ন যাই আসুক, অঙ্কটাই মাপা হয় (fe, ২২ অক্টোবর ২০২৬; মালিকের নিয়ম: যেকোনো দিকে ৳০.৫০-এর বেশি হলে সই)।
      * ফোনের প্রিভিউ −৳০.৫১ রাউন্ডিংকে ৳০.৫১ পড়ে ([[CollectionInput::difference()]]-এর abs) আর বলে মালিকের সই লাগবে; কিছু লেখে না।
      * সিঙ্কের পুশ ঋণাত্মক পার্থক্য ওয়েবের মতোই ফেরায় ([[CollectionSync]]-এর `difference.amount` নিয়ম) — কাগজ বসে না, তাই চিহ্ন বদলে সই
