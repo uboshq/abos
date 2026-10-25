@@ -92,6 +92,8 @@ class ModuleServiceProvider extends ServiceProvider
 
         // ⓘ বিক্রয় বন্ধ থাকলে রসিদে বাছার মতো খোলা বিল নেই ([[PartyOpenBills]], অডিট ম১)
         $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
+        // ⓘ ক্রয় বন্ধ থাকলে পরিশোধ ভাউচারে সরবরাহকারীর খোলা বিল নেই ([[\App\Core\Contracts\PayableOpenBills]], cb-ma-5)
+        $this->app->bind(\App\Core\Contracts\PayableOpenBills::class, \App\Core\Services\NoPayableOpenBills::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);

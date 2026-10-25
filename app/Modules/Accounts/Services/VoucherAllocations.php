@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Contracts\AcceptsVouchers;
 use App\Core\Contracts\PartyOpenBills;
+use App\Core\Contracts\PayableOpenBills;
 use App\Core\Contracts\SettlementTerms;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Support\Money;
@@ -32,7 +33,21 @@ use Illuminate\Validation\ValidationException;
  */
 final class VoucherAllocations
 {
-    public function __construct(private readonly PartyOpenBills $openBills) {}
+    public function __construct(
+        private readonly PartyOpenBills $openBills,
+        private readonly PayableOpenBills $payableBills,
+    ) {}
+
+    /**
+     * ⭐ পক্ষের খোলা বিল — গ্রাহকের বিক্রয় বিল ([[PartyOpenBills]]) আর সরবরাহকারীর ক্রয় বিল ([[PayableOpenBills]]; cb-ma-5)। ⓘ ওয়েবের
+     * কার্ড, ফোনের দরজা আর লেখার যাচাই — তিনজনেই এখান থেকে, তাই যা দেখায় তা-ই বাছা যায়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function openBillsOf(string $partyType, int $partyId, int $limit = 50): array
+    {
+        return [...$this->openBills->openBills($partyType, $partyId, $limit), ...$this->payableBills->openBills($partyType, $partyId, $limit)];
+    }
 
     /**
      * পাঠানো সারি → পক্ষের খোলা বিল; ভুল ঘর ধরে (চুক্তি §৪-এর চাবি)।
@@ -43,7 +58,7 @@ final class VoucherAllocations
     public function resolve(?string $partyType, ?int $partyId, array $rows, ?string $gross = null): array
     {
         $open = filled($partyType) && (int) $partyId > 0
-            ? collect($this->openBills->openBills((string) $partyType, (int) $partyId, 1000))->keyBy('public_id')
+            ? collect($this->openBillsOf((string) $partyType, (int) $partyId, 1000))->keyBy('public_id')
             : collect();
 
         $resolved = [];

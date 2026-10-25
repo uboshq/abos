@@ -318,7 +318,8 @@ class VoucherController extends Controller implements HasMiddleware
      */
     private function openBillsOf(string $type, int $id): array
     {
-        return app(PartyOpenBills::class)->openBills($type, $id);
+        // ⭐ গ্রাহকের বিক্রয় বিল আর সরবরাহকারীর ক্রয় বিল (cb-ma-5) — লেখার যাচাইয়ের একই উৎস
+        return app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openBillsOf($type, $id);
     }
 
     /**

@@ -308,9 +308,12 @@ final class PurchaseDashboard implements ProvidesDashboard
     /** ⓘ ক্রয় বিলের বিপরীতে খাতায় ওঠা পরিশোধ-ভাউচার — [[PurchaseBill::paidByPaymentVouchers()]]-এর হুবহু শর্ত */
     private static function billVouchers()
     {
+        $type = PurchaseBill::drillSourceType();
+
+        // ⭐ একক "বিপরীতে" বা বহু বিলের সারি — দুই পথের পরিশোধই (cb-ma-5)
         return \App\Modules\Accounts\Models\Voucher::query()
             ->where('type', \App\Modules\Accounts\Models\Voucher::PAYMENT)
-            ->where('against_type', PurchaseBill::drillSourceType())
+            ->where(fn ($q) => $q->where('against_type', $type)->orWhereHas('allocations', fn ($row) => $row->where('against_type', $type)))
             ->posted();
     }
 

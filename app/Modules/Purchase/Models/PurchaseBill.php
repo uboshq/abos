@@ -345,12 +345,21 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
     public function paidByPaymentVouchers(): string
     {
         // ⛔ শাখার দেয়াল ছাড়া — ক্রয় ⚠️৯ ([[paidAmount()]])
-        return (string) (Voucher::acrossBranches()
+        $single = (string) (Voucher::acrossBranches()
             ->where('type', Voucher::PAYMENT)
             ->where('against_type', static::drillSourceType())
             ->where('against_id', $this->getKey())
             ->posted()
             ->sum('amount') ?: '0');
+
+        // ⭐ এক পরিশোধে বহু বিল — এই বিলের সারিতে যতটা বসল, কেবল পোস্ট হওয়া পরিশোধের ([[VoucherAllocation]]; cb-ma-5)
+        $rows = (string) (\App\Modules\Accounts\Models\VoucherAllocation::query()
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('type', Voucher::PAYMENT)->posted())
+            ->sum('amount') ?: '0');
+
+        return bcadd($single, $rows, 4);
     }
 
     /**
@@ -384,8 +393,13 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
          * ⚠️ এখানে বাদ পড়লে তালিকায় বিলটা পুরো বাকি দেখাত আর একক পাতায়
          * শোধ — ঠিক ঐ দুই-অঙ্কের ভুল, যার কথা উপরের মন্তব্যে লেখা।
          */
+        // ⭐ আর বহু বিলের পরিশোধের সারি — [[paidByPaymentVouchers()]]-এর হুবহু দ্বিতীয় অংশ, একই ঘরে (`voucher_paid_total`), যাতে এই ঘর
+        // পড়া প্রতিটা তালিকা, রিপোর্ট আর ড্যাশবোর্ড নিজে থেকেই মেলে (cb-ma-5; বিক্রয়ের দিকে SalesInvoice::scopeWithCollected-এর একই)
         $byVoucher = Voucher::acrossBranches()
-            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->selectRaw('COALESCE(SUM(amount), 0) + (SELECT COALESCE(SUM(a.amount), 0) FROM acc_voucher_allocations a'
+                .' JOIN vouchers v ON v.id = a.voucher_id'
+                .' WHERE a.against_type = ? AND a.against_id = pur_bills.id AND v.type = ? AND v.status = ? AND v.company_id = pur_bills.company_id)',
+                [static::drillSourceType(), Voucher::PAYMENT, DocumentStatus::CONFIRMED])
             ->where('type', Voucher::PAYMENT)
             ->where('against_type', static::drillSourceType())
             ->whereColumn('against_id', 'pur_bills.id')

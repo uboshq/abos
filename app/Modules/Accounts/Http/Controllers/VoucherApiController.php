@@ -255,7 +255,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
         abort_unless($this->parties->knows($type) && $this->parties->exists($type, $id), 404);
 
         return response()->json([
-            'bills' => collect(app(\App\Core\Contracts\PartyOpenBills::class)->openBills($type, $id))->map(fn (array $b) => [
+            'bills' => collect(app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openBillsOf($type, $id))->map(fn (array $b) => [
                 'id' => (string) $b['public_id'],
                 'no' => (string) $b['no'],
                 'date' => (string) $b['date'],
