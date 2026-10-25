@@ -242,8 +242,10 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         $due = $invoice->dueAmount();
         $bills = [['id' => (string) $invoice->public_id, 'amount' => $due]];
 
-        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt(bcsub($due, '10.01', 2)), 'party_id' => $customer->id,
-            'difference' => ['kind' => 'rounding', 'amount' => '10.01'], 'bills' => $bills]);
+        // ⓘ ছাড়, রাউন্ডিং নয়: ৳10.01-এর রাউন্ডিং আগেই ৳10-এর সীমায় থামে, তাই বাকির নিয়মটা পর্যন্ত পৌঁছায় না (fe, ২৬ অক্টোবর ২০২৬:
+        //   cb-ma-5v-এ এই দাবিটা সীমার কথা পেয়ে লাল হয়েছিল)। টাকা বাকির ৳10.00 কম, কম-বেশি ৳10.01 — এক পয়সা বেশি।
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [...$this->receipt(bcsub($due, '10.00', 2)), 'party_id' => $customer->id,
+            'difference' => ['kind' => 'discount', 'amount' => '10.01'], 'bills' => $bills]);
         $this->assertContains($this->refusalOn('difference.amount'), $this->both('accounts::validation.difference_over_due', ['room' => Money::format('10.00'), 'due' => Money::format($due)]),
             '⛔ বিলের বাকির এক পয়সা বেশি কম-বেশি থামল না, বা difference.amount-এ নিজের কথায় নয়: '.json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
 
