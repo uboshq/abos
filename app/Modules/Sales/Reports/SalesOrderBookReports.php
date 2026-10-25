@@ -191,7 +191,7 @@ final class SalesOrderBookReports
                     ->selectRaw(self::name('cu').' as customer_name')->selectRaw('cu.id as customer_id')
                     ->selectRaw('i.subtotal, COALESCE(i.discount, 0) + COALESCE(i.bill_discount, 0) as discount, COALESCE(i.tax, 0) as tax, i.total')
                     ->selectRaw("CASE WHEN i.status = {$cancelled} THEN 0 ELSE {$paid} END as paid")
-                    ->selectRaw("CASE WHEN i.status = {$cancelled} THEN 0 ELSE GREATEST(i.total - {$paid} - i.returned_total - i.claimed_total - i.noted_total, 0) END as due");
+                    ->selectRaw("CASE WHEN i.status = {$cancelled} THEN 0 ELSE GREATEST(".SalesInvoice::dueSql('i').', 0) END as due');
             },
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
