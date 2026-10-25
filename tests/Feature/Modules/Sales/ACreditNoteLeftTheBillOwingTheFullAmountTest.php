@@ -165,7 +165,7 @@ final class ACreditNoteLeftTheBillOwingTheFullAmountTest extends TestCase
             'direction' => $direction,
             'party_kind' => Note::KIND_CUSTOMER,
             'party_id' => $customerId,
-            'other_account_id' => StandardChart::find(StandardChart::DISCOUNT_GIVEN)?->id,
+            // ⓘ অন্য দিকের খাত সার্ভিস নিজে বাছে, দিক ধরে ([[NoteAccounts::defaultOther()]]) — ছাড়ের খাত ডেবিট নোটে চলে না
             'trx_date' => now()->toDateString(),
             'amount' => $amount,
             'tax_amount' => '0',
