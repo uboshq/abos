@@ -576,7 +576,11 @@ final class ApprovalEngine
                 'document' => $this->noticeLabel($approval),
             ]),
             $remarks,
-            Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            /*
+             * ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় (২৪ অক্টোবর ২০২৬): তালিকা খোলে কেবল `approval.decide`/`approval.report`
+             * থাকলে, তাই সাধারণ লেখক নিজের কাগজের ফল খুলতে গিয়ে ৪০৩ পেতেন। পাতাটা অনুরোধকারীকে নিজের বলে খোলে।
+             */
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
@@ -1690,6 +1694,15 @@ final class ApprovalEngine
      * ⛔ দুই জায়গায় দুই রকম হলে পার্থক্যটা নীরব হত: খবর যেত
      * একজনের কাছে, আর সই দিতে পারতেন অন্য কেউ।
      */
+    /**
+     * ⭐ কাগজটা উপরে পাঠানো হয়েছে আর গন্তব্য ইনি — [[canDecide()]]-এর উপরে-পাঠানোর পথের একই প্রশ্ন, পাহারা ছাড়া। ⓘ সইয়ের পাতা
+     * "কেন পারছেন না" বলতে এটা দেখে: উপরের মানুষের পালা, কিন্তু অঙ্ক তাঁর সীমার বাইরে (fe, ২৪ অক্টোবর ২০২৬)।
+     */
+    public function escalatedHere(Approval $approval, User $user): bool
+    {
+        return $approval->escalated_at !== null && $this->escalatedTo($approval, $user);
+    }
+
     private function escalatedTo(Approval $approval, User $user): bool
     {
         $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());
