@@ -219,6 +219,11 @@ final class AStrangerOnAStandardCodeStopsThePaperTest extends TestCase
         return array_filter([
             'amount' => $received, 'moved_on' => now()->toDateString(), 'money_account_id' => $this->cash()->id,
             'source_tax' => $sourceTax,
+            /*
+             * ⓘ করের সারি ব্যাংকে পড়লে লেনদেন নম্বর লাগে — দিয়ে রাখা, যাতে কাগজ থামলে থামে কেবল মান ছকের নিয়মে। লাইভে কেউ নম্বর
+             * দিলে টাকা ব্যাংকেই বসত; নম্বর না দিলে অন্য পাহারা থামাত আর এই দাবি কিছুই মাপত না (Mac, CH3, ২৫ অক্টোবর ২০২৬)।
+             */
+            'instrument_no' => $sourceTax === null ? null : 'TX-STRANGER-1',
         ], fn ($v) => $v !== null);
     }
 }
