@@ -69,6 +69,27 @@ final class ThePreviewKnowsThePartysBranchTest extends TestCase
         $this->assertNotEmpty($answer['rows'] ?? [], '⛔ নিজের শাখার পক্ষের প্রিভিউতে খাতার সারি নেই: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
     }
 
+    /**
+     * ৩ — বিবরণ ছাড়াই সারাংশ (মালিক, ২৬ অক্টোবর ২০২৬: "vauthucer e sumrry ekhono asena keno?" — লাইভে প্রতিটা প্রিভিউ
+     * `missing: [narration]` পেয়ে খালি ছিল); বিবরণ অঙ্কের কিছু বদলায় না। ⛔ জমায় বিবরণ আগের মতোই লাগে।
+     */
+    public function test_the_summary_comes_before_the_narration_is_written(): void
+    {
+        $this->customer->forceFill(['branch_id' => $this->home->id])->save();
+
+        $answer = $this->preview(['narration' => '']);
+
+        $this->assertNotContains('narration', $answer['missing'] ?? [], '⛔ বিবরণ না লিখলে সারাংশ আসে না — প্রিভিউ বিবরণের অপেক্ষায়');
+        $this->assertNotEmpty($answer['rows'] ?? [], '⛔ বিবরণ ছাড়া প্রিভিউতে খাতার সারি নেই: '.json_encode($answer, JSON_UNESCAPED_UNICODE));
+        $this->assertNotNull($answer['summary'] ?? null, '⛔ বিবরণ ছাড়া প্রিভিউতে সারাংশ নেই');
+
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [
+            'type' => Voucher::RECEIPT, 'narration' => '', 'trx_date' => now()->toDateString(), 'amount' => '100',
+            'instrument' => 'transfer', 'instrument_no' => 'PVB-N', 'party_type' => 'customer', 'party_id' => $this->customer->id,
+            'to_account_id' => $this->bank->id,
+        ])->assertSessionHasErrors('narration');
+    }
+
     /** ২ */
     public function test_a_party_of_another_branch_is_still_refused_by_name(): void
     {

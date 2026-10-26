@@ -749,6 +749,15 @@ class VoucherController extends Controller implements HasMiddleware
          * shouldRenderJsonWhen কেবল api/*)। ⓘ অর্ধেক ভরা ফর্ম ভুল নয়, কেবল এখনো প্রিভিউর সময় হয়নি: সারি খালি, বার্তা নেই,
          * আর কোন ঘর বাকি তা `missing`-এ (পর্দা চুপ থাকে; জমার সময় সেই ঘরের পাশেই ভুল দেখায়)।
          */
+        /*
+         * ⭐ বিবরণ অঙ্কের কিছু বদলায় না — তাই সারাংশ আর খাতার ছবি তার অপেক্ষায় থাকে না (মালিক, ২৬ অক্টোবর ২০২৬: "vauthucer e
+         * sumrry ekhono asena keno?" — লাইভে প্রতিটা প্রিভিউ `missing: [narration]` পেয়ে খালি ছিল)। ⛔ জমায় বিবরণ আগের মতোই লাগে;
+         * এখানে কেবল প্রিভিউর জন্য একটা জায়গা-ধরা লেখা, যা কোথাও লেখা হয় না।
+         */
+        if (blank($request->input('narration'))) {
+            $request->merge(['narration' => '—']);
+        }
+
         try {
             $request = app(VoucherRequest::class);
         } catch (ValidationException $e) {
