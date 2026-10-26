@@ -152,6 +152,7 @@ return [
         'confirm' => 'Confirm',
         'decide' => 'Decide',
         'post' => 'Post',
+        'bank_file' => 'Download the bank file',
         'move' => 'Move money',
         'cap' => 'Monthly cap',
         'final' => 'Final report',
