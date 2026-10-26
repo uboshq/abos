@@ -26,7 +26,7 @@
 --}}
 @php
     /**
-     * ['route' => রুটের নাম, 'label' => অনুবাদের চাবি, 'can' => অনুমতি|null]
+     * ['route' => রুটের নাম, 'label' => অনুবাদের চাবি, 'icon' => [[x-ui.icon]]-এর নাম, 'can' => অনুমতি|null]
      *
      * মডিউল এলে এখানেই এক সারি — Sales এলে বিক্রয় চালান, Purchase এলে ক্রয়
      * আদেশ, Accounts এলে ভাউচার।
@@ -52,19 +52,19 @@
          * ⭐ সরাসরি বিক্রয়ের অনুমতি `sales.challan.create` (চালান+বিল এক চাপে); সরাসরি
          * ক্রয়ের `purchase.bill.create` — মেনুর সারি দুটো ঠিক এই চাবিই চায়।
          */
-        ['route' => 'sales.direct.create', 'label' => 'core.create.direct_sale', 'can' => 'sales.challan.create'],
-        ['route' => 'purchase.direct.create', 'label' => 'purchase::menu.direct', 'can' => 'purchase.bill.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'], 'label' => 'accounts::approval.receipt', 'can' => 'accounts.voucher.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'], 'label' => 'accounts::approval.payment', 'can' => 'accounts.voucher.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'expense'], 'label' => 'accounts::approval.expense', 'can' => 'accounts.voucher.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'], 'label' => 'accounts::approval.journal', 'can' => 'accounts.voucher.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'contra'], 'label' => 'accounts::approval.contra', 'can' => 'accounts.voucher.create'],
+        ['route' => 'sales.direct.create', 'label' => 'core.create.direct_sale', 'icon' => 'sales', 'can' => 'sales.challan.create'],
+        ['route' => 'purchase.direct.create', 'label' => 'purchase::menu.direct', 'icon' => 'purchase', 'can' => 'purchase.bill.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'], 'label' => 'accounts::approval.receipt', 'icon' => 'inbox', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'], 'label' => 'accounts::approval.payment', 'icon' => 'outbox', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'expense'], 'label' => 'accounts::approval.expense', 'icon' => 'wallet', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'], 'label' => 'accounts::approval.journal', 'icon' => 'book', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'contra'], 'label' => 'accounts::approval.contra', 'icon' => 'swap', 'can' => 'accounts.voucher.create'],
         // ⭐ ডেবিট আর ক্রেডিট নোট — মালিক, ৩ অক্টোবর ২০২৬; নোট বানানোর চাবি `accounts.note.manage`
-        ['route' => 'accounts.note.create', 'params' => ['direction' => 'debit'], 'label' => 'accounts::note.debit_note', 'can' => 'accounts.note.manage'],
-        ['route' => 'accounts.note.create', 'params' => ['direction' => 'credit'], 'label' => 'accounts::note.credit_note', 'can' => 'accounts.note.manage'],
-        ['route' => 'customer.create', 'label' => 'core.create.customer', 'can' => 'customer.create'],
-        ['route' => 'supplier.create', 'label' => 'core.create.supplier', 'can' => 'supplier.create'],
-        ['route' => 'inventory.product.create', 'label' => 'core.create.product', 'can' => 'inventory.product.create'],
+        ['route' => 'accounts.note.create', 'params' => ['direction' => 'debit'], 'label' => 'accounts::note.debit_note', 'icon' => 'arrow_up', 'can' => 'accounts.note.manage'],
+        ['route' => 'accounts.note.create', 'params' => ['direction' => 'credit'], 'label' => 'accounts::note.credit_note', 'icon' => 'arrow_down', 'can' => 'accounts.note.manage'],
+        ['route' => 'customer.create', 'label' => 'core.create.customer', 'icon' => 'customer', 'can' => 'customer.create'],
+        ['route' => 'supplier.create', 'label' => 'core.create.supplier', 'icon' => 'supplier', 'can' => 'supplier.create'],
+        ['route' => 'inventory.product.create', 'label' => 'core.create.product', 'icon' => 'inventory', 'can' => 'inventory.product.create'],
     ])->filter(fn ($e) => ! ($e['can'] ?? null) || auth()->user()?->can($e['can']))
 
       /*
@@ -114,9 +114,11 @@
          class="pops-onto-page absolute end-0 z-30 mt-1 w-56 overflow-hidden rounded-(--radius-card)
                 border border-(--color-border) bg-(--color-surface-card) shadow-lg">
         @forelse ($entries as $entry)
+            {{-- ⭐ প্রতিটা সারির বাঁয়ে আঁকা আইকন — চোখ নাম পড়ার আগেই কাজটা চেনে (মালিক, ২৬ অক্টোবর ২০২৬: "ei gulor pase icon bosaw") --}}
             <a href="{{ $entry['href'] }}"
-               class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
-                {{ __($entry['label']) }}
+               class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
+                <span class="shrink-0 text-(--color-ink-muted)"><x-ui.icon :name="$entry['icon']" :size="16" :drawn="true" /></span>
+                <span>{{ __($entry['label']) }}</span>
             </a>
         @empty
             <p class="px-3 py-3 text-sm text-(--color-ink-muted)">
