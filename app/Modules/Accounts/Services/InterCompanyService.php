@@ -521,17 +521,8 @@ final class InterCompanyService
      */
     private function assertControl(): Account
     {
-        $account = StandardChart::find(StandardChart::INTER_COMPANY);
-
-        if ($account === null || $account->is_group) {
-            throw ValidationException::withMessages([
-                'counter_company_id' => __('accounts::validation.inter_company_no_control', [
-                    'code' => StandardChart::INTER_COMPANY,
-                ]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor(StandardChart::INTER_COMPANY);
     }
 
     private function assertAmount(mixed $value): string

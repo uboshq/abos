@@ -144,9 +144,10 @@ final class PromotionReversal
                 GiftIssuer::LEDGER_SOURCE.'_return',
                 (int) $gift->id,
                 $at->toDateString(),
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 [
-                    ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'debit' => $value, 'credit' => '0'],
-                    ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => '0', 'credit' => $value],
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::INVENTORY)->id, 'debit' => $value, 'credit' => '0'],
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::PROMOTION_EXPENSE)->id, 'debit' => '0', 'credit' => $value],
                 ],
                 documentNo: $gift->code,
                 // ⭐ উপহারের খরচ যে শাখায় বসেছিল সেখানেই উল্টো — গুদামের শাখা, হেডারের নয় (বিক্রয় ফাঁক ১২; [[GiftIssuer::bookTheCost()]])

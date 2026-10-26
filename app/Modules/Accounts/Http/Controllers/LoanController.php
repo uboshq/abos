@@ -139,7 +139,7 @@ class LoanController extends Controller implements HasMiddleware
         return view('accounts::loan.form', [
             'menu' => $this->menu->forUser($request->user()),
             'loan' => $loan,
-            'principalAccounts' => $this->accountsUnder('2200'),
+            'principalAccounts' => $this->accountsUnder(StandardChart::LONG_TERM_LIABILITIES),
             'interestAccounts' => $this->postableAccounts(Account::EXPENSE),
             'moneyAccounts' => $this->moneyAccounts(),
 
@@ -373,18 +373,27 @@ class LoanController extends Controller implements HasMiddleware
         return back()->with('saved', __($moved?->isAwaiting() ? 'accounts::message.loan_awaiting_signature' : 'accounts::message.interest_charged'));
     }
 
-    /** একটা মাথার নিচের সব খাত — যেগুলোয় সত্যিই দাখিলা বসে। */
-    private function accountsUnder(string $parentCode)
+    /**
+     * একটা মাথার নিচের সব খাত — যেগুলোয় সত্যিই দাখিলা বসে।
+     *
+     * ⛔ মাথাটা একটা দল, তাই আগের `postable()` (দল নয়) তাকে কখনো পেত না, আর ঋণের ফর্মে মূল টাকার খাতের তালিকা সবসময় ফাঁকা
+     * থাকত (ec-র কোড-তালিকা, ২৩ অক্টোবর ২০২৬)। এখন দলটা খোঁজা হয় দল হিসেবে, আর নিচের পোস্টযোগ্য সব খাত, যত গভীরেই হোক।
+     * ⓘ সার্ভার এখনো কোম্পানির যেকোনো খাত নেয় (পুরনো ক্যাশ-ক্রেডিট ঋণ ২১১১-এ) — সেটা fe-র আলাদা সিদ্ধান্ত।
+     *
+     * @return \Illuminate\Support\Collection<int, Account>
+     */
+    private function accountsUnder(string $parentCode): \Illuminate\Support\Collection
     {
-        $parent = Account::query()->postable()->where('code', $parentCode)->first();
+        $parent = StandardChart::find($parentCode);
 
-        return $parent === null
-            ? collect()
-            : Account::query()
-                ->where('parent_id', $parent->id)
-                ->where('is_group', false)
-                ->orderBy('code')
-                ->get();
+        if ($parent === null || ! $parent->is_group) {
+            return collect();
+        }
+
+        // ⓘ গাছটা কেবল কয়েকটা ঘর আনে ([[Account::selfAndDescendants()]]), নাম নয় — তাই id ধরে পুরো সারি আবার
+        $tree = $parent->selfAndDescendants()->modelKeys();
+
+        return Account::query()->postable()->whereIn('id', $tree)->whereNull('money_kind')->orderBy('code')->get()->toBase();
     }
 
     private function postableAccounts(string $type)

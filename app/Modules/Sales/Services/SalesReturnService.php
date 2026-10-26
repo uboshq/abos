@@ -862,17 +862,10 @@ final class SalesReturnService
         }
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'status' => __('sales::validation.missing_account', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear

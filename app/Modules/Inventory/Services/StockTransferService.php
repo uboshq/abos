@@ -554,11 +554,8 @@ final class StockTransferService
             return;
         }
 
-        $inventory = \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::INVENTORY);
-
-        if ($inventory === null) {
-            return;
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $inventory = \App\Modules\Accounts\Services\StandardChart::accountFor(\App\Modules\Accounts\Services\StandardChart::INVENTORY);
 
         $note = __('inventory::message.transfer_arrived', ['no' => $transfer->document_no]);
 

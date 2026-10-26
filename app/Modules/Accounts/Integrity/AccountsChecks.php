@@ -10,6 +10,8 @@ use App\Core\Integrity\IntegrityCheck;
 use App\Core\Integrity\IntegrityFinding;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
@@ -37,7 +39,54 @@ final class AccountsChecks implements ChecksItsOwnBooks
             self::everyEntryHasItsPaper(),
             // ⭐ পক্ষের খাতার যোগ = নিয়ন্ত্রণ খাতের জের — পুনঃঅডিট, ৯ অক্টোবর ২০২৬
             self::partiesAddUpToTheirControlAccount(),
+            // ⭐ মান ছকের কোডে অন্য খাত — লাইভে UB-র ১১৩৫ আর ১১৫১-এ ব্যাংক, fe-র P4, ২৩ অক্টোবর ২০২৬
+            self::everyStandardCodeHoldsItsAccount(),
         ];
+    }
+
+    /**
+     * ⭐ মান ছকের প্রতিটা কোডে তার নিজের খাত — ধরন মেলে, আর টাকার খাত কেবল টাকার কোডে ([[StandardChart::holdsItsMeaning()]])।
+     *
+     * ⛔ লাইভে UB-তে ছক আসার আগে ১১৩৫ আর ১১৫১-এ ব্যাংক খোলা হয়েছিল; ছক থাকা কোড ছোঁয় না, তাই ড্যামেজ দাবির নোট ব্যাংকে Dr হল
+     * (CN-0017 থেকে CN-0020)। এখন কোড ধরা পথগুলো সেখানে থামে ([[StandardChart::accountFor()]]); এই পরখ বলে কোথায় থামবে।
+     */
+    public static function everyStandardCodeHoldsItsAccount(): IntegrityCheck
+    {
+        return new IntegrityCheck(
+            key: 'accounts.chart_meaning',
+            label: __('accounts::integrity.chart_meaning'),
+            question: __('accounts::integrity.chart_meaning_q'),
+            whenBroken: __('accounts::integrity.chart_meaning_broken'),
+            permission: 'accounts.report',
+            run: function (): array {
+                $out = [];
+                $columns = ['id', 'code', 'name_en', 'name_bn', 'type', 'money_kind'];
+
+                // ⓘ পোস্টযোগ্য খাত আর দল — দুটোই, ইচ্ছা করে: মান ছকের দলের কোডেও (১১০১, ১১০২ …) অন্য খাত বসতে পারে
+                $leaves = Account::query()->postable()->get($columns);
+                $groups = Account::query()->where('is_group', true)->get($columns);
+
+                foreach ($leaves->concat($groups)->sortBy('code') as $account) {
+                    $code = (string) $account->code;
+
+                    if (! StandardChart::isStandardCode($code) || StandardChart::holdsItsMeaning($account)) {
+                        continue;
+                    }
+
+                    $out[] = new IntegrityFinding(
+                        what: $code.' '.(app()->getLocale() === 'bn' ? ($account->name_bn ?: $account->name_en) : $account->name_en),
+                        detail: __('accounts::integrity.chart_meaning_detail', [
+                            'name' => $account->name_en,
+                            'type' => __('accounts::type.'.$account->type),
+                            'money' => $account->money_kind === null ? '' : ', '.$account->money_kind,
+                            'standard' => (string) StandardChart::standardName($code),
+                        ]),
+                    );
+                }
+
+                return $out;
+            },
+        );
     }
 
     /**

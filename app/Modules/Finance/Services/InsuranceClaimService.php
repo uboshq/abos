@@ -462,21 +462,13 @@ final class InsuranceClaimService
     }
 
     /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয় */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function account(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
+        if (StandardChart::find($code) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find($code);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'amount' => __('finance::validation.chart_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 }

@@ -924,7 +924,8 @@ final class MasterListService implements ProvisionsCompany
 
             $account = Account::query()->postable()->where('code', $accountCode)->first();
 
-            if ($account !== null) {
+            // ⛔ খাত কোড ধরে, মানে ধরেই — কোডে অন্য খাত বসে থাকলে জোড়া নয়, কারণ জোড়াহীন থাকে ([[StandardChart::holdsItsMeaning()]])
+            if ($account !== null && StandardChart::holdsItsMeaning($account)) {
                 $reason->forceFill(['account_id' => $account->id])->save();
             }
         }

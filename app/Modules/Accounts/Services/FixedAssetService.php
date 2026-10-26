@@ -563,13 +563,8 @@ final class FixedAssetService
             return;
         }
 
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
-
-        if ($equity === null) {
-            throw ValidationException::withMessages([
-                'opening_accumulated' => __('accounts::asset.opening_needs_the_chart'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $equity = StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
 
         $on = $this->postableDate($asset->acquired_on);
 
@@ -656,13 +651,8 @@ final class FixedAssetService
             default => StandardChart::RETAINED_EARNINGS,
         };
 
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'funded_by' => __('accounts::asset.funding_account_missing', ['code' => $code]),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $account = StandardChart::accountFor($code);
 
         return [
             'account_id' => (int) $account->id,
@@ -1218,14 +1208,7 @@ final class FixedAssetService
 
     private function disposalHead(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'amount' => __('accounts::asset.disposal_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor($code);
     }
 }

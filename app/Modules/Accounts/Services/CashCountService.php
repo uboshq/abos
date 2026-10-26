@@ -284,9 +284,10 @@ final class CashCountService
      */
     private function accountOr(string $code, string $type): Account
     {
-        $account = StandardChart::find($code);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $account = StandardChart::accountFor($code);
 
-        if ($account !== null && ! $account->is_group && $account->is_active) {
+        if ($account->is_active) {
             return $account;
         }
 

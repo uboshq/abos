@@ -384,9 +384,10 @@ final class GiftIssuer
             self::LEDGER_SOURCE,
             (int) $issue->id,
             $date->toDateString(),
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
             [
-                ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => $cost, 'credit' => '0'],
-                ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'debit' => '0', 'credit' => $cost],
+                ['account_id' => (int) StandardChart::accountFor(StandardChart::PROMOTION_EXPENSE)->id, 'debit' => $cost, 'credit' => '0'],
+                ['account_id' => (int) StandardChart::accountFor(StandardChart::INVENTORY)->id, 'debit' => '0', 'credit' => $cost],
             ],
             documentNo: $issue->code,
 

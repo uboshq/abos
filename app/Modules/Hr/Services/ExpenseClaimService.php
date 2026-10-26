@@ -434,19 +434,13 @@ final class ExpenseClaimService
             || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()));
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function head(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
+        if (StandardChart::find($code) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find($code);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.head_missing', ['code' => $code])]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 }

@@ -59,7 +59,8 @@ final class SalesCouponPapers implements CouponPapers
         if ($invoice === null || ! in_array($invoice->status, DocumentStatus::POSTED, true)) {
             return;
         }
-        $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $discount = StandardChart::accountFor(StandardChart::DISCOUNT_GIVEN);
         $notes = app(NoteService::class);
 
         /*
@@ -72,7 +73,7 @@ final class SalesCouponPapers implements CouponPapers
                 'direction' => Note::CREDIT,
                 'party_kind' => Note::KIND_CUSTOMER,
                 'party_id' => (int) $invoice->customer_id,
-                'other_account_id' => $discount?->id,
+                'other_account_id' => $discount->id,
                 // ⓘ বিলের দিনে — আজকের দিনে নয় (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬); শাখা উপরের মোড়ক থেকে
                 'trx_date' => $invoice->trx_date?->toDateString() ?? now()->toDateString(),
                 'amount' => bcadd($worth, '0', 4),

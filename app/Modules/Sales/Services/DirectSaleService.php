@@ -1776,7 +1776,8 @@ final class DirectSaleService
         DeliveryChallan $challan,
         string $trxDate,
     ): Voucher {
-        $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $receivable = StandardChart::accountFor(StandardChart::RECEIVABLE);
 
         $moneyAccount = $this->moneyAccountOf($row);
 
@@ -2470,10 +2471,11 @@ final class DirectSaleService
                 sourceType: $sourceType,
                 sourceId: (int) $challan->id,
                 trxDate: $challan->trx_date,
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 lines: [
-                    ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => $cost,
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::PROMOTION_EXPENSE)->id, 'debit' => $cost,
                         'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
-                    ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'credit' => $cost,
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::INVENTORY)->id, 'credit' => $cost,
                         'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
                 ],
                 documentNo: $challan->document_no,
@@ -3020,19 +3022,10 @@ final class DirectSaleService
      * যায়; না পেলে চুপ করে অন্য খাতে বসিয়ে দেওয়ার চেয়ে থেমে বলে দেওয়াই
      * ভালো — নইলে চেকের টাকা ভুল জায়গায় গিয়ে রেওয়ামিল মিলত, কারণ বোঝা যেত না।
      */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function chequesInHandAccount(): Account
     {
-        $account = Account::query()->postable()
-            ->where('code', StandardChart::CHEQUES_IN_HAND)
-            ->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'deposits' => __('sales::validation.no_cheques_in_hand_account'),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor(StandardChart::CHEQUES_IN_HAND);
     }
 
     private function money(mixed $value): string
