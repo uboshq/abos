@@ -258,7 +258,7 @@ final class ThePaymentIsWrittenAsItsGrossTest extends TestCase
             ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])->where('source_id', $voucher->id)->count(), '⛔ কাটা ছাড়া পরিশোধেও করণীয় উঠল');
 
         $payment = (string) $this->get(route('accounts.voucher.create', ['type' => Voucher::PAYMENT]))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/x-show="hasWithheld"[^>]*data-sum-tax-note/', $payment, '⛔ পরিশোধের সারাংশে নকশার কমলা "করণীয় তালিকায় উঠবে" লাইন নেই');
+        $this->assertMatchesRegularExpression('/x-show="hasWithheld"[^>]*data-sum-tax-note(?=[\s>])/', $payment, '⛔ পরিশোধের সারাংশে নকশার কমলা "করণীয় তালিকায় উঠবে" লাইন নেই');
         $receipt = (string) $this->get(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))->assertOk()->getContent();
         $this->assertStringNotContainsString('data-sum-tax-note', $receipt, '⛔ রসিদে কমলা করণীয়ের লাইন — পক্ষের কাটা আমাদের জমার দায় নয়');
     }

@@ -30,6 +30,8 @@ function make(overrides = {}) {
     })
 
     box.$nextTick = (fn) => fn()
+    // ⓘ Alpine-এর $dispatch — tellDue/tellApplied বাকি পর্দাকে খবর দেয়; না থাকলে loadDue-র catch পাওনা মুছে দিত (fe, ২৬ অক্টোবর ২০২৬)
+    box.$dispatch = vi.fn()
     box.$refs = {
         search: { focus: vi.fn() },
         trigger: { focus: vi.fn() },
