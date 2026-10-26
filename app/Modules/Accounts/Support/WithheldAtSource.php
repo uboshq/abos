@@ -104,7 +104,9 @@ final class WithheldAtSource
 
     private static function account(string $kind, string $code): Account
     {
-        $account = StandardChart::find($code) ?? throw ValidationException::withMessages([
+        // ⓘ চার্টের find() মানে-হারানো খাতে null দেয় (main, ২৫ অক্টোবর ২০২৬) — তখনো "নেই" নয়, কোডে কী বসে আছে তা বলা (fe, ২৬ অক্টোবর)
+        $account = StandardChart::find($code) ?? Account::query()->where('code', $code)->first();
+        $account = $account ?? throw ValidationException::withMessages([
             $kind.'_amount' => __('accounts::validation.missing_account', ['code' => $code]),
         ]);
 

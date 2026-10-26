@@ -163,7 +163,9 @@ final class WithheldTax
         // ⭐ AIT ২১২১-এ, VDS ২১২২-এ — আলাদা রিটার্ন, আলাদা খাত (fe, ২১ অক্টোবর ২০২৬)
         $accounts = [];
         foreach (['ait' => StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => StandardChart::VDS_PAYABLE] as $kind => $code) {
-            $accounts[$kind] = StandardChart::find($code) ?? throw ValidationException::withMessages([
+            // ⓘ চার্টের find() মানে-হারানো খাতে null দেয় (main, ২৫ অক্টোবর ২০২৬) — তখনো "নেই" নয়, কোডে কী বসে আছে তা বলা (fe, ২৬ অক্টোবর)
+            $account = StandardChart::find($code) ?? \App\Modules\Accounts\Models\Account::query()->where('code', $code)->first();
+            $accounts[$kind] = $account ?? throw ValidationException::withMessages([
                 $kind.'_amount' => __('accounts::validation.missing_account', ['code' => $code]),
             ]);
 
