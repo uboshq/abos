@@ -86,6 +86,12 @@ final class TheAccountsScreenReadsPartyFactsThroughCoreTest extends TestCase
             {
                 return '500.50';
             }
+
+            // ⓘ এই নকল ইঞ্জিন অবশিষ্ট নিজে জানে না — গ্রাহক তখন ব্যবহৃতের একই যোগ থেকে গোনে (main-এর ২০ অক্টোবরের চুক্তি-পদ্ধতি)
+            public function availableOf(int $customerId): ?string
+            {
+                return null;
+            }
         });
 
         $due = (string) (LedgerEntry::query()->forParty('customer', $customer->id)

@@ -559,8 +559,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
             return $engine;
         }
 
-        // ⓘ বিক্রয় বন্ধ — আটকে থাকা কিছু নেই, কেবল খাতা ([[NoCreditHolds]])
-        $left = bcsub($limit, $this->outstanding(), 4);
+        // ⓘ ইঞ্জিন জানে না (বিক্রয় বন্ধ: [[NoCreditHolds]] — আটকে থাকা ০, চেক ০) — তখন ব্যবহৃতের একই যোগ, খাতাই
+        $left = bcsub($limit, $this->creditUsed(), 4);
 
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
     }
