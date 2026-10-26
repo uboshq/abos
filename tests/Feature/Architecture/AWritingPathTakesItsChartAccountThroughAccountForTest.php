@@ -40,7 +40,6 @@ final class AWritingPathTakesItsChartAccountThroughAccountForTest extends TestCa
         ['app/Modules/Purchase/Services/PaymentService.php', "->whereIn('code', \$money)->exists();", 'cb-র হাতে — টাকার খাত চেনা money_kind দিয়ে আনবে'],
         ['app/Modules/Purchase/Services/PaymentService.php', "\$account = Account::query()->postable()->where('code', \$code)->first();", 'cb-র হাতে (account()) — accountFor-এ আনবে'],
         ['app/Modules/Sales/Services/CollectionService.php', "->whereIn('code', StandardChart::MONEY_PARENTS)", 'a6-এর হাতে — টাকার খাত চেনা'],
-        ['app/Modules/Sales/Services/CollectionService.php', "\$account = Account::query()->postable()->where('code', \$code)->first();", 'a6-এর হাতে (account()) — accountFor-এ আনবে'],
         ['app/Modules/Sales/Services/DirectSaleService.php', "PaymentMethod::query()->where('code', \$legacy)", 'টাকা দেওয়ার পদ্ধতির কোড, খাতের নয়'],
     ];
 

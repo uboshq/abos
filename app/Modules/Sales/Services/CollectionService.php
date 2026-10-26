@@ -1746,18 +1746,15 @@ final class CollectionService
      */
     private function account(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null
-            || ! app(StandardChart::class)->holdsItsMeaning($account)
-            || ! Account::query()->postable()->whereKey($account->id)->exists()) {
+        // ⓘ ec-র accountFor এখন main-এ (fe, ২৬ অক্টোবর ২০২৬) — পাতা-খাত আর মানে-ধরা পরখ সেখানেই; আদায়ের নিজের কথাটা থাকে
+        try {
+            return StandardChart::accountFor($code);
+        } catch (ValidationException) {
             $names = (array) __('sales::collection_rules.head_names');
             throw ValidationException::withMessages([
                 'status' => __('sales::collection_rules.head_not_in_chart', ['name' => $names[$code] ?? $code, 'code' => $code]),
             ]);
         }
-
-        return $account;
     }
 
     /**
