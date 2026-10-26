@@ -59,6 +59,11 @@
                 <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ $isPayment ? __('money.screen.sum.net') : __('money.screen.sum.into') }}</dt>
                 <dd class="num border-t border-(--color-border) pt-2 font-semibold" data-sum-net x-text="sumNet"></dd>
                 <x-slot:after>
+                    {{-- ⭐ সারাংশ ফাঁকা কেন — চুপ নয় (মালিক, ২৬ অক্টোবর ২০২৬: "entry dileo summary empty thake kicui dekhay na"):
+                         ঘর বাকি থাকলে কী দিলে আসবে, আর সার্ভার থামালে (যেমন অন্যের ক্যাশবাক্স) সেই কারণটাই — নিচের খাতার বাক্সের একই কথা --}}
+                    <p class="mt-3 text-xs text-(--color-ink-muted)" data-sum-waits x-show="! hasPreview && ! previewBlocked">{{ __('accounts::message.ledger_empty') }}</p>
+                    <p class="mt-3 border-s-2 border-(--color-danger) px-3 py-2 text-xs text-(--color-danger)" data-sum-blocked
+                       x-show="previewBlocked" x-cloak x-text="preview.message"></p>
                     <p class="mt-3 border-s-2 border-(--color-badge-success-ink) bg-(--color-badge-success-bg) px-3 py-2 text-xs text-(--color-badge-success-ink)"
                        x-show="sumMatches" x-cloak data-sum-matches>{{ $isPayment ? __('money.screen.sum.matches_out') : __('money.screen.sum.matches_in') }}</p>
                     {{-- ⭐ নকশার কমলা লাইন — পরিশোধে AIT/VDS কাটলে পোস্টে সত্যিই কোষাগারে জমা আর মূসক-৬.৬-এর করণীয় ওঠে
