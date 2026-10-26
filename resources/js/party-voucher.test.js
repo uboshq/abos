@@ -192,10 +192,18 @@ describe('partyVoucher — ভাগ করা পিকারের খবর',
 describe('partyVoucher — কোন বিলের বিপরীতে', () => {
     const bill = { against_type: 'sales_invoice', id: 7, no: 'INV-7', date: '2026-09-01', age: 34, outstanding: '250.0000' }
 
+    /*
+     * ⓘ একটা নকল ফর্ম, যে ব্রাউজারের মতো কমা-দেওয়া বাছাইয়ের তালিকাও বোঝে: পরিশোধের মোট ঘর `gross_amount`, তাই কোড
+     * '[name="amount"], [name="gross_amount"]' চায় (fe, ২৬ অক্টোবর ২০২৬: আগের নকল কেবল হুবহু '[name="amount"]' চিনত, null দিত)।
+     */
+    function form(fields) {
+        return { querySelector: (q) => q.split(',').map((s) => s.trim()).map((s) => fields[s]).find(Boolean) ?? null }
+    }
+
     function withAmount(value) {
         const input = { value, dispatchEvent: vi.fn() }
         const box = make()
-        box.$root = { closest: () => ({ querySelector: (q) => (q === '[name="amount"]' ? input : null) }) }
+        box.$root = { closest: () => form({ '[name="amount"]': input }) }
         box.bills = [bill]
 
         return { box, input }
@@ -217,7 +225,7 @@ describe('partyVoucher — কোন বিলের বিপরীতে', () 
         const shown = { value: '', dispatchEvent: vi.fn() }
         const sent = { value: '', dispatchEvent: vi.fn() }
         const box = make()
-        box.$root = { closest: () => ({ querySelector: (q) => (q === '[data-money-shown="amount"]' ? shown : (q === '[name="amount"]' ? sent : null)) }) }
+        box.$root = { closest: () => form({ '[data-money-shown="amount"]': shown, '[name="amount"]': sent }) }
         box.bills = [bill]
 
         box.pick(bill)
