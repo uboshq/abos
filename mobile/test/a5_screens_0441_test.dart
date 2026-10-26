@@ -89,7 +89,7 @@ void main() {
 
     testWidgets('waiting papers: number · party with point and branch, the amount, a chip each', (tester) async {
       await pump(tester, ownerHomeBody());
-      expect(find.text('সইয়ের অপেক্ষায় · 3টি'), findsOneWidget);
+      expect(find.text('অনুমোদনের অপেক্ষায় · 3টি'), findsOneWidget);
       // ⓘ নমুনার মতো: প্রথম লাইনে নম্বর · নাম, নিচে পয়েন্ট · শাখা · টাকা
       expect(find.byWidgetPredicate((w) => w is NumberAndName && w.number == 'RCV-0190' && w.name == 'রহিম স্টোর'), findsOneWidget);
       expect(find.text('কেন্দুয়া · ময়মনসিংহ · ৳50,000.00'), findsOneWidget);
@@ -97,8 +97,8 @@ void main() {
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
       expect(chips, hasLength(3));
       expect(chips.every((c) => c.state == PaperState.waiting && c.dense), isTrue, reason: 'সারিতে a6-এর compact চিপ');
-      // ⚠️ সার্ভার মোট ধাপ পাঠায় না → "সইয়ের অপেক্ষায়"; পাঠালে "2-এর 1"
-      expect(find.descendant(of: find.byType(AppStatusChip), matching: find.textContaining('সইয়ের অপেক্ষায়', findRichText: true)), findsNWidgets(3));
+      // ⚠️ সার্ভার মোট ধাপ পাঠায় না → "অনুমোদনের অপেক্ষায়"; পাঠালে "2-এর 1"
+      expect(find.descendant(of: find.byType(AppStatusChip), matching: find.textContaining('অনুমোদনের অপেক্ষায়', findRichText: true)), findsNWidgets(3));
     });
 
     testWidgets('waiting papers: when the server sends the number of levels, the chip says "2-এর 1"', (tester) async {
@@ -150,7 +150,7 @@ void main() {
       expect(find.bySemanticsLabel('হাতে নগদ, জানা নেই'), findsOneWidget);
       expect(find.bySemanticsLabel('মোট, ১ লাখ ৬২ হাজার ৭০০ টাকা'), findsOneWidget);
       expect(find.bySemanticsLabel('RCV-0190 · রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ, ৫০ হাজার টাকা'), findsOneWidget);
-      expect(find.bySemanticsLabel('অবস্থা: সইয়ের অপেক্ষায়'), findsNWidgets(3), reason: 'a6-এর চিপ নিজেই পুরো বাক্য বলে');
+      expect(find.bySemanticsLabel('অবস্থা: অনুমোদনের অপেক্ষায়'), findsNWidgets(3), reason: 'a6-এর চিপ নিজেই পুরো বাক্য বলে');
       handle.dispose();
     });
   });

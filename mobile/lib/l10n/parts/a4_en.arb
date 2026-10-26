@@ -179,7 +179,7 @@
   "permissionCameraTitle": "Camera permission",
   "permissionCameraBody": "ABOS uses the phone's camera to read QR codes and to take slip photos, receipt photos and your own profile photo. The phone will ask for camera permission next — tap \"Allow\". The camera never turns on unless you tap, and only the photo you send goes to the office.",
   "permissionNotificationsTitle": "Notification permission",
-  "permissionNotificationsBody": "ABOS sends notifications so you hear about signature requests, approvals and deliveries even when the app is closed. The phone will ask for notification permission next — tap \"Allow\". Without it the app still works; you just see the news when you open the app.",
+  "permissionNotificationsBody": "ABOS sends notifications so you hear about approval requests, approvals and deliveries even when the app is closed. The phone will ask for notification permission next — tap \"Allow\". Without it the app still works; you just see the news when you open the app.",
   "permissionNotNow": "Not now",
   "permissionOk": "OK",
   "deviceIntegrityRootedEmulator": "This phone seems to be rooted, and not a real phone (an emulator)",
@@ -268,5 +268,5 @@
   "commonStatus": "Status",
   "commonBranch": "Branch",
   "commonLoadFailed": "Could not load",
-  "commonSign": "Sign"
+  "commonSign": "Approve"
 }

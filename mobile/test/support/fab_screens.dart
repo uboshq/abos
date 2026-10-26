@@ -80,7 +80,7 @@ class FakeVouchers implements VoucherApi {
   @override
   Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1, String? money, String? from, String? to, String? branch}) async =>
       const VoucherListPage(rows: [
-        VoucherRow(id: 'v1', no: 'RV-2610-0142', type: 'receipt', state: 'awaiting', amount: 48500, stateLabel: 'সইয়ের অপেক্ষায়', party: 'রহিম ট্রেডার্স'),
+        VoucherRow(id: 'v1', no: 'RV-2610-0142', type: 'receipt', state: 'awaiting', amount: 48500, stateLabel: 'অনুমোদনের অপেক্ষায়', party: 'রহিম ট্রেডার্স'),
         VoucherRow(id: 'v2', no: 'PV-2610-0057', type: 'payment', state: 'posted', amount: 125000, stateLabel: 'পাকা', party: 'মেসার্স রহমান ট্রেডার্স'),
         VoucherRow(id: 'v3', no: 'EV-2610-0031', type: 'expense', state: 'draft', amount: 3200, stateLabel: 'খসড়া', party: 'গাড়িভাড়া'),
         VoucherRow(id: 'v4', no: 'RV-2610-0143', type: 'receipt', state: 'posted', amount: 22000, stateLabel: 'পাকা', party: 'করিম স্টোর'),

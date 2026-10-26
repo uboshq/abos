@@ -32,7 +32,7 @@ void main() {
 
   testWidgets('a notice about a voucher opens the voucher', (tester) async {
     final opened = await open(tester, {
-      'id': 'n-1', 'title': 'ভাউচার পাকা হলো — JV-0012', 'body': 'সই শেষ', 'read': true,
+      'id': 'n-1', 'title': 'ভাউচার পাকা হলো — JV-0012', 'body': 'অনুমোদন শেষ', 'read': true,
       'url': 'https://erp.adi.com.bd/accounts/vouchers/12',
     });
 
@@ -44,7 +44,7 @@ void main() {
 
   testWidgets('a query on the path is kept', (tester) async {
     final opened = await open(tester, {
-      'id': 'n-2', 'title': 'সই চাওয়া হয়েছে', 'body': '', 'read': true, 'url': '/approvals?tab=mine',
+      'id': 'n-2', 'title': 'অনুমোদন চাওয়া হয়েছে', 'body': '', 'read': true, 'url': '/approvals?tab=mine',
     });
     await tester.tap(find.byKey(const ValueKey('notification-open')));
     await tester.pumpAndSettle();

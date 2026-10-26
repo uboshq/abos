@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/bar_fonts.dart';
 
-/// ⭐ "সইয়ের অপেক্ষায় হবে" (will_wait, cb 76c7d5283) — সংরক্ষণের আগের পূর্বাভাস: সত্যিকারের "সইয়ের অপেক্ষায়"-এর একই অ্যাম্বার, কিন্তু
+/// ⭐ "অনুমোদনের অপেক্ষায় হবে" (will_wait, cb 76c7d5283) — সংরক্ষণের আগের পূর্বাভাস: সত্যিকারের "অনুমোদনের অপেক্ষায়"-এর একই অ্যাম্বার, কিন্তু
 /// ভাঙা ধার, যাতে কখনো গুলিয়ে না যায়; পর্দা-পাঠক পুরো কথা বলে।
 
 /// চিপের ভাঙা ধার আঁকা হয় কি না — শেয়ার করা চিপের নিজের আঁকিয়ে
@@ -74,21 +74,21 @@ void main() {
       final amber = dark ? critical.dark : critical.light;
       final will = _box(tester, const ValueKey('will'));
       final wait = _box(tester, const ValueKey('wait'));
-      expect(will.color, amber.background, reason: '⛔ "সইয়ের অপেক্ষায় হবে" অ্যাম্বার নয়');
+      expect(will.color, amber.background, reason: '⛔ "অনুমোদনের অপেক্ষায় হবে" অ্যাম্বার নয়');
       expect(wait.color, amber.background);
-      expect(_dashed(tester, const ValueKey('will')), isTrue, reason: '⛔ "সইয়ের অপেক্ষায় হবে"-র ধার ভাঙা নয়');
-      expect(will.border, isNull, reason: '⛔ "সইয়ের অপেক্ষায় হবে"-র ধার টানা — "সইয়ের অপেক্ষায়"-এর সাথে গুলিয়ে যায়');
+      expect(_dashed(tester, const ValueKey('will')), isTrue, reason: '⛔ "অনুমোদনের অপেক্ষায় হবে"-র ধার ভাঙা নয়');
+      expect(will.border, isNull, reason: '⛔ "অনুমোদনের অপেক্ষায় হবে"-র ধার টানা — "অনুমোদনের অপেক্ষায়"-এর সাথে গুলিয়ে যায়');
       expect(_dashed(tester, const ValueKey('wait')), isFalse);
-      expect(wait.border, isNotNull, reason: '"সইয়ের অপেক্ষায়"-এর ধার টানা');
+      expect(wait.border, isNotNull, reason: '"অনুমোদনের অপেক্ষায়"-এর ধার টানা');
     });
   }
 
   testWidgets('TalkBack reads the forecast in full, bn and en', (tester) async {
     final handle = tester.ensureSemantics();
     await _pair(tester);
-    expect(tester.getSemantics(find.byKey(const ValueKey('will'))).label, 'অবস্থা: খসড়া, পাঠালে সইয়ের অপেক্ষায় যাবে');
-    expect(PaperState.willWait.spec.semantics(english: true), 'Status: draft, goes to awaiting signature when sent');
-    expect(find.textContaining('সইয়ের অপেক্ষায় হবে', findRichText: true), findsOneWidget);
+    expect(tester.getSemantics(find.byKey(const ValueKey('will'))).label, 'অবস্থা: খসড়া, পাঠালে অনুমোদনের অপেক্ষায় যাবে');
+    expect(PaperState.willWait.spec.semantics(english: true), 'Status: draft, goes to awaiting approval when sent');
+    expect(find.textContaining('অনুমোদনের অপেক্ষায় হবে', findRichText: true), findsOneWidget);
     handle.dispose();
   });
 

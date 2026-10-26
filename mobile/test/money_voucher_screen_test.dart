@@ -396,7 +396,7 @@ void main() {
       expect(find.descendant(of: find.byKey(const ValueKey('pay-payee-bank')), matching: find.byType(EditableText)), findsNothing,
           reason: '⛔ প্রাপকের ব্যাংক বদলানো যায়');
       expect(find.textContaining('••••4521'), findsOneWidget);
-      expect(find.text('দুজনের সইয়ে যাচাই-করা'), findsOneWidget);
+      expect(find.text('দুজনের অনুমোদনে যাচাই-করা'), findsOneWidget);
       expect(_shown('pay-payee-bank-blocks'), isFalse);
       await _type(tester, 'pay-reference', 'BF26102100981');
       await _send(tester);
@@ -410,11 +410,11 @@ void main() {
       await _supplierAndAmount(tester, party: 1);
       await _tap(tester, 'pay-method-transfer');
       await _type(tester, 'pay-reference', 'BF26102100999');
-      expect(_shown('pay-payee-bank-blocks'), isTrue, reason: '⛔ সই-না-পাওয়া ব্যাংক, তবু কারণ নেই');
+      expect(_shown('pay-payee-bank-blocks'), isTrue, reason: '⛔ অনুমোদন-না-পাওয়া ব্যাংক, তবু কারণ নেই');
       expect(tester.widget<FilledButton>(find.byKey(const ValueKey('pay-post'))).onPressed, isNull,
-          reason: '⛔ সই-না-পাওয়া ব্যাংকে ট্রান্সফারের পোস্ট খোলা');
+          reason: '⛔ অনুমোদন-না-পাওয়া ব্যাংকে ট্রান্সফারের পোস্ট খোলা');
       await _send(tester);
-      expect(api.sent, isEmpty, reason: '⛔ সই-না-পাওয়া ব্যাংকে ট্রান্সফার পাঠাল');
+      expect(api.sent, isEmpty, reason: '⛔ অনুমোদন-না-পাওয়া ব্যাংকে ট্রান্সফার পাঠাল');
 
       await _tap(tester, 'pay-method-cash');
       expect(_shown('pay-payee-bank-blocks'), isFalse);

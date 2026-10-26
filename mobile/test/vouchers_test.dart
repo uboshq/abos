@@ -61,7 +61,7 @@ class _FakeVouchers implements VoucherApi {
     asked.add({'type': type, 'money': money, 'from': from, 'to': to, 'branch': branch});
     if (rows case final own?) return VoucherListPage(rows: own, count: own.length);
     return const VoucherListPage(rows: [
-      VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'awaiting', amount: 500, stateLabel: 'সইয়ের অপেক্ষায়', writtenBy: 'আবু কাওসার'),
+      VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'awaiting', amount: 500, stateLabel: 'অনুমোদনের অপেক্ষায়', writtenBy: 'আবু কাওসার'),
       VoucherRow(id: 'v2', no: 'JV-0002', type: 'journal', state: 'posted', amount: 100, stateLabel: 'পাকা'),
     ], count: 2, total: 600);
   }
@@ -371,7 +371,7 @@ void main() {
     expect(find.text('রহিম স্টোর · বিল INV-1'), findsOneWidget);
   });
 
-  testWidgets('the list shows each state, and "সইয়ের অপেক্ষায়" asks the server for those only', (tester) async {
+  testWidgets('the list shows each state, and "অনুমোদনের অপেক্ষায়" asks the server for those only', (tester) async {
     final api = _FakeVouchers();
     await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const []));
     expect(find.text('RV-0001 · আদায় ভাউচার'), findsOneWidget);

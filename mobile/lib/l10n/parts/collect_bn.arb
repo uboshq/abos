@@ -325,7 +325,7 @@
   "@collectDifferenceAmount": {
     "description": "Collection: the difference amount field"
   },
-  "collectDifferenceSign": "মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।",
+  "collectDifferenceSign": "মালিকের অনুমোদন লাগবে — পোস্ট করলে অনুমোদনে যাবে।",
   "@collectDifferenceSign": {
     "description": "Collection: a discount or rounding needs the owner's signature (item 4)"
   },
@@ -386,7 +386,7 @@
   "@collectControlsTitle": {
     "description": "Collection: the control messages card"
   },
-  "collectControlNoSignature": "এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।",
+  "collectControlNoSignature": "এই আদায়ে অনুমোদন লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।",
   "@collectControlNoSignature": {
     "description": "Collection control: no signature needed"
   },
@@ -394,7 +394,7 @@
   "@collectControlSlip": {
     "description": "Collection control: slip required (item 15)"
   },
-  "collectControlNoUndo": "পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় সই)।",
+  "collectControlNoUndo": "পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় অনুমোদন)।",
   "@collectControlNoUndo": {
     "description": "Collection control: posted papers are immutable"
   },
@@ -509,11 +509,11 @@
   "@collectSumWithheld": {
     "description": "Collection summary: VAT and tax withheld by the customer"
   },
-  "collectSumDiscount": "আদায়ে ছাড় (সই লাগবে)",
+  "collectSumDiscount": "আদায়ে ছাড় (অনুমোদন লাগবে)",
   "@collectSumDiscount": {
     "description": "Collection summary: the discount, which needs the owner's signature"
   },
-  "collectSumRounding": "রাউন্ডিং ({amount}-এর বেশি হলে মালিকের সই)",
+  "collectSumRounding": "রাউন্ডিং ({amount}-এর বেশি হলে মালিকের অনুমোদন)",
   "@collectSumRounding": {
     "description": "Collection summary: rounding; above the company's threshold (server setup rounding_sign_above, else Tk 0.50) the owner signs, in the style of the discount line",
     "placeholders": {
@@ -644,7 +644,7 @@
   "@collectPartyOldOpen": {
     "description": "Collection: opens the receipt voucher form for a non-customer party"
   },
-  "collectRoundingSign": "রাউন্ডিং {amount} — মালিকের সইয়ের পর পোস্ট হবে",
+  "collectRoundingSign": "রাউন্ডিং {amount} — মালিকের অনুমোদনের পর পোস্ট হবে",
   "@collectRoundingSign": {
     "description": "Collection control: rounding above Tk 0.50 and up to Tk 10 needs the owner's signature (owner, 2 Oct 2026)",
     "placeholders": {
@@ -653,11 +653,11 @@
       }
     }
   },
-  "collectOwnerSign": "এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে",
+  "collectOwnerSign": "এই আদায়ে মালিকের অনুমোদন লাগবে — অনুমোদনের পর খাতায় উঠবে",
   "@collectOwnerSign": {
     "description": "Collection screen 2 control: a discount, rounding above Tk 0.50 or the server says it needs the owner"
   },
-  "collectSendForSign": "সইয়ে পাঠান",
+  "collectSendForSign": "অনুমোদনে পাঠান",
   "@collectSendForSign": {
     "description": "Collection screen 2: the post button when the owner must sign first"
   },

@@ -26,7 +26,7 @@ void main() {
     final money = tester.getRect(find.byType(OwnerMoneyCard));
     final pair = tester.getRect(find.byKey(const ValueKey('home-wide-pair')));
     expect(waiting.top, bills.top, reason: 'এক সারিতে');
-    expect(waiting.right, lessThan(bills.left), reason: 'বাঁয়ে সইয়ের অপেক্ষা, ডানে বিল');
+    expect(waiting.right, lessThan(bills.left), reason: 'বাঁয়ে অনুমোদনের অপেক্ষা, ডানে বিল');
     expect(waiting.width, closeTo(bills.width, 1), reason: 'সমান দুই কলাম');
     expect(money.width, closeTo(pair.width, 1), reason: 'টাকার কার্ড পুরো চওড়ায়, জোড়া তার নিচে একই চওড়ায়');
     expect(money.bottom, lessThanOrEqualTo(pair.top));

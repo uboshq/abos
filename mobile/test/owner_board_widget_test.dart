@@ -50,7 +50,7 @@ void main() {
     expect(doc.bars.single.value!.text, '68%');
     expect(doc.bars.single.label.text, 'অক্টোবর-এর লক্ষ্য · বাকি 12 দিন');
 
-    expect([for (final a in doc.actions) a.label], ['7 সই', '2 চেক', '14 মজুদ কম', '9 চালান পথে', '4 নোটিশ']);
+    expect([for (final a in doc.actions) a.label], ['7 অনুমোদন', '2 চেক', '14 মজুদ কম', '9 চালান পথে', '4 নোটিশ']);
     expect(doc.actions.first.link, '/home/approvals');
     expect(doc.actions[1].link, '/finance/cheques');
   });
@@ -62,7 +62,7 @@ void main() {
     expect(doc.rows.map((r) => r.title.text), isNot(contains('নগদ + ব্যাংক + MFS')));
     expect(doc.rows.map((r) => r.title.text), isNot(contains('এ মাসের মোট লাভ')));
     expect(doc.bars, isEmpty);
-    expect([for (final a in doc.actions) a.label], ['7 সই', '1 নোটিশ']);
+    expect([for (final a in doc.actions) a.label], ['7 অনুমোদন', '1 নোটিশ']);
   });
 
   test('a chosen branch is named in the head', () {
@@ -74,6 +74,6 @@ void main() {
     expect(doc.empty, isNotNull);
     expect(doc.hero, isNull);
     expect(doc.rows, isEmpty);
-    expect(doc.actions, isEmpty, reason: '⛔ না-পাওয়া ভাগের বোতাম (নোটিশ, সই …)');
+    expect(doc.actions, isEmpty, reason: '⛔ না-পাওয়া ভাগের বোতাম (নোটিশ, অনুমোদন …)');
   });
 }

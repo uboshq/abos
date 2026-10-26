@@ -24,7 +24,7 @@ const _stuck = <String, dynamic>{
 };
 
 const _waiting = <String, dynamic>{
-  'id': 'v1', 'no': 'RV-0001', 'type': 'receipt', 'state': 'awaiting', 'state_label': 'সইয়ের অপেক্ষায়', 'amount': '500.00',
+  'id': 'v1', 'no': 'RV-0001', 'type': 'receipt', 'state': 'awaiting', 'state_label': 'অনুমোদনের অপেক্ষায়', 'amount': '500.00',
   'approval_level': 1, 'approval_levels': 2,
 };
 
@@ -78,13 +78,13 @@ void main() {
       final v = VoucherRow.fromJson(Map<String, dynamic>.from(_waiting));
       await tester.pumpWidget(app(Column(children: [voucherStateChip(v, dense: true), voucherStateChip(v)])));
       expect(_words('2-এর 1'), findsOneWidget);
-      expect(_words('সইয়ের অপেক্ষায় · 2-এর 1'), findsOneWidget);
+      expect(_words('অনুমোদনের অপেক্ষায় · 2-এর 1'), findsOneWidget);
     });
 
     testWidgets('only one of the two numbers is no "x-এর y" at all', (tester) async {
       final v = VoucherRow.fromJson({..._waiting, 'approval_levels': null});
       await tester.pumpWidget(app(voucherStateChip(v, dense: true)));
-      expect(_words('সইয়ের অপেক্ষায়'), findsOneWidget);
+      expect(_words('অনুমোদনের অপেক্ষায়'), findsOneWidget);
     });
 
     testWidgets('posting_failed wins over the draft state: "পোস্ট হয়নি", and the tap shows the server\'s sentence',
@@ -104,7 +104,7 @@ void main() {
         voucherStateChip(VoucherRow.fromJson({'id': 'b', 'state': 'awaiting'}), dense: true),
       ])));
       expect(_chip(PaperState.draft), findsOneWidget);
-      expect(_words('সইয়ের অপেক্ষায়'), findsOneWidget);
+      expect(_words('অনুমোদনের অপেক্ষায়'), findsOneWidget);
     });
   });
 
@@ -133,7 +133,7 @@ void main() {
           ]),
         ));
     expect(_words('2-এর 1'), findsOneWidget);
-    expect(_words('সইয়ের অপেক্ষায়'), findsOneWidget);
+    expect(_words('অনুমোদনের অপেক্ষায়'), findsOneWidget);
     expect(_chip(PaperState.notPosted), findsNothing, reason: 'claims never stick in posting');
   });
 }

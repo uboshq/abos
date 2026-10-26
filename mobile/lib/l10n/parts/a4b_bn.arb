@@ -70,7 +70,7 @@
   "@voucherPartyParty": {
     "description": "Voucher: label of the party when the kind is unknown"
   },
-  "voucherState": "{state, select, awaiting{সইয়ের অপেক্ষায়} posted{পোস্ট হয়েছে} cancelled{বাতিল} other{খসড়া}}",
+  "voucherState": "{state, select, awaiting{অনুমোদনের অপেক্ষায়} posted{পোস্ট হয়েছে} cancelled{বাতিল} other{খসড়া}}",
   "@voucherState": {
     "description": "Voucher status when the server sends no label; anything unknown reads as draft",
     "placeholders": {
@@ -1455,11 +1455,11 @@
   "@homeMfsAccounts": {
     "description": "MFS accounts sheet title"
   },
-  "homeAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "homeAwaitingSignature": "অনুমোদনের অপেক্ষায়",
   "@homeAwaitingSignature": {
     "description": "Home card title: papers waiting for a signature"
   },
-  "homeAwaitingSignatureCount": "সইয়ের অপেক্ষায় · {count}টি",
+  "homeAwaitingSignatureCount": "অনুমোদনের অপেক্ষায় · {count}টি",
   "@homeAwaitingSignatureCount": {
     "description": "Home card title: papers waiting for a signature, and how many",
     "placeholders": {
@@ -1472,11 +1472,11 @@
   "@homeSeeAll": {
     "description": "Home card: opens the full list"
   },
-  "homeWaitingLoadFailed": "সইয়ের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "homeWaitingLoadFailed": "অনুমোদনের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
   "@homeWaitingLoadFailed": {
     "description": "Home card: the waiting papers failed to load"
   },
-  "homeNothingWaiting": "এখন কিছু সইয়ের অপেক্ষায় নেই।",
+  "homeNothingWaiting": "এখন কিছু অনুমোদনের অপেক্ষায় নেই।",
   "@homeNothingWaiting": {
     "description": "Home card: no paper waits for a signature"
   },
@@ -2118,7 +2118,7 @@
   "@payPayeeBank": {
     "description": "Payment voucher to a supplier: the read-only bank box"
   },
-  "payPayeeBankVerified": "দুজনের সইয়ে যাচাই-করা",
+  "payPayeeBankVerified": "দুজনের অনুমোদনে যাচাই-করা",
   "@payPayeeBankVerified": {
     "description": "Payment voucher: the supplier bank details carry both signatures (a tick icon stands before it)"
   },
@@ -2126,11 +2126,11 @@
   "@payPayeeBankNone": {
     "description": "Payment voucher: the supplier has no signed bank details"
   },
-  "payPayeeBankPending": "সইয়ের অপেক্ষায়",
+  "payPayeeBankPending": "অনুমোদনের অপেক্ষায়",
   "@payPayeeBankPending": {
     "description": "Payment voucher: a change to the supplier bank details waits for the second signature"
   },
-  "payUnsignedBlocks": "প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় সই দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।",
+  "payUnsignedBlocks": "প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় অনুমোদন হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় অনুমোদন দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।",
   "@payUnsignedBlocks": {
     "description": "Payment voucher: an unsigned supplier bank blocks a bank transfer (the web words)"
   },

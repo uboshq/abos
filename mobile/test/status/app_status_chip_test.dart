@@ -74,12 +74,12 @@ void main() {
       AppStatusChip.compact(state: PaperState.waiting, level: 3, levels: 4),
       AppStatusChip(state: PaperState.waiting),
     ])));
-    expect(_words('সইয়ের অপেক্ষায় · 2-এর 1'), findsOneWidget);
+    expect(_words('অনুমোদনের অপেক্ষায় · 2-এর 1'), findsOneWidget);
     expect(_words('4-এর 3'), findsOneWidget);
-    expect(_words('সইয়ের অপেক্ষায়'), findsOneWidget);
-    expect(find.bySemanticsLabel('অবস্থা: সইয়ের অপেক্ষায়, 2-এর 1'), findsOneWidget);
-    expect(find.bySemanticsLabel('অবস্থা: সইয়ের অপেক্ষায়, 4-এর 3'), findsOneWidget);
-    expect(find.bySemanticsLabel('অবস্থা: সইয়ের অপেক্ষায়'), findsOneWidget);
+    expect(_words('অনুমোদনের অপেক্ষায়'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: অনুমোদনের অপেক্ষায়, 2-এর 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: অনুমোদনের অপেক্ষায়, 4-এর 3'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: অনুমোদনের অপেক্ষায়'), findsOneWidget);
     handle.dispose();
   });
 
@@ -97,7 +97,7 @@ void main() {
         }
       }
     }
-    expect(PaperState.waiting.spec.label(level: 12, levels: 15), 'সইয়ের অপেক্ষায় · 15-এর 12');
+    expect(PaperState.waiting.spec.label(level: 12, levels: 15), 'অনুমোদনের অপেক্ষায় · 15-এর 12');
   });
 
   testWidgets('no Bengali digit reaches the screen or TalkBack', (tester) async {
@@ -275,7 +275,7 @@ void main() {
     expect(_words('পোস্ট হয়েছে · খাতায় উঠেছে'), findsOneWidget);
     expect(_words('পোস্ট হয়েছে · মজুদে উঠেছে'), findsOneWidget);
     expect(_words('পোস্ট হয়েছে'), findsOneWidget);
-    expect(_words('সই শেষ · মজুদে উঠছে'), findsOneWidget);
+    expect(_words('অনুমোদিত · মজুদে উঠছে'), findsOneWidget);
     expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, মজুদে উঠেছে'), findsNWidgets(2));
     expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে'), findsOneWidget);
     handle.dispose();
@@ -385,9 +385,9 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(_words('Awaiting signature · step 1 of 2'), findsOneWidget);
+    expect(_words('Awaiting approval · step 1 of 2'), findsOneWidget);
     expect(_words('Posted'), findsOneWidget);
-    expect(find.bySemanticsLabel('Status: awaiting signature, step 1 of 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Status: awaiting approval, step 1 of 2'), findsOneWidget);
     expect(find.bySemanticsLabel('Status: posted, in stock'), findsOneWidget);
     expect(find.text('Status'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('paper-state-not_posted-tap')));

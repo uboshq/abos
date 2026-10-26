@@ -341,7 +341,7 @@ void main() {
   });
 
   group('সতর্কতা', () {
-    testWidgets('গ্রুপের মোট, কোম্পানির ভাগ, চাবি নেই = "অনুমতি নেই" (শূন্য নয়); সইয়ের অপেক্ষার গোনা', (tester) async {
+    testWidgets('গ্রুপের মোট, কোম্পানির ভাগ, চাবি নেই = "অনুমতি নেই" (শূন্য নয়); অনুমোদনের অপেক্ষার গোনা', (tester) async {
       final api = _Fake();
       await _show(tester, OwnerAlertsScreen(api: api));
 
@@ -350,7 +350,7 @@ void main() {
       expect(find.text('অনুমতি নেই'), findsOneWidget);
       expect(find.text('গ্রুপের মোট'), findsNWidgets(2));
       expect(find.text('কিছু নেই'), findsOneWidget);
-      expect(find.text('সইয়ের অপেক্ষায় (1টা)'), findsOneWidget);
+      expect(find.text('অনুমোদনের অপেক্ষায় (1টা)'), findsOneWidget);
       expect(find.text('৳2,50,000.00'), findsOneWidget);
 
       await _pull(tester);
@@ -371,7 +371,7 @@ void main() {
 
       await _tap(tester, find.text('টিডি ডিপো — মোট'));
       expect(find.text('••••'), findsOneWidget, reason: '⛔ ঢাকা তহবিল শূন্য দেখাল');
-      expect(find.text('3'), findsOneWidget, reason: '⛔ সইয়ের গোনা টাকা হয়ে গেল');
+      expect(find.text('3'), findsOneWidget, reason: '⛔ অনুমোদনের গোনা টাকা হয়ে গেল');
 
       await _tap(tester, find.byKey(const ValueKey('figure-sales')));
       expect(api.asked.last, 'history:-:sales');

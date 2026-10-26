@@ -35,7 +35,7 @@ class _FakeStock implements StockWriteApi {
   StockResult _ok(String what, Map<String, Object?> body, {String status = 'done'}) {
     sent.add(what);
     lastBody = body;
-    return StockResult(status, status == 'done' ? '$what বসেছে।' : 'সইয়ের অপেক্ষায়।', no: 'SC-0001');
+    return StockResult(status, status == 'done' ? '$what বসেছে।' : 'অনুমোদনের অপেক্ষায়।', no: 'SC-0001');
   }
 
   @override
@@ -152,7 +152,7 @@ void main() {
     expect(api.lastBody?['counted'], '17');
     expect(api.lastBody?['pool'], 'free');
     expect(api.lastBody?.containsKey('qty'), isFalse);
-    expect(find.text('সইয়ের অপেক্ষায়।'), findsOneWidget);
+    expect(find.text('অনুমোদনের অপেক্ষায়।'), findsOneWidget);
   });
 
   testWidgets('opening stock and a lot send their own fields', (tester) async {

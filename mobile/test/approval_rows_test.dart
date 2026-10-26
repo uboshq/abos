@@ -168,10 +168,10 @@ void main() {
     expect(refused, isEmpty, reason: 'কারণ ছাড়া ফেরত নয়');
     await tester.tap(find.byKey(const ValueKey('queue-send-back-ap1')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'সই নেই');
+    await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'অনুমোদন নেই');
     await tester.tap(find.byKey(const ValueKey('queue-reason-send')));
     await tester.pumpAndSettle();
-    expect(refused, ['send-back:ap1:সই নেই'], reason: '⛔ সংশোধনে ফেরত চাপলে প্রত্যাখ্যান (০.৪.৪২-এর ভুল)');
+    expect(refused, ['send-back:ap1:অনুমোদন নেই'], reason: '⛔ সংশোধনে ফেরত চাপলে প্রত্যাখ্যান (০.৪.৪২-এর ভুল)');
 
     // ⭐ প্রত্যাখ্যান — কারণ, তারপর শেষ প্রশ্ন; থাক বললে কিছু যায় না, হ্যাঁ বললে reject
     await tester.tap(find.byKey(const ValueKey('queue-reject-ap1')));
@@ -181,7 +181,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('reject-final-cancel')));
     await tester.pumpAndSettle();
-    expect(refused, ['send-back:ap1:সই নেই'], reason: '⛔ শেষ প্রশ্ন ছাড়া প্রত্যাখ্যান');
+    expect(refused, ['send-back:ap1:অনুমোদন নেই'], reason: '⛔ শেষ প্রশ্ন ছাড়া প্রত্যাখ্যান');
     await tester.tap(find.byKey(const ValueKey('queue-reject-ap1')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'ভুয়া');
@@ -194,7 +194,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('queue-tab-mine')));
     await tester.pumpAndSettle();
     expect(api.asked.last, 'queue:mine');
-    expect(find.byKey(const ValueKey('queue-sign-ap1')), findsNothing, reason: 'নিজের পাঠানো কাগজে সইয়ের বোতাম নয়');
+    expect(find.byKey(const ValueKey('queue-sign-ap1')), findsNothing, reason: 'নিজের পাঠানো কাগজে অনুমোদনের বোতাম নয়');
   });
 
   testWidgets('the signature centre has its three tabs and the history names the signer, version and fingerprint', (tester) async {

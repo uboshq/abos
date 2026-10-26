@@ -39,7 +39,7 @@ const _supplier = VoucherParty(
 
 const _staff = VoucherParty(type: 'staff', id: 8, label: 'রহিম উদ্দিন · কর্মী', name: 'রহিম উদ্দিন');
 
-const _longUnknown = 'জাবেদ অ্যাগ্রো ফুড প্রসেসিং লিমিটেড-এর ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে (ট্রান্সফার বা জমা) দেওয়া যাবে না। '
+const _longUnknown = 'জাবেদ অ্যাগ্রো ফুড প্রসেসিং লিমিটেড-এর ব্যাংক তথ্যে এখনো দ্বিতীয় অনুমোদন হয়নি — ব্যাংকে (ট্রান্সফার বা জমা) দেওয়া যাবে না। '
     'করণীয়: সরবরাহকারীর পাতায় ব্যাংক তথ্য দিন। পাতা: https://adi.abos.app/suppliers/3';
 
 class _Fake implements VoucherApi, VoucherPreviewer, VoucherBillsSource {
@@ -469,14 +469,14 @@ void main() {
     String postLabel(WidgetTester tester) =>
         tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('pay-post')), matching: find.byType(Text))).data!;
 
-    testWidgets('needs_signature true: "সইয়ের অপেক্ষায় হবে" before saving, and the button reads "সইয়ে পাঠান"', (tester) async {
+    testWidgets('needs_signature true: "অনুমোদনের অপেক্ষায় হবে" before saving, and the button reads "অনুমোদনে পাঠান"', (tester) async {
       await _pump(tester, _Fake(previewAnswer: answer(true)));
       await _fill(tester);
-      expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভারের উত্তরের আগেই "সইয়ের অপেক্ষায় হবে"');
+      expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভারের উত্তরের আগেই "অনুমোদনের অপেক্ষায় হবে"');
       expect(postLabel(tester), 'পোস্ট');
       await _tap(tester, 'pay-preview');
-      expect(_shown('pay-state-will-wait'), isTrue, reason: '⛔ সার্ভার সই চায়, তবু "সইয়ের অপেক্ষায় হবে" নেই');
-      expect(postLabel(tester), 'সইয়ে পাঠান', reason: '⛔ সই লাগবে, তবু বোতাম "পোস্ট"');
+      expect(_shown('pay-state-will-wait'), isTrue, reason: '⛔ সার্ভার অনুমোদন চায়, তবু "অনুমোদনের অপেক্ষায় হবে" নেই');
+      expect(postLabel(tester), 'অনুমোদনে পাঠান', reason: '⛔ অনুমোদন লাগবে, তবু বোতাম "পোস্ট"');
       await _type(tester, 'pay-ait', '2500');
       expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ লেখা বদলেছে, তবু পুরনো রায়');
     });
@@ -490,7 +490,7 @@ void main() {
         await _pump(tester, api());
         await _fill(tester);
         await _tap(tester, 'pay-preview');
-        expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভার সই চায়নি, তবু "সইয়ের অপেক্ষায় হবে"');
+        expect(_shown('pay-state-will-wait'), isFalse, reason: '⛔ সার্ভার অনুমোদন চায়নি, তবু "অনুমোদনের অপেক্ষায় হবে"');
         expect(postLabel(tester), 'পোস্ট');
       });
     }

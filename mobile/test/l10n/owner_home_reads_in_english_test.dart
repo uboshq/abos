@@ -123,7 +123,7 @@ void main() {
     await pump(tester);
     final texts = _allText(tester);
     expect(texts.join(' '), contains('Total in hand and bank'), reason: 'ইংরেজিতেই আঁকা');
-    expect(texts.join(' '), contains('Awaiting signature'));
+    expect(texts.join(' '), contains('Awaiting approval'));
     expect(texts.join(' '), contains('Stock value'));
     // ⓘ চিপও এখন ইংরেজিতে (a6, paper_states-এর label_en) — আর কোনো ছাড় নেই
     final left = bengaliLeft(texts);

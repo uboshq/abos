@@ -595,7 +595,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get permissionNotificationsBody =>
-      'ABOS sends notifications so you hear about signature requests, approvals and deliveries even when the app is closed. The phone will ask for notification permission next — tap \"Allow\". Without it the app still works; you just see the news when you open the app.';
+      'ABOS sends notifications so you hear about approval requests, approvals and deliveries even when the app is closed. The phone will ask for notification permission next — tap \"Allow\". Without it the app still works; you just see the news when you open the app.';
 
   @override
   String get permissionNotNow => 'Not now';
@@ -908,7 +908,7 @@ class AppL10nEn extends AppL10n {
   String get commonLoadFailed => 'Could not load';
 
   @override
-  String get commonSign => 'Sign';
+  String get commonSign => 'Approve';
 
   @override
   String get voucherTypeReceipt => 'Collection voucher';
@@ -964,7 +964,7 @@ class AppL10nEn extends AppL10n {
     String _temp0 = intl.Intl.selectLogic(
       state,
       {
-        'awaiting': 'Awaiting signature',
+        'awaiting': 'Awaiting approval',
         'posted': 'Posted',
         'cancelled': 'Cancelled',
         'other': 'Draft',
@@ -1981,11 +1981,11 @@ class AppL10nEn extends AppL10n {
   String get homeMfsAccounts => 'MFS accounts';
 
   @override
-  String get homeAwaitingSignature => 'Awaiting signature';
+  String get homeAwaitingSignature => 'Awaiting approval';
 
   @override
   String homeAwaitingSignatureCount(String count) {
-    return 'Awaiting signature · $count';
+    return 'Awaiting approval · $count';
   }
 
   @override
@@ -1993,10 +1993,10 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get homeWaitingLoadFailed =>
-      'Could not fetch the papers to sign. Check the network and try again.';
+      'Could not fetch the papers to approve. Check the network and try again.';
 
   @override
-  String get homeNothingWaiting => 'Nothing is awaiting signature now.';
+  String get homeNothingWaiting => 'Nothing is awaiting approval now.';
 
   @override
   String get homeDetails => 'Details';
@@ -2463,17 +2463,17 @@ class AppL10nEn extends AppL10n {
       'Payee\'s bank (from the supplier record — not changed here)';
 
   @override
-  String get payPayeeBankVerified => 'Verified by two signatures';
+  String get payPayeeBankVerified => 'Verified by two approvals';
 
   @override
   String get payPayeeBankNone => 'No payee bank details';
 
   @override
-  String get payPayeeBankPending => 'Awaiting signature';
+  String get payPayeeBankPending => 'Awaiting approval';
 
   @override
   String get payUnsignedBlocks =>
-      'The payee\'s bank details have no second signature yet — a bank payment cannot be made. Next: enter the bank details on the supplier\'s page, then a second person signs them. Cash, MFS or cheque can be paid now.';
+      'The payee\'s bank details have no second approval yet — a bank payment cannot be made. Next: enter the bank details on the supplier\'s page, then a second person approves them. Cash, MFS or cheque can be paid now.';
 
   @override
   String get payToAccount => 'Account it goes to *';
@@ -2803,7 +2803,7 @@ class AppL10nEn extends AppL10n {
   String get counterReturnDone => 'Returned';
 
   @override
-  String get counterAwaitingSignature => 'Awaiting signature';
+  String get counterAwaitingSignature => 'Awaiting approval';
 
   @override
   String get counterReturnFailed => 'Not returned';
@@ -3422,8 +3422,7 @@ class AppL10nEn extends AppL10n {
   String get counterRate => 'Rate';
 
   @override
-  String get counterDiscountLabel =>
-      'Discount % (needs the owner\'s signature)';
+  String get counterDiscountLabel => 'Discount % (needs the owner\'s approval)';
 
   @override
   String get counterFree => 'Free';
@@ -5071,7 +5070,7 @@ class AppL10nEn extends AppL10n {
   String get deliveryOrdersFilterAll => 'All';
 
   @override
-  String get deliveryOrdersFilterMine => 'Awaiting signature (mine)';
+  String get deliveryOrdersFilterMine => 'Awaiting approval (mine)';
 
   @override
   String deliveryOrdersEmpty(String kind) {
@@ -5087,7 +5086,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get deliveryOrdersEmptyMine =>
-      'Nothing is awaiting signature from you now.';
+      'Nothing is awaiting approval from you now.';
 
   @override
   String get deliveryOrdersNoCustomer => 'No customer';
@@ -5626,7 +5625,7 @@ class AppL10nEn extends AppL10n {
   String get claimsKindExpense => 'Expense claim';
 
   @override
-  String get claimsStateSubmitted => 'Awaiting signature';
+  String get claimsStateSubmitted => 'Awaiting approval';
 
   @override
   String get claimsStateApproved => 'Approved — awaiting payment';
@@ -5641,7 +5640,7 @@ class AppL10nEn extends AppL10n {
   String get claimsStateOther => 'Pending';
 
   @override
-  String get hrLeaveStatePending => 'Awaiting signature';
+  String get hrLeaveStatePending => 'Awaiting approval';
 
   @override
   String get hrLeaveStateApproved => 'Approved';
@@ -5684,7 +5683,7 @@ class AppL10nEn extends AppL10n {
       'Approvals are not on this server yet — the app is newer than the server. Tell the office.';
 
   @override
-  String get approvalsInboxSigned => 'Signed.';
+  String get approvalsInboxSigned => 'Approved.';
 
   @override
   String get approvalsInboxRejected => 'Rejected.';
@@ -5700,7 +5699,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsInboxAmountChanged =>
-      'The paper\'s amount changed after you opened the card — check the new amount and sign again.';
+      'The paper\'s amount changed after you opened the card — check the new amount and approve again.';
 
   @override
   String get approvalsInboxOffline =>
@@ -5713,10 +5712,10 @@ class AppL10nEn extends AppL10n {
   String get approvalsInboxMoreFailed => 'Could not load more.';
 
   @override
-  String get approvalsInboxSignTitle => 'Sign this paper?';
+  String get approvalsInboxSignTitle => 'Approve this paper?';
 
   @override
-  String get approvalsInboxSignButton => 'Sign';
+  String get approvalsInboxSignButton => 'Approve';
 
   @override
   String get approvalsInboxRejectTitle => 'Reject this paper?';
@@ -5783,7 +5782,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String approvalsDelegationRevokeBody(String person) {
-    return '$person will no longer be able to sign for you.';
+    return '$person will no longer be able to approve for you.';
   }
 
   @override
@@ -5824,7 +5823,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsDelegationEmptyMessage =>
-      'Going on leave? Tap \"New delegation\" to let someone sign for you.';
+      'Going on leave? Tap \"New delegation\" to let someone approve for you.';
 
   @override
   String get approvalsDelegationNoneGiven =>
@@ -6029,8 +6028,8 @@ class AppL10nEn extends AppL10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Still awaiting signature: $count requests',
-      one: 'Still awaiting signature: $count request',
+      other: 'Still awaiting approval: $count requests',
+      one: 'Still awaiting approval: $count request',
     );
     return '$_temp0';
   }
@@ -6040,7 +6039,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsMyRequestsEmptyMessage =>
-      'A paper you send for signature shows here.';
+      'A paper you send for approval shows here.';
 
   @override
   String get approvalsMyRequestsMore => 'More';
@@ -6287,10 +6286,10 @@ class AppL10nEn extends AppL10n {
   String get noticesEmptyMessage => 'Anything new from the company shows here.';
 
   @override
-  String get noticesSigned => 'Signed.';
+  String get noticesSigned => 'Acknowledged.';
 
   @override
-  String get noticesSignFailed => 'Could not sign.';
+  String get noticesSignFailed => 'Could not acknowledge.';
 
   @override
   String get noticesDetailTitle => 'Notice';
@@ -6302,17 +6301,17 @@ class AppL10nEn extends AppL10n {
 
   @override
   String noticesSignBy(String date) {
-    return 'Sign by $date';
+    return 'Acknowledgement due $date';
   }
 
   @override
-  String get noticesYouSigned => 'You have signed';
+  String get noticesYouSigned => 'You have acknowledged';
 
   @override
   String get noticesSending => 'Sending…';
 
   @override
-  String get noticesReadAndAgree => 'I have read and I agree — Sign';
+  String get noticesReadAndAgree => 'I have read and I agree — Acknowledge';
 
   @override
   String noticesStanding(String standing) {
@@ -6412,13 +6411,13 @@ class AppL10nEn extends AppL10n {
       'Write the reason for rejecting.';
 
   @override
-  String get hrRegisterLeaveSigned => 'Leave signed.';
+  String get hrRegisterLeaveSigned => 'Leave approved.';
 
   @override
   String get hrRegisterLeaveRejected => 'Leave rejected.';
 
   @override
-  String get hrRegisterLeaveSignFailed => 'Could not sign.';
+  String get hrRegisterLeaveSignFailed => 'Could not approve.';
 
   @override
   String get hrRegisterLeaveRejectFailed => 'Could not reject.';
@@ -6469,7 +6468,7 @@ class AppL10nEn extends AppL10n {
   String get hrRegisterLeaveReject => 'Reject';
 
   @override
-  String get hrRegisterLeaveSign => 'Sign';
+  String get hrRegisterLeaveSign => 'Approve';
 
   @override
   String get hrRegisterLeaveMore => 'More';
@@ -6486,7 +6485,7 @@ class AppL10nEn extends AppL10n {
   String get hrLeaveTitle => 'My leave';
 
   @override
-  String get hrLeaveSent => 'Leave application sent — awaiting signature.';
+  String get hrLeaveSent => 'Leave application sent — awaiting approval.';
 
   @override
   String get hrLeaveApply => 'Apply for leave';
@@ -6726,7 +6725,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get claimsHowItWorks =>
-      'You get the amount after the signatures and the cashier. Spending is settled from your advance first.';
+      'You get the amount after the approvals and the cashier. Spending is settled from your advance first.';
 
   @override
   String get claimsKindSpent => 'Already spent';
@@ -6775,10 +6774,10 @@ class AppL10nEn extends AppL10n {
   String get ownerAlerts => 'Alerts';
 
   @override
-  String get ownerAwaitingSignature => 'Awaiting signature';
+  String get ownerAwaitingSignature => 'Awaiting approval';
 
   @override
-  String get ownerNothingAwaitingNow => 'No paper is awaiting signature now.';
+  String get ownerNothingAwaitingNow => 'No paper is awaiting approval now.';
 
   @override
   String get ownerSomeCompaniesLeftOut =>
@@ -6897,11 +6896,11 @@ class AppL10nEn extends AppL10n {
 
   @override
   String ownerAwaitingSignatureCount(int count) {
-    return 'Awaiting signature ($count)';
+    return 'Awaiting approval ($count)';
   }
 
   @override
-  String get ownerNothingAwaiting => 'No paper is awaiting signature.';
+  String get ownerNothingAwaiting => 'No paper is awaiting approval.';
 
   @override
   String get ownerGroupTotal => 'Group total';
@@ -7623,7 +7622,7 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get papersSignatures => 'Signatures';
+  String get papersSignatures => 'Approvals';
 
   @override
   String papersRequestedBy(String name) {
@@ -7636,7 +7635,7 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get papersSign => 'Sign';
+  String get papersSign => 'Approve';
 
   @override
   String get financeLoadFailed => 'Could not load. Pull down to try again.';
@@ -7674,7 +7673,7 @@ class AppL10nEn extends AppL10n {
   String get financeStatusActive => 'Active';
 
   @override
-  String get financeStatusAwaitingSign => 'Awaiting signature';
+  String get financeStatusAwaitingSign => 'Awaiting approval';
 
   @override
   String get financeStatusEnded => 'Ended';
@@ -8140,7 +8139,7 @@ class AppL10nEn extends AppL10n {
   String get vouchersListNew => 'New voucher';
 
   @override
-  String get vouchersListAwaitingSign => 'Awaiting signature';
+  String get vouchersListAwaitingSign => 'Awaiting approval';
 
   @override
   String get vouchersListAllBranches => 'All branches';
@@ -8300,7 +8299,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get vouchersFormKeepDraftHint =>
-      'When off, it is posted on save — it stays a draft if signatures are needed or you wrote it';
+      'When off, it is posted on save — it stays a draft if approvals are needed or you wrote it';
 
   @override
   String get vouchersFormSave => 'Save';
@@ -8312,7 +8311,7 @@ class AppL10nEn extends AppL10n {
   String get moneyResultDone => 'Saved.';
 
   @override
-  String get moneyResultPending => 'Awaiting signature.';
+  String get moneyResultPending => 'Awaiting approval.';
 
   @override
   String moneyLoadFailed(String title) {
@@ -8713,8 +8712,7 @@ class AppL10nEn extends AppL10n {
   String get creditDashBlocked => 'Customers on credit hold';
 
   @override
-  String get creditDashPending =>
-      'Limit increase requests (awaiting signature)';
+  String get creditDashPending => 'Limit increase requests (awaiting approval)';
 
   @override
   String creditPeople(String count) {
@@ -8893,13 +8891,13 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get creditSheetOwnerNote =>
-      'It takes effect only once the owner signs; until then the old limit applies.';
+      'It takes effect only once the owner approves; until then the old limit applies.';
 
   @override
   String get creditSheetSending => 'Sending…';
 
   @override
-  String get creditSheetSend => 'Send for signature';
+  String get creditSheetSend => 'Send for approval';
 
   @override
   String get creditLiftFailed => 'Could not lift the credit hold.';
@@ -8929,10 +8927,10 @@ class AppL10nEn extends AppL10n {
   String get creditRiskCritical => 'Critical';
 
   @override
-  String get creditRequestPending => 'Awaiting signature';
+  String get creditRequestPending => 'Awaiting approval';
 
   @override
-  String get creditRequestApproved => 'Signed — applied';
+  String get creditRequestApproved => 'Approved — applied';
 
   @override
   String get creditRequestRejected => 'Rejected';
@@ -8944,7 +8942,7 @@ class AppL10nEn extends AppL10n {
   String get creditRequestExpired => 'Expired';
 
   @override
-  String get creditRequestVoid => 'No owner signature — not applied';
+  String get creditRequestVoid => 'No owner approval — not applied';
 
   @override
   String get creditApiRequestSent => 'Request sent.';
@@ -9979,16 +9977,17 @@ class AppL10nEn extends AppL10n {
   String get launcherWidgetNotices => 'Notices';
 
   @override
-  String get launcherWidgetApprovalsName => 'Waiting for signature';
+  String get launcherWidgetApprovalsName => 'Waiting for approval';
 
   @override
-  String get launcherWidgetApprovalsTitle => 'Awaiting signature from you';
+  String get launcherWidgetApprovalsTitle => 'Awaiting approval from you';
 
   @override
-  String get launcherWidgetApprovalsEmpty => 'No signatures pending';
+  String get launcherWidgetApprovalsEmpty => 'No approvals pending';
 
   @override
-  String get launcherWidgetApprovalsNothingNow => 'Nothing to sign right now.';
+  String get launcherWidgetApprovalsNothingNow =>
+      'Nothing to approve right now.';
 
   @override
   String launcherWidgetApprovalsMore(String count) {
@@ -10303,7 +10302,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String launcherWidgetOwnerToSign(String count) {
-    return '$count to sign';
+    return '$count to approve';
   }
 
   @override
@@ -10392,7 +10391,7 @@ class AppL10nEn extends AppL10n {
   String get launcherWidgetQuickScan => 'Scan';
 
   @override
-  String get launcherWidgetQuickSign => 'Sign';
+  String get launcherWidgetQuickSign => 'Approve';
 
   @override
   String get launcherWidgetQuickEmpty => 'No quick actions for you';
@@ -10780,7 +10779,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get collectDifferenceSign =>
-      'Needs the owner\'s signature — posting sends it for signing.';
+      'Needs the owner\'s approval — posting sends it for approving.';
 
   @override
   String get collectWithheldTitle => 'Withholding and discount';
@@ -10826,14 +10825,14 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get collectControlNoSignature =>
-      'No signature needed — posting puts it in the books at once.';
+      'No approval needed — posting puts it in the books at once.';
 
   @override
   String get collectControlSlip => 'This company requires a slip photo.';
 
   @override
   String get collectControlNoUndo =>
-      'A posted collection cannot be edited; to correct it, write the reason and reverse it (a second signature).';
+      'A posted collection cannot be edited; to correct it, write the reason and reverse it (a second approval).';
 
   @override
   String get collectControlStops =>
@@ -10920,11 +10919,11 @@ class AppL10nEn extends AppL10n {
   String get collectSumWithheld => 'Withheld by the customer (VDS/AIT)';
 
   @override
-  String get collectSumDiscount => 'Discount on collection (needs a signature)';
+  String get collectSumDiscount => 'Discount on collection (needs an approval)';
 
   @override
   String collectSumRounding(String amount) {
-    return 'Rounding (owner\'s signature above $amount)';
+    return 'Rounding (owner\'s approval above $amount)';
   }
 
   @override
@@ -11018,15 +11017,15 @@ class AppL10nEn extends AppL10n {
 
   @override
   String collectRoundingSign(String amount) {
-    return 'Rounding $amount — posts after the owner\'s signature';
+    return 'Rounding $amount — posts after the owner\'s approval';
   }
 
   @override
   String get collectOwnerSign =>
-      'This collection needs the owner\'s signature — it goes to the books after signing';
+      'This collection needs the owner\'s approval — it goes to the books after approving';
 
   @override
-  String get collectSendForSign => 'Send for signature';
+  String get collectSendForSign => 'Send for approval';
 
   @override
   String get collectOutOfBranch => 'This customer is not in your branch';

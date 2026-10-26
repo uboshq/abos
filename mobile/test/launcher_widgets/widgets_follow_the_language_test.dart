@@ -178,11 +178,11 @@ void main() {
   test('the older approvals widget says its lines in the language', () {
     AppLocale.current = AppLocale.english;
     final en = ApprovalsLauncherWidget.valuesFor(const [], at: DateTime(2026, 10, 21, 10));
-    expect(en[ApprovalsLauncherWidget.empty], 'Nothing to sign right now.');
+    expect(en[ApprovalsLauncherWidget.empty], 'Nothing to approve right now.');
     expect(en[ApprovalsLauncherWidget.asOf], 'As of 10:00 AM');
     AppLocale.current = AppLocale.locale;
     final bn = ApprovalsLauncherWidget.valuesFor(const [], at: DateTime(2026, 10, 21, 10));
-    expect(bn[ApprovalsLauncherWidget.empty], 'এখন সইয়ের জন্য কিছু নেই।');
+    expect(bn[ApprovalsLauncherWidget.empty], 'এখন অনুমোদনের জন্য কিছু নেই।');
     expect(bn[ApprovalsLauncherWidget.asOf], 'সকাল 10:00 পর্যন্ত');
   });
 

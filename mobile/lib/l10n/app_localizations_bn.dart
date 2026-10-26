@@ -591,7 +591,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get permissionNotificationsBody =>
-      'সই চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।';
+      'অনুমোদন চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।';
 
   @override
   String get permissionNotNow => 'এখন না';
@@ -901,7 +901,7 @@ class AppL10nBn extends AppL10n {
   String get commonLoadFailed => 'আনা গেল না';
 
   @override
-  String get commonSign => 'সই দিন';
+  String get commonSign => 'অনুমোদন দিন';
 
   @override
   String get voucherTypeReceipt => 'আদায় ভাউচার';
@@ -957,7 +957,7 @@ class AppL10nBn extends AppL10n {
     String _temp0 = intl.Intl.selectLogic(
       state,
       {
-        'awaiting': 'সইয়ের অপেক্ষায়',
+        'awaiting': 'অনুমোদনের অপেক্ষায়',
         'posted': 'পোস্ট হয়েছে',
         'cancelled': 'বাতিল',
         'other': 'খসড়া',
@@ -1948,11 +1948,11 @@ class AppL10nBn extends AppL10n {
   String get homeMfsAccounts => 'MFS খাত';
 
   @override
-  String get homeAwaitingSignature => 'সইয়ের অপেক্ষায়';
+  String get homeAwaitingSignature => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String homeAwaitingSignatureCount(String count) {
-    return 'সইয়ের অপেক্ষায় · $countটি';
+    return 'অনুমোদনের অপেক্ষায় · $countটি';
   }
 
   @override
@@ -1960,10 +1960,10 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get homeWaitingLoadFailed =>
-      'সইয়ের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।';
+      'অনুমোদনের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।';
 
   @override
-  String get homeNothingWaiting => 'এখন কিছু সইয়ের অপেক্ষায় নেই।';
+  String get homeNothingWaiting => 'এখন কিছু অনুমোদনের অপেক্ষায় নেই।';
 
   @override
   String get homeDetails => 'বিস্তারিত';
@@ -2416,17 +2416,17 @@ class AppL10nBn extends AppL10n {
       'প্রাপকের ব্যাংক (সরবরাহকারীর রেকর্ড থেকে — এখানে বদলায় না)';
 
   @override
-  String get payPayeeBankVerified => 'দুজনের সইয়ে যাচাই-করা';
+  String get payPayeeBankVerified => 'দুজনের অনুমোদনে যাচাই-করা';
 
   @override
   String get payPayeeBankNone => 'প্রাপকের ব্যাংক তথ্য নেই';
 
   @override
-  String get payPayeeBankPending => 'সইয়ের অপেক্ষায়';
+  String get payPayeeBankPending => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get payUnsignedBlocks =>
-      'প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় সই হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় সই দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।';
+      'প্রাপকের ব্যাংক তথ্যে এখনো দ্বিতীয় অনুমোদন হয়নি — ব্যাংকে পরিশোধ করা যাবে না। পথ: সরবরাহকারীর পাতায় ব্যাংক তথ্য বসান, তারপর আরেকজন দ্বিতীয় অনুমোদন দিন। নগদ, MFS বা চেকে এখনই দেওয়া যায়।';
 
   @override
   String get payToAccount => 'কোন খাতে যাবে *';
@@ -2751,7 +2751,7 @@ class AppL10nBn extends AppL10n {
   String get counterReturnDone => 'ফেরত হলো';
 
   @override
-  String get counterAwaitingSignature => 'সইয়ের অপেক্ষায়';
+  String get counterAwaitingSignature => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get counterReturnFailed => 'ফেরত হলো না';
@@ -3365,7 +3365,7 @@ class AppL10nBn extends AppL10n {
   String get counterRate => 'দর';
 
   @override
-  String get counterDiscountLabel => 'ছাড় % (দিলে মালিকের সই লাগবে)';
+  String get counterDiscountLabel => 'ছাড় % (দিলে মালিকের অনুমোদন লাগবে)';
 
   @override
   String get counterFree => 'ফ্রি';
@@ -4991,7 +4991,7 @@ class AppL10nBn extends AppL10n {
   String get deliveryOrdersFilterAll => 'সব';
 
   @override
-  String get deliveryOrdersFilterMine => 'আমার সইয়ের অপেক্ষায়';
+  String get deliveryOrdersFilterMine => 'আমার অনুমোদনের অপেক্ষায়';
 
   @override
   String deliveryOrdersEmpty(String kind) {
@@ -5006,7 +5006,8 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
-  String get deliveryOrdersEmptyMine => 'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।';
+  String get deliveryOrdersEmptyMine =>
+      'এখন আপনার অনুমোদনের অপেক্ষায় কিছু নেই।';
 
   @override
   String get deliveryOrdersNoCustomer => 'গ্রাহক নেই';
@@ -5536,7 +5537,7 @@ class AppL10nBn extends AppL10n {
   String get claimsKindExpense => 'খরচের দাবি';
 
   @override
-  String get claimsStateSubmitted => 'সইয়ের অপেক্ষায়';
+  String get claimsStateSubmitted => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get claimsStateApproved => 'অনুমোদিত — টাকার অপেক্ষায়';
@@ -5551,7 +5552,7 @@ class AppL10nBn extends AppL10n {
   String get claimsStateOther => 'অপেক্ষায়';
 
   @override
-  String get hrLeaveStatePending => 'সইয়ের অপেক্ষায়';
+  String get hrLeaveStatePending => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get hrLeaveStateApproved => 'অনুমোদিত';
@@ -5593,7 +5594,7 @@ class AppL10nBn extends AppL10n {
       'অনুমোদনের সুবিধাটা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন। অফিসে জানান।';
 
   @override
-  String get approvalsInboxSigned => 'সই দেওয়া হলো।';
+  String get approvalsInboxSigned => 'অনুমোদন দেওয়া হলো।';
 
   @override
   String get approvalsInboxRejected => 'প্রত্যাখ্যান করা হয়েছে।';
@@ -5610,7 +5611,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsInboxAmountChanged =>
-      'কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।';
+      'কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার অনুমোদন দিন।';
 
   @override
   String get approvalsInboxOffline =>
@@ -5623,10 +5624,10 @@ class AppL10nBn extends AppL10n {
   String get approvalsInboxMoreFailed => 'আরও আনা গেল না।';
 
   @override
-  String get approvalsInboxSignTitle => 'সই দেবেন?';
+  String get approvalsInboxSignTitle => 'অনুমোদন দেবেন?';
 
   @override
-  String get approvalsInboxSignButton => 'সই দিন';
+  String get approvalsInboxSignButton => 'অনুমোদন দিন';
 
   @override
   String get approvalsInboxRejectTitle => 'প্রত্যাখ্যান করবেন?';
@@ -5678,7 +5679,7 @@ class AppL10nBn extends AppL10n {
       'এই কাগজের বিস্তারিত ফোনে নেই — \"কাগজ দেখুন\" চেপে পুরো কাগজটা দেখুন।';
 
   @override
-  String get approvalsDelegationTitle => 'সইয়ের ভার';
+  String get approvalsDelegationTitle => 'দায়িত্ব অর্পণ';
 
   @override
   String get approvalsDelegationLoadFailed =>
@@ -5693,7 +5694,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String approvalsDelegationRevokeBody(String person) {
-    return '$person আর আপনার হয়ে সই দিতে পারবেন না।';
+    return '$person আর আপনার হয়ে অনুমোদন দিতে পারবেন না।';
   }
 
   @override
@@ -5732,7 +5733,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsDelegationEmptyMessage =>
-      'ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে সই দিতে দিন।';
+      'ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে অনুমোদন দিতে দিন।';
 
   @override
   String get approvalsDelegationNoneGiven => 'আপনি কাউকে ভার দেননি।';
@@ -5931,7 +5932,7 @@ class AppL10nBn extends AppL10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'এখনো সইয়ের অপেক্ষায়: $count টি',
+      other: 'এখনো অনুমোদনের অপেক্ষায়: $count টি',
     );
     return '$_temp0';
   }
@@ -5941,7 +5942,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsMyRequestsEmptyMessage =>
-      'কোনো কাগজ সইয়ের জন্য পাঠালে এখানে দেখা যাবে।';
+      'কোনো কাগজ অনুমোদনের জন্য পাঠালে এখানে দেখা যাবে।';
 
   @override
   String get approvalsMyRequestsMore => 'আরও';
@@ -6185,10 +6186,10 @@ class AppL10nBn extends AppL10n {
   String get noticesEmptyMessage => 'প্রতিষ্ঠান নতুন কিছু জানালে এখানে দেখাবে।';
 
   @override
-  String get noticesSigned => 'সই দেওয়া হলো।';
+  String get noticesSigned => 'স্বীকৃতি দেওয়া হলো।';
 
   @override
-  String get noticesSignFailed => 'সই দেওয়া গেল না।';
+  String get noticesSignFailed => 'স্বীকৃতি দেওয়া গেল না।';
 
   @override
   String get noticesDetailTitle => 'নোটিশ';
@@ -6200,17 +6201,17 @@ class AppL10nBn extends AppL10n {
 
   @override
   String noticesSignBy(String date) {
-    return 'সইয়ের শেষ সময় $date';
+    return 'স্বীকৃতির শেষ সময় $date';
   }
 
   @override
-  String get noticesYouSigned => 'আপনি সই দিয়েছেন';
+  String get noticesYouSigned => 'আপনি স্বীকৃতি দিয়েছেন';
 
   @override
   String get noticesSending => 'পাঠানো হচ্ছে…';
 
   @override
-  String get noticesReadAndAgree => 'পড়েছি ও মানছি — সই দিন';
+  String get noticesReadAndAgree => 'পড়েছি ও মানছি — স্বীকৃতি দিন';
 
   @override
   String noticesStanding(String standing) {
@@ -6309,13 +6310,13 @@ class AppL10nBn extends AppL10n {
       'প্রত্যাখ্যানের কারণ লিখতে হবে।';
 
   @override
-  String get hrRegisterLeaveSigned => 'ছুটিতে সই দেওয়া হলো।';
+  String get hrRegisterLeaveSigned => 'ছুটিতে অনুমোদন দেওয়া হলো।';
 
   @override
   String get hrRegisterLeaveRejected => 'ছুটি প্রত্যাখ্যান করা হলো।';
 
   @override
-  String get hrRegisterLeaveSignFailed => 'সই দেওয়া গেল না।';
+  String get hrRegisterLeaveSignFailed => 'অনুমোদন দেওয়া গেল না।';
 
   @override
   String get hrRegisterLeaveRejectFailed => 'প্রত্যাখ্যান করা গেল না।';
@@ -6359,7 +6360,7 @@ class AppL10nBn extends AppL10n {
   String get hrRegisterLeaveReject => 'প্রত্যাখ্যান';
 
   @override
-  String get hrRegisterLeaveSign => 'সই দিন';
+  String get hrRegisterLeaveSign => 'অনুমোদন দিন';
 
   @override
   String get hrRegisterLeaveMore => 'আরও';
@@ -6376,7 +6377,7 @@ class AppL10nBn extends AppL10n {
   String get hrLeaveTitle => 'আমার ছুটি';
 
   @override
-  String get hrLeaveSent => 'ছুটির আবেদন গেছে — সইয়ের অপেক্ষায়।';
+  String get hrLeaveSent => 'ছুটির আবেদন গেছে — অনুমোদনের অপেক্ষায়।';
 
   @override
   String get hrLeaveApply => 'ছুটির আবেদন';
@@ -6613,7 +6614,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get claimsHowItWorks =>
-      'সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।';
+      'অনুমোদন আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।';
 
   @override
   String get claimsKindSpent => 'খরচ হয়ে গেছে';
@@ -6661,10 +6662,11 @@ class AppL10nBn extends AppL10n {
   String get ownerAlerts => 'সতর্কতা';
 
   @override
-  String get ownerAwaitingSignature => 'সইয়ের অপেক্ষায়';
+  String get ownerAwaitingSignature => 'অনুমোদনের অপেক্ষায়';
 
   @override
-  String get ownerNothingAwaitingNow => 'এখন কোনো কাগজ সইয়ের অপেক্ষায় নেই।';
+  String get ownerNothingAwaitingNow =>
+      'এখন কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।';
 
   @override
   String get ownerSomeCompaniesLeftOut => 'কিছু কোম্পানি বাদ — অনুমতি নেই';
@@ -6782,11 +6784,11 @@ class AppL10nBn extends AppL10n {
 
   @override
   String ownerAwaitingSignatureCount(int count) {
-    return 'সইয়ের অপেক্ষায় ($countটা)';
+    return 'অনুমোদনের অপেক্ষায় ($countটা)';
   }
 
   @override
-  String get ownerNothingAwaiting => 'কোনো কাগজ সইয়ের অপেক্ষায় নেই।';
+  String get ownerNothingAwaiting => 'কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।';
 
   @override
   String get ownerGroupTotal => 'গ্রুপের মোট';
@@ -7495,7 +7497,7 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
-  String get papersSignatures => 'সই';
+  String get papersSignatures => 'অনুমোদন';
 
   @override
   String papersRequestedBy(String name) {
@@ -7508,7 +7510,7 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
-  String get papersSign => 'সই দিন';
+  String get papersSign => 'অনুমোদন দিন';
 
   @override
   String get financeLoadFailed => 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
@@ -7544,7 +7546,7 @@ class AppL10nBn extends AppL10n {
   String get financeStatusActive => 'চালু';
 
   @override
-  String get financeStatusAwaitingSign => 'সইয়ের অপেক্ষায়';
+  String get financeStatusAwaitingSign => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get financeStatusEnded => 'শেষ';
@@ -8006,7 +8008,7 @@ class AppL10nBn extends AppL10n {
   String get vouchersListNew => 'নতুন ভাউচার';
 
   @override
-  String get vouchersListAwaitingSign => 'সইয়ের অপেক্ষায়';
+  String get vouchersListAwaitingSign => 'অনুমোদনের অপেক্ষায়';
 
   @override
   String get vouchersListAllBranches => 'সব শাখা';
@@ -8161,7 +8163,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get vouchersFormKeepDraftHint =>
-      'বন্ধ থাকলে সংরক্ষণেই পোস্ট — সই লাগলে বা নিজের লেখা হলে খসড়াই থাকবে';
+      'বন্ধ থাকলে সংরক্ষণেই পোস্ট — অনুমোদন লাগলে বা নিজের লেখা হলে খসড়াই থাকবে';
 
   @override
   String get vouchersFormSave => 'সংরক্ষণ';
@@ -8173,7 +8175,7 @@ class AppL10nBn extends AppL10n {
   String get moneyResultDone => 'বসেছে।';
 
   @override
-  String get moneyResultPending => 'সইয়ের অপেক্ষায়।';
+  String get moneyResultPending => 'অনুমোদনের অপেক্ষায়।';
 
   @override
   String moneyLoadFailed(String title) {
@@ -8572,7 +8574,7 @@ class AppL10nBn extends AppL10n {
   String get creditDashBlocked => 'বাকি বন্ধ গ্রাহক';
 
   @override
-  String get creditDashPending => 'সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)';
+  String get creditDashPending => 'সীমা বাড়ানোর অনুরোধ (অনুমোদনের অপেক্ষায়)';
 
   @override
   String creditPeople(String count) {
@@ -8740,13 +8742,13 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get creditSheetOwnerNote =>
-      'মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।';
+      'মালিকের অনুমোদন হলে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।';
 
   @override
   String get creditSheetSending => 'পাঠানো হচ্ছে…';
 
   @override
-  String get creditSheetSend => 'সইয়ের জন্য পাঠান';
+  String get creditSheetSend => 'অনুমোদনের জন্য পাঠান';
 
   @override
   String get creditLiftFailed => 'বাকি বন্ধ তোলা গেল না।';
@@ -8776,10 +8778,10 @@ class AppL10nBn extends AppL10n {
   String get creditRiskCritical => 'চরম';
 
   @override
-  String get creditRequestPending => 'সইয়ের অপেক্ষায়';
+  String get creditRequestPending => 'অনুমোদনের অপেক্ষায়';
 
   @override
-  String get creditRequestApproved => 'সই পড়েছে — বসেছে';
+  String get creditRequestApproved => 'অনুমোদন হয়েছে — বসেছে';
 
   @override
   String get creditRequestRejected => 'না';
@@ -8791,7 +8793,7 @@ class AppL10nBn extends AppL10n {
   String get creditRequestExpired => 'মেয়াদ পেরিয়েছে';
 
   @override
-  String get creditRequestVoid => 'মালিকের সই নেই — বসেনি';
+  String get creditRequestVoid => 'মালিকের অনুমোদন নেই — বসেনি';
 
   @override
   String get creditApiRequestSent => 'অনুরোধ পাঠানো হলো।';
@@ -9815,16 +9817,17 @@ class AppL10nBn extends AppL10n {
   String get launcherWidgetNotices => 'নোটিশ';
 
   @override
-  String get launcherWidgetApprovalsName => 'সইয়ের অপেক্ষা';
+  String get launcherWidgetApprovalsName => 'অনুমোদনের অপেক্ষা';
 
   @override
-  String get launcherWidgetApprovalsTitle => 'আপনার সইয়ের অপেক্ষায়';
+  String get launcherWidgetApprovalsTitle => 'আপনার অনুমোদনের অপেক্ষায়';
 
   @override
-  String get launcherWidgetApprovalsEmpty => 'কোনো সই বাকি নেই';
+  String get launcherWidgetApprovalsEmpty => 'কোনো অনুমোদন বাকি নেই';
 
   @override
-  String get launcherWidgetApprovalsNothingNow => 'এখন সইয়ের জন্য কিছু নেই।';
+  String get launcherWidgetApprovalsNothingNow =>
+      'এখন অনুমোদনের জন্য কিছু নেই।';
 
   @override
   String launcherWidgetApprovalsMore(String count) {
@@ -10138,7 +10141,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String launcherWidgetOwnerToSign(String count) {
-    return '$count সই';
+    return '$count অনুমোদন';
   }
 
   @override
@@ -10226,7 +10229,7 @@ class AppL10nBn extends AppL10n {
   String get launcherWidgetQuickScan => 'স্ক্যান';
 
   @override
-  String get launcherWidgetQuickSign => 'সই';
+  String get launcherWidgetQuickSign => 'অনুমোদন';
 
   @override
   String get launcherWidgetQuickEmpty => 'আপনার জন্য কোনো দ্রুত কাজ নেই';
@@ -10611,7 +10614,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get collectDifferenceSign =>
-      'মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।';
+      'মালিকের অনুমোদন লাগবে — পোস্ট করলে অনুমোদনে যাবে।';
 
   @override
   String get collectWithheldTitle => 'কাটা ও ছাড়';
@@ -10657,14 +10660,14 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get collectControlNoSignature =>
-      'এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।';
+      'এই আদায়ে অনুমোদন লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।';
 
   @override
   String get collectControlSlip => 'এই কোম্পানিতে স্লিপের ছবি বাধ্যতামূলক।';
 
   @override
   String get collectControlNoUndo =>
-      'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় সই)।';
+      'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় অনুমোদন)।';
 
   @override
   String get collectControlStops =>
@@ -10750,11 +10753,11 @@ class AppL10nBn extends AppL10n {
   String get collectSumWithheld => 'গ্রাহক কেটেছে (VDS/AIT)';
 
   @override
-  String get collectSumDiscount => 'আদায়ে ছাড় (সই লাগবে)';
+  String get collectSumDiscount => 'আদায়ে ছাড় (অনুমোদন লাগবে)';
 
   @override
   String collectSumRounding(String amount) {
-    return 'রাউন্ডিং ($amount-এর বেশি হলে মালিকের সই)';
+    return 'রাউন্ডিং ($amount-এর বেশি হলে মালিকের অনুমোদন)';
   }
 
   @override
@@ -10846,15 +10849,15 @@ class AppL10nBn extends AppL10n {
 
   @override
   String collectRoundingSign(String amount) {
-    return 'রাউন্ডিং $amount — মালিকের সইয়ের পর পোস্ট হবে';
+    return 'রাউন্ডিং $amount — মালিকের অনুমোদনের পর পোস্ট হবে';
   }
 
   @override
   String get collectOwnerSign =>
-      'এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে';
+      'এই আদায়ে মালিকের অনুমোদন লাগবে — অনুমোদনের পর খাতায় উঠবে';
 
   @override
-  String get collectSendForSign => 'সইয়ে পাঠান';
+  String get collectSendForSign => 'অনুমোদনে পাঠান';
 
   @override
   String get collectOutOfBranch => 'এই গ্রাহক আপনার শাখায় নেই';
