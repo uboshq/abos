@@ -217,7 +217,11 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         /** "নির্বাচিত বিল" — টিক-দেওয়া বিলগুলোর যোগফল; টিক না থাকলে অন্য মডিউলের আগাম-বাছা একক বিলের বাকি */
         fillPickedBill() {
-            if (this.hasTicked) {
+            /*
+             * ⛔ টিক-দেওয়া সারি থাকলেই যোগফল — `hasTicked` নয়: ওটা আগাম-বাছা একক বিলেও সত্য, তখন যোগফল ০ বসত আর বিলের বাকি
+             * কখনো আসত না (fe, ২৬ অক্টোবর ২০২৬: party-voucher.test.js-এর "নির্বাচিত বিল" দাবি ০.০০ পেয়েছিল)।
+             */
+            if (this.pickedRows.length > 0) {
                 this.$dispatch('fill-amount', (this.allocSumPaisa / 100).toFixed(2));
 
                 return;
