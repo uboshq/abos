@@ -61,6 +61,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'finance.withdrawal.cap' => 'a setting',
         'governance.error.acknowledge_all' => 'marks error rows seen',
         'home.layout' => 'personal home layout',
+        'rail.layout' => 'personal left-rail layout (pins and order), no paper',
         'hr.leave_type.install' => 'installs default leave types, no paper',
         'hr.salary_head.install' => 'installs default salary heads, no paper',
         'inventory.stock.hold' => 'hold on a warehouse stock, the branch is the warehouse',
@@ -109,6 +110,9 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'purchase.direct.overview' => 'summary before confirm, writes nothing',
         'sales.direct.depot_check.open' => 'moves an existing source paper into depot check, its own branch',
         'sales.direct.overview' => 'summary before confirm, writes nothing',
+        // ⓘ টাকা নেওয়ার পর্দা (নকশা ১০০, a6, ২১ অক্টোবর ২০২৬) — দুটোই কিছু লেখে না; কাগজ লেখে `sales.collection.store`
+        'sales.collection.preview' => 'ledger preview, writes nothing',
+        'sales.collection.overview_new' => 'summary before confirm, writes nothing',
         'sales.direct.void' => 'voids the bill in progress',
         'sales.order.offers' => 'works out offers, writes nothing',
         'sales.portal.login.attempt' => 'dealer portal sign in',

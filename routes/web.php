@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
     // ⭐ হোমের সাজ — কেবল নিজের (মালিক, ৪ অক্টোবর ২০২৬: "লেআউট সাজান")
     Route::post('/home/layout', [WorkspaceController::class, 'saveLayout'])->name('home.layout');
+    // ⭐ বাঁ রেলের নিজের সাজ — পিন আর ক্রম, কেবল নিজের সারিতে (মালিক, ২৪ অক্টোবর ২০২৬)
+    Route::post('/rail/layout', [WorkspaceController::class, 'saveRail'])->name('rail.layout');
 
     /*
      * ⭐ কাগজের অবস্থা — আর এই পর্দাটা তালার বাইরে।

@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,16 @@ use Illuminate\Validation\Validator;
  */
 class VoucherRequest extends FormRequest
 {
+    /*
+     * ⭐ পরিশোধে "মোট টাকা" — নকশার ঘর (চুক্তি: পরিশোধে-মোট-টাকা-চুক্তি-২৫-অক্টোবর.md; fe-র সিদ্ধান্ত ক, ২৫ অক্টোবর ২০২৬)।
+     * `gross_amount` এলে সেটাই পক্ষের খাতা যতটা কমে; নিট = মোট − AIT − VDS সার্ভার গোনে আর `amount`-এ বসায়, তাই খাতার পথ
+     * ([[WithheldTax::onPayment()]], চার্জ মোটের বাইরে — ২৮ সেপ্টেম্বরের সিদ্ধান্ত) একটুও বদলায় না। ⓘ `gross_amount` না এলে
+     * পুরনো নিয়ম: `amount` = নিট (পুরনো ফোন, ভাঙে না)।
+     */
+    private bool $grossPath = false;
+
+    private bool $netAlsoSent = false;
+
     public function authorize(): bool
     {
         return true;
@@ -52,11 +63,37 @@ class VoucherRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // ⭐ টাকার ঘর লাখ-কমায় ("45,000.00", নকশার মতো; fe, ২৩ অক্টোবর ২০২৬) — কমা ছেঁটে পড়া, টাকা দেওয়ার পর্দার একই নিয়মে ([[PaymentRequest]])
-        foreach (['amount', 'charge_amount'] as $field) {
+        foreach (['amount', 'charge_amount', 'gross_amount', 'ait_amount', 'vds_amount'] as $field) {
             $value = $this->input($field);
 
             if (is_string($value) && str_contains($value, ',')) {
                 $this->merge([$field => str_replace(',', '', trim($value))]);
+            }
+        }
+
+        /*
+         * ⭐ কম-বেশি — `difference[kind]` (discount|rounding) আর `difference[amount]` (দফা ৪; cb-ma-5; আদায়ের একই আকার)। ⓘ মাথার দুই ঘরে
+         * নামানো, লাখ-কমা ছেঁটে; ঋণাত্মক লিখলে আকারটাই ধরা (ফোনের আদায়ের একই নিয়ম — চিহ্ন দিক বোঝায় না, ধরন বোঝায়)।
+         */
+        $difference = $this->input('difference');
+        if (is_array($difference)) {
+            $amount = str_replace([',', '-'], '', trim((string) ($difference['amount'] ?? '')));
+            $this->merge([
+                'difference_kind' => ($difference['kind'] ?? '') === '' ? null : $difference['kind'],
+                'difference_amount' => $amount === '' ? null : $amount,
+            ]);
+        }
+
+        if ($this->input('type') === Voucher::PAYMENT && $this->exists('gross_amount')) {
+            $this->grossPath = true;
+            $this->netAlsoSent = filled($this->input('amount'));
+
+            if (! $this->netAlsoSent) {
+                $net = $this->netOfGross();
+
+                if ($net !== null && bccomp($net, '0', 4) > 0) {
+                    $this->merge(['amount' => $net]);
+                }
             }
         }
 
@@ -139,7 +176,7 @@ class VoucherRequest extends FormRequest
          * ⛔ প্রিভিউতে নাম থেকে মানুষ বানানো নয় — "খাতায় যা যাবে" কিছুই লেখে না ([[VoucherController::simulate()]]); নাহলে নাম
          * টাইপ করার সময় প্রতিটা থামায় একজন করে নতুন মানুষ বসত। ⓘ তখন পক্ষ ফাঁকা থাকে, যাচাই আটকায়, আর প্রিভিউ চুপ।
          */
-        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate')) {
+        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0 && ! $this->routeIs('accounts.voucher.simulate', 'api.accounts.voucher.preview')) {
             /*
              * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
              *
@@ -379,6 +416,13 @@ class VoucherRequest extends FormRequest
     {
         $rules = [
             'type' => ['required', Rule::in(Voucher::TYPES)],
+            /*
+             * ⭐ এক টাকা, বহু বিল — `bills[i][id]` বিলের public_id, `bills[i][amount]` এই কাগজে কত (cb-ma-4; পরিশোধে-মোট-টাকা-চুক্তি §৩)।
+             * ⓘ বিলটা পক্ষের নিজের খোলা বিল কি না, বাকির বেশি কি না আর যোগফল মোটের বেশি কি না — [[after()]]-এ, সেবার একই হিসাবে।
+             */
+            'bills' => ['nullable', 'array', 'max:200'],
+            'bills.*.id' => ['required', 'string', 'max:64'],
+            'bills.*.amount' => ['required', 'numeric', 'gt:0'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             /*
              * ⭐ বিবরণ বাধ্যতামূলক, সব ধরনে — কেন টাকা নড়ল, কাগজেই লেখা (ভাউচারের পরিকল্পনা, অংশ ৩খ, ৭ অক্টোবর ২০২৬)।
@@ -523,6 +567,9 @@ class VoucherRequest extends FormRequest
             'gross_amount' => ['nullable', 'numeric', 'min:0'],
             'ait_amount' => ['nullable', 'numeric', 'min:0'],
             'vds_amount' => ['nullable', 'numeric', 'min:0'],
+            // ⭐ কম-বেশি — কেবল রসিদ আর পরিশোধে (দফা ৪; cb-ma-5)
+            'difference_kind' => ['nullable', Rule::in(['discount', 'rounding'])],
+            'difference_amount' => ['nullable', 'numeric', 'min:0'],
 
             /*
              * ⭐ কোন চালানের জন্য — এক খরচ, একাধিক চালান।
@@ -590,7 +637,8 @@ class VoucherRequest extends FormRequest
             'to_account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')
                     ->where('company_id', CompanyContext::id())],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            // ⓘ মোট এলে নিট সার্ভারের — ভুলের কথা `gross_amount`-এর ঘরে ([[after()]]), "amount" দরকারি বলে নয়
+            'amount' => $this->grossPath ? ['nullable', 'numeric'] : ['required', 'numeric', 'gt:0'],
 
             /*
              * পক্ষ — ঐচ্ছিক, `type:id` আকারে।
@@ -675,6 +723,126 @@ class VoucherRequest extends FormRequest
     public function after(): array
     {
         return [
+            /*
+             * ⭐ বিলের সারি (চুক্তি §৪): প্রতিটা পক্ষের খোলা বিল, ≤ তার বকেয়া; যোগফল ≤ মোট (টাকা + AIT + VDS — পক্ষের খাতা যতটা কমে)।
+             * ⓘ হিসাব [[VoucherAllocations::resolve()]]-এর, যে সেবা লেখার আগে আবার চালায়; পোস্টে তালাসহ আরেকবার।
+             */
+            function (Validator $validator): void {
+                $rows = $this->input('bills');
+
+                if (! is_array($rows) || $rows === [] || $validator->errors()->hasAny(['bills', 'bills.*', 'amount', 'gross_amount'])) {
+                    return;
+                }
+
+                // ⓘ কম-বেশিও পক্ষের খাত নড়ায় — ছাড় বা রাউন্ডিংয়ের অঙ্কটুকু বিলেও বসতে পারে (cb-ma-5)
+                $gross = bcadd(bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
+                    self::moneyOf($this->input('vds_amount')) ?? '0', 4), self::moneyOf($this->input('difference_amount')) ?? '0', 4);
+                $partyId = (int) $this->input('party_id', 0);
+                $result = app(\App\Modules\Accounts\Services\VoucherAllocations::class)
+                    ->resolve($this->input('party_type'), $partyId > 0 ? $partyId : null, $rows, $gross);
+
+                foreach ($result['errors'] as $field => $message) {
+                    $validator->errors()->add($field, $message);
+                }
+            },
+
+            /*
+             * ⭐ কম-বেশির নিয়ম (দফা ৪; Core [[\App\Core\Support\Settlement]], আদায়ের একই): অঙ্ক থাকলে ধরন লাগে; কেবল রসিদ আর পরিশোধে; রাউন্ডিং
+             * কোম্পানির সীমার (`sales.collection.rounding_limit`, ডিফল্ট ৳১০) বেশি নয় — বেশি হলে সেটা ছাড়, মালিকের সইয়ে।
+             */
+            function (Validator $validator): void {
+                $amount = self::moneyOf($this->input('difference_amount'));
+
+                if ($amount === null || bccomp($amount, '0', 4) <= 0 || $validator->errors()->hasAny(['difference_kind', 'difference_amount'])) {
+                    return;
+                }
+
+                if (! in_array($this->input('type'), [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_only_money'));
+
+                    return;
+                }
+
+                $kind = $this->input('difference_kind');
+
+                if ($kind === null) {
+                    $validator->errors()->add('difference.kind', __('accounts::validation.difference_needs_kind'));
+
+                    return;
+                }
+
+                $limit = \App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class));
+
+                if ($kind === 'rounding' && bccomp($amount, $limit, 4) > 0) {
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_over_limit', [
+                        'amount' => Money::format($amount), 'limit' => Money::format($limit),
+                    ]));
+
+                    return;
+                }
+
+                /*
+                 * ⛔ হিসাবের সীমা — কম-বেশি যা মেটায় তার বেশি নয় (fe, ২৫ অক্টোবর ২০২৬; শতাংশের সীমা নেই, প্রতিটা ছাড়ে মালিকের সই-ই সীমা):
+                 * পক্ষের খাত যতটা নড়ে (টাকা + AIT + VDS) আর কম-বেশি মিলে বাছা বিলগুলোর বাকি ছাড়ায় না; বিল না বাছলে পক্ষের মোট বকেয়া
+                 * (মাথার অঙ্কের একই উৎস, [[AccountsFacts::dueFrom()]])। ⓘ ছাড় দিয়ে পক্ষের স্থিতি কখনো উল্টো দিকে যায় না।
+                 * ⓘ বিলের বাকি বিলের মালিক মডিউলের একমাত্র নিয়মে (চুক্তির `outstanding` = dueAmount()/dueSql())।
+                 */
+                $moved = bcadd(bcadd(self::moneyOf($this->input('amount')) ?? '0', self::moneyOf($this->input('ait_amount')) ?? '0', 4),
+                    self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+                $partyType = (string) $this->input('party_type', '');
+                $partyId = (int) $this->input('party_id', 0);
+                $rows = $this->input('bills');
+
+                if (is_array($rows) && $rows !== []) {
+                    $resolved = app(\App\Modules\Accounts\Services\VoucherAllocations::class)->resolve($partyType, $partyId > 0 ? $partyId : null, $rows);
+                    $settles = array_reduce($resolved['rows'], fn (string $sum, array $row) => bcadd($sum, (string) $row['due'], 4), '0');
+                } else {
+                    $due = $partyId > 0 && $partyType !== '' ? (string) app(AccountsFacts::class)->dueFrom($partyType, $partyId) : '0';
+                    // ⓘ রসিদ মেটায় তিনি যা দেবেন (ধনাত্মক), পরিশোধ মেটায় আমরা যা দেব (ঋণাত্মকের আকার)
+                    $settles = $this->input('type') === Voucher::RECEIPT ? $due : bcmul($due, '-1', 4);
+                }
+
+                $settles = bccomp($settles, '0', 4) > 0 ? $settles : '0';
+
+                if (bccomp(bcadd($moved, $amount, 4), $settles, 4) > 0) {
+                    $room = bcsub($settles, $moved, 4);
+                    $validator->errors()->add('difference.amount', __('accounts::validation.difference_over_due', [
+                        'room' => Money::format(bccomp($room, '0', 4) > 0 ? $room : '0'), 'due' => Money::format($settles),
+                    ]));
+                }
+            },
+
+            /*
+             * ⭐ মোট টাকার চার নিয়ম (চুক্তি §৪): মোট আছে আর শূন্যের বেশি; AIT + VDS মোটের কম (নিট > ০); মোট আর নিট একসাথে নয় —
+             * দুটো এলে কোনটা মানা হবে বলা যায় না, আর দুটো না মিললে পক্ষের খাতা আর হাতের টাকা আলাদা গল্প বলত।
+             */
+            function (Validator $validator): void {
+                if (! $this->grossPath) {
+                    return;
+                }
+
+                if ($this->netAlsoSent) {
+                    $validator->errors()->add('amount', __('accounts::validation.gross_or_net_not_both'));
+
+                    return;
+                }
+
+                $gross = self::moneyOf($this->input('gross_amount'));
+
+                if ($gross === null || bccomp($gross, '0', 4) <= 0) {
+                    $validator->errors()->add('gross_amount', __('accounts::validation.gross_required'));
+
+                    return;
+                }
+
+                if (bccomp((string) $this->netOfGross(), '0', 4) <= 0) {
+                    $validator->errors()->add('gross_amount', __('accounts::validation.withheld_not_below_gross', [
+                        'gross' => Money::format($gross),
+                        'withheld' => Money::format(bcadd(self::moneyOf($this->input('ait_amount')) ?? '0', self::moneyOf($this->input('vds_amount')) ?? '0', 4)),
+                    ]));
+                }
+            },
+
             /*
              * বাকিতে খরচ হলে পক্ষ ছাড়া চলে না।
              *
@@ -896,6 +1064,26 @@ class VoucherRequest extends FormRequest
      *
      * @param  array<string, mixed>  $line
      */
+    /** নিট = মোট − AIT − VDS, পয়সায় নির্ভুল (bcmath); মোট সংখ্যা না হলে `null` */
+    private function netOfGross(): ?string
+    {
+        $gross = self::moneyOf($this->input('gross_amount'));
+
+        if ($gross === null) {
+            return null;
+        }
+
+        return bcsub(bcsub($gross, self::moneyOf($this->input('ait_amount')) ?? '0', 4), self::moneyOf($this->input('vds_amount')) ?? '0', 4);
+    }
+
+    /** ⓘ টাকার ঘর → ৪ দশমিকের string; ফাঁকা বা অ-সংখ্যা `null` (তখন নিয়মই বলে কী ভুল) */
+    private static function moneyOf(mixed $value): ?string
+    {
+        $value = str_replace(',', '', trim((string) ($value ?? '')));
+
+        return preg_match('/^-?\d+(\.\d+)?$/', $value) === 1 ? bcadd($value, '0', 4) : null;
+    }
+
     private function checkParty(Validator $validator, int|string $index, array $line): void
     {
         $type = trim((string) ($line['party_type'] ?? ''));

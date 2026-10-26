@@ -847,6 +847,8 @@ return [
      * comes here, through App\Core\Support\RoleLabel.
      */
     'search' => [
+        // ⓘ উপরের খোঁজায় মডিউলের নাম — সরাসরি তার প্রথম পাতায় (২৪ অক্টোবর ২০২৬)
+        'module' => 'Module',
         'type_to_find' => 'Type what you are looking for — a name, a number or a code.',
         'nothing_found' => 'Nothing found.',
         'recent' => 'Recent papers',
@@ -1135,12 +1137,23 @@ return [
         'choose_many' => 'Choose files',
         'none' => 'No file chosen',
         'many' => ':count files chosen',
+        // Drop box (tick-list #37, 25 Oct 2026)
+        'drop' => 'or drop it here',
+        'remove' => 'Remove',
+        'wrong_type' => '“:name” is not a file type this box takes — choose another file.',
+        'one_only' => 'This box takes one file — drop just one.',
     ],
 
     'status_bar' => [
         'operational' => 'Operational',
         'maintenance' => 'Maintenance',
         'incident' => 'Incident',
+    ],
+
+    // The trail's last part: "New" on a create page, the record's own number on an edit page, else "Edit" (tick-list #6, 25 Oct 2026)
+    'crumb' => [
+        'new' => 'New',
+        'edit' => 'Edit',
     ],
 
     'a11y' => [
@@ -1650,4 +1663,8 @@ return [
         'running' => 'Running now: :label',
         'no_notes' => 'No notes written yet.',
     ],
+    'rail' => ['more' => 'More modules', 'search' => 'Find a module', 'none' => 'No module by that name',
+        'arrange' => 'Arrange', 'reset' => 'Reset to default', 'arrange_title' => 'Arrange the left bar',
+        'arrange_hint' => 'Pinned modules always stay on the bar. Drag or press ↑ ↓ to reorder; saved for all your devices.',
+        'pin' => 'Pin', 'up' => 'Move up:', 'down' => 'Move down:', 'cancel' => 'Back', 'save' => 'Save'],
 ];

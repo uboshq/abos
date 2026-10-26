@@ -23,6 +23,9 @@
         ? collect($activeModule['groups'])->flatten(1)->firstWhere('url', '!==', null)['url'] ?? null
         : null;
 
+    // ⭐ শেষ অংশ — "› নতুন" বা কাগজের নম্বর ([[PageTail]]; মিল-তালিকা #৬, ২৫ অক্টোবর ২০২৬); তালিকা বা দেখার পাতায় কিছু নয়
+    $tail = $activeItem ? \App\Core\Support\PageTail::of(request()->route()) : null;
+
     $user = auth()->user();
     $company = $user?->currentCompany;
     $context = null;
@@ -51,8 +54,21 @@
 
                 <span class="text-(--color-ink-disabled)" aria-hidden="true">›</span>
 
-                {{-- শেষেরটা লিংক নয় — যে পাতায় আছি সেখানে যাওয়ার লিংক কিছুই করে না --}}
-                <span class="truncate text-(--color-ink-body)" aria-current="page">{{ $activeItem['label'] }}</span>
+                @if ($tail !== null)
+                    {{-- ⓘ শেষ অংশ থাকলে পাতার সারিটা লিংক — তালিকায় ফেরার পথ (SAP Fiori-র breadcrumb: উপরের সবাই লিংক, শেষেরটা নয়) --}}
+                    @if (! empty($activeItem['url']))
+                        <a href="{{ $activeItem['url'] }}" class="truncate hover:text-(--color-brand-600) hover:underline">{{ $activeItem['label'] }}</a>
+                    @else
+                        <span class="truncate">{{ $activeItem['label'] }}</span>
+                    @endif
+
+                    <span class="text-(--color-ink-disabled)" aria-hidden="true">›</span>
+
+                    <span data-page-tail class="truncate text-(--color-ink-body)" aria-current="page">{{ $tail }}</span>
+                @else
+                    {{-- শেষেরটা লিংক নয় — যে পাতায় আছি সেখানে যাওয়ার লিংক কিছুই করে না --}}
+                    <span class="truncate text-(--color-ink-body)" aria-current="page">{{ $activeItem['label'] }}</span>
+                @endif
             </nav>
         @endif
 

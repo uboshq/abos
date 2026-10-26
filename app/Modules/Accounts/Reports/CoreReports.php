@@ -845,7 +845,8 @@ final class CoreReports
     private static function plSections(int $companyId): array
     {
         $in = fn (array $codes) => 'ledger_entries.account_id IN ('.(implode(',', self::subtreeIds($companyId, $codes)) ?: '0').')';
-        $revenue = $in([StandardChart::SALES, StandardChart::SALES_RETURN]);
+        // ⓘ ৪১২০ আদায়ে ছাড়ও — বিক্রয়ের বিপরীত, তাই বিক্রয় ভাগেই ([[StandardChart::NET_SALES]], fe-র D3)
+        $revenue = $in(StandardChart::NET_SALES);
         $cost = $in([StandardChart::COST_OF_GOODS_SOLD, StandardChart::PURCHASE_PRICE_VARIANCE]);
         $income = "accounts.type = '".Account::INCOME."'";
 

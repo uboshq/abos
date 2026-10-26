@@ -287,7 +287,7 @@ final class CreditExposure implements CreditHolds
             return [];
         }
 
-        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total)';
+        $due = SalesInvoice::dueSql('i');
         $on = 'COALESCE(i.due_on, i.trx_date)';
         $today = Carbon::today();
 

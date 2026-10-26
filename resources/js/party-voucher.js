@@ -7,36 +7,27 @@
  * স্ট্রিং শেষ হয়ে যেত, আর Blade মন্তব্যের ভিতরের `{{ }}`-ও পার্স করত।
  *
  * ⓘ এখানে লেখাগুলো বাইরে থেকে আসে, তাই ঐ দুইটা ফাঁদই বন্ধ।
+ *
+ * ── ⭐ নাম বাছা এখন ভাগ করা পিকারে (২৪ অক্টোবর ২০২৬) ──────────────────
+ * খোঁজা, ↑ ↓ Enter, "+ নতুন নাম" আর মোবাইলের ঘর — সব [[x-ui.party-search]]-এ (`stacked addable`, a6 d8005fa00), আদায় আর
+ * সরবরাহকারী-পরিশোধের একই পিকার। ⓘ এই বাক্স কেবল শোনে: পিকার নিজের লুকানো `party_pick`-এ `change` ছাড়ে (জমা যায় পাতার একটাই `party_id`, মান `partyId`) — বাছলে id, হাতে লেখা নতুন নামে
+ * ফাঁকা — আর এখানে বকেয়া আর খোলা বিল আসে বা মোছে ([[partyPicked()]])। ⛔ আগের নিজের তালিকা (খোঁজা, কার্সর, "+") এখান থেকে
+ * সরানো — দুই জায়গায় থাকলে একদিন একটা আরেকটার থেকে আলাদা আচরণ করত।
  */
 
 /*
- * ⓘ খোঁজার নিয়ম আর একবারে কতগুলো আঁকা হয় — এখন [[party-search.js]]-এ, ৩ অক্টোবর
- * ২০২৬: ক্রেডিট / ডেবিট নোটেও একই খোঁজা লাগল (মালিক: *"ডেবিট নোট পার্টি সার্চ
- * দেয়ার অপশন নাই"*), আর দুইটা কপি একদিন আলাদা হয়ে যেত। ⚠️ এখান থেকেও রপ্তানি
- * হয়, যাতে পুরনো `import` ভাঙে না।
+ * ⓘ খোঁজার নিয়ম [[party-search.js]]-এ; এখান থেকেও রপ্তানি হয়, যাতে পুরনো `import` ভাঙে না।
  */
 import { matchParties, SHOWN_AT_ONCE } from './party-search.js'
 import { taka } from './components/money.js'
 
 export { matchParties, SHOWN_AT_ONCE }
 
-export default function partyVoucher({ partyType, partyId, parties, dueUrl, texts, pickedType = '', pickedId = '', adding = false, newName = '', out = false }) {
+export default function partyVoucher({ partyType, partyId, dueUrl, texts, pickedType = '', pickedId = '', out = false }) {
     return {
         partyType,
-        partyId,
-        parties,
+        partyId: partyId ? String(partyId) : '',
         texts,
-
-        /** "+" খোলা কি না — নতুন নাম আর মোবাইলের ঘর। */
-        adding,
-
-        /** তালিকায় না থাকা নাম — `party_new` ঘরে যা বসে। */
-        newName,
-
-        /** খোঁজার তালিকা খোলা কি না, কী লেখা, আর কোন সারিতে আলো। */
-        listOpen: false,
-        search: '',
-        cursor: 0,
 
         /** এই পক্ষের মোট বকেয়া — নামের পাশে দেখানো হয়। */
         due: null,
@@ -66,7 +57,10 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
             const side = this.out ? 'Out' : 'In';
             if (this.dueSign === 0) return this.texts['due' + side + 'None'] ?? '';
 
-            return this.texts['due' + side + (this.dueIsOwed ? 'Owed' : 'Advance')] ?? '';
+            // ⓘ উল্টো দিকের স্থিতি — "অগ্রিম" নয়, পক্ষের নিজের খাতে (Cr/Dr); :party পক্ষের ধরনে (মালিকের নিয়ম, ২৫ অক্টোবর ২০২৬)
+            const party = this.texts?.partyOf?.[this.partyType] ?? this.texts?.partyOf?.[''] ?? '';
+
+            return String(this.texts['due' + side + (this.dueIsOwed ? 'Owed' : 'Advance')] ?? '').replace(':party', party);
         },
 
         get dueAmount() {
@@ -84,6 +78,28 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
         /** এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি। */
         bills: [],
 
+        /*
+         * ⭐ এক টাকা, বহু বিল — কোন বিলে কত (`allocs`: বিলের public_id → অঙ্ক; cb-ma-4, ২৫ অক্টোবর ২০২৬; পরিশোধে-মোট-টাকা-চুক্তি §৩)।
+         * ⓘ টিক দিলে পুরো বকেয়া বসে, আর টাকার ঘরে বসে টিক-দেওয়া বিলগুলোর যোগফল — যতক্ষণ লেখক নিজে টাকার ঘর বদলাননি (`lastFill`:
+         * শেষবার এই বাক্স যা বসিয়েছিল; ঘরের মান তার থেকে আলাদা হলে আর ছোঁয়া নয়)। `grossSeen` ফর্মের মোট (পয়সায়, [[voucherMoney]]-এর
+         * `money-gross` ঘটনা): যোগফলের বাইরে যা থাকে তা অগ্রিম, বেশি হলে লাল। সার্ভার একই নিয়মে আবার মাপে ([[VoucherAllocations]])।
+         */
+        allocs: {},
+        lastFill: null,
+        grossSeen: null,
+
+        /*
+         * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর — বকেয়ার একই উত্তরে আসে (Core চুক্তি PartyCreditLimit, PartyTaxIds, PayeeBankView; cb-ma-4):
+         * বাকির সীমা (গ্রাহক), BIN/TIN (সরবরাহকারী), প্রাপকের ব্যাংক {state, line}। `method` — বাছা পদ্ধতি; ব্যাংকে যায় এমন পদ্ধতিতে
+         * (ট্রান্সফার, নগদ জমা) সই-না-পাওয়া ব্যাংক লালে, পোস্টের পাহারার একই কথা ([[PayeeBankGuard]])।
+         */
+        credit: null,
+        taxIds: null,
+        payeeBank: null,
+        method: '',
+        // ⓘ পক্ষের নিজের শাখা — কেবল তথ্য, মাথায় "শাখা: গ্রাহকের শাখা (…)"; টাকা বসে বাক্সের শাখায়
+        partyBranch: '',
+
         /**
          * ⭐ রসিদ **একটা** বিলের বিপরীতে — `against_type` / `against_id` (Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬)।
          *
@@ -94,219 +110,27 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
         pickedType: pickedType ? String(pickedType) : '',
         pickedId: pickedId ? String(pickedId) : '',
 
-        get partyOptions() {
-            return this.parties.filter((p) => p.type === this.partyType);
-        },
-
-        /** লেখার সাথে মেলা সব নাম — ধরনের ভিতরেই। */
-        get matches() {
-            return matchParties(this.partyOptions, this.search);
-        },
-
-        /** যতগুলো আঁকা হয় ([[SHOWN_AT_ONCE]])। */
-        get shown() {
-            return this.matches.slice(0, SHOWN_AT_ONCE);
-        },
-
-        get moreHidden() {
-            return this.matches.length > SHOWN_AT_ONCE;
-        },
-
-        get noMatch() {
-            return this.matches.length === 0;
-        },
-
-        /** কিছু লেখা আছে কি না — "নতুন নাম হিসেবে যোগ করুন" তখনই দেখা যায়। */
-        get hasSearch() {
-            return String(this.search || '').trim() !== '';
-        },
-
-        /** বাছা পক্ষটা — বোতামে তার নাম আর নিচে কোড · পয়েন্ট। */
-        get pickedParty() {
-            return this.partyOptions.find((p) => String(p.id) === String(this.partyId)) || null;
-        },
-
         /**
-         * বোতামে কী লেখা।
-         *
-         * ⭐ তালিকায় না থাকা নামও এখানে দেখা যায় — সমন্বয়কের মাধ্যমে মালিকের
-         * চাওয়া, ৩ অক্টোবর ২০২৬: "+" দিয়ে যোগ করা নামটা তালিকা থেকেই বাছা
-         * দেখাবে। ⓘ সার্ভারে সেটা জমার সময় ব্যক্তি হয়ে বসে ([[VoucherRequest]]),
-         * আর পরের বার তালিকাতেই থাকে।
+         * ⭐ ভাগ করা পিকারের খবর — পিকারের লুকানো `party_pick`-এর `change` ([[x-ui.party-search]]; জমা যায় পাতার `party_id`, এই বাক্সের `partyId`)। বাছলে বকেয়া আর বিল আসে; হাতে লেখা নতুন নামে
+         * মান ফাঁকা — বকেয়া, বিল আর বাছা বিল মোছে, আর মাথার তিন অঙ্কও ([[tellDue()]])। ⓘ অন্য ঘরের `change` এখানে কিছু করে না।
          */
-        get pickedLabel() {
-            if (this.pickedParty) {
-                return this.pickedParty.label;
-            }
-
-            const typed = String(this.newName || '').trim();
-
-            return this.adding && typed !== '' ? '+ ' + typed : '—';
-        },
-
-        get pickedHint() {
-            return this.pickedParty ? (this.pickedParty.hint || '') : '';
-        },
-
-        /** স্ক্রিন-রিডারের জন্য — আলো-পড়া সারির id। */
-        get activeOption() {
-            return this.listOpen && this.shown.length > 0 ? 'party-opt-' + this.cursor : '';
-        },
-
-        isCursor(i) {
-            return i === this.cursor;
-        },
-
-        isPicked(p) {
-            return String(p.id) === String(this.partyId);
-        },
-
-        /**
-         * তালিকা খোলা — খোঁজার ঘরে সাথে সাথে ফোকাস।
-         *
-         * ⓘ বোতামে একটা অক্ষর টাইপ করলে সেটাই প্রথম অক্ষর হয়ে বসে — কাউন্টারের
-         * লোক ঘরে এসে সরাসরি নাম লিখতে শুরু করেন, আগে ক্লিক করতে হয় না।
-         */
-        openList(first = '') {
-            this.search = first;
-            this.listOpen = true;
-
-            const at = this.shown.findIndex((p) => this.isPicked(p));
-
-            this.cursor = first === '' && at >= 0 ? at : 0;
-
-            this.$nextTick(() => {
-                this.$refs.search?.focus();
-                this.revealCursor();
-            });
-        },
-
-        toggleList() {
-            if (this.listOpen) {
-                this.closeList();
-            } else {
-                this.openList();
-            }
-        },
-
-        closeList() {
-            this.listOpen = false;
-            this.search = '';
-        },
-
-        /** Esc — তালিকা বন্ধ, আর ফোকাস বোতামে ফেরে, যাতে Tab আগের মতোই চলে। */
-        escape() {
-            this.closeList();
-            this.$nextTick(() => this.$refs.trigger?.focus());
-        },
-
-        /** বন্ধ বোতামে ↓ বা কোনো অক্ষর — তালিকা খোলে। */
-        triggerKey(e) {
-            if (e.ctrlKey || e.metaKey || e.altKey) {
+        partyPicked(event) {
+            if (event?.target?.name !== 'party_pick') {
                 return;
             }
 
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                this.openList();
-            } else if (typeof e.key === 'string' && e.key.length === 1 && e.key !== ' ') {
-                e.preventDefault();
-                this.openList(e.key);
+            const id = String(event.target.value ?? '');
+
+            if (id === this.partyId && id !== '') {
+                return;
             }
-        },
 
-        /** লেখা বদলালে আলো প্রথম সারিতে — নাহলে Enter পুরনো জায়গার নাম বাছত। */
-        searched() {
-            this.cursor = 0;
-        },
-
-        moveDown() {
-            if (this.shown.length > 0) {
-                this.cursor = Math.min(this.cursor + 1, this.shown.length - 1);
-                this.revealCursor();
-            }
-        },
-
-        moveUp() {
-            this.cursor = Math.max(this.cursor - 1, 0);
-            this.revealCursor();
-        },
-
-        hover(i) {
-            this.cursor = i;
-        },
-
-        /** আলো-পড়া সারিটা তালিকার দৃশ্যমান অংশে টেনে আনা। */
-        revealCursor() {
-            this.$nextTick(() => {
-                const row = this.$refs.list?.querySelector('#party-opt-' + this.cursor);
-
-                if (row && typeof row.scrollIntoView === 'function') {
-                    row.scrollIntoView({ block: 'nearest' });
-                }
-            });
-        },
-
-        /**
-         * Enter — আলো-পড়া নামটা বাছা।
-         *
-         * ⓘ কিছুই না মিললে Enter লেখাটাকে নতুন নাম বানায় — "তালিকায় নেই? নাম
-         * লিখুন"-এর একই পথ ([[addTyped()]])।
-         */
-        pickCursor() {
-            const row = this.shown[this.cursor];
-
-            if (row) {
-                this.pickParty(row.id);
-            } else if (this.search.trim() !== '') {
-                this.addTyped();
-            }
-        },
-
-        /**
-         * নাম বাছা — আগের `<select>`-এর মতোই: `partyId` বসে আর পাওনা আসে।
-         *
-         * ⚠️ নতুন নামের ঘর বন্ধ ও খালি হয়: দুইটা একসাথে থাকলে সার্ভার বাছা
-         * নামটাই নেয় ([[VoucherRequest]]), আর হাতে লেখাটা চুপচাপ হারাত।
-         */
-        pickParty(id) {
-            this.partyId = String(id);
-            this.adding = false;
-            this.newName = '';
-            this.closeList();
-            this.loadDue();
-            this.$nextTick(() => this.$refs.trigger?.focus());
-        },
-
-        /**
-         * তালিকায় নেই — লেখাটাই নতুন নাম হয়ে "+" ঘরে বসে।
-         *
-         * ⚠️ বাছা নামটা মুছে যায়: সার্ভার হাতে লেখা নাম কেবল তখনই নেয় যখন
-         * `party_id` খালি। ⓘ মোবাইলের ঘরে ফোকাস, কারণ নামটা তো লেখাই হয়ে গেছে।
-         */
-        addTyped() {
-            this.newName = this.search.trim();
-            this.partyId = '';
+            this.partyId = id;
             this.due = null;
             this.bills = [];
+            this.clearAllocs();
             this.unpick();
-            this.adding = true;
-            this.closeList();
-            this.$nextTick(() => this.$refs.newMobile?.focus());
-        },
-
-        toggleAdding() {
-            this.adding = ! this.adding;
-        },
-
-        /** নতুন নামের ঘরে লেখা — তালিকার বাছাই তখন ছেড়ে দেওয়া হয়, একই কারণে। */
-        newNameTyped() {
-            if (String(this.newName || '').trim() !== '' && this.partyId !== '') {
-                this.partyId = '';
-                this.due = null;
-                this.bills = [];
-                this.unpick();
-            }
+            this.loadDue();
         },
 
         /** বাছা বিলটা — তালিকায় থাকলে। */
@@ -323,23 +147,329 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
         get overDue() {
             const bill = this.pickedBill;
             // ⓘ ঘরটা এখন লাখ-কমায় ("45,000.00") — কমা ছেঁটে পড়া, নাহলে NaN আর "বিলের বাকির বেশি" কখনো বলত না
-            const amount = Number(String(this.$root.closest('form')?.querySelector('[name="amount"]')?.value || 0).replace(/,/g, ''));
+            // ⓘ পরিশোধে ঘরটা মোট (`gross_amount`, ২৫ অক্টোবর ২০২৬) — রসিদে `amount`
+            const amount = Number(String(this.$root.closest('form')?.querySelector('[name="amount"], [name="gross_amount"]')?.value || 0).replace(/,/g, ''));
 
             return bill !== null && amount - Number(bill.outstanding) > 0.0001;
         },
 
         init() {
+            // ⓘ শুরুর পদ্ধতি — সার্ভারের বাছা চিপ (পুরনো কাগজ, ভুল নিয়ে ফেরা)
+            this.method = String(this.$root?.querySelector?.('input[name="instrument"]:checked')?.value ?? '');
+
             if (this.partyId) {
                 this.loadDue();
             }
+
+            /*
+             * ⭐ বকেয়া আর "পক্ষ আছে কি না" ফর্মকে জানানো — মাথার তিন অঙ্ক ডানের কলামে, এই বাক্সের বাইরে ([[voucherMoney]] `heardParty`;
+             * fe, ২৪ অক্টোবর ২০২৬)। ⓘ ঘটনা, ভাগ করা অবস্থা নয় — দুই x-data একে অপরের অবস্থা দেখে না।
+             */
+            this.$watch('due', () => this.tellDue());
+            this.$watch('partyType', () => this.tellDue());
+            this.$nextTick(() => this.tellDue());
+            // ⭐ বিলে প্রয়োগের যোগফল সারাংশকে — নকশার "বিলে প্রয়োগ · অপ্রয়োগকৃত" ([[voucherMoney]] `heardApplied`; cb-ma-5)
+            this.$watch('allocSumPaisa', () => this.tellApplied());
         },
 
+        tellApplied() {
+            this.$dispatch('bills-applied', { paisa: this.allocSumPaisa });
+        },
+
+        tellDue() {
+            // ⓘ ধরনও যায় — মাথার অঙ্কের নাম তাতে ("গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা"; [[voucherMoney]] `headOwedLabel`)
+            this.$dispatch('party-due', { due: this.due, hasParty: this.partyType !== '', partyType: this.partyType, partyBranch: this.partyBranch });
+        },
+
+        /** ⭐ পক্ষের ঘরের নাম ধরনে — "গ্রাহক", "সরবরাহকারী" (নকশা পাতা ২ আর ৪); অজানা ধরনে সাধারণ "পক্ষ" */
+        get partyLabel() {
+            return this.texts?.typeLabels?.[this.partyType] ?? this.texts?.partyWord ?? '';
+        },
+
+        /**
+         * ⭐ পক্ষের ঘরের নিচে "সবচেয়ে পুরনো বাকি N দিন" (নকশা পাতা ২) — খোলা বিলের বয়স থেকে, যে বিলে এখনো বাকি আছে।
+         * ⓘ বিল না থাকলে কিছুই নয় (ফাঁকা লেখা, ঘরটা লুকানো)।
+         */
+        get oldestDueText() {
+            const ages = this.bills.filter((b) => this.isBill(b) && Number(b.outstanding) > 0.005).map((b) => Number(b.age)).filter((n) => Number.isFinite(n));
+
+            if (ages.length === 0 || !this.texts?.oldestDue) {
+                return '';
+            }
+
+            return this.texts.oldestDue.replace(':days', String(Math.max(...ages)));
+        },
+
+        /** ⭐ "পুরো বকেয়া" — কেবল রসিদের দিকে সত্যিকারের বকেয়া থাকলে (অগ্রিম বা শূন্যে নয়) */
+        get canFillDue() {
+            return this.dueIsOwed && this.dueSign !== 0;
+        },
+
+        /*
+         * ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে। ⓘ অঙ্কটা ফর্মের ([[voucherMoney]]), এই বাক্সের নয় — তাই ঘটনা
+         * (`fill-amount`), দুই x-data একে অপরের অবস্থা দেখে না। অঙ্ক কাঁচা, দুই দশমিকে ("45000.00")।
+         */
+        fillWholeDue() {
+            if (this.canFillDue) {
+                this.$dispatch('fill-amount', Math.abs(Number(this.due)).toFixed(2));
+            }
+        },
+
+        /** "নির্বাচিত বিল" — টিক-দেওয়া বিলগুলোর যোগফল; টিক না থাকলে অন্য মডিউলের আগাম-বাছা একক বিলের বাকি */
+        fillPickedBill() {
+            /*
+             * ⛔ টিক-দেওয়া সারি থাকলেই যোগফল — `hasTicked` নয়: ওটা আগাম-বাছা একক বিলেও সত্য, তখন যোগফল ০ বসত আর বিলের বাকি
+             * কখনো আসত না (fe, ২৬ অক্টোবর ২০২৬: party-voucher.test.js-এর "নির্বাচিত বিল" দাবি ০.০০ পেয়েছিল)।
+             */
+            if (this.pickedRows.length > 0) {
+                this.$dispatch('fill-amount', (this.allocSumPaisa / 100).toFixed(2));
+
+                return;
+            }
+
+            const bill = this.pickedBill;
+
+            if (bill !== null) {
+                this.$dispatch('fill-amount', Number(bill.outstanding).toFixed(2));
+            }
+        },
+
+        get hasTicked() {
+            return this.pickedRows.length > 0 || this.pickedBill !== null;
+        },
+
+        // ── বহু বিল ─────────────────────────────────────────────────────
+
+        /** ⓘ বিল না নোট — a5-এর চুক্তির `kind`; পুরনো সারিতে (ঘর নেই) বিল */
+        isBill(b) {
+            return String(b?.kind ?? 'invoice') === 'invoice';
+        },
+
+        kindText(b) {
+            return this.isBill(b) ? '' : String(this.texts?.kinds?.[b.kind] ?? b.kind ?? '');
+        },
+
+        get hasNotes() {
+            return this.bills.some((b) => !this.isBill(b));
+        },
+
+        billKey(b) {
+            return String(b.against_type) + '-' + String(b.id);
+        },
+
+        isTicked(b) {
+            return Object.prototype.hasOwnProperty.call(this.allocs, String(b.public_id));
+        },
+
+        /** টিক — পুরো বকেয়া বসে; টিক তুললে সারিটা যায় */
+        toggle(b) {
+            // ⛔ নোট টিক হয় না — এই কাগজে প্রয়োগ নয়
+            if (!this.isBill(b)) {
+                return;
+            }
+
+            const key = String(b.public_id);
+            const next = { ...this.allocs };
+
+            if (Object.prototype.hasOwnProperty.call(next, key)) {
+                delete next[key];
+            } else {
+                next[key] = Number(b.outstanding).toFixed(2);
+            }
+
+            this.allocs = next;
+            this.refill();
+        },
+
+        rowAmount(b) {
+            return this.allocs[String(b.public_id)] ?? '';
+        },
+
+        /** সারির অঙ্ক বদলানো — লাখ-কমা ছেঁটে; অ-সংখ্যা হলে ফাঁকা (সার্ভার থামাবে, চুপচাপ ০ নয়) */
+        setRow(b, value) {
+            const clean = String(value ?? '').replace(/,/g, '').trim();
+
+            this.allocs = { ...this.allocs, [String(b.public_id)]: /^\d+(\.\d+)?$/.test(clean) ? clean : '' };
+            this.refill();
+        },
+
+        /** পাঠানোর সারি — বিলের তালিকার ক্রমে (পুরনো আগে) */
+        get pickedRows() {
+            return this.bills.filter((b) => this.isTicked(b)).map((b) => ({ id: String(b.public_id), amount: this.allocs[String(b.public_id)] }));
+        },
+
+        billField(i, key) {
+            return 'bills[' + i + '][' + key + ']';
+        },
+
+        get allocSumPaisa() {
+            return this.pickedRows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0) * 100), 0);
+        },
+
+        get allocSumText() {
+            return '৳' + taka(this.allocSumPaisa / 100);
+        },
+
+        /** টাকার ঘরে যোগফল — কেবল লেখক নিজে ঘরটা না বদলালে (ফাঁকা, বা শেষবার এই বাক্সের বসানো অঙ্কই আছে) */
+        refill() {
+            const sum = this.allocSumPaisa;
+
+            if (this.grossSeen === null || this.grossSeen === 0 || this.grossSeen === this.lastFill) {
+                this.lastFill = sum;
+                this.$dispatch('fill-amount', (sum / 100).toFixed(2));
+            }
+        },
+
+        /** ⓘ ফর্মের মোট — পয়সায় ([[voucherMoney]] `money-gross`) */
+        heardGross(paisa) {
+            const value = Number(paisa);
+
+            this.grossSeen = Number.isFinite(value) ? value : null;
+        },
+
+        /**
+         * যোগফলের বাইরে যা থাকে — বিলে প্রয়োগ হয় না, পক্ষের নিজের খাতায় থাকে: পরিশোধে Dr, রসিদে Cr (চুক্তি §৭.৬)।
+         * ⛔ "অগ্রিম" নয় — সরবরাহকারীর আলাদা অগ্রিম খাত নেই (১১৩০ দল, ১১৩১ কেবল কর্মীর); খাতায় টাকা পক্ষের নিজের খাতেই বসে।
+         */
+        get unappliedText() {
+            const sum = this.allocSumPaisa;
+
+            if (sum <= 0 || this.grossSeen === null || this.grossSeen <= sum || !this.texts?.unapplied) {
+                return '';
+            }
+
+            const party = this.texts?.partyOf?.[this.partyType] ?? this.texts?.partyOf?.[''] ?? '';
+
+            return this.texts.unapplied
+                .replace(':sum', '৳' + taka(sum / 100))
+                .replace(':amount', taka((this.grossSeen - sum) / 100))
+                .replace(':party', party)
+                .replace(':side', this.out ? 'Dr' : 'Cr');
+        },
+
+        /** যোগফল টাকার বেশি — লালে (সার্ভারও থামায়, `bills_over_gross`) */
+        get overText() {
+            const sum = this.allocSumPaisa;
+
+            if (sum <= 0 || this.grossSeen === null || this.grossSeen >= sum || !this.texts?.over) {
+                return '';
+            }
+
+            return this.texts.over.replace(':sum', taka(sum / 100)).replace(':gross', taka(this.grossSeen / 100));
+        },
+
+        /** দেরি — শেষ দিন পেরোলে "N দিন" (লালে), নইলে "—" */
+        lateText(b) {
+            const days = Number(b.days_late ?? 0);
+
+            return days > 0 && this.texts?.lateDays ? this.texts.lateDays.replace(':n', String(days)) : '—';
+        },
+
+        lateClass(b) {
+            return Number(b.days_late ?? 0) > 0 ? 'font-medium text-(--color-danger)' : 'text-(--color-ink-muted)';
+        },
+
+        /** টাকা লাখ-কমায় দুই দশমিকে — নকশার "30,000.00" */
+        lakh(value) {
+            return taka(Number(value ?? 0));
+        },
+
+        /** "2026-10-17" → "17-10" (নকশার মতো) */
+        dayMonth(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ''));
+
+            return m ? m[3] + '-' + m[2] : String(value ?? '');
+        },
+
+        clearAllocs() {
+            this.allocs = {};
+            this.lastFill = null;
+            this.credit = null;
+            this.taxIds = null;
+            this.payeeBank = null;
+            this.partyBranch = '';
+        },
+
+        /** পদ্ধতির চিপ বদলালে — এই বাক্সের ভিতরের `change` (চিপ "সাধারণ তথ্য" কার্ডে) */
+        heardChange(event) {
+            if (event?.target?.name === 'instrument') {
+                this.method = String(event.target.value ?? '');
+            }
+        },
+
+        /** বাকির সীমা — সুইচ বন্ধ হলে কিছুই নয়; ০.০০ মানে বাকি নেই (নগদে) */
+        get creditText() {
+            if (this.credit === null || this.credit === undefined) {
+                return '';
+            }
+
+            return Number(this.credit.limit ?? 0) > 0.005
+                ? (this.texts?.creditLimit ?? '').replace(':limit', taka(Number(this.credit.limit)))
+                : (this.texts?.creditNone ?? '');
+        },
+
+        /** BIN · TIN — যা আছে তাই, নেই তো কিছুই নয় */
+        get taxText() {
+            const ids = this.taxIds ?? {};
+
+            return [ids.bin ? 'BIN ' + ids.bin : '', ids.tin ? 'TIN ' + ids.tin : ''].filter((x) => x !== '').join(' · ');
+        },
+
+        get bankLineText() {
+            if (this.payeeBank === null || this.payeeBank === undefined) {
+                return '';
+            }
+
+            return this.payeeBank.line ? String(this.payeeBank.line) : (this.texts?.bankNone ?? '');
+        },
+
+        get bankSigned() {
+            return this.payeeBank?.state === 'signed';
+        },
+
+        /** সই-না-পাওয়া ব্যাংক আর ব্যাংকে যায় এমন পদ্ধতি — পরিশোধে লালে (পোস্টও থামবে) */
+        get bankBlocks() {
+            return this.out && this.payeeBank !== null && this.payeeBank !== undefined && this.payeeBank.state !== 'signed'
+                && (this.method === 'transfer' || this.method === 'deposit');
+        },
+
+        /**
+         * ⓘ অন্য মডিউলের আগাম-বাছা একক "বিপরীতে" (যেমন অর্থের খাতার "টাকা নিন") যদি এই পক্ষের খোলা বিল হয় — সেটাকে বিলের সারিতে টিক,
+         * আর একক ঘর খালি: একই বিল দুই পথে দুবার বসত না।
+         */
+        adoptPicked() {
+            if (this.pickedId === '') {
+                return;
+            }
+
+            const bill = this.bills.find((b) => String(b.id) === this.pickedId && b.against_type === this.pickedType);
+
+            if (bill && bill.public_id) {
+                this.allocs = { ...this.allocs, [String(bill.public_id)]: Number(bill.outstanding).toFixed(2) };
+                this.unpick();
+            }
+        },
+
+        /** "অন্য (সরাসরি খাত)" — পক্ষ নেই, তাই বিলের তালিকা আর পাওনার অঙ্কও নেই */
+        get noParty() {
+            return this.partyType === '';
+        },
+
+        /*
+         * ধরন বদলালে বাছাই, বকেয়া আর বিল মোছে — নতুন ধরনের পিকার খালি শুরু করে।
+         * ⚠️ শুরুর ধরনে ফিরলে তার পিকার আবার শুরুর বাছাই নিয়ে জন্মায় (`x-if`, সার্ভারের `selected`) — তখন সেই নামই, আর তার বকেয়া
+         * ও বিল; নাহলে ঘর নাম পাঠাত অথচ মাথার অঙ্ক ফাঁকা থাকত।
+         */
+        firstType: partyType,
+        firstId: partyId ? String(partyId) : '',
+
         resetParty() {
-            this.closeList();
-            this.partyId = '';
+            this.partyId = this.partyType === this.firstType ? this.firstId : '';
             this.due = null;
             this.bills = [];
+            this.clearAllocs();
             this.unpick();
+            this.loadDue();
         },
 
         async loadDue() {
@@ -350,18 +480,36 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
                 return;
             }
 
+            /*
+             * ⚠️ উত্তর আসতে দেরি হলে মাঝে মানুষ নতুন নাম লিখে ফেলেন বা ধরন বদলান — তখন পুরনো পক্ষের বকেয়া এসে মোছা ঘর আবার ভরত
+             * (ধীর সার্ভারে ব্রাউজারে মাপা, ২৪ অক্টোবর ২০২৬: নতুন নাম লেখার পরে "অগ্রিম ৳45,000")। তাই যে পক্ষের জন্য চাওয়া, উত্তর
+             * কেবল তখনো সে থাকলেই বসে।
+             */
+            const asked = this.partyType + ':' + this.partyId;
+            const stillAsked = () => asked === this.partyType + ':' + this.partyId;
+
             try {
                 const url = `${dueUrl}?party_type=${encodeURIComponent(this.partyType)}&party_id=${encodeURIComponent(this.partyId)}`;
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
 
-                if (!res.ok) {
+                if (!res.ok || !stillAsked()) {
                     return;
                 }
 
                 const data = await res.json();
 
+                if (!stillAsked()) {
+                    return;
+                }
+
                 this.due = data.known ? Number(data.amount).toFixed(2) : null;
                 this.bills = data.bills || [];
+                this.credit = data.credit ?? null;
+                this.taxIds = data.tax_ids ?? null;
+                this.payeeBank = data.payee_bank ?? null;
+                this.partyBranch = String(data.party_branch ?? '');
+                this.tellDue();
+                this.adoptPicked();
             } catch (e) {
                 /*
                  * ⚠️ নেট গেলে পর্দাটা অচল হয় না — বকেয়া আর বিলের তালিকা
@@ -386,8 +534,8 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
              * মান পড়ে। ⛔ লুকানো ঘরে বসালে পর্দার অঙ্ক বদলাত না, আর পরের টিকে Alpine সেটা মুছে দিত। পুরনো পাতায় নামের ঘরটাই।
              */
             const form = this.$root.closest('form');
-            const sent = form?.querySelector('[name="amount"]');
-            const amount = form?.querySelector('[data-money-shown="amount"]') ?? sent;
+            const sent = form?.querySelector('[name="amount"], [name="gross_amount"]');
+            const amount = form?.querySelector('[data-money-shown="amount"], [data-money-shown="gross_amount"]') ?? sent;
 
             if (amount && String(sent?.value ?? amount.value ?? '').trim() === '') {
                 amount.value = Number(bill.outstanding).toFixed(2);
@@ -402,7 +550,7 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
 
         /*
          * ⭐ এই বিলটাই কি বাছা — রেডিওর `:checked`-এর জন্য (১০ অক্টোবর ২০২৬)। ⚠️ নাম `isPicked` নয় — ওটা পক্ষের তালিকার
-         * নিজের ([[isPicked()]]); একই নামে লিখলে বস্তুর শেষ চাবিটাই টিকত আর পক্ষের দাগ ভাঙত (vitest ধরেছে)।
+         * নিজের ছিল; একই নামে লিখলে বস্তুর শেষ চাবিটাই টিকত আর পক্ষের দাগ ভাঙত (vitest ধরেছে)।
          *
          * ⛔ আগে ব্লেডে লেখা ছিল `String(b.id) === pickedId && …` — আর `@alpinejs/csp` বৈশ্বিক নাম (`String`) চেনে না,
          * তাই এক্সপ্রেশনটা চুপচাপ ভাঙত: বাছা বিলের রেডিওতে দাগ পড়ত না (csp-expressions.test.js)। তুলনাটা এখন এখানে।

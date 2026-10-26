@@ -77,6 +77,13 @@ class ModuleServiceProvider extends ServiceProvider
         // ⓘ সরবরাহকারী বন্ধ থাকলে কারো ব্যাংক তথ্য নেই — ভাউচারের ব্যাংকে-পাঠানো আটকানোর মতো কিছু নেই ([[PayeeBankGuard]])
         $this->app->bind(\App\Core\Contracts\PayeeBankGuard::class, \App\Core\Services\NoPayeeBankGuard::class);
 
+        // ⓘ পক্ষের তথ্য হিসাবের পর্দায় — মালিক মডিউল বন্ধ থাকলে বলার কিছু নেই (মিল-তালিকা #১৯, #৬০, #৬৬; ২৫ অক্টোবর ২০২৬)
+        $this->app->bind(\App\Core\Contracts\PartyCreditLimit::class, \App\Core\Services\NoPartyCreditLimit::class);
+        $this->app->bind(\App\Core\Contracts\PartyTaxIds::class, \App\Core\Services\NoPartyTaxIds::class);
+        $this->app->bind(\App\Core\Contracts\PayeeBankView::class, \App\Core\Services\NoPayeeBankView::class);
+        // ⭐ ব্যাংক ফাইলের পুরো হিসাব — সরবরাহকারী মডিউল না থাকলে কিছুই নয় (cb-ma-4)
+        $this->app->bind(\App\Core\Contracts\PayeeBankAccount::class, \App\Core\Services\NoPayeeBankAccount::class);
+
         // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
         $this->app->bind(CustomerTrade::class, NoCustomerTrade::class);
 
@@ -85,6 +92,8 @@ class ModuleServiceProvider extends ServiceProvider
 
         // ⓘ বিক্রয় বন্ধ থাকলে রসিদে বাছার মতো খোলা বিল নেই ([[PartyOpenBills]], অডিট ম১)
         $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
+        // ⓘ ক্রয় বন্ধ থাকলে পরিশোধ ভাউচারে সরবরাহকারীর খোলা বিল নেই ([[\App\Core\Contracts\PayableOpenBills]], cb-ma-5)
+        $this->app->bind(\App\Core\Contracts\PayableOpenBills::class, \App\Core\Services\NoPayableOpenBills::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);

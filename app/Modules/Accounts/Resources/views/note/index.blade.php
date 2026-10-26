@@ -31,7 +31,8 @@
         ['key' => 'point', 'label' => __('accounts::note.point'), 'width' => '9rem',
          'render' => fn ($n) => $places[$n->party_type.':'.$n->party_id] ?? '—'],
         ['key' => 'against_no', 'label' => __('accounts::note.against_no'), 'width' => '10rem',
-         'render' => fn ($n) => $n->against_no ?: '—'],
+         // ⓘ বাঁধা বিল না হলে "রেফারেন্স:" আগে — বিলের বিপরীতে নয় (fe, ২৫ অক্টোবর ২০২৬)
+         'render' => fn ($n) => $n->against_no ? ($n->against_id === null ? __('accounts::note.reference').': '.$n->against_no : $n->against_no) : '—'],
         ['key' => 'reason', 'label' => __('accounts::note.reason'), 'width' => '12rem',
          'render' => fn ($n) => __('accounts::note.reason_'.$n->reason)],
         ['key' => 'total', 'total' => 'money', 'label' => __('accounts::note.total'), 'numeric' => true, 'width' => '10rem',

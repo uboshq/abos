@@ -16,7 +16,8 @@
 --}}
 <div>
     <label for="attachment" class="mb-1 block text-sm font-medium">
-        {{ __('accounts::field.attachment') }}
+        {{-- ⓘ রসিদ-পরিশোধে নকশার কথা ("ব্যাংক স্লিপ / স্ক্রিনশট", "ব্যাংকের অ্যাডভাইস / বিলের কপি"); বাকি পর্দায় আগের নাম --}}
+        {{ $attachmentLabel ?? __('accounts::field.attachment') }}
     </label>
 
     {{-- ⭐ বাংলা বোতাম ([[ui.file-input]]) — ব্রাউজারের ইংরেজি "Choose File / No file chosen" নয় (fe, ২৩ অক্টোবর ২০২৬); স্ক্যানার আসল ঘরেই --}}

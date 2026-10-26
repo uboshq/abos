@@ -128,6 +128,9 @@ return [
     'received_into' => 'Received into',
     'paid_from' => 'Paid from',
     'paid_to' => 'Paid to',
+    'lands_in' => 'Account it lands in',
+    'lands_in_hint' => "Left empty: the party's payable",
+    'party_other' => 'Other (direct account)',
     'paid_to_from_party' => '— from the payee (a supplier\'s payable) —',
     'expense_head' => 'Expense head',
     'income_by_head' => 'Income by head',
@@ -329,10 +332,10 @@ return [
     'outstanding' => 'Outstanding',
     'owed' => 'Owed',
     'due_in_owed' => 'Owes us',
-    'due_in_advance' => 'Advance',
+    'due_in_advance' => 'Already on :party account in credit (Cr)',
     'due_in_none' => 'Nothing due',
     'due_out_owed' => 'We owe',
-    'due_out_advance' => 'Advance paid',
+    'due_out_advance' => 'Already on :party account (Dr)',
     'due_out_none' => 'Nothing owed',
     'paid_into' => 'Paid into',
     'amount_received' => 'Amount received',
@@ -355,4 +358,7 @@ return [
 
     'withheld_ait' => 'Income tax withheld at source (AIT)',
     'withheld_vds' => 'VAT withheld at source (VDS)',
+    // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
+    'difference_discount' => 'Discount',
+    'difference_rounding' => 'Rounding',
 ];

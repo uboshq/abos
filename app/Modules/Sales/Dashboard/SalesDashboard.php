@@ -350,8 +350,8 @@ final class SalesDashboard implements ProvidesDashboard
     {
         $ranked = DB::query()
             ->fromSub(SalesInvoice::query()->posted()->withCollected(), 'i')
-            ->selectRaw('i.id, (i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total) as due')
-            ->whereRaw('(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total) > 0')
+            ->selectRaw('i.id, '.SalesInvoice::dueSql('i').' as due')
+            ->whereRaw(SalesInvoice::dueSql('i').' > 0')
             ->orderByDesc('due')
             ->orderBy('i.id')
             ->limit(8)

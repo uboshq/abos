@@ -56,19 +56,27 @@ final class TheDepositorListHadNoSearchTest extends TestCase
 
     public function test_both_screens_offer_a_search_box_that_is_not_sent_with_the_form(): void
     {
+        /*
+         * ⓘ ২৪ অক্টোবর ২০২৬ থেকে নাম বাছা ভাগ করা পিকারে ([[x-ui.party-search]] stacked addable) — পক্ষের প্রতিটা ধরনের নিজের
+         * পিকার, `<template x-if>`-এ; পাতায় একসাথে একটাই থাকে। তাই গোনা ধরন ধরে: প্রতিটা ধরনে একটা খোঁজার ঘর, একটা বোতাম।
+         */
+        $types = count(app(PartyRegistry::class)->forPicker());
+
         foreach ([Voucher::RECEIPT, Voucher::PAYMENT] as $type) {
             $xpath = $this->dom($type);
 
-            $search = $xpath->query('//input[@data-party-search]');
-            $this->assertSame(1, $search->length, "⛔ {$type}: নামের তালিকায় খোঁজার ঘর নেই।");
+            $search = $xpath->query('//*[@data-party-name-cell]//template//input[@data-party-search]');
+            $this->assertSame($types, $search->length, "⛔ {$type}: পক্ষের প্রতিটা ধরনের তালিকায় খোঁজার ঘর নেই।");
+            $this->assertSame($types, $xpath->query('//input[@data-party-search]')->length, "⛔ {$type}: টেমপ্লেটের বাইরে আরেকটা খোঁজার ঘর।");
 
-            /** @var DOMElement $box */
-            $box = $search->item(0);
-            $this->assertFalse($box->hasAttribute('name'),
-                "⛔ {$type}: খোঁজার ঘরের `name` আছে — লেখাটা ফর্মের সাথে চলে যেত।");
-            $this->assertSame((string) __('accounts::field.party_search'), $box->getAttribute('placeholder'));
+            foreach ($search as $box) {
+                /** @var DOMElement $box */
+                $this->assertFalse($box->hasAttribute('name'),
+                    "⛔ {$type}: খোঁজার ঘরের `name` আছে — লেখাটা ফর্মের সাথে চলে যেত।");
+                $this->assertSame((string) __('accounts::field.party_search'), $box->getAttribute('placeholder'));
+            }
 
-            $this->assertSame(1, $xpath->query('//button[@data-party-picker]')->length,
+            $this->assertSame($types, $xpath->query('//*[@data-party-name-cell]//template//button[@data-party-picker]')->length,
                 "⛔ {$type}: নাম বাছার বোতাম নেই।");
         }
     }
@@ -84,6 +92,10 @@ final class TheDepositorListHadNoSearchTest extends TestCase
             $this->assertSame(0, $fresh->query('//select[@name="party_id" and not(@disabled)]')->length,
                 "⛔ {$type}: পুরনো খোঁজা-ছাড়া `<select>`-টা এখনো আছে।");
 
+            /*
+             * ⓘ একটাই `party_id`, পাতায় আঁকা (টেমপ্লেটের বাইরে) — মান পক্ষের বাক্সের `partyId`; ধরন ধরে পিকারগুলো `<template x-if>`-এ,
+             * নিজের ঘর `party_pick` নামে (cb-ma-2, ২৪ অক্টোবর ২০২৬: টেমপ্লেটের ভিতরে থাকলে সার্ভারের আঁকা ফর্মে ঘরটাই ছিল না)।
+             */
             $sent = $fresh->query('//form//input[@name="party_id"]');
             $this->assertSame(1, $sent->length, "⛔ {$type}: `party_id` ফর্মের সাথে যায় না — সার্ভার পক্ষ পেত না।");
 
@@ -91,14 +103,24 @@ final class TheDepositorListHadNoSearchTest extends TestCase
             $hidden = $sent->item(0);
             $this->assertSame('hidden', $hidden->getAttribute('type'));
             $this->assertFalse($hidden->hasAttribute('disabled'));
+            $this->assertSame(0, $fresh->query('ancestor::template', $hidden)->length,
+                "⛔ {$type}: `party_id` টেমপ্লেটের ভিতরে — Alpine বসানোর আগে পাতায় ঘরটাই নেই।");
+            $this->assertSame(count(app(PartyRegistry::class)->forPicker()), $fresh->query('//form//template[@x-if]//input[@name="party_pick"]')->length,
+                "⛔ {$type}: পক্ষের প্রতিটা ধরনের পিকার নেই।");
 
-            // ⓘ ভুল জমার পরে old() — বাছা নামটা লুকানো ঘরে ফিরে আসে
+            // ⓘ ভুল জমার পরে old() — বাছা নামটা পাতার `party_id`-এ আর সেই ধরনের পিকারে ফিরে আসে, অন্য ধরনের পিকার খালি
             $again = $this->dom($type, ['party_type' => 'customer', 'party_id' => (string) $customer->id]);
 
-            /** @var DOMElement $kept */
+            /** @var DOMElement|null $kept */
             $kept = $again->query('//form//input[@name="party_id"]')->item(0);
-            $this->assertSame((string) $customer->id, $kept->getAttribute('value'),
+            $this->assertSame((string) $customer->id, $kept?->getAttribute('value'),
                 "⛔ {$type}: ভুল জমার পরে বাছা নামটা হারিয়ে যায়।");
+            // ⓘ `@js('customer')` বৈশিষ্ট্যে দুই-উদ্ধৃতিতে আঁকা হয় — partyType === "customer"
+            $shown = $again->query('//form//template[@x-if=\'partyType === "customer"\']//input[@name="party_pick"]')->item(0);
+            $this->assertSame((string) $customer->id, $shown?->getAttribute('value'),
+                "⛔ {$type}: ভুল জমার পরে গ্রাহকের পিকার বাছা নামটা দেখায় না।");
+            $others = $again->query('//form//template[@x-if!=\'partyType === "customer"\']//input[@name="party_pick"][@value!=""]');
+            $this->assertSame(0, $others->length, "⛔ {$type}: অন্য ধরনের পিকারেও গ্রাহকের id বসল।");
         }
     }
 

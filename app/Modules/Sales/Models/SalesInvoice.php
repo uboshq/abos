@@ -11,9 +11,11 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\ShowsItselfForSigning;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherAllocation;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Support\SalesSigningSheet;
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * বিক্রয় বিল — টাকা পাওনা হলো।
@@ -181,7 +184,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->whereHas('collection', fn ($q) => $q->posted())
             ->sum('amount');
 
-        return bcadd($collected ?: '0', $this->paidByReceiptVouchers(), 4);
+        return bcadd(bcadd($collected ?: '0', $this->clearedByCredits(), 4), $this->paidByReceiptVouchers(), 4);
     }
 
     /**
@@ -220,22 +223,57 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      */
     public function receiptVouchers(): HasMany
     {
-        return $this->hasMany(Voucher::class, 'against_id')
+        /*
+         * ⭐ এক রসিদে বহু বিল (cb-ma-4, ২৫ অক্টোবর ২০২৬) — একক "বিপরীতে" আর বিলের সারি ([[VoucherAllocation]]) দুই পথের রসিদই।
+         * ⓘ সম্পর্কটা কোম্পানি ধরে, তারপর দুই শর্তের যেকোনো একটা — বিলের পাতা একটা একটা করে খোলে (আগে থেকে টেনে আনা নয়)।
+         */
+        $type = static::drillSourceType();
+        $id = $this->getKey();
+
+        return $this->hasMany(Voucher::class, 'company_id', 'company_id')
             ->where('type', Voucher::RECEIPT)
-            ->where('against_type', static::drillSourceType())
+            ->where(fn ($q) => $q->where(fn ($single) => $single->where('against_type', $type)->where('against_id', $id))
+                ->orWhereHas('allocations', fn ($row) => $row->where('against_type', $type)->where('against_id', $id)))
             ->posted()
             ->orderBy('trx_date')
             ->orderBy('id');
     }
 
+    /**
+     * ⭐ খোলা ক্রেডিট (ক্রেডিট নোট, আগের আদায়ের অপ্রয়োগকৃত) যা এই বিলে বসেছে — দফা ৩ (মালিকের নকশা ১০০, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল পাকা আদায়ের প্রয়োগ ([[CollectionApplication]]); শর্ত [[scopeWithCollected()]]-এর হুবহু, যাতে বিলের পাতা, আদায়ের
+     * পর্দা, বাকির দেয়াল ([[CreditExposure]]) আর হিসাবের খোলা বিল ([[SalesPartyOpenBills]]) একই বাকি বলে।
+     */
+    public function clearedByCredits(): string
+    {
+        return bcadd((string) (DB::table('sal_collection_applications as a')
+            ->join('sal_collections as c', 'c.id', '=', 'a.collection_id')
+            // ⛔ কাঁচা প্রশ্নে কোম্পানির নাম নিজে — বিলের নিজের কোম্পানি ([[EveryRawQueryNamesItsCompanyTest]])
+            ->where('c.company_id', (int) $this->company_id)
+            ->where('a.target_invoice_id', $this->getKey())
+            ->whereNull('c.deleted_at')
+            ->whereIn('c.status', DocumentStatus::POSTED)
+            ->sum('a.amount') ?: '0'), '0', 4);
+    }
+
     public function paidByReceiptVouchers(): string
     {
-        return (string) (Voucher::query()
+        $single = (string) (Voucher::query()
             ->where('type', Voucher::RECEIPT)
             ->where('against_type', static::drillSourceType())
             ->where('against_id', $this->getKey())
             ->posted()
             ->sum('amount') ?: '0');
+
+        // ⭐ বহু বিলের রসিদ — এই বিলের সারিতে যতটা বসল, কেবল পাকা রসিদের ([[VoucherAllocation]]; cb-ma-4)
+        $rows = (string) (VoucherAllocation::query()
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->whereHas('voucher', fn ($v) => $v->where('type', Voucher::RECEIPT)->posted())
+            ->sum('amount') ?: '0');
+
+        return bcadd($single, $rows, 4);
     }
 
     /**
@@ -268,8 +306,15 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
 
     public function scopeWithCollected(Builder $query): Builder
     {
+        /*
+         * ⭐ খোলা ক্রেডিটের প্রয়োগও আদায়ের যোগে — দফা ৩ ([[clearedByCredits()]]-এর হুবহু শর্ত)। ⓘ `collected_total` যে সব জায়গা
+         * পড়ে (বাকির দেয়াল, রিপোর্ট, ড্যাশবোর্ড) সবাই একসাথে মানে, আলাদা করে কাউকে বদলাতে হয় না।
+         */
+        $in = implode(', ', array_fill(0, count(DocumentStatus::POSTED), '?'));
         $collected = CollectionLine::query()
-            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->selectRaw('COALESCE(SUM(amount), 0) + (SELECT COALESCE(SUM(a.amount), 0) FROM sal_collection_applications a'
+                .' JOIN sal_collections c ON c.id = a.collection_id'
+                ." WHERE a.target_invoice_id = sal_invoices.id AND c.deleted_at IS NULL AND c.status IN ({$in}))", DocumentStatus::POSTED)
             ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
             ->whereHas('collection', fn ($q) => $q->posted());
 
@@ -278,8 +323,15 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          * ⚠️ এখানে বাদ পড়লে আদায়ের পর্দার তালিকায় বিলটা পুরো বকেয়া দেখাত,
          * আর একক পাতায় শোধ — ঠিক যে দুই-অঙ্কের ভুলটা উপরের মন্তব্য বলে।
          */
+        /*
+         * ⭐ আর বহু বিলের রসিদের সারি — [[paidByReceiptVouchers()]]-এর হুবহু দ্বিতীয় অংশ, একই ঘরে (`voucher_total`), যাতে এই ঘর পড়া
+         * প্রতিটা তালিকা আর রিপোর্ট (আদায়ের পর্দা, বকেয়ার রিপোর্ট, ড্যাশবোর্ড, নগদের পূর্বাভাস) নিজে থেকেই মেলে (cb-ma-4)।
+         */
         $byVoucher = Voucher::query()
-            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->selectRaw('COALESCE(SUM(amount), 0) + (SELECT COALESCE(SUM(a.amount), 0) FROM acc_voucher_allocations a'
+                .' JOIN vouchers v ON v.id = a.voucher_id'
+                .' WHERE a.against_type = ? AND a.against_id = sal_invoices.id AND v.type = ? AND v.status = ?)',
+                [static::drillSourceType(), Voucher::RECEIPT, \App\Core\Support\DocumentStatus::CONFIRMED])
             ->where('type', Voucher::RECEIPT)
             ->where('against_type', static::drillSourceType())
             ->whereColumn('against_id', 'sal_invoices.id')
@@ -295,6 +347,12 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                 ->selectRaw('COALESCE(SUM(total), 0)')
                 ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
                 ->posted(),
+            // ⓘ বিলের বিপরীতে পাকা নোট, ক্রেডিট − ডেবিট — [[notedAmount()]]-এর হুবহু শর্ত
+            'noted_total' => self::notesOnTheBill()
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'credit' THEN total ELSE -total END), 0)")
+                ->whereColumn('acc_notes.company_id', 'sal_invoices.company_id')
+                ->whereColumn('acc_notes.party_id', 'sal_invoices.customer_id')
+                ->whereColumn('acc_notes.against_id', 'sal_invoices.id'),
             // ⓘ কমিশন দাবি — [[claimedAmount()]]-এর হুবহু শর্ত
             'claimed_total' => CommissionClaim::query()
                 ->selectRaw('COALESCE(SUM(amount), 0)')
@@ -394,6 +452,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          */
         $due = bcsub(bcsub((string) $this->total, $this->collectedAmount(), 4), $this->returnedAmount(), 4);
         $due = bcsub($due, $this->claimedAmount(), 4);
+        // ⭐ বিলের বিপরীতে পাকা নোট — ক্রেডিট কমায়, ডেবিট বাড়ায় (মিল-তালিকা দফা ৩৫, fe ২৫ অক্টোবর ২০২৬; [[notedAmount()]])
+        $due = bcsub($due, $this->notedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }
@@ -405,6 +465,51 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      * দাবির টাকাও আবার নিত। ⓘ বাতিল দাবি বাদ (দাখিলা উল্টানো); মানা বা না-মানা দাবি থাকে — দুইটাতেই গ্রাহকের
      * জমাটা থেকে যায়। ⓘ তালিকা withCollected() দিয়ে এলে অঙ্কটা সারির সাথেই (`claimed_total`)।
      */
+    /**
+     * ⭐ বিলের বিপরীতে পাকা নোটের নিট — ক্রেডিট (ফেরত ছাড়া দাম কমানো, কুপনের ছাড়) বাকি কমায়, ডেবিট বাড়ায় (মিল-তালিকা দফা ৩৫;
+     * fe, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে নোট খাতায় পাওনা কমাত ([[NoteService::confirm()]]), অথচ বিলের বাকি থেকে বাদ যেত না — ৳10,000-এর বিলে ৳2,000-এর
+     * ক্রেডিট নোটের পরে খাতা বলত 8,000, বিল, আদায়ের পর্দা আর ঋণ নিয়ন্ত্রণ বলত 10,000: রসিদে টাকা দুবার নেওয়ার দরজা।
+     * ⓘ ফেরত নোট বানায় না (নিজের পথে [[returnedAmount()]]), তাই দুবার কাটা হয় না।
+     * ⛔ বিল চেনা হয় বাঁধন দিয়ে (`against_type` + `against_id`, কোম্পানি আর গ্রাহকসহ), লেখা নম্বর দিয়ে নয় — লাইভে UB-র ২১টা পুরনো
+     * নোটের `against_no`-তে মুক্ত লেখা ("Damage Bill"), বাঁধন খালি; সেগুলো বিল ছাড়া নোট (fe, ২৫ অক্টোবর ২০২৬)।
+     */
+    public function notedAmount(): string
+    {
+        $preloaded = $this->getAttribute('noted_total');
+
+        if ($preloaded !== null) {
+            return bcadd((string) ($preloaded ?: '0'), '0', 4);
+        }
+
+        return self::notesOnTheBill()
+            ->where('company_id', $this->company_id)
+            ->where('party_id', $this->customer_id)
+            ->where('against_id', $this->getKey())
+            ->get(['direction', 'total'])
+            ->reduce(fn (string $sum, $n) => $n->direction === \App\Modules\Accounts\Models\Note::CREDIT
+                ? bcadd($sum, (string) $n->total, 4) : bcsub($sum, (string) $n->total, 4), '0.0000');
+    }
+
+    /** পাকা গ্রাহক-নোট — দেয়াল ছাড়া (বাকি গ্রাহকের, শাখার নয়); কোম্পানি ডাকনেওয়ালা নিজে মেলায় */
+    private static function notesOnTheBill(): Builder
+    {
+        return \App\Modules\Accounts\Models\Note::query()->withoutGlobalScopes()
+            ->where('party_type', 'customer')
+            ->where('against_type', 'sales_invoice')
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+    }
+
+    /**
+     * ⭐ বাকির SQL — [[dueAmount()]]-এর হুবহু সূত্র, [[scopeWithCollected()]]-এর কলাম দিয়ে। ⛔ আগে সাতটা জায়গায় নিজের হাতে লেখা ছিল;
+     * নোট যোগ হলে একটা বাদ পড়লে সেই পর্দা আবার দুই কথা বলত। এখন সবাই এটা ডাকে।
+     */
+    public static function dueSql(string $alias): string
+    {
+        return "({$alias}.total - {$alias}.collected_total - {$alias}.voucher_total - {$alias}.returned_total - {$alias}.claimed_total - {$alias}.noted_total)";
+    }
+
     public function claimedAmount(): string
     {
         $preloaded = $this->getAttribute('claimed_total');

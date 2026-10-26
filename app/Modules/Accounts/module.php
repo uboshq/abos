@@ -328,6 +328,8 @@ return [
         'accounts.voucher.create',
         'accounts.voucher.update',
         'accounts.voucher.delete',
+        // ⭐ ব্যাংক ফাইল (BEFTN) নামানো — প্রাপকের পুরো হিসাব নম্বর, তাই নিজের চাবি (fe, ২৫ অক্টোবর ২০২৬; লাইভে 2027_04_04 মাইগ্রেশন দেয়)
+        'accounts.voucher.bank_file',
         /*
          * ⛔ `accounts.voucher.approve` তোলা হলো — ২১ সেপ্টেম্বর ২০২৬।
          *
@@ -483,6 +485,8 @@ return [
             'accounts.report.group',
             'accounts.voucher.create',
             'accounts.voucher.update',
+            // ⭐ পরিশোধ পাকা করেন যিনি, তিনিই ব্যাংক ফাইল নামান (নতুন কোম্পানির ছাঁচ)
+            'accounts.voucher.bank_file',
             'accounts.cheque.view',
             'accounts.cheque.manage',
             'accounts.till.view',

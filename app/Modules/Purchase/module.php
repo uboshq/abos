@@ -97,6 +97,8 @@ return [
      */
     'bindings' => [
         CapitalisesABillLine::class => BillLinesForAssets::class,
+        // ⭐ পরিশোধ ভাউচারের খোলা বিল — সরবরাহকারীর বিল, ক্রয়ের নিজের বাকিতে (cb-ma-5)
+        \App\Core\Contracts\PayableOpenBills::class => \App\Modules\Purchase\Services\PurchasePayableOpenBills::class,
     ],
 
     'menu' => [

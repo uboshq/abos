@@ -62,6 +62,9 @@ class VoucherController extends Controller implements HasMiddleware
              * জায়গা থেকে উত্তর পায়, তাই কোনোদিন দুই রকম বলতে পারে না।
              */
             new Middleware('can:viewAny,'.Voucher::class, only: ['index']),
+            // ⛔ ব্যাংক ফাইলে প্রাপকের পুরো হিসাব নম্বর — নিজের চাবি, দরজায় (নিরাপত্তা, fe ২৫ অক্টোবর ২০২৬; SAP F110-এর payment medium;
+            // [[EveryRouteIsGuardedTest]]); শাখার নাগাল ভাউচারের নিজের দেয়ালে ([[VoucherBankFile]])
+            new Middleware('can:accounts.voucher.bank_file', only: ['bankFile']),
             new Middleware('can:view,voucher', only: ['show']),
             new Middleware('can:create,'.Voucher::class, only: ['create', 'store', 'simulate', 'referenceCheck']),
             new Middleware('can:update,voucher', only: ['edit', 'update', 'post']),
@@ -225,6 +228,39 @@ class VoucherController extends Controller implements HasMiddleware
      * ঘর, আর একটা সহায়ক ঘরের জন্য ফর্ম ভাঙা উচিত নয়। তবে চুপচাপ শূন্যও
      * নয়: `known` মিথ্যা হলে পর্দা "—" দেখায়, "০.০০" নয়।
      */
+    /**
+     * ⭐ ব্যাংক ফাইল (BEFTN) — `?account=<ব্যাংক খাতের id>&date=YYYY-MM-DD` ([[VoucherBankFile]]; cb-ma-4)।
+     *
+     * ⛔ চাবি দরজায় — নিজের `accounts.voucher.bank_file` ([[middleware()]]); শাখা-সীমিত মানুষ কেবল নিজের শাখার পরিশোধ পান (ভাউচারের শাখার
+     * দেয়াল)। খাতটা এই কোম্পানির ব্যাংক খাত হতে হবে — নগদ বা MFS-এর ব্যাংক ফাইল হয় না।
+     * ⭐ প্রতিটা নামানো নিরীক্ষায় — কে, কখন (খাতা নিজে), কোন খাত, কোন দিন, কোন ভাউচার, কয় সারি, কয়টা বাদ (`bank_file_downloaded`)।
+     * ⓘ যে প্রাপকের সই-পাওয়া হিসাব নেই, তার সারি যায় না — সংখ্যাটা উত্তরের মাথায় (`X-Skipped`), যাতে ফাইলটা পুরো ভাবা না হয়।
+     */
+    public function bankFile(Request $request): \Illuminate\Http\Response
+    {
+        $account = \App\Modules\Accounts\Models\Account::query()->whereKey((int) $request->query('account', 0))
+            ->where('money_kind', \App\Modules\Accounts\Models\Account::BANK)->first();
+        abort_if($account === null, 404);
+
+        $date = (string) $request->query('date', now()->toDateString());
+        abort_unless(preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1, 422);
+
+        $file = app(\App\Modules\Accounts\Services\VoucherBankFile::class)->of($account, $date);
+
+        app(\App\Core\Engines\Audit\AuditEngine::class)->record($account, 'bank_file_downloaded', [
+            'date' => [null, $date],
+            'rows' => [null, (string) $file['rows']],
+            'skipped' => [null, (string) $file['skipped']],
+            'vouchers' => [null, implode(',', $file['voucher_ids'])],
+        ]);
+
+        return response($file['content'], 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$file['name'].'"',
+            'X-Skipped' => (string) $file['skipped'],
+        ]);
+    }
+
     public function due(Request $request): JsonResponse
     {
         /*
@@ -263,6 +299,17 @@ class VoucherController extends Controller implements HasMiddleware
             'known' => true,
             'amount' => app(AccountsFacts::class)->dueFrom($type, $id),
             'bills' => $this->openBillsOf($type, $id),
+            /*
+             * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর — Core চুক্তি দিয়ে, মডিউল না চিনে (cb-ma-4; হিসাব গ্রাহক বা সরবরাহকারী মডিউল পড়ে না):
+             * বাকির সীমা (গ্রাহক; সুইচ বন্ধ হলে null, ০.০০ মানে বাকি নেই), BIN/TIN (সরবরাহকারী), প্রাপকের ব্যাংক {state, line}।
+             * ⓘ পক্ষ বাছা হয় ব্রাউজারে, তাই পাতায় আগে থেকে নয় — এই উত্তরেই।
+             */
+            'credit' => app(\App\Core\Contracts\PartyCreditLimit::class)->creditOf($type, $id),
+            'tax_ids' => app(\App\Core\Contracts\PartyTaxIds::class)->taxIdsOf($type, $id),
+            'payee_bank' => app(\App\Core\Contracts\PayeeBankView::class)->bankOf($type, $id),
+            // ⓘ পক্ষের নিজের শাখা — কেবল তথ্য (নকশার "শাখা: গ্রাহকের শাখা"); টাকা বসে বাক্সের শাখায় (মালিক, ১৯ অক্টোবর ২০২৬)
+            'party_branch' => ($branchId = app(PartyRegistry::class)->branchesOf([[$type, $id]])[$type.':'.$id] ?? null) === null
+                ? null : \App\Models\Branch::query()->find($branchId)?->name(),
         ]);
     }
 
@@ -281,7 +328,9 @@ class VoucherController extends Controller implements HasMiddleware
      */
     private function openBillsOf(string $type, int $id): array
     {
-        return app(PartyOpenBills::class)->openBills($type, $id);
+        // ⭐ গ্রাহকের বিক্রয় বিল আর সরবরাহকারীর ক্রয় বিল (cb-ma-5) — লেখার যাচাইয়ের একই উৎস
+        // ⓘ নোটসহ — কার্ডে দেখানোর জন্য (a5-এর চুক্তি, `kind`); প্রয়োগ হয় কেবল বিলে ([[VoucherAllocations::openBillsOf()]])
+        return app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openBillsOf($type, $id, 50, true);
     }
 
     /**
@@ -553,7 +602,30 @@ class VoucherController extends Controller implements HasMiddleware
      */
     private function formOptions(string $type): array
     {
-        return app(DepositFormOptions::class)->all($type);
+        return [
+            ...app(DepositFormOptions::class)->all($type),
+
+            /*
+             * ⭐ নিয়ন্ত্রণের কার্ড ([[x-money.controls]]) — রসিদ আর পরিশোধে, টাকা দেওয়ার পর্দার একই কার্ড (নকশা পাতা ২ আর ৪; fe, ২৪
+             * অক্টোবর ২০২৬)। ⓘ সই: এই কোম্পানিতে এই ধরনের ভাউচারে সইয়ের ছক আছে কি না ([[VoucherApproval::actionFor()]]-এর একই কাজ —
+             * ধরনটাই); তিন হাত: লেখক ≠ পাকাকারী ([[VoucherService::MAKER_CHECKER]])।
+             */
+            'moneySignatures' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                && app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires(VoucherApproval::MODULE, $type, null, class_basename(Voucher::class)),
+            'moneyThreeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get(VoucherService::MAKER_CHECKER, true),
+
+            /*
+             * ⭐ মাথার তথ্যের সারি — "নম্বর: সংরক্ষণে বসবে (RCV-…) · বানালেন · সই দেবেন: … (ধাপ 1/N) · মাস খোলা ✓" (নকশা পাতা ২ আর ৪;
+             * টাকা দেওয়ার পর্দার একই সারি, [[PaymentController]])। ⓘ উপসর্গ নম্বর সিরিজের নিজের, কিছু খরচ না করে
+             * ([[NumberSeriesEngine::prefixOf()]]); প্রথম সই একই ছক থেকে ([[ApprovalEngine::firstSigner()]])।
+             */
+            'moneyPrefix' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                ? app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->prefixOf(Voucher::DOC_TYPES[$type])
+                : '',
+            'moneyFirstSigner' => in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT], true)
+                ? app(\App\Core\Engines\Approval\ApprovalEngine::class)->firstSigner(VoucherApproval::MODULE, $type, null, class_basename(Voucher::class))
+                : null,
+        ];
     }
 
     /**
@@ -724,7 +796,80 @@ class VoucherController extends Controller implements HasMiddleware
             'debit' => \App\Core\Support\Money::format($debit),
             'credit' => \App\Core\Support\Money::format($credit),
             'balanced' => bccomp($debit, $credit, 4) === 0,
+            'summary' => $this->summaryOf($type, $data, $ledger['lines'], $accounts),
+            // ⭐ নিট — পক্ষের হাতে যা যায়, সার্ভারের হিসাবে (পরিশোধে মোট − AIT − VDS; চুক্তি §৫) — ফোনের preview-এর একই ঘর
+            'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
+            // ⭐ খাতা যে শাখায় বসবে — বাক্সের শাখা (মালিকের ১৯ অক্টোবরের নিয়ম, RCV-0143); মাথার "পোস্ট হবে: …"
+            'branch' => $branch?->name(),
+            // ⭐ পোস্টে সইয়ের অপেক্ষায় যাবে কি না — পোস্টের নিজের প্রশ্নে ([[VoucherApproval::wouldWait()]]), ফোনের preview-এর একই ঘর
+            'needs_signature' => app(VoucherApproval::class)->wouldWait($data, $lines),
         ]);
+    }
+
+    /**
+     * ⭐ হিসাবের সারাংশ — খাতার একই সারি থেকে (fe, ২৪ অক্টোবর ২০২৬; মালিকের প্রশ্ন: "হিসাবের সারাংশ ভাউচারে এখন নেই কেন?")।
+     *
+     * ⓘ রসিদে খাতে ওঠে টাকা − চার্জ (ব্যাংক কেটে রাখে), পরিশোধে খাত থেকে যায় টাকা + চার্জ ([[VoucherService::twoLineEntry()]])।
+     * নিট আর চার্জ দুটোই খাতার সারি থেকে পড়া — টাকার খাতের সারি আর চার্জের খাতের (৫২১০ ব্যাংক চার্জ, MFS চার্জ) সারি; কাগজের টাকা
+     * মাথা থেকে। তাই "মিলেছে" সত্যিই খাতা আর কাগজের মিল মাপে, হাতে গোনা যোগফল নয়।
+     * ⓘ টাকা কথায় [[AmountInWords]] থেকে — ছাপা রসিদের একই লেখা; পর্দায় দ্বিতীয় কোনো হিসাব নেই।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @param  \Illuminate\Support\Collection<int, \App\Modules\Accounts\Models\Account>  $accounts
+     * ⭐ উৎসে কর্তন (পরিশোধে, [[WithheldTax::onPayment()]]) — AIT আর VDS খাতার ২১২১/২১২২-এর সারি থেকে; মোট = দেওয়া + AIT + VDS,
+     * পক্ষের খাতে যতটা কমে (নকশা পাতা ৪-এর "বিলে প্রয়োগ (মোট) − AIT − VDS = নিট")। রসিদে পক্ষ যা কেটে রাখলেন — ১১৩৮/১১৩৫-এর ডেবিট
+     * সারি থেকে ([[WithheldAtSource]]); মোট = পাওয়া + VDS + AIT, পক্ষের খাত যতটা কমে (নকশা পাতা ২-এর "বিলে প্রয়োগ")।
+     *
+     * @return array{amount: string, gross: string, ait: string, vds: string, charge: string, net: string, words: string, matches: bool}
+     */
+    private function summaryOf(string $type, array $data, array $lines, \Illuminate\Support\Collection $accounts): array
+    {
+        $receipt = $type === Voucher::RECEIPT;
+        $moneyId = (int) ($data[$receipt ? 'to_account_id' : 'from_account_id'] ?? 0);
+        $chargeCodes = [\App\Modules\Accounts\Services\StandardChart::BANK_CHARGES, \App\Modules\Accounts\Services\StandardChart::MFS_CHARGES];
+        // ⓘ পরিশোধে আমরা কাটি (Cr ২১২১/২১২২), রসিদে পক্ষ কাটেন (Dr ১১৩৫/১১৩৮, [[WithheldAtSource]])
+        $withheldCodes = $receipt
+            ? ['ait' => \App\Modules\Accounts\Services\StandardChart::ADVANCE_INCOME_TAX, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_RECEIVABLE]
+            : ['ait' => \App\Modules\Accounts\Services\StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => \App\Modules\Accounts\Services\StandardChart::VDS_PAYABLE];
+        $withheldSide = $receipt ? 'debit' : 'credit';
+        $amount = bcadd(is_numeric($data['amount'] ?? null) ? (string) $data['amount'] : '0', '0', 4);
+        $net = '0';
+        $charge = '0';
+        $cut = ['ait' => '0', 'vds' => '0'];
+
+        foreach ($lines as $line) {
+            $code = $accounts->get((int) $line['account_id'])?->code;
+            $kind = array_search($code, $withheldCodes, true);
+
+            if ($kind !== false) {
+                $cut[$kind] = bcadd($cut[$kind], (string) ($line[$withheldSide] ?? '0'), 4);
+
+                continue;
+            }
+
+            if ((int) $line['account_id'] === $moneyId) {
+                $net = bcadd($net, (string) ($line[$receipt ? 'debit' : 'credit'] ?? '0'), 4);
+            } elseif (in_array($accounts->get((int) $line['account_id'])?->code, $chargeCodes, true)) {
+                $charge = bcadd($charge, (string) ($line['debit'] ?? '0'), 4);
+            }
+        }
+
+        $gross = bcadd($amount, bcadd($cut['ait'], $cut['vds'], 4), 4);
+        $matches = $receipt
+            ? bccomp($amount, bcadd($net, $charge, 4), 4) === 0
+            : bccomp($net, bcadd($amount, $charge, 4), 4) === 0;
+
+        return [
+            'amount' => \App\Core\Support\Money::format($amount),
+            'gross' => \App\Core\Support\Money::format($gross),
+            'ait' => \App\Core\Support\Money::format($cut['ait']),
+            'vds' => \App\Core\Support\Money::format($cut['vds']),
+            'charge' => \App\Core\Support\Money::format($charge),
+            'net' => \App\Core\Support\Money::format($net),
+            'words' => \App\Core\Support\AmountInWords::of($amount, app()->getLocale()),
+            'matches' => $matches,
+        ];
     }
 
     /**

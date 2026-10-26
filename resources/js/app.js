@@ -16,6 +16,7 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import { sidebarStore } from './sidebar-state.js'
 import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
@@ -125,14 +126,9 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.store('scanner', scannerStore())
 
-    Alpine.store('sidebar', {
-        collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
-
-        toggle() {
-            this.collapsed = ! this.collapsed
-            localStorage.setItem('abos.sidebar', this.collapsed ? 'collapsed' : 'open')
-        },
-    })
+    // ⓘ গুটানো/খোলা মানুষের বাছাই; দুই-কলামের টাকার ফর্মে ১৫৩৬-এর নিচে রেল বা ভাসমান ([[sidebar-state.js]])
+    Alpine.store('sidebar', sidebarStore())
+    window.addEventListener('resize', () => Alpine.store('sidebar').resized(window.innerWidth))
 })
 
 /*

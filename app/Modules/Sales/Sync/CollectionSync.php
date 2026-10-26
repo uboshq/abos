@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Sync;
 
+use App\Core\Contracts\AnswersAfterSync;
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
 use App\Core\Engines\Sync\SyncBatch;
@@ -15,6 +16,8 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Http\Controllers\CollectionApiController;
+use App\Modules\Sales\Services\CollectionInput;
 use App\Modules\Sales\Services\CollectionService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -42,7 +45,7 @@ use Illuminate\Validation\ValidationException;
  * ওয়েব ও ফোন দুই দিকেই এক থাকে। ফোনের জন্য আলাদা সহজ পথ বানালে দুইটা
  * সত্যি তৈরি হত।
  */
-final class CollectionSync implements SyncsToDevices
+final class CollectionSync implements SyncsToDevices, AnswersAfterSync
 {
     public function __construct(private readonly CollectionService $collections) {}
 
@@ -147,6 +150,19 @@ final class CollectionSync implements SyncsToDevices
     }
 
     /**
+     * ⭐ বসার সাথে সাথেই ফোনের রসিদ — নম্বর, অবস্থা, টাকা কথায়, রসিদের PDF, কোন কাগজে কত, কত অপ্রয়োগকৃত (a4-এর চুক্তি,
+     * ২১ অক্টোবর ২০২৬; [[CollectionApiController::answer()]], ফোনের আদায়ের পাতার একই ঘর)।
+     *
+     * @return array<string, mixed>
+     */
+    public function answerFor(string $entityId): array
+    {
+        $collection = Collection::acrossBranches()->where('public_id', $entityId)->first();
+
+        return $collection === null ? [] : CollectionApiController::answer($collection);
+    }
+
+    /**
      * ফোনের তোলা একটা আদায় — সার্ভারের নিয়ম ধরে, খসড়া হিসেবে।
      *
      * ── কেন কেবল CREATE ─────────────────────────────────────────────
@@ -180,29 +196,30 @@ final class CollectionSync implements SyncsToDevices
          * মালিক, ৭ অক্টোবর ২০২৬: "অ্যাপে পেমেন্ট অপশন চালু করো"। ⓘ টাকার খাত (নগদ/ব্যাংক/MFS), মাধ্যম, লেনদেন-নম্বর,
          * তারিখ আর মন্তব্য — পুরনো অ্যাপ এগুলো পাঠায় না, তখন আগের মতো প্রধান টিলের নগদ।
          * ⓘ অঙ্ক আর লেখার ঘর কঠোরভাবে — "1e5" বা অ্যারে এলে ৫০০ নয়, কারণসহ ফেরত (একটা ভুল সারি গোটা সারি আটকায় না)।
+         * ⭐ নকশা ১০০ (a4-এর চুক্তি, ২১ অক্টোবর ২০২৬): নতুন ঐচ্ছিক ঘর `lines: [{kind, id, amount}]` (a4-এর `{invoice, amount}` = বিল),
+         * `difference: {kind, amount}`, `vds`, `ait`, `method`, `reference`, `value_date`, `bank_charge` — ওয়েবের একই আবেদনে
+         * ([[CollectionInput::fromPhone()]]) আর একই সেবায় ([[CollectionService::createFrom()]])। সারি না দিলে পুরনো বিল আগে।
          */
-        $account = null;
-
-        if (filled($payload['accountId'] ?? null)) {
-            // ⛔ কেবল পোস্টযোগ্য খাত — দল-খাতে টাকা নয় ([[MoneyNeverLandsOnAGroupAccountTest]]); বাকি নিয়ম সেবার ([[MoneyAccountRule]])
-            $account = Account::query()->postable()->where('public_id', (string) $payload['accountId'])->first();
-
-            if ($account === null) {
-                throw new SyncRejection(__('sales::sync.unknown_money_account'));
-            }
-        }
-
+        $plain = 'regex:/^\d{1,14}(\.\d{1,4})?$/';
         $data = [
             'trx_date' => is_string($payload['trxDate'] ?? null) ? $payload['trxDate'] : now()->toDateString(),
             'amount' => is_scalar($payload['amount'] ?? null) ? (string) $payload['amount'] : '',
-            'instrument' => $payload['instrument'] ?? null,
-            'instrument_no' => $payload['instrumentNo'] ?? null,
+            'instrument' => $payload['method'] ?? $payload['instrument'] ?? null,
+            'instrument_no' => $payload['reference'] ?? $payload['instrumentNo'] ?? null,
             'narration' => $payload['narration'] ?? null,
         ];
 
-        $check = Validator::make([...$data, 'allocations' => $payload['allocations'] ?? []], [
+        $check = Validator::make([
+            ...$data,
+            'allocations' => $payload['allocations'] ?? [],
+            'lines' => $payload['lines'] ?? [],
+            'vds' => $payload['vds'] ?? null,
+            'ait' => $payload['ait'] ?? null,
+            'bank_charge' => $payload['bank_charge'] ?? $payload['bankCharge'] ?? null,
+            'difference' => $payload['difference'] ?? null,
+        ], [
             'trx_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+            'amount' => ['required', $plain, 'not_regex:/^0+(\.0+)?$/'],
             'instrument' => ['nullable', 'string', 'max:32'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'narration' => ['nullable', 'string', 'max:500'],
@@ -214,7 +231,20 @@ final class CollectionSync implements SyncsToDevices
             'allocations' => ['nullable', 'array', 'max:200'],
             'allocations.*' => ['array'],
             'allocations.*.invoiceId' => ['required', 'string', 'max:64'],
-            'allocations.*.amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+            'allocations.*.amount' => ['required', $plain, 'not_regex:/^0+(\.0+)?$/'],
+            'lines' => ['nullable', 'array', 'max:200'],
+            'lines.*' => ['array'],
+            'lines.*.kind' => ['nullable', 'in:bill,debit_note,credit_note,credit'],
+            'lines.*.id' => ['nullable', 'string', 'max:64'],
+            'lines.*.invoice' => ['nullable', 'string', 'max:64'],
+            // ⓘ ক্রেডিটের সারি ঋণাত্মকও আসে (পর্দা যেমন দেখায়)
+            'lines.*.amount' => ['required', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/'],
+            'vds' => ['nullable', $plain],
+            'ait' => ['nullable', $plain],
+            'bank_charge' => ['nullable', $plain],
+            'difference' => ['nullable', 'array'],
+            'difference.kind' => ['nullable', 'in:discount,rounding'],
+            'difference.amount' => ['nullable', $plain],
         ]);
 
         if ($check->fails()) {
@@ -222,42 +252,17 @@ final class CollectionSync implements SyncsToDevices
         }
 
         /*
-         * অন্য অংশের মতো এখানেও: প্রতিটা বণ্টনের বিল আসে বাইরের কী দিয়ে।
-         * অচেনা বিল মানে এই পরিবর্তন প্রত্যাখ্যাত — অর্ধেক বণ্টন বসিয়ে
-         * বাকিটা নীরবে বাদ দেওয়া হিসাব গুলিয়ে দেয়।
+         * অন্য অংশের মতো এখানেও: প্রতিটা বণ্টনের কাগজ আসে বাইরের কী দিয়ে। অচেনা কাগজ মানে এই পরিবর্তন প্রত্যাখ্যাত — অর্ধেক বণ্টন
+         * বসিয়ে বাকিটা নীরবে বাদ দেওয়া হিসাব গুলিয়ে দেয় ([[CollectionInput::fromPhone()]] ফেরায়)।
          */
-        $lines = [];
-
-        foreach ((array) ($payload['allocations'] ?? []) as $line) {
-            if (! is_array($line)) {
-                continue;
-            }
-
-            $invoice = SalesInvoice::query()
-                ->where('public_id', (string) ($line['invoiceId'] ?? ''))
-                ->first();
-
-            if ($invoice === null) {
-                throw new SyncRejection(__('sales::sync.unknown_invoice'));
-            }
-
-            $lines[] = [
-                'sales_invoice_id' => $invoice->id,
-                'amount' => (string) ($line['amount'] ?? '0'),
-            ];
-        }
-
         try {
-            $collection = $this->collections->create([
-                'customer_id' => $customer->id,
-                'trx_date' => $data['trx_date'],
-                'amount' => $data['amount'],
-                'account_id' => $account?->id,
-                // ⓘ পুরনো অ্যাপ মাধ্যম পাঠায় না — তখন আগের মতো নগদ
-                'instrument' => $data['instrument'] ?? ($account === null ? 'cash' : null),
-                'instrument_no' => $data['instrument_no'],
-                'narration' => $data['narration'],
-            ], $lines);
+            $collection = $this->collections->createFrom(CollectionInput::fromPhone([
+                ...$payload,
+                'customerId' => (string) $customer->public_id,
+                // ⓘ পুরনো অ্যাপ মাধ্যম পাঠায় না — খাত না বললে আগের মতো নগদ ([[CollectionInput::fromPhone()]])
+                'method' => $data['instrument'],
+                'reference' => $data['instrument_no'],
+            ]));
         } catch (ValidationException $refused) {
             throw new SyncRejection((string) collect($refused->errors())->flatten()->first());
         }

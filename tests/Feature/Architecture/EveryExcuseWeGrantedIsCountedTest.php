@@ -448,9 +448,27 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       `purchase.payment.simulate`-এর (৪৫৬ → ৪৫৭) একই সিদ্ধান্ত।
      *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
      *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
+     *
+     * ── ⚠️ ৪৫৯ → ৪৬১ (মূলের ৪৫৯ + আমাদের ২; শাখায় ছিল ৪৫৭ → ৪৫৯ → ৪৬০), ২২ অক্টোবর ২০২৬, main 2c026a303 মেশানো ২৪ অক্টোবর (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
+     *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
+     *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
+     *       ফোনের প্রিভিউ; sal_collections, sal_collection_lines, sal_collection_applications, ledger_entries, approvals,
+     *       audit_trails, issued_numbers-এর সারি আগে = পরে);
+     *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
+     *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
+     *       আটকাত (JSON-এ ৪০৯)।
+     *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
+     *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
+     *
+     * ── ⚠️ ৪৬১ → ৪৬৩, ২৪ অক্টোবর ২০২৬ (বাঁ মডিউল-রেলের নিজের সাজ; মালিক, fe-র অনুমোদন; a6) ─────────────────
+     *   +১  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — rail.layout: কেবল নিজের users.nav_layout (পিন আর ক্রম), অন্যের মডিউল
+     *       কোড ফেলা হয়, নিরীক্ষায় যায় না (দাবি: EveryModuleIsOnTheRailOrBehindMoreTest); home.layout-এর একই জাত।
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — rail.layout: কোনো কাগজ বানায় না, শাখার ছাপ লাগে না।
      */
     // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
-    private const CEILING = 460;
+    // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
+    private const CEILING = 464;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

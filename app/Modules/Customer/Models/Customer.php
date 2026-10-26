@@ -550,8 +550,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
 
         /*
          * ⭐ বাকির ইঞ্জিনের নিজের অঙ্ক — এক উৎস, দ্বিতীয় যোগ নয় (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬; [[CreditHolds::availableOf()]])।
-         * ⛔ আগে এখানে নিজের যোগ ছিল (সীমা − বকেয়া − আটকে থাকা − চেক): একটা ভাগ ভুলে গেলেই এই পাতা বাকি-নিয়ন্ত্রণের পাতা
-         * আর দেয়ালের চেয়ে বেশি দেখাত — ১৮ অক্টোবরের আগে চেক বাদ পড়ত ঠিক এভাবেই।
+         * ⓘ ব্যবহৃত অংশ ([[creditUsed()]]) একই টুকরোগুলো গোনে — হিসাবের পর্দার চুক্তি ([[PartyCreditLimit]]) দুটোই পড়ে
+         *   (fe, ২৬ অক্টোবর ২০২৬: main-এর ইঞ্জিন আর cb-র ভাগ এক জোড়ায়)।
          */
         $engine = app(CreditHolds::class)->availableOf((int) $this->id);
 
@@ -563,6 +563,29 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         $left = bcsub($limit, $this->outstanding(), 4);
 
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
+    /**
+     * ⭐ সীমার কতটা ব্যবহৃত — বকেয়া + আটকে থাকা + ক্লিয়ার না হওয়া চেক; [[availableLimit()]] আর হিসাবের পর্দার
+     * [[CustomerCreditLimit]] দুজনেই এটা পড়ে (মিল-তালিকা #১৯, ২৫ অক্টোবর ২০২৬) — ⛔ দ্বিতীয় কোনো উপায়ে গোনা নয়।
+     */
+    public function creditUsed(): string
+    {
+        /*
+         * ⭐ আটকে থাকা টাকাও — ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ বিল না হওয়া ডিও আর খসড়া বিল সীমা আটকায় (মালিকের নির্দেশ)।
+         * ⚠️ কেবল খাতা দেখলে এই পাতা কাউন্টারের চেয়ে বেশি দেখাত, আর
+         * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
+         */
+        $used = bcadd($this->outstanding(), $this->heldCredit(), 4);
+
+        /*
+         * ⭐ ক্লিয়ার না হওয়া চেকও — বাকি-নিয়ন্ত্রণের পাতা আর দেয়ালের একই হিসাব ([[CreditExposure::positionsFor()]];
+         * পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⛔ আগে এই পাতা চেকের টাকা বাদ দিত না, তাই একই গ্রাহকে এখানে বেশি "ব্যবহারযোগ্য"
+         * দেখাত আর কাউন্টারের দেয়াল কম দিত।
+         */
+        return bcadd($used, app(CreditHolds::class)->unclearedChequesOf((int) $this->id), 4);
     }
 
     /**

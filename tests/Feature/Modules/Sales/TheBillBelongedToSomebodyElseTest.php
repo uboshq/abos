@@ -61,55 +61,58 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
      * `customer_id` বাদ দিলে তালিকা আবার সবার হয়ে যেত, আর ঠিক সেই
      * দিনটাই ফিরে আসত।
      */
+    /**
+     * ⓘ টাকা নেওয়ার নকশা ১০০-এর পর্দা (a6, ২১ অক্টোবর ২০২৬): বিলের তালিকা আর পাতায় সবার বিল নিয়ে আসে না — গ্রাহক বাছলে
+     * সার্ভার কেবল তাঁর খোলা কাগজ পাঠায় (`sales.collection.open_items`)। তাই দাবি দুইটা: গ্রাহকের ঘরের বদল সত্যিই শোনা হয়
+     * (ঘরটা ফর্মের নিজের `x-data`-র ভেতরে), আর সার্ভারের উত্তরে অন্যের বিল আসে না।
+     */
     public function test_the_screen_is_told_which_customer_each_open_bill_belongs_to(): void
     {
         $mine = app(CustomerService::class)->create([
             'name_en' => 'Mine', 'credit_limit' => 0, 'credit_days' => 0,
         ]);
+        $theirs = app(CustomerService::class)->create([
+            'name_en' => 'Theirs', 'credit_limit' => 0, 'credit_days' => 0,
+        ]);
+        $own = $this->confirmedBill($mine->id, 'INV-MINE-1');
+        $foreign = $this->confirmedBill($theirs->id, 'INV-THEIRS-1');
 
         $html = (string) $this->actingAs($this->user)
             ->get(route('sales.collection.create'))->getContent();
 
-        $this->assertStringContainsString('customer_id', $html,
-            'বিলের তালিকায় গ্রাহকের নম্বর নেই — তাহলে ব্রাউজার ছাঁকবে কী দিয়ে?');
-
-        $this->assertStringContainsString('customer-picked', $html, implode("\n", [
-            'গ্রাহক বদলানোর ঘটনাটা আর পাঠানো হয় না।',
-            '',
-            'ওটা ছাড়া আগের গ্রাহকের বিলটা বাছা অবস্থায় থেকে যায়, আর',
-            'সেভ টেপার পর "বিলটা অন্য গ্রাহকের" — ঠিক সেই একত্রিশ বার।',
-        ]));
-
         /*
-         * ── আর শোনার ঘরটা যেন সত্যিই শোনে ───────────────────────────
-         * প্রথম সারাইয়ের পর `@change` markup-এ ছিল, পরীক্ষাও সবুজ
-         * ছিল, আর তবু তালিকা খালিই থাকত। কারণ Alpine কেবল `x-data`-র
-         * ভেতরের এলিমেন্ট পড়ে — আর ওই `select`-টার উপরে কোনো
-         * `x-data` ছিল না, তাই শোনার কথাটা কখনো বাঁধাই হয়নি।
-         *
-         * পর্দায় কোনো ভুল দেখা যেত না। শুধু গ্রাহক বাছলে কিছুই হত
-         * না — অর্থাৎ ঠিক আগের সমস্যাটাই, নতুন কোড দিয়ে।
+         * ── শোনার ঘরটা যেন সত্যিই শোনে ───────────────────────────────
+         * প্রথম সারাইয়ের পর `@change` markup-এ ছিল, পরীক্ষাও সবুজ ছিল, আর তবু তালিকা খালিই থাকত — ঘরটার উপরে কোনো `x-data`
+         * ছিল না। ⓘ এখন ঘরটা ফর্মের `collectionForm`-এর ভেতরে, আর বদলে `pickCustomer` ডাকে।
          */
+        $form = strpos($html, 'x-data="collectionForm(');
         $select = null;
 
-        if (preg_match('/<select[^>]*name="customer_id"[^>]*>/s', $html, $m) === 1) {
+        // ⓘ গ্রাহকের ঘর এখন খোঁজা যায় এমন পিকার (x-ui.party-search; fe, ২৪ অক্টোবর ২০২৬): `@change` পিকারের গায়ে, আর বাছলে তার
+        // ভিতরের লুকানো `customer_id` ঘর `change` ছাড়ে — তাই শোনার ঘর সেই গা, আর তার ভিতরেই পাঠানোর ঘর
+        if (preg_match('/<[a-z]+[^>]*pickCustomer\(\$event\.target\.value\)[^>]*>/s', $html, $m, PREG_OFFSET_CAPTURE) === 1) {
             $select = $m[0];
         }
 
+        $this->assertNotFalse($form, 'টাকা নেওয়ার ফর্মে `collectionForm` নেই।');
         $this->assertNotNull($select, 'গ্রাহকের ঘরটাই পাওয়া যায়নি।');
+        $this->assertNotFalse(strpos($html, 'name="customer_id"', $select[1]), 'গ্রাহকের পিকারের ভিতরে পাঠানোর ঘর (`customer_id`) নেই।');
+        $this->assertGreaterThan($form, $select[1], 'গ্রাহকের ঘর ফর্মের `x-data`-র বাইরে — বদলটা কেউ শোনে না।');
+        $this->assertStringContainsString('pickCustomer($event.target.value)', $select[0],
+            'গ্রাহক বদলালে তাঁর খোলা কাগজ আনার ডাক নেই — আগের গ্রাহকের বিল থেকে যেত।');
 
-        $this->assertStringContainsString('x-data', (string) $select, implode("\n", [
-            'গ্রাহকের ঘরে `@change` আছে কিন্তু `x-data` নেই।',
-            '',
-            'Alpine `x-data`-র বাইরের কোনো এলিমেন্ট পড়ে না, তাই ওই',
-            'শোনার কথাটা মৃত — বিলের তালিকা চিরকাল খালি থাকবে।',
-        ]));
+        $items = collect($this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]))->assertOk()->json('items'));
 
-        $this->assertStringNotContainsString('@foreach ($openInvoices', $html);
-        $this->assertSame(1, substr_count($html, 'x-for="o in mine"'),
-            'বিলের তালিকা আর ছাঁকা তালিকা থেকে আঁকা হচ্ছে না।');
+        $this->assertTrue($items->contains('id', $own->public_id), 'নিজের খোলা বিলটাই আসেনি।');
+        $this->assertFalse($items->contains('id', $foreign->public_id), '⛔ অন্য গ্রাহকের বিল এই গ্রাহকের তালিকায় — "বিলটা অন্য গ্রাহকের" আবার।');
+    }
 
-        $this->assertNotNull($mine->id);
+    private function confirmedBill(int $customerId, string $no): \App\Modules\Sales\Models\SalesInvoice
+    {
+        return \App\Modules\Sales\Models\SalesInvoice::query()->create(['document_no' => $no, 'customer_id' => $customerId,
+            'branch_id' => CompanyContext::branchId(), 'trx_date' => now()->subDays(2)->toDateString(),
+            'due_on' => now()->addDays(10)->toDateString(), 'subtotal' => '100', 'discount' => '0', 'tax' => '0', 'total' => '100',
+            'status' => \App\Core\Support\DocumentStatus::CONFIRMED]);
     }
 
     /**

@@ -6,10 +6,12 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentFingerprint;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ভাউচার পোস্ট করার আগে অনুমোদন লাগে কি না।
@@ -38,6 +40,7 @@ final class VoucherApproval
     /** অনুমোদনের ছকে মডিউলের নাম — `module.php`-র `code`। */
     public const MODULE = 'accounts';
 
+
     /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
     public const COUNTER_DEPOSIT = 'counter_deposit';
 
@@ -59,8 +62,132 @@ final class VoucherApproval
      * পাওয়া গেছে। কিছু ফেরত এলে সেটাই কারণ, আর তার `status` বলে দেয়
      * অপেক্ষায় নাকি প্রত্যাখ্যাত।
      */
+    /**
+     * ⭐ কম-বেশিতে মালিকের সই — ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳০.৫০-এর বেশি হলে ([[\App\Core\Support\Settlement::differenceNeedsOwner()]];
+     * আদায়ের হুবহু নিয়ম আর হুবহু ছক — `sales.discount`, মালিকের একটাই ধাপ; cb-ma-5, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সই লাগলে খসড়া থাকে আর অনুরোধ যায়; শেষ সইয়ে নিজে পোস্ট ([[\App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature]])।
+     * ⛔ ছক বন্ধ বা নেই মানে ফেরত (fail-closed — অনুমোদন বন্ধ কোম্পানিতেও, আদায় আর বিলের মতোই); ফেরানো সই ঠিক সেই অঙ্কে আবার
+     * পাঠালে ফেরত; সীমার বেশি রাউন্ডিং কখনো নয়।
+     */
+    public function differenceStopping(Voucher $voucher): ?Approval
+    {
+        [$kind, $amount] = $this->differenceOf($voucher);
+
+        if (! \App\Core\Support\Settlement::differenceNeedsOwner($kind, $amount)) {
+            return null;
+        }
+
+        $this->assertWithinLimit($kind, $amount);
+
+        $hash = $this->differenceFingerprint($voucher);
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
+
+        if ($decided?->status === Approval::APPROVED && $decided->stillCovers($amount, $hash)) {
+            return null;
+        }
+
+        if ($decided?->status === Approval::PENDING && $decided->state_hash !== null && ! hash_equals((string) $decided->state_hash, $hash)) {
+            $this->approvals->withdrawStale($decided);
+        }
+
+        if ($decided?->status === Approval::REJECTED && $decided->covers($amount)) {
+            throw ValidationException::withMessages(['difference.amount' => __('accounts::validation.difference_rejected')]);
+        }
+
+        $approval = $this->approvals->request(
+            document: $voucher,
+            module: \App\Modules\Accounts\Support\DifferenceSignature::MODULE,
+            action: \App\Modules\Accounts\Support\DifferenceSignature::ACTION,
+            amount: $amount,
+            // ⓘ কোন সইয়ের জায়গা নিল — বিক্রির বিলের ছাড়ের হুবহু ([[SalesInvoiceService::assertDiscountApproved()]]); শর্ত মাপা হয় না (`matchOn: []`)
+            payload: array_filter([
+                'supersedes' => $decided?->status === Approval::APPROVED ? (int) $decided->id : null,
+                'was_amount' => $decided?->status === Approval::APPROVED && $decided->amount !== null ? (string) $decided->amount : null,
+            ], fn ($v) => $v !== null),
+            reason: $voucher->narration,
+            stateHash: $hash,
+            matchOn: [],
+        );
+
+        if ($approval === null) {
+            throw ValidationException::withMessages(['difference.amount' => $kind === 'rounding'
+                ? __('accounts::validation.difference_rounding_no_signer', ['amount' => Money::format($amount), 'free' => Money::format(\App\Core\Support\Settlement::UNSIGNED)])
+                : __('accounts::validation.difference_discount_no_signer')]);
+        }
+
+        return $approval;
+    }
+
+    /**
+     * ⛔ পোস্টের নিজের পাহারা — যে পথেই আসুক (ওয়েব, ফোন, শেষ সইয়ের শেষকারী), সই লাগলে ঠিক এই কাগজের পাওয়া সই চাই।
+     */
+    public function assertDifferenceSigned(Voucher $voucher): void
+    {
+        [$kind, $amount] = $this->differenceOf($voucher);
+
+        if (! \App\Core\Support\Settlement::differenceNeedsOwner($kind, $amount)) {
+            return;
+        }
+
+        $this->assertWithinLimit($kind, $amount);
+
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
+
+        if ($decided?->status !== Approval::APPROVED || ! $decided->stillCovers($amount, $this->differenceFingerprint($voucher))) {
+            throw ValidationException::withMessages(['difference.amount' => $kind === 'rounding'
+                ? __('accounts::validation.difference_rounding_awaiting', ['amount' => Money::format($amount), 'free' => Money::format(\App\Core\Support\Settlement::UNSIGNED)])
+                : __('accounts::validation.difference_discount_awaiting')]);
+        }
+    }
+
+    /**
+     * সইয়ের ছাপ — পক্ষ, ধরন, অঙ্ক, খাতার প্রতিটা সারি (খাত, টাকার খাত, টাকা, কাটা, পার্থক্য) আর বিলের প্রতিটা সারি; বিবরণ বাদ।
+     */
+    public function differenceFingerprint(Voucher $voucher): string
+    {
+        $voucher->loadMissing(['lines', 'allocations']);
+
+        return hash('sha256', json_encode([
+            (string) $voucher->party_type,
+            (int) $voucher->party_id,
+            (string) $voucher->difference_kind,
+            bcadd((string) ($voucher->difference_amount ?? '0'), '0', 4),
+            $voucher->lines->map(fn ($l) => [(int) $l->account_id, bcadd((string) $l->debit, '0', 4), bcadd((string) $l->credit, '0', 4)])->values()->all(),
+            $voucher->allocations->map(fn ($a) => [(string) $a->against_type, (int) $a->against_id, bcadd((string) $a->amount, '0', 4)])->values()->all(),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array{0: ?string, 1: string} */
+    private function differenceOf(Voucher $voucher): array
+    {
+        if (! in_array($voucher->type, [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+            return [null, '0.0000'];
+        }
+
+        return [$voucher->difference_kind, bcadd((string) ($voucher->difference_amount ?? '0'), '0', 4)];
+    }
+
+    private function assertWithinLimit(?string $kind, string $amount): void
+    {
+        $limit = \App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class));
+
+        if ($kind === 'rounding' && bccomp($amount, $limit, 4) > 0) {
+            throw ValidationException::withMessages(['difference.amount' => __('accounts::validation.difference_over_limit', [
+                'amount' => Money::format($amount), 'limit' => Money::format($limit),
+            ])]);
+        }
+    }
+
     public function stopping(Voucher $voucher): ?Approval
     {
+        // ⭐ কম-বেশির মালিকের সই আগে — ভাউচারের নিজের ছক বন্ধ থাকলেও (cb-ma-5; [[differenceStopping()]])
+        $held = $this->differenceStopping($voucher);
+
+        if ($held !== null) {
+            return $held;
+        }
+
         /*
          * ⭐ কাউন্টারের ডিপোজিট নিজের নিয়মে — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর।
          *
@@ -290,6 +417,44 @@ final class VoucherApproval
         $paper = $class::query()->find((int) $voucher->against_id);
 
         return $paper instanceof \App\Core\Contracts\SignedBeforeItIsPaid && $paper->signedBeforeItIsPaid();
+    }
+
+    /**
+     * ⭐ লেখার আগেই — এই কাগজ পোস্টে সইয়ের অপেক্ষায় যাবে কি না (ফোনের preview আর ওয়েবের simulate-এর `needs_signature`; a4-এর
+     * "সইয়ের অপেক্ষায় হবে" চিপ, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ পোস্টের নিজের প্রশ্ন, একই ক্রমে: [[actionFor()]] (নিজের বাক্সে নগদ রসিদ, আগে সই-পাওয়া কাগজ, কাউন্টার) তারপর
+     * [[ApprovalEngine::requires()]] — অঙ্ক সেটাই যা লেখক পোস্টের সময় ভাউচারে থাকবে: সারির ডেবিটের যোগ (লেখার সময় সেবা `amount`
+     * তাই বসায়; পরিশোধে মোট + চার্জ)। ⛔ আলাদা হিসাব করলে চিপ এক কথা বলত আর পোস্ট আরেক কাজ করত। কিছুই লেখে না।
+     *
+     * @param  array<string, mixed>  $header  যাচাই-করা মাথা (`type` সহ)
+     * @param  list<array<string, mixed>>  $lines  [[VoucherWriter::linesFor()]]-এর সারি
+     */
+    public function wouldWait(array $header, array $lines): bool
+    {
+        $accounts = \App\Modules\Accounts\Models\Account::query()
+            ->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+
+        $voucher = (new Voucher)->forceFill(array_intersect_key($header, array_flip((new Voucher)->getFillable())));
+        $voucher->setAttribute('type', (string) ($header['type'] ?? ''));
+        $voucher->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->forceFill([
+            'account_id' => (int) ($l['account_id'] ?? 0),
+            'debit' => (string) ($l['debit'] ?? '0'),
+            'credit' => (string) ($l['credit'] ?? '0'),
+        ])->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))));
+        $voucher->setAttribute('amount', $voucher->totals()['debit']);
+
+        // ⭐ কম-বেশিতে মালিকের সই — ভাউচারের নিজের ছক বন্ধ থাকলেও ([[differenceStopping()]]-এর একই প্রশ্ন; cb-ma-5)
+        [$kind, $difference] = $this->differenceOf($voucher);
+
+        if (\App\Core\Support\Settlement::differenceNeedsOwner($kind, $difference)) {
+            return true;
+        }
+
+        $action = $this->actionFor($voucher);
+
+        return $action !== null && $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount,
+            class_basename(Voucher::class), ApprovalEngine::fieldsOf($voucher));
     }
 
     /**

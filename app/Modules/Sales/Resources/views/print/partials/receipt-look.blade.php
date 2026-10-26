@@ -85,6 +85,18 @@
     </table>
 @endif
 
+{{-- ── গ্রাহক যা কেটে রাখলেন, ছাড়/রাউন্ডিং আর অপ্রয়োগকৃত — দফা ১৭ ([[OrderPaperFacts::receipt()]]) ───────── --}}
+@if (($facts['withheld'] ?? []) !== [])
+    <table class="lines" style="margin-top: 3mm" data-withheld>
+        @foreach ($facts['withheld'] as $i => $row)
+            <tr>
+                <td style="{{ $look->td($i) }}">{{ $t($row['label']) }}</td>
+                <td class="num" style="{{ $look->td($i) }} width: 32mm">{{ $row['amount'] }}</td>
+            </tr>
+        @endforeach
+    </table>
+@endif
+
 @if ($facts['narration'] !== '')<div style="margin-top: 4mm; font-size: 8.5pt"><span class="cap">{{ $up('core.table.narration') }}</span><br>{{ $facts['narration'] }}</div>@endif
 
 @php $roles = array_map(fn (string $k) => $t($k), $doc->signatures); @endphp

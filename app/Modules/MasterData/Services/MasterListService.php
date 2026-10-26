@@ -868,12 +868,14 @@ final class MasterListService implements ProvisionsCompany
          * ⓘ ছয়টাই `applies_to='bank'`: আজকের মাধ্যমগুলো ব্যাংকের। MFS-এর
          * নিজের মাধ্যম (Send Money · Payment · Cash Out) কোম্পানি পরে
          * `applies_to='mfs'` দিয়ে সারি যোগ করে নিতে পারে — তালিকা খোলা।
+         * ⓘ NPSB, BEFTN, RTGS বাংলাতেও ইংরেজিতে — ব্যাংকিং পরিভাষা, স্লিপ আর নকশায় তাই (fe, ২৪ অক্টোবর ২০২৬); পুরনো
+         * কোম্পানির লিপ্যন্তর ([[FixTransferModeNames]]) কমান্ড বদলায়।
          */
         $made['transfer-modes'] = $this->seed(TransferMode::class, [
             ['ONLINE', 'Online / In-house', 'অনলাইন / একই ব্যাংক', ['applies_to' => 'bank']],
-            ['NPSB', 'NPSB', 'এনপিএসবি', ['applies_to' => 'bank']],
-            ['BEFTN', 'BEFTN', 'বিইএফটিএন', ['applies_to' => 'bank']],
-            ['RTGS', 'RTGS', 'আরটিজিএস', ['applies_to' => 'bank']],
+            ['NPSB', 'NPSB', 'NPSB', ['applies_to' => 'bank']],
+            ['BEFTN', 'BEFTN', 'BEFTN', ['applies_to' => 'bank']],
+            ['RTGS', 'RTGS', 'RTGS', ['applies_to' => 'bank']],
             ['DEPOSIT', 'Cash / Cheque deposit', 'নগদ / চেক জমা', ['applies_to' => 'bank']],
             ['PO_DD', 'Pay Order / Demand Draft', 'পে-অর্ডার / ডিমান্ড ড্রাফট', ['applies_to' => 'bank']],
         ]);

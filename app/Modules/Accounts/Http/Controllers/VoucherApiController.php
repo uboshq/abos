@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\VoucherLine;
 use App\Modules\Accounts\Services\DepositFormOptions;
 use App\Modules\Accounts\Services\VoucherApproval;
@@ -82,6 +83,11 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'narration_required' => (bool) app(SettingsService::class)->get('accounts.require_narration', false),
             'cash_hidden_reason' => $o['cashHiddenReason'],
             'instruments' => Voucher::INSTRUMENTS,
+            /*
+             * ⭐ চুক্তির সংস্করণ — ২: পরিশোধে `gross_amount` (মোট) চলে, নিট সার্ভার গোনে, আর `POST /vouchers/preview` আছে (পরিশোধে-মোট-টাকা-চুক্তি
+             * §৬)। ⓘ পুরনো সার্ভারে ঘরটাই নেই — ফোন তখন পুরনো `amount` (নিট) পাঠায়।
+             */
+            'voucher_contract' => 2,
             ...($type === Voucher::JOURNAL
                 ? ['accounts' => $this->accounts($o['allAccounts'])]
                 : ['from' => $side($o['sides']['from']), 'to' => $side($o['sides']['to'])]),
@@ -201,7 +207,118 @@ final class VoucherApiController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * `POST /vouchers/preview` — খসড়ার একই payload, খাতায় যা যাবে তার ছবি (চুক্তি §৫, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ যাচাই খসড়ার হুবহু ([[VoucherRequest]] — ভুল হলে খসড়ার একই ঘর আর চাবিতে ৪২২); হিসাব ওয়েবের simulate-এর একই
+     * [[VoucherService::ledgerPreview()]]। ⛔ কিছুই লেখে না: ভাউচার, নম্বর বা হাতে লেখা নামের মানুষ — কিছুই নয় (মানুষ বানানো এই
+     * দরজার নামে বন্ধ, [[VoucherRequest::prepareForValidation()]])। ⓘ ফোন নিট নিজে গোনে না — `net_amount` সার্ভারের।
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $user = $this->writer($request);
+        $type = $this->type($request->input('type'));
+
+        $paper = VoucherRequest::create($request->getPathInfo(), 'POST', $request->all());
+        $paper->setContainer(app())->setRedirector(app(\Illuminate\Routing\Redirector::class));
+        $paper->setUserResolver(fn () => $user);
+        $paper->setRouteResolver(fn () => $request->route());
+        $paper->validateResolved();
+
+        $data = [...$paper->validated(), 'type' => $type];
+        $lines = $this->writer->linesFor($type, $paper->all());
+        $ledger = $this->vouchers->ledgerPreview($data, $lines);
+
+        return response()->json([
+            'type' => $type,
+            'net_amount' => bcadd((string) ($data['amount'] ?? '0'), '0', 4),
+            // ⭐ পোস্টে সইয়ের অপেক্ষায় যাবে কি না — পোস্টের নিজের প্রশ্নে ([[VoucherApproval::wouldWait()]]); ফোনের "সইয়ের অপেক্ষায় হবে" চিপ
+            'needs_signature' => app(VoucherApproval::class)->wouldWait($data, $lines),
+            ...$this->ledgerOf(collect($ledger['lines'])->map(fn (array $l) => [
+                'account_id' => (int) ($l['account_id'] ?? 0),
+                'debit' => (string) ($l['debit'] ?? '0'),
+                'credit' => (string) ($l['credit'] ?? '0'),
+            ])->all()),
+        ]);
+    }
+
+    /**
+     * `GET /parties/{type}/{id}/open-bills` — এই পক্ষের খোলা বিল, ওয়েবের কার্ডের একই উৎস ([[\App\Core\Contracts\PartyOpenBills]]; চুক্তি §৭.১)।
+     *
+     * ⓘ পক্ষটা আগে নাগালে কি না — [[PartyRegistry::exists()]] মডেলের নিজের কোয়েরিতে, তাই কোম্পানির দেয়াল আর বিক্রয়কর্মীর ডিলারের দেয়াল
+     * (ScopedToUserDealers) দুটোই খাটে: অন্যের ডিলার বা অন্য কোম্পানির পক্ষে ৪০৪, তালিকা নয়। বিলের তালিকাও একই দেয়ালে ছাঁকা।
+     * ⓘ `id` বিলের public_id (চুক্তি §৩-এর `bills[i][id]`), `outstanding` = বাকি; ক্রমিক আইডি বাইরে যায় না।
+     */
+    public function openBills(Request $request, string $type, int $id): JsonResponse
+    {
+        $this->writer($request);
+        abort_unless($this->parties->knows($type) && $this->parties->exists($type, $id), 404);
+
+        return response()->json([
+            'bills' => collect(app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openBillsOf($type, $id))->map(fn (array $b) => [
+                'id' => (string) $b['public_id'],
+                'no' => (string) $b['no'],
+                'date' => (string) $b['date'],
+                'due_date' => (string) $b['due_date'],
+                'days_late' => (int) $b['days_late'],
+                'total' => bcadd((string) $b['total'], '0', 4),
+                'outstanding' => bcadd((string) $b['outstanding'], '0', 4),
+            ])->values(),
+        ]);
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⭐ নিট — পক্ষের হাতে যা গেল বা এল, খাতার সারি থেকে (চুক্তি §৫)।
+     *
+     * ⛔ মাথার `amount` নয়: পোস্টের সময় সেবা সেটা ডেবিটের মোটে বদলায় ([[VoucherService::post()]]) — পরিশোধে তখন মোট + চার্জ (১,০২৫),
+     * নিট (৮৭৫) নয়। ⓘ তাই টাকার খাতের সারি থেকে: পরিশোধে টাকার খাতের ক্রেডিট − চার্জ (চার্জ মোটের বাইরে), রসিদে টাকার খাতের ডেবিট
+     * + চার্জ (ব্যাংক চার্জ কেটে রাখে)। খসড়া আর পাকা দুই অবস্থায় একই উত্তর; অন্য ধরনে লেখা অঙ্কই।
+     */
+    private function netOf(Voucher $v): string
+    {
+        if (! in_array($v->type, [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+            return bcadd((string) ($v->amount ?? '0'), '0', 4);
+        }
+
+        $money = $v->lines
+            ->filter(fn (VoucherLine $l) => $l->account?->money_kind !== null)
+            ->reduce(fn (string $sum, VoucherLine $l) => bcadd($sum, (string) ($v->type === Voucher::RECEIPT ? $l->debit : $l->credit), 4), '0');
+        $charge = (string) ($v->charge_amount ?? '0');
+
+        return $v->type === Voucher::PAYMENT ? bcsub($money, $charge, 4) : bcadd($money, $charge, 4);
+    }
+
+    /**
+     * ⭐ খাতার সারি ফোনের চুক্তির আকারে — `account` {id, code, name}, `debit`, `credit` (৪ দশমিকের string; a4-এর নাম, চুক্তি §৭.৩ —
+     * dr/cr নয়), আর মোট দুই পাশ `total_dr`, `total_cr`।
+     * ⓘ preview আর ভাউচারের পাতা একই রূপে বলে, যাতে ফোন দুটো পাশাপাশি মেলাতে পারে (চুক্তি §৫)।
+     *
+     * @param  list<array{account_id: int, debit: string, credit: string}>  $lines
+     * @return array{ledger: list<array<string, mixed>>, total_dr: string, total_cr: string}
+     */
+    private function ledgerOf(array $lines): array
+    {
+        $accounts = Account::query()->whereKey(array_column($lines, 'account_id'))->get()->keyBy('id');
+        $dr = '0';
+        $cr = '0';
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $account = $accounts->get($line['account_id']);
+            $dr = bcadd($dr, $line['debit'], 4);
+            $cr = bcadd($cr, $line['credit'], 4);
+            $rows[] = [
+                'account' => ['id' => (int) $line['account_id'], 'code' => (string) ($account?->code ?? ''), 'name' => (string) ($account?->name() ?? '')],
+                'debit' => bcadd($line['debit'], '0', 4),
+                'credit' => bcadd($line['credit'], '0', 4),
+            ];
+        }
+
+        return ['ledger' => $rows, 'total_dr' => $dr, 'total_cr' => $cr];
+    }
+
 
     private function type(mixed $type): string
     {
@@ -480,6 +597,15 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'can_post' => $row['state'] === 'draft' && $user->can('accounts.voucher.update')
                 && ! $this->vouchers->writerMayNotPost($v),
             'awaits_another_hand' => $v->isDraft() && $this->vouchers->writerMayNotPost($v),
+            // ⭐ নিট আর খাতা সার্ভারের — ফোন নিজে গোনে না (চুক্তি §৫); preview-এর একই রূপ ([[ledgerOf()]])
+            'net_amount' => $this->netOf($v),
+            // ⭐ মোট — পক্ষের খাতা যতটা নড়ে: নিট + AIT + VDS (চুক্তি §৭.৪; পরিশোধে নকশার "মোট টাকা", রসিদে পাওয়া + পক্ষের কাটা অংশ)
+            'gross_amount' => bcadd(bcadd($this->netOf($v), (string) ($v->ait_amount ?? '0'), 4), (string) ($v->vds_amount ?? '0'), 4),
+            ...$this->ledgerOf($v->lines->map(fn (VoucherLine $l) => [
+                'account_id' => (int) $l->account_id,
+                'debit' => (string) $l->debit,
+                'credit' => (string) $l->credit,
+            ])->values()->all()),
         ];
     }
 

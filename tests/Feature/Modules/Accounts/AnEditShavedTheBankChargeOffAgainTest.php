@@ -79,7 +79,10 @@ final class AnEditShavedTheBankChargeOffAgainTest extends TestCase
     {
         $voucher = $this->draft(Voucher::PAYMENT, $this->bank()->id, StandardChart::find(StandardChart::ENTERTAINMENT)->id);
 
-        $this->assertSame(0, bccomp($this->formOf($voucher)['amount'], '1000', 4));
+        // ⓘ পরিশোধের পর্দায় টাকার ঘর মোট — `gross_amount` (২৫ অক্টোবর ২০২৬); লেখা ১০০০ সেখানেই, চার্জ বাদ না দিয়ে
+        $html = $this->get(route('accounts.voucher.edit', $voucher))->assertOk()->getContent();
+        $this->assertSame(0, bccomp((string) $this->valueOf($html, 'gross_amount'), '1000', 4),
+            '⛔ চার্জসহ পরিশোধের মোট ঘরে লেখা অঙ্ক নেই — '.var_export($this->valueOf($html, 'gross_amount'), true));
     }
 
     /** ⓘ চার্জ ছাড়া কাগজে কিছুই বদলায়নি */

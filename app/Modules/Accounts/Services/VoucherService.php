@@ -34,6 +34,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\ComplianceObligation;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
@@ -192,12 +193,16 @@ final class VoucherService
                 'gross_amount' => $data['gross_amount'] ?? null,
                 'ait_amount' => $data['ait_amount'] ?? 0,
                 'vds_amount' => $data['vds_amount'] ?? 0,
+                // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5); অঙ্ক না থাকলে ধরনও নয়
+                'difference_kind' => bccomp((string) ($data['difference_amount'] ?? '0'), '0', 4) > 0 ? ($data['difference_kind'] ?? null) : null,
+                'difference_amount' => $data['difference_amount'] ?? 0,
 
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
 
             $this->replaceLines($voucher, $lines);
+            $this->allocate($voucher, $data);
 
             // ইস্যু করা নম্বরটা কোন ভাউচারে বসল — "RV-০০০৭ কার" প্রশ্নের উত্তর
             IssuedNumber::query()
@@ -389,6 +394,8 @@ final class VoucherService
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -454,6 +461,8 @@ final class VoucherService
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
             $this->assertAgainstFits($voucher);
+            // ⭐ বহু বিলের প্রতিটা সারি — একই পাঁচ প্রশ্ন, তালাসহ, আর যোগফল ≤ মোট ([[VoucherAllocations::assertFit()]])
+            app(VoucherAllocations::class)->assertFit($voucher);
 
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
@@ -472,6 +481,7 @@ final class VoucherService
             ])->save();
 
             $this->settle($voucher, settled: true);
+            $this->raiseTaxDuties($voucher);
 
             /*
              * ⓘ অন্য মডিউলকে জানানো — লেনদেন পাকা হওয়ার পরে, আগে নয়।
@@ -483,6 +493,35 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ পরিশোধ ভাউচারে কাটা কর আর ভ্যাটের করণীয় — কোষাগারে জমা (AIT, VDS আলাদা) আর VDS কাটলে সরবরাহকারীকে মূসক-৬.৬ (cb-ma-4, ২৫ অক্টোবর
+     * ২০২৬; সরবরাহকারী-পরিশোধের হুবহু [[\App\Modules\Purchase\Services\PaymentService::raiseTaxDuties()]])।
+     *
+     * ⛔ আগে পরিশোধ ভাউচারে AIT/VDS কাটলে খাতায় ২১২১/২১২২ বসত, অথচ কোনো করণীয় উঠত না — জমার শেষ দিন কেউ মনে করাত না, আর নকশার কমলা
+     * লাইন ("দুটোই করণীয় তালিকায় উঠবে") ভাউচারে মিথ্যা হত। ⓘ কেবল সত্যি কাটা হলে (শূন্যে দায় নেই); একই ভাউচারে আবার ডাকলে নতুন সারি
+     * নয় ([[ComplianceObligations::raise()]] আগেরটাই ফেরায়); বাতিলে খোলা করণীয় ফেরে ([[cancel()]])।
+     */
+    private function raiseTaxDuties(Voucher $voucher): void
+    {
+        if ($voucher->type !== Voucher::PAYMENT) {
+            return;
+        }
+
+        $duties = app(ComplianceObligations::class);
+        $raise = fn (string $kind, string $subject, string $amount) => $duties->raise(
+            (int) $voucher->company_id, $voucher->branch_id === null ? null : (int) $voucher->branch_id,
+            Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, (string) $voucher->document_no,
+            $kind, $subject, $amount, $voucher->trx_date,
+        );
+
+        $ait = (string) ($voucher->ait_amount ?? '0');
+        $vds = (string) ($voucher->vds_amount ?? '0');
+
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, $ait);
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, $vds);
+        $raise(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, $vds);
     }
 
     /**
@@ -675,6 +714,8 @@ final class VoucherService
             ->where('approvable_type', $voucher::class)
             ->where('approvable_id', $voucher->id)
             ->where('module', '<>', VoucherApproval::MODULE)
+            // ⓘ এই ভাউচারের নিজের কম-বেশির মালিকের সই অন্য কাগজের নয় — সেটা নিজের পথেই পোস্ট পর্যন্ত যায় ([[VoucherApproval::differenceStopping()]]; cb-ma-5)
+            ->where(fn ($q) => $q->where('module', '<>', \App\Modules\Accounts\Support\DifferenceSignature::MODULE)->orWhere('action', '<>', \App\Modules\Accounts\Support\DifferenceSignature::ACTION))
             ->whereIn('status', [Approval::PENDING, Approval::APPROVED])
             ->get()
             ->contains(fn (Approval $a) => ! $posting
@@ -987,6 +1028,8 @@ final class VoucherService
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
         // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])
@@ -1031,8 +1074,37 @@ final class VoucherService
         ]);
 
         $this->replaceLines($voucher, $lines);
+        $this->allocate($voucher, $data);
 
         return $voucher->fresh(['lines']);
+    }
+
+    /**
+     * ⭐ এক টাকা, বহু বিল — `bills` এলে কোন বিলে কত, সারিতে লেখা ([[VoucherAllocations]]; cb-ma-4, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সারি পক্ষের নিজের খোলা বিল থেকে মেলানো হয়, ভুল হলে ঘর ধরে থামে (`bills.{i}.id`, `bills.{i}.amount`)। ⓘ বহু বিল থাকলে একক
+     * "বিপরীতে" (অডিট ম১-এর পুরনো ঘর) খালি — একই বিল দুই পথে দুবার বসত। ⓘ `bills` না এলে কিছুই বদলায় না (পুরনো ফোন, অন্য মডিউল)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function allocate(Voucher $voucher, array $data): void
+    {
+        if (! array_key_exists('bills', $data)) {
+            return;
+        }
+
+        $allocations = app(VoucherAllocations::class);
+        $result = $allocations->resolve($voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, (array) ($data['bills'] ?? []));
+
+        if ($result['errors'] !== []) {
+            throw ValidationException::withMessages($result['errors']);
+        }
+
+        $allocations->write($voucher, $result['rows']);
+
+        if ($result['rows'] !== [] && filled($voucher->against_type)) {
+            $voucher->forceFill(['against_type' => null, 'against_id' => null])->save();
+        }
     }
 
     /**
@@ -1129,6 +1201,11 @@ final class VoucherService
             }
 
             $this->cancelItsAutoReversal($voucher, $reason, $onDate);
+
+            // ⭐ কাটা কর ফিরল, তাই কোষাগারে জমা আর মূসক-৬.৬-এর খোলা করণীয়ও — সরবরাহকারী-পরিশোধের একই পথ ([[raiseTaxDuties()]])
+            if ($voucher->type === Voucher::PAYMENT) {
+                app(ComplianceObligations::class)->cancelFor(Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, $reason);
+            }
 
             $voucher->forceFill([
                 'status' => DocumentStatus::CANCELLED,
