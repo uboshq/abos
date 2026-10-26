@@ -903,6 +903,7 @@ return [
          * One thing gets *made* from here, so the name is one thing.
          */
         'direct_sale' => 'Direct sale',
+        'group' => ['sales' => 'Sales', 'purchase' => 'Purchase', 'inventory' => 'Inventory', 'accounts' => 'Accounts'],
         'sales_order' => 'Sales order',
         'invoice' => 'Sales invoice',
         'collection' => 'Collection',
