@@ -17,15 +17,7 @@
                 {{-- ⭐ ঘড়িটা অবস্থার পাশে — ইনবক্সে লাল দেখে কেউ এখানে এলে চিহ্নটা যেন থাকে --}}
                 @include('approval::inbox.partials.clock', ['approval' => $approval, 'state' => $slaState])
 
-                <x-ui.badge :tone="match ($approval->status) {
-                    \App\Models\Approval::APPROVED => 'success',
-                    \App\Models\Approval::REJECTED => 'danger',
-                    \App\Models\Approval::CANCELLED => 'draft',
-                    \App\Models\Approval::RETURNED => 'info',
-                    default => 'pending',
-                }">
-                    {{ __('approval::status.'.$approval->status) }}
-                </x-ui.badge>
+                @include('approval::inbox.partials.status', ['approval' => $approval])
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

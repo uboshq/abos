@@ -81,20 +81,24 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
 
     public function test_dofa1_the_first_paper_opens_beside_the_list_and_the_next_opens_after_approving(): void
     {
-        $a = $this->ask('500', now()->subHours(2));
-        $b = $this->ask('700', now()->subHour());
+        $a = $this->ask('500', now()->subHours(3));
+        $b = $this->ask('700', now()->subHours(2));
+        $c = $this->ask('900', now()->subHour());
 
         $page = $this->actingAs($this->first)->get(route('approval.inbox.index'))->assertOk();
         $this->assertSame($a->id, $page->viewData('opened')?->id, '⛔ দফা ১: ইনবক্স খুললে তালিকার প্রথম কাগজ পাশে খোলে না।');
         $page->assertSee('data-approval-detail="'.$a->id.'"', false);
         $this->assertSame($b->id, $page->viewData('nextId'), '⛔ দফা ১: অনুমোদনের পরে কোনটা খুলবে তা ভুল।');
 
-        $this->actingAs($this->first)->get(route('approval.inbox.index', ['open' => $b->id]))->assertOk()
-            ->assertSee('data-approval-detail="'.$b->id.'"', false);
+        // ⓘ মাঝেরটা খোলা থাকলে "পরের" মানে নিচেরটা, উপরেরটা নয় — দুই কাগজে এই ভুল ধরা পড়ে না
+        $middle = $this->actingAs($this->first)->get(route('approval.inbox.index', ['open' => $b->id]))->assertOk();
+        $middle->assertSee('data-approval-detail="'.$b->id.'"', false);
+        $this->assertSame($c->id, $middle->viewData('nextId'), '⛔ দফা ১: মাঝের কাগজের পরে উপরেরটা খোলে, নিচেরটা নয়।');
 
-        $this->actingAs($this->first)
-            ->post(route('approval.inbox.approve', $a->id), ['next' => $b->id, 'from' => 'sort=amount&evil=https://x.test'])
-            ->assertRedirect(route('approval.inbox.index', ['sort' => 'amount', 'open' => $b->id]));
+        $back = $this->actingAs($this->first)
+            ->post(route('approval.inbox.approve', $a->id), ['next' => $b->id, 'from' => 'sort=amount&evil=https://x.test']);
+        $this->assertSame(route('approval.inbox.index', ['sort' => 'amount', 'open' => $b->id]), $back->headers->get('Location'),
+            '⛔ দফা ১: অনুমোদনের পরে ইনবক্সে ফেরা ভুল — পরের কাগজ খোলা নেই, ছাঁকনি হারিয়েছে, বা বাইরের চাবি ঢুকেছে।');
 
         $this->assertSame(2, (int) $a->fresh()->current_level, 'প্রস্তুতিটাই ভুল — প্রথম ধাপের অনুমোদন হয়নি।');
     }
@@ -184,9 +188,11 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         $a = $this->ask('500', now()->subHours(5));
         $a->forceFill(['due_at' => now()->subHours(3)->subMinutes(10)])->save();
 
-        $this->actingAs($this->first)->get(route('approval.inbox.index'))->assertOk()
-            ->assertSee(__('approval::message.due_passed_hours', ['hours' => 3]))
-            ->assertSee(__('approval::field.step_at', ['at' => 1, 'of' => 2]));
+        $html = $this->actingAs($this->first)->get(route('approval.inbox.index'))->assertOk()->getContent();
+        $this->assertStringContainsString(e(__('approval::message.due_passed_hours', ['hours' => 3])), $html,
+            '⛔ দফা ৭: কার্ডে "শেষ সময় পেরিয়েছে 3 ঘণ্টা" নেই।');
+        $this->assertStringContainsString(e(__('approval::field.step_at', ['at' => 1, 'of' => 2])), $html,
+            '⛔ দফা ৮: কার্ডে "ধাপ 1 / 2" নেই।');
     }
 
     public function test_dofa10_the_journey_says_who_for_whom_and_what(): void
@@ -197,10 +203,11 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
 
         app(ApprovalEngine::class)->approve($a->fresh(), $deputy, 'বিল মিলেছে');
 
-        $this->actingAs($this->second)->get(route('approval.inbox.index'))->assertOk()
-            ->assertSee($deputy->name)
-            ->assertSee(__('approval::message.on_behalf_of', ['name' => $this->first->name]))
-            ->assertSee('“বিল মিলেছে”', false);
+        $html = $this->actingAs($this->second)->get(route('approval.inbox.index'))->assertOk()->getContent();
+        $this->assertStringContainsString(e($deputy->name), $html, '⛔ দফা ১০: যাত্রাপথে কে অনুমোদন দিয়েছেন তা নেই।');
+        $this->assertStringContainsString(e(__('approval::message.on_behalf_of', ['name' => $this->first->name])), $html,
+            '⛔ দফা ১০: যাত্রাপথে "কার হয়ে" নেই।');
+        $this->assertStringContainsString('“বিল মিলেছে”', $html, '⛔ দফা ১০: যাত্রাপথে মন্তব্য নেই।');
     }
 
     public function test_dofa11_four_actions_side_by_side_and_the_hard_ones_ask_in_a_popup(): void
@@ -233,14 +240,15 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         $this->assertSame(0, Approval::query()->where('approvable_type', Voucher::class)->whereIn('approvable_id', [$one->id, $two->id])->count(),
             '⛔ দফা ১৪: আগে দেখার পাতা নিজেই অনুমোদন চেয়ে বসেছে।');
 
-        $this->actingAs($this->owner)
+        $sent = $this->actingAs($this->owner)
             ->post(route('accounts.voucher.bulk_post'), ['ids' => [$one->id, $two->id, $posted->id]])
-            ->assertRedirect(route('accounts.voucher.list'))
-            ->assertSessionHas('saved', __('accounts::message.bulk_post_done', ['posted' => 0, 'asked' => 2]).' · '
-                .__('accounts::message.bulk_post_left_out', ['count' => 1]));
+            ->assertRedirect(route('accounts.voucher.list'));
 
         $this->assertSame(2, Approval::query()->pending()->where('approvable_type', Voucher::class)->whereIn('approvable_id', [$one->id, $two->id])->count(),
             '⛔ দফা ১৪: একসাথে পাঠানো খসড়া অনুমোদনে যায়নি।');
+        $this->assertSame(__('accounts::message.bulk_post_done', ['posted' => 0, 'asked' => 2]).' · '
+            .__('accounts::message.bulk_post_left_out', ['count' => 1]), $sent->getSession()?->get('saved'),
+            '⛔ দফা ১৪: পাঠানোর পরের খবর ভুল — কতটা গেল আর কতটা বাদ পড়ল তা মেলে না।');
     }
 
     private function signer(string $name): User

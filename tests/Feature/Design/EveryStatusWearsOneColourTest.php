@@ -27,10 +27,8 @@ final class EveryStatusWearsOneColourTest extends TestCase
     /** @var array<string, string> `ফাইল|অবস্থা|রং` => কেন মেনে নেওয়া */
     private const KNOWN = [
         // ⓘ অনুমোদনের অনুরোধ "বাতিল" মানে চাওয়া মানুষ নিজেই তুলে নিয়েছেন — ভুল বা ক্ষতি নয়, তাই ধূসর (লাল "ফেরানো"-র থেকে আলাদা থাকা দরকার)
+        // ⓘ অনুমোদন পর্দা ভাগ ২ (২৮ অক্টোবর ২০২৬): কাগজের পাতা আর ইনবক্সের ডান দিক রংটা এই একটা ফাইল থেকেই নেয়
         'app/Modules/Approval/Resources/views/inbox/partials/status.blade.php|cancelled|draft' => 'অনুরোধ তুলে নেওয়া — ভুল নয়',
-        'app/Modules/Approval/Resources/views/inbox/show.blade.php|cancelled|draft' => 'অনুরোধ তুলে নেওয়া — ভুল নয়',
-        // ⓘ কাগজের পাতা আর ইনবক্সের ডান দিক এখন একই ফাইল (অনুমোদন পর্দা ভাগ ২) — একই কারণ
-        'app/Modules/Approval/Resources/views/inbox/partials/detail.blade.php|cancelled|draft' => 'অনুরোধ তুলে নেওয়া — ভুল নয়',
         // ⓘ চালানের যাত্রাপথের নিজের ন'টা রঙের দল (SaleTracking::COLOURS) — ব্যাজের রং নয়; "draft" এখানে দলের নাম, মিলটা কাকতালীয়
         'app/Modules/Sales/Services/SaleTracking.php|cancelled|draft' => 'যাত্রাপথের রঙের দল, ব্যাজ নয়',
     ];

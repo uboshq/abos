@@ -38,13 +38,7 @@
                 <span>{{ $workName }}@if ($paperNo) · <span class="num">{{ $paperNo }}</span>@endif</span>
 
                 @unless ($pending)
-                    <x-ui.badge :tone="match ($approval->status) {
-                        \App\Models\Approval::APPROVED => 'success',
-                        \App\Models\Approval::REJECTED => 'danger',
-                        \App\Models\Approval::CANCELLED => 'draft',
-                        \App\Models\Approval::RETURNED => 'info',
-                        default => 'pending',
-                    }">{{ __('approval::status.'.$approval->status) }}</x-ui.badge>
+                    @include('approval::inbox.partials.status', ['approval' => $approval])
                 @endunless
             </h2>
 
