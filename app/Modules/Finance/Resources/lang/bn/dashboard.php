@@ -18,7 +18,7 @@ return [
     'pending_approvals' => 'অপেক্ষমাণ অনুমোদন',
     'expense_heads' => 'খরচের খাত',
     'product_costing' => 'পণ্যের খরচ',
-    'who_approves_what' => 'কে কীসে সই দেন',
+    'who_approves_what' => 'কে কীসে অনুমোদন দেন',
     'where_money_went' => 'এই মাসে টাকা কোথায় গেল',
     'where_money_went_hint' => 'সবচেয়ে বেশি খরচের ছয়টা খাত — ক্লিক করলে পুরো তালিকা',
 

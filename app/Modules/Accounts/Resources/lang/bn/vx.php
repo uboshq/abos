@@ -52,7 +52,7 @@ return [
     'approved_by' => 'অনুমোদনকারী',
     'received_by' => 'গ্রহীতা',
     'payee' => 'প্রাপক',
-    'approval_trail' => 'সইয়ের ধারা',
+    'approval_trail' => 'অনুমোদনের ধারা',
     'step' => 'ধাপ',
     'name' => 'নাম',
     'decision_head' => 'সিদ্ধান্ত',

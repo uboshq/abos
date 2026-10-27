@@ -16,7 +16,7 @@ return [
         'body' => ':customer',
         // ⓘ Only the number and the step on a lock screen — no shop name or money (coordinator's condition 2)
         'order_held' => ':no — held at the credit limit',
-        'order_awaits' => ':no — waiting for your signature',
+        'order_awaits' => ':no — waiting for your approval',
     ],
     'empty' => 'No sales.',
     'step' => [
@@ -68,7 +68,7 @@ return [
     'credit_held' => 'Held at the credit limit — moves on by itself when money arrives',
     'back_order' => 'The rest goes later',
     'do_written' => 'DO :no written',
-    'sent_for_signature' => 'Sent for signature',
+    'sent_for_signature' => 'Sent for approval',
     'decision' => [
         'approved' => 'Approved',
         'rejected' => 'Sent back',

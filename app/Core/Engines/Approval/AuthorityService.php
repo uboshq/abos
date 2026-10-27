@@ -87,6 +87,17 @@ final class AuthorityService
      * অঙ্ক না জানা মানে "না", কারণ সেটা **নিজের** অনুরোধ, আর সন্দেহে
      * কড়া দিকটাই নিরাপদ। এখানে অন্যের কাগজ, আর কড়া দিকটা কাজ থামায়।
      */
+    /**
+     * ⭐ এই কাগজে এই সইদাতার টাকার সীমা — কাগজের নিজের শাখা ধরে ([[allows()]]-এর একই খোঁজ); `null` মানে কোনো সীমার সারি নেই।
+     * ⓘ একসাথে সইয়ে (দফা ১৩) সীমা না থাকাটা নিজেই একটা উত্তর: fe, ২২ অক্টোবর ২০২৬ — সেখানে কড়া দিক ([[BulkApproval]])।
+     */
+    public function limitForPaper(User $user, Approval $approval): ?string
+    {
+        $branchId = $this->branchOfThePaper($approval);
+
+        return $this->limitFor($user, (string) $approval->module, (string) $approval->action, $branchId === null ? null : (int) $branchId);
+    }
+
     public function allows(User $user, Approval $approval, ?int $branchId = null): bool
     {
         if ($approval->amount === null) {

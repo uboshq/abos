@@ -7,7 +7,7 @@
     অন্তত বোঝা যায় কোন ছকটা ঘোষণা করতে ভুলে যাওয়া হয়েছে।
 --}}
 <span class="font-medium">
-    {{ $labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action }}
+    {{ $labels[$approval->module.'.'.$approval->action] ?? app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action) }}
 </span>
 
 {{-- ⓘ কাগজের নম্বর — "সই হয়েছে, পোস্ট হয়নি" তালিকায় কাগজটা চেনার জন্য (১১ অক্টোবর ২০২৬)

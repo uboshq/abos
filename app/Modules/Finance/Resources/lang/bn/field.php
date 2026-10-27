@@ -260,7 +260,7 @@ return [
     'pledged_to_loan' => 'যে ধারের বিপরীতে বন্ধক',
     'not_pledged' => 'বাঁধা নেই — ভাঙানো যায়',
     'state' => 'অবস্থা',
-    'waiting_approval' => 'সইয়ের অপেক্ষায়',
+    'waiting_approval' => 'অনুমোদনের অপেক্ষায়',
     'rental_counterparty' => 'কার সাথে',
 
     /*

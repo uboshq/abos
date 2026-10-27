@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'pending' => 'সইয়ের অপেক্ষায়',
+    'pending' => 'অনুমোদনের অপেক্ষায়',
     'approved' => 'অনুমোদিত',
     'rejected' => 'প্রত্যাখ্যাত',
     'returned' => 'সংশোধনে ফেরত',

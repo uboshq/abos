@@ -77,7 +77,7 @@ return [
     'backdated_this_month_hint' => 'Written this month but dated before the day they were written',
     'tills_below_zero' => 'Tills below zero',
     'tills_below_zero_hint' => 'Cash tills holding less than nothing — cash in hand cannot',
-    'awaiting_signature' => 'Vouchers awaiting signature',
+    'awaiting_signature' => 'Vouchers awaiting approval',
     'awaiting_signature_hint' => 'They reach the books only once approved',
     'current_position' => 'Current position — to date',
     'current_assets' => 'Current assets',

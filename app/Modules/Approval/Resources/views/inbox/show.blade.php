@@ -10,8 +10,8 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action)"
-            :subtitle="$approval->requested_at?->format('d M Y, H:i')">
+            :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action))"
+            :subtitle="\App\Core\Support\DateFormat::spoken($approval->requested_at)">
             <x-slot:actions>
                 {{-- ⭐ ঘড়িটা অবস্থার পাশে — ২৪ সেপ্টেম্বর ২০২৬।
 
@@ -72,43 +72,9 @@
          মানুষ ফিরে উপরে যেতেন — ঠিক যখন তিনি সিদ্ধান্ত নিয়ে
          ফেলেছেন। ⓘ ছোট পর্দায় কলামগুলো একের পর এক, তাই
          `lg:` থেকেই — ফোনে sticky বসালে ওটা কাগজটা ঢেকে দিত। --}}
-    <div class="grid gap-4 lg:grid-cols-[16rem_1fr_20rem] lg:items-start">
-        {{-- ── বাঁ কলাম: যাত্রাপথ ──────────────────── --}}
-        @if ($timeline !== [])
-            <aside data-boxed
-                   class="order-last min-w-0 rounded-(--radius-card) border border-(--color-border)
-                          bg-(--color-surface-card) p-4 lg:order-first lg:sticky lg:top-4">
-                <h2 class="mb-2 text-sm font-semibold">{{ __('approval::field.journey') }}</h2>
-
-                @include('approval::inbox.partials.timeline', ['timeline' => $timeline])
-
-                {{-- ⭐ পাশের তথ্য — কার, কী বাবদ, কোথায়।
-
-                     ── ⛔ কেন এগুলো এই পাতায়ই ───────────────────────
-                     ⓘ যিনি সই দিতে বসেছেন তাঁর পরের প্রশ্ন সবসময়
-                     একটাই: *"কার কাগজ, কী বাবদ"*। ⚠️ উত্তরটা অন্য
-                     পর্দায় থাকলে তিনি হয় সেখানে যান, নয় **না দেখেই
-                     সই দেন** — আর দ্বিতীয়টাই বেশি হয়। --}}
-                @if (array_filter($facts))
-                    <dl class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
-                        @foreach ([
-                            'party' => __('approval::field.party'),
-                            'about' => __('approval::field.what_for'),
-                            'where' => __('approval::field.where_money'),
-                        ] as $key => $label)
-                            @if (($facts[$key] ?? null))
-                                <div>
-                                    <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
-                                        {{ $label }}
-                                    </dt>
-                                    <dd class="text-sm">{{ $facts[$key] }}</dd>
-                                </div>
-                            @endif
-                        @endforeach
-                    </dl>
-                @endif
-            </aside>
-        @endif
+    {{-- ⭐ দফা ৯ (মালিক, ২১ অক্টোবর ২০২৬): তিন কলামে মাঝেরটা ১৩৬৬-এ ~৩২০px — সারির টেবিল কেটে যেত (তাই "সর্বমোট" ফাঁকা দেখাত),
+         পক্ষের মোবাইল আর পয়েন্ট একটার উপরে আরেকটা। এখন দুই কলাম: বাঁয়ে কাগজ চওড়া, ডানে কাজ আর তার নিচে যাত্রাপথ। --}}
+    <div class="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
 
         <div class="min-w-0 space-y-4">
             <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -262,12 +228,13 @@
                                  : __('approval::status.'.$d->decision)],
                             ['key' => 'remarks', 'label' => __('approval::field.remarks')],
                             ['key' => 'decided_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                             'render' => fn ($d) => $d->decided_at?->format('d M Y, H:i')],
+                             'render' => fn ($d) => \App\Core\Support\DateFormat::spoken($d->decided_at)],
                         ]" />
                 </div>
             @endif
         </div>
 
+        {{-- ⛔ ডান কলাম sticky থাকে — লম্বা কাগজ পড়তে পড়তে নামলেও সইয়ের বোতাম চোখের সামনে (আগের নিয়ম; দফা ৯-এর বদলে হারিয়েছিল, TheApprovalScreensCarryTheNewRulesTest ধরেছে) --}}
         <div class="min-w-0 space-y-3 lg:sticky lg:top-4">
             @if ($approval->status === \App\Models\Approval::PENDING && $canDecide)
                 {{-- ⭐ চারটা কাজ এক কার্ডে, ট্যাবে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
@@ -343,7 +310,7 @@
                      প্রথমেই জানতে চান কেন, আর না জানলে একই অনুরোধ আবার
                      আসে। --}}
                 <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
-                      x-show="act === 'reject'" x-cloak>
+                      x-show="act === 'reject'" x-cloak data-confirm="{{ __('approval::message.confirm_reject') }}">
                     @csrf
 
                     {{-- ⭐ কারণটা বাছাই করা হয়, শুধু লেখা নয় — ধাপ ১০।
@@ -393,7 +360,7 @@
                      যেখানে বাড়ানো হত না সেখানে কাগজটা **নীরবে অদৃশ্য** হত। --}}
                 {{-- ⭐ খসড়া কাগজে "সংশোধনে ফেরত" আলাদা অবস্থায় যায় (১৪ অক্টোবর ২০২৬, [[ApprovalEngine::sendBack()]]); বাকিতে আগের পথ --}}
                 <form method="POST" action="{{ ($canSendBack ?? false) ? route('approval.inbox.send_back', $approval->id) : route('approval.inbox.reject', $approval->id) }}"
-                      x-show="act === 'fix'" x-cloak>
+                      x-show="act === 'fix'" x-cloak data-confirm="{{ __('approval::message.confirm_send_back') }}">
                     @csrf
 
                     {{-- ⓘ কারণ-কোডটা লুকানো ঘরে, বাহিরে নয়।
@@ -429,7 +396,7 @@
                      তাই সহজ পথটা যেন উপরে থাকে। --}}
                 @if ($forwardTo !== [])
                     <form method="POST" action="{{ route('approval.inbox.forward', $approval->id) }}"
-                          x-show="act === 'forward'" x-cloak>
+                          x-show="act === 'forward'" x-cloak data-confirm="{{ __('approval::message.confirm_forward') }}">
                         @csrf
 
                         <x-ui.select name="to"
@@ -474,12 +441,49 @@
             @endif
 
             @if ($approval->status === \App\Models\Approval::PENDING && $approval->requested_by === auth()->id())
-                <form method="POST" action="{{ route('approval.inbox.withdraw', $approval->id) }}">
+                <form method="POST" action="{{ route('approval.inbox.withdraw', $approval->id) }}" data-confirm="{{ __('approval::message.confirm_withdraw') }}">
                     @csrf
                     <x-ui.button type="submit" tone="secondary" class="w-full">
                         {{ __('approval::action.withdraw') }}
                     </x-ui.button>
                 </form>
+            @endif
+
+            {{-- ── যাত্রাপথ, ডান কলামে কাজের নিচে (দফা ৯) ──────────────────── --}}
+            @if ($timeline !== [])
+                <aside data-boxed
+                       class="min-w-0 rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) p-4">
+                    <h2 class="mb-2 text-sm font-semibold">{{ __('approval::field.journey') }}</h2>
+
+                    @include('approval::inbox.partials.timeline', ['timeline' => $timeline])
+
+                    {{-- ⭐ পাশের তথ্য — কার, কী বাবদ, কোথায়।
+
+                         ── ⛔ কেন এগুলো এই পাতায়ই ───────────────────────
+                         ⓘ যিনি সই দিতে বসেছেন তাঁর পরের প্রশ্ন সবসময়
+                         একটাই: *"কার কাগজ, কী বাবদ"*। ⚠️ উত্তরটা অন্য
+                         পর্দায় থাকলে তিনি হয় সেখানে যান, নয় **না দেখেই
+                         সই দেন** — আর দ্বিতীয়টাই বেশি হয়। --}}
+                    @if (array_filter($facts))
+                        <dl class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                            @foreach ([
+                                'party' => __('approval::field.party'),
+                                'about' => __('approval::field.what_for'),
+                                'where' => __('approval::field.where_money'),
+                            ] as $key => $label)
+                                @if (($facts[$key] ?? null))
+                                    <div>
+                                        <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                                            {{ $label }}
+                                        </dt>
+                                        <dd class="text-sm">{{ $facts[$key] }}</dd>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </dl>
+                    @endif
+                </aside>
             @endif
         </div>
     </div>

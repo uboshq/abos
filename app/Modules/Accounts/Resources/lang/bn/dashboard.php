@@ -77,7 +77,7 @@ return [
     'backdated_this_month_hint' => 'এ মাসে লেখা, কিন্তু তারিখ লেখার দিনের আগের',
     'tills_below_zero' => 'শূন্যের নিচে ড্রয়ার',
     'tills_below_zero_hint' => 'যে ক্যাশ ড্রয়ারে টাকা শূন্যের নিচে — হাতের নগদ এমন হতে পারে না',
-    'awaiting_signature' => 'সইয়ের অপেক্ষায় ভাউচার',
+    'awaiting_signature' => 'অনুমোদনের অপেক্ষায় ভাউচার',
     'awaiting_signature_hint' => 'অনুমোদন না হওয়া পর্যন্ত খাতায় ওঠে না',
     'current_position' => 'চলতি অবস্থান — আজ পর্যন্ত',
     'current_assets' => 'চলতি সম্পদ',

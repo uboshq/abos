@@ -46,7 +46,7 @@ return [
 
     'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
     'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
-    'capital_held_for_signature' => ':no is profit taken into capital and waits for its signature — it cannot be edited or deleted; the signer can refuse it, or its voucher can be cancelled.',
+    'capital_held_for_signature' => ':no is profit taken into capital and waits for its approval — it cannot be edited or deleted; the approver can refuse it, or its voucher can be cancelled.',
     'capital_rows_changed' => 'The capital rows behind this voucher no longer match it — nothing was posted.',
     'withdrawal_only_cash_posts' => ':no was taken as an asset or goods — only a cash withdrawal leaves a money account; book the asset or stock leaving through its own journal.',
     'kind_shape_in_use' => 'Deposits were opened under :name, so its shape, issuer and "personal only" cannot change — only its name and order. Add a new kind instead.',
@@ -61,20 +61,20 @@ return [
     'facility_sanction_taken' => 'Sanction number :no of this bank is already recorded (:doc); the same loan cannot be added twice.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
     'more_than_retained' => 'The books do not hold that much profit. You asked to declare :asked and the retained profit is :have. Sharing profit that was never earned leaves nothing to pay out later.',
-    'profit_signature_refused' => 'The signer turned the profit declaration down. It is cancelled and nothing was posted.',
-    'profit_no_longer_covered' => 'The declaration was signed, but retained profit is now :have, so :asked no longer fits. It is cancelled and nothing was posted; declare again.',
+    'profit_signature_refused' => 'The approver turned the profit declaration down. It is cancelled and nothing was posted.',
+    'profit_no_longer_covered' => 'The declaration was approved, but retained profit is now :have, so :asked no longer fits. It is cancelled and nothing was posted; declare again.',
     'rental_account_unknown' => 'That account is not in this company, or is not the right kind for this — pick one from the list.',
 
     // Audit 4 Oct 2026 — signatures, money accounts, pledged deposits, profit shares
     'not_a_money_account' => 'That is not a money account — pick an active cash, bank or mobile banking account.',
     // The branch shown and the branch saved are the same - ec, 19 Oct 2026
     'money_box_in_other_branch' => 'This money box belongs to ":branch", but this page writes in the books of ":here" — pick ":branch" at the top, or take a box of ":here".',
-    'awaits_signature_first' => 'A money step on this is still waiting for its signature — try again once it is signed or refused.',
+    'awaits_signature_first' => 'A money step on this is still waiting for its approval — try again once it is approved or refused.',
     'rental_close_day_out_of_range' => 'The closing day must fall between the contract start (:from) and today (:to).',
     'deposit_is_pledged' => ':no is pledged against a loan — it cannot be encashed until the loan is repaid.',
     'shares_pay_more_than_declared' => 'The shares add up to :total, but the declaration is :asked — correct the shares, then declare.',
     'shares_over_a_hundred' => 'The agreed shares add up to :total% — more than 100% cannot be shared. Correct them on the capital page.',
-    'signature_refused' => 'The signer turned it down — it is cancelled and nothing was posted.',
+    'signature_refused' => 'The approver turned it down — it is cancelled and nothing was posted.',
     'voucher_belongs_to_finance_paper' => 'Voucher :no belongs to finance paper :paper, which keeps its own figures — correct or cancel it from that paper\'s page. Nothing was changed.',
     'month_end_reversal_follows' => 'The month-end entry it reversed was cancelled.',
 

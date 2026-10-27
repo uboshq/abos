@@ -7,7 +7,7 @@ return [
     'declare_is_final' => 'Declaring is not a draft — it posts to the books, and the only way back is a reversing entry.',
     'no_distribution_yet' => 'No profit has been distributed yet.',
     'profit_declared' => 'Profit distribution :no — :count shares posted.',
-    'profit_awaits_signature' => 'Profit distribution :no — :count shares are waiting for signature. They post by themselves on the last signature.',
+    'profit_awaits_signature' => 'Profit distribution :no — :count shares are waiting for approval. They post by themselves on the last approval.',
     'profit_narration' => 'Profit distribution :no',
     'capitalise_note' => 'What these people have not taken moves from profit payable into capital. No cash moves.',
     'capitalise_narration' => 'Profit added to capital',
@@ -101,10 +101,10 @@ return [
     'rent_accrual_month' => 'Month',
     'rent_accrual_run' => 'Book the month rent as payable',
     'rent_accrual_note' => 'Expensed at the start of the month, cleared from the payable on the day it is paid; once per month. The current month books itself.',
-    'rent_accrual_done' => 'Rent payable booked for :accrued contracts, :held awaiting signature.',
+    'rent_accrual_done' => 'Rent payable booked for :accrued contracts, :held awaiting approval.',
     'rent_accrual_future' => 'Rent for a future month is not an expense yet — only up to the current month.',
     'rent_accrual_closed' => ':month is closed — no rent payable is booked in a closed month.',
-    'rent_accrual_unsigned' => 'The rent payable for :month is still awaiting signature — pay it once signed.',
+    'rent_accrual_unsigned' => 'The rent payable for :month is still awaiting approval — pay it once approved.',
     'rental_refund_narration' => ':who — deposit refunded at close',
     'rental_topup_narration' => ':who — added to the deposit',
     'rental_ending_soon' => 'Contracts ending soon, with the money to come back',
@@ -176,7 +176,7 @@ return [
     'notice_hand_loan_body' => 'Due :date · :days days.',
 
     // Waiting for its signature — audit 4 Oct 2026 ([[FinanceSignature]])
-    'awaiting_signature' => 'Sent for signature — it posts on the last signature, and is cancelled if refused.',
+    'awaiting_signature' => 'Sent for approval — it posts on the last approval, and is cancelled if refused.',
 
     // Owner's opening capital — owner's order, 5 Oct 2026
     'opening_capital_narration' => 'Opening capital - the opening balances already in the books',

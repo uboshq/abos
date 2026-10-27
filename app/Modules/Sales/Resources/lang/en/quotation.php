@@ -14,7 +14,7 @@ return [
     'empty' => 'No quotations yet.',
     'state_all' => 'All states',
     'lines' => 'Products and prices',
-    'form_note' => 'If an approval rule is set, the quotation needs a signature before it reaches the dealer.',
+    'form_note' => 'If an approval rule is set, the quotation needs an approval before it reaches the dealer.',
     'credit_note' => 'The credit limit is not checked on a quotation — it applies at the challan and the bill.',
     'expired_banner' => 'This quotation expired on :date — it can no longer become an order. To order, make a "New revision": new validity, submitted again.',
     'superseded_banner' => 'This is an older revision — read only. The current revision:',

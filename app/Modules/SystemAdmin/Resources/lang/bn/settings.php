@@ -96,7 +96,7 @@ return [
     'notice_remind_after' => 'প্রথম তাগাদা (ঘণ্টা)',
     'notice_remind_again' => 'দ্বিতীয় তাগাদা (ঘণ্টা)',
     'notice_escalate_after' => 'উপরে জানানো (ঘণ্টা)',
-    'notice_creator_cannot_approve' => 'নিজের জরুরি নোটিশে নিজে সই দেওয়া যাবে না',
+    'notice_creator_cannot_approve' => 'নিজের জরুরি নোটিশে নিজে অনুমোদন দেওয়া যাবে না',
     'super_admin_only' => 'কেবল সুপার অ্যাডমিন বদলাতে পারেন',
     'owner_title_bn' => 'মালিকের পদবি (বাংলা) — সব কোম্পানিতে একই',
     'owner_title_en' => 'মালিকের পদবি (ইংরেজি) — সব কোম্পানিতে একই',

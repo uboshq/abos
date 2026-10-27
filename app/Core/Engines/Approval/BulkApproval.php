@@ -29,10 +29,59 @@ final class BulkApproval
     public function __construct(
         private readonly ApprovalEngine $engine,
         private readonly ModuleRegistry $modules,
+        private readonly AuthorityService $authority,
     ) {}
 
     /**
-     * ⭐ যেগুলো পারা যায়, সেগুলো — আর বাকিগুলোর কারণ।
+     * ⭐ সই দেওয়ার আগে দেখা — কোনগুলো সই হবে (সংখ্যা আর মোট টাকা), আর কোনগুলো কেন বাদ (দফা ১৩, মালিক ২১ অক্টোবর ২০২৬)।
+     *
+     * নিয়ম, ক্রমে — প্রতিটা বাদের একটা কারণ, পর্দায় লেখা থাকে:
+     *   not_pending  — আগেই মীমাংসিত;
+     *   money        — টাকা নড়ার কাজ (বেতন, পরিশোধ, ব্যাংক — মডিউলের `moves_money`): একটা একটা করে;
+     *   own          — নিজের কাগজ;
+     *   multi_step   — এক ধাপের বেশি: একসাথে সই কেবল এক-ধাপের কাগজে;
+     *   not_allowed  — এই ধাপে আপনার পালা নয় ([[ApprovalEngine::canDecide()]]);
+     *   no_limit     — ⛔ আপনার টাকার সীমাই ঠিক করা নেই (fe, ২২ অক্টোবর ২০২৬: একসাথে সই মানে চোখ না বুলিয়ে অনেক টাকা,
+     *                  তাই এখানে কড়া দিক); মালিক বা সুপার অ্যাডমিন ছাড়া। একটা একটা সইয়ের নিয়ম বদলায় না;
+     *   over_limit   — অঙ্ক আপনার সীমার বাইরে ([[AuthorityService::limitForPaper()]], `approval_limits.max_amount`)।
+     *
+     * @param  list<int>  $ids
+     * @return array{sign: list<Approval>, skip: list<array{approval: Approval, why: string}>, total: string}
+     */
+    public function review(array $ids, User $user): array
+    {
+        $sign = [];
+        $skip = [];
+        $total = '0';
+        $unbounded = $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+
+        foreach (Approval::query()->whereKey($ids)->orderBy('id')->get() as $approval) {
+            // ⓘ সীমার কারণ পালার আগে — [[ApprovalEngine::canDecide()]] সীমাও দেখে, তখন সীমার বাইরের কাগজ ভুল কারণে ("পালা নয়") বাদ যেত
+            $why = match (true) {
+                $approval->status !== Approval::PENDING => 'not_pending',
+                $this->movesMoney($approval) => 'money',
+                (int) $approval->requested_by === (int) $user->id => 'own',
+                ($this->engine->standingOf($approval)['levels'] ?? 1) > 1 => 'multi_step',
+                ! $unbounded && $this->limitReason($approval, $user) !== null => $this->limitReason($approval, $user),
+                ! $this->engine->canDecide($approval, $user) => 'not_allowed',
+                default => null,
+            };
+
+            if ($why !== null) {
+                $skip[] = ['approval' => $approval, 'why' => $why];
+
+                continue;
+            }
+
+            $sign[] = $approval;
+            $total = bcadd($total, (string) ($approval->amount ?? '0'), 4);
+        }
+
+        return ['sign' => $sign, 'skip' => $skip, 'total' => $total];
+    }
+
+    /**
+     * ⭐ যেগুলো পারা যায়, সেগুলো — আর বাকিগুলোর কারণ ([[review()]]-এর একই নিয়ম, তাই দেখা আর করা মেলে)।
      *
      * ── ⚠️ গোটা কাজ ব্যর্থ হয় না ────────────────────────────────────
      * ⓘ পনেরোটার মধ্যে একটায় অনুমতি না থাকলে চৌদ্দটা আটকে দেওয়া মানে
@@ -44,38 +93,32 @@ final class BulkApproval
      */
     public function approve(array $ids, User $user, ?string $remarks = null): array
     {
+        $review = $this->review($ids, $user);
         $done = 0;
         $skipped = [];
 
-        foreach (Approval::query()->whereKey($ids)->get() as $approval) {
-            if ($this->movesMoney($approval)) {
-                $skipped['money'] = ($skipped['money'] ?? 0) + 1;
+        foreach ($review['skip'] as $row) {
+            $skipped[$row['why']] = ($skipped[$row['why']] ?? 0) + 1;
+        }
 
-                continue;
-            }
-
-            if ($approval->status !== Approval::PENDING) {
-                $skipped['not_pending'] = ($skipped['not_pending'] ?? 0) + 1;
-
-                continue;
-            }
-
-            /*
-             * ⓘ প্রতিটা আলাদা করে [[ApprovalEngine::canDecide()]] দিয়ে
-             * যায় — কর্তৃত্বের সীমা, নিজের অনুরোধ, আগেই সই দেওয়া, সব।
-             * ⛔ bulk বলে কোনো নিয়ম শিথিল হয় না।
-             */
-            if (! $this->engine->canDecide($approval, $user)) {
-                $skipped['not_allowed'] = ($skipped['not_allowed'] ?? 0) + 1;
-
-                continue;
-            }
-
+        foreach ($review['sign'] as $approval) {
             $this->engine->approve($approval, $user, $remarks);
             $done++;
         }
 
         return ['done' => $done, 'skipped' => $skipped];
+    }
+
+    /** সীমার কারণ — সীমা নেই, নাকি সীমার বাইরে; ভেতরে হলে null */
+    private function limitReason(Approval $approval, User $user): ?string
+    {
+        $limit = $this->authority->limitForPaper($user, $approval);
+
+        if ($limit === null) {
+            return 'no_limit';
+        }
+
+        return $approval->amount !== null && bccomp((string) $approval->amount, $limit, 4) > 0 ? 'over_limit' : null;
     }
 
     /**

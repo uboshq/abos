@@ -35,8 +35,8 @@ return [
     'open' => ':what — খুলুন',
 
     'alerts_title' => 'সতর্কতা',
-    'waiting_title' => 'সইয়ের অপেক্ষায়',
-    'nothing_waiting' => 'কোনো কাগজ সইয়ের অপেক্ষায় নেই।',
+    'waiting_title' => 'অনুমোদনের অপেক্ষায়',
+    'nothing_waiting' => 'কোনো কাগজ অনুমোদনের অপেক্ষায় নেই।',
     'trend_title' => 'গত :days দিনের বিক্রি বনাম আদায়',
     'top_customers' => 'এ মাসের সেরা ৫ ক্রেতা',
     'top_products' => 'এ মাসের সেরা ৫ পণ্য',

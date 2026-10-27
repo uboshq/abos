@@ -34,7 +34,7 @@ return [
     'status' => 'Status',
     'requested_by' => 'Asked by',
     'decided_on' => 'Decided on',
-    'status_pending' => 'Awaiting signature',
+    'status_pending' => 'Awaiting approval',
     'status_approved' => 'Approved',
     'status_rejected' => 'Rejected',
     'status_cancelled' => 'Cancelled',

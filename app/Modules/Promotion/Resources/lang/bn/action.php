@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'new' => 'নতুন অফার',
     'submit' => 'অনুমোদনে পাঠান',
-    'approve' => 'সই দিন',
+    'approve' => 'অনুমোদন দিন',
     'activate' => 'চালু করুন',
     'pause' => 'থামান',
     'cancel' => 'বাতিল করুন',

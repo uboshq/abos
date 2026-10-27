@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'held_deposits' => 'ডিপোজিট সইয়ের অপেক্ষায়',
+    'held_deposits' => 'ডিপোজিট অনুমোদনের অপেক্ষায়',
     'deposit_state' => [
-        'pending' => 'সইয়ের অপেক্ষায়',
+        'pending' => 'অনুমোদনের অপেক্ষায়',
         'approved' => 'অনুমোদিত',
         'rejected' => 'প্রত্যাখ্যাত',
-        'none' => 'সই লাগে না',
+        'none' => 'অনুমোদন লাগে না',
     ],
     'supplier' => 'সরবরাহকারী',
     'product' => 'পণ্য',
@@ -22,7 +22,7 @@ return [
     'editing_sale' => 'সম্পাদনা হচ্ছে',
     'edit_sale' => 'বিক্রি সম্পাদনা',
     'pending_group_drafts' => 'খসড়া',
-    'pending_group_held' => 'সইয়ের অপেক্ষায়',
+    'pending_group_held' => 'অনুমোদনের অপেক্ষায়',
     'held_open_approval' => 'অনুমোদনের পাতা',
     'held_withdraw' => 'খসড়ায় ফিরিয়ে আনুন',
     'pending_group_delivery' => 'ডেলিভারির অপেক্ষায়',
@@ -456,5 +456,5 @@ return [
     'collected_by' => 'যিনি নিলেন',
     'no_lot' => 'লট নেই',
     'tab_drafts' => 'খসড়া',
-    'tab_awaiting_approval' => 'সইয়ের অপেক্ষায়',
+    'tab_awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
 ];

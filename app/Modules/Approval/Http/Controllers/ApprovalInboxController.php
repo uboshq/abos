@@ -103,7 +103,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'confirmAll']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'bulkReview', 'confirmAll']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -879,6 +879,23 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      * ⛔ নিয়মটা [[BulkApproval]]-এ, এখানে নয় — বোতাম লুকানো
      * নিরাপত্তা নয়, আর কেউ সরাসরি POST করলেও আটকাতে হবে।
      */
+    /**
+     * ⭐ দফা ১৩ — একসাথে সইয়ের আগে দেখা (অনুমোদন মডিউলের নকশা, মালিক ২১ অক্টোবর ২০২৬): কয়টা সই হবে, মোট কত টাকা, আর কোনগুলো
+     * কেন বাদ। ⓘ কিছু লেখে না; নিয়ম [[BulkApproval::review()]]-এর, যেটা আসল সইও মানে — তাই দেখা আর করা মেলে।
+     */
+    public function bulkReview(Request $request): View
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:100'], 'ids.*' => ['integer']]);
+        $review = app(BulkApproval::class)->review(array_map('intval', $data['ids']), $request->user());
+
+        return view('approval::inbox.bulk-review', [
+            'menu' => $this->menu->forUser($request->user()),
+            'sign' => $review['sign'],
+            'skip' => $review['skip'],
+            'total' => $review['total'],
+        ]);
+    }
+
     public function bulkApprove(Request $request): RedirectResponse
     {
         $data = $request->validate([

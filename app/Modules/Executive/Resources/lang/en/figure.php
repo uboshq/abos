@@ -11,7 +11,7 @@ return [
     'fund' => 'Cash + bank',
     'stock' => 'Stock value',
     'profit' => 'Profit',
-    'signatures' => 'Waiting for signature',
+    'signatures' => 'Waiting for approval',
     'expenses' => 'Expenses',
     'cash_flow' => 'Net cash flow',
 
@@ -22,5 +22,5 @@ return [
     'fund_hint' => 'Cash in hand, bank and mobile money — the finance dashboard\'s "total fund"',
     'stock_hint' => 'Remaining goods at their purchase cost — the same figure as the inventory dashboard',
     'profit_hint' => 'Income less expenses for the period, from the books — the accounts dashboard\'s "net profit"',
-    'signatures_hint' => 'Papers waiting for someone\'s signature — the same figure as the approvals dashboard',
+    'signatures_hint' => 'Papers waiting for someone\'s approval — the same figure as the approvals dashboard',
 ];

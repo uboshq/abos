@@ -160,7 +160,7 @@
                         </div>
 
                         @if ($row->revoked_at === null)
-                            <form method="POST" action="{{ route('approval.delegation.destroy', $row) }}">
+                            <form method="POST" action="{{ route('approval.delegation.destroy', $row) }}" data-confirm="{{ __('approval::message.confirm_delegation_stop') }}">
                                 @csrf
                                 @method('DELETE')
 

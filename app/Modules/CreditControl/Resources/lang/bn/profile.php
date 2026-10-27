@@ -30,7 +30,7 @@ return [
     'new' => 'পরে',
     'who' => 'কে',
     'reason' => 'কারণ',
-    'signature' => 'সই',
+    'signature' => 'অনুমোদন',
     'credit_blocked' => 'বাকি বন্ধ করা হলো',
     'credit_unblocked' => 'বাকি বন্ধ তোলা হলো',
     'decisions' => 'দেয়ালের শেষ সিদ্ধান্ত',

@@ -17,7 +17,7 @@ return [
     'forward' => 'Pass it on',
     'delegate' => 'Hand over',
     'delegation_stop' => 'Stop',
-    'bulk_approve' => 'Sign the selected',
+    'bulk_approve' => 'Approve selected',
     'pick_all' => 'Select all',
     'add_limit' => 'Add a limit',
     'previous' => 'Previous',

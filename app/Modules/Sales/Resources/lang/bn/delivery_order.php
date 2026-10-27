@@ -35,7 +35,7 @@ return [
     'written_by' => 'লিখেছেন',
     'save_quantities' => 'পরিমাণ রাখুন',
     'quantities_saved' => 'অনুমোদিত পরিমাণ রাখা হলো।',
-    'approve' => 'সই দিন',
+    'approve' => 'অনুমোদন দিন',
     'reject' => 'প্রত্যাখ্যান করুন',
     'reject_reason' => 'প্রত্যাখ্যানের কারণ',
     // ⭐ অফিসের DO ডেস্কের ট্যাব ([[DeliveryOrderDeskController::TABS]])

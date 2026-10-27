@@ -104,6 +104,23 @@ final class DateFormat
         return self::carbon($value)->format(self::date().' '.self::time());
     }
 
+    /**
+     * ⭐ কথায় লেখা তারিখ আর সময় — "18 অক্টোবর 2026, 19:25" (অনুমোদন মডিউলের নকশা, দফা ১৬; মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ মাসের নাম পর্দার ভাষায়, অঙ্ক সবসময় ইংরেজিতে (মালিকের নিয়ম "খ") — হোমের মাথা আর চার্টের [[DateRange]]-এর একই রূপ।
+     * ⛔ আগে অনুমোদনের পর্দা `format('d M Y, H:i')` লিখত, তাই বাংলা পর্দায় "18 Oct 2026" আসত।
+     */
+    public static function spoken(Carbon|string|null $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $text = self::carbon($value)->copy()->locale(app()->getLocale())->translatedFormat('j F Y, H:i');
+
+        return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+    }
+
     private static function carbon(Carbon|string $value): Carbon
     {
         return $value instanceof Carbon ? $value : Carbon::parse($value);

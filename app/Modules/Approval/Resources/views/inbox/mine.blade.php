@@ -83,7 +83,7 @@
             :compact="request()->boolean('compact')"
             :columns="[
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                 'render' => fn ($a) => $a->requested_at?->format('d M Y, H:i')],
+                 'render' => fn ($a) => \App\Core\Support\DateFormat::spoken($a->requested_at)],
                 ['key' => 'module', 'label' => __('approval::field.action'),
                  'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels, 'paperNo' => ($papers ?? [])[$a->id] ?? ($facts[$a->id]['no'] ?? null), 'party' => $facts[$a->id]['party'] ?? null])],
                 ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',

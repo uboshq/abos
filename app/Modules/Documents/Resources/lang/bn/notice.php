@@ -13,7 +13,7 @@ return [
     'access_given' => 'আপনাকে একটা ডকুমেন্টে অধিকার দেওয়া হলো: :name',
     'access_removed' => 'একটা ডকুমেন্টে আপনার অধিকার সরানো হলো (:no)',
     'approval_required' => 'অনুমোদন দরকার: :name',
-    'approval_required_body' => 'ডকুমেন্ট :no আপনার সইয়ের অপেক্ষায়।',
+    'approval_required_body' => 'ডকুমেন্ট :no আপনার অনুমোদনের অপেক্ষায়।',
     'approved' => 'অনুমোদিত: :name',
     'rejected' => 'প্রত্যাখ্যাত: :name',
     'changes_requested' => 'সংশোধনে ফেরত: :name',

@@ -207,8 +207,8 @@
              ⚠️ ফর্মটা টেবিলের **বাইরে** মোড়ানো, কারণ `x-ui.table` নিজে
              একটা টেবিল আঁকে — ভেতরে `<form>` বসালে HTML ওটাকে
              টেবিলের বাইরে ঠেলে দিত, আর চেকবক্সগুলো কোনো ফর্মেই থাকত না। --}}
-        <form method="POST" action="{{ route('approval.inbox.bulk') }}">
-            @csrf
+        {{-- ⓘ আগে-দেখা কিছু লেখে না, তাই GET (দফা ১৩) — csrf-চিহ্ন ঠিকানায় যায় না --}}
+        <form method="GET" action="{{ route('approval.inbox.bulk_review') }}">
 
             @php
                 /*
@@ -228,7 +228,7 @@
                      ? view('approval::inbox.partials.pick', ['approval' => $a])
                      : ''],
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                 'render' => fn ($a) => $a->requested_at?->format('d M Y, H:i')],
+                 'render' => fn ($a) => \App\Core\Support\DateFormat::spoken($a->requested_at)],
                 ['key' => 'sla', 'label' => __('approval::field.sla'), 'width' => '9rem',
                  'render' => fn ($a) => view('approval::inbox.partials.clock', [
                      'approval' => $a, 'state' => $sla[$a->id] ?? 'none',

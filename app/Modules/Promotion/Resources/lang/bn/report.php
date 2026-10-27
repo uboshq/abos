@@ -29,7 +29,7 @@ return [
     'starts_on' => 'শুরু',
     'ends_on' => 'শেষ',
     'created_by' => 'তৈরি করেছেন',
-    'approved_by' => 'সই দিয়েছেন',
+    'approved_by' => 'অনুমোদন দিয়েছেন',
     'approved_at' => 'অনুমোদনের দিন',
     'days_left' => 'বাকি দিন',
     'given_worth' => 'এখন পর্যন্ত দেওয়া',
