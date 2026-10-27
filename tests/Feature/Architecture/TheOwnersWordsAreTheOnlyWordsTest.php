@@ -256,7 +256,8 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $this->assertSame('পোস্ট হয়েছে · মজুদে উঠেছে', $states['posted']['label_bn_stock']);
         $this->assertSame('পোস্ট হয়েছে', $states['posted']['label_bn_short']);
         $this->assertSame('পরিশোধিত', $states['posted']['label_bn_claim']);
-        $this->assertSame(self::same('অনুমোদনের অপেক্ষায়'), self::same($states['waiting']['label_bn_without_level']));
+        $this->assertSame(self::same('অনুমোদনের অপেক্ষায়'), self::same($states['waiting']['label_bn_without_level']),
+            '⛔ ভাগ করা চিপের ফাইলে অপেক্ষার লেখা "অনুমোদনের অপেক্ষায়" নয়');
         $this->assertSame('সংশোধনে ফেরত', $states['sent_back']['label_bn']);
 
         $want = [
