@@ -28,4 +28,9 @@ return [
     'close' => 'Close',
     // One sale, one page — [[ApprovalBundles]], 28 September 2026
     'confirm_all' => 'Confirm',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'bulk_picked' => 'Picked :count · approve together',
+    'go_back' => 'Go back',
+    'send_back_go' => 'Send back',
 ];

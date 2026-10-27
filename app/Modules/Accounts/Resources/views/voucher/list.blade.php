@@ -47,6 +47,22 @@
             'render' => fn ($v) => \Illuminate\Support\Str::headline((string) $v->against_type)];
     }
 
+    /*
+     * ⭐ খসড়া বাছাই — একসাথে পোস্ট বা অনুমোদনে পাঠানো (অনুমোদন পর্দা ভাগ ২, দফা ১৪; [[VoucherBulkPostController]])।
+     * ⓘ ঘরটা কেবল খসড়ায়, আর কেবল যাঁর পোস্টের চাবি আছে; ⛔ তবু সার্ভার প্রতিটা আবার দেখে — লুকানো ঘর হাতে বানিয়ে পাঠানো যায়।
+     * ⓘ চেকবক্স টেবিলের বাইরের ফর্মে (`form="voucher-bulk"`) — টেবিলের ভেতরে `<form>` বসালে HTML ওটাকে বাইরে ঠেলে দিত।
+     */
+    $canBulk = ! $isDocumentTab && auth()->user()?->can('accounts.voucher.update');
+
+    if ($canBulk) {
+        array_unshift($columns, ['key' => 'pick', 'label' => __('accounts::field.pick'), 'width' => '3rem',
+            'render' => fn ($v) => $v->isDraft()
+                ? new \Illuminate\Support\HtmlString('<label class="flex min-h-(--spacing-touch) items-center justify-center">'
+                    .'<input type="checkbox" name="ids[]" value="'.(int) $v->id.'" form="voucher-bulk" class="size-4" data-voucher-pick>'
+                    .'<span class="sr-only">'.e(__('accounts::field.pick').' '.$v->document_no).'</span></label>')
+                : ''];
+    }
+
     if (! $isDocumentTab) {
         $columns[] = ['key' => 'narration', 'label' => __('core.table.narration')];
         $columns[] = ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
@@ -100,6 +116,16 @@
                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
             </x-ui.toolbar>
         </form>
+
+        {{-- ⭐ একসাথে পোস্ট বা অনুমোদনে পাঠানো — আগে দেখার পাতা (দফা ১৪); ⓘ খসড়া না থাকলে বোতামটাই নেই --}}
+        @if ($canBulk && $vouchers->getCollection()->contains(fn ($v) => $v->isDraft()))
+            <form method="GET" action="{{ route('accounts.voucher.bulk_review') }}" id="voucher-bulk"
+                  class="flex flex-wrap items-center gap-3 border-b border-(--color-border) px-3 py-2">
+                <input type="hidden" name="back" value="{{ request()->fullUrl() }}">
+                <x-ui.button type="submit" tone="secondary" data-voucher-bulk>{{ __('accounts::action.bulk_post_review') }}</x-ui.button>
+                <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::message.bulk_post_hint') }}</span>
+            </form>
+        @endif
 
         <x-ui.table
             :compact="request()->boolean('compact')"

@@ -19,6 +19,8 @@
         <x-ui.page-header :title="__('approval::menu.limits')" />
     </x-slot:header>
 
+    @include('approval::partials.rule-tabs')
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

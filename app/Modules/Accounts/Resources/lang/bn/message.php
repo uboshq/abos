@@ -294,4 +294,21 @@ return [
     // ⭐ নকশা পাতা ২-এর হুবহু লাইন — ছাপা রসিদে টাকা কথায় থাকে ([[VoucherPrintController]], AmountInWords)
     'after_post_receipt' => 'পোস্টের পরে: টাকার রসিদ (টাকা কথায়) ছাপা · PDF · WhatsApp',
     'after_post_payment' => 'পোস্টের পরে: পরিশোধের কাগজ ছাপা · PDF · WhatsApp (দেখার পাতার "ছাপা" মেনুতে)',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'bulk_post_hint' => 'খসড়ার পাশের ঘরে টিক দিন। পাঠানোর আগে দেখাবে কোনটা পোস্ট হবে আর কোনটা অনুমোদনে যাবে।',
+    'bulk_post_title' => 'একসাথে পোস্ট বা অনুমোদনে পাঠানো',
+    'bulk_post_summary' => 'পোস্ট হবে :postedটা · অনুমোদনে যাবে :askedটা · বাদ :skippedটা',
+    'bulk_post_will_post' => 'পোস্ট হবে — :countটা (অনুমোদন লাগে না, বা আগেই অনুমোদিত)',
+    'bulk_post_will_ask' => 'অনুমোদনে যাবে — :countটা',
+    'bulk_post_confirm' => 'পোস্ট হবে :postedটা, অনুমোদনে যাবে :askedটা, মোট :total। পাঠাবেন?',
+    'bulk_post_left_out_title' => 'বাদ পড়েছে — একটা একটা করে দেখুন',
+    'bulk_post_done' => 'পোস্ট হলো :postedটা · অনুমোদনে গেল :askedটা',
+    'bulk_post_left_out' => 'বাদ :countটা',
+    'bulk_post_refused' => 'আটকে গেছে:',
+    'bulk_post_was_rejected' => 'আগে প্রত্যাখ্যাত, কাগজ বদলায়নি',
+    'bulk_post_why_not_draft' => 'খসড়া নয় — আগেই পোস্ট বা বাতিল',
+    'bulk_post_why_not_allowed' => 'এই ভাউচার পোস্টের অনুমতি আপনার নেই',
+    'bulk_post_why_already_waiting' => 'আগে থেকেই অনুমোদনের অপেক্ষায়',
+    'bulk_post_why_rejected' => 'প্রত্যাখ্যাত — কাগজ ঠিক না করলে আবার পাঠানো যায় না',
 ];

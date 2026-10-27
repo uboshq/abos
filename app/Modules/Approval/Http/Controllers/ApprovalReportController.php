@@ -43,6 +43,16 @@ class ApprovalReportController extends Controller implements HasMiddleware
         'by-user' => 'approval.by_user',
     ];
 
+    /** ⓘ ট্যাবের নাম, আগের মেনুর ক্রমে — মেনু থেকে সরে আসা ছয় সারি (অনুমোদন পর্দা ভাগ ২, দফা ২) */
+    private const TAB_LABELS = [
+        'pending' => 'approval::menu.report_pending',
+        'approved' => 'approval::menu.report_approved',
+        'rejected' => 'approval::menu.report_rejected',
+        'by-user' => 'approval::menu.report_by_user',
+        'bottleneck' => 'approval::menu.report_bottleneck',
+        'why-rejected' => 'approval::menu.report_why_rejected',
+    ];
+
     /**
      * যে রিপোর্টের সারি ক্লিকযোগ্য নয়, আর পাঠককে সেটা বলে দেওয়া হয়।
      *
@@ -114,6 +124,14 @@ class ApprovalReportController extends Controller implements HasMiddleware
             'notice' => isset(self::NOT_CLICKABLE[$slug])
                 ? __(self::NOT_CLICKABLE[$slug])
                 : null,
+
+            // ⭐ মেনুর ছয় সারি এখন এক সারি, রিপোর্টগুলো এখানে ট্যাবে (অনুমোদন পর্দা ভাগ ২, দফা ২)
+            'reportTabs' => collect(self::TAB_LABELS)->map(fn (string $label, string $one) => [
+                'key' => $one,
+                'label' => __($label),
+                'url' => route('approval.report.show', $one),
+                'active' => $one === $slug,
+            ])->values()->all(),
         ]);
     }
 }

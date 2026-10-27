@@ -128,4 +128,19 @@ return [
     'bulk_skipped_multi_step' => ':count left out — more than one step.',
     'bulk_skipped_no_limit' => ':count left out — no money limit set for you; approve one at a time.',
     'bulk_skipped_over_limit' => ':count left out — above your limit.',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'due_today' => 'Due today :time',
+    'due_tomorrow' => 'Due tomorrow :time',
+    'due_passed_hours' => 'Overdue by :hours hours',
+    'due_late_days' => 'Late :days days',
+    'inbox_summary' => 'Waiting for your approval :count · overdue :late · total of all :count :total',
+    'tab_summary' => ':count · total of all :count :total',
+    'on_behalf_of' => 'On behalf of :name',
+    'pick_one' => 'Pick a paper from the list on the left.',
+    'nothing_in_tab' => 'Nothing in this tab.',
+    'next_opens' => 'After you approve, the next paper opens by itself · Keyboard: ← → previous/next · A approve · S return for correction · R reject',
+    'reject_final' => 'A rejection is final: the paper will not move on. To have it corrected and sent again, use "Return for correction".',
+    'send_back_goes' => 'The paper goes back to the person who made it; once corrected and sent again it comes back to this step.',
+    'forward_goes' => 'The paper goes to another approver and leaves your list.',
 ];

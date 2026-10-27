@@ -140,6 +140,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('voucher-list', [VoucherListController::class, 'index'])
         ->name('voucher.list');
 
+    /*
+     * ⭐ তালিকা থেকে একসাথে পোস্ট বা অনুমোদনে পাঠানো — অনুমোদন পর্দা ভাগ ২, দফা ১৪ ([[VoucherBulkPostController]])।
+     * ⓘ আগে দেখা GET (কিছু লেখে না), তারপর POST। স্থির পথ, `vouchers/{voucher}`-এর বাইরে — সংঘাত নেই।
+     */
+    Route::get('voucher-list/bulk-review', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'review'])
+        ->name('voucher.bulk_review');
+    Route::post('voucher-list/bulk-post', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'post'])
+        ->name('voucher.bulk_post');
+
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');

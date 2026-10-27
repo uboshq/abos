@@ -261,4 +261,21 @@ return [
     'ledger_empty' => 'Shows here once the party, amount and account are filled.',
     'after_post_receipt' => 'After posting: money receipt (amount in words) print · PDF · WhatsApp',
     'after_post_payment' => 'After posting: print the payment paper · PDF · WhatsApp (from the "Print" menu on its page)',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'bulk_post_hint' => 'Tick the drafts. Before anything is sent you will see which will post and which will go for approval.',
+    'bulk_post_title' => 'Post or submit for approval together',
+    'bulk_post_summary' => 'Will post :posted · will go for approval :asked · left out :skipped',
+    'bulk_post_will_post' => 'Will post: :count (no approval needed, or already approved)',
+    'bulk_post_will_ask' => 'Will go for approval: :count',
+    'bulk_post_confirm' => 'Post :posted, send :asked for approval, total :total. Send?',
+    'bulk_post_left_out_title' => 'Left out: open them one by one',
+    'bulk_post_done' => 'Posted :posted · sent for approval :asked',
+    'bulk_post_left_out' => 'left out :count',
+    'bulk_post_refused' => 'Stopped:',
+    'bulk_post_was_rejected' => 'rejected before and the paper has not changed',
+    'bulk_post_why_not_draft' => 'Not a draft: already posted or cancelled',
+    'bulk_post_why_not_allowed' => 'You may not post this voucher',
+    'bulk_post_why_already_waiting' => 'Already waiting for approval',
+    'bulk_post_why_rejected' => 'Rejected: it cannot be sent again until the paper is corrected',
 ];

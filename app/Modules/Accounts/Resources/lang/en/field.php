@@ -361,4 +361,8 @@ return [
     // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
     'difference_discount' => 'Discount',
     'difference_rounding' => 'Rounding',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'pick' => 'Pick',
+    'bulk_post_why' => 'Why left out',
 ];

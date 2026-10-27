@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
     'coverage' => 'Where approval is required',
-    'inbox' => 'Waiting for me',
+    'inbox' => 'Approval inbox',
     'mine' => 'My requests',
     'signed_unposted' => 'Approved, not posted',
-    'inbox_of' => 'Waiting for :name',
+    'inbox_of' => 'Approval inbox of :name',
     'flows' => 'Approval rules',
 
     // The four reports of section 2.8
@@ -19,4 +19,7 @@ return [
     'report_bottleneck' => 'Where it gets stuck',
     'report_why_rejected' => 'Why requests are refused',
     'limits' => 'Authority limits',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'reports' => 'Reports',
 ];

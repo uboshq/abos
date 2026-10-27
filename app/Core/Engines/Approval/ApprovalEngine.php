@@ -15,6 +15,7 @@ use App\Core\Support\Money;
 use App\Core\Support\PlainNumber;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
+use App\Models\ApprovalDelegation;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\User;
@@ -970,12 +971,13 @@ final class ApprovalEngine
          * থেমে যায়, আর ডাকা পক্ষকে আলাদা করে "খালি" সামলাতে হয় না।
          */
         $escalated = $this->escalatedTuples($user);
+        $standIn = $this->standInTuples($user);
 
         $query = Approval::query()
             ->pending()
             // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
             ->with('requester')
-            ->where(function (Builder $outer) use ($tuples, $escalated, $user): void {
+            ->where(function (Builder $outer) use ($tuples, $escalated, $standIn, $user): void {
                 /*
                  * ⭐ আমার হাতে দেওয়া — ছকে আমি থাকি বা না থাকি।
                  *
@@ -1024,6 +1026,27 @@ final class ApprovalEngine
                                 }
                             });
                     });
+                }
+
+                /*
+                 * ⭐ দায়িত্ব হস্তান্তরে পাওয়া কাগজ — [[canDecide()]] এঁকে হ্যাঁ বলে ([[delegatorAt()]]), তালিকাও তাই আনে (অনুমোদন পর্দা
+                 * ভাগ ২, দফা ২, ২৭ অক্টোবর ২০২৬)। ⛔ আগে ভারপ্রাপ্ত মানুষটা কাগজের পাতা খুললে অনুমোদন দিতে পারতেন, অথচ ইনবক্সে
+                 * কাগজটা আসতই না। ⓘ যাঁর হয়ে, তিনি এই স্তরে আগেই সিদ্ধান্ত দিলে নয় — [[notYetSignedAtLevel()]]-এর একই নিয়ম।
+                 */
+                foreach ($standIn as [$module, $action, $type, $levels, $from]) {
+                    $outer->orWhere(fn (Builder $one) => $one
+                        ->whereNull('assigned_to')
+                        ->where('module', $module)
+                        ->where('action', $action)
+                        ->where('approvable_type', $type)
+                        ->whereIn('current_level', $levels)
+                        ->whereNotExists(fn (QueryBuilder $signed) => $signed->selectRaw('1')
+                            ->from('approval_decisions')
+                            ->whereColumn('approval_decisions.approval_id', 'approvals.id')
+                            ->whereColumn('approval_decisions.level', 'approvals.current_level')
+                            ->where('approval_decisions.decision', '!=', ApprovalDecision::FORWARDED)
+                            ->where(fn (QueryBuilder $who) => $who->where('approval_decisions.user_id', $from)
+                                ->orWhere('approval_decisions.on_behalf_of', $from))));
                 }
 
                 if ($tuples === []) {
@@ -1737,6 +1760,91 @@ final class ApprovalEngine
      * ⛔ নাহলে যেকেউ যেকারও হয়ে ভার নিয়ে সব কাগজে সই দিতে
      * পারতেন — ভার ক্ষমতা **সরায়**, তৈরি করে না।
      */
+    /**
+     * ⭐ ইনি আজ যাঁদের হয়ে অনুমোদন দেন, তাঁদের ধাপগুলো — [[decidableTuples()]]-এর আকারে, সাথে যাঁর হয়ে। ⓘ বন্ধ করা মানুষের ভার
+     * খাটে না ([[delegatorAt()]]-এর একই নিয়ম); হস্তান্তরে কাজ বাঁধা থাকলে কেবল সেই কাজ ([[ApprovalDelegation::covers()]])।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: list<int>, 4: int}>
+     */
+    private function standInTuples(User $user): array
+    {
+        $delegations = ApprovalDelegation::query()->active()->where('to_user_id', $user->id)->get();
+
+        if ($delegations->isEmpty()) {
+            return [];
+        }
+
+        /*
+         * ⓘ নিজের স্তর বাদ — সেখানে ইনি নিজের পালায় অনুমোদন দেন, কারও হয়ে নয় ([[standInFor()]]-এর একই উত্তর)। ⛔ বাদ না দিলে একই
+         * কাগজ "অপেক্ষায়" আর "অন্যের হয়ে" দুই ট্যাবেই উঠত, আর সিদ্ধান্তের সারিতে লেখা থাকত না কার হয়ে।
+         */
+        $own = [];
+
+        foreach ($this->decidableTuples($user) as [$module, $action, $type, $levels]) {
+            $own[$module.'|'.$action.'|'.$type] = $levels;
+        }
+
+        $out = [];
+
+        foreach ($delegations as $delegation) {
+            $from = User::query()->find($delegation->from_user_id);
+
+            if ($from === null || ! $from->is_active || (int) $from->id === (int) $user->id) {
+                continue;
+            }
+
+            foreach ($this->decidableTuples($from) as [$module, $action, $type, $levels]) {
+                $levels = array_values(array_diff($levels, $own[$module.'|'.$action.'|'.$type] ?? []));
+
+                if ($levels !== [] && $delegation->covers((string) $module, (string) $action)) {
+                    $out[] = [$module, $action, $type, $levels, (int) $from->id];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ "অন্যের হয়ে" ট্যাব — অপেক্ষার তালিকার যে কাগজগুলো দায়িত্ব হস্তান্তরে এসেছে (অনুমোদন পর্দা ভাগ ২, দফা ২)।
+     *
+     * ⓘ [[pendingQueryFor()]]-এর ভেতরেই ছাঁকা, আলাদা নিয়মে নয় — তাই এখানে যা আসে তা অপেক্ষার তালিকাতেও আছে, আর বাকি সব পাহারা
+     * (নিজের অনুরোধ, এই স্তরে আগেই সিদ্ধান্ত) একই থাকে।
+     *
+     * @return Builder<Approval>
+     */
+    public function standInQueryFor(User $user): Builder
+    {
+        $standIn = $this->standInTuples($user);
+
+        return $this->pendingQueryFor($user)->where(function (Builder $any) use ($standIn): void {
+            $any->whereRaw('1 = 0');
+
+            foreach ($standIn as [$module, $action, $type, $levels]) {
+                $any->orWhere(fn (Builder $one) => $one
+                    ->whereNull('assigned_to')
+                    ->where('module', $module)
+                    ->where('action', $action)
+                    ->where('approvable_type', $type)
+                    ->whereIn('current_level', $levels));
+            }
+        });
+    }
+
+    /**
+     * ⭐ ইনি কাগজটায় কার হয়ে অনুমোদন দেবেন — নিজের পালায় বা হাতে দেওয়া কাগজে `null` (অনুমোদন পর্দা ভাগ ২, দফা ২: ইনবক্সের
+     * "অন্যের হয়ে" ট্যাব)। ⓘ সিদ্ধান্তের সারির `on_behalf_of` এই একই প্রশ্নে বসে ([[approve()]]), তাই ট্যাব আর খাতা মেলে।
+     */
+    public function standInFor(Approval $approval, User $user): ?int
+    {
+        if ((int) $approval->assigned_to === (int) $user->id
+            || in_array((int) $approval->current_level, $this->levelsIn($this->flowOf($approval), $user), true)) {
+            return null;
+        }
+
+        return $this->delegatorAt($approval, $user);
+    }
+
     private function delegatorAt(Approval $approval, User $user): ?int
     {
         $flow = $this->flowOf($approval);

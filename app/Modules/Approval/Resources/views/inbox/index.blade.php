@@ -1,327 +1,242 @@
 {{--
-    আমার সিদ্ধান্তের অপেক্ষায়।
+    ⭐ অনুমোদনের ইনবক্স — এক পাতায় বাঁয়ে তালিকা, ডানে কাগজ (অনুমোদন পর্দা ভাগ ২; মালিকের "হ্যাঁ", ২১ অক্টোবর ২০২৬;
+    SAP Fiori "My Inbox", পরিকল্পনার পাতা ২)।
 
-    পুরনোটা উপরে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই সবচেয়ে বেশি
-    কাউকে আটকে রেখেছে। নতুনটা উপরে রাখলে পুরনো অনুরোধগুলো নিচে চাপা
-    পড়ত, আর ঠিক ওগুলোই মানুষ ভুলে যায়।
+    বাঁয়ে: চার ট্যাব আর সংখ্যা (দফা ২) · কাজ, শাখা, অঙ্ক, দেরি আর সাজানো (দফা ৩) · কার্ড — পক্ষ, শেষ সময়, ধাপ (দফা ৫, ৭, ৮) ·
+    নিচে এই পাতার মোট, সবগুলোর মোট আর পাতা বদল (দফা ৬)।
+    ডানে: বেছে নেওয়া কাগজ ([[partials/detail]]) — অনুমোদন দিলে পরের কাগজ নিজে খোলে (দফা ১)।
+
+    ⛔ আগে: ১১ কলামের টেবিল, ৫০-এ কাটা, মোট নেই; কাগজ খুলতে আলাদা পাতা, সিদ্ধান্তের পরে আবার তালিকায় ফিরে পরেরটা খুঁজতে হত।
+
+    ⓘ ছোট পর্দায় (lg-এর নিচে) তালিকা আগে, কাগজ তার নিচে — ফোনের মাপে কার্ড-তালিকা, টেবিল নয় (দফা ২১-এর ওয়েব অংশ)।
 --}}
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.inbox') }}</x-slot:title>
 
+    @php
+        $canPick = array_flip($bulkable);
+        $keep = array_filter([
+            'person' => $person ?: null,
+            'tab' => $tab !== 'waiting' ? $tab : null,
+        ]);
+        $filterKeep = array_filter($keep + [
+            'branch' => $branch ?: null,
+            'amount' => $band !== '' ? $band : null,
+            'sort' => $sort,
+            'q' => request('q') ?: null,
+        ]);
+        $from = http_build_query(array_filter(request()->only(['tab', 'module', 'branch', 'amount', 'late', 'sort', 'q', 'page'])));
+        $rows = $approvals->getCollection();
+        $at = $opened !== null ? $rows->search(fn ($a) => (int) $a->id === (int) $opened->id) : false;
+        $prevUrl = $at !== false && $at > 0 ? request()->fullUrlWithQuery(['open' => $rows[$at - 1]->id]) : null;
+        $nextUrl = $at !== false && isset($rows[$at + 1]) ? request()->fullUrlWithQuery(['open' => $rows[$at + 1]->id]) : null;
+        $summary = $tab === 'waiting'
+            ? __('approval::message.inbox_summary', ['count' => $visibleTotal, 'late' => $lateCount, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)])
+            : __('approval::message.tab_summary', ['count' => $visibleTotal, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)]);
+    @endphp
+
+    <x-slot:header>
+        <x-ui.page-header :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
+                          :subtitle="$summary">
+            <x-slot:actions>
+                {{-- ⭐ একসাথে অনুমোদন — মালিকের সিদ্ধান্ত ৫; ⛔ টাকা নড়ে এমন কাগজে চেকবক্সই আঁকা হয় না। ⓘ আগে দেখার পাতা (দফা ১৩)
+                     সংখ্যা, মোট আর বাদ পড়ার কারণ দেখায় — সেখান থেকেই আসল অনুমোদন। --}}
+                @if ($bulkable !== [])
+                    <x-ui.button type="submit" tone="secondary" form="bulk-form" data-bulk-button
+                                 data-label="{{ __('approval::action.bulk_picked', ['count' => '__N__']) }}">
+                        {{ __('approval::action.bulk_picked', ['count' => 0]) }}
+                    </x-ui.button>
+                @endif
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
     @if (session('saved'))
         <div role="status"
-             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
-                    text-(--color-badge-success-ink)">
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
             {{ session('saved') }}
         </div>
     @endif
 
-    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-        {{--
-            অন্য কারো ইনবক্স দেখলে শিরোনামেই তাঁর নাম।
+    <x-ui.errors />
 
-            ⚠️ নাহলে পাতাটা দেখতে হুবহু নিজের ইনবক্সের মতো, আর পাঠক
-            ভাববেন **তাঁর নিজের** সইয়ের অপেক্ষায় বারোটা কাগজ ঝুলে আছে।
-            ⓘ ভুল বোঝাটা নীরব: সংখ্যাটা সত্যি, কেবল কার সংখ্যা তা নয়।
-        --}}
-        {{-- ⚠️ গোনাটা `$visibleTotal`, `$approvals->count()` নয়।
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
 
-             তালিকাটা এখন পঞ্চাশে বাঁধা, তাই সারি গুনলে উপরে লেখা উঠত
-             "৫০টি রেকর্ড" — যেখানে সত্যিকারের সংখ্যা একশো সাঁইত্রিশ।
-             আর কম দেখানোটা এখানে নিরীহ নয়: মানুষ ঠিক এই সংখ্যাটা দেখেই
-             ঠিক করেন আজ বসে অনুমোদন করবেন কি না।
+        {{-- ── বাঁয়ে: ট্যাব, ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
+        <div class="min-w-0" data-inbox-list>
+            {{-- ⓘ অন্যের ইনবক্স দেখার সময় কেবল "অপেক্ষায়" — বাকি তিনটা প্রশ্ন নিজের --}}
+            <x-ui.list-tabs :label="__('approval::field.tabs')" :tabs="collect($tabCounts)->map(fn ($count, $key) => [
+                'key' => $key,
+                'label' => __('approval::field.tab_'.$key),
+                'count' => $count,
+                'url' => route('approval.inbox.index', array_filter(['person' => $person ?: null, 'tab' => $key !== 'waiting' ? $key : null])),
+                'active' => $tab === $key,
+            ])->values()->all()" />
 
-             ছাঁকনি দেওয়া থাকলে `$visibleTotal` ওই মডিউলের সংখ্যা, তাই
-             শিরোনাম আর নিচের তালিকা একই কথা বলে। --}}
-        {{-- ⭐ শিরোনাম আর গোনা এখন টুলবারে — আগে ছিল page-header-এ,
-             তালিকার বাক্সের বাইরে। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
-             *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
+            <form method="GET" action="{{ route('approval.inbox.index') }}" class="mb-3 space-y-2" data-inbox-filters>
+                @foreach ($keep as $name => $value)
+                    <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                @endforeach
+                @if ($selected !== '')
+                    <input type="hidden" name="module" value="{{ $selected }}">
+                @endif
+                @if ($late)
+                    <input type="hidden" name="late" value="1">
+                @endif
 
-             ⭐ খোঁজার ঘর আছে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; কন্ট্রোলার `q`
-             পড়ে ([[ApprovalInboxController::searched()]])।
-
-             ⚠️ মডিউলটা লুকানো ঘরে ফর্মের সাথে যায়: নাহলে ঘনত্ব বা
-             রিফ্রেশ চাপলে ছাঁকনিটা নীরবে উঠে যেত, আর সংখ্যাটা বদলে
-             যেত কোনো কারণ না দেখিয়ে। ঘরটা টুলবারের **বাইরে**, কারণ
-             ভেতরে বসালে খালি ছাঁকনির প্যানেল খোলার একটা মৃত বোতাম
-             উঠত। --}}
-        @if ($selected !== '')
-            <input type="hidden" name="module" value="{{ $selected }}">
-        @endif
-
-        <x-ui.toolbar :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
-                      :count="trans_choice('core.count.records', $visibleTotal, ['count' => $visibleTotal])"
-                      :filter-labels="['person' => __('approval::field.whose_inbox'), 'module' => __('approval::field.module')]">
-            {{--
-                কার ইনবক্স — কেবল যাঁর অনুমতি আছে তাঁর জন্য।
-
-                ── কেন ড্রপডাউন, চিপ নয় ─────────────────────────────────
-                মডিউলের চিপে সংখ্যা বসে, কারণ গণনাটা **একই তালিকা থেকেই**
-                পাওয়া যায় — বাড়তি কোনো কোয়েরি লাগে না। মানুষের বেলায়
-                তা নয়: প্রত্যেকের সংখ্যা জানতে প্রত্যেকের জন্য আলাদা
-                হিসাব করতে হত। ⚠️ আর সংখ্যা ছাড়া দশটা চিপ কেবল জায়গা
-                নিত, তাই ওটা ড্রপডাউন।
-
-                ⓘ "সবাই" বিকল্প নেই — সেটা রিপোর্টের প্রশ্ন, ইনবক্সের নয়।
-
-                ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে এটা টুলবারের ছাঁকনির ঘরে — নিজের
-                আলাদা ফর্মে থাকলে টুলবারের ফর্মের ভেতরে ফর্ম বসাতে হত, যা
-                HTML মানে না।
-            --}}
-            @if (count($signers) > 1)
-                <label for="person" class="text-xs text-(--color-ink-muted)">
-                    {{ __('approval::field.whose_inbox') }}
-                </label>
-
-                {{-- ⓘ "নিজের ইনবক্স"-এর মান খালি, "0" নয় — ফর্মটা এখন
-                     ঘনত্ব আর রিফ্রেশেও জমা পড়ে, আর "0" গেলে টুলবার সেটাকে
-                     চালু ছাঁকনি ভেবে একটা অর্থহীন চিপ আঁকত। কন্ট্রোলার
-                     খালিকে শূন্যই পড়ে। --}}
-                <select id="person" name="person" data-action="submit-form"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('approval::field.my_inbox') }}</option>
-                    @foreach ($signers as $id => $name)
-                        <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
-                    @endforeach
-                </select>
-
-                {{-- JS বন্ধ থাকলেও যেন কাজ করে — নিয়ম নয়, সৌজন্য নয়, শর্ত --}}
-                <noscript>
-                    <button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button>
-                </noscript>
-            @endif
-        </x-ui.toolbar>
-        </form>
-
-    {{--
-        মডিউল ধরে ছাঁকনি — §২.২।
-
-        ── কেন সংখ্যাটা চিপের গায়েই ────────────────────────────────────
-        "ক্রয়" লেখা একটা চিপ চেপে খালি তালিকা পাওয়ার চেয়ে খারাপ কিছু
-        নেই। সংখ্যাটা আগে থেকে দেখা গেলে মানুষ জানেন কোথায় কাজ আছে, আর
-        যেখানে কিছু নেই সেই চিপটা দেখানোই হয় না।
-
-        ── একটার বেশি মডিউল না থাকলে সারিটাই থাকে না ────────────────────
-        একটা মাত্র বিকল্পের ছাঁকনি ছাঁকে না, শুধু জায়গা নেয় — আর নতুন
-        প্রতিষ্ঠানে শুরুর দিনগুলোতে ঠিক তা-ই হত।
-    --}}
-        {{-- ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে চিপগুলো বাক্সের ভেতরে, টুলবারের ঠিক
-             নিচে — ছাঁকনির প্যানেলে ঢোকানো হয়নি, কারণ ওটা বোতাম চেপে
-             খোলে, আর তখন "কোথায় কাজ আছে" সংখ্যাগুলো আড়ালে চলে যেত। --}}
-        @if (count($modules) > 1)
-                <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-3 py-2" role="group"
-                     aria-label="{{ __('approval::field.module') }}">
+                {{-- ⭐ কাজের চিপ, সংখ্যাসহ — §২.২; ⓘ যেখানে কিছু নেই সেই চিপ আঁকা হয় না, চিপের সংখ্যা সবসময় পুরো (ছাঁকা) তালিকার --}}
+                <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="{{ __('approval::field.module') }}">
                     @php
-                        $chip = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium
-                                 transition-colors hover:bg-(--color-surface-hover)';
-                        $on = 'border-(--color-border) bg-(--color-surface-selected) text-(--color-ink)';
+                        $chip = 'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-(--color-surface-hover)';
+                        $on = 'border-(--color-brand-500) bg-(--color-surface-selected) text-(--color-ink)';
                         $off = 'border-(--color-border) bg-(--color-surface-card) text-(--color-ink-body)';
-
-                        /*
-                            ⚠️ চিপের লিংকে ব্যক্তিটা সাথে যায়।
-
-                            না গেলে রহিমের তালিকায় "ক্রয়" চাপলে নিজের
-                            ইনবক্সে ফিরে আসতেন — আর সংখ্যাটা বদলে যেত
-                            বলে মনে হত ছাঁকনিটা কাজ করেছে।
-                        */
-                        $keep = $person ? ['person' => $person] : [];
                     @endphp
 
-                    <a href="{{ route('approval.inbox.index', $keep) }}"
-                       @class([$chip, $selected === '' ? $on : $off])
+                    <a href="{{ route('approval.inbox.index', $filterKeep) }}" @class([$chip, $selected === '' ? $on : $off])
                        @if ($selected === '') aria-current="true" @endif>
-                        {{ __('approval::field.all_modules') }}
-                        <span class="text-(--color-ink-muted)">{{ $total }}</span>
+                        {{ __('approval::field.all_work') }} <span class="num text-(--color-ink-muted)">{{ $total }}</span>
                     </a>
 
                     @foreach ($modules as $code => $one)
-                        <a href="{{ route('approval.inbox.index', $keep + ['module' => $code]) }}"
+                        <a href="{{ route('approval.inbox.index', $filterKeep + ['module' => $code]) }}"
                            @class([$chip, $selected === $code ? $on : $off])
                            @if ($selected === $code) aria-current="true" @endif>
-                            {{ $one['label'] }}
-                            <span class="text-(--color-ink-muted)">{{ $one['count'] }}</span>
+                            {{ $one['label'] }} <span class="num text-(--color-ink-muted)">{{ $one['count'] }}</span>
                         </a>
                     @endforeach
+
+                    {{-- ⭐ দেরির চিপ — সংখ্যা শূন্য হলে চিপটাই নেই ("দেরি ০" চেপে খালি তালিকা পাওয়ার চেয়ে খারাপ কিছু নেই) --}}
+                    @if ($lateCount > 0)
+                        <a href="{{ route('approval.inbox.index', $late ? $filterKeep + array_filter(['module' => $selected ?: null]) : $filterKeep + array_filter(['module' => $selected ?: null]) + ['late' => 1]) }}"
+                           @class([$chip, 'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)' => $late, $off => ! $late])
+                           @if ($late) aria-current="true" @endif data-late-chip>
+                            {{ __('approval::field.late') }} <span class="num">{{ $lateCount }}</span>
+                        </a>
+                    @endif
                 </div>
-        @endif
 
-        {{-- ⭐ দেরির চিপ — ২৪ সেপ্টেম্বর ২০২৬।
+                {{-- ⭐ শাখা · অঙ্ক · সাজানো — দফা ৩; ⓘ বদলালেই ফর্ম জমা পড়ে (`submit-form`), JS বন্ধ থাকলে নিচের বোতাম --}}
+                <div class="flex flex-wrap items-center gap-1.5">
+                    @php $select = 'h-(--spacing-field-compact) rounded-full border border-(--color-border) bg-(--color-surface-card) px-2.5 text-xs'; @endphp
 
-             ⓘ সংখ্যাটা শূন্য হলে চিপটাই থাকে না, মডিউলের চিপগুলোর মতোই:
-             ⛔ "দেরি ০" লেখা একটা চিপ চেপে খালি তালিকা পাওয়ার চেয়ে
-             খারাপ কিছু নেই, আর ওটা ঠিক ভালো দিনগুলোতেই জায়গা নিত।
+                    <label class="sr-only" for="inbox-branch">{{ __('approval::field.branch') }}</label>
+                    <select id="inbox-branch" name="branch" data-action="submit-form" class="{{ $select }}">
+                        <option value="">{{ __('approval::field.all_branches') }}</option>
+                        @foreach ($branches as $id => $name)
+                            <option value="{{ $id }}" @selected($branch === $id)>{{ $name }}</option>
+                        @endforeach
+                    </select>
 
-             ⚠️ লিংকে ব্যক্তি আর মডিউল দুইটাই সাথে যায় — নাহলে "দেরি"
-             চাপলে বাকি ছাঁকনিগুলো নীরবে উঠে যেত, আর সংখ্যাটা বদলে
-             যাওয়ায় মনে হত ছাঁকনিটা কাজ করেছে। --}}
-        @if ($lateCount > 0)
-            @php
-                $keepAll = array_filter([
-                    'person' => $person ?: null,
-                    'module' => $selected !== '' ? $selected : null,
-                ]);
-            @endphp
+                    <label class="sr-only" for="inbox-amount">{{ __('approval::field.amount_band') }}</label>
+                    <select id="inbox-amount" name="amount" data-action="submit-form" class="{{ $select }}">
+                        <option value="">{{ __('approval::field.any_amount') }}</option>
+                        @foreach (array_keys(\App\Modules\Approval\Http\Controllers\ApprovalInboxController::AMOUNT_BANDS) as $key)
+                            <option value="{{ $key }}" @selected($band === $key)>{{ __('approval::field.band_'.$key) }}</option>
+                        @endforeach
+                    </select>
 
-            <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-3 py-2">
-                <a href="{{ route('approval.inbox.index', $late ? $keepAll : $keepAll + ['late' => 1]) }}"
-                   @class([
-                       'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium
-                        transition-colors hover:bg-(--color-surface-hover)',
-                       'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg)
-                        text-(--color-badge-danger-ink)' => $late,
-                       'border-(--color-border) bg-(--color-surface-card) text-(--color-ink-body)' => ! $late,
-                   ])
-                   @if ($late) aria-current="true" @endif>
-                    {{ __('approval::field.late') }}
-                    <span>{{ $lateCount }}</span>
-                </a>
-            </div>
-        @endif
+                    <label class="sr-only" for="inbox-sort">{{ __('approval::field.sort') }}</label>
+                    <select id="inbox-sort" name="sort" data-action="submit-form" class="{{ $select }}">
+                        @foreach (\App\Modules\Approval\Http\Controllers\ApprovalInboxController::SORTS as $key)
+                            <option value="{{ $key }}" @selected($sort === $key)>{{ __('approval::field.sort_'.$key) }}</option>
+                        @endforeach
+                    </select>
 
-        {{-- কাটা পড়েছে কি না, আর কতটা — কেবল সত্যিই কাটা পড়লে।
+                    {{-- ⓘ কার ইনবক্স — কেবল `approval.report` আছে যাঁর; "সবাই" বিকল্প নেই, সেটা রিপোর্টের প্রশ্ন --}}
+                    @if (count($signers) > 1)
+                        <label class="sr-only" for="person">{{ __('approval::field.whose_inbox') }}</label>
+                        <select id="person" name="person" data-action="submit-form" class="{{ $select }}">
+                            <option value="">{{ __('approval::field.my_inbox') }}</option>
+                            @foreach ($signers as $id => $name)
+                                <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    @endif
 
-             নিচে যা দেখা যাচ্ছে সেটাই সবটা নয়, আর সেটা না বললে পাতাটা
-             সম্পূর্ণ দেখাত অথচ বাকিগুলো চুপচাপ লুকিয়ে রাখত। লম্বা সারিটা
-             নিজেই একটা সংকেত — কেউ অনুমোদন করছেন না — তাই সংখ্যাটা
-             লুকানোর মানে হত না। --}}
-        @if ($visibleTotal > $approvals->count())
-            <p role="status"
-               class="border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-2
-                      text-xs text-(--color-badge-warning-ink)">
-                {{ __('approval::message.inbox_capped', [
-                    'shown' => $approvals->count(),
-                    'total' => $visibleTotal,
-                ]) }}
-            </p>
-        @endif
+                    <noscript><button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button></noscript>
+                </div>
 
-        {{-- ⭐ একসাথে সই — মালিকের সিদ্ধান্ত ৫, ২৪ সেপ্টেম্বর ২০২৬।
+                {{-- ⭐ খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ ([[ApprovalInboxController::searched()]]) --}}
+                <label class="block">
+                    <span class="sr-only">{{ __('approval::field.search_hint') }}</span>
+                    <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ __('approval::field.search_hint') }}"
+                           class="h-(--spacing-field-compact) w-full rounded-full border border-(--color-border) bg-(--color-surface-card) px-3 text-xs">
+                </label>
+            </form>
 
-             ⛔ টাকা নড়ে এমন কাজে চেকবক্সটা **আঁকাই হয় না** — মালিকের
-             সিদ্ধান্ত: ওগুলো একটা একটা করে খুলে দেখতে হবে। ⓘ তবু
-             [[BulkApproval]] সার্ভারেও আলাদা করে দেখে, কারণ একটা লুকানো
-             চেকবক্স হাতে বানিয়ে পাঠানো যায় আর পর্দা কখনো শেষ কথা নয়।
-
-             ⚠️ ফর্মটা টেবিলের **বাইরে** মোড়ানো, কারণ `x-ui.table` নিজে
-             একটা টেবিল আঁকে — ভেতরে `<form>` বসালে HTML ওটাকে
-             টেবিলের বাইরে ঠেলে দিত, আর চেকবক্সগুলো কোনো ফর্মেই থাকত না। --}}
-        {{-- ⓘ আগে-দেখা কিছু লেখে না, তাই GET (দফা ১৩) — csrf-চিহ্ন ঠিকানায় যায় না --}}
-        <form method="GET" action="{{ route('approval.inbox.bulk_review') }}">
-
-            @php
-                /*
-                 * ⓘ `in_array` নয়, চাবি ধরে খোঁজা — তালিকাটা পঞ্চাশ সারি,
-                 * আর প্রতিটা সারিতে পঞ্চাশটা মিলানো মানে আড়াই হাজার তুলনা।
-                 */
-                $canPick = array_flip($bulkable);
-            @endphp
-
-        <x-ui.table
-            :empty="__('approval::message.nothing_waiting')"
-            :rows="$approvals"
-            :compact="request()->boolean('compact')"
-            :columns="[
-                ['key' => 'pick', 'label' => __('approval::field.pick'), 'width' => '3rem',
-                 'render' => fn ($a) => isset($canPick[$a->id])
-                     ? view('approval::inbox.partials.pick', ['approval' => $a])
-                     : ''],
-                ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
-                 'render' => fn ($a) => \App\Core\Support\DateFormat::spoken($a->requested_at)],
-                ['key' => 'sla', 'label' => __('approval::field.sla'), 'width' => '9rem',
-                 'render' => fn ($a) => view('approval::inbox.partials.clock', [
-                     'approval' => $a, 'state' => $sla[$a->id] ?? 'none',
-                 ])],
-                ['key' => 'module', 'label' => __('approval::field.action'),
-                 'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels])],
-                ['key' => 'no', 'label' => __('approval::field.paper_no'), 'width' => '8rem',
-                 'render' => fn ($a) => ($facts[$a->id]['no'] ?? null) ?: '—'],
-                ['key' => 'party', 'label' => __('approval::field.party'), 'width' => '11rem',
-                 'render' => fn ($a) => ($facts[$a->id]['party'] ?? null) ?: '—'],
-                ['key' => 'about', 'label' => __('approval::field.what_for'),
-                 'render' => fn ($a) => ($facts[$a->id]['about'] ?? null) ?: '—'],
-                ['key' => 'where', 'label' => __('approval::field.where_money'), 'width' => '11rem',
-                 'render' => fn ($a) => ($facts[$a->id]['where'] ?? null) ?: '—'],
-                ['key' => 'requested_by', 'label' => __('approval::field.requested_by'), 'width' => '11rem',
-                 'render' => fn ($a) => $a->requesterName()],
-                ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($a) => $a->amount === null ? '—' : \App\Core\Support\Money::format($a->amount)],
-                ['key' => 'open', 'label' => '', 'width' => '7rem',
-                 'render' => fn ($a) => view('approval::inbox.partials.open', ['approval' => $a])],
-            ]" />
-
-            {{-- ⓘ বোতামটা কেবল তখনই, যখন সত্যিই বাছাই করার কিছু আছে।
-
-                 ⛔ সবসময় দেখালে টাকার কাগজভরা একটা ইনবক্সে বোতামটা
-                 জীবন্ত দেখাত, চাপলে "বাছাই করা কিছু নেই" — আর পাঠক
-                 ভাবতেন ব্যবস্থাটা ভাঙা। --}}
-            @if ($bulkable !== [])
-                <div class="flex flex-wrap items-center gap-3 border-t border-(--color-border) px-4 py-3">
-                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                        <input type="checkbox" id="pick-all" class="size-4">
-                        {{ __('approval::action.pick_all') }}
-                    </label>
-
-                    <x-ui.button type="submit" tone="primary">
-                        {{ __('approval::action.bulk_approve') }}
-                    </x-ui.button>
-
-                    {{-- ⚠️ সীমাটা লেখা থাকে, লুকানো হয় না।
-
-                         ⓘ চেকবক্সটা যেখানে নেই সেখানে পাঠক ভাবতে পারেন
-                         সারিটা ভাঙা। ⛔ কারণটা না লিখলে তিনি একই কাগজে
-                         বারবার চেষ্টা করতেন। --}}
-                    <p class="text-2xs text-(--color-ink-muted)">
-                        {{ __('approval::message.bulk_only_paper') }}
+            <form method="GET" action="{{ route('approval.inbox.bulk_review') }}" id="bulk-form">
+                @if ($rows->isEmpty())
+                    <p class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm text-(--color-ink-muted)">
+                        {{ $tab === 'waiting' ? __('approval::message.nothing_waiting') : __('approval::message.nothing_in_tab') }}
                     </p>
-                </div>
+                @else
+                    <ul class="space-y-2" aria-label="{{ __('approval::field.papers_list') }}">
+                        @foreach ($rows as $approval)
+                            @include('approval::inbox.partials.card', ['approval' => $approval])
+                        @endforeach
+                    </ul>
+                @endif
+            </form>
+
+            {{-- ⭐ দুই মোট আর পাতা বদল — দফা ৬ --}}
+            <div class="mt-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-inbox-totals>
+                <p class="flex justify-between gap-2 border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
+                    <span>{{ __('approval::field.page_total', ['count' => $rows->count()]) }}</span>
+                    <span class="num" data-page-total>৳{{ \App\Core\Support\Money::format($sumPage) }}</span>
+                </p>
+                <p class="flex justify-between gap-2 px-3 py-2 text-sm text-(--color-ink-muted)">
+                    <span>{{ __('approval::field.all_total', ['count' => $visibleTotal]) }}</span>
+                    <span class="num" data-all-total>৳{{ \App\Core\Support\Money::format($sumAll) }}</span>
+                </p>
+                <x-ui.pager :rows="$approvals" />
+            </div>
+
+            @if ($bulkable !== [])
+                <p class="mt-2 text-2xs text-(--color-ink-muted)">{{ __('approval::message.bulk_only_paper') }}</p>
             @endif
-        </form>
+
+            {{-- ⭐ ছকের বাইরের অনুমোদন — সবসময় দ্বিতীয় একজনের ([[SignaturesWaitingElsewhere]]); অনুমোদন কাগজের নিজের পাতায় --}}
+            @if (($elsewhere ?? []) !== [])
+                <section data-boxed data-signatures-elsewhere
+                         class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <h2 class="font-semibold">{{ __('approval::message.elsewhere_title') }}</h2>
+                    <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('approval::message.elsewhere_hint') }}</p>
+                    <ul>
+                        @foreach ($elsewhere as $item)
+                            <li class="flex flex-wrap items-center justify-between gap-2 border-t border-(--color-border) py-2" data-elsewhere-kind="{{ $item['kind'] }}">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">{{ $item['title'] }}</p>
+                                    <p class="text-2xs text-(--color-ink-muted)">
+                                        {{ $item['detail'] }} · {{ $item['requested_by'] }}
+                                        @if ($item['requested_at'])
+                                            · {{ \App\Core\Support\DateFormat::format($item['requested_at']) }}
+                                        @endif
+                                    </p>
+                                </div>
+                                <x-ui.button tone="secondary" :href="$item['url']">{{ __('approval::message.elsewhere_open') }}</x-ui.button>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+        </div>
+
+        {{-- ── ডানে: বেছে নেওয়া কাগজ ─────────────────────────────────────────── --}}
+        <div class="min-w-0" data-inbox-detail>
+            @if ($detail !== null)
+                @include('approval::inbox.partials.detail', $detail + [
+                    'nextId' => $nextId,
+                    'from' => $from,
+                    'prevUrl' => $prevUrl,
+                    'nextUrl' => $nextUrl,
+                ])
+            @else
+                <p class="rounded-(--radius-card) border border-dashed border-(--color-border) p-6 text-center text-sm text-(--color-ink-muted)">
+                    {{ __('approval::message.pick_one') }}
+                </p>
+            @endif
+        </div>
     </div>
 
-    {{-- ⭐ ছকের বাইরের সই — সবসময় দ্বিতীয় একজনের (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SignaturesWaitingElsewhere]])।
-         ⓘ এগুলো `approvals` সারি নয়, তাই উপরের তালিকা আর গোনায় নেই; সই দেওয়া হয় কাগজের নিজের পাতায়। --}}
-    @if (($elsewhere ?? []) !== [])
-        <section data-boxed data-signatures-elsewhere
-                 class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h2 class="font-semibold">{{ __('approval::message.elsewhere_title') }}</h2>
-            <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('approval::message.elsewhere_hint') }}</p>
-            <ul>
-                @foreach ($elsewhere as $item)
-                    <li class="flex flex-wrap items-center justify-between gap-2 border-t border-(--color-border) py-2" data-elsewhere-kind="{{ $item['kind'] }}">
-                        <div>
-                            <p class="text-sm font-medium">{{ $item['title'] }}</p>
-                            <p class="text-2xs text-(--color-ink-muted)">
-                                {{ $item['detail'] }} · {{ $item['requested_by'] }}
-                                @if ($item['requested_at'])
-                                    · {{ \App\Core\Support\DateFormat::format($item['requested_at']) }}
-                                @endif
-                            </p>
-                        </div>
-                        <x-ui.button tone="secondary" :href="$item['url']">{{ __('approval::message.elsewhere_open') }}</x-ui.button>
-                    </li>
-                @endforeach
-            </ul>
-        </section>
-    @endif
-
-    {{-- "সব বাছাই" — JavaScript বন্ধ থাকলে ঘরটা কিছুই করে না, আর
-         প্রতিটা সারির নিজের চেকবক্স তখনও কাজ করে। ⓘ তাই এটা সুবিধা,
-         শর্ত নয় — ঠিক সেভাবেই বসানো। --}}
-    <script @nonce>
-        (() => {
-            const all = document.getElementById('pick-all');
-
-            if (! all) {
-                return;
-            }
-
-            all.addEventListener('change', () => {
-                document.querySelectorAll('input[name="ids[]"]').forEach((box) => {
-                    box.checked = all.checked;
-                });
-            });
-        })();
-    </script>
+    @include('approval::inbox.partials.keys')
 </x-layouts.app>
