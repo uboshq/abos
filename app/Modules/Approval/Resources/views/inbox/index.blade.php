@@ -60,18 +60,21 @@
 
     <x-ui.errors />
 
+    {{-- ⓘ অন্যের ইনবক্স দেখার সময় কেবল "অপেক্ষায়" — বাকি তিনটা প্রশ্ন নিজের।
+         ⚠️ ট্যাবের সারি দুই কলামের উপরে, পুরো চওড়ায় — 1366-এ মেনু খোলা রেখে তালিকার কলাম (20rem = 400px, মূল অক্ষর 20px) চারটা ট্যাব
+         ধরে না, শেষেরটা কেটে পাশে সরতে হত (২৮ অক্টোবর ২০২৬-এর ছবি); পুরো চওড়ায় চারটাই এক সারিতে। --}}
+    <x-ui.list-tabs :label="__('approval::field.tabs')" :tabs="collect($tabCounts)->map(fn ($count, $key) => [
+        'key' => $key,
+        'label' => __('approval::field.tab_'.$key),
+        'count' => $count,
+        'url' => route('approval.inbox.index', array_filter(['person' => $person ?: null, 'tab' => $key !== 'waiting' ? $key : null])),
+        'active' => $tab === $key,
+    ])->values()->all()" />
+
     <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
 
-        {{-- ── বাঁয়ে: ট্যাব, ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
+        {{-- ── বাঁয়ে: ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
         <div class="min-w-0" data-inbox-list>
-            {{-- ⓘ অন্যের ইনবক্স দেখার সময় কেবল "অপেক্ষায়" — বাকি তিনটা প্রশ্ন নিজের --}}
-            <x-ui.list-tabs :label="__('approval::field.tabs')" :tabs="collect($tabCounts)->map(fn ($count, $key) => [
-                'key' => $key,
-                'label' => __('approval::field.tab_'.$key),
-                'count' => $count,
-                'url' => route('approval.inbox.index', array_filter(['person' => $person ?: null, 'tab' => $key !== 'waiting' ? $key : null])),
-                'active' => $tab === $key,
-            ])->values()->all()" />
 
             <form method="GET" action="{{ route('approval.inbox.index') }}" class="mb-3 space-y-2" data-inbox-filters>
                 @foreach ($keep as $name => $value)

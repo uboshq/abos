@@ -479,9 +479,10 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
             ->assertSee(__('approval::field.journey'))
             /* ⓘ মাঝখানের কলাম — কাগজ */
             ->assertSee(__('approval::field.document'))
-            /* ⓘ ডান কলাম — সিদ্ধান্ত, আর সেটা আটকানো */
+            /* ⓘ সিদ্ধান্ত — অনুমোদন পর্দা ভাগ ২ (২৮ অক্টোবর ২০২৬) থেকে পরিকল্পনার ক্রমে: কাগজ, যাত্রাপথ, তারপর মন্তব্য আর চার বোতাম।
+                ⛔ আগের "আটকানো" ডান কলাম নতুন নকশায় কাগজ ঢাকত (1366×768 আর 1920×1080, দুই ছবিতেই) */
             ->assertSee(__('approval::action.approve'))
-            ->assertSee('lg:sticky', escape: false);
+            ->assertSeeInOrder(['data-approval-journey', 'data-approval-decide'], escape: false);
     }
 
     /**

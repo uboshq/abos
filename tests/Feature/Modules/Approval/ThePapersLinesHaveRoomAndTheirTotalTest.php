@@ -65,7 +65,7 @@ final class ThePapersLinesHaveRoomAndTheirTotalTest extends TestCase
 
         // ⓘ দুই কলাম, তিন নয় — কাগজ চওড়া, পাশে সরু যাত্রাপথ (অনুমোদন পর্দা ভাগ ২, ২৭ অক্টোবর ২০২৬: পাতার চওড়া ধরে, পর্দার নয় —
         // ইনবক্সের ডান দিকেও একই ফাইল)
-        $this->assertStringContainsString('@lg:grid-cols-[minmax(0,1fr)_13rem]', $html, '⛔ পাতা দুই কলামে নয়।');
+        $this->assertStringContainsString('@3xl:grid-cols-[minmax(0,1fr)_14rem]', $html, '⛔ পাতা দুই কলামে নয়।');
         $this->assertStringNotContainsString('lg:grid-cols-[16rem_1fr_20rem]', $html, '⛔ পুরনো তিন কলাম — কাগজের কলাম সরু।');
 
         // ⓘ যাত্রাপথ কাজের নিচে (ডান কলামে), কাগজের আগে নয়

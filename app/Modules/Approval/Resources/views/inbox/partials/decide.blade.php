@@ -20,11 +20,12 @@
     $isBundle = $bundle !== null;
 @endphp
 
-{{-- ⛔ স্থির, নিচের বারের ঠিক উপরে — লম্বা কাগজ পড়তে পড়তে নামলেও বোতাম চোখের সামনে (আগের নিয়ম,
-     [[TheApprovalScreensCarryTheNewRulesTest]]; ভাউচারের ফর্মের বোতাম-সারির একই ছাঁচ, `fixed` নয় তাই কিছু ঢাকে না) --}}
+{{-- ⓘ স্থির (sticky) নয় — পরিকল্পনার ক্রমেই, কাগজ আর যাত্রাপথের নিচে। ⛔ ২৮ অক্টোবর ২০২৬-এর ছবিতে ধরা: স্থির রাখলে 1366×768-এ বাক্সটা
+     দেখার জায়গার অর্ধেক নিয়ে লাইন আর যাত্রাপথ ঢেকে দিত, 1920×1080-এও উপরের তিন নোটিশের পরে লাইনের টেবিল ঢাকত। ⓘ লম্বা কাগজের
+     পুরোটা "পুরো কাগজ দেখুন" পপ-আপে, তাই এখানে লাইন ছয়টায় থামে আর বাক্সটা কাছেই থাকে। --}}
 <div x-data="{ ask: '' }" x-on:keydown.escape.window="ask = ''" data-approval-decide-wrap class="contents">
 <section data-boxed data-approval-decide
-         class="lg:sticky bottom-(--spacing-bottom-nav) md:bottom-(--spacing-status-bar) z-10 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 shadow-lg">
+         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
 
     {{-- ⓘ অনুমোদনের ফর্মটাই মন্তব্যের ঘর ধরে — প্রত্যাখ্যান আর ফেরতের পপ-আপে নিজের বাধ্যতামূলক ঘর --}}
     <form method="POST" id="approve-{{ $approval->id }}"
@@ -91,7 +92,7 @@
 
                 {{-- ⓘ কারণ রিপোর্টের জন্য ("কেন প্রত্যাখ্যাত হয়"), মন্তব্য মানুষটার জন্য — দুইটাই লাগে --}}
                 <x-ui.select name="reason_code" required
-                             :label="__('approval::field.reason_code').' *'"
+                             :label="__('approval::field.reason_code')"
                              :options="collect(\App\Models\ApprovalDecision::REASONS)
                                  ->mapWithKeys(fn ($r) => [$r => __('approval::reason.'.$r)])"
                              :placeholder="__('approval::field.reason_pick')" />
@@ -164,7 +165,7 @@
                     <p class="text-xs text-(--color-ink-muted)">{{ __('approval::message.forward_goes') }}</p>
 
                     <x-ui.select name="to" required
-                                 :label="__('approval::field.forward_to').' *'"
+                                 :label="__('approval::field.forward_to')"
                                  :options="$forwardTo"
                                  :placeholder="__('approval::field.forward_pick')" />
 

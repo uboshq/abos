@@ -108,7 +108,10 @@
             @elseif (method_exists($document, 'drillRoute'))
                 <a href="{{ route(...$document->drillRoute()) }}"
                    class="text-(--color-link) underline-offset-2 hover:underline">
-                    {{ $document->drillDocumentNo() }} — {{ $document->drillLabel() }}
+                    {{-- ⓘ নাম নিজেই নম্বর বললে আর জোড়া নয় ("JRN-0004 — জাবেদা ভাউচার — JRN-0004" দেখাত, ২৮ অক্টোবর ২০২৬-এর ছবি) --}}
+                    {{ str_contains((string) $document->drillLabel(), (string) $document->drillDocumentNo())
+                        ? $document->drillLabel()
+                        : $document->drillDocumentNo().' — '.$document->drillLabel() }}
                 </a>
             @else
                 {{ class_basename($document).' #'.$approval->approvable_id }}
@@ -149,7 +152,9 @@
     </section>
 
     {{-- ── কাগজ আর যাত্রাপথ ───────────────────────────────────────────── --}}
-    <div class="grid gap-3 @lg:grid-cols-[minmax(0,1fr)_13rem] @lg:items-start">
+    {{-- ⚠️ পাশাপাশি কেবল যখন কাগজের দিকটা অন্তত 48rem (মূল অক্ষর 20px-এ 960px — 1920-এ হয়): 1366-এ মেনু খোলা রেখে পাশাপাশি বসালে
+         লাইনের টেবিল পেত 391px আর ক্রেডিটের কলাম পাশে সরে যেত — ভাগ ১-এর দফা ৯ ("পুরো চওড়া টেবিল") আবার ভাঙত। তখন যাত্রাপথ নিচে। --}}
+    <div class="grid gap-3 @3xl:grid-cols-[minmax(0,1fr)_14rem] @3xl:items-start">
         <div class="min-w-0 space-y-3">
             {{-- ⓘ কাউন্টারের আটকে থাকা বিক্রি হলে পুরো বিক্রি এক পাতায় ([[ApprovalBundles]]); নাহলে কাগজের নিজের লাইন ([[ShowsItselfForSigning]]) --}}
             @if ($bundle !== null)
