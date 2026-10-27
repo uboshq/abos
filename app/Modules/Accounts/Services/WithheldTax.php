@@ -164,7 +164,7 @@ final class WithheldTax
         $accounts = [];
         foreach (['ait' => StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => StandardChart::VDS_PAYABLE] as $kind => $code) {
             // ⓘ চার্টের find() মানে-হারানো খাতে null দেয় (main, ২৫ অক্টোবর ২০২৬) — তখনো "নেই" নয়, কোডে কী বসে আছে তা বলা (fe, ২৬ অক্টোবর)
-            $account = StandardChart::find($code) ?? \App\Modules\Accounts\Models\Account::query()->where('code', $code)->first();
+            $account = StandardChart::find($code) ?? \App\Modules\Accounts\Models\Account::query()->postable()->where('code', $code)->first();
             $accounts[$kind] = $account ?? throw ValidationException::withMessages([
                 $kind.'_amount' => __('accounts::validation.missing_account', ['code' => $code]),
             ]);

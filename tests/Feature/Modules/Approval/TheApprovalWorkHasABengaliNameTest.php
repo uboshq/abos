@@ -68,8 +68,9 @@ final class TheApprovalWorkHasABengaliNameTest extends TestCase
         }
         $this->assertSame([], $raw, "⛔ কাজের নামে কাঁচা কোড:\n".implode("\n", $raw));
 
-        $this->assertSame((string) __('accounts::voucher.journal'), $labels->of('accounts', 'journal'));
-        $this->assertSame('বিক্রয়ের বিল', $labels->of('sales', 'invoice'));
+        $this->assertSame((string) __('accounts::voucher.journal'), $labels->of('accounts', 'journal'),
+            '⛔ জার্নাল ভাউচারের কাজ নিজের নামে নয় (ভাউচারের নাম বাদ পড়েছে)');
+        $this->assertSame('বিক্রয়ের বিল', $labels->of('sales', 'invoice'), '⛔ বিক্রয়ের বিলের কাজ নিজের নামে নয় — সাধারণ "…-এর কাগজ" দেখায়');
     }
 
     public function test_the_inbox_and_the_paper_name_a_journal_in_bengali(): void
