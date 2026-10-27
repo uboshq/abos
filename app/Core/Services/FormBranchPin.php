@@ -108,6 +108,7 @@ final class FormBranchPin
         'sales.shift.open',                   // ক্যাশিয়ারের পালা খোলা — খোলার নগদ
         'inventory.stock.opening.cart',       // অনেক পণ্যের প্রারম্ভিক মজুদ — মজুদ আর খাতার সারি
         'purchase.payment_schedule.propose',  // সরবরাহকারীর পরিশোধের প্রস্তাব — পরিশোধের খসড়া
+        'accounts.voucher.bulk_post',         // বাছাই করা খসড়া ভাউচার একসাথে পোস্ট বা অনুমোদনে — খাতার সারি
     ];
 
     /** পাহারা কোন অনুরোধে — কেবল নতুন কাগজের POST (`*.store` আর [[CREATE_DOORS]]); সম্পাদনা (PUT/PATCH) কাগজের নিজের শাখায় থাকে। */

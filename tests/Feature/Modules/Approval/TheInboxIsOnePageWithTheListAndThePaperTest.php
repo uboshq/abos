@@ -240,6 +240,15 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         $this->assertSame(0, Approval::query()->where('approvable_type', Voucher::class)->whereIn('approvable_id', [$one->id, $two->id])->count(),
             '⛔ দফা ১৪: আগে দেখার পাতা নিজেই অনুমোদন চেয়ে বসেছে।');
 
+        // ⛔ আগে দেখার পাতা এক শাখায় খোলা, অন্য ট্যাবে শাখা বদলানো — জমা থামে, একটাও যায় না (শাখার ছাপের পাহারা)
+        $other = Branch::query()->create([
+            'company_id' => $this->company->id, 'code' => 'P2X', 'name_en' => 'Other branch', 'name_bn' => 'অন্য শাখা', 'is_active' => true,
+        ]);
+        $this->actingAs($this->owner)->from(route('accounts.voucher.list'))
+            ->post(route('accounts.voucher.bulk_post'), ['ids' => [$one->id, $two->id], \App\Core\Services\FormBranchPin::FIELD => (string) $other->public_id]);
+        $this->assertSame(0, Approval::query()->where('approvable_type', Voucher::class)->whereIn('approvable_id', [$one->id, $two->id])->count(),
+            '⛔ দফা ১৪: অন্য শাখায় খোলা পাতার জমা থামেনি — খসড়া অনুমোদনে চলে গেছে।');
+
         $sent = $this->actingAs($this->owner)
             ->post(route('accounts.voucher.bulk_post'), ['ids' => [$one->id, $two->id, $posted->id]])
             ->assertRedirect(route('accounts.voucher.list'));
