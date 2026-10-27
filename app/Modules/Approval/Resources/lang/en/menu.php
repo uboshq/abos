@@ -21,5 +21,5 @@ return [
     'limits' => 'Authority limits',
 
     // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
-    'reports' => 'Reports',
+    'reports' => 'Approval reports',
 ];

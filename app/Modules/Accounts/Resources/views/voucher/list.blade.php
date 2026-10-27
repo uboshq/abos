@@ -60,7 +60,7 @@
                 ? new \Illuminate\Support\HtmlString('<label class="flex min-h-(--spacing-touch) items-center justify-center">'
                     .'<input type="checkbox" name="ids[]" value="'.(int) $v->id.'" form="voucher-bulk" class="size-4" data-voucher-pick>'
                     .'<span class="sr-only">'.e(__('accounts::field.pick').' '.$v->document_no).'</span></label>')
-                : ''];
+                : '']);
     }
 
     if (! $isDocumentTab) {

@@ -68,7 +68,8 @@ final class TheApprovalAsksBeforeEveryHardActionTest extends TestCase
                 foreach (array_keys($routes) as $route) {
                     $seen[$route] = true;
                 }
-                $asks = str_contains($tag, 'data-confirm') && (in_array(null, $routes, true)
+                // ⭐ ভাগ ২ (২৭ অক্টোবর ২০২৬): প্রত্যাখ্যান, ফেরত আর ফরোয়ার্ড নিজের পপ-আপে — পপ-আপের লেখাটাই জিজ্ঞাসা (`data-asks-in-dialog`)
+                $asks = (str_contains($tag, 'data-confirm') || str_contains($tag, 'data-asks-in-dialog')) && (in_array(null, $routes, true)
                     || array_filter($routes, fn ($key) => $key !== null && str_contains($tag, 'approval::message.'.$key)) !== []);
                 if (! $asks) {
                     $missing[] = basename(dirname($file)).'/'.basename($file).' → '.implode(', ', array_keys($routes));
@@ -119,7 +120,7 @@ final class TheApprovalAsksBeforeEveryHardActionTest extends TestCase
         $this->assertNotNull($asked, 'প্রস্তুতিটাই ভুল — সই চাওয়া হয়নি।');
 
         $page = $this->actingAs($signer->fresh())->get(route('approval.inbox.show', $asked->id))->assertOk();
-        $page->assertSee('data-confirm="'.e(__('approval::message.confirm_reject', [], 'bn')).'"', false);
-        $page->assertSee('data-confirm="'.e(__('approval::message.confirm_send_back', [], 'bn')).'"', false);
+        $page->assertSee('data-asks-in-dialog="'.e(__('approval::message.confirm_reject', [], 'bn')).'"', false);
+        $page->assertSee('data-asks-in-dialog="'.e(__('approval::message.confirm_send_back', [], 'bn')).'"', false);
     }
 }

@@ -63,8 +63,9 @@ final class ThePapersLinesHaveRoomAndTheirTotalTest extends TestCase
         $html = $this->actingAs($signer->fresh())->get(route('approval.inbox.show', $asked->id))->assertOk()->getContent();
         $this->assertStringContainsString('data-signing-sheet', $html, 'প্রস্তুতিটাই ভুল — সইদাতা কাগজের সারি দেখছেন না।');
 
-        // ⓘ দুই কলাম, তিন নয়
-        $this->assertStringContainsString('lg:grid-cols-[1fr_20rem]', $html, '⛔ পাতা দুই কলামে নয়।');
+        // ⓘ দুই কলাম, তিন নয় — কাগজ চওড়া, পাশে সরু যাত্রাপথ (অনুমোদন পর্দা ভাগ ২, ২৭ অক্টোবর ২০২৬: পাতার চওড়া ধরে, পর্দার নয় —
+        // ইনবক্সের ডান দিকেও একই ফাইল)
+        $this->assertStringContainsString('@lg:grid-cols-[minmax(0,1fr)_13rem]', $html, '⛔ পাতা দুই কলামে নয়।');
         $this->assertStringNotContainsString('lg:grid-cols-[16rem_1fr_20rem]', $html, '⛔ পুরনো তিন কলাম — কাগজের কলাম সরু।');
 
         // ⓘ যাত্রাপথ কাজের নিচে (ডান কলামে), কাগজের আগে নয়

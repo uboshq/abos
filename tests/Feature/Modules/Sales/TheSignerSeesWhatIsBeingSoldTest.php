@@ -280,9 +280,9 @@ final class TheSignerSeesWhatIsBeingSoldTest extends TestCase
             $at = preg_match('~>\s*'.preg_quote($no, '~').'\s*<~', $html, $m, PREG_OFFSET_CAPTURE) === 1 ? $m[0][1] : false;
             $this->assertNotFalse($at, "⛔ চালান {$no}-এর নম্বর ইনবক্সের কোনো সারিতে নেই।");
 
-            // ⓘ নম্বরের সারিটাই — `<tr` থেকে `</tr>` পর্যন্ত; অন্য সারির নাম দিয়ে সবুজ হবে না
-            $row = substr($html, (int) strrpos(substr($html, 0, (int) $at), '<tr'));
-            $row = substr($row, 0, (int) strpos($row, '</tr>'));
+            // ⓘ নম্বরের সারিটাই — কার্ডের `<li` থেকে `</li>` পর্যন্ত (অনুমোদন পর্দা ভাগ ২, ২৭ অক্টোবর ২০২৬); অন্য সারির নাম দিয়ে সবুজ হবে না
+            $row = substr($html, (int) strrpos(substr($html, 0, (int) $at), '<li data-inbox-card'));
+            $row = substr($row, 0, (int) strpos($row, '</li>'));
 
             $this->assertStringContainsString($customer, $row, "⛔ {$no}-এর সারিতে গ্রাহকের নাম নেই।");
             $this->assertStringContainsString($goods, $row, "⛔ {$no}-এর সারিতে 'কী বাবদ' পণ্য বলে না।");

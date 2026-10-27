@@ -20,8 +20,11 @@
     $isBundle = $bundle !== null;
 @endphp
 
-<section data-boxed data-approval-decide x-data="{ ask: '' }" x-on:keydown.escape.window="ask = ''"
-         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+{{-- ⛔ স্থির, নিচের বারের ঠিক উপরে — লম্বা কাগজ পড়তে পড়তে নামলেও বোতাম চোখের সামনে (আগের নিয়ম,
+     [[TheApprovalScreensCarryTheNewRulesTest]]; ভাউচারের ফর্মের বোতাম-সারির একই ছাঁচ, `fixed` নয় তাই কিছু ঢাকে না) --}}
+<div x-data="{ ask: '' }" x-on:keydown.escape.window="ask = ''" data-approval-decide-wrap class="contents">
+<section data-boxed data-approval-decide
+         class="lg:sticky bottom-(--spacing-bottom-nav) md:bottom-(--spacing-status-bar) z-10 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 shadow-lg">
 
     {{-- ⓘ অনুমোদনের ফর্মটাই মন্তব্যের ঘর ধরে — প্রত্যাখ্যান আর ফেরতের পপ-আপে নিজের বাধ্যতামূলক ঘর --}}
     <form method="POST" id="approve-{{ $approval->id }}"
@@ -40,30 +43,32 @@
             <textarea name="remarks" rows="2" maxlength="500" data-approval-remarks
                       class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
         </label>
-    </form>
 
-    <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
-        @if ($forwardTo !== [] && ! $isBundle)
-            <x-ui.button type="button" tone="ghost" x-on:click="ask = 'forward'" data-ask="forward">
-                {{ __('approval::action.forward') }}
+        {{-- ⓘ চারটা বোতাম এই ফর্মের ভেতরে, কিন্তু জমা-বোতাম কেবল অনুমোদনেরটা — বাকি তিনটা `type="button"`, কেবল পপ-আপ খোলে --}}
+        <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+            @if ($forwardTo !== [] && ! $isBundle)
+                <x-ui.button type="button" tone="ghost" x-on:click="ask = 'forward'" data-ask="forward">
+                    {{ __('approval::action.forward') }}
+                </x-ui.button>
+            @endif
+
+            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r"
+                         class="border-(--color-danger) text-(--color-danger)">
+                {{ __('approval::action.reject') }}
             </x-ui.button>
-        @endif
 
-        <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r"
-                     class="border-(--color-danger) text-(--color-danger)">
-            {{ __('approval::action.reject') }}
-        </x-ui.button>
+            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" data-shortcut="send-back">
+                {{ __('approval::action.send_back') }}
+            </x-ui.button>
 
-        <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" data-shortcut="send-back">
-            {{ __('approval::action.send_back') }}
-        </x-ui.button>
+            <x-ui.button type="submit" tone="primary" data-key="a">
+                {{ $isBundle ? __('approval::action.confirm_all') : __('approval::action.approve') }}
+            </x-ui.button>
+        </div>
 
-        <x-ui.button type="submit" tone="primary" form="approve-{{ $approval->id }}" data-key="a">
-            {{ $isBundle ? __('approval::action.confirm_all') : __('approval::action.approve') }}
-        </x-ui.button>
-    </div>
-
-    <p class="mt-2 text-end text-2xs text-(--color-ink-muted)">{{ __('approval::message.next_opens') }}</p>
+        <p class="mt-2 text-end text-2xs text-(--color-ink-muted)">{{ __('approval::message.next_opens') }}</p>
+    </form>
+</section>
 
     {{-- ── প্রত্যাখ্যান — লাল, কারণ আর মন্তব্য বাধ্যতামূলক, "চূড়ান্ত" সতর্কতা ─────────── --}}
     <div x-show="ask === 'reject'" x-cloak role="dialog" aria-modal="true" aria-labelledby="reject-title-{{ $approval->id }}"
@@ -135,7 +140,7 @@
 
             <div class="flex justify-end gap-2 border-t border-(--color-border) px-5 py-3">
                 <x-ui.button type="button" tone="ghost" x-on:click="ask = ''">{{ __('approval::action.go_back') }}</x-ui.button>
-                <x-ui.button type="submit" tone="primary">{{ __('approval::action.send_back_go') }}</x-ui.button>
+                <x-ui.button type="submit" tone="primary">{{ __('approval::action.send_back') }}</x-ui.button>
             </div>
         </form>
     </div>
@@ -177,4 +182,4 @@
             </form>
         </div>
     @endif
-</section>
+</div>

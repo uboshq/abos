@@ -259,8 +259,9 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
 
         $page = $this->actingAs($this->boss)->get(route('approval.inbox.index'));
 
+        // ⓘ ২৭ অক্টোবর ২০২৬ থেকে "সময় পার" ব্যাজের বদলে লেখায় — "দেরি 1 দিন" (অনুমোদন পর্দা ভাগ ২, দফা ৭)
         $page->assertOk()
-            ->assertSee(__('approval::message.sla_late'))
+            ->assertSee(__('approval::message.due_late_days', ['days' => 1]))
             ->assertSee(__('approval::field.late'));
 
         /*

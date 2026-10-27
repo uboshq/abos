@@ -28,7 +28,6 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
 
     /** টাকা দেখায়, কিন্তু যোগটা মিথ্যা বা অর্থহীন হত — কারণসহ; সর্বমোট এখানে ইচ্ছাকৃতভাবে নেই */
     private const NOT_A_SUM = [
-        'Approval/Resources/views/inbox/index.blade.php' => 'নানা ধরনের সই একসাথে — ছাড়, ভাউচার, ক্রয়; যোগটা কোনো টাকার হিসাব নয়',
         'Accounts/Resources/views/coa/index.blade.php' => 'খাতের গাছ — মাথার স্থিতিতে নিচের খাতগুলো আগেই ধরা, যোগ করলে দুইবার গোনা',
         'Accounts/Resources/views/year-end/index.blade.php' => 'বছর-শেষের পূর্বরূপ — তালিকা নয়, একটা হিসাব',
         'Approval/Resources/views/limit/index.blade.php' => 'সইয়ের সীমা — প্রতিটা একটা দেয়াল, দেয়ালের যোগ অর্থহীন',

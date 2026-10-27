@@ -100,6 +100,7 @@
 
         {{-- ⭐ কাগজটা কোথায় — লিংক, নাহলে কেন নেই। ⓘ "নেই" আর "আপনার জন্য নয়" এক কথা নয় (নিরীক্ষক ভাববেন কাগজ মুছে গেছে)। --}}
         <p class="mt-3 text-sm">
+            <span class="text-(--color-ink-muted)">{{ __('approval::field.document') }}:</span>
             @if ($documentHidden)
                 <span class="text-(--color-ink-muted)">{{ __('approval::message.document_not_yours') }}</span>
             @elseif ($document === null)
@@ -113,6 +114,13 @@
                 {{ class_basename($document).' #'.$approval->approvable_id }}
             @endif
         </p>
+
+        {{-- ⓘ কী বাবদ আর টাকা কোথায় — তালিকার কার্ডের একই তথ্য ([[ApprovalFacts]]), এখানে পুরো লেখায় --}}
+        @foreach (['about' => __('approval::field.what_for'), 'where' => __('approval::field.where_money')] as $key => $label)
+            @if (filled($facts[$key] ?? null))
+                <p class="mt-1 text-sm"><span class="text-(--color-ink-muted)">{{ $label }}:</span> {{ $facts[$key] }}</p>
+            @endif
+        @endforeach
 
         @if ($approval->requested_reason)
             <p class="mt-1 text-sm"><span class="text-(--color-ink-muted)">{{ __('approval::field.reason') }}:</span> {{ $approval->requested_reason }}</p>

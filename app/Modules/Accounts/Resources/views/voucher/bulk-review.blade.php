@@ -75,7 +75,8 @@
                      'render' => fn ($r) => $money($r['voucher']->amount)],
                     ['key' => 'why', 'label' => __('accounts::field.bulk_post_why'),
                      'render' => fn ($r) => __('accounts::message.bulk_post_why_'.$r['why'])],
-                ]" />
+                ]" :totals="['amount' => $money(array_reduce($skip, fn (string $sum, array $r) => bcadd($sum, (string) ($r['voucher']->amount ?? '0'), 4), '0'))]"
+                   :totalsLabel="__('core.print.total')" />
             </section>
         @endif
     </div>

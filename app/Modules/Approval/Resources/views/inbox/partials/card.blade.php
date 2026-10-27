@@ -53,6 +53,13 @@
             <span class="block truncate text-xs text-(--color-ink-muted)" data-card-place>{{ $place }}</span>
         @endif
 
+        {{-- ⭐ কী বাবদ · টাকা কোথায় — পুরনো দুই নিয়ম থাকে (মালিক, ২০ সেপ্টেম্বর ২০২৬: "kothy theke eseche kothay joma holo"; সইদাতা কী
+             বিক্রি হচ্ছে দেখেন — [[TheSignerSeesWhatIsBeingSoldTest]])। ⓘ পক্ষ না থাকলে "কী বাবদ" উপরের লাইনেই, তাই এখানে আর নয়। --}}
+        @php $more = collect([$party !== null ? ($fact['about'] ?? null) : null, $fact['where'] ?? null])->filter()->implode(' · '); @endphp
+        @if ($more !== '')
+            <span class="block truncate text-xs text-(--color-ink-muted)" data-card-about>{{ $more }}</span>
+        @endif
+
         <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-(--color-ink-muted)">
             <span>{{ __('approval::field.asked_by') }}: {{ $approval->requesterName() }}</span>
 

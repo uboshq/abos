@@ -32,5 +32,4 @@ return [
     // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
     'bulk_picked' => 'Picked :count · approve together',
     'go_back' => 'Go back',
-    'send_back_go' => 'Send back',
 ];
