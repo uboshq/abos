@@ -58,7 +58,7 @@
     {{-- ── দেওয়ার / বদলানোর ফর্ম — "+ দায়িত্ব দিন" বা "বদলান" চাপলে ── --}}
     @if ($formOpen)
         <section id="give" data-boxed data-delegation-form
-                 class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                 class="mb-4 scroll-mt-24 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">
                 {{ $change !== null
                     ? __('approval::message.delegation_changing', ['name' => $change->to?->name ?? '—'])
