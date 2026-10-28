@@ -157,8 +157,10 @@ final class TheHandOverCardSaysLiveComingOrEndedTest extends TestCase
 
         $theirs = ApprovalDelegation::query()->create(['company_id' => $this->company->id, 'from_user_id' => $this->other->id, 'to_user_id' => $this->deputy->id,
             'starts_on' => now()->addDays(3)->toDateString(), 'ends_on' => now()->addDays(4)->toDateString(), 'modules' => [], 'actions' => []]);
-        $this->put(route('approval.delegation.update', $theirs), $form)->assertForbidden();
+        // ⓘ ভারটা অন্যের নিজের — তাঁকেই আবার দিলে "নিজেকে নয়" নিয়মেই আটকাত; তাই মালিককে, যা দরজা না থাকলে বসে যেত
+        $foreign = $this->put(route('approval.delegation.update', $theirs), ['to_user_id' => $this->owner->id] + $form);
         $this->assertSame((int) $this->deputy->id, (int) $theirs->fresh()->to_user_id, '⛔ দফা ১৮: অন্যের ভার বদলানো গেছে।');
+        $foreign->assertForbidden();
     }
 
     public function test_dofa18e_handed_to_me_shows_live_and_coming_only(): void
