@@ -275,10 +275,20 @@ export function liveRefresh({ url = '', seconds = 30 } = {}) {
  * ⭐ "এই কাগজ যাবে" — ইঞ্জিনের একই নিয়ম ([[ApprovalFlow::stepsAt()]]): নিয়মের সীমার নিচে হলে নিয়মই ধরে না; নইলে প্রতিটা স্তর থাকে,
  * কেবল যে স্তরের "কত টাকা থেকে" অঙ্কের চেয়ে বড় সেটা বাদ (ধূসর, আর প্রথমটার কারণ লেখা)। কার্ড থেকে পড়া, সংরক্ষণের আগেই।
  */
-export function flowRule({ pair = '', shown = 1 } = {}) {
+export function flowRule({ pair = '', shown = 1, more = null } = {}) {
     return {
         pair,
         shown,
+        // ⓘ কোন ধাপের "আরও" পট্টি খোলা — একবারে একটা; ভুল ফিরলে সেই ধাপেরটা খোলা আসে
+        moreOf: more,
+        toggleMore(index) {
+            this.moreOf = this.moreOf === index ? null : index
+            // ⓘ পট্টিটা নিয়মের বাক্সের নিচে (পরিকল্পনার মতো) — খুললে সেটা চোখের সামনে আনা। ⚠️ `document`, `$root` নয়: বোতামটা কার্ডের
+            // নিজের x-data-র ভেতরে, সেখানে `$root` মানে কার্ড, আর পট্টি কার্ডের বাইরে
+            if (this.moreOf !== null) {
+                this.$nextTick(() => document.querySelector(`[data-step-panel="${index}"]`)?.scrollIntoView({ block: 'center' }))
+            }
+        },
         tryAmount: '',
         fields: {},
         words: {},

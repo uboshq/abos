@@ -136,13 +136,14 @@ final class TheRulePageSaysWhoFromWhichAmountTest extends TestCase
             ApprovalFlowStep::create(['approval_flow_id' => $payroll->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
         }
 
-        $this->from(route('approval.flow.index'))->patch(route('approval.flow.switch', $payroll->id))
-            ->assertSessionHasErrors(['flow' => __('approval::validation.payroll_stays_on')]);
+        // ⓘ আগে ফল, তারপর বার্তা — বার্তা আগে পরখ করলে ভুলটা "Session is missing [errors]"-এ মরে, নিজের কথায় না।
+        $switched = $this->from(route('approval.flow.index'))->patch(route('approval.flow.switch', $payroll->id));
         $this->assertTrue($payroll->fresh()->is_active, '⛔ দফা ১৭: বেতনের নিয়ম সুইচে বন্ধ হয়ে গেছে।');
+        $switched->assertSessionHasErrors(['flow' => __('approval::validation.payroll_stays_on')]);
 
-        $this->from(route('approval.flow.index'))->delete(route('approval.flow.destroy', $payroll->id))
-            ->assertSessionHasErrors(['flow' => __('approval::validation.payroll_stays_on')]);
+        $deleted = $this->from(route('approval.flow.index'))->delete(route('approval.flow.destroy', $payroll->id));
         $this->assertNotNull($payroll->fresh(), '⛔ দফা ১৭: বেতনের নিয়ম মুছে গেছে।');
+        $deleted->assertSessionHasErrors(['flow' => __('approval::validation.payroll_stays_on')]);
 
         try {
             app(ApprovalFlowService::class)->update($payroll->fresh(), ['module' => 'hr', 'action' => 'payroll', 'is_active' => false],

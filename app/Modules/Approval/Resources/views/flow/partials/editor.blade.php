@@ -33,12 +33,16 @@
     $pair = old('module', $flow->module) !== null ? old('module', $flow->module).'|'.old('action', $flow->action) : array_key_first($fields).'';
     $work = $flow->exists ? __($choices[$flow->module]['actions'][$flow->action] ?? $flow->action) : __('approval::action.new_flow');
     $input = 'w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm';
+
+    // ⓘ যে ধাপের "আরও"-র ঘরে ভুল, তার পট্টি খোলা আসে — নইলে ভুলটা লুকানো পট্টিতে থাকত
+    $moreOpen = collect(array_keys($rows))->first(fn ($i) => collect(['sla_hours', 'warn_hours', 'escalate_hours', 'escalate_to_id', 'min_approvals'])
+        ->contains(fn ($field) => $errors->has('steps.'.$i.'.'.$field)));
 @endphp
 
 <section id="rule" data-flow-editor="{{ $flow->id ?? 'new' }}" class="mt-4 scroll-mt-4"
          data-fields="{{ json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT) }}"
          data-words="{{ json_encode(['skips' => __('approval::message.try_skips'), 'notCaught' => __('approval::message.try_not_caught')], JSON_UNESCAPED_UNICODE) }}"
-         x-data="flowRule({ pair: '{{ $pair }}', shown: {{ max(1, count($existing)) }} })"
+         x-data="flowRule({ pair: '{{ $pair }}', shown: {{ max(1, count($existing)) }}, more: {{ $moreOpen ?? 'null' }} })"
          x-on:input="touch()" x-on:change="touch()">
 
     <form method="POST" id="flow-form"
@@ -171,56 +175,14 @@
                                    class="{{ $input }} text-end disabled:opacity-60">
                         </label>
 
-                        {{-- ⭐ "আরও ▾" — সময়সীমা, মনে করানো, দেরি হলে কার কাছে, কয়জনের অনুমোদন; সারাংশে সময়সীমা --}}
-                        <details class="text-sm" @if ($errors->has('steps.'.$index.'.*')) open @endif>
-                            <summary class="cursor-pointer text-(--color-link)">
-                                {{ __('approval::action.more') }}
-                                @if (! empty($step['sla_hours']))
-                                    <span class="text-2xs text-(--color-ink-muted)">({{ __('approval::message.more_summary', ['hours' => $step['sla_hours']]) }})</span>
-                                @endif
-                            </summary>
-                            <div class="mt-2 grid gap-2">
-                                <label class="grid content-start gap-0.5">
-                                    <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.min_approvals') }}</span>
-                                    <input type="number" name="steps[{{ $index }}][min_approvals]" min="1" max="9" value="{{ $step['min_approvals'] ?? '' }}"
-                                           title="{{ __('approval::message.min_approvals_hint') }}" class="{{ $input }}">
-                                </label>
-                                <label class="flex items-center gap-2 text-sm">
-                                    <input type="checkbox" name="steps[{{ $index }}][requires_all]" value="1" @checked($step['requires_all'] ?? false) class="size-4">
-                                    {{ __('approval::field.requires_all') }}
-                                </label>
-                                <label class="grid content-start gap-0.5">
-                                    <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.sla_hours') }}</span>
-                                    <input type="number" name="steps[{{ $index }}][sla_hours]" min="1" max="8760" value="{{ $step['sla_hours'] ?? '' }}"
-                                           title="{{ __('approval::message.sla_hint') }}" class="{{ $input }}">
-                                </label>
-                                <label class="grid content-start gap-0.5">
-                                    <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.warn_hours') }}</span>
-                                    <input type="number" name="steps[{{ $index }}][warn_hours]" min="1" max="8760" value="{{ $step['warn_hours'] ?? '' }}" class="{{ $input }}">
-                                </label>
-                                <label class="grid content-start gap-0.5">
-                                    <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_hours') }}</span>
-                                    <input type="number" name="steps[{{ $index }}][escalate_hours]" min="1" max="8760" value="{{ $step['escalate_hours'] ?? '' }}" class="{{ $input }}">
-                                    <span class="text-2xs text-(--color-ink-muted)" data-escalate-hint>{{ __('approval::field.escalate_hours_hint') }}</span>
-                                </label>
-                                <label class="grid content-start gap-0.5">
-                                    <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_to') }}</span>
-                                    <select name="steps[{{ $index }}][escalate_to]" title="{{ __('approval::message.escalate_hint') }}" class="{{ $input }}">
-                                        <option value="">—</option>
-                                        <optgroup label="{{ __('approval::action.by_role') }}">
-                                            @foreach ($roles as $role)
-                                                <option value="role|{{ $role->id }}" @selected($target === 'role|'.$role->id)>{{ $role->name }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                        <optgroup label="{{ __('approval::action.by_user') }}">
-                                            @foreach ($users as $user)
-                                                <option value="user|{{ $user->id }}" @selected($target === 'user|'.$user->id)>{{ $user->name }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                    </select>
-                                </label>
-                            </div>
-                        </details>
+                        {{-- ⭐ "আরও ▾" — খুললে কার্ডের নিচে আলাদা পট্টি (পরিকল্পনার পাতা ৪); সারাংশে সময়সীমা --}}
+                        <button type="button" x-on:click="toggleMore({{ $index }})" data-step-more
+                                class="self-start text-sm text-(--color-link) hover:underline" :aria-expanded="moreOf === {{ $index }}">
+                            {{ __('approval::action.more') }} ▾
+                            @if (! empty($step['sla_hours']))
+                                <span class="text-2xs text-(--color-ink-muted)">({{ __('approval::message.more_summary', ['hours' => $step['sla_hours']]) }})</span>
+                            @endif
+                        </button>
                     </li>
                 @endforeach
 
@@ -294,6 +256,59 @@
                 </div>
             </div>
         </div>
+            {{-- ⭐ "আরও" খুললে — একটা ধাপের বাকি ঘর, নিয়মের বাক্সের নিচে আলাদা পট্টিতে, এক সারিতে (পরিকল্পনার ছবির মতো): সময়সীমা, মনে করানো, দেরি হলে কার কাছে, কয়জনের অনুমোদন;
+                 তার নিচে "উপরে পাঠাও" আর "সবার সম্মতি" (পরিকল্পনায় নেই, কিন্তু আগের ঘর — বাদ নয়)। ⓘ প্রতিটা ধাপের নিজের পট্টি, একবারে
+                 একটাই দেখায়; লুকানো পট্টির ঘরও ফর্মের সাথে যায়, তাই কিছু হারায় না। --}}
+            @foreach ($rows as $index => $step)
+                @php
+                    $target = (string) ($step['escalate_to'] ?? '');
+                @endphp
+                <div data-step-panel="{{ $index }}" data-boxed class="mt-3 scroll-mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" x-show="moreOf === {{ $index }}" x-cloak>
+                    <p class="mb-2 text-sm font-semibold">{{ __('approval::action.more') }} ▾ — {{ __('approval::field.step_n', ['n' => $step['level'] ?? $index + 1]) }}</p>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.sla_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][sla_hours]" min="1" max="8760" value="{{ $step['sla_hours'] ?? '' }}"
+                                   title="{{ __('approval::message.sla_hint') }}" class="{{ $input }} text-end">
+                        </label>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.warn_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][warn_hours]" min="1" max="8760" value="{{ $step['warn_hours'] ?? '' }}" class="{{ $input }} text-end">
+                        </label>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_to') }}</span>
+                            <select name="steps[{{ $index }}][escalate_to]" title="{{ __('approval::message.escalate_hint') }}" class="{{ $input }}">
+                                <option value="">—</option>
+                                <optgroup label="{{ __('approval::action.by_role') }}">
+                                    @foreach ($roles as $role)
+                                        <option value="role|{{ $role->id }}" @selected($target === 'role|'.$role->id)>{{ $role->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                                <optgroup label="{{ __('approval::action.by_user') }}">
+                                    @foreach ($users as $user)
+                                        <option value="user|{{ $user->id }}" @selected($target === 'user|'.$user->id)>{{ $user->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            </select>
+                        </label>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.min_approvals') }}</span>
+                            <input type="number" name="steps[{{ $index }}][min_approvals]" min="1" max="9" value="{{ $step['min_approvals'] ?? '' }}"
+                                   title="{{ __('approval::message.min_approvals_hint') }}" class="{{ $input }} text-end">
+                        </label>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][escalate_hours]" min="1" max="8760" value="{{ $step['escalate_hours'] ?? '' }}" class="{{ $input }} text-end">
+                            <span class="text-2xs text-(--color-ink-muted)" data-escalate-hint>{{ __('approval::field.escalate_hours_hint') }}</span>
+                        </label>
+                        <label class="flex items-center gap-2 self-start pt-5 text-sm">
+                            <input type="checkbox" name="steps[{{ $index }}][requires_all]" value="1" @checked($step['requires_all'] ?? false) class="size-4">
+                            {{ __('approval::field.requires_all') }}
+                        </label>
+                    </div>
+                </div>
+            @endforeach
+
 
         {{-- ⓘ নিচের স্থির পট্টি: বাঁয়ে নিরীক্ষার কথা আর মোছা, ডানে বাতিল · সংরক্ষণ (পরিকল্পনার ছবির নিচের সারি) --}}
         <x-ui.form-actions :cancel="route('approval.flow.index', request()->except(['open']))">
