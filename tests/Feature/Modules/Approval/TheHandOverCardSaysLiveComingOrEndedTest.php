@@ -94,6 +94,14 @@ final class TheHandOverCardSaysLiveComingOrEndedTest extends TestCase
 
         $this->assertStringContainsString(__('approval::status.delegation_coming'), $card($coming), '⛔ দফা ১৮: আসছের কার্ডে "আসছে" লেখা নেই।');
         $this->assertStringContainsString('change='.$coming->id, $card($coming), '⛔ দফা ১৮: আসছের কার্ডে "বদলান" নেই।');
+        // ⓘ নকশায় আসছের কার্ডে কেবল "বদলান" — বাতিল বদলানোর ফর্মে, জিজ্ঞাসাসহ
+        $comingCard = substr($html, $at($coming), $at($ended) - $at($coming));
+        $this->assertStringNotContainsString(route('approval.delegation.destroy', $coming), $comingCard, '⛔ দফা ১৮: আসছের কার্ডে নকশার বাইরের "থামান"।');
+        $form = (string) $this->get(route('approval.delegation.index', ['change' => $coming->id]))->assertOk()->getContent();
+        $cancel = substr($form, (int) strpos($form, 'id="delegation-cancel"'), 600);
+        $this->assertStringContainsString('action="'.route('approval.delegation.destroy', $coming).'"', $cancel, '⛔ দফা ১৮: বদলানোর ফর্মে "এই দায়িত্ব বাতিল করুন" নেই।');
+        $this->assertStringContainsString(e(__('approval::message.confirm_delegation_stop')), $cancel, '⛔ দফা ১৮: আসছের বাতিল জিজ্ঞাসা করে না।');
+        $this->assertStringContainsString('form="delegation-cancel"', $form, '⛔ দফা ১৮: বাতিলের বোতাম ফর্মে বাঁধা নেই।');
 
         $endedCard = substr($html, $at($ended), 3000);
         $this->assertStringContainsString(__('approval::status.delegation_ended'), $endedCard, '⛔ দফা ১৮: শেষের কার্ডে "শেষ" লেখা নেই।');
@@ -124,17 +132,27 @@ final class TheHandOverCardSaysLiveComingOrEndedTest extends TestCase
         $decide(['user_id' => $this->deputy->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now()->subDays(2)]);   // মেয়াদের আগে
         $decide(['user_id' => $this->other->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now()]);                // অন্য মানুষ
         $decide(['user_id' => $this->deputy->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now(), 'decision' => ApprovalDecision::FORWARDED]);
+        // ⓘ পরিকল্পনা "আমার হয়ে অনুমোদন" — ফেরত আর প্রত্যাখ্যান অনুমোদন নয় (মালিক, ২৯ অক্টোবর: "plan onuzayi 100%")
+        $decide(['user_id' => $this->deputy->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now(), 'decision' => ApprovalDecision::RETURNED]);
+        $decide(['user_id' => $this->deputy->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now(), 'decision' => ApprovalDecision::REJECTED]);
 
         $page = $this->get(route('approval.delegation.index'))->assertOk();
-        $this->assertCount(1, $page->viewData('actedFor')[$row->id] ?? [], '⛔ দফা ১৮: "এ পর্যন্ত আমার হয়ে" ভুল গোনে — মেয়াদের বাইরের, অন্য মানুষের বা হাত-বদলও গোনা হচ্ছে।');
+        $this->assertCount(1, $page->viewData('actedFor')[$row->id] ?? [], '⛔ দফা ১৮: "এ পর্যন্ত আমার হয়ে অনুমোদন" ভুল গোনে — মেয়াদের বাইরের, অন্য মানুষের, হাত-বদল, ফেরত বা প্রত্যাখ্যানও গোনা হচ্ছে।');
         $this->assertCount(0, $page->viewData('actedFor')[$older->id] ?? [], '⛔ দফা ১৮: শেষ হওয়া ভারে তার মেয়াদের পরের সিদ্ধান্ত গোনা হচ্ছে।');
         $page->assertSee(__('approval::message.delegation_acted', ['count' => 1]));
         $page->assertSee(route('approval.inbox.show', $paper->id), false);
 
         app(DelegationService::class)->revoke($row);
         $decide(['user_id' => $this->deputy->id, 'on_behalf_of' => $this->owner->id, 'decided_at' => now()->addMinute()]);   // থামানোর পরে
-        $this->assertCount(1, $this->get(route('approval.delegation.index'))->viewData('actedFor')[$row->id] ?? [],
+        $after = $this->get(route('approval.delegation.index'));
+        $this->assertCount(1, $after->viewData('actedFor')[$row->id] ?? [],
             '⛔ দফা ১৮: থামানোর পরের সিদ্ধান্তও এই ভারে গোনা হচ্ছে।');
+
+        // ⓘ শেষ কার্ডে নকশার মতো একই লাইনে "অনুমোদন: ১টা"
+        $html = (string) $after->getContent();
+        $endedCard = substr($html, (int) strpos($html, 'data-delegation="'.$row->id.'"'), 4000);
+        $this->assertStringContainsString(__('approval::message.delegation_acted_short', ['count' => 1]), $endedCard,
+            '⛔ দফা ১৮: শেষ কার্ডে "অনুমোদন: কয়টা" নেই।');
     }
 
     public function test_dofa18d_only_a_coming_hand_over_of_mine_changes(): void

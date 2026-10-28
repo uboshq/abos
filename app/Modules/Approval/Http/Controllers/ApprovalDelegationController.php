@@ -192,7 +192,8 @@ final class ApprovalDelegationController extends Controller implements HasMiddle
      * ⭐ কার হয়ে কী হলো — প্রতিটা কার্ডে "এ পর্যন্ত আমার হয়ে" (অনুমোদন ভাগ ৩, দফা ১৮)।
      *
      * ⓘ সিদ্ধান্তের সারির `on_behalf_of` ([[ApprovalEngine::approve()]]) — আমার হয়ে, এই মানুষটা, এই ভারের মেয়াদে (থামালে
-     * থামানোর মুহূর্ত পর্যন্ত)। ⛔ "অন্যের হাতে দেওয়া" সিদ্ধান্ত নয়, তাই গোনা হয় না। পাতার সব কার্ডের জন্য একটাই কোয়েরি।
+     * থামানোর মুহূর্ত পর্যন্ত)। ⛔ পরিকল্পনার পাতা ৫-এর মতো কেবল **অনুমোদন** গোনা হয় — সংশোধনে ফেরত, প্রত্যাখ্যান বা অন্যের হাতে
+     * দেওয়া নয় (মালিক, ২৯ অক্টোবর: "plan onuzayi 100%")। পাতার সব কার্ডের জন্য একটাই কোয়েরি।
      *
      * @param  iterable<ApprovalDelegation>  $rows
      * @return array<int, list<array{approval: Approval, decision: string, at: \Illuminate\Support\Carbon}>>
@@ -208,7 +209,7 @@ final class ApprovalDelegationController extends Controller implements HasMiddle
         $decisions = ApprovalDecision::query()
             ->where('on_behalf_of', $me)
             ->whereIn('user_id', $rows->pluck('to_user_id')->unique()->all())
-            ->where('decision', '!=', ApprovalDecision::FORWARDED)
+            ->where('decision', ApprovalDecision::APPROVED)
             ->where('decided_at', '>=', $rows->min('starts_on')->copy()->startOfDay())
             ->whereHas('approval')
             ->with('approval')

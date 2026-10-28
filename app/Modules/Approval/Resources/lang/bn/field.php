@@ -52,6 +52,7 @@ return [
     'ends_on' => 'শেষ',
     'delegate_modules' => 'কোন কাজে',
     'delegate_all' => 'সব কাজে',
+    'delegate_all_short' => 'সব',
     'delegate_reason' => 'কারণ',
     'delegation_given' => 'আমি দিয়েছি',
     'delegation_held' => 'আমাকে দেওয়া',

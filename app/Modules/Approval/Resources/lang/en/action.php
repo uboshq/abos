@@ -42,4 +42,5 @@ return [
     // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৮ — দায়িত্ব হস্তান্তর (২৮ অক্টোবর ২০২৬)
     'delegation_change' => 'Change',
     'delegation_see' => 'See',
+    'delegation_cancel' => 'Cancel this hand-over',
 ];

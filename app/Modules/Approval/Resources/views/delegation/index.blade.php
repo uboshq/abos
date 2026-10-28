@@ -7,7 +7,8 @@
 
     ── ⭐ অনুমোদন ভাগ ৩, দফা ১৮ (পরিকল্পনার পাতা ৫), ২৮ অক্টোবর ২০২৬ ──
     দুই কলাম: "আমি দিয়েছি" আর "আমাকে দেওয়া"। প্রতিটা কার্ডে লেখা চালু / আসছে / শেষ; কবে থেকে কবে, কোন কাজ, কেন;
-    কার হয়ে কয়টা সিদ্ধান্ত হয়েছে (দেখুন); চালুটা "থামান" (জিজ্ঞাসা করে), আসছেটা "বদলান"। ⓘ ফর্মটা মাথার
+    কার হয়ে কয়টা অনুমোদন হয়েছে (চালুতে "দেখুন", শেষে একই লাইনে); চালুটা "থামান" (জিজ্ঞাসা করে), আসছেটা "বদলান"
+    (বাতিল বদলানোর ফর্মে)। মালিক, ২৯ অক্টোবর: "plan onuzayi 100%"। ⓘ ফর্মটা মাথার
     "+ দায়িত্ব দিন" চাপলে খোলে (`?new=1`) — জাভাস্ক্রিপ্ট ছাড়া, ভুল হলে খোলাই থাকে।
 
     ── ⚠️ কেন দুইটা তালিকা ─────────────────────────────────────────────
@@ -20,7 +21,7 @@
     $tones = [\App\Models\ApprovalDelegation::LIVE => 'success', \App\Models\ApprovalDelegation::COMING => 'pending', \App\Models\ApprovalDelegation::ENDED => 'draft'];
     $formOpen = $change !== null || request()->boolean('new') || $errors->any();
     $workOf = fn (\App\Models\ApprovalDelegation $row) => ($row->modules ?? []) === []
-        ? __('approval::field.delegate_all')
+        ? __('approval::field.delegate_all_short')
         : implode(' · ', array_map(fn ($m) => $modules[$m] ?? $m, $row->modules));
     $span = fn (\App\Models\ApprovalDelegation $row) => \App\Core\Support\DateFormat::spokenDay($row->starts_on)
         .' – '.\App\Core\Support\DateFormat::spokenDay($row->ends_on);
@@ -130,8 +131,25 @@
                         {{ $change !== null ? __('core.action.save') : __('approval::action.delegate') }}
                     </x-ui.button>
                     <x-ui.button :href="route('approval.delegation.index')">{{ __('core.action.cancel') }}</x-ui.button>
+
+                    {{-- ⓘ আসছে দায়িত্ব বাতিল — কার্ডে নকশার বাইরে বোতাম না বসিয়ে এখানে; নিচের আলাদা ফর্মে যায়, একই জিজ্ঞাসা --}}
+                    @if ($change !== null)
+                        <button type="submit" form="delegation-cancel" data-delegation-cancel
+                                class="ms-auto min-h-(--spacing-touch) rounded-(--radius-field) border border-(--color-danger) px-4 text-sm
+                                       font-medium text-(--color-badge-danger-ink) hover:bg-(--color-badge-danger-bg)">
+                            {{ __('approval::action.delegation_cancel') }}
+                        </button>
+                    @endif
                 </div>
             </form>
+
+            @if ($change !== null)
+                <form id="delegation-cancel" method="POST" action="{{ route('approval.delegation.destroy', $change) }}"
+                      data-confirm="{{ __('approval::message.confirm_delegation_stop') }}">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endif
         </section>
     @endif
 
@@ -165,17 +183,21 @@
                                 @if ($row->revoked_at !== null)
                                     · {{ __('approval::message.delegation_stopped_at', ['date' => \App\Core\Support\DateFormat::spoken($row->revoked_at)]) }}
                                 @endif
+                                {{-- ⓘ নকশায় শেষ কার্ডে গোনাটা একই লাইনে: "২–৪ অক্টোবর · কাজ: বিক্রয় · অনুমোদন: ২টা" --}}
+                                @if ($state === \App\Models\ApprovalDelegation::ENDED)
+                                    · <span data-acted="{{ count($acted) }}">{{ __('approval::message.delegation_acted_short', ['count' => count($acted)]) }}</span>
+                                @endif
                             </p>
 
-                            {{-- ⭐ কার হয়ে কয়টা — খুললে কাগজগুলো, প্রতিটা নিজের পাতায় যায়। ⓘ আসছে এমন ভারে কিছুই হয়নি, লেখাও নেই। --}}
-                            @if ($state !== \App\Models\ApprovalDelegation::COMING)
+                            {{-- ⭐ চালুর নিচে "এ পর্যন্ত আমার হয়ে অনুমোদন: ৪টা দেখুন" — খুললে কাগজগুলো, প্রতিটা নিজের পাতায় যায়। ⓘ আসছেতে কিছুই হয়নি। --}}
+                            @if ($state === \App\Models\ApprovalDelegation::LIVE)
                                 @if ($acted === [])
                                     <p class="mt-1 text-2xs" data-acted="0">{{ __('approval::message.delegation_acted', ['count' => 0]) }}</p>
                                 @else
                                     <details class="mt-1 text-2xs" data-acted="{{ count($acted) }}">
-                                        <summary class="cursor-pointer">
+                                        <summary class="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                                             {{ __('approval::message.delegation_acted', ['count' => count($acted)]) }}
-                                            · <span class="text-(--color-link) underline">{{ __('approval::action.delegation_see') }}</span>
+                                            <span class="text-(--color-link) underline">{{ __('approval::action.delegation_see') }}</span>
                                         </summary>
                                         <ul class="mt-1 space-y-1">
                                             @foreach ($acted as $one)
@@ -211,20 +233,12 @@
                                 </button>
                             </form>
                         @elseif ($state === \App\Models\ApprovalDelegation::COMING)
-                            {{-- ⓘ আসছেটা বদলানো যায়; বাতিলও এখান থেকেই — "থামান", একই জিজ্ঞাসা। --}}
-                            <div class="flex shrink-0 flex-col items-end gap-1">
-                                <x-ui.button :href="route('approval.delegation.index', ['change' => $row->id]).'#give'" data-delegation-change>
-                                    {{ __('approval::action.delegation_change') }}
-                                </x-ui.button>
-                                <form method="POST" action="{{ route('approval.delegation.destroy', $row) }}"
-                                      data-confirm="{{ __('approval::message.confirm_delegation_stop') }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-2xs text-(--color-badge-danger-ink) underline">
-                                        {{ __('approval::action.delegation_stop') }}
-                                    </button>
-                                </form>
-                            </div>
+                            {{-- ⓘ নকশার মতো নীল রেখার "বদলান" একাই; আসছেটা বাতিল হয় বদলানোর ফর্ম থেকে ("এই দায়িত্ব বাতিল করুন")। --}}
+                            <a href="{{ route('approval.delegation.index', ['change' => $row->id]) }}#give" data-delegation-change
+                               class="inline-flex min-h-(--spacing-touch) shrink-0 items-center rounded-(--radius-field) border border-(--color-link) px-4
+                                      text-sm font-medium text-(--color-link) hover:bg-(--color-surface-hover)">
+                                {{ __('approval::action.delegation_change') }}
+                            </a>
                         @endif
                     </article>
                 @empty

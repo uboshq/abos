@@ -51,6 +51,7 @@ return [
     'ends_on' => 'Until',
     'delegate_modules' => 'For which work',
     'delegate_all' => 'Everything',
+    'delegate_all_short' => 'All',
     'delegate_reason' => 'Reason',
     'delegation_given' => 'I handed over',
     'delegation_held' => 'Handed to me',
