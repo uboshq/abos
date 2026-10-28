@@ -47,12 +47,12 @@
             @if (($prevUrl ?? null) || ($nextUrl ?? null))
                 <span class="flex items-center gap-1">
                     @if ($prevUrl ?? null)
-                        <a href="{{ $prevUrl }}" data-approval-prev
+                        <a href="{{ $prevUrl }}" data-approval-prev aria-keyshortcuts="ArrowLeft"
                            class="rounded-(--radius-field) border border-(--color-border) px-2 py-0.5 text-sm hover:bg-(--color-surface-hover)"
                            aria-label="{{ __('approval::action.previous') }}" title="{{ __('approval::action.previous') }}">&larr;</a>
                     @endif
                     @if ($nextUrl ?? null)
-                        <a href="{{ $nextUrl }}" data-approval-next
+                        <a href="{{ $nextUrl }}" data-approval-next aria-keyshortcuts="ArrowRight"
                            class="rounded-(--radius-field) border border-(--color-border) px-2 py-0.5 text-sm hover:bg-(--color-surface-hover)"
                            aria-label="{{ __('approval::action.next') }}" title="{{ __('approval::action.next') }}">&rarr;</a>
                     @endif

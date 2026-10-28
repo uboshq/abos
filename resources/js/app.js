@@ -5,6 +5,7 @@ import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
+import { approvalKeys } from './approval-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
 import { guardConfirmOverview } from './confirm-overview.js'
@@ -139,6 +140,9 @@ document.addEventListener('alpine:init', () => {
  * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
  */
 listKeys()
+
+// ⭐ অনুমোদনের ← → A S R আর পপ-আপের ফোকাস — দফা ২০ ([[approval-keys.js]])
+approvalKeys()
 
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()

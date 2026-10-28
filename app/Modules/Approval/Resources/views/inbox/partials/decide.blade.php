@@ -11,8 +11,10 @@
     অনুমোদন: ব্রাউজারের "নিশ্চিত?" (`data-confirm`, অঙ্কসহ)। প্রত্যাখ্যান, ফেরত, ফরোয়ার্ড: নিজের পপ-আপ — কারণ আর মন্তব্য ছাড়া
     এগোয় না, আর পপ-আপের লেখাটাই জিজ্ঞাসা (`data-asks-in-dialog`, [[TheApprovalAsksBeforeEveryHardActionTest]])।
 
-    ── ⓘ কীবোর্ড (দফা ২০, এগিয়ে আনা) ─────────────────────────────────────
+    ── ⓘ কীবোর্ড আর পর্দা-পাঠক (দফা ২০, [[approval-keys.js]]) ─────────────────
     A · S · R কেবল **খোলে** — অনুমোদনের "নিশ্চিত?" বা পপ-আপ; ⛔ একটা অক্ষরে কখনো কিছু জমা পড়ে না। লেখার ঘরে থাকলে কিছুই নয়।
+    ⓘ বোতামের `aria-keyshortcuts` পর্দা-পাঠককে চাবিটা বলে। পপ-আপের `data-dialog-focus`: খুললে ফোকাস ভেতরে, Tab ভেতরেই ঘোরে,
+    বন্ধ হলে ফোকাস যে বোতাম খুলেছিল তাতে ফেরে।
 --}}
 @php
     $from ??= '';
@@ -41,28 +43,29 @@
 
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('approval::field.comment') }}</span>
-            <textarea name="remarks" rows="2" maxlength="500" data-approval-remarks
+            <textarea name="remarks" rows="2" maxlength="500" data-approval-remarks aria-keyshortcuts="Control+K"
                       class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
         </label>
 
         {{-- ⓘ চারটা বোতাম এই ফর্মের ভেতরে, কিন্তু জমা-বোতাম কেবল অনুমোদনেরটা — বাকি তিনটা `type="button"`, কেবল পপ-আপ খোলে --}}
         <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
             @if ($forwardTo !== [] && ! $isBundle)
-                <x-ui.button type="button" tone="ghost" x-on:click="ask = 'forward'" data-ask="forward">
+                <x-ui.button type="button" tone="ghost" x-on:click="ask = 'forward'" data-ask="forward" aria-haspopup="dialog">
                     {{ __('approval::action.forward') }}
                 </x-ui.button>
             @endif
 
-            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r"
-                         class="border-(--color-danger) text-(--color-danger)">
+            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r" aria-keyshortcuts="R"
+                         aria-haspopup="dialog" class="border-(--color-danger) text-(--color-danger)">
                 {{ __('approval::action.reject') }}
             </x-ui.button>
 
-            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" data-shortcut="send-back">
+            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" aria-keyshortcuts="S"
+                         aria-haspopup="dialog">
                 {{ __('approval::action.send_back') }}
             </x-ui.button>
 
-            <x-ui.button type="submit" tone="primary" data-key="a">
+            <x-ui.button type="submit" tone="primary" data-key="a" aria-keyshortcuts="A">
                 {{ $isBundle ? __('approval::action.confirm_all') : __('approval::action.approve') }}
             </x-ui.button>
         </div>
@@ -72,7 +75,7 @@
 </section>
 
     {{-- ── প্রত্যাখ্যান — লাল, কারণ আর মন্তব্য বাধ্যতামূলক, "চূড়ান্ত" সতর্কতা ─────────── --}}
-    <div x-show="ask === 'reject'" x-cloak role="dialog" aria-modal="true" aria-labelledby="reject-title-{{ $approval->id }}"
+    <div x-show="ask === 'reject'" x-cloak role="dialog" aria-modal="true" aria-labelledby="reject-title-{{ $approval->id }}" data-dialog-focus
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
         <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}" x-on:click.outside="ask = ''"
               data-asks-in-dialog="{{ __('approval::message.confirm_reject') }}"
@@ -113,7 +116,7 @@
 
     {{-- ── সংশোধনে ফেরত — "কী ঠিক করতে হবে" বাধ্যতামূলক ─────────────────────────── --}}
     {{-- ⭐ খসড়া কাগজে "সংশোধনে ফেরত" আলাদা অবস্থায় যায় (১৪ অক্টোবর ২০২৬, [[ApprovalEngine::sendBack()]]); বাকিতে আগের পথ --}}
-    <div x-show="ask === 'fix'" x-cloak role="dialog" aria-modal="true" aria-labelledby="fix-title-{{ $approval->id }}"
+    <div x-show="ask === 'fix'" x-cloak role="dialog" aria-modal="true" aria-labelledby="fix-title-{{ $approval->id }}" data-dialog-focus
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
         <form method="POST" x-on:click.outside="ask = ''"
               action="{{ ($canSendBack ?? false) ? route('approval.inbox.send_back', $approval->id) : route('approval.inbox.reject', $approval->id) }}"
@@ -148,7 +151,7 @@
 
     {{-- ── ফরোয়ার্ড — কেবল ছকে নাম থাকা অনুমোদনকারী, কারণসহ ──────────────────────── --}}
     @if ($forwardTo !== [] && ! $isBundle)
-        <div x-show="ask === 'forward'" x-cloak role="dialog" aria-modal="true" aria-labelledby="forward-title-{{ $approval->id }}"
+        <div x-show="ask === 'forward'" x-cloak role="dialog" aria-modal="true" aria-labelledby="forward-title-{{ $approval->id }}" data-dialog-focus
              class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
             <form method="POST" action="{{ route('approval.inbox.forward', $approval->id) }}" x-on:click.outside="ask = ''"
                   data-asks-in-dialog="{{ __('approval::message.confirm_forward') }}"

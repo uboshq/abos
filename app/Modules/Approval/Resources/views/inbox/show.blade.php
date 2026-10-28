@@ -30,6 +30,4 @@
         'prevUrl' => $prev ? route('approval.inbox.show', $prev) : null,
         'nextUrl' => $next ? route('approval.inbox.show', $next) : null,
     ])
-
-    @include('approval::inbox.partials.keys')
 </x-layouts.app>

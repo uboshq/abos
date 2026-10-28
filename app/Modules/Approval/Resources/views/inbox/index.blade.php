@@ -240,6 +240,4 @@
             @endif
         </div>
     </div>
-
-    @include('approval::inbox.partials.keys')
 </x-layouts.app>
