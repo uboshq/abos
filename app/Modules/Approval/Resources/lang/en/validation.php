@@ -16,4 +16,7 @@ return [
     'first_level_from_amount' => 'Step 1 approves every amount — it takes no "from amount". To skip small papers, give the rule its own "from amount".',
     'level_two_amounts' => 'Step :level has two different "from amounts" — one step takes one amount.',
     'payroll_stays_on' => 'The payroll rule cannot be switched off or deleted (owner\'s decision) — you can change its approvers or add steps.',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৮ — দায়িত্ব হস্তান্তর (২৮ অক্টোবর ২০২৬)
+    'delegation_not_coming' => 'An active or finished hand-over cannot be changed — stop it and give a new one.',
 ];

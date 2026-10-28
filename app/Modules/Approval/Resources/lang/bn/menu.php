@@ -15,7 +15,7 @@ return [
     'report_approved' => 'অনুমোদিত',
     'report_rejected' => 'ফেরত দেওয়া',
     'report_by_user' => 'কে কয়টা সিদ্ধান্ত দিলেন',
-    'delegation' => 'দায়িত্ব অর্পণ',
+    'delegation' => 'দায়িত্ব হস্তান্তর',
     'report_bottleneck' => 'কোথায় আটকে আছে',
     'report_why_rejected' => 'কেন প্রত্যাখ্যাত হয়',
     'limits' => 'কর্তৃত্বের সীমা',

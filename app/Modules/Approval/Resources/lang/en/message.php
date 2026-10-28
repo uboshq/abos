@@ -162,4 +162,15 @@ return [
     'flow_switched_off' => '“:rule” is off — this work now needs no approval',
     'confirm_flow_off' => 'Switch the rule off? While it is off, this work needs nobody\'s approval.',
     'more_summary' => ':hours h deadline',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৮ — দায়িত্ব হস্তান্তর (২৮ অক্টোবর ২০২৬)
+    'delegation_subtitle' => 'While you are away someone else approves for you — the paper says "on behalf of" you',
+    'delegation_audit' => 'Every stop, change and approval on someone\'s behalf stays in the audit trail. Stopping asks first.',
+    'delegation_held_where' => 'Arrives in the inbox under "On behalf"',
+    'delegation_what' => 'Work: :what',
+    'delegation_why' => 'Reason: :why',
+    'delegation_acted' => 'Decided on my behalf so far: :count',
+    'delegation_stopped_at' => 'Stopped :date',
+    'delegation_changed' => 'Hand-over changed — the earlier one stays in the audit trail.',
+    'delegation_changing' => 'Changing the hand-over to :name',
 ];

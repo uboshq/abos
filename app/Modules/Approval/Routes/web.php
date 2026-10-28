@@ -43,6 +43,8 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
      */
     Route::get('/delegations', [ApprovalDelegationController::class, 'index'])->name('delegation.index');
     Route::post('/delegations', [ApprovalDelegationController::class, 'store'])->name('delegation.store');
+    Route::put('/delegations/{delegation}', [ApprovalDelegationController::class, 'update'])
+        ->whereNumber('delegation')->name('delegation.update');
     Route::delete('/delegations/{delegation}', [ApprovalDelegationController::class, 'destroy'])
         ->whereNumber('delegation')->name('delegation.destroy');
 

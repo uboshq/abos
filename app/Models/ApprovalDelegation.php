@@ -70,6 +70,27 @@ class ApprovalDelegation extends Model
             ->where('ends_on', '>=', $on);
     }
 
+    public const LIVE = 'live';
+
+    public const COMING = 'coming';
+
+    public const ENDED = 'ended';
+
+    /**
+     * ⭐ কার্ডের লেখা — চালু, আসছে না শেষ (অনুমোদন ভাগ ৩, দফা ১৮)। ⓘ [[scopeActive()]]-এর একই তিন শর্ত, তারিখ ধরে।
+     * ⛔ আগে পাতাটা `isPast()`/`isFuture()` দিয়ে মাপত — শেষ দিনের মাঝরাত "ভবিষ্যৎ" নয়, তাই শেষ দিনে চালু ভারটা চালু দেখাত না।
+     */
+    public function stateOn(?string $on = null): string
+    {
+        $on = $on ?? now()->toDateString();
+
+        if ($this->revoked_at !== null || $this->ends_on->toDateString() < $on) {
+            return self::ENDED;
+        }
+
+        return $this->starts_on->toDateString() > $on ? self::COMING : self::LIVE;
+    }
+
     /**
      * এই ভারটা কি এই কাজটা ঢাকে?
      *
