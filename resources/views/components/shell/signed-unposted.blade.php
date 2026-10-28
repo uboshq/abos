@@ -30,7 +30,7 @@
         @if ($stuck > 0)
             <span data-signed-unposted-count
                   class="pops-onto-page absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full
-                         bg-(--color-danger) px-1 text-[10px] font-semibold leading-4 text-white">
+                         bg-(--color-count-urgent) px-1 text-[10px] font-semibold leading-4 text-(--color-count-ink)">
                 {{ $stuck }}
             </span>
         @endif
