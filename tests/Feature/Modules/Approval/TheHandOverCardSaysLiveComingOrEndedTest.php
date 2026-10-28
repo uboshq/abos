@@ -103,7 +103,10 @@ final class TheHandOverCardSaysLiveComingOrEndedTest extends TestCase
 
     public function test_dofa18c_the_card_counts_what_was_decided_on_my_behalf(): void
     {
-        $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'discount', 'is_active' => true]);
+        // ⓘ ডেমো বীজে ছাড়ের ছক আগেই আছে (একই কোম্পানি-কাজে দ্বিতীয়টা বসে না) — সেটাই নিয়ে ধাপ নতুন করে
+        $flow = ApprovalFlow::query()->firstOrCreate(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'discount', 'document_type' => '']);
+        $flow->forceFill(['is_active' => true, 'threshold_amount' => null])->save();
+        $flow->steps()->delete();
         ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
         ApprovalEngine::flowsChanged();
         $row = $this->give($this->deputy, now()->toDateString(), now()->addDays(3)->toDateString());
