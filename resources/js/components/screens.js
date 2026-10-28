@@ -266,3 +266,90 @@ export function liveRefresh({ url = '', seconds = 30 } = {}) {
         },
     }
 }
+
+/*
+ * ⭐ অনুমোদনের নিয়ম — খোলা নিয়মের কার্ড, "পরখ করুন" আর শর্তের ঘরের তালিকা (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)।
+ *
+ * ⓘ ঘরের তালিকা আর লেখাগুলো গোড়ার `data-fields` / `data-words`-এ (JSON) — ⛔ CSP-Alpine এক্সপ্রেশনে `JSON`, `Object` চেনে না।
+ *
+ * ⭐ "এই কাগজ যাবে" — ইঞ্জিনের একই নিয়ম ([[ApprovalFlow::stepsAt()]]): নিয়মের সীমার নিচে হলে নিয়মই ধরে না; নইলে প্রতিটা স্তর থাকে,
+ * কেবল যে স্তরের "কত টাকা থেকে" অঙ্কের চেয়ে বড় সেটা বাদ (ধূসর, আর প্রথমটার কারণ লেখা)। কার্ড থেকে পড়া, সংরক্ষণের আগেই।
+ */
+export function flowRule({ pair = '', shown = 1 } = {}) {
+    return {
+        pair,
+        shown,
+        tryAmount: '',
+        fields: {},
+        words: {},
+        // ⓘ কার্ডের ঘর Alpine-এর নয় — কিছু লিখলেই এটা বাড়ে, আর "এই কাগজ যাবে" আবার গোনে
+        tick: 0,
+        touch() {
+            this.tick++
+        },
+        init() {
+            this.fields = JSON.parse(this.$root.dataset.fields || '{}')
+            this.words = JSON.parse(this.$root.dataset.words || '{}')
+        },
+        get module() {
+            return this.pair.split('|')[0] || ''
+        },
+        get action() {
+            return this.pair.split('|')[1] || ''
+        },
+        get currentFields() {
+            return this.fields[this.pair] || {}
+        },
+        get hasFields() {
+            return Object.keys(this.currentFields).length > 0
+        },
+        more() {
+            this.shown++
+        },
+        chipClass(step) {
+            return step.skipped
+                ? 'bg-(--color-surface-hover) text-(--color-ink-muted) line-through'
+                : 'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)'
+        },
+        get chain() {
+            return this.tick >= 0 ? chainOf(this.$root, this.tryAmount, this.words) : { steps: [], note: '' }
+        },
+    }
+}
+
+/*
+ * ⓘ আলাদা ফাংশন, যাতে পরীক্ষা সরাসরি পায় — কার্ডগুলো থেকে স্তর, নাম আর "কত টাকা থেকে", তারপর অঙ্ক ধরে কে থাকে কে বাদ।
+ * লুকানো (না-খোলা) কার্ড আর অনুমোদনকারী না বাছা কার্ড গোনা হয় না — সার্ভারও ওগুলো ছেঁকে ফেলে।
+ */
+export function chainOf(root, tryAmount, words = {}) {
+    const amount = parseFloat(String(tryAmount).replace(/,/g, ''))
+    if (Number.isNaN(amount)) return { steps: [], note: '' }
+
+    const threshold = parseFloat(root.querySelector('[name="threshold_amount"]')?.value || '')
+    if (!Number.isNaN(threshold) && amount < threshold) return { steps: [], note: words.notCaught || '' }
+
+    const levels = {}
+    root.querySelectorAll('[data-step-card]').forEach((card) => {
+        if (card.style.display === 'none') return
+        const who = card.querySelector('[data-step-who]')
+        if (!who || who.value === '') return
+        const level = parseInt(card.querySelector('[data-step-level]')?.value || '1', 10)
+        const name = (card.querySelector('[data-step-name]')?.value || '').trim() || who.selectedOptions[0]?.text.trim() || ''
+        const from = parseFloat(card.querySelector('[data-step-from]')?.value || '')
+        levels[level] ??= { names: [], from: Number.isNaN(from) || level === 1 ? null : from }
+        if (!levels[level].names.includes(name)) levels[level].names.push(name)
+    })
+
+    const steps = Object.keys(levels).map(Number).sort((a, b) => a - b).map((level) => ({
+        level,
+        who: levels[level].names.join(' / '),
+        from: levels[level].from,
+        skipped: levels[level].from !== null && amount < levels[level].from,
+    }))
+
+    const first = steps.find((s) => s.skipped)
+    const lakh = (n) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n)
+    const note = first ? (words.skips || '').replace(':amount', lakh(first.from)).replace(':who', first.who) : ''
+
+    return { steps, note }
+}

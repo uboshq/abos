@@ -134,4 +134,15 @@ return [
     'page_total' => 'This page :count · total',
     'all_total' => 'All :count · total',
     'papers_list' => 'Paper list',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৭ — নিয়মের পাতা (২৮ অক্টোবর ২০২৬)
+    'from_amount' => 'From amount',
+    'last_signer' => 'Final approval',
+    'on_off' => 'On',
+    'rule_of' => 'Rule: :name',
+    'maker' => 'Created by',
+    'step_n' => 'Step :n',
+    'try_amount' => 'Try it: how much is the paper?',
+    'goes_to' => 'This paper goes to',
+    'conditions_optional' => 'Conditions (optional)',
 ];

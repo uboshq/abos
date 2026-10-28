@@ -1,9 +1,21 @@
 {{--
-    অনুমোদনের ছকগুলো।
+    অনুমোদনের নিয়ম — এক সারিতে একটা নিয়ম, খোলা নিয়মটা নিচে ধাপের কার্ডে।
 
-    খালি থাকা মানে কোথাও অনুমোদন লাগছে না — আর সেটা একটা সিদ্ধান্তও
-    হতে পারে। তাই খালি পর্দায় শুধু "কিছু নেই" নয়, কী হচ্ছে সেটাও লেখা।
+    ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৭ (মালিকের "হ্যাঁ", ২১ অক্টোবর ২০২৬; পরিকল্পনার পাতা ৪): কাজ · ধাপের রেখা · কত টাকা থেকে ·
+    শেষ অনুমোদন · চালু/বন্ধের সুইচ · খুলুন। ⛔ আগে কার্ডের তালিকা আর আলাদা সম্পাদনার পাতা — কে কত টাকা থেকে অনুমোদন দেন, খুলে খুঁজতে হত।
+    ⓘ আগের সব ঘর রয়ে গেছে: সংকেত, মডিউল, কারণ (খোলা নিয়মের মাথায়), খোঁজা, রপ্তানি, পাতা বদল, "বন্ধ" চিহ্ন।
+
+    খালি থাকা মানে কোথাও অনুমোদন লাগছে না — আর সেটা একটা সিদ্ধান্তও হতে পারে। তাই খালি পর্দায় শুধু "কিছু নেই" নয়, কী হচ্ছে সেটাও লেখা।
 --}}
+@php
+    $workOf = fn ($flow) => __($choices[$flow->module]['actions'][$flow->action] ?? $flow->action);
+
+    // ⓘ ধাপের নাম থাকলে সেটা, নইলে রোল বা মানুষের নাম — ইনবক্সের যাত্রাপথের একই নিয়ম
+    $whoOf = fn ($step) => filled($step->step_name) ? $step->step_name : ($names[$step->approver_type][$step->approver_id] ?? '#'.$step->approver_id);
+
+    $levelsOf = fn ($flow) => $flow->steps->sortBy('level')->groupBy('level')
+        ->map(fn ($atLevel) => ['who' => $atLevel->map($whoOf)->unique()->implode(' / '), 'from' => $atLevel->first()->from_amount]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.flows') }}</x-slot:title>
 
@@ -25,27 +37,12 @@
         </div>
     @enderror
 
-    {{-- ⭐ শিরোনাম, গোনা আর "নতুন ছক" বোতাম এখন টুলবারে — আগে ছিল
-         page-header-এ। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই
-         একই অবস্থা, সব ঠিক করো"*।
-
-         ⭐ খোঁজা এখন চালু — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬। ⓘ ঐদিন
-         সকালে লাইভে ৭২টা ছক বসেছে, আর এক পর্দায় সব ঢালা মানে মানুষ স্ক্রল
-         করে খোঁজেন, আর খুঁজে না পেয়ে ধরে নেন নিয়মটা নেই।
-
-         ⭐ রপ্তানিও চালু। ⓘ কার্ডগুলোকে `x-ui.table`-এ বদলানো হয়নি —
-         একটা ছকের নিচে তার ধাপগুলো বসে, আর সেটা এক সারিতে ধরে না। তার
-         বদলে কন্ট্রোলার নিজেই ফাইলের টেবিলটা বানায়
-         ([[ApprovalFlowController::offerTheListAsAFile()]]), আর ধাপগুলো
-         এক ঘরে জোড়া লেগে যায়।
-
-         ⛔ ঘনত্ব এখনো বন্ধ, আর কারণটা বদলায়নি: ওটা কেবল `x-ui.table`
-         মানে, আর এখানে কোনো ছক নেই। ⓘ মৃত বোতাম বসানোর চেয়ে না বসানো
-         ভালো — ওটা এই ফাইলের নিজেরই নিয়ম। --}}
+    {{-- ⓘ শিরোনাম, গোনা, খোঁজা, রপ্তানি আর "নতুন নিয়ম" টুলবারে (মালিক, ১৯ ও ২২ সেপ্টেম্বর ২০২৬); গোনার জায়গায় এখন পরিকল্পনার
+         সারাংশ — কয়টা চালু, কয়টা বন্ধ। ⛔ ঘনত্ব বন্ধ: ওটা কেবল `x-ui.table` মানে। --}}
     <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('approval::menu.flows')"
-                          :count="trans_choice('core.count.records', $flows->total(), ['count' => $flows->total()])"
+                          :count="__('approval::message.flows_summary', ['live' => $live, 'off' => $off])"
                           :density="false">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
@@ -56,15 +53,10 @@
         </form>
     </div>
 
-    {{-- ⚠️ খোঁজার পর খালি পাওয়া আর সত্যিই কিছু না থাকা — দুইটা আলাদা কথা।
-
-         ⓘ "এখনো কোনো ছক বসানো হয়নি" পড়ে মানুষ নতুন একটা বানাতে যেতেন,
-         অথচ নিয়মটা হয়তো আছে, কেবল তাঁর লেখা শব্দটার সাথে মেলেনি। --}}
+    {{-- ⚠️ খোঁজার পর খালি পাওয়া আর সত্যিই কিছু না থাকা — দুইটা আলাদা কথা। --}}
     @if ($flows->isEmpty() && $q !== '')
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
             <p class="text-sm font-medium">{{ __('approval::message.no_match') }}</p>
-            {{-- ⓘ যা লেখা হয়েছিল সেটা ফিরিয়ে দেখানো — নাহলে মানুষ
-                 বুঝতে পারেন না ছাঁকনিটা এখনো চালু আছে কি না। --}}
             <p class="mt-1 text-sm text-(--color-ink-muted)">&ldquo;{{ $q }}&rdquo;</p>
         </div>
     @elseif ($flows->isEmpty())
@@ -75,102 +67,91 @@
             </p>
         </div>
     @else
-        <div class="space-y-3">
-            @foreach ($flows as $flow)
-                <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            {{-- ⭐ সংকেত — মালিকের চাওয়া, ২২ সেপ্টেম্বর ২০২৬।
-
-                                 একটা নিয়মকে কথায় বা রিপোর্টে নাম ধরে ডাকার
-                                 জন্য। ⓘ `public_id` আছে, কিন্তু ওটা UUID —
-                                 মুখে বলার মতো নয়। --}}
-                            <p class="text-2xs font-mono text-(--color-ink-muted)">{{ $flow->code }}</p>
-                            <p class="font-medium">
-                                {{ __($choices[$flow->module]['actions'][$flow->action] ?? $flow->action) }}
-                                <span class="text-(--color-ink-muted)">
-                                    · {{ $choices[$flow->module]['label'] ?? $flow->module }}
+        <div data-boxed data-flow-list class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <table class="ui-grid">
+                <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
+                    <tr>
+                        <th class="text-start">{{ __('approval::field.work') }}</th>
+                        <th class="text-start">{{ __('approval::field.steps') }}</th>
+                        <th class="text-end">{{ __('approval::field.from_amount') }}</th>
+                        <th class="text-start">{{ __('approval::field.last_signer') }}</th>
+                        <th class="text-start">{{ __('approval::field.on_off') }}</th>
+                        <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($flows as $flow)
+                        @php
+                            $levels = $levelsOf($flow);
+                            $last = $levels->last();
+                            $isPayroll = [$flow->module, $flow->action] === $payroll;
+                        @endphp
+                        <tr data-flow-row="{{ $flow->id }}" @class(['bg-(--color-surface-hover)' => $opened?->id === $flow->id])>
+                            <td>
+                                <span class="font-semibold">{{ $workOf($flow) }}</span>
+                                {{-- ⭐ সংকেত — নিয়মকে নাম ধরে ডাকার জন্য (মালিক, ২২ সেপ্টেম্বর ২০২৬) --}}
+                                <span class="block text-2xs text-(--color-ink-muted)">
+                                    <span class="font-mono">{{ $flow->code }}</span> · {{ $choices[$flow->module]['label'] ?? $flow->module }}
                                 </span>
-
-                                {{-- ⛔ বন্ধ নিয়ম চেনা যেত না — ২২ সেপ্টেম্বর ২০২৬।
-
-                                     ⚠️ আগে কথাটা লেখা থাকত সীমার পাশে, ছোট ধূসর
-                                     অক্ষরে, আর শব্দটা ছিল **"প্রত্যাহৃত"** — যেটা
-                                     একটা *অনুরোধ* প্রত্যাহারের শব্দ, *নিয়ম* বন্ধ
-                                     করার নয়। ⛔ অর্থাৎ পর্দাটা কেবল চুপ ছিল না,
-                                     ভুল কথা বলত।
-
-                                     ⓘ আর `coverage` পর্দা একই জিনিসকে বলত "বন্ধ",
-                                     ব্যাজ পরিয়ে। ⚠️ দুইটা পর্দা একই সত্য নিয়ে
-                                     দুই কথা বললে সেটা কিছু না দেখানোর চেয়ে খারাপ —
-                                     তাই এখানে একই শব্দ, একই রঙ
-                                     ([[coverage-state.blade.php]])। --}}
-                                @unless ($flow->is_active)
-                                    <span class="ms-1 rounded-full bg-(--color-badge-pending-bg)
-                                                 px-2 py-0.5 text-2xs text-(--color-badge-pending-ink)">
-                                        {{ __('approval::message.coverage_off') }}
-                                    </span>
-                                @endunless
-                            </p>
-                            @if (filled($flow->remarks))
-                                {{-- ⓘ কারণটা তালিকাতেই — সম্পাদনায় ঢুকে দেখতে
-                                     হলে কেউ দেখত না, আর সেটাই ঘরটা বসানোর
-                                     পুরো কারণ। --}}
-                                <p class="mt-1 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
-                                    {{ $flow->remarks }}
-                                </p>
-                            @endif
-
-                            <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
-                                {{ $flow->threshold_amount === null
-                                    ? __('approval::action.always')
-                                    : __('approval::field.threshold').': '.\App\Core\Support\Money::format($flow->threshold_amount) }}
-                            </p>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <x-ui.button tone="secondary" :href="route('approval.flow.edit', $flow->id)">
-                                {{ __('core.action.edit') }}
-                            </x-ui.button>
-
-                            <form method="POST" action="{{ route('approval.flow.destroy', $flow->id) }}" data-confirm="{{ __('approval::message.confirm_flow_delete') }}">
-                                @csrf
-                                @method('DELETE')
-                                {{-- "বাতিল" নয় — ওটা ফর্ম ছেড়ে বেরোনোর
-                                     শব্দ, আর এখানে চাপলে ছকটা মুছে যায় --}}
-                                <x-ui.button type="submit" tone="ghost">{{ __('approval::action.delete') }}</x-ui.button>
-                            </form>
-                        </div>
-                    </div>
-
-                    {{-- স্তরগুলো এক লাইনে — কে, তারপর কে --}}
-                    <ol class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                        @foreach ($flow->steps as $step)
-                            <li class="rounded-(--radius-field) bg-(--color-surface-hover) px-2 py-1">
-                                <span class="text-(--color-ink-muted)">{{ $step->level }}.</span>
-
-                                {{-- রোল নাকি ব্যক্তি — দুইটার আচরণ আলাদা, তাই
-                                     নামের পাশে ধরনটাও লেখা থাকে --}}
-                                <span class="text-2xs text-(--color-ink-muted)">
-                                    {{ $step->approver_type === 'role'
-                                        ? __('approval::action.by_role')
-                                        : __('approval::action.by_user') }}
-                                </span>
-
-                                {{ $names[$step->approver_type][$step->approver_id] ?? '#'.$step->approver_id }}
-                                @if ($step->requires_all)
-                                    <span class="text-2xs text-(--color-ink-muted)">
-                                        ({{ __('approval::field.requires_all') }})
-                                    </span>
+                            </td>
+                            <td>
+                                @if ($levels->isEmpty())
+                                    —
+                                @else
+                                    {{-- ⓘ একই ধাপে দুইজন "/" দিয়ে, পরের ধাপ "→" দিয়ে --}}
+                                    {{ $levels->pluck('who')->implode(' → ') }}
+                                    @if ($flow->steps->contains(fn ($s) => $s->requires_all || $s->min_approvals > 1))
+                                        <span class="ms-1 rounded-full bg-(--color-badge-info-bg) px-2 py-0.5 text-2xs text-(--color-badge-info-ink)">
+                                            {{ __('approval::field.requires_all') }}
+                                        </span>
+                                    @endif
                                 @endif
-                            </li>
-                        @endforeach
-                    </ol>
-                </div>
-            @endforeach
+                            </td>
+                            <td class="num">
+                                {{ $flow->threshold_amount === null ? __('approval::field.any_amount') : '৳'.\App\Core\Support\Money::format($flow->threshold_amount) }}
+                            </td>
+                            <td>
+                                @if ($last === null)
+                                    —
+                                @else
+                                    {{ $last['who'] }}
+                                    @if ($last['from'] !== null)
+                                        <span class="text-(--color-ink-muted)">{{ __('approval::message.from_or_more', ['amount' => \App\Core\Support\Money::format($last['from'])]) }}</span>
+                                    @endif
+                                @endif
+                            </td>
+                            <td>
+                                {{-- ⭐ সুইচ — চাপলেই বদলায়; বন্ধ করার আগে নিশ্চিত। ⛔ বেতনের নিয়ম বন্ধ হয় না (মালিকের সিদ্ধান্ত) — সুইচটা
+                                     কেবল দেখায়, পাশে কারণ। ⓘ বন্ধের লেখা "বন্ধ" — কভারেজ পর্দার একই শব্দ, একই রঙ। --}}
+                                <span class="inline-flex flex-wrap items-center gap-2">
+                                    @if ($isPayroll && $flow->is_active)
+                                        <x-ui.state-toggle :active="true" size="sm" />
+                                        <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::message.payroll_locked') }}</span>
+                                    @else
+                                        <x-ui.state-toggle :active="$flow->is_active" size="sm" method="PATCH"
+                                                           :action="route('approval.flow.switch', $flow->id)"
+                                                           :label="$flow->is_active ? null : __('approval::message.coverage_off')"
+                                                           :confirm="$flow->is_active ? __('approval::message.confirm_flow_off') : null" />
+                                    @endif
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                {{-- ⓘ সম্পাদনার ঠিকানাই — একই পাতা, নিয়মটা নিচে খোলা; খোঁজা আর পাতার নম্বর সাথে যায় (`?open=` দিলে
+                                     টুলবার সেটাকে ছাঁকনির চিপ ভাবত) --}}
+                                <a href="{{ route('approval.flow.edit', [$flow->id, ...request()->except('open')]) }}#rule"
+                                   class="text-(--color-link) hover:underline">{{ __('approval::action.open_rule') }}</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     @endif
 
     {{ $flows->links() }}
     <x-ui.list-totals :rows="$flows" />
+
+    @if ($opened !== null)
+        @include('approval::flow.partials.editor', ['flow' => $opened])
+    @endif
 </x-layouts.app>

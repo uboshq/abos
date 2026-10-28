@@ -25,7 +25,7 @@ class ApprovalFlowStep extends Model
     protected $fillable = [
         'approval_flow_id', 'level', 'step_name', 'approver_type', 'approver_id', 'requires_all',
         'sla_hours', 'warn_hours', 'escalate_hours', 'escalate_to_type', 'escalate_to_id',
-        'min_approvals',
+        'min_approvals', 'from_amount',
     ];
 
     /** ⛔ ইঞ্জিনের জমানো ছক পুরনো হয় — যে পথেই সারি বদলাক ([[ApprovalEngine::flowsChanged()]]) */
@@ -44,7 +44,23 @@ class ApprovalFlowStep extends Model
             'warn_hours' => 'integer',
             'escalate_hours' => 'integer',
             'min_approvals' => 'integer',
+            'from_amount' => 'decimal:4',
         ];
+    }
+
+    /**
+     * ⭐ এই অঙ্কের কাগজে ধাপটা সই দেয় কি না — "কত টাকা থেকে" (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)।
+     *
+     * ⓘ সীমা না থাকলে সবসময়। ⛔ অঙ্ক না জানা থাকলেও সবসময় — অজানা অঙ্কে একটা সই কম চাওয়ার চেয়ে একটা বেশি চাওয়া নিরাপদ,
+     * [[ApprovalFlow::appliesTo()]]-এর একই নিয়ম।
+     */
+    public function signsAt(?string $amount): bool
+    {
+        if ($this->from_amount === null || $amount === null) {
+            return true;
+        }
+
+        return bccomp($amount, (string) $this->from_amount, 4) >= 0;
     }
 
     /**

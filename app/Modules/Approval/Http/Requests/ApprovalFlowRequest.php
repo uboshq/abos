@@ -75,6 +75,9 @@ class ApprovalFlowRequest extends FormRequest
              */
             'steps.*.min_approvals' => ['nullable', 'integer', 'min:1', 'max:9'],
 
+            // ⭐ "কত টাকা থেকে" — খালি মানে যেকোনো অঙ্ক; শূন্য খালিরই সমান, তাই শূন্যের বেশি (দফা ১৭)
+            'steps.*.from_amount' => ['nullable', 'numeric', 'gt:0', 'max:99999999999999'],
+
             /*
              * ⭐ টাকার অঙ্ক ছাড়াও শর্ত — ধাপ ৩।
              *
@@ -220,6 +223,9 @@ class ApprovalFlowRequest extends FormRequest
                 'escalate_to_type' => $targetType ?: null,
                 'escalate_to_id' => ($targetId ?? '') !== '' ? $targetId : null,
                 'min_approvals' => self::positiveOrNull($step['min_approvals'] ?? null),
+
+                // ⓘ খালি ঘর `null` — "যেকোনো অঙ্ক"; কমা ছাড়া, ফর্মের সংখ্যার ঘর যেমন পাঠায়
+                'from_amount' => trim((string) ($step['from_amount'] ?? '')) === '' ? null : trim((string) $step['from_amount']),
             ];
         }
 

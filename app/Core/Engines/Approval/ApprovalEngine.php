@@ -253,7 +253,8 @@ final class ApprovalEngine
             return null;
         }
 
-        $steps = collect($flow->steps)->sortBy('level')->values();
+        // ⓘ এই অঙ্কে যে ধাপগুলো সই দেয় — "ধাপ ১/N"-এর N পরে ইনবক্সের সাথে মেলে ([[ApprovalFlow::stepsAt()]])
+        $steps = $flow->stepsAt($amount);
 
         if ($steps->isEmpty()) {
             return null;
@@ -309,10 +310,8 @@ final class ApprovalEngine
             // ⚠️ অনুরোধের নিজের নথি-ধরন ধরে, `null` ধরে নয় — নাহলে
             // নথি-নির্দিষ্ট ছকে বসা অনুরোধ ভুল ছকের স্তর গুনত, আর
             // পরের স্তরটাই খুঁজে পেত না ([[flowOf]])।
-            $flow = $this->flowOf($approval);
-            $steps = $flow?->steps ?? collect();
-
-            $currentStep = $steps->firstWhere('level', $approval->current_level);
+            // ⭐ কেবল এই অঙ্কে যে ধাপগুলো সই দেয় — "৳৫ লাখের নিচে, তাই মালিকের সই লাগবে না" (দফা ১৭; [[stepsFor()]])
+            $steps = $this->stepsFor($approval);
 
             // একই স্তরে দুইজন থাকলে এবং সবার সম্মতি লাগলে — বাকিরা না দিলে
             // স্তরটা এখনো শেষ হয়নি।
@@ -1282,7 +1281,11 @@ final class ApprovalEngine
      */
     public static function fieldsOf(Model $document): array
     {
-        $skip = ['id', 'company_id', 'branch_id', 'created_at', 'updated_at', 'deleted_at',
+        /*
+         * ⓘ শাখা থাকে — "শাখা = ময়মনসিংহ" শর্তটা পরিকল্পনারই উদাহরণ (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)। ⛔ আগে বাদ ছিল, তাই শাখা ধরে
+         * শর্ত বসালে নিয়মটা কখনো ধরত না — ঘরটা আসতই না।
+         */
+        $skip = ['id', 'company_id', 'created_at', 'updated_at', 'deleted_at',
             'created_by', 'updated_by', 'public_id', 'row_hash', 'prev_hash'];
 
         $out = [];
@@ -1692,9 +1695,8 @@ final class ApprovalEngine
      */
     public function stepsFor(Approval $approval): \Illuminate\Support\Collection
     {
-        return collect($this->flowOf($approval)?->steps ?? [])
-            ->sortBy('level')
-            ->values();
+        // ⭐ এই কাগজের অঙ্কে যে ধাপগুলো সই দেয় — "কত টাকা থেকে" (অনুমোদন পর্দা ভাগ ৩, দফা ১৭; [[ApprovalFlow::stepsAt()]])
+        return $this->flowOf($approval)?->stepsAt($approval->amount === null ? null : (string) $approval->amount) ?? collect();
     }
 
     /**

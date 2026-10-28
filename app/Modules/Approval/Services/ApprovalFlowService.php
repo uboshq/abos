@@ -18,6 +18,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ApprovalFlowService
 {
+    /** ⓘ বেতনের রান — [[assertPayrollStaysOn()]] */
+    public const PAYROLL = ['hr', 'payroll'];
+
     public function __construct(private readonly ModuleRegistry $modules) {}
 
     /**
@@ -117,6 +120,11 @@ class ApprovalFlowService
         $this->assertNotDuplicated($data, $flow);
         $this->assertKeepsWaitingPapers($flow, $data, $steps);
 
+        // ⛔ বেতনের নিয়ম ফর্ম দিয়েও বন্ধ নয়, আর কাজ বদলে অন্য নিয়ম বানিয়েও নয়
+        if (! (bool) ($data['is_active'] ?? true) || (string) $data['module'] !== $flow->module || (string) $data['action'] !== $flow->action) {
+            $this->assertPayrollStaysOn($flow);
+        }
+
         return DB::transaction(function () use ($flow, $data, $steps, $conditions) {
             $flow->update([
                 'module' => $data['module'],
@@ -161,6 +169,8 @@ class ApprovalFlowService
      */
     public function delete(ApprovalFlow $flow): void
     {
+        $this->assertPayrollStaysOn($flow);
+
         $pending = Approval::query()
             ->where('module', $flow->module)
             ->where('action', $flow->action)
@@ -314,6 +324,9 @@ class ApprovalFlowService
              * ভাঙা — আর কড়া sql_mode-এ সেটা সংরক্ষণই ফেলে দেয়।
              */
             'min_approvals' => $step['min_approvals'] ?? 1,
+
+            // ⭐ "কত টাকা থেকে" — খালি মানে যেকোনো অঙ্ক (দফা ১৭; [[ApprovalFlowStep::signsAt()]])
+            'from_amount' => $step['from_amount'] ?? null,
         ];
     }
 
@@ -362,6 +375,30 @@ class ApprovalFlowService
             ]);
         }
 
+        /*
+         * ⭐ "কত টাকা থেকে" — দুই নিয়ম (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)।
+         *
+         * ⛔ প্রথম স্তরে সীমা নয়: ছক ধরলে কাউকে না কাউকে সই দিতেই হবে। সীমা বসলে তার নিচের কাগজ ছক ধরত অথচ কারো কাছে যেত না —
+         * অনুরোধ স্তর ১-এ জন্মায় ([[ApprovalEngine::request()]])। ছকের নিজের সীমা ([[ApprovalFlow::appliesTo()]]) সেই কাজ করে।
+         * ⛔ এক স্তরে এক সীমা: দুইজন একই স্তরে আলাদা অঙ্কে বসলে "এই কাগজে কয়জনের সই" দুই রকম উত্তর পেত।
+         */
+        $byLevel = [];
+
+        foreach ($steps as $step) {
+            $from = self::amountOrNull($step['from_amount'] ?? null);
+            $level = (int) $step['level'];
+
+            if ($level === 1 && $from !== null) {
+                throw ValidationException::withMessages(['steps' => __('approval::validation.first_level_from_amount')]);
+            }
+
+            if (array_key_exists($level, $byLevel) && $byLevel[$level] !== $from) {
+                throw ValidationException::withMessages(['steps' => __('approval::validation.level_two_amounts', ['level' => $level])]);
+            }
+
+            $byLevel[$level] = $from;
+        }
+
         $seen = [];
 
         foreach ($steps as $step) {
@@ -374,6 +411,45 @@ class ApprovalFlowService
             }
 
             $seen[] = $key;
+        }
+    }
+
+    /** ⓘ "50000" আর "50000.0000" একই সীমা — তুলনার আগে এক রূপে। */
+    private static function amountOrNull(mixed $value): ?string
+    {
+        return $value === null || $value === '' ? null : bcadd((string) $value, '0', 4);
+    }
+
+    /**
+     * ⭐ নিয়ম চালু বা বন্ধ — তালিকার সুইচ (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)।
+     *
+     * ⓘ পুরো ফর্ম নয়, কেবল এই ঘরটা — কিন্তু একই পাহারায়: বন্ধ করলে অপেক্ষার কাগজ যেন আটকে না যায় ([[assertKeepsWaitingPapers()]]),
+     * আর বেতনের নিয়ম বন্ধ হয় না ([[assertPayrollStaysOn()]])।
+     */
+    public function switchTo(ApprovalFlow $flow, bool $on): ApprovalFlow
+    {
+        if (! $on) {
+            $this->assertPayrollStaysOn($flow);
+            $this->assertKeepsWaitingPapers($flow, ['module' => $flow->module, 'action' => $flow->action, 'is_active' => false],
+                $flow->steps->map(fn (ApprovalFlowStep $s) => ['level' => $s->level])->all());
+        }
+
+        $flow->update(['is_active' => $on]);
+
+        return $flow->fresh(['steps']);
+    }
+
+    /**
+     * ⛔ বেতনের রানের নিয়ম বন্ধ বা মোছা যায় না — মালিকের সিদ্ধান্ত (২১ অক্টোবর ২০২৬: অনুমোদন বন্ধ কোম্পানিতেও বেতনে দ্বিতীয় সই;
+     * পরিকল্পনার পাতা ৪: "বেতনের নিয়ম বন্ধ করা যায় না")।
+     *
+     * ⓘ বেতনে টাকা সত্যিই বেরিয়ে যায়, আর একজনের হাতে গোটা বেতন ছাড়ার পথ খুললে ফেরানো যায় না। সইকারী বদলানো যায়, ধাপ যোগ করা
+     * যায় — কেবল নিয়মটা থাকা বন্ধ হয় না।
+     */
+    private function assertPayrollStaysOn(ApprovalFlow $flow): void
+    {
+        if ($flow->module === self::PAYROLL[0] && $flow->action === self::PAYROLL[1]) {
+            throw ValidationException::withMessages(['flow' => __('approval::validation.payroll_stays_on')]);
         }
     }
 

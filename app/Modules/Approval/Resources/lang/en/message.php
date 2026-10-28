@@ -143,4 +143,23 @@ return [
     'reject_final' => 'A rejection is final: the paper will not move on. To have it corrected and sent again, use "Return for correction".',
     'send_back_goes' => 'The paper goes back to the person who made it; once corrected and sent again it comes back to this step.',
     'forward_goes' => 'The paper goes to another approver and leaves your list.',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৭ — নিয়মের পাতা (২৮ অক্টোবর ২০২৬)
+    'flows_summary' => 'Who approves which work, from which amount · :live rules on · :off off',
+    'payroll_locked' => 'Cannot be switched off',
+    'last_change' => 'Last changed: :who · :at',
+    'maker_who' => 'Whoever makes the paper',
+    'maker_cannot' => 'Cannot approve their own paper',
+    'from_amount_at' => 'From ৳:amount',
+    'from_or_more' => '(৳:amount or more)',
+    'approvals_needed' => ':n approval(s)',
+    'try_skips' => 'Below ৳:amount, so :who is not needed',
+    'try_not_caught' => 'The rule does not catch this amount — no approval needed',
+    'audit_note' => 'Every change goes to the audit trail — before and after, who, when, why',
+    'conditions_pick' => 'All conditions must match · fields are picked from the list, nothing to type',
+    'no_fields_yet' => 'No paper of this kind yet — its fields appear after the first one',
+    'flow_switched_on' => '“:rule” is on',
+    'flow_switched_off' => '“:rule” is off — this work now needs no approval',
+    'confirm_flow_off' => 'Switch the rule off? While it is off, this work needs nobody\'s approval.',
+    'more_summary' => ':hours h deadline',
 ];

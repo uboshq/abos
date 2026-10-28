@@ -71,6 +71,9 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
         ->whereNumber('flow')->name('flow.edit');
     Route::put('/flows/{flow}', [ApprovalFlowController::class, 'update'])
         ->whereNumber('flow')->name('flow.update');
+    // ⭐ তালিকার সুইচ — চালু/বন্ধ (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)
+    Route::patch('/flows/{flow}/switch', [ApprovalFlowController::class, 'switch'])
+        ->whereNumber('flow')->name('flow.switch');
     Route::delete('/flows/{flow}', [ApprovalFlowController::class, 'destroy'])
         ->whereNumber('flow')->name('flow.destroy');
 

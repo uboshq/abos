@@ -89,6 +89,23 @@ class ApprovalFlow extends Model
     }
 
     /**
+     * ⭐ এই অঙ্কের কাগজে যে ধাপগুলো সই দেয় — স্তর ধরে সাজানো (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)।
+     *
+     * ⓘ একটা স্তর থাকে যদি তার কোনো ধাপ এই অঙ্কে সই দেয় ([[ApprovalFlowStep::signsAt()]]) — আর তখন স্তরের সব ধাপ থাকে, যাতে
+     * N-of-M-এর গোনা বদলায় না। ⭐ ইঞ্জিনের প্রতিটা "কয় ধাপ, পরের ধাপ কে" এখান থেকেই ([[ApprovalEngine::stepsFor()]]), তাই
+     * পর্দা, ফোন আর সই কখনো আলাদা কথা বলে না। ⛔ স্তর ১ সবসময় থাকে — সেবা সেখানে সীমা বসাতে দেয় না ([[ApprovalFlowService]])।
+     *
+     * @return \Illuminate\Support\Collection<int, ApprovalFlowStep>
+     */
+    public function stepsAt(?string $amount): \Illuminate\Support\Collection
+    {
+        $steps = collect($this->steps)->sortBy('level')->values();
+        $levels = $steps->filter(fn (ApprovalFlowStep $step) => $step->signsAt($amount))->pluck('level')->unique()->all();
+
+        return $steps->filter(fn (ApprovalFlowStep $step) => in_array($step->level, $levels, true))->values();
+    }
+
+    /**
      * এই পরিমাণে অনুমোদন লাগবে কি না।
      *
      * সীমা না থাকলে সবসময় লাগে। সীমা থাকলে তার নিচে লাগে না — কারণ
