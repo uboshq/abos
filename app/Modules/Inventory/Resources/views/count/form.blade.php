@@ -122,6 +122,7 @@
                                              ডিফল্ট মান বসানো হয় না, শূন্যও নয়। --}}
                                         <input type="number" step="0.01" min="0" inputmode="decimal"
                                                name="lines[{{ $i }}][counted_qty]"
+                                               aria-label="{{ __('inventory::field.counted_qty') }} — {{ $product->name() }}"
                                                value="{{ old('lines.'.$i.'.counted_qty') }}"
                                                class="num h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                       border border-(--color-border) bg-(--color-surface-card)
@@ -150,6 +151,7 @@
                                         {{-- ⓘ খালি রাখলে গড় দর; স্তর নেই এমন পণ্যে বাড়তি পেলে দরটা লাগবেই --}}
                                         <input type="number" step="0.01" min="0" inputmode="decimal"
                                                name="lines[{{ $i }}][unit_cost]"
+                                               aria-label="{{ __('inventory::field.surplus_rate') }} — {{ $product->name() }}"
                                                value="{{ old('lines.'.$i.'.unit_cost') }}"
                                                class="num h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                       border border-(--color-border) bg-(--color-surface-card)
@@ -158,6 +160,14 @@
                                 </tr>
                             @endforeach
                         </tbody>
+
+                        {{-- ⭐ সর্বমোট — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬: কয়টা পণ্য গোনার তালিকায়; ⛔ পরিমাণের যোগ নয় (একক মেশে) --}}
+                        <tfoot data-grand-total>
+                            <tr class="font-semibold">
+                                <td colspan="{{ $blind ? 4 : 5 }}">{{ __('core.table.grand_total') }}:
+                                    {{ __('inventory::message.count_products', ['count' => number_format(count($products))]) }}</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </section>

@@ -37,7 +37,7 @@ return [
     'none_yet' => 'No fare is recorded on this challan.',
     'recorded' => 'The fare is recorded.',
     'paid' => 'The fare is paid: :no.',
-    'paid_waits_signature' => 'Fare voucher :no is waiting for a signature.',
+    'paid_waits_signature' => 'Fare voucher :no is waiting for an approval.',
     'paid_waits_checker' => 'Fare voucher :no is written; someone else posts it.',
     'paid_narration' => 'Vehicle fare paid — challan :challan, carrier :by',
     'only_confirmed' => 'A fare can be recorded here only on a confirmed challan.',

@@ -59,14 +59,19 @@ final class CapitalService
         return DB::transaction(function () use ($data) {
             $this->assertKnown($data);
 
+            /*
+             * ⛔ রসিদ থেকে বানানো সারি রসিদের শাখায় — হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬;
+             * [[CapitalFromReceipt]])। ⓘ পর্দা থেকে নতুন সারি পর্দায় লেখা শাখায় — বাছা খাতটা অন্য শাখার বাক্সের হলে থামে, নীরবে
+             * সরে না (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchShownOnTheForm()]])। নম্বরও সেই শাখার সিরিজে।
+             */
+            $branchId = array_key_exists('branch_id', $data)
+                ? ($data['branch_id'] === null ? null : (int) $data['branch_id'])
+                : app(FinanceSignature::class)->branchShownOnTheForm($data['received_into_account_id'] ?? null, 'received_into_account_id');
+
             return CapitalEntry::query()->create([
                 'company_id' => CompanyContext::id(),
-                /*
-                 * ⛔ রসিদ থেকে বানানো সারি রসিদের শাখায় — হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬;
-                 * [[CapitalFromReceipt]])। ⓘ পর্দা থেকে নতুন সারি কাজ করা শাখায়, আগের মতো।
-                 */
-                'branch_id' => array_key_exists('branch_id', $data) ? $data['branch_id'] : CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('CAP'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('CAP', $branchId),
                 'person_id' => (int) $data['person_id'],
                 'contributor_type' => $data['contributor_type'],
                 'entry_type' => $data['entry_type'],
@@ -151,9 +156,8 @@ final class CapitalService
 
         $landed = bcsub((string) $entry->amount, $cut, 4);
 
-        $chargeAccount = Account::query()
-            ->where('code', $into->isMfs() ? StandardChart::MFS_CHARGES : StandardChart::BANK_CHARGES)
-            ->firstOrFail();
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $chargeAccount = StandardChart::accountFor($into->isMfs() ? StandardChart::MFS_CHARGES : StandardChart::BANK_CHARGES);
 
         return [
             ['account_id' => $into->id, 'debit' => $landed, 'credit' => '0'],
@@ -333,9 +337,8 @@ final class CapitalService
             $this->lockFresh($entry);
             $this->assertNotPosted($entry);
 
-            $capital = Account::query()
-                ->where('code', StandardChart::OWNER_CAPITAL)
-                ->firstOrFail();
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            $capital = StandardChart::accountFor(StandardChart::OWNER_CAPITAL);
 
             $voucher = $this->vouchers->create(
                 [

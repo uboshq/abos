@@ -98,6 +98,21 @@ return [
      * ⓘ ঘরটা ভাউচারের পর্দায় বসে, কিন্তু তালিকাটা যার, সে-ই দেয়
      * ([[App\Core\Contracts\OffersChoicesOnAForm]])।
      */
+    /*
+     * ⭐ ব্যাংক তথ্যের অপেক্ষার বদল অনুমোদনের বাক্সে — ছকের বাইরের সই (নকশা দফা #৬, ২১ অক্টোবর ২০২৬;
+     * [[SignaturesWaitingElsewhere]])। ⓘ কোর এই মডিউলের নাম জানে না; বাঁধনটা এখান থেকে।
+     */
+    'bindings' => [
+        \App\Core\Contracts\SignaturesWaitingElsewhere::class => \App\Modules\Supplier\Services\SupplierBankWaiting::class,
+        // ⛔ ভাউচারেও সই-না-পাওয়া ব্যাংকে টাকা নয় (a4, ২৪ অক্টোবর ২০২৬)
+        \App\Core\Contracts\PayeeBankGuard::class => \App\Modules\Supplier\Services\SupplierPayeeBankGuard::class,
+        // ⭐ ব্যাংক ফাইলে (BEFTN) সই-পাওয়া পুরো হিসাব (cb-ma-4)
+        \App\Core\Contracts\PayeeBankAccount::class => \App\Modules\Supplier\Services\SupplierPayeeBankAccount::class,
+        // ⭐ হিসাবের পর্দায় BIN · TIN আর প্রাপকের ব্যাংক (ঢাকা নম্বরে) — মিল-তালিকা #৬০, #৬৬ (২৫ অক্টোবর ২০২৬)
+        \App\Core\Contracts\PartyTaxIds::class => \App\Modules\Supplier\Services\SupplierTaxIds::class,
+        \App\Core\Contracts\PayeeBankView::class => \App\Modules\Supplier\Services\SupplierPayeeBankView::class,
+    ],
+
     'form_choices' => [
         \App\Modules\Supplier\Services\PayeesOnTheVoucherForm::class,
     ],
@@ -112,6 +127,20 @@ return [
 
         // ⛔ শুরুর দেনা খাতায় বসানো — টাকার কাজ, নিজের চাবি (অডিট ⛔১২, ৬ অক্টোবর ২০২৬; [[SupplierService]])
         'supplier.opening_balance',
+
+        // ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SupplierBank]]): পুরো হিসাব নম্বর দেখা, আর দ্বিতীয় সই
+        'supplier.bank.view',
+        'supplier.bank.approve',
+    ],
+
+    /*
+     * ⭐ পুরো হিসাব নম্বর — অডিট আর সময়যন্ত্রের সাধারণ পর্দায় ঘর ধরে ঢাকা; নিজের পর্দায় সেবা ঢাকে
+     * ([[SupplierBank::accountShown()]]), তাই ব্লেড-খোঁজার `sensitive_fields` নয়।
+     */
+    'section_guarded_fields' => [
+        \App\Modules\Supplier\Models\SupplierBankDetail::class => [
+            'account_no' => 'supplier.bank.view',
+        ],
     ],
 
     /* নতুন ইনস্টলে (§৫): Manager সরবরাহকারী দেখা ও রিপোর্ট (বানানো নয়)। */
@@ -126,6 +155,9 @@ return [
             'supplier.report',
             // ⓘ শুরুর দেনা হিসাবের কাজ — গ্রাহকের `customer.opening_balance`-এর জোড়া
             'supplier.opening_balance',
+            // ⭐ সরবরাহকারীর ব্যাংক তথ্যে দ্বিতীয় সই আর পুরো নম্বর — হিসাবের কাজ (নকশা দফা #৬)
+            'supplier.bank.view',
+            'supplier.bank.approve',
         ],
         'Manager' => [
             'supplier.view',
@@ -184,6 +216,14 @@ return [
 
     'widgets' => [
         SupplierWidgets::class,
+    ],
+
+    /*
+     * ⭐ ফোনের হোম-স্ক্রিন উইজেট — প্রিন্সিপালের কমিশন (মালিক, fe-র মারফত, ২০ অক্টোবর ২০২৬: *"app e dekhate hobe"*)।
+     * ⓘ সংখ্যা ওয়েবের বাক্সের হুবহু ([[PrincipalCommissionFigures]]), চাবি `supplier.report`।
+     */
+    'phone_widgets' => [
+        \App\Modules\Supplier\Widgets\PrincipalCommissionSummary::class,
     ],
 
     'settings' => [

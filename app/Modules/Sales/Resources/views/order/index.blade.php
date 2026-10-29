@@ -26,9 +26,9 @@
         [
             // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই
             'key' => 'point',
-            'label' => __('customer::field.point'),
+            'label' => __('customer::field.place'),
             'width' => '9rem',
-            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+            'render' => fn ($d) => view('customer::partials.place', ['customer' => $d->customer]),
         ],
         [
             'key' => 'total',

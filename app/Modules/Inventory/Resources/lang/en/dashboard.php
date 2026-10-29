@@ -36,5 +36,6 @@ return [
     'moves_transfer' => 'Transfers',
     'moves_adjustment' => 'Adjustments',
     // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
-    'kpi_stock_value_hint' => 'At cost · free goods at zero',
+    // ⭐ খাতা থেকে, কেনা দরে — মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬
+    'kpi_stock_value_hint' => 'At cost · per the books',
 ];

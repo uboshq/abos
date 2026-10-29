@@ -12,15 +12,23 @@ import { wireActions } from './actions.js'
  * ── ⭐ কেন আসল ব্লেডটাই পড়া হয় ───────────────────────────────────────
  * ⛔ হাতে লেখা একটা নকল HTML-এ পরীক্ষা করলে দাবিটা নকলটাকেই মাপত — আর
  * ব্লেডে একটা `@keydown` হারালেও সবুজ থাকত। ⓘ তাই এখানে
- * `command-center.blade.php`-টাই পড়ে, কেবল Blade-এর অংশগুলো (মন্তব্য,
+ * আসল ব্লেডটাই (আগে `command-center.blade.php`, এখন টপবারের খোঁজার অংশ) পড়ে, কেবল Blade-এর অংশগুলো (মন্তব্য,
  * `{{ }}`, `<x-ui.icon>`) সরিয়ে আসল CSP-Alpine-এ বসানো হয়।
  */
 
 // ⓘ happy-dom-এ পরীক্ষার নিজের `import.meta.url` file: নয় — তাই প্রকল্পের মূল থেকে
-const BLADE = join(process.cwd(), 'resources/views/components/shell/command-center.blade.php')
+// ⭐ ২১ অক্টোবর ২০২৬ থেকে খোঁজা টপবারের নিজের ঘরে (আলাদা পুরো-পাতার প্যালেট আর নেই) — তাই টপবারের ব্লেড থেকে কেবল খোঁজার অংশটা কেটে নেওয়া:
+// `<div x-data="commandCenter(` থেকে পরের "ডানে কেবল এগুলো" মন্তব্যের আগ পর্যন্ত। ⓘ আসল ব্লেড, নকল নয় — যুক্তি আগের মতোই।
+const BLADE = join(process.cwd(), 'resources/views/components/shell/topbar.blade.php')
 
 function palette () {
-    return readFileSync(BLADE, 'utf8')
+    const blade = readFileSync(BLADE, 'utf8')
+    const start = blade.lastIndexOf('<div', blade.indexOf('x-data="commandCenter('))
+    const end = blade.indexOf('{{-- ডানে কেবল এগুলো', start)
+
+    if (start < 0 || end < 0) throw new Error('টপবারে খোঁজার অংশটা পাওয়া গেল না — পরীক্ষার ভিত্তিই ভাঙা')
+
+    return blade.slice(start, end)
         .replace(/\{\{--[\s\S]*?--\}\}/g, '')
         .replace(/\{\{\s*route\('search'\)\s*\}\}/g, '/search')
         .replace(/\{\{\s*__\('([^']+)'\)\s*\}\}/g, '$1')
@@ -65,7 +73,8 @@ async function mount (extra = '') {
     return host
 }
 
-const dialog = () => host.querySelector('[role="dialog"]')
+// ⓘ নাম আগের মতো রাখা ("dialog") — কিন্তু এখন এটা টপবারের খোঁজার মোড়ক, পুরো-পাতার ডায়ালগ নয়
+const dialog = () => host.querySelector('[data-shell-search]')
 const box = () => dialog().querySelector('input')
 const isOpen = () => Alpine.$data(dialog()).open === true
 const tick = async () => {

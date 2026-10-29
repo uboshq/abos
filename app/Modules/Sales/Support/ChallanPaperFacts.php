@@ -26,7 +26,7 @@ final class ChallanPaperFacts
     public static function of(DeliveryChallan $challan): array
     {
         $challan->loadMissing([
-            'customer.location.parent', 'order', 'warehouse', 'vehicle.vehicleType', 'creator',
+            'customer.location.parent', 'customer.branch', 'order', 'warehouse', 'vehicle.vehicleType', 'creator',
             'lines.product.unit',
         ]);
 
@@ -63,7 +63,8 @@ final class ChallanPaperFacts
             'created_by' => (string) ($challan->creator?->name ?? ''),
             'to' => [
                 'name' => (string) ($customer?->name('en') ?? ''),
-                'point' => (string) ($point?->name('en') ?? ''),
+                // ⭐ "পয়েন্ট · শাখা" — এক লাইনে, কাগজের মাপ অক্ষত ([[PaperPlace::of()]]; মালিক, ১৯ অক্টোবর ২০২৬)
+                'point' => PaperPlace::of($customer, $point),
                 'address' => (string) ($challan->ship_to ?: ($customer?->address('en') ?? '')),
                 'phone' => (string) ($customer?->phone ?? ''),
             ],

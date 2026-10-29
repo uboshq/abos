@@ -69,11 +69,18 @@ final class SalesQuotationService
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
-            $documentNo = $this->numbers->next('QTN');
+            // ⛔ উদ্ধৃতি গ্রাহকের শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $customerId = (int) ($data['customer_id'] ?? 0);
+            $branchId = $data['branch_id']
+                ?? (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['customer', $customerId]])['customer:'.$customerId] ?? null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('QTN', $branchId);
 
             $quotation = SalesQuotation::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'customer_id' => $data['customer_id'],

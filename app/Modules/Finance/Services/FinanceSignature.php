@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
 use Illuminate\Validation\ValidationException;
@@ -92,5 +96,54 @@ final class FinanceSignature
         }
 
         return $account;
+    }
+
+    /**
+     * ⛔ অর্থের কাগজ কোন শাখার — যে বাক্স দিয়ে টাকা নড়ল তার শাখা, উপরের শাখা-বাছাই নয় (মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য
+     * শাখায় নয়"*; RCV-0143)।
+     *
+     * ⚠️ আগে জমা, হাতধার, ভাড়া, ভাড়াটে, মূলধন, উত্তোলন, ব্যাংক ঋণ — সব বসত জমা দেওয়ার মুহূর্তের উপরের শাখায়, আর তাদের পরের সব
+     * ভাউচার সেই শাখা ধরত। A-র বাক্স থেকে খোলা জমা, অথচ অন্য ট্যাবে উপরে B → জমা, তার নম্বর আর খাতার সারি B-তে।
+     *
+     * ⓘ ক্রম: পক্ষের নিজের শাখা আগে (খাতার দরজা পক্ষের সারি অন্য শাখায় বসতে দেয় না, [[PostingEngine::post()]]), তারপর টাকার
+     * বাক্সের শাখা ([[CashTill::branchOfAccounts()]]), কিছুই না বললে আগের মতো উপরের শাখা — সেটার পাহারা ফর্মের শাখা-ছাপ।
+     *
+     * @param  iterable<int|string|null>  $moneyAccountIds
+     * @param  list<array{0: string|null, 1: int|string|null}>  $parties
+     */
+    public function branchFor(iterable $moneyAccountIds, array $parties = []): ?int
+    {
+        $theirs = array_values(array_unique(app(PartyRegistry::class)->branchesOf($parties)));
+
+        if (count($theirs) === 1) {
+            return (int) $theirs[0];
+        }
+
+        return CashTill::branchOfAccounts($moneyAccountIds) ?? CompanyContext::branchId();
+    }
+
+    /**
+     * ⛔ যে পর্দা "কার খাতায় লিখছেন: কোম্পানি — শাখা" দেখায় (মূলধন, উত্তোলন), তার কাগজ সেই শাখাতেই — দেখানো আর বসানো শাখা
+     * কখনো নীরবে আলাদা নয় (ec, ১৯ অক্টোবর ২০২৬; RCV-0143)।
+     *
+     * ⓘ বাছা টাকার খাত অন্য শাখার বাক্সের হলে কাগজটা চুপচাপ ঐ শাখায় সরানো হয় না — পর্দায় লেখা শাখার সাথে মেলে না বলে থামে,
+     * কারণসহ। উপরে কোনো শাখা বাছা না থাকলে (পর্দায় কেবল কোম্পানি) বাক্সের শাখা; বাক্স না বললে উপরের শাখা, আগের মতো।
+     * ⚠️ পর্দা খোলার পরে উপরের শাখা বদলালে সেটা ধরে ফর্মের শাখা-ছাপ (স্তর ২), এখানে নয়।
+     */
+    public function branchShownOnTheForm(mixed $moneyAccountId, string $field): ?int
+    {
+        $here = CompanyContext::branchId();
+        $box = CashTill::branchOfAccounts([$moneyAccountId]);
+
+        if ($box !== null && $here !== null && $box !== (int) $here) {
+            throw ValidationException::withMessages([
+                $field => __('finance::validation.money_box_in_other_branch', [
+                    'branch' => Branch::query()->withoutGlobalScopes()->find($box)?->name() ?? '#'.$box,
+                    'here' => Branch::query()->withoutGlobalScopes()->find($here)?->name() ?? '#'.$here,
+                ]),
+            ]);
+        }
+
+        return $box ?? $here;
     }
 }

@@ -74,10 +74,16 @@ class ChequeController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        $cheques = $query->paginate(50)->withQueryString();
+
         return view('accounts::cheque.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
-            'cheques' => $query->paginate(50)->withQueryString(),
+            'cheques' => $cheques,
+            // ⭐ চেক নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); গোটা পাতার একবারে, সারি ধরে নয়
+            'partyNames' => app(PartyRegistry::class)->labelsOf(
+                $cheques->getCollection()->map(fn (Cheque $c) => [(string) $c->party_type, (int) $c->party_id]),
+            ),
             'q' => $request->query('q'),
             /*
              * ⓘ পক্ষের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ সরার পর

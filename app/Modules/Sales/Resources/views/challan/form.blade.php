@@ -75,12 +75,12 @@
                     ঠিকানা টাইপ করলে সে কিছুই আটকায় না।
                 --}}
                 <x-ui.select name="sales_order_id" :label="__('sales::field.order')"
-                             :options="$orders->mapWithKeys(fn ($o) => [$o->id => $o->document_no . ' - ' . $o->customer?->name()])"
+                             :options="$orders->mapWithKeys(fn ($o) => [$o->id => $o->document_no . ' - ' . $o->customer?->nameWithPoint()])"
                              :selected="$order?->id ?? $challan->sales_order_id"
                              :hint="__('sales::message.challan_needs_an_order')"
                              placeholder="-" required />
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="$order?->customer_id ?? $challan->customer_id" placeholder="-" required />
                 <x-ui.select name="warehouse_id" :label="__('sales::field.warehouse')"
                              :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"

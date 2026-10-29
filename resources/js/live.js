@@ -30,6 +30,25 @@ export function isTouched (el, doc = document) {
     return el === doc.activeElement || el.dataset?.liveTouched === '1'
 }
 
+/**
+ * খোলা পপ-আপ কি — নিশ্চিতের সারাংশ ([[confirm-overview.js]]) বা অন্য যেকোনো খোলা `<dialog>`।
+ * ⛔ নতুন পাতায় পপ-আপটা বন্ধ আর খালি; বসালে মানুষের চোখের সামনে বন্ধ হত, "নিশ্চিত"-এর আগেই (a6, ২৩ অক্টোবর ২০২৬:
+ * আদায়ের "সইয়ে পাঠান"-এর পপ-আপ দেড় সেকেন্ডে উধাও — কোম্পানিতে কেউ কিছু লিখলেই)।
+ */
+export function isOpenDialog (el) {
+    return !!el && el.nodeType === 1 && el.tagName === 'DIALOG' && el.open === true
+}
+
+/**
+ * হাতে খোলা বা বন্ধ করা ভাঁজ (`<details>`) যেমন আছে তেমন — নতুন পাতার `open` এখনকারটা দিয়ে বদলে নেওয়া, তাই ভিতরের লেখা
+ * হালনাগাদ হয়, ভাঁজ নয়। ⛔ নইলে খোলা ভাঁজ দশ সেকেন্ডে বন্ধ হত (a6, ২৪ অক্টোবর ২০২৬, আসল ব্রাউজারে মাপা — খরচের ভাউচার)।
+ */
+export function keepFoldAsIs (from, to) {
+    if (!from || from.nodeType !== 1 || from.tagName !== 'DETAILS' || !to || to.tagName !== 'DETAILS') return
+    if (from.open) to.setAttribute('open', '')
+    else to.removeAttribute('open')
+}
+
 /** হাতে লেখা ঘর চিহ্নিত — একবার লিখলেই, যতক্ষণ পাতা খোলা */
 export function rememberTyping (doc = document) {
     const mark = (event) => {
@@ -64,7 +83,8 @@ export function placeFresh (doc, fresh, morph) {
 
             morph(el, to, {
                 updating (from, toEl, childrenOnly, skip) {
-                    if (isTouched(from, doc)) skip()
+                    if (isTouched(from, doc) || isOpenDialog(from)) skip()
+                    keepFoldAsIs(from, toEl)
                 },
             })
             placed++

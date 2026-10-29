@@ -15,6 +15,7 @@ use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Contracts\ReportFilterSource;
 use App\Core\Events\DomainEvent;
+use App\Core\Widgets\WidgetSummary;
 use Illuminate\Contracts\Auth\UserProvider;
 use InvalidArgumentException;
 
@@ -509,6 +510,25 @@ final class ModuleDefinition
          * @var array<class-string, array<string, string>>
          */
         public readonly array $sectionGuardedFields = [],
+
+        /**
+         * ⭐ ফোনের হোম-স্ক্রিন উইজেটের সারাংশ — WidgetSummary বাস্তবায়ন করে (মোবাইলের পরিকল্পনা ৪, অংশ ৯; ২০ অক্টোবর ২০২৬)।
+         *
+         * ⓘ মডিউল নিজে বলে, যেমন `integrity` — কোর মডিউলের নাম জানে না ([[BoundariesTest]]); দরজা
+         * ([[WidgetSummaries::all()]]) এখান থেকে পড়ে। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var list<class-string<WidgetSummary>>
+         */
+        public readonly array $phoneWidgets = [],
+
+        /**
+         * ⭐ নিজের সচল ছক না থাকলে কোন কাজ কোন কাজের ছকে সই চায় — মডিউল নিজে বলে, কোর কোনো মডিউলের নাম জানে না
+         * ([[ApprovalEngine::flowFor()]]; fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬)। ⓘ দুই দিকই এই মডিউলের `approvals`-এর কাজ, বুটেই যাচাই।
+         * ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<string, string> কাজ => ফিরে-যাওয়ার কাজ
+         */
+        public readonly array $approvalFallbacks = [],
     ) {}
 
     /**
@@ -720,7 +740,32 @@ final class ModuleDefinition
                 $raw['permissions'] ?? [],
                 $path,
             ),
+            phoneWidgets: self::validatePhoneWidgets($raw['phone_widgets'] ?? [], $path),
+            approvalFallbacks: self::validateApprovalFallbacks($raw['approval_fallbacks'] ?? [], $raw['approvals'] ?? [], $path),
         );
+    }
+
+    /**
+     * @param  list<mixed>  $widgets
+     * @return list<class-string<WidgetSummary>>
+     */
+    private static function validatePhoneWidgets(array $widgets, string $path): array
+    {
+        foreach ($widgets as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: phone widget '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, WidgetSummary::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: phone widget {$class} must implement the WidgetSummary contract."
+                );
+            }
+        }
+
+        return array_values($widgets);
     }
 
     /**
@@ -1455,6 +1500,28 @@ final class ModuleDefinition
         }
 
         return $approvals;
+    }
+
+    /**
+     * ⛔ দুই দিকই এই মডিউলের ঘোষিত কাজ, আর নিজের দিকে ফেরা নয় — ভুল নাম নীরবে কিছুই ধরত না, আর সই চাওয়া বন্ধ হয়ে যেত।
+     *
+     * @param  array<mixed, mixed>  $fallbacks
+     * @param  array<mixed, mixed>  $approvals
+     * @return array<string, string>
+     */
+    private static function validateApprovalFallbacks(array $fallbacks, array $approvals, string $path): array
+    {
+        foreach ($fallbacks as $action => $to) {
+            if (! is_string($action) || ! is_string($to) || ! array_key_exists($action, $approvals)
+                || ! array_key_exists($to, $approvals) || $action === $to) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_fallbacks '".(is_string($action) ? $action : gettype($action))
+                    ."' must map one of this module's approval actions to another of them."
+                );
+            }
+        }
+
+        return $fallbacks;
     }
 
     /**

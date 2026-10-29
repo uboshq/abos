@@ -27,7 +27,7 @@
     <x-slot:title>{{ $customer->name() }} · {{ __('customer::summary.title') }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$customer->name()" :subtitle="$customer->code.' · '.__('customer::summary.title')">
+        <x-ui.page-header :title="$customer->nameWithPoint()" :subtitle="$customer->code.' · '.__('customer::summary.title')">
             <x-slot:actions>
                 @include('customer::partials.state-badge', ['customer' => $customer])
             </x-slot:actions>
@@ -83,6 +83,8 @@
                         </dd>
                     </div>
                 </dl>
+                {{-- ⭐ টাকা নিট বিক্রি — বিল − ফেরত, VAT বাদে ([[SalesCustomerTrade::glanceFor()]], fe, ২১ অক্টোবর ২০২৬); সংখ্যা বিলের --}}
+                <p class="mt-2 text-2xs text-(--color-ink-muted)" data-figure="amount-basis">{{ __('customer::summary.amount_basis') }}</p>
             @endif
         </section>
 

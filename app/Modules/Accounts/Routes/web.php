@@ -26,6 +26,7 @@ use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\NotePrintController;
+use App\Modules\Accounts\Http\Controllers\ComplianceObligationController;
 use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
@@ -139,6 +140,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('voucher-list', [VoucherListController::class, 'index'])
         ->name('voucher.list');
 
+    /*
+     * ⭐ তালিকা থেকে একসাথে পোস্ট বা অনুমোদনে পাঠানো — অনুমোদন পর্দা ভাগ ২, দফা ১৪ ([[VoucherBulkPostController]])।
+     * ⓘ আগে দেখা GET (কিছু লেখে না), তারপর POST। স্থির পথ, `vouchers/{voucher}`-এর বাইরে — সংঘাত নেই।
+     */
+    Route::get('voucher-list/bulk-review', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'review'])
+        ->name('voucher.bulk_review');
+    Route::post('voucher-list/bulk-post', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'post'])
+        ->name('voucher.bulk_post');
+
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');
@@ -183,6 +193,11 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          * ভাউচারের ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
          */
         Route::get('due', [VoucherController::class, 'due'])->name('due');
+        // ⭐ খাতায় যা যাবে আর রেফারেন্সের চলতি উত্তর — রসিদ ও পরিশোধের পর্দা (fe, ২৩ অক্টোবর ২০২৬); স্থির পথ, তাই /{type}-এর আগে
+        Route::post('simulate', [VoucherController::class, 'simulate'])->name('simulate');
+        Route::get('reference-check', [VoucherController::class, 'referenceCheck'])->name('reference_check');
+        // ⭐ ব্যাংক ফাইল (BEFTN) — এক ব্যাংক খাতের এক দিনের ট্রান্সফার-পরিশোধ, প্রাপকের সই-পাওয়া হিসাবে (cb-ma-4); স্থির পথ, /{type}-এর আগে
+        Route::get('bank-file', [VoucherController::class, 'bankFile'])->name('bank_file');
 
         // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
         // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
@@ -258,6 +273,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
+    // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী (IAS 1.106) — স্থিতিপত্রের একই সেবা, একই চাবি; catch-all-এর আগে, একই কারণে
+    Route::get('/reports/changes-in-equity', [BalanceSheetController::class, 'equity'])
+        ->name('equity_statement');
 
     /*
      * গ্রুপের হিসাব — স্থিতিপত্রের মতোই catch-all-এর **আগে**।
@@ -498,6 +516,12 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             Route::get('/{category}/edit', [AssetCategoryController::class, 'edit'])->whereNumber('category')->name('edit');
             Route::put('/{category}', [AssetCategoryController::class, 'update'])->whereNumber('category')->name('update');
         });
+    });
+
+    // ⭐ করণীয় — কোষাগারে জমা আর মূসক-৬.৬, শেষ তারিখসহ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+    Route::prefix('obligations')->name('obligation.')->group(function () {
+        Route::get('/', [ComplianceObligationController::class, 'index'])->name('index');
+        Route::post('/{obligation}/done', [ComplianceObligationController::class, 'done'])->whereNumber('obligation')->name('done');
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

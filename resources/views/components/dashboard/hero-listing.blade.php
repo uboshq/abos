@@ -8,8 +8,8 @@
 @props(['listing'])
 
 <section data-boxed data-hero-listing
-         class="rounded-(--radius-card) px-5 py-3 text-(--color-ink-inverse) shadow-lg"
-         style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900))">
+         class="rounded-(--radius-card) px-5 py-3 text-(--color-on-brand-ink) shadow-lg"
+         style="background: linear-gradient(135deg, var(--color-on-brand-from), var(--color-on-brand-to))">
     <div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
         <h2 class="flex items-center gap-1.5 text-sm text-white/70">
             <x-ui.icon name="wallet" :size="15" />

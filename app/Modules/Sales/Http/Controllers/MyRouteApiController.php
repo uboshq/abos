@@ -56,7 +56,8 @@ class MyRouteApiController extends Controller implements HasMiddleware
         $shops = Customer::query()
             ->inViewedBranch()
             ->active()
-            ->with('location:id,public_id')
+            // ⓘ পয়েন্টের নাম আর শাখা এক ডাকে (নাম · পয়েন্ট · শাখা)
+            ->with(['location.parent', 'branch'])
             ->whereIn('location_id', $visits->pluck('route_id')->all() ?: [0])
             ->orderBy('location_id')->orderBy('code')
             ->paginate(50);
@@ -74,6 +75,9 @@ class MyRouteApiController extends Controller implements HasMiddleware
                 'route' => (string) $c->location?->public_id,
                 'code' => (string) $c->code,
                 'name' => $c->name(),
+                // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+                'point' => $c->pointName(),
+                'branch' => $c->branchName(),
                 'phone' => $c->phone,
                 'address' => $c->address_bn ?: $c->address_en,
                 // ⓘ মাসের শুরু থেকে এই দিন পর্যন্ত, রুট-পাতার একই অঙ্ক; বকেয়া এই দিনে

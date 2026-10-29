@@ -9,6 +9,8 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\PaperParties;
+use App\Core\Services\PartyRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +85,7 @@ final class PostingBacklog
     {
         $since = CarbonImmutable::today()->subDays(self::LOOK_BACK_DAYS)->toDateString();
         $rows = [];
+        $papers = app(PaperParties::class);
 
         foreach ($this->mustReachTheBooks() as $source => $class) {
             $model = new $class;
@@ -112,8 +115,21 @@ final class PostingBacklog
                     'document_no' => $one->document_no ?? null,
                     'trx_date' => $one->trx_date?->toDateString(),
                     'amount' => isset($one->total) ? (string) $one->total : (isset($one->amount) ? (string) $one->amount : null),
+                    'party_key' => $papers->keyOf($one), // ⓘ জোড়া বা `customer_id`/`supplier_id` … ([[PaperParties::keyOf()]])
                 ];
             }
+        }
+
+        /*
+         * ⭐ নম্বরের পাশে পক্ষ — মালিক, ১৯ অক্টোবর ২০২৬। ⓘ কাগজ খাতায় ওঠেনি, তাই খাতা থেকে নয় — কাগজের নিজের ঘর থেকে;
+         * নাম আসে সব সারির একবারে ([[PartyRegistry::labelsOf()]]), সারি ধরে নয়।
+         */
+        $labels = app(PartyRegistry::class)->labelsOf(array_values(array_filter(array_column($rows, 'party_key'))));
+
+        foreach ($rows as $i => $row) {
+            $pair = $row['party_key'];
+            unset($rows[$i]['party_key']);
+            $rows[$i]['party'] = $pair === null ? null : ($labels[$pair[0].':'.$pair[1]] ?? null);
         }
 
         usort($rows, fn (array $a, array $b) => [$a['trx_date'], $a['source']] <=> [$b['trx_date'], $b['source']]);

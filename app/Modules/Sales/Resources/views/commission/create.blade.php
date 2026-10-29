@@ -51,7 +51,7 @@
                            bg-(--color-surface-app) px-2">
                 @foreach ($customers as $customer)
                     <option value="{{ $customer->id }}" @selected(old('customer_id') == $customer->id)>
-                        {{ $customer->name() }}
+                        {{ $customer->nameWithPoint() }}
                     </option>
                 @endforeach
             </select>

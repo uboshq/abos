@@ -349,6 +349,8 @@ final class CreditPositionReports
                 'type' => ReportColumn::DOCUMENT,
                 'source_type' => 'party_type_literal',
                 'source_id' => 'id',
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                'place' => ['customer', 'id'],
             ],
         ];
     }

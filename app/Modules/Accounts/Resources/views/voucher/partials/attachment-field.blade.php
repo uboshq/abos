@@ -16,15 +16,14 @@
 --}}
 <div>
     <label for="attachment" class="mb-1 block text-sm font-medium">
-        {{ __('accounts::field.attachment') }}
+        {{-- ⓘ রসিদ-পরিশোধে নকশার কথা ("ব্যাংক স্লিপ / স্ক্রিনশট", "ব্যাংকের অ্যাডভাইস / বিলের কপি"); বাকি পর্দায় আগের নাম --}}
+        {{ $attachmentLabel ?? __('accounts::field.attachment') }}
     </label>
 
-    <input id="attachment" name="attachment" type="file"
-           accept="image/png,image/jpeg,image/webp,application/pdf"
-           x-on:change="$store.scanner.begin($el, 'paper')"
-           class="min-w-0 w-full text-sm file:me-2 file:rounded-(--radius-field)
-                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                  file:px-3 file:py-1.5 file:text-sm">
+    {{-- ⭐ বাংলা বোতাম ([[ui.file-input]]) — ব্রাউজারের ইংরেজি "Choose File / No file chosen" নয় (fe, ২৩ অক্টোবর ২০২৬); স্ক্যানার আসল ঘরেই --}}
+    <x-ui.file-input id="attachment" name="attachment"
+                     accept="image/png,image/jpeg,image/webp,application/pdf"
+                     x-on:change="$store.scanner.begin($el, 'paper')" />
 
     <p class="mt-1 text-xs text-(--color-ink-muted)">
         {{ __('accounts::message.attachment_hint') }}

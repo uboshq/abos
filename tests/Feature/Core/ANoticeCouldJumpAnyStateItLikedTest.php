@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use App\Core\Services\NoticeBoard;
 use App\Core\Services\NoticeLifecycle;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\NoticePriority;
 use App\Core\Support\NoticeStatus;
@@ -129,18 +131,25 @@ final class ANoticeCouldJumpAnyStateItLikedTest extends TestCase
     /**
      * ⭐ কারণ দিলে প্রত্যাহার হয়, আর নোটিশটা বার থেকে নেমে যায়।
      *
-     * ── ⚠️ কেন `in_ticker`-টাও মাপা ─────────────────────────────────
+     * ── ⚠️ কেন বারটাও মাপা ─────────────────────────────────────────
      * ⓘ অবস্থা বদলানো সহজ অংশ। ⛔ কঠিন অংশটা হলো **ফলটা**: প্রত্যাহার
      * করার পরেও নোটিশটা নিচের বারে বসে থাকলে কাজটা হয়নি, অথচ খাতা
      * বলত হয়েছে।
      */
     public function test_a_recall_takes_it_off_the_bar(): void
     {
-        $notice = app(NoticeLifecycle::class)->recall($this->aPublishedNotice(), 'তারিখটা ভুল ছিল');
+        $published = $this->aPublishedNotice();
+        $onTheBar = fn (): bool => app(NoticeBoard::class)->forTicker(auth()->user())->contains('id', $published->id);
+
+        // ⓘ ভিত্তি: প্রকাশিত নোটিশ বারে আছে (২১ অক্টোবর ২০২৬ থেকে সাধারণ অগ্রাধিকারেও)
+        $this->assertTrue($onTheBar(), 'দাবির ভিত্তি নেই — প্রকাশিত নোটিশটা বারেই নেই।');
+
+        $notice = app(NoticeLifecycle::class)->recall($published, 'তারিখটা ভুল ছিল');
 
         $this->assertSame(NoticeStatus::RECALLED, $notice->status, 'প্রত্যাহার হয়নি।');
 
-        $this->assertFalse((bool) $notice->in_ticker, 'প্রত্যাহারের পরেও নোটিশটা নিচের বারে বসে আছে।');
+        // ⓘ আগে `in_ticker` ঘরটা মাপা হত; ঘরটা আর কেউ পড়ে না — তাই আসল বারটাই
+        $this->assertFalse($onTheBar(), 'প্রত্যাহারের পরেও নোটিশটা নিচের বারে বসে আছে।');
     }
 
     /**
@@ -164,23 +173,30 @@ final class ANoticeCouldJumpAnyStateItLikedTest extends TestCase
     }
 
     /**
-     * ⭐ জরুরি নোটিশ নিজে থেকেই বারে যায়, সাধারণটা যায় না।
+     * ⭐ বার প্রতিটা প্রকাশিত ঘোষণা নেয় — বেশি জরুরিটা আগে (fe, ২১ অক্টোবর ২০২৬)।
      *
-     * ── ⚠️ কেন দুই দিকই মাপা ────────────────────────────────────────
-     * ⓘ কেবল *"জরুরিটা বারে যায়"* মাপলে **সব নোটিশ বারে পাঠানো**
-     * একটা যন্ত্রও সবুজ পেত। ⛔ আর তখন বারটা রোজই ভরা থাকত, আর ভরা
-     * বার মানে না-পড়া বার।
+     * ── ⓘ আগে যা ছিল ───────────────────────────────────────────────
+     * দাবি ছিল *"জরুরিটা বারে যায়, সাধারণটা যায় না"* (খসড়ায় বসানো `in_ticker`)। ⛔ সেই ফটক উঠে গেছে: ফর্মের বারের
+     * টিক কিছুই করত না, আর সাধারণ ঘোষণা কোথাও উঠত না। ⚠️ দুই দিক এখনো মাপা — দুইটাই বারে, আর ক্রমটা ঠিক; নইলে
+     * "সব পাঠাও, যেকোনো ক্রমে" একটা যন্ত্রও সবুজ পেত।
      */
-    public function test_the_bar_takes_the_urgent_one_and_leaves_the_ordinary(): void
+    public function test_the_bar_takes_both_and_the_urgent_one_first(): void
     {
+        $settings = app(SettingsService::class);
+        $settings->set('notice.creator_cannot_approve', false);
+        $settings->flush();
+
         $life = app(NoticeLifecycle::class);
+        $publish = fn (string $title, NoticePriority $priority): Notice => $life->publish($life->approve($life->submit(
+            $life->draft(['title' => $title, 'body' => $title, 'priority' => $priority->value]))));
 
-        $urgent = $life->draft(['title' => 'আগুন', 'body' => 'বেরোন', 'priority' => NoticePriority::CRITICAL->value]);
-        $plain = $life->draft(['title' => 'ছুটি', 'body' => 'শুক্রবার', 'priority' => NoticePriority::LOW->value]);
+        $plain = $publish('ছুটি', NoticePriority::LOW);
+        $urgent = $publish('আগুন', NoticePriority::CRITICAL);
 
-        $this->assertTrue((bool) $urgent->in_ticker, 'জরুরি নোটিশটা বারে যাচ্ছে না।');
+        $bar = app(NoticeBoard::class)->forTicker(auth()->user())->pluck('id')->all();
 
-        $this->assertFalse((bool) $plain->in_ticker, 'সাধারণ নোটিশও বারে চলে যাচ্ছে — বারটা ভিড়ে ভরবে।');
+        $this->assertSame([$urgent->id, $plain->id], array_values(array_intersect($bar, [$urgent->id, $plain->id])),
+            '⛔ দুইটাই বারে নেই, বা সাধারণটা জরুরিটার আগে।');
     }
 
     /**

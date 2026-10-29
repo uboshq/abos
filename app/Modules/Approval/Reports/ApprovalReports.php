@@ -76,6 +76,8 @@ final class ApprovalReports
                     DB::raw("'".Approval::drillSourceType()."' as approval_source"),
                     self::whatLabel(),
                     DB::raw('COALESCE(users.name, req_c.name_bn, req_c.name_en) as requester'),
+                    // ⓘ পোর্টালের গ্রাহক চাইলে তাঁর id — নামের পাশে জায়গার জন্য ([[ReportColumn::$place]]); কর্মী চাইলে NULL
+                    DB::raw('CASE WHEN users.id IS NULL THEN approvals.requested_by_customer_id END as requester_customer_id'),
                 ])
                 /*
                  * কত দিন ধরে ঝুলে আছে — এটাই এই রিপোর্টের আসল কথা।
@@ -107,7 +109,8 @@ final class ApprovalReports
                 ['key' => 'what', 'label' => 'approval::field.action',
                     'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'approval_source', 'source_id' => 'approval_id'],
-                ['key' => 'requester', 'label' => 'approval::field.requested_by', 'width' => '11rem'],
+                // ⭐ গ্রাহক চাইলে "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'requester', 'label' => 'approval::field.requested_by', 'width' => '11rem', 'place' => ['customer', 'requester_customer_id']],
                 ['key' => 'current_level', 'label' => 'approval::field.level',
                     'type' => ReportColumn::QUANTITY, 'width' => '6rem'],
                 ['key' => 'waiting_days', 'label' => 'approval::field.waiting_days',
@@ -150,7 +153,8 @@ final class ApprovalReports
             ['key' => 'what', 'label' => 'approval::field.action',
                 'type' => ReportColumn::DOCUMENT,
                 'source_type' => 'approval_source', 'source_id' => 'approval_id'],
-            ['key' => 'requester', 'label' => 'approval::field.requested_by', 'width' => '10rem'],
+            // ⭐ গ্রাহক চাইলে "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+            ['key' => 'requester', 'label' => 'approval::field.requested_by', 'width' => '10rem', 'place' => ['customer', 'requester_customer_id']],
             ['key' => 'deciders', 'label' => 'approval::field.approver', 'width' => '11rem'],
             ['key' => 'took_days', 'label' => 'approval::field.took_days',
                 'type' => ReportColumn::QUANTITY, 'width' => '7rem'],
@@ -182,6 +186,8 @@ final class ApprovalReports
                     DB::raw("'".Approval::drillSourceType()."' as approval_source"),
                     self::whatLabel(),
                     DB::raw('COALESCE(users.name, req_c.name_bn, req_c.name_en) as requester'),
+                    // ⓘ পোর্টালের গ্রাহক চাইলে তাঁর id — নামের পাশে জায়গার জন্য ([[ReportColumn::$place]]); কর্মী চাইলে NULL
+                    DB::raw('CASE WHEN users.id IS NULL THEN approvals.requested_by_customer_id END as requester_customer_id'),
                     /*
                      * কে কে সই দিয়েছেন — সবাই, একটা ঘরে।
                      *

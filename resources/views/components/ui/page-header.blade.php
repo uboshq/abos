@@ -15,7 +15,9 @@
 --}}
 <div {{ $attributes->merge(['class' => 'flex flex-wrap items-start justify-between gap-3']) }}>
     <div class="min-w-0">
-        <h1 class="truncate text-xl font-semibold">{{ $title }}</h1>
+        {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — [[PageHeading]] --}}
+        @php($tag = \App\Core\Support\PageHeading::tag())
+        <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}</{{ $tag }}>
 
         @if ($subtitle)
             <p class="mt-0.5 text-sm text-(--color-ink-muted)">{{ $subtitle }}</p>

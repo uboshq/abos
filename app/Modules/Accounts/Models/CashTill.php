@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -33,6 +34,13 @@ class CashTill extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    /*
+     * ⭐ টিলের নিজের পাতা নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (fe, ২৪ অক্টোবর ২০২৬; ভাউচারের [[OpensInReach]]-এর একই নিয়ম):
+     * আগে route-বাঁধন `viewed-branch` ছাঁকনি মানত, তাই মালিক হেডারে MMS রেখে NTK-র টিলের খবর বা সইয়ের পাতার লিংক চাপলে ৪০৪।
+     * ⓘ তালিকা আর বাকি সব খোঁজ নিজের ছাঁকনিতেই থাকে — বদল কেবল বাঁধনে ([[acrossBranches()]])। নাগালের বাইরের মানুষ ৪০৪ পান,
+     * কেবল এই টিলের সইকারী পড়ার পাতা (GET) পান।
+     */
+    use OpensInReach;
     use SoftDeletes;
 
     /**
@@ -64,6 +72,16 @@ class CashTill extends Model implements Drillable
     }
 
     /**
+     * হেডারের শাখা না মেনে — কোম্পানির দেয়াল আর মোছার নিয়ম থাকে ([[OpensInReach]]-এর বাঁধন এটাই খোঁজে; নাগাল দেখা হয় তার পরে)।
+     *
+     * @return Builder<static>
+     */
+    public static function acrossBranches(): Builder
+    {
+        return static::query()->withoutGlobalScope('viewed-branch');
+    }
+
+    /**
      * ⭐ যে শাখাগুলোর টিল দেখা যায় — এক শাখা বাছা থাকলে [সেটা], "সব শাখা"-তে নাগাল, সীমাহীন হলে `null` (সব)।
      * ⓘ শাখাহীন টিল সবসময় যোগ হয় — ডাকনেওয়ালা নিজে `orWhereNull` বসায়। [[DataScope::viewBranchIds()]]-এর একই নিয়ম।
      *
@@ -72,6 +90,54 @@ class CashTill extends Model implements Drillable
     public static function visibleBranchIds(): ?array
     {
         return app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
+    }
+
+    /**
+     * ⭐ টাকা যে বাক্স দিয়ে নড়ল, সেই বাক্সের শাখা — কাগজের শাখা এখান থেকে (মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য শাখায়
+     * নয়"*; RCV-0143)।
+     *
+     * ⚠️ আগে কাগজ বসত জমা দেওয়ার মুহূর্তের উপরের শাখা-বাছাইয়ে: A-র বাক্স থেকে খরচ, অথচ উপরে B বাছা থাকলে কাগজ, নম্বর আর খাতার
+     * সারি B-তে। ⓘ খাতগুলোর কোনোটা শাখায় বাঁধা বাক্সের হলে আর সব বাক্স একই শাখার হলে সেই শাখা; বাক্স নেই, শাখাহীন বাক্স, বা দুই
+     * শাখার বাক্স (শাখা পেরোনো কন্ট্রা) → `null`, ডাকনেওয়ালা আগের মতো চলে। দেখার দেয়ালের বাইরে পড়া — কোন শাখার বাক্স, সেটা
+     * দেখা-না-দেখার প্রশ্ন নয়।
+     *
+     * @param  iterable<int|string|null>  $accountIds
+     */
+    public static function branchOfAccounts(iterable $accountIds): ?int
+    {
+        $branches = self::branchesOfAccounts($accountIds);
+
+        return count($branches) === 1 ? $branches[0] : null;
+    }
+
+    /**
+     * এই খাতগুলোর শাখায় বাঁধা বাক্সের সব আলাদা শাখা — শাখাহীন বাক্স বা বাক্স নেই এমন খাত বাদ ([[branchOfAccounts()]])।
+     *
+     * @param  iterable<int|string|null>  $accountIds
+     * @return list<int>
+     */
+    public static function branchesOfAccounts(iterable $accountIds): array
+    {
+        $ids = [];
+
+        foreach ($accountIds as $id) {
+            if ((int) $id > 0) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return self::query()->withoutGlobalScope('viewed-branch')
+            ->whereIn('account_id', array_unique($ids))
+            ->whereNotNull('branch_id')
+            ->pluck('branch_id')
+            ->map(fn ($branch) => (int) $branch)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     protected $fillable = [

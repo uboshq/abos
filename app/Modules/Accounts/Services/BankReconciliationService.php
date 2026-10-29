@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\MakerChecker;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankReconciliation;
@@ -202,15 +203,40 @@ final class BankReconciliationService
     }
 
     /**
+     * ⛔ এই মানুষ কি নিজের খোলা মিলকরণ বন্ধ করতে যাচ্ছেন — সুইচ চালু থাকলে তবেই আটকায়।
+     *
+     * <p>সুইচ ভাউচারের লেখক ≠ পাকাকারীর একই সুইচ (`accounts.voucher_maker_checker`, [[VoucherService::MAKER_CHECKER]]): নতুন
+     * কোম্পানিতে চালু, ঘোষণার দিনের পুরনো কোম্পানিগুলোতে (ADI, UB, TCL) মাইগ্রেশনে বন্ধ। ⛔ মালিকের নিয়ম — অনুমোদন বন্ধ থাকলে
+     * নতুন কোনো সই কিছু আটকায় না, একজন মানুষের কোম্পানিও আটকে যায় না (fe, ২০ অক্টোবর ২০২৬); আর মালিক (super admin) সবসময়
+     * নিজে বন্ধ করতে পারেন ([[MakerChecker]])। পর্দার বোতামও এটাই দেখে।
+     */
+    public function openerMayNotClose(BankReconciliation $recon): bool
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get(VoucherService::MAKER_CHECKER, true)) {
+            return false;
+        }
+
+        return ! MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by);
+    }
+
+    /**
      * মিলকরণ বন্ধ করা।
      *
      * অঙ্ক না মিললে আটকায়। এটাই পুরো ফিচারটার একমাত্র শক্ত দরজা — এটা
      * না থাকলে যে কেউ একটা মিলকরণ খুলে, কিছু না মিলিয়ে, "হয়ে গেছে" বলে
      * বন্ধ করে দিতে পারত, আর কাগজে দেখাত কাজটা হয়েছে।
+     *
+     * ⛔ যিনি মিলকরণ খুলেছেন তিনি নিজে বন্ধ করেন না — মালিকের maker-checker নিয়ম (১৪ অক্টোবর ২০২৬; নগদ আর মজুদ গোনার একই
+     * [[MakerChecker]], ছাড় কেবল super admin)। ⓘ ব্যাংক মেলানোর বন্ধে দ্বিতীয় হাতের সই SOX-এর একটা মূল নিয়ন্ত্রণ (ERP ১০০%-এর
+     * হিসাবের ফাঁক #২৯, ২০ অক্টোবর ২০২৬)। আগে যিনি খুলে টিক দিলেন তিনিই "মিলেছে" লিখে বন্ধ করতেন।
      */
     public function confirm(BankReconciliation $recon): BankReconciliation
     {
         $this->assertDraft($recon);
+
+        if ($this->openerMayNotClose($recon)) {
+            throw ValidationException::withMessages(['status' => __('accounts::recon.needs_another_hand')]);
+        }
 
         $summary = $this->summary($recon);
 

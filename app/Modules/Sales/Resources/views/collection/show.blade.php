@@ -3,7 +3,7 @@
     <x-slot:title>{{ $collection->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$collection->document_no" :subtitle="$collection->customer?->name()">
+        <x-ui.page-header :title="$collection->document_no" :subtitle="$collection->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $collection)
                     <x-ui.button tone="secondary" :href="route('sales.collection.edit', $collection)">

@@ -128,7 +128,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
-                                        <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id"
+                                        <select :id="'pr-' + i + '-product'" aria-label="{{ __('purchase::field.product') }}" :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -145,7 +145,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.quantity') }}" :id="'pr-' + i + '-qty'" :aria-labelledby="'pr-' + i + '-qty' + ' ' + 'pr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
@@ -153,7 +153,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('purchase::field.rate') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.rate') }}" :id="'pr-' + i + '-rate'" :aria-labelledby="'pr-' + i + '-rate' + ' ' + 'pr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
@@ -161,7 +161,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('purchase::field.tax') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.tax') }}" :id="'pr-' + i + '-tax'" :aria-labelledby="'pr-' + i + '-tax' + ' ' + 'pr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)

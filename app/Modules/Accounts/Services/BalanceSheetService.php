@@ -413,6 +413,202 @@ final class BalanceSheetService
         return $side;
     }
 
+    /**
+     * ⭐ তুলনার কলাম — আগের অর্থবছরের শেষ দিনের স্থিতিপত্র, প্রতিটা সারির পাশে (IAS 1.38: প্রতিটা অঙ্কের আগের সময়ের অঙ্ক;
+     * ERP ১০০%-এর হিসাবের ফাঁক #৭, ২০ অক্টোবর ২০২৬)। ⓘ লাভ-ক্ষতির পাতায় তুলনা ছিল, স্থিতিপত্রে ছিল না।
+     *
+     * <p>দুটো [[build()]]-এর ফল জোড়া: প্রতিটা মাথা আর সারিতে `prior`, আর `prior` চাবিতে আগের দিনের যোগ, লাভ আর তারিখ।
+     * শূন্য সারি [[side()]] বাদ দেয়, তাই যে খাত কেবল আগের বছরে ছিল (যেমন শোধ হওয়া ঋণ) সেটা এ বছরের অঙ্ক ০ নিয়ে বসে —
+     * নাহলে আগের বছরের মাথার যোগ তার সারিগুলোর যোগের সাথে মিলত না। ⓘ সারির চাবি খাত আর লেবেল (অগ্রিমের সারিতে খাতটা
+     * পক্ষের খাত, লেবেল আলাদা)।
+     *
+     * @param  array<string, mixed>  $sheet
+     * @param  array<string, mixed>  $prior
+     * @return array<string, mixed>
+     */
+    /**
+     * তুলনার দিন — এই অর্থবছরের শুরুর আগের দিন (১ জুলাইয়ের বছরে ৩০ জুন), অর্থাৎ আগের বছরের শেষ স্থিতিপত্র। ⓘ বছরটা খাতায়
+     * না থাকলে এক বছর আগের একই দিন।
+     */
+    public function priorDate(string $asOf): string
+    {
+        $start = FinancialYear::forDate($asOf)?->starts_on;
+
+        return $start === null
+            ? Carbon::parse($asOf)->subYear()->toDateString()
+            : Carbon::parse($start)->subDay()->toDateString();
+    }
+
+    public function withComparative(array $sheet, array $prior): array
+    {
+        foreach (['assets', 'liabilities', 'equity'] as $side) {
+            $sheet[$side] = $this->pairSide($sheet[$side], $prior[$side]);
+        }
+
+        $sheet['prior'] = [
+            'totals' => $prior['totals'],
+            'profit_this_year' => $prior['profit_this_year'],
+            'profit_earlier' => $prior['profit_earlier'],
+            'agrees' => $prior['agrees'],
+            'as_of' => $prior['as_of'],
+        ];
+
+        return $sheet;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $now
+     * @param  list<array<string, mixed>>  $then
+     * @return list<array<string, mixed>>
+     */
+    private function pairSide(array $now, array $then): array
+    {
+        $key = fn (array $line): string => $line['account']->id.'|'.($line['label'] ?? '');
+        $earlier = [];
+
+        foreach ($then as $group) {
+            $earlier[(int) $group['head']->id] = $group;
+        }
+
+        foreach ($now as $i => $group) {
+            $old = $earlier[(int) $group['head']->id] ?? ['total' => '0', 'lines' => []];
+            $now[$i]['prior'] = $old['total'];
+
+            $oldLines = [];
+            foreach ($old['lines'] as $line) {
+                $oldLines[$key($line)] = $line;
+            }
+
+            foreach ($group['lines'] as $j => $line) {
+                $now[$i]['lines'][$j]['prior'] = isset($oldLines[$key($line)]) ? $oldLines[$key($line)]['amount'] : '0';
+                unset($oldLines[$key($line)]);
+            }
+
+            foreach ($oldLines as $line) {
+                $now[$i]['lines'][] = [...$line, 'amount' => '0', 'prior' => $line['amount']];
+            }
+        }
+
+        return $now;
+    }
+
+    /**
+     * ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী — শুরুর জের থেকে শেষের জের, প্রতিটা অংশ আলাদা কলামে (IAS 1.106; ERP ১০০%-এর
+     * হিসাবের ফাঁক #৬, ২০ অক্টোবর ২০২৬)।
+     *
+     * <p>কলাম: স্থিতিপত্রের মালিকানার প্রতিটা মাথা (মূলধন, উত্তোলন, সঞ্চিত মুনাফা…), আর "বন্ধ না হওয়া লাভ" — স্থিতিপত্রের
+     * হিসাব করা লাভের সারি। সারি:
+     *  - শুরুর জের: আগের দিনের স্থিতিপত্র ([[build()]]);
+     *  - এই সময়ের লাভ: সময়ের আয়-ব্যয়, বছর বন্ধের দাখিলা বাদ — কেবল বন্ধ না হওয়া লাভের কলামে;
+     *  - বছর শেষের স্থানান্তর: বছর বন্ধের দাখিলা ([[YearEndService::closingSources()]]) — আয়-ব্যয় থেকে সঞ্চিত মুনাফায়, তাই
+     *    এক কলামে বাড়ে, লাভের কলামে সমান কমে; সারির যোগ শূন্য;
+     *  - অন্য চলাচল: মালিকের টাকা আনা, উত্তোলন, লাভ ঘোষণা — মালিকানার খাতের বাকি দাখিলা;
+     *  - শেষের জের: শেষ দিনের স্থিতিপত্র।
+     *
+     * <p>⛔ শুরু আর শেষ স্থিতিপত্রের একই [[build()]] থেকে, তাই পয়সা পর্যন্ত মেলে; চলাচল খাতা থেকে আলাদা করে গোনা, আর
+     * `agrees` বলে শুরু + চলাচল = শেষ কি না — না মিললে পাতা লুকায় না, বলে।
+     *
+     * @return array{from: string, to: string, columns: list<array{label: string, opening: string, profit: string, transfer: string, other: string, closing: string, agrees: bool}>, total: array<string, string>, agrees: bool}
+     */
+    public function equityStatement(string $from, string $to, ?int $branchId = null): array
+    {
+        $opening = $this->build(Carbon::parse($from)->subDay()->toDateString(), $branchId);
+        $closing = $this->build($to, $branchId);
+        $accounts = Account::query()->orderBy('code')->get();
+        $closeSources = YearEndService::closingSources();
+
+        $earlier = [];
+        foreach ($opening['equity'] as $group) {
+            $earlier[(int) $group['head']->id] = $group['total'];
+        }
+
+        $columns = [];
+        foreach ($closing['equity'] as $group) {
+            $ids = $this->subtreeIds($accounts, $group['head']);
+            $columns[] = $this->column(
+                $group['head']->name(),
+                $earlier[(int) $group['head']->id] ?? '0',
+                '0',
+                $this->movement($ids, $from, $to, $closeSources, true),
+                $this->movement($ids, $from, $to, $closeSources, false),
+                $group['total'],
+            );
+        }
+
+        // ⓘ বন্ধ না হওয়া লাভ — আয়-ব্যয়ের খাতের জের; বছর বন্ধের দাখিলা এখান থেকে সঞ্চিত মুনাফায় সরায়
+        $pl = $accounts->whereIn('type', [Account::INCOME, Account::EXPENSE])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $columns[] = $this->column(
+            __('accounts::field.profit_not_closed'),
+            $opening['profit'],
+            $this->movement($pl, $from, $to, $closeSources, false),
+            $this->movement($pl, $from, $to, $closeSources, true),
+            '0',
+            $closing['profit'],
+        );
+
+        $total = [];
+        foreach (['opening', 'profit', 'transfer', 'other', 'closing'] as $row) {
+            $total[$row] = array_reduce($columns, fn (string $sum, array $c) => bcadd($sum, $c[$row], 4), '0');
+        }
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'columns' => $columns,
+            'total' => $total,
+            'agrees' => collect($columns)->every(fn (array $c) => $c['agrees']),
+        ];
+    }
+
+    /** @return array{label: string, opening: string, profit: string, transfer: string, other: string, closing: string, agrees: bool} */
+    private function column(string $label, string $opening, string $profit, string $transfer, string $other, string $closing): array
+    {
+        $moved = bcadd(bcadd(bcadd($opening, $profit, 4), $transfer, 4), $other, 4);
+
+        return compact('label', 'opening', 'profit', 'transfer', 'other', 'closing') + ['agrees' => bccomp($moved, $closing, 4) === 0];
+    }
+
+    /**
+     * সময়ের চলাচল, ক্রেডিট ধনাত্মক (মালিকানার পক্ষ) — বছর বন্ধের দাখিলা কেবল, বা সেগুলো বাদে।
+     *
+     * @param  list<int>  $accountIds
+     * @param  list<string>  $closeSources
+     */
+    private function movement(array $accountIds, string $from, string $to, array $closeSources, bool $closingOnly): string
+    {
+        if ($accountIds === []) {
+            return '0';
+        }
+
+        $net = DB::table('ledger_entries')
+            ->where('ledger_entries.company_id', CompanyContext::id())
+            ->whereIn('ledger_entries.account_id', $accountIds)
+            ->whereBetween('ledger_entries.trx_date', [$from, $to])
+            ->when($closingOnly,
+                fn ($q) => $q->whereIn('ledger_entries.source_type', $closeSources),
+                fn ($q) => $q->whereNotIn('ledger_entries.source_type', $closeSources))
+            ->tap(fn ($q) => ($this->scope)($q, 'ledger_entries.branch_id'))
+            ->selectRaw('COALESCE(SUM(ledger_entries.credit - ledger_entries.debit), 0) as n')
+            ->value('n');
+
+        return bcadd((string) $net, '0', 4);
+    }
+
+    /**
+     * @param  Collection<int, Account>  $accounts
+     * @return list<int>
+     */
+    private function subtreeIds(Collection $accounts, Account $head): array
+    {
+        $ids = [(int) $head->id];
+
+        foreach ($accounts->where('parent_id', $head->id) as $child) {
+            $ids = [...$ids, ...$this->subtreeIds($accounts, $child)];
+        }
+
+        return $ids;
+    }
+
     /** @param  list<array<string, mixed>>  $side */
     private function sum(array $side): string
     {

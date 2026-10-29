@@ -13,6 +13,9 @@
          'render' => fn ($c) => $c->trx_date?->format('d M Y')],
         ['key' => 'customer', 'label' => __('customer::menu.party'),
          'render' => fn ($c) => $c->customer?->name()],
+        // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; ১৯ অক্টোবর: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম" (বিল/আদেশ/চালানের একই কলাম)
+        ['key' => 'point', 'label' => __('customer::field.place'), 'width' => '9rem',
+         'render' => fn ($c) => $c->customer_id ? view('customer::partials.place', ['customer' => $c->customer]) : null],
         ['key' => 'supplier', 'label' => __('supplier::menu.party'),
          'render' => fn ($c) => $c->supplier?->name()],
         ['key' => 'rate', 'label' => __('sales::field.commission_rate'),

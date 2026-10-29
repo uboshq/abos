@@ -1309,12 +1309,6 @@ parameters:
 			path: app/Modules/Hr/Sync/AttendanceSync.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/ProductionController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1397,30 +1391,6 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Modules/Inventory/Models/Batch.php
-
-		-
-			message: '#^Parameter \#1 \$num1 of function bccomp expects numeric\-string, float given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Models/Recipe.php
-
-		-
-			message: '#^Parameter \#2 \$num2 of function bcdiv expects string, float given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Models/Recipe.php
-
-		-
-			message: '#^Method App\\Modules\\Inventory\\Models\\RecipeLine\:\:grossQty\(\) should return string but returns float\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Inventory/Models/RecipeLine.php
-
-		-
-			message: '#^Parameter \#1 \$num1 of function bcdiv expects string, float given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Models/RecipeLine.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$difference\.$#'
@@ -1547,72 +1517,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Modules/Inventory/Services/ProductService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#1 \$recipe of method App\\Modules\\Inventory\\Services\\ProductionService\:\:assertCookable\(\) expects App\\Modules\\Inventory\\Models\\Recipe, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#1 \$recipe of method App\\Modules\\Inventory\\Services\\ProductionService\:\:assertEnoughIngredients\(\) expects App\\Modules\\Inventory\\Models\\Recipe, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#3 \$warehouse of method App\\Modules\\Inventory\\Services\\ProductionService\:\:assertEnoughIngredients\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \$product of method App\\Modules\\Inventory\\Services\\CostLayerService\:\:receive\(\) expects App\\Modules\\Inventory\\Models\\Product, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \$product of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Product, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \$recipe of method App\\Modules\\Inventory\\Services\\RecipeService\:\:consume\(\) expects App\\Modules\\Inventory\\Models\\Recipe, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\RecipeService\:\:consume\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/ProductionService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Modules/Inventory/Services/RecipeService.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Inventory\\Models\\Recipe\:\:perUnit\(\) expects App\\Modules\\Inventory\\Models\\RecipeLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Modules/Inventory/Services/RecipeService.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'

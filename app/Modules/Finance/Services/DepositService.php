@@ -78,10 +78,13 @@ final class DepositService
             // ⭐ কোথায় রাখা — তালিকা থেকে; পুরনো লেখা ঘরটাও ভরে থাকে
             $institutionId = $this->institutions->resolve($data, Institution::BANK);
 
+            // ⛔ যে বাক্স থেকে টাকা গেল তার শাখায় — উপরের শাখায় নয়; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            $branchId = $this->signature->branchFor([$from->id]);
+
             $deposit = Deposit::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('DEP'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('DEP', $branchId),
                 'kind_id' => $kind->id,
                 'institution_id' => $institutionId,
                 'institution' => $this->institutions->nameOf($institutionId)
@@ -733,17 +736,11 @@ final class DepositService
             : StandardChart::DRAWINGS);
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+    // ⓘ ১১৩৫-এ অন্য খাত বসা থাকলে (লাইভ UB) কেবল উৎসে কর কাটা থাকলেই থামে — শূন্য কাটায় [[deductionLines()]] খোঁজেই না
     private function head(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'account_id' => __('finance::validation.chart_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 
     /**

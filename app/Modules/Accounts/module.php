@@ -174,6 +174,8 @@ return [
              */
             ['label' => 'accounts::menu.inter_company', 'icon' => 'handover', 'route' => 'accounts.inter_company.index', 'permission' => 'accounts.inter_company'],
             ['label' => 'accounts::menu.cash_count', 'icon' => 'cash', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
+            // ⭐ করণীয় — কোষাগারে জমা, মূসক-৬.৬, শেষ তারিখসহ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.obligations', 'icon' => 'clock', 'route' => 'accounts.obligation.index', 'permission' => 'accounts.obligation.view'],
         ],
         'reports' => [
             ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
@@ -282,6 +284,8 @@ return [
              */
             ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.final.cash_flow', 'permission' => 'accounts.report.final'],
+            // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী — IAS 1.10(c), 1.106 (ERP ১০০%-এর হিসাবের ফাঁক #৬, ২০ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.equity_statement', 'icon' => 'grid', 'route' => 'accounts.equity_statement', 'permission' => 'accounts.report.final'],
             /*
              * ⓘ চূড়ান্ত হিসাবগুলোর পরেই, আর সেটা ইচ্ছাকৃত: গ্রুপের ছবিটা
              * এক কোম্পানির লাভ-ক্ষতি ও স্থিতিপত্র পড়ার **পরের** প্রশ্ন,
@@ -324,6 +328,8 @@ return [
         'accounts.voucher.create',
         'accounts.voucher.update',
         'accounts.voucher.delete',
+        // ⭐ ব্যাংক ফাইল (BEFTN) নামানো — প্রাপকের পুরো হিসাব নম্বর, তাই নিজের চাবি (fe, ২৫ অক্টোবর ২০২৬; লাইভে 2027_04_04 মাইগ্রেশন দেয়)
+        'accounts.voucher.bank_file',
         /*
          * ⛔ `accounts.voucher.approve` তোলা হলো — ২১ সেপ্টেম্বর ২০২৬।
          *
@@ -449,6 +455,9 @@ return [
         'accounts.transfer.manage',
         'accounts.count.create',
         'accounts.count.approve',
+        // ⭐ করণীয় — দেখা, আর "করা হয়েছে" (চালান বা সনদের নম্বরসহ, নিরীক্ষায়)
+        'accounts.obligation.view',
+        'accounts.obligation.update',
     ],
 
     /* নতুন ইনস্টলে (§৫): Manager হিসাব দেখা ও রিপোর্ট (ভাউচার বানানো accountant-এর)। */
@@ -476,6 +485,8 @@ return [
             'accounts.report.group',
             'accounts.voucher.create',
             'accounts.voucher.update',
+            // ⭐ পরিশোধ পাকা করেন যিনি, তিনিই ব্যাংক ফাইল নামান (নতুন কোম্পানির ছাঁচ)
+            'accounts.voucher.bank_file',
             'accounts.cheque.view',
             'accounts.cheque.manage',
             'accounts.till.view',
@@ -488,6 +499,8 @@ return [
             'accounts.note.view',
             'accounts.loan.view',
             'accounts.asset.view',
+            'accounts.obligation.view',
+            'accounts.obligation.update',
         ],
         'Manager' => ['accounts.view', 'accounts.report'],
     ],
@@ -902,6 +915,35 @@ return [
             'default' => 7,
             'group' => 'entry',
         ],
+        /*
+         * ⭐ করণীয়ের শেষ তারিখ (fe, ২২ অক্টোবর ২০২৬) — কোষাগারে জমা পরের মাসের কোন তারিখের মধ্যে (ডিফল্ট ১৫, ১ থেকে ২৮); মূসক-৬.৬
+         * কর্তনের কত দিন পরের মধ্যে (ডিফল্ট ৩ — বিধিতে কর্তনের দিন থেকে গোনা, মাসের তারিখ থেকে নয়)। ⓘ আইন বদলালে এখানেই বদলায়, কোডে
+         * নয়; ⚠️ তিনটাই হিসাবরক্ষকের সাথে মিলিয়ে নেওয়ার কথা লেবেলেই লেখা।
+         */
+        [
+            'key' => 'accounts.tax.ait_deposit_day',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.ait_deposit_day',
+            'type' => 'integer',
+            'default' => 15,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'accounts.tax.vds_deposit_day',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.vds_deposit_day',
+            'type' => 'integer',
+            'default' => 15,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'accounts.tax.mushak_66_issue_days',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.mushak_66_issue_days',
+            'type' => 'integer',
+            'default' => 3,
+            'group' => 'general',
+        ],
         [
             'key' => 'accounts.cash_ceiling_enabled',
             'label' => 'accounts::settings.cash_ceiling_enabled',
@@ -1022,5 +1064,13 @@ return [
             // ⭐ ভাউচারও — শেষ সইয়ে নিজে পোস্ট (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
             \App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature::class,
         ],
+    ],
+
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — টাকা হাতে, খরচ, লাভ, ব্যাংক মেলানো (cb, ২০ অক্টোবর ২০২৬; [[WidgetSummaries]])
+    'phone_widgets' => [
+        \App\Modules\Accounts\Widgets\MoneyInHandSummary::class,
+        \App\Modules\Accounts\Widgets\ExpensesSummary::class,
+        \App\Modules\Accounts\Widgets\ProfitSummary::class,
+        \App\Modules\Accounts\Widgets\BankReconcileSummary::class,
     ],
 ];

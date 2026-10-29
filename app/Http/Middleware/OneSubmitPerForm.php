@@ -61,7 +61,12 @@ class OneSubmitPerForm
          * এলে এটা ভাবত দ্বিতীয় চাপ, আর "জমা হয়েছে — একটু পরে তালিকায় দেখুন" বলে ফিরিয়ে দিত — কিছুই জমা না করে।
          * ⭐ তাই সারাংশের দরজায় টোকেন ছোঁয়া হয় না; একবারের পাহারা খাটে আসল জমায়।
          */
-        if (str_ends_with((string) $request->route()?->getName(), '.overview')) {
+        /*
+         * ⛔ পোস্টের আগের প্রিভিউ (`….simulate`) — একই কারণ, একই ছাড় (টাকা দেওয়ার পর্দা, ২২ অক্টোবর ২০২৬): প্রিভিউ ফর্মের
+         * সব ঘর (টোকেনসহ) পাঠায়, আর টোকেন খরচ হলে পরে আসল "পোস্ট" ফিরে আসত "জমা হয়েছে" বলে, কিছুই না রেখে।
+         */
+        $route = (string) $request->route()?->getName();
+        if (str_ends_with($route, '.overview') || str_ends_with($route, '.simulate')) {
             return $next($request);
         }
 
@@ -78,6 +83,9 @@ class OneSubmitPerForm
          * করত**, আর ভুলটা ধরা পড়ত অন্য কারও পর্দায়।
          */
         $request->request->remove(FormIsNotSubmittedTwice::FIELD);
+
+        // ⓘ পরের পাহারা ([[KeepsAFormInItsOwnBranch]]) কিছু না লিখে থামালে দাবিটা ফেরত দেয় — তার জন্য টোকেনটা রাখা
+        $request->attributes->set(FormIsNotSubmittedTwice::FIELD, $token);
 
         $response = $next($request);
 

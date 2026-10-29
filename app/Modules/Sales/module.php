@@ -1454,6 +1454,28 @@ return [
         ],
         [
             /*
+             * ⭐ আদায়ে রাউন্ডিংয়ের সীমা, টাকায় — টাকা নেওয়ার নকশা ১০০, দফা ৪ (২১ অক্টোবর ২০২৬): ডিফল্ট ৳১০।
+             * ⓘ ৳০.৫০ পর্যন্ত ৫৩০৫-এ সই ছাড়া; তার উপরে সীমা পর্যন্ত মালিকের সই (মালিক, ১ অক্টোবর; fe, ২২ অক্টোবর ২০২৬);
+             * সীমার উপরে বাংলায় ফেরত ([[CollectionService::plan()]], [[CollectionService::differenceNeedsOwner()]])।
+             */
+            'key' => 'sales.collection.rounding_limit',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ
+            'super_admin_only' => true,
+            'label' => 'sales::settings.collection_rounding_limit',
+            'type' => 'number',
+            'default' => 10,
+            'group' => 'limits',
+        ],
+        [
+            /* ⭐ আদায়ে স্লিপ/অ্যাডভাইস/স্ক্রিনশট বাধ্যতামূলক — দফা ১৫ (ISA 500); ডিফল্ট বন্ধ, আজকের আচরণ */
+            'key' => 'sales.collection.attachment_required',
+            'label' => 'sales::settings.collection_attachment_required',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'limits',
+        ],
+        [
+            /*
              * বিক্রিতে ভ্যাট — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ।
              * ⓘ বন্ধ মানে বন্ধ: ঘর নেই, সার্ভার ভ্যাট নেয় না ([[CalculatesSalesLines::lineFigures()]])।
              * ক্রয়ের সুইচ আলাদা (`purchase.vat_enabled`) — কোনো দিক অন্যটা পড়ে না।
@@ -1922,4 +1944,15 @@ return [
         \App\Modules\Sales\Models\CreditDecision::class => 'append-only record of what the credit wall saw and said; never edited',
     ],
 
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — আজকের চালান (নকশা ৬), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    // ⭐ ফোনের হোম-স্ক্রিনে ৮ দ্রুত কাজ আর ৯ লক্ষ্য বনাম অর্জন (a6, ২০ অক্টোবর ২০২৬)
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট ([[WidgetSummaries]]; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Sales\Widgets\ChallansTodaySummary::class,
+        \App\Modules\Sales\Widgets\QuickActionsSummary::class,
+        \App\Modules\Sales\Widgets\TargetSummary::class,
+        \App\Modules\Sales\Widgets\SrBoardSummary::class,
+        \App\Modules\Sales\Widgets\SalesTodaySummary::class,
+        \App\Modules\Sales\Widgets\CollectionsTodaySummary::class,
+    ],
 ];

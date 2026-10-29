@@ -148,6 +148,22 @@ final class FormIsNotSubmittedTwice
         }
     }
 
+    /**
+     * দাবি ফিরিয়ে দেওয়া — জমাটা কিছু না লিখেই থামানো হয়েছে (ভুল শাখা, [[FormBranchPin]])।
+     *
+     * ⚠️ না ফেরালে একই পাতা আবার জমা দিলে উত্তর আসত "আগেই সংরক্ষিত হয়েছে" — অথচ কিছুই সংরক্ষিত হয়নি।
+     */
+    public function release(string $token): void
+    {
+        try {
+            DB::table('submitted_forms')->where('token', $token)->whereNull('completed_at')->delete();
+        } catch (QueryException $failed) {
+            if (! $this->isMissingTable($failed)) {
+                throw $failed;
+            }
+        }
+    }
+
     /** এই ব্যতিক্রমটা কি `token` দুইবার বসানোর চেষ্টা? */
     private function isDuplicate(QueryException $failed): bool
     {

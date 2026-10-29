@@ -64,7 +64,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="$quotation->customer_id" placeholder="-" required />
                 <x-ui.field name="trx_date" type="date" :label="__('sales::field.date')"
                             :value="old('trx_date', $quotation->trx_date?->toDateString() ?? now()->toDateString())"

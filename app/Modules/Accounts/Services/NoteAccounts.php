@@ -31,7 +31,7 @@ final class NoteAccounts
     /** সেবাদাতার বকেয়া যে খাতগুলোয় বসতে পারে */
     private const PROVIDER_PAYABLES = [StandardChart::PAYABLE, StandardChart::TRANSPORT_PAYABLE, StandardChart::LABOUR_PAYABLE, StandardChart::VENDOR_PAYABLE];
 
-    public function __construct(private readonly PartyRegistry $parties) {}
+    public function __construct(private readonly PartyRegistry $parties, private readonly StandardChart $chart) {}
 
     /**
      * এই ধরনের পক্ষগুলো — বাছার তালিকার জন্য।
@@ -200,8 +200,10 @@ final class NoteAccounts
         /*
          * ⓘ যে ক্রমে চাওয়া হয়েছে সেই ক্রমে — প্রথমটাই ডিফল্ট ([[defaultOther()]])। ⛔ কোড ধরে সাজালে ড্যামেজ দাবি (১১৫১)
          * বিক্রয় ফেরতের (৪১১০) আগে বসত, আর প্রতিটা নতুন ক্রেডিট নোট চুপচাপ ড্যামেজ দাবিতে পড়ত (৪ অক্টোবর ২০২৬)।
+         * ⛔ কোডে অন্য খাত বসে থাকলে (UB-র ১১৫১ = Star Line-এর ব্যাংক) সেটা তালিকায় নয়, ডিফল্টও নয় ([[StandardChart::holdsItsMeaning()]])।
          */
         return Account::query()->postable()->whereIn('code', $codes)->get()
+            ->filter(fn (Account $a) => $this->chart->holdsItsMeaning($a))
             ->sortBy(fn (Account $a) => array_search((string) $a->code, $codes, true))
             ->values();
     }

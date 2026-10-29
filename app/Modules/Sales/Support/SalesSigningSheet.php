@@ -30,11 +30,12 @@ final class SalesSigningSheet
 {
     public static function ofChallan(DeliveryChallan $challan): array
     {
-        $challan->loadMissing(['lines.product', 'customer', 'warehouse']);
+        $challan->loadMissing(['lines.product', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         return self::sheet(
             facts: [
-                __('sales::field.customer') => $challan->customer?->name(),
+                // ⭐ "নাম · পয়েন্ট · শাখা" — সই দেওয়ার আগে কোন দোকান, কোন শাখা (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                __('sales::field.customer') => $challan->customer?->nameWithPoint(),
                 __('core.print.date') => DateFormat::format($challan->trx_date),
                 __('sales::field.warehouse') => $challan->warehouse?->name(),
                 __('sales::field.vehicle_no') => $challan->vehicle_no,
@@ -55,11 +56,12 @@ final class SalesSigningSheet
 
     public static function ofInvoice(SalesInvoice $invoice): array
     {
-        $invoice->loadMissing(['lines.product', 'lines.challanLine', 'customer', 'warehouse']);
+        $invoice->loadMissing(['lines.product', 'lines.challanLine', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         return self::sheet(
             facts: [
-                __('sales::field.customer') => $invoice->customer?->name(),
+                // ⭐ "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                __('sales::field.customer') => $invoice->customer?->nameWithPoint(),
                 __('core.print.date') => DateFormat::format($invoice->trx_date),
                 __('sales::field.due_on') => DateFormat::format($invoice->due_on),
                 __('sales::field.warehouse') => $invoice->warehouse?->name(),

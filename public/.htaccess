@@ -35,6 +35,8 @@
 # রিলিজ বসানো মানে এই একটা ফাইল বদলানো — লিংক একই থাকে।
 <IfModule mod_mime.c>
     AddType application/vnd.android.package-archive .apk
+    # ⭐ Android App Links — /.well-known/assetlinks.json ঠিক application/json-এ, নইলে autoVerify ব্যর্থ আর লিংক ব্রাউজারে
+    AddType application/json .json
 </IfModule>
 
 # ⚠️ লিংক একই থাকে বলে পুরনো ফাইল কোনো ক্যাশে থেকে যেতে পারে (২ অক্টোবর ২০২৬:
@@ -54,4 +56,13 @@
 <IfModule mod_headers.c>
     Header always unset X-Powered-By
     Header unset X-Powered-By
+</IfModule>
+
+# ── ফাইলের ধরন আন্দাজ নয় — ২২ অক্টোবর ২০২৬ (fe) ──
+#
+# ⓘ Laravel-এর প্রতিটা উত্তরে `nosniff` আগে থেকেই বসে ([[ContentSecurityPolicy]]), কিন্তু লোগো আর ছবি `/storage/…`
+# থেকে সরাসরি Apache দেয় — Laravel ছোঁয় না। ⛔ তখন ব্রাউজার ভেতর দেখে ধরন আন্দাজ করত, আর ছবির নামে রাখা HTML
+# পাতা হয়ে চলতে পারত। `set` — Laravel-এর উত্তরে দ্বিতীয়বার যোগ হয় না, একই মানে বদলায়।
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
 </IfModule>

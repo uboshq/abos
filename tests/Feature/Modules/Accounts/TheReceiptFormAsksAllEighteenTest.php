@@ -27,6 +27,12 @@ use Tests\TestCase;
  * দুইটা **খালি ড্রপডাউন** — দেখা যেত, ভিতরে কিছু থাকত না, আর কোনো
  * ত্রুটিও আসত না, কারণ কম্পোনেন্টের ডিফল্ট `[]`।
  *
+ * ── ⭐ ২১ অক্টোবর ২০২৬: মালিকের রায় — আঠারো নয়, পদ্ধতির নিজের ঘর ─────────────
+ * মালিক ভাউচারের ছবি দেখিয়ে: *"এতগুলো দেওয়া কি int. standard?"* — নমুনা দেখে: *"ok ekoni kaj kore live e daw"*।
+ * ⭐ এখন পর্দা টাকার বাক্স ([[x-money.method]]) — প্রতিটা পদ্ধতি কেবল নিজের ঘর চায়; মালিকের বাদ দেওয়া দশটা ঘর আর নেই,
+ * কলামগুলো থাকে ([[MoneyMovementHasEveryFieldTheOwnerAskedForTest]])। "কার মাধ্যমে" থাকে — মালিকের আলাদা আদেশ।
+ * ⛔ দাবি দুর্বল করা নয়: মালিকের রায়ে প্রশ্নের তালিকা বদলেছে; পাহারা দুই দিকেই — যা চাই তা আছে, যা বাদ তা ফেরেনি।
+ *
  * ── ⚠️ আর কার্ল দিয়ে এটা যাচাই করা যায় না ────────────────────────────
  * প্রথমে `curl` দিয়ে পাতাটা টেনে দেখা হয়েছিল — **HTTP ২০০** এল, আর
  * একটাও ঘর পাওয়া গেল না। ⓘ কারণ কার্ল লগইন করা নয়, তাই ২০০-টা ছিল
@@ -36,14 +42,16 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @var list<string> মালিকের তালিকা, হুবহু */
+    /** @var list<string> রসিদের পর্দা যা চায় — টাকার বাক্স (নগদ, MFS, ট্রান্সফার, নগদ জমা) আর "কার মাধ্যমে" */
     private const FIELDS = [
-        'carried_by', 'moved_at', 'instrument', 'note_counts',
-        'wallet', 'wallet_medium', 'counterparty_phone',
-        'instrument_no', 'instrument_date',
-        'charge_amount', 'charge_borne_by', 'transfer_mode_id',
-        'from_bank', 'from_branch', 'from_account_name', 'from_account_no',
-        'deposit_slip_no', 'lands_on',
+        'carried_by', 'instrument', 'note_counts',
+        'instrument_no', 'charge_amount', 'transfer_mode_id', 'value_date', 'deposit_slip_no',
+    ];
+
+    /** @var list<string> মালিক ২১ অক্টোবর যা বাদ দিয়েছেন — কলাম থাকে, পর্দায় নয় */
+    private const DROPPED = [
+        'moved_at', 'wallet', 'wallet_medium', 'counterparty_phone', 'charge_borne_by',
+        'from_branch', 'from_account_name', 'from_account_no', 'lands_on',
     ];
 
     protected function setUp(): void
@@ -57,7 +65,7 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
     }
 
     /**
-     * ⛔ আঠারোটার আঠারোটাই পর্দায়।
+     * ⛔ রসিদ যা চায় তা পর্দায় আছে।
      */
     public function test_the_receipt_form_asks_every_one_of_them(): void
     {
@@ -76,12 +84,31 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
         }
 
         $this->assertSame([], $missing, implode("\n", [
-            'রসিদের ফর্মে এই ঘরগুলো নেই:',
+            '⛔ রসিদের ফর্মে এই ঘরগুলো নেই:',
             '',
             '⚠️ কম্পোনেন্টে থাকা আর পর্দায় আসা দুইটা আলাদা সত্য।',
             '',
             ...$missing,
         ]));
+    }
+
+    /**
+     * ⭐ মালিকের ২১ অক্টোবরের রায়: বাদ দেওয়া দশটা ঘর রসিদ, পরিশোধ আর খরচের নতুন ফর্মে আর নেই।
+     */
+    public function test_the_ten_fields_the_owner_dropped_are_not_asked_again(): void
+    {
+        foreach (['receipt', 'payment', 'expense'] as $type) {
+            $html = (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
+            $asked = array_values(array_filter(self::DROPPED, fn (string $f) => str_contains($html, 'name="'.$f.'"')));
+
+            $this->assertSame([], $asked, "⛔ {$type}: মালিকের বাদ দেওয়া ঘর আবার চাওয়া হচ্ছে — ".implode(', ', $asked));
+        }
+
+        $payment = (string) $this->get(route('accounts.voucher.create', ['type' => 'payment']))->assertOk()->getContent();
+        foreach (['instrument_date', 'from_bank'] as $chequeField) {
+            $this->assertStringContainsString('name="'.$chequeField.'"', $payment, "⛔ পরিশোধের চেকে {$chequeField} নেই");
+        }
+        $this->assertStringContainsString('name="carried_by"', $payment, '⛔ পরিশোধে "কার মাধ্যমে" নেই — মালিকের আলাদা আদেশ');
     }
 
     /**
@@ -132,7 +159,7 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        foreach (['cash', 'mfs', 'transfer'] as $way) {
+        foreach (['cash', 'mfs', 'transfer', 'deposit'] as $way) {
             $this->assertStringContainsString('value="'.$way.'"', $html,
                 "মাধ্যম '{$way}' পর্দায় নেই, অথচ ভ্যালিডেশন সেটা মানে।");
         }
@@ -215,18 +242,17 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
     }
 
     /**
-     * ⭐ পরিশোধে লেখাটা "প্রাপকের", রসিদে "প্রেরকের"।
-     *
-     * ⓘ একই কলাম, দুই অর্থ — আর অর্থটা আসে ভাউচারের ধরন থেকে। ⚠️ ভুল
-     * হলে ঘরটা ভরা হত, কেবল ভুল মানুষের নম্বর দিয়ে, আর সেটা ধরা পড়ত
-     * যেদিন কাউকে ফোন করতে হত।
+     * ⓘ প্রেরক/প্রাপকের মোবাইল (counterparty_phone) মালিকের ২১ অক্টোবরের রায়ে বাদ — আগে এখানে দাবি ছিল লেখাটা রসিদে
+     * "প্রেরকের" আর পরিশোধে "প্রাপকের"। ⭐ এখন দাবি: দুই ফর্মের কোনোটাতেই ঘরটা নেই, কিন্তু পুরনো কাগজের মানটা কলামে থাকে।
      */
-    public function test_the_phone_label_turns_around_for_a_payment(): void
+    public function test_the_phone_is_no_longer_asked_but_an_old_value_stays(): void
     {
-        $receipt = (string) $this->get(route('accounts.voucher.create', ['type' => 'receipt']))->getContent();
-        $payment = (string) $this->get(route('accounts.voucher.create', ['type' => 'payment']))->getContent();
+        foreach (['receipt', 'payment'] as $type) {
+            $this->assertStringNotContainsString('name="counterparty_phone"',
+                (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent(),
+                "⛔ {$type}: মালিকের বাদ দেওয়া মোবাইলের ঘর আবার চাওয়া হচ্ছে");
+        }
 
-        $this->assertStringContainsString(__('accounts::field.sender_phone', [], 'bn'), $receipt);
-        $this->assertStringContainsString(__('accounts::field.receiver_phone', [], 'bn'), $payment);
+        $this->assertContains('counterparty_phone', (new Voucher)->getFillable(), '⛔ পুরনো মোবাইলের মান আর রাখা যায় না — পুরনো ফোনের পাঠানো তথ্য হারাবে');
     }
 }

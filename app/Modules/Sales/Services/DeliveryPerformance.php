@@ -113,7 +113,7 @@ final class DeliveryPerformance
             ->leftJoin('sal_delivery_states as st', 'st.delivery_challan_id', '=', 'sal_challans.id')
             ->leftJoinSub($arrived, 'arr', 'arr.delivery_challan_id', '=', 'sal_challans.id')
             ->leftJoinSub($left, 'dep', 'dep.delivery_challan_id', '=', 'sal_challans.id')
-            ->with('customer')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->select('sal_challans.*')
             ->selectRaw(self::PROMISED.' as promised_on')
             ->selectRaw('DATE(arr.at) as arrived_on')

@@ -19,7 +19,8 @@
 <div class="rule"></div>
 <div class="cap">{{ mb_strtoupper($t('sales::paper_design.received_from')) }}</div>
 <div data-received-from><strong>{{ $from['name'] }}</strong></div>
-@if ($from['point'] !== '')<div class="small">{{ $t('sales::print.classic.point') }} {{ $from['point'] }}</div>@endif
+{{-- ⭐ রোলে এক লাইন: "পয়েন্ট · শাখা" কেবল মান, ৪০ অক্ষরে কাটা — নাম ছাড়া (মালিক, ১৯ অক্টোবর ২০২৬; [[PaperPlace::of()]]) --}}
+@if ($from['point'] !== '')<div class="small" data-place>{{ mb_strimwidth($from['point'], 0, 40, '…') }}</div>@endif
 @if ($from['phone'] !== '')<div class="small">{{ $from['phone'] }}</div>@endif
 
 <div style="margin-top: 1.5mm">{!! $look->thermalAmount($t('sales::paper_design.amount_received'), $facts['total'], $lang === 'bn' ? $facts['words_bn'] : $facts['words']) !!}</div>
@@ -43,6 +44,14 @@
             <tr><td><strong>{{ $bill['no'] }}</strong> <span class="small">{{ $bill['date'] }}</span></td><td class="num">{{ $bill['bill_total'] }}</td><td class="num">{{ $bill['amount'] }}</td></tr>
         @endforeach
         <tr class="tot"><td colspan="2">{{ $t('core.print.total') }}</td><td class="num">{{ $facts['total'] }}</td></tr>
+    </table>
+@endif
+{{-- ⓘ গ্রাহক যা কেটে রাখলেন, ছাড়/রাউন্ডিং আর অপ্রয়োগকৃত — দফা ১৭ ([[OrderPaperFacts::receipt()]]) --}}
+@if (($facts['withheld'] ?? []) !== [])
+    <table class="kv" style="margin-top: 1mm" data-withheld>
+        @foreach ($facts['withheld'] as $row)
+            <tr><td>{{ $t($row['label']) }}</td><td class="num">{{ $row['amount'] }}</td></tr>
+        @endforeach
     </table>
 @endif
 @if ($facts['narration'] !== '')<div class="small" style="margin-top: 1mm">{{ $facts['narration'] }}</div>@endif

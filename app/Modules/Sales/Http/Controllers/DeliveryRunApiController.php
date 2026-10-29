@@ -45,7 +45,7 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
         $challans = ViewedBranch::narrow(DeliveryChallan::query(), 'sal_challans.branch_id')
             ->whereIn('sal_challans.id', $onTheWay)
             // ⓘ গাড়ি আর বাহক পাতায় একবার — আগে প্রতিটা চালানে আলাদা ডাক ([[DeliveryChallan::transportFacts()]]; অডিট ফোন ⚠️১৭)
-            ->with(['customer.location.parent', 'lines.product', 'vehicle.vehicleType', 'carrier'])
+            ->with(['customer.location.parent', 'customer.branch', 'lines.product', 'vehicle.vehicleType', 'carrier'])
             ->orderBy('sal_challans.trx_date')->orderBy('sal_challans.id')
             // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
             ->paginate(self::PER_PAGE);
@@ -65,6 +65,8 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
                     'customer' => (string) ($c->customer?->name() ?? ''),
                     // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
                     'customer_point' => $c->customer?->pointName(),
+                    // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                    'customer_branch' => $c->customer?->branchName(),
                     'phone' => (string) ($c->customer?->phone ?? ''),
                     'address' => (string) ($c->customer?->address() ?? ''),
                     'vehicle' => $t['vehicle_no'] ?? null,

@@ -195,6 +195,17 @@
 
                 <x-ui.field name="tin" :label="__('supplier::field.tin')"
                             :value="old('tin', $supplier->tin)" />
+
+                {{-- ⭐ উৎসে কর আর ভ্যাটের হার — পরিশোধে এখান থেকে কাটা (নকশা #২৫); বদলালে কারণ --}}
+                <x-ui.field name="ait_rate" type="number" step="0.01" min="0" max="100" numeric
+                            :label="__('supplier::field.ait_rate')" :value="old('ait_rate', $supplier->ait_rate)" />
+                <x-ui.field name="vds_rate" type="number" step="0.01" min="0" max="100" numeric
+                            :label="__('supplier::field.vds_rate')" :value="old('vds_rate', $supplier->vds_rate)" />
+                @if ($supplier->exists)
+                    <div class="sm:col-span-2">
+                        <x-ui.field name="rate_reason" :label="__('supplier::field.rate_reason')" :value="old('rate_reason')" />
+                    </div>
+                @endif
             </div>
         </section>
 

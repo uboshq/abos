@@ -20,9 +20,11 @@
     $columns = $isDocumentTab ? [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date)],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
          'render' => fn ($d) => view('accounts::voucher.partials.document-link', [
              'source' => $d->source_type, 'id' => $d->source_id,
+             // ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে কন্ট্রোলার, পাতার একবারে
+             'party' => ($partyNames ?? [])[$d->source_type.':'.$d->source_id] ?? null,
          ])],
         ['key' => 'narration', 'label' => __('core.table.narration')],
         ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
@@ -30,8 +32,12 @@
     ] : [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-         'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
+         'render' => fn ($v) => view('accounts::voucher.partials.number', [
+             'voucher' => $v,
+             // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট", নইলে প্রাপকের নাম (মালিক, ১৯ অক্টোবর ২০২৬; [[VoucherParties]])
+             'party' => ($partyNames ?? [])[$v->id] ?? null,
+         ])],
     ];
 
     if (! $isDocumentTab && $tab === \App\Modules\Accounts\Http\Controllers\VoucherListController::OTHERS) {
@@ -39,6 +45,22 @@
             'render' => fn ($v) => __('accounts::menu.' . $v->type)];
         $columns[] = ['key' => 'against_type', 'label' => __('accounts::field.came_from'), 'width' => '11rem',
             'render' => fn ($v) => \Illuminate\Support\Str::headline((string) $v->against_type)];
+    }
+
+    /*
+     * ⭐ খসড়া বাছাই — একসাথে পোস্ট বা অনুমোদনে পাঠানো (অনুমোদন পর্দা ভাগ ২, দফা ১৪; [[VoucherBulkPostController]])।
+     * ⓘ ঘরটা কেবল খসড়ায়, আর কেবল যাঁর পোস্টের চাবি আছে; ⛔ তবু সার্ভার প্রতিটা আবার দেখে — লুকানো ঘর হাতে বানিয়ে পাঠানো যায়।
+     * ⓘ চেকবক্স টেবিলের বাইরের ফর্মে (`form="voucher-bulk"`) — টেবিলের ভেতরে `<form>` বসালে HTML ওটাকে বাইরে ঠেলে দিত।
+     */
+    $canBulk = ! $isDocumentTab && auth()->user()?->can('accounts.voucher.update');
+
+    if ($canBulk) {
+        array_unshift($columns, ['key' => 'pick', 'label' => __('accounts::field.pick'), 'width' => '3rem',
+            'render' => fn ($v) => $v->isDraft()
+                ? new \Illuminate\Support\HtmlString('<label class="flex min-h-(--spacing-touch) items-center justify-center">'
+                    .'<input type="checkbox" name="ids[]" value="'.(int) $v->id.'" form="voucher-bulk" class="size-4" data-voucher-pick>'
+                    .'<span class="sr-only">'.e(__('accounts::field.pick').' '.$v->document_no).'</span></label>')
+                : '']);
     }
 
     if (! $isDocumentTab) {
@@ -94,6 +116,16 @@
                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
             </x-ui.toolbar>
         </form>
+
+        {{-- ⭐ একসাথে পোস্ট বা অনুমোদনে পাঠানো — আগে দেখার পাতা (দফা ১৪); ⓘ খসড়া না থাকলে বোতামটাই নেই --}}
+        @if ($canBulk && $vouchers->getCollection()->contains(fn ($v) => $v->isDraft()))
+            <form method="GET" action="{{ route('accounts.voucher.bulk_review') }}" id="voucher-bulk"
+                  class="flex flex-wrap items-center gap-3 border-b border-(--color-border) px-3 py-2">
+                <input type="hidden" name="back" value="{{ request()->fullUrl() }}">
+                <x-ui.button type="submit" tone="secondary" data-voucher-bulk>{{ __('accounts::action.bulk_post_review') }}</x-ui.button>
+                <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::message.bulk_post_hint') }}</span>
+            </form>
+        @endif
 
         <x-ui.table
             :compact="request()->boolean('compact')"

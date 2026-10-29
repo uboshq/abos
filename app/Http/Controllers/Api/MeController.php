@@ -97,6 +97,17 @@ class MeController extends Controller
             'phoneModules' => $this->phone->onCodes(),
 
             /*
+             * ⭐ এই সার্ভারে কোন নিজের-দরজা আছে — অ্যাপের মেনু কাজ না করা সারি দেখায় না (মালিকের নিয়ম; a4-এর সাথে ঠিক
+             * করা, a6, ২০ অক্টোবর ২০২৬)। ⓘ রুট সত্যিই থাকলে তবেই true; পুরনো সার্ভারে ঘরটাই নেই, অ্যাপ তখন দুটোই false ধরে।
+             */
+            'features' => [
+                'profile_photo' => \Illuminate\Support\Facades\Route::has('api.me.photo.store')
+                    && \Illuminate\Support\Facades\Route::has('api.users.photo'),
+                'my_phones' => \Illuminate\Support\Facades\Route::has('api.me.devices.index')
+                    && \Illuminate\Support\Facades\Route::has('api.me.devices.destroy'),
+            ],
+
+            /*
              * ⭐ কোম্পানি DO ছেড়ে বিক্রয় আদেশে চলে কি না (`sales.orders_replace_do`; DO বিক্রয় আদেশে মেশানো, ধাপ ১০,
              * ৫ অক্টোবর ২০২৬) — অ্যাপ তখন DO-র পর্দায় আদেশের দরজায় লেখে (`/sales/orders`)। ⓘ পুরনো অ্যাপ এটা পড়ে না।
              */
@@ -161,9 +172,11 @@ class MeController extends Controller
              * আর গ্রুপের মালিকের এক পদবি সব কোম্পানিতে ([[Ownership::groupOwnerTitle()]])। ⛔ পদবি না থাকলে খালি —
              * ফাঁক ভরাতে রোল নয় (মালিক: "namer sate podobi rakbe roll noy")।
              * ⓘ ছবির ঠিকানা পুরো (https://…), ফোন নিজে জুড়ে নিতে পারে না।
+             * ⛔ ২০ অক্টোবর ২০২৬ (a6): ঠিকানাটা টোকেন চাওয়া দরজা (`/api/v1/users/{id}/photo`), public ফাইল নয় — ফোন ছবিটা
+             * `Authorization: Bearer` সহ আনে ([[User::avatarApiUrl()]])।
              */
             'designation' => $this->designationOf($user),
-            'avatar_url' => ($url = $user->avatarUrl()) === null ? null : url($url),
+            'avatar_url' => $user->avatarApiUrl(),
         ];
     }
 

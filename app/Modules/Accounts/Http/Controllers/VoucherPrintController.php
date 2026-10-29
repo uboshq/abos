@@ -209,7 +209,12 @@ class VoucherPrintController extends Controller implements HasMiddleware
 
         if ($party !== '' && filled($voucher->party_type)) {
             $model = app(DrillResolver::class)->resolve((string) $voucher->party_type, (int) $voucher->party_id);
-            $point = $model !== null && method_exists($model, 'pointName') ? (string) $model->pointName() : '';
+            // ⭐ "পয়েন্ট · শাখা" — গ্রাহকের নিজের এক নিয়ম, শাখাসহ (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম); সরবরাহকারীর পয়েন্ট নেই
+            $point = match (true) {
+                $model !== null && method_exists($model, 'placeName') => (string) $model->placeName(),
+                $model !== null && method_exists($model, 'pointName') => (string) $model->pointName(),
+                default => '',
+            };
         }
 
         $against = '';

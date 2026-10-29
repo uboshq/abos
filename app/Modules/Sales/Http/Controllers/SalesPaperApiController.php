@@ -44,7 +44,7 @@ final class SalesPaperApiController extends Controller
             ->whereBetween('trx_date', [$from, $to]);
 
         $total = (string) ((clone $query)->reorder()->sum('total') ?: '0');
-        $page = (clone $query)->withCollected()->orderByDesc('trx_date')->orderByDesc('sal_invoices.id')->paginate(self::PER_PAGE);
+        $page = (clone $query)->withCollected()->with('customer.branch')->orderByDesc('trx_date')->orderByDesc('sal_invoices.id')->paginate(self::PER_PAGE);
 
         return response()->json([
             'from' => $from,
@@ -56,6 +56,8 @@ final class SalesPaperApiController extends Controller
                 'date' => $i->trx_date?->toDateString(),
                 'customer' => (string) ($i->customer?->name() ?? ''),
                 'point' => $i->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'customer_branch' => $i->customer?->branchName(),
                 'status' => (string) $i->status,
                 'status_label' => __('core.status.'.$i->status),
                 'total' => bcadd((string) $i->total, '0', 2),
@@ -71,7 +73,7 @@ final class SalesPaperApiController extends Controller
     public function invoice(string $id): JsonResponse
     {
         $invoice = SalesInvoice::query()->where('public_id', $id)
-            ->with(['lines.product.unit', 'lines.challanLine.challan', 'customer', 'warehouse', 'creator'])->firstOrFail();
+            ->with(['lines.product.unit', 'lines.challanLine.challan', 'customer.location.parent', 'customer.branch', 'warehouse', 'creator'])->firstOrFail();
 
         $challans = $invoice->lines->map(fn (SalesInvoiceLine $l) => $l->challanLine?->challan)->filter()->unique('id')->values();
 
@@ -86,6 +88,8 @@ final class SalesPaperApiController extends Controller
             'customer' => (string) ($invoice->customer?->name() ?? ''),
             'customer_code' => $invoice->customer?->code,
             'point' => $invoice->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customer_branch' => $invoice->customer?->branchName(),
             'warehouse' => $this->nameOf($invoice->warehouse),
             'narration' => (string) ($invoice->narration ?? ''),
             'created_by' => $invoice->creator?->name,
@@ -118,7 +122,7 @@ final class SalesPaperApiController extends Controller
             ->whereBetween('trx_date', [$from, $to]);
 
         $total = (string) ((clone $query)->reorder()->sum('total') ?: '0');
-        $page = (clone $query)->with('customer')->orderByDesc('trx_date')->orderByDesc('sal_challans.id')->paginate(self::PER_PAGE);
+        $page = (clone $query)->with(['customer.location.parent', 'customer.branch'])->orderByDesc('trx_date')->orderByDesc('sal_challans.id')->paginate(self::PER_PAGE);
 
         return response()->json([
             'from' => $from,
@@ -130,6 +134,8 @@ final class SalesPaperApiController extends Controller
                 'date' => $c->trx_date?->toDateString(),
                 'customer' => (string) ($c->customer?->name() ?? ''),
                 'point' => $c->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'customer_branch' => $c->customer?->branchName(),
                 'status' => (string) $c->status,
                 'status_label' => __('core.status.'.$c->status),
                 'total' => bcadd((string) ($c->total ?? '0'), '0', 2),
@@ -143,7 +149,7 @@ final class SalesPaperApiController extends Controller
     public function challan(string $id): JsonResponse
     {
         $challan = DeliveryChallan::query()->where('public_id', $id)
-            ->with(['lines.product.unit', 'customer', 'warehouse', 'creator'])->firstOrFail();
+            ->with(['lines.product.unit', 'customer.location.parent', 'customer.branch', 'warehouse', 'creator'])->firstOrFail();
 
         return response()->json([
             'id' => (string) $challan->public_id,
@@ -155,6 +161,8 @@ final class SalesPaperApiController extends Controller
             'customer' => (string) ($challan->customer?->name() ?? ''),
             'customer_code' => $challan->customer?->code,
             'point' => $challan->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customer_branch' => $challan->customer?->branchName(),
             'warehouse' => $this->nameOf($challan->warehouse),
             'vehicle_no' => $challan->vehicle_no,
             'driver_name' => $challan->driver_name,

@@ -9,7 +9,10 @@
     /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
     $columns = [
         ['key' => 'cheque_no', 'label' => __('accounts::field.cheque_no'),
-         'render' => fn ($c) => view('accounts::cheque.partials.no', ['cheque' => $c])],
+         'render' => fn ($c) => view('accounts::cheque.partials.no', [
+             'cheque' => $c,
+             'party' => ($partyNames ?? [])[$c->party_type.':'.$c->party_id] ?? null,
+         ])],
         ['key' => 'cheque_date', 'label' => __('accounts::field.cheque_date'), 'width' => '9rem',
          'render' => fn ($c) => view('accounts::cheque.partials.date', ['cheque' => $c])],
         ['key' => 'bank_name', 'label' => __('accounts::field.bank_name'),

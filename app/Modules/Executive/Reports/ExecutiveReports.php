@@ -34,7 +34,7 @@ final class ExecutiveReports
      * ক্রেতা ধরে লাভ — প্রতিটা বিলের সারির **আসল** FIFO খরচ, আন্দাজ নয়।
      *
      * ── ⓘ খরচ কোথা থেকে ───────────────────────────────────────────────────
-     * বিল পাকা হওয়ার মুহূর্তে প্রতিটা সারি তার খরচ FIFO স্তর থেকে টানে আর সারিতেই লিখে রাখে
+     * বিল পোস্ট হওয়ার মুহূর্তে প্রতিটা সারি তার খরচ FIFO স্তর থেকে টানে আর সারিতেই লিখে রাখে
      * (`sal_invoice_lines.unit_cost`, [[SalesInvoiceService::takeCostFromLayers()]]); কোন স্তর থেকে কত টানা
      * হলো তার খাতা `inv_cost_layer_uses`। ⭐ এখানে সেই লেখা খরচই যোগ হয় — মার্জিন রিপোর্ট আর পণ্য ধরে
      * বিক্রির রিপোর্ট যেটা পড়ে, ঠিক সেটা।
@@ -119,6 +119,8 @@ final class ExecutiveReports
                     'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'source_type_literal',
                     'source_id' => 'customer_id',
+                    // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                    'place' => ['customer', 'customer_id'],
                 ],
                 ['key' => 'bills', 'label' => 'executive::analysis.col_bills', 'total' => false],
                 ['key' => 'revenue', 'label' => 'executive::analysis.col_revenue', 'type' => ReportColumn::MONEY],

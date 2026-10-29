@@ -53,11 +53,23 @@ final class PurchaseOrderService
 
             // নম্বরটা ট্রানজেকশনের ভেতরে — সেভ ব্যর্থ হলে নম্বরও ফিরে যায়,
             // নাহলে প্রতিটা ব্যর্থ চেষ্টায় সিরিজে একটা ফাঁক থাকত
-            $documentNo = $this->numbers->next('PO');
+            /*
+             * ⛔ আদেশ মাল যে গুদামে নামবে তার শাখায়, গুদাম না থাকলে সরবরাহকারীর শাখায়; নম্বরও সেই শাখার সিরিজে — RCV-0143 /
+             * মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)। ⓘ আগে উপরের শাখা; দুটোর কোনোটা না থাকলে আগের মতো।
+             */
+            $supplierId = (int) ($data['supplier_id'] ?? 0);
+            $branchId = $data['branch_id']
+                ?? (filled($data['warehouse_id'] ?? null) ? \App\Modules\Inventory\Models\Warehouse::query()->withoutGlobalScopes()
+                    ->where('company_id', CompanyContext::id())->whereKey((int) $data['warehouse_id'])->value('branch_id') : null)
+                ?? (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['supplier', $supplierId]])['supplier:'.$supplierId] ?? null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('PO', $branchId);
 
             $order = PurchaseOrder::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],

@@ -287,6 +287,8 @@ final class PurchaseDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('purchase::dashboard.bought'),
             secondLabel: __('purchase::dashboard.paid'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             // ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬)
             range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
         );
@@ -306,9 +308,12 @@ final class PurchaseDashboard implements ProvidesDashboard
     /** ⓘ ক্রয় বিলের বিপরীতে খাতায় ওঠা পরিশোধ-ভাউচার — [[PurchaseBill::paidByPaymentVouchers()]]-এর হুবহু শর্ত */
     private static function billVouchers()
     {
+        $type = PurchaseBill::drillSourceType();
+
+        // ⭐ একক "বিপরীতে" বা বহু বিলের সারি — দুই পথের পরিশোধই (cb-ma-5)
         return \App\Modules\Accounts\Models\Voucher::query()
             ->where('type', \App\Modules\Accounts\Models\Voucher::PAYMENT)
-            ->where('against_type', PurchaseBill::drillSourceType())
+            ->where(fn ($q) => $q->where('against_type', $type)->orWhereHas('allocations', fn ($row) => $row->where('against_type', $type)))
             ->posted();
     }
 
@@ -321,8 +326,8 @@ final class PurchaseDashboard implements ProvidesDashboard
         $ranked = DB::query()
             ->fromSub(PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)->withPaid(), 'b')
             // ⭐ পাকা ফেরতও বাদ — [[PurchaseBill::dueAmount()]] (ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
-            ->selectRaw('b.id, (b.total - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) as due')
-            ->whereRaw('(b.total - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) > 0')
+            ->selectRaw('b.id, (b.total - b.ait_amount - b.vds_amount - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) as due')
+            ->whereRaw('(b.total - b.ait_amount - b.vds_amount - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) > 0')
             ->orderByDesc('due')
             ->orderBy('b.id')
             ->limit(8)

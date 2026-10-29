@@ -5,7 +5,7 @@
 @php
     $isNew = ! $list->exists;
     $aimOptions = match ($target) {
-        'customer' => $customers->mapWithKeys(fn ($c) => [$c->id => $c->code.' — '.$c->name()]),
+        'customer' => $customers->mapWithKeys(fn ($c) => [$c->id => $c->code.' — '.$c->nameWithPoint()]),
         'tier' => $tiers->mapWithKeys(fn ($t) => [$t->id => $t->name()]),
         'territory' => $places->mapWithKeys(fn ($p) => [$p->id => $p->path()]),
         default => collect(),

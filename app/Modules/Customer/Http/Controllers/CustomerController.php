@@ -96,6 +96,8 @@ class CustomerController extends Controller implements HasMiddleware
             ->with([
                 'partyType',
                 'location.parent.parent.parent.parent.parent.parent',
+                // ⭐ শাখার কলাম — মালিক, ১৯ অক্টোবর ২০২৬; গোটা পাতার এক প্রশ্নে
+                'branch',
             ])
             // বকেয়া সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
             // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[Customer::scopeWithOutstandingInView()]]

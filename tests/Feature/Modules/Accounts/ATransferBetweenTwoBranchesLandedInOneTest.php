@@ -74,14 +74,19 @@ final class ATransferBetweenTwoBranchesLandedInOneTest extends TestCase
         }
     }
 
-    /** ⓘ যিনি লিখছেন তিনি গ্রহীতার শাখায় বসা — কাগজের শাখা তখন নেত্রকোনা, অথচ টাকা বেরোল ময়মনসিংহের বাক্স থেকে */
+    /**
+     * ⓘ যিনি লিখছেন তিনি গ্রহীতার শাখায় বসা, অথচ টাকা বেরোল ময়মনসিংহের বাক্স থেকে।
+     *
+     * ⓘ ১৯ অক্টোবর ২০২৬ (ec, RCV-0143): কাগজটাও এখন দাতার বাক্সের শাখায় ([[MoneyTransferService::initiate()]]) — আগে এখানে লেখকের
+     * শাখা (নেত্রকোনা) পাকা করা ছিল, সেটাই ছিল ভুল।
+     */
     public function test_the_sending_leg_follows_the_box_not_the_writer(): void
     {
         CompanyContext::set($this->company->id, $this->netrakona->id);
 
         $transfer = $this->sendAndReceive('600');
 
-        $this->assertSame((int) $this->netrakona->id, (int) $transfer->branch_id, 'প্রস্তুতি: কাগজটা লেখকের শাখায় নয়।');
+        $this->assertSame((int) $this->mymensingh->id, (int) $transfer->branch_id, '⛔ কাগজটা দাতার বাক্সের শাখায় নয় — লেখকের শাখায়।');
         $this->assertSame(0, bccomp($this->onTill($this->from, $this->mymensingh), '-600', 4),
             '⛔ পাঠানো পা লেখকের শাখায় বসল — দাতার শাখায় নগদ কমেনি।');
         $this->assertSame(0, bccomp($this->onTill($this->from, $this->netrakona), '0', 4));

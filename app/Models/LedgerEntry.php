@@ -87,6 +87,20 @@ class LedgerEntry extends Model
             $entry->row_hash = $hash;
             $entry->seal_version = $sealVersion;
         });
+
+        /*
+         * ⛔ বসা সারি বদলায় না, মোছেও না — ভুল শোধরায় উল্টো দাখিলা ([[PostingEngine::reverse()]]) (ERP ১০০%-এর হিসাবের ফাঁক
+         * #২৬, ২০ অক্টোবর ২০২৬; SOX ITGC change control, ISA 315)। ⓘ হ্যাশ-চেইন বদল পরে ধরে (detective); এটা মডেলের পথে আগেই
+         * থামায় (preventive)। অ্যাপের কোনো কোড বসা সারিতে `save()` বা `delete()` ডাকে না — যে ঘোষিত মাইগ্রেশন সারি সরায়
+         * (আর [[LedgerChain::reseal()]]) তা query builder-এ লেখে, এখানে আসে না। ডাটাবেসের trigger (পুরো দরজা) মাইগ্রেশন চায়,
+         * ফ্রিজের পরে।
+         */
+        static::updating(function (self $entry): never {
+            throw new \LogicException('A posted ledger line is never changed: post a reversal instead (ledger entry '.$entry->getKey().').');
+        });
+        static::deleting(function (self $entry): never {
+            throw new \LogicException('A posted ledger line is never deleted: post a reversal instead (ledger entry '.$entry->getKey().').');
+        });
     }
 
     protected function casts(): array

@@ -105,18 +105,26 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
         $result = $reports->run(self::LISTS[$list], ['q' => PhoneInput::text($request, 'q')], $page, self::PER_PAGE);
 
         // ⓘ রিপোর্টের সারিতে গ্রাহকের ক্রমিক id — ফোনে যায় কেবল public_id, আর কেবল দেখার দেয়ালের ভিতরের গ্রাহকের
-        $publicIds = Customer::query()->inViewedBranch()
+        // ⭐ পয়েন্ট আর শাখাও এখানেই, এক ডাকে — সারি ধরে নয় (মালিক, ১৯ অক্টোবর ২০২৬: "নাম · পয়েন্ট · শাখা")
+        $customers = Customer::query()->inViewedBranch()
             ->whereIn('customers.id', array_map(fn (array $r) => (int) ($r['id'] ?? 0), $result->rows) ?: [0])
-            ->pluck('customers.public_id', 'customers.id');
+            ->with(['location.parent', 'branch'])
+            ->get()->keyBy('id');
 
         return response()->json([
             'list' => $list,
             'title' => __($definition->title),
-            'rows' => array_values(array_map(function (array $row) use ($publicIds): array {
+            'rows' => array_values(array_map(function (array $row) use ($customers): array {
+                $customer = $customers->get((int) ($row['id'] ?? 0));
                 $out = [
-                    'customer' => (string) ($publicIds[(int) ($row['id'] ?? 0)] ?? ''),
+                    'customer' => (string) ($customer?->public_id ?? ''),
                     'code' => (string) ($row['customer_code'] ?? ''),
-                    'name' => (string) ($row['customer_name'] ?? ''),
+                    // ⛔ খালি নাম — রিপোর্টের `customer_name`-এ এখন "নাম · পয়েন্ট · শাখা" (রিপোর্টের জায়গা-জোড়া), অথচ পয়েন্ট আর শাখা নিচে
+                    // আলাদা যায়; ফোন জোড়ে, তাই দুইবার নয়। দেয়ালের বাইরের সারিতে (গ্রাহক মেলেনি) রিপোর্টের লেখাই।
+                    'name' => (string) ($customer?->name() ?? ($row['customer_name'] ?? '')),
+                    // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+                    'point' => $customer?->pointName(),
+                    'branch' => $customer?->branchName(),
                 ];
 
                 foreach (self::ROW_FIELDS as $field) {
@@ -147,6 +155,9 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
             'id' => (string) $customer->public_id,
             'code' => (string) $customer->code,
             'name' => (string) $customer->name(),
+            // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+            'point' => $customer->pointName(),
+            'branch' => $customer->branchName(),
             'credit_days' => $customer->credit_days === null ? null : (int) $customer->credit_days,
             'position' => [
                 'limit' => (string) $position['limit'],
@@ -248,7 +259,7 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
 
     private function customer(string $publicId): Customer
     {
-        return Customer::query()->inViewedBranch()->withOutstanding()->where('customers.public_id', $publicId)->firstOrFail();
+        return Customer::query()->inViewedBranch()->withOutstanding()->where('customers.public_id', $publicId)->with(['location.parent', 'branch'])->firstOrFail();
     }
 
     /** ⓘ [[CreditProfileController::show()]]-এর `mayLift` হুবহু */

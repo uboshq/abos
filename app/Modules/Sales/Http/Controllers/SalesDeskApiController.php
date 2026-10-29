@@ -53,9 +53,9 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
         $q = trim((string) $request->query('q', ''));
         $query = DepotCheckController::deliveryOrders($q);
 
-        $orders = $query === null ? collect() : (clone $query)->with(['customer', 'lines'])->orderBy('id')->limit(50)->get();
+        $orders = $query === null ? collect() : (clone $query)->with(['customer.location.parent', 'customer.branch', 'lines'])->orderBy('id')->limit(50)->get();
         $grand = $query === null ? ['total' => '0'] : $this->grandTotals($query, ['total' => 't.total']);
-        $held = DepotCheckController::heldOrders($q)->limit(50)->get();
+        $held = DepotCheckController::heldOrders($q)->limit(50)->get()->load(['customer.location.parent', 'customer.branch']);
 
         return response()->json([
             'orders' => $orders->map(fn ($o) => [
@@ -63,6 +63,9 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
                 'document_no' => (string) $o->document_no,
                 'date' => DateFormat::format($o->trx_date),
                 'customer' => (string) ($o->customer?->name() ?? ''),
+                // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+                'customer_point' => $o->customer?->pointName(),
+                'customer_branch' => $o->customer?->branchName(),
                 'lines' => $o->lines->count(),
                 'total' => Money::format($o->total),
                 'status' => __('sales::delivery_order.status.'.$o->status),
@@ -78,6 +81,9 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
                 'document_no' => (string) $o->document_no,
                 'date' => DateFormat::format($o->trx_date),
                 'customer' => (string) ($o->customer?->name() ?? ''),
+                // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+                'customer_point' => $o->customer?->pointName(),
+                'customer_branch' => $o->customer?->branchName(),
                 'lines' => $o->lines->count(),
                 'total' => Money::format($o->total),
                 'status' => SalesOrderStatus::deliveryLabel((string) $o->delivery_status),
@@ -128,6 +134,8 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
         $performance = app(DeliveryPerformance::class);
         $summary = $performance->summary($from, $to);
         $late = $performance->late($from, $to)->paginate(50, ['*'], 'page', max(1, (int) $request->query('page', 1)));
+        // ⓘ পয়েন্ট আর শাখা এক ডাকে, সারি ধরে নয়
+        $late->getCollection()->loadMissing(['customer.location.parent', 'customer.branch']);
         $today = Carbon::today();
         $hours = $summary['avg_hours'];
 
@@ -154,6 +162,9 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
                 'id' => (string) $d->public_id,
                 'document_no' => (string) $d->document_no,
                 'customer' => (string) ($d->customer?->name() ?? ''),
+                // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+                'customer_point' => $d->customer?->pointName(),
+                'customer_branch' => $d->customer?->branchName(),
                 'order_no' => (string) ($d->order_no ?? ''),
                 'promised_on' => DateFormat::format($d->promised_on),
                 'arrived_on' => $d->arrived_on ? DateFormat::format($d->arrived_on) : __('sales::delivery_performance.not_yet'),

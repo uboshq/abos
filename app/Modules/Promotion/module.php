@@ -302,4 +302,9 @@ return [
             'group' => 'entry',
         ],
     ],
+
+    // ⭐ ফোনের হোম-স্ক্রিনে চলতি, সই হওয়া অফার (উইজেটের চুক্তি §১৮; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Promotion\Widgets\OffersSummary::class,
+    ],
 ];

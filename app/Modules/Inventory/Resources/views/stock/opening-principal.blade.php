@@ -84,6 +84,17 @@
                             </tr>
                         @endforeach
                     </tbody>
+
+                    {{-- ⭐ সর্বমোট — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬। ⛔ পরিমাণের যোগ নয়: নানা পণ্যের কেজি আর পিস এক সংখ্যায়
+                         মেশালে মিথ্যা বলত; তাই গোটা ছাঁকা তালিকার লট আর প্রিন্সিপাল ছাড়া লট। --}}
+                    <tfoot data-grand-total>
+                        <tr class="font-semibold">
+                            <td></td>
+                            <td colspan="5">{{ __('core.table.grand_total') }}:
+                                {{ __('inventory::message.opening_principal_lots', ['count' => number_format($rows->total())]) }}
+                                · {{ __('inventory::message.opening_principal_unset', ['count' => $unset]) }}</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         @endif

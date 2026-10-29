@@ -94,6 +94,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
         // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
+        // ⓘ শাখার ছাপের পাহারার বাইরের প্যারামিটারহীন POST দরজা, প্রতিটা কারণসহ (RCV-0143; ec, ২০ অক্টোবর ২০২৬)
+        'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
+        // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -118,6 +122,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     private const NOT_EXCUSES = [
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
+        // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_A_DISPLAY',
         // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
         'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
@@ -129,6 +135,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryChallanConfirmAsksHowTheGoodsTravelTest::KNOWN',
         'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
+        // ⓘ চাহিদা: মালিকের বাদ দেওয়া শব্দ — পর্দার লেখায় থাকতেই পারবে না; ছাড় নয়, নিষেধের তালিকা (web-terms, fe ২১ অক্টোবর ২০২৬)
+        'TheOwnersWordsAreTheOnlyWordsTest::RETIRED',
+        // ⓘ চাহিদা: অনুমোদন মডিউলের নিষেধের শব্দ (দফা ১৫) — ছাড় নয়
+        'TheOwnersWordsAreTheOnlyWordsTest::APPROVAL_ONLY',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
         'TheOtherNineLooksWereNotTouchedTest::AS_SHIPPED',
@@ -402,7 +412,65 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
      *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
      */
-    private const CEILING = 371;
+    /*
+     * ── ⚠️ ৩৭১ → ৪৫৩, ২০ অক্টোবর ২০২৬ (ফর্ম খোলার শাখায় জমা — RCV-0143, মালিক: কোনোভাবেই অন্য শাখায় নয়; ec) ─────────────
+     *   +৮২ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — প্যারামিটারহীন POST দরজা যা `*.store` নয়, CREATE_DOORS-এও নয়:
+     *       সুইচ, ব্যক্তিগত পছন্দ, বিজ্ঞপ্তি, লগইন, ডিফল্ট-তালিকা বসানো (মাস্টারের লুপের ২১টা সহ), মাসিক দৌড় (প্রতিটা কাগজ
+     *       নিজের শাখায়), আর লেখে-না এমন পূর্বদর্শন। ⓘ বেশিরভাগ কাগজই বানায় না, তবু গোনা — কারণ থাকা মানে ছাড়টা ছাড় নয়, এমন
+     *       নয় (২২২ → ২২৪-এর একই যুক্তি)। ⭐ কোনো দরজা কাগজ বানাতে শুরু করলে সারিটা CREATE_DOORS-এ যায় আর ছাদ এক কমে
+     */
+    /*
+     * ── ⚠️ ৩৭১ → ৩৭২ (দুই শাখা মিলে ৩৭১ + ৮২ + ১ = ৪৫৪, fe বান্ডেল ২০ অক্টোবর), ১৯ অক্টোবর ২০২৬ (গ্রাহকের নামের পাশে পয়েন্ট আর শাখা — মালিকের স্থায়ী নিয়ম; a5) ──────────────────────
+     *   +১  ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET — Sales-এর POS পর্দার গ্রাহক-পিকার: POS মালিকের আদেশে ২১ অক্টোবর
+     *       পর্যন্ত বন্ধ; খুললে nameWithPoint() আর with(Customer::PLACE), তখন সারি ওঠে আর ছাদ কমে
+     */
+    /*
+     * ── ⚠️ ৪৫৪ → ৪৫৬ (fe বান্ডেল ২১ অক্টোবর; শাখায় ছিল ৩৭১ → ৩৭৩), ২০ অক্টোবর ২০২৬ (অ্যাপের প্রোফাইল মেনু ০.৪.৪১ — fe; a6) ────────────────────────────────────────────
+     *   +৪  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.photo.store / .destroy, api.me.devices.index / .destroy: নিজের ছবি আর
+     *       নিজের ফোন, `/me`-র মতোই কোনো চাবি নেই (ঢুকতে পারা মানুষকে নিজের ছবি বদলাতে বা চুরি যাওয়া ফোন বের করতে বাধা নয়);
+     *       পাহারা নিয়ামকে — কেবল নিজের সারি আর নিজের টোকেন, অন্যের ফোনের id ৪০৪ (AStolenPhoneStayedSignedInTest)
+     *   −২  ছবির দরজা (`users.photo`, `api.users.photo`) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeFace')` → UserPolicy::seeFace
+     *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
+     *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
+     *
+     * ── ⚠️ ৪৫৬ → ৪৫৭, ২২ অক্টোবর ২০২৬ (cb, fe মেনেছেন) ─────────────────
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `purchase.payment.simulate`: টাকা দেওয়ার পর্দার খাতা-প্রিভিউ,
+     *       কোনো কাগজ বানায় না, কিছু লেখে না (দাবি: ThePaySupplierScreenFollowsTheDesignTest::test_item_10 — সারি গোনা আর
+     *       নিরীক্ষা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়।
+     *
+     * ── ⚠️ ৪৫৭ → ৪৫৮, ২২ অক্টোবর ২০২৬ (a4, ০.৪.৪৫ ভাষা বদল, fe মেনেছেন) ──────
+     *   +১  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.locale: নিজের ভাষা, `/me` আর নিজের ছবির মতোই কোনো চাবি নেই (নিজের
+     *       পছন্দ, ব্যবসার তথ্য নয়); পাহারা — কেবল নিজের সারি, কেবল bn বা en ([[UserLocale]]), বদল নিরীক্ষায় একবার
+     *       (TheAppAndTheWebShareOneLanguageTest)। ⛔ সাজানো authorize বসানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্ন ফাঁপা হত।
+     *
+     * ── ⚠️ ৪৫৮ → ৪৫৯, ২৩ অক্টোবর ২০২৬ (cb, ভাউচার চূড়ান্ত নকশা; fe-কে জানানো) ────────────
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `accounts.voucher.simulate`: রসিদ/পরিশোধ ভাউচারের খাতা-প্রিভিউ,
+     *       কোনো কাগজ বানায় না, কিছু লেখে না, হাতে লেখা নাম থেকে মানুষও বানায় না (দাবি: TheReceiptAndPaymentFollowTheFinalDesignTest
+     *       — ভাউচার, খাতা আর মানুষের সংখ্যা অপরিবর্তিত)। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে থাকা দরজা কাগজ বানায়;
+     *       `purchase.payment.simulate`-এর (৪৫৬ → ৪৫৭) একই সিদ্ধান্ত।
+     *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
+     *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
+     *
+     * ── ⚠️ ৪৫৯ → ৪৬১ (মূলের ৪৫৯ + আমাদের ২; শাখায় ছিল ৪৫৭ → ৪৫৯ → ৪৬০), ২২ অক্টোবর ২০২৬, main 2c026a303 মেশানো ২৪ অক্টোবর (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
+     *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
+     *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
+     *       ফোনের প্রিভিউ; sal_collections, sal_collection_lines, sal_collection_applications, ledger_entries, approvals,
+     *       audit_trails, issued_numbers-এর সারি আগে = পরে);
+     *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
+     *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
+     *       আটকাত (JSON-এ ৪০৯)।
+     *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
+     *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
+     *
+     * ── ⚠️ ৪৬১ → ৪৬৩, ২৪ অক্টোবর ২০২৬ (বাঁ মডিউল-রেলের নিজের সাজ; মালিক, fe-র অনুমোদন; a6) ─────────────────
+     *   +১  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — rail.layout: কেবল নিজের users.nav_layout (পিন আর ক্রম), অন্যের মডিউল
+     *       কোড ফেলা হয়, নিরীক্ষায় যায় না (দাবি: EveryModuleIsOnTheRailOrBehindMoreTest); home.layout-এর একই জাত।
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — rail.layout: কোনো কাগজ বানায় না, শাখার ছাপ লাগে না।
+     */
+    // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
+    // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
+    private const CEILING = 464;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

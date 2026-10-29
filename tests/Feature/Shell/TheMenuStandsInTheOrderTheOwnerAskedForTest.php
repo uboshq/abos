@@ -169,7 +169,8 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
     private function menuOf(User $user): array
     {
         return CompanyContext::forCompany(
-            (int) ($user->current_company_id ?? $this->company()->id),
+            // ⓘ চলতি কোম্পানি না থাকলে ডেমোর TDEPOT — আগে এখানে নেই-এমন `$this->company()` ডাকা হত, তাই null-এ Error দিত (phpstan L1)
+            (int) ($user->current_company_id ?? \App\Models\Company::query()->where('code', 'TDEPOT')->value('id')),
             fn () => app(MenuBuilder::class)->forUser($user),
         );
     }

@@ -246,6 +246,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account,
             'entries' => $entries,
+            'entryParties' => $ledger['parties'] ?? [],
             'grand' => $grand,
             'closing' => $ledger['closing'],
             'balance' => $account->balanceOn(null, $branch),

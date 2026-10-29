@@ -33,10 +33,42 @@
     // ── মূল সূচক — মডিউলের নিজের `kpi` ঘর, ক্রম মডিউলই বলে (sort) ──
     $kpis = $groups['kpi'] ?? [];
 
+    /*
+     * ⭐ "বাজারে বকেয়া" টাকার বাক্সের নিচে (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — মূল সূচকের সেই ঘরটাই সরে আসে, নতুন করে
+     * গোনা নয়: একই উৎস ([[CustomerMetrics::dues()]], হোমের ছাঁকনিসহ), একই চাবি (customer.report), চাবি না থাকলে ঘরটাই নেই।
+     * ⛔ একই সংখ্যা দুইবার নয় — বাক্সে উঠলে মূল সূচকের সারি থেকে বাদ। টাকার বাক্স না থাকলে আগের মতো সূচকের সারিতেই।
+     */
+    /*
+     * ⭐ "মজুদের মূল্য" "বাজারে বকেয়া"-র পাশে, টাকার বাক্সে (মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬: মালিক আর হিসাবরক্ষক এক নজরে
+     * চলতি পুঁজি দেখবেন — IAS 1-এর চলতি সম্পদ)। ⓘ বকেয়ার হুবহু পথ: মূল সূচকের সেই ঘরটাই সরে আসে ([[InventoryWidgets]] →
+     * [[StockFacts::value()]], মজুদের খাত ১১২০-এর জের, কেনা দরে, হেডারে বাছা শাখা মেনে), একই চাবি (inventory.cost.view) —
+     * চাবি না থাকলে ঘরটাই নেই, বিক্রয়কর্মীর হোমেও নেই। ⛔ বাক্সে উঠলে সূচকের সারি থেকে বাদ — একই সংখ্যা দুই জায়গায় নয়।
+     */
+    $owed = null;
+    $stockValue = null;
+    if ($position) {
+        foreach ($kpis as $k => $candidate) {
+            if ($candidate->label === __('customer::dashboard.kpi_owed')) {
+                $owed = $candidate;
+                unset($kpis[$k]);
+            } elseif ($candidate->label === __('inventory::overview.stock_value')) {
+                $stockValue = $candidate;
+                unset($kpis[$k]);
+            }
+        }
+        $kpis = array_values($kpis);
+    }
+
     // ⛔ পাতায় যা আগেই আছে তার নাম — ব্যতিক্রম কেন্দ্রে আবার নয়
     $shown = array_map(fn ($w) => $w->label, $kpis);
     if ($position) {
         $shown[] = $position->label;
+    }
+    if ($owed) {
+        $shown[] = $owed->label;
+    }
+    if ($stockValue) {
+        $shown[] = $stockValue->label;
     }
 
     $todo = collect($groups['todo'] ?? [])->reject(fn ($w) => in_array($w->label, $shown, true));
@@ -62,19 +94,27 @@
     <x-slot:header>
     {{-- ── মাথা (মালিক, ৬ অক্টোবর ২০২৬): টাকার বাক্স সোজা উপরে, শিরোনামের সমান উচ্চতায় ডানে; বাঁয়ে শিরোনাম, তার ঠিক নিচে
          কোম্পানি · তারিখ, তার কাছেই ফিল্টার · লেআউট · সময় — মাঝে ফাঁকা নয়, যাতে চার্ট উপরে ওঠে ── --}}
-    <section data-command-head class="flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-start">
-        {{-- ⓘ শিরোনাম আর কোম্পানির সারি একদম কাছাকাছি (মালিক, ৬ অক্টোবর ২০২৬: *"একদম কাছাকাছি"*) — সোনালি রেখার
-             ফাঁকা জায়গা বাদ, বাছাইয়ের বোতামের ছোঁয়ার-উচ্চতা উপরে টেনে আনা --}}
-        <div class="flex min-w-0 flex-1 flex-col" style="gap: 0.375rem">
+    {{-- ⭐ মাথা এক সারিতে — মালিকের অনুমোদিত নমুনা (২০ অক্টোবর ২০২৬; fe-র ছবি-যাচাই: ১৩৬৬-এ সব নিচে নিচে নেমে বড় জায়গা নষ্ট হত):
+         শিরোনাম · "তারিখ · কোম্পানি · শাখা" · ডানে ফিল্টার, লেআউট, সময়; টাকার বাক্স তার নিচে পুরো চওড়ায়।
+         ⓘ কোম্পানি-শাখার বাছাই এখানে আর নেই — পুরো চওড়া বারেই আছে ([[shell.company-switcher]]), একই কাজ দুই জায়গায় নয়;
+         এখানে কেবল লেখা, বারের একই উত্তরে ([[ShellFacts::branchLabel()]])। ⛔ ৫–৬ অক্টোবরের পাশাপাশি সাজ নমুনায় বদলেছে। --}}
+    <section data-command-head class="flex flex-col gap-3" style="align-items: stretch">
+        <div class="flex min-w-0 flex-col" style="gap: 0.375rem">
+            <div data-home-headline class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
             <h1 data-home-title class="truncate text-xl font-semibold" style="line-height: 1.75rem">{{ __('core.menu.dashboard') }}</h1>
-            {{-- ⭐ কোম্পানি আর শাখা — টপবারের একই বাছাই, এখানেও; বদলালে হোমের প্রতিটা সংখ্যা সেই শাখার --}}
-            <div data-home-company class="flex flex-wrap items-center gap-3" style="margin-top: -0.5rem; margin-inline-start: -0.5rem">
-                <x-shell.company-switcher :company="auth()->user()->currentCompany" :branch="auth()->user()->currentBranch" />
-                <span class="text-sm text-(--color-ink-muted)">{{ now()->locale(app()->getLocale())->translatedFormat('l, j F Y') }}</span>
-            </div>
+            @php
+                $headUser = auth()->user();
+                $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('l, j F Y'),
+                    ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+            @endphp
+            <p data-home-company class="min-w-0 text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
+                $headDate,
+                $headUser->currentCompany?->name(),
+                app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch),
+            ])) }}</p>
 
-            {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — মাথার ডান কোণ থেকে নেমে এখানে --}}
-            <div data-home-controls class="flex flex-wrap items-center gap-2">
+            {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — একই সারির ডান কোণে (নমুনার চিপ) --}}
+            <div data-home-controls class="ms-auto flex flex-wrap items-center gap-2">
                 {{-- ⭐ হোমের ফিল্টার — গুদাম, এলাকা, SR; বদলায় কেবল বিক্রি আর বকেয়া ([[HomeFilter]]) --}}
                 <details data-home-filter class="relative">
                     <summary @class([
@@ -168,6 +208,7 @@
                     </div>
                 </details>
             </div>
+            </div>
             @if ($filter->active())
                 <div data-home-filter-on class="mt-2 flex flex-wrap items-center gap-2 rounded-(--radius-field) border border-(--color-brand-600)
                             bg-(--color-brand-50) px-3 py-2 text-sm text-(--color-brand-700)">
@@ -184,11 +225,15 @@
         </div>
 
         @if ($position)
-            <a href="{{ $position->href }}" data-money-position
-               class="block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-ink-inverse) shadow-lg
+            <div data-money-position
+               class="relative block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-on-brand-ink) shadow-lg
                       transition-shadow hover:shadow-xl"
-               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900)); max-width: 40rem"
-               @if ($position->definition) title="{{ $position->definition }}" @endif>
+               style="background: linear-gradient(135deg, var(--color-on-brand-from), var(--color-on-brand-to))">
+                {{-- ⓘ বাক্সের দরজা পুরো বাক্স জুড়ে (absolute inset-0), বাক্স নিজে লিংক নয় — ⛔ লিংকের ভেতরে লিংক HTML-এ চলে না
+                     (ব্রাউজার বাইরেরটা ভেঙে দেয়), আর "মজুদের মূল্য" ঘরের নিজের দরজা লাগে: মজুদের পাতা (২১ অক্টোবর ২০২৬)।
+                     বাকি ঘরে চাপ দিলে আগের মতোই বাক্সের দরজা; মজুদের ঘর তার উপরে (z-10)। --}}
+                <a href="{{ $position->href }}" data-money-door class="absolute inset-0 rounded-(--radius-card)"
+                   aria-label="{{ $position->label }}" @if ($position->definition) title="{{ $position->definition }}" @endif></a>
                 <p class="flex items-center gap-1.5 text-sm text-white/70">
                     @if ($position->icon)
                         <x-ui.icon :name="$position->icon" :size="15" />
@@ -204,7 +249,46 @@
                         </div>
                     @endforeach
                 </div>
-            </a>
+                {{-- ⭐ আজ এসেছে · আজ গেছে · বাজারে বকেয়া (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — ফোনের আজকের পাতার একই উৎস:
+                     [[AccountsWidgets::todayTiles()]] (accounts.view) আর মূল সূচকের "বাজারে বকেয়া" ঘর (customer.report)।
+                     ⓘ চিহ্ন লেখায় ("+ " / "− "), রং একা কিছু বলে না; চাবি না থাকা ঘর আঁকাই হয় না, শূন্য নয়। --}}
+                @php
+                    $heroTiles = $position->tiles;
+                    if ($owed) {
+                        // ⓘ ঘরের পুরো কথা সাথে — অগ্রিমের ইঙ্গিতও ("… অগ্রিম"), সূচকের সারিতে যেমন ছিল; সরে আসায় হারায় না
+                        $heroTiles[] = ['label' => $owed->label, 'value' => $owed->value, 'sign' => '', 'tone' => 'plain', 'hint' => $owed->hint, 'mark' => 'owed'];
+                    }
+                    if ($stockValue) {
+                        // ⭐ "খরচ-দামে · খাতা অনুযায়ী" — সূচকের ঘরের নিজের ইঙ্গিত; চাপলে মজুদের পাতা (ঘরের নিজের দরজা)
+                        $heroTiles[] = ['label' => $stockValue->label, 'value' => $stockValue->value, 'sign' => '', 'tone' => 'plain', 'hint' => $stockValue->hint,
+                            'mark' => 'stock', 'href' => $stockValue->href];
+                    }
+                @endphp
+                @if ($heroTiles !== [])
+                    <div data-money-today @class([
+                        'mt-2 grid grid-cols-1 gap-2',
+                        'sm:grid-cols-3' => count($heroTiles) <= 3,
+                        'sm:grid-cols-2 lg:grid-cols-4' => count($heroTiles) > 3,
+                    ])>
+                        @foreach ($heroTiles as $heroTile)
+                            @php $tileTag = filled($heroTile['href'] ?? null) ? 'a' : 'div'; @endphp
+                            <{{ $tileTag }} data-money-tile="{{ $heroTile['tone'] }}" @if (($heroTile['mark'] ?? null) === 'owed') data-home-owed @endif
+                                 @if (($heroTile['mark'] ?? null) === 'stock') data-home-stock @endif
+                                 @if ($tileTag === 'a') href="{{ $heroTile['href'] }}" @endif
+                                 @class(['min-w-0 rounded-(--radius-field) px-2.5 py-1.5', 'relative z-10 block' => $tileTag === 'a'])
+                                 style="background: var(--color-on-brand-surface)">
+                                <p class="text-xs text-white/70">{{ $heroTile['label'] }}</p>
+                                {{-- ⓘ রং টোকেন থেকে (tokens.css: --color-on-brand-in/out), হাতে লেখা নয় — নকশার নিয়ম --}}
+                                <p data-money-tile-value class="tabular text-base font-semibold"
+                                   @if ($heroTile['tone'] === 'in') style="color: var(--color-on-brand-in)" @elseif ($heroTile['tone'] === 'out') style="color: var(--color-on-brand-out)" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</p>
+                                @if (filled($heroTile['hint'] ?? null))
+                                    <p data-money-tile-hint class="text-xs text-white/70">{{ $heroTile['hint'] }}</p>
+                                @endif
+                            </{{ $tileTag }}>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
         @endif
     </section>
     </x-slot:header>
@@ -243,13 +327,49 @@
                                       bg-(--color-surface-card) shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)">
                                 <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-2">
                                     <span class="min-w-0">
-                                        <span class="block truncate text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
-                                        {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না, পরে বসালে লম্বা শিরোনামে কেটে যেত --}}
-                                        <span class="block truncate text-2xs text-(--color-ink-muted)">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
+                                        <span class="block break-words text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
+                                        {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না
+                                             ⭐ উপশিরোনাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3: মূল লেখা কখনো কাটা নয়; ২০ অক্টোবর ২০২৬ —
+                                             আগে "ছয় মাসের বি…" দেখাত); তার বেশি হলে পুরোটা title-এ --}}
+                                        @if ($row['listing'] ?? null)
+                                            {{-- ⓘ তালিকা দেখালে উপশিরোনামও তালিকার — চার্টের ("কত দিন ধরে") কথা তালিকার মাথায় বেমানান --}}
+                                            <span class="line-clamp-2 block text-xs text-(--color-ink-muted)">{{ $row['listing']->label }}</span>
+                                        @else
+                                        <span class="line-clamp-2 block text-xs text-(--color-ink-muted)"
+                                              title="{{ $row['panel']->range ? $row['panel']->range.' · ' : '' }}{{ $row['panel']->label }}">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
+                                        @endif
                                     </span>
                                     <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                                 </div>
-                                <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" />
+                                {{-- ⭐ মডিউল হোমের জন্য একটা তালিকা চিহ্নিত করলে ([[Listing::$onHome]]) চার্টের বদলে সেটা — প্রথম চারটা সারি,
+                                     প্রথম কলাম (কাগজ · পক্ষ) আর শেষ কলাম (অবস্থার চিপ); মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬ --}}
+                                @if ($row['listing'] ?? null)
+                                    @php
+                                        $homeList = $row['listing'];
+                                        $firstCol = $homeList->columns[0];
+                                        $lastCol = $homeList->columns[count($homeList->columns) - 1];
+                                    @endphp
+                                    <div data-home-listing class="px-4 py-2">
+                                        @forelse ($homeList->rows->take(4) as $listRow)
+                                            {{-- ⓘ ঘরটা লেখা বা HTML (অনুমোদনের তালিকা ইনবক্সের `what` অংশ দেয় — নাম, নম্বর · পক্ষ, কারণ): লেখায় যেমন আছে,
+                                                 আর `title`-এ কেবল সাদা লেখা — ⛔ নইলে ট্যাগসুদ্ধ HTML গুণের ভেতরে পড়ে মার্কআপ ভাঙত (a5-এর তালিকা মেশানোয়, ২১ অক্টোবর ২০২৬) --}}
+                                            @php
+                                                $cell = ($firstCol['render'])($listRow);
+                                                $cellText = trim((string) preg_replace('/\s+/u', ' ', strip_tags($cell instanceof \Illuminate\Contracts\Support\Htmlable ? $cell->toHtml() : (string) $cell)));
+                                            @endphp
+                                            <div class="flex min-w-0 items-center justify-between gap-2 border-b border-(--color-border) py-1.5 text-sm last:border-b-0">
+                                                {{-- ⓘ কাটা নয়, দুই লাইন পর্যন্ত — "নম্বর · নাম · পয়েন্ট · শাখা" পুরোটা পড়া যায় (মালিকের স্থায়ী নিয়ম; fe-র ছবি-যাচাই) --}}
+                                                <span class="line-clamp-2 min-w-0 break-words leading-snug text-(--color-ink-body)" title="{{ $cellText }}">{{ $cell }}</span>
+                                                <span class="shrink-0">{{ ($lastCol['render'])($listRow) }}</span>
+                                            </div>
+                                        @empty
+                                            <p class="py-3 text-sm text-(--color-ink-muted)">{{ $homeList->empty }}</p>
+                                        @endforelse
+                                    </div>
+                                @else
+                                {{-- ⓘ কার্ডটাই লিংক — ভেতরে আলাদা ফোকাসের জায়গা নয় ([[x-dashboard.chart]]-এর `interactive`) --}}
+                                <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" :interactive="false" />
+                                @endif
                             </a>
                         @endforeach
                     </div>

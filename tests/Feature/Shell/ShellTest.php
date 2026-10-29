@@ -533,10 +533,12 @@ class ShellTest extends TestCase
 
     public function test_the_top_bar_has_a_full_screen_button(): void
     {
-        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
-        $toggle = $this->codeOf(resource_path('views/components/shell/fullscreen-toggle.blade.php'));
+        // ⭐ পূর্ণপর্দা এখন ছবির মেনুতে — SAP Fiori shell bar (ওয়েবের মান ধাপ ২, মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬);
+        //    বোতামটা হারায়নি, জায়গা বদলেছে, আর একই যন্ত্র ([[fullscreenToggle]]) চালায়
+        $markup = $this->codeOf(resource_path('views/components/shell/profile-menu.blade.php'));
+        $toggle = $markup;
 
-        $this->assertStringContainsString('fullscreen-toggle', $markup);
+        $this->assertStringContainsString('data-menu-fullscreen', $markup);
 
         // অবস্থাটা document থেকে পড়া, নিজে মনে রাখা নয়: Esc বা F11 দিয়েও
         // ফুল-স্ক্রিন ছাড়া যায়, আর তখন নিজের রাখা boolean বাস্তবের সাথে
@@ -647,8 +649,11 @@ class ShellTest extends TestCase
         // উচ্চতা ভিউপোর্টে বাঁধা না থাকলে সেটা কনটেন্টের সাথে লম্বা হয়ে
         // যায় আর পুরো পাতার সাথে উপরে উঠে যায় — লোগো ও মেনু চোখের
         // বাইরে চলে যায়।
+        // ⓘ ২২ অক্টোবর ২০২৬ (cb/hf-footer-pad): উচ্চতা এখনও ভিউপোর্টে বাঁধা, কেবল নিচের ঘোষণার বারটুকু বাদ — পুরো h-dvh হলে
+        // মেনুর শেষ সারি বারের নিচে চাপা পড়ত ([[NothingHidesUnderTheBottomBarTest]])
         $this->assertStringContainsString('sticky', $markup);
-        $this->assertStringContainsString('h-dvh', $markup);
+        $this->assertStringContainsString('h-[calc(100dvh-var(--spacing-status-bar))]', $markup,
+            '⛔ সাইডবারের উচ্চতা আর ভিউপোর্টে বাঁধা নয় — সে পাতার সাথে লম্বা হয়ে উপরে উঠে যায়');
         $this->assertStringContainsString('overflow-y-auto', $markup);
     }
 

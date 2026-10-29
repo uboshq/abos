@@ -86,4 +86,9 @@ return [
     'reports' => [
         ExecutiveReports::class,
     ],
+
+    // ⭐ ফোনের হোম-স্ক্রিনে মালিকের পূর্ণ-পর্দা উইজেট (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Executive\Widgets\OwnerBoardSummary::class,
+    ],
 ];

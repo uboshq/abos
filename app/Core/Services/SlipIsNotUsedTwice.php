@@ -72,11 +72,23 @@ final class SlipIsNotUsedTwice
 
         $slipNo = trim((string) $slipNo);
 
-        $exists = $this->query($table, $slipNo, $partyId, $party, $exceptId)->exists();
-
-        if ($exists) {
+        if ($this->isUsed($table, $slipNo, $partyId, $party, $exceptId)) {
             throw ValidationException::withMessages(['instrument_no' => $message]);
         }
+    }
+
+    /**
+     * ⭐ একই প্রশ্ন, না থামিয়ে — পর্দার তাৎক্ষণিক "আগে ব্যবহার হয়নি ✓" (টাকা দেওয়ার মিল-তালিকা #৫, ২২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[check()]] এটাকেই জিজ্ঞেস করে, তাই পর্দা আর জমা কখনো আলাদা উত্তর দেয় না। খালি নম্বর কখনো "ব্যবহৃত" নয়।
+     */
+    public function isUsed(string $table, ?string $slipNo, ?int $partyId, string $party, ?int $exceptId = null): bool
+    {
+        if (blank($slipNo)) {
+            return false;
+        }
+
+        return $this->query($table, trim((string) $slipNo), $partyId, $party, $exceptId)->exists();
     }
 
     /**

@@ -73,6 +73,7 @@ final class AccountsWidgets implements DashboardWidgets
                     __('accounts::dashboard.bank_balance') => Money::format(self::bankBalance()),
                     __('accounts::dashboard.in_transit') => Money::format(self::inTransit()),
                 ],
+                tiles: self::todayTiles(),
             ),
 
             new Widget(
@@ -131,6 +132,30 @@ final class AccountsWidgets implements DashboardWidgets
         ];
     }
 
+    /**
+     * ⭐ টাকার বাক্সের নিচে "আজ এসেছে" আর "আজ গেছে" (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ফোনের আজকের পাতার একই উৎস ([[DashboardTodayController]]-এর `inflow`): [[AccountsFacts::moneyFlowBetween()]] আজ থেকে
+     * আজ — নগদ, ব্যাংক, MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ; `in` এসেছে, `out` গেছে।
+     * ⛔ একই চাবি `accounts.view` — চাবি না থাকলে ঘর দুইটাই নেই, শূন্য নয়।
+     *
+     * @return list<array{label: string, value: string, sign: string, tone: string}>
+     */
+    private static function todayTiles(): array
+    {
+        if (! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $today = \Illuminate\Support\Carbon::today()->toDateString();
+        $flow = app(\App\Modules\Accounts\Services\AccountsFacts::class)->moneyFlowBetween($today, $today);
+
+        return [
+            ['label' => __('accounts::dashboard.today_in'), 'value' => Money::format($flow['in']), 'sign' => '+', 'tone' => 'in'],
+            ['label' => __('accounts::dashboard.today_out'), 'value' => Money::format($flow['out']), 'sign' => '−', 'tone' => 'out'],
+        ];
+    }
+
     /** ⓘ public — ফোনের "আজকের সংখ্যা" ([[DashboardTodayController]]) এটাই ডাকে, নিজে গোনে না। */
     public static function cashInHand(): string
     {
@@ -145,6 +170,32 @@ final class AccountsWidgets implements DashboardWidgets
     public static function mfsBalance(): string
     {
         return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all(), true);
+    }
+
+    /**
+     * ⭐ MFS-এর প্রতিটা খাত আর তার জের — ফোনের হোমে MFS-এ চাপলে (মালিক, ২০ অক্টোবর ২০২৬: "MFS-এ কত আছে দেখায় না")।
+     * [[mfsBalance()]]-এর একই খাত, একই শাখা-ছাঁকনি, একই হিসাব — তাই সারির যোগফল ঠিক সেই মোট, পয়সা পর্যন্ত।
+     *
+     * @return list<array{name: string, balance: string}>
+     */
+    public static function mfsAccounts(): array
+    {
+        $accounts = Account::query()->ofMoneyKind(Account::MFS)->orderBy('code')->get(['id', 'code', 'name_en', 'name_bn']);
+
+        if ($accounts->isEmpty()) {
+            return [];
+        }
+
+        $sums = self::inView(LedgerEntry::query()->whereIn('account_id', $accounts->pluck('id')->all()), 'ledger_entries.branch_id')
+            ->groupBy('account_id')
+            ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->get()
+            ->keyBy('account_id');
+
+        return $accounts->map(fn (Account $account) => [
+            'name' => $account->name(),
+            'balance' => bcsub((string) ($sums[$account->id]->d ?? '0'), (string) ($sums[$account->id]->c ?? '0'), 4),
+        ])->values()->all();
     }
 
     public static function bankBalance(): string

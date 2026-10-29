@@ -22,7 +22,7 @@ return [
     // ⓘ "Set Invoice Information"-এর নমুনা বিলের বানানো তথ্য — ছাঁচের মতো সবসময় `en` থেকে পড়া
     'sample' => [
         'customer' => 'Sample Traders',
-        'point' => 'Sample Bazar',
+        'point' => 'Sample Bazar · Head Office',
         'address' => 'House 1, Road 1, Dhaka',
         'carrier' => 'Sample Transport',
         'creator' => 'Sample Staff',
@@ -39,7 +39,8 @@ return [
         'transport' => 'Transportation Details:',
         'bill' => 'Invoice details',
         'name' => 'Name',
-        'point' => 'Point:',
+        // ⭐ পয়েন্টের ঘরে গ্রাহকের শাখাও (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম; [[PaperPlace::of()]])
+        'point' => 'Point · Branch:',
         'phone' => 'Contact No:',
         'address' => 'Address',
         'email' => 'E-mail:',

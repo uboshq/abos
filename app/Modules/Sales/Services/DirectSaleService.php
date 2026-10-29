@@ -344,6 +344,8 @@ final class DirectSaleService
             $invoiceHeader = [
                 'customer_id' => $customer->id,
                 'warehouse_id' => $warehouse->id,
+                // ⛔ বিল চালানের শাখায় — মাল, পাওনা আর নগদ এক শাখায় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+                'branch_id' => $challan->branch_id,
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'due_on' => $this->dueOn($data, $customer),
                 // হাতে লেখা নম্বর — খালি হলে সিরিজ নিজেই দেবে
@@ -627,6 +629,8 @@ final class DirectSaleService
             $invoiceHeader = [
                 'customer_id' => $customer->id,
                 'warehouse_id' => $warehouse->id,
+                // ⛔ বিল চালানের শাখায় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+                'branch_id' => $challan->branch_id,
                 'trx_date' => $trxDate,
                 'due_on' => $this->dueOn($data, $customer),
                 'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
@@ -1772,7 +1776,8 @@ final class DirectSaleService
         DeliveryChallan $challan,
         string $trxDate,
     ): Voucher {
-        $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $receivable = StandardChart::accountFor(StandardChart::RECEIVABLE);
 
         $moneyAccount = $this->moneyAccountOf($row);
 
@@ -1789,6 +1794,11 @@ final class DirectSaleService
             [
                 'type' => Voucher::RECEIPT,
                 'trx_date' => $trxDate,
+                /*
+                 * ⛔ কাউন্টারের রসিদ চালানের শাখায় — উপরের শাখা-বাছাই নয়। RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"*
+                 * (ec, ১৯ অক্টোবর ২০২৬)। ⓘ আগে মাল A-র গুদাম থেকে, অথচ নগদ আর পাওনা-কমা B-তে বসত।
+                 */
+                'branch_id' => $challan->branch_id,
                 'party_type' => 'customer',
                 'party_id' => $customer->id,
                 'instrument' => $row['instrument'] ?? null,
@@ -2461,10 +2471,11 @@ final class DirectSaleService
                 sourceType: $sourceType,
                 sourceId: (int) $challan->id,
                 trxDate: $challan->trx_date,
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 lines: [
-                    ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => $cost,
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::PROMOTION_EXPENSE)->id, 'debit' => $cost,
                         'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
-                    ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'credit' => $cost,
+                    ['account_id' => (int) StandardChart::accountFor(StandardChart::INVENTORY)->id, 'credit' => $cost,
                         'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
                 ],
                 documentNo: $challan->document_no,
@@ -2605,6 +2616,13 @@ final class DirectSaleService
     /**
      * ⛔ যে পথেই আসুক (লেখা তারিখ, দিনের সংখ্যা, মাসের শেষ) — ফল গ্রাহকের বাকির দিনের ভিতরে (পূর্ণ নিরীক্ষা §৫, [[DueWithinTerms]])।
      * ⓘ সম্পাদনায় খসড়ার আগের তারিখ রাখা যায় ($kept)।
+     *
+     * ⓘ দ্বিতীয় স্তর, বাইরে থেকে দেখা যায় না (মিউট্যান্ট g27_2 বাঁচে, ইচ্ছা করে — fe, ২১ অক্টোবর ২০২৬): এখানে বাদ দিলেও
+     * কোনো দরজা বিলের সেবার যাচাই এড়ায় না — প্রতিটা কাউন্টার-বিল [[SalesInvoiceService::create()]] বা [[SalesInvoiceService::update()]]
+     * দিয়ে জন্মায়, আর দুইটাই একই গ্রাহকের দিন আর একই বার্তায় [[DueWithinTerms]] ডাকে। দেখা দরজা: ওয়েবের কাউন্টার
+     * ([[DirectSaleController]] → complete), ফোনের কাউন্টার ([[DirectSaleApiController]] → complete), ধরা বিক্রি শেষ করা
+     * ([[SalesInvoiceController]] → finishHeld), বিক্রি সম্পাদনা ([[SaleEditor]] → complete), আর ধরা/পার্ক করা বিল
+     * (createForHeldCounterSale → create, updateForHeldCounterSale → update)। এই স্তর কেবল আগে থামায় — বিক্রি শুরুর আগেই।
      */
     private function dueOn(array $data, Customer $customer, ?string $kept = null): ?string
     {
@@ -3004,19 +3022,10 @@ final class DirectSaleService
      * যায়; না পেলে চুপ করে অন্য খাতে বসিয়ে দেওয়ার চেয়ে থেমে বলে দেওয়াই
      * ভালো — নইলে চেকের টাকা ভুল জায়গায় গিয়ে রেওয়ামিল মিলত, কারণ বোঝা যেত না।
      */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function chequesInHandAccount(): Account
     {
-        $account = Account::query()->postable()
-            ->where('code', StandardChart::CHEQUES_IN_HAND)
-            ->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'deposits' => __('sales::validation.no_cheques_in_hand_account'),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor(StandardChart::CHEQUES_IN_HAND);
     }
 
     private function money(mixed $value): string

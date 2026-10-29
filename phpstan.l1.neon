@@ -1,0 +1,37 @@
+# স্ট্যাটিক বিশ্লেষণের প্রথম ধাপ — level 1, দলের "phpstan পরিষ্কার" দাবি এটাই (fe, ২২ অক্টোবর ২০২৬)।
+#
+#   vendor/bin/phpstan analyse -c phpstan.l1.neon --memory-limit=2G --no-progress      → exit 0 মানে পরিষ্কার
+#
+# ⓘ কেন আলাদা ফাইল: phpstan.neon level 5-এর, আর তার baseline সেই level-এর; level 1-এ চালালে সেই baseline-এর
+#   শত শত সারি "মেলেনি" হয়ে ভুল দেখায়, তাই "সবুজ" বলার উপায় ছিল না। এখানে নিজের baseline (phpstan-baseline-l1.neon),
+#   আর ⛔ reportUnmatchedIgnoredErrors চালু — কোনো ছাড় আর না লাগলে phpstan নিজেই বলে, baseline আবার পুরনো হয় না।
+# ⓘ পথ, মাইগ্রেশন আর PHP সংস্করণ phpstan.neon-এর মতোই — ওখানে বদলালে এখানেও (NoStaticAnalysisDriftTest পাহারা দেয়)।
+
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline-l1.neon
+
+parameters:
+    level: 1
+
+    paths:
+        - app
+        - tests
+
+    databaseMigrationsPath:
+        - database/migrations
+        - app/Modules/*/Database/Migrations
+
+    phpVersion:
+        min: 80300
+        max: 80500
+
+    reportUnmatchedIgnoredErrors: true
+
+    ignoreErrors:
+        # larastan বলে "count() কোয়েরিতে করো" — এখানে ইচ্ছা করে নয়: `having` সহ গুনতে গেলে বিল্ডার ভিতরের কোয়েরিটাকে
+        # সাব-কোয়েরি বানায়, আর লাইভের ONLY_FULL_GROUP_BY-তে সেটা ৫০০ দেয় (কারণ ফাইলেই লেখা)। phpstan.neon-এও একই সারি।
+        -
+            message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
+            path: app/Core/Services/StatusNotices.php
+            count: 1

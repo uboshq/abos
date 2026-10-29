@@ -475,8 +475,13 @@ class AppServiceProvider extends ServiceProvider
          *
          * ⭐ কেউ এই override তুলে দিলে সুইট লাল হয় — যাচাই করে দেখা।
          */
+        /*
+         * ⛔ আর তৃতীয় ঘর `_branch` — পাতা যে শাখায় আঁকা তার ছাপ (RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়",
+         * ec, ১৯ অক্টোবর ২০২৬; [[FormBranchPin]], [[KeepsAFormInItsOwnBranch]])। একই নোঙর, একই যুক্তি।
+         */
         Blade::directive('csrf', fn (): string => '<?php echo csrf_field(), '
-            .'app('.FormIsNotSubmittedTwice::class.'::class)->field(); ?>');
+            .'app('.FormIsNotSubmittedTwice::class.'::class)->field(), '
+            .'app('.\App\Core\Services\FormBranchPin::class.'::class)->field(); ?>');
 
         /*
          * ⭐ `@nonce` — ইনলাইন `<script>` ও `<style>` ব্লকের ছাড়পত্র।

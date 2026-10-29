@@ -97,7 +97,7 @@ class LeadController extends Controller implements HasMiddleware
 
         return view('sales::crm.lead.show', [
             'menu' => $this->menu->forUser($user),
-            'lead' => $record->load(['owner', 'location', 'customer', 'converter']),
+            'lead' => $record->load(['owner', 'location', 'customer.location.parent', 'customer.branch', 'converter']),
             'opportunities' => $record->opportunities()->visibleTo($user)->with('stage')->latest('id')->get(),
             'locations' => $this->locations(),
             'partyTypes' => PartyType::query()->active()->orderBy('code')->get()

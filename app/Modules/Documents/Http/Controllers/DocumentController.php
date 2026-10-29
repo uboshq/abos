@@ -19,6 +19,7 @@ use App\Modules\Documents\Services\DocumentFinder;
 use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
 use App\Modules\Documents\Services\DocumentLinks;
+use App\Modules\Documents\Services\DocumentParties;
 use App\Modules\Documents\Services\DocumentScan;
 use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
@@ -243,9 +244,13 @@ final class DocumentController extends Controller
             default => $this->applySort($query, $request, $this->sorts()),
         };
 
+        $documents = $query->paginate(50)->withQueryString();
+
         return view('documents::index', [
             'menu' => $this->menu->forUser($request->user()),
-            'documents' => $query->paginate(50)->withQueryString(),
+            'documents' => $documents,
+            // ⭐ নম্বরের পাশে পক্ষ — জোড়া রেকর্ড থেকে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]])
+            'parties' => app(DocumentParties::class)->of(collect($documents->items())->pluck('id')),
             'view' => $view,
             'filters' => $filters,
             'folderCounts' => $view === DocumentFinder::CENTER

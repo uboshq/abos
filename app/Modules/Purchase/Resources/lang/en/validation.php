@@ -18,8 +18,8 @@ return [
     'proposal_bill_not_open' => ':no is not an open posted bill and cannot be proposed.',
     'proposal_over_due' => ':no has :due left; no more than that can be proposed.',
     'three_hands_proposer_pays' => 'Whoever proposed :no cannot pay it; someone else must confirm.',
-    'three_hands_signer_pays' => 'Whoever signed :no cannot pay it; someone else must confirm.',
-    'three_hands_proposer_signed' => 'The proposer of :no signed it; another signature is needed.',
+    'three_hands_signer_pays' => 'Whoever approved :no cannot pay it; someone else must confirm.',
+    'three_hands_proposer_signed' => 'The proposer of :no approved it; another approval is needed.',
     'unknown_product' => 'That product is not in this company\'s list.',
 
     'gift_needs_a_lot' => '":product" is lot-tracked, and a gift row has no lot number field. Taking it in without one would make both expiry and recall wrong, so a lot-tracked product cannot be taken as a gift.',
@@ -59,6 +59,7 @@ return [
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not leave from there.',
     'not_enough_money_in' => ':account holds :held — :amount cannot be paid from it. Cash on hand never goes below zero.',
+    'charge_needs_bank_or_mfs' => 'A charge applies only to a bank or MFS account — leave it at zero when paying from cash.',
 
     // Return
     'zero_value_return' => 'A return worth nothing does not go in the books.',
@@ -127,4 +128,8 @@ return [
     'contract_rate_negative' => 'An agreed rate cannot be less than zero.',
     'contract_duplicate_product' => 'The same product is in the contract twice. Then there would be two answers to "what is the contract rate".',
     'requisition_over_budget' => 'This cost centre has :budget for the month and :already is already approved. Adding the :asking on this paper goes past the limit - either the budget rises or the request comes down.',
+
+    'withheld_over_total' => 'Tax withheld at source (:withheld) cannot exceed the bill total (:total).',
+    'withheld_twice' => 'Tax was already withheld on bill :no — it cannot be withheld again on the payment.',
+    'withheld_takes_all' => 'The tax and VAT withheld on :no equal or exceed the whole amount — nothing is left to pay by cheque. Check the amount or the rates.',
 ];

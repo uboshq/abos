@@ -93,16 +93,25 @@ final class SalesReturnService
             $saleNo = isset($data['sales_invoice_id'])
                 ? SalesInvoice::query()->whereKey($data['sales_invoice_id'])->value('sale_no')
                 : null;
-            $documentNo = $this->numbers->next('SR');
+            $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
+
+            /*
+             * ⛔ ফেরত তার গুদামের শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর
+             * ২০২৬)। ⓘ আগে উপরের শাখা: A-র গুদামে মাল ফিরল, অথচ ফেরত, তার নম্বর আর খাতার সারি B-তে। শাখাহীন গুদামে আগের মতো।
+             */
+            $branchId = $data['branch_id'] ?? $warehouse->branch_id ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('SR', $branchId);
 
             $return = SalesReturn::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'sale_no' => $saleNo,
                 'customer_id' => $data['customer_id'],
-                'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? null)->id,
+                'warehouse_id' => $warehouse->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
                 'reason_note' => $data['reason_note'] ?? null,
@@ -853,17 +862,10 @@ final class SalesReturnService
         }
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'status' => __('sales::validation.missing_account', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear

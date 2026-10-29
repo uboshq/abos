@@ -58,7 +58,7 @@ final class TodayController extends Controller implements HasMiddleware
             'waiting' => $this->alerts->waiting($user, $companies, 6),
             // ⭐ বাকির চার সংখ্যা — বাকি নিয়ন্ত্রণের নিজের ড্যাশবোর্ড থেকে (ধাপ ৩.৩)
             'credit' => app(CreditHeadlines::class)->for($user, $companies),
-            'topCustomers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'total', 5, $month),
+            'topCustomers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'net_sales', 5, $month),
             'topProducts' => $this->rankings->top($user, $companies, 'sales.by_product', 'revenue', 5, $month),
             'trend' => $this->series($board['trend']),
             'filters' => ['company' => $companyId, 'branch' => $branchId, 'period' => $board['period']],
@@ -87,6 +87,8 @@ final class TodayController extends Controller implements HasMiddleware
             points: array_map(fn (array $p) => ['label' => $p['label'], 'first' => $p['sales'], 'second' => $p['collections']], $trend),
             firstLabel: __('executive::figure.sales'),
             secondLabel: __('executive::figure.collections'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             chart: 'line',
             range: DateRange::label(Carbon::parse($trend[0]['date']), Carbon::parse($trend[count($trend) - 1]['date'])),
         );

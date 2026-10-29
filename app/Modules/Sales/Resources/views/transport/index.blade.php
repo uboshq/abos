@@ -28,9 +28,9 @@
         [
             // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায়
             'key' => 'point',
-            'label' => __('customer::field.point'),
+            'label' => __('customer::field.place'),
             'width' => '9rem',
-            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+            'render' => fn ($d) => view('customer::partials.place', ['customer' => $d->customer]),
         ],
         [
             'key' => 'mode',
@@ -158,7 +158,7 @@
                 <select name="customer" class="{{ $field }}" aria-label="{{ __('sales::field.customer') }}">
                     <option value="">{{ __('sales::transport_board.any_customer') }}</option>
                     @foreach ($customers as $c)
-                        <option value="{{ $c->id }}" @selected($customer === $c->id)>{{ $c->name() }}</option>
+                        <option value="{{ $c->id }}" @selected($customer === $c->id)>{{ $c->nameWithPoint() }}</option>
                     @endforeach
                 </select>
             </x-ui.toolbar>

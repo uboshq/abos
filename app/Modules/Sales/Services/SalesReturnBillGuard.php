@@ -241,6 +241,12 @@ final class SalesReturnBillGuard
             $left[] = array_keys($this->freeLotsLeft($challanIds, $product));
         }
 
+        // ⓘ ফেরত কিছু নেই তো লটও নেই — ডাকনেওয়ালা শূন্য সারি আগেই বাদ দেয় ([[bind()]]), তবু এখানেও: নইলে
+        //   array_intersect() শূন্য প্যারামিটারে ArgumentCountError দিত (phpstan L1, ২২ অক্টোবর ২০২৬)
+        if ($left === []) {
+            return null;
+        }
+
         // দামি আর ফ্রি একই সারিতে থাকলে লটটা দুই দিকেই বেরোনো হতে হবে
         $possible = count($left) === 1 ? $left[0] : array_values(array_intersect(...$left));
         $named = (int) ($line['batch_id'] ?? 0);

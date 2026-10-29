@@ -24,7 +24,8 @@
     <tr><td>{{ $p->t('voucher_no') }}</td><td style="text-align: right">{{ $v['document_no'] }}</td></tr>
     <tr><td>{{ $p->t('date') }}</td><td style="text-align: right">{{ $p->n($v['date']) }}</td></tr>
     @if ($p->counterparty() !== '')<tr><td>{{ $p->counterpartyLabel() }}</td><td style="text-align: right">{{ $p->counterparty() }}</td></tr>@endif
-    @if ($p->d('point') !== '')<tr><td>{{ $p->t('point') }}</td><td style="text-align: right">{{ $p->d('point') }}</td></tr>@endif
+    {{-- ⭐ রোলে এক লাইন — "পয়েন্ট · শাখা" ৩২ অক্ষরে কাটা (মালিক, ১৯ অক্টোবর ২০২৬) --}}
+    @if ($p->d('point') !== '')<tr><td>{{ $p->t('point') }}</td><td style="text-align: right">{{ mb_strimwidth($p->d('point'), 0, 32, '…') }}</td></tr>@endif
     @if ($p->d('against') !== '')<tr><td>{{ $p->t('against_bill') }}</td><td style="text-align: right">{{ $p->d('against') }}</td></tr>@endif
     @if ($p->method() !== '')<tr><td>{{ $p->t('mode') }}</td><td style="text-align: right">{{ $p->method() }}</td></tr>@endif
 </table>

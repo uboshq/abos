@@ -52,6 +52,9 @@ Route::middleware('auth')->prefix('customers')->group(function () {
 
     Route::get('/{customer}', [CustomerController::class, 'show'])
         ->whereNumber('customer')->name('show');
+    // ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি — ISA 505 (হিসাবের ফাঁক #১৯, ২০ অক্টোবর ২০২৬)
+    Route::get('/{customer}/balance-confirmation', \App\Modules\Customer\Http\Controllers\CustomerBalanceConfirmationController::class)
+        ->whereNumber('customer')->name('balance_confirmation');
 
     /*
      * ⭐ এক নজরের সারাংশ — তালিকার 👁 (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।

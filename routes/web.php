@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
     // ⭐ হোমের সাজ — কেবল নিজের (মালিক, ৪ অক্টোবর ২০২৬: "লেআউট সাজান")
     Route::post('/home/layout', [WorkspaceController::class, 'saveLayout'])->name('home.layout');
+    // ⭐ বাঁ রেলের নিজের সাজ — পিন আর ক্রম, কেবল নিজের সারিতে (মালিক, ২৪ অক্টোবর ২০২৬)
+    Route::post('/rail/layout', [WorkspaceController::class, 'saveRail'])->name('rail.layout');
 
     /*
      * ⭐ কাগজের অবস্থা — আর এই পর্দাটা তালার বাইরে।
@@ -120,6 +122,9 @@ Route::middleware('auth')->group(function () {
      */
     Route::get('/notifications/settings', [NotificationController::class, 'settings'])
         ->name('notifications.settings');
+
+    // ⭐ নতুন কী এল — নিচের বারের সংস্করণে চাপলে; লগইন করা সবার, চাবি ছাড়া (মালিক, ২৪ অক্টোবর ২০২৬)
+    Route::get('/whats-new', \App\Http\Controllers\ReleaseNotesController::class)->name('release.notes');
     Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])
         ->name('notifications.settings.update');
 
@@ -127,6 +132,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
+
+    /*
+     * ⭐ একজনের মুখ — কেবল সহকর্মীর চোখে (মালিক, a6, ২০ অক্টোবর ২০২৬)। ⚠️ আগে `/storage/avatars/…`, লগইন ছাড়াই খোলা।
+     * ⓘ `can:` নেই: পাহারা নিয়ামকে — একই চালু কোম্পানির চালু সদস্য না হলে ৪০৪ ([[UserPhotoController]])। ফোনের যমজ `api.users.photo`।
+     */
+    Route::get('/users/{user}/photo', [\App\Http\Controllers\UserPhotoController::class, 'show'])
+        ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
 
     /*
      * পাসওয়ার্ড বদল — নিজের, আর তাই নিজের পথ।

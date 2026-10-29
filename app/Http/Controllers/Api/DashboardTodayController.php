@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Approval\ApprovalEngine;
-use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
 use App\Core\Services\PhoneModules;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\UnchangedAnswer;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
@@ -18,11 +18,13 @@ use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Inventory\Services\StockFacts;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Supplier\Reports\PrincipalCommissionReport;
+use App\Modules\Supplier\Services\PrincipalCommissionFigures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 /**
@@ -37,9 +39,11 @@ use Illuminate\Support\Carbon;
  * রুটে কোনো `can:` নেই; প্রতিটা ঘর নিজের চাবি দেখে।
  *
  * ── চাবিগুলো, আর চুক্তি থেকে যেখানে সরে আসা ─────────────────────────
- *   sales        sales.invoice.view  ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
+ *   sales        sales.invoice.view  ⭐ amount নিট (বিল − ফেরত, VAT বাদে) + billed, returned, vat, label (২০ অক্টোবর ২০২৬) ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
  *                                    বিলের, আর ওয়েবের কার্ডও এই চাবি চায় —
  *                                    ফোন ওয়েবের চেয়ে বেশি দেখাবে না
+ *   salesByBranch sales.invoice.view  ⭐ ২০ অক্টোবর ২০২৬ (০.৪.৪১, মালিকের হোম): শাখা ধরে আজকের বিক্রি,
+ *                                    `sales`-এর একই উৎস আর দেয়াল; সারির যোগফল = salesByBranchTotal = sales.amount
  *   collections  sales.collection.view
  *   cashInHand   accounts.till.view  ⚠️ কেবল নগদ টিল; ওয়েবের কার্ড নগদ+ব্যাংক
  *                                    মিলিয়ে দেখায়, চুক্তির নাম "হাতে নগদ"
@@ -49,8 +53,11 @@ use Illuminate\Support\Carbon;
  *   approvals    approval.decide
  *   money        accounts.till.view  ⭐ ওয়েবের "হাতে ও ব্যাংকে মোট" — নগদ · MFS · ব্যাংক · পথে (৬ অক্টোবর ২০২৬)
  *   inflow       accounts.view       ⭐ আজ যত টাকা ঢুকল, স্থানান্তর বাদ
+ *   outflow      accounts.view       ⭐ আজ যত টাকা গেল, স্থানান্তর বাদ (২০ অক্টোবর ২০২৬)
  *   payable      accounts.view       ⭐ সব দায় + হাতধারে আমাদের দেনা (হাতধারের ভাগ কেবল finance.hand_loan.view-এ)
  *   principals   supplier.report     ⭐ প্রিন্সিপালের কমিশন — শতাংশ, দেওয়া, বাকি
+ *   principalsTotal supplier.report  ⭐ একই সারির মোট — ওয়েবের বাক্সের সর্বমোট (২০ অক্টোবর ২০২৬)
+ *   stockValue   inventory.cost.view ⭐ মজুদের দাম, কেনা দরে, খাতা থেকে — ওয়েবের বাক্সের একই ঘর (২১ অক্টোবর ২০২৬)
  *
  * ── শাখা ─────────────────────────────────────────────────────────────
  * ⓘ বাছাই-করা শাখা নয় — ব্যবহারকারীর শাখা-সীমা ([[ScopedToUserBranch]]),
@@ -64,7 +71,7 @@ class DashboardTodayController extends Controller
         private readonly ApprovalEngine $approvals,
     ) {}
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): JsonResponse|Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -87,10 +94,27 @@ class DashboardTodayController extends Controller
         $on = fn (string $module): bool => $phone->isOn($module);
 
         if ($on('sales') && $user->can('sales.invoice.view')) {
+            /*
+             * ⭐ নিট বিক্রি — IFRS 15 (fe, ২০ অক্টোবর ২০২৬): `amount` = আজকের বিল − আজকের ফেরত, ওয়েবের কার্ডের হুবহু
+             * ([[SalesMetrics::salesToday()]])। `billed` আর `returned` আলাদা, `label` সার্ভারের বাংলা নাম (অ্যাপ ০.৪.৪১ দেখায়)।
+             * ⓘ পুরনো অ্যাপ কেবল `amount` পড়ে — সেটাই এখন নিট। `count` আগের মতো আজকের পাকা বিলের সংখ্যা।
+             */
+            // ⭐ সব ভ্যাট বাদে (IFRS 15.47); ভ্যাট আলাদা `vat`-এ (বিলের ভ্যাট − ফেরতের ভ্যাট)
+            $parts = SalesMetrics::netParts($today, $today);
             $body['sales'] = [
                 'count' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(),
                 'amount' => self::money(SalesMetrics::salesToday()->value()),
+                'billed' => self::money($parts['billed']),
+                'returned' => self::money($parts['returned']),
+                'vat' => self::money($parts['vat']),
+                'label' => __('sales::dashboard.sales_today'),
             ];
+
+            /*
+             * ⭐ শাখা ধরে আজকের বিক্রি — মালিকের হোমের "আজকের বিক্রি" কার্ড (অ্যাপ ০.৪.৪১, ২০ অক্টোবর ২০২৬)। ⓘ পুরনো অ্যাপ চাবিটা চেনে না।
+             * ⛔ উপরের মোটের একই ভিত ([[SalesMetrics::netByBranch()]] — নিট), তাই সারির যোগ = `sales.amount`, পয়সায়।
+             */
+            [$body['salesByBranch'], $body['salesByBranchTotal']] = $this->salesByBranch($user, $today);
         }
 
         if ($on('sales') && $user->can('sales.collection.view')) {
@@ -119,6 +143,11 @@ class DashboardTodayController extends Controller
                 'mfs' => $mfs,
                 'bank' => $bank,
                 'transit' => self::money(AccountsWidgets::inTransit()),
+                // ⭐ MFS-এ চাপলে প্রতিটা খাত (বিকাশ, নগদ …) আর তার জের — যোগফল ঠিক `mfs` (২০ অক্টোবর ২০২৬)
+                'mfsAccounts' => array_map(
+                    fn (array $row) => ['name' => $row['name'], 'balance' => self::money($row['balance'])],
+                    AccountsWidgets::mfsAccounts(),
+                ),
             ];
         }
 
@@ -126,7 +155,10 @@ class DashboardTodayController extends Controller
             $facts = app(AccountsFacts::class);
 
             // ⭐ আজকের ইনফ্লো — আজ যত টাকা ঢুকল, নগদ-ব্যাংক-MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ৬ অক্টোবর ২০২৬)
-            $body['inflow'] = ['amount' => self::money($facts->moneyFlowBetween($today, $today)['in'])];
+            $flow = $facts->moneyFlowBetween($today, $today);
+            $body['inflow'] = ['amount' => self::money($flow['in'])];
+            // ⭐ আজ যত টাকা গেল — একই খাত, একই নিয়ম, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ২০ অক্টোবর ২০২৬: হোমে "আজ গেছে")
+            $body['outflow'] = ['amount' => self::money($flow['out'])];
 
             /*
              * ⭐ Payable — "যাকেই আমার পেমেন্ট করতে হবে" (মালিক, ৬ অক্টোবর ২০২৬): দায়ের গোটা দল (সরবরাহকারী, ভাড়া, ভ্যাট,
@@ -142,29 +174,31 @@ class DashboardTodayController extends Controller
         /*
          * ⭐ প্রিন্সিপালের কমিশন — রিপোর্টের পুরো ফল (মালিক, ৬ অক্টোবর ২০২৬: "ডিলাররা যে টাকা দেয়, এখান থেকে আমি কত
          * পার্সেন্টেজ পাব, কত দেওয়া হয়েছে, কত ব্যালেন্স")। নিজে গোনা নয় — [[PrincipalCommissionReport]], শাখার দেয়ালসহ।
+         * ⭐ সারি আর মোট এক নির্মাতা থেকে ([[PrincipalCommissionFigures]]) — অ্যাপের পর্দা আর উইজেটও সেটাই নেয়, তাই তিন
+         * জায়গা কখনো আলাদা হয় না (মালিক, fe-র মারফত, ২০ অক্টোবর ২০২৬: *"app e dekhate hobe"*; চুক্তি সংশোধন ১)।
+         * ⓘ `principals`-এর ঘরের নাম আগের মতোই (০.৪.৪০-এর অ্যাপ পড়ে); নতুন কেবল `supplierId`, `branch`। পাশে
+         * `principalsTotal` — একই সারির bcmath যোগফল, ওয়েবের বাক্সের সর্বমোটের একই নিয়ম ও লেখা।
          */
-        if ($on('purchase') && $user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
-            $body['principals'] = array_map(fn (array $r) => [
-                // ⭐ সংক্ষিপ্ত নাম, না থাকলে নাম — কোড নয় (মালিক, ৬ অক্টোবর ২০২৬; রিপোর্টের সারিতেই)
-                'name' => (string) $r['supplier_name'],
-                'period' => (string) $r['period'],
-                // ⭐ ওয়েবের বাক্সের "সময়কাল: 26/09/2026 – আজ পর্যন্ত" — অঙ্কগুলো চক্রের শুরু থেকে আজ পর্যন্ত
-                'periodFrom' => (string) $r['period_from'],
-                'periodTo' => (string) $r['period_to'],
-                'periodSoFar' => \App\Modules\Supplier\Reports\PrincipalCommission::soFar((string) $r['period_from'], (string) $r['period_to']),
-                'basisRate' => (string) $r['basis_rate'],
-                'inflow' => self::money((string) $r['inflow']),
-                'commission' => self::money((string) $r['commission']),
-                // ⭐ ওয়েবের বাক্সের লেখাই — ঋণাত্মক হলে "লোকসান ৳… — কেনা দামের নিচে বিক্রি", খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
-                'commissionLabel' => \App\Modules\Supplier\Dashboard\SupplierDashboard::earned((string) $r['commission']),
-                'share' => self::money((string) $r['share']),
-                'paid' => self::money((string) $r['paid']),
-                'balance' => self::money((string) $r['balance']),
-            ], app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [], 1, 50)->rows);
+        if ($on('purchase') && $user->can('supplier.report') && class_exists(PrincipalCommissionFigures::class)) {
+            ['rows' => $body['principals'], 'total' => $body['principalsTotal']] = app(PrincipalCommissionFigures::class)->figures();
         }
 
         if ($on('customer') && $user->can('customer.report')) {
             $body['dues'] = $this->customers->dues($user, $today);
+        }
+
+        /*
+         * ⭐ মজুদের দাম — ওয়েবের হোমের টাকার বাক্সের "মজুদের মূল্য" ঘরের একই সংখ্যা, একই উৎস ([[StockFacts::value()]]: মজুদের
+         * খাত ১১২০-এর জের, কেনা দরে, হেডারে বাছা শাখা মেনে) — মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬; a4-এর সাথে চুক্তি:
+         * `stockValue: {amount, basis: "cost"}`, অ্যাপ ০.৪.৪৩-এ মালিকের হোমে।
+         * ⛔ চাবি (inventory.cost.view) না থাকলে ঘরটাই নেই — `null` বা `"0"` নয় (চুক্তির নিয়ম ক); বিক্রয়কর্মীর ফোনে মজুদের দাম নয়।
+         */
+        if ($on('inventory') && $user->can('inventory.cost.view')) {
+            $stock = app(StockFacts::class)->value();
+
+            if ($stock !== null) {
+                $body['stockValue'] = ['amount' => self::money($stock), 'basis' => 'cost'];
+            }
         }
 
         if ($on('approval') && $user->can('approval.decide')) {
@@ -175,7 +209,72 @@ class DashboardTodayController extends Controller
             )->count()];
         }
 
-        return response()->json($body);
+        /*
+         * ⛔ উত্তরে হাতের নগদ, দেনা আর কমিশন — কোনো ক্যাশে নয়; ⭐ তবু ETag আর ৩০৪, উইজেটের দরজার একই সহায়কে (cb, ২০ অক্টোবর
+         * ২০২৬; [[UnchangedAnswer]])। ⓘ hash-এ `asOf` নেই — সময়ের ছাপ থাকলে কখনো ৩০৪ আসত না।
+         */
+        return UnchangedAnswer::json($request, array_diff_key($body, ['asOf' => true]), $body);
+    }
+
+    /**
+     * শাখার সারি আর তাদের যোগ।
+     *
+     * ⭐ মানুষটার দেখার শাখার **প্রতিটা** সচল শাখা, আজ বিক্রি না হলেও "0.0000" — ওয়েবের "আজ" ছকের মতো ([[Board]]-এর সারি
+     * = [[CompanyLens::branches()]]), যাতে মালিক সব শাখা দেখেন। ⓘ দেখার শাখা = মোটের দেয়ালের একই শাখা
+     * ([[DataScope::viewBranchIds()]]): হেডারে একটা বাছা থাকলে কেবল সেটা, নইলে নাগাল; সীমা নেই মানে কোম্পানির সব।
+     * ⚠️ বিক্রি হয়েছে এমন বন্ধ শাখা, আর শাখাহীন বিল (কেবল "সব শাখা"-তে মোটে ঢোকে) নিজের সারিতে — নইলে যোগ মোটের সাথে মিলত না।
+     * ক্রম: টাকা বড় থেকে ছোট, সমান হলে নাম।
+     *
+     * ⭐ `amount` নিট (বিল − ফেরত), পাশে `billed` আর `returned` (IFRS 15, ২০ অক্টোবর ২০২৬)।
+     *
+     * @return array{0: list<array{branch_id: ?int, branch: string, amount: string, billed: string, returned: string}>, 1: string}
+     */
+    private function salesByBranch(User $user, string $today): array
+    {
+        // ⭐ নিট, শাখা ধরে — বিল আর ফেরত দুই GROUP BY ([[SalesMetrics::netByBranch()]]); সারির যোগ = `sales.amount`
+        $sold = SalesMetrics::netByBranch($today, $today);
+        $reach = $this->scope->viewBranchIds($user);
+
+        $branches = Branch::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach ?: [0]))
+            ->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', array_keys($sold) ?: [0]))
+            ->get();
+
+        $rows = [];
+
+        foreach ($branches as $branch) {
+            $rows[] = ['branch_id' => (int) $branch->id, 'branch' => $branch->name(), ...self::netRow($sold[(int) $branch->id] ?? null)];
+        }
+
+        if (isset($sold[0])) {
+            $rows[] = ['branch_id' => null, 'branch' => __('sales::overview.no_branch'), ...self::netRow($sold[0])];
+        }
+
+        usort($rows, fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4) ?: strcmp($a['branch'], $b['branch']));
+
+        $total = '0.0000';
+
+        foreach ($rows as $row) {
+            $total = bcadd($total, $row['amount'], 4);
+        }
+
+        return [$rows, $total];
+    }
+
+    /**
+     * এক শাখার নিট সারি — বিক্রি-ফেরত কিছু না থাকলে তিনটাই "0.0000"।
+     *
+     * @param  array{billed: string, returned: string, net: string}|null  $part
+     * @return array{amount: string, billed: string, returned: string}
+     */
+    private static function netRow(?array $part): array
+    {
+        return [
+            'amount' => self::money($part['net'] ?? '0'),
+            'billed' => self::money($part['billed'] ?? '0'),
+            'returned' => self::money($part['returned'] ?? '0'),
+        ];
     }
 
     /** সীমা নেই → null; এক বা একাধিক শাখা → নামগুলো ", " দিয়ে। */

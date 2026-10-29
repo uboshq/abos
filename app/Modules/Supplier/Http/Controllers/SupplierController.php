@@ -261,7 +261,31 @@ class SupplierController extends Controller implements HasMiddleware
             /* ⓘ এক শাখা বাছা থাকলে সব শাখা মিলিয়ে প্রদেয়ও — সীমা ওটা দিয়েই মাপা হয় */
             'payableAll' => ViewedBranch::one() !== null ? $supplier->payable() : null,
             'entries' => $entries,
+            // ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬; [[SupplierBank]])
+            ...$this->bankCard($supplier, $request),
         ]);
+    }
+
+    /**
+     * ব্যাংক কার্ডের তথ্য — চালু সই-পাওয়া সারি, অপেক্ষার বদল, আর নম্বর এই মানুষের চোখে (পুরো বা ••••শেষ চার)।
+     *
+     * @return array<string, mixed>
+     */
+    private function bankCard(Supplier $supplier, Request $request): array
+    {
+        $bank = app(\App\Modules\Supplier\Services\SupplierBank::class);
+        $signed = $bank->signedFor($supplier);
+        $pending = $bank->pendingFor($supplier);
+        $viewer = $request->user();
+
+        return [
+            'bankSigned' => $signed?->load(['requester', 'signer']),
+            'bankSignedAccount' => $signed !== null ? $bank->accountShown($signed, $viewer) : null,
+            'bankPending' => $pending?->load('requester'),
+            'bankPendingAccount' => $pending !== null ? $bank->accountShown($pending, $viewer) : null,
+            'bankCanSign' => $pending !== null && $viewer !== null && $bank->canSign($pending, $viewer),
+            'bankIsMaker' => $pending !== null && $viewer !== null && (int) $pending->requested_by === (int) $viewer->id,
+        ];
     }
 
     /** মাথার প্রদেয় — খাতার প্রথম ভাগের ঠিক সেই ছাঁকনিতে ([[show()]])। */

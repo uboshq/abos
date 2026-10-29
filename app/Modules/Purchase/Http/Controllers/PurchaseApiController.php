@@ -71,7 +71,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
 
         // ⭐ ছাঁকা তালিকার মোট দেনা — সব পাতা মিলে, ওয়েবের সরবরাহকারী-তালিকার একই যোগ ([[GrandTotals]]; পূর্ণ নিরীক্ষা §৯ ⚠️৭)
         $total = $this->grandTotals($query, ['payable' => 't.payable_in_view'])['payable'];
-        $page = $query->paginate(self::PER_PAGE);
+        $page = $query->with('branch')->paginate(self::PER_PAGE);
 
         return response()->json([
             'rows' => collect($page->items())->map(fn (Supplier $s) => $this->principalRow($s))->values(),
@@ -91,7 +91,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
      */
     public function principal(Request $request, string $id): JsonResponse
     {
-        $supplier = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()->where('suppliers.public_id', $id)->firstOrFail();
+        $supplier = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()->where('suppliers.public_id', $id)->with('branch')->firstOrFail();
 
         $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Supplier::drillSourceType(), $supplier->id)->orderBy('trx_date')->orderBy('id');
@@ -150,7 +150,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
          * ([[PurchaseBill::scopeWithPaid()]]) — আগে সারিপ্রতি ২–৪টা।
          */
         $cost = (bool) $request->user()?->can('inventory.cost.view');
-        $page = (clone $query)->with('supplier')->when($kind === 'bill' && $cost, fn (Builder $q) => $q->withPaid())
+        $page = (clone $query)->with('supplier.branch')->when($kind === 'bill' && $cost, fn (Builder $q) => $q->withPaid())
             ->orderByDesc("{$table}.trx_date")->orderByDesc("{$table}.id")->paginate(self::PER_PAGE);
 
         return response()->json([
@@ -172,7 +172,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
         $model = $kind === 'bill' ? PurchaseBill::class : PurchaseReceipt::class;
         $table = $kind === 'bill' ? 'pur_bills' : 'pur_receipts';
         $paper = ViewedBranch::narrow($model::query(), "{$table}.branch_id")
-            ->where("{$table}.public_id", $id)->with(['supplier', 'lines.product'])->firstOrFail();
+            ->where("{$table}.public_id", $id)->with(['supplier.branch', 'lines.product'])->firstOrFail();
         $cost = (bool) $request->user()?->can('inventory.cost.view');
 
         return response()->json([
@@ -202,9 +202,19 @@ class PurchaseApiController extends Controller implements HasMiddleware
             'full_name' => $s->name(),
             'code' => (string) $s->code,
             'phone' => (string) ($s->phone ?? ''),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬: "নাম · শাখা" (সরবরাহকারীর পয়েন্ট নেই); নামে, কোডে নয়। ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'branch' => self::branchOf($s),
             'balance' => Money::round((string) ($s->payable_in_view ?? '0'), 4),
             'last_purchase_on' => $s->last_purchase_on === null ? null : substr((string) $s->last_purchase_on, 0, 10),
         ];
+    }
+
+    /** সরবরাহকারীর শাখার নাম, না থাকলে null — ডাকার আগে `branch` একসাথে আনুন */
+    private static function branchOf(Supplier $s): ?string
+    {
+        $name = trim((string) $s->branch?->name());
+
+        return $name === '' ? null : $name;
     }
 
     /** @return array<string, mixed> */
@@ -218,6 +228,8 @@ class PurchaseApiController extends Controller implements HasMiddleware
             'no' => (string) $p->document_no,
             'date' => $p->trx_date?->toDateString(),
             'principal' => (string) ($p->supplier === null ? '' : (filled($p->supplier->short_name) ? $p->supplier->short_name : $p->supplier->name())),
+            // ⭐ সরবরাহকারীর শাখা — "নাম · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬)
+            'principal_branch' => $p->supplier === null ? null : self::branchOf($p->supplier),
             'status' => (string) $p->status,
             'status_label' => (string) __('core.status.'.$p->status),
             // ⛔ অঙ্ক কেবল দামের চাবিতে — উপরের [[purchases()]] দেখুন

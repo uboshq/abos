@@ -122,8 +122,9 @@
                     স্থায়ী নিয়মও তাই: আপলোড-সম্পাদনা-মোছা যে জিনিসের,
                     তার নিজের পর্দাতেই।
 
-                    ⚠️ SVG নেওয়া হয় না: ওতে স্ক্রিপ্ট বসানো যায়, আর
-                    ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়।
+                    ⚠️ SVG-তে স্ক্রিপ্ট বসানো যায়, আর ফাইলটা পরে সরাসরি ব্রাউজারে
+                    পরিবেশিত হয় — তাই এতদিন নেওয়া হত না। ⭐ ২১ অক্টোবর ২০২৬ থেকে নেওয়া
+                    হয়, স্ক্রিপ্ট ছেঁটে ([[SafeSvg]]; মালিক: লোগো এখন বারের বাঁ কোণেও)।
                 --}}
                 <div class="sm:col-span-2">
                     <span class="text-2xs text-(--color-ink-muted)">
@@ -160,12 +161,28 @@
                              যেত। ⭐ সার্ভারের `ImageEngine::mark()` এটাকে
                              PNG রেখেই ছোট করে। --}}
                         {{-- ⭐ বাংলা বোতাম, ব্রাউজারের ইংরেজি "Choose File" নয় — সিস্টেম পর্দার নকশা §৪, ১০ অক্টোবর ২০২৬ --}}
-                        <x-ui.file-input name="logo" accept="image/png,image/jpeg,image/webp" />
+                        {{-- ⭐ সীমা সার্ভার থেকে গোনা ([[UploadLimit]]) — দরজার নিয়ম, এই লেখা আর বাছার মুহূর্তের আপত্তি একই সংখ্যা
+                             (fe, ২১ অক্টোবর ২০২৬: লাইভে post_max_size ৮ MB, তার বেশি ফাইল গোটা ফর্ম ফেলে দিত) --}}
+                        <x-ui.file-input name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
+                                         :max-bytes="\App\Core\Support\UploadLimit::pictureBytes()"
+                                         :svg-max-bytes="\App\Core\Support\UploadLimit::svgBytes()"
+                                         :too-big="__('system_admin::message.logo_too_big', ['mb' => ':mb'])" />
                     </div>
 
                     <p class="mt-1 text-2xs text-(--color-ink-muted)">
-                        {{ __('system_admin::message.logo_hint') }}
+                        <span data-logo-limit class="font-semibold">{{ __('system_admin::message.logo_limit', [
+                            'mb' => \App\Core\Support\UploadLimit::megabytes(\App\Core\Support\UploadLimit::pictureBytes()),
+                            'svg' => \App\Core\Support\UploadLimit::megabytes(\App\Core\Support\UploadLimit::svgBytes()),
+                        ]) }}</span> · {{ __('system_admin::message.logo_hint') }}
                     </p>
+
+                    {{-- ⓘ সার্ভারের সীমার বেশি POST — PHP গোটা ফর্ম ফেলে দেয়, তাই ফেরা ঠিকানায় চিহ্ন দিয়ে (bootstrap/app.php-র
+                         PostTooLargeException; সেশন তখনো চালু হয়নি, তাই সেশনে বার্তা রাখা যায় না) --}}
+                    @if (request()->query('file_too_big'))
+                        <p class="mt-1 text-2xs text-(--color-badge-danger-ink)" role="alert" data-file-too-big>
+                            {{ __('system_admin::message.logo_too_big', ['mb' => \App\Core\Support\UploadLimit::megabytes(\App\Core\Support\UploadLimit::pictureBytes())]) }}
+                        </p>
+                    @endif
 
                     @error('logo')
                         <p class="mt-1 text-2xs text-(--color-badge-danger-ink)">{{ $message }}</p>

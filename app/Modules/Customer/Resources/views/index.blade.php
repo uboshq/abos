@@ -56,6 +56,16 @@
             'width' => '9rem',
             'render' => fn ($c) => $c->ladderNode(\App\Modules\MasterData\Models\Location::TERRITORY)?->name() ?? '—',
         ],
+        /*
+         * ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার
+         * নামও দিতে হবে।"* ⓘ পয়েন্ট আর এরিয়ার পাশে, নিজের কলামে; শাখা গোটা পাতার এক প্রশ্নে (নিয়ন্ত্রকের `branch`)।
+         */
+        [
+            'key' => 'branch',
+            'label' => __('customer::field.branch'),
+            'width' => '9rem',
+            'render' => fn ($c) => view('customer::partials.place', ['place' => $c->branchName()]),
+        ],
         [
             'key' => 'address',
             'label' => __('customer::field.full_address'),
@@ -157,7 +167,7 @@
                     array_merge(request()->except(['page', 'inactive', ...array_keys($set)]), $set),
                     fn ($v) => $v !== null && $v !== '',
                 ));
-                $status = request()->boolean('inactive') ? 'all' : (string) request('status', 'active');
+                $status = request()->boolean('inactive') ? 'all' : (string) request('status', \App\Modules\Customer\Support\CustomerListFilters::DEFAULT_STATUS);
             @endphp
 
             <x-ui.toolbar :title="$rankTitle ?? ($distributorType && (string) $partyTypeFilter === (string) $distributorType->id
@@ -166,6 +176,7 @@
                 :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
+                :defaults="['status' => \App\Modules\Customer\Support\CustomerListFilters::DEFAULT_STATUS]"
                 :filter-labels="$filterLabels"
                 :filter-values="$filterValues"
                 view>
@@ -262,9 +273,10 @@
             </x-ui.toolbar>
         </form>
 
+        {{-- ⓘ :view-url নেই — সারির কাজে চোখের আইকন একটাই (এক নজরের সারাংশ, row-actions); পুরো পাতা নামের লিংকে।
+             দুটো থাকলে একই সারিতে চোখ, কলম, চোখ — মালিক, ২৪ অক্টোবর ২০২৬ --}}
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('customer.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('customer::message.none_yet')"
             :rows="$customers"
             :compact="request()->boolean('compact')"

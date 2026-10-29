@@ -31,7 +31,8 @@
              ? '—'
              : new \Illuminate\Support\HtmlString(
                  '<a class="text-(--color-link)" href="'.e(route('customer.show', $o->customer->id)).'">'
-                 .e($o->customer->name()).'</a>')],
+                 // ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+                 .e($o->customer->nameWithPoint()).'</a>')],
 
         ['key' => 'total', 'total' => 'money', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($o) => $money($o->total)],
@@ -78,7 +79,7 @@
 
             {{-- ⭐ বাকি সব তালিকার মতোই গড়ন (১৯ সেপ্টেম্বর ২০২৬) --}}
             <x-ui.toolbar :title="__('sales::menu.order_track')"
-                          :subtitle="$customer?->name() ?? __('sales::message.order_track_note')"
+                          :subtitle="$customer?->nameWithPoint() ?? __('sales::message.order_track_note')"
                           :columns="$columns"
                           :search-placeholder="__('sales::message.order_track_search')"
                           :quiet="['stage', 'customer']" />

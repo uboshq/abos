@@ -171,7 +171,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function drafts(Request $request): JsonResponse
     {
         $drafts = DirectSaleService::trueDrafts()
-            ->with(['customer.location.parent', 'lines'])
+            ->with(['customer.location.parent', 'customer.branch', 'lines'])
             ->orderByDesc('id')
             ->limit(50)
             ->get();
@@ -182,6 +182,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'customer' => (string) ($d->customer?->name() ?? ''),
             // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
             'customer_point' => $d->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customer_branch' => $d->customer?->branchName(),
             'date' => $d->trx_date?->toDateString(),
             'total' => (string) $d->total,
             'lines' => $d->lines->count(),
@@ -212,6 +214,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'customer' => (string) ($draft->customer?->public_id ?? ''),
             'customerName' => (string) ($draft->customer?->name() ?? ''),
             'customerPoint' => $draft->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customerBranch' => $draft->customer?->branchName(),
             'lines' => array_map(fn (array $l) => [
                 'product' => (string) ($productIds[(int) $l['id']] ?? ''),
                 'name' => (string) $l['name'],

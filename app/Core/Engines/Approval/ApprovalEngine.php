@@ -15,6 +15,7 @@ use App\Core\Support\Money;
 use App\Core\Support\PlainNumber;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
+use App\Models\ApprovalDelegation;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\User;
@@ -22,9 +23,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 /**
  * অনুমোদন — প্ল্যান সেকশন ২.২, তৃতীয় engine।
@@ -45,6 +49,21 @@ final class ApprovalEngine
      * @var array<string, ApprovalFlow>|null
      */
     private ?array $flowCache = null;
+
+    /**
+     * ⛔ ছক বদলের পালা — অ্যাপের ডিফল্ট ক্যাশে, তাই **প্রতিটা প্রক্রিয়া** একই পালা দেখে (ওয়েব, কিউ-কর্মী, কমান্ড; লাইভে file,
+     * পরীক্ষায় array)। ছক, ধাপ বা শর্ত বসলে/বদলালে/মুছলে নতুন পালা লেখা হয় ([[flowsChanged()]]); প্রতিটা প্রশ্নে একটা ক্যাশ-পড়া,
+     * আর জমানো ছক অন্য পালার হলে আবার তোলা হয়। ⓘ আগে জমানোটা প্রথম প্রশ্নেই আটকে যেত: পরে বসানো ছক ইঞ্জিন দেখতই না, আর
+     * কাগজ সই ছাড়াই চলে যেত — গ্রাহক তৈরি এখন দিনের সই চালু কি না জিজ্ঞেস করে (গ্যাপ ২৬), তাই ছক বসানোর আগেই জমানোটা ভরে
+     * থাকে (২১ অক্টোবর ২০২৬)। ⓘ পালাটা এলোমেলো লেখা, গোনা নয় — database স্টোরে না-থাকা চাবি বাড়ানো যায় না, আর সমান-না-সমান
+     * দেখাই যথেষ্ট (ক্যাশ মুছলেও "অন্য পালা", তাই আবার তোলা)।
+     */
+    public const FLOWS_VERSION_KEY = 'approval:flows:version';
+
+    private ?string $flowCacheVersion = null;
+
+    /** ⓘ জমানো ছক কোন কোম্পানির — সিডার আর কমান্ড প্রক্রিয়ার মাঝে কোম্পানি বদলায়, অন্যের ছক চলবে না */
+    private ?int $flowCacheCompany = null;
 
     /**
      * ইনার রোলের আইডিগুলো — ব্যবহারকারী ধরে, একবার।
@@ -217,6 +236,48 @@ final class ApprovalEngine
     }
 
     /**
+     * ⭐ কাগজ বানানোর আগেই — প্রথম সই কে দেবেন আর মোট কয় ধাপ ("সই দেবেন: ম্যানেজার (ধাপ ১/১)"; টাকা দেওয়ার মিল-তালিকা #৪,
+     * ২২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই ছক আর একই শর্ত [[requires()]]-এর — সই না লাগলে `null`, তাই পর্দা আর পোস্ট কখনো আলাদা কথা বলে না। নাম: ধাপের নাম
+     * থাকলে সেটা, নাহলে রোলের বা মানুষের নাম (ছকের পর্দার মতোই); ধাপ গোনা স্তর ধরে ([[standingOf()]]-এর নিয়মে, N-of-M এক ধাপ)।
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array{who: string, levels: int}|null
+     */
+    public function firstSigner(string $module, string $action, ?string $amount, string $documentType, array $fields = []): ?array
+    {
+        $flow = $this->flowFor($module, $action, $documentType);
+
+        if ($flow === null || ! $flow->catches($amount, $fields)) {
+            return null;
+        }
+
+        // ⓘ এই অঙ্কে যে ধাপগুলো সই দেয় — "ধাপ ১/N"-এর N পরে ইনবক্সের সাথে মেলে ([[ApprovalFlow::stepsAt()]])
+        $steps = $flow->stepsAt($amount);
+
+        if ($steps->isEmpty()) {
+            return null;
+        }
+
+        $first = $steps->where('level', $steps->first()->level);
+        $who = $first->map(function (ApprovalFlowStep $step): string {
+            if (($step->step_name ?? '') !== '') {
+                return (string) $step->step_name;
+            }
+
+            return (string) ($step->approver_type === ApprovalFlowStep::BY_USER
+                ? User::query()->whereKey($step->approver_id)->value('name')
+                : \Spatie\Permission\Models\Role::query()->whereKey($step->approver_id)->value('name'));
+        })->filter()->unique()->implode(' / ');
+
+        return [
+            'who' => $who,
+            'levels' => $steps->pluck('level')->unique()->count(),
+        ];
+    }
+
+    /**
      * এক স্তরের অনুমোদন। সব স্তর শেষ হলে অনুরোধটাই approved হয়।
      */
     public function approve(Approval $approval, User $user, ?string $remarks = null): Approval
@@ -249,10 +310,8 @@ final class ApprovalEngine
             // ⚠️ অনুরোধের নিজের নথি-ধরন ধরে, `null` ধরে নয় — নাহলে
             // নথি-নির্দিষ্ট ছকে বসা অনুরোধ ভুল ছকের স্তর গুনত, আর
             // পরের স্তরটাই খুঁজে পেত না ([[flowOf]])।
-            $flow = $this->flowOf($approval);
-            $steps = $flow?->steps ?? collect();
-
-            $currentStep = $steps->firstWhere('level', $approval->current_level);
+            // ⭐ কেবল এই অঙ্কে যে ধাপগুলো সই দেয় — "৳৫ লাখের নিচে, তাই মালিকের সই লাগবে না" (দফা ১৭; [[stepsFor()]])
+            $steps = $this->stepsFor($approval);
 
             // একই স্তরে দুইজন থাকলে এবং সবার সম্মতি লাগলে — বাকিরা না দিলে
             // স্তরটা এখনো শেষ হয়নি।
@@ -535,7 +594,11 @@ final class ApprovalEngine
                 'document' => $this->noticeLabel($approval),
             ]),
             $remarks,
-            Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            /*
+             * ⛔ এই অনুরোধের নিজের পাতা, তালিকা নয় (২৪ অক্টোবর ২০২৬): তালিকা খোলে কেবল `approval.decide`/`approval.report`
+             * থাকলে, তাই সাধারণ লেখক নিজের কাগজের ফল খুলতে গিয়ে ৪০৩ পেতেন। পাতাটা অনুরোধকারীকে নিজের বলে খোলে।
+             */
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
@@ -580,7 +643,60 @@ final class ApprovalEngine
             return false;
         }
 
-        $paper = $approval->approvable()->withoutGlobalScopes()->first();
+        return self::sendBackAllowed($approval, $approval->approvable()->withoutGlobalScopes()->first());
+    }
+
+    /**
+     * ⭐ গোটা পাতার "সংশোধনে ফেরত" — অনুরোধ → হ্যাঁ/না, কাগজগুলো ধরন ধরে এক ডাকে (a6, ২০ অক্টোবর ২০২৬; fe-র অনুমতি)।
+     *
+     * ⛔ ফোনের সই-বাক্স সারি ধরে [[canSendBack()]] ডাকত — প্রতিটা সারিতে কাগজটা আলাদা করে পড়া, পঁচিশ সারিতে পঁচিশ কোয়েরি।
+     * ⓘ নিয়ম একটাই ([[sendBackAllowed()]]) — একা আর পাতা ধরে দুই পথ একই কথা বলে, আলাদা হতে পারে না। কাগজ তোলা হয়
+     * [[canSendBack()]]-এর একই ভাবে: সব গ্লোবাল স্কোপ ছাড়া (অনুরোধটা নিজেই কোম্পানির দেয়ালে), প্রাথমিক চাবি ধরে।
+     * ⓘ অপেক্ষায় না থাকা অনুরোধের কাগজ তোলাই হয় না — একার পথেও না।
+     *
+     * @param  iterable<Approval>  $approvals
+     * @return array<int, bool>  অনুরোধের id → ফেরত দেওয়া যায় কি না
+     */
+    public function canSendBackMany(iterable $approvals): array
+    {
+        $approvals = collect($approvals);
+        $papers = [];
+
+        foreach ($approvals->filter(fn (Approval $a) => $a->isPending())->groupBy('approvable_type') as $type => $group) {
+            $class = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel((string) $type) ?? (string) $type;
+
+            if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+                continue;
+            }
+
+            $papers[(string) $type] = $class::query()->withoutGlobalScopes()
+                ->whereKey($group->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all())
+                ->get()
+                ->keyBy(fn (Model $m) => (int) $m->getKey());
+        }
+
+        $out = [];
+
+        foreach ($approvals as $approval) {
+            $out[(int) $approval->id] = self::sendBackAllowed(
+                $approval,
+                $approval->isPending() ? ($papers[(string) $approval->approvable_type] ?? collect())->get((int) $approval->approvable_id) : null,
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ ফেরত দেওয়ার নিয়ম — একটাই জায়গায় ([[canSendBack()]] আর [[canSendBackMany()]] দুজনেই এটা ডাকে)।
+     *
+     * ⓘ "না" চার কারণে: অনুরোধ অপেক্ষায় নেই; কাগজটা নেই; কাগজ খসড়া নয়; কাগজ নিজে "না" বলে (`canBeSentBack()`)।
+     */
+    private static function sendBackAllowed(Approval $approval, ?Model $paper): bool
+    {
+        if (! $approval->isPending()) {
+            return false;
+        }
 
         if (! $paper instanceof Model || (string) $paper->getAttribute('status') !== \App\Core\Support\DocumentStatus::DRAFT) {
             return false;
@@ -761,17 +877,13 @@ final class ApprovalEngine
             $key = $definition->approvals[(string) $approval->action] ?? null;
             $action = $key === null ? null : __($key);
 
-            return trim($definition->label().' · '.($action === null || $action === $key ? $approval->action : $action));
+            return $action === null || $action === $key
+                ? app(ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action)
+                : trim($definition->label().' · '.$action);
         }
 
-        $module = __('core.module.'.$approval->module);
-        $action = __('core.approval.action.'.$approval->action);
-
-        return trim(
-            (str_starts_with($module, 'core.') ? $approval->module : $module)
-            .' · '.
-            (str_starts_with($action, 'core.') ? $approval->action : $action)
-        );
+        // ⭐ দফা ৪ — অচেনা মডিউলেও কোড নয়, নাম ([[ApprovalLabel]])
+        return app(ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action);
     }
 
     public function latestFor(Model $document, string $action): ?Approval
@@ -858,12 +970,13 @@ final class ApprovalEngine
          * থেমে যায়, আর ডাকা পক্ষকে আলাদা করে "খালি" সামলাতে হয় না।
          */
         $escalated = $this->escalatedTuples($user);
+        $standIn = $this->standInTuples($user);
 
         $query = Approval::query()
             ->pending()
             // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
             ->with('requester')
-            ->where(function (Builder $outer) use ($tuples, $escalated, $user): void {
+            ->where(function (Builder $outer) use ($tuples, $escalated, $standIn, $user): void {
                 /*
                  * ⭐ আমার হাতে দেওয়া — ছকে আমি থাকি বা না থাকি।
                  *
@@ -912,6 +1025,27 @@ final class ApprovalEngine
                                 }
                             });
                     });
+                }
+
+                /*
+                 * ⭐ দায়িত্ব হস্তান্তরে পাওয়া কাগজ — [[canDecide()]] এঁকে হ্যাঁ বলে ([[delegatorAt()]]), তালিকাও তাই আনে (অনুমোদন পর্দা
+                 * ভাগ ২, দফা ২, ২৭ অক্টোবর ২০২৬)। ⛔ আগে ভারপ্রাপ্ত মানুষটা কাগজের পাতা খুললে অনুমোদন দিতে পারতেন, অথচ ইনবক্সে
+                 * কাগজটা আসতই না। ⓘ যাঁর হয়ে, তিনি এই স্তরে আগেই সিদ্ধান্ত দিলে নয় — [[notYetSignedAtLevel()]]-এর একই নিয়ম।
+                 */
+                foreach ($standIn as [$module, $action, $type, $levels, $from]) {
+                    $outer->orWhere(fn (Builder $one) => $one
+                        ->whereNull('assigned_to')
+                        ->where('module', $module)
+                        ->where('action', $action)
+                        ->where('approvable_type', $type)
+                        ->whereIn('current_level', $levels)
+                        ->whereNotExists(fn (QueryBuilder $signed) => $signed->selectRaw('1')
+                            ->from('approval_decisions')
+                            ->whereColumn('approval_decisions.approval_id', 'approvals.id')
+                            ->whereColumn('approval_decisions.level', 'approvals.current_level')
+                            ->where('approval_decisions.decision', '!=', ApprovalDecision::FORWARDED)
+                            ->where(fn (QueryBuilder $who) => $who->where('approval_decisions.user_id', $from)
+                                ->orWhere('approval_decisions.on_behalf_of', $from))));
                 }
 
                 if ($tuples === []) {
@@ -1147,7 +1281,11 @@ final class ApprovalEngine
      */
     public static function fieldsOf(Model $document): array
     {
-        $skip = ['id', 'company_id', 'branch_id', 'created_at', 'updated_at', 'deleted_at',
+        /*
+         * ⓘ শাখা থাকে — "শাখা = ময়মনসিংহ" শর্তটা পরিকল্পনারই উদাহরণ (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)। ⛔ আগে বাদ ছিল, তাই শাখা ধরে
+         * শর্ত বসালে নিয়মটা কখনো ধরত না — ঘরটা আসতই না।
+         */
+        $skip = ['id', 'company_id', 'created_at', 'updated_at', 'deleted_at',
             'created_by', 'updated_by', 'public_id', 'row_hash', 'prev_hash'];
 
         $out = [];
@@ -1409,9 +1547,16 @@ final class ApprovalEngine
      */
     private function flows(): array
     {
-        if ($this->flowCache !== null) {
+        // ⓘ পালা আগে পড়া, ছক পরে — তোলার মাঝে বদল হলে পরের প্রশ্নে আবার তোলা হয়
+        $version = self::flowsVersion();
+        $company = CompanyContext::id();
+
+        if ($this->flowCache !== null && $this->flowCacheVersion === $version && $this->flowCacheCompany === $company) {
             return $this->flowCache;
         }
+
+        $this->flowCacheVersion = $version;
+        $this->flowCacheCompany = $company;
 
         $flows = [];
 
@@ -1447,6 +1592,37 @@ final class ApprovalEngine
      * কাজ করত না (MySQL-এ NULL ≠ NULL), আর একই কাজে দুইটা ছক বসে যেত:
      * একটা চলত, অন্যটা নীরবে মরে থাকত (V-মাইগ্রেশন ১১ আগস্ট)।
      */
+    /**
+     * ⓘ ছক, ধাপ বা শর্ত বদলালে — মডেলের ঘটনা নিজে ডাকে; মডেল এড়িয়ে লেখা পথ (কোয়েরি-মোছা, DB::table) লেখার পরে ডাকে।
+     * নতুন পালা এখনই, আর লেনদেন পাকা হলে আবার: পাকা হওয়ার আগে অন্য প্রক্রিয়া পুরনো ছক তুলে নতুন পালায় জমালে সেটাও ফেরে।
+     * ⛔ ক্যাশে লেখা না গেলে জানানো হয় (report) — কাজ থামে না।
+     */
+    public static function flowsChanged(): void
+    {
+        $bump = static function (): void {
+            try {
+                Cache::forever(self::FLOWS_VERSION_KEY, (string) Str::uuid());
+            } catch (Throwable $e) {
+                report($e);
+            }
+        };
+
+        $bump();
+        DB::afterCommit($bump);
+    }
+
+    /** ⓘ ক্যাশ পড়া না গেলে প্রতিবার নতুন পালা — অর্থাৎ প্রতিবার তোলা: ধীর, কিন্তু কখনো পুরনো ছক নয় */
+    private static function flowsVersion(): string
+    {
+        try {
+            return (string) Cache::get(self::FLOWS_VERSION_KEY, '');
+        } catch (Throwable $e) {
+            report($e);
+
+            return (string) Str::uuid();
+        }
+    }
+
     private function flowFor(string $module, string $action, ?string $documentType): ?ApprovalFlow
     {
         $flows = $this->flows();
@@ -1455,7 +1631,23 @@ final class ApprovalEngine
             return $flows[$module.'|'.$action.'|'.$documentType];
         }
 
-        return $flows[$module.'|'.$action.'|'] ?? null;
+        if (isset($flows[$module.'|'.$action.'|'])) {
+            return $flows[$module.'|'.$action.'|'];
+        }
+
+        /*
+         * ⭐ নিজের সচল ছক না থাকলে মডিউল যে কাজের ছকে ফেরায় ([[ModuleDefinition::$approvalFallbacks]]; fe-র গ্যাপ ২৬, ২০ অক্টোবর
+         * ২০২৬) — একই সইকারী, একই ইনবক্স; নিজের ছক থাকলে সেটাই জেতে। ⓘ অনুরোধের `action` নিজের থাকে, তাই অন্য কাজের অনুরোধের
+         * সাথে মেশে না। ⓘ এক ধাপই — ফেরা কাজের আবার ফেরা নয়, তাই চক্র হয় না। ⛔ কোনো ছক বানানো হয় না।
+         */
+        $fallback = app(ModuleRegistry::class)->get($module)?->approvalFallbacks[$action] ?? null;
+
+        if ($fallback === null) {
+            return null;
+        }
+
+        return ($documentType !== null ? $flows[$module.'|'.$fallback.'|'.$documentType] ?? null : null)
+            ?? $flows[$module.'|'.$fallback.'|'] ?? null;
     }
 
     /**
@@ -1503,9 +1695,39 @@ final class ApprovalEngine
      */
     public function stepsFor(Approval $approval): \Illuminate\Support\Collection
     {
-        return collect($this->flowOf($approval)?->steps ?? [])
-            ->sortBy('level')
-            ->values();
+        // ⭐ এই কাগজের অঙ্কে যে ধাপগুলো সই দেয় — "কত টাকা থেকে" (অনুমোদন পর্দা ভাগ ৩, দফা ১৭; [[ApprovalFlow::stepsAt()]])
+        return $this->flowOf($approval)?->stepsAt($approval->amount === null ? null : (string) $approval->amount) ?? collect();
+    }
+
+    /**
+     * ⭐ অপেক্ষমাণ সইটা কোন ধাপে — "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ "সইয়ের অপেক্ষায় · ২-এর ১")।
+     *
+     * ⓘ ধাপ গোনা হয় [[stepsFor()]] থেকে, স্তর ধরে — ওয়েবের যাত্রাপথ ([[ApprovalInboxController::timelineOf()]]) একই
+     * স্তরগুলোকে সারি করে, আর [[approve()]] পরের স্তর খোঁজে একই ছকে (`level > current_level`-এর সবচেয়ে ছোটটা)। ⛔ তাই একই
+     * স্তরে দুইজন (N-of-M) দুই ধাপ নয়, আর ফাঁকা স্তর (১, ৩) "৩-এর ২" নয় — "২-এর ২"।
+     * ⓘ `level` ক্রমিক (১ থেকে): এখনকার স্তর পর্যন্ত কয়টা স্তর। ⛔ ছক আর চালু না থাকলে বা অনুরোধ আর অপেক্ষায় না থাকলে `null` —
+     * অনুমান করা "১-এর ১" মিথ্যা হত। ⓘ ছকগুলো অনুরোধে একবারই তোলা ([[flows()]]), তাই সারি যতই হোক বাড়তি কোয়েরি নেই।
+     *
+     * @return array{level: int, levels: int}|null
+     */
+    public function standingOf(Approval $approval): ?array
+    {
+        if ($approval->status !== Approval::PENDING) {
+            return null;
+        }
+
+        $levels = $this->stepsFor($approval)->map(fn (ApprovalFlowStep $s) => (int) $s->level)->unique()->values();
+
+        if ($levels->isEmpty()) {
+            return null;
+        }
+
+        $current = (int) $approval->current_level;
+
+        return [
+            'level' => max(1, $levels->filter(fn (int $l) => $l <= $current)->count()),
+            'levels' => $levels->count(),
+        ];
     }
 
     public function stepNamesFor(Approval $approval): array
@@ -1540,6 +1762,91 @@ final class ApprovalEngine
      * ⛔ নাহলে যেকেউ যেকারও হয়ে ভার নিয়ে সব কাগজে সই দিতে
      * পারতেন — ভার ক্ষমতা **সরায়**, তৈরি করে না।
      */
+    /**
+     * ⭐ ইনি আজ যাঁদের হয়ে অনুমোদন দেন, তাঁদের ধাপগুলো — [[decidableTuples()]]-এর আকারে, সাথে যাঁর হয়ে। ⓘ বন্ধ করা মানুষের ভার
+     * খাটে না ([[delegatorAt()]]-এর একই নিয়ম); হস্তান্তরে কাজ বাঁধা থাকলে কেবল সেই কাজ ([[ApprovalDelegation::covers()]])।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: list<int>, 4: int}>
+     */
+    private function standInTuples(User $user): array
+    {
+        $delegations = ApprovalDelegation::query()->active()->where('to_user_id', $user->id)->get();
+
+        if ($delegations->isEmpty()) {
+            return [];
+        }
+
+        /*
+         * ⓘ নিজের স্তর বাদ — সেখানে ইনি নিজের পালায় অনুমোদন দেন, কারও হয়ে নয় ([[standInFor()]]-এর একই উত্তর)। ⛔ বাদ না দিলে একই
+         * কাগজ "অপেক্ষায়" আর "অন্যের হয়ে" দুই ট্যাবেই উঠত, আর সিদ্ধান্তের সারিতে লেখা থাকত না কার হয়ে।
+         */
+        $own = [];
+
+        foreach ($this->decidableTuples($user) as [$module, $action, $type, $levels]) {
+            $own[$module.'|'.$action.'|'.$type] = $levels;
+        }
+
+        $out = [];
+
+        foreach ($delegations as $delegation) {
+            $from = User::query()->find($delegation->from_user_id);
+
+            if ($from === null || ! $from->is_active || (int) $from->id === (int) $user->id) {
+                continue;
+            }
+
+            foreach ($this->decidableTuples($from) as [$module, $action, $type, $levels]) {
+                $levels = array_values(array_diff($levels, $own[$module.'|'.$action.'|'.$type] ?? []));
+
+                if ($levels !== [] && $delegation->covers((string) $module, (string) $action)) {
+                    $out[] = [$module, $action, $type, $levels, (int) $from->id];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ "অন্যের হয়ে" ট্যাব — অপেক্ষার তালিকার যে কাগজগুলো দায়িত্ব হস্তান্তরে এসেছে (অনুমোদন পর্দা ভাগ ২, দফা ২)।
+     *
+     * ⓘ [[pendingQueryFor()]]-এর ভেতরেই ছাঁকা, আলাদা নিয়মে নয় — তাই এখানে যা আসে তা অপেক্ষার তালিকাতেও আছে, আর বাকি সব পাহারা
+     * (নিজের অনুরোধ, এই স্তরে আগেই সিদ্ধান্ত) একই থাকে।
+     *
+     * @return Builder<Approval>
+     */
+    public function standInQueryFor(User $user): Builder
+    {
+        $standIn = $this->standInTuples($user);
+
+        return $this->pendingQueryFor($user)->where(function (Builder $any) use ($standIn): void {
+            $any->whereRaw('1 = 0');
+
+            foreach ($standIn as [$module, $action, $type, $levels]) {
+                $any->orWhere(fn (Builder $one) => $one
+                    ->whereNull('assigned_to')
+                    ->where('module', $module)
+                    ->where('action', $action)
+                    ->where('approvable_type', $type)
+                    ->whereIn('current_level', $levels));
+            }
+        });
+    }
+
+    /**
+     * ⭐ ইনি কাগজটায় কার হয়ে অনুমোদন দেবেন — নিজের পালায় বা হাতে দেওয়া কাগজে `null` (অনুমোদন পর্দা ভাগ ২, দফা ২: ইনবক্সের
+     * "অন্যের হয়ে" ট্যাব)। ⓘ সিদ্ধান্তের সারির `on_behalf_of` এই একই প্রশ্নে বসে ([[approve()]]), তাই ট্যাব আর খাতা মেলে।
+     */
+    public function standInFor(Approval $approval, User $user): ?int
+    {
+        if ((int) $approval->assigned_to === (int) $user->id
+            || in_array((int) $approval->current_level, $this->levelsIn($this->flowOf($approval), $user), true)) {
+            return null;
+        }
+
+        return $this->delegatorAt($approval, $user);
+    }
+
     private function delegatorAt(Approval $approval, User $user): ?int
     {
         $flow = $this->flowOf($approval);
@@ -1565,6 +1872,15 @@ final class ApprovalEngine
      * ⛔ দুই জায়গায় দুই রকম হলে পার্থক্যটা নীরব হত: খবর যেত
      * একজনের কাছে, আর সই দিতে পারতেন অন্য কেউ।
      */
+    /**
+     * ⭐ কাগজটা উপরে পাঠানো হয়েছে আর গন্তব্য ইনি — [[canDecide()]]-এর উপরে-পাঠানোর পথের একই প্রশ্ন, পাহারা ছাড়া। ⓘ সইয়ের পাতা
+     * "কেন পারছেন না" বলতে এটা দেখে: উপরের মানুষের পালা, কিন্তু অঙ্ক তাঁর সীমার বাইরে (fe, ২৪ অক্টোবর ২০২৬)।
+     */
+    public function escalatedHere(Approval $approval, User $user): bool
+    {
+        return $approval->escalated_at !== null && $this->escalatedTo($approval, $user);
+    }
+
     private function escalatedTo(Approval $approval, User $user): bool
     {
         $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());

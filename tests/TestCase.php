@@ -131,6 +131,14 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         Http::fake(['api.pwnedpasswords.com/*' => Http::response('', 200)]);
+
+        /*
+         * ⓘ শাখার ছাপের ছাড় পরীক্ষায় খোলা ([[FormBranchPin::inGrace()]], ec, ১৯ অক্টোবর ২০২৬)। হাজারটা পরীক্ষা
+         * পাতা না খুলে সরাসরি `*.store`-এ POST করে — ছাপ (`_branch`) কেবল আঁকা ফর্মেই থাকে, ঠিক ডেপ্লয়ের আগের পাতার মতো।
+         * ⚠️ অমিল ছাপ এতে ছাড় পায় না — কেবল ছাপহীন। কড়া অবস্থা যে দাবির দরকার, সে অতীতের একটা সময় বসায়
+         * ([[AFormLandsInTheBranchItWasOpenedInTest]])।
+         */
+        config(['abos.branch_pin.grace_until' => '2999-12-31T23:59:59+00:00']);
     }
 
     protected function setUpTraits(): array

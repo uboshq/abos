@@ -36,8 +36,8 @@ return [
     'save_quantities' => 'পরিমাণ রাখুন',
     'quantities_saved' => 'অনুমোদিত পরিমাণ রাখা হলো।',
     'approve' => 'অনুমোদন দিন',
-    'reject' => 'ফেরত পাঠান',
-    'reject_reason' => 'ফেরতের কারণ',
+    'reject' => 'প্রত্যাখ্যান করুন',
+    'reject_reason' => 'প্রত্যাখ্যানের কারণ',
     // ⭐ অফিসের DO ডেস্কের ট্যাব ([[DeliveryOrderDeskController::TABS]])
     'tab' => [
         'all' => 'সব',

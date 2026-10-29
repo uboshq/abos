@@ -197,21 +197,25 @@ final class PurchaseBillService
                 ]);
             }
 
+            /*
+             * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
+             * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
+             * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
+             */
+            $branchId = $this->branchForBill($data['warehouse_id'] ?? null, $lines) ?? $data['branch_id'] ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            // ⛔ নম্বরও বিলের শাখার সিরিজে, উপরের শাখার নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
             $documentNo = match (true) {
-                $given === '' => $this->freeSeriesNumber(),
-                $this->numbers->isNextNumber('PBL', $given) => $this->freeSeriesNumber(),
+                $given === '' => $this->freeSeriesNumber($branchId),
+                $this->numbers->isNextNumber('PBL', $given) => $this->freeSeriesNumber($branchId),
                 default => $given,
             };
 
             $bill = PurchaseBill::create([
                 'company_id' => CompanyContext::id(),
-                /*
-                 * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
-                 * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
-                 * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
-                 * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
-                 */
-                'branch_id' => $this->branchForBill($data['warehouse_id'] ?? null, $lines) ?? $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
@@ -232,6 +236,10 @@ final class PurchaseBillService
                 'payment_term' => $data['payment_term'] ?? null,
 
                 'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
+
+                // ⭐ উৎসে কর্তন — টাকার অঙ্ক, হার নয় (হার বদলায়); খাতায় বসে পাকা হলে ([[postToLedger()]]; হিসাব #১)
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
 
                 /*
                  * ⭐ যেদিন মাল এল — খতিয়ানের তারিখ নয়, মজুদের।
@@ -359,6 +367,8 @@ final class PurchaseBillService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
@@ -1094,10 +1104,10 @@ final class PurchaseBillService
      *
      * ⓘ বিক্রয়ের [[SalesInvoiceService]]-এ হুবহু এটাই আছে।
      */
-    private function freeSeriesNumber(): string
+    private function freeSeriesNumber(?int $branchId = null): string
     {
         for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next('PBL');
+            $candidate = $this->numbers->next('PBL', $branchId);
 
             // ⭐ শাখার দেয়াল ছাড়া, কোম্পানির দেয়াল রেখে — নম্বর পুরো কোম্পানিতে একটাই (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
             if (! PurchaseBill::acrossBranches()->where('document_no', $candidate)->exists()) {
@@ -1105,7 +1115,7 @@ final class PurchaseBillService
             }
         }
 
-        return $this->numbers->next('PBL');
+        return $this->numbers->next('PBL', $branchId);
     }
 
     public function warehouseFor(PurchaseBill $bill): Warehouse
@@ -1326,6 +1336,8 @@ final class PurchaseBillService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
+                'ait_amount' => self::withheldField($data, 'ait_amount'),
+                'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
@@ -1641,13 +1653,39 @@ final class PurchaseBillService
                     'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])];
         }
 
+        /*
+         * ⭐ উৎসে কর্তন — সরবরাহকারী পান নিট, কাটা অংশ সরকারের দায়ে (হিসাব #১, ২০ অক্টোবর ২০২৬; [[WithheldTax]])।
+         *
+         * ⓘ আয়কর আইন ২০২৩ ধারা ৮৯: পরিশোধ বা হিসাবে জমা — যেটা আগে, তখনই কর্তন; বিল পাকা হওয়াই "হিসাবে জমা"। মূসক ও SD আইন
+         * ২০১২ ধারা ৪৯: VDS। ⓘ মাল আর খরচের দিক (উপরের সারিগুলো) মোট বিলেই থাকে — IAS 1 ¶৩২, কাটাকাটি নয়; বদলায় কেবল
+         * দেনার সারি: মোট − AIT − VDS, আর বাকিটা ২১২১-এ, দুই সারিতে।
+         */
+        $withheld = $bill->withheldAmount();
+
+        if (bccomp($withheld, $total, 4) > 0) {
+            throw ValidationException::withMessages(['ait_amount' => __('purchase::validation.withheld_over_total', [
+                'withheld' => Money::format($withheld), 'total' => Money::format($total),
+            ])]);
+        }
+
         $lines[] = [
             'account_id' => $this->account(StandardChart::PAYABLE)->id,
-            'credit' => $total,
+            'credit' => bcsub($total, $withheld, 4),
             'party_type' => 'supplier',
             'party_id' => $bill->supplier_id,
             'narration' => __('purchase::message.payable_to_supplier', ['no' => $bill->document_no]),
         ];
+
+        foreach (['ait' => (string) $bill->ait_amount, 'vds' => (string) $bill->vds_amount] as $kind => $value) {
+            if (bccomp($value, '0', 4) > 0) {
+                $lines[] = [
+                    // ⭐ AIT ২১২১, VDS ২১২২ (fe, ২১ অক্টোবর ২০২৬)
+                    'account_id' => $this->account($kind === 'vds' ? StandardChart::VDS_PAYABLE : StandardChart::TAX_DEDUCTED_AT_SOURCE)->id,
+                    'credit' => bcadd($value, '0', 4),
+                    'narration' => __('purchase::message.withheld_'.$kind, ['no' => $bill->document_no]),
+                ];
+            }
+        }
 
         $this->postBringingIn($bill, $lines);
 
@@ -2363,17 +2401,18 @@ final class PurchaseBillService
         }
     }
 
+    /** ⓘ উৎসে কর্তনের ঘর — খালি বা অ-সংখ্যা ০; ঋণাত্মক দরজার নিয়মে আগেই থামে (`min:0`) */
+    private static function withheldField(array $data, string $key): string
+    {
+        $value = trim((string) ($data[$key] ?? ''));
+
+        return preg_match('/^\d+(\.\d+)?$/', $value) === 1 ? bcadd($value, '0', 4) : '0.0000';
+    }
+
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'status' => __('purchase::validation.missing_account', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor($code);
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear

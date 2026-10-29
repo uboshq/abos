@@ -26,9 +26,9 @@
         [
             // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই
             'key' => 'point',
-            'label' => __('customer::field.point'),
+            'label' => __('customer::field.place'),
             'width' => '9rem',
-            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+            'render' => fn ($d) => view('customer::partials.place', ['customer' => $d->customer]),
         ],
         [
             'key' => 'account_id',
@@ -103,7 +103,9 @@
              এখানে কোনো রূপের নাম লেখা নেই। --}}
         <x-ui.list-totals :totals="[
             ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
-            ['label' => __('core.list.page_total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+            ['label' => __('sales::collection_form.list_posted'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+            ['label' => __('sales::collection_form.list_drafts'), 'value' => __('sales::collection_form.list_count_money', ['count' => number_format($totals['drafts']['count']), 'money' => \App\Core\Support\Money::format($totals['drafts']['money'])])],
+            ['label' => __('sales::collection_form.list_waiting'), 'value' => __('sales::collection_form.list_count_money', ['count' => number_format($totals['waiting']['count']), 'money' => \App\Core\Support\Money::format($totals['waiting']['money'])])],
         ]" />
     </div>
 </x-layouts.app>

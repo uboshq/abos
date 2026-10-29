@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.abos.abos_mobile",
+      "sha256_cert_fingerprints": [
+        "25:2D:D4:F7:71:31:2F:C3:F2:E9:E7:37:48:D2:B7:2E:8C:71:CE:8E:ED:AB:6B:2A:3C:CA:C0:34:FC:16:13:1A"
+      ]
+    }
+  }
+]

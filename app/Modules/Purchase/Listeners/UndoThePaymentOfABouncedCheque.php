@@ -9,6 +9,7 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Events\ChequeBounced;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Purchase\Models\Payment;
+use App\Modules\Purchase\Services\PaymentService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -44,6 +45,11 @@ final class UndoThePaymentOfABouncedCheque
                 }
 
                 $payment->forceFill(['status' => Payment::BOUNCED])->save();
+
+                // ⛔ চেক ফেরত মানে টাকা যায়নি — কাটা কর/ভ্যাটের দাখিলাও উল্টো, নইলে সরকারের কাছে মিথ্যে দেনা ([[PaymentService::undoChequeWithholding()]])
+                app(PaymentService::class)->undoChequeWithholding($payment, now(), __('purchase::message.withholding_undone_on_bounce', [
+                    'cheque' => (string) ($event->payload['cheque_no'] ?? ''), 'no' => (string) $payment->document_no,
+                ]));
             });
         });
     }

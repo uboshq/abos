@@ -1,5 +1,7 @@
 @props([
     'name',
+    // ⓘ ঘরের id — না দিলে নামই; একই নামের দুটো ঘর এক পাতায় থাকলে আলাদা দিন (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬)
+    'id' => null,
     'label',
     'value' => null,
     'type' => 'text',
@@ -19,6 +21,15 @@
      * ফিরে এসেছে, কেন তা নয়।
      */
     'errorKey' => null,
+
+    /*
+     * ⭐ type="money" — দেখানোর ঘর আর পাঠানোর ঘর আলাদা (fe, ২৪ অক্টোবর ২০২৬; [[registerMoneyDisplay]])।
+     *   model       — পর্দার কোন ঘরে কাঁচা অঙ্ক থাকে (`amount`, `charge`, `gross` …)
+     *   emptyShows  — ফাঁকা থাকলে কী দেখাবে (ব্যাংক চার্জে "0.00"); না দিলে ফাঁকাই
+     * ⓘ দেখানোর ঘরের name নেই — পাঠানো হয় কেবল hidden ঘর, কাঁচা অঙ্কে; তাই কমা কোনো পথেই যায় না।
+     */
+    'model' => null,
+    'emptyShows' => null,
 ])
 
 {{--
@@ -34,16 +45,17 @@
     দাঁড়াত, সরানো নয়।
 --}}
 @php
+    $fid = $id ?? $name;
     $key = $errorKey ?? $name;
     $hasError = $errors->has($key);
     $describedBy = collect([
-        $hint ? "{$name}-hint" : null,
-        $hasError ? "{$name}-error" : null,
+        $hint ? "{$fid}-hint" : null,
+        $hasError ? "{$fid}-error" : null,
     ])->filter()->implode(' ');
 @endphp
 
 <div>
-    <label for="{{ $name }}" class="mb-1 block text-sm font-medium">
+    <label for="{{ $fid }}" class="mb-1 block text-sm font-medium">
         {{ $label }}
         @if ($required)
             {{-- তারকাটা সাজসজ্জা নয়, তাই স্ক্রিন রিডারেও বোঝা যায় এমন
@@ -66,18 +78,39 @@
 
             এখানে ধরায় বলে ৪২টা ফর্ম একসাথে ঠিক হলো, একটাও না ছুঁয়ে।
         --}}
-        <x-ui.date :name="$name" :id="$name" :value="$value"
+        <x-ui.date :name="$name" :id="$fid" :value="$value"
                    :required="$required" :readonly="$readonly"
                    :hasError="$hasError" :describedBy="$describedBy ?: null"
                    {{ $attributes }} />
     @elseif ($type === 'month')
         {{-- ⭐ মাসও ব্রাউজারের ঘরে নয় — একই কারণ ("October 2026" ইংরেজিতে); [[x-ui.month]] বাংলায় (পাতা সাজানো ধাপ ১,
              ১০ অক্টোবর ২০২৬) --}}
-        <x-ui.month :name="$name" :id="$name" :value="$value" :required="$required"
+        <x-ui.month :name="$name" :id="$fid" :value="$value" :required="$required"
                     :class="'h-(--spacing-field) w-full rounded-(--radius-field) border bg-(--color-surface-card) px-3 '
                         .($hasError ? 'border-(--color-danger)' : 'border-(--color-border)')" />
+    @elseif ($type === 'money')
+        {{-- ⓘ দেখানোর ঘর — name নেই, লাখ-কমা কেবল চোখের জন্য; ডানে, দশমিক এক লাইনে --}}
+        <input id="{{ $fid }}"
+               type="text" inputmode="decimal" autocomplete="off"
+               data-money-shown="{{ $name }}"
+               @if ($model) x-money-display="{{ $model }}" @endif
+               @if ($emptyShows !== null) data-money-empty="{{ $emptyShows }}" @endif
+               value="{{ $value === null || $value === '' ? ($emptyShows ?? '') : $value }}"
+               @if ($required) required @endif
+               @if ($readonly) readonly @endif
+               @if ($hasError) aria-invalid="true" @endif
+               @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
+               {{ $attributes->class([
+                   'h-(--spacing-field) w-full rounded-(--radius-field) border px-3 num text-end',
+                   'bg-(--color-surface-card)',
+                   'bg-(--color-surface-app) text-(--color-ink-muted)' => $readonly,
+                   'border-(--color-danger)' => $hasError,
+                   'border-(--color-border)' => ! $hasError,
+               ]) }}>
+        {{-- ⭐ পাঠানোর ঘর — কাঁচা অঙ্ক, কমা ছাড়া (সাধারণ post, পপ-আপের FormData, দুবার জমা — সবাই এটাই পড়ে) --}}
+        <input type="hidden" name="{{ $name }}" value="{{ str_replace(',', '', (string) $value) }}" @if ($model) :value="{{ $model }}" @endif>
     @else
-    <input id="{{ $name }}"
+    <input id="{{ $fid }}"
            name="{{ $name }}"
            type="{{ $type }}"
            value="{{ $value }}"
@@ -100,12 +133,12 @@
     @endif
 
     @if ($hint)
-        <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
+        <p id="{{ $fid }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
     @endif
 
     @error($key)
         {{-- ভুলটা ঘরের পাশেই — উপরের তালিকায় থাকলে লম্বা ফর্মে কোন ঘরটা
              ভুল সেটা খুঁজতে হয় (সেকশন ১৫.২৩)। --}}
-        <p id="{{ $name }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+        <p id="{{ $fid }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
     @enderror
 </div>

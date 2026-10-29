@@ -687,7 +687,8 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
      */
     public function test_every_list_shows_the_customers_point_after_the_customer(): void
     {
-        $point = $this->customer->location?->name();
+        // ⓘ তালিকা পয়েন্ট পড়ে [[Customer::pointName()]] দিয়ে — রুটে বসা দোকানে মা পয়েন্ট (মালিক, ১৯ অক্টোবর ২০২৬)
+        $point = $this->customer->pointName();
         $this->assertNotEmpty($point, 'প্রস্তুতিটাই ভুল — ক্রেতার পয়েন্ট নেই।');
 
         // ⓘ আগে পাকা বিক্রি, পরে খসড়া — খোলা খসড়া থাকলে একই ক্রেতার নতুন বিল আটকায়

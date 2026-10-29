@@ -123,8 +123,9 @@
                                     @endif
                                 </span>
 
-                                <span class="min-w-0 flex-1 truncate">
-                                    {{ $line->challan?->customer?->name() }}
+                                {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম) --}}
+                                <span class="min-w-0 flex-1 truncate" title="{{ $line->challan?->customer?->nameWithPoint() }}">
+                                    {{ $line->challan?->customer?->nameWithPoint() }}
                                 </span>
 
                                 <span class="tabular w-28 shrink-0 text-end">

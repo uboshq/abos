@@ -10,7 +10,9 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\OpenPeriod;
+use App\Core\Services\PartyRegistry;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\RevisionKeeper;
 use App\Core\Services\SettingsService;
@@ -20,16 +22,19 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\Approval;
+use App\Models\Branch;
 use App\Models\DocumentRevision;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\ComplianceObligation;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
@@ -77,13 +82,16 @@ final class VoucherService
             $trxDate = Carbon::parse($data['trx_date']);
             $year = $this->resolveFinancialYear($trxDate);
 
+            // ⛔ শাখা আগে ঠিক ([[branchOfTheVoucher()]]), তারপর সেই শাখার সিরিজ থেকে নম্বর — আগে নম্বর আসত উপরের শাখার সিরিজ থেকে, ভাউচার যে শাখারই হোক (ec, ১৯ অক্টোবর ২০২৬)
+            $branchId = $this->branchOfTheVoucher($data, $lines, $byHand);
+
             // নম্বর ট্রানজেকশনের ভেতরে — সেভ ব্যর্থ হলে নম্বরটাও ফিরে যায়,
             // নাহলে প্রতিটা ব্যর্থ চেষ্টায় সিরিজে একটা ফাঁক থাকত
-            $documentNo = $this->numbers->next(Voucher::DOC_TYPES[$type]);
+            $documentNo = $this->numbers->next(Voucher::DOC_TYPES[$type], $branchId);
 
             $voucher = Voucher::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'type' => $type,
                 'document_no' => $documentNo,
@@ -159,6 +167,7 @@ final class VoucherService
                 'from_account_name' => $data['from_account_name'] ?? null,
                 'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
                 'lands_on' => $data['lands_on'] ?? null,
+                'value_date' => $data['value_date'] ?? null,
                 'reverse_on' => $data['reverse_on'] ?? null,
                 // ⭐ মাসশেষের সমন্বয় — কেবল জাবেদায়; অন্য ধরনে দাগ বসে না (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'is_adjusting' => $type === Voucher::JOURNAL && (bool) ($data['is_adjusting'] ?? false),
@@ -184,12 +193,16 @@ final class VoucherService
                 'gross_amount' => $data['gross_amount'] ?? null,
                 'ait_amount' => $data['ait_amount'] ?? 0,
                 'vds_amount' => $data['vds_amount'] ?? 0,
+                // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5); অঙ্ক না থাকলে ধরনও নয়
+                'difference_kind' => bccomp((string) ($data['difference_amount'] ?? '0'), '0', 4) > 0 ? ($data['difference_kind'] ?? null) : null,
+                'difference_amount' => $data['difference_amount'] ?? 0,
 
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
 
             $this->replaceLines($voucher, $lines);
+            $this->allocate($voucher, $data);
 
             // ইস্যু করা নম্বরটা কোন ভাউচারে বসল — "RV-০০০৭ কার" প্রশ্নের উত্তর
             IssuedNumber::query()
@@ -380,6 +393,9 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -413,6 +429,11 @@ final class VoucherService
          */
         $ownable = $this->accountsThatHoldAParty();
 
+        // ⛔ নিয়মের আগে অন্য শাখায় লেখা খসড়াও এখানে থামে ([[assertPartyInItsBranch()]])
+        if ($byHand) {
+            $this->assertPartyInItsBranch($voucher, $ownable);
+        }
+
         return DB::transaction(function () use ($voucher, $ownable) {
             /*
              * ⛔ সারি তালা দিয়ে অবস্থা আবার পড়া — Accounts-Finance অডিট ম২, ৪ অক্টোবর ২০২৬।
@@ -440,6 +461,8 @@ final class VoucherService
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
             $this->assertAgainstFits($voucher);
+            // ⭐ বহু বিলের প্রতিটা সারি — একই পাঁচ প্রশ্ন, তালাসহ, আর যোগফল ≤ মোট ([[VoucherAllocations::assertFit()]])
+            app(VoucherAllocations::class)->assertFit($voucher);
 
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
@@ -458,6 +481,7 @@ final class VoucherService
             ])->save();
 
             $this->settle($voucher, settled: true);
+            $this->raiseTaxDuties($voucher);
 
             /*
              * ⓘ অন্য মডিউলকে জানানো — লেনদেন পাকা হওয়ার পরে, আগে নয়।
@@ -469,6 +493,35 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ পরিশোধ ভাউচারে কাটা কর আর ভ্যাটের করণীয় — কোষাগারে জমা (AIT, VDS আলাদা) আর VDS কাটলে সরবরাহকারীকে মূসক-৬.৬ (cb-ma-4, ২৫ অক্টোবর
+     * ২০২৬; সরবরাহকারী-পরিশোধের হুবহু [[\App\Modules\Purchase\Services\PaymentService::raiseTaxDuties()]])।
+     *
+     * ⛔ আগে পরিশোধ ভাউচারে AIT/VDS কাটলে খাতায় ২১২১/২১২২ বসত, অথচ কোনো করণীয় উঠত না — জমার শেষ দিন কেউ মনে করাত না, আর নকশার কমলা
+     * লাইন ("দুটোই করণীয় তালিকায় উঠবে") ভাউচারে মিথ্যা হত। ⓘ কেবল সত্যি কাটা হলে (শূন্যে দায় নেই); একই ভাউচারে আবার ডাকলে নতুন সারি
+     * নয় ([[ComplianceObligations::raise()]] আগেরটাই ফেরায়); বাতিলে খোলা করণীয় ফেরে ([[cancel()]])।
+     */
+    private function raiseTaxDuties(Voucher $voucher): void
+    {
+        if ($voucher->type !== Voucher::PAYMENT) {
+            return;
+        }
+
+        $duties = app(ComplianceObligations::class);
+        $raise = fn (string $kind, string $subject, string $amount) => $duties->raise(
+            (int) $voucher->company_id, $voucher->branch_id === null ? null : (int) $voucher->branch_id,
+            Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, (string) $voucher->document_no,
+            $kind, $subject, $amount, $voucher->trx_date,
+        );
+
+        $ait = (string) ($voucher->ait_amount ?? '0');
+        $vds = (string) ($voucher->vds_amount ?? '0');
+
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::AIT, $ait);
+        $raise(ComplianceObligation::KOSAGAR_DEPOSIT, ComplianceObligation::VDS, $vds);
+        $raise(ComplianceObligation::MUSHAK_66_ISSUE, ComplianceObligation::VDS, $vds);
     }
 
     /**
@@ -661,6 +714,8 @@ final class VoucherService
             ->where('approvable_type', $voucher::class)
             ->where('approvable_id', $voucher->id)
             ->where('module', '<>', VoucherApproval::MODULE)
+            // ⓘ এই ভাউচারের নিজের কম-বেশির মালিকের সই অন্য কাগজের নয় — সেটা নিজের পথেই পোস্ট পর্যন্ত যায় ([[VoucherApproval::differenceStopping()]]; cb-ma-5)
+            ->where(fn ($q) => $q->where('module', '<>', \App\Modules\Accounts\Support\DifferenceSignature::MODULE)->orWhere('action', '<>', \App\Modules\Accounts\Support\DifferenceSignature::ACTION))
             ->whereIn('status', [Approval::PENDING, Approval::APPROVED])
             ->get()
             ->contains(fn (Approval $a) => ! $posting
@@ -972,8 +1027,13 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertPayeeBankIsSigned($voucher);
+        // ⛔ ছাড় বা ৳০.৫০-এর বেশি রাউন্ডিং — মালিকের সই ঠিক এই কাগজে না থাকলে খাতায় নয় ([[VoucherApproval::assertDifferenceSigned()]]; cb-ma-5)
+        app(VoucherApproval::class)->assertDifferenceSigned($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
+        // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])
+        $this->assertPartyInItsBranch($voucher, $this->accountsThatHoldAParty());
 
         $this->posting->post(
             Voucher::SOURCE_TYPES[$voucher->type],
@@ -1014,8 +1074,37 @@ final class VoucherService
         ]);
 
         $this->replaceLines($voucher, $lines);
+        $this->allocate($voucher, $data);
 
         return $voucher->fresh(['lines']);
+    }
+
+    /**
+     * ⭐ এক টাকা, বহু বিল — `bills` এলে কোন বিলে কত, সারিতে লেখা ([[VoucherAllocations]]; cb-ma-4, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সারি পক্ষের নিজের খোলা বিল থেকে মেলানো হয়, ভুল হলে ঘর ধরে থামে (`bills.{i}.id`, `bills.{i}.amount`)। ⓘ বহু বিল থাকলে একক
+     * "বিপরীতে" (অডিট ম১-এর পুরনো ঘর) খালি — একই বিল দুই পথে দুবার বসত। ⓘ `bills` না এলে কিছুই বদলায় না (পুরনো ফোন, অন্য মডিউল)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function allocate(Voucher $voucher, array $data): void
+    {
+        if (! array_key_exists('bills', $data)) {
+            return;
+        }
+
+        $allocations = app(VoucherAllocations::class);
+        $result = $allocations->resolve($voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, (array) ($data['bills'] ?? []));
+
+        if ($result['errors'] !== []) {
+            throw ValidationException::withMessages($result['errors']);
+        }
+
+        $allocations->write($voucher, $result['rows']);
+
+        if ($result['rows'] !== [] && filled($voucher->against_type)) {
+            $voucher->forceFill(['against_type' => null, 'against_id' => null])->save();
+        }
     }
 
     /**
@@ -1112,6 +1201,11 @@ final class VoucherService
             }
 
             $this->cancelItsAutoReversal($voucher, $reason, $onDate);
+
+            // ⭐ কাটা কর ফিরল, তাই কোষাগারে জমা আর মূসক-৬.৬-এর খোলা করণীয়ও — সরবরাহকারী-পরিশোধের একই পথ ([[raiseTaxDuties()]])
+            if ($voucher->type === Voucher::PAYMENT) {
+                app(ComplianceObligations::class)->cancelFor(Voucher::SOURCE_TYPES[Voucher::PAYMENT], (int) $voucher->id, $reason);
+            }
 
             $voucher->forceFill([
                 'status' => DocumentStatus::CANCELLED,
@@ -1477,6 +1571,139 @@ final class VoucherService
      * তাঁর জন্য নিয়মটা খাটে: তিনি কোনো নগদ খাতেই বসাতে পারবেন না,
      * কারণ টাকাটা কার হেফাজতে তার উত্তর থাকে না।
      */
+    /**
+     * ⛔ পক্ষের টাকা পক্ষের নিজের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: *"ei party super er tai eta lion e keno zabe eta bag"*।
+     *
+     * ⚠️ হাতে লেখা ভাউচার বসত লেখকের উপরের শাখা-বাছাইয়ে (`CompanyContext::branchId()`)। Lion বেছে রাখা লেখক Super-এর
+     * গ্রাহকের রসিদ লিখলে টাকাটা Lion-এর খাতায় যেত: Super দেখলে গ্রাহক পুরো টাকা বাকি, Lion দেখলে অগ্রিম। লাইভে তিনটা
+     * এমন রসিদ পাওয়া গেছে (ADI RCV-0133, RCV-0143; UB RCV-10230)।
+     *
+     * ⭐ এখন: পক্ষের শাখা থাকলে ভাউচার সেই শাখায় বসে। অন্য শাখা স্পষ্ট বাছলে, দুই শাখার পক্ষ এক ভাউচারে দিলে, বা পক্ষের শাখা
+     * লেখকের নাগালের বাইরে হলে থামে, কারণসহ। পক্ষ নেই বা পক্ষের শাখা নেই → `null`, বাকিটা [[branchOfTheVoucher()]] ঠিক করে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function branchOfTheParty(array $data, array $lines): ?int
+    {
+        $chosen = filled($data['branch_id'] ?? null) ? (int) $data['branch_id'] : null;
+
+        $pairs = [[$data['party_type'] ?? null, $data['party_id'] ?? null]];
+
+        foreach ($lines as $line) {
+            $pairs[] = [$line['party_type'] ?? null, $line['party_id'] ?? null];
+        }
+
+        $branches = array_values(array_unique(app(PartyRegistry::class)->branchesOf($pairs)));
+
+        if ($branches === []) {
+            // ⓘ পক্ষ শাখা বলে না — বাকিটা [[branchOfTheVoucher()]] ঠিক করে (স্পষ্ট বাছাই, বাক্স, উপরের শাখা)
+            return null;
+        }
+
+        if (count($branches) > 1) {
+            throw ValidationException::withMessages(['party_id' => __('accounts::validation.parties_in_two_branches')]);
+        }
+
+        $theirs = $branches[0];
+
+        if ($chosen !== null && $chosen !== $theirs) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_in_other_branch', [
+                'branch' => $this->branchName($theirs),
+                'here' => $this->branchName($chosen),
+            ])]);
+        }
+
+        $user = auth()->user();
+
+        if ($user instanceof User && ! app(DataScope::class)->allows($user, UserDataScope::BRANCH, $theirs)) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_branch_out_of_reach', [
+                'branch' => $this->branchName($theirs),
+            ])]);
+        }
+
+        return $theirs;
+    }
+
+    /**
+     * ⛔ নগদ বা ব্যাংকের বাক্সের টাকা বাক্সের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য শাখায় নয়"* (RCV-0143)।
+     *
+     * ⚠️ পক্ষ ছাড়া হাতে লেখা ভাউচার (খরচ, পরিশোধ, কন্ট্রা) বসত জমা দেওয়ার মুহূর্তের উপরের শাখায়: A-র বাক্স থেকে খরচ, অথচ অন্য
+     * ট্যাবে উপরে B বাছা থাকলে ভাউচার, নম্বর আর খাতার সারি B-তে — A-র নগদ কমল B-র খাতায়।
+     *
+     * ⭐ ক্রম (ec, ১৯ অক্টোবর ২০২৬; বিক্রয়ের কাউন্টার আর ক্রয়ের পরিশোধ নিজের কাগজের শাখা স্পষ্ট পাঠায়):
+     *   ১. ডাকনেওয়ালার স্পষ্ট `branch_id`;
+     *   ২. নইলে হাতে লেখায় পক্ষের নিজের শাখা ([[branchOfTheParty()]], fe-র নিয়ম);
+     *   ৩. নইলে সারির খাত শাখায় বাঁধা বাক্সের হলে সেই শাখা ([[CashTill::branchesOfAccounts()]]) — লেখকের নাগালের বাইরে হলে থামে;
+     *   ৪. নইলে উপরের শাখা, আগের মতো (জাবেদা, শাখাহীন বাক্স, দুই শাখার বাক্স)।
+     * ⛔ ১ বা ২ শাখা ঠিক করলে, আর কোনো সারির বাক্স অন্য শাখার হলে থামে — B-র নগদ A-র খাতায় বসে না, বাক্সও চুপচাপ জেতে না।
+     * শাখাহীন বাক্স যেকোনো শাখায় চলে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function branchOfTheVoucher(array $data, array $lines, bool $byHand): ?int
+    {
+        $explicit = filled($data['branch_id'] ?? null) ? (int) $data['branch_id'] : null;
+        $party = $byHand ? $this->branchOfTheParty($data, $lines) : null;
+        $tills = CashTill::branchesOfAccounts(array_map(fn (array $line) => $line['account_id'] ?? null, $lines));
+        $decided = $explicit ?? $party;
+
+        if ($decided !== null) {
+            foreach ($tills as $till) {
+                if ($till !== $decided) {
+                    throw ValidationException::withMessages(['branch_id' => __('accounts::validation.till_in_other_branch', [
+                        'branch' => $this->branchName($till),
+                        'here' => $this->branchName($decided),
+                    ])]);
+                }
+            }
+
+            return $decided;
+        }
+
+        if (count($tills) !== 1) {
+            return CompanyContext::branchId();
+        }
+
+        $till = $tills[0];
+        $user = auth()->user();
+
+        if ($byHand && $user instanceof User && ! app(DataScope::class)->allows($user, UserDataScope::BRANCH, $till)) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::validation.till_branch_out_of_reach', [
+                'branch' => $this->branchName($till),
+            ])]);
+        }
+
+        return $till;
+    }
+
+    /**
+     * ⛔ পাকা করার মুহূর্তে আবার — নিয়মের আগে লেখা খসড়া, বা সম্পাদনায় বদলানো পক্ষ ([[branchOfTheParty()]])।
+     *
+     * @param  array<int, list<string>>  $ownable
+     */
+    private function assertPartyInItsBranch(Voucher $voucher, array $ownable): void
+    {
+        $pairs = array_map(fn (array $line): array => [$line['party_type'], $line['party_id']], $this->ledgerLines($voucher, $ownable));
+
+        foreach (app(PartyRegistry::class)->branchesOf($pairs) as $branch) {
+            if ((int) $voucher->branch_id !== $branch) {
+                throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_in_other_branch', [
+                    'branch' => $this->branchName($branch),
+                    'here' => $this->branchName((int) $voucher->branch_id),
+                ])]);
+            }
+        }
+    }
+
+    private function branchName(int $id): string
+    {
+        $branch = Branch::query()->withoutGlobalScopes()->find($id);
+
+        return $branch !== null ? $branch->name() : '#'.$id;
+    }
+
     private function assertCashLandsInOwnTill(Voucher $voucher): void
     {
         $userId = (int) (auth()->id() ?? 0);
@@ -1580,6 +1807,24 @@ final class VoucherService
      * এই ঘরে পেমেন্ট-পদ্ধতির **কোড** বসায় (যেমন `CHQ`, `BKASH`) — ওগুলো এই
      * তালিকায় নেই, তাই কাউন্টারের পথ অপরিবর্তিত।
      */
+    /**
+     * ⛔ সরবরাহকারীর ব্যাংকে ট্রান্সফার বা নগদ জমা — তাঁর ব্যাংক তথ্য দুই হাতে সই-পাওয়া না হলে নয় (a4, ২৪ অক্টোবর ২০২৬, লাইভে ধরা)।
+     *
+     * ⓘ সরবরাহকারী-পরিশোধ এটা আগে থেকেই আটকাত; ভাউচারের পরিশোধ আর খরচ দিয়ে — ওয়েবে বা ফোনে — একই টাকা সই-না-পাওয়া হিসাবে চলে
+     * যেত। নিয়ম সরবরাহকারীর ([[PayeeBankGuard]] → SupplierBank), এখানে কেবল ডাক: টাকা যেখানে বেরোয় (পরিশোধ, খরচ), আর পোস্টের
+     * একই পথে, যা ওয়েব, ফোন আর সংশোধনের পরে আবার-পোস্ট সবাই নেয়।
+     */
+    private function assertPayeeBankIsSigned(Voucher $voucher): void
+    {
+        if (! in_array($voucher->type, [Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            return;
+        }
+
+        app(\App\Core\Contracts\PayeeBankGuard::class)->assertBankPayable(
+            $voucher->party_type, $voucher->party_id === null ? null : (int) $voucher->party_id, $voucher->instrument,
+        );
+    }
+
     private function assertTheWayMatchesTheAccount(Voucher $voucher): void
     {
         $way = (string) $voucher->instrument;
@@ -1613,7 +1858,100 @@ final class VoucherService
         }
     }
 
+    /**
+     * ⭐ একই টাকার খাতে একই রেফারেন্সের আগের ভাউচার — পোস্টের পাহারা আর পর্দার চলতি "আগে ব্যবহার হয়নি ✓" একই প্রশ্ন করে
+     * (fe, ২৩ অক্টোবর ২০২৬; নকশার "একই খাতে আগে ব্যবহার হয়নি")। ⓘ দুই জায়গায় লিখলে একদিন পর্দা "✓" বলত আর পোস্ট আটকাত।
+     *
+     * ⛔ সব শাখা জুড়ে, কিন্তু কেবল নিজের কোম্পানিতে: `acrossBranches()` শুধু শাখার দেয়াল তোলে, কোম্পানির দেয়াল
+     * ([[BelongsToCompany]]) থাকে — অন্য কোম্পানির একই নম্বর এখানে আসেই না, তাই তার কাগজের অস্তিত্বও কোথাও ফাঁস হয় না।
+     */
+    public function referenceTwin(int $accountId, string $reference, ?int $exceptId = null): ?Voucher
+    {
+        return Voucher::acrossBranches()
+            ->where('money_account_id', $accountId)
+            ->where('instrument_no', trim($reference))
+            ->when($exceptId !== null, fn ($q) => $q->whereKeyNot($exceptId))
+            ->first();
+    }
+
+    /**
+     * ⭐ পোস্টের আগে খাতায় যা যাবে — কিছু না লিখে (fe, ২৩ অক্টোবর ২০২৬; নকশার "খাতায় যা যাবে")।
+     *
+     * ⓘ না-রাখা একটা ভাউচারে সারিগুলো বসিয়ে পোস্টের একই [[ledgerLines()]] — মাথার পক্ষ কোন সারিতে নামে সেই নিয়মসহ। সারিগুলো
+     * আসে [[VoucherWriter::linesFor()]] থেকে, যা জমা আর ফোনও ডাকে; তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
+     *
+     * ⓘ শাখাও পোস্টের একই [[branchOfTheVoucher()]] থেকে — পক্ষ বা বাক্স অন্য শাখার হলে পোস্ট যে বার্তায় থামত, প্রিভিউও সেই
+     * ValidationException ছোড়ে।
+     *
+     * @param  array<string, mixed>  $header
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{branch_id: int|null, lines: list<array<string, mixed>>}
+     */
+    public function ledgerPreview(array $header, array $lines): array
+    {
+        $branchId = $this->branchOfTheVoucher($header, $lines, true);
+
+        $paper = (new Voucher)->forceFill([
+            'type' => $header['type'] ?? null,
+            // ⛔ পোস্টের একই শাখা — না দিলে পক্ষের শাখার পাহারা ০ শাখার সাথে মেলাত, আর শাখাওয়ালা প্রতিটা পক্ষের প্রিভিউ ফিরত (লাইভে ধরা, ২৫ অক্টোবর ২০২৬)
+            'branch_id' => $branchId,
+            'party_type' => $header['party_type'] ?? null,
+            'party_id' => $header['party_id'] ?? null,
+            'narration' => $header['narration'] ?? null,
+            'instrument' => $header['instrument'] ?? null,
+            'instrument_no' => $header['instrument_no'] ?? null,
+        ]);
+        // ⓘ সম্পাদনায় নিজের নম্বর নিজের সাথে "আগে বসেছে" নয়
+        if (filled($header['voucher_id'] ?? null)) {
+            $paper->id = (int) $header['voucher_id'];
+        }
+        $accounts = Account::query()->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+        $paper->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))->forceFill([
+            'account_id' => (int) ($l['account_id'] ?? 0),
+            'debit' => (string) ($l['debit'] ?? '0'),
+            'credit' => (string) ($l['credit'] ?? '0'),
+            'party_type' => $l['party_type'] ?? null,
+            'party_id' => $l['party_id'] ?? null,
+            'cost_center_id' => $l['cost_center_id'] ?? null,
+            'narration' => $l['narration'] ?? null,
+        ])));
+
+        /*
+         * ⛔ পোস্ট যে কারণে থামত, প্রিভিউও সেই কারণে থামে — পোস্টের একই পাহারা, যেগুলো কেবল ফর্মের উপর দাঁড়ায় ([[post()]]):
+         * আদায়ে চেক নয়, সারি পোস্টযোগ্য, হাতের চেক নয়, নগদ নিজের বাক্সে, পদ্ধতি খাতের সাথে মেলে, পক্ষ নিজের শাখায়, আর
+         * রেফারেন্সের নিয়ম। ⓘ নাহলে "MFS" বেছে নগদের খাতে প্রিভিউ সুন্দর সারি দেখাত, অথচ পোস্ট ফেরাত।
+         */
+        $ownable = $this->accountsThatHoldAParty();
+        $this->assertNoChequeReceived((string) $paper->type, $paper->instrument);
+        $this->assertLinesArePostable($paper);
+        $this->assertNoChequeInHandByHand($paper);
+        $this->assertCashLandsInOwnTill($paper);
+        $this->assertTheWayMatchesTheAccount($paper);
+        $this->assertPayeeBankIsSigned($paper);
+        $this->assertPartyInItsBranch($paper, $ownable);
+        $this->bankReferenceAccount($paper);
+
+        return ['branch_id' => $branchId, 'lines' => $this->ledgerLines($paper, $ownable)];
+    }
+
     private function assertBankReferenceIsFree(Voucher $voucher): void
+    {
+        $account = $this->bankReferenceAccount($voucher);
+
+        if ($account === null) {
+            return;
+        }
+
+        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
+        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
+        $voucher->forceFill(['money_account_id' => $account->id])->save();
+    }
+
+    /**
+     * ⭐ রেফারেন্সের নিয়ম, কিছু না লিখে — থাকতেই হবে, অর্থপূর্ণ হতে হবে, আর একই খাতে আগে বসেনি (পোস্ট আর "খাতায় যা যাবে"
+     * একই কথা বলে; cb, ২৩ অক্টোবর ২০২৬)। ⓘ ফেরে নম্বরের টাকার খাত, নগদ বা জাবেদায় null।
+     */
+    private function bankReferenceAccount(Voucher $voucher): ?Account
     {
         $account = $voucher->lines
             ->map(fn (VoucherLine $line) => $line->account)
@@ -1621,7 +1959,7 @@ final class VoucherService
 
         // নগদ, বা টাকার কোনো ব্যাংক-খাত নেই (জাবেদা) — প্রশ্নই ওঠে না
         if ($account === null) {
-            return;
+            return null;
         }
 
         $reference = trim((string) $voucher->instrument_no);
@@ -1656,11 +1994,7 @@ final class VoucherService
          * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৩)। ⓘ টাকার খাতা আর অনন্যতার ইনডেক্স গোটা কোম্পানির, অথচ খোঁজ
          * ছিল দেখার শাখার দেয়ালে: অন্য শাখার ভাউচারে একই TrxID থাকলে পরিষ্কার বার্তার বদলে ডেটাবেসের ভাঙা ভুল আসত।
          */
-        $twin = Voucher::acrossBranches()
-            ->where('money_account_id', $account->id)
-            ->where('instrument_no', $reference)
-            ->whereKeyNot($voucher->id)
-            ->first();
+        $twin = $this->referenceTwin((int) $account->id, $reference, $voucher->id === null ? null : (int) $voucher->id);
 
         if ($twin !== null) {
             throw ValidationException::withMessages([
@@ -1671,9 +2005,7 @@ final class VoucherService
             ]);
         }
 
-        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
-        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
-        $voucher->forceFill(['money_account_id' => $account->id])->save();
+        return $account;
     }
 
     /**
@@ -1729,6 +2061,18 @@ final class VoucherService
             if (! $account->is_active) {
                 throw ValidationException::withMessages([
                     'lines' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            /*
+             * ⛔ খরচের ভাউচারে কেবল-সফটওয়্যারের খাত নয় — বিক্রিত মালের খরচ, অবচয়, দেওয়া ছাড় … ([[StandardChart::ENGINE_ONLY_EXPENSES]];
+             * মালিক, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দার তালিকা থেকে সরানো হয়েছে; এখানে ফোন, পুরনো খসড়া আর হাতে-বানানো ডাকের জন্য।
+             * ⓘ কেবল খরচের দিক (ডেবিট) — জাবেদায় হিসাবরক্ষকের সংশোধন খোলা।
+             */
+            if ($voucher->type === Voucher::EXPENSE && bccomp((string) $line->debit, '0', 4) > 0
+                && app(StandardChart::class)->isEngineOnlyExpense($account)) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.engine_only_expense', ['name' => $account->label()]),
                 ]);
             }
 

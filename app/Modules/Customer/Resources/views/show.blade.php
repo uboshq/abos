@@ -16,6 +16,10 @@
                 <x-ui.button tone="secondary" type="button" x-data @click="$dispatch('party-eye')" data-party-eye>
                     <x-ui.icon name="eye" :size="16" /> {{ __('customer::action.details') }}
                 </x-ui.button>
+                {{-- ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি (ISA 505, ২০ অক্টোবর ২০২৬) — পাতার খাতার একই জের, A4 --}}
+                <x-ui.button tone="secondary" icon="print" :href="route('customer.balance_confirmation', $customer)" data-balance-confirmation>
+                    {{ __('confirmation.button') }}
+                </x-ui.button>
                 @can('update', $customer)
                     <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">
                         {{ __('core.action.edit') }}
@@ -142,10 +146,14 @@
                      সবসময় জোড়ায় আসে: "সীমা কত, আর কতটা বাকি আছে"। --}}
                 <p class="mt-1 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::field.available_limit') }}:
-                    <span class="num">
-                        {{ $customer->availableLimit() === null
+                    {{-- ⓘ একবার পড়া — অঙ্কটা বাকির ইঞ্জিনের পুরো হিসাব ([[CreditHolds::availableOf()]]) --}}
+                    @php
+                        $availableLimit = $customer->availableLimit();
+                    @endphp
+                    <span class="num" data-figure="available-limit">
+                        {{ $availableLimit === null
                             ? '—'
-                            : \App\Core\Support\Money::format($customer->availableLimit()) }}
+                            : \App\Core\Support\Money::format($availableLimit) }}
                     </span>
                 </p>
 

@@ -12,6 +12,7 @@ use App\Core\Support\Accent;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
+use App\Core\Support\UserLocale;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\Company;
 use App\Models\LookSkin;
@@ -162,6 +163,40 @@ class WorkspaceController extends Controller
         $user->forceFill(['home_layout' => \App\Core\Dashboard\HomeLayout::from($order, $hidden)->toArray()])->save();
 
         return redirect()->route('dashboard', array_filter(['period' => $request->input('period')]));
+    }
+
+    /**
+     * ⭐ বাঁ রেলের নিজের সাজ রাখা — পিন করা মডিউল আর ক্রম; কেবল নিজের সারিতে (মালিক, ২৪ অক্টোবর ২০২৬; [[MenuBuilder::arranged()]])।
+     * ⓘ "আগের মতো করুন" (`reset`) ঘরটা খালি করে — তখন খোলা পাতার অনুপাতে, সমান হলে আগের ক্রমে।
+     * ⛔ নিজের মেনুতে নেই এমন কোড (চাবি নেই, বা বন্ধ মডিউল) ফেলে দেওয়া হয় — রাখা হলেও আঁকা হত না, কিন্তু সারিতে বাজে জিনিস জমত।
+     */
+    public function saveRail(Request $request): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'pinned' => ['nullable', 'array', 'max:64'],
+            'pinned.*' => ['string', 'max:64'],
+            'order' => ['nullable', 'array', 'max:64'],
+            'order.*' => ['string', 'max:64'],
+            'reset' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->boolean('reset')) {
+            $user->forceFill(['nav_layout' => null])->save();
+        } else {
+            $mine = array_column(app(\App\Core\Services\MenuBuilder::class)->forUser($user), 'code');
+            $keep = fn (array $codes): array => array_values(array_unique(array_filter($codes, fn ($c) => in_array($c, $mine, true))));
+
+            $user->forceFill(['nav_layout' => [
+                'pinned' => $keep((array) ($data['pinned'] ?? [])),
+                'order' => $keep((array) ($data['order'] ?? [])),
+            ]])->save();
+        }
+
+        return $request->expectsJson()
+            ? response()->json(['nav_layout' => $user->fresh()->nav_layout])
+            : redirect()->back();
     }
 
     /**
@@ -423,12 +458,10 @@ class WorkspaceController extends Controller
 
     public function switchLocale(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'locale' => ['required', 'string', 'in:bn,en'],
-        ]);
+        $validated = $request->validate(UserLocale::rules());
 
-        // ব্যবহারকারীর রেকর্ডে, সেশনে নয় — অন্য ডিভাইসেও একই ভাষা (নিয়ম ৯)।
-        $request->user()->forceFill(['locale' => $validated['locale']])->save();
+        // ব্যবহারকারীর রেকর্ডে, সেশনে নয় — অন্য ডিভাইসেও একই ভাষা (নিয়ম ৯); ফোনের দরজার একই নিয়ম ([[UserLocale]])
+        UserLocale::save($request->user(), $validated['locale']);
 
         return back();
     }
@@ -446,7 +479,8 @@ class WorkspaceController extends Controller
     public function switchTheme(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'theme' => ['required', 'string', 'in:light,dark'],
+            // ⭐ `system` — ফোনের মতো (যন্ত্রের আলো/অন্ধকার মানে), অ্যাপের একই তিনটা (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬; [[followTheDevice]])
+            'theme' => ['required', 'string', 'in:light,dark,system'],
         ]);
 
         $request->user()->forceFill(['theme' => $validated['theme']])->save();

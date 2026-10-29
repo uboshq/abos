@@ -17,6 +17,14 @@
      * বিরোধ নয় — বরং নকলটা এখন সব প্রস্থেই সত্যি।
      */
     'narrow' => false,
+
+    /**
+     * ⭐ বারটা রেলের মাথার উপর দিয়ে যায় — পুরো চওড়া বার (`rail` রূপ; মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ তখন "≡" ঠিক রেলের কলামে বসে (একই `--spacing-sidebar-icon` প্রস্থ, মাঝখানে), আর তার ডানে ⊞ সব মডিউল।
+     * ⛔ মালিকের ছবিতে "≡" অর্ধেক রেলের উপর, অর্ধেক বারের উপর — বারের নিজের ২০px বাঁ-ফাঁক তাকে রেলের মাঝ থেকে সরিয়ে দিত।
+     */
+    'overRail' => false,
 ])
 
 {{--
@@ -38,6 +46,27 @@
     $user = auth()->user();
     $company = $user?->currentCompany;
     $branch = $user?->currentBranch;
+
+    /*
+     * ⭐ বাঁ কোণের চিহ্ন — চলতি কোম্পানির নিজের লোগো, ABOS-এর নয় (মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অনুরোধপ্রতি পড়া হয়, তাই কোম্পানি বদলালে পরের পাতাতেই নতুন লোগো। লোগো না থাকলে নামের দুই শব্দের প্রথম অক্ষর
+     * ("আল-আমিন কর্পোরেশন" → "আক") কোম্পানির নিজের রঙের গোল ব্যাজে — রংটা id ধরে ছয়টার একটা, তাই একই কোম্পানি
+     * সবসময় একই রঙে। ⓘ অক্ষর মানে একটা গোটা গ্রাফিম (`\X`), বাইট নয়; হসন্তে শেষ হলে পরেরটাও, নইলে "ক্" একা ঝুলত।
+     * ⓘ ABOS-এর চিহ্ন রেলের মাথায়, হোমের বোতাম হয়ে ([[shell.sidebar]])।
+     */
+    $brandName = $company?->name() ?? 'ABOS';
+    $brandLogo = $company?->logoUrl();
+    $brandInitials = '';
+    foreach (array_slice(preg_split('/\s+/u', trim($brandName), -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 2) as $word) {
+        preg_match_all('/\X/u', $word, $graphemes);
+        $letter = $graphemes[0][0] ?? '';
+        if (str_ends_with($letter, "\u{09CD}") && isset($graphemes[0][1])) {
+            $letter .= $graphemes[0][1];
+        }
+        $brandInitials .= mb_strtoupper($letter);
+    }
+    $brandTone = $company ? ((int) $company->id - 1) % 6 + 1 : 1;
 @endphp
 
 {{-- `data-topbar` — পাহারার জন্য, নকশার জন্য নয়।
@@ -54,6 +83,7 @@
         @class([
             'topbar sticky top-0 z-30 flex h-(--spacing-header) shrink-0 items-center gap-2',
             'border-b border-(--color-topbar-border) bg-(--color-topbar) px-3 md:px-5',
+            'md:ps-0' => $overRail,
             'lg:hidden' => $narrow,
         ])>
 
@@ -61,322 +91,223 @@
          যে রূপের কিছু নেই তার জন্য এটা কিছুই আঁকে না। --}}
     <x-shell.chrome region="topbar-start" :menu="$menu ?? []" />
 
-    {{-- মোবাইলে সাইডবার নেই, তাই লোগোটা এখানে দেখা যায় --}}
-    <img src="{{ asset('brand/abos-icon-64.png') }}" alt="ABOS"
-         class="size-8 shrink-0 md:hidden">
-
     {{--
-        মেনু গুটানো-খোলার একমাত্র সুইচ।
+        ⭐ SAP Fiori shell bar — ওয়েবের মান ধাপ ২ (মালিকের আদেশ "100% int. standard", ২০ অক্টোবর ২০২৬; নকশা:
+        E:\ABOS\মালিকের-ফাইল\ওয়েবের-চেহারা-ভুল-ও-পরিকল্পনা-২০-অক্টোবর.pdf, পাতা ৩)।
 
-        ── কেন এটা এখানে, সাইডবারের ভেতরে নয় ───────────────────────────
-        আগে বোতামটা ছিল সাইডবারের ভেতরে, একটা `«` চিহ্ন। কিন্তু সে যা
-        গুটায় তার ভেতরেই বসে — গুটিয়ে ফেললে সে নিজেই উধাও, আর খোলার
-        কোনো পথ থাকত না। ব্যবহারকারীকে তখন হয় পাতা রিফ্রেশ করতে হত, নয়
-        localStorage মুছতে হত।
+        বাঁ থেকে ডানে, আর কিছু নয়:  [≡] ⊞ লোগো · কোম্পানি · শাখা ▾ │ একটাই খোঁজা │ ＋ তৈরি · 🔔 · ছবি
 
-        টপবারের এই ঘরটা দুই অবস্থাতেই একই জায়গায় থাকে, আর সেটাই একমাত্র
-        রূপ যেটা মানুষ শিখতে পারে।
-
-        অবস্থাটা Alpine store-এ ($store.sidebar), কারণ সুইচ এখানে আর যা
-        নড়ে সেটা অন্য শাখায় — প্রতিটার নিজের x-data রাখলে দুইজনের দুই
-        রকম উত্তর থাকত।
-
-        সীমানাসহ, কারণ এটা একটা বোতাম: পাশের লোগো ও কোম্পানির ব্লক
-        দুইটাই লিংক, আর সীমানা ছাড়া তিনটাই একই রকম লাগত।
+        ⛔ আগে বারে দশটার বেশি জিনিস ছিল (⊞ লঞ্চার, তৈরি, সবুজ টিক, কাগজ, 🔔, পূর্ণপর্দা, EN, 🌙, কোম্পানি, ⇄, ছবি) — Fiori-র
+        বারে থাকে কেবল পরিচয়, খোঁজা আর কয়েকটা কাজ। ⓘ কিছুই হারায়নি, জায়গা বদলেছে, অ্যাপের বারের এক নিয়মে:
+          · আমার সইয়ের অপেক্ষা বারেই থাকে, ＋ তৈরি আর 🔔-এর মাঝে, কেবল সইদাতার (মালিক, ২০ অক্টোবর); "সই হয়েছে, পোস্ট হয়নি" → ঘণ্টার প্যানেলের মাথায় "আপনার কাজ";
+          · ভাষা, রং (ফোনের মতো · আলো · অন্ধকার), পূর্ণপর্দা, কোম্পানি বদল → ছবির মেনুতে;
+          · মডিউলের লঞ্চার → ⊞ আবার বারে, "≡"-এর ডানে (মালিক, ২১ অক্টোবর ২০২৬: Odoo-র হোমের মতো পুরো পর্দা); রেলেও সব মডিউল;
+          · চলতি মডিউলের নাম → মডিউল-প্যানেলের মাথায় আর পাতার পথে।
+        ⓘ কোম্পানির সাথে শাখা সবসময় ([[shell.company-switcher]], মালিকের স্থায়ী নিয়ম)।
     --}}
-    {{-- নিজের `x-data` — নাহলে Alpine এই বোতামটা পড়েই না।
+    {{-- মেনু গুটানো-খোলার একমাত্র সুইচ — দুই অবস্থাতেই একই জায়গায় ($store.sidebar; [[AListenerNobodyEverBoundTest]]) --}}
+    @if ($overRail)
+        {{--
+            ⭐ "≡" রেলের কলামেই — মালিক, ২১ অক্টোবর ২০২৬ (ছবিতে বোতামটা অর্ধেক রেলে, অর্ধেক বারে)।
 
-         ── কতদিন ধরে এটা কাজ করেনি, কেউ জানে না ─────────────────────
-         `$store` ব্যবহার করলেই Alpine এলিমেন্টটা পড়বে, এমন নয়। সে
-         কেবল `x-data`-র ভেতরের এলিমেন্টে ডিরেক্টিভ বাঁধে, আর টপবারে
-         এই বোতামের উপরে কোনো `x-data` ছিল না।
-
-         ফলে তিনটাই মৃত ছিল: ক্লিক, `:aria-expanded`, আর
-         `:aria-label` — অর্থাৎ স্ক্রিন রিডারে বোতামটার কোনো নামও
-         ছিল না। পর্দায় কিছুই ভুল দেখাত না; টিপলে কিছু হত না।
-
-         ধরা পড়েছে [[AListenerNobodyEverBoundTest]]-এ, ২৯ আগস্ট
-         ২০২৬ — আদায়ের পর্দায় ঠিক একই ভুল করার পর পাহারাটা লেখা হয়। --}}
-    <button type="button"
-            x-data
-            @click="$store.sidebar.toggle()"
-            class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
-                   border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
-                   hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
-            :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
-            :aria-label="$store.sidebar.collapsed
-                ? '{{ __('core.a11y.expand_sidebar') }}'
-                : '{{ __('core.a11y.collapse_sidebar') }}'">
-        <x-ui.icon name="list" :size="18" />
-    </button>
-
-    {{--
-        চলতি মডিউল — আইকনসহ, টপবারেই।
-
-        ── মালিকের নির্দেশ, ১৪ সেপ্টেম্বর ২০২৬ ────────────────────────
-        *"মডিউল টপবারে চিহ্নিত অংশে আইকনসহ থাকবে, আর সার্চ বারটা
-        মডিউলের পরে।"*
-
-        ⓘ আগে নামটা ছিল নিচের মডিউল-বারের বাঁয়ে। উপরে আনায় নিচের
-        বারটা এখন **শুধু পর্দাগুলোর** — একটা বার, একটাই কাজ। আর উপরে
-        বাঁ থেকে ডানে পড়ার ক্রমটাও সোজা হয়: কোন মডিউলে আছি → কী খুঁজব।
-    --}}
-    @php
-        $barRoute = (string) (request()->route()?->getName() ?? '');
-
-        $barModule = collect($menu ?? [])->first(
-            fn ($m) => collect($m['groups'])->flatten(1)->contains('active', true),
-        ) ?? collect($menu ?? [])->first(
-            fn ($m) => collect($m['codes'] ?? [])->contains(fn ($c) => str_starts_with($barRoute, $c.'.')),
-        );
-
-        $barModuleUrl = $barModule
-            ? (collect($barModule['groups'])->flatten(1)->firstWhere('url', '!==', null)['url'] ?? null)
-            : null;
-    @endphp
-
-    @if ($barModule)
-        {{-- ⓘ লিংক, কারণ মডিউলের নামে চাপলে তার প্রথম পর্দায় ফেরা
-             যাওয়াটাই মানুষ আশা করেন — নিচের বারেও নিয়মটা এটাই ছিল। --}}
-        <a data-topbar-module
-           href="{{ $barModuleUrl ?? route('dashboard') }}"
-           class="hidden min-w-0 shrink-0 items-center gap-1.5 rounded-(--radius-field)
-                  px-2 py-1 text-(--color-topbar-ink) transition-colors
-                  hover:bg-(--color-topbar-hover) sm:flex">
-            <x-ui.icon :name="$barModule['icon']" :size="18" />
-            <span class="truncate text-sm font-semibold">{{ $barModule['label'] }}</span>
-        </a>
+            ঘরটা রেলের সমান: একই `w-(--spacing-sidebar-icon)`, একই `border-e` (স্বচ্ছ — দেখা যায় না, কেবল মাপ মেলায়), আর
+            ভেতরে মাঝখানে; রেলের টাইলগুলোও ঠিক তাই ([[shell.sidebar]]-এর `nav`)। ⓘ ফলে "≡"-এর মাঝ আর রেলের আইকনের মাঝ
+            একই x-এ, যে রূপ রেলের প্রস্থ যা-ই বসাক। বোতাম ৪০×৪০ (টাচ), আইকন ২২px, ঘষা পড়লে গোল হালকা জমিন।
+            ⓘ বারের রং পুরো চওড়ায়, রেলের রং বারের নিচ থেকে — কোণে দুই রং কাটাকাটি করে না।
+            ⓘ ফোনে রেল নেই (নিচের নেভিগেশন), তাই "≡"-ও নেই — কাজহীন বোতাম রাখা হয় না; ⊞ আর লোগো একই সারিতে থাকে।
+        --}}
+        <div data-menu-cell
+             class="hidden w-(--spacing-sidebar-icon) shrink-0 items-center justify-center border-e border-transparent md:flex">
+            <button type="button"
+                    x-data
+                    data-menu-toggle
+                    data-sidebar-toggle
+                    @click="$store.sidebar.toggle()"
+                    class="flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
+                           transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+                    style="--topbar-control-h: 40px"
+                    aria-label="{{ __('core.a11y.menu') }}"
+                    title="{{ __('core.a11y.menu') }}"
+                    :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'">
+                <x-ui.icon name="list" :size="22" />
+            </button>
+        </div>
+    @else
+        <button type="button"
+                x-data
+                data-sidebar-toggle
+                    @click="$store.sidebar.toggle()"
+                class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
+                       border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
+                       hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
+                aria-label="{{ __('core.a11y.collapse_sidebar') }}"
+                :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
+                :aria-label="$store.sidebar.collapsed
+                    ? '{{ __('core.a11y.expand_sidebar') }}'
+                    : '{{ __('core.a11y.collapse_sidebar') }}'">
+            <x-ui.icon name="list" :size="18" />
+        </button>
     @endif
 
-    {{-- Ctrl+K — সেকশন ১৫.৩। মোবাইলে শুধু আইকন, বড় স্ক্রিনে পূর্ণ বাক্স। --}}
-    {{-- min-w-0 ছাড়া flex আইটেম নিজের কনটেন্টের চেয়ে ছোট হতে পারে না,
-         আর তখন পুরো বারটা উপচে পড়ে — ৩৭৫px-এ ঠিক সেটাই হচ্ছিল। --}}
-    {{-- আগে ২৮rem পর্যন্ত চওড়া হতো — বাক্সটা তার নিজের লেখার চেয়ে তিনগুণ,
-         আর ভেতরে বড় ফাঁকা জায়গা। এখন ৯rem: প্রায় এক-তৃতীয়াংশ, আর টপবারের
-         বাকি জায়গাটা কোম্পানি ও শাখার নামের জন্য থাকে, যা সারাদিন পড়া হয়।
-
-         "Ctrl K" চিপটা সরানো হয়েছে — এই মাপে ওটা বসালে খোঁজার লেখাটাই কেটে
-         যেত, আর যে ইঙ্গিত নিজের লেখাটাকেই ঢেকে দেয় সেটা ইঙ্গিত নয়। শর্টকাটটা
-         title-এ আছে, আর কাজ করে আগের মতোই। --}}
-    <button type="button"
-            x-data
-            @click="$dispatch('open-command-center')"
-            title="{{ __('core.action.search_anything') }} (Ctrl K)"
-            class="flex min-h-(--spacing-touch) min-w-0 flex-1 items-center gap-2 rounded-(--radius-field)
-                   border border-(--color-topbar-border) bg-(--color-topbar-field) px-3
-                   text-start text-(--color-topbar-ink-muted) transition-colors
-                   hover:border-(--color-topbar-ink-muted) sm:max-w-36">
-        <svg viewBox="0 0 24 24" class="size-(--spacing-icon) shrink-0 fill-current" aria-hidden="true">
-            <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
-        </svg>
-        <span class="truncate text-sm">{{ __('core.action.search_anything') }}</span>
-    </button>
-
-
-
-    {{-- ডান দিকের ঝাঁক, DMS-এর ক্রমেই: যা জানায় → যা পর্দা বদলায় → কে
-         বসে আছে। জানানোর জিনিস আগে, কারণ ওটাই একমাত্র যেটা নিজে থেকে
-         বদলায়; বাকিগুলো যেখানে রাখা হয়েছে সেখানেই থাকে, আর হাত সেটা
-         মুখস্থ করে ফেলে। --}}
-    {{-- `min-w-0` — নাহলে ঝাঁকটা নিজের লেখার চেয়ে ছোট হতে পারে না।
-
-         ── কী ভাঙা ছিল ─────────────────────────────────────────────────
-         প্রোফাইলের বোতামে ব্যবহারকারীর নাম বসে, আর তাতে `max-w-56
-         truncate` দেওয়াই ছিল। কিন্তু কাটা শুরু হয় তখনই যখন ঘরটা ছোট
-         হতে **পারে** — আর flex-এ ন্যূনতম প্রস্থ ডিফল্টে `auto`, অর্থাৎ
-         ভিতরের লেখাটাই মেঝে। তাই নামটা কাটত না, বারটা চওড়া হয়ে যেত।
-
-         চোখে পড়ত কেবল **রেল-ধাঁচের রূপে** (navy, tiles), কারণ ওখানে
-         বাঁয়ের রেল টপবার থেকে ২২০px কেড়ে নেয়। মাপা: ১০২৪px-এ navy ৭০px
-         ও tiles ১১px উপচে পড়ত; apps ও classic-এ কিছুই হত না, কারণ
-         ওদের মেনু উপরে, রেলে নয়।
-
-         এক শব্দে সমাধান, নতুন কোনো breakpoint ছাড়া — নাম লম্বা হলে
-         নামটাই কাটে, বার নয়। ড্যাশবোর্ডে আজই একই নিয়ম বসেছে (grid),
-         আর নিচের সার্চ বাক্সেও এটা আগে থেকেই লেখা আছে। --}}
-    <div class="ms-auto flex min-w-0 items-center gap-1">
-        {{-- মডিউল লঞ্চার — কেবল ABOS রূপে।
-
-             ⓘ মালিকের নির্দেশ: বদলগুলো শুধু ABOS-এ। ⚠️ আর `apps` রূপের
-             নিজের ৯-ফোঁটার লঞ্চার আগে থেকেই আছে (`chrome/apps`), তাই
-             শর্ত ছাড়া বসালে ওখানে দুইটা বোতাম হত।
-
-             ⓘ কোডে ABOS-এর নাম `navy` — `core.ui.navy` অনুবাদে "ABOS"। --}}
-        @if (\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)) === 'navy')
+    {{-- ⭐ ⊞ · লোগো · কোম্পানি · শাখা ▾ — এক সারিতে, ৩৭৫ থেকে ১৯২০px (মালিক, ২১ অক্টোবর ২০২৬)।
+         ⓘ "≡"-এর কিনারা থেকে ঠিক ১৪px: ঘরের ভেতরে "≡"-এর ডানে (রেল − ৪০px) ÷ ২ ফাঁকা, তার পরে বারের `gap-2` — দুইটা বাদ দিয়ে বাকিটা। --}}
+    <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px] max-sm:gap-0',
+                                  'md:ms-[calc(14px_-_0.5rem_-_(var(--spacing-sidebar-icon)_-_40px)_/_2)]' => $overRail])>
+        {{-- ⭐ ⊞ সব মডিউল — Odoo-র হোমের মতো পুরো পর্দা (মালিক, ২১ অক্টোবর ২০২৬; Google · M365 · Fiori সবারই আছে)।
+             ⓘ টাইল রেলের একই তালিকা থেকে ($menu: অনুমতি আর মডিউলের সুইচ দুইটাই দেখা), তাই রেলে যা নেই লঞ্চারেও নেই। --}}
+        @if ($overRail)
             <x-shell.launcher :menu="$menu ?? []" />
         @endif
 
-        {{-- ঝাঁকের প্রথম, কারণ এটাই একমাত্র যেটা কাজ শুরু করে। --}}
-        <x-shell.create-menu />
+        {{-- ⭐ গ্রাহকের ব্র্যান্ড — চলতি কোম্পানির লোগো, চাপলে হোম; লোগো না থাকলে আদ্যক্ষরের ব্যাজ (উপরের `@php`)।
+             মাপ: উচ্চতা ২৮px (৩২px পাতের ভেতরে), চওড়া বড়জোর ১৪০px, `object-contain` — চওড়া লোগো ছোট হয়, ভাঙে না।
+             ⓘ ফোনে (sm-এর নিচে) বড়জোর ৫৬px: ৩৭৫px-এ ডানের কাজগুলোর পরে লোগো আর খোঁজার আইকনের জন্য ~১০৭px থাকে; ৬:১ লোগো
+             ১৪০px নিলে খোঁজার আইকনটা লোগোর উপর চেপে বসত (ছবিতে দেখা, ২১ অক্টোবর ২০২৬)।
+             লোগোর পেছনে হালকা পাত (`--color-company-logo-plate`) — অন্ধকারে, আর আলোতেও, কারণ এই রূপের বার আলোতেও গাঢ়।
+             ⛔ আগে এখানে ABOS-এর চিহ্ন, আর কোম্পানির লোগো সুইচারের ভেতরে — এখন লোগো একবারই, এখানে; সুইচারে কেবল নাম। --}}
+        <a href="{{ route('dashboard') }}" data-shell-logo data-shell-brand="{{ $company?->id }}"
+           class="flex shrink-0 items-center rounded-(--radius-field)
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+           title="{{ $brandName }}"
+           @unless ($brandLogo) aria-label="{{ $brandName }}" @endunless>
+            @if ($brandLogo)
+                <span class="flex h-[32px] max-w-[140px] items-center rounded-[6px] bg-(--color-company-logo-plate) px-[4px] max-sm:max-w-[56px]">
+                    <img src="{{ $brandLogo }}" alt="{{ $brandName }}" data-company-logo
+                         class="h-[28px] w-auto max-w-[132px] object-contain max-sm:max-w-[48px]">
+                </span>
+            @else
+                <span data-company-initials aria-hidden="true"
+                      class="grid size-[32px] shrink-0 place-items-center rounded-full text-[13px] font-bold leading-none"
+                      style="background: var(--color-company-mark-{{ $brandTone }}); color: var(--color-company-mark-ink)">{{ $brandInitials }}</span>
+            @endif
+        </a>
 
-        <x-shell.approval-quick-access />
-        {{-- ⭐ সই হয়েছে, পোস্ট হয়নি — মালিক, ১১ অক্টোবর ২০২৬ --}}
-        <x-shell.signed-unposted />
-        <x-shell.notification-bell />
+        {{-- কোম্পানি · শাখা ▾ — লোগোর ঠিক পাশে, সব মাপে (ফোনে নাম ছোট হয়ে কাটে, বার নয়); লোগো বাঁয়ের চিহ্নেই, তাই এখানে নয় --}}
+        @if ($company)
+            <div class="min-w-0 shrink" data-shell-company>
+                <x-shell.company-switcher :company="$company" :branch="$branch" beside-mark />
+            </div>
+        @endif
+    </div>
 
-        <x-shell.fullscreen-toggle />
+    {{-- একটাই খোঁজা — মাঝে, চওড়া; পাতা, মেনু, গ্রাহক, পণ্য আর কাগজের নম্বর সবই এখানে ([[SearchController::pagesMatching()]])।
+         "/" বা Ctrl+K চাপলেও খোলে ([[commandCenter]])। --}}
+    {{-- ⭐ খোঁজার ঘর নিজেই লেখার ঘর, ফল তার ঠিক নিচে (Fiori shell bar search; লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬)।
+         ⛔ আগে এটা একটা বোতাম ছিল যা পুরো পাতার উপর আলাদা প্যালেট খুলত — নিজের দ্বিতীয় "যেকোনো কিছু খুঁজুন" ঘরসহ, আর চওড়া
+         পর্দায় সেটা বাঁয়ে রেল-সাইডবারের উপর বসত (মালিকের স্ক্রিনশট, ১৬৮৭px)। এখন একটাই ঘর; Ctrl+K আর "/" এই ঘরেই আনে।
+         ⓘ যুক্তি shell.js-এর commandCenter-এ (CSP-Alpine অ্যাট্রিবিউটে পদ্ধতি পড়ে না)। ⓘ ফোনে কেবল আইকন — চাপলে পুরো-প্রস্থে নামে। --}}
+    <div x-data="commandCenter({ url: '{{ route('search') }}' })"
+         data-shell-search :data-expanded="expandedFlag"
+         @open-command-center.window="show()"
+         @keydown.window="hotkey($event)"
+         @click.outside="close()"
+         class="relative mx-auto flex min-w-0 flex-1 justify-end sm:max-w-xl sm:justify-start">
 
-        {{-- ভাষা — নিয়ম ৯। সেভ হয় ব্যবহারকারীর রেকর্ডে, সেশনে নয়।
+        <button type="button" data-search-icon @click="show()"
+                aria-label="{{ __('core.action.search_everything') }}"
+                class="flex size-(--spacing-touch) shrink-0 items-center justify-center rounded-(--radius-field)
+                       text-(--color-topbar-ink) hover:bg-(--color-topbar-hover) sm:hidden">
+            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
+                <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+            </svg>
+        </button>
 
-             আইকন **ও** লেখা, একটা নয়।
+        <label data-search-field
+               class="flex min-h-(--spacing-touch) w-full min-w-0 items-center gap-2 rounded-(--radius-field)
+                      border border-(--color-topbar-border) bg-(--color-topbar-field) px-3
+                      text-(--color-topbar-ink-muted) transition-colors focus-within:border-(--color-topbar-ink-muted)
+                      hover:border-(--color-topbar-ink-muted)">
+            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) shrink-0 fill-current" aria-hidden="true">
+                <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+            </svg>
+            <input x-ref="box" x-model="q" type="search" autocomplete="off" enterkeyhint="search"
+                   @focus="show()" @input="ask()"
+                   @keydown.down.prevent="next()"
+                   @keydown.up.prevent="prev()"
+                   @keydown.enter.prevent="choose($event)"
+                   @keydown.escape.stop="dismiss()"
+                   role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
+                   aria-label="{{ __('core.action.search_everything') }}"
+                   aria-controls="command-hits" :aria-expanded="open"
+                   :aria-activedescendant="activeId"
+                   aria-keyshortcuts="/ Control+K"
+                   placeholder="{{ __('core.action.search_everything') }}"
+                   class="min-w-0 flex-1 border-0 bg-transparent text-sm text-(--color-topbar-ink) outline-none
+                          placeholder:text-(--color-topbar-ink-muted)">
+            <span x-show="busy" x-cloak class="text-xs" aria-hidden="true">…</span>
+            <kbd class="ms-auto hidden rounded border border-(--color-topbar-border) px-1.5 text-xs md:inline" aria-hidden="true">/</kbd>
+        </label>
 
-             ── কেন দুইটাই ─────────────────────────────────────────────
-             শুধু পৃথিবীর আইকন হলে বোঝা যেত না কোন ভাষায় যাচ্ছে — আর
-             পাশের বোতামগুলো সব আইকন, তাই একটা একা "EN" লেখা বোতাম ওই
-             সারিতে বেমানান লাগত (মালিক ধরেছেন, ১৪ আগস্ট)।
+        {{-- ⓘ ফল — ঘরের ঠিক নিচে, বাঁ কিনারা মিলিয়ে, প্রস্থ ঘরের সমান (অন্তত ৪৮০px); ডানে ছাড়ালে place() ভেতরে আনে।
+             `pops-onto-page` — বারের ৩৬px বোতাম-উচ্চতার নিয়ম এখানে নয়। ⓘ জ্যামিতি inline: ক্লাস নীরবে না এলে গড়ন ভাঙত। --}}
+        <div x-ref="panel" x-show="open" x-cloak data-search-panel
+             class="pops-onto-page"
+             style="position:absolute;top:calc(100% + 4px);left:0;z-index:60;width:max(100%, 480px);max-width:calc(100vw - 16px);
+                    border-radius:12px;overflow:hidden;border:1px solid var(--color-border);background:var(--color-surface-card);
+                    box-shadow:0 20px 60px color-mix(in srgb, black 25%, transparent)">
+            <div style="max-height:60vh;overflow-y:auto">
+                <template x-if="hint">
+                    <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">{{ __('core.search.type_to_find') }}</p>
+                </template>
+                <template x-if="nothingFound">
+                    <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">{{ __('core.search.nothing_found') }}</p>
+                </template>
 
-             লেখাটা গন্তব্যের ভাষায়: বাংলায় থাকলে "EN", ইংরেজিতে থাকলে
-             "বাং" — অর্থাৎ বোতামটা বলে কোথায় যাবে, কোথায় আছে তা নয়। --}}
-        {{--
-            ভাষা ও থিম — চওড়া পর্দায় টপবারে, ছোট পর্দায় প্রোফাইল মেনুতে।
+                <div id="command-hits" role="listbox" aria-label="{{ __('core.action.search_everything') }}">
+                    <div x-show="recentList.length > 0" role="group" aria-labelledby="command-recent-label">
+                        <p id="command-recent-label"
+                           style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">{{ __('core.search.recent') }}</p>
+                        <template x-for="(hit, i) in recentList" :key="hit.url">
+                            <a :href="hit.url" :id="hitId(i)" role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                               @mousemove="point(i)"
+                               class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                               style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                                <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="hit.type"></span>
+                                <span style="flex:none;font-size:12px;color:var(--color-ink-muted)" x-text="hit.no"></span>
+                                <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="hit.label"></span>
+                            </a>
+                        </template>
+                    </div>
 
-            ── কী ভাঙা ছিল ─────────────────────────────────────────────
-            ৩৭৫px-এ ডান দিকের ঝাঁক ৩৪৭px চওড়া হয়ে ৪২৮ পর্যন্ত যেত,
-            অথচ পর্দা ৩৭৫। ফল: **প্রোফাইলের বোতামটাই পর্দার বাইরে**
-            (left=384) — অর্থাৎ ফোনে লগআউট, সেটিংস বা চেহারা কোনোটাতেই
-            পৌঁছানো যেত না, আর প্রতিটা পাতা পাশে গড়াত।
+                    <div x-show="actionList.length > 0" role="group" aria-labelledby="command-actions-label">
+                        <p id="command-actions-label"
+                           style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">{{ __('core.search.actions') }}</p>
+                        <template x-for="(act, j) in actionList" :key="act.url">
+                            <a :href="act.url" :id="actionId(j)" role="option" :aria-selected="isActionActive(j) ? 'true' : 'false'"
+                               @mousemove="pointAction(j)"
+                               class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                               style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                                <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="act.type"></span>
+                                <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="act.label"></span>
+                            </a>
+                        </template>
+                    </div>
 
-            ৭৬৮px-এও একই — ওখানে কোম্পানি-সুইচারটাও দেখা যায় বলে
-            জায়গা আরও কম।
-
-            ── কেন এই দুইটাই সরানো হলো ──────────────────────────────
-            দুইটাই **শর্টকাট**, একমাত্র পথ নয়: ভাষা ও থিম দুইটাই
-            চেহারার পাতায় আছে, আর সেই পাতার লিংক প্রোফাইল মেনুতেই।
-            তাই ছোট পর্দায় এক ট্যাপ বেশি লাগে, কিন্তু কিছুই হারায় না।
-
-            বাকিগুলো সরানো যেত না: Create কাজ শুরু করে, ঘণ্টা নিজে থেকে
-            বদলায়, আর প্রোফাইলেই লগআউট।
-
-            ── কেন `min-[1280px]`, কোনো নামের breakpoint নয় ──────────
-            প্রথমে `lg` (১০২৪px) বসানো হয়েছিল — ওখানে বারটা ৪px উপচে
-            পড়ত। তারপর `xl` বসানো হয়েছিল **১২৮০ ভেবে**, আর সেটাই
-            ভুল: এই প্রকল্পে `--breakpoint-xl` = **১৪৪০px**
-            (`tokens.css`), Tailwind-এর ডিফল্ট ১২৮০ নয়।
-
-            ফল ছিল গুরুতর — সুইচ দুইটা **১৪৪০-এর নিচে সবখানে** হারিয়ে
-            গিয়েছিল, অর্থাৎ **১৩৬৬×৭৬৮-এও**, যা এদেশে সবচেয়ে সাধারণ
-            ল্যাপটপের মাপ। মালিক ২৬ আগস্ট ধরেছেন: "থিম বদলায় না" —
-            আসলে বোতামটাই ছিল না।
-
-            ১২৮০ সংখ্যাটা মাপা, বেছে নেওয়া নয়। সুইচ দুইটা দৃশ্যমান
-            রেখে প্রতিটা প্রস্থে উপচে পড়া মাপা হয়েছে:
-
-                ১০২৪ → ১৭৫px    ১১৫২ → ৮৪px    ১২৮০ → **০**
-                ১১০০ → ১২১px    ১২০০ → ৫০px    ১৩৬৬ → **০**
-
-            নামের কোনো breakpoint ঠিক ওখানে নেই (১০২৪-এর পরেই ১৪৪০),
-            আর কেবল এই দুইটা বোতামের জন্য প্রকল্পের চারটা প্রস্থে
-            পঞ্চম একটা যোগ করা যায় না — ওটা গোটা নকশার নিয়ম, একটা
-            কম্পোনেন্টের সুবিধা নয়।
-
-            তাই সংখ্যাটা এখানেই, মাপা মান হিসেবে, আর পাশে হিসাবটা
-            লেখা — যাতে পরেরজন এটাকে খেয়ালি সংখ্যা ভেবে বদলে না দেন।
-        --}}
-        <form method="POST" action="{{ route('locale.switch') }}" class="hidden min-[1280px]:contents">
-            @csrf
-            <button type="submit" name="locale" value="{{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
-                    class="flex h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                           text-sm font-medium text-(--color-topbar-ink-muted) transition-colors
-                           hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)"
-                    title="{{ __('core.action.switch_language') }}">
-                <x-ui.icon name="globe" :size="18" />
-                {{ app()->getLocale() === 'bn' ? 'EN' : 'বাং' }}
-            </button>
-        </form>
-
-        {{-- ভাষার পাশে, কারণ দুটোই একই জাতের: পর্দাটা এই মানুষটা কেমন
-             চান, পর্দাটা কী নিয়ে তা নয়। --}}
-        {{-- কম্পোনেন্টটার মূল উপাদান `<form class="contents">`, তাই তাকে
-             ক্লাস পাঠালে কোথাও বসত না। মোড়কটাই লুকানো হয়: `hidden`
-             গোটা ডালটা লেআউট থেকে তুলে নেয়, আর `lg:contents` ফিরিয়ে
-             দিলে বোতামটা আগের মতোই সারিতে বসে — বাড়তি কোনো বাক্স নয়। --}}
-        <span class="hidden min-[1280px]:contents">
-            <x-shell.theme-toggle />
-        </span>
-
-        {{-- ব্যবহারকারীর নাম ও রোল — ছবির পাশে, ছবির ভেতরে নয়।
-
-             আগে শুধু ছবিটা ছিল, আর নামটা জানতে হলে হয় hover করতে হত
-             (মোবাইলে যা নেই) নয় মেনু খুলতে হত। "আমি কার হয়ে লগইন করা"
-             প্রশ্নটা সবচেয়ে বেশি জিজ্ঞেস করা হয়, বিশেষ করে যেখানে
-             একটা কম্পিউটার কয়েকজন ভাগ করে ব্যবহার করেন — ডিপোতে ঠিক
-             সেটাই হয়। --}}
-        {{-- ⛔ ব্যবহারকারীর নাম ও ভূমিকা এখানে ছিল — তোলা হলো,
-             ১৩ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশ: *"topbare user nam
-             designation muchba sudu user er photo thak be"*।
-
-             ── কী ছিল ──────────────────────────────────────────────
-             ছবিটার বাঁয়ে এক লাইনে "Al-Amin Shuvo (সুপার অ্যাডমিন)" —
-             নাম, আর বন্ধনীতে **রোল**।
-
-             ── ⓘ নামটা হারায়নি, জায়গা বদলেছে ──────────────────────
-             একই নির্দেশে মালিক ওটা **ফুটারের বাঁ কোণে** চেয়েছেন, আর
-             সেখানে বন্ধনীতে থাকবে **পদবি, রোল নয়** (*"namer sate
-             podobi rakbe roll noy"*)। ⚠️ দুইটা আলাদা জিনিস: রোল বলে
-             কী করতে পারেন (`super_admin`), পদবি বলে তিনি কে (`CEO`)।
-
-             ⓘ ছবিটা রয়ে গেল — `x-shell.profile-menu`-র ভিতরে নামটা
-             এখনো আছে, কিন্তু সেটা **খোলা মেনুর ভিতরে**, বারে নয়। তাই
-             "আমি কে হয়ে বসে আছি" প্রশ্নের উত্তরটা এক ক্লিক দূরে,
-             হারিয়ে যায়নি।
-
-             ⚠️ `RoleLabel` শ্রেণিটা এখানে আর ব্যবহার হয় না, কিন্তু
-             **মোছা হয়নি** — সে অন্যত্রও ডাকা হয় (ব্যবহারকারীর তালিকা,
-             প্রোফাইল)। --}}
-
-        {{-- ⭐ কোম্পানি, শাখা ও খোঁজা — বাঁ থেকে এখানে এল, ১৩ সেপ্টেম্বর
-             ২০২৬। মালিকের নির্দেশ: *"user er namer jaygay dane mark kora
-             ongso zabe"*।
-
-             ── ⓘ কেন এটা কাজ করে ───────────────────────────────────
-             ঝাঁকটার মোড়কে `ms-auto`, তাই ভিতরে যা-ই বসুক সে ডান
-             কিনারাতেই থাকে — আলাদা করে কোনো ফাঁক বসাতে হয়নি।
-
-             ⚠️ ব্লকটা **হুবহু** সরানো হয়েছে, ভিতরের কিছু বদলানো হয়নি:
-             মাপের নিয়ম, লুকানোর ব্রেকপয়েন্ট আর `min-w-0`-র কারণগুলো
-             নিচের নিজের মন্তব্যে লেখা, আর সেগুলো জায়গা বদলালেও একই
-             থাকে।
-
-             ⭐ খোঁজার বোতামটা এখন সত্যিই কাজ করে — ১৪ সেপ্টেম্বর ২০২৬।
-
-             ── ⓘ এখানে আগে কী লেখা ছিল, আর কেন কথাটা রাখা দরকার ──────
-             এই মন্তব্যেই লেখা ছিল *"বোতামটা আজও কিছুই করে না… প্রতিশ্রুতিটা
-             এখনো ফাঁকা"*। ⚠️ কথাটা **সত্যি ছিল**: `open-command-center`
-             ঘটনা পাঠানো হত আর পুরো রিপোতে তার শ্রোতা ছিল শূন্য, এমনকি
-             `title`-এ "(Ctrl K)"ও লেখা ছিল। ⛔ কেউ লিখে রেখেছিলেন, কেউ
-             পড়েননি — মালিক নিজে প্রশ্ন করার আগ পর্যন্ত।
-
-             ⓘ এখন শ্রোতা আছে ([[shell.command-center]]), পিছনে
-             [[App\Core\Engines\Search\SearchEngine]], আর ফলাফল আসে
-             `/search` থেকে। ⭐ মন্তব্যটা শুধরে দেওয়া হলো, কারণ একটা
-             বাসি সতর্কবাণী ভুল তথ্যের মতোই কাজ করে: পরের জন পড়ে ধরে
-             নেবেন জিনিসটা এখনো ভাঙা। --}}
-    @if ($company)
-        {{-- কোম্পানি ও শাখা — ব্যবহারকারী সবসময় জানবে সে কোথায় কাজ করছে।
-             একাধিক কোম্পানি থাকলেই সুইচার সক্রিয় (সেকশন ১৫.১৫)।
-
-             ৩৭৫px-এ লুকানো: লোগো, সার্চ, ভাষা, কোম্পানির লম্বা নাম ও
-             প্রোফাইল একসাথে ধরে না। মোবাইলে কোম্পানির নাম পাতার
-             শিরোনামেই থাকে, তাই তথ্যটা হারায় না। --}}
-        {{-- `shrink-0` নয়, `min-w-0` — নামটা লম্বা হলে নামই কাটে, বার নয়।
-
-             ── কী ভাঙা ছিল ─────────────────────────────────────────────
-             ভিতরের নামে `max-w-64 truncate` দেওয়াই ছিল, কিন্তু মোড়কে
-             `shrink-0` থাকায় ঘরটা কখনো ছোট হত না — তাই কাটাও হত না।
-             ৭৬৮px-এ সুইচারটা ৩১৩px নিত, আর উপরে-মেনু রূপে (apps,
-             tiles) গোটা বারটা উপচে পড়ত। মাপা: লুকিয়ে দিলে উপচে পড়া
-             ৭৫ → ০; ৯০০px থেকে এমনিতেই ধরে।
-
-             লুকিয়ে দেওয়া হয়নি, কারণ কোন কোম্পানি ও শাখায় কাজ হচ্ছে
-             সেটা সারাদিন পড়া হয় — ট্যাবলেটে ওটা কেড়ে নেওয়ার চেয়ে
-             নামটা ছোট দেখানো ভালো। --}}
-        <div class="hidden min-w-0 sm:block">
-            <x-shell.company-switcher :company="$company" :branch="$branch" />
+                    <template x-for="(hit, i) in hitList" :key="hit.url">
+                        <a :href="hit.url" :id="hitId(i)" role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                           @mousemove="point(i)"
+                           class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                           style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                            <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="hit.type"></span>
+                            <span style="flex:none;font-size:12px;color:var(--color-ink-muted)" x-text="hit.no"></span>
+                            <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="hit.label"></span>
+                        </a>
+                    </template>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <span class="hidden h-8 w-px shrink-0 bg-(--color-topbar-border) sm:block" aria-hidden="true"></span>
-    @endif
-
-        <x-shell.profile-menu :user="$user" />
+    {{-- ডানে কেবল এগুলো: কাজ শুরু (＋ তৈরি), আমার সইয়ের অপেক্ষা (সইদাতা হলে), সই হয়েছে-পোস্ট হয়নি, কী ঘটেছে (🔔), আর আমি কে (ছবি) --}}
+    <div class="flex shrink-0 items-center gap-1" data-shell-actions>
+        <x-shell.create-menu />
+        {{-- ⭐ অনুমোদন — ＋ তৈরি আর 🔔-এর মাঝে, কেবল সইদাতার বারে (মালিক, ২০ অক্টোবর ২০২৬) --}}
+        <x-shell.approval-quick-access />
+        {{-- ⭐ সই হয়েছে, পোস্ট হয়নি — অনুমোদনের ঠিক পাশে, সংখ্যার ব্যাজসহ (মালিকের নিজের আইকন, ১১ অক্টোবর; লাইভ-হটফিক্স ২১ অক্টোবর
+             ২০২৬: ঘণ্টার ভেতরে লুকিয়ে ছিল, মালিক বারে খুঁজে পাননি)। শূন্যে ব্যাজ নেই, আইকন থাকে। ঘণ্টার প্যানেলেরটাও থাকে। --}}
+        <x-shell.signed-unposted bar />
+        <x-shell.notification-bell />
+        <x-shell.profile-menu :user="$user" :company="$company" :branch="$branch" />
     </div>
 </header>

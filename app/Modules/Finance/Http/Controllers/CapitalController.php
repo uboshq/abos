@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -288,9 +289,15 @@ class CapitalController extends Controller implements HasMiddleware
     {
         $data = $request->validate($this->rules());
 
-        $data['person_id'] = $this->people->resolve($data);
+        /*
+         * ⛔ নতুন নাম আর সারি এক লেনদেনে — সারি থামলে (অন্য শাখার বাক্স) নামটাও থাকে না। RCV-0143 / মালিক: কোনোভাবেই অন্য শাখায় নয়
+         * (ec, ২০ অক্টোবর ২০২৬)। ⓘ আগে থামা ফর্মের নতুন নামটা রয়ে যেত, আর ঠিক শাখায় ফিরে আবার জমা দিলে "এই নামে আগে থেকেই একটা পক্ষ আছে"।
+         */
+        $entry = DB::transaction(function () use ($data) {
+            $data['person_id'] = $this->people->resolve($data);
 
-        $entry = $this->capital->record($data);
+            return $this->capital->record($data);
+        });
 
         $this->keepThePaper($request, $entry);
 

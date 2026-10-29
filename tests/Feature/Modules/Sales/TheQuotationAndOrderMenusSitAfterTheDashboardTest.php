@@ -39,7 +39,18 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
     public function test_both_folds_sit_in_the_sales_bar_before_the_delivery_orders(): void
     {
         // ⓘ ৪ অক্টোবর ২০২৬ থেকে উদ্ধৃতির তালিকা আসল পাতা ([[PlannedScreenController::MOVED]]) — বার সেখান থেকেই পড়া
-        $html = $this->get(route('sales.quotation.index'))->assertOk()->getContent();
+        $page = $this->get(route('sales.quotation.index'))->assertOk()->getContent();
+        /*
+         * ⓘ কেবল বিক্রয়ের মডিউল-বারের ভেতরে মাপা (`data-module-bar` থেকে তার `</nav>` পর্যন্ত — দাবির নামের "sales bar") — ২০ অক্টোবর
+         * ২০২৬ থেকে পুরো চওড়া বার (ওয়েবের মান ধাপ ২) আগে আঁকা হয়, আর তার "＋ তৈরি"-তেও সরাসরি বিক্রির লিংক আছে; পুরো পাতায় প্রথম
+         * দেখা খুঁজলে সেটাই আগে পড়ত, মেনুর ক্রম নয়। ⛔ সাইডবার (`<aside>`) নয়: "ডেলিভারি প্রসেসিং" ভাঁজটা কেবল এই বারেই আঁকা
+         * (Mac, ২১ অক্টোবর ২০২৬: সাইডবারে মাপায় দাবি লাল)।
+         */
+        $start = strpos($page, 'data-module-bar');
+        $this->assertNotFalse($start, 'প্রস্তুতিটাই ভুল — মডিউল-বার নেই।');
+        $end = strpos($page, '</nav>', $start);
+        $this->assertNotFalse($end, 'প্রস্তুতিটাই ভুল — বারের `nav` শেষ হয়নি।');
+        $html = substr($page, $start, $end - $start);
 
         $quotations = strpos($html, e(__('core.menu.quotations')));
         $orders = strpos($html, e(__('core.menu.sales_orders')));

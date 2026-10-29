@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Core\Services\AvatarService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Models\UserPermissionOverride;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -60,6 +62,19 @@ use Spatie\Permission\Models\Role;
  */
 class UserPolicy
 {
+    /**
+     * ⭐ একজনের মুখ দেখা — কেবল সহকর্মী (মালিক, a6, ২০ অক্টোবর ২০২৬; নিয়ম [[AvatarService::visibleTo()]])।
+     *
+     * ⛔ না হলে ৪০৪, ৪০৩ নয় (`denyAsNotFound`): অন্য কোম্পানির কেউ যেন জানতেও না পারেন ঐ id-র মানুষটা আছেন।
+     * ⓘ ডাকে [[App\Http\Controllers\UserPhotoController]] — `$this->authorize('seeFace', $owner)`।
+     */
+    public function seeFace(User $viewer, User $owner): Response
+    {
+        return app(AvatarService::class)->visibleTo($viewer, $owner)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
     public function update(User $actor, User $target): bool
     {
         if (! $actor->can('system_admin.user.manage')) {

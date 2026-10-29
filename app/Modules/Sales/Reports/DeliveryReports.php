@@ -108,7 +108,7 @@ final class DeliveryReports
             ->tap(ReportEngine::dealerWall($f, 'o.customer_id'))
             ->groupBy('l.id')
             ->selectRaw('MIN(o.document_no) as document_no, MIN(o.id) as source_id, MIN(o.trx_date) as order_date, '
-                .'MIN('.self::name('cu').') as customer, MIN('.self::name('p').') as product, '
+                .'MIN('.self::name('cu').') as customer, MIN(o.customer_id) as customer_id, MIN('.self::name('p').') as product, '
                 ."MIN({$promised}) as promised_on, MIN({$wanted}) as wanted, "
                 ."COALESCE(SUM(CASE WHEN a.arrived_on <= {$promised} THEN a.qty ELSE 0 END), 0) as on_time_qty, "
                 .'COALESCE(SUM(a.qty), 0) as arrived_qty, MIN(a.arrived_on) as first_arrival');
@@ -200,7 +200,7 @@ final class DeliveryReports
                     ->tap(ReportEngine::branchWall($f, 'c.branch_id'))
                     ->tap(ReportEngine::dealerWall($f, 'c.customer_id'))
                     ->selectRaw('c.document_no as document_no, '.$pdo->quote('delivery_challan').' as source_type, c.id as source_id, '
-                        .'c.trx_date as trx_date, '.self::name('cu').' as customer, o.document_no as order_no, '
+                        .'c.trx_date as trx_date, '.self::name('cu').' as customer, c.customer_id as customer_id, o.document_no as order_no, '
                         ."COALESCE(NULLIF(c.vehicle_no, ''), '') as vehicle, {$stage} as stage, "
                         .'c.created_at as created_at, e.allocated_at, e.picking_at, e.packed_at, g.gate_at, e.dispatched_at, e.arrived_at, '
                         .'CASE WHEN e.dispatched_at IS NULL THEN NULL ELSE TIMESTAMPDIFF(HOUR, c.created_at, e.dispatched_at) END as hours_to_dispatch, '
@@ -217,7 +217,8 @@ final class DeliveryReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
-                ['key' => 'customer', 'label' => 'sales::otif.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer', 'label' => 'sales::otif.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'order_no', 'label' => 'sales::otif.order'],
                 ['key' => 'vehicle', 'label' => 'sales::challan_status.vehicle'],
                 ['key' => 'stage', 'label' => 'sales::challan_status.stage'],
@@ -289,7 +290,7 @@ final class DeliveryReports
                     ->whereBetween('d.trx_date', [$f['from'], $f['to']])
                     ->tap(ReportEngine::branchWall($f, 'd.branch_id'))
                     ->tap(ReportEngine::dealerWall($f, 'd.customer_id'))
-                    ->selectRaw('d.document_no as do_no, d.trx_date as trx_date, '.self::name('cu').' as customer, '
+                    ->selectRaw('d.document_no as do_no, d.trx_date as trx_date, '.self::name('cu').' as customer, d.customer_id as customer_id, '
                         .'i.document_no as invoice_no, '.$pdo->quote('sales_invoice').' as invoice_type, i.id as invoice_id, '
                         ."{$start} as submitted_at, d.approved_at as approved_at, i.created_at as invoiced_at, g.gate_at as gate_at, "
                         .'o.dispatched_at as dispatched_at, '
@@ -318,7 +319,8 @@ final class DeliveryReports
             },
             columns: [
                 ['key' => 'do_no', 'label' => 'sales::order_dispatch.do'],
-                ['key' => 'customer', 'label' => 'sales::otif.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer', 'label' => 'sales::otif.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'invoice_no', 'label' => 'sales::order_dispatch.invoice', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'invoice_type', 'source_id' => 'invoice_id'],
                 ['key' => 'submitted_at', 'label' => 'sales::order_dispatch.submitted_at'],
@@ -371,7 +373,8 @@ final class DeliveryReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
-                ['key' => 'customer', 'label' => 'sales::otif.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer', 'label' => 'sales::otif.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'product', 'label' => 'sales::otif.product'],
                 ['key' => 'promised_on', 'label' => 'sales::otif.promised_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'wanted', 'label' => 'sales::otif.wanted', 'type' => ReportColumn::QUANTITY],

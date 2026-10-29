@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -56,7 +57,13 @@ final class TheDepositMovedInTheHeadersBranchTest extends TestCase
         $this->actingAs($this->owner);
         app(StandardChart::class)->install();
         app(DepositKindInstaller::class)->install();
-        app(CashTillService::class)->ensurePrimaryTill();
+        /*
+         * ⓘ বাক্সটা কোম্পানির, কোনো শাখার নয় — ১৯ অক্টোবর ২০২৬ (ec, RCV-0143): জমা এখন যে বাক্স থেকে টাকা গেল তার শাখায় বসে
+         * ([[FinanceSignature::branchFor()]])। ময়মনসিংহে বাঁধা বাক্স থেকে "নেত্রকোনার জমা" আর বানানোই যায় না; শাখাহীন বাক্সে জমা
+         * আগের মতো উপরের শাখায়, তাই দৃশ্যটা অক্ষত।
+         */
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+        CashTill::query()->withoutGlobalScopes()->whereKey($till->id)->update(['branch_id' => null]);
 
         Carbon::setTestNow('2026-11-15 10:00:00');
         $this->putMoneyIn($this->cash(), '1000000', '2026-07-01');

@@ -112,8 +112,9 @@ class DirectSaleController extends Controller implements HasMiddleware
          * `with('location')` — নাহলে উপরের লকআপে এলাকার নাম চাইতে গিয়ে
          * গ্রাহকপ্রতি একটা করে কোয়েরি হত। ঠিক যে N+1-টা `withOutstanding()`
          * দিয়ে বন্ধ করা হয়েছিল, সেটাই পাশের দরজা দিয়ে ফিরে আসত।
+         * ⭐ ১৯ অক্টোবর ২০২৬ থেকে মা পয়েন্ট আর শাখাও ([[Customer::PLACE]]) — নিচের `location` এখন "পয়েন্ট · শাখা"।
          */
-        $customers = Customer::query()->inViewedBranch()->active()->with('location')
+        $customers = Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)
             ->withOutstanding()->orderBy('name_en')->get();
 
         /*
@@ -340,7 +341,12 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'code' => (string) $c->code,
                 'phone' => (string) ($c->phone ?? ''),
                 'address' => (string) ($c->address() ?? ''),
-                'location' => (string) ($c->location?->name() ?? ''),
+                /*
+                 * ⭐ "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব
+                 * জায়গায়, আর শাখার নামও দিতে হবে।"* ⓘ আগে নিজের ধাপের নাম (রুটে বসা দোকানে রুটের নাম) — এখন সব জায়গার এক নিয়ম
+                 * ([[Customer::placeName()]]); খোঁজার তালিকার সারিতেও বসে।
+                 */
+                'location' => (string) ($c->placeName() ?? ''),
             ]]),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
@@ -962,7 +968,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         };
 
         $query = $query
-            ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
+            ->with(['customer.location.parent', 'customer.branch', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id');
 

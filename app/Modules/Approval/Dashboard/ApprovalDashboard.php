@@ -18,8 +18,12 @@ use App\Models\Approval;
 use App\Models\ApprovalDelegation;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Approval\Services\ApprovalFacts;
+use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 
 /**
  * অনুমোদন মডিউলের ড্যাশবোর্ড।
@@ -96,22 +100,53 @@ final class ApprovalDashboard implements ProvidesDashboard
 
             panels: [self::howLongWaiting(), ...self::byModule(), ...self::byPerson(), ...self::myQueue()],
 
-            listings: [
-                new Listing(
-                    label: __('approval::dashboard.waiting_now'),
-                    columns: [
-                        ['key' => 'module', 'label' => __('approval::dashboard.module'), 'width' => '9rem',
-                            'render' => fn ($a) => $a->module],
-                        ['key' => 'action', 'label' => __('approval::dashboard.action'),
-                            'render' => fn ($a) => $a->action],
-                        ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
-                            'render' => fn ($a) => $a->amount],
-                    ],
-                    rows: self::seen()->where('status', Approval::PENDING)->latest('id')->limit(8)->get(),
-                    empty: __('approval::dashboard.nothing_waiting'),
-                    href: route('approval.inbox.index'),
-                ),
+            listings: [self::waitingNow()],
+        );
+    }
+
+    /**
+     * ⭐ "এখন যা আটকে আছে" — কাগজের নাম, নম্বর আর পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬: *"অনেক জায়গায় তালিকায় শুধু ভাউচার নম্বর
+     * দেওয়া। সেখানে নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"*)।
+     *
+     * ⛔ আগে কাঁচা ইংরেজি চাবি ("sales", "delivery_order") আর কাঁচা অঙ্ক ("125000.0000"), নম্বর ছিলই না — কোন কাগজ আটকে, বোঝার
+     * উপায় ছিল না। ⓘ এখন ইনবক্সের হুবহু ঘর (`inbox.partials.what`): মডিউলের ঘোষিত নাম, নম্বর · পক্ষ এক লাইনে, আর কারণ।
+     * ⓘ পক্ষ গোটা তালিকার জন্য একবারে ([[ApprovalFacts]]); দেয়াল তোলা, কারণ সারিগুলো আগেই [[seen()]] দিয়ে বাছা — নিজের, নিজের
+     * হাতে, নিজের সই, অথবা শাখার সীমাহীন রিপোর্টের চাবি। ⓘ ফোনের ড্যাশবোর্ড একই ঘর লেখা হিসেবে পায় ([[DashboardApiController]])।
+     */
+    private static function waitingNow(): Listing
+    {
+        $rows = self::seen()->where('status', Approval::PENDING)->latest('id')->limit(8)->get();
+        $facts = app(ApprovalFacts::class)->of($rows, true);
+        $labels = app(ApprovalFlowService::class)->labels();
+        $engine = app(ApprovalEngine::class);
+
+        return new Listing(
+            label: __('approval::dashboard.waiting_now'),
+            columns: [
+                ['key' => 'paper', 'label' => __('approval::field.action'),
+                    'render' => fn ($a) => view('approval::inbox.partials.what', [
+                        'approval' => $a,
+                        'labels' => $labels,
+                        'paperNo' => $facts[$a->id]['no'] ?? null,
+                        'party' => $facts[$a->id]['party'] ?? null,
+                    ])],
+                ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
+                    'render' => fn ($a) => $a->amount === null ? '—' : Money::format((string) $a->amount)],
+                /*
+                 * ⭐ ডানে অবস্থার চিপ (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — `x-ui.paper-state` (paper_states.json):
+                 * অপেক্ষমাণ = waiting, ধাপ ছক থেকে ([[ApprovalEngine::stepsFor()]])।
+                 */
+                ['key' => 'state', 'label' => __('approval::dashboard.state'), 'width' => '13rem',
+                    'render' => fn ($a) => new HtmlString(Blade::render(
+                        '<x-ui.paper-state state="waiting" :level="$level" :levels="$levels" />',
+                        ['level' => $a->current_level, 'levels' => $engine->stepsFor($a)->count() ?: null],
+                    ))],
             ],
+            rows: $rows,
+            empty: __('approval::dashboard.nothing_waiting'),
+            href: route('approval.inbox.index'),
+            // ⭐ হোমের অনুমোদনের কার্ডে এই তালিকা, চিপসহ — মালিকের অনুমোদিত নমুনা (২০ অক্টোবর ২০২৬)
+            onHome: true,
         );
     }
 

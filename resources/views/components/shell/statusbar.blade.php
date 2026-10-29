@@ -15,11 +15,6 @@
 --}}
 @php
     $user = auth()->user();
-    /*
-     * ⭐ সব নোটিশ এখানে — মানুষের লেখা আগে, যন্ত্রের সতর্কতা পরে ([[StatusNotices::forTicker()]])। মালিক, ১১ অক্টোবর ২০২৬:
-     * *"footer e na dekhiye upore dekhay notice"* — ১০ অক্টোবরের উপরের হলুদ ব্যানার তোলা হলো; ঘণ্টাতেও সব থাকে।
-     */
-    $notices = $user ? app(\App\Core\Services\StatusNotices::class)->forTicker() : [];
 
     /*
      * ⭐ পদবি — মালিকের নির্দেশ, ১৩ সেপ্টেম্বর ২০২৬:
@@ -61,9 +56,19 @@
     if (app(\App\Core\Services\Ownership::class)->isGroupOwner($user)) {
         $designation = app(\App\Core\Services\Ownership::class)->groupOwnerTitle() ?? $designation;
     }
+
+    /*
+     * ⭐ নিচের চলন্ত বারে কেবল মানুষের লেখা ঘোষণা — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির,
+     * ঘোষণা নিচে চলন্ত"* ([[StatusNotices::forTicker()]])। ⛔ যন্ত্রের সতর্কতা কখনো এখানে নয় — সেগুলো উপরের স্থির ফিতায়
+     * ([[shell.notice-banner]]), আর "জরুরি" টিক দেওয়া ঘোষণাও সেখানে।
+     */
+    $announcements = $user ? app(\App\Core\Services\StatusNotices::class)->forTicker() : [];
 @endphp
 
-<footer data-footer class="fixed inset-x-0 bottom-0 z-20 hidden h-(--spacing-status-bar) items-center gap-4
+{{-- ⓘ ঘোষণা থাকলে ফুটার মোবাইলেও দেখা যায় — কেবল চলন্ত সারিটা, নিচের মেনুর ঠিক উপরে (`data-has-ticker`, app.css);
+     পরিচয় আর নাম-পদবি তখনও কেবল বড় পর্দায়। ঘোষণা না থাকলে মোবাইলে আগের মতোই লুকানো। --}}
+<footer data-footer @if ($announcements !== []) data-has-ticker @endif
+        class="fixed inset-x-0 bottom-0 z-20 {{ $announcements !== [] ? 'flex' : 'hidden' }} h-(--spacing-status-bar) items-center gap-4
                border-t border-(--color-footer-border) bg-(--color-footer) px-3
                text-2xs text-(--color-footer-ink) md:flex">
 
@@ -93,7 +98,7 @@
          ⓘ চিহ্নটা সব মাপে থাকে, কেবল লেখা সরু পর্দায় লুকায়: চিহ্নের
          জায়গা লাগে ২০px, আর ওটাই লাইনটার একমাত্র অংশ যেটা দূর থেকে
          চেনা যায়। --}}
-    <span class="flex shrink-0 items-center gap-1.5">
+    <span class="hidden shrink-0 items-center gap-1.5 md:flex">
         {{-- ⓘ ABOS — শব্দচিহ্ন, লেখা নয়।
 
              `size-5` নয়, `h-4 w-auto`: শব্দচিহ্নটা ৫৫৬×১৮৯, প্রায় ৩:১
@@ -111,7 +116,8 @@
              width="556" height="189"
              class="h-4 w-auto shrink-0 object-contain">
 
-        <span>v{{ config('app.version', '0.1.0') }}</span>
+        {{-- ⭐ সংস্করণ, তারিখ আর চলতি commit — চাপলে "নতুন কী এল" (মালিক, ২৪ অক্টোবর ২০২৬; [[App\Core\Support\Release]]) --}}
+        <a href="{{ route('release.notes') }}" data-release class="hover:underline">{{ \App\Core\Support\Release::label() }}</a>
 
         <span>© {{ now()->year }}</span>
 
@@ -121,122 +127,86 @@
         <span class="hidden lg:inline">{{ __('core.brand.rights') }}</span>
     </span>
 
-    {{-- নোটিশগুলো — ক্লিকযোগ্য, কারণ জানানোই যথেষ্ট নয়।
+    {{-- ⭐ মাঝখানে চলন্ত ঘোষণা — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
 
-         "৩টা খসড়া ভাউচার পোস্ট হয়নি" পড়ে ব্যবহারকারী সমস্যাটা জানেন,
-         কিন্তু কোথায় গিয়ে ঠিক করবেন তা নয়। লিংক ছাড়া বার্তাটা অভিযোগ,
-         সাহায্য নয় (নিয়ম ১)।
+         ── ⓘ ইতিহাস ─────────────────────────────────────────────────────────────────────
+         ১১ অক্টোবর সব নোটিশ এখানে ঘুরত; ২০ অক্টোবর (ওয়েবের মান ধাপ ২) সব উপরের স্থির ফিতায় উঠল, ফুটারে কেবল
+         সংস্করণ · © · নাম। ২১ অক্টোবর মালিকের ভাগ: কাজের সতর্কতা উপরে স্থির, মানুষের লেখা ঘোষণা এখানে চলন্ত।
+         ⛔ যন্ত্রের সতর্কতা এখানে কখনো নয় ([[StatusNotices::forTicker()]])। ঘোষণা না থাকলে চলন্ত বারের কোনো চিহ্নই আঁকা হয়
+         না — ফুটার তখন ২০ অক্টোবরের মতো সংস্করণ · © · নাম।
 
-         যেগুলোর কোনো পর্দা নেই (ব্যাকআপ — কমান্ড লাইনের কাজ; প্রতিষ্ঠানের
-         নোটিশ — ওটা পড়ার জিনিস), সেখানে লিংকও নেই: যে লিংক কোথাও নিয়ে
-         যায় না সেটাই মৃত লিংক।
+         ── ⭐ চলার নিয়ম (WCAG 2.2.2), ১১ অক্টোবরের ccc065138 থেকে ফেরানো, আর যা ছিল না তা যোগ ────────────────
+           • ধীরে — সেকেন্ডে ~৪০px, লেখার দৈর্ঘ্য ধরে ([[noticeTicker]], `--ticker-duration`)
+           • মাউস রাখলে আর কী-বোর্ডের ফোকাস এলে থামে (`group-hover`, `group-focus-within`) — সরে যাওয়া লিংক চাপা যায় না
+           • পাশে ⏸/▶ বোতাম, বাছাইটা এই ব্রাউজারে মনে থাকে (`group-data-[state=paused]`) — ⛔ ১১ অক্টোবরে এটা ছিল না,
+             আর ঠিক এই অভাবেই ২০ অক্টোবরে চলন্ত বার উঠে গিয়েছিল
+           • `motion-safe:` — যিনি চলন্ত জিনিস বন্ধ রেখেছেন তাঁর পর্দায় নড়ে না; বোতামটাও তখন লুকায়, থামানোর কিছু নেই
+           • দুইটা কপি, এক কপির সমান সরে (-৫০%) — লুপে ফাঁক নেই; প্রতিটা কপি অন্তত বারের সমান চওড়া, তাই একই বাক্য কখনো
+             পাশাপাশি দুইবার চোখে পড়ে না (HP-র অভিযোগ, ২৫ আগস্ট ২০২৬: *"ফুটারে ব্যাকআপ সতর্কবার্তা দুইবার ওভারল্যাপ"*)।
+             ⛔ ১১ অক্টোবরের `min-w-full` এটা করত না, আর ২১ অক্টোবর ছবিতে ধরা পড়ল: কপির ১০০% মাপা হয় চলন্ত সারির নিজের
+             চওড়া ধরে, আর সারিটা লেখার মাপে — তাই ছোট ঘোষণায় দুইটা কপিই একসাথে পর্দায়। ⭐ এখন সারিটা অন্তত বারের দ্বিগুণ
+             (`min-w-[200%]`, বারের চওড়া জানা), আর প্রতিটা কপি সারির অর্ধেক (`min-w-1/2`) — অর্থাৎ অন্তত একটা গোটা বার।
+           • দ্বিতীয় কপি `aria-hidden`, তার লিংক Tab-এ ধরা পড়ে না — পর্দা-পাঠক একবারই পড়ে
+           • প্রতিটা ঘোষণা ক্লিক করলে পুরো নোটিশ খোলে (system_admin.notice.show); মেয়াদ পেরোলে নিজে থেকেই সরে
+             ([[NoticeBoard::forTicker()]]); ক্রম অগ্রাধিকার ধরে, তারপর নতুনটা; চলন্ত সারিতে কোনো ✕ নেই
+           • ছাপায় আসে না (`print-hide`); এক সারি, ৩৭৫px-এও (`whitespace-nowrap`, বাইরেটা `overflow-hidden`) --}}
+    @if ($announcements !== [])
+        <div data-ticker x-data="noticeTicker" :data-state="state" data-state="running"
+             data-pause-label="{{ __('core.notice.ticker_pause') }}"
+             data-play-label="{{ __('core.notice.ticker_play') }}"
+             role="region" aria-label="{{ __('core.notice.ticker_label') }}"
+             class="group print-hide flex min-w-0 flex-1 items-center gap-2 md:border-s md:border-(--color-border) md:ps-3">
+            <div class="relative min-w-0 flex-1 overflow-hidden">
+                <div data-ticker-track
+                     class="inline-flex min-w-[200%] whitespace-nowrap will-change-transform
+                            motion-safe:animate-[abos-ticker_var(--ticker-duration,40s)_linear_infinite]
+                            group-hover:[animation-play-state:paused]
+                            group-focus-within:[animation-play-state:paused]
+                            group-data-[state=paused]:[animation-play-state:paused]">
+                    @for ($copy = 0; $copy < 2; $copy++)
+                        <span class="inline-flex min-w-1/2 shrink-0 items-center gap-6 pe-12"
+                              @if ($copy === 0) data-ticker-copy @else aria-hidden="true" @endif>
+                            @foreach ($announcements as $announcement)
+                                <span class="inline-flex items-center gap-1">
+                                    @if ($announcement['url'])
+                                        <a href="{{ $announcement['url'] }}" data-ticker-item
+                                           class="inline-flex items-center gap-1.5 text-xs text-(--color-badge-info-ink) underline-offset-2 hover:underline"
+                                           @if ($copy === 1) tabindex="-1" @endif>
+                                            <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
+                                            {{ $announcement['text'] }}
+                                        </a>
+                                    @else
+                                        <span data-ticker-item class="inline-flex items-center gap-1.5 text-xs text-(--color-badge-info-ink)">
+                                            <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
+                                            {{ $announcement['text'] }}
+                                        </span>
+                                    @endif
 
-         ── লেখাটা চলে, আর কেন ─────────────────────────────────────
-         মালিকের নির্দেশ: "footer e notice cholbe dms er moto"। আগে
-         এখানে স্থির ছিল, আর কারণটা এই মন্তব্যেই লেখা ছিল — সেটা ভুল
-         ছিল দুইভাবে: সিদ্ধান্তটা মালিকের, আর স্থির বারে দ্বিতীয়
-         নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না।
+                                    {{-- ⛔ সরানোর ✕ নেই (fe, ২১ অক্টোবর ২০২৬) — চলন্ত বোতাম চাপা যায় না, আর চাপলে কী হয় তাও
+                                         অস্পষ্ট ছিল। ⓘ থামাতে ⏸, পুরোটা পড়তে বা সরাতে নোটিশের পাতা; উপরের ফিতার নিজের ✕ যেমন ছিল। --}}
+                                </span>
+                            @endforeach
+                        </span>
+                    @endfor
+                </div>
+            </div>
 
-         চলন্ত লেখার আসল আপত্তিগুলো সারানো হয়েছে, এড়ানো হয়নি:
-           • মাউস রাখলে থামে — যে সংখ্যা সরে যাচ্ছে সেটা কেউ ক্লিক
-             করতে পারে না
-           • `motion-safe:` — যিনি চলন্ত জিনিস বন্ধ রেখেছেন তাঁর
-             পর্দায় নড়ে না, তালিকাটা স্থিরই থাকে
-           • কিছু না থাকলে বারটা চুপ — "সব ঠিক আছে" ঘুরতে থাকলে দুই
-             সপ্তাহে মানুষ তাকানো বন্ধ করে দেয়
-
-         দুইটা কপি পাশাপাশি, এক কপির সমান সরে (-৫০%) — এতেই লুপটা
-         নির্বিঘ্ন: প্রথমটা যে মুহূর্তে বেরিয়ে যায়, দ্বিতীয়টা ঠিক
-         সেখানেই থাকে যেখানে প্রথমটা শুরু হয়েছিল।
-
-         ── কেন প্রতিটা কপি অন্তত পর্দার সমান চওড়া, ৩০ আগস্ট ২০২৬ ──
-         নোটিশ যখন একটা বা দুইটা, কপি দুইটা এত ছোট হত যে **দুইটাই
-         একসাথে চোখের সামনে থাকত** — অর্থাৎ একই বাক্য পাশাপাশি দুইবার:
-
-           ● ব্যাকআপ ও খাতা একই ডিস্কে…  ● ব্যাকআপ ও খাতা একই ডিস্কে…
-
-         HP ২৫ আগস্ট এটাকে "ফুটারের বার্তা দুইবার" বলে রিপোর্ট করেছেন,
-         আর ঠিকই করেছেন: পাঠকের কাছে ওটা লুপের কৌশল নয়, একটা ভুল।
-
-         `min-w-full` দিলে দ্বিতীয় কপিটা শুরুতেই পর্দার বাইরে থাকে,
-         আর প্রথমটা বেরিয়ে যেতে যেতে ভেতরে আসে — যেভাবে চলন্ত লেখা
-         পড়ার কথা। --}}
-    <div class="group relative hidden min-w-0 flex-1 overflow-hidden md:block">
-        <div class="inline-flex whitespace-nowrap will-change-transform
-                    motion-safe:animate-[abos-ticker_30s_linear_infinite]
-                    group-hover:[animation-play-state:paused]">
-            @for ($copy = 0; $copy < 2; $copy++)
-                <span class="inline-flex min-w-full items-center gap-6 pe-12"
-                      @if ($copy === 1) aria-hidden="true" @endif>
-                    @foreach ($notices as $notice)
-                        @php
-                            $tone = match ($notice['tone']) {
-                                'danger' => 'text-(--color-danger)',
-                                'pending' => 'text-(--color-badge-pending-ink)',
-                                default => 'text-(--color-badge-info-ink)',
-                            };
-                        @endphp
-
-                        {{-- চলন্ত বারে `truncate` নেই — জায়গার সীমা আর
-                             নেই, পুরো বাক্যটাই ঘুরে আসে। ওটাই স্থির
-                             বারের সবচেয়ে বড় সমস্যা ছিল: দ্বিতীয়
-                             নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না। --}}
-                        @if ($notice['url'])
-                            <a href="{{ $notice['url'] }}"
-                               class="inline-flex items-center gap-1.5 {{ $tone }} hover:underline"
-                               @if ($copy === 1) tabindex="-1" @endif>
-                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
-                                {{ $notice['text'] }}
-                            </a>
-                        @else
-                            <span class="inline-flex items-center gap-1.5 {{ $tone }}">
-                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
-                                {{ $notice['text'] }}
-                            </span>
-                        @endif
-
-                        {{-- সরানোর ক্রস — কেবল মানুষের লেখা নোটিশে, আর
-                             কেবল যেগুলো সরানো যায়।
-
-                             ⓘ যন্ত্রের সতর্কতায় (ব্যাকআপ হয়নি) কোনো ক্রস নেই —
-                             ⛔ ওটা সরালে সমস্যাটা সরত না, কেবল খবরটা সরত।
-
-                             ⚠️ দ্বিতীয় কপিতে ফর্মটা আঁকা হয় না: লুপের জন্য রাখা
-                             কপিটা `aria-hidden`, আর ওখানে বোতাম রাখলে একই কাজের
-                             দুইটা বোতাম থাকত, যার একটা পর্দায় দেখাই যায় না। --}}
-                        @if ($copy === 0 && ($notice['id'] ?? null) && ($notice['can_dismiss'] ?? false)
-                            && \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss'))
-                            <form method="POST"
-                                  action="{{ route('system_admin.notice.dismiss', $notice['id']) }}"
-                                  class="inline-flex">
-                                @csrf
-                                <button type="submit"
-                                        title="{{ __('core.notice.dismiss') }}"
-                                        aria-label="{{ __('core.notice.dismiss') }}"
-                                        class="px-1 leading-none opacity-60 hover:opacity-100">&times;</button>
-                            </form>
-                        @endif
-                    @endforeach
-                </span>
-            @endfor
+            {{-- ⏸/▶ — এখন চাপলে কী হবে সেটাই নাম; JS ছাড়া নামটা "থামান" আর চলাটা কেবল মাউস/ফোকাসে থামে --}}
+            <button type="button" data-ticker-toggle @click="toggle"
+                    :aria-label="label" :title="label"
+                    aria-label="{{ __('core.notice.ticker_pause') }}" title="{{ __('core.notice.ticker_pause') }}"
+                    class="grid size-6 shrink-0 place-items-center rounded-(--radius-field) text-(--color-ink-muted)
+                           hover:bg-(--color-surface-hover) hover:text-(--color-ink) motion-reduce:hidden">
+                {{-- ⭐ আঁকা চিহ্ন, লেখা নয় (fe, ২১ অক্টোবর ২০২৬) — ⛔ ⏸ লেখাটা বাংলা ফন্টে "॥" দেখাত --}}
+                {{-- ⓘ ভরাট Material চিহ্ন, ১৮px, বোতাম ২৪px (size-6) — রেখার ⏸ ১৪px-এ "॥" পড়াত --}}
+                <x-ui.icon name="pause" :size="18" data-ticker-icon="pause" x-show="running" />
+                <x-ui.icon name="play" :size="18" data-ticker-icon="play" x-show="paused" x-cloak />
+            </button>
         </div>
-    </div>
-
-    {{--
-        চলাটার নিয়ম — এখানেই, বিশ্বজনীন স্টাইলশিটে নয়।
-
-        গোটা পণ্যে এটাই একমাত্র অ্যানিমেশন। একটা কম্পোনেন্টের জন্য
-        বিশ্বজনীন ফাইলে কীফ্রেম রাখলে সেটা কম্পোনেন্টটার চেয়েও বেশি
-        দিন বেঁচে থাকে, আর কেউ জানে না কেন আছে।
-    --}}
-    @once
-        <style @nonce>
-            @keyframes abos-ticker {
-                from { transform: translateX(0); }
-                to   { transform: translateX(-50%); }
-            }
-        </style>
-    @endonce
+    @else
+        {{-- ⓘ ঘোষণা নেই — ফাঁকা অংশটা নাম-পদবিকে ডানে ঠেলে রাখে --}}
+        <span class="min-w-0 flex-1" aria-hidden="true"></span>
+    @endif
 
     {{-- ⭐ ডান কোণ — কে বসে আছেন। মালিকের নির্দেশ, ১৪ সেপ্টেম্বর ২০২৬:
          *"Dane User Name Desig"*।
@@ -270,16 +240,16 @@
          রঙ, ছোট আদ্যক্ষর-বৃত্ত, নাম মোটা, পদবি হালকা; বাঁয়ে পাতলা দাগ, যাতে লাল সতর্কবার্তা
          আর নাম মিশে না যায়। ⚠️ রংগুলো টোকেন থেকে, তাই দুই মোডেই নিজে থেকে মানায়। --}}
     @if ($user)
-        <span class="flex min-w-0 shrink items-center gap-2 border-s border-(--color-border) ps-3">
+        <span class="hidden min-w-0 shrink items-center gap-2 border-s border-(--color-border) ps-3 md:flex">
             {{-- ⓘ আদ্যক্ষর-বৃত্ত নেই, আর পিলটা ফুটারের উচ্চতার ভিতরে (`leading-none`, কম
                  প্যাডিং) — মালিকের নির্দেশ, একই দিন: *"a thakbe na … Footer er liner bahire
                  giyeche"*। --}}
             <span class="flex min-w-0 items-center gap-2 rounded-full bg-(--color-surface-selected)
                          px-2.5 py-px leading-none ring-1 ring-(--color-brand-500)/30">
-                <span class="max-w-48 truncate text-xs font-semibold text-(--color-ink)">{{ $user->name }}</span>
+                <span class="max-w-48 truncate text-xs font-semibold leading-normal text-(--color-ink)">{{ $user->name }}</span>
 
                 @if ($designation)
-                    <span class="max-w-40 truncate text-2xs text-(--color-ink-muted)">{{ $designation }}</span>
+                    <span class="max-w-40 truncate text-2xs leading-normal text-(--color-ink-muted)">{{ $designation }}</span>
                 @endif
             </span>
         </span>

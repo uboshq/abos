@@ -90,6 +90,7 @@ final class MarginReport
                         DB::raw("'".SalesInvoice::drillSourceType()."' as source_type_literal"),
                         'i.id as invoice_id',
                         self::name('cu', 'customer_name'),
+                        'i.customer_id',
                         self::productName(),
                         'il.qty',
                         'il.rate',
@@ -119,7 +120,8 @@ final class MarginReport
                     'source_type' => 'source_type_literal',
                     'source_id' => 'invoice_id',
                 ],
-                ['key' => 'customer_name', 'label' => 'sales::margin.col_customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::margin.col_customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'product_name', 'label' => 'sales::margin.col_product'],
                 ['key' => 'qty', 'label' => 'sales::margin.col_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'rate', 'label' => 'sales::margin.col_rate', 'type' => ReportColumn::MONEY, 'total' => false],

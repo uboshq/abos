@@ -3,7 +3,7 @@
     <x-slot:title>{{ $order->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$order->document_no" :subtitle="$order->customer?->name()">
+        <x-ui.page-header :title="$order->document_no" :subtitle="$order->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $order)
                     <x-ui.button tone="secondary" :href="route('sales.order.edit', $order)">

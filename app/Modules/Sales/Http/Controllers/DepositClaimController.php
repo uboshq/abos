@@ -45,7 +45,7 @@ class DepositClaimController extends Controller implements HasMiddleware
         $status = $request->query('status', DepositClaim::PENDING);
 
         $query = DepositClaim::query()->inViewedBranch()
-            ->with(['customer', 'bankAccount', 'decider'])
+            ->with(['customer.location.parent', 'customer.branch', 'bankAccount', 'decider'])
             // ⓘ "অপেক্ষমাণ" ট্যাব = সিদ্ধান্ত বাকি সব — যাচাই চলছে এমনগুলোও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
             ->when($status === DepositClaim::PENDING, fn ($q) => $q->open())
             ->when($status !== 'all' && $status !== DepositClaim::PENDING, fn ($q) => $q->where('status', $status))

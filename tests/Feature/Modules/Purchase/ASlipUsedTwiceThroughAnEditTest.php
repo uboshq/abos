@@ -48,8 +48,10 @@ final class ASlipUsedTwiceThroughAnEditTest extends TestCase
         ));
 
         $payments = app(PaymentService::class);
-        $payments->create(['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '100', 'instrument_no' => 'TT-55'],
+        $first = $payments->create(['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '100', 'instrument_no' => 'TT-55'],
             [['purchase_bill_id' => $bill->id, 'amount' => '100']]);
+        // ⛔ পদ্ধতি ছাড়া পাঠানো স্লিপ নম্বর থাকে — "নগদ" ধরে মুছে ফেলা নয় ([[MoneyMethod::onlyItsOwn()]])
+        $this->assertSame('TT-55', $first->fresh()->instrument_no, '⛔ পদ্ধতি না দেওয়ায় স্লিপ নম্বর নীরবে মুছে গেল।');
         $second = $payments->create(['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '100'],
             [['purchase_bill_id' => $bill->id, 'amount' => '100']]);
 

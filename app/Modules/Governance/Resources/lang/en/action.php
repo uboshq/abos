@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'created' => 'Created',
     'updated' => 'Edited',
-    'edited' => 'Edited before signing',
+    'edited' => 'Edited before approving',
     'revised' => 'Asked again',
     'deleted' => 'Deleted',
     'restored' => 'Restored',
@@ -31,6 +31,11 @@ return [
     // label as ten other role edits, that answer takes opening every row.
     'ownership_transferred' => 'Ownership transferred',
     'companies_changed' => 'Company access changed',
+    // The company that lost the person, in its own book (24 Oct 2026)
+    'member_removed' => 'Membership removed',
+    'roles_removed' => 'Roles removed',
+    // The owner brought back into an ownerless company — abos:restore-owner (24 Oct 2026)
+    'owner_restored' => 'Owner restored',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',
@@ -39,6 +44,12 @@ return [
     'overridden' => 'Duplicate allowed',
     'two_step_reset' => 'Two-step reset',
     'two_step_off' => 'Two-step turned off',
+    // the profile photo and the phones on the app's profile menu (a6, 20 Oct 2026) — no file bytes in the trail
+    'photo_changed' => 'Profile photo changed',
+    'photo_removed' => 'Profile photo removed',
+    'device_signed_out' => 'Signed out of a phone',
+    // one-off move of the old public profile photos to the private disk — counts only ([[MoveFacesToPrivate]])
+    'faces_moved_private' => 'Old profile photos moved to the private disk',
     /*
      * Not only the eight in [[AuditTrail::ACTIONS]] — services that name their
      * own action land here too. These four were added on 29 September 2026,
@@ -66,18 +77,20 @@ return [
     'opening_principal_set' => 'Opening stock principal set',
     'opening_corrected' => 'Opening stock row corrected',
     'opening_removed' => 'Opening stock row removed',
-    'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
-    'own_claim_signed' => 'Own claim signed by the same person',
-    'claim_gone_rejected' => 'Signed after the employee left: claim rejected, nothing paid',
+    'three_hands_override' => 'Same person on a payment: proposed/approved/paid',
+    'withholding_rate' => 'Withholding rate changed',
+    'own_claim_signed' => 'Own claim approved by the same person',
+    'claim_gone_rejected' => 'Approved after the employee left: claim rejected, nothing paid',
     'own_advice_accepted' => 'Own payment advice accepted by the same person',
     'maker_checker_override' => 'Own voucher posted by its writer',
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
-    'auto_finish_refused' => 'Sale not finished after signing',
-    'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
+    'auto_finish_refused' => 'Sale not finished after approving',
+    'returned_to_draft' => 'Approved-but-stuck sale returned to draft',
     'serial_back_to_stock' => 'Returned piece checked and taken back into stock',
     'free_stock_adjusted' => 'Free goods adjusted',
     'document_viewed' => 'Document viewed',
     'document_previewed' => 'Document file opened on the page',
+    'bank_file_downloaded' => 'Bank file (BEFTN) downloaded',
     'document_downloaded' => 'Document downloaded',
     'document_printed' => 'Document opened for printing',
     'document_version_added' => 'New document version',
@@ -110,4 +123,13 @@ return [
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
     'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
+    'bank_requested' => 'Bank details change requested',
+    'bank_replaced' => 'Older bank details request replaced',
+    'bank_signed' => 'Bank details second approval',
+    'bank_rejected' => 'Bank details change refused',
+    'bank_withdrawn' => 'Bank details change withdrawn',
+    // The owner signed an offer they created — a self-approved discount (PromotionApprovalChain::OWNER_SELF_SIGNED)
+    'owner_self_signed' => 'Owner approved their own offer',
+    'obligation_done' => 'Obligation done',
+    'obligation_cancelled' => 'Obligation cancelled',
 ];

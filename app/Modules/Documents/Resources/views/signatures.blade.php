@@ -42,7 +42,10 @@
                     <tbody>
                         @forelse ($rows as $row)
                             <tr data-signature="{{ $row->id }}">
-                                <td class="num whitespace-nowrap">{{ $row->document?->document_no }}</td>
+                                <td class="whitespace-nowrap">
+                                    {{-- ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]]) --}}
+                                    <x-ui.party-cell :party="$parties[$row->document_id] ?? null"><span class="num">{{ $row->document?->document_no }}</span></x-ui.party-cell>
+                                </td>
                                 <td>
                                     @if ($row->document)
                                         <a href="{{ route('documents.show', $row->document) }}#signatures" class="text-(--color-link) hover:underline">{{ $row->document->name }}</a>
@@ -74,7 +77,10 @@
                         @forelse ($rows as $row)
                             @php($paper = $documents[$row->approvable_id] ?? null)
                             <tr data-approval="{{ $row->id }}">
-                                <td class="num whitespace-nowrap">{{ $paper?->document_no ?? '—' }}</td>
+                                <td class="whitespace-nowrap">
+                                    {{-- ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — জোড়া রেকর্ড থেকে, পাতার একবারে ([[DocumentParties]]) --}}
+                                    <x-ui.party-cell :party="$parties[$row->approvable_id] ?? null"><span class="num">{{ $paper?->document_no ?? '—' }}</span></x-ui.party-cell>
+                                </td>
                                 <td>{{ $paper?->name ?? $row->requested_reason }}</td>
                                 <td>{{ $row->payload['version'] ?? '—' }}</td>
                                 <td>{{ $row->requesterName() }}</td>

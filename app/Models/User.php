@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Services\AvatarService;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Notifications\PasswordResetLink;
@@ -17,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 /*
  * টোকেন — মোবাইল অ্যাপের জন্য, ২ সেপ্টেম্বর ২০২৬।
@@ -49,6 +49,9 @@ use Spatie\Permission\Traits\HasRoles;
  * ⚠️ পরের জনের জন্য: এখানে নাম বসানো ছাড়া কোনো নতুন ঘর ফর্ম থেকে
  * সংরক্ষিত হয় না, আর ব্যর্থতাটা **নীরব নয় — ৫০০**, তাই অন্তত সেটা
  * চোখে পড়ে।
+ */
+/**
+ * @property string $public_id বাইরের চাবি ([[HasPublicId]]) — ছবির ঠিকানা আর API এটা দিয়েই মানুষ চেনে
  */
 #[Fillable([
     'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active',
@@ -150,6 +153,8 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             // ⓘ হোমের সাজ — ক্রম আর লুকানো অংশ ([[HomeLayout]], ৪ অক্টোবর ২০২৬)
             'home_layout' => 'array',
+            // ⓘ বাঁ রেলের নিজের সাজ — পিন আর ক্রম ([[MenuBuilder::arranged()]]; মালিক, ২৪ অক্টোবর ২০২৬)
+            'nav_layout' => 'array',
 
             /*
              * গোপন চাবি ও পুনরুদ্ধার কোড — ডাটাবেজে এনক্রিপ্টেড।
@@ -219,6 +224,8 @@ class User extends Authenticatable
             'password', 'remember_token',
             'last_login_at', 'current_company_id', 'current_branch_id',
             'locale', 'theme', 'ui', 'accent', 'avatar_path',
+            // ⓘ রেলের নিজের সাজ — নিজের পছন্দ, ব্যবসার তথ্য নয় (fe, ২৪ অক্টোবর ২০২৬)
+            'nav_layout',
         ];
     }
 
@@ -356,15 +363,36 @@ class User extends Authenticatable
      */
     public function avatarUrl(): ?string
     {
-        if (! $this->avatar_path) {
+        return $this->photoRoute('users.photo', false);
+    }
+
+    /**
+     * ⭐ ফোনের ছবির ঠিকানা — টোকেন চাওয়া দরজা, পরম (a6, ২০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ওয়েবেরটা ([[self::avatarUrl()]]) সেশন-কুকিতে খোলে, ফোনের তা নেই; তাই ফোন পায় `/api/v1/users/{id}/photo`, আর
+     * ছবিটা আনে `Authorization: Bearer` সহ। ⛔ দুই ঠিকানাই একই দরজায় যায় — সহকর্মী না হলে ৪০৪ ([[AvatarService::visibleTo()]])।
+     */
+    public function avatarApiUrl(): ?string
+    {
+        return $this->photoRoute('api.users.photo', true);
+    }
+
+    /**
+     * ⛔ ছবি আর `public` ডিস্কের ঠিকানায় নয় — a6, ২০ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে এখানে `/storage/avatars/…` ফিরত, যেটা লগইন ছাড়াই খোলে। এখন পাহারা-দেওয়া দরজা
+     * ([[App\Http\Controllers\UserPhotoController]])। ⓘ `v` = পথের ছাপ: ছবি বদলালে ঠিকানা বদলায়, তাই ব্রাউজার
+     * পুরনোটা ক্যাশ থেকে দেখায় না — আগের এলোমেলো ফাইলনামের কাজটাই।
+     */
+    private function photoRoute(string $route, bool $absolute): ?string
+    {
+        $path = $this->getRawOriginal('avatar_path');
+
+        if (! is_string($path) || $path === '' || ! app(AvatarService::class)->exists($path)) {
             return null;
         }
 
-        if (! Storage::disk('public')->exists($this->avatar_path)) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($this->avatar_path);
+        return route($route, ['user' => $this->public_id, 'v' => substr(sha1($path), 0, 12)], $absolute);
     }
 
     /**

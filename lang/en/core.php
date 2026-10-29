@@ -155,6 +155,7 @@ return [
         'unbalanced' => 'Debit and credit do not match',
         'refused' => 'Could not post to the books — :reason',
         'nothing_to_post' => 'There are no lines to post.',
+        'party_in_other_branch' => 'This party belongs to the ":branch" branch — its transactions cannot be written in ":here".',
         'both_sides' => 'Line :line carries both a debit and a credit — split it into two lines.',
         'zero_line' => 'Line :line is zero on both sides.',
         'already_posted' => 'This paper is already in the books — reverse it before posting again.',
@@ -279,6 +280,7 @@ return [
         'delete' => 'Delete',
         'search' => 'Search',
         'search_anything' => 'Search anything…',
+        'search_everything' => 'Search anything: pages, customers, products, paper numbers…',
         'switch_language' => 'Switch language',
         'logout' => 'Log out',
         'more' => 'More',
@@ -345,9 +347,10 @@ return [
         'against_last' => 'against last :day',
         // ⓘ দণ্ডের মাথার ছোট মান ([[Series::short()]], ৪ অক্টোবর ২০২৬)
         'chart_total' => 'Total',
-        'short_thousand' => 'K',
-        'short_lakh' => 'L',
-        'short_crore' => 'Cr',
+        'short_thousand' => 'thousand',
+        'short_lakh' => 'lakh',
+        'short_crore' => 'crore',
+        'taka' => 'Tk',
         // ⓘ মাস্টার তালিকার স্বাস্থ্য ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
         'health_hint' => 'incomplete :missing · same phone/name :same · inactive :off',
         'oldest_is' => 'oldest is :days days old',
@@ -428,6 +431,8 @@ return [
         'theme_note' => 'Light or dark background.',
         'light' => 'Light',
         'dark' => 'Dark',
+        'system' => 'Like the device',
+        'colour' => 'Colour',
         'language' => 'Language',
         'saved' => 'Saved.',
 
@@ -494,6 +499,10 @@ return [
         'area_switch' => 'Change area',
         'launcher' => 'Pick an app',
         'launcher_search' => 'Search apps…',
+        'all_modules' => 'All modules',
+        'all_modules_search' => 'Find a module — Bangla or English…',
+        'all_modules_none' => 'No module by that name',
+        'waiting_signature' => ':count waiting for approval',
         'classic' => 'Classic',
         'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',
@@ -838,6 +847,8 @@ return [
      * comes here, through App\Core\Support\RoleLabel.
      */
     'search' => [
+        // ⓘ উপরের খোঁজায় মডিউলের নাম — সরাসরি তার প্রথম পাতায় (২৪ অক্টোবর ২০২৬)
+        'module' => 'Module',
         'type_to_find' => 'Type what you are looking for — a name, a number or a code.',
         'nothing_found' => 'Nothing found.',
         'recent' => 'Recent papers',
@@ -892,6 +903,7 @@ return [
          * One thing gets *made* from here, so the name is one thing.
          */
         'direct_sale' => 'Direct sale',
+        'group' => ['sales' => 'Sales', 'purchase' => 'Purchase', 'inventory' => 'Inventory', 'accounts' => 'Accounts'],
         'sales_order' => 'Sales order',
         'invoice' => 'Sales invoice',
         'collection' => 'Collection',
@@ -914,8 +926,17 @@ return [
         'code_auto_hint' => 'Leave it empty and one will be given. Type one only to keep a code from your old books.',
     ],
     'notice' => [
-        'awaiting_mine' => 'Waiting for your decision',
-        'signed_unposted' => 'Signed, not posted',
+        // ⭐ সতর্কবাণীর ফিতা ([[shell.notice-banner]], ওয়েবের মান ধাপ ২)
+        'details' => 'Details',
+        'close' => 'Close',
+        'more_in_bell' => ':count more notices in the bell',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'Announcements',
+        'ticker_pause' => 'Pause announcements',
+        'ticker_play' => 'Play announcements',
+        'awaiting_mine' => 'Waiting for your approval',
+        'approvals_waiting' => 'Approvals, :count waiting',
+        'signed_unposted' => 'Approved, not posted',
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
         'title' => 'Needs attention',
         'none' => 'Nothing needs attention.',
@@ -923,7 +944,7 @@ return [
         'backup_mirror_stale' => 'Nothing has reached the second destination for two days — the copy has stopped.',
         'expiring_batches' => '{1} One lot expires within :days days|[2,*] :count lots expire within :days days',
         'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
-        'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
+        'awaiting_decision' => '{1} 1 waiting for an approval|[2,*] :count waiting for approvals',
 
         // The screen is switched off in Control Panel, so knowing the address does not open it
         'screen_switched_off' => 'This screen is switched off for this company. To turn it on: System Management → Control Panel.',
@@ -960,17 +981,17 @@ return [
         'pushed_aside' => 'The notice has been taken off your bar — it is still on the notice board.',
         'cannot_push_aside' => 'This notice cannot be dismissed — it is critical.',
         'dismiss' => 'Dismiss',
-        'creator_cannot_approve' => 'You wrote :no, so you cannot sign it — a critical notice needs a second pair of eyes.',
-        'no_signature_wanted' => 'This notice does not ask for a signature.',
+        'creator_cannot_approve' => 'You wrote :no, so you cannot approve it — a critical notice needs a second pair of eyes.',
+        'no_signature_wanted' => 'This notice does not ask for an acknowledgement.',
         'not_yours_to_sign' => 'This notice is not aimed at you.',
-        'not_live_to_sign' => 'This notice is not published right now — only a published notice can be signed.',
-        'signed' => 'Signed — who signed and when is on the record.',
+        'not_live_to_sign' => 'This notice is not published right now — only a published notice can be acknowledged.',
+        'signed' => 'Acknowledged — who acknowledged and when is on the record.',
         'analytics_title' => 'Notice figures',
-        'waiting_on_signatures' => 'Still waiting on signatures',
-        'everyone_signed' => 'Every notice that asked for a signature has one.',
+        'waiting_on_signatures' => 'Still waiting on acknowledgements',
+        'everyone_signed' => 'Every notice that asked for an acknowledgement has one.',
         'priority_label' => 'Priority',
         'read_count' => 'Read',
-        'signed_count' => 'Signed',
+        'signed_count' => 'Acknowledged',
         'sign_rate' => 'Rate',
         'summary_label' => 'Summary (this is what the bar and the list show)',
         'your_standing' => 'Where you stand',
@@ -992,24 +1013,24 @@ return [
         'use_template' => 'Write from this',
         'recalled_done' => 'The notice has been recalled — it stays on the record and leaves the bar.',
         'archived_done' => 'The notice has been archived.',
-        'restored_done' => 'The notice is back as a draft — it needs signing and publishing again.',
+        'restored_done' => 'The notice is back as a draft — it needs approving and publishing again.',
         'recall_action' => 'Recall',
         'archive_action' => 'Archive',
         'restore_action' => 'Bring back',
         'why_label' => 'Why',
         'unread_widget' => 'Unread notices',
-        'to_sign_widget' => 'Waiting on your signature',
+        'to_sign_widget' => 'Waiting on your acknowledgement',
         'report_register' => 'Notice register',
-        'report_signatures' => 'Signature report',
+        'report_signatures' => 'Acknowledgement report',
         'author_label' => 'Written by',
         'published_at_label' => 'Published',
         'expires_at_label' => 'Expires',
-        'deadline_label' => 'Sign by',
+        'deadline_label' => 'Acknowledge by',
         'categories_title' => 'Notice kinds',
         'category_new' => 'New kind',
         'category_saved' => 'The kind has been saved.',
         'no_categories' => 'No kinds have been made yet.',
-        'needs_approval' => 'Needs a signature',
+        'needs_approval' => 'Needs an approval',
         'only_archived_restores' => ':no is not archived, so there is nothing to bring back.',
         'category_label' => 'Kind',
         'cannot_go_there' => ':no is ":from" — it cannot go from there to ":to".',
@@ -1117,12 +1138,23 @@ return [
         'choose_many' => 'Choose files',
         'none' => 'No file chosen',
         'many' => ':count files chosen',
+        // Drop box (tick-list #37, 25 Oct 2026)
+        'drop' => 'or drop it here',
+        'remove' => 'Remove',
+        'wrong_type' => '“:name” is not a file type this box takes — choose another file.',
+        'one_only' => 'This box takes one file — drop just one.',
     ],
 
     'status_bar' => [
         'operational' => 'Operational',
         'maintenance' => 'Maintenance',
         'incident' => 'Incident',
+    ],
+
+    // The trail's last part: "New" on a create page, the record's own number on an edit page, else "Edit" (tick-list #6, 25 Oct 2026)
+    'crumb' => [
+        'new' => 'New',
+        'edit' => 'Edit',
     ],
 
     'a11y' => [
@@ -1135,6 +1167,8 @@ return [
         'main_navigation' => 'Main navigation',
         // The path row — "Home / Module / Screen"
         'breadcrumb' => 'Where you are',
+        'menu' => 'Menu',
+        'home' => 'Home',
     ],
 
     'company' => [
@@ -1190,8 +1224,29 @@ return [
         'still_saving' => 'Saved — give it a moment and check the list.',
     ],
 
+    /*
+     * A form lands in the branch it was opened in — RCV-0143, owner: "never in another branch" (ec, 19 Oct 2026;
+     * [[KeepsAFormInItsOwnBranch]]). Every message names the branches, never ids.
+     */
+    'branch_pin' => [
+        'moved' => 'The form was opened in :opened, the header now shows :current — stopped before it went to the wrong branch.',
+        'submit_in' => 'Submit in :opened',
+        'or_here' => 'To submit in :current instead, check the form below and save it again.',
+        'files_again' => 'Attached files are not sent again — add them from the document page after it is saved.',
+        'elsewhere' => 'The form was opened in another branch or company, the header now shows :current — stopped before it went to the wrong place. Check the form below and save it again.',
+        'unstamped' => 'This form was opened before the update and was saved in :current. Check that this is the right branch; next time open the page afresh.',
+        'unstamped_refused' => 'This form is from an older page — the branch it was opened in is unknown, so it was stopped. Check the form below and save it again.',
+        'confirm_refused' => 'This button no longer works (already used, expired, or for another form) — nothing was saved. Check the form below and save it again.',
+        'no_reach' => 'The :opened branch is no longer within your reach — nothing was saved there.',
+        'confirm_failed' => 'Nothing was saved in :opened — the reason is below. To work in :opened, pick :opened in the header and submit again.',
+        'saved_elsewhere' => 'Saved in :opened. To see it, pick :opened or All branches in the header.',
+        'no_branch' => 'no branch',
+    ],
+
     'profile' => [
         'title' => 'My profile',
+        'menu' => ':name — profile and settings',
+        'language' => 'Language',
         'subtitle' => 'Your details, your photo and your password',
         'identity' => 'Identity',
         'name' => 'Name',
@@ -1259,6 +1314,15 @@ return [
     'avatar' => [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
+        // the phone's profile menu takes JPG and PNG only (a6, 20 Oct 2026)
+        'phone_jpg_png_only' => 'Use a JPG or PNG photo.',
+    ],
+
+    // "My phones" on the app's profile menu ([[MeDevicesController]])
+    'devices' => [
+        'android' => 'Android phone',
+        'ios' => 'iPhone',
+        'phone' => 'Phone',
     ],
 
     // ছবির ইঞ্জিন যা ছুঁড়তে পারে। ⚠️ `avatar.*` থেকে আলাদা রাখা হয়েছে,
@@ -1267,6 +1331,7 @@ return [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large_to_process' => 'That photo has too many pixels for the server to process. Please take it at a smaller camera size.',
         'logo_not_processed' => 'The logo could not be processed, and a file that size cannot be kept as it is. Please use an image under 2 MB.',
+        'logo_unreadable' => 'The picture could not be read — the file is damaged, or is not really an image despite its name. The previous logo is unchanged; please use another PNG, JPG or WebP.',
     ],
 
     // ছবি তোলার পর্দা ([[components/shell/scanner]])
@@ -1309,10 +1374,10 @@ return [
      * the message, or the next step is a phone call.
      */
     'approval' => [
-        'signed_paper_stuck_title' => ':no is signed but was not posted',
+        'signed_paper_stuck_title' => ':no is approved but was not posted',
         'signed_paper_stuck_body' => 'Reason: :reason. Fix it, open the paper and press "Post".',
         'changed_while_posting' => 'The paper changed elsewhere while it was being confirmed — nothing was posted. Open it again, check it and confirm.',
-        'changed_after_signing' => ':no changed after the signature was asked for — the signature is for the earlier paper, not this one. Nothing was posted; ask for a new signature.',
+        'changed_after_signing' => ':no changed after the approval was asked for — the approval is for the earlier paper, not this one. Nothing was posted; ask for a new approval.',
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
@@ -1322,6 +1387,7 @@ return [
 
     // বিজ্ঞপ্তি — একজনের জন্য একটা খবর
     'notify' => [
+        'signed_unposted' => 'Approved, not yet posted',
         'title' => 'For you',
         'none' => 'Nothing new.',
         'mark_all' => 'Mark all read',
@@ -1393,7 +1459,9 @@ return [
         'bulk_done' => ':count notifications changed.',
         'selected' => 'Selected',
         'no_access_title' => 'This paper is no longer within your reach',
-        'no_access_body' => 'The paper this notification is about was deleted, or you no longer have access to its branch. The notification is marked read. Tell an administrator if you need it.',
+        'no_access_body' => 'The paper this notification is about still exists, but you have no access to its branch. The notification is marked read. Tell an administrator if you need it.',
+        'gone_title' => 'The paper is gone',
+        'gone_body' => 'The paper this notification is about was deleted, so there is nothing left to open. The notification is marked read.',
         'tab' => ['all' => 'All', 'unread' => 'Unread', 'read' => 'Read', 'archived' => 'Archived'],
         'drawer' => ['all' => 'All', 'unread' => 'Unread', 'approval' => 'Approvals', 'task' => 'Tasks', 'system' => 'System'],
         'priority' => ['critical' => 'Critical', 'high' => 'High', 'normal' => 'Normal', 'low' => 'Low'],
@@ -1449,14 +1517,14 @@ return [
             'notification_template_test' => 'Template tests',
             'notification_template_test_note' => 'Test notices you send yourself while writing a template.',
             'approval_approved' => 'When my paper is approved',
-            'approval_approved_note' => 'A paper you sent for approval has been signed.',
+            'approval_approved_note' => 'A paper you sent for approval has been approved.',
             'approval_rejected' => 'When my paper comes back',
             'approval_returned' => 'When my paper is sent back for correction',
-            'approval_returned_note' => 'With the signer\'s note on what to fix. ⚠️ Off means a returned paper sits there unnoticed.',
-            'approval_edited_by_signer' => 'When a signer changes my paper',
-            'approval_edited_by_signer_note' => 'Who changed which fields — the signature will cover the changed paper.',
+            'approval_returned_note' => 'With the approver\'s note on what to fix. ⚠️ Off means a returned paper sits there unnoticed.',
+            'approval_edited_by_signer' => 'When an approver changes my paper',
+            'approval_edited_by_signer_note' => 'Who changed which fields — the approval will cover the changed paper.',
             'approval_rejected_note' => 'With the reason it was sent back. ⚠️ Off means a returned paper sits there unnoticed.',
-            'approval_reminder' => 'When a signature of mine is running late',
+            'approval_reminder' => 'When an approval of mine is running late',
             'approval_reminder_note' => 'Once, before the time on a request of yours runs out.',
             'approval_escalated' => 'When a late request reaches me',
             'approval_escalated_note' => 'Someone else ran past their time and the paper came to you. Turning this off means a stuck request reaches nobody.',
@@ -1467,16 +1535,37 @@ return [
             'hand_loan_due' => 'When a hand loan falls due',
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
             'backup_failed' => 'When a backup fails',
-            'signed_challan_stuck' => 'When a signed challan could not be confirmed',
-            'signed_sale_stuck' => 'When a signed counter sale could not be finished',
-            'signed_paper_stuck' => 'When a signed voucher or bill could not be posted',
+            'signed_challan_stuck' => 'When an approved challan could not be confirmed',
+            'signed_sale_stuck' => 'When an approved counter sale could not be finished',
+            'signed_paper_stuck' => 'When an approved voucher or bill could not be posted',
             'delivery_stage' => 'When a sale moves to its next delivery step',
             'order_credit_held' => 'When a sales order is held at the credit limit',
-            'order_awaits_you' => 'When a sales order waits for my signature',
+            'order_awaits_you' => 'When a sales order waits for my approval',
             'adjusting_reversal_stuck' => 'When an adjusting journal could not reverse on its date',
             'cheque_bounce_block' => 'When a bounced cheque blocks a customer\'s credit',
-            'limit_request_waiting' => 'When a credit-limit raise waits for my signature',
+            'limit_request_waiting' => 'When a credit-limit raise waits for my approval',
+            'bank_change_waiting' => 'When a supplier bank details change waits for my approval',
             'temporary_limit_ending' => 'When a temporary credit limit ends within three days',
+            'deposit_maturing_soon' => 'When a deposit matures within seven days or is past maturity',
+            'dps_instalment_due' => 'When a DPS instalment is overdue',
+            'bank_instalment_due' => 'When a bank loan instalment falls due',
+            'bank_renewal_due' => 'When a bank loan comes up for renewal or expiry',
+            'insurance_renewal_due' => 'When an insurance policy comes up for renewal',
+            'insurance_premium_due' => 'When an insurance premium is due',
+            'rental_ending_60' => 'When a rental contract ends within 60 days',
+            'rental_ending_30' => 'When a rental contract ends within 30 days or has ended',
+            'rent_overdue' => 'When rent is overdue',
+            'rental_anniversary' => 'When a rental contract reaches its yearly rent review',
+            'deposit_maturing_soon_note' => 'In the last seven days, and once a week after maturity until the deposit is closed or renewed.',
+            'dps_instalment_due_note' => 'The instalment date has passed and no money is in the books, once a week per deposit.',
+            'bank_instalment_due_note' => 'Overdue or due within seven days, once a week per loan.',
+            'bank_renewal_due_note' => 'Within thirty days of renewal or expiry, or past it.',
+            'insurance_renewal_due_note' => 'Within thirty days of the policy end, or past it, once a week.',
+            'insurance_premium_due_note' => 'Overdue or due within seven days, once a week per premium.',
+            'rental_ending_60_note' => 'Sixty days before the contract ends, once.',
+            'rental_ending_30_note' => 'From thirty days before the end, once a week until the contract is closed.',
+            'rent_overdue_note' => 'A month of rent not yet in the books, once a week until it is paid.',
+            'rental_anniversary_note' => 'Thirty days before the anniversary, once a year, when the contract names a yearly increase. The rent does not change by itself.',
             'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],
     ],
@@ -1568,4 +1657,15 @@ return [
     'linked_documents' => [
         'title' => 'Linked documents',
     ],
+
+    // Version and "what's new" (24 Oct 2026)
+    'release' => [
+        'whats_new' => 'What\'s new',
+        'running' => 'Running now: :label',
+        'no_notes' => 'No notes written yet.',
+    ],
+    'rail' => ['more' => 'More modules', 'search' => 'Find a module', 'none' => 'No module by that name',
+        'arrange' => 'Arrange', 'reset' => 'Reset to default', 'arrange_title' => 'Arrange the left bar',
+        'arrange_hint' => 'Pinned modules always stay on the bar. Drag or press ↑ ↓ to reorder; saved for all your devices.',
+        'pin' => 'Pin', 'up' => 'Move up:', 'down' => 'Move down:', 'cancel' => 'Back', 'save' => 'Save'],
 ];

@@ -15,7 +15,7 @@
     <x-ui.errors />
 
     <x-slot:header>
-        <x-ui.page-header :title="$customer->code.' · '.$customer->name()" />
+        <x-ui.page-header :title="$customer->code.' · '.$customer->nameWithPoint()" />
     </x-slot:header>
 
     <div class="space-y-4">

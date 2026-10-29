@@ -8,7 +8,7 @@
     <x-slot:title>{{ $invoice->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$invoice->document_no" :subtitle="$invoice->customer?->name()">
+        <x-ui.page-header :title="$invoice->document_no" :subtitle="$invoice->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 {{-- ⭐ কাউন্টারে আটকে থাকা বিক্রয় (১৯ সেপ্টেম্বর ২০২৬): সম্পাদনা নেই,
                      ছাপা নেই, আর "নিশ্চিত" বোতামের নাম বলে দেয় সেটা কী করবে।

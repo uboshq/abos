@@ -1,4 +1,8 @@
-@props(['menu' => []])
+@props([
+    'menu' => [],
+    /** ⭐ বারে ⊞ সব মডিউল আছে (রেল-রূপ) — তখন "আরও" সেই পাতাটাই খোলে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.launcher]]) */
+    'launcher' => false,
+])
 
 {{--
     Bottom nav — শুধু মোবাইলে (সেকশন ২০.২)।
@@ -48,9 +52,17 @@
     @endforeach
 
     @if ($hasMore)
+        {{-- ⭐ "আরও" — বাকি মডিউলগুলো। বারে ⊞ থাকলে সেই সব-মডিউলের পাতা (ফোনে ⊞ বারে নয়, এখানে); নইলে আগের মতো খোঁজা।
+             ⓘ খোঁজা ফোনেও বারের আইকনে থাকে। --}}
         <button type="button"
                 x-data
-                @click="$dispatch('open-command-center')"
+                @if ($launcher)
+                    data-bottom-launcher
+                    @click="$dispatch('open-module-launcher')"
+                    aria-haspopup="dialog"
+                @else
+                    @click="$dispatch('open-command-center')"
+                @endif
                 class="bottom-nav-item">
             <span class="bottom-nav-pill">
                 <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">

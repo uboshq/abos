@@ -143,6 +143,8 @@
             .'l-4.2-1.4-2 2a14.5 14.5 0 0 1-6.2-6.2l2-2z"/>',
 
         // ── মডিউল ───────────────────────────────────────────────────
+        // ⌂ হোম — পুরো চওড়া বারের নিচের রেলের প্রথম টাইল (ওয়েবের মান ধাপ ২, মালিকের নমুনা, ২০ অক্টোবর ২০২৬)
+        'home' => '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h5v-5.5h3V20h5V9.5"/>',
         // চারটা টাইল, অসমান — একটা পাতা নয়, একটা পর্দা
         'dashboard' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/>'
             .'<rect x="14" y="3" width="7" height="5" rx="1.5"/>'
@@ -366,14 +368,48 @@
          */
         'check-circle' => '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.8 2.8L16 9.5"/>',
         'alert-triangle' => '<path d="M12 4.2 21 19H3Z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+
+        // ⓘ কাগজের অবস্থার চিপ ([[PaperStates]], ২০ অক্টোবর ২০২৬) — Material Symbols-এর undo আর do_not_disturb_on-এর রেখায়
+        'undo' => '<path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5H15a4.5 4.5 0 0 1 0 9h-4"/>',
+        'do_not_disturb_on' => '<circle cx="12" cy="12" r="9"/><path d="M7.5 12h9"/>',
+
+        // ⓘ সতর্কবাণীর ফিতা ([[shell.notice-banner]], ২০ অক্টোবর ২০২৬) — Material Symbols-এর info আর close-এর রেখায়
+        'info' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.5h.01"/>',
+        'x' => '<path d="m6 6 12 12M18 6 6 18"/>',
+        // ⓘ ছবির মেনু ([[shell.profile-menu]]) — ইমোজির বদলে Material Symbols-এর account_circle, palette, fullscreen-এর রেখায়
+        'person' => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.3a6.5 6.5 0 0 1 11 0"/>',
+        'palette' => '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1-.9-1.4-.9-2.4 0-.9.7-1.5 1.6-1.5H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>',
+        'fullscreen' => '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
+
+        // ⓘ কাগজের অবস্থা v4 (a6 fbff00bfe) — Material Symbols-এর cancel (প্রত্যাখ্যাত) আর verified (অনুমোদিত)-এর রেখায়
+        'cancel' => '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+        'verified' => '<path d="M12 2.8 14.4 5l3.2-.4.8 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.8 3.1-3.2-.4L12 21.2 9.6 19l-3.2.4-.8-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.8-3.1 3.2.4Z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/>',
     ];
 
-    $d = $paths[$name] ?? null;
+    /*
+     * ⭐ ভরাট চিহ্ন — কেবল যেখানে রেখা চেনা যায় না (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ চলন্ত ঘোষণার ⏸/▶ ([[shell.statusbar]]) ছোট বোতামে বসে; ⛔ রেখায় আঁকা ⏸ (দুইটা সরু দাগ) ১৪px-এ "॥" পড়াত, আর
+     * লেখার ⏸ বাংলা ফন্টে সত্যিই "॥" হত। ⭐ তাই এখানে Material Symbols-এর ভরাট রূপ (Rounded: গোল প্রান্তের দুইটা মোটা
+     * দাগ, ভরাট ত্রিভুজ) — মিডিয়া-চালকের চিহ্ন সবখানে ভরাটই, চোখ ওভাবেই চেনে। ⚠️ সেটের বাকি সব রেখায়ই থাকে; রং
+     * `currentColor`, তাই দুই থিমেই বোতামের নিজের রং।
+     */
+    $solid = [
+        'pause' => '<path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/>',
+        'play' => '<path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/>',
+    ];
+
+    $filled = isset($solid[$name]);
+    $d = $paths[$name] ?? $solid[$name] ?? null;
 @endphp
 
 {{-- অচেনা নাম মানে চুপ থাকা, ভাঙা নয়: একটা মেনু সারিতে ভুল নামের
      জন্য গোটা পাতা নামিয়ে দেওয়ার কোনো কারণ নেই। --}}
-@if ($d)
+@if ($d && $filled)
+    <svg width="{{ $size }}" height="{{ $size }}" viewBox="0 0 24 24"
+         fill="currentColor" aria-hidden="true"
+         {{ $attributes->class('shrink-0') }}>{!! $d !!}</svg>
+@elseif ($d)
     <svg width="{{ $size }}" height="{{ $size }}" viewBox="0 0 24 24"
          fill="none" stroke="currentColor" stroke-width="1.75"
          stroke-linecap="round" stroke-linejoin="round"

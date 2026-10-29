@@ -21,6 +21,7 @@ use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\PaymentService;
 use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\SupplierBank;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -192,6 +193,8 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
         ]);
 
         // ── পরে পরিশোধ — সরবরাহকারীর পরিশোধের পথে, ব্যাংক থেকে ──────
+        // ⓘ ব্যাংকে পরিশোধের আগে প্রাপকের ব্যাংক তথ্যে দুজনের সই — নকশা #৬ ([[SupplierBank::assertBankPayable()]])
+        $this->signSupplierBank();
         $before = $this->snapshot();
         $payments = app(PaymentService::class);
         $payment = $payments->create([
@@ -802,6 +805,32 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
             'is_group' => false,
             'money_kind' => $kind,
         ])->id;
+    }
+
+    /** সরবরাহকারীর ব্যাংক তথ্য — একজন বসান, আরেকজন সই দেন। */
+    private function signSupplierBank(): void
+    {
+        $bank = app(SupplierBank::class);
+        $detail = $bank->request($this->supplier, [
+            'bank_name' => 'Sonali Bank', 'branch_name' => 'Motijheel', 'account_name' => (string) $this->supplier->name_en,
+            'account_no' => '0012345674521', 'routing_no' => '200274466', 'reason' => 'Bank letter',
+        ], $this->withKeys(['supplier.view', 'supplier.update', 'supplier.bank.view']));
+        $bank->sign($detail, $this->withKeys(['supplier.view', 'supplier.bank.approve', 'supplier.bank.view']));
+    }
+
+    /** @param  list<string>  $keys */
+    private function withKeys(array $keys): User
+    {
+        $user = $this->roleLessClerk();
+        $user->forceFill(['current_branch_id' => $this->company->defaultBranch()?->id, 'is_active' => true])->save();
+        CompanyContext::forCompany($this->company->id, function () use ($user, $keys): void {
+            foreach ($keys as $key) {
+                $user->givePermissionTo(Permission::findOrCreate($key, 'web'));
+            }
+        });
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
     }
 
     /** কোনো রোল নেই, কোনো চাবি নেই — কেবল কোম্পানির সদস্য। */

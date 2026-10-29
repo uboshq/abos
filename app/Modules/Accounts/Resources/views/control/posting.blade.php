@@ -37,7 +37,7 @@
          'render' => fn ($r) => \Illuminate\Support\Facades\Lang::has('core.source.'.$r['source'])
              ? __('core.source.'.$r['source'])
              : $r['source']],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '12rem',
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
          'render' => fn ($r) => view('accounts::control.partials.paper-link', ['row' => $r])],
         ['key' => 'amount', 'label' => __('accounts::control.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($r) => $r['amount'] === null ? '—' : \App\Core\Support\Money::format($r['amount'])],
@@ -46,8 +46,8 @@
     $stuckColumns = [
         ['key' => 'trx_date', 'label' => __('accounts::control.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
-        ['key' => 'document_no', 'label' => __('accounts::control.voucher'), 'width' => '10rem',
-         'render' => fn ($v) => view('accounts::control.partials.voucher-link', ['voucher' => $v])],
+        ['key' => 'document_no', 'label' => __('accounts::control.voucher'), 'width' => '18rem',
+         'render' => fn ($v) => view('accounts::control.partials.voucher-link', ['voucher' => $v, 'party' => ($stuckParties ?? [])[$v->id] ?? null])],
         ['key' => 'type', 'label' => __('accounts::control.kind'), 'width' => '8rem',
          'render' => fn ($v) => __('accounts::menu.'.$v->type)],
         ['key' => 'narration', 'label' => __('core.table.description')],

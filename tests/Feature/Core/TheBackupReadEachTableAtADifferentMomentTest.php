@@ -61,6 +61,7 @@ final class TheBackupReadEachTableAtADifferentMomentTest extends TestCase
 
         $this->assertStringContainsString('START TRANSACTION WITH CONSISTENT SNAPSHOT', $said, 'ডাম্প এক মুহূর্তের ছবি থেকে পড়েনি।');
         $this->assertSame('ROLLBACK', end($spy->said) ?: '', 'ছবির লেনদেনটা শেষে ছাড়া হয়নি।');
-        $this->assertMatchesRegularExpression('/SELECT \* FROM `migrations` ORDER BY `id` LIMIT/', $said, 'সারি প্রাথমিক কী-র ক্রমে পড়া হয়নি।');
+        // ⓘ রাখা ঘরগুলো নাম ধরে (গণনা-করা ঘর বাদ, ABackupCouldBeTakenButNotBroughtBackTest), আর প্রাথমিক কী-র ক্রমে
+        $this->assertMatchesRegularExpression('/SELECT `id`, `migration`, `batch` FROM `migrations` ORDER BY `id` LIMIT/', $said, 'সারি প্রাথমিক কী-র ক্রমে পড়া হয়নি।');
     }
 }

@@ -84,7 +84,8 @@
                                 <span class="text-(--color-ink-muted)">{{ $stat->previousLabel }}</span>
                             </span>
                         @else
-                            <span class="truncate text-2xs text-(--color-ink-muted)">{{ $stat->hint }}</span>
+                            {{-- ⭐ কাটা নয়, দুই লাইন পর্যন্ত (Material 3; ২০ অক্টোবর ২০২৬) — বেশি হলে পুরোটা কার্ডের title-এ --}}
+                            <span class="line-clamp-2 text-xs text-(--color-ink-muted)">{{ $stat->hint }}</span>
                         @endif
                     </a>
                 @endforeach

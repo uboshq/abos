@@ -33,7 +33,7 @@ use Tests\TestCase;
  *   ১. যাঁর ভূমিকা মেলে না, তিনি যেন **না** দেখেন
  *   ২. ভূমিকা না বাছলে **সবাই** দেখেন (উল্টোটা হলে নোটিশ কোথাও পৌঁছাত না)
  *   ৩. মেয়াদ শেষ হলে নিজে থেকেই সরে যায়
- *   ৪. বারে যায় কেবল যেগুলোয় টিক দেওয়া
+ *   ৪. জরুরি টিক দেওয়াটা উপরের ফিতায়, বাকি প্রতিটা নিচের চলন্ত বারে (২১ অক্টোবর ২০২৬ থেকে; আগে "বারে টিক দেওয়াগুলোই")
  *
  * ⓘ (২) সবচেয়ে সহজে উল্টে যায়, আর উল্টে গেলে লেখক ভাবতেন পাঠানো
  * হয়েছে — অথচ কেউ পেত না।
@@ -116,29 +116,31 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
     // ── ৪ · চলন্ত বার ─────────────────────────────────────────────────
 
     /**
-     * ⛔ বারে যায় কেবল টিক দেওয়াগুলো।
+     * ⭐ জায়গা ঠিক করে কেবল জরুরি টিক — fe, ২১ অক্টোবর ২০২৬ (মালিকের নিয়ম: কিছুই না করা বোতাম থাকবে না)।
      *
-     * ⚠️ সবগুলো পাঠালে জরুরি কথাটা রোজকার কথার ভিড়ে হারাত, আর বারটা
-     * আবার সেই "কেউ পড়ে না" অবস্থায় ফিরত।
+     * ⓘ আগে এখানে দাবি ছিল *"বারে যায় কেবল টিক দেওয়াগুলো"* (`in_ticker`)। ⛔ সেই টিক ফর্মে কিছুই করত না — বারে ওঠা ঠিক
+     * করত অগ্রাধিকার — তাই টিক আর ফটক দুইটাই উঠে গেল। ⭐ এখন: জরুরি টিক → উপরের স্থির ফিতা, না দিলে নিচের চলন্ত বার।
+     * ⚠️ টিকটার মানে আছে কি না সেটাই এখনো মাপা হয়: জরুরিটা চলন্ত বারে **নেই**, ফিতায় আছে; সাধারণটা উল্টো।
      */
-    public function test_only_a_ticked_notice_rides_the_ticker(): void
+    public function test_the_urgent_tick_alone_decides_the_place(): void
     {
-        $quiet = $this->aNotice('বোর্ডেই থাক');
-        $loud = $this->aNotice('সবাইকে জানাও', ticker: true);
+        $plain = $this->aNotice('সবাইকে জানাও');
+        $urgent = $this->aNotice('এখনই জানাও', urgent: true);
 
         $board = app(NoticeBoard::class);
-
         $riding = $board->forTicker($this->owner)->pluck('id')->all();
+        $standing = $board->forStrip($this->owner)->pluck('id')->all();
 
-        $this->assertContains($loud->id, $riding);
-        $this->assertNotContains($quiet->id, $riding,
-            'টিক ছাড়া নোটিশও বারে উঠেছে — তাহলে টিকটার কোনো মানে নেই।');
+        $this->assertContains($plain->id, $riding, '⛔ টিক ছাড়া সাধারণ ঘোষণা চলন্ত বারে নেই।');
+        $this->assertNotContains($plain->id, $standing, '⛔ টিক ছাড়া ঘোষণা উপরের ফিতায় উঠেছে — তাহলে টিকটার কোনো মানে নেই।');
+        $this->assertContains($urgent->id, $standing, '⛔ জরুরি টিক দেওয়া ঘোষণা উপরের ফিতায় নেই।');
+        $this->assertNotContains($urgent->id, $riding, '⛔ জরুরিটা চলন্ত বারেও — একই নোটিশ দুই জায়গায়।');
     }
 
     /** ⭐ আর বারটা সত্যিই সেটা দেখায় — সেবার তালিকা নয়, পর্দার বার। */
     public function test_the_ticker_really_carries_it(): void
     {
-        $this->aNotice('কাল দোকান বন্ধ থাকবে', ticker: true);
+        $this->aNotice('কাল দোকান বন্ধ থাকবে');
 
         $this->actingAs($this->owner);
         Cache::flush();
@@ -210,17 +212,7 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
                 'title' => 'কাল দোকান বন্ধ',
                 'body' => 'ঈদের ছুটি',
                 'is_active' => '1',
-                'in_ticker' => '1',
-
-                /*
-                 * ⚠️ অগ্রাধিকারটা এখানে **লাগে**, আর কারণটা মেপে শেখা।
-                 *
-                 * ⓘ [[NoticeLifecycle::draft()]] বারে যাওয়া ঠিক করে
-                 * অগ্রাধিকার দেখে (`goesToTheBar()`), ফর্মের ঘরটা দেখে নয়।
-                 * ⛔ অগ্রাধিকার না দিলে নোটিশটা `NORMAL` হয়, আর `NORMAL`
-                 * বারে যায় না — তখন নিচের দাবিটা লাল হত, যদিও নিয়মটা
-                 * ঠিকই কাজ করছে।
-                 */
+                // ⓘ অগ্রাধিকার এখন কেবল ক্রম ঠিক করে, বারে ওঠা নয় (২১ অক্টোবর ২০২৬)
                 'priority' => 'important',
                 'roles' => ['salesman'],
             ])
@@ -228,38 +220,46 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
 
         $notice = Notice::query()->where('title', 'কাল দোকান বন্ধ')->firstOrFail();
 
-        $this->assertTrue($notice->in_ticker);
+        $this->assertSame('important', $notice->priority?->value);
+        $this->assertFalse((bool) $notice->is_urgent, '⛔ টিক ছাড়াই জরুরি হয়ে জন্মাল।');
+        $this->assertContains($notice->id, app(NoticeBoard::class)->forTicker($this->salesman)->pluck('id')->all(),
+            '⛔ পর্দায় লেখা ঘোষণা যাঁদের জন্য, তাঁদের চলন্ত বারে নেই।');
         $this->assertSame(['salesman'], $notice->audience()->pluck('role')->all());
         $this->assertSame($this->owner->id, (int) $notice->created_by);
     }
 
     /**
-     * ⛔ সাধারণ নোটিশ বারে ওঠে না, ঘরটা টিক দেওয়া থাকলেও।
+     * ⭐ সাধারণ অগ্রাধিকারের ঘোষণাও চলন্ত বারে — fe, ২১ অক্টোবর ২০২৬।
      *
-     * ── ⭐ মালিকের স্পেক, ধারা ৮ ──────────────────────────────────────
-     * `LOW`/`NORMAL` সাধারণ নোটিফিকেশন; বারে যায় `IMPORTANT` থেকে।
+     * ── ⓘ আগে যা ছিল ──────────────────────────────────────────────────
+     * এখানে দাবি ছিল *"সাধারণ নোটিশ বারে ওঠে না, ঘরটা টিক দেওয়া থাকলেও"* (স্পেক ধারা ৮: বারে `IMPORTANT` থেকে)। ⛔ ফল:
+     * ফর্মের "নিচের চলন্ত বারেও দেখান" টিক দিলেও সাধারণ ঘোষণা কোথাও উঠত না — মালিকের নিয়মে কিছুই না করা বোতাম।
      *
-     * ── ⚠️ কেন দাবিটা আলাদা করে লাগে ────────────────────────────────
-     * ⓘ উপরেরটা একা থাকলে *"ফর্মের ঘরটাই মেনে নাও"* লিখেও সবুজ পাওয়া
-     * যেত। ⛔ আর তখন ছুটির খবর রোজ বারে থাকত, আর ভরা বার মানে না-পড়া
-     * বার — ঠিক যে রোগটা এই নিয়মটা ঠেকাতে লেখা।
+     * ⭐ এখন টিক নেই, ফটকও নেই: জরুরি নয় এমন প্রতিটা ঘোষণা চলন্ত বারে, আর ভিড় সামলায় ক্রম (অগ্রাধিকার, তারপর নতুনটা)
+     * আর সীমা। ⚠️ ক্রমটাও এখানে মাপা — নইলে "সব পাঠাও" একটা যন্ত্রও সবুজ পেত, আর ছুটির খবর আগুনের খবরের আগে ঘুরত।
      */
-    public function test_an_ordinary_notice_stays_off_the_bar(): void
+    public function test_an_ordinary_notice_runs_in_the_ticker_after_the_important_one(): void
     {
-        $this->actingAs($this->owner)
-            ->post(route('system_admin.notice.store'), [
-                'title' => 'সাধারণ খবর',
-                'body' => 'তেমন জরুরি নয়',
-                'is_active' => '1',
-                'in_ticker' => '1',
-                'priority' => 'normal',
-            ])
-            ->assertRedirect();
+        // ⚠️ গুরুত্বপূর্ণটা আগে লেখা — সাধারণটা নতুন, তবু পিছনে
+        foreach ([['গুরুত্বপূর্ণ খবর', 'high'], ['সাধারণ খবর', 'normal']] as [$title, $priority]) {
+            $this->actingAs($this->owner)
+                ->post(route('system_admin.notice.store'), [
+                    'title' => $title,
+                    'body' => 'বিস্তারিত',
+                    'is_active' => '1',
+                    'priority' => $priority,
+                ])
+                ->assertRedirect();
+        }
 
-        $this->assertFalse(
-            Notice::query()->where('title', 'সাধারণ খবর')->firstOrFail()->in_ticker,
-            'সাধারণ নোটিশটা বারে উঠে গেছে — ঘরটা টিক দেওয়া ছিল বলে।',
-        );
+        $plain = Notice::query()->where('title', 'সাধারণ খবর')->firstOrFail();
+        $this->assertFalse((bool) $plain->is_urgent);
+
+        $riding = app(NoticeBoard::class)->forTicker($this->owner)->pluck('title')->all();
+
+        $this->assertContains('সাধারণ খবর', $riding, '⛔ সাধারণ অগ্রাধিকারের ঘোষণা চলন্ত বারে নেই।');
+        $this->assertLessThan(array_search('সাধারণ খবর', $riding, true), array_search('গুরুত্বপূর্ণ খবর', $riding, true),
+            '⛔ সাধারণ খবরটা গুরুত্বপূর্ণটার আগে ঘুরছে।');
     }
 
     /** ⛔ লেখার দরজা চাবির পিছনে — পড়ার দরজা নয়। */
@@ -330,7 +330,7 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
         array $roles = [],
         ?Carbon $starts = null,
         ?Carbon $ends = null,
-        bool $ticker = false,
+        bool $urgent = false,
     ): Notice {
         $notice = Notice::create([
             'title' => $title,
@@ -338,7 +338,7 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
             'starts_on' => $starts,
             'ends_on' => $ends,
             'is_active' => true,
-            'in_ticker' => $ticker,
+            'is_urgent' => $urgent,
             'created_by' => $this->owner->id,
         ]);
 

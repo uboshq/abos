@@ -147,7 +147,8 @@
                                    @checked(in_array($challan->id, $chosen, true)) class="size-4">
 
                             <span class="w-40 shrink-0 font-medium">{{ $challan->document_no }}</span>
-                            <span class="min-w-0 flex-1 truncate">{{ $challan->customer?->name() }}</span>
+                            {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম) --}}
+                            <span class="min-w-0 flex-1 truncate" title="{{ $challan->customer?->nameWithPoint() }}">{{ $challan->customer?->nameWithPoint() }}</span>
                             <span class="tabular w-28 shrink-0 text-end">
                                 {{ \App\Core\Support\Money::format($challan->total) }}
                             </span>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Concerns\GrandTotals;
+use App\Core\Engines\Approval\PaperSigningFacts;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
@@ -116,10 +117,14 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     {
         $employee = $this->claims->employeeOf($request->user());
 
+        $claims = ExpenseClaim::query()->with('expenseAccount')->where('requested_by', $request->user()->id)
+            ->orderByDesc('id')->limit(50)->get();
+        // ⭐ সইয়ের ধাপ — পাতায় এক ডাকে, সারি ধরে নয় ([[standingOf()]])
+        $standing = $this->standingOf($claims);
+
         return response()->json([
             'open_advance' => $employee === null ? null : $this->claims->openAdvance($employee),
-            'claims' => ExpenseClaim::query()->with('expenseAccount')->where('requested_by', $request->user()->id)
-                ->orderByDesc('id')->limit(50)->get()->map(fn (ExpenseClaim $c) => $this->facts($c))->values(),
+            'claims' => $claims->map(fn (ExpenseClaim $c) => $this->facts($c, $standing))->values(),
         ]);
     }
 
@@ -135,14 +140,18 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     {
         $claim = $this->claims->submit($request->user(), $this->validated($request), $request->file('receipt'));
 
-        return response()->json($this->facts($claim->fresh('expenseAccount')), 201);
+        $claim = $claim->fresh('expenseAccount');
+
+        return response()->json($this->facts($claim, $this->standingOf(collect([$claim]))), 201);
     }
 
     public function apiShow(Request $request, ExpenseClaim $claim): JsonResponse
     {
         $this->authorize('view', $claim);
 
-        return response()->json($this->facts($claim->load('expenseAccount')));
+        $claim->load('expenseAccount');
+
+        return response()->json($this->facts($claim, $this->standingOf(collect([$claim]))));
     }
 
     // ── ভিতরের ─────────────────────────────────────────────────────────
@@ -167,15 +176,48 @@ class ExpenseClaimController extends Controller implements HasMiddleware
         return Account::query()->postable()->active()->where('type', Account::EXPENSE)->orderBy('code')->get();
     }
 
-    /** @return array<string, mixed> ফোনের আকার — একই সব জায়গায় */
-    private function facts(ExpenseClaim $claim): array
+    /**
+     * ⭐ সইয়ের অপেক্ষার দাবিগুলোর ধাপ — দাবি → "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; [[PaperSigningFacts::standing()]])।
+     *
+     * ⓘ কেবল `submitted` দাবি সইয়ের অপেক্ষায় থাকে; অনুমোদিত, দেওয়া বা ফেরানো দাবির কোনো ধাপ নেই।
+     *
+     * @param  Collection<int, ExpenseClaim>  $claims
+     * @return array<int, array{level: int, levels: int}>
+     */
+    private function standingOf(Collection $claims): array
     {
+        $waiting = $claims->filter(fn (ExpenseClaim $c) => $c->status === ExpenseClaim::SUBMITTED)
+            ->map(fn (ExpenseClaim $c) => (int) $c->id)->values()->all();
+
+        return app(PaperSigningFacts::class)->standing(ExpenseClaim::class, $waiting, ExpenseClaimService::MODULE);
+    }
+
+    /**
+     * ফোনের আকার — একই সব জায়গায়।
+     *
+     * ⭐ চিপের কথা (a6, ২০ অক্টোবর ২০২৬): `approval_level` / `approval_levels` — সইয়ের অপেক্ষায় (`submitted`) কোন ধাপে, কয় ধাপের
+     * মধ্যে; নইলে দুটোই null। ⓘ `posting_failed` / `post_problem` ভাউচারের ফোন-সারির একই আকারে, কিন্তু দাবিতে সবসময় false/null:
+     * দাবির শেষ সই নিজেই দাবিটাকে "অনুমোদিত" করে আর খসড়া ভাউচার বানায় ([[FinishTheClaimOnTheLastSignature]]) — পোস্ট বলে কোনো ধাপ
+     * দাবির নেই, তাই "সই হয়েছে, পোস্ট হয়নি" তালিকাতেও দাবি আসে না ([[SignedButNotPosted]]: অবস্থা খসড়া নয়)। টাকা দেওয়ার
+     * ভাউচারটা আটকালে সেটা ভাউচারের সারিতে দেখা যায়।
+     *
+     * @param  array<int, array{level: int, levels: int}>  $standing
+     * @return array<string, mixed>
+     */
+    private function facts(ExpenseClaim $claim, array $standing = []): array
+    {
+        $waiting = $claim->status === ExpenseClaim::SUBMITTED;
+
         return [
             'id' => (string) $claim->public_id,
             'number' => (string) $claim->document_no,
             'kind' => (string) $claim->kind,
             'status' => (string) $claim->status,
             'status_label' => __('hr::claim.state_'.$claim->status),
+            'approval_level' => $waiting ? ($standing[(int) $claim->id]['level'] ?? null) : null,
+            'approval_levels' => $waiting ? ($standing[(int) $claim->id]['levels'] ?? null) : null,
+            'posting_failed' => false,
+            'post_problem' => null,
             'amount' => (string) $claim->amount,
             'from_advance' => (string) $claim->from_advance,
             'cash' => $claim->cashPart(),

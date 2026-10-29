@@ -105,6 +105,9 @@ final class CustomerSync implements SyncsToDevices
                     ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'l0.parent_id')
                     ->where('l0.company_id', CompanyContext::id())
                     ->where(fn ($w) => $w->where('l0.updated_at', '>', $since)->orWhere('l1.updated_at', '>', $since)))
+                // ⭐ শাখার নাম বদলালে সেই শাখার দোকানগুলোও যায় — নামটা সারিতে চড়ে (`branchName`), গ্রাহকের `updated_at` নড়ে না
+                ->orWhereIn('branch_id', fn ($b) => $b->select('id')->from('branches')
+                    ->where('company_id', CompanyContext::id())->where('updated_at', '>', $since))
                 ->orWhere(fn ($w) => self::temporaryLimitEndedSince($w, $since, 'temp_credit_limit_until')));
         }
 
@@ -112,7 +115,7 @@ final class CustomerSync implements SyncsToDevices
         $after?->after($query, $query->qualifyColumn('updated_at'), $query->qualifyColumn('id'));
 
         // ⓘ পয়েন্ট খুঁজতে দুই ধাপ উপরে — এক কোয়েরিতে, সারি ধরে নয়
-        $rows = $query->with('location.parent')->get();
+        $rows = $query->with(['location.parent', 'branch'])->get();
 
         return SyncBatch::of($rows->map(fn (Customer $customer) => new SyncRecord(
             entityType: self::entityType(),
@@ -142,6 +145,11 @@ final class CustomerSync implements SyncsToDevices
                  * ⓘ পুরনো ফোন বাড়তি ঘর উপেক্ষা করে।
                  */
                 'pointName' => self::pointName($customer),
+                /*
+                 * ⭐ দোকানের শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর
+                 * শাখার নামও দিতে হবে"*। নামে ([[Customer::branchName()]]), কোডে নয়; শাখা না থাকলে null। ⓘ পুরনো ফোন বাড়তি ঘর উপেক্ষা করে।
+                 */
+                'branchName' => $customer->branchName(),
                 'addressEn' => $customer->address_en,
                 'addressBn' => $customer->address_bn,
                 'customerType' => $customer->customer_type,

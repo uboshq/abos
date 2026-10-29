@@ -108,7 +108,10 @@ final class EveryCustomerReportSaysWhoAndWhereTest extends TestCase
             $this->assertStringContainsString('Who And Where Store', (string) $row['customer_name'], "{$report}: নাম");
             $this->assertStringNotContainsString($this->customer->code, (string) $row['customer_name'],
                 "{$report}: নামের ঘরে এখনো কোড — কোড এখন নিজের কলামে।");
-            $this->assertContains($row['point_name'], ['Report Point', 'রিপোর্ট পয়েন্ট'], "{$report}: পয়েন্ট");
+            // ⭐ "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): পয়েন্টের ঘরে গ্রাহকের শাখাও
+            $branch = (string) $this->customer->fresh('branch')->branchName();
+            $this->assertNotSame('', $branch, 'দাবির ভিত্তি নেই — গ্রাহকের শাখা নেই।');
+            $this->assertContains($row['point_name'], ['Report Point · '.$branch, 'রিপোর্ট পয়েন্ট · '.$branch], "{$report}: পয়েন্ট · শাখা");
             $this->assertContains($row['area_name'], ['Report Area', 'রিপোর্ট এরিয়া'],
                 "{$report}: এরিয়া — `territory` ধাপটা পাওয়া যায়নি।");
             $this->assertSame('01711000999', $row['phone'], "{$report}: মোবাইল");
@@ -149,7 +152,7 @@ final class EveryCustomerReportSaysWhoAndWhereTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 __('customer::field.code'), __('customer::field.name'),
-                __('master_data::level.point'), __('master_data::level.territory'),
+                __('customer::field.place'), __('master_data::level.territory'),
                 __('customer::field.full_address'), __('customer::field.owner_name'), __('customer::field.phone'),
             ]);
     }

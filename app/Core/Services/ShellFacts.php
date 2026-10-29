@@ -92,4 +92,25 @@ final class ShellFacts
     {
         return $this->companies()->count() > 1 || $this->branches()->count() > 1;
     }
+
+    /**
+     * ⭐ শাখার নাম সবসময় — মালিকের স্থায়ী নিয়ম ("কোম্পানি · শাখা ▾" সব পাতায়; ওয়েবের মান ধাপ ২, ভুল ৪, ২০ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে নামটা আসত কেবল `currentBranch` থেকে, আর সেটা খালি থাকলে (লাইভে ঠিক তাই — শাখা কখনো বাছা হয়নি, এক শাখার
+     * কোম্পানি) বারে শুধু কোম্পানি থাকত। ⓘ এখন: নাগালে একাধিক শাখা আর "সব শাখা" হলে সেটা; নাহলে বাছা শাখা, দেখার শাখা
+     * ([[ViewedBranch::one()]], হোমের সংখ্যা যেটা মানে), নয়তো নাগালের প্রথম শাখা — কিছু না কিছু সবসময়।
+     * ⓘ বারের "কোম্পানি · শাখা ▾" আর পাতার মাথার "তারিখ · কোম্পানি · শাখা" — দুই জায়গায় এই একটাই উত্তর।
+     */
+    public function branchLabel(?\App\Models\User $user, ?Branch $chosen = null): ?string
+    {
+        $branches = $this->branches();
+
+        if ($branches->count() > 1 && (bool) ($user?->view_all_branches ?? true)) {
+            return __('core.company.all_branches');
+        }
+
+        $id = \App\Core\Support\ViewedBranch::one($user);
+
+        return ($chosen ?? ($id ? $branches->firstWhere('id', $id) : null) ?? $branches->first())?->name();
+    }
 }

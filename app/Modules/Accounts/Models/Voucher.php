@@ -41,6 +41,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
     use KeepsRevisions;
     // ⭐ পাতা নাগাল ধরে খোলে, মাথার শাখা ধরে নয় — সইয়ের পাতা আর নোটিশের লিংক আর ৪০৪ নয় (মালিক, ১৯ অক্টোবর ২০২৬)
     use OpensInReach;
@@ -90,7 +91,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      *
      * @var list<string>
      */
-    public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card'];
+    public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card', 'deposit'];
 
     /**
      * ⭐ মাধ্যমের ঘরে যা-ই থাক, পর্দায় একটা শব্দ — কাঁচা চাবি কখনো নয়।
@@ -219,6 +220,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         'carried_by', 'moved_at', 'note_counts', 'wallet', 'wallet_medium',
         'counterparty_phone', 'charge_borne_by', 'transfer_mode_id',
         'from_branch', 'from_account_name', 'deposit_slip_no', 'lands_on',
+        // ⭐ মূল্য-তারিখ — নতুন টাকার বাক্সের ঘর (২২ অক্টোবর ২০২৬)
+        'value_date',
         'reverse_on',
         // ⭐ মাসশেষের সমন্বয় — ভাউচারের পরিকল্পনা ৩ঘ (৭ অক্টোবর ২০২৬); কেবল জাবেদায় ([[VoucherService::create()]])
         'is_adjusting',
@@ -228,6 +231,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         // ১৫ সেপ্টেম্বর — খরচ ভাউচারের নিজের ঘর
         'cost_centre_id', 'expense_account_id', 'bill_no',
         'gross_amount', 'ait_amount', 'vds_amount',
+        // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং, কাগজে একটা (দফা ৪; cb-ma-5)
+        'difference_kind', 'difference_amount',
 
         // ১৮ সেপ্টেম্বর — কাকে দেওয়া হলো: ধরন ও নাম
         'payee_type_id', 'payee_name',
@@ -244,11 +249,13 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'reverse_on' => 'date',
             'is_adjusting' => 'boolean',
             'instrument_date' => 'date',
+            'value_date' => 'date',
             'amount' => 'decimal:4',
             'charge_amount' => 'decimal:4',
             'gross_amount' => 'decimal:4',
             'ait_amount' => 'decimal:4',
             'vds_amount' => 'decimal:4',
+            'difference_amount' => 'decimal:4',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
 
@@ -299,6 +306,16 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     public function isDirectCost(): bool
     {
         return $this->billShares()->exists();
+    }
+
+    /**
+     * ⭐ এক টাকা, বহু বিল — কোন বিলে কত (cb-ma-4; [[VoucherAllocations]])।
+     *
+     * @return HasMany<VoucherAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(VoucherAllocation::class)->orderBy('id');
     }
 
     public function lines(): HasMany

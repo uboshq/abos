@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\PartyRegistry;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Modules\Sales\Models\PrintJob;
@@ -233,5 +234,85 @@ final class PrintQueue
             ->orderBy('id')
             ->paginate(50)
             ->withQueryString();
+    }
+
+    /**
+     * কাগজ → গ্রাহক কোথায় — ধরন প্রতি টেবিল আর গ্রাহকের ঘর। গেট পাসের গ্রাহক তার চালানে।
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const CUSTOMER_OF = [
+        PrintJob::INVOICE => ['sal_invoices', 'customer_id'],
+        PrintJob::CHALLAN => ['sal_challans', 'customer_id'],
+        PrintJob::CHALLAN_GATEPASS => ['sal_challans', 'customer_id'],
+        PrintJob::ORDER => ['sal_orders', 'customer_id'],
+        PrintJob::DELIVERY_ORDER => ['sal_delivery_orders', 'customer_id'],
+        PrintJob::RECEIPT => ['sal_collections', 'customer_id'],
+        PrintJob::GATE_PASS => ['sal_gate_passes', 'delivery_challan_id'],
+    ];
+
+    /**
+     * ⭐ সারির কাগজের গ্রাহক, পয়েন্টসহ — "নাম · পয়েন্ট", নম্বরের পাশে (মালিক, ১৯ অক্টোবর ২০২৬: *"অনেক জায়গায় তালিকায়
+     * শুধু ভাউচার নম্বর দেওয়া। সেখানে নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"*)।
+     *
+     * ⚠️ গোটা পাতার জন্য একবারে: কাগজের ধরন প্রতি একটা প্রশ্ন (বড়জোর সাতটা), তারপর গ্রাহকের নাম আর জায়গা একসাথে
+     * ([[PartyRegistry::labelsOf()]]) — সারি ধরে কখনো নয়। ⓘ অচেনা ধরন, মুছে যাওয়া কাগজ বা গ্রাহক না থাকলে সারিটা কেবল নম্বর।
+     *
+     * @param  iterable<PrintJob>  $jobs
+     * @return array<int, string>  সারির id => "নাম · পয়েন্ট"
+     */
+    public function partiesOf(iterable $jobs): array
+    {
+        $ids = [];
+
+        foreach ($jobs as $job) {
+            if (isset(self::CUSTOMER_OF[$job->document_type]) && (int) $job->document_id > 0) {
+                $ids[$job->document_type][] = (int) $job->document_id;
+            }
+        }
+
+        /** @var array<string, int> "ধরন:কাগজ" => গ্রাহক */
+        $customerOf = [];
+
+        foreach ($ids as $type => $documentIds) {
+            [$table, $column] = self::CUSTOMER_OF[$type];
+
+            $query = DB::table($table.' as d')
+                ->where('d.company_id', CompanyContext::id())
+                ->whereIn('d.id', array_values(array_unique($documentIds)));
+
+            // ⓘ গেট পাসের নিজের গ্রাহক নেই — যে চালানের, তার
+            $rows = $type === PrintJob::GATE_PASS
+                ? $query->join('sal_challans as c', 'c.id', '=', 'd.delivery_challan_id')->pluck('c.customer_id', 'd.id')
+                : $query->pluck('d.'.$column, 'd.id');
+
+            foreach ($rows as $documentId => $customerId) {
+                if ((int) $customerId > 0) {
+                    $customerOf[$type.':'.$documentId] = (int) $customerId;
+                }
+            }
+        }
+
+        if ($customerOf === []) {
+            return [];
+        }
+
+        $labels = app(PartyRegistry::class)->labelsOf(array_map(
+            fn (int $customerId) => ['customer', $customerId],
+            array_values(array_unique($customerOf)),
+        ));
+
+        $parties = [];
+
+        foreach ($jobs as $job) {
+            $customerId = $customerOf[$job->document_type.':'.$job->document_id] ?? null;
+            $label = $customerId === null ? null : ($labels['customer:'.$customerId] ?? null);
+
+            if ($label !== null) {
+                $parties[(int) $job->id] = $label;
+            }
+        }
+
+        return $parties;
     }
 }

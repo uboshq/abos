@@ -65,7 +65,8 @@ final class TheCompanyFormSavedInTheMiddleTest extends TestCase
 
             $this->assertStringContainsString('name="logo"', $field, "⛔ {$url}: লোগোর ঘরটা বাংলা বোতামের ভিতরে নেই।");
             $this->assertStringContainsString(__('core.file.choose', [], 'bn'), $field, "⛔ {$url}: বোতামে বাংলা লেখা নেই।");
-            $this->assertStringContainsString('accept="image/png,image/jpeg,image/webp"', $field, "⛔ {$url}: SVG আটকানোর accept হারিয়েছে।");
+            // ⓘ ২১ অক্টোবর ২০২৬ থেকে SVG-ও (মালিক; স্ক্রিপ্ট সার্ভারে ছাঁটা হয় — [[SafeSvg]], দাবি TheBarWearsTheCustomersOwnLogoTest-এ)
+            $this->assertStringContainsString('accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"', $field, "⛔ {$url}: লোগোর accept বদলেছে।");
         }
     }
 

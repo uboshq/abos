@@ -140,4 +140,12 @@ return [
         CreditPositionReports::class,
         \App\Modules\CreditControl\Reports\CreditControlLists::class,
     ],
+
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — বাকির সীমার ঝুঁকি, চেকের দিন (cb, ২০ অক্টোবর ২০২৬; গ্রাহকের নাম লাগে বলে এখানে)
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — "বড় বকেয়া" (মালিক, ২০ অক্টোবর ২০২৬; [[WidgetSummaries]])
+    'phone_widgets' => [
+        \App\Modules\CreditControl\Widgets\CreditLimitsSummary::class,
+        \App\Modules\CreditControl\Widgets\ChequesSummary::class,
+        \App\Modules\CreditControl\Widgets\BigDuesSummary::class,
+    ],
 ];

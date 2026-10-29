@@ -341,7 +341,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
 
     private static function lastBackup(): ?int
     {
-        $path = (string) config('abos.backup.path', env('ABOS_BACKUP_PATH', ''));
+        // ⓘ কেবল config — env() config ক্যাশ থাকলে null দেয়; config/abos.php নিজেই ABOS_BACKUP_PATH পড়ে (phpstan L1)
+        $path = (string) config('abos.backup.path', '');
 
         if ($path === '' || ! is_dir($path)) {
             return null;

@@ -339,10 +339,11 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
             '⛔ "পার হতে দাও" সুইচ এখনো আছে।');
     }
 
-    // ── ⓘ যা আটকায় না ──────────────────────────────────────────────────
-
-    /** ⭐ বিক্রয় আদেশ আটকায় না — *"sales order astei pare"*। */
-    public function test_a_sales_order_is_not_stopped_by_the_limit(): void
+    /**
+     * ⛔ বিক্রয় আদেশও আটকায় — fe-র বিক্রয়ের ফাঁক ২৮ (২০ অক্টোবর ২০২৬): সীমা পরম, পুরনো পথেও (SAP আদেশে আর ডেলিভারিতে)।
+     * ⓘ আগের "sales order astei pare" (২৬ সেপ্টেম্বর) নিয়ম এতে উল্টেছে।
+     */
+    public function test_a_sales_order_past_the_limit_is_refused(): void
     {
         $order = app(SalesOrderService::class)->create(
             [
@@ -353,10 +354,14 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
             [['product_id' => $this->product->id, 'ordered_qty' => '50', 'rate' => '100']],
         );
 
-        $order = app(SalesOrderService::class)->confirm($order->fresh(['lines']));
+        try {
+            app(SalesOrderService::class)->confirm($order->fresh(['lines']));
+            $this->fail('⛔ ৫,০০০ টাকার আদেশ ১,০০০ সীমায় নিশ্চিত হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('customer_id', $e->errors());
+        }
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $order->status,
-            '⛔ ৫,০০০ টাকার আদেশ ১,০০০ সীমায় আটকে গেছে — আদেশ আন্দাজের জিনিস।');
+        $this->assertSame(DocumentStatus::DRAFT, $order->fresh()->status, '⛔ ফেরানো আদেশ খসড়া নয়।');
     }
 
     /**

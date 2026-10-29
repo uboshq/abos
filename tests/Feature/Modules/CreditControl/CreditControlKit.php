@@ -80,7 +80,7 @@ trait CreditControlKit
         $this->postLines([
             ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'party_type' => 'customer', 'party_id' => $c->id],
             ['account_id' => StandardChart::find(StandardChart::SALES)->id, 'credit' => $amount],
-        ]);
+        ], branchId: $c->branch_id);
     }
 
     private function unclearedCheque(Customer $c, string $amount): int
@@ -95,7 +95,7 @@ trait CreditControlKit
         $this->postLines([
             ['account_id' => StandardChart::find(StandardChart::CHEQUES_IN_HAND)->id, 'debit' => $amount],
             ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'credit' => $amount, 'party_type' => 'customer', 'party_id' => $c->id],
-        ], 'cheque', $id);
+        ], 'cheque', $id, $c->branch_id);
 
         return $id;
     }
@@ -113,7 +113,7 @@ trait CreditControlKit
         $this->postLines([
             ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'party_type' => 'customer', 'party_id' => $c->id],
             ['account_id' => StandardChart::find(StandardChart::SALES)->id, 'credit' => $amount],
-        ], 'sales_invoice', $id);
+        ], 'sales_invoice', $id, $c->branch_id);
 
         return $id;
     }
@@ -139,11 +139,12 @@ trait CreditControlKit
         ]);
     }
 
-    private function postLines(array $lines, string $source = 'test:credit-control', ?int $sourceId = null): void
+    /** খাতার সারি পার্টির নিজের শাখায় — অন্য শাখায় পার্টির লেনদেন নিষেধ (মালিক, ১৯ অক্টোবর) */
+    private function postLines(array $lines, string $source = 'test:credit-control', ?int $sourceId = null, ?int $branchId = null): void
     {
         app(PostingEngine::class)->post(
             sourceType: $source, sourceId: $sourceId ?? random_int(1, 9_999_999), trxDate: now()->toDateString(), lines: $lines,
-            branchId: $this->company->defaultBranch()?->id,
+            branchId: $branchId ?? $this->company->defaultBranch()?->id,
         );
     }
 

@@ -597,9 +597,14 @@ export function expenseFields (config) {
         head: config.head ?? '',
         payeeType: config.payeeType ?? '',
         payeesByType: config.payeesByType ?? {},
-        gross: config.gross ?? 0,
-        ait: config.ait ?? 0,
-        vds: config.vds ?? 0,
+        /*
+         * ⛔ সংখ্যা হিসেবে শুরু — পাতা এগুলো লেখা হিসেবে পাঠায় ('0'), আর `(ait + vds)` তখন জোড়া লাগাত ('00'), গুণ নয়; তার উপর
+         * `.toFixed(2)` → "Value is not a function", উৎসে কর্তনের সারাংশ কখনো আঁকা হত না (২২ অক্টোবর ২০২৬)। ⓘ কারণটা CSP নয় —
+         * a5 মেপেছে, CSP-র Alpine `(a * b).toFixed(2)` ঠিকই আঁকে; ভুলটা লেখার যোগে।
+         */
+        gross: Number(config.gross ?? 0) || 0,
+        ait: Number(config.ait ?? 0) || 0,
+        vds: Number(config.vds ?? 0) || 0,
         tagged: config.tagged ?? 0,
         bills: config.bills ?? [],
         basis: config.basis ?? 'qty',
@@ -611,9 +616,28 @@ export function expenseFields (config) {
             return this.payeesByType[this.payeeType] ?? []
         },
 
+        /*
+         * কাটা — উৎসে কর আর উৎসে ভ্যাট একসাথে, সংখ্যায়।
+         * ⛔ পাতা দুটো টাকা লেখা হিসেবে পাঠায় ('0', ভাসমান সংখ্যা নয়), আর মুছে ফেলা ঘরও লেখা ('')। তাই `ait + vds`
+         * জুড়ে '00' হত, `.toFixed` থাকত না, আর খরচের ভাউচার খুলতেই "Value is not a function", সারাংশের লাইন ফাঁকা
+         * (bd9447f88, ১৯ সেপ্টেম্বর থেকে; a6, ২৪ অক্টোবর ২০২৬)।
+         */
+        get deducted () {
+            return (Number(this.ait) || 0) + (Number(this.vds) || 0)
+        },
+
         /* হাতে যাবে — বিলের মোট থেকে কর্তন বাদ */
         get net () {
             return Math.max(0, this.gross - this.ait - this.vds)
+        },
+
+        /* ⓘ লেখাগুলো এখানে, পর্দার প্রকাশে নয় — যোগ একটাই জায়গায়, [[deducted]] */
+        get deductedText () {
+            return this.deducted.toFixed(2)
+        },
+
+        get netText () {
+            return this.net.toFixed(2)
         },
 
         /* একটাও চালান বাছা হয়নি মানে পরোক্ষ খরচ — মালিকের নিয়ম */
@@ -1180,25 +1204,184 @@ export function imagePreview ({ current = '' } = {}) {
 }
 
 /*
+ * ⓘ বাইট → "7.7" — MB, ইংরেজি অঙ্কে, বড়জোর এক দশমিক, নিচের দিকে; সার্ভারের [[UploadLimit::megabytes()]]-এর হুবহু একই।
+ */
+export function megabytesLabel (bytes) {
+    const tenths = Math.floor((Number(bytes) * 10) / (1024 * 1024))
+
+    return tenths % 10 === 0 ? String(tenths / 10) : `${Math.floor(tenths / 10)}.${tenths % 10}`
+}
+
+/*
  * ⭐ ফাইল তোলার বাংলা বোতাম — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: *"ব্রাউজারের ইংরেজি 'Choose File' আর
  * দেখাবে না"*।
  *
  * ⓘ ব্রাউজারের ফাইল-ঘর তার লেখা ("Choose File", "No file chosen") নিজের ভাষায় আঁকে, বদলানোর উপায় নেই। ⭐ তাই আসল ঘরটা
  * লুকানো, আর বাংলা বোতাম তার `<label>`; বাছা ফাইলের নাম (বা কয়টা) এখানে রাখা হয়, পর্দা `label` দেখায়।
  * ব্যবহার: `x-data="filePick({ none: '…', many: '… :count …' })"`, ঘরে `@change="pick($event)"`, নামে `x-text="label"`।
+ *
+ * ⭐ টেনে আনা (রসিদ-পরিশোধ মিল-তালিকা #৩৭, নকশা পাতা ২: "ব্যাংক স্লিপ / স্ক্রিনশট টেনে আনুন বা বাছুন"; ২৫ অক্টোবর ২০২৬):
+ * বাক্সে ফাইল ফেললে [[drop()]] **সেই আসল ঘরটাই** ভরে, যেটা বোতাম ভরে — একই নাম, তাই সার্ভার একই নিয়মে দেখে; তারপর ঘরে
+ * `change` ছোঁড়ে, ফলে বড় ফাইল ফেরানো ([[pick()]]) আর পাতার নিজের শ্রোতা (স্ক্যানার) বোতামের মতোই চলে।
+ * ⛔ ব্রাউজার টেনে আনায় `accept` মানে না — তাই ধরন এখানে মেলানো ([[acceptsFile()]]); একটার ঘরে কয়েকটা ফেললে কিছুই বসে না।
+ * ⓘ বাছা ফাইলের নাম `names`-এ, প্রতিটার পাশে "সরান" ([[remove()]]) — সেটাও আসল ঘর বদলে `change` ছোঁড়ে।
  */
-export function filePick ({ none = '', many = ':count' } = {}) {
+export function filePick ({ none = '', many = ':count', max = 0, svgMax = 0, tooBig = '', wrongType = '', oneOnly = '' } = {}) {
+    /* ⓘ এই ফাইলের সীমা — `.svg` হলে তার নিজেরটা (থাকলে), নইলে সাধারণটা; ০ মানে সীমা নেই */
+    const limitOf = (file) => (svgMax > 0 && /\.svg$/i.test(file.name) ? svgMax : max)
+
+    /* ⓘ বাক্সের আসল ফাইল-ঘর — যে ঘটনা যেখান থেকেই আসুক (বাক্স বা "সরান" বোতাম) */
+    const inputOf = (event) => {
+        const box = event && event.currentTarget && event.currentTarget.closest
+            ? event.currentTarget.closest('[data-file-input]')
+            : null
+
+        return box ? box.querySelector('input[type="file"]') : null
+    }
+
+    /* ⓘ আসল ঘরে ফাইলগুলো বসানো আর `change` ছোঁড়া — বোতামে বাছার হুবহু পরের ধাপ */
+    const fill = (input, files, all) => {
+        if (files.length === 0) {
+            input.value = ''
+        } else if (all && files.length === all.length) {
+            input.files = all
+        } else if (typeof DataTransfer !== 'undefined') {
+            const bag = new DataTransfer()
+            files.forEach(file => bag.items.add(file))
+            input.files = bag.files
+        } else {
+            return false
+        }
+
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+
+        return true
+    }
+
     return {
         label: none,
         picked: false,
+        refused: '',
+        names: [],
+        over: false,
 
+        /* ⓘ টানা ফাইল বাক্সের উপর — বাক্স জ্বলে, ব্রাউজার ফাইলটা নিজে খোলে না */
+        dragOver (event) {
+            event.preventDefault()
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'copy'
+            }
+            this.over = true
+        },
+
+        /* ⓘ বাক্সের বাইরে গেলে — ভিতরের কোনো অংশে ঢুকলে নয় */
+        dragLeave (event) {
+            const box = event.currentTarget
+
+            if (!box || !event.relatedTarget || !box.contains(event.relatedTarget)) {
+                this.over = false
+            }
+        },
+
+        /**
+         * ⭐ ফেলা ফাইল — আসল ঘরে, বোতামের মতোই। ধরন না মিললে বা একটার ঘরে কয়েকটা হলে ঘর অবিকল, পাশে কারণ।
+         */
+        drop (event) {
+            event.preventDefault()
+            this.over = false
+
+            const input = inputOf(event)
+            const dropped = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null
+            const files = dropped ? Array.from(dropped) : []
+
+            if (!input || input.disabled || files.length === 0) {
+                return
+            }
+
+            if (!input.multiple && files.length > 1) {
+                this.refused = oneOnly
+
+                return
+            }
+
+            const wrong = files.find(file => !acceptsFile(file, input.getAttribute('accept')))
+
+            if (wrong) {
+                this.refused = wrongType.replace(':name', wrong.name)
+
+                return
+            }
+
+            fill(input, files, dropped)
+        },
+
+        /* ⓘ একটা বাছা ফাইল সরানো — বাকিগুলো থাকে; শেষটা গেলে ঘর খালি */
+        remove (event, index) {
+            const input = inputOf(event)
+
+            if (!input) {
+                return
+            }
+
+            const files = input.files ? Array.from(input.files) : []
+            const left = files.filter((file, at) => at !== Number(index))
+
+            if (!fill(input, left, null)) {
+                fill(input, [], null)
+            }
+        },
+
+        /*
+         * ⭐ বড় ফাইল বাছার মুহূর্তেই ফেরানো (fe, ২১ অক্টোবর ২০২৬): ঘর খালি করা হয় (তাই জমায় যায় না), পাশে বাংলা বার্তা।
+         * ⛔ নইলে লাইভে ৮ MB-র বেশি ফাইল পাঠালে PHP গোটা ফর্ম ফেলে দিত — মানুষ জানতেন না কী হলো।
+         */
         pick (event) {
             const files = event.target.files ? Array.from(event.target.files) : []
+            const over = files.find(file => limitOf(file) > 0 && file.size > limitOf(file))
+
+            this.refused = over ? tooBig.replace(':mb', megabytesLabel(limitOf(over))) : ''
+
+            if (over) {
+                event.target.value = ''
+                this.picked = false
+                this.label = none
+                this.names = []
+
+                return
+            }
 
             this.picked = files.length > 0
+            this.names = files.map(file => file.name)
             this.label = files.length === 0
                 ? none
                 : (files.length === 1 ? files[0].name : many.replace(':count', String(files.length)))
         },
     }
+}
+
+/**
+ * ⓘ এই ফাইল ঘরের `accept`-এ পড়ে কি না — ব্রাউজারের বাছাইয়ের একই নিয়ম: `.ext` নামের শেষে, `image/*` ধরনের শুরুতে, বাকিটা
+ * পুরো ধরন। `accept` না থাকলে সব চলে।
+ */
+export function acceptsFile (file, accept) {
+    const tokens = String(accept || '').split(',').map(token => token.trim().toLowerCase()).filter(token => token !== '')
+
+    if (tokens.length === 0) {
+        return true
+    }
+
+    const name = String(file && file.name ? file.name : '').toLowerCase()
+    const type = String(file && file.type ? file.type : '').toLowerCase()
+
+    return tokens.some(token => {
+        if (token.startsWith('.')) {
+            return name.endsWith(token)
+        }
+
+        if (token.endsWith('/*')) {
+            return type.startsWith(token.slice(0, -1))
+        }
+
+        return type === token
+    })
 }

@@ -145,6 +145,14 @@
      */
     $neverGrouped = ['transactions'];
 
+    /*
+     * ⛔ দেখানোর কিছু না থাকলে বারটাই নেই — DOM-এ নয়, কেবল লুকানো নয় (লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬; মালিকের ড্যাশবোর্ডের ছবি)।
+     * ⓘ হোমে কোনো মডিউল নেই, ট্যাবও নেই; আর পর্দা নিজের বোতাম না পাঠালে (`crumb_actions`) বারটা উপরের বারের নিচে একটা খালি
+     * ধূসর পট্টি হয়ে বসত — ফোনে সবসময়, বড় পর্দায় মেনু গুটালে। ⓘ পাতার শরীর লেআউটের আগে আঁকা হয়, তাই স্ট্যাকটা এখানে ভরা।
+     */
+    $hasCrumbs = trim($__env->yieldPushContent('crumb_actions')) !== '';
+    $showBar = $tabs->isNotEmpty() || $hasCrumbs;
+
 @endphp
 
 {{--
@@ -180,6 +188,7 @@
      ⚠️ স্থির ক্লাস খোলা অবস্থা ধরে (সাইডবারের ডিফল্টের মতো), Alpine কেবল গুটানোটা সামলায়। --}}
 {{-- ⛔ `x-data` নিজেই — বারটা কোনো Alpine উপাদানের ভেতরে নয়, তাই এটা ছাড়া `:class` চলতই না,
      আর মেনু গুটালেও সারিটা ফিরত না (মালিক, ১ অক্টোবর: "top menubar ekdom bad dile keno")। --}}
+@if ($showBar)
 <div data-module-bar
      x-data
      class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
@@ -380,3 +389,4 @@
          ওগুলো ফেলে দিলে প্রতিটা পর্দার প্রধান কাজটাই উধাও হত। --}}
     @stack('crumb_actions')
 </div>
+@endif

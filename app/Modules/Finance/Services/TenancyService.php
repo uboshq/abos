@@ -83,9 +83,12 @@ class TenancyService
         $income = $this->incomeAccount($data['income_account_id'] ?? null);
 
         return DB::transaction(function () use ($data, $type, $id, $rent, $deposit, $term, $starts, $income) {
+            // ⛔ ভাড়াটের নিজের শাখা, নইলে জামানত যে বাক্সে এল তার শাখা — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            $branchId = $this->signature->branchFor([$data['money_account_id'] ?? null], [[$type, $id]]);
+
             $tenancy = Tenancy::query()->create([
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('TNT'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('TNT', $branchId),
                 'tenant' => filled($data['tenant'] ?? null)
                     ? (string) $data['tenant']
                     : ($this->parties->labelsOf([[$type, $id]])[$type.':'.$id] ?? $type),
@@ -424,24 +427,22 @@ class TenancyService
     {
         $money = $kind === TenancyMove::FROM_DEPOSIT ? null : $this->signature->moneyAccount($data['money_account_id'] ?? null);
         $on = Carbon::parse((string) ($data['moved_on'] ?? now()->toDateString()))->toDateString();
-        $deposits = $this->head(StandardChart::TENANT_DEPOSITS);
-        $receivable = $this->head(StandardChart::RENT_RECEIVABLE);
-
+        // ⓘ খাত কেবল যে সারি লেখা হয় তার — জামানত জমায় প্রাপ্যের খাত খোঁজা হয় না, ভাড়ায় জামানতের নয়
         [$type, $lines] = match ($kind) {
             TenancyMove::DEPOSIT_IN => [Voucher::RECEIPT, [
                 ['account_id' => $money->id, 'debit' => $amount, 'credit' => '0'],
-                $this->partyLine($tenancy, $deposits, '0', $amount),
+                $this->partyLine($tenancy, $this->head(StandardChart::TENANT_DEPOSITS), '0', $amount),
             ]],
             TenancyMove::RENT => [Voucher::RECEIPT, [
                 ['account_id' => $money->id, 'debit' => $amount, 'credit' => '0'],
-                $this->partyLine($tenancy, $receivable, '0', $amount),
+                $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), '0', $amount),
             ]],
             TenancyMove::FROM_DEPOSIT => [Voucher::JOURNAL, [
-                $this->partyLine($tenancy, $deposits, $amount, '0'),
-                $this->partyLine($tenancy, $receivable, '0', $amount),
+                $this->partyLine($tenancy, $this->head(StandardChart::TENANT_DEPOSITS), $amount, '0'),
+                $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), '0', $amount),
             ]],
             TenancyMove::REFUND => [Voucher::PAYMENT, [
-                $this->partyLine($tenancy, $deposits, $amount, '0'),
+                $this->partyLine($tenancy, $this->head(StandardChart::TENANT_DEPOSITS), $amount, '0'),
                 ['account_id' => $money->id, 'debit' => '0', 'credit' => $amount],
             ]],
         };
@@ -503,19 +504,13 @@ class TenancyService
     }
 
     /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয় */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function head(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
+        if (StandardChart::find($code) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find($code);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages(['month' => __('finance::validation.chart_head_missing', ['code' => $code])]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 }

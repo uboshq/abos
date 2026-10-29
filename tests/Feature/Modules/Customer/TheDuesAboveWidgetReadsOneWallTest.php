@@ -25,6 +25,9 @@ use Tests\TestCase;
  *
  * ⓘ ময়মনসিংহের একটা দোকানের বাকি ময়মনসিংহে ১১,১১১ আর নেত্রকোনায় ৭৭,৭৭৭। হেডারে "ময়মনসিংহ" বাছা থাকলে আগে ঘরটা গ্রাহক বাছত তাঁর
  * নিজের শাখা ধরে কিন্তু বকেয়া পড়ত গোটা কোম্পানির খাতা থেকে — ৮৮,৮৮৮; আর প্রতিটা গ্রাহক মেমরিতে তুলে আলাদা কোয়েরি।
+ *
+ * ⓘ ১৯ অক্টোবর থেকে এক শাখার পার্টির লেনদেন অন্য শাখায় যায় না (মালিক; PostingEngine থামায়), তাই নেত্রকোনার ৭৭,৭৭৭ এখন
+ * নেত্রকোনারই এক দোকানের বকেয়া — দেখার শাখা ময়মনসিংহ হলে ঘরে কেবল ১১,১১১।
  */
 final class TheDuesAboveWidgetReadsOneWallTest extends TestCase
 {
@@ -44,11 +47,11 @@ final class TheDuesAboveWidgetReadsOneWallTest extends TestCase
         // ⓘ খালি খাতা থেকে — কেবল এই দোকান
         DB::table('ledger_entries')->where('party_type', Customer::drillSourceType())->delete();
 
-        $shop = Customer::query()->create(['company_id' => $company->id, 'code' => 'WID-1', 'name_en' => 'Two Branch Shop', 'branch_id' => $mms->id, 'is_active' => true]);
         $receivable = (int) StandardChart::find(StandardChart::RECEIVABLE)->id;
         $income = (int) Account::query()->postable()->active()->where('type', Account::INCOME)->value('id');
 
-        foreach ([[$mms, '11111'], [$ntk, '77777']] as [$branch, $amount]) {
+        foreach ([[$mms, '11111', 'WID-1'], [$ntk, '77777', 'WID-2']] as [$branch, $amount, $code]) {
+            $shop = Customer::query()->create(['company_id' => $company->id, 'code' => $code, 'name_en' => 'Shop '.$code, 'branch_id' => $branch->id, 'is_active' => true]);
             app(PostingEngine::class)->post(sourceType: 'journal_voucher', sourceId: random_int(1, 9_999_999), trxDate: now()->toDateString(), lines: [
                 ['account_id' => $receivable, 'debit' => $amount, 'party_type' => Customer::drillSourceType(), 'party_id' => $shop->id],
                 ['account_id' => $income, 'credit' => $amount],

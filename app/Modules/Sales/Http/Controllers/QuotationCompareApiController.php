@@ -42,7 +42,7 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
 
         if (filled($data['family'] ?? null)) {
             $anchor = SalesQuotation::query()->where('public_id', $data['family'])->firstOrFail();
-            $quotations = $anchor->family()->with(['lines.product', 'lines.enteredUnit', 'customer', 'paymentTerm'])->get();
+            $quotations = $anchor->family()->with(['lines.product', 'lines.enteredUnit', 'customer.location.parent', 'customer.branch', 'paymentTerm'])->get();
 
             // ⛔ পরিবারের কোনো সংস্করণ দেয়ালের বাইরে হলে পুরোটা ৪০৪ — চুপচাপ বাদ দিয়ে আধা তুলনা নয়, `ids`-এর একই নিয়ম
             // (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬); কোম্পানি নামে বলা, মোছাগুলো বাদ
@@ -52,7 +52,7 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
         } else {
             $ids = collect($data['ids'] ?? [])->unique()->values();
             $quotations = SalesQuotation::query()->whereIn('public_id', $ids)
-                ->with(['lines.product', 'lines.enteredUnit', 'customer', 'paymentTerm'])->orderBy('id')->get();
+                ->with(['lines.product', 'lines.enteredUnit', 'customer.location.parent', 'customer.branch', 'paymentTerm'])->orderBy('id')->get();
 
             // ⓘ কোনোটা দেয়ালের বাইরে বা নেই — ওয়েবের মতোই ৪০৪, কোনটা তা না বলে
             abort_if($quotations->count() !== $ids->count(), 404);
@@ -77,11 +77,12 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
             ->whereNull('root_quotation_id')
             ->whereIn('id', SalesQuotation::query()->whereNotNull('root_quotation_id')->select('root_quotation_id'))
             ->search($data['q'] ?? null)
-            ->with('customer')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
             ->paginate(self::PER_PAGE);
 
-        $families = SalesQuotation::query()->whereIn('root_quotation_id', $roots->getCollection()->pluck('id'))->get()
+        $families = SalesQuotation::query()->whereIn('root_quotation_id', $roots->getCollection()->pluck('id'))
+            ->with(['customer.location.parent', 'customer.branch'])->get()
             ->groupBy('root_quotation_id');
 
         return response()->json([
@@ -107,6 +108,9 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
             'no' => (string) $q->document_no,
             'revision_no' => (int) ($q->revision_no ?? 0),
             'customer' => $q->customer?->name(),
+            // ⭐ পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::pointName()]], [[Customer::branchName()]])
+            'customer_point' => $q->customer?->pointName(),
+            'customer_branch' => $q->customer?->branchName(),
             'status' => (string) $q->effectiveStatus(),
             'status_label' => __('sales::quotation.status.'.$q->effectiveStatus()),
             'total' => bcadd((string) ($q->total ?? '0'), '0', 2),

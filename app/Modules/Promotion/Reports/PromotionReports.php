@@ -327,7 +327,8 @@ final class PromotionReports
                     ]);
             },
             columns: [
-                ['key' => 'customer_name', 'label' => 'promotion::report.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'promotion::report.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'offer_count', 'label' => 'promotion::report.offer_count',
                     'type' => ReportColumn::QUANTITY, 'total' => false, 'width' => '7rem'],
                 ['key' => 'bill_count', 'label' => 'promotion::report.bill_count',
@@ -434,7 +435,8 @@ final class PromotionReports
                 ['key' => 'promotion_code', 'label' => 'promotion::report.code', 'width' => '9rem'],
                 ['key' => 'bill', 'label' => 'promotion::report.bill', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'bill_source', 'source_id' => 'bill_id'],
-                ['key' => 'customer_name', 'label' => 'promotion::report.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'promotion::report.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'product_name', 'label' => 'promotion::report.product'],
                 ['key' => 'kind_label', 'label' => 'promotion::report.kind'],
                 ['key' => 'rate', 'label' => 'promotion::report.rate',
@@ -487,6 +489,7 @@ final class PromotionReports
                         DB::raw("CONCAT(pa.source_type, ' #', pa.source_id) as bill"),
                         DB::raw('CASE WHEN pa.customer_id IS NULL THEN '.$walkIn
                             ." ELSE CONCAT(c.code, ' - ', ".self::nameSql('c').') END as customer_name'),
+                        DB::raw('pa.customer_id as customer_id'),
                         DB::raw("CONCAT(pr.code, ' - ', ".self::nameSql('pr').') as product_name'),
                         DB::raw(self::nameSql('w').' as warehouse_name'),
                         DB::raw('gi.qty as qty_issued'),
@@ -503,7 +506,8 @@ final class PromotionReports
                 ['key' => 'promotion_code', 'label' => 'promotion::report.code', 'width' => '9rem'],
                 ['key' => 'bill', 'label' => 'promotion::report.bill', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'bill_source', 'source_id' => 'bill_id'],
-                ['key' => 'customer_name', 'label' => 'promotion::report.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'promotion::report.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'product_name', 'label' => 'promotion::report.product'],
                 ['key' => 'warehouse_name', 'label' => 'promotion::report.warehouse'],
                 ['key' => 'qty_issued', 'label' => 'promotion::report.qty_issued', 'type' => ReportColumn::QUANTITY],
@@ -683,7 +687,8 @@ final class PromotionReports
                 ['key' => 'promotion_code', 'label' => 'promotion::report.code', 'width' => '9rem'],
                 ['key' => 'bill', 'label' => 'promotion::report.bill', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'bill_source', 'source_id' => 'bill_id'],
-                ['key' => 'customer_name', 'label' => 'promotion::report.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'promotion::report.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'kind_label', 'label' => 'promotion::report.kind'],
                 ['key' => 'original_worth', 'label' => 'promotion::report.original_worth', 'type' => ReportColumn::MONEY],
                 ['key' => 'worth_after', 'label' => 'promotion::report.worth_after', 'type' => ReportColumn::MONEY],
@@ -727,7 +732,8 @@ final class PromotionReports
                 ['key' => 'promotion_code', 'label' => 'promotion::report.code', 'width' => '9rem'],
                 ['key' => 'bill', 'label' => 'promotion::report.bill', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'bill_source', 'source_id' => 'bill_id'],
-                ['key' => 'customer_name', 'label' => 'promotion::report.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'promotion::report.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'kind_label', 'label' => 'promotion::report.kind'],
                 ['key' => 'worth', 'label' => 'promotion::report.worth', 'type' => ReportColumn::MONEY],
                 ['key' => 'reversed_by_name', 'label' => 'promotion::report.reversed_by'],
@@ -826,6 +832,8 @@ final class PromotionReports
             DB::raw("CONCAT(pa.source_type, ' #', pa.source_id) as bill"),
             DB::raw('CASE WHEN pa.customer_id IS NULL THEN '.$walkIn
                 ." ELSE CONCAT(c.code, ' - ', ".self::nameSql('c').') END as customer_name'),
+            // ⓘ নামের পাশে জায়গার জন্য ([[ReportColumn::$place]]) — হাঁটা-ক্রেতায় NULL, জায়গাও নেই
+            DB::raw('pa.customer_id as customer_id'),
             DB::raw('CASE WHEN pa.product_id IS NULL THEN '.$wholeBill
                 ." ELSE CONCAT(pr.code, ' - ', ".self::nameSql('pr').') END as product_name'),
             self::labelCase('pa.benefit_kind', self::labelsOf(BenefitKind::cases()), 'kind_label'),

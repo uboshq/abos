@@ -9,13 +9,13 @@ return [
 
     'step' => 'ধাপ :level',
     'waiting_since' => ':date থেকে অপেক্ষায়',
-    'signed_on' => ':date-এ সই হয়েছিল',
-    'passes_unsigned' => 'কোনো সই ছাড়াই পার হয়ে যাচ্ছে',
+    'signed_on' => ':date-এ অনুমোদন হয়েছিল',
+    'passes_unsigned' => 'কোনো অনুমোদন ছাড়াই পার হয়ে যাচ্ছে',
 
     'kind' => [
         'no_escalation_target' => 'সময়সীমা বসানো, কিন্তু দেরি হলে কার কাছে যাবে বলা নেই',
         'sla_breached' => 'সময় পার, এখনো কারও হাতে যায়নি',
-        'changed_after_approval' => 'সই দেওয়ার পর কাগজটা বদলেছে',
+        'changed_after_approval' => 'অনুমোদন দেওয়ার পর কাগজটা বদলেছে',
         'delegation_expired' => 'ভারের মেয়াদ শেষ',
         'condition_never_matches' => 'শর্তটা এমন একটা ঘরে, যা ঐ কাজে কখনো আসে না',
         'no_flow' => 'অনুমোদন চাওয়া হয়, অথচ কোনো প্রবাহ নেই',

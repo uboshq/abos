@@ -98,6 +98,7 @@ class RouteAccountController extends Controller implements HasMiddleware
         $customers = Customer::query()
             ->inViewedBranch()
             ->where('location_id', $location->id)
+            ->with(Customer::PLACE)
             ->orderBy('code')
             ->paginate(50)
             ->withQueryString();

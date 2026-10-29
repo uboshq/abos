@@ -795,6 +795,12 @@ final class DirectPurchaseService
             [
                 'type' => Voucher::PAYMENT,
                 'trx_date' => $bill->trx_date,
+                /*
+                 * ⛔ পরিশোধ বিলের শাখায় — উপরের শাখা-বাছাই নয়। RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর
+                 * ২০২৬)। ⓘ বিল গুদামের শাখায় বসে ([[PurchaseBillService::branchForBill()]]); আগে তার টাকা উপরের শাখায় যেত — দেনা
+                 * A-তে, পরিশোধ B-তে, দুই শাখার খাতাই ভুল।
+                 */
+                'branch_id' => $bill->branch_id,
                 'party_type' => 'supplier',
                 'party_id' => $bill->supplier_id,
                 'instrument' => $instrument,
@@ -855,15 +861,8 @@ final class DirectPurchaseService
     /** খাতটা — না থাকলে বোধগম্য বার্তা, নীরব ব্যর্থতা নয়। */
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'deposits' => __('purchase::validation.no_account_for', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor($code);
     }
 
     /**

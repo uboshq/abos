@@ -1,6 +1,10 @@
 @use('App\Core\Support\Ui')
 
-@props(['menu' => []])
+@props([
+    'menu' => [],
+    /** ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২): সাইডবার বারের নিচ থেকে শুরু; বারে গ্রাহকের লোগো, রেলের মাথায় ABOS = হোম (২১ অক্টোবর ২০২৬) */
+    'underBar' => false,
+])
 
 {{--
     সাইডবার — সেকশন ১৫.২ ও ২০.২।
@@ -118,12 +122,23 @@
            Alpine কেবল গুটানো অবস্থাটা সামলায় — অর্থাৎ সে দেরি করলে
            পাতার চেহারা ভাঙে না, শুধু গুটানো থাকলে খুলতে এক পলক লাগে।
        --}}
-       class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
+       {{-- ⭐ পুরো চওড়া বারের নিচে — বারের উচ্চতা বাদ দিয়ে আটকে থাকে, যাতে মেনুর শেষটা পর্দার বাইরে না যায় --}}
+       {{-- ⛔ নিচের স্থির বারের উচ্চতাও বাদ (md থেকে বারটা সবসময় দেখা যায়, [[shell.statusbar]]) — নইলে মেনুর শেষ সারি বারের নিচে
+            চাপা পড়ত (fe, ২২ অক্টোবর ২০২৬, cb/hf-footer-pad) --}}
+       @if ($underBar) style="top: var(--spacing-header); height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar))" data-under-bar @endif
+       {{-- ⛔ z-[25]: sticky নিজেই আলাদা স্তর, তাই ভিতরের "আরও" তালিকা, ভাসমান মেনু আর flyout-এর z-50 কেবল এর ভিতরে খাটত —
+            পাতার আটকানো সারি (টেবিলের মোট, নোঙর-পটি z-20) উপরে আঁকা হত, "আগের মতো করুন" চাপা যেত না (২৪ অক্টোবর ২০২৬, মাপা)।
+            টপবারের (z-30) নিচে, যাতে তার ড্রপডাউন উপরে থাকে। --}}
+       class="relative sticky top-0 z-[25] hidden h-[calc(100dvh-var(--spacing-status-bar))] shrink-0 md:flex
               md:w-(--spacing-sidebar-icon)
               lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
-       :class="$store.sidebar.collapsed
+       {{-- ⓘ `rail` = গুটানো, বা দুই-কলামের টাকার ফর্মে ১৫৩৬-এর নিচে খোলা অথচ ভাসমান — জায়গা দুই ক্ষেত্রেই রেলের
+            ([[sidebar-state.js]]); ভাসমান মেনুর বাইরে চাপ দিলে বন্ধ, মানুষের বাছাই বদলায় না --}}
+       :class="$store.sidebar.rail
            ? 'lg:w-(--spacing-sidebar-icon)! xl:w-(--spacing-sidebar-icon)!'
-           : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'">
+           : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'"
+       :data-menu-floats="$store.sidebar.overlay ? 'open' : null"
+       @click.outside="$store.sidebar.closeOverlay($event)">
 
     <div class="flex min-w-0 flex-1 flex-col">
 
@@ -196,9 +211,14 @@
 
                  ⚠️ শূন্য করা হয়নি: উপরের মন্তব্যের কারণটা এখনো খাটে —
                  ফাঁক না থাকলে টাইলগুলো জোড়া লেগে একটা লম্বা ফিতা হত। --}}
+            {{-- ⭐ রেল নিজে মাপে, যা ধরে না তা "⋯ আরও"-তে — কোনো মডিউল পর্দার বাইরে কাটে না ([[rail-fit.js]]; মালিক, ২৪ অক্টোবর ২০২৬) --}}
+            {{-- ⓘ class আর aria-label আগে, রেলের নিজের ঘরগুলো পরে — "≡"-এর কেন্দ্রের দাবি ([[TheMenuButtonSitsOnTheRailsCentreTest]]) ট্যাগটা
+                 এই ক্রমেই পড়ে (cb-ma-5, ২৫ অক্টোবর ২০২৬); ব্রাউজারের কাছে ক্রমের কোনো মানে নেই --}}
             <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
                         overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
-                 aria-label="{{ __('core.a11y.module_navigation') }}">
+                 aria-label="{{ __('core.a11y.module_navigation') }}"
+                 x-data="railFit" data-rail data-save="{{ route('rail.layout') }}"
+                 data-up-label="{{ __('core.rail.up') }}" data-down-label="{{ __('core.rail.down') }}">
 
                 {{-- ⭐ `A` চিহ্নটা রেলের মাথায় — মালিকের নির্দেশ,
                      ১৩ সেপ্টেম্বর ২০২৬: *"a icon thakbe"*।
@@ -227,6 +247,26 @@
                     $onDashboard = request()->routeIs('dashboard');
                 @endphp
 
+                @if ($underBar)
+                    {{-- ⭐ রেলের মাথায় ABOS-এর চিহ্ন — সেটাই হোমের বোতাম (মালিক, ২১ অক্টোবর ২০২৬: *"customer brand in the bar,
+                         ABOS logo on the rail"*)। বারের বাঁ কোণে এখন গ্রাহকের নিজের লোগো ([[shell.topbar]]), আর পণ্যের চিহ্ন এখানে।
+                         ⛔ আগে এখানে মালিকের নমুনার ⌂ ঘর ছিল — চিহ্নটা তার জায়গা নিল, পাশে আলাদা ⌂ আর নেই: একই গন্তব্যে দুইটা
+                         ঘর মানে প্রতিবার "কোনটা চাপব" ভাবা (এই ফাইলের ৩ সেপ্টেম্বরের নিয়ম)।
+                         ⓘ মডিউলের টাইলের একই মাপ ও একই "এখানে আছি" দাগ; চিহ্নটা সাদা পাতে (`--color-logo-plate`), কারণ সে সাদা
+                         জমিনের জন্য আঁকা — নেভি রেলে বা অন্ধকারে সরাসরি বসালে টিলটা মিলিয়ে যেত। --}}
+                    <a href="{{ route('dashboard') }}" data-rail-home
+                       class="relative flex h-8 w-full items-center justify-center
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
+                       @if ($onDashboard) aria-current="page" @endif
+                       aria-label="ABOS · {{ __('core.a11y.home') }}"
+                       title="{{ __('core.a11y.home') }}">
+                        <span class="grid size-8 place-items-center bg-(--color-logo-plate)" aria-hidden="true"
+                              style="border-radius: var(--rail-tile-radius);
+                                     @if ($onDashboard) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif">
+                            <img src="{{ asset('brand/abos-icon-64.png') }}" alt="" data-rail-abos class="size-[24px] object-contain">
+                        </span>
+                    </a>
+                @else
                 <a href="{{ route('dashboard') }}"
                    @class([
                        'mb-1 grid size-10 shrink-0 place-items-center overflow-hidden rounded-[11px]',
@@ -242,6 +282,7 @@
                     <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
                          aria-hidden="true" class="size-7 object-contain">
                 </a>
+                @endif
 
                 {{-- ⚠️ ড্যাশবোর্ডের টাইলটা এখানে আর নেই — মালিকের সিদ্ধান্ত
                      (৩ সেপ্টেম্বর ২০২৬): *"লোগোই যদি হোমের কাজ করে, তাহলে
@@ -292,9 +333,13 @@
                     থেকে ঠিক করা তালিকার উপর নয় — নাহলে খালি দলের
                     শিরোনাম আঁকা হত।
                 --}}
-                @php $shownSection = null; @endphp
+                @php
+                    $shownSection = null;
+                    // ⭐ রেলের ক্রম এই মানুষের — পিন আর নিজের ক্রম, নইলে খোলা পাতার অনুপাতে ([[MenuBuilder::arranged()]])
+                    $railMenu = app(\App\Core\Services\MenuBuilder::class)->arranged($menu ?? [], auth()->user());
+                @endphp
 
-                @foreach ($menu as $module)
+                @foreach ($railMenu as $module)
                     @php
                         /* ⚠️ `$hereModule`, `$activeModule` নয় — উপরের কারণটা দেখুন।
 
@@ -336,7 +381,8 @@
                             : __('core.nav_section.'.$module['section']);
                     @endphp
 
-                    @if ($opensSection && $sectionLabel && ! $firstInRail)
+                    {{-- ⓘ দলের রেখা কেবল আগের দল-ক্রমে — নিজের বা হিসাব-করা ক্রমে দল মিশে যায় (fe, ২৪ অক্টোবর ২০২৬) --}}
+                    @if ($opensSection && $sectionLabel && ! $firstInRail && ($module['grouped'] ?? true))
                         {{-- ⚠️ `/35`, আগে `/20` ছিল — ৫ সেপ্টেম্বর ২০২৬।
 
                              ⓘ রেলের জমিন এখন অ্যাকসেন্টের `900` শেড, আর
@@ -359,7 +405,7 @@
                              ⚠️ `/60` — পুরো ঘনত্বে দিলে রেখাটা চলতি
                              মডিউলের দাগের মতোই উজ্জ্বল হত, আর চোখ দুইটাকে
                              এক জিনিস ভাবত। ভাগ বোঝানোই এর কাজ। --}}
-                        <div role="separator" aria-label="{{ $sectionLabel }}"
+                        <div role="separator" aria-label="{{ $sectionLabel }}" data-rail-sep="{{ $module['section'] }}"
                              class="my-1 h-0.5 w-8 shrink-0 rounded-full bg-(--rail-rule)"></div>
                     @endif
 
@@ -407,7 +453,10 @@
                         অপেক্ষা না করে ক্লিক করে দেখে নেয় — আর সেটাই
                         সমস্যাটা ফিরিয়ে আনে।
                     --}}
-                    <div class="group/rail relative w-full">
+                    <div class="group/rail relative w-full"
+                         data-rail-module="{{ $module['code'] }}" data-label="{{ $module['label'] }}"
+                         data-href="{{ $first['url'] ?? '' }}" data-section="{{ $module['section'] }}"
+                         data-pinned="{{ ($module['pinned'] ?? false) ? '1' : '0' }}">
                         <a @if ($first) href="{{ $first['url'] }}" @endif
                            {{-- ⓘ ব্র্যান্ডের টাইলের সাথে **একই চিহ্ন** — বাঁ
                                 কিনারায় মোটা সোনালি দাগ, ভিতরে পাতলা রিং।
@@ -428,9 +477,14 @@
                                     ⚠️ চিহ্নটা এখানে নেই, ভেতরের টাইলে —
                                     নিচের মন্তব্য দেখুন। --}}
                                'relative flex h-8 w-full items-center justify-center transition-transform',
+                               {{-- ⭐ কি-বোর্ডে কোথায় আছি দেখা যায় — WCAG 2.4.7/2.4.11 (ওয়েবের মান ধাপ ২, ভুল ৯) --}}
+                               'rounded-(--radius-field) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)',
                                'hover:-translate-y-px' => ! $isActive,
                            ])
+                           {{-- ⓘ পাতা নেই এমন মডিউলও Tab-এ ধরা যায় — তার তালিকাটা focus-within-এ খোলে --}}
+                           @unless ($first) tabindex="0" @endunless
                            @if ($isActive) aria-current="true" @endif
+                           aria-label="{{ $module['label'] }}"
                            title="{{ $module['label'] }}">
 
                             {{-- টাইলের রং, কোণ ও আইকনের রং — তিনটাই টোকেনে।
@@ -541,6 +595,96 @@
                         </div>
                     </div>
                 @endforeach
+
+                {{-- ⓘ রেলের সাজ রাখার চিহ্ন — এখানে কোনো ফর্ম নেই, তাই নিজের --}}
+                <input type="hidden" value="{{ csrf_token() }}" data-rail-token>
+
+                {{-- ⭐ "⋯ আরও" — রেলে যা ধরে না (WAI-ARIA menu button): বোতামে ↓/Enter খোলে, তালিকায় ↑ ↓ Home End, Esc বন্ধ করে
+                     ফোকাস বোতামে ফেরায়; খোঁজার ঘর, মডিউলের রঙের দাগ আর নাম। দেখায় কেবল কিছু সরলে ([[rail-fit.js]]) --}}
+                {{-- ⓘ বোতামের নিজের উচ্চতা লেখা নেই — ভেতরের size-8 চিহ্নটাই মাপ (টাইলের সমান ৪০px); হাতে লেখা উচ্চতা ঘন থিমে একা পুরনো
+                     মাপে থাকত ([[EveryScreenObeysTheThemeTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬) --}}
+                <div data-rail-more class="relative w-full">
+                    <button type="button" x-ref="moreButton" data-rail-more-button
+                            class="relative flex w-full items-center justify-center rounded-(--radius-field)
+                                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
+                            aria-haspopup="menu" aria-controls="rail-more-menu"
+                            :aria-expanded="moreOpen ? 'true' : 'false'"
+                            aria-label="{{ __('core.rail.more') }}" title="{{ __('core.rail.more') }}"
+                            @click="toggleMore()" @keydown="buttonKey($event)">
+                        <span class="grid size-8 place-items-center text-lg font-bold leading-none"
+                              style="background: var(--rail-tile-bg); border-radius: var(--rail-tile-radius); color: var(--rail-tile-ink)"
+                              aria-hidden="true">⋯</span>
+                    </button>
+
+                    <div id="rail-more-menu" role="menu" aria-label="{{ __('core.rail.more') }}" data-rail-more-menu
+                         x-show="moreOpen" x-cloak @click.outside="clickAway()" @keydown="menuKey($event)"
+                         class="absolute start-full bottom-0 z-50 ms-1 w-72 rounded-(--radius-card) border border-(--color-border)
+                                bg-(--color-surface-card) py-1.5 shadow-lg">
+                        <div class="px-2 pb-1.5">
+                            <input type="search" x-ref="moreSearch" x-model="query" autocomplete="off"
+                                   aria-label="{{ __('core.rail.search') }}" placeholder="{{ __('core.rail.search') }}"
+                                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) px-2 text-sm">
+                        </div>
+                        <div class="max-h-[60vh] overflow-y-auto">
+                            <template x-for="row in shownMore" :key="row.code">
+                                <a role="menuitem" data-more-item :href="row.href" :data-code="row.code"
+                                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-(--color-ink-body)
+                                          hover:bg-(--color-surface-hover) focus:bg-(--color-surface-hover) focus:outline-none">
+                                    <span class="size-2.5 shrink-0 rounded-full" :style="row.dotStyle" aria-hidden="true"></span>
+                                    {{-- ⓘ ভাঙে, কাটে না — "ব্যাকআপ ও পুনরুদ্ধার"-এর মতো লম্বা নামও পুরো --}}
+                                    <span class="min-w-0" x-text="row.label"></span>
+                                </a>
+                            </template>
+                            <p class="px-3 py-1.5 text-sm text-(--color-ink-muted)" x-show="noneFound" x-cloak>{{ __('core.rail.none') }}</p>
+                        </div>
+                        {{-- ⭐ নিজের সাজ — পিন আর ক্রম; "আগের মতো করুন" নিজের ক্রম মুছে শুরুর ক্রমে ফেরায় (fe, ২৪ অক্টোবর ২০২৬) --}}
+                        <div class="mt-1 flex gap-1 border-t border-(--color-border) px-2 pt-1.5">
+                            <button type="button" role="menuitem" data-more-item data-rail-arrange
+                                    class="flex-1 rounded-(--radius-field) px-2 py-1 text-start text-sm hover:bg-(--color-surface-hover)"
+                                    @click="openArrange()">{{ __('core.rail.arrange') }}</button>
+                            <button type="button" role="menuitem" data-more-item data-rail-reset
+                                    class="rounded-(--radius-field) px-2 py-1 text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)"
+                                    @click="resetLayout()">{{ __('core.rail.reset') }}</button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ⭐ রেল সাজানো — পিন (রেলে সবসময়), ক্রম টেনে বা ↑ ↓ বোতামে (পর্দা-পাঠকেও); রাখলে নিজের সারিতে, অন্য যন্ত্রেও এক --}}
+                <dialog x-ref="arrange" data-rail-arrange-dialog aria-labelledby="rail-arrange-title"
+                        class="m-auto w-full max-w-md rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-0">
+                    <div class="grid gap-3 p-4">
+                        <h2 id="rail-arrange-title" class="font-semibold">{{ __('core.rail.arrange_title') }}</h2>
+                        <p class="text-xs text-(--color-ink-muted)">{{ __('core.rail.arrange_hint') }}</p>
+                        <ol class="max-h-[60vh] overflow-y-auto" data-rail-arrange-list>
+                            <template x-for="(row, i) in arrangeRows" :key="row.code">
+                                <li class="flex items-center gap-2 rounded-(--radius-field) px-1 py-1 hover:bg-(--color-surface-hover)"
+                                    draggable="true" :data-code="row.code"
+                                    @dragstart="dragStart(i)" @dragover.prevent="dragOver(i)" @drop.prevent="dragDrop()">
+                                    <span class="cursor-grab text-(--color-ink-muted)" aria-hidden="true">⠿</span>
+                                    <span class="size-2.5 shrink-0 rounded-full" :style="row.dotStyle" aria-hidden="true"></span>
+                                    <span class="min-w-0 flex-1" x-text="row.label"></span>
+                                    <label class="flex items-center gap-1 text-xs">
+                                        <input type="checkbox" :checked="row.pinned" @change="togglePin(i)" data-rail-pin>
+                                        <span>{{ __('core.rail.pin') }}</span>
+                                    </label>
+                                    <button type="button" class="rounded px-1.5 text-sm hover:bg-(--color-surface-selected)"
+                                            :aria-label="moveUpLabel(row)" @click="moveUp(i)" data-rail-up>↑</button>
+                                    <button type="button" class="rounded px-1.5 text-sm hover:bg-(--color-surface-selected)"
+                                            :aria-label="moveDownLabel(row)" @click="moveDown(i)" data-rail-down>↓</button>
+                                </li>
+                            </template>
+                        </ol>
+                        <div class="flex justify-end gap-2">
+                            {{-- ⓘ সাধারণ বোতাম, x-ui.button নয় — ওর প্রধান রূপ `data-page-primary` বসায়, আর রেলের ঘর পাতার প্রধান কাজ নয় --}}
+                            <button type="button" x-on:click="closeArrange()" data-rail-cancel
+                                    class="inline-flex min-h-(--spacing-touch) items-center justify-center rounded-(--radius-field) border
+                                           border-(--color-border) bg-(--color-surface-card) px-4 text-sm font-medium hover:bg-(--color-surface-hover)">{{ __('core.rail.cancel') }}</button>
+                            <button type="button" x-on:click="saveArrange()" data-rail-save
+                                    class="inline-flex min-h-(--spacing-touch) items-center justify-center rounded-(--radius-field)
+                                           bg-(--color-brand-500) px-4 text-sm font-medium text-(--color-brand-ink) hover:bg-(--color-brand-600)">{{ __('core.rail.save') }}</button>
+                        </div>
+                    </div>
+                </dialog>
             </nav>
 
             {{-- তালিকা — শুধু চলতি মডিউলের পাতা।
@@ -558,8 +702,10 @@
                  নাম ধরে খুঁজলে গার্ডটা হয় ভঙ্গুর হত নয় সবসময় সবুজ। --}}
             <div data-site-map
                  @if ($activeModule) data-active-module="{{ $activeModule['code'] }}" @endif
-                 class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
+                 class="menu-panel hidden min-h-0 min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
+                 {{-- ⓘ ভাসমান: রেলের পাশে পাতার উপরে, পাতা ঠেলে না ([[sidebar-state.js]] overlay) --}}
+                 :class="$store.sidebar.overlay ? 'absolute inset-y-0 start-(--spacing-sidebar-icon) z-40 w-(--spacing-sidebar) shadow-xl' : ''"
                  x-show="! $store.sidebar.collapsed">
 
                 <x-shell.chrome region="rail-head" :menu="$menu ?? []" />
@@ -591,7 +737,9 @@
                         $itemCount = collect($activeModule['groups'])->flatten(1)->count();
                     @endphp
 
-                    @if ($itemCount >= 10)
+                    {{-- ⭐ পুরো চওড়া বারের নিচে এই ঘর নেই — SAP Fiori: একটাই খোঁজা (ওয়েবের মান ধাপ ২, ভুল ২)। পাতার নাম আধা মনে
+                         থাকলেও বারের খোঁজাতেই মেলে ([[SearchController::pagesMatching()]]), তাই এই কাজ হারায়নি। --}}
+                    @if ($itemCount >= 10 && ! $underBar)
                         <label class="relative shrink-0 px-2 pt-2.5 pb-1">
                             <span class="sr-only">
                                 {{ __('core.a11y.filter_this_menu', ['module' => $activeModule['label']]) }}
@@ -631,7 +779,9 @@
                         {{ __('core.empty.no_results') }}
                     </p>
 
-                    <nav class="flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
+                    {{-- ⛔ `min-h-0` — না থাকলে flex-কলামে তালিকাটা নিজের পুরো উচ্চতা নিত, ভেতরে স্ক্রল না করে বাক্সের বাইরে উপচে পড়ত:
+                         পাতা অকারণে লম্বা হত (রসিদে ১,৭০০px), স্টিকি সাইডবার পাতার সাথে সরে যেত আর মেনু নিচের বারের তলায় যেত (fe, ২২ অক্টোবর ২০২৬) --}}
+                    <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @foreach ($activeModule['groups'] as $group => $items)
@@ -654,7 +804,9 @@
                                    ])
                                    @if (! $item['url']) aria-disabled="true" @endif
                                    @if ($item['active']) aria-current="page" @endif>
-                                    <span class="min-w-0 truncate">{{ $item['label'] }}</span>
+                                    {{-- ⭐ নাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3 navigation: লেবেল কখনো কাটা নয়; fe-র ছবি-যাচাই,
+                                         ২০ অক্টোবর ২০২৬: "মাসওয়ারি টাকা আসা-..."); সারির উচ্চতা ন্যূনতম, তাই দুই লাইনে নিজে বাড়ে --}}
+                                    <span class="line-clamp-2 min-w-0 py-1 leading-snug" title="{{ $item['label'] }}">{{ $item['label'] }}</span>
 
                                     {{-- "শীঘ্রই" — ঘড়ি, লেখা নয়।
 

@@ -206,4 +206,26 @@ return [
         fn (string $email) => mb_strtolower(trim($email)),
         explode(',', (string) env('ABOS_OWNER_EMAILS', '')),
     ))),
+
+    /*
+     * ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়" (ec, ১৯ অক্টোবর ২০২৬)।
+     *
+     * `grace_until` — ISO তারিখ-সময় (যেমন `2026-10-21T18:00:00+06:00`)। তার আগ পর্যন্ত `_branch` ছাপ ছাড়া জমা
+     * (ডেপ্লয়ের আগে খোলা পাতা) একবার যায়, সতর্কতা দেখায় আর লগে লেখে; তার পরে ছাপ ছাড়া জমা থামে। ⓘ খালি = কড়া।
+     * ডেপ্লয়ের সময় `.env`-এ `ABOS_BRANCH_PIN_GRACE_UNTIL` = ডেপ্লয় + ২৪ ঘণ্টা, তারপর `config:cache`।
+     */
+    'branch_pin' => [
+        'grace_until' => (string) env('ABOS_BRANCH_PIN_GRACE_UNTIL', ''),
+    ],
+
+    /*
+     * ⭐ ফাইল তোলার সীমা — সাধারণত খালি, তখন PHP-র ini-ই সত্য ([[UploadLimit]]; fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল পরীক্ষা বা বিশেষ সার্ভারের জন্য: ini-র মতো লেখা ("8M")। চলমান PHP-তে upload-এর ini নামানো যায় না, তাই
+     * পরীক্ষা লাইভের ৮ MB-র মতো ছোট সীমা এখানেই বসায়। ⛔ ini-র চেয়ে বড় লিখলে লাভ নেই — PHP তার আগেই POST ফেলে দেয়।
+     */
+    'uploads' => [
+        'post_max_size' => env('ABOS_POST_MAX_SIZE'),
+        'upload_max_filesize' => env('ABOS_UPLOAD_MAX_FILESIZE'),
+    ],
 ];

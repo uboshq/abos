@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
@@ -33,6 +34,8 @@ class Payment extends Model implements Drillable
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;
+    use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
+    use OpensInReach; // ⭐ নোটিফিকেশন/সইয়ের লিংক নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬)
     use ScopedToUserBranch;
     use SoftDeletes;
 
@@ -48,6 +51,10 @@ class Payment extends Model implements Drillable
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'account_id', 'trx_date', 'amount',
         'instrument', 'instrument_no', 'instrument_date',
+        // ⭐ পদ্ধতির নিজের ঘর আর চার্জ — [[components.money.method]] (মালিক, ২১ অক্টোবর ২০২৬)
+        'transfer_mode_id', 'value_date', 'deposit_slip_no', 'from_bank', 'charge_amount',
+        // ⭐ উৎসে কর আর ভ্যাট — পরিশোধে কাটা হলে ([[PaymentWithholding]])
+        'ait_amount', 'vds_amount', 'withholding_reason',
 
         /*
          * ⓘ চেকে দেওয়া হলে কোন চেকটা — বাকি সব পরিশোধে `null`।
@@ -71,6 +78,10 @@ class Payment extends Model implements Drillable
         return [
             'trx_date' => 'date',
             'instrument_date' => 'date',
+            'value_date' => 'date',
+            'charge_amount' => 'decimal:4',
+            'ait_amount' => 'decimal:4',
+            'vds_amount' => 'decimal:4',
             'cancelled_at' => 'datetime',
             'amount' => 'decimal:4',
         ];

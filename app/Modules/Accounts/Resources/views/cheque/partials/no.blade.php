@@ -1,4 +1,5 @@
-{{ $cheque->cheque_no }}
+{{-- ⭐ চেক নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে কন্ট্রোলার, পাতার একবারে --}}
+<x-ui.party-cell :no="$cheque->cheque_no" :party="$party ?? null" />
 <span class="block text-2xs text-(--color-ink-muted)">
     {{ __('accounts::field.cheque_'.$cheque->direction) }}
 </span>

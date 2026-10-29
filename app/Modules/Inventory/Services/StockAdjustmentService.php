@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Engines\Posting\PostingEngine;
-use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Batch;
@@ -16,7 +15,6 @@ use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 /**
  * গণনার পর সমন্বয় — তাক, দাম আর খাতা, তিনটাই একসাথে।
@@ -549,17 +547,9 @@ final class StockAdjustmentService
         );
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function account(string $code): Account
     {
-        $account = Account::query()->postable()
-            ->where('code', $code)
-            ->where('company_id', CompanyContext::id())
-            ->first();
-
-        if ($account === null) {
-            throw new RuntimeException("The standard chart is missing account {$code}.");
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 }

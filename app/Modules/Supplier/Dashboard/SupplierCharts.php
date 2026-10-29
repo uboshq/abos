@@ -103,6 +103,8 @@ final class SupplierCharts
             points: $points,
             firstLabel: __('supplier::dashboard.trend_bought'),
             secondLabel: __('supplier::dashboard.trend_returned'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             chart: 'area',
             range: DateRange::label($start, $today),
         )];

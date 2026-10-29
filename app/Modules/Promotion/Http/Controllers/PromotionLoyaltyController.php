@@ -90,6 +90,8 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
         $rows = $this->visibleCustomers($request->user())
             ->search($request->query('q'))
             ->whereIn('id', $holders)
+            // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; গোটা পাতার এক প্রশ্নে ([[Customer::PLACE]])
+            ->with(Customer::PLACE)
             ->orderBy('code')
             ->paginate(50)
             ->withQueryString();
@@ -145,7 +147,8 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
 
         return view('promotion::loyalty.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'customer' => $customer,
+            // ⭐ মাথায় "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬
+            'customer' => $customer->loadMissing(Customer::PLACE),
             'entries' => $entries,
             'running' => $running,
             'points' => $points,

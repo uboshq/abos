@@ -67,8 +67,43 @@ final class SupplierService
     /** ⓘ শুরুর দেনা বসানোর চাবি — ছাঁচে কেবল হিসাবরক্ষকের ([[assertMayOpenABalance()]]); গ্রাহকের `customer.opening_balance`-এর জোড়া */
     public const OPENING_KEY = 'supplier.opening_balance';
 
+    /**
+     * ⛔ উৎসে কর বা ভ্যাটের হার হাতে বদলালে কারণ লাগে, আর নিরীক্ষায় থাকে আগে-পরে-কারণ (নকশা #২৫; fe, ২১ অক্টোবর ২০২৬)।
+     * ⓘ হার বদলালে পরের প্রতিটা পরিশোধে কাটা বদলায় — সরকারের পাওনা কম বা বেশি কাটার দায় যাঁর, নাম আর কারণ তাঁর।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertRateChangeHasAReason(Supplier $supplier, array &$data): void
+    {
+        $changed = [];
+        foreach (['ait_rate', 'vds_rate'] as $field) {
+            if (! array_key_exists($field, $data)) {
+                continue;
+            }
+            $was = $supplier->{$field} === null ? null : bcadd((string) $supplier->{$field}, '0', 4);
+            $now = blank($data[$field]) ? null : bcadd((string) $data[$field], '0', 4);
+            if ($was !== $now) {
+                $changed[] = $field.': '.($was ?? '—').' → '.($now ?? '—');
+            }
+        }
+
+        $reason = trim((string) ($data['rate_reason'] ?? ''));
+        unset($data['rate_reason']);
+
+        if ($changed === []) {
+            return;
+        }
+
+        if ($reason === '') {
+            throw ValidationException::withMessages(['rate_reason' => __('supplier::validation.rate_needs_reason')]);
+        }
+
+        app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($supplier, 'withholding_rate', implode('; ', $changed).' — '.$reason);
+    }
+
     public function create(array $data): Supplier
     {
+        unset($data['rate_reason']);
         $this->assertMayOpenABalance($data);
         $this->assertBanglaNameIfRequired($data);
         $this->assertBinIfRequired($data);
@@ -149,6 +184,7 @@ final class SupplierService
      */
     public function update(Supplier $supplier, array $data): Supplier
     {
+        $this->assertRateChangeHasAReason($supplier, $data);
         $this->assertBanglaNameIfRequired($data, $supplier);
         $this->assertBinIfRequired($data, $supplier);
         $this->assertNotADuplicate($data, $supplier->id);

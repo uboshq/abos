@@ -77,7 +77,7 @@ return [
     'backdated_this_month_hint' => 'Written this month but dated before the day they were written',
     'tills_below_zero' => 'Tills below zero',
     'tills_below_zero_hint' => 'Cash tills holding less than nothing — cash in hand cannot',
-    'awaiting_signature' => 'Vouchers awaiting signature',
+    'awaiting_signature' => 'Vouchers awaiting approval',
     'awaiting_signature_hint' => 'They reach the books only once approved',
     'current_position' => 'Current position — to date',
     'current_assets' => 'Current assets',
@@ -93,4 +93,7 @@ return [
     'total_expense' => 'Total expense',
     'net_profit' => 'Net profit',
     'income_expense_profit_hint' => 'Net profit = total income − total expense; negative means a loss',
+    // ⭐ টাকার কার্ডের আজকের ঘর (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)
+    'today_in' => 'In today',
+    'today_out' => 'Out today',
 ];

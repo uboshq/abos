@@ -94,7 +94,8 @@ final class HandLoanService
          */
         return HandLoanAccount::query()->create([
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
+            // ⛔ যে বাক্স দিয়ে টাকা নড়বে তার শাখায় — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            'branch_id' => $this->signature->branchFor([$data['money_account_id'] ?? null], [['person', $personId]]),
             'person_id' => $personId,
             'partner_id' => $data['partner_id'] ?? null,
             'partner_type' => ($data['partner_id'] ?? null) !== null
@@ -594,19 +595,10 @@ final class HandLoanService
      * কাছে ধার নিলে ব্যালেন্সটা ঋণাত্মক হয়ে ওই খাতের ভেতরেই বসে —
      * ঠিক যেভাবে অগ্রিম দেওয়া গ্রাহক প্রাপ্য হিসাবে ঋণাত্মক বসেন।
      */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function head(): Account
     {
-        $head = StandardChart::find(StandardChart::HAND_LOAN);
-
-        if ($head === null) {
-            throw ValidationException::withMessages([
-                'account_id' => __('finance::validation.chart_head_missing', [
-                    'code' => StandardChart::HAND_LOAN,
-                ]),
-            ]);
-        }
-
-        return $head;
+        return StandardChart::accountFor(StandardChart::HAND_LOAN);
     }
 
     /**

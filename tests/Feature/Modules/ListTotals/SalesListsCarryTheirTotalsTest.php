@@ -41,7 +41,7 @@ final class SalesListsCarryTheirTotalsTest extends TestCase
             'sales.order.index' => ['sal_orders', 'total', ['customer_id' => $customer], __('sales::field.total')],
             'sales.order.track' => ['sal_orders', 'total', ['customer_id' => $customer], __('sales::field.total')],
             'sales.return.index' => ['sal_returns', 'total', ['customer_id' => $customer, 'warehouse_id' => $warehouse], __('sales::field.total')],
-            'sales.collection.index' => ['sal_collections', 'amount', ['customer_id' => $customer, 'account_id' => $account], __('core.list.page_total')],
+            'sales.collection.index' => ['sal_collections', 'amount', ['customer_id' => $customer, 'account_id' => $account], __('sales::collection_form.list_posted')],
         ] as $list => [$table, $column, $extra, $label]) {
             if ($this->dbCount($table, 'ZQG') === 0) {
                 $this->papers($table, 'ZQG', 51, [$column => '100', ...$extra]);

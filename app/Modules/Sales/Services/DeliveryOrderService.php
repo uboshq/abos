@@ -70,16 +70,19 @@ final class DeliveryOrderService
         $orderId = $this->salesOrderFor($data['sales_order_id'] ?? null, $customerId);
 
         return DB::transaction(function () use ($data, $lines, $by, $customerId, $orderId) {
+            $branchId = $this->branchFor($data, $by, $customerId);
+
             $order = DeliveryOrder::query()->create([
-                'document_no' => $this->numbers->next('DO'),
+                // ⛔ নম্বরও DO-র শাখার সিরিজে, উপরের শাখার নয় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+                'document_no' => $this->numbers->next('DO', $branchId),
                 'customer_id' => $customerId,
                 'sales_order_id' => $orderId,
                 /*
                  * ⛔ শাখা ছাড়া DO নয় — অডিট ⛔১২ (সমন্বয়ক, ৬ অক্টোবর ২০২৬): আগে ঘরটাই লেখা হত না, তাই প্রতিটা DO শাখাহীন — শাখার
                  * তালিকা, হেডারের শাখা-ছাঁকনি আর শাখার মাল যাচাই কোনোটাই একে চিনত না। ⓘ ডিলার নিজে লিখলে তাঁর নিজের শাখা;
-                 * কর্মী লিখলে যে শাখা দেখছেন ([[SalesOrderService]]-এর মতো), "সব শাখা" দেখলে গ্রাহকের শাখা।
+                 * কর্মী লিখলেও গ্রাহকের শাখা ([[branchFor()]]); গ্রাহকের শাখা না থাকলে যে শাখা দেখছেন।
                  */
-                'branch_id' => $this->branchFor($data, $by, $customerId),
+                'branch_id' => $branchId,
                 'warehouse_id' => $data['warehouse_id'] ?? null,
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'deliver_on' => $data['deliver_on'] ?? null,
@@ -95,13 +98,19 @@ final class DeliveryOrderService
         });
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * ⛔ গ্রাহকের শাখা উপরের শাখা-বাছাইয়ের আগে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)। ⓘ আগে
+     * কর্মীর DO উপরের শাখা নিত: A-র গ্রাহকের DO B-তে বসত, B-র তালিকায় আর B-র মালের যাচাইয়ে। গ্রাহকের শাখা না থাকলে আগের মতো।
+     *
+     * @param  array<string, mixed>  $data
+     */
     private function branchFor(array $data, User|Customer $by, int $customerId): ?int
     {
-        $customerBranch = Customer::query()->whereKey($customerId)->value('branch_id');
+        // ⓘ গ্লোবাল স্কোপ ছাড়া, কোম্পানি ধরে — লেখক যে শাখা দেখছেন তার বাইরের গ্রাহকেরও আসল শাখা চাই ([[PartyRegistry::branchesOf()]])
+        $customerBranch = app(\App\Core\Services\PartyRegistry::class)->branchesOf([['customer', $customerId]])['customer:'.$customerId] ?? null;
         $chosen = $by instanceof Customer
             ? $customerBranch
-            : ($data['branch_id'] ?? \App\Core\Support\CompanyContext::branchId() ?? $customerBranch);
+            : ($data['branch_id'] ?? $customerBranch ?? \App\Core\Support\CompanyContext::branchId());
 
         return $chosen === null ? null : (int) $chosen;
     }

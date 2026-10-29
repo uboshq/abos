@@ -43,7 +43,8 @@ final class CollectionDueReport
             query: fn (array $f) => self::query($f),
             columns: [
                 ['key' => 'customer_code', 'label' => 'sales::due.code', 'type' => ReportColumn::TEXT, 'width' => '7rem'],
-                ['key' => 'customer_name', 'label' => 'sales::due.customer', 'type' => ReportColumn::TEXT],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::due.customer', 'type' => ReportColumn::TEXT, 'place' => ['customer', 'customer_id']],
                 ['key' => 'overdue', 'label' => 'sales::due.overdue', 'type' => ReportColumn::MONEY],
                 ['key' => 'due_today', 'label' => 'sales::due.today', 'type' => ReportColumn::MONEY],
                 ['key' => 'due_week', 'label' => 'sales::due.week', 'type' => ReportColumn::MONEY],
@@ -70,7 +71,7 @@ final class CollectionDueReport
                 ->tap(ReportEngine::dealerWall($f, 'sal_invoices.customer_id'))
             ->when($f['customer_id'] ?? null, fn ($w, $id) => $w->where('sal_invoices.customer_id', (int) $id));
 
-        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total)';
+        $due = SalesInvoice::dueSql('i');
         $on = 'COALESCE(i.due_on, i.trx_date)';
 
         /*

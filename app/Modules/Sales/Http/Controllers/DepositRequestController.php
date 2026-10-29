@@ -64,7 +64,7 @@ class DepositRequestController extends Controller implements HasMiddleware
 
         return view('sales::claim.request', [
             'menu' => $this->menu->forUser($request->user()),
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'banks' => $this->banks(),
             'picked' => $customer?->id,
             'openBills' => $customer === null ? null : $this->claims->openBills($customer),

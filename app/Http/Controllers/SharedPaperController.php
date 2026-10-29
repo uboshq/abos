@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Concerns\OpensInReach;
 use App\Core\Services\PaperTrail;
 use App\Models\DocumentShare;
 use Illuminate\Database\Eloquent\Model;
@@ -181,6 +182,27 @@ class SharedPaperController extends Controller
          */
         $router = app(Router::class);
         $router->substituteBindings($route->bind($target));
+
+        /*
+         * ⛔ নাগালে-খোলা কাগজ (ভাউচার, [[OpensInReach]]) নিজের রুট-বাঁধনে লগইন-করা মানুষের নাগাল দেখে —
+         * লিংকে লগইন নেই, তাই সেখানে উত্তর হতো "নেই" আর প্রতিটা শেয়ার করা রসিদ 404 (২০ অক্টোবর ২০২৬, a5 ধরেছে)।
+         * ⓘ লিংকের দেয়াল মাপা হয়েছে বানানোর সময়; এখানে কাগজটা আইডি ধরে নিজেই বসানো হয়, শাখা না দেখে —
+         * OpensInReach-এ লগইন-ছাড়া কোনো ছাড় নেই, ছাড়টা কেবল এই লিংকের পথে, আর নিচে আইডি আবার মেলানো হয়।
+         */
+        $first = (string) array_key_first($documentParams);
+        // ⓘ ধরনটা লিংকের সারির ছোট নাম ('voucher'), মডেলের নাম নয় — তাই মডেল নেওয়া হয় রুটের নিজের স্বাক্ষর থেকে
+        $class = null;
+        foreach ($route->signatureParameters(['subClass' => Model::class]) as $parameter) {
+            if ($parameter->getName() === $first) {
+                $class = $parameter->getType()?->getName();
+            }
+        }
+
+        if (is_string($class) && class_exists($class) && in_array(OpensInReach::class, class_uses_recursive($class), true)) {
+            $route->setParameter($first, $class::acrossBranches()->whereKey((int) $share->document_id)->first()
+                ?? abort(Response::HTTP_NOT_FOUND));
+        }
+
         $router->substituteImplicitBindings($route);
 
         /*

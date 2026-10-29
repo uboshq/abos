@@ -37,7 +37,7 @@ async function mount (html) {
     return host
 }
 
-/** পর্দার মতোই: উপরে টাকার খাত, নিচে মাধ্যমের চিপ আর তার ঘর */
+/** পর্দার মতোই: উপরে টাকার খাত, নিচে মাধ্যমের চিপ আর তার ঘর — ২২ অক্টোবর ২০২৬ থেকে ভাউচারও টাকার বাক্স ([[moneyMethod]]) ব্যবহার করে, পুরনো moneyMovement সরানো */
 const form = (config) => `
     <form>
         <input name="amount" value="1000">
@@ -47,7 +47,7 @@ const form = (config) => `
             <option value="12" data-kind="bank">Dutch-Bangla</option>
             <option value="13" data-kind="mfs">bKash</option>
         </select>
-        <div x-data="moneyMovement(${config})">
+        <div x-data="moneyMethod(${config})">
             <input type="radio" name="instrument" value="cash" x-model="method">
             <input type="radio" name="instrument" value="mfs" x-model="method">
             <input type="radio" name="instrument" value="transfer" x-model="method">
@@ -57,11 +57,24 @@ const form = (config) => `
         </div>
     </form>`
 
+/*
+ * ⛔ x-show দেখায় এক ফ্রেম পরে — Alpine দেখানোটা পিছিয়ে দেয় (`_x_toggleAndCascadeWithTransitions`: পাতা দৃশ্যমান হলে
+ * requestAnimationFrame, নইলে setTimeout), লুকানো তৎক্ষণাৎ। ⓘ তাই কেবল Alpine.nextTick()-এর পরে "দেখা যায়" মাপলে দাবি সময়ের
+ * উপর নির্ভর করত: একা চালালে প্রতিবার লাল, পুরো suite-এ কখনো সবুজ (fe/a6, ২৪ অক্টোবর ২০২৬: money-method.test.js:112)।
+ * ⭐ দেখার আগে টিক, একটা টাইমার আর একটা ফ্রেম — দুই পথই ঢাকা।
+ */
+async function painted () {
+    await Alpine.nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    await new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(() => r()))
+    await Alpine.nextTick()
+}
+
 async function choose (host, value) {
     const select = host.querySelector('select')
     select.value = value
     select.dispatchEvent(new Event('change', { bubbles: true }))
-    await Alpine.nextTick()
+    await painted()
 }
 
 const picked = host => host.querySelector('input[name="instrument"]:checked')?.value

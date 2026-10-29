@@ -221,6 +221,8 @@ final class InventoryDashboard implements ProvidesDashboard
                         ),
                         firstLabel: __('inventory::overview.moved_in'),
                         secondLabel: __('inventory::overview.moved_out'),
+                        // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+                        money: true,
                         // ⓘ ঢোকা আর বেরোনোর ধারা — ভরা রেখা (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
                         chart: 'area',
                         range: $flowRange,

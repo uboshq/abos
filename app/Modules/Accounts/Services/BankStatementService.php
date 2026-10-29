@@ -181,6 +181,12 @@ final class BankStatementService
      * আর ভুল জোড়া বসলে সেটা কেউ কোনোদিন খুঁজে পেত না — তার চেয়ে
      * মানুষটাকে দুইটাই দেখানো ভালো।
      *
+     * ⭐ লেনদেন নম্বর আগে (TrxID; cb-ma-4, ২৫ অক্টোবর ২০২৬ — নকশার "যা পরের ধাপে": ব্যাংক স্টেটমেন্টের TrxID মেলানো): ব্যাংকের সারির
+     * রেফারেন্স কোনো প্রার্থী ভাউচারের লেনদেন নম্বরের হুবহু হলে, আর এমন ঠিক একটা হলে, সেটাই জোড়া — একই দিনে একই অঙ্কের দুই
+     * পরিশোধও তাদের নিজের নম্বরে আলাদা হয় (SAP-এর bank statement "interpretation algorithm": reference আগে, অঙ্ক পরে)।
+     * ⓘ বাকি তিন শর্ত (টাকা, দিক, সাত দিন) তখনও লাগে — নম্বর মিলল কিন্তু অঙ্ক নয়, মানে কিছু একটা ভুল, তাই মানুষের সামনে।
+     * ⓘ নম্বরে না মিললে আগের মতোই অঙ্ক-দিন-দিক দিয়ে, একাধিক হলে কোনোটা নয়।
+     *
      * @return int কয়টা সারি মিলল
      */
     public function matchAgainstBooks(Account $account, string $upto): int
@@ -193,7 +199,7 @@ final class BankStatementService
              * ব্যাংক যখন টাকা **নেয়** (ব্যাংকের ডেবিট), আমাদের খাতায়
              * ব্যাংক খাতটা **ক্রেডিট** হয় — টাকা বেরিয়ে গেছে।
              */
-            $ours = VoucherLine::query()
+            $candidates = VoucherLine::query()
                 ->where('account_id', $account->id)
                 ->whereNull('reconciliation_id')
                 /*
@@ -211,9 +217,15 @@ final class BankStatementService
                     ]))
                 ->when($line->bankTookMoney(),
                     fn ($q) => $q->where('credit', $line->debit)->where('debit', 0),
-                    fn ($q) => $q->where('debit', $line->credit)->where('credit', 0))
+                    fn ($q) => $q->where('debit', $line->credit)->where('credit', 0));
+
+            $reference = trim((string) $line->reference);
+            $byNumber = $reference === '' ? collect() : (clone $candidates)
+                ->whereHas('voucher', fn ($q) => $q->where('instrument_no', $reference))
                 ->limit(2)
                 ->get();
+
+            $ours = $byNumber->count() === 1 ? $byNumber : $candidates->limit(2)->get();
 
             // ⛔ শূন্য বা একাধিক — দুইটাই "জানি না", আর জানি না মানে ছোঁব না
             if ($ours->count() !== 1) {

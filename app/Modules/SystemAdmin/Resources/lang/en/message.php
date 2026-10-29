@@ -47,7 +47,9 @@ return [
     'scope_house_note' => 'Warehouse limit. Tick nothing and they see stock in every warehouse. Tick some and they see only those.',
     'scope_kind_note' => 'Which :kind they may see. Tick nothing and they see them all.',
     'unsaved' => 'unsaved changes',
-    'logo_hint' => 'PNG, JPG or WebP, up to 2 MB. This is what prints on invoices and bills, so use a clear, wide image rather than a tall one.',
+    'logo_hint' => 'PNG, JPG, WebP or SVG (any script inside an SVG is stripped; pictures are shrunk for you). This shows at the left of the top bar; the bill logo comes from the print settings (if none is set there, this one is printed). Use a clear, wide image rather than a tall one.',
+    'logo_limit' => 'Up to :mb MB (SVG :svg MB)',
+    'logo_too_big' => 'The file is over :mb MB — make it smaller and try again',
     'code_still_free' => 'Nothing has been printed yet, so the code can still change. It locks when the first number is issued.',
     'code_locked' => 'This code is already on paper and in exports, so it cannot change now.',
     'code_needs_confirm' => 'This code has already gone onto paper and into exports. To change it, type the old code (:code) below.',
@@ -70,4 +72,12 @@ return [
 
     // ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১)
     'only_owner_companies' => 'Only the owner — super admin in every company — opens a company or switches one on or off.',
+
+    // The company that lost the person, in its own book (24 Oct 2026)
+    'member_removed_from' => 'Unticked from :from — before: :was',
+    'member_was' => 'member (:state, default branch :branch)',
+    'member_was_none' => 'no membership',
+    'member_active' => 'active',
+    'member_inactive' => 'inactive',
+    'roles_removed_from' => 'Unticked from :from, so the roles in this company went: :roles',
 ];

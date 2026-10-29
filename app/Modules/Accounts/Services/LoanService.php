@@ -9,6 +9,8 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -47,11 +49,27 @@ final class LoanService
     {
         return DB::transaction(function () use ($data, $intoAccountId) {
             $kind = $data['kind'] ?? Loan::TERM;
+            $direction = $kind === Loan::HAND ? ($data['direction'] ?? Loan::TAKEN) : Loan::TAKEN;
+
+            /*
+             * ⛔ ঋণের মূল টাকার খাত — পোস্টযোগ্য (দল নয়), টাকার খাত নয়, আর নেওয়া ঋণে দায়ের খাত, দেওয়া হাতধারে সম্পদের খাত
+             * (fe, ২৪ অক্টোবর ২০২৬)। ⓘ আগে কোম্পানির যেকোনো খাতের id চলত — ব্যাংক বা খরচও; পুরনো ক্যাশ-ক্রেডিট ২১১১-এ, সেটাও
+             * পোস্টযোগ্য দায়, তাই চলে। ফর্ম, ফোন বা সরাসরি ডাক — সবাই এখান দিয়েই যায়।
+             */
+            $principal = Account::query()->postable()->whereNull('money_kind')->find((int) ($data['principal_account_id'] ?? 0));
+
+            if ($principal === null || $principal->type !== ($direction === Loan::GIVEN ? Account::ASSET : Account::LIABILITY)) {
+                throw ValidationException::withMessages(['principal_account_id' => __($direction === Loan::GIVEN
+                    ? 'accounts::validation.loan_principal_given' : 'accounts::validation.loan_principal_taken')]);
+            }
+
+            // ⛔ টাকা যে বাক্সে ঢুকল তার শাখায় — উপরের শাখায় নয়; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬; RCV-0143)
+            $branchId = CashTill::branchOfAccounts([$intoAccountId]) ?? CompanyContext::branchId();
 
             $loan = Loan::create([
                 ...$data,
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'kind' => $kind,
 
                 /*
@@ -69,7 +87,7 @@ final class LoanService
                 'direction' => $kind === Loan::HAND
                     ? ($data['direction'] ?? Loan::TAKEN)
                     : Loan::TAKEN,
-                'document_no' => $this->numbers->next('LN'),
+                'document_no' => $this->numbers->next('LN', $branchId),
                 'status' => DocumentStatus::CONFIRMED,
                 'created_by' => auth()->id(),
             ]);

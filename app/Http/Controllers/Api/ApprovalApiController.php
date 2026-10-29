@@ -110,8 +110,10 @@ final class ApprovalApiController extends Controller
 
         $engine = app(ApprovalEngine::class);
         $owner = app(\App\Core\Services\Ownership::class)->isOwnerIn($user, (int) \App\Core\Support\CompanyContext::id());
+        // ⭐ "সংশোধনে ফেরত" — গোটা পাতার, কাগজের ধরন ধরে এক ডাকে; ⛔ আগে সারি ধরে কাগজ পড়া হত (a6, ২০ অক্টোবর ২০২৬; [[ApprovalEngine::canSendBackMany()]])
+        $sendBack = $engine->canSendBackMany($approvals);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner): array {
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner, $sendBack): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
             $now = self::paperAmountNow($document);
@@ -146,8 +148,16 @@ final class ApprovalApiController extends Controller
                 'requestedAmount' => $asked,
                 'amountChanged' => $changed,
                 'currentLevel' => (int) $approval->current_level,
+                ...self::standing($engine, $approval),
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
+
+                /*
+                 * ⭐ পক্ষ আলাদা ঘরে — নম্বরের লাইনে বসানোর জন্য (মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের
+                 * নাম দিলে সহজে বোঝা যায়"*)। ⓘ গ্রাহক হলে "নাম · পয়েন্ট", নয়তো সরবরাহকারী/কর্মী/ব্যক্তি ([[ApprovalFacts]]) — ওয়েবের
+                 * ইনবক্সের একই লেখা। ⚠️ `summary` আগের মতোই (পক্ষ দিয়েই শুরু) — পুরনো অ্যাপ নতুন ঘর উপেক্ষা করে আর সারাংশে পক্ষ পায়।
+                 */
+                'party' => $fact['party'] ?? null,
                 'summary' => ($changed ? __('approval::field.changed_after_request', ['amount' => \App\Core\Support\Money::format($asked)]).' · ' : '')
                     .$this->summaryOf($approval, $fact),
 
@@ -155,7 +165,7 @@ final class ApprovalApiController extends Controller
                  * ⭐ কোন বোতাম দেখাবে — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬। ⓘ "সংশোধনে ফেরত" খসড়া কাগজে; "বদলে সই" কেবল মালিক
                  * (বদল হয় কাগজের নিজের পর্দায়); অন্য সইকারী কেবল বিবরণ ঠিক করতে পারেন। ⚠️ পুরনো অ্যাপ ঘরগুলো উপেক্ষা করে।
                  */
-                'canSendBack' => $engine->canSendBack($approval),
+                'canSendBack' => $sendBack[(int) $approval->id] ?? false,
                 'canEditAndSign' => $owner,
                 'canCorrectText' => ! $owner,
             ];
@@ -196,8 +206,9 @@ final class ApprovalApiController extends Controller
         $approvals = collect($page->items());
         $facts = app(ApprovalFacts::class)->of($approvals, false);
         $documents = $this->documentsOf($approvals);
+        $engine = app(ApprovalEngine::class);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $last = $approval->decisions->sortBy('id')->last();
 
@@ -211,8 +222,11 @@ final class ApprovalApiController extends Controller
                 'status' => (string) $approval->status,
                 'statusLabel' => __('approval::status.'.$approval->status),
                 'currentLevel' => (int) $approval->current_level,
+                ...self::standing($engine, $approval),
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'decidedAt' => $approval->decided_at?->toIso8601String(),
+                // ⭐ পক্ষ আলাদা ঘরে — নম্বরের লাইনে (১৯ অক্টোবর ২০২৬; উপরের [[pending()]]-এর একই নিয়ম)
+                'party' => $facts[(int) $approval->id]['party'] ?? null,
                 'summary' => $this->summaryOf($approval, $facts[(int) $approval->id] ?? []),
                 // ⓘ শেষ কথা — কে, কী, আর কেন (ফেরত বা সংশোধনের নোট লেখককে জানতেই হয়)
                 'lastDecision' => $last === null ? null : [
@@ -261,6 +275,7 @@ final class ApprovalApiController extends Controller
         return response()->json([
             'documentType' => class_basename((string) $entry->approvable_type),
             'documentNo' => $document->getAttribute('document_no'),
+            ...self::standing(app(ApprovalEngine::class), $entry),
             'facts' => array_values(array_map(fn (array $f) => ['label' => (string) $f['label'], 'value' => (string) $f['value']], $sheet['facts'] ?? [])),
             'columns' => array_values(array_map(fn (array $c) => ['key' => (string) $c['key'], 'label' => (string) $c['label'], 'numeric' => (bool) ($c['numeric'] ?? false)], $sheet['columns'] ?? [])),
             'rows' => array_values(array_map(fn (array $r) => array_map(fn ($v) => $v === null ? null : (string) $v, $r), $sheet['rows'] ?? [])),
@@ -429,7 +444,27 @@ final class ApprovalApiController extends Controller
             'id' => $approval->public_id,
             'status' => $approval->status,
             'currentLevel' => (int) $approval->current_level,
+            ...self::standing(app(ApprovalEngine::class), $approval),
         ]);
+    }
+
+    /**
+     * ⭐ সইয়ের ধাপ — "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ, ভাউচার আর দাবির সারির একই ঘর)।
+     *
+     * ⓘ উৎস ইঞ্জিন ([[ApprovalEngine::standingOf()]]) — ওয়েবের যাত্রাপথের একই স্তর; অপেক্ষায় না থাকলে বা ছক আর চালু না থাকলে
+     * দুটোই null। ⓘ `currentLevel` আগের মতো কাঁচা স্তর (ফাঁকা স্তরে ৩ হতে পারে); `approval_level` ক্রমিক।
+     * ⛔ কোনো কোয়েরি নয়: অনুরোধের সারি পাতায় আগেই তোলা, আর ছকগুলো ইঞ্জিনে অনুরোধ-প্রতি একবার ([[ApprovalEngine::flows()]])।
+     *
+     * @return array{approval_level: int|null, approval_levels: int|null}
+     */
+    private static function standing(ApprovalEngine $engine, Approval $approval): array
+    {
+        $standing = $engine->standingOf($approval);
+
+        return [
+            'approval_level' => $standing['level'] ?? null,
+            'approval_levels' => $standing['levels'] ?? null,
+        ];
     }
 
     /**

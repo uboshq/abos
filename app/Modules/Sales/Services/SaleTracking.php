@@ -89,7 +89,7 @@ final class SaleTracking
         };
 
         $challans = $narrow(DeliveryChallan::query())
-            ->with(['customer.location.parent', 'order'])
+            ->with(['customer.location.parent', 'customer.branch', 'order'])
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
                 ->where('document_no', 'like', "%{$t}%")
@@ -102,7 +102,7 @@ final class SaleTracking
 
         // যে আদেশের কোনো (বাতিল নয়) চালান নেই — "অর্ডার" ধাপ
         $orders = $narrow(SalesOrder::query())
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('sal_challans as c')
                 ->whereColumn('c.sales_order_id', 'sal_orders.id')
@@ -131,6 +131,8 @@ final class SaleTracking
                 'customer' => $challan->customer?->name(),
                 // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
                 'customer_point' => $challan->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'customer_branch' => $challan->customer?->branchName(),
                 'total' => bcadd((string) $challan->total, '0', 2),
                 'step' => $steps[$challan->id],
                 'billed' => isset($billed[$challan->id]),
@@ -148,6 +150,8 @@ final class SaleTracking
                 'date' => $order->trx_date?->toDateString(),
                 'customer' => $order->customer?->name(),
                 'customer_point' => $order->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'customer_branch' => $order->customer?->branchName(),
                 'total' => bcadd((string) $order->total, '0', 2),
                 'step' => $this->orderStep($order),
                 'billed' => false,
@@ -191,7 +195,7 @@ final class SaleTracking
     {
         $events = collect();
         // ⓘ চালানের আদেশ-সম্পর্কের নাম `order` — আগে `salesOrder` পড়া হত, যা নেই, তাই চালানের দাগে আদেশের ঘটনা আসত না
-        $order = $sale instanceof SalesOrder ? $sale : $sale->order;
+        $order = $sale instanceof SalesOrder ? $sale : $this->orderOf($sale);
 
         if ($order !== null) {
             $order->loadMissing('creator');
@@ -501,7 +505,7 @@ final class SaleTracking
             ->where('i.company_id', CompanyContext::id()) // ⓘ লাইনে কোম্পানি নেই — বিলের কোম্পানি ধরে
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
-        return $invoiceIds->isNotEmpty() && SalesInvoice::query()->whereIn('id', $invoiceIds)
+        return $invoiceIds->isNotEmpty() && SalesInvoice::acrossBranches()->whereIn('id', $invoiceIds)
             ->whereNotNull('draft_paused_at')->exists();
     }
 
@@ -609,9 +613,13 @@ final class SaleTracking
     }
 
     /** @return Collection<int, SalesInvoice> */
+    /**
+     * চালানের পাকা বিল। ⓘ শাখার দেয়াল ছাড়া (২৩ অক্টোবর ২০২৬): চালানটা নাগালে বলেই এখানে আসা ([[SaleTrackingController::inReach()]]),
+     * আর তার বিল একই বিক্রির — হেডারে অন্য শাখা বাছা থাকলে দেয়াল বিলটা লুকাত, গল্পে "বিল হয়নি" দেখাত।
+     */
     private function invoicesOf(DeliveryChallan $challan): Collection
     {
-        return SalesInvoice::query()
+        return SalesInvoice::acrossBranches()
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
             ->with('creator')->orderBy('id')->get();
@@ -709,7 +717,7 @@ final class SaleTracking
     /** @return array<string, mixed> */
     private function head(DeliveryChallan|SalesOrder $sale, string $step, bool $billed): array
     {
-        $sale->loadMissing('customer');
+        $sale->loadMissing(['customer.location.parent', 'customer.branch']);
 
         return [
             'kind' => $sale instanceof SalesOrder ? 'order' : 'challan',
@@ -719,11 +727,19 @@ final class SaleTracking
             'date' => $sale->trx_date?->toDateString(),
             'customer' => $sale->customer?->name(),
             'customer_point' => $sale->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customer_branch' => $sale->customer?->branchName(),
             'total' => bcadd((string) $sale->total, '0', 2),
             'step' => $step,
             'category' => self::CATEGORY_OF_STEP[$step],
             'billed' => $billed,
-            'back_order' => $sale instanceof DeliveryChallan && $this->hasBackOrder($sale->order),
+            'back_order' => $sale instanceof DeliveryChallan && $this->hasBackOrder($this->orderOf($sale)),
         ];
+    }
+
+    /** চালানের আদেশ — শাখার দেয়াল ছাড়া, একই বিক্রির বলে ([[invoicesOf()]]-এর একই কারণ; ২৩ অক্টোবর ২০২৬) */
+    private function orderOf(DeliveryChallan $challan): ?SalesOrder
+    {
+        return $challan->sales_order_id === null ? null : SalesOrder::acrossBranches()->find($challan->sales_order_id);
     }
 }

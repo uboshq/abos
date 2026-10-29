@@ -286,7 +286,8 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
                 ['account_id' => $cash, 'debit' => $amount],
                 ['account_id' => (int) StandardChart::find(StandardChart::RECEIVABLE)->id, 'credit' => $amount, 'party_type' => 'customer', 'party_id' => $dealer->id],
             ],
-            branchId: $this->company->defaultBranch()?->id,
+            // ⓘ গ্রাহকের নিজের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: পক্ষের সারি অন্য শাখায় নয় ([[PostingEngine::placePartiesInTheirBranch()]])
+            branchId: (int) $dealer->branch_id,
         );
     }
 
@@ -298,7 +299,8 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
                 ['account_id' => (int) StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'party_type' => 'customer', 'party_id' => $dealer->id],
                 ['account_id' => (int) StandardChart::find(StandardChart::CHEQUES_IN_HAND)->id, 'credit' => $amount],
             ],
-            branchId: $this->company->defaultBranch()?->id,
+            // ⓘ গ্রাহকের নিজের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: পক্ষের সারি অন্য শাখায় নয় ([[PostingEngine::placePartiesInTheirBranch()]])
+            branchId: (int) $dealer->branch_id,
         );
     }
 

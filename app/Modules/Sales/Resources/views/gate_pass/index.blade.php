@@ -26,6 +26,13 @@
             'render' => fn ($p) => $p->challan?->customer?->name() ?? '—',
         ],
         [
+            // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; ১৯ অক্টোবর: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম" (বিল/আদেশ/চালানের একই কলাম)
+            'key' => 'point',
+            'label' => __('customer::field.place'),
+            'width' => '9rem',
+            'render' => fn ($p) => view('customer::partials.place', ['customer' => $p->challan?->customer]),
+        ],
+        [
             'key' => 'vehicle',
             'label' => __('sales::gate_pass.column.vehicle'),
             'width' => '10rem',

@@ -58,10 +58,16 @@ final class PurchaseContractService
         }
 
         return DB::transaction(function () use ($data, $clean, $starts, $ends) {
+            // ⛔ চুক্তি সরবরাহকারীর শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $supplierId = (int) ($data['supplier_id'] ?? 0);
+            $branchId = (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['supplier', $supplierId]])['supplier:'.$supplierId] ?? null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
             $contract = PurchaseContract::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('PC'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('PC', $branchId),
                 'supplier_id' => $data['supplier_id'],
                 'supplier_ref' => $data['supplier_ref'] ?? null,
                 'starts_on' => $starts->toDateString(),

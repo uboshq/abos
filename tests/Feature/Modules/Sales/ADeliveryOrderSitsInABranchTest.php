@@ -19,8 +19,8 @@ use Tests\TestCase;
 /**
  * DO শাখা ছাড়া জমা হয় না — অডিট ⛔১২ (সমন্বয়ক, ৬ অক্টোবর ২০২৬; DeliveryOrderService::create ঘরটাই লিখত না)।
  *
- * দাবি — একই কর্মী, একই গ্রাহক: হেডারে সুপার দেখলে DO সুপারে; "সব শাখা" দেখলে গ্রাহকের শাখায়; ডিলার নিজে লিখলে
- * তাঁর নিজের শাখায়, কর্মীর দেখা শাখা যা-ই হোক।
+ * দাবি — একই কর্মী, একই গ্রাহক: হেডারে যা-ই দেখুন DO গ্রাহকের শাখায় (ec, ১৯ অক্টোবর ২০২৬ থেকে); গ্রাহকের শাখা না
+ * থাকলে যে শাখা দেখছেন; ডিলার নিজে লিখলে তাঁর নিজের শাখায়, কর্মীর দেখা শাখা যা-ই হোক।
  */
 final class ADeliveryOrderSitsInABranchTest extends TestCase
 {
@@ -55,8 +55,17 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
     {
         $owner = auth()->user();
 
+        /*
+         * ⛔ বদল, ec, ১৯ অক্টোবর ২০২৬ — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"*। আগে এই দাবি বলত "সুপার দেখে লেখা DO
+         * সুপারে" — অর্থাৎ Home-এর গ্রাহকের DO সুপারে, ঠিক যে ভুল লাইভে ঘটেছিল। ⭐ এখন গ্রাহকের শাখা উপরের বাছাইয়ের আগে;
+         * গ্রাহকের শাখা না থাকলে তবেই যে শাখা দেখছেন।
+         */
         CompanyContext::set($this->company->id, $this->super->id);
-        $this->assertSame($this->super->id, $this->branchOf($owner), '⛔ সুপার দেখে লেখা DO সুপারে বসেনি।');
+        $this->assertSame($this->home->id, $this->branchOf($owner), '⛔ সুপার দেখে লেখা DO Home-এর গ্রাহককে সুপারে বসাল।');
+
+        $this->customer->forceFill(['branch_id' => null])->save();
+        $this->assertSame($this->super->id, $this->branchOf($owner), '⛔ শাখাহীন গ্রাহকের DO যে শাখা দেখছেন সেখানে বসেনি।');
+        $this->customer->forceFill(['branch_id' => $this->home->id])->save();
 
         CompanyContext::set($this->company->id, null);
         $this->assertSame($this->home->id, $this->branchOf($owner), '⛔ "সব শাখা" দেখে লেখা DO শাখাহীন — গ্রাহকের শাখা বসেনি।');

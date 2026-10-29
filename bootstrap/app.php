@@ -5,6 +5,7 @@ use App\Core\Services\ErrorJournal;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
+use App\Http\Middleware\KeepsAFormInItsOwnBranch;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\NudgePhonesAfterWrite;
 use App\Http\Middleware\OneSubmitPerForm;
@@ -282,6 +283,14 @@ return Application::configure(basePath: dirname(__DIR__))
             RefuseWorkWithoutALicence::class,
 
             /*
+             * ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়" (ec, ১৯ অক্টোবর ২০২৬)।
+             *
+             * ⓘ `OneSubmitPerForm`-এর পাশে নয়, প্রসঙ্গ আর পর্দার তালাগুলোর **পরে**: শাখাটা `ResolveCompanyContext` বসায়, আর
+             * বন্ধ পর্দা বা মেয়াদ-শেষের উত্তর আগে। ⚠️ ExportListing-এর আগে, যাতে "খোলার শাখায় জমা" বাকি সবকিছু ঘিরে থাকে।
+             */
+            KeepsAFormInItsOwnBranch::class,
+
+            /*
              * ?export=csv থাকলে পর্দার তালিকাটা ফাইল হয়ে নামে।
              *
              * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
@@ -314,6 +323,8 @@ return Application::configure(basePath: dirname(__DIR__))
          * টোকেন পরের অনুরোধেই ৪০১ পায় আর মুছে যায়।
          */
         $middleware->api(append: [
+            // ⭐ ঢোকা না থাকলে ফোনের ভাষা Accept-Language থেকে; ঢোকা মানুষের users.locale পরে বসে (০.৪.৪৩)
+            \App\Http\Middleware\ApiLocaleFromHeader::class,
             RefuseInactiveAccounts::class,
             // ⛔ মেয়াদ শেষে ফোনও বন্ধ, কেবল ঢোকা-বেরোনো খোলা — ওয়েবের একই তালা (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
             RefuseWorkWithoutALicence::class,
@@ -329,6 +340,13 @@ return Application::configure(basePath: dirname(__DIR__))
          * আর ডাটাবেজে আরেক রূপ যেত।
          */
         $middleware->prepend(NormalizeUnicodeInput::class);
+
+        /*
+         * ⭐ POST-এর মাপ — ini-র বদলে [[UploadLimit::postMax()]] পড়ে (fe, ২১ অক্টোবর ২০২৬): একই সংখ্যা যা ফর্মের পাশে লেখা,
+         * আর পরীক্ষা `abos.uploads.post_max_size` দিয়ে লাইভের ৮ MB-র মতো সীমা বসাতে পারে। ⓘ কাজ একই — বড় হলে PostTooLargeException,
+         * সেশন আর CSRF-এর আগেই; নিচে `withExceptions` তাকে ফর্মে ফেরায়।
+         */
+        $middleware->replace(\Illuminate\Http\Middleware\ValidatePostSize::class, \App\Http\Middleware\ValidatePostSizeFromLimit::class);
 
         /*
          * ⛔ নিরাপত্তার হেডার **প্রতিটা** উত্তরে — ২৭ সেপ্টেম্বর ২০২৬, নিরীক্ষা §৯।
@@ -389,9 +407,58 @@ return Application::configure(basePath: dirname(__DIR__))
             app(ErrorJournal::class)->record($e);
         });
 
+        /*
+         * ⭐ বড় ফাইলের POST — ৪১৯ নয়, নীরব ফেরাও নয় (fe, ২১ অক্টোবর ২০২৬)।
+         *
+         * ⛔ লাইভে post_max_size ৮ MB: তার বেশি পাঠালে PHP গোটা দেহ ফেলে দেয়, `_token`-সহ — CSRF তখন ৪১৯ দিত, আর মানুষ জানতেন
+         * না কী হলো। ⓘ এই ভুলটা সেশন আর CSRF-এর আগেই ওঠে ([[ValidatePostSizeFromLimit]]), তাই সেশনে বার্তা রাখা যায় না —
+         * ফর্মে ফেরানো হয় ঠিকানায় `?file_too_big=1` বসিয়ে, আর ফর্ম বাংলা বার্তাটা দেখায়।
+         * ⓘ কেবল কোম্পানির ফর্ম (তৈরি আর সম্পাদনা), যেখানে লোগো তোলা হয়; বাকি জায়গায় আগের মতো ৪১৩-এর পাতা।
+         */
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, Request $request) {
+            $path = trim($request->path(), '/');
+
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            if ($path === 'system/companies') {
+                return redirect()->to(url('system/companies/create').'?file_too_big=1');
+            }
+
+            if (preg_match('#^system/companies/([A-Za-z0-9-]+)$#', $path, $company) === 1) {
+                return redirect()->to(url('system/companies/'.$company[1].'/edit').'?file_too_big=1');
+            }
+
+            return null;
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        /*
+         * ⛔ ওয়েবের JSON প্রশ্নের ভুল-যাচাই ৪২২ JSON-এ, ফেরত-পাঠানো (৩০২) নয় — a6, ২৩ অক্টোবর ২০২৬ (Mac-এর লাল a59a63dc2,
+         * CollectionAppContractTest::test_item_18_one_reach_rule_on_the_web_and_the_phone: ওয়েবের প্রিভিউ ৩০২)।
+         *
+         * ⓘ উপরের নিয়ম JSON কেবল `api/*`-এ দেয়, তাই পাতার নিজের fetch (Accept: application/json, যেমন টাকা নেওয়ার প্রিভিউ,
+         * [[collection.js]]) ভুল-যাচাইয়ে ৩০২ পেত, fetch আগের পাতার HTML-এ যেত, আর `response.json()` ভেঙে পাতা কেবল "প্রিভিউ
+         * আনা গেল না" দেখাত — কারণটা ("গ্রাহক চেনা নেই" …) কখনো নয়। ⓘ কেবল ভুল-যাচাই বদলায়: সাধারণ ফর্ম-জমা (JSON চায় না)
+         * আগের মতো ফেরত-পাঠানো আর সেশনে ভুল পায়; বাকি ভুলের (৪০৩/৪০৪/৫০০) পাতা অপরিবর্তিত।
+         * ⓘ `message` প্রথম ভুলের বাক্য (বাংলা), Laravel-এর ইংরেজি সারাংশ নয়; `errors` ঘর ধরে, ফোনের ৪২২-এর একই আকার।
+         */
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+            if ($e->response !== null || $request->is('api/*') || ! $request->expectsJson()) {
+                return null;
+            }
+
+            $errors = $e->errors();
+
+            return response()->json([
+                'message' => (string) (collect($errors)->flatten()->first() ?? $e->getMessage()),
+                'errors' => $errors,
+            ], $e->status);
+        });
 
         /*
          * ⭐ "বসানো যাবে না" একটা উত্তর, ভাঙা নয় — ২১ সেপ্টেম্বর ২০২৬।
@@ -429,7 +496,12 @@ return Application::configure(basePath: dirname(__DIR__))
             /*
              * ⓘ `back()`, কোনো নির্দিষ্ট পাতা নয়: একই ইঞ্জিন বহু পর্দা
              * থেকে ডাকা হয়, আর ব্যবহারকারী যেখানে ছিলেন সেখানেই কারণটা
-             * পড়া উচিত। ⚠️ প্রতিটা পর্দায় `<x-ui.errors />` আছে।
+             * পড়া উচিত। ⭐ প্রতিটা পর্দা কারণটা দেখায়: layout নিজে পাতার
+             * উপরে `<x-ui.errors />` বসায়, পাতা যা দেখায়নি কেবল তা, আর
+             * পাতার নিজের বাক্স থাকলে সেটাই — প্রতি অনুরোধে একবার (fe,
+             * ২৪ অক্টোবর ২০২৬; [[AReasonWithNoFieldStillReachesThePageTest]])।
+             * ⛔ আগে এখানে লেখা ছিল "প্রতিটা পর্দায় আছে", অথচ ১৪টা কাগজের
+             * পাতায় (বিলের তালিকা, চালানের ভাড়া …) ছিল না, আর কারণ হারাত।
              */
             return back()
                 ->withInput()

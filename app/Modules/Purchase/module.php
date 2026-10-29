@@ -97,6 +97,8 @@ return [
      */
     'bindings' => [
         CapitalisesABillLine::class => BillLinesForAssets::class,
+        // ⭐ পরিশোধ ভাউচারের খোলা বিল — সরবরাহকারীর বিল, ক্রয়ের নিজের বাকিতে (cb-ma-5)
+        \App\Core\Contracts\PayableOpenBills::class => \App\Modules\Purchase\Services\PurchasePayableOpenBills::class,
     ],
 
     'menu' => [
@@ -851,5 +853,9 @@ return [
         \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\Purchase\Listeners\UndoThePaymentOfABouncedCheque::class],
         // ⛔ সইয়ের পরে পোস্ট হওয়া সরাসরি কেনার চেক-পরিশোধ রেজিস্টারে ওঠে (fe, ১৩ অক্টোবর ২০২৬)
         \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Purchase\Listeners\RecordTheChequeOfASignedPurchasePayment::class],
+    ],
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — মাল আসছে (নকশা ১৫), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    'phone_widgets' => [
+        \App\Modules\Purchase\Widgets\GoodsIncomingSummary::class,
     ],
 ];

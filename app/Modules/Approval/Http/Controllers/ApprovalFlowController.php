@@ -61,6 +61,20 @@ class ApprovalFlowController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
+        $open = (int) $request->query('open', 0);
+
+        return $this->page($request, $open > 0 ? ApprovalFlow::query()->with(['steps', 'conditions'])->findOrFail($open) : null);
+    }
+
+    /**
+     * ⭐ নিয়মের পাতা — উপরে এক সারিতে একটা নিয়ম, খোলা নিয়মটা নিচে ধাপের কার্ডে (অনুমোদন পর্দা ভাগ ৩, দফা ১৭; পরিকল্পনার পাতা ৪)।
+     *
+     * ⛔ আগে তালিকা কার্ডে আর সম্পাদনা আলাদা পাতায়, ১১ ঘরের সারি ধরে: কোন ঘড়ি কোন ধাপের, কে কত টাকা থেকে সই দেন — খুলে
+     * খুঁজতে হত। ⭐ এখন এক পাতায়: তালিকায় ধাপের রেখা, "কত টাকা থেকে", শেষ সই আর চালু/বন্ধ; নিচে খোলা নিয়মের কার্ড, "পরখ করুন"
+     * আর "আরও ▾"। ⓘ সম্পাদনা আর নতুনের ঠিকানা আগের মতোই — এই পাতাই খোলে, নিয়মটা নিচে খোলা।
+     */
+    private function page(Request $request, ?ApprovalFlow $opened): View
+    {
         $names = $this->approverNames();
         $q = trim((string) $request->query('q'));
 
@@ -99,7 +113,118 @@ class ApprovalFlowController extends Controller implements HasMiddleware
             'choices' => $choices,
             'names' => $names,
             'q' => $q,
+            'live' => ApprovalFlow::query()->where('is_active', true)->count(),
+            'off' => ApprovalFlow::query()->where('is_active', false)->count(),
+            'payroll' => ApprovalFlowService::PAYROLL,
+            'opened' => $opened,
+            ...($opened === null ? [] : [
+                ...$this->formData(),
+                'fields' => $this->conditionFields($choices, $opened),
+                'branches' => \App\Models\Branch::query()->ordered()->get(),
+                'lastChange' => $this->lastChangeOf($opened),
+            ]),
         ]);
+    }
+
+    /**
+     * ⭐ চালু/বন্ধের সুইচ — তালিকার সারিতেই (দফা ১৭)। ⓘ বন্ধ করার আগে নিশ্চিত করা পর্দায় ([[x-ui.state-toggle]]); বেতনের নিয়ম আর অপেক্ষার
+     * কাগজ সেবার পাহারায় ([[ApprovalFlowService::switchTo()]])।
+     */
+    public function switch(Request $request, int $flow): RedirectResponse
+    {
+        $rule = ApprovalFlow::query()->with('steps')->findOrFail($flow);
+        $on = ! $rule->is_active;
+
+        $this->flows->switchTo($rule, $on);
+
+        return redirect()->back()->with('saved', __($on ? 'approval::message.flow_switched_on' : 'approval::message.flow_switched_off',
+            ['rule' => __($this->flows->choices()[$rule->module]['actions'][$rule->action] ?? $rule->action)]));
+    }
+
+    /**
+     * ⭐ শর্তের ঘর তালিকা থেকে — হাতে লেখা নয় (দফা ১৭; পরিকল্পনার পাতা ৪: "তালিকা থেকে বাছাই, হাতে লিখতে হয় না")।
+     *
+     * ⛔ আগে ঘরের নাম হাতে লিখতে হত, আর ভুল নাম মানে নিয়ম কখনো ধরে না — নীরবে ([[ApprovalExceptions]] পরে ধরত)। ⓘ ঘরগুলো সেই
+     * উৎস থেকেই যেখান থেকে ইঞ্জিন মাপে: এই কাজের সাম্প্রতিক অনুরোধে কাগজ যে ঘর পাঠিয়েছে (`fields_seen`, [[ApprovalEngine::fieldsOf()]])।
+     * ⚠️ খোলা নিয়মের পুরনো শর্তের ঘর তালিকায় থাকেই — নইলে সংরক্ষণে নীরবে হারাত। নাম লেখা থাকলে বাংলায়, নইলে ঘরের নামই।
+     *
+     * @param  array<string, array{label: string, actions: array<string, string>}>  $choices
+     * @return array<string, array<string, string>> "module|action" => [ঘর => নাম]
+     */
+    private function conditionFields(array $choices, ApprovalFlow $opened): array
+    {
+        /*
+         * ⓘ দুই উৎস: অনুরোধে জমা `fields_seen` (পুরনো সারিতে payload-এর চাবি — [[ApprovalExceptions::flowsThatCanNeverCatch()]]-এর একই
+         * নিয়ম), আর কাগজের নিজের টেবিলের কলাম — ইঞ্জিন ঠিক ঐ কলামগুলোই মাপে ([[ApprovalEngine::fieldsOf()]])। ⛔ কেবল প্রথমটা নিলে
+         * ভাউচারে (payload জমা হয় না) তালিকা খালি থাকত, অথচ আগে হাতে লিখে শর্ত বসানো যেত।
+         */
+        $seen = \App\Models\Approval::query()
+            ->latest('id')
+            ->limit(500)
+            ->get(['module', 'action', 'payload', 'approvable_type'])
+            ->groupBy(fn ($a) => $a->module.'|'.$a->action)
+            ->map(function ($group) {
+                $fields = $group->flatMap(fn ($a) => (array) (((array) $a->payload)['fields_seen'] ?? array_keys((array) $a->payload)));
+
+                foreach ($group->pluck('approvable_type')->filter()->unique() as $type) {
+                    if (class_exists($type) && is_subclass_of($type, \Illuminate\Database\Eloquent\Model::class)) {
+                        $columns = \Illuminate\Support\Facades\Schema::getColumnListing((new $type)->getTable());
+                        $fields = $fields->merge(array_keys(\App\Core\Engines\Approval\ApprovalEngine::fieldsOf((new $type)->forceFill(array_fill_keys($columns, '')))));
+                    }
+                }
+
+                return $fields->reject(fn ($field) => $field === 'fields_seen')->unique()->values()->all();
+            });
+
+        $out = [];
+
+        foreach ($choices as $module => $entry) {
+            foreach (array_keys($entry['actions']) as $action) {
+                $key = $module.'|'.$action;
+                $fields = $seen->get($key, []);
+
+                if ($opened->module === $module && $opened->action === $action) {
+                    $fields = [...$fields, ...$opened->conditions->pluck('field')->all()];
+                }
+
+                $named = [];
+
+                foreach (array_unique($fields) as $field) {
+                    $label = 'approval::condition.'.$field;
+                    $named[(string) $field] = \Illuminate\Support\Facades\Lang::has($label) ? __($label) : str_replace('_', ' ', (string) $field);
+                }
+
+                asort($named);
+                $out[$key] = $named;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ "শেষ বদল: কে · কবে" — নিয়ম, তার ধাপ বা শর্তের সবচেয়ে নতুন নিরীক্ষা-সারি (দফা ১৭)।
+     *
+     * @return array{who: ?string, at: \Carbon\CarbonInterface}|null
+     */
+    private function lastChangeOf(ApprovalFlow $flow): ?array
+    {
+        if (! $flow->exists) {
+            return null;
+        }
+
+        $trail = \App\Models\AuditTrail::query()
+            ->where(fn ($q) => $q
+                ->where(fn ($one) => $one->where('auditable_type', ApprovalFlow::class)->where('auditable_id', $flow->id))
+                ->orWhere(fn ($steps) => $steps->where('auditable_type', \App\Models\ApprovalFlowStep::class)->whereIn('auditable_id', $flow->steps->pluck('id')))
+                ->orWhere(fn ($terms) => $terms->where('auditable_type', \App\Models\ApprovalCondition::class)->whereIn('auditable_id', $flow->conditions->pluck('id'))))
+            ->latest('id')
+            ->first(['user_id', 'created_at']);
+
+        return $trail === null ? null : [
+            'who' => $trail->user_id === null ? null : User::query()->whereKey($trail->user_id)->value('name'),
+            'at' => $trail->created_at,
+        ];
     }
 
     /**
@@ -283,11 +408,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
-        return view('approval::flow.form', [
-            'menu' => $this->menu->forUser($request->user()),
-            'flow' => new ApprovalFlow(['is_active' => true]),
-            ...$this->formData(),
-        ]);
+        return $this->page($request, new ApprovalFlow(['is_active' => true]));
     }
 
     public function store(ApprovalFlowRequest $request): RedirectResponse
@@ -299,11 +420,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
 
     public function edit(Request $request, int $flow): View
     {
-        return view('approval::flow.form', [
-            'menu' => $this->menu->forUser($request->user()),
-            'flow' => ApprovalFlow::query()->with('steps')->findOrFail($flow),
-            ...$this->formData(),
-        ]);
+        return $this->page($request, ApprovalFlow::query()->with(['steps', 'conditions'])->findOrFail($flow));
     }
 
     public function update(ApprovalFlowRequest $request, int $flow): RedirectResponse

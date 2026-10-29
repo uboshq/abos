@@ -221,7 +221,7 @@
                         <div class="border-b border-(--color-border) py-2">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm" x-text="line.name"></div>
+                                    <div class="truncate text-sm" :id="'pos-' + i + '-product'" x-text="line.name"></div>
                                     <div class="num text-2xs text-(--color-ink-muted)"
                                          x-text="money(line.rate) + ' × ' + qty(line.qty)"></div>
 
@@ -250,6 +250,7 @@
                                         class="size-8 rounded-(--radius-field) border border-(--color-border)">−</button>
 
                                 <input type="number" step="0.01" min="0.01"
+                                       aria-label="{{ __('sales::field.quantity') }}" :id="'pos-' + i + '-qty'" :aria-labelledby="'pos-' + i + '-qty pos-' + i + '-product'"
                                        x-model="line.qty"
                                        :name="'lines[' + (i) + '][qty]'"
                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
@@ -260,6 +261,7 @@
                                         class="size-8 rounded-(--radius-field) border border-(--color-border)">+</button>
 
                                 <input type="number" step="0.01" min="0"
+                                       aria-label="{{ __('sales::field.rate') }}" :id="'pos-' + i + '-rate'" :aria-labelledby="'pos-' + i + '-rate pos-' + i + '-product'"
                                        x-model="line.rate"
                                        :name="'lines[' + (i) + '][rate]'"
                                        class="num ms-auto h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
@@ -289,7 +291,7 @@
                                 <label class="text-2xs text-(--color-ink-muted)"
                                        :for="'discount-' + (i)">{{ __('sales::field.discount') }}</label>
 
-                                <input type="number" step="0.01" min="0" :id="'discount-' + (i)"
+                                <input type="number" step="0.01" min="0" :id="'discount-' + (i)" aria-label="{{ __('sales::field.discount') }}"
                                        x-model="line.discount"
                                        :max="lineBase(line)"
                                        :name="'lines[' + (i) + '][discount]'"
@@ -410,7 +412,7 @@
                         <div x-show="splitting" x-cloak class="mt-2 space-y-1">
                             <template x-for="(part, p) in payments" :key="p">
                                 <div class="flex items-center gap-1">
-                                    <select :name="'payments[' + (p) + '][payment_method_id]'"
+                                    <select :name="'payments[' + (p) + '][payment_method_id]'" aria-label="{{ __('sales::print.method') }}"
                                             x-model="part.method_id"
                                             class="h-(--spacing-field-compact) min-w-0 flex-1 rounded-(--radius-field) border
                                                    border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
@@ -420,7 +422,7 @@
                                         @endforeach
                                     </select>
 
-                                    <input type="number" step="0.01" min="0"
+                                    <input type="number" step="0.01" min="0" aria-label="{{ __('sales::field.amount') }}"
                                            x-model="part.amount"
                                            :name="'payments[' + (p) + '][amount]'"
                                            class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border
@@ -428,7 +430,7 @@
                                                   px-2 text-end text-sm">
 
                                     {{-- নম্বর কেবল যে উপায়ে লাগে — নগদে TrxID নেই --}}
-                                    <input type="text" x-show="needsReference(part)" x-cloak
+                                    <input type="text" x-show="needsReference(part)" x-cloak aria-label="{{ __('sales::field.instrument_no') }}"
                                            x-model="part.reference"
                                            :name="'payments[' + (p) + '][reference]'"
                                            :placeholder="'{{ __('sales::field.instrument_no') }}'"
@@ -617,7 +619,7 @@
                         <div class="mt-2 space-y-1">
                             <template x-for="(line, i) in bill.lines" :key="line.id">
                                 <div class="flex items-center gap-2 text-sm">
-                                    <span class="min-w-0 flex-1 truncate" x-text="line.name"></span>
+                                    <span class="min-w-0 flex-1 truncate" :id="'posr-' + i + '-product'" x-text="line.name"></span>
 
                                     {{-- আর কতটুকু ফেরত নেওয়া যায় — দ্বিতীয়বার
                                          ফেরতের সময় এটা না জানালে ক্যাশিয়ার
@@ -626,6 +628,7 @@
                                           x-text="(roomOn(line)) + ' / ' + (line.qty)"></span>
 
                                     <input type="number" step="0.01" min="0" :max="roomOn(line)"
+                                           aria-label="{{ __('sales::field.quantity') }}" :id="'posr-' + i + '-qty'" :aria-labelledby="'posr-' + i + '-qty posr-' + i + '-product'"
                                            x-model="line.take"
                                            :name="'lines[' + (i) + '][qty]'"
                                            class="num h-(--spacing-field-compact) w-20 rounded-(--radius-field) border

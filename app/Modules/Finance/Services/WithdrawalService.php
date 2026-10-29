@@ -105,10 +105,13 @@ final class WithdrawalService
             Person::query()->whereKey($personId)->lockForUpdate()->first();
             $this->assertWithinCap($personId, $amount, $on);
 
+            // ⛔ পর্দায় লেখা শাখায় — বাছা খাতটা অন্য শাখার বাক্সের হলে থামে, নীরবে সরে না; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬)
+            $branchId = $this->finance->branchShownOnTheForm($data['money_account_id'] ?? null, 'money_account_id');
+
             $withdrawal = Withdrawal::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('WDR'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('WDR', $branchId),
                 'person_id' => $personId,
                 'amount' => $amount,
                 'trx_date' => $on,
@@ -231,11 +234,9 @@ final class WithdrawalService
              * প্রদেয় মুনাফার খাতে তালা দিয়ে বাকিটা আবার গোনে। আটকানো হয়, অন্য খাতে পাঠানো হয় না।
              */
             if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
-                $payable = StandardChart::find(StandardChart::PROFIT_PAYABLE);
-
-                if ($payable !== null) {
-                    Account::query()->whereKey($payable->id)->lockForUpdate()->first();
-                }
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+                $payable = StandardChart::accountFor(StandardChart::PROFIT_PAYABLE);
+                Account::query()->whereKey($payable->id)->lockForUpdate()->first();
 
                 $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
 
@@ -294,15 +295,8 @@ final class WithdrawalService
                 default => StandardChart::DRAWINGS,
             };
 
-            $drawings = StandardChart::find($head);
-
-            if ($drawings === null) {
-                throw ValidationException::withMessages([
-                    'account_id' => __('finance::validation.chart_head_missing', [
-                        'code' => $head,
-                    ]),
-                ]);
-            }
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            $drawings = StandardChart::accountFor($head);
 
             $voucher = $this->vouchers->create(
                 [

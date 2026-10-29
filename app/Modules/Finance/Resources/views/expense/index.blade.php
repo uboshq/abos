@@ -157,8 +157,8 @@
                     ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
                      'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
                     /* নম্বরটাই লিংক — ঝুলে থাকা কাগজটা দেখার পথ (নিয়ম ১) */
-                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-                     'render' => fn ($v) => view('finance::expense.partials.paper', ['voucher' => $v])],
+                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
+                     'render' => fn ($v) => view('finance::expense.partials.paper', ['voucher' => $v, 'party' => ($partyNames ?? [])[$v->id] ?? null])],
                     ['key' => 'narration', 'label' => __('finance::field.what_for')],
                     ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
                      'render' => fn ($v) => \App\Core\Support\Money::format($v->totals()['debit'])],
@@ -181,8 +181,8 @@
                 ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
                  'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
                 /* নম্বরটাই লিংক — কাগজটা দেখার একমাত্র পথ (নিয়ম ১) */
-                ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-                 'render' => fn ($v) => view('finance::expense.partials.paper', ['voucher' => $v])],
+                ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
+                 'render' => fn ($v) => view('finance::expense.partials.paper', ['voucher' => $v, 'party' => ($partyNames ?? [])[$v->id] ?? null])],
                 ['key' => 'narration', 'label' => __('finance::field.what_for')],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
                  'render' => fn ($v) => \App\Core\Support\Money::format($v->totals()['debit'])],

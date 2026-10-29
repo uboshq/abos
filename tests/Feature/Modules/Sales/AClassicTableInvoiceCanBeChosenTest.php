@@ -123,7 +123,7 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
         $html = $this->printed($invoice)['html'];
 
         foreach ([
-            'INVOICE', 'Bill To,', 'M/S', 'Point:', 'Contact No:',
+            'INVOICE', 'Bill To,', 'M/S', 'Point · Branch:', 'Contact No:',
             'Transportation Details:', 'Transport Name:', 'Driver Mobile#:', 'Vehicle Type &amp; Number:', 'Delivery Date:',
             'INVOICE DATE:', 'INVOICE ID:', 'Order No:', 'INVOICE TYPE:', 'Created by:',
             'SL#', 'Item Name', 'Rate', 'QTY', 'Free', 'Total QTY', 'Amount', 'data-grand-row',

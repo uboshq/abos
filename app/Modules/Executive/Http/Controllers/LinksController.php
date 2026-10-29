@@ -55,7 +55,8 @@ final class LinksController extends Controller implements HasMiddleware
         $chosen = $owning->has($request->integer('company')) ? $request->integer('company') : $owning->keys()->first();
 
         $parties = $chosen === null ? [] : $this->lens->within($user, (int) $chosen, null, fn () => [
-            SisterLink::CUSTOMER => Customer::acrossDealers()->inViewedBranch()->orderBy('code')->get()->map(fn (Customer $c) => ['id' => (int) $c->id, 'name' => trim($c->code.' — '.$c->name())])->all(),
+            // ⭐ "কোড — নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); জায়গা একবারে
+            SisterLink::CUSTOMER => Customer::acrossDealers()->inViewedBranch()->with(Customer::PLACE)->orderBy('code')->get()->map(fn (Customer $c) => ['id' => (int) $c->id, 'name' => trim($c->code.' — '.$c->nameWithPoint())])->all(),
             SisterLink::SUPPLIER => Supplier::query()->inViewedBranch()->orderBy('code')->get()->map(fn (Supplier $s) => ['id' => (int) $s->id, 'name' => trim($s->code.' — '.$s->name())])->all(),
         ]);
 
@@ -65,16 +66,40 @@ final class LinksController extends Controller implements HasMiddleware
             ->orderBy('company_id')
             ->orderBy('id')
             ->paginate(50)
-            ->withQueryString()
-            ->through(fn (SisterLink $link) => [
-                'id' => (int) $link->id,
-                'company' => $companies[$link->company_id]['name'],
-                'sister' => $companies[$link->sister_company_id]['name'],
-                'type' => $link->party_type,
-                'party' => $this->lens->within($user, (int) $link->company_id, null, fn () => ($link->party_type === SisterLink::CUSTOMER
-                    ? Customer::acrossDealers()->inViewedBranch()->find($link->party_id)
-                    : Supplier::query()->inViewedBranch()->find($link->party_id))?->name() ?? '#'.$link->party_id),
-            ]);
+            ->withQueryString();
+
+        /*
+         * ⭐ পক্ষের নাম কোম্পানি ধরে একবারে — গ্রাহক হলে "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)।
+         * ⓘ আগে সারি প্রতি একটা প্রশ্ন ছিল; এখন পাতার প্রতিটা কোম্পানিতে ধরন প্রতি একটা (জায়গাসহ)।
+         */
+        $partyNames = [];
+
+        foreach ($links->getCollection()->groupBy('company_id') as $companyId => $rows) {
+            $partyNames += $this->lens->within($user, (int) $companyId, null, function () use ($rows, $companyId) {
+                $ids = fn (bool $customers) => $rows->filter(fn (SisterLink $l) => ($l->party_type === SisterLink::CUSTOMER) === $customers)
+                    ->pluck('party_id')->map(fn ($id) => (int) $id)->all() ?: [0];
+                $out = [];
+
+                foreach (Customer::acrossDealers()->inViewedBranch()->whereIn('customers.id', $ids(true))->with(Customer::PLACE)->get() as $c) {
+                    $out[$companyId.':'.SisterLink::CUSTOMER.':'.$c->id] = $c->nameWithPoint();
+                }
+
+                foreach (Supplier::query()->inViewedBranch()->whereIn('suppliers.id', $ids(false))->get() as $s) {
+                    $out[$companyId.':supplier:'.$s->id] = $s->name();
+                }
+
+                return $out;
+            });
+        }
+
+        $links->through(fn (SisterLink $link) => [
+            'id' => (int) $link->id,
+            'company' => $companies[$link->company_id]['name'],
+            'sister' => $companies[$link->sister_company_id]['name'],
+            'type' => $link->party_type,
+            'party' => $partyNames[$link->company_id.':'.($link->party_type === SisterLink::CUSTOMER ? SisterLink::CUSTOMER : 'supplier').':'.$link->party_id]
+                ?? '#'.$link->party_id,
+        ]);
 
         return view('executive::links', [
             'menu' => $this->menu->forUser($user),

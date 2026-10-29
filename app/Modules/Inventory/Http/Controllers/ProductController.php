@@ -9,6 +9,7 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Services\SourceParties;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Inventory\Http\Requests\ProductRequest;
@@ -132,6 +133,13 @@ class ProductController extends Controller implements HasMiddleware
             // চারটা অবস্থা একসাথে — একটা কোয়েরিতে
             'states' => $this->stock->statesFor($product),
             'movements' => $movements,
+            /*
+             * ⭐ কাগজের নম্বরের পাশে পক্ষ — কার কাছে গেল / কার কাছ থেকে এল (মালিক, ১৯ অক্টোবর ২০২৬)। ⓘ চলাচল কেবল কাগজের ধরন আর
+             * আইডি জানে; পক্ষ আসে খাতা বা কাগজ থেকে, পাতার একবারে ([[SourceParties]]) — সারি ধরে নয়।
+             */
+            'movementParties' => app(SourceParties::class)->of(
+                $movements->getCollection()->map(fn (StockMovement $m) => [(string) $m->source_type, (int) $m->source_id]),
+            ),
         ]);
     }
 

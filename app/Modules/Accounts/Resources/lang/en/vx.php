@@ -11,7 +11,8 @@ return [
     'received_from' => 'Received From',
     'paid_to' => 'Paid To',
     'party' => 'Party',
-    'point' => 'Point',
+    // ⭐ গ্রাহকের শাখাও (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+    'point' => 'Point · Branch',
     'payment_date' => 'Payment Date',
     'pay_method' => 'Pay Method',
     'receipt_no' => 'Receipt No.',

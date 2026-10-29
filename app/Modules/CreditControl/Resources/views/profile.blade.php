@@ -27,7 +27,7 @@
     <x-slot:title>{{ __('credit_control::profile.title', ['name' => $customer->name()]) }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$customer->name()" :subtitle="$customer->code.' · '.__('credit_control::profile.subtitle')">
+        <x-ui.page-header :title="$customer->nameWithPoint()" :subtitle="$customer->code.' · '.__('credit_control::profile.subtitle')">
             <x-slot:actions>
                 <x-ui.button tone="secondary" :href="route('customer.show', $customer)">
                     <x-ui.icon name="customer" :size="14" /> {{ __('credit_control::profile.open_customer') }}

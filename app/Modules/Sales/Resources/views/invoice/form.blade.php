@@ -71,7 +71,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="$challan?->customer_id ?? $invoice->customer_id" placeholder="-" required />
                 <x-ui.select name="warehouse_id" :label="__('sales::field.warehouse')"
                              :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"

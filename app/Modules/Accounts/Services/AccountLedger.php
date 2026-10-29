@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\ViewedBranch;
+use App\Core\Services\SourceParties;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -28,7 +29,7 @@ final class AccountLedger
      * ⭐ শাখা হেডারে বাছা শাখাই — সেবা নিজে পড়ে, ডাকা জায়গা ভুলতে পারে না (ওয়েব আর ফোন দুটোই; [[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]])।
      * ⓘ "সব শাখা"-তে null = গোটা কোম্পানি ([[ViewedBranch::one()]])।
      *
-     * @return array{entries: LengthAwarePaginator, grand: array{debit: string, credit: string}, closing: string}
+     * @return array{entries: LengthAwarePaginator, grand: array{debit: string, credit: string}, closing: string, parties: array<int, string>}
      */
     public function page(Account $account, int $page): array
     {
@@ -89,7 +90,16 @@ final class AccountLedger
             'credit' => (string) ($sums->credit ?? '0'),
         ];
 
-        return ['entries' => $entries, 'grand' => $grand, 'closing' => bcsub($grand['debit'], $grand['credit'], 4)];
+        return [
+            'entries' => $entries,
+            'grand' => $grand,
+            'closing' => bcsub($grand['debit'], $grand['credit'], 4),
+            /*
+             * ⭐ নম্বরের পাশে পক্ষ — মালিক, ১৯ অক্টোবর ২০২৬। ⓘ সারির নিজের পক্ষ, না থাকলে তার কাগজের (ক্যাশ/ব্যাংকের সারিতে পক্ষ
+             * বসে না); এই পাতার সারিগুলোর একবারে ([[SourceParties::forEntries()]]) — ওয়েব আর ফোন একই নাম পায়।
+             */
+            'parties' => app(SourceParties::class)->forEntries($entries->getCollection()),
+        ];
     }
 
     /**

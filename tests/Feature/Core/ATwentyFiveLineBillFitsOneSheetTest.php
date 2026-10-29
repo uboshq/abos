@@ -153,13 +153,15 @@ final class ATwentyFiveLineBillFitsOneSheetTest extends TestCase
 
         $today = '03-10-2026';
 
+        // ⓘ পয়েন্টের ঘরে শাখাও — আসল বিলের মতো (মালিক, ১৯ অক্টোবর ২০২৬; [[PaperPlace::of()]]); তবু এক পাতা
+
         return [
             'title' => 'S-0025',
             'doc' => new PrintableDocument(title: 'Invoice', notice: 'DUPLICATE — Print No. 2', payments: [[
                 'no' => 1, 'ref' => 'RV-0000', 'date' => $today, 'method' => 'Cash', 'narration' => '', 'amount' => '5,000.00',
             ]]),
             'facts' => [
-                'bill_to' => ['name' => 'Rahim Traders', 'point' => 'Mirpur Point', 'phone' => '01700-000000', 'address' => 'House 1, Road 1, Mirpur 10, Dhaka'],
+                'bill_to' => ['name' => 'Rahim Traders', 'point' => 'Mirpur Point · Dhaka Head Office', 'phone' => '01700-000000', 'address' => 'House 1, Road 1, Mirpur 10, Dhaka'],
                 'transport' => ['carrier' => 'Own Transport', 'driver_phone' => '01800-000000', 'vehicle' => 'Truck DM-TA-11-0000', 'delivery_date' => $today],
                 'bill' => ['bill_date' => $today, 'bill_no' => 'S-0025', 'order_no' => 'SO-0025', 'type' => 'CREDIT', 'created_by' => 'Sample Staff'],
                 'total_items' => (string) $rows,

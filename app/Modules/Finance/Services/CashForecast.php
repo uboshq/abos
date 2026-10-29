@@ -81,7 +81,7 @@ final class CashForecast
         $invoices = SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon);
 
         foreach (SalesInvoice::query()->fromSub($invoices, 'sal_invoices')
-            ->whereRaw('sal_invoices.total - sal_invoices.collected_total - sal_invoices.voucher_total - sal_invoices.returned_total - sal_invoices.claimed_total > 0')
+            ->whereRaw(SalesInvoice::dueSql('sal_invoices').' > 0')
             ->get() as $invoice) {
             $this->add($sums, $this->bucketOf($invoice->due_on, $today), 'receivables', $invoice->dueAmount());
         }
@@ -89,7 +89,7 @@ final class CashForecast
         $bills = PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon);
 
         foreach (PurchaseBill::query()->fromSub($bills, 'pur_bills')
-            ->whereRaw('pur_bills.total - pur_bills.paid_total - pur_bills.voucher_paid_total - COALESCE(pur_bills.returned_total, 0) > 0')
+            ->whereRaw('pur_bills.total - pur_bills.ait_amount - pur_bills.vds_amount - pur_bills.paid_total - pur_bills.voucher_paid_total - COALESCE(pur_bills.returned_total, 0) > 0')
             ->get() as $bill) {
             $this->add($sums, $this->bucketOf($bill->due_on, $today), 'payables', $bill->dueAmount());
         }

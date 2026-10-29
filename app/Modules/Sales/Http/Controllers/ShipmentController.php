@@ -101,7 +101,8 @@ class ShipmentController extends Controller implements HasMiddleware
     public function show(Request $request, Shipment $shipment): View
     {
         $shipment->load([
-            'lines.challan.customer', 'vehicle', 'route', 'warehouse', 'creator',
+            // ⭐ গ্রাহকের পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; সব লাইনের একবারে
+            'lines.challan.customer.location.parent', 'lines.challan.customer.branch', 'vehicle', 'route', 'warehouse', 'creator',
         ]);
 
         return view('sales::shipment.show', [
@@ -113,7 +114,7 @@ class ShipmentController extends Controller implements HasMiddleware
 
     public function edit(Request $request, Shipment $shipment): View
     {
-        $shipment->load('lines.challan.customer');
+        $shipment->load(['lines.challan.customer.location.parent', 'lines.challan.customer.branch']);
 
         return view('sales::shipment.form', [
             'menu' => $this->menu->forUser($request->user()),
@@ -207,7 +208,7 @@ class ShipmentController extends Controller implements HasMiddleware
             'challans' => DeliveryChallan::query()
                 ->where('status', DocumentStatus::CONFIRMED)
                 ->whereNotIn('id', $onOtherTrips)
-                ->with(['customer', 'warehouse'])
+                ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
                 ->orderByDesc('trx_date')->orderByDesc('id')
                 ->limit(300)
                 ->get(),

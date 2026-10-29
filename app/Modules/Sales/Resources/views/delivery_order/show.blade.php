@@ -14,7 +14,7 @@
     <section data-boxed class="mb-4 grid gap-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm" data-do-head>
         <p class="text-lg font-semibold">{{ $order->document_no }}</p>
         <p data-do-status>{{ __('sales::field.state') }}: <strong>{{ \App\Modules\Sales\Support\DeliveryOrderStatus::label((string) $order->status) }}</strong></p>
-        <p>{{ __('sales::field.customer') }}: {{ $order->customer?->name() }}</p>
+        <p>{{ __('sales::field.customer') }}: {{ $order->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint() }}</p>
         <p>{{ __('sales::field.date') }}: {{ \App\Core\Support\DateFormat::format($order->trx_date) }}</p>
         @if ($order->deliver_on)
             <p>{{ __('sales::delivery_order.deliver_on') }}: {{ \App\Core\Support\DateFormat::format($order->deliver_on) }}</p>

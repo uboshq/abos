@@ -340,4 +340,9 @@ return [
     'agreed_rates' => 'Agreed rates',
     'qty_limit' => 'Quantity limit',
     'value_limit' => 'Value limit',
+
+    'ait_amount' => 'Income tax withheld at source (AIT)',
+    'vds_amount' => 'VAT withheld at source (VDS)',
+    'payable_net' => 'Owed to the supplier (after withholding)',
+    'withheld_note' => 'Income Tax Act 2023 s.89 and VAT Act 2012 s.49 — when the bill is confirmed the withheld part is owed to the Government (2121); the supplier gets the net.',
 ];

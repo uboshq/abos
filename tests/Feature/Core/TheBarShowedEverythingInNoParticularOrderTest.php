@@ -61,7 +61,8 @@ final class TheBarShowedEverythingInNoParticularOrderTest extends TestCase
         $settings->set('notice.creator_cannot_approve', false);
         $settings->flush();
 
-        Notice::query()->update(['in_ticker' => false]);
+        // ⓘ আগে থেকে থাকা কোনো নোটিশ বারে নয় — শুরুতে খালি বার (`in_ticker` আর কেউ পড়ে না, ২১ অক্টোবর ২০২৬)
+        Notice::query()->update(['is_active' => false]);
     }
 
     /**
@@ -101,18 +102,33 @@ final class TheBarShowedEverythingInNoParticularOrderTest extends TestCase
     }
 
     /**
-     * ⓘ সাধারণ নোটিশ বারে ওঠেই না।
+     * ⭐ সাধারণ নোটিশও বারে — তবে পিছনে; সমান অগ্রাধিকারে নতুনটা আগে (fe, ২১ অক্টোবর ২০২৬)।
      *
-     * ── ⚠️ কেন এটা আলাদা দাবি ───────────────────────────────────────
-     * ⛔ উপরের সীমাটা মানা হলেও **কোনগুলো** বাদ পড়ছে সেটা অন্য প্রশ্ন।
-     * ⓘ ছুটির খবর রোজ বারে উঠলে বারটা রোজই ভরা থাকত, আর ভরা বার মানে
-     * না-পড়া বার।
+     * ── ⓘ আগে যা ছিল ───────────────────────────────────────────────
+     * এখানে দাবি ছিল *"সাধারণ নোটিশ বারে ওঠেই না"*। ⛔ সেই ফটক উঠে গেছে — ফর্মের বারের টিক কিছুই করত না।
+     * ⚠️ ভিড়ের ভয়টা তবু সত্যি, তাই এখন ক্রমটাই পাহারা: **কোনগুলো আগে** — আর সীমা ছোট হলে ছুটির খবরই বাদ পড়ে, আগুনের নয়।
      */
-    public function test_an_ordinary_notice_never_reaches_the_bar(): void
+    public function test_an_ordinary_notice_rides_behind_and_the_newer_of_equals_first(): void
     {
-        $plain = $this->published('ছুটির খবর', NoticePriority::LOW);
+        $settings = app(SettingsService::class);
+        $settings->set('notice.bar_max', 10);
+        $settings->flush();
 
-        $this->assertFalse((bool) $plain->in_ticker, 'সাধারণ নোটিশও বারে চলে যাচ্ছে।');
+        // ⚠️ বেশি জরুরিটা সবার আগে লেখা (সবচেয়ে পুরনো) — কেবল "নতুনটা আগে" সাজালে লাল হয়
+        $this->published('বেশি জরুরি', NoticePriority::HIGH);
+        $this->published('ছুটির খবর', NoticePriority::LOW);
+        $this->published('পুরনো সাধারণ', NoticePriority::NORMAL);
+        $this->published('নতুন সাধারণ', NoticePriority::NORMAL);
+
+        $this->assertSame(['বেশি জরুরি', 'নতুন সাধারণ', 'পুরনো সাধারণ', 'ছুটির খবর'],
+            app(NoticeBoard::class)->forTicker($this->me)->pluck('title')->all(),
+            '⛔ চলন্ত বারের ক্রম অগ্রাধিকার, তারপর নতুনটা — এমন নয়।');
+
+        // ⛔ সীমা ছোট হলে পিছনেরটাই বাদ পড়ে
+        $settings->set('notice.bar_max', 1);
+        $settings->flush();
+        $this->assertSame(['বেশি জরুরি'], app(NoticeBoard::class)->forTicker($this->me)->pluck('title')->all(),
+            '⛔ সীমা মানতে গিয়ে জরুরিটাই বাদ পড়ল।');
     }
 
     /**

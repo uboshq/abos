@@ -98,6 +98,9 @@ class BankFacilityService
 
         $this->assertSanctionIsNew($institutionId, $data['sanction_no'] ?? null);
 
+        // ⛔ ঋণের টাকা যে খাত দিয়ে নড়ে, সেটা কোনো শাখার বাক্সের হলে সেই শাখায় — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+        $branchId = app(FinanceSignature::class)->branchFor([$data['money_account_id'] ?? null]);
+
         return BankFacility::query()->create([
             /*
              * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো, আর এটা আমার
@@ -110,9 +113,9 @@ class BankFacilityService
              * ⚠️ ফল: মঞ্জুরি নম্বর না লিখলে সুবিধাটার পরিচয় হত স্রেফ
              * একটা আইডি, আর ড্রিলের তালিকায় সেটা দেখতে ভুলের মতো লাগত।
              */
-            'document_no' => $this->numbers->next('BFC'),
+            'document_no' => $this->numbers->next('BFC', $branchId),
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
+            'branch_id' => $branchId,
             'kind' => $kind,
 
             'institution_id' => $institutionId,
@@ -304,13 +307,8 @@ class BankFacilityService
             ]);
         }
 
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
-
-        if ($equity === null) {
-            throw ValidationException::withMessages([
-                'opening_drawn' => __('finance::validation.opening_needs_the_chart'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $equity = StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
 
         /*
          * ⛔ সই ছাড়া খাতায় নয় — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ খোলা বকেয়া দায় বাড়ায় আর সঞ্চিত মুনাফা কমায়;
@@ -340,6 +338,8 @@ class BankFacilityService
                 ['account_id' => (int) $facility->liability_account_id, 'credit' => $outstanding],
             ],
             documentNo: $facility->document_no,
+            // ⛔ সুবিধার নিজের শাখায় — শেষ সই যে শাখা থেকেই পড়ুক (ec, ১৯ অক্টোবর ২০২৬)
+            branchId: $facility->branch_id === null ? null : (int) $facility->branch_id,
         );
 
         return false;

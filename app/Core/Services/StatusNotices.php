@@ -113,6 +113,8 @@ final class StatusNotices
                 $this->approvalNotice(),
                 $this->draftNotice(),
                 $this->transferNotice(),
+                // ⭐ করণীয়ের সময় — পেরোলে লাল (বারেও), তিন দিনের মধ্যে হলে হলুদ (টাকা দেওয়ার মিল-তালিকা #৩; fe, ২২ অক্টোবর ২০২৬)
+                $this->obligationNotice(),
 
                 /*
                  * ⭐ মেয়াদ ফুরিয়ে আসছে — ২৪ সেপ্টেম্বর ২০২৬।
@@ -160,25 +162,41 @@ final class StatusNotices
     }
 
     /**
-     * ⭐ নিচের চলন্ত বারে সব নোটিশ — আগে মানুষের লেখা (যোগাযোগ কেন্দ্রের প্রকাশিত নোটিশ, বারে টিক দেওয়া), তারপর যন্ত্রের
-     * সতর্কতা (ব্যাকআপ, খসড়া, অনুমোদন, বদলি, মেয়াদ)। ঘণ্টাতেও সব থাকে ([[all()]])।
+     * ⭐ নিচের চলন্ত বারে — কেবল মানুষের লেখা ঘোষণা (মালিক, ২১ অক্টোবর ২০২৬, fe-র মাধ্যমে: *"জরুরি সতর্কতা উপরে স্থির,
+     * ঘোষণা নিচে চলন্ত"*)। ⓘ যোগাযোগ কেন্দ্রের প্রকাশিত নোটিশ, বারে টিক দেওয়া, জরুরি নয় ([[NoticeBoard::forTicker()]])।
      *
-     * ⓘ ১০ অক্টোবর (পাতা সাজানো ধাপ ১) যন্ত্রের লাল উপরের হলুদ ব্যানারে গিয়েছিল; মালিক ১১ অক্টোবর সেটা ফিরিয়ে দিলেন
-     * (নিচে দেখো)। [[forBanner()]] কেবল পুরনো "সরান" দরজার জন্য থাকে, পাতায় ব্যানার আর বসে না।
+     * ⛔ যন্ত্রের সতর্কতা (ব্যাকআপ, খসড়া, অনুমোদন, বদলি, মেয়াদ) এখানে কখনো নয় — ওগুলো উপরের স্থির ফিতায় ([[forStrip()]])।
+     * ⓘ একই নোটিশ কখনো দুই জায়গায় নয়: এই তালিকা আর [[forStrip()]] একই [[all()]]-কে দুই ভাগ করে, দুইটা আলাদা কোয়েরি নয়।
+     *
+     * ── ⓘ ইতিহাস ─────────────────────────────────────────────────────────────────────────────────────────────
+     * ১০ অক্টোবর যন্ত্রের লাল উপরে, মানুষের লেখা নিচে; ১১ অক্টোবর মালিক সব নিচে ফেরালেন (*"Web er notice board kaj
+     * korteche na footer e na dekhiye upore dekhay notice"*); ২০ অক্টোবর অনুমোদিত নমুনায় সব উপরে, স্থির; ২১ অক্টোবর এই ভাগ —
+     * কাজের সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত।
      *
      * @return list<array{text: string, url: ?string, tone: string}>
      */
     public function forTicker(): array
     {
-        /*
-         * ⭐ মালিক, ১১ অক্টোবর ২০২৬: *"Web er notice board kaj korteche na footer e na dekhiye upore dekhay notice"* —
-         * ১০ অক্টোবরের ভাগ (যন্ত্রের লাল উপরের হলুদ ব্যানারে, নিচে কেবল মানুষের লেখা) উল্টানো হলো: সব নোটিশ আবার
-         * নিচের চলন্ত বারে, মানুষের লেখা আগে, যন্ত্রের সতর্কতা পরে। উপরের ব্যানার আর পাতায় বসে না।
-         */
+        return array_values(array_filter(
+            $this->all(),
+            fn (array $n): bool => ($n['kind'] ?? null) === 'own' && ! ($n['urgent'] ?? false),
+        ));
+    }
+
+    /**
+     * ⭐ উপরের স্থির ফিতায় — যন্ত্রের সতর্কতা আর কাজের নোটিশ (ব্যাকআপ, খসড়া পোস্ট হয়নি, অনুমোদন …), সাথে লেখক যে
+     * ঘোষণায় "জরুরি" টিক দিয়েছেন — সেটা সবার আগে ([[shell.notice-banner]])।
+     *
+     * ⛔ জরুরি নয় এমন ঘোষণা এখানে কখনো নয় — সেটা নিচের চলন্ত বারে ([[forTicker()]])।
+     *
+     * @return list<array{text: string, url: ?string, tone: string}>
+     */
+    public function forStrip(): array
+    {
         $all = $this->all();
 
         return array_values(array_merge(
-            array_filter($all, fn (array $n): bool => ($n['kind'] ?? null) === 'own'),
+            array_filter($all, fn (array $n): bool => ($n['kind'] ?? null) === 'own' && ($n['urgent'] ?? false)),
             array_filter($all, fn (array $n): bool => ($n['kind'] ?? null) !== 'own'),
         ));
     }
@@ -278,7 +296,8 @@ final class StatusNotices
             return [];
         }
 
-        return app(NoticeBoard::class)->forTicker($user)
+        // ⓘ দুই বারের সব ([[NoticeBoard::onTheBars()]]) — কোনটা কোথায় বসবে সেটা `urgent` ঠিক করে ([[forStrip()]], [[forTicker()]])
+        return app(NoticeBoard::class)->onTheBars($user)
             ->map(fn (Notice $notice): array => [
                 'text' => (string) $notice->title,
 
@@ -304,8 +323,11 @@ final class StatusNotices
                 // ⓘ নীল — এটা সতর্কতা নয়, খবর।
                 'tone' => 'info',
 
-                // ⭐ মানুষের লেখা — নিচের চলন্ত বারে থাকে; যন্ত্রের সতর্কতা কেবল ঘণ্টায় (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬)
+                // ⭐ মানুষের লেখা — নিচের চলন্ত বারে; যন্ত্রের সতর্কতা উপরের ফিতায় (মালিক, ২১ অক্টোবর ২০২৬)
                 'kind' => 'own',
+
+                // ⭐ লেখকের "জরুরি" টিক — তাহলে উপরের স্থির ফিতায়, চলন্ত বারে নয় ([[forStrip()]])
+                'urgent' => (bool) $notice->is_urgent,
             ])
             ->all();
     }
@@ -571,6 +593,43 @@ final class StatusNotices
                 ? route('accounts.transfer.index')
                 : null,
             'tone' => 'info',
+        ];
+    }
+
+    /**
+     * ⭐ আইনের দায় — কোষাগারে জমা, মূসক-৬.৬ ([[ComplianceObligations]]); কেবল যিনি করণীয় দেখেন, হেডারে বাছা শাখা ধরে।
+     *
+     * ⓘ সময় পেরোনো দায় `danger` — বারের ওপরে ওঠে, কারণ জরিমানা দিন গুনে বাড়ে; তিন দিনের মধ্যে শেষ তারিখ হলে `warning`। ⛔ দুটো
+     * একসাথে নয় — পেরোনোটাই বড় কথা, আর একই বিষয়ের দুই বার্তা মানুষ একটা ভেবে পড়েন (ব্যাকআপের একই শিক্ষা)।
+     */
+    private function obligationNotice(): ?array
+    {
+        if (! Schema::hasTable('compliance_obligations') || ! (auth()->user()?->can('accounts.obligation.view') ?? false)) {
+            return null;
+        }
+
+        $open = fn () => \App\Core\Support\ViewedBranch::narrow(DB::table('compliance_obligations')
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('done_at')
+            ->whereNull('cancelled_at'), 'compliance_obligations.branch_id');
+
+        $today = Carbon::today()->toDateString();
+        // ⛔ কলামটা সত্যিকারের `date` — তারিখের ফাংশনে মোড়ালে DATE(due_on) হয়ে সূচক হারাত ([[TheDateFilterHidTheIndexFromMysqlTest]])
+        $overdue = $open()->where('due_on', '<', $today)->count();
+        $soon = $overdue > 0 ? 0 : $open()->where('due_on', '>=', $today)->where('due_on', '<=', Carbon::today()->addDays(3)->toDateString())->count();
+
+        if ($overdue === 0 && $soon === 0) {
+            return null;
+        }
+
+        return [
+            'text' => $overdue > 0
+                ? trans_choice('accounts::obligation.notice_overdue', $overdue, ['count' => $overdue])
+                : trans_choice('accounts::obligation.notice_soon', $soon, ['count' => $soon]),
+            'url' => Route::has('accounts.obligation.index')
+                ? route('accounts.obligation.index', ['tab' => $overdue > 0 ? 'overdue' : 'open'])
+                : null,
+            'tone' => $overdue > 0 ? 'danger' : 'warning',
         ];
     }
 }

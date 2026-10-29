@@ -75,3 +75,13 @@ parameters:
     phpVersion:
         min: 80300
         max: 80500
+
+    # ── হাতে লেখা ছাড়, কারণসহ (baseline যন্ত্রের, এগুলো মানুষের সিদ্ধান্ত) ──
+    ignoreErrors:
+        # larastan বলে "count() কোয়েরিতে করো" — এখানে ইচ্ছা করে নয়: `having` সহ গুনতে গেলে বিল্ডার ভিতরের কোয়েরিটাকে
+        # সাব-কোয়েরি বানায়, আর লাইভের ONLY_FULL_GROUP_BY-তে সেটা ৫০০ দেয়; গুনতি তাই কেবল b.id-র সারিতে, PHP-তে
+        # (কারণ ফাইলেই লেখা, StatusNotices-এর মেয়াদ-ফুরোনো লটের নোটিশ)। ec, ২২ অক্টোবর ২০২৬
+        -
+            message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
+            path: app/Core/Services/StatusNotices.php
+            count: 1

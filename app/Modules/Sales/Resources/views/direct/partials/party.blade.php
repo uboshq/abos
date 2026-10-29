@@ -578,6 +578,10 @@
                                                 class="w-full rounded-(--radius-field) px-2 py-1.5 text-start
                                                        hover:bg-(--color-surface-hover)">
                                             <span class="block truncate text-xs" x-text="row.name"></span>
+                                            {{-- ⭐ নামের নিচে "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরো লেখা title-এ --}}
+                                            <span class="block truncate text-2xs text-(--color-ink-muted)"
+                                                  x-show="row.location" :title="row.location" x-text="row.location"
+                                                  data-customer-place></span>
                                             <span class="num block text-2xs text-(--color-ink-muted)"
                                                   x-text="row.phone"></span>
                                         </button>

@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Support;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesOrder;
@@ -25,7 +26,7 @@ final class OrderPaperFacts
     /** @return array<string, mixed> */
     public static function order(SalesOrder $order): array
     {
-        $order->loadMissing(['customer.location.parent', 'warehouse', 'creator', 'quotation', 'lines.product.unit']);
+        $order->loadMissing(['customer.location.parent', 'customer.branch', 'warehouse', 'creator', 'quotation', 'lines.product.unit']);
 
         $byUnit = [];
         foreach ($order->lines as $line) {
@@ -49,10 +50,14 @@ final class OrderPaperFacts
         ];
     }
 
-    /** @return array<string, mixed> */
-    public static function receipt(Collection $collection): array
+    /**
+     * @param  array<string, string>  $withheld  ভাষার চাবি → অঙ্ক: গ্রাহকের কাটা VDS/AIT, ছাড়/রাউন্ডিং আর অপ্রয়োগকৃত — দফা ১৭
+     *                                            ([[SalesPrintController::receipt()]] যা চলতি কাগজে দেয়, নকশার কাগজেও সেটাই)
+     * @return array<string, mixed>
+     */
+    public static function receipt(Collection $collection, array $withheld = []): array
     {
-        $collection->loadMissing(['customer.location.parent', 'account', 'creator', 'lines.invoice']);
+        $collection->loadMissing(['customer.location.parent', 'customer.branch', 'account', 'creator', 'lines.invoice']);
 
         return [
             'no' => (string) $collection->document_no,
@@ -73,6 +78,15 @@ final class OrderPaperFacts
             'words' => AmountInWords::of((string) $collection->amount, 'en'),
             'words_bn' => AmountInWords::of((string) $collection->amount, 'bn'),
             'narration' => (string) ($collection->narration ?? ''),
+            /*
+             * ⛔ আগে কেবল চলতি কাগজ (`print.document`) এগুলো ছাপত; রসিদের ডিফল্ট নকশা ট্যালি ক্লাসিক ([[PaperDesigns::defaultFor()]])
+             * সহ সব নকশা ছাপত শুধু বিল আর মোট — গ্রাহকের কাটা VDS/AIT আর অপ্রয়োগকৃত টাকা রসিদে নেই (Mac, ২২ অক্টোবর ২০২৬, দফা ১৭)।
+             */
+            'withheld' => array_map(
+                fn (string $label, string $amount) => ['label' => $label, 'amount' => Money::format($amount)],
+                array_keys($withheld),
+                array_values($withheld),
+            ),
         ];
     }
 
@@ -88,7 +102,8 @@ final class OrderPaperFacts
 
         return [
             'name' => (string) ($customer?->name('en') ?? ''),
-            'point' => (string) ($point?->name('en') ?? ''),
+            // ⭐ "পয়েন্ট · শাখা" — এক লাইনে, কাগজের মাপ অক্ষত ([[PaperPlace::of()]]; মালিক, ১৯ অক্টোবর ২০২৬)
+            'point' => PaperPlace::of($customer instanceof Customer ? $customer : null, $point),
             'address' => (string) ($customer?->address('en') ?? ''),
             'phone' => (string) ($customer?->phone ?? ''),
         ];

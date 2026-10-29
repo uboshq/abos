@@ -151,7 +151,10 @@
                 ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
                  'render' => fn ($m) => \App\Core\Support\DateFormat::format($m->trx_date)],
                 ['key' => 'document', 'label' => __('core.table.document'),
-                 'render' => fn ($m) => view('inventory::partials.movement-source', ['movement' => $m])],
+                 'render' => fn ($m) => view('inventory::partials.movement-source', [
+                     'movement' => $m,
+                     'party' => ($movementParties ?? [])[$m->source_type.':'.$m->source_id] ?? null,
+                 ])],
                 ['key' => 'warehouse_id', 'label' => __('inventory::field.warehouse'),
                  'render' => fn ($m) => $m->warehouse?->name()],
                 ['key' => 'reason_code_id', 'label' => __('inventory::field.reason'),

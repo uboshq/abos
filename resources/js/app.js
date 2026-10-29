@@ -3,7 +3,9 @@ import morph from '@alpinejs/morph'
 import { wireActions } from './components/actions.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
+import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
+import { approvalKeys } from './approval-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
 import { guardConfirmOverview } from './confirm-overview.js'
@@ -15,6 +17,7 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import { sidebarStore } from './sidebar-state.js'
 import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
@@ -124,14 +127,9 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.store('scanner', scannerStore())
 
-    Alpine.store('sidebar', {
-        collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
-
-        toggle() {
-            this.collapsed = ! this.collapsed
-            localStorage.setItem('abos.sidebar', this.collapsed ? 'collapsed' : 'open')
-        },
-    })
+    // ⓘ গুটানো/খোলা মানুষের বাছাই; দুই-কলামের টাকার ফর্মে ১৫৩৬-এর নিচে রেল বা ভাসমান ([[sidebar-state.js]])
+    Alpine.store('sidebar', sidebarStore())
+    window.addEventListener('resize', () => Alpine.store('sidebar').resized(window.innerWidth))
 })
 
 /*
@@ -142,6 +140,9 @@ document.addEventListener('alpine:init', () => {
  * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
  */
 listKeys()
+
+// ⭐ অনুমোদনের ← → A S R আর পপ-আপের ফোকাস — দফা ২০ ([[approval-keys.js]])
+approvalKeys()
 
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()
@@ -171,3 +172,6 @@ guardOneSubmit()
 
 window.Alpine = Alpine
 Alpine.start()
+
+// ⭐ "ফোনের মতো" রং — বান্ডেল লোড হওয়ামাত্র ([[followTheDevice]])
+followTheDevice()

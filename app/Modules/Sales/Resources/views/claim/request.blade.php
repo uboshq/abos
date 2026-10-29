@@ -19,7 +19,7 @@
         <x-ui.errors />
 
         <x-ui.select name="customer" :label="__('sales::slip.customer')"
-                     :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                     :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                      :selected="old('customer', $picked)" placeholder="-" required />
 
         <x-ui.field name="claimed_on" type="date" :label="__('sales::portal.claimed_on')"
