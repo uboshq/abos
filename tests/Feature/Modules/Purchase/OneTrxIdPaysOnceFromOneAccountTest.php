@@ -92,6 +92,16 @@ final class OneTrxIdPaysOnceFromOneAccountTest extends TestCase
         $this->pay($this->two, $this->otherBank, '000123');
 
         $this->assertSame(2, Payment::query()->where('instrument_no', '000123')->count(), '⛔ দুই ব্যাংকের একই নম্বর আটকে গেল — বৈধ পরিশোধ থামত');
+
+        // ⓘ একই সরবরাহকারী, দুই ব্যাংক — প্রশ্নটা খাতের, পক্ষের নয় (fe, ৩১ অক্টোবর ২০২৬: cb-র sl_payment_no_account বেঁচে ছিল —
+        //   তৈরির পথে খাত বাদ দিলে পক্ষ ধরে মিলত, আর আগের দাবিগুলোয় দুই পক্ষ ছিল বলে সেটা ধরা পড়ত না)
+        $this->pay($this->one, $this->bank, '000456');
+        try {
+            $this->pay($this->one, $this->otherBank, '000456');
+        } catch (ValidationException $e) {
+            $this->fail('⛔ একই সরবরাহকারীকে আরেক ব্যাংক থেকে একই নম্বরে দেওয়া আটকে গেল — নম্বরটা পক্ষ ধরে মেলানো হচ্ছে, খাত ধরে নয়: '
+                .json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+        }
     }
 
     /** ৩ — বাতিলের পরে আবার */
