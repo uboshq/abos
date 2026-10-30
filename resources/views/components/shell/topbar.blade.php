@@ -87,6 +87,21 @@
             'lg:hidden' => $narrow,
         ])>
 
+    {{-- ⭐ ফোনের ☰ — বাঁ থেকে মেনু বের করে: মডিউলের রঙিন আইকন আর চলতি মডিউলের পুরো মেনু (মালিক, ৩০ অক্টোবর ২০২৬;
+         Material 3 navigation drawer)। ⓘ কেবল ৭৬৮-এর নিচে; বড় পর্দার "≡" নিজের ঘরে। বোতাম ৪০×৪০ (আঙুলের মাপ)। --}}
+    <button type="button"
+            x-data
+            data-phone-menu-toggle
+            @click="$store.sidebar.phone = true"
+            class="-ms-1 flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
+                   transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500) md:hidden"
+            aria-label="{{ __('core.a11y.menu') }}"
+            title="{{ __('core.a11y.menu') }}"
+            :aria-expanded="$store.sidebar.phone ? 'true' : 'false'">
+        <x-ui.icon name="list" :size="22" />
+    </button>
+
     {{-- রূপের নিজের অংশ — Odoo-র লঞ্চার, D365-এর ওয়াফল, ইত্যাদি।
          যে রূপের কিছু নেই তার জন্য এটা কিছুই আঁকে না। --}}
     <x-shell.chrome region="topbar-start" :menu="$menu ?? []" />

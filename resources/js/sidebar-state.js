@@ -43,6 +43,14 @@ export function sidebarStore ({ doc = document, win = window, storage = window.l
         collapsed: start.collapsed,
         floats: start.floats,
 
+        /*
+         * ⭐ ফোনের মেনু — বাঁ থেকে বেরোনো ড্রয়ার (মালিক, ৩০ অক্টোবর ২০২৬: "mobile view e module icon nai tai module select
+         * korte zamela hobe, sathe menur jonno bebosta koro"; Material 3 navigation drawer, SAP Fiori-র ফোনের ☰)।
+         * ⓘ বড় পর্দার সাইডবারটাই — বাঁয়ে মডিউলের রঙিন আইকন, পাশে চলতি মডিউলের পুরো মেনু; আলাদা দ্বিতীয় মেনু নয়।
+         * ⓘ বড় পর্দার বাছাই (গুটানো/খোলা) ছোঁয় না, localStorage-এ কিছু লেখে না — প্রতিটা পাতা বন্ধ অবস্থায় খোলে।
+         */
+        phone: false,
+
         /** রেলের চওড়া — গুটানো, বা ভাসমান (খোলা থাকলেও জায়গা রেলেরই) */
         get rail () {
             return this.collapsed || this.floats

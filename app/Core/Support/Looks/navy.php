@@ -202,30 +202,26 @@ return [
          *
          * ⓘ ঘরগুলো কেবল এই রূপে — বাকি ন'টা `tokens.css`-এর
          * ডিফল্ট রংই পায়, তাই তাদের একটা পিক্সেলও নড়ে না।
+         *
+         * ── ⭐ ৩০ অক্টোবর ২০২৬: ষোলোটা `--color-module-*` এখান থেকে উঠে গেছে ──
+         * মালিকের নতুন চাওয়া (২৪ অক্টোবর): *"full erp RGB ekta color dibe"* —
+         * ড্যাশবোর্ডের পরিকল্পনা §৩.৫: রূপ কেবল ব্র্যান্ড আর পটভূমি বদলায়,
+         * মডিউলের রং ছোঁয় না। ⓘ এক রঙের শান্ত রূপ হারায়নি — সেটা এখন
+         * কোম্পানির সুইচ `system.colorful_modules` (বন্ধ =
+         * `tokens.css`-এর `[data-modules='calm']`, সব মডিউল ব্র্যান্ড ৭০০-এ)।
+         * ⛔ এখানে ঘরগুলো থাকলে html-এর inline style সুইচকে হারিয়ে দিত।
          */
-        '--color-module-dashboard' => '#0e4b59',
-        '--color-module-accounts' => '#0e4b59',
-        '--color-module-finance' => '#0e4b59',
-        '--color-module-sales' => '#0e4b59',
-        '--color-module-purchase' => '#0e4b59',
-        '--color-module-inventory' => '#0e4b59',
-        '--color-module-customer' => '#0e4b59',
-        '--color-module-supplier' => '#0e4b59',
-        '--color-module-hr' => '#0e4b59',
-        '--color-module-approval' => '#0e4b59',
-        '--color-module-master_data' => '#0e4b59',
-        '--color-module-reports' => '#0e4b59',
-        '--color-module-governance' => '#0e4b59',
-        '--color-module-system_admin' => '#0e4b59',
-        '--color-module-backup' => '#0e4b59',
-        '--color-module-restaurant' => '#0e4b59',
         /*
          * টাইল নেই — নমুনায় রেলের আইকন খালি জমিনে বসে।
          *
          * ⓘ `.rail a{width:40px;height:40px;border-radius:9px;
          * color:#9FC4CC}` — চৌকো ভরাট নয়, কেবল আইকনের রং।
+         *
+         * ⭐ ৩০ অক্টোবর ২০২৬: `--rail-tile-bg` (transparent) আর নিচের `--rail-tile-ink` এখান থেকে
+         * `tokens.css`-এর `:root[data-modules='calm'][data-ui='navy']`-এ সরেছে — html-এর inline style
+         * স্টাইলশিটকে হারায়, তাই এখানে থাকলে রঙিন মডিউল চালু থাকলেও রেলের টাইল স্বচ্ছই থাকত (মাপা,
+         * ১৩৬৬-এর ছবিতে সব আইকন সাদা)। শান্ত রূপে রেল ঠিক আগের মতো; রঙিনে প্রতিটা টাইল নিজের মডিউলের রঙে।
          */
-        '--rail-tile-bg' => 'transparent',
         '--rail-tile-radius' => '9px',
         /*
          * ⛔ চিহ্নের রং **অ্যাকসেন্টের নিজের কালি**, বাঁধা সাদা নয়।
@@ -250,8 +246,9 @@ return [
          * ছিল, `900`-এর জন্য**। ⚠️ জমিন বদলেছে, আর তার সাথে
          * যুক্তিটাও বদলাতে হয়েছে; এটাই সেই ফাঁদ যেখানে একটা পুরনো
          * সত্য নতুন প্রসঙ্গে নীরবে মিথ্যা হয়ে যায়।
+         *
+         * ⓘ ৩০ অক্টোবর ২০২৬ থেকে এই নিয়মটা `tokens.css`-এর শান্ত ব্লকে (উপরের মন্তব্য দেখুন) — রঙিন টাইলে চিহ্ন সাদা।
          */
-        '--rail-tile-ink' => 'rgb(var(--accent-ink, 255 255 255))',
 
         /*
          * চালু আইটেম — ভরাট নয়, ছোপ।

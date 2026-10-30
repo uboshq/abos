@@ -104,6 +104,11 @@
     সাইডবারটা খোলাই দেখায় — অর্থাৎ ভুল অবস্থাটা দেখা যায় না, শুধু
     গুটানো ব্যবহারকারীর ক্ষেত্রে এক পলকে খোলা থেকে গুটিয়ে যায়।
 --}}
+{{-- ⭐ ফোনের ড্রয়ারের পেছনের পর্দা — চাপলে মেনু বন্ধ (Material 3: scrim) --}}
+<div x-data x-cloak x-show="$store.sidebar.phone" x-transition.opacity
+     data-phone-menu-scrim
+     @click="$store.sidebar.phone = false"
+     class="fixed inset-0 z-40 bg-black/40 md:hidden" aria-hidden="true"></div>
 <aside x-data="sidebarFilter"
        {{--
            চওড়া মাপটা স্থির ক্লাসেই, Alpine-এর অপেক্ষায় নয়।
@@ -134,10 +139,14 @@
               lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
        {{-- ⓘ `rail` = গুটানো, বা দুই-কলামের টাকার ফর্মে ১৫৩৬-এর নিচে খোলা অথচ ভাসমান — জায়গা দুই ক্ষেত্রেই রেলের
             ([[sidebar-state.js]]); ভাসমান মেনুর বাইরে চাপ দিলে বন্ধ, মানুষের বাছাই বদলায় না --}}
-       :class="$store.sidebar.rail
+       :class="($store.sidebar.rail
            ? 'lg:w-(--spacing-sidebar-icon)! xl:w-(--spacing-sidebar-icon)!'
-           : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'"
+           : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)')
+           {{-- ⭐ ফোনের ড্রয়ার (☰, [[shell.topbar]]): বাঁ থেকে, পাতার উপরে, আঙুলের নাগালে ৮৮% পর্যন্ত চওড়া --}}
+           + ($store.sidebar.phone ? ' max-md:fixed! max-md:start-0 max-md:z-50! max-md:flex! max-md:w-[min(88vw,22rem)] max-md:shadow-2xl' : '')"
+       :data-phone-menu="$store.sidebar.phone ? 'open' : null"
        :data-menu-floats="$store.sidebar.overlay ? 'open' : null"
+       @keydown.escape.window="$store.sidebar.phone = false"
        @click.outside="$store.sidebar.closeOverlay($event)">
 
     <div class="flex min-w-0 flex-1 flex-col">
@@ -512,7 +521,9 @@
                                  চালু টাইলের কোনো ছায়া নেই, আর ইনলাইন
                                  `box-shadow` ওটাকে এমনিতেই বাতিল করত — ক্লাসটা
                                  থাকলে পরের পাঠক ভাবত ছায়াটা আসে। --}}
-                            <span class="grid size-8 place-items-center transition-shadow"
+                            {{-- ⓘ `data-rail-tile` — টাইলের জমিন এই ঘরেই হিসাব হয় (`tokens.css`); `:root`-এ হলে
+                                 `--color-module-current` সেখানে নেই বলে সব টাইল ব্র্যান্ডের এক নীলে পড়ত (৩০ অক্টোবর ২০২৬, ছবিতে ধরা) --}}
+                            <span data-rail-tile class="grid size-8 place-items-center transition-shadow"
                                   style="background: {{ $isActive
                                              ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))'
                                              : 'var(--rail-tile-bg)' }};
@@ -705,8 +716,10 @@
                  class="menu-panel hidden min-h-0 min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
                  {{-- ⓘ ভাসমান: রেলের পাশে পাতার উপরে, পাতা ঠেলে না ([[sidebar-state.js]] overlay) --}}
-                 :class="$store.sidebar.overlay ? 'absolute inset-y-0 start-(--spacing-sidebar-icon) z-40 w-(--spacing-sidebar) shadow-xl' : ''"
-                 x-show="! $store.sidebar.collapsed">
+                 :class="($store.sidebar.overlay ? 'absolute inset-y-0 start-(--spacing-sidebar-icon) z-40 w-(--spacing-sidebar) shadow-xl' : '')
+                     + ($store.sidebar.phone ? ' max-md:flex!' : '')"
+                 {{-- ⓘ ফোনের ড্রয়ারে মেনু সবসময় খোলা — বড় পর্দায় কেউ গুটিয়ে রাখলেও ফোনে শুধু আইকন দেখালে পাতার নাম পড়া যেত না --}}
+                 x-show="! $store.sidebar.collapsed || $store.sidebar.phone">
 
                 <x-shell.chrome region="rail-head" :menu="$menu ?? []" />
 

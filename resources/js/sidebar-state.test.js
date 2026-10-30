@@ -75,4 +75,14 @@ describe('store', () => {
         store.resized(1300)
         expect([store.floats, store.overlay]).toEqual([true, true])
     })
+
+    it('ফোনের ড্রয়ার প্রতিটা পাতায় বন্ধ খোলে, আর খুলে-বন্ধ করলে বড় পর্দার বাছাই বা localStorage ছোঁয় না (মালিক, ৩০ অক্টোবর ২০২৬)', () => {
+        const storage = memory('collapsed')
+        const store = sidebarStore({ doc: page(false), win: { innerWidth: 390 }, storage })
+
+        expect(store.phone, '⛔ ফোনের মেনু পাতা খুলতেই খোলা — পাতাটাই ঢাকা পড়ত').toBe(false)
+        store.phone = true
+        store.phone = false
+        expect([store.collapsed, storage.box.value, storage.box.writes], '⛔ ফোনের মেনু বড় পর্দার গুটানো/খোলা বাছাই বদলেছে').toEqual([true, 'collapsed', 0])
+    })
 })

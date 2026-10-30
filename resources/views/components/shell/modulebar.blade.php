@@ -191,8 +191,10 @@
 @if ($showBar)
 <div data-module-bar
      x-data
+     {{-- ⓘ ফোনে (৭৬৮-এর নিচে) নেই: একই মেনু ☰-এর ড্রয়ারে ([[shell.sidebar]], মালিক ৩০ অক্টোবর ২০২৬) — এখানে গ্রুপের
+          ড্রপডাউন বলে সারি মোড়ায়, আর ৩৯০-এ তিন সারি জুড়ে পাতার অর্ধেক মাথা খেত (মাপা, হিসাবের ড্যাশবোর্ড) --}}
      class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
-            py-1 ps-2 pe-3 md:pe-5 print-hide lg:hidden"
+            py-1 ps-2 pe-3 md:pe-5 print-hide lg:hidden max-md:hidden!"
      :class="$store.sidebar.collapsed && 'lg:flex!'"
      style="background:var(--color-modulebar, var(--color-surface-muted));
             border-bottom:1px solid var(--color-modulebar-border, var(--color-border))">

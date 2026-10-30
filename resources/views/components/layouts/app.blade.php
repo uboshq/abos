@@ -58,6 +58,9 @@
       {{-- ⭐ দুই-কলামের টাকার ফর্ম (`<x-layouts.app two-column-form>`) — ১৫৩৬-এর নিচে মেনু রেলে বা ভাসমান, যাতে নকশার
            দুই কলাম মালিকের ১৩৬৬-এর পর্দায় ধরে ([[sidebar-state.js]]; মালিক আর fe, ২৪ অক্টোবর ২০২৬) --}}
       @if ($twoColumnForm ?? false) data-two-column-form @endif
+      {{-- ⭐ রঙিন মডিউল বন্ধ — সব মডিউল ব্র্যান্ডের এক রঙে (`tokens.css`-এর `[data-modules='calm']`; কোম্পানির সুইচ
+           `system.colorful_modules`, ড্যাশবোর্ডের পরিকল্পনা §৩.৬) --}}
+      @auth @unless ((bool) app(\App\Core\Services\SettingsService::class)->get('system.colorful_modules', true)) data-modules="calm" @endunless @endauth
 
       {{--
           চলতি রূপের টোকেনগুলো — সার্ভারে বাছাই করে, কেবল একটার।
