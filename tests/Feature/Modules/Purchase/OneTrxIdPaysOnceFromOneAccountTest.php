@@ -118,7 +118,9 @@ final class OneTrxIdPaysOnceFromOneAccountTest extends TestCase
         try {
             app(SlipIsNotUsedTwice::class)->guarded(PaymentService::LIVE_REF_INDEX, 'একই স্লিপ', function () use ($first) {
                 // ⓘ দুই হাত একই মুহূর্তে পাহারা পেরোলে যা ঘটে — পাহারা ছাড়া সরাসরি দ্বিতীয় সারি
-                $copy = $first->replicate(['live_ref']);
+                // ⓘ `public_id`-ও বাদ — main-এ এটা এখন অনন্য (pur_payments_public_id_unique); নকল করলে TrxID-এর তালার আগেই ওই
+                //   তালায় থামত, আর দাবি ভুল কারণে লাল হত (fe, ৩১ অক্টোবর ২০২৬, main মেশানোর পরে Mac-এ ধরা)
+                $copy = $first->replicate(['live_ref', 'public_id']);
                 $copy->document_no = 'SP-RACE-2';
                 $copy->supplier_id = $this->two->id;
                 $copy->save();
