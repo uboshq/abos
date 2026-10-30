@@ -24,6 +24,8 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
 
     /* ⭐ একসাথে অনেকগুলো — স্থির পথ, `{approval}`-এর আগে */
     Route::post('/bulk-approve', [ApprovalInboxController::class, 'bulkApprove'])->name('inbox.bulk');
+    // ⭐ দফা ১৩: সইয়ের আগে দেখা — কয়টা, মোট কত, কোনগুলো কেন বাদ। ⓘ কিছু লেখে না, তাই GET
+    Route::get('/bulk-review', [ApprovalInboxController::class, 'bulkReview'])->name('inbox.bulk_review');
 
     /*
      * রিপোর্ট — `{approval}` ধরার আগে, স্থির পথ আগে (সেকশন ১৯.৬)।
@@ -41,6 +43,8 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
      */
     Route::get('/delegations', [ApprovalDelegationController::class, 'index'])->name('delegation.index');
     Route::post('/delegations', [ApprovalDelegationController::class, 'store'])->name('delegation.store');
+    Route::put('/delegations/{delegation}', [ApprovalDelegationController::class, 'update'])
+        ->whereNumber('delegation')->name('delegation.update');
     Route::delete('/delegations/{delegation}', [ApprovalDelegationController::class, 'destroy'])
         ->whereNumber('delegation')->name('delegation.destroy');
 
@@ -69,6 +73,9 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
         ->whereNumber('flow')->name('flow.edit');
     Route::put('/flows/{flow}', [ApprovalFlowController::class, 'update'])
         ->whereNumber('flow')->name('flow.update');
+    // ⭐ তালিকার সুইচ — চালু/বন্ধ (অনুমোদন পর্দা ভাগ ৩, দফা ১৭)
+    Route::patch('/flows/{flow}/switch', [ApprovalFlowController::class, 'switch'])
+        ->whereNumber('flow')->name('flow.switch');
     Route::delete('/flows/{flow}', [ApprovalFlowController::class, 'destroy'])
         ->whereNumber('flow')->name('flow.destroy');
 

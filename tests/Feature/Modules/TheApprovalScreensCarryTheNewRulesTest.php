@@ -259,8 +259,9 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
 
         $page = $this->actingAs($this->boss)->get(route('approval.inbox.index'));
 
+        // ⓘ ২৭ অক্টোবর ২০২৬ থেকে "সময় পার" ব্যাজের বদলে লেখায় — "দেরি 1 দিন" (অনুমোদন পর্দা ভাগ ২, দফা ৭)
         $page->assertOk()
-            ->assertSee(__('approval::message.sla_late'))
+            ->assertSee(__('approval::message.due_late_days', ['days' => 1]))
             ->assertSee(__('approval::field.late'));
 
         /*
@@ -291,6 +292,12 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
             ->assertOk()
             ->assertSee('name="ids[]" value="'.$paper->id.'"', escape: false)
             ->assertDontSee('name="ids[]" value="'.$money->id.'"', escape: false);
+
+        // ⓘ দফা ১৩ (fe, ২২ অক্টোবর ২০২৬): একসাথে সইয়ে সইদাতার টাকার সীমা থাকতেই হয় — নইলে কড়া দিকে বাদ ('no_limit')
+        $bulkRole = \Spatie\Permission\Models\Role::findOrCreate('bulk-signer');
+        $this->boss->assignRole($bulkRole);
+        \App\Models\ApprovalLimit::query()->create(['company_id' => $this->company->id, 'role_id' => $bulkRole->id,
+            'module' => 'sales', 'max_amount' => '100000000']);
 
         $this->actingAs($this->boss)
             ->post(route('approval.inbox.bulk'), ['ids' => [$paper->id, $money->id]])
@@ -472,9 +479,10 @@ class TheApprovalScreensCarryTheNewRulesTest extends TestCase
             ->assertSee(__('approval::field.journey'))
             /* ⓘ মাঝখানের কলাম — কাগজ */
             ->assertSee(__('approval::field.document'))
-            /* ⓘ ডান কলাম — সিদ্ধান্ত, আর সেটা আটকানো */
+            /* ⓘ সিদ্ধান্ত — অনুমোদন পর্দা ভাগ ২ (২৮ অক্টোবর ২০২৬) থেকে পরিকল্পনার ক্রমে: কাগজ, যাত্রাপথ, তারপর মন্তব্য আর চার বোতাম।
+                ⛔ আগের "আটকানো" ডান কলাম নতুন নকশায় কাগজ ঢাকত (1366×768 আর 1920×1080, দুই ছবিতেই) */
             ->assertSee(__('approval::action.approve'))
-            ->assertSee('lg:sticky', escape: false);
+            ->assertSeeInOrder(['data-approval-journey', 'data-approval-decide'], escape: false);
     }
 
     /**

@@ -68,6 +68,43 @@ final class DelegationService
         ]);
     }
 
+    /**
+     * ⭐ আসছে এমন ভার বদলানো (অনুমোদন ভাগ ৩, দফা ১৮) — দেওয়ার একই দুই বাধা। ⓘ "আসছে কি না" দেখে ডাকেন যিনি ডাকেন
+     * ([[ApprovalDelegationController::update()]]); পুরনো মান নিরীক্ষার খাতায় ([[IsAudited]])।
+     *
+     * @param  list<string>  $modules  খালি = সব মডিউল
+     */
+    public function change(
+        ApprovalDelegation $delegation,
+        User $to,
+        string $startsOn,
+        string $endsOn,
+        array $modules = [],
+        ?string $reason = null,
+    ): ApprovalDelegation {
+        if ((int) $delegation->from_user_id === (int) $to->id) {
+            throw ValidationException::withMessages([
+                'to_user_id' => __('core.approval.delegate_not_self'),
+            ]);
+        }
+
+        if ($endsOn < $startsOn) {
+            throw ValidationException::withMessages([
+                'ends_on' => __('core.approval.delegate_bad_dates'),
+            ]);
+        }
+
+        $delegation->update([
+            'to_user_id' => $to->id,
+            'starts_on' => $startsOn,
+            'ends_on' => $endsOn,
+            'modules' => $modules,
+            'reason' => $reason,
+        ]);
+
+        return $delegation->fresh();
+    }
+
     /** ⓘ মোছা নয় — কে কবে কার হয়ে সই দিয়েছিলেন, সেই প্রশ্নের উত্তর পরে লাগে। */
     public function revoke(ApprovalDelegation $delegation): ApprovalDelegation
     {

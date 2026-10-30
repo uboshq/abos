@@ -15,6 +15,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Supplier\Models\Supplier;
+use Tests\Concerns\SignsASupplierBank;
 use Database\Seeders\DemoSeeder;
 use DOMDocument;
 use DOMElement;
@@ -47,6 +48,7 @@ use Tests\TestCase;
  */
 final class TheVoucherFormSendsWhatItShowsTest extends TestCase
 {
+    use SignsASupplierBank;
     use RefreshDatabase;
 
     private Company $company;
@@ -88,6 +90,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
     public function test_a_supplier_payment_posts_with_exactly_what_the_form_sends(): void
     {
         $supplier = Supplier::query()->firstOrFail();
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($supplier);
 
         $this->submit('payment', [
             'party_type' => 'supplier',
@@ -95,7 +99,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
             'from_account_id' => (string) $this->bank->id,
             'instrument' => 'transfer',
             'instrument_no' => 'NPSB-7001',
-            'amount' => '700',
+            // ⓘ পরিশোধের ফর্ম ২৫ অক্টোবর ২০২৬ থেকে মোট পাঠায় (নকশার "মোট টাকা"; পরিশোধে-মোট-টাকা-চুক্তি) — নিট সার্ভারের
+            'gross_amount' => '700',
         ])->assertSessionHasNoErrors();
 
         $voucher = Voucher::query()->where('type', Voucher::PAYMENT)->latest('id')->firstOrFail();

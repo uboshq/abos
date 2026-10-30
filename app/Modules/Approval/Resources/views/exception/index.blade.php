@@ -9,6 +9,8 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::exception.title') }}</x-slot:title>
 
+    @include('approval::partials.rule-tabs')
+
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-sm">
         {{ __('approval::exception.note') }}
     </p>

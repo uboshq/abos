@@ -40,6 +40,7 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
         $period = SalesPeriod::fromQuery($request->query());
         $board = $this->overview->for($request->user(), $period);
         $panels = $board['panels'];
+        $totals = $board['totals'];
 
         return response()->json([
             'module' => 'sales_overview',
@@ -72,15 +73,15 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
                 ) : null,
             ])),
             'listings' => array_values(array_filter([
-                isset($panels['top_customers']) ? $this->listing(__('sales::overview.panel.top_customers'), $panels['top_customers'], ['name', 'count', 'amount', 'share']) : null,
-                isset($panels['top_products']) ? $this->listing(__('sales::overview.panel.top_products'), $panels['top_products'], ['product', 'qty', 'revenue']) : null,
-                isset($panels['slow_products']) ? $this->listing(__('sales::overview.panel.slow_products'), $panels['slow_products'], ['product', 'qty', 'revenue']) : null,
-                isset($panels['by_seller']) ? $this->listing(__('sales::overview.panel.by_seller'), $panels['by_seller'], ['name', 'count', 'amount', 'share']) : null,
+                isset($panels['top_customers']) ? $this->listing(__('sales::overview.panel.top_customers'), $panels['top_customers'], ['name', 'count', 'net', 'share'], $totals['top_customers'] ?? null) : null,
+                isset($panels['top_products']) ? $this->listing(__('sales::overview.panel.top_products'), $panels['top_products'], ['product', 'qty', 'revenue'], $totals['top_products'] ?? null) : null,
+                isset($panels['slow_products']) ? $this->listing(__('sales::overview.panel.slow_products'), $panels['slow_products'], ['product', 'qty', 'revenue'], $totals['slow_products'] ?? null) : null,
+                isset($panels['by_seller']) ? $this->listing(__('sales::overview.panel.by_seller'), $panels['by_seller'], ['name', 'count', 'net', 'share'], $totals['by_seller'] ?? null) : null,
                 isset($panels['by_territory']) ? $this->listing(
                     __('sales::overview.panel.by_territory', ['level' => __('master_data::level.'.$panels['by_territory']['level'])]),
-                    $panels['by_territory']['rows'], ['name', 'count', 'amount', 'share'],
+                    $panels['by_territory']['rows'], ['name', 'count', 'net', 'share'], $totals['by_territory'] ?? null,
                 ) : null,
-                isset($panels['by_branch']) ? $this->listing(__('sales::overview.panel.by_branch'), $panels['by_branch'], ['name', 'count', 'amount', 'share']) : null,
+                isset($panels['by_branch']) ? $this->listing(__('sales::overview.panel.by_branch'), $panels['by_branch'], ['name', 'count', 'net', 'share'], $totals['by_branch'] ?? null) : null,
             ])),
         ])->header('Cache-Control', 'no-store');
     }
@@ -124,25 +125,55 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
     /**
      * @param  list<array<string, mixed>>  $rows
      * @param  list<string>  $columns  `sales::overview.col.*` — প্রথমটা সারির নাম
+     * @param  array{whole: bool, count: ?int, qty: ?string, amount: string, share: ?string}|null  $total  [[SalesOverview::totals()]] — ওয়েবের একই যোগের সারি
      * @return array<string, mixed>
      */
-    private function listing(string $label, array $rows, array $columns): array
+    private function listing(string $label, array $rows, array $columns, ?array $total = null): array
     {
         $value = fn (array $row, string $column): string => match ($column) {
             'name', 'product' => (string) ($row['name'] ?? ''),
             'count' => (string) ($row['count'] ?? 0),
             'qty' => Money::quantity((string) ($row['qty'] ?? '0')),
-            'amount', 'revenue' => Money::format((string) ($row['amount'] ?? '0')),
+            'amount', 'net', 'revenue' => Money::format((string) ($row['amount'] ?? '0')),
             'share' => ($row['share'] ?? null) === null ? '' : $row['share'].'%',
             default => '',
         };
+
+        /*
+         * ⓘ পুরো তালিকা (শাখা, বিক্রেতা, এরিয়া) সব সারি পাঠায় — ওয়েবের পাতাও সব সারি দেখায়, আর যোগের নাম "মোট"; প্রথম দশের তালিকা
+         * দশটাই (দরজার সীমার নিচে), নাম "এই সারিগুলোর যোগ" (fe, ২১ অক্টোবর ২০২৬)। ফলে যোগ সবসময় পাঠানো সারিগুলোরই।
+         */
+        $shown = ($total['whole'] ?? false) ? $rows : array_slice($rows, 0, self::MAX_ROWS);
+
+        /*
+         * ⭐ যোগের টাকা দেখানো সারিগুলোর গোল করা অঙ্কের bcmath যোগ — মানুষ যা পড়ে তাই যোগ হয়, এক পয়সাও এদিক-ওদিক নয়।
+         * ⓘ বিলের সংখ্যা সারির যোগ; ভাগ (%) [[SalesOverview::totals()]]-এর, নিট বিক্রির মোটে।
+         */
+        $sum = fn (string $field, int $decimals) => array_reduce($shown,
+            fn (string $s, array $r) => bcadd($s, Money::round((string) ($r[$field] ?? '0'), $decimals), 4), '0.0000');
+        $totalRow = $total === null ? null : [
+            'count' => array_sum(array_map(fn (array $r) => (int) ($r['count'] ?? 0), $shown)),
+            'qty' => $sum('qty', 4),
+            'amount' => $sum('amount', 2),
+            'share' => $total['share'],
+        ];
+
+        $totalCells = $totalRow === null ? null : array_combine($columns, array_map(fn (string $c, int $i) => $i === 0
+            ? (string) __($total['whole'] ? 'sales::overview.total_all' : 'sales::overview.total_shown')
+            : $value($totalRow, $c), $columns, array_keys($columns)));
 
         return [
             'label' => $label,
             'empty' => __('sales::overview.empty'),
             'columns' => array_map(fn (string $c) => ['key' => $c, 'label' => __('sales::overview.col.'.$c)], $columns),
-            'rows' => array_map(fn (array $row) => array_map(fn (string $c) => $value($row, $c), $columns),
-                array_slice($rows, 0, self::MAX_ROWS)),
+            'rows' => array_map(fn (array $row) => array_map(fn (string $c) => $value($row, $c), $columns), $shown),
+            /*
+             * ⭐ যোগের সারি — কলামের চাবি → লেখা ([[DashboardApiController::listing()]]-এর একই `total`, [[Listing::$total]]); ফোন একে
+             * আলাদা মোটা সারিতে আঁকে, `rows`-এ কখনো নয়। ⚠️ `amount` = `net` কেবল তথ্যের চাবি, কলাম নয় — অ্যাপ ০.৪.৪১-এর জন্য
+             * (fe, ২১ অক্টোবর ২০২৬); a4 ০.৪.৪৩-এ তুলে দেবে। ⓘ সারি ঘর-ক্রমের তালিকা (`[ঘর, ঘর, …]`), তাই সারিতে নামের চাবি বসানো
+             * যায় না — বসালে JSON-এ তালিকাটা বস্তু হয়ে যেত আর দুই অ্যাপই ভাঙত।
+             */
+            ...($totalCells === null ? [] : ['total' => $totalCells + (isset($totalCells['net']) ? ['amount' => $totalCells['net']] : [])]),
         ];
     }
 }

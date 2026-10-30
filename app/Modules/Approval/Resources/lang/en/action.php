@@ -6,7 +6,7 @@ return [
     'open' => 'Open',
     'delete' => 'Delete rule',
     'approve' => 'Approve',
-    'reject' => 'Send back',
+    'reject' => 'Reject',
     'withdraw' => 'Withdraw',
     'open_document' => 'Open the document',
     'new_flow' => 'New rule',
@@ -17,7 +17,7 @@ return [
     'forward' => 'Pass it on',
     'delegate' => 'Hand over',
     'delegation_stop' => 'Stop',
-    'bulk_approve' => 'Sign the selected',
+    'bulk_approve' => 'Approve selected',
     'pick_all' => 'Select all',
     'add_limit' => 'Add a limit',
     'previous' => 'Previous',
@@ -28,4 +28,19 @@ return [
     'close' => 'Close',
     // One sale, one page — [[ApprovalBundles]], 28 September 2026
     'confirm_all' => 'Confirm',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'bulk_picked' => 'Picked :count · approve together',
+    'go_back' => 'Go back',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৭ — নিয়মের পাতা (২৮ অক্টোবর ২০২৬)
+    'more' => 'More',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৭ — নিয়মের পাতা (২৮ অক্টোবর ২০২৬)
+    'open_rule' => 'Open',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৮ — দায়িত্ব হস্তান্তর (২৮ অক্টোবর ২০২৬)
+    'delegation_change' => 'Change',
+    'delegation_see' => 'See',
+    'delegation_cancel' => 'Cancel this hand-over',
 ];

@@ -14,7 +14,7 @@ return [
     'require_narration' => 'ভাউচারে বিবরণ বাধ্যতামূলক',
     // ⓘ খরচের ভাউচার ১০০% (২৪ অক্টোবর ২০২৬)
     'expense_attachment_over' => 'খরচের ভাউচারে এর বেশি অঙ্কে বিলের ছবি বাধ্যতামূলক (৳)',
-    'expense_budget_sign_over_pct' => 'বাজেট এত শতাংশের বেশি ছাড়ালে মালিকের সই লাগবে',
+    'expense_budget_sign_over_pct' => 'বাজেট এত শতাংশের বেশি ছাড়ালে মালিকের অনুমোদন লাগবে',
     'expense_budget_reason_over' => 'বাজেট ছাড়ালে কারণ লেখা বাধ্যতামূলক',
     'expense_employee_refund' => 'কর্মী নিজে টাকা দিলে তাঁকে ফেরত',
     'expense_employee_refund_separate_voucher' => 'আলাদা পরিশোধ ভাউচারে',
@@ -69,7 +69,7 @@ return [
         'expense_claim' => 'খরচের দাবি',
         'petty_cash' => 'পেটি ক্যাশ',
         'roll_receipt' => 'রোল রসিদ',
-        'approval_trail' => 'সইয়ের ধারাসহ',
+        'approval_trail' => 'অনুমোদনের ধারাসহ',
         'bilingual' => 'দ্বিভাষিক',
         'posting_report' => 'পোস্টিং প্রতিবেদন',
         'premium_paid' => 'প্রিমিয়াম পরিশোধিত',

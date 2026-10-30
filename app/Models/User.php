@@ -153,6 +153,8 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             // ⓘ হোমের সাজ — ক্রম আর লুকানো অংশ ([[HomeLayout]], ৪ অক্টোবর ২০২৬)
             'home_layout' => 'array',
+            // ⓘ বাঁ রেলের নিজের সাজ — পিন আর ক্রম ([[MenuBuilder::arranged()]]; মালিক, ২৪ অক্টোবর ২০২৬)
+            'nav_layout' => 'array',
 
             /*
              * গোপন চাবি ও পুনরুদ্ধার কোড — ডাটাবেজে এনক্রিপ্টেড।
@@ -222,6 +224,8 @@ class User extends Authenticatable
             'password', 'remember_token',
             'last_login_at', 'current_company_id', 'current_branch_id',
             'locale', 'theme', 'ui', 'accent', 'avatar_path',
+            // ⓘ রেলের নিজের সাজ — নিজের পছন্দ, ব্যবসার তথ্য নয় (fe, ২৪ অক্টোবর ২০২৬)
+            'nav_layout',
         ];
     }
 

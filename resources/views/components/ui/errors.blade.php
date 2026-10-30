@@ -42,7 +42,12 @@
 @php
     $errorsAlreadyShown = (bool) request()->attributes->get('ui.errors.drawn', false);
     $pageText = $shown === null ? null : (string) preg_replace('/\s+/u', ' ', (string) $shown);
-    $errorsToShow = $errorsAlreadyShown ? [] : array_values(array_filter($errors->all(),
+    /*
+     * ⛔ `$errors` কেবল ওয়েবের অনুরোধে ভাগ হয় (ShareErrorsFromSession) — পাতা সরাসরি আঁকলে (`view(...)->render()`, দাবি, ছাপা, মেইল)
+     * নেই; layout এখন এই বাক্স সবখানে বসায়, তাই না থাকলে খালি থলে, ভাঙা পাতা নয় (Mac, Finance, ২৫ অক্টোবর ২০২৬:
+     * TheWarningSignsWereScatteredAcrossSixScreensTest)।
+     */
+    $errorsToShow = $errorsAlreadyShown ? [] : array_values(array_filter(($errors ?? new \Illuminate\Support\ViewErrorBag)->all(),
         fn ($message) => $pageText === null || ! preg_match(
             '/>\s?'.preg_quote(trim((string) preg_replace('/\s+/u', ' ', e($message))), '/').'\s?</u', $pageText)));
 @endphp

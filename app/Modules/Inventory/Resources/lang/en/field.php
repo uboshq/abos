@@ -106,6 +106,7 @@ return [
     /* Food cost report. */
     'sold' => 'Sold',
     'revenue' => 'Revenue',
+    'net_sales' => 'Net sales (excl. VAT and returns)',
     'food_cost' => 'Ingredient cost',
     'food_cost_pct' => 'Food cost %',
     /* The paper's number — first column on transfer and cooking lists. */

@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
@@ -22,12 +23,14 @@ use Illuminate\Support\Facades\DB;
  *   বিল        পাকা বিলের সংখ্যা
  *   মোট বিক্রি   ছাড়ের আগে (`subtotal` — দর × পরিমাণ)
  *   ছাড়        লাইনের ছাড় + বিলের ছাড়
- *   ফেরত       পাকা ফেরতের মোট
- *   নিট বিক্রি   বিলের মোট − ফেরতের মোট
+ *   ফেরত       পাকা ফেরত, ভ্যাট বাদে ([[SalesMetrics::returnNetSql()]]; পণ্য ধরলে সারির `amount`)
+ *   নিট বিক্রি   বিলের নিট ([[SalesMetrics::billNetSql()]] — মোট − ভ্যাট − বিলে যোগ করা ভাড়া; পণ্য ধরলে [[LineNetSale]]) − ফেরত,
+ *              ভ্যাট ও ফেরত বাদে (IFRS 15.47/15.51; fe, ২১ অক্টোবর ২০২৬ — হোম, ফোন আর বাকি রিপোর্টের একই ভিত্তি)
  *   আদায়       গ্রাহকের নামে টাকা আসা — আদায় আর রসিদ ভাউচার (কাউন্টারের জমাও), খাতা থেকে,
  *              ([[SalesCustomerTrade::lastPayment()]]-এর একই উৎস); পরে উল্টালে নিজের মাসে থাকে, উল্টানোর মাসে বিয়োগ
  *              (১৩ অক্টোবর ২০২৬) — বাতিল ফেরতও তাই
- *   বাকি যোগ    নিট বিক্রি − আদায় (ঋণাত্মক মানে সেই মাসে পুরনো বাকি কমেছে)
+ *   বাকি যোগ    বিলের মোট − ফেরতের মোট − আদায়, **ভ্যাটসহ** — পাওনা ভ্যাট আর ভাড়াসহই (ঋণাত্মক মানে সেই মাসে পুরনো বাকি কমেছে)
+ *              ⓘ তাই ভিতরে দুই জোড়া ঘর: `sold`/`returned` ভ্যাটসহ (বাকির জন্য), `sold_net`/`returned_net` ভ্যাট বাদে (বিক্রির জন্য)
  *   মোট লাভ     (মোট − ভ্যাট − বিলের ভাড়া − বিক্রিত মালের খরচ) বিলে, ফেরতে উল্টো — `sales.cost.view`-এর পেছনে
  *
  * ── ⛔ খাতার সাথে এক কথা — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️১০; [[TheMonthlySalesAgreeWithTheBooksTest]]) ─────
@@ -70,8 +73,9 @@ final class MonthlySalesReport
                     ->selectRaw('COUNT(DISTINCT x.invoice_id) as bills')
                     ->selectRaw('SUM(x.gross) as gross')
                     ->selectRaw('SUM(x.discount) as discount')
-                    ->selectRaw('SUM(x.returned) as returned')
-                    ->selectRaw('SUM(x.sold) - SUM(x.returned) as net_sales')
+                    // ⭐ ফেরত আর নিট বিক্রি ভ্যাট বাদে; বাকি-যোগ নিচে ভ্যাটসহ (২১ অক্টোবর ২০২৬)
+                    ->selectRaw('SUM(x.returned_net) as returned')
+                    ->selectRaw('SUM(x.sold_net) - SUM(x.returned_net) as net_sales')
                     ->selectRaw($byLine ? 'NULL as collected' : 'SUM(x.collected) as collected')
                     ->selectRaw($byLine ? 'NULL as due_added' : 'SUM(x.sold) - SUM(x.returned) - SUM(x.collected) as due_added')
                     ->selectRaw('SUM(x.profit) as gross_profit');
@@ -100,7 +104,8 @@ final class MonthlySalesReport
             ->selectRaw('d.subtotal as gross, d.discount + d.bill_discount as discount')
             ->selectRaw('d.total as sold, 0 as returned, 0 as collected')
             // ⓘ বিলে যোগ করা ভাড়া খাতায় ভাড়ার আয়, বিক্রি নয় ([[SalesInvoiceService::postToLedger()]]) — লাভে নয়
-            ->selectRaw('d.total - d.tax - d.freight_charge - d.cost_of_goods as profit');
+            ->selectRaw('d.total - d.tax - d.freight_charge - d.cost_of_goods as profit')
+            ->selectRaw(SalesMetrics::billNetSql('d').' as sold_net, 0 as returned_net');
     }
 
     /**
@@ -112,18 +117,22 @@ final class MonthlySalesReport
             ->selectRaw("DATE_FORMAT(COALESCE(cx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('-d.subtotal as gross, -(d.discount + d.bill_discount) as discount')
             ->selectRaw('-d.total as sold, 0 as returned, 0 as collected')
-            ->selectRaw('-(d.total - d.tax - d.freight_charge - d.cost_of_goods) as profit');
+            ->selectRaw('-(d.total - d.tax - d.freight_charge - d.cost_of_goods) as profit')
+            ->selectRaw('-'.SalesMetrics::billNetSql('d').' as sold_net, 0 as returned_net');
     }
 
     /** পণ্য ধরে — বাতিলের মাসে বিলের লাইনগুলো উল্টো */
     private static function cancelledLines(array $f): Builder
     {
         return self::cancelledInRange(DB::table('sal_invoices as d')->join('sal_invoice_lines as l', 'l.sales_invoice_id', '=', 'd.id'), $f)
+            // ⓘ বিলটা পরিসরের আগের হতে পারে (বাতিলটা ভেতরে) — তাই ভাগের ভিত শেষ দিন পর্যন্ত সব বিলের
+            ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], '1000-01-01', (string) $f['to'], 'd'))
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(COALESCE(cx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('-(l.qty * l.rate) as gross, -l.discount as discount')
             ->selectRaw('-l.amount as sold, 0 as returned, 0 as collected')
-            ->selectRaw('-(l.amount - l.tax - l.qty * l.unit_cost) as profit');
+            ->selectRaw('-(l.amount - l.tax - l.qty * l.unit_cost) as profit')
+            ->selectRaw('-'.LineNetSale::sql('l', 'd').' as sold_net, 0 as returned_net');
     }
 
     /** পাকা, বা খাতায় বসার পরে বাতিল — বাতিলের আগে আয়টা খাতায় ছিল */
@@ -174,7 +183,8 @@ final class MonthlySalesReport
             ->tap(fn ($q) => self::returnPostedOrBookedThenCancelled($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, d.total as returned, 0 as collected')
-            ->selectRaw('-(d.total - d.tax - d.cost_of_goods) as profit');
+            ->selectRaw('-(d.total - d.tax - d.cost_of_goods) as profit')
+            ->selectRaw('0 as sold_net, '.SalesMetrics::returnNetSql('d').' as returned_net');
     }
 
     /**
@@ -187,7 +197,8 @@ final class MonthlySalesReport
         return self::returnCancelledInRange(DB::table('sal_returns as d'), $f)
             ->selectRaw("DATE_FORMAT(COALESCE(rx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, -d.total as returned, 0 as collected')
-            ->selectRaw('d.total - d.tax - d.cost_of_goods as profit');
+            ->selectRaw('d.total - d.tax - d.cost_of_goods as profit')
+            ->selectRaw('0 as sold_net, -'.SalesMetrics::returnNetSql('d').' as returned_net');
     }
 
     /** পণ্য ধরে — বাতিলের মাসে ফেরতের লাইনগুলো উল্টো */
@@ -198,7 +209,8 @@ final class MonthlySalesReport
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(COALESCE(rx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, -(l.amount + l.tax) as returned, 0 as collected')
-            ->selectRaw('l.amount - l.qty * COALESCE(il.unit_cost, 0) as profit');
+            ->selectRaw('l.amount - l.qty * COALESCE(il.unit_cost, 0) as profit')
+            ->selectRaw('0 as sold_net, -l.amount as returned_net');
     }
 
     /** পাকা ফেরত, বা খাতায় বসার পরে বাতিল */
@@ -260,7 +272,8 @@ final class MonthlySalesReport
             ->whereIn('le.source_type', self::paymentSources())
             ->where('le.credit', '>', 0)
             ->selectRaw("DATE_FORMAT(le.trx_date, '%Y-%m') as month, NULL as invoice_id")
-            ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, le.credit as collected, 0 as profit');
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, le.credit as collected, 0 as profit')
+            ->selectRaw('0 as sold_net, 0 as returned_net');
     }
 
     /** ⭐ উল্টানো আদায় — উল্টো দাখিলার দিনে, বিয়োগ হয়ে ([[payments()]]) */
@@ -272,7 +285,8 @@ final class MonthlySalesReport
             ->whereIn('le.source_type', $reversals)
             ->where('le.debit', '>', 0)
             ->selectRaw("DATE_FORMAT(le.trx_date, '%Y-%m') as month, NULL as invoice_id")
-            ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, -le.debit as collected, 0 as profit');
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, -le.debit as collected, 0 as profit')
+            ->selectRaw('0 as sold_net, 0 as returned_net');
     }
 
     /** গ্রাহকের খতিয়ানের সারি — কোম্পানি, দুই দেয়াল, তারিখ আর কার বিক্রি */
@@ -292,11 +306,14 @@ final class MonthlySalesReport
     {
         return self::walled(DB::table('sal_invoice_lines as l')->join('sal_invoices as d', 'd.id', '=', 'l.sales_invoice_id'), $f)
             ->tap(fn ($q) => self::postedOrBookedThenCancelled($q, $f))
+            // ⭐ সারির নিট — বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগসহ, ভ্যাট বাদে ([[LineNetSale]])
+            ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], (string) $f['from'], (string) $f['to'], 'd'))
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, d.id as invoice_id")
             ->selectRaw('l.qty * l.rate as gross, l.discount as discount')
             ->selectRaw('l.amount as sold, 0 as returned, 0 as collected')
-            ->selectRaw('l.amount - l.tax - l.qty * l.unit_cost as profit');
+            ->selectRaw('l.amount - l.tax - l.qty * l.unit_cost as profit')
+            ->selectRaw(LineNetSale::sql('l', 'd').' as sold_net, 0 as returned_net');
     }
 
     /** পণ্য ধরে — ফেরতের লাইন; খরচ মূল বিলের লাইনের */
@@ -309,7 +326,9 @@ final class MonthlySalesReport
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, NULL as invoice_id")
             // ⓘ ফেরতের সারির `amount` ভ্যাট-বাদ ([[SalesReturnService]]) — "ফেরত" ভ্যাট-সহ, বিক্রির মতো; লাভে ভ্যাট আর বাদ নয়
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, l.amount + l.tax as returned, 0 as collected')
-            ->selectRaw('-(l.amount - l.qty * COALESCE(il.unit_cost, 0)) as profit');
+            ->selectRaw('-(l.amount - l.qty * COALESCE(il.unit_cost, 0)) as profit')
+            // ⓘ সারির `amount` আগেই ভ্যাট বাদে, বিলের ছাড়ের ভাগসহ ([[SalesReturnService::shareOfTheBill()]])
+            ->selectRaw('0 as sold_net, l.amount as returned_net');
     }
 
     /** কোম্পানি, শাখার দেয়াল, তারিখ, মুছে-ফেলা বাদ, আর কার বিক্রি */

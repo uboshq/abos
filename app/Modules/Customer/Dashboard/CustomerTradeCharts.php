@@ -8,6 +8,7 @@ use App\Core\Contracts\CustomerSalesFilters;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\Money;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PartyType;
@@ -56,9 +57,10 @@ final class CustomerTradeCharts
         $overdueTotal = array_reduce($overdue, fn (string $sum, array $row) => bcadd($sum, $row['amount'], 4), '0');
 
         return [
+            // ⭐ নিট বিক্রি — বিল − ফেরত, VAT ও গাড়িভাড়া বাদে (fe, ২১ অক্টোবর ২০২৬); গড় নিচে আগের মতো বিলের মোট ÷ বিল
             new Stat(
                 label: __('customer::dashboard.sales_month'),
-                value: Money::format($bills['total']),
+                value: Money::format($bills['net'] ?? $bills['total']),
                 hint: __('customer::dashboard.sales_month_hint', ['count' => $bills['count']]),
                 href: route('customer.index'),
                 tone: Stat::GOOD,
@@ -118,7 +120,10 @@ final class CustomerTradeCharts
             return [];
         }
 
+        // ⭐ নিট বিক্রি ধরে (বিল − ফেরত, VAT বাদে; fe, ২১ অক্টোবর ২০২৬) — চুক্তির `total` এখন নিট
         $sold = array_column($top, 'total', 'customer_id');
+        // ⓘ নাম "নাম · পয়েন্ট · শাখা" (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
+        $names = $sold === [] ? [] : app(PartyRegistry::class)->labelsOf(array_map(fn (int $id) => ['customer', $id], array_keys($sold)));
 
         /*
          * ⓘ বকেয়া গ্রাহকের খাতা থেকে, হেডারে বাছা শাখায় — গ্রাহক তালিকার "বকেয়া" ঘরের একই হিসাব
@@ -138,7 +143,7 @@ final class CustomerTradeCharts
                 ['key' => 'code', 'label' => __('customer::field.code'), 'width' => '7rem',
                     'render' => fn (Customer $c) => $c->code],
                 ['key' => 'name', 'label' => __('customer::field.name'),
-                    'render' => fn (Customer $c) => $c->name()],
+                    'render' => fn (Customer $c) => $names['customer:'.$c->id] ?? $c->name()],
                 ['key' => 'sold', 'label' => __('customer::dashboard.top_buyers_sold'), 'width' => '9rem',
                     'render' => fn (Customer $c) => Money::format($c->getAttribute('sold_this_month'))],
                 ['key' => 'due', 'label' => __('customer::dashboard.top_buyers_due'), 'width' => '9rem',
@@ -147,6 +152,12 @@ final class CustomerTradeCharts
             rows: $rows,
             empty: __('customer::dashboard.top_buyers_none'),
             href: route('customer.index'),
+            // ⭐ যোগের সারি — এই পাঁচজনের নিট কেনা আর বকেয়া, bcmath (মালিক: প্রতিটা তালিকায় মোট)
+            total: $rows->isEmpty() ? null : [
+                'name' => __('customer::dashboard.top_buyers_total'),
+                'sold' => Money::format($rows->reduce(fn (string $s, Customer $c) => bcadd($s, (string) $c->getAttribute('sold_this_month'), 4), '0')),
+                'due' => Money::format($rows->reduce(fn (string $s, Customer $c) => bcadd($s, (string) ($c->getAttribute('outstanding_in_view') ?? '0'), 4), '0')),
+            ],
         )];
     }
 

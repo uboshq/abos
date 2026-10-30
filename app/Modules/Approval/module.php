@@ -61,48 +61,33 @@ return [
                 'route_params' => ['module' => 'approval'], 'permission' => 'approval.view'],
         ],
 
+        /*
+         * ⭐ মেনু ১৩টা থেকে ৫টা — অনুমোদন পর্দা ভাগ ২, দফা ২ (মালিকের "হ্যাঁ", ২১ অক্টোবর ২০২৬):
+         *   ইনবক্স · আমার অনুরোধ · অনুমোদনের নিয়ম · দায়িত্ব অর্পণ · রিপোর্ট
+         * ⓘ আগের আটটা সারি হারায়নি, ট্যাবে গেছে: কর্তৃত্বের সীমা আর নিয়মের বাইরে → নিয়মের পাতার ট্যাব
+         * ([[approval::partials.rule-tabs]]); ছয়টা রিপোর্ট → রিপোর্টের পাতার ট্যাব ([[ApprovalReportController::SLUGS]])।
+         * ⓘ ড্যাশবোর্ড সব মডিউলের মতোই প্রথমে থাকে — ওটা মডিউলের দরজার চাবি বলে ([[EveryModuleDashboardHasItsOwnDoorTest]])।
+         * ⚠️ পাঁচটাই এক দলে (`approval`), কারণ দলের ক্রম নির্দিষ্ট (`settings` সবার শেষে) — আলাদা দলে রাখলে নিয়ম চলে যেত
+         * রিপোর্টের পরে, পরিকল্পনার ক্রম ভেঙে।
+         */
         'approval' => [
             ['label' => 'approval::menu.inbox', 'icon' => 'inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
             ['label' => 'approval::menu.mine', 'icon' => 'people', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
 
-            /* ⭐ সইয়ের ভার — যিনি সই দেন, তিনিই দিতে পারেন */
-            ['label' => 'approval::menu.delegation', 'icon' => 'handover', 'route' => 'approval.delegation.index', 'permission' => 'approval.decide'],
-        ],
-        /*
-         * চারটা রিপোর্ট — §২.৮।
-         *
-         * ⚠️ slug-গুলো `ApprovalReportController::SLUGS`-এর সাথে হুবহু
-         * মিলতে হবে। ভুল লিখলে লিংকটা তৈরি হয়, পর্দায় দেখা যায়, আর
-         * চাপলে ৪০৪ — `route()` slug দেখেই না।
-         * ⓘ সেটা এখন `ALinkThatLooksAliveAndIsNotTest`-এ বাঁধা।
-         */
-        'reports' => [
-            ['label' => 'approval::menu.report_pending', 'icon' => 'clock', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'pending'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_approved', 'icon' => 'check-circle', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'approved'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_rejected', 'icon' => 'alert-triangle', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'rejected'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_by_user', 'icon' => 'people', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'by-user'], 'permission' => 'approval.report'],
-
-            /* ⭐ কোন ধাপে জমে আছে, আর কেন বাতিল হয় — ২৪ সেপ্টেম্বর ২০২৬ */
-            ['label' => 'approval::menu.report_bottleneck', 'icon' => 'alert-triangle', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'bottleneck'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_why_rejected', 'icon' => 'reports', 'route' => 'approval.report.show',
-                'route_params' => ['slug' => 'why-rejected'], 'permission' => 'approval.report'],
-        ],
-
-        'settings' => [
+            /* ⓘ চাবিটা `flow.manage` — নিয়ম, সীমা আর নিয়মের বাইরে, তিনটাই "কে কী অনুমোদন করতে পারবে" প্রশ্নের */
             ['label' => 'approval::menu.flows', 'icon' => 'swap', 'route' => 'approval.flow.index', 'permission' => 'approval.flow.manage'],
 
-            /* ⛔ নিয়মের বাইরে — ছয় ধরনের নীরব ভুল, ২৪ সেপ্টেম্বর ২০২৬ */
-            ['label' => 'approval::exception.title', 'icon' => 'alert-triangle', 'route' => 'approval.exception.index', 'permission' => 'approval.flow.manage'],
+            /* ⭐ দায়িত্ব অর্পণ — যিনি অনুমোদন দেন, তিনিই দিতে পারেন */
+            ['label' => 'approval::menu.delegation', 'icon' => 'handover', 'route' => 'approval.delegation.index', 'permission' => 'approval.decide'],
+        ],
 
-            /* ⭐ কোন রোল কত টাকা পর্যন্ত — ২৪ সেপ্টেম্বর ২০২৬।
-               ⚠️ চাবিটা `flow.manage`-ই: সীমা বসানো আর প্রবাহ
-               বসানো একই ক্ষমতা — দুইটাই বলে "কে কী অনুমোদন করতে পারবে"। */
-            ['label' => 'approval::menu.limits', 'icon' => 'scale', 'route' => 'approval.limit.index', 'permission' => 'approval.flow.manage'],
+        /*
+         * ⓘ এক সারি, ছয়টা রিপোর্ট ট্যাবে — §২.৮। ⚠️ slug `ApprovalReportController::SLUGS`-এর সাথে হুবহু
+         * মিলতে হবে (`ALinkThatLooksAliveAndIsNotTest`)।
+         */
+        'reports' => [
+            ['label' => 'approval::menu.reports', 'icon' => 'reports', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'pending'], 'permission' => 'approval.report'],
         ],
     ],
 

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
+use App\Core\Engines\Attachment\NotAllowedType;
 use App\Core\Engines\Attachment\NotASlip;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Models\Approval;
@@ -94,6 +95,11 @@ class AttachmentController extends Controller
         } catch (NotASlip $refused) {
             throw ValidationException::withMessages([
                 'file' => __('core.attachment.slip_'.$refused->reason, ['max' => '5 MB']),
+            ]);
+        } catch (NotAllowedType) {
+            // ⭐ ধরনের "না" বাংলায় — আগে ইঞ্জিনের ইংরেজি কারণটাই বসত (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬)
+            throw ValidationException::withMessages([
+                'file' => __('attachment.wrong_kind'),
             ]);
         } catch (AttachmentException $refused) {
             throw ValidationException::withMessages([

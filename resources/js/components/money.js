@@ -6,6 +6,9 @@
  * `Object` পড়তে পারে না। কারণের বিস্তার [[shell.js]]-এর মাথায়।
  */
 
+// ⓘ কম-বেশির মালিকের সই — আদায়ের একই যমজ (সার্ভার: Settlement::differenceNeedsOwner(); cb-ma-5)
+import { ownerSignNeeded, roundingNeedsOwner } from './collection-math.js'
+
 /**
  * খাত বাছাই — বাছা খাতটা কোন ধরনের, আর নম্বরের ঘর লাগবে কি না।
  *
@@ -363,6 +366,19 @@ export function allocateOldestFirst (bills, amount) {
     return out
 }
 
+/** ⓘ পক্ষের খাতের দিক — Dr ধনাত্মক; শূন্যে কিছু নয় (পয়সায় গোনা) */
+export function sideOf (paise) {
+    if (paise > 0) return 'Dr'
+    if (paise < 0) return 'Cr'
+    return ''
+}
+
+/** ⓘ অঙ্কের পাশে দিক — " (Dr)" / " (Cr)", শূন্যে কিছু নয় (নকশার "৳0.00") */
+export function sideSuffix (paise) {
+    const side = sideOf(paise)
+    return side === '' ? '' : ' (' + side + ')'
+}
+
 /**
  * ⭐ রসিদ ও পরিশোধ ভাউচারের টাকার অংশ — অঙ্ক লাখ-কমায়, খাতে কত আছে, রেফারেন্সের চলতি উত্তর আর পোস্টের আগে খাতায় যা যাবে
  * (fe, ২৩ অক্টোবর ২০২৬; চূড়ান্ত নকশার মিল-তালিকা)। ⓘ টাকা দেওয়ার পর্দার ([[payBills]]) একই আচরণ, বিলের টেবিল ছাড়া।
@@ -378,6 +394,15 @@ export function voucherMoney ({
     referenceUrl = '',
     voucherId = null,
     out = false,
+    ait = '',
+    vds = '',
+    owedLabels = {},
+    branchLabels = {},
+    bankFileUrl = '',
+    differenceKind = '',
+    difference = '',
+    sideTexts = {},
+    buttonTexts = {},
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -387,6 +412,22 @@ export function voucherMoney ({
         busy: false,
         amount: String(amount ?? ''),
         account: String(account ?? ''),
+        // ⭐ উৎসে কর্তন — পরিশোধে (x-ui.field type="money", model ait/vds); খাতায় কী যায় সার্ভার বলে ([[WithheldTax::onPayment()]])
+        ait: String(ait ?? ''),
+        vds: String(vds ?? ''),
+        // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5); ধরন না থাকলে অঙ্ক গোনা হয় না
+        differenceKind: String(differenceKind ?? ''),
+        difference: String(difference ?? ''),
+        /*
+         * ⭐ মাথার তিন অঙ্ক — পক্ষের বকেয়া/পাওনা · এই কাগজ · বাকি থাকবে (নকশা পাতা ২ আর ৪; fe, ২৪ অক্টোবর ২০২৬)। ⓘ বকেয়া আসে পক্ষের
+         * বাক্স থেকে (`party-due` ঘটনা, [[party-voucher.js]]) — সার্ভারের একই উত্তর ([[VoucherController::due()]]); চিহ্ন: ধনাত্মক = তিনি
+         * আমাদের দেবেন। পক্ষ না থাকলে (`null`) অঙ্কগুলো নেই, এক লাইনের কারণ।
+         */
+        partyDue: null,
+        hasParty: true,
+        // ⓘ পক্ষের ধরন — মাথার প্রথম অঙ্কের নাম তাতে (`owedLabels`, ধরন → "গ্রাহকের বকেয়া"; অজানায় '' → সাধারণ নাম)
+        headPartyType: '',
+        headPartyBranch: '',
         charge: 0,
         balances,
         slip: { state: 'empty', message: '' },
@@ -399,7 +440,12 @@ export function voucherMoney ({
         init () {
             form = this.$el.closest('form')
             this.$watch('account', () => { this.slipSoon(); this.refresh() })
-            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.refresh() })
+            this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('ait', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('vds', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('difference', (now, was) => { if (paisa(now) !== paisa(was)) { this.refresh(); this.tellGross() } })
+            this.$watch('differenceKind', () => { this.refresh(); this.tellGross() })
+            this.$nextTick(() => this.tellGross())
 
             // ⓘ পদ্ধতির ঘর x-if-এ আসে-যায়, আর পক্ষ-বিবরণ অন্য বাক্সে — তাই শোনা গোটা ফর্মে
             form?.addEventListener('input', (e) => {
@@ -414,15 +460,147 @@ export function voucherMoney ({
         /* ⓘ পদ্ধতির বাক্সের ঘটনা ([[moneyMethod]]) — চার্জ "খাতে আছে কি না"-য়, আর প্রিভিউ নতুন করে */
         heard (detail) {
             this.charge = paisa(detail?.charge ?? 0)
+            this.way = String(detail?.method ?? '')
             this.slipSoon()
             this.refresh()
+        },
+
+        /* ⓘ পক্ষের বাক্সের ঘটনা — বকেয়া (সার্ভারের চিহ্নে) আর পক্ষ আছে কি না ("অন্য (সরাসরি খাত)"-এ নেই) */
+        /*
+         * ⭐ বিলে প্রয়োগ — বিলের বাক্সের যোগফল (পয়সা, `bills-applied`); বাকিটা "বিলে প্রয়োগ হয়নি", পক্ষের নিজের খাতায় (cb-ma-5)।
+         * ⓘ মোট = পক্ষের খাতা যতটা নড়ে — মাথার "এই কাগজ" ([[headGrossPaisa]]), সার্ভারের যোগফল-নিয়মের একই মাপ (`bills_over_gross`)।
+         */
+        applied: 0,
+        heardApplied (detail) {
+            const value = Number(detail?.paisa ?? 0)
+            this.applied = Number.isFinite(value) && value > 0 ? value : 0
+        },
+        get hasApplied () { return this.applied > 0 },
+        get sumApplied () { return taka(this.applied / 100) },
+        get sumUnapplied () { return taka(Math.max(this.headGrossPaisa - this.applied, 0) / 100) },
+
+        heardParty (detail) {
+            this.hasParty = detail?.hasParty !== false
+            this.partyDue = this.hasParty && detail?.due !== null && detail?.due !== undefined ? String(detail.due) : null
+            this.headPartyType = String(detail?.partyType ?? '')
+            this.headPartyBranch = String(detail?.partyBranch ?? '')
+        },
+
+        /*
+         * ⓘ ফর্মের মোট (পক্ষের খাতা যতটা কমে) পক্ষের বাক্সকে — বিলের যোগফলের বাইরে অগ্রিম কত, বেশি কি না ([[party-voucher.js]] `heardGross`)।
+         * ⓘ জানালায়, কারণ পক্ষের বাক্স এই ফর্মের ভিতরে — ভিতরের দিকে ঘটনা নামে না।
+         */
+        tellGross () {
+            window.dispatchEvent(new CustomEvent('money-gross', { detail: this.headGrossPaisa }))
+        },
+
+        /* ⓘ পক্ষের বাক্সের "পুরো বকেয়া" / "নির্বাচিত বিল" — অঙ্কটা টাকার ঘরে (কাঁচা অঙ্ক; দেখানোর ঘর নিজে লাখ-কমায় সাজায়) */
+        heardFill (value) {
+            const amount = String(value ?? '').replace(/,/g, '').trim()
+            if (amount !== '' && Number.isFinite(Number(amount))) this.amount = amount
+        },
+
+        /*
+         * ⭐ মাথার "শাখা: গ্রাহকের শাখা (ময়মনসিংহ)" — কেবল তথ্য, নকশার লেখা; পাশে "পোস্ট হবে: <শাখা>" — খাতা যে শাখায় বসবে, সার্ভারের
+         * প্রিভিউ থেকে (বাক্সের শাখা — মালিকের ১৯ অক্টোবরের নিয়ম; দুটো আলাদা হলে চোখে পড়ে)।
+         */
+        get partyBranchText () {
+            if (this.headPartyBranch === '') return ''
+            const label = branchLabels[this.headPartyType] ?? branchLabels[''] ?? ''
+            return label + ' (' + this.headPartyBranch + ')'
+        },
+        get postBranchText () { return String(this.preview?.branch ?? '') },
+
+        /*
+         * ⭐ এই খাতের আজকের ব্যাংক ফাইল (BEFTN) — কেবল ব্যাংক ট্রান্সফারে, খাত বাছা থাকলে (পদ্ধতি আসে `money-method` ঘটনায়)।
+         * ⛔ নগদ বা চেকে লিংক দিলে ক্যাশ খাতের ফাইল চাইত — ৪০৪ (২৫ অক্টোবরের ছবিতে ধরা)
+         */
+        way: '',
+        get bankFileHref () {
+            if (bankFileUrl === '' || this.account === '' || this.way !== 'transfer') return ''
+            const today = new Date()
+            const day = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+            return bankFileUrl + '?account=' + encodeURIComponent(this.account) + '&date=' + day
+        },
+
+        /* ⭐ মাথার প্রথম অঙ্কের নাম পক্ষের ধরনে (নকশা: "গ্রাহকের বকেয়া", "সরবরাহকারীর পাওনা") */
+        get headOwedLabel () {
+            // ⭐ নাম অঙ্কের নিজের চিহ্নে (fe, ২৫ অক্টোবর ২০২৬): রসিদে Cr মানে "… খাতায় জমা", পরিশোধে Dr মানে "… খাতায়" — "বকেয়া"/"পাওনা" নয়
+            const side = sideOf(this.headBeforePaisa)
+            if (this.hasHeadFigures && !out && side === 'Cr') return this.sideText('owedIn')
+            if (this.hasHeadFigures && out && side === 'Dr') return this.sideText('owedOut')
+            return owedLabels[this.headPartyType] ?? owedLabels[''] ?? ''
+        },
+        get headLeftLabel () {
+            const side = sideOf(this.headAfterPaisa)
+            if (this.hasHeadFigures && !out && side === 'Cr') return this.sideText('leftIn')
+            if (this.hasHeadFigures && out && side === 'Dr') return this.sideText('leftOut')
+            return String(sideTexts?.left ?? '')
+        },
+        // ⓘ বকেয়া লালে (নকশা); পক্ষের অগ্রিম হলে সবুজ, "অগ্রিম" শব্দের সাথে; শূন্যে সাধারণ রং — নকশায় "৳0.00" রং ছাড়া
+        get headOwedClass () {
+            if (this.headOwedPaisa === 0) return ''
+            return this.headOwedIsAdvance ? 'text-(--color-badge-success-ink)' : 'text-(--color-danger)'
+        },
+
+        /*
+         * ⭐ মাথার তিন অঙ্ক। রসিদ: বকেয়া (তিনি দেবেন) · এই আদায় · বাকি থাকবে = বকেয়া − আদায়। পরিশোধ: পাওনা (আমরা দেব, তাই চিহ্ন
+         * উল্টো) · এই পরিশোধ (মোট = দেওয়া + AIT + VDS — পক্ষের খাতে যতটা কমে) · বাকি থাকবে = পাওনা − মোট। ⓘ পয়সায় গোনা; ঋণাত্মক
+         * বাকি মানে অগ্রিম — চিহ্নে নয়, কথায় ([[party-voucher.js]]-এর একই নিয়ম)।
+         */
+        get hasHeadFigures () { return this.hasParty && this.partyDue !== null },
+        get headOwedPaisa () { return (out ? -1 : 1) * paisa(this.partyDue ?? 0) },
+        // ⓘ পক্ষের খাত কমে মোটে — দুই দিকেই (রসিদে পক্ষ কাটেন, পরিশোধে আমরা কাটি): টাকা + AIT + VDS
+        // ⭐ পরিশোধে লেখা ঘরটাই মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি) — রসিদে লেখা পাওয়া টাকা, মোট তার সাথে পক্ষের কাটা অংশ
+        get headGrossPaisa () { return (out ? paisa(this.amount) : paisa(this.amount) + paisa(this.ait) + paisa(this.vds)) + this.differencePaisa },
+
+        /*
+         * ⭐ কম-বেশি — পক্ষের খাত এটুকু বেশি নড়ে (রসিদে পাওনা, পরিশোধে দেনা কমে); মালিকের সই সার্ভারের নিয়মে
+         * ([[ownerSignNeeded]] = Settlement::differenceNeedsOwner(); প্রিভিউর `needs_signature` এলে সেটাই শেষ কথা)।
+         */
+        get differencePaisa () { return this.differenceKind === '' ? 0 : paisa(this.difference) },
+        get hasDiscount () { return this.differenceKind === 'discount' && this.differencePaisa > 0 },
+        get hasRounding () { return this.differenceKind === 'rounding' && this.differencePaisa > 0 },
+        get roundingOwner () { return this.hasRounding && roundingNeedsOwner(this.differencePaisa / 100) },
+        get ownerSigns () {
+            if (this.preview?.needs_signature === true && (this.hasDiscount || this.roundingOwner)) return true
+            return ownerSignNeeded(this.hasDiscount ? this.differencePaisa / 100 : 0, this.hasRounding ? this.differencePaisa / 100 : 0)
+        },
+        get sumDifference () { return taka(this.differencePaisa / 100) },
+        // ⓘ মূল বোতামের নাম — সার্ভারের আঁকা নামই, কেবল মালিকের সই লাগলে "সইয়ে পাঠান"
+        get buttonLabel () { return String((this.ownerSigns ? buttonTexts?.signs : buttonTexts?.plain) ?? '') },
+        // ⓘ উৎসে কাটা আছে কি না — পরিশোধে কমলা "করণীয় তালিকায় উঠবে" লাইন এতে
+        get hasWithheld () { return paisa(this.ait) + paisa(this.vds) > 0 },
+        // ⓘ নিট — পক্ষের হাতে যা যায়: পরিশোধে মোট − AIT − VDS, রসিদে লেখা টাকাই
+        get netPaisa () { return out ? this.headGrossPaisa - paisa(this.ait) - paisa(this.vds) : paisa(this.amount) },
+        // ⓘ "এই আদায়" নকশার মতো হাতে পাওয়া টাকা; "এই পরিশোধ (মোট)" মোট
+        get headThisPaisa () { return out ? this.headGrossPaisa : paisa(this.amount) },
+        get headLeftPaisa () { return this.headOwedPaisa - this.headGrossPaisa },
+        /* ⓘ পক্ষের খাতের স্থিতি, Dr ধনাত্মক — আগে (সার্ভারের উত্তর) আর পরে (রসিদে মোট Cr, পরিশোধে মোট Dr) */
+        get headBeforePaisa () { return paisa(this.partyDue ?? 0) },
+        get headAfterPaisa () { return out ? this.headBeforePaisa + this.headGrossPaisa : this.headBeforePaisa - this.headGrossPaisa },
+        get headOwedText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headBeforePaisa) / 100) + sideSuffix(this.headBeforePaisa) : '—' },
+        get headThisText () { return '৳' + taka(this.headThisPaisa / 100) },
+        get headLeftText () { return this.hasHeadFigures ? '৳' + taka(Math.abs(this.headAfterPaisa) / 100) + sideSuffix(this.headAfterPaisa) : '—' },
+        get headLeftIsAdvance () { return this.hasHeadFigures && this.headLeftPaisa < 0 },
+        // ⛔ পক্ষের আগে থেকে অগ্রিম থাকলে বকেয়ার অঙ্ক চিহ্ন ছাড়া "বকেয়া" পড়াত — কথায় "অগ্রিম" (মাপা: ২৪ অক্টোবর ২০২৬, আলম স্টোর)
+        get headOwedIsAdvance () { return this.hasHeadFigures && this.headOwedPaisa < 0 },
+
+        /*
+         * ⭐ শূন্য পেরোনো অঙ্কের নিচের কথা — "অগ্রিম" নয়: আলাদা অগ্রিম খাত নেই, বাড়তি পক্ষের নিজের খাতেই থাকে (মালিকের নিয়ম, fe ২৫ অক্টোবর
+         * ২০২৬; ফোনের "বিলে প্রয়োগ হয়নি — সরবরাহকারীর খাতায় থাকবে")। পক্ষের ধরন বাক্সের খবর থেকে (`headPartyType`)।
+         */
+        sideText (key) {
+            const party = sideTexts?.partyOf?.[this.headPartyType] ?? sideTexts?.partyOf?.[''] ?? ''
+            return String(sideTexts?.[key] ?? '').replace(':party', party)
         },
 
         /* ⭐ খাতে আছে কত — পরিশোধে যথেষ্ট কি না (নকশার "খাতে আছে ৳…") */
         get balance () { return this.balances[this.account] ?? null },
         get hasBalance () { return this.balance !== null },
         get balanceText () { return this.hasBalance ? taka(Number(this.balance)) : '' },
-        get short () { return out && this.hasBalance && paisa(this.balance) < paisa(this.amount) + this.charge },
+        // ⓘ খাত থেকে বেরোয় নিট + চার্জ (চার্জ মোটের বাইরে, কোম্পানির খরচ)
+        get short () { return out && this.hasBalance && paisa(this.balance) < this.netPaisa + this.charge },
         get balanceClass () { return this.short ? 'text-(--color-danger)' : 'text-(--color-ink-muted)' },
 
         slipSoon () {
@@ -495,6 +673,24 @@ export function voucherMoney ({
         get previewBlocked () { return this.preview.message !== '' },
         get previewMatches () { return this.hasPreview && this.preview.balanced },
         get unbalanced () { return this.hasPreview && !this.preview.balanced },
+
+        /*
+         * ⭐ হিসাবের সারাংশ ([[x-money.summary]]) — অঙ্ক আর কথা সার্ভারের, খাতার একই সারি থেকে ([[VoucherController::summaryOf()]]);
+         * পর্দা কিছু গোনে না। প্রিভিউর আগে "—", কথা ফাঁকা।
+         */
+        get summary () { return this.hasPreview ? (this.preview.summary ?? null) : null },
+        get sumAmount () { return this.summary?.amount ?? '—' },
+        get sumCharge () { return this.summary?.charge ?? '—' },
+        get sumNet () { return this.summary?.net ?? '—' },
+        get sumWords () { return this.summary?.words ?? '' },
+        get sumMatches () { return this.summary?.matches === true },
+        get sumGross () { return this.summary?.gross ?? '—' },
+        // ⓘ রসিদে পক্ষ কাটেন — অঙ্ক যোগে, চিহ্ন ছাড়া (পক্ষের খাতে মোট = পাওয়া + VDS + AIT)
+        get sumAitText () { return this.summary?.ait ?? '—' },
+        get sumVdsText () { return this.summary?.vds ?? '—' },
+        // ⓘ বিয়োগ চিহ্ন কেবল সত্যি কাটলে — "−0.00" চোখে ভুল পড়ে
+        get sumAitMinus () { return this.summary ? (paisa(this.summary.ait) > 0 ? '−' : '') + this.summary.ait : '—' },
+        get sumVdsMinus () { return this.summary ? (paisa(this.summary.vds) > 0 ? '−' : '') + this.summary.vds : '—' },
     }
 }
 

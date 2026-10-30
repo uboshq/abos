@@ -29,8 +29,10 @@ final class AMoneyFieldSendsOnlyThePlainFigureTest extends TestCase
 
     /** পর্দা => তার টাকার ঘরগুলো (নাম => পর্দার মডেল) */
     private const SCREENS = [
-        'receipt' => ['amount' => 'amount', 'charge_amount' => 'charge'],
-        'payment' => ['amount' => 'amount', 'charge_amount' => 'charge'],
+        // ⓘ রসিদে পক্ষ যা কেটে রাখলেন আর কম-বেশি (cb-ma-4/5) — একই নিয়মের ঘর
+        'receipt' => ['amount' => 'amount', 'ait_amount' => 'ait', 'vds_amount' => 'vds', 'difference[amount]' => 'difference', 'charge_amount' => 'charge'],
+        // ⓘ পরিশোধের টাকার ঘর মোট (`gross_amount`, পরিশোধে-মোট-টাকা-চুক্তি; cb-ma-4) — বাক্সের মডেল আগের মতোই `amount`
+        'payment' => ['gross_amount' => 'amount', 'ait_amount' => 'ait', 'vds_amount' => 'vds', 'difference[amount]' => 'difference', 'charge_amount' => 'charge'],
         'expense' => ['gross_amount' => 'gross', 'ait_amount' => 'ait', 'vds_amount' => 'vds', 'charge_amount' => 'charge'],
         'pay_supplier' => ['amount' => 'amount', 'charge_amount' => 'charge'],
     ];

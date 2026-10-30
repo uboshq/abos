@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Services;
 
 use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
@@ -122,6 +123,8 @@ final class OwnerSignsDiscounts implements ProvisionsCompany
             $each->forceFill(['threshold_amount' => null, 'is_active' => true])->save();
 
             ApprovalFlowStep::query()->where('approval_flow_id', $each->id)->delete();
+            // ⓘ কোয়েরি-মোছা মডেলের ঘটনা চালায় না — ইঞ্জিনের জমানো ছক নিজে পুরনো করা
+            ApprovalEngine::flowsChanged();
             ApprovalFlowStep::query()->create([
                 'approval_flow_id' => $each->id,
                 'level' => 1,

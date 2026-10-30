@@ -73,6 +73,9 @@ final class TheEyeShowedTheLedgerInsteadOfTheSummaryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ⓘ "আজ" মাসের ১০ তারিখে স্থির — বিল ক মাস শুরুর ৫ দিন আগে, ৩০ দিনের বাকিতে; মাসের ২৬-এর পরে সেটা মেয়াদ পেরোত আর আজকের
+        //   বিক্রি "মেয়াদ পেরোনো বাকি আছে" বলে থামত (fe, ২৭ অক্টোবর ২০২৬: রাত ১টার রানে লাল) — দাবিটা তারিখের নয়
+        Carbon::setTestNow(Carbon::today()->startOfMonth()->addDays(9)->setTime(12, 0));
         $this->seed(DemoSeeder::class);
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
@@ -291,5 +294,11 @@ final class TheEyeShowedTheLedgerInsteadOfTheSummaryTest extends TestCase
         $this->assertSame(1, $found, "⛔ সারাংশে '{$key}' লিংক নয়।");
 
         return html_entity_decode($m[1]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 }

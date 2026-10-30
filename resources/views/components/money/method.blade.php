@@ -78,6 +78,14 @@
     'accountLabel' => null,
     'accountSelected' => null,
     'accountHint' => null,
+
+    /*
+     * ⭐ যে পদ্ধতি এই পর্দায় চলে না, কিন্তু নকশার সারিতে আছে — চিপটা লিংক, যেখানে চলে সেখানে নিয়ে যায় (পদ্ধতি → ঠিকানা)।
+     * ⓘ রসিদে "চেক": নকশা পাতা ২-এর পঞ্চম চিপ, অথচ মালিকের নিয়মে গৃহীত চেক ঢোকে কেবল চেকের খাতা দিয়ে ([[VoucherService::assertNoChequeReceived()]],
+     * ২৬ সেপ্টেম্বর ২০২৬) — তাই রেডিও নয়, চেকের খাতার লিংক (fe, ২৫ অক্টোবর ২০২৬)। `elsewhereTitle` কারণটা বলে।
+     */
+    'elsewhere' => [],
+    'elsewhereTitle' => null,
 ])
 
 @php
@@ -144,9 +152,11 @@
          চিপে মাউস রাখলে hover-এর প্রায়-সাদা জমিন জিতত (১.০৮:১) — লেখাটা মুছে যেত। ⭐ এখন brand-700 আর brand-ink: আলোয় অ্যাকসেন্টের
          ৭০০ নিজের কালির সাথে, গাঢ়ে অ্যাকসেন্টের গাঢ় ধাপ নিজের গাঢ় কালির সাথে — দুই জোড়াই ≥ ৪.৫:১ মাপা ([[AppearanceTest]]);
          আর বাছা চিপে hover রং বদলায় না। --}}
-    <fieldset @class(['order-1 sm:col-span-2' => $inline && ! $picking, 'order-0 sm:col-span-2' => $inline && $picking])>
+    {{-- ⛔ `min-w-0` — fieldset-এর নিজের সবচেয়ে কম চওড়া তার ভিতরের মাপ: পাঁচ চিপে (চেকসহ) ১৩৬৬-এ ৩৬৩px, অথচ অর্ধেক সারি ৩৩৫px, তাই
+         চিপগুলো খাতের ঘরে ঢুকে যেত (a6, আদায়ের পর্দায় মাপা, ২৫ অক্টোবর ২০২৬)। ⭐ এখন চিপের সারি জায়গা না পেলে ভাঁজ হয় (`flex-wrap`), কাটে না --}}
+    <fieldset @class(['min-w-0', 'order-1 sm:col-span-2' => $inline && ! $picking, 'order-0 sm:col-span-2' => $inline && $picking]) data-method-chips>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
-        <div class="inline-flex max-w-full overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+        <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
             @foreach ($shown as $way)
                 <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
@@ -159,6 +169,10 @@
                         {{ __('money.method.'.$way) }}
                     </span>
                 </label>
+            @endforeach
+            @foreach ($elsewhere as $way => $url)
+                <a href="{{ $url }}" data-method-elsewhere="{{ $way }}" title="{{ $elsewhereTitle }}"
+                   class="block whitespace-nowrap border-s border-(--color-border) px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors hover:bg-(--color-surface-hover)">{{ __('money.method.'.$way) }}</a>
             @endforeach
         </div>
     </fieldset>
@@ -205,8 +219,14 @@
     {{-- ── নগদ: চাইলে নোট গোনা ── --}}
     @if ($counting)
         <template x-if="method === 'cash'">
-            <div data-method-block="cash" @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
-                <div class="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            {{--
+                ⭐ ভাঁজ করা, ঐচ্ছিক — "▸ নোট গুনে মেলান — ঐচ্ছিক" (fe, ২৪ অক্টোবর ২০২৬; খরচের পরিকল্পনার একই ভাঁজ)। ⓘ নোট গোনা ক্যাশ
+                কাউন্টারের কাজ, রসিদ-পরিশোধে রোজ লাগে না; খোলা থাকলে দশটা ঘর পর্দার অর্ধেক নিত। ⓘ `<details>`: বন্ধ থাকলেও ঘরগুলো একবারই
+                আছে, তাই খুলে গুনে বন্ধ করলেও গোনা মান জমা যায় — একই নামের দুই ঘর নেই, তাই ফাঁকা ঘর ভরা ঘরকে মোছে না।
+            --}}
+            <details data-method-block="cash" data-notes-fold @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
+                <summary class="cursor-pointer text-sm font-medium">{{ __('money.counting.fold') }}</summary>
+                <div class="mt-2 grid gap-x-5 gap-y-1 sm:grid-cols-2">
                     @foreach ($notes as $note)
                         <label class="grid grid-cols-[3.5rem_0.75rem_3.5rem_1fr] items-center gap-1.5 font-mono text-xs tabular-nums">
                             <span class="text-right text-(--color-ink-muted)">{{ number_format($note) }}</span>
@@ -221,7 +241,7 @@
                 </div>
                 <p class="mt-2 rounded px-2 py-1 text-xs" :class="countClass" x-text="countText"
                    data-agrees="{{ __('accounts::message.count_agrees') }}" data-differs="{{ __('accounts::message.count_differs') }}"></p>
-            </div>
+            </details>
         </template>
     @endif
 

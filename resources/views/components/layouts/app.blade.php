@@ -55,6 +55,9 @@
            কারণ কিছু নিয়ম রূপ ধরে বসে যা টোকেন নয় (খোলসের markup,
            রেলের আইটেমের গড়ন), আর পরীক্ষাগুলোও এটা ধরেই মেলায়। --}}
       data-ui="{{ \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)) }}"
+      {{-- ⭐ দুই-কলামের টাকার ফর্ম (`<x-layouts.app two-column-form>`) — ১৫৩৬-এর নিচে মেনু রেলে বা ভাসমান, যাতে নকশার
+           দুই কলাম মালিকের ১৩৬৬-এর পর্দায় ধরে ([[sidebar-state.js]]; মালিক আর fe, ২৪ অক্টোবর ২০২৬) --}}
+      @if ($twoColumnForm ?? false) data-two-column-form @endif
 
       {{--
           চলতি রূপের টোকেনগুলো — সার্ভারে বাছাই করে, কেবল একটার।

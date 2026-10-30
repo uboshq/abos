@@ -46,7 +46,7 @@ final class TheBarKeptEveryTaskItHadTest extends TestCase
         '⊞ সব মডিউল' => ['bar', 'data-module-launcher-sheet'],
         '＋ তৈরি' => ['bar', 'data-shell-create'],
         'অনুমোদন' => ['bar', 'data-shell-approvals'],
-        'সই হয়েছে, পোস্ট হয়নি' => ['bar', 'data-signed-unposted-bar'],
+        'অনুমোদন হয়েছে, পোস্ট হয়নি' => ['bar', 'data-signed-unposted-bar'],
         '🔔 বিজ্ঞপ্তি' => ['bar', 'data-notification-bell'],
         'কোম্পানি · শাখা' => ['bar', 'data-company-branch'],
         'ছবি' => ['bar', 'data-profile-menu'],

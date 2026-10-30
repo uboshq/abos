@@ -11,10 +11,12 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
+use App\Core\Services\DataScope;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Customer\Support\ConductType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
@@ -547,22 +549,43 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         }
 
         /*
-         * ⭐ আটকে থাকা টাকাও বাদ — ২৬ সেপ্টেম্বর ২০২৬।
+         * ⭐ বাকির ইঞ্জিনের নিজের অঙ্ক — এক উৎস, দ্বিতীয় যোগ নয় (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬; [[CreditHolds::availableOf()]])।
+         * ⓘ ব্যবহৃত অংশ ([[creditUsed()]]) একই টুকরোগুলো গোনে — হিসাবের পর্দার চুক্তি ([[PartyCreditLimit]]) দুটোই পড়ে
+         *   (fe, ২৬ অক্টোবর ২০২৬: main-এর ইঞ্জিন আর cb-র ভাগ এক জোড়ায়)।
+         */
+        $engine = app(CreditHolds::class)->availableOf((int) $this->id);
+
+        if ($engine !== null) {
+            return $engine;
+        }
+
+        // ⓘ ইঞ্জিন জানে না (বিক্রয় বন্ধ: [[NoCreditHolds]] — আটকে থাকা ০, চেক ০) — তখন ব্যবহৃতের একই যোগ, খাতাই
+        $left = bcsub($limit, $this->creditUsed(), 4);
+
+        return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
+    /**
+     * ⭐ সীমার কতটা ব্যবহৃত — বকেয়া + আটকে থাকা + ক্লিয়ার না হওয়া চেক; [[availableLimit()]] আর হিসাবের পর্দার
+     * [[CustomerCreditLimit]] দুজনেই এটা পড়ে (মিল-তালিকা #১৯, ২৫ অক্টোবর ২০২৬) — ⛔ দ্বিতীয় কোনো উপায়ে গোনা নয়।
+     */
+    public function creditUsed(): string
+    {
+        /*
+         * ⭐ আটকে থাকা টাকাও — ২৬ সেপ্টেম্বর ২০২৬।
          *
          * ⓘ বিল না হওয়া ডিও আর খসড়া বিল সীমা আটকায় (মালিকের নির্দেশ)।
          * ⚠️ কেবল খাতা দেখলে এই পাতা কাউন্টারের চেয়ে বেশি দেখাত, আর
          * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
          */
-        $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
+        $used = bcadd($this->outstanding(), $this->heldCredit(), 4);
 
         /*
          * ⭐ ক্লিয়ার না হওয়া চেকও — বাকি-নিয়ন্ত্রণের পাতা আর দেয়ালের একই হিসাব ([[CreditExposure::positionsFor()]];
          * পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⛔ আগে এই পাতা চেকের টাকা বাদ দিত না, তাই একই গ্রাহকে এখানে বেশি "ব্যবহারযোগ্য"
          * দেখাত আর কাউন্টারের দেয়াল কম দিত।
          */
-        $left = bcsub($left, app(CreditHolds::class)->unclearedChequesOf((int) $this->id), 4);
-
-        return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+        return bcadd($used, app(CreditHolds::class)->unclearedChequesOf((int) $this->id), 4);
     }
 
     /**
@@ -652,6 +675,29 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function scopeInViewedBranch(Builder $query): Builder
     {
         return ViewedBranch::narrow($query, $query->getModel()->getTable().'.branch_id');
+    }
+
+    /**
+     * ⭐ একজন গ্রাহক, চাবি ধরে — ব্যবহারকারীর **নাগাল** দেখে, হেডারে বাছা শাখা নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায়
+     * না", ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নোটিশ বা লিংক একজন গ্রাহকের পাতায় আনে — সেটা তালিকা নয়, তাই [[scopeInViewedBranch()]] নয়: হেডারে MMS রাখা মালিক
+     * NTK-র গ্রাহকের নোটিশে ৪০৪ পেতেন। ভাউচারের [[OpensInReach]]-এর একই নিয়ম ([[DataScope::allows()]]): নাগালের বাইরে ৪০৪;
+     * কোম্পানি আর ডিলারের দেয়াল মডেলের নিজের স্কোপে, আগের মতোই।
+     *
+     * @param  (\Closure(Builder): Builder)|null  $shape  বাড়তি ঘর, যেমন `withOutstanding()`
+     */
+    public static function openInReach(int $id, ?User $user, ?\Closure $shape = null): self
+    {
+        $query = static::query()->whereKey($id);
+        $customer = ($shape === null ? $query : $shape($query))->firstOrFail();
+        $branch = $customer->getAttribute('branch_id');
+
+        abort_unless(app(DataScope::class)->allows(
+            $user, UserDataScope::BRANCH, $branch === null ? null : (int) $branch,
+        ), 404);
+
+        return $customer;
     }
 
     /**

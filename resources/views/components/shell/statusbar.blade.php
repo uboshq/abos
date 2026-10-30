@@ -116,7 +116,8 @@
              width="556" height="189"
              class="h-4 w-auto shrink-0 object-contain">
 
-        <span>v{{ config('app.version', '0.1.0') }}</span>
+        {{-- ⭐ সংস্করণ, তারিখ আর চলতি commit — চাপলে "নতুন কী এল" (মালিক, ২৪ অক্টোবর ২০২৬; [[App\Core\Support\Release]]) --}}
+        <a href="{{ route('release.notes') }}" data-release class="hover:underline">{{ \App\Core\Support\Release::label() }}</a>
 
         <span>© {{ now()->year }}</span>
 

@@ -163,6 +163,15 @@
     --color-success-hover: #065f46;
     --color-danger: #dc2626;        /* ৪.৮৩ ✓  (ছিল #EF4444 → ৩.৭৬ ✗) */
     --color-danger-hover: #b91c1c;
+
+    /* ⭐ ওপরের বারের সংখ্যার ব্যাজ — অনুমোদন, সই-হয়েছে-পোস্ট-হয়নি, ঘণ্টা (অনুমোদন ভাগ ৩, দফা ১৯)। ১০px লেখা, তাই
+       দুই থিমেই কালি-জমিন ৪.৫:১ লাগে। ⛔ আগে ব্যাজে `text-white` আর `--color-danger` — গাঢ় থিমের #ef4444-এ ৩.৭৬ ✗ */
+    --color-count-urgent: var(--color-danger);      /* #dc2626 · সাদায় ৪.৮৩ ✓ */
+    /* ⓘ নীলটা অ্যাকসেন্টের গাঢ় ধাপে, সাদা কালিতে, দুই থিমেই — brand-500 কোম্পানির বাছা (TDEPOT #3b82f6-এ সাদা ৩.৬৮ ✗);
+       accent-700 লেখার রং হিসেবে সাদা জমিনে ৪.৫ পাশ করে, তাই উল্টোটাও (টাকার বাক্সের একই জোড়া, --color-on-brand-*) */
+    --color-count-info: var(--color-on-brand-from);
+    --color-count-info-ink: var(--color-on-brand-ink);
+    --color-count-ink: #ffffff;
     --color-info: #1d4ed8;
 
     /*
@@ -1245,6 +1254,8 @@
     /* ⓘ লাল লেখাও, সাদা কালির লাল বোতামও — #ef4444 দুই কাজেই চলে (কালো জমিনে ৪.৯:১, সাদা কালিতে ৩.৮:১) */
     --color-danger: #ef4444;
     --color-danger-hover: #dc2626;
+    /* ⓘ লাল সংখ্যার ব্যাজ গাঢ়েও আলোর থিমের ফিল রাখে — #ef4444-এ সাদা ৩.৭৬ ✗, #dc2626 ৪.৮৩ ✓ (নীলটা দুই থিমেই এক, উপরে) */
+    --color-count-urgent: #dc2626;
     --color-info: #93c5fd;
     --color-warning-hover: #fbbf24;
     --color-accent-pink: #f472b6;

@@ -37,6 +37,9 @@ use Throwable;
  */
 final class SyncService
 {
+    /** ⓘ ফেরানো সারির ঘরহীন কারণের চাবি — কোনো ঘরে বাঁধা নয় (চাবি নেই, অফলাইনে চলে না, খাতা থামাল); চুক্তি §৭.২ */
+    public const NO_FIELD = '_';
+
     public function __construct(private readonly SyncRegistry $registry) {}
 
     /**
@@ -136,6 +139,11 @@ final class SyncService
                         : '',
                     'status' => SyncChange::REJECTED,
                     'message' => $this->firstMessage($refused),
+                    /*
+                     * ⭐ ফেরানো সারির একই আকার — ঘর ধরে কারণ (`changeId`, `entityType`, `operation` …), ঘর না জানা গেলে [[NO_FIELD]]
+                     * (a4-এর পরখ, 1de6b0897; [[refuse()]]-এর একই চুক্তি)। ⓘ পুরনো `message` থাকে — পুরনো ফোন সেটাই পড়ে।
+                     */
+                    'errors' => $refused->errors() !== [] ? $refused->errors() : [self::NO_FIELD => [$this->firstMessage($refused)]],
                 ];
 
                 continue;
@@ -203,12 +211,20 @@ final class SyncService
                     'message' => __('sync.same_key_other_content'), 'entityId' => $existing->applied_entity_id];
             }
 
-            return array_filter([
+            // ⭐ একই বদল দ্বিতীয়বার — প্রথমবারের মতোই উত্তর, বাড়তি তথ্যসহ ([[AnswersAfterSync]]; নেট গেলে আবার চাপলেও একটাই)
+            $answer = array_filter([
                 'changeId' => $change->changeId,
                 'status' => $existing->isSettled() ? SyncChange::DUPLICATE : $existing->status,
                 'message' => $existing->message,
                 'entityId' => $existing->applied_entity_id,
             ], fn ($value) => $value !== null);
+
+            // ⓘ আগে ফেরানো সারি আবার এলে — ঘর আর রাখা নেই, কেবল প্রথম কথা; তাই ঘরহীন চাবিতে (প্রতিটা ফেরানো সারির একই আকার, চুক্তি §৭.২)
+            if (($answer['status'] ?? null) === SyncChange::REJECTED) {
+                $answer['errors'] = [self::NO_FIELD => [(string) $existing->message]];
+            }
+
+            return $this->withAnswer($answer, $this->registry->forEntityType($change->entityType));
         }
 
         $handler = $this->registry->forEntityType($change->entityType);
@@ -324,7 +340,8 @@ final class SyncService
                 serverSnapshot: $rejection->serverSnapshot,
             );
         } catch (ValidationException $refused) {
-            return $this->refuse($user, $deviceId, $module, $change, $this->firstMessage($refused));
+            // ⭐ ঘর ধরে সব কারণ — ওয়েবের ৪২২-এর একই ঘর আর কথা (চুক্তি §৪, §৭.২), প্রথম কথার পাশে
+            return $this->refuse($user, $deviceId, $module, $change, $this->firstMessage($refused), errors: $refused->errors());
         } catch (\App\Core\Engines\Posting\PostingException $refused) {
             /*
              * ⛔ খাতার "না" একটা উত্তর, ক্ষণিকের ব্যর্থতা নয় — বন্ধ মাস, অন্য শাখার পক্ষ, অমিল দাখিলা; আবার পাঠালেও একই উত্তর।
@@ -349,11 +366,40 @@ final class SyncService
             throw $failure;
         }
 
-        return [
+        return $this->withAnswer([
             'changeId' => $change->changeId,
             'status' => $record->status,
             'entityId' => $record->applied_entity_id,
-        ];
+        ], $handler);
+    }
+
+    /**
+     * ⭐ বসার উত্তরে জিনিসটার নিজের বাড়তি তথ্য — যে জিনিস [[AnswersAfterSync]] মানে (আদায়: নম্বর, অবস্থা, টাকা কথায়, রসিদ…)।
+     *
+     * ⓘ উত্তরের চার নাম (`changeId`, `status`, `entityId`, `message`) বদলায় না — বাড়তিগুলো কেবল পাশে বসে। ⛔ বানাতে ভাঙলে
+     * বাড়তিটা বাদ, বসাটা নয় — ফোন যেন "বসেছে" খবর হারিয়ে একই টাকা আবার না পাঠায়।
+     *
+     * @param  array<string, mixed>  $outcome
+     * @return array<string, mixed>
+     */
+    private function withAnswer(array $outcome, mixed $handler): array
+    {
+        $id = $outcome['entityId'] ?? null;
+
+        if (! $handler instanceof \App\Core\Contracts\AnswersAfterSync || ! is_string($id) || $id === ''
+            || ! in_array($outcome['status'] ?? null, [SyncChange::APPLIED, SyncChange::DUPLICATE], true)) {
+            return $outcome;
+        }
+
+        try {
+            $extra = $handler->answerFor($id);
+        } catch (Throwable $failure) {
+            report($failure);
+
+            return $outcome;
+        }
+
+        return [...array_diff_key($extra, array_flip(['changeId', 'status', 'entityId', 'message'])), ...$outcome];
     }
 
     /**
@@ -804,6 +850,7 @@ final class SyncService
         string $message,
         bool $isConflict = false,
         ?array $serverSnapshot = null,
+        array $errors = [],
     ): array {
         $status = $isConflict ? SyncChange::CONFLICT : SyncChange::REJECTED;
 
@@ -834,6 +881,12 @@ final class SyncService
             'changeId' => $change->changeId,
             'status' => $status,
             'message' => $message,
+            /*
+             * ⭐ প্রতিটা ফেরানো সারিতে `errors: {ঘর: [কথা, …]}` — পুরনো প্রথম কথার পাশে (a4-এর চাওয়া, পরিশোধে-মোট-টাকা-চুক্তি §৭.২)।
+             * ⓘ যাচাইয়ের ভুলে ঘরের নাম ওয়েবের ৪২২-এর মতোই (`gross_amount`, `bills.0.amount` …); ঘরহীন কারণে (চাবি নেই, অফলাইনে চলে না,
+             * খাতা থামাল) [[NO_FIELD]]। ⓘ গ্রহণ করা সারির উত্তর বদলায় না।
+             */
+            ...($status === SyncChange::REJECTED ? ['errors' => $errors !== [] ? $errors : [self::NO_FIELD => [$message]]] : []),
         ];
     }
 

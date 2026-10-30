@@ -84,9 +84,12 @@ final class AccountService
         ]);
     }
 
-    public function create(array $data, bool $withAKeeper = false): Account
+    /**
+     * @param  bool  $chartRow  কেবল [[StandardChart::install()]] — মান ছকের কোড কেবল ছকের নিজের সারি পায়
+     */
+    public function create(array $data, bool $withAKeeper = false, bool $chartRow = false): Account
     {
-        return DB::transaction(function () use ($data, $withAKeeper) {
+        return DB::transaction(function () use ($data, $withAKeeper, $chartRow) {
             $parent = $this->resolveParent($data['parent_id'] ?? null);
 
             $type = $this->resolveType($data, $parent);
@@ -117,6 +120,9 @@ final class AccountService
             }
 
             $this->assertCodeIsFree($code);
+            if (! $chartRow) {
+                $this->assertCodeNotKeptForTheChart($code);
+            }
             if (! $withAKeeper) {
                 $this->assertCashHasAKeeper($data, $code, $parent, (bool) ($data['is_group'] ?? false));
             }
@@ -230,6 +236,17 @@ final class AccountService
              */
             $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $account->code;
             $newKind = $this->moneyKindFor($code, $parent);
+
+            // ⛔ অন্য খাত মান ছকের কোডে সরে আসে না; ছকের কোডের খাত তার ধরন বা টাকার ধরন হারায় না ([[assertCodeNotKeptForTheChart()]])
+            if ($code !== $account->code) {
+                $this->assertCodeNotKeptForTheChart($code);
+            } elseif (StandardChart::isStandardCode($code)
+                && ($type !== $account->type || ($newKind === null) !== ($account->money_kind === null))
+                && ! StandardChart::meaningFits($code, $type, $newKind !== null)) {
+                throw ValidationException::withMessages([
+                    'parent_id' => __('accounts::validation.code_kept_for_chart', ['code' => $code]),
+                ]);
+            }
 
             if (($account->money_kind === null) !== ($newKind === null)
                 && \App\Models\LedgerEntry::query()->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))->exists()) {
@@ -623,7 +640,26 @@ final class AccountService
 
         if ($code !== '') {
             $this->assertCodeIsFree($code);
+            $this->assertCodeNotKeptForTheChart($code);
         }
+    }
+
+    /**
+     * ⛔ মান ছকের কোড কেবল ছকের নিজের খাতের — পর্দা, ইমপোর্ট বা কোড বদলে অন্য কোনো খাত সেটা নেয় না (fe-র P2, ২৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ লাইভে UB-তে ১১৩৫ আর ১১৫১ ছক আসার আগে খালি ছিল, তাই নতুন ব্যাংক সেখানে বসেছিল ("Depot Bank A/C", "Star Line Accounts");
+     * পরে [[StandardChart::install()]] থাকা কোড এড়িয়ে গেল, আর কোড ধরে খোঁজা প্রতিটা পথ ব্যাংকটাই পেত। ⛔ ধরন মিললেও নয়:
+     * ১১৩৫-এ "অফিসের জামানত" নামে সম্পদও অগ্রিম আয়কর নয়। কোড না লিখলে [[CodeSuggester]] নিজেই এড়ায়।
+     */
+    private function assertCodeNotKeptForTheChart(string $code): void
+    {
+        if (! StandardChart::isStandardCode($code)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'code' => __('accounts::validation.code_kept_for_chart', ['code' => $code]),
+        ]);
     }
 
     /** কোম্পানির প্রসঙ্গ আছে কি না — ছক বসানোর আগে দেখা হয়। */

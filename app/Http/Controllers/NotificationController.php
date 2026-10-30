@@ -280,11 +280,21 @@ class NotificationController extends Controller
          * ⛔ যে কাগজের খবর, সেটা আর তাঁর নাগালে নেই (শাখা সরানো হয়েছে, কাগজ মোছা) — খোলা নয়, আর কারণটা বলা হয়
          * (স্পেক §১৩)। ⓘ চেষ্টাটা নিরীক্ষার খাতায় যায়; খবরটা পড়া হিসেবে বসে, যাতে ঘণ্টায় ঝুলে না থাকে।
          */
-        if (! $this->notifications->mayOpen($notification, $user)) {
-            $this->notifications->markRead($notification, $user);
-            app(NotificationAudit::class)->record('open_denied', $notification, 'denied');
+        /*
+         * ⭐ আর কাগজটা মুছে গেলে সেটাই বলা হয় — "কাগজটা আর নেই", "অনুমতি নেই" নয় (fe, ২৪ অক্টোবর ২০২৬): আগে ডকুমেন্ট বা
+         * বীমা পলিসির খবর কাগজ চিনত না, তাই মোছা কাগজের লিংক ৪০৪-এ পড়ত; আর খোঁজা যায় এমন কাগজ মুছলে "নাগালে নেই" বলত, আর
+         * মানুষ অনুমতি চাইতে যেতেন ([[NotificationService::whyClosed()]])।
+         */
+        $why = $this->notifications->whyClosed($notification, $user);
 
-            return view('notifications.no-access', ['menu' => $this->menu->forUser($user)]);
+        if ($why !== null) {
+            $this->notifications->markRead($notification, $user);
+            app(NotificationAudit::class)->record('open_denied', $notification, 'denied', ['why' => $why]);
+
+            return view('notifications.no-access', [
+                'menu' => $this->menu->forUser($user),
+                'gone' => $why === NotificationService::GONE,
+            ]);
         }
 
         $this->notifications->markRead($notification, $user);
