@@ -8,7 +8,9 @@
 
     ⛔ আগে: ১১ কলামের টেবিল, ৫০-এ কাটা, মোট নেই; কাগজ খুলতে আলাদা পাতা, সিদ্ধান্তের পরে আবার তালিকায় ফিরে পরেরটা খুঁজতে হত।
 
-    ⓘ ছোট পর্দায় (lg-এর নিচে) তালিকা আগে, কাগজ তার নিচে — ফোনের মাপে কার্ড-তালিকা, টেবিল নয় (দফা ২১-এর ওয়েব অংশ)।
+    ⭐ ছোট পর্দায় (lg-এর নিচে) আগে তালিকা, কার্ড ছুঁলে কাগজ — একবারে একটা (দফা ১ আর ২১: "ফোনে আগে তালিকা, তারপর বিস্তারিত";
+    পরিকল্পনার পাতা ৬)। কাগজের মাথায় "‹ ইনবক্স · ২ / ৩" তালিকায় ফেরায়; অনুমোদনের পরে পরের কাগজ নিজে খোলে, তাই ফোনেও।
+    ⛔ আগে ফোনে তালিকার নিচে প্রথম কাগজটা পুরো আঁকা থাকত — কার্ড ছুঁলে পাতা নতুন করে খুলত আর কাগজ খুঁজতে নিচে নামতে হত।
 --}}
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.inbox') }}</x-slot:title>
@@ -30,6 +32,9 @@
         $at = $opened !== null ? $rows->search(fn ($a) => (int) $a->id === (int) $opened->id) : false;
         $prevUrl = $at !== false && $at > 0 ? request()->fullUrlWithQuery(['open' => $rows[$at - 1]->id]) : null;
         $nextUrl = $at !== false && isset($rows[$at + 1]) ? request()->fullUrlWithQuery(['open' => $rows[$at + 1]->id]) : null;
+        // ⓘ ফোনে কাগজ কেবল তখন, যখন কেউ বেছে খুলেছেন (`?open=`); নিজে বেছে নেওয়া প্রথম কাগজটা বড় পর্দার ডান দিকের জন্য
+        $picked = request()->filled('open') && $detail !== null;
+        $backUrl = request()->fullUrlWithoutQuery(['open']);
         $summary = $tab === 'waiting'
             ? __('approval::message.inbox_summary', ['count' => $visibleTotal, 'late' => $lateCount, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)])
             : __('approval::message.tab_summary', ['count' => $visibleTotal, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)]);
@@ -74,7 +79,7 @@
     <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
 
         {{-- ── বাঁয়ে: ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
-        <div class="min-w-0" data-inbox-list>
+        <div @class(['min-w-0', 'max-lg:hidden' => $picked]) data-inbox-list>
 
             <form method="GET" action="{{ route('approval.inbox.index') }}" class="mb-3 space-y-2" data-inbox-filters>
                 @foreach ($keep as $name => $value)
@@ -225,7 +230,13 @@
         </div>
 
         {{-- ── ডানে: বেছে নেওয়া কাগজ ─────────────────────────────────────────── --}}
-        <div class="min-w-0" data-inbox-detail>
+        <div @class(['min-w-0', 'max-lg:hidden' => ! $picked]) data-inbox-detail>
+            @if ($picked)
+                <a href="{{ $backUrl }}" data-inbox-back
+                   class="mb-2 inline-flex min-h-(--spacing-touch) items-center gap-1 text-sm text-(--color-link) lg:hidden">
+                    <span aria-hidden="true">&lsaquo;</span> {{ __('approval::menu.inbox') }}@if ($at !== false) · <span class="num">{{ $at + 1 }} / {{ $rows->count() }}</span>@endif
+                </a>
+            @endif
             @if ($detail !== null)
                 @include('approval::inbox.partials.detail', $detail + [
                     'nextId' => $nextId,

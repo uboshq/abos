@@ -397,6 +397,12 @@
         height: 1px;
         overflow: hidden;
         clip: rect(0 0 0 0);
+        /* ⛔ thead-এ Tailwind-এর `sticky` আছে, আর utility এই স্তরকে হারায় — `position: absolute` তাই খাটত না, আর `clip`
+           কেবল absolute-এ চলে: ফোনে কার্ডের মাথায় সব শিরোনাম জোড়া লেগে দেখাত ("হিসাবপক্ষবিবরণডেবিটক্রেডিট",
+           ৩০ অক্টোবর ২০২৬-এর ছবি, দফা ২১)। ⓘ `display: block` আর `clip-path` যেকোনো position-এ খাটে। */
+        display: block;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 
     .table-cards tr {
@@ -429,6 +435,12 @@
         text-align: right;
     }
 
+    /* ⓘ কার্ডে ফাঁকা ঘর নয় — নামের পাশে কিছু নেই এমন লাইন কেবল জায়গা খায় (দফা ২১)। ⚠️ টেবিলে (নিচের md নিয়ম, ছাপার নিয়ম)
+       ঘরটা ফেরে — একই নির্দিষ্টতা, পরে লেখা — নাহলে কলাম এক ঘর বাঁয়ে সরে যেত। */
+    .table-cards td[data-empty] {
+        display: none;
+    }
+
     /* বড় পর্দায় আবার সত্যিকারের টেবিল — যদি না ব্যবহারকারী কার্ড
        বেছে নিয়ে থাকেন (.as-cards)। */
     @media (min-width: 768px) {
@@ -438,6 +450,9 @@
             height: auto;
             overflow: visible;
             clip: auto;
+            display: table-header-group;
+            clip-path: none;
+            white-space: normal;
         }
 
         .table-cards:not(.as-cards) tr {
@@ -917,6 +932,9 @@
         height: auto !important;
         overflow: visible !important;
         clip: auto !important;
+        display: table-header-group !important;
+        clip-path: none !important;
+        white-space: normal !important;
     }
 
     .table-cards:not(.as-cards) tr {
@@ -1004,6 +1022,9 @@
         width: auto;
         height: auto;
         clip: auto;
+        display: table-header-group;
+        clip-path: none;
+        white-space: normal;
     }
 
     a {

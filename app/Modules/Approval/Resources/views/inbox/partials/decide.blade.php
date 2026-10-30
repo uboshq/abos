@@ -55,22 +55,32 @@
                 </x-ui.button>
             @endif
 
-            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r" aria-keyshortcuts="R"
-                         aria-haspopup="dialog" class="border-(--color-danger) text-(--color-danger)">
-                {{ __('approval::action.reject') }}
-            </x-ui.button>
+            {{-- ⭐ ফোনে (md-এর নিচে) তিন বোতাম পর্দার নিচে স্থির, নিচের মেনুর ঠিক উপরে — পরিকল্পনার পাতা ৬, ছবি ২ (দফা ২১)। কাগজ যত লম্বাই
+                 হোক, সিদ্ধান্তের বোতাম খুঁজতে নিচে নামতে হয় না। ⓘ বড় পর্দায় `contents` — বোতামগুলো আগের মতোই ওপরের সারিতে, স্থির নয়
+                 (উপরের ২৮ অক্টোবরের কারণ)। ⓘ ফরোয়ার্ড বারের বাইরে: চার বোতাম ৩৯০px-এ এক সারিতে ধরে না, আর পরিকল্পনার বারে তিনটাই। --}}
+            <div data-approval-decide-bar
+                 class="contents max-md:fixed max-md:inset-x-0 max-md:bottom-(--spacing-bottom-nav) max-md:z-20 max-md:flex max-md:gap-2
+                        max-md:border-t max-md:border-(--color-border) max-md:bg-(--color-surface-card) max-md:px-3 max-md:py-2
+                        max-md:*:min-w-0 max-md:*:flex-1 max-md:*:px-2 max-md:*:text-xs">
+                <x-ui.button type="button" tone="secondary" x-on:click="ask = 'reject'" data-ask="reject" data-key="r" aria-keyshortcuts="R"
+                             aria-haspopup="dialog" class="border-(--color-danger) text-(--color-danger)">
+                    {{ __('approval::action.reject') }}
+                </x-ui.button>
 
-            <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" aria-keyshortcuts="S"
-                         aria-haspopup="dialog">
-                {{ __('approval::action.send_back') }}
-            </x-ui.button>
+                <x-ui.button type="button" tone="secondary" x-on:click="ask = 'fix'" data-ask="fix" data-key="s" aria-keyshortcuts="S"
+                             aria-haspopup="dialog">
+                    {{ __('approval::action.send_back') }}
+                </x-ui.button>
 
-            <x-ui.button type="submit" tone="primary" data-key="a" aria-keyshortcuts="A">
-                {{ $isBundle ? __('approval::action.confirm_all') : __('approval::action.approve') }}
-            </x-ui.button>
+                <x-ui.button type="submit" tone="primary" data-key="a" aria-keyshortcuts="A">
+                    {{ $isBundle ? __('approval::action.confirm_all') : __('approval::action.approve') }}
+                </x-ui.button>
+            </div>
         </div>
 
         <p class="mt-2 text-end text-2xs text-(--color-ink-muted)">{{ __('approval::message.next_opens') }}</p>
+        {{-- ⓘ স্থির বারের নিচে শেষ লাইন ঢাকা না পড়ুক — বারের সমান ফাঁকা জায়গা, কেবল ফোনে --}}
+        <div aria-hidden="true" class="h-16 md:hidden"></div>
     </form>
 </section>
 

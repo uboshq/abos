@@ -1022,7 +1022,9 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         foreach ($endOfLevel as $level => $ended) {
             if ($from !== null) {
-                $took[(int) $level] = $from->diffInHours($ended);
+                // ⛔ Carbon 3-এ diffInHours ভগ্নাংশ আর চিহ্নসহ দেয় — যাত্রাপথে "-1.3752777777778 ঘণ্টা" দেখাত (৩০ অক্টোবর ২০২৬, দফা ২১);
+                // পুরো ঘণ্টা, আর ঘড়ির গরমিলে সিদ্ধান্ত অনুরোধের আগে পড়লেও শূন্যের নিচে নয়
+                $took[(int) $level] = max(0, (int) $from->diffInHours($ended));
             }
 
             $from = $ended;
