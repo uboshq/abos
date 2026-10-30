@@ -148,6 +148,19 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
         }
     }
 
+    public function test_dofa21g2_the_whole_list_total_counts_every_page_not_just_this_one(): void
+    {
+        // ⓘ এক পাতায় ২৫ — ২৬টা কাগজে দ্বিতীয় পাতা হয়, তখন "এই পাতার" আর "সবগুলোর" মোট আলাদা হতেই হবে
+        foreach (range(1, 26) as $n) {
+            $this->paper(sprintf('PO-21-1%03d', $n), 'order', '100');
+        }
+
+        $first = $this->inbox()->assertOk();
+        $this->assertSame(2, $first->json('nextPage'), '⛔ দফা ২১: ২৬টা কাগজে দ্বিতীয় পাতা নেই।');
+        $this->assertSame(['pageCount' => 25, 'pageAmount' => '2500.0000', 'count' => 26, 'amount' => '2600.0000'], $first->json('totals'),
+            '⛔ দফা ২১: "সবগুলোর" মোট কেবল এই পাতার — দ্বিতীয় পাতার কাগজ গোনায় নেই।');
+    }
+
     public function test_dofa21h_the_paper_page_has_the_summary_journey_and_attachments(): void
     {
         Storage::fake('local');
@@ -181,11 +194,11 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
         $got = $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$mine)->assertOk();
         $this->assertSame('the slip', $got->streamedContent(), '⛔ দফা ২১: সংযুক্তি খোলে না।');
 
-        $this->assertSame(404, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$theirs)->status(),
+        $this->assertSame(404, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$theirs)->baseResponse->getStatusCode(),
             '⛔ দফা ২১: নিজের কাগজের নম্বর দিয়ে অন্য কাগজের সংযুক্তি নামানো যায়।');
 
         $this->as($this->giveKeys($this->member('অন্য কেউ', []), ['approval.decide']));
-        $this->assertSame(403, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$mine)->status(),
+        $this->assertSame(403, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$mine)->baseResponse->getStatusCode(),
             '⛔ দফা ২১: যিনি এই কাগজে সিদ্ধান্ত দেন না, তিনিও সংযুক্তি নামাতে পারেন।');
     }
 
