@@ -71,7 +71,9 @@ return [
          * রিপোর্টের পরে, পরিকল্পনার ক্রম ভেঙে।
          */
         'approval' => [
-            ['label' => 'approval::menu.inbox', 'icon' => 'inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
+            // ⓘ `count` — মেনু আর ফোনের নিচের বারের ব্যাজ, টপবারের ✔-এর একই সংখ্যা ([[WaitingForMe]], ৩১ অক্টোবর ২০২৬)
+            ['label' => 'approval::menu.inbox', 'icon' => 'inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide',
+                'count' => \App\Modules\Approval\Services\WaitingForMe::class],
             ['label' => 'approval::menu.mine', 'icon' => 'people', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
 
             /* ⓘ চাবিটা `flow.manage` — নিয়ম, সীমা আর নিয়মের বাইরে, তিনটাই "কে কী অনুমোদন করতে পারবে" প্রশ্নের */

@@ -24,13 +24,20 @@
             fn (array $n): bool => ! in_array(sha1($n['text']), $closed, true),
         ))
         : [];
+    // ⭐ সবচেয়ে জরুরিটা আগে — লাল, তারপর হলুদ, তারপর নীল; একই রঙে আগের ক্রম (মালিক, ৩১ অক্টোবর ২০২৬)
+    $rank = ['danger' => 0, 'pending' => 1];
+    $all = collect($all)->sortBy(fn (array $n, int $i): array => [$rank[$n['tone']] ?? 2, $i])->values()->all();
     $strips = array_slice($all, 0, 3);
     $hidden = count($all) - count($strips);
     $canDismiss = \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss');
 @endphp
 
+{{-- ⭐ এক জায়গায় গুটানো — মালিক, ৩১ অক্টোবর ২০২৬: *"notice ta curo kore ekta jaygay dekhaw zate porda na vange web r mobile er"*।
+     ⛔ আগে প্রতিটা নোটিশ নিজের সারিতে — তিনটা থাকলে ফোনে পর্দার এক-তৃতীয়াংশ (৩৯০-এ ২৬৪px), বড় পর্দায় তিন সারি।
+     ⭐ এখন একটা সারি: সবচেয়ে জরুরিটা, এক লাইনে (লম্বা হলে … — পুরো লেখা চাপলে), পাশে "+২টা ▾"; চাপলে বাকিগুলো নিচে খোলে
+     (SAP Fiori message strip-এর "আরও", Material 3-এর banner)। ✕ আর "বিস্তারিত" প্রতিটায় আগের মতো। --}}
 @if ($strips !== [])
-    <div data-message-strips class="print-hide">
+    <div data-message-strips class="print-hide" x-data="{ open: false }">
         @foreach ($strips as $strip)
             @php
                 [$bg, $ink, $icon] = match ($strip['tone']) {
@@ -40,10 +47,23 @@
                 };
             @endphp
             <div data-notice-banner data-message-strip="{{ $strip['tone'] }}" role="status"
+                 @if (! $loop->first) x-cloak x-show="open" @endif
                  class="flex items-center gap-3 border-b border-(--color-border) px-3 py-1.5 text-sm text-(--color-ink) md:px-5 {{ $bg }}">
                 <x-ui.icon :name="$icon" :size="18" class="shrink-0 {{ $ink }}" />
 
-                <span class="min-w-0 flex-1">{{ $strip['text'] }}</span>
+                {{-- ⓘ গুটানো অবস্থায় এক লাইন; লেখায় চাপলে পুরোটা (খোলা অবস্থায় সব লাইন) --}}
+                <span class="min-w-0 flex-1" :class="open ? '' : 'truncate'" @click="open = true" title="{{ $strip['text'] }}">{{ $strip['text'] }}</span>
+
+                @if ($loop->first && count($strips) > 1)
+                    <button type="button" data-strip-toggle
+                            @click="open = ! open"
+                            :aria-expanded="open.toString()"
+                            class="shrink-0 rounded-(--radius-pill) border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-medium
+                                   text-(--color-ink) hover:bg-(--color-surface-hover)">
+                        <span x-show="! open">+{{ count($strips) - 1 + $hidden }} ▾</span>
+                        <span x-cloak x-show="open">▴</span>
+                    </button>
+                @endif
 
                 @if ($strip['url'])
                     <a href="{{ $strip['url'] }}" class="shrink-0 font-medium text-(--color-link) underline-offset-2 hover:underline">
@@ -70,7 +90,7 @@
         @endforeach
 
         @if ($hidden > 0)
-            <p class="border-b border-(--color-border) px-3 py-1 text-xs text-(--color-ink-muted) md:px-5" data-strip-more>
+            <p class="border-b border-(--color-border) px-3 py-1 text-xs text-(--color-ink-muted) md:px-5" data-strip-more x-cloak x-show="open">
                 {{ __('core.notice.more_in_bell', ['count' => $hidden]) }}
             </p>
         @endif

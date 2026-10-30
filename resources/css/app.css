@@ -1496,6 +1496,44 @@ input[type='number'] {
 .bottom-nav {
     background: var(--color-brand-600);
     border-top: 1px solid var(--color-brand-600);
+    /* ⭐ iPhone-এর নিচের দাগ — বারের রং দাগ পর্যন্ত, বোতাম তার উপরে (৩১ অক্টোবর ২০২৬) */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transition: transform 200ms ease;
+}
+
+/* ⭐ নিচে স্ক্রল করলে বার সরে যায় (Material 3) — [[bottom-nav.js]] */
+.bottom-nav.bottom-nav-hidden {
+    transform: translateY(100%);
+}
+
+/* ⭐ মডিউলের কোণে সংখ্যা — অপেক্ষার অনুমোদন, খসড়া … (লাল জমিনে সাদা, ৪.৫ঃ১-এর উপরে) */
+.bottom-nav-count {
+    position: absolute;
+    top: 4px;
+    inset-inline-start: calc(50% + 8px);
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 4px;
+    border-radius: 9999px;
+    background: var(--color-count-urgent);
+    color: var(--color-count-ink);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px var(--color-brand-600);
+}
+
+/* ⭐ মাঝখানের ＋ — বারের রঙের উল্টো, সাদা গোল (Material 3 FAB-এর ছোট রূপ) */
+.bottom-nav-create {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    background: #fff;
+    color: var(--color-brand-700);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
 }
 
 .bottom-nav-item {
@@ -1511,7 +1549,7 @@ input[type='number'] {
     transition: opacity 120ms;
 }
 
-.bottom-nav-item:not(.bottom-nav-item-on) {
+.bottom-nav-item:not(.bottom-nav-item-on):not([data-bottom-create]) {
     /* ⓘ নিষ্ক্রিয়গুলো সাদাই, কেবল একটু হালকা — আলাদা রং দিলে বারটা
        দুই রঙের হয়ে যেত, আর ছবিতে সবই সাদা */
     opacity: 0.82;
