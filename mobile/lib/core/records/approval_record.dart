@@ -64,6 +64,43 @@ class ApprovalRecord {
   /// ⚠️ পুরনো সার্ভার পাঠায় না — তখন null, আর কার্ড আগের মতো সারাংশেই পক্ষ দেখায়।
   String? get party => _text('party');
 
+  // ── ⭐ ইনবক্সের ঘর — `GET /approvals/inbox` (অনুমোদন ভাগ ৩, দফা ২১; পরিকল্পনার পাতা ৬)। লেখা আর রং সার্ভারের — ওয়েবের
+  // ইনবক্স যেখান থেকে পড়ে ([[ApprovalInbox]]); ফোন নিজে কিছু হিসাব করে না। পুরনো সার্ভারের `pending` সারিতে এগুলো নেই — তখন null/false,
+  // আর কার্ড আগের মতো আঁকে।
+
+  /// `pending` · `approved` · `rejected` · `returned` …; পুরনো সার্ভারে null
+  String? get status => _text('status');
+
+  /// অবস্থার নাম, সার্ভারের ভাষায় ("অনুমোদিত")
+  String? get statusLabel => _text('statusLabel');
+
+  /// শেষ সময়ের লেখা — "শেষ সময় পেরিয়েছে ৩ ঘণ্টা", "আজ ৫:০০"; ঘড়ি নেই বা অপেক্ষায় নয় ⇒ null
+  String? get deadlineText => _part('deadline', 'text');
+
+  /// `danger` (দেরি) · `warning` (কাছে) · `success` (সময় আছে)
+  String? get deadlineTone => _part('deadline', 'tone');
+
+  /// ধাপ "২ / ৩" — কত নম্বর ধাপ আর মোট কয়টা; না জানা ⇒ null
+  int? get stepAt => (_map('step')?['at'] as num?)?.toInt();
+  int? get stepOf => (_map('step')?['of'] as num?)?.toInt();
+  String? get stepName => _part('step', 'name');
+
+  /// দায়িত্ব হস্তান্তরে কার হয়ে
+  String? get standInFor => _text('standInFor');
+
+  /// ⛔ একসাথে অনুমোদনে বাছা যায় কি না — সার্ভার বলে (টাকা নড়ার কাজে কখনো নয়); না বললে না
+  bool get bulkable => payload['bulkable'] == true;
+
+  Map<String, dynamic>? _map(String key) => switch (payload[key]) {
+        final Map<dynamic, dynamic> m => m.cast<String, dynamic>(),
+        _ => null,
+      };
+
+  String? _part(String key, String inner) {
+    final text = _map(key)?[inner]?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
   /// The document kind in the language the rest of this app speaks. An
   /// unfamiliar type is shown as it came rather than hidden — a document this
   /// build has not heard of is still a document somebody is waiting on.

@@ -9250,13 +9250,13 @@ abstract class AppL10n {
   /// Approvals inbox: title of the send-back dialog (the paper returns to its writer to fix; not a rejection)
   ///
   /// In bn, this message translates to:
-  /// **'সংশোধনে ফেরত দেবেন?'**
+  /// **'সংশোধনে ফেরত পাঠাবেন?'**
   String get approvalsInboxSendBackTitle;
 
   /// Approvals inbox: the send-back button on the card and in its dialog (fe 21 Oct: সংশোধনে ফেরত দিন)
   ///
   /// In bn, this message translates to:
-  /// **'সংশোধনে ফেরত দিন'**
+  /// **'সংশোধনে ফেরত পাঠান'**
   String get approvalsInboxSendBackButton;
 
   /// Approvals inbox: title of the error state
@@ -18181,6 +18181,180 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'আগের বছরগুলোর লাভ'**
   String get netWorthEarlier;
+
+  /// Approvals inbox: the chip that shows every kind of work
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get approvalsChipAll;
+
+  /// Approvals inbox: the chip that shows only late papers
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরি'**
+  String get approvalsChipLate;
+
+  /// Approvals: which signing step of how many
+  ///
+  /// In bn, this message translates to:
+  /// **'ধাপ {at}/{of}'**
+  String approvalsStepOf(int at, int of);
+
+  /// Approvals: deciding on behalf of someone who handed over
+  ///
+  /// In bn, this message translates to:
+  /// **'{name}-এর হয়ে'**
+  String approvalsOnBehalf(String name);
+
+  /// Approvals inbox footer: papers on this page
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকায় {count}টা'**
+  String approvalsListTotal(int count);
+
+  /// Approvals inbox footer: every paper in the tab
+  ///
+  /// In bn, this message translates to:
+  /// **'সব {count}টা'**
+  String approvalsAllTotal(int count);
+
+  /// Approvals inbox: the bulk approve button
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছাই {count}টা · একসাথে অনুমোদন'**
+  String approvalsBulkButton(int count);
+
+  /// Approvals inbox: screen-reader name of a card's checkbox
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছুন {paper}'**
+  String approvalsPick(String paper);
+
+  /// Bulk approve sheet: the question
+  ///
+  /// In bn, this message translates to:
+  /// **'{count}টা কাগজে একসাথে অনুমোদন দেবেন?'**
+  String approvalsBulkTitle(int count);
+
+  /// Bulk approve sheet: total line
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count}টা'**
+  String approvalsBulkTotal(int count);
+
+  /// Bulk approve sheet: how many were left out
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি {picked}টা বেছেছিলেন — বাদ পড়ছে {count}টা:'**
+  String approvalsBulkSkipped(int picked, int count);
+
+  /// Bulk approve sheet: confirm button
+  ///
+  /// In bn, this message translates to:
+  /// **'{count}টায় অনুমোদন দিন'**
+  String approvalsBulkConfirm(int count);
+
+  /// Bulk approve sheet: nothing can go
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছাই থেকে একটাও একসাথে দেওয়া যায় না'**
+  String get approvalsBulkNone;
+
+  /// Bulk approve: result
+  ///
+  /// In bn, this message translates to:
+  /// **'{done}টায় অনুমোদন হয়েছে'**
+  String approvalsBulkDone(int done);
+
+  /// Bulk approve: result with papers the server left out
+  ///
+  /// In bn, this message translates to:
+  /// **'{done}টায় অনুমোদন হয়েছে · {skipped}টা বাদ'**
+  String approvalsBulkDoneSkipped(int done, int skipped);
+
+  /// Approvals: close a sheet without doing anything
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিরে যান'**
+  String get approvalsGoBack;
+
+  /// Approvals paper page: back to the inbox, which paper of how many
+  ///
+  /// In bn, this message translates to:
+  /// **'ইনবক্স · {at}/{of}'**
+  String approvalsBackToInbox(int at, int of);
+
+  /// Approvals paper page: who asked and when
+  ///
+  /// In bn, this message translates to:
+  /// **'চেয়েছেন {name} · {when}'**
+  String approvalsAskedBy(String name, String when);
+
+  /// Approvals paper page: the lines of the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজের লাইন'**
+  String get approvalsLines;
+
+  /// Approvals paper page: open the whole paper
+  ///
+  /// In bn, this message translates to:
+  /// **'পুরো কাগজ'**
+  String get approvalsWholePaper;
+
+  /// Approvals paper page: who decided what, step by step
+  ///
+  /// In bn, this message translates to:
+  /// **'যাত্রাপথ'**
+  String get approvalsJourney;
+
+  /// Approvals journey: who made the request and when
+  ///
+  /// In bn, this message translates to:
+  /// **'তৈরি — {name} · {when}'**
+  String approvalsJourneyCreated(String name, String when);
+
+  /// Approvals journey: a step
+  ///
+  /// In bn, this message translates to:
+  /// **'ধাপ {level}'**
+  String approvalsJourneyStep(int level);
+
+  /// Approvals journey: the step the paper is at
+  ///
+  /// In bn, this message translates to:
+  /// **'এখন এখানে'**
+  String get approvalsJourneyNow;
+
+  /// Approvals journey: a step not reached yet
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষায়'**
+  String get approvalsJourneyWaiting;
+
+  /// Approvals journey: how long a step took
+  ///
+  /// In bn, this message translates to:
+  /// **'{hours} ঘণ্টা'**
+  String approvalsJourneyTook(int hours);
+
+  /// Approvals paper page: attached slips and bills
+  ///
+  /// In bn, this message translates to:
+  /// **'সংযুক্তি'**
+  String get approvalsAttachments;
+
+  /// Approvals paper page: an attachment failed to open
+  ///
+  /// In bn, this message translates to:
+  /// **'ফাইলটা খোলা গেল না'**
+  String get approvalsAttachmentFailed;
+
+  /// Approvals paper page: the total under the paper's lines
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট'**
+  String get approvalsLinesTotal;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

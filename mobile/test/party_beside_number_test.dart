@@ -39,10 +39,10 @@ void main() {
     await tester.pumpWidget(inbox({...row, 'party': party}));
     await tester.pumpAndSettle();
 
-    final line = find.byKey(const Key('approval-number-ap-1'));
-    expect(line, findsOneWidget, reason: '⛔ নম্বরের লাইন নেই');
-    expect(find.descendant(of: line, matching: find.text('COL-0042 · $party')), findsOneWidget,
-        reason: '⛔ নম্বরের পাশে পক্ষ নেই');
+    // ⓘ অনুমোদন ভাগ ৩, দফা ২১ (পরিকল্পনার পাতা ৬, ২১ অক্টোবর — এই নিয়মের পরের তারিখ): পক্ষ নম্বরের ঠিক নিচের লাইনে,
+    // ওয়েবের কার্ডের মতো; নম্বর আর পক্ষ তবু একসাথে চোখে পড়ে, আর পক্ষ একবারই
+    expect(find.text('আদায় · COL-0042'), findsOneWidget, reason: '⛔ নম্বরের লাইন নেই');
+    expect(tester.widget<Text>(find.byKey(const Key('approval-place-ap-1'))).data, party, reason: '⛔ নম্বরের নিচে পক্ষ নেই');
     expect(find.text('অক্টোবরের বকেয়া · জমা: ক্যাশ'), findsOneWidget, reason: '⛔ সারাংশে পক্ষ দুইবার, বা বাকিটা হারিয়েছে');
     expect(find.textContaining(party), findsOneWidget, reason: '⛔ পক্ষ কার্ডে দুইবার');
   });
@@ -59,16 +59,16 @@ void main() {
     await tester.pumpWidget(inbox({...row, 'party': long, 'summary': long, 'documentId': 'doc-1'}));
     await tester.pumpAndSettle();
 
-    final text = tester.widget<Text>(find.descendant(of: find.byKey(const Key('approval-number-ap-1')), matching: find.byType(Text)));
-    expect(text.maxLines, 1, reason: '⛔ নম্বরের লাইন ভেঙে কয়েক লাইন');
+    final text = tester.widget<Text>(find.byKey(const Key('approval-place-ap-1')));
+    expect(text.maxLines, 1, reason: '⛔ পক্ষের লাইন ভেঙে কয়েক লাইন');
     expect(text.overflow, TextOverflow.ellipsis);
-    expect(text.textSpan!.toPlainText(), startsWith('COL-0042 · '), reason: '⛔ নম্বর কাটা পড়েছে');
     final paragraph = tester.renderObject<RenderParagraph>(
-        find.descendant(of: find.byKey(const Key('approval-number-ap-1')), matching: find.byType(RichText)));
+        find.descendant(of: find.byKey(const Key('approval-place-ap-1')), matching: find.byType(RichText)));
     expect(paragraph.didExceedMaxLines, isTrue, reason: '⛔ নামটা যথেষ্ট লম্বা নয় — দাবিটা কাটা মাপছে না');
     expect(find.byTooltip(long), findsOneWidget, reason: '⛔ পুরো নাম পড়ার পথ নেই');
     expect(tester.takeException(), isNull, reason: '⛔ কার্ডের কিছু ডানে উপচে কেটে গেছে');
-    for (final label in ['কাগজ দেখুন', 'প্রত্যাখ্যান করুন', 'সংশোধনে ফেরত দিন', 'অনুমোদন দিন']) {
+    // ⓘ নম্বর আর অঙ্ক পুরো, পর্দার ভেতরে — সিদ্ধান্তের বোতাম এখন কাগজের পাতায় (দফা ২১), কার্ডে নয়
+    for (final label in ['আদায় · COL-0042', '৳5,000.00']) {
       final box = tester.getRect(find.descendant(of: find.byType(Card), matching: find.text(label)));
       expect(box.right, lessThanOrEqualTo(width), reason: '⛔ "$label" পর্দার বাইরে');
     }
@@ -79,7 +79,7 @@ void main() {
     await tester.pumpWidget(inbox(row));
     await tester.pumpAndSettle();
 
-    expect(find.text('COL-0042'), findsOneWidget, reason: '⛔ পুরনো সার্ভারে নম্বর একা দেখাচ্ছে না');
+    expect(find.text('আদায় · COL-0042'), findsOneWidget, reason: '⛔ পুরনো সার্ভারে নম্বর দেখাচ্ছে না');
     expect(find.text(row['summary'] as String), findsOneWidget, reason: '⛔ পুরনো সার্ভারে সারাংশ বদলে গেছে');
   });
 

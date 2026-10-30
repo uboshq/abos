@@ -5636,10 +5636,10 @@ class AppL10nBn extends AppL10n {
   String get approvalsInboxRejectButton => 'প্রত্যাখ্যান করুন';
 
   @override
-  String get approvalsInboxSendBackTitle => 'সংশোধনে ফেরত দেবেন?';
+  String get approvalsInboxSendBackTitle => 'সংশোধনে ফেরত পাঠাবেন?';
 
   @override
-  String get approvalsInboxSendBackButton => 'সংশোধনে ফেরত দিন';
+  String get approvalsInboxSendBackButton => 'সংশোধনে ফেরত পাঠান';
 
   @override
   String get approvalsInboxLoadFailedTitle => 'তালিকা আনা গেল না';
@@ -10932,4 +10932,125 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get netWorthEarlier => 'আগের বছরগুলোর লাভ';
+
+  @override
+  String get approvalsChipAll => 'সব';
+
+  @override
+  String get approvalsChipLate => 'দেরি';
+
+  @override
+  String approvalsStepOf(int at, int of) {
+    return 'ধাপ $at/$of';
+  }
+
+  @override
+  String approvalsOnBehalf(String name) {
+    return '$name-এর হয়ে';
+  }
+
+  @override
+  String approvalsListTotal(int count) {
+    return 'এই তালিকায় $countটা';
+  }
+
+  @override
+  String approvalsAllTotal(int count) {
+    return 'সব $countটা';
+  }
+
+  @override
+  String approvalsBulkButton(int count) {
+    return 'বাছাই $countটা · একসাথে অনুমোদন';
+  }
+
+  @override
+  String approvalsPick(String paper) {
+    return 'বাছুন $paper';
+  }
+
+  @override
+  String approvalsBulkTitle(int count) {
+    return '$countটা কাগজে একসাথে অনুমোদন দেবেন?';
+  }
+
+  @override
+  String approvalsBulkTotal(int count) {
+    return 'মোট $countটা';
+  }
+
+  @override
+  String approvalsBulkSkipped(int picked, int count) {
+    return 'আপনি $pickedটা বেছেছিলেন — বাদ পড়ছে $countটা:';
+  }
+
+  @override
+  String approvalsBulkConfirm(int count) {
+    return '$countটায় অনুমোদন দিন';
+  }
+
+  @override
+  String get approvalsBulkNone => 'বাছাই থেকে একটাও একসাথে দেওয়া যায় না';
+
+  @override
+  String approvalsBulkDone(int done) {
+    return '$doneটায় অনুমোদন হয়েছে';
+  }
+
+  @override
+  String approvalsBulkDoneSkipped(int done, int skipped) {
+    return '$doneটায় অনুমোদন হয়েছে · $skippedটা বাদ';
+  }
+
+  @override
+  String get approvalsGoBack => 'ফিরে যান';
+
+  @override
+  String approvalsBackToInbox(int at, int of) {
+    return 'ইনবক্স · $at/$of';
+  }
+
+  @override
+  String approvalsAskedBy(String name, String when) {
+    return 'চেয়েছেন $name · $when';
+  }
+
+  @override
+  String get approvalsLines => 'কাগজের লাইন';
+
+  @override
+  String get approvalsWholePaper => 'পুরো কাগজ';
+
+  @override
+  String get approvalsJourney => 'যাত্রাপথ';
+
+  @override
+  String approvalsJourneyCreated(String name, String when) {
+    return 'তৈরি — $name · $when';
+  }
+
+  @override
+  String approvalsJourneyStep(int level) {
+    return 'ধাপ $level';
+  }
+
+  @override
+  String get approvalsJourneyNow => 'এখন এখানে';
+
+  @override
+  String get approvalsJourneyWaiting => 'অপেক্ষায়';
+
+  @override
+  String approvalsJourneyTook(int hours) {
+    return '$hours ঘণ্টা';
+  }
+
+  @override
+  String get approvalsAttachments => 'সংযুক্তি';
+
+  @override
+  String get approvalsAttachmentFailed => 'ফাইলটা খোলা গেল না';
+
+  @override
+  String get approvalsLinesTotal => 'মোট';
 }

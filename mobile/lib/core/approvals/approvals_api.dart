@@ -48,6 +48,46 @@ class ApprovalsApi {
     );
   }
 
+  /// ⭐ ইনবক্স, ওয়েবের চার ট্যাব আর একই নিয়মে — `GET /approvals/inbox` (অনুমোদন ভাগ ৩, দফা ২১; পরিকল্পনার পাতা ৬, ছবি ১)।
+  /// ট্যাব, কাজের চিপ, দেরি, শেষ সময়, ধাপ আর দুই মোট — সবই সার্ভারের লেখা; ফোন কেবল আঁকে। পাতা নম্বরে (`page`)।
+  /// ⚠️ পুরনো সার্ভারে দরজাটা নেই (৪০৪) — পর্দা তখন [pending]-এ ফেরে ([[ApprovalInboxScreen]])।
+  static Future<InboxPage> inbox({String tab = 'waiting', String? module, bool late = false, int page = 1}) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+      '/approvals/inbox',
+      queryParameters: {
+        'tab': tab,
+        if (module != null) 'module': module,
+        if (late) 'late': 1,
+        if (page > 1) 'page': page,
+      },
+    );
+    return InboxPage.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  /// ⭐ একসাথে অনুমোদনের আগে দেখা — `POST /approvals/bulk-preview` (পাতা ৬, ছবি ৩)। কিছু জমা পড়ে না।
+  static Future<BulkPreview> bulkPreview(List<String> ids) async {
+    final response = await ApiClient.dio.post<Map<String, dynamic>>('/approvals/bulk-preview', data: {'ids': ids});
+    return BulkPreview.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  /// ⭐ একসাথে অনুমোদন — `POST /approvals/bulk-approve`। ⛔ সার্ভার আবার নিজে দেখে; ফোনের বাছাই বিশ্বাস করে না।
+  static Future<BulkResult> bulkApprove(List<String> ids, {String? remarks}) async {
+    final response = await OnceKey.of('approval-bulk:${ids.join(',')}').send(() => ApiClient.dio.post<Map<String, dynamic>>(
+          '/approvals/bulk-approve',
+          data: {'ids': ids, if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim()},
+        ));
+    return BulkResult.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  /// ⭐ কাগজের সংযুক্তি — `GET /approvals/{id}/attachments/{file}` (পাতা ৬, ছবি ২)। কেবল এই কাগজের ফাইল, সই-পাহারায়।
+  static Future<List<int>> attachment(String id, int file) async {
+    final response = await ApiClient.dio.get<List<int>>(
+      '/approvals/$id/attachments/$file',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? const <int>[];
+  }
+
   /// ⭐ আমার পাঠানো অনুরোধ — `GET /approvals/mine` (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e bujajayna")।
   /// নতুন আগে; অবস্থা আর শেষ কথা সার্ভারের লেখা, ফোন কেবল আঁকে।
   static Future<MyRequestsPage> mine({int limit = 50, String? cursor}) async {
@@ -113,8 +153,186 @@ class ApprovalsApi {
   }
 }
 
+/// ইনবক্সের এক পাতা — চার ট্যাব, কাজের চিপ, সারি আর দুই মোট (`GET /approvals/inbox`)।
+class InboxPage {
+  const InboxPage({
+    required this.tab,
+    required this.tabs,
+    required this.modules,
+    required this.rows,
+    this.module,
+    this.allCount = 0,
+    this.lateCount = 0,
+    this.pageCount = 0,
+    this.pageAmount,
+    this.count = 0,
+    this.amount,
+    this.nextPage,
+  });
+
+  final String tab;
+
+  /// (key, নাম, সংখ্যা) — ওয়েবের চার ট্যাব, ক্রমে
+  final List<(String, String, int)> tabs;
+
+  /// (key, নাম, সংখ্যা) — কাজের চিপ
+  final List<(String, String, int)> modules;
+  final String? module;
+  final int allCount;
+  final int lateCount;
+  final List<ApprovalRecord> rows;
+
+  /// এই পাতার আর পুরো তালিকার মোট — অঙ্ক স্ট্রিং, সার্ভারের লেখা
+  final int pageCount;
+  final String? pageAmount;
+  final int count;
+  final String? amount;
+  final int? nextPage;
+
+  static List<(String, String, int)> _named(Object? list) => [
+        for (final t in (list as List?) ?? const [])
+          if (t is Map) (t['key']?.toString() ?? '', t['label']?.toString() ?? '', (t['count'] as num?)?.toInt() ?? 0),
+      ];
+
+  factory InboxPage.fromJson(Map<String, dynamic> body) {
+    final totals = (body['totals'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    return InboxPage(
+      tab: body['tab']?.toString() ?? 'waiting',
+      tabs: _named(body['tabs']),
+      modules: _named(body['modules']),
+      module: body['module']?.toString(),
+      allCount: (body['allCount'] as num?)?.toInt() ?? 0,
+      lateCount: (body['lateCount'] as num?)?.toInt() ?? 0,
+      rows: [
+        for (final r in (body['rows'] as List?) ?? const [])
+          if (r is Map) ApprovalRecord(r.cast<String, dynamic>()),
+      ].where((a) => !a.isPayroll).toList(),
+      pageCount: (totals['pageCount'] as num?)?.toInt() ?? 0,
+      pageAmount: totals['pageAmount']?.toString(),
+      count: (totals['count'] as num?)?.toInt() ?? 0,
+      amount: totals['amount']?.toString(),
+      nextPage: (body['nextPage'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// একসাথে অনুমোদনের এক সারি — কোন কাগজ, কত; বাদ পড়লে কেন
+class BulkLine {
+  const BulkLine({required this.id, required this.work, this.documentNo, this.amount, this.reason});
+
+  final String id;
+  final String work;
+  final String? documentNo;
+  final String? amount;
+
+  /// বাদ পড়ার কারণ — ওয়েবের একই লেখা; যেটা যাবে তাতে null
+  final String? reason;
+
+  factory BulkLine.fromJson(Map<String, dynamic> j) => BulkLine(
+        id: j['id']?.toString() ?? '',
+        work: j['work']?.toString() ?? '',
+        documentNo: j['documentNo']?.toString(),
+        amount: j['amount']?.toString(),
+        reason: j['reason']?.toString(),
+      );
+}
+
+class BulkPreview {
+  const BulkPreview({required this.sign, required this.skip, this.total});
+
+  final List<BulkLine> sign;
+  final List<BulkLine> skip;
+  final String? total;
+
+  factory BulkPreview.fromJson(Map<String, dynamic> body) => BulkPreview(
+        sign: [for (final r in (body['sign'] as List?) ?? const []) if (r is Map) BulkLine.fromJson(r.cast<String, dynamic>())],
+        skip: [for (final r in (body['skip'] as List?) ?? const []) if (r is Map) BulkLine.fromJson(r.cast<String, dynamic>())],
+        total: body['total']?.toString(),
+      );
+}
+
+class BulkResult {
+  const BulkResult({required this.done, required this.skipped});
+
+  final int done;
+
+  /// কারণ ধরে কয়টা বাদ — সার্ভার আবার দেখার পরে
+  final Map<String, int> skipped;
+
+  int get skippedCount => skipped.values.fold(0, (a, b) => a + b);
+
+  factory BulkResult.fromJson(Map<String, dynamic> body) => BulkResult(
+        done: (body['done'] as num?)?.toInt() ?? 0,
+        skipped: {
+          for (final e in ((body['skipped'] as Map?) ?? const {}).entries) e.key.toString(): (e.value as num?)?.toInt() ?? 0,
+        },
+      );
+}
+
+/// যাত্রাপথের এক ধাপ — কোন ধাপ, এখন কোথায়, কে কী বললেন
+class JourneyStep {
+  const JourneyStep({required this.level, required this.state, this.name, this.tookHours, this.by = const []});
+
+  final int level;
+
+  /// approved · rejected · returned · forwarded · now · waiting
+  final String state;
+  final String? name;
+  final int? tookHours;
+
+  /// (নাম, সিদ্ধান্তের লেখা, কখন, মন্তব্য, কার হয়ে)
+  final List<(String, String, DateTime?, String?, String?)> by;
+
+  factory JourneyStep.fromJson(Map<String, dynamic> j) => JourneyStep(
+        level: (j['level'] as num?)?.toInt() ?? 0,
+        state: j['state']?.toString() ?? 'waiting',
+        name: j['name']?.toString(),
+        tookHours: (j['tookHours'] as num?)?.toInt(),
+        by: [
+          for (final w in (j['by'] as List?) ?? const [])
+            if (w is Map)
+              (
+                w['name']?.toString() ?? '—',
+                w['label']?.toString() ?? '',
+                DateTime.tryParse(w['at']?.toString() ?? '')?.toLocal(),
+                switch (w['remarks']?.toString().trim()) { final r? when r.isNotEmpty => r, _ => null },
+                w['for']?.toString(),
+              ),
+        ],
+      );
+}
+
 class ApprovalSheet {
-  const ApprovalSheet({this.facts = const [], this.columns = const [], this.rows = const [], this.totals = const {}});
+  const ApprovalSheet({
+    this.facts = const [],
+    this.columns = const [],
+    this.rows = const [],
+    this.totals = const {},
+    this.requesterName,
+    this.requestedAt,
+    this.amountWords,
+    this.deadlineText,
+    this.deadlineTone,
+    this.stepAt,
+    this.stepOf,
+    this.standInFor,
+    this.journey = const [],
+    this.attachments = const [],
+  });
+
+  // ── ⭐ কাগজের পুরো পাতা — পাতা ৬, ছবি ২ (দফা ২১); পুরনো সার্ভারে খালি, তখন পাতা আগের মতো কেবল লাইন দেখায়
+  final String? requesterName;
+  final DateTime? requestedAt;
+  final String? amountWords;
+  final String? deadlineText;
+  final String? deadlineTone;
+  final int? stepAt;
+  final int? stepOf;
+  final String? standInFor;
+  final List<JourneyStep> journey;
+
+  /// (id, নাম, আকার)
+  final List<(int, String, String)> attachments;
 
   /// ঘর আর মান — তারিখ, পক্ষ, মাধ্যম, বর্ণনা …
   final List<(String, String)> facts;
@@ -140,6 +358,22 @@ class ApprovalSheet {
         totals: {
           for (final e in ((json['totals'] as Map?) ?? const {}).entries) e.key.toString(): e.value?.toString() ?? '',
         },
+        requesterName: (json['summary'] as Map?)?['requesterName']?.toString(),
+        requestedAt: DateTime.tryParse((json['summary'] as Map?)?['requestedAt']?.toString() ?? '')?.toLocal(),
+        amountWords: (json['summary'] as Map?)?['amountWords']?.toString(),
+        deadlineText: ((json['summary'] as Map?)?['deadline'] as Map?)?['text']?.toString(),
+        deadlineTone: ((json['summary'] as Map?)?['deadline'] as Map?)?['tone']?.toString(),
+        stepAt: (((json['summary'] as Map?)?['step'] as Map?)?['at'] as num?)?.toInt(),
+        stepOf: (((json['summary'] as Map?)?['step'] as Map?)?['of'] as num?)?.toInt(),
+        standInFor: (json['summary'] as Map?)?['standInFor']?.toString(),
+        journey: [
+          for (final s in (json['journey'] as List?) ?? const [])
+            if (s is Map) JourneyStep.fromJson(s.cast<String, dynamic>()),
+        ],
+        attachments: [
+          for (final a in (json['attachments'] as List?) ?? const [])
+            if (a is Map && a['id'] is num) ((a['id'] as num).toInt(), a['name']?.toString() ?? '', a['size']?.toString() ?? ''),
+        ],
       );
 
   /// এক সারি এক লাইনে — মালিকের নিয়ম, টেবিল নয়: "খাত · পক্ষ · বর্ণনা — ডেবিট ৳…"

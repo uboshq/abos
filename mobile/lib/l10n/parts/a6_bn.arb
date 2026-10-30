@@ -170,11 +170,11 @@
   "@approvalsInboxRejectButton": {
     "description": "Approvals inbox: the reject button on the card and in its dialog (final; a last question follows)"
   },
-  "approvalsInboxSendBackTitle": "সংশোধনে ফেরত দেবেন?",
+  "approvalsInboxSendBackTitle": "সংশোধনে ফেরত পাঠাবেন?",
   "@approvalsInboxSendBackTitle": {
     "description": "Approvals inbox: title of the send-back dialog (the paper returns to its writer to fix; not a rejection)"
   },
-  "approvalsInboxSendBackButton": "সংশোধনে ফেরত দিন",
+  "approvalsInboxSendBackButton": "সংশোধনে ফেরত পাঠান",
   "@approvalsInboxSendBackButton": {
     "description": "Approvals inbox: the send-back button on the card and in its dialog (fe 21 Oct: সংশোধনে ফেরত দিন)"
   },

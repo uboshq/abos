@@ -80,5 +80,224 @@
   "netWorthEarlier": "আগের বছরগুলোর লাভ",
   "@netWorthEarlier": {
     "description": "Net Worth Statement: retained earnings of earlier years"
+  },
+  "approvalsChipAll": "সব",
+  "@approvalsChipAll": {
+    "description": "Approvals inbox: the chip that shows every kind of work"
+  },
+  "approvalsChipLate": "দেরি",
+  "@approvalsChipLate": {
+    "description": "Approvals inbox: the chip that shows only late papers"
+  },
+  "approvalsStepOf": "ধাপ {at}/{of}",
+  "@approvalsStepOf": {
+    "description": "Approvals: which signing step of how many",
+    "placeholders": {
+      "at": {
+        "type": "int"
+      },
+      "of": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsOnBehalf": "{name}-এর হয়ে",
+  "@approvalsOnBehalf": {
+    "description": "Approvals: deciding on behalf of someone who handed over",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsListTotal": "এই তালিকায় {count}টা",
+  "@approvalsListTotal": {
+    "description": "Approvals inbox footer: papers on this page",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsAllTotal": "সব {count}টা",
+  "@approvalsAllTotal": {
+    "description": "Approvals inbox footer: every paper in the tab",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkButton": "বাছাই {count}টা · একসাথে অনুমোদন",
+  "@approvalsBulkButton": {
+    "description": "Approvals inbox: the bulk approve button",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsPick": "বাছুন {paper}",
+  "@approvalsPick": {
+    "description": "Approvals inbox: screen-reader name of a card's checkbox",
+    "placeholders": {
+      "paper": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsBulkTitle": "{count}টা কাগজে একসাথে অনুমোদন দেবেন?",
+  "@approvalsBulkTitle": {
+    "description": "Bulk approve sheet: the question",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkTotal": "মোট {count}টা",
+  "@approvalsBulkTotal": {
+    "description": "Bulk approve sheet: total line",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkSkipped": "আপনি {picked}টা বেছেছিলেন — বাদ পড়ছে {count}টা:",
+  "@approvalsBulkSkipped": {
+    "description": "Bulk approve sheet: how many were left out",
+    "placeholders": {
+      "picked": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkConfirm": "{count}টায় অনুমোদন দিন",
+  "@approvalsBulkConfirm": {
+    "description": "Bulk approve sheet: confirm button",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkNone": "বাছাই থেকে একটাও একসাথে দেওয়া যায় না",
+  "@approvalsBulkNone": {
+    "description": "Bulk approve sheet: nothing can go"
+  },
+  "approvalsBulkDone": "{done}টায় অনুমোদন হয়েছে",
+  "@approvalsBulkDone": {
+    "description": "Bulk approve: result",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsBulkDoneSkipped": "{done}টায় অনুমোদন হয়েছে · {skipped}টা বাদ",
+  "@approvalsBulkDoneSkipped": {
+    "description": "Bulk approve: result with papers the server left out",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsGoBack": "ফিরে যান",
+  "@approvalsGoBack": {
+    "description": "Approvals: close a sheet without doing anything"
+  },
+  "approvalsBackToInbox": "ইনবক্স · {at}/{of}",
+  "@approvalsBackToInbox": {
+    "description": "Approvals paper page: back to the inbox, which paper of how many",
+    "placeholders": {
+      "at": {
+        "type": "int"
+      },
+      "of": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsAskedBy": "চেয়েছেন {name} · {when}",
+  "@approvalsAskedBy": {
+    "description": "Approvals paper page: who asked and when",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsLines": "কাগজের লাইন",
+  "@approvalsLines": {
+    "description": "Approvals paper page: the lines of the paper"
+  },
+  "approvalsWholePaper": "পুরো কাগজ",
+  "@approvalsWholePaper": {
+    "description": "Approvals paper page: open the whole paper"
+  },
+  "approvalsJourney": "যাত্রাপথ",
+  "@approvalsJourney": {
+    "description": "Approvals paper page: who decided what, step by step"
+  },
+  "approvalsJourneyCreated": "তৈরি — {name} · {when}",
+  "@approvalsJourneyCreated": {
+    "description": "Approvals journey: who made the request and when",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsJourneyStep": "ধাপ {level}",
+  "@approvalsJourneyStep": {
+    "description": "Approvals journey: a step",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsJourneyNow": "এখন এখানে",
+  "@approvalsJourneyNow": {
+    "description": "Approvals journey: the step the paper is at"
+  },
+  "approvalsJourneyWaiting": "অপেক্ষায়",
+  "@approvalsJourneyWaiting": {
+    "description": "Approvals journey: a step not reached yet"
+  },
+  "approvalsJourneyTook": "{hours} ঘণ্টা",
+  "@approvalsJourneyTook": {
+    "description": "Approvals journey: how long a step took",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsAttachments": "সংযুক্তি",
+  "@approvalsAttachments": {
+    "description": "Approvals paper page: attached slips and bills"
+  },
+  "approvalsAttachmentFailed": "ফাইলটা খোলা গেল না",
+  "@approvalsAttachmentFailed": {
+    "description": "Approvals paper page: an attachment failed to open"
+  },
+  "approvalsLinesTotal": "মোট",
+  "@approvalsLinesTotal": {
+    "description": "Approvals paper page: the total under the paper's lines"
   }
 }

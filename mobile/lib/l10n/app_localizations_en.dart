@@ -5724,10 +5724,10 @@ class AppL10nEn extends AppL10n {
   String get approvalsInboxRejectButton => 'Reject';
 
   @override
-  String get approvalsInboxSendBackTitle => 'Send back for correction?';
+  String get approvalsInboxSendBackTitle => 'Send back to fix?';
 
   @override
-  String get approvalsInboxSendBackButton => 'Send back for correction';
+  String get approvalsInboxSendBackButton => 'Send back to fix';
 
   @override
   String get approvalsInboxLoadFailedTitle => 'Could not load the list';
@@ -11103,4 +11103,126 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get netWorthEarlier => 'Earlier years\' profit';
+
+  @override
+  String get approvalsChipAll => 'All';
+
+  @override
+  String get approvalsChipLate => 'Late';
+
+  @override
+  String approvalsStepOf(int at, int of) {
+    return 'Step $at/$of';
+  }
+
+  @override
+  String approvalsOnBehalf(String name) {
+    return 'for $name';
+  }
+
+  @override
+  String approvalsListTotal(int count) {
+    return '$count in this list';
+  }
+
+  @override
+  String approvalsAllTotal(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String approvalsBulkButton(int count) {
+    return '$count picked · approve together';
+  }
+
+  @override
+  String approvalsPick(String paper) {
+    return 'Pick $paper';
+  }
+
+  @override
+  String approvalsBulkTitle(int count) {
+    return 'Approve $count papers together?';
+  }
+
+  @override
+  String approvalsBulkTotal(int count) {
+    return 'Total $count';
+  }
+
+  @override
+  String approvalsBulkSkipped(int picked, int count) {
+    return 'You picked $picked — $count are left out:';
+  }
+
+  @override
+  String approvalsBulkConfirm(int count) {
+    return 'Approve $count';
+  }
+
+  @override
+  String get approvalsBulkNone =>
+      'None of the picked papers can be approved together';
+
+  @override
+  String approvalsBulkDone(int done) {
+    return '$done approved';
+  }
+
+  @override
+  String approvalsBulkDoneSkipped(int done, int skipped) {
+    return '$done approved · $skipped left out';
+  }
+
+  @override
+  String get approvalsGoBack => 'Go back';
+
+  @override
+  String approvalsBackToInbox(int at, int of) {
+    return 'Inbox · $at/$of';
+  }
+
+  @override
+  String approvalsAskedBy(String name, String when) {
+    return 'Asked by $name · $when';
+  }
+
+  @override
+  String get approvalsLines => 'Paper lines';
+
+  @override
+  String get approvalsWholePaper => 'Whole paper';
+
+  @override
+  String get approvalsJourney => 'Journey';
+
+  @override
+  String approvalsJourneyCreated(String name, String when) {
+    return 'Created — $name · $when';
+  }
+
+  @override
+  String approvalsJourneyStep(int level) {
+    return 'Step $level';
+  }
+
+  @override
+  String get approvalsJourneyNow => 'here now';
+
+  @override
+  String get approvalsJourneyWaiting => 'waiting';
+
+  @override
+  String approvalsJourneyTook(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get approvalsAttachments => 'Attachments';
+
+  @override
+  String get approvalsAttachmentFailed => 'The file could not be opened';
+
+  @override
+  String get approvalsLinesTotal => 'Total';
 }
