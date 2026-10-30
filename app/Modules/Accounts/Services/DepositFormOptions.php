@@ -216,7 +216,14 @@ final class DepositFormOptions
              */
             ...app(FormChoices::class)->for('accounts.voucher'),
 
-            'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
+            // ⛔ কেবল-সফটওয়্যারের খাত বাদ — বিক্রিত মালের খরচ, অবচয়, দেওয়া ছাড় … ([[StandardChart::ENGINE_ONLY_EXPENSES]]; ২৪ অক্টোবর ২০২৬)
+            'expenseAccounts' => (function () use ($all) {
+                $chart = app(StandardChart::class);
+                // ⓘ পূর্বপুরুষ সবাই দল-খাত — দলগুলো একবারে তোলা, খাত ধরে আলাদা প্রশ্ন নয়; ⛔ এটা বাছাইয়ের তালিকা নয়, কেবল খোঁজার মানচিত্র
+                $seen = Account::query()->where('is_group', true)->get(['id', 'code', 'type', 'parent_id'])->keyBy('id')->all();
+
+                return $all->where('type', Account::EXPENSE)->reject(fn (Account $a) => $chart->isEngineOnlyExpense($a, $seen))->values();
+            })(),
 
             /*
              * বাকিতে খরচের অন্য পাশ — প্রদেয় হিসাব।

@@ -44,6 +44,8 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
                 'sizeBytes' => 74213888,
                 'minimumCode' => 1,
                 'note' => ['bn' => 'নতুন সংস্করণ', 'en' => 'New version'],
+                // ⓘ ওয়েবের সংস্করণও পাশে (মালিক, ২৪ অক্টোবর ২০২৬)
+                'web_version' => \App\Core\Support\Release::forApi(),
             ]);
     }
 
@@ -79,7 +81,7 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
 
         $this->getJson('/api/v1/app/version')
             ->assertStatus(503)
-            ->assertExactJson(['configured' => false])
+            ->assertExactJson(['configured' => false, 'web_version' => \App\Core\Support\Release::forApi()])
             ->assertJsonMissingPath('versionCode');
     }
 
@@ -158,7 +160,7 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
 
         $this->getJson('/api/v1/app/version')
             ->assertStatus(503)
-            ->assertExactJson(['configured' => false]);
+            ->assertExactJson(['configured' => false, 'web_version' => \App\Core\Support\Release::forApi()]);
     }
 
     /** ⚠️ খোলা দরজা, তাই throttle — চাবির বদলে এটাই পাহারা। */

@@ -57,6 +57,15 @@ trait OpensInReach
     {
         $row = static::acrossBranches()->where($column, $value)->first();
 
+        /*
+         * ⓘ কর্মী নেই (লগইন-ছাড়া শেয়ার-লিংক, কনসোল, সারির কাজ) — শাখার দেয়াল নিজেও তখন কিছু ছাঁকে না
+         * ([[ScopedToUserBranch]]), তাই খোঁজাও আগের মতো সাদা। ⛔ এটা ছাড়া শেয়ার-লিংকে ছাপা ভাউচার তার বিলের
+         * নম্বর হারাত (ec, ২৪ অক্টোবর ২০২৬)। দরজার পাহারা আলাদা: route-বাঁধনে কর্মী ছাড়া কিছুই খোলে না।
+         */
+        if (! auth()->user() instanceof User) {
+            return $row;
+        }
+
         return $row !== null && static::opensFor(auth()->user(), $row) ? $row : null;
     }
 }

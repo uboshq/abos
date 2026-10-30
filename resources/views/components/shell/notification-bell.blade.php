@@ -71,13 +71,14 @@
 
         {{-- সংখ্যাটা ব্যাজে, কারণ "কিছু একটা আছে" আর "সাতটা আছে" দুটো
              আলাদা খবর, আর দ্বিতীয়টাই ঠিক করে দেয় এখনই দেখব না পরে।
-             ⓘ শূন্যে লুকানো (`x-show`) — polling চালু থাকলে সংখ্যাটা নিজে বদলায়; বন্ধ থাকলে পাতার সংখ্যাই থাকে। --}}
+             ⓘ শূন্যে লুকানো (`x-show`) — polling চালু থাকলে সংখ্যাটা নিজে বদলায়; বন্ধ থাকলে পাতার সংখ্যাই থাকে।
+             ⓘ রং থিমের টোকেনে (অনুমোদন ভাগ ৩, দফা ১৯) — গাঢ় থিমেও সংখ্যা ৪.৫:১-এর উপরে। --}}
         <span x-show="hasCount()" x-text="count" @if ($total === 0) x-cloak @endif data-notify-count
               @class([
                   'absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full px-1',
-                  'text-[10px] font-semibold leading-4 text-white',
-                  'bg-(--color-danger)' => $urgent,
-                  'bg-(--color-brand-500)' => ! $urgent,
+                  'text-[10px] font-semibold leading-4',
+                  'bg-(--color-count-urgent) text-(--color-count-ink)' => $urgent,
+                  'bg-(--color-count-info) text-(--color-count-info-ink)' => ! $urgent,
               ])>{{ $total }}</span>
     </button>
 
@@ -133,7 +134,7 @@
                         <a href="{{ route('notifications.open', $note) }}" class="min-w-0 flex-1">
                             <span class="block font-medium">
                                 @if ($note->isCritical())
-                                    <span class="me-1 rounded-full bg-(--color-danger) px-1.5 text-[10px] text-white" data-critical>{{ __('core.notify.critical_mark') }}</span>
+                                    <span class="me-1 rounded-full bg-(--color-count-urgent) px-1.5 text-[10px] text-(--color-count-ink)" data-critical>{{ __('core.notify.critical_mark') }}</span>
                                 @endif
                                 {{ $note->title }}
                             </span>

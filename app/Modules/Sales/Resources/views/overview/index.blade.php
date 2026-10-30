@@ -35,7 +35,8 @@
         ['key' => 'name', 'label' => __('sales::overview.col.name'), 'render' => fn ($r) => $r['name']],
         ['key' => 'count', 'label' => __('sales::overview.col.count'), 'numeric' => true, 'width' => '6rem',
             'render' => fn ($r) => $r['count']],
-        ['key' => 'amount', 'label' => __('sales::overview.col.amount'), 'numeric' => true, 'width' => '10rem',
+        // ⭐ নিট বিক্রি (VAT ও ফেরত বাদে) — ভাগগুলো [[SalesMetrics::netBy()]] থেকে (fe, ২১ অক্টোবর ২০২৬)
+        ['key' => 'amount', 'label' => __('sales::overview.col.net'), 'numeric' => true, 'width' => '10rem',
             'render' => fn ($r) => Money::format($r['amount'])],
         ['key' => 'share', 'label' => __('sales::overview.col.share'), 'numeric' => true, 'width' => '6rem',
             'render' => fn ($r) => $shareCell($r['share'])],
@@ -74,6 +75,22 @@
         ['key' => 'amount', 'label' => __('sales::overview.col.amount'), 'numeric' => true, 'width' => '10rem',
             'render' => fn ($r) => Money::format($r['amount'])],
     ];
+
+    /*
+     * ⭐ যোগের সারি — [[SalesOverview::totals()]] থেকে, কাঁচা সংখ্যা; এখানে কেবল রূপ। পুরো তালিকায় "মোট" (= নিট বিক্রি),
+     * প্রথম দশটায় "এই সারিগুলোর যোগ"। ⓘ ভাগ নিট বিক্রির মোটে।
+     */
+    $totalRow = function (string $key) use ($totals, $shareCell): array {
+        $t = $totals[$key] ?? null;
+
+        return $t === null ? [] : array_filter([
+            'count' => $t['count'] === null ? null : (string) $t['count'],
+            'qty' => $t['qty'] === null ? null : Money::format($t['qty']),
+            'amount' => Money::format($t['amount']),
+            'share' => $t['count'] === null ? null : $shareCell($t['share']),
+        ], fn ($v) => $v !== null);
+    };
+    $totalLabel = fn (string $key): string => __(($totals[$key]['whole'] ?? false) ? 'sales::overview.total_all' : 'sales::overview.total_shown');
 
     $rankings = [
         'top_customers' => $rankColumns,
@@ -267,7 +284,8 @@
                     <h2 class="border-b border-(--color-border) px-4 py-3 text-xs font-semibold text-(--color-ink-muted)">
                         {{ __('sales::overview.panel.'.$key) }}
                     </h2>
-                    <x-ui.table :rows="$panels[$key]" :columns="$columns" :empty="__('sales::overview.empty')" />
+                    <x-ui.table :rows="$panels[$key]" :columns="$columns" :empty="__('sales::overview.empty')"
+                                :totals="$totalRow($key)" :totalsLabel="$totalLabel($key)" />
                 </div>
             @endforeach
 
@@ -277,7 +295,8 @@
                     <h2 class="border-b border-(--color-border) px-4 py-3 text-xs font-semibold text-(--color-ink-muted)">
                         {{ __('sales::overview.panel.by_territory', ['level' => __('master_data::level.'.$panels['by_territory']['level'])]) }}
                     </h2>
-                    <x-ui.table :rows="$panels['by_territory']['rows']" :columns="$rankColumns" :empty="__('sales::overview.empty')" />
+                    <x-ui.table :rows="$panels['by_territory']['rows']" :columns="$rankColumns" :empty="__('sales::overview.empty')"
+                                :totals="$totalRow('by_territory')" :totalsLabel="$totalLabel('by_territory')" />
                 </div>
             @endisset
         </div>

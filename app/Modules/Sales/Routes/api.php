@@ -80,6 +80,10 @@ Route::prefix('v1/sales')
         Route::get('/collections/setup', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'setup'])->middleware(['can:sales.collection.create', 'can:accounts.voucher.create'])->name('collection.setup');
         Route::get('/collections', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'index'])->name('collection.index');
         Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');
+        // ⭐ টাকা নেওয়ার নকশা ১০০ — a4-এর চুক্তির নাম (২১ অক্টোবর ২০২৬): খোলা বিল ও ক্রেডিট, খাতার প্রিভিউ (কিছু লেখে না), স্লিপ
+        Route::get('/collections/open-bills', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'openBills'])->middleware('can:sales.collection.create')->name('collection.open_bills');
+        Route::post('/collections/preview', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'preview'])->middleware('can:sales.collection.create')->name('collection.preview');
+        Route::post('/collections/{id}/attachment', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'attachment'])->whereUuid('id')->middleware(['can:sales.collection.create', \App\Http\Middleware\RemembersAPhoneWrite::class])->name('collection.attachment');
         Route::get('/returns/setup', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'setup'])->name('return.setup');
         Route::get('/returns/invoice/{id}', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'invoice'])->whereUuid('id')->name('return.invoice');
         Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('return.store');

@@ -676,13 +676,8 @@ final class ChequeService
     /** @return array<string, mixed> */
     private function line(string $code, ?string $debit = null, ?string $credit = null): array
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'account' => __('accounts::validation.chart_not_installed'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $account = StandardChart::accountFor($code);
 
         return array_filter([
             'account_id' => $account->id,

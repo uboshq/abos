@@ -32,7 +32,7 @@
     <div class="flex items-start justify-between gap-4">
         <h2 class="text-sm font-semibold">{{ __('approval::field.sheet') }}</h2>
 
-        <button type="button" x-on:click="open = true"
+        <button type="button" x-on:click="open = true" data-opens-dialog aria-haspopup="dialog"
                 class="rounded-(--radius-field) bg-(--color-brand-600) px-3 py-1 text-xs font-semibold text-white
                        hover:bg-(--color-brand-700)">
             {{ __('approval::action.view_whole_paper') }}
@@ -47,14 +47,15 @@
         </p>
     @endif
 
-    <div x-show="open" x-cloak role="dialog" aria-modal="true"
+    {{-- ⓘ পপ-আপের নাম কাগজের নম্বর (`aria-labelledby`) — আগে নামহীন, পর্দা-পাঠক কেবল "ডায়ালগ" বলত (দফা ২০) --}}
+    <div x-show="open" x-cloak role="dialog" aria-modal="true" aria-labelledby="sheet-title-{{ $approval->id }}" data-dialog-focus
          x-on:keydown.escape.window="open = false"
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
         <div x-on:click.outside="open = false"
              class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-5 shadow-lg">
             <div class="flex items-start justify-between gap-4">
-                <p class="text-lg font-bold text-(--color-ink)">
+                <p id="sheet-title-{{ $approval->id }}" class="text-lg font-bold text-(--color-ink)">
                     {{ $document?->drillDocumentNo() ?? __('approval::field.document') }}
                 </p>
 

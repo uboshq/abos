@@ -197,7 +197,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringNotContainsString('data-ticker', $html, '⛔ ঘোষণা নেই, তবু চলন্ত বার আঁকা হয়েছে।');
         $this->assertStringNotContainsString('abos-ticker', $html, '⛔ ঘোষণা নেই, তবু চলার নিয়ম পাতায়।');
         $this->assertStringNotContainsString('data-has-ticker', $footer, '⛔ ঘোষণা নেই, তবু মোবাইলে ফুটার উঠে বসেছে।');
-        $this->assertStringContainsString('v'.config('app.version', '0.1.0'), $footer, '⛔ ফুটার থেকে সংস্করণ হারাল।');
+        $this->assertStringContainsString('v'.\App\Core\Support\Release::version(), $footer, '⛔ ফুটার থেকে সংস্করণ হারাল।');
         $this->assertStringContainsString('© '.now()->year, $footer, '⛔ ফুটার থেকে © হারাল।');
         $this->assertStringContainsString(e($this->owner()->name), $footer, '⛔ ফুটার থেকে নাম হারাল।');
     }

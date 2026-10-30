@@ -182,7 +182,26 @@ final class SalesTargetService
             // ভ্যাট বাদ — ওটা সরকারের টাকা, কারও বিক্রয় নয়; ⛔ বিলের ছাড়ের ভাগও বাদ ([[LineNetSale]], ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
             ->selectRaw(LineNetSale::sql().' as line_amount');
 
-        $rows = DB::query()->fromSub($perLine, 'x')
+        /*
+         * ⭐ অর্জন নিট বিক্রিতে — ভ্যাট বাদে **আর ফেরত বাদে** (IFRS 15; fe, ২০ অক্টোবর ২০২৬)। ফেরত **নিজের তারিখে**, নিজের
+         * নিট অঙ্কে ([[SalesMetrics::returnNetSql()]] — ফেরতের `total − tax`, হোম আর ফোনের নিট বিক্রির একই সংজ্ঞা), আর
+         * বিক্রির একই নিয়মে কার ঘরে: ফেরতের দিনে ডিলারটা যাঁর নামে বাঁধা; দেয়াল বন্ধ থাকলে ফেরতের বিল যিনি কেটেছেন
+         * (বিলহীন ফেরত হলে ফেরত যিনি লিখেছেন)। ⓘ বিয়োগ হিসেবে একই যোগফলে, তাই সারির যোগ = বিক্রি − ফেরত।
+         */
+        $perReturn = DB::table('sal_returns as r')
+            ->leftJoin('sal_invoices as ri', 'ri.id', '=', 'r.sales_invoice_id')
+            ->where('r.company_id', CompanyContext::id())
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.status', DocumentStatus::POSTED)
+            ->whereBetween('r.trx_date', [$from->toDateString(), $to->toDateString()])
+            ->when(
+                app(\App\Core\Services\DealerScope::class)->switchOn(),
+                fn ($q) => $q->selectSub(\App\Modules\Sales\Services\DealerOwnership::boundOn('r.customer_id', 'r.trx_date', 'r.company_id'), 'seller_id'),
+                fn ($q) => $q->selectRaw('COALESCE(ri.created_by, r.created_by) as seller_id'),
+            )
+            ->selectRaw('0 - '.\App\Modules\Sales\Metrics\SalesMetrics::returnNetSql('r').' as line_amount');
+
+        $rows = DB::query()->fromSub($perLine->unionAll($perReturn), 'x')
             ->whereNotNull('x.seller_id')
             ->groupBy('x.seller_id')
             ->selectRaw('x.seller_id, SUM(x.line_amount) as achieved')

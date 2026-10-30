@@ -125,7 +125,7 @@ final class ApprovalsSummary implements WidgetSummary
                 'party' => $key !== null && isset($parties[$key[0].':'.$key[1]])
                     ? $parties[$key[0].':'.$key[1]]
                     : self::loose($fact['party'] ?? null),
-                'kind_label' => $kinds[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action,
+                'kind_label' => $kinds[$approval->module.'.'.$approval->action] ?? app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $approval->module, (string) $approval->action),
                 'number' => $number === null ? null : (string) $number,
                 'amount' => $approval->amount === null ? null : bcadd((string) $approval->amount, '0', 4),
                 'link' => route('approval.inbox.show', ['approval' => $approval->id], false),

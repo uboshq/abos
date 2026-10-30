@@ -17,8 +17,10 @@
     };
 
     $points = [];
+    $basisSince ??= null;
     foreach ($series as $day => $value) {
-        $points[] = ['label' => \Illuminate\Support\Carbon::parse($day)->translatedFormat('j M'), 'first' => $value,
+        // ⭐ বিক্রির ভিত্তি বদলের দিন — চিহ্ন (⚑), পুরনো সারি নিট না হওয়া পর্যন্ত ([[SalesBasis]])
+        $points[] = ['label' => \Illuminate\Support\Carbon::parse($day)->translatedFormat('j M').($basisSince === $day ? ' ⚑' : ''), 'first' => $value,
             // ⛔ ঐ দিনের রাতের হিসাব নেই = ফাঁক, ৳০ নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
             'second' => $monthBefore[\Illuminate\Support\Carbon::parse($day)->subMonthNoOverflow()->toDateString()] ?? null];
     }
@@ -91,6 +93,9 @@
             @if ($chart !== null)
                 <h2 class="px-4 pt-2 text-sm font-semibold text-(--color-ink)">{{ $chart->label }}</h2>
                 <x-dashboard.chart :panel="$chart" wide />
+                @if ($basisSince !== null)
+                    <p data-basis-marker="{{ $basisSince }}" class="px-4 text-2xs text-(--color-badge-warning-ink)">{{ __('executive::history.basis_changed', ['date' => \Illuminate\Support\Carbon::parse($basisSince)->translatedFormat('j M Y')]) }}</p>
+                @endif
             @else
                 <p class="px-4 py-3 text-2xs text-(--color-ink-muted)">{{ __('executive::history.none_that_day') }}</p>
             @endif

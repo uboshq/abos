@@ -21,6 +21,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 class DirectPurchaseTest extends TestCase
 {
+    use SignsASupplierBank;
     use RefreshDatabase;
 
     private Company $company;
@@ -58,6 +60,8 @@ class DirectPurchaseTest extends TestCase
         app(StandardChart::class)->install();
 
         $this->supplier = Supplier::query()->firstOrFail();
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($this->supplier);
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->firstOrFail();
     }

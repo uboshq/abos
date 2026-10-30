@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\DealerScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\ViewedBranch;
@@ -92,6 +93,13 @@ final class BatchTrace
              * চালান আর গ্রাহকের নাম-ফোন আসত — অন্য শাখার দোকানের তালিকা, যা এই মানুষের দেখার কথা নয়।
              */
             ->tap(fn ($q) => ViewedBranch::narrow($q, 'c.branch_id'))
+
+            /*
+             * ⛔ ডিলারের দেয়াল — দেয়ালের ভিতরের বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের চালান দেখেন, ওয়েবের বাকি তালিকার মতো
+             * (fe-র বিক্রয় ফাঁক ১৯, ২০ অক্টোবর ২০২৬; [[DealerScope::restrict()]]; [[TheLotRecallStaysBehindTheDealerWallTest]])।
+             * ⚠️ আগে লট বাছলেই অন্য বিক্রয়কর্মীর দোকানের নাম আর ফোন আসত। ⓘ মালিক, ম্যানেজার, কাউন্টার — দেয়ালের বাইরে, সবাইকে দেখেন।
+             */
+            ->tap(fn ($q) => app(DealerScope::class)->restrict($q, 'c.customer_id'))
             ->orderByDesc('c.trx_date')
             ->orderByDesc('c.id')
             ->select([

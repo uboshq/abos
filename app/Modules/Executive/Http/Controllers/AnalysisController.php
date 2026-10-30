@@ -70,7 +70,7 @@ final class AnalysisController extends Controller implements HasMiddleware
             'range' => $range,
             'many' => count($companies) > 1,
             'lists' => [
-                'customers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'total', 10, $range),
+                'customers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'net_sales', 10, $range),
                 'products' => $this->rankings->top($user, $companies, 'sales.by_product', 'revenue', 10, $range),
                 'areas' => $this->rankings->top($user, $companies, 'sales.by_route', 'sales', 10, $range),
                 'salespeople' => $this->rankings->top($user, $companies, 'sales.by_salesperson', 'net_sales', 10, $range),

@@ -99,15 +99,25 @@
         {{-- ── আটটা সংখ্যা — ৯০px ──────────────────────────────────────── --}}
         <div data-headline class="grid gap-3">
             @foreach (Figures::KEYS as $key)
-                @php $module = Figures::dashboardOf($key); @endphp
+                @php
+                    $module = Figures::dashboardOf($key);
+                    // ⭐ নিট বিক্রির ঘর খুললে বিল আর ফেরত আলাদা (IFRS 15, ২০ অক্টোবর ২০২৬)
+                    $cardTitle = __('executive::figure.'.$key.'_hint');
+                    if ($key === Figures::SALES && ($board['sales_parts'] ?? null) !== null && $board['total'][$key] !== Figures::HIDDEN) {
+                        $cardTitle = __('executive::figure.sales_parts', [
+                            'billed' => $show($board['sales_parts']['billed'], $key),
+                            'returned' => $show($board['sales_parts']['returned'], $key),
+                        ]).' · '.$cardTitle;
+                    }
+                @endphp
                 @if ($single !== null && $board['total'][$key] !== Figures::HIDDEN)
                     <button type="submit" form="executive-open" name="go" data-figure="{{ $key }}"
                             value="{{ $go($single['id'], $single['only'], 'module.dashboard', ['module' => $module]) }}"
-                            title="{{ __('executive::figure.'.$key.'_hint') }}"
+                            title="{{ $cardTitle }}" data-figure-title
                             class="flex min-w-0 flex-col items-start justify-center gap-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 text-left shadow-(--shadow-card) hover:bg-(--color-surface-hover)"
                             style="height: var(--exec-figure)">
                 @else
-                    <a href="#executive-grid" data-figure="{{ $key }}" title="{{ __('executive::figure.'.$key.'_hint') }}"
+                    <a href="#executive-grid" data-figure="{{ $key }}" title="{{ $cardTitle }}" data-figure-title
                        class="flex min-w-0 flex-col items-start justify-center gap-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 shadow-(--shadow-card) hover:bg-(--color-surface-hover)"
                        style="height: var(--exec-figure)">
                 @endif
@@ -296,7 +306,7 @@
                 @endif
             </section>
 
-            @foreach ([['top_customers', $topCustomers, 'customer_name', 'total'], ['top_products', $topProducts, 'product_name', 'revenue']] as [$title, $list, $labelKey, $measure])
+            @foreach ([['top_customers', $topCustomers, 'customer_name', 'net_sales'], ['top_products', $topProducts, 'product_name', 'revenue']] as [$title, $list, $labelKey, $measure])
                 <section data-top="{{ $title }}" class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                     <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('executive::today.'.$title) }}</h2>
                     <ol class="min-h-0 flex-1 overflow-auto text-sm">

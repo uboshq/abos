@@ -137,9 +137,18 @@ final class PromotionLifecycle
             throw ValidationException::withMessages(['status' => __('promotion::approval.use_the_chain')]);
         }
 
-        if ($this->needsApproval() && (int) $offer->created_by === (int) auth()->id()) {
+        $owner = PromotionApprovalChain::isOwner($offer, auth()->id() === null ? null : (int) auth()->id());
+
+        if ($this->needsApproval() && (int) $offer->created_by === (int) auth()->id() && ! $owner) {
             throw ValidationException::withMessages([
                 'status' => __('promotion::validation.cannot_approve_own'),
+            ]);
+        }
+
+        /* ⛔ এক-সইয়ের পথে সেই একটা সই-ই শেষ সই — তাই মালিকের (গ্যাপ ৪৩; [[PromotionApprovalChain::sign()]]) */
+        if ($this->needsApproval() && ! $owner) {
+            throw ValidationException::withMessages([
+                'status' => __('promotion::approval.owner_signs_last'),
             ]);
         }
 
@@ -177,7 +186,37 @@ final class PromotionLifecycle
             }
         }
 
+        /*
+         * ⛔ সুইচ চালু থাকলে চালুর দরজা মালিকের সই পাশ কাটায় না — গ্যাপ ৪৩।
+         *
+         * ⓘ অনুমোদিত অফারে শেষ সই মালিকের হতে হবে; এই নিয়মের আগে অন্য কারও সইয়ে অনুমোদিত অফার চালু করতে পারেন
+         * কেবল মালিক নিজে — তাঁর চালু করাটাই তাঁর সম্মতি। ⓘ থামানো অফার আবার চালু করা আগের মতোই। ⚠️ সুইচ বন্ধ
+         * থাকলে (যেমন UB) কিছুই বদলায় না।
+         */
+        if ($this->needsApproval()) {
+            return DB::transaction(function () use ($offer) {
+                $this->lockAndReread($offer);
+                $this->assertTheOwnerSigned($offer);
+
+                return $this->moveTo($offer, PromotionStatus::ACTIVE);
+            });
+        }
+
         return $this->moveTo($offer, PromotionStatus::ACTIVE);
+    }
+
+    /** ⛔ অনুমোদিত অফারের শেষ সই মালিকের — নাহলে কেবল মালিক নিজে চালু করেন (গ্যাপ ৪৩) */
+    private function assertTheOwnerSigned(Promotion $offer): void
+    {
+        if ($offer->status !== PromotionStatus::APPROVED
+            || PromotionApprovalChain::isOwner($offer, $offer->approved_by === null ? null : (int) $offer->approved_by)
+            || PromotionApprovalChain::isOwner($offer, auth()->id() === null ? null : (int) auth()->id())) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => __('promotion::approval.owner_must_have_signed'),
+        ]);
     }
 
     public function pause(Promotion $offer): Promotion

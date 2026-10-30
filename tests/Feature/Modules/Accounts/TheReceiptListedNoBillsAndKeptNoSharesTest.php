@@ -93,19 +93,33 @@ final class TheReceiptListedNoBillsAndKeptNoSharesTest extends TestCase
         $this->assertSame(0, bccomp((string) $bills[0]['outstanding'], bcsub($before, '120', 4), 4));
     }
 
-    public function test_the_form_offers_one_bill_and_no_dead_share_fields(): void
+    /**
+     * ⭐ ২৫ অক্টোবর ২০২৬ থেকে (cb-ma-4, মালিকের নকশা): এক রসিদে বহু বিল, প্রতিটা বিলে নিজের অঙ্ক — ভাগ রাখার টেবিল আছে
+     * ([[VoucherAllocation]]), তাই "বহু বিল কেবল আদায়ের পর্দায়" লেখাটা আর নেই। ⓘ মরা `bill_allocs` ঘর আগের মতোই নেই; একক
+     * "বিপরীতে" ঘর থাকে অন্য মডিউলের আগাম-ভরা কাগজের জন্য।
+     */
+    public function test_the_form_offers_many_bills_and_no_dead_share_fields(): void
     {
         $page = $this->get(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))->assertOk();
 
         $page->assertDontSee('bill_allocs', false);
         $page->assertSee('name="against_id"', false);
-        $page->assertSee(__('accounts::message.many_bills_on_collection'));
+        $page->assertDontSee(__('accounts::message.many_bills_on_collection'));
+        $html = (string) $page->getContent();
+        $this->assertStringContainsString('data-bill-tick', $html, '⛔ রসিদের খোলা বিলে টিকের ঘর নেই — বহু বিল বাছা যায় না');
+        $this->assertStringContainsString("billField(i, 'amount')", $html, '⛔ টিক-দেওয়া বিলের অঙ্ক ফর্মের সাথে যায় না');
     }
 
+    /**
+     * ⓘ টাকা নেওয়ার নকশা ১০০-এর পর্দায় (a6, ২১ অক্টোবর ২০২৬) পুরনো বিল আগে নিজে থেকেই বসে — আলাদা বোতাম নেই; পর্দা সেটা
+     * বলে ("পুরনো আগে নিজে বসেছে"), আর "পুরো বকেয়া" টাকার ঘরে বকেয়া বসিয়ে আবার পুরনো আগে বসায়। হিসাবটা নিজে
+     * [[TheCollectionFormPostsWhatTheDesignSaysTest]] আর collection-form.test.js মাপে।
+     */
     public function test_the_collection_screen_offers_oldest_bills_first(): void
     {
         $this->get(route('sales.collection.create'))->assertOk()
-            ->assertSee(__('sales::action.oldest_bills_first'));
+            ->assertSee(__('sales::collection_form.open_hint'))
+            ->assertSee('data-fill-due', false);
     }
 
     /** ⓘ বিক্রয় বন্ধ থাকলে খালি তালিকা — মিথ্যা তালিকা নয় */

@@ -53,6 +53,9 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
 
     private User $finance;
 
+    /** ⓘ গ্যাপ ৪৩: মালিক নিজের অফারেও শেষ সই দেন, তাই "নির্মাতা সই দেন না" মাপা হয় মালিক নন এমন নির্মাতা দিয়ে */
+    private User $maker;
+
     private Promotion $offer;
 
     protected function setUp(): void
@@ -69,8 +72,9 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
         $this->manager = $this->signer('Sales Manager');
         $this->head = $this->signer('Sales Head');
         $this->finance = $this->signer('Finance');
+        $this->maker = $this->signer('Maker');
 
-        /* ⓘ বানিয়েছেন মালিক — তাঁর নাম `created_by`-তে */
+        /* ⓘ বানিয়েছেন মালিক নন এমন একজন — তাঁর নাম `created_by`-তে (গ্যাপ ৪৩: শেষ সই মালিকের) */
         $this->offer = new Promotion([
             'name_en' => 'Three signatures',
             'starts_on' => Carbon::today(),
@@ -80,7 +84,7 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
         $this->offer->type = PromotionType::QUANTITY_SLAB;
         $this->offer->status = PromotionStatus::DRAFT;
         $this->offer->combines = PromotionCombines::BEST;
-        $this->offer->created_by = $this->owner->id;
+        $this->offer->created_by = $this->maker->id;
         $this->offer->save();
     }
 
@@ -147,7 +151,7 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
 
     private function submit(): void
     {
-        $this->actingAs($this->owner);
+        $this->actingAs($this->maker);
         $this->chain()->submit($this->offer->fresh());
     }
 
@@ -236,14 +240,14 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
      */
     public function test_two_levels_signed_by_one_person_through_the_inbox_do_not_count(): void
     {
-        $this->flow([1 => [$this->manager], 2 => [$this->manager, $this->head], 3 => [$this->finance]]);
+        $this->flow([1 => [$this->manager], 2 => [$this->manager, $this->head], 3 => [$this->owner]]);
         $this->submit();
 
         $engine = app(ApprovalEngine::class);
         $engine->approve($this->request(), $this->manager);
         $engine->approve($this->request(), $this->manager);
 
-        $this->signAs($this->finance);
+        $this->signAs($this->owner);
 
         $this->assertSame(PromotionStatus::DRAFT, $this->offerStatus(), 'একজনের দুই সইয়ে অফার অনুমোদিত হয়ে গেছে।');
         $this->assertSame(
@@ -260,15 +264,15 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
      */
     public function test_the_creator_cannot_sign_even_when_the_flow_names_them(): void
     {
-        $this->flow([1 => [$this->owner, $this->manager]]);
+        $this->flow([1 => [$this->maker, $this->owner]]);
         $this->submit();
 
-        $said = $this->refusal(fn () => $this->signAs($this->owner));
+        $said = $this->refusal(fn () => $this->signAs($this->maker));
         $this->assertSame(__('promotion::approval.cannot_sign_own'), $said);
         $this->assertSame(0, ApprovalDecision::query()->where('approval_id', $this->request()->id)->count());
         $this->assertSame(PromotionStatus::SUBMITTED, $this->offerStatus());
 
-        $this->signAs($this->manager);
+        $this->signAs($this->owner);
         $this->assertSame(PromotionStatus::APPROVED, $this->offerStatus());
     }
 
@@ -321,18 +325,18 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
     /** ⭐ সব স্তরের পরে — এবং কেবল তখনই — অনুমোদিত। */
     public function test_after_every_level_the_offer_is_approved(): void
     {
-        $this->flow([1 => [$this->manager], 2 => [$this->head], 3 => [$this->finance]]);
+        $this->flow([1 => [$this->manager], 2 => [$this->head], 3 => [$this->owner]]);
         $this->submit();
 
         $this->signAs($this->manager);
         $this->signAs($this->head);
         $this->assertSame(PromotionStatus::SUBMITTED, $this->offerStatus());
 
-        $this->signAs($this->finance);
+        $this->signAs($this->owner);
 
         $offer = $this->offer->fresh();
         $this->assertSame(PromotionStatus::APPROVED, $offer->status);
-        $this->assertSame($this->finance->id, (int) $offer->approved_by, 'শেষ সইকারীর নাম বসেনি।');
+        $this->assertSame($this->owner->id, (int) $offer->approved_by, 'শেষ সইকারীর নাম বসেনি।');
         $this->assertNotNull($offer->approved_at);
         $this->assertSame(Approval::APPROVED, $this->request()->status);
 
@@ -348,14 +352,14 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
      */
     public function test_a_one_level_flow_behaves_like_the_single_approval_of_today(): void
     {
-        $this->flow([1 => [$this->manager]]);
+        $this->flow([1 => [$this->owner]]);
         $this->submit();
 
-        $this->signAs($this->manager);
+        $this->signAs($this->owner);
 
         $offer = $this->offer->fresh();
         $this->assertSame(PromotionStatus::APPROVED, $offer->status);
-        $this->assertSame($this->manager->id, (int) $offer->approved_by);
+        $this->assertSame($this->owner->id, (int) $offer->approved_by);
     }
 
     public function test_with_no_flow_at_all_one_signature_still_approves_and_the_creator_still_cannot(): void
@@ -364,13 +368,13 @@ final class TheOfferNeededThreeSignaturesAndGotOneTest extends TestCase
         $this->assertSame(0, Approval::query()->where('approvable_id', $this->offer->id)
             ->where('approvable_type', Promotion::class)->count(), 'ছক ছাড়াই অনুরোধ খোলা হয়েছে।');
 
-        $said = $this->refusal(fn () => $this->signAs($this->owner));
+        $said = $this->refusal(fn () => $this->signAs($this->maker));
         $this->assertSame(__('promotion::validation.cannot_approve_own'), $said);
 
-        $this->signAs($this->manager);
+        $this->signAs($this->owner);
 
         $offer = $this->offer->fresh();
         $this->assertSame(PromotionStatus::APPROVED, $offer->status);
-        $this->assertSame($this->manager->id, (int) $offer->approved_by);
+        $this->assertSame($this->owner->id, (int) $offer->approved_by);
     }
 }

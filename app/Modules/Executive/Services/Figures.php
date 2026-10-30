@@ -151,7 +151,8 @@ final class Figures
         $accounts = app(AccountsFacts::class);
 
         $value = match ($key) {
-            self::SALES => SalesMetrics::invoiceTotal($from, $to),
+            // ⭐ নিট বিক্রি — বিল বাদ ফেরত, ফেরতের নিজের তারিখে (IFRS 15, fe ২০ অক্টোবর ২০২৬; [[SalesMetrics::net()]])
+            self::SALES => SalesMetrics::net($from, $to),
             self::COLLECTIONS => SalesMetrics::collectionTotal($from, $to),
             self::RECEIVABLE => $accounts->receivable(),
             self::PAYABLE => $accounts->payable(),
@@ -172,6 +173,26 @@ final class Figures
         };
 
         return $value === null ? null : bcadd((string) $value, '0', 4);
+    }
+
+    /**
+     * ⭐ নিট বিক্রির ভেতরের দুই ভাগ — বিল আর ফেরত, [[value()]]-এর একই উৎস আর দেয়াল (IFRS 15, ২০ অক্টোবর ২০২৬)।
+     * `null` = দেখার অনুমতি নেই। ⓘ billed − returned = value(SALES), পয়সায়।
+     *
+     * ⚠️ [[CompanyLens::within()]]-এর ভিতরে ডাকতে হয়।
+     *
+     * @return array{billed: string, returned: string, vat: string}|null
+     */
+    public function salesParts(User $user, string $from, string $to): ?array
+    {
+        if (! $this->visible($user, self::SALES)) {
+            return null;
+        }
+
+        // ⓘ ভ্যাট বাদে (IFRS 15.47); ভ্যাট আলাদা
+        $parts = SalesMetrics::netParts($from, $to);
+
+        return ['billed' => $parts['billed'], 'returned' => $parts['returned'], 'vat' => $parts['vat']];
     }
 
     /** নিচে নামার প্রথম ধাপ — ঐ মডিউলের ড্যাশবোর্ড */

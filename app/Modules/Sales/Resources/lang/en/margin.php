@@ -17,7 +17,7 @@ return [
     'no_flow' => 'Sales below the margin floor need approval, but no approval flow is set up — so the sale was stopped. Set up a "Sales · Margin" flow under Approval → Flows.',
     'reason' => 'Below the margin floor (:floor%): :products',
     'whole_document' => 'the whole document (document discount)',
-    'sale_held' => ':invoice kept as a draft — it sells below the margin floor, so it waits for approval. Once signed, confirm the sale from this page; the goods go out and the invoice can be printed then.',
+    'sale_held' => ':invoice kept as a draft — it sells below the margin floor, so it waits for approval. Once approved, confirm the sale from this page; the goods go out and the invoice can be printed then.',
 
     'setting_floor' => 'Margin floor (%)',
     'setting_action' => 'When a sale is below the floor',

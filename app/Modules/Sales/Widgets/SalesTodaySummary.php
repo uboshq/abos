@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * ⭐ "আজকের বিক্রি" — ফোনের হোম-স্ক্রিন উইজেটের সার্ভার-অংশ (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
  *
  * ⭐ নিজে কিছু গোনে না:
- *  - আজকের আর গতকালের বিক্রি, আজকের আদায় — [[SalesMetrics::invoiceTotal()]] আর [[SalesMetrics::collectionTotal()]], মালিকের
+ *  - আজকের আর গতকালের নিট বিক্রি ([[SalesMetrics::netParts()]], VAT আর ফেরত বাদে), আজকের আদায় — [[SalesMetrics::collectionTotal()]]; আগে [[SalesMetrics::invoiceTotal()]] আর [[SalesMetrics::collectionTotal()]], মালিকের
  *    পাতার ([[Figures::value()]] SALES / COLLECTIONS) একই উৎস আর একই দেখার নিয়ম (বিক্রির ড্যাশবোর্ডের দরজা, তারপর নিজের চাবি);
  *    ⓘ Sales নিজের মেট্রিক সরাসরি পড়ে — Executive-এর উপর নির্ভর করে না ([[BoundariesTest]], a6-এর Mac দৌড়, ২০ অক্টোবর ২০২৬);
  *  - বিলের সংখ্যা — খাতায় বসা বিল (`posted()`), ফোনের "আজ কেমন গেল" দরজার হুবহু একই গোনা ([[DashboardTodayController]])।
@@ -53,11 +53,18 @@ final class SalesTodaySummary implements WidgetSummary
         $yFrom = $yTo = Carbon::yesterday()->toDateString();
         $sales = $this->sees($user, 'sales.invoice.view');
 
-        $total = $sales ? bcadd(SalesMetrics::invoiceTotal($from, $to), '0', 4) : '0.0000';
-        $yesterday = $sales ? bcadd(SalesMetrics::invoiceTotal($yFrom, $yTo), '0', 4) : '0.0000';
+        // ⭐ নিট বিক্রি (IFRS 15: VAT আর ফেরত বাদে) — ওয়েব, ফোনের Today আর মালিকের বোর্ডের একই উৎস ([[SalesMetrics::netParts()]];
+        //    fe, ২১ অক্টোবর ২০২৬)। আগে মোট বিল ছিল, তাই উইজেট ওয়েবের চেয়ে বেশি দেখাত।
+        $parts = $sales ? SalesMetrics::netParts($from, $to) : null;
+        $total = $parts === null ? '0.0000' : bcadd($parts['net'], '0', 4);
+        $yesterday = $sales ? bcadd(SalesMetrics::net($yFrom, $yTo), '0', 4) : '0.0000';
 
         return [
             'total' => $total,
+            'label' => __('sales::dashboard.sales_today'),
+            'billed' => $parts === null ? null : bcadd($parts['billed'], '0', 4),
+            'returned' => $parts === null ? null : bcadd($parts['returned'], '0', 4),
+            'vat' => $parts === null ? null : bcadd($parts['vat'], '0', 4),
             'invoices' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$from, $to])->count(),
             'collections' => $this->sees($user, 'sales.collection.view') ? bcadd(SalesMetrics::collectionTotal($from, $to), '0', 4) : null,
             'yesterday' => $yesterday,

@@ -86,11 +86,12 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
         $this->assertSame((string) __('sales::salesperson_report.nobody'), $rows[0]['salesperson']);
         $this->assertArrayNotHasKey((int) $this->owner->id, $rows, '⛔ বিল যিনি কেটেছেন তিনি বিক্রি পেলেন');
 
-        // ⭐ লক্ষ্যের স্কোরবোর্ডের সাথে হুবহু — এক নিয়ম, দুই পর্দা
+        // ⭐ লক্ষ্যের স্কোরবোর্ডের সাথে হুবহু — এক নিয়ম, দুই পর্দা; ⓘ ২০ অক্টোবর ২০২৬ থেকে অর্জন নিট বিক্রিতে (ফেরত বাদে, IFRS 15),
+        // তাই রিপোর্টের "নিট বিক্রি" ঘরের সমান ([[TargetsCountNetSalesTest]])
         $achieved = app(SalesTargetService::class)->achievedByUser($this->day->copy()->subDay(), $this->day);
 
         foreach ($achieved as $user => $amount) {
-            $this->assertMoney((string) $amount, $rows[$user]['sales'] ?? null, "⛔ বিক্রয়কর্মী {$user}: রিপোর্ট আর লক্ষ্য আলাদা অঙ্ক বলে");
+            $this->assertMoney((string) $amount, $rows[$user]['net_sales'] ?? null, "⛔ বিক্রয়কর্মী {$user}: রিপোর্ট আর লক্ষ্য আলাদা অঙ্ক বলে");
         }
 
         $this->assertSame(count($achieved), count(array_filter(array_keys($rows))), '⛔ লক্ষ্যে নেই এমন কারও সারি রিপোর্টে');
@@ -112,7 +113,7 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
         $this->assertArrayNotHasKey((int) $this->sales->id, $rows, '⛔ ফেরত যিনি বসিয়েছেন তিনি ফেরত পেলেন');
         $this->assertMoney(
             (string) (app(SalesTargetService::class)->achievedByUser($this->day, $this->day)[$this->owner->id] ?? '0'),
-            $rows[$this->owner->id]['sales'] ?? null,
+            $rows[$this->owner->id]['net_sales'] ?? null,
             '⛔ দেয়াল বন্ধে রিপোর্ট আর লক্ষ্য আলাদা',
         );
     }

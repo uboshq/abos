@@ -48,7 +48,7 @@ return [
     'payment_created' => 'The payment was created.',
     'payment_updated' => 'The payment was updated.',
     'payment_confirmed' => 'The payment is posted.',
-    'payment_sent_to_sign' => 'The payment has been sent for signature — it posts once signed.',
+    'payment_sent_to_sign' => 'The payment has been sent for approval — it posts once approved.',
     'payment_cancelled' => 'The payment was cancelled.',
     'no_payments' => 'No payments yet.',
     'payment_search' => 'Search by number, cheque number or supplier',

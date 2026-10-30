@@ -140,6 +140,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('voucher-list', [VoucherListController::class, 'index'])
         ->name('voucher.list');
 
+    /*
+     * ⭐ তালিকা থেকে একসাথে পোস্ট বা অনুমোদনে পাঠানো — অনুমোদন পর্দা ভাগ ২, দফা ১৪ ([[VoucherBulkPostController]])।
+     * ⓘ আগে দেখা GET (কিছু লেখে না), তারপর POST। স্থির পথ, `vouchers/{voucher}`-এর বাইরে — সংঘাত নেই।
+     */
+    Route::get('voucher-list/bulk-review', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'review'])
+        ->name('voucher.bulk_review');
+    Route::post('voucher-list/bulk-post', [\App\Modules\Accounts\Http\Controllers\VoucherBulkPostController::class, 'post'])
+        ->name('voucher.bulk_post');
+
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');
@@ -187,6 +196,8 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         // ⭐ খাতায় যা যাবে আর রেফারেন্সের চলতি উত্তর — রসিদ ও পরিশোধের পর্দা (fe, ২৩ অক্টোবর ২০২৬); স্থির পথ, তাই /{type}-এর আগে
         Route::post('simulate', [VoucherController::class, 'simulate'])->name('simulate');
         Route::get('reference-check', [VoucherController::class, 'referenceCheck'])->name('reference_check');
+        // ⭐ ব্যাংক ফাইল (BEFTN) — এক ব্যাংক খাতের এক দিনের ট্রান্সফার-পরিশোধ, প্রাপকের সই-পাওয়া হিসাবে (cb-ma-4); স্থির পথ, /{type}-এর আগে
+        Route::get('bank-file', [VoucherController::class, 'bankFile'])->name('bank_file');
 
         // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
         // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত

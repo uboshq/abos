@@ -58,6 +58,34 @@
      * হোস্ট `slip` জানে ([[payBills]]); অন্য পর্দায় বন্ধ, তাই কিছুই আঁকা হয় না।
      */
     'slipCheck' => false,
+
+    /*
+     * ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe: SAP/Oracle-এর payment method → house bank)।
+     * ⓘ `accounts` দিলে খাতের ঘর এই বাক্সেই, পদ্ধতির ঠিক পরে — পাতার ক্রম আর Tab-এর ক্রম দুটোই "পদ্ধতি → খাত → রেফারেন্স → চার্জ"।
+     * প্রতিটা সারি `['id', 'label', 'kind']` (`kind` = খাতের `money_kind`)। ⛔ তালিকায় কেবল মিলে যাওয়া খাত — বাকিগুলো থাকেই না,
+     * ধূসরও নয় (fe)। পদ্ধতি বদলালে তালিকা নতুন করে আঁকা হয় ([[money.js]] `fillAccounts`); আগের খাত মিললে থাকে, না মিললে ফাঁকা, কারণসহ;
+     * একটাই খাত থাকলে নিজে বসে; একটাও না থাকলে তালিকার জায়গায় বাংলায় কারণ, আর জমার বোতাম বন্ধ।
+     * ⓘ না দিলে আগের মতো: হোস্টের নিজের খাতের ঘর (`moneyField`), খাত বদলালে পদ্ধতি সরে (খরচের ভাউচার)।
+     */
+    'accounts' => null,
+
+    /* খাতের ঘরের নাম — `from_account_id`, `to_account_id`, আদায়ে `account_id` */
+    'accountName' => null,
+
+    /* হোস্টের Alpine নাম — খাতের ঘর `x-model` দিয়ে হোস্টের এই মানে বাঁধা (স্থিতি, প্রিভিউ আর রেফারেন্সের উত্তর ওটাই দেখে) */
+    'accountModel' => 'account',
+
+    'accountLabel' => null,
+    'accountSelected' => null,
+    'accountHint' => null,
+
+    /*
+     * ⭐ যে পদ্ধতি এই পর্দায় চলে না, কিন্তু নকশার সারিতে আছে — চিপটা লিংক, যেখানে চলে সেখানে নিয়ে যায় (পদ্ধতি → ঠিকানা)।
+     * ⓘ রসিদে "চেক": নকশা পাতা ২-এর পঞ্চম চিপ, অথচ মালিকের নিয়মে গৃহীত চেক ঢোকে কেবল চেকের খাতা দিয়ে ([[VoucherService::assertNoChequeReceived()]],
+     * ২৬ সেপ্টেম্বর ২০২৬) — তাই রেডিও নয়, চেকের খাতার লিংক (fe, ২৫ অক্টোবর ২০২৬)। `elsewhereTitle` কারণটা বলে।
+     */
+    'elsewhere' => [],
+    'elsewhereTitle' => null,
 ])
 
 @php
@@ -66,6 +94,30 @@
     $dateOf = fn ($value) => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : (string) ($value ?? '');
 
     $chosen = (string) $was('instrument', 'cash');
+
+    /*
+     * ⓘ খাতের তালিকা দিলে — নতুন কাগজে প্রথম পদ্ধতি বাছা খাতের ধরনে, নইলে যে পদ্ধতির খাত আছে ([[MoneyMethod::startWith()]]);
+     * আগে থেকে বলা পদ্ধতি (পুরনো কাগজ, ভুল নিয়ে ফেরা) বদলায় না — তখন না-মেলা খাত সরে, কারণসহ।
+     */
+    $picking = is_array($accounts);
+    $accountName ??= $moneyField;
+    $accountList = $picking ? array_values(array_map(fn ($a) => ['id' => (string) $a['id'], 'label' => (string) $a['label'], 'kind' => (string) ($a['kind'] ?? '')], $accounts)) : [];
+    $picked = $picking ? (string) old($accountName, $accountSelected ?? '') : '';
+    $pickedRow = collect($accountList)->firstWhere('id', $picked);
+    if ($picking && old('instrument') === null && blank($record?->instrument)) {
+        $chosen = \App\Core\Support\MoneyMethod::startWith($chosen, $pickedRow['kind'] ?? null, $methods, array_column($accountList, 'kind'));
+    }
+    $matching = array_values(array_filter($accountList, fn ($a) => \App\Core\Support\MoneyMethod::fits($chosen, $a['kind'])));
+    $cleared = '';
+    if ($picking && $pickedRow !== null && ! \App\Core\Support\MoneyMethod::fits($chosen, $pickedRow['kind'])) {
+        $cleared = __('money.account.cleared', ['account' => $pickedRow['label'], 'method' => __('money.method.'.$chosen)]);
+        $picked = '';
+    }
+    if ($picking && $picked === '' && count($matching) === 1) {
+        $picked = $matching[0]['id'];
+    }
+    $methodNames = collect([...$methods, $chosen])->unique()->mapWithKeys(fn ($m) => [$m => __('money.method.'.$m)])->all();
+
     $shown = in_array($chosen, $methods, true) ? $methods : [...$methods, $chosen];
 
     /* ⓘ মূল্য-তারিখ ডিফল্ট আজ — নকশার নিয়ম; পুরনো কাগজে ফাঁকা থাকলে ফাঁকাই (আন্দাজে তারিখ বসানো হয় না) */
@@ -87,7 +139,9 @@
 @endphp
 
 <div @class(['contents' => $inline, '@container flex flex-col gap-3' => ! $inline]) data-money-method
-     x-data="moneyMethod({ method: @js($chosen), charge: @js($charge), chequeDate: @js($dateOf($was('instrument_date'))), amountField: @js($amountField), chargeField: @js($chargeField), moneyField: @js($moneyField ?? ''), direction: @js($direction), notes: @js((array) ($was('note_counts') ?? [])) })"
+     x-data="moneyMethod({ method: @js($chosen), charge: @js($charge), chequeDate: @js($dateOf($was('instrument_date'))), amountField: @js($amountField), chargeField: @js($chargeField), moneyField: @js($picking ? '' : ($moneyField ?? '')), direction: @js($direction), notes: @js((array) ($was('note_counts') ?? [])), accounts: @js($picking ? $accountList : null), methodNames: @js($methodNames), cleared: @js($cleared) })"
+     data-account-none-line="{{ __('money.account.none') }}"
+     data-account-cleared-line="{{ __('money.account.cleared') }}"
      data-line-in="{{ __('money.charge_line.in') }}"
      data-line-out="{{ __('money.charge_line.out') }}"
      data-head-bank="{{ __('money.charge_line.head_bank') }}"
@@ -98,9 +152,11 @@
          চিপে মাউস রাখলে hover-এর প্রায়-সাদা জমিন জিতত (১.০৮:১) — লেখাটা মুছে যেত। ⭐ এখন brand-700 আর brand-ink: আলোয় অ্যাকসেন্টের
          ৭০০ নিজের কালির সাথে, গাঢ়ে অ্যাকসেন্টের গাঢ় ধাপ নিজের গাঢ় কালির সাথে — দুই জোড়াই ≥ ৪.৫:১ মাপা ([[AppearanceTest]]);
          আর বাছা চিপে hover রং বদলায় না। --}}
-    <fieldset @class(['order-1 sm:col-span-2' => $inline])>
+    {{-- ⛔ `min-w-0` — fieldset-এর নিজের সবচেয়ে কম চওড়া তার ভিতরের মাপ: পাঁচ চিপে (চেকসহ) ১৩৬৬-এ ৩৬৩px, অথচ অর্ধেক সারি ৩৩৫px, তাই
+         চিপগুলো খাতের ঘরে ঢুকে যেত (a6, আদায়ের পর্দায় মাপা, ২৫ অক্টোবর ২০২৬)। ⭐ এখন চিপের সারি জায়গা না পেলে ভাঁজ হয় (`flex-wrap`), কাটে না --}}
+    <fieldset @class(['min-w-0', 'order-1 sm:col-span-2' => $inline && ! $picking, 'order-0 sm:col-span-2' => $inline && $picking]) data-method-chips>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
-        <div class="inline-flex max-w-full overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+        <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
             @foreach ($shown as $way)
                 <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
@@ -114,14 +170,63 @@
                     </span>
                 </label>
             @endforeach
+            @foreach ($elsewhere as $way => $url)
+                <a href="{{ $url }}" data-method-elsewhere="{{ $way }}" title="{{ $elsewhereTitle }}"
+                   class="block whitespace-nowrap border-s border-(--color-border) px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors hover:bg-(--color-surface-hover)">{{ __('money.method.'.$way) }}</a>
+            @endforeach
         </div>
     </fieldset>
+
+    {{--
+        ── খাত: পদ্ধতির ঠিক পরে, কেবল সেই পদ্ধতির খাত ──
+        ⓘ সার্ভার চলতি পদ্ধতির খাতগুলোই আঁকে; পদ্ধতি বদলালে [[money.js]] `fillAccounts` তালিকা নতুন করে আঁকে আর `change` ছাড়ে, তাই
+        হোস্টের `x-model` (স্থিতি, প্রিভিউ, রেফারেন্সের উত্তর) নিজের পথেই খবর পায়। ⛔ `x-for` নয়: select-এর `x-model` আর `x-for`-এর
+        option একসাথে বসলে বাছা মান এক ঝলক হারায়।
+    --}}
+    @if ($picking)
+        @php $fid = 'money-account-'.$accountName; $hasError = $errors->has($accountName); @endphp
+        <div @class(['order-1 sm:col-span-2' => $inline]) data-money-account-row>
+            <label for="{{ $fid }}" class="mb-1 block text-sm font-medium">
+                {{ $accountLabel ?? __('money.screen.from_account') }}
+                <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                <span class="sr-only">({{ __('core.form.required') }})</span>
+            </label>
+            <select id="{{ $fid }}" name="{{ $accountName }}" data-money-account x-model="{{ $accountModel }}" required
+                    x-show="hasAccounts" @if ($matching === []) style="display: none" @endif
+                    @if ($hasError) aria-invalid="true" aria-describedby="{{ $fid }}-error" @endif
+                    @class(['h-(--spacing-field) w-full rounded-(--radius-field) border bg-(--color-surface-card) px-3 text-sm',
+                            'border-(--color-danger)' => $hasError, 'border-(--color-border)' => ! $hasError])>
+                <option value="">&mdash;</option>
+                @foreach ($matching as $row)
+                    <option value="{{ $row['id'] }}" data-kind="{{ $row['kind'] }}" @selected($picked === $row['id'])>{{ $row['label'] }}</option>
+                @endforeach
+            </select>
+            <p class="rounded-(--radius-field) border border-(--color-border) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)"
+               data-account-none role="status" x-show="! hasAccounts" x-text="noAccountsLine"
+               @if ($matching !== []) style="display: none" @endif>{{ $matching === [] ? __('money.account.none', ['method' => __('money.method.'.$chosen)]) : '' }}</p>
+            <p class="mt-1 text-2xs text-(--color-badge-warning-ink)" data-account-cleared role="status" aria-live="polite"
+               x-show="clearedLine !== ''" x-text="clearedLine" @if ($cleared === '') style="display: none" @endif>{{ $cleared }}</p>
+            @if ($accountHint)
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ $accountHint }}</p>
+            @endif
+            @error($accountName)
+                <span id="{{ $fid }}-error" class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+            @enderror
+            {{ $accountNote ?? '' }}
+        </div>
+    @endif
 
     {{-- ── নগদ: চাইলে নোট গোনা ── --}}
     @if ($counting)
         <template x-if="method === 'cash'">
-            <div data-method-block="cash" @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
-                <div class="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            {{--
+                ⭐ ভাঁজ করা, ঐচ্ছিক — "▸ নোট গুনে মেলান — ঐচ্ছিক" (fe, ২৪ অক্টোবর ২০২৬; খরচের পরিকল্পনার একই ভাঁজ)। ⓘ নোট গোনা ক্যাশ
+                কাউন্টারের কাজ, রসিদ-পরিশোধে রোজ লাগে না; খোলা থাকলে দশটা ঘর পর্দার অর্ধেক নিত। ⓘ `<details>`: বন্ধ থাকলেও ঘরগুলো একবারই
+                আছে, তাই খুলে গুনে বন্ধ করলেও গোনা মান জমা যায় — একই নামের দুই ঘর নেই, তাই ফাঁকা ঘর ভরা ঘরকে মোছে না।
+            --}}
+            <details data-method-block="cash" data-notes-fold @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
+                <summary class="cursor-pointer text-sm font-medium">{{ __('money.counting.fold') }}</summary>
+                <div class="mt-2 grid gap-x-5 gap-y-1 sm:grid-cols-2">
                     @foreach ($notes as $note)
                         <label class="grid grid-cols-[3.5rem_0.75rem_3.5rem_1fr] items-center gap-1.5 font-mono text-xs tabular-nums">
                             <span class="text-right text-(--color-ink-muted)">{{ number_format($note) }}</span>
@@ -136,7 +241,7 @@
                 </div>
                 <p class="mt-2 rounded px-2 py-1 text-xs" :class="countClass" x-text="countText"
                    data-agrees="{{ __('accounts::message.count_agrees') }}" data-differs="{{ __('accounts::message.count_differs') }}"></p>
-            </div>
+            </details>
         </template>
     @endif
 
@@ -151,8 +256,8 @@
                        :class="slipUsed ? 'text-(--color-danger)' : 'text-(--color-success)'" x-text="slip.message"></p>
                 @endif
             </div>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.mfs_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.mfs_charge')" :value="$charge" />
         </div>
     </template>
 
@@ -173,8 +278,8 @@
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
             </label>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.bank_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.bank_charge')" :value="$charge" />
         </div>
     </template>
 
@@ -194,8 +299,8 @@
                 <span class="mb-1 block text-sm font-medium">{{ __('money.field.value_date') }}</span>
                 <x-ui.date name="value_date" :value="$valueDate" />
             </label>
-            <x-ui.field :name="$chargeField" type="number" step="0.01" min="0" numeric
-                        :label="__('money.field.bank_charge')" :value="$charge" x-model="charge" />
+            <x-ui.field :name="$chargeField" type="money" model="charge" empty-shows="0.00"
+                        :label="__('money.field.bank_charge')" :value="$charge" />
         </div>
     </template>
 

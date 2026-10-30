@@ -96,6 +96,15 @@ class SearchController extends Controller
         $out = [];
 
         foreach (app(\App\Core\Services\MenuBuilder::class)->forUser($user) as $module) {
+            /*
+             * ⭐ মডিউলের নামেও — লিখলে সরাসরি তার প্রথম পাতায় (মালিক, ২৪ অক্টোবর ২০২৬): বাঁ রেলে সব মডিউল ধরে না, বাকিগুলো
+             * "⋯ আরও"-তে; নাম জানা থাকলে খোঁজার ঘর থেকেই এক চালে। ⓘ চাবিহীন মডিউল এখানে আসেই না (forUser ছেঁকে দেয়)।
+             */
+            $first = collect($module['groups'] ?? [])->flatten(1)->firstWhere('url', '!==', null);
+            if ($first !== null && str_contains(mb_strtolower((string) $module['label']), $needle)) {
+                $out[$first['url']] = ['type' => __('core.search.module'), 'no' => '', 'label' => (string) $module['label'], 'url' => (string) $first['url']];
+            }
+
             foreach (collect($module['groups'] ?? [])->flatten(1) as $item) {
                 $label = (string) ($item['label'] ?? '');
 
@@ -103,14 +112,25 @@ class SearchController extends Controller
                     continue;
                 }
 
-                $out[$item['url']] = ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
-
-                if (count($out) >= 8) {
-                    return array_values($out);
-                }
+                // ⓘ একই ঠিকানায় মডিউলের ফল আগে বসলে সেটাই থাকে — নইলে "মডিউল" ফলটা প্রথম পাতার নামে চাপা পড়ত
+                $out[$item['url']] ??= ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
             }
         }
 
-        return array_values($out);
+        /*
+         * ⭐ শব্দের শুরুতে মিল আগে, মাঝখানের মিল পরে (fe, ২৫ অক্টোবর ২০২৬; আন্তর্জাতিক মান — Fiori, Spotlight)। ⛔ আগে মেনুর ক্রমেই
+         * আসত: "স্থায়ী" লিখলে "বাকি নিয়ন্ত্রণ · অস্থায়ী সীমা…" (মাঝখানে মিল) "মডিউল · স্থায়ী সম্পদ"-এর আগে বসত। ⓘ সমান হলে আগের
+         * ক্রম (usort স্থির) — তাই মডিউলের ফল তার নিজের পাতাগুলোর আগেই থাকে। আটটা বাছা হয় সাজানোর পরে, যাতে পরে আসা শুরুর-মিল কাটা না পড়ে।
+         */
+        $hits = array_values($out);
+        usort($hits, fn (array $a, array $b): int => $this->startsAWord($a['label'], $needle) <=> $this->startsAWord($b['label'], $needle));
+
+        return array_slice($hits, 0, 8);
+    }
+
+    /** ০ — লেখার শুরুতে বা কোনো শব্দের শুরুতে মেলে; ১ — কেবল শব্দের মাঝখানে */
+    private function startsAWord(string $label, string $needle): int
+    {
+        return preg_match('/(?:^|[\s·,\-—\/(])'.preg_quote($needle, '/').'/u', mb_strtolower($label)) === 1 ? 0 : 1;
     }
 }

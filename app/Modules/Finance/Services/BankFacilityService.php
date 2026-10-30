@@ -307,13 +307,8 @@ class BankFacilityService
             ]);
         }
 
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
-
-        if ($equity === null) {
-            throw ValidationException::withMessages([
-                'opening_drawn' => __('finance::validation.opening_needs_the_chart'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $equity = StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
 
         /*
          * ⛔ সই ছাড়া খাতায় নয় — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ খোলা বকেয়া দায় বাড়ায় আর সঞ্চিত মুনাফা কমায়;

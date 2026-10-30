@@ -53,8 +53,14 @@ class TheInboxSaidFiftyWhenAHundredWereWaitingTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** পর্দা যতটা দেখায় — [[ApprovalInboxController::INBOX_LIMIT]]। */
-    private const SHOWN = 50;
+    /**
+     * এক পাতা যতটা দেখায় — [[ApprovalInboxController::PER_PAGE]]।
+     *
+     * ⭐ ২৭ অক্টোবর ২০২৬ (অনুমোদন পর্দা ভাগ ২, দফা ৬; মালিকের "হ্যাঁ"): সীমা নয়, পাতা ভাগ — "এই পাতার মোট" আর "সবগুলোর মোট"
+     * আলাদা লেখা, তাই উপরের ভয়টা ("পাতা ২" আর "ক্রয় ৬০" দুই গল্প) আর নেই: চিপ পুরো তালিকার, মোট দুই লাইনে। ⓘ পাহারা একই থাকে —
+     * শিরোনাম, চিপ আর ছাঁকনির ক্রম যেন কখনো "এই পাতার" না হয়ে যায়।
+     */
+    private const SHOWN = \App\Modules\Approval\Http\Controllers\ApprovalInboxController::PER_PAGE;
 
     private const PURCHASE = 60;
 
@@ -114,17 +120,15 @@ class TheInboxSaidFiftyWhenAHundredWereWaitingTest extends TestCase
             ->get(route('approval.inbox.index'))
             ->assertOk();
 
-        $this->assertCount(self::SHOWN, $page->viewData('approvals'),
-            'সীমাটাই বসেনি — তালিকা এখনো সীমাহীন');
+        $this->assertCount(self::SHOWN, $page->viewData('approvals')->getCollection(),
+            'পাতা ভাগটাই বসেনি — তালিকা এখনো সীমাহীন');
 
         $this->assertSame(self::PURCHASE + self::PAYROLL, $page->viewData('visibleTotal'),
             'উপরের গোনাটা পাতার হয়ে গেছে — `$approvals->count()` লেখা আছে কি?');
 
-        // আর কাটা পড়ার কথাটা পর্দাতেই, লুকানো নয়
-        $page->assertSee(__('approval::message.inbox_capped', [
-            'shown' => self::SHOWN,
-            'total' => self::PURCHASE + self::PAYROLL,
-        ]));
+        // ⓘ বাকিগুলো কোথায় — পাতা বদল আর "সব Nটার মোট", পর্দাতেই
+        $this->assertSame(3, $page->viewData('approvals')->lastPage(), '⛔ বাকি কাগজের পাতা নেই।');
+        $page->assertSee(__('approval::field.all_total', ['count' => self::PURCHASE + self::PAYROLL]));
     }
 
     /**
@@ -164,8 +168,9 @@ class TheInboxSaidFiftyWhenAHundredWereWaitingTest extends TestCase
             ->get(route('approval.inbox.index', ['module' => 'purchase']))
             ->assertOk();
 
-        $this->assertCount(self::SHOWN, $page->viewData('approvals'),
-            'ক্রয়ে ষাটটা আছে, অথচ পঞ্চাশটাও আসেনি — সীমা ছাঁকনির আগে বসেছে');
+        $this->assertCount(self::SHOWN, $page->viewData('approvals')->getCollection(),
+            'ক্রয়ে ষাটটা আছে, অথচ এক পাতাও ভরেনি — পাতা ছাঁকনির আগে কাটা হয়েছে');
+        $this->assertSame(3, $page->viewData('approvals')->lastPage(), '⛔ ক্রয়ের ষাটটা তিন পাতায় নয়।');
 
         // ছাঁকনি দেওয়া অবস্থায় "মোট" মানে ওই মডিউলের মোট
         $this->assertSame(self::PURCHASE, $page->viewData('visibleTotal'));
@@ -187,13 +192,9 @@ class TheInboxSaidFiftyWhenAHundredWereWaitingTest extends TestCase
             ->get(route('approval.inbox.index', ['module' => 'hr']))
             ->assertOk();
 
-        $this->assertCount(self::PAYROLL, $page->viewData('approvals'));
+        $this->assertCount(self::PAYROLL, $page->viewData('approvals')->getCollection());
         $this->assertSame(self::PAYROLL, $page->viewData('visibleTotal'));
-
-        $page->assertDontSee(__('approval::message.inbox_capped', [
-            'shown' => self::PAYROLL,
-            'total' => self::PAYROLL,
-        ]));
+        $this->assertSame(1, $page->viewData('approvals')->lastPage(), '⛔ পাঁচটা কাগজে একাধিক পাতা।');
     }
 
     /**

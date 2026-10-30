@@ -46,7 +46,8 @@ final class ProfitSummary implements WidgetSummary
         $from = Carbon::today()->startOfMonth()->toDateString();
         $to = Carbon::today()->toDateString();
 
-        $sales = $this->net([StandardChart::SALES, StandardChart::SALES_RETURN], $from, $to, creditSide: true);
+        // ⓘ নিট বিক্রয় = ৪১০০ − ৪১১০ − ৪১২০ ([[StandardChart::NET_SALES]])
+        $sales = $this->net(StandardChart::NET_SALES, $from, $to, creditSide: true);
         $cogs = $this->net([StandardChart::COST_OF_GOODS_SOLD, StandardChart::PURCHASE_PRICE_VARIANCE], $from, $to, creditSide: false);
         $gross = bcsub($sales, $cogs, 4);
 

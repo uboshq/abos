@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\BulkApproval;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Approval\Services\ApprovalFacts;
+use App\Modules\Approval\Services\ApprovalFlowService;
+use App\Modules\Approval\Services\ApprovalInbox;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use Illuminate\Database\Eloquent\Builder;
@@ -103,8 +106,22 @@ final class ApprovalApiController extends Controller
             ->orderBy('id')
             ->cursorPaginate((int) ($validated['limit'] ?? self::DEFAULT_LIMIT));
 
-        $approvals = collect($page->items());
+        return response()->json([
+            'rows' => $this->rowsOf(collect($page->items()), $user),
+            // ⓘ `null` মানে শেষ পাতা — খালি তালিকাও স্বাভাবিক (চুক্তি §৫ ঘ)
+            'nextCursor' => $page->nextCursor()?->encode(),
+        ]);
+    }
 
+    /**
+     * ⭐ অপেক্ষার সারি — [[pending()]] আর [[inbox()]]-এর একই কার্ড (দফা ২১)। ⛔ দুই জায়গায় লিখলে একদিন নতুন অ্যাপের কার্ডে এক
+     * অঙ্ক আর পুরনো অ্যাপের কার্ডে আরেক অঙ্ক দেখাত।
+     *
+     * @param  Collection<int, Approval>  $approvals
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function rowsOf(Collection $approvals, User $user): Collection
+    {
         $facts = app(ApprovalFacts::class)->of($approvals, true); // ⓘ নিজের অপেক্ষার সারি — সইকারী নিজেই
         $documents = $this->documentsOf($approvals);
 
@@ -113,7 +130,7 @@ final class ApprovalApiController extends Controller
         // ⭐ "সংশোধনে ফেরত" — গোটা পাতার, কাগজের ধরন ধরে এক ডাকে; ⛔ আগে সারি ধরে কাগজ পড়া হত (a6, ২০ অক্টোবর ২০২৬; [[ApprovalEngine::canSendBackMany()]])
         $sendBack = $engine->canSendBackMany($approvals);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner, $sendBack): array {
+        return $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner, $sendBack): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
             $now = self::paperAmountNow($document);
@@ -170,11 +187,105 @@ final class ApprovalApiController extends Controller
                 'canCorrectText' => ! $owner,
             ];
         })->values();
+    }
+
+    /**
+     * `GET /approvals/inbox?tab=&module=&late=&page=` — ফোনের ইনবক্স, ওয়েবের চার ট্যাব আর একই নিয়মে (অনুমোদন ভাগ ৩, দফা ২১;
+     * পরিকল্পনার পাতা ৬, ছবি ১: *"অ্যাপে একই ট্যাব, একই নাম আর একই নিয়ম"*)।
+     *
+     * ⓘ ট্যাব, দেরি, সাজানো, ধাপ, কার হয়ে আর শেষ সময় — সব [[ApprovalInbox]]-এর, ওয়েবের ইনবক্স যেখান থেকে পড়ে; কার্ডের বাকিটা
+     * [[rowsOf()]]-এর, পুরনো অ্যাপের [[pending()]] যেটা পায়। ⛔ বেতন ফোনে আসে না — প্রতিটা ট্যাব [[forThePhone()]] দিয়ে, তাই সংখ্যা,
+     * মোট আর সারি তিনটাই একই ছাঁকা তালিকার।
+     *
+     * ⓘ পাতা নম্বরে (`page`), কার্সরে নয় — "দেরি আগে" সাজানো একটা হিসাব (`CASE WHEN due_at …`), আর কার্সর কেবল কলাম ধরে চলে।
+     * ⓘ মোট দুইটা, ওয়েবের দফা ৬-এর মতো: এই পাতার আর পুরো তালিকার। ⓘ একসাথে অনুমোদন কেবল অপেক্ষা আর অন্যের-হয়ে ট্যাবে, আর
+     * টাকা নড়ার কাজে কখনো নয় (`bulkable`); বাকি সব নিয়ম [[bulkPreview()]] সার্ভারে আবার দেখে।
+     */
+    public function inbox(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'tab' => ['nullable', 'string', 'in:'.implode(',', ApprovalInbox::TABS)],
+            'module' => ['nullable', 'string', 'max:64'],
+            'late' => ['nullable', 'boolean'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $inbox = app(ApprovalInbox::class);
+
+        $tabs = array_map(fn (Builder $query) => self::forThePhone($query), $inbox->tabQueries($user, true));
+        $tab = (string) ($validated['tab'] ?? 'waiting');
+        $waiting = in_array($tab, ['waiting', 'behalf'], true);
+
+        // ⓘ কাজের চিপ — ট্যাবের পুরো তালিকা ধরে, কাজ বাছার আগে (নাহলে "ক্রয়" বাছার পরে বাকি চিপ শূন্য দেখাত); ওয়েবের একই গোনা
+        $counts = (clone $tabs[$tab])
+            ->reorder()
+            ->withoutEagerLoads()
+            ->select('module')
+            ->selectRaw('COUNT(*) as tally')
+            ->groupBy('module')
+            ->pluck('tally', 'module');
+
+        $selected = trim((string) ($validated['module'] ?? ''));
+        $modules = [];
+
+        foreach (app(ApprovalFlowService::class)->choices() as $code => $entry) {
+            if ($counts->has($code) || $code === $selected) {
+                $modules[] = ['key' => (string) $code, 'label' => (string) $entry['label'], 'count' => (int) $counts->get($code, 0)];
+            }
+        }
+
+        $late = (bool) ($validated['late'] ?? false);
+        $lateCount = ApprovalInbox::lateOnes((clone $tabs[$tab])->reorder()->withoutEagerLoads())->count();
+
+        $list = ApprovalInbox::lateOnes(
+            (clone $tabs[$tab])->when($selected !== '', fn ($q) => $q->where('module', $selected)),
+            $late,
+        );
+
+        $count = (clone $list)->reorder()->withoutEagerLoads()->count();
+        $sum = (string) ((clone $list)->reorder()->withoutEagerLoads()->sum('amount') ?? '0');
+
+        $page = ApprovalInbox::sorted($list, $waiting ? 'late' : 'new')
+            ->paginate(self::DEFAULT_LIMIT, ['*'], 'page', (int) ($validated['page'] ?? 1));
+
+        $approvals = $page->getCollection()->values();
+        $steps = $inbox->stepsOf($approvals);
+        $standIns = $inbox->standInsOf($approvals, $user, true);
+        $bulk = app(BulkApproval::class);
+        $cards = $this->rowsOf($approvals, $user);
+
+        $rows = $approvals->map(fn (Approval $approval, int $i) => $cards[$i] + [
+            'status' => (string) $approval->status,
+            'statusLabel' => __('approval::status.'.$approval->status),
+            // ⓘ লেখা আর রং সার্ভারের ([[ApprovalInbox::deadlineOf()]]) — ফোন নিজে হিসাব করে না; ঘড়ি না থাকলে বা অপেক্ষায় না থাকলে null
+            'deadline' => $inbox->deadlineOf($approval),
+            'step' => $steps[(int) $approval->id] ?? null,
+            'standInFor' => $standIns[(int) $approval->id] ?? null,
+            'bulkable' => $waiting && ! $bulk->movesMoney($approval),
+        ])->values();
 
         return response()->json([
+            'tab' => $tab,
+            'tabs' => array_map(fn (string $key) => [
+                'key' => $key,
+                'label' => __('approval::field.tab_'.$key),
+                'count' => (clone $tabs[$key])->reorder()->withoutEagerLoads()->count(),
+            ], ApprovalInbox::TABS),
+            'modules' => $modules,
+            'module' => $selected === '' ? null : $selected,
+            'allCount' => (int) $counts->sum(),
+            'lateCount' => $lateCount,
             'rows' => $rows,
-            // ⓘ `null` মানে শেষ পাতা — খালি তালিকাও স্বাভাবিক (চুক্তি §৫ ঘ)
-            'nextCursor' => $page->nextCursor()?->encode(),
+            // ⓘ টাকা স্ট্রিং, চার ঘর — সারির `amount`-এর একই রূপ; ভাসমান সংখ্যা কোথাও নেই
+            'totals' => [
+                'pageCount' => $approvals->count(),
+                'pageAmount' => \App\Core\Support\Money::sumOf($approvals, fn (Approval $a) => (string) ($a->amount ?? '0')),
+                'count' => $count,
+                'amount' => bcadd($sum, '0', 4),
+            ],
+            'nextPage' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
 
@@ -284,7 +395,165 @@ final class ApprovalApiController extends Controller
              * নেই (DO, আদেশ, খরচের দাবি …) তার বিস্তারিত ফোনে "আনা গেল না" দেখাত (মালিক, ৮ অক্টোবর ২০২৬)।
              */
             'totals' => (object) array_map('strval', $sheet['totals'] ?? []),
+            ...$this->paperPage($entry, $document, $request->user()),
         ]);
+    }
+
+    /**
+     * ⭐ কাগজের পুরো পাতা — পরিকল্পনার পাতা ৬, ছবি ২ (দফা ২১): সারাংশ, যাত্রাপথ আর সংযুক্তি, ওয়েবের কাগজের পাতার একই হিসাবে।
+     *
+     * ⓘ সারাংশের ধাপ, শেষ সময় আর যাত্রাপথ [[ApprovalInbox]]-এর — ওয়েবের ইনবক্সের ডান দিক যেখান থেকে পড়ে; টাকা কথায়
+     * [[AmountInWords]]-এর। ⓘ সংযুক্তি কাগজের নিজের ([[AttachmentEngine::listFor()]]), খোলে [[attachment()]] দিয়ে — একই সই-পাহারায়।
+     * ⓘ সময় ISO-তে, ফোন নিজের ভাষায় লেখে; সিদ্ধান্তের নাম সার্ভারের ভাষায় (`label`), ওয়েবের যাত্রাপথের একই লেখা।
+     *
+     * @return array<string, mixed>
+     */
+    private function paperPage(Approval $entry, Model $document, User $user): array
+    {
+        $entry->loadMissing(['requester', 'decisions.user', 'decisions.forwardedTo', 'decisions.onBehalfOf']);
+        $inbox = app(ApprovalInbox::class);
+        $engine = app(ApprovalEngine::class);
+        $standIn = $engine->standInFor($entry, $user);
+
+        $sourceType = $document instanceof \App\Core\Contracts\Drillable ? $document::drillSourceType() : null;
+        $papers = $sourceType === null ? collect() : app(\App\Core\Engines\Attachment\AttachmentEngine::class)->listFor(
+            app(\App\Core\Engines\Drill\DrillResolver::class)->moduleFor($sourceType) ?? '',
+            $sourceType,
+            (int) $document->getKey(),
+        );
+
+        return [
+            'summary' => [
+                'requesterName' => $entry->requesterName(),
+                'requestedAt' => $entry->requested_at?->toIso8601String(),
+                'amountWords' => $entry->amount === null ? null : \App\Core\Support\AmountInWords::of((string) $entry->amount),
+                'deadline' => $inbox->deadlineOf($entry),
+                'step' => $inbox->stepsOf(collect([$entry]))[(int) $entry->id] ?? null,
+                'standInFor' => $standIn === null ? null : (string) User::query()->whereKey($standIn)->value('name'),
+            ],
+            'journey' => array_map(fn (array $step) => [
+                'level' => $step['level'],
+                'name' => $step['name'],
+                'state' => $step['state'],
+                'tookHours' => $step['took'],
+                'needed' => $step['needed'],
+                'signed' => $step['signed'],
+                'by' => array_map(fn (array $who) => [
+                    'name' => $who['name'],
+                    'decision' => $who['decision'],
+                    'label' => __('approval::status.'.$who['decision']),
+                    'at' => $who['at']?->toIso8601String(),
+                    'remarks' => $who['remarks'],
+                    'for' => $who['for'],
+                    'to' => $who['to'],
+                ], $step['by']),
+            ], $inbox->timelineOf($entry)),
+            'attachments' => $papers->map(fn ($paper) => [
+                'id' => (int) $paper->id,
+                'name' => (string) $paper->original_name,
+                'mime' => (string) $paper->mime_type,
+                'size' => $paper->humanSize(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * `GET /approvals/{approval}/attachments/{attachment}` — সইয়ের আগে স্লিপ বা বিল খোলা (পাতা ৬, ছবি ২-এর "সংযুক্তি"; দফা ২১)।
+     *
+     * ⛔ পাহারা সই-দরজার ([[decidable()]]) — অপেক্ষমাণ, আর যিনি সিদ্ধান্ত দিতে পারেন; আর ফাইলটা **এই কাগজেরই** হতে হয়।
+     * ⚠️ নাহলে কেউ নিজের অপেক্ষার একটা কাগজ দিয়ে অন্য যেকোনো কাগজের সংযুক্তির নম্বর বসিয়ে সেটা নামাতেন। অন্য কাগজের হলে ৪০৪।
+     */
+    public function attachment(Request $request, string $approval, int $attachment): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $entry = $this->decidable($request, $approval);
+        $document = $this->documentsOf(collect([$entry]))[$entry->approvable_type][(int) $entry->approvable_id] ?? null;
+        abort_unless($document instanceof \App\Core\Contracts\Drillable, 404);
+
+        $engine = app(\App\Core\Engines\Attachment\AttachmentEngine::class);
+        $sourceType = $document::drillSourceType();
+        $paper = $engine->listFor(
+            app(\App\Core\Engines\Drill\DrillResolver::class)->moduleFor($sourceType) ?? '',
+            $sourceType,
+            (int) $document->getKey(),
+        )->firstWhere('id', $attachment);
+        abort_if($paper === null || ! $engine->exists($paper), 404);
+
+        // ⓘ ওয়েবের দরজার একই পড়া ([[AttachmentController::download()]]) — ফাইল কোথায় আর কীভাবে রাখা, ইঞ্জিন জানে
+        return response()->streamDownload(
+            fn () => print ($engine->contents($paper)),
+            (string) $paper->original_name,
+            ['Content-Type' => $paper->mime_type ?: 'application/octet-stream'],
+        );
+    }
+
+    /**
+     * `POST /approvals/bulk/preview` {ids[]} — একসাথে অনুমোদনের আগে দেখা (পরিকল্পনার পাতা ৬, ছবি ৩; দফা ২১): কোনগুলো যাবে আর
+     * তাদের মোট, কোনগুলো বাদ আর কেন। ⓘ কিছুই জমা পড়ে না। ⓘ নিয়ম [[BulkApproval::review()]]-এর — ওয়েবের আগে-দেখার পাতা
+     * ([[ApprovalInboxController::bulkReview()]]) যা বলে, ফোনও তাই বলে; কারণের লেখাও একই।
+     */
+    public function bulkPreview(Request $request): JsonResponse
+    {
+        $review = app(BulkApproval::class)->review($this->bulkIds($request), $request->user());
+        $documents = $this->documentsOf(collect([...$review['sign'], ...array_column($review['skip'], 'approval')]));
+        $labels = app(ApprovalFlowService::class)->labels();
+
+        $line = function (Approval $approval) use ($documents, $labels): array {
+            $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
+
+            return [
+                'id' => $approval->public_id,
+                'work' => $labels[$approval->module.'.'.$approval->action] ?? (string) $approval->action,
+                'documentNo' => $document?->getAttribute('document_no'),
+                'amount' => $approval->amount === null ? null : (string) $approval->amount,
+            ];
+        };
+
+        return response()->json([
+            'sign' => array_map($line, $review['sign']),
+            'total' => bcadd($review['total'], '0', 4),
+            'skip' => array_map(fn (array $row) => $line($row['approval']) + [
+                'why' => $row['why'],
+                'reason' => __('approval::message.bulk_why_'.$row['why']),
+            ], $review['skip']),
+        ]);
+    }
+
+    /**
+     * `POST /approvals/bulk/approve` {ids[], remarks?} — একসাথে অনুমোদন। ⛔ ফোনের বাছাই বিশ্বাস করা হয় না: সার্ভার আবার একই নিয়মে
+     * দেখে ([[BulkApproval::approve()]] ভেতরে [[BulkApproval::review()]] ডাকে), তাই আগে-দেখার পরে কিছু বদলালে সেটা বাদ পড়ে,
+     * আর টাকা নড়ার কাজ কখনো একসাথে যায় না। উত্তর: কয়টা হলো, আর কারণ ধরে কয়টা বাদ।
+     */
+    public function bulkApprove(Request $request): JsonResponse
+    {
+        $remarks = $request->validate(['remarks' => ['nullable', 'string', 'max:500']])['remarks'] ?? null;
+
+        $result = app(BulkApproval::class)->approve($this->bulkIds($request), $request->user(), $remarks);
+
+        return response()->json([
+            'done' => $result['done'],
+            'skipped' => (object) $result['skipped'],
+        ]);
+    }
+
+    /**
+     * ফোনের পাঠানো নম্বর (public_id) থেকে সারির নম্বর — ⛔ বেতন বাদ ([[forThePhone()]]), আর অন্য কোম্পানির সারি কোম্পানির দেয়ালেই
+     * আটকায়। ⓘ অচেনা নম্বর নীরবে বাদ নয়: আগে-দেখায় সেটা আসেই না, তাই "যাবে" তালিকা ফোনের বাছাইয়ের চেয়ে ছোট দেখায়।
+     *
+     * @return list<int>
+     */
+    private function bulkIds(Request $request): array
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LIMIT],
+            'ids.*' => ['required', 'string', 'max:64'],
+        ]);
+
+        return self::forThePhone(Approval::query())
+            ->whereIn('public_id', $validated['ids'])
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     /** `POST /approvals/{approval}/approve` — মন্তব্য ঐচ্ছিক, ওয়েবের মতো। */
