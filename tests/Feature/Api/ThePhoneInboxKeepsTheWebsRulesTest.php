@@ -44,7 +44,10 @@ use Tests\TestCase;
  *   ২১জ — কাগজের পাতা: সারাংশ (টাকা কথায়, ধাপ, শেষ সময়), যাত্রাপথ (তৈরির পরের ধাপ, কে কী বললেন), সংযুক্তি;
  *   ২১ঝ — সংযুক্তি খোলে কেবল সই-পাহারায় আর কেবল এই কাগজের — অন্য কাগজের ফাইলের নম্বর বসালে ৪০৪;
  *   ২১ঞ — একসাথে অনুমোদন: আগে-দেখায় কোনগুলো যাবে, মোট, কোনগুলো বাদ আর ওয়েবের একই কারণ-লেখায়; অনুমোদনে সার্ভার আবার
- *          দেখে — টাকা নড়ার কাজ আর বেতন কখনো যায় না, আগে-দেখায় কিছু জমা পড়ে না।
+ *          দেখে — টাকা নড়ার কাজ আর বেতন কখনো যায় না, আগে-দেখায় কিছু জমা পড়ে না;
+ *   ২১ছ২ — "সবগুলোর" মোট দুই পাতা জুড়ে গোনে, "এই পাতার" মোট কেবল এই পাতার;
+ *   ২১ট — পরিকল্পনার সারি ২২ ফোনের একসাথে অনুমোদনেও: নিজের কাগজ "নিজের" কারণে বাদ, অন্য কোম্পানির কাগজ দেখা বা পাশ
+ *          হয় না, আর প্রতিটা সই রেকর্ডে (কে, কী সিদ্ধান্ত, কী মন্তব্য, কখন)।
  */
 final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
 {
@@ -232,6 +235,49 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
         $this->assertSame([Approval::APPROVED, Approval::APPROVED, Approval::PENDING, Approval::PENDING],
             [$a->fresh()?->status, $b->fresh()?->status, $bill->fresh()?->status, Approval::query()->withoutGlobalScopes()->whereKey($payroll->id)->value('status')],
             '⛔ দফা ২১: একসাথে অনুমোদনে টাকা নড়ার কাজ বা বেতন পাশ হয়েছে।');
+    }
+
+    public function test_dofa21k_the_phones_bulk_door_keeps_row_22_own_paper_other_company_and_the_record(): void
+    {
+        // ⭐ পরিকল্পনার সারি ২২ — নিজের কাগজে সই হয় না, অন্য কোম্পানির কাগজ নাগালের বাইরে, প্রতিটা সই রেকর্ডে (কে, কখন, কী মন্তব্য)
+        $theirs = $this->paper('PO-21-0051', 'order', '1000');
+        $own = $this->paper('PO-21-0052', 'order', '1200', by: $this->signer);
+        $elsewhere = Company::query()->whereKeyNot($this->depot->id)->firstOrFail();
+        $foreign = Approval::query()->withoutGlobalScopes()->create([
+            'company_id' => $elsewhere->id,
+            'approvable_type' => PurchaseOrder::class,
+            'approvable_id' => (int) $theirs->approvable_id,
+            'module' => 'purchase',
+            'action' => 'order',
+            'amount' => '700',
+            'status' => Approval::PENDING,
+            'current_level' => 1,
+            'requested_by' => $this->clerk->id,
+            'requested_at' => now()->subHours(2),
+        ]);
+        $ids = [$theirs->public_id, $own->public_id, $foreign->public_id];
+
+        $role = Role::query()->create(['name' => 'দফা ২১-এর সীমা', 'guard_name' => 'web', 'company_id' => $this->depot->id]);
+        CompanyContext::forCompany($this->depot->id, fn () => $this->signer->assignRole($role));
+        ApprovalLimit::query()->create(['company_id' => $this->depot->id, 'role_id' => $role->id, 'max_amount' => '100000']);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->as($this->signer->fresh());
+        $preview = $this->postJson('/api/v1/approvals/bulk-preview', ['ids' => $ids])->assertOk();
+        $this->assertSame([$theirs->public_id], array_column($preview->json('sign'), 'id'), '⛔ দফা ২১/সারি ২২: ফোনের আগে-দেখায় নিজের বা অন্য কোম্পানির কাগজ "যাবে" তালিকায়।');
+        $this->assertSame([[$own->public_id, 'own']], array_map(fn ($s) => [$s['id'], $s['why']], $preview->json('skip')),
+            '⛔ দফা ২১/সারি ২২: নিজের কাগজ "নিজের" কারণে বাদ পড়ে না, বা অন্য কোম্পানির কাগজ ফোনে দেখা যায়।');
+
+        $done = $this->postJson('/api/v1/approvals/bulk-approve', ['ids' => $ids, 'remarks' => 'ফোন থেকে'])->assertOk();
+        $this->assertSame(1, $done->json('done'), '⛔ দফা ২১/সারি ২২: ফোনের একসাথে অনুমোদনে নিজের বা অন্য কোম্পানির কাগজও গেছে।');
+        $this->assertSame([Approval::PENDING, Approval::PENDING],
+            [$own->fresh()?->status, Approval::query()->withoutGlobalScopes()->whereKey($foreign->id)->value('status')],
+            '⛔ দফা ২১/সারি ২২: নিজের বা অন্য কোম্পানির কাগজ ফোন থেকে পাশ হয়েছে।');
+
+        $record = ApprovalDecision::query()->where('approval_id', $theirs->id)->first();
+        $this->assertSame([$this->signer->id, 'approved', 'ফোন থেকে'], [(int) $record?->user_id, $record?->decision, $record?->remarks],
+            '⛔ দফা ২১/সারি ২২: ফোনের একসাথে অনুমোদন রেকর্ডে নেই — কে দিলেন, কী মন্তব্য, বলা যায় না।');
+        $this->assertNotNull($record?->decided_at, '⛔ দফা ২১/সারি ২২: রেকর্ডে কখন সই হলো নেই।');
     }
 
     private function member(string $name, array $keys): User
