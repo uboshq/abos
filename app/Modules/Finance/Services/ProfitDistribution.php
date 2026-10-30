@@ -822,19 +822,7 @@ final class ProfitDistribution
          *
          * ⭐ ধরা পড়েছে `MoneyNeverLandsOnAGroupAccount`-এ।
          */
-        $account = Account::query()->postable()->where('code', $code)->first();
-
-        if ($account === null) {
-            /*
-             * ⚠️ খাতটা [[StandardChart]]-এ আছে, কিন্তু পুরনো কোম্পানিতে
-             * বসেনি — `abos:sync-chart` চালালে বসে। ⓘ বার্তাটা সেটাই
-             * বলে, নাহলে পর্দায় কেবল "not found" আসত।
-             */
-            throw ValidationException::withMessages([
-                'profit' => __('finance::validation.chart_account_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        return StandardChart::accountFor($code);
     }
 }

@@ -6,6 +6,7 @@ namespace App\Core\Notifications\Channels;
 
 use App\Core\Notifications\DeliveryChannel;
 use App\Core\Notifications\DeliveryResult;
+use App\Core\Notifications\PhoneNoticeTarget;
 use App\Core\Services\FcmSender;
 use App\Models\Notification;
 use App\Models\NotificationChannel;
@@ -22,7 +23,13 @@ use Throwable;
  */
 final class MobilePushChannel implements DeliveryChannel
 {
-    public function __construct(private readonly FcmSender $fcm) {}
+    /** পুশটা নিজের পথে গেছে — চেষ্টার খাতায় প্রোভাইডারের সূত্রের জায়গায় এই লেখা */
+    public const OWN_PUSH = 'own-push';
+
+    public function __construct(
+        private readonly FcmSender $fcm,
+        private readonly PhoneNoticeTarget $target,
+    ) {}
 
     public function key(): string
     {
@@ -46,6 +53,16 @@ final class MobilePushChannel implements DeliveryChannel
 
     public function send(Notification $notification, User $user, ?NotificationChannel $config): DeliveryResult
     {
+        /*
+         * ⛔ একটা খবরে একটাই পুশ — ট্র্যাকিংয়ের খবর ([[PhoneNoticeTarget::PUSHES_ITSELF]]) নিজের পথে ফোনে যায় ([[TrackingNotices]],
+         * `open: tracking`, যা পুরনো অ্যাপ চেনে ও ট্র্যাকিং খোলে)। নিয়মে মোবাইল পুশ চালু থাকলে এখান থেকেও যেত — একই মানুষ দুইটা
+         * পুশ পেতেন ([[ATrackingNoticePushesOnceTest]], ২৪ অক্টোবর ২০২৬)। ⓘ "পৌঁছেছে" লেখা, কারণ পুশটা সত্যিই গেছে, অন্য পথে —
+         * ব্যর্থ-তালিকা মিথ্যা ব্যর্থতায় ভরে না।
+         */
+        if (PhoneNoticeTarget::pushedItself($notification)) {
+            return DeliveryResult::sent(self::OWN_PUSH);
+        }
+
         if (! $this->connected($config)) {
             return DeliveryResult::permanent('mobile push is not connected (no Firebase credentials)');
         }
@@ -60,10 +77,15 @@ final class MobilePushChannel implements DeliveryChannel
         $failed = false;
 
         try {
+            /*
+             * ⭐ `open` আর `id` যেমন ছিল (পুরনো অ্যাপ); নতুন ঘর কেবল যোগ — ধরন, কাগজ, গন্তব্য ([[PhoneNoticeTarget::pushFields()]];
+             * চুক্তি `docs/Contract — ফোনের খবর কোথায় খোলে.md`)। ⛔ সব মান লেখা — FCM-এর নিয়ম।
+             */
+            $data = ['open' => 'notification', 'id' => (string) ($notification->public_id ?? '')]
+                + $this->target->pushFields($notification, $user);
+
             foreach ($devices as $device) {
-                $result = $this->fcm->send((string) $device->push_token, (string) $notification->title, null, [
-                    'open' => 'notification', 'id' => (string) ($notification->public_id ?? ''),
-                ]);
+                $result = $this->fcm->send((string) $device->push_token, (string) $notification->title, null, $data);
 
                 if ($result === FcmSender::GONE) {
                     $device->forceFill(['push_token' => null, 'push_token_at' => null])->save();

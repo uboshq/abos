@@ -121,6 +121,7 @@
             <button type="button"
                     x-data
                     data-menu-toggle
+                    data-sidebar-toggle
                     @click="$store.sidebar.toggle()"
                     class="flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
                            transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
@@ -135,7 +136,8 @@
     @else
         <button type="button"
                 x-data
-                @click="$store.sidebar.toggle()"
+                data-sidebar-toggle
+                    @click="$store.sidebar.toggle()"
                 class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
                        border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
                        hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"

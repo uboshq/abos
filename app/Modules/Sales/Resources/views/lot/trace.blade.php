@@ -19,8 +19,9 @@
         ['key' => 'document_no', 'label' => __('sales::doc.challan'),
          'render' => fn ($r) => view('sales::lot.partials.challan', ['row' => $r])],
         ['key' => 'customer', 'label' => __('sales::field.customer'),
-         'render' => fn ($r) => app()->getLocale() === 'bn' && $r->customer_bn
-             ? $r->customer_bn : $r->customer_en],
+         // ⭐ "নাম · পয়েন্ট · শাখা" — পক্ষের এক উৎস থেকে, পাতাপ্রতি একবারে (কন্ট্রোলারের `buyers`); না পেলে খালি নাম
+         'render' => fn ($r) => $buyers['customer:'.$r->customer_id]
+             ?? (app()->getLocale() === 'bn' && $r->customer_bn ? $r->customer_bn : $r->customer_en)],
         ['key' => 'phone', 'label' => __('inventory::field.phone'), 'width' => '10rem',
          'render' => fn ($r) => view('sales::lot.partials.phone', ['row' => $r])],
         ['key' => 'qty', 'label' => __('sales::field.quantity'), 'numeric' => true,

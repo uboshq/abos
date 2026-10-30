@@ -18,10 +18,10 @@ return [
     'rent_due' => 'Rent due',
     'paid_cash' => 'Paid in cash',
     'from_deposit' => 'From deposit',
-    'waiting' => 'Awaiting signature',
+    'waiting' => 'Awaiting approval',
     'outstanding' => 'Outstanding',
     'schedule_summary' => 'Rent outstanding',
-    'schedule_text' => 'Due Tk :due, outstanding Tk :outstanding (awaiting signature Tk :waiting)',
+    'schedule_text' => 'Due Tk :due, outstanding Tk :outstanding (awaiting approval Tk :waiting)',
 
     'advance_short' => 'Advance adjustment',
     'advance_title' => 'Advance and deposit adjustment',

@@ -66,8 +66,7 @@ final class BillLinesForAssets implements CapitalisesABillLine
     {
         $line = $this->query(walled: false)->whereKey($lineId)->first();
         $account = Account::query()->postable()->whereKey($assetAccountId)->first();
-        $inventory = StandardChart::find(StandardChart::INVENTORY);
-        if ($line === null || $account === null || $inventory === null || $line->product === null) {
+        if ($line === null || $account === null || $line->product === null) {
             throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
         }
 
@@ -114,6 +113,9 @@ final class BillLinesForAssets implements CapitalisesABillLine
         $cost = bcadd((string) $taken['cost'], '0', 4);
 
         if (bccomp($cost, '0', 4) > 0) {
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            $inventory = StandardChart::accountFor(StandardChart::INVENTORY);
+
             $this->posting->post(
                 sourceType: self::SOURCE,
                 sourceId: $assetId,

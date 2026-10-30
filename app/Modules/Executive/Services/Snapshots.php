@@ -47,6 +47,7 @@ final class Snapshots
     public function __construct(
         private readonly CompanyLens $lens,
         private readonly Figures $figures,
+        private readonly SalesBasis $basis,
     ) {}
 
     /**
@@ -71,6 +72,8 @@ final class Snapshots
 
         foreach (Company::query()->where('is_active', true)->orderBy('id')->get() as $company) {
             try {
+                // ⭐ নতুন কোডের প্রথম রাত — বিক্রির ভিত্তি বদলের দিনটা কোম্পানি ধরে লেখা থাকে ([[SalesBasis]], ২১–২২ অক্টোবর ২০২৬)
+                $this->basis->noteNetSnapshot((int) $company->id);
                 $rows += $this->takeCompany($company, $day, $monthStart, $skipped);
             } catch (Throwable $e) {
                 report($e);
@@ -131,6 +134,73 @@ final class Snapshots
         }
 
         return $rows;
+    }
+
+    /**
+     * ⭐ পুরনো রাতের হিসাবের বিক্রি নিট করা — একবারের কাজ, `abos:owner-snapshots-to-net` (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিটা সারি নিজের কোম্পানি, নিজের জায়গা (শাখা, বা গোটা কোম্পানি) আর নিজের দিনে, রাতের হিসাবের একই পথে
+     * ([[takeCompany()]]: super_admin-এর চোখে, [[Figures::value()]] = [[SalesMetrics::net()]])। ⓘ কেবল নতুন ভিত্তির প্রথম
+     * দিনের আগের সারি ([[SalesBasis::since()]]) — ঐ দিন থেকে সারিগুলো আগেই নিট, আর "ঐ রাতে পর্দায় যা ছিল" সেটাই থাকে।
+     * ⭐ দুইবার চালালে দ্বিতীয়বার কিছুই বদলায় না — অঙ্ক মিললে সারি ছোঁয়া হয় না। ⓘ কোম্পানি ধরে এক লেনদেন, সারি ২০০ করে।
+     * ⓘ `$dryRun`-এ কিছুই লেখা হয় না — কেবল গোনা।
+     *
+     * @return array{companies: int, rows: int, changed: int, difference: string, skipped: list<string>}
+     */
+    public function salesToNet(bool $dryRun, ?int $companyId = null): array
+    {
+        $out = ['companies' => 0, 'rows' => 0, 'changed' => 0, 'difference' => '0.0000', 'skipped' => []];
+
+        foreach (Company::query()->when($companyId !== null, fn ($q) => $q->whereKey($companyId))->orderBy('id')->get() as $company) {
+            // ⓘ প্রতিটা কোম্পানির নিজের বদলের দিন — অন্যের দিন এর সারি ঠিক করে না (fe, ২২ অক্টোবর ২০২৬)
+            $since = $this->basis->since((int) $company->id);
+            $viewer = $this->viewerFor((int) $company->id);
+
+            if ($viewer === null) {
+                $out['skipped'][] = (string) $company->code;
+
+                continue;
+            }
+
+            $out['companies']++;
+
+            DB::transaction(function () use ($company, $viewer, $since, $dryRun, &$out): void {
+                DB::table(self::TABLE)
+                    ->where('company_id', (int) $company->id)
+                    ->when($since !== null, fn ($q) => $q->where('taken_on', '<', $since))
+                    ->whereNotNull(Figures::SALES)
+                    ->orderBy('id')
+                    ->chunkById(200, function ($rows) use ($company, $viewer, $dryRun, &$out): void {
+                        foreach ($rows as $row) {
+                            $out['rows']++;
+                            $day = Carbon::parse($row->taken_on)->toDateString();
+                            $branchId = (int) $row->place === self::WHOLE ? null : (int) $row->place;
+
+                            $net = $this->lens->within($viewer, (int) $company->id, $branchId,
+                                fn () => $this->figures->value($viewer, Figures::SALES, $day, $day));
+
+                            if ($net === null || bccomp($net, (string) $row->{Figures::SALES}, 4) === 0) {
+                                continue;
+                            }
+
+                            $out['changed']++;
+                            $out['difference'] = bcadd($out['difference'], bcsub($net, (string) $row->{Figures::SALES}, 4), 4);
+
+                            if (! $dryRun) {
+                                DB::table(self::TABLE)->where('company_id', (int) $company->id)->where('id', $row->id)
+                                    ->update([Figures::SALES => $net, 'updated_at' => now()]);
+                            }
+                        }
+                    });
+            });
+
+            // ⭐ এই কোম্পানির সব পুরনো সারি নিট — কেবল এর চিহ্ন সরে; অন্য কোম্পানি নিজের পালায় (fe, ২২ অক্টোবর ২০২৬)
+            if (! $dryRun) {
+                $this->basis->markConverted((int) $company->id);
+            }
+        }
+
+        return $out;
     }
 
     /**

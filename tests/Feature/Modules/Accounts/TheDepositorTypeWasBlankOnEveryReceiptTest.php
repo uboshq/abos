@@ -43,11 +43,10 @@ final class TheDepositorTypeWasBlankOnEveryReceiptTest extends TestCase
         foreach ([Voucher::RECEIPT => 'customer', Voucher::PAYMENT => 'supplier'] as $type => $expected) {
             $html = $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
 
-            preg_match('/<select[^>]*name="party_type"(.*?)<\/select>/s', $html, $select);
+            // ⓘ ২৪ অক্টোবর ২০২৬ থেকে ধরন চিপে (রেডিও), ড্রপডাউন নয় — নকশা পাতা ২ আর ৪ ([[TheReceiptAndPaymentMirrorEachOtherTest]])
+            $this->assertMatchesRegularExpression('/<input\b(?=[^>]*\btype="radio")(?=[^>]*\bname="party_type")[^>]*>/', $html, "{$type}: ধরনের ঘরটাই নেই।");
 
-            $this->assertNotEmpty($select, "{$type}: ধরনের ঘরটাই নেই।");
-
-            preg_match('/<option[^>]*value="([a-z_]+)"[^>]*selected/', $select[1], $chosen);
+            preg_match('/<input\b(?=[^>]*\bname="party_type")(?=[^>]*\bchecked\b)[^>]*\bvalue="([a-z_]*)"/', $html, $chosen);
 
             $this->assertSame($expected, $chosen[1] ?? null, "{$type}: আগে থেকে \"{$expected}\" বাছা নেই।");
         }

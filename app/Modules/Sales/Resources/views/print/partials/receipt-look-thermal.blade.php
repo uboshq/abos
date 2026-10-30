@@ -46,6 +46,14 @@
         <tr class="tot"><td colspan="2">{{ $t('core.print.total') }}</td><td class="num">{{ $facts['total'] }}</td></tr>
     </table>
 @endif
+{{-- ⓘ গ্রাহক যা কেটে রাখলেন, ছাড়/রাউন্ডিং আর অপ্রয়োগকৃত — দফা ১৭ ([[OrderPaperFacts::receipt()]]) --}}
+@if (($facts['withheld'] ?? []) !== [])
+    <table class="kv" style="margin-top: 1mm" data-withheld>
+        @foreach ($facts['withheld'] as $row)
+            <tr><td>{{ $t($row['label']) }}</td><td class="num">{{ $row['amount'] }}</td></tr>
+        @endforeach
+    </table>
+@endif
 @if ($facts['narration'] !== '')<div class="small" style="margin-top: 1mm">{{ $facts['narration'] }}</div>@endif
 
 <table class="signatures" data-signatures><tr>

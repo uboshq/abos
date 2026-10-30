@@ -49,11 +49,11 @@ return [
     'accrual_run' => 'Accrue interest for this month',
     'accrual_note' => 'Accrued interest is booked at month end (interest payable 2145) and reverses on the first day of the next month; one month once.',
     'accrual_month_not_over' => 'That month is not over yet — only a finished month is accrued.',
-    'accrual_done' => 'Interest accrued on :accrued loans (:held awaiting a signature); :reversed earlier accruals reversed.',
+    'accrual_done' => 'Interest accrued on :accrued loans (:held awaiting an approval); :reversed earlier accruals reversed.',
     'accrual_narration' => 'Interest accrued for :month — :facility (:days days)',
     'accrual_reversal_narration' => 'Reversal of the interest accrued for :month — :facility',
     'accrual_booked' => 'In the books',
-    'accrual_waiting' => 'Awaiting signature',
+    'accrual_waiting' => 'Awaiting approval',
     'accrual_reversed' => 'Reversed',
     // Re-audit, 9 Oct 2026
     'accrual_month_closed' => ':month is closed — interest is not accrued in a closed month. Nothing was posted.',

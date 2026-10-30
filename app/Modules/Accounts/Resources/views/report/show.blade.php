@@ -123,6 +123,11 @@
         সেটাও। ⓘ `@isset` বলে বাকি ছয়টা মডিউলের কিছুই বদলায় না — যে
         পাঠায় না, তার পাতায় ঘরটাই আঁকা হয় না।
     --}}
+    {{-- ⭐ এক মডিউলের রিপোর্টগুলো ট্যাবে — যে মডিউল পাঠায় কেবল তার (অনুমোদন: মেনুর ছয় সারি এক সারিতে, অনুমোদন পর্দা ভাগ ২, দফা ২) --}}
+    @isset($reportTabs)
+        <x-ui.list-tabs :tabs="$reportTabs" :label="__($report->title)" />
+    @endisset
+
     @isset($notice)
         <div role="note"
              class="mb-3 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app)

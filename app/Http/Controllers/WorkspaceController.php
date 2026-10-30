@@ -166,6 +166,40 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * ⭐ বাঁ রেলের নিজের সাজ রাখা — পিন করা মডিউল আর ক্রম; কেবল নিজের সারিতে (মালিক, ২৪ অক্টোবর ২০২৬; [[MenuBuilder::arranged()]])।
+     * ⓘ "আগের মতো করুন" (`reset`) ঘরটা খালি করে — তখন খোলা পাতার অনুপাতে, সমান হলে আগের ক্রমে।
+     * ⛔ নিজের মেনুতে নেই এমন কোড (চাবি নেই, বা বন্ধ মডিউল) ফেলে দেওয়া হয় — রাখা হলেও আঁকা হত না, কিন্তু সারিতে বাজে জিনিস জমত।
+     */
+    public function saveRail(Request $request): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'pinned' => ['nullable', 'array', 'max:64'],
+            'pinned.*' => ['string', 'max:64'],
+            'order' => ['nullable', 'array', 'max:64'],
+            'order.*' => ['string', 'max:64'],
+            'reset' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->boolean('reset')) {
+            $user->forceFill(['nav_layout' => null])->save();
+        } else {
+            $mine = array_column(app(\App\Core\Services\MenuBuilder::class)->forUser($user), 'code');
+            $keep = fn (array $codes): array => array_values(array_unique(array_filter($codes, fn ($c) => in_array($c, $mine, true))));
+
+            $user->forceFill(['nav_layout' => [
+                'pinned' => $keep((array) ($data['pinned'] ?? [])),
+                'order' => $keep((array) ($data['order'] ?? [])),
+            ]])->save();
+        }
+
+        return $request->expectsJson()
+            ? response()->json(['nav_layout' => $user->fresh()->nav_layout])
+            : redirect()->back();
+    }
+
+    /**
      * এই ব্যবহারকারীর ভূমিকা কোন কোম্পানিগুলোতে আছে — চলতিটা ছাড়া।
      *
      * ⓘ অনুমতির ব্যবস্থায় `teams` চালু, আর দলটা হলো কোম্পানি —

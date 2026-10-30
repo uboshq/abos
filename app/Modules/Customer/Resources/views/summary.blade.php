@@ -83,6 +83,8 @@
                         </dd>
                     </div>
                 </dl>
+                {{-- ⭐ টাকা নিট বিক্রি — বিল − ফেরত, VAT বাদে ([[SalesCustomerTrade::glanceFor()]], fe, ২১ অক্টোবর ২০২৬); সংখ্যা বিলের --}}
+                <p class="mt-2 text-2xs text-(--color-ink-muted)" data-figure="amount-basis">{{ __('customer::summary.amount_basis') }}</p>
             @endif
         </section>
 

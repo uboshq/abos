@@ -77,7 +77,7 @@ return [
     'take_new_price' => 'নতুন দাম নিন',
     'keep_old_price' => 'পুরনো দামই থাক',
     'new_requisition' => 'নতুন চাহিদা',
-    'approve_requisition' => 'মঞ্জুর করুন',
+    'approve_requisition' => 'অনুমোদন দিন',
     'make_order' => 'আদেশে রূপান্তর করুন',
     'new_rfq' => 'নতুন অনুরোধ',
     'send_rfq' => 'পাঠিয়ে দিন',

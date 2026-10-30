@@ -27,8 +27,8 @@ final class ApplyTheLimitOnTheLastSignature
          * ⓘ অনুরোধ বসায় [[ApplyTheSignedCreditRequest]]।
          */
         if (($event->payload['module'] ?? null) !== 'customer'
-            || ($event->payload['action'] ?? null) !== 'credit_limit'
-            || ($event->payload['approvable_type'] ?? null) !== Customer::class
+            || ! in_array($event->payload['action'] ?? null, ['credit_limit', 'credit_days'], true)
+            ||($event->payload['approvable_type'] ?? null) !== Customer::class
             || ($event->payload['status'] ?? null) !== Approval::APPROVED) {
             return;
         }
@@ -55,6 +55,28 @@ final class ApplyTheLimitOnTheLastSignature
                 ->first();
 
             if ($customer === null) {
+                return;
+            }
+
+            /*
+             * ⭐ বাকির দিন — একই পথ, নিজের ঘর (fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬)। ⓘ আগে সইয়ের পরে কাউকে ফিরে এসে আবার
+             * সংরক্ষণ চাপতে হত। অঙ্ক = সই-করা নতুন দিন ([[CustomerService::assertDaysRaiseIsSigned()]]); মাঝে দিন অন্য পথে
+             * বদলে থাকলে (`payload.days_before` মেলে না) কাগজটা পুরনো — কিছুই বসে না, সীমার নিয়মই।
+             */
+            if ($approval->action === 'credit_days') {
+                $daysBefore = $approval->payload['days_before'] ?? null;
+
+                if ($daysBefore === null || (int) $customer->credit_days !== (int) $daysBefore) {
+                    return;
+                }
+
+                CustomerCreditChange::because(
+                    $approval->requested_reason,
+                    (int) $approval->id,
+                    fn () => $customer->forceFill(['credit_days' => (int) $approval->amount])->save(),
+                );
+                $approval->markUsed();
+
                 return;
             }
 

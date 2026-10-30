@@ -104,6 +104,39 @@ final class DateFormat
         return self::carbon($value)->format(self::date().' '.self::time());
     }
 
+    /**
+     * ⭐ কথায় লেখা তারিখ আর সময় — "18 অক্টোবর 2026, 19:25" (অনুমোদন মডিউলের নকশা, দফা ১৬; মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ মাসের নাম পর্দার ভাষায়, অঙ্ক সবসময় ইংরেজিতে (মালিকের নিয়ম "খ") — হোমের মাথা আর চার্টের [[DateRange]]-এর একই রূপ।
+     * ⛔ আগে অনুমোদনের পর্দা `format('d M Y, H:i')` লিখত, তাই বাংলা পর্দায় "18 Oct 2026" আসত।
+     */
+    public static function spoken(Carbon|string|null $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $text = self::carbon($value)->copy()->locale(app()->getLocale())->translatedFormat('j F Y, H:i');
+
+        return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+    }
+
+    /**
+     * ⭐ কথায় লেখা দিন — "20 অক্টোবর" (এ বছরের হলে বছর ছাড়া, নইলে "20 অক্টোবর 2027"); দায়িত্ব হস্তান্তরের কার্ড, অনুমোদন
+     * ভাগ ৩, দফা ১৮। ⓘ [[spoken()]]-এর একই নিয়ম: মাস পর্দার ভাষায়, অঙ্ক ইংরেজিতে।
+     */
+    public static function spokenDay(Carbon|string|null $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $day = self::carbon($value)->copy()->locale(app()->getLocale());
+        $text = $day->translatedFormat($day->year === now()->year ? 'j F' : 'j F Y');
+
+        return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+    }
+
     private static function carbon(Carbon|string $value): Carbon
     {
         return $value instanceof Carbon ? $value : Carbon::parse($value);

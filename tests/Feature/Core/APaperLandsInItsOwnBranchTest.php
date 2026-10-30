@@ -43,6 +43,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\Concerns\PutsMoneyInTheTill;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 
 /**
@@ -60,6 +61,7 @@ use Tests\TestCase;
  */
 final class APaperLandsInItsOwnBranchTest extends TestCase
 {
+    use SignsASupplierBank;
     use PutsMoneyInTheTill;
     use RefreshDatabase;
 
@@ -104,6 +106,8 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
         $this->customer->forceFill(['branch_id' => $this->a->id, 'credit_limit' => '1000000000'])->save();
         $this->supplier = Supplier::query()->orderBy('id')->firstOrFail();
         $this->supplier->forceFill(['branch_id' => $this->a->id])->save();
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned($this->supplier);
 
         $this->product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
     }

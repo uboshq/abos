@@ -129,7 +129,8 @@ class IncomeController extends Controller implements HasMiddleware
         foreach ($rows as $row) {
             $code = $row['account']->code;
 
-            if ($code === StandardChart::SALES || $code === StandardChart::SALES_RETURN) {
+            // ⓘ আদায়ে ছাড় (৪১২০) বিক্রয়েরই বিপরীত — নিট বিক্রয়ের ভিতরে ([[StandardChart::NET_SALES]])
+            if (in_array($code, StandardChart::NET_SALES, true)) {
                 $sales = bcadd($sales, $row['now'], 4);
 
                 continue;

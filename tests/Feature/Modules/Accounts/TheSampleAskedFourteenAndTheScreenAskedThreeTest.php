@@ -142,7 +142,10 @@ final class TheSampleAskedFourteenAndTheScreenAskedThreeTest extends TestCase
 
     public function test_the_payment_voucher_asks_everything_the_sample_asks(): void
     {
-        $this->assertScreenAsks('payment', self::PARTY);
+        // ⓘ পরিশোধে টাকার ঘর মোট — `gross_amount` (পরিশোধে-মোট-টাকা-চুক্তি, ২৫ অক্টোবর ২০২৬); নমুনার "টাকার পরিমাণ" সেই ঘরেই
+        $fields = self::PARTY;
+        unset($fields['amount']);
+        $this->assertScreenAsks('payment', ['gross_amount' => self::PARTY['amount'], ...$fields]);
     }
 
     /**

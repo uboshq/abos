@@ -88,7 +88,7 @@ final class LookFile
              */
             'exported' => [
                 'at' => now()->toIso8601String(),
-                'from' => config('app.name').' v'.config('app.version', '0.1.0'),
+                'from' => config('app.name').' v'.Release::version(),
                 'version' => $skin->live()?->version,
             ],
         ];

@@ -10,7 +10,7 @@
         @foreach ($sheet['facts'] as $fact)
             <div>
                 <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ $fact['label'] }}</dt>
-                <dd class="text-sm">{{ $fact['value'] }}</dd>
+                <dd class="min-w-0 text-sm break-words">{{ $fact['value'] }}</dd>
             </div>
         @endforeach
     </dl>
@@ -26,14 +26,15 @@
             @foreach ($partyCard as $fact)
                 <div>
                     <dt class="text-2xs text-(--color-ink-muted)">{{ __($fact->label) }}</dt>
-                    <dd class="tabular text-sm">{{ $fact->value }}</dd>
+                    <dd class="tabular min-w-0 text-sm break-words">{{ $fact->value }}</dd>
                 </div>
             @endforeach
         </dl>
     </div>
 @endif
 
-<div class="mt-3">
+{{-- ⓘ চওড়া কলামেও কাগজের অনেক কলাম হলে টেবিল নিজে সরে (overflow-x), পাতার বাইরে কাটা পড়ে না --}}
+<div class="mt-3 min-w-0 overflow-x-auto">
     <x-ui.table compact
                 :empty="__('approval::field.sheet')"
                 :rows="$rows"

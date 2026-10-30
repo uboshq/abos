@@ -177,7 +177,7 @@ final class Alerts
             self::OVERDUE => $this->rowsWhere($user, 'sales.collection_due', $filters, fn (array $r) => bccomp((string) ($r['overdue'] ?? '0'), '0', 4) > 0),
             self::STOCK_LOW, self::STOCK_NEGATIVE => $this->rowsWhere($user, 'inventory.stock_alerts', $filters),
             self::STOCK_DEAD => $this->rowsWhere($user, 'inventory.slow_dead', $filters),
-            // ⓘ পাকা হওয়ার দিন পেরিয়েছে, অথচ সময়মতো পুরো আসেনি — রিপোর্টের নিজের `due`/`otif` ঘর
+            // ⓘ পোস্ট হওয়ার দিন পেরিয়েছে, অথচ সময়মতো পুরো আসেনি — রিপোর্টের নিজের `due`/`otif` ঘর
             self::LATE_DELIVERY => $this->rowsWhere($user, 'sales.otif', $filters, fn (array $r) => (int) ($r['due'] ?? 0) === 1 && (int) ($r['otif'] ?? 0) === 0),
             self::FAILED_LOGIN => $user->can('governance.login.view')
                 ? app(CompanylessRows::class)->logins($user)->failed()

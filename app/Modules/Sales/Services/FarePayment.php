@@ -185,7 +185,8 @@ final class FarePayment
         }
 
         [$account, $reference, $payer] = $this->moneyFrom($data);
-        $payable = StandardChart::find(StandardChart::TRANSPORT_PAYABLE);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $payable = StandardChart::accountFor(StandardChart::TRANSPORT_PAYABLE);
         $narration = $paper instanceof Shipment
             ? __('sales::fare.trip_paid_narration', ['trip' => $paper->document_no, 'by' => $this->payee($paper) ?? '—'])
             : __('sales::fare.paid_narration', ['challan' => $paper->document_no, 'by' => $this->payee($paper) ?? '—']);
@@ -249,7 +250,8 @@ final class FarePayment
 
         // ⓘ খাতটা খসড়ার সময় যাচাই হয়েছে; পাকা করেন অন্য হেডার-শাখার কেউ হলেও টিলের খাত "নেই" হবে না (কোম্পানির দেয়াল থাকে)
         $account = Account::query()->withoutGlobalScope('viewed-branch-till')->findOrFail((int) $paper->fare_account_id);
-        $expense = StandardChart::find(StandardChart::VEHICLE_HIRE);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $expense = StandardChart::accountFor(StandardChart::VEHICLE_HIRE);
         $narration = $this->narration($paper);
 
         $voucher = $this->vouchers->create(
@@ -327,9 +329,10 @@ final class FarePayment
             sourceType: self::TRIP_SOURCE,
             sourceId: (int) $trip->id,
             trxDate: $trip->trx_date,
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
             lines: [
-                ['account_id' => StandardChart::find(StandardChart::VEHICLE_HIRE)->id, 'debit' => (string) $trip->transport_cost, 'narration' => $narration],
-                ['account_id' => StandardChart::find(StandardChart::TRANSPORT_PAYABLE)->id, 'credit' => (string) $trip->transport_cost,
+                ['account_id' => StandardChart::accountFor(StandardChart::VEHICLE_HIRE)->id, 'debit' => (string) $trip->transport_cost, 'narration' => $narration],
+                ['account_id' => StandardChart::accountFor(StandardChart::TRANSPORT_PAYABLE)->id, 'credit' => (string) $trip->transport_cost,
                     'party_type' => 'supplier', 'party_id' => (int) $trip->carrier_id, 'narration' => $narration],
             ],
             documentNo: $trip->document_no,

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Credit Control',
-    'subtitle' => 'Who owes how much, who is stopped, what waits for a signature — every figure from the wall\'s own calculation; click a figure for its list',
+    'subtitle' => 'Who owes how much, who is stopped, what waits for an approval — every figure from the wall\'s own calculation; click a figure for its list',
     'subtitle_off' => 'Credit checks are off for this company — the figures are for reading only; no paper is stopped',
     'limits' => 'Total limits',
     'limits_hint' => 'Sum of active customers\' credit limits',
@@ -23,7 +23,7 @@ return [
     'blocked' => 'Blocked customers',
     'blocked_hint' => 'No credit sale until the whole due is paid',
     'pending_requests' => 'Limit requests',
-    'pending_requests_hint' => 'The old limit applies until signed',
+    'pending_requests_hint' => 'The old limit applies until approved',
     'ageing' => 'Open bills by age',
     'ageing_hint' => 'Click a bucket for its bills',
     'by_branch' => 'Exposure by branch',

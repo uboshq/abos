@@ -215,6 +215,8 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             'updated_at' => now(),
             'public_id' => (string) Str::uuid(),
         ]);
+        // ⓘ কাঁচা লেখা মডেলের saved/deleted এড়ায় — ইঞ্জিনের জমানো ছক নিজে পুরনো হয় না ([[ApprovalEngine::flowsChanged()]])
+        \App\Core\Engines\Approval\ApprovalEngine::flowsChanged();
     }
 
     /**
@@ -279,7 +281,9 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
 
     private function anyExpenseAccount(): int
     {
+        // ⓘ কেবল-সফটওয়্যারের খাত বাদ — খরচের ভাউচারে ওগুলো বাছা যায় না (প্রথমটা ৫১০০, বিক্রিত মালের খরচ; StandardChart::ENGINE_ONLY_EXPENSES)
         return (int) Account::query()->postable()->active()
-            ->where('type', Account::EXPENSE)->orderBy('code')->value('id');
+            ->where('type', Account::EXPENSE)->whereNotIn('code', \App\Modules\Accounts\Services\StandardChart::ENGINE_ONLY_EXPENSES)
+            ->orderBy('code')->value('id');
     }
 }

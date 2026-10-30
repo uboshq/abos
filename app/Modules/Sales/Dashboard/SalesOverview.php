@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Modules\Sales\Metrics\SalesAnalytics;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Metrics\SalesPeriod;
+use Illuminate\Support\Carbon;
 
 /**
  * বিক্রয়ের পর্দা — কোন কার্ড কে দেখবেন, আর কোন সংখ্যা কোথা থেকে (NEXUS §৪)।
@@ -27,7 +28,7 @@ use App\Modules\Sales\Metrics\SalesPeriod;
  *   ফেরত, ফেরতের ধারা                    sales.return.view
  *   আদায়                                sales.collection.view
  *   বাজারে পাওনা                         customer.report     (ফোনের `dues`-এর একই)
- *   বাকি পড়ল (বিল − আদায়)                sales.invoice.view **আর** sales.collection.view
+ *   পাওনা বাড়ল/কমল (বিল − ফেরত − আদায়)   sales.invoice.view **আর** sales.collection.view
  *   টার্গেটের অর্জন                       sales.target.view
  */
 final class SalesOverview
@@ -117,10 +118,13 @@ final class SalesOverview
         }
 
         if ($can(self::INVOICE, self::COLLECTION)) {
+            // ⭐ পাওনার নড়াচড়া, বিক্রি নয় — বাড়লে "বাড়ল", কমলে "কমল", অঙ্ক ধনাত্মক; `raw` চিহ্নসহ (fe, ২১ অক্টোবর ২০২৬)
             $gap = $this->analytics->outstanding($from, $to);
+            $rose = bccomp($gap, '0', 4) >= 0;
 
-            $cards[] = self::card('outstanding', $gap, Money::format($gap),
-                tone: bccomp($gap, '0', 4) > 0 ? 'bad' : 'good');
+            $cards[] = self::card('outstanding', $gap, Money::format($rose ? $gap : bcsub('0', $gap, 4)),
+                tone: bccomp($gap, '0', 4) > 0 ? 'bad' : 'good',
+                label: __('sales::overview.card.'.($rose ? 'outstanding_up' : 'outstanding_down')));
         }
 
         if ($can(self::TARGET)) {
@@ -136,7 +140,49 @@ final class SalesOverview
                     ]));
         }
 
-        return ['cards' => $cards, 'panels' => $this->panels($can, $period)];
+        $panels = $this->panels($can, $period);
+
+        return ['cards' => $cards, 'panels' => $panels, 'totals' => self::totals($panels, $can(self::INVOICE) ? SalesMetrics::net($from, $to) : '0')];
+    }
+
+    /**
+     * ⭐ প্রতিটা ভাগের নিচে যোগের সারি (মালিক: প্রতিটা তালিকায় মোট) — সারির টাকা আর বিলের সংখ্যার bcmath যোগ, আর ভাগ নিট বিক্রির
+     * মোটে ([[SalesAnalytics::share()]]; fe, ২১ অক্টোবর ২০২৬)। ⓘ শাখা, বিক্রেতা আর এরিয়া পুরো তালিকা — যোগ = নিট বিক্রি, লেখা "মোট";
+     * সেরা ক্রেতা আর পণ্য প্রথম দশটা — লেখা "এই সারিগুলোর যোগ"। ⓘ কাঁচা সংখ্যা; রূপ দেয় পাতা আর ফোন।
+     *
+     * @param  array<string, mixed>  $panels
+     * @return array<string, array{whole: bool, count: ?int, qty: ?string, amount: string, share: ?string}>
+     */
+    public static function totals(array $panels, string $net): array
+    {
+        $out = [];
+        $lists = [
+            'top_customers' => $panels['top_customers'] ?? null,
+            'top_products' => $panels['top_products'] ?? null,
+            'slow_products' => $panels['slow_products'] ?? null,
+            'by_seller' => $panels['by_seller'] ?? null,
+            'by_territory' => $panels['by_territory']['rows'] ?? null,
+            'by_branch' => $panels['by_branch'] ?? null,
+        ];
+
+        foreach ($lists as $key => $rows) {
+            if (! is_array($rows)) {
+                continue;
+            }
+
+            $amount = array_reduce($rows, fn (string $s, array $r) => bcadd($s, (string) $r['amount'], 4), '0.0000');
+            $products = in_array($key, ['top_products', 'slow_products'], true);
+
+            $out[$key] = [
+                'whole' => in_array($key, ['by_seller', 'by_territory', 'by_branch'], true),
+                'count' => $products ? null : array_sum(array_column($rows, 'count')),
+                'qty' => $products ? array_reduce($rows, fn (string $s, array $r) => bcadd($s, (string) $r['qty'], 4), '0.0000') : null,
+                'amount' => $amount,
+                'share' => $products ? null : SalesAnalytics::share($amount, $net),
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -181,7 +227,10 @@ final class SalesOverview
             'label' => $metric->label,
             'raw' => $metric->value(),
             'value' => Money::format($metric->value(), $metric->scale),
-            'hint' => $metric->definition(),
+            // ⭐ নিট বিক্রি: বিল আর ফেরত আলাদা, কার্ডের নিচের লেখায় (IFRS 15, ২০ অক্টোবর ২০২৬)
+            'hint' => $metric->key === 'sales.today'
+                ? SalesMetrics::netPartsLine(Carbon::today()->toDateString(), Carbon::today()->toDateString())
+                : $metric->definition(),
             'href' => null,
             'tone' => 'money',
         ];
@@ -189,11 +238,11 @@ final class SalesOverview
 
     /** @return array<string, mixed> */
     private static function card(string $key, string $raw, string $shown, ?string $href = null,
-        string $tone = 'neutral', ?string $hint = null, bool $count = false): array
+        string $tone = 'neutral', ?string $hint = null, bool $count = false, ?string $label = null): array
     {
         return [
             'key' => 'sales.overview.'.$key,
-            'label' => __('sales::overview.card.'.$key),
+            'label' => $label ?? __('sales::overview.card.'.$key),
             'raw' => $raw,
             'value' => $shown,
             'hint' => $hint ?? __('sales::overview.hint.'.$key),

@@ -12,6 +12,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Finance\Models\RentalContract;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -31,8 +32,24 @@ final class RentalNotices
 
     public const OVERDUE = 'finance.rent_overdue';
 
-    /** ⭐ বর্ষপূর্তি — বছর ধরে আলাদা ধরন, যাতে প্রতি বছর একবার (মালিক, প্র১, ৬ অক্টোবর ২০২৬) */
-    public const ANNIVERSARY = 'finance.rental_anniversary_';
+    /**
+     * ⭐ বর্ষপূর্তি — প্রতি বছর একবার (মালিক, প্র১, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে ধরনটাই বছর ধরে আলাদা ছিল (`…_2026`, `…_2027`) — "প্রতি বছর একবার" সেটা দিয়েই হত। কিন্তু খবর বন্ধ রাখা, চিঠির
+     * পছন্দ আর নিয়ম — তিনটাই ধরন হুবহু মেলায় ([[NotificationService::wants()]], [[NotificationKinds::all()]]), তাই এই খবর কেউ
+     * কোনোদিন বন্ধ করতে পারতেন না (২৪ অক্টোবর ২০২৬)। ⭐ এখন ধরন একটাই; বছরে একবার আসে চাবি থেকে (বর্ষপূর্তির তারিখ ধরে) আর
+     * [[ANNIVERSARY_QUIET_DAYS]] থেকে।
+     */
+    public const ANNIVERSARY = 'finance.rental_anniversary';
+
+    /** ⓘ আগের বছর-ধরা ধরন — কেবল "আগে বলা হয়েছে কি" দেখতে, যাতে বদলের দিনে একই বর্ষপূর্তি আবার না বাজে */
+    public const ANNIVERSARY_BY_YEAR = 'finance.rental_anniversary_';
+
+    /**
+     * ⓘ একই চুক্তির বর্ষপূর্তির খবর এর মধ্যে আবার নয় — খবর যায় বর্ষপূর্তির ৩০ দিন আগে থেকে দিন পর্যন্ত, তাই পরের বছরের
+     * প্রথম দিন আগেরটার অন্তত ৩৩৫ দিন পরে; ৩০০ দুইয়ের মাঝখানে (একই বছরে আবার নয়, পরের বছর আটকায় না)।
+     */
+    public const ANNIVERSARY_QUIET_DAYS = 300;
 
     /** বর্ষপূর্তির কত দিন আগে */
     public const ANNIVERSARY_DAYS = 30;
@@ -69,18 +86,24 @@ final class RentalNotices
             $rent = (string) $contract->monthly_rent;
             $raised = bcdiv(bcmul($rent, bcadd('100', (string) $contract->increase_percent, 4), 4), '100', 2);
 
+            $url = $this->urlOf($contract);
+
             $sent += $this->tell(
-                self::ANNIVERSARY.$next->year,
-                $this->urlOf($contract),
+                self::ANNIVERSARY,
+                $url,
                 __('finance::rental_report.notice_anniversary', ['who' => $contract->counterparty, 'place' => (string) $contract->subject]),
                 __('finance::rental_report.notice_anniversary_body', [
                     'date' => $next->translatedFormat('j M Y'), 'percent' => (string) $contract->increase_percent,
                     'rent' => Money::format($rent), 'next' => Money::format($raised),
                 ]),
-                null,
+                self::ANNIVERSARY_QUIET_DAYS,
                 // ⓘ নিয়মের মান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
                 ['party' => (string) $contract->counterparty, 'amount' => Money::format($raised), 'due_date' => $next->format('d/m/Y')],
                 $contract->branch_id,
+                about: $contract,
+                // ⭐ এক বর্ষপূর্তি, এক ঘটনা — প্রত্যেকে একবারই, ক্রন যতবারই চলুক
+                key: self::ANNIVERSARY.':'.sha1($url).':'.$next->toDateString(),
+                alsoTold: [self::ANNIVERSARY_BY_YEAR.$next->year],
             );
         }
 
@@ -107,6 +130,7 @@ final class RentalNotices
                 $stage === $first ? null : self::QUIET_DAYS,
                 ['party' => (string) $contract->counterparty, 'due_date' => $contract->ends_on->format('d/m/Y'), 'days_left' => (string) $days],
                 $contract->branch_id,
+                about: $contract,
             );
         }
 
@@ -130,6 +154,7 @@ final class RentalNotices
                 self::QUIET_DAYS,
                 ['party' => (string) $row['contract']->counterparty, 'amount' => Money::format($row['amount']), 'status' => 'overdue'],
                 $row['contract']->branch_id,
+                about: $row['contract'],
             );
         }
 
@@ -147,8 +172,12 @@ final class RentalNotices
      * ⓘ [[DueNotices::tell()]]-এর একই নিয়ম, কেবল "একবারই" ধাপটা বাড়তি।
      * ⛔ চুক্তির শাখা যাঁর নাগালে নেই, তাঁকে নয় — ভাড়ার পাতা ঐ চুক্তি তাঁকে খোলে না ([[OpensOnlyInReach]]), অথচ খবরটা
      * পক্ষের নাম আর অঙ্ক নিয়ে যেত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     * ⛔ `$about` — কোন চুক্তির খবর (২৪ অক্টোবর ২০২৬): শাখা খবরে বসে, আর খোলার আগে চুক্তিটা আছে ও নাগালে কি না দেখা হয়
+     * ([[NotificationService::mayOpen()]]); আগে খবরে কাগজ ছিল না, তাই পরে শাখা সরানো হলেও খুলত আর পাতা ৪০৪ দিত।
+     *
+     * @param  list<string>  $alsoTold  এই ধরনগুলোর আগের খবরও "বলা হয়েছে" ধরা হয়
      */
-    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays, array $data = [], int|string|null $branchId = null): int
+    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays, array $data = [], int|string|null $branchId = null, ?Model $about = null, ?string $key = null, array $alsoTold = []): int
     {
         $sent = 0;
         $scope = app(DataScope::class);
@@ -158,12 +187,12 @@ final class RentalNotices
                 continue;
             }
 
-            $told = Notification::query()->where('user_id', $user->id)->where('type', $type)->where('url', $url)
+            $told = Notification::query()->where('user_id', $user->id)->whereIn('type', [$type, ...$alsoTold])->where('url', $url)
                 ->when($quietDays !== null, fn ($q) => $q->where('created_at', '>=', now()->subDays($quietDays)))
                 ->exists();
 
             // ⭐ একই চুক্তির একই দিনের খবর একবারই (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
-            if (! $told && $this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString(), data: $data) !== null) {
+            if (! $told && $this->notifications->send($user, $type, $title, $body, $url, key: $key ?? $type.':'.sha1($url).':'.now()->toDateString(), about: $about, data: $data) !== null) {
                 $sent++;
             }
         }

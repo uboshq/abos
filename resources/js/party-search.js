@@ -52,7 +52,7 @@ export function matchParties(options, term) {
  * ⓘ `uid` প্রতিটা ঘরের নিজের — একই পাতায় কয়েকটা পিকার (জার্নালের সারি)
  * থাকলেও সারির `id` একে অন্যের সাথে মেশে না।
  */
-export default function partySearch({ value = '', options = [], uid = 'party', clearable = false } = {}) {
+export default function partySearch({ value = '', options = [], uid = 'party', clearable = false, addable = false, adding = false, newName = '' } = {}) {
     return {
         /** বাছা পক্ষের id — লুকানো ঘরে এটাই যায়। */
         value: value === null || value === undefined ? '' : String(value),
@@ -67,6 +67,15 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
         listOpen: false,
         search: '',
         cursor: 0,
+
+        /*
+         * ⭐ "লেখা নাম যোগ" — তালিকায় নেই এমন নাম (মালিক, ৩ অক্টোবর ২০২৬; রসিদ/পরিশোধের পুরনো পিকারের হুবহু আচরণ,
+         * [[party-voucher.js]]; fe আর cb, ২৪ অক্টোবর ২০২৬)। লেখাটা নতুন নামের ঘরে বসে, সার্ভার তাঁকে ব্যক্তি বানায়
+         * ([[VoucherRequest]] · [[TurnsATypedNameIntoAParty]])। ⓘ কেবল `addable` ঘরে — অন্য সব পিকার আগের মতো।
+         */
+        addable: Boolean(addable),
+        adding: Boolean(addable) && Boolean(adding),
+        newName: newName === null || newName === undefined ? '' : String(newName),
 
         get matches() {
             return matchParties(this.options, this.search)
@@ -83,6 +92,11 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
 
         get noMatch() {
             return this.matches.length === 0
+        },
+
+        /** খোঁজার ঘরে কিছু লেখা আছে — তখন "+ নতুন নাম হিসেবে রাখুন" দেখা যায় (কেবল `addable`) */
+        get canAddTyped() {
+            return this.addable && this.search.trim() !== ''
         },
 
         get picked() {
@@ -219,13 +233,51 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
             })
         },
 
-        /** Enter — আলো-পড়া নামটা বাছা; কিছু না মিললে কিছুই হয় না। */
+        /** Enter — আলো-পড়া নামটা বাছা; কিছু না মিললে `addable` ঘরে লেখাটাই নতুন নাম, নইলে কিছুই হয় না। */
         pickCursor() {
             const row = this.shown[this.cursor]
 
             if (row) {
                 this.pick(row.id)
+            } else if (this.canAddTyped) {
+                this.addTyped()
             }
+        },
+
+        /**
+         * লেখা নামটা নতুন নাম হিসেবে — তালিকার বাছাই ছেড়ে দেওয়া হয়, মোবাইলের ঘরে ফোকাস।
+         * ⚠️ দুইটা একসাথে থাকলে সার্ভার বাছা নামটাই নেয়, আর হাতে লেখাটা চুপচাপ হারাত — তাই বাছাই খালি, আর `change` ছোড়া হয়
+         * যাতে পাতা (পাওনা, বিলের তালিকা) জানে পক্ষ আর বাছা নেই।
+         */
+        addTyped() {
+            if (!this.addable) {
+                return
+            }
+            this.newName = this.search.trim()
+            this.adding = true
+            this.unpickForNewName()
+            this.closeList()
+            this.$nextTick(() => this.$refs.newMobile?.focus())
+        },
+
+        /** নামের পাশের "+" — নতুন নামের ঘর খোলা/বন্ধ */
+        toggleAdding() {
+            this.adding = this.addable && !this.adding
+        },
+
+        /** নতুন নামের ঘরে লেখা — তালিকার বাছাই তখন ছেড়ে দেওয়া হয়, একই কারণে */
+        newNameTyped() {
+            if (this.newName.trim() !== '') {
+                this.unpickForNewName()
+            }
+        },
+
+        unpickForNewName() {
+            if (this.value === '') {
+                return
+            }
+            this.value = ''
+            this.$nextTick(() => this.$refs.input?.dispatchEvent(new Event('change', { bubbles: true })))
         },
 
         /**
@@ -236,6 +288,9 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
          */
         pick(id) {
             this.value = String(id)
+            // ⓘ তালিকার নাম বাছলে নতুন নামের ঘর বন্ধ আর খালি — নইলে দুইটাই যেত, আর সার্ভার কোনটা নিল বোঝা যেত না
+            this.adding = false
+            this.newName = ''
             this.closeList()
             this.$nextTick(() => {
                 this.$refs.input?.dispatchEvent(new Event('change', { bubbles: true }))

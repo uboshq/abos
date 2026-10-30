@@ -148,7 +148,21 @@ final class EveryOfferDoorWasOpenToAnyKeyTest extends TestCase
         $status = fn () => $offer->fresh()->status;
 
         $this->door('promotion.submit', fn () => $this->post(route('promotion.submit', $offer)), $status, 'জমা');
-        $this->door('promotion.approve', fn () => $this->post(route('promotion.approve', $offer)), $status, 'অনুমোদন');
+        /*
+         * ⓘ গ্যাপ ৪৩ (২০ অক্টোবর ২০২৬): অফারের শেষ সই মালিকের। ⚠️ তাই চাবি ছাড়া ৪০৩, চাবি পেলেও কেরানির সই থামে
+         * (অবস্থা বদলায় না), আর মালিকের সইয়ে অফার অনুমোদিত হয় — চাবির দরজাটা তবু মাপা হয়।
+         */
+        $this->actingAs($this->clerk->fresh());
+        $this->post(route('promotion.approve', $offer))->assertForbidden();
+        $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status, 'অনুমোদন: চাবি ছাড়া ৪০৩ দিল, অথচ কাজটা ঘটে গেছে।');
+        $this->clerk->givePermissionTo(Permission::findOrCreate('promotion.approve', 'web'));
+        $response = $this->actingAs($this->clerk->fresh())->post(route('promotion.approve', $offer));
+        $this->assertNotSame(403, $response->status(), 'অনুমোদন: `promotion.approve` পেয়েও দরজা খোলেনি।');
+        $response->assertSessionHasErrors(['status' => __('promotion::approval.owner_signs_last')]);
+        $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status, 'মালিকের সই ছাড়াই কেরানির সইয়ে অফার অনুমোদিত।');
+        $this->actingAs($this->owner)->post(route('promotion.approve', $offer))->assertSessionHasNoErrors();
+        $this->assertSame(PromotionStatus::APPROVED, $offer->fresh()->status, 'মালিকের সইয়েও অনুমোদিত হলো না।');
+
         $this->door('promotion.activate', fn () => $this->post(route('promotion.activate', $offer)), $status, 'চালু');
         $this->door('promotion.pause', fn () => $this->post(route('promotion.pause', $offer)), $status, 'থামানো');
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Support\Release;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 
@@ -30,9 +31,12 @@ class AppVersionController extends Controller
     {
         $body = self::release();
 
+        // ⓘ ওয়েবের সংস্করণও পাশে — ফোন বলতে পারে কোন সার্ভারের সাথে কথা বলছে (মালিক, ২৪ অক্টোবর ২০২৬)
         if ($body === null) {
-            return response()->json(['configured' => false], 503);
+            return response()->json(['configured' => false, 'web_version' => Release::forApi()], 503);
         }
+
+        $body['web_version'] = Release::forApi();
 
         $android = (array) config('mobile.android');
 

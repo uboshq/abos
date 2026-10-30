@@ -93,10 +93,11 @@ final class TrackingNotices
              * বদলানো মানুষ বাদ)। ⛔ লক-স্ক্রিনে কেবল নম্বর আর ধাপ — দোকানের নাম, টাকা নয় (সমন্বয়কের শর্ত ২)।
              * ⓘ চাপলে অ্যাপ ট্র্যাকিং খোলে — `kind`/`id` দিয়ে।
              */
-            foreach ($sent->pluck('user_id')->unique() as $userId) {
-                SendPushToUser::dispatch((int) $userId, $title, [
+            // ⓘ একমাত্র পুশ — মাধ্যম এই ধরন আর পাঠায় না ([[PhoneNoticeTarget::PUSHES_ITSELF]]); নতুন ঘর কেবল যোগ (চুক্তি)
+            foreach ($sent->unique('user_id') as $bell) {
+                SendPushToUser::dispatch((int) $bell->user_id, $title, [
                     'open' => 'tracking', 'kind' => 'challan', 'id' => (string) $challan->public_id,
-                ], $challan->customer?->nameWithPoint());
+                ] + app(\App\Core\Notifications\PhoneNoticeTarget::class)->pushFields($bell), $challan->customer?->nameWithPoint());
             }
         });
     }
@@ -143,8 +144,13 @@ final class TrackingNotices
                 ->filter(fn (User $user) => $engine->canDecide($approval, $user))
                 ->modelKeys();
 
+            /*
+             * ⛔ সইয়ের পাতায়, আদেশের পাতায় নয় (২৪ অক্টোবর ২০২৬): আদেশের পাতা খোলে `sales.order.view` থাকলে, আর সইকারীর সেটা
+             * না-ও থাকতে পারে — খবর চাপলে ৪০৩, আর সইয়ের বোতাম তো ঐ পাতায় নেই-ই। সইয়ের পাতা সইকারীকে খোলে
+             * ([[ApprovalEngine::canDecide()]] — ঠিক যে প্রশ্নে উপরে প্রাপক বাছা হলো)।
+             */
             $this->tell($users, self::ORDER_AWAITS, __('sales::tracking.notice.order_awaits', ['no' => $order->document_no], 'bn'),
-                $order, route('sales.order.show', $order));
+                $order, route('approval.inbox.show', $approval->id));
         });
     }
 
@@ -172,10 +178,11 @@ final class TrackingNotices
                 'status' => (string) $order->status,
             ], fn ($v) => $v !== ''));
 
-        foreach ($sent->pluck('user_id')->unique() as $userId) {
-            SendPushToUser::dispatch((int) $userId, $title, [
+        // ⓘ একমাত্র পুশ — মাধ্যম এই ধরন আর পাঠায় না ([[PhoneNoticeTarget::PUSHES_ITSELF]]); নতুন ঘর কেবল যোগ (চুক্তি)
+        foreach ($sent->unique('user_id') as $bell) {
+            SendPushToUser::dispatch((int) $bell->user_id, $title, [
                 'open' => 'tracking', 'kind' => 'order', 'id' => (string) $order->public_id,
-            ], $order->customer?->nameWithPoint());
+            ] + app(\App\Core\Notifications\PhoneNoticeTarget::class)->pushFields($bell), $order->customer?->nameWithPoint());
         }
     }
 
