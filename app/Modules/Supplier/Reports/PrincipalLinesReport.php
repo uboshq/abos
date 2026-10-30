@@ -39,6 +39,9 @@ final class PrincipalLinesReport
             title: $title,
             // ⓘ `from`/`to` নিজের নামে, `date_range` নয় — ইঞ্জিন তখন খালি তারিখে মাস বসাত, আর "চক্র নিজের" মানেই হারাত
             filters: ['principal', 'from', 'to', 'month', 'branch'],
+            // ⓘ প্রিন্সিপাল একজন সরবরাহকারী — ফোনের বাছাই সরবরাহকারীর তালিকা থেকে, মান সার্ভার আইডিতে বদলায় (fe, ৩১ অক্টোবর ২০২৬;
+            //   [[TheReportFiltersOnlyTheWebCouldAskTest]]: আগে ফোনে "কেবল ওয়েবে")
+            sources: ['principal' => \App\Modules\Supplier\Reports\Filters\SupplierFilter::class],
             splitByBranch: false,
             query: fn (array $f) => self::lines($key, $f),
             columns: [

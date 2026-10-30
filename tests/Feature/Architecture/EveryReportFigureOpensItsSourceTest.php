@@ -145,7 +145,9 @@ final class EveryReportFigureOpensItsSourceTest extends TestCase
         'restaurant.food_cost' => [2, 'fe ঠিক করবে'],
         'sales.by_brand' => [3, 'a5/a6'],
         'sales.by_channel' => [5, 'a5/a6'],
-        'sales.by_customer' => [5, 'a5/a6'],
+        // ⓘ ৫ → ৭ (fe, ৩১ অক্টোবর ২০২৬): main-এর নিট-বিক্রির কাজ এই দাবি লেখার পরে দুইটা টাকার কলাম যোগ করেছে (ফেরত, নিট বিক্রি) —
+        //   নতুন ছাড় নয়, একই দেনার দুইটা ঘর; এখন fe-র (a5/a6 থেমেছে ২৬ অক্টোবর)
+        'sales.by_customer' => [7, 'a5/a6 → fe'],
         'sales.by_product' => [4, 'a5/a6'],
         'sales.by_route' => [6, 'a5/a6'],
         'sales.by_salesperson' => [3, 'a5/a6'],

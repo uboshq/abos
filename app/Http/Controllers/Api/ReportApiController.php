@@ -210,6 +210,17 @@ final class ReportApiController extends Controller
                 continue;
             }
 
+            /*
+             * ⭐ আলাদা শুরু আর শেষ তারিখ — `date_range` নয় এমন রিপোর্টের (প্রিন্সিপালের লাইন: চক্রের নিজের তারিখ, ফাঁকা থাকলে মাস বসে না;
+             * fe, ৩১ অক্টোবর ২০২৬)। মান `YYYY-MM-DD`, ওয়েবের একই নাম। ⓘ অ্যাপ অচেনা ধরন আঁকে না (`drawable`), তাই পুরনো অ্যাপ ভাঙে না;
+             * তারিখের ঘর আঁকা অ্যাপের পরের সংস্করণে।
+             */
+            if ($filter === 'from' || $filter === 'to') {
+                $out[] = ['key' => $filter, 'kind' => 'date', 'label' => $filter === 'from' ? 'শুরুর তারিখ' : 'শেষের তারিখ', 'options' => []];
+
+                continue;
+            }
+
             if ($filter === 'branch') {
                 $out[] = ['key' => 'branch', 'kind' => 'branch', 'label' => 'শাখা',
                     'options' => array_map(fn (Branch $b): array => ['value' => (string) $b->public_id, 'label' => $b->name()],

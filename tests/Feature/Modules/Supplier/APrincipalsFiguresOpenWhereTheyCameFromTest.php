@@ -66,7 +66,11 @@ final class APrincipalsFiguresOpenWhereTheyCameFromTest extends TestCase
         $this->b = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
 
         CompanyContext::set($this->company->id, $this->a->id);
-        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        // ⓘ ইংরেজিতে, স্পষ্ট করে — দাবির লেখাগুলো ("Open the collections behind …", "collections … × … = commission") ইংরেজি; main-এ
+        //   পাতা এখন মানুষের নিজের ভাষায় আঁকা হয় (ডেমোর মালিক বাংলা), তাই ভাষা না বললে দাবি ভুল কারণে লাল হত (fe, ৩১ অক্টোবর ২০২৬)
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['locale' => 'en'])->save();
+        $this->actingAs($owner->fresh());
         app()->setLocale('en');
 
         app(StandardChart::class)->install();
