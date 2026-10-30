@@ -46,28 +46,10 @@ final class VoucherApproval implements ClassifiesDrafts
     public const MODULE = 'accounts';
 
     /*
-     * ⭐ খসড়ার সইয়ের অবস্থা — পাতার নোট ([[waitFor()]]), ফোনের সারি, অপেক্ষার তালিকা আর তালিকার মোট ([[standing()]]) সবাই
-     * এই এক উত্তর পড়ে ([[decide()]]; তালিকার মোটের চুক্তি v6 — fe, a4, a6, ২৪ অক্টোবর ২০২৬)।
-     *   awaiting — অনুরোধ গেছে, আর তারপর ভাউচার বদলায়নি: সিদ্ধান্তের অপেক্ষা;
-     *   stale    — অনুরোধের পরে ভাউচার বদলেছে: "পোস্ট" চাপলে পুরনোটা তুলে নতুন করে সইয়ে যাবে ([[stopping()]]);
-     *   needs    — অনুরোধ হয়নি, কিন্তু ছক বলছে পোস্টে সই লাগবে;
-     *   signed   — সই আছে, ঢাকে — লেখক পোস্ট করবেন;
-     *   rejected — ফেরানো, আর তারপর ভাউচার বদলায়নি;
-     *   null     — সই লাগেই না।
-     * ⛔ আগে ফোন আর ওয়েবের অপেক্ষার তালিকা যেকোনো PENDING-কেই "সইয়ের অপেক্ষায়" বলত — বাসি অনুরোধও, যেটা পরের পোস্টে তুলে নেওয়া হয়।
+     * ⭐ খসড়ার অনুমোদনের পাঁচ অবস্থা — [[VoucherSigning]]-এ (পাতার নোট [[waitFor()]], ফোনের সারি, অপেক্ষার তালিকা আর তালিকার মোট
+     * [[standing()]] সবাই [[decide()]]-এর এক উত্তর পড়ে)। ⓘ এখানে নয়: এই ক্লাসের প্রতিটা স্ট্রিং ধ্রুবক একটা অনুমোদনের কাজ।
+     * ⛔ আগে ফোন আর ওয়েবের অপেক্ষার তালিকা যেকোনো PENDING-কেই "অপেক্ষায়" বলত — বাসি অনুরোধও, যেটা পরের পোস্টে তুলে নেওয়া হয়।
      */
-    public const AWAITING = 'awaiting';
-
-    public const STALE = 'stale';
-
-    public const NEEDS = 'needs';
-
-    public const SIGNED = 'signed';
-
-    public const REJECTED = 'rejected';
-
-    /** সইয়ের অবস্থা থেকে তালিকার মোটের দল — বাকি সব (stale, needs, signed, null) খসড়া */
-    public const GROUP_OF = [self::AWAITING => ListSummary::PENDING, self::REJECTED => ListSummary::REJECTED];
 
     /**
      * বিপরীতের কাগজগুলো আগে থেকে তোলা — [[signingOf()]]-এর সময়টুকু, নইলে null ([[paperAlreadySigned()]])।
@@ -593,7 +575,7 @@ final class VoucherApproval implements ClassifiesDrafts
             ->where('status', Approval::PENDING)
             ->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
 
-        $out = [self::AWAITING => [], self::STALE => []];
+        $out = [VoucherSigning::AWAITING => [], VoucherSigning::STALE => []];
 
         foreach (array_chunk($candidates, ListSummary::CHUNK) as $ids) {
             $drafts = Voucher::query()->withoutGlobalScope('user-branch')->whereKey($ids)->where('status', \App\Core\Support\DocumentStatus::DRAFT)->get();
@@ -605,7 +587,7 @@ final class VoucherApproval implements ClassifiesDrafts
             }
         }
 
-        return ['awaiting' => $out[self::AWAITING], 'stale' => $out[self::STALE]];
+        return ['awaiting' => $out[VoucherSigning::AWAITING], 'stale' => $out[VoucherSigning::STALE]];
     }
 
     public function groups(): array
@@ -616,7 +598,7 @@ final class VoucherApproval implements ClassifiesDrafts
     /** তালিকার মোটের দল ([[ClassifiesDrafts]]) — [[signingOf()]]-এর উত্তর থেকে, [[GROUP_OF]] দিয়ে */
     public function standing(Collection $drafts): array
     {
-        return array_map(fn (?string $signing) => self::GROUP_OF[$signing ?? ''] ?? ListSummary::DRAFT, $this->signingOf($drafts, false));
+        return array_map(fn (?string $signing) => VoucherSigning::GROUP_OF[$signing ?? ''] ?? ListSummary::DRAFT, $this->signingOf($drafts, false));
     }
 
     /**
@@ -627,16 +609,16 @@ final class VoucherApproval implements ClassifiesDrafts
     private function decide(Voucher $voucher, string $action, ?Approval $latest, ?string $hash, bool $withNeeds): ?string
     {
         if ($latest?->status === Approval::APPROVED && $latest->stillCovers((string) $voucher->amount, $hash)) {
-            return self::SIGNED;
+            return VoucherSigning::SIGNED;
         }
 
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest, $hash)) {
-            return self::REJECTED;
+            return VoucherSigning::REJECTED;
         }
 
         // ⛔ বাসি অনুরোধ অপেক্ষা নয় — পরের পোস্টে [[stopping()]] সেটা তুলে নতুন চায় (RCV-0090, ১৩–১৪ অক্টোবর ২০২৬)
         if ($latest?->status === Approval::PENDING) {
-            return $this->isStale($latest, $hash) ? self::STALE : self::AWAITING;
+            return $this->isStale($latest, $hash) ? VoucherSigning::STALE : VoucherSigning::AWAITING;
         }
 
         if (! $withNeeds) {
@@ -644,7 +626,7 @@ final class VoucherApproval implements ClassifiesDrafts
         }
 
         return $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount, class_basename(Voucher::class),
-            ApprovalEngine::fieldsOf($voucher)) ? self::NEEDS : null;
+            ApprovalEngine::fieldsOf($voucher)) ? VoucherSigning::NEEDS : null;
     }
 
     /** অপেক্ষার অনুরোধটা কি আগের কাগজের — ছাপ না মিললে; ছাপ নেই এমন পুরনো অনুরোধ বাসি নয় (আগের আচরণ) */

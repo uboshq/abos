@@ -383,7 +383,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
      */
     private function awaitingAmong(array $states): array
     {
-        return array_keys(array_filter($states, fn (?string $s) => $s === VoucherApproval::AWAITING));
+        return array_keys(array_filter($states, fn (?string $s) => $s === \App\Modules\Accounts\Services\VoucherSigning::AWAITING));
     }
 
     /**

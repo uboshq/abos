@@ -34,6 +34,9 @@ final class EveryListSummaryAddsDecimalsTest extends TestCase
      * @var array<string, array{0: int, 1: string}>
      */
     private const KNOWN = [
+        // ⓘ fe, ৩১ অক্টোবর ২০২৬ — অনুমোদনের ইনবক্স (দফা ২১): স্থায়ী — কাগজের তালিকা নয়: অনুরোধের সারি, ট্যাবেই ছাঁকা (খসড়া/বাতিল কাগজ
+        //   কোনো ট্যাবে আসে না), টাকা অনুরোধের দিনের; দুইটা জায়গা — সবগুলোর টাকা আর ট্যাবের গোনার যোগ
+        'app/Http/Controllers/Api/ApprovalApiController.php' => [2, 'স্থায়ী — কাগজের তালিকা নয়: অনুমোদনের অনুরোধের সারি, ট্যাবে ছাঁকা'],
         'app/Http/Controllers/Api/PhonePaperApiController.php' => [1, 'cb — ফেরত, কেনার কাগজ আর ট্রান্সফারের যোগফল; ListSummary-তে সরবে (তালিকার মোটের শাখা)'],
         'app/Modules/Purchase/Http/Controllers/PurchaseApiController.php' => [2, 'cb — কেনার তালিকা (status != cancelled) ListSummary-তে সরবে; অন্যটা সরবরাহকারীর দেনা: স্থায়ী — কাগজের তালিকা নয়'],
         'app/Modules/Sales/Http/Controllers/CollectionApiController.php' => [1, 'a6 — আদায়ের মোট; ListSummary-তে সরবে (কমিট ১-এর উপর)'],

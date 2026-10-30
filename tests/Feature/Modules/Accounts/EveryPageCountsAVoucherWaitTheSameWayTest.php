@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\MonthEndChecklist;
 use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherSigning;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -108,8 +109,8 @@ final class EveryPageCountsAVoucherWaitTheSameWayTest extends TestCase
         $this->assertNotNull($approval->stopping($stale->fresh()), 'নমুনা: পরে-বাসি অনুরোধ লেখা হলো না');
         $stale->fresh()->forceFill(['narration' => 'অনুরোধের পরে বদলানো'])->save();
 
-        $this->assertSame(VoucherApproval::AWAITING, $approval->waitFor($fresh->fresh()), 'নমুনা: টাটকা অনুরোধ অপেক্ষা নয়');
-        $this->assertSame(VoucherApproval::STALE, $approval->waitFor($stale->fresh()), 'নমুনা: বদলানোর পরেও অনুরোধ বাসি হলো না');
+        $this->assertSame(VoucherSigning::AWAITING, $approval->waitFor($fresh->fresh()), 'নমুনা: টাটকা অনুরোধ অপেক্ষা নয়');
+        $this->assertSame(VoucherSigning::STALE, $approval->waitFor($stale->fresh()), 'নমুনা: বদলানোর পরেও অনুরোধ বাসি হলো না');
 
         return [$fresh, $stale];
     }

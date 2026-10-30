@@ -490,7 +490,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
     // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
     // ⓘ ৩০ অক্টোবর ২০২৬ (fe): cb/list-summary-এর +১৩ (৪৫৯ → ৪৭২) আর main-এর +৫ (৪৫৯ → ৪৬৪) একসাথে = ৪৭৭
-    private const CEILING = 477;
+    // ⓘ ৩১ অক্টোবর ২০২৬ (fe): +১ EveryListSummaryAddsDecimalsTest::KNOWN — অনুমোদনের ইনবক্সের মোট (দফা ২১), স্থায়ী, কাগজের তালিকা নয়
+    private const CEILING = 478;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
