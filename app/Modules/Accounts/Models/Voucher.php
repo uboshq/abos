@@ -231,6 +231,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         // ১৫ সেপ্টেম্বর — খরচ ভাউচারের নিজের ঘর
         'cost_centre_id', 'expense_account_id', 'bill_no',
         'gross_amount', 'ait_amount', 'vds_amount',
+        // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং, কাগজে একটা (দফা ৪; cb-ma-5)
+        'difference_kind', 'difference_amount',
 
         // ১৮ সেপ্টেম্বর — কাকে দেওয়া হলো: ধরন ও নাম
         'payee_type_id', 'payee_name',
@@ -253,6 +255,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'gross_amount' => 'decimal:4',
             'ait_amount' => 'decimal:4',
             'vds_amount' => 'decimal:4',
+            'difference_amount' => 'decimal:4',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
 
@@ -303,6 +306,16 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     public function isDirectCost(): bool
     {
         return $this->billShares()->exists();
+    }
+
+    /**
+     * ⭐ এক টাকা, বহু বিল — কোন বিলে কত (cb-ma-4; [[VoucherAllocations]])।
+     *
+     * @return HasMany<VoucherAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(VoucherAllocation::class)->orderBy('id');
     }
 
     public function lines(): HasMany

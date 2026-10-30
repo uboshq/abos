@@ -28,6 +28,7 @@ use Tests\TestCase;
  */
 final class AnApprovedOrderHoldsItsStockAndIsConfirmedTest extends TestCase
 {
+    use HoldsAnOrderAsBeforeGap28;
     use RefreshDatabase;
 
     private Customer $buyer;
@@ -92,7 +93,10 @@ final class AnApprovedOrderHoldsItsStockAndIsConfirmedTest extends TestCase
     public function test_a_credit_held_order_moves_on_when_money_arrives(): void
     {
         Customer::query()->whereKey($this->buyer->id)->update(['credit_limit' => '1']);
-        $order = app(SalesOrderService::class)->confirm($this->draft('2')->fresh(['lines']))->fresh();
+        $draft = $this->draft('2');
+        // ⓘ ফাঁক ২৮: সীমা না কুলোলে জমাই ফেরে; আগে আটকে থাকা আদেশ টাকা এলে এগোয় — সেটাই এখানে
+        $this->assertRefusedAtSubmit(fn () => app(SalesOrderService::class)->confirm($draft->fresh(['lines'])), $draft);
+        $order = $this->heldAsBeforeGap28($draft);
         $this->assertSame(S::CREDIT_HELD, $order->status, 'প্রস্তুতিটাই ভুল — আদেশ বাকির সীমায় আটকায়নি।');
 
         Customer::query()->whereKey($this->buyer->id)->update(['credit_limit' => '100000000']);

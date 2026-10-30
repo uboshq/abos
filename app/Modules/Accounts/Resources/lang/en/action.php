@@ -53,4 +53,9 @@ return [
     'cheque_clear' => 'Cleared',
     'cheque_bounce' => 'Bounced',
     'reopen_year' => 'Reopen the year',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'bulk_post_review' => 'Post or submit picked drafts for approval',
+    'bulk_post_back' => 'Back to the list',
+    'bulk_post_now' => 'Send :count now',
 ];

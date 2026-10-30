@@ -72,11 +72,12 @@ final class TheCustomerDashboardShowsTheWholeSpecTest extends TestCase
         $invoice = $this->sell($customer, '3', '9000');
         $after = $this->stats();
 
-        // ── ১ · এ মাসের বিক্রয় আর গড় ───────────────────────────────────
+        // ── ১ · এ মাসের নিট বিক্রি আর গড় — নিট = বিলের মোট − VAT − গাড়িভাড়া (fe, ২১ অক্টোবর ২০২৬) ─────
+        $invoiceNet = bcsub(bcsub((string) $invoice->total, (string) $invoice->tax, 4), (string) $invoice->freight_charge, 4);
         $this->assertSame(
-            Money::round(bcadd($this->money($before[__('customer::dashboard.sales_month')]->value), (string) $invoice->total, 4)),
+            Money::round(bcadd($this->money($before[__('customer::dashboard.sales_month')]->value), $invoiceNet, 4)),
             Money::round($this->money($after[__('customer::dashboard.sales_month')]->value)),
-            '⛔ এ মাসের বিক্রয় নতুন বিলের মোট ধরে বাড়েনি।',
+            '⛔ এ মাসের নিট বিক্রি নতুন বিলের নিট ধরে বাড়েনি।',
         );
 
         $month = SalesInvoice::query()->posted()
@@ -96,7 +97,12 @@ final class TheCustomerDashboardShowsTheWholeSpecTest extends TestCase
         $this->assertSame($customer->id, $first->id, 'প্রস্তুতিটাই ভুল — এত বড় বিলের পরেও ক্রেতা প্রথমে নেই।');
         $this->assertLessThanOrEqual(5, $top->rows->count(), '⛔ পাঁচের বেশি ক্রেতা।');
 
-        $boughtByHim = (string) (clone $month)->where('customer_id', $customer->id)->sum('total');
+        // ⓘ হাতে গোনা নিট: তাঁর এ মাসের পাকা বিলের (মোট − VAT − ভাড়া) বাদ পাকা ফেরতের (মোট − VAT), সারি ধরে PHP-তে
+        $boughtByHim = (clone $month)->where('customer_id', $customer->id)->get()
+            ->reduce(fn (string $c, SalesInvoice $i) => bcadd($c, bcsub(bcsub((string) $i->total, (string) $i->tax, 4), (string) $i->freight_charge, 4), 4), '0');
+        $boughtByHim = \App\Modules\Sales\Models\SalesReturn::query()->posted()->where('customer_id', $customer->id)
+            ->whereBetween('trx_date', [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()])->get()
+            ->reduce(fn (string $c, $r) => bcsub($c, bcsub((string) $r->total, (string) $r->tax, 4), 4), $boughtByHim);
         $ledger = (string) Customer::query()->withOutstandingInView()->findOrFail($customer->id)->outstanding_in_view;
 
         $this->assertSame(Money::format($boughtByHim), $this->cell($top, 'sold', $first), '⛔ এ মাসের কেনা খাতার বিলের যোগ নয়।');

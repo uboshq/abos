@@ -7,7 +7,7 @@ return [
     'over_limit_title' => 'সীমা পার গ্রাহক',
     'overdue_stopped_title' => 'মেয়াদ পেরোনো বাকিতে বন্ধ গ্রাহক',
     'overdue_bills_title' => 'মেয়াদ পেরোনো বিল',
-    'pending_requests_title' => 'সই না পড়া সীমা বাড়ানোর অনুরোধ',
+    'pending_requests_title' => 'অনুমোদন না হওয়া সীমা বাড়ানোর অনুরোধ',
     'code' => 'কোড',
     'customer' => 'গ্রাহক',
     'limit' => 'সীমা',

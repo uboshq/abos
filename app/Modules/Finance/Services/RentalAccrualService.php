@@ -266,22 +266,14 @@ final class RentalAccrualService
     }
 
     /** ১১৩৭ অগ্রিম ভাড়া — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয় */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     public static function prepaid(): Account
     {
-        $account = StandardChart::find(StandardChart::PREPAID_RENT);
-
-        if ($account === null) {
+        if (StandardChart::find(StandardChart::PREPAID_RENT) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find(StandardChart::PREPAID_RENT);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'for_month' => __('finance::validation.chart_head_missing', ['code' => StandardChart::PREPAID_RENT]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor(StandardChart::PREPAID_RENT);
     }
 
     /**
@@ -344,21 +336,13 @@ final class RentalAccrualService
     }
 
     /** ২১৪১ — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয়; [[StandardChart::install()]] কেবল যা নেই তা-ই বসায় */
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     public static function payable(): Account
     {
-        $account = StandardChart::find(StandardChart::RENT_PAYABLE);
-
-        if ($account === null) {
+        if (StandardChart::find(StandardChart::RENT_PAYABLE) === null) {
             app(StandardChart::class)->install();
-            $account = StandardChart::find(StandardChart::RENT_PAYABLE);
         }
 
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'month' => __('finance::validation.chart_head_missing', ['code' => StandardChart::RENT_PAYABLE]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor(StandardChart::RENT_PAYABLE);
     }
 }

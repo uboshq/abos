@@ -41,8 +41,11 @@ final class ASkippedTestReadsAsAPassingOneTest extends TestCase
      *
      * ⓘ ২২ সেপ্টেম্বর ২০২৬-এ তিনটা সরানোর পর যা ছিল। ⚠️ এটা লক্ষ্য নয়,
      * **ছাদ** — কমানোই একমাত্র বৈধ দিক।
+     *
+     * ⓘ ২৪ অক্টোবর ২০২৬: ২৫ → ২৪ — টাকার maker-checker-এর দরজা ([[AMoneyPaperPostedWithNobodyToSignTest]]) তোলা হলো।
+     * ⭐ এখন গোনা ঠিক ছাদের সমান হতে হয় — কমলেও লাল, যাতে খালি হওয়া জায়গা নিঃশব্দে আবার ভরা না যায় (fe)।
      */
-    private const CEILING = 25;
+    private const CEILING = 24;
 
     /**
      * যে কারণগুলো এড়িয়ে যাওয়ার বৈধ কারণ নয়।
@@ -79,6 +82,73 @@ final class ASkippedTestReadsAsAPassingOneTest extends TestCase
             'সত্যিই দরকার হলে এই ফাইলের ছাদটা বাড়ান, আর কেন বাড়ালেন',
             'সেটা কমিটের বার্তায় লিখুন।',
         ]));
+
+        $this->assertSame(self::CEILING, count($found), implode(PHP_EOL, [
+            'ⓘ এড়িয়ে যাওয়া দাবি কমেছে: এখন '.count($found).', ছাদ '.self::CEILING.'।',
+            '⭐ ছাদটা নামিয়ে '.count($found).' করুন — খালি জায়গা থাকলে পরেরজন নিঃশব্দে সেটা ভরে ফেলতে পারতেন।',
+        ]));
+    }
+
+    /**
+     * ⭐ এড়িয়ে যাওয়ার ডাক বসে ঠিক সেই দাবির ভিতরে, যাকে সে এড়ায়।
+     *
+     * ── ⛔ কী ঘটেছিল, ২৪ অক্টোবর ২০২৬ (fe-র খোঁজ) ─────────────────────────
+     * [[AMoneyPaperPostedWithNobodyToSignTest]]-এ একটা সহায়ক `afterPhaseTwo()`-এর ভিতরে **একটা** `markTestIncomplete`
+     * ছিল, আর এগারোটা দাবি সেটা ডাকত। ⚠️ উপরের গোনা লেখা ডাক গোনে, তাই এগারোটা চোখ বোজা দাবি গোনায় এল **একটা** হয়ে —
+     * আর মালিকের maker-checker নিয়ম (নিজের টাকার কাগজে নিজে সই নয়, সুপার অ্যাডমিনও নয়) ২৮ সেপ্টেম্বর থেকে একবারও চলেনি।
+     * ⓘ setUp-এ বসানো একটা ডাকও একই কাজ করে — গোটা ক্লাস চোখ বোজে, গোনায় একটা।
+     *
+     * ⭐ তাই নিয়ম: প্রতিটা ডাক সরাসরি একটা `test…` মেথডের ভিতরে — তবেই একটা ডাক মানে একটা দাবি।
+     */
+    public function test_every_step_aside_sits_inside_the_claim_it_hides(): void
+    {
+        $outside = [];
+
+        foreach ($this->testFiles() as $path => $short) {
+            foreach ($this->outsideTheClaim((string) file_get_contents($path)) as [$line, $method]) {
+                $outside[] = $short.':'.$line.' — '.($method ?? '(মেথডের বাইরে)');
+            }
+        }
+
+        $this->assertSame([], $outside, implode(PHP_EOL, [
+            '⛔ এড়িয়ে যাওয়ার ডাক দাবির বাইরে — সহায়ক বা setUp-এ:',
+            '',
+            ...$outside,
+            '',
+            'ⓘ একটা সহায়কের ভিতরের একটা ডাক অনেক দাবিকে চোখ বোজায়, অথচ গোনায় আসে একটা।',
+            '⭐ ডাকটা প্রতিটা দাবির ভিতরে নিজে লিখুন — নয়তো দরজাটা তুলে দিন।',
+        ]));
+    }
+
+    public function test_the_site_finder_sees_a_helper_and_a_set_up(): void
+    {
+        $sample = <<<'PHP'
+            <?php
+            class X {
+                protected function setUp(): void { $this->markTestSkipped('a whole class'); }
+                public function test_one(): void { $f = function () { return 1; }; $this->markTestIncomplete('in the claim'); }
+                private function gate(bool $ok): void { if (! $ok) { $this->markTestIncomplete('one site, many claims'); } }
+            }
+            PHP;
+
+        $this->assertSame([[3, 'setUp'], [4, 'test_one'], [5, 'gate']], $this->stepAsideSites($sample),
+            'দৃশ্যটাই ভুল — খোঁজার যন্ত্র সহায়ক বা setUp-এর ডাক চেনে না, তাই উপরের নিয়ম কিছু মাপে না।');
+
+        $this->assertSame([[3, 'setUp'], [5, 'gate']], $this->outsideTheClaim($sample),
+            '⛔ setUp আর সহায়কের ডাক নিয়মে ধরা পড়ে না — afterPhaseTwo()-এর মতো দরজা আবার এগারোটা দাবি চোখ বোজাতে পারত।');
+    }
+
+    /**
+     * দাবির বাইরের ডাকগুলো — যে ডাককে ঘিরে কোনো `test…` মেথড নেই।
+     *
+     * @return list<array{0: int, 1: string|null}>
+     */
+    private function outsideTheClaim(string $source): array
+    {
+        return array_values(array_filter(
+            $this->stepAsideSites($source),
+            fn (array $site) => $site[1] === null || ! str_starts_with($site[1], 'test'),
+        ));
     }
 
     /**
@@ -246,6 +316,87 @@ final class ASkippedTestReadsAsAPassingOneTest extends TestCase
         sort($found);
 
         return $found;
+    }
+
+    /**
+     * tests-এর প্রতিটা php ফাইল, নিজেরটা বাদে — পুরো পথ => tests/… পথ।
+     *
+     * @return array<string, string>
+     */
+    private function testFiles(): array
+    {
+        $files = [];
+
+        $walk = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(base_path('tests'), \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($walk as $file) {
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
+
+            if (! $file->isFile() || ! str_ends_with($path, '.php') || str_ends_with($path, '/'.class_basename(self::class).'.php')) {
+                continue;
+            }
+
+            $files[$path] = substr($path, strpos($path, '/tests/') + 1);
+        }
+
+        ksort($files);
+
+        return $files;
+    }
+
+    /**
+     * প্রতিটা `markTestSkipped`/`markTestIncomplete` ডাকের লাইন আর তাকে ঘিরে থাকা নামওয়ালা মেথড (closure নয়)।
+     * ⓘ টোকেন ধরে — মন্তব্যে লেখা নাম ডাক নয়।
+     *
+     * @return list<array{0: int, 1: string|null}>
+     */
+    private function stepAsideSites(string $source): array
+    {
+        $sites = [];
+        $stack = [];      // প্রতিটা খোলা '{'-এর জন্য: সেটা কোন মেথডের দেহ শুরু করল (নয়তো null)
+        $pending = null;  // `function name(` দেখা গেছে, দেহের '{' এখনো আসেনি
+        $afterFunction = false;
+
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token)) {
+                if ($token[0] === T_FUNCTION) {
+                    $afterFunction = true;
+                } elseif ($afterFunction && $token[0] === T_STRING) {
+                    $pending = $token[1];
+                    $afterFunction = false;
+                } elseif ($token[0] === T_STRING && in_array($token[1], ['markTestSkipped', 'markTestIncomplete'], true)) {
+                    $method = null;
+
+                    foreach (array_reverse($stack) as $owner) {
+                        if ($owner !== null) {
+                            $method = $owner;
+                            break;
+                        }
+                    }
+
+                    $sites[] = [$token[2], $method];
+                } elseif (in_array($token[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)) {
+                    $stack[] = null;
+                }
+
+                continue;
+            }
+
+            if ($token === '(' && $afterFunction) {
+                $afterFunction = false; // closure — নাম নেই
+            } elseif ($token === ';' && $pending !== null) {
+                $pending = null; // দেহহীন (abstract/interface)
+            } elseif ($token === '{') {
+                $stack[] = $pending;
+                $pending = null;
+            } elseif ($token === '}') {
+                array_pop($stack);
+            }
+        }
+
+        return $sites;
     }
 
     /** এড়ানোর কারণটা — ঐ লাইনে, নয়তো পরের দুই লাইনে। */

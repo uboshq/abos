@@ -34,6 +34,70 @@ final class MoneyMethod
     public const CHARGEABLE = ['mfs', 'transfer', 'deposit'];
 
     /**
+     * ⭐ পদ্ধতি আগে, খাত পরে — পদ্ধতিই ঠিক করে কোন ধরনের খাত চলে (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe: SAP/Oracle-এর payment
+     * method → house bank)। ⓘ খাতের `money_kind`: নগদ → cash, MFS → mfs, ব্যাংকের চার পথ → bank (⛔ MFS নয়)।
+     * ⓘ পর্দা ([[money.js]] `kindForMethod`) একই তালিকা পড়ে — দুই জায়গার কথা আলাদা হলে পর্দা যা দেখায় সার্ভার তা ফেরাত।
+     */
+    public const KIND_OF = ['cash' => 'cash', 'mfs' => 'mfs', 'transfer' => 'bank', 'deposit' => 'bank', 'cheque' => 'bank', 'card' => 'bank'];
+
+    /**
+     * খাতটা এই পদ্ধতির কি না। ⓘ পদ্ধতি না জানা বা খাতের ধরন খালি হলে প্রশ্ন নেই — টাকার খাত কি না, তা অন্য পাহারার কাজ।
+     */
+    public static function fits(?string $method, ?string $kind): bool
+    {
+        if ($method === null || ! isset(self::KIND_OF[$method]) || blank($kind)) {
+            return true;
+        }
+
+        return self::KIND_OF[$method] === $kind;
+    }
+
+    /**
+     * ⛔ পদ্ধতি আর খাত না মিললে থামানো — বাংলায় দুইটার নামসহ (fe, ২৪ অক্টোবর ২০২৬)।
+     *
+     * @throws ValidationException
+     */
+    public static function assertFits(?string $method, ?string $kind, string $accountLabel, string $field = 'account_id'): void
+    {
+        if (self::fits($method, $kind)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => __('money.validation.account_not_for_method', [
+                'account' => $accountLabel,
+                'method' => __('money.method.'.$method),
+                'kind' => __('money.kind.'.self::KIND_OF[$method]),
+            ]),
+        ]);
+    }
+
+    /**
+     * নতুন কাগজে প্রথম পদ্ধতি — বাছা খাত থাকলে তার ধরনের, নইলে চলতিটা যদি তার খাত থাকে, নইলে তালিকার প্রথম যে পদ্ধতির খাত আছে।
+     *
+     * @param  list<string>  $methods
+     * @param  list<string>  $kinds  পর্দার খাতগুলোর ধরন
+     */
+    public static function startWith(string $current, ?string $pickedKind, array $methods, array $kinds): string
+    {
+        if (filled($pickedKind) && ! self::fits($current, $pickedKind)) {
+            foreach ($methods as $method) {
+                if (self::fits($method, $pickedKind)) {
+                    return $method;
+                }
+            }
+        }
+
+        $has = fn (string $method) => collect($kinds)->contains(fn ($kind) => isset(self::KIND_OF[$method]) && self::KIND_OF[$method] === $kind);
+
+        if ($has($current)) {
+            return $current;
+        }
+
+        return collect($methods)->first($has) ?? $current;
+    }
+
+    /**
      * যাচাইয়ের নিয়ম — হোস্ট ফর্মের নিজের নিয়মের সাথে মেশে।
      *
      * @return array<string, list<mixed>>

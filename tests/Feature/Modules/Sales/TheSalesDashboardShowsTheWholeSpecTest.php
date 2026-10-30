@@ -139,20 +139,21 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
         $this->assertSame(__('sales::dashboard.profit_hint', ['percent' => $percent]), $this->panel('profit')->hint,
             '⛔ মার্জিনের শতাংশ খাতার অঙ্কের সাথে মেলে না।');
 
-        // ── ৩ · বিক্রেতা আর এরিয়া ────────────────────────────────────
+        // ── ৩ · বিক্রেতা আর এরিয়া — নিট বিক্রি: বিলের মোট − VAT − গাড়িভাড়া (fe, ২১ অক্টোবর ২০২৬) ────
+        $billNet = bcsub(bcsub((string) $invoice->total, (string) $invoice->tax, 4), (string) $invoice->freight_charge, 4);
         $sellerAfter = $this->parts('by_seller');
         $this->assertSame(
-            Money::round(bcadd($seller[$this->owner->name] ?? '0', (string) $invoice->total, 4)),
+            Money::round(bcadd($seller[$this->owner->name] ?? '0', $billNet, 4)),
             Money::round($sellerAfter[$this->owner->name] ?? '0'),
-            '⛔ বিল কাটা মানুষের দণ্ড বিলের মোট ধরে বাড়েনি।',
+            '⛔ বিল কাটা মানুষের দণ্ড বিলের নিট বিক্রি ধরে বাড়েনি।',
         );
 
         $areaAfter = $this->parts('by_territory');
         $this->assertLessThan(8, count($areaAfter), 'ⓘ এরিয়া আটের কম ধরে নেওয়া — নাহলে যোগফলের দাবি কাটা সারি দেখত না।');
         $this->assertSame(
-            Money::round(bcadd($this->sum($area ?? []), (string) $invoice->total, 4)),
+            Money::round(bcadd($this->sum($area ?? []), $billNet, 4)),
             Money::round($this->sum($areaAfter)),
-            '⛔ এরিয়ার দণ্ডের যোগফল বিলের মোট ধরে বাড়েনি।',
+            '⛔ এরিয়ার দণ্ডের যোগফল বিলের নিট বিক্রি ধরে বাড়েনি।',
         );
     }
 

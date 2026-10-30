@@ -437,16 +437,24 @@ final class HeldCounterSaleFinisher
 
         foreach ($people as $person) {
             try {
+                /*
+                 * ⛔ যিনি কাউন্টারের খসড়ার তালিকা খুলতে পারেন না, তাঁকে সেখানে নয় (২৪ অক্টোবর ২০২৬): তালিকা চায়
+                 * `sales.challan.create`, আর সইকারীর প্রায়ই সেটা নেই — খবর চাপলে ৪০৩। ⓘ তাঁকে বিলের নিজের পাতায়; যিনি তালিকা
+                 * খোলেন (বানানেওয়ালা) তিনি আগের মতো "সই হয়েছে" ভাগে, যেখানে আবার-চেষ্টা আর ফেরতের বোতাম।
+                 * ⓘ দুই ঠিকানা মানে দুই ঘটনা — ঘটনাই ঠিকানা বয়ে নেয়, তাই চাবিও আলাদা; তালিকার চাবি আগেরটাই।
+                 */
+                $toList = $person->can('sales.challan.create');
+
                 $this->notices->send(
                     $person,
                     self::NOTICE,
                     __('sales::auto_finish.sale_stuck_title', ['no' => $invoice->document_no]),
                     __('sales::auto_finish.sale_stuck_body', ['reason' => $reason]),
-                    route('sales.direct.drafts', ['tab' => 'signed']),
+                    $toList ? route('sales.direct.drafts', ['tab' => 'signed']) : route('sales.invoice.show', $invoice),
                     // ⓘ সইকারী নিজেই সই দিলেন, কিন্তু থেমে যাওয়াটা দেখেননি — তাই নিজের কাজ হলেও খবর
                     evenToSelf: true,
                     // ⭐ কোন বিল — শাখার দেয়াল খবরেও; একই থেমে যাওয়ার খবর দিনে একবার (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
-                    key: 'sales:invoice:'.$invoice->id.':stuck:'.now()->toDateString(),
+                    key: 'sales:invoice:'.$invoice->id.':stuck:'.now()->toDateString().($toList ? '' : ':paper'),
                     about: $invoice,
                 );
             } catch (Throwable $e) {

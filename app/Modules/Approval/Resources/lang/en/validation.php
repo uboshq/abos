@@ -11,6 +11,12 @@ return [
     'duplicate_flow' => 'A rule for this action already exists — a second one would sit there doing nothing while the first kept firing. Edit the existing one.',
     'unknown_action' => 'No module asks for approval on this action, so the rule would never fire.',
     'flow_has_pending' => ':count request(s) are still waiting on this rule. Decide those first — deleting the rule would leave them with no approver.',
-    'flow_change_strands' => 'This rule still has :count waiting request(s) — their levels cannot be removed, nor the action changed or the rule switched off, or nobody could sign them. Decide them first, or keep their levels in the change.',
+    'flow_change_strands' => 'This rule still has :count waiting request(s) — their levels cannot be removed, nor the action changed or the rule switched off, or nobody could approve them. Decide them first, or keep their levels in the change.',
     'limit_action_not_in_module' => 'That action does not belong to that module — the two must match, or the limit will never apply.',
+    'first_level_from_amount' => 'Step 1 approves every amount — it takes no "from amount". To skip small papers, give the rule its own "from amount".',
+    'level_two_amounts' => 'Step :level has two different "from amounts" — one step takes one amount.',
+    'payroll_stays_on' => 'The payroll rule cannot be switched off or deleted (owner\'s decision) — you can change its approvers or add steps.',
+
+    // ⭐ অনুমোদন পর্দা ভাগ ৩, দফা ১৮ — দায়িত্ব হস্তান্তর (২৮ অক্টোবর ২০২৬)
+    'delegation_not_coming' => 'An active or finished hand-over cannot be changed — stop it and give a new one.',
 ];

@@ -253,7 +253,8 @@ final class SalesPaperOverview
             $o->note($message, 'stop');
         }
 
-        if ($what['submits']) {
+        // ⓘ থামলে "জমা হবে" বলা নয় — দুই কথা একসাথে মিথ্যা (ফাঁক ২৮)
+        if ($what['submits'] && $what['stops'] === []) {
             $o->note(__('sales::overview_confirm.order_submits'), 'info');
         }
 

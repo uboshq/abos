@@ -14,7 +14,7 @@
     $product = fn (array $r) => ['inventory.product.show', ['product' => $r['product_id'] ?? null]];
 
     $cards = [
-        ['customers', 'customer_name', 'total', 'money', $customer],
+        ['customers', 'customer_name', 'net_sales', 'money', $customer],
         ['products', 'product_name', 'revenue', 'money', $product],
         ['areas', 'route_name', 'sales', 'money', fn (array $r) => ['sales.report.show', ['slug' => 'by-route', 'from' => $range['from'], 'to' => $range['to']]]],
         ['salespeople', 'salesperson', 'net_sales', 'money', fn (array $r) => ['sales.report.show', ['slug' => 'by-salesperson', 'from' => $range['from'], 'to' => $range['to']]]],

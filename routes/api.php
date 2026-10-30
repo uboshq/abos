@@ -314,6 +314,24 @@ Route::prefix('v1')
             ->name('approvals.send_back');
 
         /*
+         * ⭐ ফোনের ইনবক্স, ওয়েবের চার ট্যাব আর একই নিয়মে — অনুমোদন ভাগ ৩, দফা ২১ (পরিকল্পনার পাতা ৬)। ⓘ একসাথে অনুমোদনের
+         * পথ এক অংশের (`bulk-approve`): দুই অংশের `/approvals/bulk/approve` উপরের `/approvals/{approval}/approve`-এ পড়ত।
+         */
+        Route::get('/approvals/inbox', [ApprovalApiController::class, 'inbox'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.inbox');
+        Route::get('/approvals/{approval}/attachments/{attachment}', [ApprovalApiController::class, 'attachment'])
+            ->whereNumber('attachment')
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.attachment');
+        Route::post('/approvals/bulk-preview', [ApprovalApiController::class, 'bulkPreview'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.bulk_preview');
+        Route::post('/approvals/bulk-approve', [ApprovalApiController::class, 'bulkApprove'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval', \App\Http\Middleware\RemembersAPhoneWrite::class])
+            ->name('approvals.bulk_approve');
+
+        /*
          * রিপোর্ট — চুক্তি §৯। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা রিপোর্টের
          * নিজের চাবি আছে (`ReportDefinition::$permission`), আর দরজা একটাই।
          * ⓘ তালিকা ছাঁকা হয়, পাতায় চাবি না থাকলে ৪০৩ ([[ReportApiController]])।

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Support\Carbon;
@@ -100,11 +102,22 @@ final class AdjustingReversals
                 'why' => $why,
             ]);
 
+            /*
+             * ⛔ কেবল যিনি জাবেদাটা খুলতে পারেন (২৪ অক্টোবর ২০২৬): মাস বন্ধের চাবি থাকলেই আগে খবর যেত, অথচ খবরের পাতা
+             * (ভাউচারের পাতা) খোলে ভাউচারের নিয়মে ([[VoucherPolicy::view()]] — `accounts.report`, বা এই কাগজের সইকারী), আর
+             * কাগজের শাখা নাগালে থাকলে — চাবিওয়ালা খবর চাপলে ৪০৩/৪০৪ পেতেন। ⓘ ঠিক করতে যিনি মাস খোলেন তিনি জাবেদাটাও দেখেন,
+             * তাই দুই প্রশ্নই একসাথে; মালিক আর সুপার অ্যাডমিন সব চাবি নিয়েই আছেন।
+             */
+            $scope = app(DataScope::class);
+            $branch = $voucher->branch_id === null ? null : (int) $voucher->branch_id;
+
             $people = User::query()
                 ->where('is_active', true)
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->get()
-                ->filter(fn (User $user) => $user->can(self::WHO_HEARS));
+                ->filter(fn (User $user) => $user->can(self::WHO_HEARS)
+                    && $user->can('view', $voucher)
+                    && $scope->allows($user, UserDataScope::BRANCH, $branch));
 
             foreach ($people as $user) {
                 $told = Notification::query()
@@ -116,7 +129,8 @@ final class AdjustingReversals
                 if (! $told) {
                     // ⓘ একটাই চাবি সবার জন্য — একটা ঘটনা, যাতে নিয়মের বাড়তি প্রাপক N-টা কপি না পান (cb-র রিভিউ, ১১ অক্টোবর ২০২৬;
                     // [[OneStuckReversalIsOneNoticeForARulesPeopleTest]])
-                    app(NotificationService::class)->send($user, self::STUCK, $title, $body, $url, key: 'accounts:adjusting_stuck:'.$voucher->id);
+                    // ⛔ কোন কাগজের — খোলার আগে জাবেদাটা আছে ও নাগালে কি না দেখা হয় ([[NotificationService::mayOpen()]])
+                    app(NotificationService::class)->send($user, self::STUCK, $title, $body, $url, key: 'accounts:adjusting_stuck:'.$voucher->id, about: $voucher);
                 }
             }
         } catch (\Throwable $e) {

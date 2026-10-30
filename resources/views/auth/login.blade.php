@@ -172,7 +172,7 @@
                             </span>
                         </div>
 
-                        <p class="mt-3 text-white/50">v{{ config('app.version', '0.1.0') }}</p>
+                        <p class="mt-3 text-white/50">v{{ \App\Core\Support\Release::version() }}</p>
                     </div>
                 </div>
             </aside>
@@ -256,13 +256,13 @@
                         <p class="mt-1">
                             {{ __('core.brand.powered_by') }} {{ __('core.brand.powered_by_name') }}
                         </p>
-                        <p class="mt-1">v{{ config('app.version', '0.1.0') }}</p>
+                        <p class="mt-1">v{{ \App\Core\Support\Release::version() }}</p>
                     </div>
 
                     {{-- বড় পর্দায় শুধু সংস্করণ — বাকিটা বাঁ পাশে দেখা যাচ্ছে --}}
                     <p class="mt-6 hidden border-t border-(--color-border) pt-3 text-center text-2xs
                               text-(--color-ink-muted) md:block">
-                        v{{ config('app.version', '0.1.0') }}
+                        v{{ \App\Core\Support\Release::version() }}
                     </p>
                 </div>
             </main>

@@ -14,6 +14,7 @@ use App\Modules\Customer\Models\CustomerCreditRequest;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Sales\Models\CreditDecision;
 use App\Modules\Sales\Services\CreditExposure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -22,8 +23,8 @@ use Illuminate\View\View;
  *
  * ⛔ এখানে কোনো সূত্র নেই — অঙ্ক [[CreditExposure::positionOf()]] আর [[CreditExposure::openBills()]] থেকে, দেয়ালের একই হিসাব।
  *
- * ⓘ দেয়াল: কোম্পানি আর ডিলার — গ্রাহকের মডেলের নিজের স্কোপে (অন্যের ডিলার ৪০৪); শাখা — হেডারে বাছা আর ব্যবহারকারীর নাগাল
- * ([[Customer::scopeInViewedBranch()]]), না মিললে ৪০৪, কেবল লুকানো বোতাম নয়।
+ * ⓘ দেয়াল: কোম্পানি আর ডিলার — গ্রাহকের মডেলের নিজের স্কোপে (অন্যের ডিলার ৪০৪); শাখা — ব্যবহারকারীর নাগাল
+ * ([[DataScope::allows()]]; ২৪ অক্টোবর ২০২৬ পর্যন্ত হেডারে বাছা শাখা), না মিললে ৪০৪, কেবল লুকানো বোতাম নয়।
  */
 class CreditProfileController extends Controller
 {
@@ -34,7 +35,13 @@ class CreditProfileController extends Controller
 
     public function show(Request $request, int $customer): View
     {
-        $customer = Customer::query()->inViewedBranch()->withOutstanding()->whereKey($customer)->firstOrFail();
+        /*
+         * ⭐ শাখা নাগাল ধরে, হেডারে বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬) — বাকির
+         * সীমা ফুরোনোর নোটিশ (`credit_control.temporary_limit_ending`) এই পাতায় আনে; আগে `inViewedBranch()` হেডারের এক শাখাই
+         * দেখত, তাই হেডারে MMS রাখা মালিক NTK-র গ্রাহকের নোটিশে ৪০৪ পেতেন। ⓘ এখন [[Customer::openInReach()]] — একজন গ্রাহক,
+         * তালিকা নয়; নাগালের বাইরে ৪০৪, আগের মতোই।
+         */
+        $customer = Customer::openInReach($customer, $request->user(), fn (Builder $query) => $query->withOutstanding());
 
         $history = CustomerCreditChange::query()
             ->where('customer_id', $customer->id)

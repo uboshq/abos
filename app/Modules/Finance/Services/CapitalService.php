@@ -156,9 +156,8 @@ final class CapitalService
 
         $landed = bcsub((string) $entry->amount, $cut, 4);
 
-        $chargeAccount = Account::query()
-            ->where('code', $into->isMfs() ? StandardChart::MFS_CHARGES : StandardChart::BANK_CHARGES)
-            ->firstOrFail();
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $chargeAccount = StandardChart::accountFor($into->isMfs() ? StandardChart::MFS_CHARGES : StandardChart::BANK_CHARGES);
 
         return [
             ['account_id' => $into->id, 'debit' => $landed, 'credit' => '0'],
@@ -338,9 +337,8 @@ final class CapitalService
             $this->lockFresh($entry);
             $this->assertNotPosted($entry);
 
-            $capital = Account::query()
-                ->where('code', StandardChart::OWNER_CAPITAL)
-                ->firstOrFail();
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            $capital = StandardChart::accountFor(StandardChart::OWNER_CAPITAL);
 
             $voucher = $this->vouchers->create(
                 [

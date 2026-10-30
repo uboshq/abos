@@ -143,11 +143,16 @@ final class MoneyMovementHasEveryFieldTheOwnerAskedForTest extends TestCase
         $asked = array_values(array_filter(self::DROPPED_BY_THE_OWNER, fn (string $f) => str_contains($box, "name=\"{$f}\"")));
         $this->assertSame([], $asked, "⛔ মালিক ২১ অক্টোবর যে ঘর বাদ দিয়েছেন, টাকার বাক্স আবার তা চায়:\n".implode("\n", $asked));
 
-        foreach (['voucher/simple-form', 'voucher/partials/expense-fields'] as $view) {
+        // ⓘ রসিদ-পরিশোধের বাক্স c0ac7aec2 থেকে টাকার অংশের নিজের ফাইলে (`partials/money-fields`, simple-form-এর ভিতরে) — সেখানেই খোঁজা
+        foreach (['voucher/partials/money-fields', 'voucher/partials/expense-fields'] as $view) {
             $blade = File::get(base_path("app/Modules/Accounts/Resources/views/{$view}.blade.php"));
             $this->assertStringContainsString('<x-money.method', $blade, "⛔ {$view} টাকার বাক্স ([[x-money.method]]) ডাকে না");
             $this->assertStringNotContainsString('<x-ui.money-movement', $blade, "⛔ {$view} আবার পুরনো আঠারো-ঘরের বাক্স ডাকে");
         }
+        $this->assertStringContainsString("@include('accounts::voucher.partials.money-fields')",
+            File::get(base_path('app/Modules/Accounts/Resources/views/voucher/partials/party-fields.blade.php')), '⛔ রসিদ-পরিশোধের পাতা টাকার অংশ আর আঁকে না');
+        $this->assertStringNotContainsString('<x-ui.money-movement', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php')),
+            '⛔ voucher/simple-form আবার পুরনো আঠারো-ঘরের বাক্স ডাকে');
 
         // ⭐ "কার মাধ্যমে" — মালিকের আলাদা আদেশ, থাকে
         $this->assertStringContainsString('name="carried_by"', File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php')),

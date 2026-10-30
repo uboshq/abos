@@ -83,7 +83,12 @@ final class SalespersonReports
                         fn ($q) => $q->selectSub(DealerOwnership::boundOn('r.customer_id', 'r.trx_date', 'r.company_id'), 'seller_id'),
                         fn ($q) => $q->selectRaw('COALESCE(ri.created_by, r.created_by) as seller_id'),
                     )
-                    ->selectRaw('r.customer_id as customer_id, NULL as invoice_id, 0 as sold, rl.amount - rl.tax as returned');
+                    /*
+                     * ⛔ ফেরতের সারির `amount` আগেই ভ্যাট বাদে ([[SalesReturnService::replaceLines()]]: `amount` = ভাগ − ভ্যাট) —
+                     * আগে `amount − tax` ভ্যাট দুইবার কাটত, তাই ভ্যাটের ফেরত কম দেখাত আর নিট বেশি (fe-র নিট বিক্রি, ২০ অক্টোবর ২০২৬)।
+                     * ⓘ সারির যোগ = ফেরতের `total − tax` = লক্ষ্যের অর্জনে কাটা ফেরত ([[SalesMetrics::returnNetSql()]])।
+                     */
+                    ->selectRaw('r.customer_id as customer_id, NULL as invoice_id, 0 as sold, rl.amount as returned');
 
                 $nobody = DB::getPdo()->quote((string) __('sales::salesperson_report.nobody'));
 

@@ -645,24 +645,33 @@ class SalesTest extends TestCase
     // ── ধারের সীমা ──────────────────────────────────────────────────────
 
     /**
-     * ⭐ আদেশ বসে, সীমা পেরোলেও — মালিকের সিদ্ধান্ত, ২৬ সেপ্টেম্বর ২০২৬
-     * (a263208d): *"customer ba SR order kikore dibe, seta DO/delivery order
-     * theke suro hobe"*। আদেশ আন্দাজের জিনিস।
+     * ⛔ সীমা পার করা আদেশ নিশ্চিতই হয় না, আর চালানও ফেরে — fe-র বিক্রয়ের ফাঁক ২৮ (২০ অক্টোবর ২০২৬): সীমা পরম, পুরনো পথেও;
+     * SAP আদেশে আর ডেলিভারিতে দুই জায়গায়ই যাচাই করে। ⓘ ২৬ সেপ্টেম্বরের "আদেশ সীমা পেরোলেও বসে" নিয়ম এতে উল্টেছে।
      *
-     * ⛔ দেয়ালটা চালানে: **একই** বিক্রয়কর্মী, **একই** আদেশের একই পরিমাণ মাল
-     * পাঠাতে গেলে ফেরত। ⓘ আগে এই দাবি বলত আদেশই আটকায় — সেটা পুরনো নিয়ম।
+     * ⓘ **একই** বিক্রয়কর্মী: ৫০০ সীমায় ২,০০০-এর আদেশ ফেরে, খসড়াই থাকে। সীমা থাকতে নিশ্চিত হওয়া আদেশের মাল সীমা কমার পরে
+     * চালানে গেলেও ফেরে — দেয়াল চালানেও।
      */
-    public function test_an_order_past_the_credit_limit_stands_but_its_challan_is_refused(): void
+    public function test_an_order_past_the_credit_limit_is_refused_and_so_is_its_challan(): void
     {
         $this->customer->forceFill(['credit_limit' => '500'])->save();
 
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
         $this->actingAs($salesman);
 
-        $order = $this->orders()->confirm($this->makeOrder('10', '200'));
+        $draft = $this->makeOrder('10', '200');
+        try {
+            $this->orders()->confirm($draft);
+            $this->fail('⛔ ২,০০০ টাকার আদেশ ৫০০ সীমায় নিশ্চিত হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('customer_id', $e->errors());
+        }
+        $this->assertSame(DocumentStatus::DRAFT, $draft->fresh()->status, '⛔ ফেরানো আদেশ খসড়া নয়।');
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $order->status,
-            '⛔ ২,০০০ টাকার আদেশ ৫০০ সীমায় আটকে গেছে — দেয়াল আদেশে নয়।');
+        // ⓘ সীমা থাকতে নিশ্চিত, তারপর সীমা কমে — চালানের দেয়াল
+        $this->customer->forceFill(['credit_limit' => '100000000'])->save();
+        $order = $this->orders()->confirm($draft->fresh(['lines']));
+        $this->assertSame(DocumentStatus::CONFIRMED, $order->status, 'দৃশ্যটাই ভুল — সীমা কুলোলেও আদেশ নিশ্চিত হয়নি।');
+        $this->customer->forceFill(['credit_limit' => '500'])->save();
 
         try {
             $this->challans()->confirm($this->makeChallan($order->fresh(['lines']), '10', '200'));
@@ -686,8 +695,21 @@ class SalesTest extends TestCase
         $this->assertTrue($this->user->roles->contains('name', 'super_admin'),
             'দৃশ্যটাই বানানো যায়নি — মালিক সুপার অ্যাডমিন নন।');
 
-        $order = $this->orders()->confirm($this->makeOrder('10', '200'));
+        // ⛔ ফাঁক ২৮ — মালিকের নিজের আদেশও সীমায় ফেরে, খসড়াই থাকে
+        $draft = $this->makeOrder('10', '200');
+        try {
+            $this->orders()->confirm($draft);
+            $this->fail('⛔ মালিক সীমা পার করা আদেশ নিশ্চিত করলেন।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('customer_id', $e->errors());
+        }
+        $this->assertSame(DocumentStatus::DRAFT, $draft->fresh()->status);
+
+        // ⓘ সীমা থাকতে নিশ্চিত হওয়া আদেশ — সীমা কমার পরে মালিকের চালানও ফেরে
+        $this->customer->forceFill(['credit_limit' => '100000000'])->save();
+        $order = $this->orders()->confirm($draft->fresh(['lines']));
         $this->assertSame(DocumentStatus::CONFIRMED, $order->status);
+        $this->customer->forceFill(['credit_limit' => '500'])->save();
 
         $this->expectException(ValidationException::class);
 

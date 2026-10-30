@@ -38,6 +38,27 @@ final class PaperStates
     /** ⓘ v4-এর কাগজের ধরন — `<name>_<kind>` থাকলে সেই ধরনে সেটাই (যেমন মজুদের কাগজে "পাকা · মজুদে উঠেছে"); ডিফল্ট টাকা */
     public const KINDS = ['money', 'stock', 'claim'];
 
+    /** ⓘ সংরক্ষণের আগের দুই অবস্থা — সই লাগবে কি না ([[beforeSave()]]) */
+    public const DRAFT = 'draft';
+
+    public const WILL_WAIT = 'will_wait';
+
+    /**
+     * ⭐ সংরক্ষণের আগে কাগজের অবস্থা — "সইয়ের অপেক্ষায় হবে" না "খসড়া" (রসিদ-পরিশোধ মিল-তালিকা #৫৪, নকশা পাতা ৪; ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ রায়টা [[ApprovalEngine::requires()]]-এর — পোস্টের সময় যে প্রশ্ন সই চায়, হুবহু সেটাই; তাই মাথার চিপ আর পোস্টের আটকানো
+     * কখনো দুই কথা বলে না। ⓘ টাকা জানা না থাকলে `null` — সীমাওয়ালা ছক তখন "ধরবে" ধরে ([[ApprovalFlow::appliesTo()]]),
+     * অর্থাৎ পর্দা আগাম সাবধানের দিকে বলে।
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public static function beforeSave(string $module, string $action, ?string $amount, string $documentType, array $fields = []): string
+    {
+        return app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires($module, $action, $amount, $documentType, $fields)
+            ? self::WILL_WAIT
+            : self::DRAFT;
+    }
+
     /** @var array<string, mixed>|null এক প্রক্রিয়ায় একবার পড়া — ফাইলটা স্থির, স্থাপনার সাথে বদলায় */
     private static ?array $file = null;
 

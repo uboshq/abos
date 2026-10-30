@@ -375,6 +375,53 @@ abos-33-এর মাঝে।
 **ঘ · তালিকা খালি হওয়া স্বাভাবিক।** "কিছু অপেক্ষা করছে না" একটা ভালো
 খবর, ত্রুটির পর্দা নয়।
 
+### ⭐ ফোনের ইনবক্স, ওয়েবের নিয়মে — ৩০ অক্টোবর ২০২৬ (অনুমোদন ভাগ ৩, দফা ২১)
+
+পরিকল্পনার পাতা ৭, সারি ২১: *"অ্যাপে একই ট্যাব, একই নাম আর একই নিয়ম, পাতা ৬-এর মতো।"* নিয়মগুলো
+(ট্যাব, দেরি, সাজানো, ধাপ, কার হয়ে, শেষ সময়, যাত্রাপথ) একটাই জায়গায় — `ApprovalInbox` — ওয়েবের ইনবক্স
+আর এই দরজাগুলো দুইটাই সেখান থেকে পড়ে। ⓘ `/approvals/pending` আগের মতোই থাকে, একই ঘরে — পুরনো অ্যাপ
+বদলায় না; নতুন অ্যাপ নিচের দরজাগুলো ডাকে।
+
+#### `GET /approvals/inbox?tab=&module=&late=&page=` · `approval.decide`
+
+```jsonc
+{
+  "tab": "waiting",                         // waiting · sent · done · behalf (ওয়েবের চার ট্যাব); অচেনা হলে ৪২২
+  "tabs": [{ "key": "waiting", "label": "অপেক্ষায়", "count": 7 }, …],   // চারটাই, ক্রমে, ওয়েবের নাম
+  "modules": [{ "key": "accounts", "label": "হিসাব", "count": 3 }, …],   // কাজের চিপ — ট্যাবের পুরো তালিকা ধরে গোনা
+  "module": null, "allCount": 7, "lateCount": 1,
+  "rows": [{ /* `pending`-এর সব ঘর, একই মান */,
+    "status": "pending", "statusLabel": "অপেক্ষমাণ",
+    "deadline": { "text": "শেষ সময় পেরিয়েছে ৩ ঘণ্টা", "tone": "danger" },  // danger · warning · success; ঘড়ি নেই বা অপেক্ষায় নয় ⇒ null
+    "step": { "at": 2, "of": 2, "name": "ম্যানেজার" },
+    "standInFor": null,                     // দায়িত্ব হস্তান্তরে কার হয়ে
+    "bulkable": true                        // কেবল waiting/behalf-এ, আর টাকা নড়ার কাজে কখনো নয়
+  }],
+  "totals": { "pageCount": 4, "pageAmount": "486500.0000", "count": 7, "amount": "521300.0000" },
+  "nextPage": null                          // ⓘ পাতা নম্বরে — "দেরি আগে" একটা হিসাব, কার্সর কেবল কলাম ধরে চলে
+}
+```
+
+⛔ বেতন কোনো ট্যাবে, সংখ্যায় বা মোটে আসে না — প্রতিটা ট্যাব `forThePhone()` দিয়ে।
+
+#### `GET /approvals/{approval}/sheet` — তিনটা নতুন ঘর
+
+`summary` (`requesterName`, `requestedAt`, `amountWords`, `deadline`, `step`, `standInFor`), `journey` (ধাপ ধরে:
+`level`, `name`, `state` = approved · rejected · returned · forwarded · now · waiting, `tookHours`, `needed`, `signed`,
+`by[]` = `name`, `decision`, `label`, `at`, `remarks`, `for`, `to`) আর `attachments` (`id`, `name`, `mime`, `size`)।
+ⓘ পাহারা আগের মতোই — অপেক্ষমাণ আর `canDecide()`।
+
+#### `GET /approvals/{approval}/attachments/{id}`
+
+ফাইলটা নিজেই। ⛔ কেবল এই কাগজের ফাইল — অন্য কাগজের নম্বর বসালে ৪০৪; পাহারা সই-দরজার।
+
+#### `POST /approvals/bulk-preview` {`ids[]`} · `POST /approvals/bulk-approve` {`ids[]`, `remarks?`}
+
+আগে-দেখা: `sign[]` (`id`, `work`, `documentNo`, `amount`), `total`, `skip[]` (একই ঘর + `why`, `reason` — ওয়েবের
+লেখা)। কিছু জমা পড়ে না। অনুমোদন: `{ "done": 2, "skipped": { "money": 1 } }` — ⛔ সার্ভার আবার একই নিয়মে দেখে
+(`BulkApproval`), ফোনের বাছাই বিশ্বাস করে না; টাকা নড়ার কাজ আর বেতন কখনো একসাথে যায় না। ⓘ পথ এক অংশের
+(`bulk-approve`) — দুই অংশের হলে `/approvals/{approval}/approve`-এ পড়ত।
+
 ---
 
 ## ৬ · সংস্করণ পরীক্ষা · টোকেন লাগে না

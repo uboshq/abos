@@ -595,7 +595,8 @@ final class PosService
         ], $this->vouchers->twoLineEntry(
             type: Voucher::PAYMENT,
             fromAccountId: $till->account_id,
-            toAccountId: StandardChart::find(StandardChart::RECEIVABLE)->id,
+            // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+            toAccountId: StandardChart::accountFor(StandardChart::RECEIVABLE)->id,
             amount: $amount,
         ));
 

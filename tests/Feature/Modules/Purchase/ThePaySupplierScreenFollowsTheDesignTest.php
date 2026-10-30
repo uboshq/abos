@@ -592,8 +592,11 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $bill = $this->bill('120000');
 
         $html = (string) $this->get(route('purchase.payment.create', ['purchase_bill_id' => $bill->id]))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/<input[^>]*name="amount"[^>]*value="1,20,000\.00"|<input[^>]*value="1,20,000\.00"[^>]*name="amount"/', $html,
-            '⛔ #৯: মোট টাকার ঘর লাখ-কমা ছাড়া ("120000") দেখায়');
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর লাখ-কমা দেখায় নিজেই (x-ui.field type="money"; vitest-এ মাপা), আর পাঠানো ঘর কাঁচা অঙ্ক
+        $this->assertMatchesRegularExpression('/<input[^>]*type="text"[^>]*data-money-shown="amount"[^>]*x-money-display="amount"/', $html,
+            '⛔ #৯: মোট টাকার ঘরে লাখ-কমার directive নেই');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="amount" value="120000(\.0+)?"/', $html,
+            '⛔ #৯: পাঠানো ঘরে কাঁচা অঙ্ক নেই — কমাসহ লেখা পাঠানো হত');
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="amount"[^>]*type="number"|<input[^>]*type="number"[^>]*name="amount"/', $html,
             '⛔ #৯: সংখ্যার ঘর কমা দেখাতে পারে না');
         // ⓘ তারিখ আর কোটির অঙ্ক ("1,23,45,678.90") ১৩৬৬-এ মেনু খোলা রেখেও না কেটে — ঘরের নিচের সীমা (ব্রাউজারে মাপা, ২২ অক্টোবর ২০২৬)

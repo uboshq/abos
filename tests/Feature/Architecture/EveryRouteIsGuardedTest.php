@@ -450,10 +450,13 @@ class EveryRouteIsGuardedTest extends TestCase
          * একটা করে চাবি দিতে হত।
          */
         'notifications.settings' => 'নিজের পছন্দ — কোন খবর পাবেন',
+        // ⓘ রেপোর নোট ছাড়া কিছু নেই — কোনো কোম্পানির তথ্য নয় (মালিক, ২৪ অক্টোবর ২০২৬: "এখন থেকেই v. দেওয়া হোক")
+        'release.notes' => 'নতুন কী এল — সংস্করণের নোট, সবার জন্য',
         'notifications.settings.update' => 'নিজের পছন্দ সংরক্ষণ',
 
         'dashboard' => 'হোম পর্দা — সংখ্যাগুলো নিজেরাই অনুমতি দেখে ছাঁকা হয় (DashboardRegistry)',
         'home.layout' => 'নিজের হোমের সাজ — কেবল নিজের users.home_layout ঘর বদলায় (request->user()), অন্য কারও নয়; ব্যবসার কোনো ডেটা নয় ([[HomeLayout]])',
+        'rail.layout' => 'নিজের বাঁ রেলের সাজ — কেবল নিজের users.nav_layout (request->user()); অন্যের মডিউল কোড ফেলা হয় (EveryModuleIsOnTheRailOrBehindMoreTest); ব্যবসার তথ্য নয়',
 
         /*
          * ⭐ নোটিশ — ২২ সেপ্টেম্বর ২০২৬, মালিকের কাজ।

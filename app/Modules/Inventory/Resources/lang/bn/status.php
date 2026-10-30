@@ -18,7 +18,7 @@ return [
     'qc_pending' => 'রায় বাকি',
     'qc_approved' => 'গৃহীত',
     'qc_quarantine' => 'কোয়ারেন্টাইন',
-    'qc_rejected' => 'বাতিল',
+    'qc_rejected' => 'মান-পরীক্ষায় বাতিল',
     'serial_in_stock' => 'গুদামে',
     'serial_sold' => 'গ্রাহকের কাছে',
     'serial_returned' => 'ফেরত এসেছে',

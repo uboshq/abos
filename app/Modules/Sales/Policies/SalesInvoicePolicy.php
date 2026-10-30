@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Policies;
 
+use App\Core\Engines\Approval\PaperSigners;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Sales\Models\SalesInvoice;
 
 /**
@@ -22,7 +24,25 @@ class SalesInvoicePolicy
 
     public function view(User $user, SalesInvoice $document): bool
     {
-        return $user->can('sales.invoice.view');
+        /*
+         * ⭐ এই বিলের সইকারীও — কেবল পড়েন (fe, ২৪ অক্টোবর ২০২৬; [[VoucherPolicy::view()]]-এর একই নিয়ম): যিনি এই বিলে সই দেন বা
+         * দিয়েছেন, আর যিনি এই বিলের টাকার কাগজে (কাউন্টারের জমার ভাউচার) সই দেন বা দিয়েছেন। ⛔ আগে সই হয়ে থেমে থাকা বিক্রির
+         * খবর সইকারীকে বিলে পাঠাত ([[HeldCounterSaleFinisher]]), আর বিল দেখার চাবি না থাকলে ৪০৩ — যে বিক্রিতে সই দিলেন সেটাই
+         * পড়তে পারতেন না। ⓘ অন্য বিল নয়, আর বদল/বাতিল নয়।
+         */
+        return $user->can('sales.invoice.view')
+            || PaperSigners::isSigner($user, $document)
+            || $this->signsItsMoney($user, $document);
+    }
+
+    /** এই বিলের টাকার কাগজের (বিলের বিপরীতে বসা ভাউচার) সইকারী কি না */
+    private function signsItsMoney(User $user, SalesInvoice $invoice): bool
+    {
+        return Voucher::acrossBranches()
+            ->where('against_type', SalesInvoice::drillSourceType())
+            ->where('against_id', $invoice->getKey())
+            ->get()
+            ->contains(fn (Voucher $voucher): bool => PaperSigners::isSigner($user, $voucher));
     }
 
     public function create(User $user): bool

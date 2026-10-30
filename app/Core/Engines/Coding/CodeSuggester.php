@@ -220,6 +220,14 @@ final class CodeSuggester
      */
     public function isFree(string $model, string $code): bool
     {
+        /*
+         * ⛔ মডেল নিজে যে কোড রেখে দেয়, সেটা খালি নয় — যেমন হিসাবের খাতে মান ছকের কোড, কোম্পানিতে এখনো না বসলেও
+         * ([[Account::isReservedCode()]]; fe, ২৩ অক্টোবর ২০২৬)। ⓘ লাইভে UB-র নতুন ব্যাংক এভাবেই ১১৩৫ আর ১১৫১ পেয়েছিল।
+         */
+        if (method_exists($model, 'isReservedCode') && $model::isReservedCode($code)) {
+            return false;
+        }
+
         $query = $model::query()->where('code', $code);
 
         if (in_array(SoftDeletes::class, class_uses_recursive($model), true)) {

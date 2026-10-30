@@ -186,6 +186,12 @@ class Account extends Model implements Drillable
         return in_array($type, [self::ASSET, self::EXPENSE], true) ? self::DEBIT : self::CREDIT;
     }
 
+    /** ⛔ মান ছকের কোড কেবল ছকের নিজের খাতের — নতুন কোড সাজানোয় খালি গোনা হয় না ([[CodeSuggester::isFree()]]) */
+    public static function isReservedCode(string $code): bool
+    {
+        return \App\Modules\Accounts\Services\StandardChart::isStandardCode($code);
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');

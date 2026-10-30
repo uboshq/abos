@@ -97,7 +97,7 @@ final class FinanceFiguresApiController extends Controller implements HasMiddlew
         $other = '0';
 
         foreach ($rows as $r) {
-            if (in_array($r['account']->code, [StandardChart::SALES, StandardChart::SALES_RETURN], true)) {
+            if (in_array($r['account']->code, StandardChart::NET_SALES, true)) {
                 $sales = bcadd($sales, (string) $r['now'], 4);
             } else {
                 $other = bcadd($other, (string) $r['now'], 4);

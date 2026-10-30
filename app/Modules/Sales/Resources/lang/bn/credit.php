@@ -34,8 +34,8 @@ return [
     'status' => 'অবস্থা',
     'requested_by' => 'অনুরোধ করেছেন',
     'decided_on' => 'সিদ্ধান্তের দিন',
-    'status_pending' => 'সইয়ের অপেক্ষায়',
+    'status_pending' => 'অনুমোদনের অপেক্ষায়',
     'status_approved' => 'অনুমোদিত',
-    'status_rejected' => 'নামঞ্জুর',
+    'status_rejected' => 'প্রত্যাখ্যাত',
     'status_cancelled' => 'বাতিল',
 ];
