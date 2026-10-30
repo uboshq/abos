@@ -58,5 +58,10 @@ final class ADeviceThemeReachesTheLookTest extends TestCase
             '⛔ অন্ধকার থিম: আলোর ব্লকে রূপের আলোর জমিন নেই।');
         $this->assertStringContainsString($name.':'.$dark[$name].';', $blocks[":root:root[data-theme='dark']"] ?? '',
             '⛔ অন্ধকার থিম: অন্ধকারের ব্লক নেই বা তাতে রূপের অন্ধকার জমিন নেই — "ফোনের মতো" অন্ধকার যন্ত্রে সাদা থাকত।');
+
+        // গ — অর্থের রং আর চার্টের রং রূপ ছোঁয় না (পরিকল্পনা §৩.১, §৩.৫); navy-র নিজের ফাইলে আজও ব্যাজের মান আছে, তাই দাবিটা ফাঁপা নয়
+        $this->assertArrayHasKey('--color-badge-pending-bg', $light, 'প্রস্তুতিটাই ভুল — navy ব্যাজের রং বলে না, দাবিটা কিছুই মাপত না।');
+        $this->assertDoesNotMatchRegularExpression('/--color-(badge|chart)-/', $sheet[1],
+            '⛔ অর্থের রং: রূপ আবার সবুজ/হলুদ/লাল/নীল বদলাচ্ছে — navy-তে "অপেক্ষা" আর "সতর্কতা" একই কমলা হত।');
     }
 }

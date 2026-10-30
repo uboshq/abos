@@ -210,7 +210,11 @@ final class LookRegistry
         $block = function (array $tokens): string {
             $css = '';
             foreach ($tokens as $name => $value) {
-                if (preg_match('/^--[a-z0-9-]+$/', (string) $name) === 1 && preg_match('/[<>{};\\\\]/', (string) $value) !== 1) {
+                // ⭐ অর্থের রং (`--color-badge-*`: সবুজ ঠিক · হলুদ অপেক্ষা · লাল এখনই · নীল তথ্য) আর চার্টের রং কোনো রূপ ছোঁয় না —
+                //   ড্যাশবোর্ডের পরিকল্পনা §৩.১, §৩.৫। ⛔ আগে navy অপেক্ষা আর সতর্কতা দুটোকেই একই কমলা করত, অর্থাৎ "হলুদ = অপেক্ষা" নিয়মটা
+                //   রূপের সাথে বদলাত; কোম্পানির নিজের স্কিনও বদলাতে পারত। মান আসে কেবল `tokens.css` থেকে, আলো আর অন্ধকার দুটোতে।
+                if (preg_match('/^--[a-z0-9-]+$/', (string) $name) === 1 && preg_match('/[<>{};\\\\]/', (string) $value) !== 1
+                    && ! str_starts_with((string) $name, '--color-badge-') && ! str_starts_with((string) $name, '--color-chart-')) {
                     $css .= $name.':'.$value.';';
                 }
             }
