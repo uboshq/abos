@@ -67,7 +67,9 @@
             </p>
         </div>
     @else
-        <div data-boxed data-flow-list class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⓘ `relative` — শেষ কলামের শিরোনামের পর্দা-পাঠকের লেখা (sr-only, absolute) এই বাক্সকে ধারক না পেয়ে বাইরে বসত আর ফোনে
+             পুরো পাতা পাশে সরত (৩৯০-এ ৪৪৩px, ৩০ অক্টোবর ২০২৬, দফা ২১); ধারক হলে বাক্সের নিজের স্ক্রলে আটকায় --}}
+        <div data-boxed data-flow-list class="relative overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <table class="ui-grid">
                 <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
                     <tr>

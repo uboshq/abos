@@ -101,13 +101,17 @@
                                 না বললে ভাঙে না — নিরাপদ দিকটা "নাম
                                 অক্ষত", কারণ ওটা দিয়েই সারিটা চেনা যায়।
                             --}}
+                            {{-- $loop->parent — ভেতরের লুপটা কলামের,
+                                 বাইরেরটা সারির, আর ক্রম নম্বর চাই
+                                 সারিরটাই --}}
+                            @php $value = $cell($row, $column, $loop->parent->index); @endphp
+                            {{-- ⓘ ফোনের কার্ডে ফাঁকা ঘর আঁকা হয় না — কেবল "পক্ষ", "ক্রেডিট" নাম আর পাশে কিছু নেই, প্রতিটা কার্ডে দুই-তিন লাইন
+                                 বাজে জায়গা (জাবেদার লাইন, ৩০ অক্টোবর ২০২৬, দফা ২১)। টেবিলে (md+) ঘরটা থাকে, নাহলে কলাম সরে যেত। --}}
                             <td data-label="{{ $column['label'] }}"
                                 @if ($column['wrap'] ?? false) data-wrap @endif
+                                @if (trim((string) $value) === '') data-empty @endif
                                 @class(['num' => $column['numeric']])>
-                                {{-- $loop->parent — ভেতরের লুপটা কলামের,
-                                     বাইরেরটা সারির, আর ক্রম নম্বর চাই
-                                     সারিরটাই --}}
-                                {{ $cell($row, $column, $loop->parent->index) }}
+                                {{ $value }}
                             </td>
                         @endforeach
                         {{-- ⭐ "দেখুন" — সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]);
@@ -147,7 +151,11 @@
                     @if ($totals !== [])
                         <tr>
                             @foreach ($normalised as $i => $column)
-                                <td @class(['num' => $column['numeric']])>
+                                {{-- ⓘ ফোনের কার্ডে নাম ছাড়া যোগের সারি কেবল দুইটা সংখ্যা — কোনটা ডেবিট বোঝা যেত না (দফা ২১) --}}
+                                @php $sum = $i > 0 ? (string) ($totals[$column['key']] ?? '') : null; @endphp
+                                <td @if ($sum !== null && $sum !== '') data-label="{{ $column['label'] }}" @endif
+                                    @if ($sum === '') data-empty @endif
+                                    @class(['num' => $column['numeric']])>
                                     @if ($i === 0)
                                         <span class="text-(--color-ink-muted)">{{ $totalsLabel ?? __('core.table.page_total') }}</span>
                                     @else

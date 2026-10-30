@@ -347,8 +347,11 @@
             @endif
 
             @if ($count !== null || $subtitle)
+                {{-- ⛔ `shrink-0` নয় — কিছু পাতা গোনার জায়গায় পুরো বাক্য পাঠায় ("কোন কাজে কে কত টাকা থেকে … · ৫টা নিয়ম চালু"), আর না-ভাঙা
+                     বাক্য ফোনে পাতাকেই পাশে ঠেলত (অনুমোদনের নিয়মের পাতা ৩৯০-এ ৪৪৩px চওড়া, ৩০ অক্টোবর ২০২৬, দফা ২১)। ⓘ সারিটা
+                     flex-wrap, তাই ছোট সংখ্যা জায়গা না পেলে আগে পরের লাইনে নামে, ভাঙে না। --}}
                 <span data-record-count
-                      class="tabular shrink-0 border-s border-(--color-border) ps-3 text-sm
+                      class="tabular min-w-0 border-s border-(--color-border) ps-3 text-sm
                              text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
             @endif
         @endif

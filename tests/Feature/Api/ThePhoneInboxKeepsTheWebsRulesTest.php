@@ -1,0 +1,339 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Api;
+
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Support\CompanyContext;
+use App\Http\Controllers\Api\AuthController;
+use App\Models\Approval;
+use App\Models\ApprovalDecision;
+use App\Models\ApprovalFlow;
+use App\Models\ApprovalFlowStep;
+use App\Models\ApprovalLimit;
+use App\Models\Company;
+use App\Models\User;
+use App\Modules\Approval\Services\ApprovalInbox;
+use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Purchase\Models\PurchaseOrder;
+use App\Modules\Supplier\Models\Supplier;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
+use Tests\TestCase;
+
+/**
+ * ⭐ অনুমোদন ভাগ ৩, দফা ২১ — অ্যাপের অংশ, সার্ভারের দিক (পরিকল্পনার পাতা ৭, সারি ২১; পাতা ৬-এর তিন ছবি):
+ * "অ্যাপে একই ট্যাব, একই নাম আর একই নিয়ম।"
+ *
+ * ⛔ আগে: ফোনের দরজা দিত একটাই তালিকা (`/approvals/pending`) — ট্যাব নেই, কাজের চিপ নেই, শেষ সময় নেই, ধাপ "২" (কয়টার মধ্যে,
+ * বলে না), মোট নেই, একসাথে অনুমোদন নেই; কাগজের বিস্তারিতে যাত্রাপথ আর সংযুক্তি নেই। নিয়মগুলো ছিল কেবল ওয়েবের ইনবক্সে।
+ *
+ * দাবি:
+ *   ২১চ — চার ট্যাব, ওয়েবের একই নাম আর একই গোনা; ট্যাব বদলালে সারিও বদলায়; বেতন কোনো ট্যাবে, সংখ্যায় বা মোটে নেই;
+ *   ২১ছ — কার্ডে শেষ সময় আর ধাপ ওয়েবের একই হিসাবের ([[ApprovalInbox]]), কাজের চিপ আর দেরির সংখ্যা, দুই মোট; টাকা নড়ার
+ *          কাজ একসাথে অনুমোদনের যোগ্য নয়; পুরনো অ্যাপের `pending` কার্ড বদলায়নি (একই ঘর, একই মান);
+ *   ২১জ — কাগজের পাতা: সারাংশ (টাকা কথায়, ধাপ, শেষ সময়), যাত্রাপথ (তৈরির পরের ধাপ, কে কী বললেন), সংযুক্তি;
+ *   ২১ঝ — সংযুক্তি খোলে কেবল সই-পাহারায় আর কেবল এই কাগজের — অন্য কাগজের ফাইলের নম্বর বসালে ৪০৪;
+ *   ২১ঞ — একসাথে অনুমোদন: আগে-দেখায় কোনগুলো যাবে, মোট, কোনগুলো বাদ আর ওয়েবের একই কারণ-লেখায়; অনুমোদনে সার্ভার আবার
+ *          দেখে — টাকা নড়ার কাজ আর বেতন কখনো যায় না, আগে-দেখায় কিছু জমা পড়ে না।
+ */
+final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Company $depot;
+
+    private User $signer;
+
+    private User $clerk;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $this->depot = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->depot->id, $this->depot->defaultBranch()?->id);
+        app()->setLocale('bn');
+
+        $this->signer = $this->member('দফা ২১-এর অনুমোদনকারী', ['approval.decide', 'approval.view']);
+        $this->clerk = $this->member('কেরানি', ['approval.view']);
+
+        ApprovalFlow::query()->where('module', 'purchase')->whereIn('action', ['order', 'bill'])->delete();
+        foreach (['order', 'bill'] as $action) {
+            $flow = ApprovalFlow::create(['module' => 'purchase', 'action' => $action]);
+            ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $this->signer->id]);
+        }
+        $payroll = ApprovalFlow::create(['module' => 'hr', 'action' => 'payroll']);
+        ApprovalFlowStep::create(['approval_flow_id' => $payroll->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $this->signer->id]);
+        ApprovalEngine::flowsChanged();
+    }
+
+    protected function tearDown(): void
+    {
+        CompanyContext::clear();
+        parent::tearDown();
+    }
+
+    public function test_dofa21f_four_tabs_with_the_webs_names_and_counts(): void
+    {
+        $this->paper('PO-21-0001', 'order', '1000');
+        $this->paper('PO-21-0002', 'order', '2000');
+        $this->payroll();
+        $sent = $this->paper('PO-21-0003', 'order', '3000', by: $this->signer);
+        $done = $this->paper('PO-21-0004', 'order', '4000');
+        ApprovalDecision::create(['approval_id' => $done->id, 'level' => 1, 'user_id' => $this->signer->id, 'decision' => ApprovalDecision::APPROVED, 'decided_at' => now()]);
+        $done->forceFill(['status' => Approval::APPROVED, 'decided_at' => now()])->save();
+
+        $inbox = $this->inbox()->assertOk();
+
+        $this->assertSame(ApprovalInbox::TABS, array_column($inbox->json('tabs'), 'key'), '⛔ দফা ২১: ফোনের ট্যাব ওয়েবের চারটা নয়, বা ক্রম আলাদা।');
+        foreach ($inbox->json('tabs') as $tab) {
+            $this->assertSame(__('approval::field.tab_'.$tab['key']), $tab['label'], "⛔ দফা ২১: \"{$tab['key']}\" ট্যাবের নাম ওয়েবের নাম নয়।");
+        }
+        $this->assertSame(['waiting' => 2, 'sent' => 1, 'done' => 1, 'behalf' => 0], array_column($inbox->json('tabs'), 'count', 'key'),
+            '⛔ দফা ২১: ট্যাবের গোনা ভুল — বেতন গোনায় ঢুকেছে, বা অন্য ট্যাবের কাগজ।');
+        $this->assertSame(['PO-21-0001', 'PO-21-0002'], $this->numbers($inbox), '⛔ দফা ২১: অপেক্ষার ট্যাবে বেতন বা অন্য ট্যাবের কাগজ।');
+        $this->assertSame('3000.0000', $inbox->json('totals.amount'), '⛔ দফা ২১: অপেক্ষার মোটে বেতনের ৮,৭৫,০০০ ঢুকেছে।');
+
+        $this->assertSame([$sent->public_id], array_column($this->inbox('?tab=sent')->assertOk()->json('rows'), 'id'), '⛔ দফা ২১: "আমার পাঠানো" ট্যাব নিজের অনুরোধ দেখায় না।');
+        $doneRows = $this->inbox('?tab=done')->assertOk()->json('rows');
+        $this->assertSame([$done->public_id], array_column($doneRows, 'id'), '⛔ দফা ২১: "আমি অনুমোদন দিয়েছি" ট্যাব নিজের দেওয়া অনুমোদন দেখায় না।');
+        $this->assertSame(__('approval::status.approved'), $doneRows[0]['statusLabel'], '⛔ দফা ২১: শেষ হওয়া কাগজ নিজের অবস্থা বলে না।');
+        $this->inbox('?tab=elsewhere')->assertUnprocessable();
+    }
+
+    public function test_dofa21g_a_card_carries_the_webs_deadline_step_chips_and_totals(): void
+    {
+        $late = $this->paper('PO-21-0011', 'order', '1500.50', due: now()->subHours(3));
+        $this->paper('PO-21-0012', 'order', '2499.50', due: now()->addDays(3));
+        $bill = $this->paper('PO-21-0013', 'bill', '7000');
+
+        $inbox = $this->inbox()->assertOk();
+        $rows = collect($inbox->json('rows'))->keyBy('documentNo');
+
+        $web = app(ApprovalInbox::class);
+        $this->assertSame($web->deadlineOf($late->fresh()), $rows['PO-21-0011']['deadline'], '⛔ দফা ২১: কার্ডের শেষ সময় ওয়েবের হিসাব নয়।');
+        $this->assertSame('danger', $rows['PO-21-0011']['deadline']['tone'] ?? null, '⛔ দফা ২১: পেরোনো শেষ সময় লাল নয়।');
+        $this->assertNull($rows['PO-21-0013']['deadline'], '⛔ দফা ২১: ঘড়ি নেই এমন কাগজে শেষ সময় বানানো।');
+        $this->assertSame(['at' => 1, 'of' => 1, 'name' => null], $rows['PO-21-0011']['step'], '⛔ দফা ২১: কার্ডে "ধাপ ১ / ১" নেই — কয়টার মধ্যে বলে না।');
+        $this->assertSame('PO-21-0011', $this->numbers($inbox)[0], '⛔ দফা ২১: ফোনে "দেরি আগে" সাজানো নয় — পেরোনোটা প্রথমে আসার কথা।');
+
+        $this->assertTrue($rows['PO-21-0011']['bulkable'], '⛔ দফা ২১: সাধারণ কাগজ একসাথে অনুমোদনের যোগ্য নয়।');
+        $this->assertFalse($rows['PO-21-0013']['bulkable'], '⛔ দফা ২১: টাকা নড়ার কাজ (ক্রয় বিল) একসাথে অনুমোদনে বাছা যায়।');
+        $this->assertSame(1, $inbox->json('lateCount'), '⛔ দফা ২১: দেরির সংখ্যা ভুল।');
+        $this->assertSame([['key' => 'purchase', 'count' => 3]], array_map(fn ($m) => ['key' => $m['key'], 'count' => $m['count']], $inbox->json('modules')),
+            '⛔ দফা ২১: কাজের চিপ নেই বা তার গোনা ভুল।');
+        $this->assertSame(['pageCount' => 3, 'pageAmount' => '11000.0000', 'count' => 3, 'amount' => '11000.0000'], $inbox->json('totals'),
+            '⛔ দফা ২১: দুই মোট ভুল — এই পাতার আর সবগুলোর।');
+
+        $only = $this->inbox('?late=1')->assertOk();
+        $this->assertSame(['PO-21-0011'], $this->numbers($only), '⛔ দফা ২১: "দেরি" বাছলে কেবল দেরিরটা আসে না।');
+        $this->assertSame('1500.5000', $only->json('totals.amount'), '⛔ দফা ২১: "দেরি" বাছার পরে মোট পুরো তালিকার।');
+
+        // ⓘ পুরনো অ্যাপের কার্ড — একই ঘর, একই মান; নতুন ঘর কেবল যোগ হয়েছে
+        $this->as($this->signer);
+        $old = collect($this->getJson('/api/v1/approvals/pending')->assertOk()->json('rows'))->keyBy('documentNo');
+        foreach ($old as $no => $card) {
+            $this->assertSame($card, array_intersect_key($rows[$no], $card), "⛔ দফা ২১: পুরনো অ্যাপের কার্ড বদলেছে ({$no}) — এক কাগজ দুই অ্যাপে দুই রকম।");
+        }
+    }
+
+    public function test_dofa21g2_the_whole_list_total_counts_every_page_not_just_this_one(): void
+    {
+        // ⓘ এক পাতায় ২৫ — ২৬টা কাগজে দ্বিতীয় পাতা হয়, তখন "এই পাতার" আর "সবগুলোর" মোট আলাদা হতেই হবে
+        foreach (range(1, 26) as $n) {
+            $this->paper(sprintf('PO-21-1%03d', $n), 'order', '100');
+        }
+
+        $first = $this->inbox()->assertOk();
+        $this->assertSame(2, $first->json('nextPage'), '⛔ দফা ২১: ২৬টা কাগজে দ্বিতীয় পাতা নেই।');
+        $this->assertSame(['pageCount' => 25, 'pageAmount' => '2500.0000', 'count' => 26, 'amount' => '2600.0000'], $first->json('totals'),
+            '⛔ দফা ২১: "সবগুলোর" মোট কেবল এই পাতার — দ্বিতীয় পাতার কাগজ গোনায় নেই।');
+    }
+
+    public function test_dofa21h_the_paper_page_has_the_summary_journey_and_attachments(): void
+    {
+        Storage::fake('local');
+        $paper = $this->paper('PO-21-0021', 'order', '125000', due: now()->addHours(5));
+        $this->attach($paper, 'bank-advice.txt');
+
+        $this->as($this->signer);
+        $sheet = $this->getJson('/api/v1/approvals/'.$paper->public_id.'/sheet')->assertOk();
+
+        $this->assertSame(\App\Core\Support\AmountInWords::of('125000'), $sheet->json('summary.amountWords'), '⛔ দফা ২১: কাগজের পাতায় টাকা কথায় নেই।');
+        $this->assertSame(['at' => 1, 'of' => 1, 'name' => null], $sheet->json('summary.step'), '⛔ দফা ২১: কাগজের পাতায় ধাপ নেই।');
+        $this->assertSame(app(ApprovalInbox::class)->deadlineOf($paper->fresh()), $sheet->json('summary.deadline'), '⛔ দফা ২১: কাগজের পাতার শেষ সময় ওয়েবের হিসাব নয়।');
+        $this->assertSame('কেরানি', $sheet->json('summary.requesterName'), '⛔ দফা ২১: কাগজের পাতা বলে না কে চেয়েছেন।');
+
+        $journey = $sheet->json('journey');
+        $this->assertSame([1], array_column($journey, 'level'), '⛔ দফা ২১: যাত্রাপথে ধাপগুলো নেই।');
+        $this->assertSame('now', $journey[0]['state'], '⛔ দফা ২১: যাত্রাপথ বলে না কাগজ এখন কোন ধাপে।');
+
+        $this->assertSame(['bank-advice.txt'], array_column($sheet->json('attachments'), 'name'), '⛔ দফা ২১: কাগজের পাতায় সংযুক্তি নেই।');
+    }
+
+    public function test_dofa21i_an_attachment_opens_only_for_its_own_paper_and_its_signer(): void
+    {
+        Storage::fake('local');
+        $paper = $this->paper('PO-21-0031', 'order', '5000');
+        $other = $this->paper('PO-21-0032', 'order', '6000');
+        $mine = $this->attach($paper, 'slip.txt', 'the slip');
+        $theirs = $this->attach($other, 'other.txt', 'someone else');
+
+        $this->as($this->signer);
+        $got = $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$mine)->assertOk();
+        $this->assertSame('the slip', $got->streamedContent(), '⛔ দফা ২১: সংযুক্তি খোলে না।');
+
+        $this->assertSame(404, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$theirs)->baseResponse->getStatusCode(),
+            '⛔ দফা ২১: নিজের কাগজের নম্বর দিয়ে অন্য কাগজের সংযুক্তি নামানো যায়।');
+
+        $this->as($this->giveKeys($this->member('অন্য কেউ', []), ['approval.decide']));
+        $this->assertSame(403, $this->get('/api/v1/approvals/'.$paper->public_id.'/attachments/'.$mine)->baseResponse->getStatusCode(),
+            '⛔ দফা ২১: যিনি এই কাগজে সিদ্ধান্ত দেন না, তিনিও সংযুক্তি নামাতে পারেন।');
+    }
+
+    public function test_dofa21j_bulk_approval_shows_first_and_the_server_checks_again(): void
+    {
+        $a = $this->paper('PO-21-0041', 'order', '1000');
+        $b = $this->paper('PO-21-0042', 'order', '2500');
+        $bill = $this->paper('PO-21-0043', 'bill', '9000');
+        $payroll = $this->payroll();
+        $ids = [$a->public_id, $b->public_id, $bill->public_id, $payroll->public_id];
+
+        // ⓘ সীমা ঠিক করা না থাকলে একসাথে অনুমোদন কিছুই নেয় না ("no_limit" — [[BulkApproval::review()]]-এর কড়া দিক)
+        $role = Role::query()->create(['name' => 'দফা ২১-এর সীমা', 'guard_name' => 'web', 'company_id' => $this->depot->id]);
+        CompanyContext::forCompany($this->depot->id, fn () => $this->signer->assignRole($role));
+        ApprovalLimit::query()->create(['company_id' => $this->depot->id, 'role_id' => $role->id, 'max_amount' => '100000']);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->as($this->signer->fresh());
+        $preview = $this->postJson('/api/v1/approvals/bulk-preview', ['ids' => $ids])->assertOk();
+
+        $this->assertSame([$a->public_id, $b->public_id], array_column($preview->json('sign'), 'id'), '⛔ দফা ২১: আগে-দেখায় "যাবে" তালিকা ভুল।');
+        $this->assertSame('3500.0000', $preview->json('total'), '⛔ দফা ২১: আগে-দেখার মোট ভুল।');
+        $this->assertSame([['id' => $bill->public_id, 'why' => 'money', 'reason' => __('approval::message.bulk_why_money')]],
+            array_map(fn ($s) => ['id' => $s['id'], 'why' => $s['why'], 'reason' => $s['reason']], $preview->json('skip')),
+            '⛔ দফা ২১: টাকা নড়ার কাজ বাদ পড়ে না, বা কারণ ওয়েবের লেখা নয়; বেতন আগে-দেখায় এসেছে।');
+        $this->assertSame(Approval::PENDING, $a->fresh()?->status, '⛔ দফা ২১: আগে-দেখাতেই অনুমোদন জমা পড়েছে।');
+
+        $done = $this->postJson('/api/v1/approvals/bulk-approve', ['ids' => $ids, 'remarks' => 'ঠিক আছে'])->assertOk();
+        $this->assertSame(2, $done->json('done'), '⛔ দফা ২১: একসাথে অনুমোদনে দুইটা যায়নি।');
+        $this->assertSame(['money' => 1], $done->json('skipped'), '⛔ দফা ২১: সার্ভার আবার দেখে না — টাকা নড়ার কাজ বাদের হিসাবে নেই।');
+        $this->assertSame([Approval::APPROVED, Approval::APPROVED, Approval::PENDING, Approval::PENDING],
+            [$a->fresh()?->status, $b->fresh()?->status, $bill->fresh()?->status, Approval::query()->withoutGlobalScopes()->whereKey($payroll->id)->value('status')],
+            '⛔ দফা ২১: একসাথে অনুমোদনে টাকা নড়ার কাজ বা বেতন পাশ হয়েছে।');
+    }
+
+    private function member(string $name, array $keys): User
+    {
+        $user = User::factory()->create(['name' => $name, 'is_active' => true, 'locale' => 'bn', 'current_company_id' => $this->depot->id]);
+        $user->companies()->attach($this->depot->id, ['is_active' => true]);
+
+        return $this->giveKeys($user, $keys);
+    }
+
+    private function giveKeys(User $user, array $keys): User
+    {
+        CompanyContext::forCompany($this->depot->id, fn () => $user->givePermissionTo(array_map(fn ($k) => Permission::findOrCreate($k, 'web'), $keys)));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
+    }
+
+    private function paper(string $no, string $action, string $amount, ?User $by = null, $due = null): Approval
+    {
+        $po = PurchaseOrder::create([
+            'company_id' => $this->depot->id,
+            'branch_id' => $this->depot->defaultBranch()?->id,
+            'document_no' => $no,
+            'supplier_id' => Supplier::query()->value('id'),
+            'trx_date' => now()->toDateString(),
+            'total' => $amount,
+            'narration' => 'দফা ২১-এর কাগজ',
+            'created_by' => ($by ?? $this->clerk)->id,
+        ]);
+
+        return Approval::create([
+            'company_id' => $this->depot->id,
+            'approvable_type' => PurchaseOrder::class,
+            'approvable_id' => $po->id,
+            'module' => 'purchase',
+            'action' => $action,
+            'amount' => $amount,
+            'status' => Approval::PENDING,
+            'current_level' => 1,
+            'requested_by' => ($by ?? $this->clerk)->id,
+            'requested_at' => now()->subHours(6),
+            'due_at' => $due,
+        ]);
+    }
+
+    private function payroll(): Approval
+    {
+        $run = PayrollRun::create([
+            'company_id' => $this->depot->id,
+            'document_no' => 'PRL-21-0001',
+            'month' => now()->format('Y-m'),
+            'trx_date' => now()->toDateString(),
+            'gross_total' => '900000',
+            'deduction_total' => '25000',
+            'net_total' => '875000',
+            'employee_count' => 12,
+            'created_by' => $this->clerk->id,
+        ]);
+
+        return Approval::create([
+            'company_id' => $this->depot->id,
+            'approvable_type' => PayrollRun::class,
+            'approvable_id' => $run->id,
+            'module' => 'hr',
+            'action' => 'payroll',
+            'amount' => '875000',
+            'status' => Approval::PENDING,
+            'current_level' => 1,
+            'requested_by' => $this->clerk->id,
+            'requested_at' => now()->subDays(2),
+            'due_at' => now()->subDay(),
+        ]);
+    }
+
+    private function attach(Approval $approval, string $name, string $content = 'a slip'): int
+    {
+        return (int) app(AttachmentEngine::class)->store(
+            file: UploadedFile::fake()->createWithContent($name, $content),
+            module: 'purchase',
+            entity: PurchaseOrder::drillSourceType(),
+            entityId: (int) $approval->approvable_id,
+            userId: $this->clerk->id,
+        )->id;
+    }
+
+    private function as(User $user): void
+    {
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($user, [AuthController::APP]);
+    }
+
+    private function inbox(string $query = ''): TestResponse
+    {
+        $this->as($this->signer);
+
+        return $this->getJson('/api/v1/approvals/inbox'.$query);
+    }
+
+    /** @return list<string|null> */
+    private function numbers(TestResponse $response): array
+    {
+        return array_column($response->json('rows'), 'documentNo');
+    }
+}
