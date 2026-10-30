@@ -191,6 +191,39 @@ final class LookRegistry
     }
 
     /**
+     * ⭐ রূপের রং `<head>`-এর একটা `<style>`-এ — html-এর inline style-এ নয় (ড্যাশবোর্ডের পরিকল্পনা §৭, সমস্যা ১; ৩০ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে: inline style সব স্টাইলশিটকে হারায়। "ফোনের মতো" (`system`) বাছলে সার্ভার আলোর মানগুলো inline বসাত, তারপর যন্ত্র
+     * অন্ধকারে গেলে [[theme.js]] `data-theme="dark"` বসাত — কিন্তু inline-এর সাদা জমিন, কালো লেখা, মেনুর রং `tokens.css`-এর
+     * অন্ধকার মানকে হারিয়ে দিত। পাতা প্রায় পুরো সাদা থাকত, কেবল কয়েকটা চিপ গাঢ় হত (পরিকল্পনার ছবি ৪)।
+     *
+     * ⭐ এখন দুই ব্লক, `data-theme` ধরে: `:root:root:not([data-theme='dark'])` আলোর, `:root:root[data-theme='dark']` অন্ধকারের
+     * (রূপের আলো আর অন্ধকার মিলিয়ে — [[tokens()]]-এর একই নিয়ম)। ⓘ `:root:root` (০,৩,০) — `tokens.css`-এর
+     * `:root[data-theme='dark']` (০,২,০)-কে জেতে, আর `:not`/`[…]` ঠিক একটা থিমে খাটে, তাই আলোর মান অন্ধকারে আর ঢোকে না।
+     *
+     * ⛔ মান স্টাইলশিটের ভেতরে যায়, অ্যাট্রিবিউটে নয় — Blade-এর `{{ }}` এখানে বাঁচায় না। কোম্পানির নিজের স্কিনের মান মানুষ লেখে,
+     * তাই নাম `--a-z0-9-` ছাড়া কিছু হলে, বা মানে `<`, `>`, `{`, `}`, `;`, `\` থাকলে সেই ঘর ফেলা হয় (একটা ঘর হারানো ভালো,
+     * গোটা পাতায় অন্যের লেখা CSS বা `</style>` বসানোর চেয়ে)।
+     */
+    public static function sheetForUser(?string $chosen, string $theme = 'light'): string
+    {
+        $block = function (array $tokens): string {
+            $css = '';
+            foreach ($tokens as $name => $value) {
+                if (preg_match('/^--[a-z0-9-]+$/', (string) $name) === 1 && preg_match('/[<>{};\\\\]/', (string) $value) !== 1) {
+                    $css .= $name.':'.$value.';';
+                }
+            }
+
+            return $css;
+        };
+
+        // ⓘ দুই ব্লক সব থিমেই — html-এর `data-theme` (আলো, অন্ধকার, বা যন্ত্র ধরে [[theme.js]]-এর বসানো) ঠিক একটা বাছে
+        return ":root:root:not([data-theme='dark']){".$block(self::forUser($chosen, 'light')).'}'
+            .":root:root[data-theme='dark']{".$block(self::forUser($chosen, 'dark')).'}';
+    }
+
+    /**
      * খোলসটা কোন কোড-রূপের — বাছাইটা স্কিন হোক বা কোড-রূপ।
      *
      * ── কেন এটা `Ui::clean()` নয় ────────────────────────────────────
