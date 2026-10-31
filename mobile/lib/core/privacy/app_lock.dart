@@ -171,7 +171,7 @@ class _AppLockGateState extends State<AppLockGate> {
                           label: const Text('খুলুন'),
                         ),
                         if (widget.onSignOut != null)
-                          TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),
+                          TextButton(onPressed: widget.onSignOut, child: const Text('লগআউট')),
                       ],
                     ),
                   ),

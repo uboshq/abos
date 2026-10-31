@@ -174,7 +174,7 @@ void main() {
         expect(cleared[key], '—', reason: '$key survived a sign-out');
       }
       expect(cleared['widget_company'], isEmpty);
-      expect(cleared['widget_as_of'], 'সাইন আউট করা হয়েছে');
+      expect(cleared['widget_as_of'], 'লগআউট করা হয়েছে');
     });
   });
 
@@ -238,7 +238,7 @@ void main() {
 
       expect(cleared['approvals_count'], '—');
       expect(cleared['approvals_empty'], isEmpty);
-      expect(cleared['approvals_as_of'], 'সাইন আউট করা হয়েছে');
+      expect(cleared['approvals_as_of'], 'লগআউট করা হয়েছে');
     });
   });
 

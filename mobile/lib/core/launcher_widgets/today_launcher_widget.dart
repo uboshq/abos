@@ -96,7 +96,7 @@ class TodayLauncherWidget {
   /// Wipes the figures on sign-out, so a home screen never shows one person's
   /// cash in hand after they have signed out, possibly to a different person
   /// at a different company on the same phone.
-  static Future<void> clear() => _blank('সাইন আউট করা হয়েছে');
+  static Future<void> clear() => _blank('লগআউট করা হয়েছে');
 
   /// Says the figures are not for this account, rather than that nobody is
   /// signed in. Both look the same on a launcher, a row of dashes, and they
