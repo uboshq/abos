@@ -47,4 +47,20 @@ return [
     'closing_kind_reversal' => 'বছর আবার খোলা — সমাপনী উল্টানো',
     'closing_year' => 'অর্থবছর',
     'closing_branch' => 'শাখা',
+
+    // ⭐ তালিকার ছাঁকনি ([[VoucherListFilters]]; মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬) — অবস্থা তালিকার মোটের দলের নামে
+    'filter' => [
+        'all' => 'সব',
+        'account' => 'খাত',
+        'state' => 'অবস্থা',
+        'state_counted' => 'পোস্ট হয়েছে',
+        'state_pending' => 'অপেক্ষায়',
+        'state_draft' => 'খসড়া',
+        'state_rejected' => 'ফেরত দেওয়া',
+        'state_cancelled' => 'বাতিল',
+        'min' => 'টাকা থেকে',
+        'max' => 'টাকা পর্যন্ত',
+        'by' => 'কে বানালেন',
+        'branch' => 'শাখা',
+    ],
 ];

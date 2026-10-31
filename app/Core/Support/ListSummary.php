@@ -207,6 +207,61 @@ final class ListSummary
     }
 
     /**
+     * ⭐ তালিকাকে একটা দলে ছাঁকা — "অবস্থা" ছাঁকনি ([[of()]]-এর একই দল, একই সই-সেবা; fe, ২৪ অক্টোবর ২০২৬: ভাউচারের তালিকার ছাঁকনি)।
+     *
+     * ⓘ যে status সরাসরি দলে বসে, সেটা `whereIn`; যে status সই-সেবা ভাগ করে ([[CLASSIFY]]), তার সারিগুলো [[of()]]-এর মতোই CHUNK করে
+     * তুলে সেবাকে দেওয়া হয়, আর এই দলের আইডিগুলো `whereIn`। ⛔ দুই জায়গায় আলাদা নিয়ম হলে "অপেক্ষায়" ছাঁকা তালিকা আর মোটের
+     * "অপেক্ষায়" দুই সংখ্যা বলত। দল চুক্তির বাইরে হলে থামে।
+     *
+     * @throws LogicException
+     */
+    public static function onlyGroup(EloquentBuilder $query, SummaryShape $shape, string $group): void
+    {
+        self::assertShape($shape);
+
+        if (! in_array($group, self::GROUPS, true)) {
+            throw new LogicException("⛔ তালিকার ছাঁকনি: দল '{$group}' চুক্তিতে নেই।");
+        }
+
+        $model = $query->getModel();
+        $table = $model->getTable();
+        $keyName = $model->getKeyName();
+        $direct = array_keys(array_filter($shape->groups, fn (string $g) => $g === $group));
+        $classify = array_keys(array_filter($shape->groups, fn (string $g) => $g === self::CLASSIFY));
+        $ids = [];
+
+        if ($classify !== []) {
+            /** @var ClassifiesDrafts $classifier */
+            $classifier = app((string) $shape->classifier);
+
+            if (in_array($group, $classifier->groups(), true)) {
+                $candidates = (clone $query)->toBase()->reorder()->whereIn($table.'.'.$shape->status, $classify)
+                    ->orderBy($table.'.'.$keyName)->pluck($table.'.'.$keyName);
+
+                foreach ($candidates->chunk(self::CHUNK) as $chunk) {
+                    // ⓘ আইডিগুলো তালিকার নিজের ছাঁকা কোয়েরি থেকে — দেয়াল সেখানে বসানো; এখানে কেবল সারিগুলো তোলা ([[classified()]]-এর মতো)
+                    $standing = $classifier->standing($model->newQueryWithoutScopes()->whereKey($chunk->all())->get());
+
+                    foreach ($chunk as $id) {
+                        if (($standing[$id] ?? null) === $group) {
+                            $ids[] = (int) $id;
+                        }
+                    }
+                }
+            }
+        }
+
+        $query->where(function (EloquentBuilder $q) use ($table, $keyName, $shape, $direct, $ids): void {
+            // ⓘ কিছুই না মিললে শূন্য সারি — খালি `whereIn` সেটাই করে
+            $q->whereIn($table.'.'.$shape->status, $direct);
+
+            if ($ids !== []) {
+                $q->orWhereIn($table.'.'.$keyName, $ids);
+            }
+        });
+    }
+
+    /**
      * @param  array{count: int, total: string}  $sum
      * @return array{count: int, total: string}
      */

@@ -41,4 +41,19 @@ return [
     'closing_kind_reversal' => 'Year reopened: the closing reversed',
     'closing_year' => 'Financial year',
     'closing_branch' => 'Branch',
+
+    'filter' => [
+        'all' => 'all',
+        'account' => 'Account',
+        'state' => 'Status',
+        'state_counted' => 'Posted',
+        'state_pending' => 'Awaiting signature',
+        'state_draft' => 'Draft',
+        'state_rejected' => 'Returned',
+        'state_cancelled' => 'Cancelled',
+        'min' => 'Amount from',
+        'max' => 'Amount to',
+        'by' => 'Made by',
+        'branch' => 'Branch',
+    ],
 ];
