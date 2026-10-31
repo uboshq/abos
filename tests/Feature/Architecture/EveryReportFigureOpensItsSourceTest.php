@@ -26,7 +26,8 @@ final class EveryReportFigureOpensItsSourceTest extends TestCase
 {
     public const REPORT_CEILING = 134;
 
-    public const COLUMN_CEILING = 452;
+    // ⓘ ৪৫২ → ৪৫৭ (fe, ৩১ অক্টোবর ২০২৬): main-এর নিট-বিক্রির পাঁচটা কলাম, দাবি লেখার পরে এসেছে (KNOWN-এ বিক্রির চার রিপোর্ট) — নতুন দেনা নয়
+    public const COLUMN_CEILING = 457;
 
     /**
      * আজও drill ছাড়া টাকার কলাম — রিপোর্ট => [কতগুলো, মালিক]। ⓘ কেবল ছোট হবে।
