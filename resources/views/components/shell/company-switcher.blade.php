@@ -108,7 +108,7 @@
             @if ($branchLabel)
                 <span data-shell-branch class="mt-0.5 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 text-2xs font-semibold"
                       style="background: var(--color-topbar-pill-bg); border: 1px solid var(--color-topbar-pill-border);">
-                    <span class="size-1.5 rounded-full" style="background: currentColor; opacity: .8;" aria-hidden="true"></span>{{ $branchLabel }}
+                    <span class="size-1.5 rounded-full" style="background: currentColor; opacity: .8;" aria-hidden="true"></span><span data-shell-branch-name class="truncate">{{ $branchLabel }}</span>
                 </span>
             @endif
         </span>

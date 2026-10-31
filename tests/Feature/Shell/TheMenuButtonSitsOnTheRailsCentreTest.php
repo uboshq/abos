@@ -75,8 +75,11 @@ final class TheMenuButtonSitsOnTheRailsCentreTest extends TestCase
         $this->assertContains('w-full', $tileClasses, '⛔ রেলের টাইল কলাম জোড়া নয়।');
         $this->assertContains('justify-center', $tileClasses, '⛔ রেলের টাইল মাঝখানে নয়।');
 
-        // ── বোতাম ──
-        $button = $this->between($bar[2], '<button', '</button>');
+        // ── বোতাম ── ⓘ ১ নভেম্বর ২০২৬ থেকে রেলের ঘরে ⊞, আর "≡" ABOS লেখার পরে (মালিকের দেখানো NEXUS-এর বার) — মাপ আর কাজ একই
+        $this->assertStringContainsString('data-module-launcher', $this->between($bar[2], '<div data-menu-cell', '</div>'),
+            '⛔ রেলের ঘরে ⊞ নেই।');
+        $this->assertSame(1, preg_match('/<button\b(?:(?!<\/button>).)*?data-menu-toggle.*?<\/button>/s', $bar[2], $toggle), '⛔ বারে "≡" নেই।');
+        $button = $toggle[0];
         foreach (['size-[40px]', 'rounded-full', 'focus-visible:outline-2', 'hover:bg-(--color-topbar-hover)'] as $class) {
             $this->assertStringContainsString($class, $button, "⛔ \"≡\" বোতামে {$class} নেই।");
         }

@@ -190,14 +190,14 @@
            title="{{ $brandName }}"
            @unless ($brandLogo) aria-label="{{ $brandName }}" @endunless>
             @if ($brandLogo)
-                <span class="flex items-center justify-center" style="width: 40px; height: 40px; border-radius: 10px; background: var(--color-company-logo-plate); padding: 3px;">
+                <span class="flex size-10 items-center justify-center rounded-[10px] p-[3px]" style="background: var(--color-company-logo-plate)">
                     <img src="{{ $brandLogo }}" alt="{{ $brandName }}" data-company-logo
                          style="max-width: 34px; max-height: 34px; object-fit: contain;">
                 </span>
             @else
                 <span data-company-initials aria-hidden="true"
-                      class="grid shrink-0 place-items-center text-[13px] font-bold leading-none" 
-                      style="width: 40px; height: 40px; border-radius: 10px; background: var(--color-company-mark-{{ $brandTone }}); color: var(--color-company-mark-ink);">{{ $brandInitials }}</span>
+                      class="grid size-10 shrink-0 place-items-center rounded-[10px] text-[13px] font-bold leading-none"
+                      style="background: var(--color-company-mark-{{ $brandTone }}); color: var(--color-company-mark-ink)">{{ $brandInitials }}</span>
             @endif
         </a>
 

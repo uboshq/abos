@@ -263,15 +263,16 @@ final class TheStockValueOnTheHomeIsTheBooksTest extends TestCase
     /** @return array{label: string, value: string, hint: string, href: string} */
     private function tile(DOMXPath $page): array
     {
-        $tiles = $page->query('//*[@data-money-position]//*[@data-home-stock]');
-        $this->assertSame(1, $tiles->length, '⛔ "মজুদের মূল্য" টাকার বাক্সে নেই, বা দুইবার।');
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে ঘরটা মাথার সূচক-কার্ডের সারিতে (মালিকের অনুমোদিত নমুনা) — একই উৎস, একই চাবি, একবারই
+        $tiles = $page->query('//*[@data-kpis]//*[@data-home-stock]');
+        $this->assertSame(1, $tiles->length, '⛔ "মজুদের মূল্য" সূচক-কার্ডে নেই, বা দুইবার।');
         $tile = $tiles->item(0);
         $text = fn (string $path) => html_entity_decode(trim($page->query($path, $tile)->item(0)?->textContent ?? ''));
 
         return [
-            'label' => $text('.//p[1]'),
-            'value' => $text('.//*[@data-money-tile-value]'),
-            'hint' => $text('.//*[@data-money-tile-hint]'),
+            'label' => $text('.//*[@data-kpi-label]'),
+            'value' => $text('.//*[@data-kpi-value]'),
+            'hint' => $text('.//*[@data-kpi-hint]'),
             'href' => $tile instanceof \DOMElement && $tile->tagName === 'a' ? $tile->getAttribute('href') : '',
         ];
     }

@@ -321,8 +321,8 @@
                                   shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)"
                            style="border-inline-start: 4px solid var(--color-pal-{{ $tone }})"
                            @if ($widget->definition) title="{{ $widget->definition }}" @endif>
-                            <span class="block truncate text-xs font-semibold text-(--color-ink-muted)" title="{{ $widget->label }}">{{ $widget->label }}</span>
-                            <span @class([
+                            <span data-kpi-label class="block truncate text-xs font-semibold text-(--color-ink-muted)" title="{{ $widget->label }}">{{ $widget->label }}</span>
+                            <span data-kpi-value @class([
                                 'hm-kpi-value tabular block whitespace-nowrap font-bold',
                                 'text-lg' => mb_strlen($widget->value) <= 12,
                                 'text-base' => mb_strlen($widget->value) > 12 && mb_strlen($widget->value) <= 14,
@@ -339,7 +339,7 @@
                                             'text-(--color-danger)' => str_starts_with($widget->delta, '-'),
                                         ])>{{ str_starts_with($widget->delta, '-') ? '▼' : '▲' }} {{ ltrim($widget->delta, '+-') }}</span>
                                     @endif
-                                    {{ $widget->hint }}
+                                    <span data-kpi-hint>{{ $widget->hint }}</span>
                                 </span>
                             @endif
                             @if (count($spark) > 1 && $peak > $floor)
