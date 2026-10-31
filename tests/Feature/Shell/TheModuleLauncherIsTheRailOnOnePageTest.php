@@ -153,9 +153,14 @@ final class TheModuleLauncherIsTheRailOnOnePageTest extends TestCase
 
         $this->assertSame(1, preg_match('/<button\b[^>]*\sdata-module-launcher\s[^>]*>/', $bar, $found, PREG_OFFSET_CAPTURE), '⛔ বারে ⊞ নেই।');
         [$tag, $button] = $found[0];
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে ক্রম: ⊞ (রেলের ঘরে) → ABOS → "≡" → কোম্পানির লোগো (মালিকের দেখানো NEXUS-এর বার)
+        $product = strpos($bar, 'data-shell-product');
         $menu = strpos($bar, 'data-menu-toggle');
         $logo = strpos($bar, 'data-shell-logo');
-        $this->assertTrue($menu !== false && $logo !== false && $menu < $button && $button < $logo, '⛔ ⊞ "≡"-এর পরে আর লোগোর আগে নয়।');
+        $this->assertTrue($product !== false && $menu !== false && $logo !== false && $button < $product && $product < $menu && $menu < $logo,
+            '⛔ বারের ক্রম ⊞ → ABOS → "≡" → লোগো নয়।');
+        // ⓘ মেনু গুটালে ABOS-এর লেখাও লুকায় (মালিক, ১ নভেম্বর ২০২৬: "menubar hide korle abos top bare hide hobe")
+        $this->assertMatchesRegularExpression('/data-shell-product[^>]*x-show="! \$store\.sidebar\.collapsed"/', $bar, '⛔ মেনু গুটালেও বারে ABOS-এর লেখা থাকে।');
 
         $this->assertStringContainsString('aria-label="'.__('core.ui.all_modules').'"', $tag, '⛔ ⊞-এর নাম "সব মডিউল" নয়।');
         $this->assertStringContainsString('aria-keyshortcuts="Alt+M"', $tag, '⛔ ⊞-এর চাবি Alt+M ঘোষিত নয়।');

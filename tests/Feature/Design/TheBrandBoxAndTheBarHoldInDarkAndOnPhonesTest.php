@@ -21,7 +21,16 @@ final class TheBrandBoxAndTheBarHoldInDarkAndOnPhonesTest extends TestCase
 {
     public function test_the_brand_boxes_wear_theme_fixed_tokens_the_dark_theme_does_not_redefine(): void
     {
-        foreach (['views/workspace/home.blade.php' => 'data-money-position', 'views/components/dashboard/hero-listing.blade.php' => 'data-hero-listing'] as $file => $mark) {
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে হোমের টাকার বাক্স সোনালি-পাড়ের কাচ (মালিকের অনুমোদিত নমুনা): জমিন আর লেখা দুটোই থিমের জোড়া —
+        //   surface-card আর ink, যা অন্ধকারে একসাথে বদলায়, তাই কোনো থিমে হালকায়-হালকা বা গাঢ়ে-গাঢ় নয়
+        $home = (string) file_get_contents(resource_path('views/workspace/home.blade.php'));
+        $glass = substr($home, (int) strpos($home, '<div data-money-position'), 900);
+        $this->assertStringContainsString('text-(--color-ink)', $glass, '⛔ হোমের টাকার বাক্সের লেখা থিমের কালিতে নয়।');
+        $this->assertStringContainsString('color-mix(in srgb, var(--color-surface-card) 78%, transparent)', $glass, '⛔ হোমের টাকার বাক্সের জমিন থিমের তল নয়।');
+        $this->assertStringContainsString('border: 1.5px solid color-mix(in srgb, var(--color-brand-gold)', $glass, '⛔ হোমের টাকার বাক্সে সোনালি পাড় নেই।');
+        $this->assertStringNotContainsString('color-ink-inverse', $glass, '⛔ বাক্স আবার ink-inverse নিল — অন্ধকারে গাঢ় লেখা।');
+
+        foreach (['views/components/dashboard/hero-listing.blade.php' => 'data-hero-listing'] as $file => $mark) {
             $source = (string) file_get_contents(resource_path($file));
             $box = substr($source, (int) strpos($source, $mark), 600);
 

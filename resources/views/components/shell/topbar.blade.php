@@ -118,21 +118,28 @@
         --}}
         <div data-menu-cell
              class="hidden w-(--spacing-sidebar-icon) shrink-0 items-center justify-center border-e border-transparent md:flex">
-            <button type="button"
-                    x-data
-                    data-menu-toggle
-                    data-sidebar-toggle
-                    @click="$store.sidebar.toggle()"
-                    class="flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
-                           transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
-                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
-                    style="--topbar-control-h: 40px"
-                    aria-label="{{ __('core.a11y.menu') }}"
-                    title="{{ __('core.a11y.menu') }}"
-                    :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'">
-                <x-ui.icon name="list" :size="22" />
-            </button>
+            {{-- ⭐ রঙিন ⊞ রেলের কলামে, তারপর ABOS-এর লেখা আর ☰ (মালিক, ১ নভেম্বর ২০২৬: NEXUS-এর ছবি — "Top barta ei rokom desine koro") --}}
+            <x-shell.launcher :menu="$menu ?? []" />
         </div>
+        {{-- ⓘ মেনু গুটালে ABOS-এর লেখাও লুকায় (মালিক, ১ নভেম্বর ২০২৬: "menubar hide korle abos top bare hide hobe") --}}
+        <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
+           class="hidden shrink-0 items-center md:flex" title="ABOS">
+            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS" class="h-[30px] w-auto">
+        </a>
+        <button type="button"
+                x-data
+                data-menu-toggle
+                data-sidebar-toggle
+                @click="$store.sidebar.toggle()"
+                class="hidden size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
+                       transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500) md:flex"
+                style="--topbar-control-h: 40px"
+                aria-label="{{ __('core.a11y.menu') }}"
+                title="{{ __('core.a11y.menu') }}"
+                :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'">
+            <x-ui.icon name="list" :size="22" />
+        </button>
     @else
         <button type="button"
                 x-data
@@ -167,13 +174,9 @@
 
     {{-- ⭐ ⊞ · লোগো · কোম্পানি · শাখা ▾ — এক সারিতে, ৩৭৫ থেকে ১৯২০px (মালিক, ২১ অক্টোবর ২০২৬)।
          ⓘ "≡"-এর কিনারা থেকে ঠিক ১৪px: ঘরের ভেতরে "≡"-এর ডানে (রেল − ৪০px) ÷ ২ ফাঁকা, তার পরে বারের `gap-2` — দুইটা বাদ দিয়ে বাকিটা। --}}
-    <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px] max-sm:gap-0',
-                                  'md:ms-[calc(14px_-_0.5rem_-_(var(--spacing-sidebar-icon)_-_40px)_/_2)]' => $overRail])>
+    <div data-shell-start class="flex min-w-0 shrink items-center gap-[10px] max-sm:gap-0">
         {{-- ⭐ ⊞ সব মডিউল — Odoo-র হোমের মতো পুরো পর্দা (মালিক, ২১ অক্টোবর ২০২৬; Google · M365 · Fiori সবারই আছে)।
              ⓘ টাইল রেলের একই তালিকা থেকে ($menu: অনুমতি আর মডিউলের সুইচ দুইটাই দেখা), তাই রেলে যা নেই লঞ্চারেও নেই। --}}
-        @if ($overRail)
-            <x-shell.launcher :menu="$menu ?? []" />
-        @endif
 
         {{-- ⭐ গ্রাহকের ব্র্যান্ড — চলতি কোম্পানির লোগো, চাপলে হোম; লোগো না থাকলে আদ্যক্ষরের ব্যাজ (উপরের `@php`)।
              মাপ: উচ্চতা ২৮px (৩২px পাতের ভেতরে), চওড়া বড়জোর ১৪০px, `object-contain` — চওড়া লোগো ছোট হয়, ভাঙে না।
@@ -187,13 +190,13 @@
            title="{{ $brandName }}"
            @unless ($brandLogo) aria-label="{{ $brandName }}" @endunless>
             @if ($brandLogo)
-                <span class="flex h-[32px] max-w-[140px] items-center rounded-[6px] bg-(--color-company-logo-plate) px-[4px] max-sm:max-w-[56px]">
+                <span class="flex size-10 items-center justify-center rounded-[10px] p-[3px]" style="background: var(--color-company-logo-plate)">
                     <img src="{{ $brandLogo }}" alt="{{ $brandName }}" data-company-logo
-                         class="h-[28px] w-auto max-w-[132px] object-contain max-sm:max-w-[48px]">
+                         style="max-width: 34px; max-height: 34px; object-fit: contain;">
                 </span>
             @else
                 <span data-company-initials aria-hidden="true"
-                      class="grid size-[32px] shrink-0 place-items-center rounded-full text-[13px] font-bold leading-none"
+                      class="grid size-10 shrink-0 place-items-center rounded-[10px] text-[13px] font-bold leading-none"
                       style="background: var(--color-company-mark-{{ $brandTone }}); color: var(--color-company-mark-ink)">{{ $brandInitials }}</span>
             @endif
         </a>

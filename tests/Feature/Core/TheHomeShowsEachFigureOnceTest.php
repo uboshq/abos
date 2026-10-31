@@ -68,27 +68,32 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         $this->assertSame([
             __('sales::dashboard.sales_today'),
             __('sales::dashboard.collected_today'),
+            // ⭐ ১ নভেম্বর ২০২৬ থেকে বকেয়া আর মজুদ আবার সূচক-কার্ডে, নমুনার তৃতীয় আর ষষ্ঠ ঘরে (মালিকের অনুমোদিত নমুনা)
+            __('customer::dashboard.kpi_owed'),
             __('purchase::widget.margin_this_month'),
             __('supplier::widget.owed_to_principals'),
+            __('inventory::overview.stock_value'),
             __('purchase::dashboard.purchases_today'),
             __('approval::dashboard.waiting_for_me'),
         ], array_keys($kpis), '⛔ মূল সূচকের ঘর বা ক্রম মালিকের পরিকল্পনা মতো নয়।');
 
         $owedTile = $page->query('//*[@data-home-owed]');
-        $this->assertSame(1, $owedTile->length, '⛔ "বাজারে বকেয়া" টাকার বাক্সে নেই, বা দুইবার।');
-        $owedLabel = trim($page->query('.//p[1]', $owedTile->item(0))->item(0)?->textContent ?? '');
-        $owedValue = trim($page->query('.//*[@data-money-tile-value]', $owedTile->item(0))->item(0)?->textContent ?? '');
+        $this->assertSame(1, $owedTile->length, '⛔ "বাজারে বকেয়া" সূচক-কার্ডে নেই, বা দুইবার।');
+        $owedLabel = trim($page->query('.//*[@data-kpi-label]', $owedTile->item(0))->item(0)?->textContent ?? '');
+        $owedValue = trim($page->query('.//*[@data-kpi-value]', $owedTile->item(0))->item(0)?->textContent ?? '');
         $this->assertSame(__('customer::dashboard.kpi_owed'), $owedLabel);
         $stockValue = $this->stockTile($page);
-        $tileLabels = array_map(fn ($n) => trim($page->query('.//p[1]', $n)->item(0)?->textContent ?? ''),
+        $tileLabels = array_map(fn ($n) => trim($page->query('.//span[1]', $n)->item(0)?->textContent ?? ''),
             iterator_to_array($page->query('//*[@data-money-tile]')));
 
         // ── কোনো নাম দুইবার নয় — টাকার বাক্স (তার ঘরগুলোসহ), সূচক, ব্যতিক্রম মিলিয়ে ──
         $names = array_merge(
-            [trim($page->query('//*[@data-money-position]/p[1]')->item(0)->textContent)],
+            [trim($page->query('//*[@data-money-position]/p[1]/span[1]')->item(0)->textContent)],
             $tileLabels,
             array_keys($kpis),
             array_map(fn ($n) => trim($n->getElementsByTagName('span')->item(1)?->textContent ?? ''), iterator_to_array($page->query('//*[@data-exception]'))),
+            // ⓘ ১ নভেম্বর ২০২৬ থেকে অপেক্ষার প্রথম চারটা মাথার "আজ যা করতে হবে"-তে — নিচের তালিকায় আবার নয়
+            array_map(fn ($n) => trim($n->getElementsByTagName('span')->item(0)?->textContent ?? ''), iterator_to_array($page->query('//*[@data-today-work]'))),
         );
         $this->assertSame([], array_values(array_diff_assoc($names, array_unique($names))), '⛔ একই জিনিস দুইবার: '.implode(', ', $names));
 
@@ -128,10 +133,10 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
     private function stockTile(DOMXPath $page): string
     {
         $tile = $page->query('//*[@data-home-stock]');
-        $this->assertSame(1, $tile->length, '⛔ "মজুদের মূল্য" টাকার বাক্সে নেই, বা দুইবার।');
-        $this->assertSame(__('inventory::overview.stock_value'), trim($page->query('.//p[1]', $tile->item(0))->item(0)?->textContent ?? ''));
+        $this->assertSame(1, $tile->length, '⛔ "মজুদের মূল্য" সূচক-কার্ডে নেই, বা দুইবার।');
+        $this->assertSame(__('inventory::overview.stock_value'), trim($page->query('.//*[@data-kpi-label]', $tile->item(0))->item(0)?->textContent ?? ''));
 
-        return trim($page->query('.//*[@data-money-tile-value]', $tile->item(0))->item(0)?->textContent ?? '');
+        return trim($page->query('.//*[@data-kpi-value]', $tile->item(0))->item(0)?->textContent ?? '');
     }
 
     /** @return array<string, string> নাম => মান, পাতার ক্রমে */
@@ -139,8 +144,8 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
     {
         $out = [];
         foreach ($page->query('//a[@data-kpi]') as $kpi) {
-            $label = trim($page->query('.//span[contains(@class, "truncate")]/span[contains(@class, "truncate")]', $kpi)->item(0)?->textContent ?? '');
-            $out[$label] = trim($page->query('.//span[contains(@class, "hm-kpi-value")]', $kpi)->item(0)?->textContent ?? '');
+            $label = trim($page->query('.//*[@data-kpi-label]', $kpi)->item(0)?->textContent ?? '');
+            $out[$label] = trim($page->query('.//*[@data-kpi-value]', $kpi)->item(0)?->textContent ?? '');
         }
 
         return $out;

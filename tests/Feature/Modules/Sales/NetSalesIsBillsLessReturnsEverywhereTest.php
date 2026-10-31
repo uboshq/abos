@@ -513,12 +513,12 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $page = new DOMXPath($dom);
 
         foreach ($page->query('//a[@data-kpi]') as $kpi) {
-            $label = trim($page->query('.//span[contains(@class, "truncate")]/span[contains(@class, "truncate")]', $kpi)->item(0)?->textContent ?? '');
+            $label = trim($page->query('.//*[@data-kpi-label]', $kpi)->item(0)?->textContent ?? '');
 
             if ($label === self::NET_LABEL) {
                 return [
                     'label' => $label,
-                    'value' => trim($page->query('.//span[contains(@class, "hm-kpi-value")]', $kpi)->item(0)?->textContent ?? ''),
+                    'value' => trim($page->query('.//*[@data-kpi-value]', $kpi)->item(0)?->textContent ?? ''),
                     'title' => (string) $kpi->getAttribute('title'),
                 ];
             }

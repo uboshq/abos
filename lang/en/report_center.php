@@ -33,7 +33,7 @@ return [
         'expense_analysis' => 'Expense analysis — by head, branch, month; unusually large expenses',
         'attendance' => 'Attendance — daily, monthly, late, absent; leave balance',
         'payroll' => 'Payroll register — deductions, bonus, salary cost by branch',
-        'security' => 'Security — sign-ins, failed attempts, permission and role changes',
+        'security' => 'Security — logins, failed attempts, permission and role changes',
         'backup_runs' => 'Backups — succeeded/failed, last run, restore tests',
         'customer_activity' => 'Customers — new, active/inactive, by area, not bought for long',
         'supplier_activity' => 'Suppliers — new, active/inactive',

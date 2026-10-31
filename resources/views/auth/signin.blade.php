@@ -120,9 +120,8 @@
                class="mx-auto block w-fit rounded-(--radius-field) transition-opacity hover:opacity-80
                       focus-visible:outline-2 focus-visible:outline-offset-4
                       focus-visible:outline-(--color-brand-600)">
-                <img src="{{ asset('brand/abos-logo-lockup-transparent.png') }}"
-                     alt="{{ __('core.brand.name') }}"
-                     width="748" height="239" class="mx-auto h-9 w-auto">
+                {{-- ⭐ জীবন্ত লোগো — দশটা নড়াচড়া এলোমেলো ক্রমে (মালিক, ১ নভেম্বর ২০২৬) --}}
+                <x-brand.live-logo style="width: 132px;" />
             </a>
 
             @php
@@ -215,5 +214,7 @@
         </footer>
         </div>
     </div>
+    {{-- ⭐ লোড হওয়ার পর্দা — পাতা বদলাতে দেরি হলে পুরো জীবন্ত লোগো (মালিক, ১ নভেম্বর ২০২৬: "loding eo Abos er full logo bosbe") --}}
+    <div data-abos-loading class="abos-loading" aria-hidden="true"><x-brand.live-logo /></div>
 </body>
 </html>

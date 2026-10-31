@@ -1178,6 +1178,19 @@
 :root {
     --color-logo-plate: #ffffff;
     --color-company-logo-plate: #ffffff;
+    /* ⭐ হোমের টাকার কার্ড — "মিষ্টি" গোলাপি-পিচ জমিন, গাঢ় বেগুনি-লাল লেখা (মালিক, ১ নভেম্বর ২০২৬: "misti color daw"); লেখা জমিনে ১০ঃ১-এর উপরে */
+    --color-money-sweet-from: #ffe1ec;
+    --color-money-sweet-to: #ffeedd;
+    --color-money-sweet-ink: #4a1630;
+    --color-money-sweet-muted: #8a4a66;
+    --color-money-sweet-tile: rgb(255 255 255 / .65);
+    /* ⭐ টপবারের রঙিন ⊞ আর শাখার পিল (মালিক, ১ নভেম্বর ২০২৬, NEXUS-এর ছবি) */
+    --color-launcher-1: #ef4444;
+    --color-launcher-2: #22c55e;
+    --color-launcher-3: #3b82f6;
+    --color-launcher-4: #f59e0b;
+    --color-topbar-pill-bg: rgb(255 255 255 / .18);
+    --color-topbar-pill-border: rgb(255 255 255 / .35);
     --color-company-mark-ink: #ffffff;
     --color-company-mark-1: #1d4ed8; /* নীল ৭০০ — সাদায় ৬.৭ঃ১ */
     --color-company-mark-2: #047857; /* এমারেল্ড ৭০০ — ৫.৫ঃ১ */
@@ -1229,6 +1242,11 @@
    ───────────────────────────────────────────────────────────────── */
 :root[data-theme='dark'] {
     --color-surface-app: #020617;
+    --color-money-sweet-from: #4a1a33;
+    --color-money-sweet-to: #4a2a1c;
+    --color-money-sweet-ink: #ffe6f0;
+    --color-money-sweet-muted: #f2b8cf;
+    --color-money-sweet-tile: rgb(255 255 255 / .08);
     --color-surface-card: #111827;
     /* ⭐ বারের লোগো আর রেলের ABOS — অন্ধকারেও হালকা পাতে (ওপরের `:root`-এর ব্যাখ্যা) */
     --color-logo-plate: #f1f5f9;

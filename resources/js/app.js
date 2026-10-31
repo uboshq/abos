@@ -8,6 +8,7 @@ import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
+import { bootLiveLogos } from './live-logo.js'
 import { guardConfirmOverview } from './confirm-overview.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
@@ -175,6 +176,9 @@ guardOneSubmit()
 
 window.Alpine = Alpine
 Alpine.start()
+
+// ⭐ জীবন্ত ABOS লোগো আর লোড হওয়ার পর্দা (মালিক, ১ নভেম্বর ২০২৬)
+bootLiveLogos()
 
 // ⭐ "ফোনের মতো" রং — বান্ডেল লোড হওয়ামাত্র ([[followTheDevice]])
 followTheDevice()

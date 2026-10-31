@@ -330,7 +330,7 @@ return [
         'search_anything' => 'যেকোনো কিছু খুঁজুন…',
         'search_everything' => 'যেকোনো কিছু খুঁজুন: পাতা, গ্রাহক, পণ্য, কাগজের নম্বর…',
         'switch_language' => 'ভাষা বদলান',
-        'logout' => 'লগ আউট',
+        'logout' => 'লগআউট',
         'more' => 'আরও',
         'fullscreen' => 'পূর্ণ পর্দা',
         'exit_fullscreen' => 'পূর্ণ পর্দা থেকে বেরোন (Esc)',

@@ -77,8 +77,9 @@ final class TheBarIsAFioriShellBarTest extends TestCase
     {
         $bar = $this->bar($this->page(route('dashboard')));
 
-        $this->assertMatchesRegularExpression('/data-shell-branch> · ([^<]+)</u', $bar, '⛔ বারে শাখার নাম নেই।');
-        preg_match('/data-shell-branch> · ([^<]+)</u', $bar, $m);
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে শাখা নামের নিচে পিলে (মালিকের দেখানো NEXUS-এর বার)
+        $this->assertMatchesRegularExpression('/data-shell-branch-name[^>]*>([^<]+)</u', $bar, '⛔ বারে শাখার নাম নেই।');
+        preg_match('/data-shell-branch-name[^>]*>([^<]+)</u', $bar, $m);
         $branches = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->get()->map->name()->all();
         $this->assertContains(html_entity_decode(trim($m[1])), $branches, '⛔ বারের শাখা এই কোম্পানির কোনো শাখা নয়।');
     }
@@ -147,8 +148,9 @@ final class TheBarIsAFioriShellBarTest extends TestCase
         $html = $this->page(route('dashboard'));
 
         $this->assertStringContainsString('data-money-today', $html, 'প্রস্তুতিটাই ভুল — টাকার বাক্সে আজকের ঘর নেই।');
-        preg_match('/data-home-owed.*?data-money-tile-value[^>]*>([^<]+)</su', $html, $m);
-        $this->assertNotEmpty($m, '⛔ "বাজারে বকেয়া" ঘর টাকার বাক্সে নেই।');
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে "বাজারে বকেয়া" মাথার সূচক-কার্ডে (মালিকের অনুমোদিত নমুনা) — একই উৎস, একই অঙ্ক
+        preg_match('/data-home-owed.*?data-kpi-value[^>]*>([^<]+)</su', $html, $m);
+        $this->assertNotEmpty($m, '⛔ "বাজারে বকেয়া" সূচক-কার্ডে নেই।');
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs($this->owner);

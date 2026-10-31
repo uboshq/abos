@@ -247,7 +247,7 @@ final class TheBranchHadNoMenuAndTheSwitcherHadNoBranchTest extends TestCase
             ->assertOk()
             /* ⓘ বারের "কোম্পানি · শাখা" — web-standard-2-এর পরে বন্ধনী নয়, বিন্দু ([[shell.company-switcher]]-এর `data-shell-branch`);
                এক শাখা বাছলে view_all_branches বন্ধ হয়, তাই "সব শাখা" নয়, শাখার নামটাই */
-            ->assertSee('data-shell-branch> · '.e($second->name()).'</span>', false);
+            ->assertSee('data-shell-branch-name class="truncate">'.e($second->name()).'</span>', false);
     }
 
     /**
