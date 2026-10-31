@@ -405,7 +405,9 @@ class VoucherRequest extends FormRequest
 
         $clean = static fn (mixed $v): string => preg_match('/^\d+(\.\d+)?$/', $s = str_replace(',', '', trim((string) $v))) === 1 ? $s : '0';
         $first = collect($lines)->first(fn ($l) => is_array($l) && filled($l['expense_account_id'] ?? null));
-        $gross = collect($lines)->filter('is_array')->reduce(
+        // ⛔ `filter('is_array')` নয় — কালেকশন মান আর চাবি দুটোই দেয়, আর PHP-র নিজের is_array() দুই মানে ArgumentCountError ছোঁড়ে;
+        //   main-এর PHP-তে খরচের simulate আর জমা দুটোই ৫০০ হত (fe, ৩১ অক্টোবর ২০২৬, Mac-এ ধরা)
+        $gross = collect($lines)->filter(fn (mixed $l): bool => is_array($l))->reduce(
             fn (string $sum, array $l) => bcadd($sum, bcadd($clean($l['amount'] ?? 0), $clean($l['vat_amount'] ?? 0), 4), 4), '0');
         $net = bcsub(bcsub($gross, $clean($this->input('ait_amount')), 4), $clean($this->input('vds_amount')), 4);
 

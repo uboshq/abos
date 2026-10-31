@@ -48,7 +48,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['voucher_id', 'sort']);
-            $table->index(['company_id', 'expense_account_id']);
+            // ⓘ নিজের ছোট নাম — গড়া নামটা ৬১ অক্ষর, ৬৪-এর সীমার গায়ে ([[NoIndexNameStandsAtTheEdgeTest]]); মাইগ্রেশন এখনো কোথাও চলেনি
+            $table->index(['company_id', 'expense_account_id'], 'acc_vexp_lines_company_head');
         });
     }
 

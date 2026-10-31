@@ -18,7 +18,8 @@ return [
     'expense_budget_reason_over' => 'বাজেট ছাড়ালে কারণ লেখা বাধ্যতামূলক',
     'expense_employee_refund' => 'কর্মী নিজে টাকা দিলে তাঁকে ফেরত',
     'expense_employee_refund_separate_voucher' => 'আলাদা পরিশোধ ভাউচারে',
-    'expense_capitalise_warn_over' => 'এর বেশি অঙ্কের খরচে "সম্পদ হতে পারে" সতর্কতা (৳)',
+    // ⓘ বাঁকা উদ্ধৃতি “ ” — সোজা " পাতায় &quot; হয়ে বসে, আর সেটিংসের পর্দার দাবি লেবেলটা খুঁজে পেত না (fe, ৩১ অক্টোবর ২০২৬)
+    'expense_capitalise_warn_over' => 'এর বেশি অঙ্কের খরচে “সম্পদ হতে পারে” সতর্কতা (৳)',
     'asset_capitalisation_threshold' => 'স্থায়ী সম্পদের সর্বনিম্ন দাম — এর কম দামের জিনিস খরচে যাবে (০ মানে কোনো সীমা নেই)',
     'asset_prorata' => 'প্রথম মাসের অবচয়',
     'asset_prorata_full_month' => 'পুরো মাস',

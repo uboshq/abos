@@ -16,7 +16,7 @@ return [
     'expense_budget_reason_over' => 'A reason is required when the budget is exceeded',
     'expense_employee_refund' => 'When an employee pays, refund them',
     'expense_employee_refund_separate_voucher' => 'On a separate payment voucher',
-    'expense_capitalise_warn_over' => 'Warn "may be an asset" on expenses above this amount (৳)',
+    'expense_capitalise_warn_over' => 'Warn “may be an asset” on expenses above this amount (৳)',
     'asset_capitalisation_threshold' => 'Fixed asset capitalisation threshold: anything cheaper goes to expense (0 means no threshold)',
     'asset_prorata' => 'First-month depreciation',
     'asset_prorata_full_month' => 'Full month',

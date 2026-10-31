@@ -178,8 +178,12 @@ final class ExpenseLedger
         $account = StandardChart::find($code);
 
         if ($account === null || ! $this->chart->holdsItsMeaning($account)) {
+            // ⓘ বার্তায় কোডে আসলে যে খাত বসে আছে তার নাম — main-এ [[StandardChart::find()]] মানে-হারানো খাতে null ফেরায়, তাই সেখান
+            //   থেকে নাম নিলে বার্তা কেবল কোড বলত (fe, ৩১ অক্টোবর ২০২৬, main মেশানোর পরে Mac-এ ধরা)
+            $sitting = Account::query()->where('code', $code)->first();
+
             throw ValidationException::withMessages([
-                $field => __('accounts::validation.account_lost_its_meaning', ['code' => $code, 'account' => $account?->label() ?? $code]),
+                $field => __('accounts::validation.account_lost_its_meaning', ['code' => $code, 'account' => $sitting?->label() ?? $code]),
             ]);
         }
 

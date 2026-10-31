@@ -80,7 +80,13 @@ final class AnExpenseHoldsItsOwnLinesTest extends TestCase
 
         $this->assertSame('2026-11-19', $fresh->due_date?->toDateString(), '⛔ শেষ দিন তারিখ হয়ে ফেরে না — বাকির বয়স গোনা যেত না');
         $this->assertSame('121.123456', (string) $fresh->fx_rate, '⛔ হার ছয় দশমিকে ফেরে না — ৳-এর অঙ্ক পয়সায় সরত');
-        $this->assertSame([['account' => 5216, 'pct' => 112.5]], $fresh->budget_check, '⛔ বাজেটের ছবি অ্যারে হয়ে ফেরে না — নিরীক্ষা পড়তে পারত না');
+        // ⓘ চাবির ক্রম মাপা হয় না — MySQL-এর JSON কলাম চাবি নিজের ক্রমে রাখে (main-এ ধরা: 'pct' আগে); মান আর ধরন হুবহু
+        $budget = array_map(function (array $row): array {
+            ksort($row);
+
+            return $row;
+        }, (array) $fresh->budget_check);
+        $this->assertSame([['account' => 5216, 'pct' => 112.5]], $budget, '⛔ বাজেটের ছবি অ্যারে হয়ে ফেরে না — নিরীক্ষা পড়তে পারত না');
         $this->assertSame(['capex'], $fresh->warnings, '⛔ সতর্কতা অ্যারে হয়ে ফেরে না');
     }
 

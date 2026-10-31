@@ -254,7 +254,8 @@ final class AnExpensePostsFromItsLinesTest extends TestCase
             'expense_lines' => [['expense_account_id' => $this->headId(StandardChart::FUEL), 'amount' => '1000', 'vat_amount' => '150', 'vat_recoverable' => '1']],
         ]));
 
-        $vat = StandardChart::find(StandardChart::INPUT_VAT_RECOVERABLE);
+        // ⓘ কোডে আসলে যে খাত বসে — main-এ StandardChart::find() মানে-হারানো খাতে null ফেরায় (fe, ৩১ অক্টোবর ২০২৬)
+        $vat = Account::query()->where('company_id', $this->company->id)->where('code', StandardChart::INPUT_VAT_RECOVERABLE)->firstOrFail();
         $expected = array_map(fn (string $l) => trans('accounts::validation.account_lost_its_meaning', ['code' => StandardChart::INPUT_VAT_RECOVERABLE, 'account' => $vat->label()], $l), ['bn', 'en']);
         $this->assertContains($this->refusalOn('expense_lines.0.vat_recoverable'), $expected,
             '⛔ ছ: মানে-হারানো 1139-এ ভ্যাট বসতে গেল, বা অন্য কারণে ফিরল: '.json_encode($this->refusalMessages(), JSON_UNESCAPED_UNICODE));
