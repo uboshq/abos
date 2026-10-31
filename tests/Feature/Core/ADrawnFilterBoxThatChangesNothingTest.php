@@ -80,6 +80,10 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         // ⓘ বীমার দাবির খাতা নিজের অবস্থাই মানে (জমা · অনুমোদিত · আংশিক · নিষ্পন্ন · নাকচ — [[InsuranceClaim::STATES]])
         'state' => [['state' => 'overdue'], ['state' => 'today'], ['state' => 'lodged']],
         'group_by' => [['group_by' => 'brand'], ['group_by' => 'product']],
+        // ⓘ প্রিন্সিপালের লাইনের রিপোর্ট (কমিশনের উৎস, cb-র commission-drill, main-এ ৩১ অক্টোবর ২০২৬) — একজন প্রিন্সিপাল আর চক্রের নিজের তারিখ
+        'principal' => ['principal' => 987638],
+        'from' => ['from' => '1997-03-11'],
+        'to' => ['to' => '1997-04-17'],
 
         /*
          * ⭐ নোটিফিকেশন রিপোর্টের ছাঁকনি — ১২ অক্টোবর ২০২৬। ⓘ মডিউল, গুরুত্ব, মাধ্যম আর অবস্থার আইডি একটা স্থির তালিকার ক্রম (১ থেকে,
