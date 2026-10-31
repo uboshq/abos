@@ -17,20 +17,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $dashboard->title }}</x-slot:title>
 
-    {{-- ⭐ মাথার পট্টি মডিউলের রঙে — ড্যাশবোর্ডের পরিকল্পনা §৪.১ (মালিক, ২৪ অক্টোবর ২০২৬: "full erp RGB ekta color dibe")।
-         ⓘ রং কেবল পরিচয়ে: পট্টি আর উপরের চার কার্ড; লেখা, বোতাম, চার্ট আর তালিকায় নয়। সাদা লেখা প্রতিটা মডিউল-রঙে ≥ ৪.৯২ঃ১
-         ([[TheModuleColoursCarryWhiteTextTest]]); রঙিন সুইচ বন্ধে ব্র্যান্ড ৭০০ — একই কনট্রাস্ট। --}}
-    <x-slot:header>
-        <div data-dashboard-head="{{ $module }}"
-             class="rounded-(--radius-card) px-4 py-3 text-white"
-             style="background: var(--color-module-{{ $module }}, var(--color-brand-700))">
-            <h1 class="text-xl font-bold leading-tight">{{ $dashboard->title }}</h1>
-            @if ($dashboard->subtitle)
-                <p class="mt-0.5 text-sm text-white/90">{{ $dashboard->subtitle }}</p>
-            @endif
-        </div>
-    </x-slot:header>
-
     @php
         /*
          * ⭐ উপরের চার — মডিউলের কঠিন রঙে বড় করে; বাকি সব নিচে "আরও অঙ্ক"-এ, একটাও হারায় না (পরিকল্পনা §১, §৪.২, §৪.৫)।
@@ -38,7 +24,60 @@
          */
         $topStats = array_slice($dashboard->stats, 0, 4);
         $moreStats = array_slice($dashboard->stats, 4);
+
+        /*
+         * ⭐ রং মালিকের নমুনা থেকে হুবহু (`config/abos.php` → `dashboard_colours`; মালিক, ৩১ অক্টোবর ২০২৬: "desh board e multi color ba
+         * 10 12 ti color", "Sample file dekhe koro")। মাথা নমুনার দুই রঙের ঢাল; কার্ড: "এখনই দেখুন" লাল, "নজর দিন" হলুদ (নমুনার মানে),
+         * বাকিগুলো নমুনার এই মডিউলের ক্রমে, যেটা আগে বসেনি — তারপর বারো রঙের বাকিগুলো। ⓘ আগের নিজের নিয়মে ক্রয়ের তিন কার্ড প্রায় এক কমলা হত।
+         */
+        $paint = (array) (config('abos.dashboard_colours')[$module] ?? []);
+        $pal = fn (string $name): string => 'var(--color-pal-'.$name.')';
+        $head = array_map($pal, $paint['head'] ?? []) ?: ['var(--color-module-'.$module.', var(--color-brand-700))'];
+        $order = [...($paint['cards'] ?? []), 'green', 'purple', 'teal', 'pink', 'sky', 'indigo', 'blue', 'lime', 'orange', 'amber'];
+        $meaning = [\App\Core\Engines\Dashboard\Stat::BAD => 'red', \App\Core\Engines\Dashboard\Stat::WARN => 'yellow'];
+        $used = [];
+        $cardColour = [];
+        foreach ($topStats as $i => $stat) {
+            // ⓘ নমুনার মতো অবস্থান ধরে: i-তম কার্ড নমুনার i-তম রং — যদি সেটা আগে না বসে থাকে আর লাল/হলুদ না হয় (মানে ছাড়া লাল নয়)
+            $name = $meaning[$stat->tone] ?? null;
+            // ⓘ একই মানের দ্বিতীয় কার্ড একই পরিবারের পরের ছায়ায় — দুই হলুদ পাশাপাশি নয় (মজুদের ছবিতে দেখা): নজর হলুদ → অ্যাম্বার → কমলা, এখনই লাল → গোলাপি
+            if ($name !== null && in_array($name, $used, true)) {
+                $family = $name === 'yellow' ? ['amber', 'orange'] : ['pink', 'orange'];
+                $name = collect($family)->first(fn (string $c) => ! in_array($c, $used, true)) ?? $name;
+            }
+            $want = $paint['cards'][$i] ?? null;
+            if ($name === null && $want !== null && ! in_array($want, $used, true) && ! in_array($want, ['red', 'yellow'], true)) {
+                $name = $want;
+            }
+            if ($name === null) {
+                foreach ($order as $candidate) {
+                    if (! in_array($candidate, $used, true) && ! in_array($candidate, ['red', 'yellow'], true)) {
+                        $name = $candidate;
+                        break;
+                    }
+                }
+            }
+            $used[] = $name ??= 'blue';
+            $cardColour[$i] = $paint === [] && $i === 0 && ! isset($meaning[$stat->tone])
+                ? 'var(--color-module-'.$module.', var(--color-brand-700))'
+                : $pal($name);
+        }
     @endphp
+
+    {{-- ⭐ মাথার পট্টি মডিউলের রঙে — ড্যাশবোর্ডের পরিকল্পনা §৪.১ (মালিক, ২৪ অক্টোবর ২০২৬: "full erp RGB ekta color dibe")।
+         ⓘ রং কেবল পরিচয়ে: পট্টি আর উপরের চার কার্ড; লেখা, বোতাম, চার্ট আর তালিকায় নয়। সাদা লেখা প্রতিটা মডিউল-রঙে ≥ ৪.৯২ঃ১
+         ([[TheModuleColoursCarryWhiteTextTest]]); রঙিন সুইচ বন্ধে ব্র্যান্ড ৭০০ — একই কনট্রাস্ট। --}}
+    <x-slot:header>
+        <div data-dashboard-head="{{ $module }}"
+             class="rounded-(--radius-card) px-4 py-3 text-white"
+             style="background: linear-gradient(100deg, {{ $head[0] }}, {{ $head[1] ?? $head[0] }})">
+            <h1 class="text-xl font-bold leading-tight">{{ $dashboard->title }}</h1>
+            @if ($dashboard->subtitle)
+                <p class="mt-0.5 text-sm text-white/90">{{ $dashboard->subtitle }}</p>
+            @endif
+        </div>
+    </x-slot:header>
+
 
     <div data-dashboard-v2 class="flex flex-col gap-4">
 
@@ -76,9 +115,10 @@
                         [$chipClass, $chipIcon, $chipText] = $chips[$stat->tone] ?? $chips[\App\Core\Engines\Dashboard\Stat::NEUTRAL];
                         $change = $stat->value === \App\Core\Engines\Dashboard\Stat::HIDDEN ? null : $stat->change();
                     @endphp
-                    <a @if ($stat->href) href="{{ $stat->href }}" @endif data-stat data-stat-solid
+                    {{-- ⓘ নমুনার মতো ঢাল: নিজের রং → তার ৬৮% (কালোর দিকে) — সাদা লেখা দুই প্রান্তেই ৪.৫ঃ১-এর উপরে --}}
+                    <a @if ($stat->href) href="{{ $stat->href }}" @endif data-stat data-stat-solid data-stat-colour="{{ $cardColour[$loop->index] }}"
                        class="flex min-w-0 flex-col gap-1.5 rounded-(--radius-card) p-4 text-white shadow-(--shadow-card) hover:brightness-110"
-                       style="background: var(--color-module-{{ $module }}, var(--color-brand-700))"
+                       style="background: linear-gradient(135deg, {{ $cardColour[$loop->index] }}, color-mix(in srgb, {{ $cardColour[$loop->index] }} 68%, #000))"
                        title="{{ $stat->hint }}">
                         <span class="flex items-start justify-between gap-2">
                             <span class="min-w-0 text-sm font-medium text-white/90">{{ $stat->label }}</span>
@@ -184,7 +224,8 @@
             <div class="grid gap-4 xl:grid-cols-3">
                 @foreach (array_values($dashboard->panels) as $i => $panel)
                     @php $series = $panel instanceof \App\Core\Engines\Dashboard\Series; @endphp
-                    <section data-boxed data-panel data-span="{{ $spans[$i] }}" @class([
+                    <section data-boxed data-panel data-span="{{ $spans[$i] }}"
+                        style="border-top: 4px solid var(--color-module{{ $i % 2 ? '2' : '' }}-{{ $module }}, var(--color-brand-700))" @class([
                         'min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
                         'xl:col-span-2' => $spans[$i] === 2,
                         'xl:col-span-3' => $spans[$i] === 3,
@@ -207,7 +248,8 @@
                 @php $plain = collect($dashboard->listings)->reject(fn ($l) => $l->hero)->values(); @endphp
                 @foreach ($plain as $listing)
                     {{-- ⓘ শেষেরটা একা পড়লে পুরো সারি — পাশে খালি জায়গা নয় --}}
-                    <section data-boxed data-listing @class([
+                    <section data-boxed data-listing
+                        style="border-top: 4px solid var(--color-module{{ $loop->index % 2 ? '' : '2' }}-{{ $module }}, var(--color-brand-700))" @class([
                         'min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
                         'xl:col-span-2' => $loop->last && $plain->count() % 2 === 1,
                     ])>
