@@ -160,6 +160,8 @@ class PeriodLockController extends Controller implements HasMiddleware
         $rows = collect(app(MonthEndChecklist::class)->run($month))->keyBy('key');
         $drafts = (int) ($rows['drafts']['count'] ?? 0);
         $awaiting = (int) ($rows['awaiting']['count'] ?? 0);
+        // ⓘ বাসি অনুরোধের খসড়া — drafts-এর গোনায় আছে, তাই মাস আটকায়; কেবল কথা আলাদা: "আবার পোস্ট করুন" (fe, ২৪ অক্টোবর ২০২৬)
+        $stale = (int) ($rows['stale']['count'] ?? 0);
 
         /*
          * ⛔ অন্য মডিউলের কাগজও — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AMonthWaitsForEveryModulesPapersTest]])। ⓘ মাস-শেষের তালিকা
@@ -168,11 +170,15 @@ class PeriodLockController extends Controller implements HasMiddleware
          * অপেক্ষা (সব মডিউল, ভাউচারসহ) আর নিশ্চিত হয়েও খাতায় না-ওঠা।
          */
         $backlog = app(\App\Modules\Accounts\Services\PostingBacklog::class);
-        $awaiting = max($awaiting, $backlog->awaitingSignatureBetween($month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString()));
+        // ⓘ সব মডিউলের অপেক্ষা গোনে, বাসি ভাউচারসহ — বাসিগুলো নিজের বাক্যে, তাই এখান থেকে বাদ
+        $awaiting = max($awaiting, $backlog->awaitingSignatureBetween($month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString()) - $stale);
         $unposted = $backlog->countBetween($month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString());
 
         if ($drafts + $awaiting > 0) {
-            return back()->withErrors(['month' => __('accounts::validation.month_has_open_papers', ['drafts' => $drafts, 'awaiting' => $awaiting])]);
+            return back()->withErrors(['month' => array_values(array_filter([
+                __('accounts::validation.month_has_open_papers', ['drafts' => $drafts, 'awaiting' => $awaiting]),
+                $stale > 0 ? __('accounts::validation.month_has_changed_drafts', ['stale' => $stale]) : null,
+            ]))]);
         }
 
         if ($unposted > 0) {

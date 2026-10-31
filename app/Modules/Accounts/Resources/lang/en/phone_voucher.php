@@ -5,6 +5,12 @@ declare(strict_types=1);
 return [
     'state_draft' => 'Draft',
     'state_awaiting' => 'Awaiting approval',
+    // ⓘ A draft's approval state; for the app only a fallback for values it does not know (agreed with a4, 24 Oct 2026; ERP words, 25 Oct)
+    'signing_awaiting' => 'Awaiting approval',
+    'signing_stale' => 'Changed after the approval was asked for; posting sends it again',
+    'signing_needs' => 'Needs an approval to post',
+    'signing_signed' => 'Approved; not posted yet',
+    'signing_rejected' => 'Approval refused',
     'state_posted' => 'Posted',
     'state_cancelled' => 'Cancelled',
     'edit_needs_network' => 'Only new vouchers can be written offline. To change one, go online and use its page.',

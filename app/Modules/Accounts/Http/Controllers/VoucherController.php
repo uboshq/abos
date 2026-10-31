@@ -106,12 +106,11 @@ class VoucherController extends Controller implements HasMiddleware
          * ⓘ গোনাটা পাঁচ ধরনের ভাউচারেই চলে, কেবল খরচে নয় — পাঁচটাই
          * `module.php`-তে অনুমোদনের কাজ হিসেবে ঘোষিত।
          */
-        $awaitingIds = Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->where('module', VoucherApproval::MODULE)
-            ->where('action', $type)
-            ->pending()
-            ->pluck('approvable_id');
+        /*
+         * ⭐ কেবল টাটকা অনুরোধ — অনুরোধের পরে ভাউচার বদলালে সেটা বাসি, পরের পোস্টে নতুন করে সইয়ে যায়; পাতার নোট, ফোন আর
+         * তালিকার মোট সেটাকে খসড়া বলে ([[VoucherApproval::signingOf()]]; ২৪ অক্টোবর ২০২৬)। ⛔ আগে যেকোনো PENDING গুনত।
+         */
+        $awaitingIds = collect(app(VoucherApproval::class)->waitingIds($type)['awaiting']);
 
         $query = Voucher::query()
             ->ofType($type)

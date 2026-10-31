@@ -50,6 +50,7 @@ final class MonthEndChecklist
         return [
             $this->drafts($from, $to),
             $this->awaiting($from, $to),
+            $this->stale($from, $to),
             $this->bankReconciled($from, $to),
             $this->cashCounted($from, $to),
             $this->depreciated($from, $to),
@@ -76,20 +77,39 @@ final class MonthEndChecklist
         return $this->row('drafts', $count, 'accounts.voucher.list');
     }
 
-    /** মাসের কোনো ভাউচার অনুমোদনের অপেক্ষায় নেই। */
+    /**
+     * মাসের কোনো ভাউচার অনুমোদনের অপেক্ষায় নেই — কেবল টাটকা অনুরোধ।
+     *
+     * ⓘ বাসিটা (চাওয়ার পরে বদলানো) [[stale()]]-এর সারিতে, নিজের কথায়: "আবার পোস্ট করুন" (fe, ২৪ অক্টোবর ২০২৬)। মাস দুটোতেই
+     * আটকায় — বাসি অনুরোধের ভাউচার খসড়া, [[drafts()]]-এর গোনায় আছে।
+     */
     private function awaiting(CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $ids = Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->pending()
-            ->pluck('approvable_id');
+        return $this->row('awaiting', $this->inMonth($this->waiting()['awaiting'], $from, $to), 'approval.inbox.index');
+    }
 
-        $count = $ids->isEmpty() ? 0 : Voucher::acrossBranches()
+    /** মাসের কোনো ভাউচার সই চাওয়ার পরে বদলে পড়ে নেই — পোস্ট চাপলে নতুন করে সইয়ে যাবে। */
+    private function stale(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return $this->row('stale', $this->inMonth($this->waiting()['stale'], $from, $to), 'accounts.voucher.list');
+    }
+
+    /** @var array{awaiting: list<int>, stale: list<int>}|null */
+    private ?array $waiting = null;
+
+    /** @return array{awaiting: list<int>, stale: list<int>} */
+    private function waiting(): array
+    {
+        return $this->waiting ??= app(VoucherApproval::class)->waitingIds();
+    }
+
+    /** @param  list<int>  $ids */
+    private function inMonth(array $ids, CarbonImmutable $from, CarbonImmutable $to): int
+    {
+        return $ids === [] ? 0 : Voucher::acrossBranches()
             ->whereIn('id', $ids)
             ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
             ->count();
-
-        return $this->row('awaiting', $count, 'approval.inbox.index');
     }
 
     /**
