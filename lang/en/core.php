@@ -1267,7 +1267,7 @@ return [
         'designation_none' => 'Not set — HR keeps this',
 
         'login_id' => 'Login ID',
-        'login_id_note' => 'Lowercase letters, digits, dot, underscore or hyphen — starting with a letter. You can sign in with this instead of your email.',
+        'login_id_note' => 'Lowercase letters, digits, dot, underscore or hyphen — starting with a letter. You can log in with this instead of your email.',
         'email_no_mailer' => 'Email sending is switched off on this server, so no link can be sent. Ask your administrator to set it up.',
         'email_change_note' => 'The address changes only after you open the link we send to the new one. Until then your old address keeps working.',
         'email_change' => 'Change email',
