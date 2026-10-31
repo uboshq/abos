@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/widgets/live_logo.dart';
 
 /// Shown only while [AuthStatus.unknown] — the moment between the app
 /// starting and [AuthController.restoreSession] answering whether a saved
@@ -12,26 +12,10 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ লোড হওয়ার সময় পুরো জীবন্ত লোগো, সাদা জমিনে (মালিক, ১ নভেম্বর ২০২৬: "loding eo Abos er full logo bosbe")
     return const Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'ABOS',
-              style: TextStyle(
-                color: AppColors.onPrimary,
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
-            ),
-            SizedBox(height: 24),
-            CircularProgressIndicator(color: AppColors.onPrimary),
-          ],
-        ),
-      ),
+      backgroundColor: Color(0xFFEEF5F7),
+      body: Center(child: LiveLogo(key: ValueKey('splash-live-logo'), width: 220)),
     );
   }
 }

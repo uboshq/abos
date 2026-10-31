@@ -776,7 +776,7 @@ class _MoreTab extends ConsumerWidget {
           ),
           onPressed: () => _confirmLogout(context, ref),
           icon: const Icon(Icons.logout),
-          label: const Text('বেরিয়ে যান'),
+          label: const Text('লগআউট'),
         ),
       ],
     );
@@ -787,7 +787,7 @@ class _MoreTab extends ConsumerWidget {
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('বেরিয়ে যাবেন?'),
+        title: const Text('লগআউট করবেন?'),
         content: Text(pending > 0
             ? 'এই ফোনে আপনার $pending টি অর্ডার এখনো পাঠানো হয়নি। বেরিয়ে গেলেও '
                 'ওগুলো ফোনেই থাকবে, আর আপনি আবার ঢুকলে তবেই যাবে — অন্য কেউ '
@@ -800,7 +800,7 @@ class _MoreTab extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('বেরিয়ে যান'),
+            child: const Text('লগআউট'),
           ),
         ],
       ),

@@ -81,7 +81,7 @@ class ApprovalsLauncherWidget {
         for (final row in rows) row: '',
         empty: '',
         more: '',
-        asOf: 'সাইন আউট করা হয়েছে',
+        asOf: 'লগআউট করা হয়েছে',
       });
 }
 

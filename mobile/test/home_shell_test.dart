@@ -134,7 +134,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
-    expect(find.text('বেরিয়ে যান'), findsOneWidget,
+    expect(find.text('লগআউট'), findsOneWidget,
         reason: 'the photo opens the profile');
   });
 
@@ -252,7 +252,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    expect(find.text('বেরিয়ে যান'), findsOneWidget);
+    expect(find.text('লগআউট'), findsOneWidget);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
     // ⭐ হাতে হালনাগাদ যাচাই — মালিক, ৭ অক্টোবর ২০২৬
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
@@ -276,12 +276,12 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'লগআউট'));
     await tester.pumpAndSettle();
 
-    expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget);
+    expect(find.text('লগআউট করবেন?'), findsOneWidget);
     await tester.tap(find.text('থাক'));
     await tester.pumpAndSettle();
-    expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
+    expect(find.text('লগআউট করবেন?'), findsNothing);
   });
 }

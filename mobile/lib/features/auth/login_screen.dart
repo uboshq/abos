@@ -8,6 +8,7 @@ import '../../core/auth/auth_exceptions.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/remembered_login.dart';
 import '../../core/config/app_config.dart';
+import '../../core/widgets/live_logo.dart';
 
 /// Identifier + password, then a six-digit code if the account has MFA on —
 /// see docs/Contract, §১ for the 409 branch this screen's [_mfaStage] answers.
@@ -55,7 +56,8 @@ class _Words {
   String get identifierMissing => bn ? 'নাম বা ইমেইল দিন' : 'Enter your name or email';
   String get password => bn ? 'পাসওয়ার্ড' : 'Password';
   String get passwordMissing => bn ? 'পাসওয়ার্ড দিন' : 'Enter your password';
-  String get signIn => bn ? 'প্রবেশ করুন' : 'Sign in';
+  // ⓘ সব জায়গায় একটাই শব্দ — লগইন / লগআউট (মালিক, ১ নভেম্বর ২০২৬; ওয়েবের সাথে এক)
+  String get signIn => bn ? 'লগইন করুন' : 'Log in';
   String get verify => bn ? 'যাচাই করুন' : 'Verify';
   String get back => bn ? 'ফিরে যান' : 'Go back';
   String get remember => bn ? 'মনে রাখুন' : 'Remember me';
@@ -73,6 +75,7 @@ class _Words {
   String get mfaLabel => bn ? 'এমএফএ কোড' : 'MFA code';
   String get mfaMissing => bn ? '৬-সংখ্যার কোডটি দিন' : 'Enter the 6-digit code';
   String get version => bn ? 'সংস্করণ' : 'Version';
+  String get poweredBy => 'Powered by';
 }
 
 class _Palette {
@@ -80,7 +83,6 @@ class _Palette {
   static const ink = Color(0xFF0B2A31);
   static const muted = Color(0xFF5B7B83);
   static const border = Color(0xFFD6E4E8);
-  static const cardBorder = Color(0xFFE3EDF0);
   static const link = Color(0xFF0A8FAE);
   static const divider = Color(0xFFBFE3EA);
   static const footer = Color(0xFF8AA4AA);
@@ -227,7 +229,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       BoxConstraints(minHeight: math.max(0, constraints.maxHeight - 32)),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 440),
+                      // ⓘ সরু বাক্স, ওয়েবের মাপে (মালিক, ১ নভেম্বর ২০২৬: "slim cuto ekta box")
+                      constraints: const BoxConstraints(maxWidth: 400),
                       child: _card(greeting),
                     ),
                   ),
@@ -244,38 +247,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final w = _w;
     const gap = SizedBox(height: 14);
 
+    // ⭐ সাদা বাক্স, চারদিকে সোনালি ঢালের গোল পাড় — ওয়েবের লগইন বাক্সের হুবহু (মালিক, ১ নভেম্বর ২০২৬:
+    //   "app er login box tate sonalir kaj ta korte hobe", "Golden color")। বাইরের ঢাল ৩px, ভেতরে সাদা।
     return Container(
-      key: const ValueKey('login-card'),
-      padding: const EdgeInsets.fromLTRB(24, 34, 24, 26),
+      key: const ValueKey('login-gold-rim'),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: _Palette.cardBorder),
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFB88A00), Color(0xFFF5B800), Color(0xFFFFD54F)],
+          stops: [0, .5, 1],
+        ),
         boxShadow: const [
-          BoxShadow(color: Color(0x240B3C48), blurRadius: 70, offset: Offset(0, 30)),
+          BoxShadow(color: Color(0x290B3C48), blurRadius: 70, offset: Offset(0, 30)),
         ],
+      ),
+      child: Container(
+      key: const ValueKey('login-card'),
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(23),
       ),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Image.asset(
-                'assets/branding/abos-logo-lockup-transparent.png',
-                width: 124,
-                semanticLabel: 'ABOS',
-                errorBuilder: (_, __, ___) => const Text('ABOS',
-                    style: TextStyle(
-                        fontSize: 28, fontWeight: FontWeight.w800, color: _Palette.ink)),
-              ),
-            ),
+            // ⭐ জীবন্ত লোগো — দশটা নড়াচড়া এলোমেলো ক্রমে ([[LiveLogo]])
+            const Center(child: LiveLogo(key: ValueKey('login-live-logo'), width: 140)),
             gap,
             Text(greeting,
                 key: const ValueKey('login-greeting'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 30, fontWeight: FontWeight.w700, color: _Palette.ink)),
+                    fontSize: 20, fontWeight: FontWeight.w700, color: _Palette.ink)),
             Text(w.subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 15, color: _Palette.muted)),
@@ -431,6 +439,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             gap,
+            // ⭐ Powered by UNIVER — ওয়েবের বাক্সের মতো, বাক্সের ভেতরেই; নাম লোগোর নীলে, স্লোগান সোনালিতে
+            //   (মালিক, ১ নভেম্বর ২০২৬: "Powed by univer soho bosabe")
+            // ⓘ সরু ফোনে এক লাইনেই থাকে, দরকারে ছোট হয় — বাক্সের বাইরে গড়ায় না
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+              key: const ValueKey('login-powered-by'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${w.poweredBy} ', style: const TextStyle(fontSize: 12, color: _Palette.muted)),
+                Image.asset('assets/branding/univer-mark.png', width: 34, height: 34,
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 34)),
+                const SizedBox(width: 6),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('UNIVER BANGLADESH',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF007A99), letterSpacing: .3)),
+                    Text('Empowering Tomorrow', style: TextStyle(fontSize: 12, color: Color(0xFFB88A00))),
+                  ],
+                ),
+              ],
+            ),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -452,6 +486,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

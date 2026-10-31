@@ -6,6 +6,7 @@ import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_exceptions.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/config/app_config.dart';
+import 'package:abos_mobile/core/widgets/live_logo.dart';
 import 'package:abos_mobile/features/auth/login_screen.dart';
 
 /// The login page in the owner's "প্রিমিয়াম ৫ · মুক্তা সাদা" look
@@ -51,18 +52,33 @@ void main() {
 
   setUp(() => auth = _FakeAuth((_) => null));
 
-  testWidgets('the owner\'s words are on the page, the button says প্রবেশ করুন', (tester) async {
+  testWidgets('the owner\'s words are on the page, the button says লগইন করুন', (tester) async {
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
 
     expect(find.text('শুভ সকাল'), findsOneWidget);
     expect(find.text('আজকের হিসাব আপনার অপেক্ষায়'), findsOneWidget);
-    expect(find.text('প্রবেশ করুন'), findsOneWidget);
+    expect(find.text('লগইন করুন'), findsOneWidget);
     expect(find.text('ঢুকুন'), findsNothing, reason: 'the owner: never "ঢুকুন"');
     expect(find.text('মনে রাখুন'), findsOneWidget);
     expect(find.text('পাসওয়ার্ড ভুলে গেছেন?'), findsOneWidget);
     expect(find.textContaining('সংস্করণ ${AppConfig.appVersion}'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
+  });
+
+  // ⭐ মালিক, ১ নভেম্বর ২০২৬: "app er login box tate sonalir kaj", "Golden color", "Powed by univer soho bosabe", "App eo jibonto live logo"
+  testWidgets('the box wears the gold rim, the live logo and Powered by UNIVER, on a 390 phone with nothing spilling', (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    final rim = tester.widget<Container>(find.byKey(const ValueKey('login-gold-rim')));
+    final gradient = (rim.decoration! as BoxDecoration).gradient as LinearGradient?;
+    expect(gradient?.colors, contains(const Color(0xFFF5B800)), reason: '⛔ লগইন বাক্সে সোনালি পাড় নেই');
+    expect(find.descendant(of: find.byKey(const ValueKey('login-gold-rim')), matching: find.byType(LiveLogo)), findsOneWidget,
+        reason: '⛔ লগইন বাক্সে জীবন্ত লোগো নেই');
+    expect(find.descendant(of: find.byKey(const ValueKey('login-card')), matching: find.text('UNIVER BANGLADESH')), findsOneWidget,
+        reason: '⛔ বাক্সের ভেতরে Powered by UNIVER নেই');
+    expect(tester.takeException(), isNull, reason: '⛔ সরু ফোনে কিছু বাক্সের বাইরে গড়িয়েছে');
   });
 
   test('the greeting reads the Dhaka clock', () {
@@ -82,13 +98,13 @@ void main() {
 
     expect(find.text('Good afternoon'), findsOneWidget);
     expect(find.text("Today's books are waiting for you"), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
     expect(find.text('Remember me'), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
 
     await tester.tap(find.text('বাংলা'));
     await tester.pumpAndSettle();
-    expect(find.text('প্রবেশ করুন'), findsOneWidget);
+    expect(find.text('লগইন করুন'), findsOneWidget);
   });
 
   testWidgets('empty fields are refused before the server is asked', (tester) async {
@@ -175,7 +191,7 @@ void main() {
 
     await tester.tap(find.text('ফিরে যান'));
     await tester.pumpAndSettle();
-    expect(find.text('প্রবেশ করুন'), findsOneWidget);
+    expect(find.text('লগইন করুন'), findsOneWidget);
   });
 
   testWidgets('পাসওয়ার্ড ভুলে গেছেন? says whom to ask', (tester) async {
