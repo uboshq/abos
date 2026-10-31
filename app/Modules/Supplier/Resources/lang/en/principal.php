@@ -51,4 +51,22 @@ return [
     'dash_to_get' => 'Due from the company: :amount',
     'dash_period' => 'Period: :period',
     'so_far' => ':from – to date',
+
+    // ⭐ Drill-down: the ledger lines behind collections and payments, and the formula box (owner, 24 Oct 2026)
+    'lines_collections_title' => 'Principal collections: where the commission comes from',
+    'lines_payments_title' => 'Paid to the principal: list',
+    'line_date' => 'Date',
+    'line_document' => 'Paper',
+    'line_customer' => 'Received from',
+    'line_account' => 'Into account',
+    'drill_line' => 'Open the paper: :amount',
+    'drill_inflow' => 'Open the collections behind :amount',
+    'drill_commission' => 'Open how the commission :amount was worked out',
+    'drill_share' => 'Open how the principal’s share :amount was worked out',
+    'drill_paid' => 'Open the payments to the principal: :amount',
+    'drill_balance' => 'Open how the balance :amount was worked out (share − paid)',
+    'explain' => ':name · :period · collections :inflow × :rate = commission :commission · principal’s share = :inflow − :commission = :share · paid :paid · balance :balance',
+    'explain_actual' => ':name · :period · principal’s share = actual purchase cost of the goods sold :share · commission = collections :inflow − :share = :commission · paid :paid · balance :balance',
+    'date_invalid' => 'The date is not in the right shape (for example 2026-10-25).',
+    'principal_invalid' => 'Only one principal can be chosen.',
 ];

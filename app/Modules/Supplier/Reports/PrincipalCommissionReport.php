@@ -52,7 +52,9 @@ final class PrincipalCommissionReport
                 ],
                 ['key' => 'branch_name', 'label' => 'supplier::principal.branch'],
                 ['key' => 'period', 'label' => 'supplier::principal.period', 'width' => '13rem'],
-                ['key' => 'inflow', 'label' => 'supplier::principal.inflow', 'type' => ReportColumn::MONEY],
+                // ⭐ প্রতিটা অঙ্কে চাপলে উৎস, আর সব টাকার কলামে ৳ — কথার জেরে ৳ ছিল, খালি অঙ্কে নয় (মালিক, ২৪ অক্টোবর ২০২৬)
+                ['key' => 'inflow', 'label' => 'supplier::principal.inflow', 'type' => ReportColumn::MONEY, 'currency' => true,
+                    'drill' => self::lines(PrincipalLinesReport::COLLECTIONS, 'supplier::principal.drill_inflow')],
                 ['key' => 'basis_rate', 'label' => 'supplier::principal.basis_rate'],
                 [
                     'key' => 'commission',
@@ -61,9 +63,13 @@ final class PrincipalCommissionReport
                     'type' => ReportColumn::DR_CR,
                     'words' => ['supplier::principal.commission_earned', 'supplier::principal.commission_lost'],
                     'total' => true,
+                    // ⓘ সূত্রের বাক্সসহ আদায়ের পাতা — আদায় × হার = কমিশন, চক্রের তারিখে
+                    'drill' => self::lines(PrincipalLinesReport::COLLECTIONS, 'supplier::principal.drill_commission'),
                 ],
-                ['key' => 'share', 'label' => 'supplier::principal.share', 'type' => ReportColumn::MONEY],
-                ['key' => 'paid', 'label' => 'supplier::principal.paid', 'type' => ReportColumn::MONEY],
+                ['key' => 'share', 'label' => 'supplier::principal.share', 'type' => ReportColumn::MONEY, 'currency' => true,
+                    'drill' => self::lines(PrincipalLinesReport::COLLECTIONS, 'supplier::principal.drill_share')],
+                ['key' => 'paid', 'label' => 'supplier::principal.paid', 'type' => ReportColumn::MONEY, 'currency' => true,
+                    'drill' => self::lines(PrincipalLinesReport::PAYMENTS, 'supplier::principal.drill_paid')],
                 [
                     'key' => 'balance',
                     'label' => 'supplier::principal.balance',
@@ -71,9 +77,32 @@ final class PrincipalCommissionReport
                     'type' => ReportColumn::DR_CR,
                     'words' => ['supplier::principal.balance_to_pay', 'supplier::principal.balance_to_get'],
                     'total' => true,
+                    /*
+                     * ⓘ জের = অংশ − দেওয়া — দেওয়ার তালিকা, মাথায় সূত্রের বাক্স ("অংশ … · দেওয়া … · জের …")। ⛔ সরবরাহকারীর খাতা নয়:
+                     * accounts-এর খাতায় accounts.report লাগে, সরবরাহকারীর পাতায় supplier.view — রিপোর্টের পাঠক (supplier.report)
+                     * সেখানে ৪০৩ পেতেন। যে অঙ্ক দেখা যায়, তার উৎস একই চাবিতে খোলে (fe, ২৪ অক্টোবর ২০২৬)।
+                     */
+                    'drill' => self::lines(PrincipalLinesReport::PAYMENTS, 'supplier::principal.drill_balance'),
                 ],
             ],
         );
+    }
+
+    /**
+     * অঙ্কের উৎসের পাতা ([[PrincipalLinesReport]]) — সারিতে সেই প্রিন্সিপালের সেই চক্র, মোটে সবাই (প্রত্যেকে নিজের চক্রে, একই মাস আর শাখা)।
+     *
+     * @return array{route: string, params: array<string, string>, total: array<string, string>, label: string}
+     */
+    private static function lines(string $report, string $label): array
+    {
+        $slug = $report === PrincipalLinesReport::COLLECTIONS ? '=principal-collections' : '=principal-payments';
+
+        return [
+            'route' => 'supplier.report.show',
+            'params' => ['slug' => $slug, 'principal' => 'supplier_id', 'from' => 'period_from', 'to' => 'period_to'],
+            'total' => ['slug' => $slug, 'month' => '@month', 'branch_id' => '@branch_id'],
+            'label' => $label,
+        ];
     }
 
     /**

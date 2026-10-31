@@ -96,7 +96,100 @@ final class ReportColumn
          * @var array{0: string, 1: string, 2: bool}|null  [ধরন, id-র ঘর, কেবল শাখা]
          */
         public readonly ?array $place = null,
+
+        /*
+         * ⭐ অঙ্কে চাপলে তার উৎস — drill-down (মালিক, ২৪ অক্টোবর ২০২৬: *"লিংক থাকার কথা, যাতে হিসাব কোথা থেকে এল বোঝা যায়"*)।
+         * ⓘ `['route' => দরজার নাম, 'params' => [ঠিকানার নাম => মান], 'total' => [...], 'label' => অনুবাদের চাবি]` — মান:
+         *   'চাবি'   সারির সেই ঘর;   '@চাবি'  রিপোর্টের ছাঁকনির সেই মান;   '=লেখা'  ঠিক এই লেখা।
+         * `total` থাকলে মোটের সারির অঙ্কও খোলে (সারি নেই, তাই কেবল '@' আর '=')। `label` — পর্দা-পাঠকের কথা, `:amount` দিয়ে
+         * ("আদায়ের বিবরণ খুলুন — ৳:amount")। ⛔ দেখার নিয়ম দরজাতেই — লিংক কেবল ঠিকানা, কিছু খোলে না যা দরজা খুলত না।
+         * @var array{route: string, params: array<string, string>, total?: array<string, string>, label?: string}|null
+         */
+        public readonly ?array $drill = null,
+
+        /* ⭐ টাকার ঘরে ৳ — এক রিপোর্টের সব টাকার কলাম এক ধাঁচে (প্রিন্সিপালের কমিশন: কথার জেরে ৳ ছিল, খালি অঙ্কে নয়; মালিক, ২৪ অক্টোবর ২০২৬) */
+        public readonly bool $currency = false,
     ) {}
+
+    /** অঙ্কে চাপলে উৎস খোলে কি ([[self::$drill]]) */
+    public function hasDrill(): bool
+    {
+        return $this->drill !== null;
+    }
+
+    /**
+     * এই সারির অঙ্কের ঠিকানা — ঘোষণা না থাকলে, বা দরকারি ঘর খালি হলে null।
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<string, mixed>  $filters
+     */
+    public function drillHref(array $row, array $filters): ?string
+    {
+        if ($this->drill === null) {
+            return null;
+        }
+
+        // ⓘ সারির নিজের কাগজ — `['source' => ['type' => ঘর, 'id' => ঘর]]` (খাতা-সারির তালিকা: অঙ্কে চাপলে যে কাগজের টাকা, সেটা)
+        if (isset($this->drill['source'])) {
+            $type = $row[$this->drill['source']['type']] ?? null;
+            $id = $row[$this->drill['source']['id']] ?? null;
+
+            return $type === null || $id === null ? null
+                : (app(\App\Core\Engines\Drill\DrillResolver::class)->describe((string) $type, (int) $id)['route'] ?? null);
+        }
+
+        return self::href($this->drill['route'], $this->drill['params'], $row, $filters);
+    }
+
+    /**
+     * মোটের সারির অঙ্কের ঠিকানা — `total` ঘোষিত না থাকলে null।
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function drillTotalHref(array $filters): ?string
+    {
+        // ⓘ মোটের দরজা আলাদা হতে পারে (`total_route`) — যেমন সারির জের এক পক্ষের খাতা খোলে, মোটের জের সবার সূত্রের পাতা
+        return isset($this->drill['total'])
+            ? self::href($this->drill['total_route'] ?? $this->drill['route'], $this->drill['total'], [], $filters)
+            : null;
+    }
+
+    /** পর্দা-পাঠকের কথা — ঘোষিত চাবি, নইলে সাধারণ "বিবরণ খুলুন — :amount" */
+    public function drillLabel(string $shown): string
+    {
+        return (string) __($this->drill['label'] ?? 'core.report.drill_open', ['amount' => $shown]);
+    }
+
+    /**
+     * @param  array<string, string>  $params
+     * @param  array<string, mixed>  $row
+     * @param  array<string, mixed>  $filters
+     */
+    private static function href(string $route, array $params, array $row, array $filters): ?string
+    {
+        $out = [];
+
+        foreach ($params as $name => $from) {
+            $value = match (true) {
+                str_starts_with($from, '=') => substr($from, 1),
+                str_starts_with($from, '@') => $filters[substr($from, 1)] ?? null,
+                default => $row[$from] ?? null,
+            };
+
+            // ⓘ সারির ঘর খালি হলে লিংক নয় — অর্ধেক ঠিকানা ভুল তালিকা খুলত; ছাঁকনির খালি মান কেবল বাদ পড়ে
+            if ($value === null || $value === '') {
+                if (! str_starts_with($from, '@')) {
+                    return null;
+                }
+
+                continue;
+            }
+
+            $out[$name] = is_bool($value) ? (int) $value : $value;
+        }
+
+        return route($route, $out);
+    }
 
     /** এই কলামের পাশে ইঞ্জিন জায়গা জোড়ে ([[self::$place]]) */
     public function hasPlace(): bool
@@ -146,7 +239,30 @@ final class ReportColumn
             ratio: isset($definition['ratio']) ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1]] : null,
             partyKey: self::partyKeyOf($definition, $type),
             place: self::placeOf($definition, $type),
+            drill: self::drillOf($definition),
+            currency: (bool) ($definition['currency'] ?? false),
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     * @return array{route: string, params: array<string, string>, total?: array<string, string>, label?: string}|null
+     */
+    private static function drillOf(array $definition): ?array
+    {
+        if (! isset($definition['drill'])) {
+            return null;
+        }
+
+        $drill = $definition['drill'];
+
+        $bySource = is_array($drill) && is_string($drill['source']['type'] ?? null) && is_string($drill['source']['id'] ?? null);
+
+        if (! is_array($drill) || (! $bySource && (! is_string($drill['route'] ?? null) || ! is_array($drill['params'] ?? null)))) {
+            throw new InvalidArgumentException("Report column '{$definition['key']}' has a drill without a route and params, or a source.");
+        }
+
+        return $drill;
     }
 
     /**

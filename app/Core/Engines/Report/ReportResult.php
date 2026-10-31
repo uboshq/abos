@@ -249,9 +249,12 @@ final class ReportResult
             return $column->signed($value);
         }
 
-        return $column->type === ReportColumn::QUANTITY
-            ? Money::quantity($value)
-            : Money::format($value, $column->decimals());
+        if ($column->type === ReportColumn::QUANTITY) {
+            return Money::quantity($value);
+        }
+
+        // ⓘ ৳ কেবল যে কলাম চায় ([[ReportColumn::$currency]]) — এক রিপোর্টের টাকার কলাম এক ধাঁচে
+        return ($column->currency && $column->type === ReportColumn::MONEY ? '৳' : '').Money::format($value, $column->decimals());
     }
 
     public function formatTotal(ReportColumn $column): string

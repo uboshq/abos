@@ -52,4 +52,22 @@ return [
     'dash_to_get' => 'কোম্পানির কাছে পাব: :amount',
     'dash_period' => 'সময়কাল: :period',
     'so_far' => ':from – আজ পর্যন্ত',
+
+    // ⭐ অঙ্কে চাপলে উৎস — আদায় আর দেওয়ার খাতা-সারি, আর সূত্রের বাক্স (মালিক, ২৪ অক্টোবর ২০২৬)
+    'lines_collections_title' => 'প্রিন্সিপালের আদায় — কমিশনের উৎস',
+    'lines_payments_title' => 'প্রিন্সিপালকে দেওয়া — তালিকা',
+    'line_date' => 'তারিখ',
+    'line_document' => 'কাগজ',
+    'line_customer' => 'কার কাছ থেকে',
+    'line_account' => 'কোন খাতে',
+    'drill_line' => 'কাগজটা খুলুন — :amount',
+    'drill_inflow' => 'আদায়ের বিবরণ খুলুন — :amount',
+    'drill_commission' => 'কমিশনের হিসাব খুলুন — :amount',
+    'drill_share' => 'প্রিন্সিপালের অংশের হিসাব খুলুন — :amount',
+    'drill_paid' => 'প্রিন্সিপালকে দেওয়ার তালিকা খুলুন — :amount',
+    'drill_balance' => 'জেরের হিসাব খুলুন (অংশ − দেওয়া) — :amount',
+    'explain' => ':name · :period · আদায় :inflow × :rate = কমিশন :commission · প্রিন্সিপালের অংশ = :inflow − :commission = :share · দেওয়া :paid · জের :balance',
+    'explain_actual' => ':name · :period · প্রিন্সিপালের অংশ = বিক্রি হওয়া মালের আসল ক্রয়মূল্য :share · কমিশন = আদায় :inflow − :share = :commission · দেওয়া :paid · জের :balance',
+    'date_invalid' => 'তারিখটা ঠিক আকারে নেই (যেমন 2026-10-25)।',
+    'principal_invalid' => 'প্রিন্সিপাল একজনই বাছা যায়।',
 ];

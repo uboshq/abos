@@ -206,6 +206,8 @@ return [
         \App\Modules\Supplier\Reports\LedgerCheckReports::class,
         // ⭐ প্রিন্সিপালের কমিশন — কেবল রিপোর্ট, খাতায় কিছু বসে না (মালিক, ৫ অক্টোবর ২০২৬)
         \App\Modules\Supplier\Reports\PrincipalCommissionReport::class,
+        // ⭐ কমিশনের অঙ্কের উৎস — আদায় আর প্রিন্সিপালকে দেওয়ার খাতা-সারি (মালিক, ২৪ অক্টোবর ২০২৬)
+        \App\Modules\Supplier\Reports\PrincipalLinesReport::class,
     ],
 
     /*
