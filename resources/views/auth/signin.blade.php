@@ -57,24 +57,37 @@
              style="position: absolute; width: 520px; max-width: 90vw; height: auto; left: 4%; bottom: -120px; opacity: .07; transform: rotate(-12deg);">
     </div>
 
-    <div class="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-10">
+    {{-- ⭐ সরু, ছোট বাক্স — মালিকের দেখানো নমুনার মাপে (৩১ অক্টোবর ২০২৬: "slim cuto ekta box … rounde e golden base") --}}
+    <div class="relative mx-auto flex min-h-dvh w-full flex-col justify-center px-4 py-10" style="max-width: 420px;">
+
+        {{-- সার্ভার চলছে কিনা — বাক্সের বাইরে, পাতার উপরে বাঁয়ে (মালিক, ৩১ অক্টোবর ২০২৬: "sochol cinnota boxer bahire nupore bampase daw");
+             বাক্সটা তাতে আরও ছোট --}}
+        <div style="position: fixed; top: 16px; inset-inline-start: 16px;"
+             class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) border border-(--color-border)
+                    bg-(--color-surface-card) px-3 text-xs text-(--color-ink-muted)">
+            <span class="size-2 rounded-full bg-(--color-success)" aria-hidden="true"></span>
+            {{ __('core.status_bar.operational') }}
+        </div>
 
         {{-- ভাষা — কোণে, কারণ এটা পাতার কাজ নয়, পাতার সেটিং --}}
         <a href="?locale={{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
-           class="absolute end-4 top-6 flex min-h-(--spacing-touch) items-center rounded-(--radius-field)
+           style="position: fixed; top: 16px; inset-inline-end: 16px;"
+           class="flex min-h-(--spacing-touch) items-center rounded-(--radius-field)
                   border border-(--color-border) bg-(--color-surface-card) px-3 text-xs
                   text-(--color-ink-muted) transition-colors hover:text-(--color-ink)">
             <x-ui.icon name="globe" :size="14" class="me-1.5" />
             {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
         </a>
 
-        {{-- ⭐ কাচের মতো সাদা কার্ড — লোগো, সম্ভাষণ আর ফর্ম এক কার্ডে (মুক্তা-সাদা নকশা) --}}
-        <div class="px-6 py-8 sm:px-8"
-             style="border-radius: 28px; border: 1px solid #E3EDF0; background: rgba(255,255,255,.86);
-                    box-shadow: 0 40px 90px rgba(11,60,72,.12); backdrop-filter: blur(6px);">
+        {{-- ⭐ সাদা কার্ড, চারদিকে সোনালি ঢালের গোল পাড় — লোগো, সম্ভাষণ, ফর্ম আর পাদটীকা সব এক বাক্সে।
+             ⓘ ঘরের উচ্চতা এখানেই একটু ছোট (৪০px) — `--spacing-field` কেবল এই বাক্সে; ফর্মটা `/login`-এর সাথে একই। --}}
+        <div class="px-6 pb-5 pt-6"
+             style="--spacing-field: 2.5rem; border-radius: 26px; border: 3px solid transparent;
+                    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #b88a00, #f5b800 50%, #ffd54f) border-box;
+                    box-shadow: 0 30px 70px rgba(11,60,72,.16);">
 
         {{-- ব্র্যান্ড — পুরো লকআপ, তারপর সম্ভাষণ --}}
-        <div class="mb-6 text-center">
+        <div class="mb-3 text-center">
             {{--
                 লোগোটাই পূর্ণ পাতায় ফেরার পথ।
 
@@ -109,7 +122,7 @@
                       focus-visible:outline-(--color-brand-600)">
                 <img src="{{ asset('brand/abos-logo-lockup-transparent.png') }}"
                      alt="{{ __('core.brand.name') }}"
-                     width="748" height="239" class="mx-auto h-11 w-auto">
+                     width="748" height="239" class="mx-auto h-9 w-auto">
             </a>
 
             @php
@@ -127,32 +140,19 @@
                 $words = explode(' ', $greeting, 2);
             @endphp
 
-            <p class="mt-5 font-semibold" style="font-size: 30px; line-height: 1.2; color: #0B2A31;">
+            <p class="mt-3 font-semibold" style="font-size: 17px; line-height: 1.3; color: #0B2A31;">
                 {{ $greeting }}
             </p>
-            <p class="mt-1 text-sm" style="color: #5B7B83;">{{ __('auth.awaits_you') }}</p>
+            <p class="text-xs" style="color: #5B7B83;">{{ __('auth.awaits_you') }}</p>
         </div>
 
         {{-- ফর্ম — পাতার আসল কাজ, তাই <main> --}}
         <main>
             <div>
 
-                {{--
-                    সার্ভার চলছে কিনা — এখানেও।
-
-                    `/login`-এ এটা আছে, আর কারণটা এখানেও একই: লগইন আটকে
-                    গেলে দোষটা পাসওয়ার্ডের না সার্ভারের, সেটা না জানলে
-                    মানুষ একই পাসওয়ার্ড পাঁচবার লেখেন।
-                --}}
-                <div class="mb-4 flex items-center gap-1.5 text-xs text-(--color-ink-muted)">
-                    <span class="size-2 rounded-full bg-(--color-success)" aria-hidden="true"></span>
-                    {{ __('core.status_bar.operational') }}
-                </div>
-
                 @include('auth._form')
             </div>
         </main>
-        </div>
 
         {{--
             পাদটীকা — কে বানাল, কার নামে, আর কোন সংস্করণ।
@@ -173,9 +173,8 @@
             তলটা `surface-card` নয়, `surface-muted` — নাহলে দুইটা সাদা
             বাক্স পাশাপাশি বসত আর চোখ ঠিক করতে পারত না **কোনটায় কাজ**।
         --}}
-        <footer class="mt-7">
-            <div class="rounded-2xl border border-(--color-border) bg-(--color-surface-muted)
-                        px-5 py-4 text-center text-2xs text-(--color-ink-muted)">
+        <footer class="mt-4 border-t border-(--color-border) pt-3">
+            <div class="text-center text-2xs text-(--color-ink-muted)">
 
                 {{--
                     UNIVER-এর লকআপ — চিহ্ন বাঁয়ে, নাম আর স্লোগান ডানে।
@@ -192,33 +191,29 @@
                     বরাবর রাখে; `text-start` ব্লকটাকে বাঁয়ে মেলায়,
                     বাইরের `text-center` থাকা সত্ত্বেও।
                 --}}
-                <div class="flex items-center justify-center gap-2">
+                <div class="flex items-center justify-center gap-1.5 whitespace-nowrap">
                     <span>{{ __('core.brand.powered_by') }}</span>
 
                     {{-- aria-hidden — নামটা পাশেই লেখা, পর্দা-পাঠক
                          যেন একই কথা দুবার না বলে --}}
                     <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
-                         class="size-8 shrink-0 object-contain">
+                         class="size-9 shrink-0 object-contain">
 
                     <span class="text-start leading-tight">
-                        <span class="block font-medium tracking-wide text-(--color-ink)">
+                        <span class="block font-semibold tracking-wide" style="color: #007A99; font-size: 15px;">{{-- ⓘ UNIVER-চিহ্নের নীল, সাদায় পড়ার মতো গাঢ় (মালিক, ৩১ অক্টোবর ২০২৬) --}}
                             {{ __('core.brand.powered_by_name') }}
                         </span>
 
-                        <span class="block text-(--color-brand-gold-deep)">
+                        <span class="block text-(--color-brand-gold-deep)" style="font-size: 12.5px;">
                             {{ __('core.brand.powered_by_slogan') }}
                         </span>
                     </span>
                 </div>
 
-                {{-- হালকা ভাগরেখা — উপরে কে বানাল, নিচে কী চলছে --}}
-                <div class="mx-auto my-3 h-px w-16 bg-(--color-border)"></div>
-
-                <p>{{ __('core.brand.developed_by') }}</p>
-
-                <p class="mt-1">{{ __('core.brand.name') }} · v{{ \App\Core\Support\Release::version() }}</p>
+                <p class="mt-2">{{ __('core.brand.developed_by') }} · v{{ \App\Core\Support\Release::version() }}</p>
             </div>
         </footer>
+        </div>
     </div>
 </body>
 </html>

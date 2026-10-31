@@ -63,6 +63,26 @@ class TwoDoorsAndTheBrowserRemembersTest extends TestCase
     }
 
     /**
+     * ⭐ শান্ত দরজা — আগের হালকা জমিনে সরু বাক্স, চারদিকে সোনালি পাড় (মালিক, ৩১ অক্টোবর ২০২৬, NEXUS-এর ছবি দেখিয়ে: "slim cuto
+     * ekta box … rounde e golden base"; "sochol cinnota boxer bahire nupore bampase daw"; "ok live e daw")।
+     * ⛔ আগে বাক্স ৪৪৮px চওড়া, পাদটীকা আলাদা বাক্সে, "সচল" বাক্সের ভেতরে — মালিকের চোখে "বেশি চওড়া"।
+     */
+    public function test_the_quiet_door_is_a_slim_gold_box(): void
+    {
+        $html = (string) $this->get(route('login.calm'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<body\b[^>]*style="background: #EEF5F7;"/', $html, '⛔ শান্ত দরজা: আগের হালকা জমিন নেই।');
+        $this->assertStringContainsString('style="max-width: 420px;"', $html, '⛔ শান্ত দরজা: বাক্স সরু নয়।');
+        $this->assertMatchesRegularExpression('/border: 3px solid transparent;\s*background: linear-gradient\(#fff, #fff\) padding-box, linear-gradient\(135deg, #b88a00/', $html,
+            '⛔ শান্ত দরজা: বাক্সের চারদিকে সোনালি পাড় নেই।');
+        $card = strpos($html, 'border: 3px solid transparent;');
+        $status = strpos($html, __('core.status_bar.operational'));
+        $this->assertNotFalse($status, '⛔ শান্ত দরজা: "সচল" চিহ্নটাই নেই।');
+        $this->assertLessThan($card, $status, '⛔ শান্ত দরজা: "সচল" বাক্সের ভেতরে — বাইরে উপরে বাঁয়ে থাকার কথা।');
+        $this->assertGreaterThan($card, strpos($html, __('core.brand.powered_by_name')), '⛔ শান্ত দরজা: পাদটীকা বাক্সের বাইরে।');
+    }
+
+    /**
      * সফলভাবে ঢোকার পর ব্রাউজারে চিহ্ন বসে।
      *
      * চিহ্নটা কেবল `1` — কে ঢুকেছিলেন, কোন কোম্পানি, কিছুই নয়। এটা
