@@ -10,11 +10,13 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Support\ListSummary;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ভাউচার পোস্ট করার আগে অনুমোদন লাগে কি না।
@@ -44,28 +46,10 @@ final class VoucherApproval implements ClassifiesDrafts
     public const MODULE = 'accounts';
 
     /*
-     * ⭐ খসড়ার সইয়ের অবস্থা — পাতার নোট ([[waitFor()]]), ফোনের সারি, অপেক্ষার তালিকা আর তালিকার মোট ([[standing()]]) সবাই
-     * এই এক উত্তর পড়ে ([[decide()]]; তালিকার মোটের চুক্তি v6 — fe, a4, a6, ২৪ অক্টোবর ২০২৬)।
-     *   awaiting — অনুরোধ গেছে, আর তারপর ভাউচার বদলায়নি: সিদ্ধান্তের অপেক্ষা;
-     *   stale    — অনুরোধের পরে ভাউচার বদলেছে: "পোস্ট" চাপলে পুরনোটা তুলে নতুন করে সইয়ে যাবে ([[stopping()]]);
-     *   needs    — অনুরোধ হয়নি, কিন্তু ছক বলছে পোস্টে সই লাগবে;
-     *   signed   — সই আছে, ঢাকে — লেখক পোস্ট করবেন;
-     *   rejected — ফেরানো, আর তারপর ভাউচার বদলায়নি;
-     *   null     — সই লাগেই না।
-     * ⛔ আগে ফোন আর ওয়েবের অপেক্ষার তালিকা যেকোনো PENDING-কেই "সইয়ের অপেক্ষায়" বলত — বাসি অনুরোধও, যেটা পরের পোস্টে তুলে নেওয়া হয়।
+     * ⭐ খসড়ার অনুমোদনের পাঁচ অবস্থা — [[VoucherSigning]]-এ (পাতার নোট [[waitFor()]], ফোনের সারি, অপেক্ষার তালিকা আর তালিকার মোট
+     * [[standing()]] সবাই [[decide()]]-এর এক উত্তর পড়ে)। ⓘ এখানে নয়: এই ক্লাসের প্রতিটা স্ট্রিং ধ্রুবক একটা অনুমোদনের কাজ।
+     * ⛔ আগে ফোন আর ওয়েবের অপেক্ষার তালিকা যেকোনো PENDING-কেই "অপেক্ষায়" বলত — বাসি অনুরোধও, যেটা পরের পোস্টে তুলে নেওয়া হয়।
      */
-    public const AWAITING = 'awaiting';
-
-    public const STALE = 'stale';
-
-    public const NEEDS = 'needs';
-
-    public const SIGNED = 'signed';
-
-    public const REJECTED = 'rejected';
-
-    /** সইয়ের অবস্থা থেকে তালিকার মোটের দল — বাকি সব (stale, needs, signed, null) খসড়া */
-    public const GROUP_OF = [self::AWAITING => ListSummary::PENDING, self::REJECTED => ListSummary::REJECTED];
 
     /**
      * বিপরীতের কাগজগুলো আগে থেকে তোলা — [[signingOf()]]-এর সময়টুকু, নইলে null ([[paperAlreadySigned()]])।
@@ -95,8 +79,132 @@ final class VoucherApproval implements ClassifiesDrafts
      * পাওয়া গেছে। কিছু ফেরত এলে সেটাই কারণ, আর তার `status` বলে দেয়
      * অপেক্ষায় নাকি প্রত্যাখ্যাত।
      */
+    /**
+     * ⭐ কম-বেশিতে মালিকের সই — ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳০.৫০-এর বেশি হলে ([[\App\Core\Support\Settlement::differenceNeedsOwner()]];
+     * আদায়ের হুবহু নিয়ম আর হুবহু ছক — `sales.discount`, মালিকের একটাই ধাপ; cb-ma-5, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সই লাগলে খসড়া থাকে আর অনুরোধ যায়; শেষ সইয়ে নিজে পোস্ট ([[\App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature]])।
+     * ⛔ ছক বন্ধ বা নেই মানে ফেরত (fail-closed — অনুমোদন বন্ধ কোম্পানিতেও, আদায় আর বিলের মতোই); ফেরানো সই ঠিক সেই অঙ্কে আবার
+     * পাঠালে ফেরত; সীমার বেশি রাউন্ডিং কখনো নয়।
+     */
+    public function differenceStopping(Voucher $voucher): ?Approval
+    {
+        [$kind, $amount] = $this->differenceOf($voucher);
+
+        if (! \App\Core\Support\Settlement::differenceNeedsOwner($kind, $amount)) {
+            return null;
+        }
+
+        $this->assertWithinLimit($kind, $amount);
+
+        $hash = $this->differenceFingerprint($voucher);
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
+
+        if ($decided?->status === Approval::APPROVED && $decided->stillCovers($amount, $hash)) {
+            return null;
+        }
+
+        if ($decided?->status === Approval::PENDING && $decided->state_hash !== null && ! hash_equals((string) $decided->state_hash, $hash)) {
+            $this->approvals->withdrawStale($decided);
+        }
+
+        if ($decided?->status === Approval::REJECTED && $decided->covers($amount)) {
+            throw ValidationException::withMessages(['difference.amount' => __('accounts::validation.difference_rejected')]);
+        }
+
+        $approval = $this->approvals->request(
+            document: $voucher,
+            module: \App\Modules\Accounts\Support\DifferenceSignature::MODULE,
+            action: \App\Modules\Accounts\Support\DifferenceSignature::ACTION,
+            amount: $amount,
+            // ⓘ কোন সইয়ের জায়গা নিল — বিক্রির বিলের ছাড়ের হুবহু ([[SalesInvoiceService::assertDiscountApproved()]]); শর্ত মাপা হয় না (`matchOn: []`)
+            payload: array_filter([
+                'supersedes' => $decided?->status === Approval::APPROVED ? (int) $decided->id : null,
+                'was_amount' => $decided?->status === Approval::APPROVED && $decided->amount !== null ? (string) $decided->amount : null,
+            ], fn ($v) => $v !== null),
+            reason: $voucher->narration,
+            stateHash: $hash,
+            matchOn: [],
+        );
+
+        if ($approval === null) {
+            throw ValidationException::withMessages(['difference.amount' => $kind === 'rounding'
+                ? __('accounts::validation.difference_rounding_no_signer', ['amount' => Money::format($amount), 'free' => Money::format(\App\Core\Support\Settlement::UNSIGNED)])
+                : __('accounts::validation.difference_discount_no_signer')]);
+        }
+
+        return $approval;
+    }
+
+    /**
+     * ⛔ পোস্টের নিজের পাহারা — যে পথেই আসুক (ওয়েব, ফোন, শেষ সইয়ের শেষকারী), সই লাগলে ঠিক এই কাগজের পাওয়া সই চাই।
+     */
+    public function assertDifferenceSigned(Voucher $voucher): void
+    {
+        [$kind, $amount] = $this->differenceOf($voucher);
+
+        if (! \App\Core\Support\Settlement::differenceNeedsOwner($kind, $amount)) {
+            return;
+        }
+
+        $this->assertWithinLimit($kind, $amount);
+
+        $decided = $this->approvals->latestFor($voucher, \App\Modules\Accounts\Support\DifferenceSignature::ACTION);
+
+        if ($decided?->status !== Approval::APPROVED || ! $decided->stillCovers($amount, $this->differenceFingerprint($voucher))) {
+            throw ValidationException::withMessages(['difference.amount' => $kind === 'rounding'
+                ? __('accounts::validation.difference_rounding_awaiting', ['amount' => Money::format($amount), 'free' => Money::format(\App\Core\Support\Settlement::UNSIGNED)])
+                : __('accounts::validation.difference_discount_awaiting')]);
+        }
+    }
+
+    /**
+     * সইয়ের ছাপ — পক্ষ, ধরন, অঙ্ক, খাতার প্রতিটা সারি (খাত, টাকার খাত, টাকা, কাটা, পার্থক্য) আর বিলের প্রতিটা সারি; বিবরণ বাদ।
+     */
+    public function differenceFingerprint(Voucher $voucher): string
+    {
+        $voucher->loadMissing(['lines', 'allocations']);
+
+        return hash('sha256', json_encode([
+            (string) $voucher->party_type,
+            (int) $voucher->party_id,
+            (string) $voucher->difference_kind,
+            bcadd((string) ($voucher->difference_amount ?? '0'), '0', 4),
+            $voucher->lines->map(fn ($l) => [(int) $l->account_id, bcadd((string) $l->debit, '0', 4), bcadd((string) $l->credit, '0', 4)])->values()->all(),
+            $voucher->allocations->map(fn ($a) => [(string) $a->against_type, (int) $a->against_id, bcadd((string) $a->amount, '0', 4)])->values()->all(),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array{0: ?string, 1: string} */
+    private function differenceOf(Voucher $voucher): array
+    {
+        if (! in_array($voucher->type, [Voucher::RECEIPT, Voucher::PAYMENT], true)) {
+            return [null, '0.0000'];
+        }
+
+        return [$voucher->difference_kind, bcadd((string) ($voucher->difference_amount ?? '0'), '0', 4)];
+    }
+
+    private function assertWithinLimit(?string $kind, string $amount): void
+    {
+        $limit = \App\Core\Support\Settlement::limit(app(\App\Core\Services\SettingsService::class));
+
+        if ($kind === 'rounding' && bccomp($amount, $limit, 4) > 0) {
+            throw ValidationException::withMessages(['difference.amount' => __('accounts::validation.difference_over_limit', [
+                'amount' => Money::format($amount), 'limit' => Money::format($limit),
+            ])]);
+        }
+    }
+
     public function stopping(Voucher $voucher): ?Approval
     {
+        // ⭐ কম-বেশির মালিকের সই আগে — ভাউচারের নিজের ছক বন্ধ থাকলেও (cb-ma-5; [[differenceStopping()]])
+        $held = $this->differenceStopping($voucher);
+
+        if ($held !== null) {
+            return $held;
+        }
+
         /*
          * ⭐ কাউন্টারের ডিপোজিট নিজের নিয়মে — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর।
          *
@@ -336,6 +444,44 @@ final class VoucherApproval implements ClassifiesDrafts
     }
 
     /**
+     * ⭐ লেখার আগেই — এই কাগজ পোস্টে সইয়ের অপেক্ষায় যাবে কি না (ফোনের preview আর ওয়েবের simulate-এর `needs_signature`; a4-এর
+     * "সইয়ের অপেক্ষায় হবে" চিপ, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ পোস্টের নিজের প্রশ্ন, একই ক্রমে: [[actionFor()]] (নিজের বাক্সে নগদ রসিদ, আগে সই-পাওয়া কাগজ, কাউন্টার) তারপর
+     * [[ApprovalEngine::requires()]] — অঙ্ক সেটাই যা লেখক পোস্টের সময় ভাউচারে থাকবে: সারির ডেবিটের যোগ (লেখার সময় সেবা `amount`
+     * তাই বসায়; পরিশোধে মোট + চার্জ)। ⛔ আলাদা হিসাব করলে চিপ এক কথা বলত আর পোস্ট আরেক কাজ করত। কিছুই লেখে না।
+     *
+     * @param  array<string, mixed>  $header  যাচাই-করা মাথা (`type` সহ)
+     * @param  list<array<string, mixed>>  $lines  [[VoucherWriter::linesFor()]]-এর সারি
+     */
+    public function wouldWait(array $header, array $lines): bool
+    {
+        $accounts = \App\Modules\Accounts\Models\Account::query()
+            ->whereKey(array_map(fn (array $l) => (int) ($l['account_id'] ?? 0), $lines))->get()->keyBy('id');
+
+        $voucher = (new Voucher)->forceFill(array_intersect_key($header, array_flip((new Voucher)->getFillable())));
+        $voucher->setAttribute('type', (string) ($header['type'] ?? ''));
+        $voucher->setRelation('lines', collect($lines)->map(fn (array $l) => (new VoucherLine)->forceFill([
+            'account_id' => (int) ($l['account_id'] ?? 0),
+            'debit' => (string) ($l['debit'] ?? '0'),
+            'credit' => (string) ($l['credit'] ?? '0'),
+        ])->setRelation('account', $accounts->get((int) ($l['account_id'] ?? 0)))));
+        $voucher->setAttribute('amount', $voucher->totals()['debit']);
+
+        // ⭐ কম-বেশিতে মালিকের সই — ভাউচারের নিজের ছক বন্ধ থাকলেও ([[differenceStopping()]]-এর একই প্রশ্ন; cb-ma-5)
+        [$kind, $difference] = $this->differenceOf($voucher);
+
+        if (\App\Core\Support\Settlement::differenceNeedsOwner($kind, $difference)) {
+            return true;
+        }
+
+        $action = $this->actionFor($voucher);
+
+        return $action !== null && $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount,
+            class_basename(Voucher::class), ApprovalEngine::fieldsOf($voucher));
+    }
+
+    /**
      * ⭐ "পোস্ট" চাপলে সই কী বলবে — কিছু না লিখে (৪ অক্টোবর ২০২৬; [[VoucherOverview]])।
      *
      * ⓘ [[stopping()]]-এর একই ধাপ, একই ক্রমে; কেবল শেষের `request()`-এর বদলে [[ApprovalEngine::requires()]] — কারণ
@@ -429,7 +575,7 @@ final class VoucherApproval implements ClassifiesDrafts
             ->where('status', Approval::PENDING)
             ->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
 
-        $out = [self::AWAITING => [], self::STALE => []];
+        $out = [VoucherSigning::AWAITING => [], VoucherSigning::STALE => []];
 
         foreach (array_chunk($candidates, ListSummary::CHUNK) as $ids) {
             $drafts = Voucher::query()->withoutGlobalScope('user-branch')->whereKey($ids)->where('status', \App\Core\Support\DocumentStatus::DRAFT)->get();
@@ -441,7 +587,7 @@ final class VoucherApproval implements ClassifiesDrafts
             }
         }
 
-        return ['awaiting' => $out[self::AWAITING], 'stale' => $out[self::STALE]];
+        return ['awaiting' => $out[VoucherSigning::AWAITING], 'stale' => $out[VoucherSigning::STALE]];
     }
 
     public function groups(): array
@@ -452,7 +598,7 @@ final class VoucherApproval implements ClassifiesDrafts
     /** তালিকার মোটের দল ([[ClassifiesDrafts]]) — [[signingOf()]]-এর উত্তর থেকে, [[GROUP_OF]] দিয়ে */
     public function standing(Collection $drafts): array
     {
-        return array_map(fn (?string $signing) => self::GROUP_OF[$signing ?? ''] ?? ListSummary::DRAFT, $this->signingOf($drafts, false));
+        return array_map(fn (?string $signing) => VoucherSigning::GROUP_OF[$signing ?? ''] ?? ListSummary::DRAFT, $this->signingOf($drafts, false));
     }
 
     /**
@@ -463,16 +609,16 @@ final class VoucherApproval implements ClassifiesDrafts
     private function decide(Voucher $voucher, string $action, ?Approval $latest, ?string $hash, bool $withNeeds): ?string
     {
         if ($latest?->status === Approval::APPROVED && $latest->stillCovers((string) $voucher->amount, $hash)) {
-            return self::SIGNED;
+            return VoucherSigning::SIGNED;
         }
 
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest, $hash)) {
-            return self::REJECTED;
+            return VoucherSigning::REJECTED;
         }
 
         // ⛔ বাসি অনুরোধ অপেক্ষা নয় — পরের পোস্টে [[stopping()]] সেটা তুলে নতুন চায় (RCV-0090, ১৩–১৪ অক্টোবর ২০২৬)
         if ($latest?->status === Approval::PENDING) {
-            return $this->isStale($latest, $hash) ? self::STALE : self::AWAITING;
+            return $this->isStale($latest, $hash) ? VoucherSigning::STALE : VoucherSigning::AWAITING;
         }
 
         if (! $withNeeds) {
@@ -480,7 +626,7 @@ final class VoucherApproval implements ClassifiesDrafts
         }
 
         return $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount, class_basename(Voucher::class),
-            ApprovalEngine::fieldsOf($voucher)) ? self::NEEDS : null;
+            ApprovalEngine::fieldsOf($voucher)) ? VoucherSigning::NEEDS : null;
     }
 
     /** অপেক্ষার অনুরোধটা কি আগের কাগজের — ছাপ না মিললে; ছাপ নেই এমন পুরনো অনুরোধ বাসি নয় (আগের আচরণ) */

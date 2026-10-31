@@ -38,7 +38,6 @@ final class AnInactivePartyWithABalanceCouldNotBeSettledTest extends TestCase
         $quiet->forceFill(['is_active' => false])->save();
 
         // ⓘ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ ([[Customer::pickerName()]])
-        $marked = $owing->fresh()->load(Customer::PLACE)->nameWithPoint().' — '.__('core.inactive_with_balance');
 
         // ⓘ ভাউচারের বাছাই
         $options = collect(app(PartyRegistry::class)->forPicker(evenInactiveWithABalance: true))
@@ -51,7 +50,11 @@ final class AnInactivePartyWithABalanceCouldNotBeSettledTest extends TestCase
         $plain = collect(collect(app(PartyRegistry::class)->forPicker())->firstWhere('type', Customer::drillSourceType())['options'])->pluck('id')->all();
         $this->assertNotContains((int) $owing->id, $plain, 'সাধারণ পিকারে নিষ্ক্রিয় গ্রাহক এলেন');
 
-        // ⓘ আদায়ের পর্দা — চিহ্নসহ
-        $this->get(route('sales.collection.create'))->assertOk()->assertSee($marked, false);
+        // ⓘ আদায়ের পর্দা — চিহ্নসহ। ভাগ করা পিকারে নাম আর চিহ্ন প্রথম লাইনে, পয়েন্ট · শাখা নিচের লাইনে (hint; মালিকের নিয়ম "নাম
+        //   প্রথম লাইনে, জায়গা নিচে") — তাই দুটো আলাদা দেখা হয় (fe, ২৬ অক্টোবর ২০২৬: আগে এক লাইনে খুঁজত, cb-ma-5c-এ লাল)
+        $withPoint = $owing->fresh()->load(Customer::PLACE)->nameWithPoint();
+        $collect = $this->get(route('sales.collection.create'))->assertOk();
+        $collect->assertSee(\Illuminate\Support\Str::before($withPoint, ' · ').' — '.__('core.inactive_with_balance'), false);
+        $collect->assertSee(\Illuminate\Support\Str::after($withPoint, ' · '), false);
     }
 }

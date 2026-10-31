@@ -163,6 +163,15 @@
     --color-success-hover: #065f46;
     --color-danger: #dc2626;        /* ৪.৮৩ ✓  (ছিল #EF4444 → ৩.৭৬ ✗) */
     --color-danger-hover: #b91c1c;
+
+    /* ⭐ ওপরের বারের সংখ্যার ব্যাজ — অনুমোদন, সই-হয়েছে-পোস্ট-হয়নি, ঘণ্টা (অনুমোদন ভাগ ৩, দফা ১৯)। ১০px লেখা, তাই
+       দুই থিমেই কালি-জমিন ৪.৫:১ লাগে। ⛔ আগে ব্যাজে `text-white` আর `--color-danger` — গাঢ় থিমের #ef4444-এ ৩.৭৬ ✗ */
+    --color-count-urgent: var(--color-danger);      /* #dc2626 · সাদায় ৪.৮৩ ✓ */
+    /* ⓘ নীলটা অ্যাকসেন্টের গাঢ় ধাপে, সাদা কালিতে, দুই থিমেই — brand-500 কোম্পানির বাছা (TDEPOT #3b82f6-এ সাদা ৩.৬৮ ✗);
+       accent-700 লেখার রং হিসেবে সাদা জমিনে ৪.৫ পাশ করে, তাই উল্টোটাও (টাকার বাক্সের একই জোড়া, --color-on-brand-*) */
+    --color-count-info: var(--color-on-brand-from);
+    --color-count-info-ink: var(--color-on-brand-ink);
+    --color-count-ink: #ffffff;
     --color-info: #1d4ed8;
 
     /*
@@ -1020,45 +1029,91 @@
    দূরে সরানো।
    ───────────────────────────────────────────────────────────────── */
 :root {
-    --color-module-dashboard: #2563eb;    /* নীল */
-    --color-module-accounts: #4f46e5;     /* ইন্ডিগো */
-    --color-module-finance: #0369a1;      /* গাঢ় আকাশি — হিসাবের পাশে, তবু আলাদা */
-    --color-module-sales: #10b981;        /* এমারেল্ড */
-    --color-module-purchase: #f59e0b;     /* অ্যাম্বার */
-    --color-module-inventory: #06b6d4;    /* সায়ান */
-    --color-module-customer: #8b5cf6;     /* ভায়োলেট */
-    --color-module-supplier: #0d9488;     /* টিল */
-    --color-module-hr: #f43f5e;           /* রোজ */
-    --color-module-approval: #ea580c;     /* কমলা */
-    --color-module-master_data: #a855f7;  /* পার্পল */
-    --color-module-reports: #475569;      /* স্লেট */
-    --color-module-governance: #7c3aed;   /* গাঢ় ভায়োলেট */
-    --color-module-system_admin: #334155; /* গাঢ় স্লেট */
-
     /*
-     * ⚠️ দুইটা মডিউল রং ছাড়া রেলে বসেছিল — `AScreenAskedForAColourNobodyDeclaresTest`
-     * ধরেছে। রং না থাকলে `var(--color-module-backup)` কিছুই ফেরত দেয় না,
-     * আর টাইলটা **বর্ণহীন** হয়ে বসে থাকে — দেখে ভুল মনে হয় না, ডিজাইন
-     * মনে হয়। ⓘ প্রতিবেশীদের থেকে আলাদা হতে হয় বলে দুইটাই বেছে নেওয়া:
-     * ব্যাকআপ ধূসর-সবুজ (বাকি সবুজ বিক্রয়ের), রেস্টুরেন্ট গাঢ় লাল-কমলা
-     * (কমলা অনুমোদনের, তাই আরও গভীরে)।
+     * ⭐ রঙিন ERP — প্রতিটা মডিউলের "কঠিন ধাপ" (ড্যাশবোর্ডের পরিকল্পনা §৩.২, ২৪ অক্টোবর ২০২৬; মালিক: "full erp RGB ekta color dibe")।
+     *
+     * ⛔ আগের হালকা রংগুলোর সাতটায় সাদা চিহ্ন ৪.৫ঃ১-এর নিচে ছিল (হলুদ ১.৯২, আকাশি ২.৭৭, কমলা ২.৮০ …)। এখন প্রতিটা
+     * ৭০০-র ঘরের — সাদা লেখা/চিহ্ন প্রতিটার উপরে ≥ ৪.৯২ঃ১ (মাপা, পাশের মন্তব্যে; `TheModuleColoursCarryWhiteTextTest` পাহারা দেয়)।
+     * ⓘ সিস্টেম লাল নয়, স্লেট: লাল মানে "এখনই দেখুন" (অর্থের রং), সিস্টেমের পাতা সব সময় বিপদ দেখাত।
+     * ⓘ রূপ (look) এগুলো আর ছোঁয় না — বন্ধ করার পথ কেবল কোম্পানির সুইচ, নিচের `[data-modules='calm']`।
      */
-    --color-module-backup: #0f766e;       /* গাঢ় টিল */
-    --color-module-restaurant: #b91c1c;   /* গাঢ় লাল */
-    /* ⓘ অফার ও প্রণোদনা রেলে রংহীন বসেছিল (ShellTest, ৫ অক্টোবর ২০২৬) — গোলাপি, তালিকায় আর কারও নেই */
-    --color-module-promotion: #db2777;    /* গোলাপি */
-    --color-module-documents: #65a30d;    /* লেবু-সবুজ — তালিকায় আর কারও নেই */
-    --color-module-fixed_assets: #92400e; /* গাঢ় বাদামি — দালানের রং, তালিকায় আর কারও নেই (১১ অক্টোবর ২০২৬) */
-    /* ⓘ মালিকের কেন্দ্র (১০ অক্টোবর ২০২৬) — গাঢ় সোনালি, ব্র্যান্ডের সোনার ঘরের; রেলে সবার উপরে, নিচের ইন্ডিগো থেকে দূরে।
-       সাদা চিহ্ন এর উপরে ৪.৯২ঃ১ ✓ */
-    --color-module-executive: #a16207;    /* গাঢ় সোনালি */
-    /* ⓘ বিজ্ঞপ্তি ব্যবস্থাপনা (১১ অক্টোবর ২০২৬) — গাঢ় নীলচে-সবুজ, ঘণ্টার চিহ্ন; ইনভেন্টরির হালকা সায়ান থেকে দূরে। সাদা চিহ্ন এর উপরে ৭.৩ঃ১ ✓ */
-    --color-module-notification: #155e75; /* গাঢ় নীলচে-সবুজ */
-    /* ⓘ বাকি নিয়ন্ত্রণ (১১ অক্টোবর ২০২৬) — গাঢ় খয়েরি-লাল: সতর্কতার রং, তবু রেস্টুরেন্টের লাল থেকে আলাদা; সাদা চিহ্ন ৬.৬ঃ১ ✓ */
-    --color-module-credit_control: #9f1239; /* গাঢ় রুবি */
+    --color-module-dashboard: #2563eb;    /* নীল — ৫.১৭ */
+    --color-module-sales: #1d4ed8;        /* নীল ৭০০ — ৬.৭০ */
+    --color-module-purchase: #c2410c;     /* কমলা ৭০০ — ৫.১৮ */
+    --color-module-inventory: #0f766e;    /* টিল ৭০০ — ৫.৪৭ */
+    --color-module-accounts: #4338ca;     /* ইন্ডিগো ৭০০ — ৭.৯০ */
+    --color-module-finance: #6d28d9;      /* বেগুনি ৭০০ — ৭.১০ */
+    --color-module-hr: #be185d;           /* গোলাপি ৭০০ — ৬.০৪ */
+    --color-module-customer: #0369a1;     /* আকাশি ৭০০ — ৫.৯৩ */
+    --color-module-promotion: #4d7c0f;    /* লেবু-সবুজ ৭০০ — ৪.৯৯ */
+    --color-module-approval: #b45309;     /* অ্যাম্বার ৭০০ — ৫.০২ */
+    --color-module-system_admin: #334155; /* স্লেট ৭০০ — ১০.৩৫ */
+    --color-module-supplier: #9a3412;     /* তামাটে (কমলা ৮০০) — ৭.৩১ */
+    --color-module-credit_control: #9f1239; /* গাঢ় রুবি — ৮.০২ */
+    --color-module-documents: #6b21a8;    /* ধূসর-বেগুনি (পার্পল ৮০০) — ৮.৭২ */
+    --color-module-restaurant: #4d5b16;   /* জলপাই — ৭.৪৪ */
+    --color-module-governance: #44403c;   /* স্লেটের ছায়া (স্টোন ৭০০) — ১০.২৭ */
+    --color-module-backup: #52525b;       /* স্লেটের ছায়া (জিংক ৬০০) — ৭.৭৩ */
+    --color-module-notification: #155e75; /* গাঢ় নীলচে-সবুজ — ৭.২৭ */
+    --color-module-master_data: #475569;  /* স্লেট ৬০০ — ৭.৫৮ */
+    --color-module-reports: #3f3f46;      /* জিংক ৭০০ — ১০.৪৪ */
+    --color-module-fixed_assets: #92400e; /* গাঢ় বাদামি — ৭.০৯ */
+    /* ⓘ মালিকের কেন্দ্র (১০ অক্টোবর ২০২৬) — গাঢ় সোনালি, ব্র্যান্ডের সোনার ঘরের */
+    --color-module-executive: #a16207;    /* গাঢ় সোনালি — ৪.৯২ */
 
     /* ⓘ নিচের মেনুর উচ্চতা — `--spacing-bottom-nav`-এর ভিত্তি; থিমের বাইরে, যাতে চলন্ত ঘোষণার সময়ও আসল মাপটা জানা থাকে */
     --spacing-bottom-nav-bar: 56px;
+}
+
+/* ⭐ রঙিন মডিউল বন্ধ (কোম্পানির সুইচ `system.colorful_modules`) — সব মডিউল ব্র্যান্ডের এক রঙে, ৪ সেপ্টেম্বরের শান্ত রূপ।
+   ⓘ html-এর inline style-এ রূপের ঘোষণা বসে, কিন্তু রূপ আর --color-module-* বলে না, তাই এই নিয়মটাই জেতে।
+   ⛔ অর্থের রং আর চার্টের রং এখানে নেই — ওগুলো মানে বহন করে, সুইচে বদলায় না। */
+:root[data-modules='calm'] {
+    --color-module-dashboard: var(--color-brand-700);
+    --color-module-sales: var(--color-brand-700);
+    --color-module-purchase: var(--color-brand-700);
+    --color-module-inventory: var(--color-brand-700);
+    --color-module-accounts: var(--color-brand-700);
+    --color-module-finance: var(--color-brand-700);
+    --color-module-hr: var(--color-brand-700);
+    --color-module-customer: var(--color-brand-700);
+    --color-module-promotion: var(--color-brand-700);
+    --color-module-approval: var(--color-brand-700);
+    --color-module-system_admin: var(--color-brand-700);
+    --color-module-supplier: var(--color-brand-700);
+    --color-module-credit_control: var(--color-brand-700);
+    --color-module-documents: var(--color-brand-700);
+    --color-module-restaurant: var(--color-brand-700);
+    --color-module-governance: var(--color-brand-700);
+    --color-module-backup: var(--color-brand-700);
+    --color-module-notification: var(--color-brand-700);
+    --color-module-master_data: var(--color-brand-700);
+    --color-module-reports: var(--color-brand-700);
+    --color-module-fixed_assets: var(--color-brand-700);
+    --color-module-executive: var(--color-brand-700);
+}
+
+/* ⭐ ABOS রূপের শান্ত রেল — ৪ সেপ্টেম্বরের নমুনা: টাইল নেই, চিহ্ন অ্যাকসেন্টের কালিতে (অ্যাম্বারে কালো; Looks/navy.php-র মন্তব্য)।
+   ⓘ ৩০ অক্টোবর পর্যন্ত এটা navy.php-তে ছিল; inline style বলে রঙিন মডিউলেও টাইল স্বচ্ছ থাকত। এখন কেবল সুইচ বন্ধে।
+   রঙিনে টাইল `--color-module-current` (উপরের `:root`-এর `--rail-tile-bg`), চিহ্ন সাদা — প্রতিটা রঙে ≥ ৪.৯২ঃ১। */
+:root[data-modules='calm'][data-ui='navy'] {
+    --rail-tile-ink: rgb(var(--accent-ink, 255 255 255));
+}
+:root[data-modules='calm'][data-ui='navy'] [data-rail-tile] {
+    --rail-tile-bg: transparent;
+}
+
+/* ⭐ রেলের টাইলের জমিন টাইলের নিজের ঘরে — ⛔ `:root`-এর `--rail-tile-bg: var(--color-module-current, …)` গোড়াতেই হিসাব হয়,
+   যেখানে `--color-module-current` নেই, তাই প্রতিটা টাইল ব্র্যান্ডের এক নীলে পড়ত (৩০ অক্টোবর ২০২৬, ১৩৬৬-এর ছবিতে ধরা)।
+   টাইল নিজের `--color-module-current` বসায় ([[shell.sidebar]]), আর এখানে সেটাই পড়া হয়। */
+[data-rail-tile] {
+    --rail-tile-bg: var(--color-module-current, var(--color-brand-600));
+}
+
+/* ⓘ রঙিন ABOS রেলে চালু টাইলও নিজের মডিউলের রঙে (সাদা ১৮% ছোপ নয় — তাতে চালুটাই একমাত্র রংহীন টাইল হত); চালু বোঝায়
+   সাদা দাগ (`--rail-tile-on-edge`, কালি = সাদা)। */
+:root[data-ui='navy']:not([data-modules='calm']) [data-rail-tile] {
+    --rail-tile-on-bg: var(--rail-tile-bg);
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -1089,7 +1144,8 @@
     --color-launcher-scrim: color-mix(in srgb, var(--color-surface-app) 86%, transparent);
 
     /* ⭐ ⊞ সব মডিউলের টাইল — প্রতিটা মডিউলের নিজের রং, Odoo-র মতো (মালিক, fe-র মাধ্যমে, ২১ অক্টোবর ২০২৬)।
-       ⓘ কেবল লঞ্চারের — রেল আর বাকি সব জায়গা ABOS রূপে এক টিল (মালিক, ৪ সেপ্টেম্বর; Looks/navy.php-র `--color-module-*`)।
+       ⓘ কেবল লঞ্চারের। রেল আর বাকি জায়গা এখন `--color-module-*` পরে — ৩০ অক্টোবর থেকে রূপ ওগুলো আর ছোঁয় না, এক রঙের
+         শান্ত রূপ কেবল কোম্পানির সুইচে (`[data-modules='calm']`; আগে ৪ সেপ্টেম্বর থেকে ABOS রূপে এক টিল ছিল)।
        ⓘ এক জায়গায়, এই তালিকায়; কোডটাই নামের শেষাংশ (§১৯.৭)। নতুন মডিউল এলে এখানে একটা সারি — না থাকলে
        [[TheLauncherWearsEachModulesOwnColourTest]] লাল।
        ⓘ সাদা আইকনের সাথে বৈসাদৃশ্য (WCAG, ≥ ৩ঃ১ চাই — বড় চিহ্ন), পাশে লেখা; টাইলের রং থিমে বদলায় না, আইকনও সাদাই থাকে,
@@ -1245,6 +1301,8 @@
     /* ⓘ লাল লেখাও, সাদা কালির লাল বোতামও — #ef4444 দুই কাজেই চলে (কালো জমিনে ৪.৯:১, সাদা কালিতে ৩.৮:১) */
     --color-danger: #ef4444;
     --color-danger-hover: #dc2626;
+    /* ⓘ লাল সংখ্যার ব্যাজ গাঢ়েও আলোর থিমের ফিল রাখে — #ef4444-এ সাদা ৩.৭৬ ✗, #dc2626 ৪.৮৩ ✓ (নীলটা দুই থিমেই এক, উপরে) */
+    --color-count-urgent: #dc2626;
     --color-info: #93c5fd;
     --color-warning-hover: #fbbf24;
     --color-accent-pink: #f472b6;

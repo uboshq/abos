@@ -49,11 +49,11 @@ return [
     'accrual_run' => 'এই মাসের সুদ জমা বসান',
     'accrual_note' => 'মাস শেষে জমা সুদ খরচে বসে (প্রদেয় সুদ ২১৪৫), পরের মাসের প্রথম দিনে নিজে উল্টায়; এক মাস একবারই।',
     'accrual_month_not_over' => 'মাসটা এখনো শেষ হয়নি — শেষ হওয়া মাসের সুদই জমা হয়।',
-    'accrual_done' => ':accrued ঋণে সুদ জমা বসেছে (:held সইয়ের অপেক্ষায়), আগের :reversed জমা উল্টেছে।',
+    'accrual_done' => ':accrued ঋণে সুদ জমা বসেছে (:held অনুমোদনের অপেক্ষায়), আগের :reversed জমা উল্টেছে।',
     'accrual_narration' => ':month-এর জমা সুদ — :facility (:days দিন)',
     'accrual_reversal_narration' => ':month-এর জমা সুদ উল্টানো — :facility',
     'accrual_booked' => 'খাতায়',
-    'accrual_waiting' => 'সইয়ের অপেক্ষায়',
+    'accrual_waiting' => 'অনুমোদনের অপেক্ষায়',
     'accrual_reversed' => 'উল্টেছে',
     // ⛔ পুনঃঅডিট, ৯ অক্টোবর ২০২৬
     'accrual_month_closed' => ':month বন্ধ — বন্ধ মাসে সুদ জমা বসে না। খাতায় কিছুই বসেনি।',

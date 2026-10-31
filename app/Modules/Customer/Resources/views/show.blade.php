@@ -146,10 +146,14 @@
                      সবসময় জোড়ায় আসে: "সীমা কত, আর কতটা বাকি আছে"। --}}
                 <p class="mt-1 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::field.available_limit') }}:
-                    <span class="num">
-                        {{ $customer->availableLimit() === null
+                    {{-- ⓘ একবার পড়া — অঙ্কটা বাকির ইঞ্জিনের পুরো হিসাব ([[CreditHolds::availableOf()]]) --}}
+                    @php
+                        $availableLimit = $customer->availableLimit();
+                    @endphp
+                    <span class="num" data-figure="available-limit">
+                        {{ $availableLimit === null
                             ? '—'
-                            : \App\Core\Support\Money::format($customer->availableLimit()) }}
+                            : \App\Core\Support\Money::format($availableLimit) }}
                     </span>
                 </p>
 

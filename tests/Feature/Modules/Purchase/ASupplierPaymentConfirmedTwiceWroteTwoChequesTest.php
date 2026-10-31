@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
@@ -100,7 +101,7 @@ final class ASupplierPaymentConfirmedTwiceWroteTwoChequesTest extends TestCase
     {
         $bill = $this->confirmedBill('1000');
 
-        $draft = $this->draft($bill, '400', ['instrument' => 'cheque', 'instrument_no' => 'CHQ-7701']);
+        $draft = $this->draft($bill, '400', ['instrument' => 'cheque', 'instrument_no' => 'CHQ-7701', 'account_id' => $this->chequeBank()->id]);
 
         // দ্বিতীয় ট্যাব — একই সারি, আলাদা মডেল, তখনো "খসড়া"
         $stale = Payment::query()->findOrFail($draft->id);
@@ -161,6 +162,19 @@ final class ASupplierPaymentConfirmedTwiceWroteTwoChequesTest extends TestCase
             ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString(), 'amount' => $amount] + $extra,
             [['purchase_bill_id' => $bill->id, 'amount' => $amount]],
         );
+    }
+
+    /**
+     * চেকের ব্যাংক — ⓘ চেক কেবল ব্যাংকের খাতে (পদ্ধতি আগে, খাত পরে; [[MoneyMethod::KIND_OF]], fe, ২৪ অক্টোবর ২০২৬)। ⛔ আগে এই দাবি
+     * নগদের খাত থেকে চেক লিখত, সার্ভার ধরন মেলাত না।
+     */
+    private function chequeBank(): Account
+    {
+        return Account::query()->firstOrCreate(['code' => '1102-CHQBANK'], [
+            'company_id' => CompanyContext::id(), 'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Cheque bank', 'name_bn' => 'চেকের ব্যাংক', 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'is_group' => false, 'money_kind' => Account::BANK,
+        ]);
     }
 
     private function payments(): PaymentService

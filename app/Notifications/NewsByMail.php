@@ -95,8 +95,24 @@ final class NewsByMail extends Notification
                 'name' => $notifiable->name,
                 'title' => $this->bell->title,
                 'body' => $this->bell->body,
-                'url' => $this->bell->url,
+                'url' => $this->link(),
                 'locale' => $locale,
             ]);
+    }
+
+    /**
+     * ⛔ চিঠির বোতাম খবরের খোলার দরজায় যায়, কাঁচা ঠিকানায় নয় (২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কাঁচা ঠিকানা তিনটা পাহারা ডিঙাত: কাগজটা এখনো তাঁর নাগালে কি না ([[NotificationService::mayOpen()]]), না হলে
+     * "দেখার অধিকার নেই" পাতা আর নিরীক্ষার সারি, আর পড়া হিসেবে বসা — চিঠি থেকে খুললেও ঘণ্টায় খবরটা না-পড়া ঝুলে থাকত।
+     * ⓘ ঘণ্টায় সারি না থাকলে (মাধ্যমের পরীক্ষার চিঠি — সেভ না করা সারি) দরজা নেই, তাই কাঁচা ঠিকানাই; ঠিকানা না থাকলে বোতামও নেই।
+     */
+    private function link(): ?string
+    {
+        if ($this->bell->url === null || ! $this->bell->exists || $this->bell->getKey() === null) {
+            return $this->bell->url;
+        }
+
+        return route('notifications.open', $this->bell);
     }
 }

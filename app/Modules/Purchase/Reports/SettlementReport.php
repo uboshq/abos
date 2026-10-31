@@ -11,6 +11,8 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Reports\LineNetSale;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
@@ -93,8 +95,9 @@ final class SettlementReport
                     'source_id' => 'supplier_id',
                 ],
                 ['key' => 'goods_in', 'label' => 'supplier::field.goods_in', 'type' => ReportColumn::MONEY],
-                ['key' => 'sold', 'label' => 'supplier::field.sold', 'type' => ReportColumn::MONEY],
-                ['key' => 'cost_of_sold', 'label' => 'supplier::field.cost_of_sold', 'type' => ReportColumn::MONEY],
+                // ⭐ নিট বিক্রি — ভ্যাট বাদে, ফেরত বাদে (ফেরতের নিজের তারিখে), বাতিল বিল বাদ; খরচও ফেরত আর বাতিলে কমে (fe, ২১ অক্টোবর ২০২৬)
+                ['key' => 'sold', 'label' => 'supplier::field.sold_net', 'type' => ReportColumn::MONEY],
+                ['key' => 'cost_of_sold', 'label' => 'supplier::field.cost_of_sold_net', 'type' => ReportColumn::MONEY],
                 ['key' => 'margin', 'label' => 'supplier::field.margin', 'type' => ReportColumn::MONEY],
                 ['key' => 'paid_to_them', 'label' => 'supplier::field.paid_to_them', 'type' => ReportColumn::MONEY],
                 ['key' => 'still_owed', 'label' => 'supplier::field.still_owed', 'type' => ReportColumn::MONEY],
@@ -116,7 +119,7 @@ final class SettlementReport
             // ⭐ কেবল পণ্যের সরবরাহকারী — সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬; [[Supplier::onlySuppliersIds()]])
             ->whereIn('suppliers.id', Supplier::onlySuppliersIds())
             ->leftJoinSub(self::goodsIn($company, $from, $to), 'gi', 'gi.supplier_id', '=', 'suppliers.id')
-            ->leftJoinSub(self::soldFromThem($company, $from, $to), 'sf', 'sf.supplier_id', '=', 'suppliers.id')
+            ->leftJoinSub(self::soldBySupplier($company, $from, $to), 'sf', 'sf.supplier_id', '=', 'suppliers.id')
             ->leftJoinSub(self::money($company, $from, $to), 'mo', 'mo.party_id', '=', 'suppliers.id')
             ->leftJoinSub(self::balance($company, $to), 'ba', 'ba.party_id', '=', 'suppliers.id')
 
@@ -181,38 +184,128 @@ final class SettlementReport
     }
 
     /**
-     * ⭐ বিল আর পণ্য ধরে এক সারি — বিক্রয়মূল্যের ওজন-গড় দর (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮)।
+     * ⭐ বিল আর পণ্য ধরে এক সারি — সেই জোড়ার নিট বিক্রি আর পরিমাণ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮; নিট, ২১ অক্টোবর ২০২৬)।
      *
-     * ⓘ খরচ-স্তরের ব্যবহার কোন বিলের লাইন টেনেছে তা জানে না, কেবল বিল আর পণ্য। তাই এক জোড়ায় এক সারি: স্তরের পরিমাণ × এই দর,
-     * আর প্রতিটা ব্যবহার একবারই মেলে। দুই লাইনের দর আলাদা হলে গড়ে বিক্রয় মোট একই থাকে। মূলধনের লাভের রিপোর্টও এটাই পড়ে।
+     * ⓘ খরচ-স্তরের ব্যবহার কোন বিলের লাইন টেনেছে তা জানে না, কেবল বিল আর পণ্য। তাই এক জোড়ায় এক সারি, আর প্রতিটা ব্যবহার
+     * একবারই মেলে: বিক্রয় = জোড়ার নিট × স্তরের পরিমাণ ÷ জোড়ার পরিমাণ। দুই লাইনের দর আলাদা হলেও মোট একই থাকে।
+     * ⭐ নিট = সারির অঙ্ক − ভ্যাট, তার উপর বিলের মাথার ছাড় আর গোলের ভাগ ([[LineNetSale]]) — আগে `দর × পরিমাণ`, তাই বিলের
+     * ছাড় বাদ পড়ত না আর দামের ভেতরের ভ্যাট বিক্রিতে ঢুকত। ⓘ গুণ আগে, ভাগ পরে — পয়সা হারায় না।
      */
-    public static function lineRates(int $company): Builder
+    public static function lineRates(int $company, string $from, string $to): Builder
     {
-        return DB::table('sal_invoice_lines as sl')
+        // ⭐ যে বিলের টান এই সময়ে পড়েছে — বিক্রি, বা পুরনো বিলের বাতিল/সম্পাদনার উল্টো টান; বিলের নিজের তারিখ যা-ই হোক (২১ অক্টোবর ২০২৬)
+        $touched = self::usesOn($company, [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'], $from, $to);
+
+        $lines = DB::table('sal_invoice_lines as sl')
             ->join('sal_invoices as si', 'si.id', '=', 'sl.sales_invoice_id')
             ->where('si.company_id', $company)
+            ->whereIn('si.id', $touched);
+
+        return LineNetSale::joinBasis($lines, $company, self::EVER, self::FOREVER, 'si', fn ($b) => $b->whereIn('bi.id', $touched))
             ->groupBy('sl.sales_invoice_id', 'sl.product_id')
-            ->selectRaw('sl.sales_invoice_id, sl.product_id, CASE WHEN SUM(sl.qty) = 0 THEN 0 ELSE SUM(sl.rate * sl.qty) / SUM(sl.qty) END as rate');
+            ->selectRaw('sl.sales_invoice_id, sl.product_id, SUM('.LineNetSale::sql('sl', 'si').') as net, SUM(sl.qty) as qty');
     }
 
     /**
-     * কার মাল কত টাকায় বিক্রি হলো, আর তার খরচ কত ছিল।
+     * ⭐ ফেরত আর পণ্য ধরে এক সারি — ফেরতের সারির `amount` (ভ্যাট বাদে, বিলের ছাড়ের ভাগসহ; যোগ = ফেরতের `total − tax`,
+     * [[SalesMetrics::returnNetSql()]]) আর পরিমাণ। ফ্রি মাল আলাদা উৎসে (`sales_return:free`), এখানে আসে না।
+     */
+    public static function returnRates(int $company, string $from, string $to): Builder
+    {
+        return DB::table('sal_return_lines as rl')
+            ->join('sal_returns as rr', 'rr.id', '=', 'rl.sales_return_id')
+            ->where('rr.company_id', $company)
+            // ⭐ যে ফেরতের টান এই সময়ে পড়েছে — ফেরত নিজে, বা পুরনো ফেরতের বাতিল (২১ অক্টোবর ২০২৬)
+            ->whereIn('rr.id', self::usesOn($company, [SalesReturn::STOCK_SOURCE, SalesReturn::STOCK_SOURCE.':cancel'], $from, $to))
+            ->groupBy('rl.sales_return_id', 'rl.product_id')
+            ->selectRaw('rl.sales_return_id, rl.product_id, SUM(rl.amount) as net, SUM(rl.qty) as qty');
+    }
+
+    /**
+     * ⭐ বিক্রি হওয়া মালের প্রতিটা স্তর-টান, নিট বিক্রি আর খরচসহ — নিষ্পত্তি আর পুঁজির ফেরত দুইটাই এখান থেকে পড়ে (২১ অক্টোবর ২০২৬)।
+     *
+     * ⭐ প্রতিটা টান **নিজের তারিখে** (`inv_cost_layer_uses.trx_date`) — IFRS 15 আর IAS 8: ফেরত বা বাতিল চলতি সময়ের ঘটনা, আগের
+     * সময়ের ভুল নয়, তাই বন্ধ মাসের অঙ্ক কখনো বদলায় না (fe, ২১ অক্টোবর ২০২৬; প্রিন্সিপালের কমিশনেরও একই নিয়ম,
+     * [[PrincipalCommission::costOfSales()]]):
+     *   · বিল = `sales_invoice` টান (বিলের তারিখে লেখা) আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক,
+     *     **বাতিলের দিনে** লেখা) — আগস্টের বিল অক্টোবরে বাতিল হলে আগস্ট অক্ষত, অক্টোবরে বিয়োগ। মোছা বিল বাদ।
+     *   · ফেরত = `sales_return` টান (ঋণাত্মক, ফেরতের দিনে) আর ফেরত বাতিলের উল্টো টান (`sales_return:cancel`, ধনাত্মক, বাতিলের
+     *     দিনে) — ফেরত বাতিল হলেও ফেরতের মাস অক্ষত। মোছা ফেরত বাদ।
+     * ⓘ বিক্রয়মূল্য বিলের (বা ফেরতের) নিজের সারি থেকে — তারিখ যা-ই হোক, একই দর।
+     * ⛔ আগে কেবল পাকা বিলের `sales_invoice` টান: ফেরত এলে বিক্রি আর খরচ দুইটাই আগের মতো থাকত, আর বিক্রি ছিল ভ্যাট আর
+     * বিলের ছাড়ের আগের দামে।
+     *
+     * @return Builder সারি: `cost_layer_id`, `sold` (নিট, ভ্যাট বাদে), `cost`
+     */
+    public static function soldMoves(int $company, string $from, string $to): Builder
+    {
+        $bills = DB::table('inv_cost_layer_uses as u')
+            ->join('sal_invoices as i', 'i.id', '=', 'u.source_id')
+            ->joinSub(self::lineRates($company, $from, $to), 'il', function ($join) {
+                $join->on('il.sales_invoice_id', '=', 'i.id')
+                    ->on('il.product_id', '=', 'u.product_id');
+            })
+            ->where('u.company_id', $company)
+            ->whereIn('u.source_type', [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'])
+            ->where('i.company_id', $company)
+            ->whereNull('i.deleted_at')
+            ->whereBetween('u.trx_date', [$from, $to])
+            ->select(['u.cost_layer_id', DB::raw('CASE WHEN il.qty = 0 THEN 0 ELSE il.net * u.qty / il.qty END as sold'), DB::raw('u.amount as cost')]);
+
+        $returns = DB::table('inv_cost_layer_uses as u')
+            ->join('sal_returns as rt', 'rt.id', '=', 'u.source_id')
+            ->joinSub(self::returnRates($company, $from, $to), 'rl', function ($join) {
+                $join->on('rl.sales_return_id', '=', 'rt.id')
+                    ->on('rl.product_id', '=', 'u.product_id');
+            })
+            ->where('u.company_id', $company)
+            ->whereIn('u.source_type', [SalesReturn::STOCK_SOURCE, SalesReturn::STOCK_SOURCE.':cancel'])
+            ->where('rt.company_id', $company)
+            ->whereNull('rt.deleted_at')
+            ->whereBetween('u.trx_date', [$from, $to])
+            ->select(['u.cost_layer_id', DB::raw('CASE WHEN rl.qty = 0 THEN 0 ELSE rl.net * u.qty / rl.qty END as sold'), DB::raw('u.amount as cost')]);
+
+        return $bills->unionAll($returns);
+    }
+
+    /** ⓘ বিলের/ফেরতের তারিখের বাঁধ নেই — টানের নিজের তারিখই বাঁধ ([[usesOn()]]) */
+    private const EVER = '1000-01-01';
+
+    private const FOREVER = '9999-12-31';
+
+    /**
+     * যে কাগজগুলোর (`source_id`) এই ধরনের টান এই সময়ে পড়েছে — টানের নিজের তারিখে।
+     *
+     * @param  list<string>  $types
+     */
+    private static function usesOn(int $company, array $types, string $from, string $to): Builder
+    {
+        return DB::table('inv_cost_layer_uses')
+            ->where('company_id', $company)
+            ->whereIn('source_type', $types)
+            ->whereBetween('trx_date', [$from, $to])
+            ->select('source_id');
+    }
+
+    /**
+     * কার মাল কত টাকায় বিক্রি হলো (নিট), আর তার খরচ কত ছিল (ফেরত বাদে) — [[soldMoves()]] সরবরাহকারী ধরে।
      *
      * ── স্তর থেকে সরবরাহকারী পর্যন্ত পথটা ───────────────────────────
-     * `inv_cost_layer_uses` (কোন বিক্রয় কোন স্তর টানল)
+     * `inv_cost_layer_uses` (কোন বিক্রয় বা ফেরত কোন স্তর টানল)
      *   → `inv_cost_layers` (স্তরটা কোন ক্রয়ে জন্মেছিল)
      *     → `pur_receipts` বা `pur_bills` (সেই ক্রয়ের সরবরাহকারী)
      *
      * দুইটা উৎস, কারণ মাল দুই পথে ঢোকে: চালানে, আর চালান-ছাড়া বিলে।
+     *
+     * ⓘ বিক্রয়মূল্য স্তরের পরিমাণ ধরে ভাগ হয়, লাইনের পুরো অঙ্ক নয়: এক লাইনের মাল একাধিক স্তর থেকে আসতে পারে (পুরনো
+     * দরের কিছু, নতুন দরের কিছু), আর তখন প্রতিটা স্তরের সাথে পুরো অঙ্কটা গোনা হত — বিক্রয় দ্বিগুণ দেখাত।
+     *
+     * @return Builder সারি: `supplier_id`, `sold`, `cost_of_sold`
      */
-    private static function soldFromThem(int $company, string $from, string $to): Builder
+    public static function soldBySupplier(int $company, string $from, string $to): Builder
     {
-        return DB::table('inv_cost_layer_uses as u')
-            ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
-            ->join('sal_invoices as i', function ($join) {
-                $join->on('i.id', '=', 'u.source_id')
-                    ->where('u.source_type', '=', SalesInvoice::STOCK_SOURCE);
-            })
+        return DB::query()->fromSub(self::soldMoves($company, $from, $to), 'm')
+            ->join('inv_cost_layers as l', 'l.id', '=', 'm.cost_layer_id')
             ->leftJoin('pur_receipts as r', function ($join) {
                 $join->on('r.id', '=', 'l.source_id')
                     ->where('l.source_type', '=', PurchaseReceipt::STOCK_SOURCE);
@@ -221,38 +314,12 @@ final class SettlementReport
                 $join->on('b.id', '=', 'l.source_id')
                     ->where('l.source_type', '=', PurchaseBill::STOCK_SOURCE);
             })
-
-            /*
-             * বিক্রয়মূল্যটা বিলের লাইন থেকে, স্তর থেকে নয় — স্তর কেবল
-             * খরচ জানে। মিলানো হয় বিল ও পণ্য ধরে।
-             */
-            /*
-             * ⛔ বিল আর পণ্য ধরে আগে এক সারি, ওজন-গড় দরে ([[lineRates()]]) — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮। ⓘ আগে বিলের
-             * প্রতিটা লাইনের সাথে সরাসরি মেলানো হত, আর একই বিলে একই পণ্য দুই লাইনে থাকলে (এক লাইনে এক লট — রোজকার ঘটনা)
-             * প্রতিটা ব্যবহার দুই লাইনের সাথেই মিলত: বিক্রির খরচ দ্বিগুণ, দর গুলিয়ে যেত।
-             */
-            ->joinSub(self::lineRates($company), 'il', function ($join) {
-                $join->on('il.sales_invoice_id', '=', 'i.id')
-                    ->on('il.product_id', '=', 'u.product_id');
-            })
-            ->where('u.company_id', $company)
-            ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereNotNull(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->groupBy(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->select([
                 DB::raw('COALESCE(r.supplier_id, b.supplier_id) as supplier_id'),
-
-                /*
-                 * বিক্রয়মূল্য = ওই লাইনের দর × স্তর থেকে টানা পরিমাণ।
-                 *
-                 * লাইনের পুরো `amount` নেওয়া যেত না: এক লাইনের মাল
-                 * একাধিক স্তর থেকে আসতে পারে (পুরনো দরের কিছু, নতুন
-                 * দরের কিছু), আর তখন প্রতিটা স্তরের সাথে পুরো অঙ্কটা
-                 * গোনা হত — বিক্রয় দ্বিগুণ দেখাত।
-                 */
-                DB::raw('SUM(il.rate * u.qty) as sold'),
-                DB::raw('SUM(u.amount) as cost_of_sold'),
+                DB::raw('SUM(m.sold) as sold'),
+                DB::raw('SUM(m.cost) as cost_of_sold'),
             ]);
     }
 

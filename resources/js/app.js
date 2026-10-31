@@ -5,6 +5,7 @@ import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
+import { approvalKeys } from './approval-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
 import { guardConfirmOverview } from './confirm-overview.js'
@@ -16,6 +17,8 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import { sidebarStore } from './sidebar-state.js'
+import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
@@ -103,6 +106,8 @@ document.addEventListener('alpine:init', () => {
      * ⓘ কারণ আর পথের পাহারা `document-scan.js`-এ।
      */
     Alpine.data('documentScan', documentScan)
+    // ⓘ ফোনের নিচের বার — স্ক্রলে সরে যাওয়া, আবার চাপ, লম্বা চাপের মেনু ([[shell.bottom-nav]])
+    Alpine.data('bottomNav', () => bottomNav())
 
     /*
      * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।
@@ -125,14 +130,9 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.store('scanner', scannerStore())
 
-    Alpine.store('sidebar', {
-        collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
-
-        toggle() {
-            this.collapsed = ! this.collapsed
-            localStorage.setItem('abos.sidebar', this.collapsed ? 'collapsed' : 'open')
-        },
-    })
+    // ⓘ গুটানো/খোলা মানুষের বাছাই; দুই-কলামের টাকার ফর্মে ১৫৩৬-এর নিচে রেল বা ভাসমান ([[sidebar-state.js]])
+    Alpine.store('sidebar', sidebarStore())
+    window.addEventListener('resize', () => Alpine.store('sidebar').resized(window.innerWidth))
 })
 
 /*
@@ -143,6 +143,9 @@ document.addEventListener('alpine:init', () => {
  * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
  */
 listKeys()
+
+// ⭐ অনুমোদনের ← → A S R আর পপ-আপের ফোকাস — দফা ২০ ([[approval-keys.js]])
+approvalKeys()
 
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()

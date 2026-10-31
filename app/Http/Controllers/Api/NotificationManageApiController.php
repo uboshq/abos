@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Core\Notifications\ChannelRegistry;
 use App\Core\Notifications\DeliveryService;
 use App\Core\Notifications\NotificationVariables;
+use App\Core\Notifications\PhoneNoticeTarget;
 use App\Core\Notifications\PreferenceBook;
 use App\Core\Notifications\PreferenceWriter;
 use App\Core\Notifications\RecipientResolver;
@@ -56,6 +57,8 @@ class NotificationManageApiController extends Controller
 
         $notify = app(NotificationService::class);
         $notify->markSeen($user, [(int) $row->id]);
+        // ⭐ ঘণ্টার তালিকার একই নতুন ঘর — চাপলে কোথায় ([[PhoneNoticeTarget]]); ⛔ কেবল যোগ, পুরনো ঘর যেমন ছিল
+        $where = app(PhoneNoticeTarget::class)->of($row, $user);
 
         return response()->json(['data' => [
             'id' => (string) $row->public_id,
@@ -71,7 +74,11 @@ class NotificationManageApiController extends Controller
             'on_behalf_of' => $row->on_behalf_of === null ? null : (string) $row->onBehalfOf?->name,
             'at' => $row->created_at?->toIso8601String(),
             // ⓘ কাগজ আর নাগালে না থাকলে ঠিকানা নয় — পর্দার মতোই
-            'url' => $notify->mayOpen($row, $user) ? $row->url : null,
+            'url' => $where['may_open'] ? $row->url : null,
+            'may_open' => $where['may_open'],
+            'paper' => $where['paper'],
+            'destination' => $where['destination'],
+            'closed' => $where['closed'],
         ]]);
     }
 

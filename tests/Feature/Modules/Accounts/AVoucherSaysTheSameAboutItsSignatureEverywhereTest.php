@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherSigning;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -69,12 +70,12 @@ final class AVoucherSaysTheSameAboutItsSignatureEverywhereTest extends TestCase
 
         $expect = [
             'none' => [null, 'draft', null, false, ListSummary::DRAFT],
-            'needs' => [VoucherApproval::NEEDS, 'draft', VoucherApproval::NEEDS, false, ListSummary::DRAFT],
-            'awaiting' => [VoucherApproval::AWAITING, 'awaiting', VoucherApproval::AWAITING, true, ListSummary::PENDING],
-            'stale' => [VoucherApproval::STALE, 'draft', VoucherApproval::STALE, false, ListSummary::DRAFT],
-            'rejected' => [VoucherApproval::REJECTED, 'draft', VoucherApproval::REJECTED, false, ListSummary::REJECTED],
-            'rejected_then_changed' => [VoucherApproval::NEEDS, 'draft', VoucherApproval::NEEDS, false, ListSummary::DRAFT],
-            'signed' => [VoucherApproval::SIGNED, 'draft', VoucherApproval::SIGNED, false, ListSummary::DRAFT],
+            'needs' => [VoucherSigning::NEEDS, 'draft', VoucherSigning::NEEDS, false, ListSummary::DRAFT],
+            'awaiting' => [VoucherSigning::AWAITING, 'awaiting', VoucherSigning::AWAITING, true, ListSummary::PENDING],
+            'stale' => [VoucherSigning::STALE, 'draft', VoucherSigning::STALE, false, ListSummary::DRAFT],
+            'rejected' => [VoucherSigning::REJECTED, 'draft', VoucherSigning::REJECTED, false, ListSummary::REJECTED],
+            'rejected_then_changed' => [VoucherSigning::NEEDS, 'draft', VoucherSigning::NEEDS, false, ListSummary::DRAFT],
+            'signed' => [VoucherSigning::SIGNED, 'draft', VoucherSigning::SIGNED, false, ListSummary::DRAFT],
         ];
 
         $standing = $approval->standing(new Collection(array_map(fn (Voucher $v) => $v->fresh(), array_values($seven))));
@@ -84,7 +85,7 @@ final class AVoucherSaysTheSameAboutItsSignatureEverywhereTest extends TestCase
             $voucher = $seven[$name]->fresh();
 
             $this->assertSame($page, $approval->waitFor($voucher), "⛔ {$name}: পাতার নোটের উত্তর ভুল");
-            $this->assertSame($group, VoucherApproval::GROUP_OF[$page ?? ''] ?? ListSummary::DRAFT, "⛔ {$name}: সারণির নিজের ভুল");
+            $this->assertSame($group, VoucherSigning::GROUP_OF[$page ?? ''] ?? ListSummary::DRAFT, "⛔ {$name}: সারণির নিজের ভুল");
             $this->assertSame($group, $standing[$voucher->id] ?? null, "⛔ {$name}: তালিকার মোট পাতার নোট থেকে আলাদা দলে গুনল");
 
             $row = $this->phone()->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();

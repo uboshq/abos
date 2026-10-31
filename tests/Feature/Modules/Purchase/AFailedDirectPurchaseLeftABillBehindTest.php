@@ -23,6 +23,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\SignsASupplierBank;
 use Tests\TestCase;
 use Throwable;
 
@@ -42,6 +43,7 @@ use Throwable;
  */
 final class AFailedDirectPurchaseLeftABillBehindTest extends TestCase
 {
+    use SignsASupplierBank;
     use RefreshDatabase;
 
     private User $owner;
@@ -57,6 +59,8 @@ final class AFailedDirectPurchaseLeftABillBehindTest extends TestCase
 
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
+        // ⓘ ব্যাংকে পরিশোধ কেবল সই-পাওয়া ব্যাংক তথ্যে ([[AVoucherPaysOnlyASignedSupplierBankTest]])
+        $this->supplierBankIsSigned(\App\Modules\Supplier\Models\Supplier::query()->firstOrFail());
     }
 
     /**

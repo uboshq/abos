@@ -45,6 +45,7 @@ use Tests\TestCase;
  */
 final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
 {
+    use HoldsAnOrderAsBeforeGap28;
     use RefreshDatabase;
 
     private Company $company;
@@ -119,7 +120,8 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
     }
 
     /**
-     * ⭐ সীমা না কুলোলে সীমায় আটকে — সই চাওয়াই হয় না; টাকা (বা সীমা) এলে আবার যাচাইয়ে নিজে সইয়ের অপেক্ষায় যায়।
+     * ⭐ সীমা না কুলোলে জমাই ফেরে — সই চাওয়াই হয় না (fe-র বিক্রয়ের ফাঁক ২৮, ২০ অক্টোবর ২০২৬; আগে `credit_held`-এ বসত)।
+     * ⓘ ফাঁক ২৮-এর আগে সীমায় আটকে থাকা আদেশ টাকা (বা সীমা) এলে আবার যাচাইয়ে নিজে সইয়ের অপেক্ষায় যায় — সেই পথ অটুট।
      */
     public function test_a_short_limit_holds_it_before_the_supervisor_and_money_moves_it_on(): void
     {
@@ -128,12 +130,13 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
         $this->limit('0');
         $orders = app(SalesOrderService::class);
 
-        $order = $orders->submit($this->draft('10')->fresh(['lines']));
+        $draft = $this->draft('10');
+        $this->assertStringContainsString('⛔', $this->refused(fn () => $orders->submit($draft->fresh(['lines'])), 'customer_id'),
+            '⛔ সীমা ০, অথচ জমা ফেরেনি।');
+        $this->assertSame(S::DRAFT, $draft->fresh()->status, '⛔ ফেরানো আদেশ খসড়া নয়।');
+        $this->assertNull($this->approvalOf($draft), '⛔ সীমা পার করা আদেশের সই চাওয়া হয়েছে — যাচাই সুপারভাইজারের আগে।');
 
-        $this->assertSame(S::CREDIT_HELD, $order->status, '⛔ সীমা ০, অথচ আদেশ সীমায় আটকায়নি।');
-        $this->assertSame(0, bccomp((string) $order->total, (string) $order->credit_short, 4), '⛔ কত কম, ভুল।');
-        $this->assertNotNull($order->credit_held_at);
-        $this->assertNull($this->approvalOf($order), '⛔ সীমায় আটকে থাকা আদেশের সই চাওয়া হয়েছে — যাচাই সুপারভাইজারের আগে।');
+        $order = $this->heldAsBeforeGap28($draft);
 
         $firstHeld = (string) $order->credit_held_at;
         $this->travel(1)->hours();
@@ -159,7 +162,7 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
         $this->limit('0');
         $orders = app(SalesOrderService::class);
 
-        $order = $orders->submit($this->draft('10')->fresh(['lines']));
+        $order = $this->heldAsBeforeGap28($this->draft('10'));
         $this->assertSame(S::CREDIT_HELD, $order->status, 'দৃশ্যটাই ভুল — আদেশ সীমায় আটকায়নি।');
 
         $other = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'RCB2', 'name_en' => 'Recheck branch', 'is_active' => true]);
@@ -320,9 +323,11 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
         $this->assertSame(0, bccomp((string) $this->buyer->fresh()->availableLimit(), $half, 4),
             '⛔ গ্রাহকের পাতায় সইয়ের অপেক্ষার আদেশ বাদ যায়নি।');
 
-        $second = $orders->submit($this->draft('10')->fresh(['lines']));
-        $this->assertSame(S::CREDIT_HELD, $second->status, '⛔ সইয়ের অপেক্ষার আদেশের জায়গা অন্য আদেশ নিয়ে নিল।');
-        $this->assertSame(0, bccomp($half, (string) $second->credit_short, 4), 'কত কম, ভুল।');
+        // ⓘ ফাঁক ২৮: সীমা না কুলোলে জমাই ফেরে, `credit_held`-এ বসে না
+        $second = $this->draft('10');
+        $this->assertStringContainsString('⛔', $this->refused(fn () => $orders->submit($second->fresh(['lines'])), 'customer_id'),
+            '⛔ সইয়ের অপেক্ষার আদেশের জায়গা অন্য আদেশ নিয়ে নিল।');
+        $this->assertSame(S::DRAFT, $second->fresh()->status);
     }
 
     private function replaceDo(bool $on): void

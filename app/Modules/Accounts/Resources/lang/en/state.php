@@ -8,7 +8,7 @@ return [
     'year_closed' => 'Closed',
     'closed' => 'Closed',
     'awaiting_receipt' => 'Awaiting receipt',
-    'awaiting_signature' => 'Awaiting signature',
+    'awaiting_signature' => 'Awaiting approval',
     'received' => 'Received',
     'approved' => 'Approved',
     'due' => 'Due',

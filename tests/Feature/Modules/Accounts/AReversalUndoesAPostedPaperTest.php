@@ -81,7 +81,9 @@ final class AReversalUndoesAPostedPaperTest extends TestCase
     public function test_a_closed_month_a_reconciled_line_and_a_second_time_are_refused(): void
     {
         // আগের মাসের ভাউচার, সেই মাস বন্ধ — এ মাস খোলা থাকলেও ফেরত
-        $this->travel(-1)->months();
+        // ⓘ subMonthNoOverflow — ৩১ তারিখে `travel(-1)->months()` সেপ্টেম্বর ৩১ = অক্টোবর ১-এ পড়ত, আর "আগের মাস" বন্ধ করতে গিয়ে চলতি
+        //   মাসটাই বন্ধ হত; পরের ভাউচার তখন ভুল কারণে থামত (fe, ৩১ অক্টোবর ২০২৬, Mac-এ main-এর ওপর লাল)
+        $this->travelTo(now()->subMonthNoOverflow());
         $old = $this->journal('300');
         $this->travelBack();
         PeriodLock::query()->create([

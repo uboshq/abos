@@ -97,27 +97,32 @@ describe('মিল-তালিকা #৯ — মোট টাকার ঘর
         const host = document.createElement('div')
         host.innerHTML = `
             <form x-data="payBills({ bills: [{ id: 1, supplier: '7', remaining: '120000', total: '120000' }], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '' })">
-                <input name="amount" x-model="amount" @change="tidyAmount()">
+                <input data-shown x-money-display="amount">
+                <input type="hidden" name="amount" :value="amount">
             </form>`
         document.body.appendChild(host)
         await new Promise(r => setTimeout(r, 0))
         await Alpine.nextTick()
 
+        // ⓘ ২৪ অক্টোবর ২০২৬ থেকে দেখানোর ঘর আর পাঠানোর ঘর আলাদা ([[registerMoneyDisplay]]) — কমা কেবল চোখে, পাঠানো মানে নয়
         const form = host.querySelector('form')
-        const field = host.querySelector('[name="amount"]')
+        const field = host.querySelector('[data-shown]')
+        const sent = host.querySelector('[name="amount"]')
         const pay = Alpine.$data(form)
 
+        field.focus()
         field.value = '120000'
         field.dispatchEvent(new Event('input'))
         await Alpine.nextTick()
         expect(pay.shown(1), 'অঙ্ক লিখলে বিলে বসেনি').toBe('120000.00')
 
         pay.typed(1, '50000')
-        field.dispatchEvent(new Event('change'))
+        field.blur()
         await Alpine.nextTick()
         await Alpine.nextTick()
 
         expect(field.value, '⛔ #৯: ঘর ছাড়ার পরেও লাখ-কমা নেই').toBe('1,20,000.00')
+        expect(sent.value, '⛔ #৯: পাঠানো মানে কমা গেল — দেখানোর লেখা নয়, কাঁচা অঙ্ক যাবে').toBe('120000')
         expect(pay.shown(1), '⛔ #৯: কমা বসাতে গিয়ে হাতে বসানো প্রয়োগ মুছে গেল').toBe('50000.00')
         host.remove()
     })

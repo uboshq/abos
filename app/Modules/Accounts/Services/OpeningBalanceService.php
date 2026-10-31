@@ -150,14 +150,9 @@ final class OpeningBalanceService
             return [];
         }
 
-        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $inventory = StandardChart::accountFor(StandardChart::INVENTORY);
         $equity = $this->openingEquity();
-
-        if ($inventory === null || $equity === null) {
-            throw new PostingException(
-                'Opening stock needs the standard chart — install it before bringing stock in.'
-            );
-        }
 
         $narration = $this->narration();
 
@@ -193,14 +188,9 @@ final class OpeningBalanceService
             return [];
         }
 
-        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $inventory = StandardChart::accountFor(StandardChart::INVENTORY);
         $equity = $this->openingEquity();
-
-        if ($inventory === null || $equity === null) {
-            throw new PostingException(
-                'Opening stock needs the standard chart — install it before bringing stock in.'
-            );
-        }
 
         $narration = $this->narration();
 
@@ -275,12 +265,6 @@ final class OpeningBalanceService
         }
 
         $equity = $this->openingEquity();
-
-        if ($equity === null) {
-            throw new PostingException(
-                'Opening balances need the standard chart — install it before opening accounts with a balance.'
-            );
-        }
 
         /*
          * চিহ্নটা খাতের স্বাভাবিক দিক থেকে, ডাকার জায়গা থেকে নয়।
@@ -418,13 +402,14 @@ final class OpeningBalanceService
         return $rows;
     }
 
-    private function openingEquity(): ?\App\Modules\Accounts\Models\Account
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]]); মূলধন না থাকলে সংরক্ষিত মুনাফা আগের মতো
+    private function openingEquity(): \App\Modules\Accounts\Models\Account
     {
         if ((bool) app(\App\Core\Services\SettingsService::class)->get('accounts.opening_to_capital', true)) {
-            return StandardChart::find(StandardChart::OWNER_CAPITAL) ?? StandardChart::find(StandardChart::RETAINED_EARNINGS);
+            return StandardChart::find(StandardChart::OWNER_CAPITAL) ?? StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
         }
 
-        return StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        return StandardChart::accountFor(StandardChart::RETAINED_EARNINGS);
     }
 
     private function post(
@@ -453,14 +438,9 @@ final class OpeningBalanceService
             $amount = bcmul($amount, '-1', 4);
         }
 
-        $party = StandardChart::find($partyAccount);
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $party = StandardChart::accountFor($partyAccount);
         $equity = $this->openingEquity();
-
-        if ($party === null || $equity === null) {
-            throw new PostingException(
-                'Opening balances need the standard chart — install it before adding parties with a balance.'
-            );
-        }
 
         // ⓘ পক্ষের কোড বিবরণে — খাতার নম্বর এখন OB সিরিজের ([[SERIES]])
         $narration = $this->narration().' · '.$documentNo;

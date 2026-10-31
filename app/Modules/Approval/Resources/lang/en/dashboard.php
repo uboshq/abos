@@ -26,11 +26,11 @@ return [
     'three_to_seven' => '3–7 days',
     'over_a_week' => 'Over a week',
     'by_person' => 'Waiting with whom',
-    'by_person_hint' => 'Whose desk the signature sits on',
+    'by_person_hint' => 'Whose desk the approval sits on',
     'anyone' => 'No one in particular',
     'others' => 'Others',
     'by_module' => 'Waiting, by module',
-    'by_module_hint' => 'Where signatures are held up',
+    'by_module_hint' => 'Where approvals are held up',
 
     // ⭐ মালিকের পুরো নকশা, ৬ অক্টোবর ২০২৬
     'approved_today' => 'Approved today',
@@ -43,9 +43,9 @@ return [
     'days' => ':n days',
     'overdue' => 'Past the time limit',
     'overdue_hint' => 'Waiting past the flow time limit · no-limit requests left out',
-    'delegations_today' => 'Signing handed over today',
+    'delegations_today' => 'Delegations active today',
     'delegations_today_hint' => 'Hand-overs in force today and not withdrawn',
-    'my_queue' => 'Waiting for my signature, by module',
+    'my_queue' => 'Waiting for my approval, by module',
     'my_queue_hint' => ':count in my inbox',
     'state' => 'State',
 ];

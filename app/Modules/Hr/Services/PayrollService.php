@@ -568,13 +568,13 @@ final class PayrollService
             }
 
             foreach ($slip->lines as $line) {
-                $accountId = $line->account_id ?? $this->fallbackAccount($line->kind)?->id;
-
-                if ($accountId === null) {
-                    throw ValidationException::withMessages([
-                        'account' => __('hr::validation.head_needs_an_account', ['head' => $line->head_code]),
-                    ]);
+                // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+                // ⓘ শূন্য সারি খাতায় যায় না ([[bccomp]] নিচে), তাই তার জন্য প্রমিত খাত খোঁজা হয় না
+                if ($line->account_id === null && bccomp((string) $line->amount, '0', 4) === 0) {
+                    continue;
                 }
+
+                $accountId = $line->account_id ?? StandardChart::accountFor($this->fallbackCode($line->kind))->id;
 
                 if (! $line->isEarning() && $this->isAdvance((int) $accountId)) {
                     $key = $accountId.':'.$slip->employee_id.':'.$branch;
@@ -589,13 +589,8 @@ final class PayrollService
             }
         }
 
-        $payable = $this->accountByCode(StandardChart::SALARY_PAYABLE);
-
-        if ($payable === null) {
-            throw ValidationException::withMessages([
-                'account' => __('hr::validation.salary_payable_missing'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $payable = StandardChart::accountFor(StandardChart::SALARY_PAYABLE);
 
         $narration = __('hr::message.ledger_narration', [
             'month' => $run->month->format('M Y'),
@@ -612,13 +607,8 @@ final class PayrollService
             $lines[] = ['account_id' => $accountId, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch];
         }
 
-        $advance = $short === [] ? null : $this->accountByCode(StandardChart::EMPLOYEE_ADVANCE);
-
-        if ($short !== [] && $advance === null) {
-            throw ValidationException::withMessages([
-                'account' => __('hr::validation.employee_advance_missing'),
-            ]);
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
+        $advance = $short === [] ? null : StandardChart::accountFor(StandardChart::EMPLOYEE_ADVANCE);
 
         foreach ($short as [$employeeId, $branch, $amount]) {
             $lines[] = [
@@ -756,14 +746,20 @@ final class PayrollService
      */
     private function fallbackAccount(string $kind): ?Account
     {
-        return $kind === SalaryHead::EARNING
-            ? $this->accountByCode(StandardChart::SALARY_EXPENSE)
-            : $this->accountByCode(StandardChart::SALARY_PAYABLE);
+        return $this->accountByCode($this->fallbackCode($kind));
     }
 
+    private function fallbackCode(string $kind): string
+    {
+        return $kind === SalaryHead::EARNING ? StandardChart::SALARY_EXPENSE : StandardChart::SALARY_PAYABLE;
+    }
+
+    // ⓘ পড়ার পথে (খসড়া শিট, বাতিলের পাহারা) — মানে না ধরলে বা দল হলে null; লেখার পথ [[StandardChart::accountFor()]] ডাকে
     private function accountByCode(string $code): ?Account
     {
-        return Account::query()->postable()->where('code', $code)->first();
+        $account = StandardChart::find($code);
+
+        return $account !== null && ! $account->is_group ? $account : null;
     }
 
     private function recount(PayrollRun $run): PayrollRun
@@ -822,11 +818,9 @@ final class PayrollService
      */
     private function assertSalaryNotPaidOut(PayrollRun $run): void
     {
-        $payable = $this->accountByCode(StandardChart::SALARY_PAYABLE);
-
-        if ($payable === null) {
-            return;
-        }
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, পাহারা নীরবে বাদ দিয়ে উল্টো দাখিলা নয় ([[StandardChart::accountFor()]])
+        // ⓘ নিশ্চিত রান খাতায় এই খাতেই বসেছিল, তাই সঠিক কোম্পানিতে এটা কখনো থামে না
+        $payable = StandardChart::accountFor(StandardChart::SALARY_PAYABLE);
 
         $owed = fn () => DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())

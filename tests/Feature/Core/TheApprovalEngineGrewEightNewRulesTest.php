@@ -946,6 +946,12 @@ class TheApprovalEngineGrewEightNewRulesTest extends TestCase
             'requested_at' => now(),
         ]);
 
+        // ⓘ দফা ১৩ (fe, ২২ অক্টোবর ২০২৬): একসাথে সইয়ে সইদাতার টাকার সীমা থাকতেই হয় — নইলে কড়া দিকে বাদ ('no_limit')
+        $bulkRole = \Spatie\Permission\Models\Role::findOrCreate('bulk-signer');
+        $this->boss->assignRole($bulkRole);
+        \App\Models\ApprovalLimit::query()->create(['company_id' => $this->company->id, 'role_id' => $bulkRole->id,
+            'module' => 'sales', 'max_amount' => '100000000']);
+
         $result = app(BulkApproval::class)->approve([(int) $good->id, (int) $money->id], $this->boss);
 
         $this->assertSame(1, $result['done'], 'যে সারিটা পারত সেটাও হয়নি।');

@@ -9,9 +9,9 @@ return [
     'bills' => 'Bills',
     'gross' => 'Gross sales',
     'discount' => 'Discount',
-    'returned' => 'Returns',
-    'net_sales' => 'Net sales',
+    'returned' => 'Returns (excl. VAT)',
+    'net_sales' => 'Net sales (excl. VAT and returns)',
     'collected' => 'Collected',
-    'due_added' => 'Due added',
+    'due_added' => 'Due added (incl. VAT)',
     'gross_profit' => 'Gross profit',
 ];

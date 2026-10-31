@@ -43,17 +43,8 @@
             </div>
         @endif
 
-        @if ($errors->any())
-            <div role="alert"
-                 class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
-                        text-(--color-badge-danger-ink)">
-                <ul class="list-inside list-disc">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        {{-- ⓘ সাধারণ বাক্স, একবারই — পাতার নিজেরটা থাকলে সেটা, এটা চুপ ([[ui.errors]]; fe, ২৪ অক্টোবর ২০২৬) --}}
+        <x-ui.errors :shown="$slot" />
 
         {{ $slot }}
     </main>

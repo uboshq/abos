@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherSigning;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InsuranceClaim;
@@ -75,13 +76,13 @@ final class AStaleReceiptRequestNoLongerHoldsTheClaimTest extends TestCase
         ]);
         $approval = app(VoucherApproval::class);
         $this->assertNotNull($approval->stopping($receipt->fresh()), 'দৃশ্যটাই বানানো যায়নি — রসিদের সই চাওয়া হয়নি');
-        $this->assertSame(VoucherApproval::AWAITING, $approval->waitFor($receipt->fresh()), 'দৃশ্যটাই বানানো যায়নি — অনুরোধ টাটকা নয়');
+        $this->assertSame(VoucherSigning::AWAITING, $approval->waitFor($receipt->fresh()), 'দৃশ্যটাই বানানো যায়নি — অনুরোধ টাটকা নয়');
 
         $this->assertSame(__('finance::validation.awaits_signature_first'), $this->receiveRefusal($claim),
             '⛔ রসিদের টাটকা অনুরোধ থাকতে দাবিতে আরও টাকা বসল — "আগে সই" বলল না');
 
         $receipt->fresh()->forceFill(['narration' => 'অনুরোধের পরে বদলানো'])->save();
-        $this->assertSame(VoucherApproval::STALE, $approval->waitFor($receipt->fresh()), 'দৃশ্যটাই বানানো যায়নি — বদলানোর পরেও অনুরোধ বাসি নয়');
+        $this->assertSame(VoucherSigning::STALE, $approval->waitFor($receipt->fresh()), 'দৃশ্যটাই বানানো যায়নি — বদলানোর পরেও অনুরোধ বাসি নয়');
 
         $this->assertNotSame(__('finance::validation.awaits_signature_first'), $this->receiveRefusal($claim),
             '⛔ বাসি অনুরোধেও দাবি "আগে সই" বলে আটকাল — বাসিটা বদলানো খসড়া, সইয়ের অপেক্ষা নয়');

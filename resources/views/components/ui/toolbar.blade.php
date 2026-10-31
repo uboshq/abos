@@ -30,6 +30,17 @@
     'quiet' => [],
 
     /*
+     * ঘরের ডিফল্ট মান — [চাবি => মান], যেমন গ্রাহকের তালিকায় ['status' => 'active']।
+     *
+     * ── কেন লাগল, ২৪ অক্টোবর ২০২৬ (মালিক, ছবিসহ) ────────────────────
+     * খোঁজায় কেবল "kona" লিখলেন, আর পুরো ছাঁকনির প্যানেল খুলে গেল, সঙ্গে "অবস্থা: চালু" চিপ — *"শুধু kona লিখতে কী
+     * হলো?"* খোঁজা পুরো ফর্ম জমা দেয়, আর তাতে ডিফল্ট মানে বসে থাকা ঘরও যায় (লুকানো `status=active`)। টুলবার সেটাকে
+     * চালু ছাঁকনি ধরত। ⓘ ডিফল্ট মানে থাকা ঘর ছাঁকনি নয়: প্যানেল খোলে না, চিপ হয় না; ডিফল্ট ছাড়া অন্য মান হলে তবেই।
+     * `quiet`-এর মতো চিরকাল চুপ নয় — "নিষ্ক্রিয়" বাছলে সেটা সত্যিকারের ছাঁকনি, প্যানেল খোলে।
+     */
+    'defaults' => [],
+
+    /*
      * পর্দার শিরোনাম ও গোনা — এখন টুলবারের নিজের।
      *
      * ── কেন এগুলো এখানে এল ───────────────────────────────────────────
@@ -251,7 +262,10 @@
     $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show', 'export', ...$quiet];
     $screenFilters = collect(request()->query())
         ->except($ownKeys)
-        ->filter(fn ($value) => $value !== '' && $value !== null);
+        ->filter(fn ($value) => $value !== '' && $value !== null)
+        // ⓘ ডিফল্ট মানে থাকা ঘর ছাঁকনি নয় (`defaults`-এর মন্তব্য দেখুন)
+        ->reject(fn ($value, $key) => array_key_exists($key, $defaults) && ! is_array($value)
+            && (string) $value === (string) $defaults[$key]);
 @endphp
 
 {{-- flex-col — দুইটা সারির ক্রম CSS ঠিক করে, তাই `order-1` ও `order-2`
@@ -333,8 +347,11 @@
             @endif
 
             @if ($count !== null || $subtitle)
+                {{-- ⛔ `shrink-0` নয় — কিছু পাতা গোনার জায়গায় পুরো বাক্য পাঠায় ("কোন কাজে কে কত টাকা থেকে … · ৫টা নিয়ম চালু"), আর না-ভাঙা
+                     বাক্য ফোনে পাতাকেই পাশে ঠেলত (অনুমোদনের নিয়মের পাতা ৩৯০-এ ৪৪৩px চওড়া, ৩০ অক্টোবর ২০২৬, দফা ২১)। ⓘ সারিটা
+                     flex-wrap, তাই ছোট সংখ্যা জায়গা না পেলে আগে পরের লাইনে নামে, ভাঙে না। --}}
                 <span data-record-count
-                      class="tabular shrink-0 border-s border-(--color-border) ps-3 text-sm
+                      class="tabular min-w-0 border-s border-(--color-border) ps-3 text-sm
                              text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
             @endif
         @endif

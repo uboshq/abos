@@ -68,6 +68,31 @@ final class TheCustomerWritesTheOrderOnThePortalTest extends TestCase
             '⛔ সুইচ বন্ধেও পোর্টালে আদেশ লেখা হলো।');
     }
 
+    /**
+     * ⛔ সীমা পার করা আদেশ পোর্টালেও জমা হয় না — বাংলা কারণসহ, আর "লিখে জমা দিন" কোনো খসড়া রেখে যায় না (fe-র বিক্রয়ের
+     * ফাঁক ২৮)। ⓘ একই গ্রাহক: সীমা ১০০-তে ৪৮০ টাকার আদেশ ফেরে, রাখা খসড়ার জমাও ফেরে; সীমা কুলোলে একই খসড়া জমা হয়।
+     */
+    public function test_a_portal_order_past_the_limit_is_refused_and_leaves_no_draft(): void
+    {
+        $this->replaceDo(true);
+        app(\App\Core\Services\SettingsService::class)->set('customer.credit_limit_enabled', true);
+        $this->customer->forceFill(['credit_limit' => '100'])->save();
+        $this->actingAs($this->customer->fresh(), 'portal');
+
+        $this->post(route('sales.portal.order.store'), $this->body(submit: true))->assertSessionHasErrors('customer_id');
+        $this->assertSame(0, SalesOrder::query()->where('customer_id', $this->customer->id)->count(),
+            '⛔ সীমায় ফেরানো জমা খসড়া রেখে গেল — আবার চাপায় দ্বিতীয়টা।');
+
+        $this->post(route('sales.portal.order.store'), $this->body())->assertSessionHasNoErrors();
+        $draft = SalesOrder::query()->where('customer_id', $this->customer->id)->latest('id')->firstOrFail();
+        $this->post(route('sales.portal.order.submit', $draft->public_id))->assertSessionHasErrors('customer_id');
+        $this->assertSame(SalesOrderStatus::DRAFT, $draft->fresh()->status, '⛔ সীমা পার করা আদেশ পোর্টাল থেকে জমা হলো।');
+
+        $this->customer->forceFill(['credit_limit' => '100000000'])->save();
+        $this->post(route('sales.portal.order.submit', $draft->public_id))->assertSessionHasNoErrors();
+        $this->assertNotSame(SalesOrderStatus::DRAFT, $draft->fresh()->status, 'দৃশ্যটাই ভুল — সীমা কুলোলেও জমা ফেরে।');
+    }
+
     public function test_the_customer_writes_and_submits_in_their_own_name_and_another_customer_cannot_open_it(): void
     {
         $this->replaceDo(true);

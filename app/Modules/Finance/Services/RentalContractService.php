@@ -866,17 +866,10 @@ class RentalContractService
         return $this->head(StandardChart::RENT);
     }
 
+    // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
     private function head(string $code): Account
     {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'account_id' => __('finance::validation.rental_head_missing', ['code' => $code]),
-            ]);
-        }
-
-        return $account;
+        return StandardChart::accountFor($code);
     }
 
     private function assertMonthNotDone(RentalContract $contract, Carbon $month): void

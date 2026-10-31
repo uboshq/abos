@@ -54,6 +54,8 @@ return [
     'goods_in' => 'Goods in',
     'sold' => 'Their goods sold',
     'cost_of_sold' => 'Cost of those goods',
+    'sold_net' => 'Net sales (excl. VAT and returns)',
+    'cost_of_sold_net' => 'Cost of those goods (less returns)',
     'margin' => 'Margin',
     'paid_to_them' => 'Paid to them',
     'still_owed' => 'Still owed',

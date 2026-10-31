@@ -181,7 +181,7 @@ final class ApprovalExceptions
 
         return $rows->map(fn (Approval $a) => [
             ...$row($a),
-            'what' => $labels[$a->module.'.'.$a->action] ?? $a->module.' · '.$a->action,
+            'what' => $labels[$a->module.'.'.$a->action] ?? app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $a->module, (string) $a->action),
             'id' => (int) $a->id,
             'no' => $facts[(int) $a->id]['no'] ?? null,
             'party' => $facts[(int) $a->id]['party'] ?? null,
@@ -291,7 +291,7 @@ final class ApprovalExceptions
                 if (! isset($live[$module.'.'.$action])) {
                     $out[] = [
                         'kind' => 'no_flow',
-                        'what' => $module.' · '.$action,
+                        'what' => app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $module, (string) $action),
                         'detail' => __('approval::exception.passes_unsigned'),
                         'id' => null,
                     ];

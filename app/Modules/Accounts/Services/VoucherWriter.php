@@ -51,6 +51,7 @@ final class VoucherWriter
              * অনাথ সারি, যেগুলোর ভাউচারই নেই।
              */
             $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
+            $this->replaceExpenseLines($voucher, $data);
 
             /*
              * সংযুক্তি — বিলের ছবি বা স্ক্যান।
@@ -129,6 +130,7 @@ final class VoucherWriter
             app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($voucher, VoucherService::EDITED_BY_HAND);
             // ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত, আর ঐ মালের দামে একটা খরচ বসে থাকত যেটা কেউ আর চায় না
             $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
+            $this->replaceExpenseLines($voucher, $data);
 
             if ($attachment !== null) {
                 app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::drillSourceType(), $voucher->id); // ⛔ 'voucher', ক্লাসের নাম নয় (উপরে store()-এ কারণ)
@@ -331,6 +333,38 @@ final class VoucherWriter
     }
 
     /**
+     * খরচের ব্যবসার লাইন রাখা — জাবেদার সারির একই লেনদেনে ([[ExpenseLedger]] যা থেকে সারি বানাল, সেই লাইনই থাকে)।
+     *
+     * ⓘ অনুরোধে লাইন না এলে কিছুই ছোঁয়া হয় না — পুরনো এক-লাইনের খরচ আর পুরনো অ্যাপ অক্ষত (§১)। ⓘ সম্পাদনায় মুছে নতুন করে, বিলের
+     * ভাগের মতোই ([[VoucherService::replaceBillShares()]])।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function replaceExpenseLines(Voucher $voucher, array $data): void
+    {
+        if ($voucher->type !== Voucher::EXPENSE || ! ExpenseLedger::hasLines($data)) {
+            return;
+        }
+
+        $voucher->expenseLines()->delete();
+
+        foreach (array_values(array_filter((array) $data['expense_lines'], fn ($l) => is_array($l) && (int) ($l['expense_account_id'] ?? 0) > 0)) as $sort => $line) {
+            $voucher->expenseLines()->create([
+                'sort' => $sort,
+                'expense_account_id' => (int) $line['expense_account_id'],
+                'cost_center_id' => filled($line['cost_center_id'] ?? null) ? (int) $line['cost_center_id'] : null,
+                'branch_id' => filled($line['branch_id'] ?? null) ? (int) $line['branch_id'] : null,
+                'description' => $line['description'] ?? null,
+                'amount' => str_replace(',', '', (string) $line['amount']),
+                'vat_tax_id' => filled($line['vat_tax_id'] ?? null) ? (int) $line['vat_tax_id'] : null,
+                'vat_amount' => filled($line['vat_amount'] ?? null) ? str_replace(',', '', (string) $line['vat_amount']) : '0',
+                'vat_recoverable' => filter_var($line['vat_recoverable'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'is_prepaid' => filter_var($line['is_prepaid'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ]);
+        }
+    }
+
+    /**
      * সহজ ফর্মের দুই খাত থেকে দুই (চার্জসহ তিন) সারি; জাবেদায় সারিগুলো যেমন এসেছে — [[VoucherController::linesFrom()]]।
      *
      * @param  array<string, mixed>  $input
@@ -340,6 +374,11 @@ final class VoucherWriter
     {
         if ($type === Voucher::JOURNAL) {
             return array_values((array) ($input['lines'] ?? []));
+        }
+
+        // ⭐ খরচের লাইন থাকলে জাবেদা লাইন থেকে ([[ExpenseLedger]]; খরচের ভাউচার ১০০%, ভাগ C) — না থাকলে নিচের পুরনো এক-লাইনের পথ অক্ষত
+        if ($type === Voucher::EXPENSE && ExpenseLedger::hasLines($input)) {
+            return app(ExpenseLedger::class)->lines($input);
         }
 
         $lines = $this->vouchers->twoLineEntry(
@@ -354,6 +393,18 @@ final class VoucherWriter
         // ⭐ খরচে উৎসে কর্তন খাতায় — খরচ মোটে, টাকা নিটে, কর্তন সরকারের দায়ে (#১, ২০ অক্টোবর ২০২৬; [[WithheldTax]])
         if ($type === Voucher::EXPENSE) {
             return app(WithheldTax::class)->onExpense($lines, (int) ($input['to_account_id'] ?? 0), $input);
+        }
+
+        // ⭐ পরিশোধেও — পক্ষের খাত মোটে, টাকা নিটে, কর্তন ২১২১/২১২২-এ (খরচের একই পথ; fe, ২৪ অক্টোবর ২০২৬, নকশা পাতা ৪)
+        if ($type === Voucher::PAYMENT) {
+            // ⭐ আর কম-বেশি — সরবরাহকারীর ছাড় বা রাউন্ডিং, দেনা পুরো বিলে কমে (দফা ৪; cb-ma-5)
+            return app(WithheldTax::class)->difference(app(WithheldTax::class)->onPayment($lines, (int) ($input['to_account_id'] ?? 0), $input), $type, $input);
+        }
+
+        // ⭐ রসিদে পক্ষ যা কেটে রাখলেন — ১১৩৮ VDS, ১১৩৫ AIT; পক্ষের খাত কমে পুরোটায় (আদায়ের দফা ৫-এর নিয়ম, [[WithheldAtSource]])
+        if ($type === Voucher::RECEIPT) {
+            // ⭐ আর কম-বেশি — আদায়ে ছাড় (৪১২০) বা রাউন্ডিং (৫৩০৫), গ্রাহকের পাওনা পুরো বিলে কমে (দফা ৪; cb-ma-5)
+            return app(WithheldTax::class)->difference(app(WithheldTax::class)->onReceipt($lines, (int) ($input['from_account_id'] ?? 0), $input), $type, $input);
         }
 
         return $lines;

@@ -463,6 +463,11 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/', [CollectionController::class, 'index'])->name('index');
         Route::get('/create', [CollectionController::class, 'create'])->name('create');
         Route::post('/', [CollectionController::class, 'store'])->name('store');
+        // ⭐ টাকা নেওয়ার পর্দা — গ্রাহকের খোলা বিল ও ক্রেডিট, খাতার প্রিভিউ, আর নতুন কাগজের নিশ্চিত-সারাংশ (নকশা ১০০, ২১ অক্টোবর ২০২৬)
+        Route::get('/open-items', [CollectionController::class, 'openItems'])->name('open_items');
+        Route::match(['post', 'put'], '/preview', [CollectionController::class, 'preview'])->name('preview');
+        // ⓘ PUT-ও — খসড়ার পাতার ফর্মে `_method=PUT` থাকে, আর পপ-আপ আর প্রিভিউ পুরো ফর্মটাই পাঠায়
+        Route::match(['post', 'put'], '/overview', [CollectionController::class, 'overviewNew'])->name('overview_new');
         Route::get('/{collection}', [CollectionController::class, 'show'])->whereNumber('collection')->name('show');
         Route::get('/{collection}/edit', [CollectionController::class, 'edit'])->whereNumber('collection')->name('edit');
         Route::put('/{collection}', [CollectionController::class, 'update'])->whereNumber('collection')->name('update');

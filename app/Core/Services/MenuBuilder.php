@@ -80,6 +80,9 @@ final class MenuBuilder
             }
 
             $groups = [];
+            // ⓘ রেলের শুরুর ক্রমের জন্য — মডিউলের কতগুলো পাতা এই মানুষ খুলতে পারেন ([[arranged()]])
+            $offered = 0;
+            $open = 0;
 
             foreach ($module->menu as $group => $items) {
                 $visible = [];
@@ -115,6 +118,10 @@ final class MenuBuilder
                      * নেই — ভাঙে; planned অথচ রুট আছে — সেটাও ভাঙে,
                      * যাতে পতাকাটা নামাতে ভুল না হয়।
                      */
+                    if (! $planned && $this->switches->itemIsOn($this->settings, $module, (string) $group, $item)) {
+                        $offered++;
+                    }
+
                     if (! $this->allowed($user, $item['permission'] ?? null)) {
                         continue;
                     }
@@ -255,6 +262,10 @@ final class MenuBuilder
                          */
                         'badge' => $planned ? null : $this->badge($item),
                     ];
+
+                    if (! $planned) {
+                        $open++;
+                    }
                 }
 
                 if ($visible !== []) {
@@ -272,6 +283,11 @@ final class MenuBuilder
                 'icon' => $module->code,
                 'section' => $module->nav['section'],
                 'order' => $module->nav['order'],
+                // ⓘ খোলা পাতার অনুপাত, দশ-হাজার ভাগে পূর্ণসংখ্যা (০–১০০০০) — রেলের শুরুর ক্রম ([[arranged()]]); মালিক সব খোলেন, তাই
+                //   সবার ১০০০০, ক্রম আগের মতোই। ⓘ কিছুই দেওয়া নেই (কেবল "শীঘ্রই" পাতা) মানে কিছুই আটকানো নয় — তাই ১০০০০।
+                // ⛔ ভগ্নাংশ (float) নয় — টাকার পাহারা যেকোনো float ধরে ([[MoneyIsNeverAFloatTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬); intdiv-এ
+                //   ক্রম একই থাকে, আর সমান অনুপাত সমানই থাকে
+                'reach' => $offered > 0 ? intdiv($open * 10000, $offered) : 10000,
 
                 /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
@@ -423,6 +439,130 @@ final class MenuBuilder
         });
 
         return $menu;
+    }
+
+    /**
+     * ⭐ বাঁ রেলের ক্রম এই মানুষের জন্য — পিন আর নিজের ক্রম, নইলে খোলা পাতার অনুপাতে (মালিক আর fe, ২৪ অক্টোবর ২০২৬)।
+     *
+     *   · নিজের সাজ (`users.nav_layout.order`) থাকলে সেটাই; তাতে নেই এমন মডিউল (নতুন চাবি, নতুন মডিউল) পরে, আগের ক্রমে।
+     *   · না থাকলে খোলা পাতার অনুপাত (`reach`) বেশি আগে, সমান হলে আগের ক্রম — বিক্রয়কর্মীর বিক্রয় আর গ্রাহক উপরে; মালিক সব
+     *     খোলেন, সবার অনুপাত ১, তাই তাঁর রেল আগের মতোই।
+     *   · `pinned` — রেল জায়গা না পেলেও এগুলো বারে থাকে ([[rail-fit.js]]); `grouped` — ক্রম দলে দলে আগের মতো কি না, দলের
+     *     সোনালি রেখা কেবল তখন ([[shell.sidebar]]), নিজের বা হিসাব-করা ক্রমে দল মিশে যায়, রেখার মানে থাকে না।
+     * ⓘ কেবল রেল ডাকে — ফোনের `/me` আর পাতার নিজের মেনু আগের মতোই। ⛔ চাবিহীন মডিউল এখানে আসেই না ([[forUser()]] আগেই ছাঁকে)।
+     *
+     * @param  list<array<string, mixed>>  $menu  [[forUser()]]-এর ফল
+     * @return list<array<string, mixed>>
+     */
+    public function arranged(array $menu, ?User $user): array
+    {
+        $layout = is_array($user?->nav_layout) ? $user->nav_layout : [];
+        $order = array_values(array_filter((array) ($layout['order'] ?? []), 'is_string'));
+        $pinned = array_values(array_filter((array) ($layout['pinned'] ?? []), 'is_string'));
+        $before = array_column($menu, 'code');
+        $at = array_flip($before);
+
+        if ($order !== []) {
+            $rank = array_flip($order);
+            usort($menu, fn (array $a, array $b): int => [$rank[$a['code']] ?? PHP_INT_MAX, $at[$a['code']]]
+                <=> [$rank[$b['code']] ?? PHP_INT_MAX, $at[$b['code']]]);
+        } else {
+            usort($menu, fn (array $a, array $b): int => [-(int) ($a['reach'] ?? 0), $at[$a['code']]]
+                <=> [-(int) ($b['reach'] ?? 0), $at[$b['code']]]);
+        }
+
+        $grouped = array_column($menu, 'code') === $before;
+
+        return array_map(fn (array $m): array => [
+            ...$m,
+            'pinned' => in_array($m['code'], $pinned, true),
+            'grouped' => $grouped,
+        ], $menu);
+    }
+
+    /**
+     * ⭐ ভূমিকা ধরে ফোনের চারটা — `config/abos.php`-এর `phone_four` (ভূমিকা → চারটা মডিউলের কোড; ক্রমটা অগ্রাধিকার)। ⓘ কনফিগে, এখানে
+     * নয়: Core মডিউল বা পক্ষের নাম হাতে লেখে না ([[TheDealerPaidTheCompanyNotMeTest]], ৩১ অক্টোবর ২০২৬ Mac-এ ধরা)।
+     *
+     * @return array<string, list<string>>
+     */
+    public static function phoneFour(): array
+    {
+        return (array) config('abos.phone_four', []);
+    }
+
+    /**
+     * ভূমিকার নাম → উপরের দল। নাম বড়-ছোট হাতের অক্ষর আর ফাঁকা/`_` ছাড়া মেলে — টেমপ্লেটের নাম ("Field Sales", "Accountant") আর
+     * কোম্পানির নিজের দেওয়া নাম (লাইভে "WAREHOUSE_IN_CHARGE", "SR", "ACCOUNTS") দুটোই।
+     */
+    private const ROLE_KIND = [
+        'superadmin' => 'owner', 'owner' => 'owner',
+        'admin' => 'admin', 'useradmin' => 'admin',
+        'manager' => 'manager', 'branchincharge' => 'manager',
+        'accountant' => 'accounts', 'accounts' => 'accounts',
+        'purchase' => 'purchase', 'purchaseofficer' => 'purchase',
+        'warehouse' => 'warehouse', 'warehouseincharge' => 'warehouse',
+        'hr' => 'hr',
+        'sr' => 'sales', 'fieldsales' => 'sales', 'dsm' => 'sales', 'asm' => 'sales', 'rsm' => 'sales', 'salesman' => 'sales',
+        'counter' => 'counter',
+    ];
+
+    /** এই মানুষের ভূমিকার দল — [[phoneFour()]]-এর ক্রমে প্রথমটা; চেনা কোনো ভূমিকা না থাকলে null */
+    public function phoneKind(?User $user): ?string
+    {
+        $kinds = [];
+        foreach ($user?->roles ?? [] as $role) {
+            $key = (string) preg_replace('/[^a-z]/', '', strtolower((string) $role->name));
+            if (isset(self::ROLE_KIND[$key])) {
+                $kinds[self::ROLE_KIND[$key]] = true;
+            }
+        }
+
+        foreach (array_keys(self::phoneFour()) as $kind) {
+            if (isset($kinds[$kind])) {
+                return $kind;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ⭐ ফোনের নিচের বারের চারটা মডিউল, এই মানুষের (মালিক, ৩০ অক্টোবর ২০২৬: "smart kajer kichu daw int standard onuzayi")।
+     *
+     *   · রেলে যা পিন করা ([[arranged()]]-এর ক্রমে) আগে — বড় পর্দায় পিন বদলালে ফোনের বারও বদলায়;
+     *   · তারপর ভূমিকার চারটা ([[phoneFour()]], [[phoneKind()]]) — ⛔ আগে সবার বারে মেনুর প্রথম চারটা (হিসাব, অর্থ,
+     *     সরবরাহকারী, ক্রয়), কারও কাজের সাথে মেলে না;
+     *   · তারপর রেলের ক্রম (নিজের সাজ, নইলে খোলা পাতার অনুপাত)।
+     * প্রতিটায় `count` — মডিউলের সারিগুলোর ব্যাজের যোগ (অপেক্ষার অনুমোদন, খসড়া …), শূন্য হলে null।
+     *
+     * @param  list<array<string, mixed>>  $menu  [[forUser()]]-এর ফল
+     * @return array{four: list<array<string, mixed>>, more: bool}
+     */
+    public function phoneBar(array $menu, ?User $user): array
+    {
+        $arranged = $this->arranged($menu, $user);
+        $byCode = array_column($arranged, null, 'code');
+        $kind = $this->phoneKind($user);
+
+        $codes = array_column(array_filter($arranged, fn (array $m): bool => (bool) ($m['pinned'] ?? false)), 'code');
+        if ($kind !== null) {
+            $codes = [...$codes, ...array_filter((self::phoneFour()[$kind] ?? []), fn (string $c): bool => isset($byCode[$c]))];
+        }
+        $codes = array_slice(array_values(array_unique([...$codes, ...array_column($arranged, 'code')])), 0, 4);
+
+        $four = array_map(function (string $code) use ($byCode): array {
+            $sum = 0;
+            foreach ($byCode[$code]['groups'] ?? [] as $items) {
+                foreach ($items as $item) {
+                    $sum += (int) ($item['badge'] ?? 0);
+                }
+            }
+
+            return [...$byCode[$code], 'count' => $sum > 0 ? $sum : null];
+        }, $codes);
+
+        return ['four' => $four, 'more' => count($arranged) > 4];
     }
 
     /**

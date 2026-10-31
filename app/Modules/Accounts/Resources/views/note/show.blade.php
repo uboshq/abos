@@ -105,7 +105,8 @@
             </div>
 
             <div>
-                <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.against_no') }}</dt>
+                {{-- ⭐ বাঁধা বিল না হলে লেখাটা কেবল রেফারেন্স — বিলের বিপরীতে নয় (fe, ২৫ অক্টোবর ২০২৬; [[SalesInvoice::notedAmount()]]) --}}
+                <dt class="text-2xs text-(--color-ink-muted)">{{ $note->against_id === null && filled($note->against_no) ? __('accounts::note.reference') : __('accounts::note.against_no') }}</dt>
                 <dd class="font-medium">{{ $note->against_no ?: '—' }}</dd>
             </div>
 

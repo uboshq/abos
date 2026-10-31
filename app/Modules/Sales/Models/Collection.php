@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
@@ -36,6 +37,7 @@ class Collection extends Model implements Drillable
     use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices; // ⭐ বিজ্ঞপ্তিতে গ্রাহক · পয়েন্ট (মালিক, ১৯ অক্টোবর ২০২৬)
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
     use \App\Core\Concerns\ScopedToUserDealers;
+    use OpensInReach; // ⭐ নোটিফিকেশন/সইয়ের লিংক নাগাল ধরে খোলে, মাথায় বাছা শাখা ধরে নয় (মালিক: "নোটিফিকেশনে ক্লিক করলে দেখা যায় না", ২৪ অক্টোবর ২০২৬)
     use ScopedToUserBranch;
     use SoftDeletes;
 
@@ -45,6 +47,9 @@ class Collection extends Model implements Drillable
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'customer_id', 'account_id', 'trx_date', 'amount', 'bank_charge',
         'instrument', 'instrument_no', 'instrument_date',
+        // ⓘ cb-র টাকার পদ্ধতি ([[MoneyMethod]]) আর টাকা নেওয়ার নকশা ১০০ (দফা ৪, ৫) — ২১ অক্টোবর ২০২৬
+        'value_date', 'transfer_mode_id', 'deposit_slip_no', 'from_bank',
+        'vds', 'ait', 'difference_kind', 'difference_amount', 'difference_account_id', 'unapplied',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -58,12 +63,32 @@ class Collection extends Model implements Drillable
             'amount' => 'decimal:4',
             // ⓘ পাওনা থেকে কমা অঙ্কের যে অংশ ব্যাংক কেটে রেখেছে — টাকার খাতে আসে `amount − bank_charge` (টাকার পরিকল্পনা ৫)
             'bank_charge' => 'decimal:4',
+            'value_date' => 'date',
+            'vds' => 'decimal:4',
+            'ait' => 'decimal:4',
+            'difference_amount' => 'decimal:4',
+            'unapplied' => 'decimal:4',
         ];
     }
 
     public function lines(): HasMany
     {
         return $this->hasMany(CollectionLine::class)->orderBy('line_no');
+    }
+
+    /** ⭐ খোলা ক্রেডিটের প্রয়োগ আর ডেবিট নোটের শোধ — দফা ৩ ([[CollectionApplication]]) */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(CollectionApplication::class)->orderBy('id');
+    }
+
+    /**
+     * ⓘ গ্রাহকের পাওনা থেকে এই কাগজে যা কমে — টাকা (চার্জসহ) + VDS + AIT + ছাড়/রাউন্ডিং।
+     */
+    public function grossToCustomer(): string
+    {
+        return bcadd(bcadd(bcadd((string) $this->amount, (string) ($this->vds ?? '0'), 4), (string) ($this->ait ?? '0'), 4),
+            (string) ($this->difference_amount ?? '0'), 4);
     }
 
     public function customer(): BelongsTo

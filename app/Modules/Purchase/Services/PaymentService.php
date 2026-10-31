@@ -58,6 +58,9 @@ final class PaymentService
      */
     private const CHEQUE = 'cheque';
 
+    /** ⓘ একই খাতে একই চালু রেফারেন্স একবারই — মাইগ্রেশনের নাম ([[SlipIsNotUsedTwice::guarded()]] এই নাম ধরে চেনে) */
+    public const LIVE_REF_INDEX = 'pur_payments_live_ref_unique';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -85,7 +88,9 @@ final class PaymentService
      */
     public function create(array $data, array $lines): Payment
     {
-        return DB::transaction(function () use ($data, $lines) {
+        // ⓘ দুই হাত একসাথে পেরোলে দ্বিতীয়টা ইউনিক ইনডেক্সে থামে — একই বার্তায়, ৫০০ নয় ([[SlipIsNotUsedTwice::guarded()]])
+        return $this->slips->guarded(self::LIVE_REF_INDEX, __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            fn () => DB::transaction(function () use ($data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
@@ -103,6 +108,7 @@ final class PaymentService
              * ⓘ নম্বরটা নেওয়ার **আগে**, ইচ্ছাকৃতভাবে: আটকালে সিরিজের
              * একটা নম্বর খরচ হয়ে যেত আর কাগজে ফাঁক পড়ত।
              */
+            // ⭐ খাত ধরে — একই খাতে একই নম্বর মানে একই টাকা, সরবরাহকারী যে-ই হোন (নিরীক্ষা ৮, ২৪ অক্টোবর ২০২৬; [[SlipIsNotUsedTwice]])
             $this->slips->check(
                 table: 'pur_payments',
                 slipNo: $data['instrument_no'] ?? null,
@@ -111,6 +117,7 @@ final class PaymentService
                 message: __('purchase::validation.slip_used_twice', [
                     'no' => trim((string) ($data['instrument_no'] ?? '')),
                 ]),
+                accountId: (int) $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
             );
 
             /*
@@ -132,7 +139,7 @@ final class PaymentService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null, $data['instrument'] ?? null)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
                 ...$this->methodFields($data),
@@ -153,7 +160,7 @@ final class PaymentService
                 ]);
 
             return $payment->fresh(['lines']);
-        });
+        }));
     }
 
     /**
@@ -173,9 +180,12 @@ final class PaymentService
             party: 'supplier_id',
             message: __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
             exceptId: (int) $payment->id,
+            accountId: (int) $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
         );
 
-        return DB::transaction(function () use ($payment, $data, $lines) {
+        // ⓘ দুই হাত একসাথে পেরোলে দ্বিতীয়টা ইউনিক ইনডেক্সে থামে — একই বার্তায়, ৫০০ নয় ([[SlipIsNotUsedTwice::guarded()]])
+        return $this->slips->guarded(self::LIVE_REF_INDEX, __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            fn () => DB::transaction(function () use ($payment, $data, $lines) {
             // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
             // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
             $this->lockFresh($payment);
@@ -184,7 +194,7 @@ final class PaymentService
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
             $payment->update([
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id)->id,
+                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $payment->account_id, $data['instrument'] ?? $payment->instrument)->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $this->money($data['amount'] ?? $payment->amount),
                 ...$this->methodFields($data),
@@ -195,7 +205,7 @@ final class PaymentService
             $this->replaceLines($payment, $lines);
 
             return $payment->fresh(['lines']);
-        });
+        }));
     }
 
     public function confirm(Payment $payment): Payment
@@ -931,7 +941,7 @@ final class PaymentService
         }
     }
 
-    private function resolveMoneyAccount(mixed $accountId): Account
+    private function resolveMoneyAccount(mixed $accountId, mixed $method = null): Account
     {
         $account = blank($accountId)
             ? $this->tills->ensurePrimaryTill()->account
@@ -983,6 +993,13 @@ final class PaymentService
                     : __('accounts::validation.no_till_of_your_own'),
             ]);
         }
+
+        /*
+         * ⛔ পদ্ধতি আর খাত এক ধরনের — "নগদ" বেছে বিকাশের খাত, বা "MFS" বেছে ব্যাংক নয় (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe)। ⓘ পর্দা
+         * কেবল মিলে যাওয়া খাত দেখায় ([[components.money.method]]); এখানে ফোন, পুরনো ফর্ম আর হাতে-বানানো ডাকের জন্য। ভাউচারের একই
+         * প্রশ্ন [[VoucherService::assertTheWayMatchesTheAccount()]]-এ, নিয়মের তালিকা একটাই ([[MoneyMethod::KIND_OF]])।
+         */
+        MoneyMethod::assertFits(is_string($method) ? $method : null, $account->money_kind, $account->label());
 
         return $account;
     }

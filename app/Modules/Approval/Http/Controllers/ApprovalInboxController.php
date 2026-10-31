@@ -12,12 +12,14 @@ use App\Core\Engines\Approval\AuthorityService;
 use App\Core\Engines\Approval\BulkApproval;
 use App\Core\Panels\FactRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\User;
 use App\Modules\Approval\Services\ApprovalFacts;
 use App\Modules\Approval\Services\ApprovalFlowService;
+use App\Modules\Approval\Services\ApprovalInbox;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -64,6 +66,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         private readonly ApprovalFacts $facts,
         private readonly ApprovalSla $sla,
         private readonly BulkApproval $bulk,
+        private readonly ApprovalInbox $inbox,
     ) {}
 
     public static function middleware(): array
@@ -103,7 +106,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'confirmAll']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'bulkReview', 'confirmAll']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -122,7 +125,34 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         ];
     }
 
-    /** আমার সিদ্ধান্তের অপেক্ষায়। */
+    /**
+     * ⭐ ইনবক্সের চারটা ট্যাব — অনুমোদন পর্দা ভাগ ২, দফা ২ (মালিকের "হ্যাঁ", ২১ অক্টোবর ২০২৬; SAP Fiori "My Inbox")।
+     *
+     *   waiting  আমার অপেক্ষায় — [[ApprovalEngine::pendingQueryFor()]]
+     *   sent     আমার পাঠানো — আমার যে অনুরোধ এখনো খোলা (অপেক্ষায় বা সংশোধনে ফেরত); পুরো ইতিহাস "আমার অনুরোধ" পাতায়
+     *   done     আমি অনুমোদন দিয়েছি — যেগুলোয় আমার অনুমোদনের সারি আছে
+     *   behalf   অন্যের হয়ে — দায়িত্ব হস্তান্তরে আমার কাছে আসা অপেক্ষার কাগজ ([[ApprovalEngine::standInQueryFor()]])
+     */
+    public const TABS = ApprovalInbox::TABS;
+
+    /** ⭐ সাজানো — দফা ৩: দেরি আগে (অপেক্ষার ডিফল্ট), নতুন আগে, অঙ্ক ধরে (বড় আগে) */
+    public const SORTS = ApprovalInbox::SORTS;
+
+    /**
+     * ⭐ অঙ্কের ছাঁকনি — দফা ৩। [নিচের সীমা, ওপরের সীমা) — নিচেরটা ধরে, ওপরেরটা নয়, তাই কোনো অঙ্ক দুই ধাপে পড়ে না।
+     * ⓘ ধাপগুলো অনুমোদনের নিয়মের চেনা সীমায় (১০ হাজার, ১ লাখ, ৫ লাখ) — "৫ লাখ বা বেশি" এক রকম (পরিকল্পনার চতুর্থ যাচাই)।
+     */
+    public const AMOUNT_BANDS = ApprovalInbox::AMOUNT_BANDS;
+
+    /** ⭐ এক পাতায় কয়টা — দফা ৬: আগে ৫০-এ কাটা পড়ত, এখন পাতা বদল আর দুই মোট */
+    public const PER_PAGE = 25;
+
+    /**
+     * ⭐ অনুমোদনের ইনবক্স — এক পাতায় বাঁয়ে তালিকা, ডানে বেছে নেওয়া কাগজ (অনুমোদন পর্দা ভাগ ২, দফা ১, ২, ৩, ৬, ৭, ৮)।
+     *
+     * ⓘ ডানের কাগজ [[detailFor()]]-এর — কাগজের নিজের পাতা ([[show()]]) ঠিক একই তথ্য দেখায়, তাই দুই জায়গা কখনো দুই কথা বলে না।
+     * ⓘ অনুমোদন দিলে পরের কাগজ নিজে খোলে: ফর্মের সাথে তালিকার পরের সারিটা যায় ([[nextAfterDecision()]])।
+     */
     public function index(Request $request): View
     {
         /** @var User $user */
@@ -154,12 +184,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
          *
          * ── কেন এটা `approval.report`-এর পেছনে ──────────────────────
          * "রহিমের অপেক্ষায় কী কী" জানা মানে **রহিমের কাজের চাপ জানা** —
-         * ম্যানেজার, নিরীক্ষক ও মালিকের প্রশ্ন, সহকর্মীর নয়। ওটা ঠিক
-         * তাঁদেরই চাবি যাঁরা গোটা কোম্পানির অপেক্ষমাণ তালিকা দেখেন।
-         *
-         * ⓘ চতুর্থ একটা নতুন চাবি বানানো হয়নি ইচ্ছে করে: প্রতিটা ক্রেতা
-         * হাতে রোল সাজান, আর একটা ঘর বসাতে ভুলে গেলে পর্দাটা **নীরবে
-         * খালি** দেখাত।
+         * ম্যানেজার, নিরীক্ষক ও মালিকের প্রশ্ন, সহকর্মীর নয়।
          *
          * ⚠️ অনুমতি না থাকলে প্যারামিটারটা চুপচাপ উপেক্ষা করা হয় না —
          * ওটা থাকলে ৪০৩। নাহলে কেউ ঠিকানায় `?person=7` বসিয়ে দেখতেন
@@ -182,46 +207,40 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             abort(403);
         }
 
-        /*
-         * পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
-         * সবচেয়ে বেশিক্ষণ আটকে রেখেছে (ইঞ্জিনই ওই ক্রমে দেয়)।
-         *
-         * ⚠️ কোয়েরিটা এখানে **চালানো হয় না** — নিচে দুইবার আলাদা করে
-         * চলে, দুইটা আলাদা প্রশ্নের জন্য: চিপের সংখ্যাগুলো পুরো
-         * তালিকার, আর সারিগুলো সীমার ভেতরে।
-         */
-        $pending = self::searched($this->engine->pendingQueryFor($subject), (string) $request->query('q', ''));
+        $own = $subject->is($user);
 
         /*
-         * মডিউল ধরে ছাঁকনি — §২.২।
-         *
-         * ── কেন গণনাটা তালিকা থেকেই, ডাটাবেস থেকে নয় ────────────────
-         * সারিগুলো ইতিমধ্যে হাতে আছে, তাই আলাদা একটা `count` কোয়েরি
-         * পাঠানো মানে একই প্রশ্ন দুইবার করা। ⓘ আর সংখ্যাটা তখন
-         * তালিকার সাথে **মিলতেও বাধ্য** — দুই জায়গা থেকে গুনলে একদিন
-         * চিপে ৫ আর তালিকায় ৪ দেখাত, আর কোনটা সত্যি তা বলার উপায়
-         * থাকত না।
-         *
-         * ⚠️ ছাঁকনিটা মূল তালিকা **কমায় না, বাছে** — চিপের সংখ্যাগুলো
-         * সবসময় পুরো তালিকার, নাহলে "ক্রয় ৫" বেছে নেওয়ার পর বাকি
-         * চিপগুলো শূন্য দেখাত।
-         *
-         * ── কেন গোনাটা এখন ডাটাবেজে, তালিকা থেকে নয় (১২ সেপ্টেম্বর ২০২৬) ──
-         * আগে ছিল `$waiting->countBy('module')` — অর্থাৎ পুরো তালিকাটা
-         * হাতে ছিল বলে গোনাটা বিনামূল্যে হত, আর উপরের যুক্তিটাও তাই
-         * খাটত। কিন্তু তালিকাটা সীমাহীন ছিল: যে ম্যানেজার ছয় মাস
-         * অনুমোদন করেননি, তাঁর ইনবক্স হাজার সারি টানত।
-         *
-         * সীমা বসানোর পর ওই গোনাটা **আর করা যায় না** — সে তখন কেবল
-         * প্রথম পঞ্চাশটার কথা বলত, আর চিপে "ক্রয় ৫০" দেখাত যেখানে
-         * সত্যিকারের সংখ্যা ১৩৭। তাই গোনাটা নেমে এসেছে একটা group-by
-         * কোয়েরিতে, যেটা সারি না তুলেই পুরো তালিকার হিসাব দেয়।
-         *
-         * ⛔ `reorder()` — গোনার কোয়েরিতে ক্রমের কোনো মানে নেই, আর
-         * `requested_at` ধরে সাজানো একটা group-by কড়া MySQL সরাসরি
-         * খারিজ করে (ONLY_FULL_GROUP_BY)।
+         * ⭐ ট্যাবের প্রশ্নগুলো — অন্যের ইনবক্স দেখার সময় কেবল "অপেক্ষায়"। ⓘ রহিমের পাঠানো বা রহিমের দেওয়া অনুমোদন জানার
+         * জায়গা রিপোর্ট; ইনবক্সে সেটা দেখালে নিরীক্ষক আর সহকর্মীর প্রশ্ন গুলিয়ে যেত।
          */
-        $counts = (clone $pending)
+        $tabs = $this->tabQueries($subject, $own);
+        $tab = (string) $request->query('tab', 'waiting');
+        $tab = isset($tabs[$tab]) ? $tab : 'waiting';
+
+        $branch = (int) $request->query('branch', 0);
+        $band = (string) $request->query('amount', '');
+        $band = isset(self::AMOUNT_BANDS[$band]) ? $band : '';
+        $sort = (string) $request->query('sort', '');
+        $sort = in_array($sort, self::SORTS, true) ? $sort : (in_array($tab, ['waiting', 'behalf'], true) ? 'late' : 'new');
+
+        /*
+         * ⓘ খোঁজা, শাখা আর অঙ্ক — পুরো তালিকা ছাঁকে, কাজের চিপের সংখ্যাও তার পরে গোনা। ⚠️ কাজ আর দেরি বাছে, চিপের সংখ্যা কমায় না
+         * (নিচে), নাহলে "ক্রয়" বাছার পর বাকি চিপ শূন্য দেখাত।
+         */
+        $filtered = $this->narrowed(
+            self::searched(clone $tabs[$tab], (string) $request->query('q', '')),
+            $branch,
+            $band,
+        );
+
+        /*
+         * কাজ ধরে চিপ — §২.২।
+         *
+         * ⓘ গোনাটা ডাটাবেজে, group-by দিয়ে — সারি না তুলেই পুরো তালিকার হিসাব (১২ সেপ্টেম্বর ২০২৬)।
+         * ⛔ `reorder()` — গোনার কোয়েরিতে ক্রমের কোনো মানে নেই, আর ক্রম ধরে সাজানো একটা group-by কড়া MySQL সরাসরি খারিজ করে
+         * (ONLY_FULL_GROUP_BY)।
+         */
+        $counts = (clone $filtered)
             ->reorder()
             ->withoutEagerLoads()
             ->select('module')
@@ -240,140 +259,173 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         }
 
         /*
-         * বেছে নেওয়া মডিউলটা ঘোষিত নয় — তবু ছাঁকনিটা মানা হয়।
-         *
-         * ফলে তালিকা খালি দেখাবে, আর সেটাই সৎ: পুরনো একটা লিংক ধরে
-         * এসে "সব" দেখলে মানুষ ভাবতেন ছাঁকনিটা কাজ করেনি।
-         */
-        /*
-         * এখন সারিগুলো — ছাঁকনিসহ, আর সীমার ভেতরে।
-         *
-         * ⚠️ ছাঁকনিটা **কোয়েরিতে**, আগের মতো তোলা তালিকার উপর নয়। উপরে
-         * ছাঁকলে সীমাটা ভুল জায়গায় পড়ত: ডাটাবেজ প্রথম পঞ্চাশটা দিত
-         * (সব মডিউল মিলিয়ে), আর তারপর তার ভেতর থেকে "ক্রয়" বাছা হত —
-         * ফলে ক্রয়ের একশো সারি থাকলেও পর্দায় হয়তো তিনটা আসত, আর
-         * চিপে লেখা থাকত ১০০। সীমা সবসময় ছাঁকনির পরে বসতে হয়।
-         */
-        /*
-         * ⭐ দেরির ছাঁকনি — ২৪ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ শর্তটা একটাই জায়গায় লেখা ([[lateOnes]]), কারণ এখানে
-         * তিনবার লাগে: চিপের সংখ্যা, সারিগুলো, আর মোট। ⛔ তিন
-         * জায়গায় লিখলে একদিন চিপে ১২ আর তালিকায় ৭ দেখাত।
+         * ⭐ দেরির ছাঁকনি — ২৪ সেপ্টেম্বর ২০২৬। ⓘ শর্তটা একটাই জায়গায় ([[lateOnes]]): চিপের সংখ্যা, সারি আর মোট — তিনটাই।
          */
         $late = $request->boolean('late');
 
-        $lateCount = self::lateOnes((clone $pending)->reorder()->withoutEagerLoads())->count();
+        $lateCount = self::lateOnes((clone $filtered)->reorder()->withoutEagerLoads())->count();
 
-        $waiting = self::lateOnes(
-            (clone $pending)->when($selected !== '', fn ($q) => $q->where('module', $selected)),
+        $list = self::lateOnes(
+            (clone $filtered)->when($selected !== '', fn ($q) => $q->where('module', $selected)),
             $late,
-        )
-            ->limit(self::INBOX_LIMIT)
-            ->get();
+        );
 
         /*
-         * এখন যা দেখা যাচ্ছে তার সত্যিকারের মোট — ছাঁকনি ধরে।
-         *
-         * ছাঁকনি থাকলে ওই মডিউলের সংখ্যা, নাহলে সবার যোগফল। এই
-         * সংখ্যাটাই উপরে "কয়টা" বলে, আর কাটা পড়েছে কি না তাও এটাই ঠিক
-         * করে — `$waiting->count()` দিয়ে করলে দুইটাই বড়জোর পঞ্চাশ বলত।
+         * ⭐ দুই মোট — দফা ৬: নিচে "এই পাতার মোট" আর "সবগুলোর মোট"। ⓘ সবগুলোর মোট ডাটাবেজে (DECIMAL-এর যোগ, কোনো ভাসমান সংখ্যা
+         * নেই), পাতার মোট পাতার সারি থেকে bcmath-এ ([[Money::sumOf()]])। ⛔ দুইটা একই সংখ্যা হলে, অর্থাৎ এক পাতাতেই সব, তাও দুই
+         * লাইনেই লেখা — "সব Nটার মোট" দেখে পাঠক জানেন আর কিছু বাকি নেই।
          */
+        $visibleTotal = (clone $list)->reorder()->withoutEagerLoads()->count();
+        $sumAll = Money::round((string) ((clone $list)->reorder()->withoutEagerLoads()->sum('amount') ?? '0'));
+
+        $approvals = self::sorted($list, $sort)
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+
+        $rows = $approvals->getCollection();
+        $sumPage = Money::sumOf($rows, fn (Approval $a) => (string) ($a->amount ?? '0'));
+
         /*
-         * ⚠️ দেরির ছাঁকনি চালু থাকলে গোনাটা আলাদা করে করতে হয়।
-         *
-         * ⓘ `$counts` গোনা হয় ছাঁকনির **আগে**, মডিউল ধরে — তাই
-         * ওটা *"দেরিগুলো কয়টা"* প্রশ্নের উত্তর দিতে পারে না।
-         * ⛔ ওটাই দেখালে শিরোনামে *"১৩৭টি"* আর নিচে তিনটা সারি
-         * থাকত, আর মানুষ ভাবতেন পাতাটা ভাঙা।
+         * ⭐ ডানের কাগজ — বেছে নেওয়াটা (`?open=`), নাহলে তালিকার প্রথমটা (দফা ১)। ⓘ বেছে নেওয়া কাগজ এই পাতায় না থাকলেও খোলে, যদি
+         * পাঠকের দেখার অধিকার থাকে ([[detailFor()]]-এর একই তিন প্রশ্ন); না থাকলে প্রথমটা — খালি ৪০৩ নয়, কারণ ঠিকানাটা ইনবক্সের।
          */
-        $visibleTotal = $late
-            ? self::lateOnes(
-                (clone $pending)->reorder()->withoutEagerLoads()
-                    ->when($selected !== '', fn ($q) => $q->where('module', $selected)),
-            )->count()
-            : ($selected !== ''
-                ? (int) $counts->get($selected, 0)
-                : (int) $counts->sum());
+        $openId = (int) $request->query('open', 0);
+        $opened = $openId > 0
+            ? ($rows->firstWhere('id', $openId) ?? Approval::query()->with('requester')->find($openId))
+            : null;
+        $detail = $opened !== null ? $this->detailFor($opened, $user) : null;
+
+        if ($detail === null && $rows->isNotEmpty()) {
+            $opened = $rows->first();
+            $detail = $this->detailFor($opened, $user);
+        }
 
         return view('approval::inbox.index', [
             'menu' => $this->menu->forUser($user),
-            'approvals' => $waiting,
+            'approvals' => $approvals,
 
             /*
-             * ⭐ কার · কী বাবদ · কোথায় — ২০ সেপ্টেম্বর ২০২৬। কাগজগুলো ধরন
-             * ধরে একবারে তোলা হয় ([[ApprovalFacts]]), সারি ধরে নয়।
+             * ⭐ কার · কী বাবদ · কোথায় — ২০ সেপ্টেম্বর ২০২৬। কাগজগুলো ধরন ধরে একবারে তোলা হয় ([[ApprovalFacts]]), সারি ধরে নয়।
+             * ⓘ দেয়াল তোলা কেবল নিজের সারিতে — অন্যের সারি দেখা রিপোর্ট-পাঠক নিজের দেয়ালেই ([[ApprovalFacts::VIEW_WALLS]])
              */
-            // ⓘ দেয়াল তোলা কেবল নিজের সারিতে — অন্যের সারি দেখা রিপোর্ট-পাঠক নিজের দেয়ালেই ([[ApprovalFacts::VIEW_WALLS]])
-            'facts' => $this->facts->of($waiting, $subject->is($user)),
+            'facts' => $this->facts->of($rows, $own),
             // ⭐ ছকের বাইরের সই — কেবল নিজের বাক্সে, অন্যের বাক্স দেখার সময় নয়
-            'elsewhere' => $subject->is($user) ? $elsewhere : [],
+            'elsewhere' => $own ? $elsewhere : [],
             'visibleTotal' => $visibleTotal,
+            'sumAll' => $sumAll,
+            'sumPage' => $sumPage,
             'labels' => $this->flows->labels(),
             'modules' => $modules,
             'selected' => $selected,
-            // "সব" চিপের সংখ্যা — সবসময় পুরো তালিকার, ছাঁকনি নির্বিশেষে
+            // "সব" চিপের সংখ্যা — সবসময় পুরো (ছাঁকা) তালিকার, কাজের চিপ নির্বিশেষে
             'total' => (int) $counts->sum(),
 
+            'tab' => $tab,
+            'tabCounts' => collect($tabs)->map(fn ($q) => (clone $q)->reorder()->withoutEagerLoads()->count())->all(),
+            'branch' => $branch,
+            'branches' => $this->branchChoices(),
+            'band' => $band,
+            'sort' => $sort,
+
             /*
-             * ব্যক্তির তালিকা — কেবল যাঁর অনুমতি আছে তাঁর জন্য, আর
-             * একজনের বেশি থাকলে।
-             *
-             * ⚠️ "সবাই" বলে কোনো বিকল্প নেই, আর সেটা ইচ্ছাকৃত:
-             * `pendingFor()` একজনের প্রশ্নের উত্তর দেয়। "সবার অপেক্ষমাণ"
-             * প্রশ্নটার উত্তর **রিপোর্টের**, ইনবক্সের নয় — আর দুই
-             * জায়গায় রাখলে সংখ্যা দুইটা একদিন আলাদা হত।
+             * ব্যক্তির তালিকা — কেবল যাঁর অনুমতি আছে তাঁর জন্য। ⚠️ "সবাই" বলে কোনো বিকল্প নেই: "সবার অপেক্ষমাণ" প্রশ্নটার উত্তর
+             * **রিপোর্টের**, ইনবক্সের নয় — দুই জায়গায় রাখলে সংখ্যা দুইটা একদিন আলাদা হত।
              */
             'signers' => $signers,
-            'person' => $subject->id === $user->id ? 0 : $subject->id,
+            'person' => $own ? 0 : $subject->id,
             'personName' => $subject->name,
 
             /*
-             * ⭐ প্রতিটা সারির ঘড়ির অবস্থা — পর্দা নিজে হিসাব করে না।
-             *
-             * ⛔ ব্লেডে `now()` আর `due_at` মিলাতে গেলে তিন জায়গায়
-             * তিন রকম হিসাব হত ([[ApprovalSla]]-এর মাথায় লেখা)।
+             * ⭐ প্রতিটা সারির ঘড়ির অবস্থা আর শেষ সময় — পর্দা নিজে হিসাব করে না ([[ApprovalSla]]); ⓘ ধাপ "২ / ৩ · ম্যানেজার"
+             * ইঞ্জিনের ধাপ থেকে ([[stepsOf()]]), দফা ৭ আর ৮।
              */
-            'sla' => $waiting->mapWithKeys(
-                fn (Approval $a) => [$a->id => $this->sla->stateOf($a)],
-            )->all(),
+            'sla' => $rows->mapWithKeys(fn (Approval $a) => [$a->id => $this->sla->stateOf($a)])->all(),
+            'steps' => $this->stepsOf($rows),
+            'standIns' => $this->standInsOf($rows, $user, $own),
+            'deadlines' => $rows->mapWithKeys(fn (Approval $a) => [$a->id => $this->deadlineOf($a)])->all(),
 
             'late' => $late,
             'lateCount' => $lateCount,
 
             /*
-             * ⭐ কোন সারিগুলো একসাথে সই করা যায় — মালিকের সিদ্ধান্ত ৫।
-             *
-             * ⚠️ পর্দায় চেকবক্সটা **দেখানোই হয় না** টাকার কাগজে।
-             * ⓘ তবু [[BulkApproval]] সার্ভারেও আলাদা করে দেখে — কারণ
-             * লুকানো একটা চেকবক্স হাতে বানিয়ে পাঠানো যায়, আর পর্দা
-             * কখনো শেষ কথা নয়।
+             * ⭐ কোন সারিগুলো একসাথে অনুমোদন দেওয়া যায় — মালিকের সিদ্ধান্ত ৫। ⓘ কেবল নিজের অপেক্ষার তালিকায়; তবু
+             * [[BulkApproval]] সার্ভারেও আলাদা করে দেখে — লুকানো একটা চেকবক্স হাতে বানিয়ে পাঠানো যায়।
              */
-            'bulkable' => $waiting->reject(
-                fn (Approval $a) => $this->bulk->movesMoney($a),
-            )->pluck('id')->all(),
+            'bulkable' => $own && in_array($tab, ['waiting', 'behalf'], true)
+                ? $rows->reject(fn (Approval $a) => $this->bulk->movesMoney($a))->pluck('id')->all()
+                : [],
+
+            'opened' => $opened,
+            'detail' => $detail,
+            'nextId' => $opened !== null ? self::nextAfterDecision($rows, (int) $opened->id) : null,
         ]);
     }
 
+    /** ⓘ নিয়মটা [[ApprovalInbox::tabQueries()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private function tabQueries(User $subject, bool $own): array
+    {
+        return $this->inbox->tabQueries($subject, $own);
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::narrowed()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private function narrowed($query, int $branch, string $band)
+    {
+        return $this->inbox->narrowed($query, $branch, $band);
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::sorted()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private static function sorted($query, string $sort)
+    {
+        return ApprovalInbox::sorted($query, $sort);
+    }
+
     /**
-     * ⭐ *"দেরি"* মানে কী — একটাই জায়গায়।
+     * ⭐ অনুমোদন দেওয়ার পরে কোন কাগজ খুলবে — দফা ১: তালিকায় ঠিক পরেরটা, শেষেরটা হলে আগেরটা, একটাই থাকলে কিছুই নয়।
      *
-     * ⚠️ তিনটা কোয়েরিতে একই শর্ত লাগে: চিপের সংখ্যা, সারিগুলো,
-     * আর মোট। ⛔ তিন জায়গায় লিখলে একদিন একটা বদলাত, আর
-     * চিপে ১২ লেখা থাকত যখন তালিকায় সাতটা সারি।
-     *
-     * ⓘ `due_at` খালি মানে ওই ধাপে ঘড়ি নেই — ওগুলো কখনো দেরি নয়।
-     *
-     * @template TModel of Approval
-     *
-     * @param  Builder<TModel>  $query
-     * @return Builder<TModel>
+     * @param  \Illuminate\Support\Collection<int, Approval>  $rows
      */
+    private static function nextAfterDecision($rows, int $id): ?int
+    {
+        $ids = $rows->pluck('id')->map(fn ($v) => (int) $v)->values()->all();
+        $at = array_search($id, $ids, true);
+
+        if ($at === false) {
+            return $ids[0] ?? null;
+        }
+
+        return $ids[$at + 1] ?? $ids[$at - 1] ?? null;
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::stepsOf()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private function stepsOf($rows): array
+    {
+        return $this->inbox->stepsOf($rows);
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::standInsOf()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private function standInsOf($rows, User $user, bool $own): array
+    {
+        return $this->inbox->standInsOf($rows, $user, $own);
+    }
+
+    /**
+     * ⭐ শাখার তালিকা — ছাঁকনির জন্য, এই কোম্পানির (দফা ৩)।
+     *
+     * @return array<int, string>
+     */
+    private function branchChoices(): array
+    {
+        return \App\Models\Branch::query()
+            ->ordered()
+            ->get()
+            ->mapWithKeys(fn ($b) => [(int) $b->id => (string) $b->name()])
+            ->all();
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::lateOnes()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
     private static function lateOnes($query, bool $only = true)
     {
-        return $query->when($only, fn ($q) => $q
-            ->whereNotNull('due_at')
-            ->where('due_at', '<', now()));
+        return ApprovalInbox::lateOnes($query, $only);
     }
 
     /**
@@ -393,31 +445,10 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     }
 
     /** আমার করা অনুরোধগুলো — নতুন আগে। */
-    /**
-     * খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: দুই তালিকাতেই খোঁজার ঘর।
-     *
-     * ⓘ যা পর্দায় দেখা যায় তা ধরেই: অনুরোধকারীর নাম, অনুরোধের কারণ, অঙ্ক, আর
-     * কাগজের তথ্য (পক্ষ, কী বাবদ, কোথায় — `payload`)। ⚠️ খালি হলে কিছুই বদলায় না।
-     *
-     * @template T of \Illuminate\Database\Eloquent\Builder
-     * @param  T  $query
-     * @return T
-     */
+    /** ⓘ নিয়মটা [[ApprovalInbox::searched()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
     private static function searched($query, string $term)
     {
-        $term = trim($term);
-
-        if ($term === '') {
-            return $query;
-        }
-
-        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
-
-        return $query->where(fn ($q) => $q
-            ->where('requested_reason', 'like', $like)
-            ->orWhere('payload', 'like', $like)
-            ->orWhere('amount', 'like', $like)
-            ->orWhereHas('requester', fn ($u) => $u->where('name', 'like', $like)));
+        return ApprovalInbox::searched($query, $term);
     }
 
     public function mine(Request $request): View
@@ -473,6 +504,36 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         $entry = Approval::query()->with(['requester', 'decisions.user', 'decisions.forwardedTo'])->findOrFail($approval);
 
+        $detail = $this->detailFor($entry, $user);
+
+        abort_if($detail === null, 403);
+
+        return view('approval::inbox.show', [
+            'menu' => $this->menu->forUser($user),
+            ...$detail,
+
+            /*
+             * ⭐ আগের আর পরের কাগজ — কেবল যিনি অনুমোদন দিতে পারেন।
+             *
+             * ⓘ নিরীক্ষক বা অনুরোধকারীর কাছে *"পরেরটা"* কথাটারই কোনো অর্থ নেই — তাঁদের কোনো সারি নেই। ⛔ তবু তীর দুইটা দেখালে
+             * সেগুলো মৃত বোতাম হত।
+             */
+            ...$this->neighboursOf($entry, $user, $detail['canDecide']),
+        ]);
+    }
+
+    /**
+     * ⭐ একটা কাগজের পুরো ছবি — কাগজের নিজের পাতা ([[show()]]) আর ইনবক্সের ডান দিক ([[index()]]) দুই জায়গাতেই, অনুমোদন পর্দা
+     * ভাগ ২, দফা ১। ⛔ দুই জায়গায় আলাদা করে বানালে একদিন ইনবক্সের ডানে এক অঙ্ক আর পাতায় আরেক অঙ্ক দেখাত।
+     *
+     * ⓘ পাঠক পাতাটা খুলতেই না পারলে `null` — ডাকা পক্ষ ঠিক করে ৪০৩ দেবে ([[show()]]) নাকি তালিকার প্রথমটা খুলবে ([[index()]])।
+     *
+     * @return array<string, mixed>|null
+     */
+    private function detailFor(Approval $entry, User $user): ?array
+    {
+        $entry->loadMissing(['requester', 'decisions.user', 'decisions.forwardedTo', 'decisions.onBehalfOf']);
+
         /*
          * ── তিনটা আলাদা প্রশ্ন, আর ওদের এক করা যাবে না ──────────────
          *
@@ -499,15 +560,39 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $canDecide = $this->engine->canDecide($entry, $user);
         $auditing = $user->can('approval.report');
 
-        abort_unless($mine || $canDecide || $auditing, 403);
+        /*
+         * ⭐ চতুর্থ দল — খবর যাঁকে এই পাতায় পাঠিয়েছে (fe-র নিয়ম, ২৪ অক্টোবর ২০২৬: "খবর যাঁকে কাগজে পাঠায় তিনি সেটা খোলেন;
+         * না পারলে কারণটা বাংলায় দেখেন — খালি ৪০৩ কখনো নয়")। ⛔ আগে উপরে-পাঠানোর গন্তব্য যাঁর সীমা ছোট, মনে-করানো পাওয়া
+         * সইকারী যাঁর কাগজ অন্যজনের হাতে, বা সীমার বাইরের সইকারী খবর চাপলেই ৪০৩ পেতেন — কেন, কেউ বলত না।
+         * ⓘ পড়ার ছাড় কেবল **নিজের খবরে** — `approval.view` থাকলেই নয়; আর সই দেওয়া আগের মতোই কেবল [[ApprovalEngine::canDecide()]]।
+         * কাগজটা (`$document`) এঁরা নিরীক্ষকের মতোই দেখেন না — রেকর্ড আর "কেন পারছেন না", এটুকুই।
+         */
+        $sentHere = ! ($mine || $canDecide || $auditing) && $this->sentHere($entry, $user);
+
+        if (! ($mine || $canDecide || $auditing || $sentHere)) {
+            return null;
+        }
 
         $mayReadDocument = $mine || $canDecide;
 
         $document = $mayReadDocument ? $this->documentOf($entry) : null;
 
-        return view('approval::inbox.show', [
-            'menu' => $this->menu->forUser($user),
+        $steps = $this->stepsOf(collect([$entry]))[(int) $entry->id];
+
+        return [
             'approval' => $entry,
+
+            // ⭐ "ধাপ ২ / ৩ · ম্যানেজার" — তালিকার অবিকল একই হিসাব (দফা ৮)
+            'step' => $steps,
+            'deadline' => $this->deadlineOf($entry),
+
+            // ⭐ টাকা কথায় — দফা ৬, বিস্তারিতের মাথায় (অঙ্কের নিচে নয়, পাশে বন্ধনীতে, পরিকল্পনার ছবির মতো)
+            'amountWords' => $entry->amount === null ? null : \App\Core\Support\AmountInWords::of((string) $entry->amount),
+
+            // ⭐ কার হয়ে অনুমোদন দেবেন — কেবল যিনি দিতে পারেন (দফা ২)
+            'standInFor' => $canDecide && ($for = $this->engine->standInFor($entry, $user)) !== null
+                ? (string) User::query()->whereKey($for)->value('name')
+                : null,
 
             /*
              * ⛔ পর্দায় যে অঙ্কটা লেখা, সেটা **সই চাওয়ার দিনের** অঙ্ক।
@@ -650,16 +735,23 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * করতে থাকেন — কাগজটা কারো কাছে নেই, আর সেটা কেউ বলে না।
              */
             'whyNot' => $canDecide ? null : $this->whyNot($entry, $user, $mine),
+        ];
+    }
 
-            /*
-             * ⭐ আগের আর পরের কাগজ — কেবল যিনি সই দিতে পারেন।
-             *
-             * ⓘ নিরীক্ষক বা অনুরোধকারীর কাছে *"পরেরটা"* কথাটারই কোনো
-             * অর্থ নেই — তাঁদের কোনো সারি নেই। ⛔ তবু তীর দুইটা
-             * দেখালে সেগুলো মৃত বোতাম হত।
-             */
-            ...$this->neighboursOf($entry, $user, $canDecide),
-        ]);
+    /**
+     * ⭐ এই মানুষের ঘণ্টায় এমন খবর আছে যা এই অনুরোধের পাতায় পাঠায় — মনে করানো, উপরে পাঠানো, অনুরোধের ফল, নিয়মের যোগ করা
+     * প্রাপক, যে-ই হোক।
+     *
+     * ⓘ ঠিকানার শেষটা মিলিয়ে (`/approvals/{id}`), পুরো ঠিকানা নয় — খবর লেখে কখনো সময়সূচি (APP_URL), কখনো ব্রাউজারের অনুরোধ
+     * (তার নিজের ঠিকানা); দুইটার শুরু আলাদা হতে পারে। ⓘ খবর নিজের আর দেখার মতো ([[NotificationService::mine()]] — শাখার দেয়ালসহ)।
+     */
+    private function sentHere(Approval $approval, User $user): bool
+    {
+        $path = route('approval.inbox.show', $approval->id, false);
+
+        return app(\App\Core\Services\NotificationService::class)->mine($user)
+            ->where('url', 'like', '%'.$path)
+            ->exists();
     }
 
     /**
@@ -683,9 +775,22 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             return __('approval::message.own_request');
         }
 
-        $atThisLevel = $this->engine->stepsFor($approval)
-            ->where('level', (int) $approval->current_level)
-            ->contains(fn ($step) => $step->allows($user));
+        /*
+         * ⭐ কাগজটা অন্যজনের হাতে দেওয়া (`assigned_to`) — তখন ধাপের সইকারীরাও সই দেন না, যতক্ষণ না ফেরত আসে
+         * ([[ApprovalEngine::canDecide()]])। ⛔ আগে এঁরা "এই স্তরে ছকে আপনি নেই" পড়তেন — মিথ্যা: ছকে আছেন, কাগজটা অন্যের কাছে।
+         */
+        if ($approval->assigned_to !== null && (int) $approval->assigned_to !== (int) $user->id) {
+            return __('approval::message.forwarded_to_other', [
+                'name' => (string) ($approval->assignee?->name ?? '—'),
+            ]);
+        }
+
+        // ⓘ পালা যাঁর — ধাপের সইকারী, হাতে দেওয়া কাগজের মানুষ, বা উপরে-পাঠানোর গন্তব্য; সীমার কথা কেবল এঁদেরই বলা হয়
+        $atThisLevel = (int) $approval->assigned_to === (int) $user->id
+            || $this->engine->escalatedHere($approval, $user)
+            || $this->engine->stepsFor($approval)
+                ->where('level', (int) $approval->current_level)
+                ->contains(fn ($step) => $step->allows($user));
 
         if ($atThisLevel && ! app(AuthorityService::class)->allows($user, $approval)) {
             return __('approval::message.beyond_your_authority');
@@ -694,104 +799,10 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return __('approval::message.not_your_turn');
     }
 
-    /**
-     * ⭐ প্রবাহের প্রতিটা ধাপ, আর এখন সেটা কোন অবস্থায়।
-     *
-     * ── ⓘ কেন সিদ্ধান্ত নয়, ধাপ ধরে ───────────────────────
-     * সিদ্ধান্তগুলো ধরে সাজালে **যে ধাপে এখনো কেউ কিছু করেননি**
-     * সেটা তালিকায় আসতই না — আর ঠিক সেটাই পাঠকের প্রশ্ন।
-     *
-     * @return list<array{level: int, name: string|null, state: string}>
-     */
+    /** ⓘ নিয়মটা [[ApprovalInbox::timelineOf()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
     private function timelineOf(Approval $approval): array
     {
-        $names = $this->engine->stepNamesFor($approval);
-
-        $decided = $approval->decisions
-            ->groupBy('level')
-            ->map(fn ($rows) => $rows->last()?->decision);
-
-        /*
-         * ⭐ একটা ধাপে কত সময় গেল — ঘণ্টায়।
-         *
-         * ⓘ গণনাটা **আগের সিদ্ধান্ত থেকে**, অনুরোধের দিন থেকে
-         * নয়। ⛔ অনুরোধ ধরে গুনলে তৃতীয় ধাপে তিন ধাপের সময় যোগ
-         * হয়ে দেখাত, আর সবসময় শেষ ধাপটাই সবচেয়ে ধীর দেখাত —
-         * যে ধাপে সত্যি দেরি হয় তাকে কখনো দেখা যেত না।
-         */
-        $took = [];
-        $from = $approval->requested_at;
-
-        /*
-         * ⛔ হিসাবটা **ধাপ ধরে**, সিদ্ধান্ত ধরে নয়।
-         *
-         * ⓘ একটা ধাপ **শেষ হয়** তার শেষ সইয়ে, আর **শুরু হয়**
-         * আগের ধাপের শেষ সইয়ে (প্রথমটার বেলায় অনুরোধের দিন)।
-         *
-         * ⚠️ প্রতিটা সিদ্ধান্তে লিখলে দুইজনের সই লাগা ধাপে সংখ্যাটা
-         * হত **দুই সইয়ের মাঝের ফাঁক** — অর্থাৎ যে ধাপে কিছু দিন
-         * কেউ তাকাননি, সেটাই সবচেয়ে ছোট দেখাত।
-         */
-        $endOfLevel = $approval->decisions
-            ->filter(fn ($d) => $d->decided_at !== null)
-            ->groupBy('level')
-            ->map(fn ($rows) => $rows->max('decided_at'))
-            ->sortKeys();
-
-        foreach ($endOfLevel as $level => $ended) {
-            if ($from !== null) {
-                $took[(int) $level] = $from->diffInHours($ended);
-            }
-
-            $from = $ended;
-        }
-
-        $out = [];
-
-        /*
-         * ⛔ ধাপগুলো [[ApprovalEngine::stepsFor()]] থেকে, নামগুলো থেকে নয়।
-         *
-         * ⚠️ `stepNamesFor()` **নামহীন ধাপ বাদ দেয়** — ওটা দিয়ে
-         * যাত্রাপথ বানালে নাম না বসানো প্রবাহে পর্দাটা **নীরবে
-         * খালি** থাকত, আর সেটা দেখতে *"কোনো ধাপ নেই"*-এর মতো।
-         */
-        $steps = $this->engine->stepsFor($approval);
-
-        /*
-         * ⓘ একই স্তরে একাধিক সইকারী থাকতে পারেন (N-of-M)।
-         * ⚠️ তাই যাত্রাপথে সারি হয় **স্তর** ধরে, মানুষ ধরে নয় —
-         * নাহলে তিনজনের একটা ধাপ তিনটা ধাপ দেখাত।
-         */
-        foreach ($steps->groupBy('level') as $level => $atLevel) {
-            $out[] = [
-                'level' => (int) $level,
-                'name' => $names[$level] ?? null,
-                'took' => $took[(int) $level] ?? null,
-
-                // ⓘ এই স্তরে কয়জনের সই লাগে, আর কয়জন দিয়েছেন
-                /*
-                 * ⛔ হিসাবটা ইঞ্জিনের, এখানে দ্বিতীয়বার লেখা নয়।
-                 *
-                 * ⚠️ দুই জায়গায় লিখলে একদিন পর্দা বলত *"২-এর ১"*
-                 * আর ইঞ্জিন কাগজটা এগিয়ে দিত — আর পাঠক কোনটাকে
-                 * বিশ্বাস করবেন বলতে পারতেন না।
-                 */
-                'needed' => ApprovalEngine::signaturesNeededAt($atLevel),
-                'signed' => $approval->decisions
-                    ->where('level', (int) $level)
-                    ->where('decision', ApprovalDecision::APPROVED)
-                    ->count(),
-
-                'state' => match (true) {
-                    isset($decided[$level]) => (string) $decided[$level],
-                    (int) $level === (int) $approval->current_level
-                        && $approval->status === Approval::PENDING => 'now',
-                    default => 'waiting',
-                },
-            ];
-        }
-
-        return $out;
+        return $this->inbox->timelineOf($approval);
     }
 
     /**
@@ -841,6 +852,23 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      * ⛔ নিয়মটা [[BulkApproval]]-এ, এখানে নয় — বোতাম লুকানো
      * নিরাপত্তা নয়, আর কেউ সরাসরি POST করলেও আটকাতে হবে।
      */
+    /**
+     * ⭐ দফা ১৩ — একসাথে সইয়ের আগে দেখা (অনুমোদন মডিউলের নকশা, মালিক ২১ অক্টোবর ২০২৬): কয়টা সই হবে, মোট কত টাকা, আর কোনগুলো
+     * কেন বাদ। ⓘ কিছু লেখে না; নিয়ম [[BulkApproval::review()]]-এর, যেটা আসল সইও মানে — তাই দেখা আর করা মেলে।
+     */
+    public function bulkReview(Request $request): View
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:100'], 'ids.*' => ['integer']]);
+        $review = app(BulkApproval::class)->review(array_map('intval', $data['ids']), $request->user());
+
+        return view('approval::inbox.bulk-review', [
+            'menu' => $this->menu->forUser($request->user()),
+            'sign' => $review['sign'],
+            'skip' => $review['skip'],
+            'total' => $review['total'],
+        ]);
+    }
+
     public function bulkApprove(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -880,8 +908,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         $this->engine->approve($entry, $request->user(), $validated['remarks'] ?? null);
 
-        return redirect()
-            ->route('approval.inbox.index')
+        return $this->backToInbox($request)
             ->with('saved', __('approval::message.approved'));
     }
 
@@ -949,8 +976,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             }
         });
 
-        return redirect()
-            ->route('approval.inbox.index')
+        return $this->backToInbox($request)
             ->with('saved', __('approval::message.bundle_confirmed', ['count' => $waiting->count()]));
     }
 
@@ -992,8 +1018,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         $this->engine->forward($entry, $request->user(), $to, $validated['remarks']);
 
-        return redirect()
-            ->route('approval.inbox.index')
+        return $this->backToInbox($request)
             ->with('saved', __('approval::message.forwarded', ['name' => $to->name]));
     }
 
@@ -1026,8 +1051,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             ($validated['reason_code'] ?? '') !== '' ? $validated['reason_code'] : null,
         );
 
-        return redirect()
-            ->route('approval.inbox.index')
+        return $this->backToInbox($request)
             ->with('saved', __('approval::message.rejected'));
     }
 
@@ -1040,8 +1064,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         $this->engine->sendBack(Approval::query()->findOrFail($approval), $request->user(), $validated['remarks']);
 
-        return redirect()
-            ->route('approval.inbox.index')
+        return $this->backToInbox($request)
             ->with('saved', __('approval::message.sent_back'));
     }
 
@@ -1055,6 +1078,41 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return redirect()
             ->route('approval.inbox.mine')
             ->with('saved', __('approval::message.withdrawn'));
+    }
+
+    /** ⓘ নিয়মটা [[ApprovalInbox::deadlineOf()]]-এ — ওয়েব আর ফোন একই জায়গা থেকে পড়ে (দফা ২১) */
+    private function deadlineOf(Approval $approval): ?array
+    {
+        return $this->inbox->deadlineOf($approval);
+    }
+
+    /** ⓘ ইনবক্সের যে ছাঁকনিগুলো সিদ্ধান্তের পরে ফেরার পথে সাথে যায় — বাকি সব ফেলে দেওয়া হয় */
+    private const KEEP_AFTER_DECISION = ['tab', 'module', 'branch', 'amount', 'late', 'sort', 'q', 'page'];
+
+    /**
+     * ⭐ সিদ্ধান্তের পরে ইনবক্সে ফেরা — একই ট্যাব, একই ছাঁকনি, আর পরের কাগজ খোলা (অনুমোদন পর্দা ভাগ ২, দফা ১: "অনুমোদন দিলে পরের
+     * কাগজ নিজে খোলে")। ⓘ ফর্ম দুইটা জিনিস পাঠায়: `next` (তালিকার পরের সারি, [[nextAfterDecision()]]) আর `from` (ইনবক্সের ঠিকানার
+     * প্রশ্ন-অংশ)। ⛔ `from` থেকে কেবল চেনা চাবিগুলো নেওয়া হয় — অন্য কিছু (ধরুন বাইরের ঠিকানা) ফেরার পথে ঢোকে না।
+     */
+    private function backToInbox(Request $request): RedirectResponse
+    {
+        parse_str((string) $request->input('from', ''), $from);
+
+        $keep = [];
+
+        foreach (self::KEEP_AFTER_DECISION as $key) {
+            if (isset($from[$key]) && is_scalar($from[$key]) && (string) $from[$key] !== '') {
+                $keep[$key] = (string) $from[$key];
+            }
+        }
+
+        $next = (int) $request->input('next', 0);
+
+        if ($next > 0) {
+            $keep['open'] = $next;
+        }
+
+        return redirect()->route('approval.inbox.index', $keep);
     }
 
     /**

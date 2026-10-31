@@ -202,8 +202,9 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         $this->assertSame(bcadd($before['gross'], '1400.0000', 4), bcadd($cards['sales.overview.gross']['raw'], '0', 4));
         $this->assertSame(bcadd($before['discount'], '50.0000', 4), bcadd($cards['sales.overview.discount']['raw'], '0', 4));
         $this->assertSame(bcadd($before['tax'], '71.2500', 4), bcadd($cards['sales.overview.tax']['raw'], '0', 4));
-        $this->assertSame(bcadd($before['net'], '1421.2500', 4), bcadd($cards['sales.overview.net']['raw'], '0', 4),
-            '⛔ খসড়া বিল গোনা হয়েছে, বা নিশ্চিত বিল বাদ পড়েছে।');
+        // ⓘ ২০ অক্টোবর ২০২৬ থেকে নিট বিক্রি VAT বাদে (IFRS 15.47): ১,০২১.২৫ − ৭১.২৫ + ৪০০ = ১,৩৫০; আগের বিলগুলোরও নিট − VAT
+        $this->assertSame(bcadd(bcsub($before['net'], $before['tax'], 4), '1350.0000', 4), bcadd($cards['sales.overview.net']['raw'], '0', 4),
+            '⛔ খসড়া বিল গোনা হয়েছে, বা নিশ্চিত বিল বাদ পড়েছে, বা VAT নিটে রয়ে গেছে।');
 
         // ⭐ ফোন আর হোম পর্দার একই সংজ্ঞা — "আজকের বিক্রয়" কার্ড আর নিট এক অঙ্ক
         $this->actingAs($this->user);
@@ -227,7 +228,8 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         foreach ($monthly as $month) {
-            $this->assertSame(bcadd(SalesMetrics::invoiceTotal($month['from'], $month['to']), '0', 4),
+            // ⓘ ২০ অক্টোবর ২০২৬ থেকে নিট বিক্রি (VAT ও ফেরত বাদে) — [[SalesMetrics::net()]]
+            $this->assertSame(SalesMetrics::net($month['from'], $month['to']),
                 bcadd($month['net'], '0', 4), "⛔ {$month['ym']} মাসের ধারা আর বিক্রয়ের সংজ্ঞা আলাদা।");
         }
 
@@ -395,11 +397,17 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
             bcadd($after['sales.overview.collection']['raw'], '0', 4),
             '⛔ আদায়ের কার্ড নিশ্চিত আদায়ের যোগফল নয় — খসড়া গোনা হয়েছে, বা নিশ্চিতটা বাদ পড়েছে।');
 
-        // বাকি পড়ল = নিট − আদায়, দুইটাই এই পাতার নিজের কার্ড থেকে
+        /*
+         * ⭐ পাওনার নড়াচড়া = বিল (VAT সহ) − ফেরত (VAT সহ) − আদায় — বিক্রি নয় (fe, ২১ অক্টোবর ২০২৬; আগে নিট − আদায়)।
+         * ⓘ আদায় এই পাতার নিজের কার্ড থেকে, বিল আর ফেরত হাতে গোনা (PHP-তে, সারি ধরে)।
+         */
+        $today = Carbon::today()->toDateString();
+        $hand = fn (string $model) => $model::acrossBranches()->whereIn('status', DocumentStatus::POSTED)->whereDate('trx_date', $today)->get()
+            ->reduce(fn (string $c, $paper) => bcadd($c, (string) $paper->total, 4), '0.0000');
         $this->assertSame(
-            bcsub(bcadd($after['sales.overview.net']['raw'], '0', 4), bcadd($after['sales.overview.collection']['raw'], '0', 4), 4),
+            bcsub(bcsub($hand(SalesInvoice::class), $hand(SalesReturn::class), 4), bcadd($after['sales.overview.collection']['raw'], '0', 4), 4),
             bcadd($after['sales.overview.outstanding']['raw'], '0', 4),
-            '⛔ "বাকি পড়ল" নিট বিক্রয় থেকে আদায় বাদ দিয়ে হয় না।',
+            '⛔ পাওনার নড়াচড়া বিল − ফেরত − আদায় নয়।',
         );
         $this->assertSame(bcadd(bcsub($before['sales.overview.outstanding']['raw'], '0', 4), '700', 4),
             bcadd($after['sales.overview.outstanding']['raw'], '0', 4));

@@ -53,7 +53,7 @@ return [
         'all' => 'সব',
         'account' => 'খাত',
         'state' => 'অবস্থা',
-        'state_counted' => 'পাকা',
+        'state_counted' => 'পোস্ট হয়েছে',
         'state_pending' => 'অপেক্ষায়',
         'state_draft' => 'খসড়া',
         'state_rejected' => 'ফেরত দেওয়া',

@@ -124,6 +124,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ নিজের ছাদ, পাহারার ভিতরেই (রিপোর্ট ১৩৪, কলাম ৪৫২; কেবল কমে) — পুরনো দেনার বিশাল তালিকা সাধারণ ছাদে নয় (fe, ২৪ অক্টোবর ২০২৬)
+        'EveryReportFigureOpensItsSourceTest::KNOWN',
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
         // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)
@@ -139,6 +141,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryChallanConfirmAsksHowTheGoodsTravelTest::KNOWN',
         'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
+        // ⓘ চাহিদা: মালিকের বাদ দেওয়া শব্দ — পর্দার লেখায় থাকতেই পারবে না; ছাড় নয়, নিষেধের তালিকা (web-terms, fe ২১ অক্টোবর ২০২৬)
+        'TheOwnersWordsAreTheOnlyWordsTest::RETIRED',
+        // ⓘ চাহিদা: অনুমোদন মডিউলের নিষেধের শব্দ (দফা ১৫) — ছাড় নয়
+        'TheOwnersWordsAreTheOnlyWordsTest::APPROVAL_ONLY',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
         'TheOtherNineLooksWereNotTouchedTest::AS_SHIPPED',
@@ -451,6 +457,22 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   ⓘ মাপা, অনুমান নয়: প্রতিফলনে গোনা ৪৫৯ (EXCLUDED ৮২ → ৮৩); একই দফার `SHOWS`-এর নতুন সারিটা ছাড় নয়, ঘোষণা (NOT_EXCUSES-এর
      *       মতো গোনায় নেই), আর অশ্রেণিবদ্ধ তালিকা শূন্য।
      *
+     * ── ⚠️ ৪৫৯ → ৪৬১ (মূলের ৪৫৯ + আমাদের ২; শাখায় ছিল ৪৫৭ → ৪৫৯ → ৪৬০), ২২ অক্টোবর ২০২৬, main 2c026a303 মেশানো ২৪ অক্টোবর (টাকা নেওয়ার পর্দা, নকশা ১০০; a6) ─────────────────
+     *   +২  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — `sales.collection.preview` (খাতার প্রিভিউ, JSON) আর
+     *       `sales.collection.overview_new` (নিশ্চিতের আগের সারাংশের পপ-আপ, কেবল View ফেরায়). fe মেনেছেন এই শর্তে যে দুটোই কিছু লেখে না,
+     *       আর সেটা দাবিতে বাঁধা: CollectionAppContractTest::test_item_10_no_preview_door_writes_anything_web_overview_or_phone (দুই দরজা আর
+     *       ফোনের প্রিভিউ; sal_collections, sal_collection_lines, sal_collection_applications, ledger_entries, approvals,
+     *       audit_trails, issued_numbers-এর সারি আগে = পরে);
+     *       কাগজ লেখে কেবল `sales.collection.store`, আর সেটা পাহারায়। `purchase.payment.simulate`, `sales.direct.overview`-এর
+     *       একই জাত। ⛔ CREATE_DOORS-এ তোলা মিথ্যা হত — ওখানে কাগজ বানানো দরজা, আর কিছু না লেখা প্রিভিউ তখন শাখার ছাপে
+     *       আটকাত (JSON-এ ৪০৯)।
+     *   ⓘ তৃতীয় ছাড়টা (AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT-এ CollectionApplication) উঠে গেছে: মডেল নিজে
+     *       auditCompanyId()/auditBranchId() বলে (আদায়ের কোম্পানি আর শাখা)। শাখায় ৩ যোগ হয়েছিল, থাকল ২।
+     *
+     * ── ⚠️ ৪৬১ → ৪৬৩, ২৪ অক্টোবর ২০২৬ (বাঁ মডিউল-রেলের নিজের সাজ; মালিক, fe-র অনুমোদন; a6) ─────────────────
+     *   +১  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — rail.layout: কেবল নিজের users.nav_layout (পিন আর ক্রম), অন্যের মডিউল
+     *       কোড ফেলা হয়, নিরীক্ষায় যায় না (দাবি: EveryModuleIsOnTheRailOrBehindMoreTest); home.layout-এর একই জাত।
+     *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — rail.layout: কোনো কাগজ বানায় না, শাখার ছাপ লাগে না।
      * ── ⚠️ ৪৫৯ → ৪৬৯, ২৪ অক্টোবর ২০২৬ (cb, তালিকার মোট — ListSummary; fe-র চাওয়া পাহারা) ────────────
      *   +১০ EveryListSummaryAddsDecimalsTest::KNOWN — ফোনের API-তে আজও নিজে যোগ করা দশটা ফাইল, মালিক আর কারণসহ: নয়টা ফাইলের কাগজের
      *       তালিকা ListSummary-তে সরবে (cb তিনটা; a6 ছয়টা — আদায়, DO, SO, বিল-চালান, আর fe-র কথায় বিক্রির ডেস্ক ও দরপত্র) —
@@ -467,7 +489,11 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       (cb, পোস্টের নিজের পথ — stopping()-এর ঠিক পরের অনুরোধ) আর কাউন্টার-বিক্রির তিন ফাইল (a5; বাসি অনুরোধে কাউন্টার কী
      *       দেখাবে a5 ঠিক করবে)। বাকি ছয় জায়গা এই কমিটেই decide()-এ সরেছে। ⛔ নতুন ছাড় নয়, পুরনো দেনা প্রথমবার গোনা।
      */
-    private const CEILING = 472;
+    // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
+    // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
+    // ⓘ ৩০ অক্টোবর ২০২৬ (fe): cb/list-summary-এর +১৩ (৪৫৯ → ৪৭২) আর main-এর +৫ (৪৫৯ → ৪৬৪) একসাথে = ৪৭৭
+    // ⓘ ৩১ অক্টোবর ২০২৬ (fe): +১ EveryListSummaryAddsDecimalsTest::KNOWN — অনুমোদনের ইনবক্সের মোট (দফা ২১), স্থায়ী, কাগজের তালিকা নয়
+    private const CEILING = 478;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

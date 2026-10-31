@@ -410,6 +410,12 @@ class ToolbarTest extends TestCase
 
                 // যে তালিকায় খোঁজার ঘর আছে অথচ শেয়ার্ড টুলবার নেই,
                 // সেখানে কেউ হাতে টুলবার লিখেছে
+                // ⓘ ছাড় একটাই: অনুমোদনের ইনবক্স — বাঁয়ে তালিকা, ডানে কাগজ (অনুমোদন পর্দা ভাগ ২, মালিকের "হ্যাঁ", ২১ অক্টোবর ২০২৬; SAP
+                // Fiori "My Inbox")। ছাঁকনি তালিকার মাথায় নিজের সারিতে; রপ্তানি আর ছাপা "অপেক্ষমাণ অনুমোদন" রিপোর্টে।
+                if (str_ends_with(str_replace('\\', '/', $file->getPathname()), 'Approval/Resources/views/inbox/index.blade.php')) {
+                    continue;
+                }
+
                 if (str_contains($source, 'name="q"') && ! str_contains($source, 'x-ui.toolbar')) {
                     $offenders[] = $file->getPathname();
                 }

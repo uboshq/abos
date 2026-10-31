@@ -123,6 +123,11 @@
         সেটাও। ⓘ `@isset` বলে বাকি ছয়টা মডিউলের কিছুই বদলায় না — যে
         পাঠায় না, তার পাতায় ঘরটাই আঁকা হয় না।
     --}}
+    {{-- ⭐ এক মডিউলের রিপোর্টগুলো ট্যাবে — যে মডিউল পাঠায় কেবল তার (অনুমোদন: মেনুর ছয় সারি এক সারিতে, অনুমোদন পর্দা ভাগ ২, দফা ২) --}}
+    @isset($reportTabs)
+        <x-ui.list-tabs :tabs="$reportTabs" :label="__($report->title)" />
+    @endisset
+
     @isset($notice)
         <div role="note"
              class="mb-3 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app)
@@ -130,6 +135,16 @@
             {{ $notice }}
         </div>
     @endisset
+
+    {{-- ⭐ অঙ্কটা কীভাবে এল — কমিশনের সূত্র, রিপোর্টের নিজের মানে (প্রিন্সিপালের কমিশনের drill; মালিক, ২৪ অক্টোবর ২০২৬) --}}
+    @if (! empty($explain))
+        <div role="note" data-report-explain
+             class="mb-3 space-y-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 py-2 text-sm">
+            @foreach ($explain as $line)
+                <p class="num">{{ $line }}</p>
+            @endforeach
+        </div>
+    @endif
 
     {{--
         ফলটা এক লাইনে, সারিগুলোর উপরে — ৭ সেপ্টেম্বর ২০২৬।
@@ -466,6 +481,7 @@
                                                 @include('accounts::report.partials.cell', [
                                                     'column' => $column,
                                                     'row' => $row,
+                                                    'filters' => $filters,
                                                 ])
                                             </td>
                                         @endforeach
@@ -505,6 +521,7 @@
                                             @include('accounts::report.partials.cell', [
                                                 'column' => $column,
                                                 'row' => $row,
+                                                'filters' => $filters,
                                             ])
                                         </td>
                                     @endforeach
@@ -520,7 +537,17 @@
                                     @if ($index === 0)
                                         {{ $result->isSplitByBranch() ? __('core.report.grand_total') : __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))
-                                        {{ \App\Core\Engines\Report\ReportResult::number($result->totals[$column->key], $column) }}
+                                        {{-- ⭐ মোটের অঙ্কও খোলে — সব সারি মিলিয়ে ([[ReportColumn::drillTotalHref()]]; মালিক, ২৪ অক্টোবর ২০২৬) --}}
+                                        @php
+                                            $grandShown = \App\Core\Engines\Report\ReportResult::number($result->totals[$column->key], $column);
+                                            $grandHref = $column->drillTotalHref($filters);
+                                        @endphp
+                                        @if ($grandHref !== null)
+                                            <a href="{{ $grandHref }}" class="underline decoration-dotted underline-offset-2 hover:text-(--color-brand-700)"
+                                               aria-label="{{ $column->drillLabel($grandShown) }}" data-report-drill-total="{{ $column->key }}">{{ $grandShown }}</a>
+                                        @else
+                                            {{ $grandShown }}
+                                        @endif
                                     @endif
                                 </td>
                             @endforeach

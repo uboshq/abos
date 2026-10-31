@@ -51,6 +51,7 @@ final class CustomerService
     public function create(array $data): Customer
     {
         $this->assertBornWithoutALimit($data);
+        $this->assertBornWithoutDaysIfSigned($data);
         $this->assertMayOpenABalance($data);
         $this->assertBanglaNameIfRequired($data);
         $this->assertNotADuplicate($data);
@@ -558,10 +559,17 @@ final class CustomerService
      * ([[CreditLimitRequests::ownerSigned()]]), সই একবারই খাটে ([[Approval::markUsed()]])। ছক না থাকলে থামে, বার্তা বলে কোথায়
      * বসাতে হবে — সীমার নিয়মই।
      *
-     * @return int মিলে যাওয়া সইয়ের সারি
+     * ⭐ সুইচ: সীমার সইয়ের পথ (বা দিনের নিজের ছক) চালু থাকলে তবেই — বন্ধ হলে আজকের মতো সরাসরি বসে ([[daysSignatureOn()]];
+     * fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬)। ⛔ সই বন্ধ কোম্পানি (যেমন UB) কখনো আটকায় না।
+     *
+     * @return int|null মিলে যাওয়া সইয়ের সারি; সুইচ বন্ধ হলে null
      */
-    private function assertDaysRaiseIsSigned(Customer $customer, int $before, int $after): int
+    private function assertDaysRaiseIsSigned(Customer $customer, int $before, int $after): ?int
     {
+        if (! $this->daysSignatureOn($customer)) {
+            return null;
+        }
+
         $paper = $customer->withoutRelations();
         $proposal = new Customer;
         $proposal->setRawAttributes(['credit_days' => $after]);
@@ -593,6 +601,48 @@ final class CustomerService
 
         // ⛔ এখানে পৌঁছানো মানে কিছু একটা থামায়নি — তবু মালিকের সই ছাড়া দিন বাড়বে না
         throw ValidationException::withMessages(['credit_days' => __('core.approval.awaiting')]);
+    }
+
+    /**
+     * ⭐ বাকির দিন বাড়ানোয় সই চালু কি না — সীমা বাড়ানোর সইয়ের পথ (`customer.credit_limit`) বা দিনের নিজের ছক
+     * (`customer.credit_days`) সচল থাকলে (fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সুইচটা ছকই — বিদ্যমান চালু/বন্ধ; ⛔ কোনো ছক বসানো হয় না। দুইটাই বন্ধ (যেমন UB, সব ছক বন্ধ) → দিন সরাসরি বসে, আজকের মতো।
+     * ⓘ সীমার পথ চালু অথচ দিনের ছক নেই → সীমার ছকেই সই, একই সইকারী ও ইনবক্স (গ্রাহক মডিউলের `approval_fallbacks`; fe, ২০ অক্টোবর)।
+     * ⓘ দ্বিতীয় প্রশ্নটা সেই পথ থাকলে বাড়তি, তবু রাখা: পথটা কোনোদিন না থাকলে বাড়ানো থামে (`days_need_a_flow`), নীরবে পার নয়।
+     */
+    private function daysSignatureOn(Customer $paper): bool
+    {
+        $engine = app(ApprovalEngine::class);
+        $fields = ApprovalEngine::fieldsOf($paper);
+        $type = class_basename(Customer::class);
+
+        return $engine->requires('customer', 'credit_days', null, $type, $fields)
+            || $engine->requires('customer', 'credit_limit', null, $type, $fields);
+    }
+
+    /**
+     * ⛔ সই চালু থাকলে নতুন গ্রাহক শূন্য দিনে জন্মায় — নইলে ফর্ম বা আমদানিতে ৯০ দিন লিখে তৈরি করলেই সই এড়ানো যেত
+     * ([[assertBornWithoutALimit()]]-এর একই নিয়ম; fe-র গ্যাপ ২৬)। ⓘ সুইচ বন্ধ হলে আজকের মতো।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertBornWithoutDaysIfSigned(array $data): void
+    {
+        $days = trim((string) ($data['credit_days'] ?? ''));
+
+        if ($days === '' || ! is_numeric($days) || (int) $days <= 0) {
+            return;
+        }
+
+        $paper = (new Customer)->forceFill([
+            'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+            'credit_days' => (int) $days,
+        ]);
+
+        if ($this->daysSignatureOn($paper)) {
+            throw ValidationException::withMessages(['credit_days' => __('customer::validation.days_on_create')]);
+        }
     }
 
     /** এই সই কি আগেই একবার সীমা বসিয়েছে — ইতিহাসে তার সূত্রসহ সারি আছে কি না ([[CustomerCreditChange]]) */
@@ -765,6 +815,7 @@ final class CustomerService
     public function assertImportable(array $data): void
     {
         $this->assertBornWithoutALimit($data);
+        $this->assertBornWithoutDaysIfSigned($data);
         $this->assertBanglaNameIfRequired($data);
 
         /*

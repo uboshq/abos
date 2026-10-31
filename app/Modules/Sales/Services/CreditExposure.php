@@ -99,6 +99,14 @@ final class CreditExposure implements CreditHolds
         return $this->unclearedChequesFor([$customerId])[$customerId] ?? '0';
     }
 
+    /** [[CreditHolds::availableOf()]] — [[positionOf()]]-এর `available`, নতুন হিসাব নয় (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬) */
+    public function availableOf(int $customerId): ?string
+    {
+        $customer = Customer::query()->find($customerId);
+
+        return $customer === null ? null : $this->positionOf($customer)['available'];
+    }
+
     public function heldFor(int $customerId): string
     {
         return $this->pendingFor([$customerId])[$customerId] ?? '0';
@@ -279,7 +287,7 @@ final class CreditExposure implements CreditHolds
             return [];
         }
 
-        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total)';
+        $due = SalesInvoice::dueSql('i');
         $on = 'COALESCE(i.due_on, i.trx_date)';
         $today = Carbon::today();
 

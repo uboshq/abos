@@ -63,11 +63,11 @@ final class VoucherOverview
 
         // ⓘ পাঁচ উত্তর — তালিকার মোট আর ফোন একই উত্তর পড়ে ([[VoucherApproval::decide()]]), তাই পাতা আর তালিকা এক কথা বলে
         match ($this->approvals->waitFor($voucher)) {
-            VoucherApproval::SIGNED => $o->note(__('accounts::overview_confirm.signed'), 'info'),
-            VoucherApproval::REJECTED => $o->note(__('accounts::overview_confirm.rejected'), 'stop'),
-            VoucherApproval::AWAITING => $o->note(__('accounts::overview_confirm.awaiting'), 'warn'),
-            VoucherApproval::STALE => $o->note(__('accounts::overview_confirm.stale'), 'warn'),
-            VoucherApproval::NEEDS => $o->note(__('accounts::overview_confirm.needs'), 'warn'),
+            VoucherSigning::SIGNED => $o->note(__('accounts::overview_confirm.signed'), 'info'),
+            VoucherSigning::REJECTED => $o->note(__('accounts::overview_confirm.rejected'), 'stop'),
+            VoucherSigning::AWAITING => $o->note(__('accounts::overview_confirm.awaiting'), 'warn'),
+            VoucherSigning::STALE => $o->note(__('accounts::overview_confirm.stale'), 'warn'),
+            VoucherSigning::NEEDS => $o->note(__('accounts::overview_confirm.needs'), 'warn'),
             default => null,
         };
 
