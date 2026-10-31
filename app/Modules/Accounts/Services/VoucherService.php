@@ -928,7 +928,9 @@ final class VoucherService
             foreach (\Illuminate\Support\Facades\Schema::getTables() as $table) {
                 $name = strtolower((string) $table['name']);
 
-                if (in_array($name, ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true)) {
+                // ⓘ ভাউচারের নিজের সন্তান — অন্য কাগজ নয়; `acc_voucher_expense_lines` খরচের লাইন, `company_id` আছে বলে না বাদ দিলে নিজের
+                //   খরচের ভাউচারকেই "অন্য মডিউলের কাগজ" ধরত আর জমা থামত (fe, ৩১ অক্টোবর ২০২৬, main মেশানোর পরে Mac-এ ধরা)
+                if (in_array($name, ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company', 'acc_voucher_expense_lines'], true)) {
                     continue;
                 }
 
