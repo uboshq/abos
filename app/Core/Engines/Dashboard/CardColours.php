@@ -89,12 +89,12 @@ final class CardColours
     }
 
     /**
-     * "নজরে রাখুন" তালিকার সারির রং — নমুনার মানে: লাল এখনই, হলুদ নজর, বাকি সব আকাশি (তথ্য)।
+     * "নজরে রাখুন" তালিকার সারির রং — নমুনার মানে: লাল এখনই, হলুদ নজর, সবুজ ভালো, বাকি সব আকাশি (তথ্য)।
      * ⓘ কার্ডের মতো ছায়া বদলায় না — তালিকায় একই মানের অনেক সারি, রং মানে বলে, ক্রম নয়।
      */
     public static function watch(?string $tone): string
     {
-        return self::css(self::MEANING[$tone ?? ''] ?? 'sky');
+        return self::css(self::MEANING[$tone ?? ''] ?? ($tone === Stat::GOOD ? 'green' : 'sky'));
     }
 
     private static function css(string $name): string

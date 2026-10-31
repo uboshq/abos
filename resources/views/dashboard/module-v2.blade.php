@@ -34,13 +34,29 @@
          ⓘ রং কেবল পরিচয়ে: পট্টি আর উপরের চার কার্ড; লেখা, বোতাম, চার্ট আর তালিকায় নয়। সাদা লেখা প্রতিটা মডিউল-রঙে ≥ ৪.৯২ঃ১
          ([[TheModuleColoursCarryWhiteTextTest]]); রঙিন সুইচ বন্ধে ব্র্যান্ড ৭০০ — একই কনট্রাস্ট। --}}
     <x-slot:header>
+        {{-- ⓘ নমুনার মতো: বাঁয়ে মডিউলের নাম · ছোট করে উপশিরোনাম, ডানে কোম্পানি আর শাখার চিপ (তাই পাতার পথের সারিতে এরা আর
+               দুইবার নয় — [[x-shell.page-path]]) --}}
+        @php
+            $moduleName = collect($menu)->firstWhere('code', $module)['label'] ?? $dashboard->title;
+            $shellUser = auth()->user();
+            $scope = array_filter([
+                $shellUser?->currentCompany?->name(),
+                app(\App\Core\Services\ShellFacts::class)->branchLabel($shellUser, $shellUser?->currentBranch),
+            ]);
+            view()->share('scopeInHead', $scope !== []);
+        @endphp
         <div data-dashboard-head="{{ $module }}"
-             class="rounded-(--radius-card) px-4 py-3 text-white"
+             class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 rounded-(--radius-card) px-4 py-3 text-white"
              style="background: linear-gradient(100deg, {{ $head[0] }}, {{ $head[1] }})">
-            <h1 class="text-xl font-bold leading-tight">{{ $dashboard->title }}</h1>
-            @if ($dashboard->subtitle)
-                <p class="mt-0.5 text-sm text-white/90">{{ $dashboard->subtitle }}</p>
-            @endif
+            <h1 class="min-w-0 flex-[1_1_220px] text-lg font-bold leading-tight">
+                {{ $moduleName }}
+                @if ($dashboard->subtitle)
+                    <span class="text-sm font-normal text-white/90">· {{ $dashboard->subtitle }}</span>
+                @endif
+            </h1>
+            @foreach ($scope as $chip)
+                <span data-dashboard-scope class="rounded-full border border-white/75 px-2.5 py-0.5 text-xs">{{ $chip }}</span>
+            @endforeach
         </div>
     </x-slot:header>
 
@@ -116,15 +132,31 @@
                 return (int) preg_replace('/\D/', '', $latin) > 0;
             });
         @endphp
-        @if ($waiting->isNotEmpty())
-            <section data-dashboard-exceptions data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 pb-3 pt-2"
+        @php
+            // ⭐ নমুনার সারি: বাঁয়ে প্রথম চার্ট (মাথার প্রথম রঙের দাগ), ডানে "নজরে রাখুন" (দ্বিতীয় রঙের দাগ) — পাশাপাশি
+            $panels = array_values($dashboard->panels);
+            $firstPanel = $panels[0] ?? null;
+            $panels = array_slice($panels, 1);
+        @endphp
+        <div data-dashboard-pair @class(['grid gap-4', 'lg:grid-cols-2' => $firstPanel !== null])>
+            @if ($firstPanel !== null)
+                <section data-boxed data-panel data-span="1" class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"
+                         style="border-top: 4px solid {{ $head[0] }}">
+                    <h2 class="border-b border-(--color-border) px-4 py-3 text-sm font-semibold text-(--color-ink)">{{ $firstPanel->label }}</h2>
+                    <x-dashboard.chart :panel="$firstPanel" :wide="false" />
+                    @if (! $firstPanel instanceof \App\Core\Engines\Dashboard\Series && $firstPanel->hint)
+                        <p class="border-t border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">{{ $firstPanel->hint }}</p>
+                    @endif
+                </section>
+            @endif
+            <section data-dashboard-exceptions data-boxed class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 pb-3 pt-2"
                      style="border-top: 4px solid {{ $head[1] }}">
                 <h2 class="mb-2 flex items-baseline justify-between gap-2 text-sm font-semibold text-(--color-ink)">
                     {{ __('home.watch_title') }}
                     <small class="font-normal text-(--color-ink-muted)">{{ __('home.watch_hint') }}</small>
                 </h2>
-                <div class="grid gap-1.5 md:grid-cols-2">
-                    @foreach ($waiting as $item)
+                <div class="grid gap-1.5">
+                    @forelse ($waiting as $item)
                         @php $c = \App\Core\Engines\Dashboard\CardColours::watch($item->tone); @endphp
                         <a href="{{ $item->href }}" data-watch-row="{{ $item->tone }}"
                            class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5 hover:brightness-95"
@@ -133,10 +165,18 @@
                             <span class="min-w-0 text-sm font-semibold">{{ $item->label }}</span>
                             <b class="tabular shrink-0 text-sm font-semibold">{{ $item->value }}</b>
                         </a>
-                    @endforeach
+                    @empty
+                        {{-- ⓘ কিছু বাকি নেই — নমুনার সবুজ সারি ("সব ঠিক"), খালি বাক্স নয় --}}
+                        @php $c = \App\Core\Engines\Dashboard\CardColours::watch(\App\Core\Engines\Dashboard\Stat::GOOD); @endphp
+                        <div data-watch-row="good" class="grid min-w-0 grid-cols-[auto_1fr] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5"
+                             style="background: color-mix(in srgb, {{ $c }} 12%, transparent)">
+                            <i class="size-2.5 rounded-full" style="background: {{ $c }}" aria-hidden="true"></i>
+                            <span class="min-w-0 text-sm font-semibold">{{ __('home.watch_all_clear') }}</span>
+                        </div>
+                    @endforelse
                 </div>
             </section>
-        @endif
+        </div>
 
         {{-- ── আরও অঙ্ক — বাকি সব সূচক, আগের মতো (পরিকল্পনা §৪.৫: একটাও বাদ নয়) ───────────── --}}
         @if ($moreStats !== [])
@@ -199,7 +239,7 @@
         @endforeach
 
         {{-- ── চার্ট — তিনটা করে; সময়ের ধারা দুই ঘর জুড়ে ─────────── --}}
-        @if ($dashboard->panels !== [])
+        @if ($panels !== [])
             @php
                 /*
                  * ⓘ তিন ঘরের সারিতে সাজানো: সময়ের ধারা দুই ঘর, বাকিগুলো এক ঘর। ⭐ সারির শেষে ফাঁকা থাকলে সেই সারির
@@ -207,7 +247,7 @@
                  */
                 $spans = [];
                 $used = 0;
-                foreach (array_values($dashboard->panels) as $i => $panel) {
+                foreach ($panels as $i => $panel) {
                     $want = $panel instanceof \App\Core\Engines\Dashboard\Series ? 2 : 1;
                     if ($used > 0 && $used + $want > 3) {
                         $spans[$i - 1] += 3 - $used;
@@ -221,10 +261,10 @@
                 }
             @endphp
             <div class="grid gap-4 xl:grid-cols-3">
-                @foreach (array_values($dashboard->panels) as $i => $panel)
+                @foreach ($panels as $i => $panel)
                     @php $series = $panel instanceof \App\Core\Engines\Dashboard\Series; @endphp
                     <section data-boxed data-panel data-span="{{ $spans[$i] }}"
-                        style="border-top: 4px solid var(--color-module{{ $i % 2 ? '2' : '' }}-{{ $module }}, var(--color-brand-700))" @class([
+                        style="border-top: 4px solid {{ $head[$i % 2] }}" @class([
                         'min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
                         'xl:col-span-2' => $spans[$i] === 2,
                         'xl:col-span-3' => $spans[$i] === 3,
@@ -248,7 +288,7 @@
                 @foreach ($plain as $listing)
                     {{-- ⓘ শেষেরটা একা পড়লে পুরো সারি — পাশে খালি জায়গা নয় --}}
                     <section data-boxed data-listing
-                        style="border-top: 4px solid var(--color-module{{ $loop->index % 2 ? '' : '2' }}-{{ $module }}, var(--color-brand-700))" @class([
+                        style="border-top: 4px solid {{ $head[$loop->index % 2] }}" @class([
                         'min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
                         'xl:col-span-2' => $loop->last && $plain->count() % 2 === 1,
                     ])>

@@ -25,7 +25,8 @@ use Tests\TestCase;
  *   গ — মানহীন কার্ডে লাল বা হলুদ কখনো নয় (নমুনায় পরের রং লাল হলেও);
  *   ঘ — নমুনার প্রতিটা রং `tokens.css`-এ আছে, আর সাদা লেখা তার উপরে ≥ ৪.৫ঃ১;
  *   ঙ — পাতায় মাথার পট্টি নমুনার দুই রঙের ঢাল, আর কার্ডগুলো এই নিয়মের রং পরে;
- *   চ — "নজরে রাখুন"-এর সারি মানের রঙে (লাল এখনই, হলুদ নজর, বাকি আকাশি), আর পাতা সেই নিয়মই পড়ে।
+ *   চ — "নজরে রাখুন"-এর সারি মানের রঙে (লাল এখনই, হলুদ নজর, সবুজ ভালো, বাকি আকাশি), আর পাতা সেই নিয়মই পড়ে;
+ *   ছ — নমুনার সারি: মাথায় মডিউলের নাম আর কোম্পানি-শাখার চিপ; প্রথম চার্ট আর "নজরে রাখুন" পাশাপাশি, কিছু বাকি না থাকলে সবুজ "সব ঠিক"।
  */
 final class TheDashboardWearsTheSamplesColoursTest extends TestCase
 {
@@ -83,9 +84,9 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
 
     public function test_ch_the_watch_list_rows_wear_their_meaning(): void
     {
-        $this->assertSame(['var(--color-pal-red)', 'var(--color-pal-yellow)', 'var(--color-pal-sky)', 'var(--color-pal-sky)', 'var(--color-pal-sky)'],
-            array_map(fn (?string $t) => CardColours::watch($t), [Stat::BAD, Stat::WARN, Stat::NEUTRAL, Stat::GOOD, null]),
-            '⛔ নজরে রাখুন: সারির রং মানে বলে না — এখনই লাল, নজর হলুদ, বাকি আকাশি।');
+        $this->assertSame(['var(--color-pal-red)', 'var(--color-pal-yellow)', 'var(--color-pal-green)', 'var(--color-pal-sky)', 'var(--color-pal-sky)'],
+            array_map(fn (?string $t) => CardColours::watch($t), [Stat::BAD, Stat::WARN, Stat::GOOD, Stat::NEUTRAL, null]),
+            '⛔ নজরে রাখুন: সারির রং মানে বলে না — এখনই লাল, নজর হলুদ, ভালো সবুজ, বাকি আকাশি।');
 
         $view = (string) file_get_contents(resource_path('views/dashboard/module-v2.blade.php'));
         $this->assertMatchesRegularExpression('/CardColours::watch\(\$item->tone\).*?data-watch-row=.*?background: color-mix\(in srgb, \{\{ \$c \}\}/s', $view,
@@ -107,6 +108,15 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
         preg_match_all('/data-stat-colour="([^"]+)"/', $html, $cards);
         $this->assertCount(4, $cards[1], '⛔ রঙিন ড্যাশবোর্ড: উপরে চারটা রঙিন কার্ড নেই।');
         $this->assertSame(count($cards[1]), count(array_unique($cards[1])), '⛔ রঙিন ড্যাশবোর্ড: পাতায় একই রঙের দুই কার্ড।');
+
+        // ছ — নমুনার সারি
+        $this->assertMatchesRegularExpression('/data-dashboard-head="sales".*?<h1[^>]*>\s*'.preg_quote((string) app(\App\Core\Module\ModuleRegistry::class)->get('sales')?->label($owner->locale ?? null), '/').'/su', $html,
+            '⛔ নমুনার মাথা: পট্টিতে মডিউলের নাম নেই।');
+        $this->assertSame(2, preg_match_all('/data-dashboard-scope/', $html), '⛔ নমুনার মাথা: কোম্পানি আর শাখার দুই চিপ নেই।');
+        $this->assertMatchesRegularExpression('/data-dashboard-pair[^>]*lg:grid-cols-2.*?data-panel.*?data-dashboard-exceptions/s', $html,
+            '⛔ নমুনার সারি: প্রথম চার্ট আর "নজরে রাখুন" পাশাপাশি নয়।');
+        $this->assertMatchesRegularExpression('/data-watch-row="good"[^>]*var\(--color-pal-green\)/s', $html,
+            '⛔ নজরে রাখুন: কিছু বাকি না থাকলে সবুজ "সব ঠিক" সারি নেই — খালি বাক্স।');
     }
 
     private function onWhite(string $hex): float
