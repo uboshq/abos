@@ -105,6 +105,40 @@
             </div>
         @endif
 
+        {{-- ── ⭐ নজরে রাখুন — মালিকের রঙিন নমুনার তালিকা (৩১ অক্টোবর ২০২৬; পরিকল্পনা §৪.৪) ─────────────────────────
+             ⓘ উপরের চার কার্ডের ঠিক নিচে, নমুনার মতো; প্রতিটা সারির সামনে মানের রঙের বিন্দু আর তার হালকা জমিন (লাল এখনই, হলুদ নজর,
+               নীল তথ্য), ডানে অঙ্ক, চাপলে সেই তালিকা বা কাগজ। ⓘ কেবল করণীয় দল (`todo`) — ৬ অক্টোবরের যাচাইয়ে একই সংখ্যা তিন জায়গায়
+               দেখা গিয়েছিল, তাই উপরের ঘরের সূচক এখানে আসে না; শূন্যও আসে না। --}}
+        @php
+            $waiting = collect($dashboard->reminders)->filter(fn ($item) => $item->group === 'todo')->filter(function ($item) {
+                $latin = strtr((string) $item->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+
+                return (int) preg_replace('/\D/', '', $latin) > 0;
+            });
+            $dot = ['bad' => 'var(--color-pal-red)', 'warn' => 'var(--color-pal-yellow)'];
+        @endphp
+        @if ($waiting->isNotEmpty())
+            <section data-dashboard-exceptions data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 pb-3 pt-2"
+                     style="border-top: 4px solid {{ $head[1] }}">
+                <h2 class="mb-2 flex items-baseline justify-between gap-2 text-sm font-semibold text-(--color-ink)">
+                    {{ __('home.watch_title') }}
+                    <small class="font-normal text-(--color-ink-muted)">{{ __('home.watch_hint') }}</small>
+                </h2>
+                <div class="grid gap-1.5 md:grid-cols-2">
+                    @foreach ($waiting as $item)
+                        @php $c = $dot[$item->tone] ?? 'var(--color-pal-sky)'; @endphp
+                        <a href="{{ $item->href }}" data-watch-row="{{ $item->tone }}"
+                           class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5 hover:brightness-95"
+                           style="background: color-mix(in srgb, {{ $c }} 12%, transparent)">
+                            <i class="size-2.5 rounded-full" style="background: {{ $c }}" aria-hidden="true"></i>
+                            <span class="min-w-0 text-sm font-semibold">{{ $item->label }}</span>
+                            <b class="tabular shrink-0 text-sm font-semibold">{{ $item->value }}</b>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         {{-- ── আরও অঙ্ক — বাকি সব সূচক, আগের মতো (পরিকল্পনা §৪.৫: একটাও বাদ নয়) ───────────── --}}
         @if ($moreStats !== [])
             <h2 class="text-sm font-semibold text-(--color-ink-muted)" data-stat-more-title>{{ __('home.more_figures') }}</h2>
@@ -231,50 +265,5 @@
             </div>
         @endif
 
-        {{-- ── ব্যতিক্রম ও সতর্কতা — যা আটকে আছে, প্রতিটা একটা কার্ড ── --}}
-        @php
-            /*
-             * ⓘ কেবল করণীয় দল (`todo`) — আজ, মাস, বছর আর হোমের মূল সূচক উপরের ঘরগুলোতেই আছে। ⛔ ৬ অক্টোবর ২০২৬-এর
-             * যাচাইয়ে বিক্রয়ের পাতায় "আজকের বিক্রয়" তিনবার দেখা গেল (উপরের ঘর, দিনের দল, মূল সূচক) — একই সংখ্যা একবারই।
-             */
-            $waiting = collect($dashboard->reminders)->filter(fn ($item) => $item->group === 'todo')->filter(function ($item) {
-                $latin = strtr((string) $item->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
-
-                return (int) preg_replace('/\D/', '', $latin) > 0;
-            });
-        @endphp
-        @if ($waiting->isNotEmpty())
-            <section data-dashboard-exceptions data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 class="mb-3 text-sm font-semibold text-(--color-ink)">{{ __('home.exceptions_title') }}</h2>
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    @foreach ($waiting as $item)
-                        @php $warn = in_array($item->tone, ['warn', 'bad'], true); @endphp
-                        <div @class([
-                            'flex min-w-0 flex-col gap-2 rounded-(--radius-card) border border-(--color-border) p-3',
-                            'bg-(--color-badge-warning-bg)/40' => $warn,
-                            'bg-(--color-surface-sunken)' => ! $warn,
-                        ])>
-                            <span @class([
-                                'inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-2xs font-semibold',
-                                'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)' => $warn,
-                                'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)' => ! $warn,
-                            ])>
-                                <x-ui.icon :name="$warn ? 'bell' : 'clock'" :size="12" />
-                                {{ $warn ? __('home.severity_warn') : __('home.severity_attention') }}
-                            </span>
-                            <span class="flex items-baseline justify-between gap-3">
-                                <span class="min-w-0 text-sm font-semibold">{{ $item->label }}</span>
-                                <span class="tabular shrink-0 text-xl font-semibold">{{ $item->value }}</span>
-                            </span>
-                            <a href="{{ $item->href }}"
-                               class="inline-flex w-fit items-center gap-1 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-3 py-1.5 text-xs font-semibold text-(--color-link) hover:bg-(--color-surface-hover)">
-                                {{ __('home.open') }} <x-ui.icon name="chevron_right" :size="14" class="rtl:rotate-180" />
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            </section>
-        @endif
     </div>
 </x-layouts.app>

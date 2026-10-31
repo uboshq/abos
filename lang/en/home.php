@@ -14,6 +14,8 @@ return [
     'details' => 'Details',
     'exceptions_title' => 'Exception center — what needs doing now',
     'more_figures' => 'More figures',
+    'watch_title' => 'Keep an eye on',
+    'watch_hint' => 'tap to open the list',
     'severity_warn' => 'Warning',
     'severity_attention' => 'Attention',
     'open' => 'Open',
