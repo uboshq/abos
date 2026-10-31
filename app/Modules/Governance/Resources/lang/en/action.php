@@ -14,7 +14,7 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Rejected',
     'end_session' => 'Sign it out',
-    'end_other_sessions' => 'Sign out everywhere else',
+    'end_other_sessions' => 'Log out everywhere else',
     'only_failed' => 'Only failures',
     'mark_seen' => 'Seen',
     'show_seen_too' => 'Include seen',
@@ -47,7 +47,7 @@ return [
     // the profile photo and the phones on the app's profile menu (a6, 20 Oct 2026) — no file bytes in the trail
     'photo_changed' => 'Profile photo changed',
     'photo_removed' => 'Profile photo removed',
-    'device_signed_out' => 'Signed out of a phone',
+    'device_signed_out' => 'Logged out of a phone',
     // one-off move of the old public profile photos to the private disk — counts only ([[MoveFacesToPrivate]])
     'faces_moved_private' => 'Old profile photos moved to the private disk',
     /*

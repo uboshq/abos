@@ -157,6 +157,9 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
         $this->assertNotEmpty($todo);
         $this->assertStringContainsString('data-exception-center', $html);
         $center = $this->between($html, 'data-exception-center', '</section>');
+        // ⓘ ১ নভেম্বর ২০২৬ থেকে অপেক্ষার প্রথম চারটা মাথার "আজ যা করতে হবে"-তে (মালিকের অনুমোদিত নমুনা) — দরজা সেখানে বা নিচের
+        //   তালিকায়, ঠিক একটায়
+        $strip = str_contains($html, 'data-home-today-work') ? $this->between($html, 'data-home-today-work', '</section>') : '';
 
         foreach ($todo as $widget) {
             if (in_array($widget->label, $kpiLabels, true)) {
@@ -168,10 +171,11 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
                 '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']));
 
             if ($digits > 0) {
-                $this->assertStringContainsString('href="'.e($widget->href).'"', $center, "\"{$widget->label}\" আটকে আছে, অথচ কার্ডে দরজা নেই।");
-                $this->assertStringContainsString(e($widget->label), $center);
+                $doors = substr_count($center, 'href="'.e($widget->href).'"') + substr_count($strip, 'href="'.e($widget->href).'"');
+                $this->assertSame(1, $doors, "\"{$widget->label}\" আটকে আছে, অথচ কার্ডে দরজা নেই — বা দুই জায়গায়।");
+                $this->assertStringContainsString(e($widget->label), $center.$strip);
             } else {
-                $this->assertStringNotContainsString('href="'.e($widget->href).'"', $center, "\"{$widget->label}\" শূন্য, তবু কার্ড বসেছে।");
+                $this->assertStringNotContainsString('href="'.e($widget->href).'"', $center.$strip, "\"{$widget->label}\" শূন্য, তবু কার্ড বসেছে।");
             }
         }
     }

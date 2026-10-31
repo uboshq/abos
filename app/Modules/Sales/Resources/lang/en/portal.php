@@ -10,12 +10,12 @@ declare(strict_types=1);
  */
 return [
     'title' => 'My account',
-    'login_title' => 'Sign in',
+    'login_title' => 'Log in',
     'code' => 'Your code',
     'code_hint' => 'It is printed at the top of every bill.',
     'password' => 'Password',
-    'sign_in' => 'Sign in',
-    'sign_out' => 'Sign out',
+    'sign_in' => 'Log in',
+    'sign_out' => 'Log out',
     'bad_login' => 'That code and password do not match.',
 
     'due' => 'You owe',

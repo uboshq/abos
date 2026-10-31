@@ -31,5 +31,5 @@ return [
     'paper_downloaded' => 'Downloaded',
     'paper_shared' => 'Sent as a link',
     'paper_opened' => 'Link opened',
-    'latest_logins' => 'Latest sign-in attempts — from which IP',
+    'latest_logins' => 'Latest login attempts — from which IP',
 ];

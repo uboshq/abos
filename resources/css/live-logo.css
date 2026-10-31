@@ -1,0 +1,101 @@
+/*
+ * ⭐ জীবন্ত ABOS লোগো — A, সোনালি বিন্দু আর "abos" ([[x-brand.live-logo]]; মালিক, ১ নভেম্বর ২০২৬: "live logo ei 10 ti activiti
+ * ektar por ekta kote thakbe live rendom kono gap ba na theme")।
+ *
+ * ⓘ দশটা নড়াচড়া, প্রতিটা ২.৮ সেকেন্ডের, শুরু আর শেষ দুই-ই স্থির লোগোয় — তাই একটার পর আরেকটা জোড়া দিলে মাঝে ফাঁক বা ঝাঁকি নেই।
+ *   কোনটার পর কোনটা, সেটা এলোমেলো ([[live-logo.js]])। মাপ লকআপের নিজের অনুপাতে (৭৪৮ × ২৩৯)।
+ * ⓘ যিনি "কম নড়াচড়া" চান (prefers-reduced-motion), তাঁর জন্য স্থির।
+ */
+.abos-live { position: relative; display: block; aspect-ratio: 748 / 239; }
+.abos-live img { position: absolute; display: block; }
+.abos-live .lv-icon { position: absolute; left: 0; top: 0; width: 35.8%; height: 100%; }
+.abos-live .lv-a { inset: 0; width: 100%; height: 100%; }
+.abos-live .lv-d { width: 22.6%; left: 78.15%; top: 75%; }
+.abos-live .lv-word { position: absolute; left: 38.8%; top: 15.5%; width: 61.2%; height: 65.3%; }
+.abos-live .lv-l { top: 0; height: 100%; }
+.abos-live .lv-la { left: 0; width: 24.6%; }
+.abos-live .lv-lb { left: 29%; width: 23.9%; }
+.abos-live .lv-lo { left: 55.2%; width: 24.1%; }
+.abos-live .lv-ls { left: 81.1%; width: 18.9%; }
+.abos-live .lv-line { position: absolute; left: 30%; bottom: 6%; height: 4%; width: 70%; border-radius: 4px; transform: scaleX(0); transform-origin: 0 50%;
+    background: linear-gradient(90deg, var(--color-brand-gold-deep), var(--color-brand-gold) 50%, var(--color-brand-gold-bright)); }
+.abos-live .lv-sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / .75) 48%, rgb(255 236 170 / .55) 52%, transparent 60%) -150% 0 / 250% 100% no-repeat; }
+
+.abos-live[data-move] * { animation-duration: 2.8s; animation-timing-function: ease-in-out; animation-fill-mode: both; animation-iteration-count: 1; }
+
+/* ১ অক্ষর নেমে আবার ওঠে, বিন্দু ছোট্ট লাফ */
+.abos-live[data-move="rise"] .lv-l { animation-name: lv-rise; }
+.abos-live[data-move="rise"] .lv-lb { animation-delay: .12s; }
+.abos-live[data-move="rise"] .lv-lo { animation-delay: .24s; }
+.abos-live[data-move="rise"] .lv-ls { animation-delay: .36s; }
+@keyframes lv-rise { 0%, 100% { opacity: 1; transform: none; } 25% { opacity: 0; transform: translateY(40%); } 55% { opacity: 1; transform: none; } }
+/* ২ টাইপ — অক্ষর মুছে আবার টাইপ, বিন্দু কার্সরের মতো */
+.abos-live[data-move="type"] .lv-l { animation-timing-function: steps(1); }
+.abos-live[data-move="type"] .lv-la { animation-name: lv-t1; }
+.abos-live[data-move="type"] .lv-lb { animation-name: lv-t2; }
+.abos-live[data-move="type"] .lv-lo { animation-name: lv-t3; }
+.abos-live[data-move="type"] .lv-ls { animation-name: lv-t4; }
+.abos-live[data-move="type"] .lv-d { animation-name: lv-blink; animation-timing-function: steps(1); }
+@keyframes lv-t1 { 0%, 100% { opacity: 1; } 8%, 30% { opacity: 0; } 30.1% { opacity: 1; } }
+@keyframes lv-t2 { 0%, 100% { opacity: 1; } 6%, 42% { opacity: 0; } 42.1% { opacity: 1; } }
+@keyframes lv-t3 { 0%, 100% { opacity: 1; } 4%, 54% { opacity: 0; } 54.1% { opacity: 1; } }
+@keyframes lv-t4 { 0%, 100% { opacity: 1; } 2%, 66% { opacity: 0; } 66.1% { opacity: 1; } }
+@keyframes lv-blink { 0%, 20%, 40%, 60%, 80%, 100% { opacity: 1; } 10%, 30%, 50%, 70% { opacity: .25; } }
+/* ৩ ঢেউ */
+.abos-live[data-move="wave"] .lv-l { animation-name: lv-wave; }
+.abos-live[data-move="wave"] .lv-lb { animation-delay: .12s; }
+.abos-live[data-move="wave"] .lv-lo { animation-delay: .24s; }
+.abos-live[data-move="wave"] .lv-ls { animation-delay: .36s; }
+.abos-live[data-move="wave"] .lv-d { animation-name: lv-pulse; }
+@keyframes lv-wave { 0%, 45%, 100% { transform: none; } 15% { transform: translateY(-16%); } 30% { transform: translateY(4%); } }
+@keyframes lv-pulse { 0%, 30%, 100% { transform: none; } 15% { transform: scale(1.2); } }
+/* ৪ বিন্দু ঘুরে "s"-এর পাশে গিয়ে গড়িয়ে ফেরে */
+.abos-live[data-move="roll"] .lv-d { animation-name: lv-roll; }
+@keyframes lv-roll { 0%, 100% { transform: none; } 45% { transform: translateX(760%) rotate(720deg); } }
+/* ৫ আলোর ঝলক */
+.abos-live[data-move="shine"] .lv-sheen { animation-name: lv-sheen; }
+.abos-live[data-move="shine"] .lv-d { animation-name: lv-twinkle; }
+@keyframes lv-sheen { 0% { opacity: 1; background-position: -150% 0; } 70% { opacity: 1; background-position: 150% 0; } 100% { opacity: 0; background-position: 150% 0; } }
+@keyframes lv-twinkle { 0%, 60%, 100% { filter: none; } 74% { filter: brightness(1.5) drop-shadow(0 0 6px var(--color-brand-gold-bright)); } }
+/* ৬ A আবার আঁকা হয়, লেখা ফুটে ওঠে */
+.abos-live[data-move="draw"] .lv-a { animation-name: lv-drawA; }
+.abos-live[data-move="draw"] .lv-word { animation-name: lv-drawW; }
+@keyframes lv-drawA { 0%, 100% { clip-path: inset(0 0 0 0); } 12% { clip-path: inset(100% 0 0 0); } 50% { clip-path: inset(0 0 0 0); } }
+@keyframes lv-drawW { 0%, 100% { clip-path: inset(0 0 0 0); } 12%, 40% { clip-path: inset(0 100% 0 0); } 75% { clip-path: inset(0 0 0 0); } }
+/* ৭ বিন্দু প্রতিটা অক্ষরে টোকা দেয় */
+.abos-live[data-move="hop"] .lv-d { animation-name: lv-hop; }
+@keyframes lv-hop { 0%, 100% { transform: none; } 12% { transform: translate(110%, -260%); } 20% { transform: translate(185%, -215%); }
+    30% { transform: translate(290%, -300%); } 38% { transform: translate(375%, -215%); } 48% { transform: translate(470%, -300%); } 56% { transform: translate(555%, -215%); }
+    66% { transform: translate(640%, -300%); } 74% { transform: translate(710%, -215%); } 88% { transform: translate(300%, -200%); } }
+.abos-live[data-move="hop"] .lv-la { animation-name: lv-dip1; }
+.abos-live[data-move="hop"] .lv-lb { animation-name: lv-dip2; }
+.abos-live[data-move="hop"] .lv-lo { animation-name: lv-dip3; }
+.abos-live[data-move="hop"] .lv-ls { animation-name: lv-dip4; }
+@keyframes lv-dip1 { 0%, 17%, 24%, 100% { transform: none; } 20% { transform: translateY(8%) scaleY(.94); } }
+@keyframes lv-dip2 { 0%, 35%, 42%, 100% { transform: none; } 38% { transform: translateY(8%) scaleY(.94); } }
+@keyframes lv-dip3 { 0%, 53%, 60%, 100% { transform: none; } 56% { transform: translateY(8%) scaleY(.94); } }
+@keyframes lv-dip4 { 0%, 71%, 78%, 100% { transform: none; } 74% { transform: translateY(8%) scaleY(.94); } }
+/* ৮ হৃদস্পন্দন */
+.abos-live[data-move="beat"] .lv-d { animation-name: lv-beat; }
+.abos-live[data-move="beat"] .lv-word { animation-name: lv-glow; }
+@keyframes lv-beat { 0%, 22%, 44%, 66%, 100% { transform: none; } 11%, 55% { transform: scale(1.28); filter: drop-shadow(0 0 10px var(--color-brand-gold)); } 33%, 77% { transform: scale(1.12); } }
+@keyframes lv-glow { 0%, 22%, 44%, 66%, 100% { filter: none; } 11%, 55% { filter: drop-shadow(0 0 6px var(--color-brand-gold)); } }
+/* ৯ সোনালি রেখা */
+.abos-live[data-move="line"] .lv-line { animation-name: lv-line; }
+.abos-live[data-move="line"] .lv-d { animation-name: lv-charge; }
+@keyframes lv-line { 0% { transform: scaleX(0); opacity: 1; } 50%, 75% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes lv-charge { 0%, 25%, 100% { filter: none; } 8% { filter: brightness(1.4) drop-shadow(0 0 8px var(--color-brand-gold)); } }
+/* ১০ A ঘুরে আসে, লেখা সরে বসে */
+.abos-live[data-move="flip"] .lv-icon { animation-name: lv-flip; }
+.abos-live[data-move="flip"] .lv-word { animation-name: lv-slide; }
+@keyframes lv-flip { 0%, 100% { transform: none; } 30% { transform: perspective(600px) rotateY(180deg); } 60% { transform: perspective(600px) rotateY(360deg); } }
+@keyframes lv-slide { 0%, 100% { transform: none; opacity: 1; } 25% { transform: translateX(8%); opacity: .4; } 60% { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) { .abos-live[data-move] * { animation: none !important; } }
+
+/* ⭐ লোড হওয়ার পর্দা — পাতা বদলাতে দেরি হলে পুরো লোগো (মালিক, ১ নভেম্বর ২০২৬: "loding eo Abos er full logo bosbe") */
+.abos-loading { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: color-mix(in srgb, var(--color-surface-page, var(--color-surface-card)) 88%, transparent);
+    backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }
+.abos-loading[data-on] { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+.abos-loading .abos-live { width: min(280px, 70vw); }

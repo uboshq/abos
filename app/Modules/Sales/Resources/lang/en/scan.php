@@ -6,10 +6,10 @@ declare(strict_types=1);
  * The QR scan on a bill or challan — [[DeliveryScanController]].
  */
 return [
-    'who_title' => 'Sign in to open this paper',
-    'who_note' => 'Depot staff choose the staff sign-in; customers choose the customer sign-in. After signing in you come straight back to this paper.',
-    'staff_login' => 'Staff sign-in',
-    'dealer_login' => 'Customer sign-in',
+    'who_title' => 'Log in to open this paper',
+    'who_note' => 'Depot staff choose the staff login; customers choose the customer login. After logging in you come straight back to this paper.',
+    'staff_login' => 'Staff login',
+    'dealer_login' => 'Customer login',
 
     'staff_title' => 'Scan — :no',
     'next_hint' => 'Below is the current stage and the button for the next one. Press it to set the next stage.',

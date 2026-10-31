@@ -31,9 +31,9 @@ return [
     'point_search' => 'Type a point name or code',
     'portal_enabled' => 'The portal is open. Tell the customer their code :code and the password.',
     'portal_password_set' => 'The new password is set. Tell the customer — the old one no longer works.',
-    'portal_disabled' => 'The portal is closed. They are signed out now, not when the session expires.',
+    'portal_disabled' => 'The portal is closed. They are logged out now, not when the session expires.',
     'portal_note' => 'Once open, the customer can see their own dues and bills over the internet, and raise a deposit claim. They can change nothing, and see nobody else.',
-    'portal_never' => 'Never signed in',
-    'portal_disable_confirm' => 'Close the portal? The customer is signed out at once. The password stays, so reopening later needs no new one.',
+    'portal_never' => 'Never logged in',
+    'portal_disable_confirm' => 'Close the portal? The customer is logged out at once. The password stays, so reopening later needs no new one.',
     'portal_password_hint' => 'At least eight characters. It is never shown again — tell the customer now.',
 ];

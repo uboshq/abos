@@ -82,15 +82,16 @@ final class TheBarWearsTheCustomersOwnLogoTest extends TestCase
         $this->assertStringContainsString($mine, $bar);
     }
 
-    public function test_without_a_logo_the_initials_sit_in_a_round_badge(): void
+    // ⓘ ১ নভেম্বর ২০২৬ থেকে গোল ব্যাজ নয়, ৪০px-এর গোল-কোণা ঘর — মালিকের দেখানো NEXUS-এর বারের মতো
+    public function test_without_a_logo_the_initials_sit_in_a_rounded_tile(): void
     {
         $this->company->forceFill(['logo_path' => null, 'name_bn' => 'আল-আমিন কর্পোরেশন'])->save();
 
         $mark = $this->mark($this->page());
 
         $this->assertStringNotContainsString('<img', $mark, '⛔ লোগো নেই, তবু চিহ্নে ছবি।');
-        $this->assertMatchesRegularExpression('/data-company-initials[^>]*class="[^"]*rounded-full[^"]*"[^>]*>আক</u', $mark,
-            '⛔ লোগো না থাকলে "আক" গোল ব্যাজে নেই।');
+        $this->assertMatchesRegularExpression('/data-company-initials[^>]*class="[^"]*size-10[^"]*rounded-\\[10px\\][^"]*"[^>]*>আক</u', $mark,
+            '⛔ লোগো না থাকলে "আক" গোল-কোণা ঘরে নেই।');
         $this->assertMatchesRegularExpression('/data-company-initials[^>]*style="background: var\(--color-company-mark-[1-6]\)/', $mark,
             '⛔ ব্যাজ কোম্পানির রঙে নয়।');
         $this->assertStringContainsString('aria-label="আল-আমিন কর্পোরেশন"', $mark, '⛔ ব্যাজের লিংকে কোম্পানির নাম নেই।');
