@@ -143,13 +143,16 @@ final class EveryReportFigureOpensItsSourceTest extends TestCase
         'purchase.settlement' => [6, 'cb'],
         'purchase.uninvoiced' => [1, 'cb'],
         'restaurant.food_cost' => [2, 'fe ঠিক করবে'],
-        'sales.by_brand' => [3, 'a5/a6'],
+        /*
+         * ⓘ বিক্রির চারটা রিপোর্টে সংখ্যা বেড়েছে (fe, ৩১ অক্টোবর ২০২৬; Mac-এ আর এক ছবিতে মাপা): main-এর নিট-বিক্রির কাজ এই দাবি লেখার
+         *   পরে টাকার কলাম যোগ করেছে — গ্রাহক ধরে দুইটা (ফেরত, নিট বিক্রি), ব্র্যান্ড/পণ্য/রুট ধরে একটা করে (নিট বিক্রি)। নতুন ছাড় নয়,
+         *   একই দেনার নতুন ঘর; এখন fe-র (a5/a6 থেমেছে ২৬ অক্টোবর) — ড্যাশবোর্ডের "অঙ্কে চাপলে উৎস" কাজের সাথে মেটানো হবে।
+         */
+        'sales.by_brand' => [4, 'a5/a6 → fe'],
         'sales.by_channel' => [5, 'a5/a6'],
-        // ⓘ ৫ → ৭ (fe, ৩১ অক্টোবর ২০২৬): main-এর নিট-বিক্রির কাজ এই দাবি লেখার পরে দুইটা টাকার কলাম যোগ করেছে (ফেরত, নিট বিক্রি) —
-        //   নতুন ছাড় নয়, একই দেনার দুইটা ঘর; এখন fe-র (a5/a6 থেমেছে ২৬ অক্টোবর)
         'sales.by_customer' => [7, 'a5/a6 → fe'],
-        'sales.by_product' => [4, 'a5/a6'],
-        'sales.by_route' => [6, 'a5/a6'],
+        'sales.by_product' => [5, 'a5/a6 → fe'],
+        'sales.by_route' => [7, 'a5/a6 → fe'],
         'sales.by_salesperson' => [3, 'a5/a6'],
         'sales.collection_due' => [6, 'a5/a6'],
         'sales.collection_target' => [3, 'a5/a6'],
