@@ -24,9 +24,8 @@
             fn (array $n): bool => ! in_array(sha1($n['text']), $closed, true),
         ))
         : [];
-    // ⭐ সবচেয়ে জরুরিটা আগে — লাল, তারপর হলুদ, তারপর নীল; একই রঙে আগের ক্রম (মালিক, ৩১ অক্টোবর ২০২৬)
-    $rank = ['danger' => 0, 'pending' => 1];
-    $all = collect($all)->sortBy(fn (array $n, int $i): array => [$rank[$n['tone']] ?? 2, $i])->values()->all();
+    // ⭐ মানুষের লেখা জরুরি নোটিশ আগে, তারপর লাল, হলুদ, নীল ([[StatusNotices::foldOrder()]]; মালিক, ২১ আর ৩১ অক্টোবর ২০২৬)
+    $all = \App\Core\Services\StatusNotices::foldOrder($all);
     $strips = array_slice($all, 0, 3);
     $hidden = count($all) - count($strips);
     $canDismiss = \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss');
@@ -58,7 +57,7 @@
                     <button type="button" data-strip-toggle
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="shrink-0 rounded-(--radius-pill) border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-medium
+                            class="shrink-0 rounded-(--radius-pill) border border-(--color-border) bg-(--color-surface-card) px-2 py-0.5 text-xs font-medium
                                    text-(--color-ink) hover:bg-(--color-surface-hover)">
                         <span x-show="! open">+{{ count($strips) - 1 + $hidden }} ▾</span>
                         <span x-cloak x-show="open">▴</span>

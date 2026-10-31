@@ -481,21 +481,15 @@ final class MenuBuilder
     }
 
     /**
-     * ⭐ ভূমিকা ধরে ফোনের চারটা — SAP Fiori-র ভূমিকার launchpad, Dynamics/Odoo-র ফোন (মালিক, ৩১ অক্টোবর ২০২৬: "ami egulo sajaini,
-     * int. standard onuzayi korte bolechi"; পরিকল্পনা তাঁকে বলা আর "ok")। ক্রমটা অগ্রাধিকার — কয়েকটা ভূমিকা থাকলে আগেরটা।
-     * ⓘ যে মডিউলের চাবি নেই সেটা বাদ, ফাঁকা ঘর রেলের পরের মডিউলে ভরে ([[phoneBar()]])।
+     * ⭐ ভূমিকা ধরে ফোনের চারটা — `config/abos.php`-এর `phone_four` (ভূমিকা → চারটা মডিউলের কোড; ক্রমটা অগ্রাধিকার)। ⓘ কনফিগে, এখানে
+     * নয়: Core মডিউল বা পক্ষের নাম হাতে লেখে না ([[TheDealerPaidTheCompanyNotMeTest]], ৩১ অক্টোবর ২০২৬ Mac-এ ধরা)।
+     *
+     * @return array<string, list<string>>
      */
-    public const ROLE_PHONE_FOUR = [
-        'owner' => ['executive', 'approval', 'sales', 'accounts'],
-        'admin' => ['executive', 'approval', 'system_admin', 'accounts'],
-        'manager' => ['sales', 'inventory', 'approval', 'accounts'],
-        'accounts' => ['accounts', 'finance', 'customer', 'approval'],
-        'purchase' => ['purchase', 'supplier', 'inventory', 'approval'],
-        'warehouse' => ['inventory', 'purchase', 'sales', 'approval'],
-        'hr' => ['hr', 'approval', 'accounts', 'governance'],
-        'sales' => ['sales', 'customer', 'inventory', 'promotion'],
-        'counter' => ['sales', 'accounts', 'customer', 'inventory'],
-    ];
+    public static function phoneFour(): array
+    {
+        return (array) config('abos.phone_four', []);
+    }
 
     /**
      * ভূমিকার নাম → উপরের দল। নাম বড়-ছোট হাতের অক্ষর আর ফাঁকা/`_` ছাড়া মেলে — টেমপ্লেটের নাম ("Field Sales", "Accountant") আর
@@ -513,7 +507,7 @@ final class MenuBuilder
         'counter' => 'counter',
     ];
 
-    /** এই মানুষের ভূমিকার দল — [[ROLE_PHONE_FOUR]]-এর ক্রমে প্রথমটা; চেনা কোনো ভূমিকা না থাকলে null */
+    /** এই মানুষের ভূমিকার দল — [[phoneFour()]]-এর ক্রমে প্রথমটা; চেনা কোনো ভূমিকা না থাকলে null */
     public function phoneKind(?User $user): ?string
     {
         $kinds = [];
@@ -524,7 +518,7 @@ final class MenuBuilder
             }
         }
 
-        foreach (array_keys(self::ROLE_PHONE_FOUR) as $kind) {
+        foreach (array_keys(self::phoneFour()) as $kind) {
             if (isset($kinds[$kind])) {
                 return $kind;
             }
@@ -537,7 +531,7 @@ final class MenuBuilder
      * ⭐ ফোনের নিচের বারের চারটা মডিউল, এই মানুষের (মালিক, ৩০ অক্টোবর ২০২৬: "smart kajer kichu daw int standard onuzayi")।
      *
      *   · রেলে যা পিন করা ([[arranged()]]-এর ক্রমে) আগে — বড় পর্দায় পিন বদলালে ফোনের বারও বদলায়;
-     *   · তারপর ভূমিকার চারটা ([[ROLE_PHONE_FOUR]], [[phoneKind()]]) — ⛔ আগে সবার বারে মেনুর প্রথম চারটা (হিসাব, অর্থ,
+     *   · তারপর ভূমিকার চারটা ([[phoneFour()]], [[phoneKind()]]) — ⛔ আগে সবার বারে মেনুর প্রথম চারটা (হিসাব, অর্থ,
      *     সরবরাহকারী, ক্রয়), কারও কাজের সাথে মেলে না;
      *   · তারপর রেলের ক্রম (নিজের সাজ, নইলে খোলা পাতার অনুপাত)।
      * প্রতিটায় `count` — মডিউলের সারিগুলোর ব্যাজের যোগ (অপেক্ষার অনুমোদন, খসড়া …), শূন্য হলে null।
@@ -553,7 +547,7 @@ final class MenuBuilder
 
         $codes = array_column(array_filter($arranged, fn (array $m): bool => (bool) ($m['pinned'] ?? false)), 'code');
         if ($kind !== null) {
-            $codes = [...$codes, ...array_filter(self::ROLE_PHONE_FOUR[$kind], fn (string $c): bool => isset($byCode[$c]))];
+            $codes = [...$codes, ...array_filter((self::phoneFour()[$kind] ?? []), fn (string $c): bool => isset($byCode[$c]))];
         }
         $codes = array_slice(array_values(array_unique([...$codes, ...array_column($arranged, 'code')])), 0, 4);
 

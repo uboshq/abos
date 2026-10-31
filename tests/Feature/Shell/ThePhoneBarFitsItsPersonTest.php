@@ -68,7 +68,7 @@ final class ThePhoneBarFitsItsPersonTest extends TestCase
         $html = $this->page();
 
         preg_match_all('/data-bottom-module="([a-z_]+)"/', $html, $codes);
-        $this->assertSame(MenuBuilder::ROLE_PHONE_FOUR['owner'], $codes[1],
+        $this->assertSame(MenuBuilder::phoneFour()['owner'], $codes[1],
             '⛔ ফোনের বার: মালিকের বারে মালিকের চারটা নয় — আগের মতো মেনুর প্রথম চারটা (হিসাব, অর্থ, সরবরাহকারী, ক্রয়)?');
         $this->assertMatchesRegularExpression('/data-bottom-module="approval".*?<button[^>]*data-bottom-create[^>]*@click="\$dispatch\(\'open-create-menu\'\)".*?data-bottom-module="sales"/s', $html,
             '⛔ ফোনের বার: মাঝখানে ＋ নেই, বা সেটা তৈরির তালিকা খোলে না।');
@@ -101,15 +101,31 @@ final class ThePhoneBarFitsItsPersonTest extends TestCase
 
     public function test_ng_several_notices_fold_into_one_row_with_the_red_one_first(): void
     {
-        $this->partialMock(StatusNotices::class, fn ($m) => $m->shouldReceive('forStrip')->andReturn([
+        $strips = [
             ['text' => 'তিনটা অনুমোদন অপেক্ষায়', 'tone' => 'pending', 'url' => null],
             ['text' => 'ঘোষণা: শুক্রবার ছুটি', 'tone' => 'info', 'url' => null],
             ['text' => 'দুই দিন ব্যাকআপ হয়নি', 'tone' => 'danger', 'url' => null],
-        ]));
+            ['text' => 'রবিবার থেকে দাম বাড়বে', 'tone' => 'info', 'url' => null, 'kind' => 'own'],
+        ];
 
-        $html = $this->page();
+        // ⓘ ক্রম: মানুষের লেখা জরুরি নোটিশ আগে (মালিক, ২১ অক্টোবর), তারপর লাল, হলুদ, নীল
+        $this->assertSame(['রবিবার থেকে দাম বাড়বে', 'দুই দিন ব্যাকআপ হয়নি', 'তিনটা অনুমোদন অপেক্ষায়', 'ঘোষণা: শুক্রবার ছুটি'],
+            array_column(StatusNotices::foldOrder($strips), 'text'), '⛔ নোটিশ: মানুষের লেখা নোটিশ আগে নয়, বা তারপর সবচেয়ে জরুরিটা (লাল) আগে নয়।');
+
+        // ⓘ ফিতাটা নিজে — StatusNotices final, তাই নকল নয়: ফিতা কেবল forStrip() ডাকে, একই নামের পদ্ধতির একটা দাঁড়ানো জিনিস যথেষ্ট
+        $this->app->instance(StatusNotices::class, new class(array_slice($strips, 0, 3))
+        {
+            public function __construct(private array $strips) {}
+
+            public function forStrip(): array
+            {
+                return $this->strips;
+            }
+        });
+        $this->actingAs($this->owner->fresh());
+        $html = \Illuminate\Support\Facades\Blade::render('<x-shell.notice-banner />');
         preg_match_all('/<div data-notice-banner data-message-strip="([a-z]+)"([^>]*)>/s', $html, $strips, PREG_SET_ORDER);
-        $this->assertSame(['danger', 'pending', 'info'], array_column($strips, 1), '⛔ নোটিশ: সবচেয়ে জরুরিটা (লাল) আগে নয়।');
+        $this->assertSame(['danger', 'pending', 'info'], array_column($strips, 1), '⛔ নোটিশ: ফিতায় সবচেয়ে জরুরিটা (লাল) আগে নয়।');
         $this->assertSame([false, true, true], array_map(fn ($s) => str_contains($s[2], 'x-show="open"'), $strips),
             '⛔ নোটিশ: তিনটাই খোলা সারিতে — পর্দার মাথা খায়; কেবল প্রথমটা দেখানোর কথা।');
         $this->assertMatchesRegularExpression('/data-strip-toggle.*?\+2 ▾/s', $html, '⛔ নোটিশ: গুটানো নোটিশ খোলার "+২ ▾" নেই।');

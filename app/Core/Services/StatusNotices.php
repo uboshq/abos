@@ -184,6 +184,25 @@ final class StatusNotices
     }
 
     /**
+     * ⭐ গুটানো ফিতার ক্রম — কোনটা এক সারিতে দেখায় আর বাকিগুলো "+N ▾"-এর পেছনে (মালিক, ৩১ অক্টোবর ২০২৬: "notice ta curo kore ekta
+     * jaygay dekhaw zate porda na vange")।
+     *   ১ · মানুষের লেখা জরুরি নোটিশ সবার আগে — [[forStrip()]]-এর নিয়ম, মালিক ২১ অক্টোবর ([[NoticesStandInTheTopStripTest]]);
+     *   ২ · তারপর যন্ত্রের: লাল (এখনই), হলুদ (অপেক্ষা), বাকিগুলো (তথ্য); একই ঘরে আগের ক্রম।
+     *
+     * @param  list<array<string, mixed>>  $strips
+     * @return list<array<string, mixed>>
+     */
+    public static function foldOrder(array $strips): array
+    {
+        $rank = ['danger' => 0, 'pending' => 1];
+
+        return collect($strips)
+            ->sortBy(fn (array $n, int $i): array => [($n['kind'] ?? null) === 'own' ? 0 : 1, $rank[$n['tone'] ?? ''] ?? 2, $i])
+            ->values()
+            ->all();
+    }
+
+    /**
      * ⭐ উপরের স্থির ফিতায় — যন্ত্রের সতর্কতা আর কাজের নোটিশ (ব্যাকআপ, খসড়া পোস্ট হয়নি, অনুমোদন …), সাথে লেখক যে
      * ঘোষণায় "জরুরি" টিক দিয়েছেন — সেটা সবার আগে ([[shell.notice-banner]])।
      *

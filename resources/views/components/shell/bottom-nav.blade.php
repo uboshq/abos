@@ -84,7 +84,7 @@
                  data-bottom-sheet="{{ $module['code'] }}"
                  class="fixed inset-0 z-40 flex items-end bg-black/40"
                  @click.self="sheet = null" @keydown.escape.window="sheet = null">
-                <div class="w-full rounded-t-2xl bg-(--color-surface) p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-(--color-ink) shadow-2xl">
+                <div class="w-full rounded-t-2xl bg-(--color-surface-card) p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-(--color-ink) shadow-2xl">
                     <p class="px-2 pb-2 text-sm font-semibold">{{ $module['label'] }}</p>
                     @foreach ($shortcuts as $item)
                         <a href="{{ $item['url'] }}" class="flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2 text-base hover:bg-(--color-surface-muted)">
