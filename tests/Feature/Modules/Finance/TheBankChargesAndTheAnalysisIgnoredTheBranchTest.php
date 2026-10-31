@@ -50,7 +50,9 @@ final class TheBankChargesAndTheAnalysisIgnoredTheBranchTest extends TestCase
 
         // ⓘ গত মাসে একবার করে (খোলা জের), এই মাসে একবার করে
         foreach (['MMS' => '300', 'NTK' => '500'] as $code => $amount) {
-            $this->charge($code, $amount, now()->subMonth()->toDateString());
+            // ⓘ subMonthNoOverflow — ৩১ তারিখে subMonth() সেপ্টেম্বর ৩১ = অক্টোবর ১, তখন "গত মাসের" চার্জ এই মাসে পড়ে মোট দ্বিগুণ হত
+            //   (fe, ৩১ অক্টোবর ২০২৬, Mac-এ main-এর ওপর ৩০০-এর বদলে ৬০০)
+            $this->charge($code, $amount, now()->subMonthNoOverflow()->toDateString());
             $this->charge($code, $amount, now()->toDateString());
         }
     }
