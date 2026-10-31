@@ -101,10 +101,15 @@
     <section data-command-head class="flex flex-col gap-3" style="align-items: stretch">
         <div class="flex min-w-0 flex-col" style="gap: 0.375rem">
             <div data-home-headline class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-            <h1 data-home-title class="truncate text-xl font-semibold" style="line-height: 1.75rem">{{ __('core.menu.dashboard') }}</h1>
+            @php
+                $hour = (int) now()->format('G');
+                $greet = __('auth.greeting.'.($hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening')));
+            @endphp
+            {{-- ⭐ নাম ধরে সম্ভাষণ (মালিকের অনুমোদিত নমুনা, ১ নভেম্বর ২০২৬); পাতার নাম "ড্যাশবোর্ড" ট্যাবে আর পথে থাকে --}}
+            <h1 data-home-title class="truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ auth()->user()->name }}</h1>
             @php
                 $headUser = auth()->user();
-                $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('l, j F Y'),
+                $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('l, j F Y · g:i A'),
                     ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
             @endphp
             <p data-home-company class="min-w-0 text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
@@ -224,71 +229,138 @@
             @endif
         </div>
 
-        @if ($position)
-            <div data-money-position
-               class="relative block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-on-brand-ink) shadow-lg
-                      transition-shadow hover:shadow-xl"
-               style="background: linear-gradient(135deg, var(--color-on-brand-from), var(--color-on-brand-to))">
-                {{-- ⓘ বাক্সের দরজা পুরো বাক্স জুড়ে (absolute inset-0), বাক্স নিজে লিংক নয় — ⛔ লিংকের ভেতরে লিংক HTML-এ চলে না
-                     (ব্রাউজার বাইরেরটা ভেঙে দেয়), আর "মজুদের মূল্য" ঘরের নিজের দরজা লাগে: মজুদের পাতা (২১ অক্টোবর ২০২৬)।
-                     বাকি ঘরে চাপ দিলে আগের মতোই বাক্সের দরজা; মজুদের ঘর তার উপরে (z-10)। --}}
-                <a href="{{ $position->href }}" data-money-door class="absolute inset-0 rounded-(--radius-card)"
-                   aria-label="{{ $position->label }}" @if ($position->definition) title="{{ $position->definition }}" @endif></a>
-                <p class="flex items-center gap-1.5 text-sm text-white/70">
-                    @if ($position->icon)
-                        <x-ui.icon :name="$position->icon" :size="15" />
-                    @endif
-                    {{ $position->label }}
-                </p>
-                <p class="tabular text-2xl font-semibold">{{ $position->value }}</p>
-                <div class="mt-1.5 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-white/15 pt-2 sm:grid-cols-4">
-                    @foreach ($position->parts as $partLabel => $partValue)
-                        <div class="min-w-0">
-                            <p class="truncate text-2xs text-white/60">{{ $partLabel }}</p>
-                            <p class="tabular mt-0.5 font-semibold">{{ $partValue }}</p>
-                        </div>
-                    @endforeach
-                </div>
-                {{-- ⭐ আজ এসেছে · আজ গেছে · বাজারে বকেয়া (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — ফোনের আজকের পাতার একই উৎস:
-                     [[AccountsWidgets::todayTiles()]] (accounts.view) আর মূল সূচকের "বাজারে বকেয়া" ঘর (customer.report)।
-                     ⓘ চিহ্ন লেখায় ("+ " / "− "), রং একা কিছু বলে না; চাবি না থাকা ঘর আঁকাই হয় না, শূন্য নয়। --}}
-                @php
-                    $heroTiles = $position->tiles;
-                    if ($owed) {
-                        // ⓘ ঘরের পুরো কথা সাথে — অগ্রিমের ইঙ্গিতও ("… অগ্রিম"), সূচকের সারিতে যেমন ছিল; সরে আসায় হারায় না
-                        $heroTiles[] = ['label' => $owed->label, 'value' => $owed->value, 'sign' => '', 'tone' => 'plain', 'hint' => $owed->hint, 'mark' => 'owed'];
-                    }
-                    if ($stockValue) {
-                        // ⭐ "খরচ-দামে · খাতা অনুযায়ী" — সূচকের ঘরের নিজের ইঙ্গিত; চাপলে মজুদের পাতা (ঘরের নিজের দরজা)
-                        $heroTiles[] = ['label' => $stockValue->label, 'value' => $stockValue->value, 'sign' => '', 'tone' => 'plain', 'hint' => $stockValue->hint,
-                            'mark' => 'stock', 'href' => $stockValue->href];
-                    }
-                @endphp
-                @if ($heroTiles !== [])
-                    <div data-money-today @class([
-                        'mt-2 grid grid-cols-1 gap-2',
-                        'sm:grid-cols-3' => count($heroTiles) <= 3,
-                        'sm:grid-cols-2 lg:grid-cols-4' => count($heroTiles) > 3,
-                    ])>
-                        @foreach ($heroTiles as $heroTile)
-                            @php $tileTag = filled($heroTile['href'] ?? null) ? 'a' : 'div'; @endphp
-                            <{{ $tileTag }} data-money-tile="{{ $heroTile['tone'] }}" @if (($heroTile['mark'] ?? null) === 'owed') data-home-owed @endif
-                                 @if (($heroTile['mark'] ?? null) === 'stock') data-home-stock @endif
-                                 @if ($tileTag === 'a') href="{{ $heroTile['href'] }}" @endif
-                                 @class(['min-w-0 rounded-(--radius-field) px-2.5 py-1.5', 'relative z-10 block' => $tileTag === 'a'])
-                                 style="background: var(--color-on-brand-surface)">
-                                <p class="text-xs text-white/70">{{ $heroTile['label'] }}</p>
-                                {{-- ⓘ রং টোকেন থেকে (tokens.css: --color-on-brand-in/out), হাতে লেখা নয় — নকশার নিয়ম --}}
-                                <p data-money-tile-value class="tabular text-base font-semibold"
-                                   @if ($heroTile['tone'] === 'in') style="color: var(--color-on-brand-in)" @elseif ($heroTile['tone'] === 'out') style="color: var(--color-on-brand-out)" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</p>
-                                @if (filled($heroTile['hint'] ?? null))
-                                    <p data-money-tile-hint class="text-xs text-white/70">{{ $heroTile['hint'] }}</p>
-                                @endif
-                            </{{ $tileTag }}>
+        {{-- ⭐ মাথার সারি — বাঁয়ে আটটা রঙিন সূচক-কার্ড (দুই সারিতে চারটা করে), ডানে ছোট "মিষ্টি" টাকার কার্ড
+             (মালিক, ১ নভেম্বর ২০২৬: NEXUS-এর ছবি → "mony on hand ei boxta cuto kore ek pase rako", "misti color daw",
+             "ei box gulor ucchota komate hobe", "ok eta live e daw"; নমুনা: claude.ai artifact 64sxY2tCX9RcH4NDMC7LM4)।
+             ⓘ "বাজারে বকেয়া" আর "মজুদের মূল্য" আবার সূচক-কার্ডে, নমুনার জায়গায় (তৃতীয় আর ষষ্ঠ) — একই উৎস, একই চাবি, একবারই।
+             ⓘ DOM-এ টাকার কার্ড আগে (মাথার প্রথম অংশ), ছবিতে ডানে — CSS `order`। --}}
+        @php
+            $cards = $layout->shows('kpis') ? $kpis : [];
+            if ($owed) {
+                array_splice($cards, min(2, count($cards)), 0, [$owed]);
+            }
+            if ($stockValue) {
+                array_splice($cards, min(5, count($cards)), 0, [$stockValue]);
+            }
+            $cardTones = ['blue', 'orange', 'purple', 'red', 'green', 'teal', 'pink', 'amber'];
+
+            // ⓘ বড় অঙ্ক ছোট করে — কোটি, লাখ (নমুনা: "৳3.30 কোটি"); পুরো অঙ্ক কার্ডের `title`-এ
+            $amountOf = fn (string $text): float => (float) preg_replace('/[^0-9.\-]/', '', strtr($text, $digits));
+            $short = function (string $text) use ($amountOf): string {
+                $n = abs($amountOf($text));
+                return match (true) {
+                    $n >= 10000000 => '৳'.number_format($n / 10000000, 2).' '.__('home.crore'),
+                    $n >= 100000 => '৳'.number_format($n / 100000, 1).' '.__('home.lakh'),
+                    default => $text,
+                };
+            };
+        @endphp
+        @if ($position || $cards !== [])
+        <div data-home-top class="hm-top">
+            @if ($position)
+                <div data-money-position class="hm-money relative rounded-(--radius-card) px-4 py-2.5"
+                     style="background: linear-gradient(135deg, var(--color-money-sweet-from), var(--color-money-sweet-to)); color: var(--color-money-sweet-ink)">
+                    <a href="{{ $position->href }}" data-money-door class="absolute inset-0 rounded-(--radius-card)"
+                       aria-label="{{ $position->label }}" @if ($position->definition) title="{{ $position->definition }}" @endif></a>
+                    <p class="flex items-center justify-between gap-2 text-xs font-semibold">
+                        <span class="flex items-center gap-1.5">
+                            @if ($position->icon)
+                                <x-ui.icon :name="$position->icon" :size="14" />
+                            @endif
+                            {{ $position->label }}
+                        </span>
+                        <span class="font-normal" style="color: var(--color-money-sweet-muted)">{{ __('home.money_as_booked') }}</span>
+                    </p>
+                    <p class="tabular text-2xl font-bold leading-snug">{{ $position->value }}</p>
+                    @php
+                        $partTones = ['pink', 'purple', 'teal', 'amber'];
+                        $partSum = array_sum(array_map(fn ($v) => max(0.0, $amountOf((string) $v)), $position->parts)) ?: 1.0;
+                    @endphp
+                    <div class="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                        @foreach ($position->parts as $partLabel => $partValue)
+                            <div class="min-w-0 rounded-[8px] px-2 py-1" style="background: var(--color-money-sweet-tile)" title="{{ $partValue }}">
+                                <p class="truncate text-2xs" style="color: var(--color-money-sweet-muted)">{{ $partLabel }}</p>
+                                <p class="tabular whitespace-nowrap text-sm font-bold">{{ $short((string) $partValue) }}</p>
+                                <div class="mt-1 h-[3px] rounded-full" style="background: color-mix(in srgb, var(--color-money-sweet-ink) 10%, transparent)">
+                                    <i class="block h-full rounded-full"
+                                       style="width: {{ max(3, (int) round(max(0.0, $amountOf((string) $partValue)) / $partSum * 100)) }}%; background: var(--color-pal-{{ $partTones[$loop->index % 4] }})"></i>
+                                </div>
+                            </div>
                         @endforeach
                     </div>
-                @endif
-            </div>
+                    @if ($position->tiles !== [])
+                        <div data-money-today class="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                            @foreach ($position->tiles as $heroTile)
+                                <div data-money-tile="{{ $heroTile['tone'] }}" class="flex min-w-0 items-center justify-between gap-2 rounded-[8px] px-2 py-1 text-xs"
+                                     style="background: var(--color-money-sweet-tile)">
+                                    <span class="truncate">{{ $heroTile['label'] }}</span>
+                                    <span data-money-tile-value class="tabular whitespace-nowrap text-sm font-bold"
+                                          @if ($heroTile['tone'] === 'in') style="color: var(--color-success)" @elseif ($heroTile['tone'] === 'out') style="color: var(--color-danger)" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</span>
+                                    @if (filled($heroTile['hint'] ?? null))
+                                        <span data-money-tile-hint class="sr-only">{{ $heroTile['hint'] }}</span>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            @if ($cards !== [])
+                <div data-kpis class="hm-cards">
+                    @foreach ($cards as $widget)
+                        @php
+                            $tone = $cardTones[$loop->index % count($cardTones)];
+                            $spark = array_map('floatval', $widget->spark);
+                            $peak = $spark === [] ? 0.0 : max($spark);
+                            $floor = $spark === [] ? 0.0 : min($spark);
+                        @endphp
+                        <a href="{{ $widget->href }}" data-kpi data-boxed
+                           @if ($widget === $owed) data-home-owed @endif @if ($widget === $stockValue) data-home-stock @endif
+                           class="relative block min-w-0 rounded-[10px] border border-(--color-border) bg-(--color-surface-card) px-2.5 py-1.5
+                                  shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)"
+                           style="border-inline-start: 4px solid var(--color-pal-{{ $tone }})"
+                           @if ($widget->definition) title="{{ $widget->definition }}" @endif>
+                            <span class="block truncate text-xs font-semibold text-(--color-ink-muted)" title="{{ $widget->label }}">{{ $widget->label }}</span>
+                            <span @class([
+                                'hm-kpi-value tabular block whitespace-nowrap font-bold',
+                                'text-lg' => mb_strlen($widget->value) <= 12,
+                                'text-base' => mb_strlen($widget->value) > 12 && mb_strlen($widget->value) <= 14,
+                                'text-sm' => mb_strlen($widget->value) > 14,
+                                'text-(--color-badge-warning-ink)' => $widget->tone === 'warn' && $pending($widget),
+                                'text-(--color-ink)' => ! ($widget->tone === 'warn' && $pending($widget)),
+                            ])>{{ $widget->value }}</span>
+                            @if ($widget->delta || $widget->hint)
+                                <span class="block truncate text-2xs text-(--color-ink-muted)">
+                                    @if ($widget->delta)
+                                        <span @class([
+                                            'font-semibold',
+                                            'text-(--color-success)' => ! str_starts_with($widget->delta, '-'),
+                                            'text-(--color-danger)' => str_starts_with($widget->delta, '-'),
+                                        ])>{{ str_starts_with($widget->delta, '-') ? '▼' : '▲' }} {{ ltrim($widget->delta, '+-') }}</span>
+                                    @endif
+                                    {{ $widget->hint }}
+                                </span>
+                            @endif
+                            @if (count($spark) > 1 && $peak > $floor)
+                                @php
+                                    $step = 100 / (count($spark) - 1);
+                                    $points = [];
+                                    foreach ($spark as $i => $value) {
+                                        $points[] = round($i * $step, 2).','.round(26 - (($value - $floor) / ($peak - $floor)) * 22, 2);
+                                    }
+                                @endphp
+                                <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true" class="mt-0.5 block h-5 w-full">
+                                    <polygon points="0,28 {{ implode(' ', $points) }} 100,28" style="fill: var(--color-pal-{{ $tone }}); opacity: .12" />
+                                    <polyline points="{{ implode(' ', $points) }}" fill="none" stroke-width="1.6"
+                                              vector-effect="non-scaling-stroke" style="stroke: var(--color-pal-{{ $tone }})" />
+                                </svg>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
         @endif
     </section>
     </x-slot:header>
@@ -297,10 +369,15 @@
         .hm-pictures { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
         .hm-kpis { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hm-work { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+        .hm-top { display: grid; gap: .6rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+        .hm-cards { display: grid; gap: .5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); order: 1; }
+        .hm-money { order: 2; }
         @media (min-width: 768px) {
             .hm-pictures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .hm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .hm-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
+        @media (min-width: 1100px) { .hm-top { grid-template-columns: minmax(0, 1fr) 400px; } }
         @media (min-width: 1280px) {
             /* ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — চার্ট বড়, মান পরিষ্কার */
             .hm-pictures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -322,7 +399,9 @@
                     {{-- ⓘ আলাদা শিরোনাম নেই — প্রতিটা কার্ড নিজের নাম বলে; জায়গাটা এক পর্দায় সব ধরাতে লাগে --}}
                     <div data-pictures-row class="hm-pictures" aria-label="{{ __('home.pictures_title') }}">
                         @foreach ($pictures as $row)
+                            {{-- ⭐ প্রতিটা চার্ট-কার্ডের মাথায় নিজের রঙের দাগ — রঙিন ড্যাশবোর্ড (মালিক, ১ নভেম্বর ২০২৬) --}}
                             <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}" data-boxed data-picture="{{ $row['module'] }}"
+                               style="border-top: 4px solid var(--color-pal-{{ ['blue', 'orange', 'red', 'teal', 'indigo', 'green', 'purple', 'sky'][$loop->index % 8] }})"
                                class="block min-w-0 rounded-(--radius-card) border border-(--color-border)
                                       bg-(--color-surface-card) shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)">
                                 <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-2">
@@ -379,65 +458,7 @@
 
         {{-- ── মূল সূচক — এক সারিতে ৮টা, প্রতিটা একবার ── --}}
         <div data-home-unit="kpis" style="order: {{ $layout->position('kpis') }}">
-            @if ($kpis !== [] && $layout->shows('kpis'))
-                <section data-kpis class="mb-4">
-                    <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.kpis_title') }} · {{ $titles[$period] }}</h2>
-                    <div class="hm-kpis">
-                        @foreach ($kpis as $widget)
-                            @php
-                                $spark = array_map('floatval', $widget->spark);
-                                $peak = $spark === [] ? 0.0 : max($spark);
-                                $floor = $spark === [] ? 0.0 : min($spark);
-                            @endphp
-                            <a href="{{ $widget->href }}" data-kpi data-boxed
-                               class="block min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)
-                                      px-3 py-2 shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)"
-                               @if ($widget->definition) title="{{ $widget->definition }}" @endif>
-                                <span class="flex items-center gap-1.5 truncate text-2xs font-semibold text-(--color-ink-muted)">
-                                    @if ($widget->icon)
-                                        <x-ui.icon :name="$widget->icon" :size="13" />
-                                    @endif
-                                    <span class="truncate">{{ $widget->label }}</span>
-                                </span>
-                                {{-- ⓘ সংখ্যা ভাঙে না — লম্বা হলে অক্ষর ছোট (৬ অক্টোবর ২০২৬-এর যাচাই: "1,13,98,450.0" এক লাইনে, "0" পরের লাইনে) --}}
-                                <span @class([
-                                    'hm-kpi-value tabular mt-1 block whitespace-nowrap font-semibold',
-                                    'text-lg' => mb_strlen($widget->value) <= 12,
-                                    'text-base' => mb_strlen($widget->value) > 12 && mb_strlen($widget->value) <= 14,
-                                    'text-sm' => mb_strlen($widget->value) > 14,
-                                    'text-(--color-badge-warning-ink)' => $widget->tone === 'warn' && $pending($widget),
-                                    'text-(--color-ink)' => ! ($widget->tone === 'warn' && $pending($widget)),
-                                ])>{{ $widget->value }}</span>
-                                @if ($widget->delta || $widget->hint)
-                                    <span class="mt-0.5 block truncate text-2xs text-(--color-ink-muted)">
-                                        @if ($widget->delta)
-                                            <span @class([
-                                                'font-semibold',
-                                                'text-(--color-success)' => ! str_starts_with($widget->delta, '-'),
-                                                'text-(--color-danger)' => str_starts_with($widget->delta, '-'),
-                                            ])>{{ str_starts_with($widget->delta, '-') ? '▼' : '▲' }} {{ ltrim($widget->delta, '+-') }}</span>
-                                        @endif
-                                        {{ $widget->hint }}
-                                    </span>
-                                @endif
-                                @if (count($spark) > 1 && $peak > $floor)
-                                    @php
-                                        $step = 100 / (count($spark) - 1);
-                                        $points = [];
-                                        foreach ($spark as $i => $value) {
-                                            $points[] = round($i * $step, 2).','.round(14 - (($value - $floor) / ($peak - $floor)) * 12, 2);
-                                        }
-                                    @endphp
-                                    <svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true" class="mt-1 block h-4 w-full">
-                                        <polyline points="{{ implode(' ', $points) }}" fill="none" stroke-width="1.5"
-                                                  vector-effect="non-scaling-stroke" style="stroke: var(--color-chart-1)" />
-                                    </svg>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
+            {{-- ⓘ সূচক-কার্ড এখন মাথায়, টাকার কার্ডের পাশে (১ নভেম্বর ২০২৬) — ভাগটা থাকে, যাতে সাজানোর ক্রম আগের মতোই --}}
         </div>
 
         {{-- ── পাশাপাশি: ব্যতিক্রম কেন্দ্র আর সদ্য যা হয়েছে ── --}}

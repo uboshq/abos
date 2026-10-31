@@ -548,6 +548,8 @@
     @stack('detached-forms')
 
     @stack('scripts')
+    {{-- ⭐ লোড হওয়ার পর্দা — পাতা বদলাতে দেরি হলে পুরো জীবন্ত লোগো (মালিক, ১ নভেম্বর ২০২৬: "loding eo Abos er full logo bosbe") --}}
+    <div data-abos-loading class="abos-loading" aria-hidden="true"><x-brand.live-logo /></div>
 </body>
 </html>
 @endif

@@ -96,9 +96,9 @@
             title="{{ __('core.ui.all_modules') }} (Alt+M)">
         {{-- চারটা বর্গ — ⊞। ⓘ ৯ ফোঁটা Odoo-র চিহ্ন; এটা ABOS-এর নিজের, তাই আলাদা দেখতে হওয়াই ঠিক। --}}
         <span class="grid grid-cols-2 gap-[3px]" aria-hidden="true">
-            @for ($i = 0; $i < 4; $i++)
-                <span class="block size-[7px] rounded-[2px] border-2 border-current"></span>
-            @endfor
+            @foreach ([1, 2, 3, 4] as $square)
+                <span class="block size-[9px] rounded-[2px]" style="background: var(--color-launcher-{{ $square }})"></span>
+            @endforeach
         </span>
     </button>
 

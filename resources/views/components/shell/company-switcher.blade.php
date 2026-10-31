@@ -103,16 +103,21 @@
 
             শাখার রংটা ম্লান রাখা — নাম আগে পড়া হোক, শাখা তার পরে।
         --}}
-        <span class="min-w-0 max-w-64 truncate text-start text-sm font-semibold
-                     text-(--color-ink)">
-            {{ $company->name() }}@if ($branchLabel)<span class="font-normal" data-shell-branch> · {{ $branchLabel }}</span>@endif
+        <span class="flex min-w-0 max-w-64 flex-col items-start text-start leading-tight">
+            <span class="max-w-full truncate font-bold text-(--color-ink)" style="font-size: 15px;">{{ $company->name() }}</span>
+            @if ($branchLabel)
+                <span data-shell-branch class="mt-0.5 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 text-2xs font-semibold"
+                      style="background: var(--color-topbar-pill-bg); border: 1px solid var(--color-topbar-pill-border);">
+                    <span class="size-1.5 rounded-full" style="background: currentColor; opacity: .8;" aria-hidden="true"></span>{{ $branchLabel }}
+                </span>
+            @endif
         </span>
 
         @if ($canSwitch)
             {{-- দুই দিকের তীর, নিচের ক্যারেট নয়: ক্যারেট বলে "আরও আছে",
                  এটা বলে "বদলানো যায়" — আর কাজটা বদলানোই। --}}
-            <svg viewBox="0 0 24 24" class="size-4 shrink-0 fill-(--color-ink-muted)" aria-hidden="true">
-                <path d="m7 10 5 5 5-5H7Z"/>
+            <svg viewBox="0 0 24 24" class="size-5 shrink-0 fill-(--color-ink-muted)" aria-hidden="true">
+                <path d="M7 7h11.17l-2.58-2.59L17 3l5 5-5 5-1.41-1.41L18.17 9H7V7Zm10 10H5.83l2.58 2.59L7 21l-5-5 5-5 1.41 1.41L5.83 15H17v2Z"/>
             </svg>
         @endif
     </button>
