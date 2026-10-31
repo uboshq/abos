@@ -8,6 +8,9 @@ use App\Models\Approval;
 use App\Core\Engines\Approval\PaperSigningFacts;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\SettingsService;
+use App\Core\Support\DocumentStatus;
+use App\Core\Support\ListSummary;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -57,6 +60,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
         private readonly VoucherService $vouchers,
         private readonly VoucherWriter $writer,
         private readonly PaperSigningFacts $signing,
+        private readonly VoucherApproval $approval,
     ) {}
 
     /** `GET /vouchers/setup?type=` — ওয়েবের ফর্মের একই তালিকা, ধরনের দুই দিক আগে থেকে ভাগ করা */
@@ -136,8 +140,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ->when($data['status'] ?? null, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when((bool) ($data['awaiting'] ?? false), fn (Builder $q) => $q->whereIn('id', $this->awaitingIds()));
 
-        // ⓘ মোট — পুরো ছাঁকা ফলের, বাতিল বাদ (বাতিল কাগজে টাকা আসেনি)
-        $total = bcadd((string) ((clone $query)->where('status', '<>', \App\Core\Support\DocumentStatus::CANCELLED)->sum('amount') ?? '0'), '0', 2);
+        /*
+         * ⭐ মোট — পুরো ছাঁকা ফলের, শুধু পাকা কাগজ; অপেক্ষা, খসড়া, ফেরানো আর বাতিল নিজের লাইনে ([[ListSummary]]; তালিকার মোটের
+         * চুক্তি v6, ২৪ অক্টোবর ২০২৬)। ⛔ আগে `status <> cancelled` গুনত — সইয়ের অপেক্ষার ৳৫০,০০০ আর খসড়াও মোটে ঢুকত।
+         * ⓘ পুরনো `total` এক release থাকে, মানে counted.total (fe-র সিদ্ধান্ত), দুই দশমিকে আগের মতো।
+         */
+        $period = ($data['from'] ?? null) === null && ($data['to'] ?? null) === null ? null : ['from' => $data['from'] ?? null, 'to' => $data['to'] ?? null];
+        $summary = ListSummary::of($query, Voucher::listSummary(), $period);
 
         $page = $query
             ->orderByDesc('trx_date')->orderByDesc('id')
@@ -150,19 +159,21 @@ final class VoucherApiController extends Controller implements HasMiddleware
          */
         $rows->load(['lines:id,voucher_id,account_id,debit,credit,party_type,party_id,sort_order', 'lines.account', 'creator:id,name']);
         $names = $this->partyNames($rows);
-        $awaiting = $this->awaitingIds($rows->modelKeys());
+        $states = $this->signingStates($rows);
+        $awaiting = $this->awaitingAmong($states);
         $moneyAccounts = $this->moneyAccountsOf($rows);
         // ⭐ ধাপ আর আটকে থাকার কারণ — পাতায় দুই ডাকে, সারি ধরে নয় ([[signing()]])
         $signing = $this->signing($rows, $awaiting);
 
         return response()->json([
             'rows' => $rows->map(fn (Voucher $v) => [
-                ...$this->row($v, $names, $awaiting, $signing),
+                ...$this->row($v, $names, $awaiting, $signing, $states),
                 // ⭐ টাকা কোথায় জমা / কোথা থেকে — তালিকাতেই (মালিক, ১৭ অক্টোবর ২০২৬: "kon account e recived hoto ta dekhayna")
                 ...$this->moneySide($v, $moneyAccounts),
             ])->values(),
             'count' => $page->total(),
-            'total' => $total,
+            'total' => bcadd($summary['counted']['total'], '0', 2),
+            'summary' => $summary,
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
@@ -342,15 +353,37 @@ final class VoucherApiController extends Controller implements HasMiddleware
         return Voucher::query()->when(! $user->can('accounts.report'), fn (Builder $q) => $q->where('created_by', $user->id));
     }
 
-    /** @param  list<int>|null  $among  @return list<int> */
-    private function awaitingIds(?array $among = null): array
+    /**
+     * ⭐ "সইয়ের অপেক্ষায়" ছাঁকনি — অনুরোধ গেছে আর তারপর ভাউচার বদলায়নি ([[VoucherApproval::signingOf()]])।
+     *
+     * ⛔ আগে যেকোনো PENDING অনুরোধই গুনত — বাসিটাও, যেটা পরের পোস্টে তুলে নতুন চাওয়া হয়; তালিকার মোট ওটাকে খসড়ায় গোনে, তাই
+     * ছাঁকনি আর মোট আলাদা কথা বলত। ⓘ প্রার্থী কেবল PENDING অনুরোধের খসড়া — ৫০০ করে, একসাথে ভাগ।
+     *
+     * @return list<int>
+     */
+    private function awaitingIds(): array
     {
-        return Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->where('module', VoucherApproval::MODULE)
-            ->pending()
-            ->when($among !== null, fn ($q) => $q->whereIn('approvable_id', $among))
-            ->pluck('approvable_id')->map(fn ($id) => (int) $id)->all();
+        return $this->approval->waitingIds()['awaiting'];
+    }
+
+    /**
+     * পাতার খসড়াগুলোর সইয়ের অবস্থা — একসাথে ([[VoucherApproval::signingOf()]]); পাকা আর বাতিলে কিছু নয়।
+     *
+     * @param  iterable<Voucher>  $vouchers
+     * @return array<int, ?string>
+     */
+    private function signingStates(iterable $vouchers): array
+    {
+        return $this->approval->signingOf(new EloquentCollection(collect($vouchers)->filter(fn (Voucher $v) => $v->isDraft())->values()->all()));
+    }
+
+    /**
+     * @param  array<int, ?string>  $states
+     * @return list<int>
+     */
+    private function awaitingAmong(array $states): array
+    {
+        return array_keys(array_filter($states, fn (?string $s) => $s === \App\Modules\Accounts\Services\VoucherSigning::AWAITING));
     }
 
     /**
@@ -510,13 +543,21 @@ final class VoucherApiController extends Controller implements HasMiddleware
      * ⛔ `state` বদলায় না — আটকে থাকা কাগজ আগের মতোই `draft`: পুরনো অ্যাপ চার নামের বাইরে কিছু চেনে না, `status=` ছাঁকনি
      *   আর `can_post` ওই নামেই চলে (কারণ মিটিয়ে হাতে পোস্ট — খসড়ারই কাজ)। নতুন অ্যাপ `posting_failed` দেখে "পোস্ট হয়নি" দেখায়।
      *
+     * ⭐ `signing` + `signing_label` (a4-এর সঙ্গে চুক্তি, ২৪ অক্টোবর ২০২৬) — খসড়ার সইয়ের অবস্থা, পাতার নোটের একই উত্তর
+     *   ([[VoucherApproval::decide()]]): awaiting · stale · needs · signed · rejected; পাকা, বাতিল বা সই লাগে না এমন খসড়ায় null।
+     *   ⓘ `state` তবু চার নামেই: `awaiting` কেবল টাটকা অনুরোধে — বাসি অনুরোধ এখন `draft` (পরের পোস্টে নতুন করে সইয়ে যায়)।
+     *   label অ্যাপের কাছে কেবল অচেনা মানের fallback — চেনা পাঁচটার লেখা অ্যাপের নিজের।
+     *
      * @param  array<string, string>  $names
      * @param  list<int>  $awaiting
      * @param  array{standing?: array<int, array{level: int, levels: int}>, problems?: array<int, string>}  $signing
+     * @param  array<int, ?string>  $states  খসড়ার সইয়ের অবস্থা ([[signingStates()]])
      * @return array<string, mixed>
      */
-    private function row(Voucher $v, array $names, array $awaiting, array $signing = []): array
+    private function row(Voucher $v, array $names, array $awaiting, array $signing = [], array $states = []): array
     {
+        $signs = $v->isDraft() ? ($states[(int) $v->id] ?? null) : null;
+
         $state = match (true) {
             $v->isCancelled() => 'cancelled',
             $v->isPosted() => 'posted',
@@ -537,6 +578,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'approval_levels' => $state === 'awaiting' ? ($signing['standing'][(int) $v->id]['levels'] ?? null) : null,
             'posting_failed' => $state === 'draft' && isset($signing['problems'][(int) $v->id]),
             'post_problem' => $state === 'draft' ? ($signing['problems'][(int) $v->id] ?? null) : null,
+            'signing' => $signs,
+            'signing_label' => $signs === null ? null : (string) __('accounts::phone_voucher.signing_'.$signs),
             'party' => $this->partyOf($v, $names),
             // ⭐ পক্ষের ঘরের নাম, ধরন ধরে: আদায়ে "কার কাছ থেকে", পরিশোধ আর খরচে "কাকে" — দিক বোঝা যায়
             'party_label' => (string) __('accounts::phone_voucher.party_'.match ($v->type) {
@@ -567,8 +610,9 @@ final class VoucherApiController extends Controller implements HasMiddleware
     private function page(Voucher $v, User $user): array
     {
         $names = $this->partyNames(collect([$v]));
-        $awaiting = $v->isDraft() ? $this->awaitingIds([(int) $v->id]) : [];
-        $row = $this->row($v, $names, $awaiting, $this->signing([$v], $awaiting));
+        $states = $this->signingStates([$v]);
+        $awaiting = $this->awaitingAmong($states);
+        $row = $this->row($v, $names, $awaiting, $this->signing([$v], $awaiting), $states);
 
         return [
             ...$row,

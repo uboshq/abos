@@ -98,6 +98,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
         // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
         'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
+        // ⓘ দেনা: ফোনের তালিকা আজও নিজে মোট যোগ করে — ListSummary-তে সরবে, তালিকা কেবল ছোট হয় (cb, ২৪ অক্টোবর ২০২৬)
+        'EveryListSummaryAddsDecimalsTest::KNOWN',
+        // ⓘ দেনা: ভাউচারের অপেক্ষা নিজে গোনা — decide()-এর বাইরে, তালিকা কেবল ছোট হয় (cb, ২৪ অক্টোবর ২০২৬)
+        'EveryVoucherWaitIsDecidedOnceTest::KNOWN',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -467,10 +471,27 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — rail.layout: কেবল নিজের users.nav_layout (পিন আর ক্রম), অন্যের মডিউল
      *       কোড ফেলা হয়, নিরীক্ষায় যায় না (দাবি: EveryModuleIsOnTheRailOrBehindMoreTest); home.layout-এর একই জাত।
      *   +১  EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — rail.layout: কোনো কাগজ বানায় না, শাখার ছাপ লাগে না।
+     * ── ⚠️ ৪৫৯ → ৪৬৯, ২৪ অক্টোবর ২০২৬ (cb, তালিকার মোট — ListSummary; fe-র চাওয়া পাহারা) ────────────
+     *   +১০ EveryListSummaryAddsDecimalsTest::KNOWN — ফোনের API-তে আজও নিজে যোগ করা দশটা ফাইল, মালিক আর কারণসহ: নয়টা ফাইলের কাগজের
+     *       তালিকা ListSummary-তে সরবে (cb তিনটা; a6 ছয়টা — আদায়, DO, SO, বিল-চালান, আর fe-র কথায় বিক্রির ডেস্ক ও দরপত্র) —
+     *       সরলেই সারি কমবে; দুইটা (খতিয়ানের বাকি, সরবরাহকারীর দেনা) "স্থায়ী — কাগজের তালিকা নয়"। ⛔ নতুন ছাড় নয়, পুরনো দেনা
+     *       প্রথমবার গোনা (fe গ্রহণ করেছেন, কেবল এই কারণে আর তালিকা কেবল কমে বলে)।
+     *   ⓘ মাপা: প্রতিফলনে গোনা ৪৬৯, অশ্রেণিবদ্ধ শূন্য (count_excuses.php)।
+     *
+     * ── ⭐ ৪৬৯ → ৪৬৮, ২৪ অক্টোবর ২০২৬ (cb, ভাউচারের মোট ListSummary-তে) ────────────
+     *   −১  EveryListSummaryAddsDecimalsTest::KNOWN — VoucherApiController আর নিজে যোগ করে না: summary আর পুরনো total দুটোই
+     *       ListSummary থেকে, শুধু পাকা কাগজ।
+     *
+     * ── ⚠️ ৪৬৮ → ৪৭২, ২৪ অক্টোবর ২০২৬ (cb, ভাউচারের অপেক্ষা এক জায়গায়; fe-র চাওয়া পাহারা) ────────────
+     *   +৪  EveryVoucherWaitIsDecidedOnceTest::KNOWN — PENDING নিজে পড়া চার ফাইল (ছয় জায়গা), মালিক আর কারণসহ: VoucherWriter
+     *       (cb, পোস্টের নিজের পথ — stopping()-এর ঠিক পরের অনুরোধ) আর কাউন্টার-বিক্রির তিন ফাইল (a5; বাসি অনুরোধে কাউন্টার কী
+     *       দেখাবে a5 ঠিক করবে)। বাকি ছয় জায়গা এই কমিটেই decide()-এ সরেছে। ⛔ নতুন ছাড় নয়, পুরনো দেনা প্রথমবার গোনা।
      */
     // ⓘ ২৪ অক্টোবর ২০২৬: +১ — ANY_SIGNED_IN_USER `release.notes` (নতুন কী এল; রেপোর নোট, কোম্পানির তথ্য নেই)
     // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
-    private const CEILING = 464;
+    // ⓘ ৩০ অক্টোবর ২০২৬ (fe): cb/list-summary-এর +১৩ (৪৫৯ → ৪৭২) আর main-এর +৫ (৪৫৯ → ৪৬৪) একসাথে = ৪৭৭
+    // ⓘ ৩১ অক্টোবর ২০২৬ (fe): +১ EveryListSummaryAddsDecimalsTest::KNOWN — অনুমোদনের ইনবক্সের মোট (দফা ২১), স্থায়ী, কাগজের তালিকা নয়
+    private const CEILING = 478;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

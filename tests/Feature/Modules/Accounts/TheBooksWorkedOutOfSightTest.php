@@ -79,7 +79,8 @@ final class TheBooksWorkedOutOfSightTest extends TestCase
         $this->assertMatchesRegularExpression('/data-check="drafts" data-state="pending"/', $html, 'পুরনো খসড়া থাকতেও চেকলিস্ট সবুজ।');
         $this->assertMatchesRegularExpression('/data-check="locked" data-state="pending"/', $html, 'মাস খোলা, অথচ "বন্ধ" বলছে।');
         // ⓘ আটটা — "আটকে থাকা উল্টো" যোগ হলো (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[AStuckReversalFailedSilentlyEveryHourTest]])
-        $this->assertSame(8, preg_match_all('/data-check="/', $html), 'চেকলিস্টে আটটা সারি নেই।');
+        // ⓘ নয়টা — "সই চাওয়ার পরে বদলানো খসড়া" নিজের সারিতে (fe, ২৪ অক্টোবর ২০২৬; [[EveryPageCountsAVoucherWaitTheSameWayTest]])
+        $this->assertSame(9, preg_match_all('/data-check="/', $html), 'চেকলিস্টে নয়টা সারি নেই।');
     }
 
     public function test_two_customers_on_one_mobile_show_as_one_group(): void

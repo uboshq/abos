@@ -61,10 +61,13 @@ final class VoucherOverview
             $o->note(__('accounts::overview_confirm.unbalanced'), 'stop');
         }
 
+        // ⓘ পাঁচ উত্তর — তালিকার মোট আর ফোন একই উত্তর পড়ে ([[VoucherApproval::decide()]]), তাই পাতা আর তালিকা এক কথা বলে
         match ($this->approvals->waitFor($voucher)) {
-            'signed' => $o->note(__('accounts::overview_confirm.signed'), 'info'),
-            'rejected' => $o->note(__('accounts::overview_confirm.rejected'), 'stop'),
-            'awaiting' => $o->note(__('accounts::overview_confirm.awaiting'), 'warn'),
+            VoucherSigning::SIGNED => $o->note(__('accounts::overview_confirm.signed'), 'info'),
+            VoucherSigning::REJECTED => $o->note(__('accounts::overview_confirm.rejected'), 'stop'),
+            VoucherSigning::AWAITING => $o->note(__('accounts::overview_confirm.awaiting'), 'warn'),
+            VoucherSigning::STALE => $o->note(__('accounts::overview_confirm.stale'), 'warn'),
+            VoucherSigning::NEEDS => $o->note(__('accounts::overview_confirm.needs'), 'warn'),
             default => null,
         };
 

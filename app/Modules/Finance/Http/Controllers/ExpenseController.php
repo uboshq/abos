@@ -218,12 +218,8 @@ class ExpenseController extends Controller implements HasMiddleware
      */
     private function waitingIds()
     {
-        return Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->where('module', VoucherApproval::MODULE)
-            ->where('action', Voucher::EXPENSE)
-            ->pending()
-            ->pluck('approvable_id');
+        // ⓘ কেবল টাটকা অনুরোধ — বাসিটা বদলানো খসড়া ([[VoucherApproval::waitingIds()]], ২৪ অক্টোবর ২০২৬)
+        return collect(app(VoucherApproval::class)->waitingIds(Voucher::EXPENSE)['awaiting']);
     }
 
     /**

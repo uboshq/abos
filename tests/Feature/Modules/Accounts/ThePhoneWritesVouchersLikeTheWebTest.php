@@ -291,7 +291,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
 
     /**
      * ⭐ নগদ রসিদ আলাদা — মালিক, ১৫ অক্টোবর ২০২৬ (অ্যাপ ০.৪.৩৪): টাকা কোন খাতে জমা (`money`), শাখা, ছাঁকা ফলের মোট আর কে
-     * তুলেছেন। দাবি: নগদে কেবল ক্যাশের রসিদ, ব্যাংকে কেবল ব্যাংকের; মোট পুরো ফলের, বাতিল বাদ; অন্য শাখায় খালি।
+     * তুলেছেন। দাবি: নগদে কেবল ক্যাশের রসিদ, ব্যাংকে কেবল ব্যাংকের; মোট পুরো ফলের, শুধু পাকা — বাতিল আর খসড়া বাদ (তালিকার মোট,
+     * [[ListSummary]], ২৪ অক্টোবর ২০২৬); অন্য শাখায় খালি।
      */
     public function test_cash_and_bank_receipts_list_apart_with_their_own_total_and_who_wrote_them(): void
     {
@@ -308,7 +309,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
             $v = Voucher::query()->where('public_id', $out[0]['entityId'])->with('lines')->firstOrFail();
             $v->lines[0]->forceFill(['account_id' => $money->id, 'debit' => $amount])->save();
             $v->lines[1]->forceFill(['credit' => $amount])->save();
-            $v->forceFill(['type' => Voucher::RECEIPT, 'amount' => $amount, 'money_account_id' => null])->save();
+            // ⓘ পাকা — তালিকার মোট শুধু পাকা কাগজ গোনে; খসড়ার মোট আলাদা লাইনে ([[ListSummary]])
+            $v->forceFill(['type' => Voucher::RECEIPT, 'amount' => $amount, 'money_account_id' => null, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED])->save();
 
             return $v;
         };
@@ -317,6 +319,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $banked = $receipt('r-bank', $bank, '300');
         $gone = $receipt('r-gone', $till, '50');
         $gone->forceFill(['status' => \App\Core\Support\DocumentStatus::CANCELLED])->save();
+        $waiting = $receipt('r-draft', $till, '20');
+        $waiting->forceFill(['status' => \App\Core\Support\DocumentStatus::DRAFT])->save();
 
         $list = fn (string $q) => $this->phone($reader)->getJson('/api/v1/accounts/vouchers?type=receipt&'.$q)->assertOk()->json();
 
@@ -324,7 +328,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $ids = collect($onlyCash['rows'])->pluck('id');
         $this->assertTrue($ids->contains($cash->public_id));
         $this->assertFalse($ids->contains($banked->public_id), '⛔ ব্যাংকের রসিদ নগদের তালিকায়।');
-        $this->assertSame('700.00', $onlyCash['total'], '⛔ নগদ রসিদের মোট ভুল (বাতিলটা গোনা হলো?)');
+        $this->assertSame('700.00', $onlyCash['total'], '⛔ নগদ রসিদের মোট ভুল (বাতিল বা খসড়া গোনা হলো?)');
+        $this->assertSame(['count' => 1, 'total' => '20.0000'], $onlyCash['summary']['draft'], '⛔ নগদের খসড়া নিজের লাইনে এল না');
         $this->assertSame($reader->name, collect($onlyCash['rows'])->firstWhere('id', $cash->public_id)['written_by'], '⛔ কে তুলেছেন, তালিকায় নেই।');
 
         $onlyBank = $list('money=bank');
