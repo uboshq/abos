@@ -93,6 +93,20 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      */
     public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card', 'deposit'];
 
+    /*
+     * ⭐ খরচের নিজের দুই পদ্ধতি — টাকা নড়ে না, তাই `MoneyMethod::METHODS`-এ নয় (খরচের ভাউচার ১০০%, fe-র সিদ্ধান্ত ১, ২৪ অক্টোবর
+     * ২০২৬)। ⓘ বাকিতে: অন্য পাশ পক্ষের দেনার খাত; কর্মী দিলেন: 1131 কর্মীর অগ্রিম, পক্ষ কর্মী। ⛔ দুটোতেই `money_account_id` বসে না।
+     */
+    public const ON_CREDIT = 'credit';
+
+    public const BY_EMPLOYEE = 'employee';
+
+    /** @var list<string> */
+    public const EXPENSE_ONLY_INSTRUMENTS = [self::ON_CREDIT, self::BY_EMPLOYEE];
+
+    /** বাকিতে খরচের পক্ষ — কেবল সরবরাহকারী বা কর্মী (fe-র সিদ্ধান্ত ১) */
+    public const ON_CREDIT_PARTIES = ['supplier', 'employee'];
+
     /**
      * ⭐ মাধ্যমের ঘরে যা-ই থাক, পর্দায় একটা শব্দ — কাঁচা চাবি কখনো নয়।
      *
@@ -239,6 +253,11 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
 
         // ১৯ সেপ্টেম্বর — কোথা থেকে এল (কাউন্টারের ডিপোজিটের নিজের নিয়ম)
         'origin',
+
+        // ⭐ খরচের ভাউচার ১০০% (ভাগ B, fe অনুমোদিত §১, ২৪ অক্টোবর ২০২৬) — বিলের তারিখ, শেষ দিন, কর্মী, মুদ্রা, বাজেট, সতর্কতা, নমুনা
+        'bill_date', 'due_date', 'employee_id',
+        'currency_id', 'fx_rate', 'fx_date', 'fx_rate_reason',
+        'budget_reason', 'budget_check', 'warnings', 'template_id',
     ];
 
     protected function casts(): array
@@ -280,7 +299,25 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
              * বাকি সব জায়গায় `array` লেখা, তাই এখানেও তাই।
              */
             'note_counts' => 'array',
+
+            // ⭐ খরচের ভাউচার ১০০% (ভাগ B) — `array`, প্রকল্পের নিয়মে (উপরে কারণ)
+            'bill_date' => 'date',
+            'due_date' => 'date',
+            'fx_date' => 'date',
+            'fx_rate' => 'decimal:6',
+            'budget_check' => 'array',
+            'warnings' => 'array',
         ];
+    }
+
+    /**
+     * ⭐ খরচের ব্যবসার লাইন (খরচের ভাউচার ১০০%, ভাগ B) — জাবেদার সারি এখান থেকে বানানো। ⓘ পুরনো খরচে খালি — তখন এক-লাইনের পথ।
+     *
+     * @return HasMany<VoucherExpenseLine, $this>
+     */
+    public function expenseLines(): HasMany
+    {
+        return $this->hasMany(VoucherExpenseLine::class)->orderBy('sort')->orderBy('id');
     }
 
     /**
@@ -528,8 +565,26 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'instrument_no',
             ...($this->is_adjusting ? [] : ['is_adjusting']),
             ...($this->reversal_of_id === null ? ['reversal_of_id'] : []),
+            ...self::EXPENSE_SNAPSHOTS,
+            ...array_values(array_filter(self::EXPENSE_HEAD_FIELDS, fn (string $c) => $this->getAttribute($c) === null)),
         ];
     }
+
+    /**
+     * ⓘ খরচের ১০০% (অংশ খ, ২০২৭_০৪_০২_১০০১০০) মাথায় যা যোগ করে, আর ছাপে তার জায়গা (ec, ২৫ অক্টোবর ২০২৬)।
+     *
+     * ⛔ ফাঁকা অবস্থায়ও ছাপে ঢুকলে মাইগ্রেশনের দিন সইয়ের অপেক্ষার প্রতিটা ভাউচারের ছাপ বদলাত: সই "পুরনো" হয়ে আবার চাওয়া হত,
+     * ADI-র পুরো সারিতে ([[is_adjusting]]-এর একই ফাঁদ)। তাই ফাঁকা থাকলে বাইরে, ভরলে কাগজের অংশ, আর সইকারী সেটা দেখে সই দেন।
+     */
+    public const EXPENSE_HEAD_FIELDS = [
+        'bill_date', 'due_date', 'employee_id', 'currency_id', 'fx_rate', 'fx_date', 'fx_rate_reason', 'budget_reason', 'template_id',
+    ];
+
+    /**
+     * ⓘ সার্ভারের লেখা ছবি, কাগজ নয় — বাজেটের হিসাব আর সতর্কতা কখনো ছাপে নয়: পোস্টের সময় বাজেটের হিসাব (ec-র অংশ ছ) লেখা হয়,
+     * আর ছাপে থাকলে বাজেটের সই কখনো আর ভাউচারকে "ঢাকত" না।
+     */
+    public const EXPENSE_SNAPSHOTS = ['budget_check', 'warnings'];
 
     /**
      * ⭐ ছাপে কোন সারিগুলো — সবসময় এগুলো, হাতে যা তোলা আছে তা নয় (২৮ সেপ্টেম্বর ২০২৬)।

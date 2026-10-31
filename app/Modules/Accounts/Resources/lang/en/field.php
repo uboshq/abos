@@ -358,6 +358,7 @@ return [
 
     'withheld_ait' => 'Income tax withheld at source (AIT)',
     'withheld_vds' => 'VAT withheld at source (VDS)',
+    'input_vat_recoverable' => 'Input VAT recoverable',
     // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
     'difference_discount' => 'Discount',
     'difference_rounding' => 'Rounding',

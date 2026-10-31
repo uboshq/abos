@@ -981,6 +981,57 @@ return [
             'group' => 'entry',
         ],
         /*
+         * ⭐ খরচের ভাউচার ১০০% — মালিকের উত্তর না আসা প্রশ্ন, fe-র প্রস্তাবিত মান, Control Panel থেকে বদলানো যায় (fe অনুমোদিত §১,
+         * ২৪ অক্টোবর ২০২৬)। ⛔ কেবল মালিক — টাকার নিয়ম।
+         */
+        [
+            // এর উপরে বিলের ছবি ছাড়া পোস্ট থামে, খসড়া চলে (ভাগ E)
+            'key' => 'accounts.expense.attachment_over',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.expense_attachment_over',
+            'type' => 'integer',
+            'default' => 5000,
+            'group' => 'entry',
+        ],
+        [
+            // বাজেটের এর বেশি শতাংশ ছাড়ালে মালিকের সই (অনুমোদন চালু থাকলে); বন্ধ থাকলে কারণ আর নোটিস (ভাগ G, ec)
+            'key' => 'accounts.expense.budget_sign_over_pct',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.expense_budget_sign_over_pct',
+            'type' => 'integer',
+            'default' => 10,
+            'group' => 'entry',
+        ],
+        [
+            // ১০০%-এর বেশিতে কারণ বাধ্যতামূলক (ভাগ G, ec)
+            'key' => 'accounts.expense.budget_reason_over',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.expense_budget_reason_over',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            // কর্মী দিলে তাঁকে ফেরত আলাদা পরিশোধ ভাউচারে (ভাগ C)
+            'key' => 'accounts.expense.employee_refund',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.expense_employee_refund',
+            'type' => 'choice',
+            'options' => ['separate_voucher'],
+            'option_label' => 'accounts::settings.expense_employee_refund_',
+            'default' => 'separate_voucher',
+            'group' => 'entry',
+        ],
+        [
+            // এর উপরে, আর খাতে capex_hint থাকলে, পরখের বাক্সে IAS 16-এর সতর্কতা — আটকায় না (ভাগ J, ec; fe: ডিফল্ট ৳৫০,০০০)
+            'key' => 'accounts.expense.capitalise_warn_over',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.expense_capitalise_warn_over',
+            'type' => 'integer',
+            'default' => 50000,
+            'group' => 'entry',
+        ],
+        /*
          * ⭐ মূলধনীকরণের সীমা — এর নিচের কেনা খরচে যায়, সম্পদের খাতায় নয় (স্থায়ী সম্পদ ধাপ ১; IAS 16-এর বস্তুগততা)।
          * ⓘ শূন্য = কোনো সীমা নেই (আজকের আচরণ)। শ্রেণির নিজের সীমা থাকলে সেটা জেতে। ⛔ কেবল মালিক — টাকার নিয়ম।
          */

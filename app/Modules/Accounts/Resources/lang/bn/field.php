@@ -382,6 +382,8 @@ return [
 
     'withheld_ait' => 'উৎসে কর্তিত আয়কর (AIT)',
     'withheld_vds' => 'উৎসে কর্তিত মূসক (VDS)',
+    // ⓘ খরচের লাইনের দাবি-করা-যায় ভ্যাট — খাতার সারির বিবরণে ([[ExpenseLedger]])
+    'input_vat_recoverable' => 'সমন্বয়যোগ্য ক্রয়-ভ্যাট',
     // ⭐ কম-বেশি — ছাড় বা রাউন্ডিং (দফা ৪; cb-ma-5)
     'difference_discount' => 'ছাড়',
     'difference_rounding' => 'রাউন্ডিং',
