@@ -133,6 +133,9 @@ class PaymentController extends Controller implements HasMiddleware
             'supplier_id' => ['required', 'integer'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'payment' => ['nullable', 'integer'],
+            // ⭐ খাত — জমার একই প্রশ্ন, খাত ধরে (নিরীক্ষা ৮, ২৪ অক্টোবর ২০২৬); না এলে আগের মতো পক্ষ ধরে। ⓘ খোঁজা নিজের কোম্পানির
+            // সারিতেই ([[SlipIsNotUsedTwice]]), তাই অন্য কোম্পানির খাতের id পাঠিয়ে কিছু জানা যায় না
+            'account_id' => ['nullable', 'integer'],
         ]);
 
         $supplier = Supplier::query()->inViewedBranch()->find((int) $data['supplier_id']);
@@ -146,6 +149,7 @@ class PaymentController extends Controller implements HasMiddleware
 
         $used = app(\App\Core\Services\SlipIsNotUsedTwice::class)->isUsed(
             'pur_payments', $no, (int) $supplier->id, 'supplier_id', isset($data['payment']) ? (int) $data['payment'] : null,
+            isset($data['account_id']) ? (int) $data['account_id'] : null,
         );
 
         return response()->json([
