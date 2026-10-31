@@ -158,10 +158,25 @@ final class PrincipalCommission
         return Carbon::create((int) $m[1], (int) $m[2], 1)->startOfDay();
     }
 
-    /** শাখায়, সময়ে আদায় — নিয়মটা উপরে। */
+    /** শাখায়, সময়ে আদায় — নিয়মটা উপরে; যোগফল ঠিক [[collectionLines()]]-এর সারিগুলোর, তাই খোলা তালিকা আর অঙ্ক কখনো আলাদা নয়। */
     public function collections(int $company, int $branch, string $from, string $to): string
     {
-        $net = DB::table('ledger_entries as m')
+        $net = $this->collectionLines($company, $branch, $from, $to)
+            ->selectRaw('COALESCE(SUM(m.debit) - SUM(m.credit), 0) as net')
+            ->value('net');
+
+        return bcadd((string) ($net ?? '0'), '0', 4);
+    }
+
+    /**
+     * ⭐ আদায়ের সারিগুলো — অঙ্কটা ঠিক যেগুলো থেকে ([[collections()]]; চাপলে উৎস, মালিক, ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ টাকার খাতের প্রতিটা খাতা-সারি (`m`), গ্রাহক ছোঁয় এমন কাগজের; নিট = ডেবিট − ক্রেডিট। ⛔ নিয়ম একটাই জায়গায় — অঙ্ক এই
+     * কোয়েরিরই যোগফল, তাই রিপোর্টের অঙ্ক আর খোলা তালিকার মোট পয়সা পর্যন্ত এক।
+     */
+    public function collectionLines(int $company, int $branch, string $from, string $to): Builder
+    {
+        return DB::table('ledger_entries as m')
             ->join('accounts as a', 'a.id', '=', 'm.account_id')
             ->where('m.company_id', $company)
             ->where('m.branch_id', $branch)
@@ -174,11 +189,13 @@ final class PrincipalCommission
                 ->whereColumn('c.company_id', 'm.company_id')
                 ->whereColumn('c.source_type', 'm.source_type')
                 ->whereColumn('c.source_id', 'm.source_id')
-                ->where('c.party_type', self::CUSTOMER_PARTY))
-            ->selectRaw('COALESCE(SUM(m.debit) - SUM(m.credit), 0) as net')
-            ->value('net');
+                ->where('c.party_type', self::CUSTOMER_PARTY));
+    }
 
-        return bcadd((string) ($net ?? '0'), '0', 4);
+    /** গ্রাহকের পক্ষ-নাম — খোলা তালিকার "কার কাছ থেকে" ঘর ([[PrincipalLinesReport]]) */
+    public static function customerParty(): string
+    {
+        return self::CUSTOMER_PARTY;
     }
 
     /**
@@ -229,23 +246,92 @@ final class PrincipalCommission
         return bcadd(bcadd((string) ($sold ?? '0'), (string) ($returned ?? '0'), 4), '0', 4);
     }
 
-    /** সময়ে এই সরবরাহকারীকে দেওয়া — পোস্ট হওয়া টাকার কাগজ, নিট। */
+    /** সময়ে এই সরবরাহকারীকে দেওয়া — পোস্ট হওয়া টাকার কাগজ, নিট; যোগফল ঠিক [[paymentLines()]]-এর সারিগুলোর। */
     public function paidTo(int $company, int $supplier, string $from, string $to): string
     {
-        $net = DB::table('ledger_entries')
-            ->where('company_id', $company)
-            ->where('party_type', Supplier::drillSourceType())
-            ->where('party_id', $supplier)
-            ->whereBetween('trx_date', [$from, $to])
-            ->where(function (Builder $q) {
-                foreach (PartyLedger::KINDS['money'] as $prefix) {
-                    $q->orWhere('source_type', $prefix)->orWhere('source_type', 'like', $prefix.':%');
-                }
-            })
-            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+        $net = $this->paymentLines($company, $supplier, $from, $to)
+            ->selectRaw('COALESCE(SUM(m.debit) - SUM(m.credit), 0) as net')
             ->value('net');
 
         return bcadd((string) ($net ?? '0'), '0', 4);
+    }
+
+    /** ⭐ প্রিন্সিপালকে দেওয়ার সারিগুলো — অঙ্কটা ঠিক যেগুলো থেকে ([[paidTo()]]; চাপলে উৎস, ২৪ অক্টোবর ২০২৬) */
+    public function paymentLines(int $company, int $supplier, string $from, string $to): Builder
+    {
+        return DB::table('ledger_entries as m')
+            ->where('m.company_id', $company)
+            ->where('m.party_type', Supplier::drillSourceType())
+            ->where('m.party_id', $supplier)
+            ->whereBetween('m.trx_date', [$from, $to])
+            ->where(function (Builder $q) {
+                foreach (PartyLedger::KINDS['money'] as $prefix) {
+                    $q->orWhere('m.source_type', $prefix)->orWhere('m.source_type', 'like', $prefix.':%');
+                }
+            });
+    }
+
+    /**
+     * প্রিন্সিপালরা — সরবরাহকারী যাঁর শাখা, ভিত্তি, হার আর দুইটা দিন বসানো; শাখার দেয়ালসহ।
+     *
+     * ⓘ `principal` ছাঁকনি থাকলে কেবল সেই একজন (খোলা তালিকা আর ব্যাখ্যার বাক্স, [[PrincipalLinesReport]]) — তালিকায় না থাকলে
+     * (অন্য কোম্পানির, প্রিন্সিপাল নন, বা শাখার দেয়ালের বাইরে) কেউ নয়।
+     *
+     * @param  array<string, mixed>  $f
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    public function principals(array $f): \Illuminate\Support\Collection
+    {
+        // ⛔ একটা ঘরে একটাই সংখ্যা — `principal[]=7` অ্যারে, আর `(int)` সেটাকে ১ বানাত (ReportFilters-এর একই নিয়ম)
+        if (filled($f['principal'] ?? null) && ! (is_scalar($f['principal']) && ctype_digit((string) $f['principal']))) {
+            throw ValidationException::withMessages(['principal' => __('supplier::principal.principal_invalid')]);
+        }
+
+        return DB::table('suppliers')
+            ->where('suppliers.company_id', $f['company_id'])
+            ->whereNull('suppliers.deleted_at')
+            ->whereNotNull('suppliers.principal_branch_id')
+            ->whereIn('suppliers.commission_basis', self::BASES)
+            // ⓘ "আসল" ভিত্তিতে হার লাগে না
+            ->where(fn (Builder $q) => $q->whereNotNull('suppliers.commission_rate')->orWhere('suppliers.commission_basis', self::ACTUAL))
+            ->whereNotNull('suppliers.cycle_start_day')
+            ->whereNotNull('suppliers.cycle_close_day')
+            ->when(filled($f['principal'] ?? null), fn (Builder $q) => $q->where('suppliers.id', (int) $f['principal']))
+            ->tap(ReportEngine::branchWall($f, 'suppliers.principal_branch_id'))
+            ->orderBy('suppliers.code')
+            ->select(['suppliers.id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn', 'suppliers.short_name', 'suppliers.principal_branch_id',
+                'suppliers.commission_basis', 'suppliers.commission_rate', 'suppliers.cycle_start_day', 'suppliers.cycle_close_day'])
+            ->get();
+    }
+
+    /**
+     * একজন প্রিন্সিপালের সময় — ঠিকানায় দুই তারিখ (`from`, `to`) থাকলে ঠিক সেটা (রিপোর্টের সারির লিংক তাই বয়), নইলে `month`-এ শেষ
+     * হওয়া চক্র, নইলে আজকের চক্র।
+     *
+     * @param  array<string, mixed>  $f
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public function cycleOf(object $p, array $f, ?Carbon $today = null): array
+    {
+        if (filled($f['from'] ?? null) && filled($f['to'] ?? null)) {
+            return [self::date('from', $f['from']), self::date('to', $f['to'])];
+        }
+
+        $month = self::month($f['month'] ?? null);
+
+        return $month !== null
+            ? self::cycleClosingIn((int) $p->cycle_start_day, (int) $p->cycle_close_day, $month)
+            : self::cycleContaining((int) $p->cycle_start_day, (int) $p->cycle_close_day, $today ?? Carbon::today());
+    }
+
+    /** ঠিকানার তারিখ — ভুল আকারে হলে ফেরত, ৫০০ নয় */
+    private static function date(string $field, mixed $raw): Carbon
+    {
+        if (! is_string($raw) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) !== 1 || ! checkdate((int) substr($raw, 5, 2), (int) substr($raw, 8, 2), (int) substr($raw, 0, 4))) {
+            throw ValidationException::withMessages([$field => __('supplier::principal.date_invalid')]);
+        }
+
+        return Carbon::parse($raw)->startOfDay();
     }
 
     /**
@@ -259,23 +345,7 @@ final class PrincipalCommission
      */
     public function rows(array $f, ?Carbon $today = null): array
     {
-        $today ??= Carbon::today();
-        $month = self::month($f['month'] ?? null);
-
-        $principals = DB::table('suppliers')
-            ->where('suppliers.company_id', $f['company_id'])
-            ->whereNull('suppliers.deleted_at')
-            ->whereNotNull('suppliers.principal_branch_id')
-            ->whereIn('suppliers.commission_basis', self::BASES)
-            // ⓘ "আসল" ভিত্তিতে হার লাগে না
-            ->where(fn (Builder $q) => $q->whereNotNull('suppliers.commission_rate')->orWhere('suppliers.commission_basis', self::ACTUAL))
-            ->whereNotNull('suppliers.cycle_start_day')
-            ->whereNotNull('suppliers.cycle_close_day')
-            ->tap(ReportEngine::branchWall($f, 'suppliers.principal_branch_id'))
-            ->orderBy('suppliers.code')
-            ->select(['suppliers.id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn', 'suppliers.short_name', 'suppliers.principal_branch_id',
-                'suppliers.commission_basis', 'suppliers.commission_rate', 'suppliers.cycle_start_day', 'suppliers.cycle_close_day'])
-            ->get();
+        $principals = $this->principals($f);
 
         if ($principals->isEmpty()) {
             return [];
@@ -289,12 +359,7 @@ final class PrincipalCommission
         $rows = [];
 
         foreach ($principals as $p) {
-            $start = (int) $p->cycle_start_day;
-            $close = (int) $p->cycle_close_day;
-
-            [$from, $to] = $month !== null
-                ? self::cycleClosingIn($start, $close, $month)
-                : self::cycleContaining($start, $close, $today);
+            [$from, $to] = $this->cycleOf($p, $f, $today);
 
             $fromDate = $from->toDateString();
             $toDate = $to->toDateString();

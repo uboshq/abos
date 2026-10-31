@@ -91,10 +91,8 @@ class FinanceControlController extends Controller implements HasMiddleware
             ])
             ->all();
 
-        $awaitingIds = Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->pending()
-            ->pluck('approvable_id');
+        // ⓘ কেবল টাটকা অনুরোধ "সইয়ের অপেক্ষায়" — বাসিটা বদলানো খসড়া, পুরনো হলে নিচের দিনের নিয়মেই আটকে ([[VoucherApproval::waitingIds()]])
+        $awaitingIds = collect(app(\App\Modules\Accounts\Services\VoucherApproval::class)->waitingIds()['awaiting']);
 
         $stuck = Voucher::query()
             ->where('status', DocumentStatus::DRAFT)

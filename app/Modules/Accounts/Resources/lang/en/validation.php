@@ -137,6 +137,8 @@ return [
     'cannot_close_future_month' => 'A month that has not come yet cannot be closed.',
     'month_has_unposted' => 'This month has :count confirmed paper(s) that never reached the books — post or cancel them from the posting monitor, then close.',
     'month_has_open_papers' => 'This month still has :drafts draft(s) and :awaiting voucher(s) awaiting approval — post or cancel them first, or they could never reach the books.',
+    // ⓘ A stale request is not waiting: it is a changed draft ([[VoucherApproval::waitingIds()]], fe, 24 Oct 2026)
+    'month_has_changed_drafts' => 'Of these, :stale draft(s) changed after the approval was asked for — post them again and they go for approval afresh.',
     'party_types_owner_only' => 'Only the owner can change which parties an account holds.',
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
 
@@ -202,6 +204,14 @@ return [
     'bills_over_gross' => 'The bills take :sum in all, but this paper is for :gross — the bills cannot take more than the money.',
     'withheld_by_party_not_its_meaning' => 'Code :code in the chart holds ":account", not the account for tax the party withheld (VDS receivable or advance income tax). Ask the accountant to fix the account; until then the withheld part cannot be posted.',
     'missing_account' => 'Account :code is missing from the chart — add it first.',
+    'account_lost_its_meaning' => 'Code :code holds ":account", which is not the standard chart\'s account — money cannot be booked there. The accountant will fix the code.',
+    'expense_prepaid_not_taken' => 'A prepaid expense line is not taken — without a prepaid account and a month-by-month release schedule it would land as a full expense. Enter the line without the prepaid mark.',
+    'expense_one_branch_per_voucher' => 'One branch per voucher — a line for another branch cannot be taken until inter-branch due-to/due-from accounting exists.',
+    'expense_only_method' => '"On credit" and "Employee paid" work only on an expense voucher.',
+    'credit_party_supplier_or_employee' => 'An expense on credit is owed only to a supplier or an employee — choose who will be owed.',
+    'credit_needs_due_date' => 'Give a due date for an expense on credit — without it the credit cannot be aged.',
+    'credit_side_not_money' => 'No money moves on credit — ":account" is a money account; choose a payable account instead.',
+    'employee_paid_needs_employee' => 'Choose which employee paid — the amount is owed to them.',
     'chart_account_wrong' => 'The chart of this company has no :name account, or another account sits on its code (:code) — tell the accountant.',
     'code_kept_for_chart' => 'Code :code belongs to the standard chart and is kept for another kind of account — choose another code.',
     'loan_principal_taken' => 'The loan principal must sit on a liability account — not a group, cash, bank or expense account.',

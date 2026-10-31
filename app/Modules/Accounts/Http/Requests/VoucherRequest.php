@@ -222,6 +222,7 @@ class VoucherRequest extends FormRequest
          */
         $this->fillAccountFromCategory();
         $this->fillAccountFromParty();
+        $this->fillFromExpenseLines();
 
         $lines = (array) $this->input('lines', []);
 
@@ -385,6 +386,46 @@ class VoucherRequest extends FormRequest
         }
     }
 
+    /**
+     * ⭐ খরচের লাইন থাকলে মাথার দুই ঘর লাইন থেকে (খরচের ভাউচার ১০০%, ভাগ C; fe অনুমোদিত §১/§২, ২৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ জাবেদা লাইন থেকে বানানো হয় ([[ExpenseLedger]]); তবু মাথার `to_account_id`/`expense_account_id` প্রথম লাইনের খাতে বসে —
+     * পুরনো তালিকা, রিপোর্ট আর সাদৃশ্যের পাহারা এক সংস্করণ এখান থেকেই পড়ে (§১)। ⓘ "কর্মী দিলেন" হলে টাকা বেরোয় না: অন্য পাশ
+     * 1131 কর্মীর অগ্রিম, পক্ষ কর্মী (fe-র সিদ্ধান্ত ৩); বাকিতে কর্মীর বেলায়ও একই খাত (পক্ষের খাত — 1131 কর্মী নেয়)।
+     * ⓘ `amount` = হাতে/খাতে যা যাবে = লাইনের মোট − AIT − VDS — [[WithheldTax]]-এর একই অর্থ ("হাতে দেওয়া")।
+     */
+    private function fillFromExpenseLines(): void
+    {
+        $lines = $this->input('expense_lines');
+        $type = $this->route('voucher')?->type ?? $this->input('type');
+
+        if ($type !== Voucher::EXPENSE || ! is_array($lines) || $lines === []) {
+            return;
+        }
+
+        $clean = static fn (mixed $v): string => preg_match('/^\d+(\.\d+)?$/', $s = str_replace(',', '', trim((string) $v))) === 1 ? $s : '0';
+        $first = collect($lines)->first(fn ($l) => is_array($l) && filled($l['expense_account_id'] ?? null));
+        // ⛔ `filter('is_array')` নয় — কালেকশন মান আর চাবি দুটোই দেয়, আর PHP-র নিজের is_array() দুই মানে ArgumentCountError ছোঁড়ে;
+        //   main-এর PHP-তে খরচের simulate আর জমা দুটোই ৫০০ হত (fe, ৩১ অক্টোবর ২০২৬, Mac-এ ধরা)
+        $gross = collect($lines)->filter(fn (mixed $l): bool => is_array($l))->reduce(
+            fn (string $sum, array $l) => bcadd($sum, bcadd($clean($l['amount'] ?? 0), $clean($l['vat_amount'] ?? 0), 4), 4), '0');
+        $net = bcsub(bcsub($gross, $clean($this->input('ait_amount')), 4), $clean($this->input('vds_amount')), 4);
+
+        $merge = ['amount' => $net, 'gross_amount' => $gross];
+        if ($first !== null) {
+            $merge['to_account_id'] = (int) $first['expense_account_id'];
+            $merge['expense_account_id'] = (int) $first['expense_account_id'];
+        }
+
+        $employeeSide = $this->input('instrument') === Voucher::BY_EMPLOYEE
+            || ($this->input('instrument') === Voucher::ON_CREDIT && $this->input('party_type') === 'employee');
+        if ($employeeSide && ($advance = StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)) !== null) {
+            $merge['from_account_id'] = (int) $advance->id;
+        }
+
+        $this->merge($merge);
+    }
+
     private function fillAccountFromCategory(): void
     {
         if (trim((string) $this->input('from_account_id', '')) !== '') {
@@ -470,7 +511,8 @@ class VoucherRequest extends FormRequest
             'party_type' => ['nullable', 'string', 'max:32'],
             'party_id' => ['nullable', 'integer'],
 
-            'instrument' => ['nullable', Rule::in(Voucher::INSTRUMENTS)],
+            // ⓘ খরচের নিজের দুই মান (বাকিতে, কর্মী দিলেন) কেবল খরচে — [[after()]]-এ (fe-র সিদ্ধান্ত ১)
+            'instrument' => ['nullable', Rule::in([...Voucher::INSTRUMENTS, ...Voucher::EXPENSE_ONLY_INSTRUMENTS])],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'instrument_date' => ['nullable', 'date'],
 
@@ -582,6 +624,27 @@ class VoucherRequest extends FormRequest
                 Rule::exists('pur_bills', 'id')->where('company_id', CompanyContext::id())],
             'bill_shares.*.share_amount' => ['required_with:bill_shares', 'numeric', 'min:0'],
             'alloc_basis' => ['nullable', Rule::in(['qty', 'value', 'weight'])],
+
+            /*
+             * ⭐ খরচের ব্যবসার লাইন আর মাথার নতুন ঘর (খরচের ভাউচার ১০০%, ভাগ C; fe অনুমোদিত §১, ২৪ অক্টোবর ২০২৬)।
+             * ⓘ সব খাত, কেন্দ্র, শাখা আর কর এই কোম্পানির; করের সারি ভ্যাটের হতে হবে। কেবল-সফটওয়্যারের খাত পোস্টের পাহারায় থামে
+             * ([[VoucherService::assertLinesArePostable()]]) — দুই জায়গায় একই তালিকা নয়।
+             */
+            'bill_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date'],
+            'employee_id' => ['nullable', 'integer', Rule::exists('hr_employees', 'id')->where('company_id', CompanyContext::id())],
+            'expense_lines' => ['nullable', 'array'],
+            'expense_lines.*.expense_account_id' => ['required_with:expense_lines', 'integer',
+                Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())->where('type', Account::EXPENSE)->where('is_group', false)],
+            'expense_lines.*.cost_center_id' => ['nullable', 'integer', Rule::exists('acc_cost_centers', 'id')->where('company_id', CompanyContext::id())],
+            'expense_lines.*.branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+            'expense_lines.*.description' => ['nullable', 'string', 'max:255'],
+            'expense_lines.*.amount' => ['required_with:expense_lines', 'numeric', 'gt:0'],
+            'expense_lines.*.vat_tax_id' => ['nullable', 'integer',
+                Rule::exists('mdm_taxes', 'id')->where('company_id', CompanyContext::id())->where('kind', 'vat')],
+            'expense_lines.*.vat_amount' => ['nullable', 'numeric', 'min:0'],
+            'expense_lines.*.vat_recoverable' => ['nullable', 'boolean'],
+            'expense_lines.*.is_prepaid' => ['nullable', 'boolean'],
         ];
 
         if ($this->isJournal()) {
@@ -960,7 +1023,11 @@ class VoucherRequest extends FormRequest
                 $moneyOrOwed = function (Account $a) use ($money): bool {
                     $payable = StandardChart::find(StandardChart::PAYABLE_GROUP);
 
-                    return $money($a) || ($payable !== null && $payable->selfAndDescendants()->contains('id', $a->id));
+                    // ⓘ কর্মীর বেলায় অন্য পাশ 1131 কর্মীর অগ্রিম (fe-র সিদ্ধান্ত ৩) — কেবল খরচের নিজের দুই পদ্ধতিতে
+                    $employeeSide = in_array($this->input('instrument'), Voucher::EXPENSE_ONLY_INSTRUMENTS, true)
+                        && (string) $a->code === StandardChart::EMPLOYEE_ADVANCE;
+
+                    return $money($a) || $employeeSide || ($payable !== null && $payable->selfAndDescendants()->contains('id', $a->id));
                 };
 
                 $type = $this->route('voucher')?->type ?? $this->input('type');
@@ -1048,6 +1115,47 @@ class VoucherRequest extends FormRequest
                         'debit' => Money::format($debit),
                         'credit' => Money::format($credit),
                     ]));
+                }
+            },
+
+            /*
+             * ⭐ খরচের দুই নিজের পদ্ধতি — বাকিতে আর কর্মী দিলেন (fe-র সিদ্ধান্ত ১, ২৪ অক্টোবর ২০২৬)।
+             *   · কেবল খরচে — অন্য ভাউচারে এই দুই মানের মানে নেই
+             *   · বাকিতে: পক্ষ কেবল সরবরাহকারী বা কর্মী, আর শেষ দিন বাধ্যতামূলক (§২.৭); অন্য পাশ টাকার খাত নয় — দেনার খাত
+             *   · কর্মী দিলেন: কোন কর্মী, বলতেই হবে (টাকাটা তাঁর পাওনায় বসে)
+             */
+            function (Validator $validator): void {
+                $instrument = $this->input('instrument');
+
+                if (! in_array($instrument, Voucher::EXPENSE_ONLY_INSTRUMENTS, true)) {
+                    return;
+                }
+
+                $type = $this->route('voucher')?->type ?? $this->input('type');
+
+                if ($type !== Voucher::EXPENSE) {
+                    $validator->errors()->add('instrument', __('accounts::validation.expense_only_method'));
+
+                    return;
+                }
+
+                if ($instrument === Voucher::ON_CREDIT) {
+                    if (! in_array($this->input('party_type'), Voucher::ON_CREDIT_PARTIES, true) || (int) $this->input('party_id', 0) <= 0) {
+                        $validator->errors()->add('party', __('accounts::validation.credit_party_supplier_or_employee'));
+                    }
+
+                    if (blank($this->input('due_date'))) {
+                        $validator->errors()->add('due_date', __('accounts::validation.credit_needs_due_date'));
+                    }
+
+                    $from = Account::query()->find((int) $this->input('from_account_id'));
+                    if ($from !== null && $from->isMoney()) {
+                        $validator->errors()->add('from_account_id', __('accounts::validation.credit_side_not_money', ['account' => $from->label()]));
+                    }
+                }
+
+                if ($instrument === Voucher::BY_EMPLOYEE && (int) $this->input('employee_id', 0) <= 0) {
+                    $validator->errors()->add('employee_id', __('accounts::validation.employee_paid_needs_employee'));
                 }
             },
         ];

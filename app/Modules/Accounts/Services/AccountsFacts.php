@@ -780,16 +780,13 @@ final class AccountsFacts
      * ⓘ অনুমোদনের সারি কোরের ([[Approval]], `App\Models`) — হিসাব কোনো মডিউলের উপর দাঁড়ায় না, তাই এটাই পড়া যায়।
      * ভাউচারের তালিকা আর মাস-শেষের চেকলিস্ট একই শর্তে গোনে ([[VoucherController]], [[MonthEndChecklist]])।
      * ⓘ ভাউচার ধরে গোনা, অনুমোদন ধরে নয় — তাই দেখার শাখার দেয়াল ভাউচার মডেলের নিজেরটাই।
+     * ⓘ কেবল টাটকা অনুরোধ — বাসিটা বদলানো খসড়া, পরের পোস্টে নতুন করে সইয়ে যায় ([[VoucherApproval::waitingIds()]], ২৪ অক্টোবর ২০২৬)।
      */
     public function vouchersAwaitingSignature(): int
     {
-        return Voucher::query()
-            ->whereIn('id', Approval::query()
-                ->where('approvable_type', Voucher::class)
-                ->where('module', VoucherApproval::MODULE)
-                ->pending()
-                ->select('approvable_id'))
-            ->count();
+        $ids = app(VoucherApproval::class)->waitingIds()['awaiting'];
+
+        return $ids === [] ? 0 : Voucher::query()->whereIn('id', $ids)->count();
     }
 
     /**
