@@ -70,11 +70,17 @@ final class AnExpenseHoldsItsOwnLinesTest extends TestCase
     public function test_the_new_head_fields_come_back_in_their_own_shape(): void
     {
         $voucher = $this->expense();
-        $voucher->forceFill([
-            'bill_date' => '2026-10-20', 'due_date' => '2026-11-19',
-            'fx_rate' => '121.123456', 'fx_date' => '2026-10-24', 'fx_rate_reason' => 'ব্যাংকের হার',
-            'budget_reason' => 'জরুরি মেরামত', 'budget_check' => [['account' => 5216, 'pct' => 112.5]], 'warnings' => ['capex'],
-        ])->save();
+        // ⓘ সংরক্ষণটাই ভাঙলে (বাজেটের ঘর অ্যারে না হলে PHP "Array to string") সেটাও দাবির নিজের কথায় — ভুলের বার্তায় নয়
+        //   (fe, ৩১ অক্টোবর ২০২৬: cb-র exb_budget_not_array কেবল ErrorException-এ মরছিল)
+        try {
+            $voucher->forceFill([
+                'bill_date' => '2026-10-20', 'due_date' => '2026-11-19',
+                'fx_rate' => '121.123456', 'fx_date' => '2026-10-24', 'fx_rate_reason' => 'ব্যাংকের হার',
+                'budget_reason' => 'জরুরি মেরামত', 'budget_check' => [['account' => 5216, 'pct' => 112.5]], 'warnings' => ['capex'],
+            ])->save();
+        } catch (\ErrorException|\Illuminate\Database\QueryException $e) {
+            $this->fail('⛔ বাজেটের ছবি অ্যারে হয়ে ফেরে না — নিরীক্ষা পড়তে পারত না (সংরক্ষণই ভাঙল: '.$e->getMessage().')');
+        }
 
         $fresh = $voucher->fresh();
 
@@ -106,7 +112,12 @@ final class AnExpenseHoldsItsOwnLinesTest extends TestCase
         $fuel = StandardChart::find(StandardChart::FUEL);
         $this->assertFalse((bool) $fuel->capex_hint, '⛔ নতুন খাত আপনা থেকে "সম্পদ হতে পারে" বলে');
 
-        $fuel->update(['capex_hint' => true]);
+        // ⓘ ফর্মের পথ (mass assignment) বন্ধ থাকলে সেটাও দাবির নিজের কথায় (fe, ৩১ অক্টোবর ২০২৬: exb_capex_not_fillable ভুলের বার্তায় মরছিল)
+        try {
+            $fuel->update(['capex_hint' => true]);
+        } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+            $this->fail('⛔ খাতে "সম্পদ হতে পারে" চিহ্ন বসানো যায় না — ফর্ম থেকে ঘরটা নেওয়াই হয় না: '.$e->getMessage());
+        }
         $this->assertTrue($fuel->fresh()->capex_hint, '⛔ খাতে "সম্পদ হতে পারে" চিহ্ন বসানো যায় না');
     }
 
