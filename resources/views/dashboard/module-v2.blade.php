@@ -115,7 +115,6 @@
 
                 return (int) preg_replace('/\D/', '', $latin) > 0;
             });
-            $dot = ['bad' => 'var(--color-pal-red)', 'warn' => 'var(--color-pal-yellow)'];
         @endphp
         @if ($waiting->isNotEmpty())
             <section data-dashboard-exceptions data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 pb-3 pt-2"
@@ -126,7 +125,7 @@
                 </h2>
                 <div class="grid gap-1.5 md:grid-cols-2">
                     @foreach ($waiting as $item)
-                        @php $c = $dot[$item->tone] ?? 'var(--color-pal-sky)'; @endphp
+                        @php $c = \App\Core\Engines\Dashboard\CardColours::watch($item->tone); @endphp
                         <a href="{{ $item->href }}" data-watch-row="{{ $item->tone }}"
                            class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5 hover:brightness-95"
                            style="background: color-mix(in srgb, {{ $c }} 12%, transparent)">

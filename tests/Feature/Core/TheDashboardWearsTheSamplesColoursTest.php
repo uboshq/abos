@@ -24,7 +24,8 @@ use Tests\TestCase;
  *   খ — "এখনই দেখুন" লাল, "নজর দিন" হলুদ; একই মানের দ্বিতীয়টা পরের ছায়ায় — চারটার মধ্যে কোনো রং দুইবার নয়;
  *   গ — মানহীন কার্ডে লাল বা হলুদ কখনো নয় (নমুনায় পরের রং লাল হলেও);
  *   ঘ — নমুনার প্রতিটা রং `tokens.css`-এ আছে, আর সাদা লেখা তার উপরে ≥ ৪.৫ঃ১;
- *   ঙ — পাতায় মাথার পট্টি নমুনার দুই রঙের ঢাল, আর কার্ডগুলো এই নিয়মের রং পরে।
+ *   ঙ — পাতায় মাথার পট্টি নমুনার দুই রঙের ঢাল, আর কার্ডগুলো এই নিয়মের রং পরে;
+ *   চ — "নজরে রাখুন"-এর সারি মানের রঙে (লাল এখনই, হলুদ নজর, বাকি আকাশি), আর পাতা সেই নিয়মই পড়ে।
  */
 final class TheDashboardWearsTheSamplesColoursTest extends TestCase
 {
@@ -78,6 +79,17 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
             }
         }
         $this->assertSame([], $problems, "⛔ রঙিন ড্যাশবোর্ড: নমুনার রং নেই, বা তার উপরে সাদা লেখা পড়া যায় না:\n".implode("\n", $problems));
+    }
+
+    public function test_ch_the_watch_list_rows_wear_their_meaning(): void
+    {
+        $this->assertSame(['var(--color-pal-red)', 'var(--color-pal-yellow)', 'var(--color-pal-sky)', 'var(--color-pal-sky)', 'var(--color-pal-sky)'],
+            array_map(fn (?string $t) => CardColours::watch($t), [Stat::BAD, Stat::WARN, Stat::NEUTRAL, Stat::GOOD, null]),
+            '⛔ নজরে রাখুন: সারির রং মানে বলে না — এখনই লাল, নজর হলুদ, বাকি আকাশি।');
+
+        $view = (string) file_get_contents(resource_path('views/dashboard/module-v2.blade.php'));
+        $this->assertMatchesRegularExpression('/CardColours::watch\(\$item->tone\).*?data-watch-row=.*?background: color-mix\(in srgb, \{\{ \$c \}\}/s', $view,
+            '⛔ নজরে রাখুন: সারি নিয়মের রং পরে না — পাতায় হাতে লেখা রং।');
     }
 
     public function test_ng_the_page_wears_the_head_gradient_and_the_card_colours(): void
