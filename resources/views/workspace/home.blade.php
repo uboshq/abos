@@ -73,6 +73,9 @@
 
     $todo = collect($groups['todo'] ?? [])->reject(fn ($w) => in_array($w->label, $shown, true));
     $waiting = $todo->filter($pending)->values();
+    // ⓘ প্রথম চারটা মাথার "আজ যা করতে হবে"-তে, বাকিগুলো নিচের তালিকায় — একই ঘর দুইবার নয়
+    $todayWork = $waiting->take(4);
+    $waiting = $waiting->slice(4)->values();
     $quiet = $todo->reject($pending);
 
     // ── ৮টা চার্ট — কোন মডিউল আর কোন ক্রম config-এ; প্রতিটা মডিউলের প্রথম চার্ট, যা নিজের পাতাতেও প্রথম ──
@@ -191,27 +194,22 @@
                     </form>
                 </details>
 
-                {{-- সময় — আজ · এ মাস · এ বছর; বদলায় কেবল প্রবাহের সূচক ([[HomePeriod]]) --}}
-                <details data-period-menu class="relative">
-                    <summary class="flex h-(--spacing-field-compact) cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
-                                    border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
-                        <span class="text-2xs text-(--color-ink-muted)">{{ __('home.period') }}</span>
-                        <span class="font-semibold">{{ $titles[$period] }}</span>
-                        <x-ui.icon name="chevron_down" :size="14" class="text-(--color-ink-muted)" />
-                    </summary>
-                    <div class="pops-onto-page absolute end-0 top-full z-50 mt-1 w-48 rounded-(--radius-field)
-                                border border-(--color-border) bg-(--color-surface-card) p-1 shadow-lg">
-                        @foreach (\App\Core\Dashboard\Widget::PERIODS as $option)
-                            <a href="{{ route('dashboard', ['period' => $option] + $filter->query()) }}"
-                               @class([
-                                   'block rounded-(--radius-field) px-3 py-2 text-sm',
-                                   'bg-(--color-brand-50) font-semibold text-(--color-brand-700)' => $period === $option,
-                                   'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => $period !== $option,
-                               ])
-                               @if ($period === $option) aria-current="page" @endif>{{ $titles[$option] }}</a>
-                        @endforeach
-                    </div>
-                </details>
+                {{-- সময় — আজ · এ মাস · এ বছর, পাশাপাশি তিনটা ট্যাব (মালিকের অনুমোদিত নমুনা, ১ নভেম্বর ২০২৬); বদলায় কেবল প্রবাহের সূচক ([[HomePeriod]]) --}}
+                <nav data-period-menu aria-label="{{ __('home.period') }}"
+                     class="flex items-center gap-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) p-[3px]">
+                    @foreach (\App\Core\Dashboard\Widget::PERIODS as $option)
+                        <a href="{{ route('dashboard', ['period' => $option] + $filter->query()) }}"
+                           @class([
+                               'rounded-[7px] px-3 py-1 text-sm font-semibold',
+                               'bg-(--color-brand-600) text-white' => $period === $option,
+                               'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => $period !== $option,
+                           ])
+                           @if ($period === $option) aria-current="page" @endif>{{ $titles[$option] }}</a>
+                    @endforeach
+                </nav>
+                @if (\Illuminate\Support\Facades\Route::has('executive.today') && auth()->user()->can('executive.view'))
+                    <a href="{{ route('executive.today') }}" data-home-executive class="whitespace-nowrap text-sm font-semibold text-(--color-link)">Executive Command Center →</a>
+                @endif
             </div>
             </div>
             @if ($filter->active())
@@ -258,8 +256,10 @@
         @if ($position || $cards !== [])
         <div data-home-top class="hm-top">
             @if ($position)
-                <div data-money-position class="hm-money relative rounded-(--radius-card) px-4 py-2.5"
-                     style="background: linear-gradient(135deg, var(--color-money-sweet-from), var(--color-money-sweet-to)); color: var(--color-money-sweet-ink)">
+                <div data-money-position class="hm-money relative overflow-hidden rounded-[18px] px-4 py-2.5 text-(--color-ink)"
+                     style="background: color-mix(in srgb, var(--color-surface-card) 78%, transparent); backdrop-filter: blur(14px) saturate(1.6);
+                            border: 1.5px solid color-mix(in srgb, var(--color-brand-gold) 80%, transparent);
+                            box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-brand-gold) 14%, transparent), 0 18px 40px -20px color-mix(in srgb, var(--color-brand-gold-deep) 60%, transparent)">
                     <a href="{{ $position->href }}" data-money-door class="absolute inset-0 rounded-(--radius-card)"
                        aria-label="{{ $position->label }}" @if ($position->definition) title="{{ $position->definition }}" @endif></a>
                     <p class="flex items-center justify-between gap-2 text-xs font-semibold">
@@ -269,19 +269,19 @@
                             @endif
                             {{ $position->label }}
                         </span>
-                        <span class="font-normal" style="color: var(--color-money-sweet-muted)">{{ __('home.money_as_booked') }}</span>
+                        <span class="font-normal text-(--color-ink-muted)">{{ __('home.money_as_booked') }}</span>
                     </p>
-                    <p class="tabular text-2xl font-bold leading-snug">{{ $position->value }}</p>
+                    <p class="tabular text-2xl font-bold leading-snug" style="background: var(--color-brand-gold-gradient); -webkit-background-clip: text; background-clip: text; color: transparent">{{ $position->value }}</p>
                     @php
-                        $partTones = ['pink', 'purple', 'teal', 'amber'];
+                        $partTones = ['orange', 'green', 'blue', 'red'];
                         $partSum = array_sum(array_map(fn ($v) => max(0.0, $amountOf((string) $v)), $position->parts)) ?: 1.0;
                     @endphp
                     <div class="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                         @foreach ($position->parts as $partLabel => $partValue)
-                            <div class="min-w-0 rounded-[8px] px-2 py-1" style="background: var(--color-money-sweet-tile)" title="{{ $partValue }}">
-                                <p class="truncate text-2xs" style="color: var(--color-money-sweet-muted)">{{ $partLabel }}</p>
+                            <div class="min-w-0 rounded-[8px] px-2 py-1" style="background: color-mix(in srgb, var(--color-surface-card) 70%, transparent); border: 1px solid color-mix(in srgb, var(--color-brand-gold) 25%, transparent)" title="{{ $partValue }}">
+                                <p class="truncate text-2xs text-(--color-ink-muted)">{{ $partLabel }}</p>
                                 <p class="tabular whitespace-nowrap text-sm font-bold">{{ $short((string) $partValue) }}</p>
-                                <div class="mt-1 h-[3px] rounded-full" style="background: color-mix(in srgb, var(--color-money-sweet-ink) 10%, transparent)">
+                                <div class="mt-1 h-[3px] rounded-full" style="background: color-mix(in srgb, var(--color-ink) 10%, transparent)">
                                     <i class="block h-full rounded-full"
                                        style="width: {{ max(3, (int) round(max(0.0, $amountOf((string) $partValue)) / $partSum * 100)) }}%; background: var(--color-pal-{{ $partTones[$loop->index % 4] }})"></i>
                                 </div>
@@ -292,7 +292,7 @@
                         <div data-money-today class="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                             @foreach ($position->tiles as $heroTile)
                                 <div data-money-tile="{{ $heroTile['tone'] }}" class="flex min-w-0 items-center justify-between gap-2 rounded-[8px] px-2 py-1 text-xs"
-                                     style="background: var(--color-money-sweet-tile)">
+                                     style="background: color-mix(in srgb, var(--color-surface-card) 70%, transparent)">
                                     <span class="truncate">{{ $heroTile['label'] }}</span>
                                     <span data-money-tile-value class="tabular whitespace-nowrap text-sm font-bold"
                                           @if ($heroTile['tone'] === 'in') style="color: var(--color-success)" @elseif ($heroTile['tone'] === 'out') style="color: var(--color-danger)" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</span>
@@ -361,6 +361,28 @@
                 </div>
             @endif
         </div>
+        @endif
+        {{-- ⭐ আজ যা করতে হবে — অপেক্ষার প্রথম চারটা, বড় অঙ্কে (মালিকের অনুমোদিত নমুনা, ১ নভেম্বর ২০২৬); বাকিগুলো নিচে "নজরে রাখুন"-এ —
+             ⛔ একই ঘর দুই জায়গায় নয় --}}
+        @if ($todayWork->isNotEmpty() && $layout->shows('exceptions'))
+            <div data-home-today-work class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 pb-3 pt-2"
+                 style="border-top: 4px solid var(--color-pal-red)">
+                <h2 class="mb-2 flex items-center justify-between text-sm font-semibold text-(--color-ink)">
+                    {{ __('home.today_work') }}
+                    <span class="rounded-full px-2 text-2xs" style="background: color-mix(in srgb, var(--color-pal-red) 12%, transparent); color: var(--color-pal-red)">{{ __('home.today_work_count', ['count' => $todayWork->count()]) }}</span>
+                </h2>
+                <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    @foreach ($todayWork as $widget)
+                        @php $wt = ['red', 'orange', 'yellow', 'purple'][$loop->index % 4]; @endphp
+                        <a href="{{ $widget->href }}" data-today-work class="grid min-w-0 grid-cols-[auto_1fr] items-center gap-x-2.5 rounded-[10px] px-3 py-2"
+                           style="background: color-mix(in srgb, var(--color-pal-{{ $wt }}) 10%, transparent); border: 1px solid color-mix(in srgb, var(--color-pal-{{ $wt }}) 25%, transparent)">
+                            <b class="tabular row-span-2 whitespace-nowrap text-xl font-bold" style="color: var(--color-pal-{{ $wt }})">{{ $widget->value }}</b>
+                            <span class="line-clamp-2 text-sm font-semibold leading-snug text-(--color-ink)" title="{{ $widget->label }}">{{ $widget->label }}</span>
+                            <small class="truncate text-2xs text-(--color-ink-muted)">{{ $widget->hint }}</small>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
         @endif
     </section>
     </x-slot:header>
@@ -464,9 +486,9 @@
         {{-- ── পাশাপাশি: ব্যতিক্রম কেন্দ্র আর সদ্য যা হয়েছে ── --}}
         <div data-home-unit="work" style="order: {{ $layout->position('work') }}">
             <div class="hm-work mb-4">
-                @if ($todo->isNotEmpty() && $layout->shows('exceptions'))
+                @if (($waiting->isNotEmpty() || $quiet->isNotEmpty()) && $layout->shows('exceptions'))
                     <section data-exception-center class="min-w-0">
-                        <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.exceptions_title') }}</h2>
+                        <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.watch_title') }}</h2>
                         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) shadow-(--shadow-card)">
                             @foreach ($waiting as $widget)
                                 @php $warn = $widget->tone === 'warn'; @endphp

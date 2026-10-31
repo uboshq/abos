@@ -19,6 +19,8 @@ return [
     'crore' => 'কোটি',
     'lakh' => 'লাখ',
     'money_as_booked' => 'খাতা অনুযায়ী, এই মুহূর্তে',
+    'today_work' => 'আজ যা করতে হবে',
+    'today_work_count' => ':countটা অপেক্ষায়',
     'watch_title' => 'নজরে রাখুন',
     'watch_hint' => 'চাপলে কাগজ',
     'watch_all_clear' => 'সব ঠিক — এখন কিছু করার নেই',

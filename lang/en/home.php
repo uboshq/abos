@@ -17,6 +17,8 @@ return [
     'crore' => 'Cr',
     'lakh' => 'L',
     'money_as_booked' => 'per the books, right now',
+    'today_work' => 'To do today',
+    'today_work_count' => ':count waiting',
     'watch_title' => 'Keep an eye on',
     'watch_hint' => 'tap for the paper',
     'watch_all_clear' => 'All clear — nothing to do now',
