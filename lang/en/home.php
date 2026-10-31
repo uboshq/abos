@@ -13,6 +13,7 @@ return [
     'business_pictures' => 'The business at a glance',
     'details' => 'Details',
     'exceptions_title' => 'Exception center — what needs doing now',
+    'more_figures' => 'More figures',
     'severity_warn' => 'Warning',
     'severity_attention' => 'Attention',
     'open' => 'Open',

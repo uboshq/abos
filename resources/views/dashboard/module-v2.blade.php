@@ -17,9 +17,28 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $dashboard->title }}</x-slot:title>
 
+    {{-- ⭐ মাথার পট্টি মডিউলের রঙে — ড্যাশবোর্ডের পরিকল্পনা §৪.১ (মালিক, ২৪ অক্টোবর ২০২৬: "full erp RGB ekta color dibe")।
+         ⓘ রং কেবল পরিচয়ে: পট্টি আর উপরের চার কার্ড; লেখা, বোতাম, চার্ট আর তালিকায় নয়। সাদা লেখা প্রতিটা মডিউল-রঙে ≥ ৪.৯২ঃ১
+         ([[TheModuleColoursCarryWhiteTextTest]]); রঙিন সুইচ বন্ধে ব্র্যান্ড ৭০০ — একই কনট্রাস্ট। --}}
     <x-slot:header>
-        <x-ui.page-header :title="$dashboard->title" :subtitle="$dashboard->subtitle" />
+        <div data-dashboard-head="{{ $module }}"
+             class="rounded-(--radius-card) px-4 py-3 text-white"
+             style="background: var(--color-module-{{ $module }}, var(--color-brand-700))">
+            <h1 class="text-xl font-bold leading-tight">{{ $dashboard->title }}</h1>
+            @if ($dashboard->subtitle)
+                <p class="mt-0.5 text-sm text-white/90">{{ $dashboard->subtitle }}</p>
+            @endif
+        </div>
     </x-slot:header>
+
+    @php
+        /*
+         * ⭐ উপরের চার — মডিউলের কঠিন রঙে বড় করে; বাকি সব নিচে "আরও অঙ্ক"-এ, একটাও হারায় না (পরিকল্পনা §১, §৪.২, §৪.৫)।
+         * ⓘ কোন চারটা: মডিউল যে ক্রমে ঘোষণা করে তার প্রথম চারটা — ক্রমটা মডিউলের মালিকের গুরুত্বের ক্রম ([[DashboardDefinition]])।
+         */
+        $topStats = array_slice($dashboard->stats, 0, 4);
+        $moreStats = array_slice($dashboard->stats, 4);
+    @endphp
 
     <div data-dashboard-v2 class="flex flex-col gap-4">
 
@@ -40,14 +59,55 @@
             </div>
         @endif
 
-        {{-- ── সূচকের কার্ড — চারটা করে এক লাইনে ───────────────────── --}}
-        @if ($dashboard->stats !== [])
+        {{-- ── ⭐ উপরের চার কার্ড — মডিউলের কঠিন রঙে, সাদা লেখা (পরিকল্পনা §৪.২) ─────────────
+             ⓘ অবস্থার চিপ নিজের অর্থের রঙেই (সবুজ/হলুদ/লাল/নীল, হালকা জমিনে গাঢ় লেখা) — মডিউলের রঙে মেশে না; তুলনা ▲/▼ সাদায়,
+               রং নয়, কারণ কঠিন জমিনে সবুজ-লাল লেখা ৪.৫ঃ১ পায় না। --}}
+        @if ($topStats !== [])
+            {{-- ⓘ ক্লাসগুলো পুরো লেখা — Tailwind জোড়া-দেওয়া নাম দেখতে পায় না --}}
+            <div data-stat-top="{{ $module }}" @class([
+                'grid gap-3 sm:grid-cols-2',
+                // ⓘ lg (১০২৪) থেকে এক সারিতে — মালিকের ১৩৬৬-এ চারটাই পাশাপাশি (এই অ্যাপের xl ১৪৪০, তাতে ১৩৬৬-এ ২+২ হত; ছবিতে দেখা)
+                'lg:grid-cols-2' => count($topStats) === 2,
+                'lg:grid-cols-3' => count($topStats) === 3,
+                'lg:grid-cols-4' => count($topStats) === 4,
+            ])>
+                @foreach ($topStats as $stat)
+                    @php
+                        [$chipClass, $chipIcon, $chipText] = $chips[$stat->tone] ?? $chips[\App\Core\Engines\Dashboard\Stat::NEUTRAL];
+                        $change = $stat->value === \App\Core\Engines\Dashboard\Stat::HIDDEN ? null : $stat->change();
+                    @endphp
+                    <a @if ($stat->href) href="{{ $stat->href }}" @endif data-stat data-stat-solid
+                       class="flex min-w-0 flex-col gap-1.5 rounded-(--radius-card) p-4 text-white shadow-(--shadow-card) hover:brightness-110"
+                       style="background: var(--color-module-{{ $module }}, var(--color-brand-700))"
+                       title="{{ $stat->hint }}">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="min-w-0 text-sm font-medium text-white/90">{{ $stat->label }}</span>
+                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold {{ $chipClass }}">
+                                <x-ui.icon :name="$chipIcon" :size="11" />{{ $chipText }}
+                            </span>
+                        </span>
+                        <span class="tabular break-words text-2xl font-bold leading-tight">{{ $stat->value ?? '—' }}</span>
+                        @if ($change !== null)
+                            <span class="text-2xs text-white/90">
+                                {{ $change >= 0 ? '▲' : '▼' }} {{ number_format(abs($change), 1) }}% {{ $stat->previousLabel }}
+                            </span>
+                        @else
+                            <span class="line-clamp-2 text-xs text-white/85">{{ $stat->hint }}</span>
+                        @endif
+                    </a>
+                @endforeach
+            </div>
+        @endif
+
+        {{-- ── আরও অঙ্ক — বাকি সব সূচক, আগের মতো (পরিকল্পনা §৪.৫: একটাও বাদ নয়) ───────────── --}}
+        @if ($moreStats !== [])
+            <h2 class="text-sm font-semibold text-(--color-ink-muted)" data-stat-more-title>{{ __('home.more_figures') }}</h2>
             @php
                 /*
                  * ⭐ মালিকের নিয়ম (১ অক্টোবর ২০২৬, পুরনো পাতায়): ছয়টা পর্যন্ত এক লাইনে, নয়-দশটা দুই লাইনে (৫ + ৪) — কম লাইন।
                  * ⓘ তাই সারি যত কম সম্ভব, প্রতি সারিতে পাঁচটার বেশি নয় (ছয়টা একাই এক সারি); শেষ সারিতে একা একটা ঘর নয়।
                  */
-                $statCount = count($dashboard->stats);
+                $statCount = count($moreStats);
                 $statCols = $statCount <= 6 ? max(1, $statCount) : (int) ceil($statCount / ceil($statCount / 5));
             @endphp
             <div data-stat-grid data-stat-cols="{{ $statCols }}" @class([
@@ -58,7 +118,7 @@
                 'xl:grid-cols-5' => $statCols === 5,
                 'xl:grid-cols-6' => $statCols === 6,
             ])>
-                @foreach ($dashboard->stats as $stat)
+                @foreach ($moreStats as $stat)
                     @php
                         [$chipClass, $chipIcon, $chipText] = $chips[$stat->tone] ?? $chips[\App\Core\Engines\Dashboard\Stat::NEUTRAL];
                         $change = $stat->value === \App\Core\Engines\Dashboard\Stat::HIDDEN ? null : $stat->change();
