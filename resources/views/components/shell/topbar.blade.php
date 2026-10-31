@@ -150,6 +150,21 @@
         </button>
     @endif
 
+    {{-- ⭐ ফোনের ☰ — বাঁ থেকে মেনু বের করে: মডিউলের রঙিন আইকন আর চলতি মডিউলের পুরো মেনু (মালিক, ৩০ অক্টোবর ২০২৬;
+         Material 3 navigation drawer)। ⓘ কেবল ৭৬৮-এর নিচে; বড় পর্দার "≡" নিজের ঘরে, তাই এটা তার পরে — বারের প্রথম জিনিস "≡"-এর ঘরই থাকে। বোতাম ৪০×৪০ (আঙুলের মাপ)। --}}
+    <button type="button"
+            x-data
+            data-phone-menu-toggle
+            @click="$store.sidebar.phone = true"
+            class="-ms-1 flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
+                   transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500) md:hidden"
+            aria-label="{{ __('core.a11y.menu') }}"
+            title="{{ __('core.a11y.menu') }}"
+            :aria-expanded="$store.sidebar.phone ? 'true' : 'false'">
+        <x-ui.icon name="list" :size="22" />
+    </button>
+
     {{-- ⭐ ⊞ · লোগো · কোম্পানি · শাখা ▾ — এক সারিতে, ৩৭৫ থেকে ১৯২০px (মালিক, ২১ অক্টোবর ২০২৬)।
          ⓘ "≡"-এর কিনারা থেকে ঠিক ১৪px: ঘরের ভেতরে "≡"-এর ডানে (রেল − ৪০px) ÷ ২ ফাঁকা, তার পরে বারের `gap-2` — দুইটা বাদ দিয়ে বাকিটা। --}}
     <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px] max-sm:gap-0',

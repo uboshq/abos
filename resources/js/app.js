@@ -18,6 +18,7 @@ import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import { sidebarStore } from './sidebar-state.js'
+import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
@@ -105,6 +106,8 @@ document.addEventListener('alpine:init', () => {
      * ⓘ কারণ আর পথের পাহারা `document-scan.js`-এ।
      */
     Alpine.data('documentScan', documentScan)
+    // ⓘ ফোনের নিচের বার — স্ক্রলে সরে যাওয়া, আবার চাপ, লম্বা চাপের মেনু ([[shell.bottom-nav]])
+    Alpine.data('bottomNav', () => bottomNav())
 
     /*
      * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।

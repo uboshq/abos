@@ -228,4 +228,22 @@ return [
         'post_max_size' => env('ABOS_POST_MAX_SIZE'),
         'upload_max_filesize' => env('ABOS_UPLOAD_MAX_FILESIZE'),
     ],
+
+    /*
+     * ⭐ ভূমিকা ধরে ফোনের নিচের বারের চারটা মডিউল — SAP Fiori-র ভূমিকার launchpad, Dynamics/Odoo-র ফোন (মালিক, ৩১ অক্টোবর ২০২৬:
+     * "int. standard onuzayi"; পরিকল্পনা তাঁকে বলা আর "ok")। ক্রমটা অগ্রাধিকার — কয়েকটা ভূমিকা থাকলে আগেরটা ([[MenuBuilder::phoneKind()]])।
+     * ⓘ কনফিগে, Core-এ নয়: Core মডিউল বা পক্ষের নাম হাতে লেখে না ([[TheDealerPaidTheCompanyNotMeTest]])।
+     * ⓘ চাবি নেই এমন মডিউল বাদ, ফাঁকা ঘর রেলের পরের মডিউলে ভরে ([[MenuBuilder::phoneBar()]])।
+     */
+    'phone_four' => [
+        'owner' => ['executive', 'approval', 'sales', 'accounts'],
+        'admin' => ['executive', 'approval', 'system_admin', 'accounts'],
+        'manager' => ['sales', 'inventory', 'approval', 'accounts'],
+        'accounts' => ['accounts', 'finance', 'customer', 'approval'],
+        'purchase' => ['purchase', 'supplier', 'inventory', 'approval'],
+        'warehouse' => ['inventory', 'purchase', 'sales', 'approval'],
+        'hr' => ['hr', 'approval', 'accounts', 'governance'],
+        'sales' => ['sales', 'customer', 'inventory', 'promotion'],
+        'counter' => ['sales', 'accounts', 'customer', 'inventory'],
+    ],
 ];

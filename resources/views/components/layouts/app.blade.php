@@ -58,6 +58,9 @@
       {{-- ⭐ দুই-কলামের টাকার ফর্ম (`<x-layouts.app two-column-form>`) — ১৫৩৬-এর নিচে মেনু রেলে বা ভাসমান, যাতে নকশার
            দুই কলাম মালিকের ১৩৬৬-এর পর্দায় ধরে ([[sidebar-state.js]]; মালিক আর fe, ২৪ অক্টোবর ২০২৬) --}}
       @if ($twoColumnForm ?? false) data-two-column-form @endif
+      {{-- ⭐ রঙিন মডিউল বন্ধ — সব মডিউল ব্র্যান্ডের এক রঙে (`tokens.css`-এর `[data-modules='calm']`; কোম্পানির সুইচ
+           `system.colorful_modules`, ড্যাশবোর্ডের পরিকল্পনা §৩.৬) --}}
+      @auth @unless ((bool) app(\App\Core\Services\SettingsService::class)->get('system.colorful_modules', true)) data-modules="calm" @endunless @endauth
 
       {{--
           চলতি রূপের টোকেনগুলো — সার্ভারে বাছাই করে, কেবল একটার।
@@ -76,7 +79,9 @@
           একটা ভুল করলে রং নীরবে অন্যটা হয়ে যেত। মিলিয়ে দেওয়াটা এখন
           সার্ভারে হয়, তাই লড়াইটাই আর নেই।
       --}}
-      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookPreview::style(auth()->user()?->theme ?? 'light') ?? \App\Core\Support\LookRegistry::styleForUser(auth()->user()?->ui, auth()->user()?->theme ?? 'light') }}">
+      {{-- ⭐ রূপের রং আর inline নয় — `<head>`-এর `<style data-look>`-এ, আলো আর অন্ধকার আলাদা ([[LookRegistry::sheetForUser()]]);
+           inline থাকলে "ফোনের মতো" বাছা মানুষের পাতা যন্ত্র অন্ধকারে গেলেও সাদা থাকত। ⓘ কেবল প্রিভিউ (নিজের হাতে চাওয়া এক থিম) inline-এ থাকে। --}}
+      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookPreview::style(auth()->user()?->theme ?? 'light') }}">
 <head>
     <meta charset="utf-8">
 
@@ -101,6 +106,10 @@
               data-action="{{ __('live.refresh') }}">
     @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- ⓘ স্টাইলশিটের পরে — `:root:root` (০,৩,০) এমনিতেই জেতে, ক্রমটা কেবল বাড়তি নিশ্চয়তা --}}
+    @if (\App\Core\Support\LookPreview::style(auth()->user()?->theme ?? 'light') === null)
+        <style data-look @nonce>{!! \App\Core\Support\LookRegistry::sheetForUser(auth()->user()?->ui) !!}</style>
+    @endif
 
     {{--
         মাউস পৌঁছালেই পাতাটা আনা শুরু — ক্লিকের অপেক্ষা নয়।

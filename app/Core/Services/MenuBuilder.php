@@ -481,6 +481,91 @@ final class MenuBuilder
     }
 
     /**
+     * ⭐ ভূমিকা ধরে ফোনের চারটা — `config/abos.php`-এর `phone_four` (ভূমিকা → চারটা মডিউলের কোড; ক্রমটা অগ্রাধিকার)। ⓘ কনফিগে, এখানে
+     * নয়: Core মডিউল বা পক্ষের নাম হাতে লেখে না ([[TheDealerPaidTheCompanyNotMeTest]], ৩১ অক্টোবর ২০২৬ Mac-এ ধরা)।
+     *
+     * @return array<string, list<string>>
+     */
+    public static function phoneFour(): array
+    {
+        return (array) config('abos.phone_four', []);
+    }
+
+    /**
+     * ভূমিকার নাম → উপরের দল। নাম বড়-ছোট হাতের অক্ষর আর ফাঁকা/`_` ছাড়া মেলে — টেমপ্লেটের নাম ("Field Sales", "Accountant") আর
+     * কোম্পানির নিজের দেওয়া নাম (লাইভে "WAREHOUSE_IN_CHARGE", "SR", "ACCOUNTS") দুটোই।
+     */
+    private const ROLE_KIND = [
+        'superadmin' => 'owner', 'owner' => 'owner',
+        'admin' => 'admin', 'useradmin' => 'admin',
+        'manager' => 'manager', 'branchincharge' => 'manager',
+        'accountant' => 'accounts', 'accounts' => 'accounts',
+        'purchase' => 'purchase', 'purchaseofficer' => 'purchase',
+        'warehouse' => 'warehouse', 'warehouseincharge' => 'warehouse',
+        'hr' => 'hr',
+        'sr' => 'sales', 'fieldsales' => 'sales', 'dsm' => 'sales', 'asm' => 'sales', 'rsm' => 'sales', 'salesman' => 'sales',
+        'counter' => 'counter',
+    ];
+
+    /** এই মানুষের ভূমিকার দল — [[phoneFour()]]-এর ক্রমে প্রথমটা; চেনা কোনো ভূমিকা না থাকলে null */
+    public function phoneKind(?User $user): ?string
+    {
+        $kinds = [];
+        foreach ($user?->roles ?? [] as $role) {
+            $key = (string) preg_replace('/[^a-z]/', '', strtolower((string) $role->name));
+            if (isset(self::ROLE_KIND[$key])) {
+                $kinds[self::ROLE_KIND[$key]] = true;
+            }
+        }
+
+        foreach (array_keys(self::phoneFour()) as $kind) {
+            if (isset($kinds[$kind])) {
+                return $kind;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ⭐ ফোনের নিচের বারের চারটা মডিউল, এই মানুষের (মালিক, ৩০ অক্টোবর ২০২৬: "smart kajer kichu daw int standard onuzayi")।
+     *
+     *   · রেলে যা পিন করা ([[arranged()]]-এর ক্রমে) আগে — বড় পর্দায় পিন বদলালে ফোনের বারও বদলায়;
+     *   · তারপর ভূমিকার চারটা ([[phoneFour()]], [[phoneKind()]]) — ⛔ আগে সবার বারে মেনুর প্রথম চারটা (হিসাব, অর্থ,
+     *     সরবরাহকারী, ক্রয়), কারও কাজের সাথে মেলে না;
+     *   · তারপর রেলের ক্রম (নিজের সাজ, নইলে খোলা পাতার অনুপাত)।
+     * প্রতিটায় `count` — মডিউলের সারিগুলোর ব্যাজের যোগ (অপেক্ষার অনুমোদন, খসড়া …), শূন্য হলে null।
+     *
+     * @param  list<array<string, mixed>>  $menu  [[forUser()]]-এর ফল
+     * @return array{four: list<array<string, mixed>>, more: bool}
+     */
+    public function phoneBar(array $menu, ?User $user): array
+    {
+        $arranged = $this->arranged($menu, $user);
+        $byCode = array_column($arranged, null, 'code');
+        $kind = $this->phoneKind($user);
+
+        $codes = array_column(array_filter($arranged, fn (array $m): bool => (bool) ($m['pinned'] ?? false)), 'code');
+        if ($kind !== null) {
+            $codes = [...$codes, ...array_filter((self::phoneFour()[$kind] ?? []), fn (string $c): bool => isset($byCode[$c]))];
+        }
+        $codes = array_slice(array_values(array_unique([...$codes, ...array_column($arranged, 'code')])), 0, 4);
+
+        $four = array_map(function (string $code) use ($byCode): array {
+            $sum = 0;
+            foreach ($byCode[$code]['groups'] ?? [] as $items) {
+                foreach ($items as $item) {
+                    $sum += (int) ($item['badge'] ?? 0);
+                }
+            }
+
+            return [...$byCode[$code], 'count' => $sum > 0 ? $sum : null];
+        }, $codes);
+
+        return ['four' => $four, 'more' => count($arranged) > 4];
+    }
+
+    /**
      * ছয়টা ভাগ সবসময় একই ক্রমে — Dashboard, Master, Transactions,
      * Approval, Reports, Settings।
      *

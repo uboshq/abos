@@ -88,6 +88,7 @@ return [
     'saved' => '{0}Nothing changed|{1}One setting saved|[2,*]:count settings saved',
 
     'document_peek' => 'A paper link in a list opens in a popup (peek)',
+    'colorful_modules' => 'Colourful modules — each module in its own colour (off: all in one colour)',
     'edit_posted_papers' => 'Posted papers can be edited (before the month close, super admin only, before and after kept)',
     'dashboards_v2' => 'New dashboards on (new charts and cards on the module dashboards)',
     'notice_bar_max' => 'Most notices on the bottom bar',
