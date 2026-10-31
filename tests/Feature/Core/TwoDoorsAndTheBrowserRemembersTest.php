@@ -63,6 +63,19 @@ class TwoDoorsAndTheBrowserRemembersTest extends TestCase
     }
 
     /**
+     * ⭐ দুই দরজার জমিন এক — গাঢ় ব্র্যান্ড রঙে আলপনা (মালিক, ৩১ অক্টোবর ২০২৬: "login page ekdom sada mata holo keno …
+     * /signin idte update daw")। ⛔ আগে শান্ত দরজাটা হালকা "মুক্তা-সাদা" জমিনে — মালিকের চোখে আগের নকশা হারানো।
+     */
+    public function test_both_doors_stand_on_the_alpona(): void
+    {
+        foreach (['login', 'login.calm'] as $door) {
+            $html = (string) $this->get(route($door, $door === 'login' ? ['full' => 1] : []))->assertOk()->getContent();
+            $this->assertMatchesRegularExpression('/<body\b[^>]*bg-\(--color-brand-900\)[^>]*style="background-image: url\([^)]*brand\/alpona\.svg/s', $html,
+                "⛔ {$door}: পাতার জমিনে আলপনা নেই — সাদামাটা পাতা।");
+        }
+    }
+
+    /**
      * সফলভাবে ঢোকার পর ব্রাউজারে চিহ্ন বসে।
      *
      * চিহ্নটা কেবল `1` — কে ঢুকেছিলেন, কোন কোম্পানি, কিছুই নয়। এটা

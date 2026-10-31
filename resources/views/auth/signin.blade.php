@@ -32,30 +32,13 @@
 </head>
 
 {{--
-    জমিন হালকা, আলপনা নেই।
-
-    ── কেন এখানে সোনা প্রায় নেই ─────────────────────────────────────────
-    আলপনা আর সোনা ABOS-এর অলংকার, আর তার জায়গা `/login`। এই পাতাটার
-    পুরো কারণই "কম" — নকশা সরিয়ে দিলে যেটুকু থাকে সেটাই কাজ। তবু
-    একটামাত্র সোনালি চুল-দাগ রাখা হয়েছে লোগোর নিচে: ওটুকু না থাকলে
-    পাতাটা যেকোনো লগইন পাতার মতো দেখাত, ABOS-এর মতো নয়।
+    ⭐ জমিন `/login`-এর মতোই — গাঢ় ব্র্যান্ড রঙে সোনালি আলপনা (মালিক, ৩১ অক্টোবর ২০২৬: "login page ekdom sada mata holo keno,
+    ager bacgraund desin kothay haralo … /signin idte update daw")।
+    ⓘ আগে (১ অক্টোবর ২০২৬) এখানে "মুক্তা-সাদা" হালকা জমিন ছিল — মালিকের চোখে সেটা সাদামাটা; কার্ডটা আগের মতোই সাদা, কাচের।
+    ⓘ ক্লাসগুলো `/login`-এর হুবহু — নতুন CSS লাগে না; ছবিটা না এলে রঙটা থাকে।
 --}}
-{{--
-    ⭐ মুক্তা-সাদা জমিন — মালিকের বাছাই, ১ অক্টোবর ২০২৬ ("প্রিমিয়াম ২", নমুনার পাতা থেকে)।
-    ⓘ নরম টিয়া বৃত্ত আর ABOS-এর "A" চিহ্নের হালকা জলছাপ; সবই `aria-hidden`, ক্লিক ধরে না।
-    ⚠️ রংগুলো inline — নতুন CSS বানানো ছাড়াই লাইভে বসে।
---}}
-<body class="relative min-h-dvh overflow-x-hidden" style="background: #EEF5F7;">
-
-    <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
-        <div style="position: absolute; width: 640px; height: 640px; border-radius: 50%; left: -200px; top: -260px; opacity: .55;
-                    background: radial-gradient(circle at 35% 35%, #BFF0F8, #8EDCEA 60%, #6CCBDD);"></div>
-        <div style="position: absolute; width: 520px; height: 520px; border-radius: 50%; right: -170px; bottom: -230px; opacity: .7;
-                    background: radial-gradient(circle at 40% 40%, #D3F4EC, #A7E3D6);"></div>
-        <div style="position: absolute; width: 170px; height: 170px; border-radius: 50%; right: 18%; top: 9%; opacity: .8; background: #CFEFF5;"></div>
-        <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
-             style="position: absolute; width: 520px; max-width: 90vw; height: auto; left: 4%; bottom: -120px; opacity: .07; transform: rotate(-12deg);">
-    </div>
+<body class="relative min-h-dvh overflow-x-hidden bg-(--color-brand-900) bg-[length:240px_240px] bg-repeat"
+      style="background-image: url('{{ asset('brand/alpona.svg') }}')">
 
     <div class="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-10">
 
@@ -70,7 +53,7 @@
 
         {{-- ⭐ কাচের মতো সাদা কার্ড — লোগো, সম্ভাষণ আর ফর্ম এক কার্ডে (মুক্তা-সাদা নকশা) --}}
         <div class="px-6 py-8 sm:px-8"
-             style="border-radius: 28px; border: 1px solid #E3EDF0; background: rgba(255,255,255,.86);
+             style="border-radius: 28px; border: 1px solid #E3EDF0; background: rgba(255,255,255,.97);
                     box-shadow: 0 40px 90px rgba(11,60,72,.12); backdrop-filter: blur(6px);">
 
         {{-- ব্র্যান্ড — পুরো লকআপ, তারপর সম্ভাষণ --}}

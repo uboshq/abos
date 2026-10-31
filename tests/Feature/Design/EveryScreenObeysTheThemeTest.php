@@ -49,7 +49,7 @@ class EveryScreenObeysTheThemeTest extends TestCase
         'app/Modules/Finance/Resources/views/hand-loan/print/' => 'হাওলাতের চিঠি, ছাপার কাগজ — একই কারণ',
         'resources/views/mail/' => 'ইমেইল — মেইল-প্রোগ্রাম CSS ভেরিয়েবল পড়ে না, রং ইনলাইন হেক্সেই যেতে হয়',
         'resources/views/errors/layout.blade.php' => 'ত্রুটির পাতা ইচ্ছা করে কোনো CSS টানে না (বিল্ড ভাঙলেও যেন পড়া যায়) — টোকেনই সেখানে নেই',
-        'resources/views/auth/signin.blade.php' => 'মালিকের বাছা "মুক্তা" লগইন নকশা — লগইনের আগে কারও থিম নেই',
+        'resources/views/auth/signin.blade.php' => 'লগইনের পাতা — আলপনার জমিনে সাদা কার্ড (মালিক, ৩১ অক্টোবর ২০২৬); লগইনের আগে কারও থিম নেই',
         'resources/views/auth/_form.blade.php' => 'ঐ লগইন নকশার ফর্ম — একই কারণ',
         'resources/views/components/shell/scanner.blade.php' => 'ক্যামেরার ছবির উপর কোণ আর আড়াল — যেকোনো ছবির উপর চোখে পড়তে হয়, থিমের রঙে নয়',
     ];
