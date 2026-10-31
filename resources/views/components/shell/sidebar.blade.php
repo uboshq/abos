@@ -104,11 +104,6 @@
     সাইডবারটা খোলাই দেখায় — অর্থাৎ ভুল অবস্থাটা দেখা যায় না, শুধু
     গুটানো ব্যবহারকারীর ক্ষেত্রে এক পলকে খোলা থেকে গুটিয়ে যায়।
 --}}
-{{-- ⭐ ফোনের ড্রয়ারের পেছনের পর্দা — চাপলে মেনু বন্ধ (Material 3: scrim) --}}
-<div x-data x-cloak x-show="$store.sidebar.phone" x-transition.opacity
-     data-phone-menu-scrim
-     @click="$store.sidebar.phone = false"
-     class="fixed inset-0 z-40 bg-black/40 md:hidden" aria-hidden="true"></div>
 <aside x-data="sidebarFilter"
        {{--
            চওড়া মাপটা স্থির ক্লাসেই, Alpine-এর অপেক্ষায় নয়।
@@ -887,3 +882,8 @@
         </div>
     </div>
 </aside>
+{{-- ⭐ ফোনের ড্রয়ারের পেছনের পর্দা — চাপলে মেনু বন্ধ (Material 3: scrim); ⓘ রেলের পরে, যাতে পাতার সারি রেল দিয়েই শুরু হয় --}}
+<div x-data x-cloak x-show="$store.sidebar.phone" x-transition.opacity
+     data-phone-menu-scrim
+     @click="$store.sidebar.phone = false"
+     class="fixed inset-0 z-40 bg-black/40 md:hidden" aria-hidden="true"></div>
