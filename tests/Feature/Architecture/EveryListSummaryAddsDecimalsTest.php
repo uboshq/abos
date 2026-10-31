@@ -39,7 +39,9 @@ final class EveryListSummaryAddsDecimalsTest extends TestCase
         'app/Http/Controllers/Api/ApprovalApiController.php' => [2, 'স্থায়ী — কাগজের তালিকা নয়: অনুমোদনের অনুরোধের সারি, ট্যাবে ছাঁকা'],
         'app/Http/Controllers/Api/PhonePaperApiController.php' => [1, 'cb — ফেরত, কেনার কাগজ আর ট্রান্সফারের যোগফল; ListSummary-তে সরবে (তালিকার মোটের শাখা)'],
         'app/Modules/Purchase/Http/Controllers/PurchaseApiController.php' => [2, 'cb — কেনার তালিকা (status != cancelled) ListSummary-তে সরবে; অন্যটা সরবরাহকারীর দেনা: স্থায়ী — কাগজের তালিকা নয়'],
-        'app/Modules/Sales/Http/Controllers/CollectionApiController.php' => [1, 'a6 — আদায়ের মোট; ListSummary-তে সরবে (কমিট ১-এর উপর)'],
+        // ⓘ ১ → ২ (fe, ৩১ অক্টোবর ২০২৬): main-এর আদায়ের সারিতে "বিলে প্রয়োগ হয়নি" = আদায় − তার লাইনের যোগ (`$c->lines->sum`) —
+        //   একটা সারির নিজের হিসাব, তালিকার মোট নয়; তালিকার মোটটা আগের মতোই একটা (ListSummary-তে সরবে)
+        'app/Modules/Sales/Http/Controllers/CollectionApiController.php' => [2, 'a6 → fe — আদায়ের মোট ListSummary-তে সরবে; অন্যটা সারির নিজের বাকি, স্থায়ী'],
         'app/Modules/Sales/Http/Controllers/CustomerLedgerApiController.php' => [2, 'স্থায়ী — কাগজের তালিকা নয়: খতিয়ানের বাকি (SUM ডেবিট − SUM ক্রেডিট, এক লাইনে দুটো)'],
         'app/Modules/Sales/Http/Controllers/DeliveryOrderApiController.php' => [1, 'a6 — DO-র মোট; ListSummary-তে সরবে (counted + open)'],
         'app/Modules/Sales/Http/Controllers/SalesDeskApiController.php' => [1, 'a6 — বিক্রির ডেস্কের সর্বমোট; Sales-এর মোটের শাখায়, DO আর SO-র পরে (fe)'],
