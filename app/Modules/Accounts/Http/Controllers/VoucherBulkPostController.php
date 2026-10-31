@@ -10,6 +10,7 @@ use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherSigning;
 use App\Modules\Accounts\Services\VoucherWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -115,7 +116,9 @@ class VoucherBulkPostController extends Controller implements HasMiddleware
 
         foreach (Voucher::query()->whereKey($ids)->orderBy('trx_date')->orderBy('id')->get() as $voucher) {
             $state = $voucher->isDraft() && $user->can('update', $voucher) ? $this->approvals->waitFor($voucher) : null;
-            $pending = $state === 'awaiting'
+            // ⓘ ২৪ অক্টোবর ২০২৬ থেকে [[VoucherSigning]]-এর পাঁচ উত্তর: অপেক্ষা (তাজা বা বাসি) = আগেই অনুমোদনে; NEEDS = এবার চাওয়া হবে।
+            //   ⛔ আগে সব 'awaiting' ছিল, তাই NEEDS-এর খসড়া "অনুমোদনে যাবে" দল থেকে হারিয়ে পোস্টের দলে পড়ত (fe, ৩১ অক্টোবর ২০২৬, Mac-এ দফা ১৪)
+            $pending = in_array($state, [VoucherSigning::AWAITING, VoucherSigning::STALE], true)
                 && ($action = $this->approvals->actionFor($voucher)) !== null
                 && app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($voucher, $action)?->status === Approval::PENDING;
 
@@ -123,13 +126,13 @@ class VoucherBulkPostController extends Controller implements HasMiddleware
                 ! $voucher->isDraft() => 'not_draft',
                 ! $user->can('update', $voucher) => 'not_allowed',
                 $pending => 'already_waiting',
-                $state === 'rejected' => 'rejected',
+                $state === VoucherSigning::REJECTED => 'rejected',
                 default => null,
             };
 
             if ($why !== null) {
                 $skip[] = ['voucher' => $voucher, 'why' => $why];
-            } elseif ($state === 'awaiting') {
+            } elseif ($state === VoucherSigning::NEEDS) {
                 $ask[] = $voucher;
                 $askTotal = bcadd($askTotal, (string) ($voucher->amount ?? '0'), 4);
             } else {

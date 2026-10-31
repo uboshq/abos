@@ -80,6 +80,10 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         // ⓘ বীমার দাবির খাতা নিজের অবস্থাই মানে (জমা · অনুমোদিত · আংশিক · নিষ্পন্ন · নাকচ — [[InsuranceClaim::STATES]])
         'state' => [['state' => 'overdue'], ['state' => 'today'], ['state' => 'lodged']],
         'group_by' => [['group_by' => 'brand'], ['group_by' => 'product']],
+        // ⓘ প্রিন্সিপালের লাইনের রিপোর্ট (কমিশনের উৎস, cb-র commission-drill, main-এ ৩১ অক্টোবর ২০২৬) — একজন প্রিন্সিপাল আর চক্রের নিজের তারিখ
+        'principal' => ['principal' => 987638],
+        'from' => ['from' => '1997-03-11'],
+        'to' => ['to' => '1997-04-17'],
 
         /*
          * ⭐ নোটিফিকেশন রিপোর্টের ছাঁকনি — ১২ অক্টোবর ২০২৬। ⓘ মডিউল, গুরুত্ব, মাধ্যম আর অবস্থার আইডি একটা স্থির তালিকার ক্রম (১ থেকে,
@@ -104,6 +108,18 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         'finance.bank_loan_instalments / date_range' => 'শেষ তারিখ কিস্তির সেবায় "আজ পর্যন্ত" হিসেবে যায়; সারি PHP-তে, ঋণ না থাকলে খালি',
         'finance.bank_loan_ledger / date_range' => 'খতিয়ান কেবল একটা সত্যিকারের ঋণ বাছলে গড়ে ওঠে ([[LoanLedgerReports::bankLoan()]]) — বানানো আইডিতে খালি খাতা',
         'finance.bank_loan_ledger / facility_id' => 'ঋণটা ডেটাবেসে খোঁজা হয় — বানানো আইডি না মিললে খালি খাতা, ছাঁকনি থাকুক বা না থাকুক',
+        // ⓘ কমিশনের অঙ্কের উৎস-সারি ([[PrincipalLinesReport::lines()]]): প্রতিটা প্রিন্সিপালের UNION PHP-তে গড়ে — প্রিন্সিপাল না থাকলে
+        //   স্থির "1 = 0" কোয়েরি, ছাঁকনি যা-ই হোক (fe, ৩১ অক্টোবর ২০২৬; সারির মিল পাহারা দেয় cb-র কমিশন-ড্রিলের দাবি)
+        'supplier.principal_collections / principal' => 'প্রিন্সিপালের তালিকায় বসে, সারি PHP-তে জন্মায় — প্রিন্সিপাল না থাকলে কোয়েরি খালি',
+        'supplier.principal_collections / from' => 'চক্রের শুরু প্রিন্সিপাল ধরে PHP-তে ([[PrincipalCommission::cycleOf()]]) — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_collections / to' => 'চক্রের শেষ প্রিন্সিপাল ধরে PHP-তে — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_collections / month' => 'মাস প্রিন্সিপালের চক্রে PHP-তে বসে — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_collections / branch' => 'শাখার দেয়াল প্রিন্সিপালের তালিকায় — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_payments / principal' => 'প্রিন্সিপালের তালিকায় বসে, সারি PHP-তে জন্মায় — প্রিন্সিপাল না থাকলে কোয়েরি খালি',
+        'supplier.principal_payments / from' => 'চক্রের শুরু প্রিন্সিপাল ধরে PHP-তে — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_payments / to' => 'চক্রের শেষ প্রিন্সিপাল ধরে PHP-তে — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_payments / month' => 'মাস প্রিন্সিপালের চক্রে PHP-তে বসে — প্রিন্সিপাল না থাকলে খালি',
+        'supplier.principal_payments / branch' => 'শাখার দেয়াল প্রিন্সিপালের তালিকায় — প্রিন্সিপাল না থাকলে খালি',
     ];
 
     private Company $company;
