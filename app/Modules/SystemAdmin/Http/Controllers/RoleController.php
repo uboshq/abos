@@ -435,7 +435,10 @@ class RoleController extends Controller implements HasMiddleware
                     array_pop($parts);
                     $subject = implode('.', $parts);
 
-                    $sections[$subject] ??= $section;
+                    // ⛔ পর্দা কেবল [[SECTIONS]]-এর ভাগ আঁকে — অচেনা ভাগের সারি (অনুমোদনের মেনুর `approval`) পর্দাতেই আসত না, আর
+                    //   রোল সংরক্ষণ করলে `approval.flow.manage` নীরবে কেটে যেত; তাই অচেনা ভাগ "অন্যান্য"-তে (fe, ৩১ অক্টোবর ২০২৬,
+                    //   [[TheRolePageShowsEveryPermissionTest]] main-এ লাল)
+                    $sections[$subject] ??= isset(self::SECTIONS[$section]) ? $section : 'other';
                 }
             }
         }
