@@ -31,7 +31,8 @@
     $context = null;
 
     // ⓘ হোমে নয় — হোমের নিজের মাথায় কোম্পানি · শাখা আর তারিখ আগেই আছে ([[workspace.home]]); একই কথা দুইবার নয়
-    if ($company !== null && ! request()->routeIs('dashboard')) {
+    // ⓘ রঙিন মডিউল ড্যাশবোর্ডও নয় — তার মাথার পট্টিতে কোম্পানি আর শাখার চিপ (মালিকের নমুনা, ৩১ অক্টোবর ২০২৬; [[dashboard.module-v2]])
+    if ($company !== null && ! request()->routeIs('dashboard') && ! ($scopeInHead ?? false)) {
         $today = now()->locale(app()->getLocale())->translatedFormat('l, j F Y');
         $today = strtr($today, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
         $context = implode(' · ', array_filter([
