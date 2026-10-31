@@ -100,7 +100,7 @@
                     {{-- ⓘ নমুনার মতো ঢাল: নিজের রং → তার ৬৮% (কালোর দিকে) — সাদা লেখা দুই প্রান্তেই ৪.৫ঃ১-এর উপরে --}}
                     <a @if ($stat->href) href="{{ $stat->href }}" @endif data-stat data-stat-solid data-stat-colour="{{ $cardColour[$loop->index] }}"
                        class="flex min-w-0 flex-col gap-1.5 rounded-(--radius-card) p-4 text-white shadow-(--shadow-card) hover:brightness-110"
-                       style="background: linear-gradient(135deg, {{ $cardColour[$loop->index] }}, color-mix(in srgb, {{ $cardColour[$loop->index] }} 68%, #000))"
+                       style="background: linear-gradient(135deg, {{ $cardColour[$loop->index] }}, color-mix(in srgb, {{ $cardColour[$loop->index] }} 68%, black))"
                        title="{{ $stat->hint }}">
                         <span class="flex items-start justify-between gap-2">
                             <span class="min-w-0 text-sm font-medium text-white/90">{{ $stat->label }}</span>
