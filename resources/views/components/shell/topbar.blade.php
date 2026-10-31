@@ -124,7 +124,7 @@
         {{-- ⓘ মেনু গুটালে ABOS-এর লেখাও লুকায় (মালিক, ১ নভেম্বর ২০২৬: "menubar hide korle abos top bare hide hobe") --}}
         <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
            class="hidden shrink-0 items-center md:flex" title="ABOS">
-            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS" style="height: 30px; width: auto;">
+            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS" class="h-[30px] w-auto">
         </a>
         <button type="button"
                 x-data
