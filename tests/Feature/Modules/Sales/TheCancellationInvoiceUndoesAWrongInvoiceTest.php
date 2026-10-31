@@ -118,7 +118,8 @@ final class TheCancellationInvoiceUndoesAWrongInvoiceTest extends TestCase
      */
     public function test_a_bill_in_a_closed_month_is_cancelled_today_and_its_month_is_left_alone(): void
     {
-        $this->travel(-1)->months();
+        // ⓘ subMonthNoOverflow — ৩১ তারিখে `travel(-1)->months()` এই মাসেরই ১ তারিখে পড়ত (fe, ৩১ অক্টোবর ২০২৬, main-এর পুরো দৌড়ে লাল)
+        $this->travelTo(now()->subMonthNoOverflow());
         $sale = $this->sell('2');
         $this->travelBack();
         PeriodLock::query()->create([

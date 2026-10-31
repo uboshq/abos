@@ -1061,6 +1061,40 @@
     /* ⓘ মালিকের কেন্দ্র (১০ অক্টোবর ২০২৬) — গাঢ় সোনালি, ব্র্যান্ডের সোনার ঘরের */
     --color-module-executive: #a16207;    /* গাঢ় সোনালি — ৪.৯২ */
 
+    /*
+     * ⭐ রঙিন ড্যাশবোর্ড — মালিকের নমুনা "সব মডিউলের রঙিন ড্যাশবোর্ড" (৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color
+     * used korte bolecilam")। নমুনার বারোটা রং (নীল, সবুজ, কমলা, বেগুনি, টিল, লাল, হলুদ, গোলাপি, আকাশি, ইন্ডিগো, লেবু, অ্যাম্বার), প্রতিটার
+     * ৭০০ ধাপ — নমুনার হালকা ধাপে সাদা লেখা ৪.৫ঃ১ পেত না (হলুদ ১.৯২)। মাথার পট্টি দুই রঙের ঢাল: মডিউলের রং → তার সঙ্গী
+     * (`--color-module2-*`, নমুনার c2)। কার্ড: মানে থাকলে মানের রং (ভালো সবুজ, এখনই লাল, নজর অ্যাম্বার), নইলে মডিউল, সঙ্গী, তারপর বারো রঙের বাকিগুলো।
+     */
+    --color-pal-blue: #1d4ed8;   /* ৬.৭০ */
+    --color-pal-green: #15803d;  /* ৫.০২ */
+    --color-pal-orange: #c2410c; /* ৫.১৮ */
+    --color-pal-purple: #6d28d9; /* ৭.১০ */
+    --color-pal-teal: #0f766e;   /* ৫.৪৭ */
+    --color-pal-red: #b91c1c;    /* ৬.৪৭ */
+    --color-pal-yellow: #a16207; /* ৪.৯২ */
+    --color-pal-pink: #be185d;   /* ৬.০৪ */
+    --color-pal-sky: #0369a1;    /* ৫.৯৩ */
+    --color-pal-indigo: #4338ca; /* ৭.৯০ */
+    --color-pal-lime: #4d7c0f;   /* ৪.৯৯ */
+    --color-pal-amber: #b45309;  /* ৫.০২ */
+    /* মানের রং কার্ডে — সুইচ বন্ধেও বদলায় না (অর্থ বহন করে) */
+    --color-card-good: #15803d;
+    --color-card-bad: #b91c1c;
+    --color-card-warn: #b45309;
+    /* মাথার পট্টির সঙ্গী রং — নমুনার c2 */
+    --color-module2-sales: var(--color-pal-sky);
+    --color-module2-purchase: var(--color-pal-amber);
+    --color-module2-inventory: var(--color-pal-green);
+    --color-module2-accounts: var(--color-pal-purple);
+    --color-module2-finance: var(--color-pal-pink);
+    --color-module2-hr: var(--color-pal-red);
+    --color-module2-customer: var(--color-pal-teal);
+    --color-module2-promotion: var(--color-pal-green);
+    --color-module2-approval: var(--color-pal-orange);
+    --color-module2-system_admin: var(--color-pal-pink);
+
     /* ⓘ নিচের মেনুর উচ্চতা — `--spacing-bottom-nav`-এর ভিত্তি; থিমের বাইরে, যাতে চলন্ত ঘোষণার সময়ও আসল মাপটা জানা থাকে */
     --spacing-bottom-nav-bar: 56px;
 }
@@ -1091,6 +1125,19 @@
     --color-module-reports: var(--color-brand-700);
     --color-module-fixed_assets: var(--color-brand-700);
     --color-module-executive: var(--color-brand-700);
+    /* ⓘ সাজের বারো রং আর সঙ্গী রংও এক রঙে; মানের রং (`--color-card-*`) থাকে */
+    --color-pal-blue: var(--color-brand-700);
+    --color-pal-green: var(--color-brand-700);
+    --color-pal-orange: var(--color-brand-700);
+    --color-pal-purple: var(--color-brand-700);
+    --color-pal-teal: var(--color-brand-700);
+    --color-pal-red: var(--color-brand-700);
+    --color-pal-yellow: var(--color-brand-700);
+    --color-pal-pink: var(--color-brand-700);
+    --color-pal-sky: var(--color-brand-700);
+    --color-pal-indigo: var(--color-brand-700);
+    --color-pal-lime: var(--color-brand-700);
+    --color-pal-amber: var(--color-brand-700);
 }
 
 /* ⭐ ABOS রূপের শান্ত রেল — ৪ সেপ্টেম্বরের নমুনা: টাইল নেই, চিহ্ন অ্যাকসেন্টের কালিতে (অ্যাম্বারে কালো; Looks/navy.php-র মন্তব্য)।

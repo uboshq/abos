@@ -57,7 +57,14 @@ final class TheDepositorTypeWasBlankOnEveryReceiptTest extends TestCase
     {
         $html = $this->get(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))->assertOk()->getContent();
 
-        $this->assertStringContainsString('color-badge-danger-bg', $html, 'পাওনার ঘরে রঙের পটভূমি নেই।');
-        $this->assertStringContainsString('color-badge-success-bg', $html, 'অগ্রিমের জন্য আলাদা রং নেই।');
+        /*
+         * ⓘ রংটা আসে ঘরের নিজের বাঁধন থেকে (`x-bind:class="dueClass"`, [[party-voucher.js]]) — পাতায় রঙের নাম লেখা থাকে না।
+         * ⛔ আগে এই দাবি পাতায় কেবল "color-badge-danger-bg" লেখাটা খুঁজত, আর সেটা মিলত html-এর inline style-এ রূপের ঘোষণা থেকে —
+         *   ঘরের সাথে সম্পর্কহীন (৩১ অক্টোবর ২০২৬: রূপ inline থেকে <style>-এ সরার পর ধরা পড়ল)। বকেয়া হলুদ জমিনে, অগ্রিম সবুজে।
+         */
+        $this->assertMatchesRegularExpression('/<span\b[^>]*data-party-due[^>]*x-bind:class="dueClass"/s', $html, '⛔ পাওনার ঘরে রঙের বাঁধন নেই।');
+        $js = (string) file_get_contents(resource_path('js/party-voucher.js'));
+        $this->assertStringContainsString('bg-(--color-badge-warning-bg)', $js, '⛔ পাওনার ঘরে রঙের পটভূমি নেই — বকেয়া চোখ এড়িয়ে যেত।');
+        $this->assertStringContainsString('bg-(--color-badge-success-bg)', $js, '⛔ অগ্রিমের জন্য আলাদা রং নেই।');
     }
 }

@@ -19,8 +19,9 @@
 @props(['panel', 'compact' => false, 'showRange' => true, 'wide' => false, 'interactive' => true])
 
 @php
-    $palette = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)',
-        'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
+    // ⭐ আটটা রং, প্রতিটা দণ্ড নিজের রঙে — মালিকের রঙিন নমুনা (৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color")।
+    $palette = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)',
+        'var(--color-chart-5)', 'var(--color-chart-6)', 'var(--color-chart-7)', 'var(--color-chart-8)'];
     $zero = fn ($v) => (float) str_replace(',', '', (string) $v) == 0.0;
     $short = fn ($v) => \App\Core\Engines\Dashboard\Series::short($v);
     $isSeries = $panel instanceof \App\Core\Engines\Dashboard\Series;
@@ -241,7 +242,7 @@
                         @if ($len > 0)
                             <circle cx="60" cy="60" r="{{ $r }}" fill="none" stroke-width="18" transform="rotate(-90 60 60)"
                                     stroke-dasharray="{{ round($len - $gap, 2) }} {{ round($circ - $len + $gap, 2) }}" stroke-dashoffset="{{ round(-$at, 2) }}"
-                                    style="stroke: {{ $palette[$i % 6] }}"><title>{{ $part['label'] }}: {{ $part['value'] }}</title></circle>
+                                    style="stroke: {{ $palette[$i % count($palette)] }}"><title>{{ $part['label'] }}: {{ $part['value'] }}</title></circle>
                         @endif
                         @php $at += $len; @endphp
                     @endforeach
@@ -255,7 +256,7 @@
             <div data-donut-legend class="min-w-0 flex-1 space-y-1.5" style="min-width: 7rem; max-width: 28rem">
                 @foreach ($parts as $i => $part)
                     <div class="flex items-center gap-1.5 text-xs" title="{{ $part['label'] }}: {{ $part['value'] }}">
-                        <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $palette[$i % 6] }}"></span>
+                        <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $palette[$i % count($palette)] }}"></span>
                         <span class="min-w-0 flex-1 break-words leading-tight text-(--color-ink-body)">{{ $part['label'] }}</span>
                         <span data-bar-value class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
                         @unless ($compact)
@@ -277,7 +278,7 @@
                     <span class="w-20 shrink-0 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
                     <div class="flex min-w-0 flex-1 justify-center">
                         <div class="flex h-6 items-center justify-center rounded text-white"
-                             style="width: {{ max(8, (int) round(abs($v) / $max * 100)) }}%; min-width: 2.5rem; background: {{ $palette[$i % 6] }}"
+                             style="width: {{ max(8, (int) round(abs($v) / $max * 100)) }}%; min-width: 2.5rem; background: {{ $palette[$i % count($palette)] }}"
                              title="{{ $part['label'] }}: {{ $part['value'] }}">
                             <span data-bar-value class="font-semibold tabular-nums" style="text-shadow: 0 0 2px color-mix(in srgb, black 45%, transparent)">{{ $part['value'] }}</span>
                         </div>
@@ -302,7 +303,7 @@
                     <span data-bar-value @class(['mb-0.5 whitespace-nowrap leading-none tabular-nums font-semibold text-(--color-ink-body)' => $shown, 'sr-only' => ! $shown])
                           @if ($shown) style="font-size: {{ $px }}px" @endif>{{ $zero($part['value']) ? '' : $part['value'] }}</span>
                     <div class="rounded-t" title="{{ $label }}"
-                         style="position: relative; width: 70%; height: {{ max(2, (int) round(max(0.0, $num($part['value'])) / $max * 85)) }}%; background: {{ $palette[0] }}"
+                         style="position: relative; width: 70%; height: {{ max(2, (int) round(max(0.0, $num($part['value'])) / $max * 85)) }}%; background: {{ $palette[$i % count($palette)] }}"
                          @if ($interactive) data-chart-tip tabindex="0" aria-label="{{ $label }}" @endif>@if ($interactive)<span class="chart-tip" aria-hidden="true">{{ $label }}</span>@endif</div>
                 </div>
             @endforeach
@@ -322,7 +323,7 @@
     @else
         {{-- আড়াআড়ি দণ্ড — নাম আর মান এক লাইনে, নিচে দণ্ড --}}
         <div class="space-y-3 px-4 py-3">
-            @foreach ($compact ? array_slice($parts, 0, 5) : $parts as $part)
+            @foreach ($compact ? array_slice($parts, 0, 5) : $parts as $i => $part)
                 <div>
                     <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
                         @if (! empty($part['href']))
@@ -334,7 +335,7 @@
                     </div>
                     <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
                         <div class="h-full rounded-full" title="{{ $part['label'] }}: {{ $part['value'] }}"
-                             style="width: {{ min(100, max(0, (int) round(max(0.0, $num($part['value'])) / $max * 100))) }}%; background: {{ $palette[0] }}"></div>
+                             style="width: {{ min(100, max(0, (int) round(max(0.0, $num($part['value'])) / $max * 100))) }}%; background: {{ $palette[$i % count($palette)] }}"></div>
                     </div>
                 </div>
             @endforeach

@@ -246,4 +246,24 @@ return [
         'sales' => ['sales', 'customer', 'inventory', 'promotion'],
         'counter' => ['sales', 'accounts', 'customer', 'inventory'],
     ],
+
+    /*
+     * ⭐ মডিউল ড্যাশবোর্ডের রং — মালিকের নমুনা "সব মডিউলের রঙিন ড্যাশবোর্ড" (claude.ai artifact 4YJNJQosVyXzJjEYzEMvbv) থেকে হুবহু
+     * (মালিক, ৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color", "Sample file dekhe koro")।
+     *   head  — মাথার পট্টির দুই রং (নমুনার c1 → c2);
+     *   cards — চার কার্ডের রং, নমুনার ক্রমে; "এখনই দেখুন" অঙ্ক লাল আর "নজর দিন" হলুদ (নমুনার মানে), বাকিগুলো এই তালিকা থেকে পরপর।
+     * রঙের নাম `tokens.css`-এর `--color-pal-*` (নমুনার বারো রং, ৭০০ ধাপ — সাদা লেখা ৪.৫ঃ১)। নমুনায় নেই এমন মডিউল: মডিউলের নিজের রং দিয়ে শুরু।
+     */
+    'dashboard_colours' => [
+        'sales' => ['head' => ['blue', 'sky'], 'cards' => ['blue', 'sky', 'orange', 'green']],
+        'purchase' => ['head' => ['orange', 'amber'], 'cards' => ['orange', 'amber', 'purple', 'red']],
+        'inventory' => ['head' => ['teal', 'green'], 'cards' => ['teal', 'red', 'yellow', 'purple']],
+        'accounts' => ['head' => ['indigo', 'purple'], 'cards' => ['indigo', 'green', 'orange', 'purple']],
+        'finance' => ['head' => ['purple', 'pink'], 'cards' => ['purple', 'pink', 'green', 'sky']],
+        'hr' => ['head' => ['pink', 'red'], 'cards' => ['green', 'yellow', 'pink', 'red']],
+        'customer' => ['head' => ['sky', 'teal'], 'cards' => ['sky', 'red', 'yellow', 'green']],
+        'promotion' => ['head' => ['lime', 'green'], 'cards' => ['lime', 'green', 'teal', 'yellow']],
+        'approval' => ['head' => ['amber', 'orange'], 'cards' => ['amber', 'green', 'red', 'sky']],
+        'system_admin' => ['head' => ['red', 'pink'], 'cards' => ['blue', 'yellow', 'green', 'teal']],
+    ],
 ];
