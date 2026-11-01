@@ -28,4 +28,28 @@ return [
     /* ⓘ কারণসহ bn/control.php-তে। */
     'module_locked' => 'Cannot be switched off',
     'module_locked_why' => 'Switching this module off would also close the control panel itself — with no way back in. Screens inside it can still be switched off one by one.',
+    // ⭐ মডিউলের কার্ডে এক লাইনে কী করে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৫)
+    'about' => [
+        'accounts' => 'Vouchers, ledgers, cash and bank, financial statements',
+        'approval' => 'Approvals — who signs, up to how much, in what order',
+        'backup' => 'Daily backups and restoring them',
+        'credit_control' => 'Credit limits, overdue dues and holds',
+        'customer' => 'Shops and customers, points, areas and dues',
+        'documents' => 'Keeping documents, signing and verifying them',
+        'executive' => 'The owner's centre — every company at a glance',
+        'finance' => 'Bank loans, deposits, rent and insurance',
+        'fixed_assets' => 'Fixed assets and depreciation',
+        'governance' => 'Activity log, login history and audit',
+        'hr' => 'Staff, attendance, leave and payroll',
+        'inventory' => 'Warehouses, stock, transfers and counts',
+        'master_data' => 'Products, units, prices and number series',
+        'notification' => 'SMS, email and app messages',
+        'promotion' => 'Offers, free goods and commission',
+        'purchase' => 'Purchase orders, goods received and supplier bills',
+        'restaurant' => 'Tables, orders and the kitchen',
+        'sales' => 'Quotations, orders, delivery, invoices and collection',
+        'supplier' => 'Suppliers, principals and payables',
+        'system_admin' => 'Companies, users, roles and settings',
+    ],
+    'settings_link' => 'Settings ›',
 ];
