@@ -52,4 +52,6 @@ return [
         'system_admin' => 'Companies, users, roles and settings',
     ],
     'settings_link' => 'Settings ›',
+    'last_change' => 'Last change',
+    'no_change_yet' => 'No change yet',
 ];

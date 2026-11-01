@@ -176,6 +176,10 @@
                                                        class="mt-1 size-4">
                                                 <span>
                                                     {{ __($setting['label']) }}
+                                                    {{-- ⚠️ পিএইচপি-ব্লক নয় — উপরে এক-লাইনের পিএইচপি আছে, আর Blade তখন পরের ব্লক-শেষ পর্যন্ত গিলে ফেলত --}}
+                                                    @if (__($setting['label'].'_hint') !== $setting['label'].'_hint')
+                                                        <span data-setting-hint class="mt-0.5 block text-xs font-normal text-(--color-ink-muted)">{{ __($setting['label'].'_hint') }}</span>
+                                                    @endif
                                                     @if ($locked)
                                                         <span class="block text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.super_admin_only') }}</span>
                                                     @endif
@@ -199,6 +203,10 @@
                                             <label class="block">
                                                 <span class="mb-1 block text-sm font-medium">
                                                     {{ __($setting['label']) }}
+                                                    {{-- ⚠️ পিএইচপি-ব্লক নয় — উপরে এক-লাইনের পিএইচপি আছে, আর Blade তখন পরের ব্লক-শেষ পর্যন্ত গিলে ফেলত --}}
+                                                    @if (__($setting['label'].'_hint') !== $setting['label'].'_hint')
+                                                        <span data-setting-hint class="mt-0.5 block text-xs font-normal text-(--color-ink-muted)">{{ __($setting['label'].'_hint') }}</span>
+                                                    @endif
                                                 </span>
                                                 <select name="settings[{{ $setting['key'] }}]"
                                                         data-was="{{ $setting['value'] }}"
@@ -219,6 +227,10 @@
                                             <label class="block">
                                                 <span class="mb-1 block text-sm font-medium">
                                                     {{ __($setting['label']) }}
+                                                    {{-- ⚠️ পিএইচপি-ব্লক নয় — উপরে এক-লাইনের পিএইচপি আছে, আর Blade তখন পরের ব্লক-শেষ পর্যন্ত গিলে ফেলত --}}
+                                                    @if (__($setting['label'].'_hint') !== $setting['label'].'_hint')
+                                                        <span data-setting-hint class="mt-0.5 block text-xs font-normal text-(--color-ink-muted)">{{ __($setting['label'].'_hint') }}</span>
+                                                    @endif
                                                 </span>
                                                 <input type="{{ $setting['type'] === 'integer' ? 'number' : 'text' }}"
                                                        name="settings[{{ $setting['key'] }}]"
@@ -241,13 +253,22 @@
 
             {{-- বদল না হলে পটিটা নেই। "সংরক্ষণ" লেখা একটা পটি সবসময়
                  ভেসে থাকলে ওটা আসবাব হয়ে যায়, আর কেউ পড়ে না। --}}
-            <div x-show="count > 0" x-cloak
+            {{-- ⭐ পটিটা সবসময় — কিছু জমলে কয়টা আর সংরক্ষণ, না জমলে শেষ বদল কে কবে করেছেন (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৬) --}}
+            <div data-save-bar
                  class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
                         bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
                 <div class="mx-auto flex max-w-screen-2xl items-center gap-3">
-                    <span class="text-sm">
+                    <span class="text-sm" x-show="count > 0" x-cloak>
                         <span class="num font-semibold" x-text="count"></span>
                         {{ __('system_admin::message.unsaved') }}
+                    </span>
+                    <span data-last-change class="min-w-0 truncate text-xs text-(--color-ink-muted)" x-show="count === 0">
+                        @if (($history ?? []) !== [])
+                            {{ __('system_admin::control.last_change') }}: {{ $history[0]['label'] }} · {{ $history[0]['who'] ?? '—' }} ·
+                            <span class="tabular">{{ \App\Core\Support\DateFormat::formatWithTime($history[0]['when']) }}</span>
+                        @else
+                            {{ __('system_admin::control.no_change_yet') }}
+                        @endif
                     </span>
 
                     <span class="flex-1"></span>
@@ -255,12 +276,12 @@
                     {{-- ফিরিয়ে দেওয়া মানে পাতাটা আবার আনা: সার্ভারের
                          মানটাই সত্যি, আর হাতে ফেরত বসাতে গেলে
                          দুইজায়গায় দুই হিসাব থাকত। --}}
-                    <x-ui.button type="button" tone="secondary" x-data
+                    <x-ui.button type="button" tone="secondary" x-data x-show="count > 0" x-cloak
                                  @click="$reload()">
                         {{ __('core.action.discard') }}
                     </x-ui.button>
 
-                    <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+                    <x-ui.button type="submit" tone="primary" x-show="count > 0" x-cloak>{{ __('core.action.save') }}</x-ui.button>
                 </div>
             </div>
 
