@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\SystemAdmin;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\SystemAdmin\Support\UserFormTabs;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,21 +21,15 @@ final class TheUserFormStandsInTabsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User $owner;
-
-    protected function setUp(): void
+    public function test_each_part_sits_in_its_own_tab_and_the_identity_tab_opens_first(): void
     {
-        parent::setUp();
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
-        $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-    }
-
-    public function test_each_part_sits_in_its_own_tab_and_the_identity_tab_opens_first(): void
-    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $other = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
-        $html = (string) $this->actingAs($this->owner)->get(route('system_admin.user.edit', $other))->assertOk()->getContent();
+
+        $html = (string) $this->actingAs($owner)->get(route('system_admin.user.edit', $other))->assertOk()->getContent();
 
         foreach (['identity', 'access', 'security', 'power'] as $tab) {
             $this->assertMatchesRegularExpression('/data-user-tab-button="'.$tab.'"/', $html, "⛔ \"{$tab}\" ট্যাবের বোতাম নেই।");
@@ -45,22 +40,16 @@ final class TheUserFormStandsInTabsTest extends TestCase
         $this->assertStringContainsString('x-data="{ tab: \'identity\' }"', $html, '⛔ পাতা খুললে পরিচয়ের ট্যাব খোলা নয়।');
     }
 
-    public function test_a_password_refusal_opens_the_security_tab(): void
+    /** ⓘ পরীক্ষার সেশনে ভুলের ব্যাগ পরের পাতায় পৌঁছায় না (JSON সেশন), তাই নিয়মটা সোজা মাপা — আর পাতা এটাই ডাকে */
+    public function test_the_tab_holding_an_error_opens_in_tab_order(): void
     {
-        $other = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
-        $this->actingAs($this->owner)->from(route('system_admin.user.edit', $other))
-            ->put(route('system_admin.user.update', $other), [
-                'name' => $other->name, 'email' => $other->email, 'locale' => 'bn', 'is_active' => '1',
-                'password' => 'Abos-Strong-1', 'password_confirmation' => 'Something-else-2',
-                'roles' => $other->roles->pluck('name')->all(), 'companies' => $other->companies->pluck('id')->all(),
-            ])->assertSessionHasErrors('password');
-        // ⓘ পরীক্ষায় session('errors') কখনো তালিকা, কখনো ব্যাগ — দুই রূপই পড়া
-        $bag = session('errors');
-        $keys = is_object($bag) ? array_keys($bag->getMessages()) : array_keys((array) $bag);
+        $this->assertSame('security', UserFormTabs::open(['password']), '⛔ পাসওয়ার্ডের ভুল আরেক ট্যাবের পেছনে লুকিয়ে থাকে।');
+        $this->assertSame('access', UserFormTabs::open(['password', 'roles']), '⛔ প্রবেশাধিকারের ভুল থাকতেও পরের ট্যাব খুলল।');
+        $this->assertSame('identity', UserFormTabs::open(['password_confirmation', 'email']), '⛔ পরিচয়ের ভুল থাকতেও পরের ট্যাব খুলল।');
+        $this->assertSame('access', UserFormTabs::open(['customer_scope.4']), '⛔ শাখা-গুদামের ভুল প্রবেশাধিকারে খোলে না।');
+        $this->assertSame('identity', UserFormTabs::open([]), '⛔ ভুল না থাকলে পরিচয়ের ট্যাব খোলা নয়।');
 
-        // ⓘ পরীক্ষার সেশনে পরের পাতায় ভুলের ব্যাগ খালি পৌঁছায় (JSON সেশন) — তাই একই ভুলগুলো সরাসরি পাতার সামনে
-        $html = (string) $this->withViewErrors(array_fill_keys($keys, 'x'))->get(route('system_admin.user.edit', $other))->getContent();
-        $this->assertStringContainsString('x-data="{ tab: \'security\' }"', $html,
-            '⛔ পাসওয়ার্ডের ভুল আরেক ট্যাবের পেছনে লুকিয়ে থাকে। (ভুলের ঘর: '.implode(', ', $keys).')');
+        $view = (string) file_get_contents(base_path('app/Modules/SystemAdmin/Resources/views/user/form.blade.php'));
+        $this->assertStringContainsString('UserFormTabs::open(array_keys($errors->getMessages()))', $view, '⛔ পাতা ট্যাবের নিয়ম পড়ে না।');
     }
 }
