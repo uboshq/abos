@@ -58,4 +58,6 @@ return [
         'system_admin' => 'কোম্পানি, ব্যবহারকারী, রোল আর সেটিংস',
     ],
     'settings_link' => 'সেটিংস ›',
+    'last_change' => 'শেষ বদল',
+    'no_change_yet' => 'এখনো কোনো বদল হয়নি',
 ];

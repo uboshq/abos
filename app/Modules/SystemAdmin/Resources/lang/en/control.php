@@ -36,7 +36,7 @@ return [
         'credit_control' => 'Credit limits, overdue dues and holds',
         'customer' => 'Shops and customers, points, areas and dues',
         'documents' => 'Keeping documents, signing and verifying them',
-        'executive' => 'The owner's centre — every company at a glance',
+        'executive' => 'The owner\'s centre — every company at a glance',
         'finance' => 'Bank loans, deposits, rent and insurance',
         'fixed_assets' => 'Fixed assets and depreciation',
         'governance' => 'Activity log, login history and audit',
@@ -52,4 +52,6 @@ return [
         'system_admin' => 'Companies, users, roles and settings',
     ],
     'settings_link' => 'Settings ›',
+    'last_change' => 'Last change',
+    'no_change_yet' => 'No change yet',
 ];
