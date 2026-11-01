@@ -43,15 +43,28 @@ final class SystemAdminDashboard implements ProvidesDashboard
             title: __('system_admin::dashboard.title'),
             subtitle: __('system_admin::dashboard.subtitle'),
 
+            /*
+             * ⭐ ভাগের কার্ড — মেনুর নকল চারটা বোতামের বদলে বাঁয়ের মেনুর ভাগগুলোই, প্রতিটা নিজের প্রথম পর্দায় (কন্ট্রোল প্যানেলের পরিকল্পনা,
+             * দফা ৪: "হোমে মেনুর নকল বোতাম → ভাগের কার্ড"; Microsoft 365 Admin Center)। ⓘ চাবি না থাকলে কার্ডটাই নেই ([[DashboardEngine]])।
+             */
             tiles: [
-                new Tile(label: __('system_admin::menu.users'), href: route('system_admin.user.index'),
+                new Tile(label: __('system_admin::menu.section_org'), href: route('system_admin.company.index'),
+                    permission: 'system_admin.company.manage', icon: 'building'),
+                new Tile(label: __('system_admin::menu.section_people'), href: route('system_admin.user.index'),
                     permission: 'system_admin.user.manage', icon: 'people'),
-                new Tile(label: __('system_admin::menu.roles'), href: route('system_admin.role.index'),
-                    permission: 'system_admin.role.manage', icon: 'lock'),
-                new Tile(label: __('system_admin::menu.backup'), href: route('backup.index'),
-                    permission: 'system_admin.settings.manage', icon: 'drawer'),
-                new Tile(label: __('system_admin::menu.control_panel'), href: route('system_admin.control-panel'),
+                new Tile(label: __('system_admin::menu.section_modules'), href: route('system_admin.control-panel'),
                     permission: 'system_admin.settings.manage', icon: 'settings'),
+                new Tile(label: __('system_admin::menu.section_comms'), href: route('system_admin.notice.index'),
+                    permission: 'system_admin.notice.manage', icon: 'bell'),
+                new Tile(label: __('system_admin::menu.section_data'), href: route('system_admin.import.index'),
+                    permission: 'system_admin.import.manage', icon: 'drawer'),
+            ],
+
+            search: [
+                'action' => route('system_admin.control-panel'),
+                'name' => 'find',
+                'placeholder' => __('system_admin::control.find'),
+                'permission' => 'system_admin.settings.manage',
             ],
 
             stats: [

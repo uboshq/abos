@@ -64,6 +64,16 @@
     <div data-dashboard-v2 class="flex flex-col gap-4">
 
         {{-- ── কাজের বোতাম ─────────────────────────────────────────── --}}
+        {{-- ⭐ সব সেটিং জুড়ে খোঁজা — ড্যাশবোর্ড চাইলে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৩) --}}
+        @if ($dashboard->search)
+            <form method="GET" action="{{ $dashboard->search['action'] }}" data-dashboard-search role="search" class="mb-4 flex max-w-xl gap-2">
+                <label class="sr-only" for="dashboard-search">{{ $dashboard->search['placeholder'] }}</label>
+                <input id="dashboard-search" type="search" name="{{ $dashboard->search['name'] }}" placeholder="{{ $dashboard->search['placeholder'] }}"
+                       class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
+                <x-ui.button type="submit" tone="primary">{{ __('core.action.search') }}</x-ui.button>
+            </form>
+        @endif
+
         @if ($dashboard->tiles !== [])
             <div class="flex flex-wrap gap-2">
                 @foreach ($dashboard->tiles as $tile)
