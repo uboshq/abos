@@ -35,7 +35,12 @@ return [
      * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
-    'nav' => ['section' => 'system', 'order' => 10],
+    /*
+     * ⭐ বাঁয়ের মেনু ২০টা এলোমেলো সারি থেকে ভাগে (কন্ট্রোল প্যানেলের পরিকল্পনা, ২১ অক্টোবর ২০২৬, দফা ১; Microsoft 365 Admin Center):
+     * সিস্টেমের হোম · প্রতিষ্ঠান · মানুষ ও প্রবেশাধিকার · মডিউল ও সেটিংস · যোগাযোগ · তথ্য। ⓘ নিরীক্ষার পর্দা Governance-এর নিজের মেনুতে
+     * (এক পর্দা, এক মালিক — নিচের মন্তব্য)। ঠিকানা একটাও বদলায়নি।
+     */
+    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data']],
 
     /*
      * ── master_data কেন, ৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
@@ -80,7 +85,7 @@ return [
     'menu' => [
         'dashboard' => [
             ['label' => 'system_admin::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
-                'route_params' => ['module' => 'system_admin'], 'permission' => 'system_admin.settings.manage'],
+                'route_params' => ['module' => 'system_admin'], 'section' => 'home', 'permission' => 'system_admin.settings.manage'],
         ],
 
         /*
@@ -101,22 +106,22 @@ return [
              * আরেকটা বাছাইয়ের ঘর লাগত। কোম্পানির পাতাতেই তার শাখাগুলো
              * থাকলে প্রশ্নটাই ওঠে না।
              */
-            ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'loose' => true, 'permission' => 'system_admin.company.manage'],
+            ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.company.manage'],
             /*
              * ⭐ শাখার নিজের সারি — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬।
              * ⓘ উপরের যুক্তি (শাখা কোম্পানির ভিতরের জিনিস) ঠিক ছিল, কিন্তু শাখা
              * খোলার পথ তখন লুকানো থাকত; মালিক আলাদা মেনু চাইলেন। ⚠️ একই চাবি
              * (`company.manage`) — নতুন চাবি লাইভের পুরনো ভূমিকায় পৌঁছাত না।
              */
-            ['label' => 'system_admin::menu.branches', 'icon' => 'building', 'route' => 'system_admin.branch.index', 'loose' => true, 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'loose' => true, 'permission' => 'system_admin.user.manage'],
-            ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'loose' => true, 'permission' => 'system_admin.role.manage'],
+            ['label' => 'system_admin::menu.branches', 'icon' => 'building', 'route' => 'system_admin.branch.index', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.company.manage'],
+            ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'section' => 'people', 'loose' => true, 'permission' => 'system_admin.user.manage'],
+            ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'section' => 'people', 'loose' => true, 'permission' => 'system_admin.role.manage'],
             /*
              * ⓘ সারিটা ব্যবহারকারী ও ভূমিকার **পরে**, কারণ কাজটা বছরে
              * একবারও হয় না — আর যে কাজ রোজ লাগে না, সেটা তালিকার মাথায়
              * বসলে রোজকার কাজগুলো একটা ঘর নিচে নেমে যায়।
              */
-            ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'loose' => true, 'permission' => 'system_admin.ownership.transfer'],
+            ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.ownership.transfer'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
@@ -145,16 +150,16 @@ return [
          */
         'reports' => [
             /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
-            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show',
+            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show', 'section' => 'data',
                 'route_params' => ['slug' => 'notice-register'], 'permission' => 'system_admin.notice.analytics'],
-            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show',
+            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show', 'section' => 'data',
                 'route_params' => ['slug' => 'notice-signatures'], 'permission' => 'system_admin.notice.analytics'],
 
-            ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index',
+            ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index', 'section' => 'comms',
                 'permission' => 'system_admin.reports.schedule'],
         ],
         'settings' => [
-            ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
+            ['label' => 'core.import.title', 'route' => 'system_admin.import.index', 'section' => 'data',
                 'permission' => 'system_admin.import.manage'],
             /*
              * ⭐ সারিটা বারে, সেটিংসের ভাঁজে নয় — ২৪ সেপ্টেম্বর ২০২৬।
@@ -164,7 +169,7 @@ return [
              * জায়গাটা বদলাল। ⛔ দল বদলালে সেটিংসের পর্দায় সারিটা হারাত।
              */
             ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings',
-                'route' => 'system_admin.control-panel', 'loose' => true,
+                'route' => 'system_admin.control-panel', 'section' => 'modules', 'loose' => true,
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -176,7 +181,7 @@ return [
              *
              * ⛔ একই চাবি — দুইটা একই প্রশ্নের দুই অর্ধেক।
              */
-            ['label' => 'system_admin::branch_module.title', 'icon' => 'building', 'route' => 'system_admin.branch-module',
+            ['label' => 'system_admin::branch_module.title', 'icon' => 'building', 'route' => 'system_admin.branch-module', 'section' => 'modules',
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -215,7 +220,7 @@ return [
              * ([[shell.modulebar]]), আর `loose` সেটাকে বারে তোলে।
              */
             ['label' => 'system_admin::notice.title', 'icon' => 'bell',
-                'route' => 'system_admin.notice.index',
+                'route' => 'system_admin.notice.index', 'section' => 'comms',
                 'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
@@ -225,7 +230,7 @@ return [
              * ⓘ নিজের চাবি, কারণ সংখ্যাগুলো কর্মীদের নাম ধরে বলে
              * *"কে এখনো মানেননি"* — ⚠️ ওটা সবার দেখার জিনিস নয়।
              */
-            ['label' => 'core.notice.analytics_title', 'icon' => 'reports', 'route' => 'system_admin.notice.analytics',
+            ['label' => 'core.notice.analytics_title', 'icon' => 'reports', 'route' => 'system_admin.notice.analytics', 'section' => 'comms',
                 'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.analytics'],
             /*
@@ -242,11 +247,11 @@ return [
              * ⭐ তাই ছাঁকনিগুলো তালিকার ভিতরে, আর মেনুতে তিনটা সত্যিকারের
              * আলাদা কাজ: বোর্ড, হিসাব, আর ছাঁচ।
              */
-            ['label' => 'core.notice.categories_title', 'icon' => 'filter', 'route' => 'system_admin.notice.category.index',
+            ['label' => 'core.notice.categories_title', 'icon' => 'filter', 'route' => 'system_admin.notice.category.index', 'section' => 'comms',
                 'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
-            ['label' => 'core.notice.templates_title', 'icon' => 'book', 'route' => 'system_admin.notice.template.index',
+            ['label' => 'core.notice.templates_title', 'icon' => 'book', 'route' => 'system_admin.notice.template.index', 'section' => 'comms',
                 'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
@@ -260,7 +265,7 @@ return [
              * ⛔ একই চাবি (`settings.manage`) — দুইটা পর্দাই একই প্রশ্নের উত্তর
              * দেয়, আর আলাদা চাবি দিলে কাউকে অর্ধেক উত্তর দেওয়ার অধিকার দেওয়া হত।
              */
-            ['label' => 'system_admin::settings.title', 'icon' => 'settings', 'route' => 'system_admin.settings',
+            ['label' => 'system_admin::settings.title', 'icon' => 'settings', 'route' => 'system_admin.settings', 'section' => 'modules',
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -303,10 +308,10 @@ return [
              * ⓘ ওটা ইচ্ছাকৃতভাবে ছোঁয়া হয়নি: কন্ট্রোলারের চাবি বদলানো
              * মানে কার হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের।
              */
-            ['label' => 'master_data::menu.number_series', 'icon' => 'sort', 'route' => 'master_data.series.index',
+            ['label' => 'master_data::menu.number_series', 'icon' => 'sort', 'route' => 'master_data.series.index', 'section' => 'modules',
                 'permission' => 'system_admin.settings.manage'],
-            ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
-            ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],
+            ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'section' => 'modules', 'permission' => 'system_admin.settings.manage'],
+            ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'section' => 'modules', 'permission' => 'system_admin.look.manage'],
             /* ব্যাকআপের সারি সরেছে — এখন নিজের মডিউলে ([[Backup/module.php]]) */
 
             /*

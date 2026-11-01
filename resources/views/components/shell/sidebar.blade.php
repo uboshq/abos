@@ -792,8 +792,29 @@
                     <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
-                        @foreach ($activeModule['groups'] as $group => $items)
-                            @foreach ($items as $item)
+                        @php
+                            /*
+                             * ⭐ ভাগে ভাগে — মডিউল `nav.panel_sections` দিলে সারিগুলো সেই ক্রমে, প্রতিটা ভাগের মাথায় ছোট শিরোনাম
+                             * (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১; Microsoft 365 Admin Center)। ⓘ ভাগের ভিতরে আগের ক্রমই থাকে;
+                             * ভাগ না বলা সারি সবার শেষে। ভাগ না দিলে আগের মতো এক তালিকা।
+                             */
+                            $panelSections = $activeModule['panel_sections'] ?? [];
+                            $panelRows = collect($activeModule['groups'])->flatten(1)->values();
+                            if ($panelSections !== []) {
+                                $rank = array_flip($panelSections);
+                                $panelRows = $panelRows->map(fn ($row, $at) => [$rank[$row['section'] ?? ''] ?? PHP_INT_MAX, $at, $row])
+                                    ->sort(fn ($x, $y) => [$x[0], $x[1]] <=> [$y[0], $y[1]])
+                                    ->map(fn ($x) => $x[2])->values();
+                            }
+                        @endphp
+                        @foreach ($panelRows as $item)
+                            @if ($panelSections !== [] && ($item['section'] ?? null) !== null
+                                && ($item['section'] ?? null) !== ($panelRows[$loop->index - 1]['section'] ?? null))
+                                <p data-panel-section="{{ $item['section'] }}"
+                                   class="px-2.5 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
+                                    {{ __($activeModule['code'].'::menu.section_'.$item['section']) }}
+                                </p>
+                            @endif
                                 {{-- ছাঁকাটা ক্লায়েন্টেই — সারিগুলো ইতিমধ্যেই
                                      পাতায় আছে, তাই সার্ভারে যাওয়ার কোনো
                                      কারণ নেই। খালি ফিল্টারে সব দেখা যায়।
@@ -869,7 +890,6 @@
                                         </span>
                                     @endif
                                 </a>
-                            @endforeach
                         @endforeach
                     </nav>
 

@@ -895,6 +895,22 @@ final class ModuleDefinition
             $validated['under'] = $nav['under'];
         }
 
+        /*
+         * ⭐ মডিউলের বাঁয়ের মেনু ভাগে ভাগে — `panel_sections` ভাগের নাম, এই ক্রমে; প্রতিটা সারি নিজের `section` বলে
+         * (কন্ট্রোল প্যানেলের পরিকল্পনা ২১ অক্টোবর ২০২৬, দফা ১: "২০টা এলোমেলো সারি থেকে ৭টা ভাগ", Microsoft 365 Admin Center-এর মতো)।
+         * ⓘ ভাগের নাম মডিউলের নিজের ভাষার ফাইলে: "{code}::menu.section_{নাম}"।
+         */
+        if (isset($nav['panel_sections'])) {
+            $sections = $nav['panel_sections'];
+            if (! is_array($sections) || $sections === [] || array_filter($sections, fn ($s) => ! is_string($s) || $s === '') !== []
+                || count(array_unique($sections)) !== count($sections)) {
+                throw new InvalidArgumentException(
+                    "{$path}: nav 'panel_sections' must be a list of distinct section names, in the order the menu shows them."
+                );
+            }
+            $validated['panel_sections'] = array_values($sections);
+        }
+
         return $validated;
     }
 
