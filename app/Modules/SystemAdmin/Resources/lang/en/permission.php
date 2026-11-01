@@ -296,4 +296,19 @@ return [
 
     'pick_a_role' => 'Pick a role on the left',
     'pick_a_role_note' => 'Choose a role and every permission it holds appears here as a grid — or create a new one.',
+
+    /* ⭐ কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১০ — মাথার দুই কার্ড, কপি, তুলনা, মডিউলে যাওয়া */
+    'card_members' => 'People in this role',
+    'card_last_change' => 'Last change',
+    'pick_for_members' => 'pick a role',
+    'changed_by' => 'by :name',
+    'copy_role' => 'New role like this',
+    'copy_name' => ':name (copy)',
+    'compare_roles' => 'Compare two roles',
+    'compare_note' => 'Only where the two differ, module by module. Change a role on its own page.',
+    'compare_pick' => 'Pick two roles',
+    'compare_show' => 'Compare',
+    'compare_same' => 'Both hold the same :count permissions besides these.',
+    'compare_no_difference' => 'These two roles hold exactly the same permissions.',
+    'jump_to_module' => 'Go to module',
 ];

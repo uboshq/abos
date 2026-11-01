@@ -116,6 +116,8 @@ return [
             ['label' => 'system_admin::menu.branches', 'icon' => 'building', 'route' => 'system_admin.branch.index', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.company.manage'],
             ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'section' => 'people', 'loose' => true, 'permission' => 'system_admin.user.manage'],
             ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'section' => 'people', 'loose' => true, 'permission' => 'system_admin.role.manage'],
+            // ⭐ দফা ৯ — দুই-ধাপ, ভুল লগইন, চালু ফোন, আপনাআপনি লগআউট এক পাতায়; ব্যবহারকারীর চাবিতেই
+            ['label' => 'system_admin::menu.login_security', 'icon' => 'lock', 'route' => 'system_admin.login-security', 'section' => 'people', 'loose' => true, 'permission' => 'system_admin.user.manage'],
             /*
              * ⓘ সারিটা ব্যবহারকারী ও ভূমিকার **পরে**, কারণ কাজটা বছরে
              * একবারও হয় না — আর যে কাজ রোজ লাগে না, সেটা তালিকার মাথায়

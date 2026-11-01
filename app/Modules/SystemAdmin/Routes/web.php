@@ -14,6 +14,7 @@ use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeReportController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeTemplateController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
+use App\Modules\SystemAdmin\Http\Controllers\LoginSecurityController;
 use App\Modules\SystemAdmin\Http\Controllers\InvoiceInfoController;
 use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
@@ -348,6 +349,9 @@ Route::middleware('auth')->prefix('system')->group(function () {
      * অডিটের সারিতে বসে আছে, আর রোল মুছলে যাঁরা ওটা ধরে আছেন তাঁরা
      * নীরবে সব অধিকার হারাতেন। নিষ্ক্রিয় করাই যথেষ্ট।
      */
+    // ⭐ লগইন নিরাপত্তা — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৯; কেবল দেখায়, বদল নিজের নিজের পাতায়
+    Route::get('/login-security', [LoginSecurityController::class, 'show'])->name('login-security');
+
     Route::prefix('users')->name('user.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::get('/create', [UserController::class, 'create'])->name('create');
@@ -403,6 +407,8 @@ Route::middleware('auth')->prefix('system')->group(function () {
     Route::prefix('roles')->name('role.')->group(function () {
         Route::get('/', [RoleController::class, 'index'])->name('index');
         Route::get('/create', [RoleController::class, 'create'])->name('create');
+        // ⭐ দুই রোল পাশাপাশি — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১০; দেখা কেবল
+        Route::get('/compare', [RoleController::class, 'compare'])->name('compare');
         Route::post('/', [RoleController::class, 'store'])->name('store');
         Route::get('/{role}/edit', [RoleController::class, 'edit'])->whereNumber('role')->name('edit');
         Route::put('/{role}', [RoleController::class, 'update'])->whereNumber('role')->name('update');

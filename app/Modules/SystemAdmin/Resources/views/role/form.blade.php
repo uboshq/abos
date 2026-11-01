@@ -83,14 +83,21 @@
          দেখলে সবার আগে ওগুলো গোছানোর কথা মনে পড়ে।
 
          ⚠️ উচ্চতা স্পেক মতো ১০০–১২০px — `p-4` ও দুই লাইনের লেখায় ≈১০৪। --}}
-    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        @foreach ([
-            ['users', 'system_admin::permission.card_users', 'people'],
-            ['roles', 'system_admin::permission.card_roles', 'check-circle'],
-            ['permissions', 'system_admin::permission.card_permissions', 'lock'],
-            ['unassigned', 'system_admin::permission.card_unassigned', 'alert-triangle'],
-        ] as [$key, $label, $icon])
-            <div data-boxed
+    {{-- ⭐ দফা ১০ (কন্ট্রোল প্যানেলের পরিকল্পনা, ২১ অক্টোবর ২০২৬): "অনুমতি ৩১৯" উঠে গেল — জায়গায় "এই রোলে যাঁরা আছেন" আর "শেষ বদল"।
+         ⓘ রোল না বাছা থাকলে প্রথমটা "একটা রোল বাছুন", শেষ বদলটা এই কোম্পানির যেকোনো রোলের ([[RoleController::lastChange()]])। --}}
+    @php
+        $hasMembers = $picked && $role->exists;
+        $cards = [
+            ['users', 'system_admin::permission.card_users', 'people', $summary['users'] ?? 0, null],
+            ['roles', 'system_admin::permission.card_roles', 'check-circle', $summary['roles'] ?? 0, null],
+            ['members', 'system_admin::permission.card_members', 'people', $hasMembers ? $members->count() : '—', $hasMembers ? null : __('system_admin::permission.pick_for_members')],
+            ['last-change', 'system_admin::permission.card_last_change', 'clock', $lastChange ? \App\Core\Support\DateFormat::format($lastChange['at']) : '—', $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : null],
+            ['unassigned', 'system_admin::permission.card_unassigned', 'alert-triangle', $summary['unassigned'] ?? 0, null],
+        ];
+    @endphp
+    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        @foreach ($cards as [$key, $label, $icon, $value, $hint])
+            <div data-boxed data-role-card="{{ $key }}"
                  class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <div class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
@@ -98,7 +105,10 @@
                     <span>{{ __($label) }}</span>
                 </div>
 
-                <div class="num mt-1 text-2xl font-bold">{{ $summary[$key] ?? 0 }}</div>
+                <div class="num mt-1 text-2xl font-bold">{{ $value }}</div>
+                @if ($hint)
+                    <div class="truncate text-2xs text-(--color-ink-muted)">{{ $hint }}</div>
+                @endif
             </div>
         @endforeach
     </div>
@@ -191,6 +201,27 @@
                     @endforeach
                 </ul>
             @endforeach
+
+            {{-- ⭐ মডিউলে যান — দফা ১০: ছকে চোদ্দটার বেশি মডিউল, নিচেরগুলোয় পৌঁছাতে লম্বা স্ক্রল। এক চাপে সেখানে, ভাঁজ খুলে
+                 (actions.js `data-permission-jump`)। ⓘ পাশে টিকের সংখ্যা — কোথায় কিছু দেওয়া আছে, তালিকাতেই দেখা যায়। --}}
+            @if ($picked && $grid !== [])
+                <nav data-permission-jump-list aria-label="{{ __('system_admin::permission.jump_to_module') }}">
+                    <h3 class="mt-4 px-2 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
+                        {{ __('system_admin::permission.jump_to_module') }}
+                    </h3>
+                    <ul class="mt-1 space-y-0.5">
+                        @foreach ($grid as $module => $block)
+                            <li>
+                                <a href="#perm-{{ $module }}" data-permission-jump="{{ $module }}"
+                                   class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 text-sm hover:bg-(--color-surface-hover)">
+                                    <span class="min-w-0 flex-1 truncate">{{ $block['label'] }}</span>
+                                    <span class="tabular-nums text-xs text-(--color-ink-muted)">{{ count(array_intersect($block['all'], $chosen)) }}/{{ count($block['all']) }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </nav>
+            @endif
         </aside>
 
         {{-- ── মাঝে: নাম আর অনুমতির ছক ───────────────────────────────── --}}
@@ -277,6 +308,17 @@
                     </div>
 
                     <div class="flex flex-wrap gap-2">
+                        {{-- ⭐ দফা ১০: "এর মতো নতুন রোল" আর "দুই রোল পাশাপাশি" — সংরক্ষিত রোলেই; নতুনটার কপির কিছু নেই --}}
+                        @unless ($isNew)
+                            <x-ui.button tone="secondary" icon="plus" data-role-copy
+                                         :href="route('system_admin.role.create', ['from' => $role->id])">
+                                {{ __('system_admin::permission.copy_role') }}
+                            </x-ui.button>
+                            <x-ui.button tone="secondary" icon="columns" data-role-compare
+                                         :href="route('system_admin.role.compare', ['a' => $role->id])">
+                                {{ __('system_admin::permission.compare_roles') }}
+                            </x-ui.button>
+                        @endunless
                         <x-ui.button tone="secondary" :href="route('system_admin.role.index')">
                             {{ __('core.action.cancel') }}
                         </x-ui.button>
@@ -400,14 +442,14 @@
                  ([[tokens.css]])।
 
                  ⓘ `xl` এখানে ১৪৪০px — দুই কলামে ভাগ করার জন্য যথেষ্ট চওড়া। --}}
-            <div class="grid items-start gap-3 xl:grid-cols-2">
+            <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
             @foreach ($grid as $module => $block)
                 @php
                     $on = count(array_intersect($block['all'], $chosen));
                     $all = count($block['all']);
                 @endphp
 
-                <details data-boxed data-permission-module="{{ $module }}" @if ($on > 0) open @endif
+                <details data-boxed data-permission-module="{{ $module }}" id="perm-{{ $module }}" @if ($on > 0) open @endif
                          class="group rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                     <summary class="flex min-h-(--spacing-touch) cursor-pointer list-none items-center gap-3 px-4 py-2
                                     [&::-webkit-details-marker]:hidden">

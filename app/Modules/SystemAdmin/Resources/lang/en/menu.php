@@ -22,4 +22,5 @@ return [
     'section_modules' => 'Modules and settings',
     'section_comms' => 'Communication',
     'section_data' => 'Data',
+    'login_security' => 'Login security',
 ];
