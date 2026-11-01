@@ -36,8 +36,11 @@ final class TheSystemHomeSearchesEverySettingTest extends TestCase
             ->assertSee(__('system_admin::settings.date_format'));
 
         foreach (['org', 'people', 'modules', 'comms', 'data'] as $section) {
-            $this->assertStringContainsString(e(__('system_admin::menu.section_'.$section)), $html, "⛔ হোমে \"{$section}\" ভাগের কার্ড নেই।");
+            // ⓘ বোতামেই (data-tile) — বাঁয়ের মেনুর ভাগের শিরোনামে একই নাম থাকে
+            $this->assertMatchesRegularExpression('/data-tile[^>]*>(?:(?!<\/a>).)*'.preg_quote(e(__('system_admin::menu.section_'.$section)), '/').'/su', $html,
+                "⛔ হোমে \"{$section}\" ভাগের কার্ড নেই।");
         }
-        $this->assertStringNotContainsString('>'.e(__('system_admin::menu.backup')).'<', $html, '⛔ হোমে আবার মেনুর নকল বোতাম।');
+        // ⓘ কেবল ড্যাশবোর্ডের বোতামে (data-tile) — বাঁয়ের মেনুতে মডিউলের নাম থাকবেই
+        $this->assertDoesNotMatchRegularExpression('/data-tile[^>]*>(?:(?!<\/a>).)*'.preg_quote(e(__('system_admin::menu.backup')), '/').'/su', $html, '⛔ হোমে আবার মেনুর নকল বোতাম।');
     }
 }
