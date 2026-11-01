@@ -53,6 +53,14 @@ final class DashboardDefinition
          * দ্বিতীয়বার একই কথা লেখালে দুইটা তালিকা একদিন আলাদা হত।
          */
         public readonly array $reminders = [],
+
+        /**
+         * ⭐ ড্যাশবোর্ডের মাথায় খোঁজার ঘর — কোথায় পাঠায় আর কোন নামে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৩: "হোম থেকে সব সেটিং জুড়ে
+         * খোঁজা; ফল সরাসরি সেই সেটিংয়ে")। চাবি না থাকলে ঘরটাই নেই ([[DashboardEngine]])।
+         *
+         * @var array{action: string, name: string, placeholder: string, permission: string}|null
+         */
+        public readonly ?array $search = null,
     ) {
         if ($stats === [] && $panels === [] && $listings === []) {
             throw new InvalidArgumentException(

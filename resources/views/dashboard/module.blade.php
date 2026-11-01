@@ -25,6 +25,16 @@
          সবার উপরে: মানুষ প্রায়ই ড্যাশবোর্ডে আসেন কিছু **করতে**, আর
          সংখ্যাগুলো পেরিয়ে নামতে হলে পরেরবার তিনি সোজা মেনুতে যান।
          যে কাজের চাবি নেই সেই টাইল ইঞ্জিনেই বাদ পড়ে। --}}
+    {{-- ⭐ সব সেটিং জুড়ে খোঁজা — ড্যাশবোর্ড চাইলে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৩) --}}
+    @if ($dashboard->search)
+        <form method="GET" action="{{ $dashboard->search['action'] }}" data-dashboard-search role="search" class="mb-4 flex max-w-xl gap-2">
+            <label class="sr-only" for="dashboard-search">{{ $dashboard->search['placeholder'] }}</label>
+            <input id="dashboard-search" type="search" name="{{ $dashboard->search['name'] }}" placeholder="{{ $dashboard->search['placeholder'] }}"
+                   class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
+            <x-ui.button type="submit" tone="primary">{{ __('core.action.search') }}</x-ui.button>
+        </form>
+    @endif
+
     @if ($dashboard->tiles !== [])
         <div class="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ($dashboard->tiles as $tile)

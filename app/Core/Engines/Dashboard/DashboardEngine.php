@@ -57,6 +57,7 @@ final class DashboardEngine
             listings: $definition->listings,
             tiles: $this->tilesFor($definition->tiles, $user),
             reminders: $this->remindersFor($module, $user),
+            search: $definition->search !== null && $user->can($definition->search['permission']) ? $definition->search : null,
         );
     }
 
