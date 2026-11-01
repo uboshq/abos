@@ -23,4 +23,5 @@ return [
     'section_modules' => 'মডিউল ও সেটিংস',
     'section_comms' => 'যোগাযোগ',
     'section_data' => 'তথ্য',
+    'login_security' => 'লগইন নিরাপত্তা',
 ];
