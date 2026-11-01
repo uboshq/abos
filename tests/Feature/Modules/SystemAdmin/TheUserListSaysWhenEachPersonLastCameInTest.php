@@ -58,7 +58,8 @@ final class TheUserListSaysWhenEachPersonLastCameInTest extends TestCase
 
         $this->assertStringContainsString('শেষ ঢোকা', $html, '⛔ তালিকায় «শেষ ঢোকা» কলাম নেই।');
 
-        $this->assertStringContainsString(DateFormat::formatWithTime($came->fresh()->last_login_at), $this->rowOf($html, $came),
+        // ⓘ কথায় লেখা — "9 অক্টোবর 2026, 14:35" (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১১)
+        $this->assertStringContainsString(DateFormat::spoken($came->fresh()->last_login_at), $this->rowOf($html, $came),
             '⛔ যিনি ঢুকেছেন তাঁর সারিতে শেষ ঢোকার সময় নেই।');
 
         $this->assertStringContainsString('কখনো ঢোকেননি', $this->rowOf($html, $never),
@@ -71,15 +72,18 @@ final class TheUserListSaysWhenEachPersonLastCameInTest extends TestCase
      * ⭐ মডিউলের রোল-ছাঁচ চিপে বাংলায়; ভিতরের নাম অপরিবর্তিত।
      *
      * ⓘ সব ছাঁচ মাপা হয় ([[RoleTemplateRegistry::all()]]), কেবল একটা নয় — নতুন মডিউল একটা ছাঁচ আনলে আর তার বাংলা নাম না থাকলে
-     * এই দাবিই প্রথম বলে। ASM · RSM · DSM ইচ্ছা করে ইংরেজিতে, তাই তালিকায় বাদ।
+     * এই দাবিই প্রথম বলে। ⓘ বিক্রয়ের ছোট নাম (ASM · RSM · DSM) ইংরেজিতেই থাকে, কিন্তু পাশে বন্ধনীতে বাংলা মানে — "ASM (এরিয়া সেলস ম্যানেজার)"
+     * (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১১); ⛔ আগে ওগুলো তালিকা থেকেই বাদ ছিল, মানে ছাড়া।
      */
     public function test_every_role_template_reads_in_bengali(): void
     {
         app()->setLocale('bn');
 
+        $codes = ['ASM', 'RSM', 'DSM'];
         $missing = collect(array_keys(app(\App\Core\Services\RoleTemplateRegistry::class)->all()))
-            ->reject(fn (string $name) => in_array($name, ['ASM', 'RSM', 'DSM'], true))
-            ->filter(fn (string $name) => RoleLabel::for($name) === $name || preg_match('/[A-Za-z]/', RoleLabel::for($name)))
+            ->filter(fn (string $name) => in_array($name, $codes, true)
+                ? ! preg_match('/^'.$name.' \([^A-Za-z()]+\)$/u', RoleLabel::for($name))
+                : (RoleLabel::for($name) === $name || preg_match('/[A-Za-z]/', RoleLabel::for($name))))
             ->values()->all();
 
         $this->assertSame([], $missing, '⛔ এই রোল-ছাঁচগুলোর বাংলা নাম নেই (lang/bn/core.php → role): '.implode(', ', $missing));

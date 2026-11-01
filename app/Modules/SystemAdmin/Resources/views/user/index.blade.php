@@ -143,7 +143,7 @@
             'width' => '9rem',
             'render' => fn ($u) => $u->last_login_at
                 ? new \Illuminate\Support\HtmlString('<span class="num whitespace-nowrap">'
-                    .e(\App\Core\Support\DateFormat::formatWithTime($u->last_login_at)).'</span>')
+                    .e(\App\Core\Support\DateFormat::spoken($u->last_login_at)).'</span>')
                 : new \Illuminate\Support\HtmlString('<span class="text-(--color-ink-muted)">'
                     .e(__('system_admin::field.never_signed_in')).'</span>'),
         ],

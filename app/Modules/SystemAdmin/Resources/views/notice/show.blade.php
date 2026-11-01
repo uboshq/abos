@@ -14,7 +14,7 @@
 
     <x-slot:header>
         <x-ui.page-header :title="$notice->title"
-                          :subtitle="$notice->starts_on?->format('d M Y')">
+                          :subtitle="\App\Core\Support\DateFormat::spokenDate($notice->starts_on)">
             @if ($canManage)
                 <x-slot:actions>
                     <x-ui.button :href="route('system_admin.notice.edit', $notice->id)" tone="secondary">
@@ -136,8 +136,8 @@
                             @if ($notice->starts_on === null && $notice->ends_on === null)
                                 {{ __('system_admin::notice.always') }}
                             @else
-                                {{ $notice->starts_on?->format('d M Y') ?? '—' }}
-                                → {{ $notice->ends_on?->format('d M Y') ?? '—' }}
+                                {{ ($notice->starts_on ? \App\Core\Support\DateFormat::spokenDate($notice->starts_on) : '—') }}
+                                → {{ ($notice->ends_on ? \App\Core\Support\DateFormat::spokenDate($notice->ends_on) : '—') }}
                             @endif
                         </dd>
                     </div>

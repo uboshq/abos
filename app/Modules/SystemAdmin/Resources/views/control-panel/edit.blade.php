@@ -265,7 +265,7 @@
                     <span data-last-change class="min-w-0 truncate text-xs text-(--color-ink-muted)" x-show="count === 0">
                         @if (($history ?? []) !== [])
                             {{ __('system_admin::control.last_change') }}: {{ $history[0]['label'] }} · {{ $history[0]['who'] ?? '—' }} ·
-                            <span class="tabular">{{ \App\Core\Support\DateFormat::formatWithTime($history[0]['when']) }}</span>
+                            <span class="tabular">{{ \App\Core\Support\DateFormat::spoken($history[0]['when']) }}</span>
                         @else
                             {{ __('system_admin::control.no_change_yet') }}
                         @endif
@@ -298,7 +298,7 @@
             <ul class="divide-y divide-(--color-border) border-t border-(--color-border)">
                 @foreach ($history as $row)
                     <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2 text-sm">
-                        <span class="tabular text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::formatWithTime($row['when']) }}</span>
+                        <span class="tabular text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::spoken($row['when']) }}</span>
                         <span class="font-medium">{{ $row['label'] }}</span>
                         <span class="text-(--color-ink-muted)">{{ $say($row['from']) }} → {{ $say($row['to']) }}</span>
                         <span class="text-2xs text-(--color-ink-muted)">{{ $row['who'] ?? '—' }}</span>

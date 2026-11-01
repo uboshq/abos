@@ -137,6 +137,21 @@ final class DateFormat
         return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
     }
 
+    /**
+     * ⭐ কথায় লেখা তারিখ, বছরসহ — "21 অক্টোবর 2026" (কন্ট্রোল প্যানেলের পরিকল্পনা, মালিকের অনুমোদিত, ২১ অক্টোবর ২০২৬, দফা ১১)।
+     * ⓘ [[spoken()]]-এর সময় ছাড়া রূপ: মাস পর্দার ভাষায়, অঙ্ক ইংরেজিতে। ⛔ সিস্টেম পর্দায় আগে "20 Oct 2026" আর "28/10/2026" মেশানো ছিল।
+     */
+    public static function spokenDate(Carbon|string|null $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $text = self::carbon($value)->copy()->locale(app()->getLocale())->translatedFormat('j F Y');
+
+        return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+    }
+
     private static function carbon(Carbon|string $value): Carbon
     {
         return $value instanceof Carbon ? $value : Carbon::parse($value);

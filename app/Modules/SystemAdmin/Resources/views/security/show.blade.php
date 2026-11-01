@@ -11,7 +11,7 @@
 
     @php
         $on = collect($people)->where('two_step', true)->count();
-        $when = fn ($at) => $at ? \App\Core\Support\DateFormat::formatWithTime(\Illuminate\Support\Carbon::parse($at)) : '—';
+        $when = fn ($at) => $at ? \App\Core\Support\DateFormat::spoken(\Illuminate\Support\Carbon::parse($at)) : '—';
     @endphp
 
     {{-- ── এক নজরে ── --}}

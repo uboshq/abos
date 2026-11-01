@@ -109,9 +109,9 @@
                                     @if ($row->starts_on === null && $row->ends_on === null)
                                         {{ __('system_admin::notice.always') }}
                                     @else
-                                        {{ $row->starts_on?->format('d M Y') ?? '—' }}
+                                        {{ ($row->starts_on ? \App\Core\Support\DateFormat::spokenDate($row->starts_on) : '—') }}
                                         →
-                                        {{ $row->ends_on?->format('d M Y') ?? '—' }}
+                                        {{ ($row->ends_on ? \App\Core\Support\DateFormat::spokenDate($row->ends_on) : '—') }}
                                     @endif
                                 </td>
 

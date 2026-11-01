@@ -386,4 +386,5 @@ return [
     'compare_same' => 'এগুলো ছাড়া দুইটারই একই :count টা অনুমতি আছে।',
     'compare_no_difference' => 'এই দুই রোলের অনুমতি হুবহু এক।',
     'jump_to_module' => 'মডিউলে যান',
+    'shown_as' => 'পর্দায় দেখায়: :name',
 ];

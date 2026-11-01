@@ -246,7 +246,7 @@
                                     </span>
 
                                     <p class="text-2xs text-(--color-ink-muted)">
-                                        {{ \App\Core\Support\DateFormat::formatWithTime($version->published_at) }}
+                                        {{ \App\Core\Support\DateFormat::spoken($version->published_at) }}
                                         @if ($version->publisher)
                                             · {{ $version->publisher->name }}
                                         @endif
