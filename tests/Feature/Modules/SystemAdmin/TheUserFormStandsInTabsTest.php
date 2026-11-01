@@ -54,8 +54,12 @@ final class TheUserFormStandsInTabsTest extends TestCase
                 'password' => 'Abos-Strong-1', 'password_confirmation' => 'Something-else-2',
                 'roles' => $other->roles->pluck('name')->all(), 'companies' => $other->companies->pluck('id')->all(),
             ])->assertSessionHasErrors('password');
+        // ⓘ পরীক্ষায় session('errors') কখনো তালিকা, কখনো ব্যাগ — দুই রূপই পড়া
+        $bag = session('errors');
+        $keys = is_object($bag) ? array_keys($bag->getMessages()) : array_keys((array) $bag);
 
         $html = (string) $this->get(route('system_admin.user.edit', $other))->getContent();
-        $this->assertStringContainsString('x-data="{ tab: \'security\' }"', $html, '⛔ পাসওয়ার্ডের ভুল আরেক ট্যাবের পেছনে লুকিয়ে থাকে।');
+        $this->assertStringContainsString('x-data="{ tab: \'security\' }"', $html,
+            '⛔ পাসওয়ার্ডের ভুল আরেক ট্যাবের পেছনে লুকিয়ে থাকে। (ভুলের ঘর: '.implode(', ', $keys).')');
     }
 }

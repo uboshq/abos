@@ -19,7 +19,9 @@
         str_starts_with($field, 'roles') || str_starts_with($field, 'companies') || str_contains($field, '_scope') || str_starts_with($field, 'branch') => 'access',
         default => 'identity',
     };
-    $openTab = $errors->any() ? $tabOf((string) array_key_first($errors->getMessages())) : 'identity';
+    // ⓘ প্রথম ভুলের ক্রমে নয়, ট্যাবের ক্রমে — পরিচয়ে ভুল থাকলে আগে সেটা, তারপর প্রবেশাধিকার, তারপর নিরাপত্তা
+    $errorTabs = array_map($tabOf, array_map('strval', array_keys($errors->getMessages())));
+    $openTab = collect(['identity', 'access', 'security'])->first(fn ($t) => in_array($t, $errorTabs, true)) ?? 'identity';
     $tabs = ['identity' => __('system_admin::field.tab_identity'), 'access' => __('system_admin::field.tab_access'),
         'security' => __('system_admin::field.tab_security')] + (($effective ?? []) !== [] ? ['power' => __('system_admin::permission.effective_access')] : []);
 @endphp
