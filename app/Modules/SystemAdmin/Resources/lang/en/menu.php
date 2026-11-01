@@ -15,4 +15,11 @@ return [
     'control_panel' => 'Control Panel',
     'report_schedules' => 'Scheduled Reports',
     'backup' => 'Backup',
+    // ⭐ বাঁয়ের মেনুর ভাগ (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১)
+    'section_home' => 'System home',
+    'section_org' => 'Organisation',
+    'section_people' => 'People and access',
+    'section_modules' => 'Modules and settings',
+    'section_comms' => 'Communication',
+    'section_data' => 'Data',
 ];

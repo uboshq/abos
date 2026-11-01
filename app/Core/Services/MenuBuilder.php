@@ -207,6 +207,9 @@ final class MenuBuilder
                          */
                         'cluster' => $item['cluster'] ?? null,
 
+                        // ⭐ বাঁয়ের মেনুর কোন ভাগে — মডিউলের nav.panel_sections-এর একটা নাম ([[ModuleDefinition::validateNav()]])
+                        'section' => $item['section'] ?? null,
+
                         /*
                          * ⭐ সারিটা বারে বসবে, ভাঁজের ভিতরে নয় — ২৪ সেপ্টেম্বর ২০২৬।
                          *
@@ -292,6 +295,9 @@ final class MenuBuilder
                 /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
                 'under' => $module->nav['under'] ?? null,
+
+                // ⭐ বাঁয়ের মেনুর ভাগ, এই ক্রমে — খালি মানে ভাগ নেই, আগের মতো এক তালিকা
+                'panel_sections' => $module->nav['panel_sections'] ?? [],
 
                 /*
                  * এই টাইলটা যে যে মডিউলের রুট ঢেকে রাখে — নিজেরটা, আর

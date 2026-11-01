@@ -16,4 +16,11 @@ return [
     'report_schedules' => 'নির্ধারিত রিপোর্ট',
     'backup' => 'ব্যাকআপ',
 
+    // ⭐ বাঁয়ের মেনুর ভাগ (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১)
+    'section_home' => 'সিস্টেমের হোম',
+    'section_org' => 'প্রতিষ্ঠান',
+    'section_people' => 'মানুষ ও প্রবেশাধিকার',
+    'section_modules' => 'মডিউল ও সেটিংস',
+    'section_comms' => 'যোগাযোগ',
+    'section_data' => 'তথ্য',
 ];
