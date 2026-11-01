@@ -451,7 +451,7 @@ class NoticeController extends Controller
 
         foreach ($people as $person) {
             isset($seen[$person->id])
-                ? $read[] = ['name' => $person->name, 'at' => $seen[$person->id]->format('d M Y, H:i')]
+                ? $read[] = ['name' => $person->name, 'at' => \App\Core\Support\DateFormat::spoken($seen[$person->id])]
                 : $unread[] = $person->name;
         }
 

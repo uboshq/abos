@@ -121,7 +121,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                         ['key' => 'email', 'label' => __('system_admin::dashboard.email'),
                             'render' => fn ($u) => $u->email],
                         ['key' => 'joined', 'label' => __('system_admin::dashboard.joined'), 'width' => '10rem',
-                            'render' => fn ($u) => $u->created_at?->format('d M Y') ?? '—'],
+                            'render' => fn ($u) => $u->created_at ? \App\Core\Support\DateFormat::spokenDate($u->created_at) : '—'],
                     ],
                     // ⛔ "নতুন ব্যবহারকারী" — অন্য কোম্পানির নাম এখানে বসত
                     rows: User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->latest('id')->limit(8)->get(),

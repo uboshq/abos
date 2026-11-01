@@ -881,6 +881,10 @@ return [
         'Notification Manager' => 'Notification Manager',
         'Notification Analyst' => 'Notification Analyst',
         'Notification Writer' => 'Notification Writer',
+        'SR' => 'SR (Sales Representative)',
+        'ASM' => 'ASM (Area Sales Manager)',
+        'RSM' => 'RSM (Regional Sales Manager)',
+        'DSM' => 'DSM (Divisional Sales Manager)',
     ],
 
     /*

@@ -58,7 +58,7 @@
                                 <span class="num">{{ $s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—' }}</span>
                             </td>
                             <td class="num text-(--color-ink-muted)">
-                                {{ $s->next_run_at ? \App\Core\Support\DateFormat::formatWithTime($s->next_run_at) : '—' }}
+                                {{ $s->next_run_at ? \App\Core\Support\DateFormat::spoken($s->next_run_at) : '—' }}
                             </td>
                             <td >
                                 <x-ui.badge :tone="$s->is_active ? 'success' : 'draft'">
@@ -99,7 +99,7 @@
                                 <span class="block text-2xs uppercase text-(--color-ink-muted)">{{ $run->format }}</span>
                             </td>
                             <td class="num text-(--color-ink-muted)">
-                                {{ \App\Core\Support\DateFormat::formatWithTime($run->ran_at) }}
+                                {{ \App\Core\Support\DateFormat::spoken($run->ran_at) }}
                             </td>
                             <td >
                                 {{ __('system_admin::schedule.run_status.'.$run->status) }}

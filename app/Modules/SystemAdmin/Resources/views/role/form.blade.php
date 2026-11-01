@@ -91,7 +91,7 @@
             ['users', 'system_admin::permission.card_users', 'people', $summary['users'] ?? 0, null],
             ['roles', 'system_admin::permission.card_roles', 'check-circle', $summary['roles'] ?? 0, null],
             ['members', 'system_admin::permission.card_members', 'people', $hasMembers ? $members->count() : '—', $hasMembers ? null : __('system_admin::permission.pick_for_members')],
-            ['last-change', 'system_admin::permission.card_last_change', 'clock', $lastChange ? \App\Core\Support\DateFormat::format($lastChange['at']) : '—', $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : null],
+            ['last-change', 'system_admin::permission.card_last_change', 'clock', $lastChange ? \App\Core\Support\DateFormat::spokenDate($lastChange['at']) : '—', $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : null],
             ['unassigned', 'system_admin::permission.card_unassigned', 'alert-triangle', $summary['unassigned'] ?? 0, null],
         ];
     @endphp
@@ -295,11 +295,11 @@
                             @if ($role->created_at)
                                 <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
                                     {{ __('system_admin::permission.made_on', [
-                                        'date' => \App\Core\Support\DateFormat::format($role->created_at),
+                                        'date' => \App\Core\Support\DateFormat::spokenDate($role->created_at),
                                     ]) }}
                                     @if ($role->updated_at && ! $role->updated_at->equalTo($role->created_at))
                                         · {{ __('system_admin::permission.changed_on', [
-                                            'date' => \App\Core\Support\DateFormat::format($role->updated_at),
+                                            'date' => \App\Core\Support\DateFormat::spokenDate($role->updated_at),
                                         ]) }}
                                     @endif
                                 </p>
@@ -330,6 +330,12 @@
                     <x-ui.field name="name" :label="__('system_admin::field.role_name')"
                                 :value="old('name', $role->name)"
                                 :hint="__('system_admin::field.role_name_hint')" required />
+                    {{-- ⭐ দফা ১১: ঘরে ভিতরের নাম ("Accountant") — পাশেই পর্দার নামটা, নইলে ইংরেজি-বাংলা মেশানো দেখায় আর কোনটা কী বোঝা যায় না --}}
+                    @if (! $isNew && \App\Core\Support\RoleLabel::for($role->name) !== $role->name)
+                        <p data-role-shown-as class="mt-1 text-xs text-(--color-ink-muted)">
+                            {{ __('system_admin::permission.shown_as', ['name' => \App\Core\Support\RoleLabel::for($role->name)]) }}
+                        </p>
+                    @endif
                 </div>
             </section>
 
