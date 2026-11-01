@@ -15,4 +15,5 @@ return [
     'as_it_stood_on' => 'As it stood on :on',
     'show_that_day' => 'Show that day',
     'time_machine' => 'How it looked then',
+    'search_values' => 'Search old and new values',
 ];

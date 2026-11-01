@@ -12,6 +12,9 @@
         <x-ui.page-header :title="$branch->exists ? $branch->code.' · '.$branch->name() : __('system_admin::menu.branches')" />
     </x-slot:header>
 
+    {{-- ⭐ দফা ১৩: শেষ বদল আর বদলের ইতিহাস --}}
+    <x-audit.last-change :subject="$branch" />
+
     <x-ui.errors />
 
     <form method="POST"

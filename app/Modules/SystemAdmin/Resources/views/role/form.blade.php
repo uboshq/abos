@@ -304,6 +304,8 @@
                                     @endif
                                 </p>
                             @endif
+                            {{-- ⭐ দফা ১৩: শেষ বদল কে করলেন, আর বদলের ইতিহাসের দরজা --}}
+                            <x-audit.last-change :subject="$role" class="mt-1" />
                         @endunless
                     </div>
 

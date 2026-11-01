@@ -55,4 +55,8 @@ return [
     'tab_identity' => 'পরিচয়',
     'tab_access' => 'প্রবেশাধিকার (রোল · কোম্পানি · শাখা)',
     'tab_security' => 'নিরাপত্তা (পাসওয়ার্ড)',
+    'tab_history' => 'ইতিহাস',
+    'fields_changed' => ':countটা ঘর বদল',
+    'by_system' => 'সিস্টেম',
+    'no_history' => 'এখনো কোনো বদল লেখা হয়নি।',
 ];

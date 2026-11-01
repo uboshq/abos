@@ -16,7 +16,12 @@
     // ⭐ ট্যাব (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৮) — ভুল যে ট্যাবে, সেটাই খুলে থাকে ([[UserFormTabs]])
     $openTab = \App\Modules\SystemAdmin\Support\UserFormTabs::open(array_keys($errors->getMessages()));
     $tabs = ['identity' => __('system_admin::field.tab_identity'), 'access' => __('system_admin::field.tab_access'),
-        'security' => __('system_admin::field.tab_security')] + (($effective ?? []) !== [] ? ['power' => __('system_admin::permission.effective_access')] : []);
+        'security' => __('system_admin::field.tab_security')] + (($effective ?? []) !== [] ? ['power' => __('system_admin::permission.effective_access')] : [])
+        + ($isNew ? [] : ['history' => __('system_admin::field.tab_history')]);
+
+    // ⭐ ইতিহাস ট্যাব — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১৩: এই মানুষের সারির শেষ ২০টা বদল; মানগুলো খাতায় (নিরীক্ষার চাবিতে)
+    $changes = $isNew ? collect() : \App\Models\AuditTrail::query()->forRecord($user::class, (int) $user->id)
+        ->latest('id')->limit(20)->with(['user:id,name'])->withCount('changes')->get();
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -27,6 +32,9 @@
             :title="$isNew ? __('system_admin::action.new_user') : $user->name"
             :subtitle="__('system_admin::message.users_note')" />
     </x-slot:header>
+
+    {{-- ⭐ দফা ১৩: শেষ বদল আর বদলের ইতিহাস --}}
+    <x-audit.last-change :subject="$user" />
 
     <form method="POST"
           action="{{ $isNew ? route('system_admin.user.store') : route('system_admin.user.update', $user) }}"
@@ -429,6 +437,30 @@
                 </div>
             </section>
         @endif
+
+        @unless ($isNew)
+            <section data-boxed data-user-tab="history" x-show="tab === 'history'"
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="text-base font-semibold">{{ __('system_admin::field.tab_history') }}</h2>
+                @forelse ($changes as $trail)
+                    <div data-user-history-row class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-(--color-border) py-2 text-sm last:border-b-0">
+                        <span class="tabular text-xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::spoken($trail->created_at) }}</span>
+                        <span class="font-medium">{{ \App\Models\AuditTrail::actionInWords($trail->action) }}</span>
+                        @if ($trail->changes_count > 0)
+                            <span class="text-xs text-(--color-ink-muted)">{{ __('system_admin::field.fields_changed', ['count' => $trail->changes_count]) }}</span>
+                        @endif
+                        <span class="ms-auto text-xs text-(--color-ink-muted)">{{ $trail->user?->name ?? __('system_admin::field.by_system') }}</span>
+                    </div>
+                @empty
+                    <p class="mt-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::field.no_history') }}</p>
+                @endforelse
+                @if ($changes->isNotEmpty() && \Illuminate\Support\Facades\Route::has('governance.audit.record') && auth()->user()?->can('governance.audit.view'))
+                    <a data-change-history href="{{ route('governance.audit.record', $changes->first()->id) }}" class="mt-3 inline-block text-sm font-semibold text-(--color-link) hover:underline">
+                        {{ __('core.audit.history') }} →
+                    </a>
+                @endif
+            </section>
+        @endunless
 
         {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে, ডানে ([[x-ui.form-actions]]) — রোল, কোম্পানি আর আসল ক্ষমতার অংশ মিলিয়ে
              ফর্মটা ১০৮০p-তে এক পর্দার চেয়ে লম্বা, আর সংরক্ষণ নিচে হারাত। --}}
