@@ -63,7 +63,8 @@ final class TheModuleDashboardFillsItsRowsTest extends TestCase
 
             // ── ১. চার্টের সারি ভরা ──
             $row = 0;
-            foreach ($page->query('//*[@data-panel]') as $panel) {
+            // ⓘ ১ নভেম্বর ২০২৬ থেকে প্রথম চার্ট মাথার জোড়া-সারিতে, "নজরে রাখুন"-এর পাশে (মালিকের নমুনা) — সেটা দুই-ঘরের সারি, তিনের নয়
+            foreach ($page->query('//*[@data-panel][not(ancestor::*[@data-dashboard-pair])]') as $panel) {
                 $looked['panels']++;
                 $span = (int) $panel->getAttribute('data-span');
                 if ($row + $span > 3) {

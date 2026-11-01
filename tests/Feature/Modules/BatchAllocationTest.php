@@ -38,6 +38,9 @@ class BatchAllocationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ⓘ লটের মেয়াদগুলো স্থির তারিখে লেখা (২০২৬-১০-৩১ …), তাই "আজ"-ও স্থির — ⛔ নইলে ১ নভেম্বর ২০২৬ থেকে "শিগগির মেয়াদ"-এর লট
+        //   মেয়াদ পেরোনো হয়ে যেত আর পাঁচটা দাবি লাল হত, অথচ বণ্টনের নিয়ম একটুও বদলায়নি (fe, পুরো main-এর রান, ১ নভেম্বর ২০২৬)
+        $this->travelTo(Carbon::parse('2026-09-15 10:00:00'));
         $this->seed(DemoSeeder::class);
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();

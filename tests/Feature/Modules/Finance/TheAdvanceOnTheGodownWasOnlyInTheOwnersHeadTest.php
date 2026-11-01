@@ -379,8 +379,9 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
     {
         $contract = $this->godown();
 
+        // ⓘ গত মাস আর এই মাস, আজ থেকে — ⛔ আগে স্থির সেপ্টেম্বর-অক্টোবর, তাই নভেম্বরে অক্টোবরও "গত" হয়ে পুরনো ভাড়া পেত (fe, ১ নভেম্বর ২০২৬)
         $done = $this->contracts->adjustMonth($contract, [
-            'for_month' => '2026-09-01',
+            'for_month' => now()->startOfMonth()->subMonthNoOverflow()->toDateString(),
             'money_account_id' => $this->cash()->id,
         ]);
 
@@ -394,7 +395,7 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
         $this->assertSame('10000.0000', (string) $done->fresh()->from_deposit);
 
         $next = $this->contracts->adjustMonth($contract->fresh(), [
-            'for_month' => '2026-10-01',
+            'for_month' => now()->startOfMonth()->toDateString(),
             'money_account_id' => $this->cash()->id,
         ]);
 
