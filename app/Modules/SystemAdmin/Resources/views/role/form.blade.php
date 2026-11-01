@@ -708,8 +708,10 @@
                 </label>
 
                 <ul class="mt-2 space-y-0.5">
+                    {{-- ⭐ দফা ১২: ইমেইল পুরো কেবল মানুষ সামলানোর চাবিতে ([[ContactMask]]) — খোঁজার লেখাতেও, নইলে পাতার কোডে খোলা থাকত --}}
                     @foreach ($members as $member)
-                        <li x-show="! q || @js(mb_strtolower($member->name.' '.$member->email)).includes(q.toLowerCase())">
+                        @php($memberEmail = \App\Core\Support\ContactMask::email($member->email))
+                        <li x-show="! q || @js(mb_strtolower($member->name.' '.$memberEmail)).includes(q.toLowerCase())">
                             <a href="{{ route('system_admin.user.edit', $member->id) }}"
                                class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 hover:bg-(--color-surface-hover)">
                                 <span class="grid size-7 flex-none place-items-center rounded-full bg-(--color-avatar) text-xs font-semibold text-(--color-avatar-ink)">
@@ -717,7 +719,7 @@
                                 </span>
                                 <span class="min-w-0">
                                     <span class="block truncate text-sm">{{ $member->name }}</span>
-                                    <span class="block truncate text-xs text-(--color-ink-muted)">{{ $member->email }}</span>
+                                    <span class="block truncate text-xs text-(--color-ink-muted)">{{ $memberEmail }}</span>
                                 </span>
                             </a>
                         </li>
