@@ -58,7 +58,8 @@ final class TheUserFormStandsInTabsTest extends TestCase
         $bag = session('errors');
         $keys = is_object($bag) ? array_keys($bag->getMessages()) : array_keys((array) $bag);
 
-        $html = (string) $this->get(route('system_admin.user.edit', $other))->getContent();
+        // ⓘ পরীক্ষার সেশনে পরের পাতায় ভুলের ব্যাগ খালি পৌঁছায় (JSON সেশন) — তাই একই ভুলগুলো সরাসরি পাতার সামনে
+        $html = (string) $this->withViewErrors(array_fill_keys($keys, 'x'))->get(route('system_admin.user.edit', $other))->getContent();
         $this->assertStringContainsString('x-data="{ tab: \'security\' }"', $html,
             '⛔ পাসওয়ার্ডের ভুল আরেক ট্যাবের পেছনে লুকিয়ে থাকে। (ভুলের ঘর: '.implode(', ', $keys).')');
     }
