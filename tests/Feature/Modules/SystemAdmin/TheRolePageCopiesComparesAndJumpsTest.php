@@ -74,21 +74,22 @@ final class TheRolePageCopiesComparesAndJumpsTest extends TestCase
     {
         $a = $this->roleOf('accounts@abos.test');
         $b = $this->roleOf('sales@abos.test');
+        // ⓘ ডেমোর দুই রোলে মিল নেই — একটা ভাগ করা অনুমতি না দিলে "মিলগুলো লুকানো" কথাটা কখনো পরখ হত না (R8 বেঁচে গিয়েছিল)
+        DB::table('role_has_permissions')->insert(['role_id' => $b->id, 'permission_id' => $a->permissions()->value('permissions.id')]);
         $heldA = $a->permissions()->pluck('name')->all();
         $heldB = $b->permissions()->pluck('name')->all();
         $onlyA = array_values(array_diff($heldA, $heldB));
         $onlyB = array_values(array_diff($heldB, $heldA));
         $both = array_values(array_intersect($heldA, $heldB));
         $this->assertNotEmpty($onlyA, 'ⓘ পরীক্ষার ভিত্তি: দুই রোল আলাদা।');
+        $this->assertNotEmpty($both, 'ⓘ পরীক্ষার ভিত্তি: দুই রোলে অন্তত একটা মিল।');
 
         $html = (string) $this->actingAs($this->owner)->get(route('system_admin.role.compare', ['a' => $a->id, 'b' => $b->id]))->assertOk()->getContent();
 
         preg_match_all('/data-compare-row="([^"]+)"/', $html, $rows);
         $this->assertEqualsCanonicalizing([...$onlyA, ...$onlyB], $rows[1], '⛔ তুলনায় কেবল আলাদাগুলো নেই — মিলগুলোও এল, বা কিছু বাদ গেল।');
         $this->assertMatchesRegularExpression('/data-compare-row="'.preg_quote($onlyA[0], '/').'"(?:(?!<\/tr>).)*data-compare-a="yes"(?:(?!<\/tr>).)*data-compare-b="no"/s', $html, '⛔ কোন রোলের হাতে আছে, ভুল পাশে বসল।');
-        if ($both !== []) {
-            $this->assertStringContainsString(e(__('system_admin::permission.compare_same', ['count' => count($both)])), $html, '⛔ মিলের সংখ্যা ভুল।');
-        }
+        $this->assertStringContainsString(e(__('system_admin::permission.compare_same', ['count' => count($both)])), $html, '⛔ মিলের সংখ্যা ভুল।');
 
         $this->assertStringContainsString(e(route('system_admin.role.compare', ['a' => $a->id])), (string) $this->get(route('system_admin.role.edit', $a))->getContent(), '⛔ রোলের পাতায় "দুই রোল পাশাপাশি" নেই।');
 
