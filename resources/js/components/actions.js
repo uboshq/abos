@@ -236,6 +236,19 @@ export function wireActions (root = document) {
     })
 
     /*
+     * ⭐ "মডিউলে যান" — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১০। লিংকটা নিজেই সেখানে নিয়ে যায় (#perm-…); এখানে কেবল ভাঁজটা খোলা —
+     * ⚠️ বন্ধ মডিউলে পৌঁছে মাথাটুকুই দেখা যেত, আর আরেকবার চাপতে হত।
+     */
+    root.addEventListener('click', (event) => {
+        const link = event.target?.closest?.('[data-permission-jump]')
+        const module = link && root.querySelector?.(`[data-permission-module="${link.dataset.permissionJump}"]`)
+
+        if (module) {
+            module.open = true
+        }
+    })
+
+    /*
      * ⭐ গোটা পর্দার তিনটা বোতাম — মালিকের স্পেক §২.৫, ২৪ সেপ্টেম্বর ২০২৬।
      *
      * `all`  — সব অনুমতি

@@ -125,3 +125,14 @@ describe('কেবল দেওয়াগুলো', () => {
         expect(root.querySelector('input[value="sales.challan.view"]').checked).toBe(false)
     })
 })
+
+describe('মডিউলে যান — দফা ১০', () => {
+    it('opens the closed module the link points at, and only that one', () => {
+        root.insertAdjacentHTML('beforeend', '<a href="#perm-purchase" data-permission-jump="purchase">ক্রয়</a>')
+
+        root.querySelector('[data-permission-jump]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+
+        expect(module('purchase').open, '⛔ মডিউলে গিয়ে ভাঁজটা বন্ধই থাকল।').toBe(true)
+        expect(module('sales').open, '⛔ অন্য মডিউলও খুলে গেল।').toBe(false)
+    })
+})

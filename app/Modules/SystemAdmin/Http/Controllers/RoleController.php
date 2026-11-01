@@ -11,6 +11,7 @@ use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalFlowStep;
+use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,22 +79,121 @@ class RoleController extends Controller implements HasMiddleware
             'held' => [],
             'members' => collect(),
             'approvalPower' => [],
+            'lastChange' => $this->lastChange(null),
 
             /* ⓘ ছকটা এখানে আঁকা হয় না — কারণসহ [[formData()]]-এ। */
             ...$this->formData(withGrid: false),
         ]);
     }
 
+    /**
+     * ⭐ "এর মতো নতুন ভূমিকা" — কন্ট্রোল প্যানেলের পরিকল্পনা, মালিকের অনুমোদিত, ২১ অক্টোবর ২০২৬, দফা ১০।
+     *
+     * ⓘ `?from=` দিলে নতুন রোলের ছক ঐ রোলের টিকগুলো নিয়ে খোলে, নামটা "… (কপি)"; সংরক্ষণ না করা পর্যন্ত কিছুই বানানো হয় না, আর
+     * সংরক্ষণ সেই একই [[store()]] — যে চাবি নিজের হাতে নেই তা দেওয়া যায় না ([[grantable()]]), কপি করেও না।
+     * ⛔ মালিকের রোল কপি হয় না: ওটা সংজ্ঞায় সব পারে, তার কপি মানে মালিক-সমান আরেকটা রোল — আর অন্য কোম্পানির রোল 404।
+     */
     public function create(Request $request): View
     {
+        $role = new Role;
+        $held = [];
+
+        if ($request->filled('from')) {
+            $source = Role::query()->findOrFail((int) $request->query('from'));
+            $this->mustBeInThisCompany($source);
+            abort_if($source->name === PermissionSyncer::SUPER_ADMIN_ROLE, 404);
+
+            $role->name = __('system_admin::permission.copy_name', ['name' => \App\Core\Support\RoleLabel::for($source->name)]);
+            $held = $source->permissions->pluck('name')->all();
+        }
+
         return view('system_admin::role.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'role' => new Role,
-            'held' => [],
+            'role' => $role,
+            'held' => $held,
             'members' => collect(),
             'approvalPower' => [],
+            'lastChange' => null,
             ...$this->formData(),
         ]);
+    }
+
+    /**
+     * ⭐ দুই ভূমিকা পাশাপাশি — দফা ১০। ⓘ কেবল যেখানে দুইটা আলাদা, মডিউল ধরে; মিলগুলো একটা সংখ্যায়।
+     * ⓘ নাম ও ভাগ সেই ছক থেকেই ([[formData()]]) — রোলের পর্দায় যে নামে দেখেন, তুলনাতেও সেই নামে। দেখা কেবল; বদল রোলের পর্দায়।
+     */
+    public function compare(Request $request): View
+    {
+        $roles = $this->rolesOfThisCompany();
+        $pick = fn (string $key) => $roles->firstWhere('id', (int) $request->query($key));
+        [$a, $b] = [$pick('a'), $pick('b')];
+
+        $rows = [];
+        $same = 0;
+
+        if ($a && $b) {
+            $heldA = array_flip($a->permissions()->pluck('name')->all());
+            $heldB = array_flip($b->permissions()->pluck('name')->all());
+            $columns = [
+                'view' => __('system_admin::permission.column_view'),
+                'create' => __('system_admin::permission.column_create'),
+                'update' => __('system_admin::permission.column_update'),
+                'delete' => __('system_admin::permission.column_delete'),
+            ];
+
+            foreach ($this->formData()['grid'] as $block) {
+                foreach ($block['rows'] as $row) {
+                    $names = collect($row['cells'])->mapWithKeys(fn (string $name, string $column) => [$name => $columns[$column]])
+                        ->merge(array_filter([$row['manage'] => $row['manage'] ? $this->verbLabel('manage') : null]))
+                        ->merge($row['special']);
+
+                    foreach ($names as $name => $verb) {
+                        $inA = isset($heldA[$name]);
+                        $inB = isset($heldB[$name]);
+
+                        if ($inA === $inB) {
+                            $same += (int) $inA;
+
+                            continue;
+                        }
+
+                        $rows[$block['label']][] = ['label' => $row['label'].' · '.$verb, 'a' => $inA, 'b' => $inB, 'name' => $name];
+                    }
+                }
+            }
+        }
+
+        return view('system_admin::role.compare', [
+            'menu' => $this->menu->forUser($request->user()),
+            'roles' => $roles,
+            'a' => $a,
+            'b' => $b,
+            'rows' => $rows,
+            'same' => $same,
+        ]);
+    }
+
+    /**
+     * ⭐ "শেষ বদল" — দফা ১০, মাথার "অনুমতি ৩১৯"-এর জায়গায়। ⓘ রোলের নিজের অডিট থেকে (নাম বা অনুমতি বদল, কে বদলালেন); কোনো সারি না
+     * থাকলে রোলের নিজের `updated_at`, লোক ছাড়া। ⓘ রোল না বাছা থাকলে এই কোম্পানির যেকোনো রোলের শেষ বদল।
+     *
+     * @return array{at: \Illuminate\Support\Carbon, by: ?string}|null
+     */
+    private function lastChange(?Role $role): ?array
+    {
+        $ids = $role ? [$role->id] : $this->rolesOfThisCompany()->pluck('id')->all();
+
+        $trail = AuditTrail::query()
+            ->where('auditable_type', Role::class)->whereIn('auditable_id', $ids)
+            ->latest('id')->with('user:id,name')->first(['id', 'user_id', 'created_at']);
+
+        if ($trail) {
+            return ['at' => $trail->created_at, 'by' => $trail->user?->name];
+        }
+
+        $at = $role ? $role->updated_at : Role::query()->whereIn('id', $ids)->max('updated_at');
+
+        return $at ? ['at' => \Illuminate\Support\Carbon::parse($at), 'by' => null] : null;
     }
 
     public function store(Request $request): RedirectResponse
@@ -131,6 +231,7 @@ class RoleController extends Controller implements HasMiddleware
             'held' => $role->permissions->pluck('name')->all(),
             'members' => $role->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
             'approvalPower' => $this->approvalPower($role),
+            'lastChange' => $this->lastChange($role),
             ...$this->formData(),
         ]);
     }
@@ -786,7 +887,7 @@ class RoleController extends Controller implements HasMiddleware
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->count(),
             'roles' => $roles->count(),
-            'permissions' => Permission::query()->count(),
+            // ⛔ "অনুমতি ৩১৯" উঠে গেল — দফা ১০: মোট অনুমতির সংখ্যা কোনো সিদ্ধান্তে লাগে না; জায়গায় "এই ভূমিকায় যাঁরা আছেন" আর "শেষ বদল"
             'unassigned' => $roles->where('users_count', 0)->count(),
         ];
     }

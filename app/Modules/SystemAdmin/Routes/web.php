@@ -407,6 +407,8 @@ Route::middleware('auth')->prefix('system')->group(function () {
     Route::prefix('roles')->name('role.')->group(function () {
         Route::get('/', [RoleController::class, 'index'])->name('index');
         Route::get('/create', [RoleController::class, 'create'])->name('create');
+        // ⭐ দুই রোল পাশাপাশি — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১০; দেখা কেবল
+        Route::get('/compare', [RoleController::class, 'compare'])->name('compare');
         Route::post('/', [RoleController::class, 'store'])->name('store');
         Route::get('/{role}/edit', [RoleController::class, 'edit'])->whereNumber('role')->name('edit');
         Route::put('/{role}', [RoleController::class, 'update'])->whereNumber('role')->name('update');
