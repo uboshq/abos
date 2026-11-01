@@ -54,10 +54,13 @@
                                         <td>{{ $row['label'] }}</td>
                                         @foreach (['a', 'b'] as $side)
                                             <td class="text-center" data-compare-{{ $side }}="{{ $row[$side] ? 'yes' : 'no' }}">
+                                                {{-- ⭐ দফা ১৪: চিহ্নটা চোখের জন্য, পর্দা-পাঠক পড়ে কথাটা ("আছে" / "নেই") --}}
                                                 @if ($row[$side])
-                                                    <span class="font-semibold text-(--color-badge-success-ink)" aria-label="✓">✓</span>
+                                                    <span class="font-semibold text-(--color-badge-success-ink)" aria-hidden="true">✓</span>
+                                                    <span class="sr-only">{{ __('system_admin::permission.compare_has') }}</span>
                                                 @else
-                                                    <span class="text-(--color-ink-disabled)" aria-label="—">—</span>
+                                                    <span class="text-(--color-ink-disabled)" aria-hidden="true">—</span>
+                                                    <span class="sr-only">{{ __('system_admin::permission.compare_hasnt') }}</span>
                                                 @endif
                                             </td>
                                         @endforeach

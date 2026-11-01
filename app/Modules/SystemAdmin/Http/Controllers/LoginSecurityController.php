@@ -42,11 +42,13 @@ final class LoginSecurityController extends Controller implements HasMiddleware
             ->get(['id', 'name', 'email', 'is_active', 'mfa_secret', 'mfa_confirmed_at', 'two_step_required']);
         $ids = $people->pluck('id')->all();
 
-        $lastIn = LoginAttempt::query()->whereIn('user_id', $ids)->where('succeeded', true)
+        // ⓘ এই কোম্পানির খাতা — কোম্পানি বসার আগের চেষ্টায় company_id ফাঁকা, তাই সেগুলোও (মানুষটা তো এই কোম্পানিরই) [[EveryRawQueryNamesItsCompanyTest]]
+        $here = fn ($q) => $q->where('company_id', CompanyContext::id())->orWhereNull('company_id');
+        $lastIn = LoginAttempt::query()->where($here)->whereIn('user_id', $ids)->where('succeeded', true)
             ->groupBy('user_id')->selectRaw('user_id, MAX(created_at) as at')->pluck('at', 'user_id');
 
         // ⓘ "কোড দেওয়া হয়নি" ভুল নয় — দুই-ধাপের লগইনের প্রথম ধাপে কোড থাকেই না ([[LoginAttempt]]); গুনলে প্রতিটা ঠিক লগইন একবার ভুল দেখাত
-        $wrong = fn () => LoginAttempt::query()->where('succeeded', false)->where('reason', '!=', LoginAttempt::NEEDS_CODE)
+        $wrong = fn () => LoginAttempt::query()->where($here)->where('succeeded', false)->where('reason', '!=', LoginAttempt::NEEDS_CODE)
             ->where('created_at', '>=', now()->subDays(7))->whereIn('user_id', $ids);
         $failed = $wrong()->latest('id')->limit(10)->get(['identifier', 'reason', 'ip_address', 'created_at', 'user_id']);
         $failedCount = $wrong()->count();

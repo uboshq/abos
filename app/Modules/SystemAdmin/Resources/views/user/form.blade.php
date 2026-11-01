@@ -47,7 +47,10 @@
              নিরাপত্তা · আসল ক্ষমতা)। ⓘ সব ট্যাব একই ফর্মে — একবারে সংরক্ষণ, ঘরের নাম বদলায়নি। ভুল যে ট্যাবে, সেটাই খুলে থাকে। --}}
         <nav data-user-tabs role="tablist" class="flex flex-wrap gap-1 border-b border-(--color-border)">
             @foreach ($tabs as $key => $tabLabel)
+                {{-- ⭐ দফা ১৪ (WAI-ARIA tabs): প্রতিটা ট্যাব তার অংশের নাম বলে (aria-controls), Tab-এ কেবল খোলা ট্যাবটায় থামে, ← → actions.js-এ --}}
                 <button type="button" role="tab" data-user-tab-button="{{ $key }}" @click="tab = '{{ $key }}'"
+                        id="user-tab-{{ $key }}" aria-controls="user-panel-{{ $key }}"
+                        :tabindex="tab === '{{ $key }}' ? '0' : '-1'"
                         :aria-selected="tab === '{{ $key }}' ? 'true' : 'false'"
                         :class="tab === '{{ $key }}' ? 'border-(--color-brand-600) text-(--color-brand-700)' : 'border-transparent text-(--color-ink-muted)'"
                         class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold">{{ $tabLabel }}</button>
@@ -68,7 +71,7 @@
 
         {{-- ⭐ প্রতিটা অংশের মাথায় নাম — সিস্টেম পর্দার নকশা, ১০ অক্টোবর ২০২৬ (ধাপ C, ব্যবহারকারীর ফর্ম)। ⓘ রোল আর কোম্পানির
              অংশে নাম আগেই ছিল, কেবল প্রথমটায় নয় — লম্বা পর্দায় চোখ কোথা থেকে শুরু করবে বুঝত না। --}}
-        <section data-boxed data-form-section="identity" data-user-tab="identity" x-show="tab === 'identity'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-form-section="identity" data-user-tab="identity" role="tabpanel" id="user-panel-identity" aria-labelledby="user-tab-identity" x-show="tab === 'identity'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('system_admin::field.identity_and_login') }}</h2>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.field name="name" :label="__('system_admin::field.user_name')"
@@ -134,7 +137,7 @@
             </div>
         </section>
 
-        <section data-boxed data-form-section="security" data-user-tab="security" x-show="tab === 'security'"
+        <section data-boxed data-form-section="security" data-user-tab="security" role="tabpanel" id="user-panel-security" aria-labelledby="user-tab-security" x-show="tab === 'security'"
                  class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('system_admin::field.tab_security') }}</h2>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -208,7 +211,7 @@
             </div>
         </section>
 
-        <section data-boxed data-user-tab="access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-user-tab="access" role="tabpanel" id="user-panel-access" aria-labelledby="user-tab-access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('system_admin::field.roles') }}</h2>
 
             {{-- রোল ব্যবহারকারী ধরে, কোম্পানি ধরে নয় — আর সেটা লিখে
@@ -257,7 +260,7 @@
             </div>
         </section>
 
-        <section data-boxed data-user-tab="access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-user-tab="access" role="tabpanel" aria-labelledby="user-tab-access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.company.company') }}</h2>
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('system_admin::message.company_access_note') }}</p>
 
@@ -405,7 +408,7 @@
              এখানে তার ফলটা দেখা যায়। ⛔ দুই জায়গায় বদলানো গেলে কোনটা
              আসল তা বলার উপায় থাকত না। --}}
         @if ($effective !== [])
-            <section data-boxed data-user-tab="power" x-show="tab === 'power'"
+            <section data-boxed data-user-tab="power" role="tabpanel" id="user-panel-power" aria-labelledby="user-tab-power" x-show="tab === 'power'"
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="text-base font-semibold">{{ __('system_admin::permission.effective_access') }}</h2>
                 <p class="mt-1 text-xs text-(--color-ink-muted)">
@@ -439,7 +442,7 @@
         @endif
 
         @unless ($isNew)
-            <section data-boxed data-user-tab="history" x-show="tab === 'history'"
+            <section data-boxed data-user-tab="history" role="tabpanel" id="user-panel-history" aria-labelledby="user-tab-history" x-show="tab === 'history'"
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="text-base font-semibold">{{ __('system_admin::field.tab_history') }}</h2>
                 @forelse ($changes as $trail)

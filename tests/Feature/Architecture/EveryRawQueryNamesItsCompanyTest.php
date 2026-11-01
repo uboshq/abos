@@ -49,6 +49,7 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
         'job_batches' => 'ফ্রেমওয়ার্ক',
         'failed_jobs' => 'ফ্রেমওয়ার্ক',
         'password_reset_tokens' => 'ফ্রেমওয়ার্ক',
+        'personal_access_tokens' => 'ফোনের লগইন চাবি — ব্যবহারকারীর, কোম্পানির নয়; ছাঁকনি tokenable_id (লগইন নিরাপত্তা, দফা ৯: এই কোম্পানির মানুষ)',
 
         /*
          * দ্বৈত-জমার টোকেন — যন্ত্রের হিসাব, ১৩ সেপ্টেম্বর ২০২৬।

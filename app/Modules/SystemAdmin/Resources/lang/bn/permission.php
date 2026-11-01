@@ -387,4 +387,6 @@ return [
     'compare_no_difference' => 'এই দুই রোলের অনুমতি হুবহু এক।',
     'jump_to_module' => 'মডিউলে যান',
     'shown_as' => 'পর্দায় দেখায়: :name',
+    'compare_has' => 'আছে',
+    'compare_hasnt' => 'নেই',
 ];

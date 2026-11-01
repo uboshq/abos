@@ -105,7 +105,8 @@
                     <span>{{ __($label) }}</span>
                 </div>
 
-                <div class="num mt-1 text-2xl font-bold">{{ $value }}</div>
+                {{-- ⓘ তারিখের কার্ডে ছোট অক্ষর — "28 অক্টোবর 2026" বড় অক্ষরে দুই লাইনে ভাঙত আর সারির সব কার্ড লম্বা হত (দফা ১৪, ১০৮০p) --}}
+                <div @class(['num mt-1 font-bold', 'text-2xl' => $key !== 'last-change', 'text-lg leading-8' => $key === 'last-change'])>{{ $value }}</div>
                 @if ($hint)
                     <div class="truncate text-2xs text-(--color-ink-muted)">{{ $hint }}</div>
                 @endif
@@ -174,7 +175,7 @@
                                 <div title="{{ __('system_admin::permission.owner_locked') }}"
                                      class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 text-sm text-(--color-ink-muted)">
                                     <x-ui.icon name="lock" class="size-4 flex-none" />
-                                    <span class="min-w-0 flex-1 truncate">{{ $label }}</span>
+                                    <span class="min-w-0 flex-1 truncate" title="{{ $label }}">{{ $label }}</span>
                                     <span class="tabular-nums text-xs">{{ $r->users_count }}</span>
                                 </div>
                             @else
@@ -186,7 +187,7 @@
                                        'hover:bg-(--color-surface-hover)' => ! $current,
                                    ])>
                                     <x-ui.icon name="people" class="size-4 flex-none text-(--color-ink-muted)" />
-                                    <span class="min-w-0 flex-1 truncate">{{ $label }}</span>
+                                    <span class="min-w-0 flex-1 truncate" title="{{ $label }}">{{ $label }}</span>
 
                                     {{-- ⓘ দুইটা সংখ্যা: কতজন · কয়টা অনুমতি। ⛔ পুরনো
                                          তালিকার পর্দায় দুইটাই কলাম হয়ে ছিল, আর ঐ পর্দাটা

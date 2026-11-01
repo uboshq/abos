@@ -249,6 +249,27 @@ export function wireActions (root = document) {
     })
 
     /*
+     * ⭐ ট্যাবের সারিতে তীর-চাবি — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১৪ (WAI-ARIA tabs): ← → পাশের ট্যাব, Home/End প্রথম আর শেষ;
+     * ঘুরে আসে। ⓘ ট্যাবটা চাপা হয় (click), তাই প্রতিটা সারির নিজের Alpine নিয়মই চলে — ব্যবহারকারীর ফর্ম, ব্যাংক সুবিধা, ঘণ্টার ড্রয়ার।
+     * ⛔ আগে কীবোর্ডে কেবল Tab — পাঁচটা ট্যাব পেরোতে পাঁচবার, আর পর্দা-পাঠক জানত না এটা একটা ট্যাবের সারি।
+     */
+    root.addEventListener('keydown', (event) => {
+        const tab = event.target?.closest?.('[role="tablist"] [role="tab"]')
+
+        if (! tab || ! ['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+            return
+        }
+
+        const tabs = [...tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')]
+        const at = tabs.indexOf(tab)
+        const next = { ArrowRight: (at + 1) % tabs.length, ArrowLeft: (at - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[event.key]
+
+        event.preventDefault()
+        tabs[next].click()
+        tabs[next].focus()
+    })
+
+    /*
      * ⭐ গোটা পর্দার তিনটা বোতাম — মালিকের স্পেক §২.৫, ২৪ সেপ্টেম্বর ২০২৬।
      *
      * `all`  — সব অনুমতি

@@ -33,7 +33,10 @@ final class TheUserFormStandsInTabsTest extends TestCase
 
         foreach (['identity', 'access', 'security', 'power'] as $tab) {
             $this->assertMatchesRegularExpression('/data-user-tab-button="'.$tab.'"/', $html, "⛔ \"{$tab}\" ট্যাবের বোতাম নেই।");
-            $this->assertMatchesRegularExpression('/data-user-tab="'.$tab.'" x-show="tab === \''.$tab.'\'"/', $html, "⛔ \"{$tab}\"-এর অংশ নিজের ট্যাবে নয়।");
+            $this->assertMatchesRegularExpression('/data-user-tab="'.$tab.'"[^>]*x-show="tab === \''.$tab.'\'"/', $html, "⛔ \"{$tab}\"-এর অংশ নিজের ট্যাবে নয়।");
+            // ⭐ দফা ১৪ (WAI-ARIA tabs): ট্যাব আর তার অংশ একে অন্যের নাম বলে — পর্দা-পাঠক জানে কোন বোতাম কোন অংশ খোলে
+            $this->assertMatchesRegularExpression('/role="tab" data-user-tab-button="'.$tab.'"[^>]*id="user-tab-'.$tab.'" aria-controls="user-panel-'.$tab.'"/', $html, "⛔ \"{$tab}\" ট্যাব নিজের অংশের নাম বলে না।");
+            $this->assertMatchesRegularExpression('/data-user-tab="'.$tab.'" role="tabpanel" id="user-panel-'.$tab.'" aria-labelledby="user-tab-'.$tab.'"/', $html, "⛔ \"{$tab}\"-এর অংশ ট্যাবের অংশ বলে চেনা যায় না।");
         }
         $this->assertMatchesRegularExpression('/data-user-tab="security"(?:(?!<\/section>).)*name="password"/s', $html, '⛔ পাসওয়ার্ড নিরাপত্তার ট্যাবে নেই।');
         $this->assertMatchesRegularExpression('/data-user-tab="access"(?:(?!<\/section>).)*name="roles\[\]"/s', $html, '⛔ রোল প্রবেশাধিকারের ট্যাবে নেই।');
