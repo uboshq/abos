@@ -119,7 +119,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                         ['key' => 'name', 'label' => __('system_admin::dashboard.name'),
                             'render' => fn ($u) => $u->name],
                         ['key' => 'email', 'label' => __('system_admin::dashboard.email'),
-                            'render' => fn ($u) => $u->email],
+                            'render' => fn ($u) => \App\Core\Support\ContactMask::email($u->email)], // ⭐ দফা ১২: হোম খোলে সেটিংসের চাবিতে — ঠিকানা আংশিক ঢাকা
                         ['key' => 'joined', 'label' => __('system_admin::dashboard.joined'), 'width' => '10rem',
                             'render' => fn ($u) => $u->created_at ? \App\Core\Support\DateFormat::spokenDate($u->created_at) : '—'],
                     ],
