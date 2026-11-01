@@ -12,6 +12,16 @@
     $chosenRoles = collect(old('roles', $user->roles->pluck('name')->all()))->all();
     $chosenCompanies = collect(old('companies', $user->companies->pluck('id')->all()))
         ->map(fn ($id) => (int) $id)->all();
+
+    // ⭐ ট্যাব (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৮) — ভুল যে ট্যাবে, সেটাই খুলে থাকে
+    $tabOf = fn (string $field) => match (true) {
+        in_array($field, ['password', 'password_confirmation', 'current_password'], true) => 'security',
+        str_starts_with($field, 'roles') || str_starts_with($field, 'companies') || str_contains($field, '_scope') || str_starts_with($field, 'branch') => 'access',
+        default => 'identity',
+    };
+    $openTab = $errors->any() ? $tabOf((string) array_key_first($errors->getMessages())) : 'identity';
+    $tabs = ['identity' => __('system_admin::field.tab_identity'), 'access' => __('system_admin::field.tab_access'),
+        'security' => __('system_admin::field.tab_security')] + (($effective ?? []) !== [] ? ['power' => __('system_admin::permission.effective_access')] : []);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -25,9 +35,21 @@
 
     <form method="POST"
           action="{{ $isNew ? route('system_admin.user.store') : route('system_admin.user.update', $user) }}"
+          x-data="{ tab: '{{ $openTab }}' }"
           class="space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
+
+        {{-- ⭐ ট্যাব — এক লম্বা পাতার বদলে (কন্ট্রোল প্যানেলের পরিকল্পনা, মালিকের অনুমোদিত, ২১ অক্টোবর ২০২৬, দফা ৮: পরিচয় · প্রবেশাধিকার ·
+             নিরাপত্তা · আসল ক্ষমতা)। ⓘ সব ট্যাব একই ফর্মে — একবারে সংরক্ষণ, ঘরের নাম বদলায়নি। ভুল যে ট্যাবে, সেটাই খুলে থাকে। --}}
+        <nav data-user-tabs role="tablist" class="flex flex-wrap gap-1 border-b border-(--color-border)">
+            @foreach ($tabs as $key => $tabLabel)
+                <button type="button" role="tab" data-user-tab-button="{{ $key }}" @click="tab = '{{ $key }}'"
+                        :aria-selected="tab === '{{ $key }}' ? 'true' : 'false'"
+                        :class="tab === '{{ $key }}' ? 'border-(--color-brand-600) text-(--color-brand-700)' : 'border-transparent text-(--color-ink-muted)'"
+                        class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold">{{ $tabLabel }}</button>
+            @endforeach
+        </nav>
 
         @if ($errors->any())
             <div role="alert"
@@ -43,7 +65,7 @@
 
         {{-- ⭐ প্রতিটা অংশের মাথায় নাম — সিস্টেম পর্দার নকশা, ১০ অক্টোবর ২০২৬ (ধাপ C, ব্যবহারকারীর ফর্ম)। ⓘ রোল আর কোম্পানির
              অংশে নাম আগেই ছিল, কেবল প্রথমটায় নয় — লম্বা পর্দায় চোখ কোথা থেকে শুরু করবে বুঝত না। --}}
-        <section data-boxed data-form-section="identity" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-form-section="identity" data-user-tab="identity" x-show="tab === 'identity'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('system_admin::field.identity_and_login') }}</h2>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.field name="name" :label="__('system_admin::field.user_name')"
@@ -75,6 +97,44 @@
                             :value="old('login_id', $user->login_id)"
                             :hint="__('system_admin::field.login_id_hint')" />
 
+                <x-ui.select name="locale" :label="__('core.appearance.language')"
+                             :options="['bn' => 'বাংলা', 'en' => 'English']"
+                             :selected="old('locale', $user->locale ?? 'bn')" required />
+
+                {{--
+                    ⛔ মোবাইল ও মন্তব্যের ঘর দুইটাও এখানে ছিল না — একই
+                    দিনে, একই কারণে ([[login_id]]-র টীকা দেখুন)।
+
+                    ⚠️ দুইটাই **তালিকায় কলাম হিসেবে দেখানো হয়**, তাই
+                    প্রশাসক ঘরগুলো দেখতেন আর ভাবতেন কেউ ভরেনি — অথচ
+                    ভরার কোনো উপায়ই ছিল না। ⓘ মন্তব্যের কলামটা তিন
+                    সারিতেই খালি ছিল, আর সেটাই ধরিয়ে দিল।
+
+                    ⓘ মোবাইলটা কেবল যোগাযোগের ঘর নয় — [[CredentialCheck]]
+                    ওটা দিয়েও লগইন করতে দেয়।
+                --}}
+                <x-ui.field name="mobile" :label="__('core.profile.mobile')"
+                            :value="old('mobile', $user->mobile)" />
+
+                {{-- ⓘ *"ছুটিতে আছেন"*, *"অক্টোবর থেকে বিক্রয়ে"* — যে কথাগুলো
+                     কোনো ঘরে পড়ে না। ⛔ জায়গা না থাকলে মানুষ ওগুলো নামের
+                     ঘরে লেখে, আর তখন নামটাই নষ্ট হয় (মাইগ্রেশনের টীকা)। --}}
+                <x-ui.field name="remarks" :label="__('core.table.remarks')"
+                            :value="old('remarks', $user->remarks)" />
+
+                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                    <input type="hidden" name="is_active" value="0">
+                    <input type="checkbox" name="is_active" value="1" class="size-4"
+                           @checked(old('is_active', $user->is_active ?? true))>
+                    {{ __('core.state.active') }}
+                </label>
+            </div>
+        </section>
+
+        <section data-boxed data-form-section="security" data-user-tab="security" x-show="tab === 'security'"
+                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('system_admin::field.tab_security') }}</h2>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {{-- পাসওয়ার্ড কখনো ভরে দেখানো হয় না — পর্দার HTML-এ থাকলে
                      যে কেউ দেখে ফেলতে পারতেন। সম্পাদনায় খালি মানে
                      "আগেরটাই থাক", মুছে দেওয়া নয়। --}}
@@ -142,41 +202,10 @@
                     @endforeach
                 </div>
 
-                <x-ui.select name="locale" :label="__('core.appearance.language')"
-                             :options="['bn' => 'বাংলা', 'en' => 'English']"
-                             :selected="old('locale', $user->locale ?? 'bn')" required />
-
-                {{--
-                    ⛔ মোবাইল ও মন্তব্যের ঘর দুইটাও এখানে ছিল না — একই
-                    দিনে, একই কারণে ([[login_id]]-র টীকা দেখুন)।
-
-                    ⚠️ দুইটাই **তালিকায় কলাম হিসেবে দেখানো হয়**, তাই
-                    প্রশাসক ঘরগুলো দেখতেন আর ভাবতেন কেউ ভরেনি — অথচ
-                    ভরার কোনো উপায়ই ছিল না। ⓘ মন্তব্যের কলামটা তিন
-                    সারিতেই খালি ছিল, আর সেটাই ধরিয়ে দিল।
-
-                    ⓘ মোবাইলটা কেবল যোগাযোগের ঘর নয় — [[CredentialCheck]]
-                    ওটা দিয়েও লগইন করতে দেয়।
-                --}}
-                <x-ui.field name="mobile" :label="__('core.profile.mobile')"
-                            :value="old('mobile', $user->mobile)" />
-
-                {{-- ⓘ *"ছুটিতে আছেন"*, *"অক্টোবর থেকে বিক্রয়ে"* — যে কথাগুলো
-                     কোনো ঘরে পড়ে না। ⛔ জায়গা না থাকলে মানুষ ওগুলো নামের
-                     ঘরে লেখে, আর তখন নামটাই নষ্ট হয় (মাইগ্রেশনের টীকা)। --}}
-                <x-ui.field name="remarks" :label="__('core.table.remarks')"
-                            :value="old('remarks', $user->remarks)" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="hidden" name="is_active" value="0">
-                    <input type="checkbox" name="is_active" value="1" class="size-4"
-                           @checked(old('is_active', $user->is_active ?? true))>
-                    {{ __('core.state.active') }}
-                </label>
             </div>
         </section>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-user-tab="access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('system_admin::field.roles') }}</h2>
 
             {{-- রোল ব্যবহারকারী ধরে, কোম্পানি ধরে নয় — আর সেটা লিখে
@@ -225,7 +254,7 @@
             </div>
         </section>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed data-user-tab="access" x-show="tab === 'access'" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.company.company') }}</h2>
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('system_admin::message.company_access_note') }}</p>
 
@@ -373,7 +402,7 @@
              এখানে তার ফলটা দেখা যায়। ⛔ দুই জায়গায় বদলানো গেলে কোনটা
              আসল তা বলার উপায় থাকত না। --}}
         @if ($effective !== [])
-            <section data-boxed
+            <section data-boxed data-user-tab="power" x-show="tab === 'power'"
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="text-base font-semibold">{{ __('system_admin::permission.effective_access') }}</h2>
                 <p class="mt-1 text-xs text-(--color-ink-muted)">

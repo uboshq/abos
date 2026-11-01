@@ -43,4 +43,8 @@ return [
     // Changing your own password: 14 Oct 2026
     'current_password' => 'Your current password',
     'current_password_hint' => 'Needed only when you change your own password. Leave blank otherwise.',
+    // ⭐ ব্যবহারকারীর ফর্মের ট্যাব (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৮)
+    'tab_identity' => 'Identity',
+    'tab_access' => 'Access (roles · companies · branches)',
+    'tab_security' => 'Security (password)',
 ];
