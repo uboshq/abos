@@ -113,7 +113,10 @@ final class TheLandlordsNoticeCameInTimeTest extends TestCase
     public function test_months_after_the_term_are_never_overdue(): void
     {
         // ⓘ চল্লিশ দিন আগে মেয়াদ শেষ, কেউ শেষ করেননি, কোনো মাস দেওয়া হয়নি
-        $expired = $this->contract('Expired Unpaid', endsIn: -40, paidUp: false);
+        // ⓘ মেয়াদ শেষ আগের-আগের মাসের শেষ দিনে (≈ চল্লিশ দিন আগে) — ⛔ "আজ − ৪০ দিন" নভেম্বরে মাসের ১ তারিখে পড়ত, তখন ১২ মাসের চুক্তি
+        //   ১৩টা ক্যালেন্ডার মাস ছুঁত আর দাবি লাল হত, নিয়ম না বদলেও (fe, ১ নভেম্বর ২০২৬)
+        $endsIn = (int) $this->today->copy()->startOfMonth()->subMonthNoOverflow()->subDay()->diffInDays($this->today, false) * -1;
+        $expired = $this->contract('Expired Unpaid', endsIn: $endsIn, paidUp: false);
         $months = app(RentalDues::class)->overdueMonths($expired);
 
         $this->assertCount(12, $months, 'বারো মাসের মেয়াদ — বারো মাসই বকেয়া, তার বেশি নয়');
