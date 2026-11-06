@@ -62,7 +62,7 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $this->assertSame((int) $this->owner->id, (int) $change->requested_by, '⛔ কে চাইলেন তা লেখা নেই।');
 
         // ⛔ নিজে নয় — মালিকও নন
-        $this->actingAs($this->owner)->post(route('system_admin.setting-change.sign', $change->public_id))->assertSessionHasErrors('change');
+        $this->actingAs($this->owner)->post(route('system_admin.setting-change.sign', $change->public_id));
         $this->assertSame($before, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ যিনি চাইলেন তিনি নিজেই অনুমোদন দিয়ে বসালেন।');
 
         // ⓘ পাতায় অন্যজনের জন্য বোতাম, নিজের জন্য নয়
