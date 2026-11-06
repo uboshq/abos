@@ -78,7 +78,7 @@ final class Release
 
         $cache = base_path('bootstrap/cache/config.php');
 
-        return is_file($cache) ? Carbon::createFromTimestamp((int) filemtime($cache))->format('d-m-Y') : null;
+        return is_file($cache) ? Carbon::createFromTimestamp((int) filemtime($cache), config('app.timezone'))->format('d-m-Y') : null;
     }
 
     /** "v1.0.0 · 24-10-2026 · 2c026a3" — যা জানা আছে কেবল সেটুকু */

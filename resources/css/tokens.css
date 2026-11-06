@@ -1232,6 +1232,8 @@
     --color-kind-approval: #ea580c;
     --color-kind-approval-deep: #c2410c;
     --color-kind-glass: rgb(255 255 255 / .2);
+    /* ⭐ ফুটারের "UNIVER BANGLADESH" — নির্মাতার চিহ্নের রং (মালিক, ৬ নভেম্বর ২০২৬) */
+    --color-univer: #007a99;
     /* ⓘ তথ্যের চার ঘর আর ট্যাবের সংখ্যা — অবস্থার রং ([[color-board-*]]) ছাড়া বাকি দুটো */
     --color-kind-fact-who: #2563eb;
     --color-kind-fact-what: #7c3aed;

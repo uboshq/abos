@@ -64,7 +64,7 @@
         <span class="flex items-center gap-1">
             {{ __('core.brand.powered_by') }}
             <img src="{{ asset('brand/univer-mark.png') }}" alt="" width="18" height="18" class="size-[18px] object-contain">
-            <b class="font-semibold tracking-wide" style="color: var(--color-univer, #007a99)">UNIVER BANGLADESH</b>
+            <b class="font-semibold tracking-wide" style="color: var(--color-univer)">UNIVER BANGLADESH</b>
         </span>
     </span>
 
