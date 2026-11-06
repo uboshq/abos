@@ -113,7 +113,30 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $key = 'hr.show_left_employees';
         $was = (bool) app(SettingsService::class)->get($key);
 
-        $this->actingAs($this->owner)->put(route('system_admin.settings.update'), ['settings' => array_filter([$key => $was ? null : '1'])]);
+        /* ⓘ পর্দা যা পাঠায় হুবহু তা — প্রতিটা ঘর তার চলতি মানে, শুধু এই একটা উল্টানো।
+           ⚠️ কেবল একটা চাবি পাঠালে বাকি চালু সুইচগুলো "টিক নেই" পড়ে বন্ধের দিকে যেত —
+           আর জরুরিগুলো (বাকির সীমা, অনুমোদন) অপেক্ষায় উঠত; দাবিটা তখন ভুল জিনিস মাপত (Mac, ৭ নভেম্বর ২০২৬) */
+        $payload = [];
+        foreach (app(SettingsService::class)->definitions() as $each => $definition) {
+            if (($definition['menu'] ?? false) || ($definition['group'] ?? '') === 'screens') {
+                continue;
+            }
+            $value = app(SettingsService::class)->get($each);
+            if ($definition['type'] === 'boolean') {
+                if ($value) {
+                    $payload[$each] = '1';
+                }
+
+                continue;
+            }
+            $payload[$each] = is_scalar($value) ? (string) $value : json_encode($value);
+        }
+        unset($payload[$key]);
+        if (! $was) {
+            $payload[$key] = '1';
+        }
+
+        $this->actingAs($this->owner)->put(route('system_admin.settings.update'), ['settings' => $payload]);
 
         $this->assertSame(! $was, (bool) app(SettingsService::class)->get($key), '⛔ সাধারণ সেটিংও আটকে গেল — কেবল জরুরিগুলো দ্বিতীয় হাত চায়।');
         $this->assertSame(0, SettingChange::query()->count(), '⛔ সাধারণ সেটিংয়ের জন্য অপেক্ষার সারি।');

@@ -24,7 +24,8 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ORDER = ['home', 'org', 'people', 'modules', 'comms', 'data'];
+    // ⓘ পরিকল্পনার ৭ ভাগ — সপ্তমটা "নিরীক্ষা" (বদলের ইতিহাস, নোটিশের রিপোর্ট), দফা ১ সম্পূর্ণ হলো ৭ নভেম্বর ২০২৬
+    private const ORDER = ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit'];
 
     public function test_every_row_names_a_section_and_the_sections_are_the_plans(): void
     {
@@ -76,6 +77,7 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
             'system_admin::menu.control_panel' => 'modules',
             'system_admin::notice.title' => 'comms',
             'core.import.title' => 'data',
+            'system_admin::menu.change_history' => 'audit',
         ] as $label => $section) {
             $this->assertSame($section, $under[__($label)] ?? null, '⛔ "'.__($label)."\" নিজের ভাগ \"{$section}\"-এর নিচে নেই।");
         }
