@@ -35,10 +35,18 @@
         ($deadline['tone'] ?? null) === 'danger' => 'late',
         default => 'wait',
     };
+    // ⓘ টোকেনের পুরো নাম — অর্ধেক লেখা নাম রঙের পাহারা পড়তে পারে না ([[EveryScreenObeysTheThemeTest]])
+    $stripe = match ($state) {
+        'today' => 'var(--color-board-today)',
+        'back' => 'var(--color-board-back)',
+        'late' => 'var(--color-board-late)',
+        'wait' => 'var(--color-board-wait)',
+        default => 'var(--color-border)',
+    };
 @endphp
 
 <li data-inbox-card="{{ $approval->id }}" @if ($state) data-card-state="{{ $state }}" @endif
-    style="border-inline-start: 4px solid {{ $state ? 'var(--color-board-'.$state.')' : 'var(--color-border)' }};
+    style="border-inline-start: 4px solid {{ $stripe }};
            @if ($state === 'late') background: color-mix(in srgb, var(--color-board-late) 5%, var(--color-surface-card)); @endif"
     @class([
         'flex gap-2 rounded-(--radius-card) border bg-(--color-surface-card) p-3',

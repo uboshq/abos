@@ -34,13 +34,13 @@
 
         <div>
             <h2 data-form-band="party" class="mb-3">{{ __('money.screen.ledger') }}</h2>
-            <table class="w-full text-xs" data-preview-ledger x-show="hasRows" x-cloak>
+            <table class="ui-grid w-full text-sm" data-preview-ledger x-show="hasRows" x-cloak>
                 <tbody>
                     <template x-for="row in rows">
-                        <tr class="border-b border-(--color-border)" data-preview-row>
-                            <td class="py-1 pe-2"><span x-text="row.account"></span> <span class="text-(--color-ink-muted)" x-text="row.party"></span></td>
-                            <td class="num py-1 text-end" x-text="row.debit"></td>
-                            <td class="num py-1 text-end" x-text="row.credit"></td>
+                        <tr data-preview-row>
+                            <td class="text-xs"><span x-text="row.account"></span> <span class="text-(--color-ink-muted)" x-text="row.party"></span></td>
+                            <td class="num" x-text="row.debit"></td>
+                            <td class="num" x-text="row.credit"></td>
                         </tr>
                     </template>
                 </tbody>

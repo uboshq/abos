@@ -117,7 +117,8 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         }
         // ⓘ ডেমোর ইনবক্স খালি থাকতে পারে — তাই কার্ডের ছাঁচে দাগটা মাপা, আর পাতায় কার্ড থাকলে প্রতিটায়
         $card = (string) file_get_contents(app_path('Modules/Approval/Resources/views/inbox/partials/card.blade.php'));
-        $this->assertStringContainsString('border-inline-start: 4px solid {{ $state ? \'var(--color-board-\'.$state.\')\'', $card, '⛔ কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+        $this->assertStringContainsString('border-inline-start: 4px solid {{ $stripe }}', $card, '⛔ কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+        $this->assertStringContainsString("'late' => 'var(--color-board-late)'", $card, '⛔ দেরির কার্ডের দাগ লাল নয় (৮)।');
         preg_match_all('/data-inbox-card="\d+"([^>]*)>/', $html, $cards);
         foreach ($cards[1] as $attributes) {
             $this->assertStringContainsString('border-inline-start: 4px solid', $attributes, '⛔ পাতার একটা কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
