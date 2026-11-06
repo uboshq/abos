@@ -85,7 +85,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
 
         $html = $this->dashboard();
         $ticker = $this->part($html, '<div data-ticker', '</footer>');
-        $strip = $this->part($html, '<div data-message-strips', '<aside');
+        $strip = $this->part($html, '<div data-message-strips', 'data-message-strips-end');
 
         $this->assertStringContainsString('কাল অফিস বন্ধ থাকবে', $ticker, '⛔ পরীক্ষার ভিত্তি নেই — ঘোষণাটাই চলন্ত বারে নেই।');
         $this->assertStringNotContainsString(e($warning), $ticker, '⛔ যন্ত্রের সতর্কতা (ব্যাকআপ) চলন্ত বারে।');
@@ -108,7 +108,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
 
         $this->assertStringContainsString('রবিবার থেকে নতুন দাম', $ticker, '⛔ ঘোষণাটা নিচের চলন্ত বারে নেই।');
         $this->assertStringNotContainsString('রবিবার থেকে নতুন দাম',
-            $this->part($html, '<div data-message-strips', '<aside', allowMissing: true),
+            $this->part($html, '<div data-message-strips', 'data-message-strips-end', allowMissing: true),
             '⛔ জরুরি নয় এমন ঘোষণা উপরের ফিতায়।');
 
         // ⓘ ক্লিক করলে পুরো নোটিশ — নোটিশের নিজের পাতা
@@ -149,7 +149,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         Cache::flush();
 
         $html = $this->dashboard();
-        $this->assertStringContainsString('গুদামে পানি উঠেছে', $this->part($html, '<div data-message-strips', '<aside'),
+        $this->assertStringContainsString('গুদামে পানি উঠেছে', $this->part($html, '<div data-message-strips', 'data-message-strips-end'),
             '⛔ জরুরি টিকের পরেও ঘোষণাটা উপরের ফিতায় ওঠেনি।');
         $this->assertStringNotContainsString('গুদামে পানি উঠেছে', $this->part($html, '<footer data-footer', '</footer>'),
             '⛔ একই নোটিশ দুই জায়গায় — জরুরিটা চলন্ত বারেও ঘুরছে।');
@@ -177,7 +177,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringContainsString('গুদামে পানি উঠেছে', $this->part($html, '<div data-ticker', '</footer>'),
             '⛔ টিক তোলার পরেও ঘোষণাটা চলন্ত বারে ফেরেনি।');
         $this->assertStringNotContainsString('গুদামে পানি উঠেছে',
-            $this->part($html, '<div data-message-strips', '<aside', allowMissing: true),
+            $this->part($html, '<div data-message-strips', 'data-message-strips-end', allowMissing: true),
             '⛔ টিক তোলার পরেও ঘোষণাটা উপরের ফিতায়।');
         $this->assertSame(['1', '0'], $this->urgentChange($notice, 2), '⛔ টিক তোলার বদল নিরীক্ষায় বসেনি।');
     }
@@ -197,9 +197,11 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringNotContainsString('data-ticker', $html, '⛔ ঘোষণা নেই, তবু চলন্ত বার আঁকা হয়েছে।');
         $this->assertStringNotContainsString('abos-ticker', $html, '⛔ ঘোষণা নেই, তবু চলার নিয়ম পাতায়।');
         $this->assertStringNotContainsString('data-has-ticker', $footer, '⛔ ঘোষণা নেই, তবু মোবাইলে ফুটার উঠে বসেছে।');
-        $this->assertStringContainsString('v'.\App\Core\Support\Release::version(), $footer, '⛔ ফুটার থেকে সংস্করণ হারাল।');
+        // ⭐ মালিকের নতুন চেহারা, ৬ নভেম্বর ২০২৬: ফুটারে বাঁয়ে লোগো · Powered by UNIVER BANGLADESH, ডানে ©; সংস্করণ প্রোফাইলের
+        // মেনুতে আর লগইন পাতায়, নাম ছবির বাঁয়ে ([[TheShellWearsTheOwnersNewLookTest]], [[TheBarCarriesTheReleaseTest]])
+        $this->assertStringContainsString('data-footer-brand', $footer, '⛔ ফুটার থেকে লোগো আর "Powered by" হারাল।');
+        $this->assertStringContainsString('UNIVER BANGLADESH', $footer, '⛔ ফুটার থেকে নির্মাতার নাম হারাল।');
         $this->assertStringContainsString('© '.now()->year, $footer, '⛔ ফুটার থেকে © হারাল।');
-        $this->assertStringContainsString(e($this->owner()->name), $footer, '⛔ ফুটার থেকে নাম হারাল।');
     }
 
     public function test_the_pause_button_has_a_name(): void
@@ -288,7 +290,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringNotContainsString(e(__('core.notice.dismiss')), $ticker, '⛔ চলন্ত সারিতে "সরান" বোতাম।');
 
         // ⓘ উপরের ফিতার নিজের ✕ অক্ষত
-        $this->assertStringContainsString('data-strip-close', $this->part($html, '<div data-message-strips', '<aside'),
+        $this->assertStringContainsString('data-strip-close', $this->part($html, '<div data-message-strips', 'data-message-strips-end'),
             '⛔ উপরের ফিতার ✕ হারাল — ওটা ছোঁয়ার কথা ছিল না।');
     }
 

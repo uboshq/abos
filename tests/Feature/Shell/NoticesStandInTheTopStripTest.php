@@ -79,7 +79,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
         Cache::flush();
 
         $html = $this->get(route('dashboard'))->assertOk()->getContent();
-        $strip = $this->part($html, '<div data-message-strips', '<aside');
+        $strip = $this->part($html, '<div data-message-strips', 'data-message-strips-end');
         $footer = $this->part($html, '<footer data-footer', '</footer>');
 
         $this->assertStringContainsString(e($warning), $strip, '⛔ যন্ত্রের সতর্কতা উপরের ফিতায় নেই।');
@@ -103,7 +103,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
         Cache::flush();
 
         $html = $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
-        $strip = $this->part($html, '<div data-message-strips', '<aside');
+        $strip = $this->part($html, '<div data-message-strips', 'data-message-strips-end');
 
         $own = strpos($strip, 'রবিবার থেকে দাম বাড়বে');
         $machine = strpos($strip, e(__('core.notice.backup_stale')));
@@ -122,7 +122,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
 
         $html = $this->get(route('dashboard'))->assertOk()->getContent();
 
-        $this->assertStringNotContainsString(e($warning), $this->part($html, '<div data-message-strips', '<aside', allowMissing: true),
+        $this->assertStringNotContainsString(e($warning), $this->part($html, '<div data-message-strips', 'data-message-strips-end', allowMissing: true),
             '⛔ ✕ চাপার পরেও ফিতা ফিরে এল।');
         $this->assertStringContainsString(e($warning), $this->bell($html), '⛔ ✕ সতর্কতাটাই মুছে দিল — ঘণ্টায় নেই।');
     }
@@ -136,7 +136,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
         Cache::flush();
 
         $html = $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
-        $strip = $this->part($html, '<div data-message-strips', '<aside');
+        $strip = $this->part($html, '<div data-message-strips', 'data-message-strips-end');
 
         $this->assertSame(3, substr_count($strip, 'data-message-strip='), '⛔ তিনটার বেশি ফিতা — পাতাটাই ঢাকা পড়ে।');
         $this->assertStringContainsString('data-strip-more', $strip, '⛔ বাকিগুলো কোথায় তা বলা নেই।');

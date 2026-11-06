@@ -94,4 +94,6 @@
             </p>
         @endif
     </div>
+    {{-- ⓘ ফিতার শেষ — ৬ নভেম্বর ২০২৬ থেকে ফিতা কাজের কলামে, সাইডবারের পরে; দাবিগুলো এখানে কাটে, `<aside` এ নয় --}}
+    <span data-message-strips-end hidden></span>
 @endif
