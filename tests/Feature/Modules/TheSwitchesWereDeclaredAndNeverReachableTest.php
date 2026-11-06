@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Services\SettingsService;
+use App\Core\Services\SignedSettings;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\Setting;
+use App\Models\SettingChange;
 use App\Models\User;
 use App\Modules\SystemAdmin\Http\Controllers\SettingsController;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -110,6 +114,7 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
                 'settings' => ['customer.zero_limit_blocks' => '1'],
             ])
             ->assertRedirect();
+        $this->anotherHandSigns();
 
         $row = Setting::query()
             ->where('company_id', $this->company->id)
@@ -180,6 +185,7 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('system_admin.settings.update'), ['settings' => $payload])
             ->assertRedirect();
+        $this->anotherHandSigns();
 
         $after = Setting::query()->where('company_id', $this->company->id)->count();
 
@@ -205,6 +211,7 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
             ->put(route('system_admin.settings.update'), [
                 'settings' => ['customer.zero_limit_blocks' => '1'],
             ])->assertRedirect();
+        $this->anotherHandSigns();
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
 
@@ -334,5 +341,29 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
 
         $this->assertGreaterThanOrEqual(8, $modules,
             'দশটার কম মডিউল দেখাচ্ছে — অথচ দশটা মডিউল সুইচ ঘোষণা করে।');
+    }
+
+    /**
+     * ⓘ বাকির সুইচ জরুরি সেটিং — টিপলে আরেকজনের অনুমোদনের অপেক্ষায় যায় (কন্ট্রোল প্যানেল দফা ৭, ৭ নভেম্বর ২০২৬)।
+     * দ্বিতীয় এক প্রশাসক অনুমোদন দিলে তবেই সারি বসে — এই দাবিগুলো সেই পুরো পথটাই হাঁটে।
+     */
+    private function anotherHandSigns(): void
+    {
+        $change = SettingChange::query()->where('key', 'customer.zero_limit_blocks')->where('status', SettingChange::PENDING)->latest('id')->first();
+        $this->assertNotNull($change, '⛔ বাকির সুইচ টেপা হলো, অথচ আরেকজনের অনুমোদনের অপেক্ষায় গেল না।');
+        $this->assertSame(0, Setting::query()->where('company_id', $this->company->id)->where('key', 'customer.zero_limit_blocks')->count(),
+            '⛔ বাকির সুইচ এক হাতেই বসে গেল।');
+
+        $second = User::factory()->create(['is_active' => true]);
+        $second->companies()->attach($this->company, ['is_active' => true]);
+        $second->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $this->company->defaultBranch()?->id])->save();
+        CompanyContext::forCompany($this->company->id, function () use ($second): void {
+            $second->givePermissionTo(Permission::findOrCreate(SignedSettings::KEY, 'web'));
+        });
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($second->fresh())->post(route('system_admin.setting-change.sign', $change->public_id))->assertRedirect();
+        app(SettingsService::class)->flush();
+        $this->actingAs($this->admin);
     }
 }

@@ -153,11 +153,12 @@ class ControlPanelTest extends TestCase
                 'accounts.backdate_days' => 21,
                 'master_data.region_enabled' => '1',
             ],
-        ])->assertRedirect();
+        ])->assertRedirect()->assertSessionHas('setting_waits');
 
         $settings->flush();
 
-        $this->assertFalse($settings->enabled('customer.credit_limit_enabled'));
+        // ⓘ বাকির সীমা জরুরি সেটিং — সরাসরি বসে না, আরেকজনের অনুমোদনের অপেক্ষায় যায় (কন্ট্রোল প্যানেল দফা ৭, ৭ নভেম্বর ২০২৬; [[AKeySettingWaitsForASecondHandTest]])
+        $this->assertTrue($settings->enabled('customer.credit_limit_enabled'), '⛔ বাকির সীমার সুইচ এক হাতেই বন্ধ হয়ে গেল');
         $this->assertSame(21, $settings->get('accounts.backdate_days'));
         $this->assertTrue($settings->enabled('master_data.region_enabled'));
     }
