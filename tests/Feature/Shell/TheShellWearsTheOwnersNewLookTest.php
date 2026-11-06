@@ -115,7 +115,13 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         foreach (['data-list-tabs', 'data-inbox-filters', 'data-inbox-totals', 'data-inbox-detail'] as $part) {
             $this->assertStringContainsString($part, $html, "⛔ লাইভের অংশ হারাল: {$part} (৮)।");
         }
-        $this->assertMatchesRegularExpression('/data-inbox-card="\d+"\s+data-card-state="(late|wait)"/', $html, '⛔ কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+        // ⓘ ডেমোর ইনবক্স খালি থাকতে পারে — তাই কার্ডের ছাঁচে দাগটা মাপা, আর পাতায় কার্ড থাকলে প্রতিটায়
+        $card = (string) file_get_contents(app_path('Modules/Approval/Resources/views/inbox/partials/card.blade.php'));
+        $this->assertStringContainsString('border-inline-start: 4px solid {{ $state ? \'var(--color-board-\'.$state.\')\'', $card, '⛔ কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+        preg_match_all('/data-inbox-card="\d+"([^>]*)>/', $html, $cards);
+        foreach ($cards[1] as $attributes) {
+            $this->assertStringContainsString('border-inline-start: 4px solid', $attributes, '⛔ পাতার একটা কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+        }
     }
 
     /**
