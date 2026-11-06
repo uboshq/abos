@@ -312,4 +312,6 @@ return [
     'compare_no_difference' => 'These two roles hold exactly the same permissions.',
     'jump_to_module' => 'Go to module',
     'shown_as' => 'Shown on screens as: :name',
+    'compare_has' => 'holds it',
+    'compare_hasnt' => 'does not hold it',
 ];

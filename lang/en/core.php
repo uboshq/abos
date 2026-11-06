@@ -1674,4 +1674,7 @@ return [
         'arrange' => 'Arrange', 'reset' => 'Reset to default', 'arrange_title' => 'Arrange the left bar',
         'arrange_hint' => 'Pinned modules always stay on the bar. Drag or press ↑ ↓ to reorder; saved for all your devices.',
         'pin' => 'Pin', 'up' => 'Move up:', 'down' => 'Move down:', 'cancel' => 'Back', 'save' => 'Save'],
+
+    /* ⭐ "শেষ বদল" আর বদলের ইতিহাস — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১৩ ([[x-audit.last-change]]) */
+    'audit' => ['last_change' => 'Last change', 'history' => 'Change history'],
 ];

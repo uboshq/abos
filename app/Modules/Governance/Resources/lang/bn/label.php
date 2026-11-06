@@ -17,4 +17,5 @@ return [
     'as_it_stood_on' => ':on তারিখে যেমন ছিল',
     'show_that_day' => 'ওইদিনটা দেখান',
     'time_machine' => 'ওইদিন কেমন ছিল',
+    'search_values' => 'আগের বা পরের মান খুঁজুন',
 ];

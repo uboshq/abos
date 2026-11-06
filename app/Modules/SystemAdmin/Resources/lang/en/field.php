@@ -47,4 +47,8 @@ return [
     'tab_identity' => 'Identity',
     'tab_access' => 'Access (roles · companies · branches)',
     'tab_security' => 'Security (password)',
+    'tab_history' => 'History',
+    'fields_changed' => ':count field(s) changed',
+    'by_system' => 'System',
+    'no_history' => 'No change recorded yet.',
 ];

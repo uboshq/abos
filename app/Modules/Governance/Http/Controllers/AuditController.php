@@ -8,6 +8,7 @@ use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Audit\TimeMachine;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -149,13 +150,31 @@ class AuditController extends Controller implements HasMiddleware
     {
         $entry = AuditTrail::query()->findOrFail($trail);
 
+        /*
+         * ⭐ আগের-পরের মানে খোঁজা — কন্ট্রোল প্যানেলের পরিকল্পনা, মালিকের অনুমোদিত, ২১ অক্টোবর ২০২৬, দফা ১৩।
+         * ⛔ ঢাকা ঘরের মানে খোঁজা হয় না ([[FieldSecurity]]): নইলে "25000" লিখে মিল এলেই বেতনটা জানা হয়ে যেত — সারির মান ঢাকা থাকলেও।
+         */
+        $term = trim((string) $request->query('q', ''));
+        $hidden = collect([
+            ...array_keys(FieldSecurity::all()[$entry->auditable_type] ?? []),
+            ...array_keys(FieldSecurity::sectionGuarded()[$entry->auditable_type] ?? []),
+        ])->reject(fn (string $field) => FieldSecurity::visible($entry->auditable_type, $field))->values()->all();
+
         $history = AuditTrail::query()
             ->forRecord($entry->auditable_type, $entry->auditable_id)
+            ->when($term !== '', function (Builder $q) use ($term, $hidden) {
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
+
+                $q->whereHas('changes', fn (Builder $c) => $c->whereNotIn('field', $hidden)
+                    ->where(fn (Builder $any) => $any->where('field', 'like', $like)->orWhere('old_value', 'like', $like)->orWhere('new_value', 'like', $like)));
+            })
             ->with(['changes', 'user'])
             ->orderByDesc('id')
-            ->paginate(60);
+            ->paginate(60)
+            ->withQueryString();
 
         return view('governance::audit.record', [
+            'term' => $term,
             'menu' => $this->menu->forUser($request->user()),
             'trail' => $entry,
             'history' => $history,

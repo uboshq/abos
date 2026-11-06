@@ -27,6 +27,9 @@
             :subtitle="__('system_admin::menu.companies')" />
     </x-slot:header>
 
+    {{-- ⭐ দফা ১৩: শেষ বদল আর বদলের ইতিহাস --}}
+    <x-audit.last-change :subject="$company" />
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

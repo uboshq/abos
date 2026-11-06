@@ -90,6 +90,8 @@ final class TheRolePageCopiesComparesAndJumpsTest extends TestCase
         $this->assertEqualsCanonicalizing([...$onlyA, ...$onlyB], $rows[1], '⛔ তুলনায় কেবল আলাদাগুলো নেই — মিলগুলোও এল, বা কিছু বাদ গেল।');
         $this->assertMatchesRegularExpression('/data-compare-row="'.preg_quote($onlyA[0], '/').'"(?:(?!<\/tr>).)*data-compare-a="yes"(?:(?!<\/tr>).)*data-compare-b="no"/s', $html, '⛔ কোন রোলের হাতে আছে, ভুল পাশে বসল।');
         $this->assertStringContainsString(e(__('system_admin::permission.compare_same', ['count' => count($both)])), $html, '⛔ মিলের সংখ্যা ভুল।');
+        // ⓘ দফা ১৪: ✓/— চোখের জন্য; পর্দা-পাঠক পড়ে কথাটা
+        $this->assertMatchesRegularExpression('/data-compare-a="yes"(?:(?!<\/td>).)*aria-hidden="true">✓<\/span>\s*<span class="sr-only">'.preg_quote(e(__('system_admin::permission.compare_has')), '/').'</su', $html, '⛔ তুলনার ✓ পর্দা-পাঠকের কাছে কথায় নেই।');
 
         $this->assertStringContainsString(e(route('system_admin.role.compare', ['a' => $a->id])), (string) $this->get(route('system_admin.role.edit', $a))->getContent(), '⛔ রোলের পাতায় "দুই রোল পাশাপাশি" নেই।');
 

@@ -39,13 +39,25 @@
         </p>
     @endif
 
+    {{-- ⭐ আগের-পরের মানে খোঁজা — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১৩ ([[AuditController::record()]]) --}}
+    <form method="GET" action="{{ route('governance.audit.record', $trail->id) }}" data-history-search role="search"
+          class="mb-3 flex flex-wrap items-center gap-2">
+        <label class="flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 sm:max-w-md">
+            <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
+            <input type="search" name="q" value="{{ $term }}" placeholder="{{ __('governance::label.search_values') }}"
+                   aria-label="{{ __('governance::label.search_values') }}"
+                   class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
+        </label>
+        <x-ui.button type="submit" tone="secondary">{{ __('core.action.search') }}</x-ui.button>
+    </form>
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('governance::message.nothing_yet')"
             :rows="$history"
             :columns="[
                 ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
-                 'render' => fn ($t) => $t->created_at->format('d M Y, H:i')],
+                 'render' => fn ($t) => \App\Core\Support\DateFormat::spoken($t->created_at)],
                 ['key' => 'user', 'label' => __('governance::field.who'), 'width' => '11rem',
                  'render' => fn ($t) => view('governance::partials.user-link', [
                      'id' => $t->user_id,
