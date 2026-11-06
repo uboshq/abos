@@ -108,7 +108,7 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
 
         $this->assertStringNotContainsString('data-inbox-board', $html, '⛔ ইনবক্সের মাথায় পাঁচ ঘর ফিরে এসেছে — মালিক লাইভের মতো চান (৮)।');
         $this->assertStringNotContainsString('data-board=', $html, '⛔ ইনবক্সে পাঁচ ঘরের একটা ঘর রয়ে গেছে (৮)।');
-        $this->assertMatchesRegularExpression('/data-kind="approval"(?:(?!data-inbox-list).)*data-money-hero(?:(?!data-inbox-list).)*'.preg_quote(e(__('approval::menu.inbox')), '/').'/s', $html,
+        $this->assertMatchesRegularExpression('/data-page-kind="approval"(?:(?!data-inbox-list).)*data-money-hero(?:(?!data-inbox-list).)*'.preg_quote(e(__('approval::menu.inbox')), '/').'/s', $html,
             '⛔ ইনবক্সের মাথা অনুমোদনের রঙে নয়, বা নাম নেই (৮)।');
         $this->assertMatchesRegularExpression('/data-hero-count[^>]*>\s*'.preg_quote(trim(explode(':count', __('approval::message.inbox_summary'))[0]), '/').'/u', $html,
             '⛔ মাথায় লাইভের এক লাইনের হিসাব (কয়টা · দেরি · মোট) নেই (৮)।');
@@ -140,7 +140,7 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
             $html = (string) $this->actingAs($this->owner)->get($url)->assertOk()->getContent();
             $hero = $this->between($html, 'data-money-hero', 'data-money-hero-end');
 
-            $this->assertStringContainsString('data-kind="'.$kind.'"', $html, "⛔ {$kind}: পাতা নিজের রঙে নয়।");
+            $this->assertStringContainsString('data-page-kind="'.$kind.'"', $html, "⛔ {$kind}: পাতা নিজের রঙে নয়।");
             $this->assertStringContainsString('class="toolbar-view', $html, "⛔ {$kind}: টুলবার হারাল — মালিক: \"egulo kintu thakbe\"।");
             if ($new !== null) {
                 $this->assertStringContainsString('href="'.e($new).'"', $hero, "⛔ {$kind}: \"নতুন\" বোতাম রঙিন মাথায় নেই।");
@@ -149,7 +149,7 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         }
 
         foreach ([route('approval.inbox.mine'), route('approval.flow.index'), route('approval.delegation.index')] as $url) {
-            $this->assertStringContainsString('data-kind="approval"',
+            $this->assertStringContainsString('data-page-kind="approval"',
                 (string) $this->actingAs($this->owner)->get($url)->assertOk()->getContent(), "⛔ অনুমোদনের পাতা রঙিন নয়: {$url}");
         }
 

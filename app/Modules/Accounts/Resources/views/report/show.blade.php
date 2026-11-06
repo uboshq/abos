@@ -112,7 +112,7 @@
 
     {{-- ⭐ যে মডিউল চায় তার রঙে (`pageKind`) — অনুমোদনের রিপোর্ট (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"); বাকি রিপোর্ট আগের মতো --}}
     @isset($pageKind)
-        <div data-kind="{{ $pageKind }}">
+        <div data-page-kind="{{ $pageKind }}">
     @endisset
 
     {{--
