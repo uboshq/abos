@@ -98,15 +98,63 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $this->assertStringNotContainsString('ae03a14', $line, '⛔ লগইনের ঘরে build নম্বর — মালিক চান না।');
     }
 
-    public function test_the_inbox_wears_five_coloured_tiles_and_coloured_cards(): void
+    /**
+     * ⭐ ৭ নভেম্বর ২০২৬, মালিক: "অনুমোদনের ইনবক্স ekhon zemon live e ache temoi thakbe setake just colorfull koro" — পাঁচ ঘর বাদ,
+     * সাজানো লাইভের মতো, শুধু রং: অনুমোদনের রঙে মাথা (নাম আর এক লাইনের হিসাব), কার্ডে অবস্থার দাগ।
+     */
+    public function test_the_inbox_keeps_its_live_layout_and_only_gains_colour(): void
     {
         $html = (string) $this->actingAs($this->owner)->get(route('approval.inbox.index'))->assertOk()->getContent();
 
-        preg_match_all('/data-board="([a-z]+)"/', $html, $m);
-        $this->assertSame(['late', 'wait', 'stuck', 'today', 'back'], $m[1], '⛔ ইনবক্সের মাথায় পাঁচ রঙিন ঘর নেই, বা ক্রম বদলেছে (৮)।');
-        foreach ($m[1] as $key) {
-            $this->assertMatchesRegularExpression('/data-board="'.$key.'"[^>]*style="background: linear-gradient\(135deg, var\(--color-board-'.$key.'\)/', $html, "⛔ \"{$key}\" ঘর নিজের রঙে নয় (৮)।");
+        $this->assertStringNotContainsString('data-inbox-board', $html, '⛔ ইনবক্সের মাথায় পাঁচ ঘর ফিরে এসেছে — মালিক লাইভের মতো চান (৮)।');
+        $this->assertStringNotContainsString('data-board=', $html, '⛔ ইনবক্সে পাঁচ ঘরের একটা ঘর রয়ে গেছে (৮)।');
+        $this->assertMatchesRegularExpression('/data-kind="approval"(?:(?!data-inbox-list).)*data-money-hero(?:(?!data-inbox-list).)*'.preg_quote(e(__('approval::menu.inbox')), '/').'/s', $html,
+            '⛔ ইনবক্সের মাথা অনুমোদনের রঙে নয়, বা নাম নেই (৮)।');
+        $this->assertMatchesRegularExpression('/data-hero-count[^>]*>\s*'.preg_quote(trim(explode(':count', __('approval::message.inbox_summary'))[0]), '/').'/u', $html,
+            '⛔ মাথায় লাইভের এক লাইনের হিসাব (কয়টা · দেরি · মোট) নেই (৮)।');
+        foreach (['data-list-tabs', 'data-inbox-filters', 'data-inbox-totals', 'data-inbox-detail'] as $part) {
+            $this->assertStringContainsString($part, $html, "⛔ লাইভের অংশ হারাল: {$part} (৮)।");
         }
+        $this->assertMatchesRegularExpression('/data-inbox-card="\d+"\s+data-card-state="(late|wait)"/', $html, '⛔ কার্ডে অবস্থার রঙের দাগ নেই (৮)।');
+    }
+
+    /**
+     * ⭐ টাকার নয় পাতা আর অনুমোদনের পাতা — নিজের রঙে মাথা, "নতুন" বোতাম মাথায়, টুলবার আর নিচের মোটের সারি অটুট
+     * (মালিক, ৬–৭ নভেম্বর ২০২৬: নমুনা "ok"; "ei box gulor dorkar nai", "egulo kintu thakbe", "egulo dibe", "fita ta ro cikon hoy")।
+     */
+    public function test_each_money_and_approval_page_wears_its_own_colour_and_keeps_its_tools(): void
+    {
+        $pages = [
+            'loan' => [route('accounts.loan.index'), route('accounts.loan.create')],
+            'receipt' => [route('accounts.voucher.index', 'receipt'), route('accounts.voucher.create', 'receipt')],
+            'payment' => [route('accounts.voucher.index', 'payment'), route('accounts.voucher.create', 'payment')],
+            'expense' => [route('accounts.voucher.index', 'expense'), route('accounts.voucher.create', 'expense')],
+            'journal' => [route('accounts.voucher.index', 'journal'), route('accounts.voucher.create', 'journal')],
+            'contra' => [route('accounts.voucher.index', 'contra'), route('accounts.voucher.create', 'contra')],
+            'list' => [route('accounts.voucher.list'), null],
+            'custody' => [route('accounts.custody'), route('accounts.transfer.create')],
+            'transfer' => [route('accounts.transfer.index'), route('accounts.transfer.create')],
+        ];
+
+        foreach ($pages as $kind => [$url, $new]) {
+            $html = (string) $this->actingAs($this->owner)->get($url)->assertOk()->getContent();
+            $hero = $this->between($html, 'data-money-hero', 'data-money-hero-end');
+
+            $this->assertStringContainsString('data-kind="'.$kind.'"', $html, "⛔ {$kind}: পাতা নিজের রঙে নয়।");
+            $this->assertStringContainsString('class="toolbar-view', $html, "⛔ {$kind}: টুলবার হারাল — মালিক: \"egulo kintu thakbe\"।");
+            if ($new !== null) {
+                $this->assertStringContainsString('href="'.e($new).'"', $hero, "⛔ {$kind}: \"নতুন\" বোতাম রঙিন মাথায় নেই।");
+            }
+            $this->assertDoesNotMatchRegularExpression('/<p\b/', $hero, "⛔ {$kind}: মাথায় নামের নিচে ব্যাখ্যার লেখা — মালিক সরু পট্টি চান।");
+        }
+
+        foreach ([route('approval.inbox.mine'), route('approval.flow.index'), route('approval.delegation.index')] as $url) {
+            $this->assertStringContainsString('data-kind="approval"',
+                (string) $this->actingAs($this->owner)->get($url)->assertOk()->getContent(), "⛔ অনুমোদনের পাতা রঙিন নয়: {$url}");
+        }
+
+        $tokens = (string) file_get_contents(resource_path('css/tokens.css'));
+        $this->assertDoesNotMatchRegularExpression('/--color-kind-payment:\s*#(dc|ef|b9|c0)/i', $tokens, '⛔ পরিশোধ আবার লাল — মালিক বদলাতে বলেছেন।');
     }
 
     private function between(string $html, string $from, string $to): string

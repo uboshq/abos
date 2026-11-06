@@ -40,10 +40,11 @@
             : __('approval::message.tab_summary', ['count' => $visibleTotal, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)]);
     @endphp
 
-    <x-slot:header>
-        <x-ui.page-header :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
-                          :subtitle="$summary">
-            <x-slot:actions>
+    {{-- ⭐ রঙিন মাথা — লাইভের মাথাটাই (নাম, এক লাইনের হিসাব, একসাথে অনুমোদন), অনুমোদনের রঙে ([[money.page]]; মালিক, ৭ নভেম্বর ২০২৬:
+         "অনুমোদনের ইনবক্স ekhon zemon live e ache temoi thakbe setake just colorfull koro", নমুনা "ok")। --}}
+    <x-money.page kind="approval" :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
+        icon="approval" :count="$summary">
+        <x-slot:actions>
                 {{-- ⭐ একসাথে অনুমোদন — মালিকের সিদ্ধান্ত ৫; ⛔ টাকা নড়ে এমন কাগজে চেকবক্সই আঁকা হয় না। ⓘ আগে দেখার পাতা (দফা ১৩)
                      সংখ্যা, মোট আর বাদ পড়ার কারণ দেখায় — সেখান থেকেই আসল অনুমোদন। --}}
                 @if ($bulkable !== [])
@@ -52,9 +53,7 @@
                         {{ __('approval::action.bulk_picked', ['count' => 0]) }}
                     </x-ui.button>
                 @endif
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+        </x-slot:actions>
 
     @if (session('saved'))
         <div role="status"
@@ -64,42 +63,6 @@
     @endif
 
     <x-ui.errors />
-
-    {{-- ⭐ পাঁচ রঙিন ঘর — এক নজরে কী জরুরি, কী অপেক্ষায়, কী আটকে, আজ কী হলো, কী ফিরল (মালিক, ৬ নভেম্বর ২০২৬; [[boardOf()]])।
-         ⓘ রং অবস্থার, কার্ডের বাঁ দাগেও একই রং। ঘরে চাপলে সেই তালিকা। অন্যের ইনবক্সে কেবল প্রথম দুটো। --}}
-    @php
-        $tiles = array_filter([
-            ['late', 'board_late', $board['late'], route('approval.inbox.index', $filterKeep + ['late' => 1]), null],
-            ['wait', 'board_wait', $board['waiting'], route('approval.inbox.index', array_filter(['person' => $person ?: null])),
-                $board['waiting_sum'] !== null ? '৳'.\App\Core\Support\Money::format($board['waiting_sum']) : null],
-            $board['stuck'] !== null ? ['stuck', 'board_stuck', $board['stuck'], route('approval.inbox.signed_unposted'), null] : null,
-            $board['today'] !== null ? ['today', 'board_today', $board['today'], null, null] : null,
-            $board['back'] !== null ? ['back', 'board_back', $board['back'], route('approval.inbox.mine'), null] : null,
-        ]);
-    @endphp
-    <div class="mb-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5" data-inbox-board>
-        @foreach ($tiles as [$key, $word, $count, $url, $note])
-            @php
-                $tileClass = 'block rounded-(--radius-card) px-3 py-2.5 shadow-sm transition-transform'.($url ? ' hover:-translate-y-px' : '');
-                $tileStyle = 'background: linear-gradient(135deg, var(--color-board-'.$key.'), color-mix(in srgb, var(--color-board-'.$key.') 78%, black)); color: var(--color-board-ink)';
-            @endphp
-            @if ($url)
-                <a href="{{ $url }}" data-board="{{ $key }}" class="{{ $tileClass }}" style="{{ $tileStyle }}">
-            @else
-                <div data-board="{{ $key }}" class="{{ $tileClass }}" style="{{ $tileStyle }}">
-            @endif
-                <span class="block text-xs opacity-95">{{ __('approval::field.'.$word) }}</span>
-                <span class="num block text-2xl font-bold leading-tight">{{ $count }}</span>
-                @if ($note)
-                    <span class="num block text-xs opacity-90">{{ __('approval::field.board_total', ['total' => $note]) }}</span>
-                @endif
-            @if ($url)
-                </a>
-            @else
-                </div>
-            @endif
-        @endforeach
-    </div>
 
     {{-- ⓘ অন্যের ইনবক্স দেখার সময় কেবল "অপেক্ষায়" — বাকি তিনটা প্রশ্ন নিজের।
          ⚠️ ট্যাবের সারি দুই কলামের উপরে, পুরো চওড়ায় — 1366-এ মেনু খোলা রেখে তালিকার কলাম (20rem = 400px, মূল অক্ষর 20px) চারটা ট্যাব
@@ -287,4 +250,5 @@
             @endif
         </div>
     </div>
+    </x-money.page>
 </x-layouts.app>

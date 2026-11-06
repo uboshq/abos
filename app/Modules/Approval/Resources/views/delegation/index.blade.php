@@ -30,15 +30,13 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.delegation') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('approval::menu.delegation')" :subtitle="__('approval::message.delegation_subtitle')">
-            <x-slot:actions>
-                <x-ui.button tone="primary" :href="route('approval.delegation.index', ['new' => 1]).'#give'" data-delegation-new>
-                    + {{ __('approval::action.delegate') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
+    <x-money.page kind="approval" :title="__('approval::menu.delegation')" icon="handover">
+        <x-slot:actions>
+            <x-ui.button tone="primary" :href="route('approval.delegation.index', ['new' => 1]).'#give'" data-delegation-new>
+                + {{ __('approval::action.delegate') }}
+            </x-ui.button>
+        </x-slot:actions>
 
     @if (session('saved'))
         <div role="status"
@@ -289,4 +287,5 @@
             </div>
         </section>
     </div>
+    </x-money.page>
 </x-layouts.app>

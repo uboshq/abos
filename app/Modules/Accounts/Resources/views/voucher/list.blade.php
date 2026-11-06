@@ -77,6 +77,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.voucher_list') }}</x-slot:title>
 
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা, "নতুন" ([[money.page]]; মালিক, ৬ নভেম্বর ২০২৬: নমুনা "ok", নিচের লেখা নয় — "fita ta ro cikon hoy") --}}
+    <x-money.page kind="list" :title="__('accounts::menu.voucher_list')" icon="list">
+
     {{-- ট্যাবের সারি — ছাঁকনি (তারিখ, খোঁজ) ট্যাব বদলালেও থেকে যায় --}}
     <nav class="mb-3 flex flex-wrap gap-1 border-b border-(--color-border) text-sm"
          aria-label="{{ __('accounts::menu.voucher_list') }}">
@@ -137,4 +140,5 @@
         <x-ui.pager :rows="$vouchers" />
         <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-money.page>
 </x-layouts.app>

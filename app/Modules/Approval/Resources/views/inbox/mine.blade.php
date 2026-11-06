@@ -12,11 +12,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $heading }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="$heading"
-            :subtitle="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])" />
-    </x-slot:header>
+    {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
+    <x-money.page kind="approval" :title="$heading" icon="outbox"
+        :count="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])">
 
     @if (session('saved'))
         <div role="status"
@@ -73,8 +71,7 @@
         {{-- ⭐ ছাঁকনির সারি আর খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: অন্য তালিকার
              মতোই টুলবার ([[ApprovalInboxController::searched()]])। --}}
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="$heading"
-                          :count="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])" />
+            <x-ui.toolbar />
         </form>
 
         <x-ui.table
@@ -100,4 +97,5 @@
         <x-ui.pager :rows="$approvals" />
         <x-ui.list-totals :rows="$approvals" />
     </div>
+    </x-money.page>
 </x-layouts.app>

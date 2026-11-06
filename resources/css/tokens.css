@@ -1208,6 +1208,33 @@
     --color-board-today: #16a34a;
     --color-board-back: #db2777;
     --color-board-ink: #ffffff;
+    /* ⭐ টাকার পাতার নিজের রং — মালিক, ৬ নভেম্বর ২০২৬ ("ei skin gulo update koro r colorfull koro", নমুনা "ok"; পরিশোধ লাল নয়:
+       "পরিশোধ er color ta poriborton koro")। লাল কেবল ভুল/ফেরতের জন্য। হালকা জমিন CSS-এ এই রং থেকে মেশানো, তাই অন্ধকারেও মানায়। */
+    --color-kind-receipt: #0f9d6b;
+    --color-kind-receipt-deep: #0b7f57;
+    --color-kind-payment: #a21caf;
+    --color-kind-payment-deep: #86198f;
+    --color-kind-expense: #d97706;
+    --color-kind-expense-deep: #b45309;
+    --color-kind-journal: #7c3aed;
+    --color-kind-journal-deep: #6d28d9;
+    --color-kind-contra: #0891b2;
+    --color-kind-contra-deep: #0e7490;
+    --color-kind-list: #4f46e5;
+    --color-kind-list-deep: #4338ca;
+    --color-kind-loan: #be185d;
+    --color-kind-loan-deep: #9d174d;
+    --color-kind-custody: #2563eb;
+    --color-kind-custody-deep: #1d4ed8;
+    --color-kind-transfer: #0e7490;
+    --color-kind-transfer-deep: #155e75;
+    /* ⭐ অনুমোদনের পাতা — রেলের অনুমোদন চিহ্নের কমলা (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") */
+    --color-kind-approval: #ea580c;
+    --color-kind-approval-deep: #c2410c;
+    --color-kind-glass: rgb(255 255 255 / .2);
+    /* ⓘ তথ্যের চার ঘর আর ট্যাবের সংখ্যা — অবস্থার রং ([[color-board-*]]) ছাড়া বাকি দুটো */
+    --color-kind-fact-who: #2563eb;
+    --color-kind-fact-what: #7c3aed;
     --color-company-mark-ink: #ffffff;
     --color-company-mark-1: #1d4ed8; /* নীল ৭০০ — সাদায় ৬.৭ঃ১ */
     --color-company-mark-2: #047857; /* এমারেল্ড ৭০০ — ৫.৫ঃ১ */

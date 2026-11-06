@@ -26,6 +26,14 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.money_transfer') }}</x-slot:title>
 
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা, "নতুন" ([[money.page]]; মালিক, ৬ নভেম্বর ২০২৬: নমুনা "ok", নিচের লেখা নয় — "fita ta ro cikon hoy") --}}
+    <x-money.page kind="transfer" :title="__('accounts::menu.money_transfer')" icon="share">
+        <x-slot:actions>
+            <x-ui.button tone="primary" icon="plus" :href="route('accounts.transfer.create')">
+                {{ __('accounts::action.new_transfer') }}
+            </x-ui.button>
+        </x-slot:actions>
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -74,15 +82,9 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.money_transfer')"
+            <x-ui.toolbar
                 :sort="$sortOptions"
-                :columns="$columns">
-        <x-slot:actions>
-            <x-ui.button tone="primary" icon="plus" :href="route('accounts.transfer.create')">
-                    {{ __('accounts::action.new_transfer') }}
-                </x-ui.button>
-        </x-slot:actions>
-        </x-ui.toolbar>
+                :columns="$columns" />
         </form>
 
         <x-ui.table
@@ -96,4 +98,5 @@
         <x-ui.pager :rows="$transfers" />
         <x-ui.list-totals :rows="$transfers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-money.page>
 </x-layouts.app>

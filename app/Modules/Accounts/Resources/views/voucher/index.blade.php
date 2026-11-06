@@ -78,6 +78,17 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::voucher.' . $type) }}</x-slot:title>
 
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা, "নতুন" ([[money.page]]; মালিক, ৬ নভেম্বর ২০২৬: নমুনা "ok", নিচের লেখা নয় — "fita ta ro cikon hoy") --}}
+    <x-money.page :kind="$type" :title="__('accounts::voucher.' . $type)" :icon="['receipt' => 'inbox', 'payment' => 'outbox', 'expense' => 'wallet', 'journal' => 'edit', 'contra' => 'swap'][$type] ?? 'wallet'"
+        :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])">
+        <x-slot:actions>
+            @can('accounts.voucher.create')
+                <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
+                    {{ __('accounts::action.new_voucher') }}
+                </x-ui.button>
+            @endcan
+        </x-slot:actions>
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -88,18 +99,10 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::voucher.' . $type)" :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])"
-                :sort="$sortOptions"
+            <x-ui.toolbar :sort="$sortOptions"
                 :columns="$columns"
                 :filter-labels="$filterLabels ?? []"
                 :filter-values="$filterValues ?? []">
-        <x-slot:actions>
-            @can('accounts.voucher.create')
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
-                        {{ __('accounts::action.new_voucher') }}
-                    </x-ui.button>
-                @endcan
-        </x-slot:actions>
                 {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
                      ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
                 <x-ui.date name="from"
@@ -214,4 +217,5 @@
         <x-ui.pager :rows="$vouchers" />
         <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-money.page>
 </x-layouts.app>

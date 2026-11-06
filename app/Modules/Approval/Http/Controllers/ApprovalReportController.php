@@ -89,6 +89,8 @@ class ApprovalReportController extends Controller implements HasMiddleware
 
         return view('accounts::report.show', [
             'menu' => $this->menu->forUser($request->user()),
+            // ⭐ অনুমোদনের রঙে — মালিক, ৭ নভেম্বর ২০২৬ ("baki porda gulo", নমুনা "ok")
+            'pageKind' => 'approval',
             'slug' => $slug,
             'report' => $definition,
             'result' => $this->reports->run(

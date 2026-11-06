@@ -45,27 +45,25 @@
         </div>
     @endif
 
-    <p class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
-        {{ __('accounts::message.loan_note') }}
-    </p>
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা, "নতুন" ([[money.page]]; মালিক, ৬ নভেম্বর ২০২৬: নমুনা "ok", নিচের লেখা নয় — "fita ta ro cikon hoy") --}}
+    <x-money.page kind="loan" :title="__('accounts::menu.loans')" icon="handover"
+        :count="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)">
+        <x-slot:actions>
+            @can('accounts.loan.manage')
+                <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
+                    {{ __('core.action.create') }}
+                </x-ui.button>
+            @endcan
+        </x-slot:actions>
 
     {{-- ⭐ শিরোনাম, মোট বকেয়া আর "তৈরি" তালিকার মাথায়, একই বাক্সে — মালিকের
          নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.loans')"
-                :count="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)"
+            <x-ui.toolbar
                 :search-placeholder="__('accounts::message.loan_search')"
-                :columns="$columns">
-                <x-slot:actions>
-                    @can('accounts.loan.manage')
-                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
-                            {{ __('core.action.create') }}
-                        </x-ui.button>
-                    @endcan
-                </x-slot:actions>
-            </x-ui.toolbar>
+                :columns="$columns" />
         </form>
 
         <x-ui.table
@@ -79,4 +77,5 @@
         <x-ui.pager :rows="$loans" />
         <x-ui.list-totals :rows="$loans" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-money.page>
 </x-layouts.app>

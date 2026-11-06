@@ -15,9 +15,8 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.limits') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('approval::menu.limits')" />
-    </x-slot:header>
+    {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
+    <x-money.page kind="approval" :title="__('approval::menu.limits')" icon="scale">
 
     @include('approval::partials.rule-tabs')
 
@@ -125,4 +124,5 @@
                 ]" />
         </div>
     </div>
+    </x-money.page>
 </x-layouts.app>

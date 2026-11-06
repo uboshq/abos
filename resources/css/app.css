@@ -1655,3 +1655,188 @@ input[type='number'] {
     display: none;
     width: 0;
 }
+
+/* ⭐ টাকার পাতাগুলো রঙিন — মালিক, ৬ নভেম্বর ২০২৬ (নমুনা "ok"): প্রতিটা পাতার নিজের রং (`--kind`, [[money.page]])।
+   মাথায় রঙিন পট্টি, টুলবারের সারি হালকা রঙে, তালিকার মাথা গাঢ় রঙে, প্রতিটা সারির বাঁয়ে রঙের দাগ, নিচের মোটের সারি হালকা রঙে।
+   ⓘ স্তরের বাইরে, ইচ্ছাকৃত — টুলবার আর টেবিলের জমিন utility, আর স্তরবিহীন নিয়ম utility-কে হারায়।
+   ⓘ হালকা জমিন রং থেকে মেশানো (`color-mix`) কার্ডের জমিনের সাথে — তাই অন্ধকার রূপেও আলাদা টোকেন লাগে না। */
+[data-kind] {
+    --kind-soft: color-mix(in srgb, var(--kind) 10%, var(--color-surface-card));
+    --kind-faint: color-mix(in srgb, var(--kind) 4%, var(--color-surface-card));
+}
+
+[data-kind] [data-money-hero] {
+    background: linear-gradient(100deg, var(--kind), var(--kind-deep));
+    color: var(--color-board-ink);
+}
+
+[data-kind] [data-money-hero] [data-hero-icon] {
+    background: var(--color-kind-glass);
+}
+
+[data-kind] [data-money-hero] [data-hero-actions] a,
+[data-kind] [data-money-hero] [data-hero-actions] button {
+    background: var(--color-surface-card);
+    color: var(--kind-deep);
+    border-color: transparent;
+}
+
+[data-kind] [data-boxed] {
+    border-top: 3px solid var(--kind);
+}
+
+[data-kind] .toolbar-view {
+    background: var(--kind-soft);
+}
+
+[data-kind] [data-boxed] thead th {
+    background: var(--kind-deep);
+    color: var(--color-board-ink);
+}
+
+[data-kind] [data-boxed] tbody > tr > td:first-child {
+    box-shadow: inset 4px 0 0 var(--kind);
+}
+
+[data-kind] [data-boxed] tbody > tr:nth-child(even) > td {
+    background: var(--kind-faint);
+}
+
+[data-kind] [data-boxed] [data-grand-total-row] td,
+[data-kind] [data-boxed] tfoot td {
+    background: var(--kind-soft);
+}
+
+/* ⓘ রংটা :root-এ, পাতার চিহ্ন থেকে — নিচের মোটের সারি ([[shell.chrome.navy]]) খোলসে, পাতার বাক্সের বাইরে, তবু একই রং নেয়। */
+:root:has([data-kind="receipt"]) {
+    --kind: var(--color-kind-receipt);
+    --kind-deep: var(--color-kind-receipt-deep);
+}
+
+:root:has([data-kind="payment"]) {
+    --kind: var(--color-kind-payment);
+    --kind-deep: var(--color-kind-payment-deep);
+}
+
+:root:has([data-kind="expense"]) {
+    --kind: var(--color-kind-expense);
+    --kind-deep: var(--color-kind-expense-deep);
+}
+
+:root:has([data-kind="journal"]) {
+    --kind: var(--color-kind-journal);
+    --kind-deep: var(--color-kind-journal-deep);
+}
+
+:root:has([data-kind="contra"]) {
+    --kind: var(--color-kind-contra);
+    --kind-deep: var(--color-kind-contra-deep);
+}
+
+:root:has([data-kind="list"]) {
+    --kind: var(--color-kind-list);
+    --kind-deep: var(--color-kind-list-deep);
+}
+
+:root:has([data-kind="loan"]) {
+    --kind: var(--color-kind-loan);
+    --kind-deep: var(--color-kind-loan-deep);
+}
+
+:root:has([data-kind="custody"]) {
+    --kind: var(--color-kind-custody);
+    --kind-deep: var(--color-kind-custody-deep);
+}
+
+:root:has([data-kind="transfer"]) {
+    --kind: var(--color-kind-transfer);
+    --kind-deep: var(--color-kind-transfer-deep);
+}
+
+:root:has([data-kind]) [data-look-listfoot] {
+    background: color-mix(in srgb, var(--kind) 10%, var(--color-surface-card));
+    box-shadow: inset 5px 0 0 var(--kind);
+}
+
+:root:has([data-kind]) [data-look-listfoot] .num {
+    color: var(--kind-deep);
+}
+
+:root:has([data-kind="approval"]) {
+    --kind: var(--color-kind-approval);
+    --kind-deep: var(--color-kind-approval-deep);
+}
+
+/* ⭐ পাতার জমিন রঙিন — মালিক, ৭ নভেম্বর ২০২৬ ("ro color full koro", নমুনা "ok"): পাতার রং থেকে বেগুনি হয়ে নীলে, খুব হালকা */
+[data-kind] {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--kind) 7%, transparent) 0,
+        color-mix(in srgb, var(--color-kind-fact-what) 5%, transparent) 55%,
+        color-mix(in srgb, var(--color-kind-fact-who) 5%, transparent) 100%);
+    border-radius: var(--radius-card);
+    padding: .5rem;
+    margin: -.5rem;
+}
+
+/* ট্যাব — বাছাই করা ট্যাবের দাগ আর সংখ্যা পাতার রঙে */
+[data-kind] [data-list-tabs] a[aria-current] {
+    border-color: var(--kind);
+    color: var(--kind-deep);
+}
+
+[data-kind] [data-list-tabs] a[aria-current] .num {
+    background: var(--kind);
+    color: var(--color-board-ink);
+}
+
+/* ── অনুমোদনের ইনবক্স ── */
+[data-kind] [data-inbox-filters] {
+    background: var(--color-surface-card);
+    border-top: 4px solid var(--kind);
+    border-radius: var(--radius-card);
+    padding: .75rem;
+    box-shadow: var(--shadow-card);
+}
+
+[data-kind] [data-inbox-filters] select {
+    background-color: var(--kind-soft);
+    border-color: color-mix(in srgb, var(--kind) 30%, transparent);
+    color: var(--kind-deep);
+    font-weight: 600;
+}
+
+[data-kind] [data-inbox-card]:not([data-card-state="late"]) {
+    background: color-mix(in srgb, var(--color-board-wait) 7%, var(--color-surface-card));
+}
+
+[data-kind] [data-inbox-totals] > :first-child {
+    background: linear-gradient(90deg, var(--kind), var(--kind-deep));
+    color: var(--color-board-ink);
+}
+
+[data-kind] [data-approval-detail] {
+    border-top: 4px solid var(--color-kind-fact-what);
+}
+
+[data-kind] [data-approval-detail] dl > div {
+    border-radius: var(--radius-field);
+    padding: .4rem .6rem;
+}
+
+[data-kind] [data-approval-detail] dl > div:nth-child(1) { background: color-mix(in srgb, var(--color-kind-fact-what) 10%, var(--color-surface-card)); }
+[data-kind] [data-approval-detail] dl > div:nth-child(2) { background: color-mix(in srgb, var(--color-kind-fact-who) 10%, var(--color-surface-card)); }
+[data-kind] [data-approval-detail] dl > div:nth-child(3) { background: color-mix(in srgb, var(--color-board-late) 9%, var(--color-surface-card)); }
+[data-kind] [data-approval-detail] dl > div:nth-child(4) { background: color-mix(in srgb, var(--color-board-today) 10%, var(--color-surface-card)); }
+
+[data-kind] [data-approval-journey] {
+    border-top: 4px solid var(--color-board-today);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-board-today) 8%, var(--color-surface-card)), var(--color-surface-card));
+    border-radius: var(--radius-card);
+    padding: .6rem .8rem;
+}
+
+[data-kind] [data-approval-decide-wrap] {
+    border-inline-start: 4px solid var(--kind);
+    border-radius: var(--radius-card);
+}
+[data-kind] [data-inbox-totals] { overflow: hidden; }

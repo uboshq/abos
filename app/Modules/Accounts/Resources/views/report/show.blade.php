@@ -110,6 +110,11 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($report->title) }}</x-slot:title>
 
+    {{-- ⭐ যে মডিউল চায় তার রঙে (`pageKind`) — অনুমোদনের রিপোর্ট (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"); বাকি রিপোর্ট আগের মতো --}}
+    @isset($pageKind)
+        <div data-kind="{{ $pageKind }}">
+    @endisset
+
     {{--
         রিপোর্টের নিজের একটা কথা — কেবল যে রিপোর্ট পাঠায়।
 
@@ -595,4 +600,7 @@
             @endif
         @endif
     </div>
+    @isset($pageKind)
+        </div>
+    @endisset
 </x-layouts.app>

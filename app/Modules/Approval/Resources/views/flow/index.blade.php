@@ -19,6 +19,15 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.flows') }}</x-slot:title>
 
+    {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
+    <x-money.page kind="approval" :title="__('approval::menu.flows')" icon="settings"
+        :count="__('approval::message.flows_summary', ['live' => $live, 'off' => $off])">
+        <x-slot:actions>
+            <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
+                {{ __('approval::action.new_flow') }}
+            </x-ui.button>
+        </x-slot:actions>
+
     @include('approval::partials.rule-tabs')
 
     @if (session('saved'))
@@ -41,15 +50,7 @@
          সারাংশ — কয়টা চালু, কয়টা বন্ধ। ⛔ ঘনত্ব বন্ধ: ওটা কেবল `x-ui.table` মানে। --}}
     <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('approval::menu.flows')"
-                          :count="__('approval::message.flows_summary', ['live' => $live, 'off' => $off])"
-                          :density="false">
-                <x-slot:actions>
-                    <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
-                        {{ __('approval::action.new_flow') }}
-                    </x-ui.button>
-                </x-slot:actions>
-            </x-ui.toolbar>
+            <x-ui.toolbar :density="false" />
         </form>
     </div>
 
@@ -156,4 +157,5 @@
     @if ($opened !== null)
         @include('approval::flow.partials.editor', ['flow' => $opened])
     @endif
+    </x-money.page>
 </x-layouts.app>

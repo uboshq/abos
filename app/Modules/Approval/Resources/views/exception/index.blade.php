@@ -9,6 +9,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::exception.title') }}</x-slot:title>
 
+    {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
+    <x-money.page kind="approval" :title="__('approval::exception.title')" icon="info">
+
     @include('approval::partials.rule-tabs')
 
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-sm">
@@ -62,4 +65,5 @@
             {{ __('approval::exception.none') }}
         </p>
     @endforelse
+    </x-money.page>
 </x-layouts.app>

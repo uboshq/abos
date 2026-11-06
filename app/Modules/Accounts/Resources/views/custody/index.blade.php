@@ -44,19 +44,16 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::custody.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::custody.title')"
-                          :subtitle="__('accounts::custody.subtitle')">
-            <x-slot:actions>
-                @can('accounts.transfer.create')
-                    <x-ui.button tone="primary" icon="handover"
-                                 :href="route('accounts.transfer.create')">
-                        {{ __('accounts::action.new_transfer') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা, "নতুন" ([[money.page]]; মালিক, ৬ নভেম্বর ২০২৬: নমুনা "ok", নিচের লেখা নয় — "fita ta ro cikon hoy") --}}
+    <x-money.page kind="custody" :title="__('accounts::custody.title')" icon="lock">
+        <x-slot:actions>
+            @can('accounts.transfer.create')
+                <x-ui.button tone="primary" icon="handover"
+                    :href="route('accounts.transfer.create')">
+                    {{ __('accounts::action.new_transfer') }}
+                </x-ui.button>
+            @endcan
+        </x-slot:actions>
 
     {{-- ── আমার গ্রহণের অপেক্ষায় ────────────────────────────────────
          ইনবক্সটা সবার উপরে, কারণ এটাই একমাত্র অংশ যেখানে **আমার**
@@ -96,7 +93,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) shadow-(--shadow-card)">
         {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
-        <x-ui.toolbar :title="__('accounts::custody.title')" :search="false" :filter="false" :columns="$columns" />
+        <x-ui.toolbar :search="false" :filter="false" :columns="$columns" />
 
         <div class="table-responsive">
             {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
@@ -169,4 +166,5 @@
             @endforeach
         </div>
     @endif
+    </x-money.page>
 </x-layouts.app>
