@@ -27,7 +27,7 @@ final class EverySystemAddressStillOpensTest extends TestCase
 
     /** পরিকল্পনার আগের ঠিকানা (প্যারামিটার ছাড়া) */
     private const BEFORE_THE_PLAN = [
-        '/import', '/setup',
+        '/import',
         '/system/branch-modules', '/system/branches', '/system/branches/create', '/system/companies', '/system/companies/create',
         '/system/control-panel', '/system/custom-fields', '/system/looks', '/system/looks/create',
         '/system/notices', '/system/notices/analytics', '/system/notices/categories', '/system/notices/new', '/system/notices/templates',
@@ -65,6 +65,9 @@ final class EverySystemAddressStillOpensTest extends TestCase
         }
 
         $this->assertSame([], $broken, "⛔ পুরনো বা নতুন ঠিকানা আর খোলে না:\n".implode("\n", $broken));
+
+        // ⓘ প্রথমবারের সেটআপ ইচ্ছা করেই বন্ধ (404) সিস্টেম বসানোর পরে — নইলে কেউ আবার মালিক বানিয়ে নিত ([[SetupController::show()]])
+        $this->assertSame(404, $this->get('/setup')->status(), '⛔ সেটআপ শেষ হওয়ার পরেও প্রথমবারের সেটআপ খোলা।');
     }
 
     public function test_the_edit_pages_of_each_kind_of_record_still_open(): void
