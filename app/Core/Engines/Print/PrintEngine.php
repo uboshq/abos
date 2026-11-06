@@ -64,7 +64,8 @@ final class PrintEngine
         ?int $scale = null,
     ): string {
         $size = PaperSize::of($paper);
-        $locale = $locale ?? app()->getLocale();
+        // ⭐ ডাকা জায়গা না বললে কাগজের ভাষা — ছাপার মেনুর বাছাই, নয়তো কোম্পানির (চেকলিস্ট ভা-১৬, [[PaperLanguage]])
+        $locale = $locale ?? \App\Core\Support\PaperLanguage::for();
         $company = $this->withInvoiceLogo($company ?? $this->currentCompany());
 
         $view = $this->resolveTemplate($template);

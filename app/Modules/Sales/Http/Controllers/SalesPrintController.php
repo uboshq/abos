@@ -2215,9 +2215,15 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
-        $locale = app()->getLocale();
+        /*
+         * ⭐ কাগজের ভাষা — যাঁর জন্য কাগজ তাঁর (গ্রাহকের "কাগজের ভাষা"), এবারের বাছাই আগে; কোম্পানির ভাষা শেষে
+         * (চেকলিস্ট ভা-১৬, [[PaperLanguage]])। ⛔ আগে যিনি ছাপলেন তাঁর পর্দার ভাষা — একই বিল দুজন দুই ভাষায় ছাপতেন।
+         */
+        $customer = $document !== null && method_exists($document, 'customer') ? $document->customer()->first() : null;
+        $locale = \App\Core\Support\PaperLanguage::for($customer instanceof \Illuminate\Database\Eloquent\Model ? $customer : null);
 
         $render = fn (PrintableDocument $doc): string => $this->print->render(
+            locale: $locale,
             template: $template,
             data: [
                 ...$extra,

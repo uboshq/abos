@@ -153,6 +153,17 @@
                             :value="old('address_en', $supplier->address_en)" />
                 <x-ui.field name="address_bn" :label="__('supplier::field.address_bn')"
                             :value="old('address_bn', $supplier->address_bn)" />
+
+                {{-- ⭐ কাগজের ভাষা — বিল, চালান, রসিদ এই ভাষায় ছাপা হয়; ফাঁকা মানে কোম্পানির ভাষা (চেকলিস্ট ভা-১৬; [[PaperLanguage]]) --}}
+                <label class="block" data-paper-language>
+                    <span class="mb-1 block text-sm font-medium">{{ __('core.print.paper_language') }}</span>
+                    <select name="paper_language" class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
+                        <option value="">{{ __('core.print.paper_language_company') }}</option>
+                        @foreach (['bn', 'en', 'both'] as $lang)
+                            <option value="{{ $lang }}" @selected(old('paper_language', $supplier->paper_language) === $lang)>{{ __('core.print.lang_'.$lang) }}</option>
+                        @endforeach
+                    </select>
+                </label>
             </div>
         </section>
 

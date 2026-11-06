@@ -77,7 +77,7 @@
                 @php
                     $action = strtok($document['url'], '?');
                     parse_str((string) parse_url($document['url'], PHP_URL_QUERY), $carried);
-                    unset($carried['paper'], $carried['scale'], $carried['download']);
+                    unset($carried['paper'], $carried['scale'], $carried['download'], $carried['lang']);
                 @endphp
                 <form method="GET" action="{{ $action }}" target="_blank">
                     @foreach ($carried as $key => $value)
@@ -87,6 +87,19 @@
                     @endforeach
                     {{-- ⓘ ফাইলের বোতামের কাগজ — কাগজের বোতাম নিজের মান পরে পাঠায়, আর সেটাই জেতে --}}
                     <input type="hidden" name="paper" value="{{ $chosen ?? \App\Core\Engines\Print\PaperSize::A4 }}">
+
+                    {{-- ⭐ কাগজের ভাষা — পক্ষের ভাষা আগে থেকে বাছা, এবারের জন্য বদলানো যায়; master বদলায় না (চেকলিস্ট ভা-১৬, [[PaperLanguage]]) --}}
+                    {{-- ⓘ প্রথমটা "পক্ষের ভাষা" (ফাঁকা) — কিছু না বাছলে সার্ভার পক্ষের ভাষা নেয়; ⛔ পর্দার ভাষা আগে থেকে বাছা থাকলে প্রতিবার সেটাই যেত --}}
+                    @php $paperLang = (string) ($document['lang'] ?? ''); @endphp
+                    <div class="flex items-center gap-1 px-2 pt-2" role="radiogroup" aria-label="{{ __('core.print.paper_language') }}" data-print-lang>
+                        @foreach (['', 'bn', 'en'] as $lang)
+                            <label class="flex-1">
+                                <input type="radio" name="lang" value="{{ $lang }}" class="peer sr-only" @checked($paperLang === $lang)>
+                                <span class="block rounded-(--radius-field) border border-(--color-border) px-2 py-1 text-center text-2xs
+                                             peer-checked:border-(--color-brand-500) peer-checked:font-semibold">{{ $lang === '' ? __('core.print.lang_party') : __('core.print.lang_'.$lang) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
 
                     <div class="flex gap-1 p-2">
                         @foreach ($papers as $paper)

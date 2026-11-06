@@ -67,6 +67,8 @@ class SupplierRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],
             'address_bn' => ['nullable', 'string', 'max:500'],
+            // ⭐ কাগজের ভাষা (চেকলিস্ট ভা-১৬; [[PaperLanguage]])
+            'paper_language' => ['nullable', 'string', 'in:bn,en,both'],
 
             'contact_person' => ['nullable', 'string', 'max:120'],
             'contact_phone' => ['nullable', 'string', 'max:32'],

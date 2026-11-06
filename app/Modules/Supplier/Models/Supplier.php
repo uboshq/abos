@@ -48,6 +48,8 @@ class Supplier extends Model implements Drillable
         // ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (মালিক, ৬ অক্টোবর ২০২৬)
         'short_name',
         'phone', 'email', 'address_en', 'address_bn',
+        // ⭐ কাগজের ভাষা — বাংলা · English · দুই ভাষা; ফাঁকা = কোম্পানির (চেকলিস্ট ভা-১৬; [[PaperLanguage]])
+        'paper_language',
         'contact_person', 'contact_phone',
         'party_type_id', 'payment_term_id', 'bin', 'tin',
         // ⭐ উৎসে কর আর ভ্যাটের হার — পরিশোধে কাটার উৎস ([[PaymentWithholding]]; নকশা #২৫)

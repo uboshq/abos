@@ -80,6 +80,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id', 'channel_id',
         'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
         'receivable_account_id', 'status', 'is_active', 'created_by',
+        // ⭐ কাগজের ভাষা — বাংলা · English · দুই ভাষা; ফাঁকা = কোম্পানির (চেকলিস্ট ভা-১৬; [[PaperLanguage]])
+        'paper_language',
     ];
 
     /*

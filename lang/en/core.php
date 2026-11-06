@@ -658,6 +658,13 @@ return [
         'revoke_link' => 'Revoke the link',
         'link_revoked' => 'The link is revoked — it opens nothing now',
         'as_file' => 'Download PDF',
+        // ⭐ Paper language (checklist ভা-১৬)
+        'paper_language' => 'Paper language',
+        'paper_language_company' => 'Company language',
+        'lang_party' => "Party's language",
+        'lang_bn' => 'বাংলা',
+        'lang_en' => 'English',
+        'lang_both' => 'Both languages',
         'scale' => 'Scale %',
         'scale_auto' => 'Auto',
         'send_to_customer' => 'Send to customer',
