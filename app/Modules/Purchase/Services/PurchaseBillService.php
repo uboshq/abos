@@ -1568,7 +1568,7 @@ final class PurchaseBillService
                 'debit' => $pendingAmount,
                 'party_type' => 'supplier',
                 'party_id' => $bill->supplier_id,
-                'narration' => __('purchase::message.bill_clears_pending', ['no' => $bill->document_no]),
+                'narration' => __('purchase::message.bill_clears_pending', ['no' => $this->lineRef($bill)]),
             ];
         }
 
@@ -1576,7 +1576,7 @@ final class PurchaseBillService
             $lines[] = [
                 'account_id' => $this->account(StandardChart::INVENTORY)->id,
                 'debit' => $directAmount,
-                'narration' => __('purchase::message.stock_in', ['no' => $bill->document_no]),
+                'narration' => __('purchase::message.stock_in', ['no' => $this->lineRef($bill)]),
             ];
         }
 
@@ -1586,7 +1586,7 @@ final class PurchaseBillService
             $lines[] = [
                 'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
                 'debit' => $tax,
-                'narration' => __('purchase::message.input_vat', ['no' => $bill->document_no]),
+                'narration' => __('purchase::message.input_vat', ['no' => $this->lineRef($bill)]),
             ];
         }
 
@@ -1648,9 +1648,9 @@ final class PurchaseBillService
 
             $lines[] = bccomp($difference, '0', 4) > 0
                 ? ['account_id' => $variance->id, 'debit' => $difference,
-                    'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])]
+                    'narration' => __('purchase::message.price_variance', ['no' => $this->lineRef($bill)])]
                 : ['account_id' => $variance->id, 'credit' => bcmul($difference, '-1', 4),
-                    'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])];
+                    'narration' => __('purchase::message.price_variance', ['no' => $this->lineRef($bill)])];
         }
 
         /*
@@ -1673,7 +1673,7 @@ final class PurchaseBillService
             'credit' => bcsub($total, $withheld, 4),
             'party_type' => 'supplier',
             'party_id' => $bill->supplier_id,
-            'narration' => __('purchase::message.payable_to_supplier', ['no' => $bill->document_no]),
+            'narration' => __('purchase::message.payable_to_supplier', ['no' => $this->lineRef($bill)]),
         ];
 
         foreach (['ait' => (string) $bill->ait_amount, 'vds' => (string) $bill->vds_amount] as $kind => $value) {
@@ -2429,5 +2429,25 @@ final class PurchaseBillService
         }
 
         return $year;
+    }
+
+    /**
+     * ⭐ বিলের খাতার লাইনের পরিচয় — আমাদের বিল নম্বর · সরবরাহকারী · তাঁর বিল নম্বর · মাল গ্রহণ (GRN) (চেকলিস্ট ভা-১৩, ৭ নভেম্বর ২০২৬;
+     * SAP-এর line item text আর reference, Odoo-র move line label)।
+     *
+     * ⓘ খতিয়ানে লাইন পড়ে বোঝা যায় কার কোন বিল, কোন চালানের মাল — কাগজ না খুলে। ⓘ যা নেই তা বাদ, ফাঁকা "·" নয়।
+     */
+    private function lineRef(PurchaseBill $bill): string
+    {
+        $grn = $bill->lines()->with('receiptLine.receipt')->get()
+            ->map(fn ($line) => $line->receiptLine?->receipt?->document_no)
+            ->filter()->unique()->values()->all();
+
+        return collect([
+            $bill->document_no,
+            $bill->supplier?->name(),
+            filled($bill->supplier_bill_no) ? __('purchase::message.their_bill', ['no' => $bill->supplier_bill_no]) : null,
+            $grn !== [] ? __('purchase::message.grn', ['no' => implode(', ', $grn)]) : null,
+        ])->filter(fn ($part) => filled($part))->implode(' · ');
     }
 }

@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'rate_first' => 'Enter the purchase rate first — markup is measured on the rate and margin on the price, so neither can be worked out without it.',
     'stock_in' => ':no — goods into the warehouse',
+    // ⭐ The supplier's bill number and the goods receipt on each ledger line (checklist ভা-১৩)
+    'their_bill' => 'supplier bill :no',
+    'grn' => 'GRN :no',
     'awaiting_bill' => ':no — goods received, bill awaited',
     'bill_clears_pending' => ':no — clears the pending liability',
     'input_vat' => ':no — input VAT',
