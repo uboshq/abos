@@ -473,12 +473,16 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $xpath = $this->dom($this->screen($type));
             $card = $xpath->query('//*[@data-voucher-main]//section[@data-voucher-general]')->item(0);
             $this->assertInstanceOf(DOMElement::class, $card, "⛔ {$type}: \"সাধারণ তথ্য\" কার্ড নেই");
-            $this->assertContains(trim((string) $xpath->query('./h2', $card)->item(0)?->textContent), [trans('money.screen.general', [], 'bn'), trans('money.screen.general', [], 'en')],
-                "⛔ {$type}: কার্ডের মাথায় \"সাধারণ তথ্য\" নেই");
+            // ⓘ মালিকের নমুনা (৭ নভেম্বর ২০২৬, "ok"): "সাধারণ তথ্য"-র জায়গায় কাজের নামের রঙিন পট্টি — রসিদে "কার কাছ থেকে", পরিশোধে "কাকে"
+            $band = $type === Voucher::RECEIPT ? 'party_in' : 'party_out';
+            $head = $xpath->query('./h2[@data-form-band="party"]', $card)->item(0);
+            $this->assertContains(trim((string) $head?->textContent), [trans('money.band.'.$band, [], 'bn'), trans('money.band.'.$band, [], 'en')],
+                "⛔ {$type}: কার্ডের মাথায় নমুনার রঙিন পট্টি নেই");
 
+            // ⓘ পক্ষের ধরন আর পদ্ধতি এখন ড্রপডাউন — সারি কমিয়ে ১০৮০p-এর এক পর্দা
             foreach ([
-                'পক্ষের ধরন' => './/input[@name="party_type"]', 'পক্ষ' => './/*[@data-party-picker-cell]', 'তারিখ' => './/input[@name="trx_date"]',
-                'টাকা' => './/*[@data-voucher-amount]', 'পদ্ধতি' => './/*[@data-voucher-money]//input[@name="instrument"]',
+                'পক্ষের ধরন' => './/select[@name="party_type"]', 'পক্ষ' => './/*[@data-party-picker-cell]', 'তারিখ' => './/input[@name="trx_date"]',
+                'টাকা' => './/*[@data-voucher-amount]', 'পদ্ধতি' => './/*[@data-voucher-money]//select[@name="instrument"]',
                 'খাত' => './/*[@data-voucher-money]//select[@name="'.$money.'"]', 'উৎসে কাটা' => './/*[@data-voucher-withheld]',
             ] as $what => $path) {
                 $this->assertGreaterThan(0, $xpath->query($path, $card)->length, "⛔ {$type}: {$what} \"সাধারণ তথ্য\" কার্ডে নেই");

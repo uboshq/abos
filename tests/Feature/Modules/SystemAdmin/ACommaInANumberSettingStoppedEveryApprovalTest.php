@@ -6,12 +6,16 @@ namespace Tests\Feature\Modules\SystemAdmin;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\SettingsService;
+use App\Core\Services\SignedSettings;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\PlainNumber;
 use App\Models\Company;
+use App\Models\SettingChange;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -39,16 +43,34 @@ final class ACommaInANumberSettingStoppedEveryApprovalTest extends TestCase
 
     public function test_lakh_commas_and_bengali_digits_are_saved_as_a_plain_number(): void
     {
+        /* ⓘ approval.* এখন দ্বিতীয় হাতের অপেক্ষায় যায় (কন্ট্রোল প্যানেল দফা ৭, ৭ নভেম্বর ২০২৬) —
+           তাই অপেক্ষার সারিতে আর অনুমোদনের পরে সেটিংয়ে, দুই জায়গাতেই পরিষ্কার সংখ্যা চাই */
+        $owner = auth()->user();
+        $second = User::factory()->create(['is_active' => true]);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $second->companies()->attach($company, ['is_active' => true]);
+        $second->forceFill(['current_company_id' => $company->id, 'current_branch_id' => $company->defaultBranch()?->id])->save();
+        CompanyContext::forCompany($company->id, function () use ($second): void {
+            $second->givePermissionTo(Permission::findOrCreate(SignedSettings::KEY, 'web'));
+        });
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         foreach (['10,000' => '10000', '১,০০,০০০' => '100000', ' 2500.50 ' => '2500.50'] as $typed => $stored) {
-            $this->put(route('system_admin.control-panel.update'), [
+            $this->actingAs($owner)->put(route('system_admin.control-panel.update'), [
                 'scope' => [self::KEY],
                 'settings' => [self::KEY => $typed],
             ])->assertRedirect()->assertSessionHasNoErrors();
 
+            $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->latest('id')->first();
+            $this->assertNotNull($change, "⛔ \"{$typed}\" দ্বিতীয় হাতের অপেক্ষায় গেল না।");
+            $this->assertSame($stored, (string) $change->new_value,
+                "⛔ \"{$typed}\" যেমন লেখা তেমনই অপেক্ষায় গেল — অনুমোদনের ইঞ্জিন এটা পড়তে পারবে না।");
+
+            $this->actingAs($second->fresh())->post(route('system_admin.setting-change.sign', $change->public_id))->assertRedirect();
             app(SettingsService::class)->flush();
 
             $this->assertSame($stored, (string) app(SettingsService::class)->get(self::KEY),
-                "⛔ \"{$typed}\" যেমন লেখা তেমনই বসল — অনুমোদনের ইঞ্জিন এটা পড়তে পারে না।");
+                "⛔ \"{$typed}\" অনুমোদনের পরে যেমন লেখা তেমনই বসল — অনুমোদনের ইঞ্জিন এটা পড়তে পারে না।");
         }
     }
 

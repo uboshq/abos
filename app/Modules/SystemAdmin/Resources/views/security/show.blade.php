@@ -9,6 +9,9 @@
         <x-ui.page-header :title="__('system_admin::security.title')" :subtitle="__('system_admin::security.subtitle')" />
     </x-slot:header>
 
+    {{-- ⓘ এই পাতা থেকে বদলের দরজায় গিয়ে ফেরত এলে কারণটা এখানে দেখা যায় ([[ARefusalNobodyEverSawTest]]) --}}
+    <x-ui.errors />
+
     @php
         $on = collect($people)->where('two_step', true)->count();
         $when = fn ($at) => $at ? \App\Core\Support\DateFormat::spoken(\Illuminate\Support\Carbon::parse($at)) : '—';

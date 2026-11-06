@@ -615,7 +615,7 @@
                         class="mt-1 grid size-8 shrink-0 place-items-center rounded-(--radius-field) text-base leading-none
                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
                         style="color: var(--rail-label-ink)"
-                        aria-label="{{ __('core.rail.arrange') }}" title="{{ __('core.rail.arrange') }}">⚙</button>
+                        aria-label="{{ __('core.rail.arrange') }}" title="{{ __('core.rail.arrange') }}"><x-ui.icon name="settings" :size="16" /></button>
 
                 {{-- ⭐ রেল সাজানো — পিন (রেলে সবসময়), ক্রম টেনে বা ↑ ↓ বোতামে (পর্দা-পাঠকেও); রাখলে নিজের সারিতে, অন্য যন্ত্রেও এক --}}
                 <dialog x-ref="arrange" data-rail-arrange-dialog aria-labelledby="rail-arrange-title"

@@ -108,8 +108,9 @@ final class TheReceiptAndPaymentFollowTheFinalDesignTest extends TestCase
         $form = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php'));
         $this->assertStringNotContainsString('lg:grid-cols-[1.4fr_1.4fr_1fr_1.6fr_1.6fr]', $form,
             '⛔ পরিশোধের পাঁচ ঘরের এক সারি ফিরেছে — ১৩৬৬-এ লম্বা খাতের নাম কাটা পড়ে');
-        $this->assertMatchesRegularExpression('/data-voucher-details.*?<div class="flex flex-col gap-3">.*?name="to_account_id".*?name="carried_by".*?name="narration"/s', $form,
-            '⛔ কাকে দেওয়া হল · কার মাধ্যমে · বিবরণ আর আলাদা পূর্ণ-চওড়া স্তম্ভে নয়');
+        // ⓘ মালিকের নমুনা (৭ নভেম্বর ২০২৬, "ok"): স্লিপ · যে খাতে বসবে · কার মাধ্যমে · বিবরণ এক সারিতে, পুরো ফর্ম ১০৮০p-এর এক পর্দায় — সর্বোচ্চ চার ঘর, পাঁচ নয়
+        $this->assertMatchesRegularExpression("/data-voucher-details.*?'lg:grid-cols-4' => \\\$isPayment\]\) data-voucher-details-row>.*?name=\"to_account_id\".*?name=\"carried_by\".*?name=\"narration\"/s", $form,
+            '⛔ যে খাতে বসবে · কার মাধ্যমে · বিবরণ নমুনার চার-ঘরের সারিতে, এই ক্রমে নেই');
 
         // ⓘ ব্যাংক খাত আগে — ডেমোর ছকে নেই, বানানো হয়; পাতা আঁকার পরে বানালে পাতায় তার স্থিতি থাকেই না (cb_v14 ফটক)
         $bank = $this->bank();
