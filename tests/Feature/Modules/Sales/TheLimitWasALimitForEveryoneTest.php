@@ -26,6 +26,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\SignsAWaitingSetting;
 use Tests\TestCase;
 
 /**
@@ -56,6 +57,7 @@ use Tests\TestCase;
 final class TheLimitWasALimitForEveryoneTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsAWaitingSetting;
 
     private Customer $customer;
 
@@ -410,6 +412,8 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
             'settings' => [],
         ])->assertRedirect();
 
+        // ⓘ কন্ট্রোল প্যানেল দফা ৭ (৭ নভেম্বর ২০২৬): সুপার অ্যাডমিনের বদল আরেকজনের অনুমোদনের অপেক্ষায় যায়, তারপর বসে
+        $this->anotherHandSigns('customer.credit_limit_enabled', Company::query()->where('code', 'TDEPOT')->firstOrFail());
         $settings->flush();
         $this->assertFalse($settings->enabled('customer.credit_limit_enabled'),
             '⛔ সুপার অ্যাডমিনও সুইচ বদলাতে পারছেন না — পাহারা সবাইকে আটকাচ্ছে।');

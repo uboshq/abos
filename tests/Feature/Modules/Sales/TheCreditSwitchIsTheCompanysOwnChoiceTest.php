@@ -23,6 +23,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\SignsAWaitingSetting;
 use Tests\TestCase;
 
 /**
@@ -37,6 +38,7 @@ use Tests\TestCase;
 final class TheCreditSwitchIsTheCompanysOwnChoiceTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsAWaitingSetting;
 
     private Company $company;
 
@@ -114,12 +116,15 @@ final class TheCreditSwitchIsTheCompanysOwnChoiceTest extends TestCase
         $this->assertTrue($this->owner->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE));
         $this->actingAs($this->owner)
             ->put(route('system_admin.settings.update'), ['settings' => ['customer.credit_limit_enabled' => '0']]);
+        // ⓘ কন্ট্রোল প্যানেল দফা ৭ (৭ নভেম্বর ২০২৬): সুপার অ্যাডমিনের বদলও আরেকজনের অনুমোদনের অপেক্ষায় — তারপরই বসে
+        $change = $this->anotherHandSigns('customer.credit_limit_enabled', $this->company);
         $this->assertFalse($this->fresh()->enabled('customer.credit_limit_enabled'),
-            '⛔ সুপার অ্যাডমিন সুইচ বন্ধ করতে পারলেন না।');
+            '⛔ সুপার অ্যাডমিন সুইচ বন্ধ করতে পারলেন না (দ্বিতীয় অনুমোদনের পরেও)।');
+        $this->assertSame((int) $this->owner->id, (int) $change->requested_by, '⛔ কে বদল চাইলেন তা লেখা নেই।');
 
         $row = Setting::query()->where('company_id', $this->company->id)->where('key', 'customer.credit_limit_enabled')->firstOrFail();
         $this->assertTrue(AuditTrail::query()->where('auditable_type', $row::class)->where('auditable_id', $row->id)
-            ->where('user_id', $this->owner->id)->exists(), '⛔ সুইচ বদলের অডিট নেই।');
+            ->where('user_id', $change->decided_by)->exists(), '⛔ সুইচ বদলের অডিট নেই।');
     }
 
     /** ⓘ মান নতুন করে পড়া — সেবা এক অনুরোধ থেকে আরেকটায় ক্যাশ রাখে */

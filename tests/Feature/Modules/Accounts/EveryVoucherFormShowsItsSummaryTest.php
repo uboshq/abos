@@ -84,7 +84,10 @@ final class EveryVoucherFormShowsItsSummaryTest extends TestCase
 
     public function test_an_expense_preview_still_shows_its_lines_and_words(): void
     {
-        $head = Account::query()->postable()->active()->where('code', 'like', '5%')->whereNull('money_kind')->orderBy('code')->firstOrFail();
+        // ⓘ মানুষের খরচের খাত — বিক্রিত মালের খরচ (৫১০০) বা অবচয়ের মতো কেবল-সফটওয়্যারের খাত নয় ([[StandardChart::isEngineOnlyExpense()]]; Mac, ৭ নভেম্বর ২০২৬)
+        $head = Account::query()->postable()->active()->where('code', 'like', '5%')->whereNull('money_kind')->orderBy('code')->get()
+            ->first(fn (Account $a) => ! app(StandardChart::class)->isEngineOnlyExpense($a));
+        $this->assertNotNull($head, 'প্রস্তুতিটাই ভুল — ডেমোতে মানুষের কোনো খরচের খাত নেই।');
 
         $answer = $this->postJson(route('accounts.voucher.simulate'), [
             'type' => Voucher::EXPENSE, 'trx_date' => now()->toDateString(), 'amount' => '1500', 'narration' => 'সারাংশের দাবি',

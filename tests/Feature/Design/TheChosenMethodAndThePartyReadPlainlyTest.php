@@ -76,8 +76,12 @@ final class TheChosenMethodAndThePartyReadPlainlyTest extends TestCase
         // ⓘ ২৩ অক্টোবর ২০২৬: পাঁচ ঘরের সারি আর নেই — "কার মাধ্যমে" এখন বিবরণের বাক্সে, পূর্ণ-চওড়া স্তম্ভে (৫২০px-এর বেশি জায়গা;
         // [[TheReceiptAndPaymentFollowTheFinalDesignTest]])। দাবির কথা একই: ঘরটা লেখার চেয়ে সরু নয়।
         $form = File::get(base_path('app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php'));
-        $this->assertMatchesRegularExpression('/data-voucher-details.*?<div class="flex flex-col gap-3">.*?name="carried_by"/s', $form,
+        // ⓘ ৭ নভেম্বর ২০২৬ (মালিকের নমুনা): ঘরগুলো এক সারিতে — কিন্তু তিন-চার ঘর কেবল ২xl-এ (১০৮০p); ১৩৬৬-এ (মূল কলাম ~৭০০px) দুই-দুই, ঘর ~৩৪০px
+        $this->assertMatchesRegularExpression('/data-voucher-details.*?@class\(\[\'grid gap-3 sm:grid-cols-2\', \'2xl:grid-cols-3\' => ! \$isPayment, \'2xl:grid-cols-4\' => \$isPayment\]\) data-voucher-details-row>.*?name="carried_by"/s', $form,
             '⛔ "কার মাধ্যমে" আবার কোনো সরু কলামে — ১৩৬৬-এ লেখা কাটা পড়ে');
+        $row = (string) preg_replace('/.*?(<div @class\(\[[^\n]*data-voucher-details-row>).*/s', '$1', $form);
+        $this->assertDoesNotMatchRegularExpression('/\b(?:lg|xl):grid-cols-[3-9]/', $row,
+            '⛔ বিবরণের সারি ১৩৬৬-এ তিন বা বেশি ঘরে — "কার মাধ্যমে" কাটা পড়ে');
     }
 
     /** @param string $a "r g b" */

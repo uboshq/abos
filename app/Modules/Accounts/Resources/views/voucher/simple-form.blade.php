@@ -841,7 +841,8 @@
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 data-form-band="note" class="mb-3">{{ __('money.screen.attach_and_note') }}</h2>
                 {{-- ⭐ এক সারিতে — স্লিপ · কার মাধ্যমে · বিবরণ (পরিশোধে "যে খাতে বসবে"-ও), যাতে পুরো ফর্ম ১০৮০p-এর এক পর্দায় আঁটে (মালিক, ৭ নভেম্বর ২০২৬) --}}
-                <div @class(['grid gap-3 sm:grid-cols-2', 'lg:grid-cols-3' => ! $isPayment, 'lg:grid-cols-4' => $isPayment]) data-voucher-details-row>
+                {{-- ⛔ ১৩৬৬-এ (মেনু খোলা) মূল কলাম ~৭০০px — তিন-চার ঘরে "কার মাধ্যমে"-র খালি লেখা (১৯১px) কাটা পড়ে; তাই চওড়া পর্দায় (২xl, ১০৮০p) এক সারি, তার নিচে দুই-দুই --}}
+                <div @class(['grid gap-3 sm:grid-cols-2', '2xl:grid-cols-3' => ! $isPayment, '2xl:grid-cols-4' => $isPayment]) data-voucher-details-row>
                     {{-- ⭐ সংযুক্তি — ব্যাংক স্লিপ, স্ক্রিনশট বা অ্যাডভাইস (নকশার "সংযুক্তি ও বিবরণ"); লেখক আগে থেকেই নেয় ([[VoucherWriter::store()]]) --}}
                     <div data-voucher-attachment>
                         @include('accounts::voucher.partials.attachment-field', ['attachmentLabel' => $isPayment ? __('money.screen.attach_hint') : __('money.screen.attach_hint_in')])
