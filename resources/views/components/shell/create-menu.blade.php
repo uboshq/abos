@@ -97,7 +97,7 @@
 
 {{-- ⓘ ফোনের নিচের বারের ＋ এই তালিকাই খোলে (`open-create-menu`, [[shell.bottom-nav]]) — পরের টিকে, নইলে একই চাপ বোতামের
      `click.outside`-এ পৌঁছে সাথে সাথে বন্ধ করে দিত --}}
-<div x-data="{ open: false }" class="relative" data-shell-create @open-create-menu.window="setTimeout(() => open = true)">
+<div x-data="createMenu" class="relative" data-shell-create @open-create-menu.window="openSoon">
     <button type="button"
             @click="open = ! open" @click.outside="open = false"
             @keydown.escape.window="open = false"

@@ -1156,3 +1156,17 @@ export function noticeTicker () {
         },
     }
 }
+
+/**
+ * ⓘ "+ তৈরি করুন"-এর তালিকা — ফোনের নিচের বারের ＋ পরের টিকে খোলে (`open-create-menu`, [[shell.bottom-nav]])।
+ * ⛔ আগে পাতায় `setTimeout(() => open = true)` লেখা ছিল — CSP-Alpine তীর-ফাংশন পড়তে পারে না, তাই ＋ চাপলে কিছুই হত না
+ * ([[csp-expressions.test.js]], ৭ নভেম্বর ২০২৬)।
+ */
+export function createMenu () {
+    return {
+        open: false,
+        openSoon () {
+            setTimeout(() => { this.open = true })
+        },
+    }
+}
