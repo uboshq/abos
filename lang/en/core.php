@@ -1553,6 +1553,7 @@ return [
             'cheque_bounce_block' => 'When a bounced cheque blocks a customer\'s credit',
             'limit_request_waiting' => 'When a credit-limit raise waits for my approval',
             'bank_change_waiting' => 'When a supplier bank details change waits for my approval',
+            'setting_change_waiting' => 'When a key setting change waits for my approval',
             'temporary_limit_ending' => 'When a temporary credit limit ends within three days',
             'deposit_maturing_soon' => 'When a deposit matures within seven days or is past maturity',
             'dps_instalment_due' => 'When a DPS instalment is overdue',

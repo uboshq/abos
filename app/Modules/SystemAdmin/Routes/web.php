@@ -6,6 +6,7 @@ use App\Modules\SystemAdmin\Http\Controllers\BranchModuleController;
 use App\Modules\SystemAdmin\Http\Controllers\BranchController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
+use App\Modules\SystemAdmin\Http\Controllers\SettingChangeController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
@@ -83,6 +84,9 @@ Route::middleware('auth')->prefix('system')->group(function () {
 
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
+    // ⭐ জরুরি সেটিংয়ের বদলে দ্বিতীয় হাত (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭ — অনুমোদন, বাকির সীমা আর বেতনের সেটিং বদলালে দ্বিতীয় সই; [[SignedSettings]])
+    Route::post('/setting-changes/{change}/sign', [SettingChangeController::class, 'sign'])->name('setting-change.sign');
+    Route::post('/setting-changes/{change}/reject', [SettingChangeController::class, 'reject'])->name('setting-change.reject');
 
     /*
      * শাখার মডিউল — ২৮ নভেম্বর ২০২৬।

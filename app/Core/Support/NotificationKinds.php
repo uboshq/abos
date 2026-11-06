@@ -114,6 +114,8 @@ final class NotificationKinds
             'credit_control.temporary_limit_ending' => 'core.notify.kind.temporary_limit_ending',
             // ⭐ সরবরাহকারীর ব্যাংক তথ্যের বদল দ্বিতীয় সইয়ের অপেক্ষায় — সইকারীদের, যিনি চাইলেন তাঁকে নয় (নকশা দফা #৬, ২১ অক্টোবর ২০২৬)
             'supplier.bank_change_waiting' => 'core.notify.kind.bank_change_waiting',
+            // ⭐ জরুরি সেটিংয়ের বদল দ্বিতীয় হাতের অপেক্ষায় — যিনি চাইলেন তাঁকে নয় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭)
+            'system_admin.setting_change_waiting' => 'core.notify.kind.setting_change_waiting',
 
             /*
              * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
@@ -174,6 +176,7 @@ final class NotificationKinds
             str_starts_with($type, 'approval.') => ['approval', 'high'],
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
             $type === 'supplier.bank_change_waiting' => ['approval', 'high'],
+            $type === 'system_admin.setting_change_waiting' => ['approval', 'high'],
             in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],

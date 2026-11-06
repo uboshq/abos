@@ -139,7 +139,26 @@ class AccountsSettingsController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /* ⭐ জরুরি সেটিং (বাজেটের বেশি খরচে সই) — অন্য কারও অনুমোদনের অপেক্ষায় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭ — অনুমোদন, বাকির সীমা আর বেতনের সেটিং বদলালে দ্বিতীয় সই; [[SignedSettings]]) */
+            $signed = app(\App\Core\Services\SignedSettings::class);
+            if ($signed->guards($key)) {
+                if ($signed->propose($key, $value, $request->user())) {
+                    $waiting[] = $signed->labelOf($key);
+                } else {
+                    $blocked[] = $signed->labelOf($key);
+                }
+
+                continue;
+            }
+
             $this->settings->set($key, $value);
+        }
+
+        if (($waiting ?? []) !== [] || ($blocked ?? []) !== []) {
+            session()->flash('setting_waits', array_filter([
+                ($waiting ?? []) !== [] ? __('system_admin::settings.change_waits', ['names' => implode(', ', $waiting)]) : null,
+                ($blocked ?? []) !== [] ? __('system_admin::settings.change_blocked', ['names' => implode(', ', $blocked)]) : null,
+            ]));
         }
 
         $back = back()->with('saved', __('accounts::message.settings_saved'));

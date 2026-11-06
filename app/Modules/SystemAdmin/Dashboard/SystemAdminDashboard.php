@@ -58,6 +58,9 @@ final class SystemAdminDashboard implements ProvidesDashboard
                     permission: 'system_admin.notice.manage', icon: 'bell'),
                 new Tile(label: __('system_admin::menu.section_data'), href: route('system_admin.import.index'),
                     permission: 'system_admin.import.manage', icon: 'drawer'),
+                // ⭐ সপ্তম ভাগ — নিরীক্ষা: কে কবে কী বদলালেন (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১ আর ৪)
+                new Tile(label: __('system_admin::menu.section_audit'), href: route('governance.audit.index'),
+                    permission: 'governance.audit.view', icon: 'governance'),
             ],
 
             search: [

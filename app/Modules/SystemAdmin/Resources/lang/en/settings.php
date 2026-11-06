@@ -116,4 +116,23 @@ return [
     'invoice_logo_hint' => 'Which logo sits at the head of the invoice.',
     'default_paper_hint' => 'The paper size chosen first when printing.',
     'print_format_hint' => 'Which layout this paper prints in.',
+    // ⭐ কন্ট্রোল প্যানেলের নিচের অংশ (দফা ২)
+    'one_place' => 'Module settings — in one place',
+    // ⭐ জরুরি সেটিংয়ের বদলে দ্বিতীয় হাত (দফা ৭)
+    'change_waiting_title' => 'A key setting change waits for your approval',
+    'changes_title' => 'Setting changes waiting for approval',
+    'changes_note' => 'Approval, credit-limit and salary settings changed by one person take effect only when another approves. The person who asked cannot approve it.',
+    'change_sign' => 'Approve',
+    'change_reject' => 'Send back',
+    'change_asked_by' => 'Asked by :name · :when',
+    'change_own' => 'Your request — someone else approves',
+    'change_on' => 'On',
+    'change_off' => 'Off',
+    'change_waits' => 'Sent for approval (takes effect when another person approves): :names',
+    'change_blocked' => 'Not changed — there is nobody else who can approve (a second person with the settings key is needed): :names',
+    'change_signed' => 'Approved, the setting is in place — :what',
+    'change_rejected' => 'Sent back, the setting stays as it was — :what',
+    'change_not_pending' => 'This change is no longer waiting.',
+    'change_maker_cannot_sign' => 'The person who asked for the change cannot approve it.',
+    'change_no_key' => 'Approving needs the settings key.',
 ];

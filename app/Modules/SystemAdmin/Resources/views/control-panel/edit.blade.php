@@ -308,4 +308,13 @@
         </details>
     @endif
     @endcomponent
+    {{-- ⭐ মডিউলের সেটিংস — এক জায়গায়, সুইচের ঠিক নিচে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ২ — "মডিউলের সেটিংস দুই পাতায় → \"মডিউল ও সেটিংস\"-এ একটাই পাতা"; নমুনার পাতা ৩) --}}
+    @if ($tab === 'switches')
+        <section id="settings" class="mt-6" data-control-settings>
+            <h2 class="mb-3 text-lg font-semibold">{{ __('system_admin::settings.one_place') }}</h2>
+        {{-- ⭐ জরুরি সেটিংয়ের বদল — অপেক্ষায়, আটকানো, অনুমোদন (দফা ৭) --}}
+    @include('system_admin::settings.partials.changes')
+            @include('system_admin::settings.partials.board', ['modules' => $settingsModules, 'onePage' => true])
+        </section>
+    @endif
 </x-layouts.app>

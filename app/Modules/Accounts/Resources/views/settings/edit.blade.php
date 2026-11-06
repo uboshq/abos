@@ -17,6 +17,9 @@
                           :subtitle="__('accounts::message.settings_note')" />
     </x-slot:header>
 
+    {{-- ⭐ জরুরি সেটিংয়ের বদল — অপেক্ষায়, আটকানো, অনুমোদন (দফা ৭) --}}
+    @include('system_admin::settings.partials.changes', ['listChanges' => false])
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

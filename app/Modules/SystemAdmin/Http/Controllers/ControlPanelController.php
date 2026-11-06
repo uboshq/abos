@@ -64,6 +64,8 @@ class ControlPanelController extends Controller implements HasMiddleware
         return view('system_admin::control-panel.edit', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
+            // ⭐ সুইচের নিচে সব সেটিং এক জায়গায় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ২ — "মডিউলের সেটিংস দুই পাতায় → \"মডিউল ও সেটিংস\"-এ একটাই পাতা")
+            'settingsModules' => app(SettingsController::class)->board(),
             'tabs' => $this->tabs->all(),
 
             /*
@@ -314,6 +316,9 @@ class ControlPanelController extends Controller implements HasMiddleware
         $changed = 0;
         $refused = [];
         $superAdminOnly = [];
+        $signed = app(\App\Core\Services\SignedSettings::class);
+        $waiting = [];
+        $blocked = [];
 
         /*
          * ⛔ সংখ্যার ঘর আগে যাচাই, কিছু বসানোর আগেই — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
@@ -468,8 +473,26 @@ class ControlPanelController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /* ⭐ জরুরি সেটিং — সরাসরি নয়, অন্য কারও অনুমোদনের অপেক্ষায়; অনুমোদন দেওয়ার কেউ না থাকলে আটকে যায় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭ — অনুমোদন, বাকির সীমা আর বেতনের সেটিং বদলালে দ্বিতীয় সই; [[SignedSettings]]) */
+            if ($signed->guards($key)) {
+                if ($signed->propose($key, $value, $request->user())) {
+                    $waiting[] = $signed->labelOf($key);
+                } else {
+                    $blocked[] = $signed->labelOf($key);
+                }
+
+                continue;
+            }
+
             $this->settings->set($key, $value);
             $changed++;
+        }
+
+        if ($waiting !== [] || $blocked !== []) {
+            session()->flash('setting_waits', array_filter([
+                $waiting !== [] ? __('system_admin::settings.change_waits', ['names' => implode(', ', $waiting)]) : null,
+                $blocked !== [] ? __('system_admin::settings.change_blocked', ['names' => implode(', ', $blocked)]) : null,
+            ]));
         }
 
         if ($superAdminOnly !== []) {

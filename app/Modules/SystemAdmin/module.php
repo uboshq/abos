@@ -40,7 +40,7 @@ return [
      * সিস্টেমের হোম · প্রতিষ্ঠান · মানুষ ও প্রবেশাধিকার · মডিউল ও সেটিংস · যোগাযোগ · তথ্য। ⓘ নিরীক্ষার পর্দা Governance-এর নিজের মেনুতে
      * (এক পর্দা, এক মালিক — নিচের মন্তব্য)। ঠিকানা একটাও বদলায়নি।
      */
-    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data']],
+    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit']],
 
     /*
      * ── master_data কেন, ৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
@@ -124,6 +124,11 @@ return [
              * বসলে রোজকার কাজগুলো একটা ঘর নিচে নেমে যায়।
              */
             ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.ownership.transfer'],
+            /*
+             * ⭐ সপ্তম ভাগ "নিরীক্ষা" — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১ — "৭টা ভাগে: প্রতিষ্ঠান · মানুষ ও প্রবেশাধিকার · মডিউল ও সেটিংস · যোগাযোগ · তথ্য · নিরীক্ষা, আর ওপরে সিস্টেমের হোম"; নমুনার কার্ড: "বদলের ইতিহাস · সইয়ের হিসাব · নোটিশ রেজিস্টার"।
+             * ⓘ বদলের ইতিহাস Governance-এর নিজের পর্দা — এখানে কেবল পথ, দ্বিতীয় কপি নয়। মেনুর সারি এই মডিউলের চাবি চায় (মডিউল অন্যের চাবি ঘোষণা করতে পারে না); পর্দাটা নিজে Governance-এর চাবি দেখে।
+             */
+            ['label' => 'system_admin::menu.change_history', 'icon' => 'list', 'route' => 'governance.audit.index', 'section' => 'audit', 'loose' => true, 'permission' => 'system_admin.settings.manage'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
@@ -152,9 +157,9 @@ return [
          */
         'reports' => [
             /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
-            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show', 'section' => 'data',
+            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show', 'section' => 'audit',
                 'route_params' => ['slug' => 'notice-register'], 'permission' => 'system_admin.notice.analytics'],
-            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show', 'section' => 'data',
+            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show', 'section' => 'audit',
                 'route_params' => ['slug' => 'notice-signatures'], 'permission' => 'system_admin.notice.analytics'],
 
             ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index', 'section' => 'comms',
@@ -267,8 +272,10 @@ return [
              * ⛔ একই চাবি (`settings.manage`) — দুইটা পর্দাই একই প্রশ্নের উত্তর
              * দেয়, আর আলাদা চাবি দিলে কাউকে অর্ধেক উত্তর দেওয়ার অধিকার দেওয়া হত।
              */
-            ['label' => 'system_admin::settings.title', 'icon' => 'settings', 'route' => 'system_admin.settings', 'section' => 'modules',
-                'permission' => 'system_admin.settings.manage'],
+            /*
+             * ⛔ "প্রতিষ্ঠানের সেটিংস" আর আলাদা সারি নয় — ৭ নভেম্বর ২০২৬ (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ২ — "মডিউলের সেটিংস দুই পাতায় → \"মডিউল ও সেটিংস\"-এ একটাই পাতা")। সেটিংস এখন কন্ট্রোল প্যানেলের পাতায়,
+             * সুইচের নিচে। ⓘ পুরনো ঠিকানা আগের মতোই খোলে (দফা ১৫, [[EverySystemAddressStillOpensTest]]), খোঁজার ফলও সেখানে নেয়।
+             */
 
             /*
              * ── ⛔ ছাপার সারিটা এখানে আর নেই, ২৪ সেপ্টেম্বর ২০২৬ ─────

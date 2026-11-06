@@ -35,7 +35,8 @@ final class TheSystemHomeSearchesEverySettingTest extends TestCase
         $this->get(route('system_admin.control-panel', ['find' => __('system_admin::settings.date_format')]))->assertOk()
             ->assertSee(__('system_admin::settings.date_format'));
 
-        foreach (['org', 'people', 'modules', 'comms', 'data'] as $section) {
+        // ⓘ সপ্তম ভাগ "নিরীক্ষা" — দফা ১ (৭ নভেম্বর ২০২৬; আগে ছয়টা ছিল)
+        foreach (['org', 'people', 'modules', 'comms', 'data', 'audit'] as $section) {
             // ⓘ বোতামেই (data-tile) — বাঁয়ের মেনুর ভাগের শিরোনামে একই নাম থাকে
             $this->assertMatchesRegularExpression('/data-tile[^>]*>(?:(?!<\/a>).)*'.preg_quote(e(__('system_admin::menu.section_'.$section)), '/').'/su', $html,
                 "⛔ হোমে \"{$section}\" ভাগের কার্ড নেই।");
