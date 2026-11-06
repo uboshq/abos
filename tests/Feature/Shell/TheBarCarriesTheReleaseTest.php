@@ -17,6 +17,8 @@ use Tests\TestCase;
  *
  * ⓘ আগে বারে লেখা ছিল `v0.1.0` — config/app.php-তে `version` চাবিই ছিল না, তাই সবসময় ডিফল্টটা।
  * ⭐ এখন একটাই উৎস config/release.php; commit আসে deploy-এর লেখা storage/app/release-build.json থেকে, না থাকলে চুপ।
+ * ⭐ ৬ নভেম্বর ২০২৬: সংস্করণ ফুটার থেকে উঠে গেল (মালিক: ফুটারে কেবল "© 2026 সর্বস্বত্ব সংরক্ষিত", সংস্করণ লগইন পাতায়) — "নতুন কী এল"-এর
+ *   দরজা এখন ছবির মেনুতে, সংস্করণ আর তারিখসহ।
  */
 final class TheBarCarriesTheReleaseTest extends TestCase
 {
@@ -45,11 +47,12 @@ final class TheBarCarriesTheReleaseTest extends TestCase
         config(['release.version' => '1.4.2', 'release.date' => '2026-10-24']);
 
         $html = (string) $this->actingAs($this->owner())->get(route('release.notes'))->getContent();
-        $bar = $this->bar($html);
+        $link = $this->releaseLink($html);
 
-        $this->assertStringContainsString('v1.4.2 · 24-10-2026', $bar, '⛔ নিচের বারে config-এর সংস্করণ আর তারিখ নেই।');
-        $this->assertStringNotContainsString('v0.1.0', $bar, '⛔ নিচের বারে পুরনো v0.1.0 রয়ে গেছে।');
-        $this->assertStringContainsString('href="'.route('release.notes').'"', $bar, '⛔ বারের সংস্করণে চাপলে "নতুন কী এল" খোলে না।');
+        $this->assertStringContainsString('v1.4.2 · 24-10-2026', $link, '⛔ ছবির মেনুতে config-এর সংস্করণ আর তারিখ নেই।');
+        $this->assertStringNotContainsString('v0.1.0', $link, '⛔ পুরনো v0.1.0 রয়ে গেছে।');
+        $this->assertStringContainsString('href="'.route('release.notes').'"', $link, '⛔ সংস্করণে চাপলে "নতুন কী এল" খোলে না।');
+        $this->assertStringNotContainsString('v1.4.2', $this->bar($html), '⛔ নিচের বারে এখনো সংস্করণ — মালিক ফুটারে কেবল © চান।');
     }
 
     public function test_the_running_commit_shows_when_deploy_wrote_it_and_nothing_breaks_without_it(): void
@@ -59,8 +62,9 @@ final class TheBarCarriesTheReleaseTest extends TestCase
         $this->assertNull(Release::sha(), '⛔ ফাইল নেই, তবু commit দেখায়।');
 
         file_put_contents($this->build, json_encode(['sha' => '2C026A30385AC3988485135FCC6935341734554', 'deployed_at' => '2026-10-24T10:00:00+06:00']));
-        $bar = $this->bar((string) $this->actingAs($this->owner())->get(route('release.notes'))->getContent());
-        $this->assertStringContainsString(' · 2c026a3', $bar, '⛔ deploy-এর লেখা commit বারে নেই।');
+        $link = $this->releaseLink((string) $this->actingAs($this->owner())->get(route('release.notes'))->getContent());
+        $this->assertStringContainsString(' · 2c026a3', $link, '⛔ deploy-এর লেখা commit ছবির মেনুর সংস্করণে নেই।');
+        $this->assertSame('24-10-2026', Release::updatedDate(), '⛔ deploy-এর লেখা সময় থেকে "হালনাগাদ"-এর দিন আসে না।');
 
         file_put_contents($this->build, '{not json');
         $this->assertSame(200, $this->actingAs($this->owner())->get(route('release.notes'))->status(), '⛔ ভাঙা release-build.json পাতা ভাঙে।');
@@ -101,6 +105,14 @@ final class TheBarCarriesTheReleaseTest extends TestCase
     private function owner(): User
     {
         return User::query()->where('email', 'owner@abos.test')->firstOrFail();
+    }
+
+    /** ছবির মেনুর "নতুন কী এল" লিংক */
+    private function releaseLink(string $html): string
+    {
+        $this->assertSame(1, preg_match('/<a [^>]*data-release[\s>].*?<\/a>/s', $html, $m), '⛔ ছবির মেনুতে "নতুন কী এল"-এর দরজা নেই।');
+
+        return $m[0];
     }
 
     private function bar(string $html): string

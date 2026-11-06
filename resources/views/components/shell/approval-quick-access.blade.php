@@ -25,9 +25,12 @@
        aria-label="{{ $label }}">
         {{-- ✅ টিক-বাক্স — Material Symbols-এর check_box, নমুনার ✅-এর আকার (ফন্টের ইমোজি নয়, তাই দুই থিমেই একই)।
              ⛔ আগের খাঁজকাটা সিলটা ছোট মাপে ⚙-এর মতো দেখাত (fe-র ছবি-যাচাই, ২০ অক্টোবর ২০২৬) --}}
-        <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
-            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9Z"/>
-        </svg>
+        {{-- ⭐ রঙিন জমিনে সাদা চিহ্ন — মালিক, ৬ নভেম্বর ২০২৬: "top barer icon golo rongin colore korbe" --}}
+        <span class="grid size-8 place-items-center rounded-[9px] shadow-sm" data-topbar-icon="tasks" style="background: var(--color-topbar-icon-tasks); color: var(--color-topbar-icon-ink)">
+            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
+                <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9Z"/>
+            </svg>
+        </span>
         @if ($pending > 0)
             {{-- ⓘ রং থিমের টোকেনে (দফা ১৯) — গাঢ় থিমেও সংখ্যা ৪.৫:১-এর উপরে --}}
             <span class="absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-(--color-count-urgent) px-1

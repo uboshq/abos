@@ -12,6 +12,7 @@ use App\Core\Engines\Approval\AuthorityService;
 use App\Core\Engines\Approval\BulkApproval;
 use App\Core\Panels\FactRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
@@ -300,6 +301,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             $detail = $this->detailFor($opened, $user);
         }
 
+        $tabCounts = collect($tabs)->map(fn ($q) => (clone $q)->reorder()->withoutEagerLoads()->count())->all();
+
         return view('approval::inbox.index', [
             'menu' => $this->menu->forUser($user),
             'approvals' => $approvals,
@@ -321,7 +324,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'total' => (int) $counts->sum(),
 
             'tab' => $tab,
-            'tabCounts' => collect($tabs)->map(fn ($q) => (clone $q)->reorder()->withoutEagerLoads()->count())->all(),
+            'tabCounts' => $tabCounts,
             'branch' => $branch,
             'branches' => $this->branchChoices(),
             'band' => $band,
@@ -334,6 +337,9 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'signers' => $signers,
             'person' => $own ? 0 : $subject->id,
             'personName' => $subject->name,
+
+            // ⭐ মাথার পাঁচ রঙিন ঘর — মালিক, ৬ নভেম্বর ২০২৬: "approval pagegulo color ful korbe, bises kore inbox ti zate sohoje buja zay"
+            'board' => $this->boardOf($subject, $own, $tabCounts, $lateCount, $tab === 'waiting' ? $sumAll : null),
 
             /*
              * ⭐ প্রতিটা সারির ঘড়ির অবস্থা আর শেষ সময় — পর্দা নিজে হিসাব করে না ([[ApprovalSla]]); ⓘ ধাপ "২ / ৩ · ম্যানেজার"
@@ -449,6 +455,42 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     private static function searched($query, string $term)
     {
         return ApprovalInbox::searched($query, $term);
+    }
+
+    /**
+     * ⭐ ইনবক্সের মাথার পাঁচ ঘর — মালিক, ৬ নভেম্বর ২০২৬ (নমুনা "ABOS নতুন চেহারা", ৮ নম্বর)।
+     *
+     *   জরুরি (শেষ সময় পেরিয়েছে) · অপেক্ষায় (মোট অঙ্কসহ) · অনুমোদিত কিন্তু খাতায় ওঠেনি · আজ অনুমোদিত · ফেরত বা নাকচ (এই সপ্তাহে)
+     *
+     * ⓘ প্রথম দুটো তালিকার নিজের হিসাব থেকে, আলাদা করে গোনা নয় — নইলে ঘর আর তালিকা একদিন দুই কথা বলত।
+     * ⓘ শেষ তিনটা কেবল নিজের ইনবক্সে; অন্যের ইনবক্স দেখার সময় (রিপোর্ট-পাঠক) সেগুলো তাঁর কাজের প্রশ্ন নয় — null, ঘরটা আঁকা হয় না।
+     * ⛔ কোম্পানির ছাঁকনি সব গোনায় — অনুমোদন কোম্পানির সারি।
+     *
+     * @param  array<string, int>  $tabCounts
+     * @return array{late: int, waiting: int, waiting_sum: ?string, stuck: ?int, today: ?int, back: ?int}
+     */
+    private function boardOf(User $subject, bool $own, array $tabCounts, int $late, ?string $waitingSum): array
+    {
+        $company = CompanyContext::id();
+
+        return [
+            'late' => $late,
+            'waiting' => (int) ($tabCounts['waiting'] ?? 0),
+            'waiting_sum' => $waitingSum,
+            'stuck' => $own ? app(\App\Core\Engines\Approval\SignedButNotPosted::class)->count($subject) : null,
+            'today' => $own ? \App\Models\ApprovalDecision::query()
+                ->where('user_id', $subject->id)
+                ->where('decision', \App\Models\ApprovalDecision::APPROVED)
+                ->where('decided_at', '>=', now()->startOfDay())
+                ->whereHas('approval', fn ($q) => $q->where('company_id', $company))
+                ->count() : null,
+            'back' => $own ? Approval::query()
+                ->where('company_id', $company)
+                ->where('requested_by', $subject->id)
+                ->whereIn('status', [Approval::REJECTED, Approval::RETURNED])
+                ->where('decided_at', '>=', now()->startOfWeek())
+                ->count() : null,
+        ];
     }
 
     public function mine(Request $request): View

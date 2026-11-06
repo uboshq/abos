@@ -253,8 +253,7 @@
     @if ($fullBar)
         {{-- ⓘ `over-rail` — "≡" রেলের কলামে, আর ⊞ সব মডিউল বারে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]) --}}
         <x-shell.topbar :menu="$menu ?? []" over-rail />
-        {{-- সতর্কবাণীর ফিতা — বারের ঠিক নিচে, পুরো চওড়া (Fiori Message Strip; ভুল ৮) --}}
-        <x-shell.notice-banner />
+        {{-- ⓘ সতর্কবাণীর ফিতা আর এখানে নয় — নিচে কাজের কলামের মাথায় (মালিক, ৬ নভেম্বর ২০২৬) --}}
     @endif
 
     <div @class(['flex flex-1', 'min-h-dvh' => ! $fullBar])>
@@ -293,10 +292,11 @@
                 <x-shell.topbar :menu="$menu ?? []" />
             @endif
 
-            {{-- অন্য রূপে ফিতা পাতার কলামের মাথায় — নোটিশ সব রূপেই উপরে, ফুটারে আর নয় --}}
-            @unless ($fullBar)
-                <x-shell.notice-banner />
-            @endunless
+            {{-- ⭐ খুব জরুরি নোটিশ কাজের কলামের মাথায়, সব রূপে — মডিউল বার আর মেনু অটুট থাকে (মালিক, ৬ নভেম্বর ২০২৬: "5টি খসড়া
+                 ভাউচার এখনো পোস্ট হয়নি ei doroner notice … modiulebar menubar er na venge dekhabe"); কম জরুরি ঘোষণা ফুটারে চলমান
+                 ([[shell.statusbar]])। ⛔ আগে `rail` রূপে ফিতাটা বারের নিচে পুরো চওড়ায়, রেল আর মেনুকে নিচে ঠেলে দিত। --}}
+            <x-shell.notice-banner />
+
 
             @if ($topnavShape !== 'none')
                 <x-shell.topnav :menu="$menu ?? []" :shape="$topnavShape" />

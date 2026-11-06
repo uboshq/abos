@@ -95,11 +95,9 @@ export function railFit () {
                 dotStyle: { background: `var(--color-module-${el.dataset.railModule}, var(--color-brand-600))` },
             }))
             this.measure()
-            if (typeof ResizeObserver === 'function') {
-                const watch = new ResizeObserver(() => this.measure())
-                watch.observe(this.root)
-            }
-            window.addEventListener('resize', () => this.measure())
+            const near = e => this.place(e.target?.closest?.('[data-rail-module]'))
+            this.root.addEventListener('mouseover', near)
+            this.root.addEventListener('focusin', near)
         },
 
         get hasMore () {
@@ -115,39 +113,27 @@ export function railFit () {
             return this.hasMore && this.shownMore.length === 0
         },
 
+        /*
+         * ⭐ রেল এখন চাকায় চলে, কিছুই লুকায় না (মালিক, ৬ নভেম্বর ২০২৬: "modiule bar eklinei hobe … mouse reke scroll kore ana zabe") —
+         * তাই সব মডিউল সবসময় রেলে, "আরও" নেই। ⓘ উপরের `fitRail` আর `hideOrder` আর ডাকা হয় না।
+         */
         measure () {
-            const nav = this.root
-            const tile = code => nav.querySelector(`[data-rail-module="${code}"]`)
-            const more = nav.querySelector('[data-rail-more]')
-            const apply = (hidden, withMore) => {
-                for (const r of this.rows) {
-                    const el = tile(r.code)
-                    if (el) el.style.display = hidden.has(r.code) ? 'none' : ''
-                }
-                // ⓘ পুরো দল সরে গেলে তার রেখাও — নইলে একা একটা সোনালি দাগ ঝুলে থাকত
-                for (const sep of nav.querySelectorAll('[data-rail-sep]')) {
-                    const any = this.rows.some(r => tile(r.code)?.dataset.section === sep.dataset.railSep && ! hidden.has(r.code))
-                    sep.style.display = any ? '' : 'none'
-                }
-                if (more) more.style.display = withMore ? '' : 'none'
-            }
-            const fits = (hidden, withMore) => {
-                apply(hidden, withMore)
-                /*
-                 * ⛔ রেলের নিজের নিচের কিনারা নয়, চোখে-দেখা শেষ বিন্দু: সাইডবার টপবারের নিচে শুরু হয় অথচ মাপ ধরে পর্দার মাথা থেকে,
-                 * তাই ৭৬৮-এর পর্দায় রেল ৭৯৬px পর্যন্ত যায়; আর নিচের স্থির বার শেষ ২৮px ঢাকে (আসল ব্রাউজারে মাপা, ২৪ অক্টোবর ২০২৬)।
-                 */
-                const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-status-bar')) || 0
-                const limit = Math.min(nav.getBoundingClientRect().bottom - parseFloat(getComputedStyle(nav).paddingBottom || '0'),
-                    window.innerHeight - bar)
-                const last = [...nav.children].filter(c => c.offsetParent !== null && ! c.hasAttribute('data-rail-flyout')).pop()
+            this.hiddenCodes = []
+        },
 
-                return ! last || last.getBoundingClientRect().bottom <= limit + 0.5
-            }
-
-            const hidden = fitRail(this.rows, fits, { alwaysMore: true })
-            apply(new Set(hidden), true)
-            this.hiddenCodes = hidden
+        /**
+         * পাশের তালিকা পর্দার গায়ে — রেল স্ক্রল করে বলে ভিতরে রাখলে কেটে যেত। টাইলের মাথা বরাবর, কিন্তু পর্দার নিচে নামে না।
+         *
+         * @param {Element|null} module  `[data-rail-module]`
+         */
+        place (module) {
+            const fly = module?.querySelector?.('.rail-flyout')
+            if (! fly) return
+            const tile = module.getBoundingClientRect()
+            const rail = this.root.getBoundingClientRect()
+            const room = window.innerHeight - (fly.offsetHeight || 0) - 8
+            fly.style.left = `${Math.round(rail.right + 4)}px`
+            fly.style.top = `${Math.round(Math.max(8, Math.min(tile.top, room)))}px`
         },
 
         toggleMore () {

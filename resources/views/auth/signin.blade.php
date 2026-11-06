@@ -209,7 +209,17 @@
                     </span>
                 </div>
 
-                <p class="mt-2">{{ __('core.brand.developed_by') }} · v{{ \App\Core\Support\Release::version() }}</p>
+                <p class="mt-2">{{ __('core.brand.developed_by') }}</p>
+                {{-- ⭐ সংস্করণের পুরো বিবরণ ঘরের একদম নিচে — মালিক, ৬ নভেম্বর ২০২৬ (ফুটার থেকে এখানে সরল; build-এর নম্বর নয়) --}}
+                <p class="mt-0.5 tabular-nums" data-release-line>
+                    ABOS v{{ \App\Core\Support\Release::version() }}
+                    @if (\App\Core\Support\Release::shownDate() !== '')
+                        · {{ __('core.brand.released') }} {{ \App\Core\Support\Release::shownDate() }}
+                    @endif
+                    @if (\App\Core\Support\Release::updatedDate())
+                        · {{ __('core.brand.updated') }} {{ \App\Core\Support\Release::updatedDate() }}
+                    @endif
+                </p>
             </div>
         </footer>
         </div>

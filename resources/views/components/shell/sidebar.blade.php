@@ -218,8 +218,11 @@
             {{-- ⭐ রেল নিজে মাপে, যা ধরে না তা "⋯ আরও"-তে — কোনো মডিউল পর্দার বাইরে কাটে না ([[rail-fit.js]]; মালিক, ২৪ অক্টোবর ২০২৬) --}}
             {{-- ⓘ class আর aria-label আগে, রেলের নিজের ঘরগুলো পরে — "≡"-এর কেন্দ্রের দাবি ([[TheMenuButtonSitsOnTheRailsCentreTest]]) ট্যাগটা
                  এই ক্রমেই পড়ে (cb-ma-5, ২৫ অক্টোবর ২০২৬); ব্রাউজারের কাছে ক্রমের কোনো মানে নেই --}}
-            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
-                        overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
+            {{-- ⭐ এক সারির রেল, প্রতিটা আইকনের নিচে নাম; "⋯ আরও" নেই — মাউস রেখে চাকা ঘোরালে বাকি মডিউল আসে, স্ক্রলবার দেখা যায় না
+                 (মালিক, ৬ নভেম্বর ২০২৬: "modiule bar eklinei hobe but niche nam soho … kono scrol bar thakbe na")। ⓘ পাশের তালিকা রেলের
+                 ভিতরে নয়, পর্দার গায়ে বসে ([[rail-fit.js]] `place()`), নইলে স্ক্রলের ঘর তাকে কেটে দিত। --}}
+            <nav class="rail-scroll flex min-h-0 w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
+                        overflow-y-auto overflow-x-hidden overscroll-contain border-e border-black/10 bg-(--color-sidebar) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}"
                  x-data="railFit" data-rail data-save="{{ route('rail.layout') }}"
                  data-up-label="{{ __('core.rail.up') }}" data-down-label="{{ __('core.rail.down') }}">
@@ -480,7 +483,7 @@
 
                                     ⚠️ চিহ্নটা এখানে নেই, ভেতরের টাইলে —
                                     নিচের মন্তব্য দেখুন। --}}
-                               'relative flex h-8 w-full items-center justify-center transition-transform',
+                               'relative flex w-full flex-col items-center justify-start gap-0.5 py-0.5 transition-transform',
                                {{-- ⭐ কি-বোর্ডে কোথায় আছি দেখা যায় — WCAG 2.4.7/2.4.11 (ওয়েবের মান ধাপ ২, ভুল ৯) --}}
                                'rounded-(--radius-field) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)',
                                'hover:-translate-y-px' => ! $isActive,
@@ -550,10 +553,12 @@
                                 <x-ui.icon :name="$module['icon']" :size="22" drawn />
                             </span>
 
-                            <span class="sr-only">{{ $module['label'] }}</span>
+                            {{-- ⭐ নাম আইকনের নিচে (মালিক, ৬ নভেম্বর ২০২৬) — দুই লাইন পর্যন্ত ভাঙে, কাটে না --}}
+                            <span data-rail-label class="block w-full px-0.5 text-center text-[10px] leading-[1.15]"
+                                  style="color: var(--rail-label-ink)">{{ $module['label'] }}</span>
                         </a>
 
-                        <div data-boxed class="rail-flyout invisible absolute start-full top-0 z-50 ms-1 w-60
+                        <div data-boxed class="rail-flyout invisible fixed z-50 w-60
                                     rounded-(--radius-card) border border-(--color-border)
                                     bg-(--color-surface-card) py-1.5 opacity-0 shadow-lg
                                     group-hover/rail:visible group-hover/rail:opacity-100
@@ -605,55 +610,12 @@
                 {{-- ⓘ রেলের সাজ রাখার চিহ্ন — এখানে কোনো ফর্ম নেই, তাই নিজের --}}
                 <input type="hidden" value="{{ csrf_token() }}" data-rail-token>
 
-                {{-- ⭐ "⋯ আরও" — রেলে যা ধরে না (WAI-ARIA menu button): বোতামে ↓/Enter খোলে, তালিকায় ↑ ↓ Home End, Esc বন্ধ করে
-                     ফোকাস বোতামে ফেরায়; খোঁজার ঘর, মডিউলের রঙের দাগ আর নাম। দেখায় কেবল কিছু সরলে ([[rail-fit.js]]) --}}
-                {{-- ⓘ বোতামের নিজের উচ্চতা লেখা নেই — ভেতরের size-8 চিহ্নটাই মাপ (টাইলের সমান ৪০px); হাতে লেখা উচ্চতা ঘন থিমে একা পুরনো
-                     মাপে থাকত ([[EveryScreenObeysTheThemeTest]], cb-ma-5, ২৫ অক্টোবর ২০২৬) --}}
-                <div data-rail-more class="relative w-full">
-                    <button type="button" x-ref="moreButton" data-rail-more-button
-                            class="relative flex w-full items-center justify-center rounded-(--radius-field)
-                                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
-                            aria-haspopup="menu" aria-controls="rail-more-menu"
-                            :aria-expanded="moreOpen ? 'true' : 'false'"
-                            aria-label="{{ __('core.rail.more') }}" title="{{ __('core.rail.more') }}"
-                            @click="toggleMore()" @keydown="buttonKey($event)">
-                        <span class="grid size-8 place-items-center text-lg font-bold leading-none"
-                              style="background: var(--rail-tile-bg); border-radius: var(--rail-tile-radius); color: var(--rail-tile-ink)"
-                              aria-hidden="true">⋯</span>
-                    </button>
-
-                    <div id="rail-more-menu" role="menu" aria-label="{{ __('core.rail.more') }}" data-rail-more-menu
-                         x-show="moreOpen" x-cloak @click.outside="clickAway()" @keydown="menuKey($event)"
-                         class="absolute start-full bottom-0 z-50 ms-1 w-72 rounded-(--radius-card) border border-(--color-border)
-                                bg-(--color-surface-card) py-1.5 shadow-lg">
-                        <div class="px-2 pb-1.5">
-                            <input type="search" x-ref="moreSearch" x-model="query" autocomplete="off"
-                                   aria-label="{{ __('core.rail.search') }}" placeholder="{{ __('core.rail.search') }}"
-                                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) px-2 text-sm">
-                        </div>
-                        <div class="max-h-[60vh] overflow-y-auto">
-                            <template x-for="row in shownMore" :key="row.code">
-                                <a role="menuitem" data-more-item :href="row.href" :data-code="row.code"
-                                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-(--color-ink-body)
-                                          hover:bg-(--color-surface-hover) focus:bg-(--color-surface-hover) focus:outline-none">
-                                    <span class="size-2.5 shrink-0 rounded-full" :style="row.dotStyle" aria-hidden="true"></span>
-                                    {{-- ⓘ ভাঙে, কাটে না — "ব্যাকআপ ও পুনরুদ্ধার"-এর মতো লম্বা নামও পুরো --}}
-                                    <span class="min-w-0" x-text="row.label"></span>
-                                </a>
-                            </template>
-                            <p class="px-3 py-1.5 text-sm text-(--color-ink-muted)" x-show="noneFound" x-cloak>{{ __('core.rail.none') }}</p>
-                        </div>
-                        {{-- ⭐ নিজের সাজ — পিন আর ক্রম; "আগের মতো করুন" নিজের ক্রম মুছে শুরুর ক্রমে ফেরায় (fe, ২৪ অক্টোবর ২০২৬) --}}
-                        <div class="mt-1 flex gap-1 border-t border-(--color-border) px-2 pt-1.5">
-                            <button type="button" role="menuitem" data-more-item data-rail-arrange
-                                    class="flex-1 rounded-(--radius-field) px-2 py-1 text-start text-sm hover:bg-(--color-surface-hover)"
-                                    @click="openArrange()">{{ __('core.rail.arrange') }}</button>
-                            <button type="button" role="menuitem" data-more-item data-rail-reset
-                                    class="rounded-(--radius-field) px-2 py-1 text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)"
-                                    @click="resetLayout()">{{ __('core.rail.reset') }}</button>
-                        </div>
-                    </div>
-                </div>
+                {{-- ⭐ রেল সাজানো — "⋯ আরও" উঠে গেল (মালিক, ৬ নভেম্বর ২০২৬), তাই পিন আর ক্রমের দরজা তালিকার শেষে নিজের ছোট বোতামে --}}
+                <button type="button" data-rail-arrange @click="openArrange()"
+                        class="mt-1 grid size-8 shrink-0 place-items-center rounded-(--radius-field) text-base leading-none
+                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
+                        style="color: var(--rail-label-ink)"
+                        aria-label="{{ __('core.rail.arrange') }}" title="{{ __('core.rail.arrange') }}">⚙</button>
 
                 {{-- ⭐ রেল সাজানো — পিন (রেলে সবসময়), ক্রম টেনে বা ↑ ↓ বোতামে (পর্দা-পাঠকেও); রাখলে নিজের সারিতে, অন্য যন্ত্রেও এক --}}
                 <dialog x-ref="arrange" data-rail-arrange-dialog aria-labelledby="rail-arrange-title"

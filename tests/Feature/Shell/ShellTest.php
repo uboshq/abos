@@ -470,7 +470,13 @@ class ShellTest extends TestCase
          * ⭐ নিয়মটা এক চুলও বদলায়নি — কোন জমিনে কোন রূপ — কেবল ফাইলের
          * নাম বদলেছে, আর সেটা এই পরীক্ষার ইতিহাসে তৃতীয়বার।
          */
-        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
+        /*
+         * ⭐ ৬ নভেম্বর ২০২৬: ফুটারে এখন আইকনসহ **জীবন্ত** লোগো আর "Powered by (চিহ্ন) UNIVER BANGLADESH" — মালিক নিজেই চাইলেন ("footer eo
+         * icon soho live logo bosabe"), আর নমুনায় রেলের "A" আর লোগো পাশাপাশি দেখে "ok" দিলেন; উপরের "দুইবার A"-এর আপত্তির চেয়ে এই
+         * সিদ্ধান্ত নতুন, তাই এটাই খাটে।
+         */
+        $this->assertStringContainsString('<x-brand.live-logo', $markup);
+        $this->assertStringContainsString('brand/univer-mark.png', $markup);
 
         if (str_contains($markup, 'abos-lockup-dark.png')) {
             $this->assertMatchesRegularExpression(

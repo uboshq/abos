@@ -122,9 +122,11 @@
             <x-shell.launcher :menu="$menu ?? []" />
         </div>
         {{-- ⓘ মেনু গুটালে ABOS-এর লেখাও লুকায় (মালিক, ১ নভেম্বর ২০২৬: "menubar hide korle abos top bare hide hobe") --}}
+        {{-- ⭐ আইকনসহ জীবন্ত লোগো, ১০টা নড়াচড়া পালা করে (মালিক, ৬ নভেম্বর ২০২৬: "logo icon soho live jibonto 10 ti movement") —
+             সাদা পাতে, কারণ চিহ্নটা সাদা জমিনের জন্য আঁকা ([[x-brand.live-logo]]) --}}
         <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
-           class="hidden shrink-0 items-center md:flex" title="ABOS">
-            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS" class="h-[30px] w-auto">
+           class="hidden shrink-0 items-center rounded-[10px] bg-(--color-logo-plate) px-2 py-1 md:flex" title="ABOS">
+            <x-brand.live-logo class="h-[30px] w-auto" />
         </a>
         <button type="button"
                 x-data

@@ -566,6 +566,7 @@
        ⓘ `--rail-tile-ink` ধরে, তাই অ্যাম্বারে সে নিজে থেকেই কালো
        হয় (ঐ অ্যাকসেন্টের ঘোষিত কালি `26 26 26`)। */
     --rail-rule: rgb(var(--accent-ink, 255 255 255) / 0.6);
+    --rail-label-ink: rgb(var(--accent-ink, 255 255 255) / 0.9);
     --rail-tile-on-edge-w: 2px;
 
     /* চালু মেনু আইটেম — ডিফল্টে ভরাট পিল (আজকের আচরণ)।
@@ -905,8 +906,8 @@
     --spacing-logo: 44px;
     --spacing-logo-sidebar: 32px;
     --spacing-login-card: 460px;
-    --spacing-sidebar: 220px;
-    --spacing-sidebar-wide: 260px;
+    --spacing-sidebar: 248px; /* ⓘ রেল ৫৮→৮৬ (নামসহ), মেনুর তালিকা আগের চওড়াতেই থাকে — মালিক, ৬ নভেম্বর ২০২৬ */
+    --spacing-sidebar-wide: 288px;
 
     /* আইকন রেল — সরু, কিন্তু ৪৪px-এর নিচে নয়।
 
@@ -917,7 +918,7 @@
     /* রেলের চওড়া। ৪৪px ছিল যখন আইকনগুলো খালি আঁকা ছিল; এখন প্রতিটা
        নিজের রঙের টাইলে বসে (৩৬px), আর ৪৪px-এ দুই পাশে ৪px থাকত — টাইলটা
        দেয়ালে ঠেকে থাকত। ৫৮px-এ দুই পাশে ১১px, তাই টাইলগুলো ভাসে। */
-    --spacing-sidebar-icon: 58px;
+    --spacing-sidebar-icon: 86px; /* ⭐ নামসহ এক সারির রেল (মালিক, ৬ নভেম্বর ২০২৬) */
 
     /* রেলের আইকন — বাকি সব আইকনের চেয়ে বড়, আর কারণটা মাপা।
 
@@ -1189,8 +1190,24 @@
     --color-launcher-2: #22c55e;
     --color-launcher-3: #3b82f6;
     --color-launcher-4: #f59e0b;
-    --color-topbar-pill-bg: rgb(255 255 255 / .18);
-    --color-topbar-pill-border: rgb(255 255 255 / .35);
+    /* ⭐ শাখার পিল সাদা, লেখা গাঢ় — মালিক, ৬ নভেম্বর ২০২৬: "branch er bacground sada korediye sposto kore dekhate hobe" */
+    --color-topbar-pill-bg: #ffffff;
+    --color-topbar-pill-border: rgb(255 255 255 / .9);
+    --color-topbar-pill-ink: #14213d;
+    --color-topbar-pill-dot: #16a34a;
+    /* ⭐ টপবারের আইকন রঙিন — মালিক, ৬ নভেম্বর ২০২৬: "top barer icon golo rongin colore korbe" (জমিন রং, চিহ্ন সাদা) */
+    --color-topbar-icon-tasks: #16a34a;
+    --color-topbar-icon-papers: #0891b2;
+    --color-topbar-icon-bell: #f59e0b;
+    --color-topbar-icon-create: #2f7af0;
+    --color-topbar-icon-ink: #ffffff;
+    /* ⭐ অনুমোদনের অবস্থার রং — ইনবক্সের পাঁচ ঘর আর কার্ডের দাগে একই (মালিক, ৬ নভেম্বর ২০২৬: "approval pagegulo color ful korbe") */
+    --color-board-late: #dc2626;
+    --color-board-wait: #d97706;
+    --color-board-stuck: #7c3aed;
+    --color-board-today: #16a34a;
+    --color-board-back: #db2777;
+    --color-board-ink: #ffffff;
     --color-company-mark-ink: #ffffff;
     --color-company-mark-1: #1d4ed8; /* নীল ৭০০ — সাদায় ৬.৭ঃ১ */
     --color-company-mark-2: #047857; /* এমারেল্ড ৭০০ — ৫.৫ঃ১ */

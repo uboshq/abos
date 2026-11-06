@@ -18,8 +18,18 @@
             :aria-expanded="open"
             aria-haspopup="menu"
             aria-label="{{ __('core.profile.menu', ['name' => $user?->name]) }}"
-            class="flex shrink-0 rounded-full"
+            class="flex shrink-0 items-center gap-2 rounded-full"
             title="{{ $user?->name }}">
+        {{-- ⭐ ছবির বাঁয়ে উপরে নাম, নিচে পদবি — মালিক, ৬ নভেম্বর ২০২৬ ([[UserDesignation]]); সরু পর্দায় কেবল ছবি --}}
+        @php
+            $designation = \App\Core\Support\UserDesignation::of($user);
+        @endphp
+        <span class="hidden min-w-0 text-end leading-tight lg:block" data-profile-identity>
+            <span class="block max-w-48 truncate text-sm font-semibold text-(--color-topbar-ink)">{{ $user?->name }}</span>
+            @if ($designation)
+                <span class="block max-w-48 truncate text-xs" style="color: var(--color-brand-gold-bright)">{{ $designation }}</span>
+            @endif
+        </span>
         <x-ui.avatar :user="$user" />
     </button>
 
@@ -126,6 +136,15 @@
                   transition-colors hover:bg-(--color-surface-hover)">
             <x-ui.icon name="lock" :size="16" />
             {{ __('governance::menu.my_sessions') }}
+        </a>
+
+        {{-- ⭐ সংস্করণ আর "নতুন কী এল" — ফুটার থেকে এখানে (মালিক, ৬ নভেম্বর ২০২৬: সংস্করণ লগইন পাতায়, ফুটারে কেবল ©);
+             ⓘ দরজাটা হারায়নি, জায়গা বদলেছে ([[App\Core\Support\Release]]) --}}
+        <a href="{{ route('release.notes') }}" role="menuitem" data-release
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm transition-colors hover:bg-(--color-surface-hover)">
+            <x-ui.icon name="star" :size="16" />
+            <span>{{ __('core.release.whats_new') }}</span>
+            <span class="tabular-nums ms-auto text-xs text-(--color-ink-muted)">{{ \App\Core\Support\Release::label() }}</span>
         </a>
 
         <form method="POST" action="{{ route('logout') }}" class="border-t border-(--color-border)">

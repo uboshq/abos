@@ -1642,3 +1642,16 @@ input[type='number'] {
         bottom: var(--spacing-bottom-nav-bar);
     }
 }
+
+/* ⭐ মডিউলের রেল — চাকা ঘোরালে চলে, স্ক্রলবার দেখা যায় না (মালিক, ৬ নভেম্বর ২০২৬: "kono scrol bar thakbe na")।
+   ⓘ `.menu-panel nav`-এর সরু স্ক্রলবারের চেয়ে নির্দিষ্ট, তাই এটাই খাটে। */
+.menu-panel nav.rail-scroll,
+.rail-scroll {
+    scrollbar-width: none;
+}
+
+.menu-panel nav.rail-scroll::-webkit-scrollbar,
+.rail-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+}

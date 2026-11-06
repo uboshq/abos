@@ -391,6 +391,8 @@ return [
         'full_name' => 'A Business Operating System',
         'tagline' => 'Simple to Run. Powerful to Grow.',
         'powered_by' => 'Powered by',
+        'released' => 'Released',
+        'updated' => 'Updated',
         /* Not translated: a company's name is its name. */
         'powered_by_name' => 'UNIVER BANGLADESH',
 

@@ -27,9 +27,19 @@
         'warning' => 'font-semibold text-(--color-badge-pending-ink)',
         'success' => 'text-(--color-badge-success-ink)',
     ];
+    // ⭐ বাঁ দাগের রং অবস্থার — ইনবক্সের মাথার ঘরগুলোর একই রং (মালিক, ৬ নভেম্বর ২০২৬)
+    $state = match (true) {
+        $approval->status === \App\Models\Approval::APPROVED => 'today',
+        in_array($approval->status, [\App\Models\Approval::REJECTED, \App\Models\Approval::RETURNED], true) => 'back',
+        $approval->status !== \App\Models\Approval::PENDING => null,
+        ($deadline['tone'] ?? null) === 'danger' => 'late',
+        default => 'wait',
+    };
 @endphp
 
-<li data-inbox-card="{{ $approval->id }}"
+<li data-inbox-card="{{ $approval->id }}" @if ($state) data-card-state="{{ $state }}" @endif
+    style="border-inline-start: 4px solid {{ $state ? 'var(--color-board-'.$state.')' : 'var(--color-border)' }};
+           @if ($state === 'late') background: color-mix(in srgb, var(--color-board-late) 5%, var(--color-surface-card)); @endif"
     @class([
         'flex gap-2 rounded-(--radius-card) border bg-(--color-surface-card) p-3',
         'border-(--color-brand-500) ring-1 ring-(--color-brand-500)' => $isOpen,

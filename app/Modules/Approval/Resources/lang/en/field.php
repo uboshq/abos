@@ -146,4 +146,12 @@ return [
     'try_amount' => 'Try it: how much is the paper?',
     'goes_to' => 'This paper goes to',
     'conditions_optional' => 'Conditions (optional)',
+
+    /* ⭐ ইনবক্সের পাঁচ রঙিন ঘর — মালিক, ৬ নভেম্বর ২০২৬ */
+    'board_late' => 'Urgent: past due',
+    'board_wait' => 'Waiting for a decision',
+    'board_stuck' => 'Approved, not yet posted',
+    'board_today' => 'Approved today',
+    'board_back' => 'Returned or rejected (this week)',
+    'board_total' => 'total :total',
 ];

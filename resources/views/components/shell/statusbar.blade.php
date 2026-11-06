@@ -17,47 +17,6 @@
     $user = auth()->user();
 
     /*
-     * ⭐ পদবি — মালিকের নির্দেশ, ১৩ সেপ্টেম্বর ২০২৬:
-     * *"Footer er bame user er nam & desig rako, zemon Al-Amin Shuvo (CEO)"*
-     * আর *"namer sate podobi rakbe roll noy"*।
-     *
-     * ⓘ ১৪ সেপ্টেম্বর নাম-পদবির দলটা **ডান কোণে** গেছে, কিন্তু উপরের
-     * নিয়মটা অপরিবর্তিত: নামের সাথে পদবি, রোল নয়।
-     *
-     * ── ⛔ কেন রোল নয় ───────────────────────────────────────────────
-     * মালিকের যুক্তি: *"ekjone ekadik roll thakte pare tai ekhne roll
-     * dewa zabena"*। ⓘ আর কোডটাই তার প্রমাণ ছিল — টপবারে লেখা ছিল
-     * `getRoleNames()->first()`, অর্থাৎ **যেটা আগে পড়ে সেটাই**, কোনো
-     * নিয়ম ছাড়া। এক ঘরে এক উত্তর বসে, আর রোল একাধিক হতে পারে; পদবি
-     * একটাই।
-     *
-     * ── ⓘ কোর HR-কে চেনে না, তাই প্রশ্নটা ঘুরে যায় ─────────────────
-     * পদবি থাকে `hr_employees`-এ, আর এই ফাইলটা কোরের। ⚠️ মেপে দেখা:
-     * `app/Core`, `app/Models`, `app/Providers` আর শেলের ভিউ — চারটার
-     * একটাতেও `App\Modules\` লেখা নেই, আর এই ফাইলেও থাকবে না।
-     *
-     * ⭐ তাই [[FactRegistry]]-কে জিজ্ঞেস করা হয় "এই ব্যবহারকারী সম্পর্কে
-     * কার কী বলার আছে", আর HR উত্তর দেয়
-     * ([[App\Modules\Hr\Panels\EmployeeFacts]])। কোর জানেই না কে বলল।
-     *
-     * ── ⚠️ খালি থাকলে খালিই থাকে ────────────────────────────────────
-     * যাঁর কর্মী-রেকর্ড নেই, বা রেকর্ডে পদবি বসানো নেই, তাঁর বেলায়
-     * বন্ধনীটাই আসে না। ⛔ ফাঁক ভরাতে রোল বসানো হয়নি — তাতে ঠিক যে
-     * জিনিসটা বাদ দিতে বলা হলো সেটাই ফিরে আসত, কেবল মাঝে মাঝে।
-     */
-    $designation = $user
-        ? (app(\App\Core\Panels\FactRegistry::class)->forRecord('user', $user->id)[0]->value ?? null)
-        : null;
-
-    /*
-     * ⭐ গ্রুপের মালিকের পদবি সব কোম্পানিতে একটাই — মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬।
-     * ⓘ পদবিটা গোটা ব্যবস্থার একটা সেটিং (group.owner_title_bn|en, কন্ট্রোল প্যানেলে সুপার অ্যাডমিন বদলান); কোনো কোম্পানির কর্মী-সারিতে অন্য পদবি থাকলেও এখানে বদলায় না ([[Ownership::isGroupOwner()]], কেবল পরিচয়)।
-     */
-    if (app(\App\Core\Services\Ownership::class)->isGroupOwner($user)) {
-        $designation = app(\App\Core\Services\Ownership::class)->groupOwnerTitle() ?? $designation;
-    }
-
-    /*
      * ⭐ নিচের চলন্ত বারে কেবল মানুষের লেখা ঘোষণা — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির,
      * ঘোষণা নিচে চলন্ত"* ([[StatusNotices::forTicker()]])। ⛔ যন্ত্রের সতর্কতা কখনো এখানে নয় — সেগুলো উপরের স্থির ফিতায়
      * ([[shell.notice-banner]]), আর "জরুরি" টিক দেওয়া ঘোষণাও সেখানে।
@@ -98,33 +57,15 @@
          ⓘ চিহ্নটা সব মাপে থাকে, কেবল লেখা সরু পর্দায় লুকায়: চিহ্নের
          জায়গা লাগে ২০px, আর ওটাই লাইনটার একমাত্র অংশ যেটা দূর থেকে
          চেনা যায়। --}}
-    <span class="hidden shrink-0 items-center gap-1.5 md:flex">
-        {{-- ⓘ ABOS — শব্দচিহ্ন, লেখা নয়।
-
-             `size-5` নয়, `h-4 w-auto`: শব্দচিহ্নটা ৫৫৬×১৮৯, প্রায় ৩:১
-             চওড়া। ⛔ বর্গাকার ক্লাসে `object-contain` ওটাকে ২০px বাক্সে
-             ঢুকিয়ে ২০px চওড়া করে ফেলত, আর "abos" লেখাটা পড়াই যেত না।
-             ⓘ বার ২৮px উঁচু, তাই ১৬px দুই পাশে শ্বাস রাখে (~৪৭px চওড়া)।
-
-             ⚠️ `alt`-এ নামটা আছে, কারণ পাশে "ABOS" কথাটা **লেখা নেই** —
-             চিহ্নটাই একমাত্র বাহক।
-
-             ⓘ `width`/`height` — ছবি নামার আগেই জায়গা ধরে রাখে, নাহলে
-             ফুটারের লেখাগুলো এক ঝলক লাফাত। --}}
-        <img src="{{ asset('brand/abos-wordmark-transparent.png') }}"
-             alt="{{ __('core.brand.name') }}"
-             width="556" height="189"
-             class="h-4 w-auto shrink-0 object-contain">
-
-        {{-- ⭐ সংস্করণ, তারিখ আর চলতি commit — চাপলে "নতুন কী এল" (মালিক, ২৪ অক্টোবর ২০২৬; [[App\Core\Support\Release]]) --}}
-        <a href="{{ route('release.notes') }}" data-release class="hover:underline">{{ \App\Core\Support\Release::label() }}</a>
-
-        <span>© {{ now()->year }}</span>
-
-        {{-- ⓘ সবচেয়ে সরু পর্দায় এটাই প্রথমে লুকায়, আর সেটা ইচ্ছাকৃত:
-             বাকি তিনটা পরিচয় বহন করে, এটা আইনি বাক্য — কেটে দেখানোর
-             চেয়ে না দেখানো ভালো। --}}
-        <span class="hidden lg:inline">{{ __('core.brand.rights') }}</span>
+    {{-- ⭐ বাঁয়ে আইকনসহ জীবন্ত লোগো, তারপর "Powered by (চিহ্ন) UNIVER BANGLADESH" — মালিক, ৬ নভেম্বর ২০২৬: "footer eo icon soho live logo
+         bosabe, sathe Powered by (icon) UNIVER BANGLADESH dibe"। ⓘ সংস্করণ আর তারিখ লগইন পাতায় সরল ("Developed by"-এর নিচে)। --}}
+    <span class="hidden shrink-0 items-center gap-2 md:flex" data-footer-brand>
+        <x-brand.live-logo class="h-[18px] w-auto" />
+        <span class="flex items-center gap-1">
+            {{ __('core.brand.powered_by') }}
+            <img src="{{ asset('brand/univer-mark.png') }}" alt="" width="18" height="18" class="size-[18px] object-contain">
+            <b class="font-semibold tracking-wide" style="color: var(--color-univer, #007a99)">UNIVER BANGLADESH</b>
+        </span>
     </span>
 
     {{-- ⭐ মাঝখানে চলন্ত ঘোষণা — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
@@ -239,19 +180,7 @@
          sundor lage … onno ekta color braground, font gulo ro sposto"*। ⓘ ব্র্যান্ডের হালকা
          রঙ, ছোট আদ্যক্ষর-বৃত্ত, নাম মোটা, পদবি হালকা; বাঁয়ে পাতলা দাগ, যাতে লাল সতর্কবার্তা
          আর নাম মিশে না যায়। ⚠️ রংগুলো টোকেন থেকে, তাই দুই মোডেই নিজে থেকে মানায়। --}}
-    @if ($user)
-        <span class="hidden min-w-0 shrink items-center gap-2 border-s border-(--color-border) ps-3 md:flex">
-            {{-- ⓘ আদ্যক্ষর-বৃত্ত নেই, আর পিলটা ফুটারের উচ্চতার ভিতরে (`leading-none`, কম
-                 প্যাডিং) — মালিকের নির্দেশ, একই দিন: *"a thakbe na … Footer er liner bahire
-                 giyeche"*। --}}
-            <span class="flex min-w-0 items-center gap-2 rounded-full bg-(--color-surface-selected)
-                         px-2.5 py-px leading-none ring-1 ring-(--color-brand-500)/30">
-                <span class="max-w-48 truncate text-xs font-semibold leading-normal text-(--color-ink)">{{ $user->name }}</span>
-
-                @if ($designation)
-                    <span class="max-w-40 truncate text-2xs leading-normal text-(--color-ink-muted)">{{ $designation }}</span>
-                @endif
-            </span>
-        </span>
-    @endif
+    {{-- ⭐ ডানে কেবল স্বত্ব — মালিক, ৬ নভেম্বর ২০২৬: "© 2026 সর্বস্বত্ব সংরক্ষিত … foter er dane"; নাম-পদবি টপবারে ছবির বাঁয়ে।
+         ⓘ সালটা `now()->year` থেকে, নইলে প্রতি জানুয়ারিতে পুরনো হত। --}}
+    <span class="hidden shrink-0 md:inline" data-footer-rights>© {{ now()->year }} {{ __('core.brand.rights') }}</span>
 </footer>
