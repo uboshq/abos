@@ -930,6 +930,11 @@
             </section>
         @endif
 
+        {{-- ⭐ হিসাবের সারাংশ — খরচ আর কন্ট্রায়ও (মালিক, ৬–৭ নভেম্বর ২০২৬; [[partials/preview-summary]]) --}}
+        @if ($expenseLayout || $contraLayout)
+            @include('accounts::voucher.partials.preview-summary')
+        @endif
+
         @unless ($sampled)
             @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
         @endunless

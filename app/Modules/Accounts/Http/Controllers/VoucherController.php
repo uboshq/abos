@@ -757,7 +757,8 @@ class VoucherController extends Controller implements HasMiddleware
     {
         $type = $this->assertType((string) $request->input('type'));
         // ⭐ খরচেও — পোস্টের আগে খাতায় যা যাবে (খরচের ভাউচার ১০০%, ভাগ C; ⛔ আগে ৪০৪, §০-এর ফাঁক ৫)। লাইন একই [[VoucherWriter::linesFor()]] থেকে
-        abort_unless(in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT, Voucher::EXPENSE], true), 404);
+        // ⭐ কন্ট্রা আর জাবেদায়ও — হিসাবের সারাংশ (মালিক, ৬ নভেম্বর ২০২৬: "ভাউচারের কাজ korar somoy হিসাবের সারাংশ ase na eta deko")
+        abort_unless(in_array($type, [Voucher::RECEIPT, Voucher::PAYMENT, Voucher::EXPENSE, Voucher::CONTRA, Voucher::JOURNAL], true), 404);
 
         /*
          * ⓘ যাচাই এখানে হাতে ধরা — ওয়েবের পথে যাচাইয়ের ভুল JSON হয় না, ফর্মে ফেরত পাঠায় ([[bootstrap/app.php]]-এর
@@ -813,6 +814,11 @@ class VoucherController extends Controller implements HasMiddleware
             ];
             $debit = bcadd($debit, $d, 4);
             $credit = bcadd($credit, $c, 4);
+        }
+
+        // ⓘ জাবেদায় টাকার ঘর নেই — কথায় লেখা মোট ডেবিটের
+        if ($type === Voucher::JOURNAL) {
+            $data['amount'] = $debit;
         }
 
         return response()->json([

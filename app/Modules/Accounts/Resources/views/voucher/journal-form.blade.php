@@ -359,6 +359,9 @@
             </div>
         </section>
 
+        {{-- ⭐ হিসাবের সারাংশ — জাবেদায়ও (মালিক, ৬–৭ নভেম্বর ২০২৬; [[partials/preview-summary]]) --}}
+        @include('accounts::voucher.partials.preview-summary', ['type' => 'journal'])
+
         <div class="flex flex-wrap items-center gap-2">
             <x-ui.button type="submit" tone="primary"
                          ::class="(busy || ! balanced) && 'pointer-events-none opacity-50'">

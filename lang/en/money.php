@@ -221,5 +221,5 @@ return [
         'send' => 'Send for approval',
     ],
     /* ⭐ টাকার পর্দার রঙিন পট্টি — মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok") */
-    'band' => ['party_in' => 'Received from', 'party_out' => 'Paid to', 'money_in' => 'Where it came in', 'money_out' => 'Where it went out from', 'cut' => 'Deductions and difference', 'note' => 'Attachment and narration', 'new_no' => 'new'],
+    'band' => ['party_in' => 'Received from', 'party_out' => 'Paid to', 'money_in' => 'Where it came in', 'money_out' => 'Where it went out from', 'cut' => 'Deductions and difference', 'note' => 'Attachment and narration', 'new_no' => 'new', 'unbalanced' => 'Does not balance: debit and credit differ'],
 ];

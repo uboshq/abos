@@ -951,3 +951,69 @@ export function payBills ({
         get unbalanced () { return this.hasPreview && !this.preview.balanced },
     }
 }
+
+/**
+ * ⭐ খরচ, কন্ট্রা আর জাবেদার হিসাবের সারাংশ — মালিক, ৬ নভেম্বর ২০২৬: "ভাউচারের কাজ korar somoy হিসাবের সারাংশ ase na eta deko"
+ * (রসিদ আর পরিশোধে ছিল, এই তিনটায় একদমই ছিল না)।
+ *
+ * ⓘ অঙ্ক, কথা আর খাতার সারি সার্ভারের, জমার একই নিয়মে ([[VoucherController::simulate()]]) — পর্দা কিছু গোনে না, তাই সারাংশ আর
+ * আসল খাতা কখনো আলাদা নয়। ফর্মের যেকোনো ঘর বদলালে একটু থেমে নতুন করে চায়; অর্ধেক ভরা ফর্মে সব "—", চুপ।
+ */
+export function voucherPreview ({ url = '', voucherId = null } = {}) {
+    let form = null
+    const empty = { rows: [], debit: '', credit: '', balanced: true, message: '', summary: null }
+
+    return {
+        preview: { ...empty },
+        timer: null,
+        asked: 0,
+
+        init () {
+            form = this.$el.closest('form')
+            if (!form) return
+            const soon = () => { clearTimeout(this.timer); this.timer = setTimeout(() => this.ask(), 400) }
+            form.addEventListener('input', soon)
+            form.addEventListener('change', soon)
+            soon()
+        },
+
+        async ask () {
+            if (!form || !url) return
+            const body = new FormData(form)
+            body.delete('_method')
+            // ⛔ একবারের জমার টোকেন প্রিভিউতে নয় ([[OneSubmitPerForm]]); ফাইলও নয়
+            body.delete('_once')
+            body.delete('attachment')
+            if (voucherId) body.set('voucher_id', String(voucherId))
+            // ⓘ খরচে খাতের দিক লুকানো ঘরে খরচের খাতকে অনুসরণ করে, অথচ তালিকার প্রথম খাত চোখে বাছা থাকলেও না ছোঁয়া পর্যন্ত লুকানো ঘর ফাঁকা
+            if (!body.get('to_account_id') && body.get('expense_account_id')) body.set('to_account_id', String(body.get('expense_account_id')))
+            const ticket = ++this.asked
+            try {
+                const response = await fetch(url, { method: 'POST', body, headers: { Accept: 'application/json' } })
+                const answer = await response.json().catch(() => null)
+                if (ticket !== this.asked) return
+                this.preview = response.ok && answer && Array.isArray(answer.rows) ? { ...empty, ...answer } : { ...empty }
+            } catch {
+                if (ticket === this.asked) this.preview = { ...empty }
+            }
+        },
+
+        get rows () { return this.preview.rows },
+        get hasRows () { return this.preview.rows.length > 0 },
+        get blocked () { return this.preview.message !== '' },
+        get blockedText () { return this.preview.message },
+        get waiting () { return !this.hasRows && !this.blocked },
+        get balanced () { return this.hasRows && this.preview.balanced === true },
+        get unbalanced () { return this.hasRows && this.preview.balanced !== true },
+        get debitText () { return this.hasRows ? this.preview.debit : '—' },
+        get creditText () { return this.hasRows ? this.preview.credit : '—' },
+        get amountText () { return this.hasRows ? (this.preview.summary?.amount ?? this.preview.debit) : '—' },
+        get chargeText () { return this.hasRows ? (this.preview.summary?.charge ?? '0.00') : '—' },
+        get cutText () {
+            const s = this.hasRows ? this.preview.summary : null
+            return s ? taka(paisa(s.ait) / 100 + paisa(s.vds) / 100) : '—'
+        },
+        get netText () { return this.hasRows ? (this.preview.summary?.net ?? this.preview.credit) : '—' },
+        get wordsText () { return this.hasRows ? (this.preview.summary?.words ?? '') : '' },
+    }
+}
