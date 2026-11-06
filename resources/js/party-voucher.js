@@ -155,7 +155,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         init() {
             // ⓘ শুরুর পদ্ধতি — সার্ভারের বাছা চিপ (পুরনো কাগজ, ভুল নিয়ে ফেরা)
-            this.method = String(this.$root?.querySelector?.('input[name="instrument"]:checked')?.value ?? '');
+            // ⓘ ৭ নভেম্বর ২০২৬ থেকে ভাউচারে পদ্ধতি ড্রপডাউনে (`select[name="instrument"]`); অন্য পর্দায় চিপ
+            this.method = String(this.$root?.querySelector?.('input[name="instrument"]:checked, select[name="instrument"]')?.value ?? '');
 
             if (this.partyId) {
                 this.loadDue();

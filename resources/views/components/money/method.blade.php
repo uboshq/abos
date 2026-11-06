@@ -86,6 +86,12 @@
      */
     'elsewhere' => [],
     'elsewhereTitle' => null,
+
+    /* ⭐ পদ্ধতি ড্রপডাউনে, চিপে নয় — মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok"। ⓘ নাম একই (`instrument`), তাই জমা আর সার্ভার অক্ষত */
+    'asSelect' => false,
+
+    /* ⭐ খাতের নোট ("খাতে আছে ৳…") ঘরের উপরে, নামের পাশে — মালিক, ৬ নভেম্বর ২০২৬: "eigulo box er upore daw" */
+    'noteAbove' => false,
 ])
 
 @php
@@ -154,6 +160,21 @@
          আর বাছা চিপে hover রং বদলায় না। --}}
     {{-- ⛔ `min-w-0` — fieldset-এর নিজের সবচেয়ে কম চওড়া তার ভিতরের মাপ: পাঁচ চিপে (চেকসহ) ১৩৬৬-এ ৩৬৩px, অথচ অর্ধেক সারি ৩৩৫px, তাই
          চিপগুলো খাতের ঘরে ঢুকে যেত (a6, আদায়ের পর্দায় মাপা, ২৫ অক্টোবর ২০২৬)। ⭐ এখন চিপের সারি জায়গা না পেলে ভাঁজ হয় (`flex-wrap`), কাটে না --}}
+    @if ($asSelect)
+    <fieldset @class(['min-w-0', 'order-1' => $inline && ! $picking, 'order-0' => $inline && $picking]) data-method-chips data-method-select-row>
+        <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
+        <select name="instrument" x-model="method" data-method-select aria-label="{{ __('money.method.legend') }}"
+                class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
+            @foreach ($shown as $way)
+                <option value="{{ $way }}" data-method-chip="{{ $way }}" @selected($chosen === $way)>{{ __('money.method.'.$way) }}</option>
+            @endforeach
+        </select>
+        @foreach ($elsewhere as $way => $url)
+            <a href="{{ $url }}" data-method-elsewhere="{{ $way }}" title="{{ $elsewhereTitle }}"
+               class="mt-1 inline-block text-2xs text-(--color-brand-700) underline">{{ __('money.method.'.$way) }} →</a>
+        @endforeach
+    </fieldset>
+    @else
     <fieldset @class(['min-w-0', 'order-1 sm:col-span-2' => $inline && ! $picking, 'order-0 sm:col-span-2' => $inline && $picking]) data-method-chips>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
         <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
@@ -176,6 +197,7 @@
             @endforeach
         </div>
     </fieldset>
+    @endif
 
     {{--
         ── খাত: পদ্ধতির ঠিক পরে, কেবল সেই পদ্ধতির খাত ──
@@ -185,12 +207,17 @@
     --}}
     @if ($picking)
         @php $fid = 'money-account-'.$accountName; $hasError = $errors->has($accountName); @endphp
-        <div @class(['order-1 sm:col-span-2' => $inline]) data-money-account-row>
-            <label for="{{ $fid }}" class="mb-1 block text-sm font-medium">
+        <div @class(['order-1 sm:col-span-2' => $inline && ! $asSelect, 'order-1 sm:col-span-1 lg:col-span-3' => $inline && $asSelect]) data-money-account-row>
+            <div @class(['mb-1 flex flex-wrap items-baseline justify-between gap-x-2' => $noteAbove])>
+            <label for="{{ $fid }}" @class(['block text-sm font-medium', 'mb-1' => ! $noteAbove])>
                 {{ $accountLabel ?? __('money.screen.from_account') }}
                 <span class="text-(--color-danger)" aria-hidden="true">*</span>
                 <span class="sr-only">({{ __('core.form.required') }})</span>
             </label>
+            @if ($noteAbove)
+                {{ $accountNote ?? '' }}
+            @endif
+            </div>
             <select id="{{ $fid }}" name="{{ $accountName }}" data-money-account x-model="{{ $accountModel }}" required
                     x-show="hasAccounts" @if ($matching === []) style="display: none" @endif
                     @if ($hasError) aria-invalid="true" aria-describedby="{{ $fid }}-error" @endif
@@ -212,7 +239,9 @@
             @error($accountName)
                 <span id="{{ $fid }}-error" class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
             @enderror
-            {{ $accountNote ?? '' }}
+            @unless ($noteAbove)
+                {{ $accountNote ?? '' }}
+            @endunless
         </div>
     @endif
 

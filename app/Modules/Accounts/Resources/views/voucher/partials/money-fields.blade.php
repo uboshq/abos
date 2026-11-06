@@ -13,6 +13,8 @@
             @endphp
 
             <div class="mt-4" data-voucher-money>
+                {{-- ⭐ রঙিন পট্টি — টাকা কোথায় এল/কোথা থেকে গেল (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok") --}}
+                <h3 data-form-band="money" class="mb-3">{{ $isPayment ? __('money.band.money_out') : __('money.band.money_in') }}</h3>
                 {{--
                     ⭐ পদ্ধতি আগে, তারপর কেবল সেই পদ্ধতির খাত, তারপর রেফারেন্স আর চার্জ (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬, fe; SAP/Oracle-এর
                     payment method → house bank)। ⓘ খাতের ঘর এখন [[x-money.method]]-এর ভিতরে, পদ্ধতির ঠিক পরে — তিন পর্দায় (রসিদ-পরিশোধ,
@@ -28,7 +30,7 @@
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-voucher-money-grid>
                     {{-- ⓘ নতুন ভাউচারে record নয় — তখন মূল্য-তারিখ আজ দিয়ে শুরু। ⭐ `slip-check`: রেফারেন্সের নিচে চলতি "একই খাতে আগে ব্যবহার হয়নি ✓" --}}
                     {{-- ⛔ পরিশোধে খাতের ঘরটা একসময় ছিলই না — লাইভে একটাও পরিশোধ পোস্ট হয়নি (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)। ⭐ লেখা নকশার: "যে খাত থেকে" --}}
-                    <x-money.method inline slip-check
+                    <x-money.method inline slip-check as-select note-above
                         :direction="$isPayment ? 'out' : 'in'"
                         :record="$voucher->exists ? $voucher : null"
                         :modes="$transferModes ?? []"
@@ -66,7 +68,10 @@
                     ];
                     $withheldOrder = $isPayment ? ['ait', 'vds'] : ['vds', 'ait'];
                 @endphp
-                <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-withheld>
+                {{-- ⭐ রঙিন পট্টি — উৎসে কাটা আর কম-বেশি এক সারিতে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok") --}}
+                <h3 data-form-band="cut" class="mt-4 mb-3">{{ __('money.band.cut') }}</h3>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-voucher-cut-row>
+                <div class="contents" data-voucher-withheld>
                     @foreach ($withheldOrder as $kind)
                         <x-ui.field :name="$withheldFields[$kind][0]" type="money" :model="$kind" empty-shows="0.00"
                                     :label="$withheldFields[$kind][1]"
@@ -80,26 +85,21 @@
                     রাউন্ডিং ৫৩০৫ — পক্ষের খাত পুরোটায় নড়ে ([[WithheldTax::difference()]])। ⛔ ছাড় যেকোনো অঙ্কে আর ৳০.৫০-এর বেশি রাউন্ডিং মালিকের সইয়ে,
                     সীমার বেশি রাউন্ডিং নয় ([[VoucherApproval::differenceStopping()]])।
                 --}}
-                <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-difference>
-                    <fieldset class="min-w-0">
-                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.difference.label') }}</legend>
-                        <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+                <div class="contents" data-voucher-difference>
+                    {{-- ⭐ কম-বেশি ড্রপডাউনে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok")। ⓘ নাম একই `difference[kind]` --}}
+                    <label class="block min-w-0">
+                        <span class="mb-1 block text-sm font-medium">{{ __('money.screen.difference.label') }}</span>
+                        <select name="difference[kind]" x-model="differenceKind" data-difference-select
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
                             @foreach (['' => __('money.screen.difference.none'), 'discount' => __('money.screen.difference.discount'), 'rounding' => __('money.screen.difference.rounding')] as $value => $text)
-                                <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
-                                    <input type="radio" name="difference[kind]" value="{{ $value }}" class="peer sr-only" data-difference-chip="{{ $value === '' ? 'none' : $value }}"
-                                           x-model="differenceKind" @checked((string) old('difference.kind', $voucher->difference_kind ?? '') === (string) $value)>
-                                    <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
-                                             hover:bg-(--color-surface-hover)
-                                             peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
-                                             peer-checked:hover:bg-(--color-brand-700)
-                                             peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">{{ $text }}</span>
-                                </label>
+                                <option value="{{ $value }}" data-difference-chip="{{ $value === '' ? 'none' : $value }}" @selected((string) old('difference.kind', $voucher->difference_kind ?? '') === (string) $value)>{{ $text }}</option>
                             @endforeach
-                        </div>
-                    </fieldset>
+                        </select>
+                    </label>
                     <div x-show="differenceKind !== ''" x-cloak>
                         <x-ui.field name="difference[amount]" type="money" model="difference" empty-shows="0.00" :label="__('money.screen.difference.amount')"
                                     :value="old('difference.amount', bccomp((string) ($voucher->difference_amount ?? '0'), '0', 4) > 0 ? $voucher->difference_amount : '')" />
                     </div>
                 </div>
+                </div>{{-- data-voucher-cut-row --}}
             </div>

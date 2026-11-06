@@ -67,7 +67,7 @@
         ভাউচারটা সেভ হয়েছে, কেবল ছবিটা নেই — আর কেন, তার কোনো চিহ্নও
         থাকত না।
     --}}
-    <form method="POST" enctype="multipart/form-data"
+    <form method="POST" enctype="multipart/form-data" data-page-kind="journal"
           action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', 'journal') : route('accounts.voucher.update', $voucher)) }}"
           x-data="journalForm"
           @submit="busy ? $event.preventDefault() : (busy = true)"

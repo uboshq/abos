@@ -83,9 +83,13 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $figures = $xpath->query('//*[@data-voucher-header]//*[@data-voucher-head-figures]')->item(0);
             $this->assertInstanceOf(DOMElement::class, $figures, "⛔ {$type}: তিন অঙ্ক পাতার মাথায় নেই");
             $this->assertNull($xpath->query('ancestor::*[@data-voucher-aside]', $figures)->item(0), "⛔ {$type}: তিন অঙ্ক আবার ডানের কলামে");
-            foreach (['data-head-owed', 'data-head-this', 'data-head-left', 'data-head-none'] as $mark) {
+            foreach (['data-head-owed', 'data-head-this', 'data-head-left'] as $mark) {
                 $this->assertSame(1, $xpath->query('.//*[@'.$mark.']', $figures)->length, "⛔ {$type}: মাথার তিন অঙ্কে {$mark} নেই");
             }
+            // ⭐ মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok"): "পক্ষ বাছলে এখানে বকেয়া…" লেখা বাদ; বানালেন-শাখা-অনুমোদনকারী ডানের নিয়ন্ত্রণে
+            $this->assertSame(0, $xpath->query('//*[@data-head-none]')->length, "⛔ {$type}: মাথায় \"পক্ষ বাছলে…\" লেখা ফিরে এসেছে");
+            $this->assertSame(1, $xpath->query('.//*[@data-voucher-meta]', $children[2])->length, "⛔ {$type}: বানালেন-শাখা-অনুমোদনকারী নিয়ন্ত্রণের কার্ডে নেই");
+            $this->assertSame(0, $xpath->query('//*[@data-voucher-header]//*[@data-voucher-meta]')->length, "⛔ {$type}: মাথায় আবার লম্বা তথ্যের সারি");
             $this->assertSame(1, $xpath->query('.//*[@data-control="signatures"]', $children[2])->length, "⛔ {$type}: নিয়ন্ত্রণে সইয়ের লাইন নেই");
             $this->assertSame('left', $xpath->query('//*[@data-voucher-main]')->item(0)?->getAttribute('data-part'), "⛔ {$type}: বাঁয়ের খণ্ড (data-part=\"left\") নেই");
             $this->assertSame(1, $xpath->query('//*[@data-part="bar"]//*[@data-save-buttons]')->length, "⛔ {$type}: নিচের বোতাম-সারি আলাদা খণ্ডে (data-part=\"bar\") নেই");
@@ -125,8 +129,9 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
 
         $this->assertSame($receipt, $payment, "⛔ রসিদ আর পরিশোধ একই ঘর একই ক্রমে চায় না:\nরসিদ: ".implode(' · ', $receipt)."\nপরিশোধ: ".implode(' · ', $payment));
 
+        // ⭐ পদ্ধতি ড্রপডাউনে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye" — নমুনা "ok")
         $chips = fn (string $type) => array_map(fn (DOMElement $e) => $e->getAttribute('value'),
-            iterator_to_array($this->dom($this->screen($type))->query('//input[@type="radio"][@name="instrument"]')));
+            iterator_to_array($this->dom($this->screen($type))->query('//select[@name="instrument"]/option')));
         $this->assertSame(['cash', 'mfs', 'transfer', 'deposit'], $chips(Voucher::RECEIPT), '⛔ রসিদের পদ্ধতির চিপ বদলেছে');
         $this->assertSame(['cash', 'mfs', 'transfer', 'cheque'], $chips(Voucher::PAYMENT), '⛔ পরিশোধের পদ্ধতির চিপ বদলেছে — কেবল পঞ্চমটা আলাদা হওয়ার কথা');
     }
@@ -209,19 +214,22 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
     }
 
     /** ৭ — পক্ষের ধরন চিপে, "অন্য (সরাসরি খাত)"-সহ */
-    public function test_the_party_type_is_chips_with_other(): void
+    /** ⭐ পক্ষের ধরন ড্রপডাউনে, পক্ষের পাশে এক সারিতে — মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye" — নমুনা "ok"; ⓘ ২৪ অক্টোবরের চিপ এর আগের রায় */
+    public function test_the_party_type_is_a_dropdown_with_other(): void
     {
         foreach ([Voucher::RECEIPT => 'customer', Voucher::PAYMENT => 'supplier'] as $type => $start) {
             $xpath = $this->dom($this->screen($type));
 
-            // ⓘ পুরনো নমুনা-বিন্যাসের ধরনের ঘর লুকানো আর বন্ধ হয়ে আঁকা থাকে, জমা যায় না — চালু ড্রপডাউন গোনা
-            $this->assertSame(0, $xpath->query('//select[@name="party_type"][not(@disabled)]')->length, "⛔ {$type}: পক্ষের ধরন এখনো ড্রপডাউন — নকশায় চিপ");
-            $chips = iterator_to_array($xpath->query('//input[@type="radio"][@name="party_type"]'));
-            $this->assertGreaterThanOrEqual(4, count($chips), "⛔ {$type}: পক্ষের ধরনের চিপ নেই");
-            $this->assertSame(1, $xpath->query('//input[@type="radio"][@name="party_type"][@value=""][@data-party-type-chip="other"]')->length,
-                "⛔ {$type}: \"অন্য (সরাসরি খাত)\" চিপ নেই");
-            $checked = array_values(array_filter($chips, fn (DOMElement $c) => $c->hasAttribute('checked')));
-            $this->assertSame($start, $checked[0]?->getAttribute('value'), "⛔ {$type}: শুরুর ধরন {$start} বাছা নেই");
+            $this->assertSame(1, $xpath->query('//select[@name="party_type"][not(@disabled)]')->length, "⛔ {$type}: পক্ষের ধরন ড্রপডাউনে নেই");
+            $this->assertSame(0, $xpath->query('//input[@type="radio"][@name="party_type"]')->length, "⛔ {$type}: পক্ষের ধরনের চিপ রয়ে গেছে — একই নামের দুই ঘর");
+            $options = iterator_to_array($xpath->query('//select[@name="party_type"]/option'));
+            $this->assertGreaterThanOrEqual(4, count($options), "⛔ {$type}: পক্ষের ধরনের তালিকা ছোট");
+            $this->assertSame(1, $xpath->query('//select[@name="party_type"]/option[@value=""][@data-party-type-chip="other"]')->length,
+                "⛔ {$type}: \"অন্য (সরাসরি খাত)\" নেই");
+            $chosen = array_values(array_filter($options, fn (DOMElement $c) => $c->hasAttribute('selected')));
+            $this->assertSame($start, $chosen[0]?->getAttribute('value'), "⛔ {$type}: শুরুর ধরন {$start} বাছা নেই");
+            $row = $xpath->query('//*[@data-voucher-head]')->item(0);
+            $this->assertNotNull($row !== null ? $xpath->query('.//select[@name="party_type"]', $row)->item(0) : null, "⛔ {$type}: ধরন পক্ষের সারিতে নেই — লাইন কমেনি");
         }
     }
 
@@ -415,15 +423,15 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $this->assertContains($h1, [trans('money.screen.'.$title, [], 'bn'), trans('money.screen.'.$title, [], 'en')], "⛔ {$type}: শিরোনাম নকশার নয়: {$h1}");
             $this->assertSame(1, $xpath->query('.//*[@data-paper-state="draft"]', $head)->length, "⛔ {$type}: মাথায় \"খসড়া\" চিপ নেই");
 
-            $meta = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('.//*[@data-voucher-meta]', $head)->item(0)?->textContent));
+            // ⭐ মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok"): মাথায় কেবল নাম · নম্বর · অবস্থা; বানালেন নিয়ন্ত্রণে; খোলা মাসে কিছু নয়
+            $number = trim((string) $xpath->query('.//*[@data-voucher-number]', $head)->item(0)?->textContent);
             $prefix = rtrim(app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->prefixOf(Voucher::DOC_TYPES[$type]), '-');
             $this->assertNotSame('', $prefix, 'দৃশ্যটাই ঠিক নয় — নম্বর সিরিজের উপসর্গ নেই');
-            $said = array_filter(['bn', 'en'], fn (string $l) => str_contains($meta, trans('money.screen.meta.number_on_save_as', ['prefix' => $prefix], $l)));
-            $this->assertNotEmpty($said, "⛔ {$type}: মাথায় নম্বর সিরিজের উপসর্গ ({$prefix}-…) নেই: {$meta}");
-            $this->assertStringContainsString((string) $owner->name, $meta, "⛔ {$type}: মাথায় \"বানালেন\" নেই");
-            $month = array_filter(['bn', 'en'], fn (string $l) => str_contains($meta, trans('money.screen.meta.month_open', [], $l)));
-            $this->assertNotEmpty($month, "⛔ {$type}: খোলা মাসে মাথায় \"মাস খোলা ✓\" নেই: {$meta}");
-            $this->assertSame(0, $xpath->query('.//*[@data-voucher-signer]', $head)->length, "⛔ {$type}: সইয়ের ছক ছাড়াই \"সই দেবেন\" লেখা");
+            $this->assertStringStartsWith($prefix.'-', $number, "⛔ {$type}: মাথায় নম্বর সিরিজের উপসর্গ ({$prefix}-…) নেই: {$number}");
+            $meta = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('//*[@data-voucher-controls]//*[@data-voucher-meta]')->item(0)?->textContent));
+            $this->assertStringContainsString((string) $owner->name, $meta, "⛔ {$type}: নিয়ন্ত্রণে \"বানালেন\" নেই");
+            $this->assertSame(0, $xpath->query('//*[@data-voucher-month]')->length, "⛔ {$type}: খোলা মাসেও মাসের কথা — বন্ধ হলে তবেই লাল সতর্কতা");
+            $this->assertSame(0, $xpath->query('//*[@data-voucher-signer]')->length, "⛔ {$type}: সইয়ের ছক ছাড়াই \"সই দেবেন\" লেখা");
 
             $label = trim((string) $xpath->query('.//*[@data-voucher-head-figures]//dt', $head)->item(0)?->textContent);
             $this->assertContains($label, [trans("money.screen.head.{$owed}.{$start}", [], 'bn'), trans("money.screen.head.{$owed}.{$start}", [], 'en')],
@@ -441,7 +449,8 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         \App\Models\ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 2, 'approver_type' => 'user', 'approver_id' => $owner->id]);
 
         $xpath = $this->dom($this->screen(Voucher::RECEIPT));
-        $signer = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('//*[@data-voucher-header]//*[@data-voucher-signer]')->item(0)?->textContent));
+        // ⓘ ৭ নভেম্বর ২০২৬ থেকে প্রথম অনুমোদনকারী ডানের নিয়ন্ত্রণে (নমুনা), মাথায় নয়
+        $signer = preg_replace('/\s+/u', ' ', trim((string) $xpath->query('//*[@data-voucher-controls]//*[@data-voucher-signer]')->item(0)?->textContent));
         $expected = array_map(fn (string $l) => trans('money.screen.meta.signer', ['who' => $owner->name, 'levels' => 2], $l), ['bn', 'en']);
         $this->assertContains($signer, $expected, '⛔ সইয়ের ছক থাকলেও মাথায় প্রথম সইদাতা আর ধাপ নেই: '.$signer);
 
@@ -502,11 +511,11 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $this->assertSame(route('accounts.cheque.create'), $link->getAttribute('href'), '⛔ রসিদের "চেক" চিপ চেকের খাতায় নিয়ে যায় না');
         $this->assertContains($link->getAttribute('title'), [trans('money.screen.cheque_elsewhere', [], 'bn'), trans('money.screen.cheque_elsewhere', [], 'en')],
             '⛔ রসিদের "চেক" চিপ কেন অন্য পাতায় নেয়, তা বলে না');
-        $this->assertSame(0, $receipt->query('//input[@name="instrument"][@value="cheque"]')->length, '⛔ রসিদে চেক আবার পদ্ধতি — গৃহীত চেক কেবল চেকের খাতা দিয়ে');
+        $this->assertSame(0, $receipt->query('//input[@name="instrument"][@value="cheque"] | //select[@name="instrument"]/option[@value="cheque"]')->length, '⛔ রসিদে চেক আবার পদ্ধতি — গৃহীত চেক কেবল চেকের খাতা দিয়ে');
 
         $payment = $this->dom($this->screen(Voucher::PAYMENT));
         $this->assertSame(0, $payment->query('//a[@data-method-elsewhere]')->length, '⛔ পরিশোধে চেক আবার লিংক — সেখানে চেক আসল পদ্ধতি');
-        $this->assertSame(1, $payment->query('//input[@name="instrument"][@value="cheque"]')->length, '⛔ পরিশোধে চেক পদ্ধতি হারাল');
+        $this->assertSame(1, $payment->query('//input[@name="instrument"][@value="cheque"] | //select[@name="instrument"]/option[@value="cheque"]')->length, '⛔ পরিশোধে চেক পদ্ধতি হারাল');
     }
 
     /** ১৮ — পদ্ধতির চিপ জায়গা না পেলে ভাঁজ হয়, খাতের ঘরে ঢোকে না (fieldset `min-w-0`; a6, আদায়ে ৩৬৩px চিপ বনাম ৩৩৫px অর্ধেক) */
@@ -523,8 +532,14 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $this->assertInstanceOf(DOMElement::class, $fieldset, "দৃশ্যটাই ঠিক নয় — {$screen}: পদ্ধতির চিপ নেই");
             $this->assertContains('min-w-0', preg_split('/\s+/', $fieldset->getAttribute('class')),
                 "⛔ {$screen}: পদ্ধতির fieldset-এ min-w-0 নেই — পাঁচ চিপ নিজের মাপে দাঁড়িয়ে খাতের ঘরে ঢুকে যায়");
-            $row = $xpath->query('./div[@role="radiogroup"]', $fieldset)->item(0);
-            $this->assertContains('flex-wrap', preg_split('/\s+/', (string) $row?->getAttribute('class')), "⛔ {$screen}: চিপের সারি ভাঁজ হয় না — জায়গা না পেলে কাটা পড়ে");
+            // ⓘ ভাউচারে ৭ নভেম্বর ২০২৬ থেকে ড্রপডাউন (পুরো চওড়ায়, কাটে না); সরবরাহকারী-পরিশোধে চিপ, ভাঁজ হয়
+            $select = $xpath->query('./select[@name="instrument"]', $fieldset)->item(0);
+            if ($select !== null) {
+                $this->assertContains('w-full', preg_split('/\s+/', (string) $select->getAttribute('class')), "⛔ {$screen}: পদ্ধতির ড্রপডাউন নিজের ঘর জুড়ে নয়");
+            } else {
+                $row = $xpath->query('./div[@role="radiogroup"]', $fieldset)->item(0);
+                $this->assertContains('flex-wrap', preg_split('/\s+/', (string) $row?->getAttribute('class')), "⛔ {$screen}: চিপের সারি ভাঁজ হয় না — জায়গা না পেলে কাটা পড়ে");
+            }
         }
     }
 

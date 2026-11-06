@@ -206,8 +206,10 @@ final class AVoucherSettlesShortByADiscountOrRoundingTest extends TestCase
         foreach ([Voucher::RECEIPT => 'data-sum-discount', Voucher::PAYMENT => 'data-sum-discount'] as $type => $mark) {
             $html = (string) $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
 
+            // ⓘ ৭ নভেম্বর ২০২৬ থেকে কম-বেশি ড্রপডাউনে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye" — নমুনা "ok")
+            $this->assertMatchesRegularExpression('/<select\b(?=[^>]*\bname="difference\[kind\]")[^>]*>/', $html, "⛔ {$type}: কম-বেশির ঘর ফর্মে যায় না");
             foreach (['discount', 'rounding', 'none'] as $chip) {
-                $this->assertStringContainsString('name="difference[kind]" value="'.($chip === 'none' ? '' : $chip).'"', $html, "⛔ {$type}: \"{$chip}\" চিপ ফর্মে যায় না");
+                $this->assertStringContainsString('<option value="'.($chip === 'none' ? '' : $chip).'" data-difference-chip="'.$chip.'"', $html, "⛔ {$type}: \"{$chip}\" বাছাই ফর্মে যায় না");
             }
             $this->assertStringContainsString('data-money-shown="difference[amount]"', $html, "⛔ {$type}: কম-বেশির অঙ্কের ঘর নেই");
             $this->assertStringContainsString($mark.' x-text="sumDifference"', $html, "⛔ {$type}: সারাংশে ছাড়ের সারি নেই");

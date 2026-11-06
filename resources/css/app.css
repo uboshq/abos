@@ -1840,3 +1840,86 @@ input[type='number'] {
     border-radius: var(--radius-card);
 }
 [data-page-kind] [data-inbox-totals] { overflow: hidden; }
+
+/* ── ভাউচারের ফর্ম রঙিন — মালিক, ৭ নভেম্বর ২০২৬ ("colorful koro full page", "Sample onuzayi colorfull koro"; নমুনা "ok") ──
+   কার্ডের ভিতরে রঙিন পট্টি: পক্ষ নীল, টাকা সবুজ, কাটা কমলা, সংযুক্তি ধূসর; ডানের তিন কার্ডের মাথা রঙিন; ড্রপডাউন নিজের অংশের হালকা রঙে। */
+[data-form-band] {
+    margin-inline: -1rem;
+    padding: .45rem 1rem;
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--color-board-ink);
+    background: var(--band);
+}
+
+[data-boxed] > [data-form-band]:first-child,
+[data-boxed] > [data-form-band]:first-of-type {
+    margin-top: -1rem;
+    border-start-start-radius: var(--radius-card);
+    border-start-end-radius: var(--radius-card);
+}
+
+[data-form-band="party"] { --band: var(--color-kind-fact-who); }
+[data-form-band="money"] { --band: var(--color-kind-receipt); }
+[data-form-band="cut"] { --band: var(--color-kind-expense-deep); }
+[data-form-band="note"] { --band: var(--color-ink-muted); }
+
+[data-page-kind] [data-voucher-general] [data-voucher-head] select,
+[data-page-kind] [data-voucher-general] [data-voucher-head] input {
+    background-color: color-mix(in srgb, var(--color-kind-fact-who) 6%, var(--color-surface-card));
+}
+
+[data-page-kind] [data-voucher-money-grid] select {
+    background-color: color-mix(in srgb, var(--color-kind-receipt) 7%, var(--color-surface-card));
+}
+
+[data-page-kind] [data-voucher-cut-row] select {
+    background-color: color-mix(in srgb, var(--color-kind-expense) 8%, var(--color-surface-card));
+}
+
+[data-page-kind] [data-voucher-aside] > section > h2,
+[data-page-kind] [data-voucher-aside] > [data-boxed] > h2 {
+    margin: -1rem -1rem .75rem;
+    padding: .45rem 1rem;
+    color: var(--color-board-ink);
+    border-start-start-radius: var(--radius-card);
+    border-start-end-radius: var(--radius-card);
+}
+
+[data-page-kind] [data-voucher-summary] > h2 { background: linear-gradient(90deg, var(--color-kind-receipt), var(--color-kind-receipt-deep)); }
+[data-page-kind] [data-voucher-ledger] > h2 { background: linear-gradient(90deg, var(--color-kind-fact-who), var(--color-kind-custody-deep)); }
+[data-page-kind] [data-voucher-controls] > h2 { background: linear-gradient(90deg, var(--color-kind-fact-what), var(--color-kind-journal-deep)); }
+
+[data-page-kind] [data-sum-net] {
+    color: var(--color-kind-receipt-deep);
+    font-size: 1rem;
+}
+
+/* ⓘ বোতামের সারি — পাতার রঙে "পোস্ট"/"অনুমোদনে পাঠান" */
+[data-page-kind] [data-part="bar"] {
+    border-top: 3px solid var(--kind);
+}
+
+[data-page-kind] [data-voucher-ledger] > div:first-child {
+    margin: -1rem -1rem .75rem;
+    padding: .45rem 1rem;
+    color: var(--color-board-ink);
+    background: linear-gradient(90deg, var(--color-kind-fact-who), var(--color-kind-custody-deep));
+    border-start-start-radius: var(--radius-card);
+    border-start-end-radius: var(--radius-card);
+}
+
+[data-page-kind] [data-voucher-ledger] > div:first-child span {
+    color: var(--color-board-ink);
+    opacity: .85;
+}
+
+/* ⓘ ফর্মের কার্ডে মাথার রঙিন পট্টিই যথেষ্ট — তালিকার মতো ৩px দাগ নয়; সংযুক্তির ঘর এক সারিতে ছোট */
+form[data-page-kind] [data-boxed] {
+    border-top-width: 1px;
+    border-top-color: var(--color-border);
+}
+
+form[data-page-kind] [data-voucher-attachment] > div > p {
+    display: none;
+}

@@ -92,7 +92,8 @@
              ]),
          })">
 <section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-    <h2 class="mb-3 font-semibold">{{ __('money.screen.general') }}</h2>
+    {{-- ⭐ রঙিন পট্টি — "সাধারণ তথ্য"-র জায়গায় কাজের নাম (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok") --}}
+    <h2 data-form-band="party" class="mb-3">{{ $isReceipt ? __('money.band.party_in') : __('money.band.party_out') }}</h2>
 
     {{--
         ── সারি ১ — তারিখ · কখন · ডিপোজিটরের ধরন · ডিপোজিটরের নাম ───────
@@ -120,7 +121,7 @@
         (মাপা)। ⓘ টাকা দেওয়ার পর্দার একই গড়ন, নকশা পাতা ২ আর ৪: পক্ষের ধরন নিজের সারিতে, তার নিচে পক্ষ · তারিখ · টাকা তিন কলামে
         (`data-pay-general-row`-এর মতো; পক্ষের কলাম বেশি — নামের পাশে "অগ্রিম ৳…" বসে, আর ৯.৫rem-এর তারিখ-টাকায় নাম "আল…" হয়ে কাটত)।
     --}}
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)]" data-voucher-head>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(7rem,1fr)_minmax(0,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)]" data-voucher-head>
 
         {{-- ⓘ "কখন" (moved_at) আর চাওয়া হয় না — মালিকের ২১ অক্টোবরের রায় ([[x-money.method]]); কলাম থাকে, পুরনো কাগজে দেখায় --}}
 
@@ -161,25 +162,16 @@
             ⓘ নাম আগের `party_type`-ই, তাই জমা, ফোন আর পুরনো কাগজ অক্ষত। ⭐ "অন্য (সরাসরি খাত)" = ফাঁকা ধরন — পক্ষ ছাড়া কাগজ (যেমন
             ভাড়ার আয়); সার্ভার আগে থেকেই পক্ষ ছাড়া চলে ([[VoucherRequest::fillAccountFromParty()]] তখন কিছু বসায় না, খাত বাছতে হয়)।
         --}}
-        <fieldset class="sm:col-span-2 lg:col-span-full" data-party-type-row>
-            <legend class="mb-1 block text-sm font-medium">{{ $isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type') }}</legend>
-            <div class="inline-flex max-w-full flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+        {{-- ⭐ ধরন ড্রপডাউনে, পক্ষের পাশে এক সারিতে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok")। ⓘ নাম একই `party_type`; "অন্য (সরাসরি খাত)" = ফাঁকা --}}
+        <label class="block min-w-0" data-party-type-row>
+            <span class="mb-1 block text-sm font-medium">{{ $isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type') }}</span>
+            <select name="party_type" x-model="partyType" x-on:change="resetParty()" data-party-type-select
+                    class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
                 @foreach ([...collect($parties)->pluck('label', 'type')->all(), '' => __('accounts::field.party_other')] as $value => $text)
-                    <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
-                        <input type="radio" name="party_type" value="{{ $value }}" class="peer sr-only"
-                               data-party-type-chip="{{ $value === '' ? 'other' : $value }}"
-                               x-model="partyType" x-on:change="resetParty()" @checked($partyType === (string) $value)>
-                        <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
-                                     hover:bg-(--color-surface-hover)
-                                     peer-checked:bg-(--color-brand-700) peer-checked:font-medium peer-checked:text-(--color-brand-ink)
-                                     peer-checked:hover:bg-(--color-brand-700)
-                                     peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">
-                            {{ $text }}
-                        </span>
-                    </label>
+                    <option value="{{ $value }}" data-party-type-chip="{{ $value === '' ? 'other' : $value }}" @selected($partyType === (string) $value)>{{ $text }}</option>
                 @endforeach
-            </div>
-        </fieldset>
+            </select>
+        </label>
 
         {{-- ⓘ `adding` এখন [[party-voucher.js]]-এ, আলাদা ছোট x-data-য় নয় — খোঁজার
              তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে "+" ঘরটা খুলতে হয়, আর

@@ -43,10 +43,10 @@ final class TheDepositorTypeWasBlankOnEveryReceiptTest extends TestCase
         foreach ([Voucher::RECEIPT => 'customer', Voucher::PAYMENT => 'supplier'] as $type => $expected) {
             $html = $this->get(route('accounts.voucher.create', ['type' => $type]))->assertOk()->getContent();
 
-            // ⓘ ২৪ অক্টোবর ২০২৬ থেকে ধরন চিপে (রেডিও), ড্রপডাউন নয় — নকশা পাতা ২ আর ৪ ([[TheReceiptAndPaymentMirrorEachOtherTest]])
-            $this->assertMatchesRegularExpression('/<input\b(?=[^>]*\btype="radio")(?=[^>]*\bname="party_type")[^>]*>/', $html, "{$type}: ধরনের ঘরটাই নেই।");
+            // ⓘ ৭ নভেম্বর ২০২৬ থেকে ধরন আবার ড্রপডাউনে — মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye" — নমুনা "ok" ([[TheReceiptAndPaymentMirrorEachOtherTest]])
+            $this->assertMatchesRegularExpression('/<select\b(?=[^>]*\bname="party_type")[^>]*>/', $html, "{$type}: ধরনের ঘরটাই নেই।");
 
-            preg_match('/<input\b(?=[^>]*\bname="party_type")(?=[^>]*\bchecked\b)[^>]*\bvalue="([a-z_]*)"/', $html, $chosen);
+            preg_match('/<option\b(?=[^>]*\bdata-party-type-chip=)(?=[^>]*\bselected\b)[^>]*\bvalue="([a-z_]*)"/', $html, $chosen);
 
             $this->assertSame($expected, $chosen[1] ?? null, "{$type}: আগে থেকে \"{$expected}\" বাছা নেই।");
         }

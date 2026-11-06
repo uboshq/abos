@@ -126,6 +126,14 @@
             {{-- ⭐ নিয়ন্ত্রণ — টাকা দেওয়ার পর্দার একই কার্ড ([[x-money.controls]]): সই চালু/বন্ধ, লেখক ≠ পাকাকারী --}}
             <x-money.controls data-voucher-controls :signatures="$moneySignatures ?? false" :three-hands="$moneyThreeHands ?? false"
                               :direction="$isPayment ? 'out' : 'in'">
+                {{-- ⭐ মাথা থেকে এখানে — বানালেন, পক্ষের শাখা আর কোথায় পোস্ট হবে, প্রথম অনুমোদনকারী (মালিক, ৭ নভেম্বর ২০২৬, নমুনার "নিয়ন্ত্রণ") --}}
+                <p class="px-1 text-xs" data-voucher-meta>
+                    {{ __('money.screen.meta.maker', ['name' => $headMaker ?? '—']) }}
+                    <span data-voucher-branch x-show="partyBranchText !== ''" x-cloak>· {{ __('money.screen.meta.branch') }} <span data-voucher-party-branch x-text="partyBranchText"></span><span x-show="postBranchText !== ''"> · {{ __('money.screen.meta.posts_in') }} <b class="font-medium" data-voucher-post-branch x-text="postBranchText"></b></span></span>
+                    @if (($moneyFirstSigner ?? null) !== null)
+                        · <b class="font-semibold" data-voucher-signer>{{ __('money.screen.meta.signer', ['who' => $moneyFirstSigner['who'] !== '' ? $moneyFirstSigner['who'] : '—', 'levels' => $moneyFirstSigner['levels']]) }}</b>
+                    @endif
+                </p>
                 {{--
                     ⭐ নকশার "বাউন্স চিহ্ন দিলে নিজে উল্টাবে" — সত্যি করে: গৃহীত চেক এই পর্দায় ঢোকে না (মালিকের ২৬ সেপ্টেম্বরের নিয়ম), চেকের খাতায়;
                     সেখানে বাউন্স চিহ্ন দিলে খাতা নিজে উল্টায়, গ্রাহকের বকেয়া ফেরে ([[ChequeService::bounce()]])। তাই লাইনটা সেই খাতায় নিয়ে যায় (cb-ma-4)।

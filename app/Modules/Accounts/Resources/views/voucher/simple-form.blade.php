@@ -166,7 +166,7 @@
         @endphp
     @endif
     {{-- ⭐ `x-money-keys` — Enter কিছু পাঠায় না, Ctrl+Enter মূল বোতাম ([[money-keys.js]]; রসিদ, পরিশোধ, খরচ — একই ফর্ম) --}}
-    <form method="POST" enctype="multipart/form-data" x-money-keys
+    <form method="POST" enctype="multipart/form-data" x-money-keys data-page-kind="{{ $voucher->type }}"
           action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher)) }}"
           @if ($partyAbove)
               x-data="voucherMoney({
@@ -237,21 +237,19 @@
                         @php $headTag = \App\Core\Support\PageHeading::tag(); @endphp
                         <{{ $headTag }} class="text-2xl font-semibold">{{ $headPaying ? __('money.screen.title_pay') : __('money.screen.title_receive') }}</{{ $headTag }}>
                         {{-- ⭐ সইয়ের ছক থাকলে খসড়াতেই "সইয়ের অপেক্ষায় হবে" (Core-এর will_wait; অঙ্ক এখনো লেখা হয়নি, তাই null — ছক নিজে বলে) --}}
+                        <span class="num rounded-(--radius-field) border border-dashed border-(--color-border-strong) bg-(--color-surface-card) px-2.5 py-0.5 text-sm font-semibold text-(--color-ink-muted)" data-voucher-number>{{ $isNew ? ($headPrefix !== '' ? $headPrefix : '—').'-'.__('money.band.new_no') : $voucher->document_no }}</span>
                         <x-ui.paper-state state="draft" :approval="[\App\Modules\Accounts\Services\VoucherApproval::MODULE, $voucher->type, null, 'Voucher']" />
                     </div>
-                    <p data-voucher-meta class="mt-1 text-xs text-(--color-ink-muted)">
-                        {{ $isNew ? __('money.screen.meta.number_on_save_as', ['prefix' => $headPrefix !== '' ? $headPrefix : '—']) : __('money.screen.meta.number', ['no' => $voucher->document_no]) }}
-                        · {{ __('money.screen.meta.maker', ['name' => $headMaker ?? '—']) }}
-                        {{-- ⭐ নকশার "শাখা: গ্রাহকের শাখা (…)" কেবল তথ্য; পাশে "পোস্ট হবে: …" — টাকা বাক্সের শাখায় (মালিকের ১৯ অক্টোবরের নিয়ম; cb-ma-4) --}}
-                        <span data-voucher-branch x-show="partyBranchText !== ''" x-cloak>· {{ __('money.screen.meta.branch') }} <span data-voucher-party-branch x-text="partyBranchText"></span><span x-show="postBranchText !== ''"> · {{ __('money.screen.meta.posts_in') }} <b class="font-medium" data-voucher-post-branch x-text="postBranchText"></b></span></span>
-                        @if (($moneyFirstSigner ?? null) !== null)
-                            · <span data-voucher-signer>{{ __('money.screen.meta.signer', ['who' => $moneyFirstSigner['who'] !== '' ? $moneyFirstSigner['who'] : '—', 'levels' => $moneyFirstSigner['levels']]) }}</span>
-                        @endif
-                        · <span data-voucher-month @class(['text-(--color-danger)' => $headYear !== null && ! $headYear->isOpen()])>{{ $headYear !== null && ! $headYear->isOpen() ? __('money.screen.meta.month_closed') : __('money.screen.meta.month_open') }}</span>
-                    </p>
+                    {{-- ⭐ মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok"): মাথায় কেবল আন্তর্জাতিক মানের জিনিস — নাম, নম্বর, অবস্থা ("upore mark kora
+                         konta konata raka int. standrad? segulo rako baki gulo bad daw")। বানালেন, শাখা আর অনুমোদনকারী ডানের নিয়ন্ত্রণে
+                         ([[money-aside]]); মাস খোলা থাকলে কিছু নয়, বন্ধ হলে তবেই লাল সতর্কতা। ⛔ বকেয়া-এই কাগজ-বাকির তিন অঙ্ক আর "পক্ষ বাছলে…"
+                         লেখা নেই — বকেয়া পক্ষের ঘরের ঠিক উপরে ([[party-fields]] `data-party-due`)। --}}
+                    @if ($headYear !== null && ! $headYear->isOpen())
+                        <p class="mt-1 text-xs font-medium text-(--color-danger)" data-voucher-month>{{ __('money.screen.meta.month_closed') }}</p>
+                    @endif
                 </div>
 
-                {{-- ⭐ তিন অঙ্ক — বকেয়া লালে, এই আদায় সবুজে (রসিদ), বাকি সাধারণ; শূন্যে "৳0.00", চিহ্ন বা শব্দ ছাড়া ([[voucherMoney]]) --}}
+                {{-- ⭐ তিন অঙ্ক (পক্ষ বাছলে তবেই; ⛔ পক্ষ না বাছলে আগের "পক্ষ বাছলে এখানে…" লেখা নেই — মালিক, ৭ নভেম্বর ২০২৬) — বকেয়া লালে, এই আদায় সবুজে (রসিদ), বাকি সাধারণ; শূন্যে "৳0.00", চিহ্ন বা শব্দ ছাড়া ([[voucherMoney]]) --}}
                 <div class="text-end" data-voucher-head-figures>
                     <dl class="flex gap-8" x-show="hasHeadFigures" x-cloak>
                         <div>
@@ -272,7 +270,6 @@
                             </dd>
                         </div>
                     </dl>
-                    <p class="max-w-sm text-xs text-(--color-ink-muted)" data-head-none x-show="! hasHeadFigures">{{ __('money.screen.head.none') }}</p>
                 </div>
             </header>
         @endif
@@ -842,14 +839,15 @@
 
             <section data-boxed data-voucher-details
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 class="mb-3 font-semibold">{{ __('money.screen.attach_and_note') }}</h2>
-                <div class="grid gap-4 lg:grid-cols-2">
+                <h2 data-form-band="note" class="mb-3">{{ __('money.screen.attach_and_note') }}</h2>
+                {{-- ⭐ এক সারিতে — স্লিপ · কার মাধ্যমে · বিবরণ (পরিশোধে "যে খাতে বসবে"-ও), যাতে পুরো ফর্ম ১০৮০p-এর এক পর্দায় আঁটে (মালিক, ৭ নভেম্বর ২০২৬) --}}
+                <div @class(['grid gap-3 sm:grid-cols-2', 'lg:grid-cols-3' => ! $isPayment, 'lg:grid-cols-4' => $isPayment]) data-voucher-details-row>
                     {{-- ⭐ সংযুক্তি — ব্যাংক স্লিপ, স্ক্রিনশট বা অ্যাডভাইস (নকশার "সংযুক্তি ও বিবরণ"); লেখক আগে থেকেই নেয় ([[VoucherWriter::store()]]) --}}
                     <div data-voucher-attachment>
                         @include('accounts::voucher.partials.attachment-field', ['attachmentLabel' => $isPayment ? __('money.screen.attach_hint') : __('money.screen.attach_hint_in')])
                     </div>
 
-                    <div class="flex flex-col gap-3">
+                    <div class="contents">
                         @if ($isPayment)
                             {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
                             {{-- ⭐ নামে খাত, পক্ষ নয় — "যে খাতে বসবে", নিচে "না বাছলে পক্ষের দেনা" (fe, ২৪ অক্টোবর ২০২৬: "কাকে দেওয়া হল" শুনে পক্ষ মনে হত) --}}
