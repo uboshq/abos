@@ -93,9 +93,19 @@ final class OnePersonProposedSignedAndPaidTest extends TestCase
         $draft = $this->propose();
 
         $this->held(fn () => $this->confirmAs($this->cashier, $draft));
-        app(ApprovalEngine::class)->approve($this->pending($draft), $this->proposer, 'নিজের');
 
-        $this->refused(fn () => $this->confirmAs($this->cashier, $draft), 'three_hands_proposer_signed');
+        // ⓘ ভা-১৪ (মালিকের সিদ্ধান্ত ২, ২৭ সেপ্টেম্বর ২০২৬; কোড ৭ নভেম্বর ২০২৬): টাকার কাগজে চাওয়া বা বানানো হাত অনুমোদনই দিতে পারে না —
+        //    আগে অনুমোদন বসে পরিশোধে থামত, এখন অনুমোদনেই থামে
+        $approval = $this->pending($draft);
+        try {
+            app(ApprovalEngine::class)->approve($approval, $this->proposer, 'নিজের');
+            $this->fail('⛔ প্রস্তাবক নিজের প্রস্তাবে অনুমোদন দিলেন।');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('cannot decide', $e->getMessage(), '⛔ অন্য কারণে থামল: '.$e->getMessage());
+        }
+        $this->assertSame(Approval::PENDING, $approval->fresh()->status, '⛔ প্রস্তাবকের অনুমোদনে কাগজটা আর অপেক্ষায় নেই।');
+
+        $this->held(fn () => $this->confirmAs($this->cashier, $draft));
         $this->assertSame(DocumentStatus::DRAFT, $draft->fresh()->status);
     }
 

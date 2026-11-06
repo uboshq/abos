@@ -131,7 +131,7 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
 
         // ⓘ সই হলে ভাউচারটা নিজেই খাতায় বসে — কেউ "পোস্ট" চাপেন না (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]]), আর তখন বিল শোধ দেখায়
         $approval = Approval::query()->where('approvable_id', $voucher->id)->firstOrFail();
-        app(ApprovalEngine::class)->approve($approval, $this->user);
+        app(ApprovalEngine::class)->approve($approval, $this->signer());
 
         $this->assertTrue($voucher->fresh()->isPosted(), '⛔ শেষ সইয়ের পরেও কাউন্টারের টাকা খসড়ায়।');
         $this->assertSame(0, bccomp($bill->fresh()->paidAmount(), '600', 4));
@@ -204,7 +204,7 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
         $this->assertFalse($voucher->isPosted(), 'দৃশ্যটাই বানানো যায়নি — চেক-পরিশোধ সইয়ের অপেক্ষায় নেই');
         $this->assertFalse(Cheque::query()->where('cheque_no', 'PAY-CHQ-HELD')->exists(), 'সইয়ের আগেই চেক রেজিস্টারে উঠল।');
 
-        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_id', $voucher->id)->firstOrFail(), $this->user);
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_id', $voucher->id)->firstOrFail(), $this->signer());
 
         $this->assertTrue($voucher->fresh()->isPosted());
         $cheque = Cheque::query()->where('cheque_no', 'PAY-CHQ-HELD')->first();
@@ -247,7 +247,16 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
             'approval_flow_id' => $flow->id,
             'level' => 1,
             'approver_type' => 'user',
-            'approver_id' => $this->user->id,
+            'approver_id' => $this->signer()->id,
         ]);
+    }
+
+    /**
+     * ⓘ সই দেন অন্য একজন — ভা-১৪ (মালিকের সিদ্ধান্ত ২, ২৭ সেপ্টেম্বর ২০২৬; কোড ৭ নভেম্বর ২০২৬): টাকার কাগজ যিনি বানান,
+     * সুপার অ্যাডমিন হলেও, তিনি নিজে সই দেন না। এখানে কাউন্টারে কেনেন মালিক, তাই সই হিসাবরক্ষকের।
+     */
+    private function signer(): User
+    {
+        return User::query()->where('email', 'accounts@abos.test')->firstOrFail();
     }
 }
