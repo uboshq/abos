@@ -1923,3 +1923,18 @@ form[data-page-kind] [data-boxed] {
 form[data-page-kind] [data-voucher-attachment] > div > p {
     display: none;
 }
+
+/* ⭐ খরচ, কন্ট্রা আর জাবেদার ফর্ম — কার্ডের মাথায় পাতার রঙের দাগ, ঘরগুলো পাতার হালকা রঙে (মালিক, ৭ নভেম্বর ২০২৬: "colorful koro full page") */
+form[data-page-kind="expense"] > section[data-boxed],
+form[data-page-kind="contra"] > section[data-boxed],
+form[data-page-kind="journal"] > section[data-boxed] {
+    border-top: 5px solid var(--kind);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--kind) 12%, transparent);
+}
+
+form[data-page-kind="expense"] select,
+form[data-page-kind="contra"] select,
+form[data-page-kind="expense"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    background-color: color-mix(in srgb, var(--kind) 6%, var(--color-surface-card));
+}
