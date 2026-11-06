@@ -1390,6 +1390,15 @@ final class ApprovalEngine
         }
 
         /*
+         * ⛔ টাকার কাগজে নিজের হাত কখনো নয় — মালিকের ২৭ সেপ্টেম্বরের সিদ্ধান্ত ২ — টাকার কাগজে নিজের সই নয়, সুপার অ্যাডমিনেরও নয়; চেকলিস্ট ভা-১৪ (৭ নভেম্বর ২০২৬)।
+         * ⓘ যিনি চাইলেন বা যিনি কাগজটা বানালেন (`created_by`), কেউই নন: সুপার অ্যাডমিনের ছাড় নেই, নিজের সীমাও (`approval.self_limit`)
+         * টাকায় খাটে না। ⓘ টাকার বাইরে নিচের পুরনো নিয়ম অবিকল — সুপার অ্যাডমিন নিজের কাগজে সই দেন, সীমার নিচে নিজে দেওয়া যায়।
+         */
+        if ($this->ownMoneyHand($approval, $user)) {
+            return false;
+        }
+
+        /*
          * নিজের অনুরোধ নিজে অনুমোদন — কেবল সীমার নিচে।
          *
          * ── কেন নিয়মটা একেবারে কঠোর নয় ──────────────────────────────
@@ -1446,6 +1455,11 @@ final class ApprovalEngine
             if ((int) $approval->requested_by === (int) $for && ! $this->withinSelfLimit($approval) && ! $this->isSuperAdmin($from)) {
                 return false;
             }
+
+            // ⛔ ভারের পথেও নয় — যাঁর হয়ে সই, তিনি যদি টাকার কাগজের নিজের হাত হন (মালিকের ২৭ সেপ্টেম্বরের সিদ্ধান্ত ২ — টাকার কাগজে নিজের সই নয়, সুপার অ্যাডমিনেরও নয়; চেকলিস্ট ভা-১৪ (৭ নভেম্বর ২০২৬))
+            if ($this->ownMoneyHand($approval, $from)) {
+                return false;
+            }
         }
 
         /*
@@ -1494,6 +1508,26 @@ final class ApprovalEngine
      * চেয়েছেন আর কে দিয়েছেন দুইটাই থাকে, তাই নিরীক্ষায় নিজে-সই করা
      * কাগজ আলাদা করে দেখা যায়।
      */
+    /**
+     * ⭐ টাকার কাগজে এই মানুষের নিজের হাত কি না — যিনি সই চাইলেন, বা যিনি কাগজটা বানালেন (মালিকের ২৭ সেপ্টেম্বরের সিদ্ধান্ত ২ — টাকার কাগজে নিজের সই নয়, সুপার অ্যাডমিনেরও নয়; চেকলিস্ট ভা-১৪ (৭ নভেম্বর ২০২৬))।
+     *
+     * ⓘ "টাকার কাগজ" মডিউলের নিজের ঘোষণা থেকে ([[BulkApproval::movesMoney()]]) — হাতে লেখা তালিকা নয়।
+     */
+    public function ownMoneyHand(Approval $approval, User $user): bool
+    {
+        if (! app(BulkApproval::class)->movesMoney($approval)) {
+            return false;
+        }
+
+        if ((int) $approval->requested_by === (int) $user->id) {
+            return true;
+        }
+
+        $maker = $approval->loadMissing('approvable')->approvable?->getAttribute('created_by');
+
+        return $maker !== null && (int) $maker === (int) $user->id;
+    }
+
     private function isSuperAdmin(User $user): bool
     {
         return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);

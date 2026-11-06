@@ -94,6 +94,72 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
     // ── ৪ · বানানেওয়ালা ≠ সইকারী ──────────────────────────────────────
 
     /** ⭐ আজই চলে — মালিকের সিদ্ধান্ত ২: টাকার বাইরে ছাড়টা থাকে। */
+    // ── ⭐ চেকলিস্ট ভা-১৪ (৭ নভেম্বর ২০২৬) — মালিকের ২৭ সেপ্টেম্বরের সিদ্ধান্ত ২: টাকার কাগজে নিজের সই নয়, সুপার অ্যাডমিনেরও নয় ──
+    // ⓘ a5-এর ২৪ অক্টোবরের দাবি (a5/money-sign-claims) থেকে নেওয়া — যেগুলো মালিকের নিয়মের; সীমা ৳5,000 যেমন আছে তেমন (মালিক, ২৪ অক্টোবর), তাই সীমার দাবি বাদ
+
+    public function test_the_self_limit_never_lets_the_maker_sign_money(): void
+    {
+        app(\App\Core\Services\SettingsService::class)->set('approval.self_limit', 1000000);
+
+        [$module, $action] = $this->moneyPair();
+        $this->flowOn($module, $action, byUser: $this->maker);
+
+        $approval = $this->engine()->request($this->paper(), $module, $action, '1', userId: $this->maker->id);
+
+        $this->assertFalse($this->engine()->canDecide($approval, $this->maker), '⛔ নিজের সীমার নিচে বলে টাকার কাগজে নিজে সই দেওয়া গেল।');
+    }
+
+    public function test_a_super_admin_cannot_sign_their_own_money_paper(): void
+    {
+        $owner = $this->superAdmin();
+
+        [$module, $action] = $this->moneyPair();
+        $this->flowOn($module, $action, byUser: $owner);
+
+        $approval = $this->engine()->request($this->paper(), $module, $action, '5000', userId: $owner->id);
+
+        $this->assertFalse($this->engine()->canDecide($approval, $owner), '⛔ সুপার অ্যাডমিন নিজের টাকার কাগজে নিজে সই দিতে পারেন।');
+    }
+
+    public function test_neither_the_creator_nor_the_requester_can_sign_money(): void
+    {
+        [$module, $action] = $this->moneyPair();
+        $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
+
+        $creator = $this->secondSignerIn($this->company, 'বানিয়েছেন');
+        $requester = $this->secondSignerIn($this->company, 'পাঠিয়েছেন');
+        $third = $this->secondSignerIn($this->company, 'তৃতীয়জন');
+
+        $paper = NoticeCategory::create(['code' => 'M'.substr(uniqid(), -8), 'name_en' => 'Money paper', 'created_by' => $creator->id]);
+        $approval = $this->engine()->request($paper, $module, $action, '700', userId: $requester->id);
+
+        $this->assertFalse($this->engine()->canDecide($approval, $creator), '⛔ যিনি টাকার কাগজটা বানালেন তিনিই সই দিলেন।');
+        $this->assertFalse($this->engine()->canDecide($approval, $requester), '⛔ যিনি সই চাইলেন তিনিই সই দিলেন।');
+        $this->assertTrue($this->engine()->canDecide($approval, $third), '⛔ তৃতীয় একজন সইকারীও সই দিতে পারছেন না — নিয়ম বেশি কড়া হয়ে গেল।');
+    }
+
+    public function test_an_approval_whose_only_yes_came_from_its_maker_does_not_clear_the_money_paper(): void
+    {
+        [$module, $action] = $this->moneyPair();
+        $this->flowOn($module, $action, byRole: $this->accountantRoleIn($this->company));
+        $paper = $this->paper();
+
+        // ⓘ নিয়মের আগের একটা অনুমোদন — নিজে সই দিয়ে পাশ, কাগজ পোস্ট হয়নি
+        $old = Approval::create([
+            'company_id' => $this->company->id, 'approvable_type' => $paper::class, 'approvable_id' => $paper->getKey(),
+            'module' => $module, 'action' => $action, 'amount' => '100', 'status' => Approval::APPROVED, 'current_level' => 1,
+            'requested_by' => $this->maker->id, 'requested_at' => now()->subDay(), 'decided_at' => now()->subDay(),
+        ]);
+        ApprovalDecision::create(['approval_id' => $old->id, 'level' => 1, 'user_id' => $this->maker->id, 'decision' => 'approved', 'decided_at' => now()->subDay()]);
+
+        $this->actingAs($this->maker);
+        $stopping = app(\App\Core\Engines\Approval\DocumentApproval::class)->stopping($paper, $module, $action, '100');
+
+        $this->assertNotNull($stopping, '⛔ নিজের সইয়ে পাশ হওয়া অনুমোদনে টাকার কাগজ পোস্ট হয়ে গেল।');
+        $this->assertNotSame((int) $old->id, (int) $stopping->id, '⛔ পুরনো নিজে-সই অনুমোদনটাই ফেরত এল।');
+        $this->assertSame(Approval::PENDING, $stopping->status, '⛔ নতুন অনুরোধটা অপেক্ষায় নেই।');
+    }
+
     public function test_outside_money_a_super_admin_still_signs_their_own_paper(): void
     {
         $owner = $this->superAdmin();

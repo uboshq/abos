@@ -119,7 +119,11 @@ final class DocumentApproval
         $hash = app(DocumentFingerprint::class)->of($document);
 
         if ($latest?->status === Approval::APPROVED) {
-            if ($latest->stillCovers($amount, $hash) && $this->signedTheSame($latest, $payload)) {
+            /*
+             * ⛔ টাকার কাগজের সই যদি কেবল তার নিজের হাতের হয় (নিয়মের আগে দেওয়া), সেটা পাশ নয় — নতুন অনুরোধ, অন্য কারও কাছে
+             * (মালিকের ২৭ সেপ্টেম্বরের সিদ্ধান্ত ২; চেকলিস্ট ভা-১৪, ৭ নভেম্বর ২০২৬)।
+             */
+            if ($latest->stillCovers($amount, $hash) && $this->signedTheSame($latest, $payload) && ! $this->onlyItsOwnHandSaidYes($latest)) {
                 return null;
             }
 
@@ -466,5 +470,29 @@ final class DocumentApproval
         $author = $document->getAttribute('created_by');
 
         return $author === null ? null : (int) $author;
+    }
+
+    /**
+     * ⓘ টাকার কাগজে "হ্যাঁ" কেবল নিজের হাতের কি না — যিনি চাইলেন বা বানালেন, নিজে বা ভারে ([[ApprovalEngine::ownMoneyHand()]])।
+     */
+    private function onlyItsOwnHandSaidYes(Approval $approval): bool
+    {
+        $engine = app(ApprovalEngine::class);
+        $yes = $approval->decisions()->where('decision', \App\Models\ApprovalDecision::APPROVED)->get();
+
+        if ($yes->isEmpty() || ! app(BulkApproval::class)->movesMoney($approval)) {
+            return false;
+        }
+
+        foreach ($yes as $decision) {
+            $hand = \App\Models\User::query()->find((int) ($decision->on_behalf_of ?? $decision->user_id));
+            $signer = \App\Models\User::query()->find((int) $decision->user_id);
+
+            if (($hand === null || ! $engine->ownMoneyHand($approval, $hand)) && ($signer === null || ! $engine->ownMoneyHand($approval, $signer))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
