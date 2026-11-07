@@ -77,7 +77,7 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
             'system_admin::menu.control_panel' => 'modules',
             'system_admin::notice.title' => 'comms',
             'core.import.title' => 'data',
-            'system_admin::menu.change_history' => 'audit',
+            'core.notice.report_register' => 'audit',
         ] as $label => $section) {
             $this->assertSame($section, $under[__($label)] ?? null, '⛔ "'.__($label)."\" নিজের ভাগ \"{$section}\"-এর নিচে নেই।");
         }

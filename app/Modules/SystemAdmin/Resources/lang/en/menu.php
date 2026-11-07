@@ -22,7 +22,6 @@ return [
     'section_modules' => 'Modules and settings',
     'section_comms' => 'Communication',
     'section_audit' => 'Audit',
-    'change_history' => 'Change history',
     'section_data' => 'Data',
     'login_security' => 'Login security',
 ];

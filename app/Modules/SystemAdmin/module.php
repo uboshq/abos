@@ -125,10 +125,12 @@ return [
              */
             ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'section' => 'org', 'loose' => true, 'permission' => 'system_admin.ownership.transfer'],
             /*
-             * ⭐ সপ্তম ভাগ "নিরীক্ষা" — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১ — "৭টা ভাগে: প্রতিষ্ঠান · মানুষ ও প্রবেশাধিকার · মডিউল ও সেটিংস · যোগাযোগ · তথ্য · নিরীক্ষা, আর ওপরে সিস্টেমের হোম"; নমুনার কার্ড: "বদলের ইতিহাস · সইয়ের হিসাব · নোটিশ রেজিস্টার"।
-             * ⓘ বদলের ইতিহাস Governance-এর নিজের পর্দা — এখানে কেবল পথ, দ্বিতীয় কপি নয়। মেনুর সারি এই মডিউলের চাবি চায় (মডিউল অন্যের চাবি ঘোষণা করতে পারে না); পর্দাটা নিজে Governance-এর চাবি দেখে।
+             * ⭐ সপ্তম ভাগ "নিরীক্ষা" — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১ — "৭টা ভাগে: … · নিরীক্ষা"; নমুনার কার্ড: "বদলের ইতিহাস · সইয়ের হিসাব · নোটিশ রেজিস্টার"।
+             * ⓘ ভাগটা ভরে নোটিশের দুই রিপোর্টে (নিচে `reports`, `section => audit`)। ⛔ বদলের ইতিহাসের মেনু-সারি এখানে নয়: পর্দাটা
+             * Governance-এর, আর এক পর্দা এক মালিক (নিচের নোট) — দুই মেনুতে বসালে সুইচের চাবি জোড়া পড়ে আর সারির চাবি রুটের চাবির
+             * সাথে মেলে না (Mac, ৭ নভেম্বর ২০২৬: EveryMenuRowHasItsOwnSwitchTest, TheMenuAsksWhatTheRouteAsksTest)। সিস্টেমের হোমের
+             * "নিরীক্ষা" টাইল সরাসরি সেখানে নেয় ([[SystemAdminDashboard]])।
              */
-            ['label' => 'system_admin::menu.change_history', 'icon' => 'list', 'route' => 'governance.audit.index', 'section' => 'audit', 'loose' => true, 'permission' => 'system_admin.settings.manage'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।

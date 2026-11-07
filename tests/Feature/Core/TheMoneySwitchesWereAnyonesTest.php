@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\SignsAWaitingSetting;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,7 @@ use Tests\TestCase;
 final class TheMoneySwitchesWereAnyonesTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsAWaitingSetting;
 
     private const OWNER_ONLY = [
         'approval.self_limit',
@@ -85,6 +87,8 @@ final class TheMoneySwitchesWereAnyonesTest extends TestCase
         $this->actingAs($keeper->fresh())->put(route('system_admin.settings.update'), ['settings' => [
             'approval.self_limit' => '500000', 'sales.discount_cap_bill_percent' => '90',
         ]]);
+        // ⓘ অনুমোদনের সীমা জরুরি সেটিং — মালিকের বদলও আরেকজনের অনুমোদনের পরে বসে (কন্ট্রোল প্যানেল দফা ৭, ৭ নভেম্বর ২০২৬)
+        $this->anotherHandSigns('approval.self_limit', $this->company);
         $this->assertSame(0, bccomp('500000', (string) $this->fresh()->get('approval.self_limit'), 2), 'মালিক, তবু বদলাল না।');
         $this->assertSame(0, bccomp('90', (string) $this->fresh()->get('sales.discount_cap_bill_percent'), 2));
     }
