@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -157,19 +158,79 @@ class PaymentScheduleController extends Controller implements HasMiddleware
      */
     public function proposal(Request $request, string $no): View
     {
+        [$payments, $approvalOf, $mine] = $this->proposalFor($no, $request->user());
+
+        return view('purchase::payment-schedule.proposal', [
+            'menu' => $this->menu->forUser($request->user()),
+            'no' => $no,
+            'payments' => $payments,
+            'approvalOf' => $approvalOf,
+            'signAll' => $mine['ids'],
+            'signAllTotal' => $mine['total'],
+        ]);
+    }
+
+    /**
+     * ⭐ ভা-২৩ — প্রস্তাবের সব সরবরাহকারীকে এক সইয়ে (মালিকের চেকলিস্ট, ২৪ অক্টোবর ২০২৬; SAP F110-এর পেমেন্ট-রান অনুমোদন)।
+     *
+     * ⛔ ইনবক্সের "একসাথে সই" টাকার কাগজ নেয় না (মালিক, ২৪ সেপ্টেম্বর ২০২৬: "টাকা নড়ার কাজে bulk নিষিদ্ধ" — চোখ না বুলিয়ে
+     * অনেক টাকা) — সেটা বদলায়নি ([[BulkApproval]])। এই দরজা কেবল প্রস্তাবের পাতার: পাতাটাই প্রতিটা সরবরাহকারী, বিল আর
+     * টাকা সারি ধরে দেখায়, আর সই সেই দেখা তালিকারই — পাঠানো তালিকা আর মোট এখনকার সাথে না মিললে কিছুই হয় না, "আবার দেখুন"।
+     * ⓘ প্রতিটা কাগজ ইঞ্জিনের নিজের সইয়ে যায় — পালা, টাকার সীমা, নিজের কাগজে নয় (ভা-১৪) — একক সইয়ের হুবহু নিয়ম, এক লেনদেনে।
+     */
+    public function signAll(Request $request, string $no): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'max:100'],
+            'ids.*' => ['integer'],
+            'total' => ['required', 'string', 'max:30'],
+        ]);
+
+        [, $approvalOf, $mine] = $this->proposalFor($no, $request->user());
+        $seen = array_map('intval', $data['ids']);
+        sort($seen);
+        $now = $mine['ids'];
+        sort($now);
+
+        if ($seen !== $now || bccomp((string) $data['total'], $mine['total'], 4) !== 0) {
+            return back()->withErrors(['ids' => __('purchase::schedule.sign_all_changed')]);
+        }
+
+        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $byId = $approvalOf->filter()->keyBy('id');
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($now, $byId, $engine, $request): void {
+            foreach ($now as $id) {
+                $engine->approve($byId[$id], $request->user(), __('purchase::schedule.sign_all_remark'));
+            }
+        });
+
+        return back()->with('saved', __('purchase::schedule.sign_all_done', ['count' => count($now)]));
+    }
+
+    /**
+     * প্রস্তাবের কাগজ, প্রতিটার শেষ অনুমোদন, আর এই মানুষের সইয়ের অপেক্ষায় যেগুলো (আইডি আর মোট)।
+     *
+     * @return array{0: \Illuminate\Support\Collection<int, \App\Modules\Purchase\Models\Payment>, 1: \Illuminate\Support\Collection<int, ?\App\Models\Approval>, 2: array{ids: list<int>, total: string}}
+     */
+    private function proposalFor(string $no, \App\Models\User $user): array
+    {
         $payments = \App\Modules\Purchase\Models\Payment::query()->where('proposal_no', $no)
             ->with(['supplier', 'creator', 'lines.bill'])->orderBy('id')->get();
 
         abort_if($payments->isEmpty(), 404);
 
         $approvals = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $approvalOf = $payments->mapWithKeys(fn ($p) => [$p->id => $approvals->latestFor($p, 'payment')]);
 
-        return view('purchase::payment-schedule.proposal', [
-            'menu' => $this->menu->forUser($request->user()),
-            'no' => $no,
-            'payments' => $payments,
-            'approvalOf' => $payments->mapWithKeys(fn ($p) => [$p->id => $approvals->latestFor($p, 'payment')]),
-        ]);
+        // ⓘ নতুন নিয়ম নেই — যে কাগজে এই মানুষ একা সই দিতে পারতেন, কেবল সেগুলো ([[ApprovalEngine::canDecide()]])
+        $mine = $payments->filter(fn ($p) => ($a = $approvalOf[$p->id] ?? null) !== null
+            && $a->status === \App\Models\Approval::PENDING && $approvals->canDecide($a, $user));
+
+        return [$payments, $approvalOf, [
+            'ids' => $mine->map(fn ($p) => (int) $approvalOf[$p->id]->id)->values()->all(),
+            'total' => $mine->reduce(fn (string $sum, $p) => bcadd($sum, (string) $p->amount, 4), '0'),
+        ]];
     }
 
     /**

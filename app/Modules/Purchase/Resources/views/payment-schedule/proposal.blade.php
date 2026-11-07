@@ -10,10 +10,25 @@
     <x-slot:header>
         <x-ui.page-header :title="$no" :subtitle="__('purchase::schedule.proposal_title')">
             <x-slot:actions>
+                {{-- ⭐ ভা-২৩ — এক সইয়ে সবগুলো: নিচের তালিকাই দেখার পাতা; সই এই দেখা তালিকা আর মোটের — বদলে গেলে কিছুই নয় ([[PaymentScheduleController::signAll()]]) --}}
+                @if ($signAll !== [])
+                    <form method="post" action="{{ route('purchase.payment_schedule.sign_all', $no) }}" data-proposal-sign-all>
+                        @csrf
+                        @foreach ($signAll as $id)
+                            <input type="hidden" name="ids[]" value="{{ $id }}">
+                        @endforeach
+                        <input type="hidden" name="total" value="{{ $signAllTotal }}">
+                        <x-ui.button tone="primary" type="submit">
+                            {{ __('purchase::schedule.sign_all', ['count' => count($signAll), 'amount' => Money::format($signAllTotal)]) }}
+                        </x-ui.button>
+                    </form>
+                @endif
                 <x-ui.button tone="secondary" :href="route('purchase.payment.index', ['proposal' => $no])">{{ __('purchase::schedule.proposal_in_list') }}</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+
+    <x-ui.errors />
 
     @if (session('saved'))
         <p role="status" class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>

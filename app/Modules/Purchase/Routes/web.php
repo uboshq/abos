@@ -189,6 +189,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
     // ⭐ পরিশোধের প্রস্তাব — বাছা বিল থেকে খসড়া পরিশোধ (টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১১, ৭ অক্টোবর ২০২৬)
     Route::post('/payment-schedule/propose', [PaymentScheduleController::class, 'propose'])->name('payment_schedule.propose');
     Route::get('/payment-proposals/{no}', [PaymentScheduleController::class, 'proposal'])->where('no', '[A-Za-z0-9\-/]+')->name('payment_schedule.proposal');
+    // ⭐ ভা-২৩ — প্রস্তাবের পাতায় দেখা তালিকাটা এক সইয়ে (মোট আর তালিকা না মিললে কিছুই নয়; প্রতিটা কাগজ ইঞ্জিনের নিজের নিয়মে)
+    Route::post('/payment-proposals/{no}/sign-all', [PaymentScheduleController::class, 'signAll'])->where('no', '[A-Za-z0-9\-/]+')->name('payment_schedule.sign_all');
 
     Route::prefix('payments')->name('payment.')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('index');
