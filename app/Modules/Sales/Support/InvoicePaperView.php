@@ -257,12 +257,16 @@ final class InvoicePaperView
         ], $rows);
     }
 
-    /** QR-এর নিচের লেখা — অনুবাদ না থাকলে '' (তখন কেবল কোডটা) */
+    /**
+     * QR-এর নিচের লেখা — কাগজের ভাষায় (ভা-১৬; [[PrintEngine]] আঁকার সময় locale কাগজের ভাষা); অনুবাদ না থাকলে '' (তখন কেবল কোডটা)।
+     * ⛔ আগে সবসময় বাংলা — ইংরেজি বিলে "স্ক্যান করুন" (৭ নভেম্বর ২০২৬-এর নমুনা)।
+     */
     public function scanHint(): string
     {
         $key = 'sales::print.classic.scan_hint';
+        $language = app()->getLocale() === \App\Core\Support\PaperLanguage::EN ? 'en' : 'bn';
 
-        return Lang::has($key, 'bn') ? (string) __($key, [], 'bn') : '';
+        return Lang::has($key, $language) ? (string) __($key, [], $language) : '';
     }
 
     /** নিচের "ছাপার সময়" লাইন */

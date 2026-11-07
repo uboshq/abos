@@ -109,12 +109,17 @@ final class InvoicePrintLook
         return max(2, min(self::MAX_BOXES, (int) $this->settings->get('sales.print.signature_count')));
     }
 
-    /** খালি রাখা ঘরে যে নাম বসে — পাতায় placeholder হিসেবেও দেখানো হয় */
+    /**
+     * খালি রাখা ঘরে যে নাম বসে — পাতায় placeholder হিসেবেও দেখানো হয়।
+     * ⭐ কাগজের ভাষায় (ভা-১৬; [[PrintEngine]] আঁকার সময় locale কাগজের ভাষা) — ⛔ আগে সবসময় বাংলা, ইংরেজি বিলে "প্রস্তুতকারী"
+     * (৭ নভেম্বর ২০২৬-এর নমুনা)। ⓘ কোম্পানির নিজের লেখা নাম যেমন লেখা তেমনই ছাপে।
+     */
     public function defaultLabel(int $index): string
     {
         $key = self::DEFAULT_LABELS[$index] ?? null;
+        $language = app()->getLocale() === PaperLanguage::EN ? 'en' : 'bn';
 
-        return $key === null ? '' : (string) __('sales::print.classic.'.$key, [], 'bn');
+        return $key === null ? '' : (string) __('sales::print.classic.'.$key, [], $language);
     }
 
     /**

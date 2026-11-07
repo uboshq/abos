@@ -120,4 +120,20 @@ final class AnEnglishBillCarriedABengaliNoteTest extends TestCase
         $this->assertNotSame([], $seen, 'দৃশ্যটাই ভুল — বিলের view InvoicePaperView পায়নি।');
         $this->assertSame('ENGLISH NOTE FOR THE PAPER', end($seen), '⛔ ইংরেজিতে ছাপা বিলের view ইংরেজি নোট পেল না।');
     }
+
+    /**
+     * ⭐ ইংরেজি বিলে বাংলা কিছু নীরবে নয় — সইয়ের ঘরের নাম আর QR-এর নিচের লেখাও কাগজের ভাষায়, আর নকশার নমুনাও ছাপার মেনুর বাছাই মানে
+     * (৭ নভেম্বর ২০২৬-এর নমুনা: ইংরেজি বিলে "প্রস্তুতকারী" আর "স্ক্যান করুন"; নমুনা পর্দার ভাষায় আঁকত)।
+     */
+    public function test_an_english_bill_names_its_signatures_and_qr_in_english(): void
+    {
+        app()->setLocale('bn');
+        $english = (string) $this->get(route('sales.invoice_sample', ['design' => 'special_db', 'size' => 'a4', 'lang' => 'en']))->assertOk()->getContent();
+        $bengali = (string) $this->get(route('sales.invoice_sample', ['design' => 'special_db', 'size' => 'a4', 'lang' => 'bn']))->assertOk()->getContent();
+
+        $this->assertStringContainsString(__('sales::print.classic.prepared_by', [], 'en'), $english, '⛔ ইংরেজি বিলে সইয়ের ঘরের নাম ইংরেজিতে নেই।');
+        $this->assertStringNotContainsString(__('sales::print.classic.prepared_by', [], 'bn'), $english, '⛔ ইংরেজি বিলে সইয়ের ঘরের নাম বাংলায়।');
+        $this->assertStringNotContainsString(__('sales::print.classic.scan_hint', [], 'bn'), $english, '⛔ ইংরেজি বিলে QR-এর নিচে বাংলা লেখা।');
+        $this->assertStringContainsString(__('sales::print.classic.prepared_by', [], 'bn'), $bengali, '⛔ বাংলা বিলে সইয়ের ঘরের নাম বাংলায় নেই।');
+    }
 }
