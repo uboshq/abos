@@ -69,11 +69,20 @@ final class AnOwnersOwnClaimIsMarkedTest extends TestCase
         $marks = fn (ExpenseClaim $claim) => AuditTrail::query()->where('action', 'own_claim_signed')
             ->where('auditable_type', $claim->getMorphClass())->where('auditable_id', $claim->id)->count();
 
-        // ⓘ মালিকের নিজের দাবি — নিজেই সই; কাজ আটকায় না, দাগ থাকে
+        /*
+         * ⓘ মালিকের নিজের দাবি — ভা-১৪ (মালিকের চেকলিস্ট, ২৪ অক্টোবর ২০২৬; কোড ৭ নভেম্বর ২০২৬): "টাকার কাগজে যিনি চাইলেন
+         *    বা বানালেন তিনি অনুমোদন দেন না, মালিকও না; নিজের অনুমোদনের পুরনো পাশ আর খাটে না"। ⚠️ এটা ৭ অক্টোবরের দফা ১৩-এর
+         *    "মালিক একাই করলে আটকায় না, দাগ থাকে" নিয়মের জায়গা নিল — নতুন সিদ্ধান্ত পুরনোটা বদলায়। তাই এখন থামে, দাগও বসে না।
+         */
         $own = $send($owner);
-        $sign($own);
-        $this->assertSame(ExpenseClaim::APPROVED, $own->fresh()->status, 'মালিকের নিজের দাবি আটকে গেল');
-        $this->assertSame(1, $marks($own), '⛔ মালিক নিজের দাবিতে নিজে সই দিলেন, অথচ নিরীক্ষায় "একই মানুষ" দাগ নেই');
+        try {
+            $sign($own);
+            $this->fail('⛔ মালিক নিজের টাকার দাবিতে নিজেই অনুমোদন দিলেন — ভা-১৪ ভাঙল।');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('cannot decide', $e->getMessage(), '⛔ অন্য কারণে থামল: '.$e->getMessage());
+        }
+        $this->assertNotSame(ExpenseClaim::APPROVED, $own->fresh()->status, '⛔ মালিকের নিজের দাবি তাঁর নিজের অনুমোদনে পাকা হলো।');
+        $this->assertSame(0, $marks($own), '⛔ থেমে যাওয়া অনুমোদনেও "একই মানুষ" দাগ বসল।');
 
         // ⓘ কর্মীর দাবি — মালিক সই দিলেন; দুই আলাদা মানুষ, দাগ নয়
         $theirs = $send($worker);

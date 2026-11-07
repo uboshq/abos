@@ -134,7 +134,17 @@ final class AGoneEmployeeCannotAskForMoneyTest extends TestCase
 
     private function ask(): ExpenseClaim
     {
-        return app(ExpenseClaimService::class)->submit($this->worker, ['kind' => ExpenseClaim::ADVANCE, 'amount' => '500', 'reason' => 'Need it']);
+        // ⓘ কর্মী নিজের লগইনে চান — নইলে কাগজের "বানালেন" মালিক হতেন, আর ভা-১৪-এ মালিক নিজের বানানো টাকার কাগজে অনুমোদন দেন না
+        $back = auth()->user();
+        $this->actingAs($this->worker);
+
+        try {
+            return app(ExpenseClaimService::class)->submit($this->worker, ['kind' => ExpenseClaim::ADVANCE, 'amount' => '500', 'reason' => 'Need it']);
+        } finally {
+            if ($back !== null) {
+                $this->actingAs($back);
+            }
+        }
     }
 
     private function assertRefused(string $why): void

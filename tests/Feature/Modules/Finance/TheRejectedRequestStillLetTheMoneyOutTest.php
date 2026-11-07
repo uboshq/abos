@@ -62,6 +62,7 @@ use Tests\TestCase;
 final class TheRejectedRequestStillLetTheMoneyOutTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private User $owner;
 
@@ -106,7 +107,7 @@ final class TheRejectedRequestStillLetTheMoneyOutTest extends TestCase
             'approval_flow_id' => $flow->id,
             'level' => 1,
             'approver_type' => ApprovalFlowStep::BY_USER,
-            'approver_id' => $this->owner->id,
+            'approver_id' => $this->secondSigner()->id,
         ]);
 
         /*
@@ -136,7 +137,7 @@ final class TheRejectedRequestStillLetTheMoneyOutTest extends TestCase
         $this->assertNotNull($approval, 'উত্তোলনের অনুরোধে কোনো অনুমোদন চাওয়াই হয়নি।');
         $this->assertTrue($approval->isPending());
 
-        app(ApprovalEngine::class)->reject($approval, $this->owner, 'এখন দরকার নেই');
+        app(ApprovalEngine::class)->reject($approval, $this->secondSigner(), 'এখন দরকার নেই');
 
         $this->assertSame(Approval::REJECTED, $approval->fresh()->status,
             'প্রত্যাখ্যানটাই বসেনি — তাহলে নিচের দাবিটা অন্য কিছু মাপছে।');

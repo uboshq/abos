@@ -105,10 +105,13 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->borrower->forceFill(['user_id' => $worker->id])->save();
 
+        // ⓘ কর্মী নিজের লগইনে চান — নইলে কাগজের "বানালেন" মালিক হতেন, আর ভা-১৪-এ নিজের বানানো টাকার কাগজে অনুমোদন নয়
+        $this->actingAs($worker);
         $claim = app(ExpenseClaimService::class)->submit($worker, [
             'kind' => ExpenseClaim::EXPENSE, 'amount' => '2800', 'reason' => 'Market visit', 'spent_on' => now()->toDateString(),
             'expense_account_id' => Account::query()->postable()->active()->where('type', Account::EXPENSE)->orderBy('code')->firstOrFail()->id,
         ]);
+        $this->actingAs($this->owner);
         app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_type', $claim->getMorphClass())
             ->where('approvable_id', $claim->id)->where('status', Approval::PENDING)->sole(), $this->owner);
         $this->assertSame('2800', bcadd((string) $claim->fresh()->from_advance, '0', 0), 'দাবি অগ্রিম থেকে মিটল');
