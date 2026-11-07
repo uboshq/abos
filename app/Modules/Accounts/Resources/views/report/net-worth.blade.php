@@ -20,26 +20,24 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::field.nw_title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::field.nw_title')"
-                          :subtitle="__('accounts::field.nw_subtitle', ['date' => \App\Core\Support\DateFormat::format($asOf)])">
-            <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    {{-- ⭐ রঙিন মাথা — টাকার পাতাগুলোর একই সাজ ([[money.page]]; মালিক, ৬–৭ নভেম্বর ২০২৬: "colorfull koro"), নিজের রঙে --}}
+    <x-money.page kind="networth" :title="__('accounts::field.nw_title')" icon="wallet"
+        :count="__('accounts::field.nw_subtitle', ['date' => \App\Core\Support\DateFormat::format($asOf)])">
+        <x-slot:actions>
+            <x-ui.button tone="secondary" icon="print" data-action="print">
+                {{ __('core.action.print') }}
+            </x-ui.button>
+        </x-slot:actions>
 
-    {{-- ── কোম্পানি বাছা ─────────────────────────────────────────── --}}
+    {{-- ── কোম্পানি বাছা — নাম লেখা, সংকেত নয় (ADI, UB নয় — "আদি কর্পোরেশন") ── --}}
     <nav class="mb-4 flex flex-wrap items-end gap-3 print-hide" aria-label="{{ __('accounts::field.nw_companies') }}" data-net-worth-companies>
         <x-ui.button :tone="$picked === null ? 'primary' : 'secondary'" :href="route('accounts.net_worth')">
             {{ __('accounts::field.nw_all_companies') }}
         </x-ui.button>
         @foreach ($companies as $c)
-            <x-ui.button :tone="$picked === $c['code'] ? 'primary' : 'secondary'"
+            <x-ui.button :tone="$picked === $c['code'] ? 'primary' : 'secondary'" title="{{ $c['code'] }}"
                          :href="route('accounts.net_worth', ['company' => $c['code']])">
-                {{ $c['code'] }}
+                {{ $c['name'] ?: $c['code'] }}
             </x-ui.button>
         @endforeach
     </nav>
@@ -117,4 +115,5 @@
             {{ __('accounts::field.nw_missing', ['company' => $m['code']]) }}
         </p>
     @endforeach
+    </x-money.page>
 </x-layouts.app>

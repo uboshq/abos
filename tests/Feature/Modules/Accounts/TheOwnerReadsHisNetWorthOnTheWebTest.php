@@ -58,6 +58,9 @@ final class TheOwnerReadsHisNetWorthOnTheWebTest extends TestCase
         $page->assertOk();
         $this->assertStringContainsString(\App\Core\Support\Money::format($all['net']), $page->getContent(),
             '⛔ নিট সম্পদ বিবরণীর পাতার বড় অঙ্ক সেবার "সব কোম্পানি"-র নিট অঙ্ক নয়।');
+        // ⭐ টাকার পাতার রঙিন মাথা, আর কোম্পানির বোতামে নাম — সংকেত নয় (৭ নভেম্বর ২০২৬)
+        $this->assertStringContainsString('data-page-kind="networth"', $page->getContent(), '⛔ নিট সম্পদ বিবরণী রঙিন মাথায় নেই।');
+        $this->assertStringContainsString(e($this->company->name()), $page->getContent(), '⛔ কোম্পানির বোতামে কোম্পানির নাম নেই।');
 
         $one = $this->actingAs($owner)->get(route('accounts.net_worth', ['company' => $this->company->code]));
         $one->assertOk();

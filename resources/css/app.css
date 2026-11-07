@@ -1758,6 +1758,11 @@ input[type='number'] {
     --kind-deep: var(--color-kind-chart-deep);
 }
 
+:root:has([data-page-kind="networth"]) {
+    --kind: var(--color-kind-networth);
+    --kind-deep: var(--color-kind-networth-deep);
+}
+
 /* ⭐ হিসাব তালিকা — প্রতিটা ধরনের নিজের রং (মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe") */
 [data-account-type="asset"] { --acct: var(--color-acct-asset); }
 [data-account-type="liability"] { --acct: var(--color-acct-liability); }
