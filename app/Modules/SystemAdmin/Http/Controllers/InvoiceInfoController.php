@@ -256,7 +256,8 @@ class InvoiceInfoController extends Controller implements HasMiddleware
                 'default_text' => isset($definition['default_text']) ? (string) __($definition['default_text'], [], $definition['text_locale'] ?? 'bn') : null,
 
                 /* ⭐ "ইংরেজি নোট নেই" — জোড়ার বাংলা ঘর নিজের লেখা, অথচ এই ঘর খালি বা কেবল সাধারণ লেখা (ভা-১৬ ধাপ ২) */
-                'missing' => $this->missingTranslation($definition),
+                // ⓘ চাবিটা হাতে দেওয়া — সেটিংয়ের তালিকা চাবি দিয়ে সাজানো, ভেতরে `key` থাকে না (Mac, ৮ নভেম্বর ২০২৬: সতর্কবার্তা আসতই না)
+                'missing' => $this->missingTranslation(['key' => $key] + $definition),
             ];
         }
 
