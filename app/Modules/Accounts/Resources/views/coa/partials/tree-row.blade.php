@@ -13,7 +13,10 @@
     $balance = $balances[$account->id] ?? '0';
 @endphp
 
-<tr class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
+{{-- ⭐ প্রতিটা ধরনের নিজের রং — সম্পদ, দায়, মূলধন, আয়, ব্যয় (মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe");
+     বাঁয়ের দাগ আর ধরনের চিহ্ন সেই রঙে, মাথার খাত (গ্রুপ) হালকা জমিনে। রং `app.css`-এ, `data-account-type` থেকে। --}}
+<tr data-account-type="{{ $account->type }}" @if ($account->is_group) data-account-group @endif
+    class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
     <td>
         <span class="flex items-center gap-2" style="padding-inline-start: {{ $indent }}rem">
             {{-- গ্রুপ আর সাধারণ খাত এক নজরে আলাদা: গ্রুপ মোটা হরফে, আর
@@ -45,8 +48,8 @@
         </span>
     </td>
 
-    <td class="hidden whitespace-nowrap text-(--color-ink-muted) sm:table-cell">
-        {{ __('accounts::type.' . $account->type) }}
+    <td class="hidden whitespace-nowrap sm:table-cell">
+        <span data-account-type-pill class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">{{ __('accounts::type.' . $account->type) }}</span>
     </td>
 
     {{-- গ্রুপের ব্যালেন্সও দেখানো হয় — সেটাই তার নিচের সবার যোগফল, আর

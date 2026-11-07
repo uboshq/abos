@@ -1231,6 +1231,12 @@
     /* ⭐ হিসাব তালিকা (হিসাবের ছক) — মালিক, ৭ নভেম্বর ২০২৬: "হিসাব তালিকা ti colorfull koro" */
     --color-kind-chart: #0d9488;
     --color-kind-chart-deep: #0f766e;
+    /* ⭐ খাতের ধরনের রং — মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe" */
+    --color-acct-asset: #2563eb;
+    --color-acct-liability: #e11d48;
+    --color-acct-equity: #7c3aed;
+    --color-acct-income: #16a34a;
+    --color-acct-expense: #d97706;
     /* ⭐ অনুমোদনের পাতা — রেলের অনুমোদন চিহ্নের কমলা (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") */
     --color-kind-approval: #ea580c;
     --color-kind-approval-deep: #c2410c;

@@ -1758,6 +1758,31 @@ input[type='number'] {
     --kind-deep: var(--color-kind-chart-deep);
 }
 
+/* ⭐ হিসাব তালিকা — প্রতিটা ধরনের নিজের রং (মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe") */
+[data-account-type="asset"] { --acct: var(--color-acct-asset); }
+[data-account-type="liability"] { --acct: var(--color-acct-liability); }
+[data-account-type="equity"] { --acct: var(--color-acct-equity); }
+[data-account-type="income"] { --acct: var(--color-acct-income); }
+[data-account-type="expense"] { --acct: var(--color-acct-expense); }
+
+[data-page-kind] [data-boxed] tbody > tr[data-account-type] > td:first-child {
+    box-shadow: inset 5px 0 0 var(--acct);
+}
+
+[data-page-kind] [data-boxed] tbody > tr[data-account-group] > td {
+    background: color-mix(in srgb, var(--acct) 8%, var(--color-surface-card));
+}
+
+tr[data-account-type] [data-account-type-pill] {
+    background: color-mix(in srgb, var(--acct) 14%, var(--color-surface-card));
+    color: var(--acct);
+}
+
+tr[data-account-group] > td:first-child a .num {
+    color: var(--acct);
+    font-weight: 700;
+}
+
 :root:has([data-page-kind]) [data-look-listfoot] {
     background: color-mix(in srgb, var(--kind) 10%, var(--color-surface-card));
     box-shadow: inset 5px 0 0 var(--kind);

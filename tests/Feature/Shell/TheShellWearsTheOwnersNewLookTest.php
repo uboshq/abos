@@ -182,6 +182,17 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $this->assertStringContainsString('<table class="ui-grid">', $html, '⛔ খাতের গাছটা হারাল।');
         $this->assertMatchesRegularExpression('/:root:has\(\[data-page-kind="chart"\]\)\s*\{\s*--kind:\s*var\(--color-kind-chart\)/',
             (string) file_get_contents(resource_path('css/app.css')), '⛔ "chart" পাতার রং কোথাও বলা নেই — মাথা রংহীন থাকবে।');
+
+        // ⭐ প্রতিটা ধরনের নিজের রং (মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe", নমুনা "Ok")
+        $css = (string) file_get_contents(resource_path('css/app.css'));
+        foreach (\App\Modules\Accounts\Models\Account::TYPES as $type) {
+            $this->assertMatchesRegularExpression('/<tr data-account-type="'.$type.'"\s+data-account-group/', $html, "⛔ {$type}: মাথার খাতের সারিতে ধরনের চিহ্ন নেই — রং বসবে না।");
+            $this->assertStringContainsString('[data-account-type="'.$type.'"] { --acct: var(--color-acct-'.$type.'); }', $css, "⛔ {$type}: এই ধরনের রং কোথাও বলা নেই।");
+        }
+        $this->assertSame(5, count(array_unique(array_map(
+            fn (string $t) => preg_match('/--color-acct-'.$t.':\s*(#[0-9a-f]{6})/i', (string) file_get_contents(resource_path('css/tokens.css')), $m) ? strtolower($m[1]) : $t,
+            \App\Modules\Accounts\Models\Account::TYPES))), '⛔ দুই ধরনের খাত একই রঙে — আলাদা করা যায় না।');
+        $this->assertStringContainsString('data-account-type-pill', $html, '⛔ "ধরন" ঘরে রঙিন চিহ্ন নেই।');
     }
 
     private function between(string $html, string $from, string $to): string

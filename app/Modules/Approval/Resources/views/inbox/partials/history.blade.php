@@ -45,10 +45,8 @@
                     default => 'info',
                 };
 
-                return new \Illuminate\Support\HtmlString(\Illuminate\Support\Facades\Blade::render(
-                    '<span data-history-decision="{{ $d }}"><x-ui.badge :tone="$tone">{{ $word }}</x-ui.badge></span>',
-                    ['d' => $d->decision, 'tone' => $tone, 'word' => __('approval::status.'.$d->decision)],
-                ));
+                return view('approval::inbox.partials.decision-badge',
+                    ['decision' => $d->decision, 'tone' => $tone, 'word' => __('approval::status.'.$d->decision)]);
             }];
         $columns[] = ['key' => 'remarks', 'label' => __('approval::field.remarks'),
             'render' => fn ($a) => ($myDecisions[$a->id]->remarks ?? null) ?: '—'];
