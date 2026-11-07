@@ -66,7 +66,11 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_machine_warnings_never_ride_the_ticker(): void
+    /**
+     * ⓘ ৭ নভেম্বর ২০২৬ থেকে উল্টো (মালিক, নমুনা ১-এর "পথ ২": "important auto notice guloto dekhabe"): যন্ত্রের জরুরি কথা নিচে চলে,
+     * আর উপরের ফিতায়ও থাকে — দুই জায়গাতেই; নিচে নিজের রঙে (লাল/হলুদ)।
+     */
+    public function test_important_machine_warnings_ride_the_ticker_and_still_stand_in_the_strip(): void
     {
         $warning = __('core.notice.backup_stale');
         $this->actingAs($this->owner());
@@ -88,15 +92,16 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $strip = $this->part($html, '<div data-message-strips', 'data-message-strips-end');
 
         $this->assertStringContainsString('কাল অফিস বন্ধ থাকবে', $ticker, '⛔ পরীক্ষার ভিত্তি নেই — ঘোষণাটাই চলন্ত বারে নেই।');
-        $this->assertStringNotContainsString(e($warning), $ticker, '⛔ যন্ত্রের সতর্কতা (ব্যাকআপ) চলন্ত বারে।');
-        $this->assertStringNotContainsString(e($drafts), $ticker, '⛔ কাজের নোটিশ (খসড়া) চলন্ত বারে।');
-        $this->assertStringContainsString(e($warning), $strip, '⛔ যন্ত্রের সতর্কতা উপরের ফিতা থেকে হারাল।');
-        $this->assertStringContainsString(e($drafts), $strip, '⛔ খসড়ার নোটিশ উপরের ফিতা থেকে হারাল।');
+        $this->assertStringContainsString(e($warning), $ticker, '⛔ যন্ত্রের লাল সতর্কতা (ব্যাকআপ) নিচের চলন্ত বারে নেই।');
+        $this->assertStringContainsString(e($drafts), $ticker, '⛔ কাজের নোটিশ (খসড়া) নিচের চলন্ত বারে নেই।');
+        $this->assertStringContainsString('data-ticker-tone="danger"', $ticker, '⛔ নিচে লাল সতর্কতা নিজের রঙে নয়।');
+        $this->assertStringContainsString(e($warning), $strip, '⛔ যন্ত্রের সতর্কতা উপরের ফিতা থেকে হারাল — মালিক দুই জায়গাই চান।');
+        $this->assertStringContainsString(e($drafts), $strip, '⛔ খসড়ার নোটিশ উপরের ফিতা থেকে হারাল — মালিক দুই জায়গাই চান।');
 
-        // ⓘ উৎসেও — পাতা যা-ই আঁকুক, চলন্ত বারের তালিকায় কেবল মানুষের লেখা
+        // ⓘ উৎসেও — চলন্ত বারের তালিকায় মানুষের ঘোষণা আর যন্ত্রের জরুরি কথা, কিন্তু তথ্যের (সাধারণ) কথা নয়
         Cache::flush();
-        $this->assertSame(['own'], array_values(array_unique(array_column(app(StatusNotices::class)->forTicker(), 'kind'))),
-            '⛔ চলন্ত বারের তালিকায় যন্ত্রের কথা ঢুকেছে।');
+        $tones = collect(app(StatusNotices::class)->forTicker())->reject(fn (array $n) => ($n['kind'] ?? null) === 'own')->pluck('tone')->unique()->all();
+        $this->assertSame([], array_values(array_diff($tones, ['danger', 'warning', 'pending'])), '⛔ চলন্ত বারে সাধারণ তথ্যের কথাও ঢুকেছে।');
     }
 
     public function test_an_announcement_runs_at_the_bottom_and_not_in_the_strip_unless_urgent(): void

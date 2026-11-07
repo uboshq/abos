@@ -108,16 +108,26 @@
                         <span class="inline-flex min-w-1/2 shrink-0 items-center gap-6 pe-12"
                               @if ($copy === 0) data-ticker-copy @else aria-hidden="true" @endif>
                             @foreach ($announcements as $announcement)
-                                <span class="inline-flex items-center gap-1">
+                                @php
+                                    // ⭐ যন্ত্রের জরুরি কথা নিজের রঙে — লাল এখনই, হলুদ অপেক্ষা; মানুষের ঘোষণা আগের মতো (মালিক, ৭ নভেম্বর ২০২৬, পথ ২)
+                                    $tickerTone = ($announcement['kind'] ?? null) === 'own' ? 'own' : ($announcement['tone'] ?? 'info');
+                                    $tickerClass = match ($tickerTone) {
+                                        'danger' => 'rounded-(--radius-pill) bg-(--color-badge-danger-bg) px-2 font-semibold text-(--color-badge-danger-ink)',
+                                        'warning' => 'rounded-(--radius-pill) bg-(--color-badge-warning-bg) px-2 font-semibold text-(--color-badge-warning-ink)',
+                                        'pending' => 'rounded-(--radius-pill) bg-(--color-badge-pending-bg) px-2 font-semibold text-(--color-badge-pending-ink)',
+                                        default => 'text-(--color-badge-info-ink)',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center gap-1" data-ticker-tone="{{ $tickerTone }}">
                                     @if ($announcement['url'])
                                         <a href="{{ $announcement['url'] }}" data-ticker-item
-                                           class="inline-flex items-center gap-1.5 text-xs text-(--color-badge-info-ink) underline-offset-2 hover:underline"
+                                           class="inline-flex items-center gap-1.5 text-xs {{ $tickerClass }} underline-offset-2 hover:underline"
                                            @if ($copy === 1) tabindex="-1" @endif>
                                             <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
                                             {{ $announcement['text'] }}
                                         </a>
                                     @else
-                                        <span data-ticker-item class="inline-flex items-center gap-1.5 text-xs text-(--color-badge-info-ink)">
+                                        <span data-ticker-item class="inline-flex items-center gap-1.5 text-xs {{ $tickerClass }}">
                                             <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
                                             {{ $announcement['text'] }}
                                         </span>

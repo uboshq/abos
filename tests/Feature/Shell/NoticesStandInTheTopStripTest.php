@@ -84,8 +84,8 @@ final class NoticesStandInTheTopStripTest extends TestCase
 
         $this->assertStringContainsString(e($warning), $strip, '⛔ যন্ত্রের সতর্কতা উপরের ফিতায় নেই।');
         $this->assertStringContainsString(e($drafts), $strip, '⛔ খসড়ার সতর্কতা উপরের ফিতায় নেই।');
-        $this->assertStringNotContainsString(e($warning), $footer, '⛔ সতর্কতা আবার ফুটারে।');
-        $this->assertStringNotContainsString('abos-ticker', $html, '⛔ চলন্ত বার ফিরে এসেছে।');
+        // ⓘ মালিক, ৭ নভেম্বর ২০২৬ (পথ ২): জরুরি অটো-নোটিশ উপরে স্থির থাকে, আর নিচেও চলে — দুই জায়গাতেই
+        $this->assertStringContainsString(e($warning), $footer, '⛔ লাল সতর্কতা নিচের চলন্ত বারে নেই — মালিক দুই জায়গাই চান।');
         $this->assertStringContainsString(e($warning), $this->bell($html), '⛔ সতর্কতা ঘণ্টা থেকে হারাল।');
         $this->assertStringContainsString(e($drafts), $this->bell($html), '⛔ খসড়ার সতর্কতা ঘণ্টা থেকে হারাল।');
 

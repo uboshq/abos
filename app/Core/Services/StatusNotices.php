@@ -177,9 +177,15 @@ final class StatusNotices
      */
     public function forTicker(): array
     {
+        /*
+         * ⭐ মালিক, ৭ নভেম্বর ২০২৬ (নমুনা ১-এর "পথ ২"): "important auto notice guloto dekhabe" — যন্ত্রের জরুরি কথাও (লাল = এখনই,
+         * হলুদ = অপেক্ষা) নিচে চলে, আর উপরের ফিতায় যেমন ছিল তেমনই থাকে — মালিক দুই জায়গাই বেছেছেন। ⓘ তথ্যের (সাধারণ) কথা নিচে নয়।
+         * ⓘ এই সিদ্ধান্ত ২১ অক্টোবরের "যন্ত্রের সতর্কতা কখনো চলন্ত বারে নয়"-এর জায়গা নিল।
+         */
         return array_values(array_filter(
             $this->all(),
-            fn (array $n): bool => ($n['kind'] ?? null) === 'own' && ! ($n['urgent'] ?? false),
+            fn (array $n): bool => (($n['kind'] ?? null) === 'own' && ! ($n['urgent'] ?? false))
+                || (($n['kind'] ?? null) === null && in_array($n['tone'] ?? '', ['danger', 'warning', 'pending'], true)),
         ));
     }
 
