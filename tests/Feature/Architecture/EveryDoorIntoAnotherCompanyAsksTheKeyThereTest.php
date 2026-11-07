@@ -48,6 +48,8 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Core/Services/CompanyProvisioner.php' => 'নতুন কোম্পানি খোলা — মালিক/প্রভিশনিং',
         'app/Http/Controllers/Api/AuthController.php' => 'টোকেন নবায়নে দুই ধাপ বাধ্যতামূলক কি না পড়া — কেবল মানুষটার নিজের চলতি কোম্পানিতে, শুধু পড়া, কিছু লেখা নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)',
         'app/Modules/Sales/Services/TrackingNotices.php' => 'ঘটনার শ্রোতা — কোনো মানুষ নেই; চালানটা যে কোম্পানির, কেবল সেই কোম্পানির ভেতরে চলে (CompanyContext::forCompany) আর সেই কোম্পানিরই লেখক, অনুমোদনকারী ও মালিককে জানায়',
+        // ⭐ নিট সম্পদ বিবরণী (ড্যা-৮, ২৫ অক্টোবর; মূল লাইনে ৮ নভেম্বর ২০২৬)
+        'app/Modules/Accounts/Services/NetWorthStatement.php' => 'কেবল মালিক — প্রতিটা কোম্পানিতে ঢোকার আগে সেখানে Ownership::isOwnerIn() জিজ্ঞেস করে (mayView); যেখানে মালিক নন, সেটা যোগে আসে না, কেবল নাম ধরে "দেখা যাচ্ছে না"',
         'app/Core/Services/Ownership.php' => 'মালিকের সুপার ক্ষমতা সব কোম্পানিতে (ABOS_OWNER_EMAILS)',
         'app/Core/Services/PermissionSyncer.php' => 'চাবির তালিকা সব কোম্পানিতে মেলানো — ডিপ্লয়/কনসোল',
     ];

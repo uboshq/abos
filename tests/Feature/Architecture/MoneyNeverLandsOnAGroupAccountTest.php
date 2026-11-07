@@ -86,6 +86,7 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
         'LedgerCheckReports.php' => 'পাওনা/দেনার নিয়ন্ত্রণ-খাত আর তার নিচের গাছ পড়া — খাতা মেলানোর রিপোর্ট, কোনো বাছাই নয়',
         'AccountService.php' => 'খাত তৈরি ও সরানো — বাবা সবসময় একটা দল',
         'StandardChart.php' => 'ছকটা নিজে বসায়, দল ও ঘর দুইটাই',
+        'NetWorthStatement.php' => 'নিট সম্পদের ঘর বাছতে খাতের গাছ পড়া (কোন খাত কোন দলের নিচে) — কোনো খাত বাছে না, টাকা বসায় না (ড্যা-৮)',
         'HeadTotals.php' => 'যোগফল গাছ ধরে হাঁটে — দল ছাড়া মাথার সংখ্যাই হত না',
         'AccountsFacts.php' => 'একই কারণে — পরিবারের যোগফল',
         'BalanceSheetService.php' => 'স্থিতিপত্র দল ধরেই সাজানো',

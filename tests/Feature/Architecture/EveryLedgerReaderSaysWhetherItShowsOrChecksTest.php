@@ -80,6 +80,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Modules/Accounts/Services/NetWorthStatement.php' => 'মালিকের নিট সম্পদ — প্রতিটা কোম্পানির গোটা খাতা, সব শাখা মিলিয়ে; মালিকের প্রশ্ন "সব বিক্রি-আদায় করে সব দেনা শোধ করলে কী থাকে", শাখার ভাগ নয় (ড্যা-৮, ২৫ অক্টোবর ২০২৬)',
         'app/Core/Services/SourceParties.php' => 'পর্দায় আগে থেকে থাকা কাগজের পক্ষ কে — খাতার সারি থেকে কেবল party_type/party_id, কোনো অঙ্ক নয়; কাগজটা তালিকার নিজের শাখা-ছাঁকনিতে আগেই বাছা, তাই খোঁজ গোটা কোম্পানি ধরে (নম্বরের পাশে পক্ষ, a5, ১৯ অক্টোবর ২০২৬)',
         'app/Core/Concerns/PickableWhileOwing.php' => 'টাকার কাগজের বাছাইয়ে নিষ্ক্রিয় পক্ষের এখনো জের আছে কি না — গোটা কোম্পানি ধরে; জের শাখায় ভাগ হয় না (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/AccountService.php' => 'খাতের দিক বা মা বদলের আগে নিচে দাখিলা আছে কি না — গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে বদল ভুল করে চলত (a6, ১৩ অক্টোবর ২০২৬)',
