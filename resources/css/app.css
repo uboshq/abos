@@ -1758,6 +1758,12 @@ input[type='number'] {
     --kind-deep: var(--color-kind-chart-deep);
 }
 
+/* ⭐ প্রতিদিনের সারাংশ — মালিকের নমুনার নীল (৭ নভেম্বর ২০২৬) */
+:root:has([data-page-kind="daily"]) {
+    --kind: var(--color-kind-custody);
+    --kind-deep: var(--color-kind-custody-deep);
+}
+
 /* ⭐ হিসাব তালিকা — প্রতিটা ধরনের নিজের রং (মালিক, ৭ নভেম্বর ২০২৬: "protiti khat alada alada color korbe") */
 [data-account-type="asset"] { --acct: var(--color-acct-asset); }
 [data-account-type="liability"] { --acct: var(--color-acct-liability); }

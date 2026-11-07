@@ -133,6 +133,42 @@ final class StockFacts
     }
 
     /**
+     * ⭐ সীমার নিচের পণ্য — নাম, এখন কত, সীমা, কত অর্ডার দিতে হবে ([[belowReorder()]]-এর একই প্রশ্ন; প্রতিদিনের সারাংশ, মালিক,
+     * ৭ নভেম্বর ২০২৬: "কি কি প্রোডাক্ট অর্ডার দিতে হবে, লেভেলের নিচে নেমে গেছে")। ⓘ সবচেয়ে কম থাকা আগে (এখন ÷ সীমা)।
+     * অর্ডার: সর্বোচ্চ সীমা পর্যন্ত ভরতে যত লাগে; সর্বোচ্চ না থাকলে পণ্যের নিজের অর্ডার-পরিমাণ; তা-ও না থাকলে সীমার দ্বিগুণ পর্যন্ত।
+     *
+     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, unit: string, available: string, level: string, order: string}>
+     */
+    public function belowReorderRows(int $limit = 40): \Illuminate\Support\Collection
+    {
+        $available = $this->availableSql();
+
+        return $this->belowReorderQuery()->with('unit')
+            ->select('inv_products.*')->selectRaw($available.' as available_qty')
+            ->orderByRaw('('.$available.') / inv_products.reorder_level')
+            ->limit($limit)->get()
+            ->map(function (Product $p) {
+                $have = (string) ($p->getAttribute('available_qty') ?? '0');
+                $level = (string) $p->reorder_level;
+                $max = (string) ($p->max_level ?? '0');
+                $order = match (true) {
+                    bccomp($max, '0', 4) > 0 => bcsub($max, $have, 4),
+                    bccomp((string) ($p->reorder_qty ?? '0'), '0', 4) > 0 => (string) $p->reorder_qty,
+                    default => bcsub(bcmul($level, '2', 4), $have, 4),
+                };
+
+                return [
+                    'id' => (int) $p->id,
+                    'name' => $p->name(),
+                    'unit' => (string) ($p->unit?->code ?? $p->unit?->name ?? ''),
+                    'available' => $have,
+                    'level' => $level,
+                    'order' => bccomp($order, '0', 4) > 0 ? $order : '0',
+                ];
+            });
+    }
+
+    /**
      * ফুরিয়ে আসা পণ্যগুলো, সবচেয়ে জরুরিটা আগে।
      *
      * @return Collection<int, Product>

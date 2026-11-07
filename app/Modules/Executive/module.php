@@ -50,6 +50,7 @@ return [
         ],
 
         'reports' => [
+            ['label' => 'executive::menu.daily_summary', 'icon' => 'calendar', 'route' => 'executive.daily_summary', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.compare', 'icon' => 'scale', 'route' => 'executive.compare', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.analysis', 'icon' => 'reports', 'route' => 'executive.analysis', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.alerts', 'icon' => 'alert-triangle', 'route' => 'executive.alerts', 'permission' => 'executive.view'],

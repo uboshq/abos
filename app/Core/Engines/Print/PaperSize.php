@@ -24,6 +24,9 @@ final class PaperSize
     // ⓘ আধা পাতা — গেট পাসের জন্য (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
     public const A5 = 'a5';
 
+    // ⓘ A4 আড়াআড়ি — প্রতিদিনের সারাংশ (মালিক, ৭ নভেম্বর ২০২৬: "lagle landscpe e dite paro")
+    public const A4_LANDSCAPE = 'a4-l';
+
     public const THERMAL_80 = '80mm';
 
     public const THERMAL_58 = '58mm';
@@ -42,6 +45,7 @@ final class PaperSize
         return match ($name) {
             self::A4 => new self(self::A4, 'A4', 12, 10, false),
             self::A5 => new self(self::A5, 'A5', 9, 9, false),
+            self::A4_LANDSCAPE => new self(self::A4_LANDSCAPE, 'A4-L', 8, 9, false),
 
             // থার্মাল প্রিন্টারে ছাপার প্রস্থ কাগজের চেয়ে কম — ৮০mm রোলে
             // ৭২mm, ৫৮mm রোলে ৪৮mm। পুরো প্রস্থ ধরে নিলে ডান দিকের লেখা

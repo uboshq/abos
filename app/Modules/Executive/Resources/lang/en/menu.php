@@ -10,4 +10,5 @@ return [
     'history' => 'Figures on a past day',
     'reports' => 'Reports',
     'links' => 'Sister-company parties',
+    'daily_summary' => 'Daily summary',
 ];

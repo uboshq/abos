@@ -186,6 +186,9 @@ return [
     'executive' => [
         'mail_to' => (string) env('ABOS_EXECUTIVE_MAIL_TO', ''),
         'mail_as' => env('ABOS_EXECUTIVE_MAIL_AS'),
+        // ⭐ প্রতিদিনের সারাংশের রাতের ইমেইল (মালিক, ৭ নভেম্বর ২০২৬) — খালি হলে উপরের mail_to, তা-ও খালি হলে মালিকের লগইনের ইমেইল
+        'daily_mail_to' => (string) env('ABOS_DAILY_SUMMARY_MAIL_TO', ''),
+        'daily_mail_at' => (string) env('ABOS_DAILY_SUMMARY_MAIL_AT', '22:00'),
     ],
 
     /*
