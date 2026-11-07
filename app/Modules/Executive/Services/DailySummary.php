@@ -6,6 +6,7 @@ namespace App\Modules\Executive\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ViewedBranch;
 use App\Models\Approval;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
@@ -151,8 +152,8 @@ final class DailySummary
             ->whereIn('money_kind', [Account::CASH, Account::BANK, Account::MFS])
             ->with('keeper')->orderBy('code')->get()
             ->map(function (Account $a) use ($d, $prev, $branch, $tills) {
-                $moves = LedgerEntry::query()->where('account_id', $a->id)->whereDate('trx_date', $d)
-                    ->when($branch, fn ($q) => $q->where('branch_id', $branch))
+                // ⓘ হেডারে বাছা শাখা — দেখার শাখার একই নিয়ম ([[ViewedBranch::narrow()]])
+                $moves = ViewedBranch::narrow(LedgerEntry::query()->where('account_id', $a->id)->whereDate('trx_date', $d), 'ledger_entries.branch_id')
                     ->selectRaw('COALESCE(SUM(debit),0) as dr, COALESCE(SUM(credit),0) as cr')->first();
 
                 return [
@@ -242,12 +243,9 @@ final class DailySummary
     /** খাতের দিনের নিট (ডেবিট − ক্রেডিট), কোড ধরে */
     private function ledgerNet(array $codes, string $d): string
     {
-        $branch = CompanyContext::branchId();
-
-        return (string) (LedgerEntry::query()
+        return (string) (ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->join('accounts as a', 'a.id', '=', 'ledger_entries.account_id')
             ->whereIn('a.code', $codes)->whereDate('ledger_entries.trx_date', $d)
-            ->when($branch, fn ($q) => $q->where('ledger_entries.branch_id', $branch))
             ->selectRaw('COALESCE(SUM(ledger_entries.debit - ledger_entries.credit),0) as net')->value('net') ?? '0');
     }
 }
