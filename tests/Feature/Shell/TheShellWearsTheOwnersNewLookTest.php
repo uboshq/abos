@@ -164,6 +164,26 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/--color-kind-payment:\s*#(dc|ef|b9|c0)/i', $tokens, '⛔ পরিশোধ আবার লাল — মালিক বদলাতে বলেছেন।');
     }
 
+    /**
+     * ⭐ হিসাব তালিকা (হিসাবের ছক) রঙিন — মালিক, ৭ নভেম্বর ২০২৬: "হিসাব তালিকা ti colorfull koro"। টাকার পাতার একই সাজ:
+     * নিজের রঙে মাথা, নাম আর কয়টা খাত, "নতুন খাত" মাথায়; টুলবার আর গাছ অটুট।
+     */
+    public function test_the_chart_of_accounts_wears_its_own_colour_and_keeps_its_tree(): void
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+
+        $html = (string) $this->actingAs($this->owner)->get(route('accounts.coa.index'))->assertOk()->getContent();
+        $hero = $this->between($html, 'data-money-hero', 'data-money-hero-end');
+
+        $this->assertStringContainsString('data-page-kind="chart"', $html, '⛔ হিসাব তালিকা নিজের রঙে নয়।');
+        $this->assertStringContainsString(e(__('accounts::menu.chart_of_accounts')), $hero, '⛔ রঙিন মাথায় পাতার নাম নেই।');
+        $this->assertStringContainsString('href="'.e(route('accounts.coa.create')).'"', $hero, '⛔ "নতুন খাত" বোতাম রঙিন মাথায় নেই।');
+        $this->assertStringContainsString('class="toolbar-view', $html, '⛔ হিসাব তালিকার টুলবার হারাল।');
+        $this->assertStringContainsString('<table class="ui-grid">', $html, '⛔ খাতের গাছটা হারাল।');
+        $this->assertMatchesRegularExpression('/:root:has\(\[data-page-kind="chart"\]\)\s*\{\s*--kind:\s*var\(--color-kind-chart\)/',
+            (string) file_get_contents(resource_path('css/app.css')), '⛔ "chart" পাতার রং কোথাও বলা নেই — মাথা রংহীন থাকবে।');
+    }
+
     private function between(string $html, string $from, string $to): string
     {
         $a = strpos($html, $from);

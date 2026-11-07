@@ -1753,6 +1753,11 @@ input[type='number'] {
     --kind-deep: var(--color-kind-transfer-deep);
 }
 
+:root:has([data-page-kind="chart"]) {
+    --kind: var(--color-kind-chart);
+    --kind-deep: var(--color-kind-chart-deep);
+}
+
 :root:has([data-page-kind]) [data-look-listfoot] {
     background: color-mix(in srgb, var(--kind) 10%, var(--color-surface-card));
     box-shadow: inset 5px 0 0 var(--kind);
@@ -1794,7 +1799,8 @@ input[type='number'] {
     background: var(--color-surface-card);
     border-top: 4px solid var(--kind);
     border-radius: var(--radius-card);
-    padding: .75rem;
+    /* ⓘ এখন ভেতরে এক সারির টুলবার (নমুনা ৪, ৭ নভেম্বর ২০২৬) — প্যাডিং টুলবারের নিজের */
+    padding: 0;
     box-shadow: var(--shadow-card);
 }
 

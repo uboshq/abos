@@ -39,6 +39,20 @@
         </div>
     @endif
 
+    {{-- ⭐ রঙিন মাথা — নাম, কয়টা খাত, "নতুন খাত" ([[money.page]]; মালিক, ৭ নভেম্বর ২০২৬: "হিসাব তালিকা ti colorfull koro") —
+         টাকার পাতাগুলোর একই সাজ: রঙিন পট্টি, টুলবারের সারি হালকা রঙে, ছকের মাথা গাঢ় রঙে, প্রতিটা সারির বাঁয়ে রঙের দাগ। --}}
+    <x-money.page kind="chart" :title="__('accounts::menu.chart_of_accounts')" icon="book"
+        :count="$total > 0 ? trans_choice('accounts::message.count', $total, ['count' => $total]) : null">
+        <x-slot:actions>
+            @can('create', \App\Modules\Accounts\Models\Account::class)
+                @if ($total > 0)
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.coa.create')">
+                        {{ __('accounts::action.new_account') }}
+                    </x-ui.button>
+                @endif
+            @endcan
+        </x-slot:actions>
+
     @if ($total === 0)
         {{-- খালি ছক — এখান থেকেই শুরু। একটা খালি টেবিল দেখিয়ে
              "নতুন খাত" বোতাম দিলে ব্যবহারকারীকে চল্লিশটা খাত হাতে
@@ -72,17 +86,7 @@
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar :title="__('accounts::menu.chart_of_accounts')" :count="trans_choice('accounts::message.count', $total, ['count' => $total])"
-                :columns="$columns">
-        <x-slot:actions>
-            @can('create', \App\Modules\Accounts\Models\Account::class)
-                    @if ($total > 0)
-                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.coa.create')">
-                            {{ __('accounts::action.new_account') }}
-                        </x-ui.button>
-                    @endif
-                @endcan
-        </x-slot:actions>
+                <x-ui.toolbar :columns="$columns">
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                         {{ __('accounts::action.show_inactive') }}
@@ -141,4 +145,5 @@
             @endif
         </div>
     @endif
+    </x-money.page>
 </x-layouts.app>

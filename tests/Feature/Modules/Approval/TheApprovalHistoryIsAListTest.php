@@ -79,16 +79,19 @@ final class TheApprovalHistoryIsAListTest extends TestCase
         $this->assertNotNull($list, '⛔ "আমি অনুমোদন দিয়েছি" এখনো ইনবক্সের মতো — পুরো চওড়া তালিকা নেই।');
         $this->assertSame(0, $page->query('//*[@data-inbox-detail]')->length, '⛔ তালিকার পাশে আবার কাগজের ডান দিক — হিসাবের ট্যাবে বাঁয়ে-ডানে নয়।');
         $this->assertGreaterThan(0, $page->query('.//table', $list)->length, '⛔ তালিকায় টেবিল নেই।');
-
-        foreach ([$yes, $no] as $approval) {
-            $this->assertSame(1, $page->query('.//a[@data-history-open][@href="'.route('approval.inbox.show', $approval->id).'"]', $list)->length,
-                "⛔ কাগজ {$approval->id}-এর নম্বরে চাপলে কাগজ খোলে না, বা সারিটাই নেই।");
+        $text = (string) preg_replace('/\s+/u', ' ', (string) $list->textContent);
+        $links = [];
+        foreach ($page->query('.//a[@data-history-open]', $list) as $a) {
+            $links[] = $a->getAttribute('href');
         }
+
+        // ⓘ ট্যাবটা "আমি অনুমোদন দিয়েছি" — যেটা ফেরত দিয়েছি সেটা এখানে নয় ([[ApprovalInbox::tabQueries()]], ফোনেরও একই নিয়ম)
+        $this->assertContains(route('approval.inbox.show', $yes->id), $links,
+            "⛔ যে কাগজে অনুমোদন দিয়েছি ({$yes->id}) সেটার নম্বরে চাপলে কাগজ খোলে না, বা সারিটাই নেই। তালিকায় আছে: ".implode(', ', $links).' — '.mb_substr($text, 0, 400));
+        $this->assertNotContains(route('approval.inbox.show', $no->id), $links, '⛔ ফেরত দেওয়া কাগজও "আমি অনুমোদন দিয়েছি"-তে উঠল।');
         $this->assertSame(1, $page->query('.//*[@data-history-decision="approved"]', $list)->length, '⛔ "অনুমোদন" সিদ্ধান্তটা সারিতে নেই।');
-        $this->assertSame(1, $page->query('.//*[@data-history-decision="rejected"]', $list)->length, '⛔ "ফেরত" সিদ্ধান্তটা সারিতে নেই।');
-        $text = preg_replace('/\s+/u', ' ', (string) $list->textContent);
-        $this->assertStringContainsString('রসিদ নেই', (string) $text, '⛔ আমার মন্তব্য সারিতে নেই।');
-        $this->assertStringContainsString('1,000.00', (string) $text, '⛔ নিচে মোট টাকা (৭০০ + ৩০০) নেই।');
+        $this->assertStringContainsString('ঠিক আছে', $text, '⛔ আমার মন্তব্য সারিতে নেই।');
+        $this->assertStringContainsString('700.00', $text, '⛔ নিচে মোট টাকা নেই।');
 
         // ⓘ অন্য সব তালিকার একই টুলবার — খোঁজা, সাজানো, রপ্তানি …
         $this->assertGreaterThan(0, $page->query('.//*[@data-list-toolbar] | .//input[@type="search"][@name="q"]', $list)->length, '⛔ তালিকায় খোঁজার ঘর নেই।');
@@ -98,17 +101,33 @@ final class TheApprovalHistoryIsAListTest extends TestCase
         $waiting = $this->xpath($this->actingAs($this->signer)->get(route('approval.inbox.index'))->assertOk()->getContent());
         $this->assertSame(0, $waiting->query('//*[@data-inbox-history]')->length, '⛔ "অপেক্ষায়" ট্যাবও তালিকা হয়ে গেল — সেখানে কাজ হয়, বাঁয়ে-ডানে থাকার কথা।');
         $this->assertSame(1, $waiting->query('//*[@data-inbox-list]')->length, '⛔ "অপেক্ষায়" ট্যাবের বাঁয়ের তালিকা হারাল।');
+
+        // ⭐ অপেক্ষার ট্যাবেও অন্য সব তালিকার একই এক সারির টুলবার, পুরো চওড়ায় তালিকা আর কাগজের উপরে (মালিক, ৭ নভেম্বর ২০২৬, নমুনা ৪ "ok")
+        $bar = $waiting->query('//form[@data-inbox-filters]')->item(0);
+        $this->assertNotNull($bar, '⛔ অপেক্ষার ট্যাবে ছাঁকনির ফর্মটাই নেই।');
+        $this->assertSame(0, $waiting->query('//*[@data-inbox-list]//*[@data-inbox-filters]')->length,
+            '⛔ ছাঁকনি এখনো বাঁয়ের তালিকার ভেতরে — পুরো চওড়ায় উপরে থাকার কথা।');
+        $this->assertGreaterThan(0, $waiting->query('.//*[contains(concat(" ", @class, " "), " toolbar-view ")]', $bar)->length,
+            '⛔ অপেক্ষার ট্যাবে অন্য তালিকার টুলবার নেই — পুরনো আলাদা বাক্স।');
+        foreach (['q', 'sort', 'module', 'amount'] as $name) {
+            $this->assertGreaterThan(0, $waiting->query('.//*[@name="'.$name.'"]', $bar)->length, "⛔ টুলবারে \"{$name}\" ঘর নেই।");
+        }
     }
 
     public function test_what_i_sent_is_the_same_list(): void
     {
         $open = $this->ask('450');
 
-        $page = $this->xpath($this->actingAs($this->owner)->get(route('approval.inbox.index', ['tab' => 'sent']))->assertOk()->getContent());
+        $response = $this->actingAs($this->owner)->get(route('approval.inbox.index', ['tab' => 'sent']));
+        // ⓘ ধাপ একটা জোড়া (কততম, কয়টার) — সোজা ছাপলে পাতা ৫০০ (Mac, ৭ নভেম্বর ২০২৬)
+        $this->assertSame(200, $response->status(), '⛔ "আমার পাঠানো" খোলে না — একটা ঘর লেখা নয়, জোড়া ছাপছে (ধাপ?)।');
+        $page = $this->xpath($response->getContent());
         $list = $page->query('//*[@data-inbox-history="sent"]')->item(0);
         $this->assertNotNull($list, '⛔ "আমার পাঠানো" এখনো ইনবক্সের মতো — পুরো চওড়া তালিকা নেই।');
         $this->assertSame(1, $page->query('.//a[@data-history-open][@href="'.route('approval.inbox.show', $open->id).'"]', $list)->length,
             '⛔ আমার পাঠানো অনুরোধটা তালিকায় নেই।');
+        $this->assertStringContainsString(__('approval::field.step_at', ['at' => 1, 'of' => 1]), (string) $list->textContent,
+            '⛔ পাঠানো অনুরোধ কোন ধাপে আছে, সারিতে লেখা নেই।');
     }
 
     private function ask(string $amount): Approval

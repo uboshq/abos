@@ -80,101 +80,93 @@
     @if (in_array($tab, ['sent', 'done'], true))
         @include('approval::inbox.partials.history')
     @else
+    {{-- ⭐ অপেক্ষার ট্যাবেও অন্য সব তালিকার একই এক সারির টুলবার — পুরো চওড়ায়, তালিকা আর কাগজের উপরে (মালিক, ৭ নভেম্বর ২০২৬,
+         নমুনা ৪ "ok"): + ছাঁকনি · খুঁজুন · সাজাও · ঘনত্ব · কলাম · রপ্তানি · শেয়ার · প্রিন্ট · নতুন করে আনো।
+         ⓘ কাজ, দেরি, শাখা, অঙ্ক আর কার ইনবক্স "+ ছাঁকনি"-র ভেতরে; ঠিকানার নাম আগের মতোই (module, late, branch, amount, person, q, sort)।
+         ⛔ আগে বাঁয়ের তালিকার মাথায় চিপ, তিনটা ড্রপডাউন আর খোঁজার আলাদা বাক্স — অন্য কোনো তালিকায় এমন নেই। --}}
+    @php
+        $inboxSorts = collect(\App\Modules\Approval\Http\Controllers\ApprovalInboxController::SORTS)
+            ->mapWithKeys(fn ($key) => [$key => __('approval::field.sort_'.$key)])->all();
+        $bandNames = collect(array_keys(\App\Modules\Approval\Http\Controllers\ApprovalInboxController::AMOUNT_BANDS))
+            ->mapWithKeys(fn ($key) => [$key => __('approval::field.band_'.$key)])->all();
+        $field = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
+    @endphp
+    <form method="GET" action="{{ route('approval.inbox.index') }}" data-inbox-filters
+          class="mb-3 block overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        @if ($tab !== 'waiting')
+            <input type="hidden" name="tab" value="{{ $tab }}">
+        @endif
+
+        {{-- ⓘ শিরোনাম নেই — ঠিক উপরে ট্যাবের নামই সেটা বলে; দুবার লিখলে তালিকা এক সারি নিচে নামে --}}
+        <x-ui.toolbar :quiet="['tab', 'open']"
+            :search-placeholder="__('approval::field.search_hint')"
+            :sort="$inboxSorts"
+            :filter-labels="[
+                'module' => __('approval::field.work'),
+                'late' => __('approval::field.late'),
+                'branch' => __('approval::field.branch'),
+                'amount' => __('approval::field.amount_band'),
+                'person' => __('approval::field.whose_inbox'),
+            ]"
+            :filter-values="[
+                'module' => collect($modules)->map(fn ($one) => $one['label'])->all(),
+                'late' => ['1' => __('approval::field.late')],
+                'branch' => collect($branches)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+                'amount' => $bandNames,
+                'person' => collect($signers)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+            ]">
+            {{-- ⓘ কাজ — সংখ্যাসহ, সংখ্যা সবসময় পুরো (ছাঁকা) তালিকার --}}
+            <select name="module" aria-label="{{ __('approval::field.work') }}" data-action="submit-form" class="{{ $field }}">
+                <option value="">{{ __('approval::field.all_work') }} ({{ $total }})</option>
+                @foreach ($modules as $code => $one)
+                    <option value="{{ $code }}" @selected($selected === $code)>{{ $one['label'] }} ({{ $one['count'] }})</option>
+                @endforeach
+            </select>
+
+            {{-- ⓘ দেরি — সংখ্যা শূন্য হলে ঘরটাই নেই, যদি না এখনই বাছা থাকে --}}
+            @if ($lateCount > 0 || $late)
+                <label class="inline-flex items-center gap-1.5 text-sm" data-late-chip>
+                    <input type="checkbox" name="late" value="1" data-action="submit-form" @checked($late)>
+                    {{ __('approval::field.late') }} <span class="num text-(--color-ink-muted)">({{ $lateCount }})</span>
+                </label>
+            @endif
+
+            @if (count($branches) > 1)
+                <select id="inbox-branch" name="branch" aria-label="{{ __('approval::field.branch') }}" data-action="submit-form" class="{{ $field }}">
+                    <option value="">{{ __('approval::field.all_branches') }}</option>
+                    @foreach ($branches as $id => $name)
+                        <option value="{{ $id }}" @selected($branch === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            @endif
+
+            <select id="inbox-amount" name="amount" aria-label="{{ __('approval::field.amount_band') }}" data-action="submit-form" class="{{ $field }}">
+                <option value="">{{ __('approval::field.any_amount') }}</option>
+                @foreach ($bandNames as $key => $name)
+                    <option value="{{ $key }}" @selected($band === $key)>{{ $name }}</option>
+                @endforeach
+            </select>
+
+            {{-- ⓘ কার ইনবক্স — কেবল `approval.report` আছে যাঁর; "সবাই" বিকল্প নেই, সেটা রিপোর্টের প্রশ্ন --}}
+            @if (count($signers) > 1)
+                <select id="person" name="person" aria-label="{{ __('approval::field.whose_inbox') }}" data-action="submit-form" class="{{ $field }}">
+                    <option value="">{{ __('approval::field.my_inbox') }}</option>
+                    @foreach ($signers as $id => $name)
+                        <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            @elseif ($person)
+                <input type="hidden" name="person" value="{{ $person }}">
+            @endif
+
+            <noscript><button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button></noscript>
+        </x-ui.toolbar>
+    </form>
+
     <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
 
-        {{-- ── বাঁয়ে: ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
+        {{-- ── বাঁয়ে: কার্ড, মোট ────────────────────────────────── --}}
         <div @class(['min-w-0', 'max-lg:hidden' => $picked]) data-inbox-list>
-
-            <form method="GET" action="{{ route('approval.inbox.index') }}" class="mb-3 space-y-2" data-inbox-filters>
-                @foreach ($keep as $name => $value)
-                    <input type="hidden" name="{{ $name }}" value="{{ $value }}">
-                @endforeach
-                @if ($selected !== '')
-                    <input type="hidden" name="module" value="{{ $selected }}">
-                @endif
-                @if ($late)
-                    <input type="hidden" name="late" value="1">
-                @endif
-
-                {{-- ⭐ কাজের চিপ, সংখ্যাসহ — §২.২; ⓘ যেখানে কিছু নেই সেই চিপ আঁকা হয় না, চিপের সংখ্যা সবসময় পুরো (ছাঁকা) তালিকার --}}
-                <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="{{ __('approval::field.module') }}">
-                    @php
-                        $chip = 'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-(--color-surface-hover)';
-                        $on = 'border-(--color-brand-500) bg-(--color-surface-selected) text-(--color-ink)';
-                        $off = 'border-(--color-border) bg-(--color-surface-card) text-(--color-ink-body)';
-                    @endphp
-
-                    <a href="{{ route('approval.inbox.index', $filterKeep) }}" @class([$chip, $selected === '' ? $on : $off])
-                       @if ($selected === '') aria-current="true" @endif>
-                        {{ __('approval::field.all_work') }} <span class="num text-(--color-ink-muted)">{{ $total }}</span>
-                    </a>
-
-                    @foreach ($modules as $code => $one)
-                        <a href="{{ route('approval.inbox.index', $filterKeep + ['module' => $code]) }}"
-                           @class([$chip, $selected === $code ? $on : $off])
-                           @if ($selected === $code) aria-current="true" @endif>
-                            {{ $one['label'] }} <span class="num text-(--color-ink-muted)">{{ $one['count'] }}</span>
-                        </a>
-                    @endforeach
-
-                    {{-- ⭐ দেরির চিপ — সংখ্যা শূন্য হলে চিপটাই নেই ("দেরি ০" চেপে খালি তালিকা পাওয়ার চেয়ে খারাপ কিছু নেই) --}}
-                    @if ($lateCount > 0)
-                        <a href="{{ route('approval.inbox.index', $late ? $filterKeep + array_filter(['module' => $selected ?: null]) : $filterKeep + array_filter(['module' => $selected ?: null]) + ['late' => 1]) }}"
-                           @class([$chip, 'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)' => $late, $off => ! $late])
-                           @if ($late) aria-current="true" @endif data-late-chip>
-                            {{ __('approval::field.late') }} <span class="num">{{ $lateCount }}</span>
-                        </a>
-                    @endif
-                </div>
-
-                {{-- ⭐ শাখা · অঙ্ক · সাজানো — দফা ৩; ⓘ বদলালেই ফর্ম জমা পড়ে (`submit-form`), JS বন্ধ থাকলে নিচের বোতাম --}}
-                <div class="flex flex-wrap items-center gap-1.5">
-                    @php $select = 'h-(--spacing-field-compact) rounded-full border border-(--color-border) bg-(--color-surface-card) px-2.5 text-xs'; @endphp
-
-                    <label class="sr-only" for="inbox-branch">{{ __('approval::field.branch') }}</label>
-                    <select id="inbox-branch" name="branch" data-action="submit-form" class="{{ $select }}">
-                        <option value="">{{ __('approval::field.all_branches') }}</option>
-                        @foreach ($branches as $id => $name)
-                            <option value="{{ $id }}" @selected($branch === $id)>{{ $name }}</option>
-                        @endforeach
-                    </select>
-
-                    <label class="sr-only" for="inbox-amount">{{ __('approval::field.amount_band') }}</label>
-                    <select id="inbox-amount" name="amount" data-action="submit-form" class="{{ $select }}">
-                        <option value="">{{ __('approval::field.any_amount') }}</option>
-                        @foreach (array_keys(\App\Modules\Approval\Http\Controllers\ApprovalInboxController::AMOUNT_BANDS) as $key)
-                            <option value="{{ $key }}" @selected($band === $key)>{{ __('approval::field.band_'.$key) }}</option>
-                        @endforeach
-                    </select>
-
-                    <label class="sr-only" for="inbox-sort">{{ __('approval::field.sort') }}</label>
-                    <select id="inbox-sort" name="sort" data-action="submit-form" class="{{ $select }}">
-                        @foreach (\App\Modules\Approval\Http\Controllers\ApprovalInboxController::SORTS as $key)
-                            <option value="{{ $key }}" @selected($sort === $key)>{{ __('approval::field.sort_'.$key) }}</option>
-                        @endforeach
-                    </select>
-
-                    {{-- ⓘ কার ইনবক্স — কেবল `approval.report` আছে যাঁর; "সবাই" বিকল্প নেই, সেটা রিপোর্টের প্রশ্ন --}}
-                    @if (count($signers) > 1)
-                        <label class="sr-only" for="person">{{ __('approval::field.whose_inbox') }}</label>
-                        <select id="person" name="person" data-action="submit-form" class="{{ $select }}">
-                            <option value="">{{ __('approval::field.my_inbox') }}</option>
-                            @foreach ($signers as $id => $name)
-                                <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    @endif
-
-                    <noscript><button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button></noscript>
-                </div>
-
-                {{-- ⭐ খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ ([[ApprovalInboxController::searched()]]) --}}
-                <label class="block">
-                    <span class="sr-only">{{ __('approval::field.search_hint') }}</span>
-                    <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ __('approval::field.search_hint') }}"
-                           class="h-(--spacing-field-compact) w-full rounded-full border border-(--color-border) bg-(--color-surface-card) px-3 text-xs">
-                </label>
-            </form>
 
             <form method="GET" action="{{ route('approval.inbox.bulk_review') }}" id="bulk-form">
                 @if ($rows->isEmpty())

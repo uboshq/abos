@@ -62,7 +62,10 @@
             'render' => fn ($a) => $a->requester?->name ?? '—'];
     } else {
         $columns[] = ['key' => 'step', 'label' => __('approval::field.step'), 'width' => '8rem',
-            'render' => fn ($a) => $steps[$a->id] ?? '—'];
+            // ⓘ ধাপ একটা জোড়া (কততম, কয়টার) — কার্ডের একই লেখা; ⛔ জোড়াটা সোজা ছাপলে "Array to string" — পাতা ৫০০ (Mac, ৭ নভেম্বর)
+            'render' => fn ($a) => isset($steps[$a->id])
+                ? __('approval::field.step_at', ['at' => $steps[$a->id]['at'], 'of' => $steps[$a->id]['of']])
+                : '—'];
     }
 
     $grand = ['amount' => $sumAll];
