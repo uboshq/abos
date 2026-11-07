@@ -20,9 +20,11 @@ use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\PaymentProposalService;
+use App\Modules\Purchase\Services\PaymentService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -157,6 +159,20 @@ final class AProposalIsSignedInOneGoTest extends TestCase
         $this->assertCount(2, $made, 'প্রস্তুতিটাই ভুল — দুই সরবরাহকারীর দুই কাগজ হয়নি।');
         $no = (string) $made[0]->proposal_no;
         $this->assertSame($no, (string) $made[1]->proposal_no, 'প্রস্তুতিটাই ভুল — দুই কাগজ এক প্রস্তাবে নয়।');
+
+        // ⓘ প্রস্তাব খসড়া বানায়; "নিশ্চিত" চাপলে ছক অনুমোদন চায় আর টাকা থামে — চাপেন তৃতীয় একজন (ভা-১৪: চাওয়া হাত সইদাতা নয়)
+        $cashier = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $cashier->companies()->attach($this->company->id, ['is_active' => true]);
+        foreach ($made as $payment) {
+            $this->actingAs($cashier->fresh());
+            try {
+                app(PaymentService::class)->confirm($payment->fresh());
+                $this->fail('প্রস্তুতিটাই ভুল — ছক থাকা সত্ত্বেও অনুমোদন ছাড়াই টাকা গেল।');
+            } catch (ValidationException) {
+                // ⓘ থামল, অনুমোদনের অপেক্ষায়
+            }
+        }
+        $this->actingAs($this->owner);
 
         $waiting = Approval::query()->where('approvable_type', Payment::class)->whereIn('approvable_id', collect($made)->pluck('id'))
             ->where('status', Approval::PENDING)->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->all();
