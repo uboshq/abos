@@ -47,6 +47,7 @@ use Tests\TestCase;
 final class AnAssetLivedAndTheBooksSawOnlyItsBirthAndDeathTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -242,7 +243,7 @@ final class AnAssetLivedAndTheBooksSawOnlyItsBirthAndDeathTest extends TestCase
         foreach ([AccountsSignature::FIXED_ASSET_ADDITION, AccountsSignature::FIXED_ASSET_REPAIR, AccountsSignature::FIXED_ASSET_REVALUE,
             AccountsSignature::FIXED_ASSET_IMPAIR, AccountsSignature::FIXED_ASSET_DISPOSE] as $action) {
             $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE, 'action' => $action, 'is_active' => true]);
-            ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+            ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
         }
 
         // ⓘ অন্য কাগজে বসা মেরামতে টাকা নড়ে না — সইও নয়
@@ -268,7 +269,7 @@ final class AnAssetLivedAndTheBooksSawOnlyItsBirthAndDeathTest extends TestCase
 
             $approval = app(ApprovalEngine::class)->latestFor($event, $action);
             $this->assertSame(Approval::PENDING, $approval?->status, "⛔ {$action}-এর নিজের সই চাওয়া হয়নি।");
-            app(ApprovalEngine::class)->approve($approval, $this->owner);
+            app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
             $this->assertSame(AssetEvent::POSTED, $event->fresh()->status, "⛔ {$action}-এর শেষ সইয়ে কাগজটা খাতায় বসেনি।");
             $this->assertGreaterThan(0, LedgerEntry::query()->where('source_type', 'asset_event')->where('source_id', $event->id)->count());
@@ -278,7 +279,7 @@ final class AnAssetLivedAndTheBooksSawOnlyItsBirthAndDeathTest extends TestCase
 
         $after = $this->assets->dispose($van->fresh(), '0', null, '2026-09-10', FixedAsset::LOST, 'Stolen');
         $this->assertTrue($after->isInService(), '⛔ হারানো সই ছাড়াই খাতা থেকে বেরোল।');
-        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($van, AccountsSignature::FIXED_ASSET_DISPOSE), $this->owner);
+        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($van, AccountsSignature::FIXED_ASSET_DISPOSE), $this->secondSigner());
         $this->assertSame(FixedAsset::LOST, $van->fresh()->status, '⛔ শেষ সইয়ে "হারানো" হিসেবে বেরোয়নি।');
     }
 

@@ -52,6 +52,7 @@ use Tests\TestCase;
 final class AnAssetHadNoClassAndNoPaperTrailTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -209,7 +210,7 @@ final class AnAssetHadNoClassAndNoPaperTrailTest extends TestCase
         $this->actingAs($this->owner);
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::FIXED_ASSET_OPENING, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $result = app(ImportRunner::class)->run('fixed_asset_opening', $this->csv($csv));
         $this->assertSame([], $result['failed'] ?? [], json_encode($result));
@@ -220,7 +221,7 @@ final class AnAssetHadNoClassAndNoPaperTrailTest extends TestCase
 
         $approval = app(ApprovalEngine::class)->latestFor($asset, AccountsSignature::FIXED_ASSET_OPENING);
         $this->assertSame(Approval::PENDING, $approval?->status, '⛔ নিজের সই চাওয়া হয়নি।');
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $asset->refresh();
         $this->assertTrue($asset->isActive());

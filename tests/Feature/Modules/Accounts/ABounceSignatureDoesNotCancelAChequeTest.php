@@ -29,6 +29,7 @@ use Tests\TestCase;
 final class ABounceSignatureDoesNotCancelAChequeTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     public function test_the_two_kinds_are_signed_apart(): void
     {
@@ -41,7 +42,7 @@ final class ABounceSignatureDoesNotCancelAChequeTest extends TestCase
 
         $flow = ApprovalFlow::create(['company_id' => $company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::CHEQUE_BOUNCE, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $cheque = app(ChequeService::class)->create([
             'direction' => Cheque::ISSUED, 'cheque_no' => 'BNC'.random_int(100000, 999999), 'bank_name' => 'Sonali Bank',
@@ -53,7 +54,7 @@ final class ABounceSignatureDoesNotCancelAChequeTest extends TestCase
         $held = app(ChequeService::class)->bounce($cheque, 'ব্যাংক ফেরত দিয়েছে');
         $this->assertNotSame(Cheque::BOUNCED, $held->status, 'প্রস্তুতি — ফেরত সইয়ের অপেক্ষায় থাকার কথা');
         Event::fake([\App\Core\Events\ApprovalDecided::class]);
-        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($cheque, AccountsSignature::CHEQUE_BOUNCE), $owner);
+        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($cheque, AccountsSignature::CHEQUE_BOUNCE), $this->secondSigner());
 
         $after = app(ChequeService::class)->cancel($cheque->fresh(), 'ছিঁড়ে ফেলা হয়েছে');
 

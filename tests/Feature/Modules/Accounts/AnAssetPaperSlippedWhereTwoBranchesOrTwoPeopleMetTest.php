@@ -57,6 +57,7 @@ use Tests\TestCase;
 final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -91,7 +92,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
         $this->showBranch($this->a);
         $this->assertNull(FixedAsset::query()->find($asset->id), 'দৃশ্যটাই বানানো যায়নি — হেডারের শাখায় সম্পদটা দেখা যাচ্ছে');
 
-        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($asset, AccountsSignature::FIXED_ASSET_REGISTER), $this->owner);
+        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($asset, AccountsSignature::FIXED_ASSET_REGISTER), $this->secondSigner());
 
         $this->assertSame(FixedAsset::ACTIVE, FixedAsset::acrossBranches()->find($asset->id)->status,
             '⛔ অন্য শাখা দেখানো অবস্থায় শেষ সই পড়ল, তবু সম্পদ চিরকাল অপেক্ষায়');
@@ -106,7 +107,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
 
         $event = app(AssetEventService::class)->addition($van, $this->addition());
         $this->assertTrue($event->isAwaiting(), 'দৃশ্যটাই বানানো যায়নি');
-        app(ApprovalEngine::class)->reject(app(ApprovalEngine::class)->latestFor($event, AccountsSignature::FIXED_ASSET_ADDITION), $this->owner, 'Not now');
+        app(ApprovalEngine::class)->reject(app(ApprovalEngine::class)->latestFor($event, AccountsSignature::FIXED_ASSET_ADDITION), $this->secondSigner(), 'Not now');
 
         $this->assertSame(AssetEvent::CANCELLED, $event->fresh()->status, '⛔ ফেরত সইয়ের পরেও ঘটনা চিরকাল অপেক্ষায়');
         $this->assertTrue(app(AssetEventService::class)->addition($van->fresh(), $this->addition())->isAwaiting(),
@@ -114,7 +115,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
 
         $this->flow(AccountsSignature::FIXED_ASSET_REGISTER);
         $waiting = $this->bought('Printer', $this->a);
-        app(ApprovalEngine::class)->reject(app(ApprovalEngine::class)->latestFor($waiting, AccountsSignature::FIXED_ASSET_REGISTER), $this->owner, 'No');
+        app(ApprovalEngine::class)->reject(app(ApprovalEngine::class)->latestFor($waiting, AccountsSignature::FIXED_ASSET_REGISTER), $this->secondSigner(), 'No');
         $this->assertNull(FixedAsset::acrossBranches()->find($waiting->id), '⛔ ফেরত নিবন্ধন চিরকাল অপেক্ষায়');
     }
 
@@ -330,7 +331,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
     private function flow(string $action): void
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE, 'action' => $action, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
         $this->app->forgetInstance(ApprovalEngine::class);
     }
 

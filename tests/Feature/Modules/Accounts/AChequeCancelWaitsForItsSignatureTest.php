@@ -35,6 +35,7 @@ use Tests\TestCase;
 final class AChequeCancelWaitsForItsSignatureTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -56,7 +57,7 @@ final class AChequeCancelWaitsForItsSignatureTest extends TestCase
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::CHEQUE_BOUNCE, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $cheque = app(ChequeService::class)->create([
             'direction' => Cheque::ISSUED, 'cheque_no' => 'CXL'.random_int(100000, 999999), 'bank_name' => 'Sonali Bank',
@@ -74,7 +75,7 @@ final class AChequeCancelWaitsForItsSignatureTest extends TestCase
         $this->assertSame(Approval::PENDING, $approval?->status);
 
         Event::fake([ChequeBounced::class]);
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $this->assertSame(Cheque::CANCELLED, $cheque->fresh()->status, '⛔ শেষ সই পড়ল, তবু চেক বাতিল হল না');
         $this->assertSame(0, bccomp($this->issuedLiability(), '0', 4), '⛔ বাতিলের পরেও দেওয়া চেকের দায় রয়ে গেল');

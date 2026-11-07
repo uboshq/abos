@@ -139,6 +139,9 @@ final class AChequeClearsOrBouncesOnlyAfterItsSignatureTest extends TestCase
 
     private function receive(): Cheque
     {
+        // ⓘ চেকটা খাতায় তোলেন হিসাবরক্ষক — অনুমোদনদাতা নিজের তোলা টাকার কাগজে অনুমোদন দেন না (ভা-১৪, ৭ নভেম্বর ২০২৬)
+        $this->actingAs($this->writer);
+
         return app(ChequeService::class)->create([
             'direction' => Cheque::RECEIVED,
             'cheque_no' => 'G1C'.random_int(100000, 999999),

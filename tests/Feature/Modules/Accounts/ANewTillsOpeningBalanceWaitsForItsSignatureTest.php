@@ -28,6 +28,7 @@ use Tests\TestCase;
 final class ANewTillsOpeningBalanceWaitsForItsSignatureTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -49,7 +50,7 @@ final class ANewTillsOpeningBalanceWaitsForItsSignatureTest extends TestCase
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::TILL_OPENING, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $till = $this->open('25000');
 
@@ -59,7 +60,7 @@ final class ANewTillsOpeningBalanceWaitsForItsSignatureTest extends TestCase
         $approval = app(ApprovalEngine::class)->latestFor($till, AccountsSignature::TILL_OPENING);
         $this->assertSame(Approval::PENDING, $approval?->status, 'সই চাওয়াই হয়নি।');
 
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $this->assertSame(0, bccomp($till->fresh()->balance(), '25000', 4), '⛔ শেষ সই পড়ল, তবু খোলা জের খাতায় উঠল না।');
     }
@@ -75,7 +76,7 @@ final class ANewTillsOpeningBalanceWaitsForItsSignatureTest extends TestCase
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::TILL_OPENING, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $till = $this->open('0');
 

@@ -29,6 +29,7 @@ use Tests\TestCase;
 final class AFixedAssetWaitsForItsSignatureTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -68,7 +69,7 @@ final class AFixedAssetWaitsForItsSignatureTest extends TestCase
 
         $approval = app(ApprovalEngine::class)->latestFor($asset->fresh(), AccountsSignature::FIXED_ASSET_REGISTER);
         $this->assertSame(Approval::PENDING, $approval?->status);
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $this->assertTrue($asset->fresh()->isActive(), '⛔ শেষ সই পড়ল, তবু সম্পদ অপেক্ষায়।');
         $this->assertSame(0, bccomp($this->bankCredit(), '100000', 4), '⛔ সইয়ের পরে টাকার উৎস (ব্যাংক) থেকে দাখিলা বসেনি।');
@@ -86,7 +87,7 @@ final class AFixedAssetWaitsForItsSignatureTest extends TestCase
         $this->assertTrue($after->isActive(), '⛔ ছক চালু, অথচ সম্পদ সই ছাড়াই বিক্রি হলো।');
 
         $approval = app(ApprovalEngine::class)->latestFor($asset->fresh(), AccountsSignature::FIXED_ASSET_DISPOSE);
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $sold = $asset->fresh();
         $this->assertSame(FixedAsset::DISPOSED, $sold->status, '⛔ শেষ সই পড়ল, তবু বিক্রি হলো না।');
@@ -108,7 +109,7 @@ final class AFixedAssetWaitsForItsSignatureTest extends TestCase
     private function flowOn(string $action): void
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE, 'action' => $action, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
     }
 
     private function register(): FixedAsset

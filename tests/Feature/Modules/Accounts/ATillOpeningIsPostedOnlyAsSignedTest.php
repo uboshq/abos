@@ -30,6 +30,7 @@ use Tests\TestCase;
 final class ATillOpeningIsPostedOnlyAsSignedTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private Company $company;
 
@@ -48,7 +49,7 @@ final class ATillOpeningIsPostedOnlyAsSignedTest extends TestCase
 
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::TILL_OPENING, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
     }
 
     public function test_the_holder_cannot_change_while_the_opening_waits(): void
@@ -74,7 +75,7 @@ final class ATillOpeningIsPostedOnlyAsSignedTest extends TestCase
         // ⓘ কোনো পথে খাতের খোলার অঙ্ক বদলে গেছে
         DB::table('accounts')->where('id', $till->account_id)->update(['opening_balance' => '90000']);
 
-        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($till, AccountsSignature::TILL_OPENING), $this->owner);
+        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($till, AccountsSignature::TILL_OPENING), $this->secondSigner());
 
         $this->assertSame(0, bccomp($till->fresh()->balance(), '0', 4), '⛔ ২৫,০০০-এর সই ৯০,০০০ খাতায় তুলল।');
         $this->assertTrue(DB::table('notifications')->where('type', SignedPaperFinisher::NOTICE)->exists(),

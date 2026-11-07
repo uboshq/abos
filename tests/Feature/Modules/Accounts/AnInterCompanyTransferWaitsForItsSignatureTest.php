@@ -30,6 +30,7 @@ final class AnInterCompanyTransferWaitsForItsSignatureTest extends TestCase
 {
     use PutsMoneyInTheTill;
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private User $owner;
 
@@ -57,7 +58,7 @@ final class AnInterCompanyTransferWaitsForItsSignatureTest extends TestCase
     {
         $flow = ApprovalFlow::create(['company_id' => $this->alpha->id, 'module' => AccountsSignature::MODULE,
             'action' => AccountsSignature::INTER_COMPANY, 'is_active' => true]);
-        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
 
         $transfer = $this->record();
 
@@ -68,7 +69,7 @@ final class AnInterCompanyTransferWaitsForItsSignatureTest extends TestCase
         $approval = app(ApprovalEngine::class)->latestFor($transfer->fresh(), AccountsSignature::INTER_COMPANY);
         $this->assertSame(Approval::PENDING, $approval?->status, 'সই চাওয়াই হয়নি।');
 
-        app(ApprovalEngine::class)->approve($approval, $this->owner);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         $this->assertSame(DocumentStatus::CONFIRMED, $transfer->fresh()->status, '⛔ শেষ সই পড়ল, তবু লেনদেন খসড়া।');
         $this->assertTrue($this->posted($this->alpha, (int) $transfer->out_voucher_id), '⛔ সইয়ের পরেও দেওয়ার খাতায় বসেনি।');
