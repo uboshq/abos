@@ -85,7 +85,9 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $before = (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY));
 
         $this->actingAs($this->owner)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => (string) ((int) $before + 100)]]);
-        $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->firstOrFail();
+        $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->first();
+        // ⓘ নিজের বার্তায় থামা — খোঁজ-না-পাওয়ার সাধারণ ত্রুটিতে নয় (Mac, ৭ নভেম্বর ২০২৬: C1 ঐ ত্রুটিতে মরছিল)
+        $this->assertNotNull($change, '⛔ সেটিংসের পাতা থেকে জরুরি সেটিং অপেক্ষায় গেল না — এক হাতেই বসল বা হারাল।');
 
         $this->actingAs($second)->post(route('system_admin.setting-change.reject', $change->public_id), ['note' => 'না'])->assertRedirect();
 
