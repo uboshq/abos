@@ -203,8 +203,9 @@ final class TheInboxFitsAPhoneTest extends TestCase
     {
         $page = $this->xpath($this->actingAs($this->owner)->get(route('approval.flow.index'))->assertOk()->getContent());
 
-        $count = $page->query('//*[@data-record-count]')->item(0);
-        $this->assertInstanceOf(DOMElement::class, $count, 'প্রস্তুতিটাই ভুল — নিয়মের পাতায় উপশিরোনাম নেই।');
+        // ⓘ ৭ নভেম্বর ২০২৬ থেকে নিয়মের সংখ্যার বাক্য রঙিন পট্টিতে ([[x-money.page]], মালিকের নমুনা) — নিয়ম একই: ফোনে ভাঙে
+        $count = $page->query('//*[@data-money-hero]//*[@data-hero-count]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $count, 'প্রস্তুতিটাই ভুল — নিয়মের পাতার পট্টিতে সংখ্যার বাক্য নেই।');
         $classes = preg_split('/\s+/', trim($count->getAttribute('class'))) ?: [];
         $this->assertNotContains('shrink-0', $classes, '⛔ দফা ২১: উপশিরোনামের বাক্য ভাঙে না — ফোনে পুরো পাতা পাশে সরে।');
         $this->assertContains('min-w-0', $classes, '⛔ দফা ২১: উপশিরোনামের বাক্য তার সারির চেয়ে চওড়া থাকে।');

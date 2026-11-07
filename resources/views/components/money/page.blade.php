@@ -18,7 +18,8 @@
         <h1 class="text-lg leading-tight font-bold">{{ $title }}</h1>
 
         @if ($count)
-            <span data-hero-count class="text-sm font-medium opacity-90">{{ $count }}</span>
+            {{-- ⓘ min-w-0 — লম্বা বাক্য ফোনে ভাঙে, পাতা পাশে সরে না (দফা ২১, [[TheInboxFitsAPhoneTest]]) --}}
+            <span data-hero-count class="min-w-0 text-sm font-medium opacity-90">{{ $count }}</span>
         @endif
 
         @isset($actions)
