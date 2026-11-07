@@ -97,16 +97,16 @@ final class AProposalIsSignedInOneGoTest extends TestCase
         // ⓘ দেখার পরে একটা কাগজ আলাদা সই পেল — তালিকা বদলেছে
         app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve(Approval::query()->findOrFail($waiting[0]), $this->owner);
 
-        $this->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids, 'total' => $total])
-            ->assertRedirect()->assertSessionHasErrors('ids');
+        $this->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids, 'total' => $total]);
         $this->assertSame(Approval::PENDING, Approval::query()->findOrFail($waiting[1])->status,
-            '⛔ দেখা তালিকা বদলে যাওয়ার পরেও বাকি কাগজে সই বসল।');
+            '⛔ দেখা তালিকা বদলে যাওয়ার পরেও বাকি কাগজে অনুমোদন বসল।');
+        $this->assertTrue(session()->has('errors'), '⛔ তালিকা বদলেছে, অথচ "আবার দেখুন" বলা হলো না।');
 
         // ⓘ মোট বদলে পাঠালেও (হাতে বানানো অনুরোধ) কিছুই নয়
         [$ids2] = $this->form($no);
-        $this->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids2, 'total' => '1'])
-            ->assertRedirect()->assertSessionHasErrors('ids');
-        $this->assertSame(Approval::PENDING, Approval::query()->findOrFail($waiting[1])->status, '⛔ ভুল মোটেও সই বসল।');
+        $this->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids2, 'total' => '1']);
+        $this->assertSame(Approval::PENDING, Approval::query()->findOrFail($waiting[1])->status, '⛔ ভুল মোটেও অনুমোদন বসল।');
+        $this->assertTrue(session()->has('errors'), '⛔ মোট মেলেনি, অথচ "আবার দেখুন" বলা হলো না।');
     }
 
     public function test_the_inbox_still_keeps_money_papers_out_of_its_bulk_signature(): void
@@ -125,16 +125,18 @@ final class AProposalIsSignedInOneGoTest extends TestCase
 
         // ⓘ হিসাবরক্ষক এই ছকে সইদাতা নন — পাতা দেখলেও বোতাম তাঁর নয়, আর হাতে পাঠালে কিছুই বসে না
         $viewer = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
-        $page = $this->actingAs($viewer)->get(route('purchase.payment_schedule.proposal', $no));
+        // ⓘ পাতা দেখার চাবি নিশ্চিত — নইলে ৪০৩-এ থেমে দাবিটা বোতাম মাপতই না (Mac, ৭ নভেম্বর ২০২৬: SA3 বেঁচে ছিল)
+        \App\Core\Support\CompanyContext::forCompany($this->company->id,
+            fn () => $viewer->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('purchase.payment.view', 'web')));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
-        if ($page->status() === 200) {
-            $this->assertStringNotContainsString('data-proposal-sign-all', (string) $page->getContent(),
-                '⛔ যিনি সইদাতা নন, তিনিও "এক সইয়ে সবগুলো" বোতাম পেলেন।');
-        } else {
-            $this->assertSame(403, $page->status(), '⛔ পাতাটা অচেনা কারণে খুলল না: '.$page->status());
-        }
+        $page = $this->actingAs($viewer->fresh())->get(route('purchase.payment_schedule.proposal', $no));
+        $this->assertSame(200, $page->status(), 'প্রস্তুতিটাই ভুল — হিসাবরক্ষক প্রস্তাবের পাতা দেখতে পেলেন না।');
+        $this->assertStringNotContainsString('data-proposal-sign-all', (string) $page->getContent(),
+            '⛔ যিনি অনুমোদনদাতা নন, তিনিও "সবগুলো একসাথে" বোতাম পেলেন।');
 
-        $this->actingAs($viewer)->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids, 'total' => $total]);
+        $answer = $this->actingAs($viewer->fresh())->post(route('purchase.payment_schedule.sign_all', $no), ['ids' => $ids, 'total' => $total]);
+        $this->assertSame(302, $answer->status(), '⛔ অনুমোদনদাতা নন — কারণ বলা ফেরতের বদলে পাতা ভাঙল ('.$answer->status().')।');
         foreach ($waiting as $id) {
             $this->assertSame(Approval::PENDING, Approval::query()->findOrFail($id)->status, '⛔ সইদাতা নন, অথচ এক সইয়ে সব বসল।');
         }
