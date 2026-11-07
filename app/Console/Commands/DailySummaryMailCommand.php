@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Services\SettingsService;
 use App\Models\User;
 use App\Modules\Executive\Notifications\DailySummaryMail;
 use App\Modules\Executive\Services\CompanyLens;
@@ -38,18 +39,20 @@ final class DailySummaryMailCommand extends Command
             return self::SUCCESS;
         }
 
-        $to = $this->recipients($owner);
-
-        if ($to === []) {
-            $this->info('কোনো ইমেইল ঠিকানা নেই — কিছু পাঠানো হলো না।');
-
-            return self::SUCCESS;
-        }
-
         $day = Carbon::parse((string) ($this->option('date') ?: Carbon::today(config('app.timezone'))->toDateString()))->startOfDay();
         $sent = 0;
 
         foreach ($lens->companies($owner) as $company) {
+            // ⓘ কোম্পানির নিজের সুইচ আর ঠিকানা (Control Panel → সাধারণ; executive.daily_mail_*)
+            [$on, $to] = $lens->within($owner, $company['id'], null, fn () => [
+                (bool) app(SettingsService::class)->get('executive.daily_mail_enabled', true),
+                $this->recipients($owner, (string) app(SettingsService::class)->get('executive.daily_mail_to', '')),
+            ]);
+
+            if (! $on || $to === []) {
+                continue;
+            }
+
             [$data, $pdf] = $lens->within($owner, $company['id'], null, fn () => [
                 $data = $summary->for($day),
                 $print->render(template: 'executive::print.daily-summary', data: ['s' => $data], paper: PaperSize::A4_LANDSCAPE, scale: 100),
@@ -63,15 +66,15 @@ final class DailySummaryMailCommand extends Command
             $sent++;
         }
 
-        $this->info(count($to).'টি ঠিকানায় '.$sent.'টি কোম্পানির প্রতিদিনের সারাংশ পাঠানো হলো।');
+        $this->info($sent.'টি কোম্পানির প্রতিদিনের সারাংশ পাঠানো হলো।');
 
         return self::SUCCESS;
     }
 
     /** @return list<string> */
-    private function recipients(User $owner): array
+    private function recipients(User $owner, string $company = ''): array
     {
-        foreach ([config('abos.executive.daily_mail_to'), config('abos.executive.mail_to'), $owner->email] as $list) {
+        foreach ([$company, config('abos.executive.daily_mail_to'), config('abos.executive.mail_to'), $owner->email] as $list) {
             $to = array_values(array_filter(array_map('trim', explode(',', (string) $list))));
 
             if ($to !== []) {

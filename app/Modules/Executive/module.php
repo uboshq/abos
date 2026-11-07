@@ -88,6 +88,29 @@ return [
         ExecutiveReports::class,
     ],
 
+    /*
+     * ⭐ প্রতিদিনের সারাংশের রাতের ইমেইল — কোম্পানি ধরে চালু/বন্ধ আর কার কাছে (মালিক, ৭ নভেম্বর ২০২৬, ইমেইলের নমুনা "ok";
+     * [[DailySummaryMailCommand]])। ⓘ ঠিকানা খালি হলে .env-এর ঠিকানা, তা-ও না থাকলে মালিকের লগইনের ইমেইল।
+     */
+    'settings' => [
+        [
+            'key' => 'executive.daily_mail_enabled',
+            'super_admin_only' => true,
+            'label' => 'executive::settings.daily_mail_enabled',
+            'type' => 'bool',
+            'default' => true,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'executive.daily_mail_to',
+            'super_admin_only' => true,
+            'label' => 'executive::settings.daily_mail_to',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'general',
+        ],
+    ],
+
     // ⭐ ফোনের হোম-স্ক্রিনে মালিকের পূর্ণ-পর্দা উইজেট (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
     'phone_widgets' => [
         \App\Modules\Executive\Widgets\OwnerBoardSummary::class,

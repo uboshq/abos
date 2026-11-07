@@ -113,6 +113,28 @@ final class TheDailySummaryTellsTheDayTest extends TestCase
         });
     }
 
+    public function test_each_company_chooses_whether_and_to_whom(): void
+    {
+        Notification::fake();
+        config(['abos.executive.daily_mail_to' => 'boss@example.test', 'abos.executive.mail_as' => $this->owner->id]);
+        $companies = count(app(\App\Modules\Executive\Services\CompanyLens::class)->companies($this->owner));
+        $this->assertGreaterThan(1, $companies, 'দৃশ্যটাই ভুল — মালিকের একটার বেশি কোম্পানি চাই।');
+        $settings = app(\App\Core\Services\SettingsService::class);
+
+        // ⓘ এই কোম্পানির (TDEPOT) নিজের ঠিকানা — বাকিরা .env-এর ঠিকানায়
+        $settings->set('executive.daily_mail_to', 'depot@example.test');
+        $this->artisan('abos:daily-summary-mail')->assertSuccessful();
+        Notification::assertSentOnDemand(DailySummaryMail::class,
+            fn ($mail, $channels, AnonymousNotifiable $to) => ($to->routes['mail'] ?? null) === 'depot@example.test');
+        Notification::assertSentOnDemandTimes(DailySummaryMail::class, $companies);
+
+        Notification::fake();
+        $settings->set('executive.daily_mail_enabled', false);
+        $this->artisan('abos:daily-summary-mail')->assertSuccessful();
+        // ⓘ এক কোম্পানি বন্ধ — একটা ইমেইল কম
+        Notification::assertSentOnDemandTimes(DailySummaryMail::class, $companies - 1);
+    }
+
     private function sell(): void
     {
         $this->post(route('sales.direct.store'), [
