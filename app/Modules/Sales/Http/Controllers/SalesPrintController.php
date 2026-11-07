@@ -147,6 +147,9 @@ class SalesPrintController extends Controller implements HasMiddleware
             ]);
         }
 
+        // ⭐ গাড়ি ভাড়া বসানো বাকি থাকলে বিল ছাপা হয় না (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[FarePayment::owesAnAmount()]])
+        app(\App\Modules\Sales\Services\FarePayment::class)->assertInvoiceFareSet($invoice);
+
         /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
          *

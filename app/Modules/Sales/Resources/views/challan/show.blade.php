@@ -91,6 +91,9 @@
             </dl>
         </section>
 
+        {{-- ⭐ গাড়ি ও ভাড়া — এক জায়গায়, ভাউচারের লিংকসহ (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}
+        @include('sales::challan.partials.vehicle-fare-card', ['challan' => $challan])
+
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">

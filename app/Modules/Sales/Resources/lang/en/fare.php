@@ -54,4 +54,18 @@ return [
     'state_trip_waits' => 'Booked when the truck leaves',
     'challan_on_trip' => 'This challan is on trip :trip, which has its fare recorded. The same truck\'s fare cannot be recorded twice.',
     'trip_challan_has_fare' => 'These challans have their own fare: :documents. With a fare on the trip the same truck would be paid twice. Remove them, or leave the trip fare empty.',
+
+    // The fare is required (owner, 7 Nov 2026, sample "ok")
+    'needs_amount_vehicle' => 'Goods going in our own or a hired vehicle need the fare amount. Without it the bill cannot be printed or confirmed.',
+    'amount_before_bill' => 'Challan :challan has no vehicle fare yet. Enter the fare first, then the bill can be printed and confirmed.',
+    'write_fare' => 'Enter fare',
+    'box_title' => 'Vehicle fare',
+    'box_done' => 'Fare entered. The bill can be printed and confirmed.',
+    'no_fare_customer_vehicle' => 'No fare. The customer\'s own vehicle',
+    'no_fare_no_vehicle' => 'No fare. The customer takes the goods',
+    'no_fare_customer_pays' => 'The customer pays the fare. Nothing in the books',
+    'no_fare_nothing' => 'No fare',
+    'carrier_phone_new' => 'Carrier mobile (type it if not in the list)',
+    'for_paper' => 'For',
+    'trip_label' => 'Trip',
 ];

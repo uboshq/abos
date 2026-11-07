@@ -321,6 +321,9 @@
                   'modes' => ['take_now' => __('sales::field.mode_take_now'), 'pickup_later' => __('sales::field.mode_pickup_later'), 'send_later' => __('sales::field.mode_send_later')],
                   'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
                   'fares' => ['us' => __('sales::field.fare_us'), 'us_add_to_bill' => __('sales::field.fare_us_add_to_bill'), 'customer' => __('sales::field.fare_customer'), 'none' => __('sales::field.fare_none')],
+                  // ⭐ ভাড়ার ঘর না লাগলে এক লাইন (মালিক, ৭ নভেম্বর ২০২৬)
+                  'noFare' => ['customer' => __('sales::fare.no_fare_customer_vehicle'), 'none' => __('sales::fare.no_fare_no_vehicle'),
+                      'customerPays' => __('sales::fare.no_fare_customer_pays'), 'nothing' => __('sales::fare.no_fare_nothing')],
                   'lotOnShelf' => __('sales::field.lot_on_shelf'),
                   'lotFree' => __('sales::field.free_short'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),

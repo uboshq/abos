@@ -309,6 +309,8 @@ export default function directSale({
         deliveryMode: '',
         vehicleOwner: '',
         farePaidBy: '',
+        // ⓘ "রাখুন" চাপা হয়েছে অথচ ভাড়া বাকি — তখন লাল লেখা জ্বলে ([[fareMissing]])
+        fareTried: false,
         // ⓘ ভাড়া কখন আর কোন খাত থেকে — প্যানেলের লুকানো ঘর থেকে বসে ([[seedDriver()]]); আগে প্যানেলের নিজের x-data-তে ছিল
         fareWhen: '',
         fareAccount: '',
@@ -883,6 +885,42 @@ export default function directSale({
             return this.farePaidBy === 'us_add_to_bill' ? (Number(this.transportCost) || 0) : 0;
         },
 
+        /*
+         * ⭐ গাড়ি ভাড়া — মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok"): আমাদের বা ভাড়ার গাড়ি আর ভাড়া আমরা দিলে অঙ্ক বাধ্যতামূলক, অঙ্ক ছাড়া
+         * বিল নিশ্চিত হয় না ([[FarePayment::owesAnAmount()]]-এর একই শর্ত)। ক্রেতার গাড়ি, গাড়ি নেই, ক্রেতা দেবেন বা ভাড়া নেই —
+         * ভাড়ার কোনো ঘরই আসে না ("egulote zegor gulo lagena segulo zate na ase")।
+         */
+        get carriesGoods() {
+            return this.vehicleOwner !== 'customer' && this.vehicleOwner !== 'none';
+        },
+
+        /** ভাড়ার বাক্স খোলে কি না — গাড়ি নিয়ে যায়, আর ভাড়া আমাদের (বা বিলে যোগ) */
+        get fareIsOurs() {
+            return this.carriesGoods && this.farePaidBy !== 'customer' && this.farePaidBy !== 'none';
+        },
+
+        /** অঙ্ক বাকি — কেবল আমাদের বা ভাড়ার গাড়িতে (গাড়ি বাছা না হলে আগের মতো, কিছু চাওয়া হয় না) */
+        get fareMissing() {
+            return (this.vehicleOwner === 'own' || this.vehicleOwner === 'hired')
+                && this.fareIsOurs
+                && ! ((Number(this.transportCost) || 0) > 0);
+        },
+
+        /** অঙ্ক বসানো — সবুজ কেবল তখন (গাড়ি বাছা না হলে বাক্স নিরপেক্ষ, "বসানো হয়েছে" মিথ্যা হত) */
+        get fareSet() {
+            return (Number(this.transportCost) || 0) > 0;
+        },
+
+        /** ভাড়ার ঘর না লাগলে এক লাইনের কারণ */
+        get noFareLine() {
+            if (this.vehicleOwner === 'customer') return String(texts.noFare?.customer ?? '');
+            if (this.vehicleOwner === 'none') return String(texts.noFare?.none ?? '');
+            if (this.farePaidBy === 'customer') return String(texts.noFare?.customerPays ?? '');
+            if (this.farePaidBy === 'none') return String(texts.noFare?.nothing ?? '');
+
+            return '';
+        },
+
         get deliveryModeLabel() {
             return String((texts.modes ?? {})[this.deliveryMode || 'take_now'] ?? '');
         },
@@ -979,8 +1017,8 @@ export default function directSale({
             /* ⛔ সইয়ের অপেক্ষার বিক্রি কেবল দেখা — আগে খসড়ায় ফেরাতে হয় ([[viewOnly]]) */
             if (this.viewOnly) return false;
 
-            /* ⛔ খোলা খসড়া থাকলে দুইটা বোতামই বন্ধ ([[customerHasOpenDraft]]) */
-            return this.lines.length > 0 && this.customerId !== '' && ! this.customerHasOpenDraft;
+            /* ⛔ খোলা খসড়া থাকলে দুইটা বোতামই বন্ধ ([[customerHasOpenDraft]]); ⛔ ভাড়া বাকি থাকলেও ([[fareMissing]]) */
+            return this.lines.length > 0 && this.customerId !== '' && ! this.customerHasOpenDraft && ! this.fareMissing;
         },
 
         /*
@@ -1223,6 +1261,13 @@ export default function directSale({
 
         /** পরিবহনের তথ্য নেওয়া — প্যানেল বন্ধ, বোতামে ছোট সারাংশ। */
         addTransport() {
+            // ⛔ ভাড়া বাকি থাকলে প্যানেল খোলা থাকে — লাল বাক্সটাই কারণ বলে ([[fareMissing]])
+            if (this.fareMissing) {
+                this.fareTried = true;
+
+                return;
+            }
+
             this.transportAdded = true;
             this.panel = '';
         },

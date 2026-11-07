@@ -55,6 +55,9 @@ final class FarePayment
     /** ট্রিপের পরে-দেব ভাড়ার দেনা — ট্রিপের নিজের দাখিলা-নাম */
     public const TRIP_SOURCE = 'shipment:fare';
 
+    /** ভাড়ার অঙ্ক বাধ্যতামূলক যেদিন থেকে ([[owesAnAmount()]]; মালিক, ৭ নভেম্বর ২০২৬) — আগের চালান যেমন ছিল */
+    public const AMOUNT_REQUIRED_FROM = '2026-11-08 00:00:00';
+
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly VoucherApproval $approval,
@@ -396,6 +399,63 @@ final class FarePayment
         }
 
         return $paper instanceof Shipment || ! in_array($paper->fare_paid_by, ['customer', 'none'], true);
+    }
+
+    /**
+     * ⭐ ভাড়া বসানো বাকি — মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok"): *"delivary te coroch ba vara dite hole obosoi ta bosiye inv print
+     * r confm korte hobe"*।
+     *
+     * আমাদের গাড়ি বা ভাড়ার গাড়ি, ভাড়া আমরা দেব (বা বিলে যোগ), অথচ অঙ্ক নেই — তখন বিল ছাপা আর নিশ্চিত হয় না।
+     * ⓘ ক্রেতার গাড়ি, গাড়ি নেই, ক্রেতা দেবেন বা ভাড়া নেই হলে কিছুই লাগে না (মালিক: "gari lagbe na, kreta diben, vara nai —
+     * egulote zegor gulo lagena")। ⓘ চালানটা ভাড়াওয়ালা ট্রিপে থাকলে ট্রাকের ভাড়াই এর ভাড়া — বাকি নয়।
+     * ⛔ আগে: অঙ্ক খালি রাখলেও বিক্রি নিশ্চিত হত, বিল ছাপা হত, আর ভাড়া খাতার বাইরে থেকে যেত।
+     */
+    public function owesAnAmount(DeliveryChallan $challan): bool
+    {
+        // ⓘ নিয়মটা চালু হওয়ার দিন থেকে — পুরনো বিল আবার ছাপতে আটকায় না (তখন অঙ্ক চাওয়া হত না)
+        if ($challan->created_at !== null && $challan->created_at->lt(\Illuminate\Support\Carbon::parse(self::AMOUNT_REQUIRED_FROM))) {
+            return false;
+        }
+
+        if (! in_array($challan->vehicle_owner, ['own', 'hired'], true)) {
+            return false;
+        }
+
+        if (in_array($challan->fare_paid_by, ['customer', 'none'], true)) {
+            return false;
+        }
+
+        $cost = (string) ($challan->transport_cost ?? '0');
+
+        if (is_numeric($cost) && bccomp($cost, '0', 4) > 0) {
+            return false;
+        }
+
+        return $this->faredTripOf($challan) === null;
+    }
+
+    /**
+     * বিলের কোন চালানে ভাড়া বসানো বাকি — প্রথমটা, নয়তো null ([[owesAnAmount()]])।
+     */
+    public function owedOnInvoice(\App\Modules\Sales\Models\SalesInvoice $invoice): ?DeliveryChallan
+    {
+        $invoice->loadMissing('lines.challanLine.challan');
+
+        return $invoice->lines
+            ->map(fn ($line) => $line->challanLine?->challan)
+            ->filter()
+            ->unique('id')
+            ->first(fn (DeliveryChallan $challan) => $this->owesAnAmount($challan));
+    }
+
+    /** ভাড়া বাকি থাকলে বিলের কাজ থামানো — কারণ আর কোথায় লিখবেন ([[owedOnInvoice()]]) */
+    public function assertInvoiceFareSet(\App\Modules\Sales\Models\SalesInvoice $invoice): void
+    {
+        if (($challan = $this->owedOnInvoice($invoice)) !== null) {
+            throw ValidationException::withMessages([
+                'transport_cost' => __('sales::fare.amount_before_bill', ['challan' => $challan->document_no]),
+            ]);
+        }
     }
 
     /** চালানটা কোন চালু, ভাড়াওয়ালা ট্রিপে — থাকলে সেই ট্রিপ */

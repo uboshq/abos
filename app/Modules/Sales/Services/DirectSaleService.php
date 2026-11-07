@@ -2048,6 +2048,8 @@ final class DirectSaleService
              */
             'carrier_id' => ($data['carrier_id'] ?? '') ?: null,
             'carrier_name' => ($data['carrier_name'] ?? '') ?: null,
+            // ⓘ তালিকার বাহকে নম্বর পক্ষের সারিতে — হাতে লেখা নামেরটাই চালানে (মালিক, ৭ নভেম্বর ২০২৬)
+            'carrier_phone' => ($data['carrier_id'] ?? '') ? null : ((trim((string) ($data['carrier_phone'] ?? '')) ?: null)),
             /*
              * ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — ধাপ ৫ ([[TransportRule]])। ⚠️ এখানে, চালানের
              * মাথায় নয়: `DeliveryChallanService::create()` ঘর হাতে বাছে, আর মাথায় দিলে টিকটা
@@ -2096,6 +2098,11 @@ final class DirectSaleService
          * জায়গায় নয় — আগে বানানো খসড়া (সইয়ের অপেক্ষায় থাকা কাউন্টারের বিক্রিও) শেষ হতে আটকায় না, পুরনো কাগজের সম্পাদনাও
          * নয়। ⓘ বাহক থাকলে পুরনো পথ বাহকের নামে ২১১৬-এ দেনা — সিদ্ধান্ত খ-এর সাথে মেলে, তাই চলে।
          */
+        // ⭐ আমাদের বা ভাড়ার গাড়ি, ভাড়া আমরা দেব — অঙ্ক বাধ্যতামূলক (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[FarePayment::owesAnAmount()]])
+        if (app(FarePayment::class)->owesAnAmount($challan->fresh())) {
+            throw ValidationException::withMessages(['transport_cost' => __('sales::fare.needs_amount_vehicle')]);
+        }
+
         if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
             app(FarePayment::class)->stamp($challan->fresh(), $data);
         } elseif (app(FarePayment::class)->isOurs($challan->fresh()) && $challan->fresh()->carrier_id === null) {

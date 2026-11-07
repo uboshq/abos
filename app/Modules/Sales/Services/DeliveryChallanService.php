@@ -175,9 +175,11 @@ final class DeliveryChallanService
                  */
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
+                'carrier_phone' => ($data['carrier_id'] ?? null) ? null : (($data['carrier_phone'] ?? null) ?: null),
                 'transport_cost' => $data['transport_cost'] ?? null,
                 // ⭐ ভাড়া কে দেবে — অফিসের চালানের পর্দাও পাঠায় (মালিক, ৭ অক্টোবর ২০২৬)
                 'fare_paid_by' => $data['fare_paid_by'] ?? null,
+                'vehicle_owner' => $data['vehicle_owner'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -238,9 +240,11 @@ final class DeliveryChallanService
                  */
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
+                'carrier_phone' => ($data['carrier_id'] ?? null) ? null : (($data['carrier_phone'] ?? null) ?: null),
                 'transport_cost' => $data['transport_cost'] ?? null,
                 // ⓘ কেবল পাঠানো হলে — কাউন্টারের খসড়া এই পর্দায় খুললে তার "কে দেবে" চুপচাপ মুছত না
                 'fare_paid_by' => array_key_exists('fare_paid_by', $data) ? $data['fare_paid_by'] : $challan->fare_paid_by,
+                'vehicle_owner' => array_key_exists('vehicle_owner', $data) ? $data['vehicle_owner'] : $challan->vehicle_owner,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
@@ -274,6 +278,11 @@ final class DeliveryChallanService
     private function stampFare(DeliveryChallan $challan, array $data): void
     {
         $fares = app(FarePayment::class);
+
+        // ⭐ আমাদের বা ভাড়ার গাড়ি, ভাড়া আমরা দেব — অঙ্ক বাধ্যতামূলক (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[FarePayment::owesAnAmount()]])
+        if ($fares->owesAnAmount($challan->fresh())) {
+            throw ValidationException::withMessages(['transport_cost' => __('sales::fare.needs_amount_vehicle')]);
+        }
 
         if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
             $fares->stamp($challan->fresh(), $data);

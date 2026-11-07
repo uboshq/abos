@@ -72,6 +72,13 @@
             <input type="hidden" name="vehicle_owner" value="{{ old('vehicle_owner', $resume['fields']['vehicle_owner'] ?? '') }}"
                    x-init="seedDriver($el, 'vehicleOwner')" :value="vehicleOwner">
         </div>
+
+        {{-- ⭐ ভাড়ার ঘর না লাগলে কেবল এক লাইন — মালিক, ৭ নভেম্বর ২০২৬: "gari lagbe na, kreta diben, vara nai — egulote zegor
+             gulo lagena segulo zate na ase" ([[noFareLine]]) --}}
+        <p class="sm:col-span-3 flex items-center gap-2 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-xs font-semibold text-(--color-ink-muted)"
+           x-show="noFareLine !== ''" x-cloak data-no-fare-line>
+            <span aria-hidden="true">🚫</span><span x-text="noFareLine"></span>
+        </p>
         {{--
             ── বাহক — তালিকা থেকে, নয়তো হাতে লেখা ──────────────────────
 
@@ -90,7 +97,7 @@
 
             ⓘ পণ্যের ব্র্যান্ডেও হুবহু এই জোড়াটাই আছে: বাছাই + মুক্ত লেখা।
         --}}
-        <div class="space-y-1">
+        <div class="space-y-1" x-show="carriesGoods">
             <label class="block" x-show="carriers.length > 0" x-cloak>
                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.carrier') }}</span>
                 <select name="carrier_id" x-model="carrierId"
@@ -114,24 +121,24 @@
             </label>
         </div>
 
-        {{-- ⓘ বাহকের নম্বর পক্ষের খাতা থেকে — দেখানোর জন্য; ⚠️ `name` নেই, কারণ
-             নম্বরটা পক্ষের সারিতেই থাকে, চালানে দ্বিতীয় কপি রাখলে কোনটা সত্যি সেই প্রশ্ন উঠত। --}}
-        <label class="block">
+        {{-- ⓘ বাহকের নম্বর — তালিকার বাহকে পক্ষের খাতা থেকে, কেবল দেখানো (দ্বিতীয় কপি নয়)।
+             ⭐ তালিকায় না থাকা নামে লেখা যায়, চালানে জমা হয় (মালিক, ৭ নভেম্বর ২০২৬: ঘরটা ধূসর, লেখা যেত না) --}}
+        <label class="block" x-show="carriesGoods && carriers.length > 0 && carrierId !== ''">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.carrier_phone') }}</span>
             <input type="text" readonly tabindex="-1" :value="carrierPhone"
                    class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-app) px-2 text-2xs text-(--color-ink-muted)">
         </label>
-
-        <label class="block">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.transport_cost') }}</span>
-            <input type="number" step="0.01" min="0" name="transport_cost" value="{{ old('transport_cost', $resume['fields']['transport_cost'] ?? '') }}"
-                   x-model="transportCost" x-init="seedDriver($el, 'transportCost')"
+        <label class="block" x-show="carriesGoods && (carriers.length === 0 || carrierId === '')" x-cloak>
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.carrier_phone_new') }}</span>
+            <input type="text" inputmode="tel" name="carrier_phone" maxlength="32" data-carrier-phone
+                   value="{{ old('carrier_phone', $resume['fields']['carrier_phone'] ?? '') }}"
+                   :disabled="! (carriers.length === 0 || carrierId === '')"
                    class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-end text-2xs">
+                          bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
-        <label class="block">
+        <label class="block" x-show="carriesGoods">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.vehicle_no') }}</span>
             <input type="text" name="vehicle_no" maxlength="64" value="{{ old('vehicle_no', $resume['fields']['vehicle_no'] ?? '') }}"
                    x-model="vehicleNo" x-init="seedDriver($el, 'vehicleNo')"
@@ -140,7 +147,7 @@
         </label>
 
         {{-- ⓘ চালক — আগের চালান থেকে পরামর্শ, আবার নতুন নাম হাতেও ([[pickDriver()]])। --}}
-        <label class="block">
+        <label class="block" x-show="carriesGoods">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.driver_name') }}</span>
             <input type="text" name="driver_name" maxlength="191" list="direct-sale-drivers" autocomplete="off"
                    value="{{ old('driver_name', $resume['fields']['driver_name'] ?? '') }}"
@@ -154,7 +161,7 @@
             </datalist>
         </label>
 
-        <label class="block">
+        <label class="block" x-show="carriesGoods">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.driver_phone') }}</span>
             <input type="text" inputmode="tel" name="driver_phone" maxlength="32"
                    value="{{ old('driver_phone', $resume['fields']['driver_phone'] ?? '') }}"
@@ -167,7 +174,7 @@
              ⓘ প্যানেল বন্ধ থাকলেও ঘরটা ফর্মের ভিতরে — `x-show` কেবল লুকায়, পাঠানো বন্ধ করে না। --}}
         {{-- ⭐ ভাড়া কে দেবে — চারটা পছন্দ (মালিক, ৪ অক্টোবর ২০২৬, 63-এর মাধ্যমে); সার্ভারে `fare_paid_by` (af)।
              ⓘ "বিলে যোগ" হলে ভাড়াটা বিলের মোটে ওঠে (`freightOnBill`), "ক্রেতা চালককে" হলে মোট বদলায় না। --}}
-        <div class="sm:col-span-3">
+        <div class="sm:col-span-3" x-show="carriesGoods">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.fare_paid_by') }}</span>
             <div class="ds-seg" role="radiogroup">
                 <button type="button" @click="farePaidBy = 'us'" :class="farePaidBy === 'us' ? 'is-on' : ''">{{ __('sales::field.fare_us') }}</button>
@@ -186,7 +193,26 @@
         {{-- ⛔ নিজের x-data নেই — আগে এখানে `get fareByBank() {…}` সহ একটা ছিল, আর CSP-Alpine বস্তুর ভেতরে getter পড়তে
              পারে না, তাই গোটা অংশটা চলতই না ("পরে দেব" বাছা যেত না, TrxID দেখাত না)। ⓘ অবস্থা আর হিসাব এখন কাউন্টারের
              নিজের (`fareWhen`, `fareAccount`, `fareByBank` — direct-sale.js); পুরনো মান লুকানো ঘর থেকে বসে (১০ অক্টোবর ২০২৬)। --}}
-        <div class="sm:col-span-3" x-show="farePaidBy === 'us' || farePaidBy === 'us_add_to_bill'">
+        {{-- ⭐ ভাড়ার বাক্স — আলাদা রঙে, চোখে পড়ার মতো (মালিক, ৭ নভেম্বর ২০২৬: "varar gorta hilite kore daw specil kore"):
+             অঙ্ক বাকি থাকলে লাল আর "বিল প্রিন্ট ও নিশ্চিত হবে না", বসালে সবুজ ([[fareMissing]])। ⓘ অঙ্কের ঘর ভাড়া আমাদের না হলে
+             বন্ধ (`disabled`) — লুকানো ঘরের পুরনো অঙ্ক যেন ক্রেতার গাড়িতে ভাড়া হয়ে না বসে। --}}
+        <div class="sm:col-span-3 grid gap-2 rounded-(--radius-card) border-2 border-s-8 p-3" x-show="fareIsOurs" data-fare-box
+             :class="fareMissing ? 'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg)' : (fareSet ? 'border-(--color-badge-success-ink) bg-(--color-badge-success-bg)' : 'border-(--color-kind-expense) bg-(--color-surface-card)')">
+            <p class="flex items-center gap-2 text-sm font-bold"
+               :class="fareMissing ? 'text-(--color-badge-danger-ink)' : (fareSet ? 'text-(--color-badge-success-ink)' : 'text-(--color-kind-expense-deep)')">
+                <span aria-hidden="true">🚚</span> {{ __('sales::fare.box_title') }} <span class="text-(--color-badge-danger-ink)">*</span>
+            </p>
+            <label class="block max-w-64">
+                <span class="mb-1 block text-xs font-semibold">{{ __('sales::field.transport_cost') }}</span>
+                <input type="number" step="0.01" min="0" name="transport_cost" value="{{ old('transport_cost', $resume['fields']['transport_cost'] ?? '') }}"
+                       x-model="transportCost" x-init="seedDriver($el, 'transportCost')" :disabled="! fareIsOurs" data-fare-amount
+                       class="num h-10 w-full rounded-(--radius-field) border-2 border-(--color-border) bg-(--color-surface-card) px-3 text-end text-lg font-bold">
+            </label>
+            <p class="text-xs font-semibold text-(--color-badge-danger-ink)" x-show="fareMissing" data-fare-missing>⚠️ {{ __('sales::fare.needs_amount_vehicle') }}</p>
+            <p class="text-xs font-semibold text-(--color-badge-success-ink)" x-show="fareSet">✓ {{ __('sales::fare.box_done') }}</p>
+        </div>
+
+        <div class="sm:col-span-3" x-show="fareIsOurs">
             <input type="hidden" value="{{ (string) old('fare_account_id', '') }}" x-init="seedDriver($el, 'fareAccount')">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
             <div class="ds-seg" role="radiogroup">

@@ -277,6 +277,23 @@
                         </dd>
                     </div>
                 @endif
+                {{-- ⭐ গাড়ি ভাড়ার ভাউচার — কোন চালান বা ট্রিপের, চাপলে খোলে (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"); ⛔ আগে নম্বরটা কেবল
+                     বিবরণের লেখায়, চাপলে কিছু খুলত না --}}
+                @php
+                    $forPaper = match ((string) $voucher->against_type) {
+                        'delivery_challan' => ($c = \App\Modules\Sales\Models\DeliveryChallan::query()->find($voucher->against_id))
+                            ? ['label' => __('sales::doc.challan'), 'no' => $c->document_no, 'url' => route('sales.challan.show', $c)] : null,
+                        'shipment' => ($t = \App\Modules\Sales\Models\Shipment::query()->find($voucher->against_id))
+                            ? ['label' => __('sales::fare.trip_label'), 'no' => $t->document_no, 'url' => route('sales.shipment.show', $t)] : null,
+                        default => null,
+                    };
+                @endphp
+                @if ($forPaper !== null)
+                    <div data-voucher-for-paper>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ __('sales::fare.for_paper') }}</dt>
+                        <dd class="text-sm"><a href="{{ $forPaper['url'] }}" class="font-semibold text-(--color-link) hover:underline">{{ $forPaper['label'] }} {{ $forPaper['no'] }} →</a></dd>
+                    </div>
+                @endif
                 @foreach ([
                     'accounts::field.date' => \App\Core\Support\DateFormat::format($voucher->trx_date),
                     'core.company.branch' => $voucher->branch?->name(),
