@@ -43,6 +43,7 @@ use Tests\TestCase;
 final class AHeldSaleFinishedWithAChequeInItTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     protected function setUp(): void
     {
@@ -62,7 +63,7 @@ final class AHeldSaleFinishedWithAChequeInItTest extends TestCase
         $held = $this->hold();
 
         // ⓘ শেষ সই পড়লে আটকে থাকা বিক্রি নিজে শেষ হয় ([[FinishTheHeldSaleOnTheLastSignature]])
-        app(ApprovalEngine::class)->approve($this->pendingFor($held), $this->owner());
+        app(ApprovalEngine::class)->approve($this->pendingFor($held), $this->secondSigner());
 
         $this->assertSame(DocumentStatus::CONFIRMED, $held->fresh()->status, 'নগদের জমা সই পেলে বিক্রি শেষ হওয়ার কথা।');
     }
@@ -83,7 +84,7 @@ final class AHeldSaleFinishedWithAChequeInItTest extends TestCase
 
         // ⓘ দুই দরজাই: শেষ সই (নিজে শেষ করে), আর হাতে "শেষ করুন"
         try {
-            app(ApprovalEngine::class)->approve($this->pendingFor($held), $this->owner());
+            app(ApprovalEngine::class)->approve($this->pendingFor($held), $this->secondSigner());
             app(DirectSaleService::class)->finishHeld($held->fresh());
         } catch (ValidationException $e) {
             $field = array_key_first($e->errors());
@@ -130,7 +131,7 @@ final class AHeldSaleFinishedWithAChequeInItTest extends TestCase
             'threshold_amount' => null,
             'is_active' => true,
         ]);
-        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner()->id]);
+        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->secondSigner()->id]);
         $this->app->forgetInstance(ApprovalEngine::class);
 
         $sale = app(DirectSaleService::class)->complete([

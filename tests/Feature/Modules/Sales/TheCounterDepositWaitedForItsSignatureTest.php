@@ -46,6 +46,7 @@ use Tests\TestCase;
 final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasASecondSigner;
 
     private User $user;
 
@@ -167,7 +168,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
         $approval = Approval::query()->where('approvable_id', $voucher->id)
             ->where('action', VoucherApproval::COUNTER_DEPOSIT)->firstOrFail();
 
-        app(ApprovalEngine::class)->approve($approval, $this->user);
+        app(ApprovalEngine::class)->approve($approval, $this->secondSigner());
 
         /*
          * ⭐ শেষ সইয়েই সব একসাথে — বোতাম আর লাগে না (মালিকের সিদ্ধান্ত ১,
@@ -390,7 +391,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
             'approval_flow_id' => $flow->id,
             'level' => 1,
             'approver_type' => 'user',
-            'approver_id' => $this->user->id,
+            'approver_id' => $this->secondSigner()->id,
         ]);
     }
 
