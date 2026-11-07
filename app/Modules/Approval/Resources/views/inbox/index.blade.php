@@ -75,6 +75,11 @@
         'active' => $tab === $key,
     ])->values()->all()" />
 
+    {{-- ⭐ "আমার পাঠানো" আর "আমি অনুমোদন দিয়েছি" — হিসাবের জায়গা, কাজের নয়: পুরো চওড়া তালিকা, অন্য সব তালিকার একই টুলবার
+         (মালিক, ৭ নভেম্বর ২০২৬, নমুনা ২ "ok"; SAP-এর Approval History)। "অপেক্ষায়" আর "অন্যের হয়ে" আগের মতো বাঁয়ে-ডানে। --}}
+    @if (in_array($tab, ['sent', 'done'], true))
+        @include('approval::inbox.partials.history')
+    @else
     <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
 
         {{-- ── বাঁয়ে: ছাঁকনি, কার্ড, মোট ────────────────────────────────── --}}
@@ -250,5 +255,6 @@
             @endif
         </div>
     </div>
+    @endif
     </x-money.page>
 </x-layouts.app>

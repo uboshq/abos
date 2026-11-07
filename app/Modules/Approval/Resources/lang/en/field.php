@@ -146,4 +146,12 @@ return [
     'try_amount' => 'Try it: how much is the paper?',
     'goes_to' => 'This paper goes to',
     'conditions_optional' => 'Conditions (optional)',
+    'history_decided_at' => 'Decided at',
+    'history_sent_at' => 'Sent at',
+    'history_number' => 'Number',
+    'history_my_decision' => 'My decision',
+    'history_where_now' => 'Where it is now',
+    'history_requested_by' => 'Asked by',
+    'history_amount' => 'Amount',
+    'history_empty' => 'Nothing here yet.',
 ];

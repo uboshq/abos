@@ -286,6 +286,15 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $sumPage = Money::sumOf($rows, fn (Approval $a) => (string) ($a->amount ?? '0'));
 
         /*
+         * ⭐ "আমি অনুমোদন দিয়েছি"-র তালিকায় নিজের সিদ্ধান্ত — কখন, কী, কী মন্তব্যে (মালিক, ৭ নভেম্বর ২০২৬, নমুনা ২)। ⓘ পাতার সারিগুলোর
+         * একবারে; একই কাগজে একাধিক ধাপে সিদ্ধান্ত থাকলে শেষেরটা।
+         */
+        $myDecisions = $tab === 'done'
+            ? \App\Models\ApprovalDecision::query()->whereIn('approval_id', $rows->pluck('id'))->where('user_id', $subject->id)
+                ->orderByDesc('decided_at')->orderByDesc('id')->get()->unique('approval_id')->keyBy('approval_id')
+            : collect();
+
+        /*
          * ⭐ ডানের কাগজ — বেছে নেওয়াটা (`?open=`), নাহলে তালিকার প্রথমটা (দফা ১)। ⓘ বেছে নেওয়া কাগজ এই পাতায় না থাকলেও খোলে, যদি
          * পাঠকের দেখার অধিকার থাকে ([[detailFor()]]-এর একই তিন প্রশ্ন); না থাকলে প্রথমটা — খালি ৪০৩ নয়, কারণ ঠিকানাটা ইনবক্সের।
          */
@@ -314,6 +323,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'visibleTotal' => $visibleTotal,
             'sumAll' => $sumAll,
             'sumPage' => $sumPage,
+            'myDecisions' => $myDecisions,
             'labels' => $this->flows->labels(),
             'modules' => $modules,
             'selected' => $selected,

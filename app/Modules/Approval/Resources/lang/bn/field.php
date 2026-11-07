@@ -147,4 +147,13 @@ return [
     'try_amount' => 'পরখ করুন: কত টাকার কাগজ?',
     'goes_to' => 'এই কাগজ যাবে',
     'conditions_optional' => 'শর্ত (ঐচ্ছিক)',
+    // ⭐ "আমি অনুমোদন দিয়েছি" আর "আমার পাঠানো"-র তালিকা (মালিক, ৭ নভেম্বর ২০২৬, নমুনা ২)
+    'history_decided_at' => 'সিদ্ধান্তের সময়',
+    'history_sent_at' => 'পাঠানোর সময়',
+    'history_number' => 'নম্বর',
+    'history_my_decision' => 'আমার সিদ্ধান্ত',
+    'history_where_now' => 'এখন কোথায়',
+    'history_requested_by' => 'চাইলেন',
+    'history_amount' => 'টাকা',
+    'history_empty' => 'এখানে এখনো কিছু নেই।',
 ];
