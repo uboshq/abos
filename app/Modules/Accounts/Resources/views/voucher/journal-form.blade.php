@@ -141,8 +141,10 @@
             </div>
 
             <label class="mt-3 block">
-                <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
-                <input type="text" name="narration" value="{{ old('narration', $voucher->narration) }}"
+                {{-- ⭐ বিবরণ বাধ্যতামূলক হলে লাল তারা — সার্ভারও তাই চায় ([[VoucherRequest]] `accounts.require_narration`; মালিক, ৭ নভেম্বর ২০২৬) --}}
+                @php $narrationRequired = (bool) app(\App\Core\Services\SettingsService::class)->get('accounts.require_narration', true); @endphp
+                <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}@if ($narrationRequired)<span class="text-(--color-danger)" aria-hidden="true"> *</span><span class="sr-only">({{ __('core.form.required') }})</span>@endif</span>
+                <input type="text" name="narration" value="{{ old('narration', $voucher->narration) }}" @if ($narrationRequired) required @endif
                        class="h-(--spacing-field) w-full rounded-(--radius-field) border
                               border-(--color-border) bg-(--color-surface-card) px-3">
             </label>

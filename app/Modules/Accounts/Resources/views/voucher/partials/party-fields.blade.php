@@ -196,10 +196,14 @@
                      ⓘ রং একা কিছু বলে না, তাই লেখাটাও সাথে থাকে। --}}
                 {{-- ⭐ ২৩ অক্টোবর ২০২৬ (fe): চিহ্নটা শব্দে — "-45,000.00" সবুজে দেখে কেউ বুঝত না এটা অগ্রিম। রসিদে "বকেয়া / অগ্রিম /
                      বকেয়া নেই", পরিশোধে "দেনা / অগ্রিম দেওয়া / দেনা নেই"; অঙ্ক কখনো ঋণাত্মক চিহ্নে নয় ([[party-voucher.js]]) --}}
-                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak data-party-due
-                      x-bind:class="dueClass">
-                    <span x-text="dueWord"></span>
-                    <b class="num ms-1" x-show="dueAmount !== ''" x-text="dueAmount"></b>
+                {{-- ⭐ মালিক, ৭ নভেম্বর ২০২৬: "বাকির সীমা … eta upore গ্রাহকের বকেয়া … er bame" — সীমা আর বকেয়া এক সারিতে, ঘরের উপরে --}}
+                <span class="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1" data-party-figures>
+                    <span class="num text-2xs text-(--color-ink-muted)" data-party-credit x-show="creditText !== ''" x-cloak x-text="creditText"></span>
+                    <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak data-party-due
+                          x-bind:class="dueClass">
+                        <span x-text="dueWord"></span>
+                        <b class="num ms-1" x-show="dueAmount !== ''" x-text="dueAmount"></b>
+                    </span>
                 </span>
             </div>
 
@@ -236,8 +240,9 @@
                 BIN/TIN পক্ষের মালিক মডিউলের, Core চুক্তি দিয়ে বকেয়ার একই উত্তরে আসে (হিসাব নিজে গ্রাহক বা সরবরাহকারী পড়ে না; cb-ma-4);
                 পুরনো বাকি খোলা বিলের বয়স থেকে ([[party-voucher.js]])।
             --}}
-            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-party-hint x-show="creditText !== '' || oldestDueText !== '' || taxText !== ''" x-cloak>
-                <span data-party-credit x-text="creditText"></span><span x-show="creditText !== '' && oldestDueText !== ''"> · </span><span data-party-oldest x-text="oldestDueText"></span><span x-show="taxText !== '' && (creditText !== '' || oldestDueText !== '')"> · </span><span data-party-tax x-text="taxText"></span>
+            {{-- ⓘ বাকির সীমা ৭ নভেম্বর থেকে উপরে, বকেয়ার পাশে (`data-party-figures`); এখানে থাকে সবচেয়ে পুরনো বাকি আর BIN/TIN --}}
+            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-party-hint x-show="oldestDueText !== '' || taxText !== ''" x-cloak>
+                <span data-party-oldest x-text="oldestDueText"></span><span x-show="taxText !== '' && oldestDueText !== ''"> · </span><span data-party-tax x-text="taxText"></span>
             </p>
         </div>
 
@@ -249,21 +254,22 @@
         {{-- ⭐ টাকা লাখ-কমায় আর দুই দশমিকে, ডানে ("45,000.00", নকশার মতো) — দেখানোর ঘর আর পাঠানোর ঘর আলাদা, পাঠানো মান কাঁচা
              অঙ্ক (type="money", fe, ২৪ অক্টোবর ২০২৬); সার্ভার তবু কমা ছেঁটে পড়ে ([[VoucherRequest::prepareForValidation()]])।
              ⓘ `?? $voucher->amount` — অর্থের খাতার "টাকা নিন" বোতাম অঙ্কসহ আসে ([[VoucherController::prefill()]], ১৮ সেপ্টেম্বর ২০২৬)। --}}
-        <div>
-            {{-- ⭐ পরিশোধে নকশার "মোট টাকা" — `gross_amount`, পক্ষের খাতা যতটা কমে; নিট (মোট − AIT − VDS) সার্ভার গোনে (পরিশোধে-মোট-টাকা-চুক্তি,
-                 fe-র সিদ্ধান্ত ক, ২৫ অক্টোবর ২০২৬)। ⓘ সম্পাদনায় পক্ষের ডেবিট সারিই মোট; আগাম-ভরা অঙ্কে কাটা নেই, তাই মোট = অঙ্ক --}}
-            <x-ui.field :name="$isReceipt ? 'amount' : 'gross_amount'" type="money" model="amount" required data-voucher-amount
-                        :label="$isReceipt ? __('money.screen.amount_in') : __('money.screen.gross')"
-                        :value="$isReceipt ? old('amount', $typedAmount ?? $voucher->amount) : old('gross_amount', $typedAmount ?? $voucher->amount)" />
-            {{-- ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে (বকেয়া থাকলে, বিল বাছা থাকলে); ঘটনায় ফর্মের টাকায় যায় ([[voucherMoney]] `heardFill`) --}}
+        <div class="relative">
+            {{-- ⭐ নকশার "পুরো বকেয়া · নির্বাচিত বিল" — এক চাপে অঙ্ক বসে (বকেয়া থাকলে, বিল বাছা থাকলে); ঘটনায় ফর্মের টাকায় যায় ([[voucherMoney]] `heardFill`)।
+                 মালিক, ৭ নভেম্বর ২০২৬: "পুরো বকেয়া box er upore dane daw" — টাকার ঘরের উপরে, লেবেলের সারিতে ডানে --}}
             @if ($isReceipt)
-                <p class="mt-1 flex flex-wrap gap-x-2 text-2xs" data-amount-fill>
+                <p class="absolute end-0 top-0 z-10 flex flex-wrap justify-end gap-x-2 text-xs font-medium" data-amount-fill>
                     <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-due
                             x-show="canFillDue" x-cloak x-on:click="fillWholeDue()">{{ __('money.screen.fill.whole_due') }}</button>
                     <button type="button" class="text-(--color-brand-700) hover:underline" data-fill-bill
                             x-show="hasTicked" x-cloak x-on:click="fillPickedBill()">{{ __('money.screen.fill.picked_bill') }}</button>
                 </p>
             @endif
+            {{-- ⭐ পরিশোধে নকশার "মোট টাকা" — `gross_amount`, পক্ষের খাতা যতটা কমে; নিট (মোট − AIT − VDS) সার্ভার গোনে (পরিশোধে-মোট-টাকা-চুক্তি,
+                 fe-র সিদ্ধান্ত ক, ২৫ অক্টোবর ২০২৬)। ⓘ সম্পাদনায় পক্ষের ডেবিট সারিই মোট; আগাম-ভরা অঙ্কে কাটা নেই, তাই মোট = অঙ্ক --}}
+            <x-ui.field :name="$isReceipt ? 'amount' : 'gross_amount'" type="money" model="amount" required data-voucher-amount
+                        :label="$isReceipt ? __('money.screen.amount_in') : __('money.screen.gross')"
+                        :value="$isReceipt ? old('amount', $typedAmount ?? $voucher->amount) : old('gross_amount', $typedAmount ?? $voucher->amount)" />
         </div>
     </div>
 

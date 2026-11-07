@@ -11,6 +11,8 @@
 --}}
 @php
     $isNew = ! $voucher->exists;
+    // ⭐ বিবরণ বাধ্যতামূলক কি না — সেটিং যা বলে সার্ভারও তাই চায় ([[VoucherRequest]] `accounts.require_narration`); চালু থাকলে লাল তারা (মালিক, ৭ নভেম্বর ২০২৬)
+    $narrationRequired = (bool) app(\App\Core\Services\SettingsService::class)->get('accounts.require_narration', true);
     // ⓘ পোস্ট হওয়া ভাউচারের সংশোধন — একই ফর্ম, অন্য দরজা আর কারণের ঘর ([[VoucherController::revise()]])
     $revising ??= false;
 
@@ -795,7 +797,7 @@
 
                     {{-- ⓘ সংযুক্তি মালিকের ছবির মার্ক করা খালি জায়গায় — উৎসে কর্তনের ঠিক নিচে। --}}
 
-                    <x-ui.field name="narration"
+                    <x-ui.field name="narration" :required="$narrationRequired"
                                 :label="__('core.table.narration')"
                                 :value="old('narration', $voucher->narration)" />
 
@@ -866,7 +868,7 @@
                                      :selected="old('carried_by', $voucher->carried_by)"
                                      :placeholder="__('accounts::field.carried_by_none')" />
 
-                        <x-ui.field name="narration"
+                        <x-ui.field name="narration" :required="$narrationRequired"
                                     :label="__('core.table.narration')"
                                     :value="old('narration', $voucher->narration)" />
                     </div>
@@ -920,7 +922,7 @@
                                 :label="__('accounts::field.amount_moved')"
                                 :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric />
 
-                    <x-ui.field name="narration"
+                    <x-ui.field name="narration" :required="$narrationRequired"
                                 :label="__('core.table.narration')"
                                 :value="old('narration', $voucher->narration)" />
 

@@ -25,7 +25,8 @@
             $designation = \App\Core\Support\UserDesignation::of($user);
         @endphp
         <span class="hidden min-w-0 text-end leading-tight lg:block" data-profile-identity>
-            <span class="block max-w-48 truncate text-sm font-semibold text-(--color-topbar-ink)">{{ $user?->name }}</span>
+            {{-- ⭐ মালিক, ৭ নভেম্বর ২০২৬: "user er nam ro bold kore boro kore" — নাম বড় আর মোটা, পদবি নিচে ছোট --}}
+            <span class="block max-w-56 truncate text-base font-bold text-(--color-topbar-ink)" data-profile-name>{{ $user?->name }}</span>
             @if ($designation)
                 <span class="block max-w-48 truncate text-xs" style="color: var(--color-brand-gold-bright)">{{ $designation }}</span>
             @endif

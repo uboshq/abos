@@ -574,11 +574,17 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             '⛔ রসিদের "পোস্টের পরে" লাইন নকশার হুবহু নয়');
     }
 
-    /** ২১ — রসিদের টাকার ঘরের নিচে "পুরো বকেয়া · নির্বাচিত বিল" (নকশা পাতা ২); পরিশোধে নেই (পাতা ৪) — আচরণ party-voucher.test.js-এ */
+    /**
+     * ২১ — রসিদে "পুরো বকেয়া · নির্বাচিত বিল" টাকার ঘরের উপরে, ডানে (মালিক, ৭ নভেম্বর ২০২৬: "পুরো বকেয়া box er upore dane daw";
+     * আগে নকশা পাতা ২-এর মতো নিচে ছিল); পরিশোধে নেই (পাতা ৪) — আচরণ party-voucher.test.js-এ
+     */
     public function test_the_receipt_offers_the_two_quick_fills_under_its_amount(): void
     {
         $receipt = $this->dom($this->screen(Voucher::RECEIPT));
         $fill = $receipt->query('//*[@data-voucher-general]//*[@data-amount-fill]')->item(0);
+        $this->assertNotNull($receipt->query('following-sibling::*//*[@data-voucher-amount] | following-sibling::*[@data-voucher-amount]', $fill)->item(0),
+            '⛔ "পুরো বকেয়া" আবার টাকার ঘরের নিচে — মালিক উপরে চান');
+        $this->assertStringContainsString('end-0', (string) $fill?->getAttribute('class'), '⛔ "পুরো বকেয়া" ডানে নয়');
         $this->assertInstanceOf(DOMElement::class, $fill, '⛔ রসিদের টাকার নিচে এক চাপের অঙ্ক নেই');
         $this->assertSame('fillWholeDue()', $receipt->query('.//button[@data-fill-due]', $fill)->item(0)?->getAttribute('x-on:click'), '⛔ "পুরো বকেয়া" অঙ্ক বসায় না');
         $this->assertSame('fillPickedBill()', $receipt->query('.//button[@data-fill-bill]', $fill)->item(0)?->getAttribute('x-on:click'), '⛔ "নির্বাচিত বিল" অঙ্ক বসায় না');
@@ -622,12 +628,20 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
         $this->assertSame('pending', $answer['payee_bank']['state'] ?? null, '⛔ বকেয়ার উত্তরে প্রাপকের ব্যাংক নেই — পরিশোধে লাইন আসবে না');
     }
 
-    /** ২৫ — পর্দা: পিকারের নিচে বাকির সীমা আর BIN/TIN, পরিশোধে প্রাপকের ব্যাংকের লাইন আর লাল নিয়ম; রসিদে ব্যাংকের লাইন নেই */
+    /**
+     * ২৫ — পর্দা: বাকির সীমা বকেয়ার বাঁয়ে, ঘরের উপরে (মালিক, ৭ নভেম্বর ২০২৬: "বাকির সীমা … eta upore গ্রাহকের বকেয়া … er bame");
+     * পিকারের নিচে BIN/TIN; পরিশোধে প্রাপকের ব্যাংকের লাইন আর লাল নিয়ম; রসিদে ব্যাংকের লাইন নেই
+     */
     public function test_the_screens_show_credit_tax_ids_and_the_payee_bank_where_the_design_puts_them(): void
     {
         $receipt = $this->dom($this->screen(Voucher::RECEIPT));
+        $figures = $receipt->query('//*[@data-party-name-cell]//*[@data-party-figures]')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $figures, '⛔ পক্ষের ঘরের উপরে সীমা-বকেয়ার সারি নেই');
+        $credit = $receipt->query('./*[@data-party-credit]', $figures)->item(0);
+        $this->assertSame('creditText', $credit?->getAttribute('x-text'), '⛔ বাকির সীমা বকেয়ার সারিতে নেই');
+        $this->assertNotNull($receipt->query('following-sibling::*[@data-party-due]', $credit)->item(0), '⛔ বাকির সীমা বকেয়ার বাঁয়ে নয়');
         $hint = $receipt->query('//*[@data-party-name-cell]//*[@data-party-hint]')->item(0);
-        $this->assertSame('creditText', $receipt->query('.//*[@data-party-credit]', $hint)->item(0)?->getAttribute('x-text'), '⛔ রসিদের পিকারের নিচে বাকির সীমা নেই');
+        $this->assertSame(0, $receipt->query('.//*[@data-party-credit]', $hint)->length, '⛔ বাকির সীমা আবার পিকারের নিচে — মালিক উপরে চান');
         $this->assertSame('taxText', $receipt->query('.//*[@data-party-tax]', $hint)->item(0)?->getAttribute('x-text'), '⛔ পিকারের নিচে BIN/TIN নেই');
         $this->assertSame(0, $receipt->query('//*[@data-payee-bank-row]')->length, '⛔ রসিদে প্রাপকের ব্যাংকের লাইন — নকশায় কেবল পরিশোধে');
 
