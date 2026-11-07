@@ -22,6 +22,9 @@ use Spatie\Permission\PermissionRegistrar;
  */
 trait SignsAWaitingSetting
 {
+    /** @var array<int, int> কোম্পানি → দ্বিতীয় হাতের ব্যবহারকারী (এই পরীক্ষার ভিতরেই) */
+    private array $secondHands = [];
+
     /** অপেক্ষার বদলটা আছে আর এখনও বসেনি — তারপর অন্য একজন অনুমোদন দেন; শেষে আগের লোক আবার লগইন থাকেন */
     protected function anotherHandSigns(string $key, Company $company): SettingChange
     {
@@ -32,13 +35,7 @@ trait SignsAWaitingSetting
         $this->assertNotSame((string) $change->new_value, SignedSettings::stored(app(SettingsService::class)->get($key)),
             "⛔ {$key} এক হাতেই বসে গেল।");
 
-        $second = User::factory()->create(['is_active' => true]);
-        $second->companies()->attach($company, ['is_active' => true]);
-        $second->forceFill(['current_company_id' => $company->id, 'current_branch_id' => $company->defaultBranch()?->id])->save();
-        CompanyContext::forCompany($company->id, function () use ($second): void {
-            $second->givePermissionTo(Permission::findOrCreate(SignedSettings::KEY, 'web'));
-        });
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $second = $this->aSecondHandStandsBy($company);
 
         $this->actingAs($second->fresh())->post(route('system_admin.setting-change.sign', $change->public_id))->assertRedirect();
         app(SettingsService::class)->flush();
@@ -48,5 +45,27 @@ trait SignsAWaitingSetting
         }
 
         return $change->fresh();
+    }
+
+    /**
+     * ⓘ সেটিংয়ের অনুমোদনের চাবিওয়ালা দ্বিতীয় একজন — **টেপার আগে** ডাকুন: আর কেউ না থাকলে বদলটা অপেক্ষায়ই যায় না,
+     * সোজা আটকে যায় ([[SignedSettings::propose()]]; Mac, ৭ নভেম্বর ২০২৬)। একবারই বানানো হয়।
+     */
+    protected function aSecondHandStandsBy(Company $company): User
+    {
+        if (isset($this->secondHands[$company->id])) {
+            return User::query()->findOrFail($this->secondHands[$company->id]);
+        }
+
+        $second = User::factory()->create(['is_active' => true]);
+        $second->companies()->attach($company, ['is_active' => true]);
+        $second->forceFill(['current_company_id' => $company->id, 'current_branch_id' => $company->defaultBranch()?->id])->save();
+        CompanyContext::forCompany($company->id, function () use ($second): void {
+            $second->givePermissionTo(Permission::findOrCreate(SignedSettings::KEY, 'web'));
+        });
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->secondHands[$company->id] = (int) $second->id;
+
+        return $second->fresh();
     }
 }

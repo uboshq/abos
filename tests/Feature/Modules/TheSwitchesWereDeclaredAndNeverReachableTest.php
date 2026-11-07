@@ -63,6 +63,9 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
         $this->admin = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+
+        // ⓘ বাকির সুইচ টেপার আগেই অনুমোদনের দ্বিতীয় হাত — নইলে বদলটা অপেক্ষায় না গিয়ে সোজা আটকে যায় (কন্ট্রোল প্যানেল দফা ৭)
+        $this->aSecondHandStandsBy($this->company);
     }
 
     // ── পর্দাটা আছে, আর খোলে ────────────────────────────────────────────
