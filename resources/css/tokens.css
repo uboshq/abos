@@ -1228,6 +1228,9 @@
     --color-kind-custody-deep: #1d4ed8;
     --color-kind-transfer: #0e7490;
     --color-kind-transfer-deep: #155e75;
+    /* ⭐ নিট সম্পদ বিবরণী — মালিকের নিজের পাতা (ড্যা-৮) */
+    --color-kind-networth: #047857;
+    --color-kind-networth-deep: #065f46;
     /* ⭐ হিসাব তালিকা (হিসাবের ছক) — মালিক, ৭ নভেম্বর ২০২৬: "হিসাব তালিকা ti colorfull koro" */
     --color-kind-chart: #0d9488;
     --color-kind-chart-deep: #0f766e;

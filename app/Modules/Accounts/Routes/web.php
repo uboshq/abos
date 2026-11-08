@@ -24,6 +24,7 @@ use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
+use App\Modules\Accounts\Http\Controllers\NetWorthController;
 use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\NotePrintController;
 use App\Modules\Accounts\Http\Controllers\ComplianceObligationController;
@@ -273,6 +274,10 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
+
+    // ⭐ নিট সম্পদ বিবরণী — কেবল মালিক, অন্যদের ৪০৪ ([[NetWorthController]]; মালিক, ২৫ অক্টোবর ২০২৬); catch-all-এর আগে
+    Route::get('/reports/net-worth', [NetWorthController::class, 'show'])
+        ->name('net_worth');
     // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী (IAS 1.106) — স্থিতিপত্রের একই সেবা, একই চাবি; catch-all-এর আগে, একই কারণে
     Route::get('/reports/changes-in-equity', [BalanceSheetController::class, 'equity'])
         ->name('equity_statement');

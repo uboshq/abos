@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Middleware\RefuseModulesOffOnThePhone;
 use App\Http\Middleware\ResolveCompanyContext;
+use App\Modules\Accounts\Http\Controllers\NetWorthApiController;
 use App\Modules\Accounts\Http\Controllers\VoucherApiController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,9 @@ Route::prefix('v1/accounts')
         RefuseModulesOffOnThePhone::class.':accounts',
     ])
     ->group(function (): void {
+        // ⭐ নিট সম্পদ বিবরণী — কেবল মালিক, অন্যদের ৪০৪ ([[NetWorthApiController]]; fe, ২৫ অক্টোবর ২০২৬)
+        Route::get('/net-worth', [NetWorthApiController::class, 'show'])->name('net_worth');
+        Route::get('/net-worth/summary', [NetWorthApiController::class, 'summary'])->name('net_worth.summary');
         Route::get('/vouchers/setup', [VoucherApiController::class, 'setup'])->name('voucher.setup');
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
         // ⭐ পোস্টের আগে খাতার ছবি — কিছুই লেখে না; ওয়েবের simulate-এর একই হিসাব (চুক্তি §৫, a4-এর চাওয়া, ২৫ অক্টোবর ২০২৬)
