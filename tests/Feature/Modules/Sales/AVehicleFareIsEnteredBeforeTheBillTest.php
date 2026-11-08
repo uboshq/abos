@@ -97,7 +97,8 @@ final class AVehicleFareIsEnteredBeforeTheBillTest extends TestCase
 
         $html = (string) $this->get(route('sales.invoice.show', $invoice))->assertOk()->getContent();
         $this->assertStringContainsString('data-vehicle-fare="owed"', $html, '⛔ বিলের পাতায় লাল "গাড়ি ও ভাড়া" নেই — কেন ছাপা আটকে, বোঝা যায় না।');
-        $this->assertStringNotContainsString('href="'.e(route('sales.print.invoice', $invoice)), $html, '⛔ ভাড়া বাকি, তবু বিলের পাতায় ছাপার বোতাম।');
+        // ⓘ ছাপার মেনুর নিজের চিহ্ন (`data-print-lang`) — ঠিকানাটা মেনু অন্যভাবে লেখে, তাই সেটা খুঁজলে কিছুই মিলত না (Mac, ৮ নভেম্বর: V7 বেঁচে ছিল)
+        $this->assertStringNotContainsString('data-print-lang', $html, '⛔ ভাড়া বাকি, তবু বিলের পাতায় ছাপার বোতাম।');
 
         $invoice->forceFill(['status' => DocumentStatus::DRAFT])->save();
         try {
@@ -128,6 +129,10 @@ final class AVehicleFareIsEnteredBeforeTheBillTest extends TestCase
         foreach ([route('sales.challan.show', $challan), route('sales.invoice.show', $invoice)] as $page) {
             $html = (string) $this->get($page)->assertOk()->getContent();
             $this->assertStringContainsString('data-vehicle-fare="set"', $html, "⛔ {$page}: \"গাড়ি ও ভাড়া\" নেই।");
+            // ⓘ উল্টো যাচাই — ভাড়া বসানো বিলে ছাপার মেনু থাকে, তাই উপরের "নেই" চিহ্নটা সত্যিই মেনুর
+            if ($page === route('sales.invoice.show', $invoice)) {
+                $this->assertStringContainsString('data-print-lang', $html, 'দৃশ্যটাই ভুল — ভাড়া বসানো বিলেও ছাপার মেনুর চিহ্ন নেই।');
+            }
             $this->assertStringContainsString('href="'.e($voucherUrl).'"', $html, "⛔ {$page}: ভাড়ার ভাউচারের লিংক নেই।");
             $this->assertStringContainsString('ঢাকা মেট্রো ন ১২-৩৪৫৬', $html, "⛔ {$page}: গাড়ির নম্বর নেই।");
         }
