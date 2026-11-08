@@ -346,6 +346,7 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
 
         $this->as($this->signer);
         $why = $this->getJson('/api/v1/approvals/'.$paper->public_id.'/sheet')->assertOk()->json('why');
+        $this->assertIsArray($why, '⛔ কাগজের পাতায় "কেন আপনার অনুমোদন লাগছে" নেই');
 
         $what = app(\App\Core\Engines\Approval\ApprovalLabel::class)->of('purchase', 'order');
         $this->assertSame($what.' — ৳'.\App\Core\Support\Money::format('100000').' বা তার বেশি হলে অনুমোদন লাগে', $why['rule'],
