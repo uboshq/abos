@@ -12,7 +12,7 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('purchase.receipt.confirm', $receipt) }}">
+                    <form id="confirm" method="POST" action="{{ route('purchase.receipt.confirm', $receipt) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
                     </form>

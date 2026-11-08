@@ -12,7 +12,7 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('purchase.return.confirm', $return) }}" data-confirm-overview="{{ route('purchase.return.overview', $return) }}">
+                    <form id="confirm" method="POST" action="{{ route('purchase.return.confirm', $return) }}" data-confirm-overview="{{ route('purchase.return.overview', $return) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('purchase::action.confirm') }}</x-ui.button>
                     </form>

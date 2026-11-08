@@ -25,7 +25,7 @@
 
                     {{-- ⛔ গাড়ি ভাড়া বাকি থাকলে নিশ্চিত নেই (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}
                     @unless ($fareOwed)
-                    <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
+                    <form id="confirm" method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>
                             {{ $held ? __('sales::action.finish_held') : __('sales::action.confirm') }}

@@ -25,7 +25,7 @@
                         বোতাম চাপলে কেবল ভুলের বার্তা আসে সেটা দেখানোই উচিত নয়।
                     --}}
                     @if ($bill->status === \App\Core\Support\DocumentStatus::DRAFT)
-                        <form method="POST" action="{{ route('purchase.bill.confirm', $bill) }}">
+                        <form id="confirm" method="POST" action="{{ route('purchase.bill.confirm', $bill) }}">
                             @csrf
                             <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
                         </form>

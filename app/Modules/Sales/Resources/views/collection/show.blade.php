@@ -10,7 +10,7 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('sales.collection.confirm', $collection) }}" data-confirm-overview="{{ route('sales.collection.overview', $collection) }}">
+                    <form id="confirm" method="POST" action="{{ route('sales.collection.confirm', $collection) }}" data-confirm-overview="{{ route('sales.collection.overview', $collection) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('sales::action.confirm') }}</x-ui.button>
                     </form>

@@ -56,7 +56,7 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('purchase.payment.show', $d)"
+            :row-menu="fn ($d) => view('purchase::payment.partials.row-menu', ['payment' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_payments')"
             :rows="$payments"
             :compact="request()->boolean('compact')"

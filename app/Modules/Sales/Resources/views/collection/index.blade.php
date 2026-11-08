@@ -90,7 +90,7 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('sales.collection.show', $d)"
+            :row-menu="fn ($d) => view('sales::collection.partials.row-menu', ['collection' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_collections')"
             :rows="$collections"
             :compact="request()->boolean('compact')"
