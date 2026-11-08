@@ -125,7 +125,15 @@
                      "বিলে যোগ" এখানে নয় — অফিসের চালানের বিল আলাদা কাগজ। --}}
                 @php($fareOptions = app(\App\Modules\Sales\Services\DirectSaleOptions::class))
                 <div class="sm:col-span-2 xl:col-span-4 grid gap-2" data-challan-fare-form
-                     x-data="{ who: @js((string) old('fare_paid_by', $challan->fare_paid_by ?: 'us')), fareWhen: @js((string) old('fare_when', $challan->fare_status === 'due' ? 'later' : 'now')) }">
+                     x-data="{ who: @js((string) old('fare_paid_by', $challan->fare_paid_by ?: 'us')), fareWhen: @js((string) old('fare_when', $challan->fare_status === 'due' ? 'later' : 'now')), vo: @js((string) old('vehicle_owner', $challan->vehicle_owner ?? '')) }">
+                    {{-- ⭐ গাড়ি কার — কাউন্টারের একই চার পছন্দ (মালিক, ৭ নভেম্বর ২০২৬): আমাদের বা ভাড়ার গাড়িতে ভাড়া আমরা দিলে অঙ্ক বাধ্যতামূলক --}}
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('sales::field.vehicle_owner') }}</span>
+                    <div class="ds-seg" role="radiogroup" data-challan-vehicle-owner>
+                        @foreach (['own', 'hired', 'customer', 'none'] as $choice)
+                            <button type="button" @click="vo = '{{ $choice }}'" :class="vo === '{{ $choice }}' ? 'is-on' : ''">{{ __('sales::field.owner_'.$choice) }}</button>
+                        @endforeach
+                    </div>
+                    <input type="hidden" name="vehicle_owner" :value="vo">
                     <span class="text-2xs text-(--color-ink-muted)">{{ __('sales::field.fare_paid_by') }}</span>
                     <div class="ds-seg" role="radiogroup">
                         @foreach (['us', 'customer', 'none'] as $choice)

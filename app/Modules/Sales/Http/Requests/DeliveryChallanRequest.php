@@ -82,6 +82,8 @@ class DeliveryChallanRequest extends FormRequest
             // ⭐ গেট পাসে পরিবহনের পুরো তথ্য — মালিক, ২ অক্টোবর ২০২৬ ([[DeliveryChallan::transportFacts()]])
             'driver_phone' => ['nullable', 'string', 'max:32'],
             'carrier_name' => ['nullable', 'string', 'max:191'],
+            // ⭐ তালিকায় না থাকা বাহকের মোবাইল (মালিক, ৭ নভেম্বর ২০২৬)
+            'carrier_phone' => ['nullable', 'string', 'max:32'],
             'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             /*
@@ -90,6 +92,8 @@ class DeliveryChallanRequest extends FormRequest
              * বিল আলাদা কাগজ, তার ভাড়ার সারি এই পর্দা বসায় না।
              */
             'fare_paid_by' => ['nullable', 'in:us,customer,none'],
+            // ⭐ গাড়ি কার — কাউন্টারের একই ঘর (মালিক, ৭ নভেম্বর ২০২৬: আমাদের বা ভাড়ার গাড়িতে ভাড়া বাধ্যতামূলক)
+            'vehicle_owner' => ['nullable', 'in:own,hired,customer,none'],
             'carrier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
             'fare_when' => ['nullable', 'in:now,later'],
             'fare_account_id' => ['nullable', 'integer'],
@@ -137,9 +141,9 @@ class DeliveryChallanRequest extends FormRequest
         return $this->safe()->only([
             'customer_id', 'warehouse_id', 'sales_order_id',
             'trx_date', 'vehicle_id', 'vehicle_no', 'driver_name', 'narration',
-            'driver_phone', 'carrier_name', 'transport_cost',
+            'driver_phone', 'carrier_name', 'carrier_phone', 'transport_cost',
             // ⭐ ভাড়ার ঘর — পাঠানো হলে তবেই ([[FarePayment::stamp()]])
-            'fare_paid_by', 'carrier_id', 'fare_when', 'fare_account_id', 'fare_reference', 'fare_payer_id',
+            'fare_paid_by', 'vehicle_owner', 'carrier_id', 'fare_when', 'fare_account_id', 'fare_reference', 'fare_payer_id',
         ]) + ['own_transport' => $this->boolean('own_transport')];
     }
 

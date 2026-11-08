@@ -498,4 +498,6 @@ return [
     'no_lot' => 'No lot',
     'tab_drafts' => 'Drafts',
     'tab_awaiting_approval' => 'Awaiting approval',
+    // Vehicle and fare on the challan and bill pages (owner, 7 Nov 2026)
+    'vehicle_and_fare' => 'Vehicle and fare',
 ];

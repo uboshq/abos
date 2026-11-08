@@ -386,4 +386,6 @@ return [
     'nw_drawings' => 'Drawn out',
     'nw_earlier' => 'Earlier profit/loss',
     'nw_missing' => ':company is not shown — you are not its owner there',
+    // The paper a fare voucher is for (owner, 7 Nov 2026)
+    'for_paper' => 'For',
 ];

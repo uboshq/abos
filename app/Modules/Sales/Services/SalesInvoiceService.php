@@ -612,6 +612,9 @@ final class SalesInvoiceService
             ]);
         }
 
+        // ⭐ গাড়ি ভাড়া বসানো বাকি থাকলে বিল নিশ্চিত হয় না (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[FarePayment::owesAnAmount()]])
+        app(FarePayment::class)->assertInvoiceFareSet($invoice);
+
         /*
          * ⛔ কাউন্টারে আটকে থাকা বিক্রয় এই দরজা দিয়ে নিশ্চিত হয় না — ১৯ সেপ্টেম্বর।
          *

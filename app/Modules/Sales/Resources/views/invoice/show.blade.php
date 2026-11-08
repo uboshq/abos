@@ -15,6 +15,7 @@
                      ⓘ বোতামটা একই রুটে যায় — [[SalesInvoiceController::confirm()]]
                      আটকে থাকা বিক্রয় চিনে ঠিক পথে পাঠায়। --}}
 
+                @php($fareOwed = app(\App\Modules\Sales\Services\FarePayment::class)->owedOnInvoice($invoice))
                 @can('update', $invoice)
                     @unless ($held)
                         <x-ui.button tone="secondary" :href="route('sales.invoice.edit', $invoice)">
@@ -22,12 +23,15 @@
                         </x-ui.button>
                     @endunless
 
+                    {{-- ⛔ গাড়ি ভাড়া বাকি থাকলে নিশ্চিত নেই (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}
+                    @unless ($fareOwed)
                     <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>
                             {{ $held ? __('sales::action.finish_held') : __('sales::action.confirm') }}
                         </x-ui.button>
                     </form>
+                    @endunless
                 @endcan
 
                 {{-- ⭐ নিশ্চিত বিক্রি — গেট পাসের আগে সম্পাদনা, কাউন্টারের পাতায় (মালিক, ২ অক্টোবর ২০২৬; [[SaleEditor]]).
@@ -78,6 +82,8 @@
                             </x-ui.button>
                         @endcan
                     @endif
+                    {{-- ⛔ গাড়ি ভাড়া বাকি থাকলে ছাপা নেই — নিচের লাল "গাড়ি ও ভাড়া" কারণ বলে ([[FarePayment::owesAnAmount()]]) --}}
+                    @unless ($fareOwed)
                     <x-ui.print-menu :documents="[
                         [
                             'label' => __('sales::doc.invoice'),
@@ -98,6 +104,7 @@
                            (মালিক, ২৫ সেপ্টেম্বর) আর পাকা বিল (পুনঃঅডিট ছাপা ১৭) দুইটাই ফেরায়; বাকি থাকত কেবল বাতিল বিল,
                            যেখানে «খসড়া» লেখা ভুল — বাতিল বিল আসল দরজাতেই «বাতিল» হয়ে ছাপে। */
                     ]" />
+                    @endunless
                 @endunless
             </x-slot:actions>
         </x-ui.page-header>
@@ -172,6 +179,12 @@
                 @endif
             </dl>
         </section>
+
+        {{-- ⭐ গাড়ি ও ভাড়া — বিলের চালান ধরে, ভাউচারের লিংকসহ; ভাড়া বাকি থাকলে লাল (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}
+        @php($invoice->loadMissing('lines.challanLine.challan'))
+        @foreach ($invoice->lines->map(fn ($l) => $l->challanLine?->challan)->filter()->unique('id') as $billChallan)
+            @include('sales::challan.partials.vehicle-fare-card', ['challan' => $billChallan])
+        @endforeach
 
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
