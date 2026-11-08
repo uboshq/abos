@@ -16,6 +16,7 @@
     :confirmable="$draft && (bool) $can?->can('accounts.voucher.update')"
     :cancellable="(bool) $can?->can('accounts.voucher.delete')"
     :cancel-label="__('core.row_menu.reverse')"
+    :draft-cancel-label="($awaiting ?? false) ? __('core.row_menu.cancel_paper') : null"
     :prints="$can?->can('view', $voucher) ? [[__('core.row_menu.print'), route('accounts.voucher.print', $voucher)]] : []"
     :pdf="$can?->can('view', $voucher) ? route('accounts.voucher.print', ['voucher' => $voucher, 'download' => 1]) : null"
     :share="$can?->can('view', $voucher) ? ['route' => 'accounts.voucher.print', 'param' => 'voucher', 'type' => 'accounts_voucher'] : null" />
