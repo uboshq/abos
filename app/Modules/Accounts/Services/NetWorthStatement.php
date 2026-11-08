@@ -92,8 +92,14 @@ final class NetWorthStatement
     /** @return array{figures: array<string, string>, accounts: array<string, list<array{id: int, code: string, name: string, amount: string}>>, agrees: bool, as_of: string} */
     private function build(int $companyId, string $asOf): array
     {
-        $accounts = Account::query()->where('company_id', $companyId)->get()->keyBy('id');
         $net = $this->balances($companyId, $asOf);
+        /*
+         * ⓘ জের আছে এমন খাত আইডি ধরে, আর গাছের দলগুলো আলাদা করে — কোন খাত কোন ঘরে (পাওনা, মজুদ…) জানতে মা-খাতের সারি লাগে।
+         * কোনো খাত বাছাই নয়, টাকা বসানো নয় (MoneyNeverLandsOnAGroupAccountTest — ছাড় না নিয়ে, ৮ নভেম্বর ২০২৬)।
+         */
+        $accounts = Account::query()->whereKey(array_keys($net))->get()
+            ->concat(Account::query()->where('company_id', $companyId)->where('is_group', true)->get())
+            ->keyBy('id');
 
         $roots = [
             'receivable' => $this->idOf($accounts, StandardChart::RECEIVABLE),
