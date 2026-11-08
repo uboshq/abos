@@ -58,8 +58,9 @@ final class HrDashboard implements ProvidesDashboard
                     permission: 'hr.attendance.view', icon: 'check-circle'),
                 new Tile(label: __('hr::menu.leave'), href: route('hr.leave.index'),
                     permission: 'hr.leave.view', icon: 'calendar'),
-                new Tile(label: __('hr::menu.payroll'), href: route('hr.payroll.index'),
-                    permission: 'hr.payroll.view', icon: 'cash'),
+                // ⛔ বেতনের বোতাম ফোনে নয় — বেতনের কিছুই ফোনে যায় না (ড্যা-৭; মালিক, ১৭ অক্টোবর ২০২৬ "ক"; [[PhoneAnswer]])
+                ...(PhoneAnswer::active() ? [] : [new Tile(label: __('hr::menu.payroll'), href: route('hr.payroll.index'),
+                    permission: 'hr.payroll.view', icon: 'cash')]),
             ],
 
             stats: [

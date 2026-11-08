@@ -87,6 +87,11 @@ final class TheHrDashboardReachesThePhoneWithoutPayTest extends TestCase
         $this->assertContains(__('hr::dashboard.employees'), array_column($answer->json('stats'), 'label'), 'বাকি ড্যাশবোর্ড আসার কথা।');
         $this->assertContains(__('hr::dashboard.todays_roll'), array_column($answer->json('panels'), 'label'));
 
+        // ⭐ ড্যা-৭ (৮ নভেম্বর ২০২৬): নতুন অংশেও বেতন নয় — "বেতনশিট" বোতাম ফোনে নেই, ওয়েবে আছে
+        $this->assertNotContains(route('hr.payroll.index'), array_column((array) $answer->json('tiles'), 'href'), '⛔ ফোনের HR ড্যাশবোর্ডে বেতনশিটের বোতাম।');
+        $this->assertContains(route('hr.payroll.index'), array_map(fn ($t) => $t->href, $web->tiles), 'দাবির ভিত্তি নেই — ওয়েবেই বেতনশিটের বোতাম নেই।');
+        $this->assertNotEmpty($answer->json('tiles'), '⛔ HR-এর বাকি বোতাম (হাজিরা, ছুটি) ফোনে আসেনি।');
+
         $modules = array_column($this->getJson('/api/v1/dashboard')->assertOk()->json('modules'), 'module');
         $this->assertContains('hr', $modules, '⛔ HR-এর ড্যাশবোর্ড ফোনের তালিকায় নেই।');
 
