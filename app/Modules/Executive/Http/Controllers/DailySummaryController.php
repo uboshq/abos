@@ -23,7 +23,7 @@ final class DailySummaryController extends Controller
         $data = $summary->for($day);
 
         if ($request->boolean('pdf')) {
-            $pdf = $print->render(template: 'executive::print.daily-summary', data: ['s' => $data], paper: \App\Core\Engines\Print\PaperSize::A4_LANDSCAPE);
+            $pdf = $print->render(template: 'print.daily-summary', data: ['s' => $data], paper: \App\Core\Engines\Print\PaperSize::A4_LANDSCAPE);
 
             return response($pdf, 200, [
                 'Content-Type' => 'application/pdf',

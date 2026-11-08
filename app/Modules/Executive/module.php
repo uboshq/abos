@@ -42,7 +42,8 @@ return [
      * ⚠️ চক্র হয় না: এদের কেউ মালিকের কেন্দ্রের উপর দাঁড়ায় না।
      */
     // ⓘ credit_control — মালিকের কেন্দ্রে বাকির চার সংখ্যা ([[CreditHeadlines]], বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
-    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control'],
+    // ⓘ finance আর purchase — প্রতিদিনের সারাংশে বাকি ভাড়া আর মাল আসা (৮ নভেম্বর ২০২৬)
+    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control', 'finance', 'purchase'],
 
     'menu' => [
         'dashboard' => [

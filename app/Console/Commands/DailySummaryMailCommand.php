@@ -55,7 +55,7 @@ final class DailySummaryMailCommand extends Command
 
             [$data, $pdf] = $lens->within($owner, $company['id'], null, fn () => [
                 $data = $summary->for($day),
-                $print->render(template: 'executive::print.daily-summary', data: ['s' => $data], paper: PaperSize::A4_LANDSCAPE, scale: 100),
+                $print->render(template: 'print.daily-summary', data: ['s' => $data], paper: PaperSize::A4_LANDSCAPE, scale: 100),
             ]);
 
             $url = route('executive.daily_summary', ['date' => $day->toDateString()]);

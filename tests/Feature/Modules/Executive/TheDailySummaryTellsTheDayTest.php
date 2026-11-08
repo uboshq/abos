@@ -74,7 +74,8 @@ final class TheDailySummaryTellsTheDayTest extends TestCase
         $this->assertStringContainsString(\App\Core\Support\Money::format((string) $challan->total), $html, '⛔ আজকের ডেলিভারির টাকা পাতায় নেই।');
         $this->assertMatchesRegularExpression('/data-fare-row="paid".*?রহিম.*?01711000000/s', $html, '⛔ গাড়ি-ভাড়ার ঘরে চালকের নাম-মোবাইল আর "শোধ" নেই।');
         $this->assertStringContainsString('Daily till', $html, '⛔ কাউন্টার ধরে টাকার ছকে আজকের টিল নেই।');
-        $this->assertMatchesRegularExpression('/data-reorder-row>\s*<td>[^<]*Cosmos Biscuit 40gm/u', $html, '⛔ সীমার নিচের পণ্য "অর্ডার দিতে হবে"-তে নেই।');
+        // ⓘ পণ্যের নাম পাতার ভাষায় — বাংলা বা ইংরেজি, যেটা আঁকা হয়
+        $this->assertMatchesRegularExpression('/data-reorder-row>\s*<td>\s*(?:'.preg_quote(e($product->name('bn')), '/').'|'.preg_quote(e($product->name('en')), '/').')\s*</u', $html, '⛔ সীমার নিচের পণ্য "অর্ডার দিতে হবে"-তে নেই।');
     }
 
     public function test_the_day_prints_as_an_a4_landscape_pdf(): void

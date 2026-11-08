@@ -1,7 +1,7 @@
 {{--
     ⭐ প্রতিদিনের সারাংশ — A4 আড়াআড়ি কাগজ (মালিক, ৭ নভেম্বর ২০২৬: "a4 sizer pdf e … lagle landscpe e dite paro"; নমুনা "ok")।
     ⓘ mPDF — গ্রিড নয়, ছক; পাতা ১-এ মাথা, বিক্রি, গাড়ি-ভাড়া, কেনা, নজরে রাখুন; পাতা ২-এ কাউন্টার ধরে টাকা আর অর্ডার দিতে হবে।
-    চাই: $s ([[DailySummary::for()]])। রাতের ইমেইলের সংযুক্তিও এই কাগজ।
+    চাই: $s ([[DailySummary::for()]])। রাতের ইমেইলের সংযুক্তিও এই কাগজ। ⓘ অন্য সব ছাপার কাগজের সাথে resources/views/print-এ — কাগজ থিম মানে না।
 --}}
 @php
     $m = fn ($v) => \App\Core\Support\Money::format((string) $v);
@@ -13,7 +13,7 @@
     $num = 'text-align: right; white-space: nowrap;';
     $pill = ['paid' => '#0f8a5f', 'due' => '#c81e1e', 'missing' => '#c81e1e', 'none' => '#5d6c7b'];
 @endphp
-<style>
+<style @nonce>
     body { font-size: 8.6pt; color: #142130; }
     table { border-collapse: collapse; width: 100%; }
     th { font-size: 7.6pt; color: #5d6c7b; text-align: left; background: #eef3f8; padding: 1mm 2mm; }
