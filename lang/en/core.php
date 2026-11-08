@@ -1266,6 +1266,9 @@ return [
         'subtitle' => 'Your details, your photo and your password',
         'identity' => 'Identity',
         'name' => 'Name',
+        'name_bn' => 'Name in Bengali',
+        'name_bn_placeholder' => 'e.g. আল-আমিন শুভ',
+        'name_bn_hint' => 'Shown everywhere when the language is Bengali; left empty, the name above.',
         'email' => 'Email',
 
         /*

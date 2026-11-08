@@ -77,6 +77,36 @@ final class TheProfilePageCouldNotSayWhoYouAreTest extends TestCase
     }
 
     /**
+     * ⭐ বাংলা নাম — মালিক, ৮ নভেম্বর ২০২৬ ("ইউজারের নাম বাংলাতে দেখায় না যদি বাংলা সিলেক্ট করি"; প্রোফাইলে নামের নিচে দাগ):
+     * ঘরটা নামের নিচে, সংরক্ষণ হয়, আর ভাষা বাংলা হলে টপবারে সেটাই — ইংরেজিতে আগের নাম, খালি রাখলে আগের নাম।
+     */
+    public function test_a_bengali_name_is_kept_and_shown_when_the_language_is_bengali(): void
+    {
+        $page = $this->actingAs($this->user)->get(route('profile'))->assertOk()->getContent();
+        $this->assertNotFalse(strpos($page, 'name="name_bn"'), '⛔ বাংলা নামের ঘর নেই।');
+        $this->assertLessThan(strpos($page, 'name="login_id"'), strpos($page, 'name="name_bn"'),
+            '⛔ বাংলা নামের ঘর নামের নিচে নয় — লগইন আইডির পরে বসেছে।');
+
+        $this->put(route('profile.update'), ['name' => 'Md. Al-Amin', 'name_bn' => 'মো. আল-আমিন', 'login_id' => 'alamin'])->assertRedirect();
+        $this->user->refresh();
+        $this->assertSame('মো. আল-আমিন', $this->user->name_bn, '⛔ বাংলা নাম সংরক্ষণ হয়নি।');
+        $this->assertSame('Md. Al-Amin', $this->user->name, '⛔ বাংলা নাম দিতে গিয়ে আসল নাম বদলে গেল।');
+
+        app()->setLocale('bn');
+        $this->assertSame('মো. আল-আমিন', $this->user->displayName(), '⛔ ভাষা বাংলা, তবু নাম ইংরেজিতে।');
+        app()->setLocale('en');
+        $this->assertSame('Md. Al-Amin', $this->user->displayName(), '⛔ ইংরেজি পাতায় বাংলা নাম।');
+
+        $this->user->forceFill(['locale' => 'bn'])->save();
+        $bar = $this->actingAs($this->user->fresh())->get(route('profile'))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/data-profile-name>\s*মো\. আল-আমিন\s*</u', $bar, '⛔ বাংলায় টপবারে বাংলা নাম নেই।');
+
+        $this->put(route('profile.update'), ['name' => 'Md. Al-Amin', 'name_bn' => '', 'login_id' => 'alamin'])->assertRedirect();
+        app()->setLocale('bn');
+        $this->assertSame('Md. Al-Amin', $this->user->fresh()->displayName(), '⛔ বাংলা নাম মুছলে নাম ফাঁকা হয়ে গেল।');
+    }
+
+    /**
      * ⛔ যোগাযোগের তিনটা ঘর সত্যিই সারিতে বসে।
      */
     public function test_contact_details_are_saved(): void

@@ -39,6 +39,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class OpenPeriod
 {
+    /** পোস্টের মুহূর্তে বসানো — যে সইকারীর পুরনো তারিখের অনুমতি আছে তাঁর id ([[SignedPaperFinisher::finish()]]) */
+    public const SIGNED_BY = 'abos.backdate.signed-by';
+
     public function __construct(
         private readonly SettingsService $settings,
     ) {}
@@ -183,6 +186,17 @@ final class OpenPeriod
         }
 
         if (auth()->user()->can('accounts.backdate.override')) {
+            return null;
+        }
+
+        /*
+         * ⭐ শেষ সই যিনি দিলেন, পুরনো তারিখের অনুমতি তাঁর থাকলে তাঁর সই-ই তারিখটা মেনে নেয় — মালিক, ৮ নভেম্বর ২০২৬ (live, আদি:
+         * RCV-0419 ২৮ অক্টোবর আর RCV-0420 ৯ অক্টোবর, মালিক সই দিলেন, তবু খসড়ায় আটকে): "মালিক সব পারবে"।
+         * ⓘ সইয়ের পরে কাগজ পোস্ট হয় লেখকের নামে ([[SignedPaperFinisher]]), আর লেখকের এই অনুমতি নেই — জানালাটা তাঁর হাতেই আটকাত।
+         * এখন শেষকারী পোস্টের মুহূর্তটুকুর জন্য সইকারীর নাম বসায় ([[SIGNED_BY]]); পোস্ট শেষে উঠে যায়। ⛔ মাসের তালা এর আগেই, তাই বন্ধ
+         * মাস বন্ধই থাকে — এটা কেবল সাত দিনের জানালা।
+         */
+        if (app()->bound(self::SIGNED_BY)) {
             return null;
         }
 

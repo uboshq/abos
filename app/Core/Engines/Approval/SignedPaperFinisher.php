@@ -47,9 +47,19 @@ final class SignedPaperFinisher
         $before = Auth::user();
         $branchId = $paper->getAttribute('branch_id');
 
+        /*
+         * ⭐ সইকারীর পুরনো তারিখের অনুমতি সইয়ের সাথে যায় — মালিক, ৮ নভেম্বর ২০২৬: "মালিক সব পারবে" (RCV-0419/0420 সই হয়েও আটকে)।
+         * ⓘ জিজ্ঞাসা লেখকের নামে বদলানোর আগে, সইকারীর নিজের নামে; বসানো থাকে কেবল এই পোস্টটুকু ([[OpenPeriod::SIGNED_BY]])।
+         */
+        $signedPast = $signer !== null && $signer->can('accounts.backdate.override');
+
         try {
             if ($maker !== null) {
                 Auth::setUser($maker);
+            }
+
+            if ($signedPast) {
+                app()->instance(\App\Core\Services\OpenPeriod::SIGNED_BY, (int) $signer->id);
             }
 
             CompanyContext::inBranch($branchId === null ? null : (int) $branchId, fn () => $post($paper));
@@ -64,6 +74,8 @@ final class SignedPaperFinisher
             report($e);
             $reason = $e->getMessage();
         } finally {
+            app()->forgetInstance(\App\Core\Services\OpenPeriod::SIGNED_BY);
+
             if ($before !== null) {
                 Auth::setUser($before);
             } else {

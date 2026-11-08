@@ -427,6 +427,17 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class, 'current_branch_id');
     }
 
+    /**
+     * ⭐ পর্দায় দেখানোর নাম — ভাষা বাংলা আর বাংলা নাম লেখা থাকলে সেটা, নয়তো `name` (মালিক, ৮ নভেম্বর ২০২৬: "ইউজারের নাম বাংলাতে
+     * দেখায় না যদি বাংলা সিলেক্ট করি")। ⓘ `name` নিজে বদলায় না — খোঁজা, লগ, ইমেইল আর ইংরেজি পাতা আগের মতোই সেটা পড়ে।
+     */
+    public function displayName(): string
+    {
+        $bn = trim((string) $this->getAttribute('name_bn'));
+
+        return $bn !== '' && str_starts_with(app()->getLocale(), 'bn') ? $bn : (string) $this->name;
+    }
+
     public function canAccessCompany(int $companyId): bool
     {
         // ⛔ বন্ধ কোম্পানিতে ঢোকা নয় — সদস্যপদ থাকলেও (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔১)
