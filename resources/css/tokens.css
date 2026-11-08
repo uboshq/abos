@@ -1201,6 +1201,26 @@
     --color-topbar-icon-bell: #f59e0b;
     --color-topbar-icon-create: #2f7af0;
     --color-topbar-icon-ink: #ffffff;
+    /* ⭐ রঙিন মডিউল-মেনুর দলের রং ([[MenuLook]]; মালিক, ৮ নভেম্বর ২০২৬) — নাম রঙেরই, সারিতে `data-mc` */
+    --color-menu-0284c7: #0284c7;
+    --color-menu-0891b2: #0891b2;
+    --color-menu-0d9488: #0d9488;
+    --color-menu-0f766e: #0f766e;
+    --color-menu-16a34a: #16a34a;
+    --color-menu-2563eb: #2563eb;
+    --color-menu-475569: #475569;
+    --color-menu-4f46e5: #4f46e5;
+    --color-menu-64748b: #64748b;
+    --color-menu-65a30d: #65a30d;
+    --color-menu-7c3aed: #7c3aed;
+    --color-menu-9333ea: #9333ea;
+    --color-menu-b45309: #b45309;
+    --color-menu-ca8a04: #ca8a04;
+    --color-menu-d97706: #d97706;
+    --color-menu-db2777: #db2777;
+    --color-menu-dc2626: #dc2626;
+    --color-menu-e11d48: #e11d48;
+    --color-menu-ea580c: #ea580c;
     /* ⭐ "নিশ্চিত?" বাক্সের রঙ — মাঝখানে, বড়, রঙিন (মালিক, ৮ নভেম্বর ২০২৬: "কালারফুল সুন্দর ডিজাইন করে দিবে"; [[ask.js]]) */
     --color-ask-ok-from: #16a34a;
     --color-ask-ok-to: #0d9488;

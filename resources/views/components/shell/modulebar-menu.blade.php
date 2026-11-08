@@ -12,6 +12,15 @@
     'icon' => null,
     'tint' => '',
     'items',
+
+    /*
+     * ⭐ রঙিন বার (মালিক, ৯ নভেম্বর ২০২৬) — দলের রং (`data-mc`-এর হেক্স), দলের চাবি, দলের চিহ্ন আর প্রতিটা সারির নিজের চিহ্ন
+     * (সারির `key` → Lucide নাম; [[MenuLook]])। না দিলে আগের ধূসর ঘর, আগের চিহ্ন।
+     */
+    'mc' => null,
+    'kind' => null,
+    'licon' => null,
+    'itemIcons' => [],
 ])
 
 {{--
@@ -30,7 +39,7 @@
     $activeItem = collect($items)->firstWhere('active', true);
 @endphp
 
-<div x-data="{ open: false }" class="relative shrink-0">
+<div x-data="{ open: false }" class="relative shrink-0" @if ($mc) data-mc="{{ $mc }}" data-bar-kind="{{ $kind }}" @endif>
     <button type="button"
             @click="open = ! open" @click.outside="open = false"
             @keydown.escape.window="open = false"
@@ -40,7 +49,9 @@
                 'modulebar-cell modulebar-cell-on' => $activeItem !== null,
                 'modulebar-cell' => $activeItem === null,
             ])>
-        @if ($icon)
+        @if ($mc && $licon)
+            <x-ui.licon :name="$licon" :size="14" class="modulebar-licon" />
+        @elseif ($icon)
             <x-ui.icon :name="$icon" :size="14" :class="$tint" />
         @endif
 
@@ -54,9 +65,12 @@
 
     <div x-show="open" x-cloak x-transition.opacity
          @if ($fold) data-modulebar-fold="{{ $fold }}" @endif
-         class="absolute start-0 top-full z-30 mt-1 max-h-80 min-w-48 overflow-y-auto
-                rounded-(--radius-card) border border-(--color-border)
-                bg-(--color-surface-card) py-1 shadow-lg">
+         @class([
+             'absolute start-0 top-full z-30 mt-1 max-h-80 min-w-48 overflow-y-auto',
+             'rounded-(--radius-card) border border-(--color-border)',
+             'bg-(--color-surface-card) py-1 shadow-lg',
+             'modulebar-drop' => $mc !== null,
+         ])>
         @foreach ($items as $item)
             <a href="{{ $item['url'] }}"
                @class([
@@ -65,7 +79,11 @@
                    'text-(--color-ink-body)' => ! ($item['active'] ?? false),
                ])
                @if ($item['active'] ?? false) aria-current="page" @endif>
-                <x-ui.icon :name="$item['icon'] ?? $icon" :size="14" :class="$tint" />
+                @if ($mc && ($itemIcons[(string) ($item['key'] ?? '')] ?? null))
+                    <span class="modulebar-drop-icon"><x-ui.licon :name="$itemIcons[(string) ($item['key'] ?? '')]" :size="14" /></span>
+                @else
+                    <x-ui.icon :name="$item['icon'] ?? $icon" :size="14" :class="$tint" />
+                @endif
                 {{ $item['label'] }}
             </a>
         @endforeach
