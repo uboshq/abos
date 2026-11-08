@@ -42,7 +42,8 @@ return [
      * ⚠️ চক্র হয় না: এদের কেউ মালিকের কেন্দ্রের উপর দাঁড়ায় না।
      */
     // ⓘ credit_control — মালিকের কেন্দ্রে বাকির চার সংখ্যা ([[CreditHeadlines]], বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
-    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control'],
+    // ⓘ finance আর purchase — প্রতিদিনের সারাংশে বাকি ভাড়া আর মাল আসা (৮ নভেম্বর ২০২৬)
+    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control', 'finance', 'purchase'],
 
     'menu' => [
         'dashboard' => [
@@ -50,6 +51,7 @@ return [
         ],
 
         'reports' => [
+            ['label' => 'executive::menu.daily_summary', 'icon' => 'calendar', 'route' => 'executive.daily_summary', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.compare', 'icon' => 'scale', 'route' => 'executive.compare', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.analysis', 'icon' => 'reports', 'route' => 'executive.analysis', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.alerts', 'icon' => 'alert-triangle', 'route' => 'executive.alerts', 'permission' => 'executive.view'],
@@ -85,6 +87,29 @@ return [
 
     'reports' => [
         ExecutiveReports::class,
+    ],
+
+    /*
+     * ⭐ প্রতিদিনের সারাংশের রাতের ইমেইল — কোম্পানি ধরে চালু/বন্ধ আর কার কাছে (মালিক, ৭ নভেম্বর ২০২৬, ইমেইলের নমুনা "ok";
+     * [[DailySummaryMailCommand]])। ⓘ ঠিকানা খালি হলে .env-এর ঠিকানা, তা-ও না থাকলে মালিকের লগইনের ইমেইল।
+     */
+    'settings' => [
+        [
+            'key' => 'executive.daily_mail_enabled',
+            'super_admin_only' => true,
+            'label' => 'executive::settings.daily_mail_enabled',
+            'type' => 'bool',
+            'default' => true,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'executive.daily_mail_to',
+            'super_admin_only' => true,
+            'label' => 'executive::settings.daily_mail_to',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'general',
+        ],
     ],
 
     // ⭐ ফোনের হোম-স্ক্রিনে মালিকের পূর্ণ-পর্দা উইজেট (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)

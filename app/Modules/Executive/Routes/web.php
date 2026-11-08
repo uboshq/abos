@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Executive\Http\Controllers\AlertsController;
 use App\Modules\Executive\Http\Controllers\AnalysisController;
 use App\Modules\Executive\Http\Controllers\CompareController;
+use App\Modules\Executive\Http\Controllers\DailySummaryController;
 use App\Modules\Executive\Http\Controllers\ExecutiveReportController;
 use App\Modules\Executive\Http\Controllers\HistoryController;
 use App\Modules\Executive\Http\Controllers\LinksController;
@@ -20,6 +21,11 @@ Route::middleware('auth')->prefix('owner')->group(function () {
 
     Route::get('/', [TodayController::class, 'show'])
         ->name('today')
+        ->middleware('can:executive.view');
+
+    // ⭐ প্রতিদিনের সারাংশ — পর্দা আর A4 আড়াআড়ি PDF (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[DailySummary]])
+    Route::get('/daily-summary', [DailySummaryController::class, 'show'])
+        ->name('daily_summary')
         ->middleware('can:executive.view');
 
     Route::get('/compare', [CompareController::class, 'show'])

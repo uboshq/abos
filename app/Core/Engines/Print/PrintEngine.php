@@ -416,6 +416,7 @@ final class PrintEngine
 
         return match (strtoupper($size->format)) {
             'A5' => [148.0, 210.0],
+            'A4-L' => [297.0, 210.0],
             'LETTER' => [215.9, 279.4],
             default => [210.0, 297.0],
         };

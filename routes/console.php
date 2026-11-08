@@ -326,6 +326,16 @@ Schedule::command('abos:owner-snapshot')
  * ⭐ মালিকের কেন্দ্রের সকালের মেইল — মালিকের উত্তর ৪, ১০ অক্টোবর ২০২৬ ([[OwnerMorningMail]])।
  * ⓘ সকাল ৮টা — রাত ২৩:৫৫-র হিসাব লেখা হয়ে গেছে, দিনের কাজ শুরুর আগে।
  */
+/*
+ * ⭐ প্রতিদিনের সারাংশ রাতে মালিকের ইমেইলে — মালিক, ৭ নভেম্বর ২০২৬ ([[DailySummaryMailCommand]]); ডিফল্ট রাত ১০টা।
+ */
+Schedule::command('abos:daily-summary-mail')
+    ->dailyAt((string) config('abos.executive.daily_mail_at', '22:00'))
+    ->withoutOverlapping(60)
+    ->onFailure(function () {
+        logger()->critical('প্রতিদিনের সারাংশের ইমেইল পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:owner-morning-mail')
     ->dailyAt('08:00')
     ->withoutOverlapping()

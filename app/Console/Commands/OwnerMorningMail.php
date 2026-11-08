@@ -66,6 +66,12 @@ final class OwnerMorningMail extends Command
     /**
      * মালিক — সবচেয়ে বেশি কোম্পানিতে সুপার অ্যাডমিন, সমান হলে আগের id। ⓘ `.env`-এ `ABOS_EXECUTIVE_MAIL_AS` দিলে সেই মানুষ।
      */
+    /** রাতের সারাংশও একই মালিক বাছে ([[DailySummaryMailCommand]]) */
+    public function ownerForMail(): ?User
+    {
+        return $this->owner();
+    }
+
     private function owner(): ?User
     {
         $chosen = config('abos.executive.mail_as');
