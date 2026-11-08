@@ -76,12 +76,6 @@
          * ⛔ "মুছুন" নেই, আর সেটা ইচ্ছাকৃত — কারণ [[invoice.partials
          * .row-actions]]-এ লেখা।
          */
-        [
-            'key' => 'actions',
-            'label' => __('core.table.actions'),
-            'width' => '4rem',
-            'render' => fn ($d) => view('sales::invoice.partials.row-actions', ['invoice' => $d]),
-        ],
     ];
 
     /*
@@ -91,7 +85,7 @@
     $arrive = app(\App\Modules\Sales\Services\DeliveryRowActions::class)->forInvoices(collect($invoices->items())->pluck('id'));
 
     if ($arrive !== []) {
-        array_splice($columns, count($columns) - 1, 0, [[
+        array_splice($columns, count($columns), 0, [[
             'key' => 'arrive',
             'label' => __('sales::delivery.column.next'),
             'width' => '10rem',
@@ -132,7 +126,7 @@
 
         <x-ui.table
             :grand="['total' => $totals['money']]"
-            :view-url="fn ($d) => route('sales.invoice.show', $d)"
+            :row-menu="fn ($d) => view('sales::invoice.partials.row-menu', ['invoice' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_invoices')"
             :rows="$invoices"
             :compact="request()->boolean('compact')"

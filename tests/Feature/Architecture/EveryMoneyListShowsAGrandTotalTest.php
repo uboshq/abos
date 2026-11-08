@@ -129,7 +129,8 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
     {
         $code = $this->code($src);
 
-        return str_contains($code, ':grand=') && ($noPage || str_contains($code, ':view-url=') || $eye);
+        /* ⓘ `:row-menu` — "অ্যাকশন ▾"-এর প্রথম সারিই "দেখুন" (`data-row-view`, মালিক ৮ নভেম্বর ২০২৬) */
+        return str_contains($code, ':grand=') && ($noPage || str_contains($code, ':view-url=') || str_contains($code, ':row-menu=') || $eye);
     }
 
     /**

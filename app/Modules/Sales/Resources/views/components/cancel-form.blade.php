@@ -4,7 +4,8 @@
     কারণটা বাধ্যতামূলক, কারণ ছয় মাস পর নিরীক্ষায় "এই বিলটা বাতিল কেন
     হয়েছিল" প্রশ্নের উত্তর কারও মনে থাকে না।
 --}}
-<details class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+{{-- ⓘ তালিকার "অ্যাকশন ▾ → মুছুন" এখানে আনে (`?cancel=1#cancel`) — ফর্মটা খোলা অবস্থায় (মালিক, ৮ নভেম্বর ২০২৬) --}}
+<details id="cancel" class="scroll-mt-24 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @if (request()->boolean('cancel')) open @endif>
     <summary class="cursor-pointer text-sm font-medium">{{ __('sales::action.cancel_document') }}</summary>
 
     <form method="POST" action="{{ $action }}" class="mt-3 space-y-3">

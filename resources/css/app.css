@@ -568,6 +568,29 @@
             background: var(--color-surface-hover);
         }
 
+        /* ⭐ "অ্যাকশন" কলাম ডানে আটকে থাকে — চওড়া তালিকা পাশে সরালেও বোতাম চোখের সামনে
+           (মালিক, ৮ নভেম্বর ২০২৬; নমুনা "লিস্টের অ্যাকশন বোতাম")। ⓘ আটকানো ঘর নিচের লেখা ঢাকে, তাই নিজের জমিন লাগে। */
+        .ui-list:not(.as-cards) [data-row-menu] {
+            position: sticky;
+            inset-inline-end: 0;
+            z-index: 1;
+            background: var(--color-surface-card);
+            box-shadow: -1px 0 0 var(--color-border);
+        }
+
+        .ui-list:not(.as-cards) thead [data-row-menu] {
+            background: var(--color-table-head);
+        }
+
+        .ui-list:not(.as-cards) tbody tr:hover [data-row-menu] {
+            background: var(--color-surface-hover);
+        }
+
+        /* ⚠️ আটকানো ঘর নিজের স্তর বানায় — খোলা মেনু তার ভিতরে, তাই মাথার সারি মেনুর উপরে চড়ত। খোলা থাকলে ঘরটাই উপরে। */
+        .ui-list:not(.as-cards) [data-row-menu]:has([aria-expanded="true"]) {
+            z-index: 40;
+        }
+
         .ui-list:not(.as-cards) tfoot tr {
             border-top: 1px solid var(--color-border-strong);
             border-bottom: 0;

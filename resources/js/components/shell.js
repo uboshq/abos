@@ -546,12 +546,23 @@ export function rowActions () {
 
             m.style.insetInlineEnd = (rtl ? r.left : window.innerWidth - r.right) + 'px'
 
-            if (window.innerHeight - r.bottom < m.offsetHeight + 8) {
-                m.style.top = 'auto'
-                m.style.bottom = (window.innerHeight - r.top + 4) + 'px'
-            } else {
+            /*
+             * ⓘ যেদিকে জায়গা বেশি সেদিকে, আর সেই জায়গার মাপে — লম্বা "অ্যাকশন ▾" মেনু (২০টা সারি) নিচে না ধরলে আগে উপরে
+             * উঠত আর পর্দার মাথায় কাটা পড়ত (৮ নভেম্বর ২০২৬, প্রথম ছবি)। এখন যতটুকু ধরে, বাকিটা মেনুর ভিতরে স্ক্রল।
+             */
+            m.style.maxHeight = ''
+            const below = window.innerHeight - r.bottom - 12
+            const above = r.top - 12
+            const tall = m.offsetHeight
+
+            if (tall <= below || below >= above) {
                 m.style.bottom = 'auto'
                 m.style.top = (r.bottom + 4) + 'px'
+                if (tall > below) m.style.maxHeight = below + 'px'
+            } else {
+                m.style.top = 'auto'
+                m.style.bottom = (window.innerHeight - r.top + 4) + 'px'
+                if (tall > above) m.style.maxHeight = above + 'px'
             }
         },
 

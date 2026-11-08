@@ -52,17 +52,27 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
     }
 
+    /**
+     * ⭐ ৮ নভেম্বর ২০২৬ থেকে সারির শেষে "অ্যাকশন ▾" (মালিকের নমুনা "লিস্টের অ্যাকশন বোতাম") — দাবিগুলো লেখা নয়, ঠিকানা মাপে:
+     * সম্পাদনার লিংক আছে কি না, নিশ্চিত করার ফর্ম আছে কি না। ⓘ ধূসর সারিতেও "সম্পাদনা" লেখাটা থাকে, তাই লেখা মাপলে চলত না।
+     */
     public function test_a_draft_row_offers_edit_and_confirm(): void
     {
-        $this->invoice('INV-DRAFT', DocumentStatus::DRAFT);
+        $draft = $this->invoice('INV-DRAFT', DocumentStatus::DRAFT);
 
-        $text = $this->listText();
+        $html = $this->listHtml();
 
-        $this->assertStringContainsString(__('core.action.edit', [], 'bn'), $text,
+        $this->assertStringContainsString('href="'.e(route('sales.invoice.edit', $draft)).'"', $html,
             '⛔ খসড়া বিলের সারিতে সম্পাদনা নেই — অথচ খসড়া খাতায় কিছুই বসায়নি।');
 
-        $this->assertStringContainsString(__('sales::action.confirm', [], 'bn'), $text,
+        $this->assertStringContainsString('action="'.e(route('sales.invoice.confirm', $draft)).'"', $html,
             '⛔ খসড়া বিলের সারিতে "নিশ্চিত করুন" নেই।');
+
+        $this->assertStringContainsString('href="'.e(route('sales.invoice.show', ['invoice' => $draft, 'cancel' => 1])).'#cancel"', $html,
+            '⛔ খসড়া বিলের সারিতে "খসড়া বাতিল" নেই।');
+
+        $this->assertStringContainsString(__('core.row_menu.why_not_posted_collect', [], 'bn'), $this->text($html),
+            '⛔ খসড়ায় "টাকা নিন" ধূসর নয়, বা কারণ লেখা নেই।');
     }
 
     /**
@@ -74,21 +84,32 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
      */
     public function test_a_confirmed_row_offers_neither_cancel_nor_edit(): void
     {
-        $this->invoice('INV-LIVE', DocumentStatus::CONFIRMED);
+        $live = $this->invoice('INV-LIVE', DocumentStatus::CONFIRMED);
 
-        $text = $this->listText();
+        $html = $this->listHtml();
+        $text = $this->text($html);
 
-        /* ⛔ ২ অক্টোবর ২০২৬ থেকে নিশ্চিত বিল বাতিলও হয় না — মালিক: *"ইনভয়েসের পরে … মোছা কখনো নয়"*
-           ([[AConfirmedBillCouldStillBeCancelledTest]]); আগে দাবি ছিল সারিতে বাতিলের পথ আছে */
+        /* ⛔ ২ অক্টোবর ২০২৬ থেকে নিশ্চিত বিলে খসড়ার বাতিল নেই ([[AConfirmedBillCouldStillBeCancelledTest]]) — উল্টাতে হলে
+           আলাদা বাতিল-কাগজ (`sales.invoice.cancellation`, কারণসহ), যা পাতাতেও একই চাবিতে আছে */
         $this->assertStringNotContainsString(__('sales::action.cancel_invoice', [], 'bn'), $text,
-            '⛔ নিশ্চিত বিলের সারিতে বাতিলের পথ দেখা যাচ্ছে।');
+            '⛔ নিশ্চিত বিলের সারিতে খসড়ার বাতিলের পথ দেখা যাচ্ছে।');
+        $this->assertStringNotContainsString('href="'.e(route('sales.invoice.show', ['invoice' => $live, 'cancel' => 1])), $html,
+            '⛔ নিশ্চিত বিলের সারি খসড়ার বাতিল-ফর্মে নিয়ে যাচ্ছে।');
+        $this->assertStringContainsString('href="'.e(route('sales.invoice.show', ['invoice' => $live, 'cancellation' => 1])).'#cancellation"', $html,
+            '⛔ নিশ্চিত বিলের সারিতে "বাতিল (রিভার্স)" নেই — মালিকের নমুনায় আছে।');
 
-        $this->assertStringNotContainsString(__('core.action.edit', [], 'bn'), $text, implode("\n", [
-            '⛔ নিশ্চিত হওয়া বিলের সারিতে সম্পাদনা দেখা যাচ্ছে।',
+        $this->assertStringNotContainsString('href="'.e(route('sales.invoice.edit', $live)).'"', $html, implode("\n", [
+            '⛔ নিশ্চিত হওয়া বিলের সারিতে সম্পাদনার লিংক।',
             '',
             '⚠️ কাগজটা ইতিমধ্যে আয়, প্রাপ্য ও ব্যয় বসিয়ে ফেলেছে — বদলানো যায় না।',
             'ⓘ পথটা দেখিয়ে ৪০৩ দেওয়া মানে ব্যবহারকারীকে একটা মিথ্যা দরজা দেখানো।',
         ]));
+        $this->assertStringContainsString(__('core.row_menu.why_posted', [], 'bn'), $text,
+            '⛔ নিশ্চিত বিলে "সম্পাদনা" ধূসর নয়, বা কারণ লেখা নেই।');
+
+        /* ⓘ বাকি ১০০ — "টাকা নিন" সাদা, আদায়ের পর্দায় এই বিলটা বেছে */
+        $this->assertStringContainsString('href="'.e(route('sales.collection.create', ['sales_invoice_id' => $live->id])).'"', $html,
+            '⛔ বাকিওয়ালা নিশ্চিত বিলে "টাকা নিন" নেই।');
     }
 
     /**
@@ -133,14 +154,23 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
         $text = $this->listText();
 
         $this->assertStringContainsString('INV-DRAFT', $text, 'বিলের সারিটাই তালিকায় আসেনি।');
-        $this->assertStringContainsString(__('core.table.actions', [], 'bn'), $text, 'কাজের কলামটাই নেই।');
+        $this->assertStringContainsString(__('core.table.action_menu', [], 'bn'), $text, 'অ্যাকশন কলামটাই নেই।');
+        $this->assertStringContainsString('data-row-actions-button', $this->listHtml(), '"অ্যাকশন ▾" বোতামটাই নেই।');
+    }
+
+    private function listHtml(): string
+    {
+        return (string) $this->get(route('sales.invoice.index'))->assertOk()->getContent();
+    }
+
+    private function text(string $html): string
+    {
+        return (string) preg_replace('/\s+/u', ' ', strip_tags($html));
     }
 
     private function listText(): string
     {
-        $html = (string) $this->get(route('sales.invoice.index'))->assertOk()->getContent();
-
-        return (string) preg_replace('/\s+/u', ' ', strip_tags($html));
+        return $this->text($this->listHtml());
     }
 
     private function invoice(string $no, string $status): SalesInvoice

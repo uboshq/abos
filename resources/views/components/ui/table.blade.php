@@ -67,7 +67,9 @@
                             {{ $column['label'] }}
                         </th>
                     @endforeach
-                    @if ($viewUrl ?? null)
+                    @if ($rowMenu ?? null)
+                        <th class="text-end" style="width: 7.5rem" scope="col" data-row-menu>{{ __('core.table.action_menu') }}</th>
+                    @elseif ($viewUrl ?? null)
                         <th class="text-end" style="width: 3.5rem" scope="col">
                             <span class="sr-only">{{ __('core.table.view') }}</span>
                         </th>
@@ -116,7 +118,9 @@
                         @endforeach
                         {{-- ⭐ "দেখুন" — সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]);
                              লেবেলে কাগজের নম্বর, যাতে স্ক্রিন-রিডার বলে কোনটা খুলবে। --}}
-                        @if ($viewUrl ?? null)
+                        @if ($rowMenu ?? null)
+                            <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu>{{ ($rowMenu)($row) }}</td>
+                        @elseif ($viewUrl ?? null)
                             @php $viewHref = ($viewUrl)($row); @endphp
                             <td data-label="{{ __('core.table.view') }}" class="text-end">
                                 @if ($viewHref)
@@ -163,7 +167,7 @@
                                     @endif
                                 </td>
                             @endforeach
-                            @if ($viewUrl ?? null)
+                            @if (($viewUrl ?? null) || ($rowMenu ?? null))
                                 <td></td>
                             @endif
                         </tr>
@@ -180,7 +184,7 @@
                                     @endif
                                 </td>
                             @endforeach
-                            @if ($viewUrl ?? null)
+                            @if (($viewUrl ?? null) || ($rowMenu ?? null))
                                 <td></td>
                             @endif
                         </tr>
