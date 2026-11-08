@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
@@ -9,7 +10,9 @@ import '../../core/dashboard/dashboard_api.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/web_inside/web_inside.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -175,14 +178,26 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
                   message: context.l10n.salesDashboardsEmptyMessage,
                   action: _RefreshButton(onPressed: _load))
             else ...[
-              if (d.subtitle.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(d.subtitle,
-                      style: TextStyle(color: context.palette.onSurfaceMuted)),
-                ),
-              for (final stat in d.stats) _StatCard(stat: stat),
-              for (final panel in d.panels) _PanelCard(panel: panel),
+              // ⭐ ড্যা-৭ — ওয়েবের নতুন সাজ (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"): রঙিন মাথা, চার রঙিন কার্ড, "নজরে রাখুন",
+              // প্রথম চার্ট, "আরও অঙ্ক"। ⓘ সার্ভার রং না পাঠালে (পুরনো সার্ভার) আগের সাজ, হুবহু।
+              if (d.hasNewLook) ...[
+                NewLookHead(dashboard: d, name: widget.name),
+                const SizedBox(height: AppSpacing.sm),
+                NewLookCards(dashboard: d),
+                NewLookWatch(watch: d.watch),
+                for (final panel in d.panels.take(1)) _PanelCard(panel: panel),
+                if (d.stats.length > 4) NewLookMore(stats: d.stats.skip(4).toList()),
+                for (final panel in d.panels.skip(1)) _PanelCard(panel: panel),
+              ] else ...[
+                if (d.subtitle.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(d.subtitle,
+                        style: TextStyle(color: context.palette.onSurfaceMuted)),
+                  ),
+                for (final stat in d.stats) _StatCard(stat: stat),
+                for (final panel in d.panels) _PanelCard(panel: panel),
+              ],
               for (final listing in d.listings)
                 _ListingCard(listing: listing, module: widget.module),
               // ⭐ এই মডিউলের রিপোর্ট — তারিখ আর PDF সহ (মালিক, ৪ অক্টোবর ২০২৬: "Sales Account er gulo dorkar")
@@ -634,6 +649,207 @@ class _ListingCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// ⭐ ড্যা-৭ — ওয়েবের `--color-pal-*` বারো রং, হুবহু (tokens.css; সাদা লেখা ৪.৫ঃ১)। নাম না চিনলে মডিউলের নিজের রং।
+const Map<String, Color> dashboardPalette = {
+  'blue': Color(0xFF1D4ED8),
+  'green': Color(0xFF15803D),
+  'orange': Color(0xFFC2410C),
+  'purple': Color(0xFF6D28D9),
+  'teal': Color(0xFF0F766E),
+  'red': Color(0xFFB91C1C),
+  'yellow': Color(0xFFA16207),
+  'pink': Color(0xFFBE185D),
+  'sky': Color(0xFF0369A1),
+  'indigo': Color(0xFF4338CA),
+  'lime': Color(0xFF4D7C0F),
+  'amber': Color(0xFFB45309),
+};
+
+Color paletteColour(String? name, Color fallback) => dashboardPalette[name] ?? fallback;
+
+/// ওয়েবের পূর্ণ ঠিকানা থেকে অ্যাপের পথ — নিজের পর্দা থাকলে সেটা, নইলে ভেতরের ওয়েব-জানালা ([[NativeForWeb]])
+void openDashboardLink(BuildContext context, String? href) {
+  if (href == null || href.isEmpty) return;
+  final uri = Uri.tryParse(href);
+  if (uri == null) return;
+  final path = uri.path.startsWith('/') ? uri.path.substring(1) : uri.path;
+  final web = uri.hasQuery ? '$path?${uri.query}' : path;
+  context.push('/home/${WebPaths.navPathFor(web)}');
+}
+
+/// রঙিন মাথা — নাম, পাশে বিবরণ, নিচে দ্রুত কাজের বোতাম
+class NewLookHead extends StatelessWidget {
+  const NewLookHead({super.key, required this.dashboard, required this.name});
+
+  final ModuleDashboard dashboard;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final head = dashboard.headColours;
+    final own = AppColors.moduleColor(dashboard.payload['module']?.toString() ?? '');
+    final a = paletteColour(head.isNotEmpty ? head[0] : null, own);
+    final b = paletteColour(head.length > 1 ? head[1] : null, a);
+
+    return Container(
+      key: const Key('dashboard-head'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(colors: [a, b]),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(dashboard.title.isNotEmpty ? dashboard.title : name,
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+          if (dashboard.subtitle.isNotEmpty)
+            Text(dashboard.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          if (dashboard.tiles.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final tile in dashboard.tiles)
+                  ActionChip(
+                    key: Key('dashboard-tile-${tile.label}'),
+                    label: Text(tile.label, style: TextStyle(color: a, fontWeight: FontWeight.w600)),
+                    backgroundColor: Colors.white,
+                    side: BorderSide.none,
+                    onPressed: () => openDashboardLink(context, tile.href),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// উপরের চার কার্ড — ওয়েবের রঙে, দুই সারিতে; চাপলে পেছনের তালিকা
+class NewLookCards extends StatelessWidget {
+  const NewLookCards({super.key, required this.dashboard});
+
+  final ModuleDashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = dashboard.stats.take(4).toList();
+    final colours = dashboard.cardColours;
+
+    return GridView.count(
+      key: const Key('dashboard-cards'),
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.55,
+      children: [
+        for (var i = 0; i < top.length; i++)
+          Material(
+            color: paletteColour(i < colours.length ? colours[i] : null, AppColors.primary),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: top[i].href == null ? null : () => openDashboardLink(context, top[i].href),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(top[i].label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(top[i].hidden ? context.l10n.salesDashboardsNoKey : (top[i].value ?? ''),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                    if (top[i].hint.isNotEmpty)
+                      Text(top[i].hint, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// "নজরে রাখুন" — লাল এখনই, হলুদ নজর; কিছু না থাকলে সবুজ "সব ঠিক আছে"
+class NewLookWatch extends StatelessWidget {
+  const NewLookWatch({super.key, required this.watch});
+
+  final List<DashboardWatch> watch;
+
+  @override
+  Widget build(BuildContext context) {
+    Color surface(String tone) => switch (tone) {
+          'bad' => AppColors.dangerSurface,
+          'warn' => AppColors.warningSurface,
+          _ => context.palette.surface,
+        };
+
+    return Card(
+      key: const Key('dashboard-watch'),
+      margin: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Text(context.l10n.dashboardWatchTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          if (watch.isEmpty)
+            Container(
+              color: AppColors.successSurface,
+              padding: const EdgeInsets.all(12),
+              child: Text(context.l10n.dashboardWatchAllClear,
+                  style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600)),
+            ),
+          for (final row in watch)
+            InkWell(
+              onTap: row.href == null ? null : () => openDashboardLink(context, row.href),
+              child: Container(
+                color: surface(row.tone),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(row.label)),
+                    Text(row.value, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "আরও অঙ্ক" — উপরের চারটার বাইরের সব অঙ্ক, একটাও হারায় না (ওয়েবের পরিকল্পনা §৪.৫)
+class NewLookMore extends StatelessWidget {
+  const NewLookMore({super.key, required this.stats});
+
+  final List<DashboardStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('dashboard-more'),
+      margin: const EdgeInsets.only(top: AppSpacing.sm),
+      child: ExpansionTile(
+        title: Text(context.l10n.dashboardMoreFigures, style: const TextStyle(fontWeight: FontWeight.w700)),
+        children: [for (final stat in stats) _StatCard(stat: stat)],
       ),
     );
   }

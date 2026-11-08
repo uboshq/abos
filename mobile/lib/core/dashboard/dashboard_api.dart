@@ -66,6 +66,32 @@ class DashboardStat {
   String get tone => (payload['tone'] ?? 'neutral').toString();
   String? get previous => payload['previous']?.toString();
   String? get previousLabel => payload['previousLabel']?.toString();
+
+  /// ⭐ ড্যা-৭: চাপলে পেছনের তালিকা — ওয়েবের ঠিকানা; অ্যাপ নিজের পর্দা খোলে, নয়তো ভেতরের ওয়েব জানালা। পুরনো সার্ভারে null।
+  String? get href => payload['href']?.toString();
+}
+
+/// ⭐ "নজরে রাখুন"-এর এক সারি (ড্যা-৭; ওয়েবের module-v2-এর একই ছাঁকনি — করণীয়, শূন্য নয়)।
+class DashboardWatch {
+  const DashboardWatch(this.payload);
+
+  final Map<String, dynamic> payload;
+
+  String get label => (payload['label'] ?? '').toString();
+  String get value => (payload['value'] ?? '').toString();
+  String get tone => (payload['tone'] ?? 'neutral').toString();
+  String? get href => payload['href']?.toString();
+}
+
+/// ⭐ দ্রুত কাজের বোতাম (ড্যা-৭)।
+class DashboardTile {
+  const DashboardTile(this.payload);
+
+  final Map<String, dynamic> payload;
+
+  String get label => (payload['label'] ?? '').toString();
+  String? get href => payload['href']?.toString();
+  String? get icon => payload['icon']?.toString();
 }
 
 class ModuleDashboard {
@@ -85,6 +111,21 @@ class ModuleDashboard {
       _maps('stats').map(DashboardStat.new).toList();
   List<Map<String, dynamic>> get panels => _maps('panels');
   List<Map<String, dynamic>> get listings => _maps('listings');
+
+  /// ⭐ ড্যা-৭ — ওয়েবের নতুন সাজের অংশ; পুরনো সার্ভার পাঠায় না, তখন খালি আর পর্দা আগের মতো।
+  List<DashboardWatch> get watch => _maps('watch').map(DashboardWatch.new).toList();
+  List<DashboardTile> get tiles => _maps('tiles').map(DashboardTile.new).toList();
+
+  /// মাথার দুই রং আর উপরের চার কার্ডের রং — নামে (blue, sky…), ওয়েবের `--color-pal-*`; না এলে খালি
+  List<String> get headColours => _names('head');
+  List<String> get cardColours => _names('cards');
+
+  /// নতুন সাজ চেনা যায় কি না — সার্ভার রং পাঠালে
+  bool get hasNewLook => payload['colours'] is Map;
+
+  List<String> _names(String key) => payload['colours'] is Map
+      ? (((payload['colours'] as Map)[key] as List?) ?? const []).map((e) => e.toString()).toList()
+      : const [];
 
   List<Map<String, dynamic>> _maps(String key) =>
       ((payload[key] as List?) ?? const [])

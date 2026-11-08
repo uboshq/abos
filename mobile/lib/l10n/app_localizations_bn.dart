@@ -11053,4 +11053,13 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsLinesTotal => 'মোট';
+
+  @override
+  String get dashboardWatchTitle => 'নজরে রাখুন';
+
+  @override
+  String get dashboardWatchAllClear => 'সব ঠিক আছে — এখন কিছু করার নেই';
+
+  @override
+  String get dashboardMoreFigures => 'আরও অঙ্ক';
 }

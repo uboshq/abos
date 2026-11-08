@@ -15397,5 +15397,17 @@
   "approvalsLinesTotal": "মোট",
   "@approvalsLinesTotal": {
     "description": "Approvals paper page: the total under the paper's lines"
+  },
+  "dashboardWatchTitle": "নজরে রাখুন",
+  "@dashboardWatchTitle": {
+    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: module dashboard watch list title (the web's \"\u09a8\u099c\u09b0\u09c7 \u09b0\u09be\u0996\u09c1\u09a8\")"
+  },
+  "dashboardWatchAllClear": "সব ঠিক আছে — এখন কিছু করার নেই",
+  "@dashboardWatchAllClear": {
+    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: watch list when nothing needs doing"
+  },
+  "dashboardMoreFigures": "আরও অঙ্ক",
+  "@dashboardMoreFigures": {
+    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: the figures below the top four"
   }
 }

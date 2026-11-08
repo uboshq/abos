@@ -18355,6 +18355,24 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'মোট'**
   String get approvalsLinesTotal;
+
+  /// ড্যা-৭: module dashboard watch list title (the web's "নজরে রাখুন")
+  ///
+  /// In bn, this message translates to:
+  /// **'নজরে রাখুন'**
+  String get dashboardWatchTitle;
+
+  /// ড্যা-৭: watch list when nothing needs doing
+  ///
+  /// In bn, this message translates to:
+  /// **'সব ঠিক আছে — এখন কিছু করার নেই'**
+  String get dashboardWatchAllClear;
+
+  /// ড্যা-৭: the figures below the top four
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও অঙ্ক'**
+  String get dashboardMoreFigures;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -11225,4 +11225,13 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsLinesTotal => 'Total';
+
+  @override
+  String get dashboardWatchTitle => 'Keep an eye on';
+
+  @override
+  String get dashboardWatchAllClear => 'All clear — nothing to do now';
+
+  @override
+  String get dashboardMoreFigures => 'More figures';
 }

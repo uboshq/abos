@@ -3049,5 +3049,8 @@
   "approvalsJourneyTook": "{hours} h",
   "approvalsAttachments": "Attachments",
   "approvalsAttachmentFailed": "The file could not be opened",
-  "approvalsLinesTotal": "Total"
+  "approvalsLinesTotal": "Total",
+  "dashboardWatchTitle": "Keep an eye on",
+  "dashboardWatchAllClear": "All clear — nothing to do now",
+  "dashboardMoreFigures": "More figures"
 }
