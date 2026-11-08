@@ -403,6 +403,8 @@ export function voucherMoney ({
     difference = '',
     sideTexts = {},
     buttonTexts = {},
+    peekTexts = {},
+    carrierLabel = '',
 } = {}) {
     // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
     let form = null
@@ -498,6 +500,36 @@ export function voucherMoney ({
         heardFill (value) {
             const amount = String(value ?? '').replace(/,/g, '').trim()
             if (amount !== '' && Number.isFinite(Number(amount))) this.amount = amount
+        },
+
+        /*
+         * ⭐ ভাঁজের মাথার ছোট লেখা — মালিক, ৮ নভেম্বর ২০২৬ ("egulo vaj kore rako zokon lagbe tokhon kule nibe"; নমুনা "ok"):
+         * ভাঁজ বন্ধ থাকলেও মাথায় দেখা যায় ভিতরে কী আছে। ⓘ লেখার ছাঁচ সার্ভারের ভাষার ফাইল থেকে (`peekTexts`, money.fold_peek)।
+         */
+        attachName: '',
+        carrierName: String(carrierLabel ?? ''),
+        get cutPeek () {
+            const figure = (value) => taka(Number(String(value ?? '').replace(/,/g, '')) || 0)
+            const diff = this.differenceKind === ''
+                ? String(peekTexts?.diffNone ?? '')
+                : String(peekTexts?.diff ?? '').replace(':amount', figure(this.difference))
+            return String(peekTexts?.cut ?? '').replace(':vds', figure(this.vds)).replace(':ait', figure(this.ait)).replace(':diff', diff)
+        },
+        get attachPeek () {
+            const file = this.attachName === '' ? String(peekTexts?.noFile ?? '') : String(peekTexts?.file ?? '').replace(':name', this.attachName)
+            const carrier = String(peekTexts?.carrier ?? '').replace(':name', this.carrierName === '' ? String(peekTexts?.direct ?? '') : this.carrierName)
+            return file + ' · ' + carrier
+        },
+        /* ⓘ ভাঁজের ভিতরের ঘর বদলালে মাথার লেখা — ফাইলের নাম, আর "কার মাধ্যমে"-র বাছা নাম (ফাঁকা = সরাসরি) */
+        heardAttach (event) {
+            const field = event?.target
+            if (!field) return
+            if (field.type === 'file') {
+                this.attachName = field.files && field.files.length > 0 ? String(field.files[0].name) : ''
+            } else if (field.name === 'carried_by') {
+                const picked = field.selectedOptions && field.selectedOptions[0]
+                this.carrierName = field.value === '' || !picked ? '' : String(picked.textContent ?? '').trim()
+            }
         },
 
         /*

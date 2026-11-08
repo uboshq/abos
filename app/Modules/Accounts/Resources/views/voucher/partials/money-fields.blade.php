@@ -69,8 +69,17 @@
                     $withheldOrder = $isPayment ? ['ait', 'vds'] : ['vds', 'ait'];
                 @endphp
                 {{-- ⭐ রঙিন পট্টি — উৎসে কাটা আর কম-বেশি এক সারিতে (মালিক, ৭ নভেম্বর ২০২৬: "পক্ষের ধরন, পদ্ধতি, কম-বেশি egulo dropdawn e diye line komiye 1080p te ek page" — নমুনা "ok") --}}
-                <h3 data-form-band="cut" class="mt-4 mb-3">{{ __('money.band.cut') }}</h3>
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-voucher-cut-row>
+                {{-- ⭐ ভাঁজ — মালিক, ৮ নভেম্বর ২০২৬ ("egulo vaj kore rako zokon lagbe tokhon kule nibe"; নমুনা "টাকা নেওয়ার ভাঁজ করা ফর্ম", "ok")।
+                     ⓘ কিছু বসানো থাকলে (VDS, AIT, কম-বেশি) বা ভুল ধরা পড়লে খোলা অবস্থায় আঁকা — ভুল কখনো ভাঁজের ভিতরে লুকায় না --}}
+                @php
+                    $cutOpen = $errors->hasAny(['ait_amount', 'vds_amount', 'difference.kind', 'difference.amount'])
+                        || filled(old('ait_amount')) || filled(old('vds_amount')) || filled(old('difference.kind'))
+                        || bccomp((string) ($voucher->ait_amount ?? '0'), '0', 4) > 0 || bccomp((string) ($voucher->vds_amount ?? '0'), '0', 4) > 0
+                        || filled($voucher->difference_kind ?? null);
+                @endphp
+                <details class="money-fold mt-4" data-fold="cut" @if ($cutOpen) open @endif>
+                <summary class="money-fold-head"><h3 data-form-band="cut" class="mb-0">{{ __('money.band.cut') }}<span class="money-fold-peek" data-fold-peek x-text="cutPeek"></span><span class="money-fold-chev" aria-hidden="true">▾</span></h3></summary>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-voucher-cut-row>
                 <div class="contents" data-voucher-withheld>
                     @foreach ($withheldOrder as $kind)
                         <x-ui.field :name="$withheldFields[$kind][0]" type="money" :model="$kind" empty-shows="0.00"
@@ -102,4 +111,5 @@
                     </div>
                 </div>
                 </div>{{-- data-voucher-cut-row --}}
+                </details>
             </div>

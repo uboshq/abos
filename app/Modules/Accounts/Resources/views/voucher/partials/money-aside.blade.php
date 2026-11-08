@@ -56,8 +56,11 @@
                 @endunless
                 <dt>{{ __('money.screen.sum.charge_any') }}</dt>
                 <dd class="num" data-sum-charge x-text="sumCharge"></dd>
-                <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ $isPayment ? __('money.screen.sum.net') : __('money.screen.sum.into') }}</dt>
-                <dd class="num border-t border-(--color-border) pt-2 font-semibold" data-sum-net x-text="sumNet"></dd>
+                {{-- ⭐ নিট — সবুজ লেখা, সবুজ গোল বাক্সে, অঙ্কটা বড় আর মোটা (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"); সারির কথা আর ক্রম আগের মতোই --}}
+                <div class="money-net" data-sum-net-box>
+                    <dt>{{ $isPayment ? __('money.screen.sum.net') : __('money.screen.sum.into') }}</dt>
+                    <dd class="num" data-sum-net x-text="sumNet"></dd>
+                </div>
                 <x-slot:after>
                     {{-- ⭐ সারাংশ ফাঁকা কেন — চুপ নয় (মালিক, ২৬ অক্টোবর ২০২৬: "entry dileo summary empty thake kicui dekhay na"):
                          ঘর বাকি থাকলে কী দিলে আসবে, আর সার্ভার থামালে (যেমন অন্যের ক্যাশবাক্স) সেই কারণটাই — নিচের খাতার বাক্সের একই কথা --}}

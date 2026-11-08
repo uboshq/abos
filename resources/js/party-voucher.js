@@ -311,6 +311,17 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             return '৳' + taka(this.allocSumPaisa / 100);
         },
 
+        /* ⭐ ভাঁজের মাথা — "৮টা বিল · বাকি ৳… · এই রসিদে প্রয়োগ ৳…" (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"); নোট গোনা নয় */
+        get billsPeek() {
+            const open = this.bills.filter((b) => this.isBill(b));
+            const due = open.reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0);
+
+            return String(this.texts?.billsPeek ?? '')
+                .replace(':n', String(open.length))
+                .replace(':due', taka(due / 100))
+                .replace(':applied', this.allocSumText);
+        },
+
         /** টাকার ঘরে যোগফল — কেবল লেখক নিজে ঘরটা না বদলালে (ফাঁকা, বা শেষবার এই বাক্সের বসানো অঙ্কই আছে) */
         refill() {
             const sum = this.allocSumPaisa;

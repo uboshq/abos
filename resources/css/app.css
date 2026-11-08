@@ -1905,6 +1905,59 @@ tr[data-account-group] > td:first-child a .num {
 [data-form-band="money"] { --band: var(--color-kind-receipt); }
 [data-form-band="cut"] { --band: var(--color-kind-expense-deep); }
 [data-form-band="note"] { --band: var(--color-ink-muted); }
+[data-form-band="bills"] { --band: var(--color-kind-chart-deep); }
+
+/* ── ভাঁজ — মালিক, ৮ নভেম্বর ২০২৬ ("egulo vaj kore rako zokon lagbe tokhon kule nibe"; নমুনা "ok") ──
+   রঙিন পট্টিটাই ভাঁজের মাথা: চাপলে খোলে; মাথায় ছোট গোল ফিতায় ভিতরের কথা; ডানে ▾ খুললে ঘোরে। */
+.money-fold > summary { list-style: none; cursor: pointer; }
+.money-fold > summary::-webkit-details-marker { display: none; }
+.money-fold > summary > [data-form-band] { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .65rem; }
+[data-boxed] > .money-fold:first-child > summary > [data-form-band] {
+    margin-top: -1rem;
+    border-start-start-radius: var(--radius-card);
+    border-start-end-radius: var(--radius-card);
+}
+[data-boxed] > .money-fold:first-child:not([open]) > summary > [data-form-band] {
+    margin-bottom: -1rem;
+    border-end-start-radius: var(--radius-card);
+    border-end-end-radius: var(--radius-card);
+}
+.money-fold:not([open]) > summary > [data-form-band] { margin-bottom: 0; }
+/* ⓘ কাটার ভাঁজ টাকার কার্ডের শেষে — বন্ধ থাকলে পট্টিটাই কার্ডের তলা, নিচে সাদা ফালি নয় (নমুনার মতো) */
+.money-fold[data-fold="cut"]:not([open]) > summary > [data-form-band] {
+    margin-bottom: -1rem;
+    border-end-start-radius: var(--radius-card);
+    border-end-end-radius: var(--radius-card);
+}
+.money-fold-peek {
+    font-weight: 500;
+    font-size: .78rem;
+    border-radius: 999px;
+    padding: .05rem .65rem;
+    background: var(--color-kind-glass);
+    font-variant-numeric: tabular-nums;
+}
+.money-fold-peek:empty { display: none; }
+.money-fold-chev { margin-inline-start: auto; font-size: .75rem; transition: transform .15s; }
+.money-fold[open] > summary .money-fold-chev { transform: rotate(180deg); }
+.money-fold > summary:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+/* ⭐ নিট — সবুজ গোল বাক্স (মালিক, ৮ নভেম্বর ২০২৬: "ei likhtao sobuj koro r ekta round box koro"; নমুনা "ok") */
+.money-net {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-top: .25rem;
+    padding: .5rem .75rem;
+    border: 2px solid var(--color-badge-success-ink);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--color-badge-success-ink) 8%, var(--color-surface-card));
+    color: var(--color-badge-success-ink);
+    font-weight: 700;
+}
+.money-net dd { font-size: 1.1rem; }
 
 [data-page-kind] [data-voucher-general] [data-voucher-head] select,
 [data-page-kind] [data-voucher-general] [data-voucher-head] input {

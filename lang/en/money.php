@@ -221,5 +221,16 @@ return [
         'send' => 'Send for approval',
     ],
     /* ⭐ টাকার পর্দার রঙিন পট্টি — মালিক, ৭ নভেম্বর ২০২৬ (নমুনা "ok") */
-    'band' => ['party_in' => 'Received from', 'party_out' => 'Paid to', 'money_in' => 'Where it came in', 'money_out' => 'Where it went out from', 'cut' => 'Deductions and difference', 'note' => 'Attachment and narration', 'new_no' => 'new', 'unbalanced' => 'Does not balance: debit and credit differ'],
+    'fold_peek' => [
+        'cut' => 'VDS :vds · AIT :ait · :diff',
+        'diffNone' => 'no difference',
+        'diff' => 'difference :amount',
+        'bills_in' => ':n bills · due ৳:due · applied here :applied',
+        'bills_out' => ':n bills · due ৳:due · applied here :applied',
+        'noFile' => 'no file',
+        'file' => 'file: :name',
+        'carrier' => 'through: :name',
+        'direct' => 'direct',
+    ],
+    'band' => ['party_in' => 'Received from', 'party_out' => 'Paid to', 'money_in' => 'Where it came in', 'money_out' => 'Where it went out from', 'cut' => 'Deductions and difference', 'note' => 'Attachment and narration', 'attach' => 'Attachment', 'narration' => 'Narration', 'new_no' => 'new', 'unbalanced' => 'Does not balance: debit and credit differ'],
 ];

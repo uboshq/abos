@@ -498,9 +498,14 @@ final class TheReceiptAndPaymentMirrorEachOtherTest extends TestCase
             $this->assertContains(trim((string) $xpath->query('.//h3', $open)->item(0)?->firstChild?->textContent), [trans('money.screen.'.$bills, [], 'bn'), trans('money.screen.'.$bills, [], 'en')],
                 "⛔ {$type}: খোলা বিলের মাথা নকশার নয়");
 
+            // ⭐ মালিক, ৮ নভেম্বর ২০২৬ (নমুনা "ok"): সংযুক্তি ভাঁজে (মাথাটাই ভাঁজের হাতল), বিবরণ নিজের কার্ডে, সবসময় খোলা
             $details = $xpath->query('//section[@data-voucher-details]')->item(0);
-            $this->assertContains(trim((string) $xpath->query('./h2', $details)->item(0)?->textContent), [trans('money.screen.attach_and_note', [], 'bn'), trans('money.screen.attach_and_note', [], 'en')],
-                "⛔ {$type}: \"সংযুক্তি ও বিবরণ\" মাথা নেই");
+            $this->assertContains(trim((string) $xpath->query('./details[@data-fold="attach"]/summary/h2', $details)->item(0)?->firstChild?->textContent), [trans('money.band.attach', [], 'bn'), trans('money.band.attach', [], 'en')],
+                "⛔ {$type}: \"সংযুক্তি\" ভাঁজের মাথা নেই");
+            $note = $xpath->query('//section[@data-voucher-note]')->item(0);
+            $this->assertNotNull($note, "⛔ {$type}: বিবরণের নিজের কার্ড নেই");
+            $this->assertNull($xpath->query('ancestor::details', $note)->item(0), "⛔ {$type}: বিবরণ ভাঁজের ভিতরে — নমুনায় সবসময় খোলা");
+            $this->assertSame(1, $xpath->query('.//*[@name="narration"]', $note)->length, "⛔ {$type}: বিবরণের ঘর নিজের কার্ডে নেই");
             $this->assertContains(trim((string) $xpath->query('.//label[@for="attachment"]', $details)->item(0)?->textContent), [trans('money.screen.'.$attach, [], 'bn'), trans('money.screen.'.$attach, [], 'en')],
                 "⛔ {$type}: সংযুক্তির নাম নকশার নয়");
         }

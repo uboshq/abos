@@ -86,6 +86,7 @@
                  'over' => __('money.screen.bills_over'),
                  'creditLimit' => __('money.screen.credit_limit'),
                  'creditNone' => __('money.screen.credit_none'),
+                 'billsPeek' => __('money.fold_peek.bills_'.($isReceipt ? 'in' : 'out')),
                  'bankNone' => __('money.screen.payee_bank_none'),
                  // ⭐ বিলে না-বাঁধা নোটের সারি — ধরনের নাম (a5-এর চুক্তি `kind`)
                  'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note')],
@@ -400,14 +401,16 @@
         `bills[i][amount]`; প্রতিটা সারি সার্ভারে পক্ষের নিজের খোলা বিল থেকে মেলে আর পোস্টে তালাসহ আবার মাপা হয় ([[VoucherAllocations]])।
         ⛔ আগের এক-বিলের রেডিও (অডিট ম১-এর সময়ে সার্ভার ভাগ রাখত না) এখন নেই — ভাগ রাখার টেবিল আছে, আর ম১-এর পাঁচ প্রশ্ন প্রতিটা সারিতে।
     --}}
+    {{-- ⭐ ভাঁজ — মালিক, ৮ নভেম্বর ২০২৬ (নমুনা "ok"): মাথায় বিলের সংখ্যা আর মোট বাকি; বিল বাছা থাকলে বা ভুল হলে খোলা --}}
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" data-open-bills
              x-show="! noParty && bills.length > 0" x-cloak>
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 class="font-semibold">
-                {{ $isReceipt ? __('money.screen.open_bills_in') : __('money.screen.open_bills') }}
+        <details class="money-fold" data-fold="bills" @if ($errors->hasAny(['bills', 'bills.*', 'against_id']) || filled(old('bills'))) open @endif>
+        <summary class="money-fold-head">
+            <h3 data-form-band="bills">
+                {{ $isReceipt ? __('money.screen.open_bills_in') : __('money.screen.open_bills') }}<span class="money-fold-peek" data-fold-peek x-text="billsPeek"></span><span class="money-fold-chev" aria-hidden="true">▾</span>
             </h3>
-            <span class="text-2xs text-(--color-ink-muted)" data-bills-hint>{{ __('money.screen.bills_hint') }}</span>
-        </div>
+        </summary>
+        <p class="mt-3 text-2xs text-(--color-ink-muted)" data-bills-hint>{{ __('money.screen.bills_hint') }}</p>
 
         <template x-if="bills.length > 0">
             <div>
@@ -479,5 +482,6 @@
                 <p class="mt-2 text-xs text-(--color-danger)" data-bills-over x-show="overText !== ''" x-cloak x-text="overText"></p>
             </div>
         </template>
+        </details>
     </section>
 </div>

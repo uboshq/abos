@@ -198,6 +198,9 @@
                   owedLabels: @js($headOwedLabels),
                   branchLabels: @js(__('money.screen.meta.party_branch_by')),
                   bankFileUrl: @js(route('accounts.voucher.bank_file')),
+                  // ⭐ ভাঁজের মাথার ছোট লেখা (মালিক, ৮ নভেম্বর ২০২৬, নমুনা ok) — ⛔ এই মন্তব্যে দুই-উদ্ধৃতি নয়: x-data-র attribute ভাঙে
+                  peekTexts: @js(__('money.fold_peek')),
+                  carrierLabel: @js((string) (collect($carriers ?? [])->get(old('carried_by', $voucher->carried_by)) ?? '')),
               })"
               @money-method="heard($event.detail)"
               @party-due="heardParty($event.detail)"
@@ -839,17 +842,36 @@
         @if ($partyAbove)
             @php $isPayment = $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT; @endphp
 
+            {{-- ⭐ সংযুক্তি আর "কার মাধ্যমে" ভাঁজে; বিবরণ (আর পরিশোধে "যে খাতে বসবে") আলাদা কার্ডে, সবসময় খোলা — মালিক, ৮ নভেম্বর ২০২৬
+                 ("egulo vaj kore rako zokon lagbe tokhon kule nibe"; নমুনা "টাকা নেওয়ার ভাঁজ করা ফর্ম", "ok")।
+                 ⓘ "কার মাধ্যমে" বসানো থাকলে বা কোনো ঘরে ভুল হলে ভাঁজ খোলা আঁকা — ভুল কখনো ভাঁজের ভিতরে লুকায় না --}}
+            @php
+                $attachOpen = $errors->hasAny(['attachment', 'carried_by']) || filled(old('carried_by', $voucher->carried_by));
+            @endphp
             <section data-boxed data-voucher-details
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 data-form-band="note" class="mb-3">{{ __('money.screen.attach_and_note') }}</h2>
-                {{-- ⭐ এক সারিতে — স্লিপ · কার মাধ্যমে · বিবরণ (পরিশোধে "যে খাতে বসবে"-ও), যাতে পুরো ফর্ম ১০৮০p-এর এক পর্দায় আঁটে (মালিক, ৭ নভেম্বর ২০২৬) --}}
-                {{-- ⛔ ১৩৬৬-এ (মেনু খোলা) মূল কলাম ~৭০০px — তিন-চার ঘরে "কার মাধ্যমে"-র খালি লেখা (১৯১px) কাটা পড়ে; তাই চওড়া পর্দায় (২xl, ১০৮০p) এক সারি, তার নিচে দুই-দুই --}}
-                <div @class(['grid gap-3 sm:grid-cols-2', '2xl:grid-cols-3' => ! $isPayment, '2xl:grid-cols-4' => $isPayment]) data-voucher-details-row>
+                <details class="money-fold" data-fold="attach" @if ($attachOpen) open @endif @change="heardAttach($event)">
+                <summary class="money-fold-head"><h2 data-form-band="note" class="mb-0">{{ __('money.band.attach') }}<span class="money-fold-peek" data-fold-peek x-text="attachPeek"></span><span class="money-fold-chev" aria-hidden="true">▾</span></h2></summary>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2" data-voucher-details-row>
                     {{-- ⭐ সংযুক্তি — ব্যাংক স্লিপ, স্ক্রিনশট বা অ্যাডভাইস (নকশার "সংযুক্তি ও বিবরণ"); লেখক আগে থেকেই নেয় ([[VoucherWriter::store()]]) --}}
                     <div data-voucher-attachment>
                         @include('accounts::voucher.partials.attachment-field', ['attachmentLabel' => $isPayment ? __('money.screen.attach_hint') : __('money.screen.attach_hint_in')])
                     </div>
 
+                    {{-- ⭐ কার মাধ্যমে — মালিকের আলাদা আদেশ (১৮ সেপ্টেম্বর ২০২৬: *"বিবরণ er age niye aso"*); বিবরণের ঠিক আগে --}}
+                    <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
+                                 :options="$carriers ?? []"
+                                 :selected="old('carried_by', $voucher->carried_by)"
+                                 :placeholder="__('accounts::field.carried_by_none')" />
+                </div>
+                </details>
+            </section>
+
+            {{-- ⭐ বিবরণ — সবসময় খোলা (এটা ছাড়া জমা হয় না); পরিশোধে পাশে "যে খাতে বসবে" --}}
+            <section data-boxed data-voucher-note
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 data-form-band="note" class="mb-3">{{ __('money.band.narration') }}</h2>
+                <div @class(['grid gap-3', 'sm:grid-cols-2' => $isPayment]) data-voucher-note-row>
                     <div class="contents">
                         @if ($isPayment)
                             {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
@@ -861,12 +883,6 @@
                                          :selected="old('to_account_id', $debitLine?->account_id)"
                                          placeholder="—" />
                         @endif
-
-                        {{-- ⭐ কার মাধ্যমে — মালিকের আলাদা আদেশ (১৮ সেপ্টেম্বর ২০২৬: *"বিবরণ er age niye aso"*); বিবরণের ঠিক আগে --}}
-                        <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
-                                     :options="$carriers ?? []"
-                                     :selected="old('carried_by', $voucher->carried_by)"
-                                     :placeholder="__('accounts::field.carried_by_none')" />
 
                         <x-ui.field name="narration" :required="$narrationRequired"
                                     :label="__('core.table.narration')"
