@@ -9,7 +9,7 @@
 <x-ui.paper-row-menu
     :paper="$voucher"
     :show="route('accounts.voucher.show', $voucher)"
-    :state="__('core.status.'.$voucher->status)"
+    :state="($awaiting ?? false) ? __('core.status.awaiting_approval') : __('core.status.'.$voucher->status)"
     module="accounts"
     :edit="route('accounts.voucher.edit', $voucher)"
     :editable="$draft && $open && (bool) $can?->can('accounts.voucher.update')"
