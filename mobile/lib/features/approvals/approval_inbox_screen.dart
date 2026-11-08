@@ -356,7 +356,8 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
         ],
       ),
       // ⭐ একসাথে অনুমোদন — নিচে স্থির (পাতা ৬, ছবি ১); ⓘ বাছাই শূন্য হলে চাপা যায় না, আর বাছার মতো কাগজই না থাকলে বোতাম নেই
-      bottomNavigationBar: _inboxDoor == true && bulkable && _decidable
+      // ⓘ নমুনা v4: বাছাই না থাকলে নিচে কোনো বোতাম নয় — লম্বা চাপে (বা চিহ্নে ছুঁয়ে) প্রথম কাগজ বাছলে তবে আসে
+      bottomNavigationBar: _inboxDoor == true && bulkable && _decidable && _picked.isNotEmpty
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
@@ -641,6 +642,7 @@ class _SortBar extends StatelessWidget {
 
     return Container(
       key: const ValueKey('approvals-sort'),
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(color: palette.surface, border: Border(bottom: BorderSide(color: palette.border))),
       // ⓘ জায়গা না থাকলে (বড় লেখা, সরু ফোন) ডানের দুই পছন্দ নিচের লাইনে নামে — কাটে বা উপচায় না
@@ -874,6 +876,8 @@ class _ApprovalCard extends StatelessWidget {
                             onPressed: onApprove,
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF15803D),
+                              // ⓘ অন্ধকারে থিমের লেখার রং গাঢ় হয়ে সবুজে মিলিয়ে যেত — সবুজের উপর সবসময় সাদা
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),

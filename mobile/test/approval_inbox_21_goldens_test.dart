@@ -135,11 +135,8 @@ void main() {
     final mode = dark ? 'dark' : 'light';
 
     testWidgets('২১ · ১. ইনবক্স, 412dp, $mode', (tester) async {
+      // ⓘ নমুনা v4-এর ছবি ১-এ কিছু বাছা নেই — ইনবক্স যেমন খোলে তেমন (বাছাই ছবি ৩-এ)
       await _open(tester, dark: dark);
-      await tester.tap(find.byKey(const Key('approval-pick-p2')));
-      await tester.tap(find.byKey(const Key('approval-pick-p3')));
-      await tester.tap(find.byKey(const Key('approval-pick-p4')));
-      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/approvals21/1_inbox_412_$mode.png'));
     });
@@ -154,9 +151,12 @@ void main() {
 
     testWidgets('২১ · ৩. একসাথে অনুমোদন, 412dp, $mode', (tester) async {
       await _open(tester, dark: dark);
-      await tester.tap(find.byKey(const Key('approval-pick-p2')));
-      await tester.tap(find.byKey(const Key('approval-pick-p3')));
-      await tester.tap(find.byKey(const Key('approval-pick-p4')));
+      // ⓘ নমুনা v4-এর কার্ড উঁচু — তৃতীয় বাছার কার্ড পর্দার নিচে; বাছার আগে তাকে দেখা জায়গায় আনা
+      for (final id in ['p2', 'p3', 'p4']) {
+        await tester.ensureVisible(find.byKey(Key('approval-pick-$id')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(Key('approval-pick-$id')));
+      }
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('approvals-bulk')));
       await tester.pumpAndSettle();

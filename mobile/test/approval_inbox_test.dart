@@ -206,6 +206,8 @@ void main() {
       expect(find.byKey(Key('approval-view-${row['id']}')), findsOneWidget, reason: '⛔ কার্ডে "দেখুন" নেই');
       expect(find.byKey(Key('approval-card-approve-${row['id']}')), findsOneWidget, reason: '⛔ কার্ডে "✓ অনুমোদন দিন" নেই');
       // ⭐ দেরি আগে, ভাগে — লাল ভাগের মাথা আগে, সবুজ পরে
+      expect(find.byKey(const ValueKey('approvals-group-danger')), findsOneWidget, reason: '⛔ নমুনা v4: "দেরি হয়ে গেছে" ভাগের মাথা নেই');
+      expect(find.byKey(const ValueKey('approvals-group-success')), findsOneWidget, reason: '⛔ নমুনা v4: "সময় আছে" ভাগের মাথা নেই');
       final lateHead = tester.getTopLeft(find.byKey(const ValueKey('approvals-group-danger'))).dy;
       final okHead = tester.getTopLeft(find.byKey(const ValueKey('approvals-group-success'))).dy;
       expect(lateHead, lessThan(okHead), reason: '⛔ নমুনা v4: "দেরি হয়ে গেছে" ভাগ আগে নয়');
@@ -330,6 +332,9 @@ void main() {
       }));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.byKey(const ValueKey('approvals-more')), 200, scrollable: list);
+      // ⓘ পুরোটা দেখা জায়গায় — `scrollUntilVisible` এক কোণা দেখা গেলেই থামে, আর ছোঁয়াটা মাঝখানে পড়ে (পর্দার বাইরে)
+      await tester.ensureVisible(find.byKey(const ValueKey('approvals-more')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('approvals-more')));
       await tester.pumpAndSettle();
 
@@ -508,8 +513,8 @@ void main() {
 
       expect(find.byKey(Key('approval-pick-${row['id']}')), findsOneWidget);
       expect(find.byKey(const Key('approval-pick-money-1')), findsNothing, reason: '⛔ দফা ২১: টাকা নড়ার কাজ বাছা যায়');
-      final dead = tester.widget<FilledButton>(find.byKey(const ValueKey('approvals-bulk')));
-      expect(dead.onPressed, isNull, reason: '⛔ দফা ২১: কিছু না বেছেও একসাথে অনুমোদন চাপা যায়');
+      // ⓘ নমুনা v4: কিছু না বাছা পর্যন্ত বোতামই নেই — চাপার মতো কিছু নেই
+      expect(find.byKey(const ValueKey('approvals-bulk')), findsNothing, reason: '⛔ কিছু না বেছেও একসাথে অনুমোদনের বোতাম');
 
       await tester.tap(find.byKey(Key('approval-pick-${row['id']}')));
       await tester.pumpAndSettle();
