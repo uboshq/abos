@@ -11142,4 +11142,12 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsLongPressHint => 'একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন';
+
+  @override
+  String get approvalsWhyTitle => 'কেন আপনার অনুমোদন লাগছে';
+
+  @override
+  String approvalsWhyReason(String reason) {
+    return 'চাওয়ার কারণ: “$reason”';
+  }
 }

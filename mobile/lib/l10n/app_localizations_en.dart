@@ -11314,4 +11314,12 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsLongPressHint => 'Long-press to pick several';
+
+  @override
+  String get approvalsWhyTitle => 'Why your approval is needed';
+
+  @override
+  String approvalsWhyReason(String reason) {
+    return 'Reason given: “$reason”';
+  }
 }

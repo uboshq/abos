@@ -15531,5 +15531,18 @@
   "approvalsLongPressHint": "একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন",
   "@approvalsLongPressHint": {
     "description": "Inbox hint for bulk picking"
+  },
+  "approvalsWhyTitle": "কেন আপনার অনুমোদন লাগছে",
+  "@approvalsWhyTitle": {
+    "description": "Approval paper page: why your approval is needed (sample v4)"
+  },
+  "approvalsWhyReason": "চাওয়ার কারণ: “{reason}”",
+  "@approvalsWhyReason": {
+    "description": "Approval paper page: the requester's reason",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -18517,6 +18517,18 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন'**
   String get approvalsLongPressHint;
+
+  /// Approval paper page: why your approval is needed (sample v4)
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন আপনার অনুমোদন লাগছে'**
+  String get approvalsWhyTitle;
+
+  /// Approval paper page: the requester's reason
+  ///
+  /// In bn, this message translates to:
+  /// **'চাওয়ার কারণ: “{reason}”'**
+  String approvalsWhyReason(String reason);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

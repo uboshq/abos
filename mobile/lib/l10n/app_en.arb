@@ -3076,5 +3076,7 @@
   "approvalsCardApprove": "✓ Approve",
   "approvalsTotalsMore": "{count} in this list · {more} more below",
   "approvalsDecidedAt": "{label} · {when}",
-  "approvalsLongPressHint": "Long-press to pick several"
+  "approvalsLongPressHint": "Long-press to pick several",
+  "approvalsWhyTitle": "Why your approval is needed",
+  "approvalsWhyReason": "Reason given: “{reason}”"
 }

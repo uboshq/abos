@@ -66,6 +66,7 @@ void main() {
       });
 
   final sheet = ApprovalSheet.fromJson({
+    'why': {'rule': 'ক্রয় বিল নিশ্চিত — ৳1,00,000.00 বা তার বেশি হলে অনুমোদন লাগে', 'step': 'ধাপ 2 · ম্যানেজার', 'reason': 'মাসের শেষ, সরবরাহ বন্ধের নোটিশ'},
     'facts': [
       {'label': 'তারিখ', 'value': '13 Sep 2026'},
     ],
@@ -364,6 +365,15 @@ void main() {
       expect(find.textContaining('“বিল মিলেছে”'), findsOneWidget, reason: '⛔ দফা ২১: যাত্রাপথে কে কী বললেন, নেই');
       expect(find.textContaining('এখন এখানে'), findsOneWidget);
       expect(find.textContaining('ব্যাংক-অ্যাডভাইস.pdf'), findsOneWidget, reason: '⛔ দফা ২১: সংযুক্তি নেই');
+      // ⭐ নমুনা v4: "কেন আপনার অনুমোদন লাগছে" — নিয়ম আর ধাপ এক লাইনে, চাওয়ার কারণ উদ্ধৃতিতে
+      expect(find.byKey(const ValueKey('approval-why')), findsOneWidget, reason: '⛔ নমুনা v4: "কেন আপনার অনুমোদন লাগছে" বাক্স নেই');
+      expect(find.byKey(const ValueKey('approval-why-reason')), findsOneWidget, reason: '⛔ নমুনা v4: যিনি চেয়েছেন তার কারণ পাতায় নেই');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('approval-why-rule'))).data,
+          'ক্রয় বিল নিশ্চিত — ৳1,00,000.00 বা তার বেশি হলে অনুমোদন লাগে · ধাপ 2 · ম্যানেজার', reason: '⛔ কেন অনুমোদন লাগছে — নিয়ম বা ধাপ নেই');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('approval-why-reason'))).data, 'চাওয়ার কারণ: “মাসের শেষ, সরবরাহ বন্ধের নোটিশ”',
+          reason: '⛔ যিনি চেয়েছেন তার কারণ পাতায় নেই');
+      final whyTop = tester.getTopLeft(find.byKey(const ValueKey('approval-why'))).dy;
+      expect(whyTop, lessThan(tester.getTopLeft(find.byKey(const ValueKey('approval-lines'))).dy), reason: '⛔ "কেন" বাক্স কাগজের লাইনের আগে নয়');
 
       final bar = tester.widget<Scaffold>(find.byType(Scaffold).last).bottomNavigationBar;
       expect(bar, isNotNull, reason: '⛔ দফা ২১: সিদ্ধান্তের বোতাম নিচে স্থির নয়');

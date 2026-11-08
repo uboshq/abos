@@ -284,6 +284,7 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
                       style: TextStyle(color: palette.danger)),
                 ),
               if (sheet != null) ...[
+                if (sheet.whyRule != null || sheet.whyReason != null) _Why(sheet: sheet),
                 _Lines(sheet: sheet, paper: paper),
                 if (sheet.journey.isNotEmpty) _Journey(sheet: sheet, paper: paper),
                 if (sheet.attachments.isNotEmpty)
@@ -439,6 +440,49 @@ class _Summary extends StatelessWidget {
           ],
           if (sheet?.standInFor != null) Text(words.approvalsOnBehalf(sheet!.standInFor!), style: small),
         ],
+      ),
+    );
+  }
+}
+
+/// ⭐ "কেন আপনার অনুমোদন লাগছে" — নমুনা v4: কোন নিয়মে কাগজটা আপনার কাছে এল আর ধাপ; যিনি চেয়েছেন তার লেখা কারণ উদ্ধৃতিতে।
+/// ⓘ বাঁয়ে বিভাগের রঙের দাগ (নমুনার `sec.why`)
+class _Why extends StatelessWidget {
+  const _Why({required this.sheet});
+
+  final ApprovalSheet sheet;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = context.l10n;
+    final palette = context.palette;
+    return Card(
+      key: const ValueKey('approval-why'),
+      margin: const EdgeInsets.only(top: AppSpacing.sm),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(border: Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 4))),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(words.approvalsWhyTitle, style: TextStyle(fontWeight: FontWeight.w700, color: palette.onSurfaceMuted, fontSize: 13.5)),
+              const SizedBox(height: AppSpacing.xs),
+              if (sheet.whyRule != null)
+                Text(
+                  sheet.whyStep == null ? sheet.whyRule! : '${sheet.whyRule!} · ${sheet.whyStep!}',
+                  key: const ValueKey('approval-why-rule'),
+                  style: const TextStyle(fontSize: 13.5),
+                ),
+              if (sheet.whyReason != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Text(words.approvalsWhyReason(sheet.whyReason!), key: const ValueKey('approval-why-reason'), style: const TextStyle(fontSize: 13.5)),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

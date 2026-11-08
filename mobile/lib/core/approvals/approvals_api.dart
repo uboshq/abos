@@ -321,7 +321,16 @@ class ApprovalSheet {
     this.standInFor,
     this.journey = const [],
     this.attachments = const [],
+    this.whyRule,
+    this.whyStep,
+    this.whyReason,
   });
+
+  /// ⭐ "কেন আপনার অনুমোদন লাগছে" — নমুনা v4 (মালিক "ok", ৮ নভেম্বর ২০২৬): ইঞ্জিনের নিয়ম, ধাপ, আর যিনি চেয়েছেন তার কারণ।
+  /// ⚠️ পুরনো সার্ভার পাঠায় না — তখন তিনটাই null আর বাক্সটা আসে না
+  final String? whyRule;
+  final String? whyStep;
+  final String? whyReason;
 
   // ── ⭐ কাগজের পুরো পাতা — পাতা ৬, ছবি ২ (দফা ২১); পুরনো সার্ভারে খালি, তখন পাতা আগের মতো কেবল লাইন দেখায়
   final String? requesterName;
@@ -377,7 +386,15 @@ class ApprovalSheet {
           for (final a in (json['attachments'] as List?) ?? const [])
             if (a is Map && a['id'] is num) ((a['id'] as num).toInt(), a['name']?.toString() ?? '', a['size']?.toString() ?? ''),
         ],
+        whyRule: _blankless((json['why'] as Map?)?['rule']),
+        whyStep: _blankless((json['why'] as Map?)?['step']),
+        whyReason: _blankless((json['why'] as Map?)?['reason']),
       );
+
+  static String? _blankless(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
 
   /// এক সারি এক লাইনে — মালিকের নিয়ম, টেবিল নয়: "খাত · পক্ষ · বর্ণনা — ডেবিট ৳…"
   String lineOf(Map<String, String?> row) {
