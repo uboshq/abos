@@ -76,6 +76,45 @@ final class ASignedPaperPostsItselfTest extends TestCase
         $this->assertSame(1, DB::table('approvals')->where('id', $approval->id)->where('status', Approval::APPROVED)->count());
     }
 
+    /**
+     * ⭐ মালিক, ৮ নভেম্বর ২০২৬ (live, আদি: RCV-0419 ২৮ অক্টোবর, RCV-0420 ৯ অক্টোবর — সই দিলেন, তবু খসড়ায় আটকে): "মালিক সব পারবে"।
+     * ⓘ পুরনো তারিখের অনুমতি সইকারীর থাকলে তাঁর সই-ই তারিখটা মেনে নেয়; লেখকের নামেই পোস্ট হয়। ⛔ অনুমতিহীন সইকারীর সইয়ে আগের
+     * মতোই আটকে থাকে, কারণসহ — জানালাটা কেউ পাশ কাটায় না।
+     */
+    public function test_a_signer_who_may_write_in_the_past_carries_an_old_dated_voucher_through(): void
+    {
+        app(SettingsService::class)->set('accounts.backdate_days', '7');
+        $old = now()->subDays(10)->toDateString();
+
+        CompanyContext::forCompany($this->company->id, fn () => $this->signer->givePermissionTo(Permission::findOrCreate('accounts.backdate.override', 'web')));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$voucher, $approval] = $this->sentForSignature($old);
+
+        $this->as($this->signer);
+        app(ApprovalEngine::class)->approve($approval, $this->signer);
+
+        $voucher = Voucher::query()->withoutGlobalScope('user-branch')->findOrFail($voucher->id);
+        $this->assertTrue($voucher->isPosted(), '⛔ পুরনো তারিখের অনুমতি-থাকা সইকারী সই দিলেন, তবু ১০ দিন আগের ভাউচার খসড়ায় আটকে।');
+        $this->assertSame((int) $this->writer->id, (int) $voucher->created_by, '⛔ লেখকের নাম বদলে গেল।');
+        $this->assertFalse(app()->bound(\App\Core\Services\OpenPeriod::SIGNED_BY), '⛔ সইকারীর অনুমতি পোস্টের পরেও বসে রইল — পরের সবকিছু জানালা পেরোত।');
+    }
+
+    public function test_a_signer_without_that_right_leaves_the_old_dated_voucher_stuck_with_the_reason(): void
+    {
+        app(SettingsService::class)->set('accounts.backdate_days', '7');
+        [$voucher, $approval] = $this->sentForSignature(now()->subDays(10)->toDateString());
+
+        $this->as($this->signer);
+        app(ApprovalEngine::class)->approve($approval, $this->signer);
+
+        $voucher = Voucher::query()->withoutGlobalScope('user-branch')->findOrFail($voucher->id);
+        $this->assertTrue($voucher->isDraft(), '⛔ অনুমতিহীন সইয়ে ১০ দিন আগের ভাউচার পাকা হয়ে গেল — সাত দিনের জানালা কেউ মানল না।');
+        $this->assertTrue(
+            DB::table('notifications')->where('user_id', $this->writer->id)->where('type', SignedPaperFinisher::NOTICE)->exists(),
+            '⛔ আটকে রইল, অথচ লেখক খবর পেলেন না।',
+        );
+    }
+
     public function test_a_post_that_is_refused_keeps_the_draft_and_tells_the_writer(): void
     {
         [$voucher, $approval] = $this->sentForSignature();
@@ -121,13 +160,13 @@ final class ASignedPaperPostsItselfTest extends TestCase
     }
 
     /** @return array{0: Voucher, 1: Approval} লেখকের খসড়া, সইয়ের অপেক্ষায় */
-    private function sentForSignature(): array
+    private function sentForSignature(?string $date = null): array
     {
         [$a, $b] = Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '5%')->orderBy('code')->take(2)->get()->all();
 
         $this->as($this->writer);
         $voucher = app(VoucherService::class)->create(
-            ['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'সইয়ের পরে নিজে পোস্ট',
+            ['type' => Voucher::JOURNAL, 'trx_date' => $date ?? now()->toDateString(), 'narration' => 'সইয়ের পরে নিজে পোস্ট',
                 'branch_id' => $this->company->defaultBranch()->id],
             [['account_id' => $a->id, 'debit' => '500', 'credit' => '0'], ['account_id' => $b->id, 'debit' => '0', 'credit' => '500']],
         );
