@@ -10,7 +10,7 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('sales.order.confirm', $order) }}" data-confirm-overview="{{ route('sales.order.overview', $order) }}">
+                    <form id="confirm" method="POST" action="{{ route('sales.order.confirm', $order) }}" data-confirm-overview="{{ route('sales.order.overview', $order) }}">
                         @csrf
                         {{-- ⭐ নতুন ধারায় "নিশ্চিত" মানে "জমা" — বাকির যাচাই, তারপর সুপারভাইজার (নকশার ধাপ ৮) --}}
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ $replacesDo ? __('sales::order_status.submit') : __('sales::action.confirm') }}</x-ui.button>
@@ -178,8 +178,9 @@
         {{-- ⭐ বন্ধ — পুরো বিলের পরে কারণ ছাড়া, কম রেখে কারণসহ (মালিক, ৪ অক্টোবর ২০২৬; [[SalesOrderService::close()]]) --}}
         @can('sales.order.close')
             @if ($order->status === \App\Core\Support\DocumentStatus::CONFIRMED)
-                <details data-close-order
-                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                {{-- ⓘ তালিকার "অ্যাকশন ▾ → অর্ডার বন্ধ করুন" এখানে আনে (`?close=1#close`) — খোলা অবস্থায় --}}
+                <details id="close" data-close-order @if (request()->boolean('close')) open @endif
+                         class="scroll-mt-24 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <summary class="cursor-pointer text-sm font-medium">{{ __('sales::order_status.close') }}</summary>
 
                     <form method="POST" action="{{ route('sales.order.close', $order) }}" class="mt-3 grid gap-3">

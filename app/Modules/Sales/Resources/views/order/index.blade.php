@@ -111,7 +111,7 @@
 
         <x-ui.table
             :grand="$grand"
-            :view-url="fn ($d) => route('sales.order.show', $d)"
+            :row-menu="fn ($d) => view('sales::order.partials.row-menu', ['order' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_orders')"
             :rows="$orders"
             :compact="request()->boolean('compact')"

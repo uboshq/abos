@@ -25,7 +25,7 @@
 
                     {{-- ⛔ গাড়ি ভাড়া বাকি থাকলে নিশ্চিত নেই (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}
                     @unless ($fareOwed)
-                    <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
+                    <form id="confirm" method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>
                             {{ $held ? __('sales::action.finish_held') : __('sales::action.confirm') }}
@@ -323,7 +323,7 @@
         {{-- ⭐ বাতিল-ইনভয়েস চাওয়া — পাকা ইনভয়েস, এখনো বাতিল-ইনভয়েস নেই (মালিক, ৪ অক্টোবর ২০২৬; পাহারা সার্ভিসে) --}}
         @can('sales.invoice.cancellation')
             @if ($invoice->status === \App\Core\Support\DocumentStatus::CONFIRMED && ! $cancellation)
-                <details data-cancellation-form class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <details id="cancellation" data-cancellation-form class="scroll-mt-24 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @if (request()->boolean('cancellation')) open @endif>
                     <summary class="cursor-pointer text-sm font-medium">{{ __('sales::cancellation.button') }}</summary>
 
                     <form method="POST" action="{{ route('sales.invoice.cancellation', $invoice) }}" class="mt-3 space-y-3">

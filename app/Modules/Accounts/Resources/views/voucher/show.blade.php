@@ -108,7 +108,7 @@
                             </p>
                         @endif
 
-                        <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
+                        <form id="confirm" method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
                               data-confirm-overview="{{ route('accounts.voucher.overview', $voucher) }}"
                               class="flex items-end gap-2">
                             @csrf
@@ -156,7 +156,8 @@
                     @can('accounts.voucher.delete')
                         {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা
                              ভাউচার পরে কেউ ব্যাখ্যা করতে পারে না --}}
-                        <form method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
+                        {{-- ⓘ তালিকার "অ্যাকশন ▾ → বাতিল" এখানে আনে (`?cancel=1#cancel`); বোতাম চাপলে কারণ চায় --}}
+                        <form id="cancel" method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
                               x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
                               @submit="ask($event)">
                             @csrf

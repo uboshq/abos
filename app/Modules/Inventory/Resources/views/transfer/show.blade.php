@@ -25,7 +25,7 @@
                             {{ __('core.action.edit') }}
                         </x-ui.button>
 
-                        <form method="POST" action="{{ route('inventory.transfer.dispatch', $transfer) }}">
+                        <form id="confirm" method="POST" action="{{ route('inventory.transfer.dispatch', $transfer) }}">
                             @csrf
                             <x-ui.button type="submit" tone="primary">
                                 {{ __('inventory::action.dispatch') }}
@@ -34,7 +34,7 @@
                     @endcan
                 @elseif ($onTheWay)
                     @can('inventory.transfer.receive')
-                        <form method="POST" action="{{ route('inventory.transfer.receive', $transfer) }}">
+                        <form id="confirm" method="POST" action="{{ route('inventory.transfer.receive', $transfer) }}">
                             @csrf
                             <x-ui.button type="submit" tone="primary">
                                 {{ __('inventory::action.receive') }}
@@ -112,7 +112,8 @@
 
         @can('delete', $transfer)
             @unless ($arrived || $transfer->status === \App\Core\Support\DocumentStatus::CANCELLED)
-                <details class="rounded-(--radius-card) border border-(--color-border)
+                {{-- ⓘ তালিকার "অ্যাকশন ▾ → বাতিল" এখানে আনে (`?cancel=1#cancel`) — খোলা অবস্থায় --}}
+                <details id="cancel" @if (request()->boolean('cancel')) open @endif class="scroll-mt-24 rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card) p-4">
                     <summary class="cursor-pointer text-sm font-medium">
                         {{ __('inventory::action.cancel_transfer') }}

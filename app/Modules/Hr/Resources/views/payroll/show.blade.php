@@ -85,7 +85,7 @@
                             <x-ui.button type="submit">{{ __('hr::action.rebuild') }}</x-ui.button>
                         </form>
 
-                        <form method="POST" action="{{ route('hr.payroll.confirm', $run->id) }}">
+                        <form id="confirm" method="POST" action="{{ route('hr.payroll.confirm', $run->id) }}">
                             @csrf
                             <x-ui.button type="submit" tone="primary">{{ __('hr::action.confirm') }}</x-ui.button>
                         </form>
@@ -97,7 +97,7 @@
                 @endif
 
                 @unless ($run->status === \App\Core\Support\DocumentStatus::CANCELLED)
-                    <form method="POST" action="{{ route('hr.payroll.cancel', $run->id) }}"
+                    <form id="cancel" method="POST" action="{{ route('hr.payroll.cancel', $run->id) }}"
                           class="mt-3 border-t border-(--color-border) pt-3">
                         @csrf
                         <label class="block">

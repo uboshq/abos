@@ -10,7 +10,7 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('purchase.payment.confirm', $payment) }}">
+                    <form id="confirm" method="POST" action="{{ route('purchase.payment.confirm', $payment) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
                     </form>

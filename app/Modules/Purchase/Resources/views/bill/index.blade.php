@@ -136,7 +136,7 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('purchase.bill.show', $d)"
+            :row-menu="fn ($d) => view('purchase::bill.partials.row-menu', ['bill' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_bills')"
             :rows="$bills"
             :compact="request()->boolean('compact')"
