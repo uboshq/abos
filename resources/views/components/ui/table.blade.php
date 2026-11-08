@@ -6,6 +6,11 @@
     $items = is_array($rows) ? $rows : iterator_to_array($rows);
 @endphp
 
+{{-- ⓘ "অ্যাকশন ▾ → গ্রাহককে পাঠান" ফিরে আসে এই তালিকাতেই — লিংকটা এখানে, কপি করার বোতামসহ (মালিক, ৮ নভেম্বর ২০২৬) --}}
+@if ($rowMenu ?? null)
+    <x-ui.shared-link />
+@endif
+
 @if (count($items) === 0)
     @php
         /*

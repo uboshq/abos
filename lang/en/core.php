@@ -1703,6 +1703,7 @@ return [
         'send' => 'Send to customer — WhatsApp · SMS link',
         'edit' => 'Edit',
         'confirm' => 'Confirm',
+        'confirm_hint' => 'after the summary',
         'delete_draft' => 'Cancel the draft — with a reason',
         'reverse' => 'Cancel (reverse) — with a reason',
         'collect' => 'Take payment (collect due)',

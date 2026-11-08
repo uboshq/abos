@@ -65,8 +65,11 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
         $this->assertStringContainsString('href="'.e(route('sales.invoice.edit', $draft)).'"', $html,
             '⛔ খসড়া বিলের সারিতে সম্পাদনা নেই — অথচ খসড়া খাতায় কিছুই বসায়নি।');
 
-        $this->assertStringContainsString('action="'.e(route('sales.invoice.confirm', $draft)).'"', $html,
+        $this->assertStringContainsString('href="'.e(route('sales.invoice.show', $draft)).'#confirm"', $html,
             '⛔ খসড়া বিলের সারিতে "নিশ্চিত করুন" নেই।');
+        /* ⛔ তালিকা থেকে সরাসরি নিশ্চিত নয় — সারাংশের পপ-আপ (মালিক, ৪ অক্টোবর ২০২৬) কেবল পাতায় */
+        $this->assertStringNotContainsString('action="'.e(route('sales.invoice.confirm', $draft)).'"', $html,
+            '⛔ তালিকার মেনু সারাংশ না দেখিয়েই বিল নিশ্চিত করছে।');
 
         $this->assertStringContainsString('href="'.e(route('sales.invoice.show', ['invoice' => $draft, 'cancel' => 1])).'#cancel"', $html,
             '⛔ খসড়া বিলের সারিতে "খসড়া বাতিল" নেই।');

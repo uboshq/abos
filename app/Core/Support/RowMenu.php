@@ -16,10 +16,10 @@ final class RowMenu
 {
     private const PERIOD = 'abos.row-menu.period';
 
-    /** মেনুর মাথা — কাগজের নম্বর আর অবস্থা */
-    public static function head(?string $no, string $status): array
+    /** মেনুর মাথা — কাগজের নম্বর আর অবস্থার লেখা (প্রতিটা কাগজ নিজের অবস্থার নাম দেয়) */
+    public static function head(?string $no, string $stateLabel): array
     {
-        return ['head' => (string) $no, 'state' => __('core.status.'.$status)];
+        return ['head' => (string) $no, 'state' => $stateLabel];
     }
 
     /** ভাগের শিরোনাম: look | paper | work */

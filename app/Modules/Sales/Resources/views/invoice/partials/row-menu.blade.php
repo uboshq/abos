@@ -31,7 +31,7 @@
     $due = $isConfirmed ? $invoice->dueAmount() : '0';
     $hasDue = bccomp($due, '0', 4) > 0;
 
-    $items = [\App\Core\Support\RowMenu::head($invoice->document_no, $status)];
+    $items = [\App\Core\Support\RowMenu::head($invoice->document_no, __('core.status.'.$status))];
 
     /* ── দেখা ── */
     $items[] = \App\Core\Support\RowMenu::group('look');
@@ -66,8 +66,10 @@
     $items[] = \App\Core\Support\RowMenu::group('work');
 
     if ($isDraft && $user?->can('sales.invoice.create')) {
-        $items[] = ['label' => __('core.row_menu.confirm'), 'icon' => 'check-circle', 'url' => route('sales.invoice.confirm', $invoice),
-            'method' => 'post', 'tone' => 'success', 'off' => $open ? null : __('core.row_menu.why_month_closed')];
+        /* ⛔ সরাসরি POST নয় — নিশ্চিতের আগে সারাংশের পপ-আপ (মালিক, ৪ অক্টোবর ২০২৬; [[confirm-overview.js]]) কাগজের পাতায়।
+           ⓘ আগের "⋮" মেনু সরাসরি নিশ্চিত করত, পপ-আপটা এড়িয়ে — এখন পাতায় নিয়ে যায়, বোতামের ঠিক পাশে। */
+        $items[] = ['label' => __('core.row_menu.confirm'), 'icon' => 'check-circle', 'url' => $show.'#confirm', 'peek' => false,
+            'tone' => 'success', 'hint' => __('core.row_menu.confirm_hint'), 'off' => $open ? null : __('core.row_menu.why_month_closed')];
     }
 
     if ($user?->can('sales.invoice.create')) {
