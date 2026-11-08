@@ -307,7 +307,7 @@ class Approval extends Model implements Drillable
     public function requesterName(): string
     {
         if ($this->requested_by !== null) {
-            return (string) ($this->requester?->name ?? '—');
+            return (string) ($this->requester?->displayName() ?? '—');
         }
 
         $id = (int) $this->requested_by_customer_id;
