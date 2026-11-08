@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use Illuminate\Contracts\Support\Htmlable;
 use App\Core\Engines\Dashboard\CardColours;
+use App\Core\Engines\Dashboard\WatchList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -151,19 +152,9 @@ final class DashboardApiController extends Controller
      */
     private function watch(iterable $reminders): array
     {
-        $out = [];
-
-        foreach ($reminders as $item) {
-            $latin = strtr((string) $item->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
-
-            if ($item->group !== 'todo' || (int) preg_replace('/\D/', '', $latin) <= 0) {
-                continue;
-            }
-
-            $out[] = ['label' => (string) $item->label, 'value' => (string) $item->value, 'tone' => $item->tone, 'href' => $item->href];
-        }
-
-        return $out;
+        return WatchList::of($reminders)
+            ->map(fn ($item) => ['label' => (string) $item->label, 'value' => (string) $item->value, 'tone' => $item->tone, 'href' => $item->href])
+            ->all();
     }
 
     /** @return array<string, mixed>|null */
