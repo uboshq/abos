@@ -51,7 +51,7 @@ class ApprovalsApi {
   /// ⭐ ইনবক্স, ওয়েবের চার ট্যাব আর একই নিয়মে — `GET /approvals/inbox` (অনুমোদন ভাগ ৩, দফা ২১; পরিকল্পনার পাতা ৬, ছবি ১)।
   /// ট্যাব, কাজের চিপ, দেরি, শেষ সময়, ধাপ আর দুই মোট — সবই সার্ভারের লেখা; ফোন কেবল আঁকে। পাতা নম্বরে (`page`)।
   /// ⚠️ পুরনো সার্ভারে দরজাটা নেই (৪০৪) — পর্দা তখন [pending]-এ ফেরে ([[ApprovalInboxScreen]])।
-  static Future<InboxPage> inbox({String tab = 'waiting', String? module, bool late = false, int page = 1}) async {
+  static Future<InboxPage> inbox({String tab = 'waiting', String? module, bool late = false, int page = 1, String q = '', String sort = 'late'}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(
       '/approvals/inbox',
       queryParameters: {
@@ -59,6 +59,9 @@ class ApprovalsApi {
         if (module != null) 'module': module,
         if (late) 'late': 1,
         if (page > 1) 'page': page,
+        // ⭐ খোঁজা আর সাজানো — নমুনা v4 (সার্ভার 6c75e093c: `q` নম্বর/পক্ষ/যিনি চেয়েছেন, `sort` late|new|amount)
+        if (q.trim().isNotEmpty) 'q': q.trim(),
+        if (sort != 'late') 'sort': sort,
       },
     );
     return InboxPage.fromJson(response.data ?? const <String, dynamic>{});

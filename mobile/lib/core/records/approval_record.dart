@@ -91,6 +91,39 @@ class ApprovalRecord {
   /// ⛔ একসাথে অনুমোদনে বাছা যায় কি না — সার্ভার বলে (টাকা নড়ার কাজে কখনো নয়); না বললে না
   bool get bulkable => payload['bulkable'] == true;
 
+  // ── ⭐ নতুন ইনবক্সের ঘর — মালিকের নমুনা "অনুমোদনের নতুন ইনবক্স" v4 ("ok", ৮ নভেম্বর ২০২৬); সার্ভার 6c75e093c থেকে পাঠায়।
+  // ⚠️ পুরনো সার্ভারে নেই — তখন শূন্য/null, আর কার্ডে চিহ্নগুলো আসে না।
+
+  /// কাগজে কয়টা সংযুক্তি — কার্ডে "📎 3"
+  int get attachmentCount => (payload['attachments'] as num?)?.toInt() ?? 0;
+
+  /// চাওয়ার পর কাগজের অঙ্ক বদলেছে — কার্ডে হলুদ সতর্কতা
+  bool get amountChanged => payload['amountChanged'] == true;
+
+  /// যিনি চেয়েছেন তার লেখা কারণ
+  String? get reason => _text('reason');
+
+  /// "দিয়েছি" ট্যাবে সিদ্ধান্তের সময়
+  DateTime? get decidedAt {
+    final raw = _text('decidedAt');
+    return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+  }
+
+  /// "ফেরত পাঠান" — কেবল সার্ভার যেখানে বলে (নমুনার দফা ১০); পুরনো সার্ভার ঘরটা পাঠায় না ⇒ আগের মতো সবখানে
+  bool get canSendBack => payload['canSendBack'] != false;
+
+  /// ⭐ কার্ডের রং আর চিহ্নের বিভাগ — সার্ভারের `module` (কাজের চিপের একই চাবি); পুরনো সার্ভারে কাগজের ধরন থেকে
+  String get moduleKey => _text('module') ?? switch (documentType) {
+        'Voucher' || 'Payment' || 'MoneyTransfer' || 'Note' => 'accounts',
+        'SalesOrder' || 'SalesInvoice' || 'DeliveryOrder' || 'DeliveryChallan' || 'SalesQuotation' || 'SalesReturn' || 'Collection' => 'sales',
+        'PurchaseOrder' || 'PurchaseBill' || 'PurchaseReturn' => 'purchase',
+        'ExpenseClaim' || 'Payroll' => 'hr',
+        'StockTransfer' => 'inventory',
+        'Promotion' => 'promotion',
+        'CustomerCreditRequest' => 'credit_control',
+        _ => '',
+      };
+
   Map<String, dynamic>? _map(String key) => switch (payload[key]) {
         final Map<dynamic, dynamic> m => m.cast<String, dynamic>(),
         _ => null,

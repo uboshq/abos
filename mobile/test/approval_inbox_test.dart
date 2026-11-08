@@ -147,8 +147,10 @@ void main() {
       }));
       await tester.pumpAndSettle();
 
-      for (final label in ['অপেক্ষায়', 'আমার পাঠানো', 'আমি অনুমোদন দিয়েছি', 'অন্যের হয়ে']) {
-        expect(find.text(label), findsOneWidget, reason: '⛔ দফা ২১: "$label" ট্যাব নেই');
+      // ⭐ নমুনা v4 দফা ৭ (মালিক "ok", ৮ নভেম্বর ২০২৬): ট্যাবের ছোট নাম, এক লাইনে — আগে "আমি অনুমোদন দিয়েছি" দুই লাইনে ভাঙত
+      for (final (key, label) in [('waiting', 'অপেক্ষায়'), ('sent', 'পাঠিয়েছি'), ('done', 'দিয়েছি'), ('behalf', 'অন্যের হয়ে')]) {
+        expect(find.descendant(of: find.byKey(ValueKey('approvals-tab-$key')), matching: find.text(label)), findsOneWidget,
+            reason: '⛔ "$label" ট্যাব নেই, বা পুরনো লম্বা নাম');
       }
       expect(find.descendant(of: find.byKey(const ValueKey('approvals-tab-waiting')), matching: find.text('7')), findsOneWidget,
           reason: '⛔ দফা ২১: ট্যাবে সংখ্যা নেই');
@@ -180,7 +182,8 @@ void main() {
       expect(asked, ['null:false', 'purchase:false', 'purchase:true'], reason: '⛔ দফা ২১: চিপ সার্ভারকে কাজ বা দেরি চায় না');
     });
 
-    testWidgets('দফা ২১: a card says party, deadline in its colour and the step of how many — with no decision buttons on it', (tester) async {
+    testWidgets('নমুনা v4: a card says party, who asked and when, deadline in its colour, the step, and carries view + approve', (tester) async {
+      await tall(tester);
       await tester.pumpWidget(screen());
       await tester.pumpAndSettle();
 
@@ -189,14 +192,83 @@ void main() {
       expect(find.text('৳1,25,000.00'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(Key('approval-place-${row['id']}'))).data, 'মেসার্স রহমান ট্রেডার্স · কারওয়ান বাজার',
           reason: '⛔ দফা ২১: নম্বরের নিচে পক্ষ নেই');
-      expect(tester.widget<Text>(find.byKey(Key('approval-about-${row['id']}'))).data, 'সিমেন্ট · প্রধান শাখায়',
-          reason: '⛔ কী বাবদ আর কোন শাখা হারিয়েছে, বা পক্ষ দুইবার');
-      expect(find.text('ধাপ 2/2'), findsOneWidget, reason: '⛔ দফা ২১: ধাপ কয়টার মধ্যে বলে না');
-      final late = tester.widget<Text>(find.byKey(Key('approval-deadline-${row['id']}')));
-      final onTime = tester.widget<Text>(find.byKey(Key('approval-deadline-${second['id']}')));
-      expect(late.data, 'শেষ সময় পেরিয়েছে 3 ঘণ্টা');
-      expect(late.style?.color, isNot(onTime.style?.color), reason: '⛔ দফা ২১: দেরি আর সময়মতো এক রঙে');
-      expect(find.text('অনুমোদন দিন'), findsNothing, reason: '⛔ দফা ২১: কার্ডে সিদ্ধান্তের বোতাম — পরিকল্পনায় বোতাম কাগজের পাতায়');
+      // ⓘ নমুনা v4 দফা ৪: লম্বা বর্ণনার লাইন বাদ — পক্ষ এক লাইন, "চেয়েছেন কে · কখন" এক লাইন
+      expect(find.byKey(Key('approval-about-${row['id']}')), findsNothing, reason: '⛔ নমুনায় বাদ দেওয়া বর্ণনার লাইন ফিরেছে');
+      expect(tester.widget<Text>(find.byKey(Key('approval-asker-${row['id']}'))).data, startsWith('চেয়েছেন করিম · '),
+          reason: '⛔ নমুনা v4: কার্ডে কে চেয়েছেন নেই');
+      expect(find.text('ধাপ 2/2'), findsNWidgets(1), reason: '⛔ দফা ২১: ধাপ কয়টার মধ্যে বলে না');
+      expect(find.descendant(of: find.byKey(Key('approval-deadline-${row['id']}')), matching: find.text('⏱ শেষ সময় পেরিয়েছে 3 ঘণ্টা')), findsOneWidget);
+      final late = tester.widget<Container>(find.byKey(Key('approval-deadline-${row['id']}')));
+      final onTime = tester.widget<Container>(find.byKey(Key('approval-deadline-${second['id']}')));
+      expect((late.decoration! as BoxDecoration).color, isNot((onTime.decoration! as BoxDecoration).color),
+          reason: '⛔ দফা ২১: দেরি আর সময়মতো এক রঙে');
+      // ⭐ নমুনা v4 দফা ৯: কার্ড থেকেই "✓ অনুমোদন দিন" — চাপলে কাগজ খুলে অঙ্কসহ প্রশ্ন; "দেখুন" কাগজ খোলে
+      expect(find.byKey(Key('approval-view-${row['id']}')), findsOneWidget, reason: '⛔ কার্ডে "দেখুন" নেই');
+      expect(find.byKey(Key('approval-card-approve-${row['id']}')), findsOneWidget, reason: '⛔ কার্ডে "✓ অনুমোদন দিন" নেই');
+      // ⭐ দেরি আগে, ভাগে — লাল ভাগের মাথা আগে, সবুজ পরে
+      final lateHead = tester.getTopLeft(find.byKey(const ValueKey('approvals-group-danger'))).dy;
+      final okHead = tester.getTopLeft(find.byKey(const ValueKey('approvals-group-success'))).dy;
+      expect(lateHead, lessThan(okHead), reason: '⛔ নমুনা v4: "দেরি হয়ে গেছে" ভাগ আগে নয়');
+    });
+
+    testWidgets('নমুনা v4: the card\'s approve opens the paper straight on the approve question with the amount', (tester) async {
+      await tall(tester);
+      final approved = <String>[];
+      await tester.pumpWidget(screen(approve: (id, _) async => approved.add(id)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(Key('approval-card-approve-${row['id']}')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget, reason: '⛔ কার্ডের "অনুমোদন দিন" প্রশ্ন ছাড়াই গেল, বা কিছুই হল না');
+      expect(find.descendant(of: find.byType(AlertDialog), matching: find.textContaining('৳1,25,000.00')), findsOneWidget,
+          reason: '⛔ প্রশ্নে অঙ্ক নেই — কোন অঙ্কে অনুমোদন, দেখা যায় না');
+      expect(approved, isEmpty, reason: '⛔ প্রশ্নের আগেই অনুমোদন গেল');
+    });
+
+    testWidgets('নমুনা v4: summary band says waiting, late and the total in lakh; search and sort go to the server', (tester) async {
+      final asked = <String>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ApprovalInboxScreen(
+          loadInboxSorted: (tab, module, late, p, q, sort) async {
+            asked.add('$q|$sort');
+            return page([row, second]);
+          },
+          loadSheet: (_) async => sheet,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byKey(const ValueKey('approvals-sum-waiting')), matching: find.text('7')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('approvals-sum-late')), matching: find.text('1')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('approvals-sum-amount')), matching: find.text('৳5.21 লাখ')), findsOneWidget,
+          reason: '⛔ মোট টাকা লাখে নেই (৳5,21,300 → ৳5.21 লাখ)');
+
+      await tester.enterText(find.byKey(const ValueKey('approvals-search')), 'PB-2609');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('approvals-sort-amount')));
+      await tester.pumpAndSettle();
+      expect(asked, ['|late', 'PB-2609|late', 'PB-2609|amount'], reason: '⛔ খোঁজা বা সাজানো সার্ভারে যায় না');
+      expect(find.byKey(const ValueKey('approvals-group-danger')), findsNothing, reason: '⛔ "বড় অঙ্ক আগে" সাজানোয় দেরির ভাগ — ক্রম ভাঙে');
+    });
+
+    testWidgets('নমুনা v4: attachments count, amount-changed warning, and the decided tab shows decision and time', (tester) async {
+      await tall(tester);
+      await tester.pumpWidget(screen(inbox: (tab, _, __, ___) async => page(tab == 'done'
+          ? [{...row, 'status': 'rejected', 'statusLabel': 'প্রত্যাখ্যাত', 'decidedAt': '2026-11-08T15:30:00+06:00', 'deadline': null, 'bulkable': false}]
+          : [{...row, 'attachments': 3, 'amountChanged': true}, {...second, 'attachments': 0}], tab: tab)));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byKey(Key('approval-files-${row['id']}')), matching: find.text('📎 3')), findsOneWidget, reason: '⛔ কার্ডে 📎 সংখ্যা নেই');
+      expect(find.byKey(Key('approval-files-${second['id']}')), findsNothing, reason: '⛔ সংযুক্তি নেই, তবু 📎');
+      expect(find.byKey(Key('approval-changed-${row['id']}')), findsOneWidget, reason: '⛔ অঙ্ক বদলের সতর্কতা কার্ডে নেই');
+      expect(find.byKey(Key('approval-changed-${second['id']}')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('approvals-tab-done')));
+      await tester.pumpAndSettle();
+      final decided = find.byKey(Key('approval-decided-${row['id']}'));
+      expect(find.descendant(of: decided, matching: find.textContaining('প্রত্যাখ্যাত · ')), findsOneWidget, reason: '⛔ "দিয়েছি" ট্যাবে সিদ্ধান্ত আর সময় নেই');
+      expect(find.byKey(Key('approval-card-approve-${row['id']}')), findsNothing, reason: '⛔ শেষ হওয়া কাগজে অনুমোদনের বোতাম');
     });
 
     testWidgets('দফা ২১: two totals under the list — this list and all', (tester) async {
@@ -205,10 +277,9 @@ void main() {
       await tester.drag(list, const Offset(0, -2000));
       await tester.pumpAndSettle();
 
-      expect(find.text('এই তালিকায় 2টা'), findsOneWidget, reason: '⛔ দফা ২১: এই তালিকার মোট নেই');
+      // ⓘ নমুনা v4: নিচে এই তালিকার সংখ্যা, বাকি কয়টা, আর এই তালিকার অঙ্ক; সবগুলোর সংখ্যা আর অঙ্ক মাথার পট্টিতে
+      expect(find.text('এই তালিকায় 2টা · আরও 5টা নিচে'), findsOneWidget, reason: '⛔ এই তালিকার মোট নেই');
       expect(find.text('৳4,86,500.00'), findsOneWidget);
-      expect(find.text('সব 7টা'), findsOneWidget, reason: '⛔ দফা ২১: সবগুলোর মোট নেই');
-      expect(find.text('৳5,21,300.00'), findsOneWidget);
     });
 
     testWidgets('an empty inbox is good news, not an error', (tester) async {
@@ -447,6 +518,8 @@ void main() {
     });
 
     testWidgets('দফা ২১: the sheet shows what goes, the total and what is left out with the reason; only the goers are sent', (tester) async {
+      // ⓘ নমুনা v4-এর কার্ড উঁচু (বোতামের সারি) — দ্বিতীয় কার্ড ৬০০-এর পর্দার বাইরে পড়ত
+      await tall(tester);
       List<String>? sent;
       await tester.pumpWidget(screen(
         inbox: (_, __, ___, ____) async => page([row, second]),

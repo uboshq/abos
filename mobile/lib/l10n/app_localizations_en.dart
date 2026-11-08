@@ -11234,4 +11234,84 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get dashboardMoreFigures => 'More figures';
+
+  @override
+  String get approvalsSumWaiting => 'Waiting';
+
+  @override
+  String get approvalsSumLate => 'Late';
+
+  @override
+  String get approvalsSumAmount => 'Total amount';
+
+  @override
+  String approvalsLakh(String n) {
+    return '৳$n lakh';
+  }
+
+  @override
+  String get approvalsSearchHint => 'Search number, party or requester';
+
+  @override
+  String get approvalsTabWaiting => 'Waiting';
+
+  @override
+  String get approvalsTabSent => 'Sent';
+
+  @override
+  String get approvalsTabDone => 'Decided';
+
+  @override
+  String get approvalsTabBehalf => 'On behalf';
+
+  @override
+  String get approvalsSortLabel => 'Sorted:';
+
+  @override
+  String get approvalsSortLate => 'Late first';
+
+  @override
+  String get approvalsSortNew => 'Newest first';
+
+  @override
+  String get approvalsSortAmount => 'Largest first';
+
+  @override
+  String get approvalsGroupLate => 'Late';
+
+  @override
+  String get approvalsGroupNear => 'Due today';
+
+  @override
+  String get approvalsGroupOk => 'Time left';
+
+  @override
+  String get approvalsGroupNoClock => 'No deadline';
+
+  @override
+  String approvalsGroupCount(int count) {
+    return '· $count';
+  }
+
+  @override
+  String get approvalsAmountChangedPill => '⚠ Amount changed after the request';
+
+  @override
+  String get approvalsCardView => 'View';
+
+  @override
+  String get approvalsCardApprove => '✓ Approve';
+
+  @override
+  String approvalsTotalsMore(int count, int more) {
+    return '$count in this list · $more more below';
+  }
+
+  @override
+  String approvalsDecidedAt(String label, String when) {
+    return '$label · $when';
+  }
+
+  @override
+  String get approvalsLongPressHint => 'Long-press to pick several';
 }

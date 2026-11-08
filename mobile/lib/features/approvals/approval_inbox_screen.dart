@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -7,8 +9,10 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
 import '../../core/records/money.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/day_part.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -45,6 +49,7 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.bulkPreview,
     this.bulkApprove,
     this.loadAttachment,
+    this.loadInboxSorted,
   });
 
   /// Seams, so this screen can be driven in a test without a server.
@@ -72,6 +77,9 @@ class ApprovalInboxScreen extends StatefulWidget {
   final Future<BulkResult> Function(List<String> ids, String? remarks)? bulkApprove;
   final Future<List<int>> Function(String id, int file)? loadAttachment;
 
+  /// ⭐ খোঁজা আর সাজানোসহ — নমুনা v4; দেওয়া থাকলে [loadInbox]-এর আগে এটা (টেস্ট খোঁজা/সাজানো দেখে)
+  final Future<InboxPage> Function(String tab, String? module, bool late, int page, String q, String sort)? loadInboxSorted;
+
   @override
   State<ApprovalInboxScreen> createState() => _ApprovalInboxScreenState();
 }
@@ -92,6 +100,12 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   String? _module;
   bool _late = false;
 
+  /// ⭐ খোঁজা আর সাজানো — নমুনা v4 ("নম্বর, পক্ষ বা কে চেয়েছেন"; দেরি আগে · নতুন আগে · বড় অঙ্ক আগে)
+  String _q = '';
+  String _sort = 'late';
+  final _search = TextEditingController();
+  Timer? _typing;
+
   /// বাছাই করা কাগজ — একসাথে অনুমোদনের জন্য (কেবল সার্ভার যেগুলো `bulkable` বলে)
   final Set<String> _picked = {};
 
@@ -101,10 +115,32 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _typing?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// ⓘ লেখা থামার একটু পরে খোঁজা — প্রতিটা অক্ষরে সার্ভারে যায় না
+  void _typed(String text) {
+    _typing?.cancel();
+    _typing = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted || text.trim() == _q) return;
+      setState(() => _q = text.trim());
+      _load();
+    });
+  }
+
   bool get _legacyOnly => widget.loadInbox == null && widget.loadPending != null;
 
-  Future<InboxPage> _inbox(int page) => (widget.loadInbox ??
-      (String t, String? m, bool l, int p) => ApprovalsApi.inbox(tab: t, module: m, late: l, page: p))(_tab, _module, _late, page);
+  Future<InboxPage> _inbox(int page) {
+    final sorted = widget.loadInboxSorted;
+    if (sorted != null) return sorted(_tab, _module, _late, page, _q, _sort);
+    final plain = widget.loadInbox;
+    if (plain != null) return plain(_tab, _module, _late, page);
+    return ApprovalsApi.inbox(tab: _tab, module: _module, late: _late, page: page, q: _q, sort: _sort);
+  }
 
   Future<void> _load() async {
     setState(() {
@@ -175,6 +211,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     }
   }
 
+  /// ⓘ ভাগ কেবল "দেরি আগে" সাজানোয় আর সিদ্ধান্তের ট্যাবে — নতুন বা বড় অঙ্ক আগে সাজালে ভাগ ক্রম ভাঙত
+  bool get _grouped => _inboxDoor == true && _sort == 'late' && _decidable;
+
   bool get _hasMore => _inboxDoor == true ? _nextPage != null : _nextCursor != null;
 
   void _say(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -199,13 +238,14 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   /// ⓘ সিদ্ধান্ত দেওয়া যায় কেবল অপেক্ষা আর অন্যের-হয়ে ট্যাবে — বাকি দুই ট্যাব কেবল দেখার (কাগজের পাতা সই-পাহারায় খোলে)
   bool get _decidable => _inboxDoor != true || _tab == 'waiting' || _tab == 'behalf';
 
-  Future<void> _open(int index) async {
+  Future<void> _open(int index, {bool approve = false}) async {
     final rows = _rows;
     if (rows == null || !_decidable) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => ApprovalPaperScreen(
         rows: List.of(rows),
         start: index,
+        askApproveFirst: approve,
         loadSheet: widget.loadSheet,
         approve: widget.approve,
         reject: widget.reject,
@@ -255,6 +295,8 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       appBar: AbosScreenBar(title: words.approvalsInboxTitle),
       body: Column(
         children: [
+          // ⭐ মাথার তিন সংখ্যা আর খোঁজা — নমুনা v4, ছবি ১ (আগে দুই মোট তালিকার একদম নিচে ছিল)
+          if (_inboxDoor == true && page != null) _SummaryBand(page: page, search: _search, onTyped: _typed),
           if (_busy) const LinearProgressIndicator(),
           if (_inboxDoor == true && page != null) ...[
             _Tabs(tabs: page.tabs, active: _tab, onTap: _switchTab),
@@ -265,6 +307,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
               onModule: (m) => _filter(() => _module = m),
               onLate: (l) => _filter(() => _late = l),
             ),
+            _SortBar(sort: _sort, onSort: (s) => _filter(() => _sort = s)),
           ],
           Expanded(
             child: RefreshIndicator(
@@ -284,7 +327,10 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                     // Not an error screen — an empty inbox is good news.
                     EmptyState(icon: Icons.inbox_outlined, title: words.approvalsInboxEmptyTitle, message: words.approvalsInboxEmptyMessage)
                   else ...[
-                    for (final (i, approval) in rows.indexed)
+                    for (final (i, approval) in rows.indexed) ...[
+                      // ⭐ দেরি আগে, তিন ভাগে — লাল "দেরি হয়ে গেছে", কমলা "আজকের মধ্যে", সবুজ "সময় আছে" (নমুনা v4); কেবল "দেরি আগে" সাজানোয়
+                      if (_grouped && (i == 0 || rows[i - 1].deadlineTone != approval.deadlineTone))
+                        _GroupHead(tone: approval.deadlineTone, count: rows.where((r) => r.deadlineTone == approval.deadlineTone).length),
                       _ApprovalCard(
                         approval: approval,
                         picked: _picked.contains(approval.id),
@@ -292,7 +338,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                             ? (on) => setState(() => on ? _picked.add(approval.id) : _picked.remove(approval.id))
                             : null,
                         onOpen: _decidable ? () => _open(i) : null,
+                        onApprove: _decidable && (approval.status == null || approval.status == 'pending') ? () => _open(i, approve: true) : null,
                       ),
+                    ],
                     if (_inboxDoor == true && page != null) _Totals(page: page),
                   ],
                   if (_error == null && rows != null && _hasMore)
@@ -346,7 +394,7 @@ class _Tabs extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final (key, label, count) in tabs)
+            for (final (key, serverLabel, count) in tabs)
               Expanded(
                 child: Semantics(
                   selected: key == active,
@@ -364,7 +412,9 @@ class _Tabs extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Flexible(
-                            child: Text(label,
+                            child: Text(_shortTab(context, key, serverLabel),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 13,
@@ -395,7 +445,119 @@ class _Tabs extends StatelessWidget {
   }
 }
 
-/// কাজের চিপ, সংখ্যাসহ, আর দেরির চিপ — ⓘ যেখানে কিছু নেই সেই চিপ আসে না (সার্ভার পাঠায় না); দেরি শূন্য হলে দেরির চিপও নয়
+/// ⭐ ট্যাবের ছোট নাম — এক লাইনে আঁটে (নমুনা v4 দফা ৭: আগে "আমি অনুমোদন দিয়েছি" দুই লাইনে ভাঙত); অচেনা চাবিতে সার্ভারের নাম
+String _shortTab(BuildContext context, String key, String serverLabel) {
+  final words = context.l10n;
+  return switch (key) {
+    'waiting' => words.approvalsTabWaiting,
+    'sent' => words.approvalsTabSent,
+    'done' => words.approvalsTabDone,
+    'behalf' => words.approvalsTabBehalf,
+    _ => serverLabel,
+  };
+}
+
+/// ⭐ বিভাগের রং — মালিকের নমুনা v4 ("ok", ৮ নভেম্বর ২০২৬): হিসাব বেগুনি, বিক্রয় নীল, ক্রয় কমলা, HR গোলাপি, মজুদ সবুজাভ-নীল;
+/// বাকিগুলো অ্যাপের মডিউলের রং ([[AppColors.moduleColor]])
+Color inboxModuleColor(String key) => switch (key) {
+      'accounts' => const Color(0xFF4F46E5),
+      'sales' => const Color(0xFF2563EB),
+      'purchase' => const Color(0xFFEA580C),
+      'hr' => const Color(0xFFDB2777),
+      'inventory' => const Color(0xFF0D9488),
+      _ => AppColors.moduleColor(key),
+    };
+
+/// হালকা পট — বিভাগের রং কার্ডের পটের উপর ১২%
+Color inboxModuleTint(BuildContext context, String key) =>
+    Color.alphaBlend(inboxModuleColor(key).withValues(alpha: 0.12), context.palette.surface);
+
+/// ⓘ কার্ডের চিহ্ন — হিসাবে "৳", বাকিতে কাগজের নামের প্রথম অক্ষর (কার সাথে কার-চিহ্ন: "বি", "ক", "খ"; হসন্তে থামে)
+String inboxGlyph(ApprovalRecord approval) {
+  if (approval.moduleKey == 'accounts') return '৳';
+  final runes = approval.documentTypeLabel.runes.toList();
+  if (runes.isEmpty) return '•';
+  final out = StringBuffer(String.fromCharCode(runes.first));
+  if (runes.length > 1 && runes[1] >= 0x09BE && runes[1] <= 0x09CC) out.write(String.fromCharCode(runes[1]));
+  return out.toString();
+}
+
+/// ⭐ মাথার তিন সংখ্যা আর খোঁজার ঘর — নমুনা v4, ছবি ১: অপেক্ষায় · দেরি (লাল) · মোট টাকা (লাখে); নিচে খোঁজা
+class _SummaryBand extends StatelessWidget {
+  const _SummaryBand({required this.page, required this.search, required this.onTyped});
+
+  final InboxPage page;
+  final TextEditingController search;
+  final ValueChanged<String> onTyped;
+
+  String _amount(BuildContext context) {
+    final value = Money.value(page.amount) ?? 0;
+    if (value < 100000) return Money.taka(value);
+    return context.l10n.approvalsLakh((value / 100000).toStringAsFixed(2));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final words = context.l10n;
+    Widget box(String key, String figure, String label, {bool late = false}) => Expanded(
+          child: Container(
+            key: ValueKey('approvals-sum-$key'),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+            decoration: BoxDecoration(
+              color: late ? const Color(0xFFC62828) : Colors.white.withValues(alpha: 0.12),
+              border: Border.all(color: late ? const Color(0xFFEF5350) : Colors.white.withValues(alpha: 0.22)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(figure,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11.5)),
+            ]),
+          ),
+        );
+
+    return Container(
+      key: const ValueKey('approvals-summary-band'),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF0F2B4C), Color(0xFF164A7A)]),
+      ),
+      child: Column(children: [
+        Row(children: [
+          box('waiting', '${page.allCount}', words.approvalsSumWaiting),
+          const SizedBox(width: AppSpacing.sm),
+          box('late', '${page.lateCount}', words.approvalsSumLate, late: page.lateCount > 0),
+          const SizedBox(width: AppSpacing.sm),
+          box('amount', _amount(context), words.approvalsSumAmount),
+        ]),
+        const SizedBox(height: AppSpacing.sm),
+        TextField(
+          key: const ValueKey('approvals-search'),
+          controller: search,
+          onChanged: onTyped,
+          onSubmitted: onTyped,
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(color: Color(0xFF142130), fontSize: 14),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+            prefixIcon: const Icon(Icons.search, color: Color(0xFF5F6F80), size: 20),
+            hintText: words.approvalsSearchHint,
+            hintStyle: const TextStyle(color: Color(0xFF5F6F80), fontSize: 13.5),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// কাজের চিপ, সংখ্যাসহ, আর দেরির চিপ — ⓘ যেখানে কিছু নেই সেই চিপ আসে না (সার্ভার পাঠায় না); দেরি শূন্য হলে দেরির চিপও নয়।
+/// ⭐ নমুনা v4: "সব" কালো, দেরি লাল, প্রতিটা বিভাগের চিপে নিজের রঙের বিন্দু
 class _Chips extends StatelessWidget {
   const _Chips({required this.page, required this.module, required this.late, required this.onModule, required this.onLate});
 
@@ -408,138 +570,318 @@ class _Chips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final words = context.l10n;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-      child: Row(
-        children: [
-          ChoiceChip(
-            key: const ValueKey('approvals-chip-all'),
-            label: Text('${words.approvalsChipAll} ${page.allCount}'),
-            selected: module == null,
-            onSelected: (_) => onModule(null),
+    final palette = context.palette;
+
+    Widget chip(Key key, String label, bool on, VoidCallback onTap, {Color? dot, Color? ink}) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Semantics(
+            selected: on,
+            button: true,
+            child: InkWell(
+              key: key,
+              borderRadius: BorderRadius.circular(999),
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                decoration: BoxDecoration(
+                  color: on ? (ink ?? palette.onSurface) : palette.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: ink ?? (on ? palette.onSurface : palette.border)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (dot != null) ...[
+                    Container(width: 9, height: 9, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(label, style: TextStyle(fontSize: 13, color: on ? palette.surface : (ink ?? palette.onSurface))),
+                ]),
+              ),
+            ),
           ),
-          for (final (key, label, count) in page.modules) ...[
-            const SizedBox(width: AppSpacing.xs),
-            ChoiceChip(
-              key: ValueKey('approvals-chip-$key'),
-              label: Text('$label $count'),
-              selected: module == key,
-              onSelected: (_) => onModule(module == key ? null : key),
-            ),
+        );
+
+    return Container(
+      color: palette.surface,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            chip(const ValueKey('approvals-chip-all'), '${words.approvalsChipAll} ${page.allCount}', module == null && !late, () {
+              if (late) onLate(false);
+              onModule(null);
+            }),
+            if (page.lateCount > 0)
+              chip(const ValueKey('approvals-chip-late'), '● ${words.approvalsChipLate} ${page.lateCount}', late, () => onLate(!late),
+                  ink: palette.danger),
+            for (final (key, label, count) in page.modules)
+              chip(ValueKey('approvals-chip-$key'), '$label $count', module == key, () => onModule(module == key ? null : key),
+                  dot: inboxModuleColor(key)),
           ],
-          if (page.lateCount > 0) ...[
-            const SizedBox(width: AppSpacing.xs),
-            FilterChip(
-              key: const ValueKey('approvals-chip-late'),
-              label: Text('${words.approvalsChipLate} ${page.lateCount}'),
-              selected: late,
-              onSelected: onLate,
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
 }
 
-/// ⭐ কার্ড — পাতা ৬, ছবি ১: "কাজ · নম্বর  অঙ্ক" / পক্ষ · শাখা / শেষ সময় (রঙে) · ধাপ ২/২
+/// ⭐ সাজানো — "সাজানো: দেরি আগে ▾", ডানে বাকি দুই পছন্দ (নমুনা v4; সার্ভারের `sort`)
+class _SortBar extends StatelessWidget {
+  const _SortBar({required this.sort, required this.onSort});
+
+  final String sort;
+  final ValueChanged<String> onSort;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = context.l10n;
+    final palette = context.palette;
+    final names = {'late': words.approvalsSortLate, 'new': words.approvalsSortNew, 'amount': words.approvalsSortAmount};
+    final small = TextStyle(fontSize: 12.5, color: palette.onSurfaceMuted);
+    final others = names.keys.where((k) => k != sort).toList();
+
+    return Container(
+      key: const ValueKey('approvals-sort'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(color: palette.surface, border: Border(bottom: BorderSide(color: palette.border))),
+      // ⓘ জায়গা না থাকলে (বড় লেখা, সরু ফোন) ডানের দুই পছন্দ নিচের লাইনে নামে — কাটে বা উপচায় না
+      child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 2, children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Text('${words.approvalsSortLabel} ', style: small),
+          Text('${names[sort]} ▾', key: ValueKey('approvals-sort-now-$sort'), style: small.copyWith(color: palette.onSurface, fontWeight: FontWeight.w700)),
+        ]),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final (i, key) in others.indexed) ...[
+            if (i > 0) Text(' · ', style: small),
+            InkWell(
+              key: ValueKey('approvals-sort-$key'),
+              onTap: () => onSort(key),
+              child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text(names[key]!, style: small)),
+            ),
+          ],
+        ]),
+      ]),
+    );
+  }
+}
+
+/// ভাগের মাথা — রঙের বিন্দু, নাম আর সংখ্যা
+class _GroupHead extends StatelessWidget {
+  const _GroupHead({required this.tone, required this.count});
+
+  final String? tone;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = context.l10n;
+    final palette = context.palette;
+    final (colour, name) = switch (tone) {
+      'danger' => (palette.danger, words.approvalsGroupLate),
+      'warning' => (palette.warning, words.approvalsGroupNear),
+      'success' => (palette.success, words.approvalsGroupOk),
+      _ => (palette.onSurfaceMuted, words.approvalsGroupNoClock),
+    };
+    return Padding(
+      key: ValueKey('approvals-group-${tone ?? 'none'}'),
+      padding: const EdgeInsets.fromLTRB(2, 6, 2, 6),
+      child: Row(children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: colour, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Text(name, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: colour)),
+        const SizedBox(width: 4),
+        Text(words.approvalsGroupCount(count), style: TextStyle(fontSize: 12.5, color: palette.onSurfaceMuted)),
+      ]),
+    );
+  }
+}
+
+/// ⭐ কার্ড — নমুনা v4, ছবি ১: বাঁয়ে বিভাগের রঙে চিহ্ন; "কাজ · নম্বর  অঙ্ক" / পক্ষ / "চেয়েছেন কে · কখন" / শেষ সময় (রঙে) · ধাপের
+/// বিন্দু আর নাম · 📎 সংখ্যা · অঙ্ক বদলেছে; নিচে "দেখুন" আর "✓ অনুমোদন দিন"। ⓘ লম্বা চাপে একসাথে অনুমোদনের বাছাই।
 class _ApprovalCard extends StatelessWidget {
-  const _ApprovalCard({required this.approval, required this.picked, required this.onPick, required this.onOpen});
+  const _ApprovalCard({required this.approval, required this.picked, required this.onPick, required this.onOpen, this.onApprove});
 
   final ApprovalRecord approval;
   final bool picked;
   final ValueChanged<bool>? onPick;
   final VoidCallback? onOpen;
+  final VoidCallback? onApprove;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final words = context.l10n;
-    final small = Theme.of(context).textTheme.bodySmall;
-    final tone = switch (approval.deadlineTone) {
-      'danger' => palette.danger,
-      'warning' => palette.warning,
-      'success' => palette.success,
-      _ => palette.onSurfaceMuted,
+    final small = TextStyle(fontSize: 12, color: palette.onSurfaceMuted);
+    final (tone, toneBg) = switch (approval.deadlineTone) {
+      'danger' => (palette.danger, palette.dangerSurface),
+      'warning' => (palette.warning, palette.warningSurface),
+      'success' => (palette.success, palette.successSurface),
+      _ => (palette.onSurfaceMuted, palette.surfaceMuted),
     };
     final title = [approval.documentTypeLabel, if (approval.documentNo != null) approval.documentNo!].join(' · ');
-    // ⓘ ওয়েবের কার্ডের তিন লাইন: কাজ · নম্বর আর অঙ্ক; পক্ষ · শাখা (মালিক, ১৯ অক্টোবর ২০২৬ — নম্বরের কাছে পক্ষ; পাতা ৬-এ নম্বরের
-    // ঠিক নিচে); কী বাবদ · টাকা কোথায় (মালিক, ২০ সেপ্টেম্বর ২০২৬: "kothy theke eseche kothay joma holo")। পুরনো সার্ভারে পক্ষ
-    // আলাদা আসে না — তখন সারাংশটাই, আগের মতো।
-    final place = approval.party;
-    final rest = summaryAfterParty(approval.summary, approval.party);
+    final place = approval.party ?? summaryAfterParty(approval.summary, null);
+    final module = approval.moduleKey;
+    final decided = approval.status != null && approval.status != 'pending';
+    final (decidedInk, decidedBg) = switch (approval.status) {
+      'approved' => (palette.success, palette.successSurface),
+      'rejected' => (palette.danger, palette.dangerSurface),
+      _ => (palette.warning, palette.warningSurface),
+    };
 
-    return Card(
+    Widget pill(Key? key, Widget child, Color ink, Color bg) => Container(
+          key: key,
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+          child: DefaultTextStyle.merge(style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ink), child: child),
+        );
+
+    final at = approval.stepAt, of = approval.stepOf;
+
+    return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: picked ? Theme.of(context).colorScheme.primary : palette.border, width: picked ? 2 : 1),
+      ),
       child: InkWell(
         key: Key('approval-open-${approval.id}'),
+        borderRadius: BorderRadius.circular(14),
         onTap: onOpen,
+        onLongPress: onPick == null ? null : () => onPick!(!picked),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ⓘ চেকবক্সের নিজের ছোঁয়া — বাছতে গিয়ে কাগজ খুলে যায় না; পর্দা-পাঠক কাগজের নম্বর শোনে
-              if (onPick != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      key: Key('approval-pick-${approval.id}'),
-                      value: picked,
-                      semanticLabel: words.approvalsPick(approval.documentNo ?? title),
-                      onChanged: (on) => onPick!(on ?? false),
-                    ),
+              // ⓘ বাছা হলে চিহ্নের জায়গায় টিক — পর্দা-পাঠক কাগজের নম্বর শোনে; ⓘ চিহ্নে ছোঁয়া = বাছাই (লম্বা চাপের পাশে, যাতে প্রথমবারেও
+              // খুঁজে পাওয়া যায়) — বাছতে গিয়ে কাগজ খোলে না
+              Semantics(
+                label: onPick == null ? null : words.approvalsPick(approval.documentNo ?? title),
+                checked: onPick == null ? null : picked,
+                child: GestureDetector(
+                  key: onPick == null ? null : Key('approval-pick-${approval.id}'),
+                  onTap: onPick == null ? null : () => onPick!(!picked),
+                  child: Container(
+                  key: Key('approval-glyph-${approval.id}'),
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: picked ? Theme.of(context).colorScheme.primary : inboxModuleTint(context, module),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: picked
+                      ? const Icon(Icons.check, color: Colors.white)
+                      : Text(inboxGlyph(approval), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: inboxModuleColor(module))),
                   ),
                 ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
-                        const SizedBox(width: AppSpacing.sm),
-                        // Absent rather than zero when the server sent no amount —
-                        // not every approvable document is about money.
-                        if (approval.amount != null) Text(approval.amountText!, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+                    Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                      Expanded(
+                        child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5)),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Absent rather than zero when the server sent no amount —
+                      // not every approvable document is about money.
+                      if (approval.amount != null)
+                        Text(approval.amountText!, key: Key('approval-amount-${approval.id}'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    ]),
                     // ⓘ লম্বা নাম এক লাইনে কাটা (…), পুরোটা চেপে ধরলে — কার্ড ভেঙে কয়েক লাইন নয়
                     if (place != null)
                       Tooltip(
                         message: place,
-                        child: Text(place,
-                            key: Key('approval-place-${approval.id}'), style: small, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        child: Text(place, key: Key('approval-place-${approval.id}'), style: const TextStyle(fontSize: 13.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
-                    if (rest != null) Text(rest, key: Key('approval-about-${approval.id}'), style: small),
-                    const SizedBox(height: AppSpacing.xs),
+                    if (approval.requesterName != null)
+                      Text(
+                        words.approvalsAskedBy(approval.requesterName!, approval.requestedAt == null ? '' : stampText(approval.requestedAt!)),
+                        key: Key('approval-asker-${approval.id}'),
+                        style: small,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 6),
                     Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
+                      spacing: 6,
+                      runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (approval.status != null && approval.status != 'pending')
-                          Text(approval.statusLabel ?? approval.status!, style: small?.copyWith(fontWeight: FontWeight.w600))
+                        if (decided)
+                          pill(
+                            Key('approval-decided-${approval.id}'),
+                            Text(approval.decidedAt == null
+                                ? (approval.statusLabel ?? approval.status!)
+                                : words.approvalsDecidedAt(approval.statusLabel ?? approval.status!, stampText(approval.decidedAt!))),
+                            decidedInk,
+                            decidedBg,
+                          )
                         else if (approval.deadlineText != null)
-                          Text(approval.deadlineText!,
-                              key: Key('approval-deadline-${approval.id}'),
-                              style: small?.copyWith(color: tone, fontWeight: FontWeight.w600)),
-                        if (approval.stepAt != null && approval.stepOf != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(color: palette.surfaceMuted, borderRadius: BorderRadius.circular(8)),
-                            child: Text(words.approvalsStepOf(approval.stepAt!, approval.stepOf!), style: small),
+                          pill(Key('approval-deadline-${approval.id}'), Text('⏱ ${approval.deadlineText!}'), tone, toneBg),
+                        if (at != null && of != null)
+                          pill(
+                            Key('approval-step-${approval.id}'),
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              for (var n = 1; n <= of && n <= 6; n++)
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  margin: const EdgeInsets.only(right: 3),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: n < at ? palette.success : (n == at ? Theme.of(context).colorScheme.primary : palette.border),
+                                  ),
+                                ),
+                              const SizedBox(width: 2),
+                              Text(approval.stepName == null ? words.approvalsStepOf(at, of) : '${words.approvalsStepOf(at, of)} · ${approval.stepName}'),
+                            ]),
+                            palette.onSurfaceMuted,
+                            palette.surfaceMuted,
                           )
                         else if (approval.currentLevel > 0)
-                          Text(words.approvalsInboxStep(approval.currentLevel), style: small),
+                          pill(null, Text(words.approvalsInboxStep(approval.currentLevel)), palette.onSurfaceMuted, palette.surfaceMuted),
+                        if (approval.attachmentCount > 0)
+                          pill(Key('approval-files-${approval.id}'), Text('📎 ${approval.attachmentCount}'), palette.onSurfaceMuted, palette.surfaceMuted),
+                        if (approval.amountChanged)
+                          pill(Key('approval-changed-${approval.id}'), Text(words.approvalsAmountChangedPill), palette.warning, palette.warningSurface),
                         if (approval.standInFor != null) Text(words.approvalsOnBehalf(approval.standInFor!), style: small),
                       ],
                     ),
+                    if (onOpen != null && onApprove != null) ...[
+                      const SizedBox(height: 9),
+                      Row(children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            key: Key('approval-view-${approval.id}'),
+                            onPressed: onOpen,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              side: BorderSide(color: palette.border, width: 1.5),
+                              foregroundColor: palette.onSurface,
+                            ),
+                            child: Text(words.approvalsCardView, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: FilledButton(
+                            key: Key('approval-card-approve-${approval.id}'),
+                            onPressed: onApprove,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF15803D),
+                              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text(words.approvalsCardApprove, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                          ),
+                        ),
+                      ]),
+                    ],
                   ],
                 ),
               ),
@@ -551,7 +893,7 @@ class _ApprovalCard extends StatelessWidget {
   }
 }
 
-/// ⭐ দুই মোট — এই তালিকার আর সবগুলোর (ওয়েবের দফা ৬)। ⓘ অঙ্ক সার্ভারের যোগ; ফোন যোগ করে না
+/// ⭐ নিচের লাইন — "এই তালিকায় ৪টা · আরও ৩টা নিচে" আর এই পাতার অঙ্ক (নমুনা v4); ⓘ অঙ্ক সার্ভারের যোগ, ফোন যোগ করে না
 class _Totals extends StatelessWidget {
   const _Totals({required this.page});
 
@@ -560,23 +902,15 @@ class _Totals extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final words = context.l10n;
-    final muted = TextStyle(color: context.palette.onSurfaceMuted);
+    final muted = TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted);
+    final more = page.count - page.pageCount;
     return Padding(
       key: const ValueKey('approvals-totals'),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Column(
-        children: [
-          Row(children: [
-            Expanded(child: Text(words.approvalsListTotal(page.pageCount), style: const TextStyle(fontWeight: FontWeight.w700))),
-            Text(Money.taka(page.pageAmount), style: const TextStyle(fontWeight: FontWeight.w700)),
-          ]),
-          const SizedBox(height: AppSpacing.xs),
-          Row(children: [
-            Expanded(child: Text(words.approvalsAllTotal(page.count), style: muted)),
-            Text(Money.taka(page.amount), style: muted),
-          ]),
-        ],
-      ),
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, AppSpacing.sm),
+      child: Row(children: [
+        Expanded(child: Text(more > 0 ? words.approvalsTotalsMore(page.pageCount, more) : words.approvalsListTotal(page.pageCount), style: muted)),
+        Text(Money.taka(page.pageAmount), key: const ValueKey('approvals-totals-amount'), style: muted),
+      ]),
     );
   }
 }

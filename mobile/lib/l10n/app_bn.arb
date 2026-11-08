@@ -15409,5 +15409,127 @@
   "dashboardMoreFigures": "আরও অঙ্ক",
   "@dashboardMoreFigures": {
     "description": "\u09a1\u09cd\u09af\u09be-\u09ed: the figures below the top four"
+  },
+  "approvalsSumWaiting": "অপেক্ষায়",
+  "@approvalsSumWaiting": {
+    "description": "Inbox summary band: waiting count label"
+  },
+  "approvalsSumLate": "দেরি হয়ে গেছে",
+  "@approvalsSumLate": {
+    "description": "Inbox summary band: late count label"
+  },
+  "approvalsSumAmount": "মোট টাকা",
+  "@approvalsSumAmount": {
+    "description": "Inbox summary band: total amount label"
+  },
+  "approvalsLakh": "৳{n} লাখ",
+  "@approvalsLakh": {
+    "description": "Inbox summary band: amount in lakh",
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsSearchHint": "নম্বর, পক্ষ বা কে চেয়েছেন — খুঁজুন",
+  "@approvalsSearchHint": {
+    "description": "Inbox search field hint"
+  },
+  "approvalsTabWaiting": "অপেক্ষায়",
+  "@approvalsTabWaiting": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabSent": "পাঠিয়েছি",
+  "@approvalsTabSent": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabDone": "দিয়েছি",
+  "@approvalsTabDone": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabBehalf": "অন্যের হয়ে",
+  "@approvalsTabBehalf": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsSortLabel": "সাজানো:",
+  "@approvalsSortLabel": {
+    "description": "Inbox sort bar label"
+  },
+  "approvalsSortLate": "দেরি আগে",
+  "@approvalsSortLate": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsSortNew": "নতুন আগে",
+  "@approvalsSortNew": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsSortAmount": "বড় অঙ্ক আগে",
+  "@approvalsSortAmount": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsGroupLate": "দেরি হয়ে গেছে",
+  "@approvalsGroupLate": {
+    "description": "Inbox group head: past the deadline"
+  },
+  "approvalsGroupNear": "আজকের মধ্যে",
+  "@approvalsGroupNear": {
+    "description": "Inbox group head: near the deadline"
+  },
+  "approvalsGroupOk": "সময় আছে",
+  "@approvalsGroupOk": {
+    "description": "Inbox group head: time left"
+  },
+  "approvalsGroupNoClock": "শেষ সময় নেই",
+  "@approvalsGroupNoClock": {
+    "description": "Inbox group head: no deadline set"
+  },
+  "approvalsGroupCount": "· {count}টা",
+  "@approvalsGroupCount": {
+    "description": "Inbox group head count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsAmountChangedPill": "⚠ চাওয়ার পর অঙ্ক বদলেছে",
+  "@approvalsAmountChangedPill": {
+    "description": "Inbox card: amount changed warning"
+  },
+  "approvalsCardView": "দেখুন",
+  "@approvalsCardView": {
+    "description": "Inbox card button: open the paper"
+  },
+  "approvalsCardApprove": "✓ অনুমোদন দিন",
+  "@approvalsCardApprove": {
+    "description": "Inbox card button: approve"
+  },
+  "approvalsTotalsMore": "এই তালিকায় {count}টা · আরও {more}টা নিচে",
+  "@approvalsTotalsMore": {
+    "description": "Inbox totals line",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "more": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsDecidedAt": "{label} · {when}",
+  "@approvalsDecidedAt": {
+    "description": "Decided tab: decision and time",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsLongPressHint": "একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন",
+  "@approvalsLongPressHint": {
+    "description": "Inbox hint for bulk picking"
   }
 }

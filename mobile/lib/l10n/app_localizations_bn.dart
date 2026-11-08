@@ -11062,4 +11062,84 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get dashboardMoreFigures => 'আরও অঙ্ক';
+
+  @override
+  String get approvalsSumWaiting => 'অপেক্ষায়';
+
+  @override
+  String get approvalsSumLate => 'দেরি হয়ে গেছে';
+
+  @override
+  String get approvalsSumAmount => 'মোট টাকা';
+
+  @override
+  String approvalsLakh(String n) {
+    return '৳$n লাখ';
+  }
+
+  @override
+  String get approvalsSearchHint => 'নম্বর, পক্ষ বা কে চেয়েছেন — খুঁজুন';
+
+  @override
+  String get approvalsTabWaiting => 'অপেক্ষায়';
+
+  @override
+  String get approvalsTabSent => 'পাঠিয়েছি';
+
+  @override
+  String get approvalsTabDone => 'দিয়েছি';
+
+  @override
+  String get approvalsTabBehalf => 'অন্যের হয়ে';
+
+  @override
+  String get approvalsSortLabel => 'সাজানো:';
+
+  @override
+  String get approvalsSortLate => 'দেরি আগে';
+
+  @override
+  String get approvalsSortNew => 'নতুন আগে';
+
+  @override
+  String get approvalsSortAmount => 'বড় অঙ্ক আগে';
+
+  @override
+  String get approvalsGroupLate => 'দেরি হয়ে গেছে';
+
+  @override
+  String get approvalsGroupNear => 'আজকের মধ্যে';
+
+  @override
+  String get approvalsGroupOk => 'সময় আছে';
+
+  @override
+  String get approvalsGroupNoClock => 'শেষ সময় নেই';
+
+  @override
+  String approvalsGroupCount(int count) {
+    return '· $countটা';
+  }
+
+  @override
+  String get approvalsAmountChangedPill => '⚠ চাওয়ার পর অঙ্ক বদলেছে';
+
+  @override
+  String get approvalsCardView => 'দেখুন';
+
+  @override
+  String get approvalsCardApprove => '✓ অনুমোদন দিন';
+
+  @override
+  String approvalsTotalsMore(int count, int more) {
+    return 'এই তালিকায় $countটা · আরও $moreটা নিচে';
+  }
+
+  @override
+  String approvalsDecidedAt(String label, String when) {
+    return '$label · $when';
+  }
+
+  @override
+  String get approvalsLongPressHint => 'একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন';
 }

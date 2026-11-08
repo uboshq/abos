@@ -36,7 +36,12 @@ class ApprovalPaperScreen extends StatefulWidget {
     this.reject,
     this.sendBack,
     this.loadAttachment,
+    this.askApproveFirst = false,
   });
+
+  /// ⭐ ইনবক্সের কার্ডের "✓ অনুমোদন দিন" — পাতা খুলেই অনুমোদনের প্রশ্ন, অঙ্কসহ (নমুনা v4 দফা ৯); প্রশ্নটা পাতার নিজের, তাই অঙ্ক
+  /// মেলানো (৪১২) আর আগে-কেউ-দিয়েছেন (৪০৯) একই পথে
+  final bool askApproveFirst;
 
   /// ইনবক্সের তালিকা, ক্রমে — আগের/পরের আর সিদ্ধান্তের পরের কাগজ এখান থেকে
   final List<ApprovalRecord> rows;
@@ -65,6 +70,16 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
   bool _busy = false;
 
   ApprovalRecord get _paper => _rows[_at];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.askApproveFirst) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _confirmApprove();
+      });
+    }
+  }
 
   Future<ApprovalSheet> _fetch() => (widget.loadSheet ?? ApprovalsApi.sheet)(_rows[_at].id);
 

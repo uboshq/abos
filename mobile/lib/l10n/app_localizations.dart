@@ -18373,6 +18373,150 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'আরও অঙ্ক'**
   String get dashboardMoreFigures;
+
+  /// Inbox summary band: waiting count label
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষায়'**
+  String get approvalsSumWaiting;
+
+  /// Inbox summary band: late count label
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরি হয়ে গেছে'**
+  String get approvalsSumLate;
+
+  /// Inbox summary band: total amount label
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট টাকা'**
+  String get approvalsSumAmount;
+
+  /// Inbox summary band: amount in lakh
+  ///
+  /// In bn, this message translates to:
+  /// **'৳{n} লাখ'**
+  String approvalsLakh(String n);
+
+  /// Inbox search field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর, পক্ষ বা কে চেয়েছেন — খুঁজুন'**
+  String get approvalsSearchHint;
+
+  /// Inbox short tab name
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষায়'**
+  String get approvalsTabWaiting;
+
+  /// Inbox short tab name
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠিয়েছি'**
+  String get approvalsTabSent;
+
+  /// Inbox short tab name
+  ///
+  /// In bn, this message translates to:
+  /// **'দিয়েছি'**
+  String get approvalsTabDone;
+
+  /// Inbox short tab name
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্যের হয়ে'**
+  String get approvalsTabBehalf;
+
+  /// Inbox sort bar label
+  ///
+  /// In bn, this message translates to:
+  /// **'সাজানো:'**
+  String get approvalsSortLabel;
+
+  /// Inbox sort choice
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরি আগে'**
+  String get approvalsSortLate;
+
+  /// Inbox sort choice
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন আগে'**
+  String get approvalsSortNew;
+
+  /// Inbox sort choice
+  ///
+  /// In bn, this message translates to:
+  /// **'বড় অঙ্ক আগে'**
+  String get approvalsSortAmount;
+
+  /// Inbox group head: past the deadline
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরি হয়ে গেছে'**
+  String get approvalsGroupLate;
+
+  /// Inbox group head: near the deadline
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের মধ্যে'**
+  String get approvalsGroupNear;
+
+  /// Inbox group head: time left
+  ///
+  /// In bn, this message translates to:
+  /// **'সময় আছে'**
+  String get approvalsGroupOk;
+
+  /// Inbox group head: no deadline set
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ সময় নেই'**
+  String get approvalsGroupNoClock;
+
+  /// Inbox group head count
+  ///
+  /// In bn, this message translates to:
+  /// **'· {count}টা'**
+  String approvalsGroupCount(int count);
+
+  /// Inbox card: amount changed warning
+  ///
+  /// In bn, this message translates to:
+  /// **'⚠ চাওয়ার পর অঙ্ক বদলেছে'**
+  String get approvalsAmountChangedPill;
+
+  /// Inbox card button: open the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'দেখুন'**
+  String get approvalsCardView;
+
+  /// Inbox card button: approve
+  ///
+  /// In bn, this message translates to:
+  /// **'✓ অনুমোদন দিন'**
+  String get approvalsCardApprove;
+
+  /// Inbox totals line
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকায় {count}টা · আরও {more}টা নিচে'**
+  String approvalsTotalsMore(int count, int more);
+
+  /// Decided tab: decision and time
+  ///
+  /// In bn, this message translates to:
+  /// **'{label} · {when}'**
+  String approvalsDecidedAt(String label, String when);
+
+  /// Inbox hint for bulk picking
+  ///
+  /// In bn, this message translates to:
+  /// **'একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন'**
+  String get approvalsLongPressHint;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
