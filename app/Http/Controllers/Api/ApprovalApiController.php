@@ -208,6 +208,9 @@ final class ApprovalApiController extends Controller
             'module' => ['nullable', 'string', 'max:64'],
             'late' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
+            // ⭐ ফোনের নতুন ইনবক্স (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"): খোঁজা আর সাজানো — ওয়েবের একই [[ApprovalInbox::searched()]]/[[sorted()]]
+            'q' => ['nullable', 'string', 'max:100'],
+            'sort' => ['nullable', 'string', 'in:late,new,amount'],
         ]);
 
         /** @var User $user */
@@ -239,15 +242,15 @@ final class ApprovalApiController extends Controller
         $late = (bool) ($validated['late'] ?? false);
         $lateCount = ApprovalInbox::lateOnes((clone $tabs[$tab])->reorder()->withoutEagerLoads())->count();
 
-        $list = ApprovalInbox::lateOnes(
+        $list = ApprovalInbox::searched(ApprovalInbox::lateOnes(
             (clone $tabs[$tab])->when($selected !== '', fn ($q) => $q->where('module', $selected)),
             $late,
-        );
+        ), (string) ($validated['q'] ?? ''));
 
         $count = (clone $list)->reorder()->withoutEagerLoads()->count();
         $sum = (string) ((clone $list)->reorder()->withoutEagerLoads()->sum('amount') ?? '0');
 
-        $page = ApprovalInbox::sorted($list, $waiting ? 'late' : 'new')
+        $page = ApprovalInbox::sorted($list, (string) ($validated['sort'] ?? ($waiting ? 'late' : 'new')))
             ->paginate(self::DEFAULT_LIMIT, ['*'], 'page', (int) ($validated['page'] ?? 1));
 
         $approvals = $page->getCollection()->values();
@@ -255,6 +258,7 @@ final class ApprovalApiController extends Controller
         $standIns = $inbox->standInsOf($approvals, $user, true);
         $bulk = app(BulkApproval::class);
         $cards = $this->rowsOf($approvals, $user);
+        $files = $this->attachmentCounts($approvals);
 
         $rows = $approvals->map(fn (Approval $approval, int $i) => $cards[$i] + [
             'status' => (string) $approval->status,
@@ -264,6 +268,10 @@ final class ApprovalApiController extends Controller
             'step' => $steps[(int) $approval->id] ?? null,
             'standInFor' => $standIns[(int) $approval->id] ?? null,
             'bulkable' => $waiting && ! $bulk->movesMoney($approval),
+            // ⭐ নমুনার কার্ডে "📎 3" — খোলার আগেই জানা যায় প্রমাণ আছে কি না; চাওয়ার কারণ; "দিয়েছি" ট্যাবে সিদ্ধান্তের সময়
+            'attachments' => $files[(int) $approval->id] ?? 0,
+            'reason' => trim((string) $approval->requested_reason) === '' ? null : (string) $approval->requested_reason,
+            'decidedAt' => $approval->decided_at?->toIso8601String(),
         ])->values();
 
         return response()->json([
@@ -287,6 +295,44 @@ final class ApprovalApiController extends Controller
             ],
             'nextPage' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
+    }
+
+    /**
+     * কাগজপ্রতি চলতি সংযুক্তির সংখ্যা — অনুমোদন-id => সংখ্যা। ⓘ কাগজের ধরন ধরে একটা করে প্রশ্ন (সারিপ্রতি নয়), সংযুক্তির ইঞ্জিনের
+     * একই ঠিকানায় ([[AttachmentEngine::listFor()]]: মডিউল · ধরন · id, কেবল চলতি সংস্করণ) — কাগজের পাতার তালিকার সাথে মেলে।
+     *
+     * @param  \Illuminate\Support\Collection<int, Approval>  $approvals
+     * @return array<int, int>
+     */
+    private function attachmentCounts(\Illuminate\Support\Collection $approvals): array
+    {
+        $out = [];
+        $drill = app(\App\Core\Engines\Drill\DrillResolver::class);
+
+        foreach ($approvals->groupBy(fn (Approval $a) => (string) $a->approvable_type) as $class => $group) {
+            $class = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($class) ?? $class;
+
+            if (! is_string($class) || ! class_exists($class) || ! is_subclass_of($class, \App\Core\Contracts\Drillable::class)) {
+                continue;
+            }
+
+            $entity = $class::drillSourceType();
+            $module = $drill->moduleFor($entity) ?? '';
+            $byPaper = \App\Models\Attachment::query()
+                ->where('source_module', $module)
+                ->where('source_entity', $entity)
+                ->whereIn('source_entity_id', $group->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values())
+                ->current()
+                ->selectRaw('source_entity_id, COUNT(*) as tally')
+                ->groupBy('source_entity_id')
+                ->pluck('tally', 'source_entity_id');
+
+            foreach ($group as $approval) {
+                $out[(int) $approval->id] = (int) ($byPaper[(int) $approval->approvable_id] ?? 0);
+            }
+        }
+
+        return $out;
     }
 
     /**

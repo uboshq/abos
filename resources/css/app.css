@@ -2003,3 +2003,119 @@ form[data-page-kind="expense"] input:not([type="checkbox"]):not([type="radio"]):
 form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
     background-color: color-mix(in srgb, var(--kind) 6%, var(--color-surface-card));
 }
+
+/* ⭐ "নিশ্চিত?" — পর্দার মাঝখানে বড়, রঙিন প্রশ্ন (মালিক, ৮ নভেম্বর ২০২৬; [[ask.js]], [[actions.js]] `data-confirm`) */
+.abos-ask {
+    --ask-from: var(--color-ask-info-from);
+    --ask-to: var(--color-ask-info-to);
+    width: min(34rem, calc(100vw - 2rem));
+    padding: 0;
+    border: 0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    box-shadow: 0 30px 80px rgb(0 0 0 / .35), 0 0 0 1px color-mix(in srgb, var(--ask-from) 30%, transparent);
+    margin: auto;
+}
+
+.abos-ask--ok { --ask-from: var(--color-ask-ok-from); --ask-to: var(--color-ask-ok-to); }
+.abos-ask--danger { --ask-from: var(--color-ask-danger-from); --ask-to: var(--color-ask-danger-to); }
+
+.abos-ask::backdrop {
+    background: var(--color-ask-backdrop);
+    backdrop-filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .abos-ask[open] { animation: abos-ask-pop 180ms ease-out; }
+}
+
+@keyframes abos-ask-pop {
+    from { opacity: 0; transform: translateY(12px) scale(.96); }
+    to { opacity: 1; transform: none; }
+}
+
+.abos-ask__band {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, var(--ask-from), var(--ask-to));
+    color: var(--color-ask-on-band);
+}
+
+.abos-ask__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / .22);
+    box-shadow: inset 0 0 0 2px rgb(255 255 255 / .55);
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+.abos-ask__title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.abos-ask__text {
+    margin: 0;
+    padding: 1.5rem 1.5rem .5rem;
+    font-size: 1.2rem;
+    line-height: 1.7;
+    text-align: center;
+}
+
+.abos-ask__money {
+    display: block;
+    margin: .2rem auto .4rem;
+    font-size: 2.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ask-from);
+}
+
+.abos-ask__row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: .75rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.abos-ask__no,
+.abos-ask__yes {
+    min-height: 3.25rem;
+    border-radius: .9rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.abos-ask__no {
+    border: 2px solid var(--color-border);
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+}
+
+.abos-ask__no:hover { background: var(--color-surface-hover); }
+
+.abos-ask__yes {
+    border: 0;
+    background: linear-gradient(135deg, var(--ask-from), var(--ask-to));
+    color: var(--color-ask-on-band);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--ask-from) 40%, transparent);
+}
+
+.abos-ask__yes:hover { filter: brightness(1.06); }
+
+.abos-ask__no:focus-visible,
+.abos-ask__yes:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--ask-from) 60%, transparent);
+    outline-offset: 3px;
+}

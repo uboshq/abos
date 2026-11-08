@@ -55,6 +55,8 @@ function countPermissions (module) {
     }
 }
 
+import { ask } from './ask.js'
+
 const PRINT = '[data-action="print"]'
 const SUBMIT = '[data-action="submit-form"]'
 const CONFIRM = '[data-confirm]'
@@ -71,6 +73,10 @@ export function wireActions (root = document) {
      * ⭐ `capture` ধাপে শোনা হয়, কারণ ফর্মের নিজের অন্য শ্রোতারা যেন
      * থামানো জমার উপর কাজ না করে।
      */
+    /*
+     * ⭐ প্রশ্নটা পর্দার মাঝখানে, বড় আর রঙিন ([[ask.js]]; মালিক, ৮ নভেম্বর ২০২৬) — ব্রাউজারের ছোট `confirm()` আর নয়।
+     * ⓘ উত্তর আসে পরে, তাই প্রথম জমা থামানো হয়; "হ্যাঁ" হলে একই বোতাম দিয়ে আবার জমা (`confirmed` চিহ্নে দ্বিতীয়বার প্রশ্ন নেই)।
+     */
     root.addEventListener('submit', (event) => {
         const form = event.target.closest?.(CONFIRM)
 
@@ -78,10 +84,29 @@ export function wireActions (root = document) {
             return
         }
 
-        if (! window.confirm(form.dataset.confirm)) {
-            event.preventDefault()
-            event.stopPropagation()
+        if (form.dataset.confirmed === '1') {
+            delete form.dataset.confirmed
+            return
         }
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        const submitter = event.submitter && event.submitter.form === form ? event.submitter : undefined
+
+        ask(form.dataset.confirm, { tone: form.dataset.confirmTone, yes: form.dataset.confirmYes, doc: form.ownerDocument }).then((yes) => {
+            if (! yes) {
+                return
+            }
+
+            form.dataset.confirmed = '1'
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(submitter)
+            } else {
+                form.submit()
+            }
+        })
     }, true)
 
     root.addEventListener('click', (event) => {
@@ -91,10 +116,22 @@ export function wireActions (root = document) {
             return
         }
 
-        if (! window.confirm(el.dataset.confirm)) {
-            event.preventDefault()
-            event.stopPropagation()
+        if (el.dataset.confirmed === '1') {
+            delete el.dataset.confirmed
+            return
         }
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        ask(el.dataset.confirm, { tone: el.dataset.confirmTone, yes: el.dataset.confirmYes, doc: el.ownerDocument }).then((yes) => {
+            if (! yes) {
+                return
+            }
+
+            el.dataset.confirmed = '1'
+            el.click()
+        })
     }, true)
 
     root.addEventListener('click', (event) => {

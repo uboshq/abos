@@ -277,7 +277,26 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
                 return
             }
             this.value = ''
-            this.$nextTick(() => this.$refs.input?.dispatchEvent(new Event('change', { bubbles: true })))
+            this.announce()
+        },
+
+        /**
+         * ⭐ লুকানো ঘরে মান বসিয়ে **এখনই** `change` — পাতার অন্য কেউ (ভাউচারের পক্ষ-বাক্স, আদায়ের ফর্ম) শুনে বকেয়া আর সারাংশ আনে।
+         *
+         * ⛔ মালিক, ৮ নভেম্বর ২০২৬ (live, আদি · ট্রেড ডিপো): জমার ভাউচারে "মেসার্স রায়ান এন্টারপ্রাইজ" বাছলে নাম বসত, কিন্তু "হিসাবের
+         * সারাংশ", "খাতায় যা যাবে" কিছুই আসত না, জমাও যেত না। ⓘ আসল ব্রাউজারে মাপা: `change` পাঠানো হত `$nextTick`-এর ভিতরে, আর
+         * সেই সারি ওই পাতায় আটকে থাকত — নাম দেখাত, ভাউচারের `party_id` খালি থাকত। আহসানউল্লাহতে একই পথে চলত, তাই ধরা পড়েনি।
+         * ⓘ এখন `x-bind`-এর পালার অপেক্ষা নেই: ঘরের মান হাতে বসে, খবরটা সাথে সাথে যায়।
+         */
+        announce() {
+            const input = this.$refs.input
+
+            if (!input) {
+                return
+            }
+
+            input.value = this.value
+            input.dispatchEvent(new Event('change', { bubbles: true }))
         },
 
         /**
@@ -292,10 +311,8 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
             this.adding = false
             this.newName = ''
             this.closeList()
-            this.$nextTick(() => {
-                this.$refs.input?.dispatchEvent(new Event('change', { bubbles: true }))
-                this.$refs.trigger?.focus()
-            })
+            this.announce()
+            this.$nextTick(() => this.$refs.trigger?.focus())
         },
     }
 }

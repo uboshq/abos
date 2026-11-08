@@ -164,6 +164,41 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
             '⛔ দফা ২১: "সবগুলোর" মোট কেবল এই পাতার — দ্বিতীয় পাতার কাগজ গোনায় নেই।');
     }
 
+    /**
+     * ⭐ ফোনের নতুন ইনবক্স — মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok": খোঁজার ঘর ("নম্বর, পক্ষ বা কে চেয়েছেন"), সাজানোর পছন্দ, কার্ডে
+     * "📎 3", চাওয়ার কারণ, আর "দিয়েছি" ট্যাবে সিদ্ধান্তের সময়।
+     */
+    public function test_the_new_phone_inbox_finds_by_number_and_party_sorts_and_counts_attachments(): void
+    {
+        Storage::fake('local');
+        $this->paper('PO-21-0031', 'order', '100');
+        $big = $this->paper('PO-21-0032', 'order', '9000');
+        $big->update(['requested_reason' => 'মাসের শেষ, সরবরাহ বন্ধের নোটিশ']);
+        $this->paper('PO-21-0033', 'order', '500');
+        $this->attach($big, 'advice.txt');
+        $this->attach($big, 'bill.txt');
+
+        $this->assertSame(['PO-21-0032'], $this->numbers($this->inbox('?q=0032')->assertOk()), '⛔ নম্বর লিখে খুঁজলে কাগজটা আসে না।');
+
+        $supplier = Supplier::query()->findOrFail(PurchaseOrder::query()->where('document_no', 'PO-21-0031')->value('supplier_id'));
+        $byParty = $this->numbers($this->inbox('?q='.urlencode((string) $supplier->name_en))->assertOk());
+        sort($byParty);
+        $this->assertSame(['PO-21-0031', 'PO-21-0032', 'PO-21-0033'], $byParty, '⛔ পক্ষের নামে খুঁজলে তাঁর কাগজ আসে না।');
+        $this->assertSame([], $this->numbers($this->inbox('?q=NOSUCHPAPER-9')->assertOk()), '⛔ না-মেলা লেখায়ও কাগজ আসে — খোঁজা ছাঁকছে না।');
+
+        $this->assertSame(['PO-21-0032', 'PO-21-0033', 'PO-21-0031'], $this->numbers($this->inbox('?sort=amount')->assertOk()),
+            '⛔ "বড় অঙ্ক আগে" সাজানো নয়।');
+        $this->inbox('?sort=sideways')->assertStatus(422);
+
+        $rows = collect($this->inbox()->assertOk()->json('rows'))->keyBy('documentNo');
+        $this->assertSame(2, $rows['PO-21-0032']['attachments'], '⛔ কার্ডে সংযুক্তির সংখ্যা ভুল।');
+        $this->assertSame(0, $rows['PO-21-0031']['attachments'], '⛔ সংযুক্তিহীন কাগজে সংখ্যা শূন্য নয়।');
+        $this->assertSame('মাসের শেষ, সরবরাহ বন্ধের নোটিশ', $rows['PO-21-0032']['reason'], '⛔ চাওয়ার কারণ কার্ডে নেই।');
+        $this->assertNull($rows['PO-21-0031']['reason'], '⛔ কারণ না থাকলে খালি লেখা যায়।');
+        $this->assertArrayHasKey('decidedAt', $rows['PO-21-0031'], '⛔ সিদ্ধান্তের সময়ের ঘর নেই।');
+        $this->assertNull($rows['PO-21-0031']['decidedAt'], '⛔ অপেক্ষার কাগজে সিদ্ধান্তের সময়।');
+    }
+
     public function test_dofa21h_the_paper_page_has_the_summary_journey_and_attachments(): void
     {
         Storage::fake('local');

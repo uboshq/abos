@@ -261,11 +261,46 @@ final class ApprovalInbox
 
         $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
 
-        return $query->where(fn ($q) => $q
-            ->where('requested_reason', 'like', $like)
-            ->orWhere('payload', 'like', $like)
-            ->orWhere('amount', 'like', $like)
-            ->orWhereHas('requester', fn ($u) => $u->where('name', 'like', $like)));
+        /*
+         * ⭐ কাগজের নম্বর আর পক্ষের নামেও — ফোনের নতুন ইনবক্স (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok": "নম্বর, পক্ষ বা কে চেয়েছেন — খুঁজুন")।
+         * ⓘ আগে কেবল কারণ, payload, অঙ্ক আর চাওয়া মানুষ — "PO-0099" বা "মেঘনা সিমেন্ট" লিখলে কিছুই মিলত না। কাগজের ধরন ধরে তার
+         * নিজের টেবিলে উপ-প্রশ্ন ([[narrowed()]]-এর শাখার একই ধাঁচ); যে টেবিলে ঘরটা নেই সেখানে প্রশ্নই নয়।
+         */
+        $types = (clone $query)->reorder()->withoutEagerLoads()->distinct()->pluck('approvable_type')->all();
+        $has = static fn (string $table, string $column): bool => \Illuminate\Support\Facades\Schema::hasColumn($table, $column);
+
+        return $query->where(function ($q) use ($like, $types, $has) {
+            $q->where('requested_reason', 'like', $like)
+                ->orWhere('payload', 'like', $like)
+                ->orWhere('amount', 'like', $like)
+                ->orWhereHas('requester', fn ($u) => $u->where('name', 'like', $like));
+
+            foreach ($types as $type) {
+                if (! is_string($type) || ! is_subclass_of($type, \Illuminate\Database\Eloquent\Model::class)) {
+                    continue;
+                }
+
+                $table = (new $type)->getTable();
+                $papers = [];
+
+                if ($has($table, 'document_no')) {
+                    $papers[] = fn ($ids) => $ids->select('id')->from($table)->where('document_no', 'like', $like);
+                }
+
+                foreach (['customer_id' => 'customers', 'supplier_id' => 'suppliers'] as $column => $parties) {
+                    if ($has($table, $column) && $has($parties, 'name_en')) {
+                        $papers[] = fn ($ids) => $ids->select($table.'.id')->from($table)
+                            ->join($parties, $parties.'.id', '=', $table.'.'.$column)
+                            ->where(fn ($n) => $n->where($parties.'.name_en', 'like', $like)
+                                ->when($has($parties, 'name_bn'), fn ($b) => $b->orWhere($parties.'.name_bn', 'like', $like)));
+                    }
+                }
+
+                foreach ($papers as $ids) {
+                    $q->orWhere(fn ($one) => $one->where('approvable_type', $type)->whereIn('approvable_id', $ids));
+                }
+            }
+        });
     }
 
     /**

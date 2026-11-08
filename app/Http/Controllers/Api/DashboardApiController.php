@@ -14,6 +14,8 @@ use App\Core\Support\PhoneAnswer;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use Illuminate\Contracts\Support\Htmlable;
+use App\Core\Engines\Dashboard\CardColours;
+use App\Core\Engines\Dashboard\WatchList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -105,6 +107,18 @@ final class DashboardApiController extends Controller
             'stats' => array_map(fn (Stat $s) => $this->stat($s), $dashboard->stats),
             'panels' => array_values(array_filter(array_map(fn ($p) => $this->panel($p), $dashboard->panels))),
             'listings' => array_map(fn (Listing $l) => $this->listing($l), $dashboard->listings),
+
+            /*
+             * ⭐ ওয়েবের নতুন ড্যাশবোর্ডের সাজ ফোনেও (ড্যা-৭; মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"; module-v2.blade.php-এর একই নিয়ম):
+             * মাথার দুই রং আর উপরের চার কার্ডের রং (নামে — ফোনের নিজের রঙের তালিকায়), "নজরে রাখুন" (করণীয়, শূন্য নয়), দ্রুত
+             * কাজের বোতাম। ⓘ সব নতুন চাবি — পুরনো অ্যাপ এগুলো না চিনেই আগের মতো চলে।
+             */
+            'colours' => [
+                'head' => CardColours::headNames($module),
+                'cards' => CardColours::names($module, array_map(fn (Stat $s) => $s->tone, array_slice($dashboard->stats, 0, 4))),
+            ],
+            'watch' => $this->watch($dashboard->reminders),
+            'tiles' => array_values(array_map(fn ($t) => ['label' => $t->label, 'href' => $t->href, 'icon' => $t->icon], $dashboard->tiles)),
         ])->header('Cache-Control', 'no-store');
     }
 
@@ -125,7 +139,22 @@ final class DashboardApiController extends Controller
             'tone' => $stat->tone,
             'previous' => $stat->previous,
             'previousLabel' => $stat->previousLabel,
+            // ⓘ চাপলে পেছনের তালিকা — ফোন নিজের পর্দা খোলে, নয়তো অ্যাপের ভেতরের ওয়েব জানালা (ড্যা-৭)
+            'href' => $stat->value === Stat::HIDDEN ? null : $stat->href,
         ];
+    }
+
+    /**
+     * ⭐ "নজরে রাখুন" — ওয়েবের একই ছাঁকনি: কেবল করণীয় দল, শূন্য নয় (module-v2.blade.php; ড্যা-৭)।
+     *
+     * @param  iterable<\App\Core\Dashboard\Widget>  $reminders
+     * @return list<array{label: string, value: string, tone: ?string, href: ?string}>
+     */
+    private function watch(iterable $reminders): array
+    {
+        return WatchList::of($reminders)
+            ->map(fn ($item) => ['label' => (string) $item->label, 'value' => (string) $item->value, 'tone' => $item->tone, 'href' => $item->href])
+            ->all();
     }
 
     /** @return array<string, mixed>|null */

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import Alpine from '@alpinejs/csp'
 import morph from '@alpinejs/morph'
-import { EVERY_MS, isFresh, isTouched, placeFresh } from './live.js'
+import { EVERY_MS, isFresh, isTouched, placeFresh, rememberTyping } from './live.js'
 
 Alpine.plugin(morph)
 
@@ -118,6 +118,43 @@ it('keeps a fold the person opened or shut as it is, and still updates what is i
     expect(document.querySelector('#shut').open).toBe(false)
     expect(document.querySelector('#opened p').textContent).toBe('নতুন')
     expect(document.querySelector('#shut p').textContent).toBe('নতুন')
+})
+
+/**
+ * ⛔ মালিক, ৮ নভেম্বর ২০২৬ (live): আদায়ে গ্রাহক বাছার পর "হুট করে আবার ডিসিলেক্ট হয়ে যাচ্ছে … টাকাগুলা জমাই নেওয়া যাচ্ছে
+ * না"। বাছা নাম আর টাকার লুকানো অঙ্ক Alpine বসায়, মানুষ টাইপ করেন না — দশ সেকেন্ডের নতুন পাতা ওগুলো খালি করত।
+ * ⓘ আসল পথে চিহ্ন: rememberTyping যে `change` শোনে, পক্ষ-বাছাই ঠিক সেটাই ছোড়ে ([[party-search.js]] pick())।
+ */
+it('keeps a sale or money form the person is working on whole, and still updates the page around it', () => {
+    document.body.innerHTML = '<main id="main"><p id="due">১,০০০</p>'
+        + '<form method="POST" id="money"><input type="hidden" name="customer_id" id="cust" value="1017">'
+        + '<span id="picked">মেসার্স রায়ান এন্টারপ্রাইজ</span><input type="hidden" name="amount" id="amt" value="34000"></form>'
+        + '<form method="GET" id="filter"><input name="q" id="q" value=""><span id="count">৫টা</span></form></main>'
+    const fresh = page('<main id="main"><p id="due">৫,০০০</p>'
+        + '<form method="POST" id="money"><input type="hidden" name="customer_id" id="cust" value="">'
+        + '<span id="picked">—</span><input type="hidden" name="amount" id="amt" value=""></form>'
+        + '<form method="GET" id="filter"><input name="q" id="q" value=""><span id="count">৬টা</span></form></main>')
+    rememberTyping(document)
+    document.querySelector('#cust').dispatchEvent(new Event('change', { bubbles: true }))
+    document.querySelector('#q').dispatchEvent(new Event('input', { bubbles: true }))
+
+    placeFresh(document, fresh, fakeMorph)
+
+    expect(document.querySelector('#picked').textContent).toBe('মেসার্স রায়ান এন্টারপ্রাইজ')
+    expect(document.querySelector('#amt').value).toBe('34000')
+    expect(document.querySelector('#cust').value).toBe('1017')
+    expect(document.querySelector('#due').textContent).toBe('৫,০০০')
+    // ⓘ খোঁজার ফর্ম আগের মতো ঘর ধরে — পাশের সংখ্যা নতুন হয়
+    expect(document.querySelector('#count').textContent).toBe('৬টা')
+})
+
+it('an untouched entry form still takes the new page', () => {
+    document.body.innerHTML = '<main id="main"><form method="POST"><span id="limit">১,০০০</span></form></main>'
+    const fresh = page('<main id="main"><form method="POST"><span id="limit">২,০০০</span></form></main>')
+
+    placeFresh(document, fresh, fakeMorph)
+
+    expect(document.querySelector('#limit').textContent).toBe('২,০০০')
 })
 
 describe('isTouched', () => {

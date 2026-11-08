@@ -27,8 +27,8 @@
        aria-label="{{ __('core.notice.signed_unposted') }}">
         @if ($bar)
             {{-- ⭐ রঙিন জমিনে সাদা চিহ্ন — মালিক, ৬ নভেম্বর ২০২৬: "top barer icon golo rongin colore korbe" --}}
-            <span class="grid size-8 place-items-center rounded-[9px] shadow-sm" data-topbar-icon="papers" style="background: var(--color-topbar-icon-papers); color: var(--color-topbar-icon-ink)">
-                <x-ui.icon name="receipt" :size="18" />
+            <span class="grid size-8 place-items-center" data-topbar-icon="papers" style="color: var(--color-topbar-glyph-papers)">
+                <x-ui.icon name="receipt" :size="26" />
             </span>
         @else
             <x-ui.icon name="receipt" :size="18" />

@@ -18,7 +18,7 @@
             :aria-expanded="open"
             aria-haspopup="menu"
             aria-label="{{ __('core.profile.menu', ['name' => $user?->name]) }}"
-            class="flex shrink-0 items-center gap-2 rounded-full"
+            class="ms-4 flex shrink-0 items-center gap-2 rounded-full"
             title="{{ $user?->name }}">
         {{-- ⭐ ছবির বাঁয়ে উপরে নাম, নিচে পদবি — মালিক, ৬ নভেম্বর ২০২৬ ([[UserDesignation]]); সরু পর্দায় কেবল ছবি --}}
         @php

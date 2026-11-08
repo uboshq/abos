@@ -1201,6 +1201,19 @@
     --color-topbar-icon-bell: #f59e0b;
     --color-topbar-icon-create: #2f7af0;
     --color-topbar-icon-ink: #ffffff;
+    /* ⭐ "নিশ্চিত?" বাক্সের রঙ — মাঝখানে, বড়, রঙিন (মালিক, ৮ নভেম্বর ২০২৬: "কালারফুল সুন্দর ডিজাইন করে দিবে"; [[ask.js]]) */
+    --color-ask-ok-from: #16a34a;
+    --color-ask-ok-to: #0d9488;
+    --color-ask-danger-from: #dc2626;
+    --color-ask-danger-to: #c026d3;
+    --color-ask-info-from: #2563eb;
+    --color-ask-info-to: #7c3aed;
+    --color-ask-backdrop: rgb(10 20 40 / .55);
+    --color-ask-on-band: #ffffff;
+    /* ⭐ বাক্স ছাড়া রঙিন চিহ্ন, নেভি বারে উজ্জ্বল (মালিক, ৮ নভেম্বর ২০২৬: "box gulo bad diye sudu icon color kore daw") */
+    --color-topbar-glyph-tasks: #4ade80;
+    --color-topbar-glyph-papers: #22d3ee;
+    --color-topbar-glyph-bell: #fbbf24;
     /* ⭐ অনুমোদনের অবস্থার রং — ইনবক্সের পাঁচ ঘর আর কার্ডের দাগে একই (মালিক, ৬ নভেম্বর ২০২৬: "approval pagegulo color ful korbe") */
     --color-board-late: #dc2626;
     --color-board-wait: #d97706;

@@ -47,6 +47,25 @@ describe('partySearch — খোঁজার নিয়ম একটাই', (
     })
 })
 
+/*
+ * ⛔ মালিক, ৮ নভেম্বর ২০২৬ (live): জমার ভাউচারে "মেসার্স রায়ান এন্টারপ্রাইজ" বাছলে নাম বসত, সারাংশ আসত না — `change` যেত
+ * `$nextTick`-এ, আর সেই সারি আটকে থাকত। ⓘ এখানে `$nextTick` কখনো চলে না (আটকানো সারির মতো), তবু খবরটা যেতে হবে, সঠিক মানসহ।
+ */
+it('a pick tells the page at once, with the value already in the box — even when the next tick never comes', () => {
+    const box = partySearch({ value: '', options, uid: 'ps-party-id-x' })
+    const sent = []
+    const input = { value: '', dispatchEvent: vi.fn(() => sent.push(input.value)) }
+    box.$nextTick = () => {}
+    box.$refs = { search: { focus: vi.fn() }, trigger: { focus: vi.fn() }, input, list: { querySelector: () => null } }
+
+    box.pick(12)
+
+    expect(input.dispatchEvent).toHaveBeenCalledTimes(1)
+    expect(input.dispatchEvent.mock.calls[0][0].type).toBe('change')
+    expect(input.dispatchEvent.mock.calls[0][0].bubbles).toBe(true)
+    expect(sent).toEqual(['12'])
+})
+
 describe('partySearch — কম্পোনেন্ট', () => {
     it('খালি শুরুতে বোতামে "—", আর আগে বাছা মান থাকলে তার নাম ও কোড-পয়েন্ট', () => {
         expect(make().pickedLabel).toBe('—')
