@@ -126,7 +126,7 @@
              সাদা পাতে, কারণ চিহ্নটা সাদা জমিনের জন্য আঁকা ([[x-brand.live-logo]]) --}}
         <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
            class="hidden shrink-0 items-center rounded-[10px] bg-(--color-logo-plate) px-2 py-1 md:flex" title="ABOS">
-            <x-brand.live-logo class="h-[30px] w-auto" />
+            <x-brand.live-logo class="h-[46px] w-auto" />
         </a>
         <button type="button"
                 x-data

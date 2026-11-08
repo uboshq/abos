@@ -68,8 +68,8 @@
              দুই রকম দেখাত, দুই পণ্যে এক তো দূরের কথা। পাশের অনুমোদনের
              সিলটা এই কারণেই আগে থেকেই আঁকা। --}}
         {{-- ⭐ রঙিন জমিনে সাদা চিহ্ন — মালিক, ৬ নভেম্বর ২০২৬: "top barer icon golo rongin colore korbe" --}}
-        <span class="grid size-8 place-items-center rounded-[9px] shadow-sm" data-topbar-icon="bell" style="background: var(--color-topbar-icon-bell); color: var(--color-topbar-icon-ink)">
-            <x-ui.icon name="bell" :size="18" />
+        <span class="grid size-8 place-items-center" data-topbar-icon="bell" style="color: var(--color-topbar-glyph-bell)">
+            <x-ui.icon name="bell" :size="26" />
         </span>
 
         {{-- সংখ্যাটা ব্যাজে, কারণ "কিছু একটা আছে" আর "সাতটা আছে" দুটো

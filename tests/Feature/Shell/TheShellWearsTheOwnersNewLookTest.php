@@ -44,9 +44,15 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $this->assertStringContainsString('color: var(--color-topbar-pill-ink)', $bar, '⛔ শাখার পিলের লেখা গাঢ় নয় (২)।');
         $tokens = (string) file_get_contents(resource_path('css/tokens.css'));
         $this->assertMatchesRegularExpression('/--color-topbar-pill-bg:\s*#ffffff;/', $tokens, '⛔ শাখার পিল সাদা নয় (২)।');
+        // ⓘ মালিক, ৮ নভেম্বর ২০২৬, রূপ ক: বাক্স নয়, চিহ্নটাই রঙিন — "box gulo bad diye sudu icon color kore daw"
         foreach (['tasks', 'bell'] as $icon) {
-            $this->assertMatchesRegularExpression('/data-topbar-icon="'.$icon.'" style="background: var\(--color-topbar-icon-'.$icon.'\)/', $bar, "⛔ টপবারের \"{$icon}\" আইকন রঙিন নয় (৬)।");
+            $this->assertMatchesRegularExpression('/data-topbar-icon="'.$icon.'" style="color: var\(--color-topbar-glyph-'.$icon.'\)/', $bar, "⛔ টপবারের \"{$icon}\" চিহ্ন রঙিন নয় (৬)।");
+            $this->assertDoesNotMatchRegularExpression('/data-topbar-icon="'.$icon.'" style="background:/', $bar, "⛔ টপবারের \"{$icon}\" চিহ্নে আবার রঙিন বাক্স (৬)।");
         }
+        $this->assertMatchesRegularExpression('/--color-topbar-glyph-tasks:\s*#/', $tokens, '⛔ সবুজ টিকের রঙ নেই (৬)।');
+        // ⓘ "modiule icon r soft logo ro boro koro" — লোগো ৪৬px, ⊞-এর বর্গ ১৫px
+        $this->assertMatchesRegularExpression('/data-shell-product(?:(?!<\/a>).)*h-\[46px\]/s', $bar, '⛔ লোগো বড় নয়।');
+        $this->assertStringContainsString('size-[15px]', $this->between($bar, '<div data-menu-cell', '</button>'), '⛔ ⊞-এর বর্গ বড় নয়।');
         $this->assertMatchesRegularExpression('/data-profile-identity(?:(?!<\/span>\s*<\/span>).)*'.preg_quote(e($this->owner->name), '/').'/s', $bar, '⛔ ছবির বাঁয়ে নাম নেই (৫)।');
         $title = \App\Core\Support\UserDesignation::of($this->owner);
         if ($title !== null) {

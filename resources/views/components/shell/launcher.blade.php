@@ -88,16 +88,16 @@
             aria-haspopup="dialog"
             aria-controls="module-launcher"
             aria-keyshortcuts="Alt+M"
-            class="grid size-[40px] shrink-0 place-items-center rounded-full text-(--color-topbar-ink-muted) max-sm:hidden
+            class="grid size-[48px] shrink-0 place-items-center rounded-full text-(--color-topbar-ink-muted) max-sm:hidden
                    transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
-            style="--topbar-control-h: 40px"
+            style="--topbar-control-h: 48px"
             aria-label="{{ __('core.ui.all_modules') }}"
             title="{{ __('core.ui.all_modules') }} (Alt+M)">
         {{-- চারটা বর্গ — ⊞। ⓘ ৯ ফোঁটা Odoo-র চিহ্ন; এটা ABOS-এর নিজের, তাই আলাদা দেখতে হওয়াই ঠিক। --}}
-        <span class="grid grid-cols-2 gap-[3px]" aria-hidden="true">
+        <span class="grid grid-cols-2 gap-[5px]" aria-hidden="true">
             @foreach ([1, 2, 3, 4] as $square)
-                <span class="block size-[9px] rounded-[2px]" style="background: var(--color-launcher-{{ $square }})"></span>
+                <span class="block size-[15px] rounded-[4px]" style="background: var(--color-launcher-{{ $square }})"></span>
             @endforeach
         </span>
     </button>
