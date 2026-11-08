@@ -105,6 +105,10 @@ return [
     'paper_no' => 'No.',
 
     // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
+    'why_rule' => ':what — this work needs approval',
+    'why_rule_from' => ':what — needs approval from ৳:amount up',
+    'why_step' => 'Step :at',
+    'why_step_named' => 'Step :at · :name',
     'tab_waiting' => 'Waiting',
     'tab_sent' => 'Sent by me',
     'tab_done' => 'Approved by me',

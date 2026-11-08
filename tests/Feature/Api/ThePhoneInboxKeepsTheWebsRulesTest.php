@@ -331,6 +331,38 @@ final class ThePhoneInboxKeepsTheWebsRulesTest extends TestCase
         return $user->fresh();
     }
 
+    /**
+     * ⭐ নমুনা v4 (মালিক "ok", ৮ নভেম্বর ২০২৬): কাগজের পাতায় "কেন আপনার অনুমোদন লাগছে" — ইঞ্জিনের নিয়ম (কাজের নাম আর ধাপ কত
+     * টাকা থেকে), ধাপের নম্বর আর নাম, আর যিনি চেয়েছেন তার কারণ; কারণ না থাকলে `null`, বানানো লেখা নয়।
+     */
+    public function test_the_paper_page_says_why_this_signer_is_asked(): void
+    {
+        $flow = ApprovalFlow::query()->where('module', 'purchase')->where('action', 'order')->firstOrFail();
+        ApprovalFlowStep::query()->where('approval_flow_id', $flow->id)->update(['from_amount' => '100000', 'step_name' => 'ম্যানেজার']);
+        app(ApprovalEngine::class)::flowsChanged();
+        $paper = $this->paper('PO-21-0031', 'order', '125000');
+        $paper->update(['requested_reason' => 'মাসের শেষ, সরবরাহ বন্ধের নোটিশ এসেছে']);
+        $bare = $this->paper('PO-21-0032', 'order', '150000');
+
+        $this->as($this->signer);
+        $why = $this->getJson('/api/v1/approvals/'.$paper->public_id.'/sheet')->assertOk()->json('why');
+
+        $what = app(\App\Core\Engines\Approval\ApprovalLabel::class)->of('purchase', 'order');
+        $this->assertSame($what.' — ৳'.\App\Core\Support\Money::format('100000').' বা তার বেশি হলে অনুমোদন লাগে', $why['rule'],
+            '⛔ নিয়মটা বলে না কোন কাজ আর কত টাকা থেকে অনুমোদন লাগে');
+        $this->assertSame('ধাপ 1 · ম্যানেজার', $why['step'], '⛔ কোন ধাপে আর কোন নামে — পাতায় নেই');
+        $this->assertSame('মাসের শেষ, সরবরাহ বন্ধের নোটিশ এসেছে', $why['reason'], '⛔ যিনি চেয়েছেন তার লেখা কারণ পাতায় আসে না');
+
+        $this->assertNull($this->getJson('/api/v1/approvals/'.$bare->public_id.'/sheet')->assertOk()->json('why.reason'),
+            '⛔ কারণ লেখা হয়নি, তবু পাতায় একটা কারণ বসল');
+
+        ApprovalFlowStep::query()->where('approval_flow_id', $flow->id)->update(['from_amount' => null, 'step_name' => null]);
+        app(ApprovalEngine::class)::flowsChanged();
+        $plain = $this->getJson('/api/v1/approvals/'.$bare->public_id.'/sheet')->assertOk()->json('why');
+        $this->assertSame($what.' — এই কাজে অনুমোদন লাগে', $plain['rule'], '⛔ টাকার সীমা ছাড়া ধাপেও "থেকে" লেখা বসল');
+        $this->assertSame('ধাপ 1', $plain['step']);
+    }
+
     private function paper(string $no, string $action, string $amount, ?User $by = null, $due = null): Approval
     {
         $po = PurchaseOrder::create([
