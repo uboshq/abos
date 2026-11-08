@@ -125,7 +125,7 @@
         {{-- ⭐ আইকনসহ জীবন্ত লোগো, ১০টা নড়াচড়া পালা করে (মালিক, ৬ নভেম্বর ২০২৬: "logo icon soho live jibonto 10 ti movement") —
              সাদা পাতে, কারণ চিহ্নটা সাদা জমিনের জন্য আঁকা ([[x-brand.live-logo]]) --}}
         <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
-           class="hidden shrink-0 items-center rounded-[10px] bg-(--color-logo-plate) px-2 py-1 md:flex" title="ABOS">
+           class="hidden h-[56px] shrink-0 items-center rounded-[12px] bg-(--color-logo-plate) px-4 md:flex" title="ABOS">
             <x-brand.live-logo class="h-[46px] w-auto" />
         </a>
         <button type="button"

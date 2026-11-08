@@ -52,6 +52,8 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $this->assertMatchesRegularExpression('/--color-topbar-glyph-tasks:\s*#/', $tokens, '⛔ সবুজ টিকের রঙ নেই (৬)।');
         // ⓘ "modiule icon r soft logo ro boro koro" — লোগো ৪৬px, ⊞-এর বর্গ ১৫px
         $this->assertMatchesRegularExpression('/data-shell-product(?:(?!<\/a>).)*h-\[46px\]/s', $bar, '⛔ লোগো বড় নয়।');
+        // ⓘ "Software logor bacgraund er sada onso ro boro korte hobe" — সাদা পাত ৫৬px উঁচু, দুই পাশে ১৬px
+        $this->assertMatchesRegularExpression('/data-shell-product[^>]*class="[^"]*h-\[56px\][^"]*px-4/', $bar, '⛔ লোগোর সাদা পাত বড় নয়।');
         $this->assertStringContainsString('size-[15px]', $this->between($bar, '<div data-menu-cell', '</button>'), '⛔ ⊞-এর বর্গ বড় নয়।');
         $this->assertMatchesRegularExpression('/data-profile-identity(?:(?!<\/span>\s*<\/span>).)*'.preg_quote(e($this->owner->name), '/').'/s', $bar, '⛔ ছবির বাঁয়ে নাম নেই (৫)।');
         $title = \App\Core\Support\UserDesignation::of($this->owner);
