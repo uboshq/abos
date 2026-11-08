@@ -175,11 +175,23 @@
                 <h2 class="mb-3 font-semibold">{{ __('core.profile.identity') }}</h2>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <label class="block">
-                        <span class="mb-1 block text-sm font-medium">{{ __('core.profile.name') }}</span>
-                        <input type="text" name="name" value="{{ old('name', $user->name) }}" required
-                               class="{{ $field }}">
-                    </label>
+                    {{-- ⭐ নামের ঠিক নিচে বাংলা নাম — মালিকের ছবিতে দাগ দেওয়া জায়গা (৮ নভেম্বর ২০২৬); একই কলামে, তাই লগইন আইডি সরে না --}}
+                    <div class="space-y-3">
+                        <label class="block">
+                            <span class="mb-1 block text-sm font-medium">{{ __('core.profile.name') }}</span>
+                            <input type="text" name="name" value="{{ old('name', $user->name) }}" required
+                                   class="{{ $field }}">
+                        </label>
+
+                        <label class="block" data-profile-name-bn>
+                            <span class="mb-1 block text-sm font-medium">{{ __('core.profile.name_bn') }}</span>
+                            <input type="text" name="name_bn" value="{{ old('name_bn', $user->name_bn) }}" lang="bn"
+                                   placeholder="{{ __('core.profile.name_bn_placeholder') }}"
+                                   class="{{ $field }}">
+                            <span class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('core.profile.name_bn_hint') }}</span>
+                            @error('name_bn')<span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>@enderror
+                        </label>
+                    </div>
 
                     {{-- ⭐ লগইন আইডি — মালিকের সিদ্ধান্ত, ১৪ সেপ্টেম্বর ২০২৬।
 

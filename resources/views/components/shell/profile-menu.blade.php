@@ -17,16 +17,16 @@
             @keydown.escape.window="open = false"
             :aria-expanded="open"
             aria-haspopup="menu"
-            aria-label="{{ __('core.profile.menu', ['name' => $user?->name]) }}"
+            aria-label="{{ __('core.profile.menu', ['name' => $user?->displayName()]) }}"
             class="ms-4 flex shrink-0 items-center gap-2 rounded-full"
-            title="{{ $user?->name }}">
+            title="{{ $user?->displayName() }}">
         {{-- ⭐ ছবির বাঁয়ে উপরে নাম, নিচে পদবি — মালিক, ৬ নভেম্বর ২০২৬ ([[UserDesignation]]); সরু পর্দায় কেবল ছবি --}}
         @php
             $designation = \App\Core\Support\UserDesignation::of($user);
         @endphp
         <span class="hidden min-w-0 text-end leading-tight lg:block" data-profile-identity>
             {{-- ⭐ মালিক, ৭ নভেম্বর ২০২৬: "user er nam ro bold kore boro kore" — নাম বড় আর মোটা, পদবি নিচে ছোট --}}
-            <span class="block max-w-56 truncate text-base font-bold text-(--color-topbar-ink)" data-profile-name>{{ $user?->name }}</span>
+            <span class="block max-w-56 truncate text-base font-bold text-(--color-topbar-ink)" data-profile-name>{{ $user?->displayName() }}</span>
             @if ($designation)
                 <span class="block max-w-48 truncate text-xs" style="color: var(--color-brand-gold-bright)">{{ $designation }}</span>
             @endif
@@ -44,7 +44,7 @@
         <div class="flex items-center gap-2 border-b border-(--color-border) px-3 py-2">
             <x-ui.avatar :user="$user" size="sm" />
             <span class="min-w-0">
-                <span class="block truncate text-sm font-medium text-(--color-ink)">{{ $user?->name }}</span>
+                <span class="block truncate text-sm font-medium text-(--color-ink)">{{ $user?->displayName() }}</span>
                 <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $user?->email }}</span>
             </span>
         </div>
