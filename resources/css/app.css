@@ -1909,8 +1909,8 @@ tr[data-account-group] > td:first-child a .num {
 
 /* ── ভাঁজ — মালিক, ৮ নভেম্বর ২০২৬ ("egulo vaj kore rako zokon lagbe tokhon kule nibe"; নমুনা "ok") ──
    রঙিন পট্টিটাই ভাঁজের মাথা: চাপলে খোলে; মাথায় ছোট গোল ফিতায় ভিতরের কথা; ডানে ▾ খুললে ঘোরে। */
-.money-fold > summary { list-style: none; cursor: pointer; }
-.money-fold > summary::-webkit-details-marker { display: none; }
+.money-fold-head { list-style: none; cursor: pointer; }
+.money-fold-head::-webkit-details-marker { display: none; }
 .money-fold > summary > [data-form-band] { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .65rem; }
 [data-boxed] > .money-fold:first-child > summary > [data-form-band] {
     margin-top: -1rem;
@@ -1940,7 +1940,7 @@ tr[data-account-group] > td:first-child a .num {
 .money-fold-peek:empty { display: none; }
 .money-fold-chev { margin-inline-start: auto; font-size: .75rem; transition: transform .15s; }
 .money-fold[open] > summary .money-fold-chev { transform: rotate(180deg); }
-.money-fold > summary:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+.money-fold-head:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 
 /* ⭐ নিট — সবুজ গোল বাক্স (মালিক, ৮ নভেম্বর ২০২৬: "ei likhtao sobuj koro r ekta round box koro"; নমুনা "ok") */
 .money-net {
