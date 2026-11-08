@@ -768,8 +768,15 @@
                                     ->sort(fn ($x, $y) => [$x[0], $x[1]] <=> [$y[0], $y[1]])
                                     ->map(fn ($x) => $x[2])->values();
                             }
+                            // ⭐ রঙিন মেনু — প্রতিটা সারির দল, রং আর নিজের চিহ্ন ([[MenuLook]]; মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok")
+                            $menuLooks = \App\Core\Navigation\MenuLook::forRows((string) $activeModule['code'], $panelRows->all());
                         @endphp
                         @foreach ($panelRows as $item)
+                            @php($look = $menuLooks[$loop->index] ?? ['kind' => null, 'starts' => false, 'colour' => null, 'icon' => null, 'name' => null])
+                            @if ($look['kind'] !== null && $look['starts'] && $panelSections === [])
+                                <p class="menu-kind-head" data-menu-kind="{{ $look['kind'] }}" data-mc="{{ ltrim((string) $look['colour'], '#') }}"
+                                   x-show="filter === ''">{{ $look['name'] }}</p>
+                            @endif
                             @if ($panelSections !== [] && ($item['section'] ?? null) !== null
                                 && ($item['section'] ?? null) !== ($panelRows[$loop->index - 1]['section'] ?? null))
                                 <p data-panel-section="{{ $item['section'] }}"
@@ -789,12 +796,17 @@
                                    x-show="shows(@js(mb_strtolower($item['label'])))"
                                    @class([
                                        'rail-item flex min-h-(--rail-item-h) items-center gap-2 px-2.5 text-(length:--rail-item-font) transition-colors',
+                                       'menu-coloured' => $look['kind'] !== null,
                                        'bg-(--rail-item-on-bg) font-semibold text-(--rail-item-on-ink)' => $item['active'],
                                        'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
                                        'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],
                                    ])
                                    @if (! $item['url']) aria-disabled="true" @endif
+                                   @if ($look['kind'] !== null) data-mc="{{ ltrim((string) $look['colour'], '#') }}" data-menu-row-kind="{{ $look['kind'] }}" @endif
                                    @if ($item['active']) aria-current="page" @endif>
+                                    @if ($look['icon'])
+                                        <span class="menu-icon"><x-ui.licon :name="$look['icon']" :size="15" /></span>
+                                    @endif
                                     {{-- ⭐ নাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3 navigation: লেবেল কখনো কাটা নয়; fe-র ছবি-যাচাই,
                                          ২০ অক্টোবর ২০২৬: "মাসওয়ারি টাকা আসা-..."); সারির উচ্চতা ন্যূনতম, তাই দুই লাইনে নিজে বাড়ে --}}
                                     <span class="line-clamp-2 min-w-0 py-1 leading-snug" title="{{ $item['label'] }}">{{ $item['label'] }}</span>
