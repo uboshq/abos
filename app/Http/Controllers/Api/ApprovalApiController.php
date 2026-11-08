@@ -454,6 +454,34 @@ final class ApprovalApiController extends Controller
      *
      * @return array<string, mixed>
      */
+    /**
+     * ⭐ "কেন আপনার অনুমোদন লাগছে" — মালিকের নমুনা "অনুমোদনের নতুন ইনবক্স" v4 ("ok", ৮ নভেম্বর ২০২৬; SAP Fiori-র "why am I
+     * approving"): কোন নিয়মে কাগজটা এল (কাজের নাম, আর ধাপটা কত টাকা থেকে সই দেয়), এখন কোন ধাপ, আর যিনি চেয়েছেন তার লেখা কারণ।
+     * ⓘ নিয়ম আর ধাপ ইঞ্জিনের নিজের ছক থেকে ([[ApprovalEngine::stepsFor()]], [[ApprovalLabel]]) — ওয়েব যেখান থেকে পড়ে।
+     *
+     * @return array{rule: string, step: string|null, reason: string|null}
+     */
+    private function whyOf(Approval $entry): array
+    {
+        $engine = app(ApprovalEngine::class);
+        $at = (int) $entry->current_level;
+        $step = $engine->stepsFor($entry)->first(fn ($s) => (int) $s->level === $at);
+        $from = $step?->from_amount === null ? null : (string) $step->from_amount;
+        $what = app(\App\Core\Engines\Approval\ApprovalLabel::class)->of((string) $entry->module, (string) $entry->action);
+        $name = $engine->stepNamesFor($entry)[$at] ?? null;
+        $reason = trim((string) $entry->requested_reason);
+
+        return [
+            'rule' => $from !== null && bccomp($from, '0', 4) > 0
+                ? (string) __('approval::field.why_rule_from', ['what' => $what, 'amount' => \App\Core\Support\Money::format($from)])
+                : (string) __('approval::field.why_rule', ['what' => $what]),
+            'step' => $at < 1 ? null : (string) ($name === null
+                ? __('approval::field.why_step', ['at' => $at])
+                : __('approval::field.why_step_named', ['at' => $at, 'name' => $name])),
+            'reason' => $reason === '' ? null : $reason,
+        ];
+    }
+
     private function paperPage(Approval $entry, Model $document, User $user): array
     {
         $entry->loadMissing(['requester', 'decisions.user', 'decisions.forwardedTo', 'decisions.onBehalfOf']);
@@ -469,6 +497,7 @@ final class ApprovalApiController extends Controller
         );
 
         return [
+            'why' => $this->whyOf($entry),
             'summary' => [
                 'requesterName' => $entry->requesterName(),
                 'requestedAt' => $entry->requested_at?->toIso8601String(),
