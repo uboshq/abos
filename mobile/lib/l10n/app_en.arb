@@ -3078,5 +3078,15 @@
   "approvalsDecidedAt": "{label} · {when}",
   "approvalsLongPressHint": "Long-press to pick several",
   "approvalsWhyTitle": "Why your approval is needed",
-  "approvalsWhyReason": "Reason given: “{reason}”"
+  "approvalsWhyReason": "Reason given: “{reason}”",
+  "approveSheetTitle": "Approve this?",
+  "approveSheetExact": "Exactly the amount you see is approved. If someone changes it meanwhile, the app stops and shows the new amount.",
+  "approveSheetRemarks": "Remark (optional)…",
+  "approveSheetBio": "Over {limit}, so confirm with your fingerprint or phone PIN. Nobody holding your unlocked phone can approve it.",
+  "approveSheetLast": "This is the last step: approving puts the paper in the books. Your name and the time stay on the paper.",
+  "approveSheetBack": "No, go back",
+  "approveSheetYes": "✓ Yes, approve",
+  "approveSheetBioFailed": "Not confirmed — try again",
+  "approveSheetNoLock": "This phone has no lock (PIN or fingerprint) — set one in the phone settings before approving large amounts",
+  "approveSheetBioReason": "Confirm a large approval"
 }

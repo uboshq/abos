@@ -11150,4 +11150,39 @@ class AppL10nBn extends AppL10n {
   String approvalsWhyReason(String reason) {
     return 'চাওয়ার কারণ: “$reason”';
   }
+
+  @override
+  String get approveSheetTitle => 'অনুমোদন দেবেন?';
+
+  @override
+  String get approveSheetExact =>
+      'যে অঙ্ক দেখছেন, ঠিক সেটাই অনুমোদন হবে। এর মধ্যে কেউ অঙ্ক বদলালে অ্যাপ থামিয়ে নতুন অঙ্ক দেখাবে।';
+
+  @override
+  String get approveSheetRemarks => 'মন্তব্য (ইচ্ছা হলে)…';
+
+  @override
+  String approveSheetBio(String limit) {
+    return '$limit-এর বেশি, তাই আঙুলের ছাপ বা ফোনের PIN দিয়ে নিশ্চিত করতে হবে। কেউ আপনার খোলা ফোন হাতে পেলেও অনুমোদন দিতে পারবে না।';
+  }
+
+  @override
+  String get approveSheetLast =>
+      'এটা শেষ ধাপ: অনুমোদন দিলেই কাগজটা খাতায় বসবে। আপনার নাম আর সময় কাগজে থেকে যাবে।';
+
+  @override
+  String get approveSheetBack => 'না, ফিরে যাই';
+
+  @override
+  String get approveSheetYes => '✓ হ্যাঁ, অনুমোদন দিন';
+
+  @override
+  String get approveSheetBioFailed => 'নিশ্চিত হলো না — আবার চেষ্টা করুন';
+
+  @override
+  String get approveSheetNoLock =>
+      'ফোনে তালা (PIN বা আঙুলের ছাপ) বসানো নেই — বড় অঙ্কে অনুমোদনের আগে ফোনের সেটিংসে বসান';
+
+  @override
+  String get approveSheetBioReason => 'বড় অঙ্কের অনুমোদন নিশ্চিত করুন';
 }

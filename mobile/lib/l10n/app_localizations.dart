@@ -18529,6 +18529,66 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'চাওয়ার কারণ: “{reason}”'**
   String approvalsWhyReason(String reason);
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দেবেন?'**
+  String get approveSheetTitle;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'যে অঙ্ক দেখছেন, ঠিক সেটাই অনুমোদন হবে। এর মধ্যে কেউ অঙ্ক বদলালে অ্যাপ থামিয়ে নতুন অঙ্ক দেখাবে।'**
+  String get approveSheetExact;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ইচ্ছা হলে)…'**
+  String get approveSheetRemarks;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'{limit}-এর বেশি, তাই আঙুলের ছাপ বা ফোনের PIN দিয়ে নিশ্চিত করতে হবে। কেউ আপনার খোলা ফোন হাতে পেলেও অনুমোদন দিতে পারবে না।'**
+  String approveSheetBio(String limit);
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'এটা শেষ ধাপ: অনুমোদন দিলেই কাগজটা খাতায় বসবে। আপনার নাম আর সময় কাগজে থেকে যাবে।'**
+  String get approveSheetLast;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'না, ফিরে যাই'**
+  String get approveSheetBack;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'✓ হ্যাঁ, অনুমোদন দিন'**
+  String get approveSheetYes;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত হলো না — আবার চেষ্টা করুন'**
+  String get approveSheetBioFailed;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোনে তালা (PIN বা আঙুলের ছাপ) বসানো নেই — বড় অঙ্কে অনুমোদনের আগে ফোনের সেটিংসে বসান'**
+  String get approveSheetNoLock;
+
+  /// Approve sheet (sample v4 picture 4)
+  ///
+  /// In bn, this message translates to:
+  /// **'বড় অঙ্কের অনুমোদন নিশ্চিত করুন'**
+  String get approveSheetBioReason;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

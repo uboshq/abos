@@ -109,9 +109,12 @@ void main() {
     Future<void> Function(String, String)? sendBack,
     Future<BulkPreview> Function(List<String>)? preview,
     Future<BulkResult> Function(List<String>, String?)? bulk,
+    Future<bool?> Function()? device,
   }) =>
       MaterialApp(
         home: ApprovalInboxScreen(
+          // ⓘ বড় অঙ্কে ফোনের তালা — টেস্টে ডিফল্ট "মিলেছে"; আলাদা দাবিতে ব্যর্থ আর তালাহীন
+          deviceCheck: device ?? () async => true,
           loadInbox: inbox ?? (_, __, ___, ____) async => page([row, second]),
           approve: approve ?? (_, __) async {},
           reject: reject ?? (_, __) async {},
@@ -222,10 +225,58 @@ void main() {
 
       await tester.tap(find.byKey(Key('approval-card-approve-${row['id']}')));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget, reason: '⛔ কার্ডের "অনুমোদন দিন" প্রশ্ন ছাড়াই গেল, বা কিছুই হল না');
-      expect(find.descendant(of: find.byType(AlertDialog), matching: find.textContaining('৳1,25,000.00')), findsOneWidget,
+      expect(find.byKey(const ValueKey('approve-sheet')), findsOneWidget, reason: '⛔ কার্ডের "অনুমোদন দিন" প্রশ্ন ছাড়াই গেল, বা কিছুই হল না');
+      expect(find.descendant(of: find.byKey(const ValueKey('approve-sheet-amount')), matching: find.text('৳1,25,000.00')), findsOneWidget,
           reason: '⛔ প্রশ্নে অঙ্ক নেই — কোন অঙ্কে অনুমোদন, দেখা যায় না');
       expect(approved, isEmpty, reason: '⛔ প্রশ্নের আগেই অনুমোদন গেল');
+    });
+
+    testWidgets('নমুনা v4 ছবি ৪: over ৳1 lakh the phone lock must say yes — a failed check or a phone with no lock sends nothing', (tester) async {
+      await tall(tester);
+      final approved = <String>[];
+      bool? answer = false;
+      await tester.pumpWidget(screen(approve: (id, _) async => approved.add(id), device: () async => answer));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key('approval-card-approve-${row['id']}')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('approve-sheet-bio')), findsOneWidget, reason: '⛔ ৳1,25,000-এ আঙুলের ছাপ বা PIN-এর কথা নেই');
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
+      await tester.pumpAndSettle();
+      expect(approved, isEmpty, reason: '⛔ ফোনের তালা "না" বলল, তবু বড় অঙ্কে অনুমোদন গেল');
+      expect(find.text('নিশ্চিত হলো না — আবার চেষ্টা করুন'), findsOneWidget, reason: '⛔ তালা না মেলার কারণ বলে না');
+
+      answer = null;
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
+      await tester.pumpAndSettle();
+      expect(approved, isEmpty, reason: '⛔ ফোনে তালাই নেই, তবু বড় অঙ্কে অনুমোদন গেল');
+      expect(find.textContaining('ফোনে তালা (PIN বা আঙুলের ছাপ) বসানো নেই'), findsOneWidget, reason: '⛔ তালাহীন ফোনে কারণ বলে না');
+
+      answer = true;
+      await tester.enterText(find.byKey(const ValueKey('approve-sheet-remarks')), 'বিল মিলেছে');
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
+      await tester.pumpAndSettle();
+      expect(approved, [row['id']], reason: '⛔ তালা মিলল, তবু অনুমোদন গেল না');
+    });
+
+    testWidgets('নমুনা v4 ছবি ৪: a small amount needs no phone lock; the last step says it goes into the books', (tester) async {
+      await tall(tester);
+      final approved = <String>[];
+      var asked = 0;
+      await tester.pumpWidget(screen(approve: (id, _) async => approved.add(id), device: () async {
+        asked++;
+        return false;
+      }));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key('approval-card-approve-${second['id']}')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('approve-sheet-bio')), findsNothing, reason: '⛔ ৳2,500-এও আঙুলের ছাপ চাইছে');
+      expect(find.byKey(const ValueKey('approve-sheet-last')), findsOneWidget, reason: '⛔ ধাপ 1/1 — শেষ ধাপের কথা ("খাতায় বসবে") নেই');
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
+      await tester.pumpAndSettle();
+      expect(asked, 0, reason: '⛔ ছোট অঙ্কে ফোনের তালা চাওয়া হল');
+      expect(approved, [second['id']], reason: '⛔ ছোট অঙ্কের অনুমোদন গেল না');
     });
 
     testWidgets('নমুনা v4: summary band says waiting, late and the total in lakh; search and sort go to the server', (tester) async {
@@ -391,7 +442,7 @@ void main() {
       await tester.tap(find.byKey(Key('approval-approve-${row['id']}')));
       await tester.pumpAndSettle();
       expect(find.textContaining('৳1,25,000.00'), findsWidgets, reason: 'অনুমোদনের প্রশ্নে অঙ্ক নেই');
-      await tester.tap(inDialog('অনুমোদন দিন'));
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
       await tester.pumpAndSettle();
 
       expect(approvedId, row['id'], reason: '⛔ অনুমোদন সার্ভারে যায়নি');
@@ -481,7 +532,7 @@ void main() {
       await openFirst(tester);
       await tester.tap(find.byKey(Key('approval-approve-${row['id']}')));
       await tester.pumpAndSettle();
-      await tester.tap(inDialog('অনুমোদন দিন'));
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('ইতিমধ্যে নিষ্পত্তি'), findsOneWidget);
@@ -507,7 +558,7 @@ void main() {
       await openFirst(tester);
       await tester.tap(find.byKey(Key('approval-approve-${row['id']}')));
       await tester.pumpAndSettle();
-      await tester.tap(inDialog('অনুমোদন দিন'));
+      await tester.tap(find.byKey(const ValueKey('approve-sheet-yes')));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('অঙ্ক বদলেছে'), findsOneWidget, reason: '⛔ বদলানো অঙ্কের ফেরত চুপ');

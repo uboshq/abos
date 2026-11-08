@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../printing/document_actions_sheet.dart';
 import '../printing/pdf_view_page.dart';
+import 'approval_approve_sheet.dart';
 import 'final_reject_confirm.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
@@ -37,7 +38,11 @@ class ApprovalPaperScreen extends StatefulWidget {
     this.sendBack,
     this.loadAttachment,
     this.askApproveFirst = false,
+    this.deviceCheck,
   });
+
+  /// বড় অঙ্কে ফোনের তালা — টেস্টের ফাঁক; না দিলে আঙুলের ছাপ বা PIN ([[ApprovalApproveSheet]])
+  final Future<bool?> Function()? deviceCheck;
 
   /// ⭐ ইনবক্সের কার্ডের "✓ অনুমোদন দিন" — পাতা খুলেই অনুমোদনের প্রশ্ন, অঙ্কসহ (নমুনা v4 দফা ৯); প্রশ্নটা পাতার নিজের, তাই অঙ্ক
   /// মেলানো (৪১২) আর আগে-কেউ-দিয়েছেন (৪০৯) একই পথে
@@ -158,22 +163,19 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
         if (approval.amountText != null) approval.amountText!,
       ].join(' · ');
 
+  /// ⭐ নমুনা v4, ছবি ৪ — নিচ থেকে ওঠা শিট: অঙ্ক সবুজ বাক্সে, ইচ্ছা হলে মন্তব্য, শেষ ধাপের কথা, বড় অঙ্কে ফোনের তালা।
+  /// ⓘ "হ্যাঁ" বলতে কারণ লাগে না, "না" বলতে লাগে — সার্ভারেরই অসমতা (ApprovalEngine.approve-এ ?string, reject-এ string)
   Future<void> _confirmApprove() async {
-    final words = context.l10n;
-    final remarks = await showDialog<String>(
-      context: context,
-      builder: (_) => _RemarksDialog(
-        title: words.approvalsInboxSignTitle,
-        subtitle: _describe(_paper),
-        confirmLabel: words.approvalsInboxSignButton,
-        // Saying yes needs no explanation; saying no does. The asymmetry is
-        // the server's own (ApprovalEngine.approve takes ?string remarks,
-        // reject takes string), kept rather than smoothed over.
-        remarksRequired: false,
-      ),
+    final paper = _paper;
+    final at = paper.stepAt, of = paper.stepOf;
+    final remarks = await ApprovalApproveSheet.show(
+      context,
+      paper: paper,
+      lastStep: at != null && of != null && at >= of,
+      deviceCheck: widget.deviceCheck,
     );
     if (remarks == null || !mounted) return;
-    await _decide(_Decision.approve, remarks);
+    await _decide(_Decision.approve, remarks.trim().isEmpty ? null : remarks);
   }
 
   /// ⭐ সংশোধনে ফেরত — কারণ বাধ্যতামূলক, কাগজ লেখকের কাছে ফেরে

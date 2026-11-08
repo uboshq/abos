@@ -11322,4 +11322,39 @@ class AppL10nEn extends AppL10n {
   String approvalsWhyReason(String reason) {
     return 'Reason given: “$reason”';
   }
+
+  @override
+  String get approveSheetTitle => 'Approve this?';
+
+  @override
+  String get approveSheetExact =>
+      'Exactly the amount you see is approved. If someone changes it meanwhile, the app stops and shows the new amount.';
+
+  @override
+  String get approveSheetRemarks => 'Remark (optional)…';
+
+  @override
+  String approveSheetBio(String limit) {
+    return 'Over $limit, so confirm with your fingerprint or phone PIN. Nobody holding your unlocked phone can approve it.';
+  }
+
+  @override
+  String get approveSheetLast =>
+      'This is the last step: approving puts the paper in the books. Your name and the time stay on the paper.';
+
+  @override
+  String get approveSheetBack => 'No, go back';
+
+  @override
+  String get approveSheetYes => '✓ Yes, approve';
+
+  @override
+  String get approveSheetBioFailed => 'Not confirmed — try again';
+
+  @override
+  String get approveSheetNoLock =>
+      'This phone has no lock (PIN or fingerprint) — set one in the phone settings before approving large amounts';
+
+  @override
+  String get approveSheetBioReason => 'Confirm a large approval';
 }

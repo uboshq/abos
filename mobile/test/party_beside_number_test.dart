@@ -43,7 +43,9 @@ void main() {
     // ওয়েবের কার্ডের মতো; নম্বর আর পক্ষ তবু একসাথে চোখে পড়ে, আর পক্ষ একবারই
     expect(find.text('আদায় · COL-0042'), findsOneWidget, reason: '⛔ নম্বরের লাইন নেই');
     expect(tester.widget<Text>(find.byKey(const Key('approval-place-ap-1'))).data, party, reason: '⛔ নম্বরের নিচে পক্ষ নেই');
-    expect(find.text('অক্টোবরের বকেয়া · জমা: ক্যাশ'), findsOneWidget, reason: '⛔ সারাংশে পক্ষ দুইবার, বা বাকিটা হারিয়েছে');
+    // ⓘ মালিকের নমুনা v4 ("ok", ৮ নভেম্বর ২০২৬ — ১৯ অক্টোবরের পরের সিদ্ধান্ত): কার্ডে লম্বা বর্ণনার লাইন বাদ — পক্ষ এক লাইন, "চেয়েছেন"
+    // এক লাইন; কী বাবদ আর টাকা কোথায় কাগজের পাতার ঘরে ([[ApprovalPaperScreen]] `facts`)
+    expect(find.text('অক্টোবরের বকেয়া · জমা: ক্যাশ'), findsNothing, reason: '⛔ নমুনায় বাদ দেওয়া বর্ণনার লাইন কার্ডে ফিরেছে');
     expect(find.textContaining(party), findsOneWidget, reason: '⛔ পক্ষ কার্ডে দুইবার');
   });
 
@@ -69,7 +71,8 @@ void main() {
     expect(tester.takeException(), isNull, reason: '⛔ কার্ডের কিছু ডানে উপচে কেটে গেছে');
     // ⓘ নম্বর আর অঙ্ক পুরো, পর্দার ভেতরে — সিদ্ধান্তের বোতাম এখন কাগজের পাতায় (দফা ২১), কার্ডে নয়
     for (final label in ['আদায় · COL-0042', '৳5,000.00']) {
-      final box = tester.getRect(find.descendant(of: find.byType(Card), matching: find.text(label)));
+      // ⓘ নমুনা v4-এর কার্ড নিজের সাজ (Container), Material Card নয় — তাই সরাসরি লেখা ধরে মাপা
+      final box = tester.getRect(find.text(label));
       expect(box.right, lessThanOrEqualTo(width), reason: '⛔ "$label" পর্দার বাইরে');
     }
   });
