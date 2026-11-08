@@ -49,10 +49,28 @@ export function keepFoldAsIs (from, to) {
     else to.removeAttribute('open')
 }
 
-/** হাতে লেখা ঘর চিহ্নিত — একবার লিখলেই, যতক্ষণ পাতা খোলা */
+/**
+ * ⭐ কাজ চলা জমার ফর্ম (POST) পুরোটা যেমন আছে তেমন — মালিক, ৮ নভেম্বর ২০২৬: আদায়ে "গ্রাহক সিলেক্ট করার পরে … হুট করে আবার
+ * ডিসিলেক্ট হয়ে যাচ্ছে … টাকাগুলা জমাই নেওয়া যাচ্ছে না" (আদি, ট্রেড ডিপো, রায়ান এন্টারপ্রাইজ)।
+ *
+ * ⚠️ কেবল হাতে লেখা ঘরটা বাঁচত। কিন্তু ফর্মের অনেক কিছু মানুষ লেখেন না, Alpine বসায়: বাছা গ্রাহকের নাম ([[party-search.js]]),
+ * খোলা বিলের সারি, টাকার লুকানো কাঁচা অঙ্ক। কোম্পানিতে কেউ কিছু লিখলেই দশ সেকেন্ডে নতুন পাতা এসে ওগুলো সার্ভারের খালি
+ * অবস্থায় ফেরাত — নাম "—", বিলের সারি উধাও, জমা দিলে অঙ্ক বা গ্রাহক নেই।
+ * ⓘ তাই যে জমার ফর্মে মানুষ হাত দিয়েছেন (লিখেছেন বা বেছেছেন), সেটা আর বসানো হয় না; পাতার বাকিটা আগের মতো নতুন হয়।
+ * খোঁজার (GET) ফর্ম আগের মতোই ঘর ধরে — সেখানে পাশের সংখ্যাগুলো নতুন হওয়াটাই কাজের।
+ */
+export function isWorkingForm (el) {
+    return !!el && el.nodeType === 1 && el.tagName === 'FORM'
+        && String(el.getAttribute('method') || 'get').toLowerCase() === 'post'
+        && el.dataset?.liveTouched === '1'
+}
+
+/** হাতে লেখা ঘর চিহ্নিত — একবার লিখলেই, যতক্ষণ পাতা খোলা; সাথে তার ফর্মটাও ([[isWorkingForm]]) */
 export function rememberTyping (doc = document) {
     const mark = (event) => {
         if (event.target && event.target.dataset) event.target.dataset.liveTouched = '1'
+        const form = event.target && typeof event.target.closest === 'function' ? event.target.closest('form') : null
+        if (form && form.dataset) form.dataset.liveTouched = '1'
     }
     doc.addEventListener('input', mark, true)
     doc.addEventListener('change', mark, true)
@@ -83,7 +101,7 @@ export function placeFresh (doc, fresh, morph) {
 
             morph(el, to, {
                 updating (from, toEl, childrenOnly, skip) {
-                    if (isTouched(from, doc) || isOpenDialog(from)) skip()
+                    if (isTouched(from, doc) || isOpenDialog(from) || isWorkingForm(from)) skip()
                     keepFoldAsIs(from, toEl)
                 },
             })
