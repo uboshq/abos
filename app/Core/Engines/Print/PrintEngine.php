@@ -123,7 +123,9 @@ final class PrintEngine
         ?Company $company = null,
     ): string {
         $size = PaperSize::of($paper);
-        $locale = $locale ?? app()->getLocale();
+        // ⭐ নমুনাও আসল ছাপার নিয়মে — ছাপার মেনুর বাছাই (`?lang`) মানে ([[render()]]-এর একই, ভা-১৬); ⛔ আগে সবসময় পর্দার ভাষা,
+        // তাই "English" নমুনায় বাংলা নোট আর সইয়ের ঘর
+        $locale = $locale ?? \App\Core\Support\PaperLanguage::for();
         $company = $this->withInvoiceLogo($company ?? $this->currentCompany());
 
         $view = $this->resolveTemplate($template);

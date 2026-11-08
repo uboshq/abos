@@ -8,7 +8,6 @@ use App\Core\Engines\Print\PaperLook;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Services\SettingsService;
-use App\Core\Support\BanglaDigits;
 use App\Models\Company;
 
 /**
@@ -18,7 +17,7 @@ use App\Models\Company;
  * আর সইয়ের ঘর এখানে একবার — একটায় ঠিক করলে ২১টাতেই ঠিক।
  * ⚠️ mPDF: flex/grid/CSS var চলে না, তাই সব টেবিল আর inline রং। ⛔ সুইচ মানা হয় আগের মতোই (meta · totals ·
  * words · narration · signatures · logo) — নতুন সাজ বন্ধ করা অংশ ফেরায় না।
- * ⓘ বাংলায় টাকা, পরিমাণ আর তারিখ বাংলা অঙ্কে; নম্বর-ধরনের পরিচয় (ভাউচার নং, TrxID, চেক নং) ইংরেজি অঙ্কে।
+ * ⓘ অঙ্ক দুই ভাষাতেই ইংরেজি (মালিক, ২৪ অক্টোবর ২০২৬; [[n()]]); কথায় লেখা টাকা আর সব লেখা কাগজের ভাষায়।
  */
 final class VoucherPaper
 {
@@ -76,10 +75,13 @@ final class VoucherPaper
         return (string) __('accounts::vx.'.$key, [], $lang);
     }
 
-    /** টাকা, পরিমাণ, তারিখ — বাংলায় বাংলা অঙ্ক */
+    /**
+     * টাকা, পরিমাণ, তারিখ — দুই ভাষাতেই ইংরেজি অঙ্ক (মালিক, ২৪ অক্টোবর ২০২৬: "বাংলা কাগজে টাকা ইংরেজি অঙ্কে থাকবে, শুধু কথায়
+     * লেখা টাকা বাংলায়" — "ok"; ১০ অক্টোবরের বাংলা-অঙ্ক নিয়ম বদলায়)। ⓘ নকশাগুলো এখনো এই এক জায়গা দিয়ে অঙ্ক ছাপে।
+     */
     public function n(string $text): string
     {
-        return $this->lang === 'bn' ? BanglaDigits::of($text) : $text;
+        return $text;
     }
 
     /** অঙ্কের অক্ষর — dejavusans-এ বাংলা অঙ্ক নেই, তাই বাংলায় বাংলার অক্ষরই */

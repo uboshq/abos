@@ -253,11 +253,36 @@ class InvoiceInfoController extends Controller implements HasMiddleware
                 'name' => $this->label($definition),
 
                 /* ⓘ সাধারণ লেখা — ঘর খালি থাকলে এটাই ছাপা হয়; পাতায় ভরা দেখায়, যাতে বদলে নেওয়া যায় */
-                'default_text' => isset($definition['default_text']) ? (string) __($definition['default_text'], [], 'bn') : null,
+                'default_text' => isset($definition['default_text']) ? (string) __($definition['default_text'], [], $definition['text_locale'] ?? 'bn') : null,
+
+                /* ⭐ "ইংরেজি নোট নেই" — জোড়ার বাংলা ঘর নিজের লেখা, অথচ এই ঘর খালি বা কেবল সাধারণ লেখা (ভা-১৬ ধাপ ২) */
+                // ⓘ চাবিটা হাতে দেওয়া — সেটিংয়ের তালিকা চাবি দিয়ে সাজানো, ভেতরে `key` থাকে না (Mac, ৮ নভেম্বর ২০২৬: সতর্কবার্তা আসতই না)
+                'missing' => $this->missingTranslation(['key' => $key] + $definition),
             ];
         }
 
         return array_filter($parts);
+    }
+
+    /**
+     * ⓘ অনুবাদের ঘর (`pairs_with`) — জোড়ার মূল ঘরে সাধারণ লেখা ছাড়া কিছু বসানো থাকলে, আর এই ঘর খালি বা কেবল নিজের সাধারণ লেখা,
+     * তাহলে অনুবাদ নেই। ⓘ পাতাটা খালি ঘরে সাধারণ লেখা ভরে সেভ করে, তাই "বসানো" দেখেই মূল ঘরকে নিজের লেখা ধরা যায় না।
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private function missingTranslation(array $definition): bool
+    {
+        if (! isset($definition['pairs_with'], $definition['key'])) {
+            return false;
+        }
+
+        $lines = fn (mixed $t): string => trim(str_replace("\r\n", "\n", (string) $t));
+        $source = $this->definitions()[$definition['pairs_with']] ?? [];
+        $original = $lines($this->settings->get($definition['pairs_with']));
+        $own = $original !== '' && $original !== $lines(isset($source['default_text']) ? __($source['default_text'], [], 'bn') : '');
+        $translation = $lines($this->settings->get($definition['key']));
+
+        return $own && ($translation === '' || $translation === $lines(isset($definition['default_text']) ? __($definition['default_text'], [], 'en') : ''));
     }
 
     /**

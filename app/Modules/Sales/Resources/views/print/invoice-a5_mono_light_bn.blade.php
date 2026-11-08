@@ -1,7 +1,5 @@
 {{--
     A5 · mono_light_bn (বাংলা) — কাঠামো [[invoice-mono-light-a5]]-এ।
 --}}
-{{-- ⭐ বাংলা নকশা — অঙ্কও বাংলায় (মালিক, ১০ অক্টোবর ২০২৬; [[BanglaDigits::inText()]]) --}}
-<?php ob_start(); ?>
+{{-- ⭐ বাংলা নকশা — লেখা বাংলায়, টাকা আর সংখ্যা ইংরেজি অঙ্কে (মালিক, ২৪ অক্টোবর ২০২৬: "বাংলা কাগজে টাকা ইংরেজি অঙ্কে থাকবে, শুধু কথায় লেখা টাকা বাংলায়" — "ok"; ১০ অক্টোবরের বাংলা-অঙ্ক নিয়ম বদলায়) --}}
 @include('sales::print.partials.invoice-mono-light-a5', ['lang' => 'bn'])
-{!! \App\Core\Support\BanglaDigits::inText((string) ob_get_clean()) !!}
