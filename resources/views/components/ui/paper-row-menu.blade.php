@@ -12,6 +12,8 @@
     'editable' => false,
     'cancellable' => false,
     'cancelLabel' => null,
+    /* ⓘ অনুমোদনে পাঠানো খসড়া আর "খসড়া" নয় — বাতিলের নাম তখন সাধারণ "বাতিল করুন" (ভাউচার; ADraftAndAPaperAwaitingASignatureLookedTheSameTest) */
+    'draftCancelLabel' => null,
 ])
 
 {{--
@@ -87,7 +89,7 @@
 
     if ($cancellable && ! $isCancelled) {
         $items[] = ['line' => true];
-        $items[] = ['label' => $isDraft ? __('core.row_menu.delete_draft') : ($cancelLabel ?? __('core.row_menu.cancel_paper')), 'icon' => 'trash', 'tone' => 'danger',
+        $items[] = ['label' => $isDraft ? ($draftCancelLabel ?? __('core.row_menu.delete_draft')) :($cancelLabel ?? __('core.row_menu.cancel_paper')), 'icon' => 'trash', 'tone' => 'danger',
             'url' => $show.$glue.'cancel=1#cancel', 'peek' => false, 'key' => $isDraft ? 'Del' : null];
     }
 @endphp
