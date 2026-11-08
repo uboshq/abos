@@ -135,7 +135,11 @@ final class SupplierService
 
             $supplier = Supplier::create([
                 ...$data,
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                /*
+                 * ⭐ ফর্মের "সব শাখা (কেন্দ্রীয়)" পাঠায় খালি — সেটা সত্যিই খালি থাকে, চলতি শাখায় বসে না (মালিক, ৮ নভেম্বর ২০২৬)।
+                 * ⓘ ঘরটা একেবারেই না পাঠালে (ইমপোর্ট) আগের মতো চলতি শাখা। ⛔ আগে `??` দুইটাকে এক করত — "সব শাখা" বাছলেও শাখা ২৬।
+                 */
+                'branch_id' => array_key_exists('branch_id', $data) ? $data['branch_id'] : CompanyContext::branchId(),
                 'status' => DocumentStatus::CONFIRMED,
                 // ডাটাবেজে ডিফল্ট true আছে, তবু এখানে বসানো: ডিফল্টটা
                 // শুধু সারিতে বসে, ফেরত দেওয়া মডেলে নয়

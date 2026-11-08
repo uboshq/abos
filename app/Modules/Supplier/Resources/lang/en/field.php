@@ -27,6 +27,8 @@ return [
     'party_type' => 'Type',
     'payment_term' => 'Payment term',
     'branch' => 'Branch',
+    'branch_all' => 'All branches (central)',
+    'branch_all_hint' => 'All branches shows it in every branch.',
 
     'bin' => 'BIN',
     'tin' => 'TIN',

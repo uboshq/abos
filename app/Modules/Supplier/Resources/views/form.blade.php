@@ -101,10 +101,14 @@
                             :value="old('code', $supplier->code)"
                             :hint="$isNew ? __('supplier::message.code_auto') : null" />
 
+                {{-- ⭐ "সব শাখা (কেন্দ্রীয়)" — মালিক, ৮ নভেম্বর ২০২৬: সেবাদাতা আর প্রিন্সিপাল কেন্দ্র থেকে নিয়োগ, "অল ব্রাঞ্চ দিয়ে দেওয়া
+                     যায় তাহলে সব ব্রাঞ্চই যাতে শো করে"। ⓘ খালি শাখা আগে থেকেই সব শাখায় দেখাত ([[ViewedBranch::narrow()]]), কিন্তু লেখা
+                     ছিল কেবল "—" — কেউ বুঝত না। ⛔ শাখায় বাঁধা কর্মীর জন্য নয় ([[SupplierRequest]]) --}}
                 <x-ui.select name="branch_id" :label="__('supplier::field.branch')"
                              :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
                              :selected="$supplier->branch_id"
-                             placeholder="—" />
+                             :hint="__('supplier::field.branch_all_hint')"
+                             :placeholder="__('supplier::field.branch_all')" />
 
                 {{-- ধরন মাস্টার তালিকা থেকে — প্রতিষ্ঠান নিজেই নতুন ধরন
                      যোগ করতে পারে, তাই এখানে কোনো স্থির তালিকা নেই। --}}

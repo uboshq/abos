@@ -91,6 +91,8 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            // ⭐ বাংলা নাম — ঐচ্ছিক; ভাষা বাংলা হলে এটাই দেখায় ([[User::displayName()]]; মালিক, ৮ নভেম্বর ২০২৬)
+            'name_bn' => ['nullable', 'string', 'max:120'],
 
             /*
              * ⭐ লগইন আইডি — মালিকের সিদ্ধান্ত, ১৪ সেপ্টেম্বর ২০২৬।
