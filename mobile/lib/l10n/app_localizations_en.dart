@@ -11357,4 +11357,39 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approveSheetBioReason => 'Confirm a large approval';
+
+  @override
+  String get rejectSheetTitle => 'Reject this?';
+
+  @override
+  String get rejectSheetHint =>
+      'Pick a reason with one tap and add a note. It goes to the requester and is counted in reports.';
+
+  @override
+  String get rejectSheetNote => 'Add a note (required)…';
+
+  @override
+  String get rejectSheetFinal =>
+      'A rejection cannot be undone, so you will be asked once more. To have it corrected instead, choose “↩ Send back” and the paper comes back to you.';
+
+  @override
+  String get rejectSheetYes => '✕ Reject';
+
+  @override
+  String get rejectReasonPrice => 'Price not right';
+
+  @override
+  String get rejectReasonDocument => 'Paper has errors';
+
+  @override
+  String get rejectReasonCredit => 'Over the credit limit';
+
+  @override
+  String get rejectReasonBudget => 'No budget';
+
+  @override
+  String get rejectReasonPolicy => 'Against policy';
+
+  @override
+  String get rejectReasonOther => 'Other reason';
 }

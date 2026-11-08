@@ -3088,5 +3088,16 @@
   "approveSheetYes": "✓ Yes, approve",
   "approveSheetBioFailed": "Not confirmed — try again",
   "approveSheetNoLock": "This phone has no lock (PIN or fingerprint) — set one in the phone settings before approving large amounts",
-  "approveSheetBioReason": "Confirm a large approval"
+  "approveSheetBioReason": "Confirm a large approval",
+  "rejectSheetTitle": "Reject this?",
+  "rejectSheetHint": "Pick a reason with one tap and add a note. It goes to the requester and is counted in reports.",
+  "rejectSheetNote": "Add a note (required)…",
+  "rejectSheetFinal": "A rejection cannot be undone, so you will be asked once more. To have it corrected instead, choose “↩ Send back” and the paper comes back to you.",
+  "rejectSheetYes": "✕ Reject",
+  "rejectReasonPrice": "Price not right",
+  "rejectReasonDocument": "Paper has errors",
+  "rejectReasonCredit": "Over the credit limit",
+  "rejectReasonBudget": "No budget",
+  "rejectReasonPolicy": "Against policy",
+  "rejectReasonOther": "Other reason"
 }

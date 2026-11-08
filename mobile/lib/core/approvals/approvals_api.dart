@@ -125,7 +125,7 @@ class ApprovalsApi {
     ));
   }
 
-  static Future<void> reject(String id, {required String remarks}) async {
+  static Future<void> reject(String id, {required String remarks, String? reasonCode}) async {
     final reason = remarks.trim();
     // Checked here as well as on the screen and on the server. A rejection
     // with no reason reaches the requester as a refusal they cannot act on,
@@ -136,7 +136,8 @@ class ApprovalsApi {
 
     await OnceKey.of('approval-reject:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>(
       '/approvals/$id/reject',
-      data: {'remarks': reason},
+      // ⭐ কারণের কোড — সার্ভার আগে থেকেই নেয় ([[ApprovalDecision::REASONS]]), অ্যাপ এতদিন পাঠাত না (নমুনা v4, ছবি ৫)
+      data: {'remarks': reason, if (reasonCode != null) 'reasonCode': reasonCode},
     ));
   }
 

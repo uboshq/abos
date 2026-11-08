@@ -51,10 +51,14 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.loadAttachment,
     this.loadInboxSorted,
     this.deviceCheck,
+    this.rejectWithCode,
   });
 
   /// বড় অঙ্কে ফোনের তালা — কাগজের পাতায় যায় ([[ApprovalApproveSheet]])
   final Future<bool?> Function()? deviceCheck;
+
+  /// প্রত্যাখ্যান, কারণের কোডসহ — কাগজের পাতায় যায় ([[ApprovalRejectSheet]])
+  final Future<void> Function(String id, String remarks, String code)? rejectWithCode;
 
   /// Seams, so this screen can be driven in a test without a server.
   ///
@@ -251,6 +255,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
         start: index,
         askApproveFirst: approve,
         deviceCheck: widget.deviceCheck,
+        rejectWithCode: widget.rejectWithCode,
         loadSheet: widget.loadSheet,
         approve: widget.approve,
         reject: widget.reject,

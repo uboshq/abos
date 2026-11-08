@@ -11185,4 +11185,39 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approveSheetBioReason => 'বড় অঙ্কের অনুমোদন নিশ্চিত করুন';
+
+  @override
+  String get rejectSheetTitle => 'প্রত্যাখ্যান করবেন?';
+
+  @override
+  String get rejectSheetHint =>
+      'এক চাপে কারণ বাছুন, দরকার হলে লিখে দিন। কারণটা যিনি চেয়েছিলেন তার কাছে যাবে, আর রিপোর্টে গোনা হবে।';
+
+  @override
+  String get rejectSheetNote => 'আরও কিছু লিখুন (বাধ্যতামূলক)…';
+
+  @override
+  String get rejectSheetFinal =>
+      'প্রত্যাখ্যান আর ফেরানো যায় না, তাই আরেকবার জিজ্ঞেস করা হবে। শুধু ঠিক করাতে চাইলে “↩ ফেরত পাঠান” বেছে নিন, তাহলে কাগজটা আবার আপনার কাছে আসবে।';
+
+  @override
+  String get rejectSheetYes => '✕ প্রত্যাখ্যান করুন';
+
+  @override
+  String get rejectReasonPrice => 'দাম ঠিক নেই';
+
+  @override
+  String get rejectReasonDocument => 'কাগজে ভুল আছে';
+
+  @override
+  String get rejectReasonCredit => 'বাকির সীমা পেরিয়ে যায়';
+
+  @override
+  String get rejectReasonBudget => 'বাজেট নেই';
+
+  @override
+  String get rejectReasonPolicy => 'নিয়মে চলে না';
+
+  @override
+  String get rejectReasonOther => 'অন্য কারণ';
 }

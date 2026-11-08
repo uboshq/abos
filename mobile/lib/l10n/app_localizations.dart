@@ -18589,6 +18589,72 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বড় অঙ্কের অনুমোদন নিশ্চিত করুন'**
   String get approveSheetBioReason;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যান করবেন?'**
+  String get rejectSheetTitle;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'এক চাপে কারণ বাছুন, দরকার হলে লিখে দিন। কারণটা যিনি চেয়েছিলেন তার কাছে যাবে, আর রিপোর্টে গোনা হবে।'**
+  String get rejectSheetHint;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও কিছু লিখুন (বাধ্যতামূলক)…'**
+  String get rejectSheetNote;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যান আর ফেরানো যায় না, তাই আরেকবার জিজ্ঞেস করা হবে। শুধু ঠিক করাতে চাইলে “↩ ফেরত পাঠান” বেছে নিন, তাহলে কাগজটা আবার আপনার কাছে আসবে।'**
+  String get rejectSheetFinal;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'✕ প্রত্যাখ্যান করুন'**
+  String get rejectSheetYes;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম ঠিক নেই'**
+  String get rejectReasonPrice;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজে ভুল আছে'**
+  String get rejectReasonDocument;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমা পেরিয়ে যায়'**
+  String get rejectReasonCredit;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাজেট নেই'**
+  String get rejectReasonBudget;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিয়মে চলে না'**
+  String get rejectReasonPolicy;
+
+  /// Reject sheet (sample v4 picture 5)
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্য কারণ'**
+  String get rejectReasonOther;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

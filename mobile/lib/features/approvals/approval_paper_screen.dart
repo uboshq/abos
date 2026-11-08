@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../printing/document_actions_sheet.dart';
 import '../printing/pdf_view_page.dart';
 import 'approval_approve_sheet.dart';
+import 'approval_reject_sheet.dart';
 import 'final_reject_confirm.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
@@ -39,7 +40,11 @@ class ApprovalPaperScreen extends StatefulWidget {
     this.loadAttachment,
     this.askApproveFirst = false,
     this.deviceCheck,
+    this.rejectWithCode,
   });
+
+  /// প্রত্যাখ্যান, কারণের কোডসহ — না দিলে [reject] (পুরনো টেস্টের ফাঁক), তাও না দিলে সার্ভার
+  final Future<void> Function(String id, String remarks, String code)? rejectWithCode;
 
   /// বড় অঙ্কে ফোনের তালা — টেস্টের ফাঁক; না দিলে আঙুলের ছাপ বা PIN ([[ApprovalApproveSheet]])
   final Future<bool?> Function()? deviceCheck;
@@ -110,7 +115,7 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
     });
   }
 
-  Future<void> _decide(_Decision decision, String? remarks) async {
+  Future<void> _decide(_Decision decision, String? remarks, {String? code}) async {
     final paper = _paper;
     setState(() => _busy = true);
     try {
@@ -122,7 +127,14 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
         case _Decision.sendBack:
           await (widget.sendBack ?? (String id, String note) => ApprovalsApi.sendBack(id, remarks: note))(paper.id, remarks!);
         case _Decision.reject:
-          await (widget.reject ?? (String id, String note) => ApprovalsApi.reject(id, remarks: note))(paper.id, remarks!);
+          final coded = widget.rejectWithCode;
+          if (coded != null) {
+            await coded(paper.id, remarks!, code ?? 'other');
+          } else if (widget.reject != null) {
+            await widget.reject!(paper.id, remarks!);
+          } else {
+            await ApprovalsApi.reject(paper.id, remarks: remarks!, reasonCode: code);
+          }
       }
       if (!mounted) return;
       _say(switch (decision) {
@@ -194,23 +206,14 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
     await _decide(_Decision.sendBack, remarks);
   }
 
-  /// ⭐ প্রত্যাখ্যান — কারণ বাধ্যতামূলক, তারপর আলাদা শেষ প্রশ্ন ("চূড়ান্ত — আর ফেরানো যাবে না"); না বললে কিছুই যায় না
+  /// ⭐ প্রত্যাখ্যান — নমুনা v4, ছবি ৫: নিচের শিটে এক চাপে কারণ আর বাধ্যতামূলক লেখা, তারপর আলাদা শেষ প্রশ্ন ("চূড়ান্ত — আর
+  /// ফেরানো যাবে না"); না বললে কিছুই যায় না
   Future<void> _confirmReject() async {
-    final words = context.l10n;
     final what = _describe(_paper);
-    final remarks = await showDialog<String>(
-      context: context,
-      builder: (_) => _RemarksDialog(
-        title: words.approvalsInboxRejectTitle,
-        subtitle: what,
-        confirmLabel: words.approvalsInboxRejectButton,
-        destructive: true,
-        remarksRequired: true,
-      ),
-    );
-    if (remarks == null || !mounted) return;
+    final picked = await ApprovalRejectSheet.show(context, what: what);
+    if (picked == null || !mounted) return;
     if (!await confirmFinalReject(context, what: what) || !mounted) return;
-    await _decide(_Decision.reject, remarks);
+    await _decide(_Decision.reject, picked.$2, code: picked.$1);
   }
 
   Future<void> _openAttachment(int file, String name) async {
@@ -330,15 +333,18 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
                   child: Text(words.approvalsInboxRejectButton, textAlign: TextAlign.center, maxLines: 2),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton(
-                  key: ValueKey('approval-send-back-${paper.id}'),
-                  onPressed: _busy ? null : _confirmSendBack,
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs)),
-                  child: Text(words.approvalsInboxSendBackButton, textAlign: TextAlign.center, maxLines: 2),
+              // ⭐ "ফেরত পাঠান" কেবল যেখানে সার্ভার অনুমতি দেয় (`canSendBack`; নমুনা v4 দফা ১০ — আগে সবখানে দেখাত)
+              if (paper.canSendBack) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton(
+                    key: ValueKey('approval-send-back-${paper.id}'),
+                    onPressed: _busy ? null : _confirmSendBack,
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs)),
+                    child: Text(words.approvalsInboxSendBackButton, textAlign: TextAlign.center, maxLines: 2),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: FilledButton(
@@ -641,14 +647,12 @@ class _RemarksDialog extends StatefulWidget {
     required this.subtitle,
     required this.confirmLabel,
     required this.remarksRequired,
-    this.destructive = false,
   });
 
   final String title;
   final String subtitle;
   final String confirmLabel;
   final bool remarksRequired;
-  final bool destructive;
 
   @override
   State<_RemarksDialog> createState() => _RemarksDialogState();
@@ -695,7 +699,6 @@ class _RemarksDialogState extends State<_RemarksDialog> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.commonCancel)),
         FilledButton(
           onPressed: ready ? () => Navigator.of(context).pop(_controller.text) : null,
-          style: widget.destructive ? FilledButton.styleFrom(backgroundColor: context.palette.danger) : null,
           child: Text(widget.confirmLabel),
         ),
       ],

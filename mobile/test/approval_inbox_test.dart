@@ -453,31 +453,58 @@ void main() {
       expect(find.text('ক্রয় বিল · PB-2609-0007'), findsNothing, reason: 'অনুমোদিত কাগজ তালিকায় রয়ে গেল');
     });
 
-    testWidgets('a rejection cannot be sent without a reason, and goes only after the final question', (tester) async {
-      var sentReason = '';
-      await tester.pumpWidget(screen(reject: (_, r) async => sentReason = r));
+    testWidgets('নমুনা v4 ছবি ৫: a rejection needs a picked reason and a note, goes with its reason code, and only after the final question',
+        (tester) async {
+      await tall(tester);
+      final sent = <String>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ApprovalInboxScreen(
+          loadInbox: (_, __, ___, ____) async => page([row, second]),
+          loadSheet: (_) async => sheet,
+          rejectWithCode: (id, note, code) async => sent.add('$code|$note'),
+        ),
+      ));
       await tester.pumpAndSettle();
       await openFirst(tester);
 
       await tester.tap(find.byKey(Key('approval-reject-${row['id']}')));
       await tester.pumpAndSettle();
-      // Dead until a reason is typed. ApprovalEngine::reject takes a non-null
-      // string and ApprovalsApi.reject checks it too — three places, because a
-      // refusal with no reason reaches the requester as something they cannot act on.
-      final confirm = tester.widget<FilledButton>(find.descendant(
-          of: find.byType(AlertDialog), matching: find.widgetWithText(FilledButton, 'প্রত্যাখ্যান করুন')));
-      expect(confirm.onPressed, isNull);
-
-      await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'দর বেশি');
+      expect(find.byKey(const ValueKey('reject-sheet')), findsOneWidget, reason: '⛔ নমুনা v4: প্রত্যাখ্যানের শিট নেই');
+      // Dead until a reason is picked and a note typed. ApprovalEngine::reject takes a non-null
+      // string and ApprovalsApi.reject checks it too — a refusal with no reason reaches the requester as something they cannot act on.
+      FilledButton yes() => tester.widget<FilledButton>(find.byKey(const ValueKey('reject-sheet-yes')));
+      expect(yes().onPressed, isNull, reason: '⛔ কিছু না দিয়েই প্রত্যাখ্যান চাপা যায়');
+      // ⓘ আগে লেখা, কারণ ছাড়া — তখনো চাপা যায় না; তারপর কারণ বাছা, লেখা মুছে — তখনো না
+      await tester.enterText(find.byKey(const ValueKey('reject-sheet-note')), 'দর বেশি');
       await tester.pumpAndSettle();
-      await tester.tap(inDialog('প্রত্যাখ্যান করুন'));
+      expect(yes().onPressed, isNull, reason: '⛔ কারণ না বেছেই প্রত্যাখ্যান চাপা যায়');
+      await tester.tap(find.byKey(const ValueKey('reject-reason-price')));
+      await tester.enterText(find.byKey(const ValueKey('reject-sheet-note')), '  ');
+      await tester.pumpAndSettle();
+      expect(yes().onPressed, isNull, reason: '⛔ লেখা ছাড়াই প্রত্যাখ্যান চাপা যায়');
+      await tester.enterText(find.byKey(const ValueKey('reject-sheet-note')), 'দর বেশি');
+      await tester.pumpAndSettle();
+      expect(yes().onPressed, isNotNull, reason: '⛔ কারণ আর লেখা দুটোই দিয়েও চাপা যায় না');
+
+      await tester.tap(find.byKey(const ValueKey('reject-sheet-yes')));
       await tester.pumpAndSettle();
       expect(find.textContaining('আর ফেরানো যাবে না'), findsOneWidget, reason: '⛔ প্রত্যাখ্যানের আগে শেষ প্রশ্ন নেই');
+      expect(sent, isEmpty, reason: '⛔ শেষ প্রশ্নের আগেই প্রত্যাখ্যান গেল');
       // ⭐ তারপর আলাদা শেষ প্রশ্ন — চূড়ান্ত
       await tester.tap(find.byKey(const ValueKey('reject-final-confirm')));
       await tester.pumpAndSettle();
 
-      expect(sentReason, 'দর বেশি', reason: '⛔ প্রত্যাখ্যান কারণসহ যায়নি');
+      expect(sent, ['price|দর বেশি'], reason: '⛔ প্রত্যাখ্যান কারণের কোড আর লেখাসহ যায়নি');
+    });
+
+    testWidgets('নমুনা v4 দফা ১০: "send back" shows only where the server allows it', (tester) async {
+      await tall(tester);
+      await tester.pumpWidget(screen(inbox: (_, __, ___, ____) async => page([{...row, 'canSendBack': false}, second])));
+      await tester.pumpAndSettle();
+      await openFirst(tester);
+      expect(find.byKey(Key('approval-send-back-${row['id']}')), findsNothing, reason: '⛔ সার্ভার মানা করেছে, তবু "ফেরত পাঠান"');
+      expect(find.byKey(Key('approval-reject-${row['id']}')), findsOneWidget);
+      expect(find.byKey(Key('approval-approve-${row['id']}')), findsOneWidget);
     });
 
     testWidgets('a rejection cancelled at the final question sends nothing', (tester) async {
@@ -488,9 +515,10 @@ void main() {
 
       await tester.tap(find.byKey(Key('approval-reject-${row['id']}')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'ভুয়া বিল');
+      await tester.tap(find.byKey(const ValueKey('reject-reason-document')));
+      await tester.enterText(find.byKey(const ValueKey('reject-sheet-note')), 'ভুয়া বিল');
       await tester.pumpAndSettle();
-      await tester.tap(inDialog('প্রত্যাখ্যান করুন'));
+      await tester.tap(find.byKey(const ValueKey('reject-sheet-yes')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('reject-final-cancel')));
       await tester.pumpAndSettle();

@@ -15589,5 +15589,49 @@
   "approveSheetBioReason": "বড় অঙ্কের অনুমোদন নিশ্চিত করুন",
   "@approveSheetBioReason": {
     "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "rejectSheetTitle": "প্রত্যাখ্যান করবেন?",
+  "@rejectSheetTitle": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetHint": "এক চাপে কারণ বাছুন, দরকার হলে লিখে দিন। কারণটা যিনি চেয়েছিলেন তার কাছে যাবে, আর রিপোর্টে গোনা হবে।",
+  "@rejectSheetHint": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetNote": "আরও কিছু লিখুন (বাধ্যতামূলক)…",
+  "@rejectSheetNote": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetFinal": "প্রত্যাখ্যান আর ফেরানো যায় না, তাই আরেকবার জিজ্ঞেস করা হবে। শুধু ঠিক করাতে চাইলে “↩ ফেরত পাঠান” বেছে নিন, তাহলে কাগজটা আবার আপনার কাছে আসবে।",
+  "@rejectSheetFinal": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetYes": "✕ প্রত্যাখ্যান করুন",
+  "@rejectSheetYes": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonPrice": "দাম ঠিক নেই",
+  "@rejectReasonPrice": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonDocument": "কাগজে ভুল আছে",
+  "@rejectReasonDocument": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonCredit": "বাকির সীমা পেরিয়ে যায়",
+  "@rejectReasonCredit": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonBudget": "বাজেট নেই",
+  "@rejectReasonBudget": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonPolicy": "নিয়মে চলে না",
+  "@rejectReasonPolicy": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonOther": "অন্য কারণ",
+  "@rejectReasonOther": {
+    "description": "Reject sheet (sample v4 picture 5)"
   }
 }
