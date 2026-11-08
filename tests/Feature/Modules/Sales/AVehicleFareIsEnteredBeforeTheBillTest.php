@@ -77,8 +77,9 @@ final class AVehicleFareIsEnteredBeforeTheBillTest extends TestCase
 
     public function test_the_customer_vehicle_or_the_customer_paying_needs_no_amount(): void
     {
-        foreach ([['customer', ''], ['none', ''], ['hired', 'customer'], ['own', 'none']] as [$vehicle, $who]) {
-            $this->post(route('sales.direct.store'), $this->form($vehicle, $who, ''))->assertSessionHasNoErrors();
+        foreach ([['customer', ''], ['none', ''], ['hired', 'customer'], ['own', 'none']] as $i => [$vehicle, $who]) {
+            // ⓘ প্রতিবার আলাদা পরিমাণ — একই বিল পরপর দুবার "আবার করবেন?" পাহারায় থামে
+            $this->post(route('sales.direct.store'), $this->form($vehicle, $who, '', ['qty_bump' => $i]))->assertSessionHasNoErrors();
             $challan = DeliveryChallan::query()->latest('id')->firstOrFail();
             $this->assertSame($vehicle, $challan->vehicle_owner, 'দৃশ্যটাই ভুল — চালানে গাড়ির মালিক বসেনি।');
             $this->assertNull($challan->fare_voucher_id, "⛔ {$vehicle} / {$who}: ভাড়া নেই, তবু ভাড়ার ভাউচার।");
@@ -102,7 +103,8 @@ final class AVehicleFareIsEnteredBeforeTheBillTest extends TestCase
         try {
             app(SalesInvoiceService::class)->confirm($invoice->fresh());
             $this->fail('⛔ ভাড়া বাকি, তবু বিল নিশ্চিত হল।');
-        } catch (ValidationException $e) {
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(ValidationException::class, $e, '⛔ ভাড়া বাকি, তবু বিল নিশ্চিত করার পথে এগোল (থামল অন্য কারণে: '.class_basename($e).')।');
             $this->assertSame(__('sales::fare.amount_before_bill', ['challan' => $challan->document_no]), $e->errors()['transport_cost'][0] ?? null,
                 '⛔ বিল থামল, কিন্তু ভাড়ার কারণে নয়।');
         }
@@ -167,8 +169,8 @@ final class AVehicleFareIsEnteredBeforeTheBillTest extends TestCase
             'driver_phone' => '01711000000',
             'transport_cost' => $amount,
             'fare_paid_by' => $who,
-            'lines' => [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => '2', 'rate' => '10', 'free_qty' => '0']],
-            ...$extra,
+            'lines' => [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => (string) (2 + (int) ($extra['qty_bump'] ?? 0)), 'rate' => '10', 'free_qty' => '0']],
+            ...array_diff_key($extra, ['qty_bump' => true]),
         ];
     }
 }

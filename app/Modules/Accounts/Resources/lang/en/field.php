@@ -366,4 +366,6 @@ return [
     // ⭐ অনুমোদন পর্দা ভাগ ২ (২৭ অক্টোবর ২০২৬)
     'pick' => 'Pick',
     'bulk_post_why' => 'Why left out',
+    // The paper a fare voucher is for (owner, 7 Nov 2026)
+    'for_paper' => 'For',
 ];

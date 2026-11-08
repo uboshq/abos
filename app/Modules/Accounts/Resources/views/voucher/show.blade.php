@@ -280,18 +280,19 @@
                 {{-- ⭐ গাড়ি ভাড়ার ভাউচার — কোন চালান বা ট্রিপের, চাপলে খোলে (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"); ⛔ আগে নম্বরটা কেবল
                      বিবরণের লেখায়, চাপলে কিছু খুলত না --}}
                 @php
-                    $forPaper = match ((string) $voucher->against_type) {
-                        'delivery_challan' => ($c = \App\Modules\Sales\Models\DeliveryChallan::query()->find($voucher->against_id))
-                            ? ['label' => __('sales::doc.challan'), 'no' => $c->document_no, 'url' => route('sales.challan.show', $c)] : null,
-                        'shipment' => ($t = \App\Modules\Sales\Models\Shipment::query()->find($voucher->against_id))
-                            ? ['label' => __('sales::fare.trip_label'), 'no' => $t->document_no, 'url' => route('sales.shipment.show', $t)] : null,
-                        default => null,
-                    };
+                    // ⓘ কাগজটা খোঁজা মূল ড্রিল-রেজিস্ট্রি দিয়ে — হিসাব মডিউল বিক্রয়ের কোনো ক্লাস চেনে না ([[DrillResolver]]; BoundariesTest)
+                    $forDoc = in_array((string) $voucher->against_type, ['delivery_challan', 'shipment'], true) && $voucher->against_id
+                        ? app(\App\Core\Engines\Drill\DrillResolver::class)->resolve((string) $voucher->against_type, (int) $voucher->against_id)
+                        : null;
+                    [$forRoute, $forParams] = $forDoc !== null ? $forDoc->drillRoute() + [null, []] : [null, []];
+                    $forPaper = $forDoc !== null && $forRoute !== null && \Illuminate\Support\Facades\Route::has($forRoute)
+                        ? ['label' => $forDoc->drillLabel(), 'no' => '', 'url' => route($forRoute, $forParams)]
+                        : null;
                 @endphp
                 @if ($forPaper !== null)
                     <div data-voucher-for-paper>
-                        <dt class="text-2xs text-(--color-ink-muted)">{{ __('sales::fare.for_paper') }}</dt>
-                        <dd class="text-sm"><a href="{{ $forPaper['url'] }}" class="font-semibold text-(--color-link) hover:underline">{{ $forPaper['label'] }} {{ $forPaper['no'] }} →</a></dd>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::field.for_paper') }}</dt>
+                        <dd class="text-sm"><a href="{{ $forPaper['url'] }}" class="font-semibold text-(--color-link) hover:underline">{{ $forPaper['label'] }} →</a></dd>
                     </div>
                 @endif
                 @foreach ([

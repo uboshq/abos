@@ -40,7 +40,7 @@
              'border-(--color-border) bg-(--color-surface-card)' => $tone === 'neutral',
          ])>
     <div class="mb-3 flex flex-wrap items-center gap-2">
-        <h2 class="text-base font-bold"><span aria-hidden="true">🚚</span> {{ __('sales::field.vehicle_and_fare') }}</h2>
+        <h2 class="text-base font-bold"><x-ui.icon name="supplier" :size="18" /> {{ __('sales::field.vehicle_and_fare') }}</h2>
         @if ($owed || $due)
             <x-ui.button tone="primary" class="ms-auto" :href="route('sales.challan.transport', $challan)" data-vehicle-fare-write>
                 {{ $owed ? __('sales::fare.write_fare') : __('sales::fare.pay_now') }}

@@ -77,7 +77,7 @@
              gulo lagena segulo zate na ase" ([[noFareLine]]) --}}
         <p class="sm:col-span-3 flex items-center gap-2 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-xs font-semibold text-(--color-ink-muted)"
            x-show="noFareLine !== ''" x-cloak data-no-fare-line>
-            <span aria-hidden="true">🚫</span><span x-text="noFareLine"></span>
+            <span x-text="noFareLine"></span>
         </p>
         {{--
             ── বাহক — তালিকা থেকে, নয়তো হাতে লেখা ──────────────────────
@@ -200,15 +200,15 @@
              :class="fareMissing ? 'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg)' : (fareSet ? 'border-(--color-badge-success-ink) bg-(--color-badge-success-bg)' : 'border-(--color-kind-expense) bg-(--color-surface-card)')">
             <p class="flex items-center gap-2 text-sm font-bold"
                :class="fareMissing ? 'text-(--color-badge-danger-ink)' : (fareSet ? 'text-(--color-badge-success-ink)' : 'text-(--color-kind-expense-deep)')">
-                <span aria-hidden="true">🚚</span> {{ __('sales::fare.box_title') }} <span class="text-(--color-badge-danger-ink)">*</span>
+                <x-ui.icon name="supplier" :size="16" /> {{ __('sales::fare.box_title') }} <span class="text-(--color-badge-danger-ink)">*</span>
             </p>
             <label class="block max-w-64">
                 <span class="mb-1 block text-xs font-semibold">{{ __('sales::field.transport_cost') }}</span>
                 <input type="number" step="0.01" min="0" name="transport_cost" value="{{ old('transport_cost', $resume['fields']['transport_cost'] ?? '') }}"
                        x-model="transportCost" x-init="seedDriver($el, 'transportCost')" :disabled="! fareIsOurs" data-fare-amount
-                       class="num h-10 w-full rounded-(--radius-field) border-2 border-(--color-border) bg-(--color-surface-card) px-3 text-end text-lg font-bold">
+                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border-2 border-(--color-border) bg-(--color-surface-card) px-3 text-end text-lg font-bold">
             </label>
-            <p class="text-xs font-semibold text-(--color-badge-danger-ink)" x-show="fareMissing" data-fare-missing>⚠️ {{ __('sales::fare.needs_amount_vehicle') }}</p>
+            <p class="text-xs font-semibold text-(--color-badge-danger-ink)" x-show="fareMissing" data-fare-missing>{{ __('sales::fare.needs_amount_vehicle') }}</p>
             <p class="text-xs font-semibold text-(--color-badge-success-ink)" x-show="fareSet">✓ {{ __('sales::fare.box_done') }}</p>
         </div>
 
