@@ -78,4 +78,36 @@ final class TheOwnerReadsHisNetWorthOnTheWebTest extends TestCase
         $this->assertSame(404, $this->actingAs($clerk)->get(route('accounts.net_worth'))->status(),
             '⛔ মালিক নন এমন কেউ নিট সম্পদ বিবরণীর পাতা পেলেন (বা পাতাটা আছে বলে জানলেন)।');
     }
+
+    /**
+     * ⛔ লাইভে, ৮ নভেম্বর ২০২৬: হেডারে এক শাখা বাছা থাকায় অন্য শাখার নগদ টিল (UB-র ৮.২৪ কোটি) নিট সম্পদ থেকে বাদ পড়ত, আর
+     * দুই দিক মিলত না। নিট সম্পদ পুরো কোম্পানির — বাছা শাখা যাই হোক।
+     */
+    public function test_a_till_in_another_branch_still_counts_and_both_sides_agree(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->actingAs($owner);
+        $home = $this->company->defaultBranch();
+        $other = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'NWB', 'name_en' => 'Far Depot', 'is_active' => true]);
+
+        $till = app(\App\Modules\Accounts\Services\CashTillService::class)->create(['code' => 'NW-FAR', 'name_en' => 'Far till', 'branch_id' => $other->id]);
+        $capital = \App\Modules\Accounts\Models\Account::query()->where('code', StandardChart::OWNER_CAPITAL)->firstOrFail();
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(
+            sourceType: 'test:money-in', sourceId: 820000, trxDate: '2026-10-15',
+            lines: [
+                ['account_id' => $till->account_id, 'debit' => '820000', 'narration' => 'অন্য শাখার টিলে টাকা'],
+                ['account_id' => $capital->id, 'credit' => '820000', 'narration' => 'অন্য শাখার টিলে টাকা'],
+            ],
+            branchId: $other->id,
+        );
+
+        // ⓘ দেখার শাখা ঘর-শাখা — অন্য শাখার টিল এই চোখে লুকানো থাকে, তবু নিট সম্পদে আসতে হবে
+        CompanyContext::set($this->company->id, $home?->id);
+        $owner->forceFill(['view_all_branches' => false])->save();
+
+        $mine = app(NetWorthStatement::class)->forCompany((int) $this->company->id);
+        $this->assertGreaterThanOrEqual(0, bccomp($mine['figures']['cash'], '820000', 2),
+            '⛔ অন্য শাখার টিলের টাকা নিট সম্পদের "নগদ ও ব্যাংক"-এ নেই: '.$mine['figures']['cash']);
+        $this->assertTrue($mine['agrees'], '⛔ দুই দিক মেলেনি — সম্পদ − দায় '.$mine['figures']['net'].', মূলধন + লাভ '.$mine['figures']['equity']);
+    }
 }

@@ -97,8 +97,10 @@ final class NetWorthStatement
          * ⓘ জের আছে এমন খাত আইডি ধরে, আর গাছের দলগুলো আলাদা করে — কোন খাত কোন ঘরে (পাওনা, মজুদ…) জানতে মা-খাতের সারি লাগে।
          * কোনো খাত বাছাই নয়, টাকা বসানো নয় (MoneyNeverLandsOnAGroupAccountTest — ছাড় না নিয়ে, ৮ নভেম্বর ২০২৬)।
          */
-        $accounts = Account::query()->whereKey(array_keys($net))->get()
-            ->concat(Account::query()->where('company_id', $companyId)->where('is_group', true)->get())
+        // ⛔ পুরো কোম্পানি — হেডারে বাছা শাখার বাইরের নগদ টিলও (খাতের `viewed-branch-till` ছাঁকনি এখানে নয়): লাইভে, ৮ নভেম্বর ২০২৬,
+        // "ট্রেড ডিপো" বাছা থাকায় UB-র ৮.২৪ কোটির টিল বাদ পড়ত, আর দুই দিক মিলত না (সম্পদ − দায় −৬.৩৯ কোটি, মূলধন + লাভ ১.৮৫ কোটি)
+        $accounts = Account::query()->withoutGlobalScope('viewed-branch-till')->whereKey(array_keys($net))->get()
+            ->concat(Account::query()->withoutGlobalScope('viewed-branch-till')->where('company_id', $companyId)->where('is_group', true)->get())
             ->keyBy('id');
 
         $roots = [
