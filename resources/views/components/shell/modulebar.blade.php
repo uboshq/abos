@@ -150,6 +150,19 @@
      * ⓘ হোমে কোনো মডিউল নেই, ট্যাবও নেই; আর পর্দা নিজের বোতাম না পাঠালে (`crumb_actions`) বারটা উপরের বারের নিচে একটা খালি
      * ধূসর পট্টি হয়ে বসত — ফোনে সবসময়, বড় পর্দায় মেনু গুটালে। ⓘ পাতার শরীর লেআউটের আগে আঁকা হয়, তাই স্ট্যাকটা এখানে ভরা।
      */
+    /*
+     * ⭐ রঙিন বার — মালিক, ৯ নভেম্বর ২০২৬ (নমুনা "মেনু লুকালে উপরে দলের বার": "ok — eta korai ache sudu color kora baki")।
+     * ⓘ প্রতিটা সারির দল, রং আর নিজের চিহ্ন বাঁয়ের রঙিন মেনুর একই তালিকা থেকে ([[MenuLook]]); ঘরের রং ঘরের প্রথম সারির দলে,
+     * পাশাপাশি দুই দল অন্তত ৬০° দূরে ([[MenuLook::forBar()]])। তালিকায় নেই এমন সারি আগের মতো ধূসর।
+     */
+    $lookRows = $current ? collect($current['groups'])->flatten(1)->values()->all() : [];
+    $lookOf = [];
+    foreach (\App\Core\Navigation\MenuLook::forRows((string) ($current['code'] ?? ''), $lookRows) as $i => $look) {
+        $lookOf[(string) ($lookRows[$i]['key'] ?? '')] = $look;
+    }
+    $lookFor = fn (array $row): array => $lookOf[(string) ($row['key'] ?? '')] ?? ['kind' => null, 'icon' => null];
+    $mc = fn (?string $colour): ?string => $colour === null ? null : ltrim($colour, '#');
+
     $hasCrumbs = trim($__env->yieldPushContent('crumb_actions')) !== '';
     $showBar = $tabs->isNotEmpty() || $hasCrumbs;
 
@@ -248,6 +261,7 @@
          aria-label="{{ __('core.a11y.breadcrumb') }}">
 
         @if (! $grouped)
+            @php $tabColours = \App\Core\Navigation\MenuLook::forBar($tabs->map(fn ($t) => $lookFor($t)['kind'])->all()); @endphp
             {{-- ⓘ `active` মেনু থেকেই আসে — এখানে আবার `routeIs()` লিখলে
                  দুই জায়গায় দুই নিয়ম হত, আর রেকর্ডের ভিতরে ঢুকলে একটা
                  জ্বলত আর অন্যটা নিভত (TheTrailWentBlankInsideARecordTest)। --}}
@@ -262,16 +276,22 @@
                      কোনোদিন সরলে ঘরগুলো আগের জোড়া-লাগা চেহারাতেই ফিরবে,
                      ভেঙে পড়বে না। ⛔ কিন্তু কেউ যেন পড়ে ভেবে না বসেন
                      ওগুলোই আজকের চেহারা ঠিক করছে — করছে না। --}}
+                @php $tabMc = $mc($tabColours[$loop->index] ?? null); $tabIcon = $lookFor($tab)['icon']; @endphp
                 <a href="{{ $tab['url'] }}"
                    @class([
                        'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field) last:rounded-e-(--radius-field)',
                        'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
                        'modulebar-cell' => ! ($tab['active'] ?? false),
                    ])
+                   @if ($tabMc) data-mc="{{ $tabMc }}" data-bar-kind="{{ $lookFor($tab)['kind'] }}" @endif
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
                     <span class="flex items-center gap-1.5">
-                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
-                                   :class="$groupTint($tab['group'])" />
+                        @if ($tabMc && $tabIcon)
+                            <x-ui.licon :name="$tabIcon" :size="14" class="modulebar-licon" />
+                        @else
+                            <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
+                                       :class="$groupTint($tab['group'])" />
+                        @endif
                         {{ $tab['label'] }}
                     </span>
                 </a>
@@ -356,27 +376,41 @@
                 }
             @endphp
 
+            @php
+                $cellKinds = $cells->map(fn ($c) => $lookFor(isset($c['fold']) ? $c['items']->first() : $c['tab'])['kind'])->all();
+                $cellColours = \App\Core\Navigation\MenuLook::forBar($cellKinds);
+            @endphp
             @foreach ($cells as $cell)
+                @php $cellMc = $mc($cellColours[$loop->index] ?? null); $cellKind = $cellKinds[$loop->index] ?? null; @endphp
                 @if (isset($cell['fold']))
                     <x-shell.modulebar-menu :fold="$cell['fold']"
                                             :label="__('core.menu.'.$cell['fold'])"
                                             :icon="$cell['icon']"
                                             :tint="$groupTint($cell['group'])"
-                                            :items="$cell['items']" />
+                                            :items="$cell['items']"
+                                            :mc="$cellMc"
+                                            :kind="$cellKind"
+                                            :licon="$cellKind === null ? null : (\App\Core\Navigation\MenuLook::KIND_ICONS[$cellKind] ?? $lookFor($cell['items']->first())['icon'])"
+                                            :item-icons="$cell['items']->mapWithKeys(fn ($r) => [(string) ($r['key'] ?? '') => $lookFor($r)['icon']])->all()" />
                     @continue
                 @endif
 
-                @php $tab = $cell['tab']; @endphp
+                @php $tab = $cell['tab']; $tabIcon = $lookFor($tab)['icon']; @endphp
                 <a href="{{ $tab['url'] }}"
                    @class([
                        'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
                        'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
                        'modulebar-cell' => ! ($tab['active'] ?? false),
                    ])
+                   @if ($cellMc) data-mc="{{ $cellMc }}" data-bar-kind="{{ $cellKind }}" @endif
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
                     <span class="flex items-center gap-1.5">
-                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
-                                   :class="$groupTint($tab['group'])" />
+                        @if ($cellMc && $tabIcon)
+                            <x-ui.licon :name="$tabIcon" :size="14" class="modulebar-licon" />
+                        @else
+                            <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
+                                       :class="$groupTint($tab['group'])" />
+                        @endif
                         {{ $tab['label'] }}
                     </span>
                 </a>

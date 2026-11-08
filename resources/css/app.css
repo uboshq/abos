@@ -2117,6 +2117,40 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
 [data-mc="dc2626"] { --menu-g: var(--color-menu-dc2626); }
 [data-mc="e11d48"] { --menu-g: var(--color-menu-e11d48); }
 [data-mc="ea580c"] { --menu-g: var(--color-menu-ea580c); }
+/* ⭐ রঙিন উপরের বার — মেনু লুকালে (মালিক, ৯ নভেম্বর ২০২৬: "sudu color kora baki"): ত্রিমাত্রিক চাবি থাকে, ভিত্তির রং দলের হালকা
+   সুর; চিহ্ন দলের রঙে; চলতি ঘর দলের পুরো রঙে ভরা (সাদা লেখা); ড্রপডাউনের মাথায় দলের রঙের দাগ, প্রতিটা সারির চিহ্ন রঙিন পটে */
+.modulebar-cell[data-mc],
+[data-mc] > .modulebar-cell {
+    --modulebar-base: color-mix(in srgb, var(--menu-g) 13%, var(--color-surface-card));
+    color: color-mix(in srgb, var(--menu-g) 78%, var(--color-ink-body));
+    border-color: color-mix(in srgb, var(--menu-g) 45%, transparent);
+    font-weight: 600;
+}
+.modulebar-cell[data-mc] .modulebar-licon,
+[data-mc] > .modulebar-cell .modulebar-licon { color: var(--menu-g); }
+.modulebar-cell-on[data-mc],
+.modulebar-cell-on[data-mc]:hover,
+[data-mc] > .modulebar-cell-on,
+[data-mc] > .modulebar-cell-on:hover {
+    --modulebar-base: var(--menu-g);
+    background: var(--menu-g);
+    color: #fff;
+    border-color: var(--menu-g);
+}
+.modulebar-cell-on[data-mc] .modulebar-licon,
+[data-mc] > .modulebar-cell-on .modulebar-licon { color: #fff; }
+.modulebar-drop { border-top: 3px solid var(--menu-g); }
+.modulebar-drop-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: .4rem;
+    color: var(--menu-g);
+    background: color-mix(in srgb, var(--menu-g) 13%, transparent);
+    flex: none;
+}
+
 .menu-kind-head {
     display: flex;
     align-items: center;

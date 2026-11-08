@@ -86,6 +86,62 @@ final class MenuLook
         return $out;
     }
 
+    /**
+     * ⭐ দলের নিজের চিহ্ন — মেনু লুকালে উপরের বারে দলের ঘরে (মালিক, ৯ নভেম্বর ২০২৬: নমুনা "মেনু লুকালে উপরে দলের বার"-এ "ok —
+     * eta korai ache sudu color kora baki")। ⓘ তালিকায় না থাকলে দলের প্রথম সারির চিহ্ন।
+     */
+    public const KIND_ICONS = [
+        'start' => 'house', 'master' => 'library', 'papers' => 'files', 'books' => 'notebook-tabs', 'reports' => 'chart-column',
+        'ledger' => 'book-marked', 'control' => 'shield-alert', 'fin' => 'scale', 'close' => 'calendar-cog', 'crm' => 'users-round',
+        'quote' => 'file-pen', 'orders' => 'clipboard-list', 'direct' => 'store', 'deliver' => 'truck', 'bill' => 'receipt-text',
+        'returns' => 'rotate-ccw', 'price' => 'tags', 'target' => 'goal', 'setup' => 'settings', 'notice' => 'megaphone',
+    ];
+
+    /**
+     * ⭐ উপরের বারের ঘরগুলোর রং — প্রতিটা ঘর তার দলের রঙে, আর পাশাপাশি দুই আলাদা দলের রং অন্তত [[APART]]° দূরে (সাইডবারের
+     * একই নিয়ম, [[forRows()]]); একই দলের পরপর ঘর একই রঙে। দল না জানা ঘর (`null`) রং পায় না।
+     *
+     * @param  list<string|null>  $kinds  ঘরগুলোর দল, বারের ক্রমে
+     * @return list<string|null>
+     */
+    public static function forBar(array $kinds): array
+    {
+        $catalog = self::data()['kinds'] ?? [];
+        $out = [];
+        $chosen = [];
+        $byKind = [];
+        $previousKind = null;
+
+        foreach ($kinds as $kind) {
+            if ($kind === null) {
+                $out[] = null;
+                $previousKind = null;
+
+                continue;
+            }
+
+            if ($kind === $previousKind) {
+                $out[] = $chosen[count($chosen) - 1];
+
+                continue;
+            }
+
+            $want = $byKind[$kind] ?? ($kind === 'start' ? self::NEUTRAL : ($catalog[$kind][1] ?? self::PALETTE[0]));
+            $prev = $chosen[count($chosen) - 1] ?? null;
+
+            if ($prev !== null && self::apart($want, $prev) < self::APART) {
+                $want = self::farthest($prev, $chosen[count($chosen) - 2] ?? null, $chosen);
+            }
+
+            $byKind[$kind] ??= $want;
+            $chosen[] = $want;
+            $out[] = $want;
+            $previousKind = $kind;
+        }
+
+        return $out;
+    }
+
     /** দুই রঙের রং-চাকার দূরত্ব (ডিগ্রি) — একটা ধূসর হলে অনেক দূরে, দুইটাই ধূসর হলে শূন্য */
     public static function apart(string $a, string $b): float
     {

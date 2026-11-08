@@ -147,4 +147,57 @@ final class EveryMenuRowHasItsOwnIconTest extends TestCase
         }
         $this->assertSame(count($icons), count(array_unique($icons)), '⛔ পাতার মেনুতে একই আইকন দুবার');
     }
+
+    /**
+     * ⭐ মেনু লুকালে উপরের বার — মালিক, ৯ নভেম্বর ২০২৬ (নমুনা "মেনু লুকালে উপরে দলের বার": "ok — eta korai ache sudu color kora
+     * baki"): প্রতিটা ঘর তার দলের রঙে আর চিহ্নে, পাশাপাশি দুই আলাদা দল অন্তত ৬০° দূরে, ড্রপডাউনের প্রতিটা সারি নিজের চিহ্নে।
+     */
+    public function test_the_bar_under_the_top_bar_wears_the_group_colours_too(): void
+    {
+        foreach ([route('accounts.voucher.create', ['type' => 'receipt']), route('sales.order.index')] as $url) {
+            $html = (string) $this->get($url)->assertOk()->getContent();
+            $dom = new DOMDocument;
+            libxml_use_internal_errors(true);
+            $dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
+            libxml_clear_errors();
+            $xpath = new DOMXPath($dom);
+
+            $cells = $xpath->query('//*[@data-module-bar]//nav/*[@data-mc]');
+            $this->assertGreaterThanOrEqual(5, $cells->length, "⛔ {$url}: উপরের বারের ঘর রঙিন নয়");
+
+            $previous = null;
+            foreach ($cells as $cell) {
+                $kind = (string) $cell->getAttribute('data-bar-kind');
+                $colour = '#'.$cell->getAttribute('data-mc');
+                $this->assertNotSame('', $kind, "⛔ {$url}: রঙিন ঘরের দল নেই");
+                $this->assertNotNull($xpath->query('.//svg[@data-licon]', $cell)->item(0), "⛔ {$url}: ঘরে দলের চিহ্ন নেই");
+
+                if ($previous !== null && $previous[0] !== $kind) {
+                    $this->assertGreaterThanOrEqual(60.0, MenuLook::apart($colour, $previous[1]),
+                        "⛔ {$url}: বারে পাশাপাশি দুই দল \"{$previous[0]}\" আর \"{$kind}\" কাছাকাছি রঙে — মালিক: \"পাশাপাশি একই রকমের কালার দিবা না\"");
+                }
+                $previous = [$kind, $colour];
+            }
+
+            $drops = $xpath->query('//*[@data-module-bar]//*[@data-modulebar-fold][contains(@class, "modulebar-drop")]');
+            $this->assertGreaterThan(0, $drops->length, "⛔ {$url}: ড্রপডাউন রঙিন নয়");
+            foreach ($drops as $drop) {
+                foreach ($xpath->query('./a', $drop) as $item) {
+                    $this->assertNotNull($xpath->query('.//svg[@data-licon]', $item)->item(0), "⛔ {$url}: ড্রপডাউনের সারি \"".trim($item->textContent).'"-এর চিহ্ন নেই');
+                }
+            }
+        }
+    }
+
+    public function test_the_bar_colours_keep_one_colour_per_group_and_part_close_neighbours(): void
+    {
+        // ⓘ একই দল পরপর — একই রং; আলাদা দল কাছাকাছি রঙে — দ্বিতীয়টা সরে
+        $colours = MenuLook::forBar(['master', 'master', 'papers', 'master']);
+        $this->assertSame($colours[0], $colours[1], '⛔ একই দলের দুই ঘর দুই রঙে');
+        $this->assertSame($colours[0], $colours[3], '⛔ একই দল দূরে ফিরে এসে অন্য রঙে');
+        $this->assertNull(MenuLook::forBar([null])[0], '⛔ দল না জানা ঘর রং পেল');
+
+        $close = MenuLook::forBar(['ledger', 'fin']);
+        $this->assertGreaterThanOrEqual(60.0, MenuLook::apart($close[0], $close[1]), '⛔ পাশাপাশি দুই সবুজ দল');
+    }
 }
