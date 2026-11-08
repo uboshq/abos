@@ -58,6 +58,7 @@ return [
     ],
 
     'branch_out_of_reach' => 'This branch is outside the branches you may see.',
+    'branch_all_needs_reach' => 'All branches needs reach over the whole company; pick a branch.',
     'report_bad_date' => 'That date is not right. Fix the day, month and year and try again.',
     'report_bad_range' => 'The start date is after the end date. Pick a start date on or before the end date.',
     'login_mobile_format' => 'Use digits only for the mobile number, 10 to 15 of them (a leading + is fine), for example 01711000000 — type it the same way to log in.',

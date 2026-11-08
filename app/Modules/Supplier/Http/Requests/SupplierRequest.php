@@ -41,6 +41,34 @@ class SupplierRequest extends FormRequest
         }
     }
 
+    /**
+     * ⭐ "সব শাখা" (খালি শাখা) কেবল পুরো কোম্পানির নাগাল যাঁর — মালিক, ৮ নভেম্বর ২০২৬ (সেবাদাতা আর প্রিন্সিপাল কেন্দ্রীয়ভাবে নিয়োগ)।
+     * ⓘ যে সরবরাহকারী আগে থেকেই সব শাখার, শাখায় বাঁধা কর্মী তাঁকে সম্পাদনা করলেও সব শাখারই থাকেন — নাহলে প্রথম সম্পাদনাতেই কেন্দ্রীয়
+     * জন একটা শাখায় আটকে যেতেন।
+     *
+     * @return list<\Closure>
+     */
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $validator): void {
+            $value = $this->input('branch_id');
+
+            if ($value !== null && $value !== '') {
+                return;
+            }
+
+            $current = $this->route('supplier');
+
+            if ($current instanceof \App\Modules\Supplier\Models\Supplier && $current->branch_id === null) {
+                return;
+            }
+
+            if (app(DataScope::class)->isLimited($this->user(), UserDataScope::BRANCH)) {
+                $validator->errors()->add('branch_id', __('validation.branch_all_needs_reach'));
+            }
+        }];
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -97,6 +125,11 @@ class SupplierRequest extends FormRequest
                     }
                 },
             ],
+            /*
+             * ⭐ "সব শাখা" (খালি) কেবল পুরো কোম্পানির নাগাল যাঁর — মালিক, ৮ নভেম্বর ২০২৬। ⛔ শাখায় বাঁধা কর্মী খালি রাখলে সরবরাহকারী সব
+             * শাখায় ছড়িয়ে পড়ত, তাঁর অজান্তে; তাঁকে নিজের একটা শাখা বাছতে হয়। ⓘ `nullable` নিয়মে খালি ঘর বাকি নিয়ম পর্যন্ত যায় না,
+             * তাই আলাদা `after` পাহারায়।
+             */
 
             'bin' => ['nullable', 'string', 'max:32'],
             'tin' => ['nullable', 'string', 'max:32'],
