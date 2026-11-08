@@ -208,7 +208,7 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('accounts.voucher.show', $d)"
+            :row-menu="fn ($d) => view('accounts::voucher.partials.row-menu', ['voucher' => $d])"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_vouchers')"
             :rows="$vouchers"

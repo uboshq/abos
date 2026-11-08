@@ -11,6 +11,7 @@
     'confirmable' => false,
     'editable' => false,
     'cancellable' => false,
+    'cancelLabel' => null,
 ])
 
 {{--
@@ -30,6 +31,7 @@
     @param $work        কাগজের নিজের কাজ — [[x-ui.row-actions]]-এর সারি
     @param $confirmable নিশ্চিত করা যায় (পাতার "নিশ্চিত" বোতামের শর্ত) — ⛔ সরাসরি POST নয়, পাতায় সারাংশের পপ-আপ
     @param $cancellable বাতিল করা যায় (পাতার বাতিল-ফর্মের শর্ত) — ফর্মটা খোলা অবস্থায় (`?cancel=1#cancel`)
+    @param $cancelLabel নিশ্চিত কাগজের বাতিলের নিজের নাম (ভাউচার: "বাতিল (রিভার্স)" — উল্টো দাখিলা বসে)
 --}}
 @php
     $status = $paper->status;
@@ -85,7 +87,7 @@
 
     if ($cancellable && ! $isCancelled) {
         $items[] = ['line' => true];
-        $items[] = ['label' => $isDraft ? __('core.row_menu.delete_draft') : __('core.row_menu.cancel_paper'), 'icon' => 'trash', 'tone' => 'danger',
+        $items[] = ['label' => $isDraft ? __('core.row_menu.delete_draft') : ($cancelLabel ?? __('core.row_menu.cancel_paper')), 'icon' => 'trash', 'tone' => 'danger',
             'url' => $show.$glue.'cancel=1#cancel', 'peek' => false, 'key' => $isDraft ? 'Del' : null];
     }
 @endphp

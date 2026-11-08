@@ -1926,5 +1926,8 @@ return [
         'print_receipt' => 'টাকার রসিদ ছাপুন',
         'make_grn' => 'মাল গ্রহণ (GRN)',
         'return_out' => 'ফেরত দিন',
+        'payslips' => 'পে-স্লিপ',
+        'bank_file' => 'ব্যাংকের ফাইল',
+        'transfer_state' => ['draft' => 'খসড়া', 'confirmed' => 'পথে', 'closed' => 'পৌঁছেছে', 'cancelled' => 'বাতিল'],
     ],
 ];

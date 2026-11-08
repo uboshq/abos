@@ -1731,5 +1731,8 @@ return [
         'print_receipt' => 'Print money receipt',
         'make_grn' => 'Receive goods (GRN)',
         'return_out' => 'Return to supplier',
+        'payslips' => 'Payslips',
+        'bank_file' => 'Bank file',
+        'transfer_state' => ['draft' => 'Draft', 'confirmed' => 'On the way', 'closed' => 'Arrived', 'cancelled' => 'Cancelled'],
     ],
 ];

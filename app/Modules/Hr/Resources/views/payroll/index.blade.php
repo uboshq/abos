@@ -49,7 +49,7 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($r) => route('hr.payroll.show', $r)"
+            :row-menu="fn ($r) => view('hr::payroll.partials.row-menu', ['run' => $r])"
             :compact="request()->boolean('compact')"
             :empty="request('q') ? __('core.empty.no_results') : __('hr::message.no_runs')"
             :rows="$runs"
