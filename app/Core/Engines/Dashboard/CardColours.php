@@ -103,6 +103,16 @@ final class CardColours
     }
 
     /** @return array<string, mixed> */
+    /**
+     * ⭐ মাথার দুই রং নামে — ফোনের জন্য (ড্যা-৭; মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok")। ⓘ নমুনায় রং না থাকলে খালি — ফোন মডিউলের নিজের রং নেয়।
+     *
+     * @return list<string>
+     */
+    public static function headNames(string $module): array
+    {
+        return array_values(array_map('strval', (array) (self::paint($module)['head'] ?? [])));
+    }
+
     private static function paint(string $module): array
     {
         $all = (array) config('abos.dashboard_colours', []);
