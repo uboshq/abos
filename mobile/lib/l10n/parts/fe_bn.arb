@@ -299,5 +299,265 @@
   "approvalsLinesTotal": "মোট",
   "@approvalsLinesTotal": {
     "description": "Approvals paper page: the total under the paper's lines"
+  },
+  "dashboardWatchTitle": "নজরে রাখুন",
+  "@dashboardWatchTitle": {
+    "description": "ড্যা-৭: module dashboard watch list title (the web's \"নজরে রাখুন\")"
+  },
+  "dashboardWatchAllClear": "সব ঠিক আছে — এখন কিছু করার নেই",
+  "@dashboardWatchAllClear": {
+    "description": "ড্যা-৭: watch list when nothing needs doing"
+  },
+  "dashboardMoreFigures": "আরও অঙ্ক",
+  "@dashboardMoreFigures": {
+    "description": "ড্যা-৭: the figures below the top four"
+  },
+  "approvalsSumWaiting": "অপেক্ষায়",
+  "@approvalsSumWaiting": {
+    "description": "Inbox summary band: waiting count label"
+  },
+  "approvalsSumLate": "দেরি হয়ে গেছে",
+  "@approvalsSumLate": {
+    "description": "Inbox summary band: late count label"
+  },
+  "approvalsSumAmount": "মোট টাকা",
+  "@approvalsSumAmount": {
+    "description": "Inbox summary band: total amount label"
+  },
+  "approvalsLakh": "{n} লাখ",
+  "@approvalsLakh": {
+    "description": "Inbox summary band: amount in lakh",
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsSearchHint": "নম্বর, পক্ষ বা কে চেয়েছেন — খুঁজুন",
+  "@approvalsSearchHint": {
+    "description": "Inbox search field hint"
+  },
+  "approvalsTabWaiting": "অপেক্ষায়",
+  "@approvalsTabWaiting": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabSent": "পাঠিয়েছি",
+  "@approvalsTabSent": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabDone": "দিয়েছি",
+  "@approvalsTabDone": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsTabBehalf": "অন্যের হয়ে",
+  "@approvalsTabBehalf": {
+    "description": "Inbox short tab name"
+  },
+  "approvalsSortLabel": "সাজানো:",
+  "@approvalsSortLabel": {
+    "description": "Inbox sort bar label"
+  },
+  "approvalsSortLate": "দেরি আগে",
+  "@approvalsSortLate": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsSortNew": "নতুন আগে",
+  "@approvalsSortNew": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsSortAmount": "বড় অঙ্ক আগে",
+  "@approvalsSortAmount": {
+    "description": "Inbox sort choice"
+  },
+  "approvalsGroupLate": "দেরি হয়ে গেছে",
+  "@approvalsGroupLate": {
+    "description": "Inbox group head: past the deadline"
+  },
+  "approvalsGroupNear": "আজকের মধ্যে",
+  "@approvalsGroupNear": {
+    "description": "Inbox group head: near the deadline"
+  },
+  "approvalsGroupOk": "সময় আছে",
+  "@approvalsGroupOk": {
+    "description": "Inbox group head: time left"
+  },
+  "approvalsGroupNoClock": "শেষ সময় নেই",
+  "@approvalsGroupNoClock": {
+    "description": "Inbox group head: no deadline set"
+  },
+  "approvalsGroupCount": "· {count}টা",
+  "@approvalsGroupCount": {
+    "description": "Inbox group head count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsAmountChangedPill": "⚠ চাওয়ার পর অঙ্ক বদলেছে",
+  "@approvalsAmountChangedPill": {
+    "description": "Inbox card: amount changed warning"
+  },
+  "approvalsCardView": "দেখুন",
+  "@approvalsCardView": {
+    "description": "Inbox card button: open the paper"
+  },
+  "approvalsCardApprove": "✓ অনুমোদন দিন",
+  "@approvalsCardApprove": {
+    "description": "Inbox card button: approve"
+  },
+  "approvalsTotalsMore": "এই তালিকায় {count}টা · আরও {more}টা নিচে",
+  "@approvalsTotalsMore": {
+    "description": "Inbox totals line",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "more": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsDecidedAt": "{label} · {when}",
+  "@approvalsDecidedAt": {
+    "description": "Decided tab: decision and time",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsLongPressHint": "একসাথে অনেকগুলো দিতে লম্বা চাপে বাছুন",
+  "@approvalsLongPressHint": {
+    "description": "Inbox hint for bulk picking"
+  },
+  "approvalsWhyTitle": "কেন আপনার অনুমোদন লাগছে",
+  "@approvalsWhyTitle": {
+    "description": "Approval paper page: why your approval is needed (sample v4)"
+  },
+  "approvalsWhyReason": "চাওয়ার কারণ: “{reason}”",
+  "@approvalsWhyReason": {
+    "description": "Approval paper page: the requester's reason",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "approveSheetTitle": "অনুমোদন দেবেন?",
+  "@approveSheetTitle": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetExact": "যে অঙ্ক দেখছেন, ঠিক সেটাই অনুমোদন হবে। এর মধ্যে কেউ অঙ্ক বদলালে অ্যাপ থামিয়ে নতুন অঙ্ক দেখাবে।",
+  "@approveSheetExact": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetRemarks": "মন্তব্য (ইচ্ছা হলে)…",
+  "@approveSheetRemarks": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetBio": "{limit}-এর বেশি, তাই আঙুলের ছাপ বা ফোনের PIN দিয়ে নিশ্চিত করতে হবে। কেউ আপনার খোলা ফোন হাতে পেলেও অনুমোদন দিতে পারবে না।",
+  "@approveSheetBio": {
+    "description": "Approve sheet (sample v4 picture 4)",
+    "placeholders": {
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "approveSheetLast": "এটা শেষ ধাপ: অনুমোদন দিলেই কাগজটা খাতায় বসবে। আপনার নাম আর সময় কাগজে থেকে যাবে।",
+  "@approveSheetLast": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetBack": "না, ফিরে যাই",
+  "@approveSheetBack": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetYes": "✓ হ্যাঁ, অনুমোদন দিন",
+  "@approveSheetYes": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetBioFailed": "নিশ্চিত হলো না — আবার চেষ্টা করুন",
+  "@approveSheetBioFailed": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetNoLock": "ফোনে তালা (PIN বা আঙুলের ছাপ) বসানো নেই — বড় অঙ্কে অনুমোদনের আগে ফোনের সেটিংসে বসান",
+  "@approveSheetNoLock": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "approveSheetBioReason": "বড় অঙ্কের অনুমোদন নিশ্চিত করুন",
+  "@approveSheetBioReason": {
+    "description": "Approve sheet (sample v4 picture 4)"
+  },
+  "rejectSheetTitle": "প্রত্যাখ্যান করবেন?",
+  "@rejectSheetTitle": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetHint": "এক চাপে কারণ বাছুন, দরকার হলে লিখে দিন। কারণটা যিনি চেয়েছিলেন তার কাছে যাবে, আর রিপোর্টে গোনা হবে।",
+  "@rejectSheetHint": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetNote": "আরও কিছু লিখুন (বাধ্যতামূলক)…",
+  "@rejectSheetNote": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetFinal": "প্রত্যাখ্যান আর ফেরানো যায় না, তাই আরেকবার জিজ্ঞেস করা হবে। শুধু ঠিক করাতে চাইলে “↩ ফেরত পাঠান” বেছে নিন, তাহলে কাগজটা আবার আপনার কাছে আসবে।",
+  "@rejectSheetFinal": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectSheetYes": "✕ প্রত্যাখ্যান করুন",
+  "@rejectSheetYes": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonPrice": "দাম ঠিক নেই",
+  "@rejectReasonPrice": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonDocument": "কাগজে ভুল আছে",
+  "@rejectReasonDocument": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonCredit": "বাকির সীমা পেরিয়ে যায়",
+  "@rejectReasonCredit": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonBudget": "বাজেট নেই",
+  "@rejectReasonBudget": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonPolicy": "নিয়মে চলে না",
+  "@rejectReasonPolicy": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "rejectReasonOther": "অন্য কারণ",
+  "@rejectReasonOther": {
+    "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "attachmentThumbsHint": "চাপলে অ্যাপেই খোলে",
+  "@attachmentThumbsHint": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerHint": "দুই আঙুলে বড় করুন · পাশে সরালে পরের ফাইল",
+  "@attachmentViewerHint": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerRotate": "↻ ঘোরান",
+  "@attachmentViewerRotate": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerOffice": "Excel বা Word ফাইল এখনো অ্যাপে দেখা যায় না — সার্ভার PDF বানানো শুরু করলে এখানেই দেখা যাবে। ওয়েবে খুলুন।",
+  "@attachmentViewerOffice": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerSlides": "PowerPoint ফাইল অ্যাপে খোলে না — ওয়েবে খুলুন।",
+  "@attachmentViewerSlides": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerOther": "এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।",
+  "@attachmentViewerOther": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
   }
 }

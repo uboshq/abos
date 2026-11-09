@@ -485,7 +485,7 @@ Color inboxModuleTint(BuildContext context, String key) =>
 
 /// ⓘ কার্ডের চিহ্ন — হিসাবে "৳", বাকিতে কাগজের নামের প্রথম অক্ষর (কার সাথে কার-চিহ্ন: "বি", "ক", "খ"; হসন্তে থামে)
 String inboxGlyph(ApprovalRecord approval) {
-  if (approval.moduleKey == 'accounts') return '৳';
+  if (approval.moduleKey == 'accounts') return '৳'; // l10n-ok: the taka sign marks money papers
   final runes = approval.documentTypeLabel.runes.toList();
   if (runes.isEmpty) return '•';
   final out = StringBuffer(String.fromCharCode(runes.first));
@@ -504,7 +504,7 @@ class _SummaryBand extends StatelessWidget {
   String _amount(BuildContext context) {
     final value = Money.value(page.amount) ?? 0;
     if (value < 100000) return Money.taka(value);
-    return context.l10n.approvalsLakh((value / 100000).toStringAsFixed(2));
+    return '৳${context.l10n.approvalsLakh((value / 100000).toStringAsFixed(2))}'; // l10n-ok: the taka sign is the currency itself
   }
 
   @override
@@ -515,16 +515,16 @@ class _SummaryBand extends StatelessWidget {
             key: ValueKey('approvals-sum-$key'),
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             decoration: BoxDecoration(
-              color: late ? const Color(0xFFC62828) : Colors.white.withValues(alpha: 0.12),
-              border: Border.all(color: late ? const Color(0xFFEF5350) : Colors.white.withValues(alpha: 0.22)),
+              color: late ? const Color(0xFFC62828) : Colors.white.withValues(alpha: 0.12), // dark-ok: on the fixed dark-blue summary band
+              border: Border.all(color: late ? const Color(0xFFEF5350) : Colors.white.withValues(alpha: 0.22)), // dark-ok: on the fixed dark-blue summary band
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(figure,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)),
-              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11.5)),
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)), // dark-ok: white on the fixed dark-blue band
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11.5)), // dark-ok: white on the fixed dark-blue band
             ]),
           ),
         );
@@ -554,7 +554,7 @@ class _SummaryBand extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Colors.white, // dark-ok: a white field with fixed dark text, as the sample, in both modes
             prefixIcon: const Icon(Icons.search, color: Color(0xFF5F6F80), size: 20),
             hintText: words.approvalsSearchHint,
             hintStyle: const TextStyle(color: Color(0xFF5F6F80), fontSize: 13.5),
@@ -783,7 +783,7 @@ class _ApprovalCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: picked
-                      ? const Icon(Icons.check, color: Colors.white)
+                      ? const Icon(Icons.check, color: Colors.white) // dark-ok: white tick on the primary-filled tile
                       : Text(inboxGlyph(approval), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: inboxModuleColor(module))),
                   ),
                 ),
@@ -887,7 +887,7 @@ class _ApprovalCard extends StatelessWidget {
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF15803D),
                               // ⓘ অন্ধকারে থিমের লেখার রং গাঢ় হয়ে সবুজে মিলিয়ে যেত — সবুজের উপর সবসময় সাদা
-                              foregroundColor: Colors.white,
+                              foregroundColor: Colors.white, // dark-ok: white on the fixed green approve button
                               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),

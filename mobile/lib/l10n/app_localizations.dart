@@ -18395,7 +18395,7 @@ abstract class AppL10n {
   /// Inbox summary band: amount in lakh
   ///
   /// In bn, this message translates to:
-  /// **'৳{n} লাখ'**
+  /// **'{n} লাখ'**
   String approvalsLakh(String n);
 
   /// Inbox search field hint

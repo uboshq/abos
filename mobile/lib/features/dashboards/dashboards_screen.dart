@@ -708,9 +708,9 @@ class NewLookHead extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(dashboard.title.isNotEmpty ? dashboard.title : name,
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)), // dark-ok: white on the module colour head (web ড্যা-৭)
           if (dashboard.subtitle.isNotEmpty)
-            Text(dashboard.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(dashboard.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 13)), // dark-ok: on the module colour head
           if (dashboard.tiles.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -721,7 +721,7 @@ class NewLookHead extends StatelessWidget {
                   ActionChip(
                     key: Key('dashboard-tile-${tile.label}'),
                     label: Text(tile.label, style: TextStyle(color: a, fontWeight: FontWeight.w600)),
-                    backgroundColor: Colors.white,
+                    backgroundColor: Colors.white, // dark-ok: white quick-button chip on the coloured head, text in the module colour
                     side: BorderSide.none,
                     onPressed: () => openDashboardLink(context, tile.href),
                   ),
@@ -768,13 +768,13 @@ class NewLookCards extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(top[i].label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        style: const TextStyle(color: Colors.white70, fontSize: 12)), // dark-ok: on the coloured figure card
                     Text(top[i].hidden ? context.l10n.salesDashboardsNoKey : (top[i].value ?? ''),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                        style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)), // dark-ok: on the coloured figure card
                     if (top[i].hint.isNotEmpty)
                       Text(top[i].hint, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                          style: const TextStyle(color: Colors.white70, fontSize: 11)), // dark-ok: on the coloured figure card
                   ],
                 ),
               ),
@@ -794,8 +794,8 @@ class NewLookWatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color surface(String tone) => switch (tone) {
-          'bad' => AppColors.dangerSurface,
-          'warn' => AppColors.warningSurface,
+          'bad' => context.palette.dangerSurface,
+          'warn' => context.palette.warningSurface,
           _ => context.palette.surface,
         };
 
@@ -811,10 +811,10 @@ class NewLookWatch extends StatelessWidget {
           ),
           if (watch.isEmpty)
             Container(
-              color: AppColors.successSurface,
+              color: context.palette.successSurface,
               padding: const EdgeInsets.all(12),
               child: Text(context.l10n.dashboardWatchAllClear,
-                  style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w600)),
             ),
           for (final row in watch)
             InkWell(

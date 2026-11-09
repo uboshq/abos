@@ -15400,15 +15400,15 @@
   },
   "dashboardWatchTitle": "নজরে রাখুন",
   "@dashboardWatchTitle": {
-    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: module dashboard watch list title (the web's \"\u09a8\u099c\u09b0\u09c7 \u09b0\u09be\u0996\u09c1\u09a8\")"
+    "description": "ড্যা-৭: module dashboard watch list title (the web's \"নজরে রাখুন\")"
   },
   "dashboardWatchAllClear": "সব ঠিক আছে — এখন কিছু করার নেই",
   "@dashboardWatchAllClear": {
-    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: watch list when nothing needs doing"
+    "description": "ড্যা-৭: watch list when nothing needs doing"
   },
   "dashboardMoreFigures": "আরও অঙ্ক",
   "@dashboardMoreFigures": {
-    "description": "\u09a1\u09cd\u09af\u09be-\u09ed: the figures below the top four"
+    "description": "ড্যা-৭: the figures below the top four"
   },
   "approvalsSumWaiting": "অপেক্ষায়",
   "@approvalsSumWaiting": {
@@ -15422,7 +15422,7 @@
   "@approvalsSumAmount": {
     "description": "Inbox summary band: total amount label"
   },
-  "approvalsLakh": "৳{n} লাখ",
+  "approvalsLakh": "{n} লাখ",
   "@approvalsLakh": {
     "description": "Inbox summary band: amount in lakh",
     "placeholders": {

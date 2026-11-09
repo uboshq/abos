@@ -11246,7 +11246,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String approvalsLakh(String n) {
-    return '৳$n lakh';
+    return '$n lakh';
   }
 
   @override
@@ -11286,7 +11286,7 @@ class AppL10nEn extends AppL10n {
   String get approvalsGroupOk => 'Time left';
 
   @override
-  String get approvalsGroupNoClock => 'No deadline';
+  String get approvalsGroupNoClock => 'No due time';
 
   @override
   String approvalsGroupCount(int count) {
@@ -11331,7 +11331,7 @@ class AppL10nEn extends AppL10n {
       'Exactly the amount you see is approved. If someone changes it meanwhile, the app stops and shows the new amount.';
 
   @override
-  String get approveSheetRemarks => 'Remark (optional)…';
+  String get approveSheetRemarks => 'Remarks (optional)…';
 
   @override
   String approveSheetBio(String limit) {
@@ -11340,7 +11340,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approveSheetLast =>
-      'This is the last step: approving puts the paper in the books. Your name and the time stay on the paper.';
+      'This is the last step: on approval the paper goes into the books. Your name and the time stay on the paper.';
 
   @override
   String get approveSheetBack => 'No, go back';

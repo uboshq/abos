@@ -76,7 +76,7 @@ class _ApprovalApproveSheetState extends State<ApprovalApproveSheet> {
   String _limit() {
     final lakh = widget.confirmAbove / 100000;
     if (widget.confirmAbove >= 100000) {
-      return context.l10n.approvalsLakh(lakh == lakh.roundToDouble() ? lakh.toStringAsFixed(0) : lakh.toStringAsFixed(2));
+      return '৳${context.l10n.approvalsLakh(lakh == lakh.roundToDouble() ? lakh.toStringAsFixed(0) : lakh.toStringAsFixed(2))}'; // l10n-ok: the taka sign is the currency itself
     }
     return Money.taka(widget.confirmAbove);
   }
@@ -179,7 +179,7 @@ class _ApprovalApproveSheetState extends State<ApprovalApproveSheet> {
                 child: FilledButton(
                   key: const ValueKey('approve-sheet-yes'),
                   onPressed: _checking ? null : _yes,
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white), // dark-ok: white on the fixed green approve button
                   child: Text(words.approveSheetYes, textAlign: TextAlign.center),
                 ),
               ),

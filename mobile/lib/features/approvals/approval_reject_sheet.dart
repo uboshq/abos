@@ -113,7 +113,7 @@ class _ApprovalRejectSheetState extends State<ApprovalRejectSheet> {
                 child: FilledButton(
                   key: const ValueKey('reject-sheet-yes'),
                   onPressed: ready ? () => Navigator.of(context).pop((_code!, _note.text.trim())) : null,
-                  style: FilledButton.styleFrom(backgroundColor: palette.danger, foregroundColor: Colors.white),
+                  style: FilledButton.styleFrom(backgroundColor: palette.danger, foregroundColor: Colors.white), // dark-ok: white on the danger-filled button
                   child: Text(words.rejectSheetYes, textAlign: TextAlign.center),
                 ),
               ),

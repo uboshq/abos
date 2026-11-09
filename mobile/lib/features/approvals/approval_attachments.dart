@@ -125,7 +125,7 @@ class _ThumbState extends State<_Thumb> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(color: colour, borderRadius: BorderRadius.circular(5)),
-              child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+              child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)), // dark-ok: white on the coloured type badge
             ),
           ),
         ]),
@@ -170,20 +170,30 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
       child: Scaffold(
         key: const ValueKey('attachment-viewer'),
         backgroundColor: const Color(0xFF0B0F14),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0B0F14),
-          leading: IconButton(key: const ValueKey('attachment-viewer-close'), icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-          title: Text(name, key: const ValueKey('attachment-viewer-name'), maxLines: 1, overflow: TextOverflow.ellipsis),
-          actions: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.md),
-                child: Text('${_at + 1} / ${widget.files.length}', key: const ValueKey('attachment-viewer-count')),
-              ),
-            ),
-          ],
-        ),
+        // ⓘ নমুনার নিজের অন্ধকার মাথা ("✕ নাম  ১ / ৩") — অ্যাপের নীল বার নয়: পুরো পর্দার দেখার জায়গা, ছবির মতোই
         body: Column(children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs),
+              child: Row(children: [
+                IconButton(
+                  key: const ValueKey('attachment-viewer-close'),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                Expanded(
+                  child: Text(name, key: const ValueKey('attachment-viewer-name'), maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.md),
+                  child: Text('${_at + 1} / ${widget.files.length}', key: const ValueKey('attachment-viewer-count')),
+                ),
+              ]),
+            ),
+          ),
           Expanded(
             child: PageView.builder(
               controller: _pages,

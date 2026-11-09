@@ -11074,7 +11074,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String approvalsLakh(String n) {
-    return '৳$n লাখ';
+    return '$n লাখ';
   }
 
   @override
