@@ -66,7 +66,10 @@ final class DashboardDefinition
          * ⭐ মডিউলের নিজের অংশ — পাতার সবার নিচে, তালিকারও পরে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের ড্যাশবোর্ডে চলতি মূলধন "সবার নিচে",
          * মালিকের ছবির হুবহু, তারিখ বাছার ঘরসহ)। ⓘ সংখ্যা-চার্ট-তালিকার সাধারণ ছাঁচে যা ধরে না, তা মডিউল নিজের Blade-এ আঁকে।
          *
-         * @var list<array{view: string, data: array<string, mixed>, permission?: string}>
+         * ⓘ `place` = `top` হলে সংখ্যার আগে মাথায়, নাহলে সবার নিচে; `data` একটা Closure-ও হতে পারে — তখন অঙ্ক কেবল পাতা আঁকার
+         * সময় গোনা হয় (হোম অন্য মডিউলের সংজ্ঞা তোলে, অংশগুলো আঁকে না)।
+         *
+         * @var list<array{view: string, data: array<string, mixed>|\Closure(): array<string, mixed>, permission?: string, place?: 'top'|'bottom'}>
          */
         public readonly array $sections = [],
     ) {

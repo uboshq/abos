@@ -51,63 +51,8 @@ final class CashForecast
             'receivables' => '0', 'loans_in' => '0', 'payables' => '0', 'loans_out' => '0',
         ]);
 
-        /*
-         * ⛔ নব্বই দিনের বাইরের কাগজ আনা হয় না — ২১ সেপ্টেম্বর ২০২৬।
-         *
-         * ── ⚠️ এটা গতির কথা, আর গতির ভুল হঠাৎ থামে ────────────────
-         * আগে কোম্পানির **প্রতিটা** পোস্ট করা চালান আর বিল একসাথে
-         * মেমরিতে উঠত। ⓘ বছরে ৩০,০০০ চালানের ডিপোতে দ্বিতীয় বছরে
-         * ৬০,০০০ সারি — আর তার পর একদিন পাতাটা সময় শেষ হয়ে থামত।
-         *
-         * ⭐ আর সারিগুলো কাজেও লাগত না: [[bucketOf()]] নব্বই দিনের
-         * পরের সবকিছু `null` ফেরত দেয়, আর [[add()]] সেগুলো ফেলে দেয়।
-         * ⓘ তাই এই ছাঁকনিতে পর্দার একটা সংখ্যাও বদলায় না।
-         *
-         * ⚠️ তারিখহীন কাগজগুলো তবু আসে — ওরা "এখন" ঘরে পড়ে,
-         * আর বাদ দিলে বকেয়া পাওনা পর্দা থেকে মুছে যেত।
-         */
-        $horizon = $today->copy()->addDays(max(self::BUCKETS))->toDateString();
-
-        $withinHorizon = fn ($q) => $q->where(
-            fn ($w) => $w->whereNull('due_on')->orWhere('due_on', '<=', $horizon),
-        );
-
-        /*
-         * ⛔ কেবল যে কাগজে এখনো টাকা বাকি — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২, ২ অক্টোবর ২০২৬
-         * ([[TheForecastLoadedEveryPaidBillTest]])। ⓘ মেয়াদোত্তীর্ণ সব কাগজ "এখন" ঘরে আসে, তাই আগে
-         * কোম্পানির **প্রতিটা** শোধ হয়ে যাওয়া পুরনো বিলও মেমরিতে উঠত — যোগফলে শূন্য দিত, কিন্তু বছর
-         * গড়ালে পাতাটাই থামত। এখন বাকির হিসাব ([[SalesInvoice::dueAmount()]]-এর একই তিন ভাগ) SQL-এ।
-         */
-        $invoices = SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon);
-
-        foreach (SalesInvoice::query()->fromSub($invoices, 'sal_invoices')
-            ->whereRaw(SalesInvoice::dueSql('sal_invoices').' > 0')
-            ->get() as $invoice) {
-            $this->add($sums, $this->bucketOf($invoice->due_on, $today), 'receivables', $invoice->dueAmount());
-        }
-
-        $bills = PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon);
-
-        foreach (PurchaseBill::query()->fromSub($bills, 'pur_bills')
-            ->whereRaw('pur_bills.total - pur_bills.ait_amount - pur_bills.vds_amount - pur_bills.paid_total - pur_bills.voucher_paid_total - COALESCE(pur_bills.returned_total, 0) > 0')
-            ->get() as $bill) {
-            $this->add($sums, $this->bucketOf($bill->due_on, $today), 'payables', $bill->dueAmount());
-        }
-
-        $instalments = LoanInstalment::query()
-            ->with('loan')
-            ->where('status', LoanInstalment::DUE)
-            ->whereHas('loan', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED))
-
-            /* ⓘ কিস্তিও একই জানালায় — পরেরগুলো পর্দায় আসে না */
-            ->where('due_date', '<=', $horizon)
-            ->get();
-
-        foreach ($instalments as $row) {
-            $left = bcsub(bcadd((string) $row->principal, (string) $row->interest, 4), (string) ($row->paid_amount ?? 0), 4);
-            $side = $row->loan->direction === Loan::GIVEN ? 'loans_in' : 'loans_out';
-
-            $this->add($sums, $this->bucketOf($row->due_date, $today), $side, $left);
+        foreach ($this->dues($today, max(self::BUCKETS)) as $item) {
+            $this->add($sums, $this->bucketOf($item['due'], $today), $item['side'], $item['amount']);
         }
 
         $rows = [];
@@ -128,6 +73,134 @@ final class CashForecast
         }
 
         return ['opening' => $opening, 'rows' => $rows];
+    }
+
+    /**
+     * ⭐ সামনের দিনগুলো দিন-ধরে — অর্থের ড্যাশবোর্ডের তহবিলের ঘর (মালিক, ৯ নভেম্বর ২০২৬, অনুমোদিত নমুনা): "৩০ দিনে আসবে − যাবে"
+     * আর "সবচেয়ে টান পড়ার দিন"। ⓘ ঝুড়ির [[build()]]-এর একই কাগজ ([[dues()]]), একই নিয়ম: মেয়াদোত্তীর্ণ বা তারিখহীন আজকের দিনে।
+     *
+     * @return array{opening: string, in: string, out: string, lowest: array{date: string, closing: string, who: string}}
+     */
+    public function daily(int $days = 30, ?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $money = $this->facts->moneyPositions();
+        $opening = bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+
+        $byDay = [];
+        $biggestOut = [];
+        $in = '0';
+        $out = '0';
+
+        foreach ($this->dues($today, $days) as $item) {
+            if (bccomp($item['amount'], '0', 4) <= 0) {
+                continue;
+            }
+
+            $at = $item['due'] === null || $item['due'] < $today->toDateString() ? $today->toDateString() : $item['due'];
+            $coming = in_array($item['side'], ['receivables', 'loans_in'], true);
+            $byDay[$at] = bcadd($byDay[$at] ?? '0', $coming ? $item['amount'] : bcmul($item['amount'], '-1', 4), 4);
+
+            if ($coming) {
+                $in = bcadd($in, $item['amount'], 4);
+            } else {
+                $out = bcadd($out, $item['amount'], 4);
+
+                if (! isset($biggestOut[$at]) || bccomp($item['amount'], $biggestOut[$at]['amount'], 4) > 0) {
+                    $biggestOut[$at] = $item;
+                }
+            }
+        }
+
+        ksort($byDay);
+        $running = $opening;
+        $lowest = ['date' => $today->toDateString(), 'closing' => $opening, 'who' => ''];
+
+        foreach ($byDay as $date => $net) {
+            $running = bcadd($running, $net, 4);
+
+            if (bccomp($running, $lowest['closing'], 4) < 0) {
+                $lowest = ['date' => $date, 'closing' => $running, 'who' => $biggestOut[$date]['who'] ?? ''];
+            }
+        }
+
+        return ['opening' => $opening, 'in' => $in, 'out' => $out, 'lowest' => $lowest];
+    }
+
+    /**
+     * আজ থেকে `$days` দিনের মধ্যে যে কাগজে টাকা আসবে বা যাবে — গ্রাহকের বাকি চালান, সরবরাহকারীর বাকি বিল, ঋণের কিস্তি।
+     *
+     * @return list<array{due: ?string, side: string, amount: string, who: string}>
+     */
+    private function dues(Carbon $today, int $days): array
+    {
+        /*
+         * ⛔ নব্বই দিনের বাইরের কাগজ আনা হয় না — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ এটা গতির কথা, আর গতির ভুল হঠাৎ থামে ────────────────
+         * আগে কোম্পানির **প্রতিটা** পোস্ট করা চালান আর বিল একসাথে
+         * মেমরিতে উঠত। ⓘ বছরে ৩০,০০০ চালানের ডিপোতে দ্বিতীয় বছরে
+         * ৬০,০০০ সারি — আর তার পর একদিন পাতাটা সময় শেষ হয়ে থামত।
+         *
+         * ⭐ আর সারিগুলো কাজেও লাগত না: [[bucketOf()]] নব্বই দিনের
+         * পরের সবকিছু `null` ফেরত দেয়, আর [[add()]] সেগুলো ফেলে দেয়।
+         * ⓘ তাই এই ছাঁকনিতে পর্দার একটা সংখ্যাও বদলায় না।
+         *
+         * ⚠️ তারিখহীন কাগজগুলো তবু আসে — ওরা "এখন" ঘরে পড়ে,
+         * আর বাদ দিলে বকেয়া পাওনা পর্দা থেকে মুছে যেত।
+         */
+        $horizon = $today->copy()->addDays($days)->toDateString();
+        $items = [];
+
+        $withinHorizon = fn ($q) => $q->where(
+            fn ($w) => $w->whereNull('due_on')->orWhere('due_on', '<=', $horizon),
+        );
+
+        /*
+         * ⛔ কেবল যে কাগজে এখনো টাকা বাকি — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২, ২ অক্টোবর ২০২৬
+         * ([[TheForecastLoadedEveryPaidBillTest]])। ⓘ মেয়াদোত্তীর্ণ সব কাগজ "এখন" ঘরে আসে, তাই আগে
+         * কোম্পানির **প্রতিটা** শোধ হয়ে যাওয়া পুরনো বিলও মেমরিতে উঠত — যোগফলে শূন্য দিত, কিন্তু বছর
+         * গড়ালে পাতাটাই থামত। এখন বাকির হিসাব ([[SalesInvoice::dueAmount()]]-এর একই তিন ভাগ) SQL-এ।
+         */
+        $invoices = SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon);
+
+        foreach (SalesInvoice::query()->fromSub($invoices, 'sal_invoices')
+            ->whereRaw(SalesInvoice::dueSql('sal_invoices').' > 0')
+            ->get() as $invoice) {
+            $items[] = ['due' => $this->day($invoice->due_on), 'side' => 'receivables', 'amount' => $invoice->dueAmount(), 'who' => ''];
+        }
+
+        $bills = PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon);
+
+        foreach (PurchaseBill::query()->fromSub($bills, 'pur_bills')->with('supplier')
+            ->whereRaw('pur_bills.total - pur_bills.ait_amount - pur_bills.vds_amount - pur_bills.paid_total - pur_bills.voucher_paid_total - COALESCE(pur_bills.returned_total, 0) > 0')
+            ->get() as $bill) {
+            $items[] = ['due' => $this->day($bill->due_on), 'side' => 'payables', 'amount' => $bill->dueAmount(), 'who' => (string) $bill->supplier?->name()];
+        }
+
+        $instalments = LoanInstalment::query()
+            ->with('loan')
+            ->where('status', LoanInstalment::DUE)
+            ->whereHas('loan', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED))
+
+            /* ⓘ কিস্তিও একই জানালায় — পরেরগুলো পর্দায় আসে না */
+            ->where('due_date', '<=', $horizon)
+            ->get();
+
+        foreach ($instalments as $row) {
+            $left = bcsub(bcadd((string) $row->principal, (string) $row->interest, 4), (string) ($row->paid_amount ?? 0), 4);
+            $side = $row->loan->direction === Loan::GIVEN ? 'loans_in' : 'loans_out';
+
+            $items[] = ['due' => $this->day($row->due_date), 'side' => $side, 'amount' => $left, 'who' => (string) $row->loan->lender];
+        }
+
+        return $items;
+
+    }
+
+    private function day($due): ?string
+    {
+        return $due === null ? null : Carbon::parse($due)->toDateString();
     }
 
     /**

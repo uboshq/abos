@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+// ⭐ The fund box at the top of the finance dashboard — the owner's approved sample (9 Nov 2026). [[FundPosition]]
+return [
+    'title' => 'Total fund · cash + bank + mobile banking',
+    'up' => '▲ :pct% · +:amount vs last month',
+    'down' => '▼ :pct% · −:amount vs last month',
+    'no_compare' => 'No fund at last month end — nothing to compare',
+    'runway' => 'Spending covered',
+    'runway_days' => ':n days',
+    'runway_hint' => 'Average spend per day :amount',
+    'runway_none' => 'No money went out in the last 90 days',
+    'flow30' => 'In − out in 30 days',
+    'flow30_hint' => 'In :in · out :out lakh',
+    'cash' => 'Cash in hand',
+    'bank' => 'In banks',
+    'mfs' => 'Mobile banking',
+    'accounts' => ':n accounts',
+    'free' => 'Free money',
+    'free_hint' => 'After :amount lakh of waiting payments and cheques',
+    'lowest' => 'Tightest day',
+    'lowest_hint' => 'Big payment that day: :who',
+    'lowest_none' => 'The fund does not fall in the next 30 days',
+    'cover' => '7-day dues covered',
+    'cover_times' => ':n times',
+    'cover_hint' => 'Yellow below 2 · red below 1',
+    'cover_none' => 'Nothing due in 7 days',
+    'od' => 'Unused credit line',
+    'od_left' => ':amount lakh more',
+    'od_hint' => 'OD limit :limit lakh · used :used lakh',
+    'od_none' => 'No running OD/CC limit',
+    'lakh' => 'lakh',
+    'share_bar' => 'Fund split: cash :cash%, bank :bank%, mobile banking :mfs%',
+    'months' => ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+];

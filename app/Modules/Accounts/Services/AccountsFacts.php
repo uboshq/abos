@@ -493,9 +493,11 @@ final class AccountsFacts
      *
      * ⓘ বংশধর ধরে, এক ধাপ নয় — [[assetValue]]-এ একই কারণ লেখা।
      *
+     * ⓘ `$upto` — সেই দিন পর্যন্ত (অর্থের তহবিলের ঘর, "গত মাসের চেয়ে", ১০ নভেম্বর ২০২৬); না দিলে আজ পর্যন্ত সব।
+     *
      * @return array{cash: string, bank: string, mfs: string}
      */
-    public function moneyPositions(): array
+    public function moneyPositions(?string $upto = null): array
     {
         $parents = [
             'cash' => StandardChart::CASH_IN_HAND,
@@ -526,6 +528,7 @@ final class AccountsFacts
         // একটাই কোয়েরি, খাত ধরে — তারপর তিনটা ঝুড়িতে ভাগ
         // ⭐ দেখার শাখার সারি — খাতগুলো কোম্পানির, টাকাটা শাখার (২৯ সেপ্টেম্বর ২০২৬)
         $rows = $this->inView(LedgerEntry::query()->whereIn('account_id', $ids), 'ledger_entries.branch_id')
+            ->when($upto, fn ($q, string $date) => $q->where('ledger_entries.trx_date', '<=', $date))
             ->groupBy('account_id')
             ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->get();
@@ -787,6 +790,17 @@ final class AccountsFacts
         $ids = app(VoucherApproval::class)->waitingIds()['awaiting'];
 
         return $ids === [] ? 0 : Voucher::query()->whereIn('id', $ids)->count();
+    }
+
+    /**
+     * ⭐ সইয়ের অপেক্ষায় থাকা পরিশোধের মোট টাকা — খাতায় এখনো ওঠেনি, কিন্তু যাবে (অর্থের তহবিলের ঘর "মুক্ত টাকা", ১০ নভেম্বর ২০২৬)।
+     * ⓘ [[vouchersAwaitingSignature()]]-এর একই টাটকা অনুরোধ, কেবল পরিশোধের ভাউচার।
+     */
+    public function paymentsAwaitingSignature(): string
+    {
+        $ids = app(VoucherApproval::class)->waitingIds()['awaiting'];
+
+        return $ids === [] ? '0.0000' : bcadd((string) (Voucher::query()->whereIn('id', $ids)->where('type', Voucher::PAYMENT)->sum('amount') ?? '0'), '0', 4);
     }
 
     /**

@@ -34,6 +34,7 @@ use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
+use App\Modules\Finance\Services\FundPosition;
 use App\Modules\Finance\Services\WorkingCapital;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -380,10 +381,19 @@ final class FinanceDashboard implements ProvidesDashboard
             ],
 
             // ⭐ চলতি মূলধন — সবার নিচে, মালিকের ছবির হুবহু (মালিক, ৯ নভেম্বর ২০২৬; [[WorkingCapital]])
-            sections: [[
-                'view' => 'finance::dashboard.working-capital',
-                'data' => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
-            ]],
+            sections: [
+                // ⭐ মোট তহবিলের ঘর — মাথায় (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FundPosition]]); নগদ/ব্যাংক/MFS-এর একই চাবি
+                [
+                    'view' => 'finance::dashboard.fund',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn () => ['fund' => app(FundPosition::class)->on()],
+                ],
+                [
+                    'view' => 'finance::dashboard.working-capital',
+                    'data' => fn () => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
+                ],
+            ],
         );
     }
 

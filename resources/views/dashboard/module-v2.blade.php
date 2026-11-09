@@ -74,6 +74,16 @@
             </form>
         @endif
 
+        {{-- ⭐ মডিউলের নিজের অংশ, মাথায় (`place` = top) — অর্থের তহবিলের ঘর (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬); পাশাপাশি সারিতে --}}
+        @php $topSections = array_values(array_filter($dashboard->sections, fn (array $s) => ($s['place'] ?? 'bottom') === 'top')); @endphp
+        @if ($topSections !== [])
+            <div data-top-sections style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch; margin-bottom: 16px">
+                @foreach ($topSections as $section)
+                    @include($section['view'], value($section['data']))
+                @endforeach
+            </div>
+        @endif
+
         @if ($dashboard->tiles !== [])
             <div class="flex flex-wrap gap-2">
                 @foreach ($dashboard->tiles as $tile)
@@ -313,8 +323,8 @@
 
         {{-- ⭐ মডিউলের নিজের অংশ — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন); চাবি না থাকলে অংশটাই নেই --}}
         @foreach ($dashboard->sections as $section)
-            @if (! isset($section['permission']) || auth()->user()?->can($section['permission']))
-                @include($section['view'], $section['data'])
+            @if (($section['place'] ?? 'bottom') !== 'top' && (! isset($section['permission']) || auth()->user()?->can($section['permission'])))
+                @include($section['view'], value($section['data']))
             @endif
         @endforeach
 
