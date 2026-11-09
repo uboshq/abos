@@ -14,6 +14,7 @@ import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../printing/row_actions.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -65,9 +66,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.quotationsListLoadFailed,
-            whenAbsent: context.l10n.quotationsListNotOnServer));
+        setState(() => _error = errorMessageFor(e, fallback: context.l10n.quotationsListLoadFailed, whenAbsent: context.l10n.quotationsListNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -116,13 +115,15 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
             const SizedBox(height: AppSpacing.sm),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; বাতিল, ফেরত আর পুরনো সংস্করণ বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
             if (_total != null && _rows.isNotEmpty)
-              TotalStrip(label: context.l10n.quotationsListTotal, value: Money.taka(_total!.sum), count: _total!.count,
+              TotalStrip(
+                  label: context.l10n.quotationsListTotal,
+                  value: Money.taka(_total!.sum),
+                  count: _total!.count,
                   // ⓘ দরপত্রের তালিকায় তারিখের ছাঁকনি নেই — সব তারিখ
                   period: const TotalsPeriod.allDates()),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.quotationsListErrorTitle, message: _error),
-            if (_loaded && _rows.isEmpty && _error == null)
-              EmptyState(icon: Icons.request_quote_outlined, title: context.l10n.quotationsListEmpty),
+            if (_loaded && _rows.isEmpty && _error == null) EmptyState(icon: Icons.request_quote_outlined, title: context.l10n.quotationsListEmpty),
             for (final q in _rows)
               Card(
                 child: ListTile(
@@ -135,9 +136,14 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                       if (q.customer != null) Text(q.customer!),
                       Text(q.statusLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
                       Text(Money.taka(q.total)),
+                      // ⭐ ওয়েবের মতো "অ্যাকশন ▾" (মালিক, ৯ নভেম্বর ২০২৬: "Abos er sokol list") — দেখা; ⓘ সার্ভারে উদ্ধৃতির ছাপা কাগজ নেই,
+                      //   তাই ছাপা ও পাঠানো ভাগটাই নেই
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: RowActionsButton(number: q.no, state: q.statusLabel.isEmpty ? null : q.statusLabel, onView: () => _open(q)),
+                      ),
                     ],
                   ),
-                  trailing: const Icon(Icons.chevron_right),
                 ),
               ),
             if (_next != null)
@@ -170,6 +176,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
   CustomerRecord? _customer;
   final List<(ProductRecord, int, double?)> _lines = [];
   final _note = TextEditingController();
+
   /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
   final _once = OnceKey();
   bool _busy = false;
@@ -216,11 +223,11 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
     });
     try {
       final made = await _once.send(() => widget.api.create(
-        customerId: customer.id,
-        lines: [for (final l in _lines) QuotedLine(l.$1.id, l.$2, l.$3)],
-        submit: submit,
-        note: _note.text,
-      ));
+            customerId: customer.id,
+            lines: [for (final l in _lines) QuotedLine(l.$1.id, l.$2, l.$3)],
+            submit: submit,
+            note: _note.text,
+          ));
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.quotationsNewSaveFailed));
@@ -231,7 +238,8 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
 
   // ⭐ দোকান বা পণ্য বা মন্তব্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা উদ্ধৃতি এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
+  Widget build(BuildContext context) =>
+      UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
 
   Widget _screen(BuildContext context) {
     return Scaffold(
@@ -276,10 +284,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
             label: Text(context.l10n.quotationsNewAddLine),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextField(
-              controller: _note,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: context.l10n.quotationsNewNote)),
+          TextField(controller: _note, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.l10n.quotationsNewNote)),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
@@ -353,8 +358,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     }
   }
 
-  void _act(String action, String doneText, {String? note}) =>
-      _run(() => widget.api.act(widget.id, action, note: note), doneText);
+  void _act(String action, String doneText, {String? note}) => _run(() => widget.api.act(widget.id, action, note: note), doneText);
 
   @override
   Widget build(BuildContext context) {
@@ -493,7 +497,6 @@ class _LineDialogState extends State<_LineDialog> {
           FilledButton(
             onPressed: () => Navigator.pop(context, (int.tryParse(_qty.text.trim()) ?? 0, double.tryParse(_rate.text.trim()))),
             child: Text(context.l10n.quotationsLineOk),
-
           ),
         ],
       );

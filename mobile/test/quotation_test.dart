@@ -46,6 +46,17 @@ class _FakeApi implements QuotationApi {
 }
 
 void main() {
+  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list"): দেখা; সার্ভারে উদ্ধৃতির ছাপা কাগজ নেই, তাই ছাপা নয়
+  testWidgets('every quotation row carries "Actions ▾" with view and no print', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: QuotationListScreen(api: _FakeApi())));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('row-actions-QTN-0001')), findsOneWidget, reason: '⛔ উদ্ধৃতির সারিতে "অ্যাকশন ▾" নেই');
+    await tester.tap(find.byKey(const ValueKey('row-actions-QTN-0001')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('row-action-view')), findsOneWidget, reason: '⛔ শিটে "দেখুন" নেই');
+    expect(find.byKey(const ValueKey('row-action-print')), findsNothing, reason: '⛔ উদ্ধৃতির ছাপা নেই, তবু ছাপার পথ');
+  });
+
   testWidgets("the list carries the server's total and count of the whole filter", (tester) async {
     await tester.pumpWidget(MaterialApp(home: QuotationListScreen(api: _FakeApi())));
     await tester.pumpAndSettle();
