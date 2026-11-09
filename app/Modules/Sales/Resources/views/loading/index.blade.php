@@ -44,7 +44,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.toolbar :title="__('sales::loading.title')" :count="__('sales::loading.subtitle')" :columns="$columns" />
 
-        <x-ui.table :empty="__('sales::loading.empty')" :rows="$trips" :columns="$columns" />
+        <x-ui.table :view-url="fn ($r) => route('sales.loading_sheet.show', $r)" :empty="__('sales::loading.empty')" :rows="$trips" :columns="$columns" />
 
         <x-ui.pager :rows="$trips" />
         <x-ui.list-totals :rows="$trips" />

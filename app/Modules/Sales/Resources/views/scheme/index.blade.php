@@ -100,7 +100,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$schemes" :columns="$columns"
+        <x-ui.table :view-url="fn ($r) => route('sales.scheme.show', $r)" :rows="$schemes" :columns="$columns"
                     :empty="$q ? __('core.empty.no_results') : __('sales::message.no_scheme')" />
     </div>
 

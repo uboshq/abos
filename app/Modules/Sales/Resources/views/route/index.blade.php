@@ -61,7 +61,7 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <x-ui.table :rows="$routes" :columns="$columns" :empty="__('sales::route.no_routes')" />
+        <x-ui.table :view-url="fn ($r) => route('sales.route.show', $r)" :rows="$routes" :columns="$columns" :empty="__('sales::route.no_routes')" />
     </div>
 
     <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('sales::route.ledger_note') }}</p>

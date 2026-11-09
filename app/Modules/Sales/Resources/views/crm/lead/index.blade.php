@@ -68,7 +68,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$leads" :columns="$columns"
+        <x-ui.table :view-url="fn ($r) => route('sales.lead.show', $r->id)" :rows="$leads" :columns="$columns"
                     :empty="$q ? __('core.empty.no_results') : __('sales::crm.no_leads')" />
 
         <x-ui.pager :rows="$leads" />

@@ -100,7 +100,7 @@
             </x-slot:filters>
         </x-ui.toolbar>
 
-        <x-ui.table
+        <x-ui.table :view-url="fn ($r) => route('promotion.show', $r)"
             :empty="__('promotion::message.none_yet')"
             :rows="$rows"
             :columns="$columns" />

@@ -68,7 +68,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table
+        <x-ui.table :view-url="fn ($r) => route('purchase.requisition.show', $r)"
             :empty="__('purchase::message.no_requisitions')"
             :rows="$requisitions"
             :compact="request()->boolean('compact')"

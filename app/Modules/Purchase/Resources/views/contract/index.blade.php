@@ -72,7 +72,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table
+        <x-ui.table :view-url="fn ($r) => route('purchase.contract.show', $r)"
             :empty="__('purchase::message.no_contracts')"
             :rows="$contracts"
             :compact="request()->boolean('compact')"
