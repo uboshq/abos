@@ -11413,4 +11413,19 @@ class AppL10nEn extends AppL10n {
   @override
   String get attachmentViewerOther =>
       'This kind of file cannot be shown in the app — open it on the web.';
+
+  @override
+  String get approvalsNext => 'Next';
+
+  @override
+  String get approvalsWhoTitle => 'Whose, who asked';
+
+  @override
+  String get approvalsWhoParty => 'Party';
+
+  @override
+  String get approvalsWhoAsked => 'Asked by';
+
+  @override
+  String get approvalsWhoFor => 'On behalf of';
 }

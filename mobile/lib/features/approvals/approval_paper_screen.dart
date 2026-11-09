@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../printing/document_actions_sheet.dart';
 import 'approval_approve_sheet.dart';
 import 'approval_attachments.dart';
+import 'approval_inbox_screen.dart' show inboxModuleColor;
 import 'approval_reject_sheet.dart';
 import 'final_reject_confirm.dart';
 import '../../core/api_client/network_errors.dart';
@@ -264,16 +265,14 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
               if (_busy || snap.connectionState != ConnectionState.done) const LinearProgressIndicator(),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  key: const ValueKey('approval-paper-position'),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.chevron_left, size: 18),
-                  label: Text(words.approvalsBackToInbox(_at + 1, _rows.length)),
-                ),
+              // ⭐ নমুনা v4, ছবি ২ — বিভাগের রঙে মাথা; তারপর "কেন", "কার, কে চেয়েছেন", লাইন, যাত্রাপথ, সংযুক্তি
+              _PaperHead(
+                paper: paper,
+                sheet: sheet,
+                position: words.approvalsBackToInbox(_at + 1, _rows.length),
+                onBack: () => Navigator.of(context).maybePop(),
+                onNext: _at < _rows.length - 1 && !_busy ? () => _go(_at + 1) : null,
               ),
-              _Summary(paper: paper, sheet: sheet),
               if (snap.hasError)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -282,6 +281,7 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
                 ),
               if (sheet != null) ...[
                 if (sheet.whyRule != null || sheet.whyReason != null) _Why(sheet: sheet),
+                _Summary(paper: paper, sheet: sheet),
                 _Lines(sheet: sheet, paper: paper),
                 if (sheet.journey.isNotEmpty) _Journey(sheet: sheet, paper: paper),
                 if (sheet.attachments.isNotEmpty)
@@ -309,6 +309,7 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
           child: Row(
             children: [
               Expanded(
+                flex: 10,
                 child: OutlinedButton(
                   key: ValueKey('approval-reject-${paper.id}'),
                   onPressed: _busy ? null : _confirmReject,
@@ -324,20 +325,31 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
               if (paper.canSendBack) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
+                  flex: 10,
                   child: OutlinedButton(
                     key: ValueKey('approval-send-back-${paper.id}'),
                     onPressed: _busy ? null : _confirmSendBack,
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.warning,
+                      side: BorderSide(color: palette.warning),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    ),
                     child: Text(words.approvalsInboxSendBackButton, textAlign: TextAlign.center, maxLines: 2),
                   ),
                 ),
               ],
               const SizedBox(width: AppSpacing.sm),
               Expanded(
+                flex: 14,
                 child: FilledButton(
                   key: ValueKey('approval-approve-${paper.id}'),
                   onPressed: _busy ? null : _confirmApprove,
-                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs)),
+                  // ⭐ নমুনা v4: সবুজ, অন্য দুইটার চেয়ে চওড়া
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF15803D),
+                    foregroundColor: const Color(0xFFFFFFFF), // dark-ok: white on the fixed green approve button
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  ),
                   child: Text(words.approvalsInboxSignButton, textAlign: TextAlign.center, maxLines: 2),
                 ),
               ),
@@ -377,7 +389,90 @@ class _Box extends StatelessWidget {
       );
 }
 
-/// সারাংশ — পক্ষ আর অঙ্ক; কে কখন চেয়েছেন আর শেষ সময়; অঙ্ক কথায় আর ধাপ
+/// ⭐ কাগজের মাথা — মালিকের নমুনা v4, ছবি ২ ("ok", ৮ নভেম্বর ২০২৬): বিভাগের রঙে ভরা পট্টি; "‹ ইনবক্স · ১/৭" আর "পরের ›", কাজ · নম্বর,
+/// বড় করে অঙ্ক, কথায় অঙ্ক, আর ফিতায় শেষ সময় (দেরি হলে লাল) আর ধাপ · নাম
+class _PaperHead extends StatelessWidget {
+  const _PaperHead({required this.paper, required this.sheet, required this.position, required this.onBack, required this.onNext});
+
+  final ApprovalRecord paper;
+  final ApprovalSheet? sheet;
+  final String position;
+  final VoidCallback onBack;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = context.l10n;
+    final colour = inboxModuleColor(paper.moduleKey);
+    final deep = Color.lerp(colour, const Color(0xFF000000), 0.28)!;
+    final deadline = sheet?.deadlineText ?? paper.deadlineText;
+    final tone = sheet?.deadlineTone ?? paper.deadlineTone;
+    final at = sheet?.stepAt ?? paper.stepAt;
+    final of = sheet?.stepOf ?? paper.stepOf;
+    final title = [paper.documentTypeLabel, if (paper.documentNo != null) paper.documentNo!].join(' · ');
+    const ink = Color(0xFFFFFFFF); // dark-ok: white on the module's own colour, in both modes
+
+    Widget pill(Key? key, String text, {bool late = false}) => Container(
+          key: key,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            color: late ? const Color(0xFFC62828) : ink.withValues(alpha: 0.18),
+            border: Border.all(color: late ? const Color(0xFFEF5350) : ink.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(text, style: const TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w600)),
+        );
+
+    return Container(
+      key: const ValueKey('approval-paper-head'),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [colour, deep]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            TextButton.icon(
+              key: const ValueKey('approval-paper-position'),
+              style: TextButton.styleFrom(foregroundColor: ink, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+              onPressed: onBack,
+              icon: const Icon(Icons.chevron_left, size: 18),
+              label: Text(position),
+            ),
+            const Spacer(),
+            if (onNext != null)
+              TextButton(
+                key: const ValueKey('approval-paper-head-next'),
+                style: TextButton.styleFrom(foregroundColor: ink, visualDensity: VisualDensity.compact),
+                onPressed: onNext,
+                child: Text('${words.approvalsNext} ›'),
+              ),
+          ]),
+          Text(title, key: const ValueKey('approval-paper-title'), style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.w700)),
+          if (paper.amountText != null)
+            Text(paper.amountText!, key: const ValueKey('approval-paper-amount'),
+                style: const TextStyle(color: ink, fontSize: 30, fontWeight: FontWeight.w700, height: 1.15)),
+          if (sheet?.amountWords != null)
+            Text(sheet!.amountWords!, key: const ValueKey('approval-paper-words'), style: TextStyle(color: ink.withValues(alpha: 0.9), fontSize: 12.5)),
+          if (deadline != null || (at != null && of != null)) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              if (deadline != null) pill(const ValueKey('approval-paper-deadline'), '⏱ $deadline', late: tone == 'danger'),
+              if (at != null && of != null)
+                pill(const ValueKey('approval-paper-step'),
+                    paper.stepName == null ? words.approvalsStepOf(at, of) : '${words.approvalsStepOf(at, of)} · ${paper.stepName}'),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// "কার, কে চেয়েছেন" — নমুনার ঘর-মান: পক্ষ, যিনি চেয়েছেন আর কখন; কারো হয়ে হলে সেটাও
 class _Summary extends StatelessWidget {
   const _Summary({required this.paper, required this.sheet});
 
@@ -388,57 +483,30 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final words = context.l10n;
     final palette = context.palette;
-    final small = Theme.of(context).textTheme.bodySmall;
-    final tone = switch (sheet?.deadlineTone ?? paper.deadlineTone) {
-      'danger' => palette.danger,
-      'warning' => palette.warning,
-      'success' => palette.success,
-      _ => palette.onSurfaceMuted,
-    };
-    final deadline = sheet?.deadlineText ?? paper.deadlineText;
     final asker = sheet?.requesterName ?? paper.requesterName;
     final when = sheet?.requestedAt ?? paper.requestedAt;
-    final at = sheet?.stepAt ?? paper.stepAt;
-    final of = sheet?.stepOf ?? paper.stepOf;
+    final party = paper.party ?? summaryOrNull(paper.summary);
+    TableRow row(String k, String v) => TableRow(children: [
+          Padding(padding: const EdgeInsets.only(bottom: 4, right: 12), child: Text(k, style: TextStyle(color: palette.onSurfaceMuted, fontSize: 13.5))),
+          Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(v, textAlign: TextAlign.end, style: const TextStyle(fontSize: 13.5))),
+        ]);
 
     return _Box(
       key: const ValueKey('approval-summary'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      title: words.approvalsWhoTitle,
+      child: Table(
+        columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
         children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: Text(paper.party ?? paper.summary ?? '', style: const TextStyle(fontWeight: FontWeight.w600))),
-            if (paper.amountText != null) Text(paper.amountText!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          ]),
-          const SizedBox(height: AppSpacing.xs),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Text(
-                asker == null ? '' : words.approvalsAskedBy(asker, when == null ? '' : stampText(when)),
-                style: small,
-              ),
-            ),
-            if (deadline != null)
-              Text(deadline, key: const ValueKey('approval-paper-deadline'), style: small?.copyWith(color: tone, fontWeight: FontWeight.w600)),
-          ]),
-          if (sheet?.amountWords != null || (at != null && of != null)) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: Text(sheet?.amountWords ?? '', key: const ValueKey('approval-paper-words'), style: small)),
-              if (at != null && of != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(color: palette.surfaceMuted, borderRadius: BorderRadius.circular(8)),
-                  child: Text(words.approvalsStepOf(at, of), style: small),
-                ),
-            ]),
-          ],
-          if (sheet?.standInFor != null) Text(words.approvalsOnBehalf(sheet!.standInFor!), style: small),
+          if (party != null) row(words.approvalsWhoParty, party),
+          if (asker != null) row(words.approvalsWhoAsked, when == null ? asker : '$asker · ${stampText(when)}'),
+          if (sheet?.standInFor != null) row(words.approvalsWhoFor, sheet!.standInFor!),
         ],
       ),
     );
   }
 }
+
+String? summaryOrNull(String? text) => text == null || text.trim().isEmpty ? null : text;
 
 /// ⭐ "কেন আপনার অনুমোদন লাগছে" — নমুনা v4: কোন নিয়মে কাগজটা আপনার কাছে এল আর ধাপ; যিনি চেয়েছেন তার লেখা কারণ উদ্ধৃতিতে।
 /// ⓘ বাঁয়ে বিভাগের রঙের দাগ (নমুনার `sec.why`)

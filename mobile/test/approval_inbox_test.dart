@@ -405,7 +405,9 @@ void main() {
 
       expect(find.text('ইনবক্স · 1/2'), findsOneWidget, reason: '⛔ দফা ২১: কাগজের পাতা বলে না তালিকার কোনটা');
       expect(find.text('এক লক্ষ পঁচিশ হাজার টাকা মাত্র'), findsOneWidget, reason: '⛔ দফা ২১: অঙ্ক কথায় নেই');
-      expect(find.textContaining('চেয়েছেন আল-আমিন'), findsOneWidget, reason: '⛔ দফা ২১: কে চেয়েছেন, নেই');
+      // ⓘ নমুনা v4: "কার, কে চেয়েছেন" ঘরে — বাঁয়ে "চেয়েছেন", ডানে নাম · সময়
+      expect(find.descendant(of: find.byKey(const ValueKey('approval-summary')), matching: find.textContaining('আল-আমিন · ')), findsOneWidget,
+          reason: '⛔ দফা ২১: কে চেয়েছেন, নেই');
       expect(find.text('PB-0057'), findsOneWidget, reason: '⛔ দফা ২১: কাগজের লাইন নেই');
       expect(find.text('80,000.00'), findsOneWidget, reason: '⛔ দফা ২১: অঙ্কের কলাম একটা, তবু নামসহ ("টাকা 80,000.00")');
       final total = find.byKey(const ValueKey('approval-lines-total'));
@@ -425,6 +427,14 @@ void main() {
           reason: '⛔ যিনি চেয়েছেন তার কারণ পাতায় নেই');
       final whyTop = tester.getTopLeft(find.byKey(const ValueKey('approval-why'))).dy;
       expect(whyTop, lessThan(tester.getTopLeft(find.byKey(const ValueKey('approval-lines'))).dy), reason: '⛔ "কেন" বাক্স কাগজের লাইনের আগে নয়');
+      // ⭐ নমুনা v4, ছবি ২: মাথা কাগজের বিভাগের রঙে (ক্রয় বিল → ক্রয়ের কমলা), অঙ্ক বড় করে, দেরি লাল ফিতায়
+      expect(find.byKey(const ValueKey('approval-paper-head')), findsOneWidget, reason: '⛔ নমুনা v4: কাগজের রঙিন মাথা নেই');
+      final head = tester.widget<Container>(find.byKey(const ValueKey('approval-paper-head')));
+      expect(((head.decoration! as BoxDecoration).gradient! as LinearGradient).colors.first, inboxModuleColor('purchase'),
+          reason: '⛔ কাগজের মাথা নিজের বিভাগের রঙে নয়');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('approval-paper-amount'))).data, '৳1,25,000.00', reason: '⛔ মাথায় বড় অঙ্ক নেই');
+      final latePill = tester.widget<Container>(find.byKey(const ValueKey('approval-paper-deadline')));
+      expect((latePill.decoration! as BoxDecoration).color, const Color(0xFFC62828), reason: '⛔ দেরি হয়ে যাওয়া কাগজের ফিতা লাল নয়');
 
       final bar = tester.widget<Scaffold>(find.byType(Scaffold).last).bottomNavigationBar;
       expect(bar, isNotNull, reason: '⛔ দফা ২১: সিদ্ধান্তের বোতাম নিচে স্থির নয়');
@@ -524,7 +534,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(rejected, isEmpty, reason: '⛔ শেষ প্রশ্নে থাক বললেও প্রত্যাখ্যান গেল');
-      expect(find.text('ক্রয় বিল · PB-2609-0007'), findsOneWidget, reason: 'কাগজ পাতাতেই থাকে');
+      expect(find.byKey(const ValueKey('approval-paper-title')), findsOneWidget, reason: 'কাগজ পাতাতেই থাকে');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('approval-paper-title'))).data, 'ক্রয় বিল · PB-2609-0007', reason: 'কাগজ পাতাতেই থাকে');
     });
 
     // ⛔ ০.৪.৪২-এর ভুল (a6, ২১ অক্টোবর ২০২৬): "সংশোধনে ফেরত" চাপলে চূড়ান্ত প্রত্যাখ্যান হত। এখন দুই আলাদা কাজ, দুই দরজা।
@@ -564,7 +575,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('ইতিমধ্যে নিষ্পত্তি'), findsOneWidget);
-      expect(find.text('ক্রয় আদেশ · PO-2609-0012'), findsOneWidget, reason: '⛔ অন্যজনের সিদ্ধান্ত হওয়া কাগজ সরে, পরেরটা খোলে');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('approval-paper-title'))).data, 'ক্রয় আদেশ · PO-2609-0012',
+          reason: '⛔ অন্যজনের সিদ্ধান্ত হওয়া কাগজ সরে, পরেরটা খোলে');
     });
 
     testWidgets('an amount changed since the card loaded is not signed: the inbox reloads and says why (phone line audit, 15 Oct 2026)',

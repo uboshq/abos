@@ -18691,6 +18691,36 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।'**
   String get attachmentViewerOther;
+
+  /// Approval paper page (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের'**
+  String get approvalsNext;
+
+  /// Approval paper page (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'কার, কে চেয়েছেন'**
+  String get approvalsWhoTitle;
+
+  /// Approval paper page (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষ'**
+  String get approvalsWhoParty;
+
+  /// Approval paper page (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'চেয়েছেন'**
+  String get approvalsWhoAsked;
+
+  /// Approval paper page (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'কার হয়ে'**
+  String get approvalsWhoFor;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

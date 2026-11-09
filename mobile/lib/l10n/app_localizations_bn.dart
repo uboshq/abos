@@ -11242,4 +11242,19 @@ class AppL10nBn extends AppL10n {
   @override
   String get attachmentViewerOther =>
       'এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।';
+
+  @override
+  String get approvalsNext => 'পরের';
+
+  @override
+  String get approvalsWhoTitle => 'কার, কে চেয়েছেন';
+
+  @override
+  String get approvalsWhoParty => 'পক্ষ';
+
+  @override
+  String get approvalsWhoAsked => 'চেয়েছেন';
+
+  @override
+  String get approvalsWhoFor => 'কার হয়ে';
 }

@@ -110,5 +110,10 @@
   "attachmentViewerRotate": "↻ Rotate",
   "attachmentViewerOffice": "Excel or Word files cannot be shown in the app yet — once the server makes a PDF they will open here. Open it on the web.",
   "attachmentViewerSlides": "PowerPoint files do not open in the app — open it on the web.",
-  "attachmentViewerOther": "This kind of file cannot be shown in the app — open it on the web."
+  "attachmentViewerOther": "This kind of file cannot be shown in the app — open it on the web.",
+  "approvalsNext": "Next",
+  "approvalsWhoTitle": "Whose, who asked",
+  "approvalsWhoParty": "Party",
+  "approvalsWhoAsked": "Asked by",
+  "approvalsWhoFor": "On behalf of"
 }
