@@ -34,6 +34,7 @@ use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
+use App\Modules\Finance\Services\FundNews;
 use App\Modules\Finance\Services\FundPosition;
 use App\Modules\Finance\Services\WorkingCapital;
 use Illuminate\Support\Carbon;
@@ -384,10 +385,14 @@ final class FinanceDashboard implements ProvidesDashboard
             sections: [
                 // ⭐ মোট তহবিলের ঘর — মাথায় (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FundPosition]]); নগদ/ব্যাংক/MFS-এর একই চাবি
                 [
-                    'view' => 'finance::dashboard.fund',
+                    'view' => 'finance::dashboard.fund-top',
                     'place' => 'top',
                     'permission' => 'accounts.view',
-                    'data' => fn () => ['fund' => app(FundPosition::class)->on()],
+                    'data' => function (): array {
+                        $fund = app(FundPosition::class)->on();
+
+                        return ['fund' => $fund, 'news' => app(FundNews::class)->items($fund)];
+                    },
                 ],
                 [
                     'view' => 'finance::dashboard.working-capital',

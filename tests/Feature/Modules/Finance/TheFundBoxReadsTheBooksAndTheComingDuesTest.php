@@ -158,6 +158,51 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ "আজকের খবর" — ৭ দিনের দেনা, বাজেট ছাড়ানো খাত আর তহবিল বাড়া; বলার কিছু না থাকলে লাইনটাই নেই।
+     */
+    public function test_the_news_says_the_week_dues_the_worst_budget_head_and_a_growing_fund(): void
+    {
+        $far = now()->addDays(400)->toDateString();
+        PurchaseBill::query()->withoutGlobalScopes()->update(['due_on' => $far]);
+        SalesInvoice::query()->withoutGlobalScopes()->update(['due_on' => $far]);
+        LoanInstalment::query()->withoutGlobalScopes()->update(['due_date' => $far]);
+        \App\Modules\Finance\Models\Budget::query()->delete();
+        // ⓘ বেতনের বাজেট এক কোটি — খরচ তার অনেক নিচে; বাজেট আছে কিন্তু ছাড়ায়নি, তাই খবর নয়
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        \App\Modules\Finance\Models\Budget::query()->create(['company_id' => $company->id, 'year' => 2026, 'month' => 11,
+            'account_id' => StandardChart::find(StandardChart::SALARY_EXPENSE)->id, 'amount' => '10000000']);
+
+        $news =fn (): array => collect(app(\App\Modules\Finance\Services\FundNews::class)->items(app(FundPosition::class)->on()))->keyBy('tone')->all();
+        $quiet = $news();
+        $this->assertArrayNotHasKey('soon', $quiet, '⛔ ৭ দিনে দেনা নেই, তবু খবর।');
+        $this->assertArrayNotHasKey('budget', $quiet, '⛔ বাজেটই নেই, তবু "বাজেট ছাড়াল" খবর।');
+
+        $bill = PurchaseBill::query()->posted()->withPaid()->get()->first(fn ($b) => bccomp($b->dueAmount(), '0', 4) > 0);
+        PurchaseBill::query()->withoutGlobalScopes()->whereKey($bill->id)->update(['due_on' => now()->addDays(3)->toDateString()]);
+
+        // ⓘ ভাড়ার বাজেট ১,০০০, খরচ ৯,০০০ → ৮০০% বেশি
+        $rent = StandardChart::find(StandardChart::RENT);
+        \App\Modules\Finance\Models\Budget::query()->create(['company_id' => $company->id, 'year' => 2026, 'month' => 11, 'account_id' => $rent->id, 'amount' => '1000']);
+        $till = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
+        $this->journal('2026-10-05', [[$till->id, '500000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '500000']]);
+        $this->journal('2026-11-08', [[$till->id, '30000000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '30000000']]);
+        $this->journal('2026-11-09', [[$rent->id, '9000', null], [$till->id, null, '9000']]);
+
+        $said = $news();
+        $this->assertArrayHasKey('soon', $said, '⛔ ৩ দিন পরের বিল "৭ দিনে" খবরে নেই।');
+        $lakh = bcdiv($bill->dueAmount(), '100000', 1);
+        $this->assertStringContainsString(app()->getLocale() === 'bn' ? \App\Core\Support\BanglaDigits::of($lakh) : $lakh, $said['soon']['bold'],
+            '⛔ ৭ দিনের খবরের অঙ্ক বিলের নয়।');
+        $this->assertArrayHasKey('budget', $said, '⛔ বাজেট ছাড়ানো খাত খবরে নেই।');
+        $this->assertStringContainsString($rent->name(), $said['budget']['lead'], '⛔ বাজেট ছাড়ানো খাতের নাম নেই।');
+        $this->assertArrayHasKey('good', $said, '⛔ তহবিল বাড়ল, তবু "ভালো" খবর নেই।');
+
+        $html = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
+        $this->assertStringContainsString('data-fund-news-item="soon"', $html, '⛔ খবরের লাইন পর্দায় নেই।');
+        $this->assertLessThan(strpos($html, 'data-fund-news'), strpos($html, 'data-fund-total'), '⛔ খবর তহবিলের ঘরের পাশে (পরে) নয়।');
+    }
+
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */
     private function journal(string $date, array $lines): void
     {
