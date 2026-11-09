@@ -15633,5 +15633,29 @@
   "rejectReasonOther": "অন্য কারণ",
   "@rejectReasonOther": {
     "description": "Reject sheet (sample v4 picture 5)"
+  },
+  "attachmentThumbsHint": "চাপলে অ্যাপেই খোলে",
+  "@attachmentThumbsHint": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerHint": "দুই আঙুলে বড় করুন · পাশে সরালে পরের ফাইল",
+  "@attachmentViewerHint": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerRotate": "↻ ঘোরান",
+  "@attachmentViewerRotate": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerOffice": "Excel বা Word ফাইল এখনো অ্যাপে দেখা যায় না — সার্ভার PDF বানানো শুরু করলে এখানেই দেখা যাবে। ওয়েবে খুলুন।",
+  "@attachmentViewerOffice": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerSlides": "PowerPoint ফাইল অ্যাপে খোলে না — ওয়েবে খুলুন।",
+  "@attachmentViewerSlides": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
+  },
+  "attachmentViewerOther": "এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।",
+  "@attachmentViewerOther": {
+    "description": "Attachments inside the app (sample v4 pictures 2-3)"
   }
 }

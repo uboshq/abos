@@ -18655,6 +18655,42 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'অন্য কারণ'**
   String get rejectReasonOther;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'চাপলে অ্যাপেই খোলে'**
+  String get attachmentThumbsHint;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'দুই আঙুলে বড় করুন · পাশে সরালে পরের ফাইল'**
+  String get attachmentViewerHint;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'↻ ঘোরান'**
+  String get attachmentViewerRotate;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'Excel বা Word ফাইল এখনো অ্যাপে দেখা যায় না — সার্ভার PDF বানানো শুরু করলে এখানেই দেখা যাবে। ওয়েবে খুলুন।'**
+  String get attachmentViewerOffice;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'PowerPoint ফাইল অ্যাপে খোলে না — ওয়েবে খুলুন।'**
+  String get attachmentViewerSlides;
+
+  /// Attachments inside the app (sample v4 pictures 2-3)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।'**
+  String get attachmentViewerOther;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

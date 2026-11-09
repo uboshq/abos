@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../printing/document_actions_sheet.dart';
-import '../printing/pdf_view_page.dart';
 import 'approval_approve_sheet.dart';
+import 'approval_attachments.dart';
 import 'approval_reject_sheet.dart';
 import 'final_reject_confirm.dart';
 import '../../core/api_client/network_errors.dart';
@@ -216,26 +216,18 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
     await _decide(_Decision.reject, picked.$2, code: picked.$1);
   }
 
-  Future<void> _openAttachment(int file, String name) async {
-    final words = context.l10n;
-    try {
-      final bytes = Uint8List.fromList(await (widget.loadAttachment ?? ApprovalsApi.attachment)(_paper.id, file));
-      if (!mounted) return;
-      final lower = name.toLowerCase();
-      if (lower.endsWith('.pdf')) {
-        await PdfViewPage.open(context, pdf: bytes, title: name);
-      } else {
-        await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => Scaffold(
-            appBar: AbosScreenBar(title: name),
-            body: InteractiveViewer(child: Center(child: Image.memory(bytes, errorBuilder: (_, __, ___) => Text(words.approvalsAttachmentFailed)))),
-          ),
-        ));
-      }
-    } catch (error) {
-      if (mounted) _say(errorMessageFor(error, fallback: words.approvalsAttachmentFailed));
-    }
+  /// ⓘ এক কাগজের সংযুক্তির বাইট — একবার আনা, তারপর মনে রাখা (ছোট ছবি আর পুরো পর্দা একই বাইট); ফোনে কোথাও লেখা হয় না
+  final Map<String, Future<Uint8List>> _files = {};
+
+  Future<Uint8List> _bytesOf(int file) {
+    final paper = _paper.id;
+    return _files.putIfAbsent('$paper:$file',
+        () async => Uint8List.fromList(await (widget.loadAttachment ?? ApprovalsApi.attachment)(paper, file)));
   }
+
+  /// ⭐ নমুনা v4, ছবি ৩ — অ্যাপের ভেতরে পুরো পর্দায়, পাশে সরালে পরের ফাইল ([[AttachmentViewer]])
+  Future<void> _openAttachment(List<(int, String, String)> files, int index) =>
+      AttachmentViewer.open(context, files: files, start: index, load: _bytesOf);
 
   @override
   Widget build(BuildContext context) {
@@ -296,17 +288,12 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
                   _Box(
                     key: const ValueKey('approval-attachments'),
                     title: words.approvalsAttachments,
-                    child: Wrap(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        for (final (id, name, size) in sheet.attachments)
-                          TextButton.icon(
-                            key: ValueKey('approval-attachment-$id'),
-                            onPressed: () => _openAttachment(id, name),
-                            icon: const Icon(Icons.attach_file, size: 18),
-                            label: Text(size.isEmpty ? name : '$name · $size'),
-                          ),
-                      ],
+                    action: Text(words.attachmentThumbsHint, style: TextStyle(fontSize: 12, color: palette.onSurfaceMuted)),
+                    // ⭐ নমুনা v4, ছবি ২ — প্রতিটা সংযুক্তির ছোট ছবি, চাপলে অ্যাপেই খোলে
+                    child: AttachmentThumbs(
+                      files: sheet.attachments,
+                      load: _bytesOf,
+                      onOpen: (i) => _openAttachment(sheet.attachments, i),
                     ),
                   ),
               ],

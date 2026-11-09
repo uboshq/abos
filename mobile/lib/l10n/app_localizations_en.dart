@@ -11392,4 +11392,25 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get rejectReasonOther => 'Other reason';
+
+  @override
+  String get attachmentThumbsHint => 'Opens inside the app';
+
+  @override
+  String get attachmentViewerHint => 'Pinch to zoom · swipe for the next file';
+
+  @override
+  String get attachmentViewerRotate => '↻ Rotate';
+
+  @override
+  String get attachmentViewerOffice =>
+      'Excel or Word files cannot be shown in the app yet — once the server makes a PDF they will open here. Open it on the web.';
+
+  @override
+  String get attachmentViewerSlides =>
+      'PowerPoint files do not open in the app — open it on the web.';
+
+  @override
+  String get attachmentViewerOther =>
+      'This kind of file cannot be shown in the app — open it on the web.';
 }

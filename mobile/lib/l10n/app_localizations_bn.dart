@@ -11220,4 +11220,26 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get rejectReasonOther => 'অন্য কারণ';
+
+  @override
+  String get attachmentThumbsHint => 'চাপলে অ্যাপেই খোলে';
+
+  @override
+  String get attachmentViewerHint =>
+      'দুই আঙুলে বড় করুন · পাশে সরালে পরের ফাইল';
+
+  @override
+  String get attachmentViewerRotate => '↻ ঘোরান';
+
+  @override
+  String get attachmentViewerOffice =>
+      'Excel বা Word ফাইল এখনো অ্যাপে দেখা যায় না — সার্ভার PDF বানানো শুরু করলে এখানেই দেখা যাবে। ওয়েবে খুলুন।';
+
+  @override
+  String get attachmentViewerSlides =>
+      'PowerPoint ফাইল অ্যাপে খোলে না — ওয়েবে খুলুন।';
+
+  @override
+  String get attachmentViewerOther =>
+      'এই ধরনের ফাইল অ্যাপে দেখা যায় না — ওয়েবে খুলুন।';
 }
