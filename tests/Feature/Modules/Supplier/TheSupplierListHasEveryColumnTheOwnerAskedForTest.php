@@ -133,8 +133,13 @@ final class TheSupplierListHasEveryColumnTheOwnerAskedForTest extends TestCase
         $this->assertStringNotContainsString('<form', $actions,
             '⛔ কাজের কলামে একটা ফর্ম এসেছে — অবস্থা বদলানো অবস্থার পিলের কাজ।');
 
-        $this->assertSame(2, substr_count($actions, '<a href'),
-            '⛔ কাজের কলামে দুইটার বেশি লিংক — ছকে কেবল দেখা আর সম্পাদনা।');
+        /*
+         * ⓘ ৯ নভেম্বর ২০২৬ থেকে (মালিক: "Abos er sokol list sob skin dekhe deke update koro") কাজের কলাম গ্রাহকের তালিকার মতো
+         * "অ্যাকশন ▾" — দেখুন, প্রিভিউ, ইতিহাস, হিসাব মেলানোর চিঠি, সম্পাদনা। ২১ সেপ্টেম্বরের "কেবল দেখা আর সম্পাদনা"-র মূল কথাটা
+         * থাকে: সবই লিংক, অবস্থা বদলানো বা মোছার একটাও ফর্ম নয় (উপরের দাবি)। ⛔ লিংক আর গোনা হয় না, মেনুর কাজ দেখা হয়।
+         */
+        $this->assertSame(1, substr_count($actions, 'data-row-view'), '⛔ মেনুতে "দেখুন" একবার নেই।');
+        $this->assertStringContainsString(route('supplier.balance_confirmation', $supplier), $actions, '⛔ মেনুতে হিসাব মেলানোর চিঠি নেই।');
     }
 
     /**
