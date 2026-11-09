@@ -98,7 +98,7 @@
                     ]),
                 ])->all(),
                 [
-                    ['key' => 'actions', 'label' => '—', 'width' => '9rem',
+                    ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '9rem',
                      'render' => fn ($r) => view('master_data::list.partials.actions', ['record' => $r, 'spec' => $spec])],
                 ],
             )" />

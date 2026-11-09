@@ -37,7 +37,7 @@
          'align' => 'end',
          'render' => fn ($r) => view('restaurant::partials.recipe-lines', ['recipe' => $r])],
 
-        ['key' => 'actions', 'label' => __('core.action.edit'), 'width' => '6rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($r) => view('restaurant::partials.recipe-actions', ['recipe' => $r])],
     ];
 @endphp

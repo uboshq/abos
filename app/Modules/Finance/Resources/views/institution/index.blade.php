@@ -39,7 +39,7 @@
             'render' => fn ($i) => $i->is_active ? __('finance::institution.active') : __('finance::institution.inactive')],
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
+            'label' => __('core.table.action_menu'),
             'width' => '8rem',
             'render' => fn ($i) => view('finance::institution.partials.row-actions', ['institution' => $i]),
         ],

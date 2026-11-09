@@ -139,8 +139,8 @@
         ],
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
-            'width' => '3.5rem',
+            'label' => __('core.table.action_menu'),
+            'width' => '8rem',
             'render' => fn ($p) => view('inventory::partials.product-actions', ['product' => $p]),
         ],
     ];

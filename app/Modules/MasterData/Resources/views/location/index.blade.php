@@ -21,7 +21,7 @@
                 ['key' => 'state', 'label' => __('core.table.status'), 'width' => '8rem',
                  'render' => fn ($l) => view('master_data::location.partials.state', ['location' => $l])],
                 // সম্পাদনা · সক্রিয়/নিষ্ক্রিয় · মুছুন — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬
-                ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '5rem',
+                ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
                  'render' => fn ($l) => view('master_data::location.partials.actions', ['location' => $l])],
             ];
 @endphp
@@ -217,8 +217,7 @@
                                     class="hidden lg:table-cell">
                                     {{ __('master_data::field.assigned_to') }}
                                 </th>
-                                <th scope="col" style="width: 5rem" 
-                                    aria-label="{{ __('master_data::action.new') }}"></th>
+                                <th scope="col" style="width: 8rem" class="text-end" data-row-menu>{{ __('core.table.action_menu') }}</th>
                             </tr>
                         </thead>
                         <tbody>

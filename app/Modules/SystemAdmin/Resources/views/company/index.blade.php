@@ -30,7 +30,7 @@
          'render' => fn ($c) => $c->phone ?: '—'],
         ['key' => 'state', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($c) => view('system_admin::company.partials.state', ['company' => $c])],
-        ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '6rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($c) => view('system_admin::company.partials.actions', ['company' => $c])],
     ];
 @endphp

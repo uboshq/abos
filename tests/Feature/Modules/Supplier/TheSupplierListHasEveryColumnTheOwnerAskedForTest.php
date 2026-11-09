@@ -56,7 +56,8 @@ final class TheSupplierListHasEveryColumnTheOwnerAskedForTest extends TestCase
             'supplier::field.phone',
             'supplier::field.payable',
             'supplier::field.state',
-            'core.table.actions',
+            // ⭐ "কাজ" এখন "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬: সব তালিকায় এক মেনু
+            'core.table.action_menu',
         ];
 
         foreach ($headings as $key) {

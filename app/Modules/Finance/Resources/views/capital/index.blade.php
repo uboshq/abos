@@ -140,7 +140,7 @@
          * পারে। ⓘ **মেনুতে লুকানো আর দরজায় তালা দেওয়া এক জিনিস নয়** —
          * আজ এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে।
          */
-        ['key' => 'actions', 'label' => '', 'width' => '3rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
              ? ''
              : view('finance::capital.partials.row-actions', ['entry' => $e])],

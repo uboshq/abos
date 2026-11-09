@@ -20,7 +20,7 @@
          'render' => fn ($b) => $b->is_default ? '✓' : ''],
         ['key' => 'state', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($b) => view('system_admin::branch.partials.state', ['branch' => $b])],
-        ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '6rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($b) => view('system_admin::branch.partials.actions', ['branch' => $b])],
     ];
 @endphp
