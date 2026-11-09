@@ -18,16 +18,17 @@
     $canEdit = auth()->user()?->can('finance.capital.create') === true;
     $canDelete = auth()->user()?->can('finance.capital.delete') === true;
 
+    $draft = $entry->status === \App\Modules\Finance\Models\CapitalEntry::DRAFT;
     $items = [];
 
-    if ($canEdit) {
+    if ($draft && $canEdit) {
         $items[] = [
             'label' => __('core.action.edit'),
             'url' => route('finance.capital.edit', $entry),
         ];
     }
 
-    if ($canDelete) {
+    if ($draft && $canDelete) {
         $items[] = [
             'label' => __('core.action.delete'),
             'url' => route('finance.capital.destroy', $entry),
@@ -37,7 +38,5 @@
     }
 @endphp
 
-@if ($items !== [])
-    {{-- ⭐ তিন বিন্দুর বদলে "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"); কাজগুলো আগের মতোই --}}
-    <x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($entry), __('core.status.draft'), null, $entry->document_no, 'finance')" />
-@endif
+{{-- ⓘ এক সারিতে একটাই মেনু: "দেখুন" এখানেই, তাই টেবিলের :view-url সরানো (Mac রান, ৯ নভেম্বর ২০২৬: টেবিলের মেনু আর এই মেনু পাশাপাশি দুবার আঁকা হত) --}}
+<x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($entry), \App\Core\Support\DocumentStatus::label((string) $entry->status), $entry->voucher_id ? route('accounts.voucher.show', $entry->voucher_id) : null, $entry->document_no, 'finance')" />

@@ -236,7 +236,6 @@
         @else
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($d) => route('finance.deposit.show', ['issuer' => $issuer, 'deposit' => $d->id])"
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_deposit_yet')"
             :rows="$deposits"

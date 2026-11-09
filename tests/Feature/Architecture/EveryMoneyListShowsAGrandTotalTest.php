@@ -140,12 +140,21 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
      */
     private function eyeInActions(string $src): bool
     {
-        preg_match_all('/view\(\s*\'([a-z_]+)::([a-z0-9_.\-]*row-actions)\'/', $this->code($src), $views, PREG_SET_ORDER);
+        preg_match_all('/view\(\s*\'([a-z_]+)::([a-z0-9_.\-]*(?:row-actions|open-it))\'/', $this->code($src), $views, PREG_SET_ORDER);
 
         foreach ($views as [, $ns, $name]) {
             $path = app_path('Modules/'.\Illuminate\Support\Str::studly($ns).'/Resources/views/'.str_replace('.', '/', $name).'.blade.php');
-            if (is_file($path)
-                && preg_match('/<a\s+href="\{\{\s*route\(\'[a-z0-9_.]+\'[^>]*>(?:(?!<\/a>).)*M12 5c-5 0-9 4\.5-10 7/s', $this->code((string) file_get_contents($path))) === 1) {
+            if (! is_file($path)) {
+                continue;
+            }
+
+            $part = $this->code((string) file_get_contents($path));
+
+            // ⓘ পুরনো চোখের লিংক, বা ৯ নভেম্বর ২০২৬ থেকে "অ্যাকশন ▾" মেনুর "দেখুন" (মালিক: "Abos er sokol list") — নিজে বসানো
+            //   (`'opens' => true`) বা [[RowMenu::dress]]-কে দেওয়া কোনো `.show` ঠিকানা
+            if (preg_match('/<a\s+href="\{\{\s*route\(\'[a-z0-9_.]+\'[^>]*>(?:(?!<\/a>).)*M12 5c-5 0-9 4\.5-10 7/s', $part) === 1
+                || preg_match("/'opens'\s*=>\s*true/", $part) === 1
+                || preg_match("/RowMenu::dress\((?:(?!\/>).)*?route\('[a-z0-9_.]+\.show'/s", $part) === 1) {
                 return true;
             }
         }

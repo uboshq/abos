@@ -200,7 +200,6 @@
         @else
             <x-ui.table :rows="$contracts"
                         :grand="$grand ?? []"
-                        :view-url="fn ($c) => route('finance.rental.show', $c)"
                         :columns="$rentColumns"
                         :compact="request()->boolean('compact')"
                         :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />

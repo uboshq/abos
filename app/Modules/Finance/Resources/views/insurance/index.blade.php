@@ -129,7 +129,6 @@
 
         <x-ui.table :rows="$policies" :columns="$columns"
                     :grand="$grand ?? []"
-                    :view-url="fn ($p) => route('finance.insurance.show', $p)"
                     :empty="__('finance::insurance.none_yet')" />
 
         <x-ui.pager :rows="$policies" />

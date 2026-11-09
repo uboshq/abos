@@ -212,7 +212,6 @@
 
         <x-ui.table
             :grand="$grand ?? []"
-            :view-url="fn ($f) => route('finance.bank_facility.show', $f)"
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_facilities')"
             :rows="$facilities"

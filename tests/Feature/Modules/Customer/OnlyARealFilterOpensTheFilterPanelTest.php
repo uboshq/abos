@@ -75,14 +75,17 @@ class OnlyARealFilterOpensTheFilterPanelTest extends TestCase
 
     public function test_each_row_action_shows_once_on_the_customer_and_supplier_lists(): void
     {
-        // ⓘ সারির কাজের চোখ (row-actions) আর টেবিলের "দেখুন" চোখ (data-row-view) আলাদা আঁকা — প্রথমটার রেখা দিয়ে গোনা। দুই তালিকাতেই
-        //   চোখ কাজের কলামে (সরবরাহকারীতে মালিকের ২১ সেপ্টেম্বরের ছক: দেখা আর সম্পাদনা; গ্রাহকে এক নজরের সারাংশ), টেবিলের চোখ নেই
-        $rowEye = 'M12 5c-5 0-9 4.5-10 7';
+        // ⓘ ৯ নভেম্বর ২০২৬ থেকে (মালিক: "Abos er sokol list") কাজের কলামের চোখ "অ্যাকশন ▾" মেনুর "দেখুন" — সেটা `data-row-view`
+        //   বহন করে। নিয়ম আগের মতোই: প্রতিটা সারিতে পাতা খোলার পথ ঠিক একটা — মেনুর "দেখুন" যতগুলো, মেনুর বোতামও ততগুলো, আর টেবিল
+        //   নিজের সাধারণ মেনু (data-row-menu-generic) আঁকে না
         foreach (['customer.index' => 'গ্রাহকের', 'supplier.index' => 'সরবরাহকারীর'] as $route => $list) {
             $page = (string) $this->get(route($route))->assertOk()->getContent();
-            $this->assertGreaterThan(0, substr_count($page, $rowEye), "⛔ {$list} তালিকার কাজের কলামে চোখ নেই — সারির পাতা খোলার পথ হারাল");
-            $this->assertSame(0, substr_count($page, 'data-row-view'),
-                "⛔ {$list} তালিকায় একই সারিতে চোখের আইকন দুবার (সারির কাজের চোখ আর টেবিলের \"দেখুন\" চোখ)");
+            $menus = substr_count($page, 'data-row-actions-button');
+            $this->assertGreaterThan(0, $menus, "⛔ {$list} তালিকার সারিতে \"অ্যাকশন ▾\" নেই — সারির পাতা খোলার পথ হারাল");
+            $this->assertSame($menus, substr_count($page, 'data-row-view'),
+                "⛔ {$list} তালিকায় সারির \"দেখুন\" মেনুর সংখ্যার সমান নয় — কোনো সারিতে নেই, বা একই সারিতে দুবার");
+            $this->assertSame(0, substr_count($page, 'data-row-menu-generic'),
+                "⛔ {$list} তালিকায় টেবিলের সাধারণ মেনুও এসেছে — একই সারিতে দুই মেনু");
         }
     }
 }

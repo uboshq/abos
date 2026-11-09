@@ -89,7 +89,6 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table :rows="$institutions" :columns="$columns"
                     :grand="$grand ?? []"
-                    :view-url="fn ($i) => route('finance.institution.show', $i)"
                     :empty="__('finance::institution.none_yet')" />
 
         <x-ui.pager :rows="$institutions" />

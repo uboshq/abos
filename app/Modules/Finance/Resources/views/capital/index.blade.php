@@ -141,9 +141,7 @@
          * আজ এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে।
          */
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
-         'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
-             ? ''
-             : view('finance::capital.partials.row-actions', ['entry' => $e])],
+         'render' => fn ($e) => view('finance::capital.partials.row-actions', ['entry' => $e])],
     ];
 
     // ⓘ কলাম-মেনু আর ঘনত্ব যে ট্যাব খোলা, তার টেবিলেই খাটে
@@ -282,7 +280,6 @@
 
             <x-ui.table
                 :grand="$grand ?? []"
-                :view-url="fn ($e) => $e->voucher_id ? route('accounts.voucher.show', $e->voucher_id) : null"
                 :compact="request()->boolean('compact')"
                 :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_capital_yet')"
                 :rows="$entries"
