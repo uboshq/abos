@@ -113,6 +113,34 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ ফোনের হোমে একই অঙ্ক — `GET /api/v1/dashboard/today`-এর `workingCapital` (মালিক, ৯ নভেম্বর ২০২৬: "sudu working capital er
+     * card ti bosabe"); তারিখ `wcDate`, গড় `wcSpan`। ⛔ অর্থের চাবি না থাকলে ঘরটাই নেই (চুক্তির নিয়ম ক)।
+     */
+    public function test_the_phone_home_gets_the_same_figures_and_none_without_the_key(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $web = app(WorkingCapital::class)->on(Carbon::parse('2026-10-31'), 12);
+
+        app('auth')->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($owner->fresh(), [\App\Http\Controllers\Api\AuthController::APP]);
+        $body = $this->getJson('/api/v1/dashboard/today?wcDate=2026-10-31&wcSpan=12')->assertOk()->json();
+
+        $this->assertArrayHasKey('workingCapital', $body, '⛔ ফোনের উত্তরে চলতি মূলধন নেই।');
+        $phone = $body['workingCapital'];
+        $this->assertSame('2026-10-31', $phone['date']);
+        $this->assertSame(12, $phone['span']);
+        $this->assertSame(bcadd($web['capital'], '0', 4), $phone['capital'], '⛔ ফোনের চলতি মূলধন ওয়েবের থেকে আলাদা।');
+        $this->assertSame($web['sales_pct'], $phone['salesPct']);
+
+        $clerk = User::factory()->create(['current_company_id' => $owner->current_company_id, 'is_active' => true]);
+        $clerk->companies()->attach($owner->current_company_id, ['is_active' => true]);
+        app('auth')->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($clerk->fresh(), [\App\Http\Controllers\Api\AuthController::APP]);
+        $none = $this->getJson('/api/v1/dashboard/today')->assertOk()->json();
+        $this->assertArrayNotHasKey('workingCapital', $none, '⛔ অর্থের চাবি ছাড়াই ফোনে চলতি মূলধন গেল।');
+    }
+
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */
     private function journal(string $date, array $lines): void
     {

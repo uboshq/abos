@@ -18,6 +18,7 @@ use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Finance\Services\WorkingCapital;
 use App\Modules\Inventory\Services\StockFacts;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -199,6 +200,33 @@ class DashboardTodayController extends Controller
             if ($stock !== null) {
                 $body['stockValue'] = ['amount' => self::money($stock), 'basis' => 'cost'];
             }
+        }
+
+        /*
+         * ⭐ চলতি মূলধন — ফোনের হোমে নগদ/MFS/ব্যাংকের কার্ডের ঠিক নিচে (মালিক, ৯ নভেম্বর ২০২৬: "mobile app e za ekhon zemon ache tai
+         * thakbe sudu working capital er card ti bosabe")। ওয়েবের অর্থের ড্যাশবোর্ডের একই অঙ্ক ([[WorkingCapital]]); তারিখ `wcDate`
+         * (না দিলে, ভুল হলে বা আগামী দিনের হলে আজ), গড় `wcSpan` ৬ বা ১২ মাস।
+         * ⛔ অর্থের ড্যাশবোর্ডের চাবি (finance.capital.view) না থাকলে ঘরটাই নেই — চুক্তির নিয়ম ক; পুরনো অ্যাপ ঘরটা পড়ে না।
+         */
+        if ($on('finance') && $user->can('finance.capital.view') && class_exists(WorkingCapital::class)) {
+            $asked = (string) $request->query('wcDate', '');
+            $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $asked) === 1 ? Carbon::parse($asked)->startOfDay() : Carbon::today();
+            $wc = app(WorkingCapital::class)->on($date->greaterThan(Carbon::today()) ? Carbon::today() : $date, (int) $request->query('wcSpan', '6'));
+            $body['workingCapital'] = [
+                'date' => $wc['date'],
+                'receivable' => self::money($wc['receivable']),
+                'stock' => self::money($wc['stock']),
+                'money' => self::money($wc['money']),
+                'payable' => self::money($wc['payable']),
+                'other' => self::money($wc['other']),
+                'capital' => self::money($wc['capital']),
+                'ratio' => $wc['ratio'],
+                'previous' => ['date' => $wc['previous']['date'], 'capital' => self::money($wc['previous']['capital'])],
+                'changePct' => $wc['change_pct'],
+                'span' => $wc['span'],
+                'avgSales' => self::money($wc['avg_sales']),
+                'salesPct' => $wc['sales_pct'],
+            ];
         }
 
         if ($on('approval') && $user->can('approval.decide')) {
