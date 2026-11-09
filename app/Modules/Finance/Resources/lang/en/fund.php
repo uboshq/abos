@@ -48,5 +48,5 @@ return [
     'news_budget_bold' => ':pct%',
     'news_good_lead' => 'The fund is up',
     'news_good_tail' => 'on last month · +:amount',
-    'months' => ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    'months' => [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 ];

@@ -61,7 +61,7 @@
         <p style="margin: 0; font-size: 14px; color: var(--color-fin-475569)">{{ __('finance::loan_box.none') }}</p>
     @else
         @if (bccomp($l['total'], '0', 4) > 0)
-            <div role="img" aria-label="{{ __('finance::loan_box.share') }}" style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 2px">
+            <div role="img" aria-label="{{ __('finance::loan_box.share') }}" style="display: flex; height: 0.75rem; border-radius: 999px; overflow: hidden; gap: 2px">
                 @foreach ($l['rows'] as $i => $r)
                     @if (bccomp($r['left'], '0', 4) > 0)
                         <div title="{{ $r['name'] }} · {{ $taka($r['left']) }}" style="flex: {{ bcdiv(bcmul($r['left'], '100', 4), $l['total'], 1) }}; background: {{ $colours[$i % 6] }}"></div>
@@ -77,7 +77,7 @@
                 </div>
                 @foreach ($l['rows'] as $i => $r)
                     <div data-loan-row style="{{ $grid }}; align-items: center; padding: 9px 4px; border-top: 1px solid var(--color-fin-eef2f7); font-size: 14px">
-                        <span style="font-weight: 700"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: {{ $colours[$i % 6] }}; margin-right: 8px"></span>{{ $r['name'] }}</span>
+                        <span style="font-weight: 700"><span style="display: inline-block; width: 10px; height: 0.625rem; border-radius: 3px; background: {{ $colours[$i % 6] }}; margin-right: 8px"></span>{{ $r['name'] }}</span>
                         <span style="color: var(--color-fin-475569)">{{ $r['kind'] }}</span>
                         <span style="font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{ $taka($r['left']) }}</span>
                         <span style="text-align: right; color: var(--color-fin-475569)">{{ $r['rate'] === null ? '—' : $digits($r['rate']).'%' }}</span>

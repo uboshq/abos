@@ -88,7 +88,7 @@
             @foreach ($rc['buckets'] as $i => $b)
                 @php $w = bccomp($rc['total'], '0', 4) > 0 ? bcdiv(bcmul($b['amount'], '100', 4), $rc['total'], 1) : '0'; @endphp
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 12px"><span style="width: 56px; color: var(--color-fin-475569)">{{ __('finance::charts.'.$rLabels[$i]) }}</span>
-                    <div style="flex: 1 1 auto; height: 10px; background: var(--color-fin-f1f5f9); border-radius: 999px"><div style="height: 10px; border-radius: 999px; width: {{ $w }}%; background: {{ $rColours[$i] }}"></div></div>
+                    <div style="flex: 1 1 auto; height: 0.625rem; background: var(--color-fin-f1f5f9); border-radius: 999px"><div style="height: 0.625rem; border-radius: 999px; width: {{ $w }}%; background: {{ $rColours[$i] }}"></div></div>
                     <span style="width: 64px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">{{ $lakh($b['amount']) }}</span></div>
             @endforeach
             <p style="{{ $foot }}">{{ $rc['dso'] === null ? __('finance::charts.no_days') : __('finance::charts.dso_foot', ['n' => $digits((string) $rc['dso'])]) }}</p>
@@ -106,7 +106,7 @@
         @foreach ($pc['buckets'] as $i => $b)
             @php $w = bccomp($pc['total'], '0', 4) > 0 ? bcdiv(bcmul($b['amount'], '100', 4), $pc['total'], 1) : '0'; @endphp
             <div style="display: flex; align-items: center; gap: 8px; font-size: 12px"><span style="width: 56px; color: var(--color-fin-475569)">{{ __('finance::charts.p_'.$b['key']) }}</span>
-                <div style="flex: 1 1 auto; height: 10px; background: var(--color-fin-f1f5f9); border-radius: 999px"><div style="height: 10px; border-radius: 999px; width: {{ $w }}%; background: {{ $pColours[$i] }}"></div></div>
+                <div style="flex: 1 1 auto; height: 0.625rem; background: var(--color-fin-f1f5f9); border-radius: 999px"><div style="height: 0.625rem; border-radius: 999px; width: {{ $w }}%; background: {{ $pColours[$i] }}"></div></div>
                 <span style="width: 64px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">{{ $lakh($b['amount']) }}</span></div>
         @endforeach
         <p style="{{ $foot }}">{{ $pc['dpo'] === null ? __('finance::charts.no_days') : __('finance::charts.dpo_foot', ['n' => $digits((string) $pc['dpo'])]) }}</p>
@@ -155,7 +155,7 @@
                 <span style="{{ $bd['over'] > 0 ? $badge('var(--color-fin-b91c1c)', 'var(--color-fin-fee2e2)') : $badge('var(--color-fin-047857)', 'var(--color-fin-d1fae5)') }}">{{ $bd['over'] > 0 ? __('finance::charts.over_badge', ['n' => $digits((string) $bd['over'])]) : __('finance::charts.none_over') }}</span></div>
             @foreach ($bd['rows'] as $r)
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 12px"><span style="width: 64px; color: var(--color-fin-475569); overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="{{ $r['name'] }}">{{ $r['name'] }}</span>
-                    <div style="position: relative; flex: 1 1 auto; height: 10px; background: var(--color-fin-f1f5f9); border-radius: 999px">
+                    <div style="position: relative; flex: 1 1 auto; height: 0.625rem; background: var(--color-fin-f1f5f9); border-radius: 999px">
                         <div style="position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; width: {{ $scale($r['actual'], $bMax, '100') }}%; background: {{ $r['over'] ? 'var(--color-fin-ef4444)' : 'var(--color-fin-6366f1)' }}"></div>
                         <div style="position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--color-fin-0f172a); left: {{ $scale($r['budget'], $bMax, '100') }}%"></div>
                     </div>

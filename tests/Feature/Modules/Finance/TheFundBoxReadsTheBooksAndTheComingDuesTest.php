@@ -8,6 +8,7 @@ use App\Core\Services\LedgerBalances;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
@@ -16,9 +17,12 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Services\FundPosition;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -88,10 +92,10 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         $this->assertSame('0', bcadd($empty['out30'], '0', 0), '⛔ জানালার বাইরের দেনা ৩০ দিনে গোনা হলো।');
         $this->assertNull($empty['cover7'], '⛔ ৭ দিনে দেনা নেই, তবু "ঢাকা" গুণ দেখায়।');
 
-        $bill = PurchaseBill::query()->posted()->withPaid()->with('supplier')->get()->first(fn ($b) => bccomp($b->dueAmount(), '0', 4) > 0);
-        $invoice = SalesInvoice::query()->posted()->withCollected()->get()->first(fn ($i) => bccomp($i->dueAmount(), '0', 4) > 0);
-        $this->assertNotNull($bill, 'ডেমোতে বাকি থাকা ক্রয়-বিল নেই');
-        $this->assertNotNull($invoice, 'ডেমোতে বাকি থাকা বিক্রয়-বিল নেই');
+        $bill = $this->bill('PB-FUND-1', '84000');
+        $invoice = $this->invoice('SI-FUND-1', '61000');
+        $this->assertSame('84000.0000', bcadd($bill->dueAmount(), '0', 4), 'দাবির বিলটা পুরো বাকি নয়');
+        $this->assertSame('61000.0000', bcadd($invoice->dueAmount(), '0', 4), 'দাবির চালানটা পুরো বাকি নয়');
 
         PurchaseBill::query()->withoutGlobalScopes()->whereKey($bill->id)->update(['due_on' => now()->addDays(10)->toDateString()]);
         SalesInvoice::query()->withoutGlobalScopes()->whereKey($invoice->id)->update(['due_on' => now()->addDays(20)->toDateString()]);
@@ -178,7 +182,7 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         $this->assertArrayNotHasKey('soon', $quiet, '⛔ ৭ দিনে দেনা নেই, তবু খবর।');
         $this->assertArrayNotHasKey('budget', $quiet, '⛔ বাজেটই নেই, তবু "বাজেট ছাড়াল" খবর।');
 
-        $bill = PurchaseBill::query()->posted()->withPaid()->get()->first(fn ($b) => bccomp($b->dueAmount(), '0', 4) > 0);
+        $bill = $this->bill('PB-NEWS-1', '230000');
         PurchaseBill::query()->withoutGlobalScopes()->whereKey($bill->id)->update(['due_on' => now()->addDays(3)->toDateString()]);
 
         // ⓘ ভাড়ার বাজেট ১,০০০, খরচ ৯,০০০ → ৮০০% বেশি
@@ -201,6 +205,32 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         $html = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
         $this->assertStringContainsString('data-fund-news-item="soon"', $html, '⛔ খবরের লাইন পর্দায় নেই।');
         $this->assertLessThan(strpos($html, 'data-fund-news'), strpos($html, 'data-fund-total'), '⛔ খবর তহবিলের ঘরের পাশে (পরে) নয়।');
+    }
+
+    /**
+     * ⓘ দাবির নিজের বাকি বিল — ডেমোর বিল সব শোধ হয়ে থাকতে পারে (Mac, ১০ নভেম্বর ২০২৬: "ডেমোতে বাকি থাকা ক্রয়-বিল নেই")।
+     */
+    private function bill(string $no, string $total): PurchaseBill
+    {
+        $bill = PurchaseBill::query()->create([
+            'branch_id' => CompanyContext::branchId(), 'financial_year_id' => FinancialYear::forDate(now())?->id,
+            'supplier_id' => Supplier::query()->firstOrFail()->id, 'warehouse_id' => Warehouse::query()->firstOrFail()->id,
+            'document_no' => $no, 'trx_date' => now()->subDays(5)->toDateString(), 'due_on' => now()->addDays(400)->toDateString(),
+            'subtotal' => $total, 'discount' => '0', 'tax' => '0', 'total' => $total, 'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        return PurchaseBill::query()->withPaid()->with('supplier')->findOrFail($bill->id);
+    }
+
+    private function invoice(string $no, string $total): SalesInvoice
+    {
+        $invoice = SalesInvoice::query()->create([
+            'document_no' => $no, 'customer_id' => Customer::query()->firstOrFail()->id, 'branch_id' => CompanyContext::branchId(),
+            'trx_date' => now()->subDays(5)->toDateString(), 'due_on' => now()->addDays(400)->toDateString(),
+            'subtotal' => $total, 'discount' => '0', 'tax' => '0', 'total' => $total, 'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        return SalesInvoice::query()->withCollected()->findOrFail($invoice->id);
     }
 
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */

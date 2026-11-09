@@ -8,6 +8,7 @@ use App\Core\Services\LedgerBalances;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
@@ -17,7 +18,9 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Services\FinanceCharts;
 use App\Modules\Finance\Services\WorkingCapital;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -76,8 +79,8 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
     {
         $far = now()->addDays(400)->toDateString();
         PurchaseBill::query()->withoutGlobalScopes()->update(['due_on' => $far]);
-        $bills = PurchaseBill::query()->posted()->withPaid()->get()->filter(fn ($b) => bccomp($b->dueAmount(), '0', 4) > 0)->values();
-        $this->assertGreaterThanOrEqual(3, $bills->count(), 'ডেমোতে বাকি থাকা তিনটা ক্রয়-বিল নেই');
+        // ⓘ দাবির নিজের তিন বিল — ডেমোর বিল সব শোধ হয়ে থাকতে পারে (Mac, ১০ নভেম্বর ২০২৬)
+        $bills = collect([$this->bill('PB-CH-1', '11000'), $this->bill('PB-CH-2', '23000'), $this->bill('PB-CH-3', '37000')]);
 
         $set = fn (int $i, int $days) => PurchaseBill::query()->withoutGlobalScopes()->whereKey($bills[$i]->id)->update(['due_on' => now()->addDays($days)->toDateString()]);
         $set(0, 7);
@@ -113,8 +116,14 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
     public function test_instalments_and_deposits_land_in_their_month(): void
     {
         LoanInstalment::query()->withoutGlobalScopes()->update(['due_date' => now()->addYears(3)->toDateString()]);
-        $loan = Loan::query()->whereIn('status', DocumentStatus::POSTED)->where('direction', '!=', Loan::GIVEN)->first();
-        $this->assertNotNull($loan, 'ডেমোতে নেওয়া ঋণ নেই');
+        // ⓘ দাবির নিজের ব্যাংক ঋণ — ডেমোতে নেওয়া ঋণ না-ও থাকতে পারে (Mac, ১০ নভেম্বর ২০২৬)
+        $loan = Loan::query()->forceCreate([
+            'company_id' => CompanyContext::id(), 'branch_id' => CompanyContext::branchId(), 'document_no' => 'LN-CH-1',
+            'lender' => 'Chart Bank', 'kind' => Loan::TERM, 'direction' => Loan::TAKEN, 'sanctioned' => '1200000',
+            'interest_rate' => '12', 'tenure_months' => 12, 'start_date' => '2026-09-01',
+            'liability_account_id' => StandardChart::find('2211')->id, 'interest_account_id' => StandardChart::find(StandardChart::INTEREST_EXPENSE)->id,
+            'status' => DocumentStatus::CONFIRMED,
+        ]);
         $row = LoanInstalment::query()->create(['loan_id' => $loan->id, 'no' => 99, 'due_date' => '2027-01-15', 'principal' => '200000', 'interest' => '20000', 'status' => LoanInstalment::DUE]);
 
         $months = collect(app(FinanceCharts::class)->all()['loans']['months'])->keyBy('month');
@@ -134,6 +143,18 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
         }
         $this->assertGreaterThan(strpos($html, 'data-fund-news'), strpos($html, 'data-finance-charts'), '⛔ চার্টগুলো তহবিলের সারির নিচে নয়।');
         $this->assertLessThan(strpos($html, 'data-working-capital'), strpos($html, 'data-finance-charts'), '⛔ চার্টগুলো চলতি মূলধনের আগে নয়।');
+    }
+
+    private function bill(string $no, string $total): PurchaseBill
+    {
+        $bill = PurchaseBill::query()->create([
+            'branch_id' => CompanyContext::branchId(), 'financial_year_id' => FinancialYear::forDate(now())?->id,
+            'supplier_id' => Supplier::query()->firstOrFail()->id, 'warehouse_id' => Warehouse::query()->firstOrFail()->id,
+            'document_no' => $no, 'trx_date' => now()->subDays(5)->toDateString(), 'due_on' => now()->addDays(400)->toDateString(),
+            'subtotal' => $total, 'discount' => '0', 'tax' => '0', 'total' => $total, 'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        return PurchaseBill::query()->withPaid()->findOrFail($bill->id);
     }
 
     /** @param  list<string>  $codes */

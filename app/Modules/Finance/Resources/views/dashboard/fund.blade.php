@@ -73,7 +73,7 @@
     </div>
 
     <div role="img" aria-label="{{ __('finance::fund.share_bar', ['cash' => $digits($share['cash']), 'bank' => $digits($share['bank']), 'mfs' => $digits($share['mfs'])]) }}"
-         style="display: flex; height: 14px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--color-fin-255-255-255-a15)">
+         style="display: flex; height: 0.875rem; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--color-fin-255-255-255-a15)">
         @foreach ($f['parts'] as $part)
             @if (bccomp($part['share'], '0', 1) > 0)
                 <div style="flex: {{ $part['share'] }}; background: {{ $partColour[$part['key']] }}"></div>
@@ -84,7 +84,7 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px">
         @foreach ($f['parts'] as $part)
             <div data-fund-part="{{ $part['key'] }}">
-                <p style="margin: 0; font-size: 13px; color: var(--color-fin-c7d2fe)"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: {{ $partColour[$part['key']] }}; margin-right: 6px"></span>{{ __('finance::fund.'.$part['key']) }} · {{ $digits(bcdiv($part['share'], '1', 0)) }}%</p>
+                <p style="margin: 0; font-size: 13px; color: var(--color-fin-c7d2fe)"><span style="display: inline-block; width: 10px; height: 0.625rem; border-radius: 3px; background: {{ $partColour[$part['key']] }}; margin-right: 6px"></span>{{ __('finance::fund.'.$part['key']) }} · {{ $digits(bcdiv($part['share'], '1', 0)) }}%</p>
                 <p style="margin: 0; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums">{{ $taka($part['amount']) }}</p>
                 <p style="margin: 0; font-size: 12px; color: {{ $part['change_pct'] !== null && bccomp($part['change_pct'], '0', 1) < 0 ? 'var(--color-fin-fecaca)' : 'var(--color-fin-bbf7d0)' }}">
                     @if ($part['change_pct'] !== null){{ bccomp($part['change_pct'], '0', 1) < 0 ? '▼' : '▲' }} {{ $digits(ltrim($part['change_pct'], '-')) }}%@endif
