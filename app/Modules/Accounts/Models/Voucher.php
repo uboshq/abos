@@ -535,7 +535,66 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'party' => $this->party_type !== null && $this->party_id !== null
                 ? ['type' => (string) $this->party_type, 'id' => (int) $this->party_id]
                 : null,
+            'impact' => $this->approvalImpact($money, $parties),
         ];
+    }
+
+    /**
+     * ⭐ "অনুমোদন দিলে কী হবে" — মালিকের নমুনা "অনুমোদনের নতুন ইনবক্স" v4, ছবি ২ ("ok", ৮ নভেম্বর ২০২৬; SAP Fiori-র "impact"):
+     * রসিদ আর পরিশোধে পক্ষের খাতা আর টাকার খাতা — এখন কত, অনুমোদনের পরে কত; পরিশোধে খাতে টাকা আছে কি না।
+     *
+     * ⓘ "এখন" খাতার আসল হিসাব ([[AccountsFacts::dueFrom()]], [[Account::balanceInView()]]) — কাগজটা খসড়া, তাই এখনো খাতায় নেই;
+     * "পরে" = এখন ± এই কাগজের অঙ্ক। পক্ষের চিহ্ন: ধনাত্মক = তিনি আমাদের দেবেন। ⓘ অন্য ধরনের ভাউচারে (জাবেদা, কন্ট্রা) বা
+     * পোস্ট হয়ে যাওয়া কাগজে `null` — বানানো অঙ্ক দেখানোর চেয়ে কিছু না দেখানো ভালো।
+     *
+     * @param  array<string, string>  $parties
+     * @return array{rows: list<array{label: string, before: string, after: string}>, checks: list<array{ok: bool, text: string}>}|null
+     */
+    private function approvalImpact(?Account $money, array $parties): ?array
+    {
+        if (! in_array($this->type, [self::RECEIPT, self::PAYMENT], true) || ! $this->isDraft()) {
+            return null;
+        }
+
+        $amount = (string) ($this->amount ?? '0');
+        if (bccomp($amount, '0', 4) <= 0) {
+            return null;
+        }
+
+        $in = $this->type === self::RECEIPT;
+        $rows = [];
+        $checks = [];
+
+        if ($this->party_type !== null && (int) $this->party_id > 0) {
+            $name = (string) ($parties[$this->party_type.':'.$this->party_id] ?? '');
+            $before = app(\App\Modules\Accounts\Services\AccountsFacts::class)->dueFrom((string) $this->party_type, (int) $this->party_id);
+            $after = $in ? bcsub($before, $amount, 4) : bcadd($before, $amount, 4);
+            $owes = bccomp($before, '0', 4) >= 0;
+            $say = fn (string $value): string => (bccomp($value, '0', 4) >= 0) === $owes || bccomp($value, '0', 4) === 0
+                ? '৳'.Money::format(ltrim($value, '-'))
+                : (string) __('accounts::message.impact_advance', ['amount' => '৳'.Money::format(ltrim($value, '-'))]);
+            $rows[] = [
+                'label' => (string) __($owes ? 'accounts::message.impact_party_owes' : 'accounts::message.impact_we_owe', ['party' => $name]),
+                'before' => '৳'.Money::format(ltrim($before, '-')),
+                'after' => $say($after),
+            ];
+        }
+
+        if ($money !== null) {
+            $before = $money->balanceInView();
+            $after = $in ? bcadd($before, $amount, 4) : bcsub($before, $amount, 4);
+            $rows[] = [
+                'label' => (string) __('accounts::message.impact_money', ['account' => $money->label()]),
+                'before' => '৳'.Money::format($before),
+                'after' => '৳'.Money::format($after),
+            ];
+            if (! $in) {
+                $enough = bccomp($after, '0', 4) >= 0;
+                $checks[] = ['ok' => $enough, 'text' => (string) __($enough ? 'accounts::message.impact_money_ok' : 'accounts::message.impact_money_short')];
+            }
+        }
+
+        return $rows === [] ? null : ['rows' => $rows, 'checks' => $checks];
     }
 
     /**

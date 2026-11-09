@@ -51,14 +51,15 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         }
         $this->assertMatchesRegularExpression('/--color-topbar-glyph-tasks:\s*#/', $tokens, '⛔ সবুজ টিকের রঙ নেই (৬)।');
         // ⓘ "modiule icon r soft logo ro boro koro" — লোগো বড়, ⊞-এর বর্গ ১৫px; ৯ নভেম্বর ২০২৬ ("iconti tik koro box er bahire ache"):
-        //    ৪২px — নড়াচড়ায় ১.২৮ গুণ হলেও ৫৬px সাদা পাতের ভিতরে, আর পাত নিজের বাইরে কিছু আঁকে না
-        $this->assertMatchesRegularExpression('/data-shell-product(?:(?!<\/a>).)*h-\[42px\]/s', $bar, '⛔ লোগোর মাপ বদলেছে — পাতের বাইরে যাবে, বা ছোট হয়ে গেছে।');
+        //    ৩৬px — নড়াচড়ায় ১.২৮ গুণ হলেও ৪৬px সাদা পাতের ভিতরে, আর পাত নিজের বাইরে কিছু আঁকে না
+        $this->assertMatchesRegularExpression('/data-shell-product(?:(?!<\/a>).)*h-\[36px\]/s', $bar, '⛔ লোগোর মাপ বদলেছে — পাতের বাইরে যাবে, বা ছোট হয়ে গেছে।');
         $this->assertMatchesRegularExpression('/data-shell-product[^>]*class="[^"]*overflow-hidden/', $bar, '⛔ লোগোর নড়াচড়া সাদা পাতের বাইরে আঁকা হয়।');
-        // ⓘ "Software logor bacgraund er sada onso ro boro korte hobe" — সাদা পাত ৫৬px উঁচু, দুই পাশে ১৬px
-        $this->assertMatchesRegularExpression('/data-shell-product[^>]*class="[^"]*h-\[56px\][^"]*px-4/', $bar, '⛔ লোগোর সাদা পাত বড় নয়।');
-        // ⛔ ৯ নভেম্বর ২০২৬: বারের সাধারণ নিয়ম (`.topbar a` = `--topbar-control-h`, ৩৬px) h-[56px]-কে হারাত — পাত আসলে ৩৬px, চিহ্ন বাইরে।
+        // ⓘ "Software logor bacgraund er sada onso ro boro korte hobe" — সাদা পাত বড় (৪৬px, ৩৬px-এর বারের ছোট নিয়মের চেয়ে), দুই পাশে ১৬px;
+        //    ৯ নভেম্বর পরে (মালিকের দাগ দেওয়া ছবি): ৫৬px পাত বারের উপরে-নিচে কিনারায় লেগে নিচে বেরোত — বারের ভিতরে ৫px ফাঁক রেখে ৪৬px
+        $this->assertMatchesRegularExpression('/data-shell-product[^>]*class="[^"]*h-\[46px\][^"]*px-4/', $bar, '⛔ লোগোর সাদা পাত বারের ভিতরে ফাঁক রেখে বসে না।');
+        // ⛔ ৯ নভেম্বর ২০২৬: বারের সাধারণ নিয়ম (`.topbar a` = `--topbar-control-h`, ৩৬px) পাতের মাপকে হারাত — পাত আসলে ৩৬px, চিহ্ন বাইরে।
         //    তাই পাত নিজের উচ্চতা ঘোষণা করে
-        $this->assertMatchesRegularExpression('/data-shell-product[^>]*style="--topbar-control-h: 56px"/', $bar,
+        $this->assertMatchesRegularExpression('/data-shell-product[^>]*style="--topbar-control-h: 46px"/', $bar,
             '⛔ সাদা পাত বারের ৩৬px নিয়মে ছোট হয়ে যায় — চিহ্ন বাক্সের বাইরে বেরোয়।');
         $this->assertStringContainsString('size-[15px]', $this->between($bar, '<div data-menu-cell', '</button>'), '⛔ ⊞-এর বর্গ বড় নয়।');
         $this->assertMatchesRegularExpression('/data-profile-identity(?:(?!<\/span>\s*<\/span>).)*'.preg_quote(e($this->owner->name), '/').'/s', $bar, '⛔ ছবির বাঁয়ে নাম নেই (৫)।');

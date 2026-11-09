@@ -34,6 +34,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> দেখায় — দেখার শাখা মানবে (ধাপ খ) */
     private const SHOWS = [
+        'app/Modules/Accounts/Models/Voucher.php' => 'সইকারীর "অনুমোদন দিলে কী হবে" — টাকার খাতের জের, ভাউচার ফর্মের "খাতে আছে"-র একই হিসাব (Account::balanceInView(); নমুনা v4, ৯ নভেম্বর ২০২৬)',
         'app/Modules/Executive/Services/DailySummary.php' => 'প্রতিদিনের সারাংশ — হেডারে বাছা শাখার দিন (মালিক, ৭ নভেম্বর ২০২৬)',
         'app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php' => 'রসিদ ও পরিশোধ ভাউচারে "খাতে আছে ৳…" — টাকার খাতের জের, দেখার শাখা ধরে (Account::balanceInView(); টাকা দেওয়ার পর্দার একই হিসাব; fe, ২৩ অক্টোবর ২০২৬)',
         'app/Modules/Purchase/Http/Controllers/PaymentController.php' => 'টাকা দেওয়ার পর্দায় "খাতে আছে ৳…" — টাকার খাতের জের, দেখার শাখা ধরে (Account::balanceInView(); নকশা #২৪, ২২ অক্টোবর ২০২৬)',

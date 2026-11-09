@@ -283,4 +283,12 @@ return [
     'bulk_post_why_not_allowed' => 'You may not post this voucher',
     'bulk_post_why_already_waiting' => 'Already waiting for approval',
     'bulk_post_why_rejected' => 'Rejected: it cannot be sent again until the paper is corrected',
+
+    // ⭐ "অনুমোদন দিলে কী হবে" — নমুনা v4, ছবি ২ ([[Voucher::approvalImpact()]])
+    'impact_party_owes' => ':party owes',
+    'impact_we_owe' => 'We owe :party',
+    'impact_advance' => 'Advance :amount',
+    'impact_money' => ':account — balance',
+    'impact_money_ok' => '✓ The account has the money',
+    'impact_money_short' => '⚠ The account will run short after this payment',
 ];
