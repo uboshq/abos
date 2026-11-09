@@ -34,6 +34,7 @@ use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
+use App\Modules\Finance\Services\FinanceCharts;
 use App\Modules\Finance\Services\FundNews;
 use App\Modules\Finance\Services\FundPosition;
 use App\Modules\Finance\Services\WorkingCapital;
@@ -393,6 +394,13 @@ final class FinanceDashboard implements ProvidesDashboard
 
                         return ['fund' => $fund, 'news' => app(FundNews::class)->items($fund)];
                     },
+                ],
+                // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
+                [
+                    'view' => 'finance::dashboard.charts',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['charts' => app(FinanceCharts::class)->all()],
                 ],
                 [
                     'view' => 'finance::dashboard.working-capital',

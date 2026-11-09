@@ -66,6 +66,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Finance/Services/CarrierAndLabourLedger.php' => 'বাহক আর শ্রমিকের খতিয়ান — পর্দা',
         'app/Modules/Finance/Services/CfoFigures.php' => 'অর্থ-প্রধানের সংখ্যা — পর্দা',
         'app/Modules/Finance/Services/WorkingCapital.php' => 'চলতি মূলধন — অর্থের ড্যাশবোর্ড আর ফোনের হোম, যেকোনো তারিখে, দেখার শাখার নাগালে (মালিক, ৯ নভেম্বর ২০২৬)',
+        'app/Modules/Finance/Services/FinanceCharts.php' => 'অর্থের ড্যাশবোর্ডের আট চার্ট — দুই তারিখের জেরের ফারাক (খরচ, বিক্রি, বিক্রীত পণ্যের খরচ) পর্দায় দেখায়, কিছু আটকায় না',
         'app/Modules/Finance/Services/HeadTotals.php' => 'মাথাভিত্তিক যোগফল — পর্দা',
         'app/Modules/Purchase/Http/Controllers/PurchaseApiController.php' => 'ফোনের প্রিন্সিপালের খাতা — ওয়েবের সরবরাহকারীর পাতার একই সারি, দেখার শাখায় (ViewedBranch::narrow)',
         'app/Modules/Sales/Http/Controllers/CustomerLedgerApiController.php' => 'ফোনের দোকানের খাতা — ওয়েবের গ্রাহক-পাতার একই সারি, দেখার শাখায় (ViewedBranch::narrow)',
