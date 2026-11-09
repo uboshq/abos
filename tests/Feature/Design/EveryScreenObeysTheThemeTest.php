@@ -40,6 +40,7 @@ class EveryScreenObeysTheThemeTest extends TestCase
     private const COLOUR_ALLOWED = [
         'resources/views/workspace/partials/ui-card.blade.php' => 'চেহারার নমুনা — ওটা ছবি, নিয়ন্ত্রণ নয়; নিজের চেহারার রঙেই আঁকতে হয় নাহলে নমুনাটা মিথ্যা বলে',
         'resources/views/print/' => 'ছাপা থিম মানে না — বিল সবার জন্য এক, ব্যক্তির পছন্দ নয়',
+        'app/Modules/Finance/Resources/views/dashboard/working-capital.blade.php' => 'চলতি মূলধনের গাঢ় নীল-সোনালি প্যানেল — মালিকের নমুনার হুবহু (৯ নভেম্বর ২০২৬, "luxury"); নিজের গাঢ় পটে নিজের হালকা লেখা, তাই দুই থিমেই একই চেহারা আর পড়া যায়',
         'app/Modules/Accounts/Resources/views/print/asset-labels.blade.php' => 'সম্পদের লেবেলের কাগজ (mPDF) — ছাপার ছাঁচ, থিম নয় (স্থায়ী সম্পদ, ১১ অক্টোবর ২০২৬)',
         'resources/views/welcome.blade.php' => 'Laravel-এর নিজের স্বাগত পাতা; ব্যবহারকারী কোনোদিন দেখেন না',
 

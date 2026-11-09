@@ -106,13 +106,13 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $html = (string) $this->get(route('module.dashboard', ['module' => 'finance', 'wc_date' => '2026-10-31', 'wc_span' => 12]))->assertOk()->getContent();
 
         $this->assertStringContainsString('data-working-capital', $html, '⛔ অর্থের ড্যাশবোর্ডে চলতি মূলধন নেই।');
-        $this->assertStringContainsString('value="2026-10-31"', $html, '⛔ বাছা তারিখটা ঘরে বসেনি।');
+        $this->assertStringContainsString('abosDate(&quot;2026-10-31&quot;', $html, '⛔ বাছা তারিখটা ঘরে বসেনি।');
         $this->assertMatchesRegularExpression('/data-wc-span="12"[^>]*aria-current="true"/', $html, '⛔ ১২ মাসের গড় বাছা দেখায় না।');
         $this->assertGreaterThan(strrpos($html, 'data-listing') ?: 0, strpos($html, 'data-working-capital'), '⛔ চলতি মূলধন সবার নিচে নয়।');
 
         foreach (['not-a-date', '2099-01-01'] as $bad) {
             $page = (string) $this->get(route('module.dashboard', ['module' => 'finance', 'wc_date' => $bad]))->assertOk()->getContent();
-            $this->assertStringContainsString('value="2026-11-20"', $page, "⛔ '{$bad}' তারিখে আজকের হিসাবে ফেরেনি।");
+            $this->assertStringContainsString('abosDate(&quot;2026-11-20&quot;', $page, "⛔ '{$bad}' তারিখে আজকের হিসাবে ফেরেনি।");
         }
     }
 

@@ -75,8 +75,10 @@
                         @if (is_string($v))<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endif
                     @endforeach
                     <label for="wc-date" style="font-size: 13px; font-weight: 600; color: #fde68a">{{ __('finance::working_capital.date') }}</label>
-                    <input id="wc-date" type="date" name="wc_date" value="{{ $w['date'] }}" max="{{ $today->toDateString() }}"
-                           style="font: inherit; font-size: 14px; font-weight: 600; color: #0b1437; background: #fef3c7; border: 0; border-radius: 8px; padding: 6px 8px; min-height: 36px">
+                    {{-- ⓘ বাড়ির তারিখের ঘর (দিন-মাস-বছর সবখানে এক), ব্রাউজারেরটা নয় — Design: তারিখের ঘর --}}
+                    <div style="min-width: 150px; color: #0b1437; background: #fef3c7; border-radius: 8px">
+                        <x-ui.date name="wc_date" id="wc-date" :value="$w['date']" :max="$today->toDateString()" dense />
+                    </div>
                     <button type="submit" style="font: inherit; font-size: 13px; font-weight: 700; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 0; background: #f5c76b; color: #1e1b4b; cursor: pointer">{{ __('finance::working_capital.show') }}</button>
                 </form>
                 @foreach ($presets as $preset)
