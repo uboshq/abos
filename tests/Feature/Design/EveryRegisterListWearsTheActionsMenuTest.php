@@ -92,11 +92,15 @@ final class EveryRegisterListWearsTheActionsMenuTest extends TestCase
         $this->assertSame('P-1 · Rice', $menu[0]['head']);
         $this->assertSame(__('core.row_menu.group_look'), $menu[1]['group']);
         $this->assertSame(__('core.row_menu.view'), $menu[2]['label'], 'দেখুন প্রথমে');
-        $this->assertSame(__('core.row_menu.preview'), $menu[3]['label']);
+        // ⓘ লেবেলের তালিকা ধরে — একটা সারি না থাকলে সূচক ভুল জায়গায় পড়ে ভুল (error) দিত, দাবি নয় (Mac রান, R4)
+        $labels = array_values(array_filter(array_column($menu, 'label')));
+        $this->assertContains(__('core.row_menu.preview'), $labels, '⛔ দেখার ভাগে প্রিভিউ নেই।');
+        $this->assertSame(__('core.row_menu.preview'), $labels[1] ?? null, '⛔ প্রিভিউ দেখুনের ঠিক পরে নয়।');
 
         $work = array_values(array_filter($menu, fn ($i) => isset($i['label']) && in_array($i['label'], ['v', 'e', 'off', 'gone', 'on'], true)));
         $this->assertSame(['e', 'off', 'gone', 'on'], array_column($work, 'label'), '⛔ দেখার লিংকটা কাজের ভাগে দুবার এসেছে।');
-        $this->assertSame(['edit', 'pause', 'trash', 'check-circle'], array_column($work, 'icon'));
+        $this->assertSame(['edit', 'pause', 'trash', 'check-circle'], array_column($work, 'icon'),
+            '⛔ কাজের চিহ্ন ভুল — নিষ্ক্রিয় করা বিরতি, পাকা মোছা ঝুড়ি, সক্রিয় করা টিক।');
     }
 
     public function test_nothing_to_do_means_no_button_not_a_bare_head(): void

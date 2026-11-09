@@ -330,7 +330,7 @@
                     */
                     $chart = \App\Modules\Accounts\Services\StandardChart::class;
                     $idOf = \App\Modules\Accounts\Models\Account::query()
-                        ->whereIn('code', [$chart::OWNER_CAPITAL, $chart::HAND_LOAN, $chart::EMPLOYEE_ADVANCE, $chart::PAYABLE])
+                        ->whereIn('code', [$chart::OWNER_CAPITAL, $chart::HAND_LOAN, $chart::EMPLOYEE_ADVANCE, $chart::PAYABLE])->postable()
                         ->pluck('id', 'code')->map(fn ($id) => (string) $id);
 
                     /*
