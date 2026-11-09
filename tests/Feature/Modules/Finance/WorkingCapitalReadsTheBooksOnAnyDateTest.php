@@ -62,7 +62,8 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $nowNov = $wc->on($nov);
         $nowOct = $wc->on($oct);
 
-        $this->assertSame('177000.0000', bcsub($nowNov['money'], $beforeNov['money'], 4), '⛔ হাতে টাকা খাতার মতো বাড়েনি।');
+        $this->assertSame('177000.0000', bcsub($nowNov['money'], $beforeNov['money'], 4),
+            '⛔ হাতে টাকা খাতার মতো বাড়েনি — আগে '.$beforeNov['money'].', পরে '.$nowNov['money'].', খাত '.$till->code.' '.$till->name().', দাখিলা '.json_encode($this->entries($till->id)));
         $this->assertSame('7000.0000', bcsub($nowNov['other'], $beforeNov['other'], 4), '⛔ অন্যান্য চলতি দায়ে মূসক প্রদেয় ওঠেনি।');
         $this->assertSame('170000.0000', bcsub($nowNov['capital'], $beforeNov['capital'], 4), '⛔ চলতি মূলধন = যোগ − বাদ মেলেনি।');
 
@@ -76,15 +77,17 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
 
     public function test_the_share_of_monthly_sales_uses_the_six_or_twelve_month_average(): void
     {
+        // ⓘ ডেমোর অর্থবছর ১ জুলাই ২০২৬ – ৩০ জুন ২০২৭; হিসাবের দিন বছরের শেষে, যাতে ১২ মাসের জানালা পুরোটাই বছরের ভিতরে
+        Carbon::setTestNow(Carbon::parse('2027-06-30 12:00:00'));
         $wc = app(WorkingCapital::class);
-        $date = Carbon::parse('2026-11-20');
+        $date = Carbon::parse('2027-06-30');
         $six = $wc->on($date, 6);
         $twelve = $wc->on($date, 12);
 
         $till = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
-        $this->journal('2026-11-05', [[$till->id, '600000', null], [StandardChart::find(StandardChart::SALES)->id, null, '600000']]);
+        $this->journal('2027-06-05', [[$till->id, '600000', null], [StandardChart::find(StandardChart::SALES)->id, null, '600000']]);
         // ⓘ ছয় মাসের আগের বিক্রি — ১২ মাসের গড়ে পড়ে, ৬ মাসেরটায় নয়
-        $this->journal('2026-02-10', [[$till->id, '1200000', null], [StandardChart::find(StandardChart::SALES)->id, null, '1200000']]);
+        $this->journal('2026-08-10', [[$till->id, '1200000', null], [StandardChart::find(StandardChart::SALES)->id, null, '1200000']]);
 
         $sixAfter = $wc->on($date, 6);
         $twelveAfter = $wc->on($date, 12);
@@ -141,6 +144,13 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $this->assertArrayNotHasKey('workingCapital', $none, '⛔ অর্থের চাবি ছাড়াই ফোনে চলতি মূলধন গেল।');
     }
 
+    /** @return list<array<string, mixed>> খাতের দাখিলা — দাবির বার্তায় দেখানোর জন্য */
+    private function entries(int $accountId): array
+    {
+        return \App\Models\LedgerEntry::query()->where('account_id', $accountId)->latest('id')->limit(6)
+            ->get(['trx_date', 'branch_id', 'debit', 'credit'])->toArray();
+    }
+
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */
     private function journal(string $date, array $lines): void
     {
@@ -149,5 +159,7 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
             array_map(fn (array $l) => array_filter(['account_id' => $l[0], 'debit' => $l[1], 'credit' => $l[2]], fn ($v) => $v !== null), $lines),
         );
         app(VoucherService::class)->post($voucher);
+        // ⓘ জের-ভান্ডার এক অনুরোধের জন্য (scoped) — আসল পর্দায় পরের দেখা নতুন অনুরোধ; এখানে হাতে ভুলিয়ে সেটাই
+        app(\App\Core\Services\LedgerBalances::class)->forget();
     }
 }
