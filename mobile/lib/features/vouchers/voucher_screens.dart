@@ -19,6 +19,7 @@ import '../books/books_widgets.dart';
 import '../books/collect_screen.dart';
 import 'money_voucher_screen.dart';
 import '../printing/document_actions_sheet.dart';
+import '../printing/row_actions.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -84,6 +85,11 @@ class VoucherListScreen extends StatefulWidget {
 }
 
 class _VoucherListScreenState extends State<VoucherListScreen> {
+  Future<void> _openVoucher(String id) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => VoucherScreen(id: id, api: widget.api)));
+    if (mounted) await _load();
+  }
+
   /// ⭐ উপরের বোতাম — সব · নগদ রসিদ · MFS রসিদ · ব্যাংক রসিদ · পেমেন্ট · কন্ট্রা · জার্নাল · খরচ (মালিক, ১৫ ও ১৭ অক্টোবর
   /// ২০২৬); তারপর এমন কোনো ধরন থাকলে যার বোতাম এখনো নেই
   static List<VoucherView> get _views => [
@@ -305,11 +311,29 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     if (v.writtenBy.isNotEmpty) Text(context.l10n.vouchersListWrittenBy(v.writtenBy)),
                     if (v.date != null) Text(dayOf(v.date)),
                   ]),
-                  onTap: () async {
-                    await Navigator.of(context)
-                        .push(MaterialPageRoute<void>(builder: (_) => VoucherScreen(id: v.id, api: widget.api)));
-                    if (mounted) await _load();
-                  },
+                  onTap: () => _openVoucher(v.id),
+                  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — দেখা · ছাপা ও পাঠানো · কাজ (মালিক, ৮ নভেম্বর ২০২৬)
+                  trailing: RowActionsButton(
+                    number: v.no,
+                    state: v.stateLabel,
+                    onView: () => _openVoucher(v.id),
+                    paperType: 'Voucher',
+                    paperId: v.id,
+                    paperTitle: '${v.kindLabel} ${v.no}',
+                    work: [
+                      RowAction(
+                        key: 'confirm',
+                        label: context.l10n.rowActionsConfirmOnPage,
+                        icon: Icons.task_alt_outlined,
+                        onTap: v.state == 'draft' ? () => _openVoucher(v.id) : null,
+                        why: switch (v.state) {
+                          'draft' => null,
+                          'awaiting' => context.l10n.rowActionsWhyAwaiting,
+                          _ => context.l10n.rowActionsWhyNotDraft,
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             if (_page?.nextPage != null) MoreButton(busy: _busy, onPressed: () => _load(more: true)),

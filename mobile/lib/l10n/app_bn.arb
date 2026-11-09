@@ -15681,5 +15681,41 @@
   "approvalsImpactTitle": "অনুমোদন দিলে কী হবে",
   "@approvalsImpactTitle": {
     "description": "Approval paper page: impact box (sample v4 picture 2)"
+  },
+  "rowActionsButton": "অ্যাকশন",
+  "@rowActionsButton": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsLook": "দেখা",
+  "@rowActionsLook": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsView": "দেখুন",
+  "@rowActionsView": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsPaper": "ছাপা ও পাঠানো",
+  "@rowActionsPaper": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsPrintSend": "ছাপুন, PDF নামান বা পাঠান",
+  "@rowActionsPrintSend": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsWork": "কাজ",
+  "@rowActionsWork": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsConfirmOnPage": "নিশ্চিত করুন — পাতায় সারাংশ দেখে",
+  "@rowActionsConfirmOnPage": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsWhyNotDraft": "নিশ্চিত হওয়া কাগজে আর কিছু নিশ্চিত করার নেই",
+  "@rowActionsWhyNotDraft": {
+    "description": "App list row actions (web-like Actions menu, owner 8 Nov)"
+  },
+  "rowActionsWhyAwaiting": "অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে",
+  "@rowActionsWhyAwaiting": {
+    "description": "App list row actions: why confirm is off for a paper waiting for approval"
   }
 }

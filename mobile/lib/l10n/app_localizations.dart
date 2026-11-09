@@ -18727,6 +18727,60 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'অনুমোদন দিলে কী হবে'**
   String get approvalsImpactTitle;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'অ্যাকশন'**
+  String get rowActionsButton;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'দেখা'**
+  String get rowActionsLook;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'দেখুন'**
+  String get rowActionsView;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপা ও পাঠানো'**
+  String get rowActionsPaper;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপুন, PDF নামান বা পাঠান'**
+  String get rowActionsPrintSend;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজ'**
+  String get rowActionsWork;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করুন — পাতায় সারাংশ দেখে'**
+  String get rowActionsConfirmOnPage;
+
+  /// App list row actions (web-like Actions menu, owner 8 Nov)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত হওয়া কাগজে আর কিছু নিশ্চিত করার নেই'**
+  String get rowActionsWhyNotDraft;
+
+  /// App list row actions: why confirm is off for a paper waiting for approval
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে'**
+  String get rowActionsWhyAwaiting;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

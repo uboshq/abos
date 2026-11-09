@@ -431,6 +431,31 @@ void main() {
     expect(api.asked.last['branch'], isNull);
   });
 
+  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — মালিক, ৮ নভেম্বর ২০২৬ ("অ্যাপস এর যে লিস্টগুলো আছে তাতেও অ্যাকশন বাটন দিতে হবে")
+  testWidgets('every voucher row carries "Actions ▾": view, print & send, and confirm greyed with its reason', (tester) async {
+    await _pump(tester, VoucherListScreen(api: _FakeVouchers(), newChangeId: _key, branches: () async => const []));
+    expect(find.byKey(const ValueKey('row-actions-RV-0001')), findsOneWidget, reason: '⛔ সারিতে "অ্যাকশন ▾" নেই');
+    expect(find.byKey(const ValueKey('row-actions-JV-0002')), findsOneWidget, reason: '⛔ সারিতে "অ্যাকশন ▾" নেই');
+    // ⓘ ওয়েবের মতো সারির ডানে — বাঁয়ে বসলে নম্বর আর অঙ্ক ঠেলে দেয়
+    expect(tester.getCenter(find.byKey(const ValueKey('row-actions-RV-0001'))).dx,
+        greaterThan(tester.getCenter(find.byKey(const ValueKey('voucher-v1'))).dx), reason: '⛔ "অ্যাকশন ▾" সারির ডানে নয়');
+
+    await tester.tap(find.byKey(const ValueKey('row-actions-RV-0001')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('row-actions-sheet')), findsOneWidget, reason: '⛔ অ্যাকশনের শিট খোলে না');
+    for (final key in ['view', 'print', 'confirm']) {
+      expect(find.byKey(ValueKey('row-action-$key')), findsOneWidget, reason: '⛔ শিটে "$key" নেই');
+    }
+    expect(tester.widget<ListTile>(find.byKey(const ValueKey('row-action-confirm'))).enabled, isFalse, reason: '⛔ অপেক্ষার কাগজে আবার নিশ্চিত করা যায়');
+    expect(find.text('অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে'), findsOneWidget, reason: '⛔ কেন করা যায় না, বলে না');
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('row-actions-JV-0002')));
+    await tester.pumpAndSettle();
+    expect(find.text('নিশ্চিত হওয়া কাগজে আর কিছু নিশ্চিত করার নেই'), findsOneWidget, reason: '⛔ পাকা কাগজের কারণ ভুল');
+  });
+
   // ⭐ "নতুন ভাউচার" কেবল লেখার চাবিওয়ালার — চাবি না থাকলে বোতামই নেই (সার্ভারের দরজাও `can:accounts.voucher.create`)
   testWidgets('"নতুন ভাউচার" shows only to one who may write a voucher', (tester) async {
     await _pump(tester, VoucherListScreen(api: _FakeVouchers(), newChangeId: _key, branches: () async => const []));

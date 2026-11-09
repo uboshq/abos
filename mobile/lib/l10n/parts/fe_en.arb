@@ -116,5 +116,14 @@
   "approvalsWhoParty": "Party",
   "approvalsWhoAsked": "Asked by",
   "approvalsWhoFor": "On behalf of",
-  "approvalsImpactTitle": "What happens on approval"
+  "approvalsImpactTitle": "What happens on approval",
+  "rowActionsButton": "Actions",
+  "rowActionsLook": "View",
+  "rowActionsView": "Open",
+  "rowActionsPaper": "Print & send",
+  "rowActionsPrintSend": "Print, save a PDF or send",
+  "rowActionsWork": "Work",
+  "rowActionsConfirmOnPage": "Confirm — on the page, after the summary",
+  "rowActionsWhyNotDraft": "Already confirmed — nothing left to confirm",
+  "rowActionsWhyAwaiting": "Awaiting approval — it goes into the books once approved"
 }

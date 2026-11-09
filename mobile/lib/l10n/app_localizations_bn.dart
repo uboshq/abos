@@ -11260,4 +11260,33 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsImpactTitle => 'অনুমোদন দিলে কী হবে';
+
+  @override
+  String get rowActionsButton => 'অ্যাকশন';
+
+  @override
+  String get rowActionsLook => 'দেখা';
+
+  @override
+  String get rowActionsView => 'দেখুন';
+
+  @override
+  String get rowActionsPaper => 'ছাপা ও পাঠানো';
+
+  @override
+  String get rowActionsPrintSend => 'ছাপুন, PDF নামান বা পাঠান';
+
+  @override
+  String get rowActionsWork => 'কাজ';
+
+  @override
+  String get rowActionsConfirmOnPage => 'নিশ্চিত করুন — পাতায় সারাংশ দেখে';
+
+  @override
+  String get rowActionsWhyNotDraft =>
+      'নিশ্চিত হওয়া কাগজে আর কিছু নিশ্চিত করার নেই';
+
+  @override
+  String get rowActionsWhyAwaiting =>
+      'অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে';
 }

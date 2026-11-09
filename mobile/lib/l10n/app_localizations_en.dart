@@ -11431,4 +11431,34 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsImpactTitle => 'What happens on approval';
+
+  @override
+  String get rowActionsButton => 'Actions';
+
+  @override
+  String get rowActionsLook => 'View';
+
+  @override
+  String get rowActionsView => 'Open';
+
+  @override
+  String get rowActionsPaper => 'Print & send';
+
+  @override
+  String get rowActionsPrintSend => 'Print, save a PDF or send';
+
+  @override
+  String get rowActionsWork => 'Work';
+
+  @override
+  String get rowActionsConfirmOnPage =>
+      'Confirm — on the page, after the summary';
+
+  @override
+  String get rowActionsWhyNotDraft =>
+      'Already confirmed — nothing left to confirm';
+
+  @override
+  String get rowActionsWhyAwaiting =>
+      'Awaiting approval — it goes into the books once approved';
 }
