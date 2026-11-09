@@ -16,7 +16,7 @@
          'render' => fn ($h) => __('hr::kind.' . $h->calculation)],
         ['key' => 'account', 'label' => __('hr::field.account'), 'width' => '14rem',
          'render' => fn ($h) => $h->account?->label() ?? '—'],
-        ['key' => 'actions', 'label' => '—', 'width' => '8rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($h) => view('hr::salary_head.partials.actions', ['head' => $h])],
     ];
 @endphp

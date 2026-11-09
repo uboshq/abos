@@ -19,7 +19,7 @@
             'render' => fn ($i) => $i->valid_from?->format('d-m-Y')],
         ['key' => 'to', 'label' => __('sales::price_book.valid_to'), 'width' => '7rem',
             'render' => fn ($i) => $i->valid_to?->format('d-m-Y') ?? __('sales::price_book.open_ended')],
-        ['key' => 'actions', 'label' => '', 'width' => '12rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
             'render' => fn ($i) => view('sales::price_book.partials.item-actions', ['list' => $list, 'item' => $i, 'canManage' => $canManage])],
     ];
 
