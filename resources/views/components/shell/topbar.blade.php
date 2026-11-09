@@ -125,13 +125,13 @@
         {{-- ⭐ আইকনসহ জীবন্ত লোগো, ১০টা নড়াচড়া পালা করে (মালিক, ৬ নভেম্বর ২০২৬: "logo icon soho live jibonto 10 ti movement") —
              সাদা পাতে, কারণ চিহ্নটা সাদা জমিনের জন্য আঁকা ([[x-brand.live-logo]]) --}}
         <a href="{{ route('dashboard') }}" data-shell-product x-data x-show="! $store.sidebar.collapsed"
-           class="hidden h-[56px] shrink-0 items-center overflow-hidden rounded-[12px] bg-(--color-logo-plate) px-4 md:flex" title="ABOS"
-           style="--topbar-control-h: 56px"
+           class="hidden h-[46px] shrink-0 items-center overflow-hidden rounded-[12px] bg-(--color-logo-plate) px-4 md:flex" title="ABOS"
+           style="--topbar-control-h: 46px"
            data-logo-plate>
             {{-- ⭐ চিহ্ন পুরোটা সাদা পাতের ভিতরে — মালিক, ৯ নভেম্বর ২০২৬ ("iconti tik koro box er bahire ache"): নড়াচড়ায় "A" ১.২৮ গুণ বড় আর
                  উপরে ওঠে। ⛔ আসল কারণ: বারের সাধারণ নিয়ম (`.topbar a` — ৩৬px) পাতটাকে ৩৬px করে রাখত, তাই ৪৬px চিহ্ন উপরে-নিচে বেরোত;
-                 এখন পাত সত্যিই ৫৬px (`--topbar-control-h`), চিহ্ন ৪২px (১.২৮ গুণে ~৫৪px), আর পাত নিজের বাইরে কিছু আঁকে না --}}
-            <x-brand.live-logo class="h-[42px] w-auto" />
+                 পাত ৪৬px — ৫৬px বারের ভিতরে, উপরে-নিচে ৫px ফাঁক (মালিক, পরে একই দিনে: বারের কিনারায় লেগে ছিল) — চিহ্ন ৩৬px (১.২৮ গুণে ~৪৬px), পাত নিজের বাইরে কিছু আঁকে না --}}
+            <x-brand.live-logo class="h-[36px] w-auto" />
         </a>
         <button type="button"
                 x-data
