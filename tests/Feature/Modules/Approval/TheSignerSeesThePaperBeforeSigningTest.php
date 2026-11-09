@@ -209,17 +209,18 @@ final class TheSignerSeesThePaperBeforeSigningTest extends TestCase
     public function test_the_phone_sheet_says_what_approving_will_change(): void
     {
         $this->flowFor(Voucher::RECEIPT, $this->signer);
-        foreach (['approval.decide', 'approval.view'] as $key) {
-            Permission::findOrCreate($key, 'web');
-            $this->signer->givePermissionTo($key);
-        }
+        // ⓘ চাবি কোম্পানির ভিতরে দেওয়া — ফোনের দরজা কোম্পানি ধরে চাবি পড়ে ([[ThePhoneInboxKeepsTheWebsRulesTest::giveKeys()]]-এর একই পথ)
+        CompanyContext::forCompany($this->company->id, fn () => $this->signer->givePermissionTo(
+            array_map(fn ($k) => Permission::findOrCreate($k, 'web'), ['approval.decide', 'approval.view'])));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         $customer = $this->customer('01711000888', '0', 'IMPACT-PT');
         $approval = $this->hold($this->customerReceipt($customer, '3000'), 'TRX-IMPACT-1');
         [$bank] = $this->bankAndOther();
         $bankBefore = $bank->fresh()->balanceInView();
 
-        \Laravel\Sanctum\Sanctum::actingAs($this->signer);
+        $this->app['auth']->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($this->signer->fresh(), [\App\Http\Controllers\Api\AuthController::APP]);
         $impact = $this->getJson('/api/v1/approvals/'.$approval->public_id.'/sheet')->assertOk()->json('impact');
 
         $this->assertIsArray($impact, '⛔ ফোনের কাগজের পাতায় "অনুমোদন দিলে কী হবে" নেই');
