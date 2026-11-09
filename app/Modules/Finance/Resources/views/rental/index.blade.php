@@ -43,9 +43,7 @@
          'render' => fn ($c) => $c->ends_on->format('d/m/Y')],
         /* ⓘ নিজের পাতায় — মাসের ভাড়া, শর্ত বদল, জামানত, চুক্তি শেষ সব ওখানে */
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
-         'render' => fn ($c) => \Illuminate\Support\Facades\Blade::render(
-             '<x-ui.row-actions :label="$label" :items="$items" />',
-             ['label' => __('core.table.action_menu'), 'items' => \App\Core\Support\RowMenu::dress([], \App\Core\Support\RowMenu::title($c), \App\Core\Support\RowMenu::activeState($c), route('finance.rental.show', $c), $c->code ?? null, 'finance')])],
+         'render' => fn ($c) => view('finance::rental.partials.row-actions', ['contract' => $c])],
     ];
 
     $rentTabs = [

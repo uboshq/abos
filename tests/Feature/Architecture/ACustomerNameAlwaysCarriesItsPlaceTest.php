@@ -35,8 +35,6 @@ final class ACustomerNameAlwaysCarriesItsPlaceTest extends TestCase
         "app/Modules/Customer/Resources/views/form.blade.php::old('name_en', \$customer->name_en)" => 'ফর্মের ঘরের মান — নাম লেখার ঘর, দেখানো নয়',
         "app/Modules/Customer/Resources/views/form.blade.php::old('name_bn', \$customer->name_bn)" => 'ফর্মের ঘরের মান — নাম লেখার ঘর, দেখানো নয়',
         'app/Modules/Customer/Resources/views/show.blade.php::<x-ui.page-header :title="$customer->name()"' => 'গ্রাহকের নিজের পাতা — পরিচয়ের বাক্সে পয়েন্ট আর শাখা আলাদা ঘরে',
-        'app/Modules/Customer/Resources/views/partials/row-actions.blade.php::aria-label="{{ __(\'core.action.view\') }} {{ $customer->name() }}"' => 'স্ক্রিন-রিডারের বোতামের নাম — সারির পয়েন্ট/এরিয়া/শাখার কলাম পাশেই',
-        'app/Modules/Customer/Resources/views/partials/row-actions.blade.php::aria-label="{{ __(\'core.action.edit\') }} {{ $customer->name() }}"' => 'স্ক্রিন-রিডারের বোতামের নাম — সারির পয়েন্ট/এরিয়া/শাখার কলাম পাশেই',
         'app/Modules/Customer/Resources/views/partials/state-badge.blade.php::$customer->name()" />' => 'স্ক্রিন-রিডারের সুইচের নাম — সারির পয়েন্ট/এরিয়া/শাখার কলাম পাশেই',
         'app/Modules/Sales/Resources/views/components/portal/layout.blade.php::{{ $customer->name_bn ?: $customer->name_en }}' => 'গ্রাহকের নিজের পোর্টাল — পাঠক নিজেই গ্রাহক',
         "app/Modules/Sales/Resources/views/delivery/partials/actions.blade.php::old('receiver_name', \$challan->customer?->name())" => 'গ্রহীতার নামের ঘরের আগে-ভরা মান — লেখার ঘর, দেখানো নয়',

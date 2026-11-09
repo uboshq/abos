@@ -23,7 +23,7 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
     /** ধাপে ধাপে আসছে (সমন্বয়কের তালিকা, ১ অক্টোবর ২০২৬) — প্রতিটা সর্বমোট পেলে এখান থেকে নাম কাটা */
     private const PENDING = [
         'Sales/Resources/views/route/index.blade.php',
-        'Sales/Resources/views/crm/opportunity/index.blade.php',
+        // ⓘ সুযোগের তালিকা বেরোল — সর্বমোট আগেই ছিল, "দেখুন" এল সারির "অ্যাকশন ▾" দিয়ে (মালিক, ৯ নভেম্বর ২০২৬: সব তালিকা)
     ];
 
     /** টাকা দেখায়, কিন্তু যোগটা মিথ্যা বা অর্থহীন হত — কারণসহ; সর্বমোট এখানে ইচ্ছাকৃতভাবে নেই */
