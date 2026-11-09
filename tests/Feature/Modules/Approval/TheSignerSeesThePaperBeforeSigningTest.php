@@ -202,6 +202,38 @@ final class TheSignerSeesThePaperBeforeSigningTest extends TestCase
         $this->assertFact($sheet, __('customer::field.credit_limit'), Money::format('25000'));
     }
 
+    /**
+     * ⭐ "অনুমোদন দিলে কী হবে" — মালিকের নমুনা v4, ছবি ২ ("ok", ৮ নভেম্বর ২০২৬): ফোনের কাগজের পাতায় পক্ষের বাকি আর টাকার খাতের
+     * জমা, এখন → পরে। নতুন গ্রাহকের বাকি ০, ৳3,000 রসিদে পরে "অগ্রিম ৳3,000.00"; ব্যাংকের জমা ৳3,000 বাড়ে।
+     */
+    public function test_the_phone_sheet_says_what_approving_will_change(): void
+    {
+        $this->flowFor(Voucher::RECEIPT, $this->signer);
+        foreach (['approval.decide', 'approval.view'] as $key) {
+            Permission::findOrCreate($key, 'web');
+            $this->signer->givePermissionTo($key);
+        }
+
+        $customer = $this->customer('01711000888', '0', 'IMPACT-PT');
+        $approval = $this->hold($this->customerReceipt($customer, '3000'), 'TRX-IMPACT-1');
+        [$bank] = $this->bankAndOther();
+        $bankBefore = $bank->fresh()->balanceInView();
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->signer);
+        $impact = $this->getJson('/api/v1/approvals/'.$approval->public_id.'/sheet')->assertOk()->json('impact');
+
+        $this->assertIsArray($impact, '⛔ ফোনের কাগজের পাতায় "অনুমোদন দিলে কী হবে" নেই');
+        $this->assertCount(2, $impact['rows'], '⛔ পক্ষ আর টাকার খাত — দুই সারি নয়');
+        [$party, $money] = $impact['rows'];
+        $this->assertStringContainsString('Sheet Store IMPACT-PT', $party['label'], '⛔ প্রথম সারি পক্ষের নয়');
+        $this->assertSame('৳'.Money::format('0'), $party['before'], '⛔ নতুন গ্রাহকের বাকি শূন্য নয়');
+        $this->assertSame(__('accounts::message.impact_advance', ['amount' => '৳'.Money::format('3000')]), $party['after'],
+            '⛔ রসিদের পরে পক্ষের অগ্রিম ঠিক নয়');
+        $this->assertSame('৳'.Money::format($bankBefore), $money['before'], '⛔ টাকার খাতের এখনকার জমা খাতার হিসাব নয়');
+        $this->assertSame('৳'.Money::format(bcadd($bankBefore, '3000', 4)), $money['after'], '⛔ রসিদে টাকার খাতের জমা অঙ্ক পরিমাণ বাড়ে না');
+        $this->assertSame([], $impact['checks'], '⛔ রসিদে "খাতে টাকা আছে" যাচাই — ওটা কেবল পরিশোধে');
+    }
+
     /** ⓘ সীমা শূন্য মানে "সীমা নেই" — "০ টাকা সীমা" দেখালে সইকারী ভুল বুঝতেন। */
     public function test_a_customer_without_a_credit_limit_shows_no_limit(): void
     {

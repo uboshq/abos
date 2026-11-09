@@ -441,6 +441,8 @@ final class ApprovalApiController extends Controller
              * নেই (DO, আদেশ, খরচের দাবি …) তার বিস্তারিত ফোনে "আনা গেল না" দেখাত (মালিক, ৮ অক্টোবর ২০২৬)।
              */
             'totals' => (object) array_map('strval', $sheet['totals'] ?? []),
+            // ⭐ "অনুমোদন দিলে কী হবে" — কাগজ নিজে বলে ([[Voucher::approvalImpact()]]); না জানলে null (নমুনা v4, ছবি ২)
+            'impact' => $sheet['impact'] ?? null,
             ...$this->paperPage($entry, $document, $request->user()),
         ]);
     }
