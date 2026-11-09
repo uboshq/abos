@@ -11289,4 +11289,85 @@ class AppL10nBn extends AppL10n {
   @override
   String get rowActionsWhyAwaiting =>
       'অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে';
+
+  @override
+  String get wcTitle => 'চলতি মূলধন';
+
+  @override
+  String get wcToday => 'আজ';
+
+  @override
+  String get wcLastMonthEnd => 'গত মাসের শেষ';
+
+  @override
+  String get wcLastYearEnd => 'গত বছরের শেষ';
+
+  @override
+  String get wcPickDate => 'তারিখ বাছুন';
+
+  @override
+  String wcUp(String pct) {
+    return '▲ $pct% আগের মাসের চেয়ে';
+  }
+
+  @override
+  String wcDown(String pct) {
+    return '▼ $pct% আগের মাসের চেয়ে';
+  }
+
+  @override
+  String get wcRatio => 'চলতি অনুপাত';
+
+  @override
+  String get wcRatioGood => 'ভালো · 1.5-এর উপরে';
+
+  @override
+  String get wcRatioWatch => 'নজরে রাখুন · 1 থেকে 1.5';
+
+  @override
+  String get wcRatioBad => 'দুর্বল · 1-এর নিচে';
+
+  @override
+  String get wcSalesShare => 'গড় মাসিক বিক্রির';
+
+  @override
+  String wcMonths(String n) {
+    return '$n মাস';
+  }
+
+  @override
+  String get wcReceivable => 'পাওনা';
+
+  @override
+  String get wcStock => 'মজুদ';
+
+  @override
+  String get wcMoney => 'হাতে টাকা';
+
+  @override
+  String get wcPayable => 'প্রিন্সিপালের দেনা';
+
+  @override
+  String get wcOther => 'অন্যান্য চলতি দায়';
+
+  @override
+  String get wcBarMoney => 'টাকা';
+
+  @override
+  String get wcBarPayable => 'দেনা';
+
+  @override
+  String get wcBarOther => 'দায়';
+
+  @override
+  String get wcBarCapital => 'মূলধন';
+
+  @override
+  String get wcChartNote => 'লাখ টাকায় · যোগ হয়ে ওঠে, বাদ গিয়ে নামে';
+
+  @override
+  String get wcFullReport => 'পুরো রিপোর্ট →';
+
+  @override
+  String get wcFailed => 'চলতি মূলধন আনা গেল না';
 }

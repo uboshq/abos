@@ -11461,4 +11461,85 @@ class AppL10nEn extends AppL10n {
   @override
   String get rowActionsWhyAwaiting =>
       'Awaiting approval — it goes into the books once approved';
+
+  @override
+  String get wcTitle => 'Working capital';
+
+  @override
+  String get wcToday => 'Today';
+
+  @override
+  String get wcLastMonthEnd => 'Last month end';
+
+  @override
+  String get wcLastYearEnd => 'Last year end';
+
+  @override
+  String get wcPickDate => 'Pick a date';
+
+  @override
+  String wcUp(String pct) {
+    return '▲ $pct% against last month';
+  }
+
+  @override
+  String wcDown(String pct) {
+    return '▼ $pct% against last month';
+  }
+
+  @override
+  String get wcRatio => 'Current ratio';
+
+  @override
+  String get wcRatioGood => 'Good · above 1.5';
+
+  @override
+  String get wcRatioWatch => 'Watch · 1 to 1.5';
+
+  @override
+  String get wcRatioBad => 'Weak · below 1';
+
+  @override
+  String get wcSalesShare => 'Of average monthly sales';
+
+  @override
+  String wcMonths(String n) {
+    return '$n months';
+  }
+
+  @override
+  String get wcReceivable => 'Receivable';
+
+  @override
+  String get wcStock => 'Stock';
+
+  @override
+  String get wcMoney => 'Amount in hand';
+
+  @override
+  String get wcPayable => 'Owed to principals';
+
+  @override
+  String get wcOther => 'Other current liabilities';
+
+  @override
+  String get wcBarMoney => 'Amount in hand';
+
+  @override
+  String get wcBarPayable => 'Principals';
+
+  @override
+  String get wcBarOther => 'Dues';
+
+  @override
+  String get wcBarCapital => 'Capital';
+
+  @override
+  String get wcChartNote => 'In lakh taka · parts add up, dues take away';
+
+  @override
+  String get wcFullReport => 'Full report →';
+
+  @override
+  String get wcFailed => 'Could not load working capital';
 }

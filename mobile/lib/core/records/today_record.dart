@@ -4,6 +4,7 @@ import '../api_client/api_client.dart';
 import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
+import 'working_capital_record.dart';
 
 /// How the day is going — docs/Contract §৮.
 ///
@@ -59,6 +60,9 @@ class TodayRecord {
     final block = payload['payable'];
     return block is Map ? Money.value(block['handLoans']) : null;
   }
+
+  /// ⭐ চলতি মূলধন — টাকার কার্ডের নিচের কার্ড (মালিক, ৯ নভেম্বর ২০২৬); পুরনো সার্ভার বা অর্থের চাবি না থাকলে null
+  WorkingCapitalRecord? get workingCapital => WorkingCapitalRecord.fromJson(payload['workingCapital']);
 
   MoneyBox? get money {
     final block = payload['money'];
@@ -227,10 +231,7 @@ class PrincipalLine {
   /// is shown instead.
   final String? periodSoFar;
 
-  String get periodLabel =>
-      (periodSoFar != null && periodSoFar!.trim().isNotEmpty)
-          ? periodSoFar!
-          : period;
+  String get periodLabel => (periodSoFar != null && periodSoFar!.trim().isNotEmpty) ? periodSoFar! : period;
 
   final String basisRate;
   final double? inflow;
@@ -249,9 +250,7 @@ class PrincipalLine {
     final said = commissionLabel?.trim() ?? '';
     if (said.isNotEmpty) return said;
     final value = commission ?? 0;
-    return value < 0
-        ? AppLocale.l10n.commissionLoss(Money.taka(-value))
-        : Money.taka(value);
+    return value < 0 ? AppLocale.l10n.commissionLoss(Money.taka(-value)) : Money.taka(value);
   }
 
   final double? paid;
@@ -263,9 +262,7 @@ class PrincipalLine {
   String get balanceLabel {
     final value = balance ?? 0;
     if (value == 0) return AppLocale.l10n.commissionSideSettled;
-    return value > 0
-        ? AppLocale.l10n.todayBalanceToPay(Money.taka(value))
-        : AppLocale.l10n.todayBalanceOwedToUs(Money.taka(-value));
+    return value > 0 ? AppLocale.l10n.todayBalanceToPay(Money.taka(value)) : AppLocale.l10n.todayBalanceOwedToUs(Money.taka(-value));
   }
 }
 

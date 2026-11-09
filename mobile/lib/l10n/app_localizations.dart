@@ -18781,6 +18781,156 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'অনুমোদনের অপেক্ষায় — অনুমোদন হলে নিজে খাতায় বসবে'**
   String get rowActionsWhyAwaiting;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি মূলধন'**
+  String get wcTitle;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ'**
+  String get wcToday;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'গত মাসের শেষ'**
+  String get wcLastMonthEnd;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'গত বছরের শেষ'**
+  String get wcLastYearEnd;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ বাছুন'**
+  String get wcPickDate;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'▲ {pct}% আগের মাসের চেয়ে'**
+  String wcUp(String pct);
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'▼ {pct}% আগের মাসের চেয়ে'**
+  String wcDown(String pct);
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি অনুপাত'**
+  String get wcRatio;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভালো · 1.5-এর উপরে'**
+  String get wcRatioGood;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'নজরে রাখুন · 1 থেকে 1.5'**
+  String get wcRatioWatch;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'দুর্বল · 1-এর নিচে'**
+  String get wcRatioBad;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'গড় মাসিক বিক্রির'**
+  String get wcSalesShare;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'{n} মাস'**
+  String wcMonths(String n);
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'পাওনা'**
+  String get wcReceivable;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ'**
+  String get wcStock;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'হাতে টাকা'**
+  String get wcMoney;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপালের দেনা'**
+  String get wcPayable;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্যান্য চলতি দায়'**
+  String get wcOther;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get wcBarMoney;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'দেনা'**
+  String get wcBarPayable;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'দায়'**
+  String get wcBarOther;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'মূলধন'**
+  String get wcBarCapital;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'লাখ টাকায় · যোগ হয়ে ওঠে, বাদ গিয়ে নামে'**
+  String get wcChartNote;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'পুরো রিপোর্ট →'**
+  String get wcFullReport;
+
+  /// Home working capital card under the money card (owner 9 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি মূলধন আনা গেল না'**
+  String get wcFailed;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
