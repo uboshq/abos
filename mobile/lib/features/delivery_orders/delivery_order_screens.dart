@@ -13,6 +13,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../printing/document_actions_sheet.dart';
+import '../printing/row_actions.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/design_list_row.dart';
@@ -41,8 +42,7 @@ String _title(BuildContext context, DeliveryOrderApi api) => context.l10n.delive
 AppStatusKind orderStatusKind(String status) => switch (status) {
       'draft' => AppStatusKind.neutral,
       'rejected' || 'cancelled' || 'credit_held' || 'accounts_held' => AppStatusKind.danger,
-      'invoiced' || 'closed' || 'delivered' || 'confirmed' || 'supervisor_approved' || 'accounts_approved' =>
-        AppStatusKind.success,
+      'invoiced' || 'closed' || 'delivered' || 'confirmed' || 'supervisor_approved' || 'accounts_approved' => AppStatusKind.success,
       'submitted' || 'supervisor_pending' || 'depot_check' || 'pending' => AppStatusKind.warning,
       _ => AppStatusKind.pending,
     };
@@ -144,9 +144,8 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.deliveryOrdersListLoadFailed,
-            whenAbsent: context.l10n.deliveryOrdersNotOnServer(_kind(widget.api))));
+        setState(() => _error =
+            errorMessageFor(e, fallback: context.l10n.deliveryOrdersListLoadFailed, whenAbsent: context.l10n.deliveryOrdersNotOnServer(_kind(widget.api))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -185,7 +184,11 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       // ⭐ "＋ নতুন" একই বারে মোটের পাশে ([ActionBottomBar]) — তালিকার ওপরে ভাসে না
       bottomNavigationBar: ActionBottomBar.maybe(
           totals: total != null && rows.isNotEmpty
-              ? TotalsBar(pageCount: page.count, pageSum: page.sum, allCount: total.count, allSum: total.sum,
+              ? TotalsBar(
+                  pageCount: page.count,
+                  pageSum: page.sum,
+                  allCount: total.count,
+                  allSum: total.sum,
                   // ⓘ ডেস্কে তারিখের ছাঁকনি নেই (সার্ভারও তারিখে ছাঁকে না) — সব তারিখ
                   period: const TotalsPeriod.allDates(),
                   rejectedCount: rejectedRows.count,
@@ -246,19 +249,33 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
             for (final order in rows)
               PaperListRow(
                 key: ValueKey('do-row-${order.id}'),
-                icon: order.awaitingMe
-                    ? Icons.draw_outlined
-                    : (widget.api.forOrders ? Icons.receipt_long_outlined : Icons.local_shipping_outlined),
+                icon: order.awaitingMe ? Icons.draw_outlined : (widget.api.forOrders ? Icons.receipt_long_outlined : Icons.local_shipping_outlined),
                 tone: order.awaitingMe ? context.palette.warning : null,
                 party: order.customer ?? context.l10n.deliveryOrdersNoCustomer,
                 number: order.no,
                 detail: order.date,
                 amount: order.total,
                 // ⭐ ওয়েবের চিপ — ব্যাক অর্ডার, সীমায় আটকে, চালান আর বিল (সমন্বয়ক, ৬ অক্টোবর ২০২৬); না থাকলে অবস্থার চিপ
-                pill: order.chips.isEmpty
-                    ? AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status))
-                    : null,
-                below: order.chips.isEmpty ? null : OrderChips(order.chips),
+                pill: order.chips.isEmpty ? AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status)) : null,
+                // ⭐ ওয়েবের মতো "অ্যাকশন ▾" (মালিক, ৯ নভেম্বর ২০২৬: "Abos er sokol list") — দেখা, আর বিক্রয় আদেশে ছাপা ও পাঠানো;
+                //   ⓘ DO-তে ছাপা নেই — কাগজের পাতার মতোই (সার্ভারের `SalesOrder` ধরন আদেশের কাগজ দেয়, DO-র নয়)
+                below: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (order.chips.isNotEmpty) OrderChips(order.chips),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: RowActionsButton(
+                        number: order.no,
+                        state: order.statusLabel.isEmpty ? null : order.statusLabel,
+                        onView: () => _open(order),
+                        paperType: widget.api.forOrders ? 'SalesOrder' : null,
+                        paperId: widget.api.forOrders ? order.id : null,
+                        paperTitle: context.l10n.deliveryOrdersPrintTitle(order.no),
+                      ),
+                    ),
+                  ],
+                ),
                 onTap: () => _open(order),
               ),
             // ⭐ পরের পাতা — বাকি তালিকার একই "আরও দেখুন" (সার্ভার পাতায় ৫০টা দেয়)
@@ -288,14 +305,14 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
   CustomerRecord? _customer;
   final List<(ProductRecord, int)> _lines = [];
   final _note = TextEditingController();
+
   /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
   final _once = OnceKey();
   bool _busy = false;
   String? _error;
 
   late final List<CustomerRecord> _customers = widget.customers ?? CustomerRecord.all();
-  late final List<ProductRecord> _products =
-      (widget.products ?? ProductRecord.all()).where((p) => p.isActive).toList();
+  late final List<ProductRecord> _products = (widget.products ?? ProductRecord.all()).where((p) => p.isActive).toList();
 
   @override
   void dispose() {
@@ -320,8 +337,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
     });
   }
 
-  Future<int?> _askQty(String title, int initial) =>
-      showDialog<int>(context: context, builder: (_) => _QtyDialog(title: title, initial: initial));
+  Future<int?> _askQty(String title, int initial) => showDialog<int>(context: context, builder: (_) => _QtyDialog(title: title, initial: initial));
 
   Future<void> _save({required bool submit}) async {
     final customer = _customer;
@@ -335,11 +351,11 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
     });
     try {
       final made = await _once.send(() => widget.api.create(
-        customerId: customer.id,
-        lines: [for (final l in _lines) WantedLine(l.$1.id, l.$2)],
-        submit: submit,
-        note: _note.text,
-      ));
+            customerId: customer.id,
+            lines: [for (final l in _lines) WantedLine(l.$1.id, l.$2)],
+            submit: submit,
+            note: _note.text,
+          ));
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
       if (mounted) {
@@ -352,7 +368,8 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
 
   // ⭐ ডিলার বা পণ্য বা মন্তব্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা DO এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
+  Widget build(BuildContext context) =>
+      UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
 
   Widget _screen(BuildContext context) {
     return Scaffold(
@@ -397,10 +414,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             label: Text(context.l10n.deliveryOrdersAddLine),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextField(
-              controller: _note,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: context.l10n.deliveryOrdersNote)),
+          TextField(controller: _note, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.l10n.deliveryOrdersNote)),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
@@ -458,8 +472,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   void _take(DeliveryOrder order) {
     _order = order;
     // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ — DO, বা বিক্রয় আদেশ (মালিক, ১২ অক্টোবর ২০২৬)
-    RecentPapers.note(
-        kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no, party: order.customer);
+    RecentPapers.note(kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no, party: order.customer);
     for (final line in order.lines) {
       (_boxes[line.id] ??= TextEditingController()).text = _qty(line.finalQty);
     }
@@ -528,16 +541,13 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
           // ⭐ তিন অবস্থা: প্রথম আনায় খসড়া সারি, আনা না গেলে "আবার চেষ্টা করুন"; কাগজ হাতে থাকলে সরু দাগ আর কাজের ভুল কার্ডে
           if (_busy && order == null) const LoadingSkeleton(rows: 3),
           if (_busy && order != null) const LinearProgressIndicator(),
-          if (_error != null && order == null)
-            ErrorState(key: const ValueKey('do-error'), message: _error!, onRetry: _busy ? null : _load),
+          if (_error != null && order == null) ErrorState(key: const ValueKey('do-error'), message: _error!, onRetry: _busy ? null : _load),
           if (_error != null && order != null) _ErrorCard(_error!),
           // ⓘ সবুজ পটে নিজের গাঢ় সবুজ লেখা — থিমের লেখা অন্ধকার মোডে এই হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১)
           if (_done != null)
             Card(
               color: context.palette.successSurface,
-              child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(_done!, style: TextStyle(color: context.palette.success))),
+              child: Padding(padding: const EdgeInsets.all(AppSpacing.md), child: Text(_done!, style: TextStyle(color: context.palette.success))),
             ),
           if (order != null) ...[
             // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে কাগজের নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
@@ -545,16 +555,14 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                 key: const ValueKey('do-customer-line'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
             Text([order.no, if (order.date != null) order.date!].join(' · '),
-                key: const ValueKey('do-number-line'),
-                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                key: const ValueKey('do-number-line'), style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: AppSpacing.xs),
             Text(context.l10n.deliveryOrdersStatus(order.statusLabel), key: const ValueKey('do-status')),
             Text(context.l10n.deliveryOrdersTotal(Money.taka(order.total))),
             // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
             if (order.creditShort != null)
               Text(context.l10n.deliveryOrdersCreditShort(Money.taka(order.creditShort)),
-                  key: const ValueKey('do-credit-short'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  key: const ValueKey('do-credit-short'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (order.chips.isNotEmpty) OrderChips(order.chips),
             // ⭐ মজুদ এখন — ধরা হয়নি: আছে, চাই, কম (ওয়েবের আদেশের পাতার একই উৎস)
             if (order.stockNow.isNotEmpty) _StockNowCard(order.stockNow),
@@ -752,14 +760,8 @@ class OrderChips extends StatelessWidget {
               Container(
                 key: ValueKey('order-chip-${c.key}'),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                decoration: BoxDecoration(
-                    color: colours(c.tone, context.palette).$1,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Text(c.label,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: colours(c.tone, context.palette).$2,
-                        fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(color: colours(c.tone, context.palette).$1, borderRadius: BorderRadius.circular(12)),
+                child: Text(c.label, style: TextStyle(fontSize: 12, color: colours(c.tone, context.palette).$2, fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -780,8 +782,7 @@ class _StockNowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(context.l10n.deliveryOrdersStockTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text(context.l10n.deliveryOrdersStockNote,
-                  style: TextStyle(color: context.palette.onSurfaceMuted)),
+              Text(context.l10n.deliveryOrdersStockNote, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in rows) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(r.product, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -790,7 +791,6 @@ class _StockNowCard extends StatelessWidget {
                     : context.l10n.deliveryOrdersStockWant(_qty(r.want))),
                 if (!r.enough)
                   Text(r.short != null ? context.l10n.deliveryOrdersStockShort(_qty(r.short!)) : context.l10n.deliveryOrdersStockNotEnough,
-
                       style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
               ],
             ],

@@ -30,8 +30,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 /// (সার্ভারে অবস্থা তখনো খসড়া)। নইলে সার্ভারের অবস্থা, সইয়ের অপেক্ষায় ধাপ দুটো এলে "2-এর 1"।
 Widget voucherStateChip(VoucherRow v, {Key? key, bool dense = false}) => v.postingFailed
     ? AppStatusChip(key: key, state: PaperState.notPosted, reason: v.postProblem, dense: dense)
-    : AppStatusChip.forServer(v.state,
-        key: key, fallbackLabel: v.stateWords, level: v.approvalLevel, levels: v.approvalLevels, dense: dense);
+    : AppStatusChip.forServer(v.state, key: key, fallbackLabel: v.stateWords, level: v.approvalLevel, levels: v.approvalLevels, dense: dense);
 
 class VoucherListScreen extends StatefulWidget {
   const VoucherListScreen({
@@ -95,8 +94,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
   static List<VoucherView> get _views => [
         ...VoucherView.kinds,
         for (final t in VoucherTypes.all)
-          if (!VoucherView.kinds.any((v) => v.type == t))
-            VoucherView(t, VoucherTypes.label(t).replaceAll(AppLocale.l10n.vouchersKindSuffix, ''), type: t),
+          if (!VoucherView.kinds.any((v) => v.type == t)) VoucherView(t, VoucherTypes.label(t).replaceAll(AppLocale.l10n.vouchersKindSuffix, ''), type: t),
       ];
 
   late VoucherView _view = VoucherView.byKey(widget.view) ?? VoucherView.all;
@@ -148,8 +146,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e,
-            fallback: context.l10n.vouchersListLoadFailed, whenAbsent: context.l10n.vouchersListNotOnServer));
+        setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersListLoadFailed, whenAbsent: context.l10n.vouchersListNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -162,31 +159,33 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
   Future<void> _new() async {
     // ⭐ ধরন নিয়ে খোলা হলে সরাসরি সেই ধরনের ফর্ম; "সব"-এ আগের মতো ধরন বাছাই
     final preset = _preset ? _view.type : null;
-    final type = preset ?? await showModalBottomSheet<String>(
-      context: context,
-      // ⓘ ছোট ফোনে ২০০% অক্ষরে সব ধরন না ধরলে গড়ায় — নিচের ধরন কাটা পড়ে না
-      builder: (sheet) => SafeArea(
-        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final t in VoucherTypes.all) ...[
-            if (t != VoucherTypes.receipt || widget.mayCollect)
-              ListTile(
-                key: ValueKey('voucher-type-$t'),
-                title: Text(VoucherTypes.label(t)),
-                subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
-                onTap: () => Navigator.of(sheet).pop(t),
-              ),
-            // ⭐ গ্রাহক ছাড়া অন্য আয় — আলাদা, পরিষ্কার নামে; আদায়ের সাথে মেশানো নয় (মালিক, ২১ অক্টোবর ২০২৬)
-            if (t == VoucherTypes.receipt)
-              ListTile(
-                key: const ValueKey('voucher-type-$_otherIncome'),
-                title: Text(sheet.l10n.collectOtherIncome),
-                subtitle: Text(sheet.l10n.collectOtherIncomeHint),
-                onTap: () => Navigator.of(sheet).pop(_otherIncome),
-              ),
-          ],
-        ])),
-      ),
-    );
+    final type = preset ??
+        await showModalBottomSheet<String>(
+          context: context,
+          // ⓘ ছোট ফোনে ২০০% অক্ষরে সব ধরন না ধরলে গড়ায় — নিচের ধরন কাটা পড়ে না
+          builder: (sheet) => SafeArea(
+            child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              for (final t in VoucherTypes.all) ...[
+                if (t != VoucherTypes.receipt || widget.mayCollect)
+                  ListTile(
+                    key: ValueKey('voucher-type-$t'),
+                    title: Text(VoucherTypes.label(t)),
+                    subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
+                    onTap: () => Navigator.of(sheet).pop(t),
+                  ),
+                // ⭐ গ্রাহক ছাড়া অন্য আয় — আলাদা, পরিষ্কার নামে; আদায়ের সাথে মেশানো নয় (মালিক, ২১ অক্টোবর ২০২৬)
+                if (t == VoucherTypes.receipt)
+                  ListTile(
+                    key: const ValueKey('voucher-type-$_otherIncome'),
+                    title: Text(sheet.l10n.collectOtherIncome),
+                    subtitle: Text(sheet.l10n.collectOtherIncomeHint),
+                    onTap: () => Navigator.of(sheet).pop(_otherIncome),
+                  ),
+              ],
+            ])),
+          ),
+        );
     if (type == null || !mounted) return;
     // ⭐ গ্রাহকের টাকা নেওয়ার একটাই পথ: "আদায় ভাউচার" খোলে আদায়ের পাতা (মালিক, ২১ অক্টোবর ২০২৬) — কেবল যিনি আদায় নিতে পারেন;
     // ⓘ রসিদের ধরন থেকে "নতুন" অন্যদের জন্য গ্রাহক ছাড়া আয় ("অন্য আয়"-এর ফর্ম)
@@ -287,7 +286,10 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               ]),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের গোনা, পুরো ফলের (পাতার নয়)
             if (total != null)
-              TotalStrip(label: context.l10n.vouchersListTotal(_view.label), value: Money.taka(total), count: _page?.count,
+              TotalStrip(
+                  label: context.l10n.vouchersListTotal(_view.label),
+                  value: Money.taka(total),
+                  count: _page?.count,
                   period: TotalsPeriod.range(_from, _to, today: widget.today)),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
@@ -310,30 +312,33 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     if (v.moneyLine case final money?) Text(money, key: ValueKey('voucher-money-${v.id}')),
                     if (v.writtenBy.isNotEmpty) Text(context.l10n.vouchersListWrittenBy(v.writtenBy)),
                     if (v.date != null) Text(dayOf(v.date)),
+                    // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — দেখা · ছাপা ও পাঠানো · কাজ (মালিক, ৮ নভেম্বর ২০২৬) — সারির ডান কিনারে, তারিখের নিচে (৯ নভেম্বর: ৪৮dp হলে পাশের ঘরে নম্বর ভাঙত)
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: RowActionsButton(
+                        number: v.no,
+                        state: v.stateLabel,
+                        onView: () => _openVoucher(v.id),
+                        paperType: 'Voucher',
+                        paperId: v.id,
+                        paperTitle: '${v.kindLabel} ${v.no}',
+                        work: [
+                          RowAction(
+                            key: 'confirm',
+                            label: context.l10n.rowActionsConfirmOnPage,
+                            icon: Icons.task_alt_outlined,
+                            onTap: v.state == 'draft' ? () => _openVoucher(v.id) : null,
+                            why: switch (v.state) {
+                              'draft' => null,
+                              'awaiting' => context.l10n.rowActionsWhyAwaiting,
+                              _ => context.l10n.rowActionsWhyNotDraft,
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ]),
                   onTap: () => _openVoucher(v.id),
-                  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — দেখা · ছাপা ও পাঠানো · কাজ (মালিক, ৮ নভেম্বর ২০২৬)
-                  trailing: RowActionsButton(
-                    number: v.no,
-                    state: v.stateLabel,
-                    onView: () => _openVoucher(v.id),
-                    paperType: 'Voucher',
-                    paperId: v.id,
-                    paperTitle: '${v.kindLabel} ${v.no}',
-                    work: [
-                      RowAction(
-                        key: 'confirm',
-                        label: context.l10n.rowActionsConfirmOnPage,
-                        icon: Icons.task_alt_outlined,
-                        onTap: v.state == 'draft' ? () => _openVoucher(v.id) : null,
-                        why: switch (v.state) {
-                          'draft' => null,
-                          'awaiting' => context.l10n.rowActionsWhyAwaiting,
-                          _ => context.l10n.rowActionsWhyNotDraft,
-                        },
-                      ),
-                    ],
-                  ),
                 ),
               ),
             if (_page?.nextPage != null) MoreButton(busy: _busy, onPressed: () => _load(more: true)),
@@ -405,9 +410,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
     } catch (e) {
       // ⭐ সার্ভারের পুরো কথা, ফর্মের ঘরের নয় এমন চাবিরও (সই-না-পাওয়া ব্যাংক: `payee_bank`); খসড়া খসড়াই থাকে, পাতা যেমন ছিল
       if (mounted) {
-        setState(() => _error = isNetworkError(e)
-            ? errorMessageFor(e, fallback: context.l10n.vouchersPagePostFailed)
-            : voucherRefusal(e) ?? context.l10n.vouchersPagePostFailed);
+        setState(() => _error =
+            isNetworkError(e) ? errorMessageFor(e, fallback: context.l10n.vouchersPagePostFailed) : voucherRefusal(e) ?? context.l10n.vouchersPagePostFailed);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -465,18 +469,15 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(l.account),
                 // ⓘ সারির পক্ষ আর বিবরণ এক লাইনে
-                subtitle: l.narration.isEmpty && l.party == null
-                    ? null
-                    : Text([if (l.party != null) l.party!, if (l.narration.isNotEmpty) l.narration].join(' · ')),
-                trailing: Text(l.debit > 0
-                    ? context.l10n.vouchersDebitLine(Money.taka(l.debit))
-                    : context.l10n.vouchersCreditLine(Money.taka(l.credit))),
+                subtitle:
+                    l.narration.isEmpty && l.party == null ? null : Text([if (l.party != null) l.party!, if (l.narration.isNotEmpty) l.narration].join(' · ')),
+                trailing: Text(l.debit > 0 ? context.l10n.vouchersDebitLine(Money.taka(l.debit)) : context.l10n.vouchersCreditLine(Money.taka(l.credit))),
               ),
             if (p.awaitsAnotherHand)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Text(context.l10n.vouchersPageAnotherHand,
-                    key: const ValueKey('voucher-another-hand'), style: TextStyle(color: context.palette.pending)),
+                child:
+                    Text(context.l10n.vouchersPageAnotherHand, key: const ValueKey('voucher-another-hand'), style: TextStyle(color: context.palette.pending)),
               ),
             if (p.canPost) ...[
               if (_needsTrx)
@@ -581,8 +582,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
     return widget.type != VoucherTypes.contra && (i == 'mfs' || i == 'transfer');
   }
 
-  double _sum(Iterable<TextEditingController> cs) =>
-      cs.fold(0, (s, c) => s + (double.tryParse(c.text.trim()) ?? 0));
+  double _sum(Iterable<TextEditingController> cs) => cs.fold(0, (s, c) => s + (double.tryParse(c.text.trim()) ?? 0));
 
   String? _problem() {
     final t = context.l10n;
@@ -655,9 +655,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
       });
     } on NoNetworkForThis catch (e) {
       if (mounted) {
-        setState(() => _error = e.mayHaveLanded
-            ? context.l10n.vouchersFormMayHaveLanded
-            : context.l10n.vouchersFormNeedsNet);
+        setState(() => _error = e.mayHaveLanded ? context.l10n.vouchersFormMayHaveLanded : context.l10n.vouchersFormNeedsNet);
       }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersFormSendFailed));
@@ -666,8 +664,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
     }
   }
 
-  Future<T?> _pick<T>(String title, List<T> options, String Function(T) label, {String? key}) =>
-      showModalBottomSheet<T>(
+  Future<T?> _pick<T>(String title, List<T> options, String Function(T) label, {String? key}) => showModalBottomSheet<T>(
         context: context,
         isScrollControlled: true,
         builder: (_) => VoucherPickSheet<T>(title: title, options: options, label: label, keyPrefix: key),
@@ -675,13 +672,11 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
 
   Future<void> _pickDate() async {
     final today = _setup?.today ?? DateTime.now();
-    final picked = await showDatePicker(
-        context: context, initialDate: _date, firstDate: today.subtract(const Duration(days: 365)), lastDate: today);
+    final picked = await showDatePicker(context: context, initialDate: _date, firstDate: today.subtract(const Duration(days: 365)), lastDate: today);
     if (picked != null && mounted) setState(() => _date = picked);
   }
 
-  Widget _accountTile(String key, String label, VoucherAccount? value, List<VoucherAccount> options, ValueChanged<VoucherAccount> set) =>
-      Card(
+  Widget _accountTile(String key, String label, VoucherAccount? value, List<VoucherAccount> options, ValueChanged<VoucherAccount> set) => Card(
         child: ListTile(
           key: ValueKey(key),
           title: Text(value?.label ?? label),
@@ -723,8 +718,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
           _to != null ||
           _party != null ||
           [_amount, _narration, _trx].any((c) => c.text.trim().isNotEmpty) ||
-          _lines.any((l) =>
-              l.account != null || l.party != null || l.debit.text.trim().isNotEmpty || l.credit.text.trim().isNotEmpty));
+          _lines.any((l) => l.account != null || l.party != null || l.debit.text.trim().isNotEmpty || l.credit.text.trim().isNotEmpty));
 
   // ⭐ খাত, টাকা বা বিবরণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা ভাউচার এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
@@ -742,11 +736,8 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
             Card(
                 key: const ValueKey('voucher-error'),
                 color: context.palette.dangerSurface,
-                child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text(_error!, style: TextStyle(color: context.palette.danger)))),
-          if (s?.cashHiddenReason != null)
-            Text(s!.cashHiddenReason!, style: TextStyle(color: context.palette.warning, fontSize: 12.5)),
+                child: Padding(padding: const EdgeInsets.all(AppSpacing.sm), child: Text(_error!, style: TextStyle(color: context.palette.danger)))),
+          if (s?.cashHiddenReason != null) Text(s!.cashHiddenReason!, style: TextStyle(color: context.palette.warning, fontSize: 12.5)),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.vouchersDate),
@@ -807,9 +798,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
                   icon: const Icon(Icons.add),
                   label: Text(context.l10n.vouchersFormAddLine)),
               const Spacer(),
-              Text(
-                  context.l10n.vouchersFormTotals(
-                      Money.taka(_sum(_lines.map((l) => l.debit))), Money.taka(_sum(_lines.map((l) => l.credit)))),
+              Text(context.l10n.vouchersFormTotals(Money.taka(_sum(_lines.map((l) => l.debit))), Money.taka(_sum(_lines.map((l) => l.credit)))),
                   key: const ValueKey('voucher-totals')),
             ]),
           ],
@@ -861,8 +850,8 @@ class _VoucherPickSheetState<T> extends State<VoucherPickSheet<T>> {
     final rows = widget.options.where((o) => q.isEmpty || widget.label(o).toLowerCase().contains(q)).take(100).toList();
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(
-            left: AppSpacing.md, right: AppSpacing.md, top: AppSpacing.md, bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md),
+        padding:
+            EdgeInsets.only(left: AppSpacing.md, right: AppSpacing.md, top: AppSpacing.md, bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md),
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
           child: Column(children: [

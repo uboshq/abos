@@ -21,10 +21,17 @@ class _FakeApi implements DeliveryOrderApi {
 
   DeliveryOrder current = _order(awaitingMe: false, editable: true, status: 'খসড়া');
 
-  static DeliveryOrder _order({required bool awaitingMe, required bool editable, required String status, double qty = 10}) =>
-      DeliveryOrder(
-        id: 'do-1', no: 'DO-0001', date: '2026-10-03', customer: 'রহিম স্টোর', status: 'x', statusLabel: status,
-        total: qty * 40, editable: editable, awaitingMe: awaitingMe, approvalId: awaitingMe ? 'ap-1' : null,
+  static DeliveryOrder _order({required bool awaitingMe, required bool editable, required String status, double qty = 10}) => DeliveryOrder(
+        id: 'do-1',
+        no: 'DO-0001',
+        date: '2026-10-03',
+        customer: 'রহিম স্টোর',
+        status: 'x',
+        statusLabel: status,
+        total: qty * 40,
+        editable: editable,
+        awaitingMe: awaitingMe,
+        approvalId: awaitingMe ? 'ap-1' : null,
         lines: [DeliveryOrderLine(id: 7, product: 'কসমস বিস্কুট', qty: 10, approvedQty: null, finalQty: qty, lineTotal: qty * 40)],
       );
 
@@ -91,11 +98,26 @@ void main() {
     expect(find.byKey(const ValueKey('do-new')), findsNothing, reason: 'লেখার চাবি নেই, তবু "নতুন DO"');
   });
 
+  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list"): DO-তে দেখা; বিক্রয় আদেশে দেখা আর ছাপা ও পাঠানো
+  testWidgets('every DO and order row carries "Actions ▾"; only the order prints', (tester) async {
+    for (final (orders, prints) in [(false, false), (true, true)]) {
+      await tester.pumpWidget(MaterialApp(home: DeliveryOrderListScreen(key: ValueKey(orders), api: _FakeApi(forOrders: orders))));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('row-actions-DO-0001')), findsOneWidget, reason: '⛔ সারিতে "অ্যাকশন ▾" নেই');
+      await tester.tap(find.byKey(const ValueKey('row-actions-DO-0001')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('row-action-view')), findsOneWidget, reason: '⛔ শিটে "দেখুন" নেই');
+      expect(find.byKey(const ValueKey('row-action-print')), prints ? findsOneWidget : findsNothing,
+          reason: prints ? '⛔ বিক্রয় আদেশে ছাপা ও পাঠানো নেই' : '⛔ DO-তে আদেশের কাগজ ছাপার পথ এসেছে');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+    }
+  });
+
   // ⭐ ডিলার বাছা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   testWidgets('a new DO with a dealer picked asks before going back, an empty one does not', (tester) async {
     const dealer = CustomerRecord({'id': 'cus-uuid', 'nameBn': 'রহিম স্টোর'});
-    await tester.pumpWidget(MaterialApp(
-        home: NewDeliveryOrderScreen(api: _FakeApi(), customers: const [dealer], products: const [])));
+    await tester.pumpWidget(MaterialApp(home: NewDeliveryOrderScreen(api: _FakeApi(), customers: const [dealer], products: const [])));
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
@@ -114,8 +136,7 @@ void main() {
     const dealer = CustomerRecord({'id': 'cus-uuid', 'nameBn': 'রহিম স্টোর'});
     const biscuit = ProductRecord({'id': 'prd-uuid', 'nameBn': 'কসমস বিস্কুট', 'salePrice': '40'});
 
-    await tester.pumpWidget(MaterialApp(
-        home: NewDeliveryOrderScreen(api: api, customers: const [dealer], products: const [biscuit])));
+    await tester.pumpWidget(MaterialApp(home: NewDeliveryOrderScreen(api: api, customers: const [dealer], products: const [biscuit])));
 
     // ডিলার ছাড়া জমা — ফোনেই থামে, সার্ভারে যায় না
     await tester.tap(find.byKey(const ValueKey('do-submit')));
@@ -152,8 +173,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('do-approve')), findsNothing, reason: 'লেখকের পাতায় অনুমোদনের বোতাম');
-    expect(find.byKey(const ValueKey('order-print')), findsNothing,
-        reason: 'ⓘ DO-র নিজের কাগজ সার্ভারের ছাপার দরজায় নেই — বোতাম দেখালে চাপলে ৪০৪');
+    expect(find.byKey(const ValueKey('order-print')), findsNothing, reason: 'ⓘ DO-র নিজের কাগজ সার্ভারের ছাপার দরজায় নেই — বোতাম দেখালে চাপলে ৪০৪');
     await tester.tap(find.byKey(const ValueKey('do-send')));
     await tester.pumpAndSettle();
     expect(api.calls, ['submit']);
@@ -186,8 +206,16 @@ void main() {
     expect(find.text('নতুন DO'), findsNothing);
 
     api.current = const DeliveryOrder(
-      id: 'so-1', no: 'SO-0001', date: '2026-10-05', customer: 'রহিম স্টোর', status: 'credit_held', statusLabel: 'সীমায় আটকে',
-      total: 400, editable: false, awaitingMe: false, creditShort: 150,
+      id: 'so-1',
+      no: 'SO-0001',
+      date: '2026-10-05',
+      customer: 'রহিম স্টোর',
+      status: 'credit_held',
+      statusLabel: 'সীমায় আটকে',
+      total: 400,
+      editable: false,
+      awaitingMe: false,
+      creditShort: 150,
     );
     await tester.pumpWidget(MaterialApp(home: DeliveryOrderScreen(id: 'so-1', api: api)));
     await tester.pumpAndSettle();

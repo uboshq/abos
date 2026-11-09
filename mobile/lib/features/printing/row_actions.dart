@@ -51,9 +51,12 @@ class RowActionsButton extends StatelessWidget {
   Widget build(BuildContext context) => OutlinedButton(
         key: ValueKey('row-actions-$number'),
         style: OutlinedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
+          // ⛔ চাপার জায়গা ৪৮×৪৮ (নকশার নিয়ম ০.৪.৩৮ §২) — আগে compact ৪০ উঁচু ছিল; ডিও তালিকার নকশা-দাবি ধরল (৯ নভেম্বর ২০২৬)
+          //   ⓘ পাশে আগের মতোই সরু (horizontal -2) — চওড়া হলে ৩২০dp ২০০%-এ নম্বর আর অঙ্ক দুই লাইনে ভাঙত
+          visualDensity: const VisualDensity(horizontal: -2, vertical: 0),
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          minimumSize: const Size(48, 36),
+          minimumSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
         onPressed: () => showRowActions(context, button: this),
         child: Text('${context.l10n.rowActionsButton} ▾', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
