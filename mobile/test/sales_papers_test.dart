@@ -110,6 +110,21 @@ void main() {
     expect(find.text(Money.taka('3500')), findsOneWidget);
   });
 
+  // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — মালিক, ৮ নভেম্বর ২০২৬ ("অ্যাপস এর যে লিস্টগুলো আছে তাতেও অ্যাকশন বাটন দিতে হবে")
+  testWidgets('every bill and challan row carries "Actions ▾" with view and print & send', (tester) async {
+    for (final (kind, no) in [(SalesPaperKind.invoice, 'INV-0059'), (SalesPaperKind.challan, 'CHA-0059')]) {
+      await tester.pumpWidget(MaterialApp(home: SalesPaperListScreen(key: ValueKey(kind), kind: kind, api: _FakePapers(), today: DateTime(2026, 10, 13))));
+      await tester.pumpAndSettle();
+      expect(find.byKey(ValueKey('row-actions-$no')), findsOneWidget, reason: '⛔ $no-এর সারিতে "অ্যাকশন ▾" নেই');
+      await tester.tap(find.byKey(ValueKey('row-actions-$no')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('row-action-view')), findsOneWidget, reason: '⛔ $no: শিটে "দেখুন" নেই');
+      expect(find.byKey(const ValueKey('row-action-print')), findsOneWidget, reason: '⛔ $no: শিটে ছাপা ও পাঠানো নেই');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('the challan list and a search go to the server', (tester) async {
     final api = _FakePapers();
     await tester.pumpWidget(MaterialApp(

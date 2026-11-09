@@ -16,6 +16,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
+import '../printing/row_actions.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ বিক্রয় বিল আর চালান — তালিকা ও পাতা (মালিক, ১৩ অক্টোবর ২০২৬: *"Mobile App e kora invoice, challan, voucher — kono
@@ -176,6 +177,18 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                               kind: widget.kind.paperKind,
                               dense: true),
                         ),
+                      // ⭐ ওয়েবের মতো "অ্যাকশন ▾" — দেখা · ছাপা ও পাঠানো (মালিক, ৮ নভেম্বর ২০২৬); সারির ডান কিনারে, অঙ্কের নিচে
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: RowActionsButton(
+                          number: r.no,
+                          state: r.statusLabel.isEmpty ? null : r.statusLabel,
+                          onView: () => context.push('/home/${RecentPapers.path(widget.kind.recentKind, r.id)}'),
+                          paperType: widget.kind.printType,
+                          paperId: r.id,
+                          paperTitle: '${widget.kind.title(context)} · ${r.no}',
+                        ),
+                      ),
                     ],
                   ),
                   isThreeLine: true,
