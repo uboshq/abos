@@ -257,4 +257,11 @@
             @endforeach
         </div>
     @endif
+
+    {{-- ⭐ মডিউলের নিজের অংশ — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন); নতুন পাতার একই নিয়ম --}}
+    @foreach ($dashboard->sections as $section)
+        @if (! isset($section['permission']) || auth()->user()?->can($section['permission']))
+            <div class="mt-6">@include($section['view'], $section['data'])</div>
+        @endif
+    @endforeach
 </x-layouts.app>

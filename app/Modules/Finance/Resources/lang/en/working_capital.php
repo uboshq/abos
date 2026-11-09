@@ -1,0 +1,41 @@
+<?php
+
+/*
+ * Working capital — at the foot of the finance dashboard, exactly as in the owner's picture (owner, 9 Nov 2026). [[WorkingCapital]]
+ */
+return [
+    'title' => 'Working Capital',
+    'title_short' => 'Working capital',
+    'subtitle' => 'As of :date · the money working to run the business',
+    'date' => 'Date',
+    'show' => 'Show',
+    'today' => 'Today',
+    'last_month_end' => 'Last month end',
+    'last_year_end' => 'Last year end',
+    'ratio' => 'Current ratio',
+    'ratio_good' => 'Good · above 1.5',
+    'ratio_watch' => 'Watch · 1 to 1.5',
+    'ratio_bad' => 'Weak · below 1',
+    'receivable' => 'Due from distributors',
+    'stock' => 'Stock value',
+    'money' => 'Money in hand (cash · bank · MFS)',
+    'payable' => 'Owed to principals',
+    'other' => 'Other current liabilities',
+    'other_sub' => 'Accrued expenses, advances',
+    'capital' => 'Working capital',
+    'up_vs_last_month' => '▲ :pct% against last month',
+    'down_vs_last_month' => '▼ :pct% against last month',
+    'bar_receivable' => 'Receivable',
+    'bar_stock' => 'Stock',
+    'bar_money' => 'Money',
+    'bar_payable' => 'Principals',
+    'bar_other' => 'Other dues',
+    'lakh' => 'L',
+    'axis_lakh' => ':n lakh',
+    'read_me' => 'Read left to right: receivable, stock and money add up, the dues take away — the last blue bar is the working capital',
+    'sales_share' => 'Working capital = of average monthly sales',
+    'avg_months' => ':n-month average',
+    'avg_sales' => 'Average sales a month ৳:amount L',
+    'no_sales' => 'No sales in this period',
+    'aria' => 'Working capital steps, :date',
+];

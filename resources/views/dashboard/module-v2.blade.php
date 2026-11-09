@@ -311,5 +311,12 @@
             </div>
         @endif
 
+        {{-- ⭐ মডিউলের নিজের অংশ — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন); চাবি না থাকলে অংশটাই নেই --}}
+        @foreach ($dashboard->sections as $section)
+            @if (! isset($section['permission']) || auth()->user()?->can($section['permission']))
+                @include($section['view'], $section['data'])
+            @endif
+        @endforeach
+
     </div>
 </x-layouts.app>

@@ -61,6 +61,14 @@ final class DashboardDefinition
          * @var array{action: string, name: string, placeholder: string, permission: string}|null
          */
         public readonly ?array $search = null,
+
+        /**
+         * ⭐ মডিউলের নিজের অংশ — পাতার সবার নিচে, তালিকারও পরে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের ড্যাশবোর্ডে চলতি মূলধন "সবার নিচে",
+         * মালিকের ছবির হুবহু, তারিখ বাছার ঘরসহ)। ⓘ সংখ্যা-চার্ট-তালিকার সাধারণ ছাঁচে যা ধরে না, তা মডিউল নিজের Blade-এ আঁকে।
+         *
+         * @var list<array{view: string, data: array<string, mixed>, permission?: string}>
+         */
+        public readonly array $sections = [],
     ) {
         if ($stats === [] && $panels === [] && $listings === []) {
             throw new InvalidArgumentException(
