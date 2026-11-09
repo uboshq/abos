@@ -37,6 +37,7 @@ use App\Modules\Finance\Services\RentalDues;
 use App\Modules\Finance\Services\FinanceCharts;
 use App\Modules\Finance\Services\FundNews;
 use App\Modules\Finance\Services\FundPosition;
+use App\Modules\Finance\Services\LoanBox;
 use App\Modules\Finance\Services\WorkingCapital;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -405,6 +406,12 @@ final class FinanceDashboard implements ProvidesDashboard
                 [
                     'view' => 'finance::dashboard.working-capital',
                     'data' => fn () => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
+                ],
+                // ⭐ ঋণের ঘর — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: "loan box sobar nice daw"; [[LoanBox]])
+                [
+                    'view' => 'finance::dashboard.loans',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['loans' => app(LoanBox::class)->on()],
                 ],
             ],
         );
