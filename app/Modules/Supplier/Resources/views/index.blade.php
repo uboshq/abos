@@ -88,7 +88,7 @@
          */
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
+            'label' => __('core.table.action_menu'),
             'width' => '6rem',
             'render' => fn ($s) => view('supplier::partials.row-actions', ['supplier' => $s]),
         ],
