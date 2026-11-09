@@ -192,8 +192,12 @@ final class TheEyeShowedTheLedgerInsteadOfTheSummaryTest extends TestCase
     {
         $html = $this->get(route('customer.index', ['q' => $this->dealer->code]))->assertOk()->getContent();
 
-        $this->assertSame(1, preg_match('/<a href="([^"]+)" data-eye/', $html, $m), '⛔ তালিকায় 👁 পাওয়া যায়নি।');
-        $this->assertSame(route('customer.summary', $this->dealer), html_entity_decode($m[1]), '⛔ 👁 এখনো সারাংশে যায় না।');
+        // ⓘ ৯ নভেম্বর ২০২৬ থেকে 👁-এর জায়গায় "অ্যাকশন ▾" (মালিক: "customar list update koto ni action botamer sathe?") — মেনুর প্রথম
+        //    কাজটাই সারাংশ, পাশে খোলে (data-no-peek নয়); পুরো পাতা তার পরে। নিয়মটা একই: এক নজরের জিনিস সারাংশ, খতিয়ান নয়।
+        $this->assertSame(1, preg_match('/<a href="([^"]+)" role="menuitem"[^>]*>/', $html, $m), '⛔ তালিকায় "অ্যাকশন ▾"-এর কাজ পাওয়া যায়নি।');
+        $this->assertSame(route('customer.summary', $this->dealer), html_entity_decode($m[1]), '⛔ মেনুর প্রথম কাজ সারাংশে যায় না।');
+        $this->assertStringNotContainsString('data-no-peek', $m[0], '⛔ সারাংশ পাশে খোলে না — পুরো পাতায় চলে যায়।');
+        $this->assertStringContainsString('href="'.e(route('customer.show', $this->dealer)).'" role="menuitem"', $html, '⛔ মেনুতে পুরো পাতা নেই।');
     }
 
     // ── ৩ · দরজা — একই মানুষ, চাবি বন্ধ তারপর খোলা ─────────────────────

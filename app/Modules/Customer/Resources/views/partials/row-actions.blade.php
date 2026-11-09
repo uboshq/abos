@@ -1,41 +1,45 @@
 {{--
-    সারির কাজগুলো — দেখা আর সম্পাদনা।
+    ⭐ গ্রাহকের সারির "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("customar list update koto ni action botamer sathe?"): কাগজের তালিকাগুলোর
+    একই মেনু ([[x-ui.row-actions]], [[x-ui.paper-row-menu]]-এর একই তিন ভাগ) — দেখা · কাগজ · কাজ।
 
-    ── সক্রিয়/নিষ্ক্রিয়ের বোতাম এখানে নেই, আর সেটা ইচ্ছাকৃত ───────────
-    অবস্থার কলামের পিলটাই এখন সেই বোতাম (মালিকের নমুনা, ২০২৬-০৮-০৭)।
-    দুই জায়গায় একই কাজ রাখলে একদিন একটা বদলাত আর অন্যটা পুরনো আচরণে
-    থেকে যেত — আর ব্যবহারকারীকেও ভাবতে হত দুইটার মধ্যে তফাত কী।
+    দেখা: সারাংশ (পাশে খোলে), পুরো পাতা, বাকি-নিয়ন্ত্রণের খবর (চাবি থাকলে), বদলের ইতিহাস (চাবি থাকলে)।
+    কাগজ: হিসাব মেলানোর চিঠি (balance confirmation) — ছাপা।
+    কাজ: নতুন অর্ডার আর টাকা নিন — এই গ্রাহক বসানো অবস্থায় খোলে (`?customer=`); সম্পাদনা। যা করা যায় না তা ধূসর, কারণসহ।
 
-    ── মোছার বোতামও নেই ────────────────────────────────────────────────
-    মালিকের তালিকায় "delete?" প্রশ্নচিহ্ন সহ লেখা ছিল, আর উত্তরটা না।
-    যে গ্রাহকের নামে একটাও বিল আছে তাঁকে মুছে ফেলা মানে ওই বিলগুলোর
-    মালিক হারিয়ে যাওয়া — খতিয়ানে টাকা থাকত, কার কাছে পাওনা তা থাকত না।
-
-    নিষ্ক্রিয় করাটাই যা মানুষ আসলে চায়: দোকান বন্ধ হয়ে গেছে, নতুন বিল
-    যাবে না, কিন্তু পুরনো হিসাব ও বকেয়া যেমন আছে তেমনই থাকবে।
+    ── ⛔ সক্রিয়/নিষ্ক্রিয় আর মোছা এখানে নেই, আর সেটা ইচ্ছাকৃত (আগের নিয়ম অক্ষত) ─────────────────
+    অবস্থার কলামের পিলটাই সেই বোতাম (মালিকের নমুনা, ২০২৬-০৮-০৭); মোছা নেই — যে গ্রাহকের নামে বিল আছে তাঁকে মুছলে বিলের মালিক
+    হারায়। নিষ্ক্রিয় করাই যা মানুষ আসলে চায়।
 --}}
-<div class="flex items-center justify-end gap-1">
-    {{-- চোখের আইকন — এক নজরের সারাংশ, খাতা নয় (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
-         ⓘ খাতায় যাওয়ার পথ সারাংশের বকেয়ার অঙ্কটা, আর তালিকার বকেয়ার কলাম। --}}
-    <a href="{{ route('customer.summary', $customer) }}" data-eye
-       title="{{ __('core.action.view') }}"
-       aria-label="{{ __('core.action.view') }} {{ $customer->name() }}"
-       class="rounded-(--radius-field) p-1.5 text-(--color-ink-muted)
-              hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
-            <path d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
-        </svg>
-    </a>
+@php
+    $user = auth()->user();
+    $id = $customer->public_id ?? $customer->id;
+    $inactive = ! $customer->is_active;
+    $items = [\App\Core\Support\RowMenu::head(trim(($customer->code ? $customer->code.' · ' : '').$customer->name()),
+        __($inactive ? 'customer::filter.inactive' : 'customer::filter.active'))];
 
-    @can('customer.update')
-        <a href="{{ route('customer.edit', $customer) }}"
-           title="{{ __('core.action.edit') }}"
-           aria-label="{{ __('core.action.edit') }} {{ $customer->name() }}"
-           class="rounded-(--radius-field) p-1.5 text-(--color-ink-muted)
-                  hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
-                <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25ZM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>
-            </svg>
-        </a>
-    @endcan
-</div>
+    $items[] = \App\Core\Support\RowMenu::group('look');
+    $items[] = ['label' => __('core.row_menu.preview'), 'icon' => 'search', 'url' => route('customer.summary', $customer)];
+    $items[] = ['label' => __('core.row_menu.view'), 'icon' => 'eye', 'url' => route('customer.show', $customer), 'peek' => false, 'key' => 'Enter', 'opens' => true];
+    if ($user?->can('credit_control.view') && \Illuminate\Support\Facades\Route::has('credit_control.customer.show')) {
+        $items[] = ['label' => __('customer::row_menu.credit'), 'icon' => 'scale', 'url' => route('credit_control.customer.show', $customer), 'peek' => false];
+    }
+    if ($user?->can('governance.audit.view')) {
+        $items[] = ['label' => __('core.row_menu.history'), 'icon' => 'clock',
+            'url' => route('governance.audit.index', ['q' => $customer->code ?: $customer->name(), 'module' => 'customer']), 'peek' => false];
+    }
+
+    $items[] = \App\Core\Support\RowMenu::group('paper');
+    $items[] = ['label' => __('customer::row_menu.balance_letter'), 'icon' => 'printer', 'url' => route('customer.balance_confirmation', $customer), 'blank' => true];
+
+    $items[] = \App\Core\Support\RowMenu::group('work');
+    $canOrder = (bool) $user?->can('create', \App\Modules\Sales\Models\SalesOrder::class);
+    $items[] = ['label' => __('customer::row_menu.new_order'), 'icon' => 'plus', 'url' => route('sales.order.create', ['customer' => $customer->id]), 'peek' => false,
+        'off' => $inactive ? __('customer::row_menu.why_inactive') : ($canOrder ? null : __('core.row_menu.why_no_key'))];
+    $canCollect = (bool) $user?->can('create', \App\Modules\Sales\Models\Collection::class);
+    $items[] = ['label' => __('core.row_menu.collect'), 'icon' => 'cash', 'url' => route('sales.collection.create', ['customer' => $id]), 'peek' => false,
+        'off' => $canCollect ? null : __('core.row_menu.why_no_key')];
+    $items[] = ['label' => __('core.row_menu.edit'), 'icon' => 'edit', 'url' => route('customer.edit', $customer), 'peek' => false,
+        'off' => $user?->can('customer.update') ? null : __('core.row_menu.why_no_key')];
+@endphp
+
+<x-ui.row-actions :items="$items" :label="__('core.table.action_menu')" />
