@@ -30,4 +30,10 @@ final class NobodyKnowsWhereTheMoneyBelongs implements KnowsWhereAPersonsMoneyBe
     {
         return [];
     }
+
+    /** @return array<string, string> */
+    public function suggestedCodes(): array
+    {
+        return [];
+    }
 }

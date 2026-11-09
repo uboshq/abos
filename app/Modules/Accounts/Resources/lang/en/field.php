@@ -115,6 +115,7 @@ return [
     'list_for' => 'For',
     'list_method' => 'Method',
     'source_equity' => 'Capital',
+    'source_supplier_refund' => 'Refund from a supplier',
     'source_liability' => 'Loans and liabilities',
     'source_income' => 'Income',
     'source_returned' => 'Money coming back (advances, deposits…)',

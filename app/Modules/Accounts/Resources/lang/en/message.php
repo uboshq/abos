@@ -240,6 +240,11 @@ return [
     'party_more' => 'More names - type a name, code or point to narrow the list.',
     'party_no_match' => 'No name matches what you typed.',
     'received_on_account_hint' => 'Capital, a loan, income, a deposit — what the money came in for. "Deposited to" below is where it was put (cash or which bank). Choose capital and it also appears on the Capital & investment page by itself.',
+    'on_account_why_supplier' => 'From the supplier payable — an advance or an overpayment coming back',
+    'on_account_why_employee' => 'From the employee advance — advance money coming back',
+    'on_account_why_capital' => 'Gave capital before — so to capital',
+    'on_account_why_hand_loan' => 'Has a running hand loan — so to the hand loan',
+    'on_account_why_last' => 'The last receipt without a party used this account',
     'no_party_note_in' => 'Other (direct account): no party, so no bills list and no amount due. Choose the account in "What the money is for".',
     'no_party_note_out' => 'Other (direct account): no party, so no bills list and no amount payable. Choose "Account it lands in".',
 
