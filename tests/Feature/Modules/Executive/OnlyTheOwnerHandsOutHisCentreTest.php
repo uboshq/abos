@@ -164,9 +164,12 @@ final class OnlyTheOwnerHandsOutHisCentreTest extends TestCase
         Notification::assertSentTo(new AnonymousNotifiable, MorningSummary::class,
             function (MorningSummary $mail, array $channels, AnonymousNotifiable $to) use ($kept, $off): bool {
                 $html = (string) $mail->toMail($to)->render();
-                $this->assertStringContainsString(e($kept->name), $html, '⛔ চালু কোম্পানিটাই সকালের মেইলে নেই।');
+                // ⓘ কোম্পানির নাম `name()` — `name` কলাম নেই, `name_en`/`name_bn` আছে (Mac, ১০ নভেম্বর ২০২৬: "Company::name must return a relationship")
+                $this->assertStringContainsString(e($kept->name()), $html, '⛔ চালু কোম্পানিটাই সকালের মেইলে নেই।');
                 foreach ($off as $company) {
-                    $this->assertStringNotContainsString(e($company->name), $html, "⛔ মেইল বন্ধ, তবু '{$company->name}' সকালের মেইলে।");
+                    foreach (array_filter([$company->name_en, $company->name_bn]) as $name) {
+                        $this->assertStringNotContainsString(e($name), $html, "⛔ মেইল বন্ধ, তবু '{$name}' সকালের মেইলে।");
+                    }
                 }
 
                 return true;
