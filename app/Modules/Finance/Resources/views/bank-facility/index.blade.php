@@ -83,7 +83,7 @@
         ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '8rem',
          'render' => fn ($f) => __('core.status.' . $f->status)],
         // ⓘ সুবিধার নিজের পাতা — জামানত, শর্ত, খাতায় কোথায়, আর বন্ধ করা
-        ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
+        ['key' => 'do', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($f) => view('finance::bank-facility.partials.open-it', ['facility' => $f])],
     ];
 @endphp

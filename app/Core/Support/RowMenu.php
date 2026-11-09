@@ -76,9 +76,15 @@ final class RowMenu
      */
     public static function dress(array $work, string $head, string $state, ?string $viewUrl = null, ?string $historyQ = null, ?string $module = null): array
     {
-        $items = array_merge([self::head($head, $state)], self::look($viewUrl, $historyQ, $module));
-
+        $look = self::look($viewUrl, $historyQ, $module);
         $work = array_values(array_filter($work, fn ($i) => ! $viewUrl || ($i['url'] ?? null) !== $viewUrl || isset($i['method'])));
+
+        // ⛔ কিছুই করার নেই (চাবি নেই) — খালি মেনু, বোতামও নয়; আগের মতো ঘরটা ফাঁকা
+        if ($look === [] && $work === []) {
+            return [];
+        }
+
+        $items = array_merge([self::head($head, $state)], $look);
 
         if ($work !== []) {
             $items[] = self::group('work');

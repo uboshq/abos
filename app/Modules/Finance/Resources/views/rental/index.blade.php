@@ -42,12 +42,10 @@
         ['key' => 'ends_on', 'label' => __('finance::field.rental_ends_on'), 'width' => '8rem',
          'render' => fn ($c) => $c->ends_on->format('d/m/Y')],
         /* ⓘ নিজের পাতায় — মাসের ভাড়া, শর্ত বদল, জামানত, চুক্তি শেষ সব ওখানে */
-        ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '7rem',
-         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
-             '<a href=\'' . route('finance.rental.show', $c) . '\' '
-             . 'class=\'inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2 text-sm '
-             . 'text-(--color-link) transition-colors hover:bg-(--color-surface-hover) print-hide\'>'
-             . e(__('core.action.view')) . '</a>')],
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
+         'render' => fn ($c) => \Illuminate\Support\Facades\Blade::render(
+             '<x-ui.row-actions :label="$label" :items="$items" />',
+             ['label' => __('core.table.action_menu'), 'items' => \App\Core\Support\RowMenu::dress([], \App\Core\Support\RowMenu::title($c), \App\Core\Support\RowMenu::activeState($c), route('finance.rental.show', $c), $c->code ?? null, 'finance')])],
     ];
 
     $rentTabs = [

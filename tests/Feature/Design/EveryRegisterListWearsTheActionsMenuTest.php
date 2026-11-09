@@ -98,4 +98,9 @@ final class EveryRegisterListWearsTheActionsMenuTest extends TestCase
         $this->assertSame(['e', 'off', 'gone', 'on'], array_column($work, 'label'), '⛔ দেখার লিংকটা কাজের ভাগে দুবার এসেছে।');
         $this->assertSame(['edit', 'pause', 'trash', 'check-circle'], array_column($work, 'icon'));
     }
+
+    public function test_nothing_to_do_means_no_button_not_a_bare_head(): void
+    {
+        $this->assertSame([], RowMenu::dress([], 'K-1', 'active'), '⛔ চাবি নেই, তবু মাথা-সর্বস্ব একটা "অ্যাকশন ▾" বোতাম।');
+    }
 }

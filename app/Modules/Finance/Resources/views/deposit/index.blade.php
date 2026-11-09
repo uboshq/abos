@@ -74,7 +74,7 @@
         ['key' => 'pledged', 'label' => __('finance::field.dep_pledged_to'), 'width' => '12rem',
          'render' => fn ($d) => view('finance::deposit.partials.pledge', ['deposit' => $d])],
 
-        ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
+        ['key' => 'do', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($d) => view('finance::deposit.partials.open-it',
              ['deposit' => $d, 'issuer' => $issuer])],
     ];
