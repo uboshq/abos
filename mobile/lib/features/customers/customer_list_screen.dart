@@ -14,6 +14,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
 import 'customer_detail_screen.dart';
+import '../printing/row_actions.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/locale/l10n.dart';
 
@@ -293,13 +294,32 @@ class _CustomerTile extends StatelessWidget {
         // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এর চাপটা কার্ডের নামহীন ঘরে গিয়ে পড়ত।
         trailing: stack ? null : duePill(constraints.maxWidth * 0.4),
         );
-        if (!stack) return tile;
-        // ⓘ দুই তলা: বকেয়া কার্ডের পুরো চওড়ায়, ডানে — সারির লেখার নিচে
+        // ⭐ ওয়েবের মতো "অ্যাকশন ▾" (মালিক, ৯ নভেম্বর ২০২৬: "Abos er sokol list"; নমুনা v4: সারির ডানে, অঙ্কের নিচে) —
+        //   দেখুন (দোকানের পাতা) · কাজ: খাতা খুলুন (বকেয়ার অঙ্কে চাপার একই পথ)
+        final actions = RowActionsButton(
+          number: customer.label,
+          state: null,
+          onView: onOpen,
+          work: [
+            RowAction(
+              key: 'ledger',
+              label: context.l10n.customersOpenLedgerHint,
+              icon: Icons.menu_book_outlined,
+              onTap: () => context.push('/home/customers/${customer.id}/ledger'),
+            ),
+          ],
+        );
+        // ⓘ দুই তলা হলে বকেয়া কার্ডের পুরো চওড়ায়, ডানে — সারির লেখার নিচে; তার নিচে বোতাম
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
           tile,
+          if (stack)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 4),
+              child: Align(alignment: AlignmentDirectional.centerEnd, child: duePill(constraints.maxWidth - 32)!),
+            ),
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 8),
-            child: Align(alignment: AlignmentDirectional.centerEnd, child: duePill(constraints.maxWidth - 32)!),
+            child: Align(alignment: AlignmentDirectional.centerEnd, child: actions),
           ),
         ]);
         },
