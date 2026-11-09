@@ -236,8 +236,6 @@ class MoneyIsNeverAFloatTest extends TestCase
     private const FLOAT_IS_DELIBERATE = [
         // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল): চারটাই টাকা জমা বা গোনা নয় — পড়ে মিলিয়ে দেখা
         'app/Core/Services/LoginPlace.php' => 'লগইনের জায়গা — অক্ষাংশ/দ্রাঘিমাংশ আর নির্ভুলতার মিটার, টাকা নয়',
-        'app/Modules/Finance/Resources/views/dashboard/charts.blade.php' => 'অর্থের আট চার্টের মাপ — দাগের উচ্চতা আর বিন্দুর জায়গা পিক্সেলে; টাকার অঙ্ক [[FinanceCharts]]-এ bcmath-এ, পর্দায় লাখে bcdiv-এ',
-        'app/Modules/Finance/Resources/views/dashboard/working-capital.blade.php' => 'চলতি মূলধনের waterfall — বারের উচ্চতা পিক্সেলে আর লাখে দেখানো; টাকার অঙ্ক [[WorkingCapital]]-এ bcmath-এ, পর্দায় Money::format-এ',
         'app/Modules/Sales/Http/Requests/DirectSaleRules.php' => 'তুলনা — খরচ শূন্যের বেশি কি না, গোল করার সীমা পেরোল কি না; টাকা জমা হয় সেবায়, bcmath-এ',
         'app/Modules/Sales/Services/DirectSaleOptions.php' => 'কাউন্টারের পর্দার জাভাস্ক্রিপ্টে পাঠানো ভ্যাটের হার আর কেনা দর — দেখানোর সংখ্যা; বিলের সব হিসাব সেবায়, bcmath-এ',
         'app/Core/Engines/Print/PaperLook.php' => 'কাগজের মাপ (মিমি, pt) — A5-এ ×০.৭২/×০.৮৫, টাকা নয় (৩০ সেপ্টেম্বর ২০২৬)',

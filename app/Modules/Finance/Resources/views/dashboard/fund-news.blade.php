@@ -4,18 +4,18 @@
 --}}
 @php
     $tones = [
-        'urgent' => ['#fef2f2', '#dc2626', '#ffffff'],
-        'soon' => ['#fff7ed', '#ea580c', '#ffffff'],
-        'budget' => ['#fefce8', '#facc15', '#422006'],
-        'good' => ['#f0fdf4', '#16a34a', '#ffffff'],
+        'urgent' => ['var(--color-fin-fef2f2)', 'var(--color-fin-dc2626)', 'var(--color-fin-ffffff)'],
+        'soon' => ['var(--color-fin-fff7ed)', 'var(--color-fin-ea580c)', 'var(--color-fin-ffffff)'],
+        'budget' => ['var(--color-fin-fefce8)', 'var(--color-fin-facc15)', 'var(--color-fin-422006)'],
+        'good' => ['var(--color-fin-f0fdf4)', 'var(--color-fin-16a34a)', 'var(--color-fin-ffffff)'],
     ];
 @endphp
 <section data-fund-news
-         style="flex: 1 1 380px; min-width: 0; background: #ffffff; color: #0f172a; border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(15,23,42,0.08)">
+         style="flex: 1 1 380px; min-width: 0; background: var(--color-fin-ffffff); color: var(--color-fin-0f172a); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px var(--color-fin-15-23-42-a8)">
     <h2 style="margin: 0; font-size: 16px; font-weight: 700">{{ __('finance::fund.news_title') }}</h2>
     @forelse ($news as $item)
         @php [$bg, $tagBg, $tagFg] = $tones[$item['tone']]; @endphp
-        @php $line = "text-decoration: none; color: #0f172a; display: flex; gap: 10px; align-items: flex-start; background: {$bg}; border-radius: 12px; padding: 10px 12px"; @endphp
+        @php $line = "text-decoration: none; color: var(--color-fin-0f172a); display: flex; gap: 10px; align-items: flex-start; background: {$bg}; border-radius: 12px; padding: 10px 12px"; @endphp
         @if ($item['href'])
             <a data-fund-news-item="{{ $item['tone'] }}" href="{{ $item['href'] }}" style="{{ $line }}">
                 <span style="flex: none; font-size: 12px; font-weight: 700; color: {{ $tagFg }}; background: {{ $tagBg }}; border-radius: 6px; padding: 2px 8px">{{ $item['tag'] }}</span>
@@ -28,6 +28,6 @@
             </div>
         @endif
     @empty
-        <p style="margin: 0; font-size: 14px; color: #475569">{{ __('finance::fund.news_none') }}</p>
+        <p style="margin: 0; font-size: 14px; color: var(--color-fin-475569)">{{ __('finance::fund.news_none') }}</p>
     @endforelse
 </section>
