@@ -121,7 +121,7 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
             'company_id' => CompanyContext::id(), 'branch_id' => CompanyContext::branchId(), 'document_no' => 'LN-CH-1',
             'lender' => 'Chart Bank', 'kind' => Loan::TERM, 'direction' => Loan::TAKEN, 'sanctioned' => '1200000',
             'interest_rate' => '12', 'tenure_months' => 12, 'start_date' => '2026-09-01',
-            'liability_account_id' => StandardChart::find('2211')->id, 'interest_account_id' => StandardChart::find(StandardChart::INTEREST_EXPENSE)->id,
+            'principal_account_id' => StandardChart::find('2211')->id, 'interest_account_id' => StandardChart::find(StandardChart::INTEREST_EXPENSE)->id,
             'status' => DocumentStatus::CONFIRMED,
         ]);
         $row = LoanInstalment::query()->create(['loan_id' => $loan->id, 'no' => 99, 'due_date' => '2027-01-15', 'principal' => '200000', 'interest' => '20000', 'status' => LoanInstalment::DUE]);
