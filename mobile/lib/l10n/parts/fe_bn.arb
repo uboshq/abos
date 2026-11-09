@@ -579,5 +579,9 @@
   "approvalsWhoFor": "কার হয়ে",
   "@approvalsWhoFor": {
     "description": "Approval paper page (sample v4 picture 2)"
+  },
+  "approvalsImpactTitle": "অনুমোদন দিলে কী হবে",
+  "@approvalsImpactTitle": {
+    "description": "Approval paper page: impact box (sample v4 picture 2)"
   }
 }

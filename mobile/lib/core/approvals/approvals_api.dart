@@ -325,7 +325,15 @@ class ApprovalSheet {
     this.whyRule,
     this.whyStep,
     this.whyReason,
+    this.impact = const [],
+    this.impactChecks = const [],
   });
+
+  /// ⭐ "অনুমোদন দিলে কী হবে" — (নাম, এখন, পরে); নমুনা v4, ছবি ২ ([[Voucher::approvalImpact()]]); পুরনো সার্ভারে খালি
+  final List<(String, String, String)> impact;
+
+  /// (ঠিক কি না, লেখা) — যেমন "✓ খাতে টাকা আছে"
+  final List<(bool, String)> impactChecks;
 
   /// ⭐ "কেন আপনার অনুমোদন লাগছে" — নমুনা v4 (মালিক "ok", ৮ নভেম্বর ২০২৬): ইঞ্জিনের নিয়ম, ধাপ, আর যিনি চেয়েছেন তার কারণ।
   /// ⚠️ পুরনো সার্ভার পাঠায় না — তখন তিনটাই null আর বাক্সটা আসে না
@@ -390,6 +398,14 @@ class ApprovalSheet {
         whyRule: _blankless((json['why'] as Map?)?['rule']),
         whyStep: _blankless((json['why'] as Map?)?['step']),
         whyReason: _blankless((json['why'] as Map?)?['reason']),
+        impact: [
+          for (final r in ((json['impact'] as Map?)?['rows'] as List?) ?? const [])
+            if (r is Map) (r['label']?.toString() ?? '', r['before']?.toString() ?? '', r['after']?.toString() ?? ''),
+        ],
+        impactChecks: [
+          for (final c in ((json['impact'] as Map?)?['checks'] as List?) ?? const [])
+            if (c is Map) (c['ok'] == true, c['text']?.toString() ?? ''),
+        ],
       );
 
   static String? _blankless(Object? value) {

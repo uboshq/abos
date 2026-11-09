@@ -281,6 +281,7 @@ class _ApprovalPaperScreenState extends State<ApprovalPaperScreen> {
                 ),
               if (sheet != null) ...[
                 if (sheet.whyRule != null || sheet.whyReason != null) _Why(sheet: sheet),
+                if (sheet.impact.isNotEmpty) _Impact(sheet: sheet),
                 _Summary(paper: paper, sheet: sheet),
                 _Lines(sheet: sheet, paper: paper),
                 if (sheet.journey.isNotEmpty) _Journey(sheet: sheet, paper: paper),
@@ -546,6 +547,40 @@ class _Why extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// ⭐ "অনুমোদন দিলে কী হবে" — নমুনা v4, ছবি ২: পক্ষের বাকি আর টাকার খাত, এখন → পরে; নিচে সবুজ/লাল যাচাই
+class _Impact extends StatelessWidget {
+  const _Impact({required this.sheet});
+
+  final ApprovalSheet sheet;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return _Box(
+      key: const ValueKey('approval-impact'),
+      title: context.l10n.approvalsImpactTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, (label, before, after)) in sheet.impact.indexed)
+            Padding(
+              key: ValueKey('approval-impact-$i'),
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Text(label, style: TextStyle(fontSize: 13.5, color: palette.onSurfaceMuted))),
+                const SizedBox(width: AppSpacing.sm),
+                // ⓘ সরু ফোনে অঙ্ক নিজের জায়গায় দুই লাইনে ভাঙে — ডানে উপচায় না
+                Flexible(child: Text('$before → $after', textAlign: TextAlign.end, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700))),
+              ]),
+            ),
+          for (final (ok, text) in sheet.impactChecks)
+            Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: ok ? palette.success : palette.danger)),
+        ],
       ),
     );
   }

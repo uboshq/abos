@@ -11257,4 +11257,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get approvalsWhoFor => 'কার হয়ে';
+
+  @override
+  String get approvalsImpactTitle => 'অনুমোদন দিলে কী হবে';
 }

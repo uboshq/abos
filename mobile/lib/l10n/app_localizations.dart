@@ -18721,6 +18721,12 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'কার হয়ে'**
   String get approvalsWhoFor;
+
+  /// Approval paper page: impact box (sample v4 picture 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দিলে কী হবে'**
+  String get approvalsImpactTitle;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -11428,4 +11428,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsWhoFor => 'On behalf of';
+
+  @override
+  String get approvalsImpactTitle => 'What happens on approval';
 }

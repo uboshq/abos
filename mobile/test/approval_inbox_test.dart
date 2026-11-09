@@ -66,6 +66,15 @@ void main() {
       });
 
   final sheet = ApprovalSheet.fromJson({
+    'impact': {
+      'rows': [
+        {'label': 'মেসার্স রহমান ট্রেডার্স-কে দেনা', 'before': '৳1,52,400.00', 'after': '৳32,400.00'},
+        {'label': 'সোনালী ব্যাংক — জমা', 'before': '৳8,40,000.00', 'after': '৳7,20,000.00'},
+      ],
+      'checks': [
+        {'ok': true, 'text': '✓ খাতে টাকা আছে'},
+      ],
+    },
     'why': {'rule': 'ক্রয় বিল নিশ্চিত — ৳1,00,000.00 বা তার বেশি হলে অনুমোদন লাগে', 'step': 'ধাপ 2 · ম্যানেজার', 'reason': 'মাসের শেষ, সরবরাহ বন্ধের নোটিশ'},
     'facts': [
       {'label': 'তারিখ', 'value': '13 Sep 2026'},
@@ -427,6 +436,14 @@ void main() {
           reason: '⛔ যিনি চেয়েছেন তার কারণ পাতায় নেই');
       final whyTop = tester.getTopLeft(find.byKey(const ValueKey('approval-why'))).dy;
       expect(whyTop, lessThan(tester.getTopLeft(find.byKey(const ValueKey('approval-lines'))).dy), reason: '⛔ "কেন" বাক্স কাগজের লাইনের আগে নয়');
+      // ⭐ নমুনা v4, ছবি ২: "অনুমোদন দিলে কী হবে" — এখন → পরে, "কেন"-র পরে, লাইনের আগে
+      expect(find.byKey(const ValueKey('approval-impact')), findsOneWidget, reason: '⛔ নমুনা v4: "অনুমোদন দিলে কী হবে" নেই');
+      expect(find.descendant(of: find.byKey(const ValueKey('approval-impact-1')), matching: find.text('৳8,40,000.00 → ৳7,20,000.00')), findsOneWidget,
+          reason: '⛔ টাকার খাতের এখন → পরে নেই');
+      expect(find.text('✓ খাতে টাকা আছে'), findsOneWidget, reason: '⛔ যাচাইয়ের লাইন নেই');
+      final impactTop = tester.getTopLeft(find.byKey(const ValueKey('approval-impact'))).dy;
+      expect(impactTop, greaterThan(whyTop), reason: '⛔ "কী হবে" "কেন"-র আগে');
+      expect(impactTop, lessThan(tester.getTopLeft(find.byKey(const ValueKey('approval-lines'))).dy), reason: '⛔ "কী হবে" কাগজের লাইনের পরে');
       // ⭐ নমুনা v4, ছবি ২: মাথা কাগজের বিভাগের রঙে (ক্রয় বিল → ক্রয়ের কমলা), অঙ্ক বড় করে, দেরি লাল ফিতায়
       expect(find.byKey(const ValueKey('approval-paper-head')), findsOneWidget, reason: '⛔ নমুনা v4: কাগজের রঙিন মাথা নেই');
       final head = tester.widget<Container>(find.byKey(const ValueKey('approval-paper-head')));

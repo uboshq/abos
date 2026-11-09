@@ -115,5 +115,6 @@
   "approvalsWhoTitle": "Whose, who asked",
   "approvalsWhoParty": "Party",
   "approvalsWhoAsked": "Asked by",
-  "approvalsWhoFor": "On behalf of"
+  "approvalsWhoFor": "On behalf of",
+  "approvalsImpactTitle": "What happens on approval"
 }
