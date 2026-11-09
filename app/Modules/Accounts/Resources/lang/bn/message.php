@@ -311,4 +311,12 @@ return [
     'bulk_post_why_not_allowed' => 'এই ভাউচার পোস্টের অনুমতি আপনার নেই',
     'bulk_post_why_already_waiting' => 'আগে থেকেই অনুমোদনের অপেক্ষায়',
     'bulk_post_why_rejected' => 'প্রত্যাখ্যাত — কাগজ ঠিক না করলে আবার পাঠানো যায় না',
+
+    // ⭐ "অনুমোদন দিলে কী হবে" — নমুনা v4, ছবি ২ ([[Voucher::approvalImpact()]])
+    'impact_party_owes' => ':party-এর বাকি',
+    'impact_we_owe' => ':party-কে দেনা',
+    'impact_advance' => 'অগ্রিম :amount',
+    'impact_money' => ':account — জমা',
+    'impact_money_ok' => '✓ খাতে টাকা আছে',
+    'impact_money_short' => '⚠ পরিশোধের পরে খাতে টাকা কম পড়বে',
 ];

@@ -28,6 +28,7 @@ interface ShowsItselfForSigning
      *     rows: list<array<string, string|null>>,
      *     totals?: array<string, string>,
      *     party?: array{type: string, id: int}|null,
+     *     impact?: array{rows: list<array{label: string, before: string, after: string}>, checks: list<array{ok: bool, text: string}>}|null,
      * }
      *
      * `facts` — ঘর আর মান, খালি মান বাদ দিয়ে। `columns` আর `rows` — কাগজের
