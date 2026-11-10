@@ -33,7 +33,7 @@ class ChequePrint extends Model
 
     protected function casts(): array
     {
-        return ['cheque_date' => 'date', 'crossed' => 'boolean', 'off_books' => 'boolean', 'cheque_no' => 'integer', 'times' => 'integer'];
+        return ['cheque_date' => 'date', 'amount' => 'decimal:4', 'crossed' => 'boolean', 'off_books' => 'boolean', 'cheque_no' => 'integer', 'times' => 'integer'];
     }
 
     /** @return BelongsTo<ChequeBook, $this> */

@@ -75,7 +75,7 @@
                     </label>
                     <p class="text-sm text-(--color-ink-muted) sm:col-span-2">{{ __('accounts::cheque_print.first_time_tip') }}</p>
                     <div class="flex flex-wrap justify-end gap-2 sm:col-span-2">
-                        <button type="submit" formaction="{{ route('accounts.cheque.print.free.test') }}"
+                        <button type="submit" name="test" value="1"
                                 class="h-(--spacing-command) rounded-(--radius-field) border border-(--color-brand-500) px-4 text-sm font-semibold text-(--color-brand-600)">{{ __('accounts::cheque_print.test') }}</button>
                         <button type="submit" data-cheque-print-button
                                 class="h-(--spacing-command) rounded-(--radius-field) bg-(--color-brand-600) px-4 text-sm font-bold text-(--color-brand-ink)">{{ __('accounts::cheque_print.print') }}</button>

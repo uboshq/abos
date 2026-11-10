@@ -34,7 +34,7 @@
     <div class="flex flex-col gap-4">
         @foreach ($forms as $form)
             @php($l = $form['layout'])
-            <form method="POST" action="{{ route('accounts.cheque.print.setup.layout') }}" data-cheque-layout="{{ $l?->id ?? 'new' }}"
+            <form method="POST" action="{{ route('accounts.cheque.print.setup.layout.store') }}" data-cheque-layout="{{ $l?->id ?? 'new' }}"
                   class="flex flex-col gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 @csrf
                 <h2 class="text-base font-bold">{{ $l?->name ?? __('accounts::cheque_print.new_layout') }}</h2>
@@ -80,7 +80,7 @@
         <section class="flex flex-col gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-base font-bold">{{ __('accounts::cheque_print.book') }}</h2>
             @foreach ($books->push(null) as $book)
-                <form method="POST" action="{{ route('accounts.cheque.print.setup.book') }}" data-cheque-book="{{ $book?->id ?? 'new' }}"
+                <form method="POST" action="{{ route('accounts.cheque.print.setup.book.store') }}" data-cheque-book="{{ $book?->id ?? 'new' }}"
                       class="grid gap-2 border-t border-(--color-border) pt-3 sm:grid-cols-4 lg:grid-cols-8">
                     @csrf
                     @if ($book)<input type="hidden" name="id" value="{{ $book->id }}">@endif

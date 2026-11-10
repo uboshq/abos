@@ -402,13 +402,12 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/print/cheque/{cheque}/test', [ChequePrintController::class, 'chequeTest'])->whereNumber('cheque')->name('print.cheque.test');
         Route::get('/print/free', [ChequePrintController::class, 'freeForm'])->name('print.free');
         Route::post('/print/free', [ChequePrintController::class, 'freePrint'])->name('print.free.store');
-        Route::post('/print/free/test', [ChequePrintController::class, 'freeTest'])->name('print.free.test');
         Route::get('/printed', [ChequePrintController::class, 'log'])->name('print.log');
         Route::post('/printed/{print}/again', [ChequePrintController::class, 'again'])->whereNumber('print')->name('print.again');
         Route::post('/printed/{print}/spoil', [ChequePrintController::class, 'spoil'])->whereNumber('print')->name('print.spoil');
         Route::get('/print/setup', [ChequePrintController::class, 'setup'])->name('print.setup');
-        Route::post('/print/setup/layout', [ChequePrintController::class, 'saveLayout'])->name('print.setup.layout');
-        Route::post('/print/setup/book', [ChequePrintController::class, 'saveBook'])->name('print.setup.book');
+        Route::post('/print/setup/layout', [ChequePrintController::class, 'saveLayout'])->name('print.setup.layout.store');
+        Route::post('/print/setup/book', [ChequePrintController::class, 'saveBook'])->name('print.setup.book.store');
     });
 
     /*

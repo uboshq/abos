@@ -206,16 +206,16 @@ final class AChequeIsPrintedFromItsBookTest extends TestCase
 
         $fields = ChequeLayout::standard()['fields'];
         $fields['payee']['x'] = 26.5;
-        $this->post(route('accounts.cheque.print.setup.layout'), ['name' => 'DBBL', 'width_mm' => '200', 'height_mm' => '90', 'offset_x' => '1.5', 'offset_y' => '-0.5', 'fields' => $fields])
+        $this->post(route('accounts.cheque.print.setup.layout.store'), ['name' => 'DBBL', 'width_mm' => '200', 'height_mm' => '90', 'offset_x' => '1.5', 'offset_y' => '-0.5', 'fields' => $fields])
             ->assertRedirect()->assertSessionHasNoErrors();
         $saved = ChequeLayout::query()->where('name', 'DBBL')->sole();
         $this->assertSame('26.50', $saved->field('payee')['x']);
 
-        $this->post(route('accounts.cheque.print.setup.book'), ['label' => 'DBBL বই ২', 'bank_account_id' => $this->bank->id, 'off_books' => '0', 'first_no' => '900', 'last_no' => '800', 'digits' => '7', 'layout_id' => $saved->id])
+        $this->post(route('accounts.cheque.print.setup.book.store'), ['label' => 'DBBL বই ২', 'bank_account_id' => $this->bank->id, 'off_books' => '0', 'first_no' => '900', 'last_no' => '800', 'digits' => '7', 'layout_id' => $saved->id])
             ->assertSessionHasErrors('last_no');
-        $this->post(route('accounts.cheque.print.setup.book'), ['label' => 'DBBL বই ২', 'off_books' => '0', 'first_no' => '800', 'last_no' => '900', 'digits' => '7', 'layout_id' => $saved->id])
+        $this->post(route('accounts.cheque.print.setup.book.store'), ['label' => 'DBBL বই ২', 'off_books' => '0', 'first_no' => '800', 'last_no' => '900', 'digits' => '7', 'layout_id' => $saved->id])
             ->assertSessionHasErrors('bank_account_id');
-        $this->post(route('accounts.cheque.print.setup.book'), ['label' => 'DBBL বই ২', 'bank_account_id' => $this->bank->id, 'off_books' => '0', 'first_no' => '800', 'last_no' => '900', 'digits' => '7', 'layout_id' => $saved->id, 'is_active' => '1'])
+        $this->post(route('accounts.cheque.print.setup.book.store'), ['label' => 'DBBL বই ২', 'bank_account_id' => $this->bank->id, 'off_books' => '0', 'first_no' => '800', 'last_no' => '900', 'digits' => '7', 'layout_id' => $saved->id, 'is_active' => '1'])
             ->assertSessionHasNoErrors();
         $this->assertSame(800, ChequeBook::query()->where('label', 'DBBL বই ২')->sole()->next_no);
     }

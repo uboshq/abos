@@ -43,8 +43,9 @@ class ChequePrintController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.cheque.print', only: ['voucherForm', 'voucherPrint', 'voucherTest', 'chequeForm', 'chequePrint', 'chequeTest']),
-            new Middleware('can:accounts.cheque.print_free', only: ['freeForm', 'freePrint', 'freeTest']),
-            new Middleware('can:accounts.cheque.view', only: ['log']),
+            new Middleware('can:accounts.cheque.print_free', only: ['freeForm', 'freePrint']),
+            // ⓘ আবার ছাপা আর নষ্ট — খাতা দেখার চাবি দরজায়, তারপর কাগজ ধরে ছাপার চাবি ([[mayTouch()]])
+            new Middleware('can:accounts.cheque.view', only: ['log', 'again', 'spoil']),
             new Middleware('can:accounts.cheque.layout', only: ['setup', 'saveLayout', 'saveBook']),
         ];
     }
@@ -177,21 +178,19 @@ class ChequePrintController extends Controller implements HasMiddleware
         ]);
     }
 
+    /** ⓘ পরীক্ষার ছাপ একই দরজায় (`test=1`) — খাতায় কিছু ওঠে না, বইয়ের নম্বর নড়ে না */
     public function freePrint(Request $request): Response
     {
         $data = $this->freeData($request);
         $book = ChequeBook::query()->with('layout')->findOrFail($data['book']);
+
+        if ($request->boolean('test')) {
+            return $this->inline($this->printer->pdf($book->layout, $data, true), 'test');
+        }
+
         $print = $this->printer->free($book, $data);
 
         return $this->pdf($book->layout, $print, $book->number($print->cheque_no));
-    }
-
-    public function freeTest(Request $request): Response
-    {
-        $data = $this->freeData($request);
-        $book = ChequeBook::query()->with('layout')->findOrFail($data['book']);
-
-        return $this->inline($this->printer->pdf($book->layout, $data, true), 'test');
     }
 
     public function log(Request $request): View
