@@ -205,7 +205,9 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
         $this->assertSame((int) $lowest['source_id'], (int) $tile['lagging']->first()->source_id, '⛔ সবচেয়ে পিছিয়ে থাকা জন তালিকার মাথায় নেই');
         $this->assertLessThanOrEqual(5, $tile['lagging']->count());
 
-        $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->assertSee(__('sales::party_target.tile'))->assertSee(__('sales::party_target.lagging'));
+        // ⓘ মালিক, 10 নভেম্বর 2026 রাত: ওয়েবের বিক্রয় পাতা চূড়ান্ত নমুনার বোর্ড — লক্ষ্য বনাম আদায়ের ঘর ফোনের ড্যাশবোর্ডে আর হোমে ([[DashboardApiController]])
+        $this->assertContains(__('sales::party_target.tile'), $this->dashboardLabels(), '⛔ ড্যাশবোর্ডে লক্ষ্য বনাম আদায়ের ঘর নেই');
+        $this->assertContains(__('sales::party_target.lagging'), $this->dashboardLabels(), '⛔ ড্যাশবোর্ডে পিছিয়ে থাকাদের তালিকা নেই');
     }
 
     /**
@@ -222,17 +224,25 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
             $this->actingAs($person)->get(route('accounts.report.show', ['slug' => 'party-target']))
                 ->assertOk()->assertSee('Door Dealer');
             $this->actingAs($person)->get(route('accounts.report.show', ['slug' => 'party-target-areas']))->assertOk();
-            $this->actingAs($person)->get(route('module.dashboard', ['module' => 'sales']))
-                ->assertOk()->assertSee(__('sales::party_target.tile'));
+            $this->actingAs($person);
+            $this->assertContains(__('sales::party_target.tile'), $this->dashboardLabels(), '⛔ '.$key.' চাবিতে ড্যাশবোর্ডের ঘর নেই');
         }
 
         $neither = $this->person(['sales.invoice.view']);
         $this->actingAs($neither)->get(route('accounts.report.show', ['slug' => 'party-target']))->assertForbidden();
-        $this->actingAs($neither)->get(route('module.dashboard', ['module' => 'sales']))
-            ->assertOk()->assertDontSee(__('sales::party_target.tile'));
+        $this->actingAs($neither);
+        $this->assertNotContains(__('sales::party_target.tile'), $this->dashboardLabels(), '⛔ চাবি ছাড়াই ড্যাশবোর্ডে লক্ষ্যের ঘর');
 
         // ⓘ অন্য রিপোর্টের দরজা আগের মতোই কেবল হিসাবের চাবি চায়
         $this->actingAs($this->person(['sales.report']))->get(route('accounts.report.show', ['slug' => 'day-book']))->assertForbidden();
+    }
+
+    /** @return list<string> ফোনের বিক্রয় ড্যাশবোর্ডের সংখ্যা আর তালিকার নাম — যে মানুষ এখন ঢুকে আছেন তাঁর চোখে */
+    private function dashboardLabels(): array
+    {
+        $d = app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for('sales', auth()->user());
+
+        return [...array_map(fn ($s) => (string) $s->label, $d->stats), ...array_map(fn ($l) => (string) $l->label, $d->listings)];
     }
 
     /** একজন নতুন মানুষ, কেবল এই চাবিগুলো হাতে */

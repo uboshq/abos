@@ -192,7 +192,9 @@ final class TheDashboardLookedForAWordNobodyWritesTest extends TestCase
      */
     private function capitalInTile(\Illuminate\Testing\TestResponse $page): string
     {
-        $dashboard = $page->viewData('dashboard');
+        // ⓘ মালিক, 10 নভেম্বর 2026 রাত: অর্থের পাতা এখন চূড়ান্ত নমুনার বোর্ড — "মূলধন এসেছে" ঘর বাঁচে হোমে আর ফোনে, একই ড্যাশবোর্ড থেকে
+        $page->assertOk();
+        $dashboard = app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for('finance', auth()->user());
 
         foreach ($dashboard->stats as $stat) {
             if ($stat->label === __('finance::dashboard.capital_in')) {

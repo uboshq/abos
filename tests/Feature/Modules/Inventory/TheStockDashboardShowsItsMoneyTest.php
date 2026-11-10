@@ -6,27 +6,20 @@ namespace Tests\Feature\Modules\Inventory;
 
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Inventory\Services\StockFacts;
+use App\Modules\Inventory\Dashboard\InventoryBoard;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * মজুদের ড্যাশবোর্ড — টাকা আগে, এক লাইনে, আর চার্টে টাকার অঙ্ক। মালিক, ১ অক্টোবর ২০২৬।
+ * মজুদের ড্যাশবোর্ড — টাকা আগে আর চার্টে টাকার অঙ্ক (মালিক, ১ অক্টোবর ২০২৬), এখন চূড়ান্ত নমুনার বোর্ডে (HmzeE5CN2wvtyLPE5exjvV, 10 নভেম্বর 2026 রাত)।
  *
- * মালিকের তিনটা কথা: *"ei 6ti box ek line daw"*, *"মজুদের মূল্য … ei boxta 1st e daw"*,
- * আর চার্ট দেখিয়ে *"ei chart e takar amount taw dio"*।
- *
- * ── ⓘ চার্টটা কেন টাকায় বদলাল, কেবল লেবেল বসল না ────────────────────────
- * আগের চার্ট নড়াচড়ার **পরিমাণ** যোগ করত — বস্তা, কার্টুন আর পিস এক যোগফলে; তার পাশে টাকা বসালে দুই
- * অর্থের দুই সংখ্যা এক বারে থাকত। এখন বার নিজেই টাকা: মজুদের খাতে (১১২০) ঢোকা ডেবিট, বেরোনো ক্রেডিট,
- * কেনা দরে ([[StockFacts::monthlyValueFlow()]]) — আর মাথায় ছোট করে লেখা, মাউস রাখলে পুরো অঙ্ক।
- * ⚠️ খরচের সংখ্যা, তাই `inventory.cost.view` ছাড়া আগের পরিমাণের চার্টই থাকে।
+ * দাবি: পাতা খোলে সমস্যা কেন্দ্র দিয়ে, ডানে মজুদের মূল্যের কোণা; 12 মাসের মজুদের ধারা মজুদের খাতা (1120) থেকে টাকায় — এ মাসে 1,50,000 ঢুকে
+ * 50,000 বেরোলে মাস-শেষের মূল্য 1,00,000 বাড়ে; ⚠️ খরচের সংখ্যা, তাই খরচের চাবি (inventory.cost.view) ছাড়া ধারার ঘর নেই, চাবি দিলে আছে।
  */
 final class TheStockDashboardShowsItsMoneyTest extends TestCase
 {
@@ -46,21 +39,20 @@ final class TheStockDashboardShowsItsMoneyTest extends TestCase
         app(StandardChart::class)->install();
     }
 
-    public function test_the_six_boxes_sit_in_one_row_with_the_stock_value_first(): void
+    public function test_the_page_opens_on_the_problem_centre_with_the_value_corner_beside_it(): void
     {
         $html = $this->get(route('module.dashboard', ['module' => 'inventory']))->assertOk()->getContent();
 
-        $this->assertStringContainsString('xl:grid-cols-6', $html, '⛔ ছয়টা বাক্স বড় পর্দায় এক লাইনে বসার ব্যবস্থা নেই।');
+        $problems = strpos($html, 'data-inv-problems');
+        $corner = strpos($html, 'data-inv-value-corner');
 
-        $value = strpos($html, e(__('inventory::overview.stock_value')));
-        $available = strpos($html, e(__('inventory::overview.available')));
-
-        $this->assertNotFalse($value, 'প্রস্তুতিটাই ভুল — মজুদের মূল্যের বাক্স নেই।');
-        $this->assertNotFalse($available, 'প্রস্তুতিটাই ভুল — বিক্রয়যোগ্যের বাক্স নেই।');
-        $this->assertLessThan($available, $value, '⛔ মজুদের মূল্য প্রথম বাক্স নয়।');
+        $this->assertNotFalse($problems, '⛔ সমস্যা কেন্দ্র নেই।');
+        $this->assertNotFalse($corner, '⛔ মজুদের মূল্যের কোণা নেই।');
+        $this->assertLessThan($corner, $problems, '⛔ সমস্যা কেন্দ্র মূল্যের কোণার আগে নয় (নমুনায় বাঁয়ে, চোখের সামনে)।');
+        $this->assertStringNotContainsString('data-stat-grid', $html, '⛔ পুরনো সংখ্যার কার্ড এখনো পাতায়।');
     }
 
-    public function test_the_chart_counts_taka_from_the_inventory_account_and_prints_it_on_the_bars(): void
+    public function test_the_trend_counts_taka_from_the_inventory_account(): void
     {
         $before = $this->thisMonth();
 
@@ -69,47 +61,42 @@ final class TheStockDashboardShowsItsMoneyTest extends TestCase
 
         $after = $this->thisMonth();
 
-        $this->assertSame(0, bccomp(bcsub($after['in'], $before['in'], 2), '150000', 2), '⛔ এ মাসে ঢোকা টাকা ১,৫০,০০০ বাড়েনি।');
-        $this->assertSame(0, bccomp(bcsub($after['out'], $before['out'], 2), '50000', 2), '⛔ এ মাসে বেরোনো টাকা ৫০,০০০ বাড়েনি।');
-
-        $html = $this->get(route('module.dashboard', ['module' => 'inventory']))->assertOk()->getContent();
-
-        $this->assertStringContainsString(e(__('inventory::overview.flow_value')), $html, '⛔ চার্ট টাকার নয়।');
-        $this->assertStringContainsString(e(StockFacts::shortTaka($after['in'])), $html, '⛔ বারের মাথায় ঢোকা টাকার অঙ্ক নেই।');
-        $this->assertStringContainsString(e(StockFacts::shortTaka($after['out'])), $html, '⛔ বারের মাথায় বেরোনো টাকার অঙ্ক নেই।');
-        $this->assertStringContainsString(e(Money::format($after['in'])), $html, '⛔ মাউস রাখলে পুরো অঙ্ক নেই।');
+        $this->assertSame(0, bccomp(bcsub($after, $before, 2), '100000', 2), '⛔ এ মাসের মজুদের মূল্য খাতার মতো 1,00,000 বাড়েনি।');
     }
 
-    /** ⛔ একই মানুষ: খরচের চাবি ছাড়া টাকার চার্ট নেই, চাবি দিলে আছে। */
-    public function test_the_money_chart_needs_the_cost_key(): void
+    /** ⛔ একই মানুষ: খরচের চাবি ছাড়া মজুদের ধারার ঘর নেই, চাবি দিলে আছে। */
+    public function test_the_money_trend_needs_the_cost_key(): void
     {
-        $this->move('150000', in: true);
-
         $clerk = User::factory()->create(['current_company_id' => $this->company->id]);
         $clerk->companies()->attach($this->company->id);
         $clerk->givePermissionTo('inventory.stock.view');
 
         $html = $this->actingAs($clerk->fresh())->get(route('module.dashboard', ['module' => 'inventory']))->assertOk()->getContent();
+        $this->assertStringContainsString('data-inv-problems', $html, 'প্রস্তুতিটাই ভুল — বোর্ডই খোলেনি।');
+        $this->assertStringNotContainsString('data-inv-trend', $html, '⛔ খরচের চাবি ছাড়াই টাকার ধারা দেখা গেল।');
+        $this->assertStringNotContainsString('data-inv-wh', $html, '⛔ খরচের চাবি ছাড়াই গুদাম ধরে মজুদের মূল্য দেখা গেল।');
+        $this->assertStringNotContainsString('data-inv-roll', $html, '⛔ খরচের চাবি ছাড়াই মজুদের মূল্যের হিসাব দেখা গেল।');
 
-        $this->assertStringNotContainsString(e(__('inventory::overview.flow_value')), $html, '⛔ খরচের চাবি ছাড়াই টাকার চার্ট দেখা গেল।');
-        $this->assertStringContainsString(e(__('inventory::overview.flow')), $html, 'প্রস্তুতিটাই ভুল — পরিমাণের চার্টও নেই।');
+        // ⛔ বোর্ডের বাকি ঘরে একটাও টাকার অঙ্ক নয় — সব কেনা দামে; জায়গায় "আছে, কিন্তু আপনার জন্য নয়" চিহ্ন
+        $board = substr($html, (int) strpos($html, 'data-inv-problems'));
+        $this->assertStringNotContainsString('৳', $board, '⛔ খরচের চাবি ছাড়াই বোর্ডে টাকার অঙ্ক।');
+        $this->assertStringContainsString(\App\Core\Security\FieldSecurity::mask(), $board, 'প্রস্তুতিটাই ভুল — লুকানো অঙ্কের চিহ্নও নেই, তাহলে বোর্ড টাকাই দেখায়নি।');
 
         $clerk->givePermissionTo('inventory.cost.view');
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $html = $this->actingAs($clerk->fresh())->get(route('module.dashboard', ['module' => 'inventory']))->assertOk()->getContent();
-
-        $this->assertStringContainsString(e(__('inventory::overview.flow_value')), $html, '⛔ খরচের চাবি দিলেও টাকার চার্ট এল না।');
+        $this->assertStringContainsString('data-inv-trend', $html, '⛔ খরচের চাবি দিলেও টাকার ধারা এল না।');
     }
 
-    /** @return array{month: string, in: string, out: string} */
-    private function thisMonth(): array
+    private function thisMonth(): string
     {
-        $flow = app(StockFacts::class)->monthlyValueFlow();
+        app(\App\Core\Services\LedgerBalances::class)->forget();
+        $trend = app(InventoryBoard::class)->trend();
 
-        $this->assertNotNull($flow, 'মালিকের খরচের চাবি আছে, অথচ টাকার চার্ট null।');
+        $this->assertNotNull($trend, 'মালিকের খরচের চাবি আছে, অথচ ধারা null।');
 
-        return $flow[array_key_last($flow)];
+        return $trend[array_key_last($trend)]['value'];
     }
 
     /** মজুদের খাতে এ মাসের একটা দাখিলা — পোস্টিং ইঞ্জিন দিয়েই। */

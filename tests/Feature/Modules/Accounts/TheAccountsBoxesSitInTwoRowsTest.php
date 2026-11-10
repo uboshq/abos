@@ -16,8 +16,9 @@ use Tests\TestCase;
  * হিসাবের ড্যাশবোর্ড — নয়টা বাক্স দুই লাইনে (৫ + ৪)। মালিক, ১ অক্টোবর ২০২৬: *"accounts deshboard e ei
  * box gulo dui line bosaw"*।
  *
- * ⓘ আগে চারটা করে তিন লাইন। ⚠️ সারির সংখ্যা ঠিক হয় বাক্সের সংখ্যা থেকে
- * (`resources/views/dashboard/module.blade.php`): ছয়টা এক লাইনে (মজুদ), নয়-দশটা পাঁচ কলামে; বাকিরা আগের মতো।
+ * ⓘ নতুন সিদ্ধান্ত (মালিক, 10 নভেম্বর 2026 রাত — চূড়ান্ত নমুনা TErMgXrtgVBkuyuoCZq8NS আর মজুদের HmzeE5CN2wvtyLPE5exjvV): সংখ্যার বাক্সের
+ * সারি আর নেই; পাতার মাথায় সমস্যা কেন্দ্র, বাকিটা নমুনার সারি ([[TheAccountsBoardReadsTheBooksTest]], [[TheStockDashboardShowsItsMoneyTest]])।
+ * তাই দাবি বদলাল: দুই পাতায় পুরনো বাক্সের ঘর আর ফিরে আসে না, প্রথমে সমস্যা কেন্দ্র।
  */
 final class TheAccountsBoxesSitInTwoRowsTest extends TestCase
 {
@@ -35,33 +36,19 @@ final class TheAccountsBoxesSitInTwoRowsTest extends TestCase
         app(StandardChart::class)->install();
     }
 
-    public function test_the_nine_boxes_sit_in_two_rows_on_a_wide_screen(): void
+    public function test_the_accounts_page_opens_on_the_problem_centre_not_on_the_old_boxes(): void
     {
         $html = $this->get(route('module.dashboard', ['module' => 'accounts']))->assertOk()->getContent();
 
-        $grid = $this->gridOfTheBoxes($html);
-
-        $this->assertStringContainsString('xl:grid-cols-5', $grid, '⛔ নয়টা বাক্স বড় পর্দায় দুই লাইনে (৫ + ৪) বসার ব্যবস্থা নেই।');
-        $this->assertStringNotContainsString('xl:grid-cols-4', $grid, '⛔ বাক্সগুলো এখনো চারটা করে তিন লাইনে।');
+        $this->assertStringNotContainsString('data-stat-grid', $html, '⛔ পুরনো নয়টা বাক্স আবার পাতায় — মালিকের চূড়ান্ত নমুনায় নেই।');
+        $this->assertStringContainsString('data-acc-problems', $html, '⛔ পাতার মাথায় সমস্যা কেন্দ্র নেই।');
     }
 
-    /** সংখ্যার বাক্সগুলোর নিজের ঘর — `data-stat-grid` চিহ্নের ঘরটা; টাইলের বা পাতার অন্য ঘর নয়। */
-    private function gridOfTheBoxes(string $html): string
-    {
-        preg_match('/<div data-stat-grid class="([^"]*)"/', $html, $m);
-        $this->assertNotEmpty($m, 'প্রস্তুতিটাই ভুল — সংখ্যার বাক্সগুলোর ঘর খুঁজে পাওয়া গেল না।');
-
-        return (string) $m[1];
-    }
-
-    /** ⓘ মজুদের ছয়টা আগের মতোই এক লাইনে — নতুন নিয়ম তাকে ছোঁয় না। */
-    public function test_the_stock_dashboard_keeps_its_one_row(): void
+    public function test_the_stock_page_opens_on_the_problem_centre_not_on_the_old_boxes(): void
     {
         $html = $this->get(route('module.dashboard', ['module' => 'inventory']))->assertOk()->getContent();
 
-        $grid = $this->gridOfTheBoxes($html);
-
-        $this->assertStringContainsString('xl:grid-cols-6', $grid);
-        $this->assertStringNotContainsString('xl:grid-cols-5', $grid);
+        $this->assertStringNotContainsString('data-stat-grid', $html, '⛔ পুরনো ছয়টা বাক্স আবার পাতায় — মালিকের চূড়ান্ত নমুনায় নেই।');
+        $this->assertStringContainsString('data-inv-problems', $html, '⛔ পাতার মাথায় সমস্যা কেন্দ্র নেই।');
     }
 }

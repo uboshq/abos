@@ -170,8 +170,12 @@ final class TheLandlordsNoticeCameInTimeTest extends TestCase
             ->assertViewHas('endingSoon', fn ($soon) => $soon->pluck('counterparty')->sort()->values()->all() === ['Ended Ten Days Ago', 'Forty Five', 'Twenty']);
 
         config(['abos.dashboards_v2' => true]);
-        $this->get('/dashboard/finance')->assertOk()->assertSee(__('finance::rental_report.dash_label'))
-            ->assertSee(__('finance::rental_report.dash_hint', ['ending' => 3, 'overdue' => 1]));
+        // ⓘ মালিক, 10 নভেম্বর 2026 রাত: অর্থের পাতা এখন চূড়ান্ত নমুনার বোর্ড — ভাড়ার ঘর বাঁচে হোমে আর ফোনে, একই ড্যাশবোর্ড থেকে
+        $this->get('/dashboard/finance')->assertOk();
+        $rent = collect(app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for('finance', auth()->user())->stats)
+            ->firstWhere('label', __('finance::rental_report.dash_label'));
+        $this->assertNotNull($rent, '⛔ ড্যাশবোর্ডে ভাড়ার ঘর নেই');
+        $this->assertSame(__('finance::rental_report.dash_hint', ['ending' => 3, 'overdue' => 1]), $rent->hint, '⛔ ভাড়ার পাতা আর ড্যাশবোর্ড আলাদা দিন ধরে');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
