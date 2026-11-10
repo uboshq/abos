@@ -45,7 +45,8 @@ return new class extends Migration
             $table->unsignedSmallInteger('sort')->default(100);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-            $table->index(['company_id', 'channel', 'document_type']);
+            // ⓘ নিজের ছোট নাম — তৈরি নামটা 62 অক্ষর, MySQL-এর 64-এর কিনারায় ([[NoIndexNameStandsAtTheEdgeTest]])
+            $table->index(['company_id', 'channel', 'document_type'], 'pmt_company_channel_type_idx');
         });
 
         Schema::create('party_messages', function (Blueprint $table) {
@@ -69,7 +70,7 @@ return new class extends Migration
             $table->foreignId('sent_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->index(['company_id', 'created_at']);
-            $table->index(['company_id', 'document_type', 'document_id']);
+            $table->index(['company_id', 'document_type', 'document_id'], 'pm_company_document_idx');
         });
 
         /*

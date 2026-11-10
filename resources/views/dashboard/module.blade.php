@@ -17,9 +17,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $dashboard->title }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="$dashboard->title" :subtitle="$dashboard->subtitle" />
-    </x-slot:header>
+    {{-- ⛔ শিরোনাম আর উপশিরোনাম নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: ড্যাশবোর্ড "একদম প্লেন থাকবে" ([[dashboard.module-v2]]) --}}
 
     {{-- ── দ্রুত কাজ ───────────────────────────────────────────────
          সবার উপরে: মানুষ প্রায়ই ড্যাশবোর্ডে আসেন কিছু **করতে**, আর

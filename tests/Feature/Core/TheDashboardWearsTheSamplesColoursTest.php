@@ -103,20 +103,44 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
 
         $html = (string) $this->actingAs($owner)->get(route('module.dashboard', 'sales'))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('/data-dashboard-head="sales"[^>]*style="background: linear-gradient\(100deg, var\(--color-pal-blue\), var\(--color-pal-sky\)\)"/s', $html,
-            '⛔ রঙিন ড্যাশবোর্ড: বিক্রয়ের মাথার পট্টি নমুনার নীল → আকাশি নয়।');
+        // ⛔ মাথার পট্টি, নাম আর উপশিরোনাম নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: "একদম প্লেন থাকবে, কোনো ড্যাশবোর্ড লেখার দরকার নাই"
+        $this->assertStringNotContainsString('data-dashboard-head', $html, '⛔ ড্যাশবোর্ডের মাথায় আবার নাম-উপশিরোনামের পট্টি বসেছে।');
+        $accounts = (string) $this->get(route('module.dashboard', 'accounts'))->assertOk()->getContent();
+        $this->assertStringNotContainsString(e((string) __('accounts::dashboard.subtitle')), $accounts,
+            '⛔ হিসাবের ড্যাশবোর্ডে "টাকা কোথায়, কার কাছে পাওনা…" উপশিরোনাম ফিরে এসেছে।');
         preg_match_all('/data-stat-colour="([^"]+)"/', $html, $cards);
         $this->assertCount(4, $cards[1], '⛔ রঙিন ড্যাশবোর্ড: উপরে চারটা রঙিন কার্ড নেই।');
         $this->assertSame(count($cards[1]), count(array_unique($cards[1])), '⛔ রঙিন ড্যাশবোর্ড: পাতায় একই রঙের দুই কার্ড।');
 
         // ছ — নমুনার সারি
-        $this->assertMatchesRegularExpression('/data-dashboard-head="sales".*?<h1[^>]*>\s*'.preg_quote((string) app(\App\Core\Module\ModuleRegistry::class)->get('sales')?->label($owner->locale ?? null), '/').'/su', $html,
-            '⛔ নমুনার মাথা: পট্টিতে মডিউলের নাম নেই।');
-        $this->assertSame(2, preg_match_all('/data-dashboard-scope/', $html), '⛔ নমুনার মাথা: কোম্পানি আর শাখার দুই চিপ নেই।');
         $this->assertMatchesRegularExpression('/data-dashboard-pair[^>]*lg:grid-cols-2.*?data-panel.*?data-dashboard-exceptions/s', $html,
             '⛔ নমুনার সারি: প্রথম চার্ট আর "নজরে রাখুন" পাশাপাশি নয়।');
         $this->assertMatchesRegularExpression('/data-watch-row="good"[^>]*var\(--color-pal-green\)/s', $html,
             '⛔ নজরে রাখুন: কিছু বাকি না থাকলে সবুজ "সব ঠিক" সারি নেই — খালি বাক্স।');
+    }
+
+    /**
+     * ⛔ পুরনো ধাঁচের ড্যাশবোর্ডেও (সুইচ বন্ধ — লাইভ এখন এটাই) বড় "ড্যাশবোর্ড" আর উপশিরোনাম নেই
+     * (মালিক, 10 নভেম্বর 2026 রাত, অর্থ আর বিক্রয়ের পাতার ছবিতে লাল দাগ দিয়ে: "মালিকের টাকা — কত ঢুকল, কত বেরোল")।
+     */
+    public function test_the_old_dashboard_carries_no_title_or_subtitle_either(): void
+    {
+        config(['abos.dashboards_v2' => false]);
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        foreach (['accounts', 'sales', 'finance'] as $module) {
+            $html = (string) $this->actingAs($owner)->get(route('module.dashboard', $module))->assertOk()->getContent();
+
+            // ⓘ data-gold-hairline কেবল x-ui.page-header-এর ভিতরে বসে — থাকলে মানে শিরোনামের মাথাটাই ফিরে এসেছে
+            $this->assertStringNotContainsString('data-gold-hairline', $html, "⛔ {$module}: পুরনো ড্যাশবোর্ডে বড় শিরোনামের মাথা ফিরে এসেছে।");
+            $subtitle = (string) __($module.'::dashboard.subtitle');
+            if ($subtitle !== $module.'::dashboard.subtitle') {
+                $this->assertStringNotContainsString(e($subtitle), $html, "⛔ {$module}: পুরনো ড্যাশবোর্ডে উপশিরোনাম ফিরে এসেছে।");
+            }
+        }
     }
 
     private function onWhite(string $hex): float

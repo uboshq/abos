@@ -30,35 +30,10 @@
         $cardColour = \App\Core\Engines\Dashboard\CardColours::for($module, array_map(fn ($s) => $s->tone, $topStats));
     @endphp
 
-    {{-- ⭐ মাথার পট্টি মডিউলের রঙে — ড্যাশবোর্ডের পরিকল্পনা §৪.১ (মালিক, ২৪ অক্টোবর ২০২৬: "full erp RGB ekta color dibe")।
-         ⓘ রং কেবল পরিচয়ে: পট্টি আর উপরের চার কার্ড; লেখা, বোতাম, চার্ট আর তালিকায় নয়। সাদা লেখা প্রতিটা মডিউল-রঙে ≥ ৪.৯২ঃ১
-         ([[TheModuleColoursCarryWhiteTextTest]]); রঙিন সুইচ বন্ধে ব্র্যান্ড ৭০০ — একই কনট্রাস্ট। --}}
-    <x-slot:header>
-        {{-- ⓘ নমুনার মতো: বাঁয়ে মডিউলের নাম · ছোট করে উপশিরোনাম, ডানে কোম্পানি আর শাখার চিপ (তাই পাতার পথের সারিতে এরা আর
-               দুইবার নয় — [[x-shell.page-path]]) --}}
-        @php
-            $moduleName = collect($menu)->firstWhere('code', $module)['label'] ?? $dashboard->title;
-            $shellUser = auth()->user();
-            $scope = array_filter([
-                $shellUser?->currentCompany?->name(),
-                app(\App\Core\Services\ShellFacts::class)->branchLabel($shellUser, $shellUser?->currentBranch),
-            ]);
-            view()->share('scopeInHead', $scope !== []);
-        @endphp
-        <div data-dashboard-head="{{ $module }}"
-             class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 rounded-(--radius-card) px-4 py-3 text-white"
-             style="background: linear-gradient(100deg, {{ $head[0] }}, {{ $head[1] }})">
-            <h1 class="min-w-0 flex-[1_1_220px] text-lg font-bold leading-tight">
-                {{ $moduleName }}
-                @if ($dashboard->subtitle)
-                    <span class="text-sm font-normal text-white/90">· {{ $dashboard->subtitle }}</span>
-                @endif
-            </h1>
-            @foreach ($scope as $chip)
-                <span data-dashboard-scope class="rounded-full border border-white/75 px-2.5 py-0.5 text-xs">{{ $chip }}</span>
-            @endforeach
-        </div>
-    </x-slot:header>
+    {{-- ⛔ মাথার পট্টি নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: *"প্রত্যেকটা ড্যাশবোর্ডের একদম উপরে … ড্যাশবোর্ড লেখা এবং নিচে বিস্তারিত …
+         আমি যে ড্যাশবোর্ডে আছি এটা তো আমি জানি … একদম প্লেন থাকবে"*। ⓘ মডিউলের নাম আর "টাকা কোথায়, কার কাছে পাওনা…" ধরনের
+         উপশিরোনাম নিচের বাক্সগুলোই বলে; জায়গাটা কাজের বাক্সের। পর্দার নাম কেবল ব্রাউজারের ট্যাবে (`title` slot)।
+         ⓘ কোম্পানি আর শাখা ওপরের পট্টিতে আগেই আছে, তাই এখানে আবার নয়। [[TheDashboardWearsTheSamplesColoursTest]] পাহারা দেয়। --}}
 
 
     <div data-dashboard-v2 class="flex flex-col gap-4">
