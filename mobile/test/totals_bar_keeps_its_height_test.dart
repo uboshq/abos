@@ -23,7 +23,8 @@ import 'support/screens_0441.dart' show srCollectBody, sampleTopBar;
 /// <p>আসল পর্দা: SR-এর আদায়, ৪১২×৯১৫ ফোন, ১০০% লেখা, আসল ফন্ট, "আজ" বাছা — full_screen_shots-এর একই নমুনা, স্ক্রল ছাড়া।
 /// দাবি:
 /// 1. নিচের মোটের পট্টি ede7957d0-এর চেয়ে উঁচু নয় — সেখানে মাপা উচ্চতা [_heightAtEde7957d0]।
-/// 2. স্থির অবস্থায় "মোট · 2টি দোকান"-এর সারি "＋ নতুন আদায়" বোতামের নিচে ঢাকা পড়ে না (দুই আয়তক্ষেত্র মেলে না)।
+/// 2. তালিকা "＋ নতুন আদায়"-এর বারের ওপরে শেষ হয়; "মোট · 2টি দোকান"-এ স্ক্রল করলে সারিটা পুরো দেখা যায়, বোতামের নিচে নয়
+///    (১০ নভেম্বর ২০২৬ পর্যন্ত: স্থির অবস্থাতেই — সারিতে "অ্যাকশন ▾" আসার আগে)।
 ///
 /// ⓘ ede7957d0-এ এই ফাইলটাই চালিয়ে মাপা: পট্টি [_heightAtEde7957d0] dp।
 const _heightAtEde7957d0 = 74.0;
@@ -93,13 +94,28 @@ void main() {
         reason: '⛔ মোটের পট্টি ede7957d0-এর চেয়ে উঁচু ($bar > $_heightAtEde7957d0) — সময়কাল নিজের লাইন নিয়েছে');
   });
 
-  testWidgets('412×915 at rest: the "মোট · 2টি দোকান" row is clear of the "+ নতুন আদায়" button', (tester) async {
+  // ⓘ ১০ নভেম্বর ২০২৬ (০.৪.৫৩): আদায়ের সারিতে "অ্যাকশন ▾" (নমুনা v4) সারি উঁচু করল — ৪১২dp-তেও এখন "মোট · 2টি দোকান" স্থির অবস্থায়
+  //   ভাঁজের নিচে, ৩৬০dp-তে যেমন আগে থেকেই। দাবিটা তাই মালিকের আসল নিয়মে ("＋ নতুন" কখনো তথ্য ঢাকে না, 52b52597a): তালিকা বারের
+  //   ওপরে শেষ হয় — দেখা কোনো সারি বোতামের নিচে নেই; আর মোটের সারিতে স্ক্রল করলে সেটা পুরো দেখা যায়, বোতাম থেকে আলাদা।
+  testWidgets('412×915: the list ends above the "+ নতুন আদায়" bar, and "মোট · 2টি দোকান" scrolled to is clear of it', (tester) async {
     await atRest(tester);
-    final total = tester.getRect(find.byKey(const ValueKey('shop-dues-total')));
     final fab = tester.getRect(find.byKey(const ValueKey('money-in-new')));
+    final bar = tester.getRect(find.byKey(const ValueKey('totals-bar')));
+    // ⓘ মোটের সারি যে স্ক্রলের ভিতরে — পাতার তালিকা (তারিখের চিপের আড়াআড়ি স্ক্রল নয়)
+    final list = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('shop-dues-total')), matching: find.byType(Scrollable)).first);
     // ignore: avoid_print
-    print('shop-dues-total $total · fab $fab');
-    expect(total.overlaps(fab), isFalse,
-        reason: '⛔ স্থির অবস্থায় "＋ নতুন আদায়" বোতাম "মোট · 2টি দোকান" ঢেকেছে (মোট $total, বোতাম $fab)');
+    print('list $list · bar $bar · fab $fab');
+    expect(list.bottom, lessThanOrEqualTo(fab.top + 0.01),
+        reason: '⛔ তালিকা "＋ নতুন আদায়"-এর নিচে পর্যন্ত চলে — বোতাম কোনো সারি ঢাকতে পারে (তালিকা $list, বোতাম $fab)');
+    expect(list.bottom, lessThanOrEqualTo(bar.top + 0.01), reason: '⛔ তালিকা মোটের পট্টির নিচে চলে (তালিকা $list, পট্টি $bar)');
+
+    final dues = find.byKey(const ValueKey('shop-dues-total'));
+    await tester.ensureVisible(dues);
+    await tester.pumpAndSettle();
+    final total = tester.getRect(dues);
+    // ignore: avoid_print
+    print('shop-dues-total scrolled $total');
+    expect(total.overlaps(fab), isFalse, reason: '⛔ স্ক্রল করেও "＋ নতুন আদায়" বোতাম "মোট · 2টি দোকান" ঢাকে (মোট $total, বোতাম $fab)');
+    expect(total.bottom, lessThanOrEqualTo(list.bottom + 0.01), reason: '⛔ স্ক্রল করেও মোটের সারি পুরো দেখা যায় না (মোট $total, তালিকা $list)');
   });
 }

@@ -206,6 +206,20 @@ void main() {
     expect(find.text('৳2,000.00'), findsOneWidget);
   });
 
+  // ⭐ আদায়ের তালিকাতেও "অ্যাকশন ▾" (নমুনা v4; মালিক, ৮ নভেম্বর ২০২৬: অ্যাপের সব তালিকা) — দেখুন আর ছাপা ও পাঠানো; পাকা আদায় বদলায় না
+  testWidgets('every money-in row carries "Actions ▾": view opens the receipt, print & send is there, no work', (tester) async {
+    await _pump(tester, MoneyInListScreen(api: _FakeBooks(), today: _today));
+    for (final no in ['RCV-0001', 'RCV-0002']) {
+      expect(find.byKey(ValueKey('row-actions-$no')), findsOneWidget, reason: '⛔ $no-এর সারিতে "অ্যাকশন ▾" নেই');
+    }
+    await tester.tap(find.byKey(const ValueKey('row-actions-RCV-0001')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('row-action-print')), findsOneWidget, reason: '⛔ শিটে ছাপা ও পাঠানো নেই');
+    await tester.tap(find.byKey(const ValueKey('row-action-view')));
+    await tester.pumpAndSettle();
+    expect(find.text('CHQ-7781'), findsOneWidget, reason: '⛔ "দেখুন" RCV-0001-এর রসিদ খোলেনি');
+  });
+
   testWidgets(
       'principals: the balance in words, red to pay, green to get; a tap opens the ledger',
       (tester) async {

@@ -18,6 +18,7 @@ import '../../core/widgets/totals_bar.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
+import '../printing/row_actions.dart';
 import 'books_widgets.dart';
 import 'collect_screen.dart';
 import '../../core/locale/app_locale.dart';
@@ -235,8 +236,18 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                       amount: row.amount,
                       // ⓘ তালিকা কেবল পাকা আদায়ের (সার্ভার POSTED ছাঁকে) — তাই "পাকা"
                       chip: const AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.money),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                          builder: (_) => MoneyInScreen(id: row.id, api: widget.api))),
+                      onTap: () => _open(row.id),
+                      // ⭐ "অ্যাকশন ▾" — দেখুন · ছাপা ও পাঠানো (সার্ভারের নিজের টাকার রসিদ, বিবরণ পাতার ছাপার একই ধরন), নমুনা v4;
+                      //   পাকা আদায় বদলানো যায় না, তাই কাজের ভাগ নেই। ⓘ ০.৪.৫১-এ বাদ ছিল (দোকানের বাকির মোট স্থির অবস্থায় বোতামের
+                      //   নিচে যেত); "＋ নতুন আদায়" নিচের বারে বাঁধা, তালিকা বারের ওপরে শেষ হয় — শেষ পর্যন্ত গেলে কিছুই ঢাকা নয়
+                      actions: RowActionsButton(
+                        number: row.no,
+                        state: PaperState.posted.spec.label(kind: PaperKind.money, english: AppLocale.isEnglish()),
+                        onView: () => _open(row.id),
+                        paperType: 'Collection',
+                        paperId: row.id,
+                        paperTitle: context.l10n.booksMoneyInPrintTitle(row.no),
+                      ),
                     ),
                 ],
               ),
@@ -250,6 +261,9 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
       ),
     );
   }
+
+  void _open(String id) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => MoneyInScreen(id: id, api: widget.api)));
 
   bool get _isToday {
     final now = widget.today ?? DateTime.now();

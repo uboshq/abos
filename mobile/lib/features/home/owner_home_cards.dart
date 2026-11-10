@@ -446,7 +446,8 @@ class _WaitingPapersCardState extends State<WaitingPapersCard> {
 /// "পয়েন্ট · শাখা" আর বাকি কথা; ডানে টাকা (থাকলে) আর তার নিচে a6-এর [AppStatusChip.compact]। পুরো সারি চাপা যায়
 /// (অন্তত ৫৬dp)। TalkBack: সারি বলে নম্বর, পুরো নাম আর টাকা কথায়; চিপ নিজে পুরো অবস্থার বাক্য বলে।
 class PaperRow extends StatelessWidget {
-  const PaperRow({super.key, required this.no, required this.party, this.detail, this.amount, required this.chip, this.onTap});
+  const PaperRow(
+      {super.key, required this.no, required this.party, this.detail, this.amount, required this.chip, this.onTap, this.actions});
 
   final String no;
 
@@ -456,6 +457,9 @@ class PaperRow extends StatelessWidget {
   final double? amount;
   final Widget chip;
   final VoidCallback? onTap;
+
+  /// ⭐ সারির "অ্যাকশন ▾" ([RowActionsButton]) — টাকা আর চিপের নিচে, ডানের কিনারে (নমুনা v4; বিল-চালানের তালিকার একই জায়গা)
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -500,6 +504,7 @@ class PaperRow extends StatelessWidget {
               if (money != null) ExcludeSemantics(child: AmountText(money, key: const ValueKey('row-amount'), style: moneyStyle)),
               if (money != null) const SizedBox(height: 2),
               chip,
+              if (actions != null) ...[const SizedBox(height: 4), actions!],
             ]);
             if (stack) {
               return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [

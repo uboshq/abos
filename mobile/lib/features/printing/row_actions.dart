@@ -59,7 +59,15 @@ class RowActionsButton extends StatelessWidget {
           tapTargetSize: MaterialTapTargetSize.padded,
         ),
         onPressed: () => showRowActions(context, button: this),
-        child: Text('${context.l10n.rowActionsButton} ▾', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        // ⓘ ▾ আইকন, লেখার অক্ষর নয় — অ্যাপের আসল ফন্টে "▾" নেই, আসল-ফন্টের ছবিতে চারকোনা ঘর এসেছিল (১০ নভেম্বর ২০২৬);
+        //   ফোনের ভরসার ফন্টে থাকলেও সব ফোনে থাকবে বলা যায় না। TalkBack শোনে কেবল "অ্যাকশন"।
+        //   ⛔ Row নয় — সরু ঘরে (ডিওর তালিকা) Row উপচে পড়ত (০.৫–২২px); লেখার ভিতরের আইকন আগের লেখার মতোই মোড়ে
+        child: Text.rich(
+          TextSpan(text: context.l10n.rowActionsButton, children: const [
+            WidgetSpan(alignment: PlaceholderAlignment.middle, child: Icon(Icons.arrow_drop_down, size: 18)),
+          ]),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
       );
 }
 
