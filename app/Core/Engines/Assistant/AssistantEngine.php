@@ -149,7 +149,8 @@ final class AssistantEngine
      */
     public static function where(): array
     {
-        $request = app()->runningInConsole() ? null : request();
+        // ⓘ আসল অনুরোধ মানে রুটসহ অনুরোধ — কমান্ডে (রাতের কাজ) রুট থাকে না; পরীক্ষায় অনুরোধ আসল, তাই runningInConsole() নয়
+        $request = app()->bound('request') && request()->route() !== null ? request() : null;
 
         return [
             'branch_id' => CompanyContext::branchId(),
