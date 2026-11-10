@@ -455,6 +455,105 @@ final class SalesBoard
         return ['rows' => $rows, 'return_pct' => $sales > 0 ? number_format($ret / $sales * 100, 1, '.', '') : null, 'discount_pct' => $sales > 0 ? number_format($disc / $sales * 100, 1, '.', '') : null];
     }
 
+    /**
+     * ⭐ সারি 5 — ব্র্যান্ড ধরে বিক্রি (ট্রিম্যাপ) · এ মাস: বিলের লাইনের টাকা পণ্যের ব্র্যান্ড ধরে, বড় ছয়টা আর বাকি "অন্যান্য";
+     * ঘর সারি-ভাগে (slice-and-dice)। ⓘ ব্র্যান্ডের লক্ষ্য খাতায় নেই — শতাংশ মানে বিক্রির ভাগ।
+     *
+     * @return list<array{name: string, value: string, pct: int, x: float, y: float, w: float, h: float}>
+     */
+    public function brands(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $rows = SalesInvoiceLine::query()->join('inv_products', 'inv_products.id', '=', 'sal_invoice_lines.product_id')
+            ->whereHas('invoice', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '>=', $from))
+            ->groupBy('inv_products.brand_id')->selectRaw('inv_products.brand_id as brand, SUM(sal_invoice_lines.amount) as v')->get()
+            ->filter(fn ($r) => (float) $r->v > 0)->sortByDesc(fn ($r) => (float) $r->v)->values();
+        $names = \App\Modules\MasterData\Models\Brand::query()->whereIn('id', $rows->pluck('brand')->filter()->all() ?: [0])->get()->mapWithKeys(fn ($b) => [(int) $b->id => $b->drillLabel()]);
+        $top = $rows->take(6)->map(fn ($r) => ['name' => (string) ($names[(int) $r->brand] ?? __('sales::board.r5.no_brand')), 'value' => bcadd((string) $r->v, '0', 4)])->all();
+        $rest = $rows->slice(6)->sum(fn ($r) => (float) $r->v);
+
+        if ($rest > 0) {
+            $top[] = ['name' => (string) __('sales::board.r5.others'), 'value' => number_format($rest, 4, '.', '')];
+        }
+
+        $total = array_sum(array_map(fn ($g) => (float) $g['value'], $top));
+
+        if ($total <= 0) {
+            return [];
+        }
+
+        $out = [];
+        $box = ['x' => 0.0, 'y' => 0.0, 'w' => 100.0, 'h' => 100.0];
+        $left = $total;
+        $vertical = true;
+
+        foreach ($top as $i => $g) {
+            $share = $left > 0 ? (float) $g['value'] / $left : 1.0;
+            $last = $i === count($top) - 1;
+            $g['pct'] = (int) round((float) $g['value'] / $total * 100);
+
+            if ($vertical) {
+                $w = $last ? $box['w'] : $box['w'] * $share;
+                $out[] = $g + ['x' => $box['x'], 'y' => $box['y'], 'w' => $w, 'h' => $box['h']];
+                $box['x'] += $w;
+                $box['w'] -= $w;
+            } else {
+                $h = $last ? $box['h'] : $box['h'] * $share;
+                $out[] = $g + ['x' => $box['x'], 'y' => $box['y'], 'w' => $box['w'], 'h' => $h];
+                $box['y'] += $h;
+                $box['h'] -= $h;
+            }
+
+            $left -= (float) $g['value'];
+            $vertical = ! $vertical;
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ বিক্রির পথ ধরে · এ মাস — গ্রাহকের বিক্রির পথ (sales channel) ধরে পাকা বিলের টাকা; আর নগদ বনাম বাকি — বিলের শর্তে:
+     * শেষ দিন বিলের দিনের পরে = বাকিতে, নাহলে নগদ।
+     *
+     * @return array{parts: list<array{name: string, value: string}>, total: string, cash_pct: ?int}
+     */
+    public function channels(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $invoices = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '>=', $from)->with('customer')->get(['id', 'customer_id', 'total', 'trx_date', 'due_on']);
+        $channels = \App\Modules\MasterData\Models\SalesChannel::query()->get()->mapWithKeys(fn ($c) => [(int) $c->id => $c->drillLabel()]);
+        $parts = $invoices->groupBy(fn ($i) => (int) ($i->customer?->channel_id ?? 0))
+            ->map(fn ($list, $id) => ['name' => (string) ($channels[(int) $id] ?? __('sales::board.r5.no_channel')), 'value' => number_format($list->sum(fn ($i) => (float) $i->total), 4, '.', '')])
+            ->sortByDesc(fn ($p) => (float) $p['value'])->values()->all();
+        $total = $invoices->sum(fn ($i) => (float) $i->total);
+        $credit = $invoices->filter(fn ($i) => $i->due_on !== null && substr((string) $i->due_on, 0, 10) > substr((string) $i->trx_date, 0, 10))->sum(fn ($i) => (float) $i->total);
+
+        return ['parts' => $parts, 'total' => number_format($total, 4, '.', ''), 'cash_pct' => $total > 0 ? (int) round(($total - $credit) / $total * 100) : null];
+    }
+
+    /**
+     * ⭐ কখন অর্ডার আসে — বার × সময়: শেষ 8 সপ্তাহের অর্ডার লেখার সময় (শনি থেকে শুক্র × সকাল 8টা থেকে রাত 10টা, দুই ঘণ্টার ঘর)।
+     *
+     * @return array{grid: array<int, array<int, int>>, max: int}
+     */
+    public function orderHours(): array
+    {
+        $grid = array_fill(0, 7, array_fill(0, 7, 0));
+        SalesOrder::query()->where('created_at', '>=', Carbon::today()->subWeeks(8))->get(['created_at'])
+            ->each(function ($o) use (&$grid): void {
+                $at = Carbon::parse($o->created_at)->setTimezone(config('app.timezone'));
+                $hour = (int) $at->format('G');
+
+                if ($hour < 8 || $hour >= 22) {
+                    return;
+                }
+
+                $grid[($at->dayOfWeek + 1) % 7][intdiv($hour - 8, 2)]++;
+            });
+
+        return ['grid' => $grid, 'max' => max(1, ...array_map('max', $grid))];
+    }
+
     /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */
     private function commission(Carbon $from, Carbon $to): string
     {

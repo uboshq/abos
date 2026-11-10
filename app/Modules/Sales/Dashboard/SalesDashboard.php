@@ -296,6 +296,17 @@ final class SalesDashboard implements ProvidesDashboard
                             'rd' => $board->returnsAndDiscounts(), 'problems' => $board->problems()];
                     },
                 ],
+                // ⭐ সারি 5 — ব্র্যান্ড ধরে, বিক্রির পথ ধরে, কখন অর্ডার আসে
+                [
+                    'view' => 'sales::dashboard.board-mix',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['brands' => $board->brands(), 'channels' => $board->channels(), 'heat' => $board->orderHours()];
+                    },
+                ],
             ],
         );
     }
