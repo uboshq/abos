@@ -416,6 +416,17 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['pnl' => $board->pnl(), 'balance' => $board->balanceSheet(), 'checks' => $board->ledgerChecks()];
                     },
                 ],
+                // ⭐ সারি 3 — এক নজরে আর খরচের ট্রিম্যাপ
+                [
+                    'view' => 'accounts::dashboard.board-glance',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['glance' => $board->glance(), 'tree' => $board->expenseTree()];
+                    },
+                ],
             ],
         );
     }

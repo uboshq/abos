@@ -234,6 +234,145 @@ final class AccountsBoard
         });
     }
 
+    /**
+     * ⭐ এক নজরে · আজকের হিসাব — ছয়টা সারি, প্রতিটা চাপলে তালিকা। ⓘ ছোট রেখা কেবল যেখানে খাতায় অতীত আছে (শেষ 7 দিন/মাস);
+     * যার অতীত খাতায় নেই (অপেক্ষার সংখ্যা), সেখানে রেখা আঁকা হয় না — আন্দাজের রেখা নয়।
+     *
+     * @return list<array{key: string, value: string, sub: string, delta: string, up: ?bool, line: list<float>, href: string}>
+     */
+    public function glance(): array
+    {
+        $today = Carbon::today();
+        $byDay = Voucher::query()->where('created_at', '>=', $today->copy()->subDays(6)->startOfDay())
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as n')->groupBy('d')->pluck('n', 'd');
+        $week = [];
+
+        for ($d = $today->copy()->subDays(6); $d->lte($today); $d->addDay()) {
+            $week[] = (float) ($byDay[$d->toDateString()] ?? 0);
+        }
+
+        $todayPapers = Voucher::query()->where('created_at', '>=', $today)->get(['status']);
+        $yesterday = $week[5];
+        $user = auth()->user();
+        $signed = $user === null ? [] : app(SignedButNotPosted::class)->papers($user);
+        $awaiting = app(\App\Modules\Accounts\Services\MonthEndChecklist::class)->run(\Carbon\CarbonImmutable::parse($today))[1]['count'] ?? 0;
+
+        $unmatched = BankStatementLine::query()->unmatched()->get(['bank_account_id', 'debit', 'credit']);
+        $pnl = $this->pnl();
+        $pnlBefore = self::moved([StandardChart::INCOME], $today->copy()->startOfMonth()->subMonthNoOverflow(), $today->copy()->startOfMonth()->subDay());
+        $lastNet = bcsub($pnlBefore, self::moved(['5000'], $today->copy()->startOfMonth()->subMonthNoOverflow(), $today->copy()->startOfMonth()->subDay()), 4);
+
+        $money = fn (Carbon $at) => array_reduce(StandardChart::MONEY_PARENTS, fn (string $c, string $code) => bcadd($c, self::balanceAt($code, $at), 4), '0');
+        $months = [];
+
+        for ($i = 6; $i >= 1; $i--) {
+            $months[] = (float) $money($today->copy()->startOfMonth()->subMonthsNoOverflow($i - 1)->subDay());
+        }
+
+        $nowMoney = $money($today);
+        $months[] = (float) $nowMoney;
+        $lastMonthEnd = $months[5];
+
+        return [
+            ['key' => 'today', 'value' => (string) $todayPapers->count(),
+                'sub' => (string) __('accounts::board.g.today_sub', ['d' => $todayPapers->where('status', DocumentStatus::DRAFT)->count(), 'p' => $todayPapers->where('status', DocumentStatus::CONFIRMED)->count()]),
+                'delta' => $yesterday > 0 ? (string) __('accounts::board.g.vs_yesterday', ['pct' => (int) round(($todayPapers->count() - $yesterday) / $yesterday * 100)]) : '',
+                'up' => $todayPapers->count() >= $yesterday, 'line' => $week, 'href' => self::link('accounts.voucher.list')],
+            ['key' => 'awaiting', 'value' => (string) $awaiting, 'sub' => '', 'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('approval.inbox.index')],
+            ['key' => 'signed', 'value' => (string) count($signed), 'sub' => implode(', ', array_slice(array_values($signed), 0, 2)), 'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('approval.inbox.signed_unposted')],
+            ['key' => 'bank', 'value' => (string) $unmatched->count(),
+                'sub' => (string) __('accounts::board.p.bank_detail', ['n' => $unmatched->groupBy('bank_account_id')->count(), 'value' => self::short($unmatched->reduce(fn (string $c, $l) => bcadd($c, bcadd((string) $l->debit, (string) $l->credit, 4), 4), '0'))]),
+                'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('accounts.reconciliation.index')],
+            ['key' => 'profit', 'value' => self::short($pnl['net']),
+                'sub' => bccomp($pnl['sales'], '0', 4) > 0 ? (string) __('accounts::board.g.profit_sub', ['pct' => bcdiv(bcmul($pnl['net'], '100', 4), $pnl['sales'], 1)]) : '',
+                'delta' => (string) __('accounts::board.g.last_month', ['value' => self::short($lastNet)]), 'up' => bccomp($pnl['net'], $lastNet, 4) >= 0, 'line' => [], 'href' => self::link('accounts.balance_sheet')],
+            ['key' => 'money', 'value' => self::short($nowMoney), 'sub' => '',
+                'delta' => $lastMonthEnd > 0 ? (string) __('accounts::board.g.vs_month', ['pct' => number_format((((float) $nowMoney) - $lastMonthEnd) / $lastMonthEnd * 100, 1, '.', '')]) : '',
+                'up' => (float) $nowMoney >= $lastMonthEnd, 'line' => $months, 'href' => self::link('accounts.custody')],
+        ];
+    }
+
+    /**
+     * ⭐ খরচের খাত · ট্রিম্যাপ · এ মাস — খরচের পাতা-খাত ধরে (বিক্রীত পণ্যের খরচ বাদ), বড় সাতটা আর বাকি "অন্যান্য";
+     * ঘরের মাপ সারি-ভাগ পদ্ধতিতে (slice-and-dice), শতাংশে।
+     *
+     * @return array{boxes: list<array{name: string, value: string, pct: int, x: float, y: float, w: float, h: float}>, total: string}
+     */
+    public function expenseTree(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $cogs = StandardChart::find(StandardChart::COST_OF_GOODS_SOLD);
+        $rows = \App\Models\LedgerEntry::query()->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->tap(fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'ledger_entries.branch_id'))
+            ->where('accounts.type', Account::EXPENSE)->where('ledger_entries.trx_date', '>=', $from)
+            ->when($cogs !== null, fn ($q) => $q->where('accounts.code', 'not like', $cogs->code.'%'))
+            ->groupBy('ledger_entries.account_id')
+            ->selectRaw('ledger_entries.account_id as id, SUM(ledger_entries.debit - ledger_entries.credit) as v')
+            ->havingRaw('SUM(ledger_entries.debit - ledger_entries.credit) > 0')->get();
+        $names = Account::query()->whereIn('id', $rows->pluck('id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+        $list = $rows->map(fn ($r) => ['name' => (string) ($names[(int) $r->id] ?? ''), 'value' => bcadd((string) $r->v, '0', 4)])
+            ->sort(fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4))->values();
+        $top = $list->take(7)->all();
+        $rest = $list->slice(7)->reduce(fn (string $c, array $r) => bcadd($c, $r['value'], 4), '0');
+
+        if (bccomp($rest, '0', 4) > 0) {
+            $top[] = ['name' => (string) __('accounts::board.g.others'), 'value' => $rest];
+        }
+
+        $total = array_reduce($top, fn (string $c, array $r) => bcadd($c, $r['value'], 4), '0');
+
+        if (bccomp($total, '0', 4) <= 0) {
+            return ['boxes' => [], 'total' => '0'];
+        }
+
+        $out = [];
+        $box = ['x' => 0.0, 'y' => 0.0, 'w' => 100.0, 'h' => 100.0];
+        $left = (float) $total;
+        $vertical = true;
+
+        foreach ($top as $i => $g) {
+            $share = $left > 0 ? (float) $g['value'] / $left : 1.0;
+            $last = $i === count($top) - 1;
+            $pct = (int) round((float) $g['value'] / (float) $total * 100);
+
+            if ($vertical) {
+                $w = $last ? $box['w'] : $box['w'] * $share;
+                $out[] = $g + ['pct' => $pct, 'x' => $box['x'], 'y' => $box['y'], 'w' => $w, 'h' => $box['h']];
+                $box['x'] += $w;
+                $box['w'] -= $w;
+            } else {
+                $h = $last ? $box['h'] : $box['h'] * $share;
+                $out[] = $g + ['pct' => $pct, 'x' => $box['x'], 'y' => $box['y'], 'w' => $box['w'], 'h' => $h];
+                $box['y'] += $h;
+                $box['h'] -= $h;
+            }
+
+            $left -= (float) $g['value'];
+            $vertical = ! $vertical;
+        }
+
+        return ['boxes' => $out, 'total' => $total];
+    }
+
+    /** একটা খাতের (ও নিচের) তারিখের জের, দেখার নাগালে */
+    private static function balanceAt(string $code, Carbon $at): string
+    {
+        $account = StandardChart::find($code);
+
+        if ($account === null) {
+            return '0';
+        }
+
+        $ids = app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
+        $total = '0';
+
+        foreach ($ids === null ? [null] : $ids as $branch) {
+            $total = bcadd($total, $account->balanceOn($at->toDateString(), $branch), 4);
+        }
+
+        return $total;
+    }
+
     /** কয়েকটা খাতের (ও নিচের) সময়ের নড়াচড়া — শেষের জের − শুরুর আগের জের, দেখার নাগালে */
     private static function moved(array $codes, Carbon $from, Carbon $to): string
     {
