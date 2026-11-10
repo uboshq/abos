@@ -14,6 +14,7 @@ use App\Modules\Notification\Http\Controllers\NotificationReportController;
 use App\Modules\Notification\Http\Controllers\NotificationRuleController;
 use App\Modules\Notification\Http\Controllers\NotificationScheduleController;
 use App\Modules\Notification\Http\Controllers\NotificationTemplateController;
+use App\Modules\Notification\Http\Controllers\PartyMessageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -108,4 +109,18 @@ Route::middleware('auth')->prefix('notification')->group(function () {
     Route::get('/archive', [NotificationArchiveController::class, 'index'])
         ->middleware('can:notification.archive')->name('archive.index');
     Route::get('/reports/{slug}', [NotificationReportController::class, 'show'])->name('report.show');
+
+    // ⭐ পার্টিকে বার্তা — লেখা আর খাতা (মালিকের "ok", ১০ নভেম্বর ২০২৬; [[PartyMessageController]])
+    Route::get('/party-templates', [PartyMessageController::class, 'templates'])
+        ->middleware('can:notification.party_templates')->name('party_templates.index');
+    Route::get('/party-templates/create', [PartyMessageController::class, 'create'])
+        ->middleware('can:notification.party_templates')->name('party_templates.create');
+    Route::post('/party-templates', [PartyMessageController::class, 'store'])
+        ->middleware('can:notification.party_templates')->name('party_templates.store');
+    Route::get('/party-templates/{template}', [PartyMessageController::class, 'edit'])
+        ->whereNumber('template')->middleware('can:notification.party_templates')->name('party_templates.edit');
+    Route::put('/party-templates/{template}', [PartyMessageController::class, 'update'])
+        ->whereNumber('template')->middleware('can:notification.party_templates')->name('party_templates.update');
+    Route::get('/party-messages', [PartyMessageController::class, 'messages'])
+        ->middleware('can:notification.party_messages')->name('party_messages.index');
 });

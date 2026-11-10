@@ -99,6 +99,9 @@ return [
             ['label' => 'notification::menu.templates', 'icon' => 'documents', 'route' => 'notification.templates.index', 'permission' => 'notification.templates'],
             ['label' => 'notification::menu.groups', 'icon' => 'people', 'route' => 'notification.groups.index', 'permission' => 'notification.recipients'],
             ['label' => 'notification::menu.quiet', 'icon' => 'moon', 'route' => 'notification.quiet.index', 'permission' => 'notification.preferences'],
+            // ⭐ পার্টিকে WhatsApp — লেখা (বাংলা/English) আর কে কাকে কী পাঠাল (মালিকের "ok", ১০ নভেম্বর ২০২৬)
+            ['label' => 'notification::menu.party_templates', 'icon' => 'documents', 'route' => 'notification.party_templates.index', 'permission' => 'notification.party_templates'],
+            ['label' => 'notification::menu.party_messages', 'icon' => 'list', 'route' => 'notification.party_messages.index', 'permission' => 'notification.party_messages'],
         ],
     ],
 
@@ -121,6 +124,8 @@ return [
         'notification.archive.export', // আর্কাইভ নামানো
         'notification.reports',    // ১৭টা রিপোর্ট দেখা
         'notification.reports.export', // রিপোর্ট CSV/XLSX নামানো
+        'notification.party_templates', // পার্টিকে পাঠানোর লেখা (WhatsApp) — বানানো, বদলানো, বন্ধ করা
+        'notification.party_messages',  // কে কোন পার্টিকে কোন কাগজ কোন লেখায় পাঠাল — খাতা দেখা
     ],
 
     'role_templates' => [

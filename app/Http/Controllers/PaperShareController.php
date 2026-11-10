@@ -6,8 +6,10 @@ namespace App\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PaperTrail;
+use App\Core\Services\PartyMessages;
 use App\Core\Support\CompanyContext;
 use App\Models\DocumentShare;
+use App\Models\PartyMessageTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * "গ্রাহককে পাঠান" — কাগজটার একটা গোপন লিংক বানায়।
@@ -175,7 +178,57 @@ class PaperShareController extends Controller
             documentNo: $this->numberOf($document),
         );
 
-        return back()->with('shared_link', route('paper.shared', $share->token));
+        // ⓘ লিংকের সারিটাও — বাক্সটা এটা ধরে পার্টির নম্বর আর লেখাগুলো আনে ([[PartyMessages]])
+        return back()->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id);
+    }
+
+    /**
+     * ⭐ পার্টির WhatsApp-এ — বেছে নেওয়া লেখা, বেছে নেওয়া ভাষায়, পার্টির নম্বরে (মালিকের "ok", ১০ নভেম্বর ২০২৬)।
+     *
+     * ⓘ অনুমতি লিংক বাতিলের মতোই — কাগজটা যিনি পাঠাতে পারেন, তিনিই; আর কাগজটা তাঁর দেখার নাগালে থাকতে হয়।
+     * ⛔ লেখাটা পাতা থেকে নেওয়া হয় না, এখানে বানানো হয় — নাহলে খাতায় এক কথা আর পার্টির কাছে আরেক কথা যেতে পারত।
+     * ⓘ ফেরত যায় `wa.me`-তে; খাতায় সারিটা তার আগেই লেখা।
+     */
+    public function whatsapp(Request $request, DocumentShare $share, PartyMessages $messages): RedirectResponse
+    {
+        abort_unless((int) $share->company_id === (int) CompanyContext::id(), 404);
+
+        $abilities = PaperTrail::abilitiesFor($share->document_type);
+
+        abort_if($abilities === [], 403);
+
+        foreach ($abilities as $ability) {
+            $this->authorize($ability);
+        }
+
+        $document = self::visibleDocument((string) $share->document_type, (int) $share->document_id);
+
+        // ⛔ মরা লিংক পাঠানো মানে পার্টির হাতে খোলে না এমন কিছু
+        abort_unless($share->isAlive(), 410);
+
+        $data = $request->validate([
+            'template_id' => ['required', 'integer'],
+            'locale' => ['required', Rule::in(['bn', 'en'])],
+            'phone' => ['required', 'string', 'max:30'],
+        ]);
+
+        $template = PartyMessageTemplate::query()
+            ->usableFor(PartyMessageTemplate::WHATSAPP, (string) $share->document_type)
+            ->whereKey((int) $data['template_id'])
+            ->first();
+
+        $phone = PartyMessages::phone($data['phone']);
+
+        if ($template === null || $phone === null) {
+            throw ValidationException::withMessages(array_filter([
+                'template_id' => $template === null ? __('core.print.wa_template_gone') : null,
+                'phone' => $phone === null ? __('core.print.wa_phone_bad') : null,
+            ]));
+        }
+
+        $message = $messages->record($document, $share, $template, $data['locale'], $phone);
+
+        return redirect()->away('https://wa.me/'.$phone.'?text='.rawurlencode((string) $message->body));
     }
 
     /**
