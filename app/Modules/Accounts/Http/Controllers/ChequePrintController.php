@@ -178,19 +178,73 @@ class ChequePrintController extends Controller implements HasMiddleware
         ]);
     }
 
-    /** ⓘ পরীক্ষার ছাপ একই দরজায় (`test=1`) — খাতায় কিছু ওঠে না, বইয়ের নম্বর নড়ে না */
+    /**
+     * ⓘ পরীক্ষার ছাপ একই দরজায় (`test=1`) — খাতায় কিছু ওঠে না, বইয়ের নম্বর নড়ে না।
+     *
+     * ⭐ বই না থাকলেও ছাপা যায় — মালিক, 11 নভেম্বর 2026: "শুধু চেক ছাপা কি করে create করবে, কিছুই নাই, জাস্ট মেনুতে চাপলে
+     * স্ক্রিন আসে"। ⛔ আগে বই ছাড়া পাতায় ফর্মই ছিল না, কেবল "চেক বই ও মাপ পাতায় বসান"। ⓘ এখন ফর্মেই নতুন বই (ব্যাংক বা বইয়ের নাম,
+     * প্রথম আর শেষ চেক নম্বর) — আসল ছাপার সাথেই বইটা বসে, মাপ বাংলাদেশ ব্যাংকের মানক (কোম্পানির প্রথম মাপ); পরীক্ষার ছাপে কিছুই বসে না।
+     */
     public function freePrint(Request $request): Response
     {
         $data = $this->freeData($request);
-        $book = ChequeBook::query()->with('layout')->findOrFail($data['book']);
+        $test = $request->boolean('test');
+        $book = $data['book'] !== null
+            ? ChequeBook::query()->with('layout')->findOrFail($data['book'])
+            : $this->newFreeBook($request, $test);
 
-        if ($request->boolean('test')) {
+        if ($test) {
             return $this->inline($this->printer->pdf($book->layout, $data, true), 'test');
         }
 
         $print = $this->printer->free($book, $data);
 
         return $this->pdf($book->layout, $print, $book->number($print->cheque_no));
+    }
+
+    /** ⓘ ফর্মে লেখা নতুন হিসাব-ছাড়া বই — পরীক্ষার ছাপে কেবল মনে রাখা (সেভ নয়), আসল ছাপায় সেভ */
+    private function newFreeBook(Request $request, bool $test): ChequeBook
+    {
+        $new = $request->validate([
+            'new_label' => ['required', 'string', 'max:160'],
+            'new_first' => ['required', 'string', 'regex:/^\d{1,12}$/'],
+            'new_last' => ['required', 'string', 'regex:/^\d{1,12}$/'],
+        ], [], [
+            'new_label' => __('accounts::cheque_print.new_label'),
+            'new_first' => __('accounts::cheque_print.new_first'),
+            'new_last' => __('accounts::cheque_print.new_last'),
+        ]);
+
+        if ((int) $new['new_last'] < (int) $new['new_first']) {
+            throw ValidationException::withMessages(['new_last' => __('accounts::cheque_print.range_wrong')]);
+        }
+
+        $layout = ChequeLayout::query()->orderBy('id')->first() ?? ChequeLayout::query()->create([
+            'company_id' => CompanyContext::id(), 'created_by' => $request->user()?->id,
+            'name' => __('accounts::cheque_print.standard_name'), 'offset_x' => 0, 'offset_y' => 0,
+        ] + ChequeLayout::standard());
+
+        // ⓘ একই বই আবার লেখা হলে (পাতা নতুন করে না খুলে দ্বিতীয় চেক) — নতুন বই নয়, সেটাই; নইলে একই নম্বর দুই বইয়ে
+        $same = ChequeBook::query()->with('layout')->where('off_books', true)->where('label', trim($new['new_label']))
+            ->where('first_no', (int) $new['new_first'])->where('last_no', (int) $new['new_last'])->first();
+
+        if ($same !== null) {
+            return $same;
+        }
+
+        $book = new ChequeBook([
+            'company_id' => CompanyContext::id(), 'created_by' => $request->user()?->id, 'off_books' => true, 'bank_account_id' => null,
+            'label' => trim($new['new_label']), 'first_no' => (int) $new['new_first'], 'last_no' => (int) $new['new_last'],
+            'next_no' => (int) $new['new_first'], 'digits' => max(strlen($new['new_first']), strlen($new['new_last'])),
+            'layout_id' => $layout->id, 'is_active' => true,
+        ]);
+        $book->setRelation('layout', $layout);
+
+        if (! $test) {
+            $book->save();
+        }
+
+        return $book;
     }
 
     public function log(Request $request): View
@@ -309,12 +363,13 @@ class ChequePrintController extends Controller implements HasMiddleware
     }
 
     /**
-     * @return array{book: int, cheque_date: string, payee: string, amount: string, crossed: bool, purpose: ?string}
+     * @return array{book: ?int, cheque_date: string, payee: string, amount: string, crossed: bool, purpose: ?string}
      */
     private function freeData(Request $request): array
     {
         $data = $request->validate([
-            'book' => ['required', 'integer'],
+            // ⓘ "new" বা খালি = ফর্মে লেখা নতুন বই ([[newFreeBook()]])
+            'book' => ['nullable', 'regex:/^(new|\d+)$/'],
             'cheque_date' => ['required', 'date'],
             'payee' => ['required', 'string', 'max:160'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
@@ -322,7 +377,7 @@ class ChequePrintController extends Controller implements HasMiddleware
         ]);
 
         return [
-            'book' => (int) $data['book'], 'cheque_date' => (string) $data['cheque_date'], 'payee' => trim((string) $data['payee']),
+            'book' => ctype_digit((string) ($data['book'] ?? '')) ? (int) $data['book'] : null, 'cheque_date' => (string) $data['cheque_date'], 'payee' => trim((string) $data['payee']),
             'amount' => (string) $data['amount'], 'crossed' => $request->boolean('crossed'), 'purpose' => $data['purpose'] ?? null,
         ];
     }
