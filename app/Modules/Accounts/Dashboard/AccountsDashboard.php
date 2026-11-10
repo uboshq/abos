@@ -392,6 +392,20 @@ final class AccountsDashboard implements ProvidesDashboard
                     href: route('accounts.transfer.index'),
                 ),
             ],
+
+            // ⭐ মালিকের চূড়ান্ত নমুনা TErMgXrtgVBkuyuoCZq8NS-এর সারিগুলো ([[AccountsBoard]]) — সাত সারি হলে পাতা কেবল এগুলো (board)
+            sections: [
+                [
+                    'view' => 'accounts::dashboard.board-top',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['problems' => $board->problems(), 'close' => $board->monthClose()];
+                    },
+                ],
+            ],
         );
     }
 
