@@ -220,6 +220,42 @@ final class AChequeIsPrintedFromItsBookTest extends TestCase
         $this->assertSame(800, ChequeBook::query()->where('label', 'DBBL বই ২')->sole()->next_no);
     }
 
+    /**
+     * ⭐ বই না থাকলেও "শুধু চেক ছাপা" কাজ করে — মালিক, 11 নভেম্বর 2026: "শুধু চেক ছাপা কি করে create করবে, কিছুই নাই, জাস্ট মেনুতে
+     * চাপলে স্ক্রিন আসে"। ⛔ আগে হিসাব-ছাড়া বই না থাকলে পাতায় ফর্মই আসত না। ⓘ এখন ফর্মেই নতুন বই: পরীক্ষার ছাপে কিছু বসে না,
+     * আসল ছাপায় বই বসে প্রথম নম্বরে ছাপে, একই বই আবার লিখলে নতুন বই নয় — পরের নম্বর।
+     */
+    public function test_with_no_book_the_cheque_only_page_still_prints_and_adds_the_book_from_the_form(): void
+    {
+        $this->assertSame(0, ChequeBook::query()->where('off_books', true)->count(), 'প্রস্তুতিটাই ভুল — হিসাব ছাড়া বই আগে থেকেই আছে।');
+
+        $this->get(route('accounts.cheque.print.free'))->assertOk()
+            ->assertSee('data-cheque-print-button', false)
+            ->assertSee('data-cheque-new-book', false)
+            ->assertSee('value="new" selected', false);
+
+        $form = ['book' => 'new', 'new_label' => 'সোনালী — নিজের', 'new_first' => '0045110', 'new_last' => '0045160',
+            'cheque_date' => now()->toDateString(), 'payee' => 'বাড়িওয়ালা জনাব করিম', 'amount' => '50000', 'crossed' => '1'];
+
+        $this->post(route('accounts.cheque.print.free.store'), $form + ['test' => '1'])->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertSame(0, ChequeBook::query()->where('off_books', true)->count(), '⛔ পরীক্ষার ছাপ বই বসিয়ে দিল।');
+        $this->assertSame(0, ChequePrint::query()->count(), '⛔ পরীক্ষার ছাপ খাতায় উঠল।');
+
+        $this->post(route('accounts.cheque.print.free.store'), $form)->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $book = ChequeBook::query()->where('off_books', true)->sole();
+        $this->assertSame([45110, 45160, 45111, 7], [$book->first_no, $book->last_no, $book->next_no, $book->digits], '⛔ ফর্মের বই ঠিক বসেনি — নম্বর, পরের পাতা বা অঙ্কের ঘর ভুল।');
+        $this->assertSame('0045110', $book->number(ChequePrint::query()->sole()->cheque_no), '⛔ প্রথম পাতার নম্বরে ছাপেনি।');
+
+        $this->post(route('accounts.cheque.print.free.store'), $form)->assertOk();
+        $this->assertSame(1, ChequeBook::query()->where('off_books', true)->count(), '⛔ একই বই আবার লেখায় দ্বিতীয় বই হলো — একই নম্বর দুই বইয়ে।');
+        $this->assertSame([45110, 45111], ChequePrint::query()->orderBy('id')->pluck('cheque_no')->all(), '⛔ দ্বিতীয় চেক পরের পাতায় ছাপেনি।');
+
+        $this->post(route('accounts.cheque.print.free.store'), ['book' => 'new', 'new_label' => 'X', 'new_first' => '200', 'new_last' => '100'] + array_diff_key($form, ['new_label' => 1, 'new_first' => 1, 'new_last' => 1, 'book' => 1]))
+            ->assertSessionHasErrors('new_last');
+        $this->post(route('accounts.cheque.print.free.store'), ['book' => 'new'] + array_diff_key($form, ['new_label' => 1, 'book' => 1]))
+            ->assertSessionHasErrors('new_label');
+    }
+
     public function test_the_words_are_the_cheque_kind(): void
     {
         $this->assertSame('Taka One Lakh Twenty Five Thousand Only', AmountInWords::cheque('125000'));

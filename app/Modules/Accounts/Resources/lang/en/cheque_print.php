@@ -88,4 +88,11 @@ return [
     'number_used' => 'Cheque number :no is already printed or spoiled — never the same number twice.',
     'range_wrong' => 'The last number cannot be smaller than the first.',
     'bank_needed' => 'A company book needs its bank account.',
+    'new_book_option' => '+ New cheque book',
+    'new_book_hint' => 'Write the bank name and the first and last leaf numbers of the cheque book — the book is added with the real print and stays in the list next time. The layout is the Bangladesh Bank standard.',
+    'new_label' => 'Bank / book name',
+    'new_label_example' => 'e.g. Sonali Bank — personal',
+    'new_first' => 'First cheque number',
+    'new_last' => 'Last cheque number',
+    'standard_name' => 'Bangladesh Bank standard (BACH)',
 ];
