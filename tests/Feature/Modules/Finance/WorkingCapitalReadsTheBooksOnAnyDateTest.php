@@ -60,7 +60,7 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $this->journal('2026-11-05', [[$till->id, '120000', null], [StandardChart::find(StandardChart::SALES)->id, null, '120000']]);
         $this->journal('2026-11-06', [[$till->id, '7000', null], [StandardChart::find(StandardChart::VAT_PAYABLE)->id, null, '7000']]);
         // ⓘ সরবরাহকারীর দেনা ৩০,০০০ — "দেনা"-য় ওঠে, "অন্যান্য"-তে দ্বিতীয়বার নয় (Mac মিউট্যান্ট W2 বেঁচেছিল, ১০ নভেম্বর ২০২৬)
-        $payableAccount = Account::query()->where('code', 'like', StandardChart::PAYABLE_GROUP.'%')->postable()->active()->orderBy('code')->firstOrFail();
+        $payableAccount = StandardChart::find('2111'); // ⓘ মালের সরবরাহকারী — দেনার দলের (২১১০) প্রথম খাত
         $this->journal('2026-11-07', [[StandardChart::find(StandardChart::RENT)->id, '30000', null],
             [$payableAccount->id, null, '30000', ['party_type' => 'supplier', 'party_id' => Supplier::query()->firstOrFail()->id]]]);
 
