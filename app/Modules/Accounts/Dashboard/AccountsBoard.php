@@ -119,40 +119,23 @@ final class AccountsBoard
     public const CLOSE_TARGET_DAYS = 5;
 
     /**
-     * ⭐ মাস বন্ধ — আগের মাস (তালা না পড়া পর্যন্ত): খাতা থেকে যাচাইযোগ্য ধাপগুলো, কোনটা হয়েছে, আজ কততম কার্যদিবস (শুক্র-শনি ছুটি),
-     * লক্ষ্য 5 দিন থেকে কত পিছিয়ে, আর তার আগের মাস কততম কার্যদিবসে বন্ধ হয়েছিল।
-     * ⓘ ধাপ: খসড়া শেষ · সই হওয়া কাগজ পোস্ট · প্রতিটা ব্যাংক মাস-শেষ পর্যন্ত মেলানো · মাস-শেষে নগদ গোনা · অবচয় (স্থায়ী সম্পদ থাকলে) · মাস তালা।
+     * ⭐ মাস বন্ধ — আগের মাস: মাস-শেষের চেকলিস্টের নয় ধাপ ([[MonthEndChecklist]] — মাস বন্ধের পাতার একই তালিকা), কোনটা হয়েছে,
+     * আজ কততম কার্যদিবস (শুক্র-শনি ছুটি), লক্ষ্য 5 দিন থেকে কত পিছিয়ে, আর তার আগের মাস কততম কার্যদিবসে বন্ধ হয়েছিল।
+     * ⓘ "এই মাসে প্রযোজ্য নয়" ধাপ গোনায় নেই — হয়েছেও বলা হয় না, বাকিও নয় (চেকলিস্টের নিজের নিয়ম)।
      *
-     * @return array{month: int, year: int, steps: list<array{key: string, done: bool}>, done: int, day: int, behind: int, locked: bool, previous: ?int}
+     * @return array{month: int, year: int, steps: list<array{key: string, done: bool, count: int, href: string}>, done: int, day: int, behind: int, locked: bool, previous: ?int}
      */
     public function monthClose(): array
     {
         $today = Carbon::today();
         $start = $today->copy()->startOfMonth()->subMonthNoOverflow();
-        $end = $start->copy()->endOfMonth();
-        $range = [$start->toDateString(), $end->toDateString()];
         $locked = \App\Models\PeriodLock::query()->where('year', $start->year)->where('month', $start->month)->first();
 
-        $banks = Account::query()->ofMoneyKind(Account::BANK)->where('is_active', true)->pluck('id');
-        $reconciled = \App\Modules\Accounts\Models\BankReconciliation::query()->where('status', \App\Modules\Accounts\Models\BankReconciliation::CONFIRMED)
-            ->where('statement_date', '>=', $end->toDateString())->distinct()->pluck('bank_account_id');
-        $user = auth()->user();
-        $signedInMonth = $user === null ? [] : app(SignedButNotPosted::class)->papers($user);
-        $hasAssets = bccomp(self::balance(StandardChart::FIXED_ASSETS), '0', 4) > 0;
-
-        $steps = [
-            ['key' => 'drafts', 'done' => ! Voucher::query()->draft()->whereBetween('trx_date', $range)->exists()],
-            ['key' => 'signed', 'done' => $signedInMonth === []],
-            ['key' => 'bank', 'done' => $banks->diff($reconciled)->isEmpty()],
-            ['key' => 'cash', 'done' => \App\Modules\Accounts\Models\CashCount::query()->where('status', '<>', DocumentStatus::CANCELLED)
-                ->whereBetween('trx_date', [$end->copy()->subDays(2)->toDateString(), $end->copy()->addDays(5)->toDateString()])->exists()],
-        ];
-
-        if ($hasAssets) {
-            $steps[] = ['key' => 'depreciation', 'done' => \App\Modules\Accounts\Models\DepreciationRun::query()->where('period_end', '>=', $end->toDateString())->exists()];
-        }
-
-        $steps[] = ['key' => 'lock', 'done' => $locked !== null];
+        $steps = collect(app(\App\Modules\Accounts\Services\MonthEndChecklist::class)->run(\Carbon\CarbonImmutable::parse($start)))
+            ->reject(fn (array $r) => $r['state'] === \App\Modules\Accounts\Services\MonthEndChecklist::NOT_APPLICABLE)
+            ->map(fn (array $r) => ['key' => $r['key'], 'done' => $r['state'] === \App\Modules\Accounts\Services\MonthEndChecklist::OK,
+                'count' => (int) $r['count'], 'href' => self::link($r['route'], $r['params'])])
+            ->values()->all();
 
         $before = \App\Models\PeriodLock::query()->where('year', $start->copy()->subMonthNoOverflow()->year)->where('month', $start->copy()->subMonthNoOverflow()->month)->first();
         $day = self::workingDay($today);

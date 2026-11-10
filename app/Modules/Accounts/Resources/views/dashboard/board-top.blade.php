@@ -67,7 +67,8 @@
             </span>
         </div>
         @foreach (array_filter($c['steps'], fn ($s) => ! $s['done']) as $s)
-            <span data-close-left="{{ $s['key'] }}" style="display: flex; justify-content: space-between; font-size: 0.8125rem; padding: 0.375rem 0; border-top: 1px solid var(--color-dash-255-255-255-a16)"><span>{{ __('accounts::board.close.step.'.$s['key']) }}</span><b style="color: var(--color-dash-fcd34d)">{{ __('accounts::board.close.pending') }}</b></span>
+            {{-- ⓘ ধাপ মাস-শেষের চেকলিস্টের, নাম ছোট করে (নমুনার মতো); চাপলে সারানোর পাতা --}}
+            <a href="{{ $s['href'] }}" data-close-left="{{ $s['key'] }}" style="display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8125rem; padding: 0.375rem 0; border-top: 1px solid var(--color-dash-255-255-255-a16); color: var(--color-dash-ffffff); text-decoration: none"><span>{{ __('accounts::board.close.step.'.$s['key']) }}</span><b style="flex: none; color: var(--color-dash-fcd34d)">{{ __('accounts::control.state_pending', ['count' => $s['count']]) }}</b></a>
         @endforeach
         <span style="display: flex; justify-content: space-between; font-size: 0.8125rem; padding: 0.375rem 0; border-top: 1px solid var(--color-dash-255-255-255-a16)"><span>{{ __('accounts::board.close.previous') }}</span><b>{{ $c['previous'] === null ? __('accounts::board.close.previous_none') : __('accounts::board.close.previous_day', ['n' => $c['previous']]) }}</b></span>
     </section>
