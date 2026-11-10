@@ -62,5 +62,7 @@ final class TheDashboardSortsLotsByExpiryTest extends TestCase
         $this->assertSame(['WEEK', 'MONTH'], array_column($mine, 'batch'), '⛔ ভুল লট এল — শেষ হওয়া, মেয়াদ পেরোনো বা সীমার বাইরের লটও, বা দিনের ক্রমে নয়।');
         $this->assertSame([5, 20], array_column($mine, 'days'), '⛔ মেয়াদের দিন ভুল।');
         $this->assertSame(0, bccomp($mine[0]['qty'], '10', 4), '⛔ লটের পরিমাণ চলাচলের যোগ নয়।');
+        // ⓘ লটের নিজের গুদাম নেই — নামটা আসে যে গুদামে লটের মাল বসেছে, সেই চলাচল থেকে
+        $this->assertSame((string) $warehouse->drillLabel(), $mine[0]['warehouse'], '⛔ লটের পাশে তার গুদামের নাম নেই।');
     }
 }

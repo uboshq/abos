@@ -936,22 +936,32 @@ final class InventoryBoard
         $today = Carbon::today();
         $snap = $this->snapshot()->keyBy('id');
 
-        return Batch::query()
-            ->with(['product', 'warehouse'])
+        /*
+         * ⓘ লটের নিজের গুদাম নেই — লটের মাল গুদামে বসে চলাচলের সারি দিয়ে। তাই চলাচল থেকে লট আর গুদাম ধরে যোগ: একই লট দুই গুদামে
+         *   থাকলে দুই সারি, প্রতিটা নিজের গুদামের নামে; বাছা গুদাম আর শাখার দেয়াল চলাচলের ওপরেই খাটে।
+         */
+        $rows = StockMovement::query()
             ->tap(fn ($q) => $this->narrow($q))
-            ->whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [$today->toDateString(), $today->copy()->addDays($days)->toDateString()])
-            ->withSum('movements as qty_sum', 'floor_change')
-            ->get()
-            ->filter(fn (Batch $b) => bccomp((string) ($b->getAttribute('qty_sum') ?? '0'), '0', 4) > 0)
-            ->map(function (Batch $b) use ($today, $snap): array {
-                $qty = (string) $b->getAttribute('qty_sum');
+            ->whereIn('batch_id', Batch::query()->whereNotNull('expiry_date')
+                ->whereBetween('expiry_date', [$today->toDateString(), $today->copy()->addDays($days)->toDateString()])->select('id'))
+            ->groupBy('batch_id', 'warehouse_id')
+            ->selectRaw('batch_id, warehouse_id, SUM(floor_change) as qty')
+            ->havingRaw('SUM(floor_change) > 0')
+            ->get()->toBase();
+        $batches = Batch::query()->with('product')->whereIn('id', $rows->pluck('batch_id')->unique()->all() ?: [0])->get()->keyBy('id');
+        $warehouses = Warehouse::query()->whereIn('id', $rows->pluck('warehouse_id')->unique()->all() ?: [0])->get()->keyBy('id');
+
+        return $rows
+            ->filter(fn ($r) => $batches->has((int) $r->batch_id))
+            ->map(function ($r) use ($today, $snap, $batches, $warehouses): array {
+                $b = $batches[(int) $r->batch_id];
+                $qty = (string) $r->qty;
                 $p = $snap[(int) $b->product_id] ?? $b->product;
 
                 return [
                     'batch' => (string) $b->batch_no,
                     'product' => (string) ($b->product?->name() ?? ''),
-                    'warehouse' => (string) ($b->warehouse?->drillLabel() ?? ''),
+                    'warehouse' => (string) ($warehouses[(int) $r->warehouse_id] ?? null)?->drillLabel(),
                     'days' => (int) $today->diffInDays(Carbon::parse($b->expiry_date)),
                     'qty' => $qty,
                     'value' => $p instanceof Product ? self::valueOf($p, $qty) : '0',
