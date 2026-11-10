@@ -6,7 +6,7 @@
     $field = 'h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2';
     $small = 'h-(--spacing-field) w-full min-w-0 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 num text-right';
     $names = ['date' => 'field_date', 'payee' => 'field_payee', 'words' => 'field_words', 'figures' => 'field_figures', 'crossing' => 'field_crossing'];
-    $keys = ['x' => 'x', 'y' => 'y', 'w' => 'w', 'size' => 'size', 'box' => 'box', 'angle' => 'angle'];
+    $keys = ['x' => 'x', 'y' => 'y', 'w' => 'w', 'size' => 'size', 'box' => 'box', 'angle' => 'angle', 'line' => 'line'];
     $forms = $layouts->map(fn ($l) => ['layout' => $l, 'fields' => collect(array_keys($names))->mapWithKeys(fn ($n) => [$n => $l->field($n)])->all()])
         ->push(['layout' => null, 'fields' => $standard['fields']]);
 @endphp
@@ -52,7 +52,7 @@
                     @endforeach
                 </div>
                 <div class="overflow-x-auto">
-                    <div class="grid min-w-[44rem] grid-cols-7 gap-2 text-sm">
+                    <div class="grid min-w-[50rem] grid-cols-8 gap-2 text-sm">
                         <span class="font-semibold"></span>
                         @foreach ($keys as $key)
                             <span class="text-xs font-semibold text-(--color-ink-muted)">{{ __('accounts::cheque_print.'.$key) }}</span>

@@ -90,6 +90,32 @@ return new class extends Migration
         });
 
         $this->keys();
+        $this->standardLayout();
+    }
+
+    /**
+     * ⭐ প্রতিটা কোম্পানিতে বাংলাদেশ ব্যাংকের মানের মাপ একটা — সব ব্যাংকের MICR চেক একই মাপে (Figure 2, 190.5 × 88.9 mm), তাই
+     * IBBL, DBBL, Prime, EBL, BRAC-এর বই এই মাপেই বসে; পরীক্ষার ছাপে মিলিয়ে দরকারে সরানো যায়। ⓘ ঘরগুলো এখানে লেখা, মডেল থেকে নয় —
+     * মডেল পরে বদলালেও এই মাইগ্রেশনের ফল একই থাকে।
+     */
+    private function standardLayout(): void
+    {
+        $fields = [
+            'date' => ['x' => 133.1, 'y' => 15.0, 'w' => 50.8, 'box' => 6.35, 'size' => 12],
+            'payee' => ['x' => 44.0, 'y' => 30.5, 'w' => 140.0, 'size' => 11],
+            'words' => ['x' => 44.0, 'y' => 39.5, 'w' => 75.0, 'size' => 10, 'line' => 8.9],
+            'figures' => ['x' => 128.0, 'y' => 42.0, 'w' => 55.0, 'size' => 12],
+            'crossing' => ['x' => 4.0, 'y' => 12.0, 'w' => 36.0, 'angle' => 35, 'size' => 7],
+        ];
+
+        foreach (DB::table('companies')->pluck('id') as $companyId) {
+            DB::table('acc_cheque_layouts')->insert([
+                'public_id' => (string) Str::uuid(), 'company_id' => $companyId,
+                'name' => 'বাংলাদেশ ব্যাংকের মান (BACH) 190.5 × 88.9 mm',
+                'width_mm' => '190.5', 'height_mm' => '88.9', 'fields' => json_encode($fields, JSON_UNESCAPED_UNICODE),
+                'offset_x' => '0', 'offset_y' => '0', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
     }
 
     public function down(): void

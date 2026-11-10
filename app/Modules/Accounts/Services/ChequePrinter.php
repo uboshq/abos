@@ -270,7 +270,9 @@ final class ChequePrinter
 
         if ($cheque['amount'] !== null) {
             $f = $layout->field('words');
-            $mpdf->WriteFixedPosHTML('<div style="'.$ink.' font-size: '.$f['size'].'pt; line-height: 7mm;">**'.e(AmountInWords::cheque($cheque['amount'])).'**</div>', $at($f['x'], $dx), $at($f['y'], $dy), $f['w'], '15', 'auto');
+            // ⓘ দুই লাইনের ফাঁক মাপ থেকে (বাংলাদেশ ব্যাংকের মানে 0.35" = 8.9 mm); পুরনো মাপে না থাকলে 7 mm
+            $line = isset($f['line']) && bccomp($f['line'], '0', 2) > 0 ? $f['line'] : '7';
+            $mpdf->WriteFixedPosHTML('<div style="'.$ink.' font-size: '.$f['size'].'pt; line-height: '.$line.'mm;">**'.e(AmountInWords::cheque($cheque['amount'])).'**</div>', $at($f['x'], $dx), $at($f['y'], $dy), $f['w'], bcmul($line, '2', 2), 'auto');
 
             $f = $layout->field('figures');
             $whole = bccomp(bcsub(Money::round($cheque['amount'], 2), Money::round($cheque['amount'], 0), 2), '0', 2) === 0;

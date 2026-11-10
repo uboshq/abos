@@ -63,6 +63,7 @@ return [
     'size' => 'Text (pt)',
     'box' => 'One box (mm)',
     'angle' => 'Slant (°)',
+    'line' => 'Line gap (mm)',
     'new_layout' => 'New layout',
     'new_book' => 'New cheque book',
     'book_label' => 'Book name',
