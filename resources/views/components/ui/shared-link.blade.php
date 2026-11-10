@@ -8,14 +8,22 @@
 
     ⓘ ৩০ দিন পরে লিংকটা নিজে থেকে মরে যায়, আর সেটা এখানেই লেখা — যাতে
     কেউ ধরে না নেন এটা চিরকালের ঠিকানা।
+
+    ── ⭐ পার্টির WhatsApp-এ (মালিকের "ok", ১০ নভেম্বর ২০২৬) ──────────────
+    আগে বোতামটা খুলত নম্বর ছাড়া — প্রতিবার পার্টিকে খুঁজতে হত। ⓘ এখন নম্বর পার্টির খাতা থেকে বসানো (বদলানো যায়),
+    লেখা বেছে নেওয়া যায় (কন্ট্রোল প্যানেলের "পার্টিকে বার্তা — লেখা"), ভাষা বাংলা বা English, আর পাঠানোর আগে
+    খাতায় লেখা হয় কে কাকে কী পাঠাল ([[PaperShareController::whatsapp()]])।
+    ⓘ কাগজটা নাগালের বাইরে বা লিংক মরা হলে পুরনো নম্বরহীন বোতামটাই থাকে।
 --}}
 @if (session('shared_link'))
     @php
         $link = session('shared_link');
         $text = trim(($message ?? '').' '.$link);
+        $wa = session('shared_share') ? app(\App\Core\Services\PartyMessages::class)->box((int) session('shared_share')) : null;
+        $choices = $wa['choices'] ?? [];
     @endphp
 
-    <div role="status" x-data="sharedLink({ url: @js($link) })"
+    <div role="status" x-data="sharedLink({ url: @js($link), choices: @js($choices) })"
          class="mb-4 rounded-(--radius-card) border border-(--color-brand-500)
                 bg-(--color-surface-card) p-3">
         <p class="mb-2 text-sm font-medium">{{ __('core.print.link_ready') }}</p>
@@ -32,10 +40,65 @@
                 <span x-show="copied" x-cloak>{{ __('core.action.copied') }}</span>
             </x-ui.button>
 
-            <x-ui.button tone="primary" target="_blank" rel="noopener"
-                         :href="'https://wa.me/?text='.urlencode($text)">
-                {{ __('core.print.whatsapp') }}
-            </x-ui.button>
+            @if ($wa === null)
+                <x-ui.button tone="primary" target="_blank" rel="noopener"
+                             :href="'https://wa.me/?text='.urlencode($text)">
+                    {{ __('core.print.whatsapp') }}
+                </x-ui.button>
+            @endif
         </div>
+
+        @if ($wa !== null)
+            @if ($choices === [])
+                <p class="mt-3 text-sm text-(--color-ink-muted)" data-wa-no-template>{{ __('core.print.wa_no_template') }}</p>
+            @else
+                {{-- ⓘ নতুন পাতায় খোলে: খাতায় লিখে সার্ভার wa.me-তে পাঠায়, আর এই পাতাটা যেমন ছিল তেমনই থাকে --}}
+                <form method="POST" action="{{ route('paper.whatsapp', $wa['share']) }}" target="_blank"
+                      class="mt-3 grid gap-3 border-t border-(--color-border) pt-3 md:grid-cols-3" data-wa-form>
+                    @csrf
+                    <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                        {{ __('core.print.wa_phone') }}
+                        <input type="tel" name="phone" required maxlength="30" inputmode="tel"
+                               {{-- ⓘ দেশের নম্বর যেভাবে মানুষ লেখেন (01…); বিদেশের নম্বর + সহ — পাঠানোর সময় আবার আন্তর্জাতিক রূপে --}}
+                               value="{{ ($p = $wa['party']['phone'] ?? null) === null ? '' : (str_starts_with($p, '880') ? substr($p, 2) : '+'.$p) }}"
+                               placeholder="01XXXXXXXXX"
+                               class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm tabular-nums">
+                        @if (($wa['party']['phone'] ?? null) === null)
+                            <span class="text-(--color-warning-ink)" data-wa-phone-missing>{{ __('core.print.wa_phone_missing') }}</span>
+                        @elseif ($wa['party']['name'] !== '')
+                            <span>{{ $wa['party']['name'] }}</span>
+                        @endif
+                    </label>
+
+                    <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                        {{ __('core.print.wa_template') }}
+                        <select name="template_id" x-model="templateId"
+                                class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            @foreach ($choices as $choice)
+                                <option value="{{ $choice['id'] }}">{{ $choice['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <fieldset class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                        <legend class="mb-1">{{ __('core.print.wa_language') }}</legend>
+                        <div class="flex gap-4 text-sm text-(--color-ink)">
+                            <label class="flex items-center gap-1.5"><input type="radio" name="locale" value="bn" x-model="locale" checked> {{ __('core.print.wa_bn') }}</label>
+                            <label class="flex items-center gap-1.5"><input type="radio" name="locale" value="en" x-model="locale"> {{ __('core.print.wa_en') }}</label>
+                        </div>
+                    </fieldset>
+
+                    <div class="grid gap-1 text-2xs text-(--color-ink-muted) md:col-span-3">
+                        {{ __('core.print.wa_preview') }}
+                        <p x-text="preview" data-wa-preview
+                           class="whitespace-pre-line rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-muted) p-2 text-sm text-(--color-ink)">{{ $choices[0]['bn'] }}</p>
+                    </div>
+
+                    <div class="md:col-span-3">
+                        <x-ui.button type="submit" tone="primary">{{ __('core.print.whatsapp') }}</x-ui.button>
+                    </div>
+                </form>
+            @endif
+        @endif
     </div>
 @endif

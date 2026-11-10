@@ -116,7 +116,14 @@ class ContentSecurityPolicy
             "font-src 'self' data:",
 
             "connect-src 'self'",
-            "form-action 'self'",
+            /*
+             * ⭐ WhatsApp-এর দুইটা ঠিকানা — কেবল এই দুইটা (১০ নভেম্বর ২০২৬, পার্টির WhatsApp-এ)।
+             * ⓘ "হোয়াটসঅ্যাপে পাঠান" ফর্মটা আমাদের সার্ভারে যায়, খাতায় লেখে, তারপর wa.me-তে ফেরত পাঠায়
+             * ([[PaperShareController::whatsapp()]]); wa.me নিজে আবার api.whatsapp.com-এ পাঠায়।
+             * ⚠️ Chrome `form-action` ফেরত-পাঠানোর ওপরেও খাটায়: `'self'` একা থাকলে খাতায় সারি পড়ত, অথচ WhatsApp খুলত না।
+             * ⛔ বাকি সব বাইরের ঠিকানায় ফর্ম পাঠানো আগের মতোই বন্ধ।
+             */
+            "form-action 'self' https://wa.me https://api.whatsapp.com",
             "base-uri 'self'",
             "frame-ancestors 'self'",
             "object-src 'none'",

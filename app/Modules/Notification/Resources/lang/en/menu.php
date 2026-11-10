@@ -17,4 +17,6 @@ return [
     'quiet' => 'Quiet hours & digest',
     'escalations' => 'Escalation management',
     'archive' => 'Notification archive',
+    'party_templates' => 'Party messages — texts',
+    'party_messages' => 'Party messages — log',
 ];

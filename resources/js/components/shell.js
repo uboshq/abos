@@ -608,15 +608,32 @@ export function shareMenu ({ url }) {
     }
 }
 
-/** গ্রাহককে পাঠানোর লিংক — কপি করার বোতামসহ */
-export function sharedLink ({ url }) {
+/**
+ * গ্রাহককে পাঠানোর লিংক — কপি করার বোতামসহ।
+ *
+ * ⭐ পার্টির WhatsApp-এ (মালিকের "ok", ১০ নভেম্বর ২০২৬): `choices` সার্ভারে আসল মান বসিয়ে দুই ভাষায় বানানো লেখা;
+ * এখানে কেবল বাছাই আর ভাষা ধরে কোনটা দেখাবে, তা ঠিক হয়। ⓘ যা যায় তা সার্ভার আবার বানায়, এই লেখা নয়।
+ */
+export function sharedLink ({ url, choices = [] }) {
     return {
         copied: false,
+        locale: 'bn',
+        templateId: choices.length > 0 ? String(choices[0].id) : '',
 
         copy () {
             navigator.clipboard.writeText(url)
             this.copied = true
             setTimeout(() => { this.copied = false }, 2000)
+        },
+
+        get preview () {
+            const chosen = choices.find((c) => String(c.id) === String(this.templateId))
+
+            if (! chosen) {
+                return ''
+            }
+
+            return this.locale === 'en' ? chosen.en : chosen.bn
         },
     }
 }
