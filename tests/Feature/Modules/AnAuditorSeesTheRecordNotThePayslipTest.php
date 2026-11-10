@@ -200,6 +200,31 @@ class AnAuditorSeesTheRecordNotThePayslipTest extends TestCase
         $page->assertSee('PRL-2026-2027-0001');
     }
 
+    /**
+     * ⭐ মালিক (সুপার অ্যাডমিন) কাগজটা খোলেন — অনুমোদন শেষ হওয়ার পরেও, নিজে না চাইলেও (মালিক, ১০ নভেম্বর ২০২৬: "মালিক সব কিছুই
+     * দেখতে পারবে")। ⛔ লাইভে RCV-0440/0441: অনুমোদন দিয়ে খুলতে গিয়ে "খোলার অনুমতি আপনার নেই"।
+     */
+    public function test_the_owner_opens_the_paper_even_after_the_decision(): void
+    {
+        $this->waiting->forceFill(['status' => Approval::APPROVED])->save();
+        app(\Spatie\Permission\PermissionRegistrar::class)->setPermissionsTeamId($this->company->id);
+        $role = \Spatie\Permission\Models\Role::findOrCreate(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE, 'web');
+        $role->givePermissionTo(['approval.view', 'approval.decide', 'approval.report']);
+        $owner = User::factory()->create(['name' => 'মালিক', 'current_company_id' => $this->company->id]);
+        $owner->companies()->attach($this->company->id);
+        $owner->assignRole($role);
+
+        $page = $this->actingAs($owner)->get(route('approval.inbox.show', ['approval' => $this->waiting->id]));
+
+        $page->assertOk();
+        $this->assertFalse($page->viewData('documentHidden'), '⛔ মালিকের কাছেও কাগজ লুকানো — "খোলার অনুমতি আপনার নেই"।');
+        $this->assertNotNull($page->viewData('document'));
+        $page->assertSee('PRL-2026-2027-0001');
+
+        // ⓘ নিরীক্ষক আগের মতোই কাগজ পান না — মালিকের ছাড় সবার নয়
+        $this->assertTrue($this->actingAs($this->auditor)->get(route('approval.inbox.show', ['approval' => $this->waiting->id]))->viewData('documentHidden'));
+    }
+
     /** আর যাঁর একটাও চাবি নেই, তাঁর কাছে দরজাটা বন্ধই। */
     public function test_a_stranger_still_gets_nothing(): void
     {
