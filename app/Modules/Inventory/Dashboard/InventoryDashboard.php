@@ -46,19 +46,27 @@ final class InventoryDashboard implements ProvidesDashboard
          * ⓘ পাতায় কেবল নমুনার সারিগুলো, ওপর থেকে নিচে — পুরনো কার্ড, বোতামের সারি আর তালিকা নেই (নমুনায় নেই)।
          * ⓘ অঙ্ক এক জায়গা থেকে ([[InventoryBoard]]); প্রতিটা সারি নিজের ব্লেড।
          */
+        // ⓘ এক পাতায় একটাই বোর্ড — সব সারি একই ছবি পড়ে, ছবিটা একবারই তোলা হয়
+        $board = null;
+        $once = function () use (&$board): InventoryBoard {
+            return $board ??= app(InventoryBoard::class);
+        };
+
         return new DashboardDefinition(
             title: __('inventory::dashboard.title'),
             subtitle: __('inventory::dashboard.subtitle'),
             sections: [
                 [
+                    'view' => 'inventory::dashboard.board-toolbar',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['bar' => $once()->toolbar()],
+                ],
+                [
                     'view' => 'inventory::dashboard.board-top',
                     'place' => 'top',
                     'permission' => 'inventory.stock.view',
-                    'data' => function (): array {
-                        $board = app(InventoryBoard::class);
-
-                        return ['problems' => $board->problems(), 'corner' => $board->corner()];
-                    },
+                    'data' => fn (): array => ['problems' => $once()->problems(), 'corner' => $once()->corner()],
                 ],
             ],
         );

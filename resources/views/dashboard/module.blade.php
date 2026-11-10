@@ -18,6 +18,7 @@
     <x-slot:title>{{ $dashboard->title }}</x-slot:title>
 
     {{-- ⛔ শিরোনাম আর উপশিরোনাম নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: ড্যাশবোর্ড "একদম প্লেন থাকবে" ([[dashboard.module-v2]]) --}}
+    @php view()->share('ownBoard', $dashboard->stats === [] && $dashboard->panels === [] && $dashboard->sections !== []); @endphp
 
     {{-- ── দ্রুত কাজ ───────────────────────────────────────────────
          সবার উপরে: মানুষ প্রায়ই ড্যাশবোর্ডে আসেন কিছু **করতে**, আর

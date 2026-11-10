@@ -37,10 +37,117 @@ final class InventoryBoard
         private readonly StockSupply $supply,
     ) {}
 
+    /**
+     * ⭐ ছাঁকনির সারির বাছাই — ঠিকানা থেকে (?warehouse= ?brand= ?category= ?abc=); প্রতিটা ঘর এটা মানে।
+     *
+     * @return array{warehouse: ?int, brand: ?int, category: ?int, abc: ?string}
+     */
+    public function picked(): array
+    {
+        $id = fn (string $k): ?int => ctype_digit((string) request()->query($k, '')) && (int) request()->query($k) > 0 ? (int) request()->query($k) : null;
+        $abc = strtoupper((string) request()->query('abc', ''));
+
+        return ['warehouse' => $id('warehouse'), 'brand' => $id('brand'), 'category' => $id('category'), 'abc' => in_array($abc, ['A', 'B', 'C'], true) ? $abc : null];
+    }
+
     /** @return Collection<int, Product> */
     public function snapshot(): Collection
     {
-        return $this->snap ??= $this->facts->snapshot();
+        if ($this->snap !== null) {
+            return $this->snap;
+        }
+
+        $p = $this->picked();
+        $snap = ($p['warehouse'] !== null ? $this->facts->forWarehouse($p['warehouse']) : $this->facts)->snapshot()
+            ->when($p['brand'] !== null, fn (Collection $c) => $c->where('brand_id', $p['brand']))
+            ->when($p['category'] !== null, fn (Collection $c) => $c->where('category_id', $p['category']))
+            ->values();
+
+        if ($p['abc'] !== null) {
+            $classes = self::abcOf($snap);
+            $snap = $snap->filter(fn (Product $x) => ($classes[(int) $x->id] ?? 'C') === $p['abc'])->values();
+        }
+
+        return $this->snap = $snap;
+    }
+
+    /**
+     * ⭐ ABC — গত 30 দিনের বেরোনো মালের টাকায় বড় থেকে ছোট; জমা 70% পর্যন্ত A, 90% পর্যন্ত B, বাকি C (আন্তর্জাতিক প্রচলিত ভাগ)।
+     *
+     * @param  Collection<int, Product>  $snap
+     * @return array<int, string>
+     */
+    public static function abcOf(Collection $snap): array
+    {
+        $values = $snap->mapWithKeys(fn (Product $p) => [(int) $p->id => self::valueOf($p, (string) $p->getAttribute('out_30'))])
+            ->sort(fn (string $a, string $b) => bccomp($b, $a, 4));
+        $total = $values->reduce(fn (string $c, string $v) => bcadd($c, $v, 4), '0');
+        $out = [];
+        $cum = '0';
+
+        foreach ($values as $id => $v) {
+            $share = bccomp($total, '0', 4) > 0 ? bcdiv(bcmul($cum, '100', 4), $total, 4) : '100';
+            $out[$id] = bccomp($share, '70', 4) < 0 && bccomp($v, '0', 4) > 0 ? 'A' : (bccomp($share, '90', 4) < 0 && bccomp($v, '0', 4) > 0 ? 'B' : 'C');
+            $cum = bcadd($cum, $v, 4);
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ ছাঁকনির সারি — নমুনার ক্রমে।
+     *
+     * @return array{today: string, updated: string, export: ?string, filters: list<array<string, mixed>>, create: list<array{label: string, href: string}>}
+     */
+    public function toolbar(): array
+    {
+        $p = $this->picked();
+        $all = $this->facts->snapshot();
+        $months = __('inventory::board.months');
+        $today = Carbon::today();
+        $opt = fn (string $key, ?int $value, string $label, bool $on) => ['label' => $label, 'on' => $on, 'href' => request()->fullUrlWithQuery([$key => $value])];
+
+        $warehouses = Warehouse::query()->where('is_active', true)->orderBy('id')->get();
+        $brandIds = $all->pluck('brand_id')->filter()->unique()->all();
+        $categoryIds = $all->pluck('category_id')->filter()->unique()->all();
+        $brands = \App\Modules\MasterData\Models\Brand::query()->whereIn('id', $brandIds)->get();
+        $categories = \App\Modules\MasterData\Models\ProductCategory::query()->whereIn('id', $categoryIds)->get();
+        $nameOf = fn ($m) => method_exists($m, 'name') ? (string) $m->name() : (string) ($m->name_bn ?? $m->name_en ?? $m->name ?? '');
+
+        $filter = function (string $key, string $allLabel, Collection $rows, ?int $picked) use ($opt, $nameOf): array {
+            $label = $picked === null ? $allLabel : (string) ($rows->firstWhere('id', $picked) ? $nameOf($rows->firstWhere('id', $picked)) : $allLabel);
+            $options = [$opt($key, null, $allLabel, $picked === null)];
+
+            foreach ($rows as $r) {
+                $options[] = $opt($key, (int) $r->id, $nameOf($r), $picked === (int) $r->id);
+            }
+
+            return ['key' => $key, 'label' => $label, 'active' => $picked !== null, 'options' => $options];
+        };
+
+        $abc = ['key' => 'abc', 'label' => 'ABC: '.($p['abc'] ?? __('inventory::board.t.all')), 'active' => $p['abc'] !== null,
+            'options' => array_map(fn (?string $c) => ['label' => $c ?? __('inventory::board.t.all'), 'on' => $p['abc'] === $c, 'href' => request()->fullUrlWithQuery(['abc' => $c])], [null, 'A', 'B', 'C'])];
+
+        $can = fn (string $ability) => auth()->user()?->can($ability) ?? false;
+        $create = array_values(array_filter([
+            Route::has('purchase.receipt.create') && $can('purchase.receipt.create') ? ['label' => __('inventory::board.t.receive'), 'href' => route('purchase.receipt.create')] : null,
+            Route::has('inventory.transfer.create') && $can('inventory.transfer.create') ? ['label' => __('inventory::board.t.transfer'), 'href' => route('inventory.transfer.create')] : null,
+            Route::has('inventory.count.create') && $can('inventory.count.create') ? ['label' => __('inventory::board.t.count'), 'href' => route('inventory.count.create')] : null,
+            Route::has('inventory.stock.adjust') && $can('inventory.stock.adjust') ? ['label' => __('inventory::board.t.adjust'), 'href' => route('inventory.stock.adjust')] : null,
+        ]));
+
+        return [
+            'today' => __('inventory::board.t.today', ['date' => $today->day.' '.($months[$today->month] ?? '').' '.$today->year]).' ▾',
+            'updated' => __('inventory::board.t.updated', ['time' => Carbon::now()->format('H:i')]),
+            'export' => Route::has('inventory.report.show') && $can('inventory.report') ? route('inventory.report.show', ['slug' => 'stock-value']) : null,
+            'filters' => [
+                $filter('warehouse', __('inventory::board.t.all_warehouses'), $warehouses, $p['warehouse']),
+                $filter('brand', __('inventory::board.t.all_brands'), $brands, $p['brand']),
+                $filter('category', __('inventory::board.t.all_categories'), $categories, $p['category']),
+                $abc,
+            ],
+            'create' => $create,
+        ];
     }
 
     /**
@@ -241,6 +348,7 @@ final class InventoryBoard
 
         return Batch::query()
             ->with(['product', 'warehouse'])
+            ->tap(fn ($q) => $this->narrow($q))
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [$today->toDateString(), $today->copy()->addDays($days)->toDateString()])
             ->withSum('movements as qty_sum', 'floor_change')
@@ -288,6 +396,7 @@ final class InventoryBoard
     public function lastCountGap(): array
     {
         $latest = StockCount::query()->with(['lines', 'warehouse'])
+            ->when($this->picked()['warehouse'] !== null, fn ($q) => $q->where('warehouse_id', $this->picked()['warehouse']))
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->orderByDesc('count_date')->orderByDesc('id')->get()
             ->unique('warehouse_id');
@@ -315,6 +424,7 @@ final class InventoryBoard
     public function recordAccuracy(): ?string
     {
         $latest = StockCount::query()->with('lines')->where('status', '<>', DocumentStatus::CANCELLED)
+            ->when($this->picked()['warehouse'] !== null, fn ($q) => $q->where('warehouse_id', $this->picked()['warehouse']))
             ->orderByDesc('count_date')->orderByDesc('id')->get()->unique('warehouse_id');
 
         $total = $latest->sum(fn (StockCount $c) => $c->lines->count());
@@ -337,7 +447,9 @@ final class InventoryBoard
     {
         $edge = Carbon::now()->subDays($days);
         $snap = $this->snapshot()->keyBy('id');
+        $w = $this->picked()['warehouse'];
         $stuck = StockTransfer::query()->onTheWay()->with(['lines', 'fromWarehouse', 'toWarehouse'])
+            ->when($w !== null, fn ($q) => $q->where(fn ($x) => $x->where('from_warehouse_id', $w)->orWhere('to_warehouse_id', $w)))
             ->whereNotNull('dispatched_at')->where('dispatched_at', '<=', $edge)->get();
 
         $value = '0';
@@ -371,6 +483,7 @@ final class InventoryBoard
         $sum = function (Carbon $from, Carbon $to) use ($reasons, $snap): string {
             return StockMovement::query()
                 ->whereIn('reason_code_id', $reasons->all())
+                ->tap(fn ($q) => $this->narrow($q))
                 ->where('floor_change', '<', 0)
                 ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
                 ->get(['product_id', 'floor_change'])
@@ -385,6 +498,20 @@ final class InventoryBoard
             $sum($month, Carbon::today()),
             $sum($month->copy()->subMonth(), $month->copy()->subMonth()->endOfMonth()),
         ];
+    }
+
+    /** ⓘ লট আর চলাচলের প্রশ্নে ছাঁকনি — বাছা গুদাম, আর ব্র্যান্ড/শ্রেণি/ABC বাছা থাকলে কেবল সেই পণ্যগুলো */
+    private function narrow($query): void
+    {
+        $p = $this->picked();
+
+        if ($p['warehouse'] !== null) {
+            $query->where('warehouse_id', $p['warehouse']);
+        }
+
+        if ($p['brand'] !== null || $p['category'] !== null || $p['abc'] !== null) {
+            $query->whereIn('product_id', $this->snapshot()->pluck('id')->all() ?: [0]);
+        }
     }
 
     /** @param  array<string, mixed>  $params */
