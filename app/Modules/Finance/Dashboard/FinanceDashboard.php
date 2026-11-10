@@ -384,7 +384,10 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
             ],
 
-            // ⭐ চলতি মূলধন — সবার নিচে, মালিকের ছবির হুবহু (মালিক, ৯ নভেম্বর ২০২৬; [[WorkingCapital]])
+            // ⭐ পাতায় কেবল নিচের সারিগুলো — মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে)
+            board: true,
+
+            // ⭐ নমুনার সাত সারি, ক্রমে ([[FinanceBoard]], [[FinanceCharts]])
             sections: [
                 // ⭐ মোট তহবিলের ঘর — মাথায় (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FundPosition]]); নগদ/ব্যাংক/MFS-এর একই চাবি
                 [
@@ -453,6 +456,17 @@ final class FinanceDashboard implements ProvidesDashboard
 
                         return ['banks' => $board->banks(), 'cheques' => $board->cheques(), 'deposits' => $board->deposits(), 'owners' => $board->owners()];
                     },
+                ],
+                // ⭐ সারি 7 — আর্থিক স্বাস্থ্য, টাকা কোথা থেকে এল কোথায় গেল, তহবিলের ধারা ([[FinanceCharts::health()]], [[FinanceBoard::sourcesAndUses()]])
+                [
+                    'view' => 'finance::dashboard.board-overview',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => [
+                        'health' => app(FinanceCharts::class)->health(),
+                        'flows' => app(FinanceBoard::class)->sourcesAndUses(),
+                        'trend' => app(FinanceCharts::class)->fundTrend(),
+                    ],
                 ],
             ],
         );

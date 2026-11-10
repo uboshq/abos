@@ -61,6 +61,7 @@ final class DashboardEngine
             // ⓘ মডিউলের নিজের অংশ — চাবি থাকলে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন)
             sections: array_values(array_filter($definition->sections,
                 fn (array $section) => ! isset($section['permission']) || $user->can($section['permission']))),
+            board: $definition->board,
         );
     }
 

@@ -161,6 +161,74 @@ final class FinanceCharts
     }
 
     /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 7 — আর্থিক স্বাস্থ্য (রাডার), এ মাস আর গত মাস-শেষ; প্রতিটা মাপ 0–100 (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+     * ⓘ মাপগুলো প্রচলিত সীমায় সরলরেখায়: তারল্য = চলতি অনুপাত (2.0 = 100); দেনা শোধের ক্ষমতা = দ্রুত অনুপাত (1.5 = 100);
+     *   লাভজনকতা = শেষ 90 দিনের নিট মার্জিন (10% = 100, লোকসানে 0); আদায়ের গতি = DSO (15 দিন বা কম = 100, 90+ = 0);
+     *   নগদ চক্র = CCC (0 বা কম = 100, 120+ = 0); ঋণের বোঝা কম = মোট দায় ÷ মোট সম্পদ (0 = 100, 0.8+ = 0)।
+     * ⓘ মাপ না থাকলে (বিক্রি নেই) সেই কোণ null — রাডারে মাঝখানে; মোট নম্বর থাকা মাপগুলোর গড়, অন্তত তিনটা মাপ থাকলে তবেই।
+     *
+     * @return array{now: list<?int>, last: list<?int>, score: ?int}
+     */
+    public function health(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $at = function (Carbon $date): array {
+            $wc = $this->workingCapital->on($date);
+            $owes = bcadd($wc['payable'], $wc['other'], 4);
+            $cycle = $this->cycle($date);
+            $from = $date->copy()->subDays(self::WINDOW_DAYS - 1);
+            $sales = $this->moved(StandardChart::NET_SALES, $from, $date);
+            $net = bcsub($this->moved([StandardChart::INCOME], $from, $date), $this->moved(['5000'], $from, $date), 4);
+            $assets = $this->balance('1000', $date);
+            $debts = $this->balance('2000', $date);
+            $line = fn (?float $v, float $zero, float $full): ?int => $v === null ? null : (int) round(max(0, min(100, ($v - $zero) / ($full - $zero) * 100)));
+
+            return [
+                $line($wc['ratio'] === null ? null : (float) $wc['ratio'], 0, 2.0),
+                $line(bccomp($owes, '0', 4) > 0 ? (float) bcdiv(bcadd($wc['receivable'], $wc['money'], 4), $owes, 4) : null, 0, 1.5),
+                $line(bccomp($sales, '0', 4) > 0 ? (float) bcdiv(bcmul($net, '100', 4), $sales, 4) : null, 0, 10),
+                $line($cycle['dso'] === null ? null : (float) $cycle['dso'], 90, 15),
+                $line($cycle['ccc'] === null ? null : (float) $cycle['ccc'], 120, 0),
+                $line(bccomp($assets, '0', 4) > 0 ? (float) bcdiv($debts, $assets, 4) : null, 0.8, 0),
+            ];
+        };
+
+        $now = $at($today);
+        $have = array_values(array_filter($now, fn ($v) => $v !== null));
+
+        return ['now' => $now, 'last' => $at($today->copy()->startOfMonth()->subDay()), 'score' => count($have) < 3 ? null : (int) round(array_sum($have) / count($have))];
+    }
+
+    /**
+     * ⭐ তহবিলের ধারা · 12 মাস — মাস-শেষের নগদ + ব্যাংক + MFS ([[trend()]]-এর একই হিসাব)।
+     *
+     * @return array{points: list<array{date: string, total: string}>, change: string, up_months: int, peak_now: bool}
+     */
+    public function fundTrend(?Carbon $today = null): array
+    {
+        return $this->trend(($today ?? now())->copy()->startOfDay());
+    }
+
+    /** একটা খাতের (ও নিচের সব খাতের) জের তারিখ পর্যন্ত, দেখার নাগালে — [[moved()]]-এর একই পথ */
+    private function balance(string $code, Carbon $upto): string
+    {
+        $account = StandardChart::find($code);
+
+        if ($account === null) {
+            return '0';
+        }
+
+        $ids = $this->scope->viewBranchIds(auth()->user());
+        $total = '0';
+
+        foreach ($ids === null ? [null] : $ids as $branch) {
+            $total = bcadd($total, $account->balanceOn($upto->toDateString(), $branch), 4);
+        }
+
+        return $total;
+    }
+
+    /**
      * ⭐ সামনের 6 মাসের ঋণের কিস্তি — অর্থের ড্যাশবোর্ডের সারি 5, ঋণের ঘরের নিচের বার ([[loansAndDeposits()]]-এর একই হিসাব)।
      *
      * @return list<array{month: string, instalments: string, deposits: string}>

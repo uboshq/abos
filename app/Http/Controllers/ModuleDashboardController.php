@@ -71,7 +71,8 @@ class ModuleDashboardController extends Controller
         return view(config('abos.dashboards_v2') ? 'dashboard.module-v2' : 'dashboard.module', [
             'menu' => $this->menu->forUser($user),
             'module' => $module,
-            'dashboard' => $dashboard,
+            // ⓘ নিজের সারিতে আঁকা বোর্ড পাতায় কেবল সারিগুলো দেখায় ([[DashboardDefinition::forPage()]]); হোম ও ফোন পুরো সংজ্ঞা পড়ে
+            'dashboard' => $dashboard->forPage(),
         ]);
     }
 }

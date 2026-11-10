@@ -72,6 +72,12 @@ final class DashboardDefinition
          * @var list<array{view: string, data: array<string, mixed>|\Closure(): array<string, mixed>, permission?: string, place?: 'top'|'bottom'}>
          */
         public readonly array $sections = [],
+
+        /**
+         * ⭐ পাতায় কেবল নিজের সারি (sections) — মালিকের চূড়ান্ত নমুনার হুবহু (10 নভেম্বর 2026 রাত: "100% স্যাম্পলের সাথে মিল রেখে")।
+         * ⓘ সংখ্যা-চার্ট-তালিকা তবু থাকে — হোম, ফোন আর খোঁজা ওগুলো পড়ে; কেবল মডিউলের নিজের পাতায় আঁকা হয় না ([[forPage()]])।
+         */
+        public readonly bool $board = false,
     ) {
         // ⓘ নিজের সারিতে আঁকা ড্যাশবোর্ডও (মালিকের চূড়ান্ত নমুনার হুবহু, 10 নভেম্বর 2026 রাত) খালি নয় — sections-ই তার সবটা
         if ($stats === [] && $panels === [] && $listings === [] && $sections === []) {
@@ -80,5 +86,17 @@ final class DashboardDefinition
                 .'it teaches people the screen is not worth opening.'
             );
         }
+    }
+
+    /**
+     * ⭐ মডিউলের নিজের পাতার রূপ — `board` হলে কেবল sections (সংখ্যা, চার্ট, তালিকা, টাইল, করণীয় পাতায় আঁকা হয় না); নাহলে হুবহু এটাই।
+     */
+    public function forPage(): self
+    {
+        if (! $this->board) {
+            return $this;
+        }
+
+        return new self(title: $this->title, subtitle: $this->subtitle, search: $this->search, sections: $this->sections);
     }
 }

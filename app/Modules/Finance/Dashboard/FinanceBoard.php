@@ -80,7 +80,8 @@ final class FinanceBoard
             $i = $at[$keys[(string) ($row['section'] ?? '')] ?? 'operating'];
             $net = (string) ($row['net'] ?? '0');
             $sections[$i]['net'] = bcadd($sections[$i]['net'], $net, 4);
-            $sections[$i]['lines'][] = ['name' => (string) ($row['account_name'] ?? ''), 'net' => $net];
+            // ⓘ রিপোর্টের নাম "কোড — নাম"; ড্যাশবোর্ডে কেবল নাম (নমুনার মতো)
+            $sections[$i]['lines'][] = ['name' => trim((string) preg_replace('/^\S+\s+[·\-—]\s+/u', '', (string) ($row['account_name'] ?? ''))), 'net' => $net];
         }
 
         foreach ($sections as $i => $s) {
@@ -92,6 +93,45 @@ final class FinanceBoard
             'opening' => (string) ($lines[0]['value'] ?? '0'),
             'closing' => (string) ($lines[1]['value'] ?? '0'),
             'sections' => $sections,
+        ];
+    }
+
+    /**
+     * ⭐ সারি 7 — টাকা কোথা থেকে এল, কোথায় গেল · এ মাস: নগদ প্রবাহ বিবরণীর একই রিপোর্টের খাতগুলো (accounts.cash_flow) —
+     * উৎস = যে খাত থেকে টাকা এল (বড় তিনটা, বাকি "অন্যান্য"), ব্যবহার = যে খাতে গেল (বড় ছয়টা, বাকি "অন্যান্য")।
+     * ⓘ রিপোর্টের চাবি না থাকলে null।
+     *
+     * @return array{sources: list<array{name: string, value: string}>, uses: list<array{name: string, value: string}>, in: string, out: string}|null
+     */
+    public function sourcesAndUses(): ?array
+    {
+        if (! Gate::allows('accounts.report.final')) {
+            return null;
+        }
+
+        $rows = $this->reports->run('accounts.cash_flow', ['from' => Carbon::today()->startOfMonth()->toDateString(), 'to' => Carbon::today()->toDateString()], 1, 100000)->rows;
+        $name = fn (array $r): string => trim((string) preg_replace('/^\S+\s+[·\-—]\s+/u', '', (string) ($r['account_name'] ?? '')));
+        $pick = function (string $key, int $keep) use ($rows, $name): array {
+            $list = collect($rows)->map(fn ($r) => (array) $r)->filter(fn (array $r) => bccomp((string) ($r[$key] ?? '0'), '0', 4) > 0)
+                ->map(fn (array $r) => ['name' => $name($r), 'value' => bcadd((string) $r[$key], '0', 4)])
+                ->sort(fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4))->values();
+            $out = $list->take($keep)->all();
+            $rest = $list->slice($keep)->reduce(fn (string $c, array $r) => bcadd($c, $r['value'], 4), '0');
+
+            if (bccomp($rest, '0', 4) > 0) {
+                $out[] = ['name' => (string) __('finance::charts.others'), 'value' => $rest];
+            }
+
+            return $out;
+        };
+        $sources = $pick('money_in', 3);
+        $uses = $pick('money_out', 6);
+
+        return [
+            'sources' => $sources,
+            'uses' => $uses,
+            'in' => array_reduce($sources, fn (string $c, array $s) => bcadd($c, $s['value'], 4), '0'),
+            'out' => array_reduce($uses, fn (string $c, array $s) => bcadd($c, $s['value'], 4), '0'),
         ];
     }
 
