@@ -109,19 +109,82 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $this->assertSame(6, $wc->on($date, 7)['span'], '⛔ অজানা মাসের সংখ্যা ৬-এ ফেরেনি।');
     }
 
-    public function test_the_dashboard_draws_it_last_for_the_asked_date_and_falls_back_to_today(): void
+    /**
+     * ⭐ পুরো পাতা নিজের ঠিকানায় (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL: ড্যাশবোর্ডে ছোট ঘর, "পুরো পাতা →") — বাছা তারিখ আর গড়,
+     * ভুল বা আগামী তারিখে আজ; ড্যাশবোর্ডের ছোট ঘর সেই পাতায় নিয়ে যায়।
+     */
+    public function test_the_full_page_draws_it_for_the_asked_date_and_falls_back_to_today(): void
     {
-        $html = (string) $this->get(route('module.dashboard', ['module' => 'finance', 'wc_date' => '2026-10-31', 'wc_span' => 12]))->assertOk()->getContent();
+        $html = (string) $this->get(route('finance.working_capital', ['wc_date' => '2026-10-31', 'wc_span' => 12]))->assertOk()->getContent();
 
-        $this->assertStringContainsString('data-working-capital', $html, '⛔ অর্থের ড্যাশবোর্ডে চলতি মূলধন নেই।');
+        $this->assertStringContainsString('data-working-capital', $html, '⛔ পুরো পাতায় চলতি মূলধন নেই।');
         $this->assertStringContainsString('abosDate(&quot;2026-10-31&quot;', $html, '⛔ বাছা তারিখটা ঘরে বসেনি।');
         $this->assertMatchesRegularExpression('/data-wc-span="12"[^>]*aria-current="true"/', $html, '⛔ ১২ মাসের গড় বাছা দেখায় না।');
-        $this->assertGreaterThan(strrpos($html, 'data-listing') ?: 0, strpos($html, 'data-working-capital'), '⛔ চলতি মূলধন সবার নিচে নয়।');
+        $this->assertStringContainsString('data-wc-part="advances"', $html, '⛔ পুরো পাতায় অগ্রিম ও জামানতের ঘর নেই।');
 
         foreach (['not-a-date', '2099-01-01'] as $bad) {
-            $page = (string) $this->get(route('module.dashboard', ['module' => 'finance', 'wc_date' => $bad]))->assertOk()->getContent();
+            $page = (string) $this->get(route('finance.working_capital', ['wc_date' => $bad]))->assertOk()->getContent();
             $this->assertStringContainsString('abosDate(&quot;2026-11-20&quot;', $page, "⛔ '{$bad}' তারিখে আজকের হিসাবে ফেরেনি।");
         }
+
+        $board = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
+        $this->assertStringContainsString('data-fin-wc', $board, '⛔ ড্যাশবোর্ডে চলতি মূলধনের ছোট ঘর নেই।');
+        $this->assertStringContainsString(route('finance.working_capital'), $board, '⛔ ছোট ঘর পুরো পাতায় নিয়ে যায় না।');
+    }
+
+    /**
+     * ⭐ অগ্রিম ও জামানত — চলতি সম্পদের বাকিটা (মালিক, 10 নভেম্বর 2026 সন্ধ্যা)। জামানতে 25,000 দিলে টাকা কমে, অগ্রিম ও জামানত বাড়ে —
+     * চলতি মূলধন একই থাকে (সম্পদের এক ঘর থেকে আরেক ঘরে); আগে ঘরটা না থাকায় মূলধন 25,000 কমে দেখাত।
+     */
+    public function test_a_security_deposit_moves_into_advances_and_leaves_working_capital_whole(): void
+    {
+        $wc = app(WorkingCapital::class);
+        $till = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
+        $this->journal('2026-11-03', [[$till->id, '100000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '100000']]);
+        $before = $wc->on(Carbon::parse('2026-11-20'));
+
+        $this->journal('2026-11-08', [[StandardChart::find('1140')->id, '25000', null], [$till->id, null, '25000']]);
+        $after = $wc->on(Carbon::parse('2026-11-20'));
+
+        $this->assertSame('25000.0000', bcsub($after['advances'], $before['advances'], 4), '⛔ জামানত "অগ্রিম ও জামানত"-এ ওঠেনি।');
+        $this->assertSame('-25000.0000', bcsub($after['money'], $before['money'], 4), 'প্রস্তুতিটাই ভুল — হাতের টাকা কমেনি।');
+        $this->assertSame(0, bccomp($after['capital'], $before['capital'], 4), '⛔ জামানত দিলে চলতি মূলধন বদলাল — সম্পদের ঘর বদল মাত্র।');
+    }
+
+    /**
+     * ⛔ চলতি মূলধন কেবল মালিকের (মালিক, 10 নভেম্বর 2026 সন্ধ্যা: "sobar switch off defolt, malik kauke dibe mone korle nijer hate anumoti
+     * dibe")। ⓘ অর্থের ড্যাশবোর্ড দেখেন এমন মানুষ (accounts.view, finance.capital.view) — চাবি ছাড়া ছোট ঘর নেই, পুরো পাতা 403; চাবি দিলে আছে।
+     * ⓘ কোনো রোলের ছাঁচে চাবিটা নেই।
+     */
+    public function test_working_capital_is_the_owners_alone_until_he_gives_the_key(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->assertTrue($owner->can('finance.working_capital.view'), 'প্রস্তুতিটাই ভুল — মালিকের চাবি নেই।');
+
+        foreach (glob(base_path('app/Modules/*/module.php')) as $file) {
+            foreach ((array) ((require $file)['role_templates'] ?? []) as $role => $keys) {
+                $this->assertNotContains('finance.working_capital.view', (array) $keys, "⛔ চলতি মূলধনের চাবি রোলের ছাঁচে ({$role}, {$file}).");
+            }
+        }
+
+        $accountant = User::factory()->create(['current_company_id' => $owner->current_company_id, 'current_branch_id' => $owner->current_branch_id, 'is_active' => true]);
+        $accountant->companies()->attach($owner->current_company_id, ['is_active' => true]);
+        app(\Spatie\Permission\PermissionRegistrar::class)->setPermissionsTeamId($owner->current_company_id);
+        $role = \Spatie\Permission\Models\Role::findOrCreate('WC accountant', 'web');
+        $role->givePermissionTo(['accounts.view', 'finance.capital.view']);
+        $accountant->assignRole($role);
+        $this->actingAs($accountant->fresh());
+
+        $board = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-fin-wc', $board, '⛔ চাবি ছাড়াই ড্যাশবোর্ডে চলতি মূলধন।');
+        $this->assertStringContainsString('data-fin-loans', $board, 'প্রস্তুতিটাই ভুল — ঋণের ঘরও নেই।');
+        $this->get(route('finance.working_capital'))->assertForbidden();
+
+        $accountant->givePermissionTo('finance.working_capital.view');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->actingAs($accountant->fresh());
+        $this->assertStringContainsString('data-fin-wc', (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent(), '⛔ চাবি দিলেও ঘর এল না।');
+        $this->get(route('finance.working_capital'))->assertOk();
     }
 
     /**
