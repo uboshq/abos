@@ -46,6 +46,11 @@ return new class extends Migration
             $table->string('outcome', 60)->nullable();
             $table->tinyInteger('feedback')->nullable();
             $table->string('reason', 255)->nullable();
+            // ⭐ কোথা থেকে, কীভাবে (মালিক, ১১ নভেম্বর ২০২৬: "কার আইডি থেকে কখন, কোথায়, কীভাবে, কোন জায়গা থেকে")
+            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
+            $table->string('channel', 8)->nullable();        // web | app | system
+            $table->string('ip_address', 45)->nullable();
+            $table->string('user_agent', 255)->nullable();
             $table->timestamps();
             $table->index(['company_id', 'created_at'], 'assistant_events_company_time_idx');
             $table->index(['company_id', 'kind', 'created_at'], 'assistant_events_company_kind_idx');

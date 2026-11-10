@@ -39,9 +39,13 @@ class AssistantEvent extends Model
 
     public const BRIEF = 'brief';
 
-    public const KINDS = [self::SEARCH, self::QUESTION, self::WATCH, self::SUGGESTION, self::DRAFT, self::BLOCKED, self::DISMISS, self::FEEDBACK, self::BRIEF];
+    /** ⭐ কে কোন পাতা খুলল বা কী নামাল (মালিক, ১১ নভেম্বর ২০২৬) */
+    public const VISIT = 'visit';
 
-    protected $fillable = ['company_id', 'user_id', 'kind', 'module', 'page', 'text', 'answer', 'tools', 'model', 'ms', 'outcome', 'feedback', 'reason'];
+    public const KINDS = [self::VISIT, self::SEARCH, self::QUESTION, self::WATCH, self::SUGGESTION, self::DRAFT, self::BLOCKED, self::DISMISS, self::FEEDBACK, self::BRIEF];
+
+    protected $fillable = ['company_id', 'user_id', 'kind', 'module', 'page', 'text', 'answer', 'tools', 'model', 'ms', 'outcome', 'feedback', 'reason',
+        'branch_id', 'channel', 'ip_address', 'user_agent'];
 
     protected function casts(): array
     {

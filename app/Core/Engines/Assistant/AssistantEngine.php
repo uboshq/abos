@@ -24,6 +24,9 @@ final class AssistantEngine
     /** ⓘ একই মানুষ টাইপ চালিয়ে গেলে এর মধ্যে একই খোঁজার সারি — প্রতিটা অক্ষরে নতুন সারি নয় */
     public const SEARCH_MERGE_SECONDS = 20;
 
+    /** ⓘ একই পাতা এর মধ্যে আবার খুললে একই সারি */
+    public const VISIT_MERGE_SECONDS = 60;
+
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
@@ -62,7 +65,48 @@ final class AssistantEngine
             'kind' => $kind,
             'text' => $text === null ? null : mb_substr($text, 0, 2000),
             'tools' => $tools,
-        ] + array_intersect_key($extra, array_flip(['module', 'page', 'answer', 'model', 'ms', 'outcome', 'feedback', 'reason'])));
+        ] + array_intersect_key($extra, array_flip(['module', 'page', 'answer', 'model', 'ms', 'outcome', 'feedback', 'reason'])) + self::where());
+    }
+
+    /**
+     * ⭐ কোথা থেকে, কীভাবে — শাখা, ওয়েব না অ্যাপ, IP, ব্রাউজার বা ফোন (মালিক, ১১ নভেম্বর ২০২৬: "কার আইডি থেকে কখন, কোথায়, কীভাবে,
+     * কোন জায়গা থেকে")। ⓘ রাতের কাজ (কমান্ড) হলে "system", IP নেই।
+     *
+     * @return array{branch_id: ?int, channel: string, ip_address: ?string, user_agent: ?string}
+     */
+    public static function where(): array
+    {
+        $request = app()->runningInConsole() ? null : request();
+
+        return [
+            'branch_id' => CompanyContext::branchId(),
+            'channel' => $request === null ? 'system' : ($request->is('api/*') ? 'app' : 'web'),
+            'ip_address' => $request?->ip(),
+            'user_agent' => $request === null ? null : mb_substr((string) $request->userAgent(), 0, 255),
+        ];
+    }
+
+    /**
+     * ⭐ কে কোন পাতা খুলল বা কী নামাল — একই মানুষ একই পাতা [[VISIT_MERGE_SECONDS]]-এর মধ্যে আবার খুললে নতুন সারি নয়
+     * (পাতা নতুন করে আনা, পেছনে ফেরা), সময়টা কেবল এগোয় ([[RecordsVisits]])।
+     */
+    public function recordVisit(User $user, string $path, string $label): void
+    {
+        if (CompanyContext::id() === null) {
+            return;
+        }
+
+        $path = mb_substr($path, 0, 191);
+        $same = AssistantEvent::query()->where('kind', AssistantEvent::VISIT)->where('user_id', $user->id)->where('page', $path)
+            ->where('updated_at', '>=', Carbon::now()->subSeconds(self::VISIT_MERGE_SECONDS))->latest('id')->first();
+
+        if ($same !== null) {
+            $same->touch();
+
+            return;
+        }
+
+        $this->record(AssistantEvent::VISIT, $user, mb_substr($label, 0, 191), ['page' => $path]);
     }
 
     /**
