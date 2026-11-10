@@ -35,6 +35,7 @@ use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
 use App\Modules\Finance\Services\FinanceCharts;
+use App\Modules\Finance\Services\CashForecast;
 use App\Modules\Finance\Services\FundNews;
 use App\Modules\Finance\Services\FundPosition;
 use App\Modules\Finance\Services\LoanBox;
@@ -409,6 +410,17 @@ final class FinanceDashboard implements ProvidesDashboard
                     'place' => 'top',
                     'permission' => 'accounts.view',
                     'data' => fn (): array => ['position' => app(FinanceCharts::class)->position()],
+                ],
+                // ⭐ সারি 4 — বিক্রি ও মার্জিন, বাজেট থেকে ফারাক, পরিশোধের ক্যালেন্ডার ([[FinanceCharts::performance()]], [[CashForecast::outgoingByDay()]])
+                [
+                    'view' => 'finance::dashboard.board-performance',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => [
+                        'performance' => app(FinanceCharts::class)->performance(),
+                        // ⓘ শনিবার থেকে 35 দিনের যতটা আজ থেকে সামনে — আজ থেকে 35 দিনই আনা যথেষ্ট
+                        'outgoing' => app(CashForecast::class)->outgoingByDay(35),
+                    ],
                 ],
                 // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
                 [

@@ -107,6 +107,59 @@ final class FinanceCharts
         ];
     }
 
+    /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 4 — বিক্রি ও লাভের হার · 12 মাস, আর বাজেট থেকে ফারাক (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+     * ⓘ বিক্রি = নিট বিক্রি (বিক্রি − ফেরত − আদায়ে ছাড়); গ্রস মার্জিন = (বিক্রি − বিক্রীত মালের খরচ) ÷ বিক্রি; নিট মার্জিন = (সব আয় − সব খরচ) ÷ বিক্রি।
+     * ⓘ চলতি মাস = এ পর্যন্ত দিনের হারে পুরো মাসের অনুমান (estimate: true) — নমুনার হালকা বার।
+     * ⓘ বাজেট: মাসের বাজেট × পেরোনো দিন ÷ মাসের দিন বনাম এ পর্যন্ত প্রকৃত; আয়ে কম আর খরচে বেশি = প্রতিকূল। বাজেটের চাবি না থাকলে null।
+     *
+     * @return array{months: list<array{month: int, sales: string, gross: ?string, net: ?string, estimate: bool}>, budget: list<array{name: string, pct: ?int, good: bool}>|null, day: int}
+     */
+    public function performance(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $months = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $from = $today->copy()->startOfMonth()->subMonthsNoOverflow($i);
+            $to = $i === 0 ? $today->copy() : $from->copy()->endOfMonth();
+            $sales = $this->moved(StandardChart::NET_SALES, $from, $to);
+            $gross = bcsub($sales, $this->moved([StandardChart::COST_OF_GOODS_SOLD], $from, $to), 4);
+            $net = bcsub($this->moved([StandardChart::INCOME], $from, $to), $this->moved(['5000'], $from, $to), 4);
+            $pct = fn (string $v): ?string => bccomp($sales, '0', 4) > 0 ? bcdiv(bcmul($v, '100', 4), $sales, 1) : null;
+            $estimate = $i === 0 && $today->day < $today->daysInMonth;
+
+            $months[] = [
+                'month' => (int) $from->month,
+                'sales' => $estimate ? bcdiv(bcmul($sales, (string) $today->daysInMonth, 4), (string) $today->day, 4) : $sales,
+                'gross' => $pct($gross),
+                'net' => $pct($net),
+                'estimate' => $estimate,
+            ];
+        }
+
+        $budget = null;
+
+        if (auth()->user()?->can('finance.budget.view') && Schema::hasTable('fin_budgets')) {
+            $share = bcdiv((string) $today->day, (string) $today->daysInMonth, 6);
+            $budget = $this->budget->vsActual((int) $today->year, (int) $today->month, (int) $today->month)
+                ->groupBy(fn (array $r) => (int) $r['account']->id)
+                ->map(function ($rows) use ($share): array {
+                    $first = $rows->first();
+                    $planned = bcmul($rows->reduce(fn (string $c, array $r) => bcadd($c, $r['budget'], 4), '0'), $share, 4);
+                    $actual = $rows->reduce(fn (string $c, array $r) => bcadd($c, $r['actual'], 4), '0');
+                    $pct = bccomp($planned, '0', 4) > 0 ? (int) round((float) bcdiv(bcmul(bcsub($actual, $planned, 4), '100', 4), $planned, 4)) : null;
+
+                    return ['name' => (string) $first['account']->name(), 'pct' => $pct, 'good' => $pct === null || ($first['over_is_bad'] ? $pct <= 0 : $pct >= 0),
+                        'income' => ! $first['over_is_bad'], 'size' => (float) $planned];
+                })
+                ->sort(fn (array $a, array $b) => [$b['income'], $b['size']] <=> [$a['income'], $a['size']])
+                ->take(7)->map(fn (array $r) => ['name' => $r['name'], 'pct' => $r['pct'], 'good' => $r['good']])->values()->all();
+        }
+
+        return ['months' => $months, 'budget' => $budget, 'day' => (int) $today->day];
+    }
+
     /** @return array{months: list<array{month: string, in: string, out: string}>, net: string, out_heavy: list<string>} */
     private function cashflow(): array
     {

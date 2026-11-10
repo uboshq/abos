@@ -128,6 +128,31 @@ final class CashForecast
     }
 
     /**
+     * ⭐ পরিশোধের ক্যালেন্ডার — এক দিন থেকে যত দিন, দিনে কত দিতে হবে (সরবরাহকারীর বাকি বিল, নেওয়া ঋণের কিস্তি)।
+     * ⓘ [[dues()]]-এর একই কাগজ; মেয়াদোত্তীর্ণ বা তারিখহীন আজকের দিনে। কেবল যাওয়ার দিক।
+     *
+     * @return array<string, list<array{who: string, amount: string, side: string}>>
+     */
+    public function outgoingByDay(int $days, ?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $out = [];
+
+        foreach ($this->dues($today, $days) as $item) {
+            if (in_array($item['side'], ['receivables', 'loans_in'], true) || bccomp($item['amount'], '0', 4) <= 0) {
+                continue;
+            }
+
+            $at = $item['due'] === null || $item['due'] < $today->toDateString() ? $today->toDateString() : $item['due'];
+            $out[$at][] = ['who' => (string) $item['who'], 'amount' => $item['amount'], 'side' => $item['side']];
+        }
+
+        ksort($out);
+
+        return $out;
+    }
+
+    /**
      * ⭐ 13 সপ্তাহের নগদের পূর্বাভাস — অর্থের ড্যাশবোর্ড, মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (10 নভেম্বর 2026 রাত)।
      * ⓘ [[daily()]]-এর একই কাগজ আর নিয়ম ([[dues()]]): মেয়াদোত্তীর্ণ বা তারিখহীন প্রথম সপ্তাহে। সপ্তাহ আজ থেকে 7 দিনের টুকরো।
      * ⓘ প্রতিটা সপ্তাহে: নিট (আসবে − যাবে), সপ্তাহ-শেষের তহবিল, আর সবচেয়ে বড় দেনা (কার, কত) — "কেন টান" বলার জন্য।
