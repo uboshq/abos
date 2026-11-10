@@ -459,6 +459,16 @@ final class PrintEngine
         return $mpdf->Output('', Destination::STRING_RETURN);
     }
 
+    /**
+     * ⓘ কাগজের নিজের mPDF যাঁরা বানান (চেকের পাতা — [[ChequePrinter]]) — একই ফন্ট, যাতে বাংলা নামও ভাঙে না।
+     *
+     * @return array{fontDir: list<string>, fontdata: array<string, mixed>}
+     */
+    public function fonts(): array
+    {
+        return ['fontDir' => $this->fontDirs(), 'fontdata' => $this->fontData()];
+    }
+
     /** @return list<string> */
     private function fontDirs(): array
     {

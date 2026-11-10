@@ -15,6 +15,13 @@
                         <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
+
+                {{-- ⭐ চেক ছাপুন — চেকে দেওয়া পরিশোধের ঝুলে থাকা চেক (মালিকের নমুনা, ১০ নভেম্বর ২০২৬); ছাপা হিসাবের চেকের খাতা থেকে --}}
+                @if ($payment->cheque_id && $payment->cheque?->status === 'pending' && \Illuminate\Support\Facades\Route::has('accounts.cheque.print.cheque'))
+                    @can('accounts.cheque.print')
+                        <x-ui.button tone="primary" :href="route('accounts.cheque.print.cheque', $payment->cheque_id)">{{ __('accounts::cheque_print.print') }}</x-ui.button>
+                    @endcan
+                @endif
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

@@ -303,6 +303,10 @@ return [
              * ওঠে, বছরে একবার নয়।
              */
             ['label' => 'accounts::menu.cheques', 'icon' => 'challan', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
+            // ⭐ চেক ছাপা — চেকের খাতার পাশে (মালিকের নমুনা, ১০ নভেম্বর ২০২৬): ছাপা চেকের খাতা, শুধু চেক ছাপা (হিসাব ছাড়া), বই ও মাপ
+            ['label' => 'accounts::cheque_print.menu_log', 'icon' => 'book', 'route' => 'accounts.cheque.print.log', 'permission' => 'accounts.cheque.view'],
+            ['label' => 'accounts::cheque_print.menu', 'icon' => 'challan', 'route' => 'accounts.cheque.print.free', 'permission' => 'accounts.cheque.print_free'],
+            ['label' => 'accounts::cheque_print.menu_setup', 'icon' => 'settings', 'route' => 'accounts.cheque.print.setup', 'permission' => 'accounts.cheque.layout'],
             /*
              * ⭐ ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭, ২০ সেপ্টেম্বর ২০২৬।
              *
@@ -367,6 +371,10 @@ return [
          */
         'accounts.cheque.view',
         'accounts.cheque.manage',
+        // ⭐ চেক ছাপা (১০ নভেম্বর ২০২৬): ভাউচারের চেক ছাপা · হিসাব ছাড়া চেক ছাপা · চেক বই ও মাপ বসানো — তিনটা আলাদা চাবি
+        'accounts.cheque.print',
+        'accounts.cheque.print_free',
+        'accounts.cheque.layout',
 
         /*
          * মিলকরণেও তিনটা চাবি, আর কারণটা মাস বন্ধ করার মতোই।
@@ -489,6 +497,7 @@ return [
             'accounts.voucher.bank_file',
             'accounts.cheque.view',
             'accounts.cheque.manage',
+            'accounts.cheque.print',
             'accounts.till.view',
             'accounts.till.manage',
             'accounts.transfer.create',

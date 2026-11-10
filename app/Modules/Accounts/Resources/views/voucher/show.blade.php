@@ -152,6 +152,16 @@
                     'share' => ['route' => 'accounts.voucher.print', 'params' => ['voucher' => $voucher->id]],
                 ]]" />
 
+                {{-- ⭐ চেক ছাপুন — কেবল পাকা পরিশোধে, মাধ্যম চেক (মালিকের নমুনা, ১০ নভেম্বর ২০২৬; [[ChequePrintController]]) --}}
+                @if ($voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT && $voucher->isPosted() && $voucher->instrument === 'cheque')
+                    @can('accounts.cheque.print')
+                        <a href="{{ route('accounts.cheque.print.voucher', $voucher) }}" data-voucher-cheque-print
+                           class="inline-flex h-(--spacing-command) items-center rounded-(--radius-field) bg-(--color-brand-600) px-4 text-sm font-semibold text-(--color-brand-ink)">
+                            {{ __('accounts::cheque_print.print') }}
+                        </a>
+                    @endcan
+                @endif
+
                 @unless ($voucher->isCancelled())
                     @can('accounts.voucher.delete')
                         {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা

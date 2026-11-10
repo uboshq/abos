@@ -4,6 +4,15 @@
     আলাদা পাতায় পাঠালে প্রতিটা সিদ্ধান্তে যাওয়া-আসা করতে হত, আর দিনে
     দশটা চেকে সেটা অসহ্য।
 --}}
+{{-- ⭐ দেওয়া চেক ছাপা — ঝুলে থাকা দেওয়া চেকে (মালিকের নমুনা, ১০ নভেম্বর ২০২৬; [[ChequePrintController::chequeForm()]]) --}}
+@if ($cheque->direction === \App\Modules\Accounts\Models\Cheque::ISSUED && $cheque->status === \App\Modules\Accounts\Models\Cheque::PENDING)
+    @can('accounts.cheque.print')
+        <div class="mb-1 flex justify-end">
+            <a href="{{ route('accounts.cheque.print.cheque', $cheque) }}" data-cheque-row-print
+               class="inline-flex h-(--spacing-field) items-center rounded-(--radius-field) border border-(--color-brand-500) px-3 text-sm font-semibold text-(--color-brand-600)">{{ __('accounts::cheque_print.print') }}</a>
+        </div>
+    @endcan
+@endif
 @if ($cheque->isOpen())
     @can('accounts.cheque.manage')
         <div class="flex flex-wrap items-center justify-end gap-2">
