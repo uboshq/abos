@@ -115,6 +115,147 @@ final class AccountsBoard
         return $out;
     }
 
+    /**
+     * ⭐ সারি 2 — লাভ-ক্ষতির সেতু · এ মাস: বিক্রি → বিক্রীত পণ্যের খরচ → মোট লাভ → বেতন ও ভাড়া → পরিবহন ও অন্যান্য খরচ → অন্যান্য আয় → নিট লাভ।
+     * ⓘ বিক্রি = নিট বিক্রি (ফেরত ও আদায়ে ছাড় বাদ); অন্যান্য আয় = সব আয় − নিট বিক্রি; খরচ = সব খরচ − বিক্রীত পণ্যের খরচ, তার বেতন (5201) ও
+     *   ভাড়া (5202) আলাদা। ⓘ নিট লাভ = সব আয় − সব খরচ — লাভ-ক্ষতির হিসাবের একই সংখ্যা।
+     *
+     * @return array{sales: string, cogs: string, gross: string, people: string, other_cost: string, other_income: string, net: string}
+     */
+    public function pnl(): array
+    {
+        $from = Carbon::today()->startOfMonth();
+        $to = Carbon::today();
+        $sales = self::moved(StandardChart::NET_SALES, $from, $to);
+        $income = self::moved([StandardChart::INCOME], $from, $to);
+        $cogs = self::moved([StandardChart::COST_OF_GOODS_SOLD], $from, $to);
+        $expense = self::moved(['5000'], $from, $to);
+        $people = self::moved([StandardChart::SALARY_EXPENSE, StandardChart::RENT], $from, $to);
+
+        return [
+            'sales' => $sales,
+            'cogs' => $cogs,
+            'gross' => bcsub($sales, $cogs, 4),
+            'people' => $people,
+            'other_cost' => bcsub(bcsub($expense, $cogs, 4), $people, 4),
+            'other_income' => bcsub($income, $sales, 4),
+            'net' => bcsub($income, $expense, 4),
+        ];
+    }
+
+    /**
+     * ⭐ স্থিতিপত্র · আজ — সম্পদ (টাকা, পাওনা, মজুদ, অগ্রিম ও জামানত, স্থায়ী ও অন্যান্য) বনাম দায় (সরবরাহকারীর দেনা, অন্যান্য চলতি, দীর্ঘমেয়াদি)
+     * আর মালিকানা (মূলধন খাত + জমা লাভ)। ⓘ জমা লাভ = সম্পদ − দায় − মূলধন খাতের জের — বছরের না-বন্ধ লাভও এতে; তাই দুই পাশ গঠনেই মেলে,
+     * আর "মিলেছে" মানে খাতার সব দাখিলা ডেবিট = ক্রেডিট ([[ledgerTotals()]])।
+     *
+     * @return array{assets: array<string, string>, claims: array<string, string>, total: string}
+     */
+    public function balanceSheet(): array
+    {
+        $money = '0';
+
+        foreach (StandardChart::MONEY_PARENTS as $code) {
+            $money = bcadd($money, self::balance($code), 4);
+        }
+
+        $receivable = self::balance(StandardChart::RECEIVABLE);
+        $stock = self::balance(StandardChart::INVENTORY);
+        $current = self::balance('1100');
+        $assets = self::balance('1000');
+        $payable = self::balance(StandardChart::PAYABLE_GROUP);
+        $currentDebt = self::balance('2100');
+        $debt = self::balance('2000');
+        $capital = self::balance('3000');
+
+        return [
+            'assets' => [
+                'money' => $money,
+                'receivable' => $receivable,
+                'stock' => $stock,
+                'advances' => bcsub(bcsub(bcsub($current, $money, 4), $receivable, 4), $stock, 4),
+                'fixed' => bcsub($assets, $current, 4),
+            ],
+            'claims' => [
+                'payable' => $payable,
+                'other_current' => bcsub($currentDebt, $payable, 4),
+                'long_term' => bcsub($debt, $currentDebt, 4),
+                'capital' => $capital,
+                'retained' => bcsub(bcsub($assets, $debt, 4), $capital, 4),
+            ],
+            'total' => $assets,
+        ];
+    }
+
+    /**
+     * ⭐ রেওয়ামিল ও উপ-খাতার মিল — খাতার মোট ডেবিট ও ক্রেডিট, আর খাতা-যাচাইয়ের নিয়মগুলো (খাতা যাচাইয়ের পর্দার একই নিয়ম —
+     * [[IntegrityRegistry]]): রেওয়ামিল, প্রতিটা কাগজ মেলে, পক্ষগুলো নিয়ন্ত্রণ খাতের সমান, সম্পদের রেজিস্টার = খাতা; সাথে সাসপেন্স, ব্যাংকের
+     * না-মেলা বিবরণী, বন্ধ মাসে নতুন দাখিলা। ⓘ যাচাই ভারী — কোম্পানি ও শাখা ধরে 10 মিনিট মনে রাখা; কখন চলেছিল তা দেখানো হয়।
+     *
+     * @return array{debit: string, credit: string, checks: list<array{key: string, ok: bool, value: string}>, at: string}
+     */
+    public function ledgerChecks(): array
+    {
+        $user = auth()->user();
+        $key = 'abos.acc-board-checks.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.($user?->id ?? 0);
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 600, function () use ($user): array {
+            $totals = \App\Models\LedgerEntry::query()
+                ->tap(fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'ledger_entries.branch_id'))
+                ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')->first();
+            $checks = [];
+            $registry = collect(app(\App\Core\Integrity\IntegrityRegistry::class)->forUser($user))->keyBy('key');
+
+            foreach (['accounts.trial_balance', 'accounts.every_document_balances', 'accounts.parties_add_up_to_their_control_account', 'accounts.asset_register_vs_ledger'] as $k) {
+                $check = $registry->get($k);
+
+                if ($check === null) {
+                    continue;
+                }
+
+                try {
+                    $found = count($check->run());
+                } catch (\Throwable) {
+                    $found = -1;
+                }
+
+                $checks[] = ['key' => substr($k, strlen('accounts.')), 'ok' => $found === 0, 'value' => $found < 0 ? '?' : (string) $found];
+            }
+
+            $unmatched = BankStatementLine::query()->unmatched()->get(['debit', 'credit'])
+                ->reduce(fn (string $c, $l) => bcadd($c, bcadd((string) $l->debit, (string) $l->credit, 4), 4), '0');
+            $checks[] = ['key' => 'bank', 'ok' => bccomp($unmatched, '0', 4) === 0, 'value' => self::short($unmatched)];
+
+            $lateInClosed = \App\Models\PeriodLock::query()->get()->sum(fn ($lock) => \App\Models\LedgerEntry::query()
+                ->whereBetween('trx_date', [Carbon::create($lock->year, $lock->month, 1)->toDateString(), Carbon::create($lock->year, $lock->month, 1)->endOfMonth()->toDateString()])
+                ->where('created_at', '>', $lock->locked_at)->count());
+            $checks[] = ['key' => 'closed_months', 'ok' => $lateInClosed === 0, 'value' => (string) $lateInClosed];
+
+            return ['debit' => (string) ($totals->d ?? '0'), 'credit' => (string) ($totals->c ?? '0'), 'checks' => $checks, 'at' => now()->format('H:i')];
+        });
+    }
+
+    /** কয়েকটা খাতের (ও নিচের) সময়ের নড়াচড়া — শেষের জের − শুরুর আগের জের, দেখার নাগালে */
+    private static function moved(array $codes, Carbon $from, Carbon $to): string
+    {
+        $ids = app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
+        $before = $from->copy()->subDay()->toDateString();
+        $total = '0';
+
+        foreach ($codes as $code) {
+            $account = StandardChart::find($code);
+
+            if ($account === null) {
+                continue;
+            }
+
+            foreach ($ids === null ? [null] : $ids as $branch) {
+                $total = bcadd($total, bcsub($account->balanceOn($to->toDateString(), $branch), $account->balanceOn($before, $branch), 4), 4);
+            }
+        }
+
+        return $total;
+    }
+
     /** মাস বন্ধের লক্ষ্য — এত কার্যদিবসের মধ্যে (প্রচলিত "fast close" মাপ) */
     public const CLOSE_TARGET_DAYS = 5;
 

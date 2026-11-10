@@ -405,6 +405,17 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['problems' => $board->problems(), 'close' => $board->monthClose()];
                     },
                 ],
+                // ⭐ সারি 2 — লাভ-ক্ষতির সেতু, স্থিতিপত্র, রেওয়ামিল ও উপ-খাতার মিল
+                [
+                    'view' => 'accounts::dashboard.board-statements',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['pnl' => $board->pnl(), 'balance' => $board->balanceSheet(), 'checks' => $board->ledgerChecks()];
+                    },
+                ],
             ],
         );
     }
