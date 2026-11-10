@@ -109,9 +109,25 @@ return new class extends Migration
         $guard = 'web';
         $from = DB::table('permissions')->where('name', 'accounts.cheque.manage')->where('guard_name', $guard)->value('id');
         $print = $this->permission('accounts.cheque.print', $guard);
-        $this->permission('accounts.cheque.print_free', $guard);
-        $this->permission('accounts.cheque.layout', $guard);
+        $free = $this->permission('accounts.cheque.print_free', $guard);
+        $layout = $this->permission('accounts.cheque.layout', $guard);
         $given = 0;
+
+        /*
+         * ⭐ সুপার অ্যাডমিন (মালিক) — তিনটা চাবিই। ⓘ ডিপ্লয় কেবল migrate চালায়, চাবি মেলানো (abos:sync-permissions) নয়; লাইভের
+         * সুপার অ্যাডমিন ভূমিকায় সব চাবি থাকে, নতুনটা কেউ না দিলে নয় — স্থানীয় কপিতে "শুধু চেক ছাপা" মালিককেও ৪০৩ দিয়েছিল।
+         */
+        $supers = DB::table('roles')->where('name', 'super_admin')->where('guard_name', $guard)->pluck('id');
+
+        foreach ($supers as $roleId) {
+            foreach ([$print, $free, $layout] as $permissionId) {
+                if (! DB::table('role_has_permissions')->where('role_id', $roleId)->where('permission_id', $permissionId)->exists()) {
+                    DB::table('role_has_permissions')->insert(['permission_id' => $permissionId, 'role_id' => $roleId]);
+                }
+            }
+        }
+
+        Log::info(sprintf('Cheque print keys: %d super admin role(s) given print, print_free and layout', $supers->count()));
 
         if ($from !== null) {
             $roles = DB::table('role_has_permissions as rp')
