@@ -76,7 +76,10 @@ final class TheFinanceBoardReadsTheBooksTest extends TestCase
     public function test_the_cheque_pipeline_sits_each_cheque_in_its_week_and_leaves_cleared_ones_out(): void
     {
         $before = app(FinanceBoard::class)->cheques();
-        $bank = Account::query()->where('money_kind', Account::BANK)->postable()->active()->orderBy('code')->firstOrFail();
+        $bank = Account::query()->create([
+            'company_id' => CompanyContext::id(), 'code' => '1102-FBRD', 'name_en' => 'Board bank', 'name_bn' => 'বোর্ডের ব্যাংক',
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT, 'money_kind' => Account::BANK,
+        ]);
 
         $this->cheque(Cheque::RECEIVED, '30000', '2026-11-29', $bank);
         $this->cheque(Cheque::ISSUED, '12000', '2026-11-20', $bank);
