@@ -304,7 +304,8 @@ final class SalesBoard
         $lastTo = $lastFrom->copy()->addDays($today->day - 1)->min($lastFrom->copy()->endOfMonth());
         $lines = fn (Carbon $a, Carbon $b) => SalesInvoiceLine::query()
             ->whereHas('invoice', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$a->toDateString(), $b->toDateString()]))
-            ->groupBy('product_id')->selectRaw('product_id, SUM(qty) as q, SUM(amount) as v')->get()->keyBy('product_id');
+            // ⓘ toBase(): মডেলের সংগ্রহে except() মডেলের id ধরে বাদ দেয় — এই যোগফলের সারিতে id নেই, তাই নতুন আর বাদ পড়া পণ্য শূন্য হত (দাবিটা ধরেছে)
+            ->groupBy('product_id')->selectRaw('product_id, SUM(qty) as q, SUM(amount) as v')->get()->toBase()->keyBy('product_id');
         $p0 = $lines($lastFrom, $lastTo);
         $p1 = $lines($from, $today);
         $common = $p0->keys()->intersect($p1->keys());
