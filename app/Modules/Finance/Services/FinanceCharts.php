@@ -59,6 +59,54 @@ final class FinanceCharts
         ];
     }
 
+    /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 3 — মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (10 নভেম্বর 2026 রাত):
+     * গ্রাহকের পাওনা (বয়স, DSO আর তার 6 মাসের রেখা), সরবরাহকারীর দেনা (মেয়াদ, DPO আর রেখা), তারল্য ও সুদের চার অনুপাত, নগদ চক্র।
+     * ⓘ ভাগ আর দিনগুলো এই ক্লাসের পুরনো চার্টের একই হিসাব ([[receivable()]], [[payable()]], [[cycle()]]) — দুই জায়গায় দুই সংখ্যা নয়।
+     * ⓘ নগদ অনুপাত = হাতের টাকা ÷ চলতি দেনা; দ্রুত অনুপাত = (পাওনা + টাকা) ÷ চলতি দেনা (মজুদ বাদ)।
+     * ⓘ সুদ শোধের ক্ষমতা = পরিচালন লাভ (নিট বিক্রি − বিক্রীত মালের খরচ − পরিচালন খরচ) ÷ সুদ খরচ, শেষ 90 দিনের; সুদ না থাকলে null।
+     *
+     * @return array<string, mixed>
+     */
+    public function position(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $user = auth()->user();
+        $wc = $this->workingCapital->on($today);
+        $owes = bcadd($wc['payable'], $wc['other'], 4);
+        $months = [];
+
+        for ($i = 5; $i >= 1; $i--) {
+            $months[] = $today->copy()->startOfMonth()->subMonthsNoOverflow($i - 1)->subDay();
+        }
+
+        $months[] = $today;
+        $trend = array_map(fn (Carbon $d) => $this->cycle($d), $months);
+
+        $from = $today->copy()->subDays(self::WINDOW_DAYS - 1);
+        $sales = $this->moved(StandardChart::NET_SALES, $from, $today);
+        $operating = bcsub(bcsub($sales, $this->moved([StandardChart::COST_OF_GOODS_SOLD], $from, $today), 4), $this->moved([StandardChart::OPERATING_EXPENSES], $from, $today), 4);
+        $interest = $this->moved([StandardChart::INTEREST_EXPENSE], $from, $today);
+        $before = $this->cycle($today->copy()->startOfMonth()->subDay());
+
+        return [
+            'receivable' => $user?->can('customer.report') ? $this->receivable($today) : null,
+            'payable' => $this->payable($today),
+            'dso' => array_map(fn (array $c) => $c['dso'], $trend),
+            'dpo' => array_map(fn (array $c) => $c['dpo'], $trend),
+            'dso_before' => $before['dso'],
+            'ratios' => [
+                'current' => $wc['ratio'],
+                'quick' => bccomp($owes, '0', 4) > 0 ? bcdiv(bcadd($wc['receivable'], $wc['money'], 4), $owes, 2) : null,
+                'cash' => bccomp($owes, '0', 4) > 0 ? bcdiv($wc['money'], $owes, 2) : null,
+                'interest' => bccomp($interest, '0', 4) > 0 ? bcdiv($operating, $interest, 1) : null,
+            ],
+            'cycle' => $this->cycle($today),
+            'cycle_before' => $before,
+            'daily_sales' => bcdiv($sales, (string) self::WINDOW_DAYS, 4),
+        ];
+    }
+
     /** @return array{months: list<array{month: string, in: string, out: string}>, net: string, out_heavy: list<string>} */
     private function cashflow(): array
     {

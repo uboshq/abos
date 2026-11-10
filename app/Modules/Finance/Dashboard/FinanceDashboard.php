@@ -403,6 +403,13 @@ final class FinanceDashboard implements ProvidesDashboard
                     'permission' => 'accounts.view',
                     'data' => fn (): array => ['forecast' => app(FinanceBoard::class)->forecast(), 'cashFlow' => app(FinanceBoard::class)->cashFlow()],
                 ],
+                // ⭐ সারি 3 — পাওনা, দেনা, তারল্য ও সুদের অনুপাত, নগদ চক্র ([[FinanceCharts::position()]])
+                [
+                    'view' => 'finance::dashboard.board-position',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['position' => app(FinanceCharts::class)->position()],
+                ],
                 // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
                 [
                     'view' => 'finance::dashboard.charts',
