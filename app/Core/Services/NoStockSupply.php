@@ -28,4 +28,9 @@ final class NoStockSupply implements StockSupply
     {
         return ['orders' => 0, 'received' => 0, 'passed' => 0, 'matched' => 0];
     }
+
+    public function returnSource(): ?string
+    {
+        return null;
+    }
 }

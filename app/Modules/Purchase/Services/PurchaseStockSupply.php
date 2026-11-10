@@ -167,4 +167,9 @@ final class PurchaseStockSupply implements StockSupply
             'matched' => $matched,
         ];
     }
+
+    public function returnSource(): ?string
+    {
+        return \App\Modules\Purchase\Models\PurchaseReturn::STOCK_SOURCE;
+    }
 }

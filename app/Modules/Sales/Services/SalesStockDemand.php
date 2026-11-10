@@ -76,4 +76,9 @@ final class SalesStockDemand implements StockDemand
             ->selectRaw('COALESCE(SUM(subtotal - COALESCE(discount, 0) - COALESCE(cost_of_goods, 0)), 0) as gp')
             ->value('gp') ?? '0');
     }
+
+    public function returnSource(): ?string
+    {
+        return \App\Modules\Sales\Models\SalesReturn::STOCK_SOURCE;
+    }
 }

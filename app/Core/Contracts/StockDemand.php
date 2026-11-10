@@ -32,4 +32,7 @@ interface StockDemand
 
     /** গ্রস লাভ — বসানো বিক্রয় বিলের (উপমোট − ছাড়) − বিক্রীত মালের খরচ; GMROI-এর লব */
     public function grossProfit(string $from, string $to): string;
+
+    /** ⓘ গ্রাহক-ফেরত মাল মজুদে কোন উৎস-নামে ঢোকে (মজুদের চলাচলের source_type) — বিক্রয় না থাকলে null */
+    public function returnSource(): ?string;
 }

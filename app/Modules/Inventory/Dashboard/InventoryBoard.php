@@ -1083,6 +1083,295 @@ final class InventoryBoard
         ];
     }
 
+    /**
+     * ⭐ মজুদের বয়স · গুদাম ধরে — আজকের মাল কবে ঢুকেছিল, FIFO ধরে: যা আছে তা সবচেয়ে নতুন ঢোকাগুলো থেকে (আন্তর্জাতিক প্রচলিত অনুমান)।
+     * ⓘ ভাগ টাকায় (কেনা দামে): 0–30, 31–60, 61–90, 90+ দিন; শতাংশ পূর্ণসংখ্যায়, যোগফল 100।
+     *
+     * @return list<array{name: string, parts: array{0: int, 1: int, 2: int, 3: int}}>
+     */
+    public function ageing(): array
+    {
+        $today = Carbon::today();
+        $base = $this->snapshot()->keyBy('id');
+        $out = [];
+
+        foreach ($this->warehouses() as $w) {
+            $have = $this->warehouseSnapshot((int) $w->id)
+                ->filter(fn (Product $p) => $base->has((int) $p->id) && bccomp((string) $p->getAttribute('on_hand_qty'), '0', 4) > 0)
+                ->mapWithKeys(fn (Product $p) => [(int) $p->id => (string) $p->getAttribute('on_hand_qty')]);
+
+            if ($have->isEmpty()) {
+                continue;
+            }
+
+            $ins = StockMovement::query()->where('warehouse_id', $w->id)->whereIn('product_id', $have->keys()->all())
+                ->groupBy('product_id', 'trx_date')
+                ->havingRaw('SUM(floor_change + unplaced_change) > 0')
+                ->selectRaw('product_id, trx_date, SUM(floor_change + unplaced_change) as qty')
+                ->orderByDesc('trx_date')->get()->groupBy('product_id');
+
+            $buckets = ['0', '0', '0', '0'];
+
+            foreach ($have as $id => $left) {
+                $p = $base[$id];
+
+                foreach ($ins->get($id, collect()) as $in) {
+                    if (bccomp($left, '0', 4) <= 0) {
+                        break;
+                    }
+
+                    $take = bccomp((string) $in->qty, $left, 4) < 0 ? (string) $in->qty : $left;
+                    $age = (int) Carbon::parse($in->trx_date)->diffInDays($today);
+                    $k = $age <= 30 ? 0 : ($age <= 60 ? 1 : ($age <= 90 ? 2 : 3));
+                    $buckets[$k] = bcadd($buckets[$k], self::valueOf($p, $take), 4);
+                    $left = bcsub($left, $take, 4);
+                }
+
+                // ⓘ ঢোকার খাতা নেই এমন মাল (প্রারম্ভিক জের) — সবচেয়ে পুরনো ঘরে
+                if (bccomp($left, '0', 4) > 0) {
+                    $buckets[3] = bcadd($buckets[3], self::valueOf($p, $left), 4);
+                }
+            }
+
+            $out[] = ['name' => (string) $w->drillLabel(), 'parts' => self::percents($buckets)];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ সরবরাহকারী — সময়মতো পুরো মাল (OTIF), লিড টাইম আর কেনার টাকা · গত 90 দিন ([[StockSupply::suppliers()]])।
+     *
+     * @return list<array{name: string, otif: ?int, lead: ?int, value: string}>
+     */
+    public function suppliers(): array
+    {
+        return $this->supply->suppliers(Carbon::today()->subDays(89)->toDateString(), Carbon::today()->toDateString());
+    }
+
+    /**
+     * ⭐ ঢোকা ও বেরোনো · 30 দিন — দিনে কত টাকার মাল ঢুকল আর বেরোল (কেনা দামে)।
+     * ⓘ "সব গুদাম" দেখলে গুদাম-বদলি বাদ — ভেতরের নড়াচড়া, ঢোকা-বেরোনো নয়; এক গুদাম বাছলে বদলিও গোনে।
+     * ⓘ কোন বারে একদিনও মাল ঢোকেনি (বাকি দিনে ঢুকেছে) — নমুনার "শুক্রবার মাল ঢোকে না"।
+     *
+     * @return array{days: list<array{date: string, in: string, out: string}>, in: string, out: string, quiet: ?int}
+     */
+    public function dailyFlow(): array
+    {
+        $from = Carbon::today()->subDays(29);
+        $snap = $this->snapshot()->keyBy('id');
+        $rows = StockMovement::query()
+            ->where('trx_date', '>=', $from->toDateString())
+            ->tap(fn ($q) => $this->narrow($q))
+            ->when($this->picked()['warehouse'] === null, fn ($q) => $q->where(fn ($x) => $x->whereNull('source_type')->orWhere('source_type', '<>', StockTransfer::STOCK_SOURCE)))
+            ->groupBy('product_id', 'trx_date')
+            ->selectRaw('product_id, trx_date, SUM(CASE WHEN floor_change + unplaced_change > 0 THEN floor_change + unplaced_change ELSE 0 END) as qin, SUM(CASE WHEN floor_change + unplaced_change < 0 THEN -(floor_change + unplaced_change) ELSE 0 END) as qout')
+            ->get();
+
+        $days = [];
+
+        for ($d = $from->copy(); $d->lte(Carbon::today()); $d->addDay()) {
+            $days[$d->toDateString()] = ['date' => $d->toDateString(), 'in' => '0', 'out' => '0'];
+        }
+
+        foreach ($rows as $r) {
+            $p = $snap[(int) $r->product_id] ?? null;
+            $key = substr((string) $r->trx_date, 0, 10);
+
+            if (! $p instanceof Product || ! isset($days[$key])) {
+                continue;
+            }
+
+            $days[$key]['in'] = bcadd($days[$key]['in'], self::valueOf($p, (string) $r->qin), 4);
+            $days[$key]['out'] = bcadd($days[$key]['out'], self::valueOf($p, (string) $r->qout), 4);
+        }
+
+        $byWeekday = [];
+
+        foreach ($days as $d) {
+            $wd = Carbon::parse($d['date'])->dayOfWeek;
+            $byWeekday[$wd] = ($byWeekday[$wd] ?? false) || bccomp($d['in'], '0', 4) > 0;
+        }
+
+        $quiet = array_keys(array_filter($byWeekday, fn (bool $any) => ! $any));
+        $sum = fn (string $k) => array_reduce($days, fn (string $c, array $d) => bcadd($c, $d[$k], 4), '0');
+
+        return [
+            'days' => array_values($days),
+            'in' => $sum('in'),
+            'out' => $sum('out'),
+            'quiet' => count($quiet) === 1 && in_array(true, $byWeekday, true) ? $quiet[0] : null,
+        ];
+    }
+
+    /**
+     * ⭐ গুদামের জায়গা কতটা ভরা — আজকের মাল (মূল এককে) ÷ গুদামের ধারণক্ষমতা ([[Warehouse]]-এর capacity_qty)।
+     * ⓘ ধারণক্ষমতা বসানো না থাকলে শতাংশ নয় — null, আর ঘরে "বসানো নেই"; আন্দাজ নয়। 85%-এর ওপরে মাল রাখা ও খোঁজা কঠিন (প্রচলিত সীমা)।
+     *
+     * @return list<array{name: string, pct: ?int, edit: string}>
+     */
+    public function space(): array
+    {
+        $out = [];
+
+        foreach ($this->warehouses() as $w) {
+            $held = $this->warehouseSnapshot((int) $w->id)->reduce(fn (string $c, Product $p) => bccomp((string) $p->getAttribute('on_hand_qty'), '0', 4) > 0 ? bcadd($c, (string) $p->getAttribute('on_hand_qty'), 4) : $c, '0');
+            $cap = $w->capacity_qty === null ? null : (string) $w->capacity_qty;
+
+            $out[] = [
+                'name' => (string) $w->drillLabel(),
+                'pct' => $cap === null || bccomp($cap, '0', 4) <= 0 ? null : (int) round((float) bcdiv(bcmul($held, '100', 4), $cap, 4)),
+                'edit' => self::link('inventory.warehouse.edit', [$w]),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ মাল ঢোকার ধাপ · তিন-দিক মিলান — গত 30 দিনের ক্রয় আদেশ → মাল এসেছে → মান যাচাই পাস → বিল মিলেছে ([[StockSupply::receivingFunnel()]]),
+     * আর এখন বিল না আসা চালান ([[StockSupply::unbilledReceipts()]])।
+     *
+     * @return array{steps: array{orders: int, received: int, passed: int, matched: int}, unbilled: array{receipts: int, value: string, supplier: string}}
+     */
+    public function receiving(): array
+    {
+        return [
+            'steps' => $this->supply->receivingFunnel(Carbon::today()->subDays(29)->toDateString(), Carbon::today()->toDateString()),
+            'unbilled' => $this->supply->unbilledReceipts(),
+        ];
+    }
+
+    /**
+     * ⭐ গুদাম-বদলি · পথে — রওনা হয়েছে, পৌঁছায়নি; পুরনোটা আগে। দিন 2-এর বেশি হলে লাল (সমস্যা কেন্দ্রের একই সীমা)।
+     *
+     * @return list<array{from: string, to: string, days: int, qty: string, value: string}>
+     */
+    public function inTransit(int $limit = 3): array
+    {
+        $snap = $this->snapshot()->keyBy('id');
+        $w = $this->picked()['warehouse'];
+
+        return StockTransfer::query()->onTheWay()->with(['lines', 'fromWarehouse', 'toWarehouse'])
+            ->when($w !== null, fn ($q) => $q->where(fn ($x) => $x->where('from_warehouse_id', $w)->orWhere('to_warehouse_id', $w)))
+            ->orderBy('dispatched_at')->limit($limit)->get()
+            ->map(function (StockTransfer $t) use ($snap): array {
+                $qty = '0';
+                $value = '0';
+
+                foreach ($t->lines as $line) {
+                    $qty = bcadd($qty, (string) $line->qty, 4);
+                    $p = $snap[(int) $line->product_id] ?? null;
+                    $value = bcadd($value, $p instanceof Product ? self::valueOf($p, (string) $line->qty) : '0', 4);
+                }
+
+                return [
+                    'from' => (string) ($t->fromWarehouse?->drillLabel() ?? ''),
+                    'to' => (string) ($t->toWarehouse?->drillLabel() ?? ''),
+                    'days' => $t->dispatched_at === null ? 0 : (int) Carbon::parse($t->dispatched_at)->startOfDay()->diffInDays(Carbon::today()),
+                    'qty' => $qty,
+                    'value' => $value,
+                ];
+            })->values()->all();
+    }
+
+    /**
+     * ⭐ নষ্ট, ফেরত ও আটকে রাখা মাল · এ মাস — কেনা দামে।
+     * ⓘ মেয়াদোত্তীর্ণ = মজুদ-সমন্বয়ে বাদ দেওয়া লট, যার মেয়াদ বাদ দেওয়ার দিনে বা আগে শেষ; বাকি সমন্বয়ে কমা = ভাঙা/নষ্ট ([[writeOffs()]]-এর একই কারণগুলো)।
+     * ⓘ গ্রাহক ফেরত আর সরবরাহকারীকে ফেরত — বিক্রয়/ক্রয়ের ফেরত-চলাচল (উৎস-নাম চুক্তি থেকে); মান যাচাইয়ে আটকে = আজ আটকে রাখা মাল।
+     *
+     * @return array{broken: string, expired: string, returned_in: ?string, held: string, returned_out: ?string, last_month: string, reason: string}
+     */
+    public function damage(): array
+    {
+        $snap = $this->snapshot()->keyBy('id');
+        $month = Carbon::today()->startOfMonth()->toDateString();
+        $today = Carbon::today()->toDateString();
+        $worth = fn ($m, string $qty): string => ($p = $snap[(int) $m->product_id] ?? null) instanceof Product ? self::valueOf($p, $qty) : '0';
+
+        $reasons = ReasonCode::query()->where('context', ReasonCode::STOCK_ADJUSTMENT)->get()->keyBy('id');
+        $written = StockMovement::query()->with('batch')->whereIn('reason_code_id', $reasons->keys()->all() ?: [0])
+            ->tap(fn ($q) => $this->narrow($q))
+            ->where('floor_change', '<', 0)->whereBetween('trx_date', [$month, $today])->get();
+
+        $broken = '0';
+        $expired = '0';
+        $byReason = [];
+
+        foreach ($written as $m) {
+            $v = $worth($m, ltrim((string) $m->floor_change, '-'));
+            $lapsed = $m->batch?->expiry_date !== null && substr((string) $m->batch->expiry_date, 0, 10) <= substr((string) $m->trx_date, 0, 10);
+
+            if ($lapsed) {
+                $expired = bcadd($expired, $v, 4);
+            } else {
+                $broken = bcadd($broken, $v, 4);
+            }
+
+            $byReason[(int) $m->reason_code_id] = bcadd($byReason[(int) $m->reason_code_id] ?? '0', $v, 4);
+        }
+
+        uasort($byReason, fn (string $a, string $b) => bccomp($b, $a, 4));
+        $top = $byReason === [] ? null : $reasons->get(array_key_first($byReason));
+
+        $moved = function (?string $source, int $sign) use ($month, $today, $worth): ?string {
+            if ($source === null) {
+                return null;
+            }
+
+            return StockMovement::query()->where('source_type', $source)
+                ->tap(fn ($q) => $this->narrow($q))
+                ->whereBetween('trx_date', [$month, $today])
+                ->get(['product_id', 'floor_change', 'unplaced_change'])
+                ->reduce(function (string $c, StockMovement $m) use ($sign, $worth): string {
+                    $q = bcmul(bcadd((string) $m->floor_change, (string) $m->unplaced_change, 4), (string) $sign, 4);
+
+                    return bccomp($q, '0', 4) > 0 ? bcadd($c, $worth($m, $q), 4) : $c;
+                }, '0');
+        };
+
+        $held = StockMovement::query()->tap(fn ($q) => $this->narrow($q))
+            ->groupBy('product_id')->havingRaw('SUM(hold_change) > 0')
+            ->selectRaw('product_id, SUM(hold_change) as qty')->get()
+            ->reduce(fn (string $c, $r) => bcadd($c, $worth($r, (string) $r->qty), 4), '0');
+
+        return [
+            'broken' => $broken,
+            'expired' => $expired,
+            'returned_in' => $moved($this->demand->returnSource(), 1),
+            'held' => $held,
+            'returned_out' => $moved($this->supply->returnSource(), -1),
+            'last_month' => $this->writeOffs()[1],
+            'reason' => $top === null ? '' : (string) $top->drillLabel(),
+        ];
+    }
+
+    /**
+     * ⓘ টাকার ভাগগুলো পূর্ণসংখ্যা শতাংশে, যোগফল ঠিক 100 (বড় ভগ্নাংশ-বাকি আগে) — সব শূন্য হলে সব শূন্য।
+     *
+     * @param  list<string>  $values
+     * @return list<int>
+     */
+    private static function percents(array $values): array
+    {
+        $total = array_reduce($values, fn (string $c, string $v) => bcadd($c, $v, 4), '0');
+
+        if (bccomp($total, '0', 4) <= 0) {
+            return array_fill(0, count($values), 0);
+        }
+
+        $raw = array_map(fn (string $v) => (float) $v * 100 / (float) $total, $values);
+        $floor = array_map(fn (float $r) => (int) floor($r), $raw);
+        $order = array_keys($raw);
+        usort($order, fn (int $a, int $b) => ($raw[$b] - $floor[$b]) <=> ($raw[$a] - $floor[$a]));
+
+        for ($i = 0, $left = 100 - array_sum($floor); $left > 0; $i++, $left--) {
+            $floor[$order[$i % count($order)]]++;
+        }
+
+        return $floor;
+    }
+
     /** ⓘ লট আর চলাচলের প্রশ্নে ছাঁকনি — বাছা গুদাম, আর ব্র্যান্ড/শ্রেণি/ABC বাছা থাকলে কেবল সেই পণ্যগুলো */
     private function narrow($query): void
     {

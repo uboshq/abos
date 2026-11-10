@@ -28,4 +28,9 @@ final class NoStockDemand implements StockDemand
     {
         return '0';
     }
+
+    public function returnSource(): ?string
+    {
+        return null;
+    }
 }

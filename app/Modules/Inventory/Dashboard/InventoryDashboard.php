@@ -97,6 +97,18 @@ final class InventoryDashboard implements ProvidesDashboard
                     'permission' => 'inventory.stock.view',
                     'data' => fn (): array => ['trend' => $once()->trend(), 'warehouses' => $once()->byWarehouse(), 'brands' => $once()->byBrand()],
                 ],
+                [
+                    'view' => 'inventory::dashboard.board-yard',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['ageing' => $once()->ageing(), 'suppliers' => $once()->suppliers(), 'flow' => $once()->dailyFlow(), 'space' => $once()->space()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-intake',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['receiving' => $once()->receiving(), 'transit' => $once()->inTransit(), 'damage' => $once()->damage()],
+                ],
             ],
         );
     }

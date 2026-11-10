@@ -39,4 +39,7 @@ interface StockSupply
      * @return array{orders: int, received: int, passed: int, matched: int}
      */
     public function receivingFunnel(string $from, string $to): array;
+
+    /** ⓘ সরবরাহকারীকে ফেরত মাল মজুদ থেকে কোন উৎস-নামে বেরোয় (মজুদের চলাচলের source_type) — ক্রয় না থাকলে null */
+    public function returnSource(): ?string;
 }
