@@ -358,7 +358,8 @@ final class InventoryDashboard implements ProvidesDashboard
                 [
                     'view' => 'inventory::dashboard.board-flow',
                     'place' => 'top',
-                    'permission' => 'inventory.stock.view',
+                    // ⛔ মজুদের মূল্যের হিসাব কেনা দামে — খরচের চাবি ছাড়া সারিটাই নেই ([[FieldSecurity]], পণ্যের ক্রয়মূল্যের একই পাহারা)
+                    'permission' => ['inventory.stock.view', 'inventory.cost.view'],
                     'data' => fn (): array => ['roll' => $once()->rollForward(), 'cover' => $once()->coverHistogram(), 'abc' => $once()->abcXyz()],
                 ],
                 [
@@ -370,7 +371,8 @@ final class InventoryDashboard implements ProvidesDashboard
                 [
                     'view' => 'inventory::dashboard.board-trend',
                     'place' => 'top',
-                    'permission' => 'inventory.stock.view',
+                    // ⛔ মজুদের দাম, গুদাম আর ব্র্যান্ড ধরে মূল্য — সবটাই কেনা দামে; খরচের চাবি ছাড়া সারিটাই নেই
+                    'permission' => ['inventory.stock.view', 'inventory.cost.view'],
                     'data' => fn (): array => ['trend' => $once()->trend(), 'warehouses' => $once()->byWarehouse(), 'brands' => $once()->byBrand()],
                 ],
                 [

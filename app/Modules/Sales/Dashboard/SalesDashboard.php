@@ -270,7 +270,10 @@ final class SalesDashboard implements ProvidesDashboard
                     'data' => function (): array {
                         $board = app(SalesBoard::class);
 
-                        return ['ladder' => $board->profitLadder(), 'target' => $board->monthTarget(), 'products' => $board->products()];
+                        // ⛔ সিঁড়িতে কেনা দাম আর গ্রস লাভ — খরচের চাবি ছাড়া নয় (বিলের ক্রয়মূল্যের একই পাহারা, sales.cost.view)
+                        $ladder = auth()->user()?->can('sales.cost.view') ? $board->profitLadder() : null;
+
+                        return ['ladder' => $ladder, 'target' => $board->monthTarget(), 'products' => $board->products()];
                     },
                 ],
                 // ⭐ সারি 3 — লক্ষ্যের পথে জমা বিক্রি আর PVM সেতু

@@ -67,6 +67,7 @@ return [
         'n_value' => ':n · :value',
     ],
     'r2' => [
+        'no_cost' => 'You do not hold the key to see cost and profit.',
         'ladder' => 'Sales to net profit · this month',
         'net_head' => 'Net profit :value · :pct% of sales',
         'loss_head' => 'Net loss :value',

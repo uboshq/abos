@@ -60,7 +60,9 @@ final class DashboardEngine
             search: $definition->search !== null && $user->can($definition->search['permission']) ? $definition->search : null,
             // ⓘ মডিউলের নিজের অংশ — চাবি থাকলে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন)
             sections: array_values(array_filter($definition->sections,
-                fn (array $section) => ! isset($section['permission']) || $user->can($section['permission']))),
+                // ⓘ একটা চাবি বা কয়েকটা — কয়েকটা হলে সবগুলোই লাগে (মজুদের দামের সারি: মজুদ দেখা + খরচ দেখা)
+                fn (array $section) => ! isset($section['permission'])
+                    || collect((array) $section['permission'])->every(fn (string $key) => $user->can($key)))),
             board: $definition->board,
         );
     }

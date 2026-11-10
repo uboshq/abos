@@ -264,14 +264,16 @@ final class InventoryBoard
         $turns = $dio !== null && bccomp($dio, '0', 0) > 0 ? bcdiv('365', $dio, 1) : null;
         $risk = bcadd(collect($this->expiringLots(60))->reduce(fn (string $c, array $l) => bcadd($c, $l['value'], 4), '0'), $this->notMoved(90)['value'], 4);
         $warehouses = Warehouse::query()->where('is_active', true)->count();
-        $costShown = $snap->first()?->getAttributes() !== null && array_key_exists('avg_cost', $snap->first()->getAttributes());
+        $costShown = \App\Core\Security\FieldSecurity::visible(StockMovement::class, 'unit_cost')
+            && $snap->first()?->getAttributes() !== null && array_key_exists('avg_cost', $snap->first()->getAttributes());
 
         $today = Carbon::today();
         $fill = $this->demand->fillRate($today->copy()->subDays(30)->toDateString(), $today->toDateString());
         $ira = $this->recordAccuracy();
         // ⓘ GMROI = গত 365 দিনের গ্রস লাভ ÷ আজকের মজুদ (কেনা দামে) — গড় মজুদের সবচেয়ে কাছের সহজ মাপ
         $gp = $this->demand->grossProfit($today->copy()->subDays(365)->toDateString(), $today->toDateString());
-        $gmroi = bccomp($cost, '0', 4) > 0 ? bcdiv($gp, $cost, 2) : null;
+        // ⛔ লাভ ÷ কেনা দাম — খরচ ছাড়া এটাও খরচের কথা বলে দেয়
+        $gmroi = ! $costShown ? \App\Core\Security\FieldSecurity::mask() : (bccomp($cost, '0', 4) > 0 ? bcdiv($gp, $cost, 2) : null);
 
         $rows = [
             ['label' => __('inventory::board.v.products'), 'value' => $snap->count().' · '.$warehouses, 'tone' => 'var(--color-dash-ffffff)'],
@@ -900,6 +902,11 @@ final class InventoryBoard
     /** ⓘ নমুনার রূপ: কোটির ওপরে "৳8.50 কো", লাখের ওপরে "৳4.6 লা", নিচে হাজারে "৳38k" — ইংরেজি অঙ্ক */
     public static function short(string $amount): string
     {
+        // ⛔ এই বোর্ডের প্রতিটা টাকা কেনা দামে — খরচের চাবি ছাড়া অঙ্কের জায়গায় "আছে, কিন্তু আপনার জন্য নয়" চিহ্ন ([[FieldSecurity::mask()]])
+        if (! \App\Core\Security\FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return \App\Core\Security\FieldSecurity::mask();
+        }
+
         $neg = bccomp($amount, '0', 4) < 0;
         $a = ltrim($amount, '-');
         $sign = $neg ? '−' : '';

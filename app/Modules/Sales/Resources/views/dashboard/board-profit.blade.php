@@ -5,7 +5,10 @@
 @php
     $card = 'background: var(--color-dash-ffffff); border-radius: 1.125rem; padding: 1.125rem 1.25rem; box-shadow: 0 1px 3px var(--color-dash-17-24-39-a06); display: flex; flex-direction: column; color: var(--color-dash-111827)';
     $short = fn (string $v) => \App\Modules\Sales\Dashboard\SalesBoard::short($v);
+    // ⛔ কেনা দাম আর গ্রস লাভ — খরচের চাবি (sales.cost.view) ছাড়া সিঁড়িটা আসে না (null), ঘরে কেবল সেই কথা
     $l = $ladder;
+    $bars = [];
+    if ($l !== null) {
     $sales = (float) $l['sales'];
     $pc = fn (string $v) => $sales > 0 ? number_format(abs((float) $v) / $sales * 100, 1, '.', '').'%' : '';
     $gross = (float) $l['gross'];
@@ -26,6 +29,7 @@
         ['t' => __('sales::board.r2.other_income'), 'v' => (bccomp($l['other_income'], '0', 4) >= 0 ? '+' : '').$short($l['other_income']), 'pc' => $pc($l['other_income'])] + $step($r3, $r4) + ['bg' => ['var(--color-dash-67e8f9)', 'var(--color-dash-0891b2)'], 'c' => 'var(--color-dash-0e7490)'],
         ['t' => __('sales::board.r2.net'), 'v' => $short($l['net']), 'pc' => $pc($l['net']), 'h' => max(2, $px(abs($r4))), 'mb' => 0, 'bg' => ['var(--color-dash-c4b5fd)', 'var(--color-dash-7c3aed)'], 'c' => bccomp($l['net'], '0', 4) < 0 ? 'var(--color-dash-dc2626)' : 'var(--color-dash-6d28d9)'],
     ];
+    }
 
     $t = $target;
     $tp = $t['pct'] ?? 0;
@@ -37,6 +41,10 @@
 @endphp
 <div data-sales-board-profit style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; width: 100%">
     <section data-sales-ladder style="grid-column: span 2; {{ $card }} gap: 0.625rem; border-top: 0.25rem solid var(--color-dash-7c3aed)">
+        @if ($l === null)
+            <h2 style="margin: 0; font-size: 1.0625rem; font-weight: 800">{{ __('sales::board.r2.ladder') }}</h2>
+            <p data-sales-ladder-hidden style="margin: 0; font-size: 0.8125rem; color: var(--color-dash-6b7280)">{{ __('sales::board.r2.no_cost') }}</p>
+        @else
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1.0625rem; font-weight: 800">{{ __('sales::board.r2.ladder') }}</h2>
             <span style="font-size: 0.875rem; font-weight: 800; color: {{ bccomp($l['net'], '0', 4) < 0 ? 'var(--color-dash-dc2626)' : 'var(--color-dash-7c3aed)' }}">@if (bccomp($l['net'], '0', 4) < 0){{ __('sales::board.r2.loss_head', ['value' => $short(ltrim($l['net'], '-'))]) }}@else{{ __('sales::board.r2.net_head', ['value' => $short($l['net']), 'pct' => trim($pc($l['net']), '%') ?: '0']) }}@endif</span>
@@ -63,6 +71,7 @@
             <span style="background: var(--color-dash-fff7ed); border-radius: 0.625rem; padding: 0.375rem 0.5rem">{{ __('sales::board.r2.labour') }}<b style="display: block; font-size: 0.875rem; color: var(--color-dash-c2410c)">{{ $short($l['labour']) }}</b></span>
             <span style="background: linear-gradient(135deg, var(--color-dash-fed7aa), var(--color-dash-fdba74)); border-radius: 0.625rem; padding: 0.375rem 0.5rem">{{ __('sales::board.r2.direct') }}<b style="display: block; font-size: 0.875rem; color: var(--color-dash-7c2d12)">{{ $short($l['direct']) }}</b></span>
         </div>
+        @endif
     </section>
 
     <section data-sales-target style="border-radius: 1.125rem; padding: 1.125rem 1.25rem; background: linear-gradient(160deg, var(--color-dash-052e2b), var(--color-dash-065f46) 55%, var(--color-dash-0e7490)); color: var(--color-dash-ffffff); display: flex; flex-direction: column; gap: 0.5rem; align-items: center">
