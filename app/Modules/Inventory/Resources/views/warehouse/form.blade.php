@@ -63,6 +63,10 @@
 
                 <x-ui.field name="address_bn" :label="__('inventory::field.address_bn')"
                             :value="old('address_bn', $warehouse->address_bn)" />
+
+                {{-- ⭐ কতটা ধরে — মজুদের ড্যাশবোর্ডের "গুদামের জায়গা কতটা ভরা" (মালিকের চূড়ান্ত নমুনা, 10 নভেম্বর 2026 রাত) --}}
+                <x-ui.field name="capacity_qty" type="number" step="0.0001" min="0" :label="__('inventory::field.capacity_qty')"
+                            :value="old('capacity_qty', $warehouse->capacity_qty)" />
             </div>
 
             <label class="mt-3 flex min-h-(--spacing-touch) items-center gap-2 text-sm">

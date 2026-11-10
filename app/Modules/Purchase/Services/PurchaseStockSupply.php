@@ -96,4 +96,75 @@ final class PurchaseStockSupply implements StockSupply
 
         return ['receipts' => $rows->count(), 'value' => $total, 'supplier' => $top];
     }
+
+    /**
+     * ⓘ OTIF = কথা দেওয়া দিনে বা আগে এসেছে আর আদেশের পুরোটা এসেছে (এ পর্যন্ত গ্রহণ ≥ আদেশ) — যে গ্রহণের আদেশে দিন লেখা ছিল তার শতাংশ।
+     * ⓘ লিড টাইম = আদেশের দিন থেকে গ্রহণের দিন; টাকা = গ্রহণের লাইনের পরিমাণ × দর।
+     */
+    public function suppliers(string $from, string $to): array
+    {
+        $receipts = PurchaseReceipt::query()->with(['supplier', 'lines', 'order.lines'])
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereBetween('trx_date', [$from, $to])->get();
+
+        return $receipts->groupBy('supplier_id')->map(function ($rs) {
+            $promised = 0;
+            $good = 0;
+            $leads = [];
+            $value = '0';
+
+            foreach ($rs as $r) {
+                $value = bcadd($value, $r->lines->reduce(fn (string $c, $l) => bcadd($c, bcmul((string) $l->received_qty, (string) $l->rate, 4), 4), '0'), 4);
+                $order = $r->order;
+
+                if ($order === null) {
+                    continue;
+                }
+
+                $leads[] = \Illuminate\Support\Carbon::parse($order->trx_date)->diffInDays(\Illuminate\Support\Carbon::parse($r->trx_date));
+
+                if ($order->expected_on === null) {
+                    continue;
+                }
+
+                $promised++;
+                $onTime = substr((string) $r->trx_date, 0, 10) <= substr((string) $order->expected_on, 0, 10);
+                $ordered = $order->lines->reduce(fn (string $c, $l) => bcadd($c, (string) $l->ordered_qty, 4), '0');
+                $got = (string) DB::table('pur_receipt_lines as rl')->join('pur_receipts as r2', 'r2.id', '=', 'rl.purchase_receipt_id')
+                    ->where('r2.purchase_order_id', $order->id)->where('r2.status', '<>', DocumentStatus::CANCELLED)
+                    ->where('r2.trx_date', '<=', $r->trx_date)->sum('rl.received_qty');
+                $good += $onTime && bccomp($got, $ordered, 4) >= 0 ? 1 : 0;
+            }
+
+            return [
+                'name' => (string) ($rs->first()->supplier?->name() ?? ''),
+                'otif' => $promised === 0 ? null : (int) round($good * 100 / $promised),
+                'lead' => $leads === [] ? null : (int) round(array_sum($leads) / count($leads)),
+                'value' => $value,
+            ];
+        })->sort(fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4))->take(6)->values()->all();
+    }
+
+    public function receivingFunnel(string $from, string $to): array
+    {
+        $orders = PurchaseOrder::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from, $to])->pluck('id');
+        $receipts = PurchaseReceipt::query()->where('status', '<>', DocumentStatus::CANCELLED)->whereIn('purchase_order_id', $orders->all() ?: [0])->get(['id', 'purchase_order_id']);
+        $failed = \App\Modules\Inventory\Models\QualityInspection::query()
+            ->where('source_type', PurchaseReceipt::STOCK_SOURCE)->whereIn('source_id', $receipts->pluck('id')->all() ?: [0])
+            ->whereIn('status', [\App\Modules\Inventory\Models\QualityInspection::PENDING, \App\Modules\Inventory\Models\QualityInspection::QUARANTINE, \App\Modules\Inventory\Models\QualityInspection::REJECTED])
+            ->distinct()->pluck('source_id')->flip();
+        $passed = $receipts->reject(fn ($r) => $failed->has($r->id));
+        $matched = DB::table('pur_bill_lines as bl')->join('pur_bills as b', 'b.id', '=', 'bl.purchase_bill_id')
+            ->join('pur_receipt_lines as rl', 'rl.id', '=', 'bl.purchase_receipt_line_id')
+            ->whereIn('rl.purchase_receipt_id', $passed->pluck('id')->all() ?: [0])
+            ->whereNull('b.deleted_at')->where('b.match_state', \App\Modules\Purchase\Models\PurchaseBill::MATCH_MATCHED)
+            ->distinct()->count('rl.purchase_receipt_id');
+
+        return [
+            'orders' => $orders->count(),
+            'received' => $receipts->pluck('purchase_order_id')->unique()->count(),
+            'passed' => $passed->count(),
+            'matched' => $matched,
+        ];
+    }
 }

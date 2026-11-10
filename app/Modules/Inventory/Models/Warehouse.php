@@ -147,6 +147,8 @@ class Warehouse extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
         'address_en', 'address_bn', 'is_default', 'is_active', 'created_by',
+        // ⭐ কতটা ধরে, মূল এককে — মজুদের ড্যাশবোর্ডের "জায়গা কতটা ভরা" (মালিকের চূড়ান্ত নমুনা, 10 নভেম্বর 2026 রাত)
+        'capacity_qty',
     ];
 
     protected function casts(): array
@@ -154,6 +156,7 @@ class Warehouse extends Model implements Drillable
         return [
             'is_default' => 'boolean',
             'is_active' => 'boolean',
+            'capacity_qty' => 'decimal:4',
         ];
     }
 

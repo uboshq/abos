@@ -25,4 +25,18 @@ interface StockSupply
      * @return array{receipts: int, value: string, supplier: string}
      */
     public function unbilledReceipts(): array;
+
+    /**
+     * ⭐ সরবরাহকারী — সময়মতো পুরো মাল (OTIF %), গড় লিড টাইম (আদেশ থেকে গ্রহণ, দিন), কেনার টাকা; বড় ছয়জন।
+     *
+     * @return list<array{name: string, otif: ?int, lead: ?int, value: string}>
+     */
+    public function suppliers(string $from, string $to): array;
+
+    /**
+     * ⭐ মাল ঢোকার ধাপ — এই সময়ে ক্রয় আদেশ, মাল এসেছে, মান যাচাই পাস, বিল মিলেছে (তিন-দিক মিলান)।
+     *
+     * @return array{orders: int, received: int, passed: int, matched: int}
+     */
+    public function receivingFunnel(string $from, string $to): array;
 }

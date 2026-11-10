@@ -18,4 +18,14 @@ final class NoStockSupply implements StockSupply
     {
         return ['receipts' => 0, 'value' => '0', 'supplier' => ''];
     }
+
+    public function suppliers(string $from, string $to): array
+    {
+        return [];
+    }
+
+    public function receivingFunnel(string $from, string $to): array
+    {
+        return ['orders' => 0, 'received' => 0, 'passed' => 0, 'matched' => 0];
+    }
 }
