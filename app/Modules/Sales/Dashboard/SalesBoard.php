@@ -40,6 +40,18 @@ final class SalesBoard
      */
     public function problems(): array
     {
+        // ⓘ সারি 1 আর সারি 4 দুই জায়গাতেই লাগে — এক অনুরোধে একবারই গোনা (অনুরোধ, কোম্পানি ও দেখা শাখা ধরে; পরের অনুরোধে নতুন করে)
+        $key = spl_object_id(request()).'.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all');
+
+        return self::$problemsOnce[$key] ??= $this->countProblems();
+    }
+
+    /** @var array<string, list<array<string, string>>> */
+    private static array $problemsOnce = [];
+
+    /** @return list<array{key: string, n: string, detail: string, note: string, sev: string, href: string}> */
+    private function countProblems(): array
+    {
         $today = Carbon::today();
         $month = $today->copy()->startOfMonth()->toDateString();
         $out = [];
@@ -316,6 +328,131 @@ final class SalesBoard
             'from_label' => $months[$lastFrom->month].' 1–'.$lastTo->day,
             'to_label' => $months[$from->month].' 1–'.$today->day,
         ];
+    }
+
+    /**
+     * ⭐ সারি 4 — গ্রাহক ধরে রাখা: মাসে চালু দোকান (মাসে অন্তত একবার পাকা বিল) শেষ 5 মাস + এ মাস; ধরে রাখা = গত মাসে কেনা দোকানের কত শতাংশ
+     * এ মাসেও কিনেছে; নতুন = এ মাসেই প্রথম কেনা; ফিরে এল = গত মাসে কেনেনি অথচ আগে কিনেছিল, এ মাসে কিনেছে; 60 দিন কেনেনি = হারানো।
+     *
+     * @return array{months: list<array{month: int, shops: int}>, kept: ?int, new: int, back: int, lost: int}
+     */
+    public function retention(): array
+    {
+        $buyers = fn (Carbon $a, Carbon $b) => SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)
+            ->whereBetween('trx_date', [$a->toDateString(), $b->toDateString()])->distinct()->pluck('customer_id');
+        $months = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $m = Carbon::today()->startOfMonth()->subMonthsNoOverflow($i);
+            $months[] = ['month' => (int) $m->month, 'shops' => $buyers($m, $i === 0 ? Carbon::today() : $m->copy()->endOfMonth())->count()];
+        }
+
+        $thisFrom = Carbon::today()->startOfMonth();
+        $now = $buyers($thisFrom, Carbon::today());
+        $last = $buyers($thisFrom->copy()->subMonthNoOverflow(), $thisFrom->copy()->subDay());
+        $before = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '<', $thisFrom->copy()->subMonthNoOverflow()->toDateString())
+            ->whereIn('customer_id', $now->all() ?: [0])->distinct()->pluck('customer_id');
+
+        return [
+            'months' => $months,
+            'kept' => $last->isEmpty() ? null : (int) round($last->intersect($now)->count() * 100 / $last->count()),
+            'new' => $now->diff($last)->diff($before)->count(),
+            'back' => $now->diff($last)->intersect($before)->count(),
+            'lost' => $this->lostCustomers()[0],
+        ];
+    }
+
+    /**
+     * ⭐ আদায়ের দক্ষতা · SR ধরে — বিলের SR (বিল যিনি লিখেছেন) ধরে: দক্ষতা = এ মাসে আদায় ÷ (এ মাসে আদায় + এখনো মেয়াদ পেরোনো বাকি),
+     * আর DSO = এখনকার বাকি ÷ শেষ 90 দিনের বিক্রি × 90। ⓘ CEI-এর প্রচলিত সংক্ষিপ্ত রূপ — মাস-শুরুর বাকির ছবি খাতায় SR ধরে রাখা নেই।
+     *
+     * @return array{rows: list<array{name: string, pct: ?int, dso: ?int}>, total: ?int}
+     */
+    public function collectionEffectiveness(): array
+    {
+        $month = Carbon::today()->startOfMonth()->toDateString();
+        $since = Carbon::today()->subDays(89)->toDateString();
+        $invoices = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->withCollected()->where('trx_date', '>=', Carbon::today()->subYear()->toDateString())->get();
+        $applied = \App\Modules\Sales\Models\CollectionApplication::query()
+            ->whereHas('collection', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '>=', $month))
+            ->whereIn('target_invoice_id', $invoices->pluck('id')->all() ?: [0])
+            ->groupBy('target_invoice_id')->selectRaw('target_invoice_id, SUM(amount) as v')->pluck('v', 'target_invoice_id');
+        $names = \App\Models\User::query()->whereIn('id', $invoices->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
+        $today = Carbon::today()->toDateString();
+        $rows = [];
+        $tc = 0.0;
+        $to = 0.0;
+
+        foreach ($invoices->groupBy('created_by') as $sr => $list) {
+            $collected = $list->sum(fn ($i) => (float) ($applied[$i->id] ?? 0));
+            $overdue = $list->filter(fn ($i) => $i->due_on !== null && substr((string) $i->due_on, 0, 10) < $today)->sum(fn ($i) => max(0, (float) $i->dueAmount()));
+            $due = $list->sum(fn ($i) => max(0, (float) $i->dueAmount()));
+            $sold = $list->filter(fn ($i) => substr((string) $i->trx_date, 0, 10) >= $since)->sum(fn ($i) => (float) $i->total);
+
+            if ($collected + $overdue <= 0) {
+                continue;
+            }
+
+            $tc += $collected;
+            $to += $overdue;
+            $rows[] = ['name' => (string) ($names[$sr] ?? __('sales::board.r4.nobody')), 'pct' => (int) round($collected * 100 / ($collected + $overdue)),
+                'dso' => $sold > 0 ? (int) round($due / $sold * 90) : null];
+        }
+
+        usort($rows, fn (array $a, array $b) => $b['pct'] <=> $a['pct']);
+
+        return ['rows' => array_slice($rows, 0, 7), 'total' => $tc + $to > 0 ? (int) round($tc * 100 / ($tc + $to)) : null];
+    }
+
+    /**
+     * ⭐ অর্ডার থেকে টাকা (ফানেল) · এ মাস — অর্ডার এসেছে → অনুমোদিত (ডেলিভারি অর্ডার হিসাবের অনুমোদন পেরিয়েছে) → চালান রওনা → বিল হয়েছে → টাকা এসেছে।
+     *
+     * @return array<string, string>
+     */
+    public function orderToCash(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $to = Carbon::today()->toDateString();
+        $range = [$from, $to];
+
+        return [
+            'ordered' => (string) SalesOrder::query()->where('status', '<>', DocumentStatus::CANCELLED)->whereBetween('trx_date', $range)->sum('total'),
+            'approved' => (string) DeliveryOrder::query()->whereIn('status', [DeliveryOrderStatus::ACCOUNTS_APPROVED, DeliveryOrderStatus::DEPOT_CHECK, DeliveryOrderStatus::INVOICED])->whereBetween('trx_date', $range)->sum('total'),
+            'dispatched' => (string) \App\Modules\Sales\Models\DeliveryChallan::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', $range)->sum('total'),
+            'invoiced' => (string) SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', $range)->sum('total'),
+            'collected' => $this->analytics->collection($from, $to),
+        ];
+    }
+
+    /**
+     * ⭐ ফেরত ও ছাড় · কারণ ধরে · এ মাস — ফেরত কারণের কোড ধরে (বড় তিনটা), আর ছাড় তিন রকম: বিলের লাইনের ছাড়, প্রচারের ছাড়, আদায়ে নগদ ছাড় (খাতা)।
+     *
+     * @return array{rows: list<array{name: string, value: string, kind: string}>, return_pct: ?string, discount_pct: ?string}
+     */
+    public function returnsAndDiscounts(): array
+    {
+        $from = Carbon::today()->startOfMonth();
+        $range = [$from->toDateString(), Carbon::today()->toDateString()];
+        $returns = \App\Modules\Sales\Models\SalesReturn::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', $range)
+            ->groupBy('reason_code_id')->selectRaw('reason_code_id, SUM(subtotal) as v')->get();
+        $reasons = \App\Modules\MasterData\Models\ReasonCode::query()->whereIn('id', $returns->pluck('reason_code_id')->filter()->all() ?: [0])->get()
+            ->mapWithKeys(fn ($r) => [(int) $r->id => $r->drillLabel()]);
+        $rows = $returns->sortByDesc(fn ($r) => (float) $r->v)->take(3)
+            ->map(fn ($r) => ['name' => (string) ($reasons[(int) $r->reason_code_id] ?? __('sales::board.r4.no_reason')), 'value' => bcadd((string) $r->v, '0', 4), 'kind' => 'return'])->values()->all();
+        $lines = SalesInvoiceLine::query()->whereHas('invoice', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', $range))
+            ->selectRaw('COALESCE(SUM(discount), 0) as d, COALESCE(SUM(promotion_discount), 0) as p')->first();
+        $cash = self::moved(\App\Modules\Accounts\Services\StandardChart::COLLECTION_DISCOUNT, $from, Carbon::today());
+        $lineDiscount = bcsub((string) ($lines->d ?? '0'), (string) ($lines->p ?? '0'), 4);
+
+        foreach ([['volume', bccomp($lineDiscount, '0', 4) > 0 ? $lineDiscount : '0'], ['promotion', (string) ($lines->p ?? '0')], ['cash', ltrim($cash, '-')]] as [$k, $v]) {
+            $rows[] = ['name' => (string) __('sales::board.r4.discount_'.$k), 'value' => bcadd($v, '0', 4), 'kind' => 'discount'];
+        }
+
+        $sales = (float) $this->analytics->totals($range[0], $range[1])['net'];
+        $ret = collect($rows)->where('kind', 'return')->sum(fn ($r) => (float) $r['value']);
+        $disc = collect($rows)->where('kind', 'discount')->sum(fn ($r) => (float) $r['value']);
+
+        return ['rows' => $rows, 'return_pct' => $sales > 0 ? number_format($ret / $sales * 100, 1, '.', '') : null, 'discount_pct' => $sales > 0 ? number_format($disc / $sales * 100, 1, '.', '') : null];
     }
 
     /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */

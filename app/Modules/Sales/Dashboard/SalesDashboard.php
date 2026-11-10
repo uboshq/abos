@@ -284,6 +284,18 @@ final class SalesDashboard implements ProvidesDashboard
                         return ['cumulative' => $board->cumulative(), 'pvm' => $board->pvm()];
                     },
                 ],
+                // ⭐ সারি 4 — গ্রাহক ধরে রাখা, আদায়ের দক্ষতা, অর্ডার থেকে টাকা, ফেরত ও ছাড়
+                [
+                    'view' => 'sales::dashboard.board-customers',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['retention' => $board->retention(), 'cei' => $board->collectionEffectiveness(), 'o2c' => $board->orderToCash(),
+                            'rd' => $board->returnsAndDiscounts(), 'problems' => $board->problems()];
+                    },
+                ],
             ],
         );
     }
