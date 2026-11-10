@@ -137,6 +137,51 @@ final class OnlyTheOwnerHandsOutHisCentreTest extends TestCase
         );
     }
 
+    /**
+     * ⭐ কোম্পানির "প্রতিদিনের মেইল" বন্ধ থাকলে সকালের মেইলেও সে নেই — মালিক, ৯ নভেম্বর ২০২৬: "sudu adi Corporation er theke mail
+     * dibe baki duto companyr mail off rakbe pore calu korbo"। আর সবগুলো বন্ধ হলে মেইলই নয়।
+     */
+    public function test_a_company_with_its_daily_mail_off_is_left_out_of_the_morning_mail(): void
+    {
+        Notification::fake();
+        config(['abos.executive.mail_to' => 'alaminsuv@gmail.com']);
+
+        $companies = $this->owner->companies()->where('companies.is_active', true)->orderBy('companies.id')->get();
+        $this->assertGreaterThanOrEqual(2, $companies->count(), 'প্রস্তুতিটাই ভুল — মালিকের দুই কোম্পানি লাগে।');
+        $kept = $companies->firstWhere('id', $this->company->id);
+        $off = $companies->reject(fn ($c) => $c->id === $this->company->id);
+
+        foreach ($off as $company) {
+            CompanyContext::forCompany($company->id, fn () => app(\App\Core\Services\SettingsService::class)->set('executive.daily_mail_enabled', false));
+        }
+
+        Carbon::setTestNow(Carbon::yesterday()->setTime(23, 55));
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+        Carbon::setTestNow();
+
+        $this->artisan('abos:owner-morning-mail')->assertSuccessful();
+
+        Notification::assertSentTo(new AnonymousNotifiable, MorningSummary::class,
+            function (MorningSummary $mail, array $channels, AnonymousNotifiable $to) use ($kept, $off): bool {
+                $html = (string) $mail->toMail($to)->render();
+                // ⓘ কোম্পানির নাম `name()` — `name` কলাম নেই, `name_en`/`name_bn` আছে (Mac, ১০ নভেম্বর ২০২৬: "Company::name must return a relationship")
+                $this->assertStringContainsString(e($kept->name()), $html, '⛔ চালু কোম্পানিটাই সকালের মেইলে নেই।');
+                foreach ($off as $company) {
+                    foreach (array_filter([$company->name_en, $company->name_bn]) as $name) {
+                        $this->assertStringNotContainsString(e($name), $html, "⛔ মেইল বন্ধ, তবু '{$name}' সকালের মেইলে।");
+                    }
+                }
+
+                return true;
+            });
+
+        // ⓘ শেষটাও বন্ধ — তখন কিছুই যায় না
+        Notification::fake();
+        CompanyContext::forCompany($kept->id, fn () => app(\App\Core\Services\SettingsService::class)->set('executive.daily_mail_enabled', false));
+        $this->artisan('abos:owner-morning-mail')->assertSuccessful();
+        Notification::assertNothingSent();
+    }
+
     /** ⓘ ঠিকানা বসানো না থাকলে কিছুই যায় না, ভুলও হয় না — ABOS অনেক ব্যবসায় বিক্রি হয়। */
     public function test_with_no_address_nothing_is_sent(): void
     {

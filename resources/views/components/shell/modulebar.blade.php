@@ -325,6 +325,39 @@
                  */
                 $cells = collect();
 
+                /*
+                 * ⭐ এক লাইনের বার — মালিক, ৯ নভেম্বর ২০২৬ (মজুদ আর ডকুমেন্টের দুই লাইনের ছবি: "ek line newar ki bebosta?" → প্রস্তাব
+                 * "বাঁয়ের মেনুর ভাগগুলোই উপরে ড্রপডাউন" → "ok … nomuna lagbe na direct kaj koro")। ঘর হয় বাঁয়ের মেনুর দল ধরে
+                 * ([[MenuLook]]-এর `kind`, বাঁয়ের রঙিন মাথাগুলো): এক দলে একটাই পাতা হলে সোজা ঘর, বেশি হলে দলের নামে ড্রপডাউন।
+                 * ⓘ এতে ১৫ সেপ্টেম্বরের "লেনদেন কখনো ভাঁজ নয়" ([[$neverGrouped]]) আর খাটে না — মালিকের এই নতুন চাওয়া পুরনোটার
+                 * পরে, আর লেনদেন এখন নিজের দলের ড্রপডাউনে। ⚠️ কোনো সারি কোনো দলে না পড়লে (`menu-look.php`-এ নেই) পুরনো নিয়মই।
+                 */
+                $oneLine = 10;
+                $kindRows = $tabs->values();
+                $kindOfRow = $kindRows->map(fn ($r) => $lookFor($r)['kind']);
+                $byKind = $kindOfRow->every(fn ($k) => $k !== null);
+
+                if ($byKind) {
+                    // ⓘ একই দল একবারই, প্রথম যেখানে আসে সেখানে — দলের সারিগুলো মেনুতে পাশাপাশি না থাকলেও (হিসাবে "রিপোর্ট"
+                    //   দুই জায়গায় ছিল, বারে দুইটা একই নামের ঘর হত)
+                    //   ⭐ `loose` সারি (মালিক, ২৪ সেপ্টেম্বর: "Control Panel setings er baire thakbe bare") দলে ঢোকে না, নিজের ঘর
+                    $runs = [];
+                    foreach ($kindRows as $i => $row) {
+                        $k = ($row['loose'] ?? false) === true ? 'loose:'.$i : $kindOfRow[$i];
+                        $runs[$k] ??= ['kind' => $kindOfRow[$i], 'items' => []];
+                        $runs[$k]['items'][] = $row;
+                    }
+
+                    $kindCells = collect();
+                    foreach ($runs as $run) {
+                        $items = collect($run['items']);
+                        $kindCells[] = $items->count() === 1
+                            ? ['tab' => $items->first(), 'group' => $items->first()['group']]
+                            : ['fold' => $run['kind'], 'items' => $items, 'icon' => $groupIcon($items->first()['group']),
+                                'group' => $items->first()['group'], 'label' => __('core.menu_kind.'.$run['kind'])];
+                    }
+                }
+
                 foreach ($current['groups'] as $name => $raw) {
                     $items = collect($raw)
                         ->filter(fn ($r) => ($r['url'] ?? null) !== null)
@@ -374,6 +407,17 @@
                             'icon' => $groupIcon($name), 'group' => $name];
                     }
                 }
+
+                /*
+                 * ⓘ দলের ঘর কেবল যেখানে আগের ঘরগুলো এক লাইনে ধরত না (দশের বেশি ঘর — মজুদ, ডকুমেন্ট, বিক্রয়)। যে বার আগে থেকেই
+                 * এক লাইনে, সেখানে মালিকের আগের সিদ্ধান্তগুলো অক্ষত: হিসাবের এক "ভাউচার" বোতাম (১৯ সেপ্টেম্বর), সিস্টেমের মাস্টার
+                 * সারি বারে সরাসরি আর নোটিশের নিজের ভাঁজ।
+                 */
+                //   ⓘ আর কেবল তখনই, যখন দলের ঘরে সংখ্যাটা সত্যিই কমে — সিস্টেমে মালিকের "বারে সরাসরি" সারিগুলো দলে ঢোকে না, সেখানে
+                //   বদলালে নোটিশের ভাঁজও ভাঙত আর ঘর বাড়ত (মাপা: ১৫টা, দুই লাইন)
+                if ($byKind && $cells->count() > $oneLine && $kindCells->count() < $cells->count()) {
+                    $cells = $kindCells;
+                }
             @endphp
 
             @php
@@ -384,7 +428,7 @@
                 @php $cellMc = $mc($cellColours[$loop->index] ?? null); $cellKind = $cellKinds[$loop->index] ?? null; @endphp
                 @if (isset($cell['fold']))
                     <x-shell.modulebar-menu :fold="$cell['fold']"
-                                            :label="__('core.menu.'.$cell['fold'])"
+                                            :label="$cell['label'] ?? __('core.menu.'.$cell['fold'])"
                                             :icon="$cell['icon']"
                                             :tint="$groupTint($cell['group'])"
                                             :items="$cell['items']"

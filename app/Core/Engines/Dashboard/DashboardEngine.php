@@ -58,6 +58,9 @@ final class DashboardEngine
             tiles: $this->tilesFor($definition->tiles, $user),
             reminders: $this->remindersFor($module, $user),
             search: $definition->search !== null && $user->can($definition->search['permission']) ? $definition->search : null,
+            // ⓘ মডিউলের নিজের অংশ — চাবি থাকলে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন)
+            sections: array_values(array_filter($definition->sections,
+                fn (array $section) => ! isset($section['permission']) || $user->can($section['permission']))),
         );
     }
 

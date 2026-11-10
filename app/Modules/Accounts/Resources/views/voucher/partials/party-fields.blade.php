@@ -328,9 +328,10 @@
                         নয়। ⓘ এখন চুক্তিটা জিজ্ঞেস করা হয়; কে উত্তর দিচ্ছে, দিচ্ছে কি না,
                         এই পর্দা কিছুই জানে না ([[KnowsWhereAPersonsMoneyBelongs]])।
                     */
-                    $contributors = app(\App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs::class)->peopleItKnowsAbout();
-                    $capitalAccount = (string) \App\Modules\Accounts\Models\Account::query()
-                        ->where('code', \App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->value('id');
+                    $chart = \App\Modules\Accounts\Services\StandardChart::class;
+                    $idOf = \App\Modules\Accounts\Models\Account::query()
+                        ->whereIn('code', [$chart::OWNER_CAPITAL, $chart::HAND_LOAN, $chart::EMPLOYEE_ADVANCE, $chart::PAYABLE])->postable()
+                        ->pluck('id', 'code')->map(fn ($id) => (string) $id);
 
                     /*
                      * ⛔ "কী বাবদ" প্রশ্নে পুরো হিসাবের তালিকা নয় — ১৯ সেপ্টেম্বর ২০২৬,
@@ -346,15 +347,50 @@
                         ->filter(fn ($a) => $a->money_kind === null);
                     $sourceGroups = array_filter([
                         __('accounts::field.source_equity') => $pool->where('type', \App\Modules\Accounts\Models\Account::EQUITY),
+                        // ⓘ সরবরাহকারী টাকা ফেরত দিলে (অগ্রিম বা বেশি দেওয়া) — তাঁর দেনার খাত; কেবল এই একটা, বাকি দেনা আগের মতো বাদ
+                        __('accounts::field.source_supplier_refund') => $pool->where('code', $chart::PAYABLE),
                         __('accounts::field.source_liability') => $pool->where('type', \App\Modules\Accounts\Models\Account::LIABILITY)
                             ->reject(fn ($a) => str_starts_with((string) $a->code, \App\Modules\Accounts\Services\StandardChart::PAYABLE_GROUP)),
                         __('accounts::field.source_income') => $pool->where('type', \App\Modules\Accounts\Models\Account::INCOME),
                         __('accounts::field.source_returned') => $pool->where('type', \App\Modules\Accounts\Models\Account::ASSET)
                             ->filter(fn ($a) => in_array(substr((string) $a->code, 0, 3), $returnable, true)),
                     ], fn ($group) => $group->isNotEmpty());
+
+                    /*
+                     * ⭐ পক্ষ বাছলে "কী বাবদ" নিজে বসে — মালিক, ৯ নভেম্বর ২০২৬ (৮ নভেম্বরের প্রস্তাব, আন্তর্জাতিক নিয়ম: পক্ষের নিজের খাত
+                     * থেকে → "eta 7nomber e koro")। সরবরাহকারী → তাঁর দেনা (২১১১); কর্মী → কর্মীর অগ্রিম (১১৩১); ব্যক্তি → মূলধন দিয়ে
+                     * থাকলে মূলধন, চলতি হাতধার থাকলে হাতধার (Finance বলে, [[KnowsWhereAPersonsMoneyBelongs::suggestedCodes()]]);
+                     * "অন্য (সরাসরি খাত)" → এই কোম্পানিতে পক্ষ ছাড়া শেষ রসিদের খাত। নিচে ছোট করে কেন বসল।
+                     * ⓘ মানুষ বদলাতে পারেন; ভুলের পরে ফর্ম ফিরলে (`old`) তাঁর বাছাইটাই থাকে, প্রস্তাব নয়।
+                     */
+                    $offered = collect($sourceGroups)->flatten(1)->map(fn ($a) => (string) $a->id)->all();
+                    $suggest = [];
+                    $why = [];
+                    $put = function (string $key, ?string $id, string $reason) use (&$suggest, &$why, $offered): void {
+                        if ($id !== null && $id !== '' && in_array($id, $offered, true)) {
+                            $suggest[$key] = $id;
+                            $why[$key] = $reason;
+                        }
+                    };
+                    if (old('from_account_id') === null) {
+                        $put('supplier', $idOf[$chart::PAYABLE] ?? null, __('accounts::message.on_account_why_supplier'));
+                        $put('employee', $idOf[$chart::EMPLOYEE_ADVANCE] ?? null, __('accounts::message.on_account_why_employee'));
+                        foreach (app(\App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs::class)->suggestedCodes() as $person => $code) {
+                            $put('p'.$person, $idOf[$code] ?? null, __($code === $chart::OWNER_CAPITAL
+                                ? 'accounts::message.on_account_why_capital' : 'accounts::message.on_account_why_hand_loan'));
+                        }
+                        $lastOther = \App\Modules\Accounts\Models\Voucher::query()
+                            ->where('type', \App\Modules\Accounts\Models\Voucher::RECEIPT)->whereNull('party_type')
+                            ->latest('id')->value('id');
+                        $put('', $lastOther === null ? null : (string) \App\Modules\Accounts\Models\VoucherLine::query()
+                            ->where('voucher_id', $lastOther)->where('credit', '>', 0)->orderBy('sort_order')->value('account_id'),
+                            __('accounts::message.on_account_why_last'));
+                    }
                 @endphp
-                <select name="from_account_id" x-bind:disabled="partyType === 'customer'"
-                        x-bind:value="partyType === 'person' && @js($contributors).includes(partyId) ? @js($capitalAccount) : $el.value"
+                {{-- ⓘ ধরন বা পক্ষ বদলালে প্রস্তাব না থাকলে ঘর ফাঁকা — আগের পক্ষের খাত পরের পক্ষে থেকে যেত (কর্মী থেকে "অন্য"-তে
+                     গেলে কর্মীর অগ্রিম, মাপা ৯ নভেম্বর); ভুলের পরে ফেরা ফর্মে বাঁধনটাই নেই, বাছাইটা থাকে --}}
+                <select name="from_account_id" x-bind:disabled="partyType === 'customer'" data-on-account
+                        @if (old('from_account_id') === null) x-bind:value="@js($suggest)[partyType === 'person' ? 'p' + partyId : partyType] || ''" @endif
                         class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                border-(--color-border) bg-(--color-surface-card) px-3">
                     <option value="">&mdash;</option>
@@ -369,6 +405,10 @@
                     @endforeach
                 </select>
             </label>
+            {{-- ⓘ কেন এই খাত নিজে বসল — পক্ষ বদলালে লেখাও বদলায়; প্রস্তাব না থাকলে লাইনটা নেই --}}
+            <p class="mt-1 text-2xs font-medium text-(--color-brand-600)" data-on-account-why
+               x-show="@js($why)[partyType === 'person' ? 'p' + partyId : partyType]"
+               x-text="@js($why)[partyType === 'person' ? 'p' + partyId : partyType]"></p>
             <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('accounts::message.received_on_account_hint') }}</p>
         </div>
     @endif

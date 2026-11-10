@@ -1,47 +1,33 @@
 {{--
-    সারির কাজগুলো — দেখা আর সম্পাদনা।
+    ⭐ সরবরাহকারীর সারির "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"): গ্রাহকের তালিকা
+    আর কাগজের তালিকাগুলোর একই মেনু ([[x-ui.row-actions]]) — দেখা · কাগজ · কাজ। (আগে: মালিকের ২১ সেপ্টেম্বরের ছকের দেখা আর সম্পাদনা
+    — দুটোই মেনুতে আছে।)
 
-    ── ⭐ মালিকের ছক, ২১ সেপ্টেম্বর ২০২৬ ───────────────────────────────
-    *"SL#, Code, Name, Type, Address, Mobile, Payable, Status, Action"* —
-    শেষ কলামটা এতদিন ছিলই না।
+    দেখা: দেখুন (পুরো পাতা), প্রিভিউ (পাশে), বদলের ইতিহাস (চাবি থাকলে)। কাগজ: হিসাব মেলানোর চিঠি ছাপুন। কাজ: সম্পাদনা।
+    ⓘ "নতুন ক্রয় আদেশ" / "টাকা দিন" এখানে নেই — ঐ পাতাগুলো এখনো সরবরাহকারী বসিয়ে খোলে না; আধা-কাজের লিংক বসানো নয়।
 
-    ── ⓘ গ্রাহকের তালিকার হুবহু একই ─────────────────────────────────
-    দুইটা তালিকা পাশাপাশি চলে, তাই আচরণও এক ([[customer::partials
-    .row-actions]])। ⚠️ আলাদা হলে ব্যবহারকারীকে দুইটা পর্দা আলাদা করে
-    শিখতে হত।
-
-    ── ⛔ সক্রিয়/নিষ্ক্রিয়ের বোতাম এখানে নেই, আর সেটা ইচ্ছাকৃত ─────────
-    অবস্থার কলামের পিলটাই সেই বোতাম। ⓘ দুই জায়গায় একই কাজ রাখলে একদিন
-    একটা বদলাত আর অন্যটা পুরনো আচরণে থেকে যেত।
-
-    ── ⛔ আর "মুছুন" নেই ──────────────────────────────────────────────
-    যে সরবরাহকারীর নামে একটাও বিল আছে তাঁকে মুছলে ঐ বিলগুলোর মালিক
-    হারিয়ে যায় — খতিয়ানে টাকা থাকত, **কাকে দিতে হবে** তা থাকত না।
-
-    ⚠️ নিষ্ক্রিয় করাটাই যা মানুষ আসলে চায়: নতুন কেনা বন্ধ, কিন্তু
-    পুরনো হিসাব ও প্রদেয় যেমন আছে তেমনই থাকবে।
+    ── ⛔ সক্রিয়/নিষ্ক্রিয় আর মোছা এখানে নেই, আগের নিয়মই — অবস্থার পিলটাই সেই বোতাম; যার নামে কাগজ আছে তাকে মোছা নয়।
 --}}
-<div class="flex items-center justify-end gap-1">
-    {{-- ⓘ বিস্তারিত সবসময় — দেখার অনুমতি না থাকলে সারিটাই আসত না। --}}
-    <a href="{{ route('supplier.show', $supplier) }}"
-       title="{{ __('core.action.view') }}"
-       aria-label="{{ __('core.action.view') }} {{ $supplier->name() }}"
-       class="rounded-(--radius-field) p-1.5 text-(--color-ink-muted)
-              hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
-            <path d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
-        </svg>
-    </a>
+@php
+    $user = auth()->user();
+    $code = (string) ($supplier->code ?? '');
+    $items = [\App\Core\Support\RowMenu::head(trim(($code !== '' ? $code.' · ' : '').$supplier->name()),
+        __($supplier->is_active ? 'customer::filter.active' : 'customer::filter.inactive'))];
 
-    @can('supplier.update')
-        <a href="{{ route('supplier.edit', $supplier) }}"
-           title="{{ __('core.action.edit') }}"
-           aria-label="{{ __('core.action.edit') }} {{ $supplier->name() }}"
-           class="rounded-(--radius-field) p-1.5 text-(--color-ink-muted)
-                  hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
-                <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25ZM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>
-            </svg>
-        </a>
-    @endcan
-</div>
+    $items[] = \App\Core\Support\RowMenu::group('look');
+    $items[] = ['label' => __('core.row_menu.view'), 'icon' => 'eye', 'url' => route('supplier.show', $supplier), 'peek' => false, 'key' => 'Enter', 'opens' => true];
+    $items[] = ['label' => __('core.row_menu.preview'), 'icon' => 'search', 'url' => route('supplier.show', $supplier)];
+    if ($user?->can('governance.audit.view') && $code !== '') {
+        $items[] = ['label' => __('core.row_menu.history'), 'icon' => 'clock',
+            'url' => route('governance.audit.index', ['q' => $code, 'module' => 'supplier']), 'peek' => false];
+    }
+
+    $items[] = \App\Core\Support\RowMenu::group('paper');
+    $items[] = ['label' => __('customer::row_menu.balance_letter'), 'icon' => 'printer', 'url' => route('supplier.balance_confirmation', $supplier), 'blank' => true];
+
+    $items[] = \App\Core\Support\RowMenu::group('work');
+    $items[] = ['label' => __('core.row_menu.edit'), 'icon' => 'edit', 'url' => route('supplier.edit', $supplier), 'peek' => false,
+        'off' => $user?->can('supplier.update') ? null : __('core.row_menu.why_no_key')];
+@endphp
+
+<x-ui.row-actions :items="$items" :label="__('core.table.action_menu')" />

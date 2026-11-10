@@ -117,7 +117,7 @@
         ],
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
+            'label' => __('core.table.action_menu'),
             'width' => '8rem',
             'render' => fn ($c) => view('customer::partials.row-actions', ['customer' => $c]),
         ],

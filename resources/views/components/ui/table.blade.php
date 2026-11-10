@@ -7,7 +7,7 @@
 @endphp
 
 {{-- ⓘ "অ্যাকশন ▾ → গ্রাহককে পাঠান" ফিরে আসে এই তালিকাতেই — লিংকটা এখানে, কপি করার বোতামসহ (মালিক, ৮ নভেম্বর ২০২৬) --}}
-@if ($rowMenu ?? null)
+@if (($rowMenu ?? null) || ($viewUrl ?? null))
     <x-ui.shared-link />
 @endif
 
@@ -72,12 +72,9 @@
                             {{ $column['label'] }}
                         </th>
                     @endforeach
-                    @if ($rowMenu ?? null)
+                    {{-- ⭐ শুধু চোখ দেওয়া তালিকাও এখন "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro") --}}
+                    @if (($rowMenu ?? null) || ($viewUrl ?? null))
                         <th class="text-end" style="width: 7.5rem" scope="col" data-row-menu>{{ __('core.table.action_menu') }}</th>
-                    @elseif ($viewUrl ?? null)
-                        <th class="text-end" style="width: 3.5rem" scope="col">
-                            <span class="sr-only">{{ __('core.table.view') }}</span>
-                        </th>
                     @endif
                 </tr>
             </thead>
@@ -126,18 +123,29 @@
                         @if ($rowMenu ?? null)
                             <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu>{{ ($rowMenu)($row) }}</td>
                         @elseif ($viewUrl ?? null)
-                            @php $viewHref = ($viewUrl)($row); @endphp
-                            <td data-label="{{ __('core.table.view') }}" class="text-end">
-                                @if ($viewHref)
-                                    <a href="{{ $viewHref }}" data-row-view
-                                       aria-label="{{ __('core.table.view') }} {{ data_get($row, 'document_no') }}"
-                                       title="{{ __('core.table.view') }}"
-                                       class="inline-flex size-8 items-center justify-center rounded-(--radius-field)
-                                              text-(--color-ink-muted) hover:bg-(--color-surface-hover) hover:text-(--color-brand-500)">
-                                        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
-                                            <path d="M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7Zm0 2.5A4.5 4.5 0 1 0 12 16.5 4.5 4.5 0 0 0 12 7.5Zm0 2a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/>
-                                        </svg>
-                                    </a>
+                            {{--
+                                ⭐ সাধারণ "অ্যাকশন ▾" — যে তালিকা কেবল দেখার ঠিকানা দেয় (আগে একটা 👁), তারও এখন কাগজের তালিকার একই মেনু
+                                (মালিক, ৯ নভেম্বর ২০২৬: "Abos er sokol list sob skin dekhe deke update koro"): মাথায় নম্বর/কোড, তারপর দেখা —
+                                দেখুন (পুরো পাতা), প্রিভিউ (পাশে), আর অডিটের চাবি থাকলে ইতিহাস। ⓘ নিজের কাজ (সম্পাদনা, বাতিল …) যে তালিকার আছে
+                                সে `:row-menu` দেয় ([[x-ui.paper-row-menu]]); এখানে কেবল যা সব তালিকায় সত্য।
+                            --}}
+                            @php
+                                $viewHref = ($viewUrl)($row);
+                                $rowNo = (string) (data_get($row, 'document_no') ?? data_get($row, 'code') ?? data_get($row, 'no') ?? '');
+                                $menu = [];
+                                if ($viewHref) {
+                                    $menu[] = \App\Core\Support\RowMenu::head($rowNo !== '' ? $rowNo : (string) (data_get($row, 'name') ?? ''), '');
+                                    $menu[] = \App\Core\Support\RowMenu::group('look');
+                                    $menu[] = ['label' => __('core.row_menu.view'), 'icon' => 'eye', 'url' => $viewHref, 'peek' => false, 'key' => 'Enter', 'opens' => true];
+                                    $menu[] = ['label' => __('core.row_menu.preview'), 'icon' => 'search', 'url' => $viewHref];
+                                    if ($rowNo !== '' && auth()->user()?->can('governance.audit.view') && \Illuminate\Support\Facades\Route::has('governance.audit.index')) {
+                                        $menu[] = ['label' => __('core.row_menu.history'), 'icon' => 'clock', 'url' => route('governance.audit.index', ['q' => $rowNo]), 'peek' => false];
+                                    }
+                                }
+                            @endphp
+                            <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu data-row-menu-generic>
+                                @if ($menu !== [])
+                                    <x-ui.row-actions :items="$menu" :label="__('core.table.action_menu')" />
                                 @endif
                             </td>
                         @endif

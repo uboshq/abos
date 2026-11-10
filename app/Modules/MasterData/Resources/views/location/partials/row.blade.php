@@ -45,18 +45,15 @@
         {{ $location->assignee?->name ?? '' }}
     </td>
 
-    <td class="text-end">
-        @if ($childLevel !== null)
-            @can('master_data.manage')
-                <a href="{{ route('master_data.location.create', ['level' => $childLevel, 'parent' => $location->id]) }}"
-                   class="inline-flex size-8 items-center justify-center rounded-(--radius-field)
-                          text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)"
-                   aria-label="{{ __('master_data::action.new') }} — {{ __('master_data::level.' . $childLevel) }}"
-                   title="{{ __('master_data::level.' . $childLevel) }}">
-                    <span aria-hidden="true">+</span>
-                </a>
-            @endcan
-        @endif
+    {{-- ⭐ গাছের সারিতেও "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"); আগের "+" (নিচের স্তর যোগ) মেনুর প্রথম কাজ --}}
+    <td class="text-end" data-row-menu>
+        @include('master_data::location.partials.actions', [
+            'location' => $location,
+            'addChild' => $childLevel !== null && auth()->user()?->can('master_data.manage')
+                ? ['label' => __('master_data::action.new').' — '.__('master_data::level.'.$childLevel), 'icon' => 'plus',
+                   'url' => route('master_data.location.create', ['level' => $childLevel, 'parent' => $location->id])]
+                : null,
+        ])
     </td>
 </tr>
 

@@ -40,7 +40,7 @@
          'render' => fn ($p) => $p->premiums->contains(fn ($x) => $x->status === InsurancePremium::DRAFT)
              ? view('finance::insurance.partials.unpaid', ['policy' => $p])
              : '—'],
-        ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '6rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($p) => view('finance::insurance.partials.row-actions', ['policy' => $p])],
     ];
 @endphp
@@ -129,7 +129,6 @@
 
         <x-ui.table :rows="$policies" :columns="$columns"
                     :grand="$grand ?? []"
-                    :view-url="fn ($p) => route('finance.insurance.show', $p)"
                     :empty="__('finance::insurance.none_yet')" />
 
         <x-ui.pager :rows="$policies" />

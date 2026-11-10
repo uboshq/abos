@@ -10,7 +10,8 @@
     আছে" — আর সেটাই পরের ধাপ বলে দেয়।
 --}}
 @php
-    $items = [];
+    // গাছের সারি থেকে এলে: নিচের স্তর যোগ — প্রথম কাজ ([[location/partials/row]])
+    $items = array_values(array_filter([$addChild ?? null]));
 
     if (auth()->user()?->can('master_data.manage')) {
         $items[] = [
@@ -39,4 +40,5 @@
     }
 @endphp
 
-<x-ui.row-actions :items="$items" />
+{{-- ⭐ তিন বিন্দুর বদলে "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"); কাজগুলো আগের মতোই --}}
+<x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($location), \App\Core\Support\RowMenu::activeState($location), route('master_data.location.show', $location), $location->code ?? null, 'master_data')" />

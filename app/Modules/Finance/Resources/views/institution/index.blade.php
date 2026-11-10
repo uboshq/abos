@@ -39,7 +39,7 @@
             'render' => fn ($i) => $i->is_active ? __('finance::institution.active') : __('finance::institution.inactive')],
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
+            'label' => __('core.table.action_menu'),
             'width' => '8rem',
             'render' => fn ($i) => view('finance::institution.partials.row-actions', ['institution' => $i]),
         ],
@@ -89,7 +89,6 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table :rows="$institutions" :columns="$columns"
                     :grand="$grand ?? []"
-                    :view-url="fn ($i) => route('finance.institution.show', $i)"
                     :empty="__('finance::institution.none_yet')" />
 
         <x-ui.pager :rows="$institutions" />

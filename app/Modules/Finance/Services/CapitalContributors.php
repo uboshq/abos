@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Models\HandLoanAccount;
 
 /**
  * যিনি আগে মূলধন দিয়েছেন, তাঁর টাকা মূলধনেই ফেরে।
@@ -57,5 +58,27 @@ final class CapitalContributors implements KnowsWhereAPersonsMoneyBelongs
             ->map(fn ($id) => (string) $id)
             ->values()
             ->all();
+    }
+
+    /**
+     * ⭐ রসিদের ফর্মে আগে-বসানো খাত — মূলধনের মানুষ → মূলধন (আগের নিয়ম), চলতি হাতধারের মানুষ → হাতধার (১১৭০; মালিক, ৯ নভেম্বর
+     * ২০২৬)। ⓘ দুইটাই হলে মূলধন আগে, আগের মতো। হাতধারের একটাই খাত দুই দিকের ([[StandardChart::HAND_LOAN]]), তাই ফেরত আর নতুন
+     * ধার দুইটাই সেখানে।
+     *
+     * @return array<string, string>
+     */
+    public function suggestedCodes(): array
+    {
+        $out = [];
+
+        foreach (HandLoanAccount::query()->whereNotNull('person_id')->where('status', HandLoanAccount::ACTIVE)->pluck('person_id') as $id) {
+            $out[(string) $id] = StandardChart::HAND_LOAN;
+        }
+
+        foreach ($this->peopleItKnowsAbout() as $id) {
+            $out[$id] = StandardChart::OWNER_CAPITAL;
+        }
+
+        return $out;
     }
 }

@@ -1,20 +1,17 @@
-@can('update', $warehouse)
-    <a href="{{ route('inventory.warehouse.edit', $warehouse) }}"
-       class="text-2xs text-(--color-brand-500) underline-offset-2 hover:underline">
-        {{ __('core.action.edit') }}
-    </a>
-@endcan
-
 {{--
-    গুদামের ভিতরের জায়গা — ব্লক ▸ র‍্যাক ▸ শেলফ।
-
-    ⚠️ ঢোকার পথটা এখানেই, আলাদা কোনো মেনু সারিতে নয়। তাক গুদামের
-    সংজ্ঞার অংশ, আর মেনুতে বসালে যাঁর গুদামে তাক নেই তিনিও রোজ একটা
-    খালি পাতা দেখতেন। ⓘ যাঁর দরকার, তিনি গুদামের তালিকা থেকেই আসেন।
+    ⭐ "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"): আগের দুইটা লেখা-লিংক
+    (সম্পাদনা, জায়গা) এখন গ্রাহকের তালিকার মতো মেনুতে। ⚠️ জায়গার (ব্লক ▸ র‍্যাক ▸ শেলফ) পথটা আগের মতোই এখানেই —
+    আলাদা মেনু-সারিতে নয়, কারণ তাক গুদামের সংজ্ঞার অংশ।
 --}}
-@can('inventory.warehouse.view')
-    <a href="{{ route('inventory.warehouse.place.index', $warehouse) }}"
-       class="ms-3 text-2xs text-(--color-brand-500) underline-offset-2 hover:underline">
-        {{ __('inventory::action.places') }}
-    </a>
-@endcan
+@php
+    $items = [];
+    if (auth()->user()?->can('inventory.warehouse.view')) {
+        $items[] = ['label' => __('inventory::action.places'), 'icon' => 'grid', 'url' => route('inventory.warehouse.place.index', $warehouse)];
+    }
+    if (auth()->user()?->can('update', $warehouse)) {
+        $items[] = ['label' => __('core.action.edit'), 'url' => route('inventory.warehouse.edit', $warehouse)];
+    }
+@endphp
+@if ($items !== [])
+    <x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($warehouse), \App\Core\Support\RowMenu::activeState($warehouse), null, $warehouse->code ?? null, 'inventory')" />
+@endif

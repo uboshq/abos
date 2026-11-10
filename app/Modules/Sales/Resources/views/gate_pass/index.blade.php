@@ -71,7 +71,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :empty="__('sales::gate_pass.empty')" :rows="$passes" :columns="$columns" />
+        <x-ui.table :view-url="fn ($r) => route('sales.gate_pass.show', $r)" :empty="__('sales::gate_pass.empty')" :rows="$passes" :columns="$columns" />
 
         <x-ui.pager :rows="$passes" />
         <x-ui.list-totals :rows="$passes" />

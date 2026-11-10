@@ -73,7 +73,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$opportunities" :columns="$columns" :grand="$grand ?? []"
+        <x-ui.table :view-url="fn ($r) => route('sales.opportunity.show', $r->id)" :rows="$opportunities" :columns="$columns" :grand="$grand ?? []"
                     :empty="$q ? __('core.empty.no_results') : __('sales::crm.no_opportunities')" />
 
         <x-ui.pager :rows="$opportunities" />

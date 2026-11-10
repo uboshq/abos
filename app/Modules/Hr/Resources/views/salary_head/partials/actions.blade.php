@@ -2,14 +2,10 @@
 
      সেবা স্তর এমনিতেই আটকায়, কিন্তু চাপা যায় অথচ ব্যর্থ হয় এমন বোতাম
      রাখা মানে ব্যবহারকারীকে দিয়ে ভুল করানো। --}}
-@if ($head->is_active && ! $head->is_basic)
-    <form method="POST" action="{{ route('hr.salary_head.destroy', $head->id) }}" class="text-end">
-        @csrf
-        @method('DELETE')
-        <button type="submit"
-                class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-ink-muted)
-                       transition-colors hover:bg-(--color-surface-hover)">
-            {{ __('hr::action.deactivate') }}
-        </button>
-    </form>
-@endif
+{{-- ⭐ "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"): আগের লেখা-বোতামগুলো গ্রাহকের তালিকার মতো মেনুতে, কাজ একই --}}
+@php
+    $items = $head->is_active && ! $head->is_basic
+        ? [['label' => __('hr::action.deactivate'), 'url' => route('hr.salary_head.destroy', $head->id), 'method' => 'delete', 'tone' => 'danger']]
+        : [];
+@endphp
+<x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($head), \App\Core\Support\RowMenu::activeState($head), null, $head->code ?? null, 'hr')" />

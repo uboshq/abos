@@ -67,4 +67,5 @@
     }
 @endphp
 
-<x-ui.row-actions :items="$items" />
+{{-- ⭐ তিন বিন্দুর বদলে "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"); কাজগুলো আগের মতোই --}}
+<x-ui.row-actions :label="__('core.table.action_menu')" :items="\App\Core\Support\RowMenu::dress($items, \App\Core\Support\RowMenu::title($product), \App\Core\Support\RowMenu::activeState($product), route('inventory.product.show', $product), $product->code ?? null, 'inventory')" />

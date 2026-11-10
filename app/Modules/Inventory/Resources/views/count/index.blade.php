@@ -55,7 +55,7 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table
+        <x-ui.table :view-url="fn ($r) => route('inventory.count.show', $r)"
             :empty="__('inventory::message.no_counts')"
             :rows="$counts"
             :compact="request()->boolean('compact')"

@@ -35,6 +35,16 @@
         </form>
     @endif
 
+    {{-- ⭐ মডিউলের নিজের অংশ, মাথায় (`place` = top) — অর্থের তহবিলের ঘর (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬); পাশাপাশি সারিতে --}}
+    @php $topSections = array_values(array_filter($dashboard->sections, fn (array $s) => ($s['place'] ?? 'bottom') === 'top')); @endphp
+    @if ($topSections !== [])
+        <div data-top-sections style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch; margin-bottom: 16px">
+            @foreach ($topSections as $section)
+                @include($section['view'], value($section['data']))
+            @endforeach
+        </div>
+    @endif
+
     @if ($dashboard->tiles !== [])
         <div class="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ($dashboard->tiles as $tile)
@@ -257,4 +267,11 @@
             @endforeach
         </div>
     @endif
+
+    {{-- ⭐ মডিউলের নিজের অংশ — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন); নতুন পাতার একই নিয়ম --}}
+    @foreach ($dashboard->sections as $section)
+        @if (($section['place'] ?? 'bottom') !== 'top' && (! isset($section['permission']) || auth()->user()?->can($section['permission'])))
+            <div class="mt-6">@include($section['view'], value($section['data']))</div>
+        @endif
+    @endforeach
 </x-layouts.app>

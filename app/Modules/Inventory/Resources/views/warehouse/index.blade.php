@@ -11,7 +11,7 @@
          'render' => fn ($w) => $w->is_default ? __('core.yes') : ''],
         ['key' => 'is_active', 'label' => __('inventory::field.state'), 'width' => '7rem',
          'render' => fn ($w) => view('inventory::partials.state-badge', ['record' => $w])],
-        ['key' => 'actions', 'label' => __('core.action.edit'), 'width' => '6rem',
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($w) => view('inventory::partials.warehouse-actions', ['warehouse' => $w])],
     ];
 @endphp

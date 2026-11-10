@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Core\Services\PermissionSyncer;
+use App\Core\Services\SettingsService;
 use App\Models\User;
 use App\Modules\Executive\Notifications\MorningSummary;
 use App\Modules\Executive\Services\CompanyLens;
@@ -49,8 +50,25 @@ final class OwnerMorningMail extends Command
 
         $date = (string) ($this->option('date') ?: Carbon::yesterday(config('app.timezone'))->toDateString());
 
+        /*
+         * ⭐ কোম্পানির "প্রতিদিনের মেইল" সুইচ সকালের মেইলেও — মালিক, ৯ নভেম্বর ২০২৬: "Erp theke ze mail gulo prtidin ase ta on off
+         * korar bebosta kore sudu adi Corporation er theke mail dibe baki duto companyr mail off rakbe pore calu korbo"। ⓘ রাতের
+         * সারাংশ এই সুইচ আগে থেকেই মানে ([[DailySummaryMailCommand]]); সকালেরটা সব কোম্পানি একসাথে পাঠাত। বন্ধ কোম্পানি বাদ, আর
+         * সবগুলো বন্ধ হলে মেইলই নয়।
+         */
+        $companies = array_values(array_filter($lens->companies($owner), fn (array $company): bool => (bool) $lens->within(
+            $owner, $company['id'], null,
+            fn () => app(SettingsService::class)->get('executive.daily_mail_enabled', true),
+        )));
+
+        if ($companies === []) {
+            $this->info('সব কোম্পানির প্রতিদিনের মেইল বন্ধ — কিছু পাঠানো হলো না।');
+
+            return self::SUCCESS;
+        }
+
         $rows = array_values(array_filter(
-            $snapshots->on($owner, $lens->companies($owner), $date),
+            $snapshots->on($owner, $companies, $date),
             fn (array $row): bool => $row['branch_id'] === null,
         ));
 

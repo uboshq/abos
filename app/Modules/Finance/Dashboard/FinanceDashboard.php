@@ -34,6 +34,11 @@ use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
+use App\Modules\Finance\Services\FinanceCharts;
+use App\Modules\Finance\Services\FundNews;
+use App\Modules\Finance\Services\FundPosition;
+use App\Modules\Finance\Services\LoanBox;
+use App\Modules\Finance\Services\WorkingCapital;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -377,7 +382,60 @@ final class FinanceDashboard implements ProvidesDashboard
                     href: route('finance.capital.index'),
                 ),
             ],
+
+            // ⭐ চলতি মূলধন — সবার নিচে, মালিকের ছবির হুবহু (মালিক, ৯ নভেম্বর ২০২৬; [[WorkingCapital]])
+            sections: [
+                // ⭐ মোট তহবিলের ঘর — মাথায় (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FundPosition]]); নগদ/ব্যাংক/MFS-এর একই চাবি
+                [
+                    'view' => 'finance::dashboard.fund-top',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $fund = app(FundPosition::class)->on();
+
+                        return ['fund' => $fund, 'news' => app(FundNews::class)->items($fund)];
+                    },
+                ],
+                // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
+                [
+                    'view' => 'finance::dashboard.charts',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['charts' => app(FinanceCharts::class)->all()],
+                ],
+                [
+                    'view' => 'finance::dashboard.working-capital',
+                    'data' => fn () => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
+                ],
+                // ⭐ ঋণের ঘর — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: "loan box sobar nice daw"; [[LoanBox]])
+                [
+                    'view' => 'finance::dashboard.loans',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['loans' => app(LoanBox::class)->on()],
+                ],
+            ],
         );
+    }
+
+    /**
+     * চলতি মূলধনের তারিখ — ঠিকানার `wc_date`; না থাকলে, ভুল হলে বা আগামী দিনের হলে আজ (ভবিষ্যতের খাতা নেই)।
+     */
+    private static function workingCapitalDate(): Carbon
+    {
+        $today = Carbon::today();
+        $asked = request()->query('wc_date');
+
+        if (! is_string($asked) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $asked) !== 1) {
+            return $today;
+        }
+
+        try {
+            $date = Carbon::createFromFormat('Y-m-d', $asked)->startOfDay();
+        } catch (\Throwable) {
+            return $today;
+        }
+
+        return $date->greaterThan($today) ? $today : $date;
     }
 
     /**

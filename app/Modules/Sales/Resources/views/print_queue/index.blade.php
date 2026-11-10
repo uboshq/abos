@@ -44,7 +44,7 @@
         ],
         [
             'key' => 'actions',
-            'label' => '',
+            'label' => __('core.table.action_menu'),
             'render' => fn ($j) => view('sales::print_queue.partials.actions', ['job' => $j]),
         ],
     ];

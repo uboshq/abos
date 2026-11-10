@@ -53,7 +53,7 @@
                  : \App\Core\Support\DateFormat::format($r['account']->next_due_on ?? $r['account']->due_on)],
             ['key' => 'state', 'label' => __('finance::field.hl_state'), 'width' => '9rem',
              'render' => fn ($r) => view('finance::hand-loan.partials.state', ['row' => $r])],
-            ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
+            ['key' => 'do', 'label' => __('core.table.action_menu'), 'width' => '8rem',
              'render' => fn ($r) => view('finance::hand-loan.partials.open-it', ['row' => $r])],
         ];
     @endphp

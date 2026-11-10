@@ -130,6 +130,7 @@ return [
     'list_for' => 'কী বাবদ',
     'list_method' => 'মাধ্যম',
     'source_equity' => 'মূলধন',
+    'source_supplier_refund' => 'সরবরাহকারীর ফেরত',
     'source_liability' => 'ঋণ ও দায়',
     'source_income' => 'আয়',
     'source_returned' => 'ফেরত পাওয়া (অগ্রিম, জামানত…)',

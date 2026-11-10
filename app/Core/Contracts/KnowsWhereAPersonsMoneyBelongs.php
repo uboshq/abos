@@ -44,4 +44,14 @@ interface KnowsWhereAPersonsMoneyBelongs
      * @return list<string> ব্যক্তির আইডি, লেখা হিসেবে
      */
     public function peopleItKnowsAbout(): array;
+
+    /**
+     * ⭐ রসিদের "টাকাটা কী বাবদ"-এর প্রস্তাব — ব্যক্তি ধরে খাতের কোড (মালিক, ৯ নভেম্বর ২০২৬: ৮ নভেম্বরের প্রস্তাব "পক্ষ বাছলে তার
+     * নিজের খাত থেকেই কী বাবদ ঠিক হয়" → "eta 7nomber e koro")। মূলধন দিয়েছেন → মূলধন; চলতি হাতধার আছে → হাতধার।
+     *
+     * ⚠️ কেবল ফর্মের আগে-বসানো মান, মানুষ বদলাতে পারেন — খাতায় তোলার নিয়ম [[accountCodeFor()]] এতে বদলায় না।
+     *
+     * @return array<string, string> ব্যক্তির আইডি (লেখা) → খাতের কোড
+     */
+    public function suggestedCodes(): array;
 }

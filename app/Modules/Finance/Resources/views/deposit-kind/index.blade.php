@@ -39,7 +39,7 @@
         ['key' => 'state', 'label' => __('finance::field.state'), 'width' => '8rem',
          'render' => fn ($k) => view('finance::deposit-kind.partials.state', ['kind' => $k])],
 
-        ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '12rem',
+        ['key' => 'do', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($k) => view('finance::deposit-kind.partials.actions', ['kind' => $k])],
     ];
 

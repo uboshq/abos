@@ -149,8 +149,8 @@
         ],
         [
             'key' => 'actions',
-            'label' => __('core.table.actions'),
-            'width' => '6rem',
+            'label' => __('core.table.action_menu'),
+            'width' => '8rem',
             'render' => fn ($u) => view('system_admin::user.partials.edit', ['user' => $u]),
         ],
     ];
