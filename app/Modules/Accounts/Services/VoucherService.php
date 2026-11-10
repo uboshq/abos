@@ -1063,6 +1063,17 @@ final class VoucherService
     {
         $trxDate = Carbon::parse($data['trx_date'] ?? $voucher->trx_date);
 
+        /*
+         * ⛔ কাটা কর আর কম-বেশির ঘর ফাঁকা এলে শূন্য — [[create()]]-এর একই নিয়ম (`?? 0`)। আগে সম্পাদনায় ফর্মের ফাঁকা ঘর `null` হয়ে
+         * NOT NULL কলামে যেত: লাইভে RCV-0441-এর লেনদেন নম্বর ঠিক করতে গিয়ে মালিক আর হিসাবরক্ষক তিনবার ৫০০ পেলেন
+         * ("Column 'ait_amount' cannot be null", ১০ নভেম্বর ২০২৬, ১৭:১১)।
+         */
+        foreach (['ait_amount', 'vds_amount', 'difference_amount'] as $money) {
+            if (array_key_exists($money, $data) && ($data[$money] === null || $data[$money] === '')) {
+                $data[$money] = '0';
+            }
+        }
+
         $voucher->update([
             // ⛔ কেবল মাথার ঘর — জাবেদার পর্দা `lines` পাঠায়, আর তা মাথায় ঢালতে গেলে খসড়া সম্পাদনা ৫০০ দিত (৭ অক্টোবর ২০২৬;
             // সংশোধনের পথ একই ছাঁকনি নেয়, [[VoucherController::saveRevision()]])

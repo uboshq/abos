@@ -583,7 +583,13 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             return null;
         }
 
-        $mayReadDocument = $mine || $canDecide;
+        /*
+         * ⭐ মালিক (সুপার অ্যাডমিন) সব কাগজ খোলেন — সিদ্ধান্তের পরেও (মালিক, ১০ নভেম্বর ২০২৬: "মালিক সব কিছুই দেখতে পারবে, সব কিছুই
+         * করতে পারবে")। ⛔ আগে অনুমোদন শেষ হলেই `canDecide` মিথ্যা, আর যিনি চাননি তাঁর কাছে কাগজ বন্ধ — মালিক নিজে অনুমোদন দিয়ে
+         * RCV-0440/0441 খুলতে গিয়ে "খোলার অনুমতি আপনার নেই" দেখলেন, অথচ ওই দুটো পোস্ট হয়নি আর কারণটা কাগজেই।
+         */
+        $owner = $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+        $mayReadDocument = $mine || $canDecide || $owner;
 
         $document = $mayReadDocument ? $this->documentOf($entry) : null;
 
