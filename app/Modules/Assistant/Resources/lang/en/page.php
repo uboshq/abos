@@ -21,6 +21,7 @@ return [
         'week' => 'This week',
     ],
     'module' => [
+        'credit_control' => 'Credit control',
         'accounts' => 'Accounts',
         'sales' => 'Sales',
         'inventory' => 'Stock',

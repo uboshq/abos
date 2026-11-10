@@ -31,7 +31,7 @@ return [
      * ⓘ যাদের সংখ্যা পড়া হয় — প্রতিটা মডিউলের নিজের বোর্ড ([[Watch]])।
      * ⚠️ চক্র হয় না: এদের কেউ কোপাইলটের উপর দাঁড়ায় না।
      */
-    'depends_on' => ['accounts', 'sales', 'inventory', 'finance'],
+    'depends_on' => ['accounts', 'sales', 'inventory', 'finance', 'customer', 'credit_control'],
 
     'menu' => [
         'dashboard' => [

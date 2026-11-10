@@ -24,7 +24,7 @@
 
         <nav class="flex gap-1 overflow-x-auto border-b border-(--color-border) text-sm" aria-label="{{ $name }}">
             <span class="border-b-2 border-(--color-brand-500) px-3 py-2 font-semibold text-(--color-brand-500)" aria-current="page">{{ __('assistant::page.tab_today') }}</span>
-            @foreach (['suggest', 'draft', 'ask'] as $soon)
+            @foreach (['draft', 'ask'] as $soon)
                 <span class="px-3 py-2 text-(--color-ink-muted)" data-assistant-soon="{{ $soon }}">{{ __('assistant::page.tab_'.$soon) }} <span class="text-2xs">· {{ __('assistant::page.soon') }}</span></span>
             @endforeach
             @can('assistant.audit')
@@ -103,6 +103,36 @@
                         </ul>
                     </details>
                 @endif
+            </section>
+        @endif
+
+        {{-- ── প্রস্তাব (ধাপ ২) ── --}}
+        @if ($suggestions !== null)
+            <section class="space-y-3" aria-labelledby="suggest-h" data-assistant-suggest>
+                <h2 id="suggest-h" class="text-base font-semibold">{{ __('assistant::suggest.title') }} <span class="text-sm text-(--color-ink-muted)">({{ count($suggestions) }})</span></h2>
+                @if ($suggestions === [])
+                    <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::suggest.empty') }}</p>
+                @endif
+                <div class="grid gap-3 lg:grid-cols-2">
+                    @foreach ($suggestions as $s)
+                        <article class="grid gap-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3" data-suggestion="{{ $s['id'] }}">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-(--radius-badge) bg-(--color-surface-selected) px-2 py-0.5 text-2xs text-(--color-link)">{{ __('assistant::page.module.'.$s['module']) }}</span>
+                            </div>
+                            <a href="{{ $s['href'] }}" class="font-medium hover:underline">{{ $s['title'] }}</a>
+                            <p class="text-sm text-(--color-ink-muted)">{{ $s['detail'] }}</p>
+                            <ul class="grid gap-1 text-sm">
+                                @foreach ($s['rows'] as $row)
+                                    <li class="flex flex-wrap justify-between gap-2 border-t border-(--color-border) pt-1">
+                                        @if ($row['href'] !== '')<a href="{{ $row['href'] }}" class="min-w-0 hover:underline">{{ $row['label'] }}</a>@else<span class="min-w-0">{{ $row['label'] }}</span>@endif
+                                        <span class="text-2xs text-(--color-ink-muted) tabular-nums">{{ $row['value'] }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                            <p class="text-2xs text-(--color-ink-muted)">{{ $s['note'] }}</p>
+                        </article>
+                    @endforeach
+                </div>
             </section>
         @endif
 

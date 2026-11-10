@@ -36,7 +36,7 @@ class AssistantController extends Controller
         private readonly AssistantEngine $engine,
     ) {}
 
-    public function today(Request $request, Watch $watch, Brief $brief): View
+    public function today(Request $request, Watch $watch, Brief $brief, \App\Modules\Assistant\Watch\Suggestions $suggestions): View
     {
         /** @var User $user */
         $user = $request->user();
@@ -46,6 +46,7 @@ class AssistantController extends Controller
             'name' => $this->engine->name(),
             'brief' => $this->engine->on('brief') ? $brief->for($user) : null,
             'findings' => $this->engine->on('watch') ? $watch->for($user) : null,
+            'suggestions' => $this->engine->on('suggest') ? $suggestions->for($user) : null,
             'dismissed' => AssistantDismissal::query()->with('user:id,name')->where('until', '>=', Carbon::today()->toDateString())->latest('id')->limit(20)->get(),
         ]);
     }

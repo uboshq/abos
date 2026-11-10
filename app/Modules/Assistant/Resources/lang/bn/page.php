@@ -21,6 +21,7 @@ return [
         'week' => 'এ সপ্তাহে',
     ],
     'module' => [
+        'credit_control' => 'বাকি নিয়ন্ত্রণ',
         'accounts' => 'হিসাব',
         'sales' => 'বিক্রয়',
         'inventory' => 'মজুদ',
