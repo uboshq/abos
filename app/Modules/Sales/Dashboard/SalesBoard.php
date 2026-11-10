@@ -554,6 +554,169 @@ final class SalesBoard
         return ['grid' => $grid, 'max' => max(1, ...array_map('max', $grid))];
     }
 
+    /**
+     * ⭐ সারি 6 — SR-দের লক্ষ্য (বুলেট): মাসের লক্ষ্য আছে এমন SR — অর্জন ÷ লক্ষ্য; কালো দাগ = মাসের কত দিন পেরিয়েছে (আজ পর্যন্ত থাকার কথা)।
+     * ⓘ অর্জন লক্ষ্যের পাতার একই হিসাবে ([[SalesTargetService::achievedByUser()]]), ভ্যাট বাদে।
+     *
+     * @return array{rows: list<array{name: string, pct: int}>, due: int}
+     */
+    public function srTargets(): array
+    {
+        $first = Carbon::today()->startOfMonth();
+        $targets = \App\Modules\Sales\Models\SalesTarget::query()->forMonth($first)->pluck('amount', 'user_id');
+        $achieved = app(\App\Modules\Sales\Services\SalesTargetService::class)->achievedByUser($first, $first->copy()->endOfMonth());
+        $names = \App\Models\User::query()->whereIn('id', $targets->keys()->all() ?: [0])->pluck('name', 'id');
+        $rows = $targets->filter(fn ($t) => (float) $t > 0)
+            ->map(fn ($t, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'pct' => (int) round((float) ($achieved[(int) $id] ?? 0) / (float) $t * 100)])
+            ->sortByDesc('pct')->take(7)->values()->all();
+
+        return ['rows' => $rows, 'due' => (int) round(Carbon::today()->day * 100 / Carbon::today()->daysInMonth)];
+    }
+
+    /**
+     * ⭐ SR কমিশন · এ মাস এ পর্যন্ত — বিলের SR ধরে বিক্রি, কমিশন ([[CommissionEngine::preview()]]) আর হার; বড় সাতজন + মোট।
+     *
+     * @return array{rows: list<array{name: string, sales: string, rate: ?string, commission: string}>, sales: string, commission: string}
+     */
+    public function srCommission(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $to = Carbon::today()->toDateString();
+        $key = 'abos.sales-board-sr-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to;
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 600, function () use ($from, $to): array {
+            $engine = app(\App\Modules\Sales\Services\CommissionEngine::class);
+            $by = [];
+
+            foreach (SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from, $to])->get() as $invoice) {
+                $sr = (int) $invoice->created_by;
+                $by[$sr] ??= ['sales' => '0', 'commission' => '0'];
+                $by[$sr]['sales'] = bcadd($by[$sr]['sales'], bcsub((string) $invoice->subtotal, (string) $invoice->discount, 4), 4);
+                $by[$sr]['commission'] = bcadd($by[$sr]['commission'], (string) $engine->preview($invoice)['total'], 4);
+            }
+
+            $names = \App\Models\User::query()->whereIn('id', array_keys($by) ?: [0])->pluck('name', 'id');
+            $rows = collect($by)->map(fn (array $v, $id) => ['name' => (string) ($names[(int) $id] ?? __('sales::board.r4.nobody')), 'sales' => $v['sales'],
+                'rate' => bccomp($v['sales'], '0', 4) > 0 ? bcdiv(bcmul($v['commission'], '100', 4), $v['sales'], 1) : null, 'commission' => $v['commission']])
+                ->sortByDesc(fn (array $r) => (float) $r['sales'])->take(7)->values()->all();
+
+            return ['rows' => $rows, 'sales' => array_reduce($by, fn (string $c, array $v) => bcadd($c, $v['sales'], 4), '0'),
+                'commission' => array_reduce($by, fn (string $c, array $v) => bcadd($c, $v['commission'], 4), '0')];
+        });
+    }
+
+    /**
+     * ⭐ সেরা দুই SR — রাডার (এ মাসে বিক্রিতে প্রথম দুজন): ছয় মাপ 0–100 — লক্ষ্যের অর্জন, আদায়ের দক্ষতা, দোকান (দুজনের বেশিজনের তুলনায়),
+     * গড় অর্ডার (তুলনায়), ফেরত কম (100 − ফেরতের হার × 10), বৃদ্ধি (গত মাসের একই দিনের তুলনায়, ±50% = 0–100)।
+     *
+     * @return list<array{name: string, values: list<int>}>
+     */
+    public function topTwo(): array
+    {
+        $from = Carbon::today()->startOfMonth();
+        $to = Carbon::today();
+        $lastFrom = $from->copy()->subMonthNoOverflow();
+        $lastTo = $lastFrom->copy()->addDays($to->day - 1)->min($lastFrom->copy()->endOfMonth());
+        $now = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])->get(['id', 'created_by', 'customer_id', 'subtotal', 'discount']);
+        $last = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$lastFrom->toDateString(), $lastTo->toDateString()])
+            ->groupBy('created_by')->selectRaw('created_by, SUM(subtotal - discount) as v')->pluck('v', 'created_by');
+        $returns = \App\Modules\Sales\Models\SalesReturn::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
+            ->whereNotNull('sales_invoice_id')->with('invoice:id,created_by')->get(['sales_invoice_id', 'subtotal']);
+        $bySr = $now->groupBy('created_by')->map(fn ($l) => ['sales' => $l->sum(fn ($i) => (float) $i->subtotal - (float) $i->discount), 'shops' => $l->pluck('customer_id')->unique()->count(), 'bills' => $l->count()])
+            ->sortByDesc('sales');
+        $top = $bySr->take(2);
+
+        if ($top->isEmpty()) {
+            return [];
+        }
+
+        $targets = $this->srTargets();
+        $cei = collect($this->collectionEffectiveness()['rows'])->keyBy('name');
+        $names = \App\Models\User::query()->whereIn('id', $top->keys()->all())->pluck('name', 'id');
+        $maxShops = max(1, $top->max('shops'));
+        $maxAvg = max(1.0, $top->max(fn ($s) => $s['bills'] > 0 ? $s['sales'] / $s['bills'] : 0));
+        $clamp = fn (float $v) => (int) round(max(0, min(100, $v)));
+
+        return $top->map(function (array $s, $id) use ($names, $targets, $cei, $maxShops, $maxAvg, $last, $returns, $clamp): array {
+            $name = (string) ($names[(int) $id] ?? __('sales::board.r4.nobody'));
+            $ret = $returns->filter(fn ($r) => (int) ($r->invoice?->created_by ?? 0) === (int) $id)->sum(fn ($r) => (float) $r->subtotal);
+            $prev = (float) ($last[$id] ?? 0);
+
+            return ['name' => $name, 'values' => [
+                $clamp((float) (collect($targets['rows'])->firstWhere('name', $name)['pct'] ?? 0)),
+                $clamp((float) ($cei[$name]['pct'] ?? 0)),
+                $clamp($s['shops'] / $maxShops * 100),
+                $clamp(($s['bills'] > 0 ? $s['sales'] / $s['bills'] : 0) / $maxAvg * 100),
+                $clamp(100 - ($s['sales'] > 0 ? $ret / $s['sales'] * 1000 : 0)),
+                $clamp($prev > 0 ? 50 + ($s['sales'] - $prev) / $prev * 100 : 50),
+            ]];
+        })->values()->all();
+    }
+
+    /**
+     * ⭐ ডিস্ট্রিবিউটর — আকার বনাম বৃদ্ধি: এ প্রান্তিকের বড় 12 গ্রাহক — x = বিক্রি, y = গত প্রান্তিকের একই দিনের তুলনায় বৃদ্ধি, বৃত্ত = বাকি।
+     *
+     * @return list<array{name: string, sales: string, growth: ?int, due: string}>
+     */
+    public function distributors(): array
+    {
+        $from = Carbon::today()->firstOfQuarter();
+        $to = Carbon::today();
+        $lastFrom = $from->copy()->subMonthsNoOverflow(3);
+        $lastTo = $lastFrom->copy()->addDays($from->diffInDays($to));
+        $sum = fn (Carbon $a, Carbon $b) => SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$a->toDateString(), $b->toDateString()])
+            ->groupBy('customer_id')->selectRaw('customer_id, SUM(subtotal - discount) as v')->pluck('v', 'customer_id');
+        $now = $sum($from, $to)->sortDesc()->take(12);
+        $before = $sum($lastFrom, $lastTo);
+        $due = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->withCollected()->whereIn('customer_id', $now->keys()->all() ?: [0])->get()
+            ->groupBy('customer_id')->map(fn ($l) => $l->sum(fn ($i) => max(0, (float) $i->dueAmount())));
+        $names = \App\Modules\Customer\Models\Customer::query()->whereIn('id', $now->keys()->all() ?: [0])->get()->mapWithKeys(fn ($c) => [(int) $c->id => $c->name()]);
+
+        return $now->map(fn ($v, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'sales' => bcadd((string) $v, '0', 4),
+            'growth' => (float) ($before[$id] ?? 0) > 0 ? (int) round(((float) $v - (float) $before[$id]) / (float) $before[$id] * 100) : null,
+            'due' => number_format((float) ($due[$id] ?? 0), 4, '.', '')])->values()->all();
+    }
+
+    /**
+     * ⭐ সারি 7 — শাখা ধরে · 5 মাস + এ মাস (স্তূপ), শীর্ষ গ্রাহক (পারেটো, এ মাস), এলাকা ধরে (এ মাস) — বিক্রয়ের নিজের হিসাবে ([[SalesAnalytics]])।
+     *
+     * @return array{branches: list<array{month: int, parts: array<string, string>}>, names: list<string>, pareto: list<array{name: string, value: string, cum: int}>, areas: list<array{name: string, value: string}>}
+     */
+    public function spread(): array
+    {
+        $months = [];
+        $names = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $m = Carbon::today()->startOfMonth()->subMonthsNoOverflow($i);
+            $rows = $this->analytics->byBranch($m->toDateString(), ($i === 0 ? Carbon::today() : $m->copy()->endOfMonth())->toDateString());
+            $parts = [];
+
+            foreach ($rows as $r) {
+                $parts[$r['name']] = (string) $r['amount'];
+                $names[$r['name']] = ($names[$r['name']] ?? 0) + (float) $r['amount'];
+            }
+
+            $months[] = ['month' => (int) $m->month, 'parts' => $parts];
+        }
+
+        arsort($names);
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $to = Carbon::today()->toDateString();
+        $customers = collect($this->analytics->topCustomers($from, $to))->take(12)->values();
+        $net = (float) $this->analytics->totals($from, $to)['net'];
+        $cum = 0.0;
+        $pareto = $customers->map(function ($c) use (&$cum, $net): array {
+            $cum += (float) $c['amount'];
+
+            return ['name' => (string) $c['name'], 'value' => (string) $c['amount'], 'cum' => $net > 0 ? (int) round($cum / $net * 100) : 0];
+        })->all();
+        $areas = collect($this->analytics->byTerritory($from, $to)['rows'] ?? [])->take(12)
+            ->map(fn ($r) => ['name' => (string) $r['name'], 'value' => (string) $r['amount']])->values()->all();
+
+        return ['branches' => $months, 'names' => array_slice(array_keys($names), 0, 6), 'pareto' => $pareto, 'areas' => $areas];
+    }
+
     /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */
     private function commission(Carbon $from, Carbon $to): string
     {

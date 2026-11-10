@@ -307,7 +307,28 @@ final class SalesDashboard implements ProvidesDashboard
                         return ['brands' => $board->brands(), 'channels' => $board->channels(), 'heat' => $board->orderHours()];
                     },
                 ],
+                // ⭐ সারি 6 — SR-দের লক্ষ্য, SR কমিশন, সেরা দুই SR, ডিস্ট্রিবিউটর
+                [
+                    'view' => 'sales::dashboard.board-team',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['srTargets' => $board->srTargets(), 'commission' => $board->srCommission(), 'topTwo' => $board->topTwo(), 'dealers' => $board->distributors()];
+                    },
+                ],
+                // ⭐ সারি 7 — শাখা, শীর্ষ গ্রাহক, এলাকা
+                [
+                    'view' => 'sales::dashboard.board-reach',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => fn (): array => ['spread' => app(SalesBoard::class)->spread()],
+                ],
             ],
+
+            // ⭐ পাতায় কেবল নমুনার সাত সারি (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে) — [[DashboardDefinition::forPage()]]
+            board: true,
         );
     }
 
