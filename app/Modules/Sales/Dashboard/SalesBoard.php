@@ -145,6 +145,133 @@ final class SalesBoard
         ];
     }
 
+    /** সরাসরি বিক্রির খরচের খাত — গাড়ি ভাড়া, জ্বালানি, পুরনো পরিবহন; লোডিং, আনলোডিং, হাম্মালি */
+    public const DIRECT_COST_CODES = ['vehicle' => ['5217', '5216', '5204'], 'labour' => ['5218', '5219', '5220']];
+
+    /**
+     * ⭐ সারি 2 — বিক্রি থেকে নিট লাভ · এ মাস: বিক্রি − কেনা দাম = গ্রস লাভ → সরাসরি বিক্রির খরচ → SR কমিশন → অফিস ও অন্যান্য খরচ → অন্যান্য আয় → নিট লাভ।
+     * ⓘ বিক্রি = নিট বিক্রি ([[SalesAnalytics::totals()]]); গ্রস লাভ = পাকা বিলের (উপমোট − ছাড়) − বিক্রীত মালের খরচ ([[StockDemand::grossProfit()]] — মজুদের ড্যাশবোর্ডের একই অঙ্ক)।
+     * ⓘ সরাসরি খরচ খাতা থেকে (গাড়ি ভাড়া ও জ্বালানি, লোড-আনলোড-হাম্মালি); অফিস ও অন্যান্য = সব পরিচালন খরচ − সরাসরি খরচ; অন্যান্য আয় = সব আয় − নিট বিক্রির খাত।
+     * ⓘ SR কমিশন খাতায় বসে না — কমিশনের হিসাব ([[CommissionEngine::preview()]]) এ মাসের পাকা বিলের ওপর; তাই নিট লাভ = খাতার নিট লাভ − এই কমিশন।
+     *
+     * @return array<string, string>
+     */
+    public function profitLadder(): array
+    {
+        $from = Carbon::today()->startOfMonth();
+        $to = Carbon::today();
+        $sales = (string) $this->analytics->totals($from->toDateString(), $to->toDateString())['net'];
+        $gross = app(\App\Core\Contracts\StockDemand::class)->grossProfit($from->toDateString(), $to->toDateString());
+        $sum = fn (array $codes) => array_reduce($codes, fn (string $c, string $code) => bcadd($c, self::moved($code, $from, $to), 4), '0');
+        $vehicle = $sum(self::DIRECT_COST_CODES['vehicle']);
+        $labour = $sum(self::DIRECT_COST_CODES['labour']);
+        $direct = bcadd($vehicle, $labour, 4);
+        $opex = self::moved(\App\Modules\Accounts\Services\StandardChart::OPERATING_EXPENSES, $from, $to);
+        $income = self::moved(\App\Modules\Accounts\Services\StandardChart::INCOME, $from, $to);
+        $expense = self::moved('5000', $from, $to);
+        $commission = $this->commission($from, $to);
+
+        return [
+            'sales' => $sales,
+            'cogs' => bcsub($sales, $gross, 4),
+            'gross' => $gross,
+            'vehicle' => $vehicle,
+            'labour' => $labour,
+            'direct' => $direct,
+            'commission' => $commission,
+            'other_cost' => bcsub($opex, $direct, 4),
+            'other_income' => bcsub($income, $sum(\App\Modules\Accounts\Services\StandardChart::NET_SALES), 4),
+            'net' => bcsub(bcsub($income, $expense, 4), $commission, 4),
+        ];
+    }
+
+    /**
+     * ⭐ মাসের লক্ষ্য — SR-দের লক্ষ্যের যোগ বনাম অর্জন ([[SalesAnalytics::targetAchievement()]]), মাসের কত দিন পেরিয়েছে, এই গতিতে মাস শেষে কত,
+     * বাকি দিনে দিনে কত দরকার আর দিনে কত হচ্ছে।
+     *
+     * @return array{target: ?string, achieved: string, pct: ?int, days_pct: int, projected: string, need: ?string, pace: string}
+     */
+    public function monthTarget(): array
+    {
+        $today = Carbon::today();
+        $t = $this->analytics->targetAchievement($today);
+        $days = $today->daysInMonth;
+        $pace = bcdiv($t['achieved'], (string) $today->day, 4);
+        $left = $days - $today->day;
+        $gap = $t['target'] === null ? '0' : bcsub($t['target'], $t['achieved'], 4);
+
+        return [
+            'target' => $t['target'],
+            'achieved' => $t['achieved'],
+            'pct' => $t['percent'] === null ? null : (int) round((float) $t['percent']),
+            'days_pct' => (int) round($today->day * 100 / $days),
+            'projected' => bcmul($pace, (string) $days, 4),
+            'need' => $t['target'] === null || $left <= 0 ? null : (bccomp($gap, '0', 4) > 0 ? bcdiv($gap, (string) $left, 4) : '0'),
+            'pace' => $pace,
+        ];
+    }
+
+    /**
+     * ⭐ সেরা 5 ও দুর্বল 5 পণ্য — এ মাসের সবচেয়ে বেশি বিক্রি (টাকায়), আর গত মাসের একই দিনগুলোর তুলনায় সবচেয়ে বেশি কমেছে (শতাংশে)।
+     *
+     * @return array{top: list<array{name: string, value: string}>, falling: list<array{name: string, pct: int}>}
+     */
+    public function products(): array
+    {
+        $today = Carbon::today();
+        $from = $today->copy()->startOfMonth();
+        $lastFrom = $from->copy()->subMonthNoOverflow();
+        $lastTo = $lastFrom->copy()->addDays($today->day - 1)->min($lastFrom->copy()->endOfMonth());
+        $by = fn (Carbon $a, Carbon $b) => SalesInvoiceLine::query()
+            ->whereHas('invoice', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$a->toDateString(), $b->toDateString()]))
+            ->groupBy('product_id')->selectRaw('product_id, SUM(amount) as v')->pluck('v', 'product_id');
+        $now = $by($from, $today);
+        $last = $by($lastFrom, $lastTo);
+        $names = \App\Modules\Inventory\Models\Product::query()->whereIn('id', array_unique([...$now->keys()->all(), ...$last->keys()->all()]) ?: [0])->get()
+            ->mapWithKeys(fn ($p) => [(int) $p->id => $p->name()]);
+
+        return [
+            'top' => $now->sortDesc()->take(5)->map(fn ($v, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'value' => bcadd((string) $v, '0', 4)])->values()->all(),
+            'falling' => $last->filter(fn ($v) => (float) $v > 0)
+                ->map(fn ($v, $id) => (int) round(((float) ($now[$id] ?? 0) - (float) $v) / (float) $v * 100))
+                ->filter(fn ($pct) => $pct < 0)->sort()->take(5)
+                ->map(fn ($pct, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'pct' => $pct])->values()->all(),
+        ];
+    }
+
+    /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */
+    private function commission(Carbon $from, Carbon $to): string
+    {
+        $key = 'abos.sales-board-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to->toDateString();
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 600, function () use ($from, $to): string {
+            $engine = app(\App\Modules\Sales\Services\CommissionEngine::class);
+
+            return SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
+                ->get()->reduce(fn (string $c, SalesInvoice $i) => bcadd($c, (string) $engine->preview($i)['total'], 4), '0');
+        });
+    }
+
+    /** একটা খাতের (ও নিচের) সময়ের নড়াচড়া, দেখার নাগালে */
+    private static function moved(string $code, Carbon $from, Carbon $to): string
+    {
+        $account = \App\Modules\Accounts\Services\StandardChart::find($code);
+
+        if ($account === null) {
+            return '0';
+        }
+
+        $ids = app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
+        $before = $from->copy()->subDay()->toDateString();
+        $total = '0';
+
+        foreach ($ids === null ? [null] : $ids as $branch) {
+            $total = bcadd($total, bcsub($account->balanceOn($to->toDateString(), $branch), $account->balanceOn($before, $branch), 4), 4);
+        }
+
+        return $total;
+    }
+
     /** @return array{0: int, 1: string} 90 দিনের বেশি পুরনো বাকি — কয়টা গ্রাহক, কত টাকা */
     private function overdue90(): array
     {

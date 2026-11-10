@@ -262,6 +262,17 @@ final class SalesDashboard implements ProvidesDashboard
                         return ['problems' => $board->problems(), 'glance' => $board->glance()];
                     },
                 ],
+                // ⭐ সারি 2 — বিক্রি থেকে নিট লাভ, মাসের লক্ষ্য, সেরা ও দুর্বল পণ্য
+                [
+                    'view' => 'sales::dashboard.board-profit',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['ladder' => $board->profitLadder(), 'target' => $board->monthTarget(), 'products' => $board->products()];
+                    },
+                ],
             ],
         );
     }
