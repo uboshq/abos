@@ -427,6 +427,17 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['glance' => $board->glance(), 'tree' => $board->expenseTree()];
                     },
                 ],
+                // ⭐ সারি 4 — মাস বন্ধের সময়রেখা, ব্যাংক মিলকরণ, কর ও সরকারি দায়
+                [
+                    'view' => 'accounts::dashboard.board-close',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['close' => $board->monthClose(), 'banks' => $board->banks(), 'taxes' => $board->taxes()];
+                    },
+                ],
             ],
         );
     }

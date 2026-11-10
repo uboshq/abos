@@ -354,6 +354,62 @@ final class AccountsBoard
         return ['boxes' => $out, 'total' => $total];
     }
 
+    /**
+     * ⭐ ব্যাংক মিলকরণ — প্রতিটা চালু ব্যাংক খাত: খাতার জের, বিবরণীর শেষ জের, না-মেলা সারি, শেষ নিশ্চিত মিলকরণের দিন, আর শেষ 90 দিনের
+     * বিবরণীর কত শতাংশ মিলেছে।
+     *
+     * @return list<array{name: string, book: string, statement: ?string, unmatched: int, last: ?string, pct: ?int}>
+     */
+    public function banks(): array
+    {
+        $since = Carbon::today()->subDays(90)->toDateString();
+
+        return Account::query()->ofMoneyKind(Account::BANK)->where('is_active', true)->orderBy('code')->get()
+            ->map(function (Account $a) use ($since): array {
+                $lines = BankStatementLine::query()->where('bank_account_id', $a->id);
+                $all = (clone $lines)->where('trx_date', '>=', $since)->count();
+                $matched = (clone $lines)->where('trx_date', '>=', $since)->whereNotNull('matched_line_id')->count();
+                $lastLine = (clone $lines)->orderByDesc('trx_date')->orderByDesc('id')->first(['balance']);
+                $last = \App\Modules\Accounts\Models\BankReconciliation::query()->where('bank_account_id', $a->id)
+                    ->where('status', \App\Modules\Accounts\Models\BankReconciliation::CONFIRMED)->max('statement_date');
+
+                return [
+                    'name' => $a->name(),
+                    'book' => $a->balanceInView(),
+                    'statement' => $lastLine?->balance === null ? null : (string) $lastLine->balance,
+                    'unmatched' => (clone $lines)->unmatched()->count(),
+                    'last' => $last === null ? null : substr((string) $last, 0, 10),
+                    'pct' => $all === 0 ? null : (int) floor($matched * 100 / $all),
+                ];
+            })->values()->all();
+    }
+
+    /**
+     * ⭐ কর ও সরকারি দায় — ভ্যাট (মূসক-9.1: প্রদেয় ভ্যাটের জের, পরের মাসের 15 তারিখ), আর খোলা কোষাগার-জমার দায়
+     * ([[ComplianceObligation]] — উৎসে আয়কর ও উৎসে ভ্যাট, নিজের শেষ তারিখে)। ⓘ বৃত্ত = মাসের কতটা পেরিয়েছে শেষ তারিখ পর্যন্ত।
+     *
+     * @return list<array{key: string, amount: string, due: string, days: int, share: float}>
+     */
+    public function taxes(): array
+    {
+        $today = Carbon::today();
+        $nextFifteenth = $today->day <= 15 ? $today->copy()->day(15) : $today->copy()->addMonthNoOverflow()->day(15);
+        $share = fn (Carbon $due) => min(1.0, max(0.0, 1 - $today->diffInDays($due) / 30));
+        $out = [['key' => 'vat', 'amount' => self::balance(StandardChart::VAT_PAYABLE), 'due' => $nextFifteenth->toDateString(),
+            'days' => (int) $today->diffInDays($nextFifteenth), 'share' => $share($nextFifteenth)]];
+        $obligation = \App\Modules\Accounts\Models\ComplianceObligation::class;
+
+        foreach ([$obligation::AIT => 'ait', $obligation::VDS => 'vds'] as $subject => $key) {
+            $open = $obligation::query()->open()->where('kind', $obligation::KOSAGAR_DEPOSIT)->where('subject', $subject)->get(['amount', 'due_on']);
+            $first = $open->min('due_on');
+            $due = $first === null ? $nextFifteenth : Carbon::parse($first)->startOfDay();
+            $out[] = ['key' => $key, 'amount' => $open->reduce(fn (string $c, $o) => bcadd($c, (string) $o->amount, 4), '0'), 'due' => $due->toDateString(),
+                'days' => (int) $today->diffInDays($due, false), 'share' => $share($due)];
+        }
+
+        return $out;
+    }
+
     /** একটা খাতের (ও নিচের) তারিখের জের, দেখার নাগালে */
     private static function balanceAt(string $code, Carbon $at): string
     {
