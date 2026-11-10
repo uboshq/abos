@@ -68,15 +68,31 @@ class SearchController extends Controller
         }
 
         $hits = $this->search->search($term, $request->user());
+        $all = [...$this->pagesMatching($term, $request->user()), ...array_map(fn (SearchHit $hit): array => [
+            'type' => $hit->type,
+            'no' => $hit->documentNo,
+            'label' => $hit->label,
+            'url' => $hit->url,
+        ], $hits)];
+
+        /*
+         * ⭐ কে কী খুঁজল — কন্ট্রোল প্যানেলের খাতায় (মালিক, ১০ নভেম্বর ২০২৬: "ke ki search korlo … control penel e alada vabe
+         * rakte hobe"; কোপাইলট ধাপ ০)। ⓘ যে পাতা থেকে খুঁজল, তা ব্রাউজারের Referer থেকে — কেবল পথ, ঠিকানার প্রশ্ন-অংশ নয়।
+         * ⓘ খাতায় লেখা না গেলেও খোঁজা চলে — খাতার ভুল মানুষের কাজ আটকায় না।
+         */
+        if ($request->user() !== null) {
+            try {
+                app(\App\Core\Engines\Assistant\AssistantEngine::class)->recordSearch(
+                    $request->user(), $term, count($all), parse_url((string) $request->headers->get('referer', ''), PHP_URL_PATH) ?: null,
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         return response()->json([
             // ⭐ পাতা আগে, তারপর কাগজ ([[pagesMatching()]]) — একটাই খোঁজা (ওয়েবের মান ধাপ ২, ভুল ২)
-            'hits' => [...$this->pagesMatching($term, $request->user()), ...array_map(fn (SearchHit $hit): array => [
-                'type' => $hit->type,
-                'no' => $hit->documentNo,
-                'label' => $hit->label,
-                'url' => $hit->url,
-            ], $hits)],
+            'hits' => $all,
         ]);
     }
 

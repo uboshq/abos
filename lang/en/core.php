@@ -1566,6 +1566,7 @@ return [
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
             'backup_failed' => 'When a backup fails',
             'sms_overdue' => 'When the SMS phone is off (SMS stuck over 2 hours)',
+            'assistant_brief' => 'Copilot morning watch',
             'signed_challan_stuck' => 'When an approved challan could not be confirmed',
             'signed_sale_stuck' => 'When an approved counter sale could not be finished',
             'signed_paper_stuck' => 'When an approved voucher or bill could not be posted',

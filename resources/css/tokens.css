@@ -1061,6 +1061,8 @@
     --color-module-fixed_assets: #92400e; /* গাঢ় বাদামি — ৭.০৯ */
     /* ⓘ মালিকের কেন্দ্র (১০ অক্টোবর ২০২৬) — গাঢ় সোনালি, ব্র্যান্ডের সোনার ঘরের */
     --color-module-executive: #a16207;    /* গাঢ় সোনালি — ৪.৯২ */
+    /* ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — গাঢ় বেগুনি, মগজের রং */
+    --color-module-assistant: #6d28d9;    /* ভায়োলেট ৭০০ — ৭.১০ */
 
     /*
      * ⭐ রঙিন ড্যাশবোর্ড — মালিকের নমুনা "সব মডিউলের রঙিন ড্যাশবোর্ড" (৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color
@@ -1126,6 +1128,7 @@
     --color-module-reports: var(--color-brand-700);
     --color-module-fixed_assets: var(--color-brand-700);
     --color-module-executive: var(--color-brand-700);
+    --color-module-assistant: var(--color-brand-700);
     /* ⓘ সাজের বারো রং আর সঙ্গী রংও এক রঙে; মানের রং (`--color-card-*`) থাকে */
     --color-pal-blue: var(--color-brand-700);
     --color-pal-green: var(--color-brand-700);
@@ -1234,6 +1237,8 @@
     --color-topbar-glyph-tasks: #4ade80;
     --color-topbar-glyph-papers: #22d3ee;
     --color-topbar-glyph-bell: #fbbf24;
+    /* ⭐ কোপাইলটের মগজ — নেভি বারে হালকা বেগুনি (পূর্ণ পরিকল্পনা 9a6nHmbFk5NF7YB5NbzCC2) */
+    --color-topbar-glyph-brain: #c4b5fd;
     /* ⭐ অনুমোদনের অবস্থার রং — ইনবক্সের পাঁচ ঘর আর কার্ডের দাগে একই (মালিক, ৬ নভেম্বর ২০২৬: "approval pagegulo color ful korbe") */
     --color-board-late: #dc2626;
     --color-board-wait: #d97706;
@@ -1317,6 +1322,7 @@
     --color-launcher-master_data: #a21caf;    /* ফুশিয়া — ৬.৩২ঃ১ */
     --color-launcher-system_admin: #334155;   /* স্লেট — ১০.৩৫ঃ১ */
     --color-launcher-executive: #a16207;      /* গাঢ় সোনালি-বাদামি, আগের মতোই — ৪.৯২ঃ১ */
+    --color-launcher-assistant: #6d28d9;      /* ভায়োলেট — কোপাইলটের মগজ — ৭.১০ঃ১ */
     --color-launcher-documents: #4d7c0f;      /* লেবু-সবুজ — ৪.৯৯ঃ১ */
     --color-launcher-notification: #0284c7;   /* আকাশি — ৪.১০ঃ১ */
     --color-launcher-fixed_assets: #78350f;   /* বাদামি — ৯.০৭ঃ১ */
