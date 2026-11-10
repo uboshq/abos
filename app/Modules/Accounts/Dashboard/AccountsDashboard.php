@@ -438,6 +438,17 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['close' => $board->monthClose(), 'banks' => $board->banks(), 'taxes' => $board->taxes()];
                     },
                 ],
+                // ⭐ সারি 5 — ভাউচারের প্রবাহ, খরচ এ মাস বনাম গত মাস, আয় বনাম খরচ
+                [
+                    'view' => 'accounts::dashboard.board-trends',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['flow' => $board->voucherFlow(), 'bullets' => $board->expenseVsLast(), 'ie' => $board->incomeVsExpense()];
+                    },
+                ],
             ],
         );
     }

@@ -155,4 +155,18 @@ return [
         'nothing' => 'nothing due',
         'tax_note' => 'Circle = how much of the time to deposit has gone · full means due today',
     ],
+    'r5' => [
+        'flow' => 'Voucher flow · last 30 days',
+        'flow_label' => 'Posted voucher money over the last 30 days, by type',
+        'types' => ['receipt' => 'Receipt', 'payment' => 'Payment', 'expense' => 'Expense', 'journal' => 'Journal', 'contra' => 'Contra'],
+        'bullets' => 'Expenses: this month vs last (bullet)',
+        'bullets_note' => 'Black mark = last month days 1–:d · coloured bar = this month days 1–:d · budget is on the finance dashboard',
+        'bullets_none' => 'No expense in either month',
+        'new' => 'new',
+        'ie' => 'Income vs expense · 12 months',
+        'ie_label' => 'Income and expense over 12 months',
+        'income' => 'Income',
+        'expense' => 'Expense',
+        'ie_note' => 'The wider the gap, the bigger the profit',
+    ],
 ];

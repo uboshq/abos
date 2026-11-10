@@ -410,6 +410,90 @@ final class AccountsBoard
         return $out;
     }
 
+    /**
+     * ⭐ সারি 5 — ভাউচারের প্রবাহ · শেষ 30 দিন: প্রতিদিন পাকা ভাউচারের টাকা, ধরন ধরে (আদায়, পরিশোধ, খরচ, জাবেদা, কন্ট্রা)।
+     *
+     * @return array{days: list<array{date: string, by: array<string, string>}>}
+     */
+    public function voucherFlow(): array
+    {
+        $from = Carbon::today()->subDays(29);
+        $rows = Voucher::query()->posted()->where('trx_date', '>=', $from->toDateString())
+            ->groupBy('trx_date', 'type')->selectRaw('trx_date, type, SUM(amount) as v')->get();
+        $days = [];
+
+        for ($d = $from->copy(); $d->lte(Carbon::today()); $d->addDay()) {
+            $days[$d->toDateString()] = ['date' => $d->toDateString(), 'by' => array_fill_keys(Voucher::TYPES, '0')];
+        }
+
+        foreach ($rows as $r) {
+            $key = substr((string) $r->trx_date, 0, 10);
+
+            if (isset($days[$key]['by'][$r->type])) {
+                $days[$key]['by'][$r->type] = bcadd($days[$key]['by'][$r->type], (string) $r->v, 4);
+            }
+        }
+
+        return ['days' => array_values($days)];
+    }
+
+    /**
+     * ⭐ খরচ: এ মাস বনাম গত মাস (বুলেট) — বড় ছয়টা খরচের খাত, এ মাসের 1 থেকে আজ বনাম গত মাসের একই দিনগুলো (বিক্রীত পণ্যের খরচ বাদ)।
+     *
+     * @return list<array{name: string, now: string, last: string, pct: ?int}>
+     */
+    public function expenseVsLast(): array
+    {
+        $today = Carbon::today();
+        $now = $this->expenseByAccount($today->copy()->startOfMonth(), $today);
+        $lastFrom = $today->copy()->startOfMonth()->subMonthNoOverflow();
+        $lastTo = $lastFrom->copy()->addDays($today->day - 1)->min($lastFrom->copy()->endOfMonth());
+        $last = $this->expenseByAccount($lastFrom, $lastTo);
+        $ids = collect(array_keys($now + $last))->sortByDesc(fn ($id) => max((float) ($now[$id] ?? 0), (float) ($last[$id] ?? 0)))->take(6)->values();
+        $names = Account::query()->whereIn('id', $ids->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+
+        return $ids->map(function ($id) use ($now, $last, $names): array {
+            $n = $now[$id] ?? '0';
+            $l = $last[$id] ?? '0';
+
+            return ['name' => (string) ($names[(int) $id] ?? ''), 'now' => $n, 'last' => $l,
+                'pct' => bccomp($l, '0', 4) > 0 ? (int) round(((float) $n - (float) $l) / (float) $l * 100) : null];
+        })->all();
+    }
+
+    /**
+     * ⭐ আয় বনাম খরচ · 12 মাস — মাসে সব আয় আর সব খরচ (লাভ-ক্ষতির খাতা থেকে); চলতি মাস আজ পর্যন্ত।
+     *
+     * @return list<array{month: int, income: string, expense: string}>
+     */
+    public function incomeVsExpense(): array
+    {
+        $out = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $from = Carbon::today()->startOfMonth()->subMonthsNoOverflow($i);
+            $to = $i === 0 ? Carbon::today() : $from->copy()->endOfMonth();
+            $out[] = ['month' => (int) $from->month, 'income' => self::moved([StandardChart::INCOME], $from, $to), 'expense' => self::moved(['5000'], $from, $to)];
+        }
+
+        return $out;
+    }
+
+    /** @return array<int, string> খরচের পাতা-খাত → সময়ের নিট খরচ (বিক্রীত পণ্যের খরচ বাদ), দেখার শাখায় */
+    private function expenseByAccount(Carbon $from, Carbon $to): array
+    {
+        $cogs = StandardChart::find(StandardChart::COST_OF_GOODS_SOLD);
+
+        return \App\Models\LedgerEntry::query()->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->tap(fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'ledger_entries.branch_id'))
+            ->where('accounts.type', Account::EXPENSE)->whereBetween('ledger_entries.trx_date', [$from->toDateString(), $to->toDateString()])
+            ->when($cogs !== null, fn ($q) => $q->where('accounts.code', 'not like', $cogs->code.'%'))
+            ->groupBy('ledger_entries.account_id')
+            ->selectRaw('ledger_entries.account_id as id, SUM(ledger_entries.debit - ledger_entries.credit) as v')
+            ->havingRaw('SUM(ledger_entries.debit - ledger_entries.credit) > 0')
+            ->pluck('v', 'id')->map(fn ($v) => bcadd((string) $v, '0', 4))->all();
+    }
+
     /** একটা খাতের (ও নিচের) তারিখের জের, দেখার নাগালে */
     private static function balanceAt(string $code, Carbon $at): string
     {
