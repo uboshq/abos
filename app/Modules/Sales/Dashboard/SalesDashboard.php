@@ -249,6 +249,20 @@ final class SalesDashboard implements ProvidesDashboard
                     href: route('accounts.report.show', ['slug' => 'party-target']),
                 )]),
             ],
+
+            // ⭐ মালিকের চূড়ান্ত নমুনা H8JXFPzh8m7zpsQSedmPDT-এর সারিগুলো ([[SalesBoard]]) — সাত সারি হলে পাতা কেবল এগুলো (board)
+            sections: [
+                [
+                    'view' => 'sales::dashboard.board-top',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['problems' => $board->problems(), 'glance' => $board->glance()];
+                    },
+                ],
+            ],
         );
     }
 
