@@ -73,6 +73,23 @@ return [
         'share' => ':p% of value',
         'rule' => 'AX auto-reorder · AZ raise safety stock · CZ question keeping it',
     ],
+    'e' => [
+        'title' => 'Expiring soon (FEFO)',
+        'risk' => ':amount at risk',
+        'aria' => 'Lots expiring in the next 60 days',
+        'b1' => '0–20 days',
+        'none' => 'No lot expires in 60 days',
+    ],
+    'h' => [
+        'title' => 'Warehouse × status (products)',
+        'cols' => ['OK', 'Low', 'Out', 'Over', 'Expiry risk', 'Not moved'],
+        'note' => 'The darker the colour, the bigger the problem · click a cell for the products',
+    ],
+    'k' => [
+        'title' => 'Count accuracy and shrinkage',
+        'none' => 'No stock count yet',
+        'note' => 'Up = counted more · down = less · shrinkage this year :amount (:share% of stock)',
+    ],
     't' => [
         'today' => 'Today, :date',
         'updated' => 'Updated :time',

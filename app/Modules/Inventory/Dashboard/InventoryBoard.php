@@ -549,6 +549,112 @@ final class InventoryBoard
     }
 
     /**
+     * ⭐ মেয়াদ শেষের পথে (FEFO) — বুদবুদ: বাঁ থেকে ডানে দিন (0–60), আকারে টাকা; নিচে সবচেয়ে কাছের তিনটা লট।
+     *
+     * @return array{total: string, bubbles: list<array{x: int, y: int, r: int, c: string}>, rows: list<array<string, string>>}
+     */
+    public function expiry(): array
+    {
+        $lots = $this->expiringLots(60);
+        $max = collect($lots)->reduce(fn (string $c, array $l) => bccomp($l['value'], $c, 4) > 0 ? $l['value'] : $c, '0');
+        $months = __('inventory::board.months_short');
+
+        return [
+            'total' => self::short(collect($lots)->reduce(fn (string $c, array $l) => bcadd($c, $l['value'], 4), '0')),
+            'bubbles' => collect($lots)->take(24)->values()->map(fn (array $l, int $i) => [
+                'x' => 12 + (int) round(min($l['days'], 60) / 60 * 336),
+                'y' => 26 + ($i * 37) % 96,
+                'r' => bccomp($max, '0', 4) > 0 ? 8 + (int) round(sqrt((float) bcdiv($l['value'], $max, 4)) * 12) : 10,
+                'c' => $l['days'] <= 20 ? 'var(--color-dash-ef4444)' : ($l['days'] <= 40 ? 'var(--color-dash-f97316)' : 'var(--color-dash-eab308)'),
+            ])->all(),
+            'rows' => collect($lots)->take(3)->map(fn (array $l) => [
+                'name' => $l['product'], 'lot' => $l['batch'], 'warehouse' => $l['warehouse'],
+                'when' => __('inventory::board.days', ['n' => $l['days']]).' · '.self::short($l['value']),
+                'tone' => $l['days'] <= 20 ? 'var(--color-dash-dc2626)' : 'var(--color-dash-ea580c)',
+            ])->all(),
+        ];
+    }
+
+    /**
+     * ⭐ গুদাম × অবস্থা — প্রতিটা গুদামে কয়টা পণ্য ঠিক আছে, কম, শেষ, বেশি, মেয়াদ ঝুঁকিতে, নড়েনি (90 দিন)।
+     * ⓘ "শেষ" কেবল সেই পণ্য যা ঐ গুদামে কোনোদিন ছিল — গুদামে কখনো না ঢোকা পণ্য শেষ নয়।
+     *
+     * @return list<array{name: string, counts: list<int>}>
+     */
+    public function warehouseHealth(): array
+    {
+        $picked = $this->picked()['warehouse'];
+        $ids = $this->snapshot()->pluck('id')->flip();
+        $edge = Carbon::today()->subDays(90)->toDateString();
+        $soon = collect($this->expiringLots(60));
+        $out = [];
+
+        foreach (Warehouse::query()->where('is_active', true)->when($picked !== null, fn ($q) => $q->whereKey($picked))->orderBy('id')->get() as $w) {
+            $snap = $this->facts->forWarehouse((int) $w->id)->snapshot()->filter(fn (Product $p) => $ids->has($p->id));
+            $seen = StockMovement::query()->where('warehouse_id', $w->id)->distinct()->pluck('product_id')->flip();
+            $c = [0, 0, 0, 0, 0, 0];
+
+            foreach ($snap as $p) {
+                if (! $seen->has($p->id)) {
+                    continue;
+                }
+
+                $have = (string) $p->getAttribute('available_qty');
+                $onHand = (string) $p->getAttribute('on_hand_qty');
+                $level = (string) ($p->reorder_level ?? '0');
+                $max = (string) ($p->max_level ?? '0');
+
+                if (bccomp($have, '0', 4) <= 0) {
+                    $c[2]++;
+                } elseif (bccomp($level, '0', 4) > 0 && bccomp($have, $level, 4) < 0) {
+                    $c[1]++;
+                } elseif (bccomp($max, '0', 4) > 0 && bccomp($onHand, $max, 4) > 0) {
+                    $c[3]++;
+                } else {
+                    $c[0]++;
+                }
+
+                if (bccomp($onHand, '0', 4) > 0 && ($p->getAttribute('last_out') === null || (string) $p->getAttribute('last_out') < $edge)) {
+                    $c[5]++;
+                }
+            }
+
+            $c[4] = $soon->where('warehouse', (string) $w->drillLabel())->pluck('product')->unique()->count();
+            $out[] = ['name' => (string) $w->drillLabel(), 'counts' => $c];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ গণনার নির্ভুলতা ও ঘাটতি — শেষ ছয় গণনার টাকার পার্থক্য (ওপরে বেশি, নিচে কম), এ অর্থবছরের মোট ঘাটতি আর তা মজুদের কত শতাংশ।
+     *
+     * @return array{ira: ?string, counts: list<array{label: string, value: string}>, short: string, share: string, last: ?array{warehouse: string, value: string}}
+     */
+    public function countAccuracy(): array
+    {
+        $counts = StockCount::query()->with(['lines', 'warehouse'])->where('status', '<>', DocumentStatus::CANCELLED)
+            ->when($this->picked()['warehouse'] !== null, fn ($q) => $q->where('warehouse_id', $this->picked()['warehouse']))
+            ->orderByDesc('count_date')->orderByDesc('id')->limit(6)->get()->reverse()->values();
+        $months = __('inventory::board.months_short');
+        $value = fn (StockCount $c) => $c->lines->reduce(fn (string $s, $l) => bcadd($s, bcmul((string) $l->difference, (string) ($l->unit_cost ?? '0'), 4), 4), '0');
+
+        $fyStart = Carbon::today()->month >= 7 ? Carbon::create(Carbon::today()->year, 7, 1) : Carbon::create(Carbon::today()->year - 1, 7, 1);
+        $short = StockCount::query()->with('lines')->where('status', DocumentStatus::CONFIRMED)->where('count_date', '>=', $fyStart->toDateString())
+            ->get()->reduce(fn (string $s, StockCount $c) => bcadd($s, $value($c), 4), '0');
+        $stock = $this->snapshot()->reduce(fn (string $c, Product $p) => bcadd($c, self::valueOf($p, (string) $p->getAttribute('on_hand_qty')), 4), '0');
+        $last = $counts->last();
+
+        return [
+            'ira' => $this->recordAccuracy(),
+            'counts' => $counts->map(fn (StockCount $c) => ['label' => Carbon::parse($c->count_date)->day.' '.($months[Carbon::parse($c->count_date)->month] ?? ''), 'value' => $value($c)])->all(),
+            'short' => bccomp($short, '0', 4) < 0 ? ltrim($short, '-') : '0',
+            'share' => bccomp($stock, '0', 4) > 0 && bccomp($short, '0', 4) < 0 ? bcdiv(bcmul(ltrim($short, '-'), '100', 4), $stock, 2) : '0',
+            'last' => $last === null ? null : ['warehouse' => (string) ($last->warehouse?->drillLabel() ?? ''), 'value' => $value($last)],
+        ];
+    }
+
+    /**
      * ⓘ প্রতিটা পণ্যের দিনের বেরোনোর ওঠানামা (আদর্শ বিচ্যুতি) — গত 90 দিন, যেদিন বেরোয়নি সেদিন 0 ধরে।
      *
      * @param  list<int>  $ids
