@@ -102,16 +102,20 @@ final class TheUserListSaysWhenEachPersonLastCameInTest extends TestCase
         $this->assertTrue($user->fresh()->hasRole('Warehouse'), '⛔ ভিতরের নামে আর রোলটা খুঁজে পাওয়া যায় না।');
     }
 
-    /** ⛔ সারির কাজ লেখাসহ বোতামেই থাকে, ⋯-এ নয় — মালিক ⋯ চাননি। */
+    /**
+     * ⛔ সারির কাজ লেখাসহ — নামহীন ⋯-এ নয় (মালিক ⋯ চাননি)। ⓘ ৯ নভেম্বর ২০২৬ থেকে (মালিক: "Abos er sokol list") কাজগুলো লেখাসহ
+     * "অ্যাকশন ▾" বোতামের মেনুতে — বোতামে নাম লেখা (`data-row-actions-button`), ভিতরে "সম্পাদনা" লেখাসহ; নতুন সিদ্ধান্ত পুরনোটাকে বদলায়।
+     */
     public function test_the_row_actions_stay_as_buttons(): void
     {
         $user = $this->member('buttons@abos.test');
 
         $row = $this->rowOf($this->list(), $user);
 
-        $this->assertStringContainsString(route('system_admin.user.edit', $user->id), $row, '⛔ সারিতে সম্পাদনার বোতাম নেই।');
-        $this->assertStringContainsString(__('core.action.edit', [], 'bn'), $row, '⛔ সম্পাদনার বোতামে লেখা নেই।');
-        $this->assertStringNotContainsString('aria-haspopup', $row, '⛔ সারির কাজ ⋯-এ লুকানো।');
+        $this->assertStringContainsString(route('system_admin.user.edit', $user->id), $row, '⛔ সারিতে সম্পাদনার পথ নেই।');
+        $this->assertStringContainsString(__('core.action.edit', [], 'bn'), $row, '⛔ সম্পাদনায় লেখা নেই।');
+        $this->assertSame(substr_count($row, 'aria-haspopup'), substr_count($row, 'data-row-actions-button'),
+            '⛔ সারির কাজ নামহীন ⋯-এ লুকানো — বোতামে "অ্যাকশন" লেখা নেই।');
     }
 
     /** @param array<string, mixed> $extra */
