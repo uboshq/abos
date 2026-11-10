@@ -90,6 +90,24 @@ return [
         'none' => 'No stock count yet',
         'note' => 'Up = counted more · down = less · shrinkage this year :amount (:share% of stock)',
     ],
+    'g' => [
+        'title' => 'Stock value and days of inventory · 12 months',
+        'value' => 'Stock value (crore)',
+        'dio' => 'Days of inventory (DIO)',
+        'dio_short' => 'Days in stock',
+        'aria' => 'Stock value and days of inventory over 12 months',
+    ],
+    'w' => [
+        'title' => 'Stock by warehouse',
+        'places' => ':n places',
+        'moving' => 'On the way (transfers)',
+        'others' => 'Others',
+        'no_brand' => 'No brand',
+    ],
+    'b' => [
+        'title' => 'Stock by brand (treemap)',
+        'none' => 'No stock on hand',
+    ],
     't' => [
         'today' => 'Today, :date',
         'updated' => 'Updated :time',

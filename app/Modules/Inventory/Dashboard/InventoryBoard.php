@@ -589,8 +589,8 @@ final class InventoryBoard
         $soon = collect($this->expiringLots(60));
         $out = [];
 
-        foreach (Warehouse::query()->where('is_active', true)->when($picked !== null, fn ($q) => $q->whereKey($picked))->orderBy('id')->get() as $w) {
-            $snap = $this->facts->forWarehouse((int) $w->id)->snapshot()->filter(fn (Product $p) => $ids->has($p->id));
+        foreach ($this->warehouses() as $w) {
+            $snap = $this->warehouseSnapshot((int) $w->id)->filter(fn (Product $p) => $ids->has($p->id));
             $seen = StockMovement::query()->where('warehouse_id', $w->id)->distinct()->pluck('product_id')->flip();
             $c = [0, 0, 0, 0, 0, 0];
 
@@ -652,6 +652,161 @@ final class InventoryBoard
             'share' => bccomp($stock, '0', 4) > 0 && bccomp($short, '0', 4) < 0 ? bcdiv(bcmul(ltrim($short, '-'), '100', 4), $stock, 2) : '0',
             'last' => $last === null ? null : ['warehouse' => (string) ($last->warehouse?->drillLabel() ?? ''), 'value' => $value($last)],
         ];
+    }
+
+    /** @var array<int, Collection<int, Product>> */
+    private array $byWarehouse = [];
+
+    /** @return Collection<int, Warehouse> */
+    private function warehouses(): Collection
+    {
+        $picked = $this->picked()['warehouse'];
+
+        return Warehouse::query()->where('is_active', true)->when($picked !== null, fn ($q) => $q->whereKey($picked))->orderBy('id')->get();
+    }
+
+    /** @return Collection<int, Product> এক গুদামের ছবি — একবারই তোলা */
+    private function warehouseSnapshot(int $id): Collection
+    {
+        return $this->byWarehouse[$id] ??= $this->facts->forWarehouse($id)->snapshot();
+    }
+
+    /**
+     * ⭐ মজুদের দাম ও মজুদে কত দিন · 12 মাস — মাস-শেষের মজুদ (মজুদের খাতা 1120) আর DIO = মাস-শেষের মজুদ ÷ ঐ মাসে বেরোনো × 30।
+     * ⓘ চলতি মাসের DIO চলতি দিন ধরে (বেরোনো ÷ পেরোনো দিন)।
+     *
+     * @return list<array{month: string, value: string, dio: ?int}>|null
+     */
+    public function trend(): ?array
+    {
+        if (! \App\Core\Security\FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
+        $account = \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::INVENTORY);
+
+        if ($account === null) {
+            return null;
+        }
+
+        $from = Carbon::today()->startOfMonth()->subMonths(11);
+        $q = fn () => \App\Core\Support\ViewedBranch::narrow(\App\Models\LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('ledger_entries.company_id', \App\Core\Support\CompanyContext::id())->where('account_id', $account->id);
+
+        $before = (string) ($q()->where('trx_date', '<', $from->toDateString())->selectRaw('COALESCE(SUM(debit - credit), 0) as b')->value('b') ?? '0');
+        $rows = $q()->where('trx_date', '>=', $from->toDateString())
+            ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c")
+            ->groupBy('ym')->get()->keyBy('ym');
+
+        $months = __('inventory::board.months_short');
+        $balance = $before;
+        $out = [];
+
+        for ($i = 0, $m = $from->copy(); $i < 12; $i++, $m->addMonth()) {
+            $row = $rows->get($m->format('Y-m'));
+            $balance = bcadd($balance, bcsub((string) ($row->d ?? '0'), (string) ($row->c ?? '0'), 4), 4);
+            $days = $m->isSameMonth(Carbon::today()) ? Carbon::today()->day : $m->daysInMonth;
+            $outflow = (string) ($row->c ?? '0');
+            $out[] = [
+                'month' => $months[$m->month] ?? '',
+                'value' => $balance,
+                'dio' => bccomp($outflow, '0', 4) > 0 ? (int) bcdiv(bcmul($balance, (string) $days, 4), $outflow, 0) : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ গুদাম ধরে মজুদ — প্রতিটা গুদামের মাল কেনা দামে, আর পথে থাকা বদলি আলাদা ভাগে।
+     *
+     * @return list<array{name: string, value: string}>
+     */
+    public function byWarehouse(): array
+    {
+        $ids = $this->snapshot()->keyBy('id');
+        $out = [];
+
+        foreach ($this->warehouses() as $w) {
+            $v = $this->warehouseSnapshot((int) $w->id)->reduce(function (string $c, Product $p) use ($ids): string {
+                $base = $ids[(int) $p->id] ?? null;
+
+                return $base === null ? $c : bcadd($c, self::valueOf($base, (string) $p->getAttribute('on_hand_qty')), 4);
+            }, '0');
+            $out[] = ['name' => (string) $w->drillLabel(), 'value' => $v];
+        }
+
+        $moving = '0';
+
+        foreach (StockTransfer::query()->onTheWay()->with('lines')->get() as $t) {
+            foreach ($t->lines as $line) {
+                $p = $ids[(int) $line->product_id] ?? null;
+                $moving = bcadd($moving, $p instanceof Product ? self::valueOf($p, (string) $line->qty) : '0', 4);
+            }
+        }
+
+        if (bccomp($moving, '0', 4) > 0) {
+            $out[] = ['name' => __('inventory::board.w.moving'), 'value' => $moving];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ ব্র্যান্ড ধরে মজুদ (ট্রিম্যাপ) — বড় ছয়টা ব্র্যান্ড আর বাকি "অন্যান্য"; ঘরের মাপ সারি-ভাগ পদ্ধতিতে (slice-and-dice), শতাংশে।
+     *
+     * @return list<array{name: string, value: string, x: float, y: float, w: float, h: float}>
+     */
+    public function byBrand(): array
+    {
+        $snap = $this->snapshot();
+        $snap->loadMissing('brandRow');
+        $groups = $snap->groupBy(fn (Product $p) => (int) ($p->brand_id ?? 0))
+            ->map(fn (Collection $ps) => ['name' => (string) ($ps->first()->brandRow?->drillLabel() ?? __('inventory::board.w.no_brand')),
+                'value' => $ps->reduce(fn (string $c, Product $p) => bcadd($c, self::valueOf($p, (string) $p->getAttribute('on_hand_qty')), 4), '0')])
+            ->filter(fn (array $g) => bccomp($g['value'], '0', 4) > 0)
+            ->sort(fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4))->values();
+
+        $top = $groups->take(6)->all();
+        $rest = $groups->slice(6)->reduce(fn (string $c, array $g) => bcadd($c, $g['value'], 4), '0');
+
+        if (bccomp($rest, '0', 4) > 0) {
+            $top[] = ['name' => __('inventory::board.w.others'), 'value' => $rest];
+        }
+
+        $total = array_reduce($top, fn (string $c, array $g) => bcadd($c, $g['value'], 4), '0');
+
+        if (bccomp($total, '0', 4) <= 0) {
+            return [];
+        }
+
+        // ⓘ সারি-ভাগ: প্রথমটা বাঁয়ে পুরো উচ্চতায়, বাকিগুলো ডানে — পালা করে উল্লম্ব/আনুভূমিক
+        $out = [];
+        $box = ['x' => 0.0, 'y' => 0.0, 'w' => 100.0, 'h' => 100.0];
+        $left = (float) $total;
+        $vertical = true;
+
+        foreach ($top as $i => $g) {
+            $share = $left > 0 ? (float) $g['value'] / $left : 1.0;
+            $last = $i === count($top) - 1;
+
+            if ($vertical) {
+                $w = $last ? $box['w'] : $box['w'] * $share;
+                $out[] = $g + ['x' => $box['x'], 'y' => $box['y'], 'w' => $w, 'h' => $box['h']];
+                $box['x'] += $w;
+                $box['w'] -= $w;
+            } else {
+                $h = $last ? $box['h'] : $box['h'] * $share;
+                $out[] = $g + ['x' => $box['x'], 'y' => $box['y'], 'w' => $box['w'], 'h' => $h];
+                $box['y'] += $h;
+                $box['h'] -= $h;
+            }
+
+            $left -= (float) $g['value'];
+            $vertical = ! $vertical;
+        }
+
+        return $out;
     }
 
     /**

@@ -91,6 +91,12 @@ final class InventoryDashboard implements ProvidesDashboard
                     'permission' => 'inventory.stock.view',
                     'data' => fn (): array => ['expiry' => $once()->expiry(), 'health' => $once()->warehouseHealth(), 'counts' => $once()->countAccuracy()],
                 ],
+                [
+                    'view' => 'inventory::dashboard.board-trend',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['trend' => $once()->trend(), 'warehouses' => $once()->byWarehouse(), 'brands' => $once()->byBrand()],
+                ],
             ],
         );
     }
