@@ -155,7 +155,8 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         $html = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
 
         $this->assertStringContainsString('data-fund-total', $html, '⛔ অর্থের ড্যাশবোর্ডে তহবিলের ঘর নেই।');
-        $this->assertLessThan(strpos($html, 'data-working-capital'), strpos($html, 'data-fund'), '⛔ তহবিলের ঘর মাথায় নয়।');
+        // ⓘ চূড়ান্ত নমুনায় তহবিলের সারির ঠিক নিচে 13 সপ্তাহের পূর্বাভাস (সারি 2)
+        $this->assertLessThan(strpos($html, 'data-fin-forecast'), strpos($html, 'data-fund'), '⛔ তহবিলের ঘর মাথায় নয়।');
         $this->assertSame(1, substr_count($html, 'data-fund-total'), '⛔ তহবিলের ঘর দুইবার আঁকা হলো (মাথায় আর নিচে)।');
         foreach (['free', 'lowest', 'cover', 'od'] as $tile) {
             $this->assertStringContainsString('data-fund-tile="'.$tile.'"', $html, "⛔ '{$tile}' ঘরটা নেই।");
