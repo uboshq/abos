@@ -443,6 +443,17 @@ final class FinanceDashboard implements ProvidesDashboard
                         ];
                     },
                 ],
+                // ⭐ সারি 6 — টাকা কোন ব্যাংকে, চেকের পাইপলাইন, সঞ্চয় ও FDR, মূলধন-উত্তোলন-লাভ বণ্টন ([[FinanceBoard]])
+                [
+                    'view' => 'finance::dashboard.board-holdings',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(FinanceBoard::class);
+
+                        return ['banks' => $board->banks(), 'cheques' => $board->cheques(), 'deposits' => $board->deposits(), 'owners' => $board->owners()];
+                    },
+                ],
             ],
         );
     }

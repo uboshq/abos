@@ -95,6 +95,141 @@ final class FinanceBoard
         ];
     }
 
+    /**
+     * ⭐ সারি 6 — টাকা কোন ব্যাংকে (ব্যাংক হিসাব ধরে + MFS এক ভাগে; এক ব্যাংকে 40%-এর বেশি হলে সতর্কতা — ঝুঁকি ছড়ানোর প্রচলিত সীমা)।
+     *
+     * @return array{parts: list<array{name: string, value: string}>, total: string, top: ?array{name: string, pct: int}}
+     */
+    public function banks(): array
+    {
+        $parts = array_map(fn (array $b) => ['name' => $b['name'], 'value' => $b['balance']],
+            array_values(array_filter(app(\App\Modules\Accounts\Services\AccountsFacts::class)->bankBalances(), fn (array $b) => bccomp($b['balance'], '0', 4) > 0)));
+        $mfs = app(\App\Modules\Accounts\Services\AccountsFacts::class)->moneyPositions()['mfs'];
+
+        if (bccomp($mfs, '0', 4) > 0) {
+            $parts[] = ['name' => 'MFS', 'value' => $mfs];
+        }
+
+        usort($parts, fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4));
+        $total = array_reduce($parts, fn (string $c, array $p) => bcadd($c, $p['value'], 4), '0');
+        $top = $parts === [] || bccomp($total, '0', 4) <= 0 ? null
+            : ['name' => $parts[0]['name'], 'pct' => (int) round((float) bcdiv(bcmul($parts[0]['value'], '100', 4), $total, 4))];
+
+        return ['parts' => $parts, 'total' => $total, 'top' => $top];
+    }
+
+    /**
+     * ⭐ চেকের পাইপলাইন · 4 সপ্তাহ — হাতে থাকা পাওয়া চেক (জমা হয়নি) আর দেওয়া চেক (ভাঙানো হয়নি), চেকের তারিখের সপ্তাহ ধরে।
+     * ⓘ তারিখ পেরোনো চেক প্রথম সপ্তাহে; ফেরত হার = গত 90 দিনে পাওয়া চেকের কত শতাংশ ফেরত এসেছে (সংখ্যায়)।
+     *
+     * @return array{weeks: list<array{in: string, out: string}>, in: string, out: string, bounce: ?string}
+     */
+    public function cheques(): array
+    {
+        $today = Carbon::today();
+        $weeks = array_fill(0, 4, ['in' => '0', 'out' => '0']);
+        $cheque = \App\Modules\Accounts\Models\Cheque::class;
+
+        $cheque::query()->whereIn('status', [$cheque::PENDING, $cheque::DEPOSITED])
+            ->where('cheque_date', '<=', $today->copy()->addDays(27)->toDateString())
+            ->get(['direction', 'status', 'cheque_date', 'amount'])
+            ->each(function ($c) use (&$weeks, $today, $cheque): void {
+                $in = $c->direction === $cheque::RECEIVED;
+
+                // ⓘ দেওয়া চেক ব্যাংকে "জমা" হয় না — কেবল ঝুলে থাকা; পাওয়া চেক জমা হলেও এখনো টাকা হয়নি
+                if (! $in && $c->status !== $cheque::PENDING) {
+                    return;
+                }
+
+                $day = Carbon::parse($c->cheque_date)->startOfDay();
+                $i = $day->lt($today) ? 0 : min(3, intdiv((int) $today->diffInDays($day), 7));
+                $weeks[$i][$in ? 'in' : 'out'] = bcadd($weeks[$i][$in ? 'in' : 'out'], (string) $c->amount, 4);
+            });
+
+        $received = $cheque::query()->where('direction', $cheque::RECEIVED)->where('cheque_date', '>=', $today->copy()->subDays(90)->toDateString())->count();
+        $bounced = $cheque::query()->where('direction', $cheque::RECEIVED)->where('status', $cheque::BOUNCED)->where('cheque_date', '>=', $today->copy()->subDays(90)->toDateString())->count();
+
+        return [
+            'weeks' => $weeks,
+            'in' => array_reduce($weeks, fn (string $c, array $w) => bcadd($c, $w['in'], 4), '0'),
+            'out' => array_reduce($weeks, fn (string $c, array $w) => bcadd($c, $w['out'], 4), '0'),
+            'bounce' => $received === 0 ? null : bcdiv((string) ($bounced * 100), (string) $received, 1),
+        ];
+    }
+
+    /**
+     * ⭐ সঞ্চয় ও FDR — মেয়াদের সময়রেখা: চালু সঞ্চয় মেয়াদের দিন ধরে, সামনের 12 মাসে; টাকার ওজনে গড় মুনাফার হার; 30 দিনে কী মেয়াদে।
+     *
+     * @return array{rows: list<array{name: string, principal: string, date: string, days: int}>, total: string, rate: ?string, soon: string, soon_name: string}
+     */
+    public function deposits(): array
+    {
+        $deposit = \App\Modules\Finance\Models\Deposit::class;
+
+        if (! \Illuminate\Support\Facades\Schema::hasTable((new $deposit)->getTable())) {
+            return ['rows' => [], 'total' => '0', 'rate' => null, 'soon' => '0', 'soon_name' => ''];
+        }
+
+        $today = Carbon::today();
+        $open = $deposit::query()->open()->with('institution')->get();
+        $total = $open->reduce(fn (string $c, $d) => bcadd($c, (string) $d->principal, 4), '0');
+        $weighted = $open->filter(fn ($d) => $d->profit_rate !== null)->reduce(fn (string $c, $d) => bcadd($c, bcmul((string) $d->principal, (string) $d->profit_rate, 6), 6), '0');
+        $weight = $open->filter(fn ($d) => $d->profit_rate !== null)->reduce(fn (string $c, $d) => bcadd($c, (string) $d->principal, 4), '0');
+        // ⓘ `institution` নামে কলামও আছে (পুরনো লেখা) — সম্পর্কটা getRelation দিয়ে, নইলে লেখাটাই আসত
+        $name = function ($d): string {
+            $place = $d->relationLoaded('institution') ? $d->getRelation('institution') : null;
+
+            return (string) ($place?->name() ?? $d->getAttribute('institution') ?? $d->document_no);
+        };
+        $rows = $open->filter(fn ($d) => $d->matures_on !== null && Carbon::parse($d->matures_on)->between($today, $today->copy()->addYear()))
+            ->sortBy('matures_on')->map(fn ($d) => ['name' => $name($d), 'principal' => (string) $d->principal,
+                'date' => Carbon::parse($d->matures_on)->toDateString(), 'days' => (int) $today->diffInDays(Carbon::parse($d->matures_on))])
+            ->values();
+        $soon = $rows->filter(fn ($r) => $r['days'] <= 30);
+
+        return [
+            'rows' => $rows->take(6)->all(),
+            'total' => $total,
+            'rate' => bccomp($weight, '0', 4) > 0 ? bcdiv($weighted, $weight, 1) : null,
+            'soon' => $soon->reduce(fn (string $c, $r) => bcadd($c, $r['principal'], 4), '0'),
+            'soon_name' => (string) ($soon->sortByDesc(fn ($r) => (float) $r['principal'])->first()['name'] ?? ''),
+        ];
+    }
+
+    /**
+     * ⭐ মূলধন, উত্তোলন ও লাভ বণ্টন · এ অর্থবছর — পাকা কাগজের যোগ; নিচে শেষ 5 মাসের মূলধন আসা আর উত্তোলন।
+     *
+     * @return array{capital: string, drawn: string, shared: string, months: list<array{month: int, in: string, out: string}>}|null
+     */
+    public function owners(): ?array
+    {
+        if (! auth()->user()?->can('finance.capital.view')) {
+            return null;
+        }
+
+        $from = \App\Core\Support\FiscalYearStart::on(Carbon::today());
+        $today = Carbon::today()->toDateString();
+        $sum = fn (string $model) => (string) $model::query()->posted()->whereBetween('trx_date', [$from, $today])->sum('amount');
+        $months = [];
+
+        for ($i = 4; $i >= 0; $i--) {
+            $m = Carbon::today()->startOfMonth()->subMonthsNoOverflow($i);
+            $range = [$m->toDateString(), $m->copy()->endOfMonth()->toDateString()];
+            $months[] = [
+                'month' => (int) $m->month,
+                'in' => (string) \App\Modules\Finance\Models\CapitalEntry::query()->posted()->whereBetween('trx_date', $range)->sum('amount'),
+                'out' => (string) \App\Modules\Finance\Models\Withdrawal::query()->posted()->whereBetween('trx_date', $range)->sum('amount'),
+            ];
+        }
+
+        return [
+            'capital' => $sum(\App\Modules\Finance\Models\CapitalEntry::class),
+            'drawn' => $sum(\App\Modules\Finance\Models\Withdrawal::class),
+            'shared' => $sum(\App\Modules\Finance\Models\ProfitShare::class),
+            'months' => $months,
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function fund(): array
     {
