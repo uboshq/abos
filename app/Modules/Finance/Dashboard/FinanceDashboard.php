@@ -396,6 +396,13 @@ final class FinanceDashboard implements ProvidesDashboard
                         return ['fund' => $fund, 'news' => app(FundNews::class)->items($fund)];
                     },
                 ],
+                // ⭐ সারি 2 — তারল্য আগে: 13 সপ্তাহের পূর্বাভাস আর নগদ প্রবাহ বিবরণী (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL; [[FinanceBoard]])
+                [
+                    'view' => 'finance::dashboard.board-liquidity',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['forecast' => app(FinanceBoard::class)->forecast(), 'cashFlow' => app(FinanceBoard::class)->cashFlow()],
+                ],
                 // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
                 [
                     'view' => 'finance::dashboard.charts',
