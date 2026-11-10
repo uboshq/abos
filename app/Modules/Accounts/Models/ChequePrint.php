@@ -29,7 +29,7 @@ class ChequePrint extends Model
 
     protected $table = 'acc_cheque_prints';
 
-    protected $fillable = ['company_id', 'cheque_book_id', 'cheque_no', 'cheque_date', 'payee', 'amount', 'crossed', 'off_books', 'voucher_id', 'purpose', 'status', 'times', 'reason', 'printed_by'];
+    protected $fillable = ['company_id', 'cheque_book_id', 'cheque_no', 'cheque_date', 'payee', 'amount', 'crossed', 'off_books', 'voucher_id', 'cheque_id', 'purpose', 'status', 'times', 'reason', 'printed_by'];
 
     protected function casts(): array
     {

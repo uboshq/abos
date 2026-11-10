@@ -15,6 +15,7 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\ChequePrintController;
 use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
@@ -388,6 +389,26 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('cheque')->name('clear');
         Route::post('/{cheque}/bounce', [ChequeController::class, 'bounce'])
             ->whereNumber('cheque')->name('bounce');
+
+        /*
+         * ⭐ চেক ছাপা — মালিকের অনুমোদিত নমুনা (১০ নভেম্বর ২০২৬; [[ChequePrintController]])। ছাপা আর পরীক্ষার ছাপ POST — PDF নতুন
+         * ট্যাবে খোলে; খাতায় সারি ওঠে কেবল আসল ছাপায়।
+         */
+        Route::get('/print/voucher/{voucher}', [ChequePrintController::class, 'voucherForm'])->whereNumber('voucher')->name('print.voucher');
+        Route::post('/print/voucher/{voucher}', [ChequePrintController::class, 'voucherPrint'])->whereNumber('voucher')->name('print.voucher.store');
+        Route::post('/print/voucher/{voucher}/test', [ChequePrintController::class, 'voucherTest'])->whereNumber('voucher')->name('print.voucher.test');
+        Route::get('/print/cheque/{cheque}', [ChequePrintController::class, 'chequeForm'])->whereNumber('cheque')->name('print.cheque');
+        Route::post('/print/cheque/{cheque}', [ChequePrintController::class, 'chequePrint'])->whereNumber('cheque')->name('print.cheque.store');
+        Route::post('/print/cheque/{cheque}/test', [ChequePrintController::class, 'chequeTest'])->whereNumber('cheque')->name('print.cheque.test');
+        Route::get('/print/free', [ChequePrintController::class, 'freeForm'])->name('print.free');
+        Route::post('/print/free', [ChequePrintController::class, 'freePrint'])->name('print.free.store');
+        Route::post('/print/free/test', [ChequePrintController::class, 'freeTest'])->name('print.free.test');
+        Route::get('/printed', [ChequePrintController::class, 'log'])->name('print.log');
+        Route::post('/printed/{print}/again', [ChequePrintController::class, 'again'])->whereNumber('print')->name('print.again');
+        Route::post('/printed/{print}/spoil', [ChequePrintController::class, 'spoil'])->whereNumber('print')->name('print.spoil');
+        Route::get('/print/setup', [ChequePrintController::class, 'setup'])->name('print.setup');
+        Route::post('/print/setup/layout', [ChequePrintController::class, 'saveLayout'])->name('print.setup.layout');
+        Route::post('/print/setup/book', [ChequePrintController::class, 'saveBook'])->name('print.setup.book');
     });
 
     /*

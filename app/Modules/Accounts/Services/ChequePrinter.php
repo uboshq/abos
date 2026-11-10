@@ -8,6 +8,7 @@ use App\Core\Contracts\PayeeBankAccount;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\ChequeBook;
 use App\Modules\Accounts\Models\ChequeLayout;
 use App\Modules\Accounts\Models\ChequePrint;
@@ -57,15 +58,63 @@ final class ChequePrinter
                 return $this->again($earlier, $payee, $crossed, $reason);
             }
 
-            $given = preg_replace('/\D/', '', (string) $voucher->instrument_no);
-            $no = $given !== '' ? (int) $given : $book->next_no;
-
-            return $this->take($book, $no, [
+            return $this->take($book, $this->numberFor($book, (string) $voucher->instrument_no), [
                 'cheque_date' => $voucher->instrument_date ?? $voucher->trx_date,
                 'payee' => $payee, 'amount' => $amount, 'crossed' => $crossed,
                 'voucher_id' => $voucher->id, 'off_books' => false,
             ]);
         });
+    }
+
+    /**
+     * ⭐ চেকের খাতার দেওয়া চেক — সরবরাহকারীর পরিশোধ এখানেই চেক বসায় ([[PaymentService]]: নিট টাকা, ব্যাংক, পক্ষ, তারিখ)।
+     * টাকা = চেকের টাকা; বই = সেই ব্যাংকের কোম্পানির বই (চেকে ব্যাংক না থাকলে যেকোনো কোম্পানির বই); নম্বর = চেকে লেখা নম্বর এই বইয়ের
+     * হলে সেটা, নাহলে বইয়ের পরেরটা — আর তখন খাতার চেকে ছাপা নম্বরটাই বসে (ব্যাংকের কাগজের সাথে মেলাতে আসল নম্বর লাগে)।
+     */
+    public function forCheque(Cheque $cheque, ChequeBook $book, string $payee, bool $crossed, ?string $reason = null): ChequePrint
+    {
+        if ($cheque->direction !== Cheque::ISSUED || $cheque->status !== Cheque::PENDING) {
+            throw ValidationException::withMessages(['cheque' => __('accounts::cheque_print.cheque_not_ready')]);
+        }
+
+        if ($book->off_books || ($cheque->bank_account_id !== null && (int) $book->bank_account_id !== (int) $cheque->bank_account_id)) {
+            throw ValidationException::withMessages(['book' => __('accounts::cheque_print.book_not_this_bank')]);
+        }
+
+        return DB::transaction(function () use ($cheque, $book, $payee, $crossed, $reason) {
+            $book = ChequeBook::query()->whereKey($book->id)->lockForUpdate()->firstOrFail();
+            $earlier = ChequePrint::query()->where('cheque_id', $cheque->id)->where('status', ChequePrint::PRINTED)->lockForUpdate()->first();
+
+            if ($earlier !== null) {
+                return $this->again($earlier, $payee, $crossed, $reason);
+            }
+
+            $no = $this->numberFor($book, (string) $cheque->cheque_no);
+            $print = $this->take($book, $no, [
+                'cheque_date' => $cheque->cheque_date, 'payee' => $payee, 'amount' => bcadd((string) $cheque->amount, '0', 4),
+                'crossed' => $crossed, 'cheque_id' => $cheque->id, 'voucher_id' => $cheque->voucher_id, 'off_books' => false,
+            ]);
+
+            if ($cheque->cheque_no !== $book->number($no)) {
+                $cheque->forceFill(['cheque_no' => $book->number($no)])->save();
+            }
+
+            return $print;
+        });
+    }
+
+    /**
+     * ⓘ কাগজে লেখা চেক নম্বর এই বইয়ের সীমার ভিতরে আর এখনো না-ছাপা হলে সেটা, নাহলে বইয়ের পরের নম্বর।
+     * ⛔ নষ্ট পাতার পরে খাতার চেকে সেই নষ্ট নম্বরই লেখা থাকে — তখন সেটা নয় (প্রথম স্থানীয় রানে ধরা, ১০ নভেম্বর ২০২৬)।
+     */
+    private function numberFor(ChequeBook $book, string $written): int
+    {
+        $digits = preg_replace('/\D/', '', $written) ?? '';
+        $no = $digits !== '' && strlen($digits) <= 15 ? (int) $digits : 0;
+        $usable = $no >= $book->first_no && $no <= $book->last_no
+            && ! ChequePrint::query()->where('cheque_book_id', $book->id)->where('cheque_no', $no)->exists();
+
+        return $usable ? $no : $book->next_no;
     }
 
     /**
@@ -144,20 +193,20 @@ final class ChequePrinter
         return $out;
     }
 
-    /** ভাউচারের পক্ষের নাম চেকে কেমন — সরবরাহকারীর ব্যাংক হিসাবের নাম থাকলে সেটা, নাহলে পক্ষের নাম; বড় হাতের */
-    public function payeeOf(Voucher $voucher): string
+    /** কাগজের পক্ষের নাম চেকে কেমন — সরবরাহকারীর ব্যাংক হিসাবের নাম থাকলে সেটা, নাহলে পক্ষের নাম; বড় হাতের */
+    public function payeeOf(Voucher|Cheque $paper): string
     {
-        if (blank($voucher->party_type) || (int) $voucher->party_id <= 0) {
+        if (blank($paper->party_type) || (int) $paper->party_id <= 0) {
             return '';
         }
 
-        $bank = app(PayeeBankAccount::class)->accountOf((string) $voucher->party_type, (int) $voucher->party_id);
+        $bank = app(PayeeBankAccount::class)->accountOf((string) $paper->party_type, (int) $paper->party_id);
 
         if (filled($bank['account_name'] ?? null)) {
             return mb_strtoupper((string) $bank['account_name']);
         }
 
-        $party = app(\App\Core\Engines\Drill\DrillResolver::class)->resolve((string) $voucher->party_type, (int) $voucher->party_id);
+        $party = app(\App\Core\Engines\Drill\DrillResolver::class)->resolve((string) $paper->party_type, (int) $paper->party_id);
 
         return $party !== null && method_exists($party, 'name') ? mb_strtoupper((string) $party->name()) : '';
     }

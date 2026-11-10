@@ -74,6 +74,8 @@ return new class extends Migration
             $table->boolean('crossed')->default(true);
             $table->boolean('off_books')->default(false);
             $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
+            // ⓘ চেকের খাতার দেওয়া চেক — সরবরাহকারীর পরিশোধ যেটা বসায় ([[ChequePrinter::forCheque()]])
+            $table->foreignId('cheque_id')->nullable()->constrained('acc_cheques')->nullOnDelete();
             $table->string('purpose', 200)->nullable();
             // ⓘ printed = ছাপা হয়েছে; spoiled = নষ্ট পাতা (নম্বরটা আর কখনো নয়)
             $table->string('status', 12)->default('printed');
@@ -84,6 +86,7 @@ return new class extends Migration
             $table->unique(['cheque_book_id', 'cheque_no']);
             $table->index(['company_id', 'created_at']);
             $table->index('voucher_id');
+            $table->index('cheque_id');
         });
 
         $this->keys();

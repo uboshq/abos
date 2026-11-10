@@ -74,6 +74,7 @@ return [
     'active' => 'In use',
     'save' => 'Save',
     'saved' => 'Saved.',
+    'cheque_not_ready' => 'A cheque prints only when it is an issued cheque still pending — not cleared, bounced or cancelled.',
     'voucher_not_ready' => 'A cheque prints only from a posted payment voucher paid by cheque.',
     'book_not_this_bank' => 'This book is not of the voucher\'s bank account — choose a book of the account the money left from.',
     'book_is_the_companys' => 'This is a company cheque book — a cheque off the books prints only from an own ("off the books") book.',
