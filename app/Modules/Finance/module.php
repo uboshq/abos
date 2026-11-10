@@ -334,6 +334,10 @@ return [
     'permissions' => [
         'finance.plan.view',
 
+        /* ⭐ চলতি মূলধন — কেবল মালিক (মালিক, 10 নভেম্বর 2026 সন্ধ্যা: "sobar switch off defolt, malik kauke dibe mone korle nijer
+           hate anumoti dibe")। ⛔ কোনো রোলের ছাঁচে নেই — মালিক (super_admin) পান migration-এ, আর কাউকে দিতে চাইলে নিজের হাতে। */
+        'finance.working_capital.view',
+
         /* বাজেট — দেখা আর লেখা আলাদা: যিনি বাজেট দেখে খরচ সামলান, বাজেট
            বদলানোর ক্ষমতা তাঁর দরকার নেই। পূর্বাভাস আর CFO ড্যাশবোর্ড শুধু
            দেখার — ওখানে লেখার কিছু নেই। (২০ সেপ্টেম্বর ২০২৬) */

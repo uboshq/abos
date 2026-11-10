@@ -422,46 +422,29 @@ final class FinanceDashboard implements ProvidesDashboard
                         'outgoing' => app(CashForecast::class)->outgoingByDay(35),
                     ],
                 ],
-                // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
+                // ⓘ আগের আট ছোট চার্ট (৯–১০ নভেম্বরের নমুনা) চূড়ান্ত নমুনায় নেই — তাদের অঙ্ক এখন সারি 2–5-এ, তাই ঘরটা সরানো
+                /*
+                 * ⭐ সারি 5 — চলতি মূলধন আর ঋণ, ঋণসীমা ও শর্ত (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+                 * ⛔ চলতি মূলধন কেবল মালিকের চাবিতে (finance.working_capital.view; মালিক, 10 নভেম্বর 2026 সন্ধ্যা) — চাবি ছাড়া ঘরটাই নেই,
+                 * ঋণের ঘর তখন পুরো চওড়া। পুরো পাতা (তারিখ, 6/12 মাসের গড়) নিজের ঠিকানায় ([[WorkingCapitalController]])।
+                 */
                 [
-                    'view' => 'finance::dashboard.charts',
+                    'view' => 'finance::dashboard.board-capital',
                     'place' => 'top',
                     'permission' => 'accounts.view',
-                    'data' => fn (): array => ['charts' => app(FinanceCharts::class)->all()],
-                ],
-                [
-                    'view' => 'finance::dashboard.working-capital',
-                    'data' => fn () => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
-                ],
-                // ⭐ ঋণের ঘর — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: "loan box sobar nice daw"; [[LoanBox]])
-                [
-                    'view' => 'finance::dashboard.loans',
-                    'permission' => 'accounts.view',
-                    'data' => fn (): array => ['loans' => app(LoanBox::class)->on()],
+                    'data' => function (): array {
+                        $wc = app(WorkingCapital::class)->on(Carbon::today());
+
+                        return [
+                            'wc' => auth()->user()?->can('finance.working_capital.view') ? $wc : null,
+                            'ratio' => $wc['ratio'],
+                            'loans' => app(LoanBox::class)->on(),
+                            'instalments' => app(FinanceCharts::class)->instalments(),
+                        ];
+                    },
                 ],
             ],
         );
-    }
-
-    /**
-     * চলতি মূলধনের তারিখ — ঠিকানার `wc_date`; না থাকলে, ভুল হলে বা আগামী দিনের হলে আজ (ভবিষ্যতের খাতা নেই)।
-     */
-    private static function workingCapitalDate(): Carbon
-    {
-        $today = Carbon::today();
-        $asked = request()->query('wc_date');
-
-        if (! is_string($asked) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $asked) !== 1) {
-            return $today;
-        }
-
-        try {
-            $date = Carbon::createFromFormat('Y-m-d', $asked)->startOfDay();
-        } catch (\Throwable) {
-            return $today;
-        }
-
-        return $date->greaterThan($today) ? $today : $date;
     }
 
     /**

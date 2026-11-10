@@ -28,7 +28,7 @@ final class WorkingCapital
     public function __construct(private readonly DataScope $scope) {}
 
     /**
-     * @return array{date: string, receivable: string, stock: string, money: string, payable: string, other: string,
+     * @return array{date: string, receivable: string, stock: string, money: string, advances: string, payable: string, other: string,
      *     capital: string, ratio: ?string, previous: ?array{date: string, capital: string}, change_pct: ?string,
      *     span: int, avg_sales: string, sales_pct: ?string}
      */
@@ -48,7 +48,8 @@ final class WorkingCapital
 
         return $now + [
             'date' => $date->toDateString(),
-            'previous' => ['date' => $previousDate->toDateString(), 'capital' => $previous['capital']],
+            // ⓘ আগের মাস-শেষের সব ভাগ — ড্যাশবোর্ডের সেতু (কোন ভাগ কত বদলাল) এখান থেকে
+            'previous' => ['date' => $previousDate->toDateString()] + $previous,
             'change_pct' => $change,
             'span' => $span,
             'avg_sales' => $avg,
@@ -56,7 +57,7 @@ final class WorkingCapital
         ];
     }
 
-    /** @return array{receivable: string, stock: string, money: string, payable: string, other: string, capital: string, ratio: ?string} */
+    /** @return array{receivable: string, stock: string, money: string, advances: string, payable: string, other: string, capital: string, ratio: ?string} */
     private function parts(Carbon $date): array
     {
         $receivable = $this->sum([StandardChart::RECEIVABLE], $date);
@@ -65,13 +66,21 @@ final class WorkingCapital
         $payable = $this->sum([StandardChart::PAYABLE_GROUP], $date);
         $other = bcsub($this->sum(['2100'], $date), $payable, 4);
 
-        $has = bcadd(bcadd($receivable, $stock, 4), $money, 4);
+        /*
+         * ⭐ অগ্রিম ও জামানত — চলতি সম্পদের বাকিটা (মালিক, 10 নভেম্বর 2026 সন্ধ্যা: "অগ্রিম ও জামানত" ঘর যোগ করো)।
+         * ⓘ চলতি সম্পদ (1100) − পাওনা − মজুদ − হাতের টাকা: অগ্রিম, জামানত, অগ্রিম পরিশোধ, দাবি, পথের টাকা ও হাতের চেক, স্বল্পমেয়াদি সঞ্চয়।
+         * ⓘ এখন চলতি মূলধন আন্তর্জাতিক মাপের হুবহু = চলতি সম্পদ − চলতি দেনা (আগে এই অংশটা বাদ পড়ত, তাই কম দেখাত)।
+         */
+        $advances = bcsub(bcsub(bcsub($this->sum(['1100'], $date), $receivable, 4), $stock, 4), $money, 4);
+
+        $has = bcadd(bcadd(bcadd($receivable, $stock, 4), $money, 4), $advances, 4);
         $owes = bcadd($payable, $other, 4);
 
         return [
             'receivable' => $receivable,
             'stock' => $stock,
             'money' => $money,
+            'advances' => $advances,
             'payable' => $payable,
             'other' => $other,
             'capital' => bcsub($has, $owes, 4),

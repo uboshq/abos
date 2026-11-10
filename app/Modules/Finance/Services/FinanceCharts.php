@@ -160,6 +160,16 @@ final class FinanceCharts
         return ['months' => $months, 'budget' => $budget, 'day' => (int) $today->day];
     }
 
+    /**
+     * ⭐ সামনের 6 মাসের ঋণের কিস্তি — অর্থের ড্যাশবোর্ডের সারি 5, ঋণের ঘরের নিচের বার ([[loansAndDeposits()]]-এর একই হিসাব)।
+     *
+     * @return list<array{month: string, instalments: string, deposits: string}>
+     */
+    public function instalments(?Carbon $today = null): array
+    {
+        return $this->loansAndDeposits(($today ?? now())->copy()->startOfDay())['months'];
+    }
+
     /** @return array{months: list<array{month: string, in: string, out: string}>, net: string, out_heavy: list<string>} */
     private function cashflow(): array
     {

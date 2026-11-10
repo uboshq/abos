@@ -206,9 +206,10 @@ class DashboardTodayController extends Controller
          * ⭐ চলতি মূলধন — ফোনের হোমে নগদ/MFS/ব্যাংকের কার্ডের ঠিক নিচে (মালিক, ৯ নভেম্বর ২০২৬: "mobile app e za ekhon zemon ache tai
          * thakbe sudu working capital er card ti bosabe")। ওয়েবের অর্থের ড্যাশবোর্ডের একই অঙ্ক ([[WorkingCapital]]); তারিখ `wcDate`
          * (না দিলে, ভুল হলে বা আগামী দিনের হলে আজ), গড় `wcSpan` ৬ বা ১২ মাস।
-         * ⛔ অর্থের ড্যাশবোর্ডের চাবি (finance.capital.view) না থাকলে ঘরটাই নেই — চুক্তির নিয়ম ক; পুরনো অ্যাপ ঘরটা পড়ে না।
+         * ⛔ চলতি মূলধনের নিজের চাবি (finance.working_capital.view — কেবল মালিক; মালিক, 10 নভেম্বর 2026 সন্ধ্যা: "sobar switch off
+         * defolt, malik kauke dibe mone korle nijer hate anumoti dibe") না থাকলে ঘরটাই নেই — চুক্তির নিয়ম ক; পুরনো অ্যাপ ঘরটা পড়ে না।
          */
-        if ($on('finance') && $user->can('finance.capital.view') && class_exists(WorkingCapital::class)) {
+        if ($on('finance') && $user->can('finance.working_capital.view') && class_exists(WorkingCapital::class)) {
             $asked = (string) $request->query('wcDate', '');
             $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $asked) === 1 ? Carbon::parse($asked)->startOfDay() : Carbon::today();
             $wc = app(WorkingCapital::class)->on($date->greaterThan(Carbon::today()) ? Carbon::today() : $date, (int) $request->query('wcSpan', '6'));
