@@ -222,7 +222,8 @@
     {{-- ── করণীয় ──────────────────────────────────────────────────
          মডিউলের নিজের উইজেট থেকেই আসে, তাই হোম পর্দা আর এই পর্দা
          কোনোদিন দুই রকম বলবে না। --}}
-    @if ($dashboard->reminders !== [])
+    {{-- ⓘ নিজের সারিতে আঁকা ড্যাশবোর্ডে (কেবল sections) এটা নেই — নমুনার সমস্যা কেন্দ্র এর কাজ করে (মালিক, 10 নভেম্বর 2026 রাত) --}}
+    @if ($dashboard->reminders !== [] && ! ($dashboard->stats === [] && $dashboard->panels === [] && $dashboard->sections !== []))
         <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                                bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) px-4 py-3 text-xs font-semibold text-(--color-ink-muted)">

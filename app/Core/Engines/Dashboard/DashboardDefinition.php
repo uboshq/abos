@@ -73,7 +73,8 @@ final class DashboardDefinition
          */
         public readonly array $sections = [],
     ) {
-        if ($stats === [] && $panels === [] && $listings === []) {
+        // ⓘ নিজের সারিতে আঁকা ড্যাশবোর্ডও (মালিকের চূড়ান্ত নমুনার হুবহু, 10 নভেম্বর 2026 রাত) খালি নয় — sections-ই তার সবটা
+        if ($stats === [] && $panels === [] && $listings === [] && $sections === []) {
             throw new InvalidArgumentException(
                 "Dashboard '{$title}' has nothing on it. An empty dashboard is worse than none: "
                 .'it teaches people the screen is not worth opening.'

@@ -99,6 +99,9 @@ return [
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
 
+        // ⭐ মজুদের ড্যাশবোর্ডের "মজুদ শেষ" — খোলা আদেশে আটকে থাকা চাহিদা আর হারানো বিক্রি ([[StockDemand]])
+        \App\Core\Contracts\StockDemand::class => \App\Modules\Sales\Services\SalesStockDemand::class,
+
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
 

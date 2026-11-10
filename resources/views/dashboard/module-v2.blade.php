@@ -123,6 +123,12 @@
         @php
             // ⓘ নিয়মটা এক জায়গায় — ফোনের উত্তরও এটাই ডাকে ([[WatchList]], ড্যা-৭)
             $waiting = \App\Core\Engines\Dashboard\WatchList::of($dashboard->reminders);
+
+            /*
+             * ⭐ নিজের সারিতে আঁকা ড্যাশবোর্ড (কার্ড-চার্ট নেই, কেবল sections) — মালিকের চূড়ান্ত নমুনার হুবহু, 10 নভেম্বর 2026 রাত:
+             * "100% স্যাম্পলের সাথে মিল রেখে"। ⓘ নমুনায় "নজরে রাখুন" নেই — ওর কাজ নমুনার সমস্যা কেন্দ্র করে, তাই এখানে আঁকা হয় না।
+             */
+            $ownBoard = $dashboard->stats === [] && $dashboard->panels === [] && $dashboard->sections !== [];
         @endphp
         @php
             // ⭐ নমুনার সারি: বাঁয়ে প্রথম চার্ট (মাথার প্রথম রঙের দাগ), ডানে "নজরে রাখুন" (দ্বিতীয় রঙের দাগ) — পাশাপাশি
@@ -130,6 +136,7 @@
             $firstPanel = $panels[0] ?? null;
             $panels = array_slice($panels, 1);
         @endphp
+        @unless ($ownBoard)
         <div data-dashboard-pair @class(['grid gap-4', 'lg:grid-cols-2' => $firstPanel !== null])>
             @if ($firstPanel !== null)
                 <section data-boxed data-panel data-span="1" class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"
@@ -169,6 +176,7 @@
                 </div>
             </section>
         </div>
+        @endunless
 
         {{-- ── আরও অঙ্ক — বাকি সব সূচক, আগের মতো (পরিকল্পনা §৪.৫: একটাও বাদ নয়) ───────────── --}}
         @if ($moreStats !== [])
