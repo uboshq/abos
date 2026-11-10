@@ -76,6 +76,8 @@ final class NotificationKinds
              * মানুষ খোলে **ঠিক ঐ দিনটায়**, যেদিন ওটা লাগে।
              */
             'backup.failed' => 'core.notify.kind.backup_failed',
+            // ⭐ অফিসের SMS ফোন বন্ধ — SMS ২ ঘণ্টার বেশি সারিতে ([[SmsWatch]])
+            'sms.overdue' => 'core.notify.kind.sms_overdue',
 
             /*
              * ⛔ সই হলো, অথচ চালান পাকা হলো না (বাকির দেয়াল, মজুদ…) — ২৯ সেপ্টেম্বর ২০২৬।

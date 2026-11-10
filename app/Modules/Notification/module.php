@@ -102,6 +102,8 @@ return [
             // ⭐ পার্টিকে WhatsApp — লেখা (বাংলা/English) আর কে কাকে কী পাঠাল (মালিকের "ok", ১০ নভেম্বর ২০২৬)
             ['label' => 'notification::menu.party_templates', 'icon' => 'documents', 'route' => 'notification.party_templates.index', 'permission' => 'notification.party_templates'],
             ['label' => 'notification::menu.party_messages', 'icon' => 'list', 'route' => 'notification.party_messages.index', 'permission' => 'notification.party_messages'],
+            // ⭐ নিজের সিমে SMS — অফিসের Android ফোন (নমুনা ধাপ ২; চাবি কেবল মালিকের)
+            ['label' => 'notification::menu.sms_phones', 'icon' => 'phone', 'route' => 'notification.sms_phones.index', 'permission' => 'notification.sms_gateway'],
         ],
     ],
 
@@ -126,6 +128,7 @@ return [
         'notification.reports.export', // রিপোর্ট CSV/XLSX নামানো
         'notification.party_templates', // পার্টিকে পাঠানোর লেখা (WhatsApp) — বানানো, বদলানো, বন্ধ করা
         'notification.party_messages',  // কে কোন পার্টিকে কোন কাগজ কোন লেখায় পাঠাল — খাতা দেখা
+        'notification.sms_gateway',     // অফিসের SMS ফোন বসানো, চাবি, দিনের সীমা, সারি দেখা — কেবল মালিক (কোনো ভূমিকায় নয়)
     ],
 
     'role_templates' => [

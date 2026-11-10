@@ -19,4 +19,5 @@ return [
     'archive' => 'Notification archive',
     'party_templates' => 'Party messages — texts',
     'party_messages' => 'Party messages — log',
+    'sms_phones' => 'SMS phones',
 ];

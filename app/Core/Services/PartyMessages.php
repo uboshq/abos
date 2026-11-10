@@ -167,7 +167,7 @@ final class PartyMessages
      *
      * ⓘ কাগজটা দেখার নাগালের বাইরে বা লিংক মরা হলে null — বাক্সে তখন পুরনো নম্বরহীন বোতামটাই থাকে।
      *
-     * @return array{share: DocumentShare, party: array{type: ?string, id: ?int, name: string, phone: ?string}, choices: list<array{id: int, name: string, bn: string, en: string}>}|null
+     * @return array{share: DocumentShare, party: array{type: ?string, id: ?int, name: string, phone: ?string}, choices: list<array{id: int, name: string, bn: string, en: string}>, sms: bool}|null
      */
     public function box(int $shareId): ?array
     {
@@ -187,18 +187,21 @@ final class PartyMessages
             'share' => $share,
             'party' => $this->partyOf($document),
             'choices' => $this->choicesFor($document, $share),
+            // ⓘ SMS-এর বোতাম কেবল তখন, যখন কোম্পানির অফিসের ফোন বসানো আছে (নমুনা ধাপ ২)
+            'sms' => app(SmsOutboxService::class)->hasPhone(),
         ];
     }
 
     /** ⭐ খাতায় লেখা — লেখাটা সার্ভারেই বানানো, পাতা থেকে পাঠানো লেখা নয় */
-    public function record(Model $document, DocumentShare $share, PartyMessageTemplate $template, string $locale, string $phone): PartyMessage
+    public function record(Model $document, DocumentShare $share, PartyMessageTemplate $template, string $locale, string $phone, string $channel = PartyMessageTemplate::WHATSAPP): PartyMessage
     {
         $party = $this->partyOf($document);
 
         return PartyMessage::query()->create([
             'company_id' => $share->company_id,
             'branch_id' => $document->getAttribute('branch_id') ?? $share->branch_id,
-            'channel' => PartyMessageTemplate::WHATSAPP,
+            // ⓘ WhatsApp (খোলা হয়েছে) বা SMS (অফিসের ফোনের সারিতে) — একই লেখা, একই খাতা
+            'channel' => $channel,
             'document_type' => $share->document_type,
             'document_id' => $share->document_id,
             'document_no' => $share->document_no,
