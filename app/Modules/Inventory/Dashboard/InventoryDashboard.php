@@ -79,6 +79,12 @@ final class InventoryDashboard implements ProvidesDashboard
                             ? route('purchase.order.create') : null,
                     ],
                 ],
+                [
+                    'view' => 'inventory::dashboard.board-flow',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['roll' => $once()->rollForward(), 'cover' => $once()->coverHistogram(), 'abc' => $once()->abcXyz()],
+                ],
             ],
         );
     }

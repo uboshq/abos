@@ -424,6 +424,131 @@ final class InventoryBoard
     }
 
     /**
+     * ⭐ মজুদের হিসাব-মিলান · এ মাস (কোটি) — শুরু + ঢুকল + ফেরত এল − বিক্রিতে গেল − নষ্ট − গণনায় কম = আজ।
+     *
+     * ⓘ ঢোকা খরচ-স্তর থেকে (কেনা = গ্রহণ/বিল, ফেরত = বিক্রয় ফেরত), বেরোনো স্তর-ব্যবহার থেকে (বিক্রি = চালান/বিল/DO); নষ্ট =
+     * [[writeOffs()]]; বাকি সমন্বয় "গণনায় কম"। আজ = এখনকার মজুদ (কেনা দামে); শুরু পেছন থেকে মেলানো — তাই সেতুটা সবসময় মেলে।
+     * ⓘ খাতার সাথে মিল: আজকের মজুদ বনাম মজুদের খাতা (1120)। ⓘ স্তরে গুদাম নেই, তাই এটা গোটা কোম্পানির (পণ্যের ছাঁকনি মানে)।
+     *
+     * @return array{steps: list<array{key: string, value: string}>, matches: ?bool, gap: string}
+     */
+    public function rollForward(): array
+    {
+        $from = Carbon::today()->startOfMonth()->toDateString();
+        $to = Carbon::today()->toDateString();
+        $ids = $this->snapshot()->pluck('id')->all() ?: [0];
+        $sum = fn (string $table, string $expr, array $types, bool $not = false) => (string) (\Illuminate\Support\Facades\DB::table($table)
+            ->where('company_id', \App\Core\Support\CompanyContext::id())
+            ->whereBetween('trx_date', [$from, $to])->whereIn('product_id', $ids)
+            ->where('source_type', '<>', 'opening')
+            ->when($types !== [], fn ($q) => $not ? $q->whereNotIn('source_type', $types) : $q->whereIn('source_type', $types))
+            ->selectRaw("COALESCE(SUM({$expr}), 0) as v")->value('v') ?? '0');
+
+        $buy = ['purchase_receipt', 'purchase_bill'];
+        $back = ['sales_return'];
+        $sold = ['delivery_challan', 'sales_invoice', 'delivery_order'];
+
+        $in = $sum('inv_cost_layers', 'qty_in * unit_cost', $buy);
+        $returned = $sum('inv_cost_layers', 'qty_in * unit_cost', $back);
+        $otherIn = $sum('inv_cost_layers', 'qty_in * unit_cost', array_merge($buy, $back), true);
+        $out = $sum('inv_cost_layer_uses', 'qty * unit_cost', $sold);
+        $otherOut = $sum('inv_cost_layer_uses', 'qty * unit_cost', $sold, true);
+        $damage = $this->writeOffs()[0];
+        $counted = bcsub(bcsub($otherOut, $damage, 4), $otherIn, 4);
+        $counted = bccomp($counted, '0', 4) > 0 ? $counted : '0';
+
+        $close = $this->snapshot()->reduce(fn (string $c, Product $p) => bcadd($c, self::valueOf($p, (string) $p->getAttribute('on_hand_qty')), 4), '0');
+        $open = bcsub(bcadd(bcadd(bcadd($close, $out, 4), $damage, 4), $counted, 4), bcadd($in, $returned, 4), 4);
+
+        $ledger = $this->facts->value();
+        $filtered = array_filter($this->picked(), fn ($v) => $v !== null) !== [];
+
+        return [
+            'steps' => [
+                ['key' => 'open', 'value' => $open], ['key' => 'in', 'value' => $in], ['key' => 'returned', 'value' => $returned],
+                ['key' => 'sold', 'value' => '-'.$out], ['key' => 'damage', 'value' => '-'.$damage], ['key' => 'counted', 'value' => '-'.$counted],
+                ['key' => 'close', 'value' => $close],
+            ],
+            'matches' => $ledger === null || $filtered ? null : bccomp(bcsub($ledger, $close, 0), '0', 0) === 0,
+            'gap' => $ledger === null ? '0' : bcsub($ledger, $close, 4),
+        ];
+    }
+
+    /**
+     * ⭐ কত দিনের মজুদ আছে — সাতটা ভাগে পণ্যের সংখ্যা (0, 1–7, 8–14, 15–30, 31–45, 46–60, 60+)।
+     * ⓘ মাল নেই = 0; মাল আছে অথচ 30 দিনে বিক্রি নেই = 60+।
+     *
+     * @return array{buckets: list<array{label: string, n: int}>, total: int, short: int, long: int}
+     */
+    public function coverHistogram(): array
+    {
+        $labels = ['0', '1–7', '8–14', '15–30', '31–45', '46–60', '60+'];
+        $n = array_fill(0, 7, 0);
+
+        foreach ($this->snapshot() as $p) {
+            if (bccomp((string) $p->getAttribute('available_qty'), '0', 4) <= 0) {
+                $n[0]++;
+
+                continue;
+            }
+
+            $c = self::daysOfCover($p);
+            $d = $c === null ? 9999.0 : (float) $c;
+            $i = match (true) {
+                $d <= 7 => 1, $d <= 14 => 2, $d <= 30 => 3, $d <= 45 => 4, $d <= 60 => 5, default => 6,
+            };
+            $n[$i]++;
+        }
+
+        return [
+            'buckets' => array_map(fn (int $i) => ['label' => $labels[$i], 'n' => $n[$i]], range(0, 6)),
+            'total' => array_sum($n), 'short' => $n[0] + $n[1], 'long' => $n[6],
+        ];
+    }
+
+    /**
+     * ⭐ ABC-XYZ — টাকায় গুরুত্ব (ABC, [[abcOf()]]) × বিক্রি কতটা স্থির (XYZ: 12 সপ্তাহের বেরোনোর ওঠানামার হার CV — 0.5-এর নিচে X,
+     * 1-এর নিচে Y, বাকি Z)। প্রতিটা ঘরে পণ্যের সংখ্যা আর মজুদের মূল্যের ভাগ।
+     *
+     * @return array<string, array{n: int, share: string}>
+     */
+    public function abcXyz(): array
+    {
+        $snap = $this->snapshot();
+        $abc = self::abcOf($snap);
+        $from = Carbon::today()->subWeeks(12)->startOfWeek();
+        $weekly = StockMovement::query()->whereIn('product_id', $snap->pluck('id')->all() ?: [0])
+            ->where('floor_change', '<', 0)->where('trx_date', '>=', $from->toDateString())
+            ->tap(fn ($q) => $this->narrow($q))
+            ->selectRaw('product_id, YEARWEEK(trx_date, 1) as wk, SUM(-floor_change) as qty')
+            ->groupBy('product_id', 'wk')->get()->groupBy('product_id');
+
+        $total = $snap->reduce(fn (string $c, Product $p) => bcadd($c, self::valueOf($p, (string) $p->getAttribute('on_hand_qty')), 4), '0');
+        $cells = [];
+
+        foreach ($snap as $p) {
+            $w = array_pad($weekly->get($p->id, collect())->map(fn ($r) => (float) $r->qty)->values()->all(), 12, 0.0);
+            $mean = array_sum($w) / 12;
+            $cv = $mean > 0 ? sqrt(array_sum(array_map(fn ($v) => ($v - $mean) ** 2, $w)) / 12) / $mean : 9.0;
+            $key = ($abc[(int) $p->id] ?? 'C').($cv < 0.5 ? 'X' : ($cv < 1.0 ? 'Y' : 'Z'));
+            $cells[$key] ??= ['n' => 0, 'value' => '0'];
+            $cells[$key]['n']++;
+            $cells[$key]['value'] = bcadd($cells[$key]['value'], self::valueOf($p, (string) $p->getAttribute('on_hand_qty')), 4);
+        }
+
+        $out = [];
+
+        foreach (['A', 'B', 'C'] as $a) {
+            foreach (['X', 'Y', 'Z'] as $x) {
+                $c = $cells[$a.$x] ?? ['n' => 0, 'value' => '0'];
+                $out[$a.$x] = ['n' => $c['n'], 'share' => bccomp($total, '0', 4) > 0 ? bcdiv(bcmul($c['value'], '100', 4), $total, 0) : '0'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * ⓘ প্রতিটা পণ্যের দিনের বেরোনোর ওঠানামা (আদর্শ বিচ্যুতি) — গত 90 দিন, যেদিন বেরোয়নি সেদিন 0 ধরে।
      *
      * @param  list<int>  $ids
