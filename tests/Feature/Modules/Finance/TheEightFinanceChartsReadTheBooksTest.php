@@ -96,8 +96,16 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
     public function test_the_ratios_and_the_cash_cycle_use_the_working_capital_parts_and_ninety_days_of_flow(): void
     {
         $today = Carbon::today();
+        // ⓘ মজুদ আর চলতি দায় দুটোই শূন্যের বেশি — নইলে "দ্রুত অনুপাতে মজুদ রয়ে গেল" ধরা পড়ে না (Mac মিউট্যান্ট C3 বেঁচেছিল, ১০ নভেম্বর ২০২৬)
+        $till = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
+        $stock = Account::query()->where('code', 'like', StandardChart::INVENTORY.'%')->postable()->active()->orderBy('code')->firstOrFail();
+        $this->journal('2026-11-10', [[$stock->id, '80000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '80000']]);
+        $this->journal('2026-11-11', [[$till->id, '5000', null], [StandardChart::find(StandardChart::VAT_PAYABLE)->id, null, '5000']]);
+
         $r = app(FinanceCharts::class)->all()['ratios'];
         $wc = app(WorkingCapital::class)->on($today);
+        $this->assertSame(1, bccomp($wc['stock'], '0', 4), 'দাবির মজুদ শূন্য');
+        $this->assertSame(1, bccomp(bcadd($wc['payable'], $wc['other'], 4), '0', 4), 'দাবির চলতি দায় শূন্য');
 
         $owes = bcadd($wc['payable'], $wc['other'], 4);
         $this->assertSame($wc['ratio'], $r['current'], '⛔ চলতি অনুপাত চলতি মূলধনের ঘরেরটা নয়।');

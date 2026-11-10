@@ -12,6 +12,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Services\WorkingCapital;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -58,14 +59,19 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $this->journal('2026-10-10', [[$till->id, '50000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '50000']]);
         $this->journal('2026-11-05', [[$till->id, '120000', null], [StandardChart::find(StandardChart::SALES)->id, null, '120000']]);
         $this->journal('2026-11-06', [[$till->id, '7000', null], [StandardChart::find(StandardChart::VAT_PAYABLE)->id, null, '7000']]);
+        // ⓘ সরবরাহকারীর দেনা ৩০,০০০ — "দেনা"-য় ওঠে, "অন্যান্য"-তে দ্বিতীয়বার নয় (Mac মিউট্যান্ট W2 বেঁচেছিল, ১০ নভেম্বর ২০২৬)
+        $payableAccount = Account::query()->where('code', 'like', StandardChart::PAYABLE_GROUP.'%')->postable()->active()->orderBy('code')->firstOrFail();
+        $this->journal('2026-11-07', [[StandardChart::find(StandardChart::RENT)->id, '30000', null],
+            [$payableAccount->id, null, '30000', ['party_type' => 'supplier', 'party_id' => Supplier::query()->firstOrFail()->id]]]);
 
         $nowNov = $wc->on($nov);
         $nowOct = $wc->on($oct);
 
         $this->assertSame('177000.0000', bcsub($nowNov['money'], $beforeNov['money'], 4),
             '⛔ হাতে টাকা খাতার মতো বাড়েনি — আগে '.$beforeNov['money'].', পরে '.$nowNov['money'].', খাত '.$till->code.' '.$till->name().', দাখিলা '.json_encode($this->entries($till->id)));
-        $this->assertSame('7000.0000', bcsub($nowNov['other'], $beforeNov['other'], 4), '⛔ অন্যান্য চলতি দায়ে মূসক প্রদেয় ওঠেনি।');
-        $this->assertSame('170000.0000', bcsub($nowNov['capital'], $beforeNov['capital'], 4), '⛔ চলতি মূলধন = যোগ − বাদ মেলেনি।');
+        $this->assertSame('30000.0000', bcsub($nowNov['payable'], $beforeNov['payable'], 4), '⛔ সরবরাহকারীর দেনা "দেনা"-য় ওঠেনি।');
+        $this->assertSame('7000.0000', bcsub($nowNov['other'], $beforeNov['other'], 4), '⛔ অন্যান্য চলতি দায়ে কেবল মূসক নয় — দেনাও দ্বিতীয়বার গোনা হলো।');
+        $this->assertSame('140000.0000', bcsub($nowNov['capital'], $beforeNov['capital'], 4), '⛔ চলতি মূলধন = যোগ − বাদ মেলেনি।');
 
         // ⓘ ৩১ অক্টোবরের হিসাবে কেবল অক্টোবরের ৫০,০০০ — নভেম্বরের টাকা পেছনের তারিখে ঢোকে না
         $this->assertSame('50000.0000', bcsub($nowOct['money'], $beforeOct['money'], 4), '⛔ তারিখের পরের দাখিলাও গোনা হলো।');
@@ -88,12 +94,14 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
         $this->journal('2027-06-05', [[$till->id, '600000', null], [StandardChart::find(StandardChart::SALES)->id, null, '600000']]);
         // ⓘ ছয় মাসের আগের বিক্রি — ১২ মাসের গড়ে পড়ে, ৬ মাসেরটায় নয়
         $this->journal('2026-08-10', [[$till->id, '1200000', null], [StandardChart::find(StandardChart::SALES)->id, null, '1200000']]);
+        // ⓘ ডিসেম্বরের বিক্রি — ৬ মাসের জানালা জানুয়ারি থেকে, তাই ঠিক বাইরে; জানালা এক মাস লম্বা হলে ঢুকে পড়ত (Mac মিউট্যান্ট W3 বেঁচেছিল)
+        $this->journal('2026-12-15', [[$till->id, '300000', null], [StandardChart::find(StandardChart::SALES)->id, null, '300000']]);
 
         $sixAfter = $wc->on($date, 6);
         $twelveAfter = $wc->on($date, 12);
 
-        $this->assertSame('100000.0000', bcsub($sixAfter['avg_sales'], $six['avg_sales'], 4), '⛔ ৬ মাসের গড়ে ৬,০০,০০০ ÷ ৬ নয়।');
-        $this->assertSame('150000.0000', bcsub($twelveAfter['avg_sales'], $twelve['avg_sales'], 4), '⛔ ১২ মাসের গড়ে (৬,০০,০০০ + ১২,০০,০০০) ÷ ১২ নয়।');
+        $this->assertSame('100000.0000', bcsub($sixAfter['avg_sales'], $six['avg_sales'], 4), '⛔ ৬ মাসের গড়ে ৬,০০,০০০ ÷ ৬ নয় — জানালা জানুয়ারির আগে থেকে?');
+        $this->assertSame('175000.0000', bcsub($twelveAfter['avg_sales'], $twelve['avg_sales'], 4), '⛔ ১২ মাসের গড়ে (৬,০০,০০০ + ৩,০০,০০০ + ১২,০০,০০০) ÷ ১২ নয়।');
 
         $expected = bcmul(bcdiv($sixAfter['capital'], $sixAfter['avg_sales'], 6), '100', 0);
         $this->assertSame($expected, $sixAfter['sales_pct'], '⛔ শতাংশ = চলতি মূলধন ÷ গড় মাসিক বিক্রি × ১০০ নয়।');
@@ -151,12 +159,12 @@ final class WorkingCapitalReadsTheBooksOnAnyDateTest extends TestCase
             ->get(['trx_date', 'branch_id', 'debit', 'credit'])->toArray();
     }
 
-    /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */
+    /** @param  list<array{0: int, 1: ?string, 2: ?string, 3?: array<string, mixed>}>  $lines  ⓘ চতুর্থটা পক্ষ — দেনার খাতে লাগে */
     private function journal(string $date, array $lines): void
     {
         $voucher = app(VoucherService::class)->create(
             ['type' => Voucher::JOURNAL, 'trx_date' => $date, 'narration' => 'চলতি মূলধনের দাবি'],
-            array_map(fn (array $l) => array_filter(['account_id' => $l[0], 'debit' => $l[1], 'credit' => $l[2]], fn ($v) => $v !== null), $lines),
+            array_map(fn (array $l) => array_filter(['account_id' => $l[0], 'debit' => $l[1], 'credit' => $l[2]], fn ($v) => $v !== null) + ($l[3] ?? []), $lines),
         );
         app(VoucherService::class)->post($voucher);
         // ⓘ জের-ভান্ডার এক অনুরোধের জন্য (scoped) — আসল পর্দায় পরের দেখা নতুন অনুরোধ; এখানে হাতে ভুলিয়ে সেটাই
