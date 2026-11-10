@@ -148,4 +148,8 @@ return [
         \App\Modules\CreditControl\Widgets\ChequesSummary::class,
         \App\Modules\CreditControl\Widgets\BigDuesSummary::class,
     ],
+    // ⭐ কোপাইলটের দরজা — কেবল পড়ার, নিজের চাবির পেছনে ([[ToolRegistry]]; ১১ নভেম্বর ২০২৬)
+    'assistant_tools' => [
+        \App\Modules\CreditControl\Assistant\OverdueTool::class,
+    ],
 ];

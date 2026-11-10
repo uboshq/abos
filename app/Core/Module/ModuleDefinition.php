@@ -529,6 +529,21 @@ final class ModuleDefinition
          * @var array<string, string> কাজ => ফিরে-যাওয়ার কাজ
          */
         public readonly array $approvalFallbacks = [],
+
+        /**
+         * ⭐ কোপাইলটের দরজা — এই মডিউলের পড়ার টুল ([[AssistantTool]]; পূর্ণ পরিকল্পনা অংশ ১০, ১১ নভেম্বর ২০২৬)।
+         * ⓘ কোর মডিউলের নাম জানে না; [[ToolRegistry]] এখান থেকে পড়ে। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var list<class-string<\App\Core\Engines\Assistant\AssistantTool>>
+         */
+        public readonly array $assistantTools = [],
+
+        /**
+         * ⭐ পূর্বাভাসের উৎস — দিন ধরে ইতিহাস ([[ForecastSource]]); হিসাবের নিয়ম একটাই, [[ForecastEngine]]-এ।
+         *
+         * @var list<class-string<\App\Core\Engines\Forecast\ForecastSource>>
+         */
+        public readonly array $forecasts = [],
     ) {}
 
     /**
@@ -742,6 +757,8 @@ final class ModuleDefinition
             ),
             phoneWidgets: self::validatePhoneWidgets($raw['phone_widgets'] ?? [], $path),
             approvalFallbacks: self::validateApprovalFallbacks($raw['approval_fallbacks'] ?? [], $raw['approvals'] ?? [], $path),
+            assistantTools: self::validateImplements($raw['assistant_tools'] ?? [], \App\Core\Engines\Assistant\AssistantTool::class, 'assistant tool', $path),
+            forecasts: self::validateImplements($raw['forecasts'] ?? [], \App\Core\Engines\Forecast\ForecastSource::class, 'forecast source', $path),
         );
     }
 
@@ -749,6 +766,27 @@ final class ModuleDefinition
      * @param  list<mixed>  $widgets
      * @return list<class-string<WidgetSummary>>
      */
+    /**
+     * ⓘ ক্লাসের তালিকা — প্রতিটা আছে কি না আর চুক্তিটা মানে কি না; বুটেই ভাঙে, পথসহ (কোপাইলটের দরজা, পূর্বাভাসের উৎস)।
+     *
+     * @param  array<int, mixed>  $classes
+     * @return list<class-string>
+     */
+    private static function validateImplements(array $classes, string $contract, string $what, string $path): array
+    {
+        foreach ($classes as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException("{$path}: {$what} '".(is_string($class) ? $class : gettype($class))."' does not exist.");
+            }
+
+            if (! is_subclass_of($class, $contract)) {
+                throw new InvalidArgumentException("{$path}: {$what} {$class} must implement ".class_basename($contract).'.');
+            }
+        }
+
+        return array_values($classes);
+    }
+
     private static function validatePhoneWidgets(array $widgets, string $path): array
     {
         foreach ($widgets as $class) {

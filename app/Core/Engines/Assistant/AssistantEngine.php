@@ -30,6 +30,79 @@ final class AssistantEngine
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
+     * ⭐ প্রশ্নের উত্তর (পূর্ণ পরিকল্পনা অংশ ২, ধাপ ৪) — মডেল বোঝে, ABOS-এর দরজা গোনে।
+     *
+     * ধাপ: অংশ চালু? → দিনের সীমা → মডেল (NEXUS-এর সার্ভার) "কোন দরজা, কী মান" বলে; না পেলে নিজের শব্দ-তালিকা ([[WordMatcher]]) →
+     * দরজা খোলা — চাবি আবার দেখা হয় ([[ToolRegistry::call()]]) → খাতায় প্রশ্ন, উত্তর, কোন দরজা কোন মানে, কোন মডেল, কত সময়।
+     * ⓘ ফল একটা অবস্থা-চিহ্ন (off, limit, not_understood, blocked, answered) — কথাগুলো কোপাইলটের মডিউল বলে, কোর নয়।
+     *
+     * @return array{state: string, tool: ?string, result: ?array<string, mixed>, model: ?string}
+     */
+    public function ask(User $user, string $question, ?string $page = null): array
+    {
+        $question = trim(mb_substr($question, 0, 500));
+        $none = ['tool' => null, 'result' => null, 'model' => null];
+
+        if (! $this->on('ask')) {
+            return ['state' => 'off'] + $none;
+        }
+
+        $limit = max(1, (int) $this->settings->get('assistant.daily_questions', 200));
+        $today = AssistantEvent::query()->where('kind', AssistantEvent::QUESTION)->where('user_id', $user->id)
+            ->where('created_at', '>=', Carbon::today())->count();
+
+        if ($today >= $limit) {
+            $this->record(AssistantEvent::BLOCKED, $user, $question, ['page' => $page, 'outcome' => 'daily_limit']);
+
+            return ['state' => 'limit'] + $none;
+        }
+
+        $registry = app(ToolRegistry::class);
+        $mine = $registry->for($user);
+        $start = microtime(true);
+        $picked = app(ModelClient::class)->interpret($question, app()->getLocale(), $page, $registry->describeFor($user, app()->getLocale()));
+        $model = $picked['model'] ?? null;
+
+        if ($picked === null || $picked['tool'] === null) {
+            $words = app(WordMatcher::class)->match($question, $mine);
+            $picked = $words === null ? null : $words + ['model' => 'words'];
+            $model = $words === null ? $model : 'words';
+        }
+
+        $ms = (int) round((microtime(true) - $start) * 1000);
+
+        if ($picked === null) {
+            $this->record(AssistantEvent::QUESTION, $user, $question, ['page' => $page, 'model' => $model, 'ms' => $ms, 'outcome' => 'not_understood']);
+
+            return ['state' => 'not_understood', 'tool' => null, 'result' => null, 'model' => $model];
+        }
+
+        $tools = [['name' => $picked['tool'], 'args' => $picked['args']]];
+        $result = $registry->call($user, (string) $picked['tool'], (array) $picked['args']);
+
+        if ($result === null) {
+            $this->record(AssistantEvent::BLOCKED, $user, $question, ['page' => $page, 'model' => $model, 'ms' => $ms, 'outcome' => 'no_key:'.$picked['tool']], $tools);
+
+            return ['state' => 'blocked', 'tool' => (string) $picked['tool'], 'result' => null, 'model' => $model];
+        }
+
+        $this->record(AssistantEvent::QUESTION, $user, $question, [
+            'page' => $page, 'model' => $model, 'ms' => (int) round((microtime(true) - $start) * 1000),
+            'outcome' => 'answered', 'answer' => mb_substr((string) $result['summary'], 0, 2000),
+        ], $tools);
+
+        return ['state' => 'answered', 'tool' => (string) $picked['tool'], 'result' => $result, 'model' => $model];
+    }
+
+    /** ⭐ 👍 👎 — নিজের প্রশ্নের উত্তরে; ভুল ধরতে (পূর্ণ পরিকল্পনা অংশ ৮) */
+    public function feedback(User $user, AssistantEvent $answer, int $value): void
+    {
+        abort_unless($answer->kind === AssistantEvent::QUESTION && (int) $answer->user_id === (int) $user->id, 404);
+
+        $answer->forceFill(['feedback' => $value > 0 ? 1 : -1])->save();
+    }
+
+    /**
      * ⭐ পর্দায় যে নাম — কন্ট্রোল প্যানেল থেকে, ভাষা ধরে (মালিক, ১০ নভেম্বর ২০২৬: "নাম সেটিং থেকে বদলাবে, কোড লাগবে না")।
      * ⓘ খালি রাখলে "Copilot"।
      */

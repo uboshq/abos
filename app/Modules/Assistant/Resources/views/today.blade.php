@@ -24,9 +24,7 @@
 
         <nav class="flex gap-1 overflow-x-auto border-b border-(--color-border) text-sm" aria-label="{{ $name }}">
             <span class="border-b-2 border-(--color-brand-500) px-3 py-2 font-semibold text-(--color-brand-500)" aria-current="page">{{ __('assistant::page.tab_today') }}</span>
-            @foreach (['ask'] as $soon)
-                <span class="px-3 py-2 text-(--color-ink-muted)" data-assistant-soon="{{ $soon }}">{{ __('assistant::page.tab_'.$soon) }} <span class="text-2xs">· {{ __('assistant::page.soon') }}</span></span>
-            @endforeach
+            <a href="{{ route('assistant.ask') }}" class="px-3 py-2 text-(--color-link) hover:underline">{{ __('assistant::page.tab_ask') }}</a>
             @can('assistant.audit')
                 <a href="{{ route('assistant.audit') }}" class="px-3 py-2 text-(--color-link) hover:underline">{{ __('assistant::page.tab_audit') }}</a>
             @endcan

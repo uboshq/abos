@@ -997,4 +997,8 @@ return [
     'phone_widgets' => [
         \App\Modules\Inventory\Widgets\StockAlertsSummary::class,
     ],
+    // ⭐ কোপাইলটের দরজা — কেবল পড়ার, নিজের চাবির পেছনে ([[ToolRegistry]]; ১১ নভেম্বর ২০২৬)
+    'assistant_tools' => [
+        \App\Modules\Inventory\Assistant\StockOnHandTool::class,
+    ],
 ];
