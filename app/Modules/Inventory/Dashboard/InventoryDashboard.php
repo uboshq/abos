@@ -68,6 +68,17 @@ final class InventoryDashboard implements ProvidesDashboard
                     'permission' => 'inventory.stock.view',
                     'data' => fn (): array => ['problems' => $once()->problems(), 'corner' => $once()->corner()],
                 ],
+                [
+                    'view' => 'inventory::dashboard.board-replenish',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => [
+                        'reorder' => $once()->reorder(),
+                        'slow' => $once()->slow(),
+                        'reorderLink' => \Illuminate\Support\Facades\Route::has('purchase.order.create') && (auth()->user()?->can('purchase.order.create') ?? false)
+                            ? route('purchase.order.create') : null,
+                    ],
+                ],
             ],
         );
     }

@@ -291,6 +291,203 @@ final class InventoryBoard
         ];
     }
 
+    /**
+     * ⭐ আবার অর্ডার দিতে হবে — নমুনার ছক: হাতে, দিনে বিক্রি, কত দিন চলবে, লিড টাইম, নিরাপত্তা মজুদ, অর্ডার সীমা, পথে আছে, প্রস্তাবিত।
+     *
+     * ⓘ নিরাপত্তা মজুদ = 1.65 × দিনের বিক্রির ওঠানামা (গত 90 দিন) × √লিড টাইম — 95% সেবার মান (আন্তর্জাতিক প্রচলিত সূত্র)।
+     * ⓘ অর্ডার সীমা = দিনে বিক্রি × লিড টাইম + নিরাপত্তা মজুদ; পণ্যের নিজের সীমা বেশি হলে সেটাই।
+     * ⓘ প্রস্তাবিত = (সর্বোচ্চ সীমা, না থাকলে অর্ডার সীমার দ্বিগুণ) − হাতে − পথে; পণ্যের নিজের পুনঃঅর্ডার পরিমাণ থাকলে সেটা।
+     *
+     * @return array{count: int, rows: list<array<string, mixed>>, lost: string, blocked: string, lost_count: int}
+     */
+    public function reorder(int $limit = 6): array
+    {
+        $snap = $this->snapshot();
+        $snap->loadMissing('brandRow');
+        $onOrder = $this->supply->onOrderByProduct();
+        $sigma = $this->dailySpread($snap->pluck('id')->all());
+        $months = __('inventory::board.months_short');
+
+        $rows = $snap->map(function (Product $p) use ($sigma, $onOrder, $months) {
+            $daily = bcdiv((string) $p->getAttribute('out_30'), '30', 4);
+            $lead = (int) ($p->lead_days ?? 0);
+            $ss = bcmul(bcmul('1.65', $sigma[(int) $p->id] ?? '0', 4), (string) sqrt(max($lead, 1)), 4);
+            $rop = bcadd(bcmul($daily, (string) $lead, 4), $ss, 4);
+            $rop = bccomp((string) ($p->reorder_level ?? '0'), $rop, 4) > 0 ? (string) $p->reorder_level : $rop;
+            $have = (string) $p->getAttribute('available_qty');
+
+            if (bccomp($rop, '0', 4) <= 0 || bccomp($have, $rop, 4) > 0) {
+                return null;
+            }
+
+            $coming = $onOrder[(int) $p->id] ?? null;
+            $target = bccomp((string) ($p->max_level ?? '0'), '0', 4) > 0 ? (string) $p->max_level : bcmul($rop, '2', 4);
+            $suggest = bccomp((string) ($p->reorder_qty ?? '0'), '0', 4) > 0 ? (string) $p->reorder_qty
+                : bcsub(bcsub($target, bccomp($have, '0', 4) > 0 ? $have : '0', 4), $coming['qty'] ?? '0', 4);
+            $days = self::daysOfCover($p);
+            $out = bccomp($have, '0', 4) <= 0;
+
+            return [
+                'id' => (int) $p->id, 'name' => $p->name(), 'brand' => (string) ($p->brandRow?->drillLabel() ?? ''),
+                'have' => self::qty($have), 'rate' => self::qty($daily), 'lead' => __('inventory::board.days', ['n' => $lead]),
+                'ss' => self::qty($ss), 'rop' => self::qty($rop),
+                'po' => $coming === null ? '—' : self::qty($coming['qty']).($coming['expected_on'] ? ' · '.Carbon::parse($coming['expected_on'])->day.' '.($months[Carbon::parse($coming['expected_on'])->month] ?? '') : ''),
+                'sug' => $coming !== null && bccomp($suggest, '0', 4) <= 0 ? '—' : self::qty(bccomp($suggest, '0', 4) > 0 ? $suggest : '0'),
+                'days' => $out ? __('inventory::board.r.out') : ($days === null ? '—' : __('inventory::board.days', ['n' => $days])),
+                'cover' => $out ? '0' : ($days ?? '99'),
+                'out' => $out,
+            ];
+        })->filter()->sortBy(fn (array $r) => (float) $r['cover'])->values();
+
+        $lostAll = $this->demand->lostByProduct(Carbon::today()->subDays(30)->toDateString());
+        $open = $this->demand->openByProduct();
+        $outs = $snap->filter(fn (Product $p) => bccomp((string) $p->getAttribute('available_qty'), '0', 4) <= 0);
+
+        return [
+            'count' => $rows->count(),
+            'rows' => $rows->take($limit)->map(function (array $r) {
+                $c = (float) $r['cover'];
+                $r['tone'] = $r['out'] ? 'var(--color-dash-dc2626)' : ($c <= 3 ? 'var(--color-dash-ef4444)' : ($c <= 7 ? 'var(--color-dash-f97316)' : ($c <= 10 ? 'var(--color-dash-eab308)' : 'var(--color-dash-84cc16)')));
+                $r['width'] = $r['out'] ? '0%' : min(100, (int) round($c / 20 * 100)).'%';
+                $r['row'] = $r['out'] ? 'var(--color-dash-fef2f2)' : 'transparent';
+
+                return $r;
+            })->all(),
+            'lost' => $outs->reduce(fn (string $c, Product $p) => bcadd($c, $lostAll[(int) $p->id] ?? '0', 4), '0'),
+            'blocked' => $outs->reduce(fn (string $c, Product $p) => bcadd($c, $open[(int) $p->id]['value'] ?? '0', 4), '0'),
+            'lost_count' => $outs->filter(fn (Product $p) => isset($open[(int) $p->id]) || isset($lostAll[(int) $p->id]))->count(),
+        ];
+    }
+
+    /**
+     * ⭐ ধীর ও অচল মজুদ — কত দিন নড়েনি তার পাঁচ ভাগ (টাকায়), বাছাই (সব / 15+ / 30+ / 60+ / 90+) আর সবচেয়ে পুরনো ছয়টা পণ্য।
+     *
+     * ⓘ "নড়েনি" = শেষ বেরোনোর পর থেকে দিন (কখনো না বেরোলে সবচেয়ে পুরনো); মাল আছে এমন পণ্যই গোনা।
+     * ⓘ "মেয়াদ কম" = পণ্যের কোনো লটে তৈরি থেকে মেয়াদ 120 দিনের মধ্যে (বিস্কুট-কেকের মতো)।
+     *
+     * @return array<string, mixed>
+     */
+    public function slow(): array
+    {
+        $pick = (int) request()->query('idle', '0');
+        $pick = in_array($pick, [15, 30, 60, 90], true) ? $pick : 0;
+        $today = Carbon::today();
+        $held = $this->snapshot()->filter(fn (Product $p) => bccomp((string) $p->getAttribute('on_hand_qty'), '0', 4) > 0);
+
+        $idle = fn (Product $p): int => $p->getAttribute('last_out') === null ? 9999 : (int) Carbon::parse((string) $p->getAttribute('last_out'))->diffInDays($today);
+        $value = fn (Product $p): string => self::valueOf($p, (string) $p->getAttribute('on_hand_qty'));
+
+        $bands = ['0' => '0', '15' => '0', '30' => '0', '60' => '0', '90' => '0'];
+
+        foreach ($held as $p) {
+            $d = $idle($p);
+            $key = $d > 90 ? '90' : ($d > 60 ? '60' : ($d > 30 ? '30' : ($d >= 15 ? '15' : '0')));
+            $bands[$key] = bcadd($bands[$key], $value($p), 4);
+        }
+
+        $totalHeld = array_reduce($bands, fn (string $c, string $v) => bcadd($c, $v, 4), '0');
+        $edge = $pick === 0 ? 15 : $pick;
+        $over = $held->filter(fn (Product $p) => $idle($p) >= $edge);
+        $overValue = $over->reduce(fn (string $c, Product $p) => bcadd($c, $value($p), 4), '0');
+
+        $shortLife = Batch::query()->whereNotNull('expiry_date')->whereNotNull('manufactured_on')
+            ->whereIn('product_id', $over->pluck('id')->all() ?: [0])
+            ->whereRaw('DATEDIFF(expiry_date, manufactured_on) <= 120')
+            ->distinct()->pluck('product_id')->map(fn ($id) => (int) $id)->all();
+
+        $top = $over->sortByDesc($idle)->take(6);
+        $home = $this->biggestWarehouse($top->pluck('id')->all());
+
+        return [
+            'pick' => $pick,
+            'value' => self::short($overValue),
+            'summary' => $pick === 0
+                ? __('inventory::board.s.summary_all', ['n' => $over->count(), 'amount' => self::short($overValue)])
+                : __('inventory::board.s.summary', ['days' => $pick, 'n' => $over->count(), 'amount' => self::short($overValue)]),
+            'bands' => collect($bands)->map(fn (string $v) => bccomp($totalHeld, '0', 4) > 0 ? max(1, (int) round((float) bcdiv(bcmul($v, '1000', 4), $totalHeld, 4))) : 0)->all(),
+            'picks' => collect([0, 15, 30, 60, 90])->map(fn (int $d) => [
+                'label' => $d === 0 ? __('inventory::board.t.all') : ($d === 15 ? __('inventory::board.s.days_plus', ['n' => $d]) : $d.'+'),
+                'on' => $d === $pick,
+                'href' => request()->fullUrlWithQuery(['idle' => $d === 0 ? null : $d]),
+            ])->all(),
+            'rows' => $top->map(function (Product $p) use ($idle, $value, $shortLife, $home) {
+                $d = $idle($p);
+
+                return [
+                    'name' => $p->name(), 'warehouse' => $home[(int) $p->id] ?? '',
+                    'days' => $d === 9999 ? __('inventory::board.s.never') : __('inventory::board.days', ['n' => $d]),
+                    'value' => self::short($value($p)), 'short' => in_array((int) $p->id, $shortLife, true),
+                    'tone' => $d > 90 ? 'var(--color-dash-475569)' : ($d > 60 ? 'var(--color-dash-dc2626)' : ($d > 30 ? 'var(--color-dash-ea580c)' : 'var(--color-dash-ca8a04)')),
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    /**
+     * ⓘ প্রতিটা পণ্যের দিনের বেরোনোর ওঠানামা (আদর্শ বিচ্যুতি) — গত 90 দিন, যেদিন বেরোয়নি সেদিন 0 ধরে।
+     *
+     * @param  list<int>  $ids
+     * @return array<int, string>
+     */
+    private function dailySpread(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $from = Carbon::today()->subDays(90);
+        $byDay = StockMovement::query()
+            ->whereIn('product_id', $ids)->where('floor_change', '<', 0)
+            ->where('trx_date', '>=', $from->toDateString())
+            ->tap(fn ($q) => $this->narrow($q))
+            ->groupBy('product_id', 'trx_date')
+            ->selectRaw('product_id, trx_date, SUM(-floor_change) as qty')
+            ->get()->groupBy('product_id');
+
+        $out = [];
+
+        foreach ($byDay as $id => $days) {
+            $values = $days->map(fn ($d) => (float) $d->qty)->all();
+            $values = array_pad($values, 90, 0.0);
+            $mean = array_sum($values) / 90;
+            $var = array_sum(array_map(fn ($v) => ($v - $mean) ** 2, $values)) / 90;
+            $out[(int) $id] = number_format(sqrt($var), 4, '.', '');
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⓘ পণ্যটা সবচেয়ে বেশি কোন গুদামে আছে — অচল মজুদের তালিকায় "কোথায়"।
+     *
+     * @param  list<int>  $ids
+     * @return array<int, string>
+     */
+    private function biggestWarehouse(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $names = Warehouse::query()->get()->mapWithKeys(fn (Warehouse $w) => [(int) $w->id => (string) $w->drillLabel()]);
+
+        return StockMovement::query()->whereIn('product_id', $ids)
+            ->tap(fn ($q) => $this->narrow($q))
+            ->groupBy('product_id', 'warehouse_id')
+            ->selectRaw('product_id, warehouse_id, SUM(floor_change + unplaced_change) as qty')
+            ->get()->groupBy('product_id')
+            ->map(fn ($rows) => $names[(int) $rows->sortByDesc(fn ($r) => (float) $r->qty)->first()->warehouse_id] ?? '')
+            ->mapWithKeys(fn ($v, $k) => [(int) $k => $v])->all();
+    }
+
+    /** ⓘ পরিমাণ — দশমিক কেবল দরকার হলে (12, 2.5) */
+    private static function qty(string $q): string
+    {
+        $r = bcadd($q, '0', 1);
+
+        return str_ends_with($r, '.0') ? substr($r, 0, -2) : $r;
+    }
+
     /** ⓘ দিনে বিক্রি = গত 30 দিনের বেরোনো ÷ 30; কত দিন চলবে = বিক্রিযোগ্য ÷ দিনে বিক্রি। বিক্রি না থাকলে null। */
     public static function daysOfCover(Product $p): ?string
     {
@@ -361,7 +558,7 @@ final class InventoryBoard
                 return [
                     'batch' => (string) $b->batch_no,
                     'product' => (string) ($b->product?->name() ?? ''),
-                    'warehouse' => (string) ($b->warehouse?->name() ?? ''),
+                    'warehouse' => (string) ($b->warehouse?->drillLabel() ?? ''),
                     'days' => (int) $today->diffInDays(Carbon::parse($b->expiry_date)),
                     'qty' => $qty,
                     'value' => $p instanceof Product ? self::valueOf($p, $qty) : '0',
@@ -410,7 +607,7 @@ final class InventoryBoard
             $value = $gaps->reduce(fn (string $c, $l) => bcadd($c, bcmul((string) $l->difference, (string) ($l->unit_cost ?? '0'), 4), 4), '0');
 
             if ($gaps->isNotEmpty() && ($worst === null || bccomp(ltrim($value, '-'), ltrim($worst['value'], '-'), 4) > 0)) {
-                $worst = ['warehouse' => (string) ($count->warehouse?->name() ?? ''), 'value' => $value,
+                $worst = ['warehouse' => (string) ($count->warehouse?->drillLabel() ?? ''), 'value' => $value,
                     'date' => Carbon::parse($count->count_date)->format('j M'), 'approved' => $count->isApproved()];
             }
         }
@@ -465,7 +662,7 @@ final class InventoryBoard
             'count' => $stuck->count(),
             'days' => (int) ($stuck->min('dispatched_at') ? Carbon::parse($stuck->min('dispatched_at'))->diffInDays(Carbon::now()) : 0),
             'value' => $value,
-            'routes' => $stuck->take(2)->map(fn (StockTransfer $t) => ($t->fromWarehouse?->name() ?? '').' → '.($t->toWarehouse?->name() ?? ''))->implode(', '),
+            'routes' => $stuck->take(2)->map(fn (StockTransfer $t) => ($t->fromWarehouse?->drillLabel() ?? '').' → '.($t->toWarehouse?->drillLabel() ?? ''))->implode(', '),
         ];
     }
 
