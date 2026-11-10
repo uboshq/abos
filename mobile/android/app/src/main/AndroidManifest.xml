@@ -65,6 +65,20 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
     <!--
+      ⭐ Office SMS phone (owner's ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026).
+      SEND_SMS is asked for at run time, and only when someone switches the SMS gateway on
+      (Profile → SMS gateway, shown only to a person holding notification.sms_gateway); on every
+      other phone it stays unasked. The foreground service keeps sending while the app is closed;
+      BOOT_COMPLETED brings it back after a power cut, and only if it was on.
+      test/android_permissions_test.dart holds this list.
+    -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <!--
       Storage and media reading, put in by open_filex (20 Oct 2026, release audit).
 
       This app opens only files it wrote itself, inside its own cache folder:
@@ -462,6 +476,23 @@
           refresh (refreshAll) redraws them on its first run.
         -->
         <receiver android:name="androidx.glance.appwidget.MyPackageReplacedReceiver" tools:node="remove" />
+
+        <!-- ⭐ Office SMS phone: the sending service, the per-part sent/delivered results, and the restart after boot -->
+        <service
+            android:name=".sms.SmsGatewayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Sends the company's own transactional SMS from the ERP queue on this office phone's SIM, all day" />
+        </service>
+        <receiver android:name=".sms.SmsResultReceiver" android:exported="false" />
+        <receiver android:name=".sms.SmsBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

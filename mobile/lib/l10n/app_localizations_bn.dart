@@ -11370,4 +11370,52 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get wcFailed => 'চলতি মূলধন আনা গেল না';
+
+  @override
+  String get smsGatewayTitle => 'SMS গেটওয়ে';
+
+  @override
+  String get smsGatewaySubtitle => 'এই ফোন অফিসের SMS পাঠাবে — নিজের সিমে';
+
+  @override
+  String get smsGatewayAddress => 'ERP-র ঠিকানা';
+
+  @override
+  String get smsGatewayKey => 'ফোনের চাবি (কন্ট্রোল প্যানেল → SMS-এর ফোন)';
+
+  @override
+  String get smsGatewayStart => 'চালু করুন';
+
+  @override
+  String get smsGatewayStop => 'বন্ধ করুন';
+
+  @override
+  String get smsGatewayOn => 'চালু — মিনিটে একবার সারি দেখে';
+
+  @override
+  String get smsGatewayOff => 'বন্ধ';
+
+  @override
+  String get smsGatewaySentToday => 'আজ এই ফোন থেকে গেছে';
+
+  @override
+  String get smsGatewayLastRun => 'শেষ দেখা';
+
+  @override
+  String get smsGatewayError => 'শেষ ভুল';
+
+  @override
+  String get smsGatewayWaitingReports => 'সার্ভারকে জানানো বাকি';
+
+  @override
+  String get smsGatewayNeedPermission => 'SMS পাঠানোর অনুমতি দিন — না দিলে কোনো SMS যাবে না';
+
+  @override
+  String get smsGatewayKeyRefused => 'চাবি আর চলে না — কন্ট্রোল প্যানেলে নতুন চাবি নিয়ে আবার চালু করুন';
+
+  @override
+  String get smsGatewayMissing => 'চাবি লিখুন — কন্ট্রোল প্যানেল → SMS-এর ফোন থেকে';
+
+  @override
+  String get smsGatewayNote => 'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।';
 }

@@ -14,6 +14,7 @@ import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/my_phones_screen.dart';
+import '../../features/profile/sms_gateway_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/nav_bottom_bar.dart';
@@ -377,6 +378,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: ProfileRoutes.phones,
             builder: (context, state) => const MyPhonesScreen(),
+          ),
+          // ⭐ অফিসের SMS ফোন — প্রোফাইল থেকে, কেবল SMS-এর ফোনের চাবিওয়ালা মানুষের (নমুনা ধাপ ২, ১১ নভেম্বর ২০২৬)
+          _framed(
+            path: ProfileRoutes.smsGateway,
+            builder: (context, state) => const SmsGatewayScreen(),
           ),
           // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
           _framed(

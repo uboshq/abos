@@ -13,6 +13,8 @@ class ProfileRoutes {
   /// `/home/` এর পরের অংশ — হোমের `openPath` এটাই নেয়
   static const String profile = 'me/profile';
   static const String phones = 'me/phones';
+  // ⭐ অফিসের SMS ফোন (নমুনা ধাপ ২) — কেবল যাঁর হাতে notification.sms_gateway
+  static const String smsGateway = 'me/sms-gateway';
 
   /// ⭐ এই সার্ভারে কী আছে — মেনু (a4) এখান থেকে পড়ে; `/me` না এলে বা Riverpod না থাকলে (একা মেনুর টেস্ট) [MeFeatures.none]
   static MeFeatures featuresOf(BuildContext context) {

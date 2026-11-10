@@ -300,6 +300,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onTap: _openPhones,
             ),
           ],
+          // ⭐ অফিসের SMS ফোন — কেবল যাঁর হাতে চাবি (আজ মালিক); বাকি সবার প্রোফাইলে সারিটাই নেই
+          if (user?.can('notification.sms_gateway') ?? false) ...[
+            const Divider(height: AppSpacing.lg),
+            ListTile(
+              key: const ValueKey('profile-sms-gateway'),
+              minVerticalPadding: 12,
+              leading: const Icon(Symbols.sms),
+              title: Text(context.l10n.smsGatewayTitle),
+              subtitle: Text(context.l10n.smsGatewaySubtitle),
+              trailing: const Icon(Symbols.chevron_right),
+              onTap: () => GoRouter.maybeOf(context)?.push('/home/${ProfileRoutes.smsGateway}'),
+            ),
+          ],
         ],
       ),
     );

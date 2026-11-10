@@ -27,8 +27,71 @@ import java.security.MessageDigest
 // ⓘ FragmentActivity — the app lock's fingerprint/PIN prompt (local_auth) needs it (7 Oct 2026)
 class MainActivity : FlutterFragmentActivity() {
 
+    /** SEND_SMS চাওয়ার উত্তরের অপেক্ষায় থাকা ডাক — Android উত্তর দেয় [onRequestPermissionsResult]-এ */
+    private var smsPermissionResult: MethodChannel.Result? = null
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == SMS_PERMISSION_REQUEST) {
+            smsPermissionResult?.success(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            smsPermissionResult = null
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // ⭐ অফিসের SMS ফোন (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২) — চালু/বন্ধ, অবস্থা, আর SMS পাঠানোর অনুমতি।
+        // ⓘ কাজটা সামনের-সেবায় (sms/SmsGatewayService) — অ্যাপ বন্ধ থাকলেও চলে; Dart শুধু সাজায় আর দেখায়
+        // (lib/core/sms_gateway/sms_gateway_channel.dart)।
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                val store = com.abos.abos_mobile.sms.SmsGatewayStore(this)
+                when (call.method) {
+                    "status" -> result.success(
+                        mapOf(
+                            "enabled" to store.enabled,
+                            "baseUrl" to store.baseUrl,
+                            "hasKey" to store.key.isNotEmpty(),
+                            "lastRun" to store.lastRun,
+                            "lastError" to store.lastError,
+                            "sentToday" to store.sentToday(),
+                            "waitingReports" to store.events().length(),
+                            "permission" to (checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED),
+                        )
+                    )
+                    "start" -> {
+                        val base = call.argument<String>("baseUrl").orEmpty()
+                        val key = call.argument<String>("key").orEmpty()
+                        if (base.isNotEmpty()) store.baseUrl = base
+                        if (key.isNotEmpty()) store.key = key
+                        store.appVersion = call.argument<String>("appVersion").orEmpty()
+                        if (store.baseUrl.isEmpty() || store.key.isEmpty()) {
+                            result.error("MISSING", "address or key missing", null)
+                        } else {
+                            store.lastError = ""
+                            store.enabled = true
+                            com.abos.abos_mobile.sms.SmsGatewayService.start(this)
+                            result.success(true)
+                        }
+                    }
+                    "stop" -> {
+                        store.enabled = false
+                        com.abos.abos_mobile.sms.SmsGatewayService.stop(this)
+                        result.success(true)
+                    }
+                    "requestPermission" -> {
+                        if (checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                            result.success(true)
+                        } else {
+                            smsPermissionResult?.success(false)
+                            smsPermissionResult = result
+                            requestPermissions(arrayOf(Manifest.permission.SEND_SMS), SMS_PERMISSION_REQUEST)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INSTALL_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -303,5 +366,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val STORAGE_CHANNEL = "com.abos.abos_mobile/storage"
         private const val PERMISSIONS_CHANNEL = "com.abos.abos_mobile/permissions"
         private const val POWER_CHANNEL = "abos/power"
+        private const val SMS_CHANNEL = "com.abos.abos_mobile/sms_gateway"
+        private const val SMS_PERMISSION_REQUEST = 7302
     }
 }

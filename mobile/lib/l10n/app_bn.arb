@@ -15832,5 +15832,69 @@
   "wcFailed": "চলতি মূলধন আনা গেল না",
   "@wcFailed": {
     "description": "Home working capital card under the money card (owner 9 Nov 2026)"
+  },
+  "smsGatewayTitle": "SMS গেটওয়ে",
+  "@smsGatewayTitle": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewaySubtitle": "এই ফোন অফিসের SMS পাঠাবে — নিজের সিমে",
+  "@smsGatewaySubtitle": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayAddress": "ERP-র ঠিকানা",
+  "@smsGatewayAddress": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayKey": "ফোনের চাবি (কন্ট্রোল প্যানেল → SMS-এর ফোন)",
+  "@smsGatewayKey": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayStart": "চালু করুন",
+  "@smsGatewayStart": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayStop": "বন্ধ করুন",
+  "@smsGatewayStop": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayOn": "চালু — মিনিটে একবার সারি দেখে",
+  "@smsGatewayOn": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayOff": "বন্ধ",
+  "@smsGatewayOff": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewaySentToday": "আজ এই ফোন থেকে গেছে",
+  "@smsGatewaySentToday": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayLastRun": "শেষ দেখা",
+  "@smsGatewayLastRun": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayError": "শেষ ভুল",
+  "@smsGatewayError": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayWaitingReports": "সার্ভারকে জানানো বাকি",
+  "@smsGatewayWaitingReports": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayNeedPermission": "SMS পাঠানোর অনুমতি দিন — না দিলে কোনো SMS যাবে না",
+  "@smsGatewayNeedPermission": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayKeyRefused": "চাবি আর চলে না — কন্ট্রোল প্যানেলে নতুন চাবি নিয়ে আবার চালু করুন",
+  "@smsGatewayKeyRefused": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayMissing": "চাবি লিখুন — কন্ট্রোল প্যানেল → SMS-এর ফোন থেকে",
+  "@smsGatewayMissing": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
+  },
+  "smsGatewayNote": "খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।",
+  "@smsGatewayNote": {
+    "description": "Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)"
   }
 }

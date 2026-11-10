@@ -18931,6 +18931,102 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'চলতি মূলধন আনা গেল না'**
   String get wcFailed;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'SMS গেটওয়ে'**
+  String get smsGatewayTitle;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফোন অফিসের SMS পাঠাবে — নিজের সিমে'**
+  String get smsGatewaySubtitle;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ERP-র ঠিকানা'**
+  String get smsGatewayAddress;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোনের চাবি (কন্ট্রোল প্যানেল → SMS-এর ফোন)'**
+  String get smsGatewayKey;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চালু করুন'**
+  String get smsGatewayStart;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ করুন'**
+  String get smsGatewayStop;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চালু — মিনিটে একবার সারি দেখে'**
+  String get smsGatewayOn;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ'**
+  String get smsGatewayOff;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ এই ফোন থেকে গেছে'**
+  String get smsGatewaySentToday;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ দেখা'**
+  String get smsGatewayLastRun;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ ভুল'**
+  String get smsGatewayError;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারকে জানানো বাকি'**
+  String get smsGatewayWaitingReports;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'SMS পাঠানোর অনুমতি দিন — না দিলে কোনো SMS যাবে না'**
+  String get smsGatewayNeedPermission;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি আর চলে না — কন্ট্রোল প্যানেলে নতুন চাবি নিয়ে আবার চালু করুন'**
+  String get smsGatewayKeyRefused;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি লিখুন — কন্ট্রোল প্যানেল → SMS-এর ফোন থেকে'**
+  String get smsGatewayMissing;
+
+  /// Office SMS phone screen (owner ok, sample U1X687u5MkwVfEL7ci7MGv step 2, 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।'**
+  String get smsGatewayNote;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

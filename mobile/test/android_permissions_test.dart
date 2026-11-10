@@ -29,6 +29,11 @@ void main() {
       'android.permission.CAMERA', // QR, স্লিপ/রসিদের ছবি
       'android.permission.REQUEST_INSTALL_PACKAGES', // অ্যাপের ভেতর থেকে আপডেট
       'android.permission.USE_BIOMETRIC', // অ্যাপ-তালা
+      // ⭐ অফিসের SMS ফোন (নমুনা ধাপ ২) — SEND_SMS চাওয়া হয় কেবল গেটওয়ে চালু করার সময়
+      'android.permission.SEND_SMS',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+      'android.permission.RECEIVE_BOOT_COMPLETED',
     });
   });
 

@@ -11542,4 +11542,52 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get wcFailed => 'Could not load working capital';
+
+  @override
+  String get smsGatewayTitle => 'SMS gateway';
+
+  @override
+  String get smsGatewaySubtitle => 'This phone sends the office SMS on its own SIM';
+
+  @override
+  String get smsGatewayAddress => 'ERP address';
+
+  @override
+  String get smsGatewayKey => 'Phone key (Control panel → SMS phones)';
+
+  @override
+  String get smsGatewayStart => 'Switch on';
+
+  @override
+  String get smsGatewayStop => 'Switch off';
+
+  @override
+  String get smsGatewayOn => 'On — checks the queue every minute';
+
+  @override
+  String get smsGatewayOff => 'Off';
+
+  @override
+  String get smsGatewaySentToday => 'Sent from this phone today';
+
+  @override
+  String get smsGatewayLastRun => 'Last check';
+
+  @override
+  String get smsGatewayError => 'Last error';
+
+  @override
+  String get smsGatewayWaitingReports => 'Reports not yet sent';
+
+  @override
+  String get smsGatewayNeedPermission => 'Allow sending SMS — without it no SMS goes out';
+
+  @override
+  String get smsGatewayKeyRefused => 'The key no longer works — take a new key in the control panel and switch on again';
+
+  @override
+  String get smsGatewayMissing => 'Type the key — from Control panel → SMS phones';
+
+  @override
+  String get smsGatewayNote => 'The only cost is the SIM SMS pack. Keep the phone charging and online; while it is off SMS wait in the queue, and after 2 hours the owner is told.';
 }
