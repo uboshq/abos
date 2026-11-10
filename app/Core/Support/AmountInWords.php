@@ -94,6 +94,25 @@ final class AmountInWords
     }
 
     /**
+     * ⭐ চেকের "Taka … Only" — বাংলাদেশের চেকের রেওয়াজে: শব্দের প্রথম অক্ষর বড়, লাখ-কোটির দল, পয়সা থাকলে "and Paisa …"
+     * ("Taka One Lakh Twenty Five Thousand Only"; মালিকের চেকের নমুনা, ১০ নভেম্বর ২০২৬)। ⓘ চেক সবসময় ইংরেজিতে — ব্যাংকের নিয়ম,
+     * পাতার ভাষা যা-ই হোক। ঋণাত্মক বা শূন্য টাকার চেক হয় না — ডাকার আগে [[ChequePrinter]] ফেরায়।
+     */
+    public static function cheque(string $amount): string
+    {
+        [$whole, $fraction] = self::split(bcadd($amount, '0', 4));
+        $words = self::englishNumber($whole);
+        $out = 'Taka '.($words === '' ? 'zero' : $words);
+
+        if ($fraction > 0) {
+            $out .= ' and paisa '.self::englishNumber((string) $fraction);
+        }
+
+        // ⓘ চেকে "Twenty Five", হাইফেন নয় — হাতে লেখা চেকের মতো
+        return ucwords(str_replace('-', ' ', $out.' only'));
+    }
+
+    /**
      * @return array{0: string, 1: int}
      */
     private static function split(string $amount): array
