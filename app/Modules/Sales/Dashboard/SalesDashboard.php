@@ -273,6 +273,17 @@ final class SalesDashboard implements ProvidesDashboard
                         return ['ladder' => $board->profitLadder(), 'target' => $board->monthTarget(), 'products' => $board->products()];
                     },
                 ],
+                // ⭐ সারি 3 — লক্ষ্যের পথে জমা বিক্রি আর PVM সেতু
+                [
+                    'view' => 'sales::dashboard.board-path',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['cumulative' => $board->cumulative(), 'pvm' => $board->pvm()];
+                    },
+                ],
             ],
         );
     }

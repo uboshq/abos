@@ -239,6 +239,85 @@ final class SalesBoard
         ];
     }
 
+    /**
+     * ⭐ সারি 3 — লক্ষ্যের পথে: এ মাসের দিনে দিনে জমা নিট বিক্রি ([[SalesMetrics::netByDay()]] — বিক্রির রিপোর্টের একই অঙ্ক),
+     * গত বছরের একই মাসের জমা, লক্ষ্য (মাসের SR লক্ষ্যের যোগ) আর এই গতিতে মাস শেষের পূর্বাভাস।
+     *
+     * @return array{days: int, today: int, now: list<float>, last_year: list<float>, target: ?string, forecast: string}
+     */
+    public function cumulative(): array
+    {
+        $today = Carbon::today();
+        $from = $today->copy()->startOfMonth();
+        $days = $today->daysInMonth;
+        $run = function (array $byDay, Carbon $start, int $upto): array {
+            $out = [];
+            $sum = 0.0;
+
+            for ($i = 0; $i < $upto; $i++) {
+                $sum += (float) ($byDay[$start->copy()->addDays($i)->toDateString()] ?? 0);
+                $out[] = $sum;
+            }
+
+            return $out;
+        };
+        $now = $run(\App\Modules\Sales\Metrics\SalesMetrics::netByDay($from->toDateString(), $today->toDateString()), $from, $today->day);
+        $lyFrom = $from->copy()->subYear();
+        $lastYear = $run(\App\Modules\Sales\Metrics\SalesMetrics::netByDay($lyFrom->toDateString(), $lyFrom->copy()->endOfMonth()->toDateString()), $lyFrom, $lyFrom->daysInMonth);
+        $done = end($now) ?: 0.0;
+
+        return [
+            'days' => $days,
+            'today' => $today->day,
+            'now' => $now,
+            'last_year' => $lastYear,
+            'target' => $this->analytics->targetAchievement($today)['target'],
+            'forecast' => number_format($done / $today->day * $days, 4, '.', ''),
+        ];
+    }
+
+    /**
+     * ⭐ বিক্রি কেন বাড়ল — দাম · পরিমাণ · মিশ্রণ (PVM): এ মাসের 1 থেকে আজ বনাম গত মাসের একই দিন, পণ্য ধরে (প্রচলিত ভাঙন, যোগফল হুবহু মেলে):
+     * পরিমাণ = (মোট পরিমাণের বদল) × আগের গড় দাম; মিশ্রণ = Σ আগের দাম × এখনকার পরিমাণ − এখনকার মোট পরিমাণ × আগের গড় দাম;
+     * দাম = Σ (এখনকার দাম − আগের দাম) × এখনকার পরিমাণ; নতুন পণ্য = আগে বিক্রি হয়নি এমন পণ্যের বিক্রি; বাদ পড়া পণ্য = এবার বিক্রি হয়নি এমনের আগের বিক্রি।
+     * ⓘ সব পণ্যের মাত্রায় — গ্রাহকের হিসাব এখানে মেশানো হয় না (মেশালে একই টাকা দুইবার গোনা হত)।
+     *
+     * @return array{before: string, volume: string, price: string, mix: string, new: string, dropped: string, after: string, from_label: string, to_label: string}
+     */
+    public function pvm(): array
+    {
+        $today = Carbon::today();
+        $from = $today->copy()->startOfMonth();
+        $lastFrom = $from->copy()->subMonthNoOverflow();
+        $lastTo = $lastFrom->copy()->addDays($today->day - 1)->min($lastFrom->copy()->endOfMonth());
+        $lines = fn (Carbon $a, Carbon $b) => SalesInvoiceLine::query()
+            ->whereHas('invoice', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$a->toDateString(), $b->toDateString()]))
+            ->groupBy('product_id')->selectRaw('product_id, SUM(qty) as q, SUM(amount) as v')->get()->keyBy('product_id');
+        $p0 = $lines($lastFrom, $lastTo);
+        $p1 = $lines($from, $today);
+        $common = $p0->keys()->intersect($p1->keys());
+        $q0 = $common->sum(fn ($id) => (float) $p0[$id]->q);
+        $q1 = $common->sum(fn ($id) => (float) $p1[$id]->q);
+        $r0c = $common->sum(fn ($id) => (float) $p0[$id]->v);
+        $avg0 = $q0 > 0 ? $r0c / $q0 : 0.0;
+        $price0 = fn ($id) => (float) $p0[$id]->q > 0 ? (float) $p0[$id]->v / (float) $p0[$id]->q : 0.0;
+        $atOld = $common->sum(fn ($id) => $price0($id) * (float) $p1[$id]->q);
+        $f = fn (float $v) => number_format($v, 4, '.', '');
+        $months = __('sales::board.months_short');
+
+        return [
+            'before' => $f((float) $p0->sum('v')),
+            'volume' => $f(($q1 - $q0) * $avg0),
+            'mix' => $f($atOld - $q1 * $avg0),
+            'price' => $f($common->sum(fn ($id) => (float) $p1[$id]->v) - $atOld),
+            'new' => $f($p1->except($common->all())->sum(fn ($r) => (float) $r->v)),
+            'dropped' => $f(-$p0->except($common->all())->sum(fn ($r) => (float) $r->v)),
+            'after' => $f((float) $p1->sum('v')),
+            'from_label' => $months[$lastFrom->month].' 1–'.$lastTo->day,
+            'to_label' => $months[$from->month].' 1–'.$today->day,
+        ];
+    }
+
     /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */
     private function commission(Carbon $from, Carbon $to): string
     {
