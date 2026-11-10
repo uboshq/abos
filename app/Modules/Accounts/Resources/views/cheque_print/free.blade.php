@@ -29,29 +29,47 @@
 
     <div class="grid gap-4 lg:grid-cols-3">
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 lg:col-span-2">
-            @if ($books->isEmpty())
-                <p role="alert" data-cheque-no-book class="text-sm">
-                    {{ __('accounts::cheque_print.no_book') }}
-                    @can('accounts.cheque.layout')
-                        <a class="font-semibold underline" href="{{ route('accounts.cheque.print.setup') }}">{{ __('accounts::cheque_print.menu_setup') }}</a>
-                    @endcan
-                </p>
-            @else
-                <form method="POST" action="{{ route('accounts.cheque.print.free.store') }}" target="_blank" class="grid gap-3 sm:grid-cols-2">
-                    @csrf
+            {{-- ⭐ ফর্ম সবসময় — বই না থাকলে এখানেই নতুন বই (মালিক, 11 নভেম্বর 2026: "কি করে create করবে, কিছুই নাই"; [[ChequePrintController::freePrint()]]) --}}
+            @php
+                $nextOf = $books->mapWithKeys(fn ($b) => [(string) $b->id => $b->number($b->next_no)])->all();
+                $picked = (string) old('book', $books->isEmpty() ? 'new' : (string) $books->first()->id);
+            @endphp
+            <form method="POST" action="{{ route('accounts.cheque.print.free.store') }}" target="_blank" class="grid gap-3 sm:grid-cols-2"
+                  x-data="{ book: @js($picked), next: @js($nextOf), first: @js((string) old('new_first', '')) }"
+                  {{-- ⓘ আসল ছাপা নতুন ট্যাবে — এই পাতা নিজেকে নতুন করে, যাতে বইয়ের পরের নম্বর আর খাতা ঠিক থাকে --}}
+                  x-on:submit="if (! ($event.submitter && $event.submitter.name === 'test')) setTimeout(() => window.location.reload(), 1500)">
+                @csrf
+                <label class="flex flex-col gap-1">
+                    <span class="text-sm font-medium">{{ __('accounts::cheque_print.book') }}</span>
+                    <select name="book" class="{{ $field }}" x-model="book" data-cheque-book>
+                        @foreach ($books as $book)
+                            <option value="{{ $book->id }}" @selected($picked === (string) $book->id)>{{ $book->label }} — {{ __('accounts::cheque_print.book_left', ['first' => $book->number($book->first_no), 'last' => $book->number($book->last_no), 'left' => $book->leavesLeft()]) }}</option>
+                        @endforeach
+                        <option value="new" @selected($picked === 'new')>{{ __('accounts::cheque_print.new_book_option') }}</option>
+                    </select>
+                    <span class="text-xs text-(--color-ink-muted)">{{ __('accounts::cheque_print.book_hint_free') }}</span>
+                </label>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm font-medium">{{ __('accounts::cheque_print.cheque_no') }}</span>
+                    <span data-cheque-next class="num flex h-(--spacing-field) items-center font-semibold"
+                          x-text="book === 'new' ? (first || '—') : (next[book] || '—')">{{ $picked === 'new' ? '—' : ($nextOf[$picked] ?? '—') }}</span>
+                </div>
+                <div data-cheque-new-book class="grid gap-3 rounded-(--radius-field) border border-dashed border-(--color-border) p-3 sm:col-span-2 sm:grid-cols-3"
+                     x-show="book === 'new'" @if ($picked !== 'new') style="display: none" @endif>
+                    <p class="text-sm text-(--color-ink-muted) sm:col-span-3">{{ __('accounts::cheque_print.new_book_hint') }}</p>
                     <label class="flex flex-col gap-1">
-                        <span class="text-sm font-medium">{{ __('accounts::cheque_print.book') }}</span>
-                        <select name="book" class="{{ $field }}">
-                            @foreach ($books as $book)
-                                <option value="{{ $book->id }}">{{ $book->label }} — {{ __('accounts::cheque_print.book_left', ['first' => $book->number($book->first_no), 'last' => $book->number($book->last_no), 'left' => $book->leavesLeft()]) }}</option>
-                            @endforeach
-                        </select>
-                        <span class="text-xs text-(--color-ink-muted)">{{ __('accounts::cheque_print.book_hint_free') }}</span>
+                        <span class="text-sm font-medium">{{ __('accounts::cheque_print.new_label') }}</span>
+                        <input type="text" name="new_label" maxlength="160" value="{{ old('new_label') }}" placeholder="{{ __('accounts::cheque_print.new_label_example') }}" class="{{ $field }}" x-bind:required="book === 'new'">
                     </label>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-sm font-medium">{{ __('accounts::cheque_print.cheque_no') }}</span>
-                        <span data-cheque-next class="num flex h-(--spacing-field) items-center font-semibold">{{ $books->first()->number($books->first()->next_no) }}</span>
-                    </div>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-sm font-medium">{{ __('accounts::cheque_print.new_first') }}</span>
+                        <input type="text" inputmode="numeric" name="new_first" maxlength="12" value="{{ old('new_first') }}" class="{{ $field }} num" x-model="first" x-bind:required="book === 'new'">
+                    </label>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-sm font-medium">{{ __('accounts::cheque_print.new_last') }}</span>
+                        <input type="text" inputmode="numeric" name="new_last" maxlength="12" value="{{ old('new_last') }}" class="{{ $field }} num" x-bind:required="book === 'new'">
+                    </label>
+                </div>
                     <label class="flex flex-col gap-1">
                         <span class="text-sm font-medium">{{ __('accounts::cheque_print.cheque_date') }}</span>
                         <x-ui.date name="cheque_date" id="cheque_date" :value="old('cheque_date', now()->toDateString())" dense />
@@ -80,8 +98,7 @@
                         <button type="submit" data-cheque-print-button
                                 class="h-(--spacing-command) rounded-(--radius-field) bg-(--color-brand-600) px-4 text-sm font-bold text-(--color-brand-ink)">{{ __('accounts::cheque_print.print') }}</button>
                     </div>
-                </form>
-            @endif
+            </form>
         </section>
 
         <section class="flex flex-col gap-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
