@@ -24,7 +24,7 @@
 
         <nav class="flex gap-1 overflow-x-auto border-b border-(--color-border) text-sm" aria-label="{{ $name }}">
             <span class="border-b-2 border-(--color-brand-500) px-3 py-2 font-semibold text-(--color-brand-500)" aria-current="page">{{ __('assistant::page.tab_today') }}</span>
-            @foreach (['draft', 'ask'] as $soon)
+            @foreach (['ask'] as $soon)
                 <span class="px-3 py-2 text-(--color-ink-muted)" data-assistant-soon="{{ $soon }}">{{ __('assistant::page.tab_'.$soon) }} <span class="text-2xs">· {{ __('assistant::page.soon') }}</span></span>
             @endforeach
             @can('assistant.audit')
@@ -130,6 +130,15 @@
                                 @endforeach
                             </ul>
                             <p class="text-2xs text-(--color-ink-muted)">{{ $s['note'] }}</p>
+                            {{-- ⭐ খসড়া (ধাপ ৩) — কোপাইলট বানায়, পাঠান মানুষ --}}
+                            @if ($s['id'] === 'suggest.reorder' && auth()->user()->can('purchase.requisition.create'))
+                                <form method="POST" action="{{ route('assistant.draft.reorder') }}">
+                                    @csrf
+                                    <button type="submit" class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-500) px-3 text-sm text-white" data-draft-reorder>{{ __('assistant::draft.reorder_button') }}</button>
+                                </form>
+                            @elseif ($s['id'] === 'suggest.call')
+                                <a href="{{ route('assistant.draft.dunning') }}" class="inline-flex h-(--spacing-field) items-center rounded-(--radius-field) border border-(--color-brand-500) px-3 text-sm text-(--color-brand-500)" data-draft-dunning>{{ __('assistant::draft.dunning_button') }}</a>
+                            @endif
                         </article>
                     @endforeach
                 </div>
