@@ -12,10 +12,10 @@
 
         <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
             <label class="grid gap-1">{{ __('notification::party.from') }}
-                <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="from" :value="$filters['from'] ?? null" />
             </label>
             <label class="grid gap-1">{{ __('notification::party.to') }}
-                <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="to" :value="$filters['to'] ?? null" />
             </label>
             <label class="grid gap-1">{{ __('notification::party.paper') }}
                 <select name="document_type" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
