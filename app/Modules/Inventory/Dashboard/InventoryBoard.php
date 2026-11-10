@@ -1105,8 +1105,9 @@ final class InventoryBoard
             }
 
             $ins = StockMovement::query()->where('warehouse_id', $w->id)->whereIn('product_id', $have->keys()->all())
+                // ⓘ কেবল ঢোকা সারি — একই দিনের বেরোনোর সাথে নিট নয় (নিট করলে সেদিনের নতুন মাল কম দেখাত, পুরনো মাল বেশি)
+                ->whereRaw('floor_change + unplaced_change > 0')
                 ->groupBy('product_id', 'trx_date')
-                ->havingRaw('SUM(floor_change + unplaced_change) > 0')
                 ->selectRaw('product_id, trx_date, SUM(floor_change + unplaced_change) as qty')
                 ->orderByDesc('trx_date')->get()->groupBy('product_id');
 

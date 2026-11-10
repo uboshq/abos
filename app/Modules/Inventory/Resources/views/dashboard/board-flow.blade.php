@@ -61,7 +61,7 @@
         <div style="display: flex; gap: 0.875rem; padding: 0 0.375rem; font-size: 0.75rem; font-weight: 600; color: var(--color-dash-374151)">
             @foreach ($bars as $b)<span style="flex: 1 1 0; text-align: center">{{ __('inventory::board.f.'.$b['key']) }}</span>@endforeach
         </div>
-        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)">{{ __('inventory::board.f.rule') }} · @if ($roll['matches'] === true){{ __('inventory::board.f.matches') }}@elseif ($roll['matches'] === false)<b style="color: var(--color-dash-dc2626)">{{ __('inventory::board.f.gap', ['amount' => AppModulesInventoryDashboardInventoryBoard::short($roll['gap'])]) }}</b>@else{{ __('inventory::board.f.filtered') }}@endif</span>
+        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)">{{ __('inventory::board.f.rule') }} · @if ($roll['matches'] === true){{ __('inventory::board.f.matches') }}@elseif ($roll['matches'] === false)<b style="color: var(--color-dash-dc2626)">{{ __('inventory::board.f.gap', ['amount' => \App\Modules\Inventory\Dashboard\InventoryBoard::short($roll['gap'])]) }}</b>@else{{ __('inventory::board.f.filtered') }}@endif</span>
     </section>
 
     <section data-inv-cover style="{{ $card }} gap: 0.5rem; border-top: 0.3125rem solid var(--color-dash-14b8a6)">
