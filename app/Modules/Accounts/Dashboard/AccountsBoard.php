@@ -479,6 +479,126 @@ final class AccountsBoard
         return $out;
     }
 
+    /**
+     * ⭐ সারি 6 — কাগজের যাত্রা (এ মাসে লেখা ভাউচার: লেখা → অনুমোদনে পাঠানো → অনুমোদিত → পোস্ট), ধরন ধরে টাকা (এ মাসের পাকা),
+     * পোস্টিংয়ের ক্যালেন্ডার (এ মাসের দিনে পোস্ট হওয়া ভাউচার), নগদ বাক্স (প্রতিটা চালু বাক্সের খাতের জের) আর চেক (আজ আর পেরোনো)।
+     *
+     * @return array<string, mixed>
+     */
+    public function pipeline(): array
+    {
+        $from = Carbon::today()->startOfMonth();
+        $written = Voucher::query()->where('created_at', '>=', $from)->get(['id', 'status', 'type', 'amount', 'trx_date']);
+        $approvals = \App\Models\Approval::query()->where('module', 'accounts')->whereIn('approvable_id', $written->pluck('id')->all() ?: [0])
+            ->get(['approvable_id', 'status']);
+        $sent = $approvals->pluck('approvable_id')->unique();
+        $approved = $approvals->where('status', \App\Models\Approval::APPROVED)->pluck('approvable_id')->unique();
+        $posted = $written->filter(fn ($v) => in_array($v->status, DocumentStatus::POSTED, true));
+
+        $byType = Voucher::query()->posted()->where('trx_date', '>=', $from->toDateString())->groupBy('type')->selectRaw('type, SUM(amount) as v')->pluck('v', 'type');
+        $perDay = Voucher::query()->posted()->where('trx_date', '>=', $from->toDateString())->groupBy('trx_date')->selectRaw('trx_date, COUNT(*) as n')
+            ->pluck('n', 'trx_date')->mapWithKeys(fn ($n, $d) => [substr((string) $d, 0, 10) => (int) $n])->all();
+
+        $tills = \App\Modules\Accounts\Models\CashTill::query()->where('is_active', true)->with('account')->get()
+            ->map(fn ($t) => ['name' => (string) ($t->{app()->getLocale() === 'bn' ? 'name_bn' : 'name_en'} ?: $t->name_en), 'value' => $t->account?->balanceInView() ?? '0'])
+            ->filter(fn (array $t) => bccomp($t['value'], '0', 4) !== 0)->sortByDesc(fn ($t) => (float) $t['value'])->values()->all();
+
+        $cheque = \App\Modules\Accounts\Models\Cheque::class;
+        $pending = $cheque::query()->where('direction', $cheque::RECEIVED)->where('status', $cheque::PENDING)->get(['cheque_date', 'amount']);
+        $todayStr = Carbon::today()->toDateString();
+        $dueToday = $pending->filter(fn ($c) => substr((string) $c->cheque_date, 0, 10) === $todayStr);
+        $overdue = $pending->filter(fn ($c) => substr((string) $c->cheque_date, 0, 10) < $todayStr);
+        $sum = fn ($rows) => $rows->reduce(fn (string $c, $r) => bcadd($c, (string) $r->amount, 4), '0');
+
+        return [
+            'funnel' => ['written' => $written->count(), 'sent' => $sent->count(), 'approved' => $approved->count(), 'posted' => $posted->count()],
+            'types' => collect(Voucher::TYPES)->mapWithKeys(fn ($t) => [$t => bcadd((string) ($byType[$t] ?? '0'), '0', 4)])->all(),
+            'calendar' => $perDay,
+            'tills' => $tills,
+            'cheques' => ['today' => [$dueToday->count(), $sum($dueToday)], 'overdue' => [$overdue->count(), $sum($overdue)]],
+        ];
+    }
+
+    /**
+     * ⭐ সারি 7 — অনুমোদনে সময় বনাম টাকা: এ মাসে সিদ্ধান্ত হওয়া হিসাবের অনুমোদন — কত ঘণ্টা লাগল (চাওয়া থেকে সিদ্ধান্ত), কত টাকার; 8 ঘণ্টার সীমা।
+     *
+     * @return list<array{hours: float, amount: string, approved: bool}>
+     */
+    public function approvalTimes(): array
+    {
+        return \App\Models\Approval::query()->where('module', 'accounts')->whereNotNull('decided_at')->whereNotNull('requested_at')
+            ->where('decided_at', '>=', Carbon::today()->startOfMonth())->latest('decided_at')->limit(40)->get(['amount', 'requested_at', 'decided_at', 'status'])
+            ->map(fn ($a) => ['hours' => round(Carbon::parse($a->requested_at)->diffInMinutes(Carbon::parse($a->decided_at)) / 60, 1),
+                'amount' => bcadd((string) ($a->amount ?? '0'), '0', 4), 'approved' => $a->status === \App\Models\Approval::APPROVED])
+            ->values()->all();
+    }
+
+    /**
+     * ⭐ খাতার স্বাস্থ্য (রাডার) — ছয় নিয়ন্ত্রণের মাপ 0–100, এ মাস আর গত মাস: সময়মতো লেখা (পেছনের তারিখ নয়), সংযুক্তি আছে (খরচ ও পরিশোধে),
+     * পক্ষ লেখা (খরচে), ব্যাংক মেলানো (মাসের বিবরণীর সারি), খসড়া কম (মাসে লেখার কত পোস্ট/বাতিল হয়েছে), হাতের জাবেদা কম (জাবেদার ভাগ উল্টো)।
+     * ⓘ কোনো মাপের ভিত্তি না থাকলে (যেমন বিবরণী নেই) null; মোট নম্বর তিনটা বা বেশি মাপে।
+     *
+     * @return array{now: list<?int>, last: list<?int>, score: ?int}
+     */
+    public function ledgerHealth(): array
+    {
+        $measure = function (Carbon $from, Carbon $to): array {
+            $range = [$from->toDateString(), $to->toDateString()];
+            $papers = Voucher::query()->where('status', '<>', DocumentStatus::CANCELLED)->whereBetween('trx_date', $range)
+                ->get(['id', 'type', 'status', 'party_id', 'trx_date', 'created_at']);
+            $pct = fn (int $good, int $all): ?int => $all === 0 ? null : (int) round($good * 100 / $all);
+            $paid = $papers->filter(fn ($v) => in_array($v->type, [Voucher::EXPENSE, Voucher::PAYMENT], true) && in_array($v->status, DocumentStatus::POSTED, true));
+            $withFile = Attachment::query()->where('source_entity', Voucher::drillSourceType())->whereIn('source_entity_id', $paid->pluck('id')->all() ?: [0])->distinct()->count('source_entity_id');
+            $expenses = $papers->where('type', Voucher::EXPENSE);
+            $lines = BankStatementLine::query()->whereBetween('trx_date', $range);
+            $lineCount = (clone $lines)->count();
+
+            return [
+                $pct($papers->filter(fn ($v) => Carbon::parse($v->created_at)->startOfDay()->diffInDays(Carbon::parse($v->trx_date), false) >= -self::BACKDATED_DAYS)->count(), $papers->count()),
+                $pct($withFile, $paid->count()),
+                $pct($expenses->whereNotNull('party_id')->count(), $expenses->count()),
+                $pct((clone $lines)->whereNotNull('matched_line_id')->count(), $lineCount),
+                $pct($papers->filter(fn ($v) => $v->status !== DocumentStatus::DRAFT)->count(), $papers->count()),
+                $papers->isEmpty() ? null : 100 - (int) round($papers->where('type', Voucher::JOURNAL)->count() * 100 / $papers->count()),
+            ];
+        };
+
+        $now = $measure(Carbon::today()->startOfMonth(), Carbon::today());
+        $last = $measure(Carbon::today()->startOfMonth()->subMonthNoOverflow(), Carbon::today()->startOfMonth()->subDay());
+        $have = array_values(array_filter($now, fn ($v) => $v !== null));
+
+        return ['now' => $now, 'last' => $last, 'score' => count($have) < 3 ? null : (int) round(array_sum($have) / count($have))];
+    }
+
+    /**
+     * ⭐ সবচেয়ে বেশি নড়াচড়া — খাত ধরে: এ মাসে ডেবিট + ক্রেডিটের যোগ, বড় সাতটা পাতা-খাত।
+     *
+     * @return list<array{name: string, value: string}>
+     */
+    public function topAccounts(): array
+    {
+        $rows = \App\Models\LedgerEntry::query()->tap(fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'ledger_entries.branch_id'))
+            ->where('trx_date', '>=', Carbon::today()->startOfMonth()->toDateString())
+            ->groupBy('account_id')->selectRaw('account_id, SUM(debit + credit) as v')->orderByDesc('v')->limit(7)->get();
+        $names = Account::query()->whereIn('id', $rows->pluck('account_id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+
+        return $rows->map(fn ($r) => ['name' => (string) ($names[(int) $r->account_id] ?? ''), 'value' => bcadd((string) $r->v, '0', 4)])->values()->all();
+    }
+
+    /**
+     * ⭐ সাম্প্রতিক কাজ — হিসাবের কাগজে শেষ সাতটা কাজ (কে, কী, কোন কাগজ, কখন), পরিবর্তনের ইতিহাস থেকে।
+     *
+     * @return list<array{at: string, who: string, action: string, doc: string}>
+     */
+    public function recentWork(): array
+    {
+        return \App\Models\AuditTrail::query()->with('user')
+            ->where('auditable_type', 'like', '%Accounts%')
+            ->latest('id')->limit(7)->get()
+            ->map(fn ($a) => ['at' => $a->created_at?->format('H:i') ?? '', 'who' => (string) ($a->user?->name ?? ''), 'action' => (string) $a->action, 'doc' => (string) ($a->document_no ?? $a->label ?? '')])
+            ->values()->all();
+    }
+
     /** @return array<int, string> খরচের পাতা-খাত → সময়ের নিট খরচ (বিক্রীত পণ্যের খরচ বাদ), দেখার শাখায় */
     private function expenseByAccount(Carbon $from, Carbon $to): array
     {

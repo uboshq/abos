@@ -449,7 +449,28 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['flow' => $board->voucherFlow(), 'bullets' => $board->expenseVsLast(), 'ie' => $board->incomeVsExpense()];
                     },
                 ],
+                // ⭐ সারি 6 — কাগজের যাত্রা, ধরন ধরে টাকা, পোস্টিংয়ের ক্যালেন্ডার, নগদ বাক্স ও চেক
+                [
+                    'view' => 'accounts::dashboard.board-pipeline',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['pipe' => app(AccountsBoard::class)->pipeline()],
+                ],
+                // ⭐ সারি 7 — অনুমোদনে সময়, খাতার স্বাস্থ্য, সবচেয়ে বেশি নড়াচড়া, সাম্প্রতিক কাজ
+                [
+                    'view' => 'accounts::dashboard.board-review',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['bubbles' => $board->approvalTimes(), 'health' => $board->ledgerHealth(), 'top' => $board->topAccounts(), 'recent' => $board->recentWork()];
+                    },
+                ],
             ],
+
+            // ⭐ পাতায় কেবল নমুনার সাত সারি (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে) — [[DashboardDefinition::forPage()]]
+            board: true,
         );
     }
 
