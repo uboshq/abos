@@ -11408,14 +11408,18 @@ class AppL10nBn extends AppL10n {
   String get smsGatewayWaitingReports => 'সার্ভারকে জানানো বাকি';
 
   @override
-  String get smsGatewayNeedPermission => 'SMS পাঠানোর অনুমতি দিন — না দিলে কোনো SMS যাবে না';
+  String get smsGatewayNeedPermission =>
+      'SMS পাঠানোর অনুমতি দিন — না দিলে কোনো SMS যাবে না';
 
   @override
-  String get smsGatewayKeyRefused => 'চাবি আর চলে না — কন্ট্রোল প্যানেলে নতুন চাবি নিয়ে আবার চালু করুন';
+  String get smsGatewayKeyRefused =>
+      'চাবি আর চলে না — কন্ট্রোল প্যানেলে নতুন চাবি নিয়ে আবার চালু করুন';
 
   @override
-  String get smsGatewayMissing => 'চাবি লিখুন — কন্ট্রোল প্যানেল → SMS-এর ফোন থেকে';
+  String get smsGatewayMissing =>
+      'চাবি লিখুন — কন্ট্রোল প্যানেল → SMS-এর ফোন থেকে';
 
   @override
-  String get smsGatewayNote => 'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।';
+  String get smsGatewayNote =>
+      'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।';
 }

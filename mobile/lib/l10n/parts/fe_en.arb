@@ -150,5 +150,21 @@
   "wcBarCapital": "Capital",
   "wcChartNote": "In lakh taka · parts add up, dues take away",
   "wcFullReport": "Full report →",
-  "wcFailed": "Could not load working capital"
+  "wcFailed": "Could not load working capital",
+  "smsGatewayTitle": "SMS gateway",
+  "smsGatewaySubtitle": "This phone sends the office SMS on its own SIM",
+  "smsGatewayAddress": "ERP address",
+  "smsGatewayKey": "Phone key (Control panel → SMS phones)",
+  "smsGatewayStart": "Switch on",
+  "smsGatewayStop": "Switch off",
+  "smsGatewayOn": "On — checks the queue every minute",
+  "smsGatewayOff": "Off",
+  "smsGatewaySentToday": "Sent from this phone today",
+  "smsGatewayLastRun": "Last check",
+  "smsGatewayError": "Last error",
+  "smsGatewayWaitingReports": "Reports not yet sent",
+  "smsGatewayNeedPermission": "Allow sending SMS — without it no SMS goes out",
+  "smsGatewayKeyRefused": "The key no longer works — take a new key in the control panel and switch on again",
+  "smsGatewayMissing": "Type the key — from Control panel → SMS phones",
+  "smsGatewayNote": "The only cost is the SIM SMS pack. Keep the phone charging and online; while it is off SMS wait in the queue, and after 2 hours the owner is told."
 }
