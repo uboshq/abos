@@ -21,8 +21,12 @@ use Throwable;
  */
 final class SmsChannel implements DeliveryChannel
 {
-    /** @var array<string, class-string<SmsGateway>> প্রোভাইডারের নাম → অ্যাডাপ্টার; ⛔ আজ খালি, মালিকের অনুমোদনের অপেক্ষায় */
-    public const GATEWAYS = [];
+    /**
+     * @var array<string, class-string<SmsGateway>> প্রোভাইডারের নাম → অ্যাডাপ্টার
+     *
+     * ⭐ phone — অফিসের Android ফোন, নিজের সিমে (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২, ১০ নভেম্বর ২০২৬)
+     */
+    public const GATEWAYS = [PhoneSmsGateway::NAME => PhoneSmsGateway::class];
 
     public function key(): string
     {
@@ -36,7 +40,14 @@ final class SmsChannel implements DeliveryChannel
 
     public function connected(?NotificationChannel $config): bool
     {
-        return $this->gateway($config) !== null && $config?->enabled === true && filled($config->sender_id);
+        $gateway = $this->gateway($config);
+
+        // ⓘ অফিসের ফোনের পথে "সংযুক্ত" মানে কোম্পানির অন্তত একটা চালু ফোন বসানো আছে
+        if ($gateway instanceof PhoneSmsGateway && ! app(\App\Core\Services\SmsOutboxService::class)->hasPhone()) {
+            return false;
+        }
+
+        return $gateway !== null && $config?->enabled === true && filled($config->sender_id);
     }
 
     public function reaches(User $user): bool

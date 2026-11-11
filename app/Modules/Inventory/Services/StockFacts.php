@@ -169,6 +169,37 @@ final class StockFacts
     }
 
     /**
+     * ⭐ প্রতি পণ্যের এক ছবি — মজুদের ড্যাশবোর্ডের বেশির ভাগ ঘর এটা থেকেই গোনে (মালিকের চূড়ান্ত নমুনা, 10 নভেম্বর 2026 রাত;
+     * [[InventoryBoard]])। একই গুদাম-দেয়াল ([[viewedWarehouses()]]) — তাই সমস্যা কেন্দ্র, পুনঃঅর্ডার আর অচল মজুদ একই সংখ্যা পড়ে।
+     *
+     * ⓘ ঘর: available_qty (বিক্রিযোগ্য, [[StockService::availableSql()]]), on_hand_qty (তাকে + বসানো বাকি), last_out (শেষ বেরোনোর
+     * দিন), out_30 (গত 30 দিনে বেরোনো পরিমাণ), avg_cost (চালু খরচ-স্তরের গড়; খরচ দেখার অনুমতি না থাকলে ঘরটাই নেই)।
+     *
+     * @return Collection<int, Product>
+     */
+    public function snapshot(): Collection
+    {
+        $walls = $this->viewedWarehouses();
+        $from = Carbon::today()->subDays(30)->toDateString();
+        $costVisible = FieldSecurity::visible(StockMovement::class, 'unit_cost');
+
+        return Product::query()
+            ->active()
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw('(select COALESCE(SUM(m.floor_change + m.unplaced_change), 0) from inv_stock_movements m
+                    where m.product_id = inv_products.id and m.company_id = inv_products.company_id'.$walls.') as on_hand_qty')
+            ->selectRaw('(select MAX(m.trx_date) from inv_stock_movements m
+                    where m.product_id = inv_products.id and m.company_id = inv_products.company_id and m.floor_change < 0'.$walls.') as last_out')
+            ->selectRaw("(select COALESCE(SUM(-m.floor_change), 0) from inv_stock_movements m
+                    where m.product_id = inv_products.id and m.company_id = inv_products.company_id and m.floor_change < 0
+                      and m.trx_date >= '{$from}'".$walls.') as out_30')
+            ->when($costVisible, fn ($q) => $q->selectRaw('(select CASE WHEN SUM(cl.qty_remaining) > 0 THEN SUM(cl.qty_remaining * cl.unit_cost) / SUM(cl.qty_remaining) END
+                    from inv_cost_layers cl where cl.product_id = inv_products.id and cl.company_id = inv_products.company_id and cl.qty_remaining > 0) as avg_cost'))
+            ->get();
+    }
+
+    /**
      * ফুরিয়ে আসা পণ্যগুলো, সবচেয়ে জরুরিটা আগে।
      *
      * @return Collection<int, Product>

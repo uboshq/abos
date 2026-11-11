@@ -15,6 +15,7 @@ use App\Modules\Notification\Http\Controllers\NotificationRuleController;
 use App\Modules\Notification\Http\Controllers\NotificationScheduleController;
 use App\Modules\Notification\Http\Controllers\NotificationTemplateController;
 use App\Modules\Notification\Http\Controllers\PartyMessageController;
+use App\Modules\Notification\Http\Controllers\SmsPhoneController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -123,4 +124,14 @@ Route::middleware('auth')->prefix('notification')->group(function () {
         ->whereNumber('template')->middleware('can:notification.party_templates')->name('party_templates.update');
     Route::get('/party-messages', [PartyMessageController::class, 'messages'])
         ->middleware('can:notification.party_messages')->name('party_messages.index');
+
+    // ⭐ অফিসের SMS ফোন — নমুনা ধাপ ২ (মালিকের "ok", ১০ নভেম্বর ২০২৬); চাবিটা কেবল মালিকের (migration-এ super_admin)
+    Route::get('/sms-phones', [SmsPhoneController::class, 'index'])
+        ->middleware('can:notification.sms_gateway')->name('sms_phones.index');
+    Route::post('/sms-phones', [SmsPhoneController::class, 'store'])
+        ->middleware('can:notification.sms_gateway')->name('sms_phones.store');
+    Route::put('/sms-phones/{phone}', [SmsPhoneController::class, 'update'])
+        ->whereNumber('phone')->middleware('can:notification.sms_gateway')->name('sms_phones.update');
+    Route::post('/sms-phones/{phone}/token', [SmsPhoneController::class, 'token'])
+        ->whereNumber('phone')->middleware(['can:notification.sms_gateway', 'throttle:6,1'])->name('sms_phones.token');
 });

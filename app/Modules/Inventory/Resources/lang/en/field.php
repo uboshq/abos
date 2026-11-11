@@ -37,6 +37,7 @@ return [
     'address' => 'Address',
     'address_en' => 'Address (English)',
     'address_bn' => 'Address (Bangla)',
+    'capacity_qty' => 'Holds (base unit)',
     'floor' => 'On floor',
     'reserved' => 'Reserved',
     'hold' => 'Held',

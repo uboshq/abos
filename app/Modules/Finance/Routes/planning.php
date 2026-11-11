@@ -29,6 +29,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
     Route::get('/cash-forecast', [ForecastController::class, 'cash'])->name('forecast.cash');
 
+    // ⭐ চলতি মূলধনের পুরো পাতা — কেবল মালিকের চাবিতে (মালিক, 10 নভেম্বর 2026 সন্ধ্যা)
+    Route::get('/working-capital', [\App\Modules\Finance\Http\Controllers\WorkingCapitalController::class, 'show'])->name('working_capital');
+
     // ⓘ কার টাকা কত আনল (§১২), আর কোনগুলো আজ দেখা দরকার (§১)
     Route::get('/investment-returns', [InvestmentController::class, 'returns'])->name('investment.returns');
     Route::get('/risks', [RiskController::class, 'index'])->name('risk');

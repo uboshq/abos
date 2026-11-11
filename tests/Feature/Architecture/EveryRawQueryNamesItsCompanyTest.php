@@ -88,6 +88,9 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
      * @var array<string, string>
      */
     private const DECLARED = [
+        // ⭐ মজুদের বোর্ডের সরবরাহকারী সারি (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬) — চারটা কোয়েরিই লাইনের টেবিলে
+        'app/Modules/Purchase/Services/PurchaseStockSupply.php' => 'আদেশ, গ্রহণ আর বিলের লাইন-টেবিলে company_id নেই; প্রতিটা কোয়েরি মাথার আইডিতে বাঁধা '
+            .'(PurchaseOrder/PurchaseReceipt-এর কোম্পানি-স্কোপের Eloquent থেকে তোলা, বা সেই আদেশের id), তাই অন্য কোম্পানির সারি ঢোকে না',
         /*
          * ⭐ আদেশের সারি গোনা — তিনটা সহ-কোয়েরি, প্রতিটাই `sal_orders.id`
          * ধরে বাঁধা (`whereColumn`)। ⓘ বাইরের কোয়েরিটা `SalesOrder::query()`,

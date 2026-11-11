@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Api\NotificationCallbackController;
 use App\Http\Controllers\Api\NotificationManageApiController;
+use App\Http\Controllers\Api\SmsGatewayController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportApiController;
 use App\Http\Controllers\Api\ReportExportApiController;
@@ -129,6 +130,16 @@ Route::post('v1/notification-callbacks/{company}/{channel}', NotificationCallbac
     ->where('channel', 'email|web_push|mobile_push|sms')
     ->middleware('throttle:60,1,notification-callback')
     ->name('api.notification-callbacks');
+
+/*
+ * ⭐ অফিসের SMS ফোন — সারি থেকে SMS নেওয়া আর "গেছে / পৌঁছেছে / যায়নি" জানানো (মালিকের "ok", নমুনা ধাপ ২)।
+ * ⓘ মানুষের লগইন নেই: ফোনটা নিজের চাবিতে ঢোকে (`Authorization: Bearer smsgw_…`), চাবি কেবল নিজের কোম্পানির সারি খোলে
+ *   ([[SmsGatewayController]])। throttle আছে, কারণ খোলা দরজা — ফোন মিনিটে একবার আসে।
+ */
+Route::prefix('v1/sms-gateway')->middleware('throttle:30,1,sms-gateway')->group(function (): void {
+    Route::post('take', [SmsGatewayController::class, 'take'])->name('api.sms-gateway.take');
+    Route::post('report', [SmsGatewayController::class, 'report'])->name('api.sms-gateway.report');
+});
 
 /*
  * অ্যাপের নিজের দরজা — সিঙ্ক নয়।

@@ -249,6 +249,89 @@ final class SalesDashboard implements ProvidesDashboard
                     href: route('accounts.report.show', ['slug' => 'party-target']),
                 )]),
             ],
+
+            // ⭐ মালিকের চূড়ান্ত নমুনা H8JXFPzh8m7zpsQSedmPDT-এর সারিগুলো ([[SalesBoard]]) — সাত সারি হলে পাতা কেবল এগুলো (board)
+            sections: [
+                [
+                    'view' => 'sales::dashboard.board-top',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['problems' => $board->problems(), 'glance' => $board->glance()];
+                    },
+                ],
+                // ⭐ সারি 2 — বিক্রি থেকে নিট লাভ, মাসের লক্ষ্য, সেরা ও দুর্বল পণ্য
+                [
+                    'view' => 'sales::dashboard.board-profit',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        // ⛔ সিঁড়িতে কেনা দাম আর গ্রস লাভ — খরচের চাবি ছাড়া নয় (বিলের ক্রয়মূল্যের একই পাহারা, sales.cost.view)
+                        $ladder = auth()->user()?->can('sales.cost.view') ? $board->profitLadder() : null;
+
+                        return ['ladder' => $ladder, 'target' => $board->monthTarget(), 'products' => $board->products()];
+                    },
+                ],
+                // ⭐ সারি 3 — লক্ষ্যের পথে জমা বিক্রি আর PVM সেতু
+                [
+                    'view' => 'sales::dashboard.board-path',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['cumulative' => $board->cumulative(), 'pvm' => $board->pvm()];
+                    },
+                ],
+                // ⭐ সারি 4 — গ্রাহক ধরে রাখা, আদায়ের দক্ষতা, অর্ডার থেকে টাকা, ফেরত ও ছাড়
+                [
+                    'view' => 'sales::dashboard.board-customers',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['retention' => $board->retention(), 'cei' => $board->collectionEffectiveness(), 'o2c' => $board->orderToCash(),
+                            'rd' => $board->returnsAndDiscounts(), 'problems' => $board->problems()];
+                    },
+                ],
+                // ⭐ সারি 5 — ব্র্যান্ড ধরে, বিক্রির পথ ধরে, কখন অর্ডার আসে
+                [
+                    'view' => 'sales::dashboard.board-mix',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['brands' => $board->brands(), 'channels' => $board->channels(), 'heat' => $board->orderHours()];
+                    },
+                ],
+                // ⭐ সারি 6 — SR-দের লক্ষ্য, SR কমিশন, সেরা দুই SR, ডিস্ট্রিবিউটর
+                [
+                    'view' => 'sales::dashboard.board-team',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => function (): array {
+                        $board = app(SalesBoard::class);
+
+                        return ['srTargets' => $board->srTargets(), 'commission' => $board->srCommission(), 'topTwo' => $board->topTwo(), 'dealers' => $board->distributors()];
+                    },
+                ],
+                // ⭐ সারি 7 — শাখা, শীর্ষ গ্রাহক, এলাকা
+                [
+                    'view' => 'sales::dashboard.board-reach',
+                    'place' => 'top',
+                    'permission' => 'sales.invoice.view',
+                    'data' => fn (): array => ['spread' => app(SalesBoard::class)->spread()],
+                ],
+            ],
+
+            // ⭐ পাতায় কেবল নমুনার সাত সারি (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে) — [[DashboardDefinition::forPage()]]
+            board: true,
         );
     }
 

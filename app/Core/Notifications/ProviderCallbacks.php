@@ -93,6 +93,16 @@ final class ProviderCallbacks
         return hash_equals($expected, trim($signature));
     }
 
+    /**
+     * ⭐ অফিসের SMS ফোনের খবর — সই করা webhook নয়, ফোনটা নিজের চাবিতে ঢোকে ([[SmsGatewayController]]); তারপর একই খাতা।
+     *
+     * @param  array<string, mixed>  $event
+     */
+    public function fromPhone(int $companyId, array $event): bool
+    {
+        return $this->apply($companyId, NotificationChannel::SMS, \App\Core\Notifications\Channels\PhoneSmsGateway::NAME, $event);
+    }
+
     /** @param  array<string, mixed>  $event */
     private function apply(int $companyId, string $channel, string $provider, array $event): bool
     {

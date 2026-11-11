@@ -225,6 +225,9 @@ Route::middleware('auth')->group(function () {
      */
     Route::post('/papers/shares/{share}/whatsapp', [PaperShareController::class, 'whatsapp'])
         ->whereNumber('share')->middleware('throttle:30,1')->name('paper.whatsapp');
+    // ⭐ একই লেখা SMS-এ — অফিসের ফোনের সারিতে (নমুনা ধাপ ২; [[PaperShareController::sms()]])
+    Route::post('/papers/shares/{share}/sms', [PaperShareController::class, 'sms'])
+        ->whereNumber('share')->middleware('throttle:30,1')->name('paper.sms');
 
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');

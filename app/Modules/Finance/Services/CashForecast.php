@@ -128,6 +128,81 @@ final class CashForecast
     }
 
     /**
+     * ⭐ পরিশোধের ক্যালেন্ডার — এক দিন থেকে যত দিন, দিনে কত দিতে হবে (সরবরাহকারীর বাকি বিল, নেওয়া ঋণের কিস্তি)।
+     * ⓘ [[dues()]]-এর একই কাগজ; মেয়াদোত্তীর্ণ বা তারিখহীন আজকের দিনে। কেবল যাওয়ার দিক।
+     *
+     * @return array<string, list<array{who: string, amount: string, side: string}>>
+     */
+    public function outgoingByDay(int $days, ?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $out = [];
+
+        foreach ($this->dues($today, $days) as $item) {
+            if (in_array($item['side'], ['receivables', 'loans_in'], true) || bccomp($item['amount'], '0', 4) <= 0) {
+                continue;
+            }
+
+            $at = $item['due'] === null || $item['due'] < $today->toDateString() ? $today->toDateString() : $item['due'];
+            $out[$at][] = ['who' => (string) $item['who'], 'amount' => $item['amount'], 'side' => $item['side']];
+        }
+
+        ksort($out);
+
+        return $out;
+    }
+
+    /**
+     * ⭐ 13 সপ্তাহের নগদের পূর্বাভাস — অর্থের ড্যাশবোর্ড, মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (10 নভেম্বর 2026 রাত)।
+     * ⓘ [[daily()]]-এর একই কাগজ আর নিয়ম ([[dues()]]): মেয়াদোত্তীর্ণ বা তারিখহীন প্রথম সপ্তাহে। সপ্তাহ আজ থেকে 7 দিনের টুকরো।
+     * ⓘ প্রতিটা সপ্তাহে: নিট (আসবে − যাবে), সপ্তাহ-শেষের তহবিল, আর সবচেয়ে বড় দেনা (কার, কত) — "কেন টান" বলার জন্য।
+     *
+     * @return array{opening: string, weeks: list<array{from: string, to: string, net: string, closing: string, biggest: array{who: string, amount: string}|null}>}
+     */
+    public function weekly(int $weeks = 13, ?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $money = $this->facts->moneyPositions();
+        $opening = bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+
+        $rows = [];
+
+        for ($i = 0; $i < $weeks; $i++) {
+            $rows[$i] = ['from' => $today->copy()->addDays($i * 7)->toDateString(), 'to' => $today->copy()->addDays($i * 7 + 6)->toDateString(),
+                'net' => '0', 'closing' => '0', 'biggest' => null];
+        }
+
+        foreach ($this->dues($today, $weeks * 7 - 1) as $item) {
+            if (bccomp($item['amount'], '0', 4) <= 0) {
+                continue;
+            }
+
+            $at = $item['due'] === null || $item['due'] < $today->toDateString() ? $today : Carbon::parse($item['due']);
+            $i = intdiv((int) $today->diffInDays($at), 7);
+
+            if (! isset($rows[$i])) {
+                continue;
+            }
+
+            $coming = in_array($item['side'], ['receivables', 'loans_in'], true);
+            $rows[$i]['net'] = bcadd($rows[$i]['net'], $coming ? $item['amount'] : bcmul($item['amount'], '-1', 4), 4);
+
+            if (! $coming && ($rows[$i]['biggest'] === null || bccomp($item['amount'], $rows[$i]['biggest']['amount'], 4) > 0)) {
+                $rows[$i]['biggest'] = ['who' => (string) $item['who'], 'amount' => $item['amount']];
+            }
+        }
+
+        $running = $opening;
+
+        foreach ($rows as $i => $row) {
+            $running = bcadd($running, $row['net'], 4);
+            $rows[$i]['closing'] = $running;
+        }
+
+        return ['opening' => $opening, 'weeks' => array_values($rows)];
+    }
+
+    /**
      * আজ থেকে `$days` দিনের মধ্যে যে কাগজে টাকা আসবে বা যাবে — গ্রাহকের বাকি চালান, সরবরাহকারীর বাকি বিল, ঋণের কিস্তি।
      *
      * @return list<array{due: ?string, side: string, amount: string, who: string}>

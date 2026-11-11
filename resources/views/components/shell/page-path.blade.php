@@ -43,7 +43,8 @@
     }
 @endphp
 
-@if (($activeModule && $activeItem) || $context)
+{{-- ⓘ নিজের সারিতে আঁকা ড্যাশবোর্ডে নয় — সেখানে নমুনার ছাঁকনির সারি এই জায়গা নেয় (মালিক, 10 নভেম্বর 2026 রাত) --}}
+@if ((($activeModule && $activeItem) || $context) && ! ($ownBoard ?? false))
     <div class="print-hide mb-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-(--color-ink-muted)">
         @if ($activeModule && $activeItem)
             <nav data-page-path class="flex min-w-0 items-center gap-1.5" aria-label="{{ __('core.a11y.breadcrumb') }}">

@@ -1061,6 +1061,8 @@
     --color-module-fixed_assets: #92400e; /* গাঢ় বাদামি — ৭.০৯ */
     /* ⓘ মালিকের কেন্দ্র (১০ অক্টোবর ২০২৬) — গাঢ় সোনালি, ব্র্যান্ডের সোনার ঘরের */
     --color-module-executive: #a16207;    /* গাঢ় সোনালি — ৪.৯২ */
+    /* ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — ফুশিয়া; অর্থের বেগুনি থেকে আলাদা (ShellTest: রেলের প্রতিটা মডিউল আলাদা রঙে) */
+    --color-module-assistant: #a21caf;    /* ফুশিয়া ৭০০ — ৬.৩২ */
 
     /*
      * ⭐ রঙিন ড্যাশবোর্ড — মালিকের নমুনা "সব মডিউলের রঙিন ড্যাশবোর্ড" (৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color
@@ -1126,6 +1128,7 @@
     --color-module-reports: var(--color-brand-700);
     --color-module-fixed_assets: var(--color-brand-700);
     --color-module-executive: var(--color-brand-700);
+    --color-module-assistant: var(--color-brand-700);
     /* ⓘ সাজের বারো রং আর সঙ্গী রংও এক রঙে; মানের রং (`--color-card-*`) থাকে */
     --color-pal-blue: var(--color-brand-700);
     --color-pal-green: var(--color-brand-700);
@@ -1234,6 +1237,8 @@
     --color-topbar-glyph-tasks: #4ade80;
     --color-topbar-glyph-papers: #22d3ee;
     --color-topbar-glyph-bell: #fbbf24;
+    /* ⭐ কোপাইলটের মগজ — নেভি বারে হালকা বেগুনি (পূর্ণ পরিকল্পনা 9a6nHmbFk5NF7YB5NbzCC2) */
+    --color-topbar-glyph-brain: #c4b5fd;
     /* ⭐ অনুমোদনের অবস্থার রং — ইনবক্সের পাঁচ ঘর আর কার্ডের দাগে একই (মালিক, ৬ নভেম্বর ২০২৬: "approval pagegulo color ful korbe") */
     --color-board-late: #dc2626;
     --color-board-wait: #d97706;
@@ -1317,6 +1322,7 @@
     --color-launcher-master_data: #a21caf;    /* ফুশিয়া — ৬.৩২ঃ১ */
     --color-launcher-system_admin: #334155;   /* স্লেট — ১০.৩৫ঃ১ */
     --color-launcher-executive: #a16207;      /* গাঢ় সোনালি-বাদামি, আগের মতোই — ৪.৯২ঃ১ */
+    --color-launcher-assistant: #6d28d9;      /* ভায়োলেট — কোপাইলটের মগজ — ৭.১০ঃ১ */
     --color-launcher-documents: #4d7c0f;      /* লেবু-সবুজ — ৪.৯৯ঃ১ */
     --color-launcher-notification: #0284c7;   /* আকাশি — ৪.১০ঃ১ */
     --color-launcher-fixed_assets: #78350f;   /* বাদামি — ৯.০৭ঃ১ */
@@ -1601,4 +1607,211 @@
     --color-fin-fff7ed: #fff7ed;
     --color-fin-fffbeb: #fffbeb;
     --color-fin-ffffff: #ffffff;
+}
+
+/* ⭐ চার ড্যাশবোর্ড — মজুদ, অর্থ, হিসাব, বিক্রয় (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬ রাত: "100% স্যাম্পলের সাথে মিল রেখে")।
+ * নমুনার প্রতিটা রং নামেই — হেক্স নিজের নামে, স্বচ্ছ রং r-g-b-aNN। প্যানেলগুলো নিজের পটে নিজের লেখা আঁকে, তাই দুই থিমে একই চেহারা। */
+:root {
+    --color-dash-0284c7: #0284c7;
+    --color-dash-0369a1: #0369a1;
+    --color-dash-047857: #047857;
+    --color-dash-052e2b: #052e2b;
+    --color-dash-059669: #059669;
+    --color-dash-065f46: #065f46;
+    --color-dash-06b6d4: #06b6d4;
+    --color-dash-075985: #075985;
+    --color-dash-082f49: #082f49;
+    --color-dash-0891b2: #0891b2;
+    --color-dash-0b2a4a: #0b2a4a;
+    --color-dash-0c4a6e: #0c4a6e;
+    --color-dash-0d9488: #0d9488;
+    --color-dash-0e7490: #0e7490;
+    --color-dash-0ea5e9: #0ea5e9;
+    --color-dash-0f172a: #0f172a;
+    --color-dash-0f766e: #0f766e;
+    --color-dash-10b981: #10b981;
+    --color-dash-111827: #111827;
+    --color-dash-14532d: #14532d;
+    --color-dash-14b8a6: #14b8a6;
+    --color-dash-15803d: #15803d;
+    --color-dash-16a34a: #16a34a;
+    --color-dash-1d4ed8: #1d4ed8;
+    --color-dash-1e1b4b: #1e1b4b;
+    --color-dash-1e3a8a: #1e3a8a;
+    --color-dash-1f2937: #1f2937;
+    --color-dash-22c55e: #22c55e;
+    --color-dash-2563eb: #2563eb;
+    --color-dash-2dd4bf: #2dd4bf;
+    --color-dash-312e81: #312e81;
+    --color-dash-34d399: #34d399;
+    --color-dash-3730a3: #3730a3;
+    --color-dash-374151: #374151;
+    --color-dash-38bdf8: #38bdf8;
+    --color-dash-3b0764: #3b0764;
+    --color-dash-3b82f6: #3b82f6;
+    --color-dash-4338ca: #4338ca;
+    --color-dash-475569: #475569;
+    --color-dash-4ade80: #4ade80;
+    --color-dash-4b5563: #4b5563;
+    --color-dash-4f46e5: #4f46e5;
+    --color-dash-5b21b6: #5b21b6;
+    --color-dash-5eead4: #5eead4;
+    --color-dash-60a5fa: #60a5fa;
+    --color-dash-6366f1: #6366f1;
+    --color-dash-64748b: #64748b;
+    --color-dash-65a30d: #65a30d;
+    --color-dash-67e8f9: #67e8f9;
+    --color-dash-6b7280: #6b7280;
+    --color-dash-6d28d9: #6d28d9;
+    --color-dash-6ee7b7: #6ee7b7;
+    --color-dash-7c2d12: #7c2d12;
+    --color-dash-7c3aed: #7c3aed;
+    --color-dash-7dd3fc: #7dd3fc;
+    --color-dash-7e22ce: #7e22ce;
+    --color-dash-818cf8: #818cf8;
+    --color-dash-84cc16: #84cc16;
+    --color-dash-86efac: #86efac;
+    --color-dash-881337: #881337;
+    --color-dash-8b5cf6: #8b5cf6;
+    --color-dash-9333ea: #9333ea;
+    --color-dash-94a3b8: #94a3b8;
+    --color-dash-99f6e4: #99f6e4;
+    --color-dash-9ca3af: #9ca3af;
+    --color-dash-9f1239: #9f1239;
+    --color-dash-a16207: #a16207;
+    --color-dash-a5b4fc: #a5b4fc;
+    --color-dash-a5f3fc: #a5f3fc;
+    --color-dash-a78bfa: #a78bfa;
+    --color-dash-a7f3d0: #a7f3d0;
+    --color-dash-a855f7: #a855f7;
+    --color-dash-b45309: #b45309;
+    --color-dash-b91c1c: #b91c1c;
+    --color-dash-bae6fd: #bae6fd;
+    --color-dash-bbf7d0: #bbf7d0;
+    --color-dash-be123c: #be123c;
+    --color-dash-be185d: #be185d;
+    --color-dash-bef264: #bef264;
+    --color-dash-c084fc: #c084fc;
+    --color-dash-c2410c: #c2410c;
+    --color-dash-c4b5fd: #c4b5fd;
+    --color-dash-c7d2fe: #c7d2fe;
+    --color-dash-ca8a04: #ca8a04;
+    --color-dash-cbd5e1: #cbd5e1;
+    --color-dash-ccfbf1: #ccfbf1;
+    --color-dash-d1d5db: #d1d5db;
+    --color-dash-d1fae5: #d1fae5;
+    --color-dash-d6dae6: #d6dae6;
+    --color-dash-d6dbe7: #d6dbe7;
+    --color-dash-d946ef: #d946ef;
+    --color-dash-d97706: #d97706;
+    --color-dash-db2777: #db2777;
+    --color-dash-dbeafe: #dbeafe;
+    --color-dash-dc2626: #dc2626;
+    --color-dash-dcfce7: #dcfce7;
+    --color-dash-e0e7ff: #e0e7ff;
+    --color-dash-e0f2fe: #e0f2fe;
+    --color-dash-e11d48: #e11d48;
+    --color-dash-e2e5ef: #e2e5ef;
+    --color-dash-e2e8f0: #e2e8f0;
+    --color-dash-e5e7f0: #e5e7f0;
+    --color-dash-e7eaf3: #e7eaf3;
+    --color-dash-e9d5ff: #e9d5ff;
+    --color-dash-ea580c: #ea580c;
+    --color-dash-eab308: #eab308;
+    --color-dash-ec4899: #ec4899;
+    --color-dash-ecfdf5: #ecfdf5;
+    --color-dash-ede9fe: #ede9fe;
+    --color-dash-eef0f6: #eef0f6;
+    --color-dash-eef1fb: #eef1fb;
+    --color-dash-eef2ff: #eef2ff;
+    --color-dash-eef6fb: #eef6fb;
+    --color-dash-ef4444: #ef4444;
+    --color-dash-eff6ff: #eff6ff;
+    --color-dash-f0f9ff: #f0f9ff;
+    --color-dash-f0fdf4: #f0fdf4;
+    --color-dash-f0fdfa: #f0fdfa;
+    --color-dash-f1f2f7: #f1f2f7;
+    --color-dash-f1f5f9: #f1f5f9;
+    --color-dash-f1f5ff: #f1f5ff;
+    --color-dash-f3e8ff: #f3e8ff;
+    --color-dash-f3f5fb: #f3f5fb;
+    --color-dash-f43f5e: #f43f5e;
+    --color-dash-f472b6: #f472b6;
+    --color-dash-f59e0b: #f59e0b;
+    --color-dash-f5f3ff: #f5f3ff;
+    --color-dash-f87171: #f87171;
+    --color-dash-f8fafc: #f8fafc;
+    --color-dash-f97316: #f97316;
+    --color-dash-f9a8d4: #f9a8d4;
+    --color-dash-facc15: #facc15;
+    --color-dash-faf5ff: #faf5ff;
+    --color-dash-fb7185: #fb7185;
+    --color-dash-fb923c: #fb923c;
+    --color-dash-fbbf24: #fbbf24;
+    --color-dash-fca5a5: #fca5a5;
+    --color-dash-fcd34d: #fcd34d;
+    --color-dash-fda4af: #fda4af;
+    --color-dash-fdba74: #fdba74;
+    --color-dash-fde047: #fde047;
+    --color-dash-fde68a: #fde68a;
+    --color-dash-fdf2f8: #fdf2f8;
+    --color-dash-fdf4ff: #fdf4ff;
+    --color-dash-fecaca: #fecaca;
+    --color-dash-fecdd3: #fecdd3;
+    --color-dash-fed7aa: #fed7aa;
+    --color-dash-fee2e2: #fee2e2;
+    --color-dash-fef2f2: #fef2f2;
+    --color-dash-fef9c3: #fef9c3;
+    --color-dash-fefce8: #fefce8;
+    --color-dash-ffe4e6: #ffe4e6;
+    --color-dash-ffedd5: #ffedd5;
+    --color-dash-fff1f2: #fff1f2;
+    --color-dash-fff7ed: #fff7ed;
+    --color-dash-fffbeb: #fffbeb;
+    --color-dash-ffffff: #ffffff;
+    --color-dash-139-92-246-a35: rgb(139 92 246 / 0.35);
+    --color-dash-14-116-144-a30: rgb(14 116 144 / 0.30);
+    --color-dash-14-116-144-a32: rgb(14 116 144 / 0.32);
+    --color-dash-14-165-233-a25: rgb(14 165 233 / 0.25);
+    --color-dash-14-165-233-a35: rgb(14 165 233 / 0.35);
+    --color-dash-148-163-184-a18: rgb(148 163 184 / 0.18);
+    --color-dash-16-185-129-a10: rgb(16 185 129 / 0.10);
+    --color-dash-16-185-129-a12: rgb(16 185 129 / 0.12);
+    --color-dash-16-185-129-a30: rgb(16 185 129 / 0.30);
+    --color-dash-16-185-129-a32: rgb(16 185 129 / 0.32);
+    --color-dash-16-185-129-a35: rgb(16 185 129 / 0.35);
+    --color-dash-168-85-247-a35: rgb(168 85 247 / 0.35);
+    --color-dash-17-24-39-a06: rgb(17 24 39 / 0.06);
+    --color-dash-217-70-239-a20: rgb(217 70 239 / 0.2);
+    --color-dash-225-29-72-a35: rgb(225 29 72 / 0.35);
+    --color-dash-236-72-153-a35: rgb(236 72 153 / 0.35);
+    --color-dash-239-68-68-a10: rgb(239 68 68 / 0.10);
+    --color-dash-239-68-68-a12: rgb(239 68 68 / 0.12);
+    --color-dash-239-68-68-a35: rgb(239 68 68 / 0.35);
+    --color-dash-245-158-11-a32: rgb(245 158 11 / 0.32);
+    --color-dash-245-158-11-a35: rgb(245 158 11 / 0.35);
+    --color-dash-249-115-22-a32: rgb(249 115 22 / 0.32);
+    --color-dash-249-115-22-a33: rgb(249 115 22 / 0.33);
+    --color-dash-249-115-22-a35: rgb(249 115 22 / 0.35);
+    --color-dash-250-204-21-a30: rgb(250 204 21 / 0.30);
+    --color-dash-255-255-255-a06: rgb(255 255 255 / 0.06);
+    --color-dash-255-255-255-a10: rgb(255 255 255 / 0.1);
+    --color-dash-255-255-255-a12: rgb(255 255 255 / 0.12);
+    --color-dash-255-255-255-a14: rgb(255 255 255 / 0.14);
+    --color-dash-255-255-255-a15: rgb(255 255 255 / 0.15);
+    --color-dash-255-255-255-a16: rgb(255 255 255 / 0.16);
+    --color-dash-255-255-255-a18: rgb(255 255 255 / 0.18);
+    --color-dash-255-255-255-a20: rgb(255 255 255 / 0.2);
+    --color-dash-255-255-255-a24: rgb(255 255 255 / 0.24);
+    --color-dash-255-255-255-a25: rgb(255 255 255 / 0.25);
+    --color-dash-34-197-94-a25: rgb(34 197 94 / 0.25);
+    --color-dash-34-197-94-a35: rgb(34 197 94 / 0.35);
+    --color-dash-52-211-153-a25: rgb(52 211 153 / 0.25);
+    --color-dash-56-189-248-a30: rgb(56 189 248 / 0.30);
+    --color-dash-67-56-202-a30: rgb(67 56 202 / 0.30);
+    --color-dash-67-56-202-a32: rgb(67 56 202 / 0.32);
+    --color-dash-79-70-229-a38: rgb(79 70 229 / 0.38);
+    --color-dash-99-102-241-a18: rgb(99 102 241 / 0.18);
+    --color-dash-99-102-241-a28: rgb(99 102 241 / 0.28);
+    --color-dash-99-102-241-a35: rgb(99 102 241 / 0.35);
 }

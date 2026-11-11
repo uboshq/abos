@@ -52,6 +52,7 @@ return [
     'address' => 'ঠিকানা',
     'address_en' => 'ঠিকানা (ইংরেজি)',
     'address_bn' => 'ঠিকানা (বাংলা)',
+    'capacity_qty' => 'কতটা ধরে (মূল এককে)',
     'floor' => 'তাকে',
     'reserved' => 'ধরা',
     'hold' => 'আটকানো',

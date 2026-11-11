@@ -151,6 +151,8 @@ class WarehouseController extends Controller implements HasMiddleware
             'name_bn' => ['nullable', 'string', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],
             'address_bn' => ['nullable', 'string', 'max:500'],
+            // ⭐ কতটা ধরে (মূল এককে) — মজুদের ড্যাশবোর্ডের "জায়গা কতটা ভরা"; খালি মানে বসানো নেই
+            'capacity_qty' => ['nullable', 'numeric', 'gt:0', 'max:99999999'],
             // exists-এ company_id — গ্লোবাল স্কোপ কাঁচা কোয়েরিতে চলে না
             'branch_id' => ['nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', $companyId)],

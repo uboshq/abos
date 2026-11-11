@@ -71,7 +71,7 @@
                     <select name="provider" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                         <option value="">{{ __('notification::channel.sms_no_gateway') }}</option>
                         @foreach ($gateways as $gateway)
-                            <option value="{{ $gateway }}" @selected($config?->provider === $gateway)>{{ $gateway }}</option>
+                            <option value="{{ $gateway }}" @selected($config?->provider === $gateway)>{{ \Illuminate\Support\Facades\Lang::has('notification::sms.gateway_'.$gateway) ? __('notification::sms.gateway_'.$gateway) : $gateway }}</option>
                         @endforeach
                     </select>
                 </label>

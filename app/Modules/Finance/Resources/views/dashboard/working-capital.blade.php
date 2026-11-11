@@ -35,9 +35,10 @@
     $big = fn (string $a, string $b): string => bccomp($a, $b, 4) >= 0 ? $a : $b;
     $small = fn (string $a, string $b): string => bccomp($a, $b, 4) <= 0 ? $a : $b;
     $L = fn (string $v): string => bcdiv($v, '100000', 4);
-    $r = $L($w['receivable']); $s = $L($w['stock']); $m = $L($w['money']); $p = $L($w['payable']); $o = $L($w['other']); $cap = $L($w['capital']);
-    $rs = bcadd($r, $s, 4); $rsm = bcadd($rs, $m, 4); $rsmp = bcsub($rsm, $p, 4);
-    $steps = [['0', $r], [$r, $rs], [$rs, $rsm], [$rsm, $rsmp], [$rsmp, $cap], ['0', $cap]];
+    // ⭐ অগ্রিম ও জামানত — টাকার পরে, দেনার আগে (মালিক, 10 নভেম্বর 2026 সন্ধ্যা)
+    $r = $L($w['receivable']); $s = $L($w['stock']); $m = $L($w['money']); $a = $L($w['advances']); $p = $L($w['payable']); $o = $L($w['other']); $cap = $L($w['capital']);
+    $rs = bcadd($r, $s, 4); $rsm = bcadd($rs, $m, 4); $rsma = bcadd($rsm, $a, 4); $rsmp = bcsub($rsma, $p, 4);
+    $steps = [['0', $r], [$r, $rs], [$rs, $rsm], [$rsm, $rsma], [$rsma, $rsmp], [$rsmp, $cap], ['0', $cap]];
     $peak = array_reduce($steps, fn (string $c, array $st) => $big($c, $big($st[0], $st[1])), '1');
     // ⓘ অক্ষের ধাপ গোল সংখ্যায় (১, ২, ৫, ১০, ২০, ২৫, ৫০ … লাখ), চারটার বেশি দাগ নয় — মালিকের ছবির মতো ০/২০/৪০/৬০
     $step = collect([1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000])->first(fn ($n) => bccomp((string) ($n * 4), $peak, 4) >= 0) ?? 10000;
@@ -45,11 +46,11 @@
     $axisMax = (int) (bccomp(bcmul($q, (string) $step, 4), $peak, 4) < 0 ? bcadd($q, '1', 0) : $q) * $step;
     $plot = 300;
     $px = fn (string $v): string => bcdiv(bcmul($big($v, '0'), (string) ($plot - 30), 4), (string) $axisMax, 1);
-    $fills = ['linear-gradient(180deg,var(--color-fin-ff6b81),var(--color-fin-e5223a))', 'linear-gradient(180deg,var(--color-fin-4ade80),var(--color-fin-00a651))', 'linear-gradient(180deg,var(--color-fin-60a5fa),var(--color-fin-1f6feb))',
+    $fills = ['linear-gradient(180deg,var(--color-fin-ff6b81),var(--color-fin-e5223a))', 'linear-gradient(180deg,var(--color-fin-4ade80),var(--color-fin-00a651))', 'linear-gradient(180deg,var(--color-fin-60a5fa),var(--color-fin-1f6feb))', 'linear-gradient(180deg,var(--color-fin-facc15),var(--color-fin-b8860b))',
         'linear-gradient(180deg,var(--color-fin-f472b6),var(--color-fin-e91e8c))', 'linear-gradient(180deg,var(--color-fin-fdba74),var(--color-fin-f47c00))', 'linear-gradient(180deg,var(--color-fin-3b5bdb),var(--color-fin-0b2fb8))'];
-    $names = ['bar_receivable', 'bar_stock', 'bar_money', 'bar_payable', 'bar_other', 'capital'];
-    $signs = ['+ ', '+ ', '+ ', '− ', '− ', '= '];
-    $amounts = [$w['receivable'], $w['stock'], $w['money'], $w['payable'], $w['other'], $w['capital']];
+    $names = ['bar_receivable', 'bar_stock', 'bar_money', 'bar_advances', 'bar_payable', 'bar_other', 'capital'];
+    $signs = ['+ ', '+ ', '+ ', '+ ', '− ', '− ', '= '];
+    $amounts = [$w['receivable'], $w['stock'], $w['money'], $w['advances'], $w['payable'], $w['other'], $w['capital']];
     $grid = [];
     for ($g = 0; $g <= $axisMax; $g += $step) {
         $grid[] = (string) $g;
@@ -63,6 +64,7 @@
         ['var(--color-fin-e5223a)', 'receivable', 'Receivable', $w['receivable'], null],
         ['var(--color-fin-00a651)', 'stock', 'Stock', $w['stock'], '+'],
         ['var(--color-fin-1f6feb)', 'money', 'Cash', $w['money'], '+'],
+        ['var(--color-fin-facc15)', 'advances', 'Advances & deposits', $w['advances'], '+'],
         ['var(--color-fin-e91e8c)', 'payable', 'Payable', $w['payable'], '−'],
         ['var(--color-fin-f47c00)', 'other', null, $w['other'], '−'],
     ];
@@ -132,7 +134,7 @@
                 @endforeach
 
                 {{-- ⭐ গড় মাসিক বিক্রির % — শেষ বারের (চলতি মূলধন) ঠিক উপরে, বেগুনি ঘরে (মালিকের দাগ দেওয়া ছবি, ৯ নভেম্বর) --}}
-                <div style="position: absolute; right: 0; top: 0; width: 16.66%; display: flex; justify-content: center; z-index: 2" data-wc-sales>
+                <div style="position: absolute; right: 0; top: 0; width: 14.28%; display: flex; justify-content: center; z-index: 2" data-wc-sales>
                     <div style="width: 88%; box-sizing: border-box; background: linear-gradient(135deg, var(--color-fin-7c3aed) 0%, var(--color-fin-4c1d95) 100%); border: 2px solid var(--color-fin-c4b5fd); border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; box-shadow: 0 8px 20px var(--color-fin-76-29-149-a40)">
                         <span style="font-size: 12px; font-weight: 600; color: var(--color-fin-ede9fe)">{{ __('finance::working_capital.sales_share') }}</span>
                         <span style="font-size: 32px; line-height: 1; font-weight: 700; color: var(--color-fin-fde047)" data-wc-sales-pct>{{ $w['sales_pct'] === null ? '—' : $digits($w['sales_pct']).'%' }}</span>
@@ -147,14 +149,14 @@
                     </div>
                 </div>
 
-                <div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr))">
+                <div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr))">
                     @foreach ($steps as $i => [$from, $to])
                         @php
                             $lo = $px($small($from, $to)); $hi = $px($big($from, $to)); $end = $px($to);
                         @endphp
                         <div style="position: relative; height: {{ $plot }}px">
-                            @if ($i < 5)<div style="position: absolute; left: 86%; right: -14%; bottom: {{ $end }}px; border-top: 2px dashed var(--color-fin-94a3b8)"></div>@endif
-                            @if ($i < 5)
+                            @if ($i < 6)<div style="position: absolute; left: 86%; right: -14%; bottom: {{ $end }}px; border-top: 2px dashed var(--color-fin-94a3b8)"></div>@endif
+                            @if ($i < 6)
                                 <div style="position: absolute; left: 0; right: 0; bottom: {{ bcadd($hi, '6', 1) }}px; text-align: center; font-size: 16px; font-weight: 700; color: var(--color-fin-0f172a); white-space: nowrap">{{ $signs[$i] }}৳{{ $lakh($amounts[$i]) }} {{ __('finance::working_capital.lakh') }}</div>
                             @endif
                             <div data-wc-bar="{{ $names[$i] }}" style="position: absolute; left: 14%; right: 14%; bottom: {{ $lo }}px; height: {{ $big(bcsub($hi, $lo, 1), '2') }}px; border-radius: 8px; background: {{ $fills[$i] }}; box-shadow: 0 4px 10px var(--color-fin-15-23-42-a18)"></div>
@@ -162,10 +164,10 @@
                     @endforeach
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr))">
+            <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr))">
                 @foreach ($names as $i => $name)
-                    <span style="text-align: center; font-size: 15px; color: {{ $i === 5 ? 'var(--color-fin-0f172a)' : 'var(--color-fin-334155)' }}; font-weight: {{ $i === 5 ? 700 : 400 }}">
-                        {{ __('finance::working_capital.'.$name) }}@if ($i === 5)<br><b style="font-size: 16px">= ৳{{ $lakh($w['capital']) }} {{ __('finance::working_capital.lakh') }}</b>@endif
+                    <span style="text-align: center; font-size: 15px; color: {{ $i === 6 ? 'var(--color-fin-0f172a)' : 'var(--color-fin-334155)' }}; font-weight: {{ $i === 6 ? 700 : 400 }}">
+                        {{ __('finance::working_capital.'.$name) }}@if ($i === 6)<br><b style="font-size: 16px">= ৳{{ $lakh($w['capital']) }} {{ __('finance::working_capital.lakh') }}</b>@endif
                     </span>
                 @endforeach
             </div>

@@ -686,6 +686,7 @@ return [
         'wa_no_template' => 'No active message for this paper — add one in the control panel under "Party messages — texts"',
         'wa_template_gone' => 'That message is no longer active — pick another',
         'wa_phone_bad' => 'That is not a recognisable mobile number — type 01XXXXXXXXX or include the country code',
+        'sms_phone_bad' => 'SMS goes only to Bangladesh mobiles (01XXXXXXXXX) — the office SIM does not send abroad',
         'sub_total' => 'Sub total',
         'free_qty' => 'Free',
         'column' => [
@@ -1564,6 +1565,8 @@ return [
             'hand_loan_due' => 'When a hand loan falls due',
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
             'backup_failed' => 'When a backup fails',
+            'sms_overdue' => 'When the SMS phone is off (SMS stuck over 2 hours)',
+            'assistant_brief' => 'Copilot morning watch',
             'signed_challan_stuck' => 'When an approved challan could not be confirmed',
             'signed_sale_stuck' => 'When an approved counter sale could not be finished',
             'signed_paper_stuck' => 'When an approved voucher or bill could not be posted',

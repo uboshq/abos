@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Engines\Dashboard\DashboardEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -48,11 +49,7 @@ final class TheFirstButtonOnTheCounterSaidTheWrongJobTest extends TestCase
      */
     public function test_the_first_action_opens_the_direct_sale_counter(): void
     {
-        $html = (string) $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->getContent();
-
-        $this->assertStringContainsString(route('sales.direct.create'), $html);
-
-        $first = $this->firstTile($html);
+        $first = $this->firstTile();
 
         $this->assertStringContainsString(route('sales.direct.create'), $first, 'প্রথম টাইলটা সরাসরি বিক্রয়ে নামে না।');
         $this->assertStringNotContainsString(route('sales.invoice.create'), $first);
@@ -68,7 +65,7 @@ final class TheFirstButtonOnTheCounterSaidTheWrongJobTest extends TestCase
     {
         app(SettingsService::class)->set('sales.screen_direct', false);
 
-        $first = $this->firstTile((string) $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->getContent());
+        $first = $this->firstTile();
 
         /*
          * ⭐ এখানে আগে বিলের ফর্ম ছিল — ২১ সেপ্টেম্বর ২০২৬-এ বদলেছে।
@@ -90,23 +87,17 @@ final class TheFirstButtonOnTheCounterSaidTheWrongJobTest extends TestCase
     }
 
     /**
-     * প্রথম টাইলটুকু — পুরো পাতায় খুঁজলে দাবিটা কিছুই প্রমাণ করত না,
-     * কারণ দুইটা ঠিকানাই পাতার অন্য কোথাও থাকতে পারে (মেনুতে)।
-     */
-    /**
-     * প্রথম টাইলটুকু — পুরো পাতায় খুঁজলে দাবিটা কিছুই প্রমাণ করত না,
-     * কারণ দুইটা ঠিকানাই পাতার অন্য কোথাও থাকতে পারে (মেনুতে)।
+     * প্রথম দ্রুত-কাজের বোতাম — ফোনের ড্যাশবোর্ড যা পায় ([[DashboardApiController]]-এর 'tiles')।
      *
-     * ⚠️ টুকরোটা `<a`-এ শুরু হতে হবে, `data-tile`-এ নয় — `href` ওটার
-     * আগে বসে, তাই পরে কাটলে ঠিকানাটাই বাদ পড়ত আর পরীক্ষাটা
-     * সঠিক পর্দাতেও লাল হত (একবার হয়েছেও)।
+     * ⓘ মালিক, 10 নভেম্বর 2026 রাত: ওয়েবের বিক্রয় ড্যাশবোর্ড এখন চূড়ান্ত নমুনার বোর্ড (H8JXFPzh8m7zpsQSedmPDT) — বোতামের সারি নেই,
+     *   সরাসরি বিক্রয় মেনুতে। বোতামগুলো বাঁচে ফোনে, তাই দাবিটা সেখানে: প্রথম বোতাম কোন দরজায়।
      */
-    private function firstTile(string $html): string
+    private function firstTile(): string
     {
-        $found = preg_match('~<a\b[^>]*\bdata-tile\b.*?</a>~s', $html, $hit);
+        $tiles = app(DashboardEngine::class)->for('sales', auth()->user())->tiles;
 
-        $this->assertSame(1, $found, 'ড্যাশবোর্ডে টাইলের ঘরটাই পাওয়া গেল না — পরীক্ষাটা কিছু দেখছে না।');
+        $this->assertNotEmpty($tiles, 'ড্যাশবোর্ডে বোতামই পাওয়া গেল না — পরীক্ষাটা কিছু দেখছে না।');
 
-        return $hit[0];
+        return $tiles[0]->href;
     }
 }

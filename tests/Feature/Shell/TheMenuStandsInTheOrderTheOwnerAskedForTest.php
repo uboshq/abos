@@ -125,6 +125,8 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['system', 'documents'],
         ['system', 'notification'],
         ['system', 'fixed_assets'],
+        // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — একই নিয়মে স্থায়ী সম্পদের নিচে; উপরের বারে মগজের বোতামও আছে
+        ['system', 'assistant'],
 
         /*
          * ⭐ ব্যাকআপ সবার শেষে — মালিকের সিদ্ধান্ত।

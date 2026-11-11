@@ -41,6 +41,17 @@ final class InventoryDashboard implements ProvidesDashboard
 {
     public static function dashboard(): DashboardDefinition
     {
+        /*
+         * ⭐ মালিকের চূড়ান্ত নমুনার হুবহু (HmzeE5CN2wvtyLPE5exjvV, 10 নভেম্বর 2026 রাত: "সব ড্যাশবোর্ড ফাইনাল 100% স্যাম্পলের সাথে মিল রেখে")।
+         * ⓘ পাতায় কেবল নমুনার সারিগুলো, ওপর থেকে নিচে — পুরনো কার্ড, বোতামের সারি আর তালিকা নেই (নমুনায় নেই)।
+         * ⓘ অঙ্ক এক জায়গা থেকে ([[InventoryBoard]]); প্রতিটা সারি নিজের ব্লেড।
+         */
+        // ⓘ এক পাতায় একটাই বোর্ড — সব সারি একই ছবি পড়ে, ছবিটা একবারই তোলা হয়
+        $board = null;
+        $once = function () use (&$board): InventoryBoard {
+            return $board ??= app(InventoryBoard::class);
+        };
+
         $facts = app(StockFacts::class);
         $states = $facts->states();
 
@@ -320,6 +331,66 @@ final class InventoryDashboard implements ProvidesDashboard
                     href: route('inventory.stock.index'),
                 ),
             ],
+            sections: [
+                [
+                    'view' => 'inventory::dashboard.board-toolbar',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['bar' => $once()->toolbar()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-top',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['problems' => $once()->problems(), 'corner' => $once()->corner()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-replenish',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => [
+                        'reorder' => $once()->reorder(),
+                        'slow' => $once()->slow(),
+                        'reorderLink' => \Illuminate\Support\Facades\Route::has('purchase.order.create') && (auth()->user()?->can('purchase.order.create') ?? false)
+                            ? route('purchase.order.create') : null,
+                    ],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-flow',
+                    'place' => 'top',
+                    // ⛔ মজুদের মূল্যের হিসাব কেনা দামে — খরচের চাবি ছাড়া সারিটাই নেই ([[FieldSecurity]], পণ্যের ক্রয়মূল্যের একই পাহারা)
+                    'permission' => ['inventory.stock.view', 'inventory.cost.view'],
+                    'data' => fn (): array => ['roll' => $once()->rollForward(), 'cover' => $once()->coverHistogram(), 'abc' => $once()->abcXyz()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-watch',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['expiry' => $once()->expiry(), 'health' => $once()->warehouseHealth(), 'counts' => $once()->countAccuracy()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-trend',
+                    'place' => 'top',
+                    // ⛔ মজুদের দাম, গুদাম আর ব্র্যান্ড ধরে মূল্য — সবটাই কেনা দামে; খরচের চাবি ছাড়া সারিটাই নেই
+                    'permission' => ['inventory.stock.view', 'inventory.cost.view'],
+                    'data' => fn (): array => ['trend' => $once()->trend(), 'warehouses' => $once()->byWarehouse(), 'brands' => $once()->byBrand()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-yard',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['ageing' => $once()->ageing(), 'suppliers' => $once()->suppliers(), 'flow' => $once()->dailyFlow(), 'space' => $once()->space()],
+                ],
+                [
+                    'view' => 'inventory::dashboard.board-intake',
+                    'place' => 'top',
+                    'permission' => 'inventory.stock.view',
+                    'data' => fn (): array => ['receiving' => $once()->receiving(), 'transit' => $once()->inTransit(), 'damage' => $once()->damage()],
+                ],
+            ],
+
+            // ⓘ মডিউলের পাতায় কেবল নমুনার সারি (forPage()); হোম আর ফোন আগের মতো সংখ্যা, চার্ট, তালিকা আর বোতাম পড়ে
+            board: true,
         );
     }
 

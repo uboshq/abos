@@ -614,7 +614,7 @@ export function shareMenu ({ url }) {
  * ⭐ পার্টির WhatsApp-এ (মালিকের "ok", ১০ নভেম্বর ২০২৬): `choices` সার্ভারে আসল মান বসিয়ে দুই ভাষায় বানানো লেখা;
  * এখানে কেবল বাছাই আর ভাষা ধরে কোনটা দেখাবে, তা ঠিক হয়। ⓘ যা যায় তা সার্ভার আবার বানায়, এই লেখা নয়।
  */
-export function sharedLink ({ url, choices = [] }) {
+export function sharedLink ({ url, choices = [], partsWord = '' }) {
     return {
         copied: false,
         locale: 'bn',
@@ -634,6 +634,20 @@ export function sharedLink ({ url, choices = [] }) {
             }
 
             return this.locale === 'en' ? chosen.en : chosen.bn
+        },
+
+        /*
+         * ⓘ SMS-এ কয়টা ভাগে যাবে — বাংলা (ইউনিকোড) 70/67, ইংরেজি 160/153 অক্ষরে; সার্ভারের [[SmsOutbox::parts()]]-এর একই হিসাব।
+         * ⓘ এক ভাগ হলে কিছু বলা হয় না।
+         */
+        get smsParts () {
+            const text = this.preview
+            const unicode = /[^\x00-\x7F]/.test(text)
+            const length = Array.from(text).length
+            const [single, multi] = unicode ? [70, 67] : [160, 153]
+            const parts = length <= single ? 1 : Math.ceil(length / multi)
+
+            return parts <= 1 || partsWord === '' ? '' : partsWord.replace('#', String(parts))
         },
     }
 }

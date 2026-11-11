@@ -23,7 +23,7 @@
         $choices = $wa['choices'] ?? [];
     @endphp
 
-    <div role="status" x-data="sharedLink({ url: @js($link), choices: @js($choices) })"
+    <div role="status" x-data="sharedLink({ url: @js($link), choices: @js($choices), partsWord: @js(__('notification::sms.parts_note', ['n' => '#'])) })"
          class="mb-4 rounded-(--radius-card) border border-(--color-brand-500)
                 bg-(--color-surface-card) p-3">
         <p class="mb-2 text-sm font-medium">{{ __('core.print.link_ready') }}</p>
@@ -94,11 +94,25 @@
                            class="whitespace-pre-line rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-muted) p-2 text-sm text-(--color-ink)">{{ $choices[0]['bn'] }}</p>
                     </div>
 
-                    <div class="md:col-span-3">
+                    <div class="flex flex-wrap items-center gap-2 md:col-span-3">
                         <x-ui.button type="submit" tone="primary">{{ __('core.print.whatsapp') }}</x-ui.button>
+                        {{-- ⭐ একই লেখা SMS-এ — অফিসের ফোনের সারিতে (নমুনা ধাপ ২); এই পাতাতেই ফেরে, তাই নতুন পাতা নয় --}}
+                        @if ($wa['sms'] ?? false)
+                            <x-ui.button type="submit" tone="secondary" formaction="{{ route('paper.sms', $wa['share']) }}" formtarget="_self" data-sms-send>{{ __('notification::sms.send') }}</x-ui.button>
+                            <span class="text-2xs text-(--color-ink-muted)" x-text="smsParts" data-sms-parts></span>
+                        @else
+                            <span class="text-2xs text-(--color-ink-muted)" data-sms-off>{{ __('notification::sms.no_gateway') }}</span>
+                        @endif
                     </div>
                 </form>
             @endif
+        @endif
+
+        @if (session('sms_queued'))
+            <p role="status" class="mt-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)" data-sms-queued>{{ session('sms_queued') }}</p>
+        @endif
+        @if (session('sms_error'))
+            <p role="alert" class="mt-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)" data-sms-error>{{ session('sms_error') }}</p>
         @endif
     </div>
 @endif

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Customer;
 
 use App\Core\Dashboard\ActivityRegistry;
+use App\Core\Engines\Dashboard\DashboardEngine;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -175,14 +176,31 @@ final class TheCustomerNameCarriesPointAndBranchTest extends TestCase
         $this->assertNotNull($row, "দৃশ্যটাই ভুল — হোমের তালিকায় বিল {$bill->document_no} নেই।");
         $this->assertSame($full, $row->subtitle, '⛔ হোমের "সদ্য যা হলো"-তে "নাম · পয়েন্ট · শাখা" নেই।');
 
-        $this->assertPlaceInRow((string) $this->get(route('module.dashboard', 'sales'))->assertOk()->getContent(),
-            (string) $bill->document_no, 'বিক্রয় ড্যাশবোর্ডের বড় বকেয়া');
+        $this->get(route('module.dashboard', 'sales'))->assertOk();
+        $this->assertPlaceInRow($this->listingHtml('sales'), (string) $bill->document_no, 'বিক্রয় ড্যাশবোর্ডের বড় বকেয়া');
 
-        $this->assertStringContainsString(e($full), (string) $this->get(route('module.dashboard', 'accounts'))->assertOk()->getContent(),
+        $this->get(route('module.dashboard', 'accounts'))->assertOk();
+        $this->assertStringContainsString(e($full), $this->listingHtml('accounts'),
             '⛔ হিসাবের ড্যাশবোর্ডের "সবচেয়ে বড় বকেয়া"-তে "নাম · পয়েন্ট · শাখা" নেই।');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⭐ ড্যাশবোর্ডের তালিকা, যেমন হোম আর ফোন পড়ে — মালিকের চূড়ান্ত নমুনার পাতায় (বোর্ড, ১০ নভেম্বর ২০২৬ রাত) তালিকা আঁকা হয় না
+     * ([[DashboardDefinition::forPage()]]); তালিকা তবু আছে, প্রতিটা সারি এখানে `<tr>` করে আঁকা — কলামের নিজের render দিয়েই।
+     */
+    private function listingHtml(string $module): string
+    {
+        $html = '';
+        foreach (app(DashboardEngine::class)->for($module, $this->owner)->listings as $listing) {
+            foreach ($listing->rows as $row) {
+                $html .= '<tr>'.implode('', array_map(fn (array $c): string => '<td>'.e((string) $c['render']($row)).'</td>', $listing->columns)).'</tr>';
+            }
+        }
+
+        return $html;
+    }
 
     private function assertPlaceInRow(string $html, string $no, string $where): void
     {

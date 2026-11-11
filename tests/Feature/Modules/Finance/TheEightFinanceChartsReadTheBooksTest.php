@@ -142,15 +142,18 @@ final class TheEightFinanceChartsReadTheBooksTest extends TestCase
         $row->delete();
     }
 
-    public function test_the_dashboard_draws_the_charts_under_the_fund_row(): void
+    /**
+     * ⭐ চূড়ান্ত নমুনায় (4h63xhNiy4m9KaJkZZQaEL, 10 নভেম্বর 2026 রাত) আট ছোট চার্টের ঘর নেই — তাদের অঙ্ক সারি 2–7-এ, তহবিলের সারির নিচে।
+     * ⓘ চার্টের অঙ্ক এই ফাইলের বাকি দাবিতে ([[FinanceCharts::all()]]) পাহারায় থাকে — হোম আর ফোন পড়ে; সারির ক্রম [[TheFinanceBoardReadsTheBooksTest]]-এ।
+     */
+    public function test_the_page_carries_the_board_rows_under_the_fund_row_and_not_the_old_charts(): void
     {
         $html = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
 
-        foreach (['cashflow', 'trend', 'receivable', 'payable', 'expense', 'ratios', 'loans'] as $chart) {
-            $this->assertStringContainsString('data-chart="'.$chart.'"', $html, "⛔ '{$chart}' চার্টটা নেই।");
+        $this->assertStringNotContainsString('data-finance-charts', $html, '⛔ পুরনো আট চার্টের ঘর এখনো পাতায় — চূড়ান্ত নমুনায় নেই।');
+        foreach (['data-fin-forecast', 'data-fin-board-position', 'data-fin-loans', 'data-fin-health'] as $row) {
+            $this->assertGreaterThan(strpos($html, 'data-fund-news'), strpos($html, $row), '⛔ '.$row.' তহবিলের সারির নিচে নয়।');
         }
-        $this->assertGreaterThan(strpos($html, 'data-fund-news'), strpos($html, 'data-finance-charts'), '⛔ চার্টগুলো তহবিলের সারির নিচে নয়।');
-        $this->assertLessThan(strpos($html, 'data-working-capital'), strpos($html, 'data-finance-charts'), '⛔ চার্টগুলো চলতি মূলধনের আগে নয়।');
     }
 
     private function bill(string $no, string $total): PurchaseBill

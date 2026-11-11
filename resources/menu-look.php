@@ -114,6 +114,10 @@ return [
             'accounts::menu.equity_statement' => ['fin', 'crown'],
             'accounts::menu.group_report' => ['fin', 'network'],
             'accounts::menu.cheques' => ['close', 'notebook-tabs'],
+            // ⭐ চেক ছাপা (মালিকের নমুনা W63BXTDuqM65tDaKRDnvwR) — চেকের পাশেই
+            'accounts::cheque_print.menu' => ['close', 'printer'],
+            'accounts::cheque_print.menu_log' => ['close', 'scroll-text'],
+            'accounts::cheque_print.menu_setup' => ['close', 'ruler'],
             'accounts::note.title' => ['close', 'sticky-note'],
             'accounts::menu.reconciliations' => ['close', 'git-merge'],
             'accounts::menu.periods' => ['close', 'calendar-x'],
@@ -187,6 +191,11 @@ return [
             'documents::menu.reports' => ['reports', 'chart-bar'],
             'documents::menu.audit' => ['reports', 'scroll-text'],
             'documents::menu.admin' => ['setup', 'settings'],
+        ],
+        // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — মগজের ছবি, উপরের বারের একই আঁকা
+        'assistant' => [
+            'assistant::menu.today' => ['start', 'brain'],
+            'assistant::menu.audit' => ['audit', 'history'],
         ],
         'executive' => [
             'executive::menu.today' => ['start', 'layout-dashboard'],
@@ -342,6 +351,10 @@ return [
             'notification::report.menu.suppression' => ['deepreports', 'volume-x'],
             'notification::report.menu.audit' => ['deepreports', 'file-search'],
             'notification::menu.channels' => ['setup', 'settings'],
+            // ⭐ পার্টিকে বার্তা ও অফিসের SMS ফোন (মালিকের "ok", ১০ নভেম্বর ২০২৬)
+            'notification::menu.party_templates' => ['setup', 'notebook-pen'],
+            'notification::menu.sms_phones' => ['setup', 'send'],
+            'notification::menu.party_messages' => ['audit', 'book-open'],
             'notification::menu.rules' => ['setup', 'list-filter'],
             'notification::menu.templates' => ['setup', 'file-text'],
             'notification::menu.groups' => ['setup', 'users-round'],

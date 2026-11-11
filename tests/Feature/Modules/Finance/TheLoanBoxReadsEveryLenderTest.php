@@ -93,15 +93,17 @@ final class TheLoanBoxReadsEveryLenderTest extends TestCase
         $this->assertSame('4500.0000', bcsub($after['interest_month'], $before['interest_month'], 4), '⛔ এ মাসের সুদে গত মাসের সুদও ঢুকল, বা এ মাসেরটা বাদ গেল।');
     }
 
-    public function test_the_dashboard_draws_the_loan_box_last(): void
+    /**
+     * ⭐ চূড়ান্ত নমুনায় (4h63xhNiy4m9KaJkZZQaEL) ঋণের ঘর সারি 5-এ, চলতি মূলধনের ডানে — ঋণদাতার ভাগ, এ মাসের সুদ, আর চার শর্ত
+     * (DSCR, ঋণসীমা ব্যবহার, D/E, চলতি অনুপাত)।
+     */
+    public function test_the_dashboard_draws_the_loan_box_beside_working_capital(): void
     {
         $html = (string) $this->get(route('module.dashboard', ['module' => 'finance']))->assertOk()->getContent();
 
-        $this->assertStringContainsString('data-loan-total', $html, '⛔ অর্থের ড্যাশবোর্ডে ঋণের ঘর নেই।');
-        $this->assertGreaterThan(strpos($html, 'data-working-capital'), strpos($html, 'data-loan-box'), '⛔ ঋণের ঘর সবার নিচে (চলতি মূলধনের পরে) নয়।');
-        foreach (['next', 'interest', 'od', 'de', 'dscr'] as $kpi) {
-            $this->assertStringContainsString('data-loan-kpi="'.$kpi.'"', $html, "⛔ '{$kpi}' মাপটা নেই।");
-        }
+        $this->assertStringContainsString('data-fin-loans', $html, '⛔ অর্থের ড্যাশবোর্ডে ঋণের ঘর নেই।');
+        $this->assertGreaterThan(strpos($html, 'data-fin-wc'), strpos($html, 'data-fin-loans'), '⛔ ঋণের ঘর চলতি মূলধনের ডানে নয়।');
+        $this->assertSame(4, substr_count($html, 'data-covenant'), '⛔ চার শর্তের মাপ নেই।');
     }
 
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */

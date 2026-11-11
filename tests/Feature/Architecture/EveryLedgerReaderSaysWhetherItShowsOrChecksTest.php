@@ -34,6 +34,10 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> দেখায় — দেখার শাখা মানবে (ধাপ খ) */
     private const SHOWS = [
+        'app/Modules/Accounts/Dashboard/AccountsBoard.php' => 'হিসাবের বোর্ড (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬ রাত) — আয়-ব্যয়, জের, খাতের যোগ সবই দেখার শাখা ধরে '
+            .'(ViewedBranch::narrow / balanceInView); কেবল "বন্ধ মাসে দেরির সারি" গোটা কোম্পানির — মাস বন্ধ হয় কোম্পানি ধরে',
+        'app/Modules/Inventory/Dashboard/InventoryBoard.php' => 'মজুদের বোর্ড — মজুদ খাতের মাসের ধারা, দেখার শাখা ধরে (ViewedBranch::narrow; মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬)',
+        'app/Modules/Sales/Dashboard/SalesBoard.php' => 'বিক্রয়ের বোর্ড — লাভের সিঁড়ির খরচের খাত, দেখার শাখা ধরে (DataScope::viewBranchIds() প্রতিটা শাখার balanceOn; মালিকের চূড়ান্ত নমুনা)',
         'app/Modules/Accounts/Models/Voucher.php' => 'সইকারীর "অনুমোদন দিলে কী হবে" — টাকার খাতের জের, ভাউচার ফর্মের "খাতে আছে"-র একই হিসাব (Account::balanceInView(); নমুনা v4, ৯ নভেম্বর ২০২৬)',
         'app/Modules/Executive/Services/DailySummary.php' => 'প্রতিদিনের সারাংশ — হেডারে বাছা শাখার দিন (মালিক, ৭ নভেম্বর ২০২৬)',
         'app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php' => 'রসিদ ও পরিশোধ ভাউচারে "খাতে আছে ৳…" — টাকার খাতের জের, দেখার শাখা ধরে (Account::balanceInView(); টাকা দেওয়ার পর্দার একই হিসাব; fe, ২৩ অক্টোবর ২০২৬)',

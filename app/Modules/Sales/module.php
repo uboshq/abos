@@ -99,6 +99,9 @@ return [
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
 
+        // ⭐ মজুদের ড্যাশবোর্ডের "মজুদ শেষ" — খোলা আদেশে আটকে থাকা চাহিদা আর হারানো বিক্রি ([[StockDemand]])
+        \App\Core\Contracts\StockDemand::class => \App\Modules\Sales\Services\SalesStockDemand::class,
+
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
 
@@ -937,6 +940,18 @@ return [
     'dashboard' => SalesDashboard::class,
 
     // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    // ⭐ কোপাইলটের দরজা — কেবল পড়ার, নিজের চাবির পেছনে ([[ToolRegistry]]; ১১ নভেম্বর ২০২৬)
+    'assistant_tools' => [
+        \App\Modules\Sales\Assistant\SalesSummaryTool::class,
+        \App\Modules\Sales\Assistant\ProductNeedTool::class,
+    ],
+
+    // ⭐ পূর্বাভাসের উৎস — দিনে নিট বিক্রি আর পণ্য ধরে বিক্রি ([[ForecastEngine]]; কোপাইলট, ১১ নভেম্বর ২০২৬)
+    'forecasts' => [
+        \App\Modules\Sales\Forecasts\NetSalesHistory::class,
+        \App\Modules\Sales\Forecasts\ProductSalesHistory::class,
+    ],
+
     'phone_papers' => [
         \App\Modules\Sales\Phone\SalesReturnPaper::class,
         \App\Modules\Sales\Phone\GatePassPaper::class,

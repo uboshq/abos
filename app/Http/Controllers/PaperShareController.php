@@ -191,6 +191,52 @@ class PaperShareController extends Controller
      */
     public function whatsapp(Request $request, DocumentShare $share, PartyMessages $messages): RedirectResponse
     {
+        [$document, $template, $phone, $locale] = $this->prepared($request, $share);
+
+        $message = $messages->record($document, $share, $template, $locale, $phone);
+
+        return redirect()->away('https://wa.me/'.$phone.'?text='.rawurlencode((string) $message->body));
+    }
+
+    /**
+     * ⭐ একই লেখা SMS-এ — অফিসের ফোনের সারিতে (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২)।
+     *
+     * ⓘ পাহারা WhatsApp-এর হুবহু ([[prepared()]]); লেখা সার্ভারেই বানানো, খাতায় লেখা, তারপর সারিতে ([[SmsOutboxService]])।
+     * ⛔ কেবল বাংলাদেশের মোবাইলে — নিজের সিমে বিদেশে SMS দামি আর অনেক সময় বন্ধ। ⛔ ফোন বসানো না থাকলে সারিতে বসে না।
+     */
+    public function sms(Request $request, DocumentShare $share, PartyMessages $messages, \App\Core\Services\SmsOutboxService $outbox): RedirectResponse
+    {
+        // ⓘ বাক্সটা খোলা থাকে — ফল বা ভুল বাক্সের ভিতরেই দেখা যায় (কাগজের সব পাতা আলাদা খবর দেখায় না)
+        $box = fn (string $key, string $text): RedirectResponse => back()->withInput()
+            ->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id)->with($key, $text);
+
+        try {
+            [$document, $template, $phone, $locale] = $this->prepared($request, $share);
+        } catch (ValidationException $e) {
+            return $box('sms_error', (string) collect($e->errors())->flatten()->first());
+        }
+
+        if (! str_starts_with($phone, '8801')) {
+            return $box('sms_error', (string) __('core.print.sms_phone_bad'));
+        }
+
+        if (! $outbox->hasPhone()) {
+            return $box('sms_error', (string) __('notification::sms.no_gateway'));
+        }
+
+        $message = $messages->record($document, $share, $template, $locale, $phone, PartyMessageTemplate::SMS);
+        $outbox->queue($phone, (string) $message->body, \App\Models\SmsOutbox::PARTY, (int) $message->id);
+
+        return $box('sms_queued', (string) __('notification::sms.queued'));
+    }
+
+    /**
+     * ⓘ WhatsApp আর SMS-এর একই পাহারা — কোম্পানি, কাগজের ছাপার চাবি, দেখার নাগাল, জীবিত লিংক, চালু লেখা, মোবাইল নম্বর।
+     *
+     * @return array{0: Model, 1: PartyMessageTemplate, 2: string, 3: string}
+     */
+    private function prepared(Request $request, DocumentShare $share): array
+    {
         abort_unless((int) $share->company_id === (int) CompanyContext::id(), 404);
 
         $abilities = PaperTrail::abilitiesFor($share->document_type);
@@ -226,9 +272,7 @@ class PaperShareController extends Controller
             ]));
         }
 
-        $message = $messages->record($document, $share, $template, $data['locale'], $phone);
-
-        return redirect()->away('https://wa.me/'.$phone.'?text='.rawurlencode((string) $message->body));
+        return [$document, $template, $phone, (string) $data['locale']];
     }
 
     /**

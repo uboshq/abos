@@ -392,6 +392,85 @@ final class AccountsDashboard implements ProvidesDashboard
                     href: route('accounts.transfer.index'),
                 ),
             ],
+
+            // ⭐ মালিকের চূড়ান্ত নমুনা TErMgXrtgVBkuyuoCZq8NS-এর সারিগুলো ([[AccountsBoard]]) — সাত সারি হলে পাতা কেবল এগুলো (board)
+            sections: [
+                [
+                    'view' => 'accounts::dashboard.board-top',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['problems' => $board->problems(), 'close' => $board->monthClose()];
+                    },
+                ],
+                // ⭐ সারি 2 — লাভ-ক্ষতির সেতু, স্থিতিপত্র, রেওয়ামিল ও উপ-খাতার মিল
+                [
+                    'view' => 'accounts::dashboard.board-statements',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['pnl' => $board->pnl(), 'balance' => $board->balanceSheet(), 'checks' => $board->ledgerChecks()];
+                    },
+                ],
+                // ⭐ সারি 3 — এক নজরে আর খরচের ট্রিম্যাপ
+                [
+                    'view' => 'accounts::dashboard.board-glance',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['glance' => $board->glance(), 'tree' => $board->expenseTree()];
+                    },
+                ],
+                // ⭐ সারি 4 — মাস বন্ধের সময়রেখা, ব্যাংক মিলকরণ, কর ও সরকারি দায়
+                [
+                    'view' => 'accounts::dashboard.board-close',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['close' => $board->monthClose(), 'banks' => $board->banks(), 'taxes' => $board->taxes()];
+                    },
+                ],
+                // ⭐ সারি 5 — ভাউচারের প্রবাহ, খরচ এ মাস বনাম গত মাস, আয় বনাম খরচ
+                [
+                    'view' => 'accounts::dashboard.board-trends',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['flow' => $board->voucherFlow(), 'bullets' => $board->expenseVsLast(), 'ie' => $board->incomeVsExpense()];
+                    },
+                ],
+                // ⭐ সারি 6 — কাগজের যাত্রা, ধরন ধরে টাকা, পোস্টিংয়ের ক্যালেন্ডার, নগদ বাক্স ও চেক
+                [
+                    'view' => 'accounts::dashboard.board-pipeline',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => ['pipe' => app(AccountsBoard::class)->pipeline()],
+                ],
+                // ⭐ সারি 7 — অনুমোদনে সময়, খাতার স্বাস্থ্য, সবচেয়ে বেশি নড়াচড়া, সাম্প্রতিক কাজ
+                [
+                    'view' => 'accounts::dashboard.board-review',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
+
+                        return ['bubbles' => $board->approvalTimes(), 'health' => $board->ledgerHealth(), 'top' => $board->topAccounts(), 'recent' => $board->recentWork()];
+                    },
+                ],
+            ],
+
+            // ⭐ পাতায় কেবল নমুনার সাত সারি (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে) — [[DashboardDefinition::forPage()]]
+            board: true,
         );
     }
 

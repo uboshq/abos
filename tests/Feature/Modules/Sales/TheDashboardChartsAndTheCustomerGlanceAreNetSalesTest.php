@@ -181,7 +181,8 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
     {
         $this->web();
         config(['abos.dashboards_v2' => true]);
-        $dashboard = $this->get('/dashboard/sales')->assertOk()->viewData('dashboard');
+        // ⓘ মালিক, 10 নভেম্বর 2026 রাত: ওয়েবের বিক্রয় পাতা চূড়ান্ত নমুনার বোর্ড ([[SalesBoard]]) — দণ্ডগুলো বাঁচে হোমে আর ফোনে, সেই একই ড্যাশবোর্ড থেকে
+        $dashboard = app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for('sales', auth()->user());
         $bars = fn (string $key) => collect($dashboard->panels)
             ->first(fn ($p) => $p instanceof Breakdown && $p->label === __('sales::dashboard.'.$key));
         $seller = $bars('by_seller');

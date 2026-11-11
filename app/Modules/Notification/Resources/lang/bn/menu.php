@@ -19,4 +19,5 @@ return [
     'archive' => 'বিজ্ঞপ্তির আর্কাইভ',
     'party_templates' => 'পার্টিকে বার্তা — লেখা',
     'party_messages' => 'পার্টিকে বার্তা — খাতা',
+    'sms_phones' => 'SMS-এর ফোন',
 ];

@@ -238,6 +238,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             ResolveCompanyContext::class,
 
+            // ⭐ কে কোন পাতা খুলল বা কী নামাল — কোপাইলটের খাতায় (মালিক, ১১ নভেম্বর ২০২৬); উত্তর তৈরির পরে লেখে, কাজ আটকায় না
+            \App\Http\Middleware\RecordsVisits::class,
+
             /*
              * Control Panel-এ বন্ধ করা পর্দা রুট-স্তরেও বন্ধ।
              *
@@ -332,6 +335,8 @@ return Application::configure(basePath: dirname(__DIR__))
             NudgePhonesAfterWrite::class,
             // ⛔ বন্ধ করা বিল্ডের লেখা ৪২৬ — ফোন তখন আপডেটের দেয়াল তোলে (পূর্ণ নিরীক্ষা §৯ ⚠️৯, ১৮ অক্টোবর ২০২৬)
             \App\Http\Middleware\RefuseRetiredAppBuilds::class,
+            // ⭐ অ্যাপ থেকে কাগজ খোলা আর নামানো — কোপাইলটের খাতায় (মালিক, ১১ নভেম্বর ২০২৬)
+            \App\Http\Middleware\RecordsVisits::class,
         ]);
 
         /*

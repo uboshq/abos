@@ -51,6 +51,7 @@
                             <th class="text-start">{{ __('notification::party.paper') }}</th>
                             <th class="text-start">{{ __('notification::party.party') }}</th>
                             <th class="text-start">{{ __('notification::party.phone') }}</th>
+                            <th class="text-start">{{ __('notification::party.channel') }}</th>
                             <th class="text-start">{{ __('notification::party.language') }}</th>
                             <th class="text-start">{{ __('notification::party.text') }}</th>
                         </tr>
@@ -63,6 +64,13 @@
                                 <td class="text-2xs">{{ __('notification::party.types.'.$row->document_type) }} <span class="tabular-nums">{{ $row->document_no }}</span></td>
                                 <td class="text-2xs">{{ $row->party_name ?? '—' }}</td>
                                 <td class="whitespace-nowrap text-2xs tabular-nums">+{{ $row->phone }}</td>
+                                {{-- ⓘ WhatsApp = খোলা হয়েছে; SMS = অফিসের ফোনের সারির অবস্থা (অপেক্ষায় → গেছে → পৌঁছেছে, বা যায়নি) --}}
+                                <td class="text-2xs" data-party-channel="{{ $row->channel }}">
+                                    {{ __('notification::party.channels.'.$row->channel) }}
+                                    @if ($row->channel === 'sms' && ($sms = ($smsStates ?? collect())->get($row->id)))
+                                        <span class="block text-(--color-ink-muted)" data-sms-state="{{ $sms->delivered_at !== null ? 'delivered' : $sms->status }}">{{ __('notification::sms.statuses.'.($sms->delivered_at !== null ? 'delivered' : $sms->status)) }}</span>
+                                    @endif
+                                </td>
                                 <td class="text-2xs">{{ __('notification::party.locales.'.$row->locale) }}</td>
                                 <td class="text-2xs">
                                     <details>

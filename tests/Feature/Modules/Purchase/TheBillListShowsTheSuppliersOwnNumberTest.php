@@ -146,14 +146,24 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
         // ⓘ প্রথম অনুরোধ ঠান্ডা — অনুমতি, সেটিং, মেনু প্রথমবার পড়ে; তুলনা কেবল গরম অনুরোধে
         $this->get(route('purchase.bill.index'))->assertOk();
         $few =$this->queriesFor(route('purchase.bill.index'));
+        $fewQueries = $this->lastQueries;
 
         foreach (['3', '4', '5', '6'] as $no) {
             $this->bill($no, lines: 2);
         }
         $many = $this->queriesFor(route('purchase.bill.index'));
 
-        $this->assertSame($few, $many, "দুই বিলে {$few}টা কোয়েরি, ছয় বিলে {$many}টা — কোনো কলাম সারিপ্রতি পড়ছে।");
+        // ⓘ লাল হলে কোন প্রশ্নটা বাড়তি, তা-ও বলে — Mac run of 050355e0c-এ 39 বনাম 40, এই পিসিতে সমান; কারণটা লালেই থাকুক
+        $extra = array_count_values($this->lastQueries);
+        foreach ($fewQueries as $q) {
+            $extra[$q] = ($extra[$q] ?? 0) - 1;
+        }
+        $extra = array_keys(array_filter($extra, fn (int $n): bool => $n !== 0));
+        $this->assertSame($few, $many, "দুই বিলে {$few}টা কোয়েরি, ছয় বিলে {$many}টা — কোনো কলাম সারিপ্রতি পড়ছে। আলাদা: ".implode(' ‖ ', $extra));
     }
+
+    /** @var list<string> শেষ অনুরোধের প্রশ্নগুলো */
+    private array $lastQueries = [];
 
     private function queriesFor(string $url): int
     {
@@ -161,6 +171,8 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
         DB::enableQueryLog();
         $this->get($url)->assertOk();
         DB::disableQueryLog();
+
+        $this->lastQueries = array_map(fn (array $q): string => (string) $q['query'], DB::getQueryLog());
 
         return count(DB::getQueryLog());
     }

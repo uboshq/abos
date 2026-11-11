@@ -45,9 +45,12 @@ final class EveryChartBarShowsItsValueTest extends TestCase
         // ⭐ এক রকম নয় — হোমে অন্তত চার ধরনের চার্ট (মালিক: "vino rokomer int standred graph")
         $kinds = array_unique(array_map(fn ($n) => $n->getAttribute('data-chart'), iterator_to_array($home->query('//*[@data-chart]'))));
         $this->assertGreaterThanOrEqual(4, count($kinds), '⛔ হোমের চার্ট প্রায় সব এক রকম: '.implode(', ', $kinds));
-        // ⓘ ফানেল বিক্রয়ের নিজের পাতায় (হোমে প্রতিটা মডিউলের প্রথম চার্ট)
-        $salesKinds = array_map(fn ($n) => $n->getAttribute('data-chart'), iterator_to_array($this->xpath($this->get(route('module.dashboard', ['module' => 'sales']))->getContent())->query('//*[@data-chart]')));
-        $this->assertContains('funnel', $salesKinds, '⛔ বিক্রয়ের ফানেল ফানেল হয়ে আঁকা হয়নি।');
+        // ⓘ ফানেল কেনার নিজের পাতায় (হোমে প্রতিটা মডিউলের প্রথম চার্ট)। ⓘ মালিক, 10 নভেম্বর 2026 রাত: বিক্রয়ের পাতা এখন চূড়ান্ত নমুনার বোর্ড
+        //   ([[SalesBoard]]) — তার ফানেল ফোনের ড্যাশবোর্ডে যায়, ফানেল হিসেবেই চিহ্নিত
+        $buyKinds = array_map(fn ($n) => $n->getAttribute('data-chart'), iterator_to_array($this->xpath($this->get(route('module.dashboard', ['module' => 'purchase']))->assertOk()->getContent())->query('//*[@data-chart]')));
+        $this->assertContains('funnel', $buyKinds, '⛔ কেনার ফানেল ফানেল হয়ে আঁকা হয়নি।');
+        $salesCharts = array_map(fn ($p) => $p->chart ?? null, app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for('sales', auth()->user())->panels);
+        $this->assertContains('funnel', $salesCharts, '⛔ বিক্রয়ের ফানেল ফোনে ফানেল হিসেবে যায় না।');
         $this->assertContains('donut', $kinds);
 
         foreach (['sales', 'inventory', 'accounts'] as $module) {

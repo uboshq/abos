@@ -116,7 +116,7 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
-                'finance', 'documents', 'promotion', 'hr'],
+                'finance', 'documents', 'promotion', 'hr', 'assistant'],
             $body['phoneModules'],
         );
 

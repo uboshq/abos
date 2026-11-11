@@ -59,6 +59,185 @@ final class FinanceCharts
         ];
     }
 
+    /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 3 — মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (10 নভেম্বর 2026 রাত):
+     * গ্রাহকের পাওনা (বয়স, DSO আর তার 6 মাসের রেখা), সরবরাহকারীর দেনা (মেয়াদ, DPO আর রেখা), তারল্য ও সুদের চার অনুপাত, নগদ চক্র।
+     * ⓘ ভাগ আর দিনগুলো এই ক্লাসের পুরনো চার্টের একই হিসাব ([[receivable()]], [[payable()]], [[cycle()]]) — দুই জায়গায় দুই সংখ্যা নয়।
+     * ⓘ নগদ অনুপাত = হাতের টাকা ÷ চলতি দেনা; দ্রুত অনুপাত = (পাওনা + টাকা) ÷ চলতি দেনা (মজুদ বাদ)।
+     * ⓘ সুদ শোধের ক্ষমতা = পরিচালন লাভ (নিট বিক্রি − বিক্রীত মালের খরচ − পরিচালন খরচ) ÷ সুদ খরচ, শেষ 90 দিনের; সুদ না থাকলে null।
+     *
+     * @return array<string, mixed>
+     */
+    public function position(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $user = auth()->user();
+        $wc = $this->workingCapital->on($today);
+        $owes = bcadd($wc['payable'], $wc['other'], 4);
+        $months = [];
+
+        for ($i = 5; $i >= 1; $i--) {
+            $months[] = $today->copy()->startOfMonth()->subMonthsNoOverflow($i - 1)->subDay();
+        }
+
+        $months[] = $today;
+        $trend = array_map(fn (Carbon $d) => $this->cycle($d), $months);
+
+        $from = $today->copy()->subDays(self::WINDOW_DAYS - 1);
+        $sales = $this->moved(StandardChart::NET_SALES, $from, $today);
+        $operating = bcsub(bcsub($sales, $this->moved([StandardChart::COST_OF_GOODS_SOLD], $from, $today), 4), $this->moved([StandardChart::OPERATING_EXPENSES], $from, $today), 4);
+        $interest = $this->moved([StandardChart::INTEREST_EXPENSE], $from, $today);
+        $before = $this->cycle($today->copy()->startOfMonth()->subDay());
+
+        return [
+            'receivable' => $user?->can('customer.report') ? $this->receivable($today) : null,
+            'payable' => $this->payable($today),
+            'dso' => array_map(fn (array $c) => $c['dso'], $trend),
+            'dpo' => array_map(fn (array $c) => $c['dpo'], $trend),
+            'dso_before' => $before['dso'],
+            'ratios' => [
+                'current' => $wc['ratio'],
+                'quick' => bccomp($owes, '0', 4) > 0 ? bcdiv(bcadd($wc['receivable'], $wc['money'], 4), $owes, 2) : null,
+                'cash' => bccomp($owes, '0', 4) > 0 ? bcdiv($wc['money'], $owes, 2) : null,
+                'interest' => bccomp($interest, '0', 4) > 0 ? bcdiv($operating, $interest, 1) : null,
+            ],
+            'cycle' => $this->cycle($today),
+            'cycle_before' => $before,
+            'daily_sales' => bcdiv($sales, (string) self::WINDOW_DAYS, 4),
+        ];
+    }
+
+    /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 4 — বিক্রি ও লাভের হার · 12 মাস, আর বাজেট থেকে ফারাক (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+     * ⓘ বিক্রি = নিট বিক্রি (বিক্রি − ফেরত − আদায়ে ছাড়); গ্রস মার্জিন = (বিক্রি − বিক্রীত মালের খরচ) ÷ বিক্রি; নিট মার্জিন = (সব আয় − সব খরচ) ÷ বিক্রি।
+     * ⓘ চলতি মাস = এ পর্যন্ত দিনের হারে পুরো মাসের অনুমান (estimate: true) — নমুনার হালকা বার।
+     * ⓘ বাজেট: মাসের বাজেট × পেরোনো দিন ÷ মাসের দিন বনাম এ পর্যন্ত প্রকৃত; আয়ে কম আর খরচে বেশি = প্রতিকূল। বাজেটের চাবি না থাকলে null।
+     *
+     * @return array{months: list<array{month: int, sales: string, gross: ?string, net: ?string, estimate: bool}>, budget: list<array{name: string, pct: ?int, good: bool}>|null, day: int}
+     */
+    public function performance(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $months = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $from = $today->copy()->startOfMonth()->subMonthsNoOverflow($i);
+            $to = $i === 0 ? $today->copy() : $from->copy()->endOfMonth();
+            $sales = $this->moved(StandardChart::NET_SALES, $from, $to);
+            $gross = bcsub($sales, $this->moved([StandardChart::COST_OF_GOODS_SOLD], $from, $to), 4);
+            $net = bcsub($this->moved([StandardChart::INCOME], $from, $to), $this->moved(['5000'], $from, $to), 4);
+            $pct = fn (string $v): ?string => bccomp($sales, '0', 4) > 0 ? bcdiv(bcmul($v, '100', 4), $sales, 1) : null;
+            $estimate = $i === 0 && $today->day < $today->daysInMonth;
+
+            $months[] = [
+                'month' => (int) $from->month,
+                'sales' => $estimate ? bcdiv(bcmul($sales, (string) $today->daysInMonth, 4), (string) $today->day, 4) : $sales,
+                'gross' => $pct($gross),
+                'net' => $pct($net),
+                'estimate' => $estimate,
+            ];
+        }
+
+        $budget = null;
+
+        if (auth()->user()?->can('finance.budget.view') && Schema::hasTable('fin_budgets')) {
+            $share = bcdiv((string) $today->day, (string) $today->daysInMonth, 6);
+            $budget = $this->budget->vsActual((int) $today->year, (int) $today->month, (int) $today->month)
+                ->groupBy(fn (array $r) => (int) $r['account']->id)
+                ->map(function ($rows) use ($share): array {
+                    $first = $rows->first();
+                    $planned = bcmul($rows->reduce(fn (string $c, array $r) => bcadd($c, $r['budget'], 4), '0'), $share, 4);
+                    $actual = $rows->reduce(fn (string $c, array $r) => bcadd($c, $r['actual'], 4), '0');
+                    $pct = bccomp($planned, '0', 4) > 0 ? (int) round((float) bcdiv(bcmul(bcsub($actual, $planned, 4), '100', 4), $planned, 4)) : null;
+
+                    return ['name' => (string) $first['account']->name(), 'pct' => $pct, 'good' => $pct === null || ($first['over_is_bad'] ? $pct <= 0 : $pct >= 0),
+                        'income' => ! $first['over_is_bad'], 'size' => (float) $planned];
+                })
+                ->sort(fn (array $a, array $b) => [$b['income'], $b['size']] <=> [$a['income'], $a['size']])
+                ->take(7)->map(fn (array $r) => ['name' => $r['name'], 'pct' => $r['pct'], 'good' => $r['good']])->values()->all();
+        }
+
+        return ['months' => $months, 'budget' => $budget, 'day' => (int) $today->day];
+    }
+
+    /**
+     * ⭐ অর্থের ড্যাশবোর্ড, সারি 7 — আর্থিক স্বাস্থ্য (রাডার), এ মাস আর গত মাস-শেষ; প্রতিটা মাপ 0–100 (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+     * ⓘ মাপগুলো প্রচলিত সীমায় সরলরেখায়: তারল্য = চলতি অনুপাত (2.0 = 100); দেনা শোধের ক্ষমতা = দ্রুত অনুপাত (1.5 = 100);
+     *   লাভজনকতা = শেষ 90 দিনের নিট মার্জিন (10% = 100, লোকসানে 0); আদায়ের গতি = DSO (15 দিন বা কম = 100, 90+ = 0);
+     *   নগদ চক্র = CCC (0 বা কম = 100, 120+ = 0); ঋণের বোঝা কম = মোট দায় ÷ মোট সম্পদ (0 = 100, 0.8+ = 0)।
+     * ⓘ মাপ না থাকলে (বিক্রি নেই) সেই কোণ null — রাডারে মাঝখানে; মোট নম্বর থাকা মাপগুলোর গড়, অন্তত তিনটা মাপ থাকলে তবেই।
+     *
+     * @return array{now: list<?int>, last: list<?int>, score: ?int}
+     */
+    public function health(?Carbon $today = null): array
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $at = function (Carbon $date): array {
+            $wc = $this->workingCapital->on($date);
+            $owes = bcadd($wc['payable'], $wc['other'], 4);
+            $cycle = $this->cycle($date);
+            $from = $date->copy()->subDays(self::WINDOW_DAYS - 1);
+            $sales = $this->moved(StandardChart::NET_SALES, $from, $date);
+            $net = bcsub($this->moved([StandardChart::INCOME], $from, $date), $this->moved(['5000'], $from, $date), 4);
+            $assets = $this->balance('1000', $date);
+            $debts = $this->balance('2000', $date);
+            $line = fn (?float $v, float $zero, float $full): ?int => $v === null ? null : (int) round(max(0, min(100, ($v - $zero) / ($full - $zero) * 100)));
+
+            return [
+                $line($wc['ratio'] === null ? null : (float) $wc['ratio'], 0, 2.0),
+                $line(bccomp($owes, '0', 4) > 0 ? (float) bcdiv(bcadd($wc['receivable'], $wc['money'], 4), $owes, 4) : null, 0, 1.5),
+                $line(bccomp($sales, '0', 4) > 0 ? (float) bcdiv(bcmul($net, '100', 4), $sales, 4) : null, 0, 10),
+                $line($cycle['dso'] === null ? null : (float) $cycle['dso'], 90, 15),
+                $line($cycle['ccc'] === null ? null : (float) $cycle['ccc'], 120, 0),
+                $line(bccomp($assets, '0', 4) > 0 ? (float) bcdiv($debts, $assets, 4) : null, 0.8, 0),
+            ];
+        };
+
+        $now = $at($today);
+        $have = array_values(array_filter($now, fn ($v) => $v !== null));
+
+        return ['now' => $now, 'last' => $at($today->copy()->startOfMonth()->subDay()), 'score' => count($have) < 3 ? null : (int) round(array_sum($have) / count($have))];
+    }
+
+    /**
+     * ⭐ তহবিলের ধারা · 12 মাস — মাস-শেষের নগদ + ব্যাংক + MFS ([[trend()]]-এর একই হিসাব)।
+     *
+     * @return array{points: list<array{date: string, total: string}>, change: string, up_months: int, peak_now: bool}
+     */
+    public function fundTrend(?Carbon $today = null): array
+    {
+        return $this->trend(($today ?? now())->copy()->startOfDay());
+    }
+
+    /** একটা খাতের (ও নিচের সব খাতের) জের তারিখ পর্যন্ত, দেখার নাগালে — [[moved()]]-এর একই পথ */
+    private function balance(string $code, Carbon $upto): string
+    {
+        $account = StandardChart::find($code);
+
+        if ($account === null) {
+            return '0';
+        }
+
+        $ids = $this->scope->viewBranchIds(auth()->user());
+        $total = '0';
+
+        foreach ($ids === null ? [null] : $ids as $branch) {
+            $total = bcadd($total, $account->balanceOn($upto->toDateString(), $branch), 4);
+        }
+
+        return $total;
+    }
+
+    /**
+     * ⭐ সামনের 6 মাসের ঋণের কিস্তি — অর্থের ড্যাশবোর্ডের সারি 5, ঋণের ঘরের নিচের বার ([[loansAndDeposits()]]-এর একই হিসাব)।
+     *
+     * @return list<array{month: string, instalments: string, deposits: string}>
+     */
+    public function instalments(?Carbon $today = null): array
+    {
+        return $this->loansAndDeposits(($today ?? now())->copy()->startOfDay())['months'];
+    }
+
     /** @return array{months: list<array{month: string, in: string, out: string}>, net: string, out_heavy: list<string>} */
     private function cashflow(): array
     {

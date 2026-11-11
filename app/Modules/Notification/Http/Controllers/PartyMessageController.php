@@ -100,6 +100,10 @@ class PartyMessageController extends Controller
         return view('notification::party.messages', [
             'menu' => $this->menu->forUser($user),
             'rows' => $rows,
+            // ⓘ SMS-এর সারিগুলোর অবস্থা — অফিসের ফোনের সারি থেকে, খাতার সারি ধরে
+            'smsStates' => \App\Models\SmsOutbox::query()->where('source', \App\Models\SmsOutbox::PARTY)
+                ->whereIn('source_id', collect($rows->items())->where('channel', PartyMessageTemplate::SMS)->pluck('id')->all() ?: [0])
+                ->get()->keyBy('source_id'),
             'filters' => $f,
             'senders' => User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->whereIn('id', PartyMessage::query()->select('sent_by')->distinct())->orderBy('name')->get(['id', 'name']),

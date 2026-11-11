@@ -35,6 +35,7 @@ use App\Modules\Finance\Services\HeadTotals;
 use App\Modules\Finance\Services\InsuranceDues;
 use App\Modules\Finance\Services\RentalDues;
 use App\Modules\Finance\Services\FinanceCharts;
+use App\Modules\Finance\Services\CashForecast;
 use App\Modules\Finance\Services\FundNews;
 use App\Modules\Finance\Services\FundPosition;
 use App\Modules\Finance\Services\LoanBox;
@@ -383,7 +384,10 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
             ],
 
-            // ⭐ চলতি মূলধন — সবার নিচে, মালিকের ছবির হুবহু (মালিক, ৯ নভেম্বর ২০২৬; [[WorkingCapital]])
+            // ⭐ পাতায় কেবল নিচের সারিগুলো — মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে)
+            board: true,
+
+            // ⭐ নমুনার সাত সারি, ক্রমে ([[FinanceBoard]], [[FinanceCharts]])
             sections: [
                 // ⭐ মোট তহবিলের ঘর — মাথায় (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FundPosition]]); নগদ/ব্যাংক/MFS-এর একই চাবি
                 [
@@ -396,46 +400,76 @@ final class FinanceDashboard implements ProvidesDashboard
                         return ['fund' => $fund, 'news' => app(FundNews::class)->items($fund)];
                     },
                 ],
-                // ⭐ আট ছোট চার্ট — তহবিলের সারির নিচে (মালিকের অনুমোদিত নমুনা, ১০ নভেম্বর ২০২৬; [[FinanceCharts]])
+                // ⭐ সারি 2 — তারল্য আগে: 13 সপ্তাহের পূর্বাভাস আর নগদ প্রবাহ বিবরণী (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL; [[FinanceBoard]])
                 [
-                    'view' => 'finance::dashboard.charts',
+                    'view' => 'finance::dashboard.board-liquidity',
                     'place' => 'top',
                     'permission' => 'accounts.view',
-                    'data' => fn (): array => ['charts' => app(FinanceCharts::class)->all()],
+                    'data' => fn (): array => ['forecast' => app(FinanceBoard::class)->forecast(), 'cashFlow' => app(FinanceBoard::class)->cashFlow()],
                 ],
+                // ⭐ সারি 3 — পাওনা, দেনা, তারল্য ও সুদের অনুপাত, নগদ চক্র ([[FinanceCharts::position()]])
                 [
-                    'view' => 'finance::dashboard.working-capital',
-                    'data' => fn () => ['wc' => app(WorkingCapital::class)->on(self::workingCapitalDate(), (int) request()->query('wc_span', '6'))],
-                ],
-                // ⭐ ঋণের ঘর — সবার নিচে (মালিক, ৯ নভেম্বর ২০২৬: "loan box sobar nice daw"; [[LoanBox]])
-                [
-                    'view' => 'finance::dashboard.loans',
+                    'view' => 'finance::dashboard.board-position',
+                    'place' => 'top',
                     'permission' => 'accounts.view',
-                    'data' => fn (): array => ['loans' => app(LoanBox::class)->on()],
+                    'data' => fn (): array => ['position' => app(FinanceCharts::class)->position()],
+                ],
+                // ⭐ সারি 4 — বিক্রি ও মার্জিন, বাজেট থেকে ফারাক, পরিশোধের ক্যালেন্ডার ([[FinanceCharts::performance()]], [[CashForecast::outgoingByDay()]])
+                [
+                    'view' => 'finance::dashboard.board-performance',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => [
+                        'performance' => app(FinanceCharts::class)->performance(),
+                        // ⓘ শনিবার থেকে 35 দিনের যতটা আজ থেকে সামনে — আজ থেকে 35 দিনই আনা যথেষ্ট
+                        'outgoing' => app(CashForecast::class)->outgoingByDay(35),
+                    ],
+                ],
+                // ⓘ আগের আট ছোট চার্ট (৯–১০ নভেম্বরের নমুনা) চূড়ান্ত নমুনায় নেই — তাদের অঙ্ক এখন সারি 2–5-এ, তাই ঘরটা সরানো
+                /*
+                 * ⭐ সারি 5 — চলতি মূলধন আর ঋণ, ঋণসীমা ও শর্ত (মালিকের চূড়ান্ত নমুনা 4h63xhNiy4m9KaJkZZQaEL)।
+                 * ⛔ চলতি মূলধন কেবল মালিকের চাবিতে (finance.working_capital.view; মালিক, 10 নভেম্বর 2026 সন্ধ্যা) — চাবি ছাড়া ঘরটাই নেই,
+                 * ঋণের ঘর তখন পুরো চওড়া। পুরো পাতা (তারিখ, 6/12 মাসের গড়) নিজের ঠিকানায় ([[WorkingCapitalController]])।
+                 */
+                [
+                    'view' => 'finance::dashboard.board-capital',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $wc = app(WorkingCapital::class)->on(Carbon::today());
+
+                        return [
+                            'wc' => auth()->user()?->can('finance.working_capital.view') ? $wc : null,
+                            'ratio' => $wc['ratio'],
+                            'loans' => app(LoanBox::class)->on(),
+                            'instalments' => app(FinanceCharts::class)->instalments(),
+                        ];
+                    },
+                ],
+                // ⭐ সারি 6 — টাকা কোন ব্যাংকে, চেকের পাইপলাইন, সঞ্চয় ও FDR, মূলধন-উত্তোলন-লাভ বণ্টন ([[FinanceBoard]])
+                [
+                    'view' => 'finance::dashboard.board-holdings',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(FinanceBoard::class);
+
+                        return ['banks' => $board->banks(), 'cheques' => $board->cheques(), 'deposits' => $board->deposits(), 'owners' => $board->owners()];
+                    },
+                ],
+                // ⭐ সারি 7 — আর্থিক স্বাস্থ্য, টাকা কোথা থেকে এল কোথায় গেল, তহবিলের ধারা ([[FinanceCharts::health()]], [[FinanceBoard::sourcesAndUses()]])
+                [
+                    'view' => 'finance::dashboard.board-overview',
+                    'place' => 'top',
+                    'permission' => 'accounts.view',
+                    'data' => fn (): array => [
+                        'health' => app(FinanceCharts::class)->health(),
+                        'flows' => app(FinanceBoard::class)->sourcesAndUses(),
+                        'trend' => app(FinanceCharts::class)->fundTrend(),
+                    ],
                 ],
             ],
         );
-    }
-
-    /**
-     * চলতি মূলধনের তারিখ — ঠিকানার `wc_date`; না থাকলে, ভুল হলে বা আগামী দিনের হলে আজ (ভবিষ্যতের খাতা নেই)।
-     */
-    private static function workingCapitalDate(): Carbon
-    {
-        $today = Carbon::today();
-        $asked = request()->query('wc_date');
-
-        if (! is_string($asked) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $asked) !== 1) {
-            return $today;
-        }
-
-        try {
-            $date = Carbon::createFromFormat('Y-m-d', $asked)->startOfDay();
-        } catch (\Throwable) {
-            return $today;
-        }
-
-        return $date->greaterThan($today) ? $today : $date;
     }
 
     /**
