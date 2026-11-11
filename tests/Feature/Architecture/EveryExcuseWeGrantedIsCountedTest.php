@@ -493,7 +493,16 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     // ⓘ ২৬ অক্টোবর ২০২৬ (fe): main-এর +১ (release.notes, 460) আর cb/money-display-এর +৪ (459 থেকে 463) একসাথে = 464
     // ⓘ ৩০ অক্টোবর ২০২৬ (fe): cb/list-summary-এর +১৩ (৪৫৯ → ৪৭২) আর main-এর +৫ (৪৫৯ → ৪৬৪) একসাথে = ৪৭৭
     // ⓘ ৩১ অক্টোবর ২০২৬ (fe): +১ EveryListSummaryAddsDecimalsTest::KNOWN — অনুমোদনের ইনবক্সের মোট (দফা ২১), স্থায়ী, কাগজের তালিকা নয়
-    private const CEILING = 478;
+    /*
+     * ── ⚠️ ৪৭৮ → ৫১৫, ১১ নভেম্বর ২০২৬ (fe, চার বোর্ড + SMS ফোন + কোপাইলট; Mac run of 80cd680a4) ──────────────────────
+     *   +২৯ MoneyIsNeverAFloatTest::FLOAT_IS_DELIBERATE — চার বোর্ডের ২৭টা ফাইল (ভাগ, বৃদ্ধি %, চার্টের মাপ, ছোট করে দেখানো ৳ লাখ/কোটি;
+     *       জমা হয় না, পোস্ট হয় না), ForecastEngine (আনুমানিক হার), ProductNeedTool (পরিমাণে কমা)। ⛔ দেনা: বোর্ডের ২৭টা bcmath-এ এলে −২৭
+     *       — fe-র তালিকায়।
+     *   +৮  কোপাইলট আর SMS ফোনের নিজের খাতা ও দরজা — AssistantEvent/SmsOutbox (নিজেরাই খাতা), SMS ফোনের দুই দরজা (নিজের চাবি), তার
+     *       কোম্পানির দরজা, কোপাইলটের খাতার পাতা (টাকা নেই), "এটা ঠিক আছে" আর তাগাদা পাঠানো (কাগজ নেই), SMS ফোনের পাতা (হাতে গোনা),
+     *       PurchaseStockSupply-র লাইন-টেবিল — প্রতিটা নিজের তালিকায় কারণসহ।
+     */
+    private const CEILING = 515;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

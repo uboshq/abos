@@ -175,7 +175,11 @@ final class AssistantEngine
             ->where('updated_at', '>=', Carbon::now()->subSeconds(self::VISIT_MERGE_SECONDS))->latest('id')->first();
 
         if ($same !== null) {
-            $same->touch();
+            /*
+             * ⓘ সবসময় ঠিক একটা লেখা — Eloquent-এর touch() একই সেকেন্ডে কিছুই লেখে না, পরের সেকেন্ডে লেখে; তাতে পাতার প্রশ্নের সংখ্যা
+             *   ঘড়ির ওপর নির্ভর করত, আর প্রশ্ন-গোনা ১২টা দাবি ধীর যন্ত্রে এলোমেলো লাল হত (Mac run of 80cd680a4: ক্রয় বিলের তালিকা 39 বনাম 40)।
+             */
+            AssistantEvent::query()->whereKey($same->id)->update(['updated_at' => Carbon::now()]);
 
             return;
         }
