@@ -101,6 +101,8 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Finance\Http\Controllers\PlanController' => 'পরিকল্পনার ধাপ কোডে লেখা, স্থির।',
         'App\Modules\Finance\Http\Controllers\HandLoanController' => 'চালু হাতধার — শোধ হলে তালিকা থেকে যায়।',
         'App\Modules\Inventory\Http\Controllers\StockOverviewController' => 'মজুদের ড্যাশবোর্ড — যোগফল ও গুদামের ড্রপডাউন।',
+        // ⭐ অফিসের SMS ফোন (নমুনা ধাপ ২, ১১ নভেম্বর ২০২৬)
+        'App\Modules\Notification\Http\Controllers\SmsPhoneController' => 'অফিসের SMS ফোন — কোম্পানিতে এক-দুইটা, মালিক হাতে বসান; SMS-এর সারি নিজেই শেষ ৫০-এ কাটা (RECENT)।',
 
         /*
          * ── ⭐ ১০ অক্টোবর ২০২৬-এ যোগ — প্রতিটা পড়ে দেখা, "আজ সারি কম" নয় ───────────────

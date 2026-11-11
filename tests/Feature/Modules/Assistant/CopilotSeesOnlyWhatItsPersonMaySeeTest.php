@@ -147,6 +147,26 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
     }
 
     /** ⭐ পূর্বাভাস — সপ্তাহের দিনের ধরন: শুক্রবার ২, বাকি দিন ১০ হলে আগামী ৭ দিন = ৬×১০ + ২ */
+    /** ⭐ ফোনের কোপাইলট — একই ইঞ্জিন; প্রশ্ন খাতায় "অ্যাপ"; চাবি ছাড়া দরজা বন্ধ (মালিক, ১১ নভেম্বর ২০২৬) */
+    public function test_the_phone_gets_the_same_copilot_by_the_same_key(): void
+    {
+        \Laravel\Sanctum\Sanctum::actingAs($this->owner, [\App\Http\Controllers\Api\AuthController::APP]);
+
+        $today = $this->getJson('/api/v1/copilot/today')->assertOk()->json();
+        $this->assertSame('Copilot', $today['name']);
+        $this->assertSame(array_column(app(Watch::class)->for($this->owner), 'id'), array_column($today['watch'], 'id'), '⛔ ফোনের নজর আর ওয়েবের নজর আলাদা।');
+
+        $answer = $this->postJson('/api/v1/copilot/ask', ['q' => 'aj koto bikri holo'])->assertOk()->json();
+        $this->assertSame('answered', $answer['state']);
+        $this->assertSame('app', AssistantEvent::query()->where('kind', AssistantEvent::QUESTION)->latest('id')->value('channel'), '⛔ ফোনের প্রশ্ন খাতায় "অ্যাপ" নয়।');
+
+        $this->postJson('/api/v1/copilot/answers/'.$answer['answer_id'].'/feedback', ['value' => -1])->assertOk();
+        $this->assertSame(-1, (int) AssistantEvent::query()->whereKey($answer['answer_id'])->value('feedback'));
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->person(['sales.invoice.view']), [\App\Http\Controllers\Api\AuthController::APP]);
+        $this->getJson('/api/v1/copilot/today')->assertForbidden();
+    }
+
     public function test_the_forecast_follows_the_weekday_pattern(): void
     {
         $history = [];

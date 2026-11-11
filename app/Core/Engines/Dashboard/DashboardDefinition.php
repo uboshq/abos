@@ -93,7 +93,12 @@ final class DashboardDefinition
      */
     public function forPage(): self
     {
-        if (! $this->board) {
+        /*
+         * ⓘ বোর্ডের কোনো সারির চাবি যাঁর নেই (যেমন কেবল মূলধনের চাবি — অর্থের সব সারি হিসাবের চাবি চায়), তাঁর পাতা খালি হত, আর খালি
+         *   ড্যাশবোর্ড ভাঙে (৫০০; Mac run of 050355e0c, EveryModuleDashboardHasItsOwnDoorTest)। ⭐ তখন আগের কার্ড-চার্টের পাতা — চাবি মেনে
+         *   যা তাঁর দেখার, সেটুকুই ([[DashboardEngine::for()]] আগেই ছেঁকেছে)।
+         */
+        if (! $this->board || $this->sections === []) {
             return $this;
         }
 
