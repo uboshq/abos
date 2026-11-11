@@ -44,7 +44,7 @@
     <section data-sales-path style="grid-column: span 2; {{ $card }} gap: 0.5rem; border-top: 0.25rem solid var(--color-dash-10b981)">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1rem; font-weight: 700">{{ __('sales::board.r3.path') }}</h2>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-10b981)">—</b> {{ __('sales::board.r3.this_month') }} &#160; @if ($c['target'] !== null)<b style="color: var(--color-dash-94a3b8)">- -</b> {{ __('sales::board.r3.target_path') }} &#160; @endif<b style="color: var(--color-dash-f59e0b)">—</b> {{ __('sales::board.r3.last_year') }} &#160; <b style="color: var(--color-dash-8b5cf6)">· ·</b> {{ __('sales::board.r3.forecast') }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-10b981)">—</b> {{ __('sales::board.r3.this_month') }} &nbsp; @if ($c['target'] !== null)<b style="color: var(--color-dash-94a3b8)">- -</b> {{ __('sales::board.r3.target_path') }} &nbsp; @endif<b style="color: var(--color-dash-f59e0b)">—</b> {{ __('sales::board.r3.last_year') }} &nbsp; <b style="color: var(--color-dash-8b5cf6)">· ·</b> {{ __('sales::board.r3.forecast') }}</span>
         </div>
         <svg role="img" aria-label="{{ __('sales::board.r3.path_label') }}" viewBox="0 0 760 270" style="width: 100%; height: 16.875rem">
             <defs><linearGradient id="salesPathFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--color-dash-10b981)" stop-opacity="0.4"></stop><stop offset="1" stop-color="var(--color-dash-10b981)" stop-opacity="0"></stop></linearGradient></defs>

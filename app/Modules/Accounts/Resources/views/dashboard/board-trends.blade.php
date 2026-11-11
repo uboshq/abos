@@ -69,6 +69,6 @@
             <polyline points="{{ $expenseLine }}" fill="none" stroke="var(--color-dash-f43f5e)" stroke-width="3" stroke-dasharray="6 4"></polyline>
             @foreach ($pts as $i => $m)<text x="{{ $mx($i) }}" y="214" text-anchor="middle" font-size="10" fill="var(--color-dash-6b7280)">{{ $monthShort[$m['month']] }}</text>@endforeach
         </svg>
-        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-0ea5e9)">—</b> {{ __('accounts::board.r5.income') }} &#160; <b style="color: var(--color-dash-f43f5e)">- -</b> {{ __('accounts::board.r5.expense') }} · {{ __('accounts::board.r5.ie_note') }}</span>
+        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-0ea5e9)">—</b> {{ __('accounts::board.r5.income') }} &nbsp; <b style="color: var(--color-dash-f43f5e)">- -</b> {{ __('accounts::board.r5.expense') }} · {{ __('accounts::board.r5.ie_note') }}</span>
     </section>
 </div>

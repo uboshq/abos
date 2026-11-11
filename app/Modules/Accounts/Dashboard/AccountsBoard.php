@@ -52,7 +52,7 @@ final class AccountsBoard
         // 2 — ব্যাংকে না-মেলা বিবরণীর সারি
         $unmatched = BankStatementLine::query()->unmatched()->get(['bank_account_id', 'debit', 'credit']);
         $banks = $unmatched->groupBy('bank_account_id');
-        $names = Account::query()->whereIn('id', $banks->keys()->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+        $names = Account::query()->postable()->whereIn('id', $banks->keys()->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
         $out[] = ['key' => 'bank', 'n' => (string) $unmatched->count(),
             'detail' => __('accounts::board.p.bank_detail', ['n' => $banks->count(), 'value' => self::short($unmatched->reduce(fn (string $c, $l) => bcadd($c, bcadd((string) $l->debit, (string) $l->credit, 4), 4), '0'))]),
             'note' => $banks->sortByDesc(fn ($ls) => $ls->count())->take(2)->map(fn ($ls, $id) => ($names[(int) $id] ?? '').' '.$ls->count())->implode(' · '),
@@ -107,7 +107,7 @@ final class AccountsBoard
             'sev' => $drafts->isEmpty() ? 'ok' : 'week', 'href' => self::link('accounts.voucher.list', ['status' => DocumentStatus::DRAFT])];
 
         // 10 — সাসপেন্স/অচেনা জমা: নামে "Suspense" বা "অচেনা" এমন পাতা-খাতের জের
-        $suspense = Account::query()->where(fn ($q) => $q->where('name_en', 'like', '%Suspense%')->orWhere('name_bn', 'like', '%অচেনা%')->orWhere('name_bn', 'like', '%সাসপেন্স%'))
+        $suspense = Account::query()->postable()->where(fn ($q) => $q->where('name_en', 'like', '%Suspense%')->orWhere('name_bn', 'like', '%অচেনা%')->orWhere('name_bn', 'like', '%সাসপেন্স%'))
             ->get()->reduce(fn (string $c, Account $a) => bcadd($c, $a->balanceInView(), 4), '0');
         $out[] = ['key' => 'suspense', 'n' => self::short($suspense), 'detail' => (string) __(bccomp($suspense, '0', 4) === 0 ? 'accounts::board.p.suspense_clear' : 'accounts::board.p.suspense_left'),
             'note' => '', 'sev' => bccomp($suspense, '0', 4) === 0 ? 'ok' : 'today', 'href' => self::link('accounts.coa.index')];
@@ -309,7 +309,7 @@ final class AccountsBoard
             ->groupBy('ledger_entries.account_id')
             ->selectRaw('ledger_entries.account_id as id, SUM(ledger_entries.debit - ledger_entries.credit) as v')
             ->havingRaw('SUM(ledger_entries.debit - ledger_entries.credit) > 0')->get();
-        $names = Account::query()->whereIn('id', $rows->pluck('id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+        $names = Account::query()->postable()->whereIn('id', $rows->pluck('id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
         $list = $rows->map(fn ($r) => ['name' => (string) ($names[(int) $r->id] ?? ''), 'value' => bcadd((string) $r->v, '0', 4)])
             ->sort(fn (array $a, array $b) => bccomp($b['value'], $a['value'], 4))->values();
         $top = $list->take(7)->all();
@@ -450,7 +450,7 @@ final class AccountsBoard
         $lastTo = $lastFrom->copy()->addDays($today->day - 1)->min($lastFrom->copy()->endOfMonth());
         $last = $this->expenseByAccount($lastFrom, $lastTo);
         $ids = collect(array_keys($now + $last))->sortByDesc(fn ($id) => max((float) ($now[$id] ?? 0), (float) ($last[$id] ?? 0)))->take(6)->values();
-        $names = Account::query()->whereIn('id', $ids->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+        $names = Account::query()->postable()->whereIn('id', $ids->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
 
         return $ids->map(function ($id) use ($now, $last, $names): array {
             $n = $now[$id] ?? '0';
@@ -580,7 +580,7 @@ final class AccountsBoard
         $rows = \App\Models\LedgerEntry::query()->tap(fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'ledger_entries.branch_id'))
             ->where('trx_date', '>=', Carbon::today()->startOfMonth()->toDateString())
             ->groupBy('account_id')->selectRaw('account_id, SUM(debit + credit) as v')->orderByDesc('v')->limit(7)->get();
-        $names = Account::query()->whereIn('id', $rows->pluck('account_id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
+        $names = Account::query()->postable()->whereIn('id', $rows->pluck('account_id')->all() ?: [0])->get()->mapWithKeys(fn (Account $a) => [(int) $a->id => $a->name()]);
 
         return $rows->map(fn ($r) => ['name' => (string) ($names[(int) $r->account_id] ?? ''), 'value' => bcadd((string) $r->v, '0', 4)])->values()->all();
     }

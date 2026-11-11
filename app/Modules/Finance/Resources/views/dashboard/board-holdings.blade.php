@@ -88,7 +88,7 @@
             <span style="font-size: 0.8125rem; color: var(--color-dash-6b7280)">{{ __('finance::board.r6.no_fdr') }}</span>
         @else
             <div style="position: relative; height: 8.125rem; margin-top: 0.375rem">
-                <span style="position: absolute; left: 0; right: 0; top: 3.625rem; height: 4px; background: linear-gradient(90deg, var(--color-dash-99f6e4), var(--color-dash-14b8a6), var(--color-dash-6366f1)); border-radius: 999px"></span>
+                <span style="position: absolute; left: 0; right: 0; top: 3.625rem; height: 0.25rem; background: linear-gradient(90deg, var(--color-dash-99f6e4), var(--color-dash-14b8a6), var(--color-dash-6366f1)); border-radius: 999px"></span>
                 @foreach ($deposits['rows'] as $i => $f)
                     @php
                         $r = round(14 + 14 * (float) $f['principal'] / $fdrPeak);
@@ -119,7 +119,7 @@
                 @endforeach
             </div>
             <div style="display: flex; gap: 0.5rem; font-size: 0.6875rem; color: var(--color-dash-6b7280)">@foreach ($owners['months'] as $m)<span style="flex: 1 1 0; text-align: center">{{ $monthShort[$m['month']] }}</span>@endforeach</div>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-8b5cf6)">■</b> {{ __('finance::board.r6.capital') }} &#160; <b style="color: var(--color-dash-f472b6)">■</b> {{ __('finance::board.r6.drawn') }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-8b5cf6)">■</b> {{ __('finance::board.r6.capital') }} &nbsp; <b style="color: var(--color-dash-f472b6)">■</b> {{ __('finance::board.r6.drawn') }}</span>
         </section>
     @endif
 </div>

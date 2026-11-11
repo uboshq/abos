@@ -64,7 +64,7 @@
     <section data-fin-forecast style="grid-column: span 2; {{ $card }} box-shadow: 0 0.5rem 1.5rem var(--color-dash-239-68-68-a10); border-top: 0.3125rem solid var(--color-dash-ef4444)">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1.0625rem; font-weight: 800">{{ __('finance::board.fc.title') }}</h2>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-4f46e5)">—</b> {{ __('finance::board.fc.line') }} &#160; <b style="color: var(--color-dash-16a34a)">■</b> {{ __('finance::board.fc.up') }} &#160; <b style="color: var(--color-dash-ef4444)">■</b> {{ __('finance::board.fc.down') }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-4f46e5)">—</b> {{ __('finance::board.fc.line') }} &nbsp; <b style="color: var(--color-dash-16a34a)">■</b> {{ __('finance::board.fc.up') }} &nbsp; <b style="color: var(--color-dash-ef4444)">■</b> {{ __('finance::board.fc.down') }}</span>
         </div>
         <svg role="img" aria-label="{{ __('finance::board.fc.label') }}" viewBox="0 0 760 330" style="width: 100%; height: 20.625rem">
             <defs><linearGradient id="finFcFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--color-dash-6366f1)" stop-opacity="0.45"></stop><stop offset="1" stop-color="var(--color-dash-6366f1)" stop-opacity="0.02"></stop></linearGradient></defs>

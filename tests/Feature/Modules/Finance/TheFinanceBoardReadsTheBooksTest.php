@@ -96,6 +96,11 @@ final class TheFinanceBoardReadsTheBooksTest extends TestCase
     /** ⭐ পূর্বাভাস আজকের তহবিল থেকে শুরু, 13 সপ্তাহ, সপ্তাহ-শেষের তহবিল = আগের + নিট; নিরাপদ সীমা = দিনে গড় বেরোনো × 14 */
     public function test_the_thirteen_week_forecast_starts_from_todays_fund_and_carries_each_week(): void
     {
+        // ⓘ টাকা বেরোনো চাই — নাহলে দৈনিক বেরোনো শূন্য, আর "দুই সপ্তাহ" আর "এক সপ্তাহ"-র সীমা দুটোই শূন্য (FB3 বেঁচে ছিল, Mac run of 050355e0c)
+        $till = Account::query()->where('money_kind', Account::CASH)->postable()->active()->orderBy('code')->firstOrFail();
+        $this->journal(Carbon::today()->subDays(3)->toDateString(), [[$till->id, '50000', null], [StandardChart::find(StandardChart::OWNER_CAPITAL)->id, null, '50000']]);
+        $this->journal(Carbon::today()->subDays(2)->toDateString(), [[StandardChart::find(StandardChart::RENT)->id, '30000', null], [$till->id, null, '30000']]);
+
         $f = app(FinanceBoard::class)->forecast();
 
         $this->assertCount(14, $f['points'], '⛔ আজ + 13 সপ্তাহ নয়।');
@@ -105,6 +110,7 @@ final class TheFinanceBoardReadsTheBooksTest extends TestCase
             $this->assertSame(Carbon::today()->addDays($i * 7)->toDateString(), $w['from'], '⛔ সপ্তাহ আজ থেকে 7 দিনের টুকরো নয়।');
         }
         $fund = app(\App\Modules\Finance\Services\FundPosition::class)->on();
+        $this->assertSame(1, bccomp($fund['daily_out'], '0', 4), 'প্রস্তুতিটাই ভুল — দৈনিক বেরোনো শূন্য।');
         $this->assertSame(0, bccomp(bcmul($fund['daily_out'], '14', 4), $f['floor'], 4), '⛔ নিরাপদ সীমা দুই সপ্তাহের গড় বেরোনো নয়।');
     }
 

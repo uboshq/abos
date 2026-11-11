@@ -68,7 +68,7 @@
                 <div title="{{ \Illuminate\Support\Carbon::parse($d['date'])->format('j M') }} · {{ __('inventory::board.y.in') }} {{ $short($d['in']) }} · {{ __('inventory::board.y.out') }} {{ $short($d['out']) }}" style="flex: 1 1 0; display: flex; gap: 1px; align-items: flex-end; height: 100%"><span style="flex: 1 1 0; height: {{ $bar($d['in']) }}rem; background: linear-gradient(180deg, var(--color-dash-4ade80), var(--color-dash-16a34a)); border-radius: 3px 3px 0 0"></span><span style="flex: 1 1 0; height: {{ $bar($d['out']) }}rem; background: linear-gradient(180deg, var(--color-dash-fdba74), var(--color-dash-ea580c)); border-radius: 3px 3px 0 0"></span></div>
             @endforeach
         </div>
-        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-16a34a)">■</b> {{ __('inventory::board.y.in') }} {{ $short($flow['in']) }} &#160; <b style="color: var(--color-dash-ea580c)">■</b> {{ __('inventory::board.y.out') }} {{ $short($flow['out']) }}@if ($flow['quiet'] !== null) · {{ __('inventory::board.y.quiet', ['day' => __('inventory::board.y.weekdays')[$flow['quiet']]]) }}@endif</span>
+        <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-16a34a)">■</b> {{ __('inventory::board.y.in') }} {{ $short($flow['in']) }} &nbsp; <b style="color: var(--color-dash-ea580c)">■</b> {{ __('inventory::board.y.out') }} {{ $short($flow['out']) }}@if ($flow['quiet'] !== null) · {{ __('inventory::board.y.quiet', ['day' => __('inventory::board.y.weekdays')[$flow['quiet']]]) }}@endif</span>
     </section>
 
     <section data-inv-space style="{{ $card }} gap: 0.5rem; border-top: 0.3125rem solid var(--color-dash-0ea5e9)">

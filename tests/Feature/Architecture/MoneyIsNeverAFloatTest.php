@@ -233,7 +233,41 @@ class MoneyIsNeverAFloatTest extends TestCase
      *
      * @var array<string, string> ফাইল => কারণ
      */
+    /** চার বোর্ডের একই কারণ — একবার লেখা, প্রতিটা ফাইলে একই সত্য */
+    private const BOARD_FIGURES = 'বোর্ডের দেখানো অঙ্ক — ভাগ, বৃদ্ধি %, চার্টের মাপ, ছোট করে দেখানো টাকা (৳ লাখ/কোটি); জমা বা পোস্ট হয় না, সমান-কিনা মেলানো হয় না';
+
     private const FLOAT_IS_DELIBERATE = [
+        // ⭐ চার মডিউলের বোর্ড (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬ রাত) — ভাগ, বৃদ্ধি %, চার্টের মাপ আর ছোট করে দেখানো অঙ্ক (৳ লাখ/কোটি, এক দশমিক);
+        //   কোথাও জমা হয় না, খাতায় ওঠে না, সমান-কিনা মেলানো হয় না; বইয়ের সাথে মেলার অঙ্ক (নিট, সম্পদ, জের) bcmath-এ। ⓘ পরের ধাপে bcmath-এ আনা — fe-র তালিকায়
+        'app/Modules/Accounts/Dashboard/AccountsBoard.php' => self::BOARD_FIGURES,
+        'app/Modules/Accounts/Resources/views/dashboard/board-pipeline.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Accounts/Resources/views/dashboard/board-review.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Accounts/Resources/views/dashboard/board-statements.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Accounts/Resources/views/dashboard/board-trends.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Dashboard/FinanceBoard.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-capital.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-holdings.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-liquidity.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-overview.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-performance.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Resources/views/dashboard/board-position.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Finance/Services/FinanceCharts.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Dashboard/InventoryBoard.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Resources/views/dashboard/board-flow.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Resources/views/dashboard/board-intake.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Resources/views/dashboard/board-trend.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Resources/views/dashboard/board-watch.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Inventory/Resources/views/dashboard/board-yard.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Dashboard/SalesBoard.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-customers.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-mix.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-path.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-profit.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-reach.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-team.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Resources/views/dashboard/board-top.blade.php' => self::BOARD_FIGURES,
+        'app/Modules/Sales/Assistant/ProductNeedTool.php' => 'কোপাইলটের উত্তরে পরিমাণ দেখানো — পূর্ণ সংখ্যায় কমা বসানো (number_format), হিসাব ForecastEngine-এ',
+        'app/Core/Engines/Forecast/ForecastEngine.php' => 'পূর্বাভাস — দিনের গড় হার, সপ্তাহের দিনের গুণক, মজুদ কত দিন চলবে; আনুমানিক সংখ্যা, কোথাও জমা হয় না, খাতায় ওঠে না (কোপাইলট, ১১ নভেম্বর ২০২৬)',
         // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল): চারটাই টাকা জমা বা গোনা নয় — পড়ে মিলিয়ে দেখা
         'app/Core/Services/LoginPlace.php' => 'লগইনের জায়গা — অক্ষাংশ/দ্রাঘিমাংশ আর নির্ভুলতার মিটার, টাকা নয়',
         'app/Modules/Sales/Http/Requests/DirectSaleRules.php' => 'তুলনা — খরচ শূন্যের বেশি কি না, গোল করার সীমা পেরোল কি না; টাকা জমা হয় সেবায়, bcmath-এ',

@@ -77,6 +77,10 @@ final class TheStockDashboardShowsItsMoneyTest extends TestCase
         $this->assertStringNotContainsString('data-inv-wh', $html, '⛔ খরচের চাবি ছাড়াই গুদাম ধরে মজুদের মূল্য দেখা গেল।');
         $this->assertStringNotContainsString('data-inv-roll', $html, '⛔ খরচের চাবি ছাড়াই মজুদের মূল্যের হিসাব দেখা গেল।');
 
+        // ⛔ বোর্ড নিজেও — পাতার সারির চাবি ছাড়াও (ফোন, হোম, কোপাইলট বোর্ড সরাসরি পড়ে): খরচের চাবি ছাড়া টাকার ধারা নেই (IB2 বেঁচে ছিল)
+        $this->actingAs($clerk->fresh());
+        $this->assertNull(app(\App\Modules\Inventory\Dashboard\InventoryBoard::class)->trend(), '⛔ খরচের চাবি ছাড়াই বোর্ড টাকার ধারা দিল।');
+
         // ⛔ বোর্ডের বাকি ঘরে একটাও টাকার অঙ্ক নয় — সব কেনা দামে; জায়গায় "আছে, কিন্তু আপনার জন্য নয়" চিহ্ন
         $board = substr($html, (int) strpos($html, 'data-inv-problems'));
         $this->assertStringNotContainsString('৳', $board, '⛔ খরচের চাবি ছাড়াই বোর্ডে টাকার অঙ্ক।');

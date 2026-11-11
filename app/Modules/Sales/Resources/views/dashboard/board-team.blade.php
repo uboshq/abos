@@ -68,7 +68,7 @@
                 @foreach ($topTwo as $i => $sr)<polygon points="{{ $poly(array_map(fn ($v) => max(0.04, $v / 100), $sr['values'])) }}" fill="{{ $radarPaint[$i][1] }}" stroke="{{ $radarPaint[$i][0] }}" stroke-width="3"></polygon>@endforeach
                 @foreach ($labels as $l)<text x="{{ $l['x'] }}" y="{{ $l['y'] }}" text-anchor="{{ $l['a'] }}" font-size="10" fill="var(--color-dash-374151)">{{ $l['t'] }}</text>@endforeach
             </svg>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)">@foreach ($topTwo as $i => $sr)<b style="color: {{ $radarPaint[$i][0] }}">■</b> {{ $sr['name'] }} &#160; @endforeach</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)">@foreach ($topTwo as $i => $sr)<b style="color: {{ $radarPaint[$i][0] }}">■</b> {{ $sr['name'] }} &nbsp; @endforeach</span>
         @endif
     </section>
 

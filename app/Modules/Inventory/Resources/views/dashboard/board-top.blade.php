@@ -17,8 +17,8 @@
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1.1875rem; font-weight: 800">{{ __('inventory::board.problems') }}</h2>
             <span style="font-size: 0.8125rem; color: var(--color-dash-4b5563)">
-                <b style="color: var(--color-dash-dc2626)">●</b> {{ __('inventory::board.sev.urgent') }} &#160;
-                <b style="color: var(--color-dash-ea580c)">●</b> {{ __('inventory::board.sev.today_long') }} &#160;
+                <b style="color: var(--color-dash-dc2626)">●</b> {{ __('inventory::board.sev.urgent') }} &nbsp;
+                <b style="color: var(--color-dash-ea580c)">●</b> {{ __('inventory::board.sev.today_long') }} &nbsp;
                 <b style="color: var(--color-dash-ca8a04)">●</b> {{ __('inventory::board.sev.week') }}
             </span>
         </div>

@@ -79,7 +79,12 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
         foreach ($rows as $row) {
             $door = route('module.dashboard', ['module' => $row['module']]);
             $this->assertStringContainsString('href="'.e($door).'"', $pictures, "\"{$row['module']}\"-এর চার্টে নিজের পর্দার দরজা নেই।");
-            $own = $this->actingAs($owner)->get($door)->assertOk()->viewData('dashboard');
+            $this->actingAs($owner)->get($door)->assertOk();
+            // ⓘ মডিউলের পুরো সংজ্ঞা, পাতার রূপ নয় — মালিকের চূড়ান্ত নমুনার পাতা (বোর্ড, ১০ নভেম্বর ২০২৬ রাত) চার্ট-তালিকা আঁকে না,
+            //   কিন্তু হোম সেগুলো সংজ্ঞা থেকেই পড়ে ([[DashboardDefinition::forPage()]])
+            //   হোমের বাছা সময়েই (আজ/এ মাস/এ বছর) — সময় মানা চার্টের নাম সময়ের সাথে বদলায় ([[HomePeriod::chosen()]])
+            $own = \App\Core\Dashboard\HomePeriod::during((string) $response->viewData('period'),
+                fn () => app(\App\Core\Engines\Dashboard\DashboardEngine::class)->for($row['module'], $owner));
 
             /*
              * ⭐ মডিউল হোমের জন্য একটা তালিকা চিহ্নিত করলে ([[Listing::$onHome]], মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬ — অনুমোদনের

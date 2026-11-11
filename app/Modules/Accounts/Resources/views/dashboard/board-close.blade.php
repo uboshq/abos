@@ -18,7 +18,7 @@
     <section data-acc-timeline style="grid-column: span 2; {{ $card }} gap: 0.5rem; border-top: 0.3125rem solid var(--color-dash-6366f1)">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1.0625rem; font-weight: 800">{{ __('accounts::board.r4.timeline', ['month' => __('accounts::board.months')[$c['month']]]) }}</h2>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-10b981)">■</b> {{ __('accounts::board.r4.done') }} &#160; <b style="color: var(--color-dash-f59e0b)">■</b> {{ __('accounts::board.r4.doing') }} &#160; <b style="color: var(--color-dash-cbd5e1)">■</b> {{ __('accounts::board.r4.todo') }} &#160; <b style="color: var(--color-dash-ef4444)">|</b> {{ __('accounts::board.r4.target', ['n' => $target]) }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-10b981)">■</b> {{ __('accounts::board.r4.done') }} &nbsp; <b style="color: var(--color-dash-f59e0b)">■</b> {{ __('accounts::board.r4.doing') }} &nbsp; <b style="color: var(--color-dash-cbd5e1)">■</b> {{ __('accounts::board.r4.todo') }} &nbsp; <b style="color: var(--color-dash-ef4444)">|</b> {{ __('accounts::board.r4.target', ['n' => $target]) }}</span>
         </div>
         <div style="display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.375rem 0.75rem; font-size: 0.75rem; align-items: center">
             <span></span>

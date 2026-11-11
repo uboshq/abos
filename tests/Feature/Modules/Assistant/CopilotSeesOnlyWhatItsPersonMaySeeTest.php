@@ -7,10 +7,14 @@ namespace Tests\Feature\Modules\Assistant;
 use App\Core\Engines\Assistant\AssistantEngine;
 use App\Core\Engines\Assistant\ModelClient;
 use App\Core\Engines\Forecast\ForecastEngine;
+use App\Core\Services\FormBranchPin;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\AssistantEvent;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Purchase\Models\PurchaseRequisition;
 use App\Modules\Assistant\Watch\Watch;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,6 +77,8 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
         $this->get(route('customer.index'))->assertOk();
         $this->get(route('customer.index'))->assertOk();
         $this->getJson('/search?q=xyz')->assertOk();
+        // ⓘ পেছনের ডাক সাধারণ পাতাতেও — Alpine/fetch যে পাতা টানে (ajax), তা মানুষের খোলা নয়; খোঁজা ('search') তো তালিকা থেকেই বাদ
+        $this->get(route('dashboard'), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk();
 
         $visits = AssistantEvent::query()->where('kind', AssistantEvent::VISIT)->get();
         $this->assertCount(1, $visits, '⛔ একই পাতা দুইবার খোলায় দুই সারি, বা পেছনের ডাকও পাতা হিসেবে লেখা।');
@@ -97,12 +103,17 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
     /** ⭐ নজর চাবি মানে — হিসাবের চাবি ছাড়া হিসাবের নজর নেই; "এটা ঠিক আছে" কারণ ছাড়া চলে না, কারণসহ চুপ করায় */
     public function test_the_watch_keeps_to_the_keys_and_quietening_needs_a_reason(): void
     {
-        $clerk = $this->person(['assistant.use', 'sales.invoice.view']);
-        $mine = app(Watch::class)->for($clerk);
-        $this->assertSame([], array_values(array_filter($mine, fn (array $f): bool => $f['module'] === 'accounts')), '⛔ হিসাবের চাবি ছাড়াই হিসাবের নজর।');
-
         $owners = app(Watch::class)->for($this->owner);
         $this->assertNotEmpty($owners, 'প্রস্তুতিটাই ভুল — ডেমোতে মালিকের কোনো নজর নেই।');
+
+        // ⓘ কেরানির কেবল বিক্রয়ের চাবি — হিসাব, অর্থ, মজুদের নজর তাঁর নয়; মালিকের সেগুলোর অন্তত একটা থাকা চাই, নাহলে দাবিটা ফাঁকা
+        $notHis = ['accounts', 'finance', 'inventory'];
+        $this->assertNotSame([], array_filter($owners, fn (array $f): bool => in_array($f['module'], $notHis, true)),
+            'প্রস্তুতিটাই ভুল — মালিকের হিসাব/অর্থ/মজুদের কোনো নজর নেই, তাই চাবির দেয়াল মাপা যায় না।');
+        $clerk = $this->person(['assistant.use', 'sales.invoice.view']);
+        $mine = app(Watch::class)->for($clerk);
+        $this->assertSame([], array_values(array_filter($mine, fn (array $f): bool => in_array($f['module'], $notHis, true))),
+            '⛔ চাবি ছাড়াই হিসাব/অর্থ/মজুদের নজর।');
         $first = $owners[0];
 
         $this->post(route('assistant.dismiss'), ['finding' => $first['id'], 'reason' => ''])->assertSessionHasErrors('reason');
@@ -147,6 +158,35 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
     }
 
     /** ⭐ পূর্বাভাস — সপ্তাহের দিনের ধরন: শুক্রবার ২, বাকি দিন ১০ হলে আগামী ৭ দিন = ৬×১০ + ২ */
+    /**
+     * ⭐ কোপাইলটের খসড়া — ক্রয়ের চাহিদাপত্র কেবল **খসড়া**, যে শাখায় পাতা খোলা সেখানে; সুপারিশের পরিমাণই লাইনে; খাতায় এক সারি।
+     * ⛔ চাহিদাপত্র বানানোর চাবি ছাড়া দরজা বন্ধ (৪০৩), আর কিছুই বসে না।
+     */
+    public function test_the_reorder_draft_is_only_a_draft_in_the_branch_it_was_opened_in(): void
+    {
+        $branch = $this->company->defaultBranch();
+        $product = Product::query()->where('is_active', true)->firstOrFail();
+        $product->forceFill(['reorder_level' => '999999', 'reorder_qty' => '25'])->save();
+        $before = PurchaseRequisition::query()->count();
+
+        $clerk = $this->person(['assistant.use', 'inventory.stock.view']);
+        // ⓘ একই কাজের শাখা — নাহলে শাখার ছাপের পাহারা আগেই ফেরায় (৩০২), আর ৪০৩-টা চাবির কিনা বোঝা যেত না
+        $clerk->forceFill(['current_branch_id' => $branch?->id])->save();
+        $this->actingAs($clerk->fresh())->post(route('assistant.draft.reorder'), [FormBranchPin::FIELD => (string) $branch?->public_id])->assertForbidden();
+        $this->assertSame($before, PurchaseRequisition::query()->count(), '⛔ চাবি ছাড়া চাহিদাপত্র বসেছে।');
+
+        $this->actingAs($this->owner)->post(route('assistant.draft.reorder'), [FormBranchPin::FIELD => (string) $branch?->public_id])->assertRedirect();
+
+        $made = PurchaseRequisition::query()->latest('id')->firstOrFail();
+        $this->assertSame($before + 1, PurchaseRequisition::query()->count(), '⛔ একটার বেশি চাহিদাপত্র বসেছে।');
+        $this->assertSame(DocumentStatus::DRAFT, $made->status, '⛔ কোপাইলটের চাহিদাপত্র খসড়া নয় — মানুষের চাপ ছাড়াই এগিয়েছে।');
+        $this->assertSame((int) $branch?->id, (int) $made->branch_id, '⛔ চাহিদাপত্র খোলার শাখায় বসেনি।');
+        $line = $made->lines()->where('product_id', $product->id)->first();
+        $this->assertNotNull($line, '⛔ নিচে নামা পণ্যটা চাহিদাপত্রে নেই।');
+        $this->assertSame(0, bccomp((string) $line->qty, '25', 4), '⛔ লাইনের পরিমাণ সুপারিশের (আবার-কেনার পরিমাণ 25) নয়।');
+        $this->assertSame(1, AssistantEvent::query()->where('kind', AssistantEvent::DRAFT)->where('outcome', $made->document_no)->count(), '⛔ খসড়া খাতায় ওঠেনি।');
+    }
+
     /** ⭐ ফোনের কোপাইলট — একই ইঞ্জিন; প্রশ্ন খাতায় "অ্যাপ"; চাবি ছাড়া দরজা বন্ধ (মালিক, ১১ নভেম্বর ২০২৬) */
     public function test_the_phone_gets_the_same_copilot_by_the_same_key(): void
     {

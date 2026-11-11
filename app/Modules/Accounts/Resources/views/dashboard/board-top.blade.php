@@ -22,9 +22,9 @@
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1.1875rem; font-weight: 800">{{ __('accounts::board.p.title') }}</h2>
             <span style="font-size: 0.8125rem; color: var(--color-dash-4b5563)">
-                <b style="color: var(--color-dash-dc2626)">●</b> {{ __('accounts::board.sev.urgent') }} &#160;
-                <b style="color: var(--color-dash-ea580c)">●</b> {{ __('accounts::board.sev.today_long') }} &#160;
-                <b style="color: var(--color-dash-ca8a04)">●</b> {{ __('accounts::board.sev.week') }} &#160;
+                <b style="color: var(--color-dash-dc2626)">●</b> {{ __('accounts::board.sev.urgent') }} &nbsp;
+                <b style="color: var(--color-dash-ea580c)">●</b> {{ __('accounts::board.sev.today_long') }} &nbsp;
+                <b style="color: var(--color-dash-ca8a04)">●</b> {{ __('accounts::board.sev.week') }} &nbsp;
                 <b style="color: var(--color-dash-16a34a)">●</b> {{ __('accounts::board.sev.ok') }}
             </span>
         </div>

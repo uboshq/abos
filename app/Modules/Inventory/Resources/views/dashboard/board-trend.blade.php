@@ -40,7 +40,7 @@
     <section data-inv-trend style="grid-column: span 2; {{ $card }} gap: 0.375rem; border-top: 0.3125rem solid var(--color-dash-3b82f6)">
         <div style="display: flex; justify-content: space-between; align-items: baseline">
             <h2 style="margin: 0; font-size: 1rem; font-weight: 700">{{ __('inventory::board.g.title') }}</h2>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-2563eb)">■</b> {{ __('inventory::board.g.value') }} &#160; <b style="color: var(--color-dash-db2777)">—</b> {{ __('inventory::board.g.dio') }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-2563eb)">■</b> {{ __('inventory::board.g.value') }} &nbsp; <b style="color: var(--color-dash-db2777)">—</b> {{ __('inventory::board.g.dio') }}</span>
         </div>
         @if ($bars === [])
             <p style="margin: 0; font-size: 0.8125rem; color: var(--color-dash-6b7280)">{{ __('inventory::board.v.no_cost') }}</p>

@@ -59,7 +59,7 @@
     <section data-fin-margins style="grid-column: span 2; {{ $card }} gap: 0.375rem; border-top: 0.3125rem solid var(--color-dash-0ea5e9)">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1rem; font-weight: 700">{{ __('finance::board.perf.title') }}</h2>
-            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-0ea5e9)">■</b> {{ __('finance::board.perf.sales', ['unit' => __($crore ? 'finance::board.perf.crore_word' : 'finance::board.perf.lakh_word')]) }} &#160; <b style="color: var(--color-dash-f59e0b)">—</b> {{ __('finance::board.perf.gross') }} &#160; <b style="color: var(--color-dash-7c3aed)">—</b> {{ __('finance::board.perf.net') }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-dash-4b5563)"><b style="color: var(--color-dash-0ea5e9)">■</b> {{ __('finance::board.perf.sales', ['unit' => __($crore ? 'finance::board.perf.crore_word' : 'finance::board.perf.lakh_word')]) }} &nbsp; <b style="color: var(--color-dash-f59e0b)">—</b> {{ __('finance::board.perf.gross') }} &nbsp; <b style="color: var(--color-dash-7c3aed)">—</b> {{ __('finance::board.perf.net') }}</span>
         </div>
         <svg role="img" aria-label="{{ __('finance::board.perf.label') }}" viewBox="0 0 760 300" style="width: 100%; height: 18.75rem">
             <defs><linearGradient id="finRevBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--color-dash-38bdf8)"></stop><stop offset="1" stop-color="var(--color-dash-0284c7)"></stop></linearGradient></defs>

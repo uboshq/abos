@@ -21,7 +21,7 @@ use Spatie\Permission\PermissionRegistrar;
  * `assistant_events` — এক খাতায় সব: খোঁজা, প্রশ্ন ও উত্তর, নজর, প্রস্তাব, খসড়া, আটকানো প্রশ্ন, "এটা ঠিক আছে", 👍👎।
  *   ⛔ পর্দা থেকে বদলানো বা মোছা যায় না; প্রশ্নের লেখার মেয়াদ কোম্পানির সেটিং, "কে কখন কী" থেকে যায়।
  * `assistant_dismissals` — "এটা ঠিক আছে": কোন নজর, কে, কেন, কতদিন চুপ।
- * চাবি: assistant.use (কোপাইলট দেখা), assistant.audit (খাতা — কেবল মালিক), assistant.settings (সেটিং — কেবল মালিক)।
+ * চাবি: assistant.use (কোপাইলট দেখা), assistant.audit (খাতা — কেবল মালিক)। ⓘ সেটিংস আলাদা চাবি চায় না — প্রতিটা ঘর super_admin_only।
  */
 return new class extends Migration
 {
@@ -79,18 +79,18 @@ return new class extends Migration
         Schema::dropIfExists('assistant_events');
 
         DB::table('role_has_permissions')
-            ->whereIn('permission_id', DB::table('permissions')->whereIn('name', ['assistant.use', 'assistant.audit', 'assistant.settings'])->select('id'))
+            ->whereIn('permission_id', DB::table('permissions')->whereIn('name', ['assistant.use', 'assistant.audit'])->select('id'))
             ->delete();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    /** ⚠️ ডিপ্লয় অনুমতি মেলায় না, তাই মালিক (super_admin) তিনটা চাবি এখানেই পান; বাকিদের মালিক নিজে দেন */
+    /** ⚠️ ডিপ্লয় অনুমতি মেলায় না, তাই মালিক (super_admin) দুইটা চাবি এখানেই পান; বাকিদের মালিক নিজে দেন */
     private function keys(): void
     {
         $guard = 'web';
         $supers = DB::table('roles')->where('name', 'super_admin')->where('guard_name', $guard)->pluck('id');
 
-        foreach (['assistant.use', 'assistant.audit', 'assistant.settings'] as $name) {
+        foreach (['assistant.use', 'assistant.audit'] as $name) {
             $id = DB::table('permissions')->where('name', $name)->where('guard_name', $guard)->value('id')
                 ?? DB::table('permissions')->insertGetId([
                     'name' => $name, 'guard_name' => $guard, 'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now(),
@@ -103,7 +103,7 @@ return new class extends Migration
             }
         }
 
-        Log::info(sprintf('Copilot keys: %d super admin role(s) given assistant.use, assistant.audit, assistant.settings', $supers->count()));
+        Log::info(sprintf('Copilot keys: %d super admin role(s) given assistant.use, assistant.audit', $supers->count()));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 };

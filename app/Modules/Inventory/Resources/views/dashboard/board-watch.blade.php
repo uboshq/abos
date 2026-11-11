@@ -54,7 +54,7 @@
             <span style="font-size: 0.8125rem; font-weight: 800; color: var(--color-dash-059669)">IRA {{ $counts['ira'] === null ? '—' : $counts['ira'].'%' }}</span>
         </div>
         <div style="display: flex; align-items: center; height: 10.625rem; gap: 0.625rem; position: relative">
-            <span style="position: absolute; left: 0; right: 0; top: 5.3125rem; height: 1px; background: var(--color-dash-d1d5db)"></span>
+            <span style="position: absolute; left: 0; right: 0; top: 5.3125rem; height: 0.0625rem; background: var(--color-dash-d1d5db)"></span>
             @forelse ($counts['counts'] as $c)
                 @php $neg = bccomp($c['value'], '0', 4) < 0; $h = max(0.25, round(abs((float) $c['value']) / $maxGap * 4.5, 3)); @endphp
                 <div style="flex: 1 1 0; height: 10.625rem; display: flex; flex-direction: column; justify-content: {{ $neg ? 'flex-start' : 'flex-end' }}; align-items: center">

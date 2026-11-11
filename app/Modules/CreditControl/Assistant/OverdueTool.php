@@ -43,7 +43,7 @@ final class OverdueTool implements AssistantTool
         $customers = Customer::query()->where('is_active', true)->get()->keyBy('id')->all();
         $facts = collect(app(CreditRisk::class)->factsFor($customers))
             ->filter(fn (array $f): bool => bccomp((string) $f['overdue'], '0', 4) > 0)
-            ->sortByDesc(fn (array $f): float => (float) $f['overdue'])->take($limit);
+            ->sort(fn (array $x, array $y): int => bccomp((string) $y['overdue'], (string) $x['overdue'], 4))->take($limit);
 
         $rows = $facts->map(fn (array $f, int $id): array => [
             'customer' => $customers[$id]->name(),

@@ -378,7 +378,7 @@ final class SalesBoard
             ->whereHas('collection', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '>=', $month))
             ->whereIn('target_invoice_id', $invoices->pluck('id')->all() ?: [0])
             ->groupBy('target_invoice_id')->selectRaw('target_invoice_id, SUM(amount) as v')->pluck('v', 'target_invoice_id');
-        $names = \App\Models\User::query()->whereIn('id', $invoices->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
+        $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $invoices->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
         $today = Carbon::today()->toDateString();
         $rows = [];
         $tc = 0.0;
@@ -566,7 +566,7 @@ final class SalesBoard
         $first = Carbon::today()->startOfMonth();
         $targets = \App\Modules\Sales\Models\SalesTarget::query()->forMonth($first)->pluck('amount', 'user_id');
         $achieved = app(\App\Modules\Sales\Services\SalesTargetService::class)->achievedByUser($first, $first->copy()->endOfMonth());
-        $names = \App\Models\User::query()->whereIn('id', $targets->keys()->all() ?: [0])->pluck('name', 'id');
+        $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $targets->keys()->all() ?: [0])->pluck('name', 'id');
         $rows = $targets->filter(fn ($t) => (float) $t > 0)
             ->map(fn ($t, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'pct' => (int) round((float) ($achieved[(int) $id] ?? 0) / (float) $t * 100)])
             ->sortByDesc('pct')->take(7)->values()->all();
@@ -596,7 +596,7 @@ final class SalesBoard
                 $by[$sr]['commission'] = bcadd($by[$sr]['commission'], (string) $engine->preview($invoice)['total'], 4);
             }
 
-            $names = \App\Models\User::query()->whereIn('id', array_keys($by) ?: [0])->pluck('name', 'id');
+            $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', array_keys($by) ?: [0])->pluck('name', 'id');
             $rows = collect($by)->map(fn (array $v, $id) => ['name' => (string) ($names[(int) $id] ?? __('sales::board.r4.nobody')), 'sales' => $v['sales'],
                 'rate' => bccomp($v['sales'], '0', 4) > 0 ? bcdiv(bcmul($v['commission'], '100', 4), $v['sales'], 1) : null, 'commission' => $v['commission']])
                 ->sortByDesc(fn (array $r) => (float) $r['sales'])->take(7)->values()->all();
@@ -633,7 +633,7 @@ final class SalesBoard
 
         $targets = $this->srTargets();
         $cei = collect($this->collectionEffectiveness()['rows'])->keyBy('name');
-        $names = \App\Models\User::query()->whereIn('id', $top->keys()->all())->pluck('name', 'id');
+        $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $top->keys()->all())->pluck('name', 'id');
         $maxShops = max(1, $top->max('shops'));
         $maxAvg = max(1.0, $top->max(fn ($s) => $s['bills'] > 0 ? $s['sales'] / $s['bills'] : 0));
         $clamp = fn (float $v) => (int) round(max(0, min(100, $v)));
@@ -671,7 +671,7 @@ final class SalesBoard
         $before = $sum($lastFrom, $lastTo);
         $due = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->withCollected()->whereIn('customer_id', $now->keys()->all() ?: [0])->get()
             ->groupBy('customer_id')->map(fn ($l) => $l->sum(fn ($i) => max(0, (float) $i->dueAmount())));
-        $names = \App\Modules\Customer\Models\Customer::query()->whereIn('id', $now->keys()->all() ?: [0])->get()->mapWithKeys(fn ($c) => [(int) $c->id => $c->name()]);
+        $names = \App\Modules\Customer\Models\Customer::query()->inViewedBranch()->whereIn('id', $now->keys()->all() ?: [0])->get()->mapWithKeys(fn ($c) => [(int) $c->id => $c->name()]);
 
         return $now->map(fn ($v, $id) => ['name' => (string) ($names[(int) $id] ?? ''), 'sales' => bcadd((string) $v, '0', 4),
             'growth' => (float) ($before[$id] ?? 0) > 0 ? (int) round(((float) $v - (float) $before[$id]) / (float) $before[$id] * 100) : null,
@@ -805,7 +805,7 @@ final class SalesBoard
             return null;
         }
 
-        return ['name' => (string) (\App\Modules\Customer\Models\Customer::query()->find($worst['id'])?->name() ?? ''), 'pct' => $worst['pct']];
+        return ['name' => (string) (\App\Modules\Customer\Models\Customer::query()->inViewedBranch()->find($worst['id'])?->name() ?? ''), 'pct' => $worst['pct']];
     }
 
     /** @return array{name: string, pct: int}|null রুট-পরিকল্পনার যে রুটের দোকান সবচেয়ে কম কিনেছে (30 দিন) */
@@ -816,7 +816,7 @@ final class SalesBoard
         $worst = null;
 
         foreach ($plans->unique('route_id') as $plan) {
-            $shops = \App\Modules\Customer\Models\Customer::query()->where('location_id', $plan->route_id)->pluck('id');
+            $shops = \App\Modules\Customer\Models\Customer::query()->inViewedBranch()->where('location_id', $plan->route_id)->pluck('id');
 
             if ($shops->isEmpty()) {
                 continue;

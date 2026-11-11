@@ -121,13 +121,14 @@ class DraftController extends Controller
      */
     private function dunningDrafts(): array
     {
-        $customers = Customer::query()->where('is_active', true)->get()->keyBy('id')->all();
+        // ⓘ হেডারে বাছা শাখার গ্রাহক কেবল — ড্যাশবোর্ড আর তালিকার একই নিয়ম (EveryPartyListFollowsTheViewedBranchTest)
+        $customers = Customer::query()->inViewedBranch()->where('is_active', true)->get()->keyBy('id')->all();
         $facts = app(\App\Modules\CreditControl\Services\CreditRisk::class)->factsFor($customers);
         $company = \App\Models\Company::query()->find(\App\Core\Support\CompanyContext::id());
         $from = (string) ($company?->name_bn ?: $company?->name_en ?: '');
 
         return collect($facts)->filter(fn (array $f): bool => bccomp((string) $f['overdue'], '0', 4) > 0)
-            ->sortByDesc(fn (array $f): float => (float) $f['overdue'])->take(Suggestions::CALL_LIST)
+            ->sort(fn (array $x, array $y): int => bccomp((string) $y['overdue'], (string) $x['overdue'], 4))->take(Suggestions::CALL_LIST)
             ->map(function (array $f, int $id) use ($customers, $from): array {
                 $c = $customers[$id];
 

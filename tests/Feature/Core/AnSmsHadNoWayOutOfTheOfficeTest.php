@@ -66,6 +66,12 @@ final class AnSmsHadNoWayOutOfTheOfficeTest extends TestCase
         $this->assertSame([], $this->take($token)->assertOk()->json('messages'), '⛔ একই SMS দুইবার নেওয়া গেল।');
         $this->take('smsgw_'.str_repeat('x', 48))->assertStatus(401);
 
+        // ⛔ মালিক ফোনটা বন্ধ করলে সেই চাবি আর খোলে না — নতুন সারি থাকলেও
+        app(SmsOutboxService::class)->queue('8801711000003', 'তৃতীয়', SmsOutbox::PARTY);
+        \App\Models\SmsGatewayPhone::query()->update(['is_active' => false]);
+        $this->take($token)->assertStatus(401);
+        \App\Models\SmsGatewayPhone::query()->update(['is_active' => true]);
+
         // ⓘ চাবি একবারই — পরের পাতায় দেখা যায়, তার পরের বার আর নয়
         $this->get(route('notification.sms_phones.index'))->assertOk()->assertSee($token, false);
         $this->get(route('notification.sms_phones.index'))->assertOk()->assertDontSee($token, false);

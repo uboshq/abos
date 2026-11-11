@@ -73,6 +73,6 @@ return [
         'shift_closed' => 'পালা বন্ধ',
         'document_viewed' => 'নথি দেখা',
         'document_shared' => 'নথি পাঠানো',
-        'document_signed' => 'নথিতে সই',
+        'document_signed' => 'নথিতে অনুমোদন',
     ],
 ];

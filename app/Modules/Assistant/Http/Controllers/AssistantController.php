@@ -139,7 +139,7 @@ class AssistantController extends Controller
             ->paginate(self::PER_PAGE)
             ->withQueryString();
 
-        $people = User::query()->whereIn('id', $members)->orderBy('name')->get(['id', 'name', 'email']);
+        $people = User::query()->whereHas('companies', fn ($q) => $q->whereKey($company))->whereIn('id', $members)->orderBy('name')->get(['id', 'name', 'email']);
 
         // ⓘ পাতার মানুষের পড়ার মতো নাম — মেনুর নামই (ঠিকানা → নাম); না মিললে ঠিকানা
         $menu = $this->menu->forUser($request->user());

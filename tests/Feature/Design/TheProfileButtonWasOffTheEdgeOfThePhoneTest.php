@@ -63,8 +63,12 @@ class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
         $actions = substr($actions, 0, (int) strpos($actions, '</div>'));
         preg_match_all('/<x-shell\.([a-z-]+)/', $actions, $parts);
         // ⓘ ২১ অক্টোবর ২০২৬: "সই হয়েছে, পোস্ট হয়নি" বারে ফিরল (মালিকের নিজের আইকন); ৩৭৫px-এ খোঁজা আইকন হয়ে জায়গা ছাড়ে
-        $this->assertSame(['create-menu', 'approval-quick-access', 'signed-unposted', 'notification-bell', 'profile-menu'], $parts[1],
+        // ⓘ ১১ নভেম্বর ২০২৬: কোপাইলটের মগজ-বোতাম (মালিক, ১০ নভেম্বর: "মগজের ছবি, নিচে নাম") — কেবল ৬৪০px-এর ওপরে, নিচে দেখুন
+        $this->assertSame(['create-menu', 'copilot-button', 'approval-quick-access', 'signed-unposted', 'notification-bell', 'profile-menu'], $parts[1],
             '⛔ ডানের ঝাঁকে বাড়তি কিছু — ছোট পর্দায় প্রোফাইলের বোতাম আবার ঠেলে বাইরে যেতে পারে।');
+        $copilot = (string) file_get_contents(resource_path('views/components/shell/copilot-button.blade.php'));
+        $this->assertMatchesRegularExpression('/data-copilot-button\s+class="hidden\s[^"]*\bsm:flex\b/', $copilot,
+            '⛔ কোপাইলটের বোতাম ছোট পর্দাতেও বারে — ৩৭৫px-এ প্রোফাইলের বোতাম ঠেলে বাইরে যাবে।');
 
         $menu = (string) file_get_contents(resource_path('views/components/shell/profile-menu.blade.php'));
         $this->assertStringContainsString('data-menu-language', $menu, 'ভাষার সুইচ ছবির মেনুতেও নেই — তাহলে কোথাও নেই।');

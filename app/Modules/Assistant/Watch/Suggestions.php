@@ -93,10 +93,11 @@ final class Suggestions
     /** ⭐ আজ কাকে ফোন — বাকি পেরিয়েছে, টাকা সবচেয়ে বেশি; পুরনো বিল সাথে (গ্রাহকের দেয়াল মেনে) */
     private function callList(): ?array
     {
-        $customers = Customer::query()->where('is_active', true)->get()->keyBy('id')->all();
+        // ⓘ হেডারে বাছা শাখার গ্রাহক কেবল — ড্যাশবোর্ড আর তালিকার একই নিয়ম (EveryPartyListFollowsTheViewedBranchTest)
+        $customers = Customer::query()->inViewedBranch()->where('is_active', true)->get()->keyBy('id')->all();
         $facts = app(CreditRisk::class)->factsFor($customers);
         $due = collect($facts)->filter(fn (array $f): bool => bccomp((string) $f['overdue'], '0', 4) > 0)
-            ->sortByDesc(fn (array $f): float => (float) $f['overdue'])->take(self::CALL_LIST);
+            ->sort(fn (array $x, array $y): int => bccomp((string) $y['overdue'], (string) $x['overdue'], 4))->take(self::CALL_LIST);
 
         if ($due->isEmpty()) {
             return null;
@@ -121,7 +122,8 @@ final class Suggestions
     /** ⭐ বাকির সীমা কমানো ভালো — ঝুঁকির মাত্রা বেশি বা চরম, আর সীমা বসানো আছে */
     private function lowerLimits(): ?array
     {
-        $customers = Customer::query()->where('is_active', true)->get()->keyBy('id')->all();
+        // ⓘ হেডারে বাছা শাখার গ্রাহক কেবল — ড্যাশবোর্ড আর তালিকার একই নিয়ম (EveryPartyListFollowsTheViewedBranchTest)
+        $customers = Customer::query()->inViewedBranch()->where('is_active', true)->get()->keyBy('id')->all();
         $facts = app(CreditRisk::class)->factsFor($customers);
         $rates = app(CreditRisk::class)->rateAll($customers, $facts);
         $risky = collect($rates)->filter(fn (array $r, int $id): bool => in_array($r['level'], [CreditRisk::HIGH, CreditRisk::CRITICAL], true)
