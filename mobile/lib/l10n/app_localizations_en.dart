@@ -11595,4 +11595,69 @@ class AppL10nEn extends AppL10n {
   @override
   String get smsGatewayNote =>
       'The only cost is the SIM SMS pack. Keep the phone charging and online; while it is off SMS wait in the queue, and after 2 hours the owner is told.';
+
+  @override
+  String get navScreenCopilot => 'Copilot';
+
+  @override
+  String get copilotFailed => 'Could not load Copilot';
+
+  @override
+  String get copilotTabToday => 'Today';
+
+  @override
+  String get copilotTabAsk => 'Ask';
+
+  @override
+  String get copilotBrief => 'Morning brief';
+
+  @override
+  String get copilotWatch => 'Watch — anything unusual';
+
+  @override
+  String get copilotWatchEmpty => 'Nothing unusual right now.';
+
+  @override
+  String get copilotSuggestions => 'Suggestions';
+
+  @override
+  String get copilotSuggestionsEmpty => 'No suggestions right now.';
+
+  @override
+  String get copilotDismiss => 'Fine';
+
+  @override
+  String get copilotDismissTitle => 'This is fine — quiet for 7 days';
+
+  @override
+  String get copilotDismissReason => 'Why it is fine (required)';
+
+  @override
+  String get copilotDismissGo => 'Keep quiet';
+
+  @override
+  String get copilotCancel => 'Cancel';
+
+  @override
+  String get copilotRules =>
+      'Copilot posts nothing and sends nothing — it only shows. Who saw and searched what stays in the owner log.';
+
+  @override
+  String get copilotModelOff =>
+      'The office AI server is not connected yet — common questions like the examples are answered.';
+
+  @override
+  String get copilotPlaceholder => 'Type… e.g. \"How much did we sell today?\"';
+
+  @override
+  String get copilotAskButton => 'Ask';
+
+  @override
+  String get copilotSource => 'Source';
+
+  @override
+  String get copilotRight => 'Right answer';
+
+  @override
+  String get copilotWrong => 'Wrong answer';
 }

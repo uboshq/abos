@@ -549,6 +549,14 @@ class NavCatalog {
         icon: Icons.local_shipping_outlined,
         aliases: ['challan', 'চালান', 'gate pass', 'cha', 'delivery challans']),  // l10n-ok: search aliases in both languages
     // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+    // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬)
+    NavScreenDef(
+        path: 'copilot',
+        module: 'assistant',
+        group: _l.navGroupDashboards,
+        label: _l.navScreenCopilot,
+        icon: Icons.psychology_outlined,
+        aliases: ['copilot', 'কোপাইলট', 'মগজ', 'প্রশ্ন', 'নজর', 'সারাংশ', 'ask', 'assistant', 'brief', 'watch']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'owner-centre',
         module: 'executive',

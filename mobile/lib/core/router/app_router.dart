@@ -45,6 +45,7 @@ import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
 import '../../features/executive/executive_screen.dart';
+import '../../features/copilot/copilot_screen.dart';
 import '../../features/credit_control/credit_screens.dart';
 import '../../features/notices/notice_board_screen.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
@@ -397,6 +398,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
           // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতা, কেবল পড়া
+          // ⭐ কোপাইলট — ওয়েবের একই ইঞ্জিন আর চাবি (মালিক, ১১ নভেম্বর ২০২৬: "কোপাইলটটা মোবাইল অ্যাপে একই বিল্ডে")
+          _framed(
+            path: 'copilot',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'copilot', child: CopilotScreen()),
+          ),
           _framed(
             path: 'owner-centre',
             builder: (context, state) =>

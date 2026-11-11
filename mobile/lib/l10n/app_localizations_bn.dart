@@ -11422,4 +11422,69 @@ class AppL10nBn extends AppL10n {
   @override
   String get smsGatewayNote =>
       'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।';
+
+  @override
+  String get navScreenCopilot => 'কোপাইলট';
+
+  @override
+  String get copilotFailed => 'কোপাইলট আনা গেল না';
+
+  @override
+  String get copilotTabToday => 'আজ';
+
+  @override
+  String get copilotTabAsk => 'জিজ্ঞাসা';
+
+  @override
+  String get copilotBrief => 'সকালের সারাংশ';
+
+  @override
+  String get copilotWatch => 'নজর — অস্বাভাবিক কিছু';
+
+  @override
+  String get copilotWatchEmpty => 'এখন অস্বাভাবিক কিছু নেই।';
+
+  @override
+  String get copilotSuggestions => 'প্রস্তাব';
+
+  @override
+  String get copilotSuggestionsEmpty => 'এখন কোনো প্রস্তাব নেই।';
+
+  @override
+  String get copilotDismiss => 'ঠিক আছে';
+
+  @override
+  String get copilotDismissTitle => 'এটা ঠিক আছে — 7 দিন চুপ';
+
+  @override
+  String get copilotDismissReason => 'কেন ঠিক আছে (লিখতে হবে)';
+
+  @override
+  String get copilotDismissGo => 'চুপ রাখুন';
+
+  @override
+  String get copilotCancel => 'বাতিল';
+
+  @override
+  String get copilotRules =>
+      'কোপাইলট খাতায় কিছু তোলে না, কিছু পাঠায় না — শুধু দেখায়। কে কী দেখল ও খুঁজল, মালিকের খাতায় থাকে।';
+
+  @override
+  String get copilotModelOff =>
+      'অফিসের AI সার্ভার এখনো যুক্ত নয় — উদাহরণের মতো প্রশ্নের উত্তর দেয়।';
+
+  @override
+  String get copilotPlaceholder => 'লিখুন… যেমন \"আজ কত বিক্রি হলো?\"';
+
+  @override
+  String get copilotAskButton => 'জিজ্ঞেস';
+
+  @override
+  String get copilotSource => 'উৎস';
+
+  @override
+  String get copilotRight => 'ঠিক উত্তর';
+
+  @override
+  String get copilotWrong => 'ভুল উত্তর';
 }

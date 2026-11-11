@@ -19027,6 +19027,132 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'খরচ কেবল সিমের SMS প্যাকেজ। ফোনটা চার্জে আর নেটে রাখুন; বন্ধ থাকলে SMS সারিতে অপেক্ষা করে, 2 ঘণ্টার বেশি হলে মালিককে খবর যায়।'**
   String get smsGatewayNote;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'কোপাইলট'**
+  String get navScreenCopilot;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'কোপাইলট আনা গেল না'**
+  String get copilotFailed;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ'**
+  String get copilotTabToday;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'জিজ্ঞাসা'**
+  String get copilotTabAsk;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'সকালের সারাংশ'**
+  String get copilotBrief;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'নজর — অস্বাভাবিক কিছু'**
+  String get copilotWatch;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'এখন অস্বাভাবিক কিছু নেই।'**
+  String get copilotWatchEmpty;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রস্তাব'**
+  String get copilotSuggestions;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'এখন কোনো প্রস্তাব নেই।'**
+  String get copilotSuggestionsEmpty;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get copilotDismiss;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'এটা ঠিক আছে — 7 দিন চুপ'**
+  String get copilotDismissTitle;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন ঠিক আছে (লিখতে হবে)'**
+  String get copilotDismissReason;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'চুপ রাখুন'**
+  String get copilotDismissGo;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get copilotCancel;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'কোপাইলট খাতায় কিছু তোলে না, কিছু পাঠায় না — শুধু দেখায়। কে কী দেখল ও খুঁজল, মালিকের খাতায় থাকে।'**
+  String get copilotRules;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'অফিসের AI সার্ভার এখনো যুক্ত নয় — উদাহরণের মতো প্রশ্নের উত্তর দেয়।'**
+  String get copilotModelOff;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'লিখুন… যেমন \"আজ কত বিক্রি হলো?\"'**
+  String get copilotPlaceholder;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'জিজ্ঞেস'**
+  String get copilotAskButton;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'উৎস'**
+  String get copilotSource;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক উত্তর'**
+  String get copilotRight;
+
+  /// Copilot on the phone (owner 11 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভুল উত্তর'**
+  String get copilotWrong;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

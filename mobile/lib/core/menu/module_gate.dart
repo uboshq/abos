@@ -69,6 +69,8 @@ class ModuleGate {
     'payslips': 'hr',
     // ── ⭐ ১৩ অক্টোবর ২০২৬ — নোটিশ বোর্ড কোনো মডিউলের নয় (কোরের, সবার), তাই এখানে নেই ──
     'owner-centre': 'executive',
+    // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬)
+    'copilot': 'assistant',
     // ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬)
     'invoices': 'sales',
     'challans': 'sales',

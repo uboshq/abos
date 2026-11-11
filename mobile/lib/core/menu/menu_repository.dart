@@ -481,6 +481,14 @@ class MenuRepository {
           ),
         // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
         // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতার চাবি; কোম্পানির ফোন-সুইচ [[ModuleGate]]-এ
+        // ⭐ কোপাইলট — মগজ (মালিক, ১০–১১ নভেম্বর ২০২৬); ওয়েবের চাবি `assistant.use`
+        if (user.can('assistant.use'))
+          MenuItem(
+            key: 'assistant.today',
+            label: AppLocale.l10n.navScreenCopilot,
+            icon: Icons.psychology_outlined,
+            routeName: 'copilot',
+          ),
         if (user.can('executive.view'))
           MenuItem(
             key: 'executive.today',
