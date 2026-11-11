@@ -204,7 +204,8 @@ class _CopilotScreenState extends State<CopilotScreen> {
 
     children.add(Padding(padding: const EdgeInsets.symmetric(vertical: AppSpacing.md), child: Text(l.copilotRules, style: TextStyle(color: p.onSurfaceMuted, fontSize: 12))));
 
-    return ListView(padding: const EdgeInsets.all(AppSpacing.md), children: children);
+    // ⓘ খালি বা ভুলের পাতাতেও নিচে টানলে আবার আনে — তালিকা ছোট হলেও টানা যায়
+    return ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(AppSpacing.md), children: children);
   }
 
   Widget _askView(BuildContext context, String name) {

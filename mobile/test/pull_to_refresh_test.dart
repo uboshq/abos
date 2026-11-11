@@ -8,6 +8,7 @@ import 'package:abos_mobile/core/records/report_record.dart';
 import 'package:abos_mobile/core/widgets/empty_state.dart';
 import 'package:abos_mobile/features/approvals/approval_inbox_screen.dart';
 import 'package:abos_mobile/features/attendance/attendance_screen.dart';
+import 'package:abos_mobile/features/copilot/copilot_screen.dart';
 import 'package:abos_mobile/features/customers/customer_list_screen.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';
 import 'package:abos_mobile/core/records/notification_record.dart';
@@ -99,6 +100,8 @@ void main() {
     'my_phones_screen.dart',
     // ⭐ টাকা আদায়ের খালি তালিকা (নকশা ৩, ২০ অক্টোবর ২০২৬) — টান test/a5_counter_money_dues_design3_test.dart-এ দেখা
     'money_in_screens.dart',
+    // ⭐ কোপাইলট (০.৪.৫৪, ১১ নভেম্বর ২০২৬) — আনতে না পারলে খালি অবস্থা; টান নিচে এই ফাইলেই দেখা
+    'copilot_screen.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
@@ -187,6 +190,8 @@ void main() {
   testWidgets('নোটিফিকেশন', (t) => expectPullable(t, NotificationsScreen(
       fetch: () async => const NotificationPage(items: [], unread: 0))));
 
+  testWidgets('কোপাইলট — আনতে না পারলে', (t) => expectPullable(t, const CopilotScreen(api: _FailingCopilot())));
+
   testWidgets('অর্ডার — the screen the hand-written list missed',
       (t) => expectPullable(t, const OrderListScreen()));
 
@@ -266,4 +271,17 @@ void main() {
         reason: 'its EmptyState is written before the RefreshIndicator, the '
             'exact shape the orders screen had while its pull did nothing');
   });
+}
+
+/// ⓘ সার্ভার না পেলে কোপাইলট খালি অবস্থা আঁকে — সেটাই নিচে টানা যায় কিনা দেখা
+class _FailingCopilot implements CopilotApi {
+  const _FailingCopilot();
+  @override
+  Future<Map<String, dynamic>> today() async => throw Exception('offline');
+  @override
+  Future<Map<String, dynamic>> ask(String question) async => throw Exception('offline');
+  @override
+  Future<void> feedback(int answerId, int value) async {}
+  @override
+  Future<void> dismiss(String finding, String reason) async {}
 }
