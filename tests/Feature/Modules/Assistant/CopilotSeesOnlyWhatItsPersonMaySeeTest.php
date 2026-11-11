@@ -152,6 +152,40 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
     }
 
     /** ⭐ মডেলের কাছে লম্বা অঙ্ক (মোবাইল, NID) যায় না */
+    /**
+     * ⭐ OpenAI-ধাঁচের চ্যাট — NEXUS-এর গেটওয়ে বা Ollama, অফিসের Mac mini-র মডেল (মালিক ও nexus-60, ১২ নভেম্বর ২০২৬): দরজা `tools`-এ
+     *   (বিন্দুর বদলে `__`), মডেলের নাম সেটিং থেকে, লম্বা অঙ্ক ঢাকা; মডেলের বাছা দরজায় উত্তর ABOS-এর নিজের হিসাব থেকে।
+     * ⛔ মডেল তালিকার বাইরের নাম বললে কোনো দরজা খোলে না — "বুঝিনি", আন্দাজ নয়।
+     */
+    public function test_the_office_model_picks_only_a_door_from_the_list(): void
+    {
+        $settings = app(\App\Core\Services\SettingsService::class);
+        $settings->set('assistant.model_url', 'https://ai.office.test');
+        $settings->set('assistant.model_kind', 'chat');
+        $settings->set('assistant.model_name', 'qwen3:4b-instruct');
+        $call = fn (string $name, string $args): array => ['model' => 'qwen3:4b-instruct', 'choices' => [['message' => ['role' => 'assistant', 'content' => '',
+            'tool_calls' => [['type' => 'function', 'function' => ['name' => $name, 'arguments' => $args]]]]]]];
+        Http::fake(['ai.office.test/v1/chat/completions' => Http::sequence()
+            ->push($call('sales__summary', '{"period": "today"}'))
+            ->push($call('payroll__everyone', '{}'))]);
+
+        $answer = app(AssistantEngine::class)->ask($this->owner, 'আজ কত বিক্রি হলো? 01712345678');
+        $this->assertSame('answered', $answer['state'], '⛔ মডেলের বাছা দরজায় উত্তর এল না।');
+        $this->assertSame('sales.summary', $answer['tool'], '⛔ `sales__summary` আবার `sales.summary` হয়নি।');
+        $this->assertSame('qwen3:4b-instruct', $answer['model']);
+        Http::assertSent(function ($request): bool {
+            $body = $request->data();
+
+            return str_ends_with($request->url(), '/v1/chat/completions') && $body['model'] === 'qwen3:4b-instruct' && $body['stream'] === false
+                && $body['messages'][1]['content'] === 'আজ কত বিক্রি হলো? ••••'
+                && in_array('sales__summary', array_column(array_column($body['tools'], 'function'), 'name'), true);
+        });
+
+        $made = app(AssistantEngine::class)->ask($this->owner, 'সবার বেতন কত');
+        $this->assertSame('not_understood', $made['state'], '⛔ তালিকার বাইরের দরজার নামে কিছু খুলল বা আন্দাজ হলো।');
+        $this->assertNull($made['result']);
+    }
+
     public function test_long_numbers_are_masked_before_the_model(): void
     {
         $this->assertSame('রহিমের নম্বর •••• দেখাও', ModelClient::mask('রহিমের নম্বর 01712345678 দেখাও'));

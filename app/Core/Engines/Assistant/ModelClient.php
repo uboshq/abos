@@ -24,6 +24,16 @@ final class ModelClient
     /** ⓘ চুক্তির পথ — NEXUS-এর সাথে ঠিক করা এক রূপ, দুই ERP */
     public const PATH = '/v1/assistant/interpret';
 
+    /** ⓘ সার্ভারের ধরন — NEXUS-এর পুরনো চুক্তি, বা OpenAI-ধাঁচের চ্যাট (NEXUS-এর গেটওয়ে / Ollama; `assistant.model_kind`) */
+    public const NEXUS = 'nexus';
+
+    public const CHAT = 'chat';
+
+    public const CHAT_PATH = '/v1/chat/completions';
+
+    /** ⓘ Mac mini-তে বসানো মডেল (১২ নভেম্বর ২০২৬) — সেটিং খালি হলে এটাই */
+    public const DEFAULT_MODEL = 'qwen3:4b-instruct';
+
     public function __construct(private readonly SettingsService $settings) {}
 
     public function configured(): bool
@@ -42,6 +52,10 @@ final class ModelClient
         }
 
         $start = microtime(true);
+
+        if ($this->kind() === self::CHAT) {
+            return $this->viaChat($question, $locale, $page, $tools, $start);
+        }
 
         try {
             $response = Http::timeout(self::TIMEOUT_SECONDS)->acceptJson()
@@ -72,6 +86,89 @@ final class ModelClient
             'model' => mb_substr((string) $response->json('model', 'nexus'), 0, 60),
             'ms' => (int) round((microtime(true) - $start) * 1000),
         ];
+    }
+
+    /**
+     * ⭐ OpenAI-ধাঁচের চ্যাট (`/v1/chat/completions`, দরজাগুলো `tools`-এ) — NEXUS-এর গেটওয়ে (nexus-60, ১২ নভেম্বর ২০২৬: Mac mini-র
+     *   মডেলের সামনে চাবিওয়ালা Cloudflare Tunnel) আর Ollama নিজেও একই রূপ বোঝে।
+     *
+     * ⓘ দরজার নামে বিন্দু চলে না (`^[a-zA-Z0-9_-]+$`) — `sales.summary` যায় `sales__summary` হয়ে, ফেরার পথে আবার বিন্দু।
+     * ⓘ তাপমাত্রা ০ — একই প্রশ্নে একই দরজা; মডেল দরজা না বাছলে null, তখন নিজের শব্দ-তালিকা ([[WordMatcher]])।
+     * ⛔ তালিকার বাইরের নাম বললে দরজা নেই — আন্দাজে কিছু খোলে না; চাবি তবু [[AssistantEngine]]-এ আবার দেখা।
+     *
+     * @param  list<array{name: string, description: string, parameters: array<string, mixed>, required: list<string>}>  $tools
+     * @return array{tool: ?string, args: array<string, mixed>, model: string, ms: int}|null
+     */
+    private function viaChat(string $question, string $locale, ?string $page, array $tools, float $start): ?array
+    {
+        $wire = [];
+
+        foreach ($tools as $t) {
+            $wire[self::wireName($t['name'])] = $t['name'];
+        }
+
+        $system = 'You help a user of a business ERP. Call exactly one of the given tools when it answers the question; '
+            .'if none fits, answer with no tool call. Keep product and party names exactly as written. '
+            .'The question is in '.($locale === 'bn' ? 'Bengali' : 'English').'.'
+            .($page !== null && $page !== '' ? ' The user is on the ERP page "'.$page.'".' : '');
+        $name = $this->modelName();
+
+        try {
+            $response = Http::timeout(self::TIMEOUT_SECONDS)->acceptJson()
+                ->withToken((string) config('services.assistant.key', ''))
+                ->post($this->url().self::CHAT_PATH, [
+                    'model' => $name,
+                    'stream' => false,
+                    'temperature' => 0,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $system],
+                        ['role' => 'user', 'content' => self::mask($question)],
+                    ],
+                    'tools' => array_map(fn (array $t): array => ['type' => 'function', 'function' => [
+                        'name' => self::wireName($t['name']),
+                        'description' => $t['description'],
+                        'parameters' => ['type' => 'object', 'properties' => $t['parameters'] === [] ? new \stdClass : $t['parameters'], 'required' => $t['required']],
+                    ]], $tools),
+                ]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $call = $response->json('choices.0.message.tool_calls.0.function');
+        $tool = is_array($call) ? ($wire[(string) ($call['name'] ?? '')] ?? null) : null;
+        $raw = is_array($call) ? ($call['arguments'] ?? null) : null;
+        $args = is_string($raw) ? json_decode($raw, true) : $raw;
+
+        return [
+            'tool' => $tool,
+            'args' => $tool !== null && is_array($args) ? $args : [],
+            'model' => mb_substr((string) ($response->json('model') ?: $name), 0, 60),
+            'ms' => (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /** ⓘ `sales.summary` → `sales__summary` — OpenAI-র দরজার নামে বিন্দু চলে না */
+    public static function wireName(string $name): string
+    {
+        return str_replace('.', '__', $name);
+    }
+
+    private function kind(): string
+    {
+        return (string) $this->settings->get('assistant.model_kind', self::NEXUS) === self::CHAT ? self::CHAT : self::NEXUS;
+    }
+
+    private function modelName(): string
+    {
+        $name = trim((string) $this->settings->get('assistant.model_name', self::DEFAULT_MODEL));
+
+        return $name !== '' ? $name : self::DEFAULT_MODEL;
     }
 
     /** ⓘ ১০ বা তার বেশি অঙ্কের সারি (মোবাইল, NID, হিসাব নম্বর) ঢাকা — মডেলের দরকার নেই */
