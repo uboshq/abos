@@ -124,7 +124,8 @@
 
                         <div class="cq-chips" x-show="idle()" data-copilot-examples>
                             @foreach ($examples as $example)
-                                <button type="button" class="cq-chip" @click="pick('{{ e(str_replace("'", '', $example)) }}')">{{ $example }}</button>
+                                @php $said = $say === null ? '' : str_replace("'", '', $example); @endphp
+                                <button type="button" class="cq-chip" @click="pick('{{ $said }}')">{{ $example }}</button>
                             @endforeach
                         </div>
 

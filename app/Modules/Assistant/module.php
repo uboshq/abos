@@ -76,5 +76,27 @@ return [
     'role_templates' => [
         // ⓘ কোপাইলট দেখা — নিজের চাবির তথ্যটুকুই; খাতা আর সেটিং মালিকের
         'Copilot user' => ['assistant.use'],
+        // ⭐ কোপাইলট সবার — মালিক, ১২ নভেম্বর ২০২৬ ("আমার আইডি ছাড়া অন্য কারো আইডিতেই কোপাইলট দেখাচ্ছে না"); প্রত্যেকে কেবল নিজের চাবির
+        //   তথ্য পান, তাই নিরাপদ। ⛔ খাতা (assistant.audit) মালিকের। live-এ একই দিন হাতে বসানো (৬০ রোল) — এখানে নতুন কোম্পানির জন্য
+        'Accountant' => ['assistant.use'],
+        'ASM' => ['assistant.use'],
+        'Auditor' => ['assistant.use'],
+        'Backup Operator' => ['assistant.use'],
+        'Backup Watcher' => ['assistant.use'],
+        'Counter' => ['assistant.use'],
+        'DSM' => ['assistant.use'],
+        'Field Sales' => ['assistant.use'],
+        'HR' => ['assistant.use'],
+        'Kitchen' => ['assistant.use'],
+        'Manager' => ['assistant.use'],
+        'Notification Analyst' => ['assistant.use'],
+        'Notification Manager' => ['assistant.use'],
+        'Notification Watcher' => ['assistant.use'],
+        'Notification Writer' => ['assistant.use'],
+        'RSM' => ['assistant.use'],
+        'Security Watch' => ['assistant.use'],
+        'Settings Keeper' => ['assistant.use'],
+        'User Admin' => ['assistant.use'],
+        'Warehouse' => ['assistant.use'],
     ],
 ];
