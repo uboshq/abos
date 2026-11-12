@@ -43,6 +43,14 @@ Route::middleware('auth')->prefix('customers')->group(function () {
         ->whereNumber('binding')->name('binding.end');
 
     /*
+     * ⭐ ফিল্ড ফোর্সের গাছ — মালিক, ১২ নভেম্বর ২০২৬ ([[FieldForceController]])।
+     */
+    Route::get('/field-force', [\App\Modules\Customer\Http\Controllers\FieldForceController::class, 'index'])->name('fieldforce.index');
+    Route::post('/field-force/wall', [\App\Modules\Customer\Http\Controllers\FieldForceController::class, 'wall'])->name('fieldforce.wall');
+    Route::post('/field-force/{user}', [\App\Modules\Customer\Http\Controllers\FieldForceController::class, 'save'])
+        ->whereNumber('user')->name('fieldforce.save');
+
+    /*
      * আচরণ নামানো — কোড দিয়ে, তাই {customer}-এর আগে ও স্থির পথে।
      * "conduct" সংখ্যা নয় বলে {customer} (whereNumber) এটাকে গিলত না,
      * তবু স্পষ্টতার জন্য উপরে।

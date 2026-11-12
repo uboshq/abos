@@ -1,0 +1,79 @@
+/*
+ * ⭐ ফিল্ড ফোর্সের গাছ — মালিকের নমুনা, ১২ নভেম্বর ২০২৬ ([[FieldForceController]])।
+ * ⓘ পদের রং চালু টোকেন থেকে — নতুন রং নয়: DSM বেগুনি, RSM নীল, ASM সবুজ, SR কমলা।
+ */
+.ff-pos {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.375rem;
+    padding: 0.0625rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-surface-card);
+    background: var(--color-ink-muted);
+}
+.ff-pos[data-pos='DSM'] { background: var(--color-kind-journal); }
+.ff-pos[data-pos='RSM'] { background: var(--color-brand-600); }
+.ff-pos[data-pos='ASM'] { background: var(--color-kind-receipt-deep, var(--color-kind-receipt)); }
+.ff-pos[data-pos='SR'] { background: var(--color-kind-expense-deep, var(--color-kind-expense)); }
+
+.ff-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    font-size: 0.72rem;
+    line-height: 1.35rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+}
+.ff-chip[data-tone='depot'] { border-color: var(--color-brand-500); color: var(--color-brand-700); }
+.ff-chip[data-tone='danger'] { border-color: var(--color-badge-danger-ink); color: var(--color-badge-danger-ink); background: var(--color-badge-danger-bg); }
+
+.ff-node {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-card);
+    padding: 0.55rem 0.75rem;
+}
+.ff-node:hover { border-color: var(--color-brand-500); }
+.ff-node[aria-current='true'] {
+    border: 2px solid var(--color-brand-600);
+    background: var(--color-badge-info-bg);
+}
+.ff-branch { margin-inline-start: 1.1rem; border-inline-start: 2px dashed var(--color-border); padding-inline-start: 1.1rem; }
+
+.ff-check { border-radius: var(--radius-card); padding: 0.75rem 0.9rem; border: 1px solid var(--color-border); }
+.ff-check[data-tone='ok'] { background: var(--color-badge-success-bg); color: var(--color-badge-success-ink); }
+.ff-check[data-tone='bad'] { background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink); }
+.ff-check[data-tone='warn'] { background: var(--color-badge-pending-bg); color: var(--color-badge-pending-ink); }
+.ff-check strong { font-size: 1.15rem; }
+
+.ff-seg { display: inline-flex; gap: 0.4rem; flex-wrap: wrap; }
+.ff-seg label { cursor: pointer; }
+.ff-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.ff-seg span {
+    display: inline-block;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.ff-seg input:checked + span { background: var(--color-brand-600); border-color: var(--color-brand-600); color: var(--color-surface-card); }
+.ff-seg input:focus-visible + span { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+.ff-picks {
+    max-height: 9.5rem;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--color-surface-page, var(--color-surface-card));
+}
