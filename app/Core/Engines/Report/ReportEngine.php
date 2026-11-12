@@ -818,7 +818,12 @@ final class ReportEngine
             }
         }
 
-        if ($allowed !== null && $report->branchless === ReportDefinition::WHOLE_COMPANY) {
+        /*
+         * ⓘ ডিলারের দেয়ালের ভেতরের মানুষ (ফিল্ড ফোর্স) শাখা দিয়ে নয়, ডিলার দিয়ে সীমিত — তাঁর জন্য গোটা কোম্পানির রিপোর্ট শাখার কারণে
+         *   ফেরানো হয় না; রিপোর্ট নিজের ডিলারের দেয়াল না বসালে উপরের পাহারাই ফেরায় (মালিক, ১২ নভেম্বর ২০২৬: ডিপো না বসানো ফিল্ড
+         *   ফোর্স "কোনো ডিপো নয়" হলো, আর তাগাদার লক্ষ্যের রিপোর্ট তাঁকে ৪০৩ দিচ্ছিল — EveryDealerPaperStandsBehindTheDealerWallTest)।
+         */
+        if ($allowed !== null && $report->branchless === ReportDefinition::WHOLE_COMPANY && ! app(DealerScope::class)->walled()) {
             throw new AuthorizationException(
                 "Report '{$report->key}' counts the whole company and cannot be split by branch; a branch-limited user cannot have it."
             );
