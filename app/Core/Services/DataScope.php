@@ -69,7 +69,23 @@ final class DataScope
             ->map(fn ($id) => (int) $id)
             ->all();
 
+        /*
+         * ⛔ ফিল্ড ফোর্সের ডিপো না বসানো = কোনো ডিপো নয়, "সব" নয় (মালিক, ১২ নভেম্বর ২০২৬: "সবার সব ডিপো … অন্য আইডিতে দেখা যায়")।
+         *   ⓘ কেবল ডিলারের দেয়ালের ভেতরের মানুষ (DSM/RSM/ASM/SR — [[DealerScope::walled()]]), আর কেবল কোম্পানির সেই একই সুইচ চালু
+         *   থাকলে — বাঁধন আর ডিপো বসানোর আগে সুইচ বন্ধ, তাই আজ কারও দেখা হঠাৎ শূন্য হয় না। অফিসের মানুষ আগের মতো: সারি নেই মানে সব।
+         */
+        if ($ids === [] && $type === UserDataScope::BRANCH && $this->fieldForceWalled($user, (int) $userId)) {
+            return $this->cache[$key] = [];
+        }
+
         return $this->cache[$key] = $ids === [] ? null : $ids;
+    }
+
+    private function fieldForceWalled(User|int|null $user, int $userId): bool
+    {
+        $person = $user instanceof User ? $user : User::query()->find($userId);
+
+        return $person instanceof User && app(DealerScope::class)->walled($person);
     }
 
     /** এই কোম্পানিতে সুপার অ্যাডমিন কি না — কাঁচা কোয়েরিতে, যাতে কোনো দেয়াল নিজেকে ডেকে না বসে */
