@@ -22,6 +22,9 @@
             'render' => fn ($l) => (string) ($counts[$l->id] ?? 0)],
         ['key' => 'state', 'label' => '', 'width' => '6rem',
             'render' => fn ($l) => $l->is_active ? __('sales::price_book.active') : __('sales::price_book.inactive')],
+        // ⭐ অ্যাকশন ▾ — দেখা, প্রিভিউ, ইতিহাস, সম্পাদনা (মালিক, ১০ নভেম্বর ২০২৬; [[price_book.partials.row-actions]])
+        ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '7.5rem',
+            'render' => fn ($l) => view('sales::price_book.partials.row-actions', ['list' => $l])],
     ];
 @endphp
 
