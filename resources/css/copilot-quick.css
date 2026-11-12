@@ -1,0 +1,157 @@
+/*
+ * ⭐ কোপাইলটের দ্রুত জিজ্ঞাসা — উপরের বারের মগজ চাপলে পুরো পর্দা জুড়ে কেবল জিজ্ঞাসা (মালিক, ১২ নভেম্বর ২০২৬: Siri আর Gemini-র মতো;
+ *   নমুনা 3uJhK92DAMhwyELt63mSmr)। পেছনের পাতা ঝাপসা, পাতা বদলায় না; Esc বা × দিলে সেই পাতাতেই।
+ *   ⓘ রং এখানে, পর্দার Blade-এ নয় (EveryScreenObeysTheThemeTest) — কাচের পর্দা গাঢ়ই থাকে, আলো বা অন্ধকার থিমে একই।
+ */
+:root {
+    --color-cq-scrim: rgb(6 10 24 / 0.8);
+    --color-cq-glass: rgb(17 24 48 / 0.9);
+    --color-cq-line: rgb(148 163 184 / 0.24);
+    --color-cq-chip: rgb(255 255 255 / 0.08);
+    --color-cq-ink: #f8fafc;
+    --color-cq-muted: #cbd5e1;
+    --color-cq-faint: #94a3b8;
+    --color-cq-me: rgb(168 85 247 / 0.24);
+    --color-cq-me-line: rgb(192 132 252 / 0.45);
+    --color-cq-accent: #f0abfc;
+    --color-cq-link: #7dd3fc;
+    --color-cq-send: #e2e8f0;
+    --color-cq-send-ink: #0f172a;
+    --color-cq-stop: #ef4444;
+}
+
+.cq-btn {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-width: 3.25rem; height: 2.75rem; border-radius: 0.75rem; cursor: pointer; color: #fff; padding: 0 .25rem;
+    font: 700 0.6rem/1 Inter, system-ui, sans-serif; letter-spacing: .02em; flex: none;
+    /* ⓘ মালিক, ১২ নভেম্বর ২০২৬: উপরের বারে কেবল জীবন্ত মগজ — আংটি আর পেছনের বাক্স নেই */
+    background: transparent; border: 0;
+}
+.cq-btn:hover .cq-orb-mark svg { filter: drop-shadow(0 0 6px rgb(232 121 249 / .9)); }
+/*
+ * ⓘ মগজের নিচের নাম — মালিক, ১২ নভেম্বর ২০২৬ ("একটা সুন্দর ফন্ট দিয়ে দাও"): Montserrat (প্রকল্পে আগে থেকেই), মগজের একই রঙের ঢাল,
+ *   ধীরে সরে — নাম আর মগজ এক জিনিস দেখায়।
+ */
+.cq-label {
+    font-family: 'Montserrat', 'Inter', system-ui, sans-serif; font-weight: 700; font-size: .66rem; letter-spacing: .06em; line-height: 1;
+    background: linear-gradient(90deg, #7dd3fc, #c084fc, #f472b6, #fbbf24, #7dd3fc); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: cq-label 6s linear infinite;
+}
+@keyframes cq-label { to { background-position: 300% 0; } }
+.cq-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/*
+ * ⭐ কোপাইলটের জীবন্ত মগজ — মালিকের "ঘ" (১২ নভেম্বর ২০২৬: "ক + খ + গ একসাথে final ok"; নমুনা Ve4fMPX3g6ksYwUSyDG99o):
+ *   ঘোরা রঙের আংটি (গ) · ভেতরে রং-বদলানো মগজ যা আলতো শ্বাস নেয় (ক) · মগজের ভাঁজে আলোর বিন্দু ছোটে (খ)।
+ *   শুনলে দ্রুত (.cq-fast), উত্তর খুঁজলে ঝিকিমিকি (.cq-think); "নড়াচড়া কম" চালু থাকলে স্থির।
+ */
+.cq-orb-mark { position: relative; display: grid; place-items: center; border-radius: 999px; flex: none; width: 1.9rem; height: 1.9rem;
+    box-shadow: 0 0 10px rgb(168 85 247 / 0.6); }
+.cq-orb-mark::before { content: ""; position: absolute; inset: 0; border-radius: 999px;
+    background: conic-gradient(from 0deg, #0ea5e9, #a855f7, #ec4899, #f59e0b, #22c55e, #0ea5e9); animation: cq-spin 4s linear infinite; }
+.cq-orb-mark::after { content: ""; position: absolute; inset: 2px; border-radius: 999px; background: radial-gradient(circle at 35% 30%, #312e81, #0b1020 70%); }
+.cq-orb-mark svg { position: relative; z-index: 1; width: 62%; height: 62%; animation: cq-breathe 3.2s ease-in-out infinite; }
+.cq-orb-mark.lg { width: 2.6rem; height: 2.6rem; }
+/* ⓘ উপরের বারে আংটি ছাড়া — কেবল মগজ, একটু বড়, শ্বাস নেয়, আলোর বিন্দু ছোটে */
+.cq-orb-mark.bare { width: 1.75rem; height: 1.6rem; box-shadow: none; }
+.cq-orb-mark.bare::before, .cq-orb-mark.bare::after { display: none; }
+.cq-orb-mark.bare svg { width: 100%; height: 100%; }
+.cq-orb-mark.lg::after { inset: 3px; }
+.cq-orb-mark.cq-fast::before { animation-duration: 1.4s; }
+.cq-orb-mark.cq-fast svg { animation-duration: 1s; }
+.cq-orb-mark.cq-think svg { animation: cq-flicker 1.2s ease-in-out infinite; }
+@keyframes cq-breathe { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgb(232 121 249 / .5)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 5px rgb(232 121 249 / .9)) drop-shadow(0 0 9px rgb(56 189 248 / .5)); } }
+@keyframes cq-flicker { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* মগজের রঙের ঢাল — নীল → বেগুনি → গোলাপি → কমলা, ৬ সেকেন্ডে এক পাক; আলোর দুই বিন্দু সাদা আর সোনালি */
+.cq-s1 { stop-color: #38bdf8; animation: cq-s1 6s linear infinite; }
+.cq-s2 { stop-color: #a855f7; animation: cq-s2 6s linear infinite; }
+.cq-s3 { stop-color: #ec4899; animation: cq-s3 6s linear infinite; }
+@keyframes cq-s1 { 25% { stop-color: #a855f7; } 50% { stop-color: #ec4899; } 75% { stop-color: #f59e0b; } }
+@keyframes cq-s2 { 25% { stop-color: #ec4899; } 50% { stop-color: #f59e0b; } 75% { stop-color: #38bdf8; } }
+@keyframes cq-s3 { 25% { stop-color: #f59e0b; } 50% { stop-color: #38bdf8; } 75% { stop-color: #a855f7; } }
+.cq-spark-a { fill: #fff; }
+.cq-spark-b { fill: #fde68a; }
+
+.cq-sheet {
+    position: fixed; inset: 0; z-index: 80; background: var(--color-cq-scrim); backdrop-filter: blur(8px);
+    display: flex; justify-content: center; padding: 1.5rem 1rem 1rem; color: var(--color-cq-ink); overflow: hidden;
+}
+.cq-sheet::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; opacity: 0; transition: opacity .3s;
+    background: linear-gradient(90deg, #0ea5e9, #a855f7, #ec4899, #f59e0b, #0ea5e9); background-size: 200% 100%;
+}
+.cq-sheet[data-glow="1"]::after { opacity: 1; animation: cq-edge 2.4s linear infinite; }
+@keyframes cq-edge { to { background-position: 200% 0; } }
+
+.cq-col { width: 100%; max-width: 52rem; display: flex; flex-direction: column; gap: 1rem; min-height: 0; }
+.cq-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.cq-brain { width: 2.25rem; height: 2.25rem; border-radius: .6rem; display: grid; place-items: center; flex: none;
+    background: radial-gradient(120% 120% at 30% 20%, #e879f9, #a21caf 45%, #6d28d9); }
+.cq-name { font: 700 1.125rem Inter, system-ui, sans-serif; }
+.cq-ctx { font-size: .8125rem; color: var(--color-cq-muted); background: var(--color-cq-chip); border: 1px solid var(--color-cq-line);
+    border-radius: 999px; padding: .15rem .65rem; }
+.cq-close { margin-left: auto; display: flex; align-items: center; gap: .4rem; color: var(--color-cq-muted); font-size: .8125rem; }
+.cq-round { width: 2.5rem; height: 2.5rem; border-radius: 999px; border: 1px solid var(--color-cq-line); background: var(--color-cq-chip);
+    color: var(--color-cq-ink); cursor: pointer; display: grid; place-items: center; }
+.cq-kbd { font: 600 .6875rem Inter, system-ui, sans-serif; border: 1px solid var(--color-cq-line); border-radius: .35rem; padding: 0 .35rem;
+    color: var(--color-cq-muted); }
+
+.cq-hello { font-size: clamp(1.5rem, 4.5vw, 2.5rem); font-weight: 600; line-height: 1.2; margin: .5rem 0 0; text-wrap: balance; }
+.cq-hello span { background: linear-gradient(90deg, #38bdf8, #c084fc, #f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.cq-box { display: flex; align-items: center; gap: .5rem; background: var(--color-cq-glass); border: 1px solid var(--color-cq-line);
+    border-radius: 1.375rem; padding: .5rem .5rem .5rem 1.1rem; box-shadow: 0 10px 40px rgb(0 0 0 / .35); }
+.cq-box:focus-within { border-color: #c084fc; box-shadow: 0 0 0 3px rgb(192 132 252 / .35), 0 10px 40px rgb(0 0 0 / .35); }
+.cq-box input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--color-cq-ink); font-size: 1.125rem; padding: .6rem 0; }
+.cq-box input::placeholder { color: var(--color-cq-faint); }
+.cq-ib { width: 3rem; height: 3rem; border-radius: 999px; border: 0; cursor: pointer; display: grid; place-items: center; flex: none; }
+.cq-ib[disabled] { opacity: .45; cursor: not-allowed; }
+.cq-mic { background: linear-gradient(135deg, #a855f7, #ec4899); color: #fff; }
+.cq-send { background: var(--color-cq-send); color: var(--color-cq-send-ink); }
+
+.cq-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cq-chip { font-size: .875rem; color: var(--color-cq-ink); background: var(--color-cq-chip); border: 1px solid var(--color-cq-line);
+    border-radius: 999px; padding: .45rem .9rem; cursor: pointer; min-height: 2.5rem; }
+.cq-foot { display: flex; flex-wrap: wrap; gap: .9rem; color: var(--color-cq-muted); font-size: .8125rem; }
+.cq-safe { font-size: .78rem; color: var(--color-cq-faint); }
+
+.cq-orb { width: 7.5rem; height: 7.5rem; border-radius: 999px; margin: .75rem auto 0;
+    background: conic-gradient(from 0deg, #0ea5e9, #a855f7, #ec4899, #f59e0b, #0ea5e9);
+    animation: cq-spin 3s linear infinite, cq-pulse 1.4s ease-in-out infinite; box-shadow: 0 0 60px rgb(168 85 247 / .6); }
+@keyframes cq-spin { to { transform: rotate(360deg); } }
+@keyframes cq-pulse { 50% { scale: 1.08; } }
+.cq-heard { font-size: clamp(1.25rem, 3.6vw, 1.875rem); font-weight: 600; text-align: center; line-height: 1.35; min-height: 2.6rem; }
+.cq-wave { display: flex; gap: 5px; justify-content: center; align-items: center; height: 2.5rem; }
+.cq-wave b { display: block; width: 5px; border-radius: 3px; background: linear-gradient(#c084fc, #38bdf8); animation: cq-w 1s ease-in-out infinite; }
+.cq-wave b:nth-child(2n) { animation-delay: .15s; } .cq-wave b:nth-child(3n) { animation-delay: .3s; } .cq-wave b:nth-child(5n) { animation-delay: .45s; }
+@keyframes cq-w { 0%, 100% { height: 8px; } 50% { height: 36px; } }
+.cq-center { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; }
+.cq-pill { font-weight: 600; font-size: .9rem; border-radius: 999px; border: 1px solid var(--color-cq-line); background: var(--color-cq-chip);
+    color: var(--color-cq-ink); padding: .5rem 1rem; min-height: 2.5rem; cursor: pointer; display: inline-flex; gap: .45rem; align-items: center; }
+.cq-pill[aria-pressed="true"] { background: rgb(168 85 247 / .3); border-color: #c084fc; }
+
+.cq-thread { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: .75rem; padding-right: .25rem; }
+.cq-me { align-self: flex-end; max-width: 85%; background: var(--color-cq-me); border: 1px solid var(--color-cq-me-line);
+    border-radius: 1.1rem 1.1rem .25rem 1.1rem; padding: .6rem .9rem; font-weight: 500; }
+.cq-bot { display: flex; gap: .5rem; align-items: flex-start; }
+.cq-bot .cq-brain { width: 1.9rem; height: 1.9rem; border-radius: .55rem; }
+.cq-ans { background: var(--color-cq-glass); border: 1px solid var(--color-cq-line); border-radius: .25rem 1.1rem 1.1rem 1.1rem;
+    padding: .9rem 1rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; flex: 1; }
+.cq-big { font-size: clamp(1.1rem, 2.6vw, 1.4rem); font-weight: 700; line-height: 1.35; }
+.cq-rows { display: grid; grid-template-columns: 1fr auto; border-top: 1px solid var(--color-cq-line); }
+.cq-k, .cq-v { padding: .45rem .1rem; border-bottom: 1px solid var(--color-cq-line); font-variant-numeric: tabular-nums; }
+.cq-v { text-align: right; font-weight: 600; }
+.cq-src { font-size: .8rem; color: var(--color-cq-muted); }
+.cq-acts { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+.cq-more { color: var(--color-cq-link); font-weight: 600; margin-left: auto; padding: .4rem .2rem; }
+.cq-mini { display: inline-flex; gap: 3px; align-items: center; height: 16px; }
+.cq-mini b { width: 3px; border-radius: 2px; background: var(--color-cq-accent); animation: cq-w2 .9s ease-in-out infinite; }
+.cq-mini b:nth-child(2) { animation-delay: .2s; } .cq-mini b:nth-child(3) { animation-delay: .4s; }
+@keyframes cq-w2 { 0%, 100% { height: 4px; } 50% { height: 15px; } }
+.cq-typing { color: var(--color-cq-muted); font-size: .9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .cq-orb, .cq-wave b, .cq-mini b, .cq-sheet[data-glow="1"]::after, .cq-orb-mark::before, .cq-orb-mark svg, .cq-label { animation: none; }
+    .cq-orb-mark .cq-spark { display: none; }
+}

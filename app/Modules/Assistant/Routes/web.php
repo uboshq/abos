@@ -23,6 +23,10 @@ Route::middleware('auth')->prefix('copilot')->group(function () {
     Route::get('/ask', [AskController::class, 'show'])
         ->name('ask')
         ->middleware(['can:assistant.use', 'throttle:30,1']);
+    // ⭐ দ্রুত জিজ্ঞাসা — উপরের বারের মগজ (মালিক, ১২ নভেম্বর ২০২৬): পাতা না বদলে JSON-এ উত্তর; ফোনের একই দরজা, একই চাবি, একই খাতা
+    Route::post('/quick', [\App\Modules\Assistant\Http\Controllers\CopilotApiController::class, 'ask'])
+        ->name('quick')
+        ->middleware(['can:assistant.use', 'throttle:30,1']);
     Route::post('/answers/{event}/feedback', [AskController::class, 'feedback'])
         ->whereNumber('event')->name('feedback')
         ->middleware(['can:assistant.use', 'throttle:30,1']);

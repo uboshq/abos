@@ -34,6 +34,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
      */
     private const EXCLUDED = [
         'assistant.draft.dunning.send' => 'Copilot dunning SMS the person ticked — queues text messages on the office phone and logs them per party; no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
+        'assistant.quick' => 'Copilot quick ask from the top bar — a question in, an answer out as JSON; writes only the audit row, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'assistant.dismiss' => 'Copilot "this is fine" on a watch finding — a per-person quiet note with a reason, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'accounts.voucher.simulate' => 'preview of a receipt/payment voucher\'s ledger lines; writes nothing and makes no person from a typed name (claimed: TheReceiptAndPaymentFollowTheFinalDesignTest, voucher/ledger/people counts unchanged)',
         'purchase.payment.simulate' => 'preview of the ledger lines; writes nothing (claimed: ThePaySupplierScreenFollowsTheDesignTest, row counts and audit unchanged)',

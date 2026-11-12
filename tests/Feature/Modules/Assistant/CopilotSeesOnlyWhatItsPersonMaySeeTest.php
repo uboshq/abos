@@ -203,6 +203,39 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
         $this->assertSame('প্রিমিয়াম চা ২৫০ গ্রাম', $find('চা'), '⛔ "চা" চা পায়নি — বা চাল পেল।');
     }
 
+    /**
+     * ⭐ উপরের বারের মগজ — কেবল দ্রুত জিজ্ঞাসা (মালিক, ১২ নভেম্বর ২০২৬: Siri/Gemini-র মতো; নমুনা 3uJhK92DAMhwyELt63mSmr): পাতা না
+     *   বদলে পুরো পর্দা, মাইক আর পাঠানো; সারাংশ, নজর, খাতা এখানে নেই। উত্তর JSON-এ, খাতায় "ওয়েব"। ⛔ চাবি ছাড়া বোতামও নেই, দরজাও বন্ধ।
+     */
+    public function test_the_top_bar_brain_opens_only_the_quick_ask(): void
+    {
+        $html = (string) $this->get(route('dashboard'))->assertOk()->getContent();
+        $start = strpos($html, 'data-copilot-quick');
+        $this->assertNotFalse($start, '⛔ উপরের বারে কোপাইলটের দ্রুত জিজ্ঞাসা নেই।');
+        // ⓘ মগজের অংশটুকুই — ঠিক পরেই ডানের ঝাঁক (বাঁয়ের মডিউল বারে পুরো কোপাইলটের লিংক থাকে, সেটা এর বাইরে)
+        $quick = substr($html, (int) $start, (int) strpos($html, 'data-shell-actions', (int) $start) - (int) $start);
+        $this->assertStringContainsString('data-copilot-sheet', $quick);
+        $this->assertStringContainsString('data-copilot-mic', $quick, '⛔ কথা বলার বোতাম নেই।');
+        $this->assertStringContainsString(route('assistant.quick'), $quick);
+        // ⭐ জীবন্ত মগজ — মালিকের "ঘ" (রঙের আংটি, রং-বদলানো মগজ, আলোর বিন্দু): বোতামে, মাথায় আর উত্তরের পাশে, ঢাল একবার
+        $this->assertGreaterThanOrEqual(3, substr_count($quick, 'cq-orb-mark'), '⛔ বোতাম, মাথা আর উত্তরে জীবন্ত মগজ নেই।');
+        $this->assertSame(1, substr_count($html, 'id="cq-grad"'), '⛔ মগজের রঙের ঢাল পাতায় একবার নয়।');
+        $this->assertStringContainsString('animateMotion', $quick, '⛔ মগজের ভাঁজে আলোর বিন্দু ছোটে না।');
+        foreach (['data-finding', 'data-brief-part', route('assistant.audit'), 'href="'.route('assistant.today').'"'] as $other) {
+            $this->assertStringNotContainsString($other, $quick, '⛔ দ্রুত জিজ্ঞাসায় পুরো কোপাইলটের পর্দা: '.$other);
+        }
+
+        $this->postJson(route('assistant.quick'), ['q' => 'aj koto bikri holo', 'page' => 'dashboard'])->assertOk()
+            ->assertJsonPath('state', 'answered');
+        $asked = AssistantEvent::query()->where('kind', AssistantEvent::QUESTION)->latest('id')->firstOrFail();
+        $this->assertSame(['web', 'dashboard'], [$asked->channel, $asked->page], '⛔ দ্রুত জিজ্ঞাসা খাতায় ওয়েব আর পাতাসহ ওঠেনি।');
+
+        $clerk = $this->person(['sales.invoice.view']);
+        $this->actingAs($clerk)->postJson(route('assistant.quick'), ['q' => 'aj koto bikri holo'])->assertForbidden();
+        $this->assertStringNotContainsString('data-copilot-quick', (string) $this->actingAs($clerk)->get(route('dashboard'))->getContent(),
+            '⛔ চাবি ছাড়াই উপরের বারে কোপাইলট।');
+    }
+
     public function test_long_numbers_are_masked_before_the_model(): void
     {
         $this->assertSame('রহিমের নম্বর •••• দেখাও', ModelClient::mask('রহিমের নম্বর 01712345678 দেখাও'));

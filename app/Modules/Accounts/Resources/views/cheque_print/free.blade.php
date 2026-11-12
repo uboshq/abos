@@ -35,9 +35,9 @@
                 $picked = (string) old('book', $books->isEmpty() ? 'new' : (string) $books->first()->id);
             @endphp
             <form method="POST" action="{{ route('accounts.cheque.print.free.store') }}" target="_blank" class="grid gap-3 sm:grid-cols-2"
-                  x-data="{ book: @js($picked), next: @js($nextOf), first: @js((string) old('new_first', '')) }"
-                  {{-- ⓘ আসল ছাপা নতুন ট্যাবে — এই পাতা নিজেকে নতুন করে, যাতে বইয়ের পরের নম্বর আর খাতা ঠিক থাকে --}}
-                  x-on:submit="if (! ($event.submitter && $event.submitter.name === 'test')) setTimeout(() => window.location.reload(), 1500)">
+                  x-data="chequeFreeForm({ book: @js($picked), next: @js($nextOf), first: @js((string) old('new_first', '')) })"
+                  {{-- ⓘ আসল ছাপা নতুন ট্যাবে — এই পাতা নিজেকে নতুন করে, যাতে বইয়ের পরের নম্বর আর খাতা ঠিক থাকে ([[chequeFreeForm]]) --}}
+                  x-on:submit="afterSubmit($event)">
                 @csrf
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-medium">{{ __('accounts::cheque_print.book') }}</span>
