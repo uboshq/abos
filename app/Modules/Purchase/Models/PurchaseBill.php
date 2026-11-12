@@ -32,7 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
  */
-class PurchaseBill extends Model implements Drillable, SettlementTerms
+class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -170,6 +170,12 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — মিলকরণের পার্থক্যও টাকা
             'match_difference' => 'decimal:4',
         ];
+    }
+
+    /** ⭐ সইকারীর পাতায় — পণ্য, পরিমাণ, ফ্রি, দর, টাকা ([[PurchaseSigningSheet]]; মালিক, ১২ নভেম্বর ২০২৬) */
+    public function signingSheet(): array
+    {
+        return \App\Modules\Purchase\Support\PurchaseSigningSheet::ofBill($this);
     }
 
     public function lines(): HasMany
