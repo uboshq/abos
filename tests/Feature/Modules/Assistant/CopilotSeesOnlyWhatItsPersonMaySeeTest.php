@@ -186,6 +186,23 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
         $this->assertNull($made['result']);
     }
 
+    /** ⭐ নেই এমন পণ্য — উত্তরে সেই নামটাই ("'চিনি' নামে কোনো পণ্য পাইনি"), "বুঝিনি" নয়; নাম না দিলে তবেই "কোন পণ্য?" */
+    public function test_a_product_that_is_not_there_is_named_in_the_answer(): void
+    {
+        app()->setLocale('bn');
+        $tool = app(\App\Modules\Inventory\Assistant\StockOnHandTool::class);
+
+        // ⓘ ডেমোতে চিনি নেই; "গুঁড়া দুধ ১ কেজি" আছে — একটা শব্দ ("গুঁড়া") মিললেই দুধ উঠে আসত
+        $this->assertSame('"চিনির গুঁড়া" নামে কোনো পণ্য পাইনি — নাম বা কোড দেখে আবার লিখুন।',
+            $tool->run($this->owner, ['product' => 'চিনির গুঁড়া'])['summary'], '⛔ নেই এমন পণ্যে অন্য পণ্য উঠে এল, বা নামটা উত্তরে নেই।');
+        $this->assertSame((string) __('inventory::assistant.no_product'), $tool->run($this->owner, [])['summary']);
+
+        // ⭐ বিভক্তি চলে ("দুধের" ⊃ "দুধ"), আর "চা" "চাল" নয়
+        $find = fn (string $name): ?string => \App\Modules\Inventory\Assistant\ProductInQuestion::find(['product' => $name])?->name_bn;
+        $this->assertSame('গুঁড়া দুধ ১ কেজি', $find('গুঁড়া দুধের'), '⛔ "গুঁড়া দুধের" দুধ পায়নি।');
+        $this->assertSame('প্রিমিয়াম চা ২৫০ গ্রাম', $find('চা'), '⛔ "চা" চা পায়নি — বা চাল পেল।');
+    }
+
     public function test_long_numbers_are_masked_before_the_model(): void
     {
         $this->assertSame('রহিমের নম্বর •••• দেখাও', ModelClient::mask('রহিমের নম্বর 01712345678 দেখাও'));

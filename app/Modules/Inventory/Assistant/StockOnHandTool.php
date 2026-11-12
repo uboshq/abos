@@ -40,7 +40,7 @@ final class StockOnHandTool implements AssistantTool
         $product = ProductInQuestion::find($args);
 
         if ($product === null) {
-            return ['rows' => [], 'columns' => [], 'summary' => (string) __('inventory::assistant.no_product'), 'sources' => []];
+            return ['rows' => [], 'columns' => [], 'summary' => ProductInQuestion::notFound($args), 'sources' => []];
         }
 
         $stock = app(StockService::class);
