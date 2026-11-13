@@ -50,6 +50,7 @@ import 'nav_bottom_bar.dart';
 import 'nav_search.dart';
 import 'notice_ticker.dart';
 import 'workspace_picker.dart';
+import '../copilot/copilot_quick_sheet.dart';
 
 /// The signed-in person's home — the owner's navigation of 12 Oct 2026:
 /// *"app icon e tap korle age module asbe, module e dhukle tar menu, menu r
@@ -345,6 +346,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   /// ⭐ ভেতরের পর্দার বার ([AbosScreenBar]) একই কোম্পানি, শাখা, ছবি আর একই কাজ পায় — হোম যা জানে তা-ই, নতুন ডাক নয়
+  /// ⭐ উপরের মগজ — কেবল যাঁর মেনুতে কোপাইলট আছে (সার্ভার `assistant.use` দেখে দেয়); "পুরো দেখুন" পুরো কোপাইলটের পাতায়
+  Future<void> Function(BuildContext context, String page)? get _copilot => _tree.screen('copilot') == null
+      ? null
+      : (from, page) => openCopilotQuick(from, page: page, onFull: () => (widget.openPath ?? _push)('copilot'));
+
   void _publishTopBar() {
     final user = ref.read(authStateProvider).user;
     final org = _org;
@@ -375,6 +381,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               if (mounted) await _openPicker(fromScreen: true);
             }
           : null,
+      copilot: _copilot,
     );
   }
 
@@ -619,6 +626,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               : page.up!),
           onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
           onSearch: _openSearch,
+          onCopilot: _copilot == null ? null : () => _copilot!(context, context.l10n.navTabHome),
           unread: _unread,
           onBell: () async {
             await (widget.openPath ?? _push)('notifications');

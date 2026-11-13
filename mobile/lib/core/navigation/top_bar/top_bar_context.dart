@@ -18,6 +18,7 @@ class TopBarContext {
     required this.openNotifications,
     required this.openMenu,
     this.switchBranch,
+    this.copilot,
   });
 
   final String company;
@@ -40,6 +41,9 @@ class TopBarContext {
 
   /// শাখা বদল — null মানে বদলানোর কিছু নেই (এক কোম্পানি, এক শাখা)
   final Future<void> Function(BuildContext context)? switchBranch;
+
+  /// ⭐ উপরের মগজ — কোপাইলটের জিজ্ঞাসা, পুরো পর্দায় ([page] = যে পাতা থেকে খোলা); null মানে কোপাইলটের চাবি নেই
+  final Future<void> Function(BuildContext context, String page)? copilot;
 }
 
 /// হোম লেখে, প্রতিটা পর্দার বার পড়ে

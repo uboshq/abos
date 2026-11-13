@@ -30,12 +30,24 @@ class MainActivity : FlutterFragmentActivity() {
     /** SEND_SMS চাওয়ার উত্তরের অপেক্ষায় থাকা ডাক — Android উত্তর দেয় [onRequestPermissionsResult]-এ */
     private var smsPermissionResult: MethodChannel.Result? = null
 
+    /** ⭐ কোপাইলটের কথা — শোনা আর পড়ে শোনানো (voice/VoiceChannel.kt) */
+    private var voice: com.abos.abos_mobile.voice.VoiceChannel? = null
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == SMS_PERMISSION_REQUEST) {
             smsPermissionResult?.success(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             smsPermissionResult = null
         }
+        if (requestCode == com.abos.abos_mobile.voice.VoiceChannel.MIC_PERMISSION_REQUEST) {
+            voice?.onPermission(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        }
+    }
+
+    override fun onDestroy() {
+        voice?.dispose()
+        voice = null
+        super.onDestroy()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -287,6 +299,14 @@ class MainActivity : FlutterFragmentActivity() {
         // redraw all, and the key list (widgets/LauncherWidgetsChannel.kt). While
         // the app runs, the kit's secret texts follow lock and unlock (LockWatch).
         LauncherWidgetsChannel.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+
+        // ⭐ কোপাইলটের মাইক আর পড়ে শোনানো — অনুমতি এখান থেকে চাওয়া, উত্তর [onRequestPermissionsResult]-এ
+        voice?.dispose()
+        voice = com.abos.abos_mobile.voice.VoiceChannel(this, flutterEngine.dartExecutor.binaryMessenger).also { v ->
+            v.needsPermission = {
+                requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), com.abos.abos_mobile.voice.VoiceChannel.MIC_PERMISSION_REQUEST)
+            }
+        }
         LockWatch.ensure(applicationContext)
     }
 

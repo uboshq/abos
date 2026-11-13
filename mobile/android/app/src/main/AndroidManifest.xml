@@ -42,6 +42,11 @@
     <!-- চালান/গেট পাসের QR পড়ার ক্যামেরা (0.4.3) — কেবল "কাগজ স্ক্যান" পর্দা খুললে চায়।
          ক্যামেরা ছাড়া ফোনেও বাকি সব চলে, তাই required নয়। -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- কোপাইলটের মাইক (১২ নভেম্বর ২০২৬) — কেবল মাইক চাপলে চাওয়া; ফোন নিজে শুনে লেখা দেয়, অডিও কোথাও জমা হয় না
+         (voice/VoiceChannel.kt)। মাইক ছাড়া ফোনেও কোপাইলট লেখায় চলে, তাই required নয়। -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone"
+        android:required="false" />
     <uses-feature android:name="android.hardware.camera"
         android:required="false" />
 
@@ -503,6 +508,13 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- কোপাইলটের কথা: Android 11+ ফোনের কথা-চেনা আর পড়ে-শোনানোর যন্ত্র দেখতে এগুলো লাগে -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

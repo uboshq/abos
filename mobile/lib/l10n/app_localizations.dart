@@ -19153,6 +19153,120 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'ভুল উত্তর'**
   String get copilotWrong;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'কোপাইলটকে জিজ্ঞেস করুন'**
+  String get copilotQuickOpen;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'কী জানতে চান?'**
+  String get copilotQuickHello;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি আছেন: {page}'**
+  String copilotQuickWhere(String page);
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'শুনছি…'**
+  String get copilotQuickListening;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'বলা শেষ'**
+  String get copilotQuickDoneSpeaking;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get copilotQuickCancel;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'বলে জিজ্ঞেস করুন'**
+  String get copilotQuickMic;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান'**
+  String get copilotQuickSend;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'শুনুন'**
+  String get copilotQuickListen;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'থামান'**
+  String get copilotQuickStop;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'শোনাচ্ছে'**
+  String get copilotQuickSpeaking;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'পুরো দেখুন →'**
+  String get copilotQuickFull;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ'**
+  String get copilotQuickClose;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'খুঁজছি…'**
+  String get copilotQuickThinking;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাইকের অনুমতি নেই — লিখে জিজ্ঞেস করুন।'**
+  String get copilotQuickMicDenied;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু শোনা গেল না — আবার বলুন, বা লিখুন।'**
+  String get copilotQuickMicNone;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফোনে কথা-চেনা নেই — লিখে জিজ্ঞেস করুন।'**
+  String get copilotQuickMicOff;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফোনে বাংলার কণ্ঠ নেই — উত্তর লেখায় আছে।'**
+  String get copilotQuickNoVoice;
+
+  /// Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)
+  ///
+  /// In bn, this message translates to:
+  /// **'উত্তর কেবল আপনার চাবির তথ্য থেকে; কথার অডিও কোথাও জমা থাকে না।'**
+  String get copilotQuickPrivacy;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

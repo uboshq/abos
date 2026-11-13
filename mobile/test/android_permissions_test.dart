@@ -34,6 +34,8 @@ void main() {
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
       'android.permission.RECEIVE_BOOT_COMPLETED',
+      // ⭐ কোপাইলটের মাইক (মালিক, ১২ নভেম্বর ২০২৬) — চাওয়া হয় কেবল মাইক চাপলে; অডিও ফোনেই লেখা হয়, কোথাও জমা নয়
+      'android.permission.RECORD_AUDIO',
     });
   });
 

@@ -144,6 +144,7 @@ class _LiveScreenBarState extends ConsumerState<_LiveScreenBar> {
       onLeading: bar.onBack ?? () => AbosScreenBar.back(context),
       onOrgTap: switchBranch == null ? null : () => switchBranch(context),
       onSearch: () => top.search(context),
+      onCopilot: top.copilot == null ? null : () => top.copilot!(context, bar.title),
       onBell: () => top.openNotifications(context),
       unread: unread,
       avatarName: user.name,

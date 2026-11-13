@@ -11660,4 +11660,67 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get copilotWrong => 'Wrong answer';
+
+  @override
+  String get copilotQuickOpen => 'Ask Copilot';
+
+  @override
+  String get copilotQuickHello => 'What would you like to know?';
+
+  @override
+  String copilotQuickWhere(String page) {
+    return 'You are on: $page';
+  }
+
+  @override
+  String get copilotQuickListening => 'Listening…';
+
+  @override
+  String get copilotQuickDoneSpeaking => 'Done';
+
+  @override
+  String get copilotQuickCancel => 'Cancel';
+
+  @override
+  String get copilotQuickMic => 'Ask by voice';
+
+  @override
+  String get copilotQuickSend => 'Send';
+
+  @override
+  String get copilotQuickListen => 'Listen';
+
+  @override
+  String get copilotQuickStop => 'Stop';
+
+  @override
+  String get copilotQuickSpeaking => 'Speaking';
+
+  @override
+  String get copilotQuickFull => 'See it all →';
+
+  @override
+  String get copilotQuickClose => 'Close';
+
+  @override
+  String get copilotQuickThinking => 'Looking…';
+
+  @override
+  String get copilotQuickMicDenied =>
+      'No microphone permission — type your question.';
+
+  @override
+  String get copilotQuickMicNone => 'Nothing was heard — try again, or type.';
+
+  @override
+  String get copilotQuickMicOff =>
+      'This phone cannot recognise speech — type your question.';
+
+  @override
+  String get copilotQuickNoVoice =>
+      'This phone has no Bengali voice — the answer is written above.';
+
+  @override
+  String get copilotQuickPrivacy =>
+      'Answers come only from what your keys show; no voice audio is stored anywhere.';
 }

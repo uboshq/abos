@@ -9,6 +9,7 @@ import '../../sync_engine/sync_engine.dart';
 import '../../sync_engine/sync_status.dart';
 import '../../theme/bar_palette.dart';
 import '../../widgets/unsaved_guard.dart';
+import '../../../features/copilot/copilot_mark.dart';
 
 /// ⭐ উপরের বার — মালিকের চূড়ান্ত নকশা, সংস্করণ ৩ (২০ অক্টোবর ২০২৬; Material 3 top app bar, Apple HIG, SAP Fiori shell
 /// bar, WCAG 2.2 AA)।
@@ -32,6 +33,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.onLeading,
     this.onOrgTap,
     this.onSearch,
+    this.onCopilot,
     this.onBell,
     this.unread,
     this.news = false,
@@ -66,6 +68,9 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
   /// শাখা বদলের তালিকা — null মানে বদলানোর কিছু নেই (এক শাখা), তখন ▾ নেই, চাপ নেই
   final VoidCallback? onOrgTap;
   final VoidCallback? onSearch;
+
+  /// ⭐ জীবন্ত মগজ — খোঁজার আগে; null মানে কোপাইলটের চাবি নেই, বোতামও নেই (মালিক, ১২ নভেম্বর ২০২৬)
+  final VoidCallback? onCopilot;
   final VoidCallback? onBell;
 
   /// না-পড়া বিজ্ঞপ্তি — null বা ০ হলে গোনা নেই
@@ -293,6 +298,13 @@ class _AbosTopBarState extends State<AbosTopBar> {
                 onTap: widget.onOrgTap == null ? null : _tapOrg,
               );
               final actions = [
+                if (widget.onCopilot != null)
+                  IconButton(
+                    key: const ValueKey('top-copilot'),
+                    tooltip: context.l10n.copilotQuickOpen,
+                    onPressed: widget.onCopilot,
+                    icon: const CopilotMark(size: 26),
+                  ),
                 IconButton(
                   key: const ValueKey('top-search'),
                   tooltip: context.l10n.topBarSearch,
@@ -311,7 +323,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
               ];
               // ⭐ শাখার নাম মাঝের জায়গায় না ধরলে (ছোট ফোন, বড় লেখা) শিরোনাম আইকনের সারির নিচে পুরো চওড়ায় নামে —
               // Material 3-এর medium top app bar; শাখা কাটে না, বার লম্বা হয়
-              final middle = box.maxWidth - 10 - 48 * 4 - 8;
+              final middle = box.maxWidth - 10 - 48 * (widget.onCopilot == null ? 4 : 5) - 8;
               final fits = _titleFits(context, middle);
               final rows = <Widget>[
                 if (fits)

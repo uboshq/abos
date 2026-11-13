@@ -11487,4 +11487,65 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get copilotWrong => 'ভুল উত্তর';
+
+  @override
+  String get copilotQuickOpen => 'কোপাইলটকে জিজ্ঞেস করুন';
+
+  @override
+  String get copilotQuickHello => 'কী জানতে চান?';
+
+  @override
+  String copilotQuickWhere(String page) {
+    return 'আপনি আছেন: $page';
+  }
+
+  @override
+  String get copilotQuickListening => 'শুনছি…';
+
+  @override
+  String get copilotQuickDoneSpeaking => 'বলা শেষ';
+
+  @override
+  String get copilotQuickCancel => 'বাতিল';
+
+  @override
+  String get copilotQuickMic => 'বলে জিজ্ঞেস করুন';
+
+  @override
+  String get copilotQuickSend => 'পাঠান';
+
+  @override
+  String get copilotQuickListen => 'শুনুন';
+
+  @override
+  String get copilotQuickStop => 'থামান';
+
+  @override
+  String get copilotQuickSpeaking => 'শোনাচ্ছে';
+
+  @override
+  String get copilotQuickFull => 'পুরো দেখুন →';
+
+  @override
+  String get copilotQuickClose => 'বন্ধ';
+
+  @override
+  String get copilotQuickThinking => 'খুঁজছি…';
+
+  @override
+  String get copilotQuickMicDenied => 'মাইকের অনুমতি নেই — লিখে জিজ্ঞেস করুন।';
+
+  @override
+  String get copilotQuickMicNone => 'কিছু শোনা গেল না — আবার বলুন, বা লিখুন।';
+
+  @override
+  String get copilotQuickMicOff => 'এই ফোনে কথা-চেনা নেই — লিখে জিজ্ঞেস করুন।';
+
+  @override
+  String get copilotQuickNoVoice =>
+      'এই ফোনে বাংলার কণ্ঠ নেই — উত্তর লেখায় আছে।';
+
+  @override
+  String get copilotQuickPrivacy =>
+      'উত্তর কেবল আপনার চাবির তথ্য থেকে; কথার অডিও কোথাও জমা থাকে না।';
 }
