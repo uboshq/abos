@@ -59,7 +59,9 @@ class TheWallHadNoDoorTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $this->salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        // ⓘ অফিসের মানুষ — "সারি নেই মানে সব" তাঁর নিয়ম। ডেমোর বিক্রয়কর্মী ডিলারের দেয়ালের ভেতরে: ডিপো না থাকলে কিছুই নয়,
+        //   আর ডেমো তাঁকে নিজের ডিপো দেয় (১২ নভেম্বর ২০২৬; [[AFieldForcePersonWithoutADepotSeesNoDepotTest]])
+        $this->salesman = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
 
         $this->main = $this->company->defaultBranch();
         $this->netrokona = Branch::query()

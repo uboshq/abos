@@ -234,6 +234,7 @@ return [
 
     'settings_group' => [
         'entry' => 'Entry rules',
+        'model' => 'Copilot model',
         'risk' => 'Risk points',
         'bell' => 'Bell',
         'delivery' => 'Delivery',
