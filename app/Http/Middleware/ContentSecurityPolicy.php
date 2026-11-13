@@ -260,7 +260,9 @@ class ContentSecurityPolicy
         if (! $response->headers->has('Permissions-Policy')) {
             $response->headers->set('Permissions-Policy', implode(', ', [
                 'camera=()',
-                'microphone=()',
+                // ⭐ কোপাইলটের মাইক — কেবল নিজের সাইট (মালিক, ১৩ নভেম্বর ২০২৬: "মাইক্রোফোনে চাপ দিলে দেখা যায় মাইক্রোফোন নট অ্যালাউ")।
+                //   ⓘ `()` থাকলে ব্রাউজার অনুমতি না চেয়েই "না" বলত; এখন প্রথমবার মাইক চাপলে একবার জিজ্ঞেস করে। বাইরের ফ্রেম পায় না।
+                'microphone=(self)',
                 // ⭐ নিজের পাতা কেবল — লগইনে লোকেশন চাওয়া, ঢোকার খাতার জন্য (মালিক, ১ অক্টোবর ২০২৬; [[LoginPlace]])
                 'geolocation=(self)',
                 'payment=()',
