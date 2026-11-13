@@ -63,13 +63,14 @@
                             <p class="cq-hello">{{ __('assistant::quick.hello', ['person' => auth()->user()->name]) }} <span>{{ __('assistant::quick.hello_ask') }}</span></p>
                         </div>
 
-                        {{-- ২ · শুনছে — আলোর গোলা, বলা কথা সাথে সাথে লেখা; থামলে নিজেই পাঠায় --}}
+                        {{-- ২ · শুনছে — আলোর গোলা, বলা কথা সাথে সাথে লেখা; মানুষ না থামানো পর্যন্ত শোনে (১৩ নভেম্বর ২০২৬) --}}
                         <div x-show="listening" x-cloak style="display:flex;flex-direction:column;gap:1rem" data-copilot-listening>
                             <div class="cq-orb" aria-hidden="true"></div>
                             <p class="cq-heard" aria-live="polite" x-text="heard"></p>
                             <div class="cq-wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
                             <div class="cq-center">
-                                <button type="button" class="cq-pill" @click="stopListening()">{{ __('assistant::quick.done') }}</button>
+                                <button type="button" class="cq-pill" @click="sendListening()" data-copilot-send-now>{{ __('assistant::quick.send_now') }}</button>
+                                <button type="button" class="cq-pill" @click="stopListening()" data-copilot-done>{{ __('assistant::quick.done') }}</button>
                                 <button type="button" class="cq-pill" @click="cancelListening()">{{ __('assistant::quick.cancel') }}</button>
                             </div>
                             <p class="cq-safe" style="text-align:center;margin:0">{{ __('assistant::quick.listening') }}</p>
@@ -110,6 +111,7 @@
                             <p class="cq-typing" x-show="busy">{{ __('assistant::quick.thinking') }}</p>
                         </div>
 
+                        <p class="cq-safe" x-show="micBlocked && ! listening" x-cloak data-copilot-mic-blocked>{{ __('assistant::quick.mic_blocked') }}</p>
                         <form class="cq-box" x-show="! listening" @submit.prevent="submit()" data-copilot-box>
                             <label for="cq-q" class="sr-only">{{ __('assistant::quick.question') }}</label>
                             <input id="cq-q" x-ref="box" x-model="q" autocomplete="off" enterkeyhint="send" maxlength="500" :placeholder="boxHint()">

@@ -270,7 +270,8 @@
                         <span class="grid size-8 place-items-center bg-(--color-logo-plate)" aria-hidden="true"
                               style="border-radius: var(--rail-tile-radius);
                                      @if ($onDashboard) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif">
-                            <img src="{{ asset('brand/abos-icon-64.png') }}" alt="" data-rail-abos class="size-[24px] object-contain">
+                            {{-- ⭐ জীবন্ত চিহ্ন — উপরের বারের লোগোর একই A আর সোনালি বল (মালিক, ১৩ নভেম্বর ২০২৬) --}}
+                            <x-brand.live-logo icon-only data-rail-abos class="h-[22px] w-auto" />
                         </span>
                     </a>
                 @else
@@ -286,8 +287,7 @@
                     {{-- `alt` খালি নয় — এই লিংকটার নাম `title` থেকে আসে,
                          আর চিহ্নটা তার সাজ। দুইটাতেই নাম দিলে পর্দা-পাঠক
                          একই কথা দুবার বলত। --}}
-                    <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
-                         aria-hidden="true" class="size-7 object-contain">
+                    <x-brand.live-logo icon-only aria-hidden="true" class="h-7 w-auto" />
                 </a>
                 @endif
 
@@ -550,7 +550,12 @@
                                      বড় হয়েছে, তাই ফাঁক কমেছে **আর** চিহ্ন
                                      স্পষ্ট হয়েছে — দুইটা একে অন্যের বিপরীত
                                      নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
-                                <x-ui.icon :name="$module['icon']" :size="22" drawn />
+                                {{-- ⭐ কোপাইলট — উপরের বারের একই জীবন্ত মগজ, স্থির ছবি নয় (মালিক, ১৩ নভেম্বর ২০২৬) --}}
+                                @if ($module['code'] === 'assistant')
+                                    <x-shell.copilot-mark size="bare" class="cq-rail" data-rail-copilot />
+                                @else
+                                    <x-ui.icon :name="$module['icon']" :size="22" drawn />
+                                @endif
                             </span>
 
                             {{-- ⭐ নাম আইকনের নিচে (মালিক, ৬ নভেম্বর ২০২৬) — দুই লাইন পর্যন্ত ভাঙে, কাটে না --}}

@@ -1002,5 +1002,7 @@ return [
     // ⭐ কোপাইলটের দরজা — কেবল পড়ার, নিজের চাবির পেছনে ([[ToolRegistry]]; ১১ নভেম্বর ২০২৬)
     'assistant_tools' => [
         \App\Modules\Inventory\Assistant\StockOnHandTool::class,
+        // ⭐ পুরো মজুদ — "সব স্টক", "আজকের স্টক" (১৩ নভেম্বর ২০২৬)
+        \App\Modules\Inventory\Assistant\StockSummaryTool::class,
     ],
 ];
