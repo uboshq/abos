@@ -77,6 +77,18 @@ final class TheSrBoardNeverShowsAnSrSomeoneElsesFigureTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         app(DealerScope::class)->forget();
 
+        // ⓘ দেয়ালের ভেতরে ডিপো না থাকলে কিছুই নয় (১২ নভেম্বর ২০২৬) — দুজনেই কোম্পানির সব ডিপো, তাই "মোট জন" মালিকের সমান
+        foreach ([$this->first, $this->second] as $seller) {
+            UserDataScope::query()->withoutGlobalScopes()->where('user_id', $seller->id)->where('scope_type', UserDataScope::BRANCH)->delete();
+            foreach ($this->allDepots() as $depot) {
+                UserDataScope::query()->withoutGlobalScopes()->create([
+                    'company_id' => $this->company->id, 'user_id' => $seller->id,
+                    'scope_type' => UserDataScope::BRANCH, 'scope_id' => $depot,
+                ]);
+            }
+        }
+        app(DataScope::class)->forget();
+
         $niloy = Customer::acrossDealers()->where('name_en', 'Niloy Store')->firstOrFail();
         app(DealerBindingService::class)->bind((int) $this->second->id, [(int) $niloy->id], Carbon::today()->toDateString());
         app(DealerScope::class)->forget();
@@ -123,7 +135,7 @@ final class TheSrBoardNeverShowsAnSrSomeoneElsesFigureTest extends TestCase
             $this->assertTrue($me->can(DealerScope::OWN) && ! $me->can(DealerScope::ALL), "প্রস্তুতিটাই ভুল — {$me->email}-এর চাবি দেয়ালের নয়।");
             $this->assertTrue(app(DealerScope::class)->walled($me), "প্রস্তুতিটাই ভুল — {$me->email} দেয়ালে নেই।");
             $this->assertFalse(app(DataScope::class)->viewsOneBranch($me), "প্রস্তুতিটাই ভুল — {$me->email} হেডারে এক শাখায়।");
-            $this->assertNull(app(DataScope::class)->idsFor($me, UserDataScope::BRANCH), "প্রস্তুতিটাই ভুল — {$me->email} শাখায় সীমিত, মোট জন মালিকের সাথে মেলে না।");
+            $this->assertEqualsCanonicalizing($this->allDepots(), app(DataScope::class)->idsFor($me, UserDataScope::BRANCH) ?? $this->allDepots(), "প্রস্তুতিটাই ভুল — {$me->email} শাখায় সীমিত, মোট জন মালিকের সাথে মেলে না।");
 
             $response = $this->as($me)->getJson('/api/v1/widgets/summary?keys=sr_board')->assertOk();
             $board = $response->json('widgets.sr_board');
@@ -214,6 +226,13 @@ final class TheSrBoardNeverShowsAnSrSomeoneElsesFigureTest extends TestCase
             ->all();
 
         return array_slice($rows, 0, SrBoardSummary::ROWS);
+    }
+
+    /** @return list<int> */
+    private function allDepots(): array
+    {
+        return Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->whereNull('deleted_at')
+            ->pluck('id')->map(fn ($id) => (int) $id)->sort()->values()->all();
     }
 
     private function as(User $user): self

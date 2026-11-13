@@ -238,6 +238,8 @@ final class ThePhoneCouldNotChangeCompanyOrBranchTest extends TestCase
     public function test_a_branch_outside_the_persons_reach_is_refused_and_not_even_listed(): void
     {
         $sales = $this->user('sales@abos.test');
+        // ⓘ ডেমো তাঁকে নিজের ডিপো দেয় (দেয়ালের ভেতরে ডিপো না থাকলে কিছুই নয়, ১২ নভেম্বর ২০২৬) — এখানে কেবল NTK
+        UserDataScope::query()->withoutGlobalScopes()->where('user_id', $sales->id)->where('scope_type', UserDataScope::BRANCH)->delete();
         UserDataScope::query()->withoutGlobalScopes()->create([
             'company_id' => $this->company('TDEPOT')->id,
             'user_id' => $sales->id,
