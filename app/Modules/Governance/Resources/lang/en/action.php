@@ -132,4 +132,6 @@ return [
     'owner_self_signed' => 'Owner approved their own offer',
     'obligation_done' => 'Obligation done',
     'obligation_cancelled' => 'Obligation cancelled',
+    // ⓘ অফিসের SMS ফোনের চাবি বদল (১১ নভেম্বর ২০২৬; SmsPhoneController)
+    'sms_phone_token' => 'New SMS phone key',
 ];

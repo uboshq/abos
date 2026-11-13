@@ -6,6 +6,7 @@ namespace App\Core\Engines\Audit;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\AssistantEvent;
 use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\DocumentDelivery;
@@ -26,6 +27,7 @@ use App\Models\NotificationJob;
 use App\Models\NotificationProviderEvent;
 use App\Models\NotificationRuleVersion;
 use App\Models\NotificationSubscription;
+use App\Models\SmsOutbox;
 use App\Models\NotificationSuppression;
 use App\Models\NotificationTemplateVersion;
 use App\Models\RecentPaper;
@@ -167,6 +169,10 @@ final class AuditEngine
          * নোটিশের ঘটনা-সারি — বসে, নয় বসে না; কেউ সম্পাদনা করে না।
          * ⓘ নোটিশ নিজে (Notice) অডিটেড।
          */
+        // ⓘ কোপাইলটের খাতা আর SMS-এর সারি (১১–১২ নভেম্বর ২০২৬) — নিজেরাই খাতা বা যন্ত্রের সারি; কে কী জিজ্ঞেস করলেন আর কোন SMS কবে গেল,
+        //   সেটাই এদের কাজ (Modules root AuditTest, Mac run of fa86dd536)
+        AssistantEvent::class => 'the Copilot and search journal itself — read-only from the screen; auditing it would write every question twice',
+        SmsOutbox::class => 'the SMS sending queue: a machine state that moves waiting → taken → sent on every phone poll; who asked for the SMS is audited where it was asked',
         NoticeAck::class => 'the signature row itself, with IP and device — written once, never edited',
         NoticeTarget::class => 'a target key, replaced whole on save, never edited; the notice itself is audited',
         NoticeVersion::class => 'a frozen copy of a notice as published — the history itself, never edited',

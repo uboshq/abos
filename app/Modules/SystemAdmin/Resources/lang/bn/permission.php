@@ -21,6 +21,8 @@ declare(strict_types=1);
  */
 return [
     'subjects' => [
+        // ⓘ কোপাইলট (১১ নভেম্বর ২০২৬)
+        'assistant' => 'কোপাইলট',
         'accounts' => 'পুরো হিসাব মডিউল',
         'accounts.asset' => 'স্থায়ী সম্পদ',
         'accounts.backdate' => 'পুরনো তারিখে লেখা',
@@ -57,6 +59,7 @@ return [
         'finance.income' => 'আয়',
         'finance.plan' => 'ফিন্যান্স মানচিত্র',
         'finance.rental' => 'ভাড়ার চুক্তি',
+        'finance.working_capital' => 'চলতি মূলধন',
         'finance.withdrawal' => 'মালিকের উত্তোলন',
 
         'governance.audit' => 'অডিট লগ',
@@ -164,6 +167,13 @@ return [
     ],
 
     'verbs' => [
+        // ⓘ চেক ছাপা, পার্টির বার্তা, SMS ফোন, কোপাইলট (১০–১২ নভেম্বর ২০২৬)
+        'print_free' => 'শুধু চেক ছাপা',
+        'layout' => 'চেকের নকশা ও বই',
+        'party_templates' => 'পার্টির বার্তার ছাঁচ',
+        'party_messages' => 'পার্টিকে বার্তা পাঠানো',
+        'sms_gateway' => 'অফিসের SMS ফোন',
+        'use' => 'ব্যবহার',
         'view' => 'দেখা',
         'create' => 'তৈরি',
         'update' => 'সম্পাদনা',

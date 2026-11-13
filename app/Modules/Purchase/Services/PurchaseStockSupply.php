@@ -62,7 +62,7 @@ final class PurchaseStockSupply implements StockSupply
         $receipts = PurchaseReceipt::query()->where('status', DocumentStatus::CONFIRMED)->pluck('supplier_id', 'id');
 
         if ($receipts->isEmpty()) {
-            return ['receipts' => 0, 'value' => '0', 'supplier' => ''];
+            return ['receipts' => 0, 'value' => '0', 'top_name' => ''];
         }
 
         $posted = "'".implode("','", DocumentStatus::POSTED)."'";
@@ -78,7 +78,7 @@ final class PurchaseStockSupply implements StockSupply
             ->get();
 
         if ($rows->isEmpty()) {
-            return ['receipts' => 0, 'value' => '0', 'supplier' => ''];
+            return ['receipts' => 0, 'value' => '0', 'top_name' => ''];
         }
 
         $bySupplier = [];
@@ -94,7 +94,7 @@ final class PurchaseStockSupply implements StockSupply
         uasort($bySupplier, fn (string $a, string $b) => bccomp($b, $a, 4));
         $top = PurchaseReceipt::query()->with('supplier')->where('supplier_id', array_key_first($bySupplier))->first()?->supplier?->name() ?? '';
 
-        return ['receipts' => $rows->count(), 'value' => $total, 'supplier' => $top];
+        return ['receipts' => $rows->count(), 'value' => $total, 'top_name' => $top];
     }
 
     /**

@@ -16,7 +16,7 @@ final class NoStockSupply implements StockSupply
 
     public function unbilledReceipts(): array
     {
-        return ['receipts' => 0, 'value' => '0', 'supplier' => ''];
+        return ['receipts' => 0, 'value' => '0', 'top_name' => ''];
     }
 
     public function suppliers(string $from, string $to): array

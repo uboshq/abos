@@ -246,6 +246,23 @@ class ACancelledPaperLooksValidTest extends TestCase
             'system_admin.print_control.preview' => 'বানানো নমুনা (PrintSample), সংরক্ষিত কাগজ নয় — বাতিল হতে পারে না',
             'system_admin.print_control.invoice_info' => '"Set Invoice Information"-এর পর্দা, কাগজ নয়',
             'system_admin.print_control.invoice_info.update' => '"Set Invoice Information" সংরক্ষণ, কাগজ নয়',
+            // ⓘ চেক ছাপা (১১ নভেম্বর ২০২৬) — ব্যাংকের চেকের পাতা, ABOS-এর কাগজ নয়: "বাতিল" ছাপার জায়গা নেই। ছাপা হয় কেবল চালু জিনিসে —
+            //   ভাউচার পোস্ট-করা চেক-পরিশোধ, চেক জারি-করা আর অপেক্ষমাণ ([[ChequePrinter]] ফিরিয়ে দেয়); ভুল ছাপা পাতা "নষ্ট" লেখা থাকে
+            //   (accounts.cheque.print.spoil; AChequeIsPrintedFromItsBookTest)
+            'accounts.cheque.print.voucher' => 'চেকের পাতা ছাপার পর্দা — পোস্ট-না-করা বা বাতিল ভাউচারে "তৈরি নয়" বলে, ছাপে না',
+            'accounts.cheque.print.voucher.store' => 'ব্যাংকের চেকের পাতা — বাতিল ভাউচার ChequePrinter::forVoucher-এ ফেরত',
+            'accounts.cheque.print.voucher.test' => 'পরীক্ষার ছাপ — কিছুই লেখা হয় না',
+            'accounts.cheque.print.cheque' => 'চেকের পাতা ছাপার পর্দা — অপেক্ষমাণ জারি-করা চেকেই কেবল ছাপা',
+            'accounts.cheque.print.cheque.store' => 'ব্যাংকের চেকের পাতা — মীমাংসিত বা বাতিল চেক ChequePrinter::forCheque-এ ফেরত',
+            'accounts.cheque.print.cheque.test' => 'পরীক্ষার ছাপ — কিছুই লেখা হয় না',
+            'accounts.cheque.print.free' => 'শুধু চেক ছাপার পর্দা — কোনো ডকুমেন্টের কাগজ নয়',
+            'accounts.cheque.print.log' => 'ছাপা চেকের খাতা — তালিকা, কাগজ নয়',
+            'accounts.cheque.print.again' => 'একই চেক আবার — কারণ চায়, একই সারি; ChequePrinter একই পাতার নিয়ম মানে (AChequeIsPrintedFromItsBookTest)',
+            'accounts.cheque.print.spoil' => 'ভুল ছাপা পাতা "নষ্ট" লেখা — নিজেই বাতিলের কাজ, কাগজ নয়',
+            'accounts.cheque.print.setup' => 'চেকের নকশা আর বইয়ের পর্দা, কাগজ নয়',
+            'accounts.cheque.print.setup.layout.store' => 'চেকের নকশা সংরক্ষণ, কাগজ নয়',
+            'accounts.cheque.print.setup.book.store' => 'চেক বই সংরক্ষণ, কাগজ নয়',
+            'accounts.cheque.print.free.store' => 'শুধু চেক ছাপা — খাতার বাইরের পাতা, বাতিল হওয়ার মতো ডকুমেন্ট নেই',
             'documents.print' => 'তোলা আসল ফাইলটাই ব্রাউজারে খোলে (DocumentFileController::print) — ABOS-এর আঁকা কাগজ নয়, চিহ্ন বসানোর জায়গা নেই; ডকুমেন্টের "বাতিল" অবস্থাও নেই, আর কে ছাপতে পারেন তা দেয়াল ঠিক করে (ADocumentStaysBehindItsWallsTest)',
         ];
 

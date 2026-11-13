@@ -884,6 +884,7 @@ return [
         'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
         'salesman' => 'Salesman',
+        'Copilot user' => 'Copilot user',
 
         /* ⓘ মডিউলের রোল-ছাঁচ — ইংরেজিতে নামটাই, বাংলা ফাইলের জোড়া (BothLanguagesSayTheSameThingTest) */
         'Accountant' => 'Accountant',
