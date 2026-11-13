@@ -194,7 +194,8 @@ final class SalesAnalytics
     {
         $first = $day->copy()->startOfMonth();
 
-        $targets = SalesTarget::query()->forMonth($first)->pluck('amount', 'user_id');
+        // ⛔ দেয়ালের ভেতরের মানুষ (ফিল্ড ফোর্স) কেবল নিজের আর নিচের লোকের লক্ষ্য — গোটা কোম্পানির নয় (মালিক, ১২ নভেম্বর ২০২৬; নিরাপত্তা অডিট)
+        $targets = SalesTarget::query()->forMonth($first)->when(app(\App\Core\Services\DealerScope::class)->walled(), fn ($q) => $q->whereIn('user_id', app(\App\Core\Services\DealerScope::class)->reachOf(auth()->user())))->pluck('amount', 'user_id');
 
         if ($targets->isEmpty()) {
             return ['month' => $first->format('Y-m'), 'target' => null, 'achieved' => '0.0000', 'percent' => null];

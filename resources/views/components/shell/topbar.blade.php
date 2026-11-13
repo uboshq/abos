@@ -227,7 +227,8 @@
          @open-command-center.window="show()"
          @keydown.window="hotkey($event)"
          @click.outside="close()"
-         class="relative mx-auto flex min-w-0 flex-1 justify-end sm:max-w-xl sm:justify-start">
+         {{-- ⓘ ms-auto (mx-auto নয়): ডানের ফাঁকা নেই, তাই কোপাইলটের মগজ ঘরের ঠিক পাশে (মালিক, ১২ নভেম্বর ২০২৬) --}}
+         class="relative ms-auto flex min-w-0 flex-1 justify-end sm:max-w-xl sm:justify-start">
 
         <button type="button" data-search-icon @click="show()"
                 aria-label="{{ __('core.action.search_everything') }}"
@@ -325,10 +326,10 @@
     </div>
 
     {{-- ডানে কেবল এগুলো: কাজ শুরু (＋ তৈরি), আমার সইয়ের অপেক্ষা (সইদাতা হলে), সই হয়েছে-পোস্ট হয়নি, কী ঘটেছে (🔔), আর আমি কে (ছবি) --}}
+    {{-- ⭐ কোপাইলট — সার্চ বক্সের ঠিক ডানে; চাপলে কেবল দ্রুত জিজ্ঞাসা (মালিক, ১২ নভেম্বর ২০২৬; পুরো কোপাইলট মডিউল বারে) --}}
+    <x-shell.copilot-button />
     <div class="flex shrink-0 items-center gap-1" data-shell-actions>
         <x-shell.create-menu />
-        {{-- ⭐ কোপাইলট — মগজ আর নিচে ছোট নাম (মালিক, ১০ নভেম্বর ২০২৬; পূর্ণ পরিকল্পনা অংশ ১) --}}
-        <x-shell.copilot-button />
         {{-- ⭐ অনুমোদন — ＋ তৈরি আর 🔔-এর মাঝে, কেবল সইদাতার বারে (মালিক, ২০ অক্টোবর ২০২৬) --}}
         <x-shell.approval-quick-access />
         {{-- ⭐ সই হয়েছে, পোস্ট হয়নি — অনুমোদনের ঠিক পাশে, সংখ্যার ব্যাজসহ (মালিকের নিজের আইকন, ১১ অক্টোবর; লাইভ-হটফিক্স ২১ অক্টোবর

@@ -529,6 +529,8 @@ return [
          */
         'DSM' => [
             'inventory.product.view',
+            // ⭐ মজুদ দেখা আর মজুদের রিপোর্ট — মালিক, ১২ নভেম্বর ২০২৬ (আবদুল্লাহ আল কবির, ADI); কেনা দাম নয় (cost.view ছাড়া ঢাকা)
+            'inventory.stock.view', 'inventory.report',
         ],
         'Warehouse' => [
             'inventory.stock.view', 'inventory.stock.adjust', 'inventory.stock.hold',

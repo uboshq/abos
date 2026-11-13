@@ -152,6 +152,90 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
     }
 
     /** ⭐ মডেলের কাছে লম্বা অঙ্ক (মোবাইল, NID) যায় না */
+    /**
+     * ⭐ OpenAI-ধাঁচের চ্যাট — NEXUS-এর গেটওয়ে বা Ollama, অফিসের Mac mini-র মডেল (মালিক ও nexus-60, ১২ নভেম্বর ২০২৬): দরজা `tools`-এ
+     *   (বিন্দুর বদলে `__`), মডেলের নাম সেটিং থেকে, লম্বা অঙ্ক ঢাকা; মডেলের বাছা দরজায় উত্তর ABOS-এর নিজের হিসাব থেকে।
+     * ⛔ মডেল তালিকার বাইরের নাম বললে কোনো দরজা খোলে না — "বুঝিনি", আন্দাজ নয়।
+     */
+    public function test_the_office_model_picks_only_a_door_from_the_list(): void
+    {
+        $settings = app(\App\Core\Services\SettingsService::class);
+        $settings->set('assistant.model_url', 'https://ai.office.test');
+        $settings->set('assistant.model_kind', 'chat');
+        $settings->set('assistant.model_name', 'qwen3:4b-instruct');
+        $call = fn (string $name, string $args): array => ['model' => 'qwen3:4b-instruct', 'choices' => [['message' => ['role' => 'assistant', 'content' => '',
+            'tool_calls' => [['type' => 'function', 'function' => ['name' => $name, 'arguments' => $args]]]]]]];
+        Http::fake(['ai.office.test/v1/chat/completions' => Http::sequence()
+            ->push($call('sales__summary', '{"period": "today"}'))
+            ->push($call('payroll__everyone', '{}'))]);
+
+        $answer = app(AssistantEngine::class)->ask($this->owner, 'আজ কত বিক্রি হলো? 01712345678');
+        $this->assertSame('answered', $answer['state'], '⛔ মডেলের বাছা দরজায় উত্তর এল না।');
+        $this->assertSame('sales.summary', $answer['tool'], '⛔ `sales__summary` আবার `sales.summary` হয়নি।');
+        $this->assertSame('qwen3:4b-instruct', $answer['model']);
+        Http::assertSent(function ($request): bool {
+            $body = $request->data();
+
+            return str_ends_with($request->url(), '/v1/chat/completions') && $body['model'] === 'qwen3:4b-instruct' && $body['stream'] === false
+                && $body['messages'][1]['content'] === 'আজ কত বিক্রি হলো? ••••'
+                && in_array('sales__summary', array_column(array_column($body['tools'], 'function'), 'name'), true);
+        });
+
+        $made = app(AssistantEngine::class)->ask($this->owner, 'সবার বেতন কত');
+        $this->assertSame('not_understood', $made['state'], '⛔ তালিকার বাইরের দরজার নামে কিছু খুলল বা আন্দাজ হলো।');
+        $this->assertNull($made['result']);
+    }
+
+    /** ⭐ নেই এমন পণ্য — উত্তরে সেই নামটাই ("'চিনি' নামে কোনো পণ্য পাইনি"), "বুঝিনি" নয়; নাম না দিলে তবেই "কোন পণ্য?" */
+    public function test_a_product_that_is_not_there_is_named_in_the_answer(): void
+    {
+        app()->setLocale('bn');
+        $tool = app(\App\Modules\Inventory\Assistant\StockOnHandTool::class);
+
+        // ⓘ ডেমোতে চিনি নেই; "গুঁড়া দুধ ১ কেজি" আছে — একটা শব্দ ("গুঁড়া") মিললেই দুধ উঠে আসত
+        $this->assertSame('"চিনির গুঁড়া" নামে কোনো পণ্য পাইনি — নাম বা কোড দেখে আবার লিখুন।',
+            $tool->run($this->owner, ['product' => 'চিনির গুঁড়া'])['summary'], '⛔ নেই এমন পণ্যে অন্য পণ্য উঠে এল, বা নামটা উত্তরে নেই।');
+        $this->assertSame((string) __('inventory::assistant.no_product'), $tool->run($this->owner, [])['summary']);
+
+        // ⭐ বিভক্তি চলে ("দুধের" ⊃ "দুধ"), আর "চা" "চাল" নয়
+        $find = fn (string $name): ?string => \App\Modules\Inventory\Assistant\ProductInQuestion::find(['product' => $name])?->name_bn;
+        $this->assertSame('গুঁড়া দুধ ১ কেজি', $find('গুঁড়া দুধের'), '⛔ "গুঁড়া দুধের" দুধ পায়নি।');
+        $this->assertSame('প্রিমিয়াম চা ২৫০ গ্রাম', $find('চা'), '⛔ "চা" চা পায়নি — বা চাল পেল।');
+    }
+
+    /**
+     * ⭐ উপরের বারের মগজ — কেবল দ্রুত জিজ্ঞাসা (মালিক, ১২ নভেম্বর ২০২৬: Siri/Gemini-র মতো; নমুনা 3uJhK92DAMhwyELt63mSmr): পাতা না
+     *   বদলে পুরো পর্দা, মাইক আর পাঠানো; সারাংশ, নজর, খাতা এখানে নেই। উত্তর JSON-এ, খাতায় "ওয়েব"। ⛔ চাবি ছাড়া বোতামও নেই, দরজাও বন্ধ।
+     */
+    public function test_the_top_bar_brain_opens_only_the_quick_ask(): void
+    {
+        $html = (string) $this->get(route('dashboard'))->assertOk()->getContent();
+        $start = strpos($html, 'data-copilot-quick');
+        $this->assertNotFalse($start, '⛔ উপরের বারে কোপাইলটের দ্রুত জিজ্ঞাসা নেই।');
+        // ⓘ মগজের অংশটুকুই — ঠিক পরেই ডানের ঝাঁক (বাঁয়ের মডিউল বারে পুরো কোপাইলটের লিংক থাকে, সেটা এর বাইরে)
+        $quick = substr($html, (int) $start, (int) strpos($html, 'data-shell-actions', (int) $start) - (int) $start);
+        $this->assertStringContainsString('data-copilot-sheet', $quick);
+        $this->assertStringContainsString('data-copilot-mic', $quick, '⛔ কথা বলার বোতাম নেই।');
+        $this->assertStringContainsString(route('assistant.quick'), $quick);
+        // ⭐ জীবন্ত মগজ — মালিকের "ঘ" (রঙের আংটি, রং-বদলানো মগজ, আলোর বিন্দু): বোতামে, মাথায় আর উত্তরের পাশে, ঢাল একবার
+        $this->assertGreaterThanOrEqual(3, substr_count($quick, 'cq-orb-mark'), '⛔ বোতাম, মাথা আর উত্তরে জীবন্ত মগজ নেই।');
+        $this->assertSame(1, substr_count($html, 'id="cq-grad"'), '⛔ মগজের রঙের ঢাল পাতায় একবার নয়।');
+        $this->assertStringContainsString('animateMotion', $quick, '⛔ মগজের ভাঁজে আলোর বিন্দু ছোটে না।');
+        foreach (['data-finding', 'data-brief-part', route('assistant.audit'), 'href="'.route('assistant.today').'"'] as $other) {
+            $this->assertStringNotContainsString($other, $quick, '⛔ দ্রুত জিজ্ঞাসায় পুরো কোপাইলটের পর্দা: '.$other);
+        }
+
+        $this->postJson(route('assistant.quick'), ['q' => 'aj koto bikri holo', 'page' => 'dashboard'])->assertOk()
+            ->assertJsonPath('state', 'answered');
+        $asked = AssistantEvent::query()->where('kind', AssistantEvent::QUESTION)->latest('id')->firstOrFail();
+        $this->assertSame(['web', 'dashboard'], [$asked->channel, $asked->page], '⛔ দ্রুত জিজ্ঞাসা খাতায় ওয়েব আর পাতাসহ ওঠেনি।');
+
+        $clerk = $this->person(['sales.invoice.view']);
+        $this->actingAs($clerk)->postJson(route('assistant.quick'), ['q' => 'aj koto bikri holo'])->assertForbidden();
+        $this->assertStringNotContainsString('data-copilot-quick', (string) $this->actingAs($clerk)->get(route('dashboard'))->getContent(),
+            '⛔ চাবি ছাড়াই উপরের বারে কোপাইলট।');
+    }
+
     public function test_long_numbers_are_masked_before_the_model(): void
     {
         $this->assertSame('রহিমের নম্বর •••• দেখাও', ModelClient::mask('রহিমের নম্বর 01712345678 দেখাও'));

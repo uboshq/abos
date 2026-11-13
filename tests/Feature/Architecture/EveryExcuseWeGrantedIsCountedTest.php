@@ -502,7 +502,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       কোম্পানির দরজা, কোপাইলটের খাতার পাতা (টাকা নেই), "এটা ঠিক আছে" আর তাগাদা পাঠানো (কাগজ নেই), SMS ফোনের পাতা (হাতে গোনা),
      *       PurchaseStockSupply-র লাইন-টেবিল — প্রতিটা নিজের তালিকায় কারণসহ।
      */
-    private const CEILING = 515;
+    // ⓘ ১২ নভেম্বর ২০২৬ (fe): +১ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED `assistant.quick` — উপরের বারের দ্রুত জিজ্ঞাসা, কাগজ নয় = ৫১৬
+    private const CEILING = 516;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

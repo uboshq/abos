@@ -63,11 +63,16 @@ class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
         $actions = substr($actions, 0, (int) strpos($actions, '</div>'));
         preg_match_all('/<x-shell\.([a-z-]+)/', $actions, $parts);
         // ⓘ ২১ অক্টোবর ২০২৬: "সই হয়েছে, পোস্ট হয়নি" বারে ফিরল (মালিকের নিজের আইকন); ৩৭৫px-এ খোঁজা আইকন হয়ে জায়গা ছাড়ে
-        // ⓘ ১১ নভেম্বর ২০২৬: কোপাইলটের মগজ-বোতাম (মালিক, ১০ নভেম্বর: "মগজের ছবি, নিচে নাম") — কেবল ৬৪০px-এর ওপরে, নিচে দেখুন
-        $this->assertSame(['create-menu', 'copilot-button', 'approval-quick-access', 'signed-unposted', 'notification-bell', 'profile-menu'], $parts[1],
+        $this->assertSame(['create-menu', 'approval-quick-access', 'signed-unposted', 'notification-bell', 'profile-menu'], $parts[1],
             '⛔ ডানের ঝাঁকে বাড়তি কিছু — ছোট পর্দায় প্রোফাইলের বোতাম আবার ঠেলে বাইরে যেতে পারে।');
+
+        // ⭐ কোপাইলটের মগজ সার্চ বক্সের ঠিক ডানে, ডানের ঝাঁকের আগে (মালিক, ১২ নভেম্বর ২০২৬); কেবল ৬৪০px-এর ওপরে
+        $search = (int) strpos($code, 'x-data="commandCenter(');
+        $brain = (int) strpos($code, '<x-shell.copilot-button');
+        $this->assertTrue($search > 0 && $brain > $search && $brain < (int) strpos($code, 'data-shell-actions'),
+            '⛔ কোপাইলটের মগজ সার্চ বক্সের ঠিক ডানে নেই।');
         $copilot = (string) file_get_contents(resource_path('views/components/shell/copilot-button.blade.php'));
-        $this->assertMatchesRegularExpression('/data-copilot-button\s+class="hidden\s[^"]*\bsm:flex\b/', $copilot,
+        $this->assertMatchesRegularExpression('/class="hidden sm:flex[^"]*" data-copilot-quick/', $copilot,
             '⛔ কোপাইলটের বোতাম ছোট পর্দাতেও বারে — ৩৭৫px-এ প্রোফাইলের বোতাম ঠেলে বাইরে যাবে।');
 
         $menu = (string) file_get_contents(resource_path('views/components/shell/profile-menu.blade.php'));

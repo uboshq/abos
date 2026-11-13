@@ -68,10 +68,35 @@ return [
         ['key' => 'assistant.daily_questions', 'super_admin_only' => true, 'label' => 'assistant::settings.daily_questions', 'type' => 'integer', 'default' => 200, 'group' => 'general'],
         // ⓘ ভাষার মডেলের ঠিকানা — NEXUS-এর সার্ভার (অফিসের Mac mini); খালি = বন্ধ, নজর-সারাংশ-প্রস্তাব-খসড়া তবু চলে
         ['key' => 'assistant.model_url', 'super_admin_only' => true, 'label' => 'assistant::settings.model_url', 'type' => 'string', 'default' => '', 'group' => 'model'],
+        // ⓘ সার্ভারের ভাষা — NEXUS-এর পুরনো চুক্তি (/v1/assistant/interpret) বা OpenAI-ধাঁচের চ্যাট (/v1/chat/completions — NEXUS-এর গেটওয়ে বা Ollama; মালিক, ১২ নভেম্বর ২০২৬: Mac mini-তে মডেল বসেছে)
+        ['key' => 'assistant.model_kind', 'super_admin_only' => true, 'label' => 'assistant::settings.model_kind', 'type' => 'select', 'options' => ['nexus', 'chat'], 'option_label' => 'assistant::settings.kind.', 'default' => 'nexus', 'group' => 'model'],
+        ['key' => 'assistant.model_name', 'super_admin_only' => true, 'label' => 'assistant::settings.model_name', 'type' => 'string', 'default' => 'qwen3:4b-instruct', 'group' => 'model'],
     ],
 
     'role_templates' => [
         // ⓘ কোপাইলট দেখা — নিজের চাবির তথ্যটুকুই; খাতা আর সেটিং মালিকের
         'Copilot user' => ['assistant.use'],
+        // ⭐ কোপাইলট সবার — মালিক, ১২ নভেম্বর ২০২৬ ("আমার আইডি ছাড়া অন্য কারো আইডিতেই কোপাইলট দেখাচ্ছে না"); প্রত্যেকে কেবল নিজের চাবির
+        //   তথ্য পান, তাই নিরাপদ। ⛔ খাতা (assistant.audit) মালিকের। live-এ একই দিন হাতে বসানো (৬০ রোল) — এখানে নতুন কোম্পানির জন্য
+        'Accountant' => ['assistant.use'],
+        'ASM' => ['assistant.use'],
+        'Auditor' => ['assistant.use'],
+        'Backup Operator' => ['assistant.use'],
+        'Backup Watcher' => ['assistant.use'],
+        'Counter' => ['assistant.use'],
+        'DSM' => ['assistant.use'],
+        'Field Sales' => ['assistant.use'],
+        'HR' => ['assistant.use'],
+        'Kitchen' => ['assistant.use'],
+        'Manager' => ['assistant.use'],
+        'Notification Analyst' => ['assistant.use'],
+        'Notification Manager' => ['assistant.use'],
+        'Notification Watcher' => ['assistant.use'],
+        'Notification Writer' => ['assistant.use'],
+        'RSM' => ['assistant.use'],
+        'Security Watch' => ['assistant.use'],
+        'Settings Keeper' => ['assistant.use'],
+        'User Admin' => ['assistant.use'],
+        'Warehouse' => ['assistant.use'],
     ],
 ];

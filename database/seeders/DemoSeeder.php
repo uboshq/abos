@@ -475,6 +475,12 @@ class DemoSeeder extends Seeder
                     'starts_on' => '2026-01-01',
                 ]);
             }
+
+            // ⭐ নিজের ডিপোও — দেয়ালের ভেতরে ডিপো না বসানো মানে কোনো ডিপো নয় (মালিক, ১২ নভেম্বর ২০২৬; [[DataScope::idsFor()]])
+            \App\Models\UserDataScope::query()->create([
+                'company_id' => $alpha->id, 'user_id' => $salesman->id,
+                'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => (int) $alpha->defaultBranch()?->id,
+            ]);
         });
 
         /*

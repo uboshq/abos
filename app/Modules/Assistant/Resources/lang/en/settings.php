@@ -14,4 +14,7 @@ return [
     'keep_days' => 'Keep question text for (days)',
     'daily_questions' => 'Questions per person per day',
     'model_url' => 'Language model address (office AI server — empty = off)',
+    'model_kind' => 'Server kind',
+    'model_name' => 'Model name (e.g. qwen3:4b-instruct)',
+    'kind' => ['nexus' => 'NEXUS older contract', 'chat' => 'Chat (NEXUS gateway or Ollama)'],
 ];

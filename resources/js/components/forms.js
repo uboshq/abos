@@ -1385,3 +1385,21 @@ export function acceptsFile (file, accept) {
         return type === token
     })
 }
+
+/**
+ * ⭐ শুধু চেক ছাপা — বই বাছা, পরের নম্বর, নতুন বইয়ের প্রথম পাতা (মালিক, ১১ নভেম্বর ২০২৬; [[ChequePrintController::freePrint()]])।
+ *
+ * ⓘ আসল ছাপা নতুন ট্যাবে — তারপর এই পাতা নিজেকে নতুন করে, যাতে বইয়ের পরের নম্বর আর খাতা ঠিক থাকে; "পরীক্ষার ছাপা" কিছু বসায় না,
+ *   তাই তখন নয়। ⛔ আগে এটা ফর্মে লেখা ছিল (`setTimeout(...)`), যা CSP-Alpine চালায় না — পাতা নতুন হত না (csp-expressions.test.js)।
+ */
+export function chequeFreeForm ({ book = '', next = {}, first = '' }) {
+    return {
+        book,
+        next,
+        first,
+        afterSubmit (event) {
+            if (event?.submitter?.name === 'test') return
+            setTimeout(() => window.location.reload(), 1500)
+        },
+    }
+}

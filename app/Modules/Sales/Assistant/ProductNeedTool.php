@@ -46,7 +46,7 @@ final class ProductNeedTool implements AssistantTool
         $product = ProductInQuestion::find($args);
 
         if ($product === null) {
-            return ['rows' => [], 'columns' => [], 'summary' => (string) __('inventory::assistant.no_product'), 'sources' => []];
+            return ['rows' => [], 'columns' => [], 'summary' => ProductInQuestion::notFound($args), 'sources' => []];
         }
 
         $days = max(1, min(60, (int) ($args['days'] ?? (str_contains(mb_strtolower((string) ($args['q'] ?? '')), 'মাস') ? 30 : 7))));

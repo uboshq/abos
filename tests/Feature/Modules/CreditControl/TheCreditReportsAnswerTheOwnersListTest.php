@@ -131,6 +131,9 @@ final class TheCreditReportsAnswerTheOwnersListTest extends TestCase
         }
 
         $sr = $this->staffWith(['credit_control.view', DealerScope::OWN]);
+        // ⓘ দেয়ালের ভেতরে ডিপো না থাকলে কিছুই নয় (১২ নভেম্বর ২০২৬) — নিজের ডিপো
+        \App\Models\UserDataScope::query()->withoutGlobalScopes()->create(['company_id' => $this->company->id, 'user_id' => $sr->id,
+            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => (int) $this->company->defaultBranch()?->id]);
         app(DealerBindingService::class)->bind((int) $sr->id, [(int) $mine->id], now()->toDateString());
         app(SettingsService::class)->set(DealerScope::SWITCH, true);
         app(PermissionRegistrar::class)->forgetCachedPermissions();

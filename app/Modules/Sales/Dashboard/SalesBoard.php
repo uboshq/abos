@@ -564,7 +564,8 @@ final class SalesBoard
     public function srTargets(): array
     {
         $first = Carbon::today()->startOfMonth();
-        $targets = \App\Modules\Sales\Models\SalesTarget::query()->forMonth($first)->pluck('amount', 'user_id');
+        // ⛔ দেয়ালের ভেতরের মানুষ কেবল নিজের আর নিচের লোকের লক্ষ্য দেখেন — সহকর্মীদের নাম আর অর্জন নয় (মালিক, ১২ নভেম্বর ২০২৬)
+        $targets = \App\Modules\Sales\Models\SalesTarget::query()->forMonth($first)->when(app(\App\Core\Services\DealerScope::class)->walled(), fn ($q) => $q->whereIn('user_id', app(\App\Core\Services\DealerScope::class)->reachOf(auth()->user())))->pluck('amount', 'user_id');
         $achieved = app(\App\Modules\Sales\Services\SalesTargetService::class)->achievedByUser($first, $first->copy()->endOfMonth());
         $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $targets->keys()->all() ?: [0])->pluck('name', 'id');
         $rows = $targets->filter(fn ($t) => (float) $t > 0)
@@ -583,7 +584,8 @@ final class SalesBoard
     {
         $from = Carbon::today()->startOfMonth()->toDateString();
         $to = Carbon::today()->toDateString();
-        $key = 'abos.sales-board-sr-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to;
+        // ⛔ দেয়ালের ভেতরের মানুষের আলাদা চাবি — নাহলে মালিকের গোটা তালিকা দশ মিনিট তাঁকে দেখাত (নিরাপত্তা অডিট, ১২ নভেম্বর ২০২৬)
+        $key = 'abos.sales-board-sr-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to.(app(\App\Core\Services\DealerScope::class)->walled() ? '.u'.auth()->id() : '.all');
 
         return \Illuminate\Support\Facades\Cache::remember($key, 600, function () use ($from, $to): array {
             $engine = app(\App\Modules\Sales\Services\CommissionEngine::class);
@@ -721,7 +723,7 @@ final class SalesBoard
     /** এ মাসের পাকা বিলের SR কমিশন — কমিশনের হিসাব থেকে, 10 মিনিট মনে রাখা (বিল ধরে গোনা ভারী) */
     private function commission(Carbon $from, Carbon $to): string
     {
-        $key = 'abos.sales-board-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to->toDateString();
+        $key = 'abos.sales-board-commission.'.\App\Core\Support\CompanyContext::id().'.'.(\App\Core\Support\ViewedBranch::one() ?? 'all').'.'.$to->toDateString().(app(\App\Core\Services\DealerScope::class)->walled() ? '.u'.auth()->id() : '.all');
 
         return \Illuminate\Support\Facades\Cache::remember($key, 600, function () use ($from, $to): string {
             $engine = app(\App\Modules\Sales\Services\CommissionEngine::class);

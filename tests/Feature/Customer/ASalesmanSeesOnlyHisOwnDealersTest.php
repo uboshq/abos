@@ -568,6 +568,11 @@ final class ASalesmanSeesOnlyHisOwnDealersTest extends TestCase
         ]);
         $user->companies()->attach($this->company->id, ['is_active' => true]);
         CompanyContext::forCompany($this->company->id, fn () => $user->assignRole('salesman'));
+        // ⓘ ডেমোর বিক্রয়কর্মীর মতো নিজের ডিপো — দেয়ালের ভেতরে ডিপো না থাকলে কিছুই নয় (১২ নভেম্বর ২০২৬)
+        \App\Models\UserDataScope::query()->withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'user_id' => $user->id,
+            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => (int) $this->company->defaultBranch()?->id,
+        ]);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return $user;

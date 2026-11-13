@@ -92,7 +92,15 @@ final class ThePricingPagesWereOnlyASignTest extends TestCase
         $this->assertSame(SalesPrice::CUSTOMER, SalesPrice::targetOf($list));
         $this->actingAs($clerk)->get(route('sales.price_book.edit', $list))->assertOk()->assertSee('RAHIM');
         $this->actingAs($clerk)->get(route('sales.price_book.index', ['target' => 'customer']))->assertOk()
-            ->assertSee('Rahim special')->assertSee($this->dealer->name());
+            ->assertSee('Rahim special')->assertSee($this->dealer->name())
+            // ⭐ অ্যাকশন ▾ — দেখা আর সম্পাদনা (মালিক, ১০ নভেম্বর ২০২৬: বাকি তালিকায় অ্যাকশন ▾)
+            ->assertSee('data-row-actions-button', false)->assertSee(route('sales.price_book.edit', $list), false);
+
+        // ⛔ দেখার চাবিতে মেনু আছে, সম্পাদনা ধূসর আর তার ঠিকানা নেই — পাতার বোতামের একই শর্ত
+        $viewer = $this->staff(['sales.price_list.view']);
+        $this->actingAs($viewer)->get(route('sales.price_book.index', ['target' => 'customer']))->assertOk()
+            ->assertSee('data-row-actions-button', false)->assertSee(route('sales.price_book.show', $list), false)
+            ->assertSee('data-row-action-off', false)->assertDontSee(route('sales.price_book.edit', $list), false);
 
         // ⛔ লক্ষ্য ছাড়া গ্রাহকের তালিকা নয়, আর একই কোড দুইবার নয়
         $this->actingAs($clerk)->post(route('sales.price_book.store'), ['target_id' => null] + $body + ['code' => 'X1'])
