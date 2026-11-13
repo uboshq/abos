@@ -32,6 +32,7 @@ return [
     'about' => [
         'accounts' => 'Vouchers, ledgers, cash and bank, financial statements',
         'approval' => 'Approvals — who signs, up to how much, in what order',
+        'assistant' => 'Copilot — answers, the morning watch and the search journal',
         'backup' => 'Daily backups and restoring them',
         'credit_control' => 'Credit limits, overdue dues and holds',
         'customer' => 'Shops and customers, points, areas and dues',

@@ -8,6 +8,8 @@ declare(strict_types=1);
  */
 return [
     'subjects' => [
+        // ⓘ কোপাইলট (১১ নভেম্বর ২০২৬)
+        'assistant' => 'Copilot',
         'accounts' => 'Whole accounts module',
         'accounts.asset' => 'Fixed assets',
         'accounts.backdate' => 'Back-dated entries',
@@ -39,6 +41,7 @@ return [
         'finance.income' => 'Income',
         'finance.plan' => 'Finance map',
         'finance.rental' => 'Rental agreements',
+        'finance.working_capital' => 'Working capital',
         'finance.withdrawal' => 'Owner withdrawals',
         'governance.audit' => 'Audit log',
         'governance.error' => 'Error log',
@@ -137,6 +140,13 @@ return [
     ],
 
     'verbs' => [
+        // ⓘ চেক ছাপা, পার্টির বার্তা, SMS ফোন, কোপাইলট (১০–১২ নভেম্বর ২০২৬)
+        'print_free' => 'Print a cheque only',
+        'layout' => 'Cheque layouts and books',
+        'party_templates' => 'Party message templates',
+        'party_messages' => 'Send messages to parties',
+        'sms_gateway' => 'Office SMS phone',
+        'use' => 'Use',
         'view' => 'View',
         'create' => 'Create',
         'update' => 'Edit',

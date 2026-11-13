@@ -227,7 +227,7 @@ final class InventoryBoard
                 'text' => $count['date'] === null ? __('inventory::board.p.no_count') : __('inventory::board.p.count_gap_text', ['date' => $count['date'], 'state' => __($count['approved'] ? 'inventory::board.approved' : 'inventory::board.approval_due')]),
                 'action' => __('inventory::board.a.recount'), 'href' => self::link('inventory.count.index'), 'severity' => $sev('today', $count['lines'] > 0)],
             ['key' => 'unbilled', 'label' => __('inventory::board.p.unbilled'), 'count' => (string) $unbilled['receipts'],
-                'value' => $unbilled['receipts'] === 0 ? $none : self::short($unbilled['value']).($unbilled['supplier'] !== '' ? ' · '.$unbilled['supplier'] : ''),
+                'value' => $unbilled['receipts'] === 0 ? $none : self::short($unbilled['value']).($unbilled['top_name'] !== '' ? ' · '.$unbilled['top_name'] : ''),
                 'text' => __('inventory::board.p.unbilled_text'), 'action' => __('inventory::board.a.ask_bill'),
                 'href' => self::link('purchase.receipt.index'), 'severity' => $sev('today', $unbilled['receipts'] > 0)],
             ['key' => 'transfer_stuck', 'label' => __('inventory::board.p.transfer_stuck'), 'count' => (string) $stuck['count'],

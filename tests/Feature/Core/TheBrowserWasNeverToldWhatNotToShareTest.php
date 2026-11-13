@@ -104,9 +104,16 @@ final class TheBrowserWasNeverToldWhatNotToShareTest extends TestCase
 
         $policy = (string) $response->headers->get('Permissions-Policy');
 
-        foreach (['camera=()', 'microphone=()', 'payment=()', 'usb=()'] as $denied) {
+        foreach (['camera=()', 'payment=()', 'usb=()'] as $denied) {
             $this->assertStringContainsString($denied, $policy, "⛔ {$page}: Permissions-Policy-তে {$denied} নেই।");
         }
+
+        /*
+         * ⭐ মাইক কেবল নিজের সাইটের — কোপাইলটের মাইক (মালিক, ১৩ নভেম্বর ২০২৬: "মাইক্রোফোনে চাপ দিলে দেখা যায় মাইক্রোফোন নট অ্যালাউ")।
+         * ⛔ `()` হলে ব্রাউজার অনুমতিই চায় না, সোজা "না"; বাইরের ফ্রেম বা সাইট কখনো নয় — কেবল `(self)`।
+         */
+        $this->assertMatchesRegularExpression('/(^|,\s*)microphone=\(self\)(,|$)/', $policy,
+            "⛔ {$page}: মাইক নিজের সাইটের জন্য খোলা নয় — কোপাইলটের মাইক চাপলে ব্রাউজার না জিজ্ঞেস করেই \"not allowed\" বলে।");
 
         /*
          * ⓘ লোকেশন কেবল নিজের সাইটের জন্য — মালিক, ১ অক্টোবর ২০২৬: লগইনের জায়গা খাতায় ([[LoginPlace]])।
