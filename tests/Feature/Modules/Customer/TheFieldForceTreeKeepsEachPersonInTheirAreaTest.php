@@ -85,7 +85,8 @@ final class TheFieldForceTreeKeepsEachPersonInTheirAreaTest extends TestCase
         AreaBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $sr->id, 'location_id' => $north->id, 'starts_on' => now()->subMonth()->toDateString()]);
         $this->post(route('customer.fieldforce.save', $sr->id), ['position' => 'SR', 'areas' => [], 'starts_on' => now()->toDateString()])
             ->assertSessionHasNoErrors();
-        $old = AreaBinding::query()->where('user_id', $sr->id)->firstOrFail();
+        $old = AreaBinding::query()->where('user_id', $sr->id)->first();
+        $this->assertNotNull($old, '⛔ পুরনো এলাকা মুছে গেল — "মার্চে কার ছিল" হারায়; শেষ দিন বসার কথা, মোছা নয়।');
         $this->assertSame(now()->subDay()->toDateString(), $old->ends_on?->toDateString(), '⛔ পুরনো এলাকা মুছে গেল বা ভুল দিনে শেষ — "মার্চে কার ছিল" হারায়।');
     }
 
@@ -100,13 +101,15 @@ final class TheFieldForceTreeKeepsEachPersonInTheirAreaTest extends TestCase
         $this->actingAs($this->owner);
         $this->get(route('customer.fieldforce.index', ['person' => $sr->id]))->assertOk()->assertSee($sr->name)->assertSee('data-no-depot="1"', false);
 
-        $this->post(route('customer.fieldforce.save', $sr->id), ['position' => 'SR', 'depots' => [$foreign], 'starts_on' => now()->toDateString()])
-            ->assertSessionHasErrors('depots');
+        // ⓘ আগে ফল (কারণসহ), পরে ফেরত-বার্তা — ফ্রেমওয়ার্কের সাধারণ বার্তায় ধরা পড়লে সেটা দাবির প্রমাণ নয়
+        $foreignTry = $this->post(route('customer.fieldforce.save', $sr->id), ['position' => 'SR', 'depots' => [$foreign], 'starts_on' => now()->toDateString()]);
         $this->assertSame(0, UserDataScope::query()->where('user_id', $sr->id)->count(), '⛔ অন্য কোম্পানির ডিপো বসে গেল।');
+        $foreignTry->assertSessionHasErrors('depots');
 
         // ⛔ ডিপো নেই — দেয়াল চালু হয় না
-        $this->post(route('customer.fieldforce.wall'), ['on' => 1])->assertSessionHasErrors('wall');
+        $wallTry = $this->post(route('customer.fieldforce.wall'), ['on' => 1]);
         $this->assertFalse((bool) app(SettingsService::class)->get(DealerScope::SWITCH), '⛔ ডিপো ছাড়া মানুষ থাকতেও দেয়াল চালু হলো — চালুর সকালে তিনি অন্ধ।');
+        $wallTry->assertSessionHasErrors('wall');
 
         $this->post(route('customer.fieldforce.save', $sr->id), ['position' => 'SR', 'depots' => [$depot], 'starts_on' => now()->toDateString()])
             ->assertSessionHasNoErrors();
@@ -122,8 +125,9 @@ final class TheFieldForceTreeKeepsEachPersonInTheirAreaTest extends TestCase
 
         $this->actingAs($keeper);
         $this->get(route('customer.fieldforce.index'))->assertOk()->assertSee(__('customer::fieldforce.wall_owner_only'));
-        $this->post(route('customer.fieldforce.wall'), ['on' => 0])->assertForbidden();
+        $flip = $this->post(route('customer.fieldforce.wall'), ['on' => 0]);
         $this->assertTrue((bool) app(SettingsService::class)->get(DealerScope::SWITCH), '⛔ মালিক নন এমন কেউ সবার দেয়াল নামালেন।');
+        $flip->assertForbidden();
     }
 
     private function place(string $code, string $en, string $level, ?Location $parent = null): Location
