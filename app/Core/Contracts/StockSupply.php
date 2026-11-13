@@ -22,7 +22,9 @@ interface StockSupply
     /**
      * মাল এসেছে, সরবরাহকারীর বিল এখনো বসেনি — কয়টা চালান, কত টাকা, সবচেয়ে বড় অঙ্কের সরবরাহকারী।
      *
-     * @return array{receipts: int, value: string, supplier: string}
+     * ⓘ `top_name` — সবচেয়ে বড় অঙ্কের সরবরাহকারীর নাম; চাবির নামে পক্ষের ধরন নয়, কোর পক্ষ চেনে না (TheDealerPaidTheCompanyNotMeTest)
+     *
+     * @return array{receipts: int, value: string, top_name: string}
      */
     public function unbilledReceipts(): array;
 
