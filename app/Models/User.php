@@ -574,7 +574,8 @@ class User extends Authenticatable
             );
 
             if ($allowed !== null && ! in_array((int) $branchId, $allowed, true)) {
-                $branchId = $allowed[0];
+                // ⛔ দেয়ালের ভেতরে ডিপো না থাকলে তালিকা খালি (১২ নভেম্বর ২০২৬) — তখন কোনো শাখা নয়, ৫০০ নয় (Mac run of fa86dd536)
+                $branchId = $allowed[0] ?? null;
             }
         }
 
