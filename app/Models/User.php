@@ -155,8 +155,6 @@ class User extends Authenticatable
             'home_layout' => 'array',
             // ⓘ বাঁ রেলের নিজের সাজ — পিন আর ক্রম ([[MenuBuilder::arranged()]]; মালিক, ২৪ অক্টোবর ২০২৬)
             'nav_layout' => 'array',
-            // ⭐ তালিকার নিজের পছন্দ — ছাঁকনি প্যানেল ভাঁজ ([[filter-layout]], ১৪ নভেম্বর ২০২৬)
-            'list_prefs' => 'array',
 
             /*
              * গোপন চাবি ও পুনরুদ্ধার কোড — ডাটাবেজে এনক্রিপ্টেড।
@@ -228,8 +226,6 @@ class User extends Authenticatable
             'locale', 'theme', 'ui', 'accent', 'avatar_path',
             // ⓘ রেলের নিজের সাজ — নিজের পছন্দ, ব্যবসার তথ্য নয় (fe, ২৪ অক্টোবর ২০২৬)
             'nav_layout',
-            // ⓘ ছাঁকনি প্যানেল ভাঁজ করা কি না — নিজের পছন্দ (১৪ নভেম্বর ২০২৬)
-            'list_prefs',
         ];
     }
 

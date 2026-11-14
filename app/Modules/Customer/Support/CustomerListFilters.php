@@ -9,8 +9,10 @@ use App\Core\ListFilter\ChoiceFacet;
 use App\Core\ListFilter\DateRangeFacet;
 use App\Core\ListFilter\FieldsFacet;
 use App\Core\ListFilter\FilterSet;
+use App\Core\ListFilter\ListCard;
 use App\Core\ListFilter\RangeFacet;
 use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
@@ -18,6 +20,7 @@ use App\Modules\MasterData\Models\Location;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * গ্রাহকের তালিকার ছাঁকনি — মালিক, ১ অক্টোবর ২০২৬:
@@ -77,30 +80,30 @@ final class CustomerListFilters
     public function set(Request $request): FilterSet
     {
         return new FilterSet([
-            new ChoiceFacet('status', __('customer::filter.status'), [
-                'active' => ['label' => __('customer::filter.active'), 'apply' => fn (Builder $q) => $q->where('customers.is_active', true)],
-                'inactive' => ['label' => __('customer::filter.inactive'), 'apply' => fn (Builder $q) => $q->where('customers.is_active', false)],
+            (new ChoiceFacet('status', __('customer::filter.status'), [
+                'active' => ['label' => __('customer::filter.active'), 'tone' => 'green', 'apply' => fn (Builder $q) => $q->where('customers.is_active', true)],
+                'inactive' => ['label' => __('customer::filter.inactive'), 'tone' => 'slate', 'apply' => fn (Builder $q) => $q->where('customers.is_active', false)],
                 'all' => ['label' => __('customer::filter.all'), 'apply' => fn (Builder $q) => $q],
-            ], multi: false, default: $request->boolean('inactive') ? 'all' : self::DEFAULT_STATUS),
-            new ChoiceFacet('quick', __('customer::filter.quick'), [
-                'due' => ['label' => __('customer::filter.quick_due'), 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '>', 0)],
-                'advance' => ['label' => __('customer::filter.quick_advance'), 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '<', 0)],
-                'good' => ['label' => __('customer::filter.quick_good'), 'apply' => fn (Builder $q) => $this->good($q)],
-                'over_limit' => ['label' => __('customer::filter.quick_over_limit'), 'apply' => fn (Builder $q) => $q->overCreditLimit()],
-            ]),
-            new ChoiceFacet('area', __('customer::filter.area'), $this->places(Location::TERRITORY)),
-            new ChoiceFacet('point', __('customer::filter.point'), $this->places(Location::POINT)),
-            new RangeFacet('due', __('customer::filter.due'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), 1, $min, $max)),
-            new RangeFacet('advance', __('customer::filter.advance'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), -1, $min, $max)),
-            new DateRangeFacet('created', __('customer::filter.created'), function (Builder $q, ?string $from, ?string $to): void {
+            ], multi: false, default: $request->boolean('inactive') ? 'all' : self::DEFAULT_STATUS))->look('green', '●'),
+            (new ChoiceFacet('quick', __('customer::filter.quick'), [
+                'due' => ['label' => __('customer::filter.quick_due'), 'tone' => 'red', 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '>', 0)],
+                'advance' => ['label' => __('customer::filter.quick_advance'), 'tone' => 'green', 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '<', 0)],
+                'good' => ['label' => __('customer::filter.quick_good'), 'tone' => 'teal', 'apply' => fn (Builder $q) => $this->good($q)],
+                'over_limit' => ['label' => __('customer::filter.quick_over_limit'), 'tone' => 'amber', 'apply' => fn (Builder $q) => $q->overCreditLimit()],
+            ]))->look('red', '৳'),
+            (new ChoiceFacet('area', __('customer::filter.area'), $this->places(Location::TERRITORY)))->look('teal', '◈'),
+            (new ChoiceFacet('point', __('customer::filter.point'), $this->places(Location::POINT)))->look('violet', '⌖'),
+            (new RangeFacet('due', __('customer::filter.due'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), 1, $min, $max)))->look('amber', '⇕'),
+            (new RangeFacet('advance', __('customer::filter.advance'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), -1, $min, $max)))->look('green', '⇕'),
+            (new DateRangeFacet('created', __('customer::filter.created'), function (Builder $q, ?string $from, ?string $to): void {
                 if ($from !== null) {
                     $q->where('customers.created_at', '>=', $from.' 00:00:00');
                 }
                 if ($to !== null) {
                     $q->where('customers.created_at', '<=', $to.' 23:59:59');
                 }
-            }),
-            new FieldsFacet('rank', __('customer::filter.rank'), [
+            }))->look('sky', '📅'),
+            (new FieldsFacet('rank', __('customer::filter.rank'), [
                 ['key' => 'rank', 'label' => __('customer::filter.rank'), 'type' => 'select',
                     'options' => ['' => __('customer::filter.any'), 'top' => __('customer::filter.top'), 'bottom' => __('customer::filter.bottom')]],
                 ['key' => 'rank_n', 'label' => __('customer::filter.rank_n'), 'type' => 'number', 'min' => 1, 'max' => 500, 'placeholder' => (string) self::RANK_DEFAULT],
@@ -110,8 +113,43 @@ final class CustomerListFilters
                 ['key' => 'sales_to', 'label' => __('customer::filter.sales_to'), 'type' => 'date'],
             ], function (Builder $q) use ($request): void {
                 $this->rankTitle = $this->rank($q, $request);
-            }, fn (array $v) => (string) $this->rankTitleFor($request)),
-        ]);
+            }, fn (array $v) => (string) $this->rankTitleFor($request)))->look('violet', '★'),
+        ], $this->cards());
+    }
+
+    /**
+     * ⭐ উপরের চারটা রঙিন কার্ড — চালু গ্রাহক · বকেয়া আছে · অগ্রিম আছে · সীমা পার (মালিকের অনুমোদিত নমুনা, ১৪ নভেম্বর ২০২৬)।
+     * ⓘ "মেয়াদ পার" কার্ড আসবে মেয়াদের বয়সের ধাপে ([[কেন্দ্রীয়-ছাঁকনি পরিকল্পনা]] §৬)।
+     *
+     * @return list<ListCard>
+     */
+    private function cards(): array
+    {
+        $people = fn (int $n) => __('customer::filter.people', ['n' => number_format($n)]);
+
+        return [
+            new ListCard(__('customer::filter.card_all'), '👥', ['#2346d8', '#7c3aed'], [],
+                fn (Builder $q) => $people((clone $q)->where('customers.is_active', true)->count()),
+                fn (Builder $q) => __('customer::filter.card_all_sub', ['all' => number_format($q->count())])),
+            new ListCard(__('customer::filter.quick_due'), '⬆', ['#dc2626', '#f97316'], ['quick' => ['due']],
+                fn (Builder $q) => $people((clone $q)->where('customers.is_active', true)->where($this->outstanding(), '>', 0)->count()),
+                fn (Builder $q) => '৳'.Money::format($this->sumOutstanding($q->where('customers.is_active', true), 1))),
+            new ListCard(__('customer::filter.quick_advance'), '⬇', ['#059669', '#22c55e'], ['quick' => ['advance']],
+                fn (Builder $q) => $people((clone $q)->where('customers.is_active', true)->where($this->outstanding(), '<', 0)->count()),
+                fn (Builder $q) => '৳'.Money::format($this->sumOutstanding($q->where('customers.is_active', true), -1))),
+            new ListCard(__('customer::filter.quick_over_limit'), '⚠', ['#d97706', '#facc15'], ['quick' => ['over_limit']],
+                fn (Builder $q) => $people((clone $q)->where('customers.is_active', true)->overCreditLimit()->count()),
+                fn (Builder $q) => __('customer::filter.card_over_sub')),
+        ];
+    }
+
+    /** ⓘ বকেয়া (১) বা অগ্রিম (−১) — সারির হিসাবেরই যোগফল, ধনাত্মক অঙ্কে */
+    private function sumOutstanding(Builder $query, int $sign): string
+    {
+        $rows = $query->select('customers.id')->selectSub($this->outstanding(), 'o');
+        $sum = DB::query()->fromSub($rows, 't')->where('t.o', $sign > 0 ? '>' : '<', 0)->sum('t.o');
+
+        return ltrim(bcadd((string) $sum, '0', 4), '-');
     }
 
     /**

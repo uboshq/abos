@@ -30,10 +30,17 @@ final class FilterSet
     /** @var list<Facet> */
     public readonly array $facets;
 
-    /** @param  list<Facet>  $facets */
-    public function __construct(array $facets)
+    /** @var list<ListCard> */
+    public readonly array $cards;
+
+    /**
+     * @param  list<Facet>  $facets
+     * @param  list<ListCard>  $cards  উপরের রঙিন কার্ড — চারটা পর্যন্ত
+     */
+    public function __construct(array $facets, array $cards = [])
     {
         $this->facets = $facets;
+        $this->cards = array_slice($cards, 0, 4);
     }
 
     /** কোয়েরিতে সব চালু অংশ বসানো (ডিফল্ট মানসহ) */
@@ -88,7 +95,7 @@ final class FilterSet
     /**
      * চালু ছাঁকনির চিপ — প্রতিটায় নিজেকে মোছার ঠিকানা।
      *
-     * @return list<array{text: string, url: string}>
+     * @return list<array{text: string, url: string, tone: string}>
      */
     public function chips(Request $request): array
     {
@@ -102,11 +109,24 @@ final class FilterSet
             }
 
             foreach ($facet->chips($value) as $chip) {
-                $chips[] = ['text' => $chip['text'], 'url' => $this->urlWithout($request, $chip['drop'])];
+                $chips[] = ['text' => $chip['text'], 'url' => $this->urlWithout($request, $chip['drop']), 'tone' => $chip['tone'] ?? $facet->tone];
             }
         }
 
         return $chips;
+    }
+
+    /**
+     * ⭐ ছাঁকনি মেনে তালিকায় কতটা — প্যানেলের "Nটা দেখুন" বোতাম চাপার আগেই জানায় (নমুনার নিচের বোতাম)।
+     *
+     * @param  Closure(): Builder  $base
+     */
+    public function total(Closure $base, Request $request): int
+    {
+        $query = $base();
+        $this->apply($query, $request);
+
+        return $query->count();
     }
 
     public function activeCount(Request $request): int
@@ -144,18 +164,22 @@ final class FilterSet
                 'label' => $facet->label,
                 'active' => $value === null ? 0 : count($facet->chips($value)),
                 'open' => $facet->open || $value !== null,
+                'tone' => $facet->tone,
+                'icon' => $facet->icon,
             ];
 
             if ($facet instanceof ChoiceFacet) {
                 $shown = $facet->applied($request) ?? [];
                 $section += [
                     'multi' => $facet->multi,
+                    'default' => $facet->default,
                     'findable' => $facet->findable(),
                     'options' => array_map(fn (string $option) => [
                         'value' => $option,
                         'label' => $facet->options[$option]['label'],
                         'count' => $counts[$facet->key][$option] ?? null,
                         'checked' => in_array($option, $shown, true),
+                        'tone' => $facet->options[$option]['tone'] ?? null,
                     ], array_map('strval', array_keys($facet->options))),
                 ];
             } elseif ($facet instanceof RangeFacet) {

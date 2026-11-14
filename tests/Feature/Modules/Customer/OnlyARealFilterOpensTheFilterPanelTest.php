@@ -64,7 +64,7 @@ class OnlyARealFilterOpensTheFilterPanelTest extends TestCase
     {
         $due = $this->page(['q' => 'kona', 'status' => 'active', 'due_min' => '100']);
         $this->assertMatchesRegularExpression('/'.self::BADGE.'>\s*1\s*</', $due, '⛔ "বকেয়া অন্তত ১০০" দিলেও "ছাঁকনি" বোতামে ১ নেই — চালু ছাঁকনি লুকাল');
-        $this->assertMatchesRegularExpression('/<details\s+open\s+data-filter-section="due"/', $due, '⛔ চালু "বকেয়ার পরিমাণ" অংশটা ভাঁজ করা — কোন ছাঁকনি চালু, দেখা যায় না');
+        $this->assertMatchesRegularExpression('/class="list-filter-group tone-amber has"\s+data-filter-section="due"/', $due, '⛔ চালু "বকেয়ার পরিমাণ" অংশটা ভাঁজ করা — কোন ছাঁকনি চালু, দেখা যায় না');
         $this->assertSame(1, substr_count($due, 'data-facet'), '⛔ "বকেয়া অন্তত ১০০"-র চিপ একটা হওয়ার কথা (ডিফল্ট অবস্থা চিপ নয়)');
 
         // ⓘ ডিফল্ট ছাড়া অন্য অবস্থা সত্যিকারের ছাঁকনি — quiet-এর মতো চিরকাল চুপ নয়

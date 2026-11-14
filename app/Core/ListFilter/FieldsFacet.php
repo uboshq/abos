@@ -79,6 +79,7 @@ final class FieldsFacet extends Facet
         return [[
             'text' => ($this->chipText)($value),
             'drop' => array_fill_keys($this->keys(), null),
+            'tone' => $this->tone,
         ]];
     }
 }

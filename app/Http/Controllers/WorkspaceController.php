@@ -487,19 +487,4 @@ class WorkspaceController extends Controller
 
         return back();
     }
-
-    /**
-     * ⭐ তালিকার ছাঁকনি প্যানেল ভাঁজ করা না খোলা — মানুষের নিজের হিসাবে, যেকোনো কম্পিউটারে একই (মালিক, ১৪ নভেম্বর ২০২৬:
-     *   *"ফুল করে রাখার ব্যবস্থাটা তো রাখার দরকার"*; [[filter-layout]])। ⓘ পাতা আবার খোলে না — JS চুপচাপ পাঠায়।
-     */
-    public function foldListFilters(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $folded = $request->validate(['folded' => ['required', 'boolean']])['folded'];
-        $user = $request->user();
-        $prefs = is_array($user->list_prefs) ? $user->list_prefs : [];
-        $prefs['folded'] = (bool) $folded;
-        $user->forceFill(['list_prefs' => $prefs])->save();
-
-        return response()->json(['folded' => $prefs['folded']]);
-    }
 }

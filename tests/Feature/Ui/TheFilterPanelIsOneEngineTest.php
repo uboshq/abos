@@ -26,15 +26,12 @@ use Tests\TestCase;
  *   - এক অংশে একাধিক টিক = "যেকোনোটা" (দুই এলাকা দুটোরই গ্রাহক), আলাদা অংশ একসাথে খাটে
  *   - ঘরের পাশের সংখ্যা = টিক দিলে যতজন আসে; নিজের অংশ বাদ দিয়ে গোনা
  *   - চিপ মুছলে কেবল সেই মান যায়, বাকি টিক থাকে
- *   - প্যানেল ভাঁজ — মানুষের নিজের হিসাবে থাকে, নিরীক্ষার খাতায় যায় না
+ *   - টিক দিতে দিতেই সংখ্যা (`_filter_counts`), উপরের রঙিন কার্ড চাপলে সেই ছাঁকনি
  *   - অচেনা মান (অন্য কোম্পানির এলাকা, "1e5") চুপচাপ বাদ, ৫০০ নয়
  */
 final class TheFilterPanelIsOneEngineTest extends TestCase
 {
     use RefreshDatabase;
-
-    /** ⓘ সার্ভার যে ক্লাস আঁকে — `:class`-এর লেখায় "is-folded" শব্দটা সবসময় থাকে, তাই শব্দ নয়, ক্লাসটা ধরা */
-    private const FOLDED = '/class="list-filter-layout is-folded"/';
 
     /** @var array<string, Customer> */
     private array $c = [];
@@ -68,6 +65,8 @@ final class TheFilterPanelIsOneEngineTest extends TestCase
         $this->c['n_clean'] = $this->customer('Zfx North Clean', $this->north);
         $this->c['s_due'] = $this->customer('Zfx South Due', $this->south, '300');
         $this->c['e_due'] = $this->customer('Zfx East Due', $this->east, '900');
+        // ⓘ খোঁজার বাইরে একজন বকেয়াদার — কার্ড খোঁজা না মানলে "Zfx"-এ তিনের বদলে চার দেখাত
+        $this->c['outside'] = $this->customer('Qqo Outside Due', $this->place('ZFW', Location::TERRITORY, null), '450');
     }
 
     public function test_two_ticks_in_one_section_mean_either_and_sections_combine(): void
@@ -122,22 +121,43 @@ final class TheFilterPanelIsOneEngineTest extends TestCase
         $this->assertMatchesRegularExpression('/data-filter-toggle-count>\s*3\s*</', $html, '⛔ বারের "ছাঁকনি" বোতামে চালু ছাঁকনির সংখ্যা ৩ নয়');
     }
 
-    public function test_the_fold_is_the_persons_own_and_stays_out_of_the_audit_book(): void
+    /**
+     * ⭐ টিক দিতে দিতেই সংখ্যা — প্যানেল একই ঠিকানায় `_filter_counts=1` দিয়ে জিজ্ঞেস করে; উত্তর পাতা নয়, কেবল সংখ্যা।
+     */
+    public function test_the_drawer_learns_the_counts_while_ticking(): void
     {
-        $this->assertDoesNotMatchRegularExpression(self::FOLDED, $this->page([]), '⛔ নতুন মানুষের প্যানেল শুরুতেই ভাঁজ করা');
+        $response = $this->getJson(route('customer.index', ['area' => [$this->north->id], 'quick' => ['due'], '_filter_counts' => 1]));
+        $this->assertStringStartsWith('application/json', (string) $response->headers->get('Content-Type'),
+            '⛔ প্যানেলের প্রশ্নে সংখ্যার বদলে পুরো পাতা এল — টিক দিতে দিতে "Nটা দেখুন" বদলাবে না');
+        $json = $response->json();
 
-        $before = DB::table('audit_trails')->count();
-        $this->postJson(route('list_filters.fold'), ['folded' => true])->assertOk()->assertJson(['folded' => true]);
+        $this->assertSame(1, $json['total'] ?? null, '⛔ উত্তর আর "বকেয়া আছে" — "Nটা দেখুন"-এ ১ হওয়ার কথা');
+        $this->assertSame(1, $json['counts']['area'][(string) $this->south->id] ?? null,
+            '⛔ টিক দিতে দিতে দক্ষিণের পাশে ১ আসার কথা — নিজের অংশ বাদ দিয়ে গোনা');
+        $this->assertArrayNotHasKey('due', $json['counts'], '⛔ টাকার সীমার অংশে ঘর নেই — তার সংখ্যাও আসার কথা নয়');
+    }
 
-        $this->assertTrue($this->owner->fresh()->list_prefs['folded'] ?? false, '⛔ ভাঁজ করা পছন্দ মানুষের হিসাবে জমা হয়নি');
-        $this->assertMatchesRegularExpression(self::FOLDED, $this->page([]),
-            '⛔ ভাঁজ করে রাখার পরের বার তালিকা খুললে প্যানেল আবার খোলা');
-        $this->assertSame($before, DB::table('audit_trails')->count(), '⛔ প্যানেল ভাঁজ করা নিরীক্ষার খাতায় উঠল — থিমের মতো নিজের পছন্দ');
+    /**
+     * ⭐ উপরের রঙিন কার্ড — সংখ্যা তালিকার নিজের হিসাব থেকে, চাপলে সেই ছাঁকনি, বসানো কার্ড জ্বলে।
+     */
+    public function test_a_card_counts_what_it_filters_and_lights_when_it_is_the_filter(): void
+    {
+        $html = $this->page(['q' => 'Zfx']);
+        preg_match_all('/<a href="([^"]+)" class="list-card( is-on)?"[^>]*>.*?list-card-label">([^<]+)<.*?list-card-value num">([^<]+)</su', $html, $cards, PREG_SET_ORDER);
+        $this->assertCount(4, $cards, '⛔ উপরে চারটা রঙিন কার্ড নেই');
 
-        $this->postJson(route('list_filters.fold'), ['folded' => false])->assertOk();
-        $this->assertDoesNotMatchRegularExpression(self::FOLDED, $this->page([]), '⛔ আবার খোলার পরেও ভাঁজ করা');
+        $due = collect($cards)->first(fn ($c) => trim($c[3]) === __('customer::filter.quick_due'));
+        $this->assertNotNull($due, '⛔ "বকেয়া আছে" কার্ড নেই');
+        $this->assertSame(__('customer::filter.people', ['n' => '3']), trim($due[4]), '⛔ "Zfx" খোঁজায় তিনজনের বকেয়া — কার্ডে অন্য সংখ্যা');
+        $this->assertSame('', $due[2], '⛔ কোনো ছাঁকনি নেই, তবু "বকেয়া আছে" কার্ড জ্বলে আছে');
 
-        $this->postJson(route('list_filters.fold'), ['folded' => 'maybe'])->assertStatus(422);
+        parse_str((string) parse_url(html_entity_decode($due[1]), PHP_URL_QUERY), $query);
+        $this->assertSame(['due'], $query['quick'] ?? null, '⛔ "বকেয়া আছে" কার্ড চাপলে "বকেয়া আছে" ছাঁকনি বসে না');
+        $this->assertSame('Zfx', $query['q'] ?? null, '⛔ কার্ড চাপলে খোঁজা হারায়');
+
+        $this->sees($query, ['n_due', 's_due', 'e_due'], ['n_clean'], 'কার্ডের ঠিকানা');
+        $this->assertMatchesRegularExpression('/class="list-card is-on"[^>]*>.*?list-card-label">'.preg_quote(__('customer::filter.quick_due'), '/').'</su',
+            $this->page($query), '⛔ কার্ড চাপার পরে সেই কার্ড জ্বলে না');
     }
 
     public function test_unknown_values_are_dropped_not_obeyed(): void
@@ -150,7 +170,7 @@ final class TheFilterPanelIsOneEngineTest extends TestCase
 
     private function countBeside(string $html, string $section, string $value): ?string
     {
-        $part = preg_match('/data-filter-section="'.$section.'".*?<\/details>/su', $html, $m) === 1 ? $m[0] : '';
+        $part = preg_match('/data-filter-section="'.$section.'".*?<\/section>/su', $html, $m) === 1 ? $m[0] : '';
         $found = preg_match('/value="'.preg_quote($value, '/').'"[^>]*>.*?data-count>([^<]*)</su', $part, $c);
 
         return $found === 1 ? trim($c[1]) : null;

@@ -1,233 +1,364 @@
 /*
- * ⭐ ছাঁকনি প্যানেল — তালিকার বাঁ পাশে, সব তালিকায় এক চেহারা ([[filter-layout]]; মালিক, ১৪ নভেম্বর ২০২৬)।
- * ⓘ রং কেবল টোকেন থেকে — আলো/অন্ধকার আর দশটা রূপ নিজে থেকেই মানে।
- * ⓘ ভাঁজ করলে প্যানেল ৪৪px-এর ফিতা; ফোনের মাপে (< ৯০০px) প্যানেল নিচ থেকে ওঠা পাত।
+ * ⭐ তালিকার ছাঁকনি আর রঙিন কার্ড — সব তালিকায় এক চেহারা ([[filter-layout]]; মালিকের অনুমোদিত নমুনা, ১৪ নভেম্বর ২০২৬:
+ *   মালিকের-ফাইল/তালিকার-নকশা-নমুনা-১৪-নভেম্বর.html)।
+ * ⓘ অংশের রং `.tone-*` থেকে — একবার ঠিক, সব তালিকায় এক; অন্ধকার থিমে উজ্জ্বলতর মান, যাতে কালো পটে পড়া যায়।
+ * ⓘ রং কখনো একা অর্থ বহন করে না — প্রতিটা চিপ আর বিন্দুর পাশে লেখা থাকে।
  */
-.list-filter-layout {
+.tone-green { --c: #059669; --c2: #10b981; }
+.tone-red { --c: #dc2626; --c2: #f97316; }
+.tone-amber { --c: #d97706; --c2: #f59e0b; }
+.tone-slate { --c: #64748b; --c2: #94a3b8; }
+.tone-teal { --c: #0d9488; --c2: #06b6d4; }
+.tone-violet { --c: #7c3aed; --c2: #c026d3; }
+.tone-blue { --c: #2346d8; --c2: #3b82f6; }
+.tone-pink { --c: #db2777; --c2: #f43f5e; }
+.tone-sky { --c: #0284c7; --c2: #22d3ee; }
+
+.dark .tone-green, [data-theme="dark"] .tone-green { --c: #4fd69a; --c2: #10b981; }
+.dark .tone-red, [data-theme="dark"] .tone-red { --c: #ff7b72; --c2: #f97316; }
+.dark .tone-amber, [data-theme="dark"] .tone-amber { --c: #fbbf24; --c2: #f59e0b; }
+.dark .tone-slate, [data-theme="dark"] .tone-slate { --c: #a8b3c4; --c2: #94a3b8; }
+.dark .tone-teal, [data-theme="dark"] .tone-teal { --c: #2dd4bf; --c2: #06b6d4; }
+.dark .tone-violet, [data-theme="dark"] .tone-violet { --c: #b794ff; --c2: #c026d3; }
+.dark .tone-blue, [data-theme="dark"] .tone-blue { --c: #7c9bff; --c2: #3b82f6; }
+.dark .tone-pink, [data-theme="dark"] .tone-pink { --c: #f472b6; --c2: #f43f5e; }
+.dark .tone-sky, [data-theme="dark"] .tone-sky { --c: #38bdf8; --c2: #22d3ee; }
+
+/* ── রঙিন কার্ড ── */
+.list-cards {
     display: grid;
-    grid-template-columns: 17.5rem minmax(0, 1fr);
-    align-items: start;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
 }
 
-.list-filter-layout.is-folded {
-    grid-template-columns: 2.75rem minmax(0, 1fr);
-}
-
-.list-filter-panel {
-    position: sticky;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 3.5rem);
-    border-inline-end: 1px solid var(--color-border);
-    background: var(--color-surface-card);
-}
-
-.list-filter-layout.is-folded .list-filter-panel {
-    display: none;
-}
-
-.list-filter-rail {
-    display: none;
-    position: sticky;
-    top: 0;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 12rem;
-    padding: 0.75rem 0;
-    border-inline-end: 1px solid var(--color-border);
-    background: var(--color-surface-card);
-    color: var(--color-ink-body);
-    cursor: pointer;
-}
-
-.list-filter-rail:hover {
-    background: var(--color-surface-hover);
-}
-
-.list-filter-layout.is-folded .list-filter-rail {
-    display: flex;
-}
-
-.list-filter-rail-label {
-    writing-mode: vertical-rl;
-    font-size: 0.8125rem;
-    font-weight: 600;
-}
-
-.list-filter-badge {
-    min-width: 1.25rem;
-    padding: 0 0.35rem;
-    border-radius: var(--radius-pill);
-    background: var(--color-accent-600);
-    color: var(--color-accent-ink);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-}
-
-.list-filter-head {
+.list-card {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid var(--color-border);
+    gap: 0.75rem;
+    overflow: hidden;
+    padding: 0.875rem 1rem;
+    border: 2px solid transparent;
+    border-radius: 0.875rem;
+    background: linear-gradient(135deg, var(--a), var(--b));
+    box-shadow: 0 8px 20px -8px var(--a);
+    color: #fff;
+    text-decoration: none;
+    transition: transform 0.15s;
 }
 
-.list-filter-fold {
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-field);
-    color: var(--color-ink-body);
-    line-height: 1;
+.list-card:hover { transform: translateY(-2px); }
+
+.list-card::after {
+    content: "";
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.13);
 }
 
-.list-filter-fold:hover {
-    background: var(--color-surface-hover);
+.list-card.is-on {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px var(--a), 0 10px 22px -8px var(--a);
 }
 
-.list-filter-sections {
-    flex: 1;
-    overflow-y: auto;
+.list-card-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.625rem;
+    height: 2.625rem;
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 0.2);
+    font-size: 1.2rem;
 }
 
-.list-filter-sections details {
-    border-bottom: 1px solid var(--color-border);
-}
+.list-card-label { display: block; font-size: 0.78rem; opacity: 0.92; }
+.list-card-value { display: block; font-size: 1.3rem; font-weight: 700; line-height: 1.15; }
+.list-card-sub { display: block; overflow: hidden; font-size: 0.75rem; opacity: 0.92; text-overflow: ellipsis; white-space: nowrap; }
 
-.list-filter-sections summary {
-    display: flex;
+/* ── বারের "ছাঁকনি" বোতাম আর রঙিন চিপ ── */
+.list-filter-open {
+    display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.55rem 0.75rem;
-    font-size: 0.8125rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: linear-gradient(135deg, #2346d8, #7c3aed);
+    box-shadow: 0 4px 12px -4px #7c3aed;
+    color: #fff;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.list-filter-open:hover { filter: brightness(1.08); }
+
+.list-filter-open .list-filter-badge {
+    padding: 0 0.45rem;
+    border-radius: 0.6rem;
+    background: #fff;
+    color: #7c3aed;
+    font-size: 0.75rem;
+    line-height: 1.15rem;
+}
+
+.list-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.15rem 0.3rem 0.15rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--c) 12%, var(--color-surface-card));
+    color: var(--c);
+    font-size: 0.8rem;
     font-weight: 600;
-    cursor: pointer;
-    list-style: none;
+    text-decoration: none;
 }
 
-.list-filter-sections summary::-webkit-details-marker {
-    display: none;
-}
-
-.list-filter-sections summary::after {
-    content: "▾";
-    margin-inline-start: auto;
-    color: var(--color-ink-muted);
-}
-
-.list-filter-sections details:not([open]) summary::after {
-    transform: rotate(-90deg);
-}
-
-.list-filter-body {
+.list-filter-chip .x {
     display: grid;
-    gap: 0.15rem;
-    padding: 0 0.75rem 0.65rem;
+    place-items: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--c) 18%, transparent);
+    font-size: 0.65rem;
 }
+
+.list-filter-clearall { color: var(--color-danger, #dc2626); font-size: 0.8rem; font-weight: 700; text-decoration: none; }
+
+/* ── ডান পাশের প্যানেল ── */
+.list-filter-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(17 28 54 / 0.38);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.list-filter-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.list-filter-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+    width: 23.75rem;
+    max-width: 100%;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--color-surface-app);
+    box-shadow: -14px 0 40px rgb(17 28 54 / 0.25);
+    transform: translateX(105%);
+    transition: transform 0.22s;
+}
+
+.list-filter-drawer.is-open { transform: none; }
+
+.list-filter-head {
+    position: relative;
+    overflow: hidden;
+    padding: 1rem;
+    background: linear-gradient(135deg, #2346d8, #7c3aed);
+    color: #fff;
+}
+
+.list-filter-head::after {
+    content: "";
+    position: absolute;
+    top: -50px;
+    right: -40px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.12);
+    pointer-events: none;
+}
+
+.list-filter-picked:not(:empty) {
+    padding: 0.05rem 0.5rem;
+    border-radius: 0.6rem;
+    background: rgb(255 255 255 / 0.22);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.list-filter-headlink {
+    position: relative;
+    z-index: 1;
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.45rem;
+    background: rgb(255 255 255 / 0.18);
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+.list-filter-close {
+    position: relative;
+    z-index: 1;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.45rem;
+    background: rgb(255 255 255 / 0.22);
+    color: #fff;
+}
+
+.list-filter-sections { flex: 1; overflow-y: auto; padding: 0.25rem 0 0.75rem; }
+
+.list-filter-group {
+    margin: 0.65rem 0.75rem 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface-card);
+}
+
+.list-filter-group.has {
+    border-color: color-mix(in srgb, var(--c) 50%, transparent);
+    box-shadow: 0 4px 12px -6px var(--c);
+}
+
+.list-filter-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    color: var(--color-ink-body);
+    font-weight: 700;
+    text-align: start;
+}
+
+.list-filter-tile {
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.55rem;
+    background: linear-gradient(135deg, var(--c), var(--c2));
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.list-filter-n { padding: 0 0.45rem; border-radius: 0.6rem; background: var(--c); color: #fff; font-size: 0.75rem; }
+.list-filter-caret { margin-inline-start: auto; color: var(--color-ink-muted); font-size: 0.7rem; transition: transform 0.15s; }
+.list-filter-group.is-shut .list-filter-caret { transform: rotate(-90deg); }
+.list-filter-group.is-shut .list-filter-body { display: none; }
+
+.list-filter-body { padding: 0 0.75rem 0.65rem; }
+
+.list-filter-tools { display: flex; justify-content: space-between; margin: -0.1rem 0 0.4rem; font-size: 0.75rem; }
+.list-filter-tools button, .list-filter-more { color: var(--c); font-weight: 700; }
+.list-filter-more { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
 
 .list-filter-option {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.2rem 0.25rem;
-    border-radius: var(--radius-field);
-    font-size: 0.8125rem;
+    gap: 0.6rem;
+    margin: 1px 0;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.5rem;
     cursor: pointer;
 }
 
-.list-filter-option:hover {
-    background: var(--color-surface-hover);
+.list-filter-option:hover { background: var(--color-surface-hover); }
+.list-filter-option:has(input:checked) { background: color-mix(in srgb, var(--c) 10%, var(--color-surface-card)); }
+.list-filter-option input { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--c); }
+.list-filter-option.is-zero { opacity: 0.45; }
+.list-filter-option.is-more { display: none; }
+.list-filter-group.show-more .list-filter-option.is-more { display: flex; }
+.list-filter-group.show-more .list-filter-more { display: none; }
+
+.list-filter-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--c); }
+
+.list-filter-count {
+    min-width: 1.6rem;
+    margin-inline-start: auto;
+    padding: 0 0.5rem;
+    border-radius: 0.6rem;
+    background: var(--color-surface-selected);
+    color: var(--color-ink-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
 }
 
-.list-filter-option.is-zero {
-    opacity: 0.5;
-}
+.list-filter-option:has(input:checked) .list-filter-count { background: var(--c); color: #fff; }
 
 .list-filter-find,
 .list-filter-input {
     width: 100%;
-    height: var(--spacing-field-dense);
-    padding: 0 0.5rem;
+    min-width: 0;
+    height: 2.1rem;
+    padding: 0 0.6rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-field);
-    background: var(--color-surface-card);
+    border-radius: 0.5rem;
+    background: var(--color-surface-app);
     color: var(--color-ink-body);
-    font-size: 0.8125rem;
 }
 
-.list-filter-find {
-    margin-bottom: 0.25rem;
+.list-filter-find { margin-bottom: 0.4rem; }
+.list-filter-range { display: flex; align-items: center; gap: 0.5rem; }
+.list-filter-quick { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+
+.list-filter-quick button {
+    padding: 0.1rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.9rem;
+    background: var(--color-surface-card);
+    color: var(--c);
+    font-size: 0.75rem;
 }
 
 .list-filter-foot {
-    display: none;
-    gap: 0.5rem;
-    padding: 0.6rem 0.75rem;
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
     border-top: 1px solid var(--color-border);
+    background: var(--color-surface-card);
 }
 
 .list-filter-button {
     flex: 1;
-    padding: 0.5rem;
+    height: 2.75rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-field);
-    font-weight: 600;
+    border-radius: 0.6rem;
+    background: var(--color-surface-card);
+    color: var(--color-ink-body);
+    font-weight: 700;
 }
 
 .list-filter-button.is-primary {
-    border-color: var(--color-accent-600);
-    background: var(--color-accent-600);
-    color: var(--color-accent-ink);
+    border: 0;
+    background: linear-gradient(135deg, #2346d8, #7c3aed);
+    color: #fff;
 }
 
-/* ফোন আর সরু পর্দা — প্যানেল লুকানো, বারের "ছাঁকনি" বোতামে নিচ থেকে ওঠে */
-@media (max-width: 899.98px) {
-    .list-filter-layout,
-    .list-filter-layout.is-folded {
-        grid-template-columns: minmax(0, 1fr);
-    }
+@media (max-width: 1000px) {
+    .list-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-    .list-filter-layout .list-filter-rail,
-    .list-filter-layout.is-folded .list-filter-rail,
-    .list-filter-fold {
-        display: none;
-    }
-
-    .list-filter-panel,
-    .list-filter-layout.is-folded .list-filter-panel {
-        display: flex;
-        position: fixed;
-        inset: auto 0 0;
-        z-index: 40;
-        max-height: 82vh;
-        border: 0;
-        border-radius: 1rem 1rem 0 0;
-        box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        transform: translateY(105%);
-        transition: transform 0.2s ease;
-    }
-
-    .list-filter-panel.is-sheet {
-        transform: none;
-    }
-
-    .list-filter-foot {
-        display: flex;
-    }
+@media (max-width: 600px) {
+    .list-filter-drawer { width: 100%; }
+    .list-card { padding: 0.6rem 0.75rem; }
+    .list-card-icon { display: none; }
+    .list-card-value { font-size: 1rem; }
 }
 
 @media print {
-    .list-filter-panel,
-    .list-filter-rail {
-        display: none !important;
-    }
-
-    .list-filter-layout {
-        display: block;
-    }
+    .list-cards,
+    .list-filter-scrim,
+    .list-filter-drawer { display: none !important; }
 }

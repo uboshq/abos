@@ -135,10 +135,9 @@
         </div>
     @endif
 
-    {{-- ⓘ overflow-clip, hidden নয় — hidden একটা স্ক্রল-ধারক বানায়, তখন বাঁ পাশের ছাঁকনি প্যানেল পর্দার সাথে আটকে থাকত না --}}
-    <div data-boxed class="overflow-clip rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-      {{-- ⭐ ছাঁকনি প্যানেল বাঁ পাশে — সব তালিকায় এক ছাঁচ (মালিক, ১৪ নভেম্বর ২০২৬; [[filter-layout]], [[CustomerListFilters::set()]]) --}}
-      <x-ui.filter-layout :filters="$filters" form="list-form">
+    {{-- ⭐ রঙিন কার্ড, তালিকা আর ডান পাশের ছাঁকনি — সব তালিকায় এক ছাঁচ (মালিক, ১৪ নভেম্বর ২০২৬; [[filter-layout]], [[CustomerListFilters::set()]]) --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('customer::filter.noun')">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             {{-- ⛔ ছাঁকনিটা খোঁজার পরেও টিকে থাকতে হবে।
 
@@ -214,6 +213,6 @@
 
         <x-ui.pager :rows="$customers" />
         <x-ui.list-totals :rows="$customers" :grand="$grand ?? []" :columns="$columns" />
-      </x-ui.filter-layout>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

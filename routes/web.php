@@ -231,8 +231,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
-    // ⭐ তালিকার ছাঁকনি প্যানেল ভাঁজ — নিজের পছন্দ ([[filter-layout]], ১৪ নভেম্বর ২০২৬)
-    Route::post('/list-filters/fold', [WorkspaceController::class, 'foldListFilters'])->middleware('throttle:60,1')->name('list_filters.fold');
 });
 
 /*

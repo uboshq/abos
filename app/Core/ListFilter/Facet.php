@@ -19,6 +19,24 @@ abstract class Facet
     /** ⓘ শুরুতে অংশটা খোলা কি না — চালু থাকলে সবসময় খোলা */
     public bool $open = true;
 
+    /** ⭐ অংশের রং — প্যানেলের টালি, চালু অংশের দাগ আর চিপ একই রঙে ([[TONES]]; মালিকের অনুমোদিত নমুনা, ১৪ নভেম্বর ২০২৬) */
+    public string $tone = 'blue';
+
+    /** ⓘ টালির চিহ্ন — একটা অক্ষর বা প্রতীক (৳, ◈, ⌖ …), ছবি নয় */
+    public string $icon = '●';
+
+    /** ⓘ রঙের নাম — CSS-এ `.tone-<নাম>` (আলো আর অন্ধকার দুই থিমে আলাদা মান) */
+    public const TONES = ['green', 'red', 'amber', 'slate', 'teal', 'violet', 'blue', 'pink', 'sky'];
+
+    /** ⓘ ঘোষণায় এক লাইনে: `->look('red', '৳')` */
+    public function look(string $tone, string $icon): static
+    {
+        $this->tone = in_array($tone, self::TONES, true) ? $tone : 'blue';
+        $this->icon = $icon;
+
+        return $this;
+    }
+
     public function __construct(
         public readonly string $key,
         public readonly string $label,

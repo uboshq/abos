@@ -1418,67 +1418,134 @@ export function perPagePicker () {
 }
 
 /**
- * ⭐ ছাঁকনি প্যানেল — টিক দিলেই তালিকা বদলায়; « চাপলে প্যানেল সরু ফিতা, ফিতায় চাপলে আবার খোলা; Alt+F দুটোই
- *   (মালিক, ১৪ নভেম্বর ২০২৬: *"ফুল করে রাখার ব্যবস্থাটা তো রাখার দরকার"*; [[filter-layout]], [[FilterSet]])।
- * ⓘ ভাঁজ করা না খোলা — মানুষের নিজের হিসাবে জমা থাকে (যেকোনো কম্পিউটারে একই), পাতা আবার না খুলেই।
- * ⓘ ফোনের মাপে (< ৯০০px) প্যানেল লুকানো; "ছাঁকনি" বোতাম চাপলে নিচ থেকে ওঠে।
+ * ⭐ ছাঁকনি প্যানেল — ডান পাশ থেকে (মালিকের অনুমোদিত নমুনা, ১৪ নভেম্বর ২০২৬; [[filter-layout]], [[FilterSet]])।
+ *
+ * ⓘ টিক দিলে তালিকা তখনই বদলায় না; প্যানেল একই ঠিকানায় `_filter_counts=1` দিয়ে জিজ্ঞেস করে আর প্রতিটা ঘরের সংখ্যা ও
+ *   নিচের "Nটা … দেখুন" বসায় — চাপার আগেই জানা যায় কতটা আসবে। "বন্ধ" বা Esc চাপলে টিক খোলার সময়ের মতো ফেরে।
+ * ⓘ প্রশ্ন ধীর হলে পুরোনো উত্তর নতুনটার উপর বসে না — কেবল শেষ প্রশ্নের উত্তর নেওয়া হয়।
  */
-export const FILTER_SHEET_BELOW = 900
-
 export function filterPanel () {
     return {
-        folded: false,
-        sheet: false,
+        open: false,
+        total: null,
+        picked: 0,
+        asked: 0,
+        saved: [],
+        // ⓘ সাধারণ ঘর, গণনা-করা নয় — CSP-Alpine গণনা-করা ঘরের লেখা পর্দায় নিজে বদলায় না
+        showText: '',
+        pickedText: '',
         init () {
-            this.folded = this.$root.dataset.folded === '1'
+            this.picked = this.countPicked()
+            this.paint()
         },
-        narrow () {
-            return typeof window !== 'undefined' && window.innerWidth < FILTER_SHEET_BELOW
+        paint () {
+            const tpl = this.$root.dataset.show ?? ''
+            this.showText = this.total === null ? (this.$root.dataset.showPlain ?? '') : tpl.replace(':n', Number(this.total).toLocaleString('en-IN'))
+            const el = this.$root.querySelector('[data-picked]')
+            this.pickedText = this.picked > 0 && el ? el.dataset.picked.replace('#', String(this.picked)) : ''
         },
-        toggle () {
-            if (this.narrow()) {
-                this.sheet = ! this.sheet
-                return
+        form () {
+            return document.getElementById(this.$root.dataset.form)
+        },
+        fields () {
+            return Array.from(this.$root.querySelectorAll('.list-filter-drawer [form], .list-filter-drawer input[type="hidden"]'))
+        },
+        openPanel () {
+            this.saved = this.fields().map((el) => [el, el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value])
+            this.open = true
+            this.refresh()
+        },
+        closePanel () {
+            if (! this.open) return
+            for (const [el, was] of this.saved) {
+                if (el.type === 'checkbox' || el.type === 'radio') el.checked = was
+                else el.value = was
             }
-            this.folded ? this.unfold() : this.fold()
+            this.open = false
+            this.picked = this.countPicked()
+            this.paint()
         },
-        fold () {
-            this.folded = true
-            this.remember()
+        countPicked () {
+            // ⓘ বাছাইয়ের ঘরে প্রথম মানটাই ডিফল্ট (যেমন "মাপ: বিক্রি") — সেটা বাছা নয়
+            return this.fields().filter((el) => {
+                if (el.type === 'checkbox' || el.type === 'radio') return el.checked && ! this.isDefault(el)
+                if (el.tagName === 'SELECT') return el.selectedIndex > 0
+                return el.type !== 'hidden' && el.value !== ''
+            }).length
         },
-        unfold () {
-            this.folded = false
-            this.sheet = this.narrow()
-            this.remember()
+        isDefault (el) {
+            // ⓘ একটাই-বাছাইয়ের অংশে ডিফল্ট (যেমন "চালু") চালু ছাঁকনি নয় — সার্ভার নিজেই চিহ্ন দেয় (`data-default`)
+            return el.type === 'radio' && el.hasAttribute('data-default')
         },
-        closeSheet () {
-            this.sheet = false
+        changed () {
+            this.picked = this.countPicked()
+            this.paint()
+            this.refresh()
         },
-        remember () {
-            const root = this.$root
-            if (! root.dataset.foldUrl || typeof fetch !== 'function') return
-            const body = new FormData()
-            body.append('folded', this.folded ? '1' : '0')
-            fetch(root.dataset.foldUrl, {
-                method: 'POST',
-                body,
-                headers: { 'X-CSRF-TOKEN': root.dataset.token ?? '', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin',
-            }).catch(() => {})
+        async refresh () {
+            const form = this.form()
+            if (! form || typeof fetch !== 'function') return
+            const params = new URLSearchParams(new FormData(form))
+            params.delete('page')
+            params.set('_filter_counts', '1')
+            const ticket = ++this.asked
+            try {
+                const response = await fetch(form.action + (form.action.includes('?') ? '&' : '?') + params.toString(), {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                })
+                if (! response.ok || ticket !== this.asked) return
+                const data = await response.json()
+                if (ticket !== this.asked) return
+                this.total = data.total
+                this.paint()
+                for (const [key, counts] of Object.entries(data.counts ?? {})) {
+                    const section = this.$root.querySelector(`[data-filter-section="${key}"]`)
+                    if (! section) continue
+                    for (const row of section.querySelectorAll('[data-value]')) {
+                        const n = counts[row.dataset.value] ?? 0
+                        const pill = row.querySelector('[data-count]')
+                        if (pill) pill.textContent = Number(n).toLocaleString('en-IN')
+                        row.classList.toggle('is-zero', n === 0 && ! row.querySelector('input')?.checked)
+                    }
+                }
+            } catch (e) {
+                // ⓘ সংখ্যা না এলে পুরোনোটাই থাকে; ছাঁকনি নিজে ঠিকই চলে
+            }
         },
-        submit (event) {
-            // ⓘ অংশের ভেতরের খোঁজার ঘর ছাঁকনি নয় — কেবল ঘর লুকায়
-            if (event?.target?.classList?.contains('list-filter-find')) return
-            // ⓘ টাকার ঘরে প্রতিটা অক্ষরে নয় — ঘর ছাড়লে (change) তবেই
-            const form = document.getElementById(this.$root.dataset.form)
-            if (! form) return
-            form.requestSubmit ? form.requestSubmit() : form.submit()
+        toggleGroup (event) {
+            event.currentTarget.closest('[data-filter-section]')?.classList.toggle('is-shut')
+        },
+        pickAll (event) {
+            event.currentTarget.closest('[data-filter-section]')?.querySelectorAll('input[type="checkbox"]').forEach((el) => { el.checked = true })
+            this.changed()
+        },
+        pickNone (event) {
+            event.currentTarget.closest('[data-filter-section]')?.querySelectorAll('input[type="checkbox"]').forEach((el) => { el.checked = false })
+            this.changed()
+        },
+        showMore (event) {
+            event.currentTarget.closest('[data-filter-section]')?.classList.add('show-more')
+        },
+        quickMin (event) {
+            const min = event.currentTarget.closest('[data-filter-section]')?.querySelector('input[name$="_min"]')
+            if (min) min.value = event.currentTarget.dataset.min
+            this.changed()
+        },
+        clearAll () {
+            this.fields().forEach((el) => {
+                if (el.type === 'checkbox') el.checked = false
+                else if (el.type === 'radio') el.checked = this.isDefault(el)
+                else if (el.type !== 'hidden') el.value = ''
+            })
+            this.changed()
         },
         find (event) {
             const needle = (event.target.value ?? '').trim().toLowerCase()
-            const body = event.target.closest('.list-filter-body')
-            if (! body) return
-            body.querySelectorAll('[data-option]').forEach((row) => {
+            const section = event.target.closest('[data-filter-section]')
+            if (! section) return
+            section.classList.toggle('show-more', needle !== '')
+            section.querySelectorAll('[data-option]').forEach((row) => {
                 row.hidden = needle !== '' && ! (row.dataset.option ?? '').toLowerCase().includes(needle)
             })
         },

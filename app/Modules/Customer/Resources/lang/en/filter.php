@@ -44,4 +44,11 @@ return [
     'last_days' => 'last :days days',
     'today' => 'as of today',
     'rank_title' => ':rank :n — :by, :period',
+
+    // ⭐ রঙিন কার্ড (১৪ নভেম্বর ২০২৬)
+    'people' => ':n',
+    'card_all' => 'Active customers',
+    'card_all_sub' => ':all in all (with inactive)',
+    'card_over_sub' => 'over their credit limit',
+    'noun' => 'customers',
 ];

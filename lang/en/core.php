@@ -1817,8 +1817,6 @@ return [
     'list_filter' => [
         'title' => 'Filters',
         'clear' => 'Clear all',
-        'fold' => 'Fold the filters',
-        'open' => 'Open the filters',
         'close' => 'Close',
         'show' => 'Show results',
         'find' => 'Find :name',
@@ -1827,5 +1825,11 @@ return [
         'from' => 'from',
         'to' => 'to',
         'button' => 'Filters',
+        'show_n' => 'Show :n :noun',
+        'picked' => ':n picked',
+        'pick_all' => 'Pick all',
+        'pick_none' => 'Clear this',
+        'more' => '+ :n more',
+        'clear_chips' => 'Clear all filters',
     ],
 ];

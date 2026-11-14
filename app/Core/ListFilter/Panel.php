@@ -6,6 +6,7 @@ namespace App\Core\ListFilter;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 
 /**
@@ -18,19 +19,29 @@ final class Panel
 {
     /**
      * @param  Closure(): Builder  $base
-     * @return array{sections: list<array<string, mixed>>, count: int, chips: list<array{text: string, url: string}>, clear: string, folded: bool}
+     * @return array{sections: list<array<string, mixed>>, count: int, chips: list<array{text: string, url: string, tone: string}>, clear: string, cards: list<array<string, mixed>>}
      */
     public static function of(FilterSet $set, Closure $base, Request $request): array
     {
+        /*
+         * ⭐ টিক দিতে দিতেই সংখ্যা — প্যানেল একই ঠিকানায় `_filter_counts=1` দিয়ে জিজ্ঞেস করে, আর পাতার বদলে এই উত্তর পায়:
+         *   প্রতিটা ঘরের সংখ্যা আর মোট। ⓘ একই কোয়েরি, একই দেয়াল — পাতা যা দেখাত তার বাইরের কিছু নয়।
+         */
+        if ($request->boolean('_filter_counts')) {
+            throw new HttpResponseException(response()->json([
+                'total' => $set->total($base, $request),
+                'counts' => $set->counts($base, $request),
+            ]));
+        }
+
         $chips = $set->chips($request);
-        $prefs = $request->user()?->list_prefs;
 
         return [
             'sections' => $set->sections($request, $set->counts($base, $request)),
             'count' => count($chips),
             'chips' => $chips,
             'clear' => $set->clearUrl($request),
-            'folded' => is_array($prefs) && ($prefs['folded'] ?? false) === true,
+            'cards' => array_map(fn (ListCard $card) => $card->view($base, $request, $set->keys(), $chips === []), $set->cards),
         ];
     }
 }

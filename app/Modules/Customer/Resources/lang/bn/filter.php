@@ -44,4 +44,11 @@ return [
     'last_days' => 'গত :days দিন',
     'today' => 'আজ পর্যন্ত',
     'rank_title' => ':rank :n — :by, :period',
+
+    // ⭐ রঙিন কার্ড (১৪ নভেম্বর ২০২৬)
+    'people' => ':n জন',
+    'card_all' => 'চালু গ্রাহক',
+    'card_all_sub' => 'মোট :all জন (বন্ধসহ)',
+    'card_over_sub' => 'ধারের সীমার বাইরে',
+    'noun' => 'গ্রাহক',
 ];

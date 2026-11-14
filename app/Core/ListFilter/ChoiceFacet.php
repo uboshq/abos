@@ -21,7 +21,7 @@ final class ChoiceFacet extends Facet
     public const FIND_FROM = 8;
 
     /**
-     * @param  array<string, array{label: string, apply: Closure(Builder): mixed}>  $options
+     * @param  array<string, array{label: string, apply: Closure(Builder): mixed, tone?: string}>  $options  ⓘ `tone` দিলে ঘরের বিন্দু আর চিপ সেই রঙে (যেমন "বকেয়া" লাল)
      */
     public function __construct(
         string $key,
@@ -89,6 +89,7 @@ final class ChoiceFacet extends Facet
         return array_map(fn (string $v) => [
             'text' => $this->label.': '.$this->options[$v]['label'],
             'drop' => [$this->key => $v],
+            'tone' => $this->options[$v]['tone'] ?? $this->tone,
         ], $value);
     }
 
