@@ -49,6 +49,8 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'company.switch' => 'the header switch itself',
         'customer.binding.handover' => 'moves dealers between salesmen, no paper',
         'customer.binding.supervisor' => 'sets a supervisor, no paper',
+        // ⓘ ফিল্ড ফোর্সের পাতা (মালিক, ১২ নভেম্বর ২০২৬)
+        'customer.fieldforce.wall' => 'turns the company dealer-wall setting on or off — owner only (SettingsService::mayChange), no paper, no money',
         'documents.ocr.fields' => 'reads text from a file, writes nothing',
         'executive.open' => 'owner centre navigation',
         'executive.refresh' => 'refreshes owner figures',

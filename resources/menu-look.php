@@ -165,6 +165,7 @@ return [
             'customer::dashboard.title' => ['start', 'layout-dashboard'],
             'customer::menu.customers' => ['master', 'users'],
             'customer::binding.menu' => ['master', 'link'],
+            'customer::fieldforce.menu' => ['master', 'network'],
             'customer::ledger_check.title' => ['reports', 'scale'],
             'customer::menu.due_list' => ['reports', 'wallet'],
             'customer::menu.ageing' => ['reports', 'hourglass'],

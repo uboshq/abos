@@ -625,7 +625,7 @@ final class SyncService
             return '';
         }
 
-        $ids = $dealers->dealerIds($user)->distinct()->orderBy('dealer_bindings.customer_id')->pluck('customer_id')->implode(',');
+        $ids = $dealers->dealerIds($user)->distinct()->pluck('customer_id')->map(fn ($id) => (int) $id)->sort()->values()->implode(',');
 
         return '|d:'.sha1($ids);
     }

@@ -98,6 +98,8 @@ return [
             ['label' => 'customer::menu.customers', 'icon' => 'customer', 'route' => 'customer.index', 'permission' => 'customer.view'],
             // ⭐ কোন কর্মী কোন ডিলারের — চালুর আগে এই পর্দা (⛔১৬, ২ অক্টোবর ২০২৬)
             ['label' => 'customer::binding.menu', 'icon' => 'customer', 'route' => 'customer.binding.index', 'permission' => 'customer.binding.manage'],
+            // ⭐ ফিল্ড ফোর্সের গাছ — কে কার নিচে, এলাকা আর ডিপো (মালিক, ১২ নভেম্বর ২০২৬)
+            ['label' => 'customer::fieldforce.menu', 'icon' => 'customer', 'route' => 'customer.fieldforce.index', 'permission' => 'customer.binding.manage'],
         ],
         'reports' => [
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)

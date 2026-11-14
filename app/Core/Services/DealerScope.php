@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
  *  ১ · বাঁধনহীন ডিলার বিক্রয়কর্মী দেখেন না।
  *  ২ · বিক্রয়কর্মী কিছুই তৈরি করেন না — কেবল অর্ডার দেন ([[mayDo()]])।
  *  ৩ · উপরের স্তর (SM · TSM · RSM · DSM) নিজের নিচের গোটা গাছের ডিলার দেখেন।
- *  ৪ · কেবল যা নিজে বাঁধা — এলাকা ধরে চলমান নয়।
+ *  ৪ · নিজে বাঁধা ডিলার, আর চলমান এলাকার সব ডিলার — পরে আসা ডিলারও (মালিক, ১২ নভেম্বর ২০২৬; ২৬ সেপ্টেম্বরের
+ *      "কেবল যা নিজে বাঁধা" বদলে; [[areaLocationIds()]])।
  *  ৫ · হাতবদলে নতুনজন পুরনো বিলসহ দেখেন (দেখা ডিলার ধরে, কাগজের তারিখ ধরে নয়)।
  *  ৭ · কোম্পানির সুইচ — চালু থাকলে fail-closed; ডিফল্ট **বন্ধ** (সমন্বয়কারী, ৪ অক্টোবর ২০২৬: মালিক বেঁধে নিজে চালু করেন)।
  *  কাউন্টার, ম্যানেজার আর সুপার অ্যাডমিন সব দেখেন।
@@ -82,6 +83,9 @@ final class DealerScope
 
     /** @var array<string, list<int>> কোম্পানি:ব্যবহারকারী => নিজে + নিচের গাছ */
     private array $reach = [];
+
+    /** @var array<string, list<int>> কোম্পানি:ব্যবহারকারী => চলমান এলাকা আর তার নিচের সব এলাকা */
+    private array $areas = [];
 
     /**
      * ⭐ এই মানুষটি কি দেয়ালের ভিতরে?
@@ -165,12 +169,74 @@ final class DealerScope
     {
         $today = Carbon::today()->toDateString();
 
-        return DB::table('dealer_bindings')
+        $bound = DB::table('dealer_bindings')
             ->select('dealer_bindings.customer_id')
             ->where('dealer_bindings.company_id', CompanyContext::id())
             ->whereIn('dealer_bindings.user_id', $this->reachOf($user))
             ->where('dealer_bindings.starts_on', '<=', $today)
             ->where(fn ($q) => $q->whereNull('dealer_bindings.ends_on')->orWhere('dealer_bindings.ends_on', '>=', $today));
+
+        $areas = $this->areaLocationIds($user);
+
+        if ($areas === []) {
+            return $bound;
+        }
+
+        // ⭐ চলমান এলাকা (মালিক, ১২ নভেম্বর ২০২৬) — এলাকার আজকের আর পরে আসা সব ডিলার; একই `customer_id` কলাম
+        return DB::table('customers')
+            ->select('customers.id as customer_id')
+            ->where('customers.company_id', CompanyContext::id())
+            ->where(fn ($q) => $q->whereIn('customers.id', $bound)->orWhereIn('customers.location_id', $areas));
+    }
+
+    /**
+     * ⭐ নিজের আর নিচের গাছের আজ-চালু এলাকা — নিচের সব এলাকাসহ (এলাকার মই সাত ধাপ পর্যন্ত গভীর)।
+     *
+     * @return list<int>
+     */
+    public function areaLocationIds(User $user): array
+    {
+        $companyId = (int) CompanyContext::id();
+        $key = $companyId.':'.$user->id;
+
+        if (array_key_exists($key, $this->areas)) {
+            return $this->areas[$key];
+        }
+
+        $today = Carbon::today()->toDateString();
+        $roots = DB::table('area_bindings')
+            ->where('company_id', $companyId)
+            ->whereIn('user_id', $this->reachOf($user))
+            ->where('starts_on', '<=', $today)
+            ->where(fn ($q) => $q->whereNull('ends_on')->orWhere('ends_on', '>=', $today))
+            ->pluck('location_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        if ($roots === []) {
+            return $this->areas[$key] = [];
+        }
+
+        $children = [];
+
+        foreach (DB::table('mdm_locations')->where('company_id', $companyId)->whereNotNull('parent_id')->get(['id', 'parent_id']) as $row) {
+            $children[(int) $row->parent_id][] = (int) $row->id;
+        }
+
+        $seen = array_fill_keys($roots, true);
+        $queue = $roots;
+
+        while ($queue !== []) {
+            foreach ($children[array_shift($queue)] ?? [] as $child) {
+                if (! isset($seen[$child])) {
+                    $seen[$child] = true;
+                    $queue[] = $child;
+                }
+            }
+        }
+
+        $ids = array_keys($seen);
+        sort($ids);
+
+        return $this->areas[$key] = $ids;
     }
 
     /**
@@ -229,5 +295,18 @@ final class DealerScope
     public function forget(): void
     {
         $this->reach = [];
+        $this->areas = [];
+    }
+
+    /**
+     * ⓘ সুইচ চালু হলে কি দেয়ালে পড়তেন — গাছের পাতার আগাম দেখা ([[FieldForceController]]); সুইচ বন্ধেও উত্তর দেয়।
+     */
+    public function wouldBeWalled(User $user): bool
+    {
+        if ($user->loadMissing('roles')->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return false;
+        }
+
+        return $user->can(self::OWN) && ! $user->can(self::ALL);
     }
 }
