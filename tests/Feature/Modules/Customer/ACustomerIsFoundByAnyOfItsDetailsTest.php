@@ -50,7 +50,11 @@ final class ACustomerIsFoundByAnyOfItsDetailsTest extends TestCase
          * বদলালেই তালিকা বদলায় ([[ui.toolbar]]-এর ধারকে `data-action="submit-form"`)।
          */
         $html = $this->get(route('customer.index'))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/<div id="toolbar-filters"\s+data-action="submit-form"/', $html,
-            'ছাঁকনির টিক দিলে তালিকা বদলায় না — "খুঁজুন" না চাপা পর্যন্ত কিছুই হয় না।');
+        // ⓘ ১৪ নভেম্বর ২০২৬ থেকে ডান পাশের প্যানেল (মালিকের অনুমোদিত নমুনা): টিক দিলেই সংখ্যা আসে আর নিচের "Nটা গ্রাহক দেখুন"
+        //   চাপলে তালিকা বদলায় — "খুঁজুন" খুঁজে বের করতে হয় না
+        $this->assertStringContainsString('x-on:change="changed"', $html,
+            'ছাঁকনির টিক দিলে কিছুই হয় না — সংখ্যা আর "দেখুন" বোতাম বদলায় না।');
+        $this->assertStringContainsString('data-filter-apply', $html,
+            'প্যানেলে "Nটা দেখুন" বোতাম নেই — টিক দিয়ে তালিকা বদলানোর পথ নেই।');
     }
 }

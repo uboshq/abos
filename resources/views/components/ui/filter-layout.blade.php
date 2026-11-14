@@ -27,8 +27,7 @@
      @filter-panel-toggle.window="openPanel"
      @keydown.escape.window="closePanel"
      @keydown.alt.f.window.prevent="openPanel"
-     data-filter-layout
-     class="list-filter-layout">
+     data-filter-layout>
 
     {{-- ⭐ রঙিন কার্ড — চাপলেই সেই ছাঁকনি; বসানো কার্ডের চারপাশে উজ্জ্বল দাগ --}}
     @if (($filters['cards'] ?? []) !== [])
@@ -71,7 +70,7 @@
             @foreach ($sections as $section)
                 <section @class(['list-filter-group', 'tone-'.$section['tone'], 'has' => $section['active'] > 0, 'is-shut' => ! $section['open']])
                          data-filter-section="{{ $section['key'] }}">
-                    <button type="button" class="list-filter-group-head" x-on:click="toggleGroup">
+                    <button type="button" class="list-filter-group-head" x-on:click="toggleGroup($event)">
                         <span class="list-filter-tile" aria-hidden="true">{{ $section['icon'] }}</span>
                         <span>{{ $section['label'] }}</span>
                         @if ($section['active'] > 0)<span class="list-filter-n">{{ $section['active'] }}</span>@endif
@@ -82,8 +81,8 @@
                             @case('choice')
                                 @if ($section['multi'])
                                     <div class="list-filter-tools">
-                                        <button type="button" x-on:click="pickAll">{{ __('core.list_filter.pick_all') }}</button>
-                                        <button type="button" x-on:click="pickNone">{{ __('core.list_filter.pick_none') }}</button>
+                                        <button type="button" x-on:click="pickAll($event)">{{ __('core.list_filter.pick_all') }}</button>
+                                        <button type="button" x-on:click="pickNone($event)">{{ __('core.list_filter.pick_none') }}</button>
                                     </div>
                                 @endif
                                 @if ($section['findable'])
@@ -107,7 +106,7 @@
                                     </label>
                                 @endforeach
                                 @if ($section['findable'] && count($section['options']) > 6)
-                                    <button type="button" class="list-filter-more" x-on:click="showMore" data-more>{{ __('core.list_filter.more', ['n' => count($section['options']) - 6]) }}</button>
+                                    <button type="button" class="list-filter-more" x-on:click="showMore($event)" data-more>{{ __('core.list_filter.more', ['n' => count($section['options']) - 6]) }}</button>
                                 @endif
                                 @break
                             @case('range')
@@ -122,7 +121,7 @@
                                 </div>
                                 <div class="list-filter-quick">
                                     @foreach ([10000, 50000, 100000] as $q)
-                                        <button type="button" x-on:click="quickMin" data-min="{{ $q }}">৳{{ number_format($q) }}+</button>
+                                        <button type="button" x-on:click="quickMin($event)" data-min="{{ $q }}">৳{{ number_format($q) }}+</button>
                                     @endforeach
                                 </div>
                                 @break

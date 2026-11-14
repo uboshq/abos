@@ -404,9 +404,11 @@
         --}}
         @if ($facets !== null)
             <span class="order-1" x-data="filterToggle">
-                <button type="button" x-on:click="toggle" data-filter-toggle aria-controls="list-filter-panel" class="list-filter-open">
+                {{-- ⓘ সাজের নিজের লেখা — chips সাজে "+ ছাঁকনি", বাকিগুলোয় "Filter" ([[TheChipSaidOneAndNobodyKnewWhichFilter]]) --}}
+                <button type="button" x-on:click="toggle" data-filter-toggle aria-controls="list-filter-panel" class="list-filter-open"
+                        @if ($filterMode === 'chips') data-look-chip @endif>
                     <x-ui.icon name="filter" class="size-4" />
-                    {{ __('core.list_filter.button') }}
+                    {{ $filterMode === 'chips' ? __('core.toolbar.add_filter') : __('core.toolbar.filter') }}
                     @if ($facets['count'] > 0)
                         <span class="list-filter-badge" data-filter-toggle-count>{{ $facets['count'] }}</span>
                     @endif

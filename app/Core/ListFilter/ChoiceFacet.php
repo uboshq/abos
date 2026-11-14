@@ -21,7 +21,8 @@ final class ChoiceFacet extends Facet
     public const FIND_FROM = 8;
 
     /**
-     * @param  array<string, array{label: string, apply: Closure(Builder): mixed, tone?: string}>  $options  ⓘ `tone` দিলে ঘরের বিন্দু আর চিপ সেই রঙে (যেমন "বকেয়া" লাল)
+     * @param  array<string, array{label: string, apply: Closure(Builder): mixed, tone?: string, chip?: string}>  $options  ⓘ `tone` দিলে ঘরের বিন্দু আর চিপ সেই রঙে (যেমন "বকেয়া" লাল); `chip` দিলে চিপে পুরো এই লেখা
+     * @param  array<string, string>  $legacy  পুরোনো চাবি => যে ঘর বোঝায় — নতুন চাবি না থাকলে খাটে (`['inactive' => 'all']`); চিপ মুছলে সেটাও যায়
      */
     public function __construct(
         string $key,
@@ -30,6 +31,7 @@ final class ChoiceFacet extends Facet
         public readonly bool $multi = true,
         public readonly ?string $default = null,
         public readonly bool $counted = true,
+        public readonly array $legacy = [],
     ) {
         parent::__construct($key, $label);
     }
@@ -39,10 +41,24 @@ final class ChoiceFacet extends Facet
         return 'choice';
     }
 
+    public function keys(): array
+    {
+        return [$this->key, ...array_keys($this->legacy)];
+    }
+
     /** @return list<string>|null */
     public function read(Request $request): mixed
     {
         $raw = $request->query($this->key);
+
+        if (($raw === null || $raw === '') && $this->legacy !== []) {
+            foreach ($this->legacy as $old => $means) {
+                if ($request->boolean($old)) {
+                    $raw = $means;
+                    break;
+                }
+            }
+        }
         $picked = is_array($raw) ? $raw : (is_scalar($raw) && (string) $raw !== '' ? [(string) $raw] : []);
         $picked = array_values(array_unique(array_filter(
             array_map(fn ($v) => is_scalar($v) ? (string) $v : '', $picked),
@@ -87,8 +103,8 @@ final class ChoiceFacet extends Facet
     public function chips(mixed $value): array
     {
         return array_map(fn (string $v) => [
-            'text' => $this->label.': '.$this->options[$v]['label'],
-            'drop' => [$this->key => $v],
+            'text' => $this->options[$v]['chip'] ?? $this->label.': '.$this->options[$v]['label'],
+            'drop' => [$this->key => $v] + array_fill_keys(array_keys($this->legacy), null),
             'tone' => $this->options[$v]['tone'] ?? $this->tone,
         ], $value);
     }

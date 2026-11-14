@@ -1824,7 +1824,6 @@ return [
         'max' => 'At most',
         'from' => 'from',
         'to' => 'to',
-        'button' => 'Filters',
         'show_n' => 'Show :n :noun',
         'picked' => ':n picked',
         'pick_all' => 'Pick all',

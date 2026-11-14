@@ -83,8 +83,9 @@ final class CustomerListFilters
             (new ChoiceFacet('status', __('customer::filter.status'), [
                 'active' => ['label' => __('customer::filter.active'), 'tone' => 'green', 'apply' => fn (Builder $q) => $q->where('customers.is_active', true)],
                 'inactive' => ['label' => __('customer::filter.inactive'), 'tone' => 'slate', 'apply' => fn (Builder $q) => $q->where('customers.is_active', false)],
-                'all' => ['label' => __('customer::filter.all'), 'apply' => fn (Builder $q) => $q],
-            ], multi: false, default: $request->boolean('inactive') ? 'all' : self::DEFAULT_STATUS))->look('green', '●'),
+                // ⓘ চিপে "নিষ্ক্রিয়সহ" — সব মানে চালু আর বন্ধ দুটোই (পুরোনো `?inactive=1` লিংকের নাম)
+                'all' => ['label' => __('customer::filter.all'), 'chip' => __('core.toolbar.filter_names.inactive'), 'apply' => fn (Builder $q) => $q],
+            ], multi: false, default: self::DEFAULT_STATUS, legacy: ['inactive' => 'all']))->look('green', '●'),
             (new ChoiceFacet('quick', __('customer::filter.quick'), [
                 'due' => ['label' => __('customer::filter.quick_due'), 'tone' => 'red', 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '>', 0)],
                 'advance' => ['label' => __('customer::filter.quick_advance'), 'tone' => 'green', 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '<', 0)],
