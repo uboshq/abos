@@ -71,8 +71,16 @@ class CustomerController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = Customer::query()->inViewedBranch()
+        /*
+         * ⭐ তালিকার নিজের কোয়েরি, ছাঁকনি ছাড়া — শাখা, খোঁজা, ধরন। ⓘ ছাঁকনি প্যানেলের সংখ্যাও এটা থেকেই গোনা হয়
+         *   ([[Panel::of()]]), তাই সংখ্যা আর তালিকা কখনো আলাদা কথা বলে না (১৪ নভেম্বর ২০২৬)।
+         */
+        $base = fn () => Customer::query()->inViewedBranch()
             ->search($request->query('q'))
+            ->when($request->boolean('over_limit'), fn ($q) => $q->overCreditLimit())
+            ->when($request->filled('party_type'), fn ($q) => $q->where('party_type_id', $request->integer('party_type')));
+
+        $query = $base()
             /*
              * এলাকা ও পয়েন্ট — সারির সাথেই, আর গাছের উপরের ধাপগুলোসহ।
              *
@@ -101,33 +109,8 @@ class CustomerController extends Controller implements HasMiddleware
             ])
             // বকেয়া সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
             // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[Customer::scopeWithOutstandingInView()]]
-            ->withOutstandingInView()
-
-            /*
-             * কেবল যাঁরা ধারের সীমা ছাড়িয়ে গেছেন।
-             *
-             * হোম পর্দার সারিটা এখানেই নিয়ে আসে, আর সংখ্যাটা ও এই
-             * তালিকাটা একই স্কোপ থেকে আসে (`overCreditLimit`) — তাই
-             * "৩ জন" দেখে ক্লিক করে চারজন পাওয়ার সুযোগ নেই।
-             */
-            ->when($request->boolean('over_limit'), fn ($q) => $q->overCreditLimit())
-
-            /*
-             * ⭐ এক ধরনের তালিকা — মালিকের চাওয়া "পরিবেশক তালিকা", ১৬ সেপ্টেম্বর ২০২৬।
-             *
-             * ── ⛔ কেন আলাদা পর্দা নয়, একটা ছাঁকনি ─────────────────────
-             * আলাদা কন্ট্রোলার ও ভিউ বানানো যেত। ⚠️ কিন্তু তাহলে খোঁজা,
-             * সাজানো, পাতা ভাঙা, কলাম বাছা, বকেয়ার হিসাব — সব **দুই
-             * জায়গায়** থাকত, আর একদিন একটায় ঠিক হয়ে অন্যটায় পুরনো
-             * থেকে যেত। ⓘ আজকের দিনটাই শিখিয়েছে দুই জায়গায় এক নিয়ম
-             * রাখার দাম কত।
-             *
-             * ⭐ তাই তালিকা একটাই, আর "পরিবেশক তালিকা" বোতামটা সেই
-             * তালিকাকেই একটা ধরনে ছেঁকে দেখায়।
-             */
-            ->when($request->filled('party_type'), fn ($q) => $q->where(
-                'party_type_id', $request->integer('party_type'),
-            ));
+            // ⓘ সীমা-পেরোনো (`over_limit`, হোমের সারি থেকে) আর পরিবেশক ধরন (`party_type`, ১৬ সেপ্টেম্বর ২০২৬) এখন `$base`-এ
+            ->withOutstandingInView();
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -136,7 +119,8 @@ class CustomerController extends Controller implements HasMiddleware
          * ([[CustomerListFilters]])। ⓘ সাজানোর **পরে**, কারণ টপ/বটম নিজের ক্রম বসায়; অবস্থার ছাঁকনিও ওখানে
          * (পুরনো `?inactive=1` লিংক এখনো "সব" খোলে)।
          */
-        $rankTitle = app(CustomerListFilters::class)->apply($query, $request);
+        $filters = app(CustomerListFilters::class);
+        $rankTitle = $filters->apply($query, $request);
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
         $grand = $this->grandTotals($query, ['outstanding' => 't.outstanding_in_view']);
@@ -170,6 +154,8 @@ class CustomerController extends Controller implements HasMiddleware
             'distributorType' => $distributorType,
             'partyTypeFilter' => $request->integer('party_type') ?: null,
             'rankTitle' => $rankTitle,
+            // ⭐ ছাঁকনি প্যানেল — ইঞ্জিন থেকে (১৪ নভেম্বর ২০২৬; [[FilterSet]], [[filter-layout]])
+            'filters' => \App\Core\ListFilter\Panel::of($filters->set($request), $base, $request),
             // ⭐ দেখার শাখার এলাকা ([[Location::scopeInViewedBranch()]], ৬ অক্টোবর ২০২৬)
             'areas' => Location::query()->inViewedBranch()->atLevel(Location::TERRITORY)->where('is_active', true)->orderBy('name_en')->get(),
             'points' => Location::query()->inViewedBranch()->atLevel(Location::POINT)->where('is_active', true)->orderBy('name_en')->get(),

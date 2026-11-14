@@ -1416,3 +1416,80 @@ export function perPagePicker () {
         },
     }
 }
+
+/**
+ * ⭐ ছাঁকনি প্যানেল — টিক দিলেই তালিকা বদলায়; « চাপলে প্যানেল সরু ফিতা, ফিতায় চাপলে আবার খোলা; Alt+F দুটোই
+ *   (মালিক, ১৪ নভেম্বর ২০২৬: *"ফুল করে রাখার ব্যবস্থাটা তো রাখার দরকার"*; [[filter-layout]], [[FilterSet]])।
+ * ⓘ ভাঁজ করা না খোলা — মানুষের নিজের হিসাবে জমা থাকে (যেকোনো কম্পিউটারে একই), পাতা আবার না খুলেই।
+ * ⓘ ফোনের মাপে (< ৯০০px) প্যানেল লুকানো; "ছাঁকনি" বোতাম চাপলে নিচ থেকে ওঠে।
+ */
+export const FILTER_SHEET_BELOW = 900
+
+export function filterPanel () {
+    return {
+        folded: false,
+        sheet: false,
+        init () {
+            this.folded = this.$root.dataset.folded === '1'
+        },
+        narrow () {
+            return typeof window !== 'undefined' && window.innerWidth < FILTER_SHEET_BELOW
+        },
+        toggle () {
+            if (this.narrow()) {
+                this.sheet = ! this.sheet
+                return
+            }
+            this.folded ? this.unfold() : this.fold()
+        },
+        fold () {
+            this.folded = true
+            this.remember()
+        },
+        unfold () {
+            this.folded = false
+            this.sheet = this.narrow()
+            this.remember()
+        },
+        closeSheet () {
+            this.sheet = false
+        },
+        remember () {
+            const root = this.$root
+            if (! root.dataset.foldUrl || typeof fetch !== 'function') return
+            const body = new FormData()
+            body.append('folded', this.folded ? '1' : '0')
+            fetch(root.dataset.foldUrl, {
+                method: 'POST',
+                body,
+                headers: { 'X-CSRF-TOKEN': root.dataset.token ?? '', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            }).catch(() => {})
+        },
+        submit (event) {
+            // ⓘ অংশের ভেতরের খোঁজার ঘর ছাঁকনি নয় — কেবল ঘর লুকায়
+            if (event?.target?.classList?.contains('list-filter-find')) return
+            // ⓘ টাকার ঘরে প্রতিটা অক্ষরে নয় — ঘর ছাড়লে (change) তবেই
+            const form = document.getElementById(this.$root.dataset.form)
+            if (! form) return
+            form.requestSubmit ? form.requestSubmit() : form.submit()
+        },
+        find (event) {
+            const needle = (event.target.value ?? '').trim().toLowerCase()
+            const body = event.target.closest('.list-filter-body')
+            if (! body) return
+            body.querySelectorAll('[data-option]').forEach((row) => {
+                row.hidden = needle !== '' && ! (row.dataset.option ?? '').toLowerCase().includes(needle)
+            })
+        },
+    }
+}
+
+/** ⭐ বারের "ছাঁকনি (৩)" বোতাম — প্যানেল খোলা/ভাঁজ ([[filterPanel]] শোনে) */
+export function filterToggle () {
+    return {
+        toggle () {
+            window.dispatchEvent(new CustomEvent('filter-panel-toggle'))
+        },
+    }
+}

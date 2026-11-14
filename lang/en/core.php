@@ -1812,4 +1812,20 @@ return [
         'notice' => 'Notice',
         'forms' => 'Forms',
     ],
+
+    // ⭐ ছাঁকনি প্যানেল — সব তালিকায় এক ([[filter-layout]], [[FilterSet]]; ১৪ নভেম্বর ২০২৬)
+    'list_filter' => [
+        'title' => 'Filters',
+        'clear' => 'Clear all',
+        'fold' => 'Fold the filters',
+        'open' => 'Open the filters',
+        'close' => 'Close',
+        'show' => 'Show results',
+        'find' => 'Find :name',
+        'min' => 'At least',
+        'max' => 'At most',
+        'from' => 'from',
+        'to' => 'to',
+        'button' => 'Filters',
+    ],
 ];

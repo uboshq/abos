@@ -20,7 +20,11 @@ return [
     'all' => 'All',
 
     // One-click views
-    'quick' => 'Quick view',
+    'quick' => 'Account state',
+    // ⭐ filter panel sections (14 Nov 2026)
+    'due' => 'Due amount (৳)',
+    'advance' => 'Advance amount (৳)',
+    'created' => 'Opened on',
     'quick_due' => 'Owes money',
     'quick_advance' => 'Paid in advance',
     'quick_good' => 'Good customers',

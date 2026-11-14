@@ -68,6 +68,12 @@
      */
     'min' => null,
     'max' => null,
+
+    /*
+     * ⭐ ঘরটা যে ফর্মের — ঘর ফর্মের বাইরে বসলে (ছাঁকনি প্যানেল, [[filter-layout]]; ১৪ নভেম্বর ২০২৬)। ⓘ দিলে তারিখ বসলেই
+     *   সেই ফর্ম জমা হয়; না দিলে আচরণ আগের মতো।
+     */
+    'form' => null,
 ])
 
 {{--
@@ -126,7 +132,8 @@
     $seed = $bindIso !== null ? $bindIso : json_encode($iso);
 @endphp
 
-<div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode((bool) $submitOnChange) }})"
+<div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode((bool) $submitOnChange || $form !== null) }})"
+     @if ($form) data-form="{{ $form }}" @endif
      @if ($bindModel) x-effect="{{ $bindModel }} = iso" @endif>
     <input type="text"
            id="{{ $id }}"
@@ -164,7 +171,7 @@
            ]) }}>
 
     {{-- সার্ভারে যায় এটাই — ISO, তাই ব্যাকএন্ডে কোনো বদল লাগেনি --}}
-    <input type="hidden" @if ($bindName) x-bind:name="{{ $bindName }}" @else name="{{ $name }}" @endif x-bind:value="iso">
+    <input type="hidden" @if ($form) form="{{ $form }}" @endif @if ($bindName) x-bind:name="{{ $bindName }}" @else name="{{ $name }}" @endif x-bind:value="iso">
 
     {{-- ব্রাউজারের নিজের পিকার — দেখা যায় না, কিন্তু কাজ করে।
          showPicker() Chrome/Edge ৯৯+ এ আছে; না থাকলে ঘরটায় হাতে লেখা যায়,

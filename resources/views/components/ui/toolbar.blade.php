@@ -99,6 +99,13 @@
      * ⚠️ না দিলে আচরণ আগের মতোই — পর্দারটাই ছাপে।
      */
     'printHref' => null,
+
+    /*
+     * ⭐ ছাঁকনি ইঞ্জিনের তালিকা — [[Panel::of()]]-এর তথ্য (মালিক, ১৪ নভেম্বর ২০২৬: *"সেন্ট্রালি নিয়ন্ত্রিত"*)।
+     * ⓘ দিলে "+ Filter" বোতামটা বাঁ পাশের প্যানেল খোলে/ভাঁজ করে ([[filter-layout]]), পাশে চালু ছাঁকনির সংখ্যা; চিপ আসে ইঞ্জিন
+     *   থেকে (নামসহ, একাধিক টিক আলাদা চিপ)। না দিলে আগের মতো — পর্দার নিজের ঘর টুলবারের নিচে।
+     */
+    'facets' => null,
 ])
 
 {{--
@@ -395,7 +402,34 @@
             ফুটারের ব্যাকআপ-সতর্কতার মতোই যুক্তি: যেটা ব্যবসার দরকার,
             সেটা নকলের জন্য বাদ যায় না।
         --}}
-        @if ($screenFilters->isNotEmpty())
+        @if ($facets !== null)
+            <span class="order-1" x-data="filterToggle">
+                <button type="button" x-on:click="toggle" data-filter-toggle aria-controls="list-filter-panel"
+                        class="flex items-center gap-1.5 rounded-(--radius-field) border border-(--color-border) px-2.5 py-1 text-xs font-medium
+                               transition-colors hover:bg-(--color-surface-hover)">
+                    <x-ui.icon name="filter" class="size-4" />
+                    {{ __('core.list_filter.button') }}
+                    @if ($facets['count'] > 0)
+                        <span class="list-filter-badge" data-filter-toggle-count>{{ $facets['count'] }}</span>
+                    @endif
+                </button>
+            </span>
+            @if ($facets['chips'] !== [])
+                <span class="order-2 flex flex-wrap items-center gap-1" data-chip-row>
+                    @foreach ($facets['chips'] as $chip)
+                        <a data-facet href="{{ $chip['url'] }}"
+                           class="inline-flex items-center gap-1.5 rounded-(--radius-pill) bg-(--color-surface-selected) px-2.5 py-0.5 text-2xs font-medium
+                                  text-(--color-ink-body) transition-colors hover:bg-(--color-surface-hover)"
+                           title="{{ __('core.toolbar.remove_filter') }}">
+                            <span class="truncate">{{ $chip['text'] }}</span>
+                            <svg viewBox="0 0 24 24" class="size-3 shrink-0 fill-current opacity-60" aria-hidden="true">
+                                <path d="m12 10.6 5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4z"/>
+                            </svg>
+                        </a>
+                    @endforeach
+                </span>
+            @endif
+        @elseif ($screenFilters->isNotEmpty())
             <span class="order-2 flex flex-wrap items-center gap-1">
                 @foreach ($screenFilters as $key => $value)
                     <a data-facet

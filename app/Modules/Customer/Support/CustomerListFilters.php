@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Support;
 
 use App\Core\Contracts\CustomerSalesFilters;
+use App\Core\ListFilter\ChoiceFacet;
+use App\Core\ListFilter\DateRangeFacet;
+use App\Core\ListFilter\FieldsFacet;
+use App\Core\ListFilter\FilterSet;
+use App\Core\ListFilter\RangeFacet;
 use App\Core\Support\DateFormat;
 use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
@@ -48,38 +53,84 @@ final class CustomerListFilters
 
     public function __construct(private readonly CustomerSalesFilters $sales) {}
 
+    /** ⓘ টপ/বটমের শিরোনাম — [[apply()]] চালালে ভরে */
+    private ?string $rankTitle = null;
+
     /**
      * কোয়েরিতে ছাঁকনি বসায়; টপ/বটম চালু থাকলে তার শিরোনাম ফেরত দেয় (নাহলে null)।
+     *
+     * ⭐ ১৪ নভেম্বর ২০২৬ থেকে ছাঁকনি ইঞ্জিনের ঘোষণা ([[set()]], [[FilterSet]]) — প্যানেল, সংখ্যা আর চিপ সেখান থেকে।
      */
     public function apply(Builder $query, Request $request): ?string
     {
-        $this->status($query, $request);
+        $this->rankTitle = null;
+        $this->set($request)->apply($query, $request);
 
-        foreach (['created_from' => '>=', 'created_to' => '<='] as $key => $op) {
-            if (($day = $this->date($request->query($key))) !== null) {
-                $query->whereDate('customers.created_at', $op, $day);
-            }
+        return $this->rankTitle;
+    }
+
+    /**
+     * ⭐ গ্রাহক তালিকার ছাঁকনি — ঘোষণা (মালিক, ১ অক্টোবর আর ১৪ নভেম্বর ২০২৬)।
+     *
+     * ⓘ ঠিকানার চাবিগুলো আগের মতোই, তাই পুরোনো লিংক অটুট; এলাকা, পয়েন্ট আর দ্রুত দৃশ্যে এখন একাধিক টিক চলে (`area[]=…`)।
+     */
+    public function set(Request $request): FilterSet
+    {
+        return new FilterSet([
+            new ChoiceFacet('status', __('customer::filter.status'), [
+                'active' => ['label' => __('customer::filter.active'), 'apply' => fn (Builder $q) => $q->where('customers.is_active', true)],
+                'inactive' => ['label' => __('customer::filter.inactive'), 'apply' => fn (Builder $q) => $q->where('customers.is_active', false)],
+                'all' => ['label' => __('customer::filter.all'), 'apply' => fn (Builder $q) => $q],
+            ], multi: false, default: $request->boolean('inactive') ? 'all' : self::DEFAULT_STATUS),
+            new ChoiceFacet('quick', __('customer::filter.quick'), [
+                'due' => ['label' => __('customer::filter.quick_due'), 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '>', 0)],
+                'advance' => ['label' => __('customer::filter.quick_advance'), 'apply' => fn (Builder $q) => $q->where($this->outstanding(), '<', 0)],
+                'good' => ['label' => __('customer::filter.quick_good'), 'apply' => fn (Builder $q) => $this->good($q)],
+                'over_limit' => ['label' => __('customer::filter.quick_over_limit'), 'apply' => fn (Builder $q) => $q->overCreditLimit()],
+            ]),
+            new ChoiceFacet('area', __('customer::filter.area'), $this->places(Location::TERRITORY)),
+            new ChoiceFacet('point', __('customer::filter.point'), $this->places(Location::POINT)),
+            new RangeFacet('due', __('customer::filter.due'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), 1, $min, $max)),
+            new RangeFacet('advance', __('customer::filter.advance'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), -1, $min, $max)),
+            new DateRangeFacet('created', __('customer::filter.created'), function (Builder $q, ?string $from, ?string $to): void {
+                if ($from !== null) {
+                    $q->where('customers.created_at', '>=', $from.' 00:00:00');
+                }
+                if ($to !== null) {
+                    $q->where('customers.created_at', '<=', $to.' 23:59:59');
+                }
+            }),
+            new FieldsFacet('rank', __('customer::filter.rank'), [
+                ['key' => 'rank', 'label' => __('customer::filter.rank'), 'type' => 'select',
+                    'options' => ['' => __('customer::filter.any'), 'top' => __('customer::filter.top'), 'bottom' => __('customer::filter.bottom')]],
+                ['key' => 'rank_n', 'label' => __('customer::filter.rank_n'), 'type' => 'number', 'min' => 1, 'max' => 500, 'placeholder' => (string) self::RANK_DEFAULT],
+                ['key' => 'rank_by', 'label' => __('customer::filter.rank_by'), 'type' => 'select',
+                    'options' => ['sales' => __('customer::filter.by_sales'), 'due' => __('customer::filter.by_due')]],
+                ['key' => 'sales_from', 'label' => __('customer::filter.sales_from'), 'type' => 'date'],
+                ['key' => 'sales_to', 'label' => __('customer::filter.sales_to'), 'type' => 'date'],
+            ], function (Builder $q) use ($request): void {
+                $this->rankTitle = $this->rank($q, $request);
+            }, fn (array $v) => (string) $this->rankTitleFor($request)),
+        ]);
+    }
+
+    /**
+     * এলাকা বা পয়েন্টের ঘর — দেখার শাখার, চালু, নামের ক্রমে; প্রতিটা ঘর ঐ জায়গা আর তার নিচের পুরো ডাল।
+     *
+     * @return array<string, array{label: string, apply: callable(Builder): mixed}>
+     */
+    private function places(string $level): array
+    {
+        $options = [];
+
+        foreach (Location::query()->inViewedBranch()->atLevel($level)->where('is_active', true)->orderBy('name_en')->get() as $place) {
+            $options[(string) $place->id] = [
+                'label' => $place->name(),
+                'apply' => fn (Builder $q) => $q->whereIn('customers.location_id', $place->selfAndDescendants()->pluck('id')->all() ?: [0]),
+            ];
         }
 
-        $this->range($query, $request, 'due', $this->outstanding(), 1);
-        $this->range($query, $request, 'advance', $this->outstanding(), -1);
-
-        foreach (['area', 'point'] as $key) {
-            if ($request->integer($key) > 0) {
-                $place = Location::query()->find($request->integer($key));
-                $query->whereIn('customers.location_id', $place?->selfAndDescendants()->pluck('id')->all() ?? [0]);
-            }
-        }
-
-        match ((string) $request->query('quick')) {
-            'due' => $query->where($this->outstanding(), '>', 0),
-            'advance' => $query->where($this->outstanding(), '<', 0),
-            'over_limit' => $query->overCreditLimit(),
-            'good' => $this->good($query),
-            default => null,
-        };
-
-        return $this->rank($query, $request);
+        return $options;
     }
 
     /** হেডারে বাছা শাখার বকেয়া — [[Customer::scopeWithOutstandingInView()]]-এর হুবহু, সারিতে যা দেখায় তাই */
@@ -91,29 +142,11 @@ final class CustomerListFilters
             ->where('ledger_entries.party_type', Customer::drillSourceType());
     }
 
-    private function status(Builder $query, Request $request): void
-    {
-        $status = $request->boolean('inactive') ? 'all' : (string) $request->query('status', self::DEFAULT_STATUS);
-
-        match ($status) {
-            'inactive' => $query->where('customers.is_active', false),
-            'all' => null,
-            default => $query->where('customers.is_active', true),
-        };
-    }
-
     /**
      * সর্বনিম্ন–সর্বোচ্চ, যেকোনো একটা বা দুইটাই। ⓘ অগ্রিমে চিহ্ন উল্টো: খাতায় −৩,০০০ মানে ৩,০০০ অগ্রিম।
      */
-    private function range(Builder $query, Request $request, string $key, Builder $amount, int $sign): void
+    private function between(Builder $query, Builder $amount, int $sign, ?string $min, ?string $max): void
     {
-        $min = $this->money($request->query($key.'_min'));
-        $max = $this->money($request->query($key.'_max'));
-
-        if ($min === null && $max === null) {
-            return;
-        }
-
         $query->where($amount, $sign > 0 ? '>' : '<', 0);
 
         if ($min !== null) {
@@ -170,6 +203,18 @@ final class CustomerListFilters
         return $this->rankTitle($rank, $n, $by, $from, $to, $request);
     }
 
+    /** ⓘ চিপের লেখা — টপ/বটমের শিরোনামই */
+    private function rankTitleFor(Request $request): ?string
+    {
+        $rank = (string) $request->query('rank');
+        $n = max(1, min(500, $request->integer('rank_n') ?: self::RANK_DEFAULT));
+        $by = $request->query('rank_by') === 'due' ? 'due' : 'sales';
+        $from = $this->date($request->query('sales_from')) ?? now()->subDays(self::SALES_DAYS)->toDateString();
+        $to = $this->date($request->query('sales_to')) ?? now()->toDateString();
+
+        return $this->rankTitle($rank, $n, $by, $from, $to, $request);
+    }
+
     private function rankTitle(string $rank, int $n, string $by, string $from, string $to, Request $request): string
     {
         $period = $request->filled('sales_from') || $request->filled('sales_to')
@@ -182,14 +227,6 @@ final class CustomerListFilters
             'by' => __('customer::filter.by_'.$by),
             'period' => $by === 'sales' ? $period : __('customer::filter.today'),
         ]);
-    }
-
-    private function money(mixed $value): ?string
-    {
-        $value = is_string($value) ? trim(str_replace(',', '', $value)) : '';
-
-        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric` পেরিয়ে bcmath-এ ভেঙে ৫০০ দিত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৭)
-        return preg_match('/^\d{1,14}(\.\d{1,4})?$/', $value) === 1 ? bcadd($value, '0', 4) : null;
     }
 
     private function date(mixed $value): ?string

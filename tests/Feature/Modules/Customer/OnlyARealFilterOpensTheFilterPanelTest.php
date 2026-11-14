@@ -23,9 +23,8 @@ class OnlyARealFilterOpensTheFilterPanelTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SHUT = 'filtersOpen: false';
-
-    private const OPEN = 'filtersOpen: true';
+    /** ⓘ ১৪ নভেম্বর ২০২৬ থেকে প্যানেল বাঁ পাশে সবসময় ([[filter-layout]]); "চালু ছাঁকনি" মানে বারের বোতামে সংখ্যা আর চিপ */
+    private const BADGE = 'data-filter-toggle-count';
 
     protected function setUp(): void
     {
@@ -46,7 +45,7 @@ class OnlyARealFilterOpensTheFilterPanelTest extends TestCase
     {
         $page = $this->page(['q' => 'kona']);
 
-        $this->assertStringContainsString(self::SHUT, $page, '⛔ কেবল "kona" খুঁজতেই ছাঁকনির প্যানেল খুলে গেল');
+        $this->assertStringNotContainsString(self::BADGE, $page, '⛔ কেবল "kona" খুঁজতেই "ছাঁকনি" বোতামে চালু ছাঁকনির সংখ্যা উঠল');
         $this->assertSame(0, substr_count($page, 'data-facet'), '⛔ কেবল খোঁজায় ছাঁকনির চিপ উঠল ("অবস্থা: চালু")');
     }
 
@@ -57,19 +56,20 @@ class OnlyARealFilterOpensTheFilterPanelTest extends TestCase
             'due_max' => '', 'advance_min' => '', 'advance_max' => '', 'area' => '', 'point' => '', 'rank' => '', 'rank_n' => '',
             'rank_by' => '', 'sales_from' => '', 'sales_to' => '']);
 
-        $this->assertStringContainsString(self::SHUT, $page, '⛔ ডিফল্টে থাকা ঘরসহ জমায় প্যানেল খুলে গেল — status=active চালু ছাঁকনি ধরা হলো');
+        $this->assertStringNotContainsString(self::BADGE, $page, '⛔ ডিফল্টে থাকা ঘরসহ জমায় চালু ছাঁকনি গোনা হলো — status=active চালু ছাঁকনি ধরা হলো');
         $this->assertSame(0, substr_count($page, 'data-facet'), '⛔ ডিফল্ট "চালু" অবস্থা চিপ হলো — দ্রুত-দৃশ্যের বাছাই আর চিপ একই কথা দুবার বলে');
     }
 
     public function test_a_real_filter_opens_the_panel_with_its_chip(): void
     {
         $due = $this->page(['q' => 'kona', 'status' => 'active', 'due_min' => '100']);
-        $this->assertStringContainsString(self::OPEN, $due, '⛔ "বকেয়া অন্তত ১০০" দিলেও প্যানেল বন্ধ — চালু ছাঁকনি লুকাল');
+        $this->assertMatchesRegularExpression('/'.self::BADGE.'>\s*1\s*</', $due, '⛔ "বকেয়া অন্তত ১০০" দিলেও "ছাঁকনি" বোতামে ১ নেই — চালু ছাঁকনি লুকাল');
+        $this->assertMatchesRegularExpression('/<details\s+open\s+data-filter-section="due"/', $due, '⛔ চালু "বকেয়ার পরিমাণ" অংশটা ভাঁজ করা — কোন ছাঁকনি চালু, দেখা যায় না');
         $this->assertSame(1, substr_count($due, 'data-facet'), '⛔ "বকেয়া অন্তত ১০০"-র চিপ একটা হওয়ার কথা (ডিফল্ট অবস্থা চিপ নয়)');
 
         // ⓘ ডিফল্ট ছাড়া অন্য অবস্থা সত্যিকারের ছাঁকনি — quiet-এর মতো চিরকাল চুপ নয়
         $inactive = $this->page(['status' => 'inactive']);
-        $this->assertStringContainsString(self::OPEN, $inactive, '⛔ "নিষ্ক্রিয়" বাছলেও প্যানেল বন্ধ — সারি কম কেন, পর্দা বলল না');
+        $this->assertMatchesRegularExpression('/'.self::BADGE.'>\s*1\s*</', $inactive, '⛔ "নিষ্ক্রিয়" বাছলেও "ছাঁকনি" বোতামে ১ নেই — সারি কম কেন, পর্দা বলল না');
         $this->assertSame(1, substr_count($inactive, 'data-facet'), '⛔ "নিষ্ক্রিয়" অবস্থার চিপ নেই');
     }
 

@@ -109,7 +109,8 @@ final class TheCustomerListFiltersWhatTheOwnerAskedTest extends TestCase
             'এরিয়ার চিপে জায়গার নাম নেই, বা চিপ সরালে বকেয়ার ছাঁকনিও চলে যায়।');
         $this->assertDoesNotMatchRegularExpression('/data-facet[^>]*>\s*<span[^>]*>[^<]*: '.$this->area1->id.'\s*</u', $html, 'চিপে এরিয়ার আইডি।');
 
-        foreach (['created_from', 'created_to', 'due_min', 'due_max', 'advance_min', 'advance_max', 'area', 'point', 'status'] as $name) {
+        // ⓘ ১৪ নভেম্বর ২০২৬ থেকে বাঁ পাশের প্যানেলে ([[filter-layout]]); এরিয়া আর পয়েন্ট টিকের ঘর, একাধিক চলে (`area[]`)
+        foreach (['created_from', 'created_to', 'due_min', 'due_max', 'advance_min', 'advance_max', 'area\[\]', 'point\[\]', 'status'] as $name) {
             $this->assertMatchesRegularExpression('/name="'.$name.'"/', $html, "ছাঁকনির প্যানেলে \"{$name}\" ঘর নেই।");
         }
     }

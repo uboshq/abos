@@ -83,7 +83,9 @@ export function abosDate(iso, submitOnChange = false) {
                 return
             }
 
-            const form = this.$el.closest('form')
+            // ⓘ ফর্মের বাইরের ঘর (ছাঁকনি প্যানেল) নিজের ফর্মের id বলে দেয়
+            const own = (this.$root || this.$el).dataset.form
+            const form = own ? document.getElementById(own) : this.$el.closest('form')
 
             if (form && typeof form.requestSubmit === 'function') {
                 form.requestSubmit()
