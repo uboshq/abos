@@ -109,7 +109,10 @@ final class TheBarWearsTheCustomersOwnLogoTest extends TestCase
         $this->assertStringContainsString('title="'.__('core.a11y.home').'"', $first[0], '⛔ চিহ্নের নাম "হোম" নয়।');
 
         $home = $this->between($rail, 'data-rail-home', '</a>');
-        $this->assertStringContainsString('brand/abos-icon-64.png', $home, '⛔ রেলের মাথায় ABOS-এর চিহ্ন নেই।');
+        // ⭐ জীবন্ত চিহ্ন — উপরের বারের লোগোর একই A আর সোনালি বল (মালিক, ১৩ নভেম্বর ২০২৬: "হোম বাটনে … বলটা গোল্ডেন … জীবন্ত")
+        $this->assertStringContainsString('data-abos-live', $home, '⛔ রেলের মাথায় ABOS-এর জীবন্ত চিহ্ন নেই।');
+        $this->assertStringContainsString('brand/live/dot.png', $home, '⛔ রেলের হোমে সোনালি বল নেই।');
+        $this->assertStringContainsString('abos-live-icon', $home, '⛔ রেলের হোমে পুরো লকআপ — চিহ্নটুকু নয়।');
 
         // ⛔ ⌂ ঘরটা গেছে — `home` আঁকার পথ রেলে নেই, আর হোমের ঠিকানা রেলে একবারই
         $this->assertStringNotContainsString('M5.5 9.5V20h5v-5.5h3V20h5V9.5', $rail, '⛔ রেলে এখনো ⌂ আইকন — দুইটা হোম।');

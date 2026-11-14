@@ -37,6 +37,11 @@ final class StockOnHandTool implements AssistantTool
 
     public function run(User $user, array $args): array
     {
+        // ⭐ "সব স্টক", "আজকের স্টক" — পণ্যের নাম নয়, পুরো মজুদ (মালিক, ১৩ নভেম্বর ২০২৬; [[StockSummaryTool]])
+        if (StockSummaryTool::asksForAll($args)) {
+            return (new StockSummaryTool)->run($user, $args);
+        }
+
         $product = ProductInQuestion::find($args);
 
         if ($product === null) {

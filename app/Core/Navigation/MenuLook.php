@@ -90,6 +90,14 @@ final class MenuLook
      * ⭐ দলের নিজের চিহ্ন — মেনু লুকালে উপরের বারে দলের ঘরে (মালিক, ৯ নভেম্বর ২০২৬: নমুনা "মেনু লুকালে উপরে দলের বার"-এ "ok —
      * eta korai ache sudu color kora baki")। ⓘ তালিকায় না থাকলে দলের প্রথম সারির চিহ্ন।
      */
+    /**
+     * ⭐ রেলে যে মডিউলের টাইলে স্থির ছবির বদলে জীবন্ত চিহ্ন — মডিউলের কোড => চিহ্ন (মালিক, ১৩ নভেম্বর ২০২৬: "কোপাইলটের … লাইভ আইকন")।
+     * ⓘ রেল নিজে কোনো মডিউলের নাম জানে না; কেবল এই তালিকা দেখে।
+     *
+     * @var array<string, string>
+     */
+    public const LIVING_TILES = ['assistant' => 'copilot-mark'];
+
     public const KIND_ICONS = [
         'start' => 'house', 'master' => 'library', 'papers' => 'files', 'books' => 'notebook-tabs', 'reports' => 'chart-column',
         'ledger' => 'book-marked', 'control' => 'shield-alert', 'fin' => 'scale', 'close' => 'calendar-cog', 'crm' => 'users-round',

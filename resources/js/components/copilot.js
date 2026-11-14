@@ -9,6 +9,14 @@
 
 const recognizer = () => (typeof window === 'undefined' ? null : (window.SpeechRecognition || window.webkitSpeechRecognition || null))
 
+/** ⓘ মাইক ভুলে খোলা থাকলে এতক্ষণ পরে নিজে থামে — বলা কথা ঘরে থাকে (মালিক, ১৩ নভেম্বর ২০২৬) */
+export const MAX_LISTEN_MS = 120000
+
+/** আগে জমা কথা আর নতুন অংশ — মাঝে একটা ফাঁক, দুই পাশের বাড়তি ফাঁক বাদ */
+export function joinSaid (kept, part) {
+    return [String(kept ?? '').trim(), String(part ?? '').trim()].filter((s) => s !== '').join(' ')
+}
+
 /** উত্তরের সারিগুলো জোড়ায় — "কী · কত" (বিক্রির সারাংশ), নাহলে প্রথম ঘর আর বাকিগুলো একসাথে (বকেয়ার তালিকা) */
 export function pairsOf (answer) {
     const rows = Array.isArray(answer?.rows) ? answer.rows : []
@@ -40,6 +48,13 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
         speaking: null,
         byVoice: false,
         rec: null,
+        // ⓘ শোনার অবস্থা — জমা কথা, কে থামাতে চাইল (null · keep · send · cancel), কখন শুরু, ২ মিনিটের ঘড়ি
+        kept: '',
+        wantStop: null,
+        listenStarted: 0,
+        listenTimer: null,
+        voiceTyped: false,
+        micBlocked: false,
 
         init () {
             window.addEventListener('keydown', (e) => {
@@ -74,41 +89,90 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
         },
         toggle () { return this.open ? this.close() : this.show() },
 
+        /*
+         * ⭐ যতক্ষণ মানুষ থামান না, ততক্ষণ শোনা (মালিক, ১৩ নভেম্বর ২০২৬: "Claude অ্যাপের মতো — যতক্ষণ মন চায় কথা বলা, শেষ হলে
+         *   সেন্ড")। ⓘ ব্রাউজারের কথা-চেনা চুপ থাকলে বা নিজের সময় শেষে থেমে যায় — তখন জমা লেখা রেখে আবার শুরু, মানুষ টের পান না।
+         *   শেষ করেন মানুষ: "বলা শেষ" — লেখা ঘরে, দেখে পাঠানো; "পাঠান" — সঙ্গে সঙ্গে। ⛔ ভুলে খোলা থাকলে [[MAX_LISTEN_MS]]-এ নিজে থামে,
+         *   যা বলা হয়েছে ঘরে থাকে।
+         */
         listen () {
             const Rec = recognizer()
             if (Rec === null || this.busy) return
             this.stopSpeaking()
+            this.kept = this.q.trim()
+            this.heard = this.kept
+            this.listening = true
+            this.wantStop = null
+            this.listenStarted = Date.now()
+            clearTimeout(this.listenTimer)
+            this.listenTimer = setTimeout(() => this.finishListening(false), MAX_LISTEN_MS)
+            this.startRecognizer()
+        },
+        startRecognizer () {
+            const Rec = recognizer()
+            if (Rec === null) return
             const rec = new Rec()
             rec.lang = locale === 'bn' ? 'bn-BD' : 'en-US'
             rec.interimResults = true
-            rec.continuous = false
+            rec.continuous = true
+            let finalPart = ''
             rec.onresult = (e) => {
-                let text = ''
-                for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript
-                this.heard = text
+                let interim = ''
+                finalPart = ''
+                for (let i = 0; i < e.results.length; i++) {
+                    if (e.results[i].isFinal) finalPart += e.results[i][0].transcript
+                    else interim += e.results[i][0].transcript
+                }
+                this.heard = joinSaid(this.kept, finalPart + interim)
             }
-            rec.onerror = () => { this.listening = false }
-            rec.onend = () => {
-                this.listening = false
-                const said = this.heard.trim()
-                this.heard = ''
-                if (said !== '') {
-                    this.byVoice = true
-                    this.ask(said)
+            rec.onerror = (e) => {
+                // ⓘ চুপ থাকা বা মাঝপথে কাটা ভুল নয় — আবার শুরু হবে; অনুমতি না পেলে থামা
+                if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) {
+                    this.micBlocked = true
+                    this.wantStop = 'keep'
                 }
             }
+            rec.onend = () => {
+                this.kept = joinSaid(this.kept, finalPart)
+                if (this.wantStop === null && this.listening && Date.now() - this.listenStarted < MAX_LISTEN_MS) {
+                    this.startRecognizer()
+                    return
+                }
+                this.endListening()
+            }
             this.rec = rec
-            this.heard = ''
-            this.listening = true
-            rec.start()
+            try { rec.start() } catch (_) { this.endListening() }
         },
-        stopListening () {
-            if (this.rec !== null) this.rec.stop()
-        },
-        cancelListening () {
-            this.heard = ''
-            if (this.rec !== null) this.rec.abort()
+        endListening () {
+            clearTimeout(this.listenTimer)
+            const said = this.heard.trim()
+            const send = this.wantStop === 'send'
             this.listening = false
+            this.rec = null
+            this.heard = ''
+            if (this.wantStop === 'cancel') return
+            this.q = said
+            if (send && said !== '') {
+                this.byVoice = true
+                this.ask(said)
+                return
+            }
+            // ⓘ বলা কথা ঘরে — দেখে পাঠান; পাঠালে উত্তরও শোনায় (বলে জিজ্ঞেস করা)
+            this.voiceTyped = said !== ''
+            this.$nextTick(() => this.$refs.box?.focus())
+        },
+        finishListening (send) {
+            this.wantStop = send ? 'send' : 'keep'
+            if (this.rec !== null) this.rec.stop()
+            else this.endListening()
+        },
+        stopListening () { this.finishListening(false) },
+        sendListening () { this.finishListening(true) },
+        cancelListening () {
+            this.wantStop = 'cancel'
+            this.q = this.kept
+            if (this.rec !== null) this.rec.abort()
+            else this.endListening()
         },
 
         pick (text) {
@@ -116,7 +180,9 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
             this.ask(text)
         },
         submit () {
-            this.byVoice = false
+            // ⓘ মাইকে বলা কথা ঘর থেকে পাঠালেও "বলে জিজ্ঞেস করা" — উত্তর পড়ে শোনায়
+            this.byVoice = this.voiceTyped
+            this.voiceTyped = false
             this.ask(this.q)
         },
 

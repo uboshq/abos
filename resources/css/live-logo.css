@@ -9,6 +9,9 @@
 .abos-live { position: relative; display: block; aspect-ratio: 748 / 239; }
 .abos-live img { position: absolute; display: block; }
 .abos-live .lv-icon { position: absolute; left: 0; top: 0; width: 35.8%; height: 100%; }
+/* ⓘ কেবল-চিহ্ন (রেলের হোম) — লকআপের চিহ্নের অংশটুকু, নিজের অনুপাতে (৭৪৮ × ৩৫.৮% = ২৬৮ × ২৩৯) */
+.abos-live.abos-live-icon { aspect-ratio: 268 / 239; }
+.abos-live.abos-live-icon .lv-icon { width: 100%; }
 .abos-live .lv-a { inset: 0; width: 100%; height: 100%; }
 .abos-live .lv-d { width: 22.6%; left: 78.15%; top: 75%; }
 .abos-live .lv-word { position: absolute; left: 38.8%; top: 15.5%; width: 61.2%; height: 65.3%; }
