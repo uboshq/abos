@@ -44,7 +44,7 @@ class GatePassController extends Controller implements HasMiddleware
             ->with(['challan.customer.location.parent', 'challan.customer.branch', 'issuer'])
             ->orderByDesc('issued_at')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('sales::gate_pass.index', [

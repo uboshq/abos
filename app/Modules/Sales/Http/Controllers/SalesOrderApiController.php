@@ -70,7 +70,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
         $total = bcadd((string) ((clone $query)->whereNotIn('status', SalesOrderStatus::UNCOUNTED)
             ->sum('total') ?? '0'), '0', 2);
 
-        $rows = $query->latest('trx_date')->latest('id')->paginate(50);
+        $rows = $query->latest('trx_date')->latest('id')->paginate(\App\Core\Support\PerPage::of());
 
         // ⓘ ওয়েবের আদেশ-তালিকার চিপের একই গোনা, পঞ্চাশটায় একবার ([[OrderProgress::compute()]])
         $progress = app(OrderProgress::class)->compute($rows->getCollection());

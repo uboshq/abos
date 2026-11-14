@@ -1403,3 +1403,16 @@ export function chequeFreeForm ({ book = '', next = {}, first = '' }) {
         },
     }
 }
+
+/**
+ * ⭐ এক পাতায় কয়টা — বাছলেই তালিকা আবার খোলে, প্রথম পাতা থেকে (মালিক, ১৩ নভেম্বর ২০২৬; [[PerPage]])।
+ * ⓘ CSP-Alpine-এ পর্দা থেকে `$el.form.submit()` লেখা যায় না — তাই একটা নামওয়ালা কাজ।
+ */
+export function perPagePicker () {
+    return {
+        go (event) {
+            const form = event.target.form
+            if (form) form.requestSubmit ? form.requestSubmit() : form.submit()
+        },
+    }
+}

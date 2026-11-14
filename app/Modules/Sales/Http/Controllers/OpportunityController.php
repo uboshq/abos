@@ -66,7 +66,7 @@ class OpportunityController extends Controller implements HasMiddleware
 
         return view('sales::crm.opportunity.index', [
             'menu' => $this->menu->forUser($user),
-            'opportunities' => (clone $query)->paginate(50)->withQueryString(),
+            'opportunities' => (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির আনুমানিক মূল্য, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['value' => 't.estimated_value']),
             'stages' => $this->opportunities->stages()->mapWithKeys(fn ($s) => [$s->id => $s->name()]),

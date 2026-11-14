@@ -79,7 +79,7 @@ class ProductController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
-        $products = $query->paginate(50)->withQueryString();
+        $products = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('inventory::product.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -124,7 +124,7 @@ class ProductController extends Controller implements HasMiddleware
             ->with(['warehouse', 'reasonCode'])
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('inventory::product.show', [

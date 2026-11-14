@@ -64,7 +64,7 @@ class DepositClaimController extends Controller implements HasMiddleware
 
         return view('sales::claim.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'claims' => (clone $query)->paginate(50)->withQueryString(),
+            'claims' => (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির দাবির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'status' => $status,

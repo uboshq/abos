@@ -7,5 +7,7 @@ return [
     'label' => 'Pages',
     'previous' => 'Previous',
     'next' => 'Next',
+    // ⓘ এক পাতায় কয়টা (১৩ নভেম্বর ২০২৬; [[PerPage]])
+    'per_page' => 'Per page',
     'page_of' => 'Page :page / :last',
 ];

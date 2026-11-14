@@ -70,7 +70,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
                             ->orWhere('account_number', 'like', "%{$term}%"))
                 ))
                 ->orderByDesc('statement_date')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
             'q' => $request->query('q'),
         ]);

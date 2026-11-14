@@ -73,7 +73,7 @@ class NoteController extends Controller implements HasMiddleware
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
         $grand = $this->grandTotals($list, ['total' => 't.total']);
-        $rows = $list->paginate(50)->withQueryString();
+        $rows = $list->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         /*
          * ⓘ পক্ষের নাম একবারে — সারি প্রতি একটা প্রশ্ন করলে পঞ্চাশ সারির

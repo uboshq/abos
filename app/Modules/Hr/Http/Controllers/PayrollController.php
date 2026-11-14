@@ -80,7 +80,7 @@ class PayrollController extends Controller implements HasMiddleware
                     ? ['gross_total' => 't.seen_gross', 'deduction_total' => 't.seen_deductions', 'net_total' => 't.seen_net']
                     : ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
             // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
-            'runs' => $list->paginate(50)->withQueryString(),
+            'runs' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

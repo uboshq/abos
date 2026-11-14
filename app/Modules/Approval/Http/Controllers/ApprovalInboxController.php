@@ -279,7 +279,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $sumAll = Money::round((string) ((clone $list)->reorder()->withoutEagerLoads()->sum('amount') ?? '0'));
 
         $approvals = self::sorted($list, $sort)
-            ->paginate(self::PER_PAGE)
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
         $rows = $approvals->getCollection();
@@ -467,7 +467,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             ->where('requested_by', $request->user()?->id)
             ->with(['decisions.user'])
             ->orderByDesc('id')
-            ->paginate(50);
+            ->paginate(\App\Core\Support\PerPage::of());
 
         return view('approval::inbox.mine', [
             'menu' => $this->menu->forUser($request->user()),
@@ -490,7 +490,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $approvals = self::searched($signed->query($request->user()), (string) $request->query('q', ''))
             ->with(['decisions.user'])
             ->orderByDesc('decided_at')
-            ->paginate(50);
+            ->paginate(\App\Core\Support\PerPage::of());
 
         return view('approval::inbox.mine', [
             'papers' => $signed->papers($request->user()),

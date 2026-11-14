@@ -195,7 +195,7 @@ final class ProfitDistributionController implements HasMiddleware
                  *
                  * ⓘ ধরা পড়েছে `EveryListScreenPaginates`-এ।
                  */, ['amount' => 't.amount']),
-            'history' => $list->paginate(50)->withQueryString(),
+            'history' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'profit' => null,
             'preview' => null,
         ];

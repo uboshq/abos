@@ -71,7 +71,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
         $total = bcadd((string) ((clone $query)->whereNotIn('status', DeliveryOrderStatus::UNCOUNTED)
             ->sum('total') ?? '0'), '0', 2);
 
-        $rows = $query->latest('trx_date')->latest('id')->paginate(50);
+        $rows = $query->latest('trx_date')->latest('id')->paginate(\App\Core\Support\PerPage::of());
 
         $latest = LatestApprovals::of($rows->items(), DeliveryOrder::class, DeliveryOrderStatus::SUPERVISOR_PENDING, DeliveryOrderService::APPROVAL_ACTION);
 

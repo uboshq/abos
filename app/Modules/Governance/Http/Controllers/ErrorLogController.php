@@ -61,7 +61,7 @@ class ErrorLogController extends Controller implements HasMiddleware
             ->with(['user', 'acknowledger'])
             ->when($request->query('only') !== 'all', fn (Builder $q) => $q->open())
             ->recentFirst()
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('governance::error.index', [

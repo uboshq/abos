@@ -71,7 +71,7 @@ class LoanController extends Controller implements HasMiddleware
          */
         $grand = $this->grandTotals($list, ['sanctioned' => 't.sanctioned']) + ['outstanding' => (clone $list)->get()
             ->reduce(fn (string $sum, Loan $l) => bcadd($sum, (string) $l->outstanding(), 4), '0')];
-        $loans = $list->paginate(50)->withQueryString();
+        $loans = $list->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::loan.index', [
             'menu' => $this->menu->forUser($request->user()),

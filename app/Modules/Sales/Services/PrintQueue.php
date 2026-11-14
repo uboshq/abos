@@ -232,7 +232,7 @@ final class PrintQueue
             ->waiting()
             ->when($term !== '', fn ($q) => $q->where('document_no', 'like', "%{$term}%"))
             ->orderBy('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 

@@ -49,7 +49,7 @@ class InstitutionController extends Controller implements HasMiddleware
             ->ofKind($kind)
             ->orderByDesc('is_active')
             ->orderBy('name_en')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('finance::institution.index', [

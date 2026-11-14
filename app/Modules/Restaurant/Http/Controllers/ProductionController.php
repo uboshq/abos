@@ -81,7 +81,7 @@ class ProductionController extends Controller implements HasMiddleware
 
         return view('restaurant::production.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'productions' => $query->paginate(50)->withQueryString(),
+            'productions' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'status' => $request->query('status'),
             'dates' => $dates,

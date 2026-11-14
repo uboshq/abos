@@ -63,7 +63,7 @@ class ExchangeRateController extends Controller implements HasMiddleware
              */
             'rates' => $currency->rates()
                 ->with('creator')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
             'today' => $currency->rateOn(),
         ]);

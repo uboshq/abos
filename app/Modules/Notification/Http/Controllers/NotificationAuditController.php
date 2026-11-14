@@ -37,7 +37,7 @@ class NotificationAuditController extends Controller
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', $d.' 00:00:00'))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->where('created_at', '<=', $d.' 23:59:59'))
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
         return view('notification::audit.index', [

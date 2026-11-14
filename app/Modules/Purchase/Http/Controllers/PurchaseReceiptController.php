@@ -72,7 +72,7 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
         return view('purchase::receipt.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
-            'receipts' => $query->paginate(50)->withQueryString(),
+            'receipts' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,

@@ -193,7 +193,7 @@ class NotificationController extends Controller
             default => $query->orderByDesc('id'),
         };
 
-        $rows = $query->with('onBehalfOf:id,name')->paginate(self::PER_PAGE)->withQueryString();
+        $rows = $query->with('onBehalfOf:id,name')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         // ⓘ পাতায় যা দেখানো হলো তা "দেখা" — খোলা নয়, তাই পড়া নয় (স্পেক: দেখা আর পড়া আলাদা)
         $this->notifications->markSeen($user, $rows->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());

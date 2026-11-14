@@ -67,7 +67,7 @@ class RouteAccountController extends Controller implements HasMiddleware
                     ->orWhere('name_bn', 'like', $like));
             })
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $ids = $routes->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -100,7 +100,7 @@ class RouteAccountController extends Controller implements HasMiddleware
             ->where('location_id', $location->id)
             ->with(Customer::PLACE)
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $customerIds = $customers->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all();

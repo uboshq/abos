@@ -47,7 +47,7 @@ final class SalePriceBook
                     ->orWhere('name_bn', 'like', $like));
             })
             ->orderBy('name_en')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 

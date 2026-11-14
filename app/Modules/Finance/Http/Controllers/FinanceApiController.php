@@ -92,7 +92,7 @@ final class FinanceApiController extends Controller implements HasMiddleware
             ->orderByRaw('matures_on IS NULL')
             ->orderBy('matures_on')
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return $this->page($page, fn (Deposit $d) => $this->depositFacts($d));
     }
@@ -163,7 +163,7 @@ final class FinanceApiController extends Controller implements HasMiddleware
                 fn ($q) => $q->where('status', DocumentStatus::CLOSED),
                 fn ($q) => $q->where('status', '!=', DocumentStatus::CLOSED))
             ->latest('id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         $standing = $this->facilities->standing(collect($page->items()));
 
@@ -271,7 +271,7 @@ final class FinanceApiController extends Controller implements HasMiddleware
             $page = Tenancy::query()->inViewedBranch()
                 ->where('status', $tab === 'closed' ? Tenancy::CLOSED : Tenancy::ACTIVE)
                 ->orderBy('ends_on')->orderBy('id')
-                ->paginate(self::PER_PAGE);
+                ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
             return $this->page($page, fn (Tenancy $t) => $this->tenancyFacts($t));
         }
@@ -281,7 +281,7 @@ final class FinanceApiController extends Controller implements HasMiddleware
                 fn ($q) => $q->where('status', RentalContract::CLOSED),
                 fn ($q) => $q->active())
             ->orderBy('ends_on')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return $this->page($page, fn (RentalContract $c) => $this->contractFacts($c));
     }

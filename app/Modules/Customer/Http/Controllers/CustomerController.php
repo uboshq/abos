@@ -144,7 +144,7 @@ class CustomerController extends Controller implements HasMiddleware
         $customers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — শেয়ার্ড হোস্টে পুরো তালিকা
             // এক রেসপন্সে পাঠানো মানে টাইমআউট।
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         /*

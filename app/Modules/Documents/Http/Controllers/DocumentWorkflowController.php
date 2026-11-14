@@ -53,7 +53,7 @@ final class DocumentWorkflowController extends Controller
             ->with(['requester'])
             ->orderBy('approvals.due_at')
             ->orderBy('approvals.id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $documents = Document::query()->withoutGlobalScopes()

@@ -116,7 +116,7 @@ class UserController extends Controller implements HasMiddleware
                         ->orWhere('email', 'like', $like));
                 })
                 ->orderBy('name')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 // ⓘ পাতা বদলালে খোঁজা আর ঘনত্ব হারায় না
                 ->withQueryString(),
         ]);

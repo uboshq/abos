@@ -67,7 +67,7 @@ class WarehouseController extends Controller implements HasMiddleware
 
         return view('inventory::warehouse.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'warehouses' => $query->paginate(50)->withQueryString(),
+            'warehouses' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
             'q' => $request->query('q'),
             'sort' => $sort,

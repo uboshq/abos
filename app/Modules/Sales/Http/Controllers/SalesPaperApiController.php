@@ -44,7 +44,7 @@ final class SalesPaperApiController extends Controller
             ->whereBetween('trx_date', [$from, $to]);
 
         $total = (string) ((clone $query)->reorder()->sum('total') ?: '0');
-        $page = (clone $query)->withCollected()->with('customer.branch')->orderByDesc('trx_date')->orderByDesc('sal_invoices.id')->paginate(self::PER_PAGE);
+        $page = (clone $query)->withCollected()->with('customer.branch')->orderByDesc('trx_date')->orderByDesc('sal_invoices.id')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'from' => $from,
@@ -122,7 +122,7 @@ final class SalesPaperApiController extends Controller
             ->whereBetween('trx_date', [$from, $to]);
 
         $total = (string) ((clone $query)->reorder()->sum('total') ?: '0');
-        $page = (clone $query)->with(['customer.location.parent', 'customer.branch'])->orderByDesc('trx_date')->orderByDesc('sal_challans.id')->paginate(self::PER_PAGE);
+        $page = (clone $query)->with(['customer.location.parent', 'customer.branch'])->orderByDesc('trx_date')->orderByDesc('sal_challans.id')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'from' => $from,

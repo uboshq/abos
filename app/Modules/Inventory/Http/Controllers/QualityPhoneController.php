@@ -66,7 +66,7 @@ final class QualityPhoneController extends Controller implements HasMiddleware
             ->when($data['status'] ?? null, fn ($q, string $s) => $q->where('status', $s))
             ->orderByRaw("CASE WHEN status = '".QualityInspection::PENDING."' THEN 0 ELSE 1 END")
             ->orderByDesc('inspected_on')->orderByDesc('id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'from' => min($from, $to),

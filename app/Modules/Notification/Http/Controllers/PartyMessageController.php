@@ -94,7 +94,7 @@ class PartyMessageController extends Controller
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where(fn ($w) => $w->where('document_no', 'like', '%'.$s.'%')
                 ->orWhere('party_name', 'like', '%'.$s.'%')->orWhere('phone', 'like', '%'.$s.'%')))
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
         return view('notification::party.messages', [

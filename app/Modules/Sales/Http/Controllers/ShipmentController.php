@@ -70,7 +70,7 @@ class ShipmentController extends Controller implements HasMiddleware
 
         return view('sales::shipment.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'shipments' => $query->paginate(50)->withQueryString(),
+            'shipments' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,

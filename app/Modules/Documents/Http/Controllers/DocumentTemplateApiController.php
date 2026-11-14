@@ -37,7 +37,7 @@ final class DocumentTemplateApiController extends Controller implements HasMiddl
     /** `GET /documents/templates?page=` */
     public function index(Request $request): JsonResponse
     {
-        $rows = DocumentTemplate::query()->orderBy('title')->paginate(50, ['*'], 'page', max(1, (int) $request->query('page', 1)));
+        $rows = DocumentTemplate::query()->orderBy('title')->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', max(1, (int) $request->query('page', 1)));
         $types = $this->choices->types(true);
 
         return response()->json([

@@ -63,7 +63,7 @@ class DepositKindController extends Controller implements HasMiddleware
             ->orderBy('issuer')
             ->orderBy('sort')
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $counts = ['all' => DepositKind::query()->count()];

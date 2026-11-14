@@ -258,7 +258,7 @@ class ChequePrintController extends Controller implements HasMiddleware
 
         return view('accounts::cheque_print.log', [
             'menu' => $this->menu->forUser($request->user()),
-            'prints' => (clone $query)->paginate(50)->withQueryString(),
+            'prints' => (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'grand' => $this->grandTotals($query->where('status', ChequePrint::PRINTED), ['amount' => 't.amount']),
             'mayPrint' => $request->user()?->can('accounts.cheque.print') ?? false,
             'mayFree' => $mayFree,

@@ -133,7 +133,7 @@ class SupplierController extends Controller implements HasMiddleware
 
         $suppliers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯)
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('supplier::index', [

@@ -141,7 +141,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
 
         return view('sales::invoice.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'invoices' => $query->paginate(50)->withQueryString(),
+            'invoices' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'totals' => [
                 'rows' => (clone $totalled)->count(),
                 'money' => $money,

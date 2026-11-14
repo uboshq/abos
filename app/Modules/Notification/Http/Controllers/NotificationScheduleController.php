@@ -33,7 +33,7 @@ class NotificationScheduleController extends Controller
     public function index(Request $request): View
     {
         $rows = NotificationSchedule::query()->with(['template', 'group'])->orderByDesc('is_active')->orderBy('next_run_at')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::schedules.index', [
             'menu' => $this->menu->forUser($request->user()),

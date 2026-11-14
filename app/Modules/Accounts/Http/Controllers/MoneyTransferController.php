@@ -60,7 +60,7 @@ class MoneyTransferController extends Controller implements HasMiddleware
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
         $grand = $this->grandTotals($query, ['amount' => 't.amount']);
 
-        $transfers = $query->paginate(50)->withQueryString();
+        $transfers = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::transfer.index', [
             'menu' => $this->menu->forUser($request->user()),

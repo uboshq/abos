@@ -96,7 +96,7 @@ class LoginHistoryController extends Controller implements HasMiddleware
             ->when($this->readDate($request->query('to')),
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
             ->latestFirst()
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('governance::login.index', [

@@ -89,7 +89,7 @@ class PaymentController extends Controller implements HasMiddleware
         return view('purchase::payment.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
-            'payments' => $query->paginate(50)->withQueryString(),
+            'payments' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'totals' => [
                 'rows' => (clone $totalled)->count(),
                 'money' => (clone $totalled)->sum('amount'),

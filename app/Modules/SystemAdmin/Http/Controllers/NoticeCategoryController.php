@@ -40,7 +40,7 @@ final class NoticeCategoryController extends Controller implements HasMiddleware
     {
         return view('system_admin::notice.categories', [
             'menu' => $this->menu->forUser($request->user()),
-            'categories' => NoticeCategory::query()->orderBy('code')->paginate(50)->withQueryString(),
+            'categories' => NoticeCategory::query()->orderBy('code')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'priorities' => collect(NoticePriority::cases())
                 ->mapWithKeys(fn (NoticePriority $p) => [$p->value => $p->label()]),
         ]);

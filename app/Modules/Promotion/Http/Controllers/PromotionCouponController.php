@@ -89,7 +89,7 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
             ->when($offer !== null, fn ($q) => $q->where('promotion_id', $offer->id))
             ->when($search !== '', fn ($q) => $q->where('code', 'like', '%'.addcslashes($search, '%_\\').'%'))
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('promotion::coupons', [

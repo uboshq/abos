@@ -63,7 +63,7 @@ class InsuranceController extends Controller implements HasMiddleware
             'policies' => $this->filtered($tab)
                 ->with(['institution', 'premiums'])
                 ->orderBy('ends_on')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
         ]);
     }

@@ -133,7 +133,7 @@ final class SalesDeskApiController extends Controller implements HasMiddleware
 
         $performance = app(DeliveryPerformance::class);
         $summary = $performance->summary($from, $to);
-        $late = $performance->late($from, $to)->paginate(50, ['*'], 'page', max(1, (int) $request->query('page', 1)));
+        $late = $performance->late($from, $to)->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', max(1, (int) $request->query('page', 1)));
         // ⓘ পয়েন্ট আর শাখা এক ডাকে, সারি ধরে নয়
         $late->getCollection()->loadMissing(['customer.location.parent', 'customer.branch']);
         $today = Carbon::today();

@@ -101,7 +101,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             // ⭐ ফেরত, বাতিল আর পুরনো সংস্করণ মোটে নয় — ফোনের দরজার একই নিয়ম (fe, ১৭ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals((clone $query)->whereNotIn($query->getModel()->qualifyColumn('status'), SalesQuotation::UNCOUNTED), ['total' => 't.total']),
-            'quotations' => $query->paginate(50)->withQueryString(),
+            'quotations' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,
@@ -186,7 +186,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             ->search($request->query('q'))
             ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $latest = SalesQuotation::query()

@@ -54,7 +54,7 @@ class LeadApiController extends Controller implements HasMiddleware
             ->when(in_array($request->query('status'), Lead::STATUSES, true),
                 fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
             ->latest('id')
-            ->paginate(50);
+            ->paginate(\App\Core\Support\PerPage::of());
 
         return response()->json([
             'leads' => collect($rows->items())->map(fn (Lead $l) => $this->facts($l))->values(),

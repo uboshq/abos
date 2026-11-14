@@ -63,7 +63,7 @@ class ExpenseClaimController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $all ? 'all' : 'mine',
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
-            'claims' => $query->paginate(50)->withQueryString(),
+            'claims' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'openAdvance' => $employee === null ? null : $this->claims->openAdvance($employee),
         ]);
     }

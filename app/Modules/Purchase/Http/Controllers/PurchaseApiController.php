@@ -71,7 +71,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
 
         // ⭐ ছাঁকা তালিকার মোট দেনা — সব পাতা মিলে, ওয়েবের সরবরাহকারী-তালিকার একই যোগ ([[GrandTotals]]; পূর্ণ নিরীক্ষা §৯ ⚠️৭)
         $total = $this->grandTotals($query, ['payable' => 't.payable_in_view'])['payable'];
-        $page = $query->with('branch')->paginate(self::PER_PAGE);
+        $page = $query->with('branch')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'rows' => collect($page->items())->map(fn (Supplier $s) => $this->principalRow($s))->values(),
@@ -151,7 +151,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
          */
         $cost = (bool) $request->user()?->can('inventory.cost.view');
         $page = (clone $query)->with('supplier.branch')->when($kind === 'bill' && $cost, fn (Builder $q) => $q->withPaid())
-            ->orderByDesc("{$table}.trx_date")->orderByDesc("{$table}.id")->paginate(self::PER_PAGE);
+            ->orderByDesc("{$table}.trx_date")->orderByDesc("{$table}.id")->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'kind' => $kind,

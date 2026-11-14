@@ -87,7 +87,7 @@ final class TransportAssignmentController extends Controller implements HasMiddl
             ->orderByDesc('sal_challans.id');
 
         $grand = $this->grandTotals($query, ['transport_cost' => 't.transport_cost']);
-        $challans = $query->paginate(50)->withQueryString();
+        $challans = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('sales::transport.index', [
             'menu' => $this->menu->forUser($request->user()),

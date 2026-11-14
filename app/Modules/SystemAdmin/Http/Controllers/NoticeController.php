@@ -68,7 +68,7 @@ class NoticeController extends Controller
                  * এই ভুলটা এই খাতায় আগেও ধরা পড়েছে (সরবরাহকারীর প্রদেয়)।
                  */
                 ? Notice::query()->with(['author', 'audience'])
-                    ->orderByDesc('id')->paginate(50)->withQueryString()
+                    ->orderByDesc('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString()
                 : null,
 
             'mine' => $mine ? null : $this->board->forUser($user),

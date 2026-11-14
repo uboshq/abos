@@ -93,7 +93,7 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
             // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; গোটা পাতার এক প্রশ্নে ([[Customer::PLACE]])
             ->with(Customer::PLACE)
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         /* ⓘ পাতার প্রতিটা ক্রেতার ব্যালান্স খাতা থেকে — পঞ্চাশটার বেশি কখনো নয় */
@@ -132,7 +132,7 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
             ->where('customer_id', $customer->id)
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $running = [];

@@ -41,7 +41,7 @@ final class AccountLedger
             ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
             ->orderBy('trx_date')
             ->orderBy('id')
-            ->paginate(self::PER_PAGE, ['*'], 'page', $page);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE), ['*'], 'page', $page);
 
         /*
          * চলমান জের শূন্য থেকে শুরু।

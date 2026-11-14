@@ -55,7 +55,7 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
             ->with(['requester'])
             ->orderBy('approvals.due_at')
             ->orderBy('approvals.id')
-            ->paginate(50, ['*'], 'page', max(1, (int) $request->query('page', 1)));
+            ->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', max(1, (int) $request->query('page', 1)));
 
         return $this->approvals($rows, ! $mine);
     }
@@ -76,7 +76,7 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
                 ->with(['document', 'version', 'signer'])
                 ->orderByDesc('signed_at')
                 ->orderByDesc('id')
-                ->paginate(50, ['*'], 'page', $page);
+                ->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', $page);
 
             // ⭐ নম্বরের পাশে পক্ষ — আলাদা ঘর `party`, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]]); পুরনো অ্যাপ উপেক্ষা করে
             $parties = app(DocumentParties::class)->of(collect($rows->items())->pluck('document_id'));
@@ -107,7 +107,7 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
             ->with('requester')
             ->orderBy('approvals.due_at')
             ->orderBy('approvals.id')
-            ->paginate(50, ['*'], 'page', $page);
+            ->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', $page);
 
         return $this->approvals($rows, $tab === 'to_sign', $tab);
     }

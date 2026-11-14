@@ -81,7 +81,7 @@ class RfqController extends Controller implements HasMiddleware
 
         return view('purchase::rfq.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rfqs' => $query->paginate(50)->withQueryString(),
+            'rfqs' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => [

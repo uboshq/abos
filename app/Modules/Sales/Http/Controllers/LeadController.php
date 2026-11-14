@@ -66,7 +66,7 @@ class LeadController extends Controller implements HasMiddleware
 
         return view('sales::crm.lead.index', [
             'menu' => $this->menu->forUser($user),
-            'leads' => $query->paginate(50)->withQueryString(),
+            'leads' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'status' => $request->query('status'),
         ]);

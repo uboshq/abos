@@ -146,7 +146,7 @@ class CashTillController extends Controller implements HasMiddleware
             ->forAccount($till->account_id)
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         /*

@@ -71,7 +71,7 @@ final class BranchController extends Controller implements HasMiddleware
             ->orderBy('company_id')
             ->orderByDesc('is_default')
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('system_admin::branch.index', [

@@ -53,7 +53,7 @@ final class DealerBindingController extends Controller implements HasMiddleware
             ->orderBy('user_id')
             ->orderByDesc('starts_on')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('customer::binding.index', [

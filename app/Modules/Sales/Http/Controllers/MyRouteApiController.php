@@ -60,7 +60,7 @@ class MyRouteApiController extends Controller implements HasMiddleware
             ->with(['location.parent', 'branch'])
             ->whereIn('location_id', $visits->pluck('route_id')->all() ?: [0])
             ->orderBy('location_id')->orderBy('code')
-            ->paginate(50);
+            ->paginate(\App\Core\Support\PerPage::of());
         $figures = $this->metrics->forCustomers($shops->getCollection()->modelKeys(), $from, $to);
 
         return response()->json([

@@ -93,7 +93,7 @@ class WithdrawalController extends Controller implements HasMiddleware
                 ))
                 // ⓘ পাতা বদলালে খোঁজা আর ট্যাব হারায় না
                 ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
-            'rows' => $list->paginate(50)->withQueryString(),
+            'rows' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা
             'counts' => [

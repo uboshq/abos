@@ -71,7 +71,7 @@ class PurchaseOrderController extends Controller implements HasMiddleware
         return view('purchase::order.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
-            'orders' => $query->paginate(50)->withQueryString(),
+            'orders' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             /*
              * ধাপের সারাংশ — কয়টা কোথায়, আর কত টাকার।
              *

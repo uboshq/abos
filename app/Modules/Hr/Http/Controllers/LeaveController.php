@@ -51,7 +51,7 @@ class LeaveController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
-        $applications = $query->paginate(50)->withQueryString();
+        $applications = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('hr::leave.index', [
             'menu' => $this->menu->forUser($request->user()),

@@ -47,7 +47,7 @@ final class DocumentAuditController extends Controller
             ->when($action !== '', fn ($q) => $q->where('action', $action))
             ->with('user')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('documents::audit', [

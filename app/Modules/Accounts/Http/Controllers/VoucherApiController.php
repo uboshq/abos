@@ -150,7 +150,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
 
         $page = $query
             ->orderByDesc('trx_date')->orderByDesc('id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         $rows = $page->getCollection();
         /*
