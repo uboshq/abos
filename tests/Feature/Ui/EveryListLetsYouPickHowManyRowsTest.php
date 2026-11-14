@@ -36,13 +36,14 @@ final class EveryListLetsYouPickHowManyRowsTest extends TestCase
     {
         $response = $this->get(route('accounts.voucher.list', ['status' => 'draft', 'page' => 3]))->assertOk();
 
-        $response->assertSee('data-per-page', false);
+        $html = (string) $response->getContent();
+        $this->assertStringContainsString('data-per-page', $html, '⛔ পেজারে "প্রতি পাতায়" ঘরটা নেই।');
         foreach (PerPage::CHOICES as $n) {
-            $response->assertSee('<option value="'.$n.'"', false);
+            $this->assertStringContainsString('<option value="'.$n.'"', $html, "⛔ প্রতি পাতায় {$n} বাছার উপায় নেই।");
         }
-        $response->assertSee('<option value="50" selected', false);
-        $response->assertSee('name="status" value="draft"', false);
-        $response->assertDontSee('name="page"', false);
+        $this->assertStringContainsString('<option value="50" selected', $html, '⛔ বাছাই ছাড়া ৫০ বাছা দেখায় না।');
+        $this->assertStringContainsString('name="status" value="draft"', $html, '⛔ সংখ্যা বদলালে ছাঁকনি (খসড়া) হারায়।');
+        $this->assertStringNotContainsString('name="page"', $html, '⛔ সংখ্যা বদলালে পুরোনো পাতা নম্বর থেকে যায় — ফাঁকা পাতায় পড়তে পারে।');
         $this->assertSame(50, $response->viewData('vouchers')->perPage(), '⛔ বাছাই ছাড়া আগের ৫০ নয়।');
     }
 
