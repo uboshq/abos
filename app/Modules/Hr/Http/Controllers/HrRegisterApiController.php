@@ -103,7 +103,7 @@ final class HrRegisterApiController extends Controller implements HasMiddleware
             ->when($request->boolean('pending'), fn ($q) => $q->pending())
             ->orderByDesc('from_date')
             ->orderByDesc('id')
-            ->paginate(50, ['*'], 'page', max(1, (int) $request->query('page', 1)));
+            ->paginate(\App\Core\Support\PerPage::of(), ['*'], 'page', max(1, (int) $request->query('page', 1)));
 
         return response()->json([
             'rows' => collect($page->items())->map(fn (LeaveApplication $a) => [

@@ -65,7 +65,7 @@ final class LinksController extends Controller implements HasMiddleware
             ->whereIn('sister_company_id', $companies->keys()->all() ?: [0])
             ->orderBy('company_id')
             ->orderBy('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         /*

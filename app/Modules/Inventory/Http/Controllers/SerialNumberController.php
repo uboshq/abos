@@ -80,7 +80,7 @@ class SerialNumberController extends Controller implements HasMiddleware
 
         return view('inventory::serial.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'serials' => $query->paginate(50)->withQueryString(),
+            'serials' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'serial' => $serial,
             'sort' => $sort,
             'sortOptions' => [

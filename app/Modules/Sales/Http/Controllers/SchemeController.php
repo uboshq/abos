@@ -67,7 +67,7 @@ class SchemeController extends Controller implements HasMiddleware
 
         return view('sales::scheme.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'schemes' => $query->paginate(50)->withQueryString(),
+            'schemes' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'status' => $request->query('status'),
             'sort' => $sort,

@@ -44,7 +44,7 @@ final class DeliveryPerformanceController extends Controller implements HasMiddl
             'menu' => $this->menu->forUser($request->user()),
             'dates' => ['from' => $from, 'to' => $to],
             'summary' => $this->performance->summary($from, $to),
-            'late' => $this->performance->late($from, $to)->paginate(50)->withQueryString(),
+            'late' => $this->performance->late($from, $to)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

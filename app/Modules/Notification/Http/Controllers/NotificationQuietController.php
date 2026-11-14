@@ -32,7 +32,7 @@ class NotificationQuietController extends Controller
         $rows = NotificationPreference::query()->with('user:id,name')
             ->where(fn ($q) => $q->where('quiet_enabled', true)->orWhere('frequency', '!=', 'instant'))
             ->orderBy('id')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         $settings = app(SettingsService::class);
 

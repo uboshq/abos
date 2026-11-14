@@ -27,7 +27,7 @@ class NotificationGroupController extends Controller
 
     public function index(Request $request): View
     {
-        $rows = NotificationRecipientGroup::query()->orderBy('name')->paginate(self::PER_PAGE)->withQueryString();
+        $rows = NotificationRecipientGroup::query()->orderBy('name')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::groups.index', [
             'menu' => $this->menu->forUser($request->user()),

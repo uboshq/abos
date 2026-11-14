@@ -43,7 +43,7 @@ class SalaryHeadController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
-        $heads = $query->paginate(50)->withQueryString();
+        $heads = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('hr::salary_head.index', [
             'menu' => $this->menu->forUser($request->user()),

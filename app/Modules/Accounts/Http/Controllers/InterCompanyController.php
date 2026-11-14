@@ -47,7 +47,7 @@ class InterCompanyController extends Controller implements HasMiddleware
             ->with(['counterCompany', 'creator'])
             ->latest('trx_date')
             ->latest('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('accounts::inter-company.index', [

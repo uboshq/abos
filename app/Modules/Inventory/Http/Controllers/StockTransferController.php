@@ -79,7 +79,7 @@ class StockTransferController extends Controller implements HasMiddleware
 
         return view('inventory::transfer.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'transfers' => $query->paginate(50)->withQueryString(),
+            'transfers' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,

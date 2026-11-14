@@ -62,7 +62,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
             ->whereNotIn('status', SalesQuotation::UNCOUNTED)
             ->sum('total') ?? '0'), '0', 2);
 
-        $rows = $query->latest('trx_date')->latest('id')->paginate(50);
+        $rows = $query->latest('trx_date')->latest('id')->paginate(\App\Core\Support\PerPage::of());
 
         return response()->json([
             'quotations' => collect($rows->items())->map(fn (SalesQuotation $q) => $this->facts($q, false))->values(),

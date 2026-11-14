@@ -50,7 +50,7 @@ final class DocumentSignatureController extends Controller
                 ->with(['document', 'version', 'signer'])
                 ->orderByDesc('signed_at')
                 ->orderByDesc('id')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString();
         } else {
             $rows = ($tab === 'asked'
@@ -61,7 +61,7 @@ final class DocumentSignatureController extends Controller
                 ->with('requester')
                 ->orderBy('approvals.due_at')
                 ->orderBy('approvals.id')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString();
         }
 

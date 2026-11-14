@@ -116,7 +116,7 @@ class DepositController extends Controller implements HasMiddleware
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')
                 ->orderByDesc('id')
-                ->paginate(50)
+                ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
         ]);
     }
@@ -251,7 +251,7 @@ class DepositController extends Controller implements HasMiddleware
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')
                 ->orderByDesc('id'), ['principal' => 't.principal']),
-            'deposits' => $list->paginate(50)->withQueryString(),
+            'deposits' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

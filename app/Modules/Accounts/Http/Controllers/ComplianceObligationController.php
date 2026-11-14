@@ -60,7 +60,7 @@ final class ComplianceObligationController extends Controller implements HasMidd
             ->orderBy($tab === 'done' ? 'done_at' : 'due_on', $tab === 'done' ? 'desc' : 'asc')
             ->orderBy('id');
 
-        $rows = (clone $query)->with('doneBy')->paginate(50)->withQueryString();
+        $rows = (clone $query)->with('doneBy')->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         $counts = [
             'open' => $base()->open()->count(),

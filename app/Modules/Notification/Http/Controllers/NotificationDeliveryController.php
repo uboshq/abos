@@ -67,7 +67,7 @@ class NotificationDeliveryController extends Controller
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', $d.' 00:00:00'))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->where('created_at', '<=', $d.' 23:59:59'))
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::deliveries.logs', [
             'menu' => $this->menu->forUser($request->user()),
@@ -154,7 +154,7 @@ class NotificationDeliveryController extends Controller
             ->whereIn('status', isset($f['status']) ? [$f['status']] : $statuses)
             ->when($f['channel'] ?? null, fn ($q, $c) => $q->where('channel', $c))
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view($view, [
             'menu' => $this->menu->forUser($request->user()),

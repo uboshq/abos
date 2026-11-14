@@ -67,7 +67,7 @@ class NotificationCenterController extends Controller
 
         return view('notification::center.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rows' => $query->paginate(self::PER_PAGE)->withQueryString(),
+            'rows' => $query->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString(),
             'filters' => $f,
             'modules' => NotificationEvent::query()->distinct()->orderBy('module')->pluck('module'),
             'canManage' => $request->user()->can('notification.manage'),

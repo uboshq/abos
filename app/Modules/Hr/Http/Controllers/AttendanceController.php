@@ -143,7 +143,7 @@ class AttendanceController extends Controller implements HasMiddleware
         $rows = $this->reach()->employees(Employee::query(), $request->user())
             ->onPayrollFor($month->copy()->endOfMonth())
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString()
             ->through(fn (Employee $employee) => [
                 'employee' => $employee,

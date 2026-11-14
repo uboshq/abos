@@ -120,7 +120,7 @@ final class DocumentLibraryApiController extends Controller implements HasMiddle
             $query->orderByDesc('dms_documents.updated_at')->orderByDesc('dms_documents.id');
         }
 
-        $page = $query->paginate(self::PER_PAGE);
+        $page = $query->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'view' => $view,

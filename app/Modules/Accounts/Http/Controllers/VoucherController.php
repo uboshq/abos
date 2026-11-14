@@ -142,7 +142,7 @@ class VoucherController extends Controller implements HasMiddleware
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
         $grand = $this->grandTotals($query, ['amount' => Voucher::countedAmountSql()]); // ⓘ কেবল পাকা — [[Voucher::countedAmount()]]
 
-        $vouchers = $query->paginate(50)->withQueryString();
+        $vouchers = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         /*
          * ⭐ পক্ষ · কী বাবদ · কোথায় · মাধ্যম — ১৯ সেপ্টেম্বর ২০২৬, মালিকের

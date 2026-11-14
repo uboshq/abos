@@ -78,7 +78,7 @@ class FixedAssetController extends Controller implements HasMiddleware
 
         return view('accounts::asset.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'assets' => (clone $query)->paginate(50)->withQueryString(),
+            'assets' => (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             // ⭐ যোগফলের পট্টি — ছাঁকা সব সম্পদের কেনা দাম, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['cost' => 't.cost']),
             'q' => $request->query('q'),

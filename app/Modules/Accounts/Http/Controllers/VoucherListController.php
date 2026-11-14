@@ -151,7 +151,7 @@ class VoucherListController extends Controller implements HasMiddleware
          * কী আছে। ⚠️ তারিখের ছাঁকনি সংখ্যাতেও খাটে, নাহলে ট্যাব বলত
          * "১২০" আর খুললে দেখাত "৩"।
          */
-        $vouchers = (clone $query)->paginate(50)->withQueryString();
+        $vouchers = (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::voucher.list', [
             'menu' => $this->menu->forUser($request->user()),
@@ -192,7 +192,7 @@ class VoucherListController extends Controller implements HasMiddleware
             'document_no' => fn ($q) => $q->orderBy('document_no'),
         ]);
 
-        $bills = (clone $query)->paginate(50)->withQueryString();
+        $bills = (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::voucher.list', [
             'menu' => $this->menu->forUser($request->user()),

@@ -43,7 +43,7 @@ class AssetCategoryController extends Controller implements HasMiddleware
                 ->with(['assetAccount', 'expenseAccount'])
                 ->withCount('assets')
                 ->orderBy('code')
-                ->paginate(50)->withQueryString(),
+                ->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

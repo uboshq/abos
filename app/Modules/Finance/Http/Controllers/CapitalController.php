@@ -158,7 +158,7 @@ class CapitalController extends Controller implements HasMiddleware
                             ->orWhere('code', 'like', "%{$term}%")),
                 ))
                 ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
-            'entries' => $list->paginate(50)->withQueryString(),
+            'entries' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             /*
              * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।
              *

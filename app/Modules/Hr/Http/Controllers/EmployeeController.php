@@ -100,7 +100,7 @@ class EmployeeController extends Controller implements HasMiddleware
 
         return view('hr::employee.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'employees' => $query->paginate(50)->withQueryString(),
+            'employees' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),

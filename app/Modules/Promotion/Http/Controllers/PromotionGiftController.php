@@ -74,7 +74,7 @@ final class PromotionGiftController extends Controller implements HasMiddleware
             ->whereRaw('benefit_amount > coalesce((select sum(g.qty) from promotion_gift_issues g '
                 .'where g.promotion_application_id = promotion_applications.id), 0)')
             ->orderBy('id')
-            ->paginate(50);
+            ->paginate(\App\Core\Support\PerPage::of());
 
         /*
          * ⓘ একটা পাতার সব উপহার-পণ্যের লট একবারে — সারি ধরে ধরে নয়।

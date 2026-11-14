@@ -69,7 +69,7 @@ final class PartyLedger
             $page = max(1, (int) ceil(self::filter(clone $base, $request)->reorder()->count() / self::PER_PAGE));
         }
 
-        $rows = $order(self::filter(clone $base, $request))->paginate(self::PER_PAGE, ['*'], 'page', $page)->withQueryString();
+        $rows = $order(self::filter(clone $base, $request))->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE), ['*'], 'page', $page)->withQueryString();
         $items = $rows->getCollection();
 
         if ($items->isEmpty()) {

@@ -170,7 +170,7 @@ class StrandedStockController extends Controller implements HasMiddleware
                 DB::raw('SUM(inv_stock_movements.free_change) as free_qty'),
             ])
             ->orderBy('inv_products.name_en')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 }

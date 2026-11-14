@@ -99,7 +99,7 @@ class StockCountController extends Controller implements HasMiddleware
 
         return view('inventory::count.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'counts' => $query->paginate(50)->withQueryString(),
+            'counts' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),

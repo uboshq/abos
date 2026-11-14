@@ -74,7 +74,7 @@ class ChequeController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
-        $cheques = $query->paginate(50)->withQueryString();
+        $cheques = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::cheque.index', [
             'menu' => $this->menu->forUser($request->user()),

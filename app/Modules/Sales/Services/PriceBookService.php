@@ -55,7 +55,7 @@ final class PriceBookService
                 $w->where(fn ($x) => $x->where('code', 'like', $like)->orWhere('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));
             })
             ->orderBy('code')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 

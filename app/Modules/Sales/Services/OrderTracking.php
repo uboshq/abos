@@ -111,7 +111,7 @@ final class OrderTracking
      */
     public function rows(?string $term, string $stage, ?int $customerId = null): LengthAwarePaginator
     {
-        return $this->query($term, $stage, $customerId)->paginate(50)->withQueryString();
+        return $this->query($term, $stage, $customerId)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
     }
 
     /**

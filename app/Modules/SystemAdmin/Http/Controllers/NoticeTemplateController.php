@@ -42,7 +42,7 @@ final class NoticeTemplateController extends Controller implements HasMiddleware
     {
         return view('system_admin::notice.templates', [
             'menu' => $this->menu->forUser($request->user()),
-            'templates' => NoticeTemplate::query()->orderBy('code')->paginate(50)->withQueryString(),
+            'templates' => NoticeTemplate::query()->orderBy('code')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'priorities' => collect(NoticePriority::cases())
                 ->mapWithKeys(fn (NoticePriority $p) => [$p->value => $p->label()]),
         ]);

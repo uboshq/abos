@@ -121,7 +121,7 @@ class CollectionController extends Controller implements HasMiddleware
         return view('sales::collection.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals((clone $query)->whereIn('sal_collections.status', DocumentStatus::POSTED), ['amount' => 't.amount']),
-            'collections' => $query->paginate(50)->withQueryString(),
+            'collections' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'totals' => [
                 'rows' => (clone $totalled)->count(),
                 'money' => (string) (clone $posted)->sum('sal_collections.amount'),

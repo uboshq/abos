@@ -345,7 +345,7 @@ class OpeningStockController extends Controller implements HasMiddleware
                 'inv_cost_layers.unit_cost',
             ])
             ->orderByDesc('inv_stock_movements.id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 

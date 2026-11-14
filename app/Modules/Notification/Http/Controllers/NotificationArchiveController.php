@@ -54,7 +54,7 @@ class NotificationArchiveController extends Controller
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('notification_events.created_at', '>=', $d.' 00:00:00'))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->where('notification_events.created_at', '<=', $d.' 23:59:59'))
             ->orderByDesc('notification_events.id')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         $settings = app(SettingsService::class);
 

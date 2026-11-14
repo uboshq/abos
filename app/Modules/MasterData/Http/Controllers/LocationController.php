@@ -182,7 +182,7 @@ class LocationController extends Controller implements HasMiddleware
             ->orderByDesc('is_active')
             ->orderBy('code')
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — রুট কয়েকশো হতে পারে
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         $parentLevel = Location::parentLevelOf($level);

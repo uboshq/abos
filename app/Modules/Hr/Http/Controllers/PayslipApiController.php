@@ -53,7 +53,7 @@ final class PayslipApiController extends Controller implements HasMiddleware
             ->join('hr_payroll_runs as run', 'run.id', '=', 'hr_payslips.payroll_run_id')
             ->orderByDesc('run.month')->orderByDesc('hr_payslips.id')
             ->select('hr_payslips.*')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'employee' => true,

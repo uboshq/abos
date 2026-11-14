@@ -972,7 +972,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id');
 
-        $drafts = (clone $query)->paginate(50)->withQueryString();
+        $drafts = (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('sales::direct.drafts', [
             'menu' => $this->menu->forUser($request->user()),

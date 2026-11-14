@@ -51,7 +51,7 @@ class OpeningPrincipalController extends Controller implements HasMiddleware
             ->orderBy('l.id')
             ->select(['l.id', 'l.product_id', 'l.qty_in', 'l.qty_remaining', 'l.trx_date', 'l.supplier_id',
                 'p.code as product_code', 'p.name_en', 'p.name_bn', 'w.name_en as warehouse_name', 'b.batch_no'])
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('inventory::stock.opening-principal', [

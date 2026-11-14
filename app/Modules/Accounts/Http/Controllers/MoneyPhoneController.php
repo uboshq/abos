@@ -138,7 +138,7 @@ final class MoneyPhoneController extends Controller implements HasMiddleware
         /** @var User $user */
         $user = $request->user();
         $page = MoneyTransfer::query()->with(['fromTill', 'toTill', 'toAccount', 'giver', 'receiver'])
-            ->orderByDesc('trx_date')->orderByDesc('id')->paginate(self::PER_PAGE);
+            ->orderByDesc('trx_date')->orderByDesc('id')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         /*
          * ⭐ সব পাতা মিলে হাতবদলের মোট টাকা — বাতিল বাদ, যা কখনো হাতবদল হয়নি (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬;
@@ -223,7 +223,7 @@ final class MoneyPhoneController extends Controller implements HasMiddleware
 
     public function counts(): JsonResponse
     {
-        $page = CashCount::query()->with(['till', 'counter', 'approver'])->orderByDesc('trx_date')->orderByDesc('id')->paginate(self::PER_PAGE);
+        $page = CashCount::query()->with(['till', 'counter', 'approver'])->orderByDesc('trx_date')->orderByDesc('id')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'rows' => $page->getCollection()->map(fn (CashCount $c) => $this->countRow($c))->values(),

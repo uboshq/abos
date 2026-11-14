@@ -51,7 +51,7 @@ final class SerialPhoneController extends Controller implements HasMiddleware
             $query->numbered($serial);
         }
 
-        $page = $query->paginate(self::PER_PAGE);
+        $page = $query->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'rows' => $page->getCollection()->map(fn (SerialNumber $s) => [

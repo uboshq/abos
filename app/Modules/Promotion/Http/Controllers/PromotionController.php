@@ -316,7 +316,7 @@ final class PromotionController extends Controller implements HasMiddleware
             })
             ->orderByDesc('starts_on')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('promotion::index', [

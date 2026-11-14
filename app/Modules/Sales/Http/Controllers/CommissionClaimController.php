@@ -76,7 +76,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
         return view('sales::commission.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
-            'claims' => $query->paginate(50)->withQueryString(),
+            'claims' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             /*
              * ⓘ ডিলার ও কোম্পানির তালিকা দুইটা আর এখানে নয় — ফর্মটা
              * `create`-এ সরার পর তালিকার পাতায় ওগুলোর কোনো ব্যবহারকারী

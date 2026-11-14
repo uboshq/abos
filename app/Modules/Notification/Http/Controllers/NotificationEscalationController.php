@@ -47,7 +47,7 @@ class NotificationEscalationController extends Controller
             ->when(($f['state'] ?? null) === 'late', fn ($q) => $q->whereNull('escalated_at')->where('due_at', '<=', now()))
             ->when(($f['state'] ?? null) === 'escalated', fn ($q) => $q->whereNotNull('escalated_at'))
             ->orderBy('due_at')
-            ->paginate(self::PER_PAGE)->withQueryString();
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         $escalatedTo = User::query()->withoutGlobalScope('company')
             ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))

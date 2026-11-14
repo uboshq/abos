@@ -248,7 +248,7 @@ class StockController extends Controller implements HasMiddleware
             ? ['not_billed_value' => 'CASE WHEN t.layer_qty_total > t.floor_total + t.unplaced_total THEN TRUNCATE((t.layer_qty_total - t.floor_total - t.unplaced_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END']
             : []));
 
-        $products = $query->paginate(50)->withQueryString();
+        $products = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('inventory::stock.index', [
             'menu' => $this->menu->forUser($request->user()),

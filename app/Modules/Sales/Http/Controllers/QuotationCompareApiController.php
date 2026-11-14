@@ -79,7 +79,7 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
             ->search($data['q'] ?? null)
             ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         $families = SalesQuotation::query()->whereIn('root_quotation_id', $roots->getCollection()->pluck('id'))
             ->with(['customer.location.parent', 'customer.branch'])->get()

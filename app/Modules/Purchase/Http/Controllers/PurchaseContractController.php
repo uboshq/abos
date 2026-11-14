@@ -63,7 +63,7 @@ class PurchaseContractController extends Controller implements HasMiddleware
 
         return view('purchase::contract.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'contracts' => $query->paginate(50)->withQueryString(),
+            'contracts' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

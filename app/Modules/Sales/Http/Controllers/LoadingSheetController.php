@@ -54,7 +54,7 @@ class LoadingSheetController extends Controller implements HasMiddleware
             ->withCount('lines')
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('sales::loading.index', [

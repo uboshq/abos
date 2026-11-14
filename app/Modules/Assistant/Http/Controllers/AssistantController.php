@@ -136,7 +136,7 @@ class AssistantController extends Controller
         $rows = DB::query()->fromSub($union, 't')
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where(fn ($w) => $w->where('what', 'like', '%'.$s.'%')->orWhere('page', 'like', '%'.$s.'%')))
             ->orderByDesc('at')
-            ->paginate(self::PER_PAGE)
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
         $people = User::query()->whereHas('companies', fn ($q) => $q->whereKey($company))->whereIn('id', $members)->orderBy('name')->get(['id', 'name', 'email']);

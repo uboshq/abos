@@ -72,7 +72,7 @@ class TenancyController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'grand' => $this->grandTotals($query, ['monthly_rent' => 't.monthly_rent']),
-            'tenancies' => $query->paginate(50)->withQueryString(),
+            'tenancies' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'counts' => [
                 'running' => Tenancy::query()->inViewedBranch()->active()->count(),
                 'closed' => Tenancy::query()->inViewedBranch()->where('status', Tenancy::CLOSED)->count(),

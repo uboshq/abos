@@ -194,7 +194,7 @@ class RentalContractController extends Controller implements HasMiddleware
 
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['monthly_rent' => 't.monthly_rent', 'cash' => 't.monthly_rent - t.monthly_adjustment', 'monthly_adjustment' => 't.monthly_adjustment']),
-            'contracts' => $query->paginate(50)->withQueryString(),
+            'contracts' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
 
             /*
              * ⭐ যেগুলো শেষ হয়ে আসছে — তালিকার মাথায়, আলাদা করে।

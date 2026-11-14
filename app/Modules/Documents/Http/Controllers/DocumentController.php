@@ -244,7 +244,7 @@ final class DocumentController extends Controller
             default => $this->applySort($query, $request, $this->sorts()),
         };
 
-        $documents = $query->paginate(50)->withQueryString();
+        $documents = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('documents::index', [
             'menu' => $this->menu->forUser($request->user()),

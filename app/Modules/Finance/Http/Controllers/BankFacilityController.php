@@ -138,7 +138,7 @@ class BankFacilityController extends Controller implements HasMiddleware
      */
     private function facilityList(string $tab, string $term): LengthAwarePaginator
     {
-        return $this->facilityQuery($tab, $term)->paginate(50)->withQueryString();
+        return $this->facilityQuery($tab, $term)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
     }
 
     /** ⓘ তালিকার কোয়েরি, পাতা ভাঙার আগে — সর্বমোটও ঠিক এটাই যোগ করে ([[GrandTotals]]) */

@@ -42,7 +42,7 @@ class LoadingApiController extends Controller implements HasMiddleware
             ->withCount('lines')
             ->orderByDesc('sal_shipments.trx_date')->orderByDesc('sal_shipments.id')
             // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             // ⭐ লোডিং শিট কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)

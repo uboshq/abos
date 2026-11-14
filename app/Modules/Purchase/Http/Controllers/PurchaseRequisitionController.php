@@ -91,7 +91,7 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
 
         return view('purchase::requisition.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'requisitions' => $query->paginate(50)->withQueryString(),
+            'requisitions' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => [

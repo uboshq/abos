@@ -488,7 +488,7 @@ class MasterListController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts($model));
 
-        $records = $query->paginate(50)->withQueryString();
+        $records = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('master_data::list.index', [
             'menu' => $this->menu->forUser($request->user()),

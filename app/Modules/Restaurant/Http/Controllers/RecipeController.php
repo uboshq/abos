@@ -92,7 +92,7 @@ class RecipeController extends Controller implements HasMiddleware
 
         return view('restaurant::recipe.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'recipes' => $query->paginate(50)->withQueryString(),
+            'recipes' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'kind' => $request->query('kind'),
             'showInactive' => $request->boolean('inactive'),

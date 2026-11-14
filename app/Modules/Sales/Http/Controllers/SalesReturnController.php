@@ -70,7 +70,7 @@ class SalesReturnController extends Controller implements HasMiddleware
         return view('sales::return.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
-            'returns' => $query->paginate(50)->withQueryString(),
+            'returns' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,

@@ -303,7 +303,7 @@ class CollectionApiController extends Controller implements HasMiddleware
         $total = (string) (clone $query)->sum('sal_collections.amount');
         $page = (clone $query)->with(['customer.location.parent', 'customer.branch', 'account'])
             ->orderByDesc('sal_collections.trx_date')->orderByDesc('sal_collections.id')
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             'from' => $from,

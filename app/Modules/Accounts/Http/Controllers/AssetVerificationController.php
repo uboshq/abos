@@ -50,7 +50,7 @@ class AssetVerificationController extends Controller implements HasMiddleware
                 'lines',
                 'lines as checked_count' => fn ($q) => $q->whereNotNull('result'),
                 'lines as exception_count' => fn ($q) => $q->whereNotNull('result')->where('result', '!=', AssetVerificationLine::FOUND),
-            ])->orderByDesc('started_on')->orderByDesc('id')->paginate(50)->withQueryString(),
+            ])->orderByDesc('started_on')->orderByDesc('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'branches' => Branch::query()->orderBy('code')->get(),
         ]);
     }

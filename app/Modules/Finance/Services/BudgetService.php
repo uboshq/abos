@@ -169,7 +169,7 @@ final class BudgetService
             ->groupBy('account_id', 'cost_center_id')
             ->orderBy('account_id')
             ->orderBy('cost_center_id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         if ($pairs->isEmpty()) {

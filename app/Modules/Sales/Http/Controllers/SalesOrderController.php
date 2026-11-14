@@ -148,7 +148,7 @@ class SalesOrderController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             // ⭐ ফেরত আর বাতিল মোটে নয় — ফোনের দরজার একই নিয়ম (fe, ১৭ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals((clone $query)->whereNotIn($query->getModel()->qualifyColumn('status'), SalesOrderStatus::UNCOUNTED), ['total' => 't.total']),
-            'orders' => $orders = $query->paginate(50)->withQueryString(),
+            'orders' => $orders = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             // ⭐ প্রতিটা আদেশের অবস্থা ও অগ্রগতি — পাতার পঞ্চাশটার জন্য একবারে ([[OrderProgress::compute()]])
             'states' => app(OrderProgress::class)->compute($orders->getCollection()),
             'q' => $request->query('q'),

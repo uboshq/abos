@@ -96,7 +96,7 @@ class QualityInspectionController extends Controller implements HasMiddleware
 
         return view('inventory::quality.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'inspections' => $query->paginate(50)->withQueryString(),
+            'inspections' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),

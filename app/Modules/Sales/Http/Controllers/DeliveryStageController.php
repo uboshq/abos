@@ -67,7 +67,7 @@ class DeliveryStageController extends Controller implements HasMiddleware
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সারির টাকা চালানের ([[GrandTotals]])
         $grand = $this->grandTotals($list, ['total' => '(SELECT COALESCE(c.total, 0) FROM sal_challans c WHERE c.id = t.delivery_challan_id)']);
-        $rows = $list->paginate(50)->withQueryString();
+        $rows = $list->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         /*
          * ⭐ সারির "পরের ধাপ" — কেবল ধাপ বদলানোর চাবিধারীর জন্য (কোঅর্ডিনেটর, ২৯ সেপ্টেম্বর ২০২৬)।

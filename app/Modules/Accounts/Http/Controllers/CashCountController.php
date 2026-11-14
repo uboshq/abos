@@ -56,7 +56,7 @@ class CashCountController extends Controller implements HasMiddleware
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
         $grand = $this->grandTotals($query, ['counted_amount' => 't.counted_amount', 'difference' => 't.difference']);
 
-        $counts = $query->paginate(50)->withQueryString();
+        $counts = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::count.index', [
             'menu' => $this->menu->forUser($request->user()),

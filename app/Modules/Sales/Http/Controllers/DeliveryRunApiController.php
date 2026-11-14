@@ -48,7 +48,7 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
             ->with(['customer.location.parent', 'customer.branch', 'lines.product', 'vehicle.vehicleType', 'carrier'])
             ->orderBy('sal_challans.trx_date')->orderBy('sal_challans.id')
             // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
-            ->paginate(self::PER_PAGE);
+            ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE));
 
         return response()->json([
             // ⭐ পথে থাকা চালান কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)

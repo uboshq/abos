@@ -66,7 +66,7 @@ class RecoveryController extends Controller
             ->with('verifications')
             ->latest('started_at')
             ->latest('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('backup::verifications', [

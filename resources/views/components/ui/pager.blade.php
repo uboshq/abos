@@ -25,6 +25,14 @@
     $total = $rows->total();
     $from = $total > 0 ? $rows->firstItem() : 0;
     $to = $total > 0 ? $rows->lastItem() : 0;
+    // ⭐ এক পাতায় কয়টা — ঠিকানার বাকি ছাঁকনি সাথে যায় (পাতা বাদে: নতুন সংখ্যায় প্রথম পাতা)
+    $keep = [];
+    foreach (explode('&', http_build_query(request()->except(['page', 'per_page']))) as $pair) {
+        if ($pair !== '') {
+            [$k, $v] = array_pad(explode('=', $pair, 2), 2, '');
+            $keep[] = [urldecode($k), urldecode($v)];
+        }
+    }
 @endphp
 
 <div data-pager
@@ -37,6 +45,20 @@
     <span class="num shrink-0 text-2xs text-(--color-ink-muted)">
         {{ __('core.table.range', ['from' => $from, 'to' => $to, 'total' => $total]) }}
     </span>
+
+    <form method="GET" action="{{ url()->current() }}" data-per-page x-data="perPagePicker" class="flex items-center gap-1 text-2xs text-(--color-ink-muted)">
+        @foreach ($keep as [$k, $v])
+            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+        @endforeach
+        <label for="per-page-{{ $rows->getPageName() }}">{{ __('pager.per_page') }}</label>
+        <select id="per-page-{{ $rows->getPageName() }}" name="per_page" x-on:change="go"
+                class="num rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-1.5 py-0.5 text-2xs text-(--color-ink)">
+            @foreach (\App\Core\Support\PerPage::CHOICES as $n)
+                <option value="{{ $n }}" @selected($rows->perPage() === $n)>{{ $n }}</option>
+            @endforeach
+        </select>
+        <noscript><button type="submit" class="underline">{{ __('pager.per_page') }}</button></noscript>
+    </form>
 
     {{-- ⓘ নিজের তীর, বাংলায় — Laravel-এর ডিফল্ট `links()` "« Previous / Next » / Showing 1 to 50 of 60 results" লিখত,
          আর সংখ্যাটা উপরে আগেই আছে (৬ অক্টোবর ২০২৬-এর বিক্রয় ধারার পরীক্ষা, গ্রাহকের খাতা) --}}
