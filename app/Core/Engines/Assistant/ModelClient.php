@@ -34,6 +34,11 @@ final class ModelClient
     /** ⓘ Mac mini-তে বসানো মডেল (১২ নভেম্বর ২০২৬) — সেটিং খালি হলে এটাই */
     public const DEFAULT_MODEL = 'qwen3:4b-instruct';
 
+    public const EMBED_PATH = '/v1/embeddings';
+
+    /** ⓘ মানে-ছাপের মডেল — বাংলা আর ইংরেজি এক জায়গায় (১৩ নভেম্বর ২০২৬) */
+    public const DEFAULT_EMBED_MODEL = 'bge-m3:latest';
+
     public function __construct(private readonly SettingsService $settings) {}
 
     public function configured(): bool
@@ -151,6 +156,62 @@ final class ModelClient
             'model' => mb_substr((string) ($response->json('model') ?: $name), 0, 60),
             'ms' => (int) round((microtime(true) - $start) * 1000),
         ];
+    }
+
+    /**
+     * ⭐ মানে-ছাপ (embedding) — একই গেটওয়ের `/v1/embeddings`, মডেল `assistant.embed_model` (Mac mini-তে bge-m3, বাংলা আর ইংরেজি এক জায়গায়;
+     *   ১৩ নভেম্বর ২০২৬)। ⓘ কেবল চ্যাট-ধরনের গেটওয়েতে; ঠিকানা খালি, বন্ধ বা ভাঙা উত্তর — null, তখন শব্দের মিলই শেষ কথা।
+     * ⛔ যায় কেবল পণ্যের নাম বা প্রশ্নের পণ্য-শব্দ — লম্বা অঙ্কের সারি ঢাকা ([[mask()]])।
+     *
+     * @param  list<string>  $texts
+     * @return list<list<float>>|null
+     */
+    public function embed(array $texts): ?array
+    {
+        if (! $this->configured() || $this->kind() !== self::CHAT || $texts === []) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(self::TIMEOUT_SECONDS)->acceptJson()
+                ->withToken((string) config('services.assistant.key', ''))
+                ->withUserAgent('abos-erp/1.0')
+                ->post($this->url().self::EMBED_PATH, [
+                    'model' => $this->embedModel(),
+                    'input' => array_map(fn (string $t): string => self::mask($t), array_values($texts)),
+                ]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        $rows = $response->successful() ? $response->json('data') : null;
+
+        if (! is_array($rows) || count($rows) !== count($texts)) {
+            return null;
+        }
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            $vector = is_array($row) ? ($row['embedding'] ?? null) : null;
+
+            if (! is_array($vector) || $vector === []) {
+                return null;
+            }
+
+            $out[] = array_map('floatval', array_values($vector));
+        }
+
+        return $out;
+    }
+
+    public function embedModel(): string
+    {
+        $name = trim((string) $this->settings->get('assistant.embed_model', self::DEFAULT_EMBED_MODEL));
+
+        return $name !== '' ? $name : self::DEFAULT_EMBED_MODEL;
     }
 
     /** ⓘ `sales.summary` → `sales__summary` — OpenAI-র দরজার নামে বিন্দু চলে না */

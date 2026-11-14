@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Assistant;
 
+use App\Core\Engines\Assistant\MeaningIndex;
 use App\Modules\Inventory\Models\Product;
 
 /**
@@ -69,7 +70,23 @@ final class ProductInQuestion
             }
         }
 
+        // ⭐ অক্ষরে কিছু না মিললে মানে ধরে — "cosmos biskut", "বিস্কিট" (১৩ নভেম্বর ২০২৬); কেবল মডেল পণ্যের নাম আলাদা করে দিলে,
+        //   পুরো প্রশ্ন দিয়ে নয়। ⛔ নিশ্চিত না হলে null — [[MeaningIndex::nearest()]]-এর দুই সীমা।
+        if ($best === null && $asked !== []) {
+            $hit = app(MeaningIndex::class)->nearest(self::KIND, $text);
+            $best = $hit === null ? null : Product::query()->where('is_active', true)->whereKey($hit['id'])->first();
+        }
+
         return $best;
+    }
+
+    /** ⓘ মানে-ছাপের খাতায় পণ্যের ধরন */
+    public const KIND = 'product';
+
+    /** ⓘ মানে-ছাপের লেখা — বাংলা আর ইংরেজি নাম একসাথে (একটা ছাপ, দুই ভাষার প্রশ্নই কাছে আসে) */
+    public static function meaningText(Product $p): string
+    {
+        return implode(' · ', array_filter([trim((string) $p->name_bn), trim((string) $p->name_en)], fn (string $s): bool => $s !== ''));
     }
 
     /**

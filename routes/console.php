@@ -242,6 +242,8 @@ Schedule::command('abos:notifications-digest')->hourly()->withoutOverlapping();
 Schedule::command('abos:sms-watch')->everyFiveMinutes()->withoutOverlapping();
 // ⭐ কোপাইলটের সকালের খবর — সকাল ৮টায়, প্রত্যেকের নিজের চাবির নজর ([[CopilotMorning]])
 Schedule::command('abos:copilot-morning')->dailyAt('08:00')->withoutOverlapping();
+// ⭐ পণ্যের নামের মানে-ছাপ — রাতে, কেবল নতুন বা বদলানো নাম ([[CopilotMeaning]], ১৩ নভেম্বর ২০২৬)
+Schedule::command('abos:copilot-meaning')->dailyAt('03:20')->withoutOverlapping();
 // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৪ — আর্কাইভ আর রাখার মেয়াদ। ⓘ ঘণ্টায় একবার, দিনে একবার নয়: ব্যাকআপের শিক্ষা (উপরে) — এক
 //   মিনিট ফসকালে গোটা দিন বাদ যেত; কাজটা বারবার চালালেও একই ফল, আর প্রতিবার সীমিত সারি
 Schedule::command('abos:notifications-retention')->hourlyAt(41)->withoutOverlapping();

@@ -71,6 +71,8 @@ return [
         // ⓘ সার্ভারের ভাষা — NEXUS-এর পুরনো চুক্তি (/v1/assistant/interpret) বা OpenAI-ধাঁচের চ্যাট (/v1/chat/completions — NEXUS-এর গেটওয়ে বা Ollama; মালিক, ১২ নভেম্বর ২০২৬: Mac mini-তে মডেল বসেছে)
         ['key' => 'assistant.model_kind', 'super_admin_only' => true, 'label' => 'assistant::settings.model_kind', 'type' => 'select', 'options' => ['nexus', 'chat'], 'option_label' => 'assistant::settings.kind.', 'default' => 'nexus', 'group' => 'model'],
         ['key' => 'assistant.model_name', 'super_admin_only' => true, 'label' => 'assistant::settings.model_name', 'type' => 'string', 'default' => 'qwen3:4b-instruct', 'group' => 'model'],
+        // ⓘ মানে-ছাপের মডেল — অক্ষর না মিললে মানে ধরে পণ্য চেনা ([[MeaningIndex]], ১৩ নভেম্বর ২০২৬)
+        ['key' => 'assistant.embed_model', 'super_admin_only' => true, 'label' => 'assistant::settings.embed_model', 'type' => 'string', 'default' => 'bge-m3:latest', 'group' => 'model'],
     ],
 
     'role_templates' => [

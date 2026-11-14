@@ -16,5 +16,6 @@ return [
     'model_url' => 'Language model address (office AI server — empty = off)',
     'model_kind' => 'Server kind',
     'model_name' => 'Model name (e.g. qwen3:4b-instruct)',
+    'embed_model' => 'Meaning-search model (e.g. bge-m3:latest)',
     'kind' => ['nexus' => 'NEXUS older contract', 'chat' => 'Chat (NEXUS gateway or Ollama)'],
 ];

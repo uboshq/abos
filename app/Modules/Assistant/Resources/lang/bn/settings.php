@@ -16,5 +16,6 @@ return [
     'model_url' => 'ভাষার মডেলের ঠিকানা (অফিসের AI সার্ভার — খালি = বন্ধ)',
     'model_kind' => 'সার্ভারের ধরন',
     'model_name' => 'মডেলের নাম (যেমন qwen3:4b-instruct)',
+    'embed_model' => 'মানে ধরে খোঁজার মডেল (যেমন bge-m3:latest)',
     'kind' => ['nexus' => 'NEXUS-এর পুরনো চুক্তি', 'chat' => 'চ্যাট (NEXUS-এর গেটওয়ে বা Ollama)'],
 ];
