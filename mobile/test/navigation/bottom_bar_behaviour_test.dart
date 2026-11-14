@@ -34,32 +34,46 @@ void main() {
     return router;
   }
 
-  group('four tabs by role, each with an icon and a Bengali label', () {
+  // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভূমিকার চার ঘর + শেষে "আমি" (নিজের ছবি) = পাঁচ, Material 3-এর সীমা
+  group('four role tabs and "আমি" last, each with an icon and a Bengali label', () {
     for (final (role, names, labels) in [
-      ('owner', ['home', 'approvals', 'reports', 'modules'], ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল']),
-      ('sr', ['home', 'orders', 'collections', 'modules'], ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল']),
-      ('depot', ['home', 'challans', 'stock', 'modules'], ['হোম', 'চালান', 'মজুদ', 'সব মডিউল']),
-      ('accounts', ['home', 'approvals', 'vouchers', 'modules'], ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল']),
+      ('owner', ['home', 'approvals', 'reports', 'modules', 'me'], ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল', 'আমি']),
+      ('sr', ['home', 'orders', 'collections', 'modules', 'me'], ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল', 'আমি']),
+      ('depot', ['home', 'challans', 'stock', 'modules', 'me'], ['হোম', 'চালান', 'মজুদ', 'সব মডিউল', 'আমি']),
+      ('accounts', ['home', 'approvals', 'vouchers', 'modules', 'me'], ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল', 'আমি']),
     ]) {
       testWidgets('$role: ${labels.join(' · ')}', (tester) async {
         await pump(tester, role);
         for (var i = 0; i < names.length; i++) {
           expect(tab(names[i]), findsOneWidget, reason: names[i]);
           expect(find.descendant(of: tab(names[i]), matching: find.text(labels[i])), findsOneWidget);
-          expect(find.descendant(of: tab(names[i]), matching: find.byType(Icon)), findsOneWidget);
+          // ⓘ "আমি"-র আইকন মানুষের নিজের ছবি (না থাকলে নামের প্রথম অক্ষর), Material-এর আইকন নয়
+          expect(find.descendant(of: tab(names[i]), matching: find.byType(Icon)), names[i] == 'me' ? findsNothing : findsOneWidget,
+              reason: names[i]);
         }
+        expect(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('nav-me-face'))), findsOneWidget);
         expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(InkWell)),
-            findsNWidgets(4));
+            findsNWidgets(5));
       });
     }
 
-    testWidgets('notifications and "আমি" are not on the bar, yet their pages still open and draw the bar',
+    testWidgets('notifications are not on the bar, yet their page still opens and draws the bar; "আমি" is the last tab',
         (tester) async {
       final router = await pump(tester, 'owner');
       expect(tab('notifications'), findsNothing);
-      expect(tab('me'), findsNothing);
       expect(find.text('বিজ্ঞপ্তি'), findsNothing);
-      expect(find.text('আমি'), findsNothing);
+      expect(tab('me'), findsOneWidget);
+      expect(tester.getCenter(tab('me')).dx, greaterThan(tester.getCenter(tab('modules')).dx),
+          reason: '"আমি" sits last, after all modules');
+
+      await tester.tap(tab('me'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOME me'), findsOneWidget, reason: '"আমি" opens the home\'s own আমি page');
+      expect(lit(tester, 'me'), isTrue);
+      expect(lit(tester, 'home'), isFalse);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget, reason: 'back from আমি goes home first');
 
       router.push('/home/notifications');
       await tester.pumpAndSettle();
@@ -72,7 +86,7 @@ void main() {
   group('touch targets and TalkBack', () {
     testWidgets('every tab is at least 48×48dp, on the smallest phone too', (tester) async {
       await pump(tester, 'owner', size: const Size(320, 640));
-      for (final name in ['home', 'approvals', 'reports', 'modules']) {
+      for (final name in ['home', 'approvals', 'reports', 'modules', 'me']) {
         final s = tester.getSize(tab(name));
         expect(s.width, greaterThanOrEqualTo(48), reason: name);
         expect(s.height, greaterThanOrEqualTo(48), reason: name);
@@ -89,8 +103,9 @@ void main() {
           matchesSemantics(label: 'হোম', isButton: true, hasTapAction: true, hasSelectedState: true,
               isSelected: true, isInMutuallyExclusiveGroup: true));
       expect(tester.getSemantics(tab('reports')).label, 'রিপোর্ট');
+      expect(tester.getSemantics(tab('me')).label, 'আমি');
       // one sentence per tab: the name and the red count are not read again as loose pieces
-      for (final name in ['home', 'approvals', 'reports', 'modules']) {
+      for (final name in ['home', 'approvals', 'reports', 'modules', 'me']) {
         expect(tester.getSemantics(tab(name)).childrenCount, 0, reason: name);
       }
       expect(find.bySemanticsLabel(RegExp('অনুমোদন')), findsOneWidget);
@@ -403,7 +418,7 @@ void main() {
     await pump(tester, 'sr', initial: '/home/orders', loading: {'orders'});
     expect(find.byType(LoadingSkeleton), findsOneWidget);
     expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
-    for (final name in ['home', 'orders', 'collections', 'modules']) {
+    for (final name in ['home', 'orders', 'collections', 'modules', 'me']) {
       expect(tab(name), findsOneWidget);
     }
     expect(lit(tester, 'orders'), isTrue);

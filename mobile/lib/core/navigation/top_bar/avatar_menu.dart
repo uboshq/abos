@@ -458,3 +458,19 @@ class _SegmentLabel extends StatelessWidget {
     ]);
   }
 }
+
+/// ⭐ 'আমি' পাতার রঙ বাছাই — ছবির মেনুর একই সারি (মালিক, ১৪ নভেম্বর ২০২৬: ছবি নিচের বারে, তাই মেনুর কাজ 'আমি' পাতায়)
+class MeThemeRow extends StatelessWidget {
+  const MeThemeRow({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _ThemeRow();
+}
+
+/// ⭐ 'আমি' পাতার ভাষা বাছাই — ছবির মেনুর একই সারি; ⛔ দেখায় কেবল [LanguageSwitch.shown] হলে
+class MeLanguageRow extends StatelessWidget {
+  const MeLanguageRow({super.key});
+
+  @override
+  Widget build(BuildContext context) => LanguageSwitch.shown ? const _LanguageRow() : const SizedBox.shrink();
+}

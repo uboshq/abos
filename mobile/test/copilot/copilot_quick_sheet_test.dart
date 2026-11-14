@@ -61,7 +61,8 @@ void main() {
     expect(voice.calls.last, 'stopSpeaking');
   });
 
-  testWidgets('speaking shows the words as they come, sends them when done, and reads the answer aloud', (tester) async {
+  // ⭐ মালিক, ১৩ নভেম্বর ২০২৬: "Claude অ্যাপের মতো — যতক্ষণ মন চায় কথা বলা, শেষ হলে সেন্ড"; ফোন চুপ থাকলে থামলেও শোনা চলে
+  testWidgets('a pause does not end the question: the phone listens again and the words pile up until Send', (tester) async {
     final (api, voice) = await open(tester);
 
     await tester.tap(find.byKey(const ValueKey('copilot-quick-mic')));
@@ -73,10 +74,64 @@ void main() {
     await tester.pump();
     expect(find.text('আজ কত'), findsOneWidget, reason: '⛔ বলা কথা সাথে সাথে লেখা হয় না');
 
+    // ⓘ মানুষ থামলেন, ফোনের কথা-চেনা শেষ করল — প্রশ্ন যাবে না, আবার শুনবে
     voice.emit(const VoiceEvent(VoiceEventKind.done, text: 'আজ কত বিক্রি হলো'));
+    await tester.pump();
+    expect(api.asked, isEmpty, reason: '⛔ একটু থামতেই আধা প্রশ্ন চলে গেল');
+    expect(voice.calls.where((c) => c == 'listen:bn-BD').length, 2, reason: '⛔ থামার পরে আবার শোনা শুরু হয়নি');
+    voice.emit(const VoiceEvent(VoiceEventKind.error, code: 'no_speech'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('copilot-quick-listening')), findsOneWidget, reason: '⛔ চুপ থাকায় শোনা বন্ধ হলো');
+
+    voice.emit(const VoiceEvent(VoiceEventKind.partial, text: 'আর কার কাছে বাকি'));
     await tester.pumpAndSettle();
-    expect(api.asked, ['আজ কত বিক্রি হলো'], reason: '⛔ বলা শেষে প্রশ্নটা যায়নি');
+    expect(find.text('আজ কত বিক্রি হলো আর কার কাছে বাকি'), findsOneWidget, reason: '⛔ আগের কথা মুছে নতুনটা — জমছে না');
+
+    await tester.tap(find.byKey(const ValueKey('copilot-quick-send-now')));
+    await tester.pump();
+    expect(voice.calls, contains('stopListening'));
+    voice.emit(const VoiceEvent(VoiceEventKind.done, text: 'আর কার কাছে বাকি'));
+    await tester.pumpAndSettle();
+    expect(api.asked, ['আজ কত বিক্রি হলো আর কার কাছে বাকি'], reason: '⛔ "পাঠান"-এ পুরো প্রশ্নটা যায়নি');
     expect(voice.spoken, ['এ মাসে নিট বিক্রি ৳৪৮,৬৫০'], reason: '⛔ বলে জিজ্ঞেস করা উত্তর শোনাল না');
+  });
+
+  testWidgets('"Done" puts the words in the box to check, and sending them still reads the answer aloud', (tester) async {
+    final (api, voice) = await open(tester);
+
+    await tester.tap(find.byKey(const ValueKey('copilot-quick-mic')));
+    await tester.pump();
+    voice.emit(const VoiceEvent(VoiceEventKind.partial, text: 'চাল কত আছে'));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('copilot-quick-done')));
+    await tester.pump();
+    // ⓘ ফোন শেষ টুকরো না পাঠালেও একটু পরে নিজে শেষ — বোতাম চেপে আটকে থাকা নয়
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(api.asked, isEmpty, reason: '⛔ "বলা শেষ"-এ দেখার আগেই চলে গেল');
+    final box = tester.widget<TextField>(find.byKey(const ValueKey('copilot-quick-input')));
+    expect(box.controller!.text, 'চাল কত আছে', reason: '⛔ বলা কথা লেখার ঘরে আসেনি');
+
+    await tester.tap(find.byKey(const ValueKey('copilot-quick-send')));
+    await tester.pumpAndSettle();
+    expect(api.asked, ['চাল কত আছে']);
+    expect(voice.spoken, isNotEmpty, reason: '⛔ মুখে বলা প্রশ্ন ঘর থেকে পাঠালে উত্তর শোনাল না');
+  });
+
+  testWidgets('a forgotten open microphone stops by itself after two minutes and keeps what was said', (tester) async {
+    final (api, voice) = await open(tester);
+
+    await tester.tap(find.byKey(const ValueKey('copilot-quick-mic')));
+    await tester.pump();
+    voice.emit(const VoiceEvent(VoiceEventKind.partial, text: 'বকেয়া'));
+    await tester.pump();
+    await tester.pump(const Duration(minutes: 2, seconds: 3));
+
+    expect(voice.calls, contains('stopListening'), reason: '⛔ ভুলে খোলা মাইক থামল না');
+    expect(find.byKey(const ValueKey('copilot-quick-listening')), findsNothing);
+    final box = tester.widget<TextField>(find.byKey(const ValueKey('copilot-quick-input')));
+    expect(box.controller!.text, 'বকেয়া', reason: '⛔ নিজে থামলে বলা কথা হারাল');
+    expect(api.asked, isEmpty);
   });
 
   testWidgets('without the microphone permission it says so and the typing box comes back', (tester) async {

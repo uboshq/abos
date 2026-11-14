@@ -150,6 +150,7 @@ class _LiveScreenBarState extends ConsumerState<_LiveScreenBar> {
       avatarName: user.name,
       avatar: top.avatar,
       menuOpen: _menuOpen,
+      showAvatar: false,
       onAvatar: (y) async {
         setState(() => _menuOpen = true);
         try {

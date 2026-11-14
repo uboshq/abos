@@ -155,8 +155,10 @@ void main() {
   // ⭐ The owner, 6 Oct 2026: no greeting, no name on the home — the photo sits
   // at the far right of the header and opens the profile. ⓘ 12 Oct 2026: the
   // bell moved to the bottom bar ("বিজ্ঞপ্তি"), one tap from every screen.
+  // ⓘ 13 Nov 2026 — the owner's decision "ছবি নিচের বারে": the photo left the
+  // header for the bottom bar's last tab, "আমি", which opens the আমি page.
   testWidgets(
-      'no greeting on the home; the photo is in the header, the bell not in the bottom bar',
+      'no greeting on the home; the photo is the bottom bar\'s আমি, the bell not in the bottom bar',
       (tester) async {
     await tester.pumpWidget(shell(now: () => DateTime(2026, 9, 27, 20, 15)));
     await tester.pumpAndSettle();
@@ -164,18 +166,21 @@ void main() {
     expect(find.textContaining('শুভ রাত্রি'), findsNothing);
     // ⓘ বারের নকশা ৩ (২০ অক্টোবর ২০২৬): ঘণ্টা ওপরের বারে (a4), নিচের বারে নয়
     expect(find.byKey(const ValueKey('nav-notifications')), findsNothing);
-    expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('top-bell')), findsOneWidget);
+    expect(find.byKey(const ValueKey('header-avatar')), findsNothing,
+        reason: 'the photo is no longer in the header');
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('nav-me')),
+            matching: find.byKey(const ValueKey('nav-me-face'))),
+        findsOneWidget,
+        reason: 'the photo is the bottom bar\'s আমি tab');
 
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
-    await tester.pumpAndSettle();
-    // ⓘ ছবি এখন নিজের মেনু খোলে; "আমি" পাতা তার "সেটিংস" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
-    await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
     await _scrollToLogout(tester);
     expect(find.text('বেরিয়ে যান'), findsOneWidget,
-        reason: 'the photo opens my menu, its settings row the profile');
+        reason: 'the photo opens the আমি page');
   });
 
   // ⭐ "আমার প্রোফাইল" → পুরো পর্দা "প্রোফাইল ও ছবি" (০.৪.৪১, a6, ২০ অক্টোবর ২০২৬: সার্ভারের ছবি আর ফোনের দরজা এসেছে;
@@ -184,11 +189,16 @@ void main() {
     final opened = <String>[];
     await tester.pumpWidget(shell(openPath: (path) async => opened.add(path)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    // ⭐ ১৪ নভেম্বর ২০২৬: ছবি নিচের বারের "আমি" — সেখানে নামের কার্ড আর "প্রোফাইল ও ছবি" সারি দুটোই প্রোফাইল খোলে
+    await _openMe(tester);
+    expect(find.byKey(const ValueKey('me-page')), findsOneWidget, reason: '⛔ নিচের বারের ছবিতে চাপ দিলে "আমি" পাতা খোলেনি');
+    await tester.tap(find.byKey(const ValueKey('profile-avatar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('avatar-profile')));
+    expect(opened, ['me/profile'], reason: '⛔ নামের কার্ডে চাপ দিলে প্রোফাইল খোলেনি');
+    await _scrollMeTo(tester, find.byKey(const ValueKey('me-profile')));
+    await tester.tap(find.byKey(const ValueKey('me-profile')));
     await tester.pumpAndSettle();
-    expect(opened, ['me/profile']);
+    expect(opened, ['me/profile', 'me/profile'], reason: '⛔ "প্রোফাইল ও ছবি" সারি প্রোফাইল খোলেনি');
     expect(find.byKey(const ValueKey('profile-dialog')), findsNothing);
   });
 
@@ -298,12 +308,13 @@ void main() {
         pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
 
-    // ⓘ বারের নকশা ৩: বিক্রয়কর্মীর (অর্ডার লেখেন) ঘর; আদায়ের চাবি নেই, তাই আদায় নেই; "আমি" মাথার ছবিতে
-    for (final label in ['হোম', 'অর্ডার', 'সব মডিউল']) {
+    // ⓘ বারের নকশা ৩: বিক্রয়কর্মীর (অর্ডার লেখেন) ঘর; আদায়ের চাবি নেই, তাই আদায় নেই।
+    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — এখন বারের শেষ ঘর; বিজ্ঞপ্তি এখনো বারে নয়
+    for (final label in ['হোম', 'অর্ডার', 'সব মডিউল', 'আমি']) {
       expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
           findsOneWidget, reason: label);
     }
-    for (final label in ['বিজ্ঞপ্তি', 'আমি']) {
+    for (final label in ['বিজ্ঞপ্তি']) {
       expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
           findsNothing, reason: label);
     }
@@ -312,7 +323,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('গ্রাহক'), findsOneWidget);
 
-    // ⓘ "আমি" এখন ছবি → মেনু → "সেটিংস · সংস্করণ" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
+    // ⓘ "আমি" — নিচের বারের শেষ ঘর (১৩ নভেম্বর ২০২৬)
     await _openMe(tester);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
     // ⭐ প্রিন্টার — থার্মাল আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
@@ -339,23 +350,8 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
-    // ⭐ ছবির মেনুর "বের হওয়া" — বেরোনোর মূল পথ (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('avatar-logout')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('avatar-logout')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget,
-        reason: 'the menu\'s way out asks first');
-    await tester.tap(find.text('থাক'));
-    await tester.pumpAndSettle();
-    expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
-    expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget,
-        reason: '"থাক" keeps me signed in');
-
-    // ⓘ "আমি" পাতার বোতামও একই প্রশ্ন করে
+    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): ছবির মেনু হোমের মাথায় আর নেই — বেরোনোর পথ নিচের বারের "আমি" পাতা;
+    // মেনুর "বের হওয়া" নিজে test/top_bar_test.dart-এ যাচাই হয়
     await _openMe(tester);
     await _scrollToLogout(tester);
     await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
@@ -366,6 +362,8 @@ void main() {
     await tester.tap(find.text('থাক'));
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
+    expect(find.byKey(const ValueKey('nav-me')), findsOneWidget,
+        reason: '"থাক" keeps me signed in');
   });
   // ⭐ root করা বা ছদ্ম-ফোন — হোমে একবার বলা, আটকানো নয় (অ্যাপের নিরাপত্তা, MASVS-RESILIENCE-1, ১৯ অক্টোবর ২০২৬)
   testWidgets('a rooted phone is warned once a run and the app goes on; a clean phone is not', (tester) async {
@@ -404,21 +402,20 @@ void main() {
 
 }
 
-/// "আমি" — the photo opens my menu; its "সেটিংস · সংস্করণ" row opens the page
-/// (the owner's bar design 3 §৩, 20 Oct 2026).
+/// "আমি" — the bottom bar's last tab, the person's photo (the owner's decision
+/// "ছবি নিচের বারে", 13 Nov 2026), opens the page.
 Future<void> _openMe(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('header-avatar')));
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+  await tester.tap(find.byKey(const ValueKey('nav-me')));
   await tester.pumpAndSettle();
 }
 
 /// "আমি" grew a printer row (14 Oct 2026); on the test's 800×600 screen the
 /// way out now sits below the fold, as it does on a short phone.
-Future<void> _scrollToLogout(WidgetTester tester) async {
-  await tester.dragUntilVisible(find.text('বেরিয়ে যান'),
-      find.byKey(const ValueKey('me-sync-status')), const Offset(0, -150));
+Future<void> _scrollToLogout(WidgetTester tester) => _scrollMeTo(tester, find.text('বেরিয়ে যান'));
+
+/// ⓘ "আমি" পাতার নিজের তালিকা ধরে নামা — ১৪ নভেম্বর ২০২৬ পাতায় প্রোফাইল, রঙ আর ভাষার সারি এল, কোনো একটা সারি ধরে টানলে সেটা নিজেই পর্দা ছাড়ে
+Future<void> _scrollMeTo(WidgetTester tester, Finder target) async {
+  final list = find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first;
+  await tester.scrollUntilVisible(target, 150, scrollable: list);
   await tester.pumpAndSettle();
 }

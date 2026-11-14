@@ -41,6 +41,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.avatar,
     required this.onAvatar,
     this.menuOpen = false,
+    this.showAvatar = true,
     this.demo,
     this.syncStatus,
     this.pendingCount,
@@ -80,6 +81,11 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
   final bool news;
 
   final String avatarName;
+
+  /// ⭐ নিজের ছবি বারে — অ্যাপের পর্দায় false: ছবি নিচের বারের "আমি" ঘরে (মালিক, ১৩ নভেম্বর ২০২৬; Material 3 — উপরে ডানে
+  /// সর্বোচ্চ তিনটা আইকন: কোপাইলট, খোঁজা, ঘণ্টা)
+  final bool showAvatar;
+
   final ImageProvider? avatar;
 
   /// ছবিতে চাপ — বারের নিচের কিনারা (পর্দার হিসাবে) সাথে আসে, মেনু ঠিক তার নিচে বসে ([showAvatarMenu])
@@ -156,9 +162,7 @@ String titleLabel(String company, String branch, List<String> crumbs, {bool demo
 }
 
 /// অফলাইনের ফিতার বাক্য
-String offlineSentence(int pending) => pending > 0
-    ? AppLocale.l10n.topBarOfflinePending(pending, bnDigits(pending))
-    : AppLocale.l10n.topBarOfflineNoNet;
+String offlineSentence(int pending) => pending > 0 ? AppLocale.l10n.topBarOfflinePending(pending, bnDigits(pending)) : AppLocale.l10n.topBarOfflineNoNet;
 
 /// ⭐ শাখা বা কোম্পানি বদলের আগে — কোথাও আধা-লেখা ফর্ম থাকলে আগে জিজ্ঞেস ([UnsavedGuard.anyDirty])।
 /// `true` হলে বদলানো চলে।
@@ -224,9 +228,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
 
   void _tapAvatar() {
     final box = _barKey.currentContext?.findRenderObject() as RenderBox?;
-    final bottom = box == null || !box.hasSize
-        ? MediaQuery.paddingOf(context).top + AbosTopBar.rowHeight
-        : box.localToGlobal(Offset(0, box.size.height)).dy;
+    final bottom = box == null || !box.hasSize ? MediaQuery.paddingOf(context).top + AbosTopBar.rowHeight : box.localToGlobal(Offset(0, box.size.height)).dy;
     widget.onAvatar(bottom);
   }
 
@@ -235,11 +237,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
     final base = Theme.of(context).textTheme.bodyMedium ?? const TextStyle();
     final scaler = MediaQuery.textScalerOf(context);
     double measure(String s, TextStyle style) {
-      final p = TextPainter(
-          text: TextSpan(text: s, style: base.merge(style)),
-          textDirection: Directionality.of(context),
-          textScaler: scaler,
-          maxLines: 1)
+      final p = TextPainter(text: TextSpan(text: s, style: base.merge(style)), textDirection: Directionality.of(context), textScaler: scaler, maxLines: 1)
         ..layout();
       final w = p.width;
       p.dispose();
@@ -313,17 +311,18 @@ class _AbosTopBarState extends State<AbosTopBar> {
                   icon: const Icon(Symbols.search),
                 ),
                 _Bell(unread: widget.unread, news: widget.news, onTap: widget.onBell, color: fg),
-                IconButton(
-                  key: const ValueKey('header-avatar'),
-                  tooltip: context.l10n.topBarMyMenu,
-                  padding: EdgeInsets.zero,
-                  onPressed: _tapAvatar,
-                  icon: AvatarDisc(name: widget.avatarName, image: widget.avatar, size: 36, ring: widget.menuOpen),
-                ),
+                if (widget.showAvatar)
+                  IconButton(
+                    key: const ValueKey('header-avatar'),
+                    tooltip: context.l10n.topBarMyMenu,
+                    padding: EdgeInsets.zero,
+                    onPressed: _tapAvatar,
+                    icon: AvatarDisc(name: widget.avatarName, image: widget.avatar, size: 36, ring: widget.menuOpen),
+                  ),
               ];
               // ⭐ শাখার নাম মাঝের জায়গায় না ধরলে (ছোট ফোন, বড় লেখা) শিরোনাম আইকনের সারির নিচে পুরো চওড়ায় নামে —
               // Material 3-এর medium top app bar; শাখা কাটে না, বার লম্বা হয়
-              final middle = box.maxWidth - 10 - 48 * (widget.onCopilot == null ? 4 : 5) - 8;
+              final middle = box.maxWidth - 10 - 48 * (3 + (widget.onCopilot == null ? 0 : 1) + (widget.showAvatar ? 1 : 0)) - 8;
               final fits = _titleFits(context, middle);
               final rows = <Widget>[
                 if (fits)
@@ -355,9 +354,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
 
     final bottom = widget.bottom;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: ThemeData.estimateBrightnessForColor(colors.background) == Brightness.dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+      value: ThemeData.estimateBrightnessForColor(colors.background) == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         bar,
         if (bottom != null)
@@ -397,9 +394,8 @@ class AvatarDisc extends StatelessWidget {
     final c = context.bar;
     final letter = name.trim().isEmpty ? '?' : name.trim().characters.first;
     final initial = Center(
-      child: Text(letter,
-          textScaler: TextScaler.noScaling,
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: size * 0.44, color: c.onAvatar, height: 1.1)),
+      child:
+          Text(letter, textScaler: TextScaler.noScaling, style: TextStyle(fontWeight: FontWeight.w700, fontSize: size * 0.44, color: c.onAvatar, height: 1.1)),
     );
     final disc = Container(
       key: const ValueKey('avatar-disc'),
@@ -411,9 +407,7 @@ class AvatarDisc extends StatelessWidget {
         border: Border.all(color: c.onBar, width: 2),
       ),
       child: ClipOval(
-        child: image == null
-            ? initial
-            : Image(image: image!, fit: BoxFit.cover, width: size, height: size, errorBuilder: (_, __, ___) => initial),
+        child: image == null ? initial : Image(image: image!, fit: BoxFit.cover, width: size, height: size, errorBuilder: (_, __, ___) => initial),
       ),
     );
     if (!ring) return disc;
@@ -489,8 +483,7 @@ class _Title extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _OrgLine(company: first, code: named ? code.trim() : '', branch: branch.trim(), style: line1, chevron: onTap != null),
-        if (line2 && (crumbs.isNotEmpty || demo))
-          Padding(padding: const EdgeInsets.only(top: 1), child: _Crumbs(crumbs: crumbs, demo: demo, colors: colors)),
+        if (line2 && (crumbs.isNotEmpty || demo)) Padding(padding: const EdgeInsets.only(top: 1), child: _Crumbs(crumbs: crumbs, demo: demo, colors: colors)),
       ],
     );
 
@@ -545,8 +538,7 @@ class _Crumbs extends StatelessWidget {
               decoration: BoxDecoration(color: colors.pill, borderRadius: BorderRadius.circular(6)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text(context.l10n.topBarDemo,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.onPill, height: 1.3)),
+                child: Text(context.l10n.topBarDemo, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.onPill, height: 1.3)),
               ),
             ),
           if (crumbs.isNotEmpty)
@@ -572,8 +564,14 @@ class ScreenActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fixed = [for (final a in actions) if (a is! IconButton) a];
-    final icons = [for (final a in actions) if (a is IconButton) a];
+    final fixed = [
+      for (final a in actions)
+        if (a is! IconButton) a
+    ];
+    final icons = [
+      for (final a in actions)
+        if (a is IconButton) a
+    ];
     final overflow = actions.length > shown;
     final room = overflow ? (shown - fixed.length).clamp(0, shown) : icons.length;
     final direct = icons.take(room).toSet();
@@ -622,11 +620,9 @@ class _OrgLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = DefaultTextStyle.of(context).style.merge(this.style);
     final scaler = MediaQuery.textScalerOf(context);
-    final arrow = chevron
-        ? Icon(Symbols.arrow_drop_down, size: _chevron, color: style.color, key: const ValueKey('top-chevron'))
-        : null;
-    Text companyText(String text) => Text(text,
-        key: const ValueKey('top-company'), maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style);
+    final arrow = chevron ? Icon(Symbols.arrow_drop_down, size: _chevron, color: style.color, key: const ValueKey('top-chevron')) : null;
+    Text companyText(String text) =>
+        Text(text, key: const ValueKey('top-company'), maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style);
 
     return LayoutBuilder(builder: (context, c) {
       double width(String s) {
@@ -741,8 +737,7 @@ class OfflineRibbon extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               child: Text(offlineSentence(_pending()),
-                  key: const ValueKey('top-offline-text'),
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.onRibbon, height: 1.3)),
+                  key: const ValueKey('top-offline-text'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.onRibbon, height: 1.3)),
             ),
           ),
         );

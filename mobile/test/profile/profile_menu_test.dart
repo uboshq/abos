@@ -59,8 +59,11 @@ void main() {
 
   ProviderContainer container() => ProviderContainer(overrides: [authStateProvider.overrideWith((ref) => SignedIn(me))]);
 
-  ImageProvider? headerFace(WidgetTester tester) =>
-      tester.widget<AvatarDisc>(find.descendant(of: find.byKey(const ValueKey('header-avatar')), matching: find.byType(AvatarDisc))).image;
+  // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): হোমের মুখ এখন নিচের বারের "আমি" ঘরে, উপরের বারে নয়
+  ImageProvider? headerFace(WidgetTester tester) {
+    expect(find.byKey(const ValueKey('header-avatar')), findsNothing, reason: 'the photo is on the bottom bar now');
+    return tester.widget<AvatarDisc>(find.descendant(of: find.byKey(const ValueKey('nav-me')), matching: find.byKey(const ValueKey('nav-me-face')))).image;
+  }
 
   testWidgets('the menu\'s profile row opens the profile screen', (tester) async {
     final opened = <String>[];
@@ -68,9 +71,17 @@ void main() {
     addTearDown(c.dispose);
     await tester.pumpWidget(shell(c, opened));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    // ⭐ ১৪ নভেম্বর ২০২৬: ছবির মেনু নেই — "আমি" পাতার "প্রোফাইল ও ছবি" সারি
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('avatar-profile')));
+    try {
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-profile')), 150,
+          scrollable: find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first);
+    } on StateError {
+      fail('⛔ "আমি" পাতার শেষ পর্যন্ত নেমেও "প্রোফাইল ও ছবি" সারি নেই');
+    }
+    expect(find.text('প্রোফাইল ও ছবি বদল'), findsOneWidget, reason: '⛔ সার্ভার ছবি বদল নেয়, তবু সারি "আমার প্রোফাইল"');
+    await tester.tap(find.byKey(const ValueKey('me-profile')));
     await tester.pumpAndSettle();
     expect(opened, [ProfileRoutes.profile]);
     expect(ProfileRoutes.profile, 'me/profile');
@@ -86,7 +97,7 @@ void main() {
     expect(c.read(meFeaturesProvider), const MeFeatures(profilePhoto: true));
   });
 
-  testWidgets('/me\'s face is shared, and a new face from the photo screen reaches the header and inner bars at once', (tester) async {
+  testWidgets('/me\'s face is shared, and a new face from the photo screen reaches the bottom bar\'s আমি and inner bars at once', (tester) async {
     final c = container();
     addTearDown(c.dispose);
     await tester.pumpWidget(shell(c, []));

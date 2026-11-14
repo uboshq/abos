@@ -109,13 +109,10 @@ void main() {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(homeShell());
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('header-avatar')));
+      // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
+      await tester.tap(find.byKey(const ValueKey('nav-me')));
       await tester.pumpAndSettle();
-      // ⓘ ছবি এখন নিজের মেনু খোলে; "আমি" পাতা তার "সেটিংস" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
-      await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('avatar-settings')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('me-sync-status')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
       await expectLater(tester, meetsGuideline(g.value));
       handle.dispose();
     });

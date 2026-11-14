@@ -70,13 +70,10 @@ void main() {
   Future<List<String>> openSettings(WidgetTester tester, double scale) => collectBreaks(() async {
         await tester.pumpWidget(homeShell(textScale: scale));
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const ValueKey('header-avatar')));
+        // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
+        await tester.tap(find.byKey(const ValueKey('nav-me')));
         await tester.pumpAndSettle();
-        // ⓘ ছবি এখন নিজের মেনু খোলে; "আমি" পাতা তার "সেটিংস" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
-        await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const ValueKey('avatar-settings')));
-        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('me-page')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
       });
 
   // ⛔ বড় লেখায় বোতামের লেখা বোতামের ভেতরে, উপরে-নিচে-পাশে অন্তত ৮dp ফাঁক রেখে — দুই লাইনে ভাঙলে বোতাম বাড়ে, লেখা কিনারা ছোঁয় না

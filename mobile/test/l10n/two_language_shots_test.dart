@@ -161,6 +161,8 @@ Widget _screen(String screen, bool en) => switch (screen) {
             unread: 3,
             avatarName: _owner.name,
             onAvatar: (_) async {},
+            // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): HomeShell-এর মতোই — উপরের বারে ছবি নেই, ছবি নিচের বারের "আমি"
+            showAvatar: false,
             syncStatus: SyncStatus(),
             pendingCount: () => 0,
           )),

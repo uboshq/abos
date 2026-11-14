@@ -179,15 +179,16 @@ void main() {
       expect(find.text('› বিক্রয় › আদায়'), findsOneWidget);
     });
 
-    testWidgets('search, bell, photo and the branch do what they do on the home', (tester) async {
+    // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভেতরের পর্দার বারে আর ছবি নেই; নিজের মেনু নিচের বারের "আমি" ঘরে
+    testWidgets('search, bell and the branch do what they do on the home; the photo is not on the bar', (tester) async {
       final calls = _Calls();
       await _pump(tester, _app(_screen(actions: const []), context: _context(calls)));
+      expect(find.byKey(const ValueKey('header-avatar')), findsNothing, reason: 'the photo lives on the bottom bar (আমি)');
       await tester.tap(find.byKey(const ValueKey('top-search')));
       await tester.tap(find.byKey(const ValueKey('top-bell')));
-      await tester.tap(find.byKey(const ValueKey('header-avatar')));
       await tester.tap(find.byKey(const ValueKey('workspace-header')));
       await tester.pumpAndSettle();
-      expect([calls.search, calls.bell, calls.menu, calls.branch], [1, 1, 1, 1]);
+      expect([calls.search, calls.bell, calls.menu, calls.branch], [1, 1, 0, 1]);
     });
 
     testWidgets('one branch: nothing to switch, no ▾', (tester) async {
@@ -224,14 +225,15 @@ void main() {
     });
   });
 
-  group('screen actions sit on the second row, never beside search, bell and photo', () {
+  // ⓘ ১৩ নভেম্বর ২০২৬ ("ছবি নিচের বারে"): ডান কোণে এখন খোঁজা আর ঘণ্টা (কোপাইলট থাকলে তা-ও) — ছবি নিচের বারে
+  group('screen actions sit on the second row, never beside search and bell', () {
     for (final n in [0, 2, 4]) {
       for (final width in [320.0, 412.0]) {
         testWidgets('$n actions at ${width.toInt()} dp', (tester) async {
           final calls = _Calls();
           await _pump(tester, _app(_screen(actions: _actions(calls, n)), context: _context(calls), width: width), width: width);
           expect(tester.takeException(), isNull);
-          // ⓘ ডান কোণে কেবল তিনটা (Material 3) — খোঁজা, ঘণ্টা, ছবি; পর্দার বোতাম তাদের সারিতে নয়
+          // ⓘ ডান কোণে সর্বোচ্চ তিনটা (Material 3) — কোপাইলট, খোঁজা, ঘণ্টা; পর্দার বোতাম তাদের সারিতে নয়
           final topRow = tester.getRect(find.byKey(const ValueKey('top-search'))).center.dy;
           for (final a in _actions(calls, n)) {
             final f = find.byKey(a.key!);
@@ -243,7 +245,7 @@ void main() {
           final visible = [for (final k in ['a-filter', 'a-refresh', 'a-print', 'a-share']) if (find.byKey(ValueKey(k)).evaluate().isNotEmpty) k];
           expect(visible.length, n > 2 ? 2 : n);
           // ⓘ সব চাপার জায়গা অন্তত ৪৮dp
-          for (final k in [...visible, if (n > 2) 'top-overflow', 'top-leading', 'top-search', 'top-bell', 'header-avatar']) {
+          for (final k in [...visible, if (n > 2) 'top-overflow', 'top-leading', 'top-search', 'top-bell']) {
             final size = tester.getSize(find.byKey(ValueKey(k)));
             expect(size.width >= 48 && size.height >= 48, isTrue, reason: '⛔ $k $size');
           }

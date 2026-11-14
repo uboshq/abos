@@ -70,6 +70,14 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
   int? _speaking;
   StreamSubscription<VoiceEvent>? _voiceSub;
 
+  // ⓘ শোনার অবস্থা — জমা কথা, কে থামাতে চাইল (null · keep · send · cancel), শুরুর সময়, ২ মিনিটের ঘড়ি, ঘর থেকে বলা কথা পাঠানো কি না
+  String _kept = '';
+  String? _stop;
+  DateTime _listenStarted = DateTime.now();
+  Timer? _listenTimer;
+  Timer? _stopFallback;
+  bool _voiceTyped = false;
+
   String get _locale => Localizations.localeOf(context).languageCode == 'en' ? 'en-US' : 'bn-BD';
 
   @override
@@ -91,6 +99,8 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
   @override
   void dispose() {
     _voiceSub?.cancel();
+    _listenTimer?.cancel();
+    _stopFallback?.cancel();
     widget.voice.cancel();
     widget.voice.stopSpeaking();
     _input.dispose();
@@ -98,30 +108,35 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
     super.dispose();
   }
 
+  /// ⓘ আগে জমা কথা আর নতুন অংশ — মাঝে একটা ফাঁক
+  static String joinSaid(String kept, String part) => [kept.trim(), part.trim()].where((s) => s.isNotEmpty).join(' ');
+
   void _onVoice(VoiceEvent e) {
     if (!mounted) return;
     final l = context.l10n;
     switch (e.kind) {
       case VoiceEventKind.partial:
-        setState(() => _heard = e.text);
+        if (_listening) setState(() => _heard = joinSaid(_kept, e.text));
       case VoiceEventKind.done:
-        setState(() {
-          _listening = false;
-          _heard = '';
-        });
-        if (e.text.trim().isNotEmpty) _ask(e.text, byVoice: true);
+        if (!_listening) return;
+        _kept = joinSaid(_kept, e.text);
+        _heard = _kept;
+        _againOrEnd();
       case VoiceEventKind.error:
-        setState(() {
-          _listening = false;
-          _heard = '';
-          if (e.code == 'no_voice' || e.code == 'tts') _speaking = null;
-          _note = switch (e.code) {
-            'permission' => l.copilotQuickMicDenied,
-            'unavailable' => l.copilotQuickMicOff,
-            'no_voice' || 'tts' => l.copilotQuickNoVoice,
-            _ => l.copilotQuickMicNone,
-          };
-        });
+        if (e.code == 'no_voice' || e.code == 'tts') {
+          setState(() {
+            _speaking = null;
+            _note = l.copilotQuickNoVoice;
+          });
+          return;
+        }
+        if (!_listening) return;
+        if (e.code == 'permission' || e.code == 'unavailable') {
+          _note = e.code == 'permission' ? l.copilotQuickMicDenied : l.copilotQuickMicOff;
+          _stop ??= 'keep';
+        }
+        // ⓘ চুপ থাকা ("no_speech") বা মাঝপথে কাটা ভুল নয় — মানুষ না থামানো পর্যন্ত আবার শোনা
+        _againOrEnd();
       case VoiceEventKind.spoken:
         setState(() => _speaking = null);
       case VoiceEventKind.level:
@@ -129,15 +144,77 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
     }
   }
 
+  /// ⭐ যতক্ষণ মানুষ থামান না, ততক্ষণ শোনা (মালিক, ১৩ নভেম্বর ২০২৬: "Claude অ্যাপের মতো — যতক্ষণ মন চায় কথা বলা, শেষ হলে সেন্ড")।
+  /// ⓘ ফোনের কথা-চেনা চুপ থাকলে থামে — জমা লেখা রেখে আবার শুরু; ভুলে খোলা থাকলে [maxListen]-এ নিজে থামে, বলা কথা ঘরে থাকে।
+  static const maxListen = Duration(minutes: 2);
+
+  void _againOrEnd() {
+    final inTime = DateTime.now().difference(_listenStarted) < maxListen;
+    if (_stop == null && _listening && inTime) {
+      setState(() {});
+      widget.voice.listen(_locale);
+      return;
+    }
+    _endListening();
+  }
+
   Future<void> _listen() async {
     await widget.voice.stopSpeaking();
     setState(() {
+      _kept = _input.text.trim();
+      _heard = _kept;
       _listening = true;
-      _heard = '';
+      _stop = null;
       _note = '';
       _speaking = null;
+      _listenStarted = DateTime.now();
     });
+    _listenTimer?.cancel();
+    _listenTimer = Timer(maxListen, () => _finishListening(send: false));
     await widget.voice.listen(_locale);
+  }
+
+  /// মানুষ থামালেন — "পাঠান" হলে সঙ্গে সঙ্গে, "বলা শেষ" হলে লেখা ঘরে; ফোনের শেষ টুকরো এলে [_againOrEnd] শেষ করে, না এলে একটু পরে নিজে
+  void _finishListening({required bool send}) {
+    if (!_listening) return;
+    _stop = send ? 'send' : 'keep';
+    widget.voice.stopListening();
+    _stopFallback?.cancel();
+    _stopFallback = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted && _listening) _endListening();
+    });
+  }
+
+  void _cancelListening() {
+    _stop = 'cancel';
+    widget.voice.cancel();
+    _endListening();
+  }
+
+  void _endListening() {
+    _listenTimer?.cancel();
+    _stopFallback?.cancel();
+    final said = _heard.trim();
+    final mode = _stop;
+    setState(() {
+      _listening = false;
+      _heard = '';
+      if (mode != 'cancel') {
+        _input.text = said;
+        _voiceTyped = said.isNotEmpty;
+      }
+    });
+    if (mode == 'send' && said.isNotEmpty) {
+      _voiceTyped = false;
+      _ask(said, byVoice: true);
+    }
+  }
+
+  void _sendTyped() {
+    // ⓘ মাইকে বলা কথা ঘর থেকে পাঠালেও "বলে জিজ্ঞেস করা" — উত্তর পড়ে শোনায়
+    final byVoice = _voiceTyped;
+    _voiceTyped = false;
+    _ask(_input.text, byVoice: byVoice);
   }
 
   Future<void> _ask(String text, {bool byVoice = false}) async {
@@ -245,13 +322,7 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
               ),
               Expanded(
                 child: _listening
-                    ? _ListeningView(heard: _heard, onDone: () => widget.voice.stopListening(), onCancel: () {
-                        widget.voice.cancel();
-                        setState(() {
-                          _listening = false;
-                          _heard = '';
-                        });
-                      })
+                    ? _ListeningView(heard: _heard, onSend: () => _finishListening(send: true), onDone: () => _finishListening(send: false), onCancel: _cancelListening)
                     : ListView(
                         controller: _scroll,
                         padding: const EdgeInsets.all(AppSpacing.md),
@@ -306,7 +377,7 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
                         key: const ValueKey('copilot-quick-input'),
                         controller: _input,
                         textInputAction: TextInputAction.send,
-                        onSubmitted: _ask,
+                        onSubmitted: (_) => _sendTyped(),
                         minLines: 1,
                         maxLines: 3,
                         decoration: InputDecoration(
@@ -329,7 +400,7 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
                     IconButton.filled(
                       key: const ValueKey('copilot-quick-send'),
                       tooltip: l.copilotQuickSend,
-                      onPressed: _asking ? null : () => _ask(_input.text),
+                      onPressed: _asking ? null : _sendTyped,
                       icon: const Icon(Symbols.send),
                     ),
                   ]),
@@ -485,9 +556,10 @@ class _AnswerBubble extends StatelessWidget {
 
 /// ⭐ শুনছে — মাঝে বড় আলোর মগজ, নিচে বলা কথা সাথে সাথে, "বলা শেষ" আর "বাতিল" (নমুনা ধাপ ২)
 class _ListeningView extends StatelessWidget {
-  const _ListeningView({required this.heard, required this.onDone, required this.onCancel});
+  const _ListeningView({required this.heard, required this.onSend, required this.onDone, required this.onCancel});
 
   final String heard;
+  final VoidCallback onSend;
   final VoidCallback onDone;
   final VoidCallback onCancel;
 
@@ -504,7 +576,10 @@ class _ListeningView extends StatelessWidget {
         child: Text(heard, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
       ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        FilledButton(key: const ValueKey('copilot-quick-done'), onPressed: onDone, child: Text(l.copilotQuickDoneSpeaking)),
+        // ⓘ "পাঠান" — সঙ্গে সঙ্গে; "বলা শেষ" — লেখা ঘরে, দেখে পাঠানো (মালিক, ১৩ নভেম্বর ২০২৬)
+        FilledButton(key: const ValueKey('copilot-quick-send-now'), onPressed: onSend, child: Text(l.copilotQuickSend)),
+        const SizedBox(width: AppSpacing.sm),
+        OutlinedButton(key: const ValueKey('copilot-quick-done'), onPressed: onDone, child: Text(l.copilotQuickDoneSpeaking)),
         const SizedBox(width: AppSpacing.sm),
         OutlinedButton(key: const ValueKey('copilot-quick-cancel'), onPressed: onCancel, child: Text(l.copilotQuickCancel)),
       ]),

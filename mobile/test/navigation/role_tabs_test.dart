@@ -6,53 +6,53 @@ import 'package:abos_mobile/core/web_inside/web_inside.dart';
 
 import 'bar_harness.dart';
 
-/// ⭐ বারের নকশা ৩, অংশ ৪ আর ৭ — খাঁটি নিয়মগুলো: ভূমিকা চাবি থেকে, চার ঘর, লাল গোনা, TalkBack-এর বাক্য, ＋ নতুন, বারের ধরন।
+/// ⭐ বারের নকশা ৩, অংশ ৪ আর ৭ — খাঁটি নিয়মগুলো: ভূমিকা চাবি থেকে, চার ঘর + শেষে "আমি" (১৩ নভেম্বর ২০২৬, মালিক: "ছবি নিচের বারে"), লাল গোনা, TalkBack-এর বাক্য, ＋ নতুন, বারের ধরন।
 void main() {
   List<BarTab> tabs(String role, {Set<String>? modulesOn}) =>
       RoleTabs.tabsFor(rolePermissions[role]!, modulesOn: modulesOn);
   List<String> labels(List<BarTab> t) => [for (final x in t) RoleTabs.specs[x]!.label];
 
   group('the role comes from permissions, never from a role name', () {
-    test('owner or director: হোম · অনুমোদন · রিপোর্ট · সব মডিউল', () {
+    test('owner or director: হোম · অনুমোদন · রিপোর্ট · সব মডিউল · আমি', () {
       expect(RoleTabs.roleOf(rolePermissions['owner']!), BarRole.owner);
-      expect(labels(tabs('owner')), ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল']);
+      expect(labels(tabs('owner')), ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল', 'আমি']);
     });
 
-    test('SR: হোম · অর্ডার · আদায় · সব মডিউল', () {
+    test('SR: হোম · অর্ডার · আদায় · সব মডিউল · আমি', () {
       expect(RoleTabs.roleOf(rolePermissions['sr']!), BarRole.sr);
-      expect(labels(tabs('sr')), ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল']);
+      expect(labels(tabs('sr')), ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল', 'আমি']);
     });
 
-    test('depot: হোম · চালান · মজুদ · সব মডিউল', () {
+    test('depot: হোম · চালান · মজুদ · সব মডিউল · আমি', () {
       expect(RoleTabs.roleOf(rolePermissions['depot']!), BarRole.depot);
-      expect(labels(tabs('depot')), ['হোম', 'চালান', 'মজুদ', 'সব মডিউল']);
+      expect(labels(tabs('depot')), ['হোম', 'চালান', 'মজুদ', 'সব মডিউল', 'আমি']);
     });
 
-    test('accounts: হোম · অনুমোদন · ভাউচার · সব মডিউল', () {
+    test('accounts: হোম · অনুমোদন · ভাউচার · সব মডিউল · আমি', () {
       expect(RoleTabs.roleOf(rolePermissions['accounts']!), BarRole.accounts);
-      expect(labels(tabs('accounts')), ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল']);
+      expect(labels(tabs('accounts')), ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল', 'আমি']);
     });
 
-    test('somebody with none of the four keys gets home and all modules only', () {
+    test('somebody with none of the four keys gets home, all modules and আমি only', () {
       expect(RoleTabs.roleOf(const ['customer.view']), BarRole.other);
-      expect(RoleTabs.tabsFor(const ['customer.view']), [BarTab.home, BarTab.modules]);
+      expect(RoleTabs.tabsFor(const ['customer.view']), [BarTab.home, BarTab.modules, BarTab.me]);
     });
 
     test('a tab whose permission is missing never appears', () {
       // SR without the collection key: no আদায়
       expect(RoleTabs.tabsFor(const ['sales.order.create', 'sales.order.view']),
-          [BarTab.home, BarTab.orders, BarTab.modules]);
+          [BarTab.home, BarTab.orders, BarTab.modules, BarTab.me]);
       // accounts without the approval key: no অনুমোদন
-      expect(RoleTabs.tabsFor(const ['accounts.voucher.create']), [BarTab.home, BarTab.vouchers, BarTab.modules]);
+      expect(RoleTabs.tabsFor(const ['accounts.voucher.create']), [BarTab.home, BarTab.vouchers, BarTab.modules, BarTab.me]);
       // owner without the report keys: no রিপোর্ট
       expect(RoleTabs.tabsFor(const ['executive.view', 'approval.decide']),
-          [BarTab.home, BarTab.approvals, BarTab.modules]);
+          [BarTab.home, BarTab.approvals, BarTab.modules, BarTab.me]);
     });
 
     test('a module the company switched off for the phone takes its tab away', () {
-      expect(tabs('sr', modulesOn: {'customer'}), [BarTab.home, BarTab.modules]);
-      expect(tabs('owner', modulesOn: {'sales', 'customer'}), [BarTab.home, BarTab.reports, BarTab.modules]);
-      expect(tabs('depot', modulesOn: {'inventory'}), [BarTab.home, BarTab.stock, BarTab.modules]);
+      expect(tabs('sr', modulesOn: {'customer'}), [BarTab.home, BarTab.modules, BarTab.me]);
+      expect(tabs('owner', modulesOn: {'sales', 'customer'}), [BarTab.home, BarTab.reports, BarTab.modules, BarTab.me]);
+      expect(tabs('depot', modulesOn: {'inventory'}), [BarTab.home, BarTab.stock, BarTab.modules, BarTab.me]);
     });
 
     test('no tab outside the role ever comes in, whatever else the person may open', () {
@@ -60,9 +60,11 @@ void main() {
       expect(tabs('owner'), isNot(contains(BarTab.stock)));
       expect(tabs('owner'), isNot(contains(BarTab.challans)));
       for (final role in rolePermissions.keys) {
-        expect(tabs(role).length, 4, reason: role);
+        // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভূমিকার চার ঘর + শেষে "আমি" = পাঁচ (Material 3-এর সীমা)
+        expect(tabs(role).length, 5, reason: role);
         expect(tabs(role).first, BarTab.home);
-        expect(tabs(role).last, BarTab.modules);
+        expect(tabs(role)[3], BarTab.modules, reason: role);
+        expect(tabs(role).last, BarTab.me, reason: role);
       }
     });
   });

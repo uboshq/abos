@@ -9,6 +9,8 @@ import '../../core/books/collection_entry.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/role_tabs.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show AvatarDisc;
+import '../../core/navigation/top_bar/top_bar_context.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/fab_clearance.dart';
@@ -64,7 +66,11 @@ class AbosBottomBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (_InFrame.of(context)) return const SizedBox.shrink();
     final tabs = _tabsOf(ref);
-    final shown = selected == NavTab.modules ? BarTab.modules : BarTab.home;
+    final shown = switch (selected) {
+      NavTab.modules => BarTab.modules,
+      NavTab.me => BarTab.me,
+      _ => BarTab.home,
+    };
     return RoleBottomBar(
       tabs: tabs,
       selected: tabs.contains(shown) ? shown : null,
@@ -77,6 +83,9 @@ class AbosBottomBar extends ConsumerWidget {
             onSelect(NavTab.modules);
           case BarTab.approvals:
             onSelect(NavTab.approvals);
+          // ⭐ ছবির ঘর — 'আমি' পাতা খোলে, অন্য ঠিকানায় ঠেলে না (মালিক, ১৪ নভেম্বর ২০২৬: ছবি নিচের বারে)
+          case BarTab.me:
+            onSelect(NavTab.me);
           default:
             GoRouter.maybeOf(context)?.push(RoleTabs.specs[tab]!.location);
         }
@@ -485,6 +494,20 @@ class RoleRail extends StatelessWidget {
   }
 }
 
+/// ⭐ "আমি" ঘরের আইকন — নিজের ছবি, না থাকলে নামের প্রথম অক্ষর (উপরের বারের একই [AvatarDisc]); বাছা থাকলে চারপাশে দাগ
+class _MyFace extends ConsumerWidget {
+  const _MyFace({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref.watch(authStateProvider).user?.name ?? '';
+    final face = ref.watch(topBarContextProvider)?.avatar;
+    return AvatarDisc(key: const ValueKey('nav-me-face'), name: name, image: face, size: 26, ring: selected);
+  }
+}
+
 class _BarItem extends StatelessWidget {
   const _BarItem({
     required this.spec,
@@ -505,7 +528,9 @@ class _BarItem extends StatelessWidget {
     final palette = context.palette;
     final ink = selected ? palette.onSurface : palette.onSurfaceMuted;
     final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
-    final icon = Icon(spec.icon, size: 24, color: ink, fill: selected ? 1 : 0);
+    final icon = spec.tab == BarTab.me
+        ? _MyFace(selected: selected)
+        : Icon(spec.icon, size: 24, color: ink, fill: selected ? 1 : 0);
     final badged = switch (badge.kind) {
       TabBadgeKind.none => icon,
       TabBadgeKind.dot => Badge(
@@ -635,6 +660,7 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
 
   BarTab? _shownTab(List<BarTab> tabs, HomePage page) {
     if (_isHome) {
+      if (page.kind == HomePageKind.me && tabs.contains(BarTab.me)) return BarTab.me;
       final modules = page.kind != HomePageKind.home && page.kind != HomePageKind.me;
       return modules && tabs.contains(BarTab.modules) ? BarTab.modules : BarTab.home;
     }
@@ -657,8 +683,11 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
       history.save(_owner, current, router.routerDelegate.currentConfiguration, ref.read(homePageProvider));
     }
     final saved = history.take(_owner, target);
-    ref.read(homePageProvider.notifier).state =
-        target == BarTab.modules ? (saved?.page ?? HomePage.modules) : HomePage.home;
+    ref.read(homePageProvider.notifier).state = switch (target) {
+      BarTab.modules => saved?.page ?? HomePage.modules,
+      BarTab.me => HomePage.me,
+      _ => HomePage.home,
+    };
     ref.read(activeTabProvider.notifier).state = target;
     if (saved != null) {
       router.restore(saved.matches);
@@ -672,8 +701,9 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final spec = RoleTabs.specs[tab]!;
     final page = ref.read(homePageProvider);
     final atRoot = switch (tab) {
-      BarTab.home => _isHome && (page.kind == HomePageKind.home || page.kind == HomePageKind.me),
+      BarTab.home => _isHome && page.kind == HomePageKind.home,
       BarTab.modules => _isHome && page == HomePage.modules,
+      BarTab.me => _isHome && page.kind == HomePageKind.me,
       _ => Uri.parse(widget.location).path == spec.location,
     };
     if (atRoot) {
@@ -686,7 +716,11 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
       return;
     }
     ref.read(tabHistoryProvider).forget(tab);
-    ref.read(homePageProvider.notifier).state = tab == BarTab.modules ? HomePage.modules : HomePage.home;
+    ref.read(homePageProvider.notifier).state = switch (tab) {
+      BarTab.modules => HomePage.modules,
+      BarTab.me => HomePage.me,
+      _ => HomePage.home,
+    };
     GoRouter.of(context).go(spec.location);
   }
 

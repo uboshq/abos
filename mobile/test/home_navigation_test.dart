@@ -283,10 +283,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
-    // ⓘ "আমি" এখন ছবি → মেনু → "সেটিংস · সংস্করণ" সারিতে (বারের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
 
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);

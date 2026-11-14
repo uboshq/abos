@@ -27,6 +27,7 @@ import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
 import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
+import '../../core/locale/language_switch.dart';
 import '../../core/privacy/phone_privacy.dart';
 import '../../core/profile/face_image.dart';
 import '../../core/router/profile_routes.dart';
@@ -635,6 +636,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           avatarName: user.name,
           avatar: avatarImage(_avatarUrl),
           menuOpen: _menuOpen,
+          showAvatar: false,
           onAvatar: (top) => _openAvatarMenu(top, user, org),
         ),
         // docs/Contract §৬. Wrapped here rather than around the whole app: the
@@ -680,6 +682,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     org: org,
                     designation: _designation,
                     avatarUrl: _avatarUrl,
+                    onProfile: () => (widget.openPath ?? _push)(ProfileRoutes.profile),
+                    profileTitle: ProfileRoutes.profileTitle(ref.watch(meFeaturesProvider) ?? MeFeatures.none),
                     onOpen: _open),
               ],
             )),
@@ -770,7 +774,13 @@ class _MoreTab extends ConsumerWidget {
       required this.org,
       required this.onOpen,
       this.designation,
-      this.avatarUrl});
+      this.avatarUrl,
+      this.onProfile,
+      this.profileTitle});
+
+  /// ⭐ নামের কার্ডে চাপ — 'প্রোফাইল ও ছবি' (ছবি, নিজের তথ্য, 'আমার ফোনগুলো'); আগে উপরের বারের ছবির মেনুতে ছিল
+  final VoidCallback? onProfile;
+  final String? profileTitle;
 
   final String? designation;
   final String? avatarUrl;
@@ -784,6 +794,7 @@ class _MoreTab extends ConsumerWidget {
     // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
     final cs = Theme.of(context).colorScheme;
     return ListView(
+      key: const ValueKey('me-page'),
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Card(
@@ -805,8 +816,22 @@ class _MoreTab extends ConsumerWidget {
               if (user.email.isNotEmpty) user.email,
             ].join('\n')),
             isThreeLine: designation != null && user.email.isNotEmpty,
+            trailing: onProfile == null ? null : const Icon(Icons.chevron_right),
+            onTap: onProfile,
           ),
         ),
+        if (onProfile != null && profileTitle != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Card(
+            child: ListTile(
+              key: const ValueKey('me-profile'),
+              leading: const Icon(Icons.person_outline),
+              title: Text(profileTitle!),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: onProfile,
+            ),
+          ),
+        ],
         if (org != null && !org!.isEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
           Card(
@@ -844,7 +869,13 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬; [[LockDelay]])
         const _LockDelayTile(),
-        // ⓘ আলো বা অন্ধকার এখন ছবির মেনুতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬; [[AvatarMenu]])
+        const SizedBox(height: AppSpacing.sm),
+        // ⭐ রঙ আর ভাষা — আগে ছবির মেনুতে; ছবি নিচের বারে যাওয়ায় এখানে (মালিক, ১৪ নভেম্বর ২০২৬)
+        const Card(clipBehavior: Clip.antiAlias, child: MeThemeRow()),
+        if (LanguageSwitch.shown) ...[
+          const SizedBox(height: AppSpacing.sm),
+          const Card(clipBehavior: Clip.antiAlias, child: MeLanguageRow()),
+        ],
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
         const AppUpdateTile(),

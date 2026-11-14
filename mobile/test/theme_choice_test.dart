@@ -111,13 +111,20 @@ void main() {
     expect(page(tester), AppTheme.dark().scaffoldBackgroundColor);
   });
 
-  testWidgets('the avatar menu offers the three choices and a tap is the choice', (tester) async {
+  testWidgets('the আমি page offers the three choices and a tap is the choice', (tester) async {
     setScreenSize(tester, const Size(390, 1600));
     await tester.runAsync(seedMainData);
     await tester.pumpWidget(homeShell());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    // ⭐ ১৪ নভেম্বর ২০২৬: ছবি নিচের বারের "আমি" — রঙ বাছাই সেই পাতায় (আগে ছবির মেনুতে)
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
+    try {
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-theme')), 150,
+          scrollable: find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first);
+    } on StateError {
+      fail('⛔ "আমি" পাতার শেষ পর্যন্ত নেমেও রঙ বাছাইয়ের সারি নেই');
+    }
 
     expect(find.byKey(const ValueKey('me-theme')), findsOneWidget);
     for (final c in ThemeChoice.values) {

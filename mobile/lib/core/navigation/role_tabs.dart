@@ -16,7 +16,7 @@ import '../web_inside/web_inside.dart';
 enum BarRole { owner, sr, depot, accounts, other }
 
 /// বারের সম্ভাব্য সব ঘর। প্রতিটা ভূমিকা এর চারটা পায়।
-enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules }
+enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me }
 
 /// একটা ঘরের সব তথ্য — নাম, আইকন (কেবল Material Symbols), কোন পথে খোলে, কোন চাবিতে দেখা যায়।
 @immutable
@@ -103,6 +103,8 @@ class RoleTabs {
         path: 'vouchers',
         anyOf: const ['accounts.voucher.create']),
     BarTab.modules: BarTabSpec(tab: BarTab.modules, label: l.navTabModules, icon: Symbols.apps),
+    // ⭐ নিজের ছবি — নিচের বারের শেষ ঘর (মালিক, ১৩ নভেম্বর ২০২৬: উপরের বারে জায়গা; YouTube, Instagram, Facebook-এর একই নিয়ম)
+    BarTab.me: BarTabSpec(tab: BarTab.me, label: l.homeMe, icon: Symbols.account_circle),
     };
   }
 
@@ -144,6 +146,8 @@ class RoleTabs {
     return [
       for (final tab in byRole[roleOf(p)]!)
         if (allows(tab, p, modulesOn)) tab,
+      // ⓘ সবার শেষে নিজের ছবি — চাবি লাগে না; ভূমিকার সর্বোচ্চ চার ঘর + এটা = পাঁচ (Material 3-এর সীমা)
+      BarTab.me,
     ];
   }
 

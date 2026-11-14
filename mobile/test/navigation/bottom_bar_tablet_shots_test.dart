@@ -45,6 +45,8 @@ Widget _realHome() => Scaffold(
         onBell: () {},
         onLeading: () {},
         onAvatar: (_) {},
+        // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): HomeShell-এর মতোই — উপরের বারে ছবি নেই, ছবি নিচের বারের "আমি"
+        showAvatar: false,
       ),
       body: ownerHomeBody(),
     );
