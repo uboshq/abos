@@ -51,6 +51,9 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Accounts\Http\Controllers\PeriodLockController' => 'হিসাববর্ষের মাসগুলো — বছরে বারোটা।',
         'App\Modules\Accounts\Http\Controllers\YearEndController' => 'কেবল চলতি বছর, একটাই।',
 
+        // ⓘ ১৪ নভেম্বর ২০২৬ (fe, রিলিজ 1.2.0; Mac run of b09c322b1) — মাঠকর্মীর গাছ
+        'App\Modules\Customer\Http\Controllers\FieldForceController' => 'মাঠকর্মীর গাছ — কে কার অধীনে; গাছ পাতায় ভাঙলে উপরওয়ালা এক পাতায় আর তার লোক আরেক পাতায় পড়ত। সারি কোম্পানির বিক্রয়ের লোক — কর্মী নিয়োগে বাড়ে, লেনদেনে নয়।',
+
         // ⓘ ১৯ অক্টোবর ২০২৬ (a5) — খাতার পাতা ভাগ এখন [[AccountLedger::page()]]-এ, তাই কন্ট্রোলারে আর `paginate(` নেই
         'App\Modules\Accounts\Http\Controllers\ChartOfAccountsController' => 'হিসাবের ছক গাছ আকারে — দল আর তার সন্তান একসাথে না দেখালে গাছটাই ভাঙে, আর দলের জের সন্তানদের যোগ; খাত বাড়ে ব্যবসার ধরনে, লেনদেনে নয়। খাতের খাতা নিজে ৫০-এ ভাগ (AccountLedger::page())।',
         'App\Modules\Approval\Http\Controllers\ApprovalDelegationApiController' => 'বাঁধা — এই মানুষটার দেওয়া সর্বশেষ ১০০টা ভার (limit 100), আর তাঁর হাতে এখন চালু ভারগুলো (মেয়াদ ফুরোলেই সরে, জমে না); সাথে বাছাইয়ের জন্য কোম্পানির কর্মীরা (কর্মীসংখ্যায় বাঁধা)। EveryListScreenPaginatesTest-এর একই ঘোষণা।',

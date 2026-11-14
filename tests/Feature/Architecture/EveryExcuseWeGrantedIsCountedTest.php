@@ -503,7 +503,10 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       PurchaseStockSupply-র লাইন-টেবিল — প্রতিটা নিজের তালিকায় কারণসহ।
      */
     // ⓘ ১২ নভেম্বর ২০২৬ (fe): +১ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED `assistant.quick` — উপরের বারের দ্রুত জিজ্ঞাসা, কাগজ নয় = ৫১৬
-    private const CEILING = 516;
+    // ⓘ ১৪ নভেম্বর ২০২৬ (fe, রিলিজ 1.2.0 — চার শাখা একসাথে; Mac run of b09c322b1: ৫১৭): +১ শাখাগুলো একসাথে মেলায় (কোপাইলটের
+    //   মানে-ছাপের টেবিল `assistant_vectors` — PublicIdTest::FRAMEWORK, আর মাঠকর্মীর গাছের দুই ঘর: তালিকা নয় ও কাগজের ফর্ম নয়),
+    //   +১ TheListThatGrowsForever…::WHOLE_ON_PURPOSE `FieldForceController` — গাছ পাতায় ভাঙে না, সারি কর্মীর সংখ্যায় = ৫১৮
+    private const CEILING = 518;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
