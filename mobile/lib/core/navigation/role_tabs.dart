@@ -108,12 +108,13 @@ class RoleTabs {
     };
   }
 
-  /// নকশার অংশ ৪-এর সারণি, হুবহু
+  /// নকশার অংশ ৪-এর সারণি — ⭐ ১৪ নভেম্বর ২০২৬ থেকে "সব মডিউল" সব ভূমিকায় মাঝখানে, তৃতীয় ঘরে (মালিক: "রিপোর্টের জায়গায়
+  /// চলে যাবে হচ্ছে মডিউল, মডিউলের জায়গায় রিপোর্ট চলে আসবে")
   static const Map<BarRole, List<BarTab>> byRole = {
-    BarRole.owner: [BarTab.home, BarTab.approvals, BarTab.reports, BarTab.modules],
-    BarRole.sr: [BarTab.home, BarTab.orders, BarTab.collections, BarTab.modules],
-    BarRole.depot: [BarTab.home, BarTab.challans, BarTab.stock, BarTab.modules],
-    BarRole.accounts: [BarTab.home, BarTab.approvals, BarTab.vouchers, BarTab.modules],
+    BarRole.owner: [BarTab.home, BarTab.approvals, BarTab.modules, BarTab.reports],
+    BarRole.sr: [BarTab.home, BarTab.orders, BarTab.modules, BarTab.collections],
+    BarRole.depot: [BarTab.home, BarTab.challans, BarTab.modules, BarTab.stock],
+    BarRole.accounts: [BarTab.home, BarTab.approvals, BarTab.modules, BarTab.vouchers],
     // ⓘ চারের কোনোটায় না পড়লে: হোম, সই করার চাবি থাকলে অনুমোদন, আর সব মডিউল
     BarRole.other: [BarTab.home, BarTab.approvals, BarTab.modules],
   };

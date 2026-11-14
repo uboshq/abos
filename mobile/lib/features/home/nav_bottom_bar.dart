@@ -8,6 +8,7 @@ import '../../core/auth/auth_state.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
+import '../../core/navigation/colour_tab_icon.dart';
 import '../../core/navigation/role_tabs.dart';
 import '../../core/navigation/top_bar/abos_top_bar.dart' show AvatarDisc;
 import '../../core/navigation/top_bar/top_bar_context.dart';
@@ -399,12 +400,12 @@ class RoleBottomBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 80),
+              // ⭐ ১৪ নভেম্বর ২০২৬ (মালিকের নমুনা ৩): লেখা নেই, বড় রঙিন আইকন — বার ৭২ উঁচু
+              constraints: const BoxConstraints(minHeight: 72),
               child: Padding(
-                // ⓘ পুরো পাতার নমুনা: ওপরে ৮, নিচে ১৪
-                padding: const EdgeInsets.only(top: 8, bottom: 14),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     for (final tab in tabs)
                       Expanded(
@@ -481,6 +482,7 @@ class RoleRail extends StatelessWidget {
                           badge: badges[tab] ?? const TabBadge.none(),
                           onTap: () => onSelect(tab),
                           wide: extended,
+                          rail: true,
                         ),
                       ),
                   ],
@@ -496,15 +498,17 @@ class RoleRail extends StatelessWidget {
 
 /// ⭐ "আমি" ঘরের আইকন — নিজের ছবি, না থাকলে নামের প্রথম অক্ষর (উপরের বারের একই [AvatarDisc]); বাছা থাকলে চারপাশে দাগ
 class _MyFace extends ConsumerWidget {
-  const _MyFace({required this.selected});
+  const _MyFace({required this.selected, this.size = 26});
 
   final bool selected;
+  final double size;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(authStateProvider).user?.name ?? '';
     final face = ref.watch(topBarContextProvider)?.avatar;
-    return AvatarDisc(key: const ValueKey('nav-me-face'), name: name, image: face, size: 26, ring: selected);
+    // ⭐ নিচের বারে বড় ছবি (৫৬, মালিকের নমুনা ৩), পাশের খাড়া বারে আইকনের মাপে
+    return AvatarDisc(key: const ValueKey('nav-me-face'), name: name, image: face, size: size, ring: selected, edge: false);
   }
 }
 
@@ -515,6 +519,7 @@ class _BarItem extends StatelessWidget {
     required this.badge,
     required this.onTap,
     this.wide = false,
+    this.rail = false,
   });
 
   final BarTabSpec spec;
@@ -523,14 +528,19 @@ class _BarItem extends StatelessWidget {
   final VoidCallback onTap;
   final bool wide;
 
+  /// ⓘ পাশের খাড়া বার — নামসহ থাকে (জায়গা আছে); নিচের ফোনের বারেই কেবল লেখা ছাড়া
+  final bool rail;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final ink = selected ? palette.onSurface : palette.onSurfaceMuted;
     final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    // ⭐ নিচের বার (wide নয়, রেল নয়) — লেখা ছাড়া বড় রঙিন আইকন; রেলে নামসহ, আইকন ২৮
+    final bare = ! wide && ! rail;
     final icon = spec.tab == BarTab.me
-        ? _MyFace(selected: selected)
-        : Icon(spec.icon, size: 24, color: ink, fill: selected ? 1 : 0);
+        ? _MyFace(selected: selected, size: bare ? 56 : 30)
+        : ColourTabIcon(key: ValueKey('nav-${spec.tab.name}-icon'), tab: spec.tab, size: bare ? 36 : 28);
     final badged = switch (badge.kind) {
       TabBadgeKind.none => icon,
       TabBadgeKind.dot => Badge(
@@ -550,12 +560,13 @@ class _BarItem extends StatelessWidget {
     };
     final indicator = AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: wide ? null : 64,
-      height: 32,
+      width: wide ? null : (bare ? 68 : 64),
+      height: bare ? 48 : 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? palette.primarySoft : null,
-        borderRadius: BorderRadius.circular(16),
+        // ⓘ ছবির ঘরে পটি নয় — বাছা থাকলে ছবির চারপাশে রিং ([AvatarDisc] ring)
+        color: selected && spec.tab != BarTab.me ? palette.primarySoft : null,
+        borderRadius: BorderRadius.circular(bare ? 24 : 18),
       ),
       child: badged,
     );
@@ -585,7 +596,15 @@ class _BarItem extends StatelessWidget {
               Expanded(child: label),
             ]),
           )
-        : ConstrainedBox(
+        : bare
+            // ⓘ লেখা নেই — নাম লম্বা চাপে ভেসে ওঠে ([Tooltip]) আর TalkBack পড়ে (নিচের Semantics)
+            ? Tooltip(
+                message: spec.label,
+                // ⛔ উচ্চতা বাঁধা — নিচের বার ঢিলা মাপ পায়, খালি Center পুরো পর্দা জুড়ে বার লম্বা করত আর তালিকা ঢাকত
+                // (fab_never_hides_data_test ধরেছে, ১৫ নভেম্বর ২০২৬)
+                child: SizedBox(height: 64, child: Center(child: indicator)),
+              )
+            : ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 64, minWidth: 48),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),

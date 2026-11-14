@@ -310,12 +310,13 @@ void main() {
 
     // ⓘ বারের নকশা ৩: বিক্রয়কর্মীর (অর্ডার লেখেন) ঘর; আদায়ের চাবি নেই, তাই আদায় নেই।
     // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — এখন বারের শেষ ঘর; বিজ্ঞপ্তি এখনো বারে নয়
+    // ⓘ ১৪ নভেম্বর ২০২৬ (মালিকের নমুনা ৩): ফোনের বারে লেখা নেই — বাংলা নাম লম্বা চাপের Tooltip-এ (আর TalkBack-এ)
     for (final label in ['হোম', 'অর্ডার', 'সব মডিউল', 'আমি']) {
-      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
+      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byTooltip(label)),
           findsOneWidget, reason: label);
     }
     for (final label in ['বিজ্ঞপ্তি']) {
-      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
+      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byTooltip(label)),
           findsNothing, reason: label);
     }
 

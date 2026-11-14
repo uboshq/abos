@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'dart:ui' show Tristate;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:abos_mobile/core/navigation/colour_tab_icon.dart';
 import 'package:abos_mobile/core/navigation/nav_state.dart';
 import 'package:abos_mobile/core/web_inside/web_inside.dart';
 import 'package:abos_mobile/core/widgets/state_views.dart';
@@ -35,22 +35,37 @@ void main() {
   }
 
   // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভূমিকার চার ঘর + শেষে "আমি" (নিজের ছবি) = পাঁচ, Material 3-এর সীমা
-  group('four role tabs and "আমি" last, each with an icon and a Bengali label', () {
+  // ⭐ ১৪ নভেম্বর ২০২৬ (মালিকের নমুনা ৩): "সব মডিউল" সব ভূমিকায় মাঝখানে; ফোনের বারে কোনো লেখা নেই — নাম TalkBack-এ আর
+  //   লম্বা চাপে ([Tooltip]); প্রতিটা ঘরে রঙিন আইকন ([ColourTabIcon]), "আমি"-তে নিজের বড় ছবি
+  group('four role tabs and "আমি" last, modules in the middle, colour icons without words', () {
     for (final (role, names, labels) in [
-      ('owner', ['home', 'approvals', 'reports', 'modules', 'me'], ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল', 'আমি']),
-      ('sr', ['home', 'orders', 'collections', 'modules', 'me'], ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল', 'আমি']),
-      ('depot', ['home', 'challans', 'stock', 'modules', 'me'], ['হোম', 'চালান', 'মজুদ', 'সব মডিউল', 'আমি']),
-      ('accounts', ['home', 'approvals', 'vouchers', 'modules', 'me'], ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল', 'আমি']),
+      ('owner', ['home', 'approvals', 'modules', 'reports', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'রিপোর্ট', 'আমি']),
+      ('sr', ['home', 'orders', 'modules', 'collections', 'me'], ['হোম', 'অর্ডার', 'সব মডিউল', 'আদায়', 'আমি']),
+      ('depot', ['home', 'challans', 'modules', 'stock', 'me'], ['হোম', 'চালান', 'সব মডিউল', 'মজুদ', 'আমি']),
+      ('accounts', ['home', 'approvals', 'modules', 'vouchers', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'ভাউচার', 'আমি']),
     ]) {
       testWidgets('$role: ${labels.join(' · ')}', (tester) async {
         await pump(tester, role);
+        final xs = <double>[];
         for (var i = 0; i < names.length; i++) {
           expect(tab(names[i]), findsOneWidget, reason: names[i]);
-          expect(find.descendant(of: tab(names[i]), matching: find.text(labels[i])), findsOneWidget);
-          // ⓘ "আমি"-র আইকন মানুষের নিজের ছবি (না থাকলে নামের প্রথম অক্ষর), Material-এর আইকন নয়
-          expect(find.descendant(of: tab(names[i]), matching: find.byType(Icon)), names[i] == 'me' ? findsNothing : findsOneWidget,
-              reason: names[i]);
+          xs.add(tester.getCenter(tab(names[i])).dx);
+          expect(find.descendant(of: tab(names[i]), matching: find.text(labels[i])), findsNothing,
+              reason: '⛔ ${names[i]}: ফোনের বারে লেখা — মালিকের নমুনায় কোনো ঘরে লেখা নেই');
+          expect(tester.getSemantics(tab(names[i])).label, contains(labels[i]),
+              reason: '⛔ ${names[i]}: TalkBack নাম পড়ে না — লেখা তুলে দিলে চোখে কম দেখেন এমন মানুষ হারিয়ে যান');
+          expect(find.descendant(of: tab(names[i]), matching: find.byWidgetPredicate((w) => w is Tooltip && w.message == labels[i])),
+              findsOneWidget, reason: '⛔ ${names[i]}: লম্বা চাপে নাম ভেসে ওঠে না');
+          // ⓘ "আমি"-র আইকন মানুষের নিজের ছবি (না থাকলে নামের প্রথম অক্ষর), রঙিন আইকন নয়
+          expect(find.descendant(of: tab(names[i]), matching: find.byType(ColourTabIcon)), names[i] == 'me' ? findsNothing : findsOneWidget,
+              reason: '⛔ ${names[i]}: রঙিন আইকন নেই');
         }
+        expect(xs, orderedEquals([...xs]..sort()), reason: '⛔ ঘরের ক্রম ${labels.join(' · ')} নয়');
+        expect(tester.getSize(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('nav-me-face')))).height,
+            greaterThanOrEqualTo(48), reason: '⛔ নিজের ছবি বড় নয় — নমুনায় ৫৬');
+        // ⓘ বাছা না থাকলে ছবির কিনারায় কোনো দাগ নয় — উপরের বারের সাদা কিনারা অন্ধকার থিমে বাছা ঘরের রিংয়ের মতো দেখাত
+        final disc = tester.widget<Container>(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('avatar-disc'))));
+        expect((disc.decoration! as BoxDecoration).border, isNull, reason: '⛔ বাছা না থাকা ছবির চারপাশে দাগ — দেখে মনে হয় "আমি" বাছা');
         expect(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('nav-me-face'))), findsOneWidget);
         expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(InkWell)),
             findsNWidgets(5));
@@ -134,7 +149,7 @@ void main() {
     });
   });
 
-  testWidgets('200% text (real fonts): nothing overflows on a 320dp phone, every label stays whole', (tester) async {
+  testWidgets('200% text (real fonts): nothing overflows on a 320dp phone, and the bar stays a bar of icons', (tester) async {
     await tester.runAsync(loadRealFonts);
     for (final role in rolePermissions.keys) {
       await setScreen(tester, const Size(320, 640));
@@ -143,20 +158,12 @@ void main() {
           badges: const NavBadges(pending: 120), themed: realFontTheme));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: role);
-      final bar = tester.getRect(find.byKey(const ValueKey('nav-bar')));
-      for (final t in find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(Text)).evaluate()) {
-        final para = t.renderObject! as RenderParagraph;
-        final text = (t.widget as Text).data;
-        expect(para.didExceedMaxLines, isFalse, reason: '$role: $text');
-        // every glyph laid out (no ellipsis, nothing cut), and the text inside the bar
-        expect(para.getPositionForOffset(Offset(para.size.width, para.size.height)).offset, text!.length,
-            reason: '$role: $text');
-        final rect = tester.getRect(find.byWidget(t.widget));
-        expect(bar.contains(rect.topLeft) && bar.contains(rect.bottomRight - const Offset(0.01, 0.01)), isTrue,
-            reason: '$role: $text');
-      }
-      expect(tester.getSize(find.byKey(const ValueKey('nav-bar'))).height, greaterThan(80),
-          reason: 'the bar grows with the text instead of clipping it');
+      // ⭐ ১৪ নভেম্বর ২০২৬ থেকে বারে লেখা নেই — বড় অক্ষরেও বারটা আইকনের বার, পর্দা খায় না; ছবি গোল থাকে, কাটা পড়ে না
+      final badgeTexts = find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(Text)).evaluate()
+          .map((e) => (e.widget as Text).data ?? '').where((s) => int.tryParse(s.replaceAll('+', '')) == null && s.length > 1).toList();
+      expect(badgeTexts, isEmpty, reason: '⛔ $role: বারে ঘরের নাম লেখা — নমুনায় কোনো ঘরে লেখা নেই');
+      final h = tester.getSize(find.byKey(const ValueKey('nav-bar'))).height;
+      expect(h, inInclusiveRange(72, 96), reason: '⛔ $role: বারের উচ্চতা $h — বড় অক্ষরে বার পর্দা খাচ্ছে, বা ৭২-এর কম');
     }
   });
 
@@ -351,7 +358,7 @@ void main() {
       expect(find.byKey(const ValueKey('nav-drawer')), findsOneWidget);
       expect(find.byKey(const ValueKey('nav-rail')), findsNothing);
       expect(tester.getSize(find.byKey(const ValueKey('nav-drawer'))).width, greaterThanOrEqualTo(240));
-      final icon = tester.getCenter(find.descendant(of: tab('vouchers'), matching: find.byType(Icon)));
+      final icon = tester.getCenter(find.descendant(of: tab('vouchers'), matching: find.byType(ColourTabIcon)));
       final label = tester.getCenter(find.descendant(of: tab('vouchers'), matching: find.text('ভাউচার')));
       expect(label.dx, greaterThan(icon.dx));
       expect((label.dy - icon.dy).abs(), lessThan(8));

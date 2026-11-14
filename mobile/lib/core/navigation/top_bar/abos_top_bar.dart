@@ -382,12 +382,16 @@ class _AbosTopBarState extends State<AbosTopBar> {
 /// ⭐ নিজের ছবি — ছবি থাকলে ছবি, নইলে কমলা গোলে নামের প্রথম অক্ষর, চারপাশে সাদা দাগ; মেনু খোলা থাকলে বাইরে কমলা দাগ
 /// (নমুনা পাতা ২)। অক্ষরটা প্রতীক — বড় লেখায় বাড়ে না, গোলের ভেতরেই থাকে।
 class AvatarDisc extends StatelessWidget {
-  const AvatarDisc({super.key, required this.name, this.image, this.size = 36, this.ring = false});
+  const AvatarDisc({super.key, required this.name, this.image, this.size = 36, this.ring = false, this.edge = true});
 
   final String name;
   final ImageProvider? image;
   final double size;
   final bool ring;
+
+  /// ⓘ উপরের বারের রঙে সরু কিনারা — গাঢ় উপরের বারে ছবি আলাদা করে; নিচের বারে নয় (সেখানে সাদা কিনারা অন্ধকার থিমে বাছা
+  /// ঘরের রিংয়ের মতো দেখাত, ১৫ নভেম্বর ২০২৬)
+  final bool edge;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +408,7 @@ class AvatarDisc extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [c.avatarFrom, c.avatarTo]),
-        border: Border.all(color: c.onBar, width: 2),
+        border: edge ? Border.all(color: c.onBar, width: 2) : null,
       ),
       child: ClipOval(
         child: image == null ? initial : Image(image: image!, fit: BoxFit.cover, width: size, height: size, errorBuilder: (_, __, ___) => initial),

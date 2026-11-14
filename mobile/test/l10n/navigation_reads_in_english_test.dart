@@ -51,8 +51,9 @@ void main() {
       ),
     )));
     await tester.pumpAndSettle();
+    // ⓘ ১৪ নভেম্বর ২০২৬ থেকে ফোনের বারে লেখা নেই — নাম থাকে লম্বা চাপের Tooltip-এ আর TalkBack-এ; সেটাই ইংরেজি হতে হবে
     for (final label in ['Home', 'Approvals', 'Reports', 'All modules']) {
-      expect(find.text(label), findsOneWidget, reason: label);
+      expect(find.byTooltip(label), findsOneWidget, reason: label);
     }
     expect(_shown(tester).where(_bengali.hasMatch), isEmpty);
     for (final tab in tabs) {
