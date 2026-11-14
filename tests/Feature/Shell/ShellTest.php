@@ -493,8 +493,8 @@ class ShellTest extends TestCase
         }
         $this->assertStringContainsString('object-contain', $markup);
 
-        // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক।
-        $this->assertStringContainsString('abos-icon-transparent.png', $markup);
+        // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক — ১৩ নভেম্বর ২০২৬ থেকে জীবন্ত চিহ্নটুকু (মালিক: "বলটা গোল্ডেন … জীবন্ত")
+        $this->assertStringContainsString('<x-brand.live-logo icon-only', $markup);
 
         // স্ক্রিন রিডারের জন্য পূর্ণরূপটা লেখা হিসেবেও থাকে — একটা ছবির
         // alt="ABOS" পড়ে শোনালে পূর্ণরূপটা হারিয়ে যেত।

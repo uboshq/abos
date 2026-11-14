@@ -551,7 +551,7 @@
                                      স্পষ্ট হয়েছে — দুইটা একে অন্যের বিপরীত
                                      নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
                                 {{-- ⭐ কোপাইলট — উপরের বারের একই জীবন্ত মগজ, স্থির ছবি নয় (মালিক, ১৩ নভেম্বর ২০২৬) --}}
-                                @if ($module['code'] === 'assistant')
+                                @if ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark')
                                     <x-shell.copilot-mark size="bare" class="cq-rail" data-rail-copilot />
                                 @else
                                     <x-ui.icon :name="$module['icon']" :size="22" drawn />
