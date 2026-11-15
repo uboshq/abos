@@ -107,20 +107,16 @@
         </div>
     @endif
 
+    {{-- ⭐ রঙিন কার্ড, তালিকা আর ডান পাশের ছাঁকনি — সব তালিকায় এক ছাঁচ ([[filter-layout]], [[InvoiceListFilters]]; ১৫ নভেম্বর ২০২৬) --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('sales::filter.noun')">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::menu.invoices')" :count="__('sales::message.invoice_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.invoice_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$filters">
         {{-- ⭐ "New invoice" নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"Direct Sales আছে।"*
              বিল জন্মায় সরাসরি বিক্রয়ে, আর (পরের কাজ) শিপমেন্ট থেকে আদেশ ধরে। ⓘ চালানের পাতার
              "এই চালানের বিল করুন" থাকল — সেই ব্যবস্থা তৈরি হওয়া পর্যন্ত আদেশের মালের একমাত্র পথ। --}}
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -155,4 +151,5 @@
             ['label' => __('sales::field.due'), 'value' => \App\Core\Support\Money::format($totals['due']), 'tone' => 'bad'],
         ]" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -55,32 +55,22 @@ class SalesInvoiceController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = self::listed($request);
+        /*
+         * ⭐ ছাঁকনি — কেন্দ্রীয় ইঞ্জিন ([[InvoiceListFilters]], ১৫ নভেম্বর ২০২৬): অবস্থা, আদায়ের অবস্থা, তারিখ, ডিপো, এলাকা, টাকা।
+         * ⓘ তালিকার নিজের কোয়েরি (`listed`) ছাঁকনি ছাড়া — প্যানেলের সংখ্যা আর কার্ড সেটা থেকেই গোনা হয়।
+         */
+        $filters = app(\App\Modules\Sales\Support\InvoiceListFilters::class)->set($request);
+        $base = fn () => self::listed($request);
+        $query = $base();
 
         /*
-         * ধাপের পটির কোয়েরিটা **অবস্থার ছাঁকনি বসানোর আগে**।
-         *
-         * তীরগুলো বাকি সব ছাঁকনি মানে — তারিখ, গ্রাহক, খোঁজা — কিন্তু
-         * অবস্থারটা নয়। নাহলে "খসড়া" বেছে নেওয়ার পর তীরগুলো দেখাত
-         * খসড়া ৩১ আর বাকি সব শূন্য, অর্থাৎ পটিটা তার নিজের কাজটাই
-         * করত না: কোথায় কতটা জমে আছে সেটা দেখানো।
+         * ধাপের পটির কোয়েরিটা **অবস্থার ছাঁকনি ছাড়া**, বাকি সব ছাঁকনিসহ — নাহলে "খসড়া" বেছে নেওয়ার পর তীরগুলো দেখাত
+         * খসড়া ৩১ আর বাকি সব শূন্য, অর্থাৎ পটিটা তার নিজের কাজটাই করত না: কোথায় কতটা জমে আছে সেটা দেখানো।
          */
-        $bandBase = clone $query;
-
-        /*
-         * অবস্থা ধরে ছাঁকা — এই প্যারামিটারটা এসেছে ধাপের পটির সাথে,
-         * ২৯ আগস্ট ২০২৬। তীরে ক্লিক করলে ওই ধাপের কাগজগুলোই থাকে।
-         */
-        $stage = (string) $request->query('stage', '');
-
-        if (in_array($stage, DocumentStatus::ALL, true)) {
-            $query->where('status', $stage);
-        } else {
-            $stage = '';
-        }
-
-        // তারিখের পরিসর — হোম পর্দার "আজকের বিক্রয়" ঠিক এখানেই নামে
-        $dates = $this->applyDateRange($query, $request);
+        $bandBase = $base();
+        $filters->applyExcept($bandBase, $request, 'stage');
+        $filters->apply($query, $request);
+        $stage = \App\Modules\Sales\Support\InvoiceListFilters::singleStage($request);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -149,7 +139,8 @@ class SalesInvoiceController extends Controller implements HasMiddleware
                 'due' => max(bcsub((string) $money, (string) $collected, 4), '0'),
             ],
             'q' => $request->query('q'),
-            'dates' => $dates,
+            // ⭐ ছাঁকনি প্যানেল আর কার্ড — ইঞ্জিন থেকে
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),

@@ -117,7 +117,9 @@ final class TheCustomerNameCarriesPointAndBranchTest extends TestCase
             $this->assertLessThanOrEqual($few[$table], $many[$table],
                 "⛔ বিলের তালিকা: সারি বাড়তেই `{$table}`-এর প্রশ্ন বাড়ল ({$few[$table]} → {$many[$table]}) — সারি ধরে প্রশ্ন।");
         }
-        $this->assertLessThanOrEqual(3, $many['customers'] + $many['mdm_locations'],
+        // ⓘ ১৫ নভেম্বর ২০২৬: ৩ থেকে ৫ — ছাঁকনি প্যানেল ([[Places]]) জায়গার গাছ একবার পড়ে আর সব এলাকার সংখ্যা এক কোয়েরিতে গোনে;
+        //   এই দুইটা সারির সংখ্যায় বাড়ে না (উপরের "বেশি সারি ≤ কম সারি" দাবিই সেটা পাহারা দেয়)। সারিপ্রতি প্রশ্ন এলে আবার লাল।
+        $this->assertLessThanOrEqual(5, $many['customers'] + $many['mdm_locations'],
             "⛔ বিলের তালিকা: একুশ সারিতে গ্রাহক/জায়গার ".($many['customers'] + $many['mdm_locations']).'টা প্রশ্ন।');
     }
 

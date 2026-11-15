@@ -32,6 +32,8 @@ final class ChoiceFacet extends Facet
         public readonly ?string $default = null,
         public readonly bool $counted = true,
         public readonly array $legacy = [],
+        /** ⓘ সব ঘরের সংখ্যা এক কোয়েরিতে — দিলে ঘরপ্রতি আলাদা COUNT হয় না ([[Places]]) */
+        public readonly ?Closure $countAll = null,
     ) {
         parent::__construct($key, $label);
     }

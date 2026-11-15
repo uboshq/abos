@@ -10,6 +10,7 @@ use App\Core\ListFilter\DateRangeFacet;
 use App\Core\ListFilter\FieldsFacet;
 use App\Core\ListFilter\FilterSet;
 use App\Core\ListFilter\ListCard;
+use App\Core\ListFilter\Places;
 use App\Core\ListFilter\RangeFacet;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -92,8 +93,8 @@ final class CustomerListFilters
                 'good' => ['label' => __('customer::filter.quick_good'), 'tone' => 'teal', 'apply' => fn (Builder $q) => $this->good($q)],
                 'over_limit' => ['label' => __('customer::filter.quick_over_limit'), 'tone' => 'amber', 'apply' => fn (Builder $q) => $q->overCreditLimit()],
             ]))->look('red', '৳'),
-            (new ChoiceFacet('area', __('customer::filter.area'), $this->places(Location::TERRITORY)))->look('teal', '◈'),
-            (new ChoiceFacet('point', __('customer::filter.point'), $this->places(Location::POINT)))->look('violet', '⌖'),
+            $this->placeFacet('area', __('customer::filter.area'), Location::TERRITORY)->look('teal', '◈'),
+            $this->placeFacet('point', __('customer::filter.point'), Location::POINT)->look('violet', '⌖'),
             (new RangeFacet('due', __('customer::filter.due'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), 1, $min, $max)))->look('amber', '⇕'),
             (new RangeFacet('advance', __('customer::filter.advance'), fn (Builder $q, ?string $min, ?string $max) => $this->between($q, $this->outstanding(), -1, $min, $max)))->look('green', '⇕'),
             (new DateRangeFacet('created', __('customer::filter.created'), function (Builder $q, ?string $from, ?string $to): void {
@@ -154,22 +155,18 @@ final class CustomerListFilters
     }
 
     /**
-     * এলাকা বা পয়েন্টের ঘর — দেখার শাখার, চালু, নামের ক্রমে; প্রতিটা ঘর ঐ জায়গা আর তার নিচের পুরো ডাল।
-     *
-     * @return array<string, array{label: string, apply: callable(Builder): mixed}>
+     * এলাকা বা পয়েন্টের অংশ — প্রতিটা ঘর ঐ জায়গা আর তার নিচের পুরো ডাল; গাছ একবারই পড়া, সংখ্যা এক কোয়েরিতে ([[Places]])।
      */
-    private function places(string $level): array
+    private function placeFacet(string $key, string $label, string $level): ChoiceFacet
     {
-        $options = [];
+        $section = Places::section(
+            $level,
+            fn (array $ids) => fn (Builder $q) => $q->whereIn('customers.location_id', $ids ?: [0]),
+            fn (Builder $q) => (clone $q)->reorder()->toBase()->selectRaw('customers.location_id as loc, COUNT(*) as n')
+                ->groupBy('customers.location_id')->get(),
+        );
 
-        foreach (Location::query()->inViewedBranch()->atLevel($level)->where('is_active', true)->orderBy('name_en')->get() as $place) {
-            $options[(string) $place->id] = [
-                'label' => $place->name(),
-                'apply' => fn (Builder $q) => $q->whereIn('customers.location_id', $place->selfAndDescendants()->pluck('id')->all() ?: [0]),
-            ];
-        }
-
-        return $options;
+        return new ChoiceFacet($key, $label, $section['options'], countAll: $section['count']);
     }
 
     /** হেডারে বাছা শাখার বকেয়া — [[Customer::scopeWithOutstandingInView()]]-এর হুবহু, সারিতে যা দেখায় তাই */

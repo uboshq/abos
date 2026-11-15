@@ -97,19 +97,17 @@
         </div>
     @endif
 
+    {{-- ⭐ রঙিন কার্ড, তালিকা আর ডান পাশের ছাঁকনি — সব তালিকায় এক ছাঁচ ([[filter-layout]], [[ChallanListFilters]]; ১৫ নভেম্বর ২০২৬) --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('sales::filter.challan_noun')">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
+            {{-- ⓘ উপরের ধাপের ট্যাব খোঁজা বা ছাঁকনিতে হারায় না --}}
+            @if ($tab)<input type="hidden" name="tab" value="{{ $tab }}">@endif
             <x-ui.toolbar :title="__('sales::menu.challans')" :count="__('sales::message.challan_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.challan_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$filters" :quiet="['tab']">
         {{-- ⛔ "নতুন চালান" নেই — মালিকের পরিকল্পনা, ধাপ ৪ (২৮ সেপ্টেম্বর ২০২৬): চালান জন্মায়
              বিক্রি থেকে (অনুমোদনের পরে বিলের সাথে), তালিকা থেকে নয়। এই পাতা কেবল তালিকা। --}}
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -124,4 +122,5 @@
         <x-ui.pager :rows="$challans" />
         <x-ui.list-totals :rows="$challans" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

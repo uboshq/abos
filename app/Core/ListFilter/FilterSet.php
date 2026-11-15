@@ -55,6 +55,22 @@ final class FilterSet
         }
     }
 
+    /** ⓘ একটা অংশ বাদে বাকি সব — যেমন ধাপের পটি: অন্য ছাঁকনি মানে, নিজের অবস্থারটা নয় */
+    public function applyExcept(Builder $query, Request $request, string $key): void
+    {
+        foreach ($this->facets as $facet) {
+            if ($facet->key === $key) {
+                continue;
+            }
+
+            $value = $facet->applied($request);
+
+            if ($value !== null) {
+                $facet->apply($query, $value);
+            }
+        }
+    }
+
     /**
      * প্রতিটা টিকের ঘরের সংখ্যা।
      *
@@ -66,7 +82,7 @@ final class FilterSet
         $counts = [];
 
         foreach ($this->facets as $facet) {
-            if (! $facet instanceof ChoiceFacet || ! $facet->counted || count($facet->options) > self::COUNT_UP_TO) {
+            if (! $facet instanceof ChoiceFacet || ! $facet->counted || ($facet->countAll === null && count($facet->options) > self::COUNT_UP_TO)) {
                 continue;
             }
 
@@ -82,6 +98,12 @@ final class FilterSet
                 if ($value !== null) {
                     $other->apply($query, $value);
                 }
+            }
+
+            if ($facet->countAll !== null) {
+                $counts[$facet->key] = ($facet->countAll)($query);
+
+                continue;
             }
 
             foreach (array_keys($facet->options) as $option) {

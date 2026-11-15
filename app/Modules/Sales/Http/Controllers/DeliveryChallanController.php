@@ -60,26 +60,24 @@ class DeliveryChallanController extends Controller implements HasMiddleware
         $tab = in_array($request->query('tab'), \App\Modules\Sales\Services\DeliveryOrderTabs::LISTED, true)
             ? (string) $request->query('tab') : null;
 
-        $query = self::listed($request)
-            ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
+        /*
+         * ⭐ ছাঁকনি — কেন্দ্রীয় ইঞ্জিন ([[ChallanListFilters]], ১৫ নভেম্বর ২০২৬): অবস্থা, পৌঁছানো, তারিখ, ডিপো, এলাকা।
+         * ⓘ তালিকার নিজের কোয়েরি ছাঁকনি ছাড়া — বাতিল লুকানো (নিয়ম ৫) আর উপরের ধাপের ট্যাব সহ; প্যানেলের সংখ্যা আর কার্ড এটা থেকেই।
+         */
+        $filters = app(\App\Modules\Sales\Support\ChallanListFilters::class)->set();
+        $base = fn () => self::listed($request)
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
-                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+                fn ($q) => $q->where('sal_challans.status', '<>', DocumentStatus::CANCELLED))
             ->when($tab !== null, fn ($q) => $q->whereIn('sal_challans.id', $tabs->query($tab)->select('sal_challans.id')));
 
-        // ধাপের পটির হিসাব অবস্থার ছাঁকনির আগে — কারণটা
-        // [[ProcessBand::forStatuses()]]-এ লেখা
-        $bandBase = clone $query;
+        $query = $base()->with(['customer.location.parent', 'customer.branch', 'warehouse']);
 
-        $stage = (string) $request->query('stage', '');
-
-        if (in_array($stage, DocumentStatus::ALL, true)) {
-            $query->where('status', $stage);
-        } else {
-            $stage = '';
-        }
-
-        $dates = $this->applyDateRange($query, $request);
+        // ধাপের পটির হিসাব অবস্থার ছাঁকনি ছাড়া, বাকি সব ছাঁকনিসহ — কারণটা [[ProcessBand::forStatuses()]]-এ লেখা
+        $bandBase = $base();
+        $filters->applyExcept($bandBase, $request, 'stage');
+        $filters->apply($query, $request);
+        $stage = \App\Modules\Sales\Support\InvoiceListFilters::singleStage($request);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -93,7 +91,8 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'challans' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'q' => $request->query('q'),
-            'dates' => $dates,
+            // ⭐ ছাঁকনি প্যানেল আর কার্ড — ইঞ্জিন থেকে
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
