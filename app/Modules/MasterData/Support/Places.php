@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Core\ListFilter;
+namespace App\Modules\MasterData\Support;
 
 use App\Core\Services\DataScope;
 use App\Models\User;
