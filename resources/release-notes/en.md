@@ -1,5 +1,13 @@
 # What's new
 
+## 1.3.0 — 15-11-2026
+
+- Colour cards on top of the customer, distributor, invoice and challan lists — tap one and its filter is set.
+- The new filter opens from the right: each section in its own colour, a count beside every box, several ticks in one section, and "Show N" before you apply.
+- Chosen filters as coloured chips on top; ✕ removes one, "Clear all filters" removes all.
+- Invoice list: payment — still owing, overdue, paid — by the dues report's own sum.
+- Challan list: delivery — waiting and delivered; the tab no longer disappears on a search.
+
 ## 1.2.0 — 14-11-2026
 
 - A living logo with the gold ball on the left bar's home button, and a living brain on Copilot's tile.
