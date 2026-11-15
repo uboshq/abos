@@ -27,6 +27,7 @@ return [
     'asset_idle_stops_depreciation' => 'অলস পড়ে থাকা সম্পদে অবচয় থামবে',
     'asset_auto_run' => 'মাসের অবচয় নিজে নিজে বসবে (মাসের প্রথম দিনে, গত মাসের)',
     'print_signature_lines' => 'প্রিন্টে স্বাক্ষরের ঘর রাখো',
+    'statement_colour' => 'পার্টির লেজার রঙিন ছাপো (বন্ধ থাকলে সাদা-কালো)',
     'paper_voucher' => 'ভাউচার কোন কাগজে',
     'voucher_copies' => 'A4-এ রসিদ কয় কপি',
     'voucher_copies_1' => '১ কপি (গ্রাহকের)',

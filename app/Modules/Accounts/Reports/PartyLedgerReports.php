@@ -48,6 +48,33 @@ final class PartyLedgerReports
     /** ⓘ ছাঁকনির নাম → খতিয়ানের পক্ষের ধরন; বাছার তালিকা ([[ReportController]]) এটা পড়ে */
     public const PARTY_FILTERS = ['customer_id' => 'customer', 'supplier_id' => 'supplier', 'person_id' => 'person'];
 
+    /**
+     * ⭐ ছাপা = হিসাব বিবরণী, সব পাতা, রিপোর্টের একই পক্ষ আর তারিখে (মালিক, ১৫ নভেম্বর ২০২৬: "হিসাব → রিপোর্ট"-এ মূল জায়গা)।
+     * ⓘ পক্ষ বাছা না থাকলে `null` — তখন রিপোর্টের নিজের ছাপা। "শুরু থেকে" (১৯০০-০১-০১) মানে বিবরণীতেও শুরু থেকে।
+     *
+     * @param  array<string, mixed>  $filters  ইঞ্জিনের গোছানো ছাঁকনি ([[ReportResult::$filters]])
+     */
+    public static function statementHref(string $key, array $filters): ?string
+    {
+        // ⓘ সাধারণ খতিয়ান (`accounts.ledger`) — খাত বাছা থাকলে অ্যাকাউন্ট লেজার (মালিক, ১৫ নভেম্বর ২০২৬)
+        $filter = [self::CUSTOMER => 'customer_id', self::SUPPLIER => 'supplier_id', self::PERSON => 'person_id',
+            'accounts.ledger' => 'account_id'][$key] ?? null;
+        $id = $filter === null ? 0 : (int) ($filters[$filter] ?? 0);
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        $from = (string) ($filters['from'] ?? '');
+
+        return route('accounts.statement', array_filter([
+            'type' => self::PARTY_FILTERS[$filter] ?? 'account',
+            'id' => $id,
+            'from' => $from === '' || $from === ReportEngine::BEGINNING ? null : $from,
+            'to' => (string) ($filters['to'] ?? '') ?: null,
+        ], fn ($v) => $v !== null));
+    }
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::ledger(self::CUSTOMER, 'customer', 'customer_id', 'accounts::party_ledger.customer_title'));

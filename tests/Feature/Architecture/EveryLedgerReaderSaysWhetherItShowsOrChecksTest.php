@@ -34,6 +34,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> দেখায় — দেখার শাখা মানবে (ধাপ খ) */
     private const SHOWS = [
+        'app/Modules/Accounts/Support/PartyStatement.php' => 'লেজার (হিসাব বিবরণী, মালিক ১৫ নভেম্বর ২০২৬) — দলের পাতার খাতার হুবহু: দেখার শাখা ধরে '
+            .'(ViewedBranch::narrow), তাই শেষ জের পাতার বকেয়া/দেনার সমান; অপর পাশের নাম খুঁজতে একই কাগজের সারি — কেবল নাম, অঙ্ক নয়',
         'app/Modules/Accounts/Dashboard/AccountsBoard.php' => 'হিসাবের বোর্ড (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬ রাত) — আয়-ব্যয়, জের, খাতের যোগ সবই দেখার শাখা ধরে '
             .'(ViewedBranch::narrow / balanceInView); কেবল "বন্ধ মাসে দেরির সারি" গোটা কোম্পানির — মাস বন্ধ হয় কোম্পানি ধরে',
         'app/Modules/Inventory/Dashboard/InventoryBoard.php' => 'মজুদের বোর্ড — মজুদ খাতের মাসের ধারা, দেখার শাখা ধরে (ViewedBranch::narrow; মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬)',

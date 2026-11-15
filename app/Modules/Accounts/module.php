@@ -1099,6 +1099,14 @@ return [
             'default' => true,
             'group' => 'print',
         ],
+        // ⭐ হিসাব বিবরণী রঙিন — মূল ছাপা সাদা-কালো, এটা চালু করলে রঙিন (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]])
+        [
+            'key' => 'accounts.statement_colour',
+            'label' => 'accounts::settings.statement_colour',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'print',
+        ],
     ],
     /*
      * ⓘ যে ঘটনাগুলো Accounts ঘোষণা করে — অন্য মডিউল এগুলো শোনে,

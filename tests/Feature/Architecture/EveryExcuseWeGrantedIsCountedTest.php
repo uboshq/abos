@@ -506,7 +506,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     // ⓘ ১৪ নভেম্বর ২০২৬ (fe, রিলিজ 1.2.0 — চার শাখা একসাথে; Mac run of b09c322b1: ৫১৭): +১ শাখাগুলো একসাথে মেলায় (কোপাইলটের
     //   মানে-ছাপের টেবিল `assistant_vectors` — PublicIdTest::FRAMEWORK, আর মাঠকর্মীর গাছের দুই ঘর: তালিকা নয় ও কাগজের ফর্ম নয়),
     //   +১ TheListThatGrowsForever…::WHOLE_ON_PURPOSE `FieldForceController` — গাছ পাতায় ভাঙে না, সারি কর্মীর সংখ্যায় = ৫১৮
-    private const CEILING = 518;
+    // ⓘ ৫১৮ → ৫১৯ (১৬ নভেম্বর ২০২৬): লেজারের ঠিকানা `accounts.statement` — দুই চাবির যেকোনো একটা (হিসাবের রিপোর্ট বা পক্ষকে দেখার
+    //   অনুমতি), তাই পাহারা পদ্ধতির ভেতরে abort_unless()-এ (GUARDED_INSIDE_THE_METHOD); একটা can: মিডলওয়্যারে এটা বলা যায় না
+    private const CEILING = 519;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

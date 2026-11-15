@@ -276,6 +276,11 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
 
+    // ⭐ হিসাব বিবরণী — যেকোনো পক্ষ, যেকোনো সময়, সব পাতার PDF (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]]); catch-all-এর আগে
+    Route::get('/statement/{type}/{id}', \App\Modules\Accounts\Http\Controllers\PartyStatementController::class)
+        ->where('type', '[a-z_]+')->whereNumber('id')
+        ->name('statement');
+
     // ⭐ নিট সম্পদ বিবরণী — কেবল মালিক, অন্যদের ৪০৪ ([[NetWorthController]]; মালিক, ২৫ অক্টোবর ২০২৬); catch-all-এর আগে
     Route::get('/reports/net-worth', [NetWorthController::class, 'show'])
         ->name('net_worth');

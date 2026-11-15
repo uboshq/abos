@@ -24,6 +24,7 @@ return [
     'asset_idle_stops_depreciation' => 'Stop depreciation while an asset is idle',
     'asset_auto_run' => 'Post monthly depreciation automatically (on the 1st, for the month before)',
     'print_signature_lines' => 'Signature lines on printouts',
+    'statement_colour' => 'Print party ledgers in colour (off: black and white)',
     'paper_voucher' => 'Paper for vouchers',
     'voucher_copies' => 'Receipt copies on A4',
     'voucher_copies_1' => '1 copy (customer)',

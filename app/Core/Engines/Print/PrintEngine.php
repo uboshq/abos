@@ -96,6 +96,67 @@ final class PrintEngine
     }
 
     /**
+     * ⭐ কয়েক পাতার কাগজ — এক পাতায় আঁটানো নয় (হিসাব বিবরণী, মালিক, ১৫ নভেম্বর ২০২৬: "৫ বছরের লেজার … সব পাতা")।
+     *
+     * ⛔ [[render()]] দুই পাতার বেশি হলে [[fitOnOnePage()]] লেখা ছোট করে এক পাতায় আঁটায় — ৪৭ পাতার খাতা তাতে পড়াই যেত না।
+     * এখানে লেখা ১০০%-এ, যত পাতা লাগে তত; পাতা ভাগ কাগজের ছাঁচ নিজেই করে (`<pagebreak />`)। ⓘ পাতার মার্জিন ছাঁচ বলে দেয়
+     * (`$margin`, মিমি) — খাতায় কাগজ বাঁচাতে কম।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{pdf: string, pages: int}
+     */
+    public function renderDocument(string $template, array $data, string $paper = PaperSize::A4, ?string $locale = null,
+        ?Company $company = null, ?float $margin = null): array
+    {
+        $size = PaperSize::of($paper);
+        $locale = $locale ?? \App\Core\Support\PaperLanguage::for();
+        $company = $this->withInvoiceLogo($company ?? $this->currentCompany());
+        $view = $this->resolveTemplate($template);
+
+        $previous = app()->getLocale();
+        app()->setLocale($locale);
+
+        try {
+            $html = View::make($view, [
+                ...$data,
+                'company' => $company,
+                'paper' => $size,
+                'locale' => $locale,
+                'settings' => $this->settings,
+                'profile' => PrintProfile::everything(),
+            ])->render();
+        } finally {
+            app()->setLocale($previous);
+        }
+
+        $mpdf = $this->newMpdf($size);
+
+        if ($margin !== null) {
+            $mpdf->SetMargins($margin, $margin, $margin);
+            $mpdf->SetAutoPageBreak(true, $margin);
+        }
+
+        $mpdf->SetTitle((string) ($data['title'] ?? $template));
+        $mpdf->SetCreator('ABOS');
+        $mpdf->WriteHTML($html);
+
+        return ['pdf' => $mpdf->Output('', Destination::STRING_RETURN), 'pages' => count($mpdf->pages)];
+    }
+
+    /**
+     * ⓘ লেখার চওড়া, মিমি — কাগজের নিজের ফন্টে (বাংলা যুক্তাক্ষরসহ)। পাতা ভাগ করার আগে কোন সারি কয় লাইনে ভাঙবে তা মাপতে।
+     */
+    public function textWidth(string $text, float $sizePt, bool $bold = false): float
+    {
+        $mpdf = $this->measurer ??= $this->newMpdf(PaperSize::of(PaperSize::A4));
+        $mpdf->SetFont('hindsiliguri', $bold ? 'B' : '', $sizePt);
+
+        return (float) $mpdf->GetStringWidth($text);
+    }
+
+    private ?Mpdf $measurer = null;
+
+    /**
      * ⭐ নমুনা — PDF নয়, হুবহু সেই HTML.
      *
      * ── ⭐ মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬ ────────────

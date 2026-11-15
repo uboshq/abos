@@ -218,7 +218,8 @@
                  [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
             <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null ? ' · '.$period : '')"
                           :search="$report->searchableColumns() !== []"
-                          :print-href="$result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null"
+                          :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)
+                              ?? ($result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null)"
                           :columns="$menuColumns">
                 @if ($report->hasFilter('date_range'))
                     {{--

@@ -399,6 +399,8 @@ class EveryRouteIsGuardedTest extends TestCase
      * একটার বেশি হতে পারে।
      */
     private const GUARDED_INSIDE_THE_METHOD = [
+        // ⭐ লেজার (হিসাব বিবরণী) — হিসাবের রিপোর্টের চাবি, অথবা সেই পক্ষকে দেখার অনুমতি (দলের পাতার ছাপা); খাতের লেজারে কেবল রিপোর্টের চাবি
+        'accounts.statement' => 'accounts.report অথবা পক্ষের নিজের view-নীতি — abort_unless() পদ্ধতির ভেতরে (PartyStatementController)',
         /*
          * ইনবক্স খোলেন দুই ধরনের মানুষ: যিনি সই দেন (`approval.decide`),
          * আর যিনি দেখেন কার সইয়ে কী আটকে আছে (`approval.report` —

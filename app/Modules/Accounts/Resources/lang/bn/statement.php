@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * ⭐ হিসাব বিবরণী — ব্যাংকের মতো, সব পাতা (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatement]])।
+ */
+return [
+    'title' => [
+        // ⭐ দলের ধরন দেখে — মানুষ যে নামে চেনে (মালিক, ১৫ নভেম্বর ২০২৬)
+        'customer' => 'কাস্টমার লেজার',
+        'supplier' => 'সাপ্লায়ার লেজার',
+        'service_provider' => 'সার্ভিস প্রোভাইডার লেজার',
+        'person' => 'পার্টি লেজার',
+        'employee' => 'এমপ্লয়ি লেজার',
+        'party' => 'পার্টি লেজার',
+        'account' => 'অ্যাকাউন্ট লেজার',
+    ],
+    'title_en' => [
+        'customer' => 'Customer Ledger',
+        'supplier' => 'Supplier Ledger',
+        'service_provider' => 'Service Provider Ledger',
+        'person' => 'Party Ledger',
+        'employee' => 'Employee Ledger',
+        'party' => 'Party Ledger',
+        'account' => 'Account Ledger',
+    ],
+    'party' => 'যার খাতা',
+    'info' => 'বিবরণীর তথ্য',
+    'fact' => [
+        'type' => 'ধরন',
+        'point' => 'পয়েন্ট',
+        'address' => 'ঠিকানা',
+        'phone' => 'ফোন',
+        'bin' => 'BIN',
+        'tin' => 'TIN',
+        'code' => 'কোড',
+        'group' => 'দল',
+    ],
+    'period' => 'সময়কাল',
+    'from_to' => ':from থেকে :to',
+    'since_start' => 'শুরু থেকে :to',
+    'branch' => 'শাখা',
+    'all_branches' => 'সব শাখা',
+    'printed_at' => 'ছাপার সময়',
+    'printed_by' => 'ছাপলেন',
+    'currency' => 'মুদ্রা',
+    'bdt' => 'টাকা (BDT)',
+    'col' => [
+        'sl' => 'ক্র. নং',
+        'no' => 'ভাউচার নং',
+        'date' => 'তারিখ',
+        'particulars' => 'বিবরণ',
+        'kind' => 'ধরন',
+        'debit' => 'ডেবিট (৳)',
+        'credit' => 'ক্রেডিট (৳)',
+        'balance' => 'জের (৳)',
+    ],
+    'opening_row' => 'শুরুর জের — :date-এর আগের সব লেনদেন',
+    'brought' => '← পূর্ব পৃষ্ঠার জের',
+    'carried' => 'পরের পৃষ্ঠায় জের →',
+    'total' => 'মোট',
+    'recon' => [
+        'opening' => 'শুরুর জের — :date',
+        'opening_start' => 'শুরুর জের',
+        'add' => 'যোগ: মোট :side',
+        'less' => 'বাদ: মোট :side',
+        'closing' => 'শেষ জের — :date',
+    ],
+    'debit' => 'ডেবিট',
+    'credit' => 'ক্রেডিট',
+    'sign' => [
+        'prepared' => 'প্রস্তুতকারী',
+        'approved' => 'অনুমোদনকারী',
+    ],
+    'computer_made' => 'কম্পিউটারে তৈরি — স্বাক্ষর ছাড়াও বৈধ।',
+    'page' => 'পৃষ্ঠা',
+    'kind' => [
+        'sales' => 'সেলস',
+        'receive' => 'রিসিভ',
+        'payment' => 'পেমেন্ট',
+        'purchase' => 'পারচেজ',
+        'return' => 'রিটার্ন',
+        'journal' => 'জার্নাল',
+        'opening' => 'ওপেনিং',
+    ],
+    'doc' => [
+        'sales_invoice' => 'বিক্রয় বিল',
+        'sales_return' => 'বিক্রয় ফেরত',
+        'purchase_bill' => 'ক্রয় বিল',
+        'purchase_return' => 'ক্রয় ফেরত',
+    ],
+    'undone' => 'বাতিল',
+    'too_many' => 'এই সময়ে :n-এর বেশি লেনদেন। তারিখ ছোট করে আবার ছাপুন।',
+    'empty' => 'এই সময়ে কোনো লেনদেন নেই।',
+];

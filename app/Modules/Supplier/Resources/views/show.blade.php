@@ -312,7 +312,8 @@
                                "asc" আর "1" লেখা দুইটা কাঁচা চিপ তুলত, আর সরাতে গেলে
                                কাগজের ক্রমটাই হারাত। --}}
                           :quiet="['ledger', 'print', 'part']"
-                          :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])">
+                          {{-- ⭐ ছাপা = হিসাব বিবরণী, সব পাতা, পর্দার একই তারিখে (মালিক, ১৫ নভেম্বর ২০২৬) — আগে পর্দার ৫০ সারিই ছাপত --}}
+                          :print-href="route('accounts.statement', array_filter(['type' => \App\Modules\Supplier\Models\Supplier::drillSourceType(), 'id' => $supplier->id, 'from' => request('from'), 'to' => request('to')], fn ($v) => is_string($v) ? $v !== '' : $v !== null))">
                 {{-- ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬; কন্ট্রোলার পড়ে [[PartyLedger::filter()]], জের খাতার সব লেনদেন থেকে --}}
                 <x-ui.party-ledger-filters party="supplier" />
             </x-ui.toolbar>

@@ -247,6 +247,12 @@ class Supplier extends Model implements Drillable
         );
     }
 
+    /** ⓘ এই পক্ষ সেবা প্রদানকারী কি না — উপরের নিয়মে; লেজারের শিরোনাম পড়ে ("সার্ভিস প্রোভাইডার লেজার", [[PartyStatementController]]) */
+    public function isServiceProvider(): bool
+    {
+        return self::query()->onlyServiceProviders()->whereKey($this->getKey())->exists();
+    }
+
     /**
      * ক্রয়ের ড্রপডাউন — কেবল পণ্যের সরবরাহকারী, মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬।
      *

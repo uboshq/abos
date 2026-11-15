@@ -431,23 +431,13 @@ final class PartyRegistry
      * ⓘ কোর মডিউলের নাম জানে না, তাই মডেলের নিজের পদ্ধতি বা ঘর যা থাকে তাই — `name()`/`drillLabel()`, `code`,
      * `address()`/`address`, `mobile`/`phone`। না থাকলে খালি; অন্য কোম্পানির সারি কখনো নয়।
      *
-     * @return array{name: string, code: string, address: string, phone: string}|null
+     * ⓘ BIN/TIN — যে পক্ষের ঘর আছে (সরবরাহকারী) তার; বাকিদের খালি (হিসাব বিবরণী খালি তথ্যের লাইন দেখায় না, ১৫ নভেম্বর ২০২৬)।
+     *
+     * @return array{name: string, code: string, address: string, phone: string, bin: string, tin: string}|null
      */
     public function paperFacts(string $type, int $id): ?array
     {
-        $model = $this->modelFor($type);
-
-        if ($model === null || $id <= 0) {
-            return null;
-        }
-
-        $row = $model::query()
-            ->whereKey($id)
-            ->when(
-                in_array('company_id', $model->getFillable(), true),
-                fn ($q) => $q->where('company_id', CompanyContext::id()),
-            )
-            ->first();
+        $row = $this->find($type, $id);
 
         if ($row === null) {
             return null;
@@ -462,7 +452,30 @@ final class PartyRegistry
             'code' => (string) ($row->getAttribute('code') ?? ''),
             'address' => $address,
             'phone' => (string) ($row->getAttribute('mobile') ?? $row->getAttribute('phone') ?? ''),
+            'bin' => (string) ($row->getAttribute('bin') ?? ''),
+            'tin' => (string) ($row->getAttribute('tin') ?? ''),
         ];
+    }
+
+    /**
+     * পক্ষের নিজের সারি — কেবল এই কোম্পানির (অন্য কোম্পানির আইডি দিলে `null`)। ⓘ যিনি দেখতে চান তাঁর অনুমতি যাচাই ডাকা জায়গার
+     * কাজ (`Gate::allows('view', …)`) — কোর মডিউলের নীতি জানে না।
+     */
+    public function find(string $type, int $id): ?Model
+    {
+        $model = $this->modelFor($type);
+
+        if ($model === null || $id <= 0) {
+            return null;
+        }
+
+        return $model::query()
+            ->whereKey($id)
+            ->when(
+                in_array('company_id', $model->getFillable(), true),
+                fn ($q) => $q->where('company_id', CompanyContext::id()),
+            )
+            ->first();
     }
 
     /**
