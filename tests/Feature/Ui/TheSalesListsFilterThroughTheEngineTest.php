@@ -96,7 +96,7 @@ final class TheSalesListsFilterThroughTheEngineTest extends TestCase
         $this->assertSame(2, $counts['pay']['due'] ?? null, '⛔ "বাকি রয়েছে"-র পাশে ২ নয়');
 
         $html = (string) $this->get(route('sales.invoice.index', ['q' => 'ZSINV']))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/list-card-label">'.preg_quote(__('sales::filter.pay_overdue'), '/').'<.*?list-card-value num">'
+        $this->assertMatchesRegularExpression('/list-card-label">'.preg_quote(__('sales::filter.pay_overdue'), '/').'<(?:(?!list-card-label).)*?list-card-value num">'
             .preg_quote(__('sales::filter.bills', ['n' => '1']), '/').'</su', $html, '⛔ "মেয়াদ পার" কার্ডে একটা বিল দেখানোর কথা');
     }
 

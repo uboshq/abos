@@ -57,6 +57,14 @@ final class DateRangeFacet extends Facet
         $from = self::day($request->query($this->fromKey()));
         $to = self::day($request->query($this->toKey()));
 
+        /*
+         * ⓘ উল্টো পরিসর সোজা করে নেওয়া — কেউ "থেকে" ৩১ আর "পর্যন্ত" ১ দিলে তালিকা খালি দেখাত আর মানুষ ভাবত মাসটায়
+         *   কিছু হয়নি। আগের তারিখের ঘরের ([[FiltersByDate::applyDateRange()]]) একই নিয়ম।
+         */
+        if ($from !== null && $to !== null && $from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
         return $from === null && $to === null ? null : ['from' => $from, 'to' => $to];
     }
 

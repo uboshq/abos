@@ -30,4 +30,13 @@ return [
     'card_awaiting_sub' => 'খাতায় বসেছে, এখনো পৌঁছায়নি',
     'card_delivered_sub' => 'গ্রাহকের হাতে',
     'challan_noun' => 'চালান',
+
+    // ⭐ অর্ডারের তালিকা (১৫ নভেম্বর ২০২৬)
+    'order_delivery' => 'মাল যাওয়া',
+    'order_date' => 'অর্ডারের তারিখ',
+    'order_total' => 'অর্ডারের টাকা (৳)',
+    'orders' => ':nটা অর্ডার',
+    'card_back_sub' => 'নিশ্চিত, অথচ কিছু মাল কম গেছে',
+    'card_order_draft_sub' => 'এখনো জমা হয়নি',
+    'order_noun' => 'অর্ডার',
 ];

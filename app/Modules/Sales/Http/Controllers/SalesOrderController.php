@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
-use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\ListFilter\Panel;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -25,6 +25,7 @@ use App\Modules\Sales\Services\OrderTracking;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SellableStock;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\OrderListFilters;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,6 @@ use Illuminate\View\View;
 class SalesOrderController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
-    use FiltersByDate;
     use GrandTotals;
     use SortsLists;
 
@@ -113,29 +113,37 @@ class SalesOrderController extends Controller implements HasMiddleware
             && ($request->user()?->can(OrderTracking::LIST_TABS[$tab]['permission']) ?? false)
             ? $tab : OrderTracking::LIST_ALL;
 
-        $base = SalesOrder::query()->search($request->query('q'));
-        $dates = $this->applyDateRange($base, $request);
-
-        // ⓘ গোনা খোঁজা আর তারিখ মানে — নাহলে ট্যাব বলত "১২০" আর খুললে দেখাত "৩"
-        $counts = $tracking->listCounts(clone $base);
-
-        // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — "সব" ট্যাবে চাইলে দেখা যায়
-        $query = $tracking->applyListTab(
-            (clone $base)->with(['customer.location.parent', 'customer.branch', 'warehouse']),
-            $tab,
-            $request->boolean('cancelled'),
-        );
-
         /*
-         * ⭐ "কেবল আমার সইয়ের অপেক্ষায়" — সইয়ের ট্যাবের ভিতরে (নকশার §৪)। ⓘ সইয়ের ইনবক্সের একই প্রশ্ন
-         * ([[ApprovalEngine::pendingQueryFor()]]), তাই দুই পাতা কখনো দুই কথা বলে না।
+         * ⭐ ছাঁকনি — কেন্দ্রীয় ইঞ্জিন ([[OrderListFilters]], ১৫ নভেম্বর ২০২৬): অবস্থা, মাল যাওয়া, তারিখ, ডিপো, এলাকা, টাকা।
+         * ⓘ তালিকার নিজের কোয়েরি ছাঁকনি ছাড়া — খোঁজা, উপরের ট্যাব, বাতিল লুকানো (নিয়ম ৫) আর "কেবল আমার"; প্যানেলের
+         *   সংখ্যা আর কার্ড এটা থেকেই।
          */
-        if ($tab === OrderTracking::LIST_AWAITING && $request->boolean('mine') && $request->user() !== null) {
-            $query->whereIn('sal_orders.id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
-                ->where('approvable_type', SalesOrder::class)
-                ->where('action', SalesOrderService::APPROVAL_ACTION)
-                ->select('approvable_id'));
-        }
+        $filters = app(OrderListFilters::class)->set();
+        $base = function () use ($request, $tracking, $tab) {
+            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — "সব" ট্যাবে চাইলে দেখা যায়
+            $orders = $tracking->applyListTab(SalesOrder::query()->search($request->query('q')), $tab, $request->boolean('cancelled'));
+
+            /*
+             * ⭐ "কেবল আমার সইয়ের অপেক্ষায়" — সইয়ের ট্যাবের ভিতরে (নকশার §৪)। ⓘ সইয়ের ইনবক্সের একই প্রশ্ন
+             * ([[ApprovalEngine::pendingQueryFor()]]), তাই দুই পাতা কখনো দুই কথা বলে না।
+             */
+            if ($tab === OrderTracking::LIST_AWAITING && $request->boolean('mine') && $request->user() !== null) {
+                $orders->whereIn('sal_orders.id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
+                    ->where('approvable_type', SalesOrder::class)
+                    ->where('action', SalesOrderService::APPROVAL_ACTION)
+                    ->select('approvable_id'));
+            }
+
+            return $orders;
+        };
+
+        // ⓘ ট্যাবের গোনা খোঁজা আর সব ছাঁকনি মানে — নাহলে ট্যাব বলত "১২০" আর খুললে দেখাত "৩"
+        $countBase = SalesOrder::query()->search($request->query('q'));
+        $filters->apply($countBase, $request);
+        $counts = $tracking->listCounts($countBase);
+
+        $query = $base()->with(['customer.location.parent', 'customer.branch', 'warehouse']);
+        $filters->apply($query, $request);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -152,7 +160,8 @@ class SalesOrderController extends Controller implements HasMiddleware
             // ⭐ প্রতিটা আদেশের অবস্থা ও অগ্রগতি — পাতার পঞ্চাশটার জন্য একবারে ([[OrderProgress::compute()]])
             'states' => app(OrderProgress::class)->compute($orders->getCollection()),
             'q' => $request->query('q'),
-            'dates' => $dates,
+            // ⭐ ছাঁকনি প্যানেল আর কার্ড — ইঞ্জিন থেকে
+            'filters' => Panel::of($filters, $base, $request),
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),

@@ -30,4 +30,13 @@ return [
     'card_awaiting_sub' => 'in the books, not yet arrived',
     'card_delivered_sub' => 'with the customer',
     'challan_noun' => 'challans',
+
+    // ⭐ অর্ডারের তালিকা (১৫ নভেম্বর ২০২৬)
+    'order_delivery' => 'Goods sent',
+    'order_date' => 'Order date',
+    'order_total' => 'Order amount (৳)',
+    'orders' => ':n orders',
+    'card_back_sub' => 'confirmed, some goods short',
+    'card_order_draft_sub' => 'not submitted yet',
+    'order_noun' => 'orders',
 ];
