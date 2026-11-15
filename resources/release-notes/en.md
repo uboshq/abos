@@ -1,5 +1,13 @@
 # What's new
 
+## 1.3.1 — 16-11-2026
+
+- Ledger print — customer, supplier, service provider, party and account ledgers: every page of any period at once, on A4. Brought and carried forward balances on each page, total and reconciliation at the end, page numbers at the foot.
+- The party page's transactions print and the ledger reports' print now print the whole ledger — before, only the 50 rows on screen.
+- The approval confirm box names whose paper it is under the question — name · point · branch.
+- Order list: colour cards and the right-hand filter; the tab counts follow the filters.
+- A reversed date range (from the 31st to the 1st) is now read the right way round.
+
 ## 1.3.0 — 15-11-2026
 
 - Colour cards on top of the customer, distributor, invoice and challan lists — tap one and its filter is set.
