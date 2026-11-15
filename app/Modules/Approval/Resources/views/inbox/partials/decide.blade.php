@@ -36,7 +36,9 @@
               ? __('approval::message.bundle_confirm', ['count' => collect($bundle['approvals'])->where('status', \App\Models\Approval::PENDING)->count()])
               : ($approval->amount === null
                   ? __('approval::message.approve_confirm_plain')
-                  : __('approval::message.approve_confirm', ['amount' => \App\Core\Support\Money::format($approval->amount)])) }}">
+                  : __('approval::message.approve_confirm', ['amount' => \App\Core\Support\Money::format($approval->amount)])) }}"
+          {{-- ⭐ প্রশ্নের নিচে কার কাগজ — "নাম · পয়েন্ট · শাখা" (মালিক, ১৫ নভেম্বর ২০২৬); কাগজ দেখার অধিকার না থাকলে খালি --}}
+          @if (! $isBundle && ($place ?? '') !== '') data-confirm-who="{{ $place }}" @endif>
         @csrf
         <input type="hidden" name="next" value="{{ $nextId }}">
         <input type="hidden" name="from" value="{{ $from }}">

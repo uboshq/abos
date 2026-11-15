@@ -122,5 +122,9 @@ final class TheApprovalAsksBeforeEveryHardActionTest extends TestCase
         $page = $this->actingAs($signer->fresh())->get(route('approval.inbox.show', $asked->id))->assertOk();
         $page->assertSee('data-asks-in-dialog="'.e(__('approval::message.confirm_reject', [], 'bn')).'"', false);
         $page->assertSee('data-asks-in-dialog="'.e(__('approval::message.confirm_send_back', [], 'bn')).'"', false);
+        // ⭐ অনুমোদনের "নিশ্চিত?"-এর নিচে কার কাগজ — "নাম · পয়েন্ট · শাখা" (মালিক, ১৫ নভেম্বর ২০২৬); এই খতিয়ানের পক্ষ নেই, তাই শাখা
+        $branch = (string) $company->defaultBranch()?->name();
+        $this->assertMatchesRegularExpression('/data-confirm="[^"]*"\s*data-confirm-who="[^"]*'.preg_quote(e($branch), '/').'[^"]*"/u', (string) $page->getContent(),
+            '⛔ অনুমোদনের পপ-আপে কার কাগজ যায় না — প্রশ্নের নিচে নাম, পয়েন্ট বা শাখা নেই');
     }
 }

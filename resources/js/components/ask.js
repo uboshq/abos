@@ -5,6 +5,8 @@
  * ⓘ সব `data-confirm` এখান দিয়েই ([[actions.js]]) — অনুমোদন, মোছা, বাতিল, বন্ধ করা। রঙ কাজ ধরে: `data-confirm-tone`
  * ("ok" সবুজ · "danger" লাল), না দিলে লেখা থেকে আন্দাজ — "অনুমোদন" সবুজ, "মুছ/বাতিল/প্রত্যাখ্যান/বন্ধ" লাল, বাকি নীল।
  * ⓘ টাকার অঙ্ক ("34,000.00", "৳1,20,000") আলাদা বড় রঙিন অক্ষরে — কত টাকায় হ্যাঁ বলছেন, সেটাই চোখে পড়ুক।
+ * ⭐ প্রশ্নের নিচে এক লাইনে কার কাগজ — "নাম · পয়েন্ট · শাখা" (`data-confirm-who`; মালিক, ১৫ নভেম্বর ২০২৬: "নিশ্চিতকরণের নিচ দিয়া
+ *   কাস্টমারের নাম, পয়েন্ট বা ঠিকানা … ছোট্ট করে এক লাইনে")। লম্বা হলে "…", পুরোটা ছুঁলে দেখায়।
  * ⛔ style অ্যাট্রিবিউট নয় (CSP) — সব চেহারা app.css-এর `.abos-ask*` ক্লাসে।
  */
 
@@ -45,7 +47,7 @@ const ICON = { ok: '✓', danger: '!', info: '?' }
  * প্রশ্ন দেখায়, উত্তর দেয় — true হ্যাঁ, false না (Esc, বাইরে চাপ, "না")।
  * @returns {Promise<boolean>}
  */
-export function ask (message, { tone = '', yes = '', doc = document } = {}) {
+export function ask (message, { tone = '', yes = '', who = '', doc = document } = {}) {
     const w = words(doc)
     const kind = toneOf(message, tone)
 
@@ -81,6 +83,15 @@ export function ask (message, { tone = '', yes = '', doc = document } = {}) {
             }
         }
 
+        const whoLine = String(who ?? '').trim()
+        const whoEl = whoLine === '' ? null : doc.createElement('p')
+        if (whoEl) {
+            whoEl.className = 'abos-ask__who'
+            whoEl.dataset.askWho = ''
+            whoEl.title = whoLine
+            whoEl.textContent = whoLine
+        }
+
         const row = doc.createElement('div')
         row.className = 'abos-ask__row'
         const no = doc.createElement('button')
@@ -95,7 +106,7 @@ export function ask (message, { tone = '', yes = '', doc = document } = {}) {
         go.dataset.askYes = ''
         row.append(no, go)
 
-        dialog.append(band, body, row)
+        dialog.append(band, body, ...(whoEl ? [whoEl] : []), row)
         doc.body.append(dialog)
 
         let done = false

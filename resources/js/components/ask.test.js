@@ -47,7 +47,7 @@ describe('data-confirm forms', () => {
     const flush = () => new Promise((r) => setTimeout(r, 0))
 
     it('a "no" stops the paper, a "yes" sends it once — and the browser confirm is never called', async () => {
-        document.body.innerHTML = '<form id="f" data-confirm="34,000.00 টাকার কাগজে অনুমোদন দেওয়া হবে। নিশ্চিত?"><button id="go" type="submit">অনুমোদন দিন</button></form>'
+        document.body.innerHTML = '<form id="f" data-confirm="34,000.00 টাকার কাগজে অনুমোদন দেওয়া হবে। নিশ্চিত?" data-confirm-who="মা ট্রেডার্স · কেশরগঞ্জ"><button id="go" type="submit">অনুমোদন দিন</button></form>'
         window.confirm = () => { throw new Error('browser confirm called') }
         wireActions(document)
         const form = document.querySelector('#f')
@@ -58,6 +58,7 @@ describe('data-confirm forms', () => {
         await flush()
         expect(document.querySelectorAll('dialog[data-ask-dialog]').length).toBe(1)
         expect(sent).toBe(0)
+        expect(document.querySelector('[data-ask-who]')?.textContent, '⛔ ফর্মের data-confirm-who পপ-আপে পৌঁছায়নি').toBe('মা ট্রেডার্স · কেশরগঞ্জ')
         document.querySelector('[data-ask-no]').click()
         await flush()
         expect(sent).toBe(0)
@@ -69,5 +70,20 @@ describe('data-confirm forms', () => {
         await flush()
         expect(sent).toBe(1)
         expect(document.querySelectorAll('dialog[data-ask-dialog]').length).toBe(0)
+    })
+
+    it('names whose paper it is in one small line under the question — and draws nothing when there is no name', async () => {
+        const answer = ask('40,000.00 টাকার কাগজে অনুমোদন দেওয়া হবে। নিশ্চিত?', { who: 'মা ট্রেডার্স · কেশরগঞ্জ · সুপার ডিপো', doc: document })
+        const line = document.querySelector('[data-ask-who]')
+        expect(line, '⛔ পপ-আপে কার কাগজ লেখা নেই').not.toBeNull()
+        expect(line.textContent).toBe('মা ট্রেডার্স · কেশরগঞ্জ · সুপার ডিপো')
+        expect(line.compareDocumentPosition(document.querySelector('[data-ask-text]')) & Node.DOCUMENT_POSITION_PRECEDING, '⛔ নাম প্রশ্নের নিচে নয়').toBeTruthy()
+        document.querySelector('[data-ask-no]').click()
+        await answer
+
+        const plain = ask('মুছে ফেলবেন?', { doc: document })
+        expect(document.querySelector('[data-ask-who]'), '⛔ নাম না দিলেও খালি সারি আঁকা হলো').toBeNull()
+        document.querySelector('[data-ask-no]').click()
+        await plain
     })
 })

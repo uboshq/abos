@@ -2128,6 +2128,17 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     text-align: center;
 }
 
+/* ⭐ কার কাগজ — প্রশ্নের নিচে এক লাইনে, ছোট আর হালকা (মালিক, ১৫ নভেম্বর ২০২৬) */
+.abos-ask__who {
+    margin: 0 1.5rem .25rem;
+    overflow: hidden;
+    font-size: .9rem;
+    color: var(--color-ink-muted);
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .abos-ask__money {
     display: block;
     margin: .2rem auto .4rem;

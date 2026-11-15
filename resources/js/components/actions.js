@@ -94,7 +94,7 @@ export function wireActions (root = document) {
 
         const submitter = event.submitter && event.submitter.form === form ? event.submitter : undefined
 
-        ask(form.dataset.confirm, { tone: form.dataset.confirmTone, yes: form.dataset.confirmYes, doc: form.ownerDocument }).then((yes) => {
+        ask(form.dataset.confirm, { tone: form.dataset.confirmTone, yes: form.dataset.confirmYes, who: form.dataset.confirmWho, doc: form.ownerDocument }).then((yes) => {
             if (! yes) {
                 return
             }
@@ -124,7 +124,7 @@ export function wireActions (root = document) {
         event.preventDefault()
         event.stopPropagation()
 
-        ask(el.dataset.confirm, { tone: el.dataset.confirmTone, yes: el.dataset.confirmYes, doc: el.ownerDocument }).then((yes) => {
+        ask(el.dataset.confirm, { tone: el.dataset.confirmTone, yes: el.dataset.confirmYes, who: el.dataset.confirmWho, doc: el.ownerDocument }).then((yes) => {
             if (! yes) {
                 return
             }
