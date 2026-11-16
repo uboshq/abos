@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.2 — 16-11-2026
+
+- Ledger: the opening row now reads "Opening balance" — before, an internal code showed.
+- Ledger: page 1 is filled; if the total and reconciliation do not fit, only they move to the next page.
+
 ## 1.3.1 — 16-11-2026
 
 - Ledger print — customer, supplier, service provider, party and account ledgers: every page of any period at once, on A4. Brought and carried forward balances on each page, total and reconciliation at the end, page numbers at the foot.
