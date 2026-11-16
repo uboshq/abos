@@ -235,6 +235,38 @@ final class ThePartyStatementPrintsEveryPageTest extends TestCase
             'from' => '2026-01-01', 'to' => '2026-01-31'])), $gl, '⛔ সাধারণ খতিয়ানের ছাপা অ্যাকাউন্ট লেজার খোলে না');
     }
 
+    public function test_the_opening_row_reads_as_opening_and_no_raw_key_ever_shows(): void
+    {
+        // ⓘ লাইভে দেখা (১৬ নভেম্বর ২০২৬): শুরুর বাকির সারিতে "core.source.customer:opening" কাঁচা লেখা উঠেছিল
+        $this->entry('customer:opening', 1, 'OB-0022', '2026-01-01', $this->receivable, '0', '154.25', true);
+        $this->sale('2026-01-10', '1000', 'ZST-SI-1');
+
+        $rows = app(PartyStatement::class)->build('customer', (int) $this->shop->id, null, '2026-12-31')['rows'];
+        $this->assertSame(__('accounts::statement.kind.opening'), $rows[0]['kind'], '⛔ শুরুর বাকির ধরন "ওপেনিং" নয়');
+        $this->assertSame(__('accounts::statement.doc.opening'), $rows[0]['particulars'], '⛔ শুরুর বাকির বিবরণ নয়');
+        foreach ($rows as $row) {
+            $this->assertStringNotContainsString('core.source', $row['kind'].$row['particulars'], '⛔ লেজারে কাঁচা চাবির লেখা');
+        }
+    }
+
+    public function test_the_first_page_is_always_full_when_the_rows_run_on(): void
+    {
+        // ⭐ "প্রতিটা পৃষ্ঠায় সর্বোচ্চ পরিমাণে লাইন" (মালিক, ১৫ নভেম্বর ২০২৬) — শেষ সারি আঁটলে এই পাতায়, মোট-মেলানো পরের পাতায়
+        $row = fn (int $i) => ['sl' => $i, 'particulars' => 'বিক্রয় বিল', 'balance' => '0'];
+        $paging = app(PartyStatementPages::class);
+        $cap = count($paging->split(array_map($row, range(1, 200)), true)[0]);
+        $this->assertGreaterThan(10, $cap);
+
+        for ($n = $cap - 3; $n <= $cap + 3; $n++) {
+            $pages = $paging->split(array_map($row, range(1, $n)), true);
+            $this->assertSame($n, array_sum(array_map('count', $pages)), "⛔ {$n} সারির পাতা ভাগে সারি হারাল");
+            if (count($pages) > 1) {
+                // ⓘ সারি এক পাতায় আঁটলে সবই প্রথম পাতায় (মোট পরের পাতায়); না আঁটলে প্রথম পাতা পুরো ভরা
+                $this->assertSame(min($n, $cap), count($pages[0]), "⛔ {$n} সারিতে প্রথম পাতা না ভরে পরের পাতায় গেল");
+            }
+        }
+    }
+
     private function sale(string $date, string $amount, string $no, ?string $narration = null): void
     {
         $id = DB::table('sal_invoices')->insertGetId([
