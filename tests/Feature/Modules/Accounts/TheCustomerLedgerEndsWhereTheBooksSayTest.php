@@ -132,7 +132,9 @@ final class TheCustomerLedgerEndsWhereTheBooksSayTest extends TestCase
 
         // পর্দা: ১০০ সারি, আর "ছাপুন" গোটা পরিসরের ঠিকানায়
         $screen = (string) $this->get($url)->assertOk()->getContent();
-        $this->assertStringContainsString('print=1', $screen, '⛔ ছাপার বোতাম গোটা পরিসরের ঠিকানায় যায় না — পর্দার পাতাই ছাপবে।');
+        // ⭐ ১৬ নভেম্বর ২০২৬ থেকে ছাপা = লেজারের PDF, সব পাতা, একই পক্ষ আর তারিখে ([[PartyStatementController]])
+        $this->assertStringContainsString(e(route('accounts.statement', ['type' => 'customer', 'id' => $this->dealer->id, 'from' => '2026-10-01', 'to' => '2026-10-03'])),
+            $screen, '⛔ ছাপার বোতাম গোটা পরিসরের লেজারে যায় না — পর্দার পাতাই ছাপবে।');
 
         // ছাপা: ১৩৩ সারি (খোলা জের + ২ + ১৩০), শেষে শেষ জের = খাতার বকেয়া
         $print = (string) $this->get($url.'&print=1')->assertOk()->getContent();
