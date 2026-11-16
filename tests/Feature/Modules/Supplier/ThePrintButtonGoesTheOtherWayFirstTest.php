@@ -61,11 +61,12 @@ final class ThePrintButtonGoesTheOtherWayFirstTest extends TestCase
     {
         $html = $this->page($party);
 
-        $this->assertStringContainsString('ledger=asc', $html, implode("\n", [
-            '⛔ ছাপার বোতামটা কাগজের ক্রমে যায় না।',
+        // ⭐ ১৬ নভেম্বর ২০২৬ থেকে ছাপা = লেজারের PDF ([[PartyStatementController]]) — পুরনো থেকে শুরু, সব পাতা (ব্যাংকের খাতার মতো)
+        $this->assertStringContainsString('/accounts/statement/'.$party.'/', $html, implode("\n", [
+            '⛔ ছাপার বোতামটা লেজারের কাগজে যায় না।',
             '',
-            '⚠️ তখন সে পর্দায় যা আছে তা-ই ছাপে — নতুন সারি উপরে। ⓘ মালিক',
-            'চান ব্যাংকের খাতার মতো, পুরনো থেকে শুরু।',
+            '⚠️ তখন সে পর্দায় যা আছে তা-ই ছাপে — নতুন সারি উপরে, আর কেবল ৫০টা। ⓘ মালিক',
+            'চান ব্যাংকের খাতার মতো, পুরনো থেকে শুরু, সব পাতা।',
         ]));
     }
 
