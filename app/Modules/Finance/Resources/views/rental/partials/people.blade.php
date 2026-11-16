@@ -60,7 +60,7 @@
 
 <x-ui.table
     :rows="$people"
-    :compact="request()->boolean('compact')"
+    :compact="\App\Core\Support\Ui::compact()"
     :empty="__('finance::message.no_rental_people')"
     :columns="[
         [

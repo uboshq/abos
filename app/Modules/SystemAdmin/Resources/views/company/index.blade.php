@@ -81,7 +81,7 @@
         <x-ui.table
             :empty="request('q') ? __('core.empty.no_results') : __('system_admin::message.no_companies')"
             :rows="$companies"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
     </div>
 </x-layouts.app>

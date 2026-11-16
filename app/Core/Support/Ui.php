@@ -68,6 +68,21 @@ final class Ui
      *     shell?: string, listfoot?: string, hints?: string, tabs?: string,
      * }>
      */
+    /**
+     * ⭐ ঘন সারি — ব্যবহারকারীর নিজের সেটিং, একবার (পরিকল্পনা §৩.১: "ঘনত্ব প্রতিটা তালিকায় নয়। ব্যবহারকারীর নিজের সেটিংসে একবার
+     *   ঠিক করলেই হবে")। ⓘ ঠিকানায় `?compact=` থাকলে সেটাই (পুরোনো লিংক অটুট)।
+     */
+    public static function compact(): bool
+    {
+        $request = request();
+
+        if ($request->query->has('compact')) {
+            return $request->boolean('compact');
+        }
+
+        return (bool) (auth()->user()?->compact_rows ?? false);
+    }
+
     public static function all(): array
     {
         return [

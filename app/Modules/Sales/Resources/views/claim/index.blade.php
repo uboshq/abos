@@ -120,7 +120,7 @@
         <x-ui.table :rows="$claims"
                     :grand="$grand ?? []"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="request('q') ? __('core.empty.no_results') : __('sales::portal.empty')" />
     </div>
 

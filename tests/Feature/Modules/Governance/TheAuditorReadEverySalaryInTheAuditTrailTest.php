@@ -196,14 +196,15 @@ final class TheAuditorReadEverySalaryInTheAuditTrailTest extends TestCase
     /** নিরীক্ষকের ছাঁচ — `governance.audit.view` আর `governance.export.view`, HR-এর কিছুই নয়। */
     private function auditor(): User
     {
-        foreach (['governance.audit.view', 'governance.export.view', 'hr.salary.view'] as $key) {
+        foreach (['governance.audit.view', 'governance.export.view', 'hr.salary.view', 'system_admin.list.export'] as $key) {
             Permission::findOrCreate($key, 'web');
         }
 
         $user = User::factory()->create(['name' => 'Auditor Probe']);
         $user->companies()->attach($this->company, ['is_active' => true]);
         $user->forceFill(['current_company_id' => $this->company->id])->save();
-        $user->givePermissionTo(['governance.audit.view', 'governance.export.view']);
+        // ⓘ তালিকা নামানোর চাবি — ১৬ নভেম্বর ২০২৬ থেকে নামানো নিজের চাবিতে ([[ExportListing]]); এই পরীক্ষা অন্য নিয়মের কথা বলে
+        $user->givePermissionTo(['governance.audit.view', 'governance.export.view', 'system_admin.list.export']);
 
         $user = $user->fresh();
         $this->assertFalse($user->can('hr.salary.view'), 'প্রস্তুতিটাই ভুল — চাবি না দিয়েও হাতে আছে।');

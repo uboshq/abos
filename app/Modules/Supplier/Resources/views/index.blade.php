@@ -156,7 +156,7 @@
             :grand="$grand ?? []"
             :empty="$q ? __('core.empty.no_results') : __('supplier::message.none_yet')"
             :rows="$suppliers"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :grid="request('view') === 'grid'"
             :columns="$columns" />
 

@@ -38,6 +38,11 @@ class ExportListing
         // আগের অনুরোধের তালিকা যেন এই অনুরোধের ফাইলে না নামে
         $this->export->reset();
 
+        // ⛔ "তালিকা নামানো" চাবি ছাড়া ফাইল নয় — মেনু লুকানো যথেষ্ট নয়, ঠিকানায় `?export=` লিখলেও (পরিকল্পনা §৩.১)
+        if ($this->export->wanted() && ! ($request->user()?->can('system_admin.list.export') ?? false)) {
+            abort(403);
+        }
+
         /** @var Response $response */
         $response = $next($request);
 

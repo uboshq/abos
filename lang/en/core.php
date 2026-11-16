@@ -423,6 +423,9 @@ return [
     ],
 
     'appearance' => [
+        'density' => 'List rows',
+        'density_normal' => 'Normal',
+        'density_compact' => 'Compact — more rows on a screen',
         'title' => 'Appearance',
         'subtitle' => 'Your own colour, theme and language — not a company setting',
         'ui' => 'How the ERP looks',
@@ -1111,6 +1114,7 @@ return [
         'remove_filter' => 'Remove this filter',
         'columns' => 'Columns',
         'columns_note' => 'Untick them all and the table shows every column — an empty table helps nobody.',
+        'download' => 'Download',
         'export' => 'Export',
         'export_csv' => 'CSV (opens in Excel)',
         'export_csv_note' => 'Every row of this filter, across all pages',
@@ -1830,5 +1834,16 @@ return [
         'pick_none' => 'Clear this',
         'more' => '+ :n more',
         'clear_chips' => 'Clear all filters',
+        'date' => 'Date',
+        'custom' => 'Pick dates…',
+        'preset' => [
+            'today' => 'Today',
+            'yesterday' => 'Yesterday',
+            'last7' => 'Last 7 days',
+            'this_month' => 'This month',
+            'last_month' => 'Last month',
+            'last90' => 'Last 90 days',
+            'any' => 'Any date',
+        ],
     ],
 ];

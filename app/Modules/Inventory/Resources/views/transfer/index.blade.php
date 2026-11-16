@@ -58,7 +58,7 @@
             :row-menu="fn ($d) => view('inventory::transfer.partials.row-menu', ['transfer' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.no_transfers')"
             :rows="$transfers"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$transfers" />

@@ -61,7 +61,7 @@ final class ChallanListFilters
                 if ($to !== null) {
                     $q->where('sal_challans.trx_date', '<=', $to);
                 }
-            }, fromKey: 'from', toKey: 'to'))->look('sky', '📅'),
+            }, fromKey: 'from', toKey: 'to'))->look('sky', '📅')->onTheBar(),
             (new ChoiceFacet('depot', __('sales::filter.depot'), $this->depots()))->look('blue', '🏬'),
             $this->areaFacet()->look('teal', '◈'),
             (new ChoiceFacet('cancelled', __('sales::filter.cancelled'), [

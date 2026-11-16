@@ -107,7 +107,7 @@
                     <x-ui.empty-state :message="__('core.empty.no_results')" />
                 @else
                     <x-ui.table :view-url="fn ($r) => route('accounts.coa.show', $r)"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
                         :empty="__('core.empty.no_results')"
                         :rows="$results"
                         :columns="$columns" />

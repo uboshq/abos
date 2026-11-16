@@ -166,7 +166,7 @@
         <x-ui.table :rows="$assets"
                     :grand="$grand ?? []"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::asset.empty')" />
     </div>
 

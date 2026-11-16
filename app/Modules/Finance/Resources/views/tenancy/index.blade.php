@@ -103,7 +103,7 @@
                     :grand="$grand ?? []"
                     :view-url="fn ($t) => route('finance.tenancy.show', $t)"
                     :columns="$tenancyColumns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="request('q') ? __('core.empty.no_results') : __('finance::tenancy.none')" />
 
         <x-ui.pager :rows="$tenancies" />

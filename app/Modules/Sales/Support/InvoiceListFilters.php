@@ -71,7 +71,7 @@ final class InvoiceListFilters
                 if ($to !== null) {
                     $q->where('sal_invoices.trx_date', '<=', $to);
                 }
-            }, fromKey: 'from', toKey: 'to'))->look('sky', '📅'),
+            }, fromKey: 'from', toKey: 'to'))->look('sky', '📅')->onTheBar(),
             (new ChoiceFacet('depot', __('sales::filter.depot'), $this->depots()))->look('blue', '🏬'),
             $this->areaFacet()->look('teal', '◈'),
             (new RangeFacet('total', __('sales::filter.total'), function (Builder $q, ?string $min, ?string $max): void {

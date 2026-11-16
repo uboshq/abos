@@ -225,7 +225,7 @@
             :view-url="$view === DocumentFinder::BIN ? null : fn ($d) => route('documents.show', $d)"
             :empty="filled($filters['q']) ? __('core.empty.no_results') : __('documents::message.none_yet')"
             :rows="$documents"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$documents" />

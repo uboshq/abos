@@ -434,7 +434,7 @@
         <x-ui.table
             :empty="$emptyLine"
             :rows="$products"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns"
             :grand="$grand ?? []"
             :view-url="fn ($p) => route('inventory.product.show', $p).'#movements'"

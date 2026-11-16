@@ -86,7 +86,7 @@
         <x-ui.table
             :grand="['balance' => $total]"
             :view-url="fn ($t) => route('accounts.till.show', $t)"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_tills')"
             :rows="$tills"
             :columns="$columns" />

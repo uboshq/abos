@@ -96,6 +96,63 @@ final class TheOrderListFiltersThroughTheEngineTest extends TestCase
     }
 
     /**
+     * ⭐ বারের "📅 তারিখ ▾" (পরিকল্পনা §৩.১/§৩.৩) — চটজলদি নাম এক চাপে, বাকি ছাঁকনি অটুট, বোতামে বাছা নামটা লেখা।
+     * ⛔ ৩১ তারিখে "গত মাস" মানে আগের মাস ([[last-month-on-the-31st-is-this-month]]) — ৩১ মার্চে ফেব্রুয়ারি, মার্চ নয়।
+     */
+    public function test_the_date_button_on_the_bar_picks_a_period_in_one_press(): void
+    {
+        $this->travelTo('2026-03-31 15:00:00');
+
+        $html = (string) $this->get(route('sales.order.index', ['q' => 'ZSO', 'area' => [$this->south->id]]))->assertOk()->getContent();
+        $this->assertStringContainsString('data-date-bar', $html, '⛔ আদেশের তালিকার বারে "📅 তারিখ" বোতাম নেই');
+        foreach (['today', 'yesterday', 'last7', 'this_month', 'last_month', 'last90', 'any'] as $preset) {
+            $this->assertStringContainsString('data-date-preset="'.$preset.'"', $html, "⛔ তারিখের মেনুতে {$preset} নেই");
+        }
+
+        $thisMonth = $this->presetHref($html, 'this_month');
+        parse_str((string) parse_url($thisMonth, PHP_URL_QUERY), $query);
+        $this->assertSame('2026-03-01', $query['from'] ?? null, '⛔ "এই মাস" মাসের ১ তারিখ থেকে নয়');
+        $this->assertSame('2026-03-31', $query['to'] ?? null, '⛔ "এই মাস" আজ পর্যন্ত নয়');
+        $this->assertSame('ZSO', $query['q'] ?? null, '⛔ তারিখ বাছতে গিয়ে খোঁজা হারাল');
+        $this->assertSame([(string) $this->south->id], array_map('strval', (array) ($query['area'] ?? [])), '⛔ তারিখ বাছতে গিয়ে এলাকার ছাঁকনি হারাল');
+
+        parse_str((string) parse_url($this->presetHref($html, 'last_month'), PHP_URL_QUERY), $last);
+        $this->assertSame(['2026-02-01', '2026-02-28'], [$last['from'] ?? null, $last['to'] ?? null],
+            '⛔ ৩১ মার্চে "গত মাস" ফেব্রুয়ারি হওয়ার কথা (subMonth উপচে মার্চেই থাকে)');
+
+        // চাপার পর — তালিকা সেই মাসের, বোতামে "এই মাস", মেনুতে সেটা বাছা
+        $after = (string) $this->get($thisMonth)->assertOk()->getContent();
+        $this->assertStringContainsString('ZSO-SURE', $after);
+        $this->assertStringNotContainsString('ZSO-DRAFT', $after, '⛔ "এই মাস" (মার্চ) বাছার পরেও এপ্রিলের আদেশ');
+        $this->assertMatchesRegularExpression('/data-date-bar-text>\s*'.preg_quote(__('core.list_filter.preset.this_month'), '/').'\s*</u', $after,
+            '⛔ বাছার পরে বোতামে "এই মাস" লেখা নেই');
+        $this->assertMatchesRegularExpression('/data-date-preset="this_month"\s+aria-current="true"/', $after, '⛔ মেনুতে বাছা নামটা চিহ্নিত নয়');
+        // ⓘ বোতামেই "এই মাস" লেখা — তারিখ আবার দুটো চিপ হয়ে আসে না (বার দুই লাইনে ভাঙত); এলাকার চিপ থাকে
+        $this->assertDoesNotMatchRegularExpression('/data-facet[^>]*>\s*<span class="truncate">'.preg_quote(__('sales::filter.order_date'), '/').'/u', $after,
+            '⛔ বারের বোতামে তারিখ লেখা, তবু চিপেও একই তারিখ');
+        $this->assertSame(1, preg_match_all('/<a data-facet /', $after), '⛔ এলাকার একটা চিপই থাকার কথা');
+
+        // নিজে বাছা পরিসর — বোতামে তারিখ দুটো
+        $own = (string) $this->get(route('sales.order.index', ['from' => '2026-03-05', 'to' => '2026-03-20']))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/data-date-bar-text>\s*\S+ – \S+\s*</u', $own, '⛔ নিজে বাছা পরিসরে বোতামে তারিখ দুটো নেই');
+    }
+
+    public function test_the_customer_list_has_no_date_button_on_its_bar(): void
+    {
+        // ⓘ পরিকল্পনা: "📅 তারিখ (লেনদেনের তালিকায়)" — গ্রাহকের "যোগের তারিখ" প্যানেলেই থাকে, বারে নয়
+        $html = (string) $this->get(route('customer.index'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-date-bar', $html, '⛔ গ্রাহকের তালিকায় বারে তারিখের বোতাম — পরিকল্পনায় কেবল লেনদেনের তালিকায়');
+    }
+
+    private function presetHref(string $html, string $preset): string
+    {
+        $this->assertMatchesRegularExpression('/<a href="([^"]+)" data-date-preset="'.$preset.'"/', $html, "⛔ {$preset}-এর লিংক নেই");
+        preg_match('/<a href="([^"]+)" data-date-preset="'.$preset.'"/', $html, $m);
+
+        return html_entity_decode($m[1]);
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @param  list<string>  $in
      * @param  list<string>  $out

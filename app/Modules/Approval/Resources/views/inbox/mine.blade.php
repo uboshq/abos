@@ -77,7 +77,7 @@
         <x-ui.table
             :empty="request('q') ? __('core.empty.no_results') : $emptyText"
             :rows="$approvals"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="[
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
                  'render' => fn ($a) => \App\Core\Support\DateFormat::spoken($a->requested_at)],

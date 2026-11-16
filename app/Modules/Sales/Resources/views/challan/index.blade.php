@@ -116,7 +116,7 @@
             :row-menu="fn ($d) => view('sales::challan.partials.row-menu', ['challan' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_challans')"
             :rows="$challans"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$challans" />

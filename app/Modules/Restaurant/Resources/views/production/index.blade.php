@@ -58,7 +58,7 @@
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.no_productions')"
             :rows="$productions"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$productions" />

@@ -176,14 +176,15 @@ class ACostFileLeavesATraceTest extends TestCase
     private function clerk(array $extra = []): User
     {
         // ⓘ খাতার নিজের চাবি — ১৮ সেপ্টেম্বর ২০২৬ থেকে (d722232c "চার খাতা এক চাবিতে খুলত"), অডিটের চাবি নয়
-        foreach (['governance.export.view', 'sales.report'] as $name) {
+        foreach (['governance.export.view', 'sales.report', 'system_admin.list.export'] as $name) {
             Permission::findOrCreate($name, 'web');
         }
 
         $user = User::factory()->create();
         $user->companies()->attach($this->company, ['is_active' => true]);
         $user->forceFill(['current_company_id' => $this->company->id])->save();
-        $user->givePermissionTo($extra);
+        // ⓘ তালিকা নামানোর চাবি — ১৬ নভেম্বর ২০২৬ থেকে নামানো নিজের চাবিতে ([[ExportListing]]); এই পরীক্ষা খাতার কথা বলে, চাবির নয়
+        $user->givePermissionTo([...$extra, 'system_admin.list.export']);
 
         return $user->fresh();
     }

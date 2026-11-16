@@ -139,7 +139,7 @@
             :row-menu="fn ($d) => view('purchase::bill.partials.row-menu', ['bill' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_bills')"
             :rows="$bills"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$bills" />

@@ -89,7 +89,7 @@
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('sales::shipment.empty')"
             :rows="$shipments"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$shipments" />

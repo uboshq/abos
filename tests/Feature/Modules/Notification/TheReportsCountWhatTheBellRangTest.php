@@ -229,7 +229,9 @@ final class TheReportsCountWhatTheBellRangTest extends TestCase
 
     private function grant(User $user, string $permission): void
     {
-        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo(Permission::findOrCreate($permission, 'web')));
+        // ⓘ তালিকা নামানোর চাবি — ১৬ নভেম্বর ২০২৬ থেকে নামানো নিজের চাবিতে ([[ExportListing]]); এই পরীক্ষা অন্য চাবির কথা বলে
+        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo(Permission::findOrCreate($permission, 'web'),
+            Permission::findOrCreate('system_admin.list.export', 'web')));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 

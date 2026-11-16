@@ -98,7 +98,7 @@
         <x-ui.table
             :grand="['now' => collect($heads)->reduce(fn ($s, $r) => bcadd($s, (string) $r['now'], 4), '0'), 'before' => collect($heads)->reduce(fn ($s, $r) => bcadd($s, (string) $r['before'], 4), '0')]"
             :view-url="fn ($r) => auth()->user()?->can('view', $r['account']) ? route('accounts.coa.show', $r['account']).'#transactions' : null"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_income_yet')"
             :rows="$heads"
             :columns="$incomeColumns" />

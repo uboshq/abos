@@ -50,7 +50,7 @@
         <x-ui.table
             :grand="$grand ?? []"
             :row-menu="fn ($r) => view('hr::payroll.partials.row-menu', ['run' => $r])"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="request('q') ? __('core.empty.no_results') : __('hr::message.no_runs')"
             :rows="$runs"
             :columns="$columns" />

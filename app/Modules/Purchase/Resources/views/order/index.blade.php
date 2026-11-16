@@ -84,7 +84,7 @@
             :row-menu="fn ($d) => view('purchase::order.partials.row-menu', ['order' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_orders')"
             :rows="$orders"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$orders" />

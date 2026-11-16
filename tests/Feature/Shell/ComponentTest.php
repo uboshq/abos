@@ -169,10 +169,10 @@ class ComponentTest extends TestCase
          * ফিরবে। প্রতিটা বোতাম সত্যিই কিছু করে কি না তা ToolbarTest
          * পাহারা দেয়।
          */
+        // ⭐ পরিকল্পনা §৩.১ (মালিক, ১৪ নভেম্বর ২০২৬) — ঘনত্ব নিজের সেটিংসে, রিফ্রেশ নেই; প্রিন্ট "নামান ▾"-এর ভেতরে
         foreach ([
-            __('core.toolbar.density'),
+            __('core.toolbar.download'),
             __('core.action.print'),
-            __('core.toolbar.refresh'),
         ] as $label) {
             $response->assertSee('aria-label="'.$label.'"', false);
         }

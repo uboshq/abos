@@ -333,7 +333,7 @@
         <x-ui.table
             :empty="\App\Core\Support\PartyLedger::filtered(request()) ? __('core.empty.no_results') : __('supplier::message.no_transactions')"
             :rows="$entries"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$ledgerColumns" />
 
         <x-ui.pager :rows="$entries" />

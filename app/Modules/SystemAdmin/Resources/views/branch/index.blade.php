@@ -72,7 +72,7 @@
         <x-ui.table
             :empty="request('q') ? __('core.empty.no_results') : __('system_admin::message.no_branches')"
             :rows="$rows"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
     </div>
 

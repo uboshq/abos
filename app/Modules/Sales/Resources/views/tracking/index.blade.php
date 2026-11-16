@@ -129,7 +129,7 @@
                 :view-url="fn ($r) => route('sales.tracking.show', [$r['kind'], $r['id']])"
                 :empty="$q ? __('core.empty.no_results') : __('sales::tracking.empty')"
                 :rows="$rows"
-                :compact="request()->boolean('compact')"
+                :compact="\App\Core\Support\Ui::compact()"
                 :columns="$columns" />
 
             <x-ui.pager :rows="$rows" />

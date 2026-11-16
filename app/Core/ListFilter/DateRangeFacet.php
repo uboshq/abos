@@ -31,6 +31,67 @@ final class DateRangeFacet extends Facet
         parent::__construct($key, $label);
     }
 
+    /**
+     * ⭐ চটজলদি তারিখ — পরিকল্পনা §৩.৩ (মালিক, ১৪ নভেম্বর ২০২৬): *"আজ, গতকাল, গত ৭ দিন, এই মাস, গত মাস, গত ৯০ দিন, যেকোনো তারিখ"*।
+     * ⓘ "যেকোনো তারিখ" মানে দুই চাবিই মোছা — নিচের তালিকায় নেই, [[FilterSet::presets()]] শেষে যোগ করে।
+     */
+    public const PRESETS = ['today', 'yesterday', 'last7', 'this_month', 'last_month', 'last90'];
+
+    /** ⭐ লেনদেনের তালিকা — বারে "📅 তারিখ" বোতাম (পরিকল্পনা §৩.১: *"📅 তারিখ (লেনদেনের তালিকায়)"*); গ্রাহকের "যোগের তারিখ"-এ নয় */
+    public bool $onBar = false;
+
+    public function onTheBar(): static
+    {
+        $this->onBar = true;
+
+        return $this;
+    }
+
+    /**
+     * চটজলদি নামের পরিসর — Y-m-d, আজ সহ।
+     *
+     * ⛔ "গত মাস" `subMonthNoOverflow` — ৩১ তারিখে `subMonth()` আগের মাসে না গিয়ে এই মাসেই থেকে যায়
+     *   ([[last-month-on-the-31st-is-this-month]], ৩১ অক্টোবর ২০২৬-এ দুইটা লাল)।
+     *
+     * @return array{from: string, to: string}
+     */
+    public static function presetRange(string $preset, ?Carbon $today = null): array
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+
+        [$from, $to] = match ($preset) {
+            'today' => [$today, $today],
+            'yesterday' => [$today->copy()->subDay(), $today->copy()->subDay()],
+            'last7' => [$today->copy()->subDays(6), $today],
+            'this_month' => [$today->copy()->startOfMonth(), $today],
+            'last_month' => [$today->copy()->subMonthNoOverflow()->startOfMonth(), $today->copy()->subMonthNoOverflow()->endOfMonth()],
+            'last90' => [$today->copy()->subDays(89), $today],
+            default => throw new \InvalidArgumentException($preset),
+        };
+
+        return ['from' => $from->toDateString(), 'to' => $to->toDateString()];
+    }
+
+    /**
+     * এখনকার পরিসর কোন চটজলদি নামের সাথে হুবহু মেলে — না মিললে null (তখন বোতামে তারিখ দুটোই লেখা)।
+     *
+     * @param  array{from: ?string, to: ?string}|null  $value
+     */
+    public static function presetOf(?array $value, ?Carbon $today = null): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        foreach (self::PRESETS as $preset) {
+            if (self::presetRange($preset, $today) === $value) {
+                return $preset;
+            }
+        }
+
+        return null;
+    }
+
     public function kind(): string
     {
         return 'date';

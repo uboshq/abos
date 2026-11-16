@@ -251,7 +251,8 @@ class WhichProductActuallyPaysTest extends TestCase
         $user = User::factory()->create();
         $user->companies()->attach($this->company, ['is_active' => true]);
         $user->forceFill(['current_company_id' => $this->company->id])->save();
-        $user->givePermissionTo(array_merge(['sales.report'], $extra));
+        // ⓘ তালিকা নামানোর চাবি — ১৬ নভেম্বর ২০২৬ থেকে নামানো নিজের চাবিতে ([[ExportListing]]); এই পরীক্ষা অন্য চাবির কথা বলে
+        $user->givePermissionTo(array_merge(['sales.report', Permission::findOrCreate('system_admin.list.export', 'web')->name], $extra));
 
         return $user->fresh();
     }

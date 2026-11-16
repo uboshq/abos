@@ -102,7 +102,7 @@
             :view-url="fn ($d) => route('sales.delivery_order.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::delivery_order.none')"
             :rows="$orders"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$orders" />

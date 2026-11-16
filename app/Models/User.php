@@ -54,7 +54,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $public_id বাইরের চাবি ([[HasPublicId]]) — ছবির ঠিকানা আর API এটা দিয়েই মানুষ চেনে
  */
 #[Fillable([
-    'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active',
+    'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active', 'compact_rows',
     'login_id', 'mobile', 'remarks',
 ])]
 /*
@@ -150,6 +150,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'view_all_branches' => 'boolean',
+            // ⓘ ঘন সারি — নিজের সেটিং ([[Ui::compact()]])
+            'compact_rows' => 'boolean',
             'last_login_at' => 'datetime',
             // ⓘ হোমের সাজ — ক্রম আর লুকানো অংশ ([[HomeLayout]], ৪ অক্টোবর ২০২৬)
             'home_layout' => 'array',

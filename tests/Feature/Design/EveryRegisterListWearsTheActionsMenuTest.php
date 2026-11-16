@@ -45,7 +45,19 @@ final class EveryRegisterListWearsTheActionsMenuTest extends TestCase
         $html = $this->get(route('inventory.product.index'))->assertOk()->getContent();
 
         $this->assertStringContainsString(e(__('core.table.action_menu')), $html, '⛔ কলামের নাম "অ্যাকশন" নয়।');
-        $this->assertStringContainsString('data-row-actions-button', $html, '⛔ সারিতে "অ্যাকশন ▾" বোতাম নেই — এখনো তিন বিন্দু।');
+        $this->assertStringContainsString('data-row-actions-button', $html, '⛔ সারিতে অ্যাকশনের বোতাম নেই।');
+
+        /*
+         * ⭐ মালিক, ১৬ নভেম্বর ২০২৬: *"অ্যাকশন নামটা থাকবে … হেডারটা আছে ওইটাতে … আর এখানে … জাস্ট একটা ছোট্ট চিহ্ন"* —
+         *   সারির বোতামে কোনো লেখা নয়, কেবল চিহ্ন; নাম কলামের মাথায়, আর বোতামের aria-label-এ (পর্দা-পাঠক)।
+         */
+        $this->assertMatchesRegularExpression('/<th[^>]*data-row-menu[^>]*>\s*'.preg_quote(e(__('core.table.action_menu')), '/').'\s*<\/th>/u', $html,
+            '⛔ "অ্যাকশন" নামটা কলামের মাথায় নেই।');
+        $this->assertSame(1, preg_match('/<button(?:(?!<\/button>).)*?data-row-actions-button[^>]*>(.*?)<\/button>/su', $html, $button),
+            '⛔ সারির অ্যাকশন বোতাম পাওয়া গেল না।');
+        $this->assertSame('', trim(strip_tags($button[1])), '⛔ সারির বোতামে লেখা — মালিক চেয়েছেন কেবল ছোট চিহ্ন, নাম মাথায়।');
+        $this->assertStringContainsString('aria-label="'.e(__('core.table.action_menu')).'"', $button[0], '⛔ চিহ্নের বোতামে পর্দা-পাঠকের নাম নেই।');
+
         $this->assertStringContainsString(e(RowMenu::title($product)), $html, '⛔ মেনুর মাথায় কোড · নাম নেই।');
         $this->assertStringContainsString(e(__('core.row_menu.preview')), $html, '⛔ দেখার ভাগে প্রিভিউ নেই।');
         $this->assertStringContainsString(route('inventory.product.show', $product), $html);

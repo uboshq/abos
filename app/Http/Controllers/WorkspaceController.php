@@ -341,6 +341,7 @@ class WorkspaceController extends Controller
                 'theme' => $user->theme ?? 'light',
                 'ui' => Ui::clean($user->ui),
                 'locale' => $user->locale ?? config('app.locale'),
+                'compact_rows' => (bool) $user->compact_rows,
             ],
         ]);
     }
@@ -398,6 +399,8 @@ class WorkspaceController extends Controller
              */
             'match_accent' => ['sometimes', 'boolean'],
             'locale' => ['required', 'string', 'in:bn,en'],
+            // ⭐ ঘন সারি — সব তালিকায় একবারে (পরিকল্পনা §৩.১)
+            'compact_rows' => ['sometimes', 'boolean'],
         ]);
 
         /*

@@ -354,6 +354,12 @@ return [
         'system_admin.company.manage',
         'system_admin.user.manage',
         /*
+         * ⭐ তালিকা নামানো — Excel, CSV, PDF আর প্রিন্ট (পরিকল্পনা §৩.১, মালিক ১৪ নভেম্বর ২০২৬: "ওকে, এইভাবে এই কাজটা ধরে ফেলো")।
+         * ⓘ D365-এর "Open in Excel" অনুমতি ধরে। আজ যাঁরা নামাতে পারেন তাঁরা সবাই পান (মাইগ্রেশন — কারও কাজ থামে না); মালিক
+         *   চাইলে কোনো ভূমিকা থেকে তুলে দেবেন। যার নেই তার কাছে "নামান" মেনুই নেই, ঠিকানায় `?export=` লিখলেও ৪০৩ ([[ExportListing]])।
+         */
+        'system_admin.list.export',
+        /*
          * ── মালিকানা হস্তান্তরের নিজের অনুমতি, ব্যবহারকারী-ব্যবস্থাপনার
          *    সাথে নয় ────────────────────────────────────────────────────
          * ⓘ `system_admin.user.manage` দিয়ে গেট করলে যে কেউ ব্যবহারকারী
@@ -452,12 +458,33 @@ return [
      * বদলায়; ভুল হলে কেউ কাজ করতে পারেন না।
      */
     'role_templates' => [
+        // ⭐ তালিকা নামানো — আজ সবাই পারেন, তাই সব ছাঁচে (নতুন কোম্পানিতেও কাজ না থামে); মালিক তুলে দিতে পারেন
+        'Copilot user' => ['system_admin.list.export'],
+        'Accountant' => ['system_admin.list.export'],
+        'ASM' => ['system_admin.list.export'],
+        'Auditor' => ['system_admin.list.export'],
+        'Backup Operator' => ['system_admin.list.export'],
+        'Backup Watcher' => ['system_admin.list.export'],
+        'Counter' => ['system_admin.list.export'],
+        'DSM' => ['system_admin.list.export'],
+        'Field Sales' => ['system_admin.list.export'],
+        'HR' => ['system_admin.list.export'],
+        'Kitchen' => ['system_admin.list.export'],
+        'Manager' => ['system_admin.list.export'],
+        'Notification Analyst' => ['system_admin.list.export'],
+        'Notification Manager' => ['system_admin.list.export'],
+        'Notification Watcher' => ['system_admin.list.export'],
+        'Notification Writer' => ['system_admin.list.export'],
+        'RSM' => ['system_admin.list.export'],
+        'Security Watch' => ['system_admin.list.export'],
+        'Warehouse' => ['system_admin.list.export'],
         /*
          * ⓘ যিনি মানুষ বসান ও সরান — কিন্তু ক্ষমতার ছক বানান না।
          */
         'User Admin' => [
             'system_admin.user.manage',
             'system_admin.audit.view',
+            'system_admin.list.export',
         ],
 
         /*
@@ -471,6 +498,7 @@ return [
             'system_admin.settings.manage',
             'system_admin.import.manage',
             'system_admin.reports.schedule',
+            'system_admin.list.export',
         ],
     ],
 

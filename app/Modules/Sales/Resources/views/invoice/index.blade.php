@@ -125,7 +125,7 @@
             :row-menu="fn ($d) => view('sales::invoice.partials.row-menu', ['invoice' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_invoices')"
             :rows="$invoices"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$invoices" />

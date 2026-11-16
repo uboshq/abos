@@ -121,7 +121,7 @@
             :view-url="fn ($s) => $s->delivery_challan_id ? route('sales.challan.show', $s->delivery_challan_id) : null"
             :empty="$q !== '' ? __('core.empty.no_results') : __('sales::delivery.empty')"
             :rows="$rows"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$rows" />

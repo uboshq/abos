@@ -87,7 +87,7 @@
         @else
             <x-ui.table :rows="$jobs"
                         :columns="$columns"
-                        :compact="request()->boolean('compact')"
+                        :compact="\App\Core\Support\Ui::compact()"
                         :empty="__('core.empty.no_results')" />
 
             <x-ui.pager :rows="$jobs" />

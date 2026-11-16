@@ -77,7 +77,7 @@
         </form>
 
         <x-ui.table
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="$q ? __('core.empty.no_results') : __('master_data::message.none_yet')"
             :rows="$records"
             :columns="array_merge(
