@@ -69,7 +69,19 @@ final class PartyStatementPages
             $height = $this->height((string) $row['particulars']);
             $isLast = $i === array_key_last($rows);
 
-            // ⓘ এই সারির পরে "পরের পৃষ্ঠায় জের" (পাতা চলবে), নয়তো মোট আর মেলানো (শেষ সারি) — দুটোর জায়গা রেখে
+            /*
+             * ⓘ এই সারির পরে "পরের পৃষ্ঠায় জের" (পাতা চলবে), নয়তো মোট আর মেলানো (শেষ সারি)।
+             * ⭐ শেষ সারি আঁটে অথচ মোট-মেলানো-সই আঁটে না — সারি এই পাতাতেই, আর মোট পরের পাতায় (লাইভে দেখা, ১৬ নভেম্বর ২০২৬:
+             *   প্রথম পাতা আধখালি রেখে শেষ সারিটা একা পরের পাতায় যাচ্ছিল — মালিকের "প্রতিটা পৃষ্ঠায় সর্বোচ্চ লাইন" ভাঙত)।
+             */
+            if ($isLast && $page !== [] && $used + $height + $tail > $room && $used + $height + self::CARRY <= $room) {
+                $page[] = $row;
+                $pages[] = $page;
+                $pages[] = [];
+
+                return $pages;
+            }
+
             $needed = $used + $height + ($isLast ? $tail : self::CARRY);
 
             if ($page !== [] && $needed > $room) {
@@ -126,7 +138,8 @@ final class PartyStatementPages
 
     private function height(string $particulars): float
     {
-        $width = $particulars === '' ? 0.0 : $this->print->textWidth($particulars, self::FONT_PT);
+        // ⓘ শব্দের সীমায় ভাঙে, অক্ষরে নয় — তাই চওড়ায় ৮% বাড়তি ধরে (লাইভের লম্বা ইংরেজি ন্যারেশনে মাপ কম পড়েছিল)
+        $width = $particulars === '' ? 0.0 : $this->print->textWidth($particulars, self::FONT_PT) * 1.08;
         $lines = max(1, (int) ceil($width / self::PARTICULARS_WIDTH));
 
         return self::ROW + ($lines - 1) * self::LINE;

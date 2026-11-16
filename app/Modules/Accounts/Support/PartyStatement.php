@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -58,6 +59,8 @@ final class PartyStatement
         'sales_return' => 'accounts::statement.doc.sales_return',
         'purchase_bill' => 'accounts::statement.doc.purchase_bill',
         'purchase_return' => 'accounts::statement.doc.purchase_return',
+        // ⓘ পক্ষের শুরুর বাকি — উৎস "customer:opening" / "supplier:opening" ([[OpeningBalanceService::SOURCE_SUFFIX]])
+        'opening' => 'accounts::statement.doc.opening',
     ];
 
     public function __construct(private readonly PartyRegistry $parties, private readonly DrillResolver $drill) {}
@@ -247,6 +250,11 @@ final class PartyStatement
     /** @return array{0: string, 1: bool} উৎসের মূল নাম, আর এটা বাতিল বা সম্পাদনার উল্টো সারি কি না */
     private function baseOf(string $sourceType): array
     {
+        // ⓘ শুরুর বাকি — যে পক্ষেরই হোক, একটাই ধরন (লাইভে দেখা: "core.source.customer:opening" কাঁচা লেখা উঠেছিল)
+        if (str_ends_with($sourceType, ':opening')) {
+            return ['opening', false];
+        }
+
         foreach ([':reversal', ':cancel'] as $suffix) {
             if (str_ends_with($sourceType, $suffix)) {
                 return [substr($sourceType, 0, -strlen($suffix)), true];
@@ -260,7 +268,12 @@ final class PartyStatement
     {
         $kind = self::KIND[$sourceBase] ?? ($sourceBase === 'cheque' ? (bccomp($cr, '0', 2) > 0 ? 'receive' : 'payment') : null);
 
-        return $kind === null ? (string) __('core.source.'.$sourceBase) : (string) __('accounts::statement.kind.'.$kind);
+        if ($kind !== null) {
+            return (string) __('accounts::statement.kind.'.$kind);
+        }
+
+        // ⛔ অজানা উৎসে কাঁচা চাবি নয় — নাম জানা থাকলে নাম, নাহলে জার্নাল
+        return Lang::has('core.source.'.$sourceBase) ? (string) __('core.source.'.$sourceBase) : (string) __('accounts::statement.kind.journal');
     }
 
     private function particulars(string $sourceBase, bool $undone, string $money, string $narration, bool $accountLedger = false): string
@@ -272,7 +285,7 @@ final class PartyStatement
             $money !== '' => $money,
             // ⓘ জার্নালে ন্যারেশনই বিবরণ; ন্যারেশন না থাকলে উৎসের নাম
             $narration !== '' && in_array(self::KIND[$sourceBase] ?? '', ['journal', 'receive', 'payment'], true) => '',
-            default => (string) __('core.source.'.$sourceBase),
+            default => Lang::has('core.source.'.$sourceBase) ? (string) __('core.source.'.$sourceBase) : '',
         };
 
         $text = trim($head.($head !== '' && $narration !== '' ? ' — ' : '').$narration);

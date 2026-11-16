@@ -40,7 +40,9 @@
     .party-name { font-size: 11pt; font-weight: bold; }
     .k { color: {{ $muted }}; padding-right: 3mm; white-space: nowrap; }
     .run td { font-size: 8pt; color: {{ $muted }}; border-bottom: 0.25mm solid {{ $line }}; padding-bottom: 1.5mm; }
-    table.led { width: 100%; border: 0.3mm solid {{ $ink }}; margin-top: 2mm; page-break-inside: avoid; }
+    {{-- ⛔ page-break-inside: avoid নয় — তাতে mPDF উপচানো টেবিল চুপচাপ ছোট করে (লাইভে সারি ছোট আর পাতা আধখালি); উপচালে বরং পাতা
+         বাড়ে, আর নিয়ন্ত্রক কম জায়গা ধরে আবার ভাগ করে ([[PartyStatementController]]) --}}
+    table.led { width: 100%; border: 0.3mm solid {{ $ink }}; margin-top: 2mm; }
     .led th { font-weight: bold; text-align: center; padding: 1.6mm 1.2mm;
         @if ($colour) background-color: {{ $brand }}; color: #ffffff; @else border-top: 0.6mm solid #000000; border-bottom: 0.4mm solid #000000; @endif }
     .led td { padding: 1.2mm 1.2mm; border-bottom: 0.1mm solid {{ $line }}; vertical-align: top; }

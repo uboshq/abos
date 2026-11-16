@@ -88,6 +88,7 @@ return [
         'sales_return' => 'Sales return',
         'purchase_bill' => 'Purchase bill',
         'purchase_return' => 'Purchase return',
+        'opening' => 'Opening balance',
     ],
     'undone' => 'Cancelled',
     'too_many' => 'More than :n transactions in this period. Shorten the dates and print again.',
