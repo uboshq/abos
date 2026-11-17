@@ -179,6 +179,11 @@ return [
         ],
         'reports' => [
             ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
+            /*
+             * ⭐ মাস শেষের হিসাব — দিন-খাতার পাশে (মালিক, ১৭ নভেম্বর ২০২৬: নমুনা "Ok", "Sob ok")। ⓘ পাতাটা মালিকের কেন্দ্রের
+             * ([[MonthCloseController]]) — বিক্রয়, মজুদ, ক্রয়, বেতন একসাথে পড়ে, আর হিসাব কারও উপর দাঁড়ায় না; দরজা এখানে।
+             */
+            ['label' => 'accounts::menu.month_close', 'icon' => 'calendar', 'route' => 'executive.month_close', 'permission' => 'accounts.report.month_close'],
             ['label' => 'accounts::menu.cash_book', 'icon' => 'cash', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-book'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.bank_book', 'icon' => 'building', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
 
@@ -416,6 +421,12 @@ return [
         'accounts.year.close',
         'accounts.report',
         'accounts.report.final',
+        /*
+         * ⭐ মাস শেষের হিসাব — নিজের চাবি (মালিক, ১৭ নভেম্বর ২০২৬)। ⓘ পাতায় লাভ-ক্ষতি, মুনাফার হার আর মজুদের দাম আছে, তাই চাবিটা
+         * পান যাঁদের চূড়ান্ত হিসাবের চাবি আছে (নতুন কোম্পানিতে হিসাবরক্ষক; চালু কোম্পানিতে মাইগ্রেশন ২০২৭_০৪_১৮)। ⛔ ম্যানেজারের ছাঁচে নয় —
+         * তাঁর কাছে লাভ-ক্ষতি আর খরচের অঙ্ক ইচ্ছা করে নেই।
+         */
+        'accounts.report.month_close',
 
         /*
          * ⭐ গ্রুপের হিসাবের নিজের চাবি — ২৫ সেপ্টেম্বর ২০২৬।
@@ -490,6 +501,8 @@ return [
              * অঙ্ক এখন এই চাবির পেছনে। ⓘ ছাঁচ কেবল নতুন কোম্পানিতে লাগে — লাইভের হিসাবরক্ষককে দিতে হয় ভূমিকার পর্দা থেকে।
              */
             'accounts.report.final',
+            // ⭐ মাস শেষের হিসাব — চূড়ান্ত হিসাবের পাশে (১৭ নভেম্বর ২০২৬)
+            'accounts.report.month_close',
             'accounts.report.group',
             'accounts.voucher.create',
             'accounts.voucher.update',

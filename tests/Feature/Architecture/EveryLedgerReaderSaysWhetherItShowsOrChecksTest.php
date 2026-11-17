@@ -42,6 +42,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Dashboard/SalesBoard.php' => 'বিক্রয়ের বোর্ড — লাভের সিঁড়ির খরচের খাত, দেখার শাখা ধরে (DataScope::viewBranchIds() প্রতিটা শাখার balanceOn; মালিকের চূড়ান্ত নমুনা)',
         'app/Modules/Accounts/Models/Voucher.php' => 'সইকারীর "অনুমোদন দিলে কী হবে" — টাকার খাতের জের, ভাউচার ফর্মের "খাতে আছে"-র একই হিসাব (Account::balanceInView(); নমুনা v4, ৯ নভেম্বর ২০২৬)',
         'app/Modules/Executive/Services/DailySummary.php' => 'প্রতিদিনের সারাংশ — হেডারে বাছা শাখার দিন (মালিক, ৭ নভেম্বর ২০২৬)',
+        'app/Modules/Executive/Services/MonthClose/MonthBooks.php' => 'মাস শেষের হিসাব — লাভ-ক্ষতি, টাকা, পাওনা, দেনা, মজুদ, মূসক; হেডারে বাছা শাখা ধরে (ViewedBranch::narrow; মালিক, ১৭ নভেম্বর ২০২৬)',
         'app/Modules/Accounts/Resources/views/voucher/simple-form.blade.php' => 'রসিদ ও পরিশোধ ভাউচারে "খাতে আছে ৳…" — টাকার খাতের জের, দেখার শাখা ধরে (Account::balanceInView(); টাকা দেওয়ার পর্দার একই হিসাব; fe, ২৩ অক্টোবর ২০২৬)',
         'app/Modules/Purchase/Http/Controllers/PaymentController.php' => 'টাকা দেওয়ার পর্দায় "খাতে আছে ৳…" — টাকার খাতের জের, দেখার শাখা ধরে (Account::balanceInView(); নকশা #২৪, ২২ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/AccountLedger.php' => 'খাতের খাতা আর ছকের জের — ওয়েব আর ফোনের একই সেবা, দেখার শাখা ধরে (ViewedBranch::one(); মালিক, ১৭ অক্টোবর ২০২৬)',
