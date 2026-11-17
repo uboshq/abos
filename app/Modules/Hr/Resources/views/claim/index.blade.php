@@ -64,7 +64,7 @@
         @endcan
 
         <x-ui.table :rows="$claims" :grand="$grand ?? []" :view-url="fn ($c) => route('hr.claim.show', $c)"
-                    :columns="$claimColumns" :compact="request()->boolean('compact')" :empty="__('hr::claim.none')" />
+                    :columns="$claimColumns" :compact="\App\Core\Support\Ui::compact()" :empty="__('hr::claim.none')" />
 
         <x-ui.pager :rows="$claims" />
         <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$claimColumns" />

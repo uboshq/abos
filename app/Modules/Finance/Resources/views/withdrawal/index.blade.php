@@ -174,7 +174,7 @@
                 </h2>
 
                 <x-ui.table
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('finance::message.no_withdrawal_yet')"
                     :rows="$standing"
                     :columns="$standColumns" />
@@ -229,7 +229,7 @@
             <x-ui.table
                 :grand="$grand ?? []"
                 :view-url="fn ($e) => $e->voucher_id ? route('accounts.voucher.show', $e->voucher_id) : null"
-                :compact="request()->boolean('compact')"
+                :compact="\App\Core\Support\Ui::compact()"
                 :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_withdrawal_yet')"
                 :rows="$rows"
                 :columns="$wdColumns" />

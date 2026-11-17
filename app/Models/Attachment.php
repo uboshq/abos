@@ -31,7 +31,7 @@ class Attachment extends Model
     protected $fillable = [
         'company_id', 'source_module', 'source_entity', 'source_entity_id',
         'original_name', 'stored_path', 'mime_type', 'extension',
-        'size_bytes', 'checksum', 'version', 'replaces_id', 'uploaded_by',
+        'size_bytes', 'checksum', 'fingerprint', 'version', 'replaces_id', 'uploaded_by',
     ];
 
     protected function casts(): array

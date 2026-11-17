@@ -760,7 +760,7 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
     {
         $this->grant(self::REPORT_KEY);
 
-        foreach (ListExport::FORMATS as $format) {
+        foreach (ListExport::FILES as $format) {
             [$headers, $text] = $this->exported(self::LIMITS, $format);
 
             $this->assertSame(['Code', 'Limit'], $headers, "⛔ {$format}: ঢাকা কলামের শিরোনাম ফাইলে।");
@@ -770,7 +770,7 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
 
         $this->grant(self::COST_KEY);
 
-        foreach (ListExport::FORMATS as $format) {
+        foreach (ListExport::FILES as $format) {
             [$headers, $text] = $this->exported(self::LIMITS, $format);
 
             $this->assertSame(['Code', 'Limit', 'Hidden cost'], $headers, "⛔ {$format}: চাবি দেওয়ার পরেও কলাম আসেনি।");

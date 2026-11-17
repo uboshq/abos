@@ -217,7 +217,7 @@
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.none_yet')"
             :rows="$products"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :grid="request('view') === 'grid'"
             :columns="$columns" />
 

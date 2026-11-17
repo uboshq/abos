@@ -32,10 +32,17 @@ final class EveryToolButtonSitsOnTheBarTest extends TestCase
 
         $this->assertStringNotContainsString('data-toolbar-more', $html, '⛔ "…" মেনু ফিরে এসেছে — মালিক পুরনো টুলবার চেয়েছেন।');
 
-        foreach (['core.toolbar.density', 'core.toolbar.columns', 'core.toolbar.share_copy', 'core.toolbar.refresh',
-            'core.toolbar.export', 'core.action.print'] as $key) {
+        // ⭐ পরিকল্পনা §৩.১ (মালিক, ১৪ নভেম্বর ২০২৬) — বারে: কলাম, নামান ▾ (ভেতরে প্রিন্ট); লিংক কপি দৃশ্যের মেনুতে
+        foreach (['core.toolbar.columns', 'core.toolbar.download', 'core.action.print'] as $key) {
             $this->assertStringContainsString('aria-label="'.e(__($key)).'"', $html, "⛔ \"{$key}\" টুলবারে নেই।");
         }
+        $this->assertStringContainsString('data-copy-link', $html, '⛔ দৃশ্যের মেনুতে "লিংক কপি" নেই।');
+
+        // ⛔ পরিকল্পনা থেকে বাদ — ঘনত্ব (নিজের সেটিংসে), রিফ্রেশ (পাতা নিজে নতুন তথ্য আনে), আলাদা শেয়ার, টেবিল-কার্ডের সুইচ
+        foreach (['core.toolbar.density', 'core.toolbar.refresh', 'core.toolbar.share'] as $key) {
+            $this->assertStringNotContainsString('aria-label="'.e(__($key)).'"', $html, "⛔ \"{$key}\" বারে ফিরে এসেছে — পরিকল্পনায় নেই।");
+        }
+        $this->assertStringNotContainsString('data-view-switch', $html, '⛔ টেবিল-কার্ডের সুইচ বারে ফিরে এসেছে।');
 
         $this->assertStringContainsString('name="show[]"', $html, '⛔ কলামের টিকগুলো নেই।');
         $this->assertStringContainsString('data-quick-find', $html, 'খোঁজার ঘর নেই।');

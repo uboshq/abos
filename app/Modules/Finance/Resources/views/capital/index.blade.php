@@ -255,7 +255,7 @@
 
                  ⓘ নামটা লিংক — লেনদেন ট্যাবে কেবল তাঁর সারিগুলো খোলে। --}}
             <x-ui.table
-                :compact="request()->boolean('compact')"
+                :compact="\App\Core\Support\Ui::compact()"
                 :empty="__('finance::message.no_capital_yet')"
                 :rows="$positions"
                 :columns="$ownerColumns" />
@@ -280,7 +280,7 @@
 
             <x-ui.table
                 :grand="$grand ?? []"
-                :compact="request()->boolean('compact')"
+                :compact="\App\Core\Support\Ui::compact()"
                 :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_capital_yet')"
                 :rows="$entries"
                 :columns="$entryColumns" />

@@ -14,7 +14,7 @@
 --}}
 <x-ui.table
     :rows="$institutions"
-    :compact="request()->boolean('compact')"
+    :compact="\App\Core\Support\Ui::compact()"
     :empty="__('finance::message.no_deposit_yet')"
     :columns="[
         [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectCorners, orderCorners, solvePerspective, suggestSize, warp } from './scan.js'
+import { detectCorners, enhance, LOOKS, orderCorners, solvePerspective, suggestSize, warp } from './scan.js'
 
 /*
  * বাঁকা কাগজ সোজা করার অঙ্ক।
@@ -290,5 +290,130 @@ describe('কাগজ খুঁজে বের করা', () => {
 
     it('সরু ফালি চতুর্ভুজ বলে চালানো হয় না', () => {
         expect(detectCorners(onATable(140, 5, 152, 395))).toBeNull()
+    })
+})
+
+/*
+ * ⭐ কাগজের চেহারা (মালিক, ১৬ নভেম্বর ২০২৬: "ক্যাম স্ক্যানারে যে কাজগুলো হয় … স্পষ্ট করা") — ছায়া যায়, কাগজ সাদা,
+ *   লেখা কালো, রঙিন সিল বাঁচে; সাদা-কালোয় কেবল দুই রং।
+ */
+describe('enhance — কাগজের চেহারা', () => {
+    /** বাঁ অর্ধেক আলোয় (240), ডান অর্ধেক ছায়ায় (150); দুই দিকেই একটা কালির দাগ */
+    function shadowed() {
+        const image = canvas(200, 100, [240, 240, 240])
+
+        for (let y = 0; y < 100; y++) {
+            for (let x = 100; x < 200; x++) {
+                paint(image, x, y, [150, 150, 150])
+            }
+        }
+
+        for (let y = 45; y < 50; y++) {
+            for (let x = 30; x < 70; x++) paint(image, x, y, [40, 40, 40])
+            for (let x = 130; x < 170; x++) paint(image, x, y, [25, 25, 25])
+        }
+
+        return image
+    }
+
+    const at = (image, x, y) => Array.from(image.data.slice((y * image.width + x) * 4, (y * image.width + x) * 4 + 3))
+
+    it('পরিষ্কার: ছায়ার কাগজও সাদা, দুই দিকের লেখা কালো', () => {
+        const out = enhance(shadowed(), 'clean')
+
+        expect(at(out, 10, 10)[0]).toBeGreaterThanOrEqual(245)
+        expect(at(out, 190, 10)[0]).toBeGreaterThanOrEqual(245)
+        expect(at(out, 50, 47)[0]).toBeLessThanOrEqual(80)
+        expect(at(out, 150, 47)[0]).toBeLessThanOrEqual(80)
+    })
+
+    it('সাদা-কালো: কেবল 0 আর 255 — ছায়ার কাগজ সাদা, কালি কালো', () => {
+        const out = enhance(shadowed(), 'bw')
+        const values = new Set()
+
+        for (let i = 0; i < out.data.length; i += 4) values.add(out.data[i])
+
+        expect([...values].sort((a, b) => a - b)).toEqual([0, 255])
+        expect(at(out, 190, 10)).toEqual([255, 255, 255])
+        expect(at(out, 150, 47)).toEqual([0, 0, 0])
+    })
+
+    it('ধূসর: তিন রং সমান', () => {
+        const image = shadowed()
+        paint(image, 20, 20, [200, 30, 30])
+        const [r, g, b] = at(enhance(image, 'grey'), 20, 20)
+
+        expect(r).toBe(g)
+        expect(g).toBe(b)
+    })
+
+    it('পরিষ্কারে লাল সিল লালই থাকে', () => {
+        const image = shadowed()
+        for (let y = 20; y < 26; y++) for (let x = 20; x < 26; x++) paint(image, x, y, [200, 30, 30])
+        const [r, g] = at(enhance(image, 'clean'), 22, 22)
+
+        expect(r).toBeGreaterThan(g * 2)
+    })
+
+    it('মোটা শিরোনাম (পুরো ঘর কালিতে ঢাকা) মুছে সাদা হয় না', () => {
+        const image = canvas(400, 400, [235, 235, 235])
+        for (let y = 100; y < 160; y++) for (let x = 100; x < 300; x++) paint(image, x, y, [30, 30, 30])
+
+        expect(at(enhance(image, 'clean'), 200, 130)[0]).toBeLessThanOrEqual(60)
+    })
+
+    it('আসল রং: কিছুই বদলায় না; অচেনা নাম আসল রঙের মতো', () => {
+        const image = shadowed()
+
+        expect(Array.from(enhance(image, 'colour').data)).toEqual(Array.from(image.data))
+        expect(Array.from(enhance(image, 'sepia').data)).toEqual(Array.from(image.data))
+        expect(LOOKS).toEqual(['clean', 'colour', 'grey', 'bw'])
+    })
+})
+
+/* ⭐ ১৭ নভেম্বর ২০২৬ — ফোনের ছবিতে ধরা দুই ভুল: কাঠের টেবিলে কোণ মেলেনি, আর ছায়ার ঢালে কাগজ ধূসর থেকে গিয়েছিল */
+describe('ফোনের মতো ছবি — রঙিন ডোরাকাটা টেবিল, ছায়ার ঢাল', () => {
+    it('কাঠের ডোরাকাটা টেবিলে সাদা কাগজের কোণ পাওয়া যায়, পুরো ছবি নয়', () => {
+        const image = canvas(400, 500, [120, 84, 52])
+
+        // কাঠের ডোরা — গাঢ়-হালকা বাদামি সারি
+        for (let y = 0; y < 500; y += 6) {
+            for (let x = 0; x < 400; x++) paint(image, x, y, [150, 105, 66])
+        }
+
+        // কাগজ ১০০..৩০০ × ১০০..৪০০, ডান দিকে ছায়ার ঢাল (কাগজ রংহীনই থাকে)
+        for (let y = 100; y < 400; y++) {
+            for (let x = 100; x < 300; x++) {
+                const v = Math.round(245 - (x - 100) * 0.6)
+                paint(image, x, y, [v, v, v - 4])
+            }
+        }
+
+        const corners = detectCorners(image)
+
+        expect(corners).not.toBeNull()
+        const [tl, , br] = corners
+        expect(Math.abs(tl.x - 100)).toBeLessThanOrEqual(6)
+        expect(Math.abs(tl.y - 100)).toBeLessThanOrEqual(6)
+        expect(Math.abs(br.x - 298)).toBeLessThanOrEqual(6)
+        expect(Math.abs(br.y - 398)).toBeLessThanOrEqual(6)
+    })
+
+    it('ছায়ার ঢালে (ফোনের ছবির মতো খাড়া — ৬০ বিন্দুতে ২৪০ থেকে ১১০) পুরো কাগজ সাদা হয়', () => {
+        const image = canvas(600, 300, [240, 240, 240])
+
+        for (let y = 0; y < 300; y++) {
+            for (let x = 0; x < 600; x++) {
+                const v = Math.round(240 - Math.min(130, Math.max(0, x - 200) * (130 / 60)))
+                paint(image, x, y, [v, v, v])
+            }
+        }
+
+        const out = enhance(image, 'clean')
+        let darkest = 255
+
+        for (let i = 0; i < out.data.length; i += 4) darkest = Math.min(darkest, out.data[i])
+
+        expect(darkest).toBeGreaterThanOrEqual(235)
     })
 })

@@ -73,7 +73,7 @@ final class ReportsController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($user),
             'companies' => $companies->values()->all(),
             'views' => $views,
-            'formats' => ListExport::FORMATS,
+            'formats' => ListExport::FILES,
             'canSchedule' => $user->can('system_admin.reports.schedule') && Route::has('system_admin.reports.schedule.index'),
         ]);
     }

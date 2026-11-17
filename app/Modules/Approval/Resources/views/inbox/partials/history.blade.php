@@ -99,7 +99,7 @@
     </form>
 
     <x-ui.table
-        :compact="request()->boolean('compact')"
+        :compact="\App\Core\Support\Ui::compact()"
         :empty="__('approval::field.history_empty')"
         :rows="$approvals"
         :grand="$grand"

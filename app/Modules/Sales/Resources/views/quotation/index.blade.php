@@ -97,7 +97,7 @@
             :view-url="fn ($d) => route('sales.quotation.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::quotation.empty')"
             :rows="$quotations"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$quotations" />

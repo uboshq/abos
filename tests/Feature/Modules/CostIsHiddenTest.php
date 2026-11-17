@@ -69,14 +69,15 @@ class CostIsHiddenTest extends TestCase
      */
     private function clerk(array $extra = []): User
     {
-        foreach (['sales.report', 'sales.invoice.view', 'sales.cost.view'] as $name) {
+        foreach (['sales.report', 'sales.invoice.view', 'sales.cost.view', 'system_admin.list.export'] as $name) {
             Permission::findOrCreate($name, 'web');
         }
 
         $user = User::factory()->create();
         $user->companies()->attach($this->company, ['is_active' => true]);
         $user->forceFill(['current_company_id' => $this->company->id])->save();
-        $user->givePermissionTo(array_merge(['sales.report', 'sales.invoice.view'], $extra));
+        // ⓘ তালিকা নামানোর চাবি — ১৬ নভেম্বর ২০২৬ থেকে নামানো নিজের চাবিতে ([[ExportListing]]); এই পরীক্ষা অন্য নিয়মের কথা বলে
+        $user->givePermissionTo(array_merge(['sales.report', 'sales.invoice.view', 'system_admin.list.export'], $extra));
 
         return $user->fresh();
     }

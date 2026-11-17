@@ -98,18 +98,25 @@
                 aria-label="{{ $label ?? __('core.table.actions') }}"
                 @class([
                     'flex min-h-(--spacing-touch) items-center gap-1 rounded-(--radius-field) text-sm transition-colors',
-                    'px-2 text-(--color-ink-muted) hover:bg-(--color-surface-hover) hover:text-(--color-ink)' => ! $label,
-                    /* ⭐ লেখাসহ বোতাম — নমুনার "কাজ ▾": ফ্রেমে বাঁধা, খুললে নীল */
-                    'border border-(--color-border) bg-(--color-surface-card) px-3 font-semibold text-(--color-ink) hover:border-(--color-brand-500) hover:text-(--color-brand-600) aria-expanded:border-(--color-brand-500) aria-expanded:text-(--color-brand-600)' => (bool) $label,
+                    /* ⭐ মালিক, ১৬ নভেম্বর ২০২৬: *"sob talikay etai bosaw"* — নাম-ছাড়া বোতামও একই ফ্রেমে বাঁধা ⋯ */
+                    'border border-(--color-border) bg-(--color-surface-card) px-1.5 text-(--color-ink-muted) hover:border-(--color-brand-500) hover:text-(--color-brand-600) aria-expanded:border-(--color-brand-500) aria-expanded:text-(--color-brand-600)' => ! $label,
+                    /*
+                     * ⭐ মালিক, ১৬ নভেম্বর ২০২৬: *"অ্যাকশন নামটা থাকবে … হেডারটা আছে ওইটাতে … আর এখানে … জাস্ট একটা ছোট্ট
+                     *   চিহ্ন থাকবে"* — সারিতে কেবল ছোট "⋯" (ফ্রেমে বাঁধা, খুললে নীল); "অ্যাকশন" লেখা কলামের মাথায়।
+                     *   ⓘ নামটা হারায় না: title আর aria-label-এ থাকে — মাউস রাখলে দেখা যায়, পর্দা-পাঠক পড়ে।
+                     *   ⓘ আন্তর্জাতিক চল (Salesforce, SAP Fiori, D365): সারিতে চিহ্ন, নাম মাথায়।
+                     */
+                    'border border-(--color-border) bg-(--color-surface-card) px-1.5 text-(--color-ink-muted) hover:border-(--color-brand-500) hover:text-(--color-brand-600) aria-expanded:border-(--color-brand-500) aria-expanded:text-(--color-brand-600)' => (bool) $label,
                 ])
                 @if ($label) data-row-actions-button @endif>
             @if ($label)
-                <span>{{ $label }}</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current"><path d="M7 10l5 5 5-5z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-5 shrink-0 fill-current">
+                    <path d="M6 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"/>
+                </svg>
             @else
-                {{-- তিনটা বিন্দু — যেখানেই দেখা যাক, "এখানে আরও কিছু আছে" --}}
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                    <path d="M12 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"/>
+                {{-- তিনটা বিন্দু, আড়াআড়ি (⋯) — মালিকের বাছাই, ১৬ নভেম্বর ২০২৬; খাড়া ⋮ আর নয় --}}
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-5 shrink-0 fill-current">
+                    <path d="M6 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"/>
                 </svg>
             @endif
         </button>

@@ -209,7 +209,7 @@
         <x-ui.table
             :grand="$grand ?? []"
             :row-menu="fn ($d) => view('accounts::voucher.partials.row-menu', ['voucher' => $d, 'awaiting' => in_array((int) $d->id, $awaitingIds ?? [], true)])"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_vouchers')"
             :rows="$vouchers"
             :columns="$columns" />

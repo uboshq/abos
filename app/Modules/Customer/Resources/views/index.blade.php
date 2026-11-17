@@ -197,7 +197,7 @@
             :grand="$grand ?? []"
             :empty="$q ? __('core.empty.no_results') : __('customer::message.none_yet')"
             :rows="$customers"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :grid="request('view') === 'grid'"
             {{--
                 কলামের ক্রমটা মালিকের দেওয়া — প্রথমবার ২০২৬-০৮-০৭, আর

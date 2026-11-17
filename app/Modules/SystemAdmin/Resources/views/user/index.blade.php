@@ -190,7 +190,7 @@
 
         <x-ui.table :rows="$users"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('core.empty.no_results')" />
     </div>
 

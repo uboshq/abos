@@ -126,6 +126,13 @@
                                 </div>
                                 @break
                             @case('date')
+                                {{-- ⭐ চটজলদি তারিখ (পরিকল্পনা §৩.৩) — চাপলেই সেই পরিসর; নিচে নিজে শুরু-শেষ (দিন-মাস-বছর) --}}
+                                <div class="list-filter-quick" data-date-presets>
+                                    @foreach ($section['presets'] as $preset)
+                                        <a href="{{ $preset['url'] }}" data-date-preset="{{ $preset['key'] }}"
+                                           @class(['is-on' => $preset['on']]) @if ($preset['on']) aria-current="true" @endif>{{ $preset['label'] }}</a>
+                                    @endforeach
+                                </div>
                                 <div class="grid gap-2">
                                     <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.from') }}
                                         <x-ui.date dense :name="$section['from_key']" :value="$section['from']" :form="$form" /></label>

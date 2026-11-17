@@ -313,7 +313,8 @@
 .list-filter-range { display: flex; align-items: center; gap: 0.5rem; }
 .list-filter-quick { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
 
-.list-filter-quick button {
+.list-filter-quick button,
+.list-filter-quick a {
     padding: 0.1rem 0.55rem;
     border: 1px solid var(--color-border);
     border-radius: 0.9rem;
@@ -321,6 +322,10 @@
     color: var(--c);
     font-size: 0.75rem;
 }
+
+/* ⓘ চটজলদি তারিখ (পরিকল্পনা §৩.৩) — তারিখের ঘরের উপরে; বাছা নামটা অংশের রঙে ভরা */
+.list-filter-quick[data-date-presets] { margin: 0 0 0.5rem; }
+.list-filter-quick a.is-on { background: var(--c); border-color: var(--c); color: #fff; }
 
 .list-filter-foot {
     display: flex;

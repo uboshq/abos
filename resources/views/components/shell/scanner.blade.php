@@ -148,9 +148,23 @@
             >
         </label>
 
-        <p class="flex-1 text-xs text-(--color-ink-muted)" x-show="$store.scanner.mode === 'paper'">
-            {{ __('core.scan.hint') }}
-        </p>
+        {{-- ⭐ কাগজের চেহারা — CamScanner-এর মতো (মালিক, ১৬ নভেম্বর ২০২৬); বাছাইটা "ঠিক আছে" চাপার পরে কাগজটুকুর উপরে বসে --}}
+        <div class="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1.5" x-show="$store.scanner.mode === 'paper'">
+            <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="{{ __('core.scan.look') }}" data-scan-looks>
+                @foreach (['clean', 'colour', 'grey', 'bw'] as $look)
+                    <button
+                        type="button"
+                        role="radio"
+                        data-look="{{ $look }}"
+                        x-on:click="$store.scanner.choose('{{ $look }}')"
+                        x-bind:aria-checked="$store.scanner.look === '{{ $look }}' ? 'true' : 'false'"
+                        x-bind:class="$store.scanner.look === '{{ $look }}' ? 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) font-semibold' : 'border-(--color-border) text-(--color-ink-muted)'"
+                        class="rounded-full border px-3 py-1 text-xs"
+                    >{{ __('core.scan.looks.'.$look) }}</button>
+                @endforeach
+            </div>
+            <p class="text-xs text-(--color-ink-muted)">{{ __('core.scan.hint') }}</p>
+        </div>
 
         <button
             type="button"

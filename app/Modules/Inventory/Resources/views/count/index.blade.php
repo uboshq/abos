@@ -58,7 +58,7 @@
         <x-ui.table :view-url="fn ($r) => route('inventory.count.show', $r)"
             :empty="__('inventory::message.no_counts')"
             :rows="$counts"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$counts" />

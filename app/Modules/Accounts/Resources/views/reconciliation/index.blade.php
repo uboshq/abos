@@ -93,7 +93,7 @@
 
         <x-ui.table :rows="$reconciliations"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::recon.empty')" />
     </div>
 

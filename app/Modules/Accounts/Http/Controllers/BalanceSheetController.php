@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Engines\Print\PaperSize;
+use App\Core\Engines\Print\PrintEngine;
 use App\Core\Services\DataScope;
+use App\Core\Services\ExportJournal;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingsService;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -13,6 +17,7 @@ use App\Models\FinancialYear;
 use App\Models\UserDataScope;
 use App\Modules\Accounts\Services\BalanceSheetService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
@@ -47,7 +52,7 @@ class BalanceSheetController extends Controller implements HasMiddleware
         return [new Middleware('can:accounts.report.final')];
     }
 
-    public function show(Request $request): View
+    public function show(Request $request): View|Response
     {
         $asOf = $request->query('as_of');
 
@@ -65,6 +70,15 @@ class BalanceSheetController extends Controller implements HasMiddleware
         abort_if($asked !== null && ! $scope->allows($request->user(), UserDataScope::BRANCH, $asked), 404);
 
         $reach = $scope->idsFor($request->user(), UserDataScope::BRANCH); // ⓘ ড্রপডাউনে নাগাল, বাছাই নয়
+
+        /*
+         * ⭐ প্রিন্ট ভিউ আর PDF — IAS 1 ছকের কাগজ, লেজারের প্যাডে ([[print.balance-sheet]]; মালিক, ১৬ নভেম্বর ২০২৬)।
+         * ⓘ `?export=` তাই "তালিকা নামানো" চাবি আর নিরীক্ষার খাতা একই দরজায় ([[ExportListing]]) — স্থিতিপত্র আলাদা নিয়মে নয়।
+         */
+        $paper = $request->query('export');
+        if ($paper === 'print' || $paper === 'pdf') {
+            return $this->paper($request, is_string($asOf) && $asOf !== '' ? $asOf : now()->toDateString(), $asked, $paper);
+        }
 
         return view('accounts::report.balance-sheet', [
             'menu' => $this->menu->forUser($request->user()),
@@ -88,6 +102,31 @@ class BalanceSheetController extends Controller implements HasMiddleware
                 ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach))
                 ->orderBy('name_en')
                 ->get(),
+        ]);
+    }
+
+    private function paper(Request $request, string $asOf, ?int $asked, string $how): Response
+    {
+        $user = $request->user();
+        $branchId = $asked ?? ViewedBranch::one($user);
+        $sheet = $this->comparedSheet($asOf, $asked);
+
+        $pdf = app(PrintEngine::class)->renderDocument('accounts::print.balance-sheet', [
+            'title' => (string) __('accounts::menu.balance_sheet'),
+            'sheet' => $sheet,
+            'branch' => $branchId !== null ? (string) Branch::query()->whereKey($branchId)->first()?->name() : (string) __('core.listing.all_branches'),
+            'branchNote' => $branchId !== null,
+            'printedBy' => (string) $user->name,
+            'printedAt' => now()->format('d-m-Y, h:i A'),
+            'signatures' => app(SettingsService::class)->enabled('accounts.print_signature_lines'),
+        ], PaperSize::A4)['pdf'];
+
+        app(ExportJournal::class)->wrote(1);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($how === 'print' ? 'inline' : 'attachment').'; filename="balance-sheet-'.$asOf.'.pdf"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }
 

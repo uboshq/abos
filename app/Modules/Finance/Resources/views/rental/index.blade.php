@@ -201,7 +201,7 @@
             <x-ui.table :rows="$contracts"
                         :grand="$grand ?? []"
                         :columns="$rentColumns"
-                        :compact="request()->boolean('compact')"
+                        :compact="\App\Core\Support\Ui::compact()"
                         :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />
 
             <x-ui.pager :rows="$contracts" />

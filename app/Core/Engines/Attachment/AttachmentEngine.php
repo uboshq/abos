@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Engines\Attachment;
 
 use App\Core\Engines\Image\ImageEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
@@ -173,7 +174,8 @@ final class AttachmentEngine
             now()->format('m'),
         );
 
-        $kept = $this->keep($file, $directory, $storedName, $extension);
+        // ⭐ স্লিপ ছোট বাজেটে — সেটিংসের KB (মালিক, ১৬ নভেম্বর ২০২৬); বাকি কাগজ আগের মতো ([[budgetFor()]])
+        $kept = $this->keep($file, $directory, $storedName, $extension, $this->budgetFor($only));
 
         $version = 1;
 
@@ -200,11 +202,64 @@ final class AttachmentEngine
             'extension' => $kept['extension'],
             'size_bytes' => $kept['bytes'],
             'checksum' => hash_file('sha256', Storage::disk($this->disk)->path($kept['path'])),
+            // ⭐ চেহারার ছাপ — হোয়াটসঅ্যাপে আবার-চাপা একই স্লিপ চেনার জন্য ([[lookalikes()]]); ছবি না হলে null
+            'fingerprint' => $this->images->fingerprint(Storage::disk($this->disk)->path($kept['path'])),
             'version' => $version,
             'replaces_id' => $replacesId,
             // ⛔ কেবল কর্মী — পোর্টালে গ্রাহক তুললে null ([[Actor]])
             'uploaded_by' => $userId ?? \App\Core\Support\Actor::userId(),
         ]);
+    }
+
+    /**
+     * ⭐ স্লিপের KB সেটিংস থেকে — মালিক, ১৬ নভেম্বর ২০২৬ (*"ছবিগুলোকে কেবি সাইজে নিয়ে আসা"*)।
+     *
+     * ⓘ কেবল স্লিপের দরজা ([[SLIP]]) ছোট বাজেট পায়; সাধারণ কাগজ (বিল, চুক্তি) [[ImageEngine::PAPER_BYTES]]-এই থাকে। সেটিং না
+     *   থাকলে (মডিউল বন্ধ) ১০০ KB।
+     */
+    private function budgetFor(?array $only): ?int
+    {
+        if ($only !== self::SLIP) {
+            return null;
+        }
+
+        $kb = (int) app(SettingsService::class)->get('system.image_kb.slip', self::SLIP_KB);
+
+        return max(20, $kb) * 1024;
+    }
+
+    /** স্লিপের ডিফল্ট KB — সেটিংসের ডিফল্টও এটাই */
+    public const SLIP_KB = 100;
+
+    /** কত বিট পর্যন্ত তফাত হলে "একই ছবি" ধরা — ৬৪-এর ৬ */
+    public const LOOKALIKE_BITS = 6;
+
+    /**
+     * ⭐ এই ছবির মতো আগের ছবি — একই কোম্পানির, আগের এক বছরের (মালিক, ১৬ নভেম্বর ২০২৬: একই স্লিপ দুবার)।
+     *
+     * ⚠️ কেবল সতর্কতা, আটকানো নয় — একই ব্যাংকের একই ছাঁচের দুটো আলাদা স্লিপ কখনো কাছাকাছি ছাপ দিতে পারে; শেষ কথা ব্যাংক
+     *   স্টেটমেন্ট। ⓘ আগে যেটা এসেছিল (পুরনোটা আগে) সেটাই প্রথমে।
+     *
+     * @return Collection<int, Attachment>
+     */
+    public function lookalikes(Attachment $attachment, int $within = self::LOOKALIKE_BITS)
+    {
+        $mine = (string) $attachment->fingerprint;
+
+        if (strlen($mine) !== 16) {
+            return Attachment::query()->whereRaw('1 = 0')->get();
+        }
+
+        return Attachment::query()
+            ->where('company_id', $attachment->company_id)
+            ->whereKeyNot($attachment->getKey())
+            ->whereNotNull('fingerprint')
+            ->where('created_at', '>=', now()->subYear())
+            ->orderBy('id')
+            ->limit(20000)
+            ->get(['id', 'company_id', 'source_module', 'source_entity', 'source_entity_id', 'original_name', 'fingerprint', 'uploaded_by', 'created_at'])
+            ->filter(fn (Attachment $other) => ImageEngine::distance($mine, (string) $other->fingerprint) <= $within)
+            ->values();
     }
 
     /** @return Collection<int, Attachment> */
@@ -316,14 +371,14 @@ final class AttachmentEngine
      *
      * @return array{path: string, extension: string, mime: string, bytes: int}
      */
-    private function keep(UploadedFile $file, string $directory, string $storedName, string $extension): array
+    private function keep(UploadedFile $file, string $directory, string $storedName, string $extension, ?int $budget = null): array
     {
         $source = $file->getRealPath();
         $isImage = $source !== false && @getimagesize($source) !== false;
 
         if ($isImage && $this->images->reads($source)) {
             try {
-                $bytes = $this->images->paper($source);
+                $bytes = $this->images->paper($source, $budget);
 
                 /*
                  * ⓘ যা বের হয় সেটা সবসময় JPEG, তাই নামের লেজও তাই — নাহলে

@@ -94,7 +94,7 @@
         </form>
 
         <x-ui.table
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="array_filter($filters) ? __('governance::message.none') : __('governance::message.nothing_yet')"
             :rows="$trails"
             :columns="$columns" />

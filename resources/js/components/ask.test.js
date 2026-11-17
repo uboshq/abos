@@ -72,12 +72,14 @@ describe('data-confirm forms', () => {
         expect(document.querySelectorAll('dialog[data-ask-dialog]').length).toBe(0)
     })
 
-    it('names whose paper it is in one small line under the question — and draws nothing when there is no name', async () => {
+    // ⭐ মালিক, ১৬ নভেম্বর ২০২৬ (দাগানো ছবি): নাম সবুজ মাথার ঠিক নিচে, টাকা আর প্রশ্নের **উপরে**
+    it('names whose paper it is in one small line under the green head, above the money — and draws nothing when there is no name', async () => {
         const answer = ask('40,000.00 টাকার কাগজে অনুমোদন দেওয়া হবে। নিশ্চিত?', { who: 'মা ট্রেডার্স · কেশরগঞ্জ · সুপার ডিপো', doc: document })
         const line = document.querySelector('[data-ask-who]')
         expect(line, '⛔ পপ-আপে কার কাগজ লেখা নেই').not.toBeNull()
         expect(line.textContent).toBe('মা ট্রেডার্স · কেশরগঞ্জ · সুপার ডিপো')
-        expect(line.compareDocumentPosition(document.querySelector('[data-ask-text]')) & Node.DOCUMENT_POSITION_PRECEDING, '⛔ নাম প্রশ্নের নিচে নয়').toBeTruthy()
+        expect(line.compareDocumentPosition(document.querySelector('[data-ask-text]')) & Node.DOCUMENT_POSITION_FOLLOWING, '⛔ নাম টাকা-প্রশ্নের উপরে নয়').toBeTruthy()
+        expect(line.previousElementSibling?.classList.contains('abos-ask__band'), '⛔ নাম সবুজ মাথার ঠিক নিচে নয়').toBe(true)
         document.querySelector('[data-ask-no]').click()
         await answer
 

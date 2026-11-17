@@ -59,7 +59,7 @@
         <x-ui.table :view-url="fn ($r) => route('inventory.qc.show', $r)"
             :empty="__('inventory::message.no_inspections')"
             :rows="$inspections"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$inspections" />

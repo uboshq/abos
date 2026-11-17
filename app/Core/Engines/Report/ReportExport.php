@@ -66,6 +66,13 @@ final class ReportExport
             return;
         }
 
+        // ⭐ কাগজের মাথা — রিপোর্টের নিজের নাম (বাংলা ও ইংরেজি) আর সময়কাল ([[ListPaper]], ১৬ নভেম্বর ২০২৬)
+        $export->describe([
+            'title' => (string) __($result->report->title),
+            'title_en' => app()->getLocale() === 'en' ? '' : (string) __($result->report->title, [], 'en'),
+            'period' => self::period($result->filters),
+        ]);
+
         // ⭐ টাকা, পরিমাণ আর শতাংশ ফাইলে খালি সংখ্যা — CSV-তে কমা ছাড়া, xlsx-এ সংখ্যার ঘর (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৬, ১৪ অক্টোবর ২০২৬)
         $export->numeric(array_values(array_map(
             fn (ReportColumn $column): string => $column->key,
@@ -186,6 +193,27 @@ final class ReportExport
         $rows[] = ['__section' => 'grand', '__label' => __('core.report.grand_total'), ...$result->totals];
 
         return $rows;
+    }
+
+    /**
+     * সময়কালের লেখা — "01-11-2026 থেকে 16-11-2026", শুরু থেকে হলে "শুরু থেকে 16-11-2026", কেবল এক তারিখ হলে সেটা।
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public static function period(array $filters): string
+    {
+        $from = is_string($filters['from'] ?? null) ? $filters['from'] : null;
+        $to = is_string($filters['to'] ?? null) ? $filters['to'] : null;
+
+        if ($to === null) {
+            return $from === null ? '' : DateFormat::format($from);
+        }
+
+        if ($from === null || $from === ReportEngine::BEGINNING || ($filters['all_time'] ?? false)) {
+            return (string) __('core.listing.since_start', ['to' => DateFormat::format($to)]);
+        }
+
+        return (string) __('core.listing.range', ['from' => DateFormat::format($from), 'to' => DateFormat::format($to)]);
     }
 
     private static function indexOf(array $columns, string $key): int

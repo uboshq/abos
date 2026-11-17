@@ -93,7 +93,7 @@
             :row-menu="fn ($d) => view('sales::collection.partials.row-menu', ['collection' => $d])"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_collections')"
             :rows="$collections"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$collections" />

@@ -69,7 +69,7 @@
         <x-ui.table
             :grand="$grand ?? []"
             :view-url="fn ($l) => route('accounts.loan.show', $l)"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_loans')"
             :rows="$loans"
             :columns="$columns" />

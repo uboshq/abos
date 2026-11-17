@@ -222,6 +222,25 @@
             </div>
         </section>
 
+        {{-- ⭐ তালিকার সারি — সাধারণ না ঘন; সব তালিকায় একবারে (পরিকল্পনা §৩.১; আগে প্রতিটা তালিকার বারে বোতাম ছিল) --}}
+        <section data-boxed data-density class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="font-semibold">{{ __('core.appearance.density') }}</h2>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @foreach (['0' => __('core.appearance.density_normal'), '1' => __('core.appearance.density_compact')] as $value => $label)
+                    <label class="group flex min-h-(--spacing-touch) cursor-pointer select-none items-center gap-2
+                                  rounded-(--radius-field) border border-(--color-border) px-4 transition-colors
+                                  hover:bg-(--color-surface-hover)
+                                  has-[:checked]:border-(--color-brand-500)
+                                  has-[:checked]:bg-(--color-surface-selected)">
+                        <input type="radio" name="compact_rows" value="{{ $value }}"
+                               @checked((string) (int) $current['compact_rows'] === $value)
+                               class="sr-only" data-action="submit-form">
+                        <span class="text-sm">{{ $label }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </section>
+
         {{-- ভাষা — এখানেও, কারণ ব্যবহারকারী "চেহারা"-তেই এটা খোঁজে --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.language') }}</h2>

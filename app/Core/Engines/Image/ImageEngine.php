@@ -84,6 +84,9 @@ final class ImageEngine
      */
     public const PAPER_BYTES = 800 * 1024;
 
+    /** ⓘ ছোট বাজেটে নামতে গিয়ে কাগজের লম্বা বাহু এর নিচে নয় — স্লিপের সংখ্যা পড়া যায় এই পর্যন্ত */
+    public const READABLE_EDGE = 1100;
+
     /** প্রোফাইল ছবির বাহু — বর্গাকার। */
     public const FACE_EDGE = 512;
 
@@ -205,15 +208,115 @@ final class ImageEngine
      * `PAPER_EDGE`-এর চেয়ে **ছোট** হয় (যতটা প্রান্ত কাটা গেল, ততটা)।
      * ⓘ সেটা ক্ষতি নয় — কাগজটা তো সবটুকুই আছে, কেবল টেবিলটা নেই।
      */
-    public function paper(string $path): string
+    public function paper(string $path, ?int $budget = null, ?string $look = null): string
     {
         $image = $this->open($path);
         $image = $this->straighten($image, $path);
         $image = $this->fit($image, self::PAPER_EDGE);
         $image = $this->trimPlainEdges($image);
         $image = $this->clarify($image);
+        $image = $this->wear($image, $look);
 
-        return $this->squeeze($image, self::PAPER_BYTES);
+        return $this->squeezeSmaller($image, $budget ?? self::PAPER_BYTES);
+    }
+
+    /**
+     * ⭐ কাগজের চেহারা — ধূসর বা সাদা-কালো (মালিক, ১৬ নভেম্বর ২০২৬: CamScanner-এর মতো)।
+     *
+     * ⓘ ছায়া সরানো আর কাগজ সাদা করা ফোনের ব্রাউজারে হয় ([[resources/js/scan.js]] `enhance()`) — প্রতি বিন্দুর হিসাব PHP-তে
+     *   শেয়ার্ড হোস্টে কয়েক সেকেন্ড নিত। ⭐ এখানে কেবল যা GD এক ডাকে পারে: ধূসর, আর ধূসর থেকে সাদা-কালো। ব্রাউজার আগেই করে
+     *   থাকলে আবার করায় ক্ষতি নেই — ধূসরের ধূসর একই।
+     */
+    private function wear(GdImage $image, ?string $look): GdImage
+    {
+        if ($look === 'grey' || $look === 'bw') {
+            @imagefilter($image, IMG_FILTER_GRAYSCALE);
+        }
+
+        if ($look === 'bw') {
+            // ⓘ কনট্রাস্ট −100: মাঝের ধূসর দুই দিকে ছিটকে যায় — কাগজ সাদা, কালি কালো
+            @imagefilter($image, IMG_FILTER_CONTRAST, -100);
+        }
+
+        return $image;
+    }
+
+    /**
+     * ⭐ বাজেট যত ছোটই হোক, সেখানে পৌঁছানো — আগে মান, তারপর বাহু।
+     *
+     * ⓘ ৮০০ KB-র কাগজ মান কমিয়েই ঢোকে। ⚠️ কিন্তু স্লিপের বাজেট ১০০ KB (সেটিংসে আরও ছোটও হতে পারে) — ২০০০px-এর ছবি মান ৪০-এও
+     *   ঢোকে না। তাই মান ৪০-এও না ঢুকলে বাহু ৮৫% করে ছোট, তবে লম্বা বাহু [[READABLE_EDGE]]-এর নিচে নয় — তার নিচে স্লিপের
+     *   সংখ্যা পড়া যায় না, আর পড়া যায় না এমন ছোট ছবির চেয়ে একটু বড় পড়া-যায় ছবি ভালো।
+     */
+    private function squeezeSmaller(GdImage $image, int $budget): string
+    {
+        $bytes = $this->squeeze($image, $budget);
+
+        while (strlen($bytes) > $budget && max(imagesx($image), imagesy($image)) * 0.85 >= self::READABLE_EDGE) {
+            $image = $this->scaleBy($image, 0.85);
+            $bytes = $this->squeeze($image, $budget);
+        }
+
+        return $bytes;
+    }
+
+    /**
+     * ⭐ ছবির "চেহারার ছাপ" — ১৬ অক্ষরের হেক্স (৬৪ বিট, dHash)।
+     *
+     * ⓘ মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ হোয়াটসঅ্যাপে কয়েক হাত ঘুরে আসে। ⛔ ফাইলের হুবহু ছাপ (sha256) তাই অকেজো — হোয়াটসঅ্যাপ
+     *   প্রতিবার ছবি নতুন করে চাপে, বাইট বদলায়। ⭐ এটা ছবিকে ৯×৮ ধূসর বিন্দুতে নামিয়ে পাশাপাশি দুই বিন্দুর কোনটা উজ্জ্বল তা
+     *   লেখে — ছোট-বড়, একটু চাপা বা একটু কাটা হলেও ছাপ প্রায় একই থাকে ([[distance()]] ≤ ৬)।
+     */
+    public function fingerprint(string $path): ?string
+    {
+        if (! $this->reads($path)) {
+            return null;
+        }
+
+        $image = $this->straighten($this->open($path), $path);
+        $small = imagecreatetruecolor(9, 8);
+        imagecopyresampled($small, $image, 0, 0, 0, 0, 9, 8, imagesx($image), imagesy($image));
+
+        $bits = '';
+
+        for ($y = 0; $y < 8; $y++) {
+            $prev = null;
+
+            for ($x = 0; $x < 9; $x++) {
+                $rgb = imagecolorat($small, $x, $y);
+                $lum = 0.299 * (($rgb >> 16) & 0xFF) + 0.587 * (($rgb >> 8) & 0xFF) + 0.114 * ($rgb & 0xFF);
+
+                if ($prev !== null) {
+                    $bits .= $lum > $prev ? '1' : '0';
+                }
+
+                $prev = $lum;
+            }
+        }
+
+        $hex = '';
+
+        foreach (str_split($bits, 4) as $nibble) {
+            $hex .= dechex((int) bindec($nibble));
+        }
+
+        return $hex;
+    }
+
+    /** দুই ছাপের তফাত — কত বিট আলাদা (০ = একই ছবি, ৬৪ = সম্পূর্ণ আলাদা) */
+    public static function distance(string $a, string $b): int
+    {
+        if (strlen($a) !== 16 || strlen($b) !== 16) {
+            return 64;
+        }
+
+        $diff = 0;
+
+        for ($i = 0; $i < 16; $i++) {
+            $diff += substr_count(decbin(hexdec($a[$i]) ^ hexdec($b[$i])), '1');
+        }
+
+        return $diff;
     }
 
     /**

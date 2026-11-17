@@ -379,8 +379,19 @@
        ছিল আড়াআড়ি ক্লিপিং থাকছে। ⛔ ব্রাউজারে মেপে দেখা গেল দুইটাই
        `visible` — অর্থাৎ মন্তব্যটা কোডের চেয়ে বেশি দাবি করছিল। মাপা
        আচরণটাই এখানে লেখা। */
+    /* ⛔ ১৬ নভেম্বর ২০২৬ — নিয়মটা কাজই করছিল না: এটা `@layer components`-এ, আর Tailwind-এর `overflow-hidden` থাকে
+       `@layer utilities`-এ, যা পরের স্তর — স্তরের ক্রম বিশেষত্বের (specificity) আগে খাটে। ব্রাউজারে মাপা: বাক্স
+       `hidden/hidden`, তাই ছোট তালিকায় "📅 তারিখ", দৃশ্য, কলাম, নামান — সব মেনু বাক্সের নিচের ধারে কাটা পড়ত।
+       ⓘ `!important` এই একটা জায়গায়, কারণ উল্টোটা ১৫১টা তালিকার ব্লেড বদলানো। */
     [data-boxed]:has(.toolbar-view) {
-        overflow: visible;
+        overflow: visible !important;
+    }
+
+    /* ⓘ বাক্স আর কাটে না, তাই টুলবারের রঙিন জমিন উপরের গোল কোণা নিজেই মানে */
+    [data-boxed] > .toolbar-view:first-child,
+    [data-boxed] > form:first-child > .toolbar-view:first-child {
+        border-start-start-radius: var(--radius-card);
+        border-start-end-radius: var(--radius-card);
     }
 
     .table-responsive {
@@ -2128,9 +2139,9 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     text-align: center;
 }
 
-/* ⭐ কার কাগজ — প্রশ্নের নিচে এক লাইনে, ছোট আর হালকা (মালিক, ১৫ নভেম্বর ২০২৬) */
+/* ⭐ কার কাগজ — সবুজ মাথার ঠিক নিচে, টাকার উপরে, এক লাইনে ছোট আর হালকা (মালিক, ১৫ ও ১৬ নভেম্বর ২০২৬) */
 .abos-ask__who {
-    margin: 0 1.5rem .25rem;
+    margin: 1.1rem 1.5rem 0;
     overflow: hidden;
     font-size: .9rem;
     color: var(--color-ink-muted);
@@ -2138,6 +2149,9 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* ⓘ নামের লাইন উপরে থাকলে প্রশ্নের উপরের ফাঁক ছোট — নাম আর টাকা একসাথে পড়া যায় */
+.abos-ask__who + .abos-ask__text { padding-top: .5rem; }
 
 .abos-ask__money {
     display: block;

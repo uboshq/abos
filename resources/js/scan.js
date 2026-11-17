@@ -330,12 +330,107 @@ export function warp(source, corners, width, height) {
  * বর্তমান আচরণেরই সমান, খারাপ কিছু নয়।
  */
 export function detectCorners(source, tolerance = 42) {
-    const { data, width, height } = source
+    const { width, height } = source
 
     if (width < 8 || height < 8) {
         return null
     }
 
+    return neutralPaper(source) ?? differentFromBorder(source, tolerance)
+}
+
+/**
+ * ⭐ কাগজ রংহীন — সাদা বা ধূসর, ছায়াতেও; টেবিল সাধারণত রঙিন (কাঠ, ছাপা কাপড়)। ১৭ নভেম্বর ২০২৬।
+ *
+ * ⛔ ফোনের ছবিতে মাপা: কাঠের ডোরাকাটা টেবিল আর এক পাশে ছায়া — কিনারার রং থেকে "আলাদা" বিন্দু সারা ছবিতে ছড়িয়ে ছিল, আর
+ *   পুরনো পথ ([[differentFromBorder]]) পুরো ছবিটাকেই কাগজ ধরল। ⭐ এখানে: রঙের তীব্রতা ((বড়−ছোট)/বড়) কম আর খুব অন্ধকার নয় এমন
+ *   বিন্দু, তার মধ্যে সবচেয়ে বড় জোড়া-লাগা টুকরো (ছিটেফোঁটা বাদ), আর তার চরম চার বিন্দু।
+ * ⓘ সাদা টেবিলে সাদা কাগজ — প্রায় সবটাই রংহীন, তখন এটা কিছু ফেরত দেয় না আর পুরনো পথ চলে।
+ */
+function neutralPaper(source) {
+    const { data, width, height } = source
+    const step = Math.max(1, Math.floor(Math.min(width, height) / 200))
+    const gw = Math.ceil(width / step)
+    const gh = Math.ceil(height / step)
+    const mask = new Uint8Array(gw * gh)
+
+    for (let gy = 0; gy < gh; gy++) {
+        for (let gx = 0; gx < gw; gx++) {
+            const at = (gy * step * width + gx * step) * 4
+            const r = data[at]
+            const g = data[at + 1]
+            const b = data[at + 2]
+            const high = Math.max(r, g, b)
+            const low = Math.min(r, g, b)
+
+            mask[gy * gw + gx] = high > 70 && (high - low) / high < 0.18 ? 1 : 0
+        }
+    }
+
+    // সবচেয়ে বড় জোড়া-লাগা টুকরো — চার দিকের পাশাপাশি ঘর ধরে
+    const seen = new Uint8Array(gw * gh)
+    let biggest = []
+
+    for (let start = 0; start < mask.length; start++) {
+        if (!mask[start] || seen[start]) {
+            continue
+        }
+
+        const piece = []
+        const stack = [start]
+        seen[start] = 1
+
+        while (stack.length) {
+            const cell = stack.pop()
+            piece.push(cell)
+            const cx = cell % gw
+            const cy = (cell - cx) / gw
+
+            for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+                const next = ny * gw + nx
+
+                if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && mask[next] && !seen[next]) {
+                    seen[next] = 1
+                    stack.push(next)
+                }
+            }
+        }
+
+        if (piece.length > biggest.length) {
+            biggest = piece
+        }
+    }
+
+    if (biggest.length < mask.length * 0.12 || biggest.length > mask.length * 0.95) {
+        return null
+    }
+
+    const points = biggest.map((cell) => ({ x: (cell % gw) * step, y: Math.floor(cell / gw) * step }))
+    const corners = extremes(points)
+
+    return isSaneQuad(corners, width, height) ? corners : null
+}
+
+/** চরম চার বিন্দু — `x+y` আর `x−y`-এর সবচেয়ে ছোট ও বড় */
+function extremes(points) {
+    let tl = points[0]
+    let tr = points[0]
+    let br = points[0]
+    let bl = points[0]
+
+    for (const p of points) {
+        if (p.x + p.y < tl.x + tl.y) tl = p
+        if (p.x + p.y > br.x + br.y) br = p
+        if (p.x - p.y > tr.x - tr.y) tr = p
+        if (p.x - p.y < bl.x - bl.y) bl = p
+    }
+
+    return [tl, tr, br, bl]
+}
+
+/** পুরনো পথ — কিনারার রং থেকে আলাদা বিন্দু (একরঙা টেবিলে ভালো কাজ করে) */
+function differentFromBorder(source, tolerance) {
+    const { data, width, height } = source
     const background = borderColour(data, width, height)
     const points = []
 
@@ -456,3 +551,140 @@ function quadArea(corners) {
 
     return Math.abs(area) / 2
 }
+
+/*
+ * ── ⭐ কাগজের চেহারা — পরিষ্কার, আসল রং, ধূসর, সাদা-কালো (মালিক, ১৬ নভেম্বর ২০২৬) ──────────
+ * *"ক্যাম স্ক্যানারে যে কাজগুলো হয় … স্পষ্ট করা … ক্লিয়ারিটি দেয়া"*।
+ *
+ * ⓘ কীভাবে: কাগজ ছবির সবচেয়ে উজ্জ্বল জিনিস, কালি অন্ধকার। ছবিটাকে ছোট ছোট ঘরে ভাগ করে প্রতিটা ঘরের সবচেয়ে উজ্জ্বল
+ *   বিন্দু = ঐ জায়গার কাগজের রং (ছায়ায় কম, আলোয় বেশি)। প্রতিটা বিন্দুকে তার জায়গার কাগজের রং দিয়ে ভাগ করলে ছায়া চলে যায়,
+ *   কাগজ সাদা হয় — CamScanner-এর "ম্যাজিক কালার"-এর মূল কৌশল।
+ * ⚠️ রঙিন সিল আর লাল কালির সই "পরিষ্কার"-এ বাঁচে (রং ভাগ হয় তিন রঙে আলাদা করে); কেবল "সাদা-কালো" ওগুলো কালো করে।
+ * ⓘ বিশুদ্ধ ফাংশন — DOM নেই, তাই `npm test`-এ প্রমাণ করা যায়।
+ */
+
+/** চেহারার নাম — স্ক্যানারের বোতাম আর সার্ভার একই চারটা নাম বোঝে */
+export const LOOKS = ['clean', 'colour', 'grey', 'bw']
+
+/** সাদা-কালোয় কোথায় কাটা — পরিষ্কার করা কাগজের উজ্জ্বলতার এই ভাগের নিচে কালি */
+const INK_CUT = 0.78
+
+/**
+ * @param {{data: Uint8ClampedArray, width: number, height: number}} image
+ * @param {string} look
+ * @returns {{data: Uint8ClampedArray, width: number, height: number}}
+ */
+export function enhance(image, look = 'clean') {
+    const { width, height, data } = image
+    const out = new Uint8ClampedArray(data)
+
+    if (look === 'colour' || !LOOKS.includes(look) || width === 0 || height === 0) {
+        return { data: out, width, height }
+    }
+
+    const paper = paperShade(data, width, height)
+
+    for (let y = 0, i = 0; y < height; y++) {
+        for (let x = 0; x < width; x++, i += 4) {
+            const lift = 255 / Math.max(paper(x, y), 48)
+
+            if (look === 'clean') {
+                out[i] = curve(data[i] * lift)
+                out[i + 1] = curve(data[i + 1] * lift)
+                out[i + 2] = curve(data[i + 2] * lift)
+                continue
+            }
+
+            const grey = Math.min(255, (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) * lift)
+            const v = look === 'bw' ? (grey < 255 * INK_CUT ? 0 : 255) : curve(grey)
+
+            out[i] = v
+            out[i + 1] = v
+            out[i + 2] = v
+        }
+    }
+
+    return { data: out, width, height }
+}
+
+/**
+ * কাগজের রং প্রতিটা জায়গায় — ঘরের সবচেয়ে উজ্জ্বল বিন্দু, পাশের ঘরের সাথে মিলিয়ে, মাঝে মসৃণ।
+ *
+ * ⚠️ পাশের ঘরের সর্বোচ্চটা নেওয়া হয়: একটা ঘর পুরো কালিতে ঢাকা হলে (মোটা শিরোনাম) তার নিজের সর্বোচ্চ কালির রং, আর ওটা দিয়ে
+ *   ভাগ করলে শিরোনামটাই সাদা হয়ে মুছে যেত।
+ */
+function paperShade(data, width, height) {
+    const block = Math.max(16, Math.round(Math.max(width, height) / 40))
+    const gw = Math.ceil(width / block)
+    const gh = Math.ceil(height / block)
+    const raw = new Float32Array(gw * gh)
+
+    for (let y = 0; y < height; y++) {
+        const row = Math.floor(y / block) * gw
+
+        for (let x = 0, i = y * width * 4; x < width; x++, i += 4) {
+            const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+            const cell = row + Math.floor(x / block)
+
+            if (lum > raw[cell]) {
+                raw[cell] = lum
+            }
+        }
+    }
+
+    const grid = new Float32Array(gw * gh)
+
+    /*
+     * ⚠️ পাশের ঘরের সর্বোচ্চটা কেবল তখন, যখন নিজের ঘরটা পাশের তুলনায় অনেক অন্ধকার (< ৬০%) — মানে ঘরটা পুরো কালিতে ঢাকা।
+     * ⛔ সবসময় পাশেরটা নিলে ছায়ার ঢালে (এক দিক থেকে ধীরে অন্ধকার) পাশের উজ্জ্বল ঘর কাগজের রং বাড়িয়ে ধরত, আর ছায়ার দিকটা ধূসর
+     *   থেকে যেত — ফোনের ছবিতে এটাই দেখা গেছে (১৭ নভেম্বর ২০২৬)। ছায়া ধীরে বদলায়, কালির ঘর হঠাৎ — তফাতটা এখানেই।
+     */
+    for (let gy = 0; gy < gh; gy++) {
+        for (let gx = 0; gx < gw; gx++) {
+            let best = 0
+
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const ny = gy + dy
+                    const nx = gx + dx
+
+                    if (ny >= 0 && ny < gh && nx >= 0 && nx < gw && raw[ny * gw + nx] > best) {
+                        best = raw[ny * gw + nx]
+                    }
+                }
+            }
+
+            const own = raw[gy * gw + gx]
+
+            grid[gy * gw + gx] = own < best * 0.6 ? best : own
+        }
+    }
+
+    return (x, y) => {
+        const fx = Math.min(gw - 1, Math.max(0, x / block - 0.5))
+        const fy = Math.min(gh - 1, Math.max(0, y / block - 0.5))
+        const x0 = Math.floor(fx)
+        const y0 = Math.floor(fy)
+        const x1 = Math.min(gw - 1, x0 + 1)
+        const y1 = Math.min(gh - 1, y0 + 1)
+        const tx = fx - x0
+        const ty = fy - y0
+        const top = grid[y0 * gw + x0] * (1 - tx) + grid[y0 * gw + x1] * tx
+        const bottom = grid[y1 * gw + x0] * (1 - tx) + grid[y1 * gw + x1] * tx
+
+        return top * (1 - ty) + bottom * ty
+    }
+}
+
+/**
+ * লেখা একটু গাঢ়, কাগজ পুরো সাদা — প্রায়-সাদা ([[WHITE_FROM]]-এর উপরে) সাদা, তার নিচে গামা ১.৬।
+ * ⓘ CamScanner-এর "সাদা কেটে দেওয়া": কাগজের রং ঘর ধরে মাপা, তাই ঘরের ভেতরে ছায়া একটু থেকে যায় — ঐটুকু এখানে মুছে যায়।
+ */
+function curve(value) {
+    const v = Math.min(1, Math.min(255, value) / 255 / WHITE_FROM)
+
+    return Math.round(255 * v ** 1.6)
+}
+
+/** এর উপরের উজ্জ্বলতা কাগজ — পুরো সাদা */
+const WHITE_FROM = 0.88

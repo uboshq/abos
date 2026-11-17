@@ -82,11 +82,11 @@
             </select>
         </label>
 
-        {{-- ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬ ([[DepositSlip]]); ফোনে খুললে সরাসরি ক্যামেরা --}}
+        {{-- ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬ ([[DepositSlip]]); ⛔ ক্যামেরায় বাঁধা নয় — গ্যালারি/হোয়াটসঅ্যাপের ছবিও (মালিক, ১৬ নভেম্বর ২০২৬) --}}
         <label class="block" x-show="method !== 'cash'">
             <span class="mb-1 block text-sm font-medium">{{ __('sales::slip.slip') }}</span>
             <input type="file" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf"
-                   capture="environment" data-slip-input class="block w-full text-sm">
+                   data-slip-input class="block w-full text-sm">
         </label>
 
         <label class="block">

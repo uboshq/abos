@@ -79,7 +79,7 @@
         <x-ui.table
             :empty="$serial !== '' ? __('inventory::message.serial_not_found') : __('inventory::message.no_serials')"
             :rows="$serials"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$serials" />

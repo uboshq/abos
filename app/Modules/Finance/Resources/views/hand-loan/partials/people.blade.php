@@ -31,7 +31,7 @@
 
 <x-ui.table
     :rows="$people['rows']"
-    :compact="request()->boolean('compact')"
+    :compact="\App\Core\Support\Ui::compact()"
     :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_people_yet')"
     :totals="[
         'person' => __('finance::loan_ledger.total'),

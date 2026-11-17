@@ -138,7 +138,7 @@
         <x-ui.table :rows="$cheques"
                     :grand="$grand ?? []"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_cheques')" />
     </div>
 

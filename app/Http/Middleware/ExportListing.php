@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Core\Services\ExportJournal;
 use App\Core\Services\ListExport;
+use App\Core\Services\ListPaper;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,6 +39,11 @@ class ExportListing
         // আগের অনুরোধের তালিকা যেন এই অনুরোধের ফাইলে না নামে
         $this->export->reset();
 
+        // ⛔ "তালিকা নামানো" চাবি ছাড়া ফাইল নয় — মেনু লুকানো যথেষ্ট নয়, ঠিকানায় `?export=` লিখলেও (পরিকল্পনা §৩.১)
+        if ($this->export->wanted() && ! ($request->user()?->can('system_admin.list.export') ?? false)) {
+            abort(403);
+        }
+
         /** @var Response $response */
         $response = $next($request);
 
@@ -67,6 +73,7 @@ class ExportListing
         $body = match ($format) {
             'xlsx' => $this->export->xlsx(),
             'json' => $this->export->json(),
+            'pdf', 'print' => $this->export->captured() === null ? null : app(ListPaper::class)->render($this->export, $request),
             default => $this->export->csv(),
         };
 
@@ -100,9 +107,11 @@ class ExportListing
             'Content-Type' => match ($format) {
                 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'json' => 'application/json; charset=UTF-8',
+                'pdf', 'print' => 'application/pdf',
                 default => 'text/csv; charset=UTF-8',
             },
-            'Content-Disposition' => 'attachment; filename="'.$this->export->filename().'"',
+            // ⭐ প্রিন্ট ভিউ ব্রাউজারেই খোলে (সব পাতা দেখা, ছাপা, সেভ) — PDF নামে ফাইল হয়ে
+            'Content-Disposition' => ($format === 'print' ? 'inline' : 'attachment').'; filename="'.$this->export->filename().'"',
 
             /*
              * রপ্তানি কখনো ক্যাশ হবে না — একই ঠিকানা কাল অন্য সংখ্যা

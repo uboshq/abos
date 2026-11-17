@@ -134,7 +134,7 @@
         @else
             <x-ui.table :rows="$rows"
                         :columns="$hlColumns"
-                        :compact="request()->boolean('compact')"
+                        :compact="\App\Core\Support\Ui::compact()"
                         :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_hand_loan_yet')" />
         @endif
     </div>

@@ -90,7 +90,7 @@
         <x-ui.table
             :grand="$grand ?? []"
             :view-url="fn ($d) => route('accounts.transfer.show', $d)"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_transfers')"
             :rows="$transfers"
             :columns="$columns" />

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\ListFilter;
 
+use App\Core\Support\DateFormat;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -131,7 +132,9 @@ final class FilterSet
             }
 
             foreach ($facet->chips($value) as $chip) {
-                $chips[] = ['text' => $chip['text'], 'url' => $this->urlWithout($request, $chip['drop']), 'tone' => $chip['tone'] ?? $facet->tone];
+                $chips[] = ['text' => $chip['text'], 'url' => $this->urlWithout($request, $chip['drop']), 'tone' => $chip['tone'] ?? $facet->tone,
+                    // ⓘ বারের "📅 তারিখ" বোতামে যে তারিখ লেখা, সেটা চিপ হয়ে আবার আসে না ([[Panel::of()]])
+                    'bar' => $facet instanceof DateRangeFacet && $facet->onBar];
             }
         }
 
@@ -160,6 +163,82 @@ final class FilterSet
     public function clearUrl(Request $request): string
     {
         return $this->urlWithout($request, array_fill_keys($this->keys(), null));
+    }
+
+    /**
+     * ⭐ চটজলদি তারিখের লিংক — আজ, গতকাল, গত ৭ দিন, এই মাস, গত মাস, গত ৯০ দিন, যেকোনো তারিখ (পরিকল্পনা §৩.৩)।
+     *
+     * ⓘ প্রতিটা একটা সাধারণ ঠিকানা: বাকি ছাঁকনি, খোঁজা, সাজানো অটুট, কেবল এই অংশের দুই চাবি বদলায়, পাতা নম্বর বাদ।
+     *
+     * @return list<array{key: string, label: string, url: string, on: bool}>
+     */
+    public function presets(Request $request, DateRangeFacet $facet): array
+    {
+        $value = $facet->read($request);
+        $current = DateRangeFacet::presetOf($value);
+        $links = [];
+
+        foreach (DateRangeFacet::PRESETS as $preset) {
+            $range = DateRangeFacet::presetRange($preset);
+            $links[] = [
+                'key' => $preset,
+                'label' => __('core.list_filter.preset.'.$preset),
+                'url' => $this->urlWith($request, [$facet->fromKey() => $range['from'], $facet->toKey() => $range['to']]),
+                'on' => $current === $preset,
+            ];
+        }
+
+        $links[] = [
+            'key' => 'any',
+            'label' => __('core.list_filter.preset.any'),
+            'url' => $this->urlWithout($request, [$facet->fromKey() => null, $facet->toKey() => null]),
+            'on' => $value === null,
+        ];
+
+        return $links;
+    }
+
+    /**
+     * ⭐ বারের "📅 তারিখ ▾" — লেনদেনের তালিকার তারিখের অংশ ([[DateRangeFacet::onTheBar()]]); নেই তো null।
+     *
+     * ⓘ বোতামের লেখা: চটজলদি নামে মিললে সেই নাম ("এই মাস"), নিজে বাছা পরিসর হলে তারিখ দুটো, কিছু না থাকলে null (বোতাম বলে "তারিখ")।
+     *
+     * @return array{label: string, text: ?string, presets: list<array{key: string, label: string, url: string, on: bool}>}|null
+     */
+    public function bar(Request $request): ?array
+    {
+        foreach ($this->facets as $facet) {
+            if (! $facet instanceof DateRangeFacet || ! $facet->onBar) {
+                continue;
+            }
+
+            $value = $facet->read($request);
+            $preset = DateRangeFacet::presetOf($value);
+
+            $text = match (true) {
+                $value === null => null,
+                $preset !== null => __('core.list_filter.preset.'.$preset),
+                default => ($value['from'] !== null ? DateFormat::format($value['from']) : '…')
+                    .' – '.($value['to'] !== null ? DateFormat::format($value['to']) : '…'),
+            };
+
+            return ['label' => __('core.list_filter.date'), 'text' => $text, 'presets' => $this->presets($request, $facet)];
+        }
+
+        return null;
+    }
+
+    /**
+     * এখনকার ঠিকানা, কিছু চাবি বসিয়ে — পাতা নম্বর বাদ।
+     *
+     * @param  array<string, string>  $set
+     */
+    private function urlWith(Request $request, array $set): string
+    {
+        $query = array_merge($request->query(), $set);
+        unset($query['page']);
+
+        return $request->url().'?'.http_build_query($query);
     }
 
     /** @return list<string> */
@@ -210,6 +289,7 @@ final class FilterSet
                 $section += [
                     'from_key' => $facet->fromKey(), 'to_key' => $facet->toKey(),
                     'from' => $value['from'] ?? null, 'to' => $value['to'] ?? null,
+                    'presets' => $this->presets($request, $facet),
                 ];
             } elseif ($facet instanceof FieldsFacet) {
                 $section += ['fields' => array_map(fn (array $field) => $field + [

@@ -333,6 +333,10 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->name('report.final.'.str_replace('-', '_', $finalSlug));
     }
 
+    // ⭐ রেওয়ামিলের অঙ্কে চাপলে ঐ হিসাবের খতিয়ান — রেওয়ামিলের নিজের চাবিতে ([[ReportController::ledgerFromTrialBalance()]])
+    Route::get('/reports/trial-balance/ledger', [ReportController::class, 'ledgerFromTrialBalance'])
+        ->middleware('can:accounts.report.final')->name('report.tb_ledger');
+
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 
     /*

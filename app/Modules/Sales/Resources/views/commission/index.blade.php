@@ -94,7 +94,7 @@
             <x-ui.table :rows="$claims"
                         :grand="$grand ?? []"
                         :columns="$columns"
-                        :compact="request()->boolean('compact')"
+                        :compact="\App\Core\Support\Ui::compact()"
                         :empty="request('q') || request('status') || request('supplier')
                             ? __('core.empty.no_results')
                             : __('sales::message.no_commissions')" />

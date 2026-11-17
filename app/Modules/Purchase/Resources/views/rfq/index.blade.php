@@ -69,7 +69,7 @@
         <x-ui.table :view-url="fn ($r) => route('purchase.rfq.show', $r)"
             :empty="__('purchase::message.no_rfqs')"
             :rows="$rfqs"
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
 
         <x-ui.pager :rows="$rfqs" />

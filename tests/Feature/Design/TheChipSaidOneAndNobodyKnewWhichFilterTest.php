@@ -166,8 +166,10 @@ class TheChipSaidOneAndNobodyKnewWhichFilterTest extends TestCase
 
         $navy = $this->get(route('customer.index'))->assertOk()->getContent();
 
-        $this->assertStringContainsString(__('core.toolbar.add_filter'), (string) $navy,
-            'chips মোডে "+ ছাঁকনি" নেই — মোডটা তাহলে এখনো কিছুই বদলাচ্ছে না।');
+        // ⓘ ১৬ নভেম্বর ২০২৬ — ছাঁকনি ইঞ্জিনের তালিকায় (গ্রাহক) অনুমোদিত নমুনার লেখা "ছাঁকনি" ("+" ছাড়া); মোডের চিহ্ন বোতামের গড়ন
+        $this->assertMatchesRegularExpression('/data-filter-toggle[^>]*data-look-chip[^>]*>\s*<svg(?:(?!<\/button>).)*'
+            .preg_quote(__('core.list_filter.title'), '/').'/su', (string) $navy,
+            'chips মোডে "ছাঁকনি" চিপ-বোতাম নেই — মোডটা তাহলে এখনো কিছুই বদলাচ্ছে না।');
     }
 
     /**

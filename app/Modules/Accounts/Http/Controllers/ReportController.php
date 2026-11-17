@@ -175,6 +175,23 @@ class ReportController extends Controller implements HasMiddleware
     {
         $this->authorizeReport($request, $slug);
 
+        return $this->page($request, $slug);
+    }
+
+    /**
+     * ⭐ রেওয়ামিলের অঙ্ক থেকে ঐ হিসাবের খতিয়ান — `accounts.report.final`-এর দরজায় (রুটের চাবি; ১৭ নভেম্বর ২০২৬)।
+     *
+     * ⓘ রেওয়ামিল দেখে `.final`, সাধারণ খতিয়ান `accounts.report` — কেবল `.final` থাকলে অঙ্কে চাপলে ৪০৩ পেতেন
+     *   ([[EveryReportFigureOpensItsSourceTest]])। ⭐ নতুন কিছু খোলে না: যে হিসাবের শুরু, লেনদেন আর শেষ জের রেওয়ামিলেই দেখা যায়,
+     *   এখানে কেবল তার লাইনগুলো — একই খাতা, একই শাখার দেয়াল ([[CoreReports::ledger()]])।
+     */
+    public function ledgerFromTrialBalance(Request $request): View
+    {
+        return $this->page($request, 'ledger');
+    }
+
+    private function page(Request $request, string $slug): View
+    {
         abort_unless(isset(self::SLUGS[$slug]), 404);
 
         /*

@@ -88,9 +88,13 @@
 
         <label class="block">
             <span class="mb-1 block text-sm font-medium">{{ __('sales::slip.slip') }}</span>
-            {{-- ⓘ ফোনে খুললে সরাসরি ক্যামেরা — capture --}}
-            <input type="file" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment"
+            {{--
+                ⛔ আগে `capture="environment"` ছিল — অনেক ফোনে সরাসরি ক্যামেরা খুলত, গ্যালারি নয়। ⭐ মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ
+                   হোয়াটসঅ্যাপে কয়েক হাত ঘুরে আসে — তাই ক্যামেরা আর গ্যালারি দুটোই। ছবি বাছলেই স্ক্যানার: কোণা, সোজা, পরিষ্কার।
+            --}}
+            <input type="file" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf"
                    data-slip-input
+                   x-on:change="$store.scanner.begin($el, 'paper')"
                    class="block w-full text-sm">
         </label>
 

@@ -110,7 +110,7 @@
         <x-ui.table :rows="$orders"
                     :grand="$grand ?? []"
                     :columns="$columns"
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="filled(request('q')) ? __('core.empty.no_results') : __('sales::message.no_orders_to_track')" />
     </div>
 

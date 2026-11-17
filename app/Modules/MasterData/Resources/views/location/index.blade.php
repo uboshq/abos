@@ -176,7 +176,7 @@
                 @endif
 
                 <x-ui.table
-                    :compact="request()->boolean('compact')"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('master_data::message.level_empty', ['level' => __('master_data::level.' . $level)])"
                     :rows="$rows"
                     :columns="$columns" />
@@ -197,7 +197,7 @@
 
             @if ($level === null && $q)
                 <x-ui.table
-            :compact="request()->boolean('compact')"
+            :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('core.empty.no_results')"
                     :rows="$results"
                     :columns="$columns" />

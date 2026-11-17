@@ -294,6 +294,17 @@
                  লেখা ধরে খুঁজলে ভাষা বদলালেই পরীক্ষাটা ভাঙত, আর ক্লাস
                  ধরে খুঁজলে নকশা বদলালে। চিহ্নটা দুইটার কোনোটার সাথেই
                  বদলায় না। --}}
+            {{-- ⭐ লিংক কপি — শেয়ারের আলাদা বোতাম নেই (পরিকল্পনা §৩.১); যিনি খুলবেন, নিজের অনুমতি অনুযায়ীই দেখবেন --}}
+            <div x-data="shareMenu({ url: @js(url()->current().(($q = http_build_query(collect(request()->query())->except('page')->all())) !== '' ? '?'.$q : '')) })">
+                <button type="button" @click="copy()" data-copy-link
+                        class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm
+                               text-(--color-ink-body) hover:bg-(--color-surface-hover)">
+                    <span aria-hidden="true">🔗</span>
+                    <span x-show="! copied">{{ __('core.toolbar.share_copy') }}</span>
+                    <span x-show="copied" x-cloak class="text-(--color-badge-success-ink)">{{ __('core.toolbar.share_copied') }}</span>
+                </button>
+            </div>
+
             <button type="button" x-show="! naming" data-view-save
                     @click="startNaming()"
                     class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm
