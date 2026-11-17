@@ -730,8 +730,8 @@
                  ⛔ নতুন চাবি "তালিকা নামানো" (`system_admin.list.export`): যার নেই তার কাছে মেনুই দেখায় না, আর ঠিকানায় `?export=`
                  লিখলেও ৪০৩ ([[ExportListing]]); কে কখন কী নামাল তা নিরীক্ষার খাতায় ([[ExportJournal]])। --}}
             @php $canDownload = auth()->user()?->can('system_admin.list.export') ?? false; @endphp
-            {{-- ⓘ শেয়ার আগে নিজের মেনুতে ছিল, শর্ত কেবল `$share` — নামানোর চাবি না থাকলেও শেয়ার থাকে --}}
-            @if (($canDownload && ($export || $print)) || $share)
+            {{-- ⛔ শেয়ারও নামানোর চাবির পেছনে — চাবি নেই তো মেনুই নেই ([[TheListBarFollowsThePlanTest]]; Mac রান, ১৮ নভেম্বর ২০২৬) --}}
+            @if ($canDownload && ($export || $print || $share))
                 <div x-data="{ open: false }" class="relative" data-list-download>
                     <button type="button" @click="open = ! open" @click.outside="open = false"
                             @keydown.escape.window="open = false"
