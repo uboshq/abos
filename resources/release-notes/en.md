@@ -1,5 +1,14 @@
 # What's new
 
+## 1.3.3 — 17-11-2026
+
+- Every list and report prints on the ledger paper — "Print view" opens in the browser, "PDF file" downloads; one info line on top, the action column never reaches paper.
+- Date buttons on the list bar — today, yesterday, 7 days, this month, last month, 90 days, or your own; the row action is now a small ⋯, its name only in the column head.
+- Trial balance in 6 columns — opening, movement and closing, each debit and credit; a figure opens that account's ledger.
+- Balance sheet print in the IAS 1 layout, beside it the last day of the previous financial year.
+- Deposit slips: gallery and WhatsApp photos work; picking a photo opens the scanner — finds the corners, straightens, clean/original colour/grey/black-and-white; under 100 KB (a setting); the same slip coming again is recognised.
+- The approval "Sure?" box names whose paper it is — now above the question.
+
 ## 1.3.2 — 16-11-2026
 
 - Ledger: the opening row now reads "Opening balance" — before, an internal code showed.
