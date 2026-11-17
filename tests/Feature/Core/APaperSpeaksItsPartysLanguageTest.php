@@ -86,6 +86,38 @@ final class APaperSpeaksItsPartysLanguageTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ মালিক, ১৭ নভেম্বর ২০২৬ (জরুরি): *"ইনভয়েসে বাংলায় প্রিন্ট দিতে গেলে বাংলা প্রোডাক্টের নামগুলো আসতেছে না"* — ক্লাসিক বিলে
+     *   পণ্য, গ্রাহকের নাম আর ঠিকানা `('en')`-এ বাঁধা ছিল। ⭐ ছাপার মেনুর ভাষা (বাংলা / English) এখন তিনটাতেই মানা হয়।
+     */
+    public function test_the_classic_bill_names_products_and_the_customer_in_the_chosen_language(): void
+    {
+        $invoice = app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create(
+            [
+                'customer_id' => Customer::query()->orderBy('id')->value('id'),
+                'warehouse_id' => \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->value('id'),
+                'trx_date' => now()->toDateString(),
+            ],
+            [['product_id' => \App\Modules\Inventory\Models\Product::query()->orderBy('id')->value('id'), 'qty' => '1', 'rate' => '100']],
+        )->load('lines.product', 'customer');
+        $product = $invoice->lines->first()->product;
+        $product->forceFill(['name_en' => 'Rod 12 mm', 'name_bn' => 'রড ১২ মিমি'])->save();
+        $invoice->customer->forceFill(['name_bn' => 'রাইয়ান এন্টারপ্রাইজ', 'address_bn' => 'ফুলপুর বাজার'])->save();
+        $facts = new \ReflectionMethod(\App\Modules\Sales\Http\Controllers\SalesPrintController::class, 'classicFacts');
+        $controller = app(\App\Modules\Sales\Http\Controllers\SalesPrintController::class);
+
+        request()->query->set('lang', 'bn');
+        $bn = $facts->invoke($controller, $invoice->fresh());
+        $this->assertContains('রড ১২ মিমি', array_column($bn['items']['rows'], 'name'), '⛔ বাংলা কাগজে পণ্যের বাংলা নাম আসে না');
+        $this->assertSame('রাইয়ান এন্টারপ্রাইজ', $bn['bill_to']['name'], '⛔ বাংলা কাগজে গ্রাহকের বাংলা নাম আসে না');
+        $this->assertSame('ফুলপুর বাজার', $bn['bill_to']['address'], '⛔ বাংলা কাগজে গ্রাহকের বাংলা ঠিকানা আসে না');
+
+        request()->query->set('lang', 'en');
+        $en = $facts->invoke($controller, $invoice->fresh());
+        $this->assertContains('Rod 12 mm', array_column($en['items']['rows'], 'name'), '⛔ ইংরেজি কাগজে পণ্যের নাম ইংরেজিতে নয়');
+        $this->assertNotSame('রাইয়ান এন্টারপ্রাইজ', $en['bill_to']['name']);
+    }
+
     public function test_the_print_engine_and_the_sales_paper_follow_the_rule(): void
     {
         $engine = (string) file_get_contents(app_path('Core/Engines/Print/PrintEngine.php'));

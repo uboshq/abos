@@ -252,10 +252,10 @@ class AccountReportsTest extends TestCase
      */
     public function test_a_balance_report_offers_no_from_date_on_screen(): void
     {
+        // ⭐ রেওয়ামিল এখন ৬ কলামে (মালিক, ১৬ নভেম্বর ২০২৬) — শুরুর জের, এই সময়ের লেনদেন, শেষ জের; তাই "কবে থেকে" লাগে
         $this->get(route('accounts.report.show', ['slug' => 'trial-balance']))
             ->assertOk()
-            ->assertSee(__('accounts::field.as_on'))
-            ->assertDontSee('name="from"', false);
+            ->assertSee('name="from"', false);
 
         $this->get(route('accounts.report.show', ['slug' => 'balance-sheet']))
             ->assertOk()

@@ -126,6 +126,7 @@ return [
         'system_admin.look' => 'চেহারা ও থিম',
         'system_admin.ownership' => 'মালিকানা হস্তান্তর',
         'system_admin.reports' => 'রিপোর্টের সময়সূচি',
+        'system_admin.list' => 'তালিকা ও রিপোর্ট নামানো (Excel, CSV, PDF, প্রিন্ট)',
         'system_admin.role' => 'রোল',
         'system_admin.settings' => 'সেটিংস',
         'system_admin.user' => 'ব্যবহারকারী',
