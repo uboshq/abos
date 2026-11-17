@@ -99,6 +99,7 @@ return [
         'system_admin.look' => 'Look & theme',
         'system_admin.ownership' => 'Ownership transfer',
         'system_admin.reports' => 'Report schedule',
+        'system_admin.list' => 'Downloading lists and reports (Excel, CSV, PDF, print)',
         'system_admin.role' => 'Roles',
         'system_admin.settings' => 'Settings',
         'system_admin.user' => 'Users',

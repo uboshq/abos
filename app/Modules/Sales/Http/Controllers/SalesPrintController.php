@@ -438,15 +438,21 @@ class SalesPrintController extends Controller implements HasMiddleware
             );
         }
 
-        $items = $this->classicItems($invoice);
+        /*
+         * ⛔ পণ্য আর গ্রাহকের নাম কাগজের ভাষায় — মালিক, ১৭ নভেম্বর ২০২৬ (জরুরি): *"ইনভয়েসে বাংলায় প্রিন্ট দিতে গেলে বাংলা প্রোডাক্টের নামগুলো আসতেছে না"*।
+         * ⓘ আগে এখানে `name('en')` বাঁধা ছিল — বাংলা কাগজেও ইংরেজি নাম। ⭐ এখন কাগজের ভাষা ([[PaperLanguage::for()]] — এবারের বাছাই,
+         *   তারপর গ্রাহকের "কাগজের ভাষা", তারপর কোম্পানির); বাংলা নাম না থাকলে ইংরেজি ([[Product::name()]])।
+         */
+        $paperLocale = \App\Core\Support\PaperLanguage::for($customer instanceof \Illuminate\Database\Eloquent\Model ? $customer : null);
+        $items = $this->classicItems($invoice, $paperLocale);
 
         return [
             'bill_to' => [
-                'name' => (string) ($customer?->name('en') ?? ''),
+                'name' => (string) ($customer?->name($paperLocale) ?? ''),
                 // ⭐ "পয়েন্ট · শাখা" — এক লাইনে, কাগজের মাপ অক্ষত ([[PaperPlace::of()]]; মালিক, ১৯ অক্টোবর ২০২৬)
                 'point' => PaperPlace::of($customer, $point),
                 'phone' => (string) ($customer?->phone ?? ''),
-                'address' => (string) ($customer?->address('en') ?? ''),
+                'address' => (string) ($customer?->address($paperLocale) ?? ''),
             ],
             'transport' => [
                 'carrier' => (string) ($challan?->carrier_name ?? ''),
@@ -516,7 +522,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      *
      * @return array{rows: list<array{name: string, rate: string, qty: string, free: string, total_qty: string, amount: string}>, totals: array{qty: string, free: string, total_qty: string, amount: string}}
      */
-    private function classicItems(SalesInvoice $invoice): array
+    private function classicItems(SalesInvoice $invoice, string $locale = 'en'): array
     {
         $invoice->loadMissing(['lines.product.unit', 'lines.enteredUnit', 'lines.challanLine.batch']);
 
@@ -566,7 +572,7 @@ class SalesPrintController extends Controller implements HasMiddleware
 
             if (! isset($merged[$key])) {
                 $merged[$key] = [
-                    'name' => (string) ($line->product?->name('en') ?? ''),
+                    'name' => (string) ($line->product?->name($locale) ?? ''),
                     'code' => $showCode ? (string) ($line->product?->code ?? '') : '',
                     'lots' => [],
                     'short' => $short,

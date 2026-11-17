@@ -48,9 +48,8 @@ final class TheReportNeverSaidWhichPeriodTest extends TestCase
         $this->assertStringContainsString($day('2026-07-01').' – '.$day('2026-09-30'),
             $count(route('accounts.report.show', ['slug' => 'day-book', 'from' => '2026-07-01', 'to' => '2026-09-30'])));
 
-        // ⓘ জেরের রিপোর্টে শুরুর তারিখ অর্থহীন — কেবল "যে তারিখ পর্যন্ত"
-        $tb = $count(route('accounts.report.show', ['slug' => 'trial-balance', 'to' => '2026-09-30']));
-        $this->assertStringContainsString(__('accounts::field.as_on').': '.$day('2026-09-30'), $tb);
-        $this->assertStringNotContainsString(' – ', $tb, '⛔ জেরের রিপোর্টে শুরুর তারিখ দেখাল।');
+        // ⭐ রেওয়ামিল এখন ৬ কলামে (মালিক, ১৬ নভেম্বর ২০২৬) — শুরুর জের "থেকে"-র আগের সব, লেনদেন এই সময়ের; তাই সময়কালটাই লেখা
+        $tb = $count(route('accounts.report.show', ['slug' => 'trial-balance', 'from' => '2026-07-01', 'to' => '2026-09-30']));
+        $this->assertStringContainsString($day('2026-07-01').' – '.$day('2026-09-30'), $tb, '⛔ রেওয়ামিল বলে না কোন সময়ের লেনদেন।');
     }
 }

@@ -730,7 +730,8 @@
                  ⛔ নতুন চাবি "তালিকা নামানো" (`system_admin.list.export`): যার নেই তার কাছে মেনুই দেখায় না, আর ঠিকানায় `?export=`
                  লিখলেও ৪০৩ ([[ExportListing]]); কে কখন কী নামাল তা নিরীক্ষার খাতায় ([[ExportJournal]])। --}}
             @php $canDownload = auth()->user()?->can('system_admin.list.export') ?? false; @endphp
-            @if ($canDownload && ($export || $print))
+            {{-- ⓘ শেয়ার আগে নিজের মেনুতে ছিল, শর্ত কেবল `$share` — নামানোর চাবি না থাকলেও শেয়ার থাকে --}}
+            @if (($canDownload && ($export || $print)) || $share)
                 <div x-data="{ open: false }" class="relative" data-list-download>
                     <button type="button" @click="open = ! open" @click.outside="open = false"
                             @keydown.escape.window="open = false"
@@ -749,7 +750,7 @@
                     <div x-show="open" x-cloak x-transition.opacity
                          class="absolute end-0 z-30 mt-1 w-56 overflow-hidden rounded-(--radius-card)
                                 border border-(--color-border) bg-(--color-surface-card) shadow-lg">
-                        @if ($export)
+                        @if ($canDownload && $export)
                             {{-- data-no-prefetch — মাউস ছুঁলেই ফাইল বানানো শুরু হয় না --}}
                             <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'xlsx']) }}"
                                data-no-prefetch data-download="xlsx"
@@ -771,13 +772,13 @@
                                 <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.export_pdf_note') }}</span>
                             </a>
                         @endif
-                        @if ($print && $printHref)
+                        @if ($canDownload && $print && $printHref)
                             {{-- ⓘ ছাপার নিজের ঠিকানা (যেমন লেজার, পুরো পরিসর) — `<a>`, ফর্ম জমা নয় --}}
                             <a href="{{ $printHref }}" data-download="print" aria-label="{{ __('core.action.print') }}"
                                class="block border-t border-(--color-border) px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                                 {{ __('core.action.print') }}
                             </a>
-                        @elseif ($print)
+                        @elseif ($canDownload && $print)
                             {{-- ⭐ প্রিন্ট ভিউ — নতুন ট্যাবে কাগজটা, সব পাতা; সেখানেই দেখা, ছাপা, সেভ (মালিক, ১৬ নভেম্বর ২০২৬) --}}
                             <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'print']) }}"
                                target="_blank" rel="noopener" data-no-prefetch data-download="print" aria-label="{{ __('core.action.print') }}"
@@ -785,6 +786,23 @@
                                 {{ __('core.action.print') }}
                                 <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.print_view_note') }}</span>
                             </a>
+                        @endif
+                        {{--
+                            ⛔ শেয়ার — এই ছাঁকনিসহ তালিকার লিংক (হোয়াটসঅ্যাপ, ইমেইল, কপি)। বারের নতুন "নামান" মেনুতে (41d7b56ce) এটা বাদ পড়েছিল —
+                               পুরনো সুবিধা হারানো চলবে না; Mac রানে AVoucherListFiltersByEveryFieldTest ধরেছে (১৭ নভেম্বর ২০২৬)।
+                        --}}
+                        @if ($share)
+                            <div x-data="shareMenu({ url: @js($shareUrl) })" class="border-t border-(--color-border)" data-list-share>
+                                <a href="https://wa.me/?text={{ urlencode($shareUrl) }}" target="_blank" rel="noopener"
+                                   class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">WhatsApp</a>
+                                <a href="mailto:?body={{ urlencode($shareUrl) }}"
+                                   class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">{{ __('core.toolbar.share_email') }}</a>
+                                <button type="button" @click="copy()" aria-label="{{ __('core.toolbar.share_copy') }}"
+                                        class="block w-full px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
+                                    <span x-show="! copied">{{ __('core.toolbar.share_copy') }}</span>
+                                    <span x-show="copied" x-cloak class="text-(--color-badge-success-ink)">{{ __('core.toolbar.share_copied') }}</span>
+                                </button>
+                            </div>
                         @endif
                     </div>
                 </div>

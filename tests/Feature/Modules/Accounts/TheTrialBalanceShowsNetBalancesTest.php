@@ -35,6 +35,8 @@ final class TheTrialBalanceShowsNetBalancesTest extends TestCase
 
     private Account $quiet;
 
+    private Account $untouched;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -51,6 +53,7 @@ final class TheTrialBalanceShowsNetBalancesTest extends TestCase
         $this->box = $make('1981', Account::ASSET, Account::DEBIT);
         $this->owed = $make('2981', Account::LIABILITY, Account::CREDIT);
         $this->quiet = $make('1982', Account::ASSET, Account::DEBIT);
+        $this->untouched = $make('1983', Account::ASSET, Account::DEBIT);
 
         // ⓘ বাক্সে ১০,০০০ ঢুকল, ৩,০০০ বেরোল → (Dr) ৭,০০০; দেনা (Cr) ৭,০০০; চুপ খাতে ৫০০ ঢুকে বেরোল → শূন্য
         $this->book($this->box->id, $this->owed->id, '10000', 1);
@@ -66,7 +69,10 @@ final class TheTrialBalanceShowsNetBalancesTest extends TestCase
 
         $this->assertSame(['7000.00', '0.00'], $this->sides($rows[$this->box->id]), '⛔ বাক্সের মোট লেনদেন বসল, নিট জের নয়');
         $this->assertSame(['0.00', '7000.00'], $this->sides($rows[$this->owed->id]), '⛔ দেনার জের ক্রেডিট কলামে নয়');
-        $this->assertFalse($rows->has($this->quiet->id), '⛔ শূন্য-জেরের খাত রেওয়ামিলে রইল');
+        // ⭐ ৬ কলামে (১৬ নভেম্বর ২০২৬): এই সময়ে লেনদেন হয়েছে এমন খাত শেষ জের শূন্য হলেও থাকে — নইলে লেনদেনের দুই কলাম মিলত না
+        $this->assertSame(['0.00', '0.00'], $this->sides($rows[$this->quiet->id]), '⛔ ঢুকে-বেরোনো খাতের শেষ জের শূন্য নয়');
+        $this->assertSame('500.00', bcadd((string) $rows[$this->quiet->id]['period_debit'], '0', 2), '⛔ ঢুকে-বেরোনো খাতের লেনদেন দেখায় না');
+        $this->assertFalse($rows->has($this->untouched->id), '⛔ ছোঁয়া হয়নি এমন শূন্য-জেরের খাত রেওয়ামিলে রইল');
         $this->assertSame(0, bccomp((string) $result->totals['debit'], (string) $result->totals['credit'], 2), '⛔ দুই কলামের মোট সমান নয়');
     }
 
