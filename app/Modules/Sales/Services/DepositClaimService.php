@@ -138,6 +138,7 @@ final class DepositClaimService
             'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
             'bank_account_id' => $data['bank_account_id'] ?? null,
             'note' => $data['note'] ?? null,
+            'depositor' => filled($data['depositor'] ?? null) ? trim((string) $data['depositor']) : null,
             'bills' => $bills === [] ? null : $bills,
             'status' => DepositClaim::PENDING,
         ]);

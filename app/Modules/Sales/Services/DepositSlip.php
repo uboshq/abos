@@ -46,7 +46,7 @@ final class DepositSlip
 
             if ($slip !== null) {
                 try {
-                    $this->attachments->store(
+                    $stored = $this->attachments->store(
                         file: $slip,
                         module: self::MODULE,
                         entity: DepositClaim::class,
@@ -57,10 +57,28 @@ final class DepositSlip
                 } catch (AttachmentException $refused) {
                     throw ValidationException::withMessages(['slip' => $refused->getMessage()]);
                 }
+
+                $this->markLookalike($claim, $stored);
             }
 
             return $claim;
         });
+    }
+
+    /**
+     * ⭐ একই চেহারার আগের স্লিপ — দাবিতে তার নম্বর (মালিক, ১৬ নভেম্বর ২০২৬: হোয়াটসঅ্যাপে কয়েক হাত ঘুরে একই স্লিপ আবার আসে)।
+     *
+     * ⓘ কেবল জমার দাবির স্লিপের মধ্যে, পুরনোটা — [[AttachmentEngine::lookalikes()]] ক্রমে দেয়। ⚠️ সতর্কতা, আটকানো নয়: একই ব্যাংকের
+     *   একই ছাঁচের দুটো আলাদা স্লিপ কাছাকাছি ছাপ দিতে পারে; শেষ কথা ব্যাংক স্টেটমেন্ট।
+     */
+    private function markLookalike(DepositClaim $claim, Attachment $slip): void
+    {
+        $earlier = $this->attachments->lookalikes($slip)
+            ->first(fn (Attachment $a) => $a->source_entity === DepositClaim::class && (int) $a->source_entity_id !== (int) $claim->id);
+
+        if ($earlier !== null) {
+            $claim->forceFill(['lookalike_claim_id' => (int) $earlier->source_entity_id])->save();
+        }
     }
 
     /** দাবির সর্বশেষ স্লিপ — না থাকলে null */

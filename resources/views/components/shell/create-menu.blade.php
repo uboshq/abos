@@ -53,6 +53,8 @@
          * ক্রয়ের `purchase.bill.create` — মেনুর সারি দুটো ঠিক এই চাবিই চায়।
          */
         ['route' => 'sales.direct.create', 'label' => 'core.create.direct_sale', 'group' => 'sales', 'icon' => 'sales', 'can' => 'sales.challan.create'],
+        // ⭐ টাকা জমার খবর — ওয়েবের শর্টকাট (মালিক, ১৬ নভেম্বর ২০২৬); এসআর থেকে হেড অফ সেলস, যার চাবি আছে
+        ['route' => 'sales.claim.request.create', 'label' => 'sales::menu.deposit_report', 'group' => 'sales', 'icon' => 'wallet', 'can' => 'sales.claim.submit'],
         ['route' => 'purchase.direct.create', 'label' => 'purchase::menu.direct', 'group' => 'purchase', 'icon' => 'purchase', 'can' => 'purchase.bill.create'],
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'], 'label' => 'accounts::approval.receipt', 'group' => 'accounts', 'icon' => 'inbox', 'can' => 'accounts.voucher.create'],
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'], 'label' => 'accounts::approval.payment', 'group' => 'accounts', 'icon' => 'outbox', 'can' => 'accounts.voucher.create'],

@@ -165,6 +165,10 @@ return [
             ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.index',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
 
+            // ⭐ টাকা জমার খবর — শর্টকাট, ফোনেও এই সারিটাই (মালিক, ১৬ নভেম্বর ২০২৬: "ওয়েবে এবং অ্যাপস দুই জায়গায় শর্টকাট")
+            ['label' => 'sales::menu.deposit_report', 'icon' => 'wallet', 'route' => 'sales.claim.request.create',
+                'permission' => 'sales.claim.submit'],
+
             /*
              * ⭐ অপেক্ষমাণ, আংশিক, ব্যাক অর্ডার, ইতিহাস — এখন "অর্ডার তালিকা"-র ওপরের ট্যাব, মেনুর আলাদা সারি নয়
              * (নকশার পর্যালোচনা, ধাপ ৭-এর ২; মালিক, ১ অক্টোবর ২০২৬: *"ok kore daw"*)। ⓘ ২৮ সেপ্টেম্বরের
@@ -516,6 +520,12 @@ return [
          */
         'sales.claim.view',
         'sales.claim.decide',
+        /*
+         * ⭐ জমার খবর দেওয়া — আদায় নয় (মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ হোয়াটসঅ্যাপে এসআর → ম্যানেজার → আরএসএম ঘুরে আসে, যে কেউ খবর দেন)।
+         * ⓘ নিজের চাবি, `sales.collection.create` নয় — দেয়ালের ভেতরের এসআর খবর দিতে পারেন, আদায় লেখা আগের মতোই কেবল অফিস
+         *   ([[DealerScope::MAY_CREATE]]; চাবির শেষ অংশ `.submit` বদলের তালিকায় নেই)। খবর টাকা নয় — গ্রহণের আগে খাতায় কিছু ওঠে না।
+         */
+        'sales.claim.submit',
 
         'sales.scheme.view',
         'sales.scheme.manage',
@@ -709,13 +719,20 @@ return [
             'sales.collection.create',
             'sales.claim.view',
             'sales.claim.decide',
+            'sales.claim.submit',
         ],
         'Field Sales' => [
             'sales.quotation.view', 'sales.quotation.create', 'sales.quotation.update',
             'sales.order.view', 'sales.order.create', 'sales.do.view', 'sales.do.create',
             'sales.lead.view', 'sales.opportunity.view',
             'sales.collection.view', 'sales.collection.create',
+            // ⭐ জমার খবর (১৬ নভেম্বর ২০২৬)
+            'sales.claim.submit',
         ],
+        // ⭐ মাঠের উপরের স্তর — খবর দেন, স্লিপ তাঁদের কাছেও আসে (মালিক, ১৬ নভেম্বর ২০২৬)
+        'ASM' => ['sales.claim.submit'],
+        'RSM' => ['sales.claim.submit'],
+        'DSM' => ['sales.claim.submit'],
         'Manager' => [
             // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
             'sales.challan.create',

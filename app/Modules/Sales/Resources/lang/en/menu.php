@@ -36,6 +36,7 @@ return [
 
     // ডিলারের কমিশন
     'commission' => 'Dealer commission',
+    'deposit_report' => 'Report a deposit',
     'deposit_claims' => 'Payment advice', // ⭐ টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬
     'schemes' => 'Schemes & commission rules',
 ];

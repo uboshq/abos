@@ -18,6 +18,14 @@
 
         <x-ui.errors />
 
+        @if (session('status'))
+            <div role="status" class="rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">{{ session('status') }}</div>
+        @endif
+        {{-- ⚠️ একই চেহারার স্লিপ — সতর্কতা, আটকানো নয় ([[DepositSlip::markLookalike()]]) --}}
+        @if (session('warning'))
+            <div role="alert" data-slip-lookalike class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">{{ session('warning') }}</div>
+        @endif
+
         <x-ui.select name="customer" :label="__('sales::slip.customer')"
                      :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                      :selected="old('customer', $picked)" placeholder="-" required />
@@ -97,6 +105,10 @@
                    x-on:change="$store.scanner.begin($el, 'paper')"
                    class="block w-full text-sm">
         </label>
+
+        {{-- ⭐ টাকা কে জমা দিলেন — ঐচ্ছিক (মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ কয়েক হাত ঘুরে আসে) --}}
+        <x-ui.field name="depositor" :label="__('sales::slip.depositor')" :value="old('depositor')" maxlength="120"
+                    :placeholder="__('sales::slip.depositor_hint')" />
 
         <x-ui.field name="note" :label="__('sales::portal.note')" :value="old('note')" />
 

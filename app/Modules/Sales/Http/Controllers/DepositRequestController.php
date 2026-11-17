@@ -47,7 +47,8 @@ class DepositRequestController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:sales.collection.create', except: ['slip']),
+            // ⭐ জমার খবরের নিজের চাবি — আদায়ের নয় (১৬ নভেম্বর ২০২৬; দেয়ালের ভেতরের এসআরও পাঠান)
+            new Middleware('can:sales.claim.submit', except: ['slip']),
             new Middleware('can:sales.claim.view', only: ['slip']),
         ];
     }
@@ -76,8 +77,15 @@ class DepositRequestController extends Controller implements HasMiddleware
     {
         $claim = $this->raise($request);
 
-        return redirect()->route('sales.claim.request.create')
+        $redirect = redirect()->route('sales.claim.request.create')
             ->with('status', __('sales::slip.sent', ['no' => $claim->id]));
+
+        // ⚠️ একই চেহারার স্লিপ আগে এসেছে — সতর্কতা, আটকানো নয় (শেষ কথা ব্যাংক স্টেটমেন্ট; মালিক, ১৬ নভেম্বর ২০২৬)
+        $earlier = $claim->lookalike;
+
+        return $earlier === null ? $redirect : $redirect->with('warning', __('sales::slip.lookalike', [
+            'no' => $earlier->id, 'date' => $earlier->claimed_on?->format('d-m-Y'), 'customer' => (string) $earlier->customer?->nameWithPoint(),
+        ]));
     }
 
     /** `GET /api/v1/sales/deposit-requests/accounts` — অ্যাপের ব্যাংক বাছাই */
@@ -144,6 +152,8 @@ class DepositRequestController extends Controller implements HasMiddleware
             'reference' => ['nullable', 'string', 'max:64'],
             'bank_account_id' => ['nullable', 'integer', Rule::in($this->banks()->modelKeys())],
             'note' => ['nullable', 'string', 'max:500'],
+            // ⭐ টাকা কে জমা দিলেন — ডিলার নিজে, আত্মীয়, পরিচিত কেউ (ঐচ্ছিক; মালিক, ১৬ নভেম্বর ২০২৬)
+            'depositor' => ['nullable', 'string', 'max:120'],
             'slip' => [Rule::requiredIf($request->input('method') === DepositClaim::BANK), 'nullable', 'file',
                 'max:'.intdiv(\App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, 1024)],
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক; বিলের public_id আর অঙ্ক ([[DepositClaimService::raise()]] বাকিটা দেখে)
@@ -224,6 +234,9 @@ class DepositRequestController extends Controller implements HasMiddleware
             'status_label' => $claim->statusLabel(),
             // ⭐ কে পাঠালেন — কর্মীর নাম, পোর্টালের দোকানি হলে খালি (টাকার পরিকল্পনা ৩; ফোন "পাঠালেন …" দেখায়, a4 8e39aaa5)
             'submitted_by_name' => (string) ($claim->submitter?->name ?? ''),
+            // ⭐ টাকা কে জমা দিলেন, আর একই চেহারার আগের স্লিপ (১৬ নভেম্বর ২০২৬)
+            'depositor' => $claim->depositor,
+            'lookalike_of' => $claim->lookalike?->public_id,
             'decision_reason' => $claim->decision_reason,
             'has_slip' => $this->slips->of($claim) !== null,
             // ⓘ বাছা বিল — দাবির প্রস্তাব; গ্রহণের পরে আসল ভাগ আদায়ের সারিতে

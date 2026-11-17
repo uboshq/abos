@@ -1,3 +1,8 @@
 {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); এক লাইনে, পুরোটা title-এ --}}
 <span class="block max-w-64 truncate" title="{{ $claim->customer?->nameWithPoint() }}">{{ $claim->customer?->nameWithPoint() }}</span>
-<span class="block text-2xs text-(--color-ink-muted)">{{ $claim->customer?->code }}</span>
+<span class="block text-2xs text-(--color-ink-muted)">{{ $claim->customer?->code }}@if ($claim->depositor) · {{ __('sales::slip.depositor') }}: {{ $claim->depositor }}@endif</span>
+{{-- ⚠️ একই চেহারার স্লিপ আগে এসেছে — হিসাবরক্ষক ব্যাংক স্টেটমেন্টে মিলিয়ে দেখবেন (সতর্কতা, আটকানো নয়; ১৬ নভেম্বর ২০২৬) --}}
+@if ($claim->lookalike_claim_id)
+    <span class="mt-0.5 inline-block rounded-(--radius-field) bg-(--color-badge-warning-bg) px-1.5 text-2xs font-semibold text-(--color-badge-warning-ink)"
+          data-slip-lookalike>⚠ {{ __('sales::slip.lookalike_short', ['no' => $claim->lookalike_claim_id]) }}</span>
+@endif

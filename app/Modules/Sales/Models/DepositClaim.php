@@ -73,6 +73,8 @@ class DepositClaim extends Model
         'submitted_by',
         'claimed_on', 'amount', 'method', 'reference', 'bank_account_id',
         'status', 'note', 'bills', 'collection_id',
+        // ⭐ টাকা কে জমা দিলেন, আর একই চেহারার আগের স্লিপের দাবি (১৬ নভেম্বর ২০২৬)
+        'depositor', 'lookalike_claim_id',
         'decided_by', 'decided_at', 'decision_reason',
     ];
 
@@ -125,6 +127,12 @@ class DepositClaim extends Model
     }
 
     /** ⭐ কে পাঠালেন — টাকার পরিকল্পনা ৩ */
+    /** ⭐ একই চেহারার স্লিপের আগের দাবি — হোয়াটসঅ্যাপে আবার আসা স্লিপ ([[DepositSlip::markLookalike()]], ১৬ নভেম্বর ২০২৬) */
+    public function lookalike(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'lookalike_claim_id');
+    }
+
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'submitted_by');
