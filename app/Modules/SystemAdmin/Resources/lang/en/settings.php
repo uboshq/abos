@@ -79,6 +79,7 @@ return [
         'note' => 'Bottom line',
     ],
     'auto_logout_minutes' => 'Minutes of inactivity before automatic logout',
+    'image_kb_slip' => 'Largest size of a deposit slip photo (KB)',
     'date_format' => 'How dates are written',
     'time_format' => 'How the clock is written',
 

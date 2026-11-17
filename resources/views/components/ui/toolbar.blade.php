@@ -273,6 +273,24 @@
         // ⓘ ডিফল্ট মানে থাকা ঘর ছাঁকনি নয় (`defaults`-এর মন্তব্য দেখুন)
         ->reject(fn ($value, $key) => array_key_exists($key, $defaults) && ! is_array($value)
             && (string) $value === (string) $defaults[$key]);
+
+    /*
+     * ⭐ কাগজের মাথা — তালিকার নাম আর "যা দেখানো হচ্ছে" (চালু ছাঁকনি, খোঁজা, বারের তারিখ) ([[ListPaper]], ১৬ নভেম্বর ২০২৬)।
+     * ⓘ কেবল কাগজ চাইলে; রিপোর্ট নিজের নাম আর সময়কাল পরে বসিয়ে দেয় ([[ReportExport::capture()]])।
+     */
+    $exporter = app(\App\Core\Services\ListExport::class);
+    if ($exporter->isPaper()) {
+        $facts = $facets !== null
+            ? array_column($facets['chips'], 'text')
+            : $screenFilters->map(fn ($value, $key) => $chipText((string) $key, $value))->values()->all();
+        if (($facets['date']['text'] ?? null) !== null) {
+            array_unshift($facts, $facets['date']['label'].': '.$facets['date']['text']);
+        }
+        if ($searched !== '') {
+            $facts[] = __('core.action.search').': '.$searched;
+        }
+        $exporter->describe(['title' => is_string($title) ? $title : null, 'facts' => $facts]);
+    }
 @endphp
 
 {{-- flex-col — দুইটা সারির ক্রম CSS ঠিক করে, তাই `order-1` ও `order-2`
@@ -745,11 +763,13 @@
                                 {{ __('core.toolbar.export_csv') }}
                                 <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.export_csv_note') }}</span>
                             </a>
-                            <button type="button" data-action="print" data-download="pdf"
-                                    aria-label="{{ __('core.toolbar.export_pdf') }}"
-                                    class="block w-full px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
+                            {{-- ⭐ PDF — লেজারের ছাঁচের কাগজ, সব পাতা, ফাইল হয়ে নামে ([[ListPaper]]; আগে ছিল "ছাপুন, তারপর PDF হিসেবে সেভ") --}}
+                            <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'pdf']) }}"
+                               data-no-prefetch data-download="pdf" aria-label="{{ __('core.toolbar.export_pdf') }}"
+                               class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                                 {{ __('core.toolbar.export_pdf') }}
-                            </button>
+                                <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.export_pdf_note') }}</span>
+                            </a>
                         @endif
                         @if ($print && $printHref)
                             {{-- ⓘ ছাপার নিজের ঠিকানা (যেমন লেজার, পুরো পরিসর) — `<a>`, ফর্ম জমা নয় --}}
@@ -758,10 +778,13 @@
                                 {{ __('core.action.print') }}
                             </a>
                         @elseif ($print)
-                            <button type="button" data-action="print" data-download="print" aria-label="{{ __('core.action.print') }}"
-                                    class="block w-full border-t border-(--color-border) px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
+                            {{-- ⭐ প্রিন্ট ভিউ — নতুন ট্যাবে কাগজটা, সব পাতা; সেখানেই দেখা, ছাপা, সেভ (মালিক, ১৬ নভেম্বর ২০২৬) --}}
+                            <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'print']) }}"
+                               target="_blank" rel="noopener" data-no-prefetch data-download="print" aria-label="{{ __('core.action.print') }}"
+                               class="block border-t border-(--color-border) px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                                 {{ __('core.action.print') }}
-                            </button>
+                                <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.print_view_note') }}</span>
+                            </a>
                         @endif
                     </div>
                 </div>

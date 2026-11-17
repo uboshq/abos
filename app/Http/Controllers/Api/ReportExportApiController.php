@@ -77,7 +77,7 @@ final class ReportExportApiController extends Controller
         $format = (string) $request->validate([
             // ⭐ pdf — খতিয়ান আর রিপোর্ট ফোন থেকে দেখা, ছাপা, পাঠানো (মালিক, ৪ অক্টোবর ২০২৬); কেবল এই দরজায়, তালিকার
             // সাধারণ রপ্তানিতে নয় — নইলে ওয়েবের প্রতিটা তালিকা pdf মেনে নিত অথচ বানাতে পারত না
-            'format' => ['required', 'string', Rule::in([...ListExport::FORMATS, 'pdf'])],
+            'format' => ['required', 'string', Rule::in([...ListExport::FILES, 'pdf'])],
         ])['format'];
 
         if ((int) ($page['totalRows'] ?? 0) > self::MAX_ROWS) {

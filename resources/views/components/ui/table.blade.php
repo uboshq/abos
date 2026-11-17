@@ -63,11 +63,15 @@
                             নাহলে `text-start`। দুইটা নিয়ম আর একে অন্যের
                             সাথে লড়ে না।
                         --}}
+                        {{-- ⭐ কলাম হিসেবে দেওয়া অ্যাকশনও (পণ্যের তালিকা) একই মাথা — `data-row-menu`, ডান ধারে (মালিক, ১৬ নভেম্বর ২০২৬: নাম কেবল মাথায়) --}}
+                        @php $isMenu = in_array($column['key'] ?? null, ['actions', 'action'], true); @endphp
                         <th @class([
                                 'text-end num' => $column['numeric'],
-                                'text-start' => ! $column['numeric'],
+                                'text-end' => $isMenu && ! $column['numeric'],
+                                'text-start' => ! $column['numeric'] && ! $isMenu,
                             ])
                             @if ($column['width']) style="width: {{ $column['width'] }}" @endif
+                            @if ($isMenu) data-row-menu @endif
                             scope="col">
                             {{ $column['label'] }}
                         </th>

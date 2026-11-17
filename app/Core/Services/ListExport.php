@@ -93,8 +93,70 @@ class ListExport
         $this->refused = true;
     }
 
-    /** যে ফরম্যাটগুলো নামানো যায় — সবই এক ধরা-টেবিল থেকে। */
-    public const FORMATS = ['csv', 'xlsx', 'json'];
+    /**
+     * যে ফরম্যাটগুলো নামানো যায় — সবই এক ধরা-টেবিল থেকে।
+     *
+     * ⭐ `pdf` (ফাইল নামে) আর `print` (প্রিন্ট ভিউ — নতুন ট্যাবে সব পাতা, সেখান থেকেই ছাপা) — লেজারের ছাঁচে কাগজ ([[print.listing]];
+     *   মালিক, ১৬ নভেম্বর ২০২৬: *"সবগুলাই প্রিন্ট ভিউ হয়, প্রিন্ট ভিউ এ দেখতে পারবো, আবার প্রিন্টও করতে পারবো"*)।
+     */
+    public const FORMATS = ['csv', 'xlsx', 'json', 'pdf', 'print'];
+
+    /**
+     * ⓘ ধরা টেবিল থেকে বানানো ফাইল — ফোনের রপ্তানি আর নির্ধারিত রিপোর্ট এগুলোই চেনে।
+     * ⛔ `print` ব্রাউজারের প্রিন্ট ভিউ, ফাইল নয় — ফোনের দরজায় ঢুকলে CSV-র বাইট xlsx নামে যেত (১৬ নভেম্বর ২০২৬, ThePhoneCouldNotPrintWhatItSawTest)।
+     */
+    public const FILES = ['csv', 'xlsx', 'json'];
+
+    /** কাগজের ফরম্যাট — টেবিলটা PDF হয়ে বেরোয় ([[ExportListing]]) */
+    public const PAPER = ['pdf', 'print'];
+
+    /**
+     * ⭐ কাগজের মাথার তথ্য — শিরোনাম, ইংরেজি শিরোনাম, সময়কাল আর "যা দেখানো হচ্ছে"-র লাইন (চালু ছাঁকনি)।
+     * ⓘ টুলবার দেয় (শিরোনাম + চিপ), রিপোর্ট দেয় (নাম + তারিখের সীমা); পরেরটা আগেরটার উপরে বসে।
+     *
+     * @var array{title?: string, title_en?: string, period?: string, facts?: list<string>}
+     */
+    private array $meta = [];
+
+    /**
+     * ⭐ প্রতিটা সারির ধরন — `row`, ভাগের মাথা `head`, ভাগের মোট `total`, সর্বমোট `grand` ([[ReportExport::rowsOf()]]-এর `__section`)।
+     * ⓘ কাগজে মাথা আর মোট মোটা হরফে ও ছায়ায়; CSV/Excel-এ সব সারি একই।
+     *
+     * @var list<string>
+     */
+    private array $kinds = [];
+
+    /** @var list<int> ধরা টেবিল থেকে বাদ পড়া কলামের জায়গা (অ্যাকশন) — সর্বমোটের সারিও সেগুলো বাদ দেয় */
+    private array $droppedAt = [];
+
+    /** @param  array{title?: string, title_en?: string, period?: string, facts?: list<string>}  $meta */
+    public function describe(array $meta): void
+    {
+        $this->meta = array_merge($this->meta, array_filter($meta, fn ($v) => $v !== null && $v !== '' && $v !== []));
+    }
+
+    /** @return array{title?: string, title_en?: string, period?: string, facts?: list<string>} */
+    public function meta(): array
+    {
+        return $this->meta;
+    }
+
+    /** @return list<string> সংখ্যার কলামের চাবি — রিপোর্ট বলে দেয় ([[numeric()]]) */
+    public function numericKeys(): array
+    {
+        return $this->numeric;
+    }
+
+    /** @return list<string> */
+    public function kinds(): array
+    {
+        return $this->kinds;
+    }
+
+    public function isPaper(): bool
+    {
+        return in_array($this->format(), self::PAPER, true);
+    }
 
     /**
      * এই অনুরোধে কোন ফরম্যাট — চাওয়া না হলে বা অচেনা হলে null।
@@ -142,7 +204,41 @@ class ListExport
 
         $this->takenThisPage = true;
 
+        /*
+         * ⛔ অ্যাকশনের কলাম ফাইলে নয় — ১৬ নভেম্বর ২০২৬ কাগজের প্রথম ছবিতে ধরা: ঐ কলামে সারির মেনুর সব লেখা ("দেখা প্রিভিউ — পাশে খুলবে
+         *   … সম্পাদনা") প্রতিটা সারিতে, CSV আর Excel-এও — অনেকদিন ধরে। ⓘ কলামটা কাজের বোতাম, তথ্য নয়।
+         */
+        // ⓘ অনুবাদক না থাকলে (খালি ইউনিট পরীক্ষা) কেবল চাবির নামে চেনা — নাহলে `__()` ভেঙে পড়ত
+        $words = function_exists('app') && app()->bound('translator');
+        $actionLabels = $words ? [(string) __('core.table.action_menu'), (string) __('core.table.actions')] : [];
+        $serialLabel = $words ? (string) __('core.table.serial') : null;
+        $keep = array_filter($columns, fn (array $column): bool => ! in_array($column['key'], ['actions', 'action', 'do', 'menu'], true)
+            && ! in_array((string) $column['label'], $actionLabels, true));
+        // ⓘ সর্বমোটের সারিও একই ঘরগুলো বাদ দেয় ([[footer()]]) — নাহলে মোট এক ঘর সরে বসত
+        $this->droppedAt = array_values(array_diff(array_keys($columns), array_keys($keep)));
+        $columns = array_values($keep);
+
+        if ($columns === []) {
+            $this->takenThisPage = false;
+
+            return;
+        }
+
+        /*
+         * ⛔ "ক্রম" কলাম ফাইলে নিজেই গোনা — পর্দার ঘর পাতার ভেতরের ক্রম দেয়, আর ফাইলে প্রতিটা সারিতে "1" আসছিল (একই ছবি)।
+         *   ⓘ সব পাতা জোড়া লাগলেও ১, ২, ৩ … — আগের পাতার সারির পরে থেকে।
+         */
+        $serialAt = null;
+        foreach ($columns as $i => $column) {
+            if (in_array($column['key'], ['serial', 'sl', '#'], true) || ($serialLabel !== null && (string) $column['label'] === $serialLabel)) {
+                $serialAt = $i;
+                break;
+            }
+        }
+        $counted = $this->table !== null ? count(array_filter($this->kinds, fn (string $k): bool => $k === 'row')) : 0;
+
         $values = [];
+        $kinds = [];
 
         foreach ($rows as $row) {
             $line = [];
@@ -151,7 +247,14 @@ class ListExport
                 $line[] = $this->text($cell($row, $column));
             }
 
+            $kind = is_array($row) && isset($row['__section']) ? (string) $row['__section'] : 'row';
+
+            if ($serialAt !== null && $kind === 'row') {
+                $line[$serialAt] = (string) ++$counted;
+            }
+
             $values[] = $line;
+            $kinds[] = $kind;
         }
 
         if ($rows instanceof LengthAwarePaginator) {
@@ -167,10 +270,13 @@ class ListExport
         if ($this->table !== null) {
             if ($this->table['columns'] === $columns) {
                 array_push($this->table['values'], ...$values);
+                array_push($this->kinds, ...$kinds);
             }
 
             return;
         }
+
+        $this->kinds = $kinds;
 
         $this->table = [
             'columns' => $columns,
@@ -210,6 +316,9 @@ class ListExport
         $this->table = null;
         $this->footer = null;
         $this->numeric = [];
+        $this->meta = [];
+        $this->kinds = [];
+        $this->droppedAt = [];
 
         // অস্বীকারটাও প্রতি অনুরোধে নতুন — নাহলে একটা রপ্তানি-বিহীন
         // পর্দা দেখার পর পরের পর্দার রপ্তানিও নীরবে বন্ধ থাকত
@@ -233,7 +342,11 @@ class ListExport
      */
     public function footer(array $values): void
     {
-        $this->footer = array_map(fn ($v) => $this->text($v), $values);
+        foreach ($this->droppedAt as $i) {
+            unset($values[$i]);
+        }
+
+        $this->footer = array_map(fn ($v) => $this->text($v), array_values($values));
     }
 
     /**
@@ -271,6 +384,7 @@ class ListExport
     public function restartFromTheFirstPage(): void
     {
         $this->table = null;
+        $this->kinds = [];
         $this->takenThisPage = false;
     }
 
@@ -538,7 +652,8 @@ class ListExport
     public function filename(): string
     {
         $route = (string) (request()->route()?->getName() ?? 'list');
-        $ext = $this->format() ?? 'csv';
+        // ⓘ প্রিন্ট ভিউও PDF — ব্রাউজার সেভ করলে নামটা .pdf
+        $ext = $this->isPaper() ? 'pdf' : ($this->format() ?? 'csv');
 
         return 'abos-'.str_replace('.', '-', $route).'-'.now()->format('Y-m-d').'.'.$ext;
     }

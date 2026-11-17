@@ -1,4 +1,4 @@
-import { detectCorners, orderCorners, suggestSize, warp } from './scan.js'
+import { detectCorners, enhance, LOOKS, orderCorners, suggestSize, warp } from './scan.js'
 
 /*
  * ছবি তোলার পর্দা — চার কোণ টেনে কাগজ সোজা করা।
@@ -27,6 +27,13 @@ export function scannerStore() {
         open: false,
         busy: false,
         mode: 'paper',
+
+        /**
+         * ⭐ কাগজের চেহারা — পরিষ্কার / আসল রং / ধূসর / সাদা-কালো (মালিক, ১৬ নভেম্বর ২০২৬: CamScanner-এর মতো "স্পষ্ট করা")।
+         * ⓘ ঘর চাইলে নিজের শুরুর চেহারা দেয় (`begin(..., { look: 'bw' })` — সই); না দিলে পরিষ্কার।
+         */
+        look: 'clean',
+        looks: LOOKS,
 
         /** কোন ইনপুটে ফলাফলটা ফেরত যাবে। */
         input: null,
@@ -122,6 +129,7 @@ export function scannerStore() {
             this.input = input
             this.mode = mode
             this.autoSubmit = options.submit === true
+            this.look = LOOKS.includes(options.look) ? options.look : 'clean'
             this.failed = ''
             this.busy = true
 
@@ -207,6 +215,11 @@ export function scannerStore() {
         },
 
         /* ── কোণ টানা ────────────────────────────────────────────────── */
+
+        /** চেহারা বাছা — অচেনা নাম এলে পরিষ্কার */
+        choose(look) {
+            this.look = LOOKS.includes(look) ? look : 'clean'
+        },
 
         grab(index) {
             this.dragging = index
@@ -318,11 +331,14 @@ export function scannerStore() {
 
             const { width, height } = suggestSize(corners)
             const source = this.pixelsOfFull()
-            const flattened = warp(source, corners, width, height)
+            const warped = warp(source, corners, width, height)
 
-            if (flattened === null) {
+            if (warped === null) {
                 return null
             }
+
+            // ⓘ সোজা করার পরে, কাগজটুকুর উপরেই — টেবিলের রং কাগজের রঙের হিসাবে ঢুকত না
+            const flattened = enhance({ data: warped.data, width, height }, this.look)
 
             const canvas = document.createElement('canvas')
             canvas.width = width

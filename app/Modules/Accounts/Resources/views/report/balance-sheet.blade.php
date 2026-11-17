@@ -23,9 +23,17 @@
                               'date' => \App\Core\Support\DateFormat::format($sheet['as_of']),
                           ])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
+                {{-- ⭐ প্রিন্ট ভিউ (নতুন ট্যাবে, IAS 1 ছকের কাগজ) আর PDF — "তালিকা নামানো" চাবিতে (মালিক, ১৬ নভেম্বর ২০২৬) --}}
+                @can('system_admin.list.export')
+                    <x-ui.button tone="secondary" icon="print" target="_blank" rel="noopener" data-paper="print"
+                                 :href="url()->current().'?'.http_build_query(request()->query() + ['export' => 'print'])">
+                        {{ __('core.action.print') }}
+                    </x-ui.button>
+                    <x-ui.button tone="secondary" data-paper="pdf"
+                                 :href="url()->current().'?'.http_build_query(request()->query() + ['export' => 'pdf'])">
+                        {{ __('core.toolbar.export_pdf') }}
+                    </x-ui.button>
+                @endcan
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

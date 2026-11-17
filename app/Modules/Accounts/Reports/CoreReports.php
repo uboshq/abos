@@ -147,6 +147,21 @@ final class CoreReports
      * মডিউলগুলোর নিজের ঘোষণা (`parties`) থেকে, পাতা তোলার পরে একবারে ([[ReportEngine::withParties()]])। সীমানা অক্ষত।
      */
 
+    /**
+     * রেওয়ামিলের অঙ্ক থেকে ঐ হিসাবের খতিয়ান — একই "থেকে–পর্যন্ত" আর শাখা ([[ReportColumn::$drill]])।
+     * ⓘ দরজা `report.tb_ledger` — রেওয়ামিলের চাবি (`accounts.report.final`) চায়, সাধারণ খতিয়ানের (`accounts.report`) নয়।
+     *
+     * @return array{route: string, params: array<string, string>, label: string}
+     */
+    private static function ledgerOf(): array
+    {
+        return [
+            'route' => 'accounts.report.tb_ledger',
+            'params' => ['account_id' => 'account_id', 'from' => '@from', 'to' => '@to', 'branch_id' => '@branch_id'],
+            'label' => 'accounts::statement.tb.drill',
+        ];
+    }
+
     /** দৈনিক খতিয়ান — একটা তারিখ পরিসরের সব লেনদেন, ক্রমানুসারে। */
     public static function dayBook(): ReportDefinition
     {
@@ -358,7 +373,11 @@ final class CoreReports
             // ⭐ কেবল চূড়ান্ত হিসাবের চাবি — মেনু, ওয়েবের দরজা আর ফোন একই কথা বলে, লাভ-ক্ষতির মতো (fe hotfix, ১৯ অক্টোবর ২০২৬);
             // ⛔ আগে মেনু কেবল `.final` দেখে সারি দেখাত অথচ এখানে `accounts.report`-ও চাইত — খুললেই ৪০৩
             permission: 'accounts.report.final',
-            asOfDate: true,
+            /*
+             * ⭐ ৬ কলাম — শুরুর জের, এই সময়ের লেনদেন, শেষ জের; প্রতিটা ডেবিট/ক্রেডিট (মালিক, ১৬ নভেম্বর ২০২৬: রেওয়ামিল "সব দিক দিয়ে মিলে";
+             *   আন্তর্জাতিক ধারা — SAP-এর Balance list, Tally-র Detailed Trial Balance)। ⓘ তিন জোড়াই মেলে, নিচের মোটে দেখা যায়।
+             * ⓘ তাই এখন সময়কাল (থেকে–পর্যন্ত), "কোন দিন পর্যন্ত" নয়; শুরুর জের "থেকে"-র আগের সব লেনদেন। "শুরু থেকে" বাছলে শুরুর জের শূন্য।
+             */
             title: 'accounts::menu.trial_balance',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',
@@ -391,15 +410,27 @@ final class CoreReports
                 ->select([
                     'ledger_entries.account_id',
                     self::accountName(),
+                    // ⓘ শুরুর জের — "থেকে"-র আগের সব; নিট যেদিকে, সেই ঘরে
+                    DB::raw('GREATEST(SUM(CASE WHEN ledger_entries.trx_date < ? THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END), 0) as opening_debit'),
+                    DB::raw('GREATEST(SUM(CASE WHEN ledger_entries.trx_date < ? THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END), 0) as opening_credit'),
+                    // ⓘ এই সময়ের লেনদেন — মোট ডেবিট আর মোট ক্রেডিট, নিট নয়
+                    DB::raw('SUM(CASE WHEN ledger_entries.trx_date >= ? THEN ledger_entries.debit ELSE 0 END) as period_debit'),
+                    DB::raw('SUM(CASE WHEN ledger_entries.trx_date >= ? THEN ledger_entries.credit ELSE 0 END) as period_credit'),
                     DB::raw('CASE WHEN SUM(ledger_entries.debit) > SUM(ledger_entries.credit) THEN SUM(ledger_entries.debit) - SUM(ledger_entries.credit) ELSE 0 END as debit'),
                     DB::raw('CASE WHEN SUM(ledger_entries.credit) > SUM(ledger_entries.debit) THEN SUM(ledger_entries.credit) - SUM(ledger_entries.debit) ELSE 0 END as credit'),
                 ])
-                // ⓘ জের শূন্য — রেওয়ামিলে সারি নেই
-                ->havingRaw('SUM(ledger_entries.debit) <> SUM(ledger_entries.credit)'),
+                ->addBinding([$f['from'], $f['from'], $f['from'], $f['from']], 'select')
+                // ⓘ শুরু, লেনদেন আর শেষ — তিনটাই শূন্য হলে সারি নেই; শেষ জের শূন্য অথচ এই সময়ে লেনদেন থাকলে সারি থাকে (মেলানোর জন্য)
+                ->havingRaw('SUM(ledger_entries.debit) <> SUM(ledger_entries.credit) OR SUM(CASE WHEN ledger_entries.trx_date >= ? THEN ledger_entries.debit + ledger_entries.credit ELSE 0 END) <> 0', [$f['from']]),
             columns: [
                 ['key' => 'account_name', 'label' => 'core.print.account'],
-                ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
-                ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
+                // ⭐ প্রতিটা অঙ্কে চাপলে ঐ হিসাবের খতিয়ান, একই সময় ও শাখায় — রেওয়ামিলের নিজের চাবির দরজায় ([[ledgerOf()]])
+                ['key' => 'opening_debit', 'label' => 'accounts::statement.tb.opening_debit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
+                ['key' => 'opening_credit', 'label' => 'accounts::statement.tb.opening_credit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
+                ['key' => 'period_debit', 'label' => 'accounts::statement.tb.period_debit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
+                ['key' => 'period_credit', 'label' => 'accounts::statement.tb.period_credit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
+                ['key' => 'debit', 'label' => 'accounts::statement.tb.closing_debit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
+                ['key' => 'credit', 'label' => 'accounts::statement.tb.closing_credit', 'type' => ReportColumn::MONEY, 'drill' => self::ledgerOf()],
             ],
         );
     }

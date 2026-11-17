@@ -702,6 +702,17 @@ return [
             'default' => 15,
             'group' => 'general',
         ],
+        [
+            /*
+             * ⭐ জমার স্লিপের ছবি সর্বোচ্চ কত KB — মালিক, ১৬ নভেম্বর ২০২৬ (*"ছবিগুলোকে কেবি সাইজে নিয়ে আসা, স্পষ্ট করা"*)।
+             * ⓘ ইঞ্জিন মান আর মাপ কমিয়ে এর নিচে আনে, তবে লেখা পড়া যায় এমন মাপের নিচে নয় ([[ImageEngine::READABLE_EDGE]])।
+             */
+            'key' => 'system.image_kb.slip',
+            'label' => 'system_admin::settings.image_kb_slip',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Attachment\AttachmentEngine::SLIP_KB,
+            'group' => 'general',
+        ],
         /*
          * নিজের জরুরি নোটিশ নিজে অনুমোদন নয় — স্পেক, ধারা ১৭।
          *

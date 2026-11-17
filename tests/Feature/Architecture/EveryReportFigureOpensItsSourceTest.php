@@ -63,7 +63,6 @@ final class EveryReportFigureOpensItsSourceTest extends TestCase
         'accounts.profit_loss' => [4, 'ec'],
         'accounts.project_ledger' => [3, 'ec'],
         'accounts.supplier_ledger' => [3, 'ec'],
-        'accounts.trial_balance' => [2, 'ec'],
         'approval.approved' => [1, 'fe ঠিক করবে'],
         'approval.pending' => [1, 'fe ঠিক করবে'],
         'approval.rejected' => [1, 'fe ঠিক করবে'],
