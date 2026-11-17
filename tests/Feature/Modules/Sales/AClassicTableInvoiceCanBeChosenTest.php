@@ -143,7 +143,10 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
 
         // ⛔ পণ্যের নামের ঘরে কেবল নাম — কোড নয়
         $this->assertStringNotContainsString(e((string) $product->code).' - ', $html, 'পণ্যের নামের সাথে কোড জুড়ে গেছে।');
-        $this->assertStringContainsString(e($product->name('en')), $html);
+        // ⓘ পণ্যের নাম কাগজের ভাষায় — কাগজের ঘরের নাম ইংরেজি থাকলেও (মালিক, ১৭ নভেম্বর ২০২৬: বাংলা ইনভয়েসে বাংলা পণ্যের নাম আসছিল না;
+        //   [[APaperSpeaksItsPartysLanguageTest]]); আগে এখানে সবসময় ইংরেজি নাম চাওয়া হত
+        $paperLocale = \App\Core\Support\PaperLanguage::for($invoice->customer);
+        $this->assertStringContainsString(e($product->name($paperLocale)), $html, "পণ্যের নাম কাগজের ভাষায় ({$paperLocale}) নেই।");
 
         // ⓘ বিলের ধরন কখনো ফাঁকা নয় — শর্ত বা বিলের মেয়াদ থেকে
         $this->assertMatchesRegularExpression('/INVOICE TYPE:\s*(CASH|CREDIT)/', $html, 'INVOICE TYPE ফাঁকা ছাপা হলো।');
