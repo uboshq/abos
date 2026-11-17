@@ -26,6 +26,7 @@ return [
         'sales_summary' => 'How much did we sell today?',
         'sales_product_need' => 'How much sugar is needed next week?',
         'stock_on_hand' => 'How much sugar is in stock?',
+        'stock_summary' => 'Show the whole stock',
         'credit_overdue' => 'Who owes the most?',
     ],
 ];

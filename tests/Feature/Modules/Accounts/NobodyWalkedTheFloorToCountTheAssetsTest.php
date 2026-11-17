@@ -168,6 +168,20 @@ final class NobodyWalkedTheFloorToCountTheAssetsTest extends TestCase
         $this->get(route('accounts.asset.show', $fridge))->assertOk()->assertSee(__('accounts::asset.labels_action'));
     }
 
+    /**
+     * ⛔ লাইভ, ১৭ নভেম্বর ২০২৬ (মালিকের অডিট, পাতা ৬৮৮): সম্পদ একটাও নেই, তালিকার "লেবেল ছাপুন" চাপলেই
+     * ৪০৪ — "Nothing lives at this address", যেন বোতামটাই ভাঙা। এখন তালিকায় ফিরে কারণটা বলে।
+     */
+    public function test_labels_with_nothing_to_print_go_back_and_say_why(): void
+    {
+        $this->assertSame(0, FixedAsset::query()->count(), 'দৃশ্যটাই ঠিক নয় — সম্পদ আগে থেকেই আছে');
+
+        $this->get(route('accounts.asset.labels'))->assertRedirect(route('accounts.asset.index'));
+
+        $this->followingRedirects()->get(route('accounts.asset.labels'))->assertOk()
+            ->assertSee(__('accounts::asset.labels_none'));
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $over */

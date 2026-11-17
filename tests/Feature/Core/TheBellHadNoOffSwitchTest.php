@@ -126,4 +126,23 @@ final class TheBellHadNoOffSwitchTest extends TestCase
 
         $this->assertSame(['approval.approved'], $checked, 'পর্দা পছন্দটা মনে রাখেনি।');
     }
+
+    /**
+     * ⛔ লাইভ, ১৭ নভেম্বর ২০২৬ (মালিকের অডিট, পাতা ৩৬): ১৪টা ধরনের নিচের ছোট লাইনে কাঁচা চাবি —
+     * "core.notify.kind.delivery_stage_note" — কারণ সেগুলোর ব্যাখ্যা লেখা হয়নি। দুই ভাষাতেই দেখা হয়।
+     */
+    public function test_the_page_never_shows_a_raw_key(): void
+    {
+        foreach (['en', 'bn'] as $locale) {
+            $this->owner->forceFill(['locale' => $locale])->save();
+            $this->actingAs($this->owner->fresh());
+            app()->setLocale($locale);
+
+            $html = (string) $this->get(route('notifications.settings'))->assertOk()->getContent();
+
+            $this->assertStringContainsString('value="sales.delivery_stage"', $html, "দৃশ্যটাই ঠিক নয় ({$locale}) — ডেলিভারির ধাপের সারি নেই");
+            $this->assertSame(0, preg_match_all('/core\.notify\.kind\.[a-z_]+/', strip_tags($html), $raw),
+                "⛔ ({$locale}) পর্দায় কাঁচা চাবি: ".implode(', ', array_unique($raw[0] ?? [])));
+        }
+    }
 }

@@ -19,6 +19,7 @@ use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use App\Modules\Supplier\Reports\PrincipalLinesReport;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
@@ -200,6 +201,32 @@ final class APrincipalsFiguresOpenWhereTheyCameFromTest extends TestCase
         $this->assertMatchesRegularExpression('/data-report-drill="paid">৳0\.00</', $html, '⛔ শূন্য দেওয়ায় চাপলে কিছু খোলে না — শূন্যও একটা উত্তর');
         preg_match('/<a href="([^"]+)"[^>]*data-report-drill="paid"/', $html, $paid);
         $this->get(html_entity_decode($paid[1] ?? '/missing'))->assertOk();
+    }
+
+    /**
+     * ⛔ লাইভ, ১৭ নভেম্বর ২০২৬ (মালিকের অডিট, পাতা ৫৫৪): "প্রিন্সিপালের আদায়" খুললেই 500 —
+     * `ReportColumn::drillHref(): Return value must be of type ?string, array returned`।
+     *
+     * ⓘ উপরের দৃশ্যের কাগজগুলো কাল্পনিক (৭০০১…), তাই [[DrillResolver::describe()]] কিছু খুঁজে পেত না,
+     *   ঠিকানা আসত null — আর পাতা খুলত। লাইভে সারির কাগজটা সত্যি আছে; তখন ঠিকানা আসে
+     *   `[রুটের নাম, প্যারামিটার]` জোড়া, আর সেটা সরাসরি ফেরত দেওয়ায় পাতা ভেঙে পড়ত।
+     *   এখানে একটা সারির কাগজকে সত্যিকারের (খোলা যায় এমন) কাগজে বসিয়ে দেখা হয়।
+     */
+    public function test_a_line_whose_paper_exists_opens_that_paper(): void
+    {
+        $entry = DB::table('ledger_entries')->where('company_id', $this->company->id)->where('source_type', 'collection')
+            ->where('account_id', $this->bank->id)->where('debit', '100000')->orderBy('id')->first();
+        $this->assertNotNull($entry, 'দৃশ্যটাই ঠিক নয় — ১,০০,০০০-এর আদায়-সারি নেই');
+        DB::table('ledger_entries')->where('company_id', $this->company->id)->where('source_type', 'collection')
+            ->where('source_id', $entry->source_id)
+            ->update(['source_type' => Supplier::drillSourceType(), 'source_id' => $this->principal->id]);
+
+        $response = $this->get(route('supplier.report.show', ['slug' => 'principal-collections', 'principal' => $this->principal->id]));
+
+        $this->assertSame(200, $response->getStatusCode(), '⛔ সারির কাগজ সত্যি থাকলে পাতাটাই খোলে না (লাইভের 500)');
+        $href = route('supplier.show', ['supplier' => $this->principal->id]);
+        $this->assertMatchesRegularExpression('/<a href="'.preg_quote(e($href), '/').'"[^>]*data-report-drill="amount"/', (string) $response->getContent(),
+            '⛔ অঙ্কে চাপলে সারির নিজের কাগজ খোলে না');
     }
 
     public function test_a_principal_given_twice_is_refused_not_a_crash(): void

@@ -121,6 +121,33 @@ class TheSalesTabSavedZeroIntoEveryChoiceTest extends TestCase
     }
 
     /**
+     * ⛔ লাইভ, ১৭ নভেম্বর ২০২৬ (মালিকের অডিট, পাতা ৮২৮): দামের নীতির তিন বাছাই দেখাত কাঁচা চাবি —
+     * "sales::price_policy.allow", ".warn", ".block"। মালিক বুঝতেন না কোনটা কী।
+     *
+     * ⓘ পুরো নিয়ন্ত্রণ প্যানেলের প্রতিটা বাছাই দেখা হয়, দুই ভাষায় — কোনো `<option>`-এ চাবি নয়।
+     */
+    public function test_no_choice_on_the_control_panel_shows_a_raw_key(): void
+    {
+        foreach (['en' => 'Warn', 'bn' => 'সতর্ক করো'] as $locale => $warn) {
+            $this->owner->forceFill(['locale' => $locale])->save();
+            $this->actingAs($this->owner->fresh());
+            app()->setLocale($locale);
+
+            $html = (string) $this->followingRedirects()
+                ->get(route('system_admin.control-panel', ['tab' => 'sales']))
+                ->assertOk()->getContent();
+
+            preg_match_all('#<option[^>]*>\s*([^<]*?)\s*</option>#u', $html, $options);
+            $this->assertGreaterThan(20, count($options[1]), "দৃশ্যটাই ঠিক নয় ({$locale}) — পাতায় বাছাই প্রায় নেই");
+
+            $raw = array_values(array_filter($options[1], fn (string $text): bool => preg_match('/^[a-z_]+::[a-z_.]+$/', $text) === 1));
+            $this->assertSame([], $raw, "⛔ ({$locale}) বাছাইয়ে কাঁচা অনুবাদের চাবি: ".implode(', ', $raw));
+
+            $this->assertContains($warn, $options[1], "⛔ ({$locale}) দামের নীতির \"{$warn}\" বাছাই নেই");
+        }
+    }
+
+    /**
      * ২ · পুরনো খোলা পাতা থেকে ঠিক লাইভের পাঠানোটা — প্রতিটা তালিকাওয়ালা ঘরে `"0"`।
      *
      * ⓘ লাইভের পাতা ডিপ্লয়ের আগে খোলা থাকলে নতুন সার্ভারেও এটাই আসবে। ⛔ "যা ছিল তাই থাক" —

@@ -16,6 +16,7 @@ return [
     'empty_unassigned' => 'Every confirmed challan has its transport.',
     'empty_assigned' => 'No challan is waiting for a gate pass.',
     'empty_passed' => 'No challan has a gate pass yet.',
+    'empty_fare_due' => 'No fare is owed to any carrier.',
     'not_set' => 'Not set',
     'fare' => 'Fare',
     'gate_pass' => 'Gate pass',

@@ -26,6 +26,7 @@ return [
         'sales_summary' => 'আজ কত বিক্রি হলো?',
         'sales_product_need' => 'আগামী সপ্তাহে চিনি কত লাগবে?',
         'stock_on_hand' => 'চিনি কত আছে?',
+        'stock_summary' => 'সব স্টক দেখাও',
         'credit_overdue' => 'কার কাছে সবচেয়ে বেশি বাকি?',
     ],
 ];

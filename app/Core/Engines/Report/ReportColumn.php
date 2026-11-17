@@ -134,8 +134,18 @@ final class ReportColumn
             $type = $row[$this->drill['source']['type']] ?? null;
             $id = $row[$this->drill['source']['id']] ?? null;
 
-            return $type === null || $id === null ? null
-                : (app(\App\Core\Engines\Drill\DrillResolver::class)->describe((string) $type, (int) $id)['route'] ?? null);
+            if ($type === null || $id === null) {
+                return null;
+            }
+
+            /*
+             * ⛔ ঠিকানাটা `[রুটের নাম, প্যারামিটার]` জোড়া ([[Drillable::drillRoute()]]), লিংক নয় — আগে সেটাই
+             * সরাসরি ফেরত যেত, আর কাগজটা সত্যি থাকলে পাতা 500 দিত (লাইভ, ১৭ নভেম্বর ২০২৬, প্রিন্সিপালের আদায়;
+             * [[APrincipalsFiguresOpenWhereTheyCameFromTest]])।
+             */
+            $route = app(\App\Core\Engines\Drill\DrillResolver::class)->describe((string) $type, (int) $id)['route'] ?? null;
+
+            return is_array($route) && is_string($route[0] ?? null) ? route($route[0], $route[1] ?? []) : null;
         }
 
         return self::href($this->drill['route'], $this->drill['params'], $row, $filters);

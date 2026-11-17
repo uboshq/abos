@@ -67,9 +67,13 @@
 
                     <label for="kind-{{ $loop->index }}" class="min-w-0 flex-1">
                         <span class="font-medium">{{ __($label) }}</span>
-                        <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">
-                            {{ __($label.'_note') }}
-                        </span>
+                        {{-- ⛔ ব্যাখ্যা না থাকলে লাইনটাই নয় — আগে ১৪টা ধরনে কাঁচা চাবি দেখাত
+                             ("core.notify.kind.delivery_stage_note"; মালিকের অডিট, ১৭ নভেম্বর ২০২৬, পাতা ৩৬) --}}
+                        @if (__($label.'_note') !== $label.'_note')
+                            <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">
+                                {{ __($label.'_note') }}
+                            </span>
+                        @endif
                     </label>
 
                     {{--

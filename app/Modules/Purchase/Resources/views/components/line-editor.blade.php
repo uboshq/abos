@@ -305,9 +305,12 @@
                                 {{-- ⚠️ x-show মোড়কের উপরে: কম্পোনেন্টের `$attributes`
                                      ভেতরের লেখার ঘরে বসে, বাইরের `<div>`-এ নয় —
                                      সরাসরি দিলে ঘরটা লুকাত, বাক্সটা নয়। --}}
+                                {{-- ⛔ নাম জোড়া লাগে `+` দিয়ে, `…${i}…` ছাঁচে নয় — লাইভের CSP-সংস্করণের Alpine
+                                     ছাঁচ পড়তে পারে না ("CSP Parser Error: Unexpected token `"), ফলে মেয়াদের ঘর
+                                     নাম পেত না আর তারিখ জমাই হত না (মালিকের অডিট, ১৭ নভেম্বর ২০২৬, পাতা ৪০৮ ও ৫৫৯)। --}}
                                 <div x-show="tracksLot(row)" class="w-full sm:w-36">
                                     <x-ui.date name="expiry_date"
-                                               bind-name="`lines[${i}][expiry_date]`"
+                                               bind-name="'lines[' + (i) + '][expiry_date]'"
                                                bind-iso="row.expiry_date"
                                                bind-model="row.expiry_date" />
                                 </div>

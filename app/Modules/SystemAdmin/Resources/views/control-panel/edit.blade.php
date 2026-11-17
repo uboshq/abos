@@ -218,7 +218,9 @@
                                                         @php($value = array_is_list($choices) ? $sample : $key)
                                                         <option value="{{ $value }}"
                                                                 @selected((string) $setting['value'] === (string) $value)>
-                                                            {{ $sample }}
+                                                            {{-- ⛔ বাছাইয়ের নাম অনুবাদের চাবি হতে পারে (দামের নীতি: `sales::price_policy.warn`) — আগে কাঁচা
+                                                                 চাবিটাই দেখাত (মালিকের অডিট, ১৭ নভেম্বর ২০২৬, পাতা ৮২৮)। নমুনা (১৮/০২/২০২৬) __()-তে যেমন আছে তেমন ফেরে। --}}
+                                                            {{ is_string($sample) ? __($sample) : $sample }}
                                                         </option>
                                                     @endforeach
                                                 </select>

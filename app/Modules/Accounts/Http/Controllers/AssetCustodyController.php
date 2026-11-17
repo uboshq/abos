@@ -71,7 +71,7 @@ class AssetCustodyController extends Controller implements HasMiddleware
     /**
      * ⭐ লেবেলের শীট — বাছাই করা সম্পদ, নয়তো এক শাখার সব চালু সম্পদ।
      */
-    public function labels(Request $request, PrintEngine $print, SettingsService $settings): Response
+    public function labels(Request $request, PrintEngine $print, SettingsService $settings): Response|RedirectResponse
     {
         $data = $request->validate([
             'assets' => ['nullable', 'array'],
@@ -85,7 +85,15 @@ class AssetCustodyController extends Controller implements HasMiddleware
             ->when($data['branch_id'] ?? null, fn ($q, $branch) => $q->where('branch_id', $branch))
             ->with('branch')->orderBy('tag_no')->limit(500)->get();
 
-        abort_if($assets->isEmpty(), 404);
+        /*
+         * ⛔ ছাপার মতো সম্পদ নেই — আগে ৪০৪ ("Nothing lives at this address"), যেন বোতামটাই ভাঙা
+         * (মালিকের অডিট, ১৭ নভেম্বর ২০২৬, পাতা ৬৮৮: সম্পদের তালিকা খালি, বোতাম চাপলেই ৪০৪)।
+         * ⓘ তালিকায় ফিরে কারণটা বলা হয়।
+         */
+        if ($assets->isEmpty()) {
+            // ⓘ ভুলের বাক্সে ([[x-ui.errors]]) — পাতাগুলো `session('warning')` আঁকে না, সেটায় দিলে কথাটা হারাত
+            return redirect()->route('accounts.asset.index')->withErrors(['assets' => __('accounts::asset.labels_none')]);
+        }
 
         $paper = PaperSize::chosen($data['paper'] ?? null, $settings->get('accounts.print.paper.asset_labels'));
 

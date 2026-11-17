@@ -325,6 +325,7 @@ return [
     'ack_condition_wrong' => 'Unknown condition.',
     'labels_title' => 'Asset labels',
     'labels_action' => 'Print labels',
+    'labels_none' => 'No asset in service to print a label for. Add an asset first.',
     'custodian_ack' => 'Custodian\'s acknowledgement',
     'custodian_ack_none' => 'Not acknowledged yet',
 

@@ -459,6 +459,20 @@ export function purchaseReturn (config = {}) {
 export function salesReturn (config = {}) {
     return {
                     rows: config.rows,
+
+                    /*
+                     * ⛔ লট-ধরা পণ্যের লট — ফর্ম প্রতিটা সারিতে `lotsFor(row)` ডাকে, অথচ এই অংশটা কখনো লেখাই হয়নি
+                     * (২৮ সেপ্টেম্বর ২০২৬ থেকে)। লাইভে পাতা খুললেই "lotsFor is not defined", আর লটের ঘরে
+                     * "লট নেই" ছাড়া কিছুই আসত না — মেয়াদোত্তীর্ণ মাল ফেরতে লট বাছাই যেত না
+                     * (মালিকের অডিট, ১৭ নভেম্বর ২০২৬, পাতা ৪২২)।
+                     */
+                    lots: Array.isArray(config.lots) ? config.lots : [],
+                    lotsFor(row) {
+                        const product = String(row.product_id ?? '')
+
+                        return product === '' ? [] : this.lots.filter(lot => String(lot.product_id) === product)
+                    },
+
                     add() { this.rows.push({ product_id: '', sales_invoice_line_id: '', qty: '', rate: '', tax: '', to_hold: false }); },
                     remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
                     amount(row) {
