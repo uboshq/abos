@@ -62,6 +62,8 @@ final class APaymentMethodFitsItsMoneyAccountTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         app(StandardChart::class)->install();
+        // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
 
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);

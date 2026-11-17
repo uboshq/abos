@@ -330,6 +330,9 @@ return [
             // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'sales::register.title', 'icon' => 'list', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'register'], 'permission' => 'sales.report'],
+            // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            ['label' => 'sales::deposit.register_title', 'icon' => 'list', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'deposit-register'], 'permission' => 'sales.claim.view'],
             ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'sales.report'],
             // ⭐ আদায়ের সূচি — কার কাছে আজ যেতে হবে, সপ্তাহে কত আসার কথা (রিপোর্ট সেন্টার ধাপ ৪)
@@ -440,6 +443,9 @@ return [
                 'permission' => 'sales.commission.view'],
             ['label' => 'sales::menu.deposit_claims', 'icon' => 'attachment', 'route' => 'sales.claim.index',
                 'permission' => 'sales.claim.view'],
+            // ⭐ ব্যাংক স্টেটমেন্টে মেলানো (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            ['label' => 'sales::menu.deposit_match', 'icon' => 'attachment', 'route' => 'sales.claim.match.index',
+                'permission' => 'sales.claim.match'],
         ],
     ],
 
@@ -526,6 +532,11 @@ return [
          *   ([[DealerScope::MAY_CREATE]]; চাবির শেষ অংশ `.submit` বদলের তালিকায় নেই)। খবর টাকা নয় — গ্রহণের আগে খাতায় কিছু ওঠে না।
          */
         'sales.claim.submit',
+        /*
+         * ⭐ ব্যাংক স্টেটমেন্ট তোলা আর খবর মেলানো — অফিসের কাজ (ধাপ গ, ১৮ নভেম্বর ২০২৬)। ⓘ মেলানো খাতায় কিছু তোলে না; খাতায়
+         * তোলা ("অনুমোদন দিন") আগের মতোই `sales.claim.decide`, আর আদায়ের অনুমোদনের ছক তারপরও।
+         */
+        'sales.claim.match',
 
         'sales.scheme.view',
         'sales.scheme.manage',
@@ -720,6 +731,8 @@ return [
             'sales.claim.view',
             'sales.claim.decide',
             'sales.claim.submit',
+            // ⭐ ব্যাংক স্টেটমেন্টে মেলানো (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            'sales.claim.match',
         ],
         'Field Sales' => [
             'sales.quotation.view', 'sales.quotation.create', 'sales.quotation.update',
@@ -757,6 +770,9 @@ return [
             'sales.return.report',
             // ⓘ দর তালিকা দেখা — তদারকি; বসানো নয় (মালিকের কাজ)
             'sales.price_list.view',
+            // ⭐ জমার খবর দেখা আর ব্যাংক স্টেটমেন্টে মেলানো — তদারকি; খাতায় তোলা হিসাবরক্ষকের (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            'sales.claim.view',
+            'sales.claim.match',
         ],
     ],
 
@@ -853,6 +869,8 @@ return [
         \App\Modules\Sales\Reports\CollectionTargetReports::class,
         // ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ ([[PartyTargetReport]])
         \App\Modules\Sales\Reports\PartyTargetReport::class,
+        // ⭐ প্রতিদিনের জমার খাতা — খবর, মিল, খাতায়, অপেক্ষা (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\DepositRegisterReport::class,
     ],
 
     /*
@@ -929,7 +947,11 @@ return [
         \App\Modules\Sales\Events\DeliveryOrderCancelled::class => [\App\Modules\Sales\Listeners\ReleaseTheDeliveryOrderStock::class],
         // ⭐ অনুমোদিত বিক্রয় আদেশ — মাল ধরা, তারপর নিশ্চিত (SO+DO মেশানো, ধাপ ৪, ৪ অক্টোবর ২০২৬; [[HoldTheStockForTheApprovedOrder]])
         \App\Modules\Sales\Events\SalesOrderApproved::class => [\App\Modules\Sales\Listeners\HoldTheStockForTheApprovedOrder::class],
-        \App\Modules\Sales\Events\CollectionConfirmed::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
+        \App\Modules\Sales\Events\CollectionConfirmed::class => [
+            \App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class,
+            // ⭐ জমার খবরের আদায় পাকা — খবর "খাতায়" (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            \App\Modules\Sales\Listeners\SettleTheClaimWithItsCollection::class,
+        ],
         \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Modules\Accounts\Events\ChequeCleared::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Core\Events\ApprovalDecided::class => [
@@ -1624,6 +1646,26 @@ return [
             'label' => 'sales::settings.advice_four_eyes',
             'type' => 'boolean',
             'default' => false,
+            'group' => 'limits',
+        ],
+        [
+            /*
+             * ⭐ শেষ কথা ব্যাংক স্টেটমেন্ট — মালিক, ১৬ নভেম্বর ২০২৬ (জমার খবর ধাপ গ)। ⓘ চালু (ডিফল্ট): ব্যাংক বা MFS খাতে জমার খবর
+             * গ্রহণ কেবল স্টেটমেন্টের সারিতে মেলার পরে ([[DepositClaimService::accept()]])। নগদের খাতে আগের মতো।
+             */
+            'key' => 'sales.deposit_bank_line_first',
+            'super_admin_only' => true,
+            'label' => 'sales::settings.deposit_bank_line_first',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'limits',
+        ],
+        [
+            // ⭐ নিজে থেকে মেলানোর প্রস্তাবে খবরের তারিখ থেকে কত দিন আগে-পরে ([[DepositMatchService::suggestions()]])
+            'key' => 'sales.deposit_match_days',
+            'label' => 'sales::settings.deposit_match_days',
+            'type' => 'integer',
+            'default' => 3,
             'group' => 'limits',
         ],
         [

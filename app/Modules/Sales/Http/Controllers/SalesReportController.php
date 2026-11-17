@@ -51,6 +51,18 @@ class SalesReportController extends Controller implements HasMiddleware
         'collection-target' => \App\Modules\Sales\Reports\CollectionTargetReports::KEY,
         // ⭐ বিক্রয়কর্মী ধরে বিক্রি — লক্ষ্যের একই নিয়মে (পরিকল্পনা সংস্করণ ২ §৯ গ; [[SalespersonReports]])
         'by-salesperson' => \App\Modules\Sales\Reports\SalespersonReports::KEY,
+        // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositRegisterReport]])
+        'deposit-register' => \App\Modules\Sales\Reports\DepositRegisterReport::KEY,
+    ];
+
+    /**
+     * ⭐ যে রিপোর্টের দরজার চাবি `sales.report` নয় — জমার খাতা দেখেন হিসাবরক্ষক, যাঁর বিক্রয়ের রিপোর্টের চাবি নেই।
+     * ⓘ বাকি সব আগের মতো `sales.report`; রিপোর্টের নিজের ঘোষিত চাবিও ইঞ্জিন দেখে।
+     *
+     * @var array<string, string>
+     */
+    private const OWN_KEYS = [
+        'deposit-register' => 'sales.claim.view',
     ];
 
     public function __construct(
@@ -60,12 +72,18 @@ class SalesReportController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:sales.report')];
+        /*
+         * ⓘ রুটে সবার জন্য একটা চাবি নেই — প্রতিটা স্লাগ নিজেরটা চায়, `show()`-এ ([[PurchaseReportController]]-এর একই উপায়);
+         * বেশিরভাগই `sales.report`, জমার খাতা `sales.claim.view` ([[OWN_KEYS]])। `auth` রুট-গোষ্ঠীতেই আছে।
+         */
+        return [];
     }
 
     public function show(Request $request, string $slug): View
     {
         abort_unless(isset(self::SLUGS[$slug]), 404);
+
+        $this->authorize(self::OWN_KEYS[$slug] ?? 'sales.report');
 
         $key = self::SLUGS[$slug];
         $definition = $this->reports->get($key);

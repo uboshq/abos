@@ -25,4 +25,7 @@ return [
     'both_sides_filled' => 'Both debit and credit carry money — the columns are mismatched',
     'bad_statement_amount' => 'The amount is unreadable or negative (:value) — put withdrawals in the withdrawn column and deposits in the deposited column, without a sign.',
     'account_already_there' => '":name" already exists under this parent (code :code) — not created twice.',
+    // ⭐ the bank's own statement file ([[BankStatementFile]], 18 Nov 2026)
+    'file_no_header' => 'No date and deposit/withdrawal column heads were found in the file — give the bank statement as CSV or XLSX.',
+    'file_unreadable' => 'The file could not be read — give the bank statement as CSV or XLSX.',
 ];

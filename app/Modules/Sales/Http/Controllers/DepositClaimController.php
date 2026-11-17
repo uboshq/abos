@@ -45,7 +45,7 @@ class DepositClaimController extends Controller implements HasMiddleware
         $status = $request->query('status', DepositClaim::PENDING);
 
         $query = DepositClaim::query()->inViewedBranch()
-            ->with(['customer.location.parent', 'customer.branch', 'bankAccount', 'decider'])
+            ->with(['customer.location.parent', 'customer.branch', 'bankAccount', 'decider', 'statementLine.bankAccount', 'collection'])
             // ⓘ "অপেক্ষমাণ" ট্যাব = সিদ্ধান্ত বাকি সব — যাচাই চলছে এমনগুলোও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
             ->when($status === DepositClaim::PENDING, fn ($q) => $q->open())
             ->when($status !== 'all' && $status !== DepositClaim::PENDING, fn ($q) => $q->where('status', $status))
@@ -79,7 +79,9 @@ class DepositClaimController extends Controller implements HasMiddleware
     public function accept(Request $request, DepositClaim $claim): RedirectResponse
     {
         $data = $request->validate([
-            'account_id' => ['required', 'integer', 'exists:accounts,id'],
+            // ⓘ ব্যাংকে মেলানো খবরে খাত ব্যাংকের সারি থেকে — তখন ঘরটা ফাঁকা আসে ([[DepositClaimService::accept()]])
+            'account_id' => [\Illuminate\Validation\Rule::requiredIf($claim->statement_line_id === null), 'nullable', 'integer',
+                \Illuminate\Validation\Rule::exists('accounts', 'id')->where('company_id', \App\Core\Support\CompanyContext::id())],
 
             /*
              * অঙ্ক ও তারিখ সংশোধনযোগ্য।
@@ -94,13 +96,14 @@ class DepositClaimController extends Controller implements HasMiddleware
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $this->claims->accept($claim, (int) $data['account_id'], [
+        $claim = $this->claims->accept($claim, isset($data['account_id']) ? (int) $data['account_id'] : null, [
             'amount' => $data['amount'] ?? null,
             'bank_charge' => $data['bank_charge'] ?? null,
             'trx_date' => $data['trx_date'] ?? null,
         ]);
 
-        return back()->with('status', __('sales::portal.accepted'));
+        // ⓘ আদায়ের ছক সই চাইলে খবর খোলা থাকে — "অনুমোদনের অপেক্ষায়", শেষ সইয়ে নিজে খাতায় ([[DepositClaimService::accept()]])
+        return back()->with('status', __($claim->isAccepted() ? 'sales::portal.accepted' : 'sales::deposit.sent_for_approval'));
     }
 
     public function reject(Request $request, DepositClaim $claim): RedirectResponse

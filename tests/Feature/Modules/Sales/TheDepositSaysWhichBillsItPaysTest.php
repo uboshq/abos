@@ -49,6 +49,8 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         app(StandardChart::class)->install();
+        // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->dealer = Customer::query()->orderBy('id')->firstOrFail();

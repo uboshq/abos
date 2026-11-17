@@ -10,8 +10,22 @@
     <a href="{{ route('sales.claim.slip', $claim) }}" target="_blank" data-slip-link
        class="mb-1 inline-block text-sm text-(--color-brand-500) hover:underline">{{ __('sales::slip.view') }}</a>
 @endif
+{{-- ⭐ ব্যাংকের কথা — মিলেছে, না এখনো পাওয়া যায়নি; খাতায় উঠলে মানি রিসিট (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬) --}}
+<span class="mb-1 flex flex-wrap items-center gap-2 text-2xs">
+    @include('sales::claim.partials.stage', ['claim' => $claim])
+    @if ($claim->isOpen() && $claim->statement_line_id === null)
+        @can('sales.claim.match')
+            <a href="{{ route('sales.claim.match.index') }}" class="text-(--color-brand-500) hover:underline" data-go-match>{{ __('sales::deposit.go_match') }}</a>
+        @endcan
+    @endif
+    @if ($claim->isAccepted() && $claim->collection_id !== null)
+        <a href="{{ route('sales.claim.receipt', $claim) }}" target="_blank" class="text-(--color-brand-500) hover:underline" data-deposit-receipt>{{ __('sales::deposit.receipt_title') }}</a>
+    @endif
+</span>
 {{-- ⭐ খোলা মানে পাঠানো বা যাচাই চলছে — দুটো থেকেই সিদ্ধান্ত (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬) --}}
-@if ($claim->isOpen())
+@if ($claim->isOpen() && $claim->statement_line_id !== null)
+    @include('sales::claim.partials.confirm', ['claim' => $claim])
+@elseif ($claim->isOpen())
     @can('sales.claim.decide')
         <div class="flex flex-wrap items-end gap-2">
             @if ($claim->isPending())

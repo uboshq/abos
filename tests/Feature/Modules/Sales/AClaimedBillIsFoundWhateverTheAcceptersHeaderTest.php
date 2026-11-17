@@ -40,6 +40,8 @@ final class AClaimedBillIsFoundWhateverTheAcceptersHeaderTest extends TestCase
         $elsewhere = Branch::query()->withoutGlobalScopes()->where('company_id', $company->id)->whereKeyNot($home->id)->orderBy('id')->firstOrFail();
         CompanyContext::set($company->id, $home->id);
         app(StandardChart::class)->install();
+        // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($owner);
 

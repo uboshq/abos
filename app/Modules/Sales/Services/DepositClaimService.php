@@ -278,11 +278,48 @@ final class DepositClaimService
      *
      * @param  array<string, mixed>  $overrides  ডিপো যা সংশোধন করেছে
      */
-    public function accept(DepositClaim $claim, int $accountId, array $overrides = []): DepositClaim
+    public function accept(DepositClaim $claim, ?int $accountId, array $overrides = []): DepositClaim
     {
         return DB::transaction(function () use ($claim, $accountId, $overrides) {
             // ⛔ অডিট §১.৪ — সারি আটকে আবার পড়া; দেখুন lockPending()
             $this->lockPending($claim);
+
+            /*
+             * ⭐ সইয়ের অপেক্ষার খসড়া আদায় আগেই আছে — নতুন আদায় নয়, সেটাই আবার পাকা করার চেষ্টা (ধাপ গ, ১৮ নভেম্বর ২০২৬)।
+             * ⛔ নইলে "অনুমোদন দিন" দুইবার চাপলে দুইটা আদায়ের খসড়া, আর দুই সইয়ে দুইবার খাতায়।
+             */
+            if ($claim->collection_id !== null) {
+                return $this->confirmTheWaitingDraft($claim);
+            }
+
+            /*
+             * ⭐ শেষ কথা ব্যাংক স্টেটমেন্ট — মালিক, ১৬ নভেম্বর ২০২৬ (ধাপ গ; [[DepositMatchService]])।
+             * ⓘ মেলানো থাকলে খাত, অঙ্ক আর তারিখ ব্যাংকের সারি থেকে — হাতের লেখা নয়; চার্জ কেবল অফিস বলে। ⛔ ব্যাংক বা MFS খাতে
+             * নিতে চাইলে আর মেলানো না থাকলে থামে (সুইচ [[DepositClaim::BANK_LINE_FIRST]], ডিফল্ট চালু)। নগদের খাতে আগের মতো।
+             */
+            $line = $claim->statement_line_id === null ? null
+                : \App\Modules\Accounts\Models\BankStatementLine::query()->whereKey($claim->statement_line_id)->first();
+
+            if ($line !== null) {
+                if ($accountId !== null && $accountId !== (int) $line->bank_account_id) {
+                    throw ValidationException::withMessages(['account_id' => __('sales::deposit.other_bank_account')]);
+                }
+                $accountId = (int) $line->bank_account_id;
+                $overrides['amount'] = (string) $line->credit;
+                $overrides['trx_date'] = $line->trx_date->toDateString();
+            }
+
+            if ($accountId === null) {
+                throw ValidationException::withMessages(['account_id' => __('sales::deposit.account_needed')]);
+            }
+
+            if ($line === null) {
+                $target = \App\Modules\Accounts\Models\Account::query()->find($accountId);
+                if ($target !== null && ($target->isBank() || $target->isMfs())
+                    && (bool) app(\App\Core\Services\SettingsService::class)->get(DepositClaim::BANK_LINE_FIRST, true)) {
+                    throw ValidationException::withMessages(['account_id' => __('sales::deposit.not_in_the_bank_yet')]);
+                }
+            }
 
             /*
              * ডিপো অঙ্ক ও তারিখ সংশোধন করতে পারে।
@@ -355,16 +392,58 @@ final class DepositClaimService
                 // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
             ], $this->sharesAt($claim, $credit)));
 
-            CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->confirm($collection));
+            $claim->forceFill(['collection_id' => $collection->id])->save();
 
-            $claim->update([
-                'status' => DepositClaim::ACCEPTED,
-                'collection_id' => $collection->id,
-                'decided_by' => Actor::userId(),
-                'decided_at' => now(),
-            ]);
+            return $this->confirmTheWaitingDraft($claim);
+        });
+    }
 
-            return $claim->refresh();
+    /**
+     * ⭐ আদায়ের খসড়া পাকা করা — আদায়ের নিজের দরজায় ([[CollectionService::confirm()]]): অনুমোদনের ছক, অঙ্কের সীমা, আর
+     * "অনুমোদন বন্ধ" কোম্পানি সব সেখানেই — দ্বিতীয় কোনো পোস্টিং পথ নয় (ধাপ গ, ১৮ নভেম্বর ২০২৬)।
+     *
+     * ⓘ ছক সই চাইলে ([[HeldForApproval]]) খসড়া আর অনুরোধ দুইটাই থাকে, খবর খোলা থাকে "অনুমোদনের অপেক্ষায়"; শেষ সইয়ে আদায়
+     * নিজে পাকা হয় ([[ConfirmTheCollectionOnTheLastSignature]]) আর খবর "খাতায়" ([[\App\Modules\Sales\Listeners\SettleTheClaimWithItsCollection]])।
+     * ⚠️ অন্য যেকোনো থামা (বিল বাতিল, রেফারেন্স) পুরো লেনদেন ফিরিয়ে দেয় — আগের মতোই।
+     * ⓘ অবশ্যই `DB::transaction`-এর ভিতরে, খবর তালায়।
+     */
+    private function confirmTheWaitingDraft(DepositClaim $claim): DepositClaim
+    {
+        $collection = \App\Modules\Sales\Models\Collection::query()->withoutGlobalScope('user-branch')->findOrFail($claim->collection_id);
+
+        if ($collection->status === DocumentStatus::DRAFT) {
+            try {
+                CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->confirm($collection));
+            } catch (\App\Core\Engines\Approval\HeldForApproval) {
+                return $claim->refresh();
+            }
+        } elseif ($collection->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages(['status' => __('sales::deposit.draft_gone', ['no' => $collection->document_no])]);
+        }
+
+        $claim->update([
+            'status' => DepositClaim::ACCEPTED,
+            'decided_by' => Actor::userId(),
+            'decided_at' => now(),
+        ]);
+
+        return $claim->refresh();
+    }
+
+    /**
+     * ⭐ আদায় পাকা হলো (শেষ সইয়ে বা হাতে) — তার খবর "খাতায়"। একবারই; খোলা খবরেই।
+     */
+    public function settleWith(int $collectionId, ?int $by): void
+    {
+        DB::transaction(function () use ($collectionId, $by): void {
+            $claim = DepositClaim::query()->withoutGlobalScopes()
+                ->where('collection_id', $collectionId)->whereNull('deleted_at')->lockForUpdate()->first();
+
+            if ($claim === null || ! $claim->isOpen()) {
+                return;
+            }
+
+            $claim->update(['status' => DepositClaim::ACCEPTED, 'decided_by' => $by, 'decided_at' => now()]);
         });
     }
 
@@ -387,7 +466,11 @@ final class DepositClaimService
             // ⛔ গ্রহণের সাথে একই তালা — নইলে গৃহীত দাবি পুরনো পাতা থেকে "নাকচ" হত
             $this->lockPending($claim);
 
+            // ⭐ ফেরত খবর ব্যাংকের সারি ছেড়ে দেয়, আর সইয়ের অপেক্ষার খসড়া আদায় বাতিল (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            app(DepositMatchService::class)->dropTheWaitingDraft($claim, $reason);
+
             $claim->update([
+                'statement_line_id' => null,
                 'status' => DepositClaim::REJECTED,
                 'decision_reason' => $reason,
                 'decided_by' => Actor::userId(),
