@@ -106,6 +106,8 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
         // ABOS-এর নিজের দুইটা — নকল করার মতো আসল কিছু নেই
         'navy' => [],
         'rose' => [],
+        // ⓘ নীল প্যানেল (১৮ নভেম্বর ২০২৬) — ABOS-এরই, navy-র গড়নে; নিজের markup নেই, গড়ন CSS-এ ([[blue-look.css]])
+        'blue' => [],
     ];
 
     /**

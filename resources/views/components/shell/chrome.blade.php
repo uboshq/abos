@@ -30,6 +30,10 @@
 @php
     $look = \App\Core\Support\Ui::clean(auth()->user()?->ui);
     $partial = 'components.shell.chrome.'.$look;
+    // ⓘ নিজের ফাইল না থাকলে যার গড়নে দাঁড়ায় তার ([[Ui::family()]]) — নীল প্যানেল navy-র খোলস পরে
+    if (! view()->exists($partial)) {
+        $partial = 'components.shell.chrome.'.\App\Core\Support\Ui::family($look);
+    }
 @endphp
 
 @if (view()->exists($partial))

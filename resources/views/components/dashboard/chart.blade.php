@@ -23,6 +23,11 @@
     $palette = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)',
         'var(--color-chart-5)', 'var(--color-chart-6)', 'var(--color-chart-7)', 'var(--color-chart-8)'];
     $zero = fn ($v) => (float) str_replace(',', '', (string) $v) == 0.0;
+    // ⭐ ভাগের নিজের অর্থ থাকলে অবস্থার রং — উপস্থিত সবুজ, দেরিতে কমলা, ছুটি ধূসর, অনুপস্থিত লাল (মালিক, ১৮ নভেম্বর ২০২৬: একটা রঙের
+    //   একটাই অর্থ); অর্থ না থাকলে চার্টের সারির রং, ক্রমে। ⓘ `tone` [[Breakdown]]-এর ঘোষিত ঘর; অচেনা মান হলে সারির রং।
+    $paint = fn (array $part, int $i): string => in_array($part['tone'] ?? null, ['ok', 'today', 'week', 'urgent', 'off'], true)
+        ? 'var(--color-status-'.($part['tone'] === 'week' ? 'week-bar' : $part['tone']).')'
+        : $palette[$i % count($palette)];
     $short = fn ($v) => \App\Core\Engines\Dashboard\Series::short($v);
     $isSeries = $panel instanceof \App\Core\Engines\Dashboard\Series;
     $kind = $isSeries ? $panel->chart : $panel->kind();
@@ -172,9 +177,11 @@
                 <line x1="{{ $left }}" x2="{{ $w - $right }}" y1="{{ $h - $bottom }}" y2="{{ $h - $bottom }}" style="stroke: var(--color-border)" stroke-width="1" />
                 @foreach ([['second', $palette[1], $panel->secondLabel], ['first', $palette[0], $panel->firstLabel]] as [$side, $stroke, $name])
                     @foreach ($runs($side) as $run)
-                        @if ($kind === 'area')
+                        {{-- ⓘ রেখার নিচের নরম ছোপ — `area`-তে সবসময়; `line`-এ কেবল যে রূপ চায় (`--chart-line-fill`, নীল প্যানেলের নমুনা,
+                             ১৮ নভেম্বর ২০২৬), বাকিদের ০ — অঙ্ক বা রেখা বদলায় না --}}
+                        @if ($kind === 'area' || $kind === 'line')
                             <polygon points="{{ round($x($run[0]), 1) }},{{ $h - $bottom }} {{ $line($side, $run) }} {{ round($x($run[count($run) - 1]), 1) }},{{ $h - $bottom }}"
-                                     style="fill: {{ $stroke }}; fill-opacity: 0.14" />
+                                     style="fill: {{ $stroke }}; fill-opacity: {{ $kind === 'area' ? '0.14' : 'var(--chart-line-fill, 0)' }}" />
                         @endif
                         <polyline points="{{ $line($side, $run) }}" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="stroke: {{ $stroke }}" />
                     @endforeach
@@ -242,7 +249,7 @@
                         @if ($len > 0)
                             <circle cx="60" cy="60" r="{{ $r }}" fill="none" stroke-width="18" transform="rotate(-90 60 60)"
                                     stroke-dasharray="{{ round($len - $gap, 2) }} {{ round($circ - $len + $gap, 2) }}" stroke-dashoffset="{{ round(-$at, 2) }}"
-                                    style="stroke: {{ $palette[$i % count($palette)] }}"><title>{{ $part['label'] }}: {{ $part['value'] }}</title></circle>
+                                    style="stroke: {{ $paint($part, $i) }}"><title>{{ $part['label'] }}: {{ $part['value'] }}</title></circle>
                         @endif
                         @php $at += $len; @endphp
                     @endforeach
@@ -256,7 +263,7 @@
             <div data-donut-legend class="min-w-0 flex-1 space-y-1.5" style="min-width: 7rem; max-width: 28rem">
                 @foreach ($parts as $i => $part)
                     <div class="flex items-center gap-1.5 text-xs" title="{{ $part['label'] }}: {{ $part['value'] }}">
-                        <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $palette[$i % count($palette)] }}"></span>
+                        <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $paint($part, $i) }}"></span>
                         <span class="min-w-0 flex-1 break-words leading-tight text-(--color-ink-body)">{{ $part['label'] }}</span>
                         <span data-bar-value class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
                         @unless ($compact)
@@ -278,7 +285,7 @@
                     <span class="w-20 shrink-0 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
                     <div class="flex min-w-0 flex-1 justify-center">
                         <div class="flex h-6 items-center justify-center rounded text-white"
-                             style="width: {{ max(8, (int) round(abs($v) / $max * 100)) }}%; min-width: 2.5rem; background: {{ $palette[$i % count($palette)] }}"
+                             style="width: {{ max(8, (int) round(abs($v) / $max * 100)) }}%; min-width: 2.5rem; background: {{ $paint($part, $i) }}"
                              title="{{ $part['label'] }}: {{ $part['value'] }}">
                             <span data-bar-value class="font-semibold tabular-nums" style="text-shadow: 0 0 2px color-mix(in srgb, black 45%, transparent)">{{ $part['value'] }}</span>
                         </div>
@@ -303,7 +310,7 @@
                     <span data-bar-value @class(['mb-0.5 whitespace-nowrap leading-none tabular-nums font-semibold text-(--color-ink-body)' => $shown, 'sr-only' => ! $shown])
                           @if ($shown) style="font-size: {{ $px }}px" @endif>{{ $zero($part['value']) ? '' : $part['value'] }}</span>
                     <div class="rounded-t" title="{{ $label }}"
-                         style="position: relative; width: 70%; height: {{ max(2, (int) round(max(0.0, $num($part['value'])) / $max * 85)) }}%; background: {{ $palette[$i % count($palette)] }}"
+                         style="position: relative; width: 70%; height: {{ max(2, (int) round(max(0.0, $num($part['value'])) / $max * 85)) }}%; background: {{ $paint($part, $i) }}"
                          @if ($interactive) data-chart-tip tabindex="0" aria-label="{{ $label }}" @endif>@if ($interactive)<span class="chart-tip" aria-hidden="true">{{ $label }}</span>@endif</div>
                 </div>
             @endforeach
@@ -335,7 +342,7 @@
                     </div>
                     <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
                         <div class="h-full rounded-full" title="{{ $part['label'] }}: {{ $part['value'] }}"
-                             style="width: {{ min(100, max(0, (int) round(max(0.0, $num($part['value'])) / $max * 100))) }}%; background: {{ $palette[$i % count($palette)] }}"></div>
+                             style="width: {{ min(100, max(0, (int) round(max(0.0, $num($part['value'])) / $max * 100))) }}%; background: {{ $paint($part, $i) }}"></div>
                     </div>
                 </div>
             @endforeach

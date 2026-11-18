@@ -209,7 +209,8 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
     public function test_the_other_nine_looks_are_exactly_as_they_shipped(): void
     {
         $now = Ui::all();
-        unset($now['navy']);
+        // ⓘ `blue` (নীল প্যানেল, ১৮ নভেম্বর ২০২৬) ABOS-এর নিজের নতুন রূপ, navy-র গড়নে — এই ন'টার একটাও নয়; নিচে আলাদা দাবি
+        unset($now['navy'], $now['blue']);
 
         foreach ($now as $key => $look) {
             ksort($look);
@@ -247,5 +248,29 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
         $this->assertSame('abos', $navy['accent'], 'ABOS-এর রূপ ব্র্যান্ডের রং ছেড়ে দিয়েছে।');
         $this->assertSame('#087F91', $navy['swatch']);
         $this->assertSame('#06323C', $navy['ink']);
+    }
+
+    /**
+     * ⭐ নীল প্যানেল মালিকের নিজের রং পরে, আর navy-র গড়নে দাঁড়ায় (মালিক, ১৮ নভেম্বর ২০২৬)।
+     *
+     * ⛔ মালিক Microsoft Fluent-এর গাঢ় নেভিতে রেগে গিয়েছিলেন — তাঁর রং: ফ্রেম #3a7be9, রেল/বার #2160d8, কাজের জায়গা #eef3fc,
+     * ব্র্যান্ড #2563eb। কেউ "একটু ভদ্র" করতে গিয়ে বদলালে এখানে লাল।
+     */
+    public function test_the_blue_panels_wear_the_owners_own_blue_on_the_abos_skeleton(): void
+    {
+        $blue = Ui::all()['blue'];
+        $light = \App\Core\Support\LookRegistry::tokens('blue', 'light');
+
+        $this->assertSame('blue', Ui::DEFAULT, '⛔ নীল প্যানেল আর প্রথম রূপ নয় — মালিকের ১৮ নভেম্বরের সিদ্ধান্ত।');
+        $this->assertSame('navy', Ui::family('blue'), '⛔ নীল প্যানেল navy-র খোলস ছেড়েছে — মডিউল-বার, পথ, যোগফলের পট্টি হারাবে।');
+        $this->assertSame('navy', Ui::family('navy'));
+        $this->assertSame('apps', Ui::family('apps'), '⛔ অন্য রূপও navy-র খোলসে বসছে।');
+        $this->assertSame(['#2563eb', 'blue'], [$blue['swatch'], $blue['accent']]);
+        $this->assertSame('#2160d8', $light['--color-topbar'], '⛔ উপরের বার মালিকের নীল নয়।');
+        $this->assertSame('#2160d8', $light['--color-sidebar'], '⛔ রেল মালিকের নীল নয়।');
+        $this->assertSame('#eef3fc', $light['--color-surface-app'], '⛔ কাজের জায়গা মালিকের হালকা নীল নয়।');
+        $this->assertSame('22px', $light['--radius-card'], '⛔ কার্ডের কোণ স্পষ্ট গোল নয়।');
+        $this->assertStringContainsString('--blue-frame: #3a7be9;', (string) file_get_contents(resource_path('css/blue-look.css')),
+            '⛔ ফ্রেমের নীল মালিকের নয়।');
     }
 }

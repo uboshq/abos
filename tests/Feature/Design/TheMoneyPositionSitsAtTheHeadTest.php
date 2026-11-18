@@ -19,12 +19,18 @@ use Tests\TestCase;
  * ⓘ টাকার অবস্থান কোনো কালপর্বের নয় — আজ/মাস/বছর যেটাই বাছা হোক, কার্ডটা মাথায় থাকে।
  * ⛔ আর নিচের সারিতে কার্ডটা দ্বিতীয়বার আসে না: একই সংখ্যা দুই জায়গায় থাকলে মালিক ভাবেন দুইটা আলাদা টাকা।
  * ⚠️ যাঁর টাকার অনুমতি নেই, তাঁর মাথায় শুধু শিরোনাম — কার্ড নয়।
+ * ⭐ ১৮ নভেম্বর ২০২৬: কার্ডটা মাথা থেকে চার্টের নিচে নেমেছে (মালিক, নীল প্যানেলের নমুনা) — প্রথম দাবিতে লেখা।
  */
 final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_owner_sees_the_money_position_once_at_the_head_whatever_the_period(): void
+    /**
+     * ⭐ ১৮ নভেম্বর ২০২৬ থেকে টাকার বাক্স মাথায় নয়, ৮টা চার্টের ঠিক নিচে, সূচকের পাশে — মালিক: "সব গ্রাফ একদম উপরে, শুরুর
+     * পর্দাতেই" (নীল প্যানেলের নমুনা)। ⓘ ১ অক্টোবরের "মাথার সারিতে" দাবিটা এই নতুন সিদ্ধান্তে বদলেছে; বাকি সব একই — একবারই,
+     * সব কালপর্বে, সূচকে দ্বিতীয়বার নয়।
+     */
+    public function test_the_owner_sees_the_money_position_once_right_under_the_charts_whatever_the_period(): void
     {
         [$owner] = $this->people();
 
@@ -34,13 +40,18 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
 
             $this->assertStringContainsString('data-command-head', $html, "{$period}: কমান্ড সেন্টারের মাথা নেই।");
             $this->assertStringNotContainsString(e(__('home.command_center')), $html, "{$period}: ⛔ পুরনো বড় শিরোনাম ফিরে এসেছে।");
-            $this->assertSame(1, substr_count($html, 'data-money-position'), "{$period}: টাকার অবস্থানের কার্ড মাথায় একবার নেই।");
+            $this->assertSame(1, substr_count($html, 'data-money-position'), "{$period}: টাকার অবস্থানের কার্ড একবার নেই।");
 
             $label = $this->positionLabel($response->viewData('groups'));
             $this->assertNotNull($label, 'মালিকের জন্য হিসাব মডিউল টাকার অবস্থান দেয়নি।');
 
             $head = $this->between($html, 'data-command-head', '</section>');
-            $this->assertStringContainsString(e($label), $head, "{$period}: \"{$label}\" মাথার সারিতে নেই।");
+            $this->assertStringNotContainsString('data-money-position', $head, "{$period}: ⛔ টাকার বাক্স আবার মাথায় — চার্ট নিচে নেমে যায়।");
+            $unit = $this->between($html, 'data-home-unit="kpis"', 'data-home-unit="work"');
+            $this->assertStringContainsString('data-money-position', $unit, "{$period}: টাকার বাক্স সূচকের ভাগে নেই।");
+            $this->assertStringContainsString(e($label), $unit, "{$period}: \"{$label}\" সূচকের পাশের বাক্সে নেই।");
+            $this->assertLessThan(strpos($html, 'data-money-position'), strpos($html, 'data-business-pictures'),
+                "{$period}: ⛔ টাকার বাক্স চার্টের আগে — মালিকের ক্রম চার্ট আগে।");
             $kpis = $this->between($html, 'data-kpis', '</section>');
             $this->assertStringNotContainsString(e($label), $kpis,
                 "{$period}: \"{$label}\" মূল সূচকেও বসে গেছে — একই টাকা দুই জায়গায়।");

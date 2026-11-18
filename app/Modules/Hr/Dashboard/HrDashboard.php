@@ -173,14 +173,15 @@ final class HrDashboard implements ProvidesDashboard
         $off = $count(fn ($r) => $r->status === Attendance::HOLIDAY);
         $unwritten = max(0, $headcount - $present - $late - $leave - $absent - $off);
 
+        // ⭐ প্রতিটা ভাগের অবস্থার রং — উপস্থিত ঠিক আছে, দেরিতে আজই, ছুটি ধূসর, অনুপস্থিত আর লেখা হয়নি জরুরি (মালিক, ১৮ নভেম্বর ২০২৬)
         return new Breakdown(
             label: __('hr::dashboard.todays_roll'),
             parts: [
-                ['label' => __('hr::kind.present'), 'value' => (string) $present],
-                ['label' => __('hr::dashboard.late'), 'value' => (string) $late],
-                ['label' => __('hr::kind.leave'), 'value' => (string) $leave],
-                ['label' => __('hr::kind.absent'), 'value' => (string) $absent],
-                ['label' => __('hr::dashboard.not_written'), 'value' => (string) $unwritten],
+                ['label' => __('hr::kind.present'), 'value' => (string) $present, 'tone' => 'ok'],
+                ['label' => __('hr::dashboard.late'), 'value' => (string) $late, 'tone' => 'today'],
+                ['label' => __('hr::kind.leave'), 'value' => (string) $leave, 'tone' => 'off'],
+                ['label' => __('hr::kind.absent'), 'value' => (string) $absent, 'tone' => 'urgent'],
+                ['label' => __('hr::dashboard.not_written'), 'value' => (string) $unwritten, 'tone' => 'urgent'],
             ],
             hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
             // ⭐ কোন দিনের (মালিক, ৫ অক্টোবর ২০২৬)

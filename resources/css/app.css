@@ -5,6 +5,8 @@
 @import './copilot-quick.css';
 @import './field-force.css';
 @import './list-filter.css';
+/* ⭐ নীল প্যানেল — মালিকের নীল রূপের খোলস (১৮ নভেম্বর ২০২৬) */
+@import './blue-look.css';
 
 /* ─────────────────────────────────────────────────────────────────
    ক্লাসগুলো কোথায় খুঁজবে — প্রতিটা জায়গা নাম ধরে লেখা।
@@ -2302,4 +2304,17 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
 .rail-item.menu-coloured[aria-current="page"] {
     background: color-mix(in srgb, var(--menu-g) 16%, var(--color-surface-card));
     color: var(--color-ink);
+}
+
+/* ⭐ অবস্থার চিপ ([[x-ui.status-chip]]) — জরুরি · আজই · এ সপ্তাহে · ঠিক আছে · তথ্য; রং চিপের নিজের `style`-এ, অর্থের টোকেন থেকে
+   (মালিক, ১৮ নভেম্বর ২০২৬: একটা রঙের একটাই অর্থ, পাশে সবসময় শব্দ)। ⓘ মাপ px-এ — এই অ্যাপে 1rem = 20px। */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    border-radius: var(--radius-pill);
+    padding: 1px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
 }

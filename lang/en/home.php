@@ -53,4 +53,18 @@ return [
     'pictures_title' => 'The business at a glance',
     'layout_part_kpis' => 'Key figures',
     'nothing_today' => 'Nothing yet',
+    // Copilot line and status chips — the blue panels sample (owner, 18 Nov 2026)
+    'copilot_collected_up' => 'Collection today is :pct% above last :day.',
+    'copilot_collected_down' => 'Collection today is :pct% below last :day.',
+    'copilot_collected_same' => 'Collection today matches last :day.',
+    'copilot_drafts' => '{1} :count draft voucher is not posted yet — check it before closing the day.|[2,*] :count draft vouchers are not posted yet — check them before closing the day.',
+    'copilot_quiet' => 'Nothing new needs your eye today — ask anything you want to know.',
+    'copilot_q_owed' => 'Who owes us the most?',
+    'copilot_q_spent' => 'Where did the spending go today?',
+    'copilot_ask' => 'Ask :name: :question',
+    'level_urgent' => 'Urgent',
+    'level_today' => 'Today',
+    'level_week' => 'This week',
+    'level_ok' => 'All good',
+    'money_total' => 'Total',
 ];

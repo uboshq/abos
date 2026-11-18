@@ -50,7 +50,14 @@ final class Ui
        `clean()` এখানেই ফেরত আসে। অর্থাৎ ভুল বা মুছে ফেলা চেহারার
        উত্তরও ABOS-এর নিজেরটা, কোনো নকল নয়।
     */
-    public const DEFAULT = 'navy';
+    /*
+       ⭐ ১৮ নভেম্বর ২০২৬ থেকে ডিফল্ট `blue` — "নীল প্যানেল", মালিকের অনুমোদিত নমুনা (claude.ai artifact BTey3zZ3nnwspGzPMDVfMd v5)।
+       ⓘ ABOS-এর নিজের রূপই, কেবল জামা বদল: খোলস, মেনু, ট্যাব, যোগফলের পট্টি সবই navy-র ([[family()]]); বদলায় রং আর কোণ।
+       ⛔ navy মুছে ফেলা হয়নি — যিনি নিজে অন্য রূপ বেছেছেন তিনি সেটাতেই থাকেন; `navy`-তে বসা সবাই (ঘরের ডিফল্ট ছিল `navy`,
+       তাই "নিজে বেছেছেন" আর "কিছু বাছেননি" আলাদা করা যায় না) মাইগ্রেশনে `blue`-তে ওঠেন
+       (`2027_04_19_100000_the_owners_blue_becomes_the_first_look`)।
+    */
+    public const DEFAULT = 'blue';
 
     /**
      * ⚠️ ঘরগুলো সব রূপে **এক নয়** — চারটা কেবল `navy`-তে।
@@ -65,7 +72,7 @@ final class Ui
      *     density: string, nav: string, topnav: string, band: string, commands: string, filters: string,
      *     views: string, record: string, sections: string, accent: string, swatch: string,
      *     ink: string, panel: string,
-     *     shell?: string, listfoot?: string, hints?: string, tabs?: string,
+     *     shell?: string, listfoot?: string, hints?: string, tabs?: string, builds_on?: string,
      * }>
      */
     /**
@@ -112,6 +119,38 @@ final class Ui
              * নামটা দেখা যায় `core.ui.navy` অনুবাদে, আর সেখানেই এখন
              * "ABOS" লেখা।
              */
+            /*
+             * ⭐ নীল প্যানেল — মালিকের নিজের নীল (১৮ নভেম্বর ২০২৬): উজ্জ্বল রাজকীয় নীল ফ্রেম আর রেল, হালকা নীল কাজের জায়গা,
+             * সাদা কার্ড, স্পষ্ট গোল কোণ; মেনু আর কাজের জায়গা নীলের উপর আলাদা ভাসমান প্যানেল ([[resources/css/blue-look.css]])।
+             *
+             * ⓘ গড়ন navy-র হুবহু — `builds_on` বলে খোলস কার: মডিউল-বার, পাতার পথ, নিচের যোগফল, কীবোর্ড, ট্যাব সব navy-র
+             * (`chrome/navy.blade.php`), তাই একটা ঘরও আলাদা করে আঁকা লাগেনি, আর navy বদলালে এটাও সাথে বদলায়।
+             * ⛔ মালিক Microsoft Fluent-এর গাঢ় নেভিতে রেগে গিয়েছিলেন — রং তাঁর পাঠানো ছবির: ফ্রেম #3a7be9, রেল/বার #2160d8,
+             * কাজের জায়গা #eef3fc, ব্র্যান্ড #2563eb (অ্যাকসেন্ট `blue`-এর ৬০০)।
+             */
+            'blue' => [
+                'label' => 'core.ui.blue',
+                'blurb' => 'core.ui.blue_blurb',
+                'imitates' => null,
+                'accent' => 'blue',
+                'commands' => 'inline',
+                'filters' => 'chips',
+                'views' => 'title',
+                'record' => 'facts',
+                'sections' => 'plain',
+                'nav' => 'rail',
+                'topnav' => 'none',
+                'band' => 'none',
+                'density' => 'dense',
+                'swatch' => '#2563eb',
+                'ink' => '#152238',
+                'panel' => 'light',
+                'shell' => 'split',
+                'listfoot' => 'totals',
+                'hints' => 'keys',
+                'tabs' => 'strip',
+                'builds_on' => 'navy',
+            ],
             'navy' => [
                 'label' => 'core.ui.navy',
                 'blurb' => 'core.ui.navy_blurb',
@@ -454,6 +493,19 @@ final class Ui
      * ফিরিয়ে আনার চেয়ে রেখে দেওয়া সস্তা, আর এই লাইনগুলো বলে দেয়
      * কেন আজ চুপ।
      */
+    /**
+     * ⭐ খোলসটা কোন রূপের গড়নে — নিজের, নাকি যার উপর দাঁড়িয়ে (`builds_on`)।
+     *
+     * ⓘ `blue` navy-র গড়নে দাঁড়ায়: শেলের যে জায়গাগুলো "ABOS রূপ কি না" জিজ্ঞেস করে (মডিউল-বার, পাতার পথ,
+     * `chrome/navy`), তারা নাম নয়, এটা জিজ্ঞেস করে — তাই নতুন জামা মানে নতুন শর্ত নয়।
+     */
+    public static function family(?string $key): string
+    {
+        $look = self::clean($key);
+
+        return self::all()[$look]['builds_on'] ?? $look;
+    }
+
     public static function panelIsDark(?string $key): bool
     {
         return (self::all()[self::clean($key)]['panel'] ?? 'light') === 'dark';

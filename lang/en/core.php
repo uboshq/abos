@@ -529,6 +529,8 @@ return [
         'rose_blurb' => 'An ABOS original — warm red, gentle edges.',
         'navy' => 'ABOS',
         'navy_blurb' => 'An ABOS original — the brand teal, dense and quiet.',
+        'blue' => 'Blue panels',
+        'blue_blurb' => 'An ABOS original — a bright blue frame, white floating panels, clearly round corners.',
         'like' => 'Like :erp',
     ],
 
