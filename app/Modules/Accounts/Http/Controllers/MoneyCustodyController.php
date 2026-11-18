@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Services\DataScope;
+use App\Core\Services\LedgerBalances;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
@@ -118,8 +120,11 @@ class MoneyCustodyController extends Controller implements HasMiddleware
             ->orderBy('trx_date')
             ->get();
 
+        $transit = StandardChart::find(StandardChart::CASH_IN_TRANSIT);
+        $this->preloadBalances($tills, $officeCash, $banks, $transit);
+
         // ⓘ পথে থাকা টাকা — কাঁচা অঙ্কটা সর্বমোটে যায়, লেখা অঙ্কটা ফুটারের সারিতে
-        $transitAmount = (string) (StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceInView() ?? '0');
+        $transitAmount = (string) ($transit?->balanceInView() ?? '0');
 
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -139,6 +144,44 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 fn (MoneyTransfer $t) => $t->toTill?->holder_id === $request->user()?->id
             )->values(),
         ]);
+    }
+
+    /**
+     * ⭐ সব সারির জের একবারে — প্রতি সারিতে একটা করে খাতা-পড়া নয় (ম্যাক, ১৯ নভেম্বর ২০২৬:
+     * TheBillTagWroteThousandsAndTheCustodyPageReadTwiceTest — ১.৩.৪-এর দিন বন্ধের পপআপ প্রতিটা পাতায় খাতা পড়ে, তাই এই পাতার
+     * সারি-প্রতি পড়া সীমা পেরোল)।
+     *
+     * ⓘ উত্তর হুবহু এক: [[LedgerBalances]] কেবল কাঁচা ডেবিট-ক্রেডিট তুলে রাখে, আর [[Account::balanceOn()]] সেটা পেলে নিজের
+     * কোয়েরির বদলে সেটাই নেয়; চিহ্ন বসে আগের জায়গায়। টিলের জের গোটা ড্রয়ারের ([[CashTill::balance()]] — শাখা ছাড়া), সিন্দুক,
+     * ব্যাংক আর পথের টাকা দেখার শাখায় ([[Account::balanceInView()]] — "সব শাখা" সীমাহীন, বা একটা শাখা বাছা থাকলে সেই শাখা)।
+     * ⚠️ নাগালে-আটকানো কর্মীর "সব শাখা" [[DataScope::inView()]]-এর পথে যায়, আগের মতো সারি ধরে — তাঁর জন্য তোলা হয় না।
+     *
+     * @param  Collection<int, CashTill>  $tills
+     * @param  Collection<int, Account>  $officeCash
+     * @param  Collection<int, Account>  $banks
+     */
+    private function preloadBalances($tills, $officeCash, $banks, ?Account $transit): void
+    {
+        $balances = app(LedgerBalances::class);
+        $tillAccounts = $tills->map(fn (CashTill $t) => $t->account?->id)->filter()->map(fn ($id) => (int) $id)->values()->all();
+        $viewed = $officeCash->concat($banks)->push($transit)->filter()->map(fn (Account $a) => (int) $a->id)->values()->all();
+
+        $scope = app(DataScope::class);
+        $user = auth()->user();
+        $ids = $scope->viewBranchIds($user);
+
+        if ($ids === null) {
+            // ⓘ সীমাহীন "সব শাখা" — টিল আর বাকি সারি একই শর্তে, তাই একটাই প্রশ্ন
+            $balances->preload(array_values(array_unique([...$tillAccounts, ...$viewed])));
+
+            return;
+        }
+
+        $balances->preload($tillAccounts);
+
+        if ($scope->viewsOneBranch($user)) {
+            $balances->preload($viewed, null, $ids[0] ?? null);
+        }
     }
 
     /**
