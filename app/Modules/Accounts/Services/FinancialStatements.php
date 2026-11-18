@@ -66,7 +66,7 @@ final class FinancialStatements
 
         $loansNow = $this->loanDueWithinAYear($asOf, $branchId);
         $loansThen = $this->loanDueWithinAYear($priorDate, $branchId);
-        $taxAccount = Account::query()->where('code', StandardChart::INCOME_TAX_PROVISION)->first();
+        $taxAccount = Account::query()->postable()->where('code', StandardChart::INCOME_TAX_PROVISION)->first();
 
         // ── সম্পদ ──
         $assets = ['non_current' => [], 'current' => [], 'other' => []];
@@ -230,7 +230,7 @@ final class FinancialStatements
                 self::NOTE_TAX => [
                     'account' => $taxAccount === null ? null : $taxAccount->code.' '.$taxAccount->name(),
                     'balance' => collect($liabilities['current'])->firstWhere('kind', 'tax')['now'] ?? '0',
-                    'expense_account' => ($e = Account::query()->where('code', StandardChart::INCOME_TAX_EXPENSE)->first()) === null ? null : $e->code.' '.$e->name(),
+                    'expense_account' => ($e = Account::query()->postable()->where('code', StandardChart::INCOME_TAX_EXPENSE)->first()) === null ? null : $e->code.' '.$e->name(),
                 ],
             ],
         ];
@@ -382,7 +382,7 @@ final class FinancialStatements
      */
     private function ppeNote(string $priorDate, string $asOf): array
     {
-        $all = Account::query()->get(['id', 'code', 'parent_id', 'nature']);
+        $all = $this->chart();
         $head = $all->firstWhere('code', StandardChart::FIXED_ASSETS);
         $ids = $head === null ? [] : $this->subtree($all, (int) $head->id);
         $dep = $all->whereIn('id', $ids)->where('nature', Account::CREDIT)->pluck('id')->map(fn ($i) => (int) $i)->all();
@@ -421,7 +421,7 @@ final class FinancialStatements
      */
     private function cashNote(string $priorDate, string $asOf): array
     {
-        $all = Account::query()->get();
+        $all = $this->chart();
         $ids = [];
         foreach ($all->whereIn('code', StandardChart::MONEY_PARENTS) as $parent) {
             $ids = [...$ids, ...$this->subtree($all, (int) $parent->id)];
@@ -438,7 +438,7 @@ final class FinancialStatements
             ->get()->keyBy('account_id');
 
         $out = [];
-        foreach ($all->whereIn('id', $ids)->sortBy('code') as $account) {
+        foreach (Account::query()->whereIn('id', $ids ?: [0])->where('is_group', false)->orderBy('code')->get() as $account) {
             $row = $rows->get($account->id);
             if ($row === null || (bccomp((string) $row->now_net, '0', 4) === 0 && bccomp((string) $row->then_net, '0', 4) === 0)) {
                 continue;
@@ -450,7 +450,7 @@ final class FinancialStatements
     }
 
     /**
-     * @param  Collection<int, Account>  $all
+     * @param  Collection<int, object>  $all
      * @return list<int>
      */
     private function subtree(Collection $all, int $id): array
@@ -461,6 +461,19 @@ final class FinancialStatements
         }
 
         return $ids;
+    }
+
+    /**
+     * ছকের গাছ — id, বাবা, কোড, প্রকৃতি; দলসহ, কারণ মাথা (১২০০, ১১০১…) থেকে নিচের সব খুঁজতে দলই লাগে। কেবল পড়া, কোনো খাত বাছে না।
+     *
+     * @return Collection<int, object>
+     */
+    private function chart(): Collection
+    {
+        return DB::table('accounts')
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('deleted_at')
+            ->get(['id', 'parent_id', 'code', 'nature']);
     }
 
     private function useScope(?int $branchId): void
@@ -482,7 +495,7 @@ final class FinancialStatements
         $priorFrom = Carbon::parse($from)->subYearNoOverflow()->toDateString();
         $priorTo = Carbon::parse($to)->subYearNoOverflow()->toDateString();
 
-        $all = Account::query()->get();
+        $all = $this->chart();
         $in = function (array $codes) use ($all): array {
             $ids = [];
             foreach ($all->whereIn('code', $codes) as $a) {
@@ -509,6 +522,9 @@ final class FinancialStatements
             ->selectRaw('SUM(CASE WHEN ledger_entries.trx_date BETWEEN ? AND ? THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as then_net', [$priorFrom, $priorTo])
             ->get();
 
+        // ⓘ নাম কেবল যে খাতে এই দুই সময়ে লেনদেন — ছকের গাছ উপরে [[chart()]] থেকে
+        $names = Account::query()->whereKey($rows->pluck('account_id')->all())->get()->keyBy('id');
+
         $sections = array_fill_keys(['revenue', 'cost_of_sales', 'other_income', 'operating_expenses', 'finance_costs', 'income_tax'], []);
         foreach ($rows as $row) {
             $id = (int) $row->account_id;
@@ -528,7 +544,7 @@ final class FinancialStatements
                 continue;
             }
 
-            $account = $all->firstWhere('id', $id);
+            $account = $names->get($id);
             $sections[$section][] = $this->line($account === null ? '#'.$id : $account->code.' '.$account->name(), $now, $then);
         }
 

@@ -56,7 +56,7 @@ final class TrialBalanceStatement
         $f = $result->filters;
 
         $ids = array_map(fn (array $r) => (int) $r['account_id'], $result->rows);
-        $accounts = Account::query()->withTrashed()->with('parent')->whereIn('id', $ids ?: [0])->get()->keyBy('id');
+        $accounts = Account::query()->withTrashed()->with('parent')->whereKey($ids ?: [0])->get()->keyBy('id');
 
         $groups = [];
         foreach ([...self::CLASSES, 'other'] as $type) {
