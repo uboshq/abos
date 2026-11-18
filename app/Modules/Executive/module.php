@@ -46,6 +46,14 @@ return [
     // ⓘ hr — মাস শেষের হিসাবে মাসের বেতন ([[MonthClosePack]], ১৭ নভেম্বর ২০২৬); ⚠️ চক্র নেই: hr দাঁড়ায় কেবল accounts আর master_data-র উপর
     'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control', 'finance', 'purchase', 'hr'],
 
+    /*
+     * ⭐ হোমের গোটা-ব্যবসার বোর্ড — গ্রাফ আগে, তারপর ঘর, তালিকা, প্রতিষ্ঠানের টেবিল, আজ যা করতে হবে (মালিকের অনুমোদিত নমুনা,
+     * ১৯ নভেম্বর ২০২৬)। ⓘ কোর প্রশ্নটা রাখে ([[\App\Core\Contracts\HomeBoard]]), উত্তর এখানে — প্রতিটা সংখ্যা মডিউলের নিজের সংজ্ঞায়।
+     */
+    'bindings' => [
+        \App\Core\Contracts\HomeBoard::class => \App\Modules\Executive\Services\HomeBoard::class,
+    ],
+
     'menu' => [
         'dashboard' => [
             ['label' => 'executive::menu.today', 'icon' => 'dashboard', 'route' => 'executive.today', 'permission' => 'executive.view'],

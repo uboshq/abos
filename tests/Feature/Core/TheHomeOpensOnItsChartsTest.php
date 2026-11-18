@@ -30,8 +30,10 @@ final class TheHomeOpensOnItsChartsTest extends TestCase
         $owner = $this->owner();
         $html = (string) $this->actingAs($owner)->get(route('dashboard'))->assertOk()->getContent();
 
-        $marks = ['data-command-head', 'data-business-pictures', 'data-money-position', 'data-kpis',
-            'data-home-today-work', 'data-exception-center'];
+        // ⭐ ১৯ নভেম্বর ২০২৬ (মালিকের অনুমোদিত নমুনা, "ABOS"): মাথা → ৮টা গ্রাফ → টাকার বাক্স আর ৮টা ঘর → তিন তালিকা → সব প্রতিষ্ঠান →
+        //    আজ যা করতে হবে → নজরে রাখুন → একদম শেষে আগের মডিউলের চিত্র (বাদ নয়)
+        $marks = ['data-command-head', 'data-home-board-charts', 'data-money-position', 'data-kpis', 'data-home-lists',
+            'data-home-companies', 'data-home-today-work', 'data-exception-center', 'data-business-pictures'];
         $at = [];
         foreach ($marks as $mark) {
             $at[$mark] = strpos($html, $mark);
@@ -52,6 +54,9 @@ final class TheHomeOpensOnItsChartsTest extends TestCase
         preg_match_all('/data-today-work data-level="([a-z]+)"/', $html, $levels);
         $this->assertNotEmpty($levels[1], 'আজ যা করতে হবে-তে একটাও ঘর নেই — দাবির ভিত নেই।');
         $work = substr($html, $at['data-home-today-work'], $at['data-exception-center'] - $at['data-home-today-work']);
+        // ⓘ বোর্ডের চারটা: ৯০ দিন পেরোনো বকেয়া, মজুদ শেষ, ধীরে চলা মজুদ, দুই দিনের বেশি অপেক্ষার অনুমোদন
+        preg_match_all('/data-board-todo="([a-z_0-9]+)"/', $work, $todo);
+        $this->assertSame(['over_90', 'out_of_stock', 'slow', 'approvals'], $todo[1], '⛔ আজ যা করতে হবে-র চারটা নমুনার নয়।');
         foreach (array_unique($levels[1]) as $level) {
             $this->assertMatchesRegularExpression('/data-status-chip="'.$level.'"[^>]*>'.preg_quote(e(__('home.level_'.$level)), '/').'</u', $work,
                 "⛔ \"{$level}\" রঙের ঘরে অবস্থার শব্দ নেই — রং একা কথা বলছে।");

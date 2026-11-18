@@ -33,7 +33,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
-        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        // ⓘ মডিউল-বার আর রেল ABOS Blue-র খোলসের দাবি — নতুন ডিফল্ট "ABOS"-এ ওগুলো নেই (১৯ নভেম্বর ২০২৬), তাই এই মানুষ ABOS Blue-তে
+        $this->actingAs(tap(User::query()->where('email', 'owner@abos.test')->firstOrFail(), fn (User $u) => $u->forceFill(['ui' => 'blue'])->save()));
     }
 
     public function test_both_folds_sit_in_the_sales_bar_before_the_delivery_orders(): void

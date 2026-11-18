@@ -415,6 +415,16 @@ export function launcher () {
         },
 
         show () {
+            // ⭐ "ABOS" রূপে ⊞ মেনুর নিচের মডিউল-তালিকাই খোলে (মালিক, ১৯ নভেম্বর ২০২৬; [[chrome/rose.blade.php]]) — তালিকা পর্দায় থাকলে
+            //    (বড় পর্দায় মেনু খোলা); ফোনে বা মেনু গুটানো থাকলে আগের মতো পুরো পর্দার পাতা
+            const picker = document.querySelector('[data-module-picker]')
+
+            if (picker && picker.offsetParent !== null) {
+                window.dispatchEvent(new CustomEvent('open-module-picker'))
+
+                return
+            }
+
             this.open = true
             this.$nextTick(() => this.$refs.q?.focus())
         },

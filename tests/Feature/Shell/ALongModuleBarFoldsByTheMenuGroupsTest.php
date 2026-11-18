@@ -29,7 +29,8 @@ final class ALongModuleBarFoldsByTheMenuGroupsTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
-        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        // ⓘ মডিউল-বার আর রেল ABOS Blue-র খোলসের দাবি — নতুন ডিফল্ট "ABOS"-এ ওগুলো নেই (১৯ নভেম্বর ২০২৬), তাই এই মানুষ ABOS Blue-তে
+        $this->actingAs(tap(User::query()->where('email', 'owner@abos.test')->firstOrFail(), fn (User $u) => $u->forceFill(['ui' => 'blue'])->save()));
     }
 
     protected function tearDown(): void

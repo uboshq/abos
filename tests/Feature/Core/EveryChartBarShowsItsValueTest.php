@@ -34,11 +34,15 @@ final class EveryChartBarShowsItsValueTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $home = $this->xpath($this->get(route('dashboard'))->assertOk()->getContent());
-        $this->assertSame(3, $home->query('//div[@data-home-units]/div[@data-home-unit]')->length, '⛔ হোমের সাজানো ভাগ তিনটা পাশাপাশি নয় — কোনো বন্ধনী ভুল জায়গায়।');
-        $this->assertSame(1, $home->query('//div[@data-home-unit="pictures"]//section[@data-business-pictures]')->length, '⛔ ছবির অংশ নিজের ভাগের বাইরে।');
-        // ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — ছকটা পাতার নিজের শৈলীতে
-        $this->assertStringContainsString('hm-pictures', (string) $home->query('//div[@data-pictures-row]')->item(0)?->getAttribute('class'));
-        $this->assertStringContainsString('repeat(4, minmax(0, 1fr))', $html = $this->get(route('dashboard'))->getContent(), '⛔ চার্ট ৪টা করে সারিতে নয়।');
+        // ⓘ ১৯ নভেম্বর ২০২৬: তিন সাজানো ভাগ (গ্রাফ · ঘর · কাজ) আর শেষে আগের মডিউলের চিত্রের ভাগ — চারটা পাশাপাশি
+        $this->assertSame(4, $home->query('//div[@data-home-units]/div[@data-home-unit]')->length, '⛔ হোমের ভাগ চারটা পাশাপাশি নয় — কোনো বন্ধনী ভুল জায়গায়।');
+        $this->assertSame(1, $home->query('//div[@data-home-unit="pictures"]//section[@data-home-board-charts]')->length, '⛔ গ্রাফের অংশ নিজের ভাগের বাইরে।');
+        $this->assertSame(1, $home->query('//div[@data-home-unit="modules"]//section[@data-business-pictures]')->length, '⛔ মডিউলের চিত্র নিজের ভাগের বাইরে।');
+        // ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — ছকটা বোর্ডের শৈলীতে (resources/css/home-board.css)
+        $this->assertStringContainsString('hb-charts', (string) $home->query('//div[@data-pictures-row]')->item(0)?->getAttribute('class'));
+        $this->assertMatchesRegularExpression('/\.hb-charts\s*\{\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/',
+            (string) file_get_contents(resource_path('css/home-board.css')), '⛔ চার্ট ৪টা করে সারিতে নয়।');
+        $this->assertSame(8, $home->query('//section[@data-home-board-charts]/section[@data-board-chart]')->length, '⛔ বোর্ডে ৮টা গ্রাফ নেই।');
 
         $this->assertBarsHaveValues($home, 'হোম');
 

@@ -526,7 +526,7 @@ return [
         'linear' => 'Linear',
         'linear_blurb' => 'A near-black screen, one indigo, almost no chrome at all.',
         'rose' => 'ABOS',
-        'rose_blurb' => 'An ABOS original — warm red, gentle edges.',
+        'rose_blurb' => 'An ABOS original — a flat menu in the frame blue, the module list at its foot, a rounded work panel.',
         'navy' => 'ABOS Navy',
         'navy_blurb' => 'An ABOS original — the brand teal, dense and quiet.',
         'blue' => 'ABOS Blue',
@@ -1715,6 +1715,22 @@ return [
         'arrange' => 'Arrange', 'reset' => 'Reset to default', 'arrange_title' => 'Arrange the left bar',
         'arrange_hint' => 'Pinned modules always stay on the bar. Drag or press ↑ ↓ to reorder; saved for all your devices.',
         'pin' => 'Pin', 'up' => 'Move up:', 'down' => 'Move down:', 'cancel' => 'Back', 'save' => 'Save'],
+
+    /* ⭐ "ABOS" look module list — at the foot of the menu, opens upward (owner, 19 Nov 2026; [[chrome/rose.blade.php]]) */
+    'picker' => [
+        'change' => 'Change module',
+        'title' => 'All modules',
+        'find' => 'Find a module — Bangla or English…',
+        'none' => 'No module by that name',
+        'arrange' => '⇅ Arrange',
+        'done' => 'Done',
+        'reset' => 'Default order',
+        'note' => 'Your own order',
+        'note_arranging' => 'Press ▲ ▼ to reorder',
+        'up' => 'Move up:',
+        'down' => 'Move down:',
+        'notice' => 'Notice',
+    ],
 
     /* ⭐ "শেষ বদল" আর বদলের ইতিহাস — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১৩ ([[x-audit.last-change]]) */
     'audit' => ['last_change' => 'Last change', 'history' => 'Change history'],

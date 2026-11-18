@@ -128,6 +128,14 @@ class WorkspaceController extends Controller
 
             // ⭐ হোমের সাজ — ব্যবহারকারীর নিজের ক্রম আর লুকানো অংশ (মালিক, ৪ অক্টোবর ২০২৬)
             'layout' => \App\Core\Dashboard\HomeLayout::for($request->user()),
+
+            /*
+             * ⭐ গোটা-ব্যবসার বোর্ড — ৮টা গ্রাফ আগে, তারপর ৮টা ঘর, তালিকা, সব প্রতিষ্ঠান, আজ যা করতে হবে (মালিকের অনুমোদিত নমুনা,
+             * ১৯ নভেম্বর ২০২৬)। ⓘ কোর কোনো সংখ্যা গোনে না — উত্তর মডিউলের ([[\App\Core\Contracts\HomeBoard]]); বাছা সময় আর ছাঁকনি
+             * ভিতরে চালু, যেমন মূল সূচকে।
+             */
+            'board' => $filter->during(fn () => \App\Core\Dashboard\HomePeriod::during($period,
+                fn () => app(\App\Core\Contracts\HomeBoard::class)->for($request->user(), $period))),
         ]);
     }
 

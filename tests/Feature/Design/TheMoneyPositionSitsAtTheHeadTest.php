@@ -50,7 +50,7 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
             $unit = $this->between($html, 'data-home-unit="kpis"', 'data-home-unit="work"');
             $this->assertStringContainsString('data-money-position', $unit, "{$period}: টাকার বাক্স সূচকের ভাগে নেই।");
             $this->assertStringContainsString(e($label), $unit, "{$period}: \"{$label}\" সূচকের পাশের বাক্সে নেই।");
-            $this->assertLessThan(strpos($html, 'data-money-position'), strpos($html, 'data-business-pictures'),
+            $this->assertLessThan(strpos($html, 'data-money-position'), strpos($html, 'data-home-board-charts'),
                 "{$period}: ⛔ টাকার বাক্স চার্টের আগে — মালিকের ক্রম চার্ট আগে।");
             $kpis = $this->between($html, 'data-kpis', '</section>');
             $this->assertStringNotContainsString(e($label), $kpis,

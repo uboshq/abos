@@ -35,6 +35,8 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ মডিউল-বার আর রেল ABOS Blue-র খোলসের দাবি — নতুন ডিফল্ট "ABOS"-এ ওগুলো নেই (১৯ নভেম্বর ২০২৬), তাই এই মানুষ ABOS Blue-তে
+        $this->owner->forceFill(['ui' => 'blue'])->save();
         $this->actingAs($this->owner);
     }
 
@@ -54,7 +56,7 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
 
     private function person(array $keys): User
     {
-        $user = User::factory()->create(['is_active' => true, 'current_company_id' => $this->owner->current_company_id]);
+        $user = User::factory()->create(['is_active' => true, 'ui' => 'blue', 'current_company_id' => $this->owner->current_company_id]);
         $user->companies()->attach($this->owner->current_company_id, ['is_active' => true]);
         CompanyContext::forCompany((int) $this->owner->current_company_id, fn () => $user->givePermissionTo(
             array_map(fn (string $k) => \Spatie\Permission\Models\Permission::findOrCreate($k, 'web'), $keys)));
