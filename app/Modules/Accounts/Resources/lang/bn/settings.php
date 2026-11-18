@@ -38,7 +38,7 @@ return [
     'popup_every_10' => '10 মিনিট পরে',
     'popup_every_60' => '1 ঘণ্টা পরে',
     'popup_every_120' => '2 ঘণ্টা পরে',
-    'popup_every_0' => 'দেখাবে না',
+    'popup_every_off' => 'দেখাবে না',
     'asset_capitalisation_threshold' => 'স্থায়ী সম্পদের সর্বনিম্ন দাম — এর কম দামের জিনিস খরচে যাবে (০ মানে কোনো সীমা নেই)',
     'asset_prorata' => 'প্রথম মাসের অবচয়',
     'asset_prorata_full_month' => 'পুরো মাস',

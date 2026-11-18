@@ -35,7 +35,7 @@ return [
     'popup_every_10' => 'after 10 minutes',
     'popup_every_60' => 'after 1 hour',
     'popup_every_120' => 'after 2 hours',
-    'popup_every_0' => 'never show',
+    'popup_every_off' => 'never show',
     'asset_capitalisation_threshold' => 'Fixed asset capitalisation threshold: anything cheaper goes to expense (0 means no threshold)',
     'asset_prorata' => 'First-month depreciation',
     'asset_prorata_full_month' => 'Full month',

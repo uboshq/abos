@@ -21,7 +21,6 @@
 @php
     $show = false;
     $user = auth()->user();
-    $settings = app(\App\Core\Services\SettingsService::class);
     $days = [];
     $month = null;
     $latest = null;
@@ -40,7 +39,8 @@
         ) !== [];
 
         // ── ২ · দিন আর মাস বন্ধ হয়নি — দিন বন্ধের চাবি যাঁর ──
-        if ($user->can('accounts.day_close.close') && (string) ($settings->get('accounts.day_close.popup_every') ?? '60') !== '0') {
+        // ⓘ "দেখাবে না" = `off` (আগের জমা `0`-ও) — [[DayChecklist::popupEvery()]]
+        if ($user->can('accounts.day_close.close') && \App\Modules\Accounts\Services\DayChecklist::popupEvery() !== null) {
             $check = app(\App\Modules\Accounts\Services\DayChecklist::class);
             $today = now()->startOfDay();
             $days = $check->openDays($today);

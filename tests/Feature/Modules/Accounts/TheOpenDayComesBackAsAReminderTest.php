@@ -129,7 +129,8 @@ final class TheOpenDayComesBackAsAReminderTest extends TestCase
         $this->get(route('accounts.voucher.list'))->assertDontSee('data-open-days', false);
 
         $this->actingAs($this->owner->fresh());
-        app(SettingsService::class)->set('accounts.day_close.popup_every', '0');
+        // ⓘ "দেখাবে না" এখন `off` — তালিকার ঘরে `0` দরজা ফেলে দেয় (TheSalesTabSavedZeroIntoEveryChoiceTest; ম্যাক, ১৯ নভেম্বর ২০২৬)
+        app(SettingsService::class)->set('accounts.day_close.popup_every', 'off');
         $this->get(route('accounts.voucher.list'))->assertOk()->assertDontSee('data-open-days', false);
     }
 

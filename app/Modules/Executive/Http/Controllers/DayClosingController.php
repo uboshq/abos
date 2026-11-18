@@ -54,7 +54,8 @@ class DayClosingController extends Controller implements HasMiddleware
      */
     public function snooze(Request $request): RedirectResponse
     {
-        $minutes = max(1, (int) (app(\App\Core\Services\SettingsService::class)->get('accounts.day_close.popup_every') ?? 60));
+        // ⓘ "দেখাবে না" (`off`) বাছা থাকলেও জরুরি খবরের জন্য ১ ঘণ্টা — পপআপের "পরে"-র একই নিয়ম ([[NotificationController::closeBanner()]])
+        $minutes = \App\Modules\Accounts\Services\DayChecklist::popupEvery() ?? 60;
         $request->session()->put('daycheck.snooze_until', now()->addMinutes($minutes)->getTimestamp());
 
         return back();

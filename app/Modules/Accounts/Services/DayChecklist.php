@@ -35,6 +35,21 @@ final class DayChecklist
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
+     * ⭐ পপআপ কত মিনিট পরে ফেরে (`accounts.day_close.popup_every`) — `null` মানে "দেখাবে না"।
+     * ⓘ "দেখাবে না"-র মান `off`; ১.৩.৪-এর `0` আগে জমা থাকলে সেটাও "দেখাবে না" (ম্যাক, ১৯ নভেম্বর ২০২৬)। অচেনা মান হলে ডিফল্ট ১ ঘণ্টা।
+     */
+    public static function popupEvery(): ?int
+    {
+        $value = (string) (app(SettingsService::class)->get('accounts.day_close.popup_every') ?? '60');
+
+        if ($value === 'off' || $value === '0') {
+            return null;
+        }
+
+        return ctype_digit($value) && (int) $value > 0 ? (int) $value : 60;
+    }
+
+    /**
      * একটা দিনের বাকি কাজ — খালি তালিকা মানে কিছু বাকি নেই।
      *
      * @return list<array{key: string, count: int, amount: ?string, url: ?string, tone: string, names?: list<string>}>

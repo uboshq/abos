@@ -1156,7 +1156,9 @@ return [
             'key' => 'accounts.day_close.popup_every',
             'label' => 'accounts::settings.day_close_popup_every',
             'type' => 'choice',
-            'options' => ['10', '60', '120', '0'],
+            // ⓘ "দেখাবে না" = `off`, `0` নয় — তালিকার ঘরে `0` পুরনো পাতার ভুল বলে দরজা ফেলে দেয়, তাই "দেখাবে না" কখনো বসত না
+            //   (TheSalesTabSavedZeroIntoEveryChoiceTest; ম্যাক, ১৯ নভেম্বর ২০২৬)। পুরনো জমা `0` পড়ার সময় `off` ধরা হয় ([[DayChecklist::popupEvery()]])।
+            'options' => ['10', '60', '120', 'off'],
             'option_label' => 'accounts::settings.popup_every_',
             'default' => '60',
             'group' => 'day_close',
