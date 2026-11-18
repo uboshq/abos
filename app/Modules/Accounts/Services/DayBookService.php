@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Models\FinancialYear;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -68,6 +69,8 @@ final class DayBookService
             ->where('le.company_id', $company)
             ->where('le.trx_date', $date)
             ->tap(ReportEngine::branchWall($filters, 'le.branch_id'))
+            // ⭐ শাখা না বললে হেডারে বাছা শাখা আর নাগাল — মালিকের নিয়ম "হেডারের শাখা সব ছাঁকে"; সীমাহীন নাগালে কোনো ছাঁকনিই নয়, আগের মতোই
+            ->when($branchId === null, fn ($q) => ViewedBranch::narrow($q, 'le.branch_id'))
             ->orderBy('le.id')
             ->get([
                 'le.id', 'le.source_type', 'le.source_id', 'le.document_no', 'le.narration', 'le.party_type', 'le.party_id',
