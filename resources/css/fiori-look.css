@@ -1,0 +1,465 @@
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ SAP (`tiles`) — আসল SAP Fiori "Horizon"-এর হুবহু গড়ন (মালিক, ১৯ নভেম্বর ২০২৬: *"সাপের … একদম 100% হুবহু কপি"*)।
+
+   ⓘ মাপ আর রং আসল SAP-এর চালু নমুনা-অ্যাপের (ui5.sap.com, sap_horizon) ১৯২০ চওড়া পর্দা থেকে পিক্সেল ধরে মাপা:
+     · শেল বার সাদা ৫২px; খোঁজা ধূসর পিল (#eff1f2, ৩৬px, কোণ ১৮); নামের আদ্যক্ষর #d1efff-এ #0057d2
+     · স্পেসের ট্যাব: মোটা ১৪px, বাছাটা #0064d9 আর নিচে ৩px দাগ; বারের নিচে নরম ছায়া
+     · মাঠ #f5f6f7; কার্ড সাদা, কোণ ১২px, ছায়া `0 0 .125rem / 0 .125rem .5rem rgba(34,53,72,.15)`; টালি কোণ ১৬px
+     · লেখা #131e29, লেবেল #556b82, লিংক #0064d9, জোর-দেওয়া বোতাম #0070f2 (কোণ ৮px)
+     · ডেস্কটপে ঘর আর বোতাম ২৬px (Fiori-র "compact" — আসল নমুনায় যা দেখা যায়); ছোঁয়ার পর্দায় বড়ই থাকে, Fiori-রও তাই
+     · অবস্থা: চিহ্ন + রঙিন লেখা (সবুজ #256f3a, লাল #aa0808, কমলা #a93e00) — পটি নয়
+   ⛔ কেবল `[data-ui='tiles']`-এ — বাকি রূপগুলোর একটা পিক্সেলও নড়ে না (মালিক, ১৯ নভেম্বর ২০২৬)।
+   ⓘ রং টোকেনে ([[app/Core/Support/Looks/tiles.php]]); এখানে কেবল যা টোকেনে হয় না। স্তরহীন, তাই Tailwind-এর utility-কে জেতে।
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='tiles'] {
+    --fiori-shadow: 0 0 0.125rem rgb(34 53 72 / 0.15), 0 0.125rem 0.5rem rgb(34 53 72 / 0.15);
+    --fiori-bar-shadow: 0 0.125rem 0.25rem 0 rgb(34 53 72 / 0.12);
+    --fiori-emphasized: #0070f2;
+    --fiori-link: #0064d9;
+    --fiori-field-border: #bcc3ca;
+    --fiori-field-bottom: #556b82;
+    --fiori-label: #556b82;
+
+    /* ⭐ ব্র্যান্ড নীল Horizon-এর — ব্যবহারকারীর অ্যাকসেন্ট যা-ই হোক, এই রূপে আসলটার নীলই (হুবহু কপির শর্ত) */
+    --color-brand-50: #ebf8ff;
+    --color-brand-100: #d1efff;
+    --color-brand-500: #0070f2;
+    --color-brand-600: #0064d9;
+    --color-brand-700: #0057d2;
+    --color-brand-900: #00144a;
+    --color-brand-ink: #ffffff;
+    --color-avatar: #d1efff;
+    --color-avatar-ink: #0057d2;
+    --color-count-urgent: #aa0808;
+    /* ⓘ অক্ষর ABOS-এরই — SAP-এর "72" ওদের নিজের, আর বাংলার অক্ষর ভাঙা চলবে না */
+}
+
+:root[data-ui='tiles'][data-theme='dark'] {
+    --fiori-shadow: 0 0 0.125rem rgb(0 0 0 / 0.5), 0 0.125rem 0.5rem rgb(0 0 0 / 0.5);
+    --fiori-bar-shadow: 0 0.125rem 0.25rem 0 rgb(0 0 0 / 0.4);
+    --fiori-emphasized: #0070f2;
+    --fiori-link: #4db1ff;
+    --fiori-field-border: #4e5b69;
+    --fiori-field-bottom: #a9b4be;
+    --fiori-label: #a9b4be;
+    --color-brand-600: #4db1ff;
+    --color-avatar: #002a4d;
+    --color-avatar-ink: #4db1ff;
+}
+
+/* ⓘ ডেস্কটপে Fiori-র "compact" মাপ — আসল নমুনার ঘর আর বোতাম ২৬px। ছোঁয়ার পর্দায় (ফোন, ট্যাব) বড় মাপই থাকে। */
+@media (min-width: 1024px) and (pointer: fine) {
+    :root[data-ui='tiles'] {
+        --spacing-field: 26px;
+        --spacing-field-compact: 26px;
+        --spacing-command: 26px;
+        --spacing-touch: 26px;
+    }
+}
+
+:root[data-ui='tiles'] body {
+    background: var(--color-surface-app);
+    color: var(--color-ink-body);
+}
+
+/* ── শেল বার ────────────────────────────────────────────────────────── */
+:root[data-ui='tiles'] header[data-topbar] {
+    height: 52px;
+    border-bottom: 0;
+    background: var(--color-topbar);
+    box-shadow: none;
+    gap: 12px;
+}
+
+/* আসলটায় হ্যামবার্গার আর কোম্পানির আদ্যক্ষরের বাক্স নেই — লোগো আর অ্যাপের নাম ([[chrome/tiles]]) */
+:root[data-ui='tiles'] header[data-topbar] [data-shell-logo] {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    :root[data-ui='tiles'] header[data-topbar] [data-sidebar-toggle] {
+        display: none;
+    }
+}
+
+:root[data-ui='tiles'] [data-shell-company] button {
+    min-height: 32px;
+    border-radius: 8px;
+}
+
+:root[data-ui='tiles'] [data-shell-search] {
+    margin-inline: auto;
+    max-width: 36rem;
+}
+
+:root[data-ui='tiles'] [data-search-field] {
+    min-height: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--color-topbar-field);
+    color: var(--color-ink-muted);
+}
+
+:root[data-ui='tiles'] [data-search-field] input::placeholder {
+    color: var(--fiori-label);
+    font-style: normal;
+}
+
+/* ডানের আইকন — খালি, গাঢ়, ৩৬px ছোঁয়ার জায়গা; গণনা ছোট লাল */
+:root[data-ui='tiles'] [data-shell-actions] > a,
+:root[data-ui='tiles'] [data-shell-actions] [data-notification-bell] > button {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    color: var(--color-topbar-ink-muted);
+}
+
+:root[data-ui='tiles'] [data-shell-actions] > a:hover,
+:root[data-ui='tiles'] [data-shell-actions] [data-notification-bell] > button:hover {
+    background: var(--color-topbar-hover);
+}
+
+:root[data-ui='tiles'] [data-shell-create] > button {
+    min-height: 32px;
+    border-radius: 8px;
+    background: var(--fiori-emphasized);
+    font-weight: 700;
+}
+
+/* আসলটায় কেবল গোল আদ্যক্ষর — নাম আর পদ প্রোফাইল-মেনুর ভিতরে */
+@media (min-width: 768px) {
+    :root[data-ui='tiles'] [data-profile-identity] {
+        display: none;
+    }
+}
+
+:root[data-ui='tiles'] [data-profile-menu] [data-avatar] {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ── স্পেসের ট্যাব (মডিউলের সারি) ────────────────────────────────────── */
+:root[data-ui='tiles'] nav.topnav {
+    min-height: 44px;
+    gap: 24px;
+    padding-inline: 40px;
+    border-bottom: 0;
+    background: var(--color-topnav);
+    box-shadow: var(--fiori-bar-shadow);
+    position: relative;
+    z-index: 2;
+}
+
+:root[data-ui='tiles'] nav.topnav [data-nav-item] {
+    height: 44px;
+    padding-inline: 8px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-topnav-ink);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+:root[data-ui='tiles'] nav.topnav [data-nav-item]:hover {
+    background: transparent;
+    color: var(--fiori-link);
+}
+
+:root[data-ui='tiles'] nav.topnav [data-nav-item][class*='topnav-selected'],
+:root[data-ui='tiles'] nav.topnav [data-nav-item][aria-current='page'] {
+    color: var(--fiori-link);
+    box-shadow: inset 0 -3px 0 var(--fiori-link);
+}
+
+/* স্পেসের নামে আইকন থাকে না — কেবল লেখা, আর তালিকা থাকলে ⌄; সারির শুরুর লোগোও নয় (লোগো শেল বারে একবারই) */
+:root[data-ui='tiles'] nav.topnav [data-nav-item] > :first-child:not(:last-child) {
+    display: none;
+}
+
+:root[data-ui='tiles'] nav.topnav > a.size-8:first-child {
+    display: none;
+}
+
+:root[data-ui='tiles'] nav.topnav button[data-nav-item]::after {
+    content: '';
+    display: inline-block;
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-inline-start: 4px;
+    margin-top: -3px;
+    border-right: 1.6px solid currentColor;
+    border-bottom: 1.6px solid currentColor;
+    transform: rotate(45deg);
+}
+
+:root[data-ui='tiles'] nav.topnav [role='separator'] {
+    display: none;
+}
+
+/* স্পেসের তালিকা — সাদা গোল কার্ড, ছায়া, বাছা সারি নীল */
+:root[data-ui='tiles'] nav.topnav .pops-onto-page {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0.625rem 1.875rem 0 rgb(34 53 72 / 0.25), 0 0 0.125rem 0 rgb(34 53 72 / 0.2);
+    padding-block: 8px;
+}
+
+:root[data-ui='tiles'] nav.topnav .pops-onto-page a {
+    min-height: 36px;
+    color: var(--color-ink);
+}
+
+:root[data-ui='tiles'] nav.topnav .pops-onto-page a[aria-current='page'] {
+    color: var(--fiori-link);
+    background: var(--color-surface-selected);
+}
+
+/* ── তালিকার পাতা (List Report) ────────────────────────────────────── */
+:root[data-ui='tiles'] [data-boxed] {
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-surface-card);
+    box-shadow: var(--fiori-shadow);
+}
+
+:root[data-ui='tiles'] h1[data-view-selector],
+:root[data-ui='tiles'] [data-view-menu].text-lg {
+    color: var(--fiori-link);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+:root[data-ui='tiles'] [data-record-count] {
+    border: 0;
+    color: var(--fiori-label);
+}
+
+/* টেবিলের উপরের "তৈরি" বোতাম — আসলটায় স্বচ্ছ, নীল মোটা লেখা ("Create") */
+:root[data-ui='tiles'] [data-command-bar] [data-page-primary] {
+    min-height: 26px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--fiori-link);
+    font-weight: 700;
+    box-shadow: none;
+}
+
+:root[data-ui='tiles'] [data-command-bar] [data-page-primary]:hover {
+    background: var(--color-surface-hover);
+}
+
+/* রঙিন "ফিল্টার" বোতাম → আসলটার "Adapt Filters": স্বচ্ছ, নীল মোটা লেখা */
+:root[data-ui='tiles'] .list-filter-open {
+    height: 26px;
+    padding-inline: 8px;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--fiori-link);
+}
+
+:root[data-ui='tiles'] .list-filter-open:hover {
+    background: var(--color-surface-hover);
+    filter: none;
+}
+
+:root[data-ui='tiles'] .list-filter-open .list-filter-badge {
+    background: var(--fiori-link);
+    color: #fff;
+}
+
+/* তালিকার উপরের রঙিন কার্ড → Horizon-এর সাদা টালি; বাছাটার নীল ফ্রেম (আসল লঞ্চপ্যাডের বাছা টালির মতো) */
+:root[data-ui='tiles'] .list-card {
+    border: 2px solid transparent;
+    border-radius: 16px;
+    background: var(--color-surface-card);
+    box-shadow: var(--fiori-shadow);
+    color: var(--color-ink);
+}
+
+:root[data-ui='tiles'] .list-card::after {
+    display: none;
+}
+
+:root[data-ui='tiles'] .list-card:hover {
+    transform: none;
+    background: var(--color-surface-hover);
+}
+
+:root[data-ui='tiles'] .list-card.is-on {
+    border-color: #0032a5;
+    box-shadow: var(--fiori-shadow);
+}
+
+:root[data-ui='tiles'] .list-card-icon {
+    border-radius: 12px;
+    background: var(--color-brand-50);
+    color: var(--fiori-link);
+}
+
+:root[data-ui='tiles'] .list-card-label {
+    color: var(--color-ink);
+    font-weight: 700;
+    opacity: 1;
+}
+
+:root[data-ui='tiles'] .list-card-value {
+    color: var(--color-ink);
+    font-weight: 300;
+    font-size: 1.75rem;
+}
+
+:root[data-ui='tiles'] .list-card-sub {
+    color: var(--fiori-label);
+    opacity: 1;
+}
+
+/* ── টেবিল ─────────────────────────────────────────────────────────── */
+:root[data-ui='tiles'] table.ui-list thead th {
+    background: var(--color-table-head);
+    color: var(--color-table-head-ink);
+    font-size: 14px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border);
+}
+
+:root[data-ui='tiles'] table.ui-list tbody td {
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-ink);
+    font-size: 14px;
+}
+
+:root[data-ui='tiles'] table.ui-list tbody tr:hover td {
+    background: var(--color-surface-hover);
+}
+
+:root[data-ui='tiles'] table.ui-list a {
+    color: var(--fiori-link);
+}
+
+/* সারির ⋯ — ফ্রেম ছাড়া, আসলটার "›"-এর মতো হালকা */
+:root[data-ui='tiles'] [data-row-actions-button] {
+    border: 0;
+    background: transparent;
+    color: var(--fiori-link);
+}
+
+:root[data-ui='tiles'] [data-row-actions-button]:hover {
+    background: var(--color-surface-hover);
+}
+
+:root[data-ui='tiles'] [data-pager] {
+    border-top-color: var(--color-border);
+}
+
+/* ── ঘর (ইনপুট, বাছাই) — Horizon: সাদা, চারপাশে হালকা, নিচে গাঢ় দাগ; চাপলে নীল ২px ─────────────────── */
+:root[data-ui='tiles'] main :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']), select, textarea) {
+    border: 1px solid var(--fiori-field-border);
+    border-bottom-color: var(--fiori-field-bottom);
+    border-radius: 4px;
+    background-color: var(--color-surface-card);
+    color: var(--color-ink);
+    font-size: 14px;
+}
+
+:root[data-ui='tiles'] main :is(input, select, textarea)::placeholder {
+    color: var(--fiori-label);
+    font-style: italic;
+}
+
+:root[data-ui='tiles'] main :is(input, select, textarea):focus {
+    border-color: var(--fiori-link);
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--fiori-link);
+}
+
+:root[data-ui='tiles'] main [data-party-picker] {
+    border-color: var(--fiori-field-border);
+    border-bottom-color: var(--fiori-field-bottom);
+    border-radius: 4px;
+}
+
+/* লেবেল উপরে, ধূসর, স্বাভাবিক ওজন — আসলটার "Begin Date:" */
+:root[data-ui='tiles'] main form label {
+    color: var(--fiori-label);
+    font-weight: 400;
+}
+
+:root[data-ui='tiles'] main form label .text-\(--color-danger\),
+:root[data-ui='tiles'] main form label [aria-hidden='true'].text-\(--color-danger\) {
+    color: #aa0808;
+}
+
+/* ফর্মের ভাগ — সাদা গোল কার্ড, শিরোনাম মোটা */
+:root[data-ui='tiles'] main form section[data-boxed] {
+    padding: 16px 32px 20px;
+}
+
+:root[data-ui='tiles'] main form section[data-boxed] > h2 {
+    color: var(--color-ink);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* ── বোতাম ─────────────────────────────────────────────────────────── */
+:root[data-ui='tiles'] main :is(a, button).is-primary {
+    border-radius: 8px;
+    background: var(--fiori-emphasized);
+    color: #fff;
+    font-weight: 700;
+}
+
+:root[data-ui='tiles'] main :is(a, button).is-primary:hover {
+    background: #0064d9;
+}
+
+/* সাধারণ বোতাম — সাদা, হালকা ফ্রেম, নীল লেখা (আসলটার "Delete") */
+:root[data-ui='tiles'] main :is(a, button).inline-flex.px-4[class*='border-(--color-border)'][class*='bg-(--color-surface-card)'] {
+    border-color: var(--fiori-field-border);
+    border-radius: 8px;
+    color: var(--fiori-link);
+    font-weight: 700;
+}
+
+/* ফর্মের নিচের "সংরক্ষণ / বাতিল" → Horizon-এর ভাসমান গোল ফুটার: সাদা, ছায়া, বোতাম ডানে */
+:root[data-ui='tiles'] main form :is(div, footer):has(> [data-page-primary]):not([data-command-bar], .cmd-actions) {
+    position: sticky;
+    bottom: calc(var(--spacing-status-bar, 28px) + 8px);
+    z-index: 5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: var(--color-surface-card);
+    box-shadow: var(--fiori-shadow);
+}
+
+/* ── জানালা আর পপআপ — সাদা, ১২px কোণ, মাথায় মোটা শিরোনাম ─────────────── */
+:root[data-ui='tiles'] [data-day-popup] > section,
+:root[data-ui='tiles'] [role='dialog'] > section {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0.625rem 1.875rem 0 rgb(34 53 72 / 0.25), 0 0 0.125rem 0 rgb(34 53 72 / 0.2);
+}
+
+:root[data-ui='tiles'] [data-day-popup] > section > header {
+    background: var(--color-surface-card);
+}
+
+:root[data-ui='tiles'] [data-day-popup] > section > header h2 {
+    font-weight: 700;
+}
+
+/* ── নিচের বার ───────────────────────────────────────────────────────── */
+:root[data-ui='tiles'] footer[data-footer] {
+    background: var(--color-footer);
+    border-top-color: var(--color-footer-border);
+}
