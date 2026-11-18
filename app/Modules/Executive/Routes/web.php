@@ -85,4 +85,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('/month-close', [\App\Modules\Executive\Http\Controllers\MonthCloseController::class, 'show'])
         ->name('month_close')
         ->middleware('can:accounts.report.month_close');
+
+    // ⭐ দিন শেষের হিসাব — পর্দা, কাগজ, দিন বন্ধ, আবার খোলা, পপআপের "পরে" (মালিক, ১৬ ও ১৮ নভেম্বর ২০২৬; [[DayClosingController]])।
+    // ⓘ হিসাব মডিউল থেকে এখানে, ঠিকানা একই — বিক্রয়, গ্রাহক আর প্রতিদিনের সারাংশ পড়ে (BoundariesTest; ম্যাক, ১৮ নভেম্বর ২০২৬)
+    Route::get('/day-closing', [\App\Modules\Executive\Http\Controllers\DayClosingController::class, 'show'])
+        ->name('dayclose');
+    Route::post('/day-closing/close', [\App\Modules\Executive\Http\Controllers\DayClosingController::class, 'close'])
+        ->name('dayclose.close');
+    Route::post('/day-closing/reopen', [\App\Modules\Executive\Http\Controllers\DayClosingController::class, 'reopen'])
+        ->name('dayclose.reopen');
+    Route::post('/day-closing/later', [\App\Modules\Executive\Http\Controllers\DayClosingController::class, 'snooze'])
+        ->name('dayclose.snooze');
 });

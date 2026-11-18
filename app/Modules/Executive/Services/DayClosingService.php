@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Accounts\Services;
+namespace App\Modules\Executive\Services;
 
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -13,7 +13,6 @@ use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Executive\Services\DailySummary;
 use App\Modules\Sales\Dashboard\SalesBoard;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -34,6 +33,8 @@ use Illuminate\Support\Facades\DB;
  *   মাসের লক্ষ্য [[SalesBoard::monthTarget()]] — তাই এই কাগজের অঙ্ক বাকি পাতার সাথে মেলে।
  * ⓘ শাখা: হেডারে বাছা শাখা ([[ViewedBranch]]), প্রতিদিনের সারাংশের মতোই।
  * ⓘ কেবল পোস্ট হওয়া কাগজ — খতিয়ানে খসড়া থাকেই না, আর বিল/চালানে `POSTED` অবস্থা।
+ * ⓘ কোথায় থাকে: নির্বাহী মডিউলে, হিসাবে নয় — বিক্রয়, গ্রাহক আর প্রতিদিনের সারাংশ পড়ে, আর হিসাব কারও উপর নির্ভর করে না
+ *   (BoundariesTest; ম্যাক, ১৮ নভেম্বর ২০২৬)। মাস শেষের হিসাবের ([[MonthCloseController]]) একই জায়গা।
  */
 final class DayClosingService
 {
@@ -108,7 +109,8 @@ final class DayClosingService
         $sources = $rows->map(fn ($r) => [$r->source_type, (int) $r->source_id])->unique()->values();
         $parties = $this->entryParties($sources);
         $charges = $this->entryCharges($sources);
-        $vouchers = DB::table('vouchers')->whereIn('id', $rows->where('source_type', 'receipt_voucher')->pluck('source_id')->all())
+        $vouchers = DB::table('vouchers')->where('company_id', CompanyContext::id())
+            ->whereIn('id', $rows->where('source_type', 'receipt_voucher')->pluck('source_id')->all())
             ->get(['id', 'instrument', 'instrument_no', 'deposit_slip_no'])->keyBy('id');
 
         $groups = [];
@@ -536,7 +538,7 @@ final class DayClosingService
 
         $ids = $cash->pluck('id')->all();
         $tills = \App\Modules\Accounts\Models\CashTill::query()->whereIn('account_id', $ids)->pluck('holder_id', 'account_id');
-        $keepers = Account::query()->whereIn('id', $ids)->pluck('held_by', 'id');
+        $keepers = Account::query()->postable()->whereIn('id', $ids)->pluck('held_by', 'id');
         $holderOf = fn (int $account) => $tills[$account] ?? $keepers[$account] ?? null;
 
         $owners = \App\Models\User::query()
@@ -652,7 +654,8 @@ final class DayClosingService
     /** @return list<int> একটা কোডের হিসাব আর তার নিচের সব */
     private function accountTree(string $code): array
     {
-        $all = Account::query()->get(['id', 'parent_id', 'code']);
+        // ⓘ ছকের গাছ হাঁটা — দল-খাতও লাগে (মূল আর মাঝের দল), এটা কোনো বাছাইয়ের তালিকা নয়; তাই খাতের মডেল নয়, কোম্পানি-বাঁধা কাঁচা সারি
+        $all = DB::table('accounts')->where('company_id', CompanyContext::id())->whereNull('deleted_at')->get(['id', 'parent_id', 'code']);
         $root = $all->firstWhere('code', $code);
 
         if ($root === null) {

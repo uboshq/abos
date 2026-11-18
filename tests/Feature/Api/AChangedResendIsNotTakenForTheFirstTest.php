@@ -49,7 +49,8 @@ final class AChangedResendIsNotTakenForTheFirstTest extends TestCase
         $shop = Customer::query()->orderBy('id')->firstOrFail();
         $sr = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $sr->companies()->attach($this->company->id, ['is_active' => true]);
-        CompanyContext::forCompany($this->company->id, fn () => $sr->givePermissionTo(Permission::findOrCreate('sales.collection.create', 'web')));
+        // ⓘ জমার খবরের দরজা জমার ধাপ খ (19e713177) থেকে নিজের চাবিতে
+        CompanyContext::forCompany($this->company->id, fn () => $sr->givePermissionTo([Permission::findOrCreate('sales.collection.create', 'web'), Permission::findOrCreate('sales.claim.submit', 'web')]));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         Sanctum::actingAs($sr->fresh(), [AuthController::APP]);
         $advice = fn (string $amount) => ['customer' => (string) $shop->public_id, 'claimed_on' => now()->toDateString(), 'amount' => $amount, 'method' => 'cash'];

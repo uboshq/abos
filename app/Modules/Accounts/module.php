@@ -182,7 +182,7 @@ return [
             //   সমতল তালিকা `/accounts/reports/day-book` ঠিকানায় থাকে
             ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.daybook', 'permission' => 'accounts.report'],
             // ⭐ দিন শেষের হিসাব — মালিকের অনুমোদিত নমুনা v7 ([[DayClosingController]])
-            ['label' => 'accounts::menu.day_closing', 'icon' => 'check-circle', 'route' => 'accounts.dayclose', 'permission' => 'accounts.day_close.view'],
+            ['label' => 'accounts::menu.day_closing', 'icon' => 'check-circle', 'route' => 'executive.dayclose', 'permission' => 'accounts.day_close.view'],
             /*
              * ⭐ মাস শেষের হিসাব — দিন-খাতার পাশে (মালিক, ১৭ নভেম্বর ২০২৬: নমুনা "Ok", "Sob ok")। ⓘ পাতাটা মালিকের কেন্দ্রের
              * ([[MonthCloseController]]) — বিক্রয়, মজুদ, ক্রয়, বেতন একসাথে পড়ে, আর হিসাব কারও উপর দাঁড়ায় না; দরজা এখানে।
@@ -1136,8 +1136,10 @@ return [
             'key' => 'accounts.day_close.weekly_holiday',
             'label' => 'accounts::settings.weekly_holiday',
             'type' => 'choice',
-            'options' => ['friday' => 'accounts::settings.day_friday', 'saturday' => 'accounts::settings.day_saturday',
-                'sunday' => 'accounts::settings.day_sunday', 'none' => 'accounts::settings.day_none'],
+            // ⓘ বাছাইয়ের ঘর মান-তালিকা নেয় আর নামের উপসর্গ (`option_label`) — মান => নাম দিলে নামটাকেই মান ধরে কাগজের মাপ খুঁজত, গোটা
+            //   নিয়ন্ত্রণ প্যানেল ৫০০ (ম্যাক, ১৮ নভেম্বর ২০২৬; [[settings.partials.board]])
+            'options' => ['friday', 'saturday', 'sunday', 'none'],
+            'option_label' => 'accounts::settings.day_',
             'default' => 'friday',
             'group' => 'day_close',
         ],
@@ -1146,6 +1148,19 @@ return [
          * আটকে না থাকে"। বন্ধ থাকলে বন্ধ দিনেও লেখা চলে, শুধু দিনের হিসাবে "দিন বন্ধের পরে যোগ হয়েছে"-তে দেখায় ([[OpenPeriod]])।
          */
         ['key' => 'accounts.day_close.lock', 'label' => 'accounts::settings.day_close_lock', 'type' => 'boolean', 'default' => false, 'group' => 'day_close'],
+        /*
+         * ⭐ বন্ধ-না-হওয়া দিনের পপআপ কতক্ষণ পরে ফিরবে — মালিক, ১৮ নভেম্বর ২০২৬: *"কেটে দিতে পারবে … এক ঘন্টা পর পর আবার আসবে"*।
+         * ⓘ ✕ চাপলে এই সময় পর্যন্ত লুকায় ([[DayCheckController]]); কখনো কাজ আটকায় না।
+         */
+        [
+            'key' => 'accounts.day_close.popup_every',
+            'label' => 'accounts::settings.day_close_popup_every',
+            'type' => 'choice',
+            'options' => ['10', '60', '120', '0'],
+            'option_label' => 'accounts::settings.popup_every_',
+            'default' => '60',
+            'group' => 'day_close',
+        ],
         [
             'key' => 'accounts.print_signature_lines',
             'label' => 'accounts::settings.print_signature_lines',

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Accounts\Http\Controllers;
+namespace App\Modules\Executive\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
@@ -12,7 +12,7 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\DayClose;
-use App\Modules\Accounts\Services\DayClosingService;
+use App\Modules\Executive\Services\DayClosingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -44,7 +44,20 @@ class DayClosingController extends Controller implements HasMiddleware
             new Middleware('can:accounts.day_close.view', only: ['show']),
             new Middleware('can:accounts.day_close.close', only: ['close']),
             new Middleware('can:accounts.day_close.reopen', only: ['reopen']),
+            new Middleware('can:accounts.day_close.view', only: ['snooze']),
         ];
+    }
+
+    /**
+     * ⭐ মাঝখানের সতর্কতার ✕ — মালিক, ১৮ নভেম্বর ২০২৬: *"কেটে দিতে পারবে … এক ঘন্টা পর পর আবার আসবে"*।
+     * ⓘ এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত লুকায় (`accounts.day_close.popup_every`, মিনিট); কিছু বদলায় না, কিছু আটকায় না।
+     */
+    public function snooze(Request $request): RedirectResponse
+    {
+        $minutes = max(1, (int) (app(\App\Core\Services\SettingsService::class)->get('accounts.day_close.popup_every') ?? 60));
+        $request->session()->put('daycheck.snooze_until', now()->addMinutes($minutes)->getTimestamp());
+
+        return back();
     }
 
     public function show(Request $request): View|Response
@@ -64,6 +77,8 @@ class DayClosingController extends Controller implements HasMiddleware
             'branch' => $this->branchName(),
             'canClose' => $request->user()->can('accounts.day_close.close'),
             'canReopen' => $request->user()->can('accounts.day_close.reopen'),
+            // ⭐ বন্ধের আগে চেকলিস্ট — যা বাকি, লিংকসহ; কেবল সতর্কতা (মালিক, ১৮ নভেম্বর ২০২৬)
+            'checklist' => app(\App\Modules\Accounts\Services\DayChecklist::class)->for($day),
         ]);
     }
 
@@ -117,7 +132,7 @@ class DayClosingController extends Controller implements HasMiddleware
             DayClose::query()->create(['company_id' => CompanyContext::id(), 'branch_id' => $branchId, 'day' => $day->toDateString()] + $values);
         });
 
-        return redirect()->route('accounts.dayclose', ['date' => $day->toDateString()])
+        return redirect()->route('executive.dayclose', ['date' => $day->toDateString()])
             ->with('status', __('accounts::dayclose.close.done', ['date' => $day->format('d-m-Y')]));
     }
 
@@ -141,7 +156,7 @@ class DayClosingController extends Controller implements HasMiddleware
 
         $closed->update(['reopened_by' => $request->user()->id, 'reopened_at' => now(), 'reopen_reason' => trim($data['reopen_reason'])]);
 
-        return redirect()->route('accounts.dayclose', ['date' => $day->toDateString()])
+        return redirect()->route('executive.dayclose', ['date' => $day->toDateString()])
             ->with('status', __('accounts::dayclose.reopen.done', ['date' => $day->format('d-m-Y')]));
     }
 

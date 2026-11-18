@@ -108,7 +108,8 @@
                                         <td colspan="4"></td>
                                     @endif
                                     <td class="font-mono text-xs">{{ $line['code'] }}</td>
-                                    <td @class(['ps-6' => bccomp($line['credit'], '0', 4) > 0])>{{ $line['account'] }}</td>
+                                    {{-- ⓘ ক্রেডিটের সারি একটু ভেতরে (খাতার রীতি) — ঘরের প্যাডিং থিমের, ভেতরের লেখায় সরানো --}}
+                                    <td><span @class(['ms-6 inline-block' => bccomp($line['credit'], '0', 4) > 0])>{{ $line['account'] }}</span></td>
                                     <td class="num">{{ $money($line['debit']) }}</td>
                                     <td class="num">{{ $money($line['credit']) }}</td>
                                     <td class="whitespace-nowrap">@if ($i === 0){{ $entry['who'] }}@endif</td>

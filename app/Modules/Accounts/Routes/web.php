@@ -283,13 +283,7 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('/day-book', [\App\Modules\Accounts\Http\Controllers\DayBookController::class, 'show'])
         ->name('daybook');
 
-    // ⭐ দিন শেষের হিসাব — পর্দা, কাগজ আর দিন বন্ধ (মালিক, ১৬ ও ১৮ নভেম্বর ২০২৬; [[DayClosingController]])
-    Route::get('/day-closing', [\App\Modules\Accounts\Http\Controllers\DayClosingController::class, 'show'])
-        ->name('dayclose');
-    Route::post('/day-closing/close', [\App\Modules\Accounts\Http\Controllers\DayClosingController::class, 'close'])
-        ->name('dayclose.close');
-    Route::post('/day-closing/reopen', [\App\Modules\Accounts\Http\Controllers\DayClosingController::class, 'reopen'])
-        ->name('dayclose.reopen');
+    // ⓘ দিন শেষের হিসাব (/accounts/day-closing) নির্বাহী মডিউলের রুটে — বিক্রয় আর গ্রাহক পড়ে, হিসাব কারও উপর নির্ভর করে না
 
     // ⭐ হিসাব বিবরণী — যেকোনো পক্ষ, যেকোনো সময়, সব পাতার PDF (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]]); catch-all-এর আগে
     Route::get('/statement/{type}/{id}', \App\Modules\Accounts\Http\Controllers\PartyStatementController::class)

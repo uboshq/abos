@@ -1585,6 +1585,7 @@ return [
             'order_credit_held' => 'When a sales order is held at the credit limit',
             'order_awaits_you' => 'When a sales order waits for my approval',
             'adjusting_reversal_stuck' => 'When an adjusting journal could not reverse on its date',
+            'staff_cash_held' => 'When company cash is still in my hands in the afternoon',
             'cheque_bounce_block' => 'When a bounced cheque blocks a customer\'s credit',
             'limit_request_waiting' => 'When a credit-limit raise waits for my approval',
             'bank_change_waiting' => 'When a supplier bank details change waits for my approval',

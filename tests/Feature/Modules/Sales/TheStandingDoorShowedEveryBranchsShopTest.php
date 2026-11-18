@@ -57,6 +57,8 @@ class TheStandingDoorShowedEveryBranchsShopTest extends TestCase
         $this->sr->companies()->attach($this->company->id, ['is_active' => true]);
         CompanyContext::forCompany($this->company->id, fn () => $this->sr->givePermissionTo([
             Permission::findOrCreate('sales.order.create', 'web'), Permission::findOrCreate('sales.collection.create', 'web'),
+            // ⓘ জমার খবরের দরজা জমার ধাপ খ (19e713177) থেকে নিজের চাবিতে — বিক্রির পুরো শিকল খবর দেয়
+            Permission::findOrCreate('sales.claim.submit', 'web'),
         ]));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

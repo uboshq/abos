@@ -110,6 +110,8 @@ final class NotificationKinds
 
             // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
             'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
+            // ⭐ বিকেলে কর্মীর হাতে কোম্পানির নগদ — সেই কর্মীকে, দিনে একবার (মালিক, ১৮ নভেম্বর ২০২৬; [[StaffCashAfternoon]])
+            'accounts.staff_cash_held' => 'core.notify.kind.staff_cash_held',
 
             // ⭐ চেক ফেরতে গ্রাহকের বাকি নিজে থেকেই বন্ধ — মালিককে, প্রতি চেকে একবার (বাকি নিয়ন্ত্রণ ধাপ ২.৪, ১১ অক্টোবর ২০২৬)
             'customer.cheque_bounce_block' => 'core.notify.kind.cheque_bounce_block',
@@ -181,7 +183,7 @@ final class NotificationKinds
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
             $type === 'supplier.bank_change_waiting' => ['approval', 'high'],
             $type === 'system_admin.setting_change_waiting' => ['approval', 'high'],
-            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting'], true) => ['task', 'high'],
+            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting', 'accounts.staff_cash_held'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],
             $type === 'notification.template_test' => ['system', 'low'],

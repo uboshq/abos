@@ -342,6 +342,16 @@ Schedule::command('abos:daily-summary-mail')
         logger()->critical('প্রতিদিনের সারাংশের ইমেইল পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ বিকেলে কর্মীর হাতে কোম্পানির নগদ থাকলে সেই কর্মীকে খবর — মালিক, ১৮ নভেম্বর ২০২৬ ([[StaffCashAfternoon]]); দিনে একবার।
+ */
+Schedule::command('abos:staff-cash-afternoon')
+    ->dailyAt('17:00')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('কর্মীর হাতে টাকার বিকেলের খবর পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:owner-morning-mail')
     ->dailyAt('08:00')
     ->withoutOverlapping()

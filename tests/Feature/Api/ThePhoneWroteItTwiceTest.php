@@ -93,7 +93,8 @@ final class ThePhoneWroteItTwiceTest extends TestCase
     {
         $user = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $user->companies()->attach($this->company->id, ['is_active' => true]);
-        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo(Permission::findOrCreate('sales.collection.create', 'web')));
+        // ⓘ জমার খবরের দরজা জমার ধাপ খ (19e713177) থেকে নিজের চাবিতে
+        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo([Permission::findOrCreate('sales.collection.create', 'web'), Permission::findOrCreate('sales.claim.submit', 'web')]));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return $user->fresh();

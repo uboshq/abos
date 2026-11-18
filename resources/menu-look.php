@@ -85,6 +85,9 @@ return [
             'accounts::menu.cash_count' => ['master', 'calculator'],
             'accounts::menu.obligations' => ['master', 'list-todo'],
             'accounts::menu.day_book' => ['books', 'calendar-days'],
+            // ⭐ দিন শেষের হিসাব আর মাস শেষের হিসাব — দিন-খাতার ঠিক পরে, একই "বই" দলে (মালিক, ১৬–১৮ নভেম্বর ২০২৬)
+            'accounts::menu.day_closing' => ['books', 'moon'],
+            'accounts::menu.month_close' => ['books', 'calendar-clock'],
             'accounts::menu.cash_book' => ['books', 'book-open'],
             'accounts::menu.bank_book' => ['books', 'landmark'],
             'accounts::menu.inflow' => ['books', 'list-checks'],

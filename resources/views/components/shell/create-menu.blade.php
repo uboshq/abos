@@ -65,7 +65,7 @@
         ['route' => 'accounts.note.create', 'params' => ['direction' => 'debit'], 'label' => 'accounts::note.debit_note', 'group' => 'accounts', 'icon' => 'arrow_up', 'can' => 'accounts.note.manage'],
         ['route' => 'accounts.note.create', 'params' => ['direction' => 'credit'], 'label' => 'accounts::note.credit_note', 'group' => 'accounts', 'icon' => 'arrow_down', 'can' => 'accounts.note.manage'],
         // ⭐ দিন শেষের হিসাব — দিন বন্ধের শর্টকাট, কেবল যাঁর দিন বন্ধের চাবি আছে (মালিক, ১৮ নভেম্বর ২০২৬: '+' মেনুর নিচে)
-        ['route' => 'accounts.dayclose', 'label' => 'accounts::dayclose.create_menu', 'group' => 'accounts', 'icon' => 'check-circle', 'can' => 'accounts.day_close.close'],
+        ['route' => 'executive.dayclose', 'label' => 'accounts::dayclose.create_menu', 'group' => 'accounts', 'icon' => 'check-circle', 'can' => 'accounts.day_close.close'],
         ['route' => 'customer.create', 'label' => 'core.create.customer', 'group' => 'sales', 'icon' => 'customer', 'can' => 'customer.create'],
         ['route' => 'supplier.create', 'label' => 'core.create.supplier', 'group' => 'purchase', 'icon' => 'supplier', 'can' => 'supplier.create'],
         ['route' => 'inventory.product.create', 'label' => 'core.create.product', 'group' => 'inventory', 'icon' => 'inventory', 'can' => 'inventory.product.create'],

@@ -296,6 +296,8 @@
                  ভাউচার এখনো পোস্ট হয়নি ei doroner notice … modiulebar menubar er na venge dekhabe"); কম জরুরি ঘোষণা ফুটারে চলমান
                  ([[shell.statusbar]])। ⛔ আগে `rail` রূপে ফিতাটা বারের নিচে পুরো চওড়ায়, রেল আর মেনুকে নিচে ঠেলে দিত। --}}
             <x-shell.notice-banner />
+            {{-- ⭐ দিন বা মাস বন্ধ না হলে মাঝখানের সতর্কতা — কেটে দেওয়া যায়, কিছু আটকায় না (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+            <x-shell.day-check />
 
 
             @if ($topnavShape !== 'none')

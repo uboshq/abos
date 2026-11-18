@@ -51,6 +51,9 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Accounts\Http\Controllers\PeriodLockController' => 'হিসাববর্ষের মাসগুলো — বছরে বারোটা।',
         'App\Modules\Accounts\Http\Controllers\YearEndController' => 'কেবল চলতি বছর, একটাই।',
 
+        // ⓘ ১৮ নভেম্বর ২০২৬ (জমার ধাপ গ; Mac run of 0de6763e9) — ব্যাংকের সাথে মেলানোর টেবিল
+        'App\Modules\Sales\Http\Controllers\DepositMatchController' => 'মেলানোর কাজের টেবিল — কেবল এখনো না-মেলা জমার খবর আর ব্যাংক-বিবরণীর না-মেলা সারি, প্রতিটা সবচেয়ে পুরনো ২০০টা (limit 200); মিললেই সরে যায়, জমে না। পাতায় ভাঙলে একটা খবর আর তার ব্যাংকের সারি আলাদা পাতায় পড়ত, মেলানোই যেত না।',
+
         // ⓘ ১৪ নভেম্বর ২০২৬ (fe, রিলিজ 1.2.0; Mac run of b09c322b1) — মাঠকর্মীর গাছ
         'App\Modules\Customer\Http\Controllers\FieldForceController' => 'মাঠকর্মীর গাছ — কে কার অধীনে; গাছ পাতায় ভাঙলে উপরওয়ালা এক পাতায় আর তার লোক আরেক পাতায় পড়ত। সারি কোম্পানির বিক্রয়ের লোক — কর্মী নিয়োগে বাড়ে, লেনদেনে নয়।',
 

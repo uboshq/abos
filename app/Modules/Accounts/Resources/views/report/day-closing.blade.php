@@ -26,10 +26,10 @@
             <x-slot:actions>
                 @can('system_admin.list.export')
                     <x-ui.button tone="secondary" icon="print" target="_blank" rel="noopener" data-paper="print"
-                                 :href="route('accounts.dayclose', ['date' => $day->toDateString(), 'export' => 'print'])">
+                                 :href="route('executive.dayclose', ['date' => $day->toDateString(), 'export' => 'print'])">
                         {{ __('core.action.print') }}
                     </x-ui.button>
-                    <x-ui.button tone="secondary" data-paper="pdf" :href="route('accounts.dayclose', ['date' => $day->toDateString(), 'export' => 'pdf'])">
+                    <x-ui.button tone="secondary" data-paper="pdf" :href="route('executive.dayclose', ['date' => $day->toDateString(), 'export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>
                 @endcan
@@ -213,7 +213,7 @@
                 @foreach (['gross', 'vat', 'returned', 'net', 'cogs', 'margin', 'delivery', 'after', 'office', 'fixed'] as $key)
                     @continue($key === 'returned' && bccomp((string) $pl['month']['returned'], '0', 4) === 0)
                     <tr @class(['font-semibold' => in_array($key, ['net', 'margin', 'after'], true)])>
-                        <td @class(['ps-6' => in_array($key, ['vat', 'returned', 'cogs', 'delivery', 'office', 'fixed'], true)])>{{ __('accounts::dayclose.pl.'.$key, ['rate' => $pl['month']['margin_rate'] ?? '0', 'monthly' => $m($r['fixed']['monthly']), 'days' => $r['fixed']['workdays']]) }}</td>
+                        <td><span @class(['ms-6 inline-block' => in_array($key, ['vat', 'returned', 'cogs', 'delivery', 'office', 'fixed'], true)])>{{ __('accounts::dayclose.pl.'.$key, ['rate' => $pl['month']['margin_rate'] ?? '0', 'monthly' => $m($r['fixed']['monthly']), 'days' => $r['fixed']['workdays']]) }}</span></td>
                         @foreach (['today', 'month', 'avg'] as $col)<td class="num">{{ $neg($pl[$col][$key] ?? '0') }}</td>@endforeach
                     </tr>
                 @endforeach
@@ -316,7 +316,7 @@
             ]) }}</b>
             {{-- ⭐ দিন আবার খোলা — কারণ লিখে, কেবল যাঁর চাবি আছে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
             @if ($canReopen)
-                <form method="POST" action="{{ route('accounts.dayclose.reopen') }}" class="mt-3 flex flex-wrap items-end gap-3" data-day-reopen-form>
+                <form method="POST" action="{{ route('executive.dayclose.reopen') }}" class="mt-3 flex flex-wrap items-end gap-3" data-day-reopen-form>
                     @csrf
                     <input type="hidden" name="date" value="{{ $day->toDateString() }}">
                     <x-ui.field name="reopen_reason" :label="__('accounts::dayclose.reopen.reason')" required />
@@ -332,8 +332,14 @@
                 ]) }}</p>
             @endif
             <p class="mb-2">{{ __('accounts::dayclose.open_line') }}</p>
+            {{-- ⭐ বন্ধের আগে চেকলিস্ট (মালিক, ১৮ নভেম্বর ২০২৬) — কেবল সতর্কতা, বোতাম সবসময় চলে --}}
+            <div class="mb-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-muted) px-4 py-3 print-hide" data-day-check>
+                <h3 class="mb-1 font-semibold">{{ __('accounts::dayclose.check.title') }}</h3>
+                @include('accounts::partials.day-checklist', ['items' => $checklist ?? []])
+                @if (($checklist ?? []) !== [])<p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('accounts::dayclose.check.note') }}</p>@endif
+            </div>
             @if ($canClose && ! $day->isFuture())
-                <form method="POST" action="{{ route('accounts.dayclose.close') }}" class="flex flex-wrap items-end gap-3" data-day-close-form>
+                <form method="POST" action="{{ route('executive.dayclose.close') }}" class="flex flex-wrap items-end gap-3" data-day-close-form>
                     @csrf
                     <input type="hidden" name="date" value="{{ $day->toDateString() }}">
                     @if ($r['count'] !== null && bccomp($r['count']['gap'], '0', 2) !== 0)

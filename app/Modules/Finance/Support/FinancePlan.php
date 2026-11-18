@@ -129,7 +129,7 @@ final class FinancePlan
                 'items' => [
                     ['খতিয়ান', 'accounts.report.show:ledger', null],
                     ['রেওয়ামিল', 'accounts.report.show:trial-balance', null],
-                    ['দৈনিক খতিয়ান', 'accounts.report.show:day-book', null],
+                    ['দৈনিক খতিয়ান', 'accounts.daybook', null], // ⭐ মালিকের নমুনা v7-এর জার্নাল-খাতা, মেনুর একই পাতা (১৮ নভেম্বর ২০২৬)
                     ['বছর শেষ', 'accounts.year_end.index', null],
                     ['পিরিয়ড বন্ধ ও খোলা', 'accounts.period.index', null],
                     ['খোলা ব্যালেন্স', 'inventory.stock.opening', 'মজুদের খোলা ব্যালেন্স'],
@@ -598,7 +598,7 @@ final class FinancePlan
                 'no' => '২৯',
                 'title' => 'রিপোর্ট',
                 'items' => [
-                    ['দৈনিক খতিয়ান', 'accounts.report.show:day-book', null],
+                    ['দৈনিক খতিয়ান', 'accounts.daybook', null], // ⭐ মালিকের নমুনা v7-এর জার্নাল-খাতা, মেনুর একই পাতা (১৮ নভেম্বর ২০২৬)
                     ['ক্যাশ বই', 'accounts.report.show:cash-book', null],
                     ['ব্যাংক বই', 'accounts.report.show:bank-book', null],
                     ['খতিয়ান', 'accounts.report.show:ledger', null],

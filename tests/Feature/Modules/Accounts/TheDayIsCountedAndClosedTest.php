@@ -17,7 +17,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\AccountService;
-use App\Modules\Accounts\Services\DayClosingService;
+use App\Modules\Executive\Services\DayClosingService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Supplier\Models\Supplier;
@@ -139,10 +139,10 @@ final class TheDayIsCountedAndClosedTest extends TestCase
         $this->assertSame(0, bccomp($r['count']['gap'], '-150', 2), '⛔ নগদ গণনার ঘাটতি দেখায় না');
 
         // ⛔ কারণ ছাড়া বন্ধ নয়
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasErrors('gap_reason');
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY])->assertSessionHasErrors('gap_reason');
         $this->assertSame(0, DayClose::query()->count(), '⛔ কারণ ছাড়া ঘাটতির দিন বন্ধ হয়ে গেল');
 
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY, 'gap_reason' => 'Change returned from the cashier'])
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY, 'gap_reason' => 'Change returned from the cashier'])
             ->assertRedirect()->assertSessionHasNoErrors();
         $closed = DayClose::query()->firstOrFail();
         $this->assertSame(0, bccomp((string) $closed->cash_gap, '-150', 2));
@@ -174,7 +174,7 @@ final class TheDayIsCountedAndClosedTest extends TestCase
 
         // ⓘ দুইবার বন্ধ নয়
         $this->actingAs($this->owner->fresh());
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY, 'gap_reason' => 'again'])->assertSessionHasErrors('date');
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY, 'gap_reason' => 'again'])->assertSessionHasErrors('date');
         $this->assertSame(1, DayClose::query()->count());
     }
 
@@ -188,7 +188,7 @@ final class TheDayIsCountedAndClosedTest extends TestCase
             $this->actingAs($this->owner->fresh());
             app()->setLocale($locale);
 
-            $html = (string) $this->get(route('accounts.dayclose', ['date' => self::DAY]))->assertOk()->getContent();
+            $html = (string) $this->get(route('executive.dayclose', ['date' => self::DAY]))->assertOk()->getContent();
 
             $this->assertStringContainsString($heading, $html, "⛔ ({$locale}) প্রথম অংশের নাম নেই");
             foreach (['inflow', 'delivery', 'sales', 'expense', 'count', 'paid_out', 'balances', 'pl', 'stock', 'fixed', 'vat'] as $sec) {
@@ -198,7 +198,7 @@ final class TheDayIsCountedAndClosedTest extends TestCase
             $this->assertStringContainsString('70,000.00', $html, "⛔ ({$locale}) মোট টাকা আসা লাখের ধাঁচে নেই");
         }
 
-        $pdf = $this->get(route('accounts.dayclose', ['date' => self::DAY, 'export' => 'pdf']))->assertOk();
+        $pdf = $this->get(route('executive.dayclose', ['date' => self::DAY, 'export' => 'pdf']))->assertOk();
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
         $this->assertStringStartsWith('%PDF', (string) $pdf->getContent());
     }
@@ -209,7 +209,7 @@ final class TheDayIsCountedAndClosedTest extends TestCase
     public function test_an_entry_after_the_close_is_listed_and_the_day_can_be_reopened_with_a_reason(): void
     {
         $this->theDay();
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
 
         // ⓘ পরের দিন সকালে মালিক (পেছনের তারিখের অনুমতি আছে) ১৬ তারিখে একটা ভুলে যাওয়া খরচ বসালেন
         Carbon::setTestNow('2026-11-18 10:00:00');
@@ -221,13 +221,13 @@ final class TheDayIsCountedAndClosedTest extends TestCase
         $late = app(DayClosingService::class)->build(Carbon::parse(self::DAY))['late'];
         $this->assertSame(['T-9307'], array_column($late, 'no'), '⛔ দিন বন্ধের পরে বসা কাগজ "পরে যোগ হয়েছে"-তে নেই, বা আগের কাগজও এসেছে');
         $this->assertSame(0, bccomp($late[0]['amount'], '700', 2));
-        $this->get(route('accounts.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-sec="late"', false);
+        $this->get(route('executive.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-sec="late"', false);
 
         // ⛔ কারণ ছাড়া খোলা নয়
-        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY])->assertSessionHasErrors('reopen_reason');
+        $this->post(route('executive.dayclose.reopen'), ['date' => self::DAY])->assertSessionHasErrors('reopen_reason');
         $this->assertTrue($this->isClosed(), '⛔ কারণ ছাড়া দিন খুলে গেল');
 
-        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'Three old bills to enter'])->assertSessionHasNoErrors();
+        $this->post(route('executive.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'Three old bills to enter'])->assertSessionHasNoErrors();
         $this->assertFalse($this->isClosed(), '⛔ দিন আবার খুলল না');
 
         // ⓘ খোলা দিনে অনুমতি ছাড়াও লেখা যায়
@@ -236,7 +236,7 @@ final class TheDayIsCountedAndClosedTest extends TestCase
 
         // ⓘ আবার বন্ধ — একই সারি, খোলার দাগ মোছে
         $this->actingAs($this->owner->fresh());
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
         $this->assertSame(1, DayClose::query()->count(), '⛔ আবার বন্ধে নতুন সারি হলো');
         $this->assertNull(DayClose::query()->firstOrFail()->reopened_at);
         $this->assertTrue($this->isClosed(), '⛔ আবার বন্ধ হলো না');
@@ -244,18 +244,18 @@ final class TheDayIsCountedAndClosedTest extends TestCase
 
     public function test_only_the_reopen_key_reopens_and_the_create_menu_offers_the_close_to_who_may_close(): void
     {
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
 
         $clerk = $this->clerk(['accounts.day_close.view', 'accounts.day_close.close']);
         $this->actingAs($clerk);
-        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'x y z'])->assertForbidden();
+        $this->post(route('executive.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'x y z'])->assertForbidden();
         $this->assertTrue($this->isClosed(), '⛔ খোলার চাবি ছাড়াই দিন খুলল');
 
-        $this->assertStringContainsString(route('accounts.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
+        $this->assertStringContainsString(route('executive.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
             '⛔ "+" মেনুতে দিন বন্ধের শর্টকাট নেই');
 
         $this->actingAs($this->clerk(['accounts.day_close.view']));
-        $this->assertStringNotContainsString(route('accounts.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
+        $this->assertStringNotContainsString(route('executive.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
             '⛔ দিন বন্ধের চাবি ছাড়াই "+" মেনুতে শর্টকাট');
     }
 
@@ -279,19 +279,19 @@ final class TheDayIsCountedAndClosedTest extends TestCase
         $this->assertSame($cashier->name, $staff[0]['who']);
         $this->assertSame(0, bccomp($staff[0]['amount'], '12000', 2));
 
-        $this->get(route('accounts.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-staff-cash', false)->assertSee($cashier->name);
+        $this->get(route('executive.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-staff-cash', false)->assertSee($cashier->name);
     }
 
     public function test_seeing_and_closing_are_two_keys(): void
     {
         $clerk = $this->clerk([]);
         $this->actingAs($clerk);
-        $this->get(route('accounts.dayclose'))->assertForbidden();
+        $this->get(route('executive.dayclose'))->assertForbidden();
 
         $clerk->givePermissionTo(Permission::findOrCreate('accounts.day_close.view', 'web'));
         $this->actingAs($clerk->fresh());
-        $this->get(route('accounts.dayclose'))->assertOk();
-        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertForbidden();
+        $this->get(route('executive.dayclose'))->assertOk();
+        $this->post(route('executive.dayclose.close'), ['date' => self::DAY])->assertForbidden();
         $this->assertSame(0, DayClose::query()->count(), '⛔ দেখার চাবিতেই দিন বন্ধ হলো');
     }
 

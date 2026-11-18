@@ -508,7 +508,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //   +১ TheListThatGrowsForever…::WHOLE_ON_PURPOSE `FieldForceController` — গাছ পাতায় ভাঙে না, সারি কর্মীর সংখ্যায় = ৫১৮
     // ⓘ ৫১৮ → ৫১৯ (১৬ নভেম্বর ২০২৬): লেজারের ঠিকানা `accounts.statement` — দুই চাবির যেকোনো একটা (হিসাবের রিপোর্ট বা পক্ষকে দেখার
     //   অনুমতি), তাই পাহারা পদ্ধতির ভেতরে abort_unless()-এ (GUARDED_INSIDE_THE_METHOD); একটা can: মিডলওয়্যারে এটা বলা যায় না
-    private const CEILING = 519;
+    // ⓘ ৫১৯ → ৫২৪ (১৮ নভেম্বর ২০২৬, রিলিজ 1.3.4; Mac run of 0de6763e9 মাপল ৫২০):
+    //   +১ জমার ধাপ গ — ব্যাংক-বিবরণী আনা আর হাতে একটা সারি (sales.claim.match.load/.line, EXCLUDED: কাগজ নয়, কিছু পোস্ট হয় না),
+    //      মাপা হয়েছিল, ছাদ বাড়ানো হয়নি — এখানে লেখা হলো
+    //   +৩ দিন শেষের হিসাব — দিন বন্ধ, আবার খোলা, পপআপের "পরে" (EXCLUDED: একটা DayClose সারি বা কেবল সেশন; কাগজ নয়, টাকা নড়ে না)
+    //   +১ TheListThatGrowsForever…::WHOLE_ON_PURPOSE `DepositMatchController` — মেলানোর টেবিল পাতায় ভাঙলে খবর আর ব্যাংকের সারি
+    //      আলাদা পাতায় পড়ত; কেবল না-মেলা সারি, প্রতিটা ২০০-তে বাঁধা
+    private const CEILING = 524;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

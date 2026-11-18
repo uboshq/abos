@@ -36,6 +36,10 @@ class DayClose extends Model
     {
         return [
             'day' => 'date',
+            // ⓘ টাকা কখনো float নয় (MoneyIsNeverAFloatTest)
+            'cash_counted' => 'decimal:4',
+            'cash_book' => 'decimal:4',
+            'cash_gap' => 'decimal:4',
             'closed_at' => 'datetime',
             'reopened_at' => 'datetime',
         ];
