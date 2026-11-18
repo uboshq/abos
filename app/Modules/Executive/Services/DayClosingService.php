@@ -12,6 +12,7 @@ use App\Models\DayClose;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Dashboard\SalesBoard;
 use App\Modules\Sales\Metrics\SalesMetrics;
