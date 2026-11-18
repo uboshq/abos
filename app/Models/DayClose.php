@@ -29,6 +29,7 @@ class DayClose extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'day', 'cash_counted', 'cash_book', 'cash_gap', 'gap_reason', 'closed_by', 'closed_at',
+        'reopened_by', 'reopened_at', 'reopen_reason',
     ];
 
     protected function casts(): array
@@ -36,12 +37,18 @@ class DayClose extends Model
         return [
             'day' => 'date',
             'closed_at' => 'datetime',
+            'reopened_at' => 'datetime',
         ];
     }
 
     public function closer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    public function reopener(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reopened_by');
     }
 
     public function branch(): BelongsTo
@@ -53,8 +60,17 @@ class DayClose extends Model
      * এই দিন (এই শাখায়) বন্ধ কি না — কোম্পানির পুরো দিন বন্ধ হলেও হ্যাঁ।
      *
      * ⓘ শাখা না জানা গেলে (সব শাখার কাগজ) কেবল কোম্পানির পুরো দিনের বন্ধ দেখা হয়।
+     * ⓘ আবার খোলা দিন বন্ধ নয় ([[recordOn()]] খোলা-বন্ধ দুইটাই দেয়)।
      */
     public static function closedOn(Carbon|string $day, ?int $branchId = null): ?self
+    {
+        $record = self::recordOn($day, $branchId);
+
+        return $record !== null && $record->reopened_at === null ? $record : null;
+    }
+
+    /** এই দিনের বন্ধের দাগ — খোলা থাকলেও (আবার বন্ধ করলে একই সারি নতুন করে বসে) */
+    public static function recordOn(Carbon|string $day, ?int $branchId = null): ?self
     {
         $date = ($day instanceof Carbon ? $day : Carbon::parse($day))->toDateString();
 

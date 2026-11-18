@@ -58,6 +58,19 @@
         </ul>
     </section>
 
+    {{-- ⭐ কর্মীর হাতে টাকা — হলুদ বাক্সে, খবরের ঠিক নিচে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+    @if ($r['staff_cash'] !== [])
+        <section class="mb-4 rounded-(--radius-card) border border-(--color-warning) bg-(--color-badge-warning-bg) px-4 py-3 text-(--color-badge-warning-ink)" data-staff-cash>
+            <h2 class="mb-1 font-semibold">{{ __('accounts::dayclose.staff_cash.title') }}</h2>
+            <ul class="list-disc ps-5 text-sm">
+                @foreach ($r['staff_cash'] as $s)
+                    <li><b>{{ __('accounts::dayclose.staff_cash.row', ['who' => $s['who'] ?? __('accounts::dayclose.staff_cash.nobody'), 'amount' => $m($s['amount']), 'account' => $s['account']]) }}</b></li>
+                @endforeach
+            </ul>
+            <p class="mt-1 text-xs">{{ __('accounts::dayclose.staff_cash.note') }}</p>
+        </section>
+    @endif
+
     {{-- ১ · আজ টাকা এল --}}
     <h2 class="mb-1 font-semibold">{{ $title(1, 'inflow') }}</h2>
     <div class="{{ $box }}">
@@ -272,6 +285,24 @@
         </div>
     </div>
 
+    {{-- ⭐ দিন বন্ধের পরে যোগ হয়েছে — কেউ চুপচাপ পুরনো দিনের অঙ্ক বদলাতে পারবে না (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+    @if ($r['late'] !== [])
+        <h2 class="mb-1 mt-2 font-semibold text-(--color-danger)">{{ __('accounts::dayclose.late.title') }}</h2>
+        <p class="mb-1 text-sm text-(--color-ink-muted)">{{ __('accounts::dayclose.late.note') }}</p>
+        <div class="{{ $box }}">
+            <table class="ui-grid w-full text-sm" data-sec="late">
+                <thead><tr><th>{{ __('accounts::dayclose.late.paper') }}</th><th>{{ __('accounts::dayclose.late.kind') }}</th><th class="num">{{ __('accounts::dayclose.col.amount') }}</th>
+                    <th>{{ __('accounts::dayclose.late.who') }}</th><th>{{ __('accounts::dayclose.late.when') }}</th></tr></thead>
+                <tbody>
+                    @foreach ($r['late'] as $row)
+                        <tr><td class="font-mono text-xs">{{ $row['no'] }}</td><td>{{ __('core.source.'.$row['type']) }}</td><td class="num">{{ $m($row['amount']) }}</td>
+                            <td>{{ $row['who'] }}</td><td>{{ $row['when']->format('d/m/Y h:i A') }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     {{-- দিন বন্ধ --}}
     <section class="mt-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-muted) px-4 py-3 text-sm" data-close-line>
         @if ($r['closed'])
@@ -283,7 +314,23 @@
                 'who' => $c->closer?->name ?? '—',
                 'time' => $c->closed_at?->format('h:i A') ?? '',
             ]) }}</b>
+            {{-- ⭐ দিন আবার খোলা — কারণ লিখে, কেবল যাঁর চাবি আছে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+            @if ($canReopen)
+                <form method="POST" action="{{ route('accounts.dayclose.reopen') }}" class="mt-3 flex flex-wrap items-end gap-3" data-day-reopen-form>
+                    @csrf
+                    <input type="hidden" name="date" value="{{ $day->toDateString() }}">
+                    <x-ui.field name="reopen_reason" :label="__('accounts::dayclose.reopen.reason')" required />
+                    <x-ui.button type="submit" tone="secondary">{{ __('accounts::dayclose.reopen.button') }}</x-ui.button>
+                </form>
+            @endif
         @else
+            @if ($r['record']?->reopened_at)
+                <p class="mb-2 font-semibold" data-reopened-line>{{ __('accounts::dayclose.reopen.line', [
+                    'who' => $r['record']->reopener?->name ?? '—',
+                    'time' => $r['record']->reopened_at->format('d/m/Y h:i A'),
+                    'reason' => $r['record']->reopen_reason,
+                ]) }}</p>
+            @endif
             <p class="mb-2">{{ __('accounts::dayclose.open_line') }}</p>
             @if ($canClose && ! $day->isFuture())
                 <form method="POST" action="{{ route('accounts.dayclose.close') }}" class="flex flex-wrap items-end gap-3" data-day-close-form>

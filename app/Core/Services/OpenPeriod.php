@@ -69,8 +69,13 @@ final class OpenPeriod
          * ⭐ বন্ধ দিন — "দিন শেষের হিসাব"-এ গুনে-মিলিয়ে বন্ধ করা দিনে নতুন বা বদলানো এন্ট্রি অনুমোদন ছাড়া নয় (মালিকের অনুমোদিত
          * নমুনা, ১৬ ও ১৮ নভেম্বর ২০২৬; [[TheDayIsCountedAndClosedTest]])। ⓘ "অনুমোদন" = পেছনের তারিখের অনুমতি যাঁর আছে
          * (`accounts.backdate.override`), বা সেই অনুমতির সইকারী এই কাগজে সই দিয়েছেন — পেছনের জানালার একই দুই দরজা।
+         *
+         * ⛔ কিন্তু কেবল যদি কোম্পানি আটকানো চায় — মালিক, ১৮ নভেম্বর ২০২৬: *"এগুলো শুধুমাত্র সতর্কতার জন্য … কাজ যাতে কোনোভাবে
+         * আটকে না থাকে"*। ডিফল্টে বন্ধ দিনে লেখা চলে, আর দিনের হিসাবের "দিন বন্ধের পরে যোগ হয়েছে" অংশে লাল হয়ে দেখায়
+         * ([[DayClosingService::addedAfterClose()]]); সুইচ `accounts.day_close.lock` চালু করলে তবেই আটকায়।
          */
-        if (! $this->mayPassClosedDays() && ($closed = DayClose::closedOn($date, CompanyContext::branchId())) !== null) {
+        if ($this->settings->enabled('accounts.day_close.lock') && ! $this->mayPassClosedDays()
+            && ($closed = DayClose::closedOn($date, CompanyContext::branchId())) !== null) {
             throw ValidationException::withMessages([
                 $field => __('core.period.day_closed', [
                     'date' => $date->format('d-m-Y'),

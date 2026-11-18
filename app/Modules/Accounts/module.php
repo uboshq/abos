@@ -438,6 +438,8 @@ return [
          */
         'accounts.day_close.view',
         'accounts.day_close.close',
+        // ⭐ দিন আবার খোলা — কোনো ছাঁচে নয়; মালিক (সুপার অ্যাডমিন) আর যাঁকে তিনি দেন (১৮ নভেম্বর ২০২৬)
+        'accounts.day_close.reopen',
 
         /*
          * ⭐ গ্রুপের হিসাবের নিজের চাবি — ২৫ সেপ্টেম্বর ২০২৬।
@@ -1139,6 +1141,11 @@ return [
             'default' => 'friday',
             'group' => 'day_close',
         ],
+        /*
+         * ⭐ বন্ধ দিনে লেখা আটকাবে কি না — ডিফল্ট বন্ধ। মালিক, ১৮ নভেম্বর ২০২৬: "এগুলো শুধুমাত্র সতর্কতার জন্য … কাজ যাতে কোনোভাবে
+         * আটকে না থাকে"। বন্ধ থাকলে বন্ধ দিনেও লেখা চলে, শুধু দিনের হিসাবে "দিন বন্ধের পরে যোগ হয়েছে"-তে দেখায় ([[OpenPeriod]])।
+         */
+        ['key' => 'accounts.day_close.lock', 'label' => 'accounts::settings.day_close_lock', 'type' => 'boolean', 'default' => false, 'group' => 'day_close'],
         [
             'key' => 'accounts.print_signature_lines',
             'label' => 'accounts::settings.print_signature_lines',

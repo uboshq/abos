@@ -148,9 +148,17 @@ final class TheDayIsCountedAndClosedTest extends TestCase
         $this->assertSame(0, bccomp((string) $closed->cash_gap, '-150', 2));
         $this->assertSame('Change returned from the cashier', $closed->gap_reason);
 
-        // ⛔ বন্ধ দিনে, পেছনের তারিখের অনুমতি ছাড়া, লেখা আটকায়
+        // ⭐ ডিফল্টে কেবল সতর্কতা — বন্ধ দিনেও লেখা চলে (মালিক, ১৮ নভেম্বর ২০২৬: "কাজ যাতে কোনোভাবে আটকে না থাকে")
         $clerk = $this->clerk(['accounts.day_close.view']);
         $this->actingAs($clerk);
+        try {
+            app(OpenPeriod::class)->assertOpen(self::DAY);
+        } catch (ValidationException) {
+            $this->fail('⛔ ডিফল্টে বন্ধ দিনে লেখা আটকালো — মালিকের নিয়ম: কেবল সতর্কতা, কাজ আটকাবে না');
+        }
+
+        // ⛔ সুইচ চালু করলে তবেই, পেছনের তারিখের অনুমতি ছাড়া, লেখা আটকায়
+        app(SettingsService::class)->set('accounts.day_close.lock', true);
         try {
             app(OpenPeriod::class)->assertOpen(self::DAY);
             $this->fail('⛔ বন্ধ দিনে অনুমতি ছাড়া লেখা গেল');
@@ -195,6 +203,85 @@ final class TheDayIsCountedAndClosedTest extends TestCase
         $this->assertStringStartsWith('%PDF', (string) $pdf->getContent());
     }
 
+    /**
+     * ⭐ মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে, তাহলে তোমার প্ল্যান মতো এটা করো"): বন্ধ দিনে পরে যা বসে তা চোখের সামনে, আর কারণ লিখে দিন আবার খোলা।
+     */
+    public function test_an_entry_after_the_close_is_listed_and_the_day_can_be_reopened_with_a_reason(): void
+    {
+        $this->theDay();
+        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+
+        // ⓘ পরের দিন সকালে মালিক (পেছনের তারিখের অনুমতি আছে) ১৬ তারিখে একটা ভুলে যাওয়া খরচ বসালেন
+        Carbon::setTestNow('2026-11-18 10:00:00');
+        $this->book('expense_voucher', [
+            ['account_id' => StandardChart::find(StandardChart::BANK_CHARGES)->id, 'debit' => '700', 'branch_id' => $this->a->id],
+            ['account_id' => $this->cash->id, 'credit' => '700', 'branch_id' => $this->a->id],
+        ]);
+
+        $late = app(DayClosingService::class)->build(Carbon::parse(self::DAY))['late'];
+        $this->assertSame(['T-9307'], array_column($late, 'no'), '⛔ দিন বন্ধের পরে বসা কাগজ "পরে যোগ হয়েছে"-তে নেই, বা আগের কাগজও এসেছে');
+        $this->assertSame(0, bccomp($late[0]['amount'], '700', 2));
+        $this->get(route('accounts.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-sec="late"', false);
+
+        // ⛔ কারণ ছাড়া খোলা নয়
+        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY])->assertSessionHasErrors('reopen_reason');
+        $this->assertTrue($this->isClosed(), '⛔ কারণ ছাড়া দিন খুলে গেল');
+
+        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'Three old bills to enter'])->assertSessionHasNoErrors();
+        $this->assertFalse($this->isClosed(), '⛔ দিন আবার খুলল না');
+
+        // ⓘ খোলা দিনে অনুমতি ছাড়াও লেখা যায়
+        $this->actingAs($this->clerk(['accounts.day_close.view']));
+        app(OpenPeriod::class)->assertOpen(self::DAY);
+
+        // ⓘ আবার বন্ধ — একই সারি, খোলার দাগ মোছে
+        $this->actingAs($this->owner->fresh());
+        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+        $this->assertSame(1, DayClose::query()->count(), '⛔ আবার বন্ধে নতুন সারি হলো');
+        $this->assertNull(DayClose::query()->firstOrFail()->reopened_at);
+        $this->assertTrue($this->isClosed(), '⛔ আবার বন্ধ হলো না');
+    }
+
+    public function test_only_the_reopen_key_reopens_and_the_create_menu_offers_the_close_to_who_may_close(): void
+    {
+        $this->post(route('accounts.dayclose.close'), ['date' => self::DAY])->assertSessionHasNoErrors();
+
+        $clerk = $this->clerk(['accounts.day_close.view', 'accounts.day_close.close']);
+        $this->actingAs($clerk);
+        $this->post(route('accounts.dayclose.reopen'), ['date' => self::DAY, 'reopen_reason' => 'x y z'])->assertForbidden();
+        $this->assertTrue($this->isClosed(), '⛔ খোলার চাবি ছাড়াই দিন খুলল');
+
+        $this->assertStringContainsString(route('accounts.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
+            '⛔ "+" মেনুতে দিন বন্ধের শর্টকাট নেই');
+
+        $this->actingAs($this->clerk(['accounts.day_close.view']));
+        $this->assertStringNotContainsString(route('accounts.dayclose'), (string) $this->blade('<x-shell.create-menu />'),
+            '⛔ দিন বন্ধের চাবি ছাড়াই "+" মেনুতে শর্টকাট');
+    }
+
+    /**
+     * ⭐ কর্মীর হাতে টাকা — মালিক, ১৮ নভেম্বর ২০২৬: মালিক আর ব্যাংক ছাড়া কর্মীর জিম্মায় নগদ থাকলে দিনের হিসাবে হাইলাইট করে।
+     */
+    public function test_cash_held_by_staff_is_highlighted_and_the_owners_own_cash_is_not(): void
+    {
+        $this->theDay(); // ⓘ "Head office cash" মালিকের জিম্মায় — তালিকায় আসবে না
+
+        $cashier = $this->clerk([]);
+        $till = app(AccountService::class)->create(['name_en' => 'Counter cash', 'parent_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id, 'held_by' => $cashier->id]);
+        $this->book('receipt_voucher', [
+            ['account_id' => $till->id, 'debit' => '12000', 'branch_id' => $this->a->id],
+            ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'credit' => '12000', 'party_type' => 'customer', 'party_id' => $this->dealer->id, 'branch_id' => $this->a->id],
+        ]);
+
+        $staff = app(DayClosingService::class)->build(Carbon::parse(self::DAY))['staff_cash'];
+
+        $this->assertSame(['Counter cash'], array_column($staff, 'account'), '⛔ কর্মীর জিম্মার নগদ তালিকায় নেই, বা মালিকের নিজের নগদ এসেছে');
+        $this->assertSame($cashier->name, $staff[0]['who']);
+        $this->assertSame(0, bccomp($staff[0]['amount'], '12000', 2));
+
+        $this->get(route('accounts.dayclose', ['date' => self::DAY]))->assertOk()->assertSee('data-staff-cash', false)->assertSee($cashier->name);
+    }
+
     public function test_seeing_and_closing_are_two_keys(): void
     {
         $clerk = $this->clerk([]);
@@ -209,6 +296,12 @@ final class TheDayIsCountedAndClosedTest extends TestCase
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
+
+    /** ⓘ দিনটা বন্ধ কি না — যে শাখায় বন্ধ হোক (অনুরোধের দেখার শাখায় বন্ধের দাগ বসে) */
+    private function isClosed(): bool
+    {
+        return DayClose::query()->where('day', self::DAY)->whereNull('reopened_at')->exists();
+    }
 
     /**
      * দিনের কাগজ: নগদ রসিদ ২০,০০০ (T-9301), ব্যাংক রসিদ ৫০,০০০ (T-9302), নগদ → ব্যাংক সরানো ৫,০০০ (T-9303, কন্ট্রা),

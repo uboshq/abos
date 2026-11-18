@@ -30,6 +30,7 @@ return [
     'day_saturday' => 'Saturday',
     'day_sunday' => 'Sunday',
     'day_none' => 'No weekly holiday',
+    'day_close_lock' => 'Stop new or changed entries on a closed day (when off, it only warns — shown on the day closing)',
     'asset_capitalisation_threshold' => 'Fixed asset capitalisation threshold: anything cheaper goes to expense (0 means no threshold)',
     'asset_prorata' => 'First-month depreciation',
     'asset_prorata_full_month' => 'Full month',

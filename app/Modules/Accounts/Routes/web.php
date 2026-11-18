@@ -285,6 +285,8 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         ->name('dayclose');
     Route::post('/day-closing/close', [\App\Modules\Accounts\Http\Controllers\DayClosingController::class, 'close'])
         ->name('dayclose.close');
+    Route::post('/day-closing/reopen', [\App\Modules\Accounts\Http\Controllers\DayClosingController::class, 'reopen'])
+        ->name('dayclose.reopen');
 
     // ⭐ হিসাব বিবরণী — যেকোনো পক্ষ, যেকোনো সময়, সব পাতার PDF (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]]); catch-all-এর আগে
     Route::get('/statement/{type}/{id}', \App\Modules\Accounts\Http\Controllers\PartyStatementController::class)

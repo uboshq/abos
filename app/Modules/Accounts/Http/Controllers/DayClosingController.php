@@ -43,6 +43,7 @@ class DayClosingController extends Controller implements HasMiddleware
         return [
             new Middleware('can:accounts.day_close.view', only: ['show']),
             new Middleware('can:accounts.day_close.close', only: ['close']),
+            new Middleware('can:accounts.day_close.reopen', only: ['reopen']),
         ];
     }
 
@@ -62,6 +63,7 @@ class DayClosingController extends Controller implements HasMiddleware
             'r' => $report,
             'branch' => $this->branchName(),
             'canClose' => $request->user()->can('accounts.day_close.close'),
+            'canReopen' => $request->user()->can('accounts.day_close.reopen'),
         ]);
     }
 
@@ -91,21 +93,56 @@ class DayClosingController extends Controller implements HasMiddleware
         }
 
         DB::transaction(function () use ($day, $branchId, $count, $reason, $request): void {
-            DayClose::query()->create([
-                'company_id' => CompanyContext::id(),
-                'branch_id' => $branchId,
-                'day' => $day->toDateString(),
+            $values = [
                 'cash_counted' => $count['counted'] ?? null,
                 'cash_book' => $count['book'] ?? null,
                 'cash_gap' => $count['gap'] ?? null,
                 'gap_reason' => $reason !== '' ? $reason : null,
                 'closed_by' => $request->user()->id,
                 'closed_at' => now(),
-            ]);
+                'reopened_by' => null,
+                'reopened_at' => null,
+                'reopen_reason' => null,
+            ];
+
+            // ⓘ আগে খোলা হয়ে থাকলে একই সারি আবার বন্ধ — আগের অবস্থা নিরীক্ষার খাতায় থাকে
+            $record = DayClose::recordOn($day, $branchId);
+
+            if ($record !== null && (int) ($record->branch_id ?? 0) === (int) ($branchId ?? 0)) {
+                $record->update($values);
+
+                return;
+            }
+
+            DayClose::query()->create(['company_id' => CompanyContext::id(), 'branch_id' => $branchId, 'day' => $day->toDateString()] + $values);
         });
 
         return redirect()->route('accounts.dayclose', ['date' => $day->toDateString()])
             ->with('status', __('accounts::dayclose.close.done', ['date' => $day->format('d-m-Y')]));
+    }
+
+    /**
+     * ⭐ দিন আবার খোলা — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে, তাহলে তোমার প্ল্যান মতো এটা করো"): অনেক পেছনের এন্ট্রি একসাথে দিতে হলে কারণ লিখে
+     * দিন খোলা; কাজ শেষে আবার গুনে-মিলিয়ে বন্ধ। চাবি `accounts.day_close.reopen` — কোনো ছাঁচে নেই, মালিক (সুপার অ্যাডমিন) আর যাঁকে তিনি দেন।
+     */
+    public function reopen(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'reopen_reason' => ['required', 'string', 'min:3', 'max:500'],
+        ], ['reopen_reason.required' => __('accounts::dayclose.reopen.reason_needed')]);
+
+        $day = Carbon::parse($data['date']);
+        $closed = DayClose::closedOn($day, CompanyContext::branchId());
+
+        if ($closed === null) {
+            return back()->withErrors(['date' => __('accounts::dayclose.reopen.not_closed', ['date' => $day->format('d-m-Y')])]);
+        }
+
+        $closed->update(['reopened_by' => $request->user()->id, 'reopened_at' => now(), 'reopen_reason' => trim($data['reopen_reason'])]);
+
+        return redirect()->route('accounts.dayclose', ['date' => $day->toDateString()])
+            ->with('status', __('accounts::dayclose.reopen.done', ['date' => $day->format('d-m-Y')]));
     }
 
     /** @param  array<string, mixed>  $report */

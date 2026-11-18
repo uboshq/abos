@@ -35,6 +35,16 @@ return new class extends Migration
 
             $table->foreignId('closed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('closed_at')->nullable();
+
+            /*
+             * ⭐ দিন আবার খোলা — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে, তাহলে তোমার প্ল্যান মতো এটা করো"): অনেক পেছনের এন্ট্রি একসাথে দিতে হলে
+             * কারণ লিখে দিন খোলা, কাজ শেষে আবার গুনে-মিলিয়ে বন্ধ। ⓘ সারি মোছে না — খোলা থাকলে এই তিন ঘর ভরা; আবার বন্ধ হলে বন্ধের
+             * ঘরগুলো নতুন করে বসে আর এগুলো খালি হয়, আর আগের সব অবস্থা নিরীক্ষার খাতায় থাকে ([[IsAudited]])।
+             */
+            $table->foreignId('reopened_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('reopened_at')->nullable();
+            $table->string('reopen_reason', 500)->nullable();
+
             $table->timestamps();
 
             // ⓘ শাখা খালি হলে MySQL-এ UNIQUE দুইবার একই দিন আটকায় না — সেবা নিজে আগে দেখে ([[DayClose::isClosed()]])

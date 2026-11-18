@@ -107,6 +107,15 @@
     </tr></table>
 </div>
 
+{{-- ⭐ কর্মীর হাতে টাকা — হাইলাইট করে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+@if ($r['staff_cash'] !== [])
+    <div class="news" style="background-color: #fff3cd; border-color: #b8860b; margin-top: 1.5mm;" data-staff-cash>
+        <b style="font-size: 9pt;">{{ __('accounts::dayclose.staff_cash.title') }}</b><br>
+        @foreach ($r['staff_cash'] as $s)• <b>{{ __('accounts::dayclose.staff_cash.row', ['who' => $s['who'] ?? __('accounts::dayclose.staff_cash.nobody'), 'amount' => $m($s['amount']), 'account' => $s['account']]) }}</b><br>@endforeach
+        <span class="sub">{{ __('accounts::dayclose.staff_cash.note') }}</span>
+    </div>
+@endif
+
 {{-- ── ১ · আজ টাকা এল ── --}}
 {!! $sec(1, 'inflow') !!}
 <table class="t" data-sec="inflow">
@@ -333,6 +342,22 @@
     </td>
 </tr></table>
 
+{{-- ── দিন বন্ধের পরে যোগ হয়েছে (মালিক, ১৮ নভেম্বর ২০২৬) ── --}}
+@if ($r['late'] !== [])
+    <table width="100%" class="sec"><tr><td><b>{{ __('accounts::dayclose.late.title') }}</b></td><td class="en">{{ __('accounts::dayclose.late.caption') }}</td></tr></table>
+    <table class="t" data-sec="late">
+        <thead><tr><th width="16%">{{ __('accounts::dayclose.late.paper') }}</th><th>{{ __('accounts::dayclose.late.kind') }}</th><th width="16%">{{ __('accounts::dayclose.col.amount') }}</th>
+            <th width="22%">{{ __('accounts::dayclose.late.who') }}</th><th width="18%">{{ __('accounts::dayclose.late.when') }}</th></tr></thead>
+        <tbody>
+            @foreach ($r['late'] as $row)
+                <tr><td class="mono">{{ $row['no'] }}</td><td>{{ __('core.source.'.$row['type']) }}</td><td class="num">{{ $m($row['amount']) }}</td>
+                    <td>{{ $row['who'] }}</td><td class="num" style="text-align: left;">{{ $row['when']->format('d-m-Y h:i A') }}</td></tr>
+            @endforeach
+            <tr><td colspan="5" class="sub">{{ __('accounts::dayclose.late.note') }}</td></tr>
+        </tbody>
+    </table>
+@endif
+
 {{-- ── দিন বন্ধ ── --}}
 <div class="closebox" data-close-line>
     @if ($r['closed'])
@@ -345,6 +370,9 @@
             'time' => $c->closed_at?->format('h:i A') ?? '',
         ])) !!}</b>
     @else
+        @if ($r['record']?->reopened_at)
+            <b>{{ __('accounts::dayclose.reopen.line', ['who' => $r['record']->reopener?->name ?? '—', 'time' => $r['record']->reopened_at->format('d-m-Y h:i A'), 'reason' => $r['record']->reopen_reason]) }}</b><br>
+        @endif
         {{ __('accounts::dayclose.open_line') }}
     @endif
 </div>

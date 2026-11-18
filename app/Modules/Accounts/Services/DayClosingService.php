@@ -81,6 +81,9 @@ final class DayClosingService
             'vat' => $vat,
             'news' => $this->news($sales, $delivery, $inflow, $count, $stock, $vat, $base['sales']),
             'closed' => DayClose::closedOn($day, CompanyContext::branchId()),
+            'record' => ($record = DayClose::recordOn($day, CompanyContext::branchId())),
+            'late' => $this->addedAfterClose($d, $record),
+            'staff_cash' => $this->staffCash($base['money']['rows']),
         ];
     }
 
@@ -510,6 +513,75 @@ final class DayClosingService
         }
 
         return $out;
+    }
+
+    // ── কর্মীর হাতে টাকা ─────────────────────────────────────────────────
+
+    /**
+     * ⭐ মালিক আর ব্যাংক ছাড়া কর্মীর জিম্মায় নগদ — মালিক, ১৮ নভেম্বর ২০২৬: *"কোম্পানির কোনো কর্মীর হাতে টাকা থাকে, সেটার
+     * ওয়ার্নিংটাও … বন্ধের নোটিশে এটা থাকবে যে অমুকের কাছে এত টাকা আছে, এবং হাইলাইট করেই থাকবে"*।
+     * ⓘ নগদের খাত (কাউন্টার বা জিম্মাদারসহ হিসাব), দিনের শেষ জের শূন্যের বেশি, আর জিম্মাদার মালিক (সুপার অ্যাডমিন) নন।
+     *   জিম্মাদার নেই এমন নগদও আসে — "নামহীন জিম্মা"।
+     *
+     * @param  Collection<int, array<string, mixed>>  $money  [[DailySummary]]-এর টাকার খাতের সারি
+     * @return list<array{who: ?string, account: string, amount: string}>
+     */
+    private function staffCash(Collection $money): array
+    {
+        $cash = $money->where('kind', Account::CASH)->filter(fn (array $r) => bccomp((string) $r['closing'], '0', 2) > 0);
+
+        if ($cash->isEmpty()) {
+            return [];
+        }
+
+        $ids = $cash->pluck('id')->all();
+        $tills = \App\Modules\Accounts\Models\CashTill::query()->whereIn('account_id', $ids)->pluck('holder_id', 'account_id');
+        $keepers = Account::query()->whereIn('id', $ids)->pluck('held_by', 'id');
+        $holderOf = fn (int $account) => $tills[$account] ?? $keepers[$account] ?? null;
+
+        $owners = \App\Models\User::query()
+            ->whereIn('id', $cash->map(fn ($r) => $holderOf((int) $r['id']))->filter()->unique()->all() ?: [0])
+            ->whereHas('roles', fn ($q) => $q->where('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE))
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return $cash
+            ->reject(fn ($r) => in_array((int) $holderOf((int) $r['id']), $owners, true))
+            ->sortByDesc(fn ($r) => (float) $r['closing'])
+            ->map(fn ($r) => ['who' => $r['holder'] !== '' ? (string) $r['holder'] : null, 'account' => (string) $r['name'], 'amount' => (string) $r['closing']])
+            ->values()->all();
+    }
+
+    // ── দিন বন্ধের পরে যোগ হয়েছে ──────────────────────────────────────────
+
+    /**
+     * ⭐ বন্ধ দিনের তারিখে, বন্ধের মুহূর্তের পরে খাতায় বসা কাগজ — মালিক, ১৮ নভেম্বর ২০২৬: কেউ চুপচাপ পুরনো দিনের অঙ্ক বদলাতে পারবে না,
+     * সব চোখের সামনে। ⓘ কাগজ ধরে এক সারি — নম্বর, ধরন, টাকা (ডেবিটের যোগ), কে বসালেন, কখন।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function addedAfterClose(string $d, ?DayClose $record): array
+    {
+        if ($record === null || $record->closed_at === null) {
+            return [];
+        }
+
+        $rows = $this->ledger($d)
+            ->where('ledger_entries.created_at', '>', $record->closed_at)
+            ->groupBy('ledger_entries.source_type', 'ledger_entries.source_id', 'ledger_entries.document_no')
+            ->selectRaw('ledger_entries.source_type, ledger_entries.source_id, ledger_entries.document_no, SUM(ledger_entries.debit) as amount,'
+                .' MIN(ledger_entries.created_at) as added_at, MIN(ledger_entries.created_by) as added_by')
+            ->orderBy('added_at')
+            ->get();
+
+        $users = \App\Models\User::query()->whereIn('id', $rows->pluck('added_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
+
+        return $rows->map(fn ($r) => [
+            'no' => (string) $r->document_no,
+            'type' => explode(':', (string) $r->source_type)[0],
+            'amount' => (string) $r->amount,
+            'who' => (string) ($users[$r->added_by] ?? '—'),
+            'when' => Carbon::parse($r->added_at),
+        ])->all();
     }
 
     // ── কর্মদিবস ──────────────────────────────────────────────────────
