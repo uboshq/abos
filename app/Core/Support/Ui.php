@@ -512,6 +512,31 @@ final class Ui
     }
 
     /**
+     * ⭐ চেহারার পাতায় রূপগুলোর ক্রম — মালিক, ১৮–১৯ নভেম্বর ২০২৬ রাত: ১ ABOS Blue (ডিফল্ট — "এটা ১ নম্বরে, ডিফল্ট করে দাও"),
+     * ২ ABOS Navy, ৩ ABOS Rose, ৪ Dynamic, ৫ Odoo (apps), ৬ SAP (tiles), ৭ NetSuite (suite), তারপর Redwood, Salesforce, Linear,
+     * একদম শেষে Classic; এক গ্রিডে, সারিতে চারটা।
+     * ⓘ তালিকায় না থাকা রূপ (ভবিষ্যতের) শেষে বসে, হারায় না।
+     *
+     * @var list<string>
+     */
+    public const APPEARANCE_ORDER = ['blue', 'navy', 'rose', 'dynamic', 'apps', 'tiles', 'suite', 'redwood', 'salesforce', 'linear', 'classic'];
+
+    /** @return array<string, array<string, mixed>> চেহারার পাতার ক্রমে সব রূপ */
+    public static function inAppearanceOrder(): array
+    {
+        $all = self::all();
+        $ordered = [];
+
+        foreach (self::APPEARANCE_ORDER as $key) {
+            if (isset($all[$key])) {
+                $ordered[$key] = $all[$key];
+            }
+        }
+
+        return $ordered + $all;
+    }
+
+    /**
      * ⭐ ABOS-এর নিজের খোলসের অংশ (মডিউল-বার, পাতার পথ) পরে কি না — navy আর মালিকের নীল প্যানেল।
      *
      * ⓘ নীল আর navy-র উপর দাঁড়ায় না (মালিক, ১৮ নভেম্বর ২০২৬ রাত: "আলাদা থিম") — নিজের `chrome/blue` ফাইল, নিজের রং; কেবল

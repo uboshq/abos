@@ -407,6 +407,7 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
 
             /* ABOS-এর নিজেরটা — মেনু বাঁয়ের রেলে, উপরে পটি নেই। */
             'navy' => 'none',
+            'blue' => 'none', // মালিকের নীল প্যানেল — navy-র মতোই মেনু বাঁয়ের রেলে (১৮ নভেম্বর ২০২৬)
             'rose' => 'none',
             'dynamic' => 'none',
             'redwood' => 'none',

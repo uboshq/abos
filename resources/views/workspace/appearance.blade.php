@@ -83,28 +83,18 @@
                  * পাতাটা দেখতে নিখুঁত ছিল: দুইটা শিরোনাম, ৮ ও ২টা কার্ড,
                  * সব রং ঠিক। ধরা পড়েছে ব্রাউজারে রেডিও খুঁজতে গিয়ে।
                  */
-                $grouped = collect($uis)->groupBy(
-                    fn ($ui, $key) => \App\Core\Support\Ui::changesArrangement($key) ? 'shape' : 'colour',
-                    preserveKeys: true,
-                );
+                /*
+                 * ⭐ মালিক, ১৮ নভেম্বর ২০২৬ রাত: এক গ্রিডে, সারিতে চারটা, তাঁর ক্রমে — ১ ABOS Navy, ২ ABOS Blue, ৩ ABOS Rose, ৪ Dynamic,
+                 *   ৫ Odoo, ৬ SAP, ৭ NetSuite, তারপর Redwood, Salesforce, Linear, শেষে Classic ([[Ui::APPEARANCE_ORDER]])।
+                 * ⓘ আগে দুই দলে ("সাজ বদলায়" / "কেবল রং") — মালিকের ক্রম দুই দল মিশিয়ে, তাই একটাই গ্রিড; চাবিগুলো রূপের নাম থাকে
+                 *   (`collect()`-এ `groupBy` নেই, তাই রেডিওর মান আর সংখ্যা হয় না)।
+                 */
+                $group = collect($uis);
             @endphp
 
-            @foreach (['shape', 'colour'] as $band)
-                @php $group = $grouped->get($band); @endphp
-
-                {{-- দলটা খালি থাকলে শিরোনামটাও থাকে না — একটা খালি
-                     শিরোনাম প্রতিবার একটা অনুপস্থিত জিনিস পড়ায়। --}}
-                @if ($group?->isNotEmpty())
-                    <h3 class="mt-4 mb-1 text-2xs font-semibold tracking-wide
-                               text-(--color-ink-muted) uppercase first:mt-0">
-                        {{ __('core.appearance.band_'.$band) }}
-                    </h3>
-
-                    <p class="mb-3 max-w-(--spacing-prose-max) text-2xs text-(--color-ink-muted)">
-                        {{ __('core.appearance.band_'.$band.'_note') }}
-                    </p>
-
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            @foreach ([1] as $_)
+                @if ($group->isNotEmpty())
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-look-grid>
                         @foreach ($group as $key => $ui)
                             @include('workspace.partials.ui-card', [
                                 'key' => $key,

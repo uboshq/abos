@@ -322,7 +322,7 @@ class WorkspaceController extends Controller
         return view('workspace.appearance', [
             'menu' => $this->menu->forUser($user),
             'accents' => Accent::all(),
-            'uis' => Ui::all(),
+            'uis' => Ui::inAppearanceOrder(), // ⭐ মালিকের ক্রম (১৮ নভেম্বর ২০২৬ রাত) — ABOS Navy, Blue, Rose, তারপর বাকিরা
 
             /*
              * কোম্পানির নিজের রূপগুলো — কেবল প্রকাশিতগুলো।
