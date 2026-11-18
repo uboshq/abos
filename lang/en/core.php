@@ -525,7 +525,7 @@ return [
         'salesforce_blurb' => 'Dark navy header, a white tab row beneath it, sharp 4px corners.',
         'linear' => 'Linear',
         'linear_blurb' => 'A near-black screen, one indigo, almost no chrome at all.',
-        'rose' => 'ABOS Rose',
+        'rose' => 'ABOS',
         'rose_blurb' => 'An ABOS original — warm red, gentle edges.',
         'navy' => 'ABOS Navy',
         'navy_blurb' => 'An ABOS original — the brand teal, dense and quiet.',

@@ -606,7 +606,7 @@ return [
         'salesforce_blurb' => 'গাঢ় নেভি মাথা, তার নিচে সাদা ট্যাবের সারি, ধারালো ৪px কোণ।',
         'linear' => 'Linear',
         'linear_blurb' => 'প্রায়-কালো পর্দা, একটাই ইন্ডিগো, খোলস বলতে প্রায় কিছুই নেই।',
-        'rose' => 'ABOS Rose',
+        'rose' => 'ABOS',
         'rose_blurb' => 'ABOS-এর নিজের — উষ্ণ লাল, নরম ধার।',
         'navy' => 'ABOS Navy',
         'navy_blurb' => 'ABOS-এর নিজের — ব্র্যান্ডের টিয়া, ঘন ও শান্ত।',
