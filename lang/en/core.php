@@ -246,6 +246,7 @@ return [
         'location' => 'Location',
         'general' => 'General',
         'screens' => 'Screens',
+        'day_close' => 'Day closing',
 
         /* ⓘ core puts these three on every module — the menu switches */
         'module' => 'Module on/off',
