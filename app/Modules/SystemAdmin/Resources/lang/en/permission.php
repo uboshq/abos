@@ -16,6 +16,7 @@ return [
         'accounts.cheque' => 'Cheques',
         'accounts.coa' => 'Chart of accounts',
         'accounts.count' => 'Cash count',
+        'accounts.day_close' => 'Day closing', // view, close the day, reopen (18 Nov 2026)
         'accounts.loan' => 'Loans',
         'accounts.obligation' => 'Obligations (treasury deposits, Mushak-6.6)',
         'accounts.period' => 'Period lock',
@@ -162,6 +163,7 @@ return [
         'reopen' => 'Reopen',
         'confirm' => 'Confirm',
         'decide' => 'Decide',
+        'match' => 'Match with the statement', // sales.claim.match (18 Nov 2026)
         'post' => 'Post',
         'bank_file' => 'Download the bank file',
         'move' => 'Move money',

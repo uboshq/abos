@@ -29,6 +29,7 @@ return [
         'accounts.cheque' => 'চেক',
         'accounts.coa' => 'হিসাবের ছক',
         'accounts.count' => 'নগদ গণনা',
+        'accounts.day_close' => 'দিন শেষের হিসাব', // ⓘ দেখা, দিন বন্ধ, আবার খোলা (১৮ নভেম্বর ২০২৬)
         'accounts.loan' => 'ঋণ',
         'accounts.obligation' => 'করণীয় (কোষাগারে জমা, মূসক-৬.৬)',
         'accounts.period' => 'মাসের তালা',
@@ -189,6 +190,8 @@ return [
         'reopen' => 'আবার খোলা',
         'confirm' => 'নিশ্চিত করা',
         'decide' => 'সিদ্ধান্ত',
+        // ⓘ ব্যাংক স্টেটমেন্টের সাথে জমার খবর মেলানো — sales.claim.match (১৮ নভেম্বর ২০২৬)
+        'match' => 'স্টেটমেন্টের সাথে মেলানো',
         'post' => 'পোস্ট করা',
         // ⓘ ব্যাংক ফাইল (BEFTN) নামানোর নিজের চাবি — accounts.voucher.bank_file (fe, ২৬ অক্টোবর ২০২৬)
         'bank_file' => 'ব্যাংক ফাইল নামানো',
