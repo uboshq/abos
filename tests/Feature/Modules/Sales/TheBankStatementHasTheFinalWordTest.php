@@ -136,6 +136,12 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
     public function test_a_match_is_suggested_only_on_the_exact_amount_account_and_window(): void
     {
         $claim = $this->claim('50000', '2026-11-16');
+        /*
+         * ⓘ অন্য খাতেরও একটা খবর (অন্য অঙ্ক) — নইলে অন্য খাতের সারি তালিকাতেই আসত না, আর খাত মেলানোর শর্তটা মাপা হত না
+         * (মিউট্যান্ট `account` বেঁচে গিয়েছিল, ১৮ নভেম্বর ২০২৬)।
+         */
+        $other = $this->claim('1234', '2026-11-16', 'OTHER-BANK');
+        $other->forceFill(['bank_account_id' => $this->otherBank->id])->save();
 
         $this->line($this->bank, '2026-11-16', '49999.99');          // ⓘ এক পয়সা কম
         $this->line($this->otherBank, '2026-11-16', '50000');        // ⓘ অন্য খাত
