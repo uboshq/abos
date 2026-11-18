@@ -1,0 +1,454 @@
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ নীল প্যানেল (`blue`) — খোলসের গড়ন, যা টোকেনে হয় না (মালিক, ১৮ নভেম্বর ২০২৬; নমুনা claude.ai artifact
+   BTey3zZ3nnwspGzPMDVfMd সংস্করণ ৫)।
+
+   ⓘ রং আর কোণ `app/Core/Support/Looks/blue.php`-এ (টোকেন); এখানে কেবল যা markup-এর জায়গা বদলায়:
+     · উজ্জ্বল নীল ফ্রেম (#3a7be9, হালকা দুটো আলোর বৃত্ত) — তার ভিতরে #2160d8-এর অ্যাপ, ৩০px গোল কোণ
+     · মেনু আর কাজের জায়গা নীলের উপর আলাদা ভাসমান প্যানেল (২৪px আর ২৬px কোণ)
+     · খোঁজার ঘর, বোতাম, চিপ, মেনুর সারি — পুরো গোল (পিল)
+     · নিচের বার একটা সাদা পিল
+     · চার্টের রং কেবল নীলের পরিবার — লাল, কমলা, সবুজ, হলুদ কেবল অবস্থা বোঝায় (মালিক: "একটা রঙের একটাই অর্থ")
+   ⛔ কেবল `[data-ui='blue']`-এ — বাকি দশটা রূপের একটা পিক্সেলও নড়ে না ([[TheOtherNineLooksWereNotTouchedTest]])।
+   ⓘ স্তরহীন (unlayered) — Tailwind-এর utilities-কে জেতে, তাই `!important` কেবল যেখানে markup নিজেই inline style বসায়।
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='blue'] {
+    --blue-frame: #3a7be9;
+    --blue-shell: var(--color-topbar);
+    --blue-ring: 0px;
+    --blue-gap: 10px;
+    /* ⭐ মেনু প্যানেলের জমিন আর দাগ — দুইটা মান, যাতে মালিক চাইলে পুরো সমতল রূপে যাওয়া দুই ঘরের বদল (জমিন #2160d8,
+       দাগ transparent; মালিক, ১৮ নভেম্বর ২০২৬: আগে হালকা ছোপেই দেখবেন) */
+    --blue-menu-bg: rgb(255 255 255 / 0.10);
+    --blue-menu-border: rgb(255 255 255 / 0.22);
+
+    /* ⭐ চার্টের সারি নীলের পরিবারে — নমুনার brand · brand2 · brand3 আর তাদের মাঝের ধাপ; ধূসর-নীল চতুর্থ ("পথে") */
+    --color-chart-1: #2563eb;
+    --color-chart-2: #7aa2f7;
+    --color-chart-3: #1e40af;
+    --color-chart-4: #94a3b8;
+    --color-chart-5: #60a5fa;
+    --color-chart-6: #1d4ed8;
+    --color-chart-7: #93c5fd;
+    --color-chart-8: #3b82f6;
+}
+
+:root[data-ui='blue'][data-theme='dark'] {
+    --blue-frame: #1c3f8f;
+    --color-chart-1: #6c9bff;
+    --color-chart-2: #a9c2fb;
+    --color-chart-3: #3b6fe0;
+    --color-chart-4: #8a9bbb;
+    --color-chart-5: #8fb3ff;
+    --color-chart-6: #4f7fe8;
+    --color-chart-7: #c3d3f3;
+    --color-chart-8: #7aa2f7;
+}
+
+@media (min-width: 768px) {
+    :root[data-ui='blue'] { --blue-ring: 12px; }
+}
+
+/* ── ফ্রেম আর অ্যাপ ───────────────────────────────────────────────────── */
+:root[data-ui='blue'] body {
+    background:
+        radial-gradient(circle at 12% 18%, rgb(255 255 255 / 0.14) 0 18%, transparent 19%),
+        radial-gradient(circle at 88% 82%, rgb(255 255 255 / 0.12) 0 16%, transparent 17%),
+        var(--blue-frame);
+    background-attachment: fixed;
+    padding: var(--blue-ring) var(--blue-ring) 0;
+}
+
+/* উপরের বার — অ্যাপের মাথা, উপরের দুই কোণ গোল */
+:root[data-ui='blue'] [data-topbar] {
+    background: var(--blue-shell);
+    border-bottom-color: transparent;
+    border-radius: calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5) 0 0;
+}
+
+/* বারের নিচের সারি (রেল + মেনু + কাজের জায়গা) — অ্যাপের শরীর, নিচের দুই কোণ গোল */
+:root[data-ui='blue'] body > div.flex:has(> div > #main) {
+    background: var(--blue-shell);
+    border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
+    padding: 0 var(--blue-ring) var(--blue-ring) 0;
+    margin-bottom: calc(var(--spacing-status-bar) + var(--blue-ring) * 2);
+}
+
+/* রেল আর মেনুর খুঁটি — বারের নিচে আটকে থাকে; ফ্রেম আর নিচের পিলের জায়গা বাদ (inline style-কে হারাতে !important) */
+@media (min-width: 768px) {
+    :root[data-ui='blue'] aside[data-under-bar] {
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4) !important;
+        padding-bottom: 4px;
+    }
+}
+
+:root[data-ui='blue'] nav[data-rail] {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* ⭐ মেনু — ফ্রেমের একই নীলে আলাদা ভাসমান প্যানেল, ২৪px কোণ (মালিক, ১৮ নভেম্বর ২০২৬ রাতে: "মেনু সাদা নয়, ফ্রেমের নীল";
+   নমুনার `.menu`): সাদার ১০% ছোপ, সাদার ২২% দাগ, ছায়া নেই; লেখা সাদা, ভাগের নাম #cfe0ff, চালু সারি সাদা পিলে #2160d8।
+   ⓘ মাপা (WCAG, আলো থিমে প্যানেলের জমিন ≈ #376fdb): সাদা লেখা ৪.৮ঃ১, চালু পিলে #2160d8 সাদায় ৫.৪ঃ১; অন্ধকারে (≈ #2d4579) সাদা ৯.৬ঃ১। */
+:root[data-ui='blue'] [data-site-map].menu-panel {
+    background: var(--blue-menu-bg);
+    border: 1px solid var(--blue-menu-border);
+    border-radius: 24px;
+    margin: 4px var(--blue-gap) 0 0;
+    box-shadow: none;
+    overflow: hidden;
+    padding-top: 6px;
+    color: #ffffff;
+    --rail-item-on-bg: #ffffff;
+    --rail-item-on-ink: #2160d8;
+}
+
+:root[data-ui='blue'] [data-site-map] > p,
+:root[data-ui='blue'] [data-site-map] [data-panel-section],
+:root[data-ui='blue'] [data-site-map] .menu-kind-head {
+    color: #cfe0ff;
+}
+
+:root[data-ui='blue'] [data-site-map] .menu-kind-head::before {
+    background: rgb(255 255 255 / 0.55);
+}
+
+:root[data-ui='blue'] [data-site-map] .rail-item {
+    color: #ffffff;
+}
+
+:root[data-ui='blue'] [data-site-map] .rail-item:hover {
+    background: rgb(255 255 255 / 0.14);
+}
+
+:root[data-ui='blue'] [data-site-map] .rail-item[aria-current] {
+    background: #ffffff;
+    color: #2160d8;
+    font-weight: 600;
+}
+
+:root[data-ui='blue'] [data-site-map] .rail-item[aria-disabled] {
+    color: rgb(255 255 255 / 0.55);
+}
+
+/* চিহ্ন থাকে, সাদার হালকা ছোপে; চালু সারিতে নীল */
+:root[data-ui='blue'] [data-site-map] .menu-coloured .menu-icon,
+:root[data-ui='blue'] [data-site-map] .rail-item .menu-icon {
+    background: rgb(255 255 255 / 0.16);
+    color: #ffffff;
+}
+
+:root[data-ui='blue'] [data-site-map] .rail-item[aria-current] .menu-icon {
+    background: #e8f0ff;
+    color: #2160d8;
+}
+
+:root[data-ui='blue'] [data-site-map] input[type='search'] {
+    background: rgb(255 255 255 / 0.14);
+    border-color: rgb(255 255 255 / 0.28);
+    color: #ffffff;
+    border-radius: 999px;
+}
+
+:root[data-ui='blue'] [data-site-map] input[type='search']::placeholder {
+    color: #cfe0ff;
+}
+
+:root[data-ui='blue'] [data-site-map] label > span[aria-hidden],
+:root[data-ui='blue'] [data-site-map] label .pointer-events-none {
+    color: #cfe0ff;
+}
+
+/* ⭐ কাজের জায়গা — হালকা নীল, ২৬px কোণ, মেনুর পাশে আলাদা প্যানেল */
+:root[data-ui='blue'] body > div.flex > div:has(> #main) {
+    background: var(--color-surface-app);
+    border-radius: 26px;
+    margin-top: 4px;
+    min-height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4);
+    overflow: clip;
+}
+
+/* ⭐ বড় পর্দায় কাজের জায়গা নিজেই স্ক্রল করে — তার গোল তলা সবসময় নিচের পিলের উপরে দেখা যায়, পাতা কখনো পিলের নিচে ঢোকে না
+   (নমুনা: `.status` কাজের জায়গার নিচে আলাদা পিল)। ⓘ উচ্চতা = পর্দা − ফ্রেম − উপরের বার − নিচের পিল; ভিতরের আঠালো সারি
+   (টেবিলের মাথা, টুলবার) এখন এই বাক্সের মাথায় আটকায়। ফোনে (৭৬৮-এর নিচে) আগের মতো গোটা পাতা স্ক্রল করে। */
+@media (min-width: 768px) {
+    :root[data-ui='blue'] body > div.flex > div:has(> #main) {
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4 - 4px);
+        min-height: 0;
+        overflow-x: clip;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+:root[data-ui='blue'] #main {
+    padding-top: 14px;
+}
+
+@media (min-width: 1024px) {
+    :root[data-ui='blue'] #main { padding-inline: 22px; }
+}
+
+/* জরুরি ফিতা — কাজের জায়গার ভিতরে একটা পিল */
+:root[data-ui='blue'] [data-message-strips] {
+    padding: 12px 18px 0;
+}
+
+:root[data-ui='blue'] [data-message-strip] {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-status-urgent) 30%, transparent);
+    padding-inline-start: 16px;
+}
+
+:root[data-ui='blue'] [data-message-strip='danger'] {
+    background: var(--color-status-urgent-soft);
+}
+
+/* ⭐ নিচের বার — কাজের জায়গার নিচে আলাদা একটা সাদা পিল, পাতার উপরে চাপে না (নমুনা `.status`)।
+   ⓘ বারটা আগের মতোই স্থির (ঘোষণা সবসময় চোখে — মালিক, ২১ অক্টোবর ২০২৬); তার পেছনে অ্যাপের নীলের একটা স্থির পট্টি
+   (`body::after`, নিচের দুই কোণ গোল), তাই স্ক্রল করা পাতা পিলের নিচে না ঢুকে পট্টির কিনারায় থামে — ফ্রেম, অ্যাপের তলা, পিল,
+   ঠিক নমুনার মতো। */
+@media (min-width: 768px) {
+    :root[data-ui='blue'] body::after {
+        content: "";
+        position: fixed;
+        z-index: 19;
+        inset-inline: var(--blue-ring);
+        bottom: var(--blue-ring);
+        height: calc(var(--spacing-status-bar) + var(--blue-ring) * 1.5);
+        background: var(--blue-shell);
+        border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
+        pointer-events: none;
+    }
+
+    /* ⓘ পট্টির নিচে ফ্রেমের ফালি — স্ক্রলে পাতা ওখানেও দেখা না যায় */
+    :root[data-ui='blue'] body::before {
+        content: "";
+        position: fixed;
+        z-index: 19;
+        inset-inline: 0;
+        bottom: 0;
+        height: var(--blue-ring);
+        background: var(--blue-frame);
+        pointer-events: none;
+    }
+
+    :root[data-ui='blue'] footer[data-footer] {
+        inset-inline: calc(var(--blue-ring) * 2);
+        bottom: calc(var(--blue-ring) * 1.5);
+        border-radius: 999px;
+        border: 0;
+        box-shadow: var(--shadow-card);
+        padding-inline: 18px;
+    }
+}
+
+/* ── উপরের বারের ভিতরটা — সব পিল ───────────────────────────────────────── */
+:root[data-ui='blue'] [data-logo-plate] {
+    border-radius: 16px;
+}
+
+:root[data-ui='blue'] [data-search-field] {
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.28);
+    background: var(--color-topbar-field);
+}
+
+:root[data-ui='blue'] [data-shell-create] > button {
+    background: #ffffff;
+    color: #2160d8;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+:root[data-ui='blue'] [data-shell-actions] > a,
+:root[data-ui='blue'] [data-notify-bell-root] > button {
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+}
+
+:root[data-ui='blue'] [data-company-branch] > button,
+:root[data-ui='blue'] [data-module-launcher],
+:root[data-ui='blue'] [data-sidebar-toggle] {
+    border-radius: 999px;
+}
+
+/* ── রেল — টাইল নেই, সাদা চিহ্ন; চালুটা সাদার হালকা ছোপে, ১৬px কোণ ─────────── */
+:root[data-ui='blue'] [data-rail-tile] {
+    --rail-tile-bg: transparent;
+    --rail-tile-ink: #ffffff;
+    --rail-tile-on-bg: transparent;
+    --rail-tile-on-edge-w: 0px;
+}
+
+:root[data-ui='blue'] {
+    --rail-label-ink: #dbe7ff;
+}
+
+:root[data-ui='blue'] [data-rail] [data-rail-module] > a,
+:root[data-ui='blue'] [data-rail] [data-rail-home] {
+    border-radius: 16px;
+}
+
+:root[data-ui='blue'] [data-rail] [data-rail-module] > a[aria-current] {
+    background: rgb(255 255 255 / 0.2);
+}
+
+:root[data-ui='blue'] [data-rail] [data-rail-module] > a[aria-current] [data-rail-label] {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+:root[data-ui='blue'] [data-rail] [data-rail-module] > a:hover {
+    background: rgb(255 255 255 / 0.12);
+}
+
+/* ── কার্ড — দাগ নেই, নরম ছায়া (নমুনা: "কম রেখা, বেশি ফাঁক") ──────────────── */
+:root[data-ui='blue'] [data-home-units] [data-boxed],
+:root[data-ui='blue'] [data-money-position],
+:root[data-ui='blue'] [data-home-today-work] {
+    border-color: transparent;
+}
+
+/* রঙিন দাগ (মডিউলের রং) এই রূপে নেই — রং কেবল অবস্থা বোঝায় */
+:root[data-ui='blue'] .hm-picture { border-top-width: 0; }
+:root[data-ui='blue'] .hm-kpi { border-inline-start-width: 0; --hm-tone: var(--color-brand-600); }
+
+/* ⭐ সূচক-কার্ড — নমুনার মাপ: ১৬×১৮ ফাঁক, নাম ১৩px, অঙ্ক ২২px, ছোট রেখা ডানে নিচে */
+:root[data-ui='blue'] .hm-cards { gap: 16px; }
+:root[data-ui='blue'] .hm-top { gap: 16px; }
+:root[data-ui='blue'] .hm-pictures { gap: 16px; }
+:root[data-ui='blue'] .hm-work { gap: 16px; }
+
+:root[data-ui='blue'] .hm-kpi {
+    padding: 16px 18px;
+    min-height: 104px;
+}
+
+:root[data-ui='blue'] .hm-kpi [data-kpi-label] {
+    font-size: 13px;
+    font-weight: 400;
+}
+
+:root[data-ui='blue'] .hm-kpi [data-kpi-value] {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+:root[data-ui='blue'] .hm-kpi [data-kpi-sub] {
+    font-size: 12px;
+    padding-inline-end: 80px;
+}
+
+:root[data-ui='blue'] .hm-kpi .hm-kpi-spark {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    width: 70px;
+    height: 26px;
+}
+
+:root[data-ui='blue'] .hm-kpi .hm-kpi-spark-fill { opacity: 0; }
+:root[data-ui='blue'] .hm-kpi .hm-kpi-spark-line { stroke-width: 2; }
+
+:root[data-ui='blue'] .hm-money {
+    padding: 16px 18px;
+}
+
+:root[data-ui='blue'] [data-home-today-work] {
+    padding: 16px 18px;
+}
+
+/* চার্ট-কার্ডের মাথার দাগ নেই — নমুনায় নাম আর উপ-লেখা, তারপর সরাসরি চার্ট */
+:root[data-ui='blue'] .hm-picture > div:first-child {
+    border-bottom-color: transparent;
+    padding: 14px 18px 4px;
+}
+
+:root[data-ui='blue'] .hm-picture > div:first-child > span > span:first-child {
+    font-size: 16px;
+}
+
+/* পাতার মাথার বোতাম — পিল (ফিল্টার, লেআউট, সময়) */
+:root[data-ui='blue'] [data-home-filter] > summary,
+:root[data-ui='blue'] [data-layout-menu] > summary,
+:root[data-ui='blue'] [data-period-menu],
+:root[data-ui='blue'] [data-period-menu] > a {
+    border-radius: 999px;
+}
+
+:root[data-ui='blue'] [data-home-title] {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* মেনুর সারি — পুরো গোল, ছোট ফোঁটা নয় চিহ্ন (ABOS-এর চিহ্নই থাকে) */
+:root[data-ui='blue'] [data-site-map] .rail-item {
+    margin-inline: 2px;
+}
+
+/* ── ফোন: ফ্রেম নেই, অ্যাপ পুরো পর্দায় ─────────────────────────────────── */
+@media (max-width: 767px) {
+    :root[data-ui='blue'] [data-topbar] { border-radius: 0; }
+    :root[data-ui='blue'] body > div.flex:has(> div > #main) {
+        padding: 0;
+        margin-bottom: 0;
+        border-radius: 0;
+    }
+    :root[data-ui='blue'] body > div.flex > div:has(> #main) {
+        border-radius: 22px 22px 0 0;
+    }
+}
+
+/* ── মেনুর রং — মডিউলের নিজের রঙের বদলে ব্র্যান্ডের নীল (রং কেবল অবস্থা বোঝায়); সারি পুরো গোল, বাঁয়ের দাগ নেই ── */
+:root[data-ui='blue'] [data-mc] {
+    --menu-g: var(--color-brand-600);
+}
+
+:root[data-ui='blue'] .rail-item.menu-coloured {
+    border-inline-start: 0;
+    border-radius: var(--rail-item-radius);
+}
+
+/* ── অনুমোদনের কার্ডের সারি — নরম গোল বাক্স, আদ্যক্ষরের গোল ছাপ, ধাপের চিপ নীল (কমলা কেবল "আজই") ── */
+:root[data-ui='blue'] [data-home-listing] {
+    display: grid;
+    gap: 6px;
+    padding: 4px 18px 16px;
+}
+
+:root[data-ui='blue'] [data-home-listing] > [data-home-listing-row] {
+    background: var(--color-surface-muted);
+    border: 0;
+    border-radius: 16px;
+    padding: 8px 10px;
+    gap: 10px;
+}
+
+:root[data-ui='blue'] [data-home-listing] .hm-avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+:root[data-ui='blue'] [data-home-listing] .paper-state {
+    color: var(--color-brand-700);
+    background: var(--color-brand-50);
+    border-color: transparent;
+    border-radius: 999px;
+}
+
+:root[data-ui='blue'] [data-home-listing] .paper-state svg {
+    display: none;
+}
+
+/* ⓘ রেখা-চার্টের নিচে নমুনার নরম ছোপ ([[x-dashboard.chart]]-এর `--chart-line-fill`; অঙ্ক বা রেখা বদলায় না) */
+:root[data-ui='blue'] {
+    --chart-line-fill: 0.16;
+}

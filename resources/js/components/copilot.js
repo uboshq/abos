@@ -66,6 +66,18 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
                 }
             }, true)
             window.addEventListener('copilot-quick-open', () => this.show())
+            // ⭐ যেকোনো `data-copilot-ask` চিপ (Copilot-লাইনের প্রশ্ন, [[CopilotLine]]) — চাপলে এই জিজ্ঞাসাই খোলে, প্রশ্নটা ঘরে লেখা; পাঠান মানুষ নিজে (১৮ নভেম্বর ২০২৬)
+            document.addEventListener('click', (e) => {
+                const chip = e.target?.closest?.('[data-copilot-ask]')
+                if (! chip) return
+                e.preventDefault()
+                this.prefill(chip.getAttribute('data-copilot-ask') ?? '')
+            })
+        },
+
+        prefill (question) {
+            this.q = String(question).trim()
+            this.show()
         },
 
         canListen () { return recognizer() !== null },

@@ -114,7 +114,8 @@ final class TheOtherNineLooksStillDrawTheSameTest extends TestCase
             $awake++;
 
             foreach (Ui::keys() as $look) {
-                if ($look === Ui::DEFAULT) {
+                // ⓘ ABOS-এর দুই রূপ (navy আর ১৮ নভেম্বরের নীল প্যানেল) একই গড়নে ([[Ui::family()]]) — "বাকি ন'টা" মানে তার বাইরেরগুলো
+                if (Ui::family($look) === Ui::family(Ui::DEFAULT)) {
                     continue;
                 }
 

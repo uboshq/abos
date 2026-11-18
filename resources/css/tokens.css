@@ -1181,6 +1181,21 @@
    ───────────────────────────────────────────────────────────────── */
 :root {
     --color-logo-plate: #ffffff;
+    /* ⭐ অবস্থার চার রং, প্রতিটার একটাই অর্থ — মালিক, ১৮ নভেম্বর ২০২৬ (নীল প্যানেলের নমুনা): লাল জরুরি · কমলা আজই ·
+       হলুদ এ সপ্তাহে · সবুজ ঠিক আছে; নীল সাধারণ তথ্য। পাশে সবসময় লেখা ([[x-ui.status-chip]]) — রং একা কিছু বলে না।
+       `-soft` জমিন, `-bar` হলুদের ভরাট (হলুদ লেখা সাদায় পড়া যায় না, তাই চিপে কালো লেখা), `-on` ভরাটের উপরের লেখা। */
+    --color-status-urgent: #c50f1f;
+    --color-status-urgent-soft: #fdf3f4;
+    --color-status-today: #bc4b09;
+    --color-status-today-soft: #fdf6f3;
+    --color-status-week: #8a6d00;
+    --color-status-week-bar: #eaa300;
+    --color-status-week-soft: #fefbf4;
+    --color-status-week-on: #1b1b1b;
+    --color-status-ok: #107c10;
+    --color-status-ok-soft: #f1faf1;
+    --color-status-on: #ffffff;
+    --color-status-off: #94a3b8;
     --color-company-logo-plate: #ffffff;
     /* ⭐ হোমের টাকার কার্ড — "মিষ্টি" গোলাপি-পিচ জমিন, গাঢ় বেগুনি-লাল লেখা (মালিক, ১ নভেম্বর ২০২৬: "misti color daw"); লেখা জমিনে ১০ঃ১-এর উপরে */
     --color-money-sweet-from: #ffe1ec;
@@ -1339,6 +1354,18 @@
    ───────────────────────────────────────────────────────────────── */
 :root[data-theme='dark'] {
     --color-surface-app: #020617;
+    --color-status-urgent: #ff8a93;
+    --color-status-urgent-soft: #3b1519;
+    --color-status-today: #ffa36b;
+    --color-status-today-soft: #3a2010;
+    --color-status-week: #f5d16b;
+    --color-status-week-bar: #f5c400;
+    --color-status-week-soft: #352b0a;
+    --color-status-week-on: #1b1b1b;
+    --color-status-ok: #6ccb5f;
+    --color-status-ok-soft: #14301a;
+    --color-status-on: #1b1b1b;
+    --color-status-off: #8a9bbb;
     --color-money-sweet-from: #4a1a33;
     --color-money-sweet-to: #4a2a1c;
     --color-money-sweet-ink: #ffe6f0;

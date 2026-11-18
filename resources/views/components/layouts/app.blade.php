@@ -332,7 +332,7 @@
                 (`chrome/*`-এর `page-head`), তাই ওখানে এটা বসালে দুইটা
                 ট্যাব বার হত — একটার নিচে আরেকটা।
             --}}
-            @if ($shellLook === 'navy')
+            @if (\App\Core\Support\Ui::family($shellLook) === 'navy')
                 <x-shell.modulebar :menu="$menu ?? []" />
             @else
                 <x-shell.crumbbar :menu="$menu ?? []" />
@@ -435,7 +435,7 @@
                          চলন্ত বারেই ([[StatusNotices::forTicker()]]) --}}
 
                     {{-- ⭐ "কোথায় আছি" — ABOS রূপে পাতার মাথার উপরে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬); বাকি রূপের নিজের crumbbar --}}
-                    @if ($shellLook === 'navy')
+                    @if (\App\Core\Support\Ui::family($shellLook) === 'navy')
                         <x-shell.page-path :menu="$menu ?? []" />
                     @endif
 

@@ -55,4 +55,18 @@ return [
     'pictures_title' => 'ব্যবসার চিত্র',
     'layout_part_kpis' => 'মূল সূচক',
     'nothing_today' => 'এখনো কিছু নেই',
+    // ⭐ Copilot-এর এক লাইন আর অবস্থার চিপ — নীল প্যানেলের নমুনা (মালিক, ১৮ নভেম্বর ২০২৬)
+    'copilot_collected_up' => 'আজ আদায় গত :dayের চেয়ে :pct% বেশি।',
+    'copilot_collected_down' => 'আজ আদায় গত :dayের চেয়ে :pct% কম।',
+    'copilot_collected_same' => 'আজ আদায় গত :dayের সমান।',
+    'copilot_drafts' => ':countটা খসড়া ভাউচার এখনো পোস্ট হয়নি — দিন বন্ধের আগে দেখে নিন।',
+    'copilot_quiet' => 'আজ নজরে আনার মতো নতুন কিছু নেই — যা জানতে চান জিজ্ঞেস করুন।',
+    'copilot_q_owed' => 'বাকি কার কাছে সবচেয়ে বেশি?',
+    'copilot_q_spent' => 'আজ খরচ কোথায় গেল?',
+    'copilot_ask' => ':name-কে জিজ্ঞেস করুন: :question',
+    'level_urgent' => 'জরুরি',
+    'level_today' => 'আজই',
+    'level_week' => 'এ সপ্তাহে',
+    'level_ok' => 'ঠিক আছে',
+    'money_total' => 'মোট',
 ];
