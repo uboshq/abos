@@ -484,7 +484,8 @@ final class DayClosingService
     private function news(array $sales, array $delivery, array $inflow, ?array $count, array $stock, array $vat, array $summarySales): array
     {
         $out = [];
-        $biggest = collect($sales['rows'])->sortByDesc(fn ($r) => (float) $r['gross'])->first();
+        // ⓘ টাকার তুলনা bcmath-এ, ভগ্নাংশের সংখ্যায় নয় (MoneyIsNeverAFloatTest); সমান হলে আগের ক্রম থাকে, আগের মতোই
+        $biggest = collect($sales['rows'])->sort(fn ($a, $b) => bccomp((string) $b['gross'], (string) $a['gross'], 4))->first();
 
         if ($biggest !== null) {
             $out[] = ['key' => 'biggest', 'params' => ['party' => $biggest['party'], 'amount' => $biggest['gross'],
@@ -550,7 +551,7 @@ final class DayClosingService
 
         return $cash
             ->reject(fn ($r) => in_array((int) $holderOf((int) $r['id']), $owners, true))
-            ->sortByDesc(fn ($r) => (float) $r['closing'])
+            ->sort(fn ($a, $b) => bccomp((string) $b['closing'], (string) $a['closing'], 4))
             ->map(fn ($r) => ['who' => $r['holder'] !== '' ? (string) $r['holder'] : null, 'account' => (string) $r['name'], 'amount' => (string) $r['closing']])
             ->values()->all();
     }
