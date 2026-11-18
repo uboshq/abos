@@ -78,7 +78,8 @@
             @endif
 
             <div class="grid gap-3 px-4 py-3 text-sm">
-                @if ($days !== [] || $month !== null)
+                {{-- ⓘ ভাগের শিরোনাম কেবল জরুরি খবরও থাকলে — নইলে মাথার শিরোনামই "দিন বন্ধ হয়নি", দুবার নয় (লাইভে দেখা, ১৯ নভেম্বর ২০২৬) --}}
+                @if ($hasNews && ($days !== [] || $month !== null))
                     <p class="font-semibold" data-popup-day-head>{{ __('accounts::dayclose.popup.title') }}</p>
                 @endif
 
