@@ -1813,6 +1813,16 @@ input[type='number'] {
 [data-account-type="income"] { --acct: var(--color-acct-income); }
 [data-account-type="expense"] { --acct: var(--color-acct-expense); }
 
+/* ⭐ রেওয়ামিল — হিসাবের ধরনের রঙে দলের সারি আর বাঁয়ের দাগ (মালিক, ১৭ নভেম্বর ২০২৬ "ok") */
+[data-tb-table] tbody[data-account-type] > tr[data-tb-group] > td {
+    background: color-mix(in srgb, var(--acct) 12%, var(--color-surface-card));
+    color: var(--acct);
+}
+
+[data-tb-table] tbody[data-account-type] > tr > td:first-child {
+    box-shadow: inset 4px 0 0 var(--acct);
+}
+
 [data-page-kind] [data-boxed] tbody > tr[data-account-type] > td:first-child {
     box-shadow: inset 5px 0 0 var(--acct);
 }

@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
@@ -31,7 +32,7 @@ class FinalAccountsReportController extends Controller implements HasMiddleware
         return [new Middleware('can:accounts.report.final')];
     }
 
-    public function show(Request $request, string $slug): View
+    public function show(Request $request, string $slug): View|Response
     {
         return app(ReportController::class)->show($request, $slug);
     }
