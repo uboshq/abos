@@ -19,6 +19,7 @@ return [
     'cash_count' => 'Cash Count',
     'day_book' => 'Day Book',
     'day_closing' => 'Day Closing',
+    'month_close' => 'Month Close Pack',
     'cash_book' => 'Cash Book',
     'bank_book' => 'Bank Book',
     'ledger' => 'Ledger',

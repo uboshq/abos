@@ -40,6 +40,7 @@ return [
     'cash_count' => 'নগদ গণনা',
     'day_book' => 'দৈনিক খতিয়ান',
     'day_closing' => 'দিন শেষের হিসাব',
+    'month_close' => 'মাস শেষের হিসাব',
     'cash_book' => 'ক্যাশ বই',
     'bank_book' => 'ব্যাংক বই',
     'ledger' => 'খতিয়ান',

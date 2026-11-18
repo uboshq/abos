@@ -43,7 +43,8 @@ return [
      */
     // ⓘ credit_control — মালিকের কেন্দ্রে বাকির চার সংখ্যা ([[CreditHeadlines]], বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
     // ⓘ finance আর purchase — প্রতিদিনের সারাংশে বাকি ভাড়া আর মাল আসা (৮ নভেম্বর ২০২৬)
-    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control', 'finance', 'purchase'],
+    // ⓘ hr — মাস শেষের হিসাবে মাসের বেতন ([[MonthClosePack]], ১৭ নভেম্বর ২০২৬); ⚠️ চক্র নেই: hr দাঁড়ায় কেবল accounts আর master_data-র উপর
+    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control', 'finance', 'purchase', 'hr'],
 
     'menu' => [
         'dashboard' => [

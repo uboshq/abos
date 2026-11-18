@@ -76,3 +76,13 @@ Route::middleware('auth')->prefix('owner')->group(function () {
         ->name('open')
         ->middleware('can:executive.view');
 });
+
+/*
+ * ⭐ মাস শেষের হিসাব — হিসাব › বই-এ দিন-খাতার পাশে (মালিক, ১৭ নভেম্বর ২০২৬; [[MonthCloseController]])। ⓘ ঠিকানা হিসাবের ঘরে,
+ * কিন্তু `/accounts/reports/{slug}`-এর বাইরে — ওটা যেকোনো নাম ধরে আর হিসাবের রুট আগে বসে।
+ */
+Route::middleware('auth')->prefix('accounts')->group(function () {
+    Route::get('/month-close', [\App\Modules\Executive\Http\Controllers\MonthCloseController::class, 'show'])
+        ->name('month_close')
+        ->middleware('can:accounts.report.month_close');
+});
