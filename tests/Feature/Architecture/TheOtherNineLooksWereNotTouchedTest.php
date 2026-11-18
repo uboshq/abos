@@ -262,9 +262,14 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
         $light = \App\Core\Support\LookRegistry::tokens('blue', 'light');
 
         $this->assertSame('blue', Ui::DEFAULT, '⛔ নীল প্যানেল আর প্রথম রূপ নয় — মালিকের ১৮ নভেম্বরের সিদ্ধান্ত।');
-        $this->assertSame('navy', Ui::family('blue'), '⛔ নীল প্যানেল navy-র খোলস ছেড়েছে — মডিউল-বার, পথ, যোগফলের পট্টি হারাবে।');
-        $this->assertSame('navy', Ui::family('navy'));
-        $this->assertSame('apps', Ui::family('apps'), '⛔ অন্য রূপও navy-র খোলসে বসছে।');
+        // ⭐ আলাদা থিম (মালিক, ১৮ নভেম্বর ২০২৬ রাত): navy-র উপর দাঁড়ায় না — নিজের খোলসের ফাইল, তবু ABOS-এর মডিউল-বার আর পথ পরে,
+        //    আর চেহারার পাতায় Rose-এর পাশে "একই সাজ, আলাদা রং"
+        $this->assertSame('blue', Ui::family('blue'), '⛔ নীল প্যানেল আবার navy-র উপর দাঁড়িয়েছে — navy বদলালে নীলও বদলাবে।');
+        $this->assertTrue(view()->exists('components.shell.chrome.blue'), '⛔ নীল প্যানেলের নিজের খোলসের ফাইল নেই।');
+        $this->assertTrue(Ui::wearsAbosShell('blue') && Ui::wearsAbosShell('navy'), '⛔ মডিউল-বার আর পাতার পথ হারাবে।');
+        $this->assertFalse(Ui::wearsAbosShell('apps'), '⛔ অন্য রূপও ABOS-এর খোলস পরছে।');
+        $this->assertFalse(Ui::changesArrangement('blue'), '⛔ নীল প্যানেল চেহারার পাতায় Rose-এর দলে নয়।');
+        $this->assertFalse(Ui::changesArrangement('rose'));
         $this->assertSame(['#2563eb', 'blue'], [$blue['swatch'], $blue['accent']]);
         $this->assertSame('#2160d8', $light['--color-topbar'], '⛔ উপরের বার মালিকের নীল নয়।');
         $this->assertSame('#2160d8', $light['--color-sidebar'], '⛔ রেল মালিকের নীল নয়।');

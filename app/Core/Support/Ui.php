@@ -149,7 +149,12 @@ final class Ui
                 'listfoot' => 'totals',
                 'hints' => 'keys',
                 'tabs' => 'strip',
-                'builds_on' => 'navy',
+                /*
+                 * ⭐ আলাদা থিম, navy-র উপর দাঁড়ানো নয় — মালিক, ১৮ নভেম্বর ২০২৬ রাতে: *"এটাই আলাদা থিম … ABOS-এর অরিজিনাল … পরিবর্তন
+                 * হলেও এটার পরিবর্তন হবে না … সব একই গ্রুপে বসাও"*। খোলস নিজের ফাইলে (`chrome/blue`), রং নিজের ফাইলে (`Looks/blue`);
+                 * চেহারার পাতায় Rose-এর পাশে "একই সাজ, আলাদা রং" দলে ([[changesArrangement()]] `group`)।
+                 */
+                'group' => 'colour',
             ],
             'navy' => [
                 'label' => 'core.ui.navy',
@@ -506,6 +511,17 @@ final class Ui
         return self::all()[$look]['builds_on'] ?? $look;
     }
 
+    /**
+     * ⭐ ABOS-এর নিজের খোলসের অংশ (মডিউল-বার, পাতার পথ) পরে কি না — navy আর মালিকের নীল প্যানেল।
+     *
+     * ⓘ নীল আর navy-র উপর দাঁড়ায় না (মালিক, ১৮ নভেম্বর ২০২৬ রাত: "আলাদা থিম") — নিজের `chrome/blue` ফাইল, নিজের রং; কেবল
+     *   মডিউল-বার আর পাতার পথের সাধারণ উপাদান দুইজনেই পরে, যেমন প্রতিটা রূপ একই বোতাম পরে।
+     */
+    public static function wearsAbosShell(?string $key): bool
+    {
+        return in_array(self::clean($key), ['navy', 'blue'], true);
+    }
+
     public static function panelIsDark(?string $key): bool
     {
         return (self::all()[self::clean($key)]['panel'] ?? 'light') === 'dark';
@@ -722,6 +738,11 @@ final class Ui
     public static function changesArrangement(?string $key): bool
     {
         $look = self::clean($key);
+
+        // ⭐ রূপ নিজে দল বললে সেটাই — নীল প্যানেলের নিজের খোলস আছে, তবু সে Rose-এর পাশে "একই সাজ, আলাদা রং" (মালিক, ১৮ নভেম্বর ২০২৬)
+        if (($group = self::all()[$look]['group'] ?? null) !== null) {
+            return $group === 'shape';
+        }
 
         if (view()->exists('components.shell.chrome.'.$look)) {
             return true;
