@@ -1,5 +1,16 @@
 # What's new
 
+## 1.3.4 — 19-11-2026
+
+- New look "ABOS Blue": a bright blue frame, round floating panels, light and dark; now everyone's default. Go back to ABOS Navy or any other look in one click on the Appearance page, now in a new order, four to a row.
+- The home page opens on its charts; the number tiles, the cash and bank box and "To do today" sit below, each to-do with its word: urgent, today, this week.
+- Day Book: one day's journals, entry by entry, with a print.
+- Day Closing: money in and out, deliveries, sales and margin, expenses, the cash count, balances, profit and loss; close the day, reopen it with a reason. Cash held by staff shows in a yellow box, by name.
+- Day-close checklist: cash count, vehicle fares, drafts, approvals, deposits not yet matched in the bank, each with a link. An open working day comes back the next morning as a reminder in the middle of the screen; it can be closed and never stops work.
+- At 5 pm, whoever still holds company cash is told.
+- Month Close; trial balance by class and a balance sheet with notes and ratios: the full statement set.
+- Deposit reports: matched against the bank statement, a money receipt, a daily deposit register.
+
 ## 1.3.3 — 17-11-2026
 
 - Every list and report prints on the ledger paper — "Print view" opens in the browser, "PDF file" downloads; one info line on top, the action column never reaches paper.
