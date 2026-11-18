@@ -409,7 +409,8 @@ final class DayClosingService
             ->groupBy('i.customer_id')
             ->selectRaw("i.customer_id, MIN(i.trx_date) as since, SUM({$due}) as amount")
             ->orderBy('since')->limit(3)->get();
-        $customers = Customer::query()->with(Customer::placeVia(''))->whereIn('id', $oldest->pluck('customer_id')->all() ?: [0])->get()->keyBy('id');
+        // ⓘ গ্রাহকের নিজের জায়গা — Customer::PLACE; placeVia('') ".location.parent" বানাত, লাইভে ৫০০ (১৯ নভেম্বর ২০২৬, পুরনো বকেয়া থাকলেই)
+        $customers = Customer::query()->with(Customer::PLACE)->whereIn('id', $oldest->pluck('customer_id')->all() ?: [0])->get()->keyBy('id');
 
         return [
             'stock' => $roll(StandardChart::INVENTORY),
