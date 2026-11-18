@@ -513,13 +513,13 @@ final class Ui
 
     /**
      * ⭐ চেহারার পাতায় রূপগুলোর ক্রম — মালিক, ১৯ নভেম্বর ২০২৬: ১ "ABOS" (আগের Rose, নতুন নামে; এর নতুন নকশা আসছে, তারপর ডিফল্ট),
-     * ২ ABOS Navy, ৩ ABOS Blue, ৪ Dynamic, ৫ Odoo (apps), ৬ SAP (tiles), ৭ NetSuite (suite), ৮ Redwood, তারপর Salesforce, Linear,
-     * একদম শেষে Classic; এক গ্রিডে, সারিতে চারটা।
+     * ২ ABOS Navy, ৩ ABOS Blue, ৪ Dynamic; দ্বিতীয় সারি ৫ SAP Fiori (tiles), ৬ Odoo (apps), ৭ NetSuite (suite), ৮ Redwood;
+     * তৃতীয় সারি Salesforce, Linear, Classic; এক গ্রিডে, সারিতে চারটা (মালিকের নতুন ছক, ১৯ নভেম্বর ২০২৬ — SAP উঠে এল Odoo-র আগে)।
      * ⓘ তালিকায় না থাকা রূপ (ভবিষ্যতের) শেষে বসে, হারায় না।
      *
      * @var list<string>
      */
-    public const APPEARANCE_ORDER = ['rose', 'navy', 'blue', 'dynamic', 'apps', 'tiles', 'suite', 'redwood', 'salesforce', 'linear', 'classic'];
+    public const APPEARANCE_ORDER = ['rose', 'navy', 'blue', 'dynamic', 'tiles', 'apps', 'suite', 'redwood', 'salesforce', 'linear', 'classic'];
 
     /** @return array<string, array<string, mixed>> চেহারার পাতার ক্রমে সব রূপ */
     public static function inAppearanceOrder(): array
