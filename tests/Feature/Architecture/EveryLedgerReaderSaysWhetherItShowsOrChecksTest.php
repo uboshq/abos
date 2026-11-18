@@ -62,6 +62,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Resources/views/coa/show.blade.php' => 'একটা খাতের পাতা',
         'app/Modules/Accounts/Services/AccountsFacts.php' => 'হিসাবের পর্দার তথ্য',
         'app/Modules/Accounts/Services/BalanceSheetService.php' => 'স্থিতিপত্রের পর্দা',
+        'app/Modules/Accounts/Services/FinancialStatements.php' => 'আর্থিক বিবরণীর কাগজ — স্থায়ী সম্পদ আর নগদের নোট, লাভ-ক্ষতির তুলনা; স্থিতিপত্রের একই শাখার নিয়ম (ViewedBranch::one() / DataScope::inView(); মালিক, ১৭ নভেম্বর ২০২৬)',
         'app/Modules/Accounts/Services/GroupLedgerService.php' => 'দলগত খতিয়ানের পর্দা',
         'app/Modules/Customer/Http/Controllers/CustomerController.php' => 'গ্রাহকের পাতার বকেয়া (সীমার পাশে গোটা কোম্পানির বকেয়াও — সমন্বয়কারীর সিদ্ধান্ত)',
         'app/Modules/Customer/Services/CustomerMetrics.php' => 'গ্রাহকের পাতার অঙ্ক',

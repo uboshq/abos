@@ -33,6 +33,19 @@
                                  :href="url()->current().'?'.http_build_query(request()->query() + ['export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>
+                    {{-- ⭐ ইংরেজি কাগজ আর পূর্ণ সেট (লাভ-ক্ষতি, মালিকানা স্বত্ব, নগদ প্রবাহ, নোট) — মালিক, ১৭ নভেম্বর ২০২৬ "ok" --}}
+                    <x-ui.button tone="secondary" target="_blank" rel="noopener" data-paper="print-en"
+                                 :href="url()->current().'?'.http_build_query(request()->query() + ['export' => 'print', 'lang' => 'en'])">
+                        {{ __('accounts::fs.set.print_bs_en') }}
+                    </x-ui.button>
+                    <x-ui.button tone="secondary" target="_blank" rel="noopener" data-paper="set-bn"
+                                 :href="route('accounts.financial_statements', request()->only(['as_of', 'branch_id']) + ['export' => 'print', 'lang' => 'bn'])">
+                        {{ __('accounts::fs.set.print_bn') }}
+                    </x-ui.button>
+                    <x-ui.button tone="secondary" target="_blank" rel="noopener" data-paper="set-en"
+                                 :href="route('accounts.financial_statements', request()->only(['as_of', 'branch_id']) + ['export' => 'print', 'lang' => 'en'])">
+                        {{ __('accounts::fs.set.print_en') }}
+                    </x-ui.button>
                 @endcan
             </x-slot:actions>
         </x-ui.page-header>
@@ -89,6 +102,18 @@
             {{ __('accounts::field.total_funding') }} <strong>{{ $money($sheet['totals']['funding']) }}</strong>
         </span>
     </section>
+
+    {{-- ⭐ অনুপাতের সারি আর "অন্তর্বর্তী, নিরীক্ষিত নয়" — কাগজের একই অঙ্ক ([[FinancialStatements::position()]]; মালিক, ১৭ নভেম্বর ২০২৬ "ok") --}}
+    @isset($fs)
+        @php $ratio = fn (?string $r) => $r === null ? __('accounts::fs.bs.not_meaningful') : __('accounts::fs.bs.ratio_times', ['value' => $r]); @endphp
+        <p data-ratios class="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-(--color-ink-muted)">
+            <span>{{ __('accounts::fs.bs.ratio_current') }} <strong class="num text-(--color-ink)" data-ratio="current">{{ $ratio($fs['ratios']['current']) }}</strong>
+                {{ __('accounts::fs.bs.ratio_was', ['value' => $fs['ratios']['current_prior'] ?? __('accounts::fs.bs.not_meaningful')]) }}</span>
+            <span>{{ __('accounts::fs.bs.working_capital') }} <strong class="num text-(--color-ink)" data-ratio="working">{{ $money($fs['ratios']['working_capital']) }}</strong></span>
+            <span>{{ __('accounts::fs.bs.debt_equity') }} <strong class="num text-(--color-ink)" data-ratio="debt_equity">{{ $ratio($fs['ratios']['debt_equity']) }}</strong></span>
+            <span data-interim>{{ __('accounts::fs.bs.interim') }}</span>
+        </p>
+    @endisset
 
     <div class="grid gap-4 lg:grid-cols-2">
         {{-- ── বাঁ পক্ষ · সম্পদ ─────────────────────────────────────── --}}

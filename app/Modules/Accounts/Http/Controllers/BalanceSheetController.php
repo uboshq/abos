@@ -10,12 +10,14 @@ use App\Core\Services\DataScope;
 use App\Core\Services\ExportJournal;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PaperLanguage;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\FinancialYear;
 use App\Models\UserDataScope;
 use App\Modules\Accounts\Services\BalanceSheetService;
+use App\Modules\Accounts\Services\FinancialStatements;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -88,6 +90,8 @@ class BalanceSheetController extends Controller implements HasMiddleware
              * [[TheBalanceSheetHadNoLastYearTest]])। আগে স্থিতিপত্রে কেবল এক দিনের অঙ্ক ছিল।
              */
             'sheet' => $this->comparedSheet(is_string($asOf) && $asOf !== '' ? $asOf : now()->toDateString(), $asked),
+            // ⭐ অনুপাতের সারি — কাগজের একই হিসাব ([[FinancialStatements::position()]]; ১৭ নভেম্বর ২০২৬)
+            'fs' => app(FinancialStatements::class)->position(is_string($asOf) && $asOf !== '' ? $asOf : now()->toDateString(), $asked),
             'branchId' => $asked ?? ViewedBranch::one($request->user()),
 
             /*
@@ -107,25 +111,71 @@ class BalanceSheetController extends Controller implements HasMiddleware
 
     private function paper(Request $request, string $asOf, ?int $asked, string $how): Response
     {
+        return $this->formalPaper($request, 'accounts::print.balance-sheet', $asOf, $asked, $how, 'balance-sheet', full: false);
+    }
+
+    /**
+     * ⭐ আর্থিক বিবরণীর পূর্ণ সেট — আর্থিক অবস্থা, লাভ-ক্ষতি (আগের বছরের একই সময়), মালিকানা স্বত্বের পরিবর্তন, নগদ প্রবাহ (পরোক্ষ), নোট;
+     * বাংলা বা ইংরেজি (`?lang=en`) — মালিক, ১৭ নভেম্বর ২০২৬ "ok"। ⓘ কেবল কাগজ (`?export=print|pdf`), "তালিকা নামানো" চাবির একই দরজায়
+     * ([[ExportListing]]); কাগজ না চাইলে স্থিতিপত্রের পাতায় ফেরে।
+     */
+    public function statements(Request $request): Response|\Illuminate\Http\RedirectResponse
+    {
+        $request->validate(['as_of' => ['nullable', 'date_format:Y-m-d']]);
+        $asOf = is_string($request->query('as_of')) && $request->query('as_of') !== '' ? (string) $request->query('as_of') : now()->toDateString();
+        $asked = $request->integer('branch_id') ?: null;
+        abort_if($asked !== null && ! app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH, $asked), 404);
+
+        $how = $request->query('export');
+        if ($how !== 'print' && $how !== 'pdf') {
+            return redirect()->route('accounts.balance_sheet', $request->only(['as_of', 'branch_id']));
+        }
+
+        return $this->formalPaper($request, 'accounts::print.statements', $asOf, $asked, $how, 'financial-statements', full: true);
+    }
+
+    private function formalPaper(Request $request, string $view, string $asOf, ?int $asked, string $how, string $file, bool $full): Response
+    {
         $user = $request->user();
         $branchId = $asked ?? ViewedBranch::one($user);
-        $sheet = $this->comparedSheet($asOf, $asked);
+        $locale = PaperLanguage::for();
+        $previous = app()->getLocale();
+        app()->setLocale($locale);
 
-        $pdf = app(PrintEngine::class)->renderDocument('accounts::print.balance-sheet', [
-            'title' => (string) __('accounts::menu.balance_sheet'),
-            'sheet' => $sheet,
-            'branch' => $branchId !== null ? (string) Branch::query()->whereKey($branchId)->first()?->name() : (string) __('core.listing.all_branches'),
-            'branchNote' => $branchId !== null,
-            'printedBy' => (string) $user->name,
-            'printedAt' => now()->format('d-m-Y, h:i A'),
-            'signatures' => app(SettingsService::class)->enabled('accounts.print_signature_lines'),
-        ], PaperSize::A4)['pdf'];
+        try {
+            $statements = app(FinancialStatements::class);
+            $fs = $statements->position($asOf, $branchId);
+            $from = $statements->periodStart($asOf);
+            $settings = app(SettingsService::class);
+
+            $data = [
+                'title' => (string) __($full ? 'accounts::fs.set.title' : 'accounts::fs.bs.title'),
+                'fs' => $fs,
+                'soce' => $statements->equity(min($from, $asOf), $asOf, $branchId),
+                'branch' => $branchId !== null ? (string) Branch::query()->whereKey($branchId)->first()?->name() : (string) __('core.listing.all_branches'),
+                'branchNote' => $branchId !== null,
+                'printedBy' => (string) $user->name,
+                'printedAt' => now()->format('d-m-Y, h:i A'),
+                'signatures' => $settings->enabled('accounts.print_signature_lines'),
+                // ⭐ কোম্পানি আইনের চার সই — আনুষ্ঠানিক বিবরণীতে, সেটিংসে বন্ধ করা যায় (রোজকার কাগজে দুই সই, আগের মতো)
+                'board' => $settings->enabled('accounts.statement_board_signatures'),
+            ];
+
+            if ($full) {
+                $data['pl'] = $statements->profitOrLoss(min($from, $asOf), $asOf, $branchId);
+                $data['cf'] = $statements->cashFlow(min($from, $asOf), $asOf, $branchId);
+            }
+
+            $pdf = app(PrintEngine::class)->renderDocument($view, $data, PaperSize::A4, $locale)['pdf'];
+        } finally {
+            app()->setLocale($previous);
+        }
 
         app(ExportJournal::class)->wrote(1);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => ($how === 'print' ? 'inline' : 'attachment').'; filename="balance-sheet-'.$asOf.'.pdf"',
+            'Content-Disposition' => ($how === 'print' ? 'inline' : 'attachment').'; filename="'.$file.'-'.$asOf.'-'.$locale.'.pdf"',
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }

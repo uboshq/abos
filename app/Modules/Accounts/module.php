@@ -1099,6 +1099,15 @@ return [
             'default' => true,
             'group' => 'print',
         ],
+        // ⭐ আনুষ্ঠানিক আর্থিক বিবরণীতে কোম্পানি আইনের চার সই — ব্যবস্থাপনা পরিচালক, পরিচালক, কোম্পানি সচিব, প্রধান অর্থ কর্মকর্তা
+        // (মালিক, ১৭ নভেম্বর ২০২৬ "ok"; [[FinancialStatements]])। বন্ধ হলে রোজকার কাগজের দুই সই। রোজকার কাগজ এতে বদলায় না।
+        [
+            'key' => 'accounts.statement_board_signatures',
+            'label' => 'accounts::settings.statement_board_signatures',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'print',
+        ],
         // ⭐ হিসাব বিবরণী রঙিন — মূল ছাপা সাদা-কালো, এটা চালু করলে রঙিন (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]])
         [
             'key' => 'accounts.statement_colour',

@@ -275,6 +275,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
+    // ⭐ আর্থিক বিবরণীর পূর্ণ সেট — কেবল কাগজ, বাংলা বা ইংরেজি (মালিক, ১৭ নভেম্বর ২০২৬ "ok"); স্থিতিপত্রের একই চাবি; catch-all-এর আগে
+    Route::get('/reports/financial-statements', [BalanceSheetController::class, 'statements'])
+        ->name('financial_statements');
 
     // ⭐ হিসাব বিবরণী — যেকোনো পক্ষ, যেকোনো সময়, সব পাতার PDF (মালিক, ১৫ নভেম্বর ২০২৬; [[PartyStatementController]]); catch-all-এর আগে
     Route::get('/statement/{type}/{id}', \App\Modules\Accounts\Http\Controllers\PartyStatementController::class)
