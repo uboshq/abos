@@ -443,6 +443,8 @@ return [
             'sales::planned.quotation_revision' => ['quote', 'file-pen'],
             'sales::planned.order_new' => ['orders', 'shopping-cart'],
             'sales::planned.order_list' => ['orders', 'clipboard-list'],
+            // ⓘ টাকা জমার খবর — মেনুতে অর্ডারের ঠিক পরে বসে, তাই অর্ডারের দলেই (একই রং, পাশের দলগুলোর রং বদলায় না); চিহ্ন module.php আর "+" মেনুর একই
+            'sales::menu.deposit_report' => ['orders', 'wallet'],
             'sales::planned.do_list' => ['orders', 'clipboard-copy'],
             'sales::planned.do_pending' => ['orders', 'hourglass'],
             'sales::planned.do_partial' => ['orders', 'split'],
@@ -472,6 +474,8 @@ return [
             'sales::menu.pos' => ['counter', 'monitor'],
             'sales::menu.shift' => ['counter', 'timer'],
             'sales::register.title' => ['reports', 'library'],
+            // ⓘ প্রতিদিনের জমার খাতা — কাগজের খাতার ঠিক পরে, রিপোর্টের দলে (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            'sales::deposit.register_title' => ['reports', 'banknote'],
             'sales::menu.pending_orders' => ['control', 'clock'],
             'sales::due.title' => ['reports', 'calendar-clock'],
             'sales::order_book.open_title' => ['control', 'folder-open'],
@@ -496,6 +500,8 @@ return [
             'sales::menu.schemes' => ['target', 'scroll-text'],
             'sales::menu.commission' => ['target', 'coins'],
             'sales::menu.deposit_claims' => ['target', 'bell-ring'],
+            // ⓘ ব্যাংক স্টেটমেন্টে জমা মেলানো — জমার বিজ্ঞপ্তির ঠিক পরে, একই দলে (ধাপ গ, ১৮ নভেম্বর ২০২৬)
+            'sales::menu.deposit_match' => ['target', 'landmark'],
         ],
         'supplier' => [
             'supplier::dashboard.title' => ['start', 'layout-dashboard'],
