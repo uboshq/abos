@@ -167,6 +167,7 @@ return [
         'move' => 'Move money',
         'cap' => 'Monthly cap',
         'final' => 'Final report',
+        'month_close' => 'Month close pack',
         'portal' => 'Portal',
         'self' => 'Own',
         'adjust' => 'Adjust',

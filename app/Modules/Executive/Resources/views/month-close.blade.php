@@ -63,7 +63,8 @@
                 <tbody>
                 @foreach ($m['pl']['rows'] as $row)
                     <tr data-pl="{{ $row['key'] }}" @class(['font-semibold bg-(--color-surface-sunken)' => $row['style'] === 'sub'])>
-                        <td @class(['ps-6' => in_array($row['style'], ['less', 'add'], true)])>{{ $t('pl.'.$row['key']) }}</td>
+                        {{-- ⓘ বাদ/যোগের লাইন ভেতরে সরানো — ঘরের প্যাডিং নয় (থিমের ঘনত্ব), ভেতরের লেখায় --}}
+                        <td><span @class(['inline-block ps-6' => in_array($row['style'], ['less', 'add'], true)])>{{ $t('pl.'.$row['key']) }}</span></td>
                         @foreach ($plCols as $c)<td class="num">{{ $row['style'] === 'less' ? $less($row['values'][$c]) : $signed($row['values'][$c]) }}</td>@endforeach
                     </tr>
                 @endforeach
@@ -71,7 +72,7 @@
                         <td>{{ $t('pl.net_profit') }}</td>
                         @foreach ($plCols as $c)<td class="num">{{ $signed($m['pl']['figures'][$c]['net_profit'] ?? null) }}</td>@endforeach
                     </tr>
-                    <tr><td class="ps-6">{{ $t('pl.margin') }}</td>@foreach ($plCols as $c)<td class="num">{{ $m['pl']['margin'][$c] ?? '—' }}</td>@endforeach</tr>
+                    <tr><td><span class="inline-block ps-6">{{ $t('pl.margin') }}</span></td>@foreach ($plCols as $c)<td class="num">{{ $m['pl']['margin'][$c] ?? '—' }}</td>@endforeach</tr>
                 </tbody>
             </table>
         </div>
