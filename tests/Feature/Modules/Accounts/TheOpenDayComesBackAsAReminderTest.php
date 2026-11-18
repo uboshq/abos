@@ -115,7 +115,7 @@ final class TheOpenDayComesBackAsAReminderTest extends TestCase
             'closed_by' => $this->owner->id, 'closed_at' => now()]);
 
         $this->assertSame([], app(DayChecklist::class)->openDays(Carbon::today()), '⛔ শাখা দিন বন্ধ করার পরেও দিনটা "বন্ধ হয়নি" দেখাচ্ছে');
-        $this->get(route('accounts.voucher.list'))->assertOk()->assertDontSee('data-day-popup', false);
+        $this->get(route('accounts.voucher.list'))->assertOk()->assertDontSee('data-open-days', false);
     }
 
     public function test_without_the_close_key_or_with_the_switch_off_nothing_pops_up(): void
@@ -126,11 +126,11 @@ final class TheOpenDayComesBackAsAReminderTest extends TestCase
         $clerk->companies()->attach($this->company->id, ['default_branch_id' => $this->a->id, 'is_active' => true]);
         $clerk->givePermissionTo(Permission::findOrCreate('accounts.report', 'web'), Permission::findOrCreate('accounts.day_close.view', 'web'));
         $this->actingAs($clerk->fresh());
-        $this->get(route('accounts.voucher.list'))->assertDontSee('data-day-popup', false);
+        $this->get(route('accounts.voucher.list'))->assertDontSee('data-open-days', false);
 
         $this->actingAs($this->owner->fresh());
         app(SettingsService::class)->set('accounts.day_close.popup_every', '0');
-        $this->get(route('accounts.voucher.list'))->assertOk()->assertDontSee('data-day-popup', false);
+        $this->get(route('accounts.voucher.list'))->assertOk()->assertDontSee('data-open-days', false);
     }
 
     public function test_cash_held_by_staff_is_named_and_the_owners_own_cash_is_not(): void
@@ -176,6 +176,49 @@ final class TheOpenDayComesBackAsAReminderTest extends TestCase
         $page->assertDontSee('data-day-popup', false); // ⓘ নিজের পাতায় পপআপ নয়
         $html = $page->getContent();
         $this->assertLessThan(strpos($html, 'data-day-close-form'), strpos($html, 'data-day-check'), '⛔ চেকলিস্ট বন্ধের বোতামের উপরে নেই');
+    }
+
+    /** ⭐ মালিক, ১৯ নভেম্বর ২০২৬: ফিতা পাতার উপরে নয় — খোলার সময়ের পপআপে; "পরে" চাপলে পুরো পপআপ লুকায়, সময় পেরোলে ফেরে */
+    public function test_urgent_news_comes_in_the_popup_not_on_top_of_the_page_and_later_hides_it(): void
+    {
+        $page = $this->get(route('accounts.voucher.list'));
+        $page->assertOk();
+        $html = $page->getContent();
+
+        $this->assertStringContainsString('data-popup-news', $html, '⛔ জরুরি খবর (ব্যাকআপ) পপআপে আসেনি');
+        $news = strpos($html, 'data-popup-news');
+        $this->assertSame(strpos($html, 'data-message-strips'), strpos($html, 'data-message-strips', $news),
+            '⛔ ফিতাটা এখনো পপআপের বাইরে, পাতার উপরে আঁকা');
+
+        $this->post(route('notifications.banner.close'), ['later' => '1'])->assertRedirect();
+        $this->get(route('accounts.voucher.list'))->assertDontSee('data-day-popup', false);
+
+        Carbon::setTestNow('2026-11-17 11:01:00');
+        $this->get(route('accounts.voucher.list'))->assertSee('data-popup-news', false);
+    }
+
+    /** ⭐ অফিসের ম্যাকের রসিদ দ্বিতীয় কপি — টাটকা হলে "একই ডিস্কে" আর আসে না, দুই দিনের পুরনো হলে "কপি থেমে গেছে" */
+    public function test_the_office_mac_receipt_counts_as_the_second_copy_until_it_goes_stale(): void
+    {
+        config(['abos.backup.mirror' => null]);
+        $receipt = storage_path('app/backup-offsite.json');
+        $words = fn () => array_column(app(\App\Core\Services\StatusNotices::class)->all(), 'text');
+
+        try {
+            @unlink($receipt);
+            $this->assertContains(__('core.notice.backup_no_mirror'), $words(), '⛔ রসিদ না থাকলেও "একই ডিস্কে" বলছে না');
+
+            file_put_contents($receipt, json_encode(['at' => now()->subHours(5)->toIso8601String(), 'where' => 'office Mac']));
+            \App\Core\Services\StatusNotices::forget((int) $this->company->id, (int) $this->owner->id);
+            $this->assertNotContains(__('core.notice.backup_no_mirror'), $words(), '⛔ ম্যাকের টাটকা কপির পরেও "একই ডিস্কে" বলছে');
+            $this->assertNotContains(__('core.notice.backup_mirror_stale'), $words());
+
+            file_put_contents($receipt, json_encode(['at' => now()->subDays(3)->toIso8601String(), 'where' => 'office Mac']));
+            \App\Core\Services\StatusNotices::forget((int) $this->company->id, (int) $this->owner->id);
+            $this->assertContains(__('core.notice.backup_mirror_stale'), $words(), '⛔ ম্যাকের কপি তিন দিন থেমে, অথচ চুপ');
+        } finally {
+            @unlink($receipt);
+        }
     }
 
     public function test_the_staff_member_holding_cash_is_told_in_the_afternoon_once_and_the_owner_is_not(): void

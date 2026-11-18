@@ -426,11 +426,24 @@ final class StatusNotices
         $backups = app(BackupService::class);
 
         if ($backups->mirrorPath() === null) {
-            return [
-                'text' => __('core.notice.backup_no_mirror'),
-                'url' => null,
-                'tone' => 'danger',
-            ];
+            /*
+             * ⭐ সফটওয়্যারের নিজের দ্বিতীয় গন্তব্য নেই — কিন্তু অফিসের ম্যাক বাইরে থেকে কপি নেয় ([[BackupService::offsiteAt()]];
+             * মালিক, ১৯ নভেম্বর ২০২৬)। রসিদ টাটকা (দুই দিনের মধ্যে) হলে দ্বিতীয় কপি আছে — চুপ; পুরনো হলে "কপি থেমে গেছে";
+             * কোনোদিন রসিদ না এলে আগের মতো "একই ডিস্কে"।
+             */
+            $offsite = $backups->offsiteAt();
+
+            if ($offsite === null) {
+                return [
+                    'text' => __('core.notice.backup_no_mirror'),
+                    'url' => null,
+                    'tone' => 'danger',
+                ];
+            }
+
+            return $offsite->lt(now()->subDays(2))
+                ? ['text' => __('core.notice.backup_mirror_stale'), 'url' => null, 'tone' => 'danger']
+                : null;
         }
 
         /*

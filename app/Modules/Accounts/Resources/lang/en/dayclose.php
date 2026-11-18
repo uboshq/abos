@@ -224,6 +224,7 @@ return [
     ],
     'popup' => [
         'title' => 'Day not closed',
+        'title_news' => 'Urgent news today',
         'days' => 'These days are not closed yet:',
         'month' => ':month is not closed yet',
         'month_go' => 'Month-end work',

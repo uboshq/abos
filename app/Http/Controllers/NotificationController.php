@@ -327,6 +327,16 @@ class NotificationController extends Controller
             $request->session()->put('shell.banner.closed', array_values(array_unique([...$closed, $key])));
         }
 
+        /*
+         * ⭐ মাঝখানের পপআপের "পরে মনে করাবেন" — পুরো পপআপ এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত লুকায় (ডিফল্ট ১ ঘণ্টা; "দেখাবে না"
+         * বাছা থাকলেও জরুরি খবরের জন্য ১ ঘণ্টা), তারপর যা তখনো বাকি তা নিয়ে ফেরে (মালিক, ১৮–১৯ নভেম্বর ২০২৬; [[shell.day-check]])।
+         * ⓘ এখানে, কারণ এই দরজা সবার — দিন বন্ধের চাবি ছাড়াও জরুরি খবর আসে।
+         */
+        if ($request->boolean('later')) {
+            $minutes = (int) (app(\App\Core\Services\SettingsService::class)->get('accounts.day_close.popup_every') ?? 60);
+            $request->session()->put('daycheck.snooze_until', now()->addMinutes($minutes > 0 ? $minutes : 60)->getTimestamp());
+        }
+
         return back();
     }
 }

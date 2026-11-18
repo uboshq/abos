@@ -1,45 +1,68 @@
 {{--
-    ⭐ বন্ধ-না-হওয়া দিন আর মাসের মাঝখানের সতর্কতা — মালিক, ১৮ নভেম্বর ২০২৬:
-    *"পরের দিন সকালবেলায় যখন সফটওয়্যারে লগইন করবে … এই চেকলিস্টে সামনে চলে আসবে … পপআপ আকারে সামনে চলে আসবে …
-    কেটে দিতে পারবে … এক ঘন্টা পর পর আবার আসবে"*, আর *"কাজ যাতে কোনোভাবে আটকে না থাকে"*।
+    ⭐ খোলার সময়ের মাঝখানের পপআপ — জরুরি খবর আর বন্ধ-না-হওয়া দিন/মাস।
 
-    ⓘ কে দেখেন: যাঁর দিন বন্ধের চাবি আছে (`accounts.day_close.close`; মালিক সব চাবি পান)।
-    ⓘ কী দেখায়: গত সাত দিনের যেসব কর্মদিবসে খাতায় লেখা হয়েছে অথচ দিন বন্ধ হয়নি ([[DayChecklist::openDays()]]),
-      গত মাস বন্ধ না হলে সেটা ([[DayChecklist::openMonth()]]), আর সবচেয়ে নতুন খোলা দিনের চেকলিস্ট — প্রতিটা সারি লিংক।
-    ⓘ ✕ বা "পরে মনে করাবেন" — এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত লুকায় ([[DayClosingController::snooze()]]); তারপর আবার আসে।
-    ⛔ পর্দা ঢাকে না: পেছনের পাতা চলতেই থাকে (কোনো আটকানো পর্দা নেই), দিন শেষের হিসাবের পাতায় নিজে আসে না, ছাপায় আসে না।
-    ⓘ জাভাস্ক্রিপ্ট ছাড়া — নোটিশের ফিতার মতো ছোট ফর্ম।
+    মালিক, ১৮ নভেম্বর ২০২৬: *"পরের দিন সকালবেলায় যখন সফটওয়্যারে লগইন করবে … পপআপ আকারে সামনে চলে আসবে … কেটে দিতে পারবে …
+    এক ঘন্টা পর পর আবার আসবে"*, আর *"কাজ যাতে কোনোভাবে আটকে না থাকে"*।
+    মালিক, ১৮ নভেম্বর রাত ও ১৯ নভেম্বর ২০২৬: *"ব্যাকআপের ফিতা আর কোপাইলটের ফিতা … এখানে না দেখিয়ে … পপ আপে নোটিফিকেশনটা দেখানো
+    আরও গুরুত্বপূর্ণ … সারাদিন এইখানে বসে থাকাটা জায়গাটাও আটকে রাখে"*, *"পপআপে যা দেখাবে ঠিক না হওয়ার আগ পর্যন্ত পপআপ কাটার পরে
+    নিচের নোটিশ বারে অল টাইম চলতেই থাকবে"*।
+
+    ⓘ দুই ভাগ:
+      ১ · জরুরি খবর — আগে পাতার উপরের ফিতায় যা থাকত ([[shell.notice-banner]], [[StatusNotices::forStrip()]]): ব্যাকআপ, খসড়া, অনুমোদন,
+          লেখকের "জরুরি" নোটিশ। সবার জন্য, যার যা দেখার অধিকার। প্রতিটার ✕ আগের মতোই (এই লগইনে সেটা আর আসে না)।
+          ⓘ নিচের চলন্ত বারে এগুলো আগে থেকেই চলে, ঠিক না হওয়া পর্যন্ত ([[StatusNotices::forTicker()]], মালিক ৭ নভেম্বর)।
+      ২ · দিন আর মাস বন্ধ হয়নি — যাঁর দিন বন্ধের চাবি আছে (`accounts.day_close.close`): গত সাত দিনের বন্ধ-না-হওয়া কর্মদিবস
+          ([[DayChecklist::openDays()]]), গত মাস ([[DayChecklist::openMonth()]]), আর সবচেয়ে নতুন খোলা দিনের চেকলিস্ট।
+          নিয়ন্ত্রণ প্যানেলে "দেখাবে না" বাছলে কেবল এই ভাগটা চুপ।
+    ⓘ "পরে মনে করাবেন" — এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত (ডিফল্ট ১ ঘণ্টা) পুরো পপআপ লুকায়; তারপর যা তখনো বাকি তা নিয়ে আবার আসে
+      ([[NotificationController::closeBanner()]] `later`, সবার জন্য খোলা — দিন বন্ধের চাবি ছাড়াও)।
+    ⛔ পর্দা ঢাকে না: পেছনের পাতা চলতেই থাকে, দিন/মাস শেষের হিসাবের পাতায় নিজে আসে না, ছাপায় আসে না। জাভাস্ক্রিপ্ট ছাড়া।
 --}}
 @php
     $show = false;
     $user = auth()->user();
     $settings = app(\App\Core\Services\SettingsService::class);
+    $days = [];
+    $month = null;
+    $latest = null;
+    $items = [];
+    $hasNews = false;
 
     if ($user !== null
-        && \Illuminate\Support\Facades\Route::has('executive.dayclose.snooze')
-        && (string) ($settings->get('accounts.day_close.popup_every') ?? '60') !== '0'
+        && \Illuminate\Support\Facades\Route::has('notifications.banner.close')
         && ! request()->routeIs('executive.dayclose', 'executive.dayclose.*', 'executive.month_close')
-        && (int) session('daycheck.snooze_until', 0) <= now()->getTimestamp()
-        && $user->can('accounts.day_close.close')) {
-        $check = app(\App\Modules\Accounts\Services\DayChecklist::class);
-        $today = now()->startOfDay();
-        $days = $check->openDays($today);
-        $month = $check->openMonth($today);
-        $show = $days !== [] || $month !== null;
-        $latest = $days !== [] ? end($days) : null;
-        $items = $latest !== null ? $check->for($latest) : [];
+        && (int) session('daycheck.snooze_until', 0) <= now()->getTimestamp()) {
+        // ── ১ · জরুরি খবর (আগের উপরের ফিতা) — এই লগইনে ✕ দেওয়াগুলো বাদ, ফিতার একই নিয়ম ──
+        $closed = (array) session('shell.banner.closed', []);
+        $hasNews = array_filter(
+            app(\App\Core\Services\StatusNotices::class)->forStrip(),
+            fn (array $n): bool => ! in_array(sha1($n['text']), $closed, true),
+        ) !== [];
+
+        // ── ২ · দিন আর মাস বন্ধ হয়নি — দিন বন্ধের চাবি যাঁর ──
+        if ($user->can('accounts.day_close.close') && (string) ($settings->get('accounts.day_close.popup_every') ?? '60') !== '0') {
+            $check = app(\App\Modules\Accounts\Services\DayChecklist::class);
+            $today = now()->startOfDay();
+            $days = $check->openDays($today);
+            $month = $check->openMonth($today);
+            $latest = $days !== [] ? end($days) : null;
+            $items = $latest !== null ? $check->for($latest) : [];
+        }
+
+        $show = $hasNews || $days !== [] || $month !== null;
     }
 @endphp
 
 @if ($show)
-    <div class="pointer-events-none fixed inset-x-0 top-[18vh] z-40 flex justify-center px-4 print-hide" data-day-popup>
+    <div class="pointer-events-none fixed inset-x-0 top-[14vh] z-40 flex justify-center px-4 print-hide" data-day-popup>
         <section role="dialog" aria-labelledby="day-popup-title"
-                 class="pointer-events-auto w-full max-w-lg rounded-(--radius-card) border border-(--color-warning) bg-(--color-surface-card) shadow-xl">
+                 class="pointer-events-auto w-full max-w-xl overflow-hidden rounded-(--radius-card) border border-(--color-warning) bg-(--color-surface-card) shadow-xl">
             <header class="flex items-center gap-2 border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-2">
                 <x-ui.icon name="alert-triangle" :size="18" class="shrink-0 text-(--color-warning-hover)" />
-                <h2 id="day-popup-title" class="min-w-0 flex-1 font-semibold">{{ __('accounts::dayclose.popup.title') }}</h2>
-                <form method="POST" action="{{ route('executive.dayclose.snooze') }}">
+                <h2 id="day-popup-title" class="min-w-0 flex-1 font-semibold">{{ __($hasNews ? 'accounts::dayclose.popup.title_news' : 'accounts::dayclose.popup.title') }}</h2>
+                <form method="POST" action="{{ route('notifications.banner.close') }}">
                     @csrf
+                    <input type="hidden" name="later" value="1">
                     <button type="submit" data-day-popup-x aria-label="{{ __('accounts::dayclose.popup.later') }}"
                             class="rounded p-1 text-(--color-ink-muted) hover:bg-(--color-surface-muted) hover:text-(--color-ink)">
                         <x-ui.icon name="x" :size="18" />
@@ -47,7 +70,18 @@
                 </form>
             </header>
 
+            {{-- ১ · জরুরি খবর — আগের উপরের ফিতার সারিগুলো, প্রতিটার নিজের ✕ আর "বিস্তারিত" সহ --}}
+            @if ($hasNews)
+                <div data-popup-news>
+                    <x-shell.notice-banner />
+                </div>
+            @endif
+
             <div class="grid gap-3 px-4 py-3 text-sm">
+                @if ($days !== [] || $month !== null)
+                    <p class="font-semibold" data-popup-day-head>{{ __('accounts::dayclose.popup.title') }}</p>
+                @endif
+
                 @if ($days !== [])
                     <div>
                         <p class="mb-1">{{ __('accounts::dayclose.popup.days') }}</p>
@@ -81,8 +115,9 @@
             </div>
 
             <footer class="flex flex-wrap items-center justify-end gap-2 border-t border-(--color-border) px-4 py-2">
-                <form method="POST" action="{{ route('executive.dayclose.snooze') }}">
+                <form method="POST" action="{{ route('notifications.banner.close') }}">
                     @csrf
+                    <input type="hidden" name="later" value="1">
                     <x-ui.button type="submit" tone="secondary">{{ __('accounts::dayclose.popup.later') }}</x-ui.button>
                 </form>
                 @if ($latest !== null)

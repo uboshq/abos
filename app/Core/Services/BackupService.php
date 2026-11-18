@@ -333,6 +333,35 @@ final class BackupService
     }
 
     /**
+     * ⭐ বাইরের কপির রসিদ — অফিসের ম্যাক প্রতি রাতে লাইভের ব্যাকআপ টেনে নেয় (SSD + HDD), আর সফল হলে এখানে একটা রসিদ লিখে যায়
+     * (মালিক, ১৮–১৯ নভেম্বর ২০২৬: *"আরও দুই জায়গায় ব্যাকআপ নেওয়া হয়েছে, তারপরেও কেন এটা দেখাচ্ছে"*)।
+     *
+     * ⓘ কপিটা সফটওয়্যারের বাইরে থেকে হয় (ম্যাক টানে, সার্ভার পাঠায় না), তাই `ABOS_BACKUP_MIRROR` বসানো থাকে না — আগে সফটওয়্যার
+     *   ভাবত ব্যাকআপ একই ডিস্কে। এখন রসিদটাই দ্বিতীয় গন্তব্যের প্রমাণ; রসিদ দুই দিনের পুরনো হলে "কপি থেমে গেছে" ([[StatusNotices]])।
+     * ⓘ ফাইল: `storage/app/backup-offsite.json` — `{"at": ISO-8601, "where": "…"}`; ম্যাকের `~/abos-backup-pull.sh` লেখে।
+     */
+    public function offsiteAt(): ?Carbon
+    {
+        $receipt = storage_path('app'.DIRECTORY_SEPARATOR.'backup-offsite.json');
+
+        if (! is_file($receipt)) {
+            return null;
+        }
+
+        $said = json_decode((string) @file_get_contents($receipt), true);
+
+        if (! is_array($said) || ! isset($said['at'])) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $said['at']);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * দ্বিতীয় গন্তব্যটা কোথায় — বসানো না থাকলে null।
      *
      * ── কেন এটা বাইরে থেকে জিজ্ঞেস করা যেতে হয় ─────────────────────
