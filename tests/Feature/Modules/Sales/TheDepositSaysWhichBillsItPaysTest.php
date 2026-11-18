@@ -71,7 +71,7 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $this->bill('INV-B-4', '700', now()->subDays(4), DocumentStatus::DRAFT);
         $this->bill('INV-B-5', '800', now()->subDays(8), customer: $this->other());
 
-        $this->phone(['sales.collection.create']);
+        $this->phone(['sales.collection.create', 'sales.claim.submit']); // ⓘ খবরের দরজার চাবি এখন sales.claim.submit (ধাপ খ, 19e713177) — আদায়ের চাবি একা দরজা খোলে না
         $bills = $this->getJson('/api/v1/sales/deposit-requests/bills?customer='.$this->dealer->public_id)->assertOk()->json('bills');
         $this->assertSame(['INV-B-1', 'INV-B-2'], array_column($bills, 'no'), '⛔ খোলা বিলের তালিকা ভুল — অন্যের, খসড়া বা শোধ হওয়া এল, বা ক্রম পুরনো আগে নয়।');
         $this->assertSame(['600.00', '400.00'], array_column($bills, 'due'));
@@ -121,7 +121,7 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         // ⓘ আগে খালি বসত; খসড়া আর অন্যের বিল বাদ, তাই কেবল নিজের পাকা INV-D-1
         $this->assertSame(['INV-D-1' => '300.0000'], $this->linesOf($plain), '⛔ বিল না বাছা আদায় পুরনো বিলে বসেনি, বা ভুল বিলে বসল।');
 
-        $this->phone(['sales.collection.create']);
+        $this->phone(['sales.collection.create', 'sales.claim.submit']); // ⓘ খবরের দরজার চাবি এখন sales.claim.submit (ধাপ খ, 19e713177) — আদায়ের চাবি একা দরজা খোলে না
         foreach ([
             'অন্যের বিল' => ['300', [['invoice' => (string) $theirs->public_id, 'amount' => '100']]],
             'অচেনা বিল' => ['300', [['invoice' => '00000000-0000-0000-0000-000000000000', 'amount' => '100']]],
@@ -165,7 +165,7 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $this->assertEquals([['sales_invoice_id' => $bill->id, 'amount' => '500.0000']], $portal->bills);
         $this->actingAs($this->dealer->fresh(), 'portal')->get(route('sales.portal.claim.show', $portal))->assertOk()->assertSee('INV-E-1');
 
-        $desk = $this->member(['sales.collection.create', 'sales.claim.view']);
+        $desk = $this->member(['sales.collection.create', 'sales.claim.view', 'sales.claim.submit']);
         $this->actingAs($desk)->get(route('sales.claim.request.create'))->assertOk()->assertDontSee('INV-E-1');
         $this->actingAs($desk)->get(route('sales.claim.request.create', ['customer' => $this->dealer->id]))->assertOk()
             ->assertSee('INV-E-1')->assertSee((string) $bill->public_id, false);

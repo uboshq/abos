@@ -44,7 +44,8 @@ final class RecordsVisits
         $user = $request->user();
         $name = (string) ($request->route()?->getName() ?? '');
 
-        if ($user === null || ! $request->isMethod('GET') || $response->getStatusCode() !== 200 || $name === '') {
+        // ⓘ কেবল কর্মী — পোর্টালের দোকানি (Customer) কপাইলটের লগে নয়; আগে TypeError হয়ে প্রতিটা পোর্টাল পাতায় রিপোর্ট জমত
+        if (! $user instanceof \App\Models\User || ! $request->isMethod('GET') || $response->getStatusCode() !== 200 || $name === '') {
             return;
         }
 
