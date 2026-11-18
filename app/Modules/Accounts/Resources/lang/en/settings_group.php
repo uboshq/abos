@@ -6,4 +6,5 @@ return [
     'entry' => 'Entry rules',
     'print' => 'Printing',
     'general' => 'General',
+    'day_close' => 'Day closing',
 ];

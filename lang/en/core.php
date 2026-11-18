@@ -1394,6 +1394,7 @@ return [
     // মাস বন্ধ ও পেছনের তারিখের জানালা
     'period' => [
         'month_closed' => ':month has been closed (:reason). To enter anything dated in it, the month has to be reopened first.',
+        'day_closed' => 'The books of :date were counted and closed by :who. A new or changed entry dated that day needs someone allowed to enter back-dated papers.',
         'no_reason' => 'no reason given',
         'too_far_back' => 'An entry cannot be dated more than :days days back. The earliest date allowed is :date.',
     ],

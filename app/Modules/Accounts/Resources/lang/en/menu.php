@@ -18,6 +18,7 @@ return [
     'obligations' => 'Obligations',
     'cash_count' => 'Cash Count',
     'day_book' => 'Day Book',
+    'day_closing' => 'Day Closing',
     'cash_book' => 'Cash Book',
     'bank_book' => 'Bank Book',
     'ledger' => 'Ledger',

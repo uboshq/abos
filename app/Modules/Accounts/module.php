@@ -178,7 +178,11 @@ return [
             ['label' => 'accounts::menu.obligations', 'icon' => 'clock', 'route' => 'accounts.obligation.index', 'permission' => 'accounts.obligation.view'],
         ],
         'reports' => [
-            ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
+            // ⭐ দৈনিক খতিয়ান — জার্নাল ধরে, মালিকের অনুমোদিত নমুনা (১৬ ও ১৮ নভেম্বর ২০২৬; [[DayBookController]]); তারিখের পরিসরের পুরনো
+            //   সমতল তালিকা `/accounts/reports/day-book` ঠিকানায় থাকে
+            ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.daybook', 'permission' => 'accounts.report'],
+            // ⭐ দিন শেষের হিসাব — মালিকের অনুমোদিত নমুনা v7 ([[DayClosingController]])
+            ['label' => 'accounts::menu.day_closing', 'icon' => 'check-circle', 'route' => 'accounts.dayclose', 'permission' => 'accounts.day_close.view'],
             ['label' => 'accounts::menu.cash_book', 'icon' => 'cash', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-book'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.bank_book', 'icon' => 'building', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
 
@@ -418,6 +422,13 @@ return [
         'accounts.report.final',
 
         /*
+         * ⭐ দিন শেষের হিসাব — মালিকের অনুমোদিত নমুনা v7 (১৬ নভেম্বর ২০২৬; ১৮ নভেম্বর: "এখনই করে লাইভে দাও")।
+         * ⓘ দেখা আর দিন বন্ধ করা আলাদা চাবি: কাগজে দিনের লাভ থাকে, আর বন্ধ করলে ঐ দিনে লেখা আটকায় ([[OpenPeriod]])।
+         */
+        'accounts.day_close.view',
+        'accounts.day_close.close',
+
+        /*
          * ⭐ গ্রুপের হিসাবের নিজের চাবি — ২৫ সেপ্টেম্বর ২০২৬।
          *
          * ⛔ `accounts.report.final` যথেষ্ট নয়, আর সেটা ইচ্ছাকৃত।
@@ -510,8 +521,11 @@ return [
             'accounts.asset.view',
             'accounts.obligation.view',
             'accounts.obligation.update',
+            // ⭐ দিন শেষের হিসাব — দেখা আর দিন বন্ধ (১৮ নভেম্বর ২০২৬)
+            'accounts.day_close.view',
+            'accounts.day_close.close',
         ],
-        'Manager' => ['accounts.view', 'accounts.report'],
+        'Manager' => ['accounts.view', 'accounts.report', 'accounts.day_close.view'],
     ],
 
     'doc_types' => [
@@ -1091,6 +1105,26 @@ return [
             // ⭐ মালিক: ৳১০,০০০-এর নিচের কেনা খরচ, সম্পদ নয় (fe-র মাধ্যমে, ১১ অক্টোবর ২০২৬); শ্রেণির নিজের সীমা থাকলে সেটা
             'default' => 10000,
             'group' => 'entry',
+        ],
+        /*
+         * ⭐ দিন শেষের হিসাব — স্থির খরচ (মাসিক) আর সাপ্তাহিক ছুটি (মালিকের অনুমোদিত নমুনা v7, ১৬ নভেম্বর ২০২৬: "স্থির খরচ (মাসিক, সেটিংস থেকে)")।
+         * ⓘ দিনের ভাগ = মাসের অঙ্ক ÷ মাসের কর্মদিবস (ছুটির দিন বাদে) — [[DayClosingService::fixed()]]। শূন্য = ঘরটা কাগজে আসে না।
+         */
+        ['key' => 'accounts.day_close.fixed.salary', 'label' => 'accounts::settings.fixed_salary', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.rent', 'label' => 'accounts::settings.fixed_rent', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.utilities', 'label' => 'accounts::settings.fixed_utilities', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.marketing', 'label' => 'accounts::settings.fixed_marketing', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.depreciation', 'label' => 'accounts::settings.fixed_depreciation', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.other', 'label' => 'accounts::settings.fixed_other', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        ['key' => 'accounts.day_close.fixed.interest', 'label' => 'accounts::settings.fixed_interest', 'type' => 'number', 'default' => 0, 'group' => 'day_close'],
+        [
+            'key' => 'accounts.day_close.weekly_holiday',
+            'label' => 'accounts::settings.weekly_holiday',
+            'type' => 'choice',
+            'options' => ['friday' => 'accounts::settings.day_friday', 'saturday' => 'accounts::settings.day_saturday',
+                'sunday' => 'accounts::settings.day_sunday', 'none' => 'accounts::settings.day_none'],
+            'default' => 'friday',
+            'group' => 'day_close',
         ],
         [
             'key' => 'accounts.print_signature_lines',

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Core\Support\CompanyContext;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+
+/**
+ * ⭐ দিন বন্ধ — একটা দিনের খাতা গুনে-মিলিয়ে বন্ধ (মালিকের অনুমোদিত "দিন শেষের হিসাব", ১৬ ও ১৮ নভেম্বর ২০২৬)।
+ *
+ * ⓘ বন্ধ দিনের তারিখে নতুন বা বদলানো এন্ট্রি আটকায় [[OpenPeriod::assertOpen()]]; পেছনের তারিখের অনুমতি যাঁর আছে
+ *   (`accounts.backdate.override`), তিনি পারেন।
+ * ⓘ শাখা খালি = গোটা কোম্পানির দিন বন্ধ — তখন সব শাখার ঐ দিন বন্ধ। শাখার দিন বন্ধ কেবল ঐ শাখার।
+ */
+class DayClose extends Model
+{
+    use BelongsToCompany;
+    use HasPublicId;
+    use IsAudited;
+
+    protected $table = 'acc_day_closes';
+
+    protected $fillable = [
+        'company_id', 'branch_id', 'day', 'cash_counted', 'cash_book', 'cash_gap', 'gap_reason', 'closed_by', 'closed_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'day' => 'date',
+            'closed_at' => 'datetime',
+        ];
+    }
+
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * এই দিন (এই শাখায়) বন্ধ কি না — কোম্পানির পুরো দিন বন্ধ হলেও হ্যাঁ।
+     *
+     * ⓘ শাখা না জানা গেলে (সব শাখার কাগজ) কেবল কোম্পানির পুরো দিনের বন্ধ দেখা হয়।
+     */
+    public static function closedOn(Carbon|string $day, ?int $branchId = null): ?self
+    {
+        $date = ($day instanceof Carbon ? $day : Carbon::parse($day))->toDateString();
+
+        return self::query()
+            ->where('company_id', CompanyContext::id())
+            ->where('day', $date)
+            ->where(fn ($q) => $q->whereNull('branch_id')->when($branchId !== null, fn ($q) => $q->orWhere('branch_id', $branchId)))
+            ->orderBy('id')
+            ->first();
+    }
+}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Models\DayClose;
 use App\Models\PeriodLock;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -60,6 +61,20 @@ final class OpenPeriod
                 $field => __('core.period.month_closed', [
                     'month' => $lock->label(),
                     'reason' => $lock->reason ?: __('core.period.no_reason'),
+                ]),
+            ]);
+        }
+
+        /*
+         * ⭐ বন্ধ দিন — "দিন শেষের হিসাব"-এ গুনে-মিলিয়ে বন্ধ করা দিনে নতুন বা বদলানো এন্ট্রি অনুমোদন ছাড়া নয় (মালিকের অনুমোদিত
+         * নমুনা, ১৬ ও ১৮ নভেম্বর ২০২৬; [[TheDayIsCountedAndClosedTest]])। ⓘ "অনুমোদন" = পেছনের তারিখের অনুমতি যাঁর আছে
+         * (`accounts.backdate.override`), বা সেই অনুমতির সইকারী এই কাগজে সই দিয়েছেন — পেছনের জানালার একই দুই দরজা।
+         */
+        if (! $this->mayPassClosedDays() && ($closed = DayClose::closedOn($date, CompanyContext::branchId())) !== null) {
+            throw ValidationException::withMessages([
+                $field => __('core.period.day_closed', [
+                    'date' => $date->format('d-m-Y'),
+                    'who' => $closed->closer?->name ?? '—',
                 ]),
             ]);
         }
@@ -156,6 +171,19 @@ final class OpenPeriod
      * প্রতিটা এন্ট্রিতে বাধা দিলে তিনি তারিখটাই বদলে দিতেন, আর তখন
      * খাতায় ভুল তারিখ বসত — যা সীমা না থাকার চেয়েও খারাপ।
      */
+    /**
+     * বন্ধ দিন ডিঙাতে পারেন কে — পেছনের জানালার একই তিন দরজা: লগইন ছাড়া চলা কাজ (ইমপোর্ট, নির্ধারিত কাজ), পেছনের তারিখের
+     * অনুমতি, আর সেই অনুমতির সইকারীর সই ([[windowDays()]]-এর নিচের ব্যাখ্যা)।
+     */
+    private function mayPassClosedDays(): bool
+    {
+        $user = auth()->user();
+
+        return ! $user instanceof \App\Models\User
+            || $user->can('accounts.backdate.override')
+            || app()->bound(self::SIGNED_BY);
+    }
+
     private function windowDays(): ?int
     {
         /*
