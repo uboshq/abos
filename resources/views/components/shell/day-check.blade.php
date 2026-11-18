@@ -89,7 +89,7 @@
                         <p class="flex flex-wrap gap-2" data-open-days>
                             @foreach ($days as $d)
                                 <a href="{{ route('executive.dayclose', ['date' => $d->toDateString()]) }}"
-                                   class="rounded-(--radius-pill) border border-(--color-border) px-2 py-0.5 font-medium text-(--color-primary) hover:bg-(--color-surface-muted)">{{ $d->format('d/m/Y') }}</a>
+                                   class="rounded-(--radius-pill) border border-(--color-border) px-2 py-0.5 font-medium text-(--color-link) hover:bg-(--color-surface-muted)">{{ $d->format('d/m/Y') }}</a>
                             @endforeach
                         </p>
                     </div>
@@ -100,7 +100,7 @@
                         <x-ui.icon name="calendar" :size="16" class="text-(--color-warning-hover)" />
                         <span class="flex-1">{{ __('accounts::dayclose.popup.month', ['month' => $month->copy()->locale(app()->getLocale())->translatedFormat('F Y')]) }}</span>
                         @if (\Illuminate\Support\Facades\Route::has('executive.month_close') && $user->can('accounts.report.month_close'))
-                            <a href="{{ route('executive.month_close', ['month' => $month->format('Y-m')]) }}" class="font-medium text-(--color-primary) hover:underline">{{ __('accounts::dayclose.popup.month_go') }} →</a>
+                            <a href="{{ route('executive.month_close', ['month' => $month->format('Y-m')]) }}" class="font-medium text-(--color-link) hover:underline">{{ __('accounts::dayclose.popup.month_go') }} →</a>
                         @endif
                     </p>
                 @endif

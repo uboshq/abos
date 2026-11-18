@@ -26,7 +26,7 @@
                     @endif
                 </span>
                 @if ($it['url'])
-                    <a href="{{ $it['url'] }}" class="shrink-0 font-medium text-(--color-primary) underline-offset-2 hover:underline">
+                    <a href="{{ $it['url'] }}" class="shrink-0 font-medium text-(--color-link) underline-offset-2 hover:underline">
                         {{ __($it['tone'] === 'info' ? 'accounts::dayclose.check.see' : 'accounts::dayclose.check.go') }} →</a>
                 @endif
             </li>
