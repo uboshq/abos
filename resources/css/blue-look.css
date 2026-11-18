@@ -168,6 +168,19 @@
     overflow: clip;
 }
 
+/* ⭐ বড় পর্দায় কাজের জায়গা নিজেই স্ক্রল করে — তার গোল তলা সবসময় নিচের পিলের উপরে দেখা যায়, পাতা কখনো পিলের নিচে ঢোকে না
+   (নমুনা: `.status` কাজের জায়গার নিচে আলাদা পিল)। ⓘ উচ্চতা = পর্দা − ফ্রেম − উপরের বার − নিচের পিল; ভিতরের আঠালো সারি
+   (টেবিলের মাথা, টুলবার) এখন এই বাক্সের মাথায় আটকায়। ফোনে (৭৬৮-এর নিচে) আগের মতো গোটা পাতা স্ক্রল করে। */
+@media (min-width: 768px) {
+    :root[data-ui='blue'] body > div.flex > div:has(> #main) {
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4 - 4px);
+        min-height: 0;
+        overflow-x: clip;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
 :root[data-ui='blue'] #main {
     padding-top: 14px;
 }
