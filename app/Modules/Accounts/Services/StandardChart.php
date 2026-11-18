@@ -370,6 +370,14 @@ final class StandardChart implements ProvisionsCompany
     public const ADVANCE_INCOME_TAX = '1135';
 
     /*
+     * ⭐ আয়করের সঞ্চিতি (চলতি দায়) আর আয়কর খরচ — IAS 12 (মালিক, ১৭ নভেম্বর ২০২৬ "ok": স্থিতিপত্রে আয়করের সঞ্চিতির লাইন)।
+     * ⓘ বিবরণী কেবল খাতার জের দেখায়, অঙ্ক বানায় না ([[FinancialStatements::position()]]); সঞ্চিতি বসে জার্নালে (খরচ ↔ সঞ্চিতি)।
+     */
+    public const INCOME_TAX_PROVISION = '2126';
+
+    public const INCOME_TAX_EXPENSE = '5500';
+
+    /*
      * ⭐ উৎসে কাটা ভ্যাট পাওনা — গ্রাহক বিল থেকে যে ভ্যাট (VDS) কেটে রাখেন, মূসক-৬.৬ সনদ না আসা পর্যন্ত চলতি সম্পদ (fe-র D2,
      * ২১ অক্টোবর ২০২৬; টাকা নেওয়া, দফা ৫)। গ্রাহকের পাওনা কমে পুরো অঙ্কে ([[CollectionService]])।
      */
@@ -1263,6 +1271,8 @@ final class StandardChart implements ProvisionsCompany
             ['2121', 'Tax Deducted at Source', 'উৎসে কর্তিত কর', $L, '2100', false, []],
             // ⭐ VDS-এর নিজের খাত — মূসকের রিটার্ন আয়করের থেকে আলাদা (২১ অক্টোবর ২০২৬; [[VDS_PAYABLE]])
             ['2122', 'VAT Deducted at Source (VDS) Payable', 'উৎসে ভ্যাট প্রদেয় (VDS)', $L, '2100', false, []],
+            // ⭐ আয়করের সঞ্চিতি — IAS 12 (১৭ নভেম্বর ২০২৬; [[INCOME_TAX_PROVISION]])
+            ['2126', 'Provision for Income Tax', 'আয়করের সঞ্চিতি', $L, '2100', false, []],
 
             /*
              * ঘোষিত মুনাফা — ভাগ করা হয়েছে, এখনো তোলা হয়নি।
@@ -1521,6 +1531,8 @@ final class StandardChart implements ProvisionsCompany
             ['5320', 'Loss on Sale of Assets', 'সম্পদ বিক্রির লোকসান', $X, '5000', false, []],
             ['5325', 'Early Encashment Penalty', 'আগে ভাঙানোর জরিমানা', $X, '5000', false, []],
             ['5400', 'Bad Debt', 'অনাদায়ী পাওনা', $X, '5000', false, []],
+            // ⭐ আয়কর খরচ — IAS 12 (১৭ নভেম্বর ২০২৬; [[INCOME_TAX_EXPENSE]])
+            ['5500', 'Income Tax Expense', 'আয়কর খরচ', $X, '5000', false, []],
         ];
     }
 }

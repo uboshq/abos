@@ -17,7 +17,10 @@ use App\Modules\Accounts\Reports\ExpenseAnalysisReport;
 use App\Modules\Accounts\Reports\FixedAssetReports;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
 use App\Modules\Accounts\Reports\PartyLedgerReports;
+use App\Modules\Accounts\Services\TrialBalancePaper;
+use App\Modules\Accounts\Services\TrialBalanceStatement;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -171,9 +174,17 @@ class ReportController extends Controller implements HasMiddleware
             : (bool) $request->user()?->can('accounts.report'), 403);
     }
 
-    public function show(Request $request, string $slug): View
+    public function show(Request $request, string $slug): View|Response
     {
         $this->authorizeReport($request, $slug);
+
+        /*
+         * ⭐ রেওয়ামিলের কাগজ নিজের ছকে — দল, উপমোট, "মিলেছে" সনদ, তিন সই (মালিক, ১৭ নভেম্বর ২০২৬; [[TrialBalancePaper]])।
+         * ⓘ CSV/Excel আগের মতো ইঞ্জিনের সারি থেকে; কেবল ছাপা আর PDF এখানে। "তালিকা নামানো" চাবির দরজা একই ([[ExportListing]])।
+         */
+        if ($slug === 'trial-balance' && in_array($request->query('export'), ['print', 'pdf'], true)) {
+            return app(TrialBalancePaper::class)->response($request);
+        }
 
         return $this->page($request, $slug);
     }
@@ -327,6 +338,10 @@ class ReportController extends Controller implements HasMiddleware
 
             // ⓘ রিপোর্টের নিজের ছাঁকনি — ভাগের পাতার `$extraFilters` দরজা দিয়ে (চেকের দিক আর অবস্থা)
             'extraFilters' => $key === ChequeReports::KEY ? 'accounts::report.partials.cheque-filters' : null,
-        ]);
+        ] + ($key === 'accounts.trial_balance' ? [
+            // ⭐ রেওয়ামিল বিবরণী আকারে — দল, উপমোট, অবস্থার সারি; একই ইঞ্জিনের সারি থেকে (মালিক, ১৭ নভেম্বর ২০২৬)
+            'statement' => app(TrialBalanceStatement::class)->build($request->only($definition->requestKeys())),
+            'statementTable' => 'accounts::report.partials.trial-balance',
+        ] : []));
     }
 }

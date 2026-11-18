@@ -143,11 +143,16 @@ final class EveryListPrintsOnTheLedgerPaperTest extends TestCase
         $page = (string) $this->get(route('accounts.balance_sheet'))->assertOk()->getContent();
         $this->assertStringContainsString('data-paper="print"', $page, '⛔ স্থিতিপত্রের পাতায় প্রিন্ট ভিউয়ের বোতাম নেই');
 
-        $sheet = app(\App\Modules\Accounts\Services\BalanceSheetService::class);
-        $built = $sheet->withComparative($sheet->build('2026-11-16'), $sheet->build($sheet->priorDate('2026-11-16')));
+        /*
+         * ⓘ কাগজ এখন NEXUS-এর মানের বিবরণী (মালিক, ১৭ নভেম্বর ২০২৬ "ok"): অঙ্ক [[FinancialStatements::position()]] থেকে, সাথে নোট আর
+         *   মালিকানা স্বত্বের পরিবর্তন — তাই কাগজের উপাদান বদলেছে; দাবি একই: IAS 1-এর ক্রম, তুলনার তারিখ, শেষে মিল।
+         */
+        $statements = app(\App\Modules\Accounts\Services\FinancialStatements::class);
+        $built = ['prior' => ['as_of' => app(\App\Modules\Accounts\Services\BalanceSheetService::class)->priorDate('2026-11-16')]];
         $html = view('accounts::print.balance-sheet', [
-            'company' => Company::query()->where('code', 'TDEPOT')->firstOrFail(), 'locale' => 'bn', 'sheet' => $built,
-            'branch' => 'সব শাখা', 'branchNote' => false, 'printedBy' => 'Owner', 'printedAt' => '16-11-2026', 'signatures' => true,
+            'company' => Company::query()->where('code', 'TDEPOT')->firstOrFail(), 'locale' => 'bn',
+            'fs' => $statements->position('2026-11-16'), 'soce' => $statements->equity($statements->periodStart('2026-11-16'), '2026-11-16'),
+            'branch' => 'সব শাখা', 'branchNote' => false, 'printedBy' => 'Owner', 'printedAt' => '16-11-2026', 'signatures' => true, 'board' => true,
         ])->render();
 
         $assets = mb_strpos($html, __('accounts::statement.bs.total_assets'));
