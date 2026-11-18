@@ -56,25 +56,37 @@
         </div>
     </div>
 
-    {{-- বিভাজক ও অ্যাপের নাম — D365-এ ওয়াফলের ঠিক পাশে বসে, আর ওটাই
-         বলে "কোন অ্যাপে আছেন"। --}}
-    @php
-        $route = (string) (request()->route()?->getName() ?? '');
-        $current = collect($menu)->first(
-            fn ($m) => collect($m['groups'])->flatten(1)->contains('active', true),
-        ) ?? collect($menu)->first(
-            fn ($m) => collect($m['codes'])->contains(fn ($c) => str_starts_with($route, $c.'.')),
-        ) ?? ($menu[0] ?? null);
-    @endphp
+    {{-- ⭐ ওয়াফলের পাশে পণ্যের নাম — এখানে ABOS-এর লোগো, ছোট সাদা পাতে (মালিক, ১৯ নভেম্বর ২০২৬: "ok final")।
+         ⛔ অন্য কোম্পানির নাম বা লোগো পর্দায় কোথাও নয় — কেবল ABOS। চলতি মডিউলের নাম আর বারে নয়: নিচের মেনুর সারিতে
+         সেটা মোটা হয়ে দেখায় ([[shell.dynamic.nav]])। --}}
+    <a href="{{ route('dashboard') }}" data-dyn-brand title="ABOS"
+       class="dyn-brand flex shrink-0 items-center">
+        <img src="{{ asset('brand/abos-logo-lockup-transparent.png') }}" alt="ABOS">
+    </a>
 
-    @if ($current)
-        <span class="hidden h-4 w-px shrink-0 bg-(--color-topbar-ink-muted) opacity-50 sm:block"
-              aria-hidden="true"></span>
-        <span data-d365-app
-              class="hidden shrink-0 text-sm font-semibold text-(--color-topbar-ink) sm:block">
-            {{ $current['label'] }}
-        </span>
+    {{-- ⭐ ডান কোণের শেষ দুইটা — ⚙ সেটিংস (চেহারার পাতা) আর ? সাহায্য (নতুন কী এল)। ⓘ markup এখানে, বারের শুরুতে, কিন্তু
+         CSS-এর `order` এদের বারের একদম ডানে বসায় ([[dynamic-look.css]]) — শেয়ার্ড টপবারে হাত না দিয়ে। --}}
+    <a href="{{ route('appearance') }}" data-dyn-settings class="dyn-appbar-icon"
+       title="{{ __('dynamic.settings') }}" aria-label="{{ __('dynamic.settings') }}">
+        <x-ui.icon name="settings" :size="18" />
+    </a>
+    @if (\Illuminate\Support\Facades\Route::has('release.notes'))
+        <a href="{{ route('release.notes') }}" data-dyn-help class="dyn-appbar-icon" data-no-prefetch
+           title="{{ __('dynamic.help') }}" aria-label="{{ __('dynamic.help') }}">
+            <span aria-hidden="true" class="text-[18px] leading-none">?</span>
+        </a>
     @endif
+
+    {{-- ⓘ "Company:" — কোম্পানি বদলের বোতামের আগে, অনুবাদসহ; লেখাটা CSS-এর `content`-এ, তাই বোতামের markup অক্ষত --}}
+    <style @nonce>
+        :root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span::before { content: {!! json_encode(__('dynamic.company'), JSON_UNESCAPED_UNICODE) !!}; }
+    </style>
+@endif
+
+
+@if ($region === 'page-head')
+    {{-- ⭐ নেভিগেশনের সারি — কোম্পানির নাম, তারপর মডিউলের মেনুগুলো আড়াআড়ি; হোমে তার নিচে বেশি খোলা পাতার টিয়া লিংক --}}
+    @include('components.shell.dynamic.nav', ['menu' => $menu])
 @endif
 
 

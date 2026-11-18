@@ -287,8 +287,10 @@
 
     {{-- ⭐ সাজানো যায় এমন তিন ভাগ — ক্রম CSS `order`-এ, লুকানো অংশ আঁকাই হয় না ([[HomeLayout]])।
          ⭐ ডিফল্ট ক্রম মালিকের (১৮ নভেম্বর ২০২৬): ৮টা চার্ট → ৮টা সূচক আর টাকার বাক্স → আজ যা করতে হবে → নজরে রাখুন ও সদ্য যা
-         হয়েছে। ⓘ সব রূপেই — পাতা রূপ চেনে না ([[EveryScreenObeysTheThemeTest]]); যিনি নিজে ক্রম সাজিয়েছেন তাঁর ক্রমই থাকে। --}}
-    <div data-home-units style="display: flex; flex-direction: column">
+         হয়েছে। ⓘ সব রূপেই — পাতা রূপ চেনে না ([[EveryScreenObeysTheThemeTest]]); যিনি নিজে ক্রম সাজিয়েছেন তাঁর ক্রমই থাকে।
+         ⓘ Dynamic রূপে আগে হোমের "রোল সেন্টার" — এই পাতার একই হিসাব, অন্য আঁকা ([[shell.dynamic.role-center]]; মালিক, ১৯ নভেম্বর
+         ২০২৬)। ⛔ নির্দেশটা `<div>`-এর ঠিক আগে, একই লাইনে — বাকি রূপে পাতার আউটপুট বাইট ধরে আগের মতো থাকে। --}}
+    @includeWhen(\App\Core\Support\DynamicLook::on(), 'components.shell.dynamic.role-center')<div data-home-units style="display: flex; flex-direction: column">
 
         {{-- ── ব্যবসার চিত্র — ৮টা চার্ট, ৪টা করে দুই সারি, শুরুর পর্দাতেই ── --}}
         <div data-home-unit="pictures" style="order: {{ $layout->position('pictures') }}">
