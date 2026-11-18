@@ -75,8 +75,30 @@ class DepositClaim extends Model
         'status', 'note', 'bills', 'collection_id',
         // ⭐ টাকা কে জমা দিলেন, আর একই চেহারার আগের স্লিপের দাবি (১৬ নভেম্বর ২০২৬)
         'depositor', 'lookalike_claim_id',
+        // ⭐ ব্যাংক স্টেটমেন্টের কোন সারিতে মিলল — শেষ কথা ব্যাংকের (ধাপ গ, ১৬ নভেম্বর ২০২৬; [[DepositMatchService]])
+        'statement_line_id', 'matched_by', 'matched_at', 'unmatch_reason',
         'decided_by', 'decided_at', 'decision_reason',
     ];
+
+    /**
+     * ⭐ ব্যাংকের কাগজে আগে মেলানো, তারপর গ্রহণ — কোম্পানির সুইচ, ডিফল্ট চালু (মালিক, ১৬ নভেম্বর ২০২৬: "শেষ কথা ব্যাংক স্টেটমেন্ট")।
+     * ⓘ কেবল ব্যাংক বা MFS খাতে নেওয়ার সময় — নগদের খাতে (ডিপোর ক্যাশে হাতে দেওয়া টাকা) কোনো স্টেটমেন্ট আসে না।
+     */
+    public const BANK_LINE_FIRST = 'sales.deposit_bank_line_first';
+
+    /** ⭐ খবরের তারিখ আর ব্যাংকের তারিখের মাঝে কত দিন পর্যন্ত নিজে থেকে মেলানোর প্রস্তাব (ডিফল্ট ৩) */
+    public const MATCH_DAYS = 'sales.deposit_match_days';
+
+    /** ⓘ পর্দা আর খাতার ধাপ — অবস্থা (`status`) থেকে আর মিল থেকে কষা, ফোনের চাবি বদলায় না ([[stage()]]) */
+    public const STAGE_REPORTED = 'reported';
+
+    public const STAGE_MATCHED = 'matched';
+
+    public const STAGE_AWAITING = 'awaiting';
+
+    public const STAGE_CONFIRMED = 'confirmed';
+
+    public const STAGE_REJECTED = 'rejected';
 
     /**
      * ⛔ যিনি পাঠালেন তিনি নিজে গ্রহণ করেন না — টাকার পরিকল্পনা ৩ (সমন্বয়ক, ৭ অক্টোবর ২০২৬)। সুইচ [[FOUR_EYES]], ডিফল্ট বন্ধ।
@@ -116,6 +138,7 @@ class DepositClaim extends Model
             'claimed_on' => 'date',
             'amount' => 'decimal:4',
             'decided_at' => 'datetime',
+            'matched_at' => 'datetime',
             // ⭐ কোন বিলের বিপরীতে — `[{sales_invoice_id, amount}]`, ঐচ্ছিক ([[DepositClaimService::raise()]])
             'bills' => 'array',
         ];
@@ -156,6 +179,37 @@ class DepositClaim extends Model
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
+    }
+
+    /** ⭐ ব্যাংক স্টেটমেন্টের যে সারিতে মিলেছে ([[DepositMatchService::match()]]) */
+    public function statementLine(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\BankStatementLine::class, 'statement_line_id');
+    }
+
+    public function matcher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'matched_by');
+    }
+
+    /**
+     * ⭐ পাঁচ ধাপ — খবর এসেছে (ব্যাংকে এখনো পাওয়া যায়নি) · ব্যাংকে মিলেছে · অনুমোদনের অপেক্ষায় · খাতায় (পাকা) · ফেরত।
+     * ⓘ "অনুমোদনের অপেক্ষায়" মানে আদায়ের খসড়া বসেছে আর অনুমোদনের ছক সই চেয়েছে ([[DepositClaimService::accept()]])।
+     */
+    public function stage(): string
+    {
+        return match (true) {
+            $this->status === self::ACCEPTED => self::STAGE_CONFIRMED,
+            $this->status === self::REJECTED => self::STAGE_REJECTED,
+            $this->collection_id !== null => self::STAGE_AWAITING,
+            $this->statement_line_id !== null => self::STAGE_MATCHED,
+            default => self::STAGE_REPORTED,
+        };
+    }
+
+    public function stageLabel(): string
+    {
+        return (string) __('sales::deposit.stage.'.$this->stage());
     }
 
     public function isPending(): bool

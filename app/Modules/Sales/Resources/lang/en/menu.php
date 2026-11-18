@@ -38,5 +38,6 @@ return [
     'commission' => 'Dealer commission',
     'deposit_report' => 'Report a deposit',
     'deposit_claims' => 'Payment advice', // ⭐ টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬
+    'deposit_match' => 'Bank match (deposits)', // ⭐ deposit report step C, 18 Nov 2026
     'schemes' => 'Schemes & commission rules',
 ];

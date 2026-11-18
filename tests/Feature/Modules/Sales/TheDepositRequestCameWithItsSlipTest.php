@@ -72,7 +72,7 @@ final class TheDepositRequestCameWithItsSlipTest extends TestCase
 
     public function test_the_phone_sends_a_slip_and_it_waits_for_accounts(): void
     {
-        $sr = $this->member(['sales.collection.create']);
+        $sr = $this->member(['sales.collection.create', 'sales.claim.submit']);
         $ledgerBefore = DB::table('ledger_entries')->count();
         Sanctum::actingAs($sr, [AuthController::APP]);
 
@@ -92,7 +92,7 @@ final class TheDepositRequestCameWithItsSlipTest extends TestCase
 
     public function test_a_bank_deposit_without_a_slip_or_with_a_disguised_file_raises_nothing(): void
     {
-        Sanctum::actingAs($this->member(['sales.collection.create']), [AuthController::APP]);
+        Sanctum::actingAs($this->member(['sales.collection.create', 'sales.claim.submit']), [AuthController::APP]); // ⓘ খবরের দরজার চাবি এখন sales.claim.submit (ধাপ খ, 19e713177) — আদায়ের চাবি একা দরজা খোলে না
 
         $this->post('/api/v1/sales/deposit-requests', $this->form(), ['Accept' => 'application/json'])
             ->assertStatus(422)->assertJsonValidationErrors('slip');
@@ -107,20 +107,26 @@ final class TheDepositRequestCameWithItsSlipTest extends TestCase
     {
         $foreign = Account::query()->withoutGlobalScopes()->where('company_id', '!=', $this->company->id)
             ->where('is_group', false)->firstOrFail();
-        Sanctum::actingAs($this->member(['sales.collection.create']), [AuthController::APP]);
+        Sanctum::actingAs($this->member(['sales.collection.create', 'sales.claim.submit']), [AuthController::APP]); // ⓘ খবরের দরজার চাবি এখন sales.claim.submit (ধাপ খ, 19e713177) — আদায়ের চাবি একা দরজা খোলে না
 
         $this->post('/api/v1/sales/deposit-requests', $this->form(['bank_account_id' => $foreign->id, 'slip' => $this->png('slip.png')]),
             ['Accept' => 'application/json'])->assertStatus(422)->assertJsonValidationErrors('bank_account_id');
     }
 
-    public function test_the_same_person_needs_the_collection_key_to_send_and_the_claim_key_to_see_the_slip(): void
+    public function test_the_same_person_needs_the_submit_key_to_send_and_the_claim_key_to_see_the_slip(): void
     {
         $person = $this->member([]);
         Sanctum::actingAs($person, [AuthController::APP]);
         $this->post('/api/v1/sales/deposit-requests', $this->form(['slip' => $this->png('slip.png')]), ['Accept' => 'application/json'])
             ->assertForbidden();
 
+        // ⓘ খবর পাঠানোর চাবি এখন `sales.claim.submit` (ধাপ খ, 19e713177) — আদায়ের চাবি একা আর এই দরজা খোলে না
         $this->grant($person, 'sales.collection.create');
+        Sanctum::actingAs($person->fresh(), [AuthController::APP]);
+        $this->post('/api/v1/sales/deposit-requests', $this->form(['slip' => $this->png('slip.png')]), ['Accept' => 'application/json'])
+            ->assertForbidden();
+
+        $this->grant($person, 'sales.claim.submit');
         Sanctum::actingAs($person->fresh(), [AuthController::APP]);
         $id = $this->post('/api/v1/sales/deposit-requests', $this->form(['slip' => $this->png('slip.png')]), ['Accept' => 'application/json'])
             ->assertCreated()->json('id');
@@ -134,7 +140,7 @@ final class TheDepositRequestCameWithItsSlipTest extends TestCase
 
     public function test_the_web_form_sends_with_the_slip(): void
     {
-        $sr = $this->member(['sales.collection.create']);
+        $sr = $this->member(['sales.collection.create', 'sales.claim.submit']);
         $this->actingAs($sr)->get(route('sales.claim.request.create'))->assertOk()->assertSee('data-slip-input', false);
 
         $this->actingAs($sr)->post(route('sales.claim.request.store'), $this->form(['customer' => (string) $this->dealer->id, 'slip' => $this->pdf('slip.pdf')]))

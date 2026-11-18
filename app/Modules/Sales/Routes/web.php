@@ -334,6 +334,16 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/request', [\App\Modules\Sales\Http\Controllers\DepositRequestController::class, 'store'])->name('request.store');
         Route::get('/{claim}/slip', [\App\Modules\Sales\Http\Controllers\DepositRequestController::class, 'slip'])
             ->whereNumber('claim')->name('slip');
+        // ⭐ ব্যাংক স্টেটমেন্টে মেলানো, আর খাতায় ওঠা জমার মানি রিসিট (ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositMatchController]])
+        Route::get('/bank', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'index'])->name('match.index');
+        Route::post('/bank/statement', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'load'])->name('match.load');
+        Route::post('/bank/line', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'line'])->name('match.line');
+        Route::post('/{claim}/match', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'match'])
+            ->whereNumber('claim')->name('match.store');
+        Route::post('/{claim}/unmatch', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'unmatch'])
+            ->whereNumber('claim')->name('match.unmatch');
+        Route::get('/{claim}/receipt', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'receipt'])
+            ->whereNumber('claim')->name('receipt');
     });
 
     /*
