@@ -44,6 +44,7 @@ return [
 
     'loaded' => 'Statement loaded — new lines :added, already there :known, unreadable :bad.',
     'bad_line' => 'Line :line — could not read the date ":value"',
+    'future_line' => 'Line :line — the date ":value" is in the future, which a bank statement never is; not stored',
     'line_added' => 'Bank line added.',
     'line_known' => 'This line is already there — not stored twice.',
     'matched' => 'Deposit :no matched to the bank line.',

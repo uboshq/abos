@@ -16,7 +16,7 @@
         ['key' => 'reference', 'label' => __('sales::portal.reference'), 'render' => fn ($p) => $p['claim']->reference ?? '—'],
         ['key' => 'bank', 'label' => __('sales::deposit.bank_line'),
             'render' => fn ($p) => view('sales::claim.partials.bank-line', ['line' => $p['line']])],
-        ['key' => 'amount', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($p) => $money($p['claim']->amount)],
+        ['key' => 'amount', 'total' => 'money', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($p) => $money($p['claim']->amount)],
         ['key' => 'act', 'label' => $action, 'width' => '8rem',
             'render' => fn ($p) => view('sales::claim.partials.match-button', ['claim' => $p['claim'], 'line' => $p['line']])],
     ];
@@ -27,7 +27,7 @@
         ['key' => 'claimed_on', 'label' => __('sales::portal.claimed_on'), 'width' => '8rem', 'render' => fn ($c) => $date($c->claimed_on)],
         ['key' => 'bank', 'label' => __('sales::deposit.bank_line'),
             'render' => fn ($c) => view('sales::claim.partials.bank-line', ['line' => $c->statementLine])],
-        ['key' => 'amount', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($c) => $money($c->amount)],
+        ['key' => 'amount', 'total' => 'money', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($c) => $money($c->amount)],
         ['key' => 'stage', 'label' => __('sales::portal.status'), 'width' => '9rem',
             'render' => fn ($c) => view('sales::claim.partials.stage', ['claim' => $c])],
         ['key' => 'act', 'label' => $action,
@@ -40,7 +40,7 @@
         ['key' => 'claimed_on', 'label' => __('sales::portal.claimed_on'), 'width' => '8rem', 'render' => fn ($c) => $date($c->claimed_on)],
         ['key' => 'bank', 'label' => __('sales::portal.bank_account'), 'render' => fn ($c) => $c->bankAccount?->label() ?? '—'],
         ['key' => 'reference', 'label' => __('sales::portal.reference'), 'render' => fn ($c) => $c->reference ?? '—'],
-        ['key' => 'amount', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($c) => $money($c->amount)],
+        ['key' => 'amount', 'total' => 'money', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($c) => $money($c->amount)],
         ['key' => 'act', 'label' => $action,
             'render' => fn ($c) => view('sales::claim.partials.match-by-hand', ['claim' => $c, 'lines' => $lines])],
     ];
@@ -50,8 +50,15 @@
         ['key' => 'account', 'label' => __('sales::portal.bank_account'), 'render' => fn ($l) => $l->bankAccount?->label() ?? '—'],
         ['key' => 'reference', 'label' => __('sales::portal.reference'), 'render' => fn ($l) => $l->reference ?? '—'],
         ['key' => 'description', 'label' => __('sales::deposit.description'), 'render' => fn ($l) => $l->description ?? '—'],
-        ['key' => 'credit', 'label' => __('sales::deposit.came_in'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($l) => $money($l->credit)],
+        ['key' => 'credit', 'total' => 'money', 'label' => __('sales::deposit.came_in'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($l) => $money($l->credit)],
     ];
+
+    // ⓘ প্রতিটা ভাগের নিজের যোগ — খোলা কাজের অঙ্ক, খাতার মোট নয় (খাতার মোট কেবল পাকা জমায়: জমার খাতা)
+    $sum = fn (iterable $rows, \Closure $of) => collect($rows)->reduce(fn (string $s, $r) => bcadd($s, (string) $of($r), 4), '0');
+    $suggestedGrand = ['amount' => $sum($suggested, fn ($p) => $p['claim']->amount)];
+    $matchedGrand = ['amount' => $sum($matched, fn ($c) => $c->amount)];
+    $waitingGrand = ['amount' => $sum($waiting, fn ($c) => $c->amount)];
+    $linesGrand = ['credit' => $sum($lines, fn ($l) => $l->credit)];
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -108,28 +115,28 @@
     {{-- ২. নিজে থেকে মেলানোর প্রস্তাব --}}
     <section class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-suggestions>
         <h2 class="border-b border-(--color-border) px-3 py-2 font-semibold">{{ __('sales::deposit.suggested_title') }}</h2>
-        <x-ui.table :rows="$suggested" :columns="$suggestColumns" :compact="\App\Core\Support\Ui::compact()"
+        <x-ui.table :rows="$suggested" :grand="$suggestedGrand" :columns="$suggestColumns" :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('sales::deposit.suggested_empty')" />
     </section>
 
     {{-- ৩. ব্যাংকে মিলেছে — অনুমোদন দিন --}}
     <section class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-matched>
         <h2 class="border-b border-(--color-border) px-3 py-2 font-semibold">{{ __('sales::deposit.matched_title') }}</h2>
-        <x-ui.table :rows="$matched" :columns="$matchedColumns" :compact="\App\Core\Support\Ui::compact()"
+        <x-ui.table :rows="$matched" :grand="$matchedGrand" :columns="$matchedColumns" :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('sales::deposit.matched_empty')" />
     </section>
 
     {{-- ৪. না-মেলা খবর — ব্যাংকে এখনো পাওয়া যায়নি --}}
     <section class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-waiting>
         <h2 class="border-b border-(--color-border) px-3 py-2 font-semibold">{{ __('sales::deposit.waiting_title') }}</h2>
-        <x-ui.table :rows="$waiting" :columns="$waitingColumns" :compact="\App\Core\Support\Ui::compact()"
+        <x-ui.table :rows="$waiting" :grand="$waitingGrand" :columns="$waitingColumns" :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('sales::deposit.waiting_empty')" />
     </section>
 
     {{-- ৫. না-মেলা ব্যাংকের সারি — টাকা এসেছে, কোনো খবরে বসেনি --}}
     <section class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-free-lines>
         <h2 class="border-b border-(--color-border) px-3 py-2 font-semibold">{{ __('sales::deposit.lines_title') }}</h2>
-        <x-ui.table :rows="$lines" :columns="$lineColumns" :compact="\App\Core\Support\Ui::compact()"
+        <x-ui.table :rows="$lines" :grand="$linesGrand" :columns="$lineColumns" :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('sales::deposit.lines_empty')" />
     </section>
 </x-layouts.app>

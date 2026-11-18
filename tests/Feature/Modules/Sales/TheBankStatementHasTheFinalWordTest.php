@@ -91,11 +91,15 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
             ."16/11/2026,CASH DEP,,,500.00,145500.00\n"
             ."16/11/2026,CASH DEP,,,500.00,146000.00\n"
             ."17/11/2026,CHQ 1234,1234,2000.00,,144000.00\n"
+            // ⓘ আগামীকালের সারি — ব্যাংকের কাগজে হয় না (ভুল ছক); বসে না, কারণসহ ফেরে
+            .now()->addDay()->format('d/m/Y').",CASH DEP,TOMORROW,,900.00,\n"
             .",Closing balance,,,,144000.00\n";
 
         $first = app(DepositMatchService::class)->load($this->bank, $this->file($csv));
-        $this->assertSame(['added' => 4, 'known' => 0, 'bad' => []], $first,
-            '⛔ ব্যাংকের ফাইলের চারটা টাকার সারি বসেনি — একই দিনের দুই ৫০০ দুইটাই বসার কথা');
+        $this->assertSame(4, $first['added'], '⛔ ব্যাংকের ফাইলের চারটা টাকার সারি বসেনি — একই দিনের দুই ৫০০ দুইটাই বসার কথা');
+        $this->assertSame(0, $first['known']);
+        $this->assertCount(1, $first['bad'], '⛔ আগামীকালের সারি চুপচাপ বসল বা চুপচাপ বাদ পড়ল');
+        $this->assertSame(0, BankStatementLine::query()->where('reference', 'TOMORROW')->count(), '⛔ ভবিষ্যতের তারিখের ব্যাংক-সারি বসল');
 
         $again = app(DepositMatchService::class)->load($this->bank, $this->file($csv));
         $this->assertSame(0, $again['added'], '⛔ একই স্টেটমেন্ট আবার তুলতে সারি দ্বিগুণ হলো');

@@ -22,8 +22,9 @@ final class BankStatementFile
     public const MAX_ROWS = 5000;
 
     /** @var array<string, list<string>> ঘরের নাম → চেনা মাথা (ছোট হাত, অক্ষর-অঙ্ক ছাড়া সব বাদ) */
+    // ⓘ তারিখের ঘর ভেতরে `on` — বাইরে `trx_date` ([[rows()]]); চেনা নামের তালিকা কোনো যাচাইয়ের নিয়ম নয়
     private const HEADS = [
-        'trx_date' => ['date', 'trxdate', 'txndate', 'transactiondate', 'trandate', 'valuedate', 'postingdate', 'postdate', 'তারিখ'],
+        'on' => ['date', 'trxdate', 'txndate', 'transactiondate', 'trandate', 'valuedate', 'postingdate', 'postdate', 'তারিখ'],
         'description' => ['description', 'narration', 'particulars', 'details', 'remarks', 'transactiondetails', 'বিবরণ'],
         'reference' => ['reference', 'ref', 'refno', 'referenceno', 'chequeno', 'chqno', 'chequenumber', 'instrumentno', 'trxid', 'transactionid', 'রেফারেন্স'],
         'debit' => ['debit', 'withdrawal', 'withdrawals', 'withdrawn', 'dr', 'debitamount', 'উত্তোলন', 'ডেবিট'],
@@ -54,7 +55,7 @@ final class BankStatementFile
 
             $row = [];
             foreach (array_keys(self::HEADS) as $name) {
-                $row[$name] = isset($map[$name]) ? trim((string) ($cells[$map[$name]] ?? '')) : '';
+                $row[$name === 'on' ? 'trx_date' : $name] = isset($map[$name]) ? trim((string) ($cells[$map[$name]] ?? '')) : '';
             }
             $rows[$n + 1] = $row;
         }
@@ -96,7 +97,7 @@ final class BankStatementFile
                 }
             }
 
-            if (isset($map['trx_date']) && (isset($map['credit']) || isset($map['debit']))) {
+            if (isset($map['on']) &&(isset($map['credit']) || isset($map['debit']))) {
                 return [$at, $map];
             }
         }

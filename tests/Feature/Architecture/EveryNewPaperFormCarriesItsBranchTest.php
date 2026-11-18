@@ -119,6 +119,10 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'sales.collection.preview' => 'ledger preview, writes nothing',
         'sales.collection.overview_new' => 'summary before confirm, writes nothing',
         'sales.direct.void' => 'voids the bill in progress',
+        // ⭐ deposit step C (18 Nov 2026): bank statement lines are the bank's record, not our paper — no number, no money moved;
+        // money moves only at "approve", through the collection door in the claim's own branch (TheBankStatementHasTheFinalWordTest)
+        'sales.claim.match.load' => 'loads bank statement lines for a bank account; not a paper, posts nothing',
+        'sales.claim.match.line' => 'one bank statement line typed by hand; not a paper, posts nothing',
         'sales.order.offers' => 'works out offers, writes nothing',
         'sales.portal.login.attempt' => 'dealer portal sign in',
         'sales.portal.logout' => 'dealer portal sign out',

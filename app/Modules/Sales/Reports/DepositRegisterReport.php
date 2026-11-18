@@ -61,9 +61,14 @@ final class DepositRegisterReport
                 ['key' => 'bank_date', 'label' => 'sales::deposit.bank_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'stage_label', 'label' => 'sales::portal.status', 'width' => '8rem'],
                 ['key' => 'receipt_no', 'label' => 'sales::deposit.receipt_no', 'width' => '8rem'],
-                ['key' => 'reported_amount', 'label' => 'sales::deposit.reported_amount', 'type' => ReportColumn::MONEY, 'total' => false],
-                ['key' => 'confirmed_amount', 'label' => 'sales::deposit.confirmed_amount', 'type' => ReportColumn::MONEY, 'total' => true],
-                ['key' => 'waiting_amount', 'label' => 'sales::deposit.waiting_amount', 'type' => ReportColumn::MONEY, 'total' => true],
+                // ⭐ অঙ্কে চাপলে উৎস — খবরের অঙ্ক আর অপেক্ষা খোলে দাবির তালিকা (সেই দোকানের, সব অবস্থা), খাতার অঙ্ক খোলে আদায়ের কাগজ
+                ['key' => 'reported_amount', 'label' => 'sales::deposit.reported_amount', 'type' => ReportColumn::MONEY, 'total' => false,
+                    'drill' => ['route' => 'sales.claim.index', 'params' => ['status' => '=all', 'q' => 'customer_code']]],
+                ['key' => 'confirmed_amount', 'label' => 'sales::deposit.confirmed_amount', 'type' => ReportColumn::MONEY, 'total' => true,
+                    // ⓘ আদায়ের কাগজ নিজের দেখার নিয়মে খোলে ([[DrillResolver]]) — জমার খাতার চাবি আদায়ের তালিকা খুলে দেয় না
+                    'drill' => ['source' => ['type' => 'collection_type', 'id' => 'collection_id']]],
+                ['key' => 'waiting_amount', 'label' => 'sales::deposit.waiting_amount', 'type' => ReportColumn::MONEY, 'total' => true,
+                    'drill' => ['route' => 'sales.claim.index', 'params' => ['status' => '=pending', 'q' => 'customer_code']]],
             ],
         );
     }
@@ -111,6 +116,9 @@ final class DepositRegisterReport
             ->selectRaw('dc.claimed_on')
             ->selectRaw("{$name} as customer_name")
             ->selectRaw('dc.customer_id')
+            ->selectRaw('c.code as customer_code')
+            ->selectRaw(DB::getPdo()->quote(\App\Modules\Sales\Models\Collection::drillSourceType()).' as collection_type')
+            ->selectRaw("CASE WHEN dc.status = '".DepositClaim::ACCEPTED."' AND col.status IN ({$posted}) THEN dc.collection_id END as collection_id")
             ->selectRaw("COALESCE(NULLIF(dc.depositor, ''), u.name) as given_by")
             ->selectRaw("{$bank} as bank_name")
             ->selectRaw('dc.reference')

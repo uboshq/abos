@@ -84,6 +84,13 @@ final class DepositMatchService
                     continue;
                 }
 
+                // ⛔ ব্যাংকের কাগজে আগামীকাল নেই — ভবিষ্যতের সারি বসে না (ভুল তারিখের ছক, বা d/m উল্টো)
+                if ($date > Carbon::today()->toDateString()) {
+                    $bad[] = (string) __('sales::deposit.future_line', ['line' => $n, 'value' => $row['trx_date']]);
+
+                    continue;
+                }
+
                 $new = $lines->add(
                     account: $account,
                     date: $date,
