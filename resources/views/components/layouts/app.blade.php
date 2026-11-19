@@ -333,7 +333,8 @@
                 (`chrome/*`-এর `page-head`), তাই ওখানে এটা বসালে দুইটা
                 ট্যাব বার হত — একটার নিচে আরেকটা।
             --}}
-            @if (\App\Core\Support\Ui::pathBar($shellLook) === 'modulebar')
+            @if (in_array(\App\Core\Support\Ui::pathBar($shellLook), ['modulebar', 'collapsed'], true))
+                {{-- ⓘ `collapsed` ("ABOS"): একই বার, কিন্তু কেবল মেনু গুটালে — খোলা মেনুর সময় [[abos-look.css]] লুকায় --}}
                 <x-shell.modulebar :menu="$menu ?? []" />
             @elseif (\App\Core\Support\Ui::pathBar($shellLook) === 'crumbs')
                 <x-shell.crumbbar :menu="$menu ?? []" />

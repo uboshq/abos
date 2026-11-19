@@ -50,7 +50,11 @@ final class TheModulePickerSitsUnderTheMenuTest extends TestCase
         $html = (string) $this->get(route('sales.invoice.index'))->assertOk()->getContent();
         $this->assertStringContainsString('data-ui="rose"', $html);
         $this->assertStringNotContainsString('data-rail-module=', $html, '⛔ "ABOS"-এ বাঁয়ের রেল আঁকা হলো।');
-        $this->assertStringNotContainsString('data-module-bar', $html, '⛔ "ABOS"-এ পাতার মাথায় মডিউল-বার — নমুনায় নেই।');
+        // ⭐ মেনু-সারি আছে, কিন্তু কেবল মেনু গুটালে দেখা দেয় (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "মেনু বারটা হাইড করলে উপর দিকে চলে যেত মেনুগুলা")
+        $this->assertStringContainsString('data-module-bar', $html, '⛔ "ABOS"-এ মেনু গুটালে উপরে আসার মেনু-সারিটাই নেই।');
+        $css = (string) file_get_contents(resource_path('css/abos-look.css'));
+        $this->assertStringContainsString(":root[data-ui='rose']:not(:has([data-site-map][style*='display: none'])) [data-module-bar]", $css,
+            '⛔ "ABOS"-এ মেনু খোলা থাকলেও উপরের মেনু-সারি দেখা দেয় — একই মেনু দুই জায়গায়।');
         $this->assertStringNotContainsString('data-page-path', $html, '⛔ "ABOS"-এ পাতার পথ — নমুনায় নেই।');
         $this->assertStringContainsString('data-site-map', $html, '⛔ মেনুটাই নেই।');
 

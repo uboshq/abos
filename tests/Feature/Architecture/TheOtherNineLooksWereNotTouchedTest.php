@@ -307,7 +307,9 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
 
         // ── রেল নেই, মডিউল-বার বা পথ নেই; বাকিরা আগের মতো ──
         $this->assertSame('none', Ui::moduleRail('rose'), '⛔ "ABOS"-এ বাঁয়ের রেল ফিরে এসেছে।');
-        $this->assertSame('none', Ui::pathBar('rose'), '⛔ "ABOS"-এ পাতার মাথায় সারি বসেছে — নমুনায় নেই।');
+        // ⓘ ১৯ নভেম্বর ২০২৬ রাত থেকে `collapsed` — মেনু খোলা থাকলে মাথায় কিছু নেই, গুটালে মেনু টপবারের নিচে আড়াআড়ি (মালিক:
+        //   "মেনু বারটা হাইড করলে উপর দিকে চলে যেত মেনুগুলা … আগে এইভাবে আসতো")
+        $this->assertSame('collapsed', Ui::pathBar('rose'), '⛔ "ABOS"-এ মেনু গুটালে উপরের মেনু-সারির নিয়ম বদলেছে।');
         $this->assertFalse(Ui::wearsAbosShell('rose'));
         foreach (array_diff(Ui::keys(), ['rose']) as $other) {
             $this->assertSame('icons', Ui::moduleRail($other), "⛔ {$other}-এর রেল হারিয়েছে।");
