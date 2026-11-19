@@ -872,3 +872,69 @@
 :root[data-ui='rose'] :is([data-head-tabs], [data-head-filter-form])[hidden] {
     display: none !important;
 }
+
+/* ⭐ তালিকার ওপরের রঙিন বক্স — তিন ভাগের এক ভাগ উচ্চতা, এক লাইনে। মালিক, ১৯ নভেম্বর ২০২৬ রাত: "প্রতিটা বক্স প্রায় ১১৬ পিক্সেল …
+   তিনটা লাইনে লেখা … এক লাইনে … তিন ভাগের এক ভাগ বক্সটা করা যায় কিনা"। রং (দুই রঙের ঢাল) আগের মতো; বড় আইকন, ভেতরের গোল
+   ছায়া আর মোটা ছায়া নেই। লেখা: নাম · সংখ্যা · নিচের কথা — জায়গা না ধরলে শেষেরটা "…" হয়। */
+:root[data-ui='rose'] .list-cards {
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+:root[data-ui='rose'] .list-card {
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    border-width: 1.5px;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+:root[data-ui='rose'] .list-card:hover {
+    transform: none;
+    filter: brightness(1.06);
+}
+
+:root[data-ui='rose'] .list-card::after {
+    display: none;
+}
+
+:root[data-ui='rose'] .list-card.is-on {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px var(--a);
+}
+
+:root[data-ui='rose'] .list-card-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+:root[data-ui='rose'] .list-card > .min-w-0 {
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+:root[data-ui='rose'] .list-card-label {
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 1;
+}
+
+:root[data-ui='rose'] .list-card-value {
+    flex: none;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+:root[data-ui='rose'] .list-card-sub {
+    min-width: 0;
+    font-size: 12px;
+    opacity: 0.85;
+}
