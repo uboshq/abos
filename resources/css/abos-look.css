@@ -750,9 +750,9 @@
 :root[data-ui='rose'] [data-head-tabs] {
     display: flex;
     flex-wrap: nowrap;
-    gap: 4px;
+    gap: 2px;
     margin: 0;
-    padding: 3px;
+    padding: 2px;
     border: 1px solid var(--color-border);
     border-radius: 999px;
     background: #ffffff;
@@ -763,14 +763,23 @@
     order: 0;
 }
 
+/* ⭐ সরু ট্যাব — মালিক, ১৯ নভেম্বর ২০২৬ রাত: "10টা ট্যাব তাহলে মোটা রাখছো কেন? সেমভাবে করো" (রঙিন বক্সের মতো এক লাইন, ছোট) */
 :root[data-ui='rose'] [data-head-tabs] a {
-    min-height: 30px;
+    min-height: 24px;
     margin: 0;
-    padding: 0 14px;
+    padding: 0 10px;
     border: 0;
     border-radius: 999px;
+    gap: 6px;
     white-space: nowrap;
-    font-size: 13px;
+    font-size: 12.5px;
+    line-height: 1;
+}
+
+:root[data-ui='rose'] [data-head-tabs] a .num {
+    padding: 1px 6px;
+    font-size: 11px;
+    line-height: 1.2;
 }
 
 :root[data-ui='rose'] [data-head-tabs] a[aria-current='page'] {
@@ -835,20 +844,25 @@
 :root[data-ui='rose'] [data-head-tabs-menu] > button {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: 0 12px 0 16px;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 8px 0 12px;
+    border: 1px solid var(--color-brand-200, #c7d7f7);
     border-radius: 999px;
-    background: var(--color-brand-600);
-    color: #ffffff;
-    font-size: 13px;
+    background: var(--color-brand-50, #eaf1fd);
+    color: var(--color-brand-700, #1d4ed8);
+    font-size: 12.5px;
     font-weight: 600;
+    line-height: 1;
     white-space: nowrap;
 }
 
 :root[data-ui='rose'] [data-head-tabs-menu] > button .num {
-    background: rgb(255 255 255 / 0.22);
-    color: #ffffff;
+    padding: 1px 6px;
+    background: #ffffff;
+    color: var(--color-brand-700, #1d4ed8);
+    font-size: 11px;
+    line-height: 1.2;
 }
 
 :root[data-ui='rose'] [data-head-tabs-menu] > [data-head-tabs] {
