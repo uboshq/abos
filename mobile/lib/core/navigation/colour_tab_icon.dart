@@ -153,6 +153,13 @@ class _TabPainter extends CustomPainter {
         _line(canvas, const [Offset(8, 15), Offset(12, 15)], _Ink.white, 1.6);
         canvas.drawCircle(const Offset(17, 17.5), 3.2, _fill(ink.pink));
         canvas.drawCircle(const Offset(17, 17.5), 3.2, _stroke(ring, 1.4));
+      // ⭐ জমা (0.4.58) — সবুজ নোট আর নিচে নামা তীর: টাকা ব্যাংকে গেল
+      case BarTab.deposit:
+        _rr(canvas, 2.5, 4, 15, 10, 2, ink.green);
+        canvas.drawCircle(const Offset(10, 9), 2.6, _fill(const Color(0xFFBBF7D0)));
+        _rr(canvas, 12, 12, 10, 9, 2, ink.blue);
+        _line(canvas, const [Offset(17, 13.5), Offset(17, 19)], _Ink.white, 1.8);
+        _line(canvas, const [Offset(14.6, 16.8), Offset(17, 19.2), Offset(19.4, 16.8)], _Ink.white, 1.8);
       case BarTab.me:
         break;
     }

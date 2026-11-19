@@ -47,8 +47,9 @@ class _FakeApi implements DepositRequestApi {
     String? note,
     String? slipPath,
     List<BillShare> bills = const [],
+    String? depositor,
   }) async {
-    sent.add({'amount': amount, 'slip': slipPath, 'method': method, 'key': OnceKey.current,
+    sent.add({'amount': amount, 'slip': slipPath, 'method': method, 'key': OnceKey.current, 'depositor': depositor,
       'bills': [for (final b in bills) '${b.invoiceId}=${b.amount}']});
     return DepositRequestRow(date: null, amount: double.parse(amount), method: method, status: 'pending', hasSlip: slipPath != null);
   }
@@ -122,6 +123,10 @@ void main() {
 
   testWidgets('a bank deposit is not sent without the slip, and is sent with it', (tester) async {
     final api = _FakeApi();
+    // ⓘ 0.4.58: "কে জমা দিলেন" আর স্লিপের জোড়া বোতাম যোগ হওয়ায় ফর্ম লম্বা — পুরো ফর্ম এক পর্দায়, যাতে মাথার বার্তা আর "পাঠান" দুটোই দেখা যায়
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       home: DepositRequestScreen(customerId: 'c1', api: api, picker: () async => '/tmp/slip.jpg'),
     ));
@@ -133,10 +138,11 @@ void main() {
     expect(api.sent, isEmpty);
     expect(find.text('ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('স্লিপের ছবি তুলুন'));
-    await tester.tap(find.text('স্লিপের ছবি তুলুন'));
+    // ⓘ 0.4.58: "ক্যামেরা" আর "গ্যালারি / WhatsApp" — জমার নমুনার জোড়া বোতাম
+    await tester.ensureVisible(find.text('ক্যামেরা'));
+    await tester.tap(find.text('ক্যামেরা'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('পাঠান'));
+    await tester.scrollUntilVisible(find.text('পাঠান'), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('পাঠান'));
     await tester.pumpAndSettle();
 

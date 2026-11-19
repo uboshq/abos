@@ -50,6 +50,8 @@ import 'home_dashboard.dart';
 import 'module_pages.dart';
 import '../../core/theme/app_look.dart';
 import 'nav_bottom_bar.dart';
+import 'quick_actions.dart';
+import '../../core/navigation/role_tabs.dart';
 import 'nav_search.dart';
 import 'notice_ticker.dart';
 import 'workspace_picker.dart';
@@ -385,6 +387,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             }
           : null,
       copilot: _copilot,
+      quick: (from) => _openQuick(from),
     );
   }
 
@@ -504,64 +507,34 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ));
   }
 
-  /// ⭐ দ্রুত কাজ — Material 3-এর ＋ (আর পরে ≡) এক চাপে রোজের কাজ: টাকা জমার খবর, নতুন অর্ডার, আদায়, অনুমোদন, দোকান খুঁজুন
-  /// (মালিক, ২০ নভেম্বর ২০২৬ "ok", নমুনা Ash6Ev6q)। ⓘ যে পাতার চাবি নেই, তা পাতার নিজের দরজাই থামায় ([ModuleGateView])।
-  Future<void> _openQuick() async {
+  /// ⭐ দ্রুত কাজের ঘর — এই মানুষের মেনুতে যা আছে কেবল তা-ই, ক্রমে: টাকা জমার খবর, নতুন অর্ডার, আদায়, অনুমোদন, আজকের হিসাব,
+  /// দোকান খুঁজুন (মালিক, ১৬ নভেম্বর ২০২৬: "এক চাপে রোজের কাজ", পদ ধরে; নমুনা ২০ নভেম্বর "ok")। ⓘ পদ ধরে বাছাই মেনু থেকেই
+  /// আসে — SR-এর মেনুতে জমা, অর্ডার, দোকান; হিসাবের মেনুতে আদায়, অনুমোদন।
+  List<QuickAction> get _quickActions {
     final l10n = context.l10n;
-    final items = <(IconData, String, String)>[
-      (Symbols.payments, l10n.lookQuickDeposit, 'deposits'),
-      (Symbols.add_shopping_cart, l10n.navScreenNewOrder, 'new-order'),
-      (Symbols.savings, l10n.navTabCollections, 'collections'),
-      (Symbols.approval, l10n.navScreenApprovals, 'approvals'),
-      (Symbols.storefront, l10n.navScreenCustomers, 'customers'),
+    return [
+      for (final (icon, path, label) in <(IconData, String, String)>[
+        (Symbols.payments, RoleTabs.depositReportPath, l10n.lookQuickDeposit),
+        (Symbols.add_shopping_cart, 'new-order', l10n.navScreenNewOrder),
+        (Symbols.savings, 'collections', l10n.navScreenCollections),
+        (Symbols.fact_check, 'approvals', l10n.navScreenApprovals),
+        (Symbols.insights, 'today', l10n.navScreenToday),
+        (Symbols.storefront, 'customers', l10n.lookQuickFindShop),
+      ])
+        if (_tree.screen(path) != null) QuickAction(icon: icon, path: path, label: label),
     ];
-    final path = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(l10n.lookQuickActions, style: Theme.of(sheet).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            GridView.count(
-              shrinkWrap: true,
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                for (final (i, (icon, label, to)) in items.indexed)
-                  Material(
-                    key: ValueKey('quick-$to'),
-                    color: i == 0 ? Theme.of(sheet).colorScheme.primary : Theme.of(sheet).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(i.isEven ? 22 : 14),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(i.isEven ? 22 : 14),
-                      onTap: () => Navigator.of(sheet).pop(to),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Icon(icon, size: 28, color: i == 0 ? Theme.of(sheet).colorScheme.onPrimary : null),
-                          const SizedBox(height: 6),
-                          Text(label,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12.5,
-                                  color: i == 0 ? Theme.of(sheet).colorScheme.onPrimary : null)),
-                        ]),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ]),
-        ),
-      ),
-    );
-    if (path != null && mounted) await (widget.openPath ?? _push)(path);
+  }
+
+  /// ⭐ দ্রুত কাজ — ≡ (সব রূপে) আর Material 3-এর ＋ এক চাপে রোজের কাজ (মালিক, ১৬ ও ২০ নভেম্বর ২০২৬ "ok")। ⓘ মডিউলের তালিকা
+  /// নিচের "মডিউল"-এ আছেই, তাই ≡ আর সেটা খোলে না। কিছুই না থাকলে (কোনো চাবি নেই) আগের মতো সব মডিউল।
+  Future<void> _openQuick([BuildContext? from]) async {
+    final actions = _quickActions;
+    if (actions.isEmpty) {
+      _setPage(HomePage.modules);
+      return;
+    }
+    final picked = await showQuickActions(from ?? context, actions);
+    if (picked != null && mounted) await _open(picked.path, picked.label);
   }
 
   Future<void> _openSearch({BuildContext? from}) async {
@@ -689,10 +662,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             HomePageKind.home || HomePageKind.modules => TopBarLeading.menu,
             _ => TopBarLeading.back,
           },
-          // ≡ পুরো মেনু = সব মডিউল; ← এক ধাপ উপরে (অ্যান্ড্রয়েডের "পিছনে"-র একই নিয়ম)
-          onLeading: () => _setPage(page.up == null || page.kind == HomePageKind.modules
-              ? HomePage.modules
-              : page.up!),
+          // ⭐ ≡ = দ্রুত কাজ (0.4.58; মালিক, ১৬ নভেম্বর ২০২৬: মডিউল নিচের বারে আছেই); ← এক ধাপ উপরে (অ্যান্ড্রয়েডের "পিছনে"-র
+          // একই নিয়ম)
+          onLeading: () => page.up == null || page.kind == HomePageKind.modules ? _openQuick() : _setPage(page.up!),
+          menuTooltip: context.l10n.lookQuickActions,
           onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
           onSearch: _openSearch,
           onCopilot: _copilot == null ? null : () => _copilot!(context, context.l10n.navTabHome),

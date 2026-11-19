@@ -31,6 +31,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.crumbs = const [],
     this.leading = TopBarLeading.menu,
     this.onLeading,
+    this.menuTooltip,
     this.onOrgTap,
     this.onSearch,
     this.onCopilot,
@@ -65,6 +66,9 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
 
   final TopBarLeading leading;
   final VoidCallback? onLeading;
+
+  /// ≡-এর নাম (লম্বা চাপ আর TalkBack) — না দিলে "পুরো মেনু"; হোমে "দ্রুত কাজ" (0.4.58)
+  final String? menuTooltip;
 
   /// শাখা বদলের তালিকা — null মানে বদলানোর কিছু নেই (এক শাখা), তখন ▾ নেই, চাপ নেই
   final VoidCallback? onOrgTap;
@@ -279,7 +283,9 @@ class _AbosTopBarState extends State<AbosTopBar> {
             child: LayoutBuilder(builder: (context, box) {
               final leading = IconButton(
                 key: const ValueKey('top-leading'),
-                tooltip: widget.leading == TopBarLeading.menu ? context.l10n.topBarFullMenu : context.l10n.topBarBack,
+                tooltip: widget.leading == TopBarLeading.menu
+                    ? (widget.menuTooltip ?? context.l10n.topBarFullMenu)
+                    : context.l10n.topBarBack,
                 color: fg,
                 onPressed: widget.onLeading,
                 icon: Icon(widget.leading == TopBarLeading.menu ? Symbols.menu : Symbols.arrow_back),

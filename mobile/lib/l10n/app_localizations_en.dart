@@ -11772,5 +11772,146 @@ class AppL10nEn extends AppL10n {
   String get lookTodayWork => 'Today\'s work';
 
   @override
-  String get lookQuickDeposit => 'Report a deposit';
+  String get lookQuickDeposit => 'Report a deposited amount';
+
+  @override
+  String get lookTabDeposit => 'Deposit';
+
+  @override
+  String get lookQuickFindShop => 'Find a shop';
+
+  @override
+  String get lookChoose => 'Look';
+
+  @override
+  String get lookAbosHint => 'Today\'s ABOS — nothing changes';
+
+  @override
+  String get lookGlassHint => 'iOS 26 — clear glass over moving colour';
+
+  @override
+  String get lookExpressiveHint => 'Bold shapes, waves and big numbers';
+
+  @override
+  String get lookBlurClearEnd => '0 · fully clear (like a mirror)';
+
+  @override
+  String get lookBlurHint =>
+      'The text below stays readable through clear glass';
+
+  @override
+  String get lookMotionHint =>
+      'Stops by itself when the phone\'s reduce-motion is on';
+
+  @override
+  String get lookProfileSubtitle => 'ABOS · Liquid Glass · Material 3';
+
+  @override
+  String get lookTodaySales => 'Today\'s sales';
+
+  @override
+  String lookTargetPercent(String percent) {
+    return '$percent% of the month\'s target';
+  }
+
+  @override
+  String lookCollectedToday(String amount) {
+    return 'Today\'s collection $amount';
+  }
+
+  @override
+  String get lookTileCollected => 'Today\'s collection';
+
+  @override
+  String get lookTileApprovals => 'Awaiting approval';
+
+  @override
+  String get lookTileDues => 'Dues';
+
+  @override
+  String get scanSlipTitle => 'Fix the slip';
+
+  @override
+  String get scanSlipAccept => 'Use this photo';
+
+  @override
+  String get scanSlipCornersHint =>
+      'The corners are found by themselves — drag them with a finger if they are wrong.';
+
+  @override
+  String get scanSlipClean => 'Clean';
+
+  @override
+  String get scanSlipGrey => 'Grey';
+
+  @override
+  String get scanSlipBw => 'Black & white';
+
+  @override
+  String get scanSlipRotate => 'Rotate';
+
+  @override
+  String get scanSlipRetake => 'Take again';
+
+  @override
+  String scanSlipOriginal(String size) {
+    return 'Original $size';
+  }
+
+  @override
+  String scanSlipWillSend(String size) {
+    return 'Will send ≈ $size';
+  }
+
+  @override
+  String get scanSlipWorking => 'Preparing…';
+
+  @override
+  String get scanSlipUnreadable =>
+      'The photo could not be opened — please take it again.';
+
+  @override
+  String get customersDepositShop => 'Shop / dealer';
+
+  @override
+  String get customersDepositPickShop => 'Choose the shop';
+
+  @override
+  String get customersDepositNeedShop => 'Choose the shop first.';
+
+  @override
+  String get customersDepositDepositor => 'Who deposited';
+
+  @override
+  String get customersDepositDepositorHint =>
+      'If not the dealer, the name of their person';
+
+  @override
+  String get customersDepositCamera => 'Camera';
+
+  @override
+  String get customersDepositGallery => 'Gallery / WhatsApp';
+
+  @override
+  String customersDepositSentTitle(String amount) {
+    return 'Sent — $amount';
+  }
+
+  @override
+  String get customersDepositLookalikeTitle =>
+      '⚠ This slip looks like an earlier one';
+
+  @override
+  String customersDepositLookalikeOf(String date, String amount) {
+    return 'The deposit report of $date ($amount). The office will catch a slip sent twice — if this is a mistake, say so now.';
+  }
+
+  @override
+  String get customersDepositLookalikeUnknown =>
+      'The office will catch a slip sent twice — if this is a mistake, say so now.';
+
+  @override
+  String customersDepositHistoryDepositor(String name) {
+    return 'Deposited by: $name';
+  }
 }

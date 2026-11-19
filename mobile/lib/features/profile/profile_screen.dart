@@ -1,3 +1,4 @@
+import 'look_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -288,6 +289,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ],
+          // ⭐ চেহারা — ABOS · Liquid Glass · Material 3, আর কাচের ঝাপসা (0.4.58; মালিক, ২০ নভেম্বর ২০২৬ "ok")
+          const Divider(height: AppSpacing.lg),
+          ListTile(
+            key: const ValueKey('profile-look'),
+            minVerticalPadding: 12,
+            leading: const Icon(Symbols.palette),
+            title: Text(context.l10n.lookTitle),
+            subtitle: Text(context.l10n.lookProfileSubtitle),
+            trailing: const Icon(Symbols.chevron_right),
+            onTap: () => LookScreen.open(context),
+          ),
           if (features.myPhones) ...[
             const Divider(height: AppSpacing.lg),
             ListTile(

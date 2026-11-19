@@ -19363,6 +19363,246 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'টাকা জমার খবর'**
   String get lookQuickDeposit;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা'**
+  String get lookTabDeposit;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান খুঁজুন'**
+  String get lookQuickFindShop;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'রূপ'**
+  String get lookChoose;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনকার ABOS — কিছুই বদলায় না'**
+  String get lookAbosHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'iOS 26 — স্বচ্ছ কাচ, পেছনে রঙের ছোপ'**
+  String get lookGlassHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'বড় আকার, ঢেউ আর মোটা অঙ্ক'**
+  String get lookExpressiveHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'0 · একদম স্বচ্ছ (আয়নার মতো)'**
+  String get lookBlurClearEnd;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচের লেখা — স্বচ্ছ কাচে পড়া যায়'**
+  String get lookBlurHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোনের \"কম নড়াচড়া\" চালু থাকলে এমনিতেই থামে'**
+  String get lookMotionHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ABOS · Liquid Glass · Material 3'**
+  String get lookProfileSubtitle;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের বিক্রি'**
+  String get lookTodaySales;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাসের লক্ষ্যের {percent}%'**
+  String lookTargetPercent(String percent);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ আদায় {amount}'**
+  String lookCollectedToday(String amount);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ আদায়'**
+  String get lookTileCollected;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনে'**
+  String get lookTileApprovals;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়া'**
+  String get lookTileDues;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'স্লিপ ঠিক করুন'**
+  String get scanSlipTitle;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ছবিটা নিন'**
+  String get scanSlipAccept;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনাগুলো নিজে খুঁজে বসায় — ভুল হলে আঙুলে টেনে ঠিক করুন।'**
+  String get scanSlipCornersHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিষ্কার'**
+  String get scanSlipClean;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ধূসর'**
+  String get scanSlipGrey;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'সাদা-কালো'**
+  String get scanSlipBw;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ঘোরান'**
+  String get scanSlipRotate;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার তুলুন'**
+  String get scanSlipRetake;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আসল ছবি {size}'**
+  String scanSlipOriginal(String size);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠাবে ≈ {size}'**
+  String scanSlipWillSend(String size);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'তৈরি হচ্ছে…'**
+  String get scanSlipWorking;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবিটা খোলা গেল না — আবার তুলুন।'**
+  String get scanSlipUnreadable;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান / ডিলার'**
+  String get customersDepositShop;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান বেছে নিন'**
+  String get customersDepositPickShop;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'আগে দোকান বেছে নিন।'**
+  String get customersDepositNeedShop;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'কে জমা দিলেন'**
+  String get customersDepositDepositor;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার নিজে না হলে তাঁর লোকের নাম'**
+  String get customersDepositDepositorHint;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরা'**
+  String get customersDepositCamera;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্যালারি / WhatsApp'**
+  String get customersDepositGallery;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো হয়েছে — {amount}'**
+  String customersDepositSentTitle(String amount);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'⚠ এই স্লিপটা আগের একটার মতো দেখতে'**
+  String get customersDepositLookalikeTitle;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'{date}-এর জমার খবর ({amount})। একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।'**
+  String customersDepositLookalikeOf(String date, String amount);
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।'**
+  String get customersDepositLookalikeUnknown;
+
+  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা দিলেন: {name}'**
+  String customersDepositHistoryDepositor(String name);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

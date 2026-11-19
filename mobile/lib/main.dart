@@ -272,10 +272,11 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     final locale = ref.watch(appLocaleProvider);
     // ⭐ মানুষের আলো/অন্ধকার বাছাই — চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না ([ThemeChoices])
     // ⭐ রূপ (ABOS / Liquid Glass / Material 3) আর কাচের ঝাপসা — চাপ বা দাগ টানলেই বদলায় ([AppLooks]; 0.4.58)
-    return ListenableBuilder(
-      listenable: Listenable.merge([ThemeChoices.instance.current, AppLooks.instance.look, AppLooks.instance.blur]),
+    return ValueListenableBuilder<ThemeChoice>(
+      valueListenable: ThemeChoices.instance.current,
+      builder: (context, choice, _) => ListenableBuilder(
+      listenable: Listenable.merge([AppLooks.instance.look, AppLooks.instance.blur]),
       builder: (context, _) {
-        final choice = ThemeChoices.instance.current.value;
         final look = AppLooks.instance.look.value;
         return MaterialApp.router(
         title: 'ABOS',
@@ -291,7 +292,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
           AppLook.expressive => AppTheme.expressive(),
           AppLook.abos => AppTheme.dark(),
         },
-        themeMode: look == AppLook.abos ? choice.mode : ThemeMode.light,
+        // ⓘ Liquid Glass আর Material 3-এ আলো আর অন্ধকার দুই থিমই একই — তাই মানুষের বাছাই কেবল ABOS-এ কিছু বদলায়
+        themeMode: choice.mode,
         /*
          * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
          * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
@@ -300,17 +302,17 @@ class _AbosAppState extends ConsumerState<AbosApp> {
         supportedLocales: AppLocale.supported,
         localizationsDelegates: AppLocale.delegates,
         routerConfig: router,
-        builder: (context, child) {
-          final gate = AppLockGate(
-            lock: _lock,
-            onSignOut: () => ref.read(authStateProvider.notifier).logout(),
-            child: child ?? const SizedBox.shrink(),
-          );
-          // ⭐ Liquid Glass — সব পাতার পেছনে একই রঙের ছোপ, পাতাগুলো স্বচ্ছ পটে তার উপর ([GlassBackdrop])
-          return look == AppLook.glass ? GlassBackdrop(child: gate) : gate;
-        },
+        // ⭐ Liquid Glass — সব পাতার পেছনে একই রঙের ছোপ, পাতাগুলো স্বচ্ছ পটে তার উপর ([GlassBackdrop]); তালা সবার উপরে, অস্বচ্ছ
+        builder: (context, child) => AppLockGate(
+          lock: _lock,
+          onSignOut: () => ref.read(authStateProvider.notifier).logout(),
+          child: look == AppLook.glass
+              ? GlassBackdrop(child: child ?? const SizedBox.shrink())
+              : child ?? const SizedBox.shrink(),
+        ),
       );
       },
+    ),
     );
   }
 }

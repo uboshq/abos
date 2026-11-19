@@ -16,7 +16,8 @@ import '../web_inside/web_inside.dart';
 enum BarRole { owner, sr, depot, accounts, other }
 
 /// বারের সম্ভাব্য সব ঘর। প্রতিটা ভূমিকা এর চারটা পায়।
-enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me }
+/// ⓘ [deposit] ("জমা", 0.4.58) কেবল Liquid Glass আর Material 3-এর বারে ([lookTabsFor]) — ABOS-এর বার ০.৪.৫৭-এর মতোই
+enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me, deposit }
 
 /// একটা ঘরের সব তথ্য — নাম, আইকন (কেবল Material Symbols), কোন পথে খোলে, কোন চাবিতে দেখা যায়।
 @immutable
@@ -103,6 +104,13 @@ class RoleTabs {
         path: 'vouchers',
         anyOf: const ['accounts.voucher.create']),
     BarTab.modules: BarTabSpec(tab: BarTab.modules, label: l.navTabModules, icon: Symbols.apps),
+    // ⭐ "জমা" — টাকা জমার খবর এক চাপে (মালিক, ২০ নভেম্বর ২০২৬ "ok", জমার নমুনা); জমার খবরের নিজের চাবি `sales.claim.submit`
+    BarTab.deposit: BarTabSpec(
+        tab: BarTab.deposit,
+        label: l.lookTabDeposit,
+        icon: Symbols.payments,
+        path: depositReportPath,
+        anyOf: const ['sales.claim.submit']),
     // ⭐ নিজের ছবি — নিচের বারের শেষ ঘর (মালিক, ১৩ নভেম্বর ২০২৬: উপরের বারে জায়গা; YouTube, Instagram, Facebook-এর একই নিয়ম)
     BarTab.me: BarTabSpec(tab: BarTab.me, label: l.homeMe, icon: Symbols.account_circle),
     };
@@ -150,6 +158,27 @@ class RoleTabs {
       // ⓘ সবার শেষে নিজের ছবি — চাবি লাগে না; ভূমিকার সর্বোচ্চ চার ঘর + এটা = পাঁচ (Material 3-এর সীমা)
       BarTab.me,
     ];
+  }
+
+  /// টাকা জমার খবরের পাতা — `/home/deposit-report` (দোকান পাতার ভেতরে বাছা হয়)
+  static const String depositReportPath = 'deposit-report';
+
+  /// ⭐ Liquid Glass আর Material 3-এর বার (0.4.58; মালিকের নমুনা): হোম · জমা · ভূমিকার দ্বিতীয় ঘর · মডিউল · আমি।
+  /// জমার চাবি না থাকলে ABOS-এর একই ঘর। পাঁচের বেশি হলে মডিউলের পরের ভূমিকার ঘর (রিপোর্ট, আদায়, মজুদ, ভাউচার) বাদ —
+  /// সেটা ≡-এর দ্রুত কাজ আর "সব মডিউল"-এ থাকে।
+  static List<BarTab> lookTabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) {
+    final p = permissions.toSet();
+    final base = tabsFor(p, modulesOn: modulesOn);
+    if (!allows(BarTab.deposit, p, modulesOn)) return base;
+    final out = [...base]..insert(base.isEmpty ? 0 : 1, BarTab.deposit);
+    while (out.length > 5) {
+      final modules = out.indexOf(BarTab.modules);
+      final drop = out.indexWhere((t) => t != BarTab.me && t != BarTab.modules && t != BarTab.deposit && t != BarTab.home,
+          modules < 0 ? 0 : modules);
+      if (drop < 0) break;
+      out.removeAt(drop);
+    }
+    return out;
   }
 
   /// ⭐ একটা ঠিকানা কোন ঘরের — কেবল ঘরের নিজের পাতা আর তার কাগজ; বাকি পাতা যে ঘর থেকে খোলা, সেই ঘরের থাকে।

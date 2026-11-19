@@ -48,6 +48,7 @@ class ModuleGate {
     'delivery-orders': 'sales',
     'counter': 'sales',
     'collections': 'sales',
+    'deposit-report': 'sales',
     'deliveries': 'sales',
     'loading': 'sales',
     'principals': 'purchase',

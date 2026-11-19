@@ -10,7 +10,9 @@ import '../../core/records/list_queries.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
+import '../../core/theme/app_look.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
@@ -85,6 +87,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
     final newOrder = FrameFab.offeredTo(context);
+    // ⓘ রূপ বদলালে থিম বদলায় — তাতে তালিকাও নতুন করে আঁকা হয় (0.4.58)
+    final look = (Theme.of(context), AppLooks.instance.look.value).$2;
+    Widget row(SalesOrderRecord order) => PaperListRow(
+          key: ValueKey('order-row-${order.id}'),
+          icon: Icons.receipt_long_outlined,
+          party: order.customerName,
+          number: order.documentNo ?? context.l10n.ordersListNoNumber,
+          detail: order.trxDate == null ? null : DateFormat('dd/MM/yyyy').format(order.trxDate!),
+          amount: order.total,
+          pill: AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status ?? '')),
+        );
     return Scaffold(
       appBar: AbosScreenBar(title: context.l10n.ordersListTitle, module: context.l10n.ordersModuleSales),
       // ⭐ কাঠামোর "＋ নতুন অর্ডার" এখানে বসে ([FrameFab.offeredTo]) — নিচের বারে মোটের পাশে ([ActionBottomBar]), তালিকার
@@ -204,15 +217,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     // which the server has never sent, so every confirmed
                     // order here said "নম্বর নেই"; see SalesOrderRecord.
                     // ⭐ নকশা ৩-এর সারি: গ্রাহক "নাম · পয়েন্ট · শাখা" (CustomerRecord.label), নিচে নম্বর · তারিখ, ডানে টাকা আর অবস্থা
-                    ...shown.map((order) => PaperListRow(
-                          key: ValueKey('order-row-${order.id}'),
-                          icon: Icons.receipt_long_outlined,
-                          party: order.customerName,
-                          number: order.documentNo ?? context.l10n.ordersListNoNumber,
-                          detail: order.trxDate == null ? null : DateFormat('dd/MM/yyyy').format(order.trxDate!),
-                          amount: order.total,
-                          pill: AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status ?? '')),
-                        )),
+                    // ⭐ Liquid Glass-এ এক কাচের প্যানেলে, Material 3-এ জোড়া কার্ডে ([LookGroup]); ABOS-এ আগের মতো
+                    if (look == AppLook.abos)
+                      ...shown.map(row)
+                    else
+                      LookGroup(children: [for (final order in shown) row(order)]),
                   ],
                 ],
               ),

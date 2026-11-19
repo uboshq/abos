@@ -363,6 +363,15 @@ class MenuRepository {
             icon: Icons.payments_outlined,
             routeName: 'collections',
           ),
+        // ⭐ টাকা জমার খবর — জমার খবরের নিজের চাবি (সার্ভার `sales.claim.submit`, ১৬ নভেম্বর ২০২৬); দোকান পাতার ভেতরে বাছা
+        // (মালিক, ১৬ ও ২০ নভেম্বর ২০২৬: ≡-এর দ্রুত কাজ আর নিচের "জমা" থেকে সরাসরি)
+        if (user.can('sales.claim.submit'))
+          MenuItem(
+            key: 'sales.deposit_report',
+            label: AppLocale.l10n.lookQuickDeposit,
+            icon: Icons.payments_outlined,
+            routeName: 'deposit-report',
+          ),
         if (user.can('supplier.view'))
           MenuItem(
             key: 'purchase.principals',

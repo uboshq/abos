@@ -15,7 +15,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/row_icon.dart';
 import '../../core/locale/l10n.dart';
 import '../today/today_panel.dart';
+import 'look_hero.dart';
 import 'owner_home_cards.dart';
+import '../../core/theme/app_look.dart';
 
 /// The হোম tab: the search box, the day's figures ("আজ"), the person's own
 /// favourites ("প্রিয়") and what they opened last ("সাম্প্রতিক") — the owner's
@@ -219,6 +221,11 @@ class HomeDashboard extends StatelessWidget {
       // sokal etaw bad daw"; নাম আর ছবি মাথার ডানে।
       // ⭐ উপরে কেবল খোঁজার বাক্স আর "আজ" (মালিকের নমুনা, ১২ অক্টোবর ২০২৬)
       leading: (context, today) => [
+        // ⭐ Liquid Glass আর Material 3-এ মাথার কার্ড — "আজকের কাজ" আর আজকের বিক্রি (0.4.58); ABOS-এ কিছু নয়
+        if (AppLooks.instance.look.value != AppLook.abos) ...[
+          LookHero(today: today, name: user.name, onTile: (path, label) => _go(context, path, label)),
+          const SizedBox(height: AppSpacing.md),
+        ],
         if (search != null) ...[
           search!,
           const SizedBox(height: AppSpacing.md),

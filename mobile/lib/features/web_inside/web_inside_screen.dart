@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
@@ -377,13 +378,27 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
   }
 
   /// ⭐ পিছনে — আগে ওয়েবের নিজের পিছনের পাতা, শেষে জানালা বন্ধ।
+  /// ⛔ আগে শেষ ধাপে `maybePop()` — কিন্তু এই পাতার নিজের PopScope (`canPop: false`) সেটা আবার এখানেই পাঠাত, আর এখান থেকে
+  ///   আবার `maybePop()`: অ্যান্ড্রয়েডের "পেছনে" (আর ✕) একটা অন্তহীন চক্রে ঘুরত, পাতা কখনো বন্ধ হত না — মালিক, ১৬ নভেম্বর
+  ///   ২০২৬: "মডিউলে ঢুকলে পেছনে বোতাম কাজ করে না"। ⭐ এখন সোজা `pop()` — ওয়েবের পিছনের পাতা না থাকলে জানালা বন্ধ।
   Future<void> _back() async {
     final controller = _controller;
     if (controller != null && _error == null && await controller.canGoBack()) {
       await controller.goBack();
       return;
     }
-    if (mounted) Navigator.of(context).maybePop();
+    _close();
+  }
+
+  /// জানালা বন্ধ — নিজের PopScope পেরিয়ে ([Navigator.pop]); পেছনে কিছু না থাকলে হোমে
+  void _close() {
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      GoRouter.maybeOf(context)?.go('/home');
+    }
   }
 
   @override
@@ -400,7 +415,8 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
             key: const ValueKey('web-inside-close'),
             tooltip: context.l10n.webInsideClose,
             icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).maybePop(),
+            // ⓘ ✕ = জানালা বন্ধ, সবসময় — ওয়েবের ভেতরের পিছনে নয় (সেটা অ্যান্ড্রয়েডের "পেছনে")
+            onPressed: _close,
           ),
           title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
           actions: [

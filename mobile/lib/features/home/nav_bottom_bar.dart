@@ -107,10 +107,16 @@ class AbosBottomBar extends ConsumerWidget {
   }
 }
 
-List<BarTab> _tabsOf(WidgetRef ref) => RoleTabs.tabsFor(
+/// ⭐ বারের ঘর — ABOS-এ ০.৪.৫৭-এর হুবহু; Liquid Glass আর Material 3-এ "জমা"-সহ ([RoleTabs.lookTabsFor])
+List<BarTab> _tabsOf(WidgetRef ref) => _tabsFor(
       ref.watch(authStateProvider).user?.permissions ?? const <String>[],
-      modulesOn: ref.watch(phoneModulesProvider),
+      ref.watch(phoneModulesProvider),
     );
+
+List<BarTab> _tabsFor(List<String> permissions, Set<String>? modulesOn) =>
+    AppLooks.instance.look.value == AppLook.abos
+        ? RoleTabs.tabsFor(permissions, modulesOn: modulesOn)
+        : RoleTabs.lookTabsFor(permissions, modulesOn: modulesOn);
 
 Map<BarTab, TabBadge> _badgesOf(NavBadges b) => {
       BarTab.approvals: RoleTabs.badgeFor(b.pending, more: b.pendingMore),
@@ -406,11 +412,13 @@ class RoleBottomBar extends StatelessWidget {
   /// দ্রুত কাজ — Material 3-এর বড় চারকোনা ＋ ([AppLook.expressive])
   final VoidCallback? onQuick;
 
+  /// রূপের বারের ঘর — বাছার দাগ ঘরের নিজের নয়, লেন্স বা বড়ির ([_BarItem.onLook])
   Widget _item(BarTab tab) => _BarItem(
         spec: RoleTabs.specs[tab]!,
         selected: tab == selected,
         badge: badges[tab] ?? const TabBadge.none(),
         onTap: () => onSelect(tab),
+        onLook: true,
       );
 
   /// ⭐ Liquid Glass — ভাসমান কাচের ক্যাপসুল, বাছা ঘর কাচের লেন্সে, পাশে খোঁজার কাচের বল (মালিকের নমুনা, ২০ নভেম্বর ২০২৬)
@@ -432,9 +440,9 @@ class RoleBottomBar extends StatelessWidget {
                           margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
                           decoration: tab == selected
                               ? BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.22),
+                                  color: Colors.white.withValues(alpha: 0.22), // dark-ok: কাচের লেন্স, অন্ধকার পটে
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6)), // dark-ok: কাচের লেন্স, অন্ধকার পটে
                                 )
                               : null,
                           child: _item(tab),
@@ -469,7 +477,7 @@ class RoleBottomBar extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Row(children: [
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Flexible(
               child: Container(
                 key: const ValueKey('nav-bar-expressive'),
@@ -480,7 +488,10 @@ class RoleBottomBar extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(32)),
                   boxShadow: [BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8))],
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                // ⓘ সরু ফোনে (৩২০) পাঁচ ঘর আর ＋ না ধরলে টুলবার ছোট হয়, কাটে না
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                   for (final tab in tabs)
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -493,10 +504,11 @@ class RoleBottomBar extends StatelessWidget {
                       ),
                       child: _item(tab),
                     ),
-                ]),
+                  ]),
+                ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 10),
             if (onQuick != null)
               ExpressiveFab(
                   key: const ValueKey('nav-quick-fab'), label: AppLocale.l10n.lookQuickActions, onPressed: onQuick!),
@@ -648,7 +660,11 @@ class _BarItem extends StatelessWidget {
     required this.onTap,
     this.wide = false,
     this.rail = false,
+    this.onLook = false,
   });
+
+  /// ⭐ Liquid Glass বা Material 3-এর বারে (0.4.58) — নিজের পটি নেই (লেন্স বা বড়ি বার আঁকে), আইকন একটু ছোট
+  final bool onLook;
 
   final BarTabSpec spec;
   final bool selected;
@@ -667,8 +683,8 @@ class _BarItem extends StatelessWidget {
     // ⭐ নিচের বার (wide নয়, রেল নয়) — লেখা ছাড়া বড় রঙিন আইকন; রেলে নামসহ, আইকন ২৮
     final bare = ! wide && ! rail;
     final icon = spec.tab == BarTab.me
-        ? _MyFace(selected: selected, size: bare ? 56 : 30)
-        : ColourTabIcon(key: ValueKey('nav-${spec.tab.name}-icon'), tab: spec.tab, size: bare ? 36 : 28);
+        ? _MyFace(selected: selected, size: onLook ? 40 : (bare ? 56 : 30))
+        : ColourTabIcon(key: ValueKey('nav-${spec.tab.name}-icon'), tab: spec.tab, size: onLook ? 30 : (bare ? 36 : 28));
     final badged = switch (badge.kind) {
       TabBadgeKind.none => icon,
       TabBadgeKind.dot => Badge(
@@ -686,7 +702,9 @@ class _BarItem extends StatelessWidget {
           child: icon,
         ),
     };
-    final indicator = AnimatedContainer(
+    final indicator = onLook
+        ? SizedBox(height: 44, child: Center(child: badged))
+        : AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: wide ? null : (bare ? 68 : 64),
       height: bare ? 48 : 36,
@@ -730,7 +748,7 @@ class _BarItem extends StatelessWidget {
                 message: spec.label,
                 // ⛔ উচ্চতা বাঁধা — নিচের বার ঢিলা মাপ পায়, খালি Center পুরো পর্দা জুড়ে বার লম্বা করত আর তালিকা ঢাকত
                 // (fab_never_hides_data_test ধরেছে, ১৫ নভেম্বর ২০২৬)
-                child: SizedBox(height: 64, child: Center(child: indicator)),
+                child: SizedBox(height: onLook ? 52 : 64, child: Center(child: indicator)),
               )
             : ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 64, minWidth: 48),
@@ -897,7 +915,9 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final user = ref.watch(authStateProvider).user;
     final permissions = user?.permissions ?? const <String>[];
     final modulesOn = ref.watch(phoneModulesProvider);
-    final tabs = RoleTabs.tabsFor(permissions, modulesOn: modulesOn);
+    // ⓘ রূপ বদলালে থিম বদলায় — তাতে কাঠামোও নতুন করে আঁকা হয়, বারের ঘরও
+    final look = (Theme.of(context), AppLooks.instance.look.value).$2;
+    final tabs = _tabsFor(permissions, modulesOn);
     final page = ref.watch(homePageProvider);
     final shown = _shownTab(tabs, page);
     final badges = _badgesOf(ref.watch(navBadgesProvider));
@@ -915,6 +935,7 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final layout = RoleTabs.layoutFor(media.size);
     final keyboardOpen = media.viewInsets.bottom > 0;
     void onSelect(BarTab t) => _select(t, shown);
+    final top = ref.watch(topBarContextProvider);
 
     // ⓘ হোমের "＋ নতুন" কেবল হোমের নিজের পাতায় — সব মডিউলে বা "আমি"-তে নয়
     final fab = _isHome && page.kind != HomePageKind.home
@@ -942,7 +963,15 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     if (layout == BarLayout.bottom) {
       final nav = keyboardOpen || tabs.length < 2
           ? null
-          : RoleBottomBar(tabs: tabs, selected: shown, badges: badges, onSelect: onSelect);
+          : RoleBottomBar(
+              tabs: tabs,
+              selected: shown,
+              badges: badges,
+              onSelect: onSelect,
+              // ⭐ Liquid Glass-এর খোঁজার বল আর Material 3-এর ＋ (দ্রুত কাজ) — হোমের নিজের খোঁজা আর দ্রুত কাজ ([TopBarContext])
+              onSearch: look == AppLook.glass && top != null ? () => top.search(context) : null,
+              onQuick: look == AppLook.expressive && top?.quick != null ? () => top!.quick!(context) : null,
+            );
       return Scaffold(
         body: child,
         bottomNavigationBar: actionBar == null

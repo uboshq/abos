@@ -54,7 +54,19 @@ class DepositRequestRow {
     this.serverLabel = '',
     this.bills = const [],
     this.submittedBy,
+    this.id,
+    this.depositor,
+    this.lookalikeOf,
   });
+
+  /// সার্ভারের `public_id` — পুরনো সার্ভারে null
+  final String? id;
+
+  /// ⭐ টাকা কে জমা দিলেন (`depositor`, ১৬ নভেম্বর ২০২৬) — ডিলার নিজে না হলে তাঁর লোক; ঐচ্ছিক
+  final String? depositor;
+
+  /// ⭐ একই চেহারার আগের স্লিপ (`lookalike_of`, সার্ভারের যাচাই) — থাকলে পাঠানোর পরে সতর্কতা; কাজ আটকায় না
+  final String? lookalikeOf;
 
   final String? date;
   final double amount;
@@ -82,12 +94,20 @@ class DepositRequestRow {
         reason: json['decision_reason']?.toString(),
         hasSlip: json['has_slip'] == true,
         serverLabel: json['status_label']?.toString() ?? '',
+        id: _textOrNull(json['id']),
+        depositor: _textOrNull(json['depositor']),
+        lookalikeOf: _textOrNull(json['lookalike_of']),
         submittedBy: (json['submitted_by_name']?.toString().trim().isEmpty ?? true) ? null : json['submitted_by_name'].toString().trim(),
         bills: [
           for (final b in (json['bills'] as List?) ?? const [])
             if (b is Map) (b['no']?.toString() ?? '', Money.valueOrZero(b['amount'])),
         ],
       );
+
+  static String? _textOrNull(Object? value) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? null : text;
+  }
 
   /// ⭐ চার অবস্থা: পাঠানো · যাচাই চলছে · গৃহীত · প্রত্যাখ্যাত (কারণসহ, [reason])।
   /// ⓘ সার্ভারের নিজের নাম (`status_label`) আগে — a6, ৭ অক্টোবর ২০২৬: "এটাই দেখিয়ো"; পুরনো সার্ভারে নিজের চার নাম।
@@ -115,6 +135,7 @@ abstract class DepositRequestApi {
     String? note,
     String? slipPath,
     List<BillShare> bills = const [],
+    String? depositor,
   });
 }
 
@@ -165,6 +186,7 @@ class ServerDepositRequestApi implements DepositRequestApi {
     String? note,
     String? slipPath,
     List<BillShare> bills = const [],
+    String? depositor,
   }) async {
     final form = FormData.fromMap({
       'customer': customerId,
@@ -174,6 +196,8 @@ class ServerDepositRequestApi implements DepositRequestApi {
       if (bankAccountId != null) 'bank_account_id': '$bankAccountId',
       if (reference != null && reference.isNotEmpty) 'reference': reference,
       if (note != null && note.isNotEmpty) 'note': note,
+      // ⭐ কে জমা দিলেন — সার্ভারের ঘর `depositor` (সর্বোচ্চ ১২০ অক্ষর)
+      if (depositor != null && depositor.trim().isNotEmpty) 'depositor': depositor.trim(),
       if (slipPath != null) 'slip': await MultipartFile.fromFile(slipPath, filename: slipPath.split(RegExp(r'[\\/]')).last),
       // ⓘ ঘরের নাম হাতে — ফর্মের ভেতরের তালিকা dio নিজে যেভাবে লেখে তার উপর ভরসা নয়
       for (var i = 0; i < bills.length; i++) ...{

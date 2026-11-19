@@ -19,6 +19,7 @@ class TopBarContext {
     required this.openMenu,
     this.switchBranch,
     this.copilot,
+    this.quick,
   });
 
   final String company;
@@ -44,6 +45,9 @@ class TopBarContext {
 
   /// ⭐ উপরের মগজ — কোপাইলটের জিজ্ঞাসা, পুরো পর্দায় ([page] = যে পাতা থেকে খোলা); null মানে কোপাইলটের চাবি নেই
   final Future<void> Function(BuildContext context, String page)? copilot;
+
+  /// ⭐ দ্রুত কাজ — ≡ আর Material 3-এর ＋ (0.4.58; মালিক, ১৬ ও ২০ নভেম্বর ২০২৬): টাকা জমার খবর, নতুন অর্ডার, আদায়, অনুমোদন …
+  final Future<void> Function(BuildContext context)? quick;
 }
 
 /// হোম লেখে, প্রতিটা পর্দার বার পড়ে

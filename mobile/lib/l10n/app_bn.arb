@@ -16130,5 +16130,203 @@
   "lookQuickDeposit": "টাকা জমার খবর",
   "@lookQuickDeposit": {
     "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookTabDeposit": "জমা",
+  "@lookTabDeposit": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookQuickFindShop": "দোকান খুঁজুন",
+  "@lookQuickFindShop": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookChoose": "রূপ",
+  "@lookChoose": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookAbosHint": "এখনকার ABOS — কিছুই বদলায় না",
+  "@lookAbosHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookGlassHint": "iOS 26 — স্বচ্ছ কাচ, পেছনে রঙের ছোপ",
+  "@lookGlassHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookExpressiveHint": "বড় আকার, ঢেউ আর মোটা অঙ্ক",
+  "@lookExpressiveHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookBlurClearEnd": "0 · একদম স্বচ্ছ (আয়নার মতো)",
+  "@lookBlurClearEnd": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookBlurHint": "নিচের লেখা — স্বচ্ছ কাচে পড়া যায়",
+  "@lookBlurHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookMotionHint": "ফোনের \"কম নড়াচড়া\" চালু থাকলে এমনিতেই থামে",
+  "@lookMotionHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookProfileSubtitle": "ABOS · Liquid Glass · Material 3",
+  "@lookProfileSubtitle": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookTodaySales": "আজকের বিক্রি",
+  "@lookTodaySales": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookTargetPercent": "মাসের লক্ষ্যের {percent}%",
+  "@lookTargetPercent": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "lookCollectedToday": "আজ আদায় {amount}",
+  "@lookCollectedToday": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "lookTileCollected": "আজ আদায়",
+  "@lookTileCollected": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookTileApprovals": "অনুমোদনে",
+  "@lookTileApprovals": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookTileDues": "বকেয়া",
+  "@lookTileDues": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipTitle": "স্লিপ ঠিক করুন",
+  "@scanSlipTitle": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipAccept": "এই ছবিটা নিন",
+  "@scanSlipAccept": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipCornersHint": "কোনাগুলো নিজে খুঁজে বসায় — ভুল হলে আঙুলে টেনে ঠিক করুন।",
+  "@scanSlipCornersHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipClean": "পরিষ্কার",
+  "@scanSlipClean": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipGrey": "ধূসর",
+  "@scanSlipGrey": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipBw": "সাদা-কালো",
+  "@scanSlipBw": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipRotate": "ঘোরান",
+  "@scanSlipRotate": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipRetake": "আবার তুলুন",
+  "@scanSlipRetake": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipOriginal": "আসল ছবি {size}",
+  "@scanSlipOriginal": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "scanSlipWillSend": "পাঠাবে ≈ {size}",
+  "@scanSlipWillSend": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "scanSlipWorking": "তৈরি হচ্ছে…",
+  "@scanSlipWorking": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "scanSlipUnreadable": "ছবিটা খোলা গেল না — আবার তুলুন।",
+  "@scanSlipUnreadable": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositShop": "দোকান / ডিলার",
+  "@customersDepositShop": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositPickShop": "দোকান বেছে নিন",
+  "@customersDepositPickShop": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositNeedShop": "আগে দোকান বেছে নিন।",
+  "@customersDepositNeedShop": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositDepositor": "কে জমা দিলেন",
+  "@customersDepositDepositor": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositDepositorHint": "ডিলার নিজে না হলে তাঁর লোকের নাম",
+  "@customersDepositDepositorHint": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositCamera": "ক্যামেরা",
+  "@customersDepositCamera": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositGallery": "গ্যালারি / WhatsApp",
+  "@customersDepositGallery": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositSentTitle": "পাঠানো হয়েছে — {amount}",
+  "@customersDepositSentTitle": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositLookalikeTitle": "⚠ এই স্লিপটা আগের একটার মতো দেখতে",
+  "@customersDepositLookalikeTitle": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositLookalikeOf": "{date}-এর জমার খবর ({amount})। একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।",
+  "@customersDepositLookalikeOf": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositLookalikeUnknown": "একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।",
+  "@customersDepositLookalikeUnknown": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "customersDepositHistoryDepositor": "জমা দিলেন: {name}",
+  "@customersDepositHistoryDepositor": {
+    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

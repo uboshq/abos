@@ -222,6 +222,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // ⭐ টাকা জমার খবর, দোকান বাছাসহ (0.4.58; মালিক, ১৬ ও ২০ নভেম্বর ২০২৬) — ≡-এর দ্রুত কাজ আর নিচের "জমা"
+          _framed(
+            path: 'deposit-report',
+            builder: (context, state) => const ModuleGateView(
+                path: 'deposit-report', child: DepositRequestScreen()),
+          ),
           _framed(
             path: 'products',
             builder: (context, state) => const ModuleGateView(

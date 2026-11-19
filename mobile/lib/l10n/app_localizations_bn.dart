@@ -11598,4 +11598,142 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get lookQuickDeposit => 'টাকা জমার খবর';
+
+  @override
+  String get lookTabDeposit => 'জমা';
+
+  @override
+  String get lookQuickFindShop => 'দোকান খুঁজুন';
+
+  @override
+  String get lookChoose => 'রূপ';
+
+  @override
+  String get lookAbosHint => 'এখনকার ABOS — কিছুই বদলায় না';
+
+  @override
+  String get lookGlassHint => 'iOS 26 — স্বচ্ছ কাচ, পেছনে রঙের ছোপ';
+
+  @override
+  String get lookExpressiveHint => 'বড় আকার, ঢেউ আর মোটা অঙ্ক';
+
+  @override
+  String get lookBlurClearEnd => '0 · একদম স্বচ্ছ (আয়নার মতো)';
+
+  @override
+  String get lookBlurHint => 'নিচের লেখা — স্বচ্ছ কাচে পড়া যায়';
+
+  @override
+  String get lookMotionHint => 'ফোনের \"কম নড়াচড়া\" চালু থাকলে এমনিতেই থামে';
+
+  @override
+  String get lookProfileSubtitle => 'ABOS · Liquid Glass · Material 3';
+
+  @override
+  String get lookTodaySales => 'আজকের বিক্রি';
+
+  @override
+  String lookTargetPercent(String percent) {
+    return 'মাসের লক্ষ্যের $percent%';
+  }
+
+  @override
+  String lookCollectedToday(String amount) {
+    return 'আজ আদায় $amount';
+  }
+
+  @override
+  String get lookTileCollected => 'আজ আদায়';
+
+  @override
+  String get lookTileApprovals => 'অনুমোদনে';
+
+  @override
+  String get lookTileDues => 'বকেয়া';
+
+  @override
+  String get scanSlipTitle => 'স্লিপ ঠিক করুন';
+
+  @override
+  String get scanSlipAccept => 'এই ছবিটা নিন';
+
+  @override
+  String get scanSlipCornersHint =>
+      'কোনাগুলো নিজে খুঁজে বসায় — ভুল হলে আঙুলে টেনে ঠিক করুন।';
+
+  @override
+  String get scanSlipClean => 'পরিষ্কার';
+
+  @override
+  String get scanSlipGrey => 'ধূসর';
+
+  @override
+  String get scanSlipBw => 'সাদা-কালো';
+
+  @override
+  String get scanSlipRotate => 'ঘোরান';
+
+  @override
+  String get scanSlipRetake => 'আবার তুলুন';
+
+  @override
+  String scanSlipOriginal(String size) {
+    return 'আসল ছবি $size';
+  }
+
+  @override
+  String scanSlipWillSend(String size) {
+    return 'পাঠাবে ≈ $size';
+  }
+
+  @override
+  String get scanSlipWorking => 'তৈরি হচ্ছে…';
+
+  @override
+  String get scanSlipUnreadable => 'ছবিটা খোলা গেল না — আবার তুলুন।';
+
+  @override
+  String get customersDepositShop => 'দোকান / ডিলার';
+
+  @override
+  String get customersDepositPickShop => 'দোকান বেছে নিন';
+
+  @override
+  String get customersDepositNeedShop => 'আগে দোকান বেছে নিন।';
+
+  @override
+  String get customersDepositDepositor => 'কে জমা দিলেন';
+
+  @override
+  String get customersDepositDepositorHint =>
+      'ডিলার নিজে না হলে তাঁর লোকের নাম';
+
+  @override
+  String get customersDepositCamera => 'ক্যামেরা';
+
+  @override
+  String get customersDepositGallery => 'গ্যালারি / WhatsApp';
+
+  @override
+  String customersDepositSentTitle(String amount) {
+    return 'পাঠানো হয়েছে — $amount';
+  }
+
+  @override
+  String get customersDepositLookalikeTitle =>
+      '⚠ এই স্লিপটা আগের একটার মতো দেখতে';
+
+  @override
+  String customersDepositLookalikeOf(String date, String amount) {
+    return '$date-এর জমার খবর ($amount)। একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।';
+  }
+
+  @override
+  String get customersDepositLookalikeUnknown =>
+      'একই স্লিপ দুইবার গেলে অফিস ধরবে — ভুল হলে এখনই জানান।';
+
+  @override
+  String customersDepositHistoryDepositor(String name) {
+    return 'জমা দিলেন: $name';
+  }
 }

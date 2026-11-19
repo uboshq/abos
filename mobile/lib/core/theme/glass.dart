@@ -14,7 +14,7 @@ class GlassSpec {
 
   factory GlassSpec.of(int level) {
     final k = level.clamp(0, 100) / 100;
-    return GlassSpec._(level, k * 20, 0.01 + k * 0.17, 0.22 + k * 0.12, 0.18 + k * 0.30);
+    return GlassSpec._(level, k * 28, 0.01 + k * 0.17, 0.22 + k * 0.12, 0.18 + k * 0.30);
   }
 
   /// এখনকার মানুষের বাছাই থেকে
@@ -22,7 +22,7 @@ class GlassSpec {
 
   final int level;
 
-  /// ঝাপসার মাপ (Gaussian sigma) — 0 থেকে 20
+  /// ঝাপসার মাপ (Gaussian sigma) — 0 থেকে 28 (ঝাপসার নমুনার `blur(k × 28px)`)
   final double sigma;
 
   /// সাদার আভা — 0.01 থেকে 0.18
@@ -158,7 +158,10 @@ class GlassPanel extends StatelessWidget {
           child: DefaultTextStyle.merge(
             // ⓘ খুব স্বচ্ছ কাচেও লেখা পড়া যায় — হালকা ছায়া সবসময়
             style: const TextStyle(color: Colors.white, shadows: [Shadow(color: Color(0x59000000), blurRadius: 6)]),
-            child: IconTheme.merge(data: const IconThemeData(color: Colors.white), child: child),
+            // ⓘ ভেতরের ListTile আর InkWell-এর ছাপ কাচের উপরেই পড়ে — কাচের রঙিন পট নিচে ঢেকে দেয় না
+            child: IconTheme.merge(
+                data: const IconThemeData(color: Colors.white),
+                child: Material(type: MaterialType.transparency, child: child)),
           ),
         );
         final clipped = circle
