@@ -102,14 +102,14 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
     public function test_an_empty_today_widens_to_the_month_and_says_so(): void
     {
         // ⓘ আজ কিছু বিক্রি নেই, এই মাসে আছে — শীর্ষ পণ্য ও গ্রাহক এই মাসের, নিচে লেখা (মালিক: "Nothing in this period … ঠিক করবা")
-        if (Carbon::today()->day === 1) {
-            $this->markTestSkipped('মাসের প্রথম দিনে "এই মাসের আগের দিন" নেই।');
-        }
-        Carbon::setTestNow(Carbon::today()->subDay()->setTime(11, 0));
+        // ⓘ তারিখ স্থির — মাসের ১৪ তারিখে বিক্রি, ১৫ তারিখে হোম দেখা; মাসের প্রথম দিনেও দাবিটা একই থাকে, বাদ পড়ে না
+        $day15 = Carbon::today()->startOfMonth()->addDays(14);
+        Carbon::setTestNow($day15->copy()->subDay()->setTime(11, 0));
         $this->sellToday();
-        Carbon::setTestNow();
+        Carbon::setTestNow($day15->copy()->setTime(12, 0));
 
         $html = (string) $this->get(route('dashboard'))->assertOk()->getContent();
+        Carbon::setTestNow();
         $note = e(__('home.board.note_widened', ['period' => __('core.dashboard.this_month')]));
 
         $this->assertGreaterThanOrEqual(2, substr_count($html, $note), '⛔ খালি "আজ"-এ শীর্ষ পণ্য আর গ্রাহক এই মাসে যায়নি, বা লেখা নেই।');
