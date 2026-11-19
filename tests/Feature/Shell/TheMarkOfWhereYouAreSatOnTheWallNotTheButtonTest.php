@@ -63,7 +63,9 @@ class TheMarkOfWhereYouAreSatOnTheWallNotTheButtonTest extends TestCase
 
     private function owner(): User
     {
-        return User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ এই দাবি সাধারণ হোম/রেলের — ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট নতুন "ABOS" (রেল নেই, নিজের বোর্ড), তাই ABOS Blue-তে বাঁধা
+        return tap(User::query()->where('email', 'owner@abos.test')->firstOrFail(),
+            fn (User $u) => $u->forceFill(['ui' => 'blue'])->save());
     }
 
     private function shell(): string

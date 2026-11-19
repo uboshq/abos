@@ -247,7 +247,7 @@
         if ($stockValue) {
             array_splice($cards, min(5, count($cards)), 0, [$stockValue]);
         }
-        $cardTones = ['blue', 'orange', 'purple', 'red', 'green', 'teal', 'pink', 'amber'];
+        $cardTones = ['--color-pal-blue', '--color-pal-orange', '--color-pal-purple', '--color-pal-red', '--color-pal-green', '--color-pal-teal', '--color-pal-pink', '--color-pal-amber'];
 
         // ⓘ লেখা অঙ্ক থেকে সংখ্যা — টাকার বাক্সের ডোনাটের ভাগ আর মাঝের মোট (নমুনা: "22.30 লাখ টাকা"); পুরো অঙ্ক পাশে আর `title`-এ
         $amountOf = fn (string $text): float => (float) preg_replace('/[^0-9.\-]/', '', strtr($text, $digits));
@@ -301,7 +301,7 @@
                         @foreach ($pictures as $row)
                             {{-- ⭐ প্রতিটা চার্ট-কার্ডের মাথায় নিজের রঙের দাগ — রঙিন ড্যাশবোর্ড (মালিক, ১ নভেম্বর ২০২৬); নীল প্যানেলে দাগ নেই --}}
                             <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}" data-boxed data-picture="{{ $row['module'] }}"
-                               style="--hm-tone: var(--color-pal-{{ ['blue', 'orange', 'red', 'teal', 'indigo', 'green', 'purple', 'sky'][$loop->index % 8] }})"
+                               style="--hm-tone: var({{ ['--color-pal-blue', '--color-pal-orange', '--color-pal-red', '--color-pal-teal', '--color-pal-indigo', '--color-pal-green', '--color-pal-purple', '--color-pal-sky'][$loop->index % 8] }})"
                                class="hm-picture block min-w-0 rounded-(--radius-card) border border-(--color-border)
                                       bg-(--color-surface-card) shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)">
                                 <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-2">
@@ -448,7 +448,7 @@
                                @if ($widget === $owed) data-home-owed @endif @if ($widget === $stockValue) data-home-stock @endif
                                class="hm-kpi relative block min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-2.5 py-1.5
                                       shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)"
-                               style="--hm-tone: var(--color-pal-{{ $tone }})"
+                               style="--hm-tone: var({{ $tone }})"
                                @if ($widget->definition) title="{{ $widget->definition }}" @endif>
                                 <span data-kpi-label class="block truncate text-xs font-semibold text-(--color-ink-muted)" title="{{ $widget->label }}">{{ $widget->label }}</span>
                                 <span data-kpi-value @class([

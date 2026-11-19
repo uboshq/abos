@@ -72,7 +72,7 @@
     }
     foreach ([2 => ['dues', $owed], 5 => ['stock', $stockValue]] as $at => [$key, $widget]) {
         if ($widget && ! in_array($key, $boardKeys, true)) {
-            array_splice($tiles, min($at, count($tiles)), 0, [['key' => $key, 'widget' => $widget, 'tone' => 'var(--color-pal-'.($key === 'dues' ? 'purple' : 'pink').')',
+            array_splice($tiles, min($at, count($tiles)), 0, [['key' => $key, 'widget' => $widget, 'tone' => $key === 'dues' ? 'var(--color-pal-purple)' : 'var(--color-pal-pink)',
                 'href' => $widget->href, 'label' => $widget->label, 'value' => $widget->value, 'delta' => null, 'sub' => null, 'spark' => [], 'note' => null]]);
         }
     }

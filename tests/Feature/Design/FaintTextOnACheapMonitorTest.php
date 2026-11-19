@@ -49,12 +49,8 @@ class FaintTextOnACheapMonitorTest extends TestCase
      * @var array<string, string>
      */
     private const KNOWN = [
-        // SAP Fiori-র নিজের সতর্ক-রং। ৪.১৯ — AA থেকে সামান্য নিচে,
-        // আর ব্যাজের লেখা ছোট হলেও পাশে একটা আইকন ও শব্দ থাকে।
-        'tiles|light|--color-badge-pending-ink' => 'SAP-এর নিজের #B8860B',
-        'tiles|light|--color-badge-warning-ink' => 'SAP-এর নিজের #B8860B',
-        'tiles|dark|--color-badge-pending-ink' => 'SAP-এর নিজের #B8860B',
-        'tiles|dark|--color-badge-warning-ink' => 'SAP-এর নিজের #B8860B',
+        // ⓘ SAP-এর পুরোনো Fiori 3-এর সতর্ক-রং #B8860B-এর চারটা ছাড় উঠে গেছে — ১৯ নভেম্বর ২০২৬ থেকে SAP রূপ Horizon-এর
+        //   #A93E00, যেটা AA পাশ করে (ca7d7e355)।
 
         // Odoo-র ফিকে কালি #8A7F90। আসল Odoo-তেও এটাই, আর এটাই তার
         // নরম চেহারার একটা বড় অংশ।

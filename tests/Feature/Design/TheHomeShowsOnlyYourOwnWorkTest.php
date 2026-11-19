@@ -53,6 +53,8 @@ final class TheHomeShowsOnlyYourOwnWorkTest extends TestCase
     /** @return list<string> টাইলের মডিউলগুলো */
     private function tiles(User $user): array
     {
+        // ⓘ এই দাবি সাধারণ হোম/রেলের — ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট নতুন "ABOS" (রেল নেই, নিজের বোর্ড), তাই ABOS Blue-তে বাঁধা
+        $user->forceFill(['ui' => 'blue'])->save();
         $response = $this->actingAs($user)->get(route('dashboard'))->assertOk();
 
         return array_values(array_map(fn (array $row) => (string) $row['module'], $response->viewData('overall')));

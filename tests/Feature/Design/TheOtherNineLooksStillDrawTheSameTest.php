@@ -114,8 +114,10 @@ final class TheOtherNineLooksStillDrawTheSameTest extends TestCase
             $awake++;
 
             foreach (Ui::keys() as $look) {
-                // ⓘ ABOS-এর দুই রূপ (navy আর ১৮ নভেম্বরের নীল প্যানেল) একই গড়নে ([[Ui::family()]]) — "বাকি ন'টা" মানে তার বাইরেরগুলো
-                if (Ui::family($look) === Ui::family(Ui::DEFAULT)) {
+                // ⓘ ABOS-এর নিজের রূপগুলো (navy, ১৮ নভেম্বরের ABOS Blue, ১৯ নভেম্বরের নতুন "ABOS") — "বাকি ন'টা" মানে তার বাইরেরগুলো।
+                //   যে রূপ গড়নটা নিজে Ui::all()-এ ঘোষণা করেছে (যেমন `filters=chips`), তার বেলায় চিহ্ন থাকাই ঠিক।
+                [$key, $value] = explode('=', $why, 2);
+                if (Ui::family($look) === Ui::family(Ui::DEFAULT) || (Ui::all()[$look][$key] ?? null) === $value) {
                     continue;
                 }
 

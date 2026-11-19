@@ -615,6 +615,7 @@
     color: var(--color-ink);
 }
 :root[data-ui='dynamic'] .dyn-headline b { font-weight: 300; color: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-rc-slides { display: block; min-width: 0; }
 :root[data-ui='dynamic'] .dyn-rc-dots { display: flex; gap: 6px; margin-top: 36px; color: #808080; }
 :root[data-ui='dynamic'] .dyn-rc-dots label {
     width: 8px;

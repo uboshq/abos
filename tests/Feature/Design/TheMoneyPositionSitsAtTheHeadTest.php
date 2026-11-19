@@ -203,10 +203,11 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
-        return [
+        // ⓘ এই দাবি সাধারণ হোম/রেলের — ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট নতুন "ABOS" (রেল নেই, নিজের বোর্ড), তাই ABOS Blue-তে বাঁধা
+        return array_map(fn (User $u) => tap($u, fn (User $x) => $x->forceFill(['ui' => 'blue'])->save()), [
             User::query()->where('email', 'owner@abos.test')->firstOrFail(),
             User::query()->where('email', 'sales@abos.test')->firstOrFail(),
-        ];
+        ]);
     }
 
     /** @param array<string, list<\App\Core\Dashboard\Widget>> $groups */

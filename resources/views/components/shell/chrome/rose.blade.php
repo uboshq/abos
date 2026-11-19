@@ -19,7 +19,7 @@
         $pickerUser = auth()->user();
         $registry = app(\App\Core\Module\ModuleRegistry::class);
         $looks = (array) config('abos.module_picker', []);
-        $fallback = $looks['default'] ?? ['icon' => 'layout-grid', 'colour' => '#2563eb'];
+        $fallback = $looks['default'] ?? ['icon' => 'grid', 'colour' => 'var(--color-brand-600)'];
         $routeName = (string) (request()->route()?->getName() ?? '');
 
         // ⓘ সাইডবারের একই উত্তর — কোন মডিউলে আছি: চালু সারি, নইলে রুটের উপসর্গ ([[shell.sidebar]]-এর `$hereModule`)
@@ -141,7 +141,7 @@
         $showTotals = \App\Core\Support\Ui::listFoot(auth()->user()?->ui) === 'totals';
         $showHints = \App\Core\Support\Ui::hints(auth()->user()?->ui) === 'keys';
 
-        // ⚠️ যোগফলের স্ট্যাক কেবল একবার পড়া যায়, তাই মানটা ধরে রাখা হয়
+        // ⓘ যোগফলের স্ট্যাক কেবল একবার পড়া যায়, তাই মানটা ধরে রাখা হয়
         $totals = trim($__env->yieldPushContent('list-totals'));
     @endphp
 

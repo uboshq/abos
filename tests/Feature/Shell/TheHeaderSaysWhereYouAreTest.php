@@ -54,7 +54,8 @@ final class TheHeaderSaysWhereYouAreTest extends TestCase
 
     public function test_another_look_keeps_its_own_crumbbar_and_gets_nothing_new(): void
     {
-        $other = collect(\App\Core\Support\Ui::keys())->first(fn (string $k) => $k !== 'navy');
+        // ⓘ "অন্য রূপ" মানে যে রূপ নিজের পথের পটি রাখে — ABOS-এর খোলস পরা রূপগুলো (navy, ১৮ নভেম্বরের ABOS Blue) আর নতুন "ABOS" বাদ
+        $other = collect(\App\Core\Support\Ui::keys())->first(fn (string $k) => \App\Core\Support\Ui::pathBar($k) === 'crumbs');
         $this->owner->forceFill(['ui' => $other])->save();
 
         $html = $this->actingAs($this->owner)->get(route('accounts.period.index'))->assertOk()->getContent();

@@ -99,8 +99,10 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
     public function test_the_urgent_strip_sits_in_the_work_column_and_the_sign_in_card_carries_the_full_version(): void
     {
         $layout = (string) file_get_contents(resource_path('views/components/layouts/app.blade.php'));
-        $this->assertSame(1, substr_count($layout, '<x-shell.notice-banner />'), '⛔ নোটিশের ফিতা একাধিক জায়গায়।');
-        $this->assertGreaterThan(strpos($layout, '<x-shell.sidebar'), strpos($layout, '<x-shell.notice-banner />'), '⛔ জরুরি নোটিশ রেল আর মেনুর উপরে পুরো চওড়ায় — কাজের কলামে বসার কথা (৯)।');
+        // ⓘ মালিক, ১৮ নভেম্বর ২০২৬ রাত: পাতার উপরে ফিতা আর নয় — জরুরি নোটিশ খোলার সময়ের মাঝের পপআপে, একবারই (d1b2e777e)
+        $popup = (string) file_get_contents(resource_path('views/components/shell/day-check.blade.php'));
+        $this->assertSame(0, substr_count($layout, '<x-shell.notice-banner />'), '⛔ পাতার উপরে আবার নোটিশের ফিতা — নোটিশ পপআপে।');
+        $this->assertSame(1, substr_count($popup, '<x-shell.notice-banner />'), '⛔ জরুরি নোটিশ পপআপে একবার নেই।');
 
         config(['release.version' => '1.4.2', 'release.date' => '2026-10-24']);
         $build = storage_path('app/release-build.json');

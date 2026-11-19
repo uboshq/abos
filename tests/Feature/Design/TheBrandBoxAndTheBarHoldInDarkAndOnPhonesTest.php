@@ -25,7 +25,7 @@ final class TheBrandBoxAndTheBarHoldInDarkAndOnPhonesTest extends TestCase
         //   surface-card আর ink, যা অন্ধকারে একসাথে বদলায়, তাই কোনো থিমে হালকায়-হালকা বা গাঢ়ে-গাঢ় নয়
         // ⭐ ১৯ নভেম্বর ২০২৬ (মালিকের অনুমোদিত নমুনা, "ABOS"): বাক্সটা বোর্ডের কার্ড (`hb-card hb-cash`) — জমিন আর লেখা থিমের জোড়া
         //   (surface-card আর ink), পাড় অবস্থার হলুদ (`--color-status-week-bar`), সব রূপে home-board.css থেকে
-        $home = (string) file_get_contents(resource_path('views/workspace/home.blade.php'));
+        $home = (string) file_get_contents(resource_path('views/workspace/home-abos.blade.php'));
         $glass = substr($home, (int) strpos($home, '<section data-money-position'), 300);
         $this->assertStringContainsString('hb-card hb-cash', $glass, '⛔ হোমের টাকার বাক্স বোর্ডের কার্ড নয়।');
         $css = (string) file_get_contents(resource_path('css/home-board.css'));

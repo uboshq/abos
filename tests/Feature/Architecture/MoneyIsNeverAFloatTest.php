@@ -242,6 +242,11 @@ class MoneyIsNeverAFloatTest extends TestCase
         // ⭐ চার মডিউলের বোর্ড (মালিকের চূড়ান্ত নমুনা, ১০ নভেম্বর ২০২৬ রাত) — ভাগ, বৃদ্ধি %, চার্টের মাপ আর ছোট করে দেখানো অঙ্ক (৳ লাখ/কোটি, এক দশমিক);
         //   কোথাও জমা হয় না, খাতায় ওঠে না, সমান-কিনা মেলানো হয় না; বইয়ের সাথে মেলার অঙ্ক (নিট, সম্পদ, জের) bcmath-এ। ⓘ পরের ধাপে bcmath-এ আনা — fe-র তালিকায়
         'app/Modules/Accounts/Dashboard/AccountsBoard.php' => self::BOARD_FIGURES,
+        // ⭐ নতুন "ABOS"-এর গোটা-ব্যবসার বোর্ড (মালিকের নমুনা v11, ১৯ নভেম্বর ২০২৬) — চার্টের দণ্ড-রেখার মাপ, ভাগের %, স্পার্কলাইন;
+        //   দেখানো টাকার অঙ্ক নিজে bcmath-এ আসে (Money), float কেবল আঁকার মাপে — জমা, খাতা বা মেলানোয় যায় না
+        'app/Modules/Executive/Services/HomeBoard.php' => self::BOARD_FIGURES,
+        // ⭐ Copilot-এর এক লাইন — "+12.5%"-এর মতো লেখা বৃদ্ধিকে ভালো/খারাপ বলার জন্য চিহ্ন আর মাপ পড়া; টাকা নয়
+        'app/Core/Dashboard/CopilotLine.php' => 'বৃদ্ধির লেখা ("+12.5%") থেকে দিক আর মাপ পড়া — কথার সুর ঠিক করতে; টাকা নয়, কোথাও জমা হয় না',
         'app/Modules/Accounts/Resources/views/dashboard/board-pipeline.blade.php' => self::BOARD_FIGURES,
         'app/Modules/Accounts/Resources/views/dashboard/board-review.blade.php' => self::BOARD_FIGURES,
         'app/Modules/Accounts/Resources/views/dashboard/board-statements.blade.php' => self::BOARD_FIGURES,

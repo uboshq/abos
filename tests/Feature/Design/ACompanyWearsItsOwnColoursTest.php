@@ -165,8 +165,9 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
 
         $fell = LookRegistry::forUser($skin->public_id, 'light');
 
+        // ⓘ ডিফল্ট রূপ বদলায় (navy → blue → নতুন "ABOS", ১৯ নভেম্বর ২০২৬) — দাবিটা "ডিফল্টে ফেরে", কোন নামে তা নয়
         $this->assertSame(
-            LookRegistry::tokens('navy', 'light'),
+            LookRegistry::tokens(\App\Core\Support\Ui::DEFAULT, 'light'),
             $fell,
             'খসড়া রূপে নেমে গেছে — ডিফল্টে ফেরার কথা।',
         );

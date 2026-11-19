@@ -52,6 +52,8 @@ class ARiseFromNothingIsNotAPercentageTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ এই দাবি সাধারণ হোম/রেলের — ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট নতুন "ABOS" (রেল নেই, নিজের বোর্ড), তাই ABOS Blue-তে বাঁধা
+        $this->owner->forceFill(['ui' => 'blue'])->save();
         $this->actingAs($this->owner);
     }
 

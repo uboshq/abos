@@ -26,7 +26,8 @@
     // ⭐ ভাগের নিজের অর্থ থাকলে অবস্থার রং — উপস্থিত সবুজ, দেরিতে কমলা, ছুটি ধূসর, অনুপস্থিত লাল (মালিক, ১৮ নভেম্বর ২০২৬: একটা রঙের
     //   একটাই অর্থ); অর্থ না থাকলে চার্টের সারির রং, ক্রমে। ⓘ `tone` [[Breakdown]]-এর ঘোষিত ঘর; অচেনা মান হলে সারির রং।
     $paint = fn (array $part, int $i): string => in_array($part['tone'] ?? null, ['ok', 'today', 'week', 'urgent', 'off'], true)
-        ? 'var(--color-status-'.($part['tone'] === 'week' ? 'week-bar' : $part['tone']).')'
+        ? ['ok' => 'var(--color-status-ok)', 'today' => 'var(--color-status-today)', 'week' => 'var(--color-status-week-bar)',
+            'urgent' => 'var(--color-status-urgent)', 'off' => 'var(--color-status-off)'][$part['tone']]
         : $palette[$i % count($palette)];
     $short = fn ($v) => \App\Core\Engines\Dashboard\Series::short($v);
     $isSeries = $panel instanceof \App\Core\Engines\Dashboard\Series;

@@ -1193,6 +1193,9 @@
     --color-status-week-soft: #fefbf4;
     --color-status-week-on: #1b1b1b;
     --color-status-ok: #107c10;
+    /* ⓘ কার্ডের নিজের রং আর রেখার নিচের ছোপ — প্রতিটা কার্ড/রূপ নিজে বসায়; এখানে কেবল ঘোষণা, যাতে না বসালে খালি না থাকে */
+    --hm-tone: currentColor;
+    --chart-line-fill: 0;
     --color-status-ok-soft: #f1faf1;
     --color-status-on: #ffffff;
     --color-status-off: #94a3b8;

@@ -257,6 +257,9 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
 
                 $this->assertStringNotContainsString('rail-flyout', $html,
                     "{$look}-এ বাঁয়ের রেলও রয়ে গেছে — একই পর্দায় দুইটা মেনু।");
+            } elseif (Ui::moduleRail($look) === 'none') {
+                // ⓘ নতুন "ABOS" (১৯ নভেম্বর ২০২৬): মেনু বাঁয়ে, কিন্তু মডিউলের রেল নেই — মডিউল বদলায় মেনুর নিচের তালিকায়
+                $this->assertStringNotContainsString('rail-flyout', $html, "{$look} রেল চায় না, অথচ রেলটা আঁকা হয়েছে।");
             } else {
                 $this->assertStringContainsString('rail-flyout', $html,
                     "{$look} বাঁয়ে রেল চায়, কিন্তু রেলটা নেই।");
