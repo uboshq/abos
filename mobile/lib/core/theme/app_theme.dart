@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_palette.dart';
 import 'bar_palette.dart';
+import 'expressive.dart';
+import 'glass.dart';
 
 /// The one [ThemeData] the app builds from tokens — screens ask for
 /// `Theme.of(context)` and its extensions, never a literal colour or size.
@@ -176,6 +178,105 @@ class AppTheme {
       ),
       pageTransitionsTheme: pageTransitions,
       extensions: const [palette, BarPalette.light],
+    );
+  }
+
+  /// ⭐ Liquid Glass — অন্ধকারের থিমের উপর: পট স্বচ্ছ (পেছনে [GlassBackdrop]-এর রঙের ছোপ), কার্ড আর ঘর সাদা আভার কাচ, লেখা সাদা।
+  /// ⓘ আভা আর কিনারা মানুষের ঝাপসার দাগ থেকে ([GlassSpec]); আসল ঝাপসা (BackdropFilter) কেবল বড় অংশে — হোমের কার্ড, উপরের বল,
+  ///   নিচের ক্যাপসুল — যাতে লম্বা তালিকায় ফোন ধীর না হয়। (মালিক, ২০ নভেম্বর ২০২৬ "ok")
+  static ThemeData glass(GlassSpec spec) {
+    final base = dark();
+    final card = Colors.white.withValues(alpha: 0.04 + spec.fill);
+    final edge = Colors.white.withValues(alpha: spec.edge);
+    return base.copyWith(
+      scaffoldBackgroundColor: Colors.transparent,
+      canvasColor: const Color(0xF0161C33),
+      colorScheme: base.colorScheme.copyWith(surface: const Color(0xFF161C33), primary: const Color(0xFF9CC9FF)),
+      appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent, foregroundColor: Colors.white, elevation: 0, centerTitle: false),
+      cardTheme: CardThemeData(
+        color: card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: edge)),
+        margin: EdgeInsets.zero,
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        fillColor: Colors.white.withValues(alpha: 0.06 + spec.fill / 2),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: edge)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: edge)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 1.6)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0x4778DCFF),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          shape: const StadiumBorder(side: BorderSide(color: Color(0x59FFFFFF))),
+        ),
+      ),
+      navigationBarTheme: base.navigationBarTheme.copyWith(backgroundColor: Colors.transparent),
+      bottomSheetTheme: const BottomSheetThemeData(backgroundColor: Color(0xF0161C33)),
+      extensions: [AppPalette.darkFrom(base.colorScheme), BarPalette.dark.withBar(Colors.transparent, Colors.white)],
+    );
+  }
+
+  /// ⭐ Material 3 Expressive — নমুনার বেগুনি রং-পরিবার, বড় গোল কোনা, মোটা শিরোনাম; ABOS-এর আলোর থিমের উপর, তাই
+  /// অবস্থার রং (`context.palette`) আগের মতোই কাজ করে। (মালিক, ২০ নভেম্বর ২০২৬ "ok")
+  static ThemeData expressive() {
+    final base = light();
+    final scheme = ColorScheme.fromSeed(
+      seedColor: Expressive.primary,
+      primary: Expressive.primary,
+      onPrimary: Colors.white,
+      surface: Expressive.background,
+      onSurface: Expressive.ink,
+      error: AppColors.danger,
+    );
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: Expressive.background,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Expressive.background,
+        foregroundColor: Expressive.ink,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Expressive.ink),
+      ),
+      cardTheme: const CardThemeData(
+        color: Expressive.surfaceBox,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+        margin: EdgeInsets.zero,
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        fillColor: Expressive.surfaceBox,
+        border: const UnderlineInputBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            borderSide: BorderSide(color: Expressive.primary, width: 2)),
+        enabledBorder: const UnderlineInputBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            borderSide: BorderSide(color: Expressive.primary, width: 2)),
+        focusedBorder: const UnderlineInputBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            borderSide: BorderSide(color: Expressive.primaryDeep, width: 3)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Expressive.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Color(0xFFFFD8E4),
+        foregroundColor: Color(0xFF31111D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+      ),
+      navigationBarTheme: base.navigationBarTheme.copyWith(backgroundColor: Expressive.background),
+      extensions: [AppPalette.light, BarPalette.light.withBar(Expressive.background, Expressive.ink)],
     );
   }
 }

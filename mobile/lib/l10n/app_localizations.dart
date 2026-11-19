@@ -19267,6 +19267,96 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'উত্তর কেবল আপনার চাবির তথ্য থেকে; কথার অডিও কোথাও জমা থাকে না।'**
   String get copilotQuickPrivacy;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'চেহারা'**
+  String get lookTitle;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'ABOS'**
+  String get lookAbos;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'Liquid Glass'**
+  String get lookGlass;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'Material 3'**
+  String get lookExpressive;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'কাচের ঝাপসা'**
+  String get lookBlur;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'স্বচ্ছ'**
+  String get lookBlurClear;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'হালকা'**
+  String get lookBlurLight;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাঝারি'**
+  String get lookBlurMedium;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'ঘন'**
+  String get lookBlurDense;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'ঘষা কাচ'**
+  String get lookBlurFrosted;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'পেছনের রং নড়বে'**
+  String get lookMotion;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'খুঁজুন'**
+  String get lookSearch;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'দ্রুত কাজ'**
+  String get lookQuickActions;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'সুপ্রভাত, {name}'**
+  String lookGreeting(String name);
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের কাজ'**
+  String get lookTodayWork;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

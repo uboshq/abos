@@ -386,8 +386,122 @@ class RoleBottomBar extends StatelessWidget {
   final Map<BarTab, TabBadge> badges;
   final ValueChanged<BarTab> onSelect;
 
+  /// খোঁজা — Liquid Glass-এ ক্যাপসুলের পাশের কাচের বল ([AppLook.glass])
+  final VoidCallback? onSearch;
+
+  /// দ্রুত কাজ — Material 3-এর বড় চারকোনা ＋ ([AppLook.expressive])
+  final VoidCallback? onQuick;
+
+  Widget _item(BarTab tab) => _BarItem(
+        spec: RoleTabs.specs[tab]!,
+        selected: tab == selected,
+        badge: badges[tab] ?? const TabBadge.none(),
+        onTap: () => onSelect(tab),
+      );
+
+  /// ⭐ Liquid Glass — ভাসমান কাচের ক্যাপসুল, বাছা ঘর কাচের লেন্সে, পাশে খোঁজার কাচের বল (মালিকের নমুনা, ২০ নভেম্বর ২০২৬)
+  Widget _glass(BuildContext context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          child: Row(children: [
+            Expanded(
+              child: GlassPanel(
+                key: const ValueKey('nav-bar-glass'),
+                radius: 32,
+                child: SizedBox(
+                  height: 64,
+                  child: Row(children: [
+                    for (final tab in tabs)
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+                          decoration: tab == selected
+                              ? BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+                                )
+                              : null,
+                          child: _item(tab),
+                        ),
+                      ),
+                  ]),
+                ),
+              ),
+            ),
+            if (onSearch != null) ...[
+              const SizedBox(width: 10),
+              GlassPanel(
+                key: const ValueKey('nav-search-glass'),
+                circle: true,
+                child: SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: IconButton(
+                    onPressed: onSearch,
+                    tooltip: AppLocale.l10n.lookSearch,
+                    icon: const Icon(Symbols.search, size: 26),
+                  ),
+                ),
+              ),
+            ],
+          ]),
+        ),
+      );
+
+  /// ⭐ Material 3 Expressive — ভাসমান গাঢ় টুলবার, বাছা ঘর বেগুনি বড়িতে; ডানে বড় চারকোনা ＋ (দ্রুত কাজ)
+  Widget _expressive(BuildContext context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          child: Row(children: [
+            Flexible(
+              child: Container(
+                key: const ValueKey('nav-bar-expressive'),
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: const BoxDecoration(
+                  color: Expressive.toolbar,
+                  borderRadius: BorderRadius.all(Radius.circular(32)),
+                  boxShadow: [BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8))],
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  for (final tab in tabs)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: tab == selected ? 68 : 52,
+                      height: 52,
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      decoration: BoxDecoration(
+                        color: tab == selected ? Expressive.primaryDeep : Colors.transparent,
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                      child: _item(tab),
+                    ),
+                ]),
+              ),
+            ),
+            const Spacer(),
+            if (onQuick != null)
+              ExpressiveFab(
+                  key: const ValueKey('nav-quick-fab'), label: AppLocale.l10n.lookQuickActions, onPressed: onQuick!),
+          ]),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    // ⓘ রূপ বদলালে থিম বদলায়, তাই এই বারও নতুন করে আঁকা হয়
+    Theme.of(context);
+    switch (AppLooks.instance.look.value) {
+      case AppLook.glass:
+        return Semantics(container: true, explicitChildNodes: true, child: _glass(context));
+      case AppLook.expressive:
+        return Semantics(container: true, explicitChildNodes: true, child: _expressive(context));
+      case AppLook.abos:
+        break;
+    }
     final palette = context.palette;
     return Semantics(
       container: true,

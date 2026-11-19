@@ -123,6 +123,33 @@ class BarPalette extends ThemeExtension<BarPalette> {
   @override
   BarPalette copyWith() => this;
 
+  /// ⭐ একই রং-পরিবার, কেবল বারের জমি আর লেখা অন্য — Liquid Glass-এ স্বচ্ছ বার আর সাদা লেখা, Material 3-এ নমুনার হালকা
+  /// বেগুনি-সাদা জমি (০.৪.৫৮; মালিক, ২০ নভেম্বর ২০২৬)
+  BarPalette withBar(Color bar, Color onBar) => BarPalette(
+        bar: bar,
+        onBar: onBar,
+        demoBar: demoBar,
+        onDemoBar: onDemoBar,
+        demoPill: demoPill,
+        onDemoPill: onDemoPill,
+        badge: badge,
+        onBadge: onBadge,
+        avatarFrom: avatarFrom,
+        avatarTo: avatarTo,
+        onAvatar: onAvatar,
+        avatarRing: avatarRing,
+        ribbon: ribbon,
+        onRibbon: onRibbon,
+        menu: menu,
+        menuLine: menuLine,
+        menuInk: menuInk,
+        menuSub: menuSub,
+        menuRow: menuRow,
+        selected: selected,
+        onSelected: onSelected,
+        danger: danger,
+      );
+
   @override
   BarPalette lerp(BarPalette? other, double t) {
     if (other == null) return this;

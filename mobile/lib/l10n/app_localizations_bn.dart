@@ -11548,4 +11548,51 @@ class AppL10nBn extends AppL10n {
   @override
   String get copilotQuickPrivacy =>
       'উত্তর কেবল আপনার চাবির তথ্য থেকে; কথার অডিও কোথাও জমা থাকে না।';
+
+  @override
+  String get lookTitle => 'চেহারা';
+
+  @override
+  String get lookAbos => 'ABOS';
+
+  @override
+  String get lookGlass => 'Liquid Glass';
+
+  @override
+  String get lookExpressive => 'Material 3';
+
+  @override
+  String get lookBlur => 'কাচের ঝাপসা';
+
+  @override
+  String get lookBlurClear => 'স্বচ্ছ';
+
+  @override
+  String get lookBlurLight => 'হালকা';
+
+  @override
+  String get lookBlurMedium => 'মাঝারি';
+
+  @override
+  String get lookBlurDense => 'ঘন';
+
+  @override
+  String get lookBlurFrosted => 'ঘষা কাচ';
+
+  @override
+  String get lookMotion => 'পেছনের রং নড়বে';
+
+  @override
+  String get lookSearch => 'খুঁজুন';
+
+  @override
+  String get lookQuickActions => 'দ্রুত কাজ';
+
+  @override
+  String lookGreeting(String name) {
+    return 'সুপ্রভাত, $name';
+  }
+
+  @override
+  String get lookTodayWork => 'আজকের কাজ';
 }

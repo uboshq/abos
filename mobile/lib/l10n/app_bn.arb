@@ -16061,5 +16061,70 @@
   "copilotQuickPrivacy": "উত্তর কেবল আপনার চাবির তথ্য থেকে; কথার অডিও কোথাও জমা থাকে না।",
   "@copilotQuickPrivacy": {
     "description": "Copilot quick ask on the phone (owner 12 Nov 2026, sample 3uJhK92DAMhwyELt63mSmr)"
+  },
+  "lookTitle": "চেহারা",
+  "@lookTitle": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookAbos": "ABOS",
+  "@lookAbos": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookGlass": "Liquid Glass",
+  "@lookGlass": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookExpressive": "Material 3",
+  "@lookExpressive": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlur": "কাচের ঝাপসা",
+  "@lookBlur": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlurClear": "স্বচ্ছ",
+  "@lookBlurClear": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlurLight": "হালকা",
+  "@lookBlurLight": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlurMedium": "মাঝারি",
+  "@lookBlurMedium": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlurDense": "ঘন",
+  "@lookBlurDense": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookBlurFrosted": "ঘষা কাচ",
+  "@lookBlurFrosted": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookMotion": "পেছনের রং নড়বে",
+  "@lookMotion": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookSearch": "খুঁজুন",
+  "@lookSearch": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookQuickActions": "দ্রুত কাজ",
+  "@lookQuickActions": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
+  },
+  "lookGreeting": "সুপ্রভাত, {name}",
+  "@lookGreeting": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "lookTodayWork": "আজকের কাজ",
+  "@lookTodayWork": {
+    "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
   }
 }

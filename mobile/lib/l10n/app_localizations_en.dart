@@ -11723,4 +11723,51 @@ class AppL10nEn extends AppL10n {
   @override
   String get copilotQuickPrivacy =>
       'Answers come only from what your keys show; no voice audio is stored anywhere.';
+
+  @override
+  String get lookTitle => 'Look';
+
+  @override
+  String get lookAbos => 'ABOS';
+
+  @override
+  String get lookGlass => 'Liquid Glass';
+
+  @override
+  String get lookExpressive => 'Material 3';
+
+  @override
+  String get lookBlur => 'Glass blur';
+
+  @override
+  String get lookBlurClear => 'Clear';
+
+  @override
+  String get lookBlurLight => 'Light';
+
+  @override
+  String get lookBlurMedium => 'Medium';
+
+  @override
+  String get lookBlurDense => 'Dense';
+
+  @override
+  String get lookBlurFrosted => 'Frosted';
+
+  @override
+  String get lookMotion => 'Moving background';
+
+  @override
+  String get lookSearch => 'Search';
+
+  @override
+  String get lookQuickActions => 'Quick actions';
+
+  @override
+  String lookGreeting(String name) {
+    return 'Good morning, $name';
+  }
+
+  @override
+  String get lookTodayWork => 'Today\'s work';
 }

@@ -29,7 +29,9 @@ import 'core/sync_engine/auto_sync.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
+import 'core/theme/app_look.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/glass.dart';
 import 'core/theme/theme_choice.dart';
 import 'core/permissions/permission_rationale.dart';
 
@@ -63,6 +65,8 @@ Future<void> main() async {
     lockDelay: () async {
       await LockDelay.instance.load();
       await ThemeChoices.instance.load();
+      // ⭐ অ্যাপের রূপ আর কাচের ঝাপসা (0.4.58; মালিক, ২০ নভেম্বর ২০২৬ "ok") — কেবল ফোনের ভাণ্ডার
+      await AppLooks.instance.load();
       ThemeChoices.onChanged = (_) => WidgetHub.refresh();
       // ⭐ ভাষার বাছাই (0.4.43) — উইজেট নতুন ভাষায়, আর সার্ভারে রাখা ([[saveLocale]]; পুরনো সার্ভারে চুপ)
       await LocaleChoices.instance.load();
@@ -267,14 +271,27 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // ⭐ মানুষের ভাষা — চাপ দিলেই পুরো অ্যাপ নতুন ভাষায় ([appLocaleProvider]; সুইচ বন্ধ থাকলে সবসময় বাংলা)
     final locale = ref.watch(appLocaleProvider);
     // ⭐ মানুষের আলো/অন্ধকার বাছাই — চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না ([ThemeChoices])
-    return ValueListenableBuilder<ThemeChoice>(
-      valueListenable: ThemeChoices.instance.current,
-      builder: (context, choice, _) => MaterialApp.router(
+    // ⭐ রূপ (ABOS / Liquid Glass / Material 3) আর কাচের ঝাপসা — চাপ বা দাগ টানলেই বদলায় ([AppLooks]; 0.4.58)
+    return ListenableBuilder(
+      listenable: Listenable.merge([ThemeChoices.instance.current, AppLooks.instance.look, AppLooks.instance.blur]),
+      builder: (context, _) {
+        final choice = ThemeChoices.instance.current.value;
+        final look = AppLooks.instance.look.value;
+        return MaterialApp.router(
         title: 'ABOS',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: choice.mode,
+        // ⓘ Liquid Glass সবসময় কাচের অন্ধকার পটে, Material 3 সবসময় আলোয় — নমুনার মতো; ABOS আগের মতো মানুষের আলো/অন্ধকার
+        theme: switch (look) {
+          AppLook.glass => AppTheme.glass(GlassSpec.current),
+          AppLook.expressive => AppTheme.expressive(),
+          AppLook.abos => AppTheme.light(),
+        },
+        darkTheme: switch (look) {
+          AppLook.glass => AppTheme.glass(GlassSpec.current),
+          AppLook.expressive => AppTheme.expressive(),
+          AppLook.abos => AppTheme.dark(),
+        },
+        themeMode: look == AppLook.abos ? choice.mode : ThemeMode.light,
         /*
          * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
          * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
@@ -283,12 +300,17 @@ class _AbosAppState extends ConsumerState<AbosApp> {
         supportedLocales: AppLocale.supported,
         localizationsDelegates: AppLocale.delegates,
         routerConfig: router,
-        builder: (context, child) => AppLockGate(
-          lock: _lock,
-          onSignOut: () => ref.read(authStateProvider.notifier).logout(),
-          child: child ?? const SizedBox.shrink(),
-        ),
-      ),
+        builder: (context, child) {
+          final gate = AppLockGate(
+            lock: _lock,
+            onSignOut: () => ref.read(authStateProvider.notifier).logout(),
+            child: child ?? const SizedBox.shrink(),
+          );
+          // ⭐ Liquid Glass — সব পাতার পেছনে একই রঙের ছোপ, পাতাগুলো স্বচ্ছ পটে তার উপর ([GlassBackdrop])
+          return look == AppLook.glass ? GlassBackdrop(child: gate) : gate;
+        },
+      );
+      },
     );
   }
 }
