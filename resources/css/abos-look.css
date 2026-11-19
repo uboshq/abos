@@ -1069,3 +1069,44 @@
 @media (max-width: 767px) {
     :root[data-ui='rose'] td[data-pick-col] { text-align: start; }
 }
+
+/* ⭐ ড্যাশবোর্ডের সারি ([[board-arrange.js]]; মালিক, ২০ নভেম্বর ২০২৬, নমুনা 5gynumii "ok") — প্রথম দুই সারি গ্রাফ, এক মাপে; বাকি নিচে,
+   কোনো বক্স পাশের লম্বা বক্সের সমান টেনে লম্বা হয় না */
+:root[data-ui='rose'] [data-board-row] {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: start;
+}
+
+:root[data-ui='rose'] [data-board-row] {
+    width: 100%;
+}
+
+:root[data-ui='rose'] [data-board-row] > section {
+    grid-column: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0;
+    margin: 0;
+}
+
+:root[data-ui='rose'] [data-board-first] {
+    align-items: stretch;
+}
+
+:root[data-ui='rose'] [data-board-first] > section {
+    height: 100%;
+}
+
+@media (max-width: 1023px) {
+    :root[data-ui='rose'] [data-board-row] {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 639px) {
+    :root[data-ui='rose'] [data-board-row] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}

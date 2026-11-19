@@ -21,6 +21,7 @@ import { registerComponents } from './components/index.js'
 import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
 import { bulkBars, pickColumns } from './bulk-bar.js'
+import { arrangeBoards } from './board-arrange.js'
 import { sidebarStore } from './sidebar-state.js'
 import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
@@ -183,6 +184,8 @@ compactPageHead()
 foldPageNotes()
 bulkBars()
 pickColumns()
+// ⭐ ড্যাশবোর্ডের প্রথম পর্দায় গ্রাফ, বাকি নিচে ([[board-arrange.js]])
+arrangeBoards()
 
 window.Alpine = Alpine
 // ⭐ ভাসমান তালিকা পর্দার ভেতরে — Dynamic-এর মডিউল-মেনু ([[keep-on-screen.js]])
