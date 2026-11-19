@@ -1,0 +1,955 @@
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ Dynamic (`dynamic`) — অফিস-ERP-র খোলস, Microsoft Dynamics 365 Business Central-এর হুবহু গড়ন
+   (মালিক, ১৯ নভেম্বর ২০২৬: নমুনা "খ" — "ok final"; "১% কম হলেও চলবে না")।
+
+   ⓘ রং আর কোণ `app/Core/Support/Looks/dynamic.php`-এ (টোকেন); এখানে কেবল যা markup-এর জায়গা আর গড়ন বদলায়:
+     · ৪৮px কালো অ্যাপ-বার (#1e1e1e): বাঁয়ে ওয়াফল আর ABOS-এর লোগো সাদা পাতে; ডানে "Company:", খোঁজা, ঘণ্টা, ⚙, ?
+     · বাঁয়ের রেল নেই — সাদা পাতার মাথায় কোম্পানির নাম (মোটা ১৯px │) আর মডিউলের মেনু আড়াআড়ি ([[shell.dynamic.nav]])
+     · তালিকা: হালকা কাজের সারি (উপরে-নিচে দাগ, সাদামাটা লেখার বোতাম), ঘন ছক — ধূসর ছোট মাথা, ডোরা নেই, টিয়া লিংক,
+       বাছা/ঘষা সারি #b3e5ec
+     · ফর্ম: ৩৮px হালকা শিরোনাম, অংশগুলো "ফাস্ট-ট্যাব" (১৮px মোটা মাথা, নিচে ২px গাঢ় দাগ, ডানে "আরও/কম দেখান"),
+       চওড়া পর্দায় লেবেল · · · · ঘর, চৌকো ঘর ১px #bbb, শুধু-পড়ার মান #e8e8e8
+     · হোম: রোল সেন্টার ([[shell.dynamic.role-center]])
+   ⛔ সব নিয়ম `:root[data-ui='dynamic']`-এর ভিতরে — বাকি দশটা রূপের একটা পিক্সেলও নড়ে না
+     ([[TheOtherNineLooksWereNotTouchedTest]])।
+   ⓘ স্তরহীন (unlayered) — Tailwind-এর utilities-কে জেতে; `!important` কেবল যেখানে markup নিজে inline style বসায় বা
+     ব্যবহারকারীর অ্যাকসেন্ট `<html>`-এ inline আসে।
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='dynamic'] {
+    --dyn-teal: #00788a;
+    --dyn-teal-dark: #005f6d;
+    --dyn-teal-soft: #d9eef1;
+    --dyn-select: #b3e5ec;
+    --dyn-line: #dddddd;
+    --dyn-line-soft: #eeeeee;
+    --dyn-field: #bbbbbb;
+    --dyn-readonly: #e8e8e8;
+    --dyn-head-ink: #505050;
+    --dyn-rule: #333333;
+    --dyn-ink: #212121;
+    --dyn-pad: 32px;
+
+    /* ⓘ Segoe UI → Open Sans → বাংলা অক্ষরের জন্য Hind Siliguri (Segoe-তে বাংলা নেই, ব্রাউজার অক্ষর ধরে পরেরটায় যায়) */
+    --font-sans: 'Segoe UI', 'Open Sans', 'Hind Siliguri', system-ui, sans-serif;
+    --font-heading: 'Segoe UI', 'Open Sans', 'Hind Siliguri', system-ui, sans-serif;
+    --font-bangla: 'Segoe UI', 'Hind Siliguri', 'Open Sans', system-ui, sans-serif;
+
+    /* ⭐ প্রধান রং টিয়া — বোতাম, বাছা ট্যাব, ব্যাজ। ⓘ অ্যাকসেন্ট `<html>`-এ inline আসে, তাই `!important` */
+    --accent-50: 230 244 246 !important;
+    --accent-100: 204 234 238 !important;
+    --accent-400: 51 160 173 !important;
+    --accent-500: 0 120 138 !important;
+    --accent-600: 0 101 117 !important;
+    --accent-700: 0 82 95 !important;
+    --accent-900: 0 50 58 !important;
+    --accent-ink: 255 255 255 !important;
+    --accent-dark: 0 120 138 !important;
+    --accent-dark-600: 76 194 209 !important;
+    --accent-dark-ink: 255 255 255 !important;
+
+    --color-footer: #f3f3f3;
+    --color-footer-border: #dddddd;
+    --color-footer-ink: #505050;
+}
+
+:root[data-ui='dynamic'][data-theme='dark'] {
+    --dyn-teal: #4cc2d1;
+    --dyn-teal-soft: #0f3a40;
+    --dyn-select: #0f4a52;
+    --dyn-line: #3d3d3d;
+    --dyn-line-soft: #333333;
+    --dyn-field: #5a5a5a;
+    --dyn-readonly: #2b2b2b;
+    --dyn-head-ink: #adadad;
+    --dyn-rule: #d0d0d0;
+    --dyn-ink: #f0f0f0;
+    --color-footer: #1b1b1b;
+    --color-footer-border: #3d3d3d;
+    --color-footer-ink: #adadad;
+}
+
+@media (min-width: 1280px) {
+    :root[data-ui='dynamic'] { --dyn-pad: 56px; }
+}
+
+/* ⓘ হোমে পাতাটা দুই পাশে চওড়া ফাঁক রাখে — রোল সেন্টারের মতো (~১০%) */
+@media (min-width: 1100px) {
+    :root[data-ui='dynamic']:has([data-dyn-home]) { --dyn-pad: max(56px, 9.5vw); }
+}
+
+:root[data-ui='dynamic'] body {
+    background: var(--color-surface-card);
+    color: var(--dyn-ink);
+}
+
+/* ══ ১. অ্যাপ-বার ═══════════════════════════════════════════════════════ */
+
+:root[data-ui='dynamic'] [data-topbar] {
+    gap: 4px;
+    padding-inline: 8px 12px !important;
+    border-bottom: 0;
+}
+
+/* রেল নেই, তাই রেলের "≡", রেলের কলামের ⊞, জীবন্ত লোগোর পাত আর কোম্পানির লোগো বারে বসে না;
+   ⓘ ⊞-এর কাজ ওয়াফল করে, "কোথায় কাজ করছি" — ডানে "Company:" */
+:root[data-ui='dynamic'] [data-topbar] :is([data-menu-cell], [data-shell-product], [data-menu-toggle], [data-phone-menu-toggle], [data-shell-logo]) {
+    display: none !important;
+}
+
+:root[data-ui='dynamic'] [data-waffle] {
+    width: 48px;
+    height: 48px;
+    margin-inline-start: -8px;
+    border-radius: 0;
+}
+:root[data-ui='dynamic'] [data-waffle] > span { gap: 3px; }
+:root[data-ui='dynamic'] [data-waffle] > span > span { width: 4px; height: 4px; border-radius: 0; }
+
+:root[data-ui='dynamic'] .dyn-brand {
+    height: 28px;
+    padding: 3px 8px;
+    margin-inline-start: 4px;
+    border-radius: 4px;
+    background: #ffffff;
+}
+:root[data-ui='dynamic'] .dyn-brand img { height: 22px; width: auto; display: block; }
+
+/* ডানের ক্রম: Company · খোঁজা · কোপাইলট · ＋ · অনুমোদন · ঘণ্টা · ছবি · ⚙ · ? */
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-start] { order: 10; margin-inline-start: auto; }
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-search] { order: 11; margin-inline-start: 8px; flex: 0 1 240px; }
+:root[data-ui='dynamic'] [data-topbar] > :not([data-shell-start], [data-shell-search], [data-shell-actions], [data-dyn-settings], [data-dyn-help], [data-dyn-brand], .relative.shrink-0, style) { order: 12; }
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-actions] { order: 13; gap: 2px; }
+:root[data-ui='dynamic'] [data-topbar] > [data-dyn-settings] { order: 14; }
+:root[data-ui='dynamic'] [data-topbar] > [data-dyn-help] { order: 15; }
+
+:root[data-ui='dynamic'] .dyn-appbar-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 48px;
+    color: #ffffff;
+}
+:root[data-ui='dynamic'] .dyn-appbar-icon:hover { background: var(--color-topbar-hover); }
+
+/* "Company:" ছোট দুই লাইনে — উপরে লেবেল, নিচে নাম (শাখা পাশে, সাদামাটা) */
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button {
+    min-height: 40px;
+    padding-inline: 8px;
+    border-radius: 0;
+}
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span {
+    max-width: 16rem;
+}
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span::before {
+    font-size: 10px;
+    line-height: 12px;
+    color: #ffffff;
+}
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span > span:first-child {
+    font-size: 11px !important;
+    font-weight: 400;
+    line-height: 14px;
+    color: #ffffff;
+}
+:root[data-ui='dynamic'] [data-shell-company] [data-shell-branch] {
+    margin-top: 0;
+    padding: 0;
+    border: 0 !important;
+    background: none !important;
+    color: #d6d6d6 !important;
+    font-size: 10px;
+    font-weight: 400;
+}
+:root[data-ui='dynamic'] [data-shell-company] [data-shell-branch] > span:first-child { display: none; }
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > svg { width: 14px; height: 14px; fill: #d6d6d6; }
+
+/* খোঁজা — গাঢ় বারে সরু চৌকো ঘর, ছুঁলে চওড়া */
+:root[data-ui='dynamic'] [data-topbar] [data-search-field] {
+    min-height: 32px;
+    border-radius: 0;
+    border-color: #6b6b6b;
+    background: transparent;
+    transition: width 120ms;
+}
+:root[data-ui='dynamic'] [data-topbar] [data-search-field]:focus-within { background: #ffffff; }
+:root[data-ui='dynamic'] [data-topbar] [data-search-field]:focus-within input { color: #212121; }
+:root[data-ui='dynamic'] [data-topbar] [data-search-field] kbd { display: none; }
+:root[data-ui='dynamic'] [data-topbar] [data-search-panel] { border-radius: 0 !important; }
+
+/* ＋ তৈরি আর বারের বাকি বোতাম — সমতল, সাদা লেখা, চৌকো ঘষা */
+:root[data-ui='dynamic'] [data-topbar] [data-shell-create] > button {
+    min-height: 48px;
+    border-radius: 0;
+    background: transparent;
+    color: #ffffff;
+    font-weight: 400;
+}
+:root[data-ui='dynamic'] [data-topbar] [data-shell-create] > button:hover { background: var(--color-topbar-hover); filter: none; }
+:root[data-ui='dynamic'] [data-topbar] [data-shell-actions] :is(button, a) { border-radius: 0; }
+
+/* বারের ভাসমান তালিকা — চৌকো, হালকা ছায়া */
+:root[data-ui='dynamic'] .pops-onto-page { border-radius: 0 !important; }
+
+/* ══ ২. নেভিগেশনের সারি (রেলের জায়গায়) ════════════════════════════════ */
+
+/* ⛔ রেল লুকায় কেবল যখন নেভিগেশনের সারি সত্যিই আঁকা হয়েছে — নইলে বড় পর্দায় মেনুই থাকত না */
+@media (min-width: 768px) {
+    :root[data-ui='dynamic']:has([data-dyn-nav]) aside[x-data="sidebarFilter"] { display: none !important; }
+}
+
+/* পথের পটি নেই — "কোথায় আছি" মেনুর সারিতে (চলতি মডিউল মোটা) */
+:root[data-ui='dynamic']:has([data-dyn-nav]) [class*='top-(--spacing-header)'][class*='h-(--spacing-field-compact)'] { display: none; }
+
+:root[data-ui='dynamic'] .dyn-nav {
+    order: -1;
+    padding-inline: var(--dyn-pad);
+    background: var(--color-surface-card);
+    font-size: 15px;
+}
+:root[data-ui='dynamic'] .dyn-nav-row {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+    padding-top: 6px;
+}
+:root[data-ui='dynamic'] .dyn-co {
+    flex: none;
+    max-width: 22rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-inline-end: 22px;
+    margin-inline-end: 12px;
+    border-inline-end: 1px solid #c8c8c8;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--color-ink);
+}
+:root[data-ui='dynamic'] .dyn-menus {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
+    align-items: center;
+}
+:root[data-ui='dynamic'] .dyn-menu { position: relative; }
+:root[data-ui='dynamic'] .dyn-menu[hidden] { display: none; }
+:root[data-ui='dynamic'] .dyn-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding-inline: 11px;
+    color: #333333;
+    white-space: nowrap;
+}
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-menu-btn { color: #d6d6d6; }
+:root[data-ui='dynamic'] .dyn-menu-btn:hover,
+:root[data-ui='dynamic'] .dyn-menu-btn[aria-expanded='true'] { background: var(--color-surface-hover); }
+:root[data-ui='dynamic'] .dyn-menu-on { color: var(--color-ink); font-weight: 600; }
+:root[data-ui='dynamic'] .dyn-chev { width: 11px; height: 11px; flex: none; opacity: .8; }
+
+:root[data-ui='dynamic'] .dyn-drop,
+:root[data-ui='dynamic'] .dyn-all-panel {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 50;
+    max-height: 72vh;
+    overflow-y: auto;
+    padding: 12px 8px;
+    border: 1px solid var(--dyn-line);
+    background: var(--color-surface-card);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
+    columns: 3 220px;
+    column-gap: 8px;
+    width: max-content;
+    max-width: min(760px, calc(100vw - 32px));
+    font-size: 14px;
+}
+:root[data-ui='dynamic'] .dyn-drop-group,
+:root[data-ui='dynamic'] .dyn-all-module { break-inside: avoid; padding-bottom: 10px; }
+:root[data-ui='dynamic'] .dyn-drop-head,
+:root[data-ui='dynamic'] .dyn-all-title {
+    padding: 4px 10px 2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+:root[data-ui='dynamic'] .dyn-drop-item {
+    display: block;
+    padding: 4px 10px;
+    color: var(--dyn-ink);
+    white-space: normal;
+}
+:root[data-ui='dynamic'] .dyn-drop-item:hover { background: var(--color-surface-hover); }
+:root[data-ui='dynamic'] .dyn-drop-on { font-weight: 600; color: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-drop-off { color: var(--color-ink-disabled); cursor: not-allowed; }
+
+:root[data-ui='dynamic'] .dyn-all {
+    position: relative;
+    flex: none;
+    margin-inline-start: 10px;
+    padding-inline-start: 10px;
+    border-inline-start: 1px solid #c8c8c8;
+}
+:root[data-ui='dynamic'] .dyn-all-btn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 32px;
+    color: #333333;
+}
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-all-btn { color: #d6d6d6; }
+:root[data-ui='dynamic'] .dyn-all-btn svg { width: 18px; height: 18px; }
+:root[data-ui='dynamic'] .dyn-all-btn:hover,
+:root[data-ui='dynamic'] .dyn-all-btn[aria-expanded='true'] { background: var(--color-surface-hover); }
+:root[data-ui='dynamic'] .dyn-all-panel {
+    columns: 4 200px;
+    max-width: min(1100px, calc(100vw - 32px));
+}
+
+:root[data-ui='dynamic'] .dyn-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 26px;
+    padding: 8px 0 22px;
+    font-size: 15px;
+}
+:root[data-ui='dynamic'] .dyn-links a { color: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-links a:hover { text-decoration: underline; }
+
+/* ফোন — মেনুগুলো সরে কেবল ☰; কোম্পানির নাম ছোট */
+@media (max-width: 767px) {
+    :root[data-ui='dynamic'] .dyn-nav { padding-inline: 16px; }
+    :root[data-ui='dynamic'] .dyn-menus { display: none; }
+    :root[data-ui='dynamic'] .dyn-co { font-size: 17px; max-width: calc(100vw - 96px); }
+    :root[data-ui='dynamic'] .dyn-all-panel {
+        position: fixed;
+        top: auto;
+        inset-inline: 8px;
+        width: auto;
+        max-width: none;
+        columns: 1;
+        max-height: 70vh;
+    }
+    :root[data-ui='dynamic'] .dyn-links { gap: 6px 18px; padding-bottom: 14px; }
+}
+
+/* ══ ৩. পাতার মাথা আর কাজের সারি ══════════════════════════════════════ */
+
+:root[data-ui='dynamic'] main#main {
+    padding-inline: var(--dyn-pad);
+    padding-top: 0;
+}
+:root[data-ui='dynamic'] [data-command-strip] {
+    padding: 0 var(--dyn-pad);
+    border-bottom: 0;
+    background: var(--color-surface-card);
+}
+
+/* ফর্ম ও রেকর্ডের মাথা — বড় হালকা শিরোনাম, তার নিচে সাদামাটা কাজের সারি (উপরে-নিচে দাগ) */
+:root[data-ui='dynamic'] [data-command-strip] > div {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+}
+:root[data-ui='dynamic'] [data-command-strip] :is(h1, h2):first-child,
+:root[data-ui='dynamic'] [data-command-strip] > div > .min-w-0 > :is(h1, h2) {
+    padding: 6px 0 12px;
+    font-size: 38px;
+    font-weight: 300;
+    line-height: 1.2;
+    white-space: normal;
+}
+:root[data-ui='dynamic'] [data-command-strip] [data-page-actions] {
+    gap: 0;
+    padding: 4px 0;
+    border-top: 1px solid var(--dyn-line);
+    border-bottom: 1px solid var(--dyn-line);
+}
+:root[data-ui='dynamic'] [data-command-strip] [data-gold-hairline] { display: none; }
+
+/* সাদামাটা লেখার বোতাম — কাজের সারির সবখানে: কোনো পিল নয়, কোনো জমিন নয় */
+:root[data-ui='dynamic'] :is([data-command-strip] [data-page-actions], .toolbar-view [data-command-bar]) :is(a, button) {
+    min-height: 34px;
+    height: auto;
+    padding: 4px 12px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--dyn-ink) !important;
+    font-size: 14px;
+    font-weight: 400;
+}
+:root[data-ui='dynamic'] :is([data-command-strip] [data-page-actions], .toolbar-view [data-command-bar]) :is(a, button):hover {
+    background: var(--color-surface-hover) !important;
+}
+:root[data-ui='dynamic'] :is([data-command-strip] [data-page-actions], .toolbar-view [data-command-bar]) :is(a, button) svg {
+    color: var(--dyn-teal);
+}
+
+/* হোমের মাথা — শুভেচ্ছা ছোট, পাশে সময় আর ছাঁকনি: একটা হালকা কাজের সারি */
+:root[data-ui='dynamic'] [data-command-strip]:has([data-home-title]) [data-command-head] {
+    padding: 4px 0;
+    border-top: 1px solid var(--dyn-line);
+    border-bottom: 1px solid var(--dyn-line);
+}
+:root[data-ui='dynamic'] [data-command-strip] [data-home-title] {
+    padding: 0 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    line-height: 28px !important;
+}
+
+/* ── তালিকার কাজের সারি — "শিরোনাম: সব ⌄ │ খোঁজা ＋নতুন … │ দৃশ্য …" এক লাইনে ── */
+:root[data-ui='dynamic'] .toolbar-view {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 6px;
+    margin-inline: calc(var(--dyn-pad) * -1);
+    padding: 3px var(--dyn-pad);
+    border-top: 1px solid var(--dyn-line);
+    border-bottom: 1px solid var(--dyn-line);
+    border-radius: 0;
+    background: var(--color-surface-card);
+    box-shadow: none;
+    font-size: 14px;
+}
+:root[data-ui='dynamic'] .toolbar-view > div { display: contents; }
+:root[data-ui='dynamic'] .toolbar-view > div > :is(h1, h2) {
+    font-size: 14px;
+    font-weight: 600;
+    padding-inline-end: 6px;
+}
+:root[data-ui='dynamic'] .toolbar-view [data-record-count] {
+    padding-inline: 10px;
+    border-inline: 1px solid #cccccc;
+    font-size: 13px;
+}
+:root[data-ui='dynamic'] .toolbar-view [data-command-bar] {
+    gap: 0;
+    padding-inline-end: 6px;
+    border-inline-end: 1px solid #cccccc;
+}
+:root[data-ui='dynamic'] .toolbar-view :is(input[type='search'], select) {
+    height: 32px;
+    border-radius: 0;
+    border-color: transparent;
+    background-color: transparent;
+    font-size: 14px;
+}
+:root[data-ui='dynamic'] .toolbar-view :is(input[type='search'], select):is(:hover, :focus) { border-color: var(--dyn-field); }
+:root[data-ui='dynamic'] .toolbar-view :is(button, a, summary) { border-radius: 0; }
+:root[data-ui='dynamic'] .toolbar-view .list-filter-open {
+    border: 0;
+    background: transparent;
+    color: var(--dyn-ink);
+    font-weight: 400;
+}
+:root[data-ui='dynamic'] .toolbar-view .list-filter-chip { border-radius: 2px; }
+
+/* ══ ৪. ছক ════════════════════════════════════════════════════════════ */
+
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) thead tr {
+    background: transparent;
+    border-bottom: 1px solid var(--dyn-line);
+}
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) th {
+    padding: 18px 8px 6px;
+    vertical-align: bottom;
+    color: var(--dyn-head-ink);
+    font-size: 12.5px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr:nth-child(odd) td { background: transparent; }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr { border-bottom: 1px solid var(--dyn-line-soft); }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) td { padding-inline: 8px; }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) :is(td, th):not(:last-child) { border-right: 0; }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr:hover,
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr:hover td,
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr:has(:focus-visible) td,
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tbody tr[aria-selected='true'] td {
+    background: var(--dyn-select) !important;
+}
+:root[data-ui='dynamic'] .ui-list:not(.as-cards) tbody tr:hover [data-row-menu] { background: var(--dyn-select); }
+:root[data-ui='dynamic'] .ui-list:not(.as-cards) [data-row-menu] { box-shadow: none; }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid) tbody a:not([class*='bg-']) { color: var(--dyn-teal); }
+:root[data-ui='dynamic'] :is(.ui-list, .ui-grid):not(.as-cards) tfoot tr { background: transparent; }
+
+/* তালিকার ছকের ফ্রেম — কার্ড নয়, পাতার উপর সরাসরি */
+:root[data-ui='dynamic'] main [data-boxed]:has(> .table-responsive > .ui-list),
+:root[data-ui='dynamic'] main [data-boxed]:has(> .ui-list) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* লাইনের ছক (ফর্মের ভিতরে) — বড় হাতের ছোট মাথা, ঘরে বাক্স */
+:root[data-ui='dynamic'] .ui-lines:not(.as-cards) thead { border-bottom: 1px solid var(--dyn-line); }
+:root[data-ui='dynamic'] .ui-lines:not(.as-cards) th {
+    vertical-align: bottom;
+    color: var(--dyn-ink);
+    font-size: 12.5px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+:root[data-ui='dynamic'] .ui-lines:not(.as-cards) td { border: 1px solid var(--dyn-line-soft); }
+
+/* ══ ৫. ফর্ম — ফাস্ট-ট্যাব, লেবেল · · · ঘর, চৌকো ঘর ═══════════════════ */
+
+:root[data-ui='dynamic'] main section[data-boxed] {
+    padding: 0 0 18px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+:root[data-ui='dynamic'] main section[data-boxed] > h2:first-child {
+    display: flex;
+    align-items: baseline;
+    margin: 0 0 14px;
+    padding: 22px 0 6px;
+    border: 0;
+    border-bottom: 2px solid var(--dyn-rule);
+    background: transparent;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+}
+:root[data-ui='dynamic'] main section[data-boxed] > h2:first-child .dyn-ft-toggle {
+    margin-inline-start: auto;
+    padding-inline-start: 12px;
+    color: var(--dyn-head-ink);
+    font-size: 12.5px;
+    font-weight: 400;
+}
+:root[data-ui='dynamic'] main section[data-boxed][data-dyn-folded] > :not(h2:first-child) { display: none !important; }
+
+:root[data-ui='dynamic'] main :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='hidden']), select, textarea) {
+    border-radius: 0;
+    border-color: var(--dyn-field);
+}
+:root[data-ui='dynamic'] main :is(input, select, textarea):focus {
+    border-color: var(--dyn-teal);
+    outline: 1px solid var(--dyn-teal);
+    outline-offset: -1px;
+}
+:root[data-ui='dynamic'] main :is(input, textarea):is([readonly], :disabled),
+:root[data-ui='dynamic'] main select:disabled {
+    border-color: var(--dyn-readonly);
+    background-color: var(--dyn-readonly);
+}
+
+/* লেবেল · · · · ঘর — চওড়া পর্দায় লেবেল বাঁয়ে, বিন্দুর সারি টেনে ঘর ডানে */
+@media (min-width: 1024px) {
+    :root[data-ui='dynamic'] main div:has(> label.mb-1.block + :is(input, select, textarea, div, span)) {
+        display: grid;
+        grid-template-columns: minmax(150px, 42%) minmax(0, 1fr);
+        column-gap: 10px;
+        align-items: center;
+    }
+    :root[data-ui='dynamic'] main div:has(> label.mb-1.block + :is(input, select, textarea, div, span)) > label.mb-1.block {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        margin: 0;
+        overflow: hidden;
+        color: var(--dyn-ink);
+        font-size: 14px;
+        font-weight: 400;
+        white-space: nowrap;
+    }
+    :root[data-ui='dynamic'] main div:has(> label.mb-1.block + :is(input, select, textarea, div, span)) > label.mb-1.block::after {
+        content: '';
+        flex: 1 1 auto;
+        min-width: 12px;
+        border-bottom: 1px dotted #a0a0a0;
+        transform: translateY(-3px);
+    }
+    :root[data-ui='dynamic'] main div:has(> label.mb-1.block + :is(input, select, textarea, div, span)) > :not(label) { grid-column: 2; }
+}
+
+/* প্রধান বোতাম — টিয়া, চৌকো */
+:root[data-ui='dynamic'] main [data-form-actions] :is(a, button) { border-radius: 0; }
+
+/* পাশের তথ্য (রেকর্ডের ঘর, স্মার্ট বোতাম) — FactBox: বাঁয়ে হালকা দাগ, টিয়া মান */
+:root[data-ui='dynamic'] main [data-smart-buttons] :is(a, button) {
+    border-radius: 0;
+    background: var(--dyn-teal);
+    color: #ffffff;
+    border: 0;
+}
+
+/* ══ ৬. রোল সেন্টার (হোম) ═════════════════════════════════════════════ */
+
+/* রোল সেন্টারে নতুন করে আঁকা অংশগুলো — পুরনো আঁকা লুকায়, হিসাব একই ([[shell.dynamic.role-center]]) */
+:root[data-ui='dynamic']:has([data-dyn-role]) [data-home-unit='kpis'],
+:root[data-ui='dynamic']:has([data-dyn-role]) [data-home-today-work],
+:root[data-ui='dynamic']:has([data-dyn-role]) [data-exception-center] { display: none !important; }
+
+:root[data-ui='dynamic'] .dyn-rc { padding-top: 18px; color: var(--dyn-ink); }
+:root[data-ui='dynamic'] .dyn-rc-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding-bottom: 28px;
+}
+:root[data-ui='dynamic'] .dyn-rc-insight small { display: block; font-size: 13px; color: #333333; }
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-rc-insight small { color: #d0d0d0; }
+:root[data-ui='dynamic'] .dyn-rc-radio { position: absolute; opacity: 0; pointer-events: none; }
+:root[data-ui='dynamic'] .dyn-headline {
+    display: none;
+    margin: 8px 0 0;
+    font-size: 44px;
+    font-weight: 300;
+    line-height: 1.15;
+    color: var(--color-ink);
+}
+:root[data-ui='dynamic'] .dyn-headline b { font-weight: 300; color: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-rc-dots { display: flex; gap: 6px; margin-top: 36px; color: #808080; }
+:root[data-ui='dynamic'] .dyn-rc-dots label {
+    width: 8px;
+    height: 8px;
+    border: 1px solid #808080;
+    border-radius: 50%;
+    cursor: pointer;
+}
+:root[data-ui='dynamic'] .dyn-rc-actions h2 { margin: 0 0 10px; font-size: 13px; font-weight: 400; color: #333333; }
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-rc-actions h2 { color: #d0d0d0; }
+:root[data-ui='dynamic'] .dyn-rc-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
+    gap: 10px 30px;
+    font-size: 15px;
+}
+:root[data-ui='dynamic'] .dyn-rc-actions-grid :is(a, button) {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--dyn-teal);
+    text-align: start;
+}
+:root[data-ui='dynamic'] .dyn-rc-actions-grid :is(a, button):hover { text-decoration: underline; }
+:root[data-ui='dynamic'] .dyn-plus { font-size: 20px; font-weight: 300; line-height: 1; }
+:root[data-ui='dynamic'] .dyn-go { font-size: 17px; line-height: 1; }
+
+:root[data-ui='dynamic'] .dyn-rc-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    padding: 14px 30px;
+    background: var(--dyn-teal-soft);
+    font-size: 16px;
+}
+:root[data-ui='dynamic'] .dyn-rc-banner p { min-width: 0; }
+:root[data-ui='dynamic'] .dyn-rc-banner b { font-weight: 600; margin-inline-end: 4px; }
+:root[data-ui='dynamic'] .dyn-rc-banner-hint { color: var(--dyn-head-ink); font-size: 14px; }
+:root[data-ui='dynamic'] .dyn-rc-banner a {
+    flex: none;
+    margin-inline-start: auto;
+    padding: 8px 22px;
+    background: var(--dyn-teal);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+:root[data-ui='dynamic'] .dyn-rc-banner a:hover { background: var(--dyn-teal-dark); }
+
+:root[data-ui='dynamic'] .dyn-rc-sec {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 22px 0 6px;
+    border-bottom: 2px solid #444444;
+    font-size: 17px;
+    font-weight: 600;
+}
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-rc-sec { border-color: #bbbbbb; }
+:root[data-ui='dynamic'] .dyn-rc-sec svg { width: 12px; height: 12px; }
+:root[data-ui='dynamic'] .dyn-rc-sec-note { margin-inline-start: auto; font-size: 12.5px; font-weight: 400; color: var(--dyn-head-ink); }
+
+:root[data-ui='dynamic'] .dyn-cues {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px 24px;
+    padding: 18px 0 24px;
+    border-bottom: 1px solid var(--dyn-line);
+}
+:root[data-ui='dynamic'] .dyn-cue { min-width: 0; }
+:root[data-ui='dynamic'] .dyn-cue small {
+    display: block;
+    min-height: 36px;
+    font-size: 13.5px;
+    line-height: 18px;
+    color: #333333;
+}
+:root[data-ui='dynamic'][data-theme='dark'] .dyn-cue small { color: #d0d0d0; }
+:root[data-ui='dynamic'] .dyn-cue-v {
+    display: block;
+    font-size: 44px;
+    font-weight: 300;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: var(--color-ink);
+}
+:root[data-ui='dynamic'] .dyn-cue-v.dyn-v-m { font-size: 36px; }
+:root[data-ui='dynamic'] .dyn-cue-v.dyn-v-s { font-size: 28px; line-height: 1.4; }
+:root[data-ui='dynamic'] .dyn-cue-bar { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+:root[data-ui='dynamic'] .dyn-cue-bar i { display: block; width: 100px; height: 4px; }
+:root[data-ui='dynamic'] .dyn-cue-spark { width: 70px; height: 18px; stroke: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-cue-sub { display: block; font-size: 12.5px; color: var(--dyn-head-ink); }
+:root[data-ui='dynamic'] .dyn-up { color: #107c10; font-weight: 600; }
+:root[data-ui='dynamic'] .dyn-down { color: #c50f1f; font-weight: 600; }
+:root[data-ui='dynamic'] .dyn-more { display: inline-flex; gap: 4px; margin-top: 4px; color: var(--dyn-teal); font-size: 14px; }
+:root[data-ui='dynamic'] .dyn-more:hover { text-decoration: underline; }
+
+:root[data-ui='dynamic'] .dyn-bar-bad { background: #c50f1f; }
+:root[data-ui='dynamic'] .dyn-bar-warn { background: #c19c00; }
+:root[data-ui='dynamic'] .dyn-bar-good { background: #00a650; }
+:root[data-ui='dynamic'] .dyn-bar-money { background: var(--dyn-teal); }
+:root[data-ui='dynamic'] .dyn-bar-none { background: #c8c8c8; }
+
+:root[data-ui='dynamic'] .dyn-tiles { display: flex; flex-wrap: wrap; gap: 26px 34px; padding: 22px 0 30px; }
+:root[data-ui='dynamic'] .dyn-tile-group h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+:root[data-ui='dynamic'] .dyn-tile-row { display: flex; flex-wrap: wrap; gap: 6px; }
+:root[data-ui='dynamic'] .dyn-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 122px;
+    height: 138px;
+    padding: 10px;
+    background: var(--dyn-teal);
+    color: #ffffff;
+    font-size: 13px;
+    line-height: 16px;
+}
+:root[data-ui='dynamic'] .dyn-tile:hover { background: var(--dyn-teal-dark); }
+:root[data-ui='dynamic'] .dyn-tile-l {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+:root[data-ui='dynamic'] .dyn-tile-n {
+    margin-top: auto;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.6);
+    font-size: 40px;
+    font-weight: 300;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+:root[data-ui='dynamic'] .dyn-tile[data-level='urgent'] .dyn-tile-n { border-bottom: 4px solid #e8a3a8; }
+:root[data-ui='dynamic'] .dyn-tile-a { padding-top: 6px; font-size: 12px; }
+:root[data-ui='dynamic'] .dyn-tile-grey { background: #e6e6e6; color: #333333; }
+:root[data-ui='dynamic'] .dyn-tile-grey:hover { background: #d6d6d6; }
+:root[data-ui='dynamic'] .dyn-tile-grey .dyn-tile-n { border-bottom: 4px solid #00a650; }
+
+/* হোমের বাকি অংশ — চার্ট আর "সদ্য যা হয়েছে": কার্ড নয়, পাতার অংশ */
+:root[data-ui='dynamic']:has([data-dyn-role]) [data-home-units] [data-boxed] {
+    border-radius: 0;
+    box-shadow: none;
+}
+:root[data-ui='dynamic']:has([data-dyn-role]) [data-business-pictures] { padding-top: 10px; }
+
+@media (max-width: 1099px) {
+    :root[data-ui='dynamic'] .dyn-rc-top { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    :root[data-ui='dynamic'] .dyn-cues { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+    :root[data-ui='dynamic'] .dyn-headline { font-size: 30px; }
+    :root[data-ui='dynamic'] .dyn-rc-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+    :root[data-ui='dynamic'] .dyn-cue-v { font-size: 34px; }
+    :root[data-ui='dynamic'] .dyn-cue-v.dyn-v-m { font-size: 28px; }
+    :root[data-ui='dynamic'] .dyn-cue-v.dyn-v-s { font-size: 22px; }
+    :root[data-ui='dynamic'] .dyn-rc-banner { flex-wrap: wrap; padding: 12px 16px; }
+    :root[data-ui='dynamic'] .dyn-tile { width: calc(50vw - 22px); }
+}
+
+/* ══ ৭. নিচের বার আর খোলার পপআপ — সমতল ════════════════════════════════ */
+
+:root[data-ui='dynamic'] [data-footer] { border-radius: 0; box-shadow: none; }
+:root[data-ui='dynamic'] [data-footer] :is(a, button, span) { border-radius: 0; }
+
+/* ফোনে পাতা কখনো পাশে স্ক্রল করে না */
+@media (max-width: 767px) {
+    :root[data-ui='dynamic'] body { overflow-x: hidden; }
+}
+
+/* ══ ৮. দ্বিতীয় দফা — ছবি মিলিয়ে (১৯ নভেম্বর ২০২৬) ═══════════════════════ */
+
+/* বারের ডানে কেবল ছবির গোল — নাম আর পদ ছবির মেনুর ভিতরে; কোপাইলটের নিচের লেখা নয় */
+:root[data-ui='dynamic'] [data-topbar] [data-profile-identity] { display: none !important; }
+:root[data-ui='dynamic'] [data-topbar] [data-copilot-label],
+:root[data-ui='dynamic'] [data-topbar] .cq-label { display: none; }
+
+@media (max-width: 767px) {
+    :root[data-ui='dynamic'] { --dyn-pad: 16px; }
+    :root[data-ui='dynamic'] [data-topbar] > :is([data-dyn-settings], [data-dyn-help]) { display: none; }
+    :root[data-ui='dynamic'] [data-topbar] [data-shell-actions] { gap: 0; }
+    :root[data-ui='dynamic'] .dyn-all { margin-inline-start: auto; border-inline-start: 0; }
+    :root[data-ui='dynamic'] .dyn-co { border-inline-end: 0; }
+}
+
+/* তালিকার নাম — "নাম ⌄", ছোট মোটা, কাজের সারির ভিতরে */
+:root[data-ui='dynamic'] .toolbar-view [data-view-selector],
+:root[data-ui='dynamic'] .toolbar-view [data-view-menu] > button,
+:root[data-ui='dynamic'] .toolbar-view h1 button,
+:root[data-ui='dynamic'] .toolbar-view h2 button {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 32px;
+}
+
+/* সারির মেনু — বাক্স নয়, ছোট ⋯ */
+:root[data-ui='dynamic'] .ui-list:not(.as-cards) tbody td button[aria-haspopup] {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+:root[data-ui='dynamic'] .ui-list:not(.as-cards) [data-row-menu] { background: transparent; }
+
+/* তালিকার রঙিন কার্ড → কিউ: সাদা, বড় হালকা সংখ্যা, নিচে রঙের দাগ (রংটা কার্ডেরই) */
+:root[data-ui='dynamic'] .list-cards { gap: 0 24px; margin-bottom: 4px; }
+:root[data-ui='dynamic'] .list-card {
+    display: block;
+    padding: 10px 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--dyn-ink);
+    transform: none !important;
+}
+:root[data-ui='dynamic'] .list-card::after {
+    top: auto;
+    bottom: 6px;
+    right: auto;
+    left: 0;
+    width: 100px;
+    height: 4px;
+    border-radius: 0;
+    background: var(--a);
+}
+:root[data-ui='dynamic'] .list-card.is-on { background: var(--dyn-select); box-shadow: none; }
+:root[data-ui='dynamic'] .list-card-icon { display: none; }
+:root[data-ui='dynamic'] .list-card-label { font-size: 13.5px; opacity: 1; color: #333333; }
+:root[data-ui='dynamic'][data-theme='dark'] .list-card-label { color: #d0d0d0; }
+:root[data-ui='dynamic'] .list-card-value { font-size: 34px; font-weight: 300; line-height: 1.2; }
+:root[data-ui='dynamic'] .list-card-sub { font-size: 12.5px; opacity: 1; color: var(--dyn-head-ink); }
+
+/* টাকার ফর্মের রঙিন পট্টি → ফাস্ট-ট্যাবের মাথা */
+:root[data-ui='dynamic'] main [data-form-band] {
+    margin: 0 0 14px !important;
+    padding: 22px 0 6px;
+    border-bottom: 2px solid var(--dyn-rule);
+    border-radius: 0 !important;
+    background: transparent;
+    color: var(--color-ink);
+    font-size: 18px;
+    font-weight: 600;
+}
+:root[data-ui='dynamic'] main .money-fold:not([open]) > summary > [data-form-band] { margin-bottom: 0 !important; }
+:root[data-ui='dynamic'] main .money-fold-peek { border-radius: 0; background: var(--color-surface-muted); color: var(--dyn-head-ink); }
+:root[data-ui='dynamic'] main section[data-boxed] > h2[data-form-band]:first-child { padding-top: 22px; }
+
+/* হিসাবের পাতার রঙের ছোপ — এই রূপে সাদা পাতা, ধূসর ছকের মাথা */
+:root[data-ui='dynamic'] main [data-page-kind] {
+    --kind-soft: var(--color-surface-card);
+    --kind-faint: var(--color-surface-card);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+:root[data-ui='dynamic'] main [data-page-kind] [data-boxed] { border-top: 0; }
+:root[data-ui='dynamic'] main [data-page-kind] [data-boxed] thead th { background: transparent; color: var(--dyn-head-ink); }
+:root[data-ui='dynamic'] main [data-page-kind] [data-boxed] tbody > tr > td:first-child { box-shadow: none; }
+:root[data-ui='dynamic'] main [data-page-kind] [data-money-hero] { background: transparent; color: var(--color-ink); }
+:root[data-ui='dynamic'] main [data-page-kind] .toolbar-view { background: var(--color-surface-card); }
+
+/* ফর্মের প্রধান ও সাধারণ বোতাম — চৌকো */
+:root[data-ui='dynamic'] main :is(button, a)[class*='rounded'] { border-radius: 0; }
+:root[data-ui='dynamic'] main .rounded-full { border-radius: 9999px; }
+
+/* খোলার সময়ের পপআপ — চৌকো ডায়ালগ */
+:root[data-ui='dynamic'] [data-day-popup] :not(.rounded-full) { border-radius: 0 !important; }
+
+/* বাছা কার্ড — জমিন নয়, টিয়া মোটা নাম (BC-র বাছা কিউ) */
+:root[data-ui='dynamic'] .list-card.is-on { background: transparent; }
+:root[data-ui='dynamic'] .list-card.is-on .list-card-label { color: var(--dyn-teal); font-weight: 600; }
+
+/* টাকার ফর্মের ডানের তিন কার্ড — রঙিন মাথা নয়, FactBox-এর মোটা লেখা আর নিচে দাগ */
+:root[data-ui='dynamic'] main [data-page-kind] [data-voucher-aside] > :is(section, [data-boxed]) > h2,
+:root[data-ui='dynamic'] main [data-page-kind] [data-voucher-ledger] > div:first-child {
+    margin: 0 0 12px !important;
+    padding: 22px 0 6px;
+    border-bottom: 2px solid var(--dyn-rule);
+    border-radius: 0;
+    background: transparent !important;
+    color: var(--color-ink) !important;
+    font-size: 18px;
+    font-weight: 600;
+}
+:root[data-ui='dynamic'] main [data-page-kind] [data-voucher-aside] {
+    padding-inline-start: 18px;
+    border-inline-start: 1px solid var(--dyn-line-soft);
+}
+:root[data-ui='dynamic'] main [data-page-kind] [data-voucher-aside] > :is(section, [data-boxed]) { padding-inline: 0; }
+:root[data-ui='dynamic'] main [data-page-kind] :is([data-voucher-general], [data-voucher-money-grid], [data-voucher-cut-row]) :is(select, input) {
+    background-color: var(--color-surface-card);
+}
+:root[data-ui='dynamic'] main .money-net { border-radius: 0; }
+:root[data-ui='dynamic'] main [data-page-kind] [data-part='bar'] { border-top: 0; }
+
+/* ফোনে বারটা ৪০০px-এ ধরে — ওয়াফল সরু, ＋-এর ফাঁক কম (＋ থাকে: নিচের বারের ＋ এটাকেই খোলে) */
+@media (max-width: 767px) {
+    :root[data-ui='dynamic'] [data-waffle] { width: 40px; }
+    :root[data-ui='dynamic'] .dyn-brand { margin-inline-start: 0; padding-inline: 6px; }
+    :root[data-ui='dynamic'] [data-topbar] [data-shell-create] > button { padding-inline: 6px; gap: 2px; }
+    :root[data-ui='dynamic'] [data-topbar] [data-shell-create] > button > svg:last-child { display: none; }
+    :root[data-ui='dynamic'] [data-topbar] { padding-inline: 4px 6px !important; gap: 0; }
+}
+
+/* নিচের বারের চলন্ত লেখা বারের ভিতরেই — ফোনে পাতা পাশে সরত (৪০০px-এ ১৬px) */
+:root[data-ui='dynamic'] [data-footer] { overflow: hidden; }
+@media (max-width: 767px) {
+    :root[data-ui='dynamic'] { overflow-x: clip; }
+}
+
+/* পাতার নিজের বড় শিরোনাম — হালকা ৩০০, BC-র কাগজের নামের মতো */
+:root[data-ui='dynamic'] main h1:not(.sr-only) { font-weight: 300; }
+:root[data-ui='dynamic'] main > div > :is(h1, div):first-child { margin-top: 10px; }
+
+/* তালিকার কাজের সারিতে বর্ণনা এক লাইনে, কাটা — BC-তে কেবল নাম থাকে */
+:root[data-ui='dynamic'] .toolbar-view [data-record-count] {
+    max-width: 22rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+:root[data-ui='dynamic'] .toolbar-view [data-filter-toggle] { box-shadow: none !important; }
+
+/* তালিকার ফ্রেম (খালি তালিকাসহ) — বাক্স নয় */
+:root[data-ui='dynamic'] main [data-boxed]:has(.ui-list, [data-empty]) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}

@@ -157,8 +157,9 @@
     {{-- কোনটা কার নকল — এটাই এখানকার সবচেয়ে কাজের তথ্য।
 
          যিনি বিশ বছর SAP চালিয়েছেন তিনি "টাইলস" নামটা চেনেন না,
-         কিন্তু "SAP Fiori" দেখলেই জানেন কোনটা তাঁর। --}}
-    @if ($ui['imitates'])
+         কিন্তু "SAP Fiori" দেখলেই জানেন কোনটা তাঁর।
+         ⛔ Dynamic-এর নিচে অন্য কোম্পানির নাম নয় — মালিক, ১৯ নভেম্বর ২০২৬: পর্দায় কোথাও Microsoft-এর নাম বা লোগো থাকবে না। --}}
+    @if ($ui['imitates'] && ! ($key === \App\Core\Support\DynamicLook::KEY && \App\Core\Support\DynamicLook::on()))
         <span class="inline-flex w-fit rounded-(--radius-field) bg-(--color-surface-sunken)
                      px-2 py-0.5 text-2xs text-(--color-ink-muted)">
             {{ __('core.ui.like', ['erp' => $ui['imitates']]) }}
