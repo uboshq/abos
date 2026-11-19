@@ -19357,6 +19357,12 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'আজকের কাজ'**
   String get lookTodayWork;
+
+  /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা জমার খবর'**
+  String get lookQuickDeposit;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

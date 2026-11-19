@@ -14,6 +14,10 @@ import '../../core/navigation/top_bar/abos_top_bar.dart' show AvatarDisc;
 import '../../core/navigation/top_bar/top_bar_context.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/theme/app_look.dart';
+import '../../core/theme/expressive.dart';
+import '../../core/theme/glass.dart';
 import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/totals_bar.dart';
 
@@ -57,11 +61,17 @@ class AbosBottomBar extends ConsumerWidget {
     required this.selected,
     required this.badges,
     required this.onSelect,
+    this.onSearch,
+    this.onQuick,
   });
 
   final NavTab selected;
   final NavBadges badges;
   final ValueChanged<NavTab> onSelect;
+
+  /// Liquid Glass-এর খোঁজার কাচের বল, আর Material 3-এর ＋ (দ্রুত কাজ) — ABOS রূপে কোনোটাই আঁকা হয় না
+  final VoidCallback? onSearch;
+  final VoidCallback? onQuick;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +86,8 @@ class AbosBottomBar extends ConsumerWidget {
       tabs: tabs,
       selected: tabs.contains(shown) ? shown : null,
       badges: _badgesOf(badges),
+      onSearch: onSearch,
+      onQuick: onQuick,
       onSelect: (tab) {
         switch (tab) {
           case BarTab.home:
@@ -379,6 +391,8 @@ class RoleBottomBar extends StatelessWidget {
     required this.selected,
     required this.badges,
     required this.onSelect,
+    this.onSearch,
+    this.onQuick,
   });
 
   final List<BarTab> tabs;

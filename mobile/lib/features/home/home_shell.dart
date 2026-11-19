@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,6 +48,7 @@ import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
 import 'module_pages.dart';
+import '../../core/theme/app_look.dart';
 import 'nav_bottom_bar.dart';
 import 'nav_search.dart';
 import 'notice_ticker.dart';
@@ -502,6 +504,66 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ));
   }
 
+  /// ⭐ দ্রুত কাজ — Material 3-এর ＋ (আর পরে ≡) এক চাপে রোজের কাজ: টাকা জমার খবর, নতুন অর্ডার, আদায়, অনুমোদন, দোকান খুঁজুন
+  /// (মালিক, ২০ নভেম্বর ২০২৬ "ok", নমুনা Ash6Ev6q)। ⓘ যে পাতার চাবি নেই, তা পাতার নিজের দরজাই থামায় ([ModuleGateView])।
+  Future<void> _openQuick() async {
+    final l10n = context.l10n;
+    final items = <(IconData, String, String)>[
+      (Symbols.payments, l10n.lookQuickDeposit, 'deposits'),
+      (Symbols.add_shopping_cart, l10n.navScreenNewOrder, 'new-order'),
+      (Symbols.savings, l10n.navTabCollections, 'collections'),
+      (Symbols.approval, l10n.navScreenApprovals, 'approvals'),
+      (Symbols.storefront, l10n.navScreenCustomers, 'customers'),
+    ];
+    final path = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(l10n.lookQuickActions, style: Theme.of(sheet).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                for (final (i, (icon, label, to)) in items.indexed)
+                  Material(
+                    key: ValueKey('quick-$to'),
+                    color: i == 0 ? Theme.of(sheet).colorScheme.primary : Theme.of(sheet).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(i.isEven ? 22 : 14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(i.isEven ? 22 : 14),
+                      onTap: () => Navigator.of(sheet).pop(to),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Icon(icon, size: 28, color: i == 0 ? Theme.of(sheet).colorScheme.onPrimary : null),
+                          const SizedBox(height: 6),
+                          Text(label,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12.5,
+                                  color: i == 0 ? Theme.of(sheet).colorScheme.onPrimary : null)),
+                        ]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (path != null && mounted) await (widget.openPath ?? _push)(path);
+  }
+
   Future<void> _openSearch({BuildContext? from}) async {
     final pick = await showSearch<NavPick?>(
       context: from ?? context,
@@ -591,6 +653,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _ => NavTab.modules,
     };
     final counts = _counts;
+    // ⓘ রূপ বদলালে থিম বদলায় — তাতে এই পাতাও নতুন করে আঁকা হয়
+    Theme.of(context);
+    final look = AppLooks.instance.look.value;
 
     return PopScope(
       // ⭐ অ্যান্ড্রয়েডের "পিছনে" — সবসময় এক ধাপ উপরে; হোমে থাকলে তবেই অ্যাপ বন্ধ
@@ -600,6 +665,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         if (!didPop && up != null) _setPage(up);
       },
       child: Scaffold(
+        // ⭐ Liquid Glass আর Material 3-এ নিচের বার ভাসে — পাতা তার নিচ দিয়ে যায় (0.4.58)
+        extendBody: look != AppLook.abos,
+        backgroundColor: look == AppLook.glass ? Colors.transparent : null,
         // ⭐ উপরের বার — মালিকের নকশা ৩ আর পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬): সব পাতায় "কোম্পানি · শাখা ▾",
         // ভেতরের পাতায় "› মডিউল › পাতা"; ডানে খোঁজা, বিজ্ঞপ্তি, নিজের ছবি ([AbosTopBar])
         appBar: AbosTopBar(
@@ -691,6 +759,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
         bottomNavigationBar: AbosBottomBar(
           selected: tab,
+          onSearch: _openSearch,
+          onQuick: _openQuick,
           badges: NavBadges(
               pending: _pending, pendingMore: _pendingMore, unread: _unread),
           onSelect: (selected) async {

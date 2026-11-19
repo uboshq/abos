@@ -11770,4 +11770,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get lookTodayWork => 'Today\'s work';
+
+  @override
+  String get lookQuickDeposit => 'Report a deposit';
 }

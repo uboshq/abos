@@ -11595,4 +11595,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get lookTodayWork => 'আজকের কাজ';
+
+  @override
+  String get lookQuickDeposit => 'টাকা জমার খবর';
 }
