@@ -968,3 +968,47 @@
     border: 1px solid var(--abos-line, var(--color-border)) !important;
     background: var(--color-surface-card) !important;
 }
+
+/* ⭐ একসাথে কাজের বার — কিছু বাছলে তবেই, গাঢ় নীল, সাদা লেখা ([[bulk-bar.js]]; মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3 "ok") */
+:root[data-ui='rose'] form[data-bulk-wired] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 8px 14px;
+    border: 0;
+    background: #1b3f9e;
+    color: #ffffff;
+}
+
+:root[data-ui='rose'] form[data-bulk-wired][hidden] {
+    display: none;
+}
+
+:root[data-ui='rose'] form[data-bulk-wired] [data-bulk-count] {
+    font-weight: 700;
+    font-size: 13.5px;
+    padding-inline-end: 6px;
+}
+
+:root[data-ui='rose'] form[data-bulk-wired] :is(button, a) {
+    min-height: 30px;
+    border: 1px solid rgb(255 255 255 / 0.55);
+    border-radius: 999px;
+    background: transparent;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+:root[data-ui='rose'] form[data-bulk-wired] :is(button, a):hover {
+    background: rgb(255 255 255 / 0.14);
+}
+
+:root[data-ui='rose'] form[data-bulk-wired] > span:not([data-bulk-count]) {
+    color: rgb(255 255 255 / 0.8);
+}
+
+:root[data-ui='rose'] tr[data-picked] > td {
+    background: #dbe7ff !important;
+}

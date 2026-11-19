@@ -618,6 +618,11 @@ return [
         'refused' => 'This paper cannot be opened here — you have no permission, it belongs to another company or branch, or it is gone.',
     ],
 
+    // the list's bulk-action bar ([[bulk-bar.js]]; owner, 19 Nov 2026)
+    'bulk' => [
+        'count' => ':n selected',
+        'all' => 'Select all on this page',
+    ],
     'table' => [
         'range' => ':from - :to of :total',
         'page_total' => 'This page',
