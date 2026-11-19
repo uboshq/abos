@@ -67,7 +67,14 @@ class WorkspaceController extends Controller
          * পর্দাতেই আসার কথা। সুইচ এখন কেবল মডিউলের ড্যাশবোর্ডের নতুন রূপ বাঁধে; চার্ট সারিতে তাই সুইচ বন্ধে
          * মডিউলের পুরনো প্রথম চার্ট, চালুতে নতুনটা।
          */
-        return view('workspace.home', [
+        /*
+         * ⭐ গোটা-ব্যবসার বোর্ড কেবল নতুন "ABOS"-এ ([[Ui::home()]]); বাকি সব রূপ আগের হোম হুবহু পায় — মালিকের নিয়ম, ১৯ নভেম্বর
+         * ২০২৬: অন্য রূপের নকশা এক পিক্সেলও বদলাবে না। ⓘ বোর্ডের কোয়েরিও কেবল তখন চলে।
+         */
+        $board = \App\Core\Support\Ui::home(\App\Core\Support\LookRegistry::lookFor(
+            \App\Core\Support\LookPreview::orChosen($request->user()?->ui))) === 'board';
+
+        return view($board ? 'workspace.home-abos' : 'workspace.home', [
             'menu' => $menu,
 
             /*
@@ -134,8 +141,8 @@ class WorkspaceController extends Controller
              * ১৯ নভেম্বর ২০২৬)। ⓘ কোর কোনো সংখ্যা গোনে না — উত্তর মডিউলের ([[\App\Core\Contracts\HomeBoard]]); বাছা সময় আর ছাঁকনি
              * ভিতরে চালু, যেমন মূল সূচকে।
              */
-            'board' => $filter->during(fn () => \App\Core\Dashboard\HomePeriod::during($period,
-                fn () => app(\App\Core\Contracts\HomeBoard::class)->for($request->user(), $period))),
+            'board' => $board ? $filter->during(fn () => \App\Core\Dashboard\HomePeriod::during($period,
+                fn () => app(\App\Core\Contracts\HomeBoard::class)->for($request->user(), $period))) : null,
         ]);
     }
 

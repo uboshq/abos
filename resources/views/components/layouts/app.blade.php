@@ -333,11 +333,9 @@
                 (`chrome/*`-এর `page-head`), তাই ওখানে এটা বসালে দুইটা
                 ট্যাব বার হত — একটার নিচে আরেকটা।
             --}}
-            {{-- ⓘ "ABOS"-এ (১৯ নভেম্বর ২০২৬) এই সারির কোনোটাই নেই — নমুনায় মেনু আর কাজের প্যানেল সরাসরি ([[Ui::pathBar()]]) --}}
-            @php $pathBar = \App\Core\Support\Ui::pathBar($shellLook); @endphp
-            @if ($pathBar === 'modulebar')
+            @if (\App\Core\Support\Ui::pathBar($shellLook) === 'modulebar')
                 <x-shell.modulebar :menu="$menu ?? []" />
-            @elseif ($pathBar === 'crumbs')
+            @elseif (\App\Core\Support\Ui::pathBar($shellLook) === 'crumbs')
                 <x-shell.crumbbar :menu="$menu ?? []" />
             @endif
 

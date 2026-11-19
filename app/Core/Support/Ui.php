@@ -59,8 +59,8 @@ final class Ui
     */
     /*
        ⭐ ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট `rose` — নাম "ABOS" (মালিকের অনুমোদিত নমুনা, claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)।
-       ⓘ `blue`-তে বসা সবাই (ঘরের আগের ডিফল্ট — "নিজে বেছেছেন" আর "কিছু বাছেননি" আলাদা করা যায় না) মাইগ্রেশনে `rose`-এ ওঠেন
-       (`2027_04_20_100000_the_new_abos_look_becomes_the_first_look`); যিনি অন্য কিছু বেছেছেন তিনি সেটাতেই থাকেন।
+       ⓘ মালিক, ১৯ নভেম্বর ২০২৬: "একদম সবার জন্য" — মাইগ্রেশনে সবাই `rose`-এ ওঠেন (আগের মান JSON-এ রাখা, ফেরার পথে ফেরে)
+       (`2027_04_20_100000_the_new_abos_look_becomes_the_first_look`); পরে যে কেউ নিজে অন্য রূপ বাছতে পারেন।
     */
     public const DEFAULT = 'rose';
 
@@ -280,6 +280,9 @@ final class Ui
                 // ⭐ কেবল এই রূপে — বাঁয়ের আইকন-রেল নেই, পাতার মাথায় মডিউল-বার বা পথ নেই ([[moduleRail()]], [[pathBar()]])
                 'rail' => 'none',
                 'pathbar' => 'none',
+                // ⭐ কেবল এই রূপে — নিচের বারে নীল "Notice" ([[tickerTag()]]) আর হোমে গোটা-ব্যবসার বোর্ড ([[home()]])
+                'ticker' => 'tag',
+                'home' => 'board',
             ],
             'tiles' => [
                 'label' => 'core.ui.tiles',
@@ -591,6 +594,24 @@ final class Ui
         $look = self::clean($key);
 
         return self::all()[$look]['pathbar'] ?? (self::wearsAbosShell($look) ? 'modulebar' : 'crumbs');
+    }
+
+    /**
+     * ⭐ নিচের বারের চলন্ত নোটিশের আগে রূপের নিজের চিহ্ন বসে কি না — কেবল "ABOS" (১৯ নভেম্বর ২০২৬)।
+     * ⛔ মালিকের নিয়ম (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না — তাই অন্যদের বেলায় জায়গাটা ডাকাই হয় না।
+     */
+    public static function tickerTag(?string $key): bool
+    {
+        return (self::all()[self::clean($key)]['ticker'] ?? 'plain') === 'tag';
+    }
+
+    /**
+     * ⭐ হোমের পাতা — `board` (গোটা-ব্যবসার বোর্ড, `workspace.home-abos`) কেবল "ABOS"-এ; বাকি সবার আগের হোম হুবহু
+     * (`workspace.home`, bf90c405b-এর মতো)। ⛔ মালিকের নিয়ম (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না।
+     */
+    public static function home(?string $key): string
+    {
+        return self::all()[self::clean($key)]['home'] ?? 'classic';
     }
 
     public static function panelIsDark(?string $key): bool

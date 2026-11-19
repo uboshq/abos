@@ -401,7 +401,14 @@
         overscroll-behavior: contain;
     }
 
-    /* ⓘ পাতা আর নিজে স্ক্রল করে না — একটাই স্ক্রলবার, প্যানেলের */
+    /* ⓘ পাতা আর নিজে স্ক্রল করে না — একটাই স্ক্রলবার, প্যানেলের।
+       ⓘ html-এও আটকানো: শুধু body-তে দিলে overflow পুরো জানালায় চলে যায়, আর কিবোর্ডে কোনো ঘরে গেলে জানালাটা সরে নিচে নীল
+         ফাঁকা দেখাত (স্থানীয় পরীক্ষা, ১৯ নভেম্বর ২০২৬) */
+    :root[data-ui='rose'] {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
     :root[data-ui='rose'] body {
         height: 100dvh;
         overflow: hidden;
@@ -507,10 +514,15 @@
     background: rgb(255 255 255 / 0.14);
 }
 
-/* ── কার্ড — দাগ নেই, নরম ছায়া ─────────────────────────────────────────── */
-:root[data-ui='rose'] [data-boxed],
-:root[data-ui='rose'] [data-money-position] {
+/* ── কার্ড — দাগ নেই, নরম ছায়া; ⛔ কিন্তু ঘরের রঙিন মাথা আর টাকার বাক্সের সোনালি পাড় থাকে (মালিক, ১৯ নভেম্বর ২০২৬: "মাল্টি কালার
+   ভাইব") — সেগুলো home-board.css-এ, তাই এখানে কেবল পাশের দাগ মোছা ─────────────────────────────────────────── */
+:root[data-ui='rose'] [data-boxed]:not(.hb-tile):not(.hb-cash) {
     border-color: transparent;
+}
+
+:root[data-ui='rose'] .hb-tile {
+    border-inline-color: transparent;
+    border-bottom-color: transparent;
 }
 
 /* ── ফোন: কাজের প্যানেল উপরে গোল, পুরো পর্দায় ─────────────────────────────────── */

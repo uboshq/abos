@@ -156,6 +156,29 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
 
     // ── সাহায্য ─────────────────────────────────────────────────────────
 
+    /**
+     * ⛔ মালিকের নিয়ম (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না — বোর্ড কেবল "ABOS"-এ; বাকি সবার আগের হোম
+     * (`workspace.home`, bf90c405b-এর হুবহু), আর বোর্ডের কোয়েরি চলেই না।
+     */
+    public function test_every_other_look_keeps_its_old_home(): void
+    {
+        foreach (['navy', 'blue', 'dynamic', 'tiles'] as $look) {
+            $this->owner->forceFill(['ui' => $look])->save();
+            $response = $this->actingAs($this->owner->fresh())->get(route('dashboard'))->assertOk();
+            $html = (string) $response->getContent();
+
+            $response->assertViewIs('workspace.home');
+            $this->assertNull($response->viewData('board'), "⛔ {$look}: বোর্ডের কোয়েরি চলেছে।");
+            $this->assertStringNotContainsString('data-home-board-charts', $html, "⛔ {$look}: নতুন বোর্ড অন্য রূপে বসেছে।");
+            $this->assertStringNotContainsString('data-module-picker', $html, "⛔ {$look}: মডিউল-তালিকা অন্য রূপে বসেছে।");
+            $this->assertStringNotContainsString('data-notice-tag', $html, "⛔ {$look}: নোটিশের চিহ্ন অন্য রূপে বসেছে।");
+            $this->assertStringContainsString('hm-pictures', $html, "⛔ {$look}: আগের হোমের চার্টের সারি নেই।");
+        }
+
+        $this->owner->forceFill(['ui' => 'rose'])->save();
+        $this->actingAs($this->owner->fresh())->get(route('dashboard'))->assertOk()->assertViewIs('workspace.home-abos');
+    }
+
     private function sellToday(): void
     {
         app(DirectSaleService::class)->complete(

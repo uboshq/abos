@@ -3,9 +3,12 @@
    গ্রাফ আগে (৮টা, চারটা করে দুই সারি) → ৮টা ঘর আর বড় টাকার বাক্স → তিন তালিকা → সব প্রতিষ্ঠান → আজ যা করতে হবে → নজরে রাখুন,
    সদ্য যা হয়েছে ([[workspace.home]], [[x-dashboard.board-chart]])।
 
-   ⓘ সব রূপে একই গড়ন — পাতা রূপ চেনে না ([[EveryScreenObeysTheThemeTest]]); রং আর কোণ টোকেনে, তাই রূপ বদলালে নিজে বদলায়।
+   ⛔ কেবল "ABOS"-এ (`[data-ui='rose']`, নিচের মোড়ক) — বোর্ডটা কেবল ওই রূপেই আঁকা হয় ([[Ui::home()]]), আর মালিকের নিয়ম
+   (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না।
    ⓘ মাপ px-এ — এই অ্যাপে 1rem = 20px।
    ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='rose'] {
 
 .hb-section { display: grid; gap: 14px; margin-bottom: 14px; }
 
@@ -156,4 +159,39 @@
     .hb-donut { grid-template-columns: minmax(0, 1fr); }
     .hb-donut svg { justify-self: center; }
     .hb-cash .hb-v { font-size: 22px; }
+}
+
+/* ── ⭐ মাল্টি কালার ভাইব — মালিক, ১৯ নভেম্বর ২০২৬ ("হাতে, ব্যাংকে, পথে … গোল্ডেন কালারের শেড … সবগুলো বক্সের মধ্যে একটা কালারিং");
+   নমুনার হুবহু মান (abossample/index.html) ────────────────────────────────────────────────────── */
+.hb-cash { border-color: #f0b429; }
+.hb-parts div[data-part="1"] i { background: #f59e0b; }
+.hb-parts div[data-part="2"] i { background: #db2777; }
+.hb-parts div[data-part="3"] i { background: #2563eb; }
+.hb-parts div[data-part="4"] i { background: #94a3b8; }
+.hb-io { background: #fdf5e6; }
+
+.hb-row[data-tint='blue'] { background: #eff6ff; }
+.hb-row[data-tint='brand'] { background: #e8f0ff; }
+.hb-row[data-tint='green'] { background: #ecfdf5; }
+.hb-row[data-tint='yellow'] { background: #fffbeb; }
+.hb-row[data-tint='red'] { background: #fef2f2; }
+.hb-row[data-tint='orange'] { background: #fff7ed; }
+.hb-row[data-tint='lemon'] { background: #fefce8; }
+.hb-row[data-tint='cyan'] { background: #ecfeff; }
+
+.hb-todo-item[data-level='urgent'] { background: #fef2f2; }
+.hb-todo-item[data-level='today'] { background: #fff7ed; }
+.hb-todo-item[data-level='week'] { background: #fffbeb; }
+.hb-todo-item[data-level='ok'] { background: #f0fdf4; }
+.hb-todo-item[data-level='urgent'] > b { color: #c50f1f; }
+.hb-todo-item[data-level='today'] > b { color: #bc4b09; }
+.hb-todo-item[data-level='week'] > b { color: #a16207; }
+.hb-todo-item[data-level='ok'] > b { color: #107c10; }
+
+.hb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+}
+
+/* ⓘ অন্ধকারে রঙের ছোপ গাঢ় জমিনে — একই রং, কম আলো */
+:root[data-ui='rose'][data-theme='dark'] {
+    .hb-io, .hb-row, .hb-todo-item { background: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) !important; }
 }

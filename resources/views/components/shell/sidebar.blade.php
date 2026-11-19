@@ -221,12 +221,7 @@
             {{-- ⭐ এক সারির রেল, প্রতিটা আইকনের নিচে নাম; "⋯ আরও" নেই — মাউস রেখে চাকা ঘোরালে বাকি মডিউল আসে, স্ক্রলবার দেখা যায় না
                  (মালিক, ৬ নভেম্বর ২০২৬: "modiule bar eklinei hobe but niche nam soho … kono scrol bar thakbe na")। ⓘ পাশের তালিকা রেলের
                  ভিতরে নয়, পর্দার গায়ে বসে ([[rail-fit.js]] `place()`), নইলে স্ক্রলের ঘর তাকে কেটে দিত। --}}
-            {{-- ⭐ "ABOS" রূপে (১৯ নভেম্বর ২০২৬) রেলটা নেই — মডিউল বদলায় মেনুর নিচের তালিকায় ([[Ui::moduleRail()]], chrome/rose-এর rail-foot) --}}
-            @php
-                $hasRail = Ui::moduleRail(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui))) !== 'none';
-            @endphp
-            @if ($hasRail)
-            <nav class="rail-scroll flex min-h-0 w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
+            @if (Ui::moduleRail(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui))) !== 'none')<nav class="rail-scroll flex min-h-0 w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
                         overflow-y-auto overflow-x-hidden overscroll-contain border-e border-black/10 bg-(--color-sidebar) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}"
                  x-data="railFit" data-rail data-save="{{ route('rail.layout') }}"
@@ -663,8 +658,8 @@
                         </div>
                     </div>
                 </dialog>
-            </nav>
-            @endif
+            </nav>@endif
+
 
             {{-- তালিকা — শুধু চলতি মডিউলের পাতা।
 

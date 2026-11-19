@@ -570,6 +570,7 @@ final class HomeBoard implements HomeBoardContract
                     ? __('home.board.over_90_amount', ['amount' => '৳'.Money::format((string) $r['bucket_90'], 0)]) : null,
                 'amount' => '৳'.Money::format((string) $r['outstanding'], 0),
                 'colour' => [self::BLUE, self::ORANGE, self::PURPLE, self::TEAL, self::GREEN][$i % 5],
+                'tint' => 'brand',
                 'href' => self::link('supplier.show', ['supplier' => (int) $r['party_id']]),
             ], $top, array_keys($top)),
         ];
@@ -588,7 +589,7 @@ final class HomeBoard implements HomeBoardContract
             $due = (string) (app(PrincipalCommissionFigures::class)->figures()['total']['balance'] ?? '0');
             $total = bcadd($total, $due, 4);
             $rows[] = ['name' => __('home.board.principal_commission'), 'hint' => null, 'amount' => '৳'.Money::format($due, 0),
-                'colour' => self::GREEN, 'tint' => 'ok',
+                'colour' => self::GREEN, 'tint' => 'green',
                 'href' => self::link('supplier.report.show', ['slug' => 'principal-commission'])];
         }
 
@@ -596,7 +597,7 @@ final class HomeBoard implements HomeBoardContract
             $due = (string) CommissionClaim::query()->where('status', CommissionClaim::PENDING)->sum('amount');
             $total = bcadd($total, $due, 4);
             $rows[] = ['name' => __('home.board.dealer_commission'), 'hint' => null, 'amount' => '৳'.Money::format($due, 0),
-                'colour' => self::YELLOW, 'tint' => 'week', 'href' => self::link('sales.commission.index')];
+                'colour' => self::YELLOW, 'tint' => 'yellow', 'href' => self::link('sales.commission.index')];
         }
 
         if ($rows === []) {
@@ -639,7 +640,8 @@ final class HomeBoard implements HomeBoardContract
         }
         uasort($points, fn (array $a, array $b) => bccomp($b['amount'], $a['amount'], 4));
         $top = array_slice($points, 0, 5, true);
-        $tints = [['urgent', self::RED], ['today', self::ORANGE], ['week', self::YELLOW], ['info', self::TEAL], ['info', self::BLUE]];
+        // ⭐ নমুনার লাল → নীল ঢাল: ছোপ আর ফোঁটা (মালিক, ১৯ নভেম্বর ২০২৬: "মাল্টি কালার ভাইব")
+        $tints = [['red', self::RED], ['orange', self::ORANGE], ['lemon', self::YELLOW], ['cyan', self::TEAL], ['blue', self::BLUE]];
 
         return [
             'key' => 'points',

@@ -97,9 +97,7 @@
              data-play-label="{{ __('core.notice.ticker_play') }}"
              role="region" aria-label="{{ __('core.notice.ticker_label') }}"
              class="group print-hide flex min-w-0 flex-1 items-center gap-2 md:border-s md:border-(--color-border) md:ps-3">
-            {{-- ⓘ রূপের নিজের চিহ্ন চলন্ত সারির আগে — "ABOS"-এ নীল "Notice" ([[chrome/rose.blade.php]]); বাকিদের কিছুই নয় --}}
-            <x-shell.chrome region="ticker-start" />
-            <div class="relative min-w-0 flex-1 overflow-hidden">
+            @if (\App\Core\Support\Ui::tickerTag(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui))))<x-shell.chrome region="ticker-start" />@endif<div class="relative min-w-0 flex-1 overflow-hidden">
                 <div data-ticker-track
                      class="inline-flex min-w-[200%] whitespace-nowrap will-change-transform
                             motion-safe:animate-[abos-ticker_var(--ticker-duration,40s)_linear_infinite]
