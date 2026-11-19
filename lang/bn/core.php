@@ -1117,6 +1117,7 @@ return [
         'ticker_label' => 'ঘোষণা',
         'ticker_pause' => 'ঘোষণা থামান',
         'ticker_play' => 'ঘোষণা চালান',
+        'ticker_quiet' => 'আজ কোনো জরুরি নোটিশ নেই — সব ঠিক আছে',
         'awaiting_mine' => 'আপনার অনুমোদনের অপেক্ষায়',
         'approvals_waiting' => 'অনুমোদন, :countটা অপেক্ষায়',
         'signed_unposted' => 'অনুমোদন হয়েছে, পোস্ট হয়নি',

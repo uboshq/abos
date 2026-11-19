@@ -480,15 +480,60 @@
 }
 
 /* ── উপরের বার — লাইভের হুবহু (মালিকের ছবি, ১৯ নভেম্বর ২০২৬) ────────────────────── */
-/* ⭐ আসল ABOS লোগো সাদা পিলে — জীবন্ত লোগোর বদলে লকআপের ছবি (৭৪৮×২৩৯, ৩০px উঁচু) */
+/* ⭐ সোনালি দাগের জীবন্ত লোগো, মেনুর কলামের পুরো চওড়া জুড়ে — মালিক, ১৯ নভেম্বর ২০২৬: "লাইভ লোগোটা বসাইতে হবে … মেনু বার যেটা আছে
+   এটা পুরোটা জুড়ে বসাইতে হবে" (আগে এখানে স্থির লকআপের ছবি ছিল) */
 :root[data-ui='rose'] [data-shell-product] {
-    width: 124px;
+    justify-content: center;
+    width: calc(var(--spacing-sidebar) - 24px);
+    margin-inline-start: 12px;
     border-radius: 14px;
-    background: #ffffff url('/brand/abos-logo-lockup-transparent.png') center / auto 30px no-repeat;
+    background: #ffffff;
 }
 
-:root[data-ui='rose'] [data-shell-product] > * {
-    visibility: hidden;
+/* ⭐ বড় লোগো — সাদা বক্স বারের নিচ পর্যন্ত নামে (নমুনা Q2W6mM3S v3, মালিক "ok", ১৯ নভেম্বর ২০২৬); মেনু তার নিচ থেকে শুরু */
+@media (min-width: 768px) {
+    :root[data-ui='rose'] header[data-topbar] {
+        position: relative;
+        z-index: 31;
+        overflow: visible;
+    }
+
+    :root[data-ui='rose'] [data-shell-product] {
+        align-self: flex-start;
+        height: 84px !important;
+        margin-top: 8px;
+        border-radius: 18px;
+        box-shadow: 0 6px 18px rgb(8 30 90 / 0.25);
+        --topbar-control-h: 84px;
+    }
+
+    :root[data-ui='rose'] [data-shell-product] .abos-live {
+        width: calc(var(--spacing-sidebar) - 64px) !important;
+        height: auto !important;
+    }
+
+    :root[data-ui='rose'] [data-site-map].menu-panel {
+        padding-top: 44px;
+    }
+}
+
+/* ⭐ রঙিন ⊞ (মডিউলের তালিকা) খোঁজার ঘরের ঠিক বাঁয়ে — ডানে Copilot, বাঁয়ে মডিউল (মালিক, ১৯ নভেম্বর ২০২৬) */
+@media (min-width: 768px) {
+    :root[data-ui='rose'] header[data-topbar] [data-menu-cell] {
+        order: 1;
+        width: auto;
+        margin-inline-start: auto;
+        padding-inline-end: 4px;
+    }
+
+    :root[data-ui='rose'] header[data-topbar] [data-shell-search] {
+        order: 1;
+        margin-inline-start: 0;
+    }
+
+    :root[data-ui='rose'] header[data-topbar] [data-shell-search] ~ * {
+        order: 2;
+    }
 }
 
 /* ⭐ ভরা টিয়া "+ Create ▾" */
@@ -529,5 +574,161 @@
 @media (max-width: 767px) {
     :root[data-ui='rose'] body > div.flex > div:has(> #main) {
         border-radius: 18px 18px 0 0;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   ⭐ তালিকা — নমুনা Q2W6mM3S v3, মালিক "ok", ১৯ নভেম্বর ২০২৬ রাত
+   · মাথা এক সারিতে, রঙহীন সাদা বক্সে: নাম · সংখ্যা · ছাঁকনি · খোঁজা · দৃশ্য/কলাম/নামান · একমাত্র রঙিন "+ নতুন"
+     (টাকার পাতার রঙিন পট্টি টুলবারে উঠে আসে — [[abos-list-head.js]])
+   · সারির পালা-রং স্পষ্ট: সাদা আর #E9F0FC, মাউস রাখলে #D7E4FB; মাথা আর নিচের মোটের সারি #F4F7FC
+   ⛔ কেবল `rose`-এ; অন্য রূপের তালিকা অটুট
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+:root[data-ui='rose'] {
+    --abos-zebra: #e9f0fc;
+    --abos-row-hover: #d7e4fb;
+    --abos-head: #f4f7fc;
+    --abos-line: #e1e7f1;
+}
+
+:root[data-ui='rose'][data-theme='dark'] {
+    --abos-zebra: rgb(255 255 255 / 0.05);
+    --abos-row-hover: rgb(255 255 255 / 0.1);
+    --abos-head: rgb(255 255 255 / 0.04);
+    --abos-line: rgb(255 255 255 / 0.1);
+}
+
+/* টাকার পাতার পট্টি — জাভাস্ক্রিপ্ট ছাড়াও রঙহীন সাদা */
+:root[data-ui='rose'] [data-page-kind] [data-money-hero] {
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+}
+
+:root[data-ui='rose'] [data-page-kind] [data-boxed] {
+    border-top: 0;
+}
+
+/* এক সারি */
+:root[data-ui='rose'] .toolbar-view {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px 10px 18px;
+    background: var(--color-surface-card) !important;
+    border-bottom: 1px solid var(--abos-line);
+}
+
+:root[data-ui='rose'] .toolbar-view > div.order-1,
+:root[data-ui='rose'] .toolbar-view > div.order-2 {
+    display: contents;
+}
+
+:root[data-ui='rose'] .toolbar-view :is([data-view-selector], [data-merged-title]) {
+    order: 0;
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+:root[data-ui='rose'] .toolbar-view [data-record-count] {
+    order: 0;
+    border: 0;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--color-brand-50, #e8eefc);
+    color: var(--color-brand-600);
+    font-size: 12.5px;
+    font-weight: 600;
+    opacity: 1;
+}
+
+:root[data-ui='rose'] .toolbar-view [data-command-bar] {
+    order: 4;
+    margin: 0;
+}
+
+:root[data-ui='rose'] .toolbar-view [data-command-bar] :is(a, button).is-primary {
+    border-radius: 999px;
+    background: #0f9fa8;
+    color: #ffffff;
+    font-weight: 600;
+    padding-inline: 16px;
+}
+
+/* ছাঁকনির বোতাম — রঙিন নয়, সাদা পিল */
+:root[data-ui='rose'] .toolbar-view .list-filter-open {
+    height: 34px;
+    border: 1px solid var(--abos-line);
+    border-radius: 999px;
+    background: var(--color-surface-card);
+    box-shadow: none;
+    color: var(--color-ink);
+    font-weight: 500;
+}
+
+:root[data-ui='rose'] .toolbar-view [data-quick-find] {
+    border-radius: 999px;
+    background: #f7f9fd;
+}
+
+/* তালিকার মাথা হালকা, পালা-রং স্পষ্ট — টাকার পাতার রঙিন মাথা আর বাঁয়ের দাগও এই রূপে হালকা */
+:root[data-ui='rose'] table.ui-list thead th,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] thead th {
+    background: var(--abos-head);
+    color: #33415c;
+    font-weight: 600;
+    border-bottom: 1px solid var(--abos-line);
+}
+
+:root[data-ui='rose'] table.ui-list tbody > tr:nth-child(even) > td,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] tbody > tr:nth-child(even) > td {
+    background: var(--abos-zebra);
+}
+
+:root[data-ui='rose'] table.ui-list tbody > tr > td,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] tbody > tr > td {
+    border-bottom: 1px solid var(--abos-line);
+}
+
+:root[data-ui='rose'] table.ui-list tbody > tr:hover > td,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] tbody > tr:hover > td {
+    background: var(--abos-row-hover);
+}
+
+:root[data-ui='rose'] [data-page-kind] [data-boxed] tbody > tr > td:first-child {
+    box-shadow: none;
+}
+
+:root[data-ui='rose'] table.ui-list tfoot td,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] tfoot td,
+:root[data-ui='rose'] [data-page-kind] [data-boxed] [data-grand-total-row] td,
+:root[data-ui='rose'] [data-pager] {
+    background: var(--abos-head);
+}
+
+/* ═══ ⊞ সব মডিউল — পর্দার মাঝখানের পপআপ (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "পর্দার মাঝখানে পপআপ আসবে") ═══ */
+@media (min-width: 768px) {
+    :root[data-ui='rose'] [data-module-launcher-sheet] {
+        display: grid;
+        place-items: start center;
+        padding: 9vh 16px 16px;
+    }
+
+    :root[data-ui='rose'] [data-module-launcher-sheet][style*='display: none'] {
+        display: none;
+    }
+
+    :root[data-ui='rose'] [data-module-launcher-sheet] > div {
+        width: min(960px, 100%);
+        max-height: 78vh;
+        overflow-y: auto;
+        margin: 0;
+        padding: 20px 24px 24px;
+        border-radius: 22px;
+        background: var(--color-surface-card);
+        box-shadow: 0 20px 60px rgb(8 30 90 / 0.35);
     }
 }

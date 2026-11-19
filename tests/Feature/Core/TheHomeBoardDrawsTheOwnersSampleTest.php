@@ -89,6 +89,30 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
             $board .= $page->query($part)->item(0)?->textContent ?? '';
         }
         $this->assertDoesNotMatchRegularExpression('/[০-৯]/u', $board, '⛔ বোর্ডে বাংলা অঙ্ক।');
+
+        // ⭐ মালিক, ১৯ নভেম্বর ২০২৬ রাত (লাইভের দাগানো ছবি): এক্সিকিউটিভ কমান্ড সেন্টারের লিংক মাথায় নয়; "শীর্ষ ১০ দোকান" নয়, "শীর্ষ ১০ গ্রাহক"
+        $this->assertSame(0, $page->query('//*[@data-home-executive]')->length, '⛔ মাথায় আবার এক্সিকিউটিভ কমান্ড সেন্টারের লিংক।');
+        $this->assertStringContainsString(e(__('home.board.chart_top_shops')), $html);
+        $this->assertSame('Top 10 customers', trans('home.board.chart_top_shops', [], 'en'));
+        // ⓘ আজ বিক্রি হয়েছে (sellToday) — তাই শীর্ষ গ্রাহক আজকের, বড় সময়ে যাওয়ার লেখা নেই
+        $this->assertStringNotContainsString(e(__('home.board.note_widened', ['period' => __('core.dashboard.this_month')])), $html,
+            '⛔ আজ বিক্রি থাকতেও শীর্ষ গ্রাহক এই মাসে চলে গেছে।');
+    }
+
+    public function test_an_empty_today_widens_to_the_month_and_says_so(): void
+    {
+        // ⓘ আজ কিছু বিক্রি নেই, এই মাসে আছে — শীর্ষ পণ্য ও গ্রাহক এই মাসের, নিচে লেখা (মালিক: "Nothing in this period … ঠিক করবা")
+        if (Carbon::today()->day === 1) {
+            $this->markTestSkipped('মাসের প্রথম দিনে "এই মাসের আগের দিন" নেই।');
+        }
+        Carbon::setTestNow(Carbon::today()->subDay()->setTime(11, 0));
+        $this->sellToday();
+        Carbon::setTestNow();
+
+        $html = (string) $this->get(route('dashboard'))->assertOk()->getContent();
+        $note = e(__('home.board.note_widened', ['period' => __('core.dashboard.this_month')]));
+
+        $this->assertGreaterThanOrEqual(2, substr_count($html, $note), '⛔ খালি "আজ"-এ শীর্ষ পণ্য আর গ্রাহক এই মাসে যায়নি, বা লেখা নেই।');
     }
 
     public function test_the_board_stands_behind_the_branch_picked_in_the_header(): void

@@ -127,9 +127,10 @@ final class TheModulePickerSitsUnderTheMenuTest extends TestCase
         $this->assertStringContainsString('data-ticker-toggle', $bar, '⛔ চলা থামানোর বোতাম হারাল।');
         $this->assertStringContainsString('motion-safe:', $bar, '⛔ কম-নড়াচড়ার নিয়ম হারাল।');
 
-        // ⓘ উপরের ⊞ একই তালিকা খোলে
+        // ⓘ দুইটা দুই জায়গায় (মালিক, ১৯ নভেম্বর ২০২৬ রাত): উপরের ⊞ মাঝের পপআপ খোলে, মেনুর নিচের তালিকা নিজের বোতামে
         $shell = (string) file_get_contents(resource_path('js/components/shell.js'));
-        $this->assertStringContainsString("new CustomEvent('open-module-picker')", $shell, '⛔ ⊞ মডিউল-তালিকা খোলে না।');
+        $this->assertStringNotContainsString("new CustomEvent('open-module-picker')", $shell, '⛔ ⊞ আবার মেনুর নিচের তালিকা খুলছে — ওটার নিজের পপআপ।');
+        $this->assertMatchesRegularExpression("/:root\\[data-ui='rose'\\] \\[data-module-launcher-sheet\\]/", $css, '⛔ ⊞-এর পাতা মাঝের পপআপ নয়।');
         $this->assertStringContainsString('@open-module-picker.window="toggle()"', $chrome);
     }
 

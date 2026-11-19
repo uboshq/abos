@@ -118,9 +118,11 @@ final class HomeBoard implements HomeBoardContract
                 $this->salesAgainstCollection($months, $collectedByMonth, $filter),
                 $this->duesAgeing($ageing),
                 $this->stockChart($stock, $filter),
-                $this->topProducts($can('sales.invoice.view'), $from, $to),
-                $this->topShops($can('sales.invoice.view'), $from, $to),
-                $this->byChannel($can('sales.collection.view'), $from, $to, $filter),
+                // ⭐ মালিক, ১৯ নভেম্বর ২০২৬: "Nothing in this period … কেন শো করতেছে এটা ঠিক করবা" — বাছা সময়ে কিছু না থাকলে
+                //   এই মাস, তারপর এই অর্থবছর; কোন সময়ের তা ঘরের নিচে লেখা ([[widened()]])
+                $this->widened($period, fn (string $f, string $t) => $this->topProducts($can('sales.invoice.view'), $f, $t)),
+                $this->widened($period, fn (string $f, string $t) => $this->topShops($can('sales.invoice.view'), $f, $t)),
+                $this->widened($period, fn (string $f, string $t) => $this->byChannel($can('sales.collection.view'), $f, $t, $filter)),
                 $this->workingCapital($money, $stock, $dues, $filter),
             ])),
             'cards' => array_values(array_filter([
@@ -335,7 +337,29 @@ final class HomeBoard implements HomeBoardContract
             ->groupBy('instrument')
             ->selectRaw('instrument, COALESCE(SUM(amount), 0) as total')
             ->toBase()
+            ->pluck('total', 'instrument')
+            ->all();
+
+        // ⭐ গ্রাহকের রসিদ ভাউচারও আদায় — লাইভে এ মাসে আদায়ের কাগজ ৫টা, রসিদ ভাউচার ২১৪টা (১৯ নভেম্বর ২০২৬); মালিক: "কালেকশন বাই
+        //   চ্যানেল … কিছু শো করতেছে না"। মডেলের কোম্পানি আর শাখার দেয়াল একই ([[Voucher]]: BelongsToCompany, ScopedToUserBranch)।
+        $vouchers = \App\Modules\Accounts\Models\Voucher::query()
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->where('type', 'receipt')
+            ->where('party_type', 'customer')
+            ->whereBetween('trx_date', [$from, $to])
+            ->groupBy('instrument')
+            ->selectRaw('instrument, COALESCE(SUM(amount), 0) as total')
+            ->toBase()
             ->pluck('total', 'instrument');
+        // ⓘ মাধ্যম খালি মানে নগদ — দুই উৎসের খালি আর "cash" এক সারিতে, নইলে "নগদ" দুইবার
+        $merged = [];
+        foreach ([$sums, $vouchers->all()] as $source) {
+            foreach ($source as $method => $amount) {
+                $key = (string) ($method ?: 'cash');
+                $merged[$key] = bcadd((string) ($merged[$key] ?? '0'), (string) $amount, 4);
+            }
+        }
+        $sums = $merged;
 
         $colours = ['cash' => self::AMBER, 'mfs' => self::PINK, 'transfer' => self::BLUE, 'deposit' => self::TEAL, 'cheque' => self::PURPLE];
         $total = '0';
@@ -986,6 +1010,41 @@ final class HomeBoard implements HomeBoardContract
     }
 
     /** লিংক — রুট না থাকলে "#" নয়, ঘরটা লিংকহীন (`''`) */
+    /**
+     * ⭐ বাছা সময়ে কিছু না থাকলে বড় সময় — আজ → এই মাস → এই অর্থবছর; প্রথম যেটায় কিছু আছে সেটা, নিচে লেখা "… দেখানো হচ্ছে"।
+     *   কিছুতেই না থাকলে বাছা সময়ের খালি ঘরটাই (আগের মতো)। ⓘ কেবল এই তিন ঘরে — অঙ্কের ঘর আর চার্টগুলো বাছা সময়ই মানে।
+     *
+     * @param  callable(string, string): ?array<string, mixed>  $make
+     * @return ?array<string, mixed>
+     */
+    private function widened(string $period, callable $make): ?array
+    {
+        $order = ['today', 'month', 'year'];
+        $start = array_search($period, $order, true);
+        $first = null;
+
+        foreach (array_slice($order, $start === false ? 0 : $start) as $try) {
+            [$f, $t] = \App\Core\Dashboard\HomePeriod::window($try);
+            $chart = $make($f, $t);
+
+            if ($chart === null) {
+                return null;
+            }
+            $first ??= $chart;
+
+            if (! ($chart['empty'] ?? false)) {
+                if ($try !== $period) {
+                    $shown = __($try === 'month' ? 'core.dashboard.this_month' : 'home.board.this_fy');
+                    $chart['note'] = trim(__('home.board.note_widened', ['period' => $shown]).' '.($chart['note'] ?? ''));
+                }
+
+                return $chart;
+            }
+        }
+
+        return $first;
+    }
+
     private static function link(string $route, array $params = [], array $query = []): string
     {
         if (! Route::has($route)) {

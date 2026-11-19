@@ -113,7 +113,7 @@
     <x-slot:header>
     <section data-command-head class="flex flex-col gap-3" style="align-items: stretch">
         <div class="flex min-w-0 flex-col" style="gap: 0.375rem">
-            <div data-home-headline class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+            <div data-home-headline class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 xl:flex-nowrap">
             @php
                 $hour = (int) now()->format('G');
                 $greet = __('auth.greeting.'.($hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening')));
@@ -122,15 +122,15 @@
                 $branchLabel = app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch);
                 $year = $headUser->currentCompany?->currentFinancialYear();
             @endphp
-            <h1 data-home-title class="truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ $headUser->name }}</h1>
-            <p data-home-company class="min-w-0 text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
+            <h1 data-home-title class="shrink-0 truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ $headUser->name }}</h1>
+            <p data-home-company class="min-w-0 truncate text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
                 $headUser->currentCompany?->name(),
                 $branchLabel,
                 $year ? strtr((string) ($year->name ?? ''), $digits) : null,
                 $headDate,
             ])) }}</p>
 
-            <div data-home-controls class="ms-auto flex flex-wrap items-center gap-2">
+            <div data-home-controls class="ms-auto flex shrink-0 flex-wrap items-center gap-2 xl:flex-nowrap">
                 {{-- ⭐ ছাঁকনি — শাখা (উপরের বারে বাছা; এখানে কেবল লেখা), গুদাম, এলাকা (আর SR); বদলায় বিক্রি আর বকেয়া ([[HomeFilter]]),
                      যে ঘরে খাটে না সে নিজেই বলে --}}
                 <span class="hb-pill" data-home-branch>{{ __('home.board.filter_branch') }}: <b>{{ $branchLabel ?? __('home.board.filter_all') }}</b></span>
@@ -215,9 +215,8 @@
                            @if ($period === $option) aria-current="page" @endif>{{ $titles[$option] }}</a>
                     @endforeach
                 </nav>
-                @if (\Illuminate\Support\Facades\Route::has('executive.today') && auth()->user()->can('executive.view'))
-                    <a href="{{ route('executive.today') }}" data-home-executive class="whitespace-nowrap text-sm font-semibold text-(--color-link)">{{ __('home.board.executive_link') }}</a>
-                @endif
+                {{-- ⓘ "এক্সিকিউটিভ কমান্ড সেন্টার"-এর লিংক এখানে আর নয় — মালিক, ১৯ নভেম্বর ২০২৬: "এই লিংকটা দেওয়ার দরকার নাই …
+                     আমার দরকার পড়লে আমি যাইতে পারবো"; ওটার জন্যই মাথার সারি দুই লাইনে ভাঙছিল --}}
             </div>
             </div>
             @if ($filter->active())

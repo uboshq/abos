@@ -154,6 +154,13 @@
                 <x-ui.icon name="play" :size="18" data-ticker-icon="play" x-show="paused" x-cloak />
             </button>
         </div>
+    @elseif (\App\Core\Support\Ui::tickerTag(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui))))
+        {{-- ⭐ "ABOS"-এ নোটিশ না থাকলেও নোটিশের জায়গা ফাঁকা নয় — মালিক, ১৯ নভেম্বর ২০২৬: "নোটিশ বারে … কোনো কিছু নোটিশই আসতেছে না";
+             লাইভে সেদিন জরুরি কিছু ছিল না, তাই সারিটা আঁকাই হত না। নীল "Notice" আর "সব ঠিক আছে"; নোটিশ এলে আগের মতো চলে। --}}
+        <div data-ticker-quiet class="flex min-w-0 flex-1 items-center gap-2 md:border-s md:border-(--color-border) md:ps-3">
+            <x-shell.chrome region="ticker-start" />
+            <span class="truncate text-xs text-(--color-ink-muted)">{{ __('core.notice.ticker_quiet') }}</span>
+        </div>
     @else
         {{-- ⓘ ঘোষণা নেই — ফাঁকা অংশটা নাম-পদবিকে ডানে ঠেলে রাখে --}}
         <span class="min-w-0 flex-1" aria-hidden="true"></span>

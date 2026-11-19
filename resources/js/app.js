@@ -18,6 +18,7 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import { mergeMoneyHead } from './abos-list-head.js'
 import { sidebarStore } from './sidebar-state.js'
 import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
@@ -173,6 +174,9 @@ wireActions()
 // ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
 guardConfirmOverview()
 guardOneSubmit()
+
+// ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
+mergeMoneyHead()
 
 window.Alpine = Alpine
 Alpine.start()

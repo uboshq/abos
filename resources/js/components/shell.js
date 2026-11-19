@@ -415,16 +415,9 @@ export function launcher () {
         },
 
         show () {
-            // ⭐ "ABOS" রূপে ⊞ মেনুর নিচের মডিউল-তালিকাই খোলে (মালিক, ১৯ নভেম্বর ২০২৬; [[chrome/rose.blade.php]]) — তালিকা পর্দায় থাকলে
-            //    (বড় পর্দায় মেনু খোলা); ফোনে বা মেনু গুটানো থাকলে আগের মতো পুরো পর্দার পাতা
-            const picker = document.querySelector('[data-module-picker]')
-
-            if (picker && picker.offsetParent !== null) {
-                window.dispatchEvent(new CustomEvent('open-module-picker'))
-
-                return
-            }
-
+            // ⭐ ⊞ নিজের পাতা খোলে — মালিক, ১৯ নভেম্বর ২০২৬ রাত: "টপ বারে যে মডিউল আইকনটা … ক্লিক করলে পর্দার মাঝখানে পপআপ আসবে …
+            //    মেনু বারের নিচে … সিলেক্টর … এখন যেভাবে আসতেছে এইভাবেই আসবে। তার মানে দুইটা দুই জায়গায়"। "ABOS"-এ পাতাটা মাঝের
+            //    পপআপ ([[abos-look.css]]); মেনুর নিচের তালিকা নিজের বোতামেই খোলে ([[chrome/rose.blade.php]])।
             this.open = true
             this.$nextTick(() => this.$refs.q?.focus())
         },

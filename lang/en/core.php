@@ -969,6 +969,7 @@ return [
         'ticker_label' => 'Announcements',
         'ticker_pause' => 'Pause announcements',
         'ticker_play' => 'Play announcements',
+        'ticker_quiet' => 'No urgent notice today, all is well',
         'awaiting_mine' => 'Waiting for your approval',
         'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Approved, not posted',
