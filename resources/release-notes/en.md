@@ -1,5 +1,14 @@
 # What's new
 
+## 1.3.5 — 19-11-2026
+
+- New look "ABOS", now everyone's look: a flat blue menu, a module picker at its foot (arrange it your way), a thin round footer with the running notices. Anyone can go back to their earlier look on the Appearance page.
+- The "ABOS" home is a whole-business board: 8 colourful charts first, then colourful number tiles and the gold "cash and bank" box, principal, commission and point lists, every company in a row, and today's to-dos.
+- The "SAP" look now follows this year's SAP (Horizon): a white bar, space tabs, white tiles, a floating save bar.
+- The "Dynamic" look now follows Business Central: a black bar, menus across the top, dense lists, forms in sections.
+- The Appearance page in a new order: ABOS, ABOS Navy, ABOS Blue, Dynamic; then SAP, Odoo, NetSuite, Redwood; then Salesforce, Linear, Classic.
+- The day-close popup's "never show" works; the Day Book follows the branch picked in the header; the deposit register has its menu icon.
+
 ## 1.3.4 — 19-11-2026
 
 - New look "ABOS Blue": a bright blue frame, round floating panels, light and dark; now everyone's default. Go back to ABOS Navy or any other look in one click on the Appearance page, now in a new order, four to a row.
