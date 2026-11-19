@@ -252,8 +252,14 @@ class TheNoticeRunsTest extends TestCase
         $html = $this->page();
 
         // ⓘ ২১ অক্টোবর ২০২৬: কিছু না থাকলে চলন্ত বারটাই আঁকা হয় না — ঘোরার মতো সারি তো নয়ই
-        $this->assertStringNotContainsString('data-ticker', $html,
+        // ⭐ ১৯ নভেম্বর ২০২৬ (মালিক: "নোটিশ বারে … কোনো কিছু নোটিশই আসতেছে না"): "ABOS"-এ ঘোরা সারি নয়, স্থির এক লাইন "সব ঠিক আছে"
+        $this->assertDoesNotMatchRegularExpression('/data-ticker(?![-\w])/', $html,
             'কোনো নোটিশ নেই, তবু বারে সারি ঘুরছে।');
+
+        if (str_contains($html, 'data-ui="rose"')) {
+            $this->assertStringContainsString('data-ticker-quiet', $html, 'নোটিশ নেই, আর বারটা ফাঁকা — "সব ঠিক আছে" লাইনটা নেই।');
+            $this->assertStringContainsString(e(__('core.notice.ticker_quiet')), $html, 'চুপ বারে "আজ কোনো জরুরি নোটিশ নেই" লেখাটা নেই।');
+        }
     }
 
     /**

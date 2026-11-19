@@ -638,6 +638,21 @@
     background: #f7f9fd;
 }
 
+/* ট্যাব থাকলে খোঁজার ঘর ছোট হয়ে জায়গা দেয় — নইলে দৃশ্য/নামান নিচের সারিতে ভেঙে পড়ে */
+:root[data-ui='rose'] .toolbar-view:has([data-head-tabs]) :is([data-quick-find], form:has([data-quick-find])) {
+    flex: 1 1 160px;
+    width: auto !important;
+    min-width: 140px;
+    max-width: 320px;
+}
+
+:root[data-ui='rose'] .toolbar-view:has([data-head-tabs]) [data-record-count] {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* তালিকার মাথা হালকা, পালা-রং স্পষ্ট — টাকার পাতার রঙিন মাথা আর বাঁয়ের দাগও এই রূপে হালকা */
 :root[data-ui='rose'] table.ui-list thead th,
 :root[data-ui='rose'] [data-page-kind] [data-boxed] thead th {
@@ -713,4 +728,147 @@
 
 :root[data-ui='rose'] [data-page-info]:hover {
     color: var(--color-brand-600);
+}
+
+/* ⭐ পাতার মাথা এক সারিতে — নাম · ট্যাব (পিল) · ছাঁকনি ▾ ও চিপ … বোতাম ([[abos-list-head.js]] compactPageHead)।
+   মালিক, ১৯ নভেম্বর ২০২৬ রাত: "বাম পাশের যে ট্যাবগুলো আছে সেগুলো এক লাইনে … যে জায়গাগুলোতে ফিল্টার দরকার … ফিল্টার বাটনটা বসায়"। */
+:root[data-ui='rose'] [data-head-compact] {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    column-gap: 14px;
+}
+
+:root[data-ui='rose'] [data-head-compact] > [data-page-actions] {
+    margin-left: auto;
+}
+
+:root[data-ui='rose'] [data-head-compact] > [data-gold-hairline] {
+    display: none;
+}
+
+:root[data-ui='rose'] [data-head-tabs] {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: #ffffff;
+    overflow-x: auto;
+}
+
+:root[data-ui='rose'] .toolbar-view [data-head-tabs] {
+    order: 0;
+}
+
+:root[data-ui='rose'] [data-head-tabs] a {
+    min-height: 30px;
+    margin: 0;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+:root[data-ui='rose'] [data-head-tabs] a[aria-current='page'] {
+    background: var(--color-brand-600);
+    color: #ffffff;
+}
+
+:root[data-ui='rose'] [data-head-filter] {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+:root[data-ui='rose'] [data-head-filter] > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: #ffffff;
+    font-size: 13px;
+}
+
+:root[data-ui='rose'] [data-head-chips] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+:root[data-ui='rose'] [data-head-chips] > span {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--color-brand-50, #eaf1fd);
+    color: var(--color-brand-700, #1d4ed8);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+:root[data-ui='rose'] [data-head-filter-form] {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    margin: 0;
+    min-width: 320px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgb(15 23 42 / 0.16);
+}
+
+/* ⓘ পাঁচের বেশি ট্যাব: "বাছা ট্যাব ▾" বোতাম, নিচে সবগুলোর তালিকা */
+:root[data-ui='rose'] [data-head-tabs-menu] {
+    position: relative;
+    order: 0;
+}
+
+:root[data-ui='rose'] [data-head-tabs-menu] > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 12px 0 16px;
+    border-radius: 999px;
+    background: var(--color-brand-600);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+:root[data-ui='rose'] [data-head-tabs-menu] > button .num {
+    background: rgb(255 255 255 / 0.22);
+    color: #ffffff;
+}
+
+:root[data-ui='rose'] [data-head-tabs-menu] > [data-head-tabs] {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 240px;
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgb(15 23 42 / 0.16);
+}
+
+:root[data-ui='rose'] [data-head-tabs-menu] > [data-head-tabs] a {
+    justify-content: space-between;
+    border-radius: 8px;
+}
+
+:root[data-ui='rose'] :is([data-head-tabs], [data-head-filter-form])[hidden] {
+    display: none !important;
 }

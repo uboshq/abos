@@ -199,7 +199,8 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $html = $this->dashboard();
         $footer = $this->part($html, '<footer data-footer', '</footer>');
 
-        $this->assertStringNotContainsString('data-ticker', $html, '⛔ ঘোষণা নেই, তবু চলন্ত বার আঁকা হয়েছে।');
+        // ⓘ চলন্ত বার (`data-ticker`) নয় — "ABOS"-এ কেবল স্থির "আজ কোনো জরুরি নোটিশ নেই" (`data-ticker-quiet`), মালিক, ১৯ নভেম্বর ২০২৬
+        $this->assertDoesNotMatchRegularExpression('/data-ticker(?![-\w])/', $html, '⛔ ঘোষণা নেই, তবু চলন্ত বার আঁকা হয়েছে।');
         $this->assertStringNotContainsString('abos-ticker', $html, '⛔ ঘোষণা নেই, তবু চলার নিয়ম পাতায়।');
         $this->assertStringNotContainsString('data-has-ticker', $footer, '⛔ ঘোষণা নেই, তবু মোবাইলে ফুটার উঠে বসেছে।');
         // ⭐ মালিকের নতুন চেহারা, ৬ নভেম্বর ২০২৬: ফুটারে বাঁয়ে লোগো · Powered by UNIVER BANGLADESH, ডানে ©; সংস্করণ প্রোফাইলের
