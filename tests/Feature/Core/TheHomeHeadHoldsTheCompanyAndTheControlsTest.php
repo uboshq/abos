@@ -34,7 +34,8 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
-        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        // ⓘ এই দাবি সাধারণ হোমের (`workspace.home`) — নতুন "ABOS" রূপের বোর্ড আলাদা পাতা, তার দাবি TheHomeBoardDrawsTheOwnersSampleTest-এ
+        $this->actingAs(tap(User::query()->where('email', 'owner@abos.test')->firstOrFail(), fn (User $u) => $u->forceFill(['ui' => 'blue'])->save()));
 
         // ⓘ বিক্রির দণ্ড লম্বা হোক — ভেতরে মান বসার মতো
         app(DirectSaleService::class)->complete(
@@ -47,11 +48,14 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
             config(['abos.dashboards_v2' => $v2]);
             $page = $this->xpath($this->get(route('dashboard'))->assertOk()->getContent());
 
-            // ── টাকার বাক্স শিরোনামের সাথে একই মাথার সারিতে (মালিক, ৬ অক্টোবর ২০২৬: *"সোজা উপরে বসবে"*) ──
+            // ── টাকার বাক্স পাতায় একবার — আর মাথার সারিতে নয় ──
+            // ⓘ ৬ অক্টোবরের "সোজা উপরে বসবে" বদলেছে মালিকের অনুমোদিত নীল প্যানেলের হোমে (১৮ নভেম্বর ২০২৬, 753df743d): আগে ৮টা
+            //   চার্ট, তারপর সূচক আর টাকার বাক্স — বাক্সটা মাথা থেকে নিচের সারিতে নেমেছে। পুরোনো দাবিটা সেই অনুমোদিত বদলের পরে বাসি।
             $head = $page->query('//section[@data-command-head]');
             $this->assertSame(1, $head->length, '⛔ হোমের মাথার সারি নেই।');
             $this->assertSame(1, $page->query('.//*[@data-home-title]', $head->item(0))->length, '⛔ শিরোনাম মাথার সারিতে নেই।');
-            $this->assertSame(1, $page->query('.//*[@data-money-position]', $head->item(0))->length, '⛔ টাকার বাক্স শিরোনামের সারিতে নেই।');
+            $this->assertSame(1, $page->query('//*[@data-money-position]')->length, '⛔ টাকার বাক্স পাতায় একবার নেই।');
+            $this->assertSame(0, $page->query('.//*[@data-money-position]', $head->item(0))->length, '⛔ টাকার বাক্স আবার মাথার সারিতে — অনুমোদিত হোমে চার্ট আগে।');
             // ⭐ মালিকের ২০ অক্টোবরের নমুনা: শিরোনাম · তারিখ · কোম্পানি · শাখা · বোতাম এক সারিতে, টাকার বাক্স তার ঠিক নিচে পুরো চওড়ায়
             $headline = $page->query('.//*[@data-home-headline]', $head->item(0));
             $this->assertSame(1, $headline->length, '⛔ মাথার এক সারি নেই।');
