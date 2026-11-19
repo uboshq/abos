@@ -6,6 +6,153 @@
  *   সারির টিক-বাক্স `form="<সেই id>"`। কাজ, অনুমতি আর যাচাই সব সার্ভারের — এখানে কেবল দেখানো।
  * ⛔ কেবল "ABOS"-এ বার লুকায়/দেখায় আর "সব বাছুন" বসে — বাকি রূপে পাতা আগের মতোই।
  */
+/*
+ * ⭐ সব রেকর্ডের তালিকায় সারির বাঁয়ে টিক-বাক্স — মালিক, ২০ নভেম্বর ২০২৬ (SAP-এর তালিকার ছবি দিয়ে: "ei box gulo to dawni")।
+ *   কিছু বাছলে টেবিলের ওপরে বার: "৩টা বাছা · কপি · ছাপুন · Excel · বাছাই মুছুন"। সব কাজ পাতাতেই — সার্ভারে কিছু লেখা হয় না,
+ *   তাই কোনো অনুমতি পেরোনো যায় না; যা পর্দায় দেখা যাচ্ছে কেবল তা-ই।
+ * ⓘ কেবল রেকর্ডের তালিকা — যে টেবিলের শেষে "অ্যাকশন" কলাম ([[x-ui.table]]-এর `data-row-menu`)। রিপোর্ট, খাতা আর গাছের তালিকায়
+ *   ওই কলাম নেই, তাই বাক্সও নেই। যে পাতার নিজের বাছাই-ফর্ম আছে (ভাউচারের "পোস্টের আগে দেখুন"), সেখানে এটা বসে না।
+ * ⛔ কেবল "ABOS"-এ।
+ */
+const WORDS = {
+    bn: { count: ':nটা বাছা', all: 'এই পাতার সব বাছুন', row: 'এই সারি বাছুন', copy: 'কপি', print: 'ছাপুন', excel: 'Excel', clear: 'বাছাই মুছুন', copied: 'কপি হয়েছে' },
+    en: { count: ':n selected', all: 'Select all on this page', row: 'Select this row', copy: 'Copy', print: 'Print', excel: 'Excel', clear: 'Clear', copied: 'Copied' },
+}
+
+const cellText = td => (td?.innerText ?? td?.textContent ?? '').replace(/\s+/g, ' ').trim()
+
+export function pickColumns (root = document) {
+    if (root.documentElement?.dataset.ui !== 'rose') {
+        return 0
+    }
+
+    const w = WORDS[root.documentElement.lang === 'en' ? 'en' : 'bn']
+    let added = 0
+
+    for (const table of root.querySelectorAll('main table.ui-list')) {
+        const headRow = table.querySelector('thead tr')
+        const bodyRows = [...table.querySelectorAll(':scope > tbody > tr')]
+
+        if (! headRow || bodyRows.length === 0 || table.hasAttribute('data-picks') || ! headRow.querySelector('th[data-row-menu]')
+            || table.querySelector('tbody input[type=checkbox][form]') || table.closest('[data-no-pick]')) {
+            continue
+        }
+
+        table.setAttribute('data-picks', '')
+
+        const th = root.createElement('th')
+        th.setAttribute('data-pick-col', '')
+        th.style.width = '2.5rem'
+        const all = root.createElement('input')
+        all.type = 'checkbox'
+        all.className = 'size-4'
+        all.setAttribute('data-bulk-all', '')
+        all.setAttribute('aria-label', w.all)
+        th.append(all)
+        headRow.prepend(th)
+
+        for (const tr of bodyRows) {
+            const td = root.createElement('td')
+            td.setAttribute('data-pick-col', '')
+            const box = root.createElement('input')
+            box.type = 'checkbox'
+            box.className = 'size-4'
+            box.setAttribute('data-pick', '')
+            box.setAttribute('aria-label', `${w.row}: ${cellText(tr.cells[0]).slice(0, 40)}`)
+            td.append(box)
+            // ⓘ বাক্সের ঘরে চাপ সারি খোলার চাপ নয়
+            td.addEventListener('click', e => e.stopPropagation())
+            tr.prepend(td)
+        }
+
+        for (const tr of table.querySelectorAll(':scope > tfoot > tr')) {
+            tr.prepend(root.createElement('td'))
+        }
+
+        // ⓘ বার — টেবিলের ঠিক ওপরে, কিছু না বাছলে লুকানো
+        const bar = root.createElement('div')
+        bar.setAttribute('data-bulk-bar', '')
+        bar.hidden = true
+        const count = root.createElement('span')
+        count.setAttribute('data-bulk-count', '')
+        bar.append(count)
+
+        const button = (label, act) => {
+            const b = root.createElement('button')
+            b.type = 'button'
+            b.textContent = label
+            b.setAttribute('data-bulk-act', act)
+            bar.append(b)
+            return b
+        }
+
+        const picked = () => bodyRows.filter(tr => tr.querySelector('[data-pick]')?.checked)
+        const columns = () => [...headRow.children].map((h, i) => ({ i, h }))
+            .filter(({ h }) => ! h.hasAttribute('data-pick-col') && ! h.hasAttribute('data-row-menu'))
+        const matrix = () => [columns().map(({ h }) => cellText(h)), ...picked().map(tr => columns().map(({ i }) => cellText(tr.cells[i])))]
+
+        button(w.copy, 'copy').addEventListener('click', async e => {
+            const text = matrix().map(r => r.join('\t')).join('\n')
+            try {
+                await navigator.clipboard.writeText(text)
+                e.target.textContent = w.copied
+                setTimeout(() => { e.target.textContent = w.copy }, 1500)
+            } catch (_) {
+                // ⓘ ক্লিপবোর্ড না দিলে চুপ — পাতা ভাঙে না
+            }
+        })
+
+        button(w.print, 'print').addEventListener('click', () => {
+            root.documentElement.setAttribute('data-print-picked', '')
+            const done = () => root.documentElement.removeAttribute('data-print-picked')
+            window.addEventListener('afterprint', done, { once: true })
+            window.print()
+        })
+
+        button(w.excel, 'excel').addEventListener('click', () => {
+            const csv = '﻿' + matrix().map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\r\n')
+            const a = root.createElement('a')
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+            a.download = `${(root.title || 'list').split('|')[0].trim()}.csv`
+            a.click()
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+        })
+
+        button(w.clear, 'clear').addEventListener('click', () => {
+            bodyRows.forEach(tr => { const b = tr.querySelector('[data-pick]'); if (b) b.checked = false; tr.removeAttribute('data-picked') })
+            sync()
+        })
+
+        const sync = () => {
+            const n = picked().length
+            bar.hidden = n === 0
+            count.textContent = w.count.replace(':n', String(n))
+            all.checked = n > 0 && n === bodyRows.length
+            all.indeterminate = n > 0 && n < bodyRows.length
+        }
+
+        all.addEventListener('change', () => {
+            bodyRows.forEach(tr => { const b = tr.querySelector('[data-pick]'); if (b) b.checked = all.checked; tr.toggleAttribute('data-picked', all.checked) })
+            sync()
+        })
+
+        table.addEventListener('change', e => {
+            if (e.target.matches?.('[data-pick]')) {
+                e.target.closest('tr')?.toggleAttribute('data-picked', e.target.checked)
+                sync()
+            }
+        })
+
+
+        const holder = table.closest('.table-responsive') ?? table
+        holder.before(bar)
+        sync()
+        added++
+    }
+
+    return added
+}
+
 export function bulkBars (root = document) {
     if (root.documentElement?.dataset.ui !== 'rose') {
         return 0

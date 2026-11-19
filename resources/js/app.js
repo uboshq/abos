@@ -20,7 +20,7 @@ import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
-import { bulkBars } from './bulk-bar.js'
+import { bulkBars, pickColumns } from './bulk-bar.js'
 import { sidebarStore } from './sidebar-state.js'
 import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
@@ -182,6 +182,7 @@ mergeMoneyHead()
 compactPageHead()
 foldPageNotes()
 bulkBars()
+pickColumns()
 
 window.Alpine = Alpine
 // ⭐ ভাসমান তালিকা পর্দার ভেতরে — Dynamic-এর মডিউল-মেনু ([[keep-on-screen.js]])

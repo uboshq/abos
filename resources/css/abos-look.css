@@ -1012,3 +1012,60 @@
 :root[data-ui='rose'] tr[data-picked] > td {
     background: #dbe7ff !important;
 }
+
+/* ⭐ সব রেকর্ডের তালিকায় সারির টিক-বাক্স আর বাছাইয়ের বার ([[bulk-bar.js]] pickColumns; মালিক, ২০ নভেম্বর ২০২৬: "ei box gulo to dawni") */
+:root[data-ui='rose'] :is(th, td)[data-pick-col] {
+    width: 2.5rem;
+    padding-inline: 10px 4px !important;
+    text-align: center;
+}
+
+:root[data-ui='rose'] :is(th, td)[data-pick-col] input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-brand-600);
+    cursor: pointer;
+}
+
+:root[data-ui='rose'] [data-bulk-bar] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: #1b3f9e;
+    color: #ffffff;
+}
+
+:root[data-ui='rose'] [data-bulk-bar][hidden] {
+    display: none;
+}
+
+:root[data-ui='rose'] [data-bulk-bar] [data-bulk-count] {
+    font-weight: 700;
+    font-size: 13.5px;
+    padding-inline-end: 6px;
+}
+
+:root[data-ui='rose'] [data-bulk-bar] button {
+    min-height: 30px;
+    padding: 0 14px;
+    border: 1px solid rgb(255 255 255 / 0.55);
+    border-radius: 999px;
+    background: transparent;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+:root[data-ui='rose'] [data-bulk-bar] button:hover {
+    background: rgb(255 255 255 / 0.14);
+}
+
+@media print {
+    :root[data-print-picked] tbody > tr:not([data-picked]) { display: none !important; }
+    :root[data-print-picked] [data-bulk-bar], :root[data-print-picked] [data-pick-col] { display: none !important; }
+}
+
+@media (max-width: 767px) {
+    :root[data-ui='rose'] td[data-pick-col] { text-align: start; }
+}
