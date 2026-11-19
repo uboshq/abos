@@ -67,13 +67,16 @@ final class CopilotLine
     /** "+6.0%" → "আজ আদায় গত বুধবারের চেয়ে 6% বেশি।" — শতাংশ দশমিকের শূন্য ছাড়া, সংখ্যা ইংরেজিতে (মালিকের নিয়ম) */
     private static function collectedSentence(string $delta): string
     {
-        $value = (float) str_replace(['%', '+'], '', $delta);
+        // ⓘ লেখাটা bcmath-এ পড়া — float নয় ([[MoneyIsNeverAFloatTest]]); অচেনা লেখা হলে "সমান"
+        $raw = trim(str_replace(['%', '+', ','], '', $delta));
+        $value = is_numeric($raw) ? bcadd($raw, '0', 1) : '0.0';
+        $sign = bccomp($value, '0', 1);
         $day = Carbon::today()->subWeek()->locale(app()->getLocale())->dayName;
-        $pct = rtrim(rtrim(number_format(abs($value), 1, '.', ''), '0'), '.');
+        $pct = rtrim(rtrim(ltrim($value, '-'), '0'), '.');
 
         return (string) __(match (true) {
-            $value > 0 => 'home.copilot_collected_up',
-            $value < 0 => 'home.copilot_collected_down',
+            $sign > 0 => 'home.copilot_collected_up',
+            $sign < 0 => 'home.copilot_collected_down',
             default => 'home.copilot_collected_same',
         }, ['day' => strtr($day, self::DIGITS), 'pct' => $pct]);
     }
