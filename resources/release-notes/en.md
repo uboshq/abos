@@ -1,5 +1,16 @@
 # What's new
 
+## 1.3.6 — 19-11-2026
+
+- Home: the head on one line; "Top 10 customers" (was "shops"); top products, customers and collection by channel fall back to the month or year when today is empty; channel collection now counts voucher receipts too.
+- The notice bar at the foot is never blank: with nothing urgent it says "No urgent notice today, all is well".
+- "ABOS" top bar: the module ⊞ at the far left, the live logo in a white box sized to it; ⊞ opens a centred popup.
+- Page heads on one row: name ⓘ · tabs · filter and chips … buttons. No description line under titles, hover ⓘ instead. More than five tabs fold into one slim "▾" button.
+- List heads in one white rounded box, stronger row stripes; the coloured cards above a list at a third of their height, on one line.
+- In "ABOS", hiding the left menu brings the current module's menu across the top.
+- "Dynamic": right-hand module menus no longer run off the screen; company name bold in the bar with the branch below; your picture at the far right; description lines behind ⓘ.
+- "SAP": the module bar on one line, no scrolling.
+
 ## 1.3.5 — 19-11-2026
 
 - New look "ABOS", now everyone's look: a flat blue menu, a module picker at its foot (arrange it your way), a thin round footer with the running notices. Anyone can go back to their earlier look on the Appearance page.
