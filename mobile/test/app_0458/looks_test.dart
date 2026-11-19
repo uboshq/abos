@@ -98,11 +98,18 @@ void main() {
       expect(RoleTabs.lookTabsFor(owner), [BarTab.home, BarTab.deposit, BarTab.approvals, BarTab.modules, BarTab.me]);
     });
 
-    test('without the deposit key, and in ABOS, the bar is exactly 0.4.57\'s', () {
+    test('ABOS has the same tabs (only the drawing differs); without the deposit key the bar is exactly 0.4.57\'s', () {
       const noKey = ['sales.order.view', 'sales.order.create', 'sales.collection.view'];
-      expect(RoleTabs.lookTabsFor(noKey), RoleTabs.tabsFor(noKey));
-      expect(RoleTabs.tabsFor(sr), [BarTab.home, BarTab.orders, BarTab.modules, BarTab.collections, BarTab.me],
-          reason: '⛔ ABOS-এর বারে "জমা" ঢুকল — ABOS একটুও বদলাবে না');
+      expect(RoleTabs.tabsFor(noKey), [BarTab.home, BarTab.orders, BarTab.modules, BarTab.collections, BarTab.me]);
+      expect(RoleTabs.tabsFor(sr), RoleTabs.lookTabsFor(sr), reason: 'জমা ABOS-এর বারেও (সমন্বয়কারী, ২০ নভেম্বর ২০২৬)');
+      // ⓘ চার ঘরের ভূমিকা ("অন্য") — জমা যোগ হয়, কিছু বাদ যায় না
+      expect(RoleTabs.tabsFor(['approval.decide', 'sales.claim.submit']),
+          [BarTab.home, BarTab.deposit, BarTab.approvals, BarTab.modules, BarTab.me]);
+      for (final p in [sr, owner, ['accounts.voucher.create', 'approval.decide', 'sales.claim.submit']]) {
+        final tabs = RoleTabs.tabsFor(p);
+        expect(tabs.length, lessThanOrEqualTo(5));
+        expect(tabs, containsAll([BarTab.home, BarTab.modules, BarTab.me]), reason: 'হোম, মডিউল, আমি কখনো বাদ নয়');
+      }
       expect(RoleTabs.lookTabsFor(sr, modulesOn: {'customer'}).contains(BarTab.deposit), isFalse,
           reason: 'বিক্রয়ের সুইচ বন্ধ — জমার ঘরও নেই');
     });

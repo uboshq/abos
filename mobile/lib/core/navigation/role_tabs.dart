@@ -16,7 +16,7 @@ import '../web_inside/web_inside.dart';
 enum BarRole { owner, sr, depot, accounts, other }
 
 /// বারের সম্ভাব্য সব ঘর। প্রতিটা ভূমিকা এর চারটা পায়।
-/// ⓘ [deposit] ("জমা", 0.4.58) কেবল Liquid Glass আর Material 3-এর বারে ([lookTabsFor]) — ABOS-এর বার ০.৪.৫৭-এর মতোই
+/// ⓘ [deposit] ("জমা", 0.4.58) — জমার খবরের চাবি যাঁর আছে, সব রূপের বারে ([tabsFor])
 enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me, deposit }
 
 /// একটা ঘরের সব তথ্য — নাম, আইকন (কেবল Material Symbols), কোন পথে খোলে, কোন চাবিতে দেখা যায়।
@@ -150,25 +150,13 @@ class RoleTabs {
   }
 
   /// ⭐ বারের ঘর — ভূমিকার চারটা, যার চাবি বা সুইচ নেই সেটা বাদ
+  /// ⭐ 0.4.58 থেকে "জমা"-সহ — হোমের পরেই, জমার খবরের চাবি (`sales.claim.submit`) যাঁর আছে (মালিক, ১৬ নভেম্বর ২০২৬ জমার
+  /// শর্টকাট; জমার নমুনায় ABOS-এর বারেও; সমন্বয়কারীর সিদ্ধান্ত ২০ নভেম্বর ২০২৬: "ABOS বদলাবে না" মানে রং আর আকার, এই কাজ নয়)।
+  /// পাঁচের বেশি হলে মডিউলের পরের ভূমিকার ঘর (রিপোর্ট, আদায়, মজুদ, ভাউচার) বাদ — হোম, মডিউল, আমি কখনো নয়; বাদ পড়া ঘর
+  /// ≡-এর দ্রুত কাজ আর "সব মডিউল"-এ থাকে।
   static List<BarTab> tabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) {
     final p = permissions.toSet();
-    return [
-      for (final tab in byRole[roleOf(p)]!)
-        if (allows(tab, p, modulesOn)) tab,
-      // ⓘ সবার শেষে নিজের ছবি — চাবি লাগে না; ভূমিকার সর্বোচ্চ চার ঘর + এটা = পাঁচ (Material 3-এর সীমা)
-      BarTab.me,
-    ];
-  }
-
-  /// টাকা জমার খবরের পাতা — `/home/deposit-report` (দোকান পাতার ভেতরে বাছা হয়)
-  static const String depositReportPath = 'deposit-report';
-
-  /// ⭐ Liquid Glass আর Material 3-এর বার (0.4.58; মালিকের নমুনা): হোম · জমা · ভূমিকার দ্বিতীয় ঘর · মডিউল · আমি।
-  /// জমার চাবি না থাকলে ABOS-এর একই ঘর। পাঁচের বেশি হলে মডিউলের পরের ভূমিকার ঘর (রিপোর্ট, আদায়, মজুদ, ভাউচার) বাদ —
-  /// সেটা ≡-এর দ্রুত কাজ আর "সব মডিউল"-এ থাকে।
-  static List<BarTab> lookTabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) {
-    final p = permissions.toSet();
-    final base = tabsFor(p, modulesOn: modulesOn);
+    final base = _roleTabsFor(p, modulesOn);
     if (!allows(BarTab.deposit, p, modulesOn)) return base;
     final out = [...base]..insert(base.isEmpty ? 0 : 1, BarTab.deposit);
     while (out.length > 5) {
@@ -180,6 +168,23 @@ class RoleTabs {
     }
     return out;
   }
+
+  /// ভূমিকার নিজের ঘর আর "আমি" — জমা ছাড়া (০.৪.৫৭-এর বার)
+  static List<BarTab> _roleTabsFor(Set<String> p, Set<String>? modulesOn) {
+    return [
+      for (final tab in byRole[roleOf(p)]!)
+        if (allows(tab, p, modulesOn)) tab,
+      // ⓘ সবার শেষে নিজের ছবি — চাবি লাগে না; ভূমিকার সর্বোচ্চ চার ঘর + এটা = পাঁচ (Material 3-এর সীমা)
+      BarTab.me,
+    ];
+  }
+
+  /// টাকা জমার খবরের পাতা — `/home/deposit-report` (দোকান পাতার ভেতরে বাছা হয়)
+  static const String depositReportPath = 'deposit-report';
+
+  /// Liquid Glass আর Material 3-এর বার — ABOS-এর একই ঘর ([tabsFor]); কেবল চেহারা আলাদা
+  static List<BarTab> lookTabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) =>
+      tabsFor(permissions, modulesOn: modulesOn);
 
   /// ⭐ একটা ঠিকানা কোন ঘরের — কেবল ঘরের নিজের পাতা আর তার কাগজ; বাকি পাতা যে ঘর থেকে খোলা, সেই ঘরের থাকে।
   /// বিজ্ঞপ্তি বা লিংক থেকে খোলা ওয়েবের ঠিকানাও (`/home/web/<চিহ্ন>`) এখানে চেনা যায়।

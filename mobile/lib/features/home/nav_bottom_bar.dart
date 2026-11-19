@@ -107,16 +107,14 @@ class AbosBottomBar extends ConsumerWidget {
   }
 }
 
-/// ⭐ বারের ঘর — ABOS-এ ০.৪.৫৭-এর হুবহু; Liquid Glass আর Material 3-এ "জমা"-সহ ([RoleTabs.lookTabsFor])
+/// ⭐ বারের ঘর — সব রূপে একই, "জমা"-সহ ([RoleTabs.tabsFor])
 List<BarTab> _tabsOf(WidgetRef ref) => _tabsFor(
       ref.watch(authStateProvider).user?.permissions ?? const <String>[],
       ref.watch(phoneModulesProvider),
     );
 
 List<BarTab> _tabsFor(List<String> permissions, Set<String>? modulesOn) =>
-    AppLooks.instance.look.value == AppLook.abos
-        ? RoleTabs.tabsFor(permissions, modulesOn: modulesOn)
-        : RoleTabs.lookTabsFor(permissions, modulesOn: modulesOn);
+    RoleTabs.tabsFor(permissions, modulesOn: modulesOn);
 
 Map<BarTab, TabBadge> _badgesOf(NavBadges b) => {
       BarTab.approvals: RoleTabs.badgeFor(b.pending, more: b.pendingMore),
