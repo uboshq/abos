@@ -63,7 +63,9 @@ export function arrangeBoards (root = document, orders = BOARD_ORDERS) {
 
     const [, spec] = found
     const boxes = [...main.querySelectorAll('section')].filter(s => ! s.parentElement.closest('section'))
-    const keyOf = s => [...s.attributes].map(a => a.name).find(n => /^data-(fin|inv|sales|fund)/.test(n))?.slice(5)
+    // ⓘ বক্স চেনা যায় তালিকার নাম দিয়েই — `data-<নাম>` চিহ্নটা যার আছে (মডিউলের উপসর্গ ধরে নয়, তাই নতুন মডিউলেও খাটে)
+    const named = new Set(spec.rows.flatMap(r => (Array.isArray(r) ? r : r.keys)))
+    const keyOf = s => [...s.attributes].map(a => a.name.slice(5)).find(n => named.has(n))
     const byKey = new Map(boxes.map(s => [keyOf(s), s]).filter(([k]) => k))
 
     // ⓘ সব বক্সের সাধারণ ধারক — প্রথম আর শেষ বক্স দুইটাই যার ভিতরে
