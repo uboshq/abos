@@ -98,10 +98,38 @@ final class DashboardDefinition
          *   ড্যাশবোর্ড ভাঙে (৫০০; Mac run of 050355e0c, EveryModuleDashboardHasItsOwnDoorTest)। ⭐ তখন আগের কার্ড-চার্টের পাতা — চাবি মেনে
          *   যা তাঁর দেখার, সেটুকুই ([[DashboardEngine::for()]] আগেই ছেঁকেছে)।
          */
-        if (! $this->board || $this->sections === []) {
+        if ($this->board && $this->sections !== []) {
+            return new self(title: $this->title, subtitle: $this->subtitle, search: $this->search, sections: $this->sections);
+        }
+
+        /*
+         * ⭐ গ্রাফের বোর্ড যা দেখায়, পাতায় সেই সংখ্যা-চার্ট-তালিকা আর আলাদা নয় — মালিক, ২০ নভেম্বর ২০২৬ ("একই জিনিস দুই জায়গায় দেখানোর
+         *   দরকার নেই"; নমুনা RoPEayT7)। অংশটা `covers`-এ বলে কোন নামগুলো সে গ্রাফে এনেছে; বাকি সব আগের মতো নিচে, কিছু হারায় না।
+         * ⓘ কেবল এই পাতায় — হোম, ফোন আর খোঁজা পুরো সংজ্ঞাই পড়ে।
+         */
+        $covers = [];
+        foreach ($this->sections as $section) {
+            foreach ($section['covers'] ?? [] as $label) {
+                $covers[(string) $label] = true;
+            }
+        }
+
+        if ($covers === []) {
             return $this;
         }
 
-        return new self(title: $this->title, subtitle: $this->subtitle, search: $this->search, sections: $this->sections);
+        $keep = fn (array $items) => array_values(array_filter($items, fn ($item) => ! isset($covers[$item->label])));
+
+        return new self(
+            title: $this->title,
+            subtitle: $this->subtitle,
+            stats: $keep($this->stats),
+            panels: $keep($this->panels),
+            listings: $keep($this->listings),
+            tiles: $this->tiles,
+            reminders: $this->reminders,
+            search: $this->search,
+            sections: $this->sections,
+        );
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
@@ -101,7 +103,94 @@ final class ApprovalDashboard implements ProvidesDashboard
             panels: [self::howLongWaiting(), ...self::byModule(), ...self::byPerson(), ...self::myQueue()],
 
             listings: [self::waitingNow()],
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা RoPEayT7 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            sections: [Card::board(fn (): array => self::charts(), covers: [
+                __('approval::dashboard.pending'), __('approval::dashboard.approved'), __('approval::dashboard.rejected'),
+                __('approval::dashboard.how_long'), __('approval::dashboard.by_module'), __('approval::dashboard.by_person'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ অনুমোদনের গ্রাফের বোর্ড — মডিউল ধরে অপেক্ষায় (ডোনাট), কত দিন ধরে (রঙিন কলাম), কার কাছে (লোলিপপ), 14 দিনের সিদ্ধান্ত
+     *   (স্তূপ-এলাকা), সময়মতো সিদ্ধান্তের হার (কাঁটা-মিটার), অনুরোধ কখন আসে (হিটম্যাপ)। সবই [[seen()]]-এর একই ছাঁকনিতে।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(): array
+    {
+        $parts = fn (array $breakdowns) => $breakdowns === [] ? [] : $breakdowns[0]->parts;
+        $byModule = $parts(self::byModule());
+        $byPerson = $parts(self::byPerson());
+        $waiting = self::howLongWaiting()->parts;
+        $pending = array_sum(array_map(fn ($p) => (int) $p['value'], $waiting));
+
+        // 14 দিনের সিদ্ধান্ত — দিন ধরে অনুমোদিত আর নাকচ
+        $from = Carbon::today()->subDays(13);
+        $decided = self::seen()->whereIn('status', [Approval::APPROVED, Approval::REJECTED])
+            ->where('decided_at', '>=', $from)
+            ->selectRaw('DATE(decided_at) as d, status, COUNT(*) as n')->groupBy('d', 'status')->toBase()->get();
+        $days = [];
+        $approved = [];
+        $rejected = [];
+        for ($i = 0; $i < 14; $i++) {
+            $day = $from->copy()->addDays($i)->toDateString();
+            $days[] = $i === 0 || $i === 13 || $i === 6 ? $from->copy()->addDays($i)->format('d M') : '';
+            $approved[] = (int) $decided->where('d', $day)->where('status', Approval::APPROVED)->sum('n');
+            $rejected[] = (int) $decided->where('d', $day)->where('status', Approval::REJECTED)->sum('n');
+        }
+
+        // সময়মতো — এ মাসে যেগুলোর সিদ্ধান্ত হয়েছে, তার কতগুলো জমার 8 ঘণ্টার মধ্যে
+        $month = self::seen()->whereIn('status', [Approval::APPROVED, Approval::REJECTED])
+            ->whereNotNull('requested_at')->where('decided_at', '>=', Carbon::today()->startOfMonth())
+            ->get(['requested_at', 'decided_at']);
+        $quick = $month->filter(fn ($a) => $a->requested_at->diffInMinutes($a->decided_at) <= 480)->count();
+        $onTime = $month->count() > 0 ? $quick / $month->count() : null;
+
+        // অনুরোধ কখন আসে — গত 30 দিন, বার × সময়
+        $weekdays = [6 => 'শনি', 0 => 'রবি', 1 => 'সোম', 2 => 'মঙ্গল', 3 => 'বুধ', 4 => 'বৃহঃ'];
+        $bands = ['9–11' => [9, 11], '11–1' => [11, 13], '1–3' => [13, 15], '3–5' => [15, 17], '5–7' => [17, 19]];
+        $grid = array_fill_keys(array_keys($weekdays), array_fill(0, count($bands), 0));
+        foreach (self::seen()->where('requested_at', '>=', Carbon::today()->subDays(29))->pluck('requested_at') as $at) {
+            $at = Carbon::parse($at);
+            if (! isset($grid[$at->dayOfWeek])) {
+                continue;
+            }
+            foreach (array_values($bands) as $k => [$a, $b]) {
+                if ($at->hour >= $a && $at->hour < $b) {
+                    $grid[$at->dayOfWeek][$k]++;
+                }
+            }
+        }
+
+        return [
+            Card::make(__('approval::dashboard.by_module'), 'donut', [
+                'c' => (string) $pending, 'cs' => __('approval::dashboard.pending'),
+                'p' => array_map(fn ($p) => [$p['label'], (int) $p['value'], null, $p['value']], $byModule),
+            ], value: (string) $pending, sub: __('approval::dashboard.by_module_hint'), href: route('approval.inbox.index'), colour: '#f59e0b'),
+            Card::make(__('approval::dashboard.how_long'), 'bars', [
+                'v' => array_map(fn ($p) => (int) $p['value'], $waiting),
+                'l' => array_map(fn ($p) => $p['label'], $waiting),
+                'colors' => Svg::STATUS,
+            ], sub: __('approval::dashboard.how_long_hint'), colour: '#f97316'),
+            Card::make(__('approval::dashboard.by_person'), 'lollipop', [
+                'v' => array_map(fn ($p) => (int) $p['value'], $byPerson),
+                'l' => array_map(fn ($p) => $p['label'], $byPerson),
+            ], sub: __('approval::dashboard.by_person_hint'), colour: '#e11d48'),
+            Card::make(__('approval::dashboard.decisions_14'), 'stackedArea', [
+                'series' => [$approved, $rejected], 'colors' => [Svg::STATUS[0], Svg::STATUS[3]], 'l' => $days,
+            ], sub: __('approval::dashboard.decisions_14_hint'), legend: [
+                [__('approval::dashboard.approved'), Svg::STATUS[0]], [__('approval::dashboard.rejected'), Svg::STATUS[3]],
+            ], colour: '#16a34a'),
+            Card::make(__('approval::dashboard.on_time'), 'gauge', $onTime === null ? [] : [
+                'v' => $onTime, 'label' => round($onTime * 100).'%',
+                'sub' => __('approval::dashboard.on_time_sub', ['n' => $quick, 'of' => $month->count()]),
+            ], value: $onTime === null ? '' : round($onTime * 100).'%', sub: __('approval::dashboard.on_time_hint'), colour: '#2160d8'),
+            Card::make(__('approval::dashboard.when_requests'), 'heat', [
+                'rows' => array_values($weekdays), 'cols' => array_keys($bands), 'v' => array_values($grid),
+            ], sub: __('approval::dashboard.when_requests_hint'), colour: '#7c3aed'),
+        ];
     }
 
     /**

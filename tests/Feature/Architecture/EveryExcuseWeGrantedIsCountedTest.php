@@ -514,7 +514,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //   +৩ দিন শেষের হিসাব — দিন বন্ধ, আবার খোলা, পপআপের "পরে" (EXCLUDED: একটা DayClose সারি বা কেবল সেশন; কাগজ নয়, টাকা নড়ে না)
     //   +১ TheListThatGrowsForever…::WHOLE_ON_PURPOSE `DepositMatchController` — মেলানোর টেবিল পাতায় ভাঙলে খবর আর ব্যাংকের সারি
     //      আলাদা পাতায় পড়ত; কেবল না-মেলা সারি, প্রতিটা ২০০-তে বাঁধা
-    private const CEILING = 524;
+    // ⓘ ৫২৪ → ৫২৫ (২০ নভেম্বর ২০২৬, সব মডিউলের ড্যাশবোর্ড — মালিকের নমুনা RoPEayT7 "ok"): +১ MoneyIsNeverAFloat::FLOAT_IS_DELIBERATE
+    //   `app/Core/Dashboard/Viz/Svg.php` — SVG আঁকার মাপ, টাকা নয়; মডিউলের গ্রাফের তথ্য স্ট্রিং/পূর্ণসংখ্যায় আসে, float কেবল এই এক জায়গায়
+    private const CEILING = 525;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

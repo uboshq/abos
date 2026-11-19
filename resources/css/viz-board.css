@@ -1,0 +1,126 @@
+/*
+ * ⭐ গ্রাফের বোর্ড ([[dashboard/viz-board]]) — মালিকের নমুনা RoPEayT7 (২০ নভেম্বর ২০২৬ "ok"): এক মাপের সাদা কার্ড, মাথায় রঙিন দাগ,
+ *   1920×1080-এ দুই সারি এক পর্দায়। ⓘ রং টোকেনে, তাই অন্ধকারেও পড়া যায়; গ্রাফের নিজের রং SVG-তে।
+ */
+.viz-board {
+    display: grid;
+    grid-template-columns: repeat(var(--viz-cols, 3), minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.viz-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 418px;
+    padding: 16px 18px 12px;
+    border-top: 4px solid var(--viz-edge, var(--color-brand-600));
+    border-radius: 18px;
+    background: var(--color-surface-card);
+    box-shadow: 0 1px 0 rgb(20 40 80 / 0.06), 0 6px 18px -10px rgb(20 40 80 / 0.25);
+}
+
+.viz-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.viz-head h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--color-ink);
+}
+
+.viz-head b {
+    font-size: 22px;
+    font-weight: 800;
+    white-space: nowrap;
+    color: var(--color-ink);
+}
+
+.viz-sub {
+    margin: 2px 0 6px;
+    font-size: 14px;
+    color: var(--color-ink-muted);
+}
+
+.viz-plot {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.viz-plot svg {
+    width: 100%;
+    height: 100%;
+}
+
+.viz-empty {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    color: var(--color-ink-muted);
+    font-size: 15px;
+}
+
+.viz-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 20px;
+}
+
+.viz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 13.5px;
+    color: var(--color-ink-muted);
+}
+
+.viz-legend i {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    margin-right: 6px;
+    border-radius: 3px;
+    vertical-align: -1px;
+}
+
+.viz-more {
+    margin-left: auto;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-link);
+}
+
+/* ⓘ অন্ধকারে SVG-র লেখা — গাঢ় কালির অক্ষর হালকা হয় */
+:root[data-theme='dark'] .viz-plot svg text[fill='#14213d'] {
+    fill: #e6ecf7;
+}
+
+:root[data-theme='dark'] .viz-plot svg text[fill='#5b6b86'] {
+    fill: #9db0cc;
+}
+
+@media (max-width: 1279px) {
+    .viz-board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .viz-board {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .viz-card {
+        height: 360px;
+    }
+}

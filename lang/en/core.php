@@ -623,6 +623,11 @@ return [
         'count' => ':n selected',
         'all' => 'Select all on this page',
     ],
+    // the chart board ([[dashboard/viz-board]]; owner, 20 Nov 2026)
+    'viz' => [
+        'empty' => 'Nothing in this period.',
+        'details' => 'Details',
+    ],
     'table' => [
         'range' => ':from - :to of :total',
         'page_total' => 'This page',

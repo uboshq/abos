@@ -13,6 +13,7 @@
 @import './abos-look.css';
 /* ⭐ হোমের গোটা-ব্যবসার বোর্ড — কেবল "ABOS"-এ, `[data-ui='rose']` (১৯ নভেম্বর ২০২৬) */
 @import './home-board.css';
+@import './viz-board.css';
 @import './dynamic-look.css';
 
 /* ─────────────────────────────────────────────────────────────────

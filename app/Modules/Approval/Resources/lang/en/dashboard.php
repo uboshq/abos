@@ -48,4 +48,12 @@ return [
     'my_queue' => 'Waiting for my approval, by module',
     'my_queue_hint' => ':count in my inbox',
     'state' => 'State',
+    // the chart board (owner, 20 Nov 2026)
+    'decisions_14' => 'Decisions — 14 days',
+    'decisions_14_hint' => 'Approved and rejected, by day',
+    'on_time' => 'Decided on time',
+    'on_time_hint' => 'This month, decided within 8 hours of asking',
+    'on_time_sub' => ':n of :of within 8 hours',
+    'when_requests' => 'When requests arrive',
+    'when_requests_hint' => 'Last 30 days · day × time',
 ];

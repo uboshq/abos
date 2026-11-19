@@ -271,6 +271,9 @@ class MoneyIsNeverAFloatTest extends TestCase
         'app/Modules/Sales/Resources/views/dashboard/board-reach.blade.php' => self::BOARD_FIGURES,
         'app/Modules/Sales/Resources/views/dashboard/board-team.blade.php' => self::BOARD_FIGURES,
         'app/Modules/Sales/Resources/views/dashboard/board-top.blade.php' => self::BOARD_FIGURES,
+        // ⭐ সব মডিউলের ড্যাশবোর্ডের গ্রাফ (মালিকের নমুনা RoPEayT7, ২০ নভেম্বর ২০২৬) — SVG-র দণ্ড, বৃত্তচাপ আর বিন্দুর মাপ; টাকা আসে
+        //   স্ট্রিং বা পূর্ণসংখ্যা হয়ে, এখানে কেবল আঁকার জন্য float — জমা, খাতা বা মেলানোয় যায় না
+        'app/Core/Dashboard/Viz/Svg.php' => self::BOARD_FIGURES,
         'app/Modules/Sales/Assistant/ProductNeedTool.php' => 'কোপাইলটের উত্তরে পরিমাণ দেখানো — পূর্ণ সংখ্যায় কমা বসানো (number_format), হিসাব ForecastEngine-এ',
         'app/Core/Engines/Forecast/ForecastEngine.php' => 'পূর্বাভাস — দিনের গড় হার, সপ্তাহের দিনের গুণক, মজুদ কত দিন চলবে; আনুমানিক সংখ্যা, কোথাও জমা হয় না, খাতায় ওঠে না (কোপাইলট, ১১ নভেম্বর ২০২৬)',
         // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল): চারটাই টাকা জমা বা গোনা নয় — পড়ে মিলিয়ে দেখা
