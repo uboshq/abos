@@ -480,60 +480,24 @@
 }
 
 /* ── উপরের বার — লাইভের হুবহু (মালিকের ছবি, ১৯ নভেম্বর ২০২৬) ────────────────────── */
-/* ⭐ সোনালি দাগের জীবন্ত লোগো, মেনুর কলামের পুরো চওড়া জুড়ে — মালিক, ১৯ নভেম্বর ২০২৬: "লাইভ লোগোটা বসাইতে হবে … মেনু বার যেটা আছে
-   এটা পুরোটা জুড়ে বসাইতে হবে" (আগে এখানে স্থির লকআপের ছবি ছিল) */
+/* ⭐ জীবন্ত লোগো (A, সোনালি বল, abos) সাদা বক্সে — বক্স লোগোর মাপে, বারের উচ্চতার ভেতরে; ⊞ আগের মতো একদম বাঁয়ে।
+   মালিক, ১৯ নভেম্বর ২০২৬ রাত (নমুনা Q2W6mM3S v6): "আগের মতো মডিউল আইকনটা বাম পাশে … বক্সটার লম্বাটা একটু ছোট করে ফেলো, লোগোর
+   সাথে ম্যাচ করে"। ⓘ বল "A"-এর নিচে ঝোলে, তাই লোগো বক্সের উপরের দিকে বসে, যাতে বলসহ পুরোটা বক্সের ভেতরে থাকে। */
 :root[data-ui='rose'] [data-shell-product] {
     justify-content: center;
-    width: calc(var(--spacing-sidebar) - 24px);
-    margin-inline-start: 12px;
-    border-radius: 14px;
+    align-items: flex-start;
+    width: auto;
+    height: 48px !important;
+    padding: 6px 16px 0;
+    border-radius: 12px;
     background: #ffffff;
+    overflow: hidden;
+    --topbar-control-h: 48px;
 }
 
-/* ⭐ বড় লোগো — সাদা বক্স বারের নিচ পর্যন্ত নামে (নমুনা Q2W6mM3S v3, মালিক "ok", ১৯ নভেম্বর ২০২৬); মেনু তার নিচ থেকে শুরু */
-@media (min-width: 768px) {
-    :root[data-ui='rose'] header[data-topbar] {
-        position: relative;
-        z-index: 31;
-        overflow: visible;
-    }
-
-    :root[data-ui='rose'] [data-shell-product] {
-        align-self: flex-start;
-        height: 84px !important;
-        margin-top: 8px;
-        border-radius: 18px;
-        box-shadow: 0 6px 18px rgb(8 30 90 / 0.25);
-        --topbar-control-h: 84px;
-    }
-
-    :root[data-ui='rose'] [data-shell-product] .abos-live {
-        width: calc(var(--spacing-sidebar) - 64px) !important;
-        height: auto !important;
-    }
-
-    :root[data-ui='rose'] [data-site-map].menu-panel {
-        padding-top: 44px;
-    }
-}
-
-/* ⭐ রঙিন ⊞ (মডিউলের তালিকা) খোঁজার ঘরের ঠিক বাঁয়ে — ডানে Copilot, বাঁয়ে মডিউল (মালিক, ১৯ নভেম্বর ২০২৬) */
-@media (min-width: 768px) {
-    :root[data-ui='rose'] header[data-topbar] [data-menu-cell] {
-        order: 1;
-        width: auto;
-        margin-inline-start: auto;
-        padding-inline-end: 4px;
-    }
-
-    :root[data-ui='rose'] header[data-topbar] [data-shell-search] {
-        order: 1;
-        margin-inline-start: 0;
-    }
-
-    :root[data-ui='rose'] header[data-topbar] [data-shell-search] ~ * {
-        order: 2;
-    }
+:root[data-ui='rose'] [data-shell-product] .abos-live {
+    width: auto !important;
+    height: 30px !important;
 }
 
 /* ⭐ ভরা টিয়া "+ Create ▾" */
@@ -731,4 +695,22 @@
         background: var(--color-surface-card);
         box-shadow: 0 20px 60px rgb(8 30 90 / 0.35);
     }
+}
+
+/* ═══ পাতার মাথা — ব্যাখ্যার লাইন নয়, নামের পাশে ⓘ (মালিক, ১৯ নভেম্বর ২০২৬ রাত; [[ui/page-header]]) ═══ */
+:root[data-ui='rose'] [data-page-subtitle] {
+    display: none;
+}
+
+:root[data-ui='rose'] [data-page-info] {
+    display: inline-grid;
+    place-items: center;
+    margin-inline-start: 8px;
+    vertical-align: middle;
+    color: var(--color-ink-muted);
+    cursor: help;
+}
+
+:root[data-ui='rose'] [data-page-info]:hover {
+    color: var(--color-brand-600);
 }
