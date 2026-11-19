@@ -1,0 +1,533 @@
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ "ABOS" (`rose`) — খোলসের গড়ন, যা টোকেনে হয় না (মালিকের অনুমোদিত নমুনা, ১৯ নভেম্বর ২০২৬; claude.ai artifact
+   AAjAfjZ8TnCfnjtt3Kthjz v11)।
+
+   ⓘ রং `app/Core/Support/Looks/rose.php`-এ (টোকেন); এখানে কেবল যা markup-এর জায়গা বদলায়:
+     · ফ্রেম পর্দার কিনারা পর্যন্ত একই নীল (#2160d8) — উপরের বার আর মেনু তার ভিতরে, আলাদা কোনো জমিন নেই
+     · মেনু সমতল: ছোপ নেই, দাগ নেই; সাদা লেখা, বাছা সারি সাদা বড়িতে নীল লেখা; নিচে মডিউল-তালিকার বোতাম
+     · বাঁয়ের মডিউল-রেল নেই (markup-এই নেই — [[Ui::moduleRail()]])
+     · কাজের প্যানেল বাঁয়ে গোল (উপরে আর নিচে), ডান কিনারা আর নিচের বার পর্যন্ত টানা; একটাই স্ক্রলবার — প্যানেলের নিজের
+     · নিচের বার একটা চিকন গোল পিল (~২৮px), কিনারা থেকে সামান্য ভেতরে ভাসমান; বাঁয়ে Powered by, মাঝে "Notice" আর চলন্ত
+       নোটিশ, ডানে ©
+     · উপরের বার লাইভের হুবহু (মালিকের ছবি): ভরা টিয়া "+ Create ▾", সবুজ টিক-বাক্স, কাগজ, হলুদ ঘণ্টা — গাঢ় ব্যাজে সংখ্যা;
+       আসল ABOS লোগো (public/brand/abos-logo-lockup-transparent.png) সাদা পিলে
+   ⛔ কেবল `[data-ui='rose']`-এ, আর navy বা blue-র কোনো ফাইলের উপর দাঁড়ায় না — মালিক: "একটা বদলালে অন্যটা বদলাবে না"।
+   ⓘ স্তরহীন (unlayered) — Tailwind-এর utilities-কে জেতে, তাই `!important` কেবল যেখানে markup নিজেই inline style বসায়।
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='rose'] {
+    --abos-frame: #2160d8;
+    /* ⓘ নমুনার ব্র্যান্ড-নীল — ব্যবহারকারীর অ্যাকসেন্ট (যেমন টিয়া) এখানে খাটে না: তালিকার বাছা সারি আর "Notice" নীলই */
+    --abos-brand: #2563eb;
+    --abos-menu-ink: #ffffff;
+    --abos-menu-head: #dbe7ff;
+    --abos-menu-group: #cfe0ff;
+    --abos-pill-gap: 6px;
+    --abos-pill-h: 28px;
+
+    /* ⓘ নিচের পিলের জায়গা = পিল + উপর-নিচের ফাঁক; মেনু আর কাজের প্যানেল এর উপরেই থামে */
+    --spacing-status-bar: calc(var(--abos-pill-h) + var(--abos-pill-gap) * 2);
+    /* ⓘ রেল নেই — মেনু নমুনার চওড়ায় (২৩০px + ফাঁক) */
+    --spacing-sidebar: 240px;
+    --spacing-sidebar-wide: 248px;
+
+    /* ⭐ চার্ট রঙিন — প্রতিটা চার্টের নিজের রং (নমুনা: নীল, কমলা, বেগুনি, সবুজ, হলুদ, গোলাপি, টিয়া) */
+    --color-chart-1: #2563eb;
+    --color-chart-2: #f97316;
+    --color-chart-3: #7c3aed;
+    --color-chart-4: #16a34a;
+    --color-chart-5: #eab308;
+    --color-chart-6: #db2777;
+    --color-chart-7: #0891b2;
+    --color-chart-8: #dc2626;
+}
+
+:root[data-ui='rose'][data-theme='dark'] {
+    --abos-frame: #16336f;
+    --abos-brand: #6c9bff;
+    --abos-menu-head: #c3d3f3;
+    --abos-menu-group: #a9c2fb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root[data-ui='rose']:not([data-theme='light']):not([data-theme='dark']) {
+        --abos-frame: #16336f;
+    }
+}
+
+/* ── ফ্রেম — একই নীল পর্দার কিনারা পর্যন্ত, নিচে আর কোনো জমিন নেই ─────────────── */
+:root[data-ui='rose'] body {
+    background: var(--abos-frame);
+}
+
+:root[data-ui='rose'] [data-topbar] {
+    background: var(--abos-frame);
+    border-bottom-color: transparent;
+}
+
+/* ── মেনু — সমতল, ফ্রেমের হুবহু নীল ─────────────────────────────────────── */
+:root[data-ui='rose'] aside[data-under-bar] {
+    background: var(--abos-frame);
+}
+
+@media (min-width: 768px) {
+    :root[data-ui='rose'] aside[data-under-bar] {
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar)) !important;
+        width: var(--spacing-sidebar);
+    }
+
+    /* ⓘ রেল নেই, তাই ট্যাবলেটেও (৭৬৮–১০২৩) মেনুর তালিকাটাই — নইলে বাঁয়ে খালি নীল কলাম থাকত */
+    :root[data-ui='rose'] [data-site-map].menu-panel {
+        display: flex;
+    }
+
+    /* ⓘ মেনু গুটানো ("≡") — রেল নেই বলে বাঁয়ে কিছুই থাকে না, কাজের প্যানেল পুরো চওড়ায় */
+    :root[data-ui='rose'] aside[data-under-bar]:has([data-site-map][style*='display: none']) {
+        display: none !important;
+    }
+}
+
+:root[data-ui='rose'] [data-site-map].menu-panel {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--abos-menu-ink);
+    padding: 4px 6px 0 14px;
+    --rail-item-on-bg: #ffffff;
+    --rail-item-on-ink: #2160d8;
+}
+
+:root[data-ui='rose'] [data-site-map] > p {
+    color: var(--abos-menu-head);
+    font-size: 13px;
+    letter-spacing: .06em;
+    padding-top: 8px;
+}
+
+:root[data-ui='rose'] [data-site-map] [data-panel-section],
+:root[data-ui='rose'] [data-site-map] .menu-kind-head {
+    color: var(--abos-menu-group);
+}
+
+:root[data-ui='rose'] [data-site-map] .menu-kind-head::before {
+    background: var(--abos-menu-group);
+}
+
+:root[data-ui='rose'] [data-site-map] .rail-item,
+:root[data-ui='rose'] [data-site-map] .rail-item.menu-coloured {
+    color: #ffffff;
+    border-inline-start: 0;
+    border-radius: 999px;
+    margin-inline: 2px;
+}
+
+:root[data-ui='rose'] [data-site-map] .rail-item:hover {
+    background: rgb(255 255 255 / 0.14);
+}
+
+:root[data-ui='rose'] [data-site-map] .rail-item[aria-current],
+:root[data-ui='rose'] [data-site-map] .rail-item.menu-coloured[aria-current='page'] {
+    background: #ffffff;
+    color: #2160d8;
+    font-weight: 600;
+}
+
+:root[data-ui='rose'] [data-site-map] .rail-item[aria-disabled] {
+    color: rgb(255 255 255 / 0.55);
+}
+
+:root[data-ui='rose'] [data-site-map] .menu-coloured .menu-icon,
+:root[data-ui='rose'] [data-site-map] .rail-item .menu-icon {
+    background: rgb(255 255 255 / 0.16);
+    color: #ffffff;
+    border-radius: 8px;
+}
+
+:root[data-ui='rose'] [data-site-map] .rail-item[aria-current] .menu-icon {
+    background: #e8f0ff;
+    color: #2160d8;
+}
+
+:root[data-ui='rose'] [data-site-map] input[type='search'] {
+    background: rgb(255 255 255 / 0.14);
+    border-color: rgb(255 255 255 / 0.28);
+    color: #ffffff;
+    border-radius: 999px;
+}
+
+:root[data-ui='rose'] [data-site-map] input[type='search']::placeholder {
+    color: var(--abos-menu-group);
+}
+
+/* ⓘ মেনুর তালিকার স্ক্রলবার নীলের উপর হালকা */
+:root[data-ui='rose'] [data-site-map] nav {
+    scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+    scrollbar-width: thin;
+}
+
+/* ── মডিউল-তালিকা — মেনুর নিচে, উপরে খোলে ([[chrome/rose.blade.php]]) ─────────── */
+:root[data-ui='rose'] .abos-modpick {
+    position: relative;
+    z-index: 46;
+    flex: none;
+    padding: 10px 2px 10px 0;
+    background: var(--abos-frame);
+}
+
+:root[data-ui='rose'] .abos-modpick-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgb(255 255 255 / 0.12);
+    border: 1px solid rgb(255 255 255 / 0.3);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.2;
+    text-align: start;
+    cursor: pointer;
+}
+
+:root[data-ui='rose'] .abos-modpick-btn:hover {
+    background: rgb(255 255 255 / 0.18);
+}
+
+:root[data-ui='rose'] .abos-modpick-btn:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+:root[data-ui='rose'] .abos-modpick-btn > i {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: #ffffff;
+    color: #2160d8;
+}
+
+:root[data-ui='rose'] .abos-modpick-btn small {
+    display: block;
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--abos-menu-group);
+}
+
+:root[data-ui='rose'] .abos-chev {
+    font-size: 12px;
+}
+
+:root[data-ui='rose'] .abos-modlist {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% - 2px);
+    z-index: 60;
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 20px;
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    box-shadow: 0 20px 50px rgb(5 20 60 / 0.35);
+    /* ⓘ উপরের বারের নিচে থামে — কখনো বারের তলায় ঢোকে না; ১০৮০-তে ২০টা মডিউলও স্ক্রল ছাড়া */
+    max-height: calc(100dvh - var(--spacing-header) - 112px);
+    overflow-y: auto;
+}
+
+:root[data-ui='rose'] .abos-modfind {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0 14px;
+    color: var(--color-ink-muted);
+}
+
+:root[data-ui='rose'] .abos-modfind input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 7px 0;
+    font-size: 13.5px;
+    color: var(--color-ink);
+}
+
+:root[data-ui='rose'] .abos-modrows {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+:root[data-ui='rose'] .abos-modrows > li {
+    display: flex;
+    align-items: center;
+    border-radius: 14px;
+}
+
+:root[data-ui='rose'] .abos-modrows > li[hidden] {
+    display: none;
+}
+
+:root[data-ui='rose'] .abos-modrow {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 10px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-ink);
+    text-decoration: none;
+}
+
+:root[data-ui='rose'] .abos-modrows > li:hover,
+:root[data-ui='rose'] .abos-modrows > li:has(.is-here) {
+    background: var(--color-surface-selected);
+}
+
+:root[data-ui='rose'] .abos-modrow.is-here {
+    color: var(--abos-brand);
+    font-weight: 700;
+}
+
+:root[data-ui='rose'] .abos-modtile {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: #ffffff;
+    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.12);
+}
+
+:root[data-ui='rose'] .abos-modname {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+:root[data-ui='rose'] .abos-mv {
+    display: none;
+    gap: 4px;
+    margin-inline: 4px 6px;
+}
+
+:root[data-ui='rose'] .abos-modlist.arranging .abos-mv {
+    display: flex;
+}
+
+:root[data-ui='rose'] .abos-modlist.arranging .abos-modrow {
+    cursor: default;
+}
+
+:root[data-ui='rose'] .abos-mv button {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+:root[data-ui='rose'] .abos-mv button:hover {
+    background: var(--color-surface-selected);
+}
+
+:root[data-ui='rose'] .abos-modnone {
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--color-ink-muted);
+}
+
+:root[data-ui='rose'] .abos-modfoot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--color-border);
+    padding-top: 8px;
+}
+
+:root[data-ui='rose'] .abos-modfoot button {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-muted);
+    color: var(--color-ink);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+:root[data-ui='rose'] .abos-modfoot button.done {
+    background: var(--abos-brand);
+    border-color: var(--abos-brand);
+    color: #ffffff;
+}
+
+:root[data-ui='rose'] .abos-modfoot small {
+    margin-inline-start: auto;
+    font-size: 11.5px;
+    color: var(--color-ink-muted);
+}
+
+/* ── কাজের প্যানেল — বাঁয়ে গোল, ডান কিনারা আর নিচের বার পর্যন্ত টানা, নিজেই স্ক্রল করে ──────── */
+:root[data-ui='rose'] body > div.flex > div:has(> #main) {
+    background: var(--color-surface-app);
+    border-radius: 24px 0 0 24px;
+}
+
+@media (min-width: 768px) {
+    :root[data-ui='rose'] body > div.flex > div:has(> #main) {
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar));
+        overflow-x: clip;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* ⓘ পাতা আর নিজে স্ক্রল করে না — একটাই স্ক্রলবার, প্যানেলের।
+       ⓘ html-এও আটকানো: শুধু body-তে দিলে overflow পুরো জানালায় চলে যায়, আর কিবোর্ডে কোনো ঘরে গেলে জানালাটা সরে নিচে নীল
+         ফাঁকা দেখাত (স্থানীয় পরীক্ষা, ১৯ নভেম্বর ২০২৬) */
+    :root[data-ui='rose'] {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    :root[data-ui='rose'] body {
+        height: 100dvh;
+        overflow: hidden;
+    }
+}
+
+:root[data-ui='rose'] #main {
+    padding-top: 18px;
+    padding-bottom: 20px;
+}
+
+@media (min-width: 1024px) {
+    :root[data-ui='rose'] #main { padding-inline: 20px; }
+}
+
+/* ── নিচের বার — চিকন গোল পিল, কিনারা থেকে সামান্য ভেতরে ভাসমান ─────────────────── */
+@media (min-width: 768px) {
+    :root[data-ui='rose'] footer[data-footer] {
+        inset-inline: 12px;
+        bottom: var(--abos-pill-gap);
+        height: var(--abos-pill-h);
+        border: 0;
+        border-radius: 999px;
+        padding: 2px 6px 2px 12px;
+        font-size: 11.5px;
+        background: var(--color-surface-card);
+        box-shadow: 0 1px 4px rgb(8 30 80 / 0.18);
+    }
+
+    :root[data-ui='rose'] footer[data-footer] [data-footer-brand] img,
+    :root[data-ui='rose'] footer[data-footer] [data-footer-brand] .live-logo {
+        max-height: 14px;
+    }
+}
+
+:root[data-ui='rose'] footer[data-footer] [data-ticker] {
+    border-inline-start: 0;
+    padding: 1px 2px;
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    gap: 8px;
+}
+
+:root[data-ui='rose'] .abos-notice-tag {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: var(--abos-brand);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+:root[data-ui='rose'] .abos-notice-tag > i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 0.35);
+}
+
+:root[data-ui='rose'] footer[data-footer] [data-ticker-toggle] {
+    width: 20px;
+    height: 20px;
+}
+
+/* ── উপরের বার — লাইভের হুবহু (মালিকের ছবি, ১৯ নভেম্বর ২০২৬) ────────────────────── */
+/* ⭐ আসল ABOS লোগো সাদা পিলে — জীবন্ত লোগোর বদলে লকআপের ছবি (৭৪৮×২৩৯, ৩০px উঁচু) */
+:root[data-ui='rose'] [data-shell-product] {
+    width: 124px;
+    border-radius: 14px;
+    background: #ffffff url('/brand/abos-logo-lockup-transparent.png') center / auto 30px no-repeat;
+}
+
+:root[data-ui='rose'] [data-shell-product] > * {
+    visibility: hidden;
+}
+
+/* ⭐ ভরা টিয়া "+ Create ▾" */
+:root[data-ui='rose'] [data-shell-create] > button {
+    background: #14b8c4;
+    color: #ffffff;
+    border-radius: 10px;
+    font-weight: 600;
+    padding-inline: 16px;
+}
+
+/* ⭐ গাঢ় ব্যাজে সংখ্যা — ঘণ্টা, অনুমোদন আর কাগজের কোণে */
+:root[data-ui='rose'] [data-topbar] {
+    --color-count-urgent: #0f4c5c;
+    --color-count-ink: #ffffff;
+    --color-count-info: #0f4c5c;
+    --color-count-info-ink: #ffffff;
+}
+
+:root[data-ui='rose'] [data-search-field] {
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.3);
+    background: rgb(255 255 255 / 0.14);
+}
+
+/* ── কার্ড — দাগ নেই, নরম ছায়া; ⛔ কিন্তু ঘরের রঙিন মাথা আর টাকার বাক্সের সোনালি পাড় থাকে (মালিক, ১৯ নভেম্বর ২০২৬: "মাল্টি কালার
+   ভাইব") — সেগুলো home-board.css-এ, তাই এখানে কেবল পাশের দাগ মোছা ─────────────────────────────────────────── */
+:root[data-ui='rose'] [data-boxed]:not(.hb-tile):not(.hb-cash) {
+    border-color: transparent;
+}
+
+:root[data-ui='rose'] .hb-tile {
+    border-inline-color: transparent;
+    border-bottom-color: transparent;
+}
+
+/* ── ফোন: কাজের প্যানেল উপরে গোল, পুরো পর্দায় ─────────────────────────────────── */
+@media (max-width: 767px) {
+    :root[data-ui='rose'] body > div.flex > div:has(> #main) {
+        border-radius: 18px 18px 0 0;
+    }
+}

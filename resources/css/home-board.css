@@ -1,0 +1,197 @@
+/* ─────────────────────────────────────────────────────────────────────
+   ⭐ হোমের গোটা-ব্যবসার বোর্ড — মালিকের অনুমোদিত নমুনা, ১৯ নভেম্বর ২০২৬ (claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)।
+   গ্রাফ আগে (৮টা, চারটা করে দুই সারি) → ৮টা ঘর আর বড় টাকার বাক্স → তিন তালিকা → সব প্রতিষ্ঠান → আজ যা করতে হবে → নজরে রাখুন,
+   সদ্য যা হয়েছে ([[workspace.home]], [[x-dashboard.board-chart]])।
+
+   ⛔ কেবল "ABOS"-এ (`[data-ui='rose']`, নিচের মোড়ক) — বোর্ডটা কেবল ওই রূপেই আঁকা হয় ([[Ui::home()]]), আর মালিকের নিয়ম
+   (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না।
+   ⓘ মাপ px-এ — এই অ্যাপে 1rem = 20px।
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-ui='rose'] {
+
+.hb-section { display: grid; gap: 14px; margin-bottom: 14px; }
+
+.hb-card {
+    min-width: 0;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    color: var(--color-ink);
+}
+
+/* ── মাথা: সম্ভাষণ, ছাঁকনি, সময় ─────────────────────────────────────── */
+.hb-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-card);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+}
+
+.hb-pill b { color: var(--color-ink); font-weight: 600; }
+
+/* ── গ্রাফ ─────────────────────────────────────────────────────────── */
+.hb-charts { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 768px) { .hb-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .hb-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.hb-chart { padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.hb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.hb-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink); }
+.hb-more { font-size: 13px; color: var(--color-link); white-space: nowrap; }
+.hb-sub { font-size: 12px; color: var(--color-ink-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.hb-key { display: inline-flex; align-items: center; gap: 4px; }
+.hb-key i, .hb-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.hb-chart > svg { width: 100%; height: 150px; display: block; }
+.hb-grid { stroke: var(--color-border); }
+.hb-axis { font-size: 9px; fill: var(--color-ink-muted); }
+.hb-val { font-size: 10px; font-weight: 600; fill: var(--color-ink); }
+.hb-centre { font-size: 14px; font-weight: 700; fill: var(--color-ink); font-variant-numeric: tabular-nums; }
+.hb-ring { stroke: var(--color-border); }
+.hb-empty { display: grid; place-items: center; height: 140px; font-size: 13px; color: var(--color-ink-muted); }
+.hb-note { margin: 2px 0 0; font-size: 11px; color: var(--color-ink-muted); }
+
+.hb-donut { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; align-items: center; }
+.hb-donut svg { width: 140px; height: 140px; display: block; }
+.hb-legend { display: grid; gap: 5px; font-size: 12.5px; min-width: 0; }
+.hb-legend div { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.hb-legend span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-legend b { margin-inline-start: auto; font-weight: 600; white-space: nowrap; }
+.hb-legend small { width: 38px; text-align: end; color: var(--color-ink-muted); flex: none; }
+
+.hb-bars { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 11.5px; }
+.hb-bars li { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr) auto; align-items: center; gap: 6px; }
+.hb-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
+.hb-bar { display: block; height: 8px; border-radius: 4px; background: var(--color-surface-muted); overflow: hidden; }
+.hb-bar i { display: block; height: 100%; border-radius: 4px; }
+.hb-bars b { font-weight: 600; white-space: nowrap; }
+
+/* ── ঘর আর টাকার বাক্স ────────────────────────────────────────────── */
+.hb-top { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+/* ⓘ DOM-এ টাকার বাক্স আগে, ছবিতে ঘরের ডানে */
+.hb-top > [data-kpis] { order: 1; }
+.hb-top > .hb-cash { order: 2; }
+@media (min-width: 1300px) { .hb-top { grid-template-columns: minmax(0, 1fr) 420px; } }
+
+.hb-tiles { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .hb-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .hb-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.hb-tile {
+    position: relative;
+    display: grid;
+    gap: 2px;
+    align-content: start;
+    padding: 12px 16px;
+    border-top: 3px solid var(--hb-tone);
+    text-decoration: none;
+}
+
+.hb-tile:hover { background: var(--color-surface-hover); }
+.hb-tile .hb-lb { font-size: 12.5px; color: var(--color-ink-muted); padding-inline-end: 84px; }
+.hb-tile .hb-v { font-size: 22px; font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.hb-tile .hb-s { font-size: 11.5px; color: var(--color-ink-muted); }
+.hb-tile .hb-up { color: var(--color-status-ok, var(--color-success)); font-weight: 600; }
+.hb-tile .hb-down { color: var(--color-status-urgent, var(--color-danger)); font-weight: 600; }
+.hb-tile svg { position: absolute; right: 12px; top: 12px; width: 78px; height: 30px; }
+
+.hb-cash { padding: 14px 16px; display: grid; gap: 10px; align-content: start; border: 2px solid var(--color-status-week-bar, var(--color-warning)); position: relative; }
+.hb-cash .hb-h { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--color-ink-muted); }
+.hb-cash .hb-h b { color: var(--color-ink); font-size: 14px; }
+.hb-cash .hb-v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hb-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .hb-parts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.hb-parts div { background: var(--color-surface-muted); border-radius: 12px; padding: 6px 8px; font-size: 11.5px; color: var(--color-ink-muted); min-width: 0; }
+.hb-parts b { display: block; color: var(--color-ink); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.hb-parts i { display: block; height: 3px; border-radius: 2px; margin-top: 4px; }
+.hb-io { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--color-surface-muted); border-radius: 12px; padding: 6px 12px; font-size: 12.5px; }
+.hb-io .hb-in { color: var(--color-status-ok, var(--color-success)); font-weight: 700; }
+.hb-io .hb-out { color: var(--color-status-urgent, var(--color-danger)); font-weight: 700; }
+
+.hb-more-tiles { margin-top: 2px; }
+.hb-more-tiles > h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--color-ink-muted); }
+
+/* ── তিন তালিকা ───────────────────────────────────────────────────── */
+.hb-three { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1300px) { .hb-three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.hb-list { padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.hb-list h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.hb-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 12px; font-size: 13px; color: var(--color-ink); text-decoration: none; background: var(--color-surface-muted); }
+.hb-row[data-tint='urgent'] { background: var(--color-status-urgent-soft, var(--color-surface-muted)); }
+.hb-row[data-tint='today'] { background: var(--color-status-today-soft, var(--color-surface-muted)); }
+.hb-row[data-tint='week'] { background: var(--color-status-week-soft, var(--color-surface-muted)); }
+.hb-row[data-tint='ok'] { background: var(--color-status-ok-soft, var(--color-surface-muted)); }
+.hb-row > i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.hb-row > span { min-width: 0; }
+.hb-row small { display: block; color: var(--color-ink-muted); font-size: 11px; }
+.hb-row > b { margin-inline-start: auto; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ── সব প্রতিষ্ঠান ─────────────────────────────────────────────────── */
+.hb-companies { padding: 14px 16px; overflow-x: auto; }
+.hb-companies h2 { margin: 0 0 2px; font-size: 16px; font-weight: 700; }
+.hb-companies table { min-width: 900px; }
+.hb-companies tr.hb-total td { font-weight: 700; }
+.hb-here { font-size: 11px; color: var(--color-link); margin-inline-start: 6px; }
+
+/* ── আজ যা করতে হবে ────────────────────────────────────────────────── */
+.hb-todo { padding: 14px 16px; display: grid; gap: 10px; }
+.hb-todo-items { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .hb-todo-items { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1300px) { .hb-todo-items { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.hb-todo-item { display: flex; gap: 10px; align-items: center; border-radius: 14px; padding: 10px 12px; text-decoration: none; color: var(--color-ink); }
+.hb-todo-item > b { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hb-todo-item small { display: block; color: var(--color-ink-muted); font-size: 11.5px; }
+.hb-todo-item .status-chip { margin-inline-start: auto; }
+
+.hb-two { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1300px) { .hb-two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+@media (max-width: 640px) {
+    .hb-donut { grid-template-columns: minmax(0, 1fr); }
+    .hb-donut svg { justify-self: center; }
+    .hb-cash .hb-v { font-size: 22px; }
+}
+
+/* ── ⭐ মাল্টি কালার ভাইব — মালিক, ১৯ নভেম্বর ২০২৬ ("হাতে, ব্যাংকে, পথে … গোল্ডেন কালারের শেড … সবগুলো বক্সের মধ্যে একটা কালারিং");
+   নমুনার হুবহু মান (abossample/index.html) ────────────────────────────────────────────────────── */
+.hb-cash { border-color: #f0b429; }
+.hb-parts div[data-part="1"] i { background: #f59e0b; }
+.hb-parts div[data-part="2"] i { background: #db2777; }
+.hb-parts div[data-part="3"] i { background: #2563eb; }
+.hb-parts div[data-part="4"] i { background: #94a3b8; }
+.hb-io { background: #fdf5e6; }
+
+.hb-row[data-tint='blue'] { background: #eff6ff; }
+.hb-row[data-tint='brand'] { background: #e8f0ff; }
+.hb-row[data-tint='green'] { background: #ecfdf5; }
+.hb-row[data-tint='yellow'] { background: #fffbeb; }
+.hb-row[data-tint='red'] { background: #fef2f2; }
+.hb-row[data-tint='orange'] { background: #fff7ed; }
+.hb-row[data-tint='lemon'] { background: #fefce8; }
+.hb-row[data-tint='cyan'] { background: #ecfeff; }
+
+.hb-todo-item[data-level='urgent'] { background: #fef2f2; }
+.hb-todo-item[data-level='today'] { background: #fff7ed; }
+.hb-todo-item[data-level='week'] { background: #fffbeb; }
+.hb-todo-item[data-level='ok'] { background: #f0fdf4; }
+.hb-todo-item[data-level='urgent'] > b { color: #c50f1f; }
+.hb-todo-item[data-level='today'] > b { color: #bc4b09; }
+.hb-todo-item[data-level='week'] > b { color: #a16207; }
+.hb-todo-item[data-level='ok'] > b { color: #107c10; }
+
+.hb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+}
+
+/* ⓘ অন্ধকারে রঙের ছোপ গাঢ় জমিনে — একই রং, কম আলো */
+:root[data-ui='rose'][data-theme='dark'] {
+    .hb-io, .hb-row, .hb-todo-item { background: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) !important; }
+}

@@ -10,6 +10,8 @@ import * as collection from './collection.js'
 import { railFit } from '../rail-fit.js'
 // ⓘ কোপাইলটের দ্রুত জিজ্ঞাসা — কেবল কম্পোনেন্টটা; pairsOf/sayOf সাহায্যকারী, x-data নয়
 import { copilotQuick } from './copilot.js'
+// ⭐ "ABOS" রূপের মডিউল-তালিকা — কেবল কম্পোনেন্টটা ([[chrome/rose.blade.php]])
+import { modulePicker } from '../module-picker.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -20,7 +22,7 @@ import { copilotQuick } from './copilot.js'
  * ওটাকে সরাসরি পায়।
  */
 // ⓘ rail-fit.js-এর সাহায্যকারীগুলো (hideOrder, fitRail…) x-data নয় — তাই কেবল কম্পোনেন্টটা
-const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }]
+const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }, { modulePicker }]
 
 /*
  * ব্রাউজারের কয়েকটা ফাংশন, পর্দা থেকে ডাকার মতো করে।

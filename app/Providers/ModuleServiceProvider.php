@@ -102,6 +102,9 @@ class ModuleServiceProvider extends ServiceProvider
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);
 
+        // ⓘ Executive বন্ধ থাকলে হোমের গোটা-ব্যবসার বোর্ডে কিছুই নেই — হোম আগের অংশগুলো নিয়েই থাকে ([[HomeBoard]])
+        $this->app->bind(\App\Core\Contracts\HomeBoard::class, \App\Core\Services\NoHomeBoard::class);
+
         // ⓘ অফারের মডিউল বন্ধ থাকলে বিক্রয়ের কাগজে অফারের প্যানেল আঁকা হয় না ([[SalesOffers]])
         $this->app->bind(SalesOffers::class, NoSalesOffers::class);
 

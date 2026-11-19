@@ -199,6 +199,36 @@ return [
     'home_pictures' => ['sales', 'finance', 'accounts', 'inventory', 'purchase', 'approval', 'hr', 'master_data'],
 
     /*
+     * ⭐ "ABOS" রূপের মডিউল-তালিকা (মেনুর নিচে, উপরে খোলে) — প্রতিটা মডিউলের Lucide চিহ্ন আর টাইলের রং (মালিকের অনুমোদিত
+     * নমুনা, ১৯ নভেম্বর ২০২৬, claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)। ⓘ মডিউলের কোড — ডেটা, কোড নয় (কোর মডিউলের নাম
+     * হাতে লেখে না)। তালিকায় নেই এমন মডিউল `default`-এর চিহ্ন আর রং পায়, হারায় না। চিহ্নের নাম resources/icons/lucide.php-এর।
+     */
+    'module_picker' => [
+        'assistant' => ['icon' => 'sparkles', 'colour' => '#a855f7'],
+        'accounts' => ['icon' => 'landmark', 'colour' => '#2563eb'],
+        'finance' => ['icon' => 'wallet', 'colour' => '#7c3aed'],
+        'supplier' => ['icon' => 'truck', 'colour' => '#ea580c'],
+        'purchase' => ['icon' => 'shopping-cart', 'colour' => '#f97316'],
+        'inventory' => ['icon' => 'package', 'colour' => '#0d9488'],
+        'customer' => ['icon' => 'users', 'colour' => '#0891b2'],
+        'credit_control' => ['icon' => 'credit-card', 'colour' => '#be123c'],
+        'sales' => ['icon' => 'shopping-bag', 'colour' => '#2563eb'],
+        'promotion' => ['icon' => 'gift', 'colour' => '#16a34a'],
+        'hr' => ['icon' => 'id-card', 'colour' => '#db2777'],
+        'approval' => ['icon' => 'badge-check', 'colour' => '#4f46e5'],
+        'governance' => ['icon' => 'scale', 'colour' => '#475569'],
+        'master_data' => ['icon' => 'database', 'colour' => '#64748b'],
+        'executive' => ['icon' => 'crown', 'colour' => '#b45309'],
+        'system_admin' => ['icon' => 'settings', 'colour' => '#334155'],
+        'fixed_assets' => ['icon' => 'building-2', 'colour' => '#0f766e'],
+        'documents' => ['icon' => 'folder-open', 'colour' => '#0369a1'],
+        'restaurant' => ['icon' => 'utensils', 'colour' => '#c2410c'],
+        'backup' => ['icon' => 'archive', 'colour' => '#475569'],
+        'notification' => ['icon' => 'bell', 'colour' => '#ca8a04'],
+        'default' => ['icon' => 'layout-grid', 'colour' => '#2563eb'],
+    ],
+
+    /*
      * ⭐ গ্রুপের মালিক — কেবল পরিচয়ের জন্য (মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬)।
      *
      * ⓘ এই ইমেইলের মানুষটির পদবি সব কোম্পানিতে একটাই ("গ্রুপ চেয়ারম্যান ও সিইও"), কোনো কোম্পানির কর্মী-সারি যা-ই বলুক।

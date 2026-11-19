@@ -333,9 +333,9 @@
                 (`chrome/*`-এর `page-head`), তাই ওখানে এটা বসালে দুইটা
                 ট্যাব বার হত — একটার নিচে আরেকটা।
             --}}
-            @if (\App\Core\Support\Ui::wearsAbosShell($shellLook))
+            @if (\App\Core\Support\Ui::pathBar($shellLook) === 'modulebar')
                 <x-shell.modulebar :menu="$menu ?? []" />
-            @else
+            @elseif (\App\Core\Support\Ui::pathBar($shellLook) === 'crumbs')
                 <x-shell.crumbbar :menu="$menu ?? []" />
             @endif
 

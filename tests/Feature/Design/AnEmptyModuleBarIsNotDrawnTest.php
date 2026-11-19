@@ -28,6 +28,8 @@ final class AnEmptyModuleBarIsNotDrawnTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ মডিউল-বার আর রেল ABOS Blue-র খোলসের দাবি — নতুন ডিফল্ট "ABOS"-এ ওগুলো নেই (১৯ নভেম্বর ২০২৬), তাই এই মানুষ ABOS Blue-তে
+        $owner->forceFill(['ui' => 'blue'])->save();
 
         $home = (string) $this->actingAs($owner)->get(route('dashboard'))->assertOk()->getContent();
         $this->assertStringNotContainsString('data-module-bar', $home, '⛔ হোমে দেখানোর কিছু নেই, তবু মডিউল-বার আঁকা হলো — উপরের বারের নিচে খালি পট্টি।');

@@ -105,7 +105,8 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
 
         // ABOS-এর নিজের দুইটা — নকল করার মতো আসল কিছু নেই
         'navy' => [],
-        'rose' => [],
+        // ⭐ নতুন "ABOS" (১৯ নভেম্বর ২০২৬) — রেলের বদলে মেনুর নিচে মডিউল-তালিকা ([[chrome/rose.blade.php]])
+        'rose' => ['data-module-picker', 'data-modpick'],
         // ⓘ নীল প্যানেল (১৮ নভেম্বর ২০২৬) — ABOS-এরই, navy-র গড়নে; নিজের markup নেই, গড়ন CSS-এ ([[blue-look.css]])
         'blue' => [],
     ];

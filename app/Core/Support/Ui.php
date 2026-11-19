@@ -57,7 +57,12 @@ final class Ui
        তাই "নিজে বেছেছেন" আর "কিছু বাছেননি" আলাদা করা যায় না) মাইগ্রেশনে `blue`-তে ওঠেন
        (`2027_04_19_100000_the_owners_blue_becomes_the_first_look`)।
     */
-    public const DEFAULT = 'blue';
+    /*
+       ⭐ ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট `rose` — নাম "ABOS" (মালিকের অনুমোদিত নমুনা, claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)।
+       ⓘ মালিক, ১৯ নভেম্বর ২০২৬: "একদম সবার জন্য" — মাইগ্রেশনে সবাই `rose`-এ ওঠেন (আগের মান JSON-এ রাখা, ফেরার পথে ফেরে)
+       (`2027_04_20_100000_the_new_abos_look_becomes_the_first_look`); পরে যে কেউ নিজে অন্য রূপ বাছতে পারেন।
+    */
+    public const DEFAULT = 'rose';
 
     /**
      * ⚠️ ঘরগুলো সব রূপে **এক নয়** — চারটা কেবল `navy`-তে।
@@ -241,23 +246,43 @@ final class Ui
                  */
                 'tabs' => 'strip',
             ],
+            /*
+             * ⭐ "ABOS" — আগের Rose-এর চাবিতে নতুন রূপ, ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট (মালিকের অনুমোদিত নমুনা, claude.ai artifact
+             * AAjAfjZ8TnCfnjtt3Kthjz v11)।
+             *
+             * ⓘ ABOS Blue-র রং ([[Looks/rose.php]]-এ লেখা, ধার করা নয়); মেনু সমতল, ফ্রেমের একই নীল; বাঁয়ের মডিউল-রেল নেই
+             * (`rail` => `none`) — মডিউল বদলায় মেনুর নিচের তালিকা থেকে ([[chrome/rose.blade.php]]-এর `rail-foot`), আর উপরের
+             * রঙিন ⊞ থেকে; পাতার মাথায় মডিউল-বার বা পাতার পথ নেই (`pathbar` => `none`)।
+             * ⛔ স্বাধীন রূপ — মালিক: "একটা বদলালে অন্যটা বদলাবে না"। খোলস নিজের ফাইলে, গড়ন নিজের CSS-এ
+             * ([[resources/css/abos-look.css]]); navy বা blue-র কোনো ফাইল এটা পড়ে না।
+             */
             'rose' => [
                 'label' => 'core.ui.rose',
                 'blurb' => 'core.ui.rose_blurb',
                 'imitates' => null,
-                'accent' => 'crimson',
+                'accent' => 'blue',
                 'commands' => 'inline',
-                'filters' => 'toggle',
+                'filters' => 'chips',
                 'views' => 'title',
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'rail',
                 'topnav' => 'none',
                 'band' => 'none',
-                'density' => 'comfortable',
-                'swatch' => '#be123c',
-                'ink' => '#1f1417',
+                'density' => 'dense',
+                'swatch' => '#2160d8',
+                'ink' => '#152238',
                 'panel' => 'light',
+                'shell' => 'split',
+                'listfoot' => 'totals',
+                'hints' => 'keys',
+                'tabs' => 'strip',
+                // ⭐ কেবল এই রূপে — বাঁয়ের আইকন-রেল নেই, পাতার মাথায় মডিউল-বার বা পথ নেই ([[moduleRail()]], [[pathBar()]])
+                'rail' => 'none',
+                'pathbar' => 'none',
+                // ⭐ কেবল এই রূপে — নিচের বারে নীল "Notice" ([[tickerTag()]]) আর হোমে গোটা-ব্যবসার বোর্ড ([[home()]])
+                'ticker' => 'tag',
+                'home' => 'board',
             ],
             'tiles' => [
                 'label' => 'core.ui.tiles',
@@ -545,6 +570,48 @@ final class Ui
     public static function wearsAbosShell(?string $key): bool
     {
         return in_array(self::clean($key), ['navy', 'blue'], true);
+    }
+
+    /**
+     * ⭐ বাঁয়ের মডিউল-রেল — `icons` (আজকের সবাই) বা `none` (কেবল "ABOS", ১৯ নভেম্বর ২০২৬)।
+     *
+     * ⓘ `none`-এ রেলটা **আঁকাই হয় না** ([[shell.sidebar]]); মডিউল বদলের পথ তখন রূপের নিজের — "ABOS"-এ মেনুর নিচের তালিকা
+     * ([[chrome/rose.blade.php]]-এর `rail-foot`) আর উপরের রঙিন ⊞ ([[shell.launcher]] সেই তালিকাই খোলে)।
+     * ⓘ ঘরটা কেবল যে রূপ চায় তার সারিতে — অনুপস্থিতি মানে আজকের আচরণ।
+     */
+    public static function moduleRail(?string $key): string
+    {
+        return self::all()[self::clean($key)]['rail'] ?? 'icons';
+    }
+
+    /**
+     * ⭐ পাতার মাথার সারি — `modulebar` (ABOS-এর মডিউল-বার আর পাতার পথ), `crumbs` (বাকিদের breadcrumb) বা `none`।
+     *
+     * ⓘ ঘর না থাকলে আগের নিয়ম: [[wearsAbosShell()]] হলে মডিউল-বার, নইলে breadcrumb। "ABOS"-এর নমুনায় দুইটার একটাও নেই।
+     */
+    public static function pathBar(?string $key): string
+    {
+        $look = self::clean($key);
+
+        return self::all()[$look]['pathbar'] ?? (self::wearsAbosShell($look) ? 'modulebar' : 'crumbs');
+    }
+
+    /**
+     * ⭐ নিচের বারের চলন্ত নোটিশের আগে রূপের নিজের চিহ্ন বসে কি না — কেবল "ABOS" (১৯ নভেম্বর ২০২৬)।
+     * ⛔ মালিকের নিয়ম (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না — তাই অন্যদের বেলায় জায়গাটা ডাকাই হয় না।
+     */
+    public static function tickerTag(?string $key): bool
+    {
+        return (self::all()[self::clean($key)]['ticker'] ?? 'plain') === 'tag';
+    }
+
+    /**
+     * ⭐ হোমের পাতা — `board` (গোটা-ব্যবসার বোর্ড, `workspace.home-abos`) কেবল "ABOS"-এ; বাকি সবার আগের হোম হুবহু
+     * (`workspace.home`, bf90c405b-এর মতো)। ⛔ মালিকের নিয়ম (১৯ নভেম্বর ২০২৬): অন্য রূপের নকশা এক পিক্সেলও বদলাবে না।
+     */
+    public static function home(?string $key): string
+    {
+        return self::all()[self::clean($key)]['home'] ?? 'classic';
     }
 
     public static function panelIsDark(?string $key): bool

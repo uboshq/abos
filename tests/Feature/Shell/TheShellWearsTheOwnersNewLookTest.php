@@ -32,6 +32,8 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ মডিউল-বার আর রেল ABOS Blue-র খোলসের দাবি — নতুন ডিফল্ট "ABOS"-এ ওগুলো নেই (১৯ নভেম্বর ২০২৬), তাই এই মানুষ ABOS Blue-তে
+        $this->owner->forceFill(['ui' => 'blue'])->save();
     }
 
     public function test_the_top_bar_carries_the_live_logo_white_branch_coloured_icons_and_the_name_with_title(): void

@@ -3,133 +3,181 @@
 declare(strict_types=1);
 
 /*
- * Rose — ABOS-এর নিজের রূপ — উষ্ণ গোলাপি, নরম ধার, সোনার রেখা।
+ * ⭐ "ABOS" — আগের Rose-এর জায়গায়, ১৯ নভেম্বর ২০২৬ থেকে ডিফল্ট রূপ (মালিকের অনুমোদিত নমুনা, claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)।
  *
- * ── এই ফাইলটা কী, আর কেন CSS নয় ─────────────────────────────────────
- * থিম ইঞ্জিনের ধাপ ১: রূপ **ডাটায়**, CSS ফাইলে নয়। আজ পর্যন্ত দশটা
- * রূপের টোকেন `resources/css/themes.css`-এ `[data-ui='x']` ব্লক হয়ে
- * ছিল, আর তার ফল ছিল দুইটা:
+ * ── রং কোথা থেকে ─────────────────────────────────────────────────────
+ * ABOS Blue-র রং হুবহু (নমুনার `:root`): রেল ও উপরের বার #2160d8, কাজের জায়গা #eef3fc, সাদা কার্ড, কালি #152238, ফিকে কালি
+ * #5f6f8a, দাগ #e3e9f4, ব্র্যান্ড #2563eb (অ্যাকসেন্ট `blue`-এর ৬০০)।
+ * ⓘ তফাত একটাই: মেনু সমতল — ফ্রেমের একই নীল (#2160d8), ছোপ নেই, দাগ নেই; সাদা লেখা, বাছা সারি সাদা বড়িতে নীল লেখা।
  *
- *   · পাতায় **দশটা রূপেরই** টোকেন নামত — যিনি Navy চালান তিনিও
- *     Odoo, Fiori, Linear সবার রং ডাউনলোড করতেন
- *   · নতুন রূপ মানে CSS ফাইলে হাতে আরেকটা ব্লক, আর ভুল টোকেনের নাম
- *     নীরবে কিছুই করত না
+ * ── ⛔ স্বাধীন ────────────────────────────────────────────────────────
+ * মালিক: "একটা বদলালে অন্যটা বদলাবে না"। তাই মানগুলো এখানে **লেখা**, ABOS Blue-র ফাইল থেকে পড়া নয়; ABOS Blue বদলালে এটা নড়ে না,
+ * এটা বদলালে ABOS Blue নড়ে না। খোলসের গড়ন নিজের ফাইলে ([[resources/css/abos-look.css]], [[chrome/rose.blade.php]])।
  *
- * ডাটায় এলে সংকলক কেবল চলতি রূপটা পাঠাতে পারে, আর স্কিমা ভুল নামটা
- * সেভের সময়েই ফেরাতে পারে।
- *
- * ── মানগুলো হাতে টোকা হয়নি ──────────────────────────────────────────
- * `themes.css` পড়ে যন্ত্র দিয়ে বের করা, কারণ প্ল্যানের শর্ত হলো
- * **একটাও পিক্সেল নড়বে না**। দশটা রূপে দুই হাজারের বেশি মান; হাতে
- * টুকলে একটা ভুল হেক্স কেউ ধরতে পারত না।
- *
- * `LooksMatchTheStylesheetTest` দুই দিক মিলিয়ে দেখে — এই ফাইল আর
- * স্টাইলশিট আলাদা কিছু বললে সেটা ভাঙে।
+ * ── অবস্থার চার রং — প্রতিটার একটাই অর্থ ───────────────────────────────
+ * লাল জরুরি · কমলা আজই · হলুদ এ সপ্তাহে · সবুজ ঠিক আছে; পাশে সবসময় লেখার চিপ ([[x-ui.status-chip]])।
  */
 
 return [
     'light' => [
-        '--color-badge-danger-bg' => '#fbe9ec',
-        '--color-badge-danger-ink' => '#b4243c',
-        '--color-badge-pending-bg' => '#fdf3e3',
-        '--color-badge-pending-ink' => '#7d5005',
-        '--color-badge-success-bg' => '#e9f6ef',
-        '--color-badge-success-ink' => '#116b3d',
-        '--color-badge-warning-bg' => '#fdf3e3',
-        '--color-badge-warning-ink' => '#7d5005',
-        '--color-border' => '#d9e1ec',
-        '--color-border-strong' => '#b9c6d8',
+        '--color-border' => '#e3e9f4',
+        '--color-border-strong' => '#c9d6ee',
         '--color-cell-line' => 'transparent',
-        '--color-ink' => '#1b2430',
-        '--color-ink-body' => '#1b2430',
-        '--color-ink-muted' => '#5b6575',
-        '--color-link' => '#9d1249',
-        '--color-sidebar' => '#f6f8fb',
-        '--color-sidebar-active' => '#c2185b',
-        '--color-sidebar-border' => '#d9e1ec',
-        '--color-sidebar-hover' => '#eef2f8',
-        '--color-sidebar-icon' => '#5b6575',
-        '--color-sidebar-panel' => '#f6f8fb',
-        '--color-state-on' => '#116b3d',
-        '--color-surface-app' => '#ffffff',
+        '--color-ink' => '#152238',
+        '--color-ink-body' => '#152238',
+        '--color-ink-muted' => '#5f6f8a',
+        '--color-link' => '#2563eb',
+
+        // ⓘ রেল আর উপরের বার একই নীলে — নমুনার `.app{background:#2160d8}`; ফ্রেমের হালকা নীল CSS-এ পাতার জমিন
+        '--color-sidebar' => '#2160d8',
+        '--color-sidebar-active' => '#ffffff',
+        '--color-sidebar-border' => '#2160d8',
+        '--color-sidebar-hover' => 'rgb(255 255 255 / 0.14)',
+        '--color-sidebar-icon' => '#ffffff',
+        // ⭐ মেনু সমতল — ফ্রেমের হুবহু একই নীল, কোনো ছোপ বা দাগ নয় (মালিক, ১৯ নভেম্বর ২০২৬)
+        '--color-sidebar-panel' => '#2160d8',
+        '--color-state-on' => '#107c10',
+
+        '--color-surface-app' => '#eef3fc',
         '--color-surface-card' => '#ffffff',
-        '--color-surface-hover' => '#fafbfd',
-        '--color-surface-muted' => '#f6f8fb',
-        '--color-surface-selected' => '#fff1f6',
-        '--color-surface-sunken' => '#f6f8fb',
-        '--color-table-head' => '#f6f8fb',
-        '--color-table-head-ink' => '#5b6575',
+        '--color-surface-hover' => '#f2f6fd',
+        '--color-surface-muted' => '#f5f8fe',
+        '--color-surface-selected' => '#e8f0ff',
+        '--color-surface-sunken' => '#eef3fc',
+        '--color-table-head' => '#f5f8fe',
+        '--color-table-head-ink' => '#5f6f8a',
         '--color-toolbar' => '#ffffff',
-        '--color-topbar' => '#ffffff',
-        '--color-topbar-border' => '#d9e1ec',
-        '--color-topbar-field' => '#f6f8fb',
-        '--color-topbar-hover' => '#eef2f8',
-        '--color-topbar-ink' => '#1b2430',
-        '--color-topbar-ink-muted' => '#5b6575',
+        '--color-row-alt' => '#f8faff',
+        '--color-section-head' => '#f5f8fe',
+
+        '--color-topbar' => '#2160d8',
+        '--color-topbar-border' => '#2160d8',
+        '--color-topbar-field' => 'rgb(255 255 255 / 0.14)',
+        '--color-topbar-hover' => 'rgb(255 255 255 / 0.18)',
+        '--color-topbar-ink' => '#ffffff',
+        '--color-topbar-ink-muted' => '#eef5ff',
+
+        '--color-modulebar' => '#ffffff',
+        '--color-modulebar-border' => '#e3e9f4',
         '--color-topnav' => '#ffffff',
-        '--color-topnav-border' => '#d9e1ec',
-        '--color-topnav-hover' => '#eef2f8',
-        '--color-topnav-ink' => '#9d1249',
-        '--color-topnav-ink-muted' => '#5b6575',
-        '--color-topnav-selected' => '#fff1f6',
-        '--font-size-table' => '13px',
-        '--gold-hairline-h' => '2px',
+        '--color-topnav-border' => '#e3e9f4',
+        '--color-topnav-hover' => '#f2f6fd',
+        '--color-topnav-ink' => '#152238',
+        '--color-topnav-ink-muted' => '#5f6f8a',
+        '--color-topnav-selected' => '#e8f0ff',
+
+        '--color-footer' => '#ffffff',
+        '--color-footer-border' => 'transparent',
+        '--color-footer-ink' => '#5f6f8a',
+
+        // ⭐ অবস্থার চার রং — নমুনার হুবহু (জরুরি · আজই · এ সপ্তাহে · ঠিক আছে)
+        '--color-status-urgent' => '#c50f1f',
+        '--color-status-urgent-soft' => '#fdf3f4',
+        '--color-status-today' => '#bc4b09',
+        '--color-status-today-soft' => '#fdf6f3',
+        '--color-status-week' => '#8a6d00',
+        '--color-status-week-bar' => '#eaa300',
+        '--color-status-week-soft' => '#fefbf4',
+        '--color-status-week-on' => '#1b1b1b',
+        '--color-status-ok' => '#107c10',
+        '--color-status-ok-soft' => '#f1faf1',
+        '--color-status-on' => '#ffffff',
+        '--color-status-off' => '#94a3b8',
+
+        // ⓘ নমুনার নরম ছায়া — কার্ডে দাগ নেই, ছায়া আর ফাঁক
+        '--shadow-card' => '0 1px 2px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.06)',
+
+        '--font-size-table' => '12.5px',
         '--grid-pad-x' => '12px',
-        '--grid-pad-y' => '8px',
+        '--grid-pad-y' => '7px',
         '--radius-badge' => '999px',
-        '--radius-card' => '12px',
-        '--radius-field' => '8px',
+        '--radius-card' => '22px',
+        '--radius-field' => '14px',
         '--radius-pill' => '999px',
+
+        '--rail-tile-radius' => '16px',
+        // ⭐ বাছা সারি সাদা বড়িতে ফ্রেমের নীল লেখা
+        '--rail-item-on-bg' => '#ffffff',
+        '--rail-item-on-ink' => '#2160d8',
+        '--rail-item-h' => '32px',
+        '--rail-item-font' => '13.5px',
+        '--rail-item-radius' => '999px',
         '--row-height' => '44px',
         '--row-height-dense' => '36px',
-        '--spacing-header' => '56px',
+        '--spacing-header' => '64px',
+        '--topbar-control-h' => '40px',
     ],
 
     /*
-     * গাঢ় থিমে এই রূপের নিজের মান।
-     *
-     * খালি থাকলে রূপটা গাঢ় থিমের সাধারণ মানই নেয়। আজ দশটারই
-     * নিজের গাঢ় রূপ আছে — SAP Horizon Dark, Fluent 2 Dark ও
-     * Salesforce Dark-এর নিজের ধাপ ধরে।
+     * গাঢ় থিম — নমুনার `[data-theme="dark"]` হুবহু: ফ্রেম #1c3f8f, রেল #16336f, জমিন #0f1830, কার্ড #17223f।
+     * ⓘ কোণ, ঘনত্ব, সারির উচ্চতা এখানে নেই — রাতে ওগুলো বদলায় না ([[LookRegistry::tokens()]] আলোর উপর গাঢ় বসায়)।
      */
     'dark' => [
-        '--color-border' => '#31212a',
-        '--color-border-strong' => '#452e3a',
-        '--color-cell-line' => '#31212a',
-        '--color-footer' => '#170e13',
-        '--color-footer-border' => '#31212a',
-        '--color-footer-ink' => '#bb9aa6',
-        '--color-ink' => '#f7eaf0',
-        '--color-ink-body' => '#f7eaf0',
-        '--color-ink-muted' => '#bb9aa6',
-        '--color-link' => '#f08bb0',
-        '--color-row-alt' => '#1b1116',
-        '--color-sidebar' => '#140c11',
-        '--color-sidebar-active' => '#c2185b',
-        '--color-sidebar-border' => '#31212a',
-        '--color-sidebar-hover' => '#1e293b',
-        '--color-sidebar-icon' => '#bb9aa6',
-        '--color-sidebar-panel' => '#1a1015',
-        '--color-surface-app' => '#170e13',
-        '--color-surface-card' => '#1f141a',
-        '--color-surface-hover' => '#271923',
-        '--color-surface-muted' => '#1b1116',
-        '--color-surface-selected' => '#33202c',
-        '--color-surface-sunken' => '#1b1116',
-        '--color-table-head' => '#1b1116',
-        '--color-table-head-ink' => '#bb9aa6',
-        '--color-toolbar' => '#1f141a',
-        '--color-topbar' => '#1f141a',
-        '--color-topbar-border' => '#31212a',
-        '--color-topbar-field' => '#271923',
-        '--color-topbar-hover' => '#271923',
-        '--color-topbar-ink' => '#f7eaf0',
-        '--color-topbar-ink-muted' => '#bb9aa6',
-        '--color-topnav' => '#1a1015',
-        '--color-topnav-border' => '#31212a',
-        '--color-topnav-hover' => '#271923',
-        '--color-topnav-ink' => '#f7eaf0',
-        '--color-topnav-ink-muted' => '#bb9aa6',
-        '--color-topnav-selected' => '#33202c',
+        '--color-border' => '#26345a',
+        '--color-border-strong' => '#33457a',
+        '--color-cell-line' => '#26345a',
+        '--color-ink' => '#e7eefc',
+        '--color-ink-body' => '#e7eefc',
+        '--color-ink-muted' => '#9fb0cf',
+        '--color-link' => '#8fb3ff',
+
+        '--color-sidebar' => '#16336f',
+        '--color-sidebar-active' => '#ffffff',
+        '--color-sidebar-border' => '#16336f',
+        '--color-sidebar-hover' => 'rgb(255 255 255 / 0.10)',
+        '--color-sidebar-icon' => '#ffffff',
+        '--color-sidebar-panel' => '#16336f',
+        '--color-state-on' => '#6ccb5f',
+
+        '--color-surface-app' => '#0f1830',
+        '--color-surface-card' => '#17223f',
+        '--color-surface-hover' => '#1e2b4f',
+        '--color-surface-muted' => '#1b2849',
+        '--color-surface-selected' => '#1e2f5c',
+        '--color-surface-sunken' => '#0f1830',
+        '--color-table-head' => '#1b2849',
+        '--color-table-head-ink' => '#9fb0cf',
+        '--color-toolbar' => '#17223f',
+        '--color-row-alt' => '#192544',
+        '--color-section-head' => '#1b2849',
+        '--color-surface-success-tint' => '#17223f',
+
+        '--color-topbar' => '#16336f',
+        '--color-topbar-border' => '#16336f',
+        '--color-topbar-field' => 'rgb(255 255 255 / 0.10)',
+        '--color-topbar-hover' => 'rgb(255 255 255 / 0.14)',
+        '--color-topbar-ink' => '#e7eefc',
+        '--color-topbar-ink-muted' => '#c3d3f3',
+
+        '--color-modulebar' => '#17223f',
+        '--color-modulebar-border' => '#26345a',
+        '--color-topnav' => '#17223f',
+        '--color-topnav-border' => '#26345a',
+        '--color-topnav-hover' => '#1e2b4f',
+        '--color-topnav-ink' => '#e7eefc',
+        '--color-topnav-ink-muted' => '#9fb0cf',
+        '--color-topnav-selected' => '#1e2f5c',
+
+        '--color-footer' => '#17223f',
+        '--color-footer-border' => 'transparent',
+        '--color-footer-ink' => '#9fb0cf',
+
+        '--color-status-urgent' => '#ff8a93',
+        '--color-status-urgent-soft' => '#3b1519',
+        '--color-status-today' => '#ffa36b',
+        '--color-status-today-soft' => '#3a2010',
+        '--color-status-week' => '#f5d16b',
+        '--color-status-week-bar' => '#f5c400',
+        '--color-status-week-soft' => '#352b0a',
+        '--color-status-week-on' => '#1b1b1b',
+        '--color-status-ok' => '#6ccb5f',
+        '--color-status-ok-soft' => '#14301a',
+        '--color-status-on' => '#1b1b1b',
+        '--color-status-off' => '#8a9bbb',
+
+        '--shadow-card' => '0 1px 2px rgb(0 0 0 / 0.4), 0 4px 14px rgb(0 0 0 / 0.35)',
+
+        '--rail-item-on-bg' => '#ffffff',
+        '--rail-item-on-ink' => '#16336f',
     ],
 ];

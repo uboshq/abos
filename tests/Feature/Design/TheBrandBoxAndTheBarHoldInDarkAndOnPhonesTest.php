@@ -23,12 +23,17 @@ final class TheBrandBoxAndTheBarHoldInDarkAndOnPhonesTest extends TestCase
     {
         // ⓘ ১ নভেম্বর ২০২৬ থেকে হোমের টাকার বাক্স সোনালি-পাড়ের কাচ (মালিকের অনুমোদিত নমুনা): জমিন আর লেখা দুটোই থিমের জোড়া —
         //   surface-card আর ink, যা অন্ধকারে একসাথে বদলায়, তাই কোনো থিমে হালকায়-হালকা বা গাঢ়ে-গাঢ় নয়
+        // ⭐ ১৯ নভেম্বর ২০২৬ (মালিকের অনুমোদিত নমুনা, "ABOS"): বাক্সটা বোর্ডের কার্ড (`hb-card hb-cash`) — জমিন আর লেখা থিমের জোড়া
+        //   (surface-card আর ink), পাড় অবস্থার হলুদ (`--color-status-week-bar`), সব রূপে home-board.css থেকে
         $home = (string) file_get_contents(resource_path('views/workspace/home.blade.php'));
-        $glass = substr($home, (int) strpos($home, '<div data-money-position'), 900);
-        $this->assertStringContainsString('text-(--color-ink)', $glass, '⛔ হোমের টাকার বাক্সের লেখা থিমের কালিতে নয়।');
-        $this->assertStringContainsString('color-mix(in srgb, var(--color-surface-card) 78%, transparent)', $glass, '⛔ হোমের টাকার বাক্সের জমিন থিমের তল নয়।');
-        $this->assertStringContainsString('border: 1.5px solid color-mix(in srgb, var(--color-brand-gold)', $glass, '⛔ হোমের টাকার বাক্সে সোনালি পাড় নেই।');
-        $this->assertStringNotContainsString('color-ink-inverse', $glass, '⛔ বাক্স আবার ink-inverse নিল — অন্ধকারে গাঢ় লেখা।');
+        $glass = substr($home, (int) strpos($home, '<section data-money-position'), 300);
+        $this->assertStringContainsString('hb-card hb-cash', $glass, '⛔ হোমের টাকার বাক্স বোর্ডের কার্ড নয়।');
+        $css = (string) file_get_contents(resource_path('css/home-board.css'));
+        $card = substr($css, (int) strpos($css, '.hb-card {'), 300);
+        $this->assertStringContainsString('background: var(--color-surface-card)', $card, '⛔ হোমের টাকার বাক্সের জমিন থিমের তল নয়।');
+        $this->assertStringContainsString('color: var(--color-ink)', $card, '⛔ হোমের টাকার বাক্সের লেখা থিমের কালিতে নয়।');
+        $this->assertMatchesRegularExpression('/\.hb-cash \{[^}]*border: 2px solid var\(--color-status-week-bar/', $css, '⛔ হোমের টাকার বাক্সে হলুদ পাড় নেই।');
+        $this->assertStringNotContainsString('color-ink-inverse', $glass.$card, '⛔ বাক্স আবার ink-inverse নিল — অন্ধকারে গাঢ় লেখা।');
 
         foreach (['views/components/dashboard/hero-listing.blade.php' => 'data-hero-listing'] as $file => $mark) {
             $source = (string) file_get_contents(resource_path($file));
