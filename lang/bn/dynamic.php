@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 return [
     'company' => 'কোম্পানি:',
+    'branch_suffix' => 'শাখা',
     'settings' => 'সেটিংস',
     'help' => 'সাহায্য ও নতুন কী এল',
     'all_menus' => 'সব মেনু',

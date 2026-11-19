@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 return [
     'company' => 'Company:',
+    'branch_suffix' => 'branch',
     'settings' => 'Settings',
     'help' => 'Help and updates',
     'all_menus' => 'All menus',

@@ -46,6 +46,8 @@
                     </button>
 
                     <template x-if="open">
+                        {{-- ⭐ ডানে জায়গা না থাকলে তালিকা বাঁয়ে সরে পর্দার ভেতরে খোলে — মালিক, ১৯ নভেম্বর ২০২৬ রাত (লাইভের ছবি: "ডান পাশের
+                             বাকি মেনুগুলা কেটে যাচ্ছে … এটা হচ্ছে মেইন সমস্যা") --}}
                         <div class="dyn-drop pops-onto-page" data-dyn-drop>
                             @foreach ($module['groups'] as $group => $items)
                                 <div class="dyn-drop-group">

@@ -57,7 +57,58 @@ export function mergeMoneyHead (root = document) {
  * ⓘ ঘর আর লিংক নিজেরাই সরে — নকল নয় — তাই জমা দেওয়া, ঠিকানা, পেছনে যাওয়া সব আগের মতো।
  * ⛔ কেবল `rose`-এ। তালিকার টুলবার ([[x-ui.toolbar]]) আর তার ছাঁকনির পাতা ছোঁয়া হয় না — ওগুলো আগেই এক সারিতে।
  */
-const FUNNEL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'
+/*
+ * ⭐ পাতার নিজের ব্যাখ্যার লাইন (page-header-এর `subtitle` নয় — পাতা নিজেই লেখা একটা ম্লান `<p>`, তালিকার বাক্সের আগে) — লুকায়,
+ *   আর লেখাটা নামের পাশে ⓘ-এর ভিতরে যায়, মাউস রাখলে দেখা যায়। "ABOS" আর "Dynamic"-এ (মালিক, ১৯ নভেম্বর ২০২৬ রাত — Dynamic-এর
+ *   কোম্পানির পাতার ছবি: "এই ধরনের সমস্যা আছে কোথায় কোথায় দেখে এগুলো রিমুভ করে")।
+ * ⓘ সতর্কবার্তা (`role=alert`), ফর্ম, বাক্স বা টেবিলের ভিতরের লেখা ছোঁয় না — কেবল মাথা আর প্রথম বাক্সের মাঝের ম্লান লাইন।
+ */
+const INFO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+
+export function foldPageNotes (root = document) {
+    if (! ['rose', 'dynamic'].includes(root.documentElement?.dataset.ui)) {
+        return 0
+    }
+
+    const main = root.querySelector('main')
+    const box = main?.querySelector('[data-boxed], table, .toolbar-view')
+
+    if (! main || ! box) {
+        return 0
+    }
+
+    const notes = [...main.querySelectorAll('p')].filter(p => before(p, box)
+        && /(^|\s)text-\(--color-ink-muted\)(\s|$)/.test(p.className) && ! p.hidden && p.textContent.trim() !== ''
+        && ! p.hasAttribute('data-page-subtitle')
+        && ! p.closest('[data-boxed], form, section, table, dialog, aside, li, details, [role=alert], [data-head-filter], [data-page-kind] > [data-money-hero]'))
+
+    if (notes.length === 0) {
+        return 0
+    }
+
+    const title = [...main.querySelectorAll('h1, h2[data-view-selector]')].find(h => ! h.hidden && h.getClientRects().length !== 0)
+        ?? main.querySelector('h1, h2[data-view-selector]')
+    const text = notes.map(p => p.textContent.trim().replace(/\s+/g, ' ')).join(' ')
+
+    if (title && ! title.querySelector('[data-page-info]')) {
+        const info = root.createElement('span')
+        info.setAttribute('data-page-info', '')
+        info.setAttribute('data-page-note-info', '')
+        info.title = text
+        info.setAttribute('aria-label', text)
+        info.innerHTML = INFO
+        title.append(info)
+    } else if (title) {
+        const info = title.querySelector('[data-page-info]')
+        info.title = `${info.title} ${text}`.trim()
+    }
+
+    notes.forEach(p => { p.hidden = true; p.setAttribute('data-page-note', '') })
+
+    return notes.length
+}
+
+const FUNNEL ='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'
 
 const before = (a, b) => b === null || Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 

@@ -18,7 +18,8 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
-import { compactPageHead, mergeMoneyHead } from './abos-list-head.js'
+import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
+import { keepMenusOnScreen } from './keep-on-screen.js'
 import { sidebarStore } from './sidebar-state.js'
 import { bottomNav } from './bottom-nav.js'
 import documentScan from './document-scan.js'
@@ -178,8 +179,11 @@ guardOneSubmit()
 // ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
 mergeMoneyHead()
 compactPageHead()
+foldPageNotes()
 
 window.Alpine = Alpine
+// ⭐ ভাসমান তালিকা পর্দার ভেতরে — Dynamic-এর মডিউল-মেনু ([[keep-on-screen.js]])
+keepMenusOnScreen()
 Alpine.start()
 
 // ⭐ জীবন্ত ABOS লোগো আর লোড হওয়ার পর্দা (মালিক, ১ নভেম্বর ২০২৬)

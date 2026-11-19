@@ -141,15 +141,15 @@
 :root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span {
     max-width: 16rem;
 }
-:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span::before {
-    font-size: 10px;
-    line-height: 12px;
-    color: #ffffff;
+/* ⭐ দুই লাইন, পড়ার মতো বড় — উপরে কেবল কোম্পানির নাম (মোটা), নিচে "<নাম> শাখা"। মালিক, ১৯ নভেম্বর ২০২৬ রাত: "কোম্পানির নামটা তিন
+   লাইনে হয়ে গেছে এবং এগুলো ছোট দেখতে কষ্ট হয় … এক লাইনে শুধু কোম্পানির নামটা … নিচে ব্রাঞ্চ" ("কোম্পানি:" লেবেল আর নেই) */
+:root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span {
+    max-width: 22rem;
 }
 :root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span > span:first-child {
-    font-size: 11px !important;
-    font-weight: 400;
-    line-height: 14px;
+    font-size: 14px !important;
+    font-weight: 700;
+    line-height: 18px;
     color: #ffffff;
 }
 :root[data-ui='dynamic'] [data-shell-company] [data-shell-branch] {
@@ -158,8 +158,9 @@
     border: 0 !important;
     background: none !important;
     color: #d6d6d6 !important;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 400;
+    line-height: 16px;
 }
 :root[data-ui='dynamic'] [data-shell-company] [data-shell-branch] > span:first-child { display: none; }
 :root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > svg { width: 14px; height: 14px; fill: #d6d6d6; }
@@ -954,3 +955,29 @@
     border-radius: 0;
     box-shadow: none;
 }
+
+/* ══ মালিক, ১৯ নভেম্বর ২০২৬ রাত — লাইভের ছবি দেখে চার বদল ("ok") ═══════════════════════════════════════════
+   ⓘ কেবল এই রূপে; বাকি রূপ ছোঁয়া হয়নি। */
+
+/* ⭐ কোম্পানির নাম এক জায়গাতেই — উপরের বারে। মেনুর সারির বাঁয়ের নামটা বড় পর্দায় আর নয়, মডিউল সেখান থেকেই শুরু
+   ("কোম্পানির নামটা দুই জায়গায় আছে")। ফোনে মেনুর সারিতে মডিউল নেই, তাই সেখানে নামটা থাকে। */
+@media (min-width: 768px) {
+    :root[data-ui='dynamic'] .dyn-co { display: none; }
+}
+
+/* ⭐ নিজের ছবি একদম ডানে — ⚙ আর ?-এর পরে (Microsoft 365, Google, SAP, Salesforce সবাই তাই করে) */
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-actions] { display: contents; }
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-actions] > * { order: 13; }
+:root[data-ui='dynamic'] [data-topbar] > [data-shell-actions] > [data-profile-menu] { order: 16; margin-inline-start: 4px; }
+
+/* ⭐ শিরোনামের নিচের বিবরণের লাইন নেই — নামের পাশে ⓘ, মাউস রাখলে লেখাটা ("এই ধরনের সমস্যা … রিমুভ করে") */
+:root[data-ui='dynamic'] [data-page-subtitle] { display: none; }
+:root[data-ui='dynamic'] [data-page-info] {
+    display: inline-grid;
+    place-items: center;
+    margin-inline-start: 8px;
+    vertical-align: middle;
+    color: var(--color-ink-muted);
+    cursor: help;
+}
+:root[data-ui='dynamic'] [data-page-info]:hover { color: var(--dyn-teal); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compactPageHead, mergeMoneyHead } from './abos-list-head.js'
+import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 
 /* ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে (মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3) — অন্য রূপে কিছুই নড়ে না */
 function page (ui) {
@@ -123,6 +123,44 @@ describe('compactPageHead', () => {
             expect(compactPageHead(document)).toBeNull()
             expect(document.querySelector('main > nav')).not.toBeNull()
             expect(document.querySelector('main > form').hidden).toBe(false)
+        }
+    })
+})
+
+/* ⭐ পাতার নিজের ম্লান ব্যাখ্যার লাইন ⓘ-তে — "ABOS" আর "Dynamic"-এ (মালিক, ১৯ নভেম্বর ২০২৬ রাত) */
+function companies (ui) {
+    document.documentElement.dataset.ui = ui
+    document.body.innerHTML = `
+        <main>
+            <div role="alert" class="text-(--color-ink-muted)"><p class="text-sm text-(--color-ink-muted)">Saved</p></div>
+            <p class="mb-4 text-sm text-(--color-ink-muted)">A new company gets its branch, year and books at once.</p>
+            <div data-boxed><div class="toolbar-view"><h2 data-view-selector>Companies</h2></div>
+                <p class="text-sm text-(--color-ink-muted)">inside the box</p><table></table></div>
+        </main>`
+}
+
+describe('foldPageNotes', () => {
+    it('hides the page\'s own grey note and puts it behind an ⓘ beside the title, in ABOS and Dynamic', () => {
+        for (const ui of ['rose', 'dynamic']) {
+            companies(ui)
+
+            expect(foldPageNotes(document)).toBe(1)
+            const note = document.querySelector('main > p')
+            expect(note.hidden).toBe(true)
+            const info = document.querySelector('h2[data-view-selector] [data-page-info]')
+            expect(info?.title).toBe('A new company gets its branch, year and books at once.')
+            expect(document.querySelector('[role=alert] p').hidden).toBe(false)
+            expect(document.querySelector('[data-boxed] > p').hidden).toBe(false)
+        }
+    })
+
+    it('leaves every other look untouched', () => {
+        for (const ui of ['navy', 'blue', 'tiles']) {
+            companies(ui)
+
+            expect(foldPageNotes(document)).toBe(0)
+            expect(document.querySelector('main > p').hidden).toBe(false)
+            expect(document.querySelector('[data-page-info]')).toBeNull()
         }
     })
 })

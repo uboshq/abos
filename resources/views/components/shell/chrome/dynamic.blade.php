@@ -77,9 +77,10 @@
         </a>
     @endif
 
-    {{-- ⓘ "Company:" — কোম্পানি বদলের বোতামের আগে, অনুবাদসহ; লেখাটা CSS-এর `content`-এ, তাই বোতামের markup অক্ষত --}}
+    {{-- ⭐ "কোম্পানি:" লেবেল আর নেই — প্রথম লাইনে কেবল কোম্পানির নাম, মোটা; নিচে "<নাম> শাখা" (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "কোম্পানি
+         যে লেখাটা কোম্পানি লিখতে হইলো না … নিচে ব্রাঞ্চ লিখে মানে অমুক ব্রাঞ্চ")। "শাখা" শব্দটা CSS-এর `content`-এ, অনুবাদসহ। --}}
     <style @nonce>
-        :root[data-ui='dynamic'] [data-shell-company] [data-company-branch] > button > span::before { content: {!! json_encode(__('dynamic.company'), JSON_UNESCAPED_UNICODE) !!}; }
+        :root[data-ui='dynamic'] [data-shell-company] [data-shell-branch-name]:not([data-all-branches])::after { content: {!! json_encode(' '.__('dynamic.branch_suffix'), JSON_UNESCAPED_UNICODE) !!}; }
     </style>
 @endif
 

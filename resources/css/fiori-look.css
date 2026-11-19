@@ -462,3 +462,27 @@
     background: var(--color-footer);
     border-top-color: var(--color-footer-border);
 }
+
+/* ⭐ মডিউলের সারি এক লাইনে, স্ক্রল ছাড়া — মালিক, ১৯ নভেম্বর ২০২৬ রাত: "Sap feiri teo module bare scroll korte hoy tai font coto kore
+   gap komiye scrol nakore zate dekhqa zay ek line rako d365 er moto"। ছোট হরফ, কম ফাঁক; চলতিটা নীল দাগে আগের মতো। */
+:root[data-ui='tiles'] nav.topnav {
+    gap: 0;
+    padding-inline: 12px;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+:root[data-ui='tiles'] nav.topnav [data-nav-item] {
+    gap: 2px;
+    padding-inline: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+:root[data-ui='tiles'] nav.topnav button[data-nav-item]::after {
+    width: 9px;
+    height: 9px;
+    margin-inline-start: 1px;
+}
