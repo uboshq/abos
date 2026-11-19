@@ -260,7 +260,7 @@ final class HomeBoard implements HomeBoardContract
             'centre' => self::short($stock['total']),
             'centre_label' => __('home.board.stock_value'),
             'parts' => self::parts(array_map(fn (array $r, int $i) => [
-                'label' => $r['name'],
+                'label' => self::latin((string) $r['name']),
                 'colour' => $colours[$i % count($colours)],
                 'amount' => $r['value'],
             ], $rows, array_keys($rows)), $stock['total'], true),
@@ -286,7 +286,7 @@ final class HomeBoard implements HomeBoardContract
             'type' => 'bars',
             'colour' => self::PURPLE,
             'rows' => array_map(fn (array $r): array => [
-                'label' => (string) $r['name'],
+                'label' => self::latin((string) $r['name']),
                 'value' => (float) $r['amount'],
                 'text' => self::short((string) $r['amount']),
             ], $rows),
@@ -310,7 +310,7 @@ final class HomeBoard implements HomeBoardContract
             'type' => 'bars',
             'colour' => self::TEAL,
             'rows' => array_map(fn (array $r): array => [
-                'label' => (string) $r['name'],
+                'label' => self::latin((string) $r['name']),
                 'value' => (float) $r['amount'],
                 'text' => self::short((string) $r['amount']),
                 'href' => self::link('customer.show', ['customer' => $r['id']]),
@@ -565,7 +565,7 @@ final class HomeBoard implements HomeBoardContract
             'href' => self::link('supplier.report.show', ['slug' => 'payable-list']),
             'link' => __('home.board.payable_list'),
             'rows' => array_map(fn (array $r, int $i) => [
-                'name' => (string) ($names[(int) $r['party_id']] ?? '—'),
+                'name' => self::latin((string) ($names[(int) $r['party_id']] ?? '—')),
                 'hint' => bccomp((string) ($r['bucket_90'] ?? '0'), '0', 4) > 0
                     ? __('home.board.over_90_amount', ['amount' => '৳'.Money::format((string) $r['bucket_90'], 0)]) : null,
                 'amount' => '৳'.Money::format((string) $r['outstanding'], 0),
@@ -650,7 +650,7 @@ final class HomeBoard implements HomeBoardContract
             'href' => self::link('customer.report.show', ['slug' => 'ageing'] + self::branchParam()),
             'link' => __('home.board.see_all'),
             'rows' => array_map(fn (string $name, array $p, int $i) => [
-                'name' => $name.' · '.__('home.board.shop_count', ['count' => $p['shops']]),
+                'name' => self::latin($name).' · '.__('home.board.shop_count', ['count' => $p['shops']]),
                 'hint' => null,
                 'amount' => '৳'.Money::format($p['amount'], 0),
                 'colour' => $tints[$i][1],
@@ -708,7 +708,7 @@ final class HomeBoard implements HomeBoardContract
 
             $rows[] = [
                 'id' => $id,
-                'name' => (string) $company['name'],
+                'name' => self::latin((string) $company['name']),
                 'here' => $id === $current,
                 // ⓘ কোম্পানি বদল POST ([[WorkspaceController::switchCompany()]]) — তাই অন্য প্রতিষ্ঠানের নাম মালিকের কেন্দ্রে নামে, সেখানে সব আছে
                 'href' => $id === $current ? null : self::link('executive.today'),
@@ -835,7 +835,7 @@ final class HomeBoard implements HomeBoardContract
 
         $rows = [];
         foreach ($byCategory as $id => $value) {
-            $rows[] = ['name' => (string) ($names[$id] ?? __('home.board.no_category')), 'value' => $value];
+            $rows[] = ['name' => self::latin((string) ($names[$id] ?? __('home.board.no_category'))), 'value' => $value];
         }
 
         return ['total' => $sum, 'ledger' => $warehouse === null ? app(StockFacts::class)->value() : null, 'rows' => $rows];
