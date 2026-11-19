@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Dashboard;
 
+use App\Core\Contracts\CustomerSalesFilters;
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\Location;
+use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * গ্রাহক মডিউলের ড্যাশবোর্ড।
@@ -95,7 +101,210 @@ final class CustomerDashboard implements ProvidesDashboard
                     href: route('customer.index'),
                 ),
             ],
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            sections: [Card::board(fn (): array => self::charts(), covers: [
+                __('customer::dashboard.total'), __('customer::dashboard.active'), __('customer::dashboard.inactive'),
+                __('customer::dashboard.new_this_month'), __('customer::dashboard.growth'), __('customer::dashboard.ageing'),
+                __('customer::dashboard.segments'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ গ্রাহকের গ্রাফের বোর্ড — গ্রাহক বৃদ্ধি (কলাম), অবস্থা (ওয়াফল), বাকির বয়স (ডোনাট), এলাকা × ধরন (হিটম্যাপ),
+     *   সবচেয়ে বেশি বকেয়া (লোলিপপ), ফিরে আসা গ্রাহক (কাঁটা-মিটার)। সবই দেখার শাখার গ্রাহক ([[Customer::scopeInViewedBranch()]]);
+     *   ডিলারের দেয়াল মডেলের নিজের স্কোপে। ⛔ টাকার আর বিক্রির গ্রাফ কেবল `customer.report`-এ — নিচের বয়সের চার্টের একই চাবি।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(): array
+    {
+        $today = Carbon::today();
+        $money = (bool) auth()->user()?->can('customer.report');
+        $cards = [];
+
+        // ── গ্রাহক বৃদ্ধি — প্রতি মাসের শেষে মোট গ্রাহক, গত ছয় মাস ──────────────────
+        $start = $today->copy()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(created_at, '%Y-%m')";
+        $added = Customer::query()->inViewedBranch()->where('created_at', '>=', $start)
+            ->selectRaw("{$expr} as ym, COUNT(*) as n")->groupByRaw($expr)->toBase()->pluck('n', 'ym');
+        $running = Customer::query()->inViewedBranch()->where('created_at', '<', $start)->count();
+        $totals = [];
+        $months = [];
+        for ($month = $start->copy(); $month->lessThanOrEqualTo($today); $month->addMonth()) {
+            $running += (int) ($added[$month->format('Y-m')] ?? 0);
+            $totals[] = $running;
+            $months[] = $month->translatedFormat('M');
+        }
+        $newThisMonth = (int) ($added[$today->format('Y-m')] ?? 0);
+        $cards[] = Card::make(__('customer::dashboard.viz_growth'), 'bars', [
+            'v' => $totals, 'l' => $months, 'top' => array_map(fn (int $n) => number_format($n), $totals),
+            'colors' => [...array_fill(0, max(count($totals) - 1, 0), '#93c5fd'), '#2160d8'],
+        ], value: __('customer::dashboard.viz_people', ['n' => number_format($running)]),
+            sub: __('customer::dashboard.viz_growth_sub', ['n' => number_format($newThisMonth)]), href: route('customer.index'), colour: '#2160d8');
+
+        // ── অবস্থা — সচল, নিষ্ক্রিয়, বাকি বন্ধ (সচলের ভেতরের ভাগ, তাই যোগফল মোট গ্রাহক) ──────
+        $state = Customer::query()->inViewedBranch()
+            ->selectRaw('SUM(CASE WHEN customers.is_active = 1 AND customers.credit_blocked_at IS NULL THEN 1 ELSE 0 END) as on_,'
+                .' SUM(CASE WHEN customers.is_active = 0 THEN 1 ELSE 0 END) as off_,'
+                .' SUM(CASE WHEN customers.is_active = 1 AND customers.credit_blocked_at IS NOT NULL THEN 1 ELSE 0 END) as blocked_')
+            ->toBase()->first();
+        $parts = [
+            [__('customer::dashboard.active'), (int) ($state->on_ ?? 0)],
+            [__('customer::dashboard.inactive'), (int) ($state->off_ ?? 0)],
+            [__('customer::dashboard.viz_blocked'), (int) ($state->blocked_ ?? 0)],
+        ];
+        $cards[] = Card::make(__('customer::dashboard.viz_state'), 'waffle', [
+            'p' => array_map(fn (array $p) => [$p[0], $p[1], number_format($p[1])], $parts),
+        ], sub: __('customer::dashboard.viz_state_sub'), href: route('customer.index'), colour: '#16a34a');
+
+        // ── বাকির বয়স — বয়স রিপোর্টের যোগফল (নিচের পুরনো চার্টের একই উৎস) ──────────────
+        $ageing = $money ? self::ageingTotals() : null;
+        if ($ageing !== null) {
+            $buckets = ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90'];
+            $outstanding = (string) ($ageing['outstanding'] ?? '0');
+            $cards[] = Card::make(__('customer::dashboard.viz_ageing'), 'donut', [
+                'c' => self::short($outstanding), 'cs' => __('customer::dashboard.viz_outstanding'),
+                'p' => array_map(fn (string $b, int $i) => [
+                    __('customer::dashboard.viz_'.$b), (string) ($ageing[$b] ?? '0'), Svg::STATUS[$i], self::short((string) ($ageing[$b] ?? '0')),
+                ], $buckets, array_keys($buckets)),
+            ], value: bccomp($outstanding, '0', 4) === 0 ? '' : self::short($outstanding), sub: __('customer::dashboard.viz_ageing_sub'),
+                href: route('customer.report.show', ['slug' => 'ageing']), colour: '#f97316');
+        }
+
+        // ── এলাকা × ধরন — সচল গ্রাহক, এরিয়া ধরে (জায়গার মই বেয়ে উপরে) ────────────────
+        $cards[] = self::areaHeat();
+
+        // ── সবচেয়ে বেশি বকেয়া — গ্রাহক তালিকার "বকেয়া" ঘরের একই হিসাব (দেখার শাখার খাতা) ─────
+        if ($money) {
+            $top = Customer::query()->inViewedBranch()->withOutstandingInView()
+                ->orderByDesc('outstanding_in_view')->limit(5)->get()
+                ->filter(fn (Customer $c) => bccomp((string) ($c->getAttribute('outstanding_in_view') ?? '0'), '0', 4) > 0)->values();
+            $cards[] = Card::make(__('customer::dashboard.viz_top_due'), 'lollipop', [
+                'v' => $top->map(fn (Customer $c) => (string) $c->getAttribute('outstanding_in_view'))->all(),
+                'l' => $top->map(fn (Customer $c) => Str::limit($c->name(), 16))->all(),
+                'top' => $top->map(fn (Customer $c) => self::short((string) $c->getAttribute('outstanding_in_view')))->all(),
+            ], sub: __('customer::dashboard.viz_top_due_sub'), href: route('customer.index'), colour: '#e11d48');
+        }
+
+        // ── ফিরে আসা — গত মাসে কিনেছেন, এ মাসেও কিনলেন (বিক্রয়ের চুক্তি; বিক্রয় না থাকলে খালি) ──────
+        if ($money) {
+            $sales = app(CustomerSalesFilters::class);
+            $lastFrom = $today->copy()->subMonthNoOverflow()->startOfMonth()->toDateString();
+            $lastTo = $today->copy()->subMonthNoOverflow()->endOfMonth()->toDateString();
+            $last = $sales->boughtBetween(Customer::query()->inViewedBranch(), $lastFrom, $lastTo)->count();
+            $back = $last === 0 ? 0 : $sales->boughtBetween(
+                $sales->boughtBetween(Customer::query()->inViewedBranch(), $lastFrom, $lastTo),
+                $today->copy()->startOfMonth()->toDateString(), $today->toDateString(),
+            )->count();
+            $rate = $last > 0 ? $back / $last : null;
+            $cards[] = Card::make(__('customer::dashboard.viz_returning'), 'gauge', $rate === null ? [] : [
+                'v' => $rate, 'label' => round($rate * 100).'%',
+                'sub' => __('customer::dashboard.viz_returning_of', ['n' => number_format($back), 'of' => number_format($last)]),
+            ], value: $rate === null ? '' : round($rate * 100).'%', sub: __('customer::dashboard.viz_returning_sub'), colour: '#14b8a6');
+        }
+
+        return $cards;
+    }
+
+    /**
+     * এলাকা × গ্রাহকের ধরন — সচল গ্রাহক; এরিয়া জায়গার মই বেয়ে ([[Customer::area()]]-এর একই নিয়ম), এক কোয়েরিতে সব জায়গা।
+     * বড় পাঁচ এরিয়া আর বড় চার ধরন, বাকি "অন্যান্য" — যোগফল সচল গ্রাহকের সমান থাকে।
+     *
+     * @return array<string, mixed>
+     */
+    private static function areaHeat(): array
+    {
+        $rows = Customer::query()->inViewedBranch()->where('customers.is_active', true)
+            ->selectRaw('customers.location_id as loc, customers.party_type_id as pt, COUNT(*) as n')
+            ->groupBy('customers.location_id', 'customers.party_type_id')->toBase()->get();
+
+        $places = Location::query()->get(['id', 'parent_id', 'level', 'name_en', 'name_bn'])->keyBy('id');
+        $none = __('customer::dashboard.viz_no_area');
+        $areaOf = function ($id) use ($places, $none): string {
+            $node = $id === null ? null : ($places[(int) $id] ?? null);
+            for ($depth = 0; $node !== null && $depth < 10; $depth++) {
+                if ($node->level === Location::AREA) {
+                    return $node->name();
+                }
+                $node = $node->parent_id === null ? null : ($places[(int) $node->parent_id] ?? null);
+            }
+
+            return $none;
+        };
+        $types = PartyType::query()->whereIn('id', $rows->pluck('pt')->filter()->all())->get()
+            ->mapWithKeys(fn (PartyType $t) => [$t->id => $t->name()]);
+
+        $grid = [];
+        foreach ($rows as $r) {
+            $area = $areaOf($r->loc);
+            $type = $r->pt === null ? __('customer::dashboard.segments_none') : (string) ($types[$r->pt] ?? __('customer::dashboard.segments_none'));
+            $grid[$area][$type] = ($grid[$area][$type] ?? 0) + (int) $r->n;
+        }
+
+        $other = __('customer::dashboard.viz_other');
+        $areaTotals = array_map('array_sum', $grid);
+        arsort($areaTotals);
+        $typeTotals = [];
+        foreach ($grid as $byType) {
+            foreach ($byType as $type => $n) {
+                $typeTotals[$type] = ($typeTotals[$type] ?? 0) + $n;
+            }
+        }
+        arsort($typeTotals);
+        $areas = array_slice(array_keys($areaTotals), 0, 5);
+        $cols = array_slice(array_keys($typeTotals), 0, 4);
+        $moreAreas = count($areaTotals) > 5;
+        $moreTypes = count($typeTotals) > 4;
+
+        $v = [];
+        foreach ([...$areas, ...($moreAreas ? [$other] : [])] as $i => $area) {
+            $source = $area === $other && $moreAreas ? array_slice(array_keys($areaTotals), 5) : [$area];
+            foreach ([...$cols, ...($moreTypes ? [$other] : [])] as $j => $type) {
+                $typesHere = $type === $other && $moreTypes ? array_slice(array_keys($typeTotals), 4) : [$type];
+                $sum = 0;
+                foreach ($source as $a) {
+                    foreach ($typesHere as $t) {
+                        $sum += $grid[$a][$t] ?? 0;
+                    }
+                }
+                $v[$i][$j] = $sum;
+            }
+        }
+
+        return Card::make(__('customer::dashboard.viz_area'), 'heat', $grid === [] ? [] : [
+            'rows' => array_map(fn ($a) => Str::limit((string) $a, 10), [...$areas, ...($moreAreas ? [$other] : [])]),
+            'cols' => array_map(fn ($t) => Str::limit((string) $t, 14), [...$cols, ...($moreTypes ? [$other] : [])]),
+            'v' => $v,
+        ], sub: __('customer::dashboard.viz_area_sub'), href: route('customer.index'), colour: '#7c3aed');
+    }
+
+    /**
+     * বয়স রিপোর্টের পুরো ফলের যোগফল — নিচের বয়সের চার্ট আর বোর্ডের ডোনাটের একটাই উৎস।
+     *
+     * @return array<string, mixed>
+     */
+    private static function ageingTotals(): array
+    {
+        return app(\App\Core\Engines\Report\ReportEngine::class)
+            ->run('customer.ageing', ['to' => Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 1)
+            ->totals;
+    }
+
+    /** ⓘ নমুনার রূপ: কোটির ওপরে "৳X.XX কো", লাখের ওপরে "৳X.X লা", নিচে হাজারে "৳Xk" — ইংরেজি অঙ্ক, bcmath */
+    private static function short(string $amount): string
+    {
+        $amount = $amount === '' ? '0' : $amount;
+        $a = ltrim($amount, '-');
+        $sign = bccomp($amount, '0', 4) < 0 ? '−' : '';
+
+        return match (true) {
+            bccomp($a, '10000000', 4) >= 0 => $sign.'৳'.bcdiv($a, '10000000', 2).' '.__('customer::dashboard.crore'),
+            bccomp($a, '100000', 4) >= 0 => $sign.'৳'.bcdiv($a, '100000', 1).' '.__('customer::dashboard.lakh'),
+            bccomp($a, '1000', 4) >= 0 => $sign.'৳'.bcdiv($a, '1000', 0).'k',
+            default => $sign.'৳'.bcadd($a, '0', 0),
+        };
     }
 
     /**
@@ -114,9 +323,7 @@ final class CustomerDashboard implements ProvidesDashboard
             return [];
         }
 
-        $totals = app(\App\Core\Engines\Report\ReportEngine::class)
-            ->run('customer.ageing', ['to' => \Illuminate\Support\Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 1)
-            ->totals;
+        $totals = self::ageingTotals();
 
         return [new Breakdown(
             label: __('customer::dashboard.ageing'),

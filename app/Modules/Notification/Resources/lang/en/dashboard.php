@@ -24,4 +24,23 @@ return [
     'by_channel_hint' => 'How many deliveries each channel got in the last 30 days',
     'recent' => 'Recent notifications',
     'recent_empty' => 'No notifications yet.',
+
+    // ⭐ Chart board (owner, 20 Nov 2026)
+    'funnel' => 'Notified → seen → read',
+    'funnel_hint' => ':range · :unread unread now',
+    'funnel_bell' => 'In the bell',
+    'funnel_seen' => 'Seen',
+    'funnel_read' => 'Read',
+    'deliveries' => 'deliveries',
+    'daily' => 'Notifications per day — 30 days',
+    'daily_hint' => ':range · in the bell, delivered outside, failed',
+    'today' => 'Today',
+    'health_chart_hint' => 'Last 7 days, by channel · black mark = 95% goal',
+    'by_module' => 'Notifications by kind of work',
+    'by_module_hint' => ':range · by module',
+    'others' => 'Others',
+    'when_read' => 'When they are read',
+    'when_read_hint' => ':range · weekday × time of day',
+    'weekdays' => [0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'],
+    'bands' => ['Morning', 'Midday', 'Afternoon', 'Evening', 'Night'],
 ];

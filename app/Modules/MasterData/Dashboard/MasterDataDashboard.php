@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\MasterData\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -55,7 +57,8 @@ final class MasterDataDashboard implements ProvidesDashboard
 
     public static function dashboard(): DashboardDefinition
     {
-        $health = self::health();
+        $lists = self::lists();
+        $health = self::health($lists);
 
         return new DashboardDefinition(
             title: __('master_data::dashboard.title'),
@@ -131,7 +134,77 @@ final class MasterDataDashboard implements ProvidesDashboard
             ],
 
             listings: self::recentlyChanged(),
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'md'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            // ⓘ রেডিয়ালে চারটা তালিকা ধরে — কেবল ঐ চারটার নিজের ঘর ঢাকা পড়ে, পঞ্চমটা নিচে থাকে
+            sections: [Card::board(fn (): array => self::charts($lists), covers: [
+                __('master_data::dashboard.quality_score'), __('master_data::dashboard.missing'),
+                __('master_data::dashboard.same'), __('master_data::dashboard.inactive'),
+                __('master_data::dashboard.new_month'),
+                ...array_map(fn ($w) => $w->label, array_slice($lists, 0, 4)),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ মাস্টার ডেটার গ্রাফের বোর্ড — তালিকা ধরে পূর্ণতা (রেডিয়াল), ডেটার মান (রাডার), অসম্পূর্ণ সারি (আড়াআড়ি কলাম), একই ফোন বা নাম
+     *   (লোলিপপ), এ মাসে নতুন (কলাম), চালু বনাম বন্ধ (100% স্তূপ)। সবই প্রতিটা মডিউলের নিজের গোনা ([[MasterHealth]]) — চাবি মেনে।
+     *
+     * @param  list<\App\Core\Dashboard\Widget>  $lists
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(array $lists): array
+    {
+        $n = fn ($w, string $key): int => (int) $w->parts[$key];
+        // ⓘ গ্রাফে ছোট নাম — "সরবরাহকারী তালিকা" → "সরবরাহকারী" (রাডারের কোণে লম্বা নাম গ্রাফের উপর পড়ত)
+        $labels = array_map(fn ($w) => (string) preg_replace('/\s+(তালিকা|list)$/iu', '', $w->label), $lists);
+        $complete = array_map(fn ($w) => $n($w, 'active') === 0 ? 1 : $n($w, 'complete') / $n($w, 'active'), $lists);
+        $unique = array_map(fn ($w) => $n($w, 'active') === 0 ? 1 : 1 - $n($w, 'same') / $n($w, 'active'), $lists);
+        $active = array_sum(array_map(fn ($w) => $n($w, 'active'), $lists));
+        $whole = array_sum(array_map(fn ($w) => $n($w, 'complete'), $lists));
+        $score = $active === 0 ? 100 : intdiv(100 * $whole, $active);
+        $column = fn (string $key) => array_map(fn ($w) => $n($w, $key), $lists);
+        $newMonth = $column('new_month');
+
+        return [
+            Card::make(__('master_data::dashboard.complete_by_list'), 'radial', [
+                'p' => array_map(fn ($l, $c) => [$l, $c], array_slice($labels, 0, 4), array_slice($complete, 0, 4)),
+            ], sub: __('master_data::dashboard.complete_by_list_hint'), colour: '#16a34a'),
+            Card::make(__('master_data::dashboard.quality_score'), 'radar', $lists === [] ? [] : [
+                'axes' => $labels, 'sets' => [$complete, $unique],
+            ], value: $lists === [] ? '' : $score.'%', sub: __('master_data::dashboard.quality_radar_hint'), legend: [
+                [__('master_data::dashboard.axis_complete'), Svg::PALETTE[0]], [__('master_data::dashboard.axis_unique'), Svg::PALETTE[1]],
+            ], colour: '#7c3aed'),
+            Card::make(__('master_data::dashboard.missing'), 'hbars', [
+                'v' => $column('missing'), 'l' => $labels, 'color' => '#f97316',
+            ], sub: __('master_data::dashboard.missing_board_hint'), colour: '#f97316'),
+            Card::make(__('master_data::dashboard.same'), 'lollipop', [
+                'v' => $column('same'), 'l' => $labels,
+            ], sub: __('master_data::dashboard.same_board_hint'), colour: '#e11d48'),
+            Card::make(__('master_data::dashboard.new_month'), 'bars', [
+                'v' => $newMonth, 'l' => $labels, 'color' => '#2160d8',
+            ], value: $lists === [] ? '' : number_format(array_sum($newMonth)), sub: __('master_data::dashboard.new_month_board_hint'), colour: '#2160d8'),
+            Card::make(__('master_data::dashboard.inactive'), 'stack100', [
+                'rows' => array_map(fn ($w, $l) => [$l, [$n($w, 'active'), $n($w, 'inactive')]], $lists, $labels),
+                'colors' => ['#16a34a', '#94a3b8'],
+            ], sub: __('master_data::dashboard.inactive_board_hint'), legend: [
+                [__('master_data::dashboard.on'), '#16a34a'], [__('master_data::dashboard.off'), '#94a3b8'],
+            ], colour: '#94a3b8'),
+        ];
+    }
+
+    /**
+     * অন্য মডিউলের মাস্টার তালিকার স্বাস্থ্য — দর্শকের চাবি মেনে ([[DashboardRegistry::health()]]); কেবল নতুন ড্যাশবোর্ডে।
+     *
+     * @return list<\App\Core\Dashboard\Widget>
+     */
+    private static function lists(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        return array_values(app(\App\Core\Dashboard\DashboardRegistry::class)->health(auth()->user()));
     }
 
     /**
@@ -187,16 +260,11 @@ final class MasterDataDashboard implements ProvidesDashboard
      * গ্রাহক বা পণ্য চেনে না। ⓘ মোট মান = সব চালু সারির মধ্যে সম্পূর্ণ সারির ভাগ (সারি ধরে ওজন, তালিকা ধরে গড় নয় —
      * দশটা গুদাম আর দশ হাজার গ্রাহক সমান ভারী নয়)। ⓘ কেবল নতুন ড্যাশবোর্ডে (config abos.dashboards_v2)।
      *
+     * @param  list<\App\Core\Dashboard\Widget>  $lists  [[lists()]]
      * @return array{stats: list<Stat>, panels: list<Breakdown>}
      */
-    private static function health(): array
+    private static function health(array $lists): array
     {
-        if (! config('abos.dashboards_v2')) {
-            return ['stats' => [], 'panels' => []];
-        }
-
-        $lists = app(\App\Core\Dashboard\DashboardRegistry::class)->health(auth()->user());
-
         if ($lists === []) {
             return ['stats' => [], 'panels' => []];
         }

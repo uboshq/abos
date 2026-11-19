@@ -48,4 +48,21 @@ return [
     'every_daily' => 'Every day',
     'every_weekly' => 'Every week',
     'every_monthly' => 'Every month',
+
+    // ⭐ Chart board (owner, 20 Nov 2026)
+    'calendar_hint' => '✓ = a copy reached every destination that day · last backup :last',
+    'restore_hint' => ':range · last run: :last',
+    'restore_sub' => ':n of :of copies restored in a test',
+    'size_by_month' => 'Backup size month by month',
+    'size_by_month_hint' => ':range · last good backup of each month',
+    'destinations_reach' => 'How often each destination gets the copy',
+    'destinations_chart_hint' => 'Share of the :count runs in the last 30 days · black mark = 95% goal',
+    'server_nightly' => 'Nightly backup (server)',
+    'ticks' => ['Now', '+6', '+12', '+18', '+24'],
+    'daily_runs' => 'Daily backups — 5 weeks',
+    'schedule_chart_hint' => 'Next 24 hours · active policies (hourly and daily)',
+    'flow' => 'Who ran it → what happened',
+    'flow_hint' => ':range · running ones left out',
+    'copies_safe_short' => 'Every destination',
+    'trigger_deploy' => 'Before an update',
 ];

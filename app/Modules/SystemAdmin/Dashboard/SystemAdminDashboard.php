@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -132,7 +133,173 @@ final class SystemAdminDashboard implements ProvidesDashboard
                     href: route('system_admin.user.index'),
                 ),
             ],
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'sys'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            // ⛔ ঢাকা কেবল সেটুকু, যার গ্রাফ এই দর্শক সত্যিই দেখেন — চাবি না থাকলে আগের সংখ্যাটা নিচে থেকে যায়
+            sections: [Card::board(fn (): array => self::charts($backup), covers: self::covers())],
         );
+    }
+
+    /** @return list<string> যে আগের সংখ্যা-চার্ট এই দর্শকের গ্রাফে এসেছে */
+    private static function covers(): array
+    {
+        $viewer = auth()->user();
+        $v2 = (bool) config('abos.dashboards_v2');
+        $covers = [__('system_admin::dashboard.last_backup')];
+
+        if ($v2 && $viewer?->can('system_admin.user.manage')) {
+            array_push($covers, __('system_admin::menu.users'), __('system_admin::dashboard.who_gets_in'),
+                __('system_admin::dashboard.two_step'), __('system_admin::dashboard.access_changes'));
+        }
+        if ($v2 && self::superAdminHere()) {
+            array_push($covers, __('system_admin::dashboard.jobs_queued'), __('system_admin::dashboard.jobs_failed'));
+        }
+        if ($v2 && $viewer?->can('system_admin.settings.manage')) {
+            $covers[] = __('system_admin::dashboard.errors_week');
+        }
+
+        return $covers;
+    }
+
+    /**
+     * ⭐ সিস্টেম প্রশাসনের গ্রাফের বোর্ড — ব্যবহারকারীর অবস্থা (ডোনাট), রোল ধরে দ্বিতীয় ধাপ (রেডিয়াল), এ সপ্তাহের অনুমতির বদল (কলাম),
+     *   পেছনের কাজ (ফানেল), ব্যবস্থার ভুল এ সপ্তাহ বনাম গত সপ্তাহ (জোড়া রেখা), প্রতিদিনের ব্যাকআপ (ক্যালেন্ডার)।
+     * ⛔ প্রতিটা গ্রাফ আগের সংখ্যার একই চাবিতে: মানুষ আর অনুমতি `system_admin.user.manage`, পেছনের কাজ কেবল এই কোম্পানির সুপার
+     *   অ্যাডমিন, ভুল `system_admin.settings.manage` — চাবি না থাকলে কার্ডটাই নেই।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(?int $backup): array
+    {
+        $viewer = auth()->user();
+        $v2 = (bool) config('abos.dashboards_v2');
+        $today = Carbon::today();
+        $company = CompanyContext::id();
+        $cards = [];
+        $weekday = fn (Carbon $d) => $d->locale(app()->getLocale())->translatedFormat('D');
+
+        if ($v2 && $viewer?->can('system_admin.user.manage')) {
+            // ব্যবহারকারীর অবস্থা — আগের চার্টের হুবহু চার ভাগ
+            $who = self::whoCanGetIn()[0]->parts;
+            $everyone = array_sum(array_map(fn ($p) => (int) $p['value'], $who));
+            $tones = ['#16a34a', '#f59e0b', '#0ea5e9', '#94a3b8'];
+            $cards[] = Card::make(__('system_admin::dashboard.who_gets_in'), 'donut', [
+                'c' => number_format($everyone), 'cs' => __('system_admin::dashboard.users_word'),
+                'p' => array_map(fn ($p, $c) => [$p['label'], (int) $p['value'], $c, number_format((int) $p['value'])], $who, $tones),
+            ], value: number_format($everyone), sub: __('system_admin::dashboard.who_gets_in_board_hint'),
+                href: route('system_admin.user.index'), colour: '#2160d8');
+
+            // দ্বিতীয় ধাপ — রোল ধরে, বড় চারটা রোল; মাথায় সবার মিলিয়ে
+            $two = self::twoStep()[0]->parts;
+            $on = (int) $two[0]['value'];
+            $all = $on + (int) $two[1]['value'];
+            $roles = DB::table('model_has_roles as mhr')
+                ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+                ->join('users as u', 'u.id', '=', 'mhr.model_id')
+                ->where('mhr.company_id', $company)
+                ->where('mhr.model_type', (new User)->getMorphClass())
+                ->whereIn('u.id', DB::table('company_user')->where('company_user.company_id', $company)->where('company_user.is_active', true)->select('company_user.user_id'))
+                ->groupBy('r.name')
+                ->selectRaw('r.name as name, COUNT(DISTINCT u.id) as n')
+                ->selectRaw('COUNT(DISTINCT CASE WHEN u.mfa_secret IS NOT NULL AND u.mfa_confirmed_at IS NOT NULL THEN u.id END) as on_')
+                ->orderByDesc('n')->limit(4)->get();
+            $cards[] = Card::make(__('system_admin::dashboard.two_step'), 'radial', [
+                'p' => $roles->map(fn ($r) => [
+                    mb_strimwidth(\App\Core\Support\RoleLabel::for((string) $r->name), 0, 18, '…'),
+                    (int) $r->n === 0 ? 0 : (int) $r->on_ / (int) $r->n,
+                ])->all(),
+            ], value: $all === 0 ? '' : intdiv(100 * $on, $all).'%', sub: __('system_admin::dashboard.two_step_board_hint', ['on' => $on, 'all' => $all]),
+                href: route('system_admin.user.index'), colour: '#16a34a');
+
+            // ব্যবহারকারী আর অনুমতির বদল — শেষ সাত দিন, দিন ধরে (আগের চার্টের একই খাতা আর ছাঁকনি)
+            $from = $today->copy()->subDays(6);
+            $byDay = AuditTrail::query()->where('auditable_type', (new User)->getMorphClass())->where('created_at', '>=', $from)
+                ->selectRaw('DATE(created_at) as d, COUNT(*) as n')->groupBy('d')->toBase()->pluck('n', 'd');
+            $days = array_map(fn ($i) => $from->copy()->addDays($i), range(0, 6));
+            $changes = array_map(fn (Carbon $d) => (int) ($byDay[$d->toDateString()] ?? 0), $days);
+            $cards[] = Card::make(__('system_admin::dashboard.access_changes'), 'bars', [
+                'v' => $changes, 'l' => array_map($weekday, $days), 'color' => '#7c3aed',
+            ], value: number_format(array_sum($changes)), sub: __('system_admin::dashboard.access_changes_board_hint'), colour: '#7c3aed');
+        }
+
+        if ($v2 && self::superAdminHere()) {
+            // ⚠️ কোম্পানিহীন টেবিল — company_id নেই; দরজাটা উপরের সুপার অ্যাডমিনের প্রশ্ন। কেবল গোনা, payload কখনো নয়।
+            $jobs = DB::table('jobs')
+                ->selectRaw('SUM(CASE WHEN reserved_at IS NULL AND attempts = 0 THEN 1 ELSE 0 END) as waiting')
+                ->selectRaw('SUM(CASE WHEN reserved_at IS NOT NULL THEN 1 ELSE 0 END) as running')
+                ->selectRaw('SUM(CASE WHEN reserved_at IS NULL AND attempts > 0 THEN 1 ELSE 0 END) as retrying')
+                ->first();
+            $failed = DB::table('failed_jobs')->count();
+            $steps = [
+                [__('system_admin::dashboard.jobs_waiting'), (int) ($jobs->waiting ?? 0)],
+                [__('system_admin::dashboard.jobs_running'), (int) ($jobs->running ?? 0)],
+                [__('system_admin::dashboard.jobs_retrying'), (int) ($jobs->retrying ?? 0)],
+                [__('system_admin::dashboard.jobs_failed_short'), $failed],
+            ];
+            $cards[] = Card::make(__('system_admin::dashboard.jobs'), 'funnel', [
+                'p' => array_map(fn ($s) => [$s[0], $s[1], number_format($s[1])], $steps),
+            ], sub: __('system_admin::dashboard.jobs_board_hint'), colour: '#0ea5e9');
+        }
+
+        if ($v2 && $viewer?->can('system_admin.settings.manage')) {
+            // ব্যবস্থার ভুল — শেষবার দেখা দেওয়ার দিন ধরে (আগের চার্টের একই শর্ত), এ সপ্তাহ বনাম আগের সপ্তাহ
+            $from = $today->copy()->subDays(13);
+            $seen = ErrorEvent::query()->where('company_id', $company)->where('last_seen_at', '>=', $from)
+                ->selectRaw('DATE(last_seen_at) as d, COUNT(*) as n, SUM(CASE WHEN acknowledged_at IS NULL THEN 1 ELSE 0 END) as unseen')
+                ->groupBy('d')->toBase()->get()->keyBy('d');
+            $count = fn (int $i) => (int) ($seen[$from->copy()->addDays($i)->toDateString()]->n ?? 0);
+            $thisWeek = array_map($count, range(7, 13));
+            $lastWeek = array_map($count, range(0, 6));
+            $unseen = (int) $seen->filter(fn ($r) => $r->d >= $from->copy()->addDays(7)->toDateString())->sum('unseen');
+            $cards[] = Card::make(__('system_admin::dashboard.errors_week'), 'line', [
+                'v' => $thisWeek, 'v2' => $lastWeek, 'color' => '#e11d48', 'c2' => '#94a3b8',
+                'l' => array_map(fn ($i) => $weekday($from->copy()->addDays($i)), range(7, 13)),
+            ], value: number_format(array_sum($thisWeek)), sub: __('system_admin::dashboard.errors_board_hint', ['n' => $unseen]), legend: [
+                [__('system_admin::dashboard.this_week'), '#e11d48'], [__('system_admin::dashboard.last_week'), '#94a3b8'],
+            ], colour: '#e11d48');
+        }
+
+        // শেষ ব্যাকআপ — প্রতিদিন ফাইল আছে কি না, শনিবার থেকে পাঁচ সপ্তাহ, আজ পর্যন্ত (ফাইল দেখে, খাতা নয় — [[lastBackup()]]-এর নিয়ম)
+        $start = $today->copy()->subDays((($today->dayOfWeek + 1) % 7) + 28);
+        $perDay = [];
+        foreach (self::backupTimes() as $at) {
+            $key = Carbon::createFromTimestamp($at, config('app.timezone'))->toDateString();
+            $perDay[$key] = ($perDay[$key] ?? 0) + 1;
+        }
+        $calendar = [];
+        for ($d = $start->copy(); $d->lte($today); $d->addDay()) {
+            $calendar[] = [(int) $d->format('j'), $perDay[$d->toDateString()] ?? 0];
+        }
+        $cards[] = Card::make(__('system_admin::dashboard.last_backup'), 'calendar', $perDay === [] ? [] : [
+            'days' => $calendar, 'marks' => true, 'color' => '#16a34a',
+        ], value: $backup === null ? __('system_admin::dashboard.never') : __('system_admin::dashboard.days_ago', ['days' => $backup]),
+            sub: __('system_admin::dashboard.backup_board_hint'), href: route('backup.index'), colour: '#14b8a6');
+
+        return $cards;
+    }
+
+    /**
+     * ব্যাকআপ ফাইলগুলোর সময় — [[lastBackup()]]-এর একই ফোল্ডার আর একই ধরন (*.sql.gz); ফোল্ডার না থাকলে ফাঁকা।
+     *
+     * @return list<int>
+     */
+    private static function backupTimes(): array
+    {
+        $path = (string) config('abos.backup.path', '');
+
+        if ($path === '' || ! is_dir($path)) {
+            return [];
+        }
+
+        $times = [];
+        foreach (glob(rtrim($path, '/\\').'/*.sql.gz') ?: [] as $file) {
+            $at = filemtime($file);
+            if ($at !== false) {
+                $times[] = $at;
+            }
+        }
+
+        return $times;
     }
 
     /**

@@ -122,7 +122,9 @@
 
         {{-- ⭐ একসাথে পোস্ট বা অনুমোদনে পাঠানো — আগে দেখার পাতা (দফা ১৪); ⓘ খসড়া না থাকলে বোতামটাই নেই --}}
         @if ($canBulk && $vouchers->getCollection()->contains(fn ($v) => $v->isDraft()))
-            <form method="GET" action="{{ route('accounts.voucher.bulk_review') }}" id="voucher-bulk"
+            {{-- ⓘ `data-bulk-form` — "ABOS"-এ কিছু বাছলে তবেই গাঢ় নীল বার, মাথায় "সব বাছুন" ([[bulk-bar.js]]) --}}
+            <form method="GET" action="{{ route('accounts.voucher.bulk_review') }}" id="voucher-bulk" data-bulk-form
+                  data-count-label="{{ __('core.bulk.count') }}" data-all-label="{{ __('core.bulk.all') }}"
                   class="flex flex-wrap items-center gap-3 border-b border-(--color-border) px-3 py-2">
                 <input type="hidden" name="back" value="{{ request()->fullUrl() }}">
                 <x-ui.button type="submit" tone="secondary" data-voucher-bulk>{{ __('accounts::action.bulk_post_review') }}</x-ui.button>

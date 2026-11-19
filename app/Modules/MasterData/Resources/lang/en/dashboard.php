@@ -33,4 +33,17 @@ return [
     'col_what' => 'What happened',
     'col_record' => 'Record',
     'system' => 'The system',
+
+    // Chart board (20 Nov 2026)
+    'complete_by_list' => 'How complete the lists are',
+    'complete_by_list_hint' => 'Share of active rows with every needed field — by list',
+    'quality_radar_hint' => 'Completeness and uniqueness by list — the further out, the better',
+    'axis_complete' => 'Completeness',
+    'axis_unique' => 'Uniqueness',
+    'missing_board_hint' => 'Active rows with a needed field blank',
+    'same_board_hint' => 'Active rows with exactly the same phone or name',
+    'new_month_board_hint' => 'From the 1st of the month to today — by list',
+    'inactive_board_hint' => 'Active against inactive rows',
+    'on' => 'Active',
+    'off' => 'Inactive',
 ];

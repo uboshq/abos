@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Services\DataScope;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
@@ -24,6 +26,7 @@ use App\Modules\Promotion\Services\BudgetGuard;
 use App\Modules\Promotion\Support\BenefitKind;
 use App\Modules\Promotion\Support\PromotionStatus;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * অফার মডিউলের ড্যাশবোর্ড।
@@ -72,10 +75,7 @@ final class PromotionDashboard implements ProvidesDashboard
                  */
                 new Stat(
                     label: __('promotion::dashboard.upcoming'),
-                    value: (string) Promotion::query()
-                        ->whereIn('status', [PromotionStatus::APPROVED->value, PromotionStatus::ACTIVE->value])
-                        ->whereDate('starts_on', '>', $today->toDateString())
-                        ->count(),
+                    value: (string) self::upcoming($today)->count(),
                     hint: __('promotion::dashboard.upcoming_hint'),
                 ),
 
@@ -107,7 +107,138 @@ final class PromotionDashboard implements ProvidesDashboard
             panels: [...self::usedThisMonth(), ...self::endingSoon($today), ...self::coupons($today), ...self::budgets()],
 
             listings: self::liveOffers($today),
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            sections: [Card::board(fn (): array => self::charts($today), covers: [
+                __('promotion::dashboard.active'), __('promotion::dashboard.upcoming'), __('promotion::dashboard.lapsed'),
+                __('promotion::dashboard.ending_soon'), __('promotion::dashboard.budget_used'), __('promotion::dashboard.coupons'),
+                __('promotion::dashboard.discount_this_month'), __('promotion::dashboard.used_this_month'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ অফারের গ্রাফের বোর্ড — অফারগুলো কোথায় (ডোনাট), চালু অফার কবে শেষ (সময়রেখা), বাজেট বনাম খরচ (বুলেট), কুপন দেওয়া →
+     *   ভাঙানো (ফানেল), ছয় মাসের ছাড় (স্তূপ-এলাকা), এ মাসে কোন অফার কতবার লাগল (লোলিপপ)।
+     * ⓘ প্রতিটা গ্রাফ নিচের পুরনো ঘর-চার্টের একই কোয়েরি পড়ে; ⛔ কুপনের গ্রাফ কেবল `promotion.coupon`-এ, ছাড় দেখার শাখায়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(Carbon $today): array
+    {
+        $cards = [];
+
+        // ── অফারগুলো কোথায় — উপরের তিন সংখ্যা, আর থামানো ও শেষ হওয়া ───────────────────
+        $count = fn (PromotionStatus $s) => Promotion::query()->where('status', $s->value)->count();
+        $where = [
+            [__('promotion::dashboard.active'), Promotion::query()->liveOn($today)->count(), Svg::STATUS[0]],
+            [__('promotion::dashboard.upcoming'), self::upcoming($today)->count(), '#2160d8'],
+            [__('promotion::dashboard.viz_paused'), $count(PromotionStatus::PAUSED), Svg::STATUS[1]],
+            [__('promotion::dashboard.lapsed'), Promotion::query()->lapsed()->count(), Svg::STATUS[2]],
+            [__('promotion::dashboard.viz_ended'), $count(PromotionStatus::EXPIRED), '#94a3b8'],
+        ];
+        $offers = array_sum(array_column($where, 1));
+        $cards[] = Card::make(__('promotion::dashboard.viz_where'), 'donut', [
+            'c' => number_format($offers), 'cs' => __('promotion::dashboard.viz_offers'),
+            'p' => array_map(fn (array $p) => [$p[0], $p[1], $p[2], number_format($p[1])], $where),
+        ], value: $offers === 0 ? '' : __('promotion::dashboard.viz_n_offers', ['n' => number_format($offers)]),
+            sub: __('promotion::dashboard.viz_where_sub'), href: route('promotion.index'), colour: '#7c3aed');
+
+        // ── চালু অফার কবে শেষ — আজ থেকে ছয় সপ্তাহের ছকে, আগে যেটা শেষ হবে সেটা উপরে ──────────────
+        $live = Promotion::query()->liveOn($today)->orderBy('ends_on')->orderBy('id')->limit(6)->get();
+        $cards[] = Card::make(__('promotion::dashboard.viz_ends'), 'gantt', $live->isEmpty() ? [] : [
+            'ticks' => [__('promotion::dashboard.viz_today'), ...array_map(fn (int $w) => __('promotion::dashboard.viz_week', ['n' => $w]), range(1, 6))],
+            'today' => 0,
+            'p' => $live->map(function (Promotion $p) use ($today) {
+                $days = (int) $today->diffInDays(Carbon::parse($p->ends_on));
+
+                return [Str::limit($p->name(), 16), 0, min(1, max($days, 1) / 42), $days <= 7 ? Svg::STATUS[3] : null];
+            })->all(),
+        ], sub: __('promotion::dashboard.viz_ends_sub'), href: route('promotion.index'), colour: '#2160d8');
+
+        // ── বাজেট বনাম খরচ — বাজেটের পাহারার নিজের হিসাব ([[BudgetGuard::usage()]]) ─────────────────
+        $budgets = array_slice(self::budgetRows(), 0, 6);
+        $cards[] = Card::make(__('promotion::dashboard.budget_used'), 'bullet', $budgets === [] ? [] : [
+            'p' => array_map(fn (array $r) => [Str::limit($r['label'], 14), $r['percent'] / 100, 1], $budgets),
+        ], sub: __('promotion::dashboard.viz_budget_sub'), href: route('promotion.index'), colour: '#f97316');
+
+        // ── কুপন — ছয় মাসে দেওয়া → ভাঙানো (নিচের পুরনো রেখার একই দুই গোনা) ─────────────────────
+        $coupons = auth()->user()?->can('promotion.coupon') ? self::couponMonths($today) : null;
+        if ($coupons !== null) {
+            $issued = array_sum(array_column($coupons, 'first'));
+            $redeemed = array_sum(array_column($coupons, 'second'));
+            $cards[] = Card::make(__('promotion::dashboard.coupons'), 'funnel', [
+                'p' => [
+                    [__('promotion::dashboard.coupons_issued'), $issued, number_format($issued)],
+                    [__('promotion::dashboard.coupons_redeemed'), $redeemed, number_format($redeemed)],
+                ],
+            ], value: $issued > 0 ? round($redeemed * 100 / $issued).'%' : '', sub: __('promotion::dashboard.viz_coupons_sub'), colour: '#0ea5e9');
+        }
+
+        // ── ছাড় — ছয় মাস, শতকরা আর টাকার ছাড় (উপরের "এ মাসে ছাড়"-এর একই নিয়ম, দেখার শাখায়) ─────────────
+        $start = $today->copy()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(created_at, '%Y-%m')";
+        $given = self::applicationsSeen()
+            ->whereNull('reversed_at')
+            ->whereIn('benefit_kind', [BenefitKind::PERCENT->value, BenefitKind::AMOUNT->value])
+            ->where('created_at', '>=', $start)
+            ->selectRaw("{$expr} as ym, benefit_kind as k, COALESCE(SUM(worth), 0) as total")
+            ->groupByRaw("{$expr}, benefit_kind")
+            ->toBase()->get();
+        $percent = [];
+        $amount = [];
+        $months = [];
+        for ($month = $start->copy(); $month->lessThanOrEqualTo($today); $month->addMonth()) {
+            $ym = $month->format('Y-m');
+            $percent[] = (string) ($given->first(fn ($r) => $r->ym === $ym && $r->k === BenefitKind::PERCENT->value)?->total ?? '0');
+            $amount[] = (string) ($given->first(fn ($r) => $r->ym === $ym && $r->k === BenefitKind::AMOUNT->value)?->total ?? '0');
+            $months[] = $month->translatedFormat('M');
+        }
+        $thisMonth = bcadd((string) end($percent), (string) end($amount), 4);
+        $cards[] = Card::make(__('promotion::dashboard.viz_discount'), 'stackedArea', [
+            'series' => [$percent, $amount], 'colors' => [Svg::STATUS[0], '#f59e0b'], 'l' => $months,
+        ], value: bccomp($thisMonth, '0', 4) === 0 ? '' : self::short($thisMonth), sub: __('promotion::dashboard.viz_discount_sub'), legend: [
+            [__('promotion::dashboard.viz_percent'), Svg::STATUS[0]], [__('promotion::dashboard.viz_amount'), '#f59e0b'],
+        ], colour: '#16a34a');
+
+        // ── ক্যাম্পেইনের ফল — এ মাসে কোন অফার কতবার লাগল ───────────────────────────────
+        $used = self::usedRows();
+        $cards[] = Card::make(__('promotion::dashboard.viz_used'), 'lollipop', [
+            'v' => array_column($used, 'value'), 'l' => array_map(fn (array $u) => Str::limit($u['label'], 16), $used),
+        ], sub: __('promotion::dashboard.viz_used_sub'), href: route('promotion.index'), colour: '#e8175d');
+
+        return $cards;
+    }
+
+    /** ⭐ "আসছে" — অনুমোদিত বা চালু, কিন্তু শুরুর দিন সামনে; উপরের সংখ্যা আর বোর্ডের ডোনাটের একই শর্ত */
+    private static function upcoming(Carbon $today): \Illuminate\Database\Eloquent\Builder
+    {
+        return Promotion::query()
+            ->whereIn('status', [PromotionStatus::APPROVED->value, PromotionStatus::ACTIVE->value])
+            ->whereDate('starts_on', '>', $today->toDateString());
+    }
+
+    /**
+     * ⛔ অফারের প্রয়োগ, দেখার শাখায় — হেডারের শাখা আর নাগাল, প্রয়োগের নিজের শাখা ধরে (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     */
+    private static function applicationsSeen(): \Illuminate\Database\Eloquent\Builder
+    {
+        return app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id');
+    }
+
+    /** ⓘ নমুনার রূপ: কোটির ওপরে "৳X.XX কো", লাখের ওপরে "৳X.X লা", নিচে হাজারে "৳Xk" — ইংরেজি অঙ্ক, bcmath */
+    private static function short(string $amount): string
+    {
+        $amount = $amount === '' ? '0' : $amount;
+        $a = ltrim($amount, '-');
+        $sign = bccomp($amount, '0', 4) < 0 ? '−' : '';
+
+        return match (true) {
+            bccomp($a, '10000000', 4) >= 0 => $sign.'৳'.bcdiv($a, '10000000', 2).' '.__('promotion::dashboard.crore'),
+            bccomp($a, '100000', 4) >= 0 => $sign.'৳'.bcdiv($a, '100000', 1).' '.__('promotion::dashboard.lakh'),
+            bccomp($a, '1000', 4) >= 0 => $sign.'৳'.bcdiv($a, '1000', 0).'k',
+            default => $sign.'৳'.bcadd($a, '0', 0),
+        };
     }
 
     /**
@@ -135,7 +266,7 @@ final class PromotionDashboard implements ProvidesDashboard
          * [[ThePromotionDashboardStaysInMyBranchTest]])। ⓘ আগে ময়মনসিংহে সীমিত মানুষও গোটা কোম্পানির ছাড়ের টাকা আর উপহার দেখতেন।
          * ⓘ উপহারের পর্দার একই নিয়ম ([[PromotionGiftController::index()]])।
          */
-        $seen = fn () => app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id');
+        $seen = fn () => self::applicationsSeen();
 
         $discount = (string) $seen()
             ->whereNull('reversed_at')
@@ -181,6 +312,25 @@ final class PromotionDashboard implements ProvidesDashboard
 
         $start = $today->copy()->startOfMonth()->subMonths(5);
 
+        return [new Series(
+            label: __('promotion::dashboard.coupons'),
+            points: array_map(fn (array $p) => ['label' => $p['label'], 'first' => (string) $p['first'], 'second' => (string) $p['second']], self::couponMonths($today)),
+            firstLabel: __('promotion::dashboard.coupons_issued'),
+            secondLabel: __('promotion::dashboard.coupons_redeemed'),
+            chart: 'line',
+            range: DateRange::label($start, $today),
+        )];
+    }
+
+    /**
+     * কুপন, মাস ধরে, গত ছয় মাস — `first` দেওয়া, `second` ভাঙানো (পূর্ণসংখ্যা)। নিচের রেখা আর বোর্ডের ফানেলের একই গোনা।
+     *
+     * @return list<array{label: string, first: int, second: int}>
+     */
+    private static function couponMonths(Carbon $today): array
+    {
+        $start = $today->copy()->startOfMonth()->subMonths(5);
+
         $issued = PromotionCoupon::query()
             ->where('created_at', '>=', $start->toDateTimeString())
             ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as n")
@@ -200,19 +350,12 @@ final class PromotionDashboard implements ProvidesDashboard
             $key = $month->format('Y-m');
             $points[] = [
                 'label' => $month->translatedFormat('M'),
-                'first' => (string) (int) ($issued[$key] ?? 0),
-                'second' => (string) (int) ($redeemed[$key] ?? 0),
+                'first' => (int) ($issued[$key] ?? 0),
+                'second' => (int) ($redeemed[$key] ?? 0),
             ];
         }
 
-        return [new Series(
-            label: __('promotion::dashboard.coupons'),
-            points: $points,
-            firstLabel: __('promotion::dashboard.coupons_issued'),
-            secondLabel: __('promotion::dashboard.coupons_redeemed'),
-            chart: 'line',
-            range: DateRange::label($start, $today),
-        )];
+        return $points;
     }
 
     /**
@@ -232,6 +375,30 @@ final class PromotionDashboard implements ProvidesDashboard
             return [];
         }
 
+        $rows = self::budgetRows();
+
+        if ($rows === []) {
+            return [];
+        }
+
+        return [new Series(
+            label: __('promotion::dashboard.budget_used'),
+            points: array_map(fn (array $r) => ['label' => $r['label'], 'first' => $r['first'], 'second' => $r['second']], array_slice($rows, 0, 6)),
+            firstLabel: __('promotion::dashboard.budget_ceiling'),
+            secondLabel: __('promotion::dashboard.budget_spent'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
+            chart: 'bars',
+        )];
+    }
+
+    /**
+     * টাকার ছাদের অফার, সবচেয়ে বেশি ভরা আগে — নিচের পুরনো কলাম আর বোর্ডের বুলেটের একই সারি ([[BudgetGuard::usage()]])।
+     *
+     * @return list<array{label: string, first: string, second: string, percent: int}>
+     */
+    private static function budgetRows(): array
+    {
         $offers = Promotion::query()
             ->whereIn('status', [PromotionStatus::APPROVED->value, PromotionStatus::ACTIVE->value, PromotionStatus::PAUSED->value])
             ->whereIn('id', PromotionBudget::query()->select('promotion_id'))
@@ -258,21 +425,9 @@ final class PromotionDashboard implements ProvidesDashboard
             }
         }
 
-        if ($rows === []) {
-            return [];
-        }
-
         usort($rows, fn (array $a, array $b) => [$b['percent'], $a['label']] <=> [$a['percent'], $b['label']]);
 
-        return [new Series(
-            label: __('promotion::dashboard.budget_used'),
-            points: array_map(fn (array $r) => ['label' => $r['label'], 'first' => $r['first'], 'second' => $r['second']], array_slice($rows, 0, 6)),
-            firstLabel: __('promotion::dashboard.budget_ceiling'),
-            secondLabel: __('promotion::dashboard.budget_spent'),
-            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
-            money: true,
-            chart: 'bars',
-        )];
+        return $rows;
     }
 
     /**
@@ -325,8 +480,30 @@ final class PromotionDashboard implements ProvidesDashboard
             return [];
         }
 
-        // ⛔ দেখার শাখা — উপরের ছাড়ের ঘরের একই দেয়াল (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
-        $rows = app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id')
+        $rows = self::usedRows();
+
+        if ($rows === []) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('promotion::dashboard.used_this_month'),
+            parts: array_map(fn (array $r) => ['label' => $r['label'], 'value' => (string) $r['value']], $rows),
+            hint: __('promotion::dashboard.used_this_month_hint'),
+            // ⓘ সময়ের চার্ট — কোন দিন থেকে কোন দিন, শিরোনামের পাশে (মালিক, ৫ অক্টোবর ২০২৬; বসানো ৬ অক্টোবর ২০২৬)
+            range: DateRange::label(Carbon::today()->startOfMonth(), Carbon::today()),
+        )];
+    }
+
+    /**
+     * এ মাসে কোন অফার কতবার লাগল, বড় ছয়টা — নিচের পুরনো চার্ট আর বোর্ডের লোলিপপের একই গোনা।
+     * ⛔ দেখার শাখা — উপরের ছাড়ের ঘরের একই দেয়াল (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     *
+     * @return list<array{label: string, value: int}>
+     */
+    private static function usedRows(): array
+    {
+        $rows = self::applicationsSeen()
             ->whereNull('reversed_at')
             ->where('created_at', '>=', Carbon::today()->startOfMonth())
             ->selectRaw('promotion_id, COUNT(*) as n')
@@ -341,16 +518,10 @@ final class PromotionDashboard implements ProvidesDashboard
 
         $names = Promotion::query()->whereKey($rows->pluck('promotion_id')->all())->get()->keyBy('id');
 
-        return [new Breakdown(
-            label: __('promotion::dashboard.used_this_month'),
-            parts: $rows->map(fn ($r) => [
-                'label' => $names[$r->promotion_id]?->name() ?? '—',
-                'value' => (string) (int) $r->n,
-            ])->all(),
-            hint: __('promotion::dashboard.used_this_month_hint'),
-            // ⓘ সময়ের চার্ট — কোন দিন থেকে কোন দিন, শিরোনামের পাশে (মালিক, ৫ অক্টোবর ২০২৬; বসানো ৬ অক্টোবর ২০২৬)
-            range: DateRange::label(Carbon::today()->startOfMonth(), Carbon::today()),
-        )];
+        return $rows->map(fn ($r) => [
+            'label' => $names[$r->promotion_id]?->name() ?? '—',
+            'value' => (int) $r->n,
+        ])->values()->all();
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Governance\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -97,7 +98,131 @@ final class GovernanceDashboard implements ProvidesDashboard
 
                 ...self::latestLogins(),
             ],
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'gov'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            sections: [Card::board(fn (): array => self::charts(), covers: [
+                __('governance::dashboard.changes_today'), __('governance::dashboard.this_month_actions'),
+                __('governance::dashboard.logins_today'), __('governance::dashboard.papers_this_month'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ নিরীক্ষার গ্রাফের বোর্ড — এ মাসের কাজ (আড়াআড়ি কলাম), আজকের বদল ঘণ্টা ধরে (হিটম্যাপ), আজকের লগইন (ফানেল), কাগজ কীভাবে
+     *   বেরোল (ডোনাট), 30 দিনের বদল (রেখা), আইপি ধরে ঢোকার চেষ্টা (বাবল)।
+     * ⛔ চাবি আগের মতোই: লগইনের দুই গ্রাফ কেবল `governance.login.view`-এ ([[CompanylessRows::logins()]]-এর দেয়ালে), কাগজের গ্রাফ কেবল
+     *   `governance.audit.view`-এ — চাবি না থাকলে কার্ডটাই নেই। বাকি তিনটা আগের "আজকের বদল" আর মাসের চার্টের একই খাতা, একই দরজা।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(): array
+    {
+        $viewer = auth()->user();
+        $today = Carbon::today();
+        $cards = [];
+        $parts = fn (array $breakdowns) => $breakdowns === [] ? [] : $breakdowns[0]->parts;
+
+        // এ মাসের কাজ — আগের মাসের চার্টের হুবহু ভাগ
+        $month = $parts(self::whatWasDone());
+        $cards[] = Card::make(__('governance::dashboard.audit_month'), 'hbars', [
+            'v' => array_map(fn ($p) => (int) $p['value'], $month),
+            'l' => array_map(fn ($p) => $p['label'], $month),
+        ], value: number_format(array_sum(array_map(fn ($p) => (int) $p['value'], $month))),
+            sub: __('governance::dashboard.by_kind_of_action'), href: route('governance.audit.index'), colour: '#2160d8');
+
+        // আজকের বদল — মডিউল × ঘণ্টা; ঘণ্টা পিএইচপির ঘড়িতে (অ্যাপের সময়), SQL-এর নয়
+        $todayRows = AuditTrail::query()->where('created_at', '>=', $today)->toBase()->get(['auditable_type', 'created_at']);
+        $hours = range(9, 17);
+        $byModule = [];
+        foreach ($todayRows as $row) {
+            $name = (new AuditTrail(['auditable_type' => (string) $row->auditable_type]))->moduleLabel()
+                ?? __('governance::dashboard.other_modules');
+            $hour = Carbon::parse($row->created_at)->hour;
+            $col = max(0, min(count($hours) - 1, $hour - 9));
+            $byModule[$name] ??= array_fill(0, count($hours), 0);
+            $byModule[$name][$col]++;
+        }
+        // বড় চারটা মডিউল নিজের সারিতে, বাকি সব (চেনা-না-যাওয়া সহ) এক "অন্যান্য" সারিতে
+        $other = __('governance::dashboard.other_modules');
+        $rest = $byModule[$other] ?? null;
+        unset($byModule[$other]);
+        uasort($byModule, fn ($a, $b) => array_sum($b) <=> array_sum($a));
+        foreach (array_slice($byModule, 4, null, true) as $line) {
+            $rest ??= array_fill(0, count($hours), 0);
+            foreach ($line as $k => $n) {
+                $rest[$k] += $n;
+            }
+        }
+        $byModule = array_slice($byModule, 0, 4, true);
+        if ($rest !== null) {
+            $byModule[$other] = $rest;
+        }
+        $cols = array_map(fn (int $h) => (string) ($h > 12 ? $h - 12 : $h), $hours);
+        $cols[0] = '≤9';
+        $cols[count($cols) - 1] = '5+';
+        $cards[] = Card::make(__('governance::dashboard.today_by_hour'), 'heat', [
+            'rows' => array_map(fn ($n) => mb_strimwidth((string) $n, 0, 10, '…'), array_keys($byModule)),
+            'cols' => $cols,
+            'v' => array_values($byModule),
+        ], value: number_format($todayRows->count()), sub: __('governance::dashboard.today_by_hour_hint'),
+            href: route('governance.audit.index'), colour: '#7c3aed');
+
+        // আজকের লগইন — আগের চার্টের হুবহু ভাগ, মাথায় মোট চেষ্টা
+        $logins = $parts(self::loginsToday());
+        if ($logins !== []) {
+            $tried = array_sum(array_map(fn ($p) => (int) $p['value'], $logins));
+            $cards[] = Card::make(__('governance::dashboard.logins_today'), 'funnel', ['p' => array_merge(
+                [[__('governance::dashboard.login_attempts'), $tried, number_format($tried)]],
+                array_map(fn ($p) => [$p['label'], (int) $p['value'], number_format((int) $p['value'])],
+                    array_values(array_filter($logins, fn ($p) => (int) $p['value'] > 0))),
+            )], value: number_format($tried), sub: __('governance::dashboard.logins_funnel_hint'),
+                href: route('governance.login.index'), colour: '#e11d48');
+        }
+
+        // কাগজ কীভাবে বেরোল — আগের চার্টের হুবহু ভাগ
+        $papers = $parts(self::papersThisMonth());
+        if ($papers !== []) {
+            $out = array_sum(array_map(fn ($p) => (int) $p['value'], $papers));
+            $cards[] = Card::make(__('governance::dashboard.papers_out'), 'donut', [
+                'c' => number_format($out), 'cs' => __('governance::dashboard.papers'),
+                'p' => array_map(fn ($p) => [$p['label'], (int) $p['value'], null, number_format((int) $p['value'])], $papers),
+            ], sub: __('governance::dashboard.papers_out_hint'), colour: '#0ea5e9');
+        }
+
+        // 30 দিনের বদল — দিন ধরে মোট
+        $from = $today->copy()->subDays(29);
+        $daily = AuditTrail::query()->where('created_at', '>=', $from)
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as n')->groupBy('d')->toBase()->pluck('n', 'd');
+        $values = [];
+        $labels = [];
+        for ($i = 0; $i < 30; $i++) {
+            $day = $from->copy()->addDays($i);
+            $values[] = (int) ($daily[$day->toDateString()] ?? 0);
+            $labels[] = $i === 29 ? __('governance::dashboard.today') : (in_array($i, [0, 10, 20], true) ? $day->format('d M') : '');
+        }
+        $cards[] = Card::make(__('governance::dashboard.changes_30'), 'line', [
+            'v' => $values, 'l' => $labels, 'color' => '#14b8a6',
+        ], sub: __('governance::dashboard.changes_30_hint'), href: route('governance.audit.index'), colour: '#14b8a6');
+
+        // ঢোকার চেষ্টা আইপি ধরে — গত 30 দিন, বড় ছয়টা আইপি; ঢোকার খাতার একই দেয়াল
+        if (config('abos.dashboards_v2') && $viewer?->can('governance.login.view')) {
+            $ips = app(\App\Modules\Governance\Services\CompanylessRows::class)->logins($viewer)
+                ->where('created_at', '>=', $from)
+                ->selectRaw('ip_address, COUNT(*) as n, SUM(CASE WHEN succeeded THEN 0 ELSE 1 END) as bad, COUNT(DISTINCT identifier) as people')
+                ->groupBy('ip_address')->orderByDesc('n')->limit(6)->toBase()->get();
+            $most = max(1, (int) ($ips->max('n') ?? 0));
+            $cards[] = Card::make(__('governance::dashboard.logins_by_ip'), 'bubble', [
+                'x' => __('governance::dashboard.axis_attempts'), 'y' => __('governance::dashboard.axis_wrong'),
+                'p' => $ips->map(fn ($r) => [
+                    (string) ($r->ip_address ?: '—'),
+                    6 + intdiv(80 * (int) $r->n, $most),
+                    intdiv(100 * (int) $r->bad, max(1, (int) $r->n)),
+                    min(36, 8 + 3 * (int) $r->people),
+                ])->values()->all(),
+            ], sub: __('governance::dashboard.logins_by_ip_hint'), href: route('governance.login.index'), colour: '#f97316');
+        }
+
+        return $cards;
     }
 
     /**

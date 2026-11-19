@@ -239,8 +239,10 @@ final class Svg
             $last = $i === count($pts) - 1;
             $s .= '<circle cx="'.$px.'" cy="'.$py.'" r="'.($last ? 6 : 3.5).'" fill="'.($last ? $c : '#fff').'" stroke="'.$c.'" stroke-width="2.4"/>';
         }
-        foreach (($o['l'] ?? []) as $i => $l) {
-            $s .= self::t($x0 + $i * $dx, $y1 + 20, (string) $l, ['size' => 12.5]);
+        $labels = $o['l'] ?? [];
+        foreach ($labels as $i => $l) {
+            $anchor = $i === 0 ? 'start' : ($i === count($labels) - 1 ? 'end' : 'middle');
+            $s .= self::t($x0 + $i * $dx + ($anchor === 'start' ? -6 : ($anchor === 'end' ? 6 : 0)), $y1 + 20, (string) $l, ['size' => 12.5, 'anchor' => $anchor]);
         }
 
         return self::svg($s);
@@ -513,7 +515,7 @@ final class Svg
         $max = max(1.0, (float) max(array_map(fn ($d) => (float) $d[1], $days)));
         $col = $o['color'] ?? self::STATUS[0];
         $s = '';
-        foreach (['শনি', 'রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র'] as $i => $d) {
+        foreach ((array) __('core.viz.weekdays') as $i => $d) {
             $s .= self::t(40 + $i * 78, 16, $d, ['size' => 13]);
         }
         foreach (array_slice($days, 0, 35) as $n => $d) {
@@ -543,7 +545,8 @@ final class Svg
             return null;
         }
         $y = 14;
-        $bh = (self::H - 20) / count($p) - 14;
+        // ⓘ এক-দুই সারিতে দাগ 44-এর বেশি মোটা নয় — নইলে একটা সারি পুরো উচ্চতার দেয়াল হত
+        $bh = min(44, (self::H - 20) / count($p) - 14);
         [$x0, $w] = [140, self::W - 160];
         $s = '';
         foreach ($p as $part) {
@@ -572,8 +575,16 @@ final class Svg
             $cx = 40 + max(0, min(100, (float) $b[1])) * 4.9;
             $cy = 262 - max(0, min(100, (float) $b[2])) * 2.4;
             $r = max(6.0, min(40.0, (float) $b[3]));
+            $cy = max($r + 4, min(266 - $r, $cy));
+            $cx = max(30 + $r, min(self::W - 10 - $r, $cx));
             $s .= '<circle cx="'.self::n($cx).'" cy="'.self::n($cy).'" r="'.self::n($r).'" fill="'.self::PALETTE[$i % count(self::PALETTE)].'" fill-opacity=".72" stroke="#fff" stroke-width="2"/>';
-            $s .= self::t($cx, $cy + 4, (string) $b[0], ['size' => 12, 'fill' => $r > 16 ? '#fff' : self::INK, 'weight' => 700]);
+            // ⓘ নাম বৃত্তে ধরলে ভেতরে সাদায়; না ধরলে বৃত্তের নিচে কালিতে — লম্বা নাম (IP ঠিকানা) ছোট বৃত্তের বাইরে ছড়ায় না
+            $label = (string) $b[0];
+            if (mb_strlen($label) * 6.5 <= $r * 2 - 4) {
+                $s .= self::t($cx, $cy + 4, $label, ['size' => 12, 'fill' => '#fff', 'weight' => 700]);
+            } else {
+                $s .= self::t($cx, min($cy + $r + 14, 278), $label, ['size' => 11.5, 'fill' => self::INK, 'weight' => 600]);
+            }
         }
         $s .= self::t(self::W - 10, 290, $o['x'] ?? '', ['size' => 12.5, 'anchor' => 'end']).self::t(34, 12, $o['y'] ?? '', ['size' => 12.5, 'anchor' => 'start']);
 
@@ -592,7 +603,7 @@ final class Svg
         $gap = (self::H - 24) / count($v);
         $s = '';
         foreach ($v as $i => $n) {
-            $x = 150 + (self::W - 210) * $n / $max;
+            $x = 150 + (self::W - 280) * $n / $max;
             $s .= self::t(140, $y + 5, $o['l'][$i] ?? '', ['size' => 14, 'fill' => self::INK, 'anchor' => 'end', 'weight' => 600]);
             $s .= '<line x1="150" x2="'.self::n($x).'" y1="'.self::n($y).'" y2="'.self::n($y).'" stroke="#cbd5e6" stroke-width="3"/>';
             $s .= '<circle cx="'.self::n($x).'" cy="'.self::n($y).'" r="10" fill="'.self::PALETTE[$i % count(self::PALETTE)].'"/>';
@@ -617,7 +628,8 @@ final class Svg
             $s .= '<line x1="'.self::n($x).'" x2="'.self::n($x).'" y1="14" y2="'.(self::H - 10).'" stroke="#eef2f8"/>'.self::t($x, 12, (string) $tk, ['size' => 12]);
         }
         $y = 22;
-        $bh = (self::H - 40) / count($p) - 10;
+        // ⓘ সারি যত কমই হোক, দাগ 40-এর বেশি মোটা নয় — একটা সারি পুরো উচ্চতা জুড়ে দেয়াল হত
+        $bh = min(40, (self::H - 40) / count($p) - 10);
         foreach ($p as $i => $bar) {
             $a = max(0.0, min(1.0, (float) $bar[1]));
             $b = max($a + .01, min(1.0, (float) $bar[2]));
@@ -627,7 +639,7 @@ final class Svg
         }
         $today = 150 + (self::W - 160) * (float) ($o['today'] ?? 0);
         $s .= '<line x1="'.self::n($today).'" x2="'.self::n($today).'" y1="14" y2="'.(self::H - 6).'" stroke="'.self::STATUS[3].'" stroke-width="2" stroke-dasharray="5 4"/>';
-        $s .= self::t($today, self::H - 1, 'আজ', ['size' => 12, 'fill' => self::STATUS[3], 'weight' => 700]);
+        $s .= self::t($today, self::H - 1, __('core.viz.today'), ['size' => 12, 'fill' => self::STATUS[3], 'weight' => 700]);
 
         return self::svg($s);
     }
@@ -770,6 +782,9 @@ final class Svg
             if ($rw > 70 && $rh > 40) {
                 $s .= self::t($x + 12, $y + 26, (string) $it[0], ['size' => 15, 'fill' => '#fff', 'anchor' => 'start', 'weight' => 700]);
                 $s .= self::t($x + 12, $y + 46, $it[3] ?? self::short((float) $it[1]), ['size' => 13, 'fill' => '#fff', 'anchor' => 'start']);
+            } elseif ($rw > 24 && $rh > 24) {
+                // ⓘ সরু বাক্স — ছোট অক্ষরে নামের প্রথম অংশ, যাতে কোনো রং নামহীন না থাকে
+                $s .= self::t($x + $rw / 2, $y + $rh / 2 + 4, mb_substr((string) $it[0], 0, max(2, (int) ($rw / 9))), ['size' => 11, 'fill' => '#fff', 'weight' => 700]);
             }
             if ($horiz) {
                 $x += $rw;

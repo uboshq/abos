@@ -62,4 +62,17 @@ return [
     'doc_status_draft' => 'খসড়া',
     'doc_status_archived' => 'আর্কাইভে',
     'doc_recent' => 'সাম্প্রতিক ডকুমেন্ট',
+
+    // ⭐ গ্রাফের বোর্ড (২০ নভেম্বর ২০২৬)
+    'doc_in_review' => 'অনুমোদনে',
+    'doc_status_expired' => 'মেয়াদ পেরোনো',
+    'doc_status_board_hint' => 'প্রতিটা কাগজ একটা ভাগে — চলতি · আর্কাইভে · অনুমোদনে · সইয়ের অপেক্ষায়',
+    'doc_activity_hint' => 'তোলা বনাম নামানো, দিন ধরে',
+    'today' => 'আজ',
+    'by_count' => 'সংখ্যা',
+    'by_space' => 'জায়গা',
+    'by_kind_board_hint' => 'ভাগ % · সংখ্যায় বনাম জায়গায়',
+    'storage_board_hint' => 'সব জোড়া নথি, সার্ভারের খালি জায়গার তুলনায়',
+    'storage_sub' => ':used · ডিস্কে খালি :free',
+    'expiry_soon' => 'মেয়াদ — শিগগির শেষ',
 ];

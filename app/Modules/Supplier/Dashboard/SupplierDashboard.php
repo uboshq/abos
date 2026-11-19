@@ -5,18 +5,27 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\DataScope;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Reports\PrincipalCommission;
 use App\Modules\Supplier\Reports\PrincipalCommissionReport;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * সরবরাহকারী মডিউলের ড্যাশবোর্ড।
@@ -29,6 +38,13 @@ final class SupplierDashboard implements ProvidesDashboard
     public static function dashboard(): DashboardDefinition
     {
         $month = Carbon::today()->startOfMonth()->toDateString();
+
+        // ⓘ চার সংখ্যা একবারই গোনা — ঘর আর গ্রাফের বোর্ড একই অঙ্ক দেখায়
+        $suppliers = fn () => Supplier::query()->inViewedBranch()->onlySuppliers();
+        $total = $suppliers()->count();
+        $active = $suppliers()->where('is_active', true)->count();
+        $inactive = $suppliers()->where('is_active', false)->count();
+        $new = $suppliers()->where('created_at', '>=', $month)->count();
 
         return new DashboardDefinition(
             title: __('supplier::dashboard.title'),
@@ -44,27 +60,27 @@ final class SupplierDashboard implements ProvidesDashboard
             stats: [
                 new Stat(
                     label: __('supplier::dashboard.total'),
-                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->count(),
+                    value: (string) $total,
                     hint: __('supplier::dashboard.total_hint'),
                     href: route('supplier.index'),
                 ),
                 new Stat(
                     label: __('supplier::dashboard.active'),
-                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('is_active', true)->count(),
+                    value: (string) $active,
                     hint: __('supplier::dashboard.active_hint'),
                     href: route('supplier.index'),
                     tone: Stat::GOOD,
                 ),
                 new Stat(
                     label: __('supplier::dashboard.inactive'),
-                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('is_active', false)->count(),
+                    value: (string) $inactive,
                     hint: __('supplier::dashboard.inactive_hint'),
                     href: route('supplier.index'),
                     tone: Stat::WARN,
                 ),
                 new Stat(
                     label: __('supplier::dashboard.new_this_month'),
-                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('created_at', '>=', $month)->count(),
+                    value: (string) $new,
                     hint: __('supplier::dashboard.new_hint'),
                     href: route('supplier.index'),
                 ),
@@ -94,7 +110,210 @@ final class SupplierDashboard implements ProvidesDashboard
                     href: route('supplier.index'),
                 ),
             ],
+
+            /*
+             * ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "sup"): সরবরাহকারী (ডোনাট), দেনার বয়স (স্তূপ-দাগ),
+             *   সবচেয়ে বেশি যাঁদের দিতে হবে (আড়াআড়ি কলাম), প্রিন্সিপালের কমিশন (বুলেট), সময়মতো মাল (বাবল), পরিশোধের দিন (ক্যালেন্ডার)।
+             *   যে সংখ্যা-চার্ট-তালিকা গ্রাফে এল, পাতায় আর আলাদা নয়; বাকি (এ মাসে কেনা, কেনার ধারা, প্রিন্সিপাল, সদ্য যুক্ত) নিচে।
+             */
+            sections: [Card::board(fn (): array => self::charts($total, $active, $inactive, $new), covers: [
+                __('supplier::dashboard.total'), __('supplier::dashboard.active'), __('supplier::dashboard.inactive'),
+                __('supplier::dashboard.new_this_month'), __('supplier::dashboard.ageing'), __('supplier::dashboard.most_owed'),
+                __('supplier::dashboard.performance'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ সরবরাহকারীর গ্রাফের বোর্ড — প্রতিটা অঙ্ক আগের ঘর, চার্ট, রিপোর্টের একই সংজ্ঞা থেকে, একই চাবিতে।
+     * ⓘ টাকা স্ট্রিং হয়ে যায়; ছোট লেখায় (৳ 8.4 লা) কেবল পূর্ণ টাকার পূর্ণসংখ্যা — float নয়; টাকার অনুপাত bcmath-এ।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(int $total, int $active, int $inactive, int $new): array
+    {
+        $user = auth()->user();
+        $short = fn (string $amount): string => (bccomp($amount, '0', 4) < 0 ? '−' : '').'৳ '.Svg::short((int) ltrim(Money::round($amount, 0), '-'));
+        $t = fn (string $key, array $with = []): string => (string) __('supplier::dashboard.'.$key, $with);
+        $name = fn (string $label, int $limit = 14): string => Str::limit(trim((string) Str::afterLast($label, ' — ')), $limit);
+        $buckets = ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90'];
+
+        // ── দেনার বয়স — বয়সের রিপোর্টটাই (বড় চারজন আর সবাই মিলে), রিপোর্টের চাবিতে ([[ageing()]]-এর একই ডাক)
+        $ageRows = [];
+        $agePayable = null;
+        if (config('abos.dashboards_v2') && $user?->can('supplier.report')) {
+            $result = app(\App\Core\Engines\Report\ReportEngine::class)
+                ->run('supplier.ageing', ['to' => Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 4);
+            foreach ($result->rows as $row) {
+                $ageRows[] = [$name((string) $row['supplier_name'], 10),array_map(fn (string $b) => (string) ($row[$b] ?? '0'), $buckets)];
+            }
+            if ($ageRows !== []) {
+                $ageRows[] = [$t('viz_all'), array_map(fn (string $b) => (string) ($result->totals[$b] ?? '0'), $buckets)];
+            }
+            $agePayable = (string) ($result->totals['payable'] ?? '0');
+        }
+
+        // ── সবচেয়ে বেশি যাঁদের দিতে হবে — [[mostOwed()]]-এর একই পাঁচজন
+        $owed = self::mostOwedRows();
+
+        // ── প্রিন্সিপালের কমিশন — রিপোর্টের সারি; প্রিন্সিপালের ভাগের কতটা পাঠানো হলো (দাগ = পুরোটা)
+        $principals = array_values(array_filter(self::principalRows(), fn (array $r) => bccomp((string) $r['share'], '0', 4) > 0));
+        $bullet = array_map(fn (array $r) => [
+            Str::limit((string) $r['supplier_name'], 12), bcdiv((string) $r['paid'], (string) $r['share'], 4), '1',
+        ], array_slice($principals, 0, 6));
+        $shareSum = array_reduce($principals, fn (string $s, array $r) => bcadd($s, (string) $r['share'], 4), '0');
+        $paidSum = array_reduce($principals, fn (string $s, array $r) => bcadd($s, (string) $r['paid'], 4), '0');
+        $sentPct = bccomp($shareSum, '0', 4) > 0 ? Money::round(bcmul(bcdiv($paidSum, $shareSum, 6), '100', 4), 0).'%' : '';
+
+        // ── সময়মতো মাল — এ মাসের শীর্ষ পাঁচ সরবরাহকারী ([[SupplierCharts::listings()]]-এর একই ছাঁকনি)
+        $bubbles = self::deliveryBubbles();
+
+        // ── পরিশোধের দিন — শেষ পাঁচ সপ্তাহ, শনিবার থেকে; পরিশোধের চাবিতে
+        $calendar = $user?->can('purchase.payment.view') ? self::paymentDays() : ['days' => [], 'total' => '0'];
+
+        return [
+            Card::make($t('viz_suppliers'), 'donut', [
+                'c' => (string) $total, 'cs' => $t('viz_total'),
+                'p' => [[$t('active'), $active, Svg::STATUS[0], (string) $active], [$t('inactive'), $inactive, '#94a3b8', (string) $inactive]],
+            ], value: $t('viz_people', ['n' => $total]), sub: $t('viz_suppliers_sub', ['n' => $new]), href: route('supplier.index'), colour: Svg::PALETTE[0]),
+            Card::make($t('ageing'), 'stack100', ['rows' => $ageRows, 'colors' => Svg::STATUS],
+                value: $agePayable === null ? '' : $short($agePayable), sub: $t('viz_ageing_sub'),
+                legend: [[$t('viz_age_0'), Svg::STATUS[0]], [$t('viz_age_30'), Svg::STATUS[1]], [$t('viz_age_60'), Svg::STATUS[2]], [$t('viz_age_90'), Svg::STATUS[3]]],
+                href: route('supplier.report.show', ['slug' => 'ageing']), colour: '#f97316'),
+            Card::make($t('most_owed'), 'hbars', [
+                'v' => array_column($owed, 'amount'), 'l' => array_map(fn (array $r) => Str::limit($r['name'], 12), $owed),
+                'top' => array_map(fn (array $r) => $short($r['amount']), $owed), 'color' => Svg::STATUS[3],
+            ], sub: $t('viz_most_owed_sub'), href: route('supplier.report.show', ['slug' => 'ageing']), colour: '#e11d48'),
+            Card::make($t('viz_commission'), 'bullet', ['p' => $bullet], value: $sentPct, sub: $t('viz_commission_sub'),
+                href: route('supplier.report.show', ['slug' => 'principal-commission']), colour: Svg::PALETTE[1]),
+            Card::make($t('viz_delivery'), 'bubble', ['p' => $bubbles, 'x' => $t('viz_delivery_x'), 'y' => $t('viz_delivery_y')],
+                sub: $t('viz_delivery_sub'), href: route('supplier.index'), colour: Svg::PALETTE[2]),
+            Card::make($t('viz_paydays'), 'calendar', ['days' => $calendar['days'], 'color' => Svg::STATUS[3]],
+                value: $calendar['days'] === [] ? '' : $short($calendar['total']), sub: $t('viz_paydays_sub'), colour: Svg::STATUS[0]),
+        ];
+    }
+
+    /**
+     * ⭐ সময়মতো মাল — এ মাসে যাঁদের কাছ থেকে সবচেয়ে বেশি কেনা, প্রথম পাঁচজন: x = এ মাসের মাল গ্রহণের কতটা আসার তারিখ পেরিয়ে আসেনি,
+     * y = কেনার কতটা ফেরত যায়নি, বৃত্ত = কেনা। ⓘ [[SupplierCharts::listings()]]-এর হুবহু ছাঁকনি (কোম্পানি, পাকা কাগজ, মোছা বাদ, হেডারে বাছা
+     * শাখা) আর একই "দেরি"-র সংজ্ঞা; যাঁর এ মাসে মাল গ্রহণের কাগজই নেই (সরাসরি ক্রয়), তাঁর সময় মাপার কিছু নেই — বাদ।
+     * ⛔ ক্রয়ের অঙ্ক — `purchase.bill.view` ছাড়া খালি (ক্রয় মডিউল না থাকলে চাবিও নেই)।
+     *
+     * @return list<array{0: string, 1: int, 2: string, 3: string}>
+     */
+    private static function deliveryBubbles(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.bill.view')) {
+            return [];
+        }
+
+        $range = [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->endOfMonth()->toDateString()];
+
+        $top = self::posted(DB::table('pur_bills')->where('pur_bills.company_id', CompanyContext::id()), 'pur_bills')
+            ->whereBetween('pur_bills.trx_date', $range)
+            ->selectRaw('pur_bills.supplier_id, COALESCE(SUM(pur_bills.total), 0) as amount')
+            ->groupBy('pur_bills.supplier_id')
+            ->orderByDesc('amount')->orderBy('pur_bills.supplier_id')
+            ->limit(5)->get();
+
+        $ids = $top->pluck('supplier_id')->map(fn ($id) => (int) $id)->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $receipts = self::posted(DB::table('pur_receipts')
+            ->leftJoin('pur_orders', 'pur_orders.id', '=', 'pur_receipts.purchase_order_id')
+            ->where('pur_receipts.company_id', CompanyContext::id()), 'pur_receipts')
+            ->whereBetween('pur_receipts.trx_date', $range)
+            ->whereIn('pur_receipts.supplier_id', $ids)
+            ->selectRaw('pur_receipts.supplier_id, COUNT(*) as n')
+            ->selectRaw('SUM(CASE WHEN pur_orders.expected_on IS NOT NULL AND pur_receipts.trx_date > pur_orders.expected_on THEN 1 ELSE 0 END) as late')
+            ->groupBy('pur_receipts.supplier_id')
+            ->get()->keyBy('supplier_id');
+
+        $returned = self::posted(DB::table('pur_returns')->where('pur_returns.company_id', CompanyContext::id()), 'pur_returns')
+            ->whereBetween('pur_returns.trx_date', $range)
+            ->whereIn('pur_returns.supplier_id', $ids)
+            ->selectRaw('pur_returns.supplier_id, COALESCE(SUM(pur_returns.total), 0) as amount')
+            ->groupBy('pur_returns.supplier_id')
+            ->pluck('amount', 'supplier_id');
+
+        $names = Supplier::query()->whereKey($ids)->get()->keyBy('id');
+        $biggest = (string) $top->first()->amount;
+        $out = [];
+
+        foreach ($top as $row) {
+            $got = $receipts->get($row->supplier_id);
+            $bought = (string) $row->amount;
+
+            if ($got === null || (int) $got->n === 0 || bccomp($bought, '0', 4) <= 0) {
+                continue;
+            }
+
+            $kept = bcsub($bought, (string) ($returned[$row->supplier_id] ?? '0'), 4);
+            $out[] = [
+                Str::limit(Str::before($names->get((int) $row->supplier_id)?->name() ?? '—', ' '), 8),
+                intdiv(((int) $got->n - (int) $got->late) * 100, (int) $got->n),
+                bcmul(bcdiv($kept, $bought, 6), '100', 2),
+                // ⓘ বৃত্ত 8–26 — বড় বৃত্ত 100%-এর কাছে মাথার কিনারায় কাটত
+                bcadd('8', bcmul('18', bcdiv($bought, $biggest, 6), 4), 2),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ পরিশোধের দিন — শেষ পাঁচ সপ্তাহ (শনিবার থেকে), প্রতিদিন সরবরাহকারীকে কত দেওয়া হলো: খাতায় ওঠা ক্রয়ের পরিশোধ আর পরিশোধ-ভাউচার
+     * (পণ্যের সরবরাহকারী — সেবাদাতা নয়)। ⓘ পরিশোধের টেবিল কাঁচা পড়া — সরবরাহকারী মডিউল ক্রয়কে চেনে না ([[SupplierCharts]]-এর একই কারণ)।
+     * ⓘ পাঁচ সপ্তাহে একটা পয়সাও না গেলে খালি — শূন্যের ক্যালেন্ডার আঁকা হয় না।
+     *
+     * @return array{days: list<array{0: int, 1: string}>, total: string}
+     */
+    private static function paymentDays(): array
+    {
+        $today = Carbon::today();
+        $start = $today->copy()->subDays(28);
+        $start->subDays(($start->dayOfWeek + 1) % 7);   // শনিবারে ফেরা (শনি = 6)
+        $range = [$start->toDateString(), $start->copy()->addDays(34)->toDateString()];
+
+        $byDay = self::posted(DB::table('pur_payments')->where('pur_payments.company_id', CompanyContext::id()), 'pur_payments')
+            ->whereBetween('pur_payments.trx_date', $range)
+            ->whereIn('pur_payments.supplier_id', Supplier::onlySuppliersIds())
+            ->selectRaw('DATE(pur_payments.trx_date) as d, COALESCE(SUM(pur_payments.amount), 0) as amount')
+            ->groupByRaw('DATE(pur_payments.trx_date)')
+            ->pluck('amount', 'd')->map(fn ($v) => (string) $v)->all();
+
+        $vouchers = Voucher::query()->posted()->where('type', Voucher::PAYMENT)
+            ->where('party_type', Supplier::drillSourceType())
+            ->whereIn('party_id', Supplier::onlySuppliersIds())
+            ->whereBetween('trx_date', $range)
+            ->selectRaw('DATE(trx_date) as d, COALESCE(SUM(amount), 0) as amount')
+            ->groupByRaw('DATE(trx_date)')
+            ->toBase()->pluck('amount', 'd');
+        foreach ($vouchers as $day => $amount) {
+            $byDay[$day] = bcadd($byDay[$day] ?? '0', (string) $amount, 4);
+        }
+
+        $days = [];
+        $total = '0';
+        for ($i = 0; $i < 35; $i++) {
+            $day = $start->copy()->addDays($i);
+            $amount = $day->greaterThan($today) ? '0' : ($byDay[$day->toDateString()] ?? '0');
+            $days[] = [$day->day, $amount];
+            $total = bcadd($total, $amount, 4);
+        }
+
+        return ['days' => bccomp($total, '0', 4) > 0 ? $days : [], 'total' => $total];
+    }
+
+    /** পাকা কাগজ, মোছা বাদ, আর হেডারে বাছা শাখা ([[DataScope::inView()]]) — [[SupplierCharts]]-এর হুবহু ছাঁকনি */
+    private static function posted(Builder $query, string $table): Builder
+    {
+        $query->whereIn($table.'.status', DocumentStatus::POSTED)->whereNull($table.'.deleted_at');
+
+        return app(DataScope::class)->inView($query, $table.'.branch_id');
     }
 
     /**
@@ -107,6 +326,29 @@ final class SupplierDashboard implements ProvidesDashboard
      * @return list<Breakdown>
      */
     private static function mostOwed(): array
+    {
+        $rows = self::mostOwedRows();
+
+        if ($rows === []) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('supplier::dashboard.most_owed'),
+            parts: array_map(fn (array $row) => [
+                'label' => $row['name'],
+                'value' => Money::format($row['amount']),
+            ], $rows),
+            hint: __('supplier::dashboard.most_owed_hint'),
+        )];
+    }
+
+    /**
+     * সবচেয়ে বেশি যাঁদের দিতে হবে — নাম আর টাকা (স্ট্রিং); আগের চার্ট আর গ্রাফের বোর্ড দুইটাই এটা পড়ে। চাবি না থাকলে ফাঁকা।
+     *
+     * @return list<array{name: string, amount: string}>
+     */
+    private static function mostOwedRows(): array
     {
         // ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)
         if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.payment.view')) {
@@ -125,18 +367,10 @@ final class SupplierDashboard implements ProvidesDashboard
         $names = Supplier::query()->inViewedBranch()->onlySuppliers()->whereIn('id', array_column($rows, 'party_id'))->get()->keyBy('id');
         $rows = array_slice(array_values(array_filter($rows, fn (array $row) => $names->has($row['party_id']))), 0, 5);
 
-        if ($rows === []) {
-            return [];
-        }
-
-        return [new Breakdown(
-            label: __('supplier::dashboard.most_owed'),
-            parts: array_map(fn (array $row) => [
-                'label' => $names[$row['party_id']]?->name() ?? '—',
-                'value' => Money::format($row['amount']),
-            ], $rows),
-            hint: __('supplier::dashboard.most_owed_hint'),
-        )];
+        return array_map(fn (array $row) => [
+            'name' => $names[$row['party_id']]?->name() ?? '—',
+            'amount' => $row['amount'],
+        ], $rows);
     }
 
     /**
@@ -151,18 +385,9 @@ final class SupplierDashboard implements ProvidesDashboard
      */
     private static function principals(): array
     {
-        if (! auth()->user()?->can('supplier.report')) {
-            return [];
-        }
+        $rows = self::principalRows();
 
-        $result = app(\App\Core\Engines\Report\ReportEngine::class)->run(
-            PrincipalCommissionReport::KEY,
-            ['branch_id' => \App\Core\Support\ViewedBranch::one()],
-            1,
-            50,
-        );
-
-        if ($result->rows === []) {
+        if ($rows === []) {
             return [];
         }
 
@@ -175,7 +400,7 @@ final class SupplierDashboard implements ProvidesDashboard
          *     আলাদা মন্তব্যের কলাম আর নেই (de2353dc-এরটা এখানে মিশে গেল)
          *   · সময়কাল শিরোনামের নিচে, সবার চক্র এক হলে; আলাদা হলে প্রতিটা সারিতে একটা কলাম
          */
-        $periods = collect($result->rows)
+        $periods = collect($rows)
             ->map(fn (array $row) => PrincipalCommission::soFar((string) $row['period_from'], (string) $row['period_to']))
             ->unique();
         $oneCycle = $periods->count() === 1;
@@ -185,7 +410,7 @@ final class SupplierDashboard implements ProvidesDashboard
          * পর্দার সারি আর মোট কখনো দুই কথা বলে না। বাকি ইনফ্লো চিহ্নসহ যোগ হয় (দিতে হবে +, পাব −), তারপর একই কথায়
          * ([[owed()]]) — দুই দিকের সারি থাকলে নিট দিকটাই বলে। শাখার বাছাই রিপোর্টের, তাই মোটেরও।
          */
-        $sum = fn (string $key): string => collect($result->rows)
+        $sum = fn (string $key): string => collect($rows)
             ->reduce(fn (string $carry, array $row): string => bcadd($carry, (string) ($row[$key] ?? '0'), 4), '0');
 
         return [new Listing(
@@ -204,7 +429,7 @@ final class SupplierDashboard implements ProvidesDashboard
                 ['key' => 'balance', 'label' => __('supplier::principal.dash_balance'), 'width' => '14rem',
                     'render' => fn (array $row) => self::owed((string) $row['balance'])],
             ],
-            rows: collect($result->rows),
+            rows: collect($rows),
             empty: __('supplier::principal.dashboard_empty'),
             href: route('supplier.report.show', ['slug' => 'principal-commission']),
             note: $oneCycle ? __('supplier::principal.dash_period', ['period' => $periods->first()]) : null,
@@ -217,6 +442,26 @@ final class SupplierDashboard implements ProvidesDashboard
                 'balance' => self::owed($sum('balance')),
             ],
         )];
+    }
+
+    /**
+     * প্রিন্সিপালের কমিশন রিপোর্টের সারি — রিপোর্টটাই চালানো (শাখার দেয়াল আর হেডারে বাছা শাখা রিপোর্টের); তালিকা আর গ্রাফের বোর্ড
+     * দুইটাই এটা পড়ে। ⛔ রিপোর্টের চাবি (`supplier.report`) ছাড়া ফাঁকা।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function principalRows(): array
+    {
+        if (! auth()->user()?->can('supplier.report')) {
+            return [];
+        }
+
+        return app(\App\Core\Engines\Report\ReportEngine::class)->run(
+            PrincipalCommissionReport::KEY,
+            ['branch_id' => \App\Core\Support\ViewedBranch::one()],
+            1,
+            50,
+        )->rows;
     }
 
     /**

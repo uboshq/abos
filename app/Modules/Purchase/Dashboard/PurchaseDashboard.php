@@ -5,20 +5,28 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\DataScope;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Services\AccountsFacts;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * ক্রয় মডিউলের ড্যাশবোর্ড।
@@ -33,6 +41,14 @@ final class PurchaseDashboard implements ProvidesDashboard
     public static function dashboard(): DashboardDefinition
     {
         $month = Carbon::today()->startOfMonth()->toDateString();
+
+        // ⓘ উপরের তিন সংখ্যা একবারই পড়া — ঘর আর গ্রাফের বোর্ড একই অঙ্ক দেখায়
+        $payable = app(AccountsFacts::class)->payable();
+        $bought = (string) (PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
+            ->where('trx_date', '>=', $month)->sum('total') ?: '0');
+        $paid = self::paidFrom($month);
+        $series = self::boughtAgainstPaid();
+        $panels = PurchaseCharts::panels();
 
         return new DashboardDefinition(
             title: __('purchase::dashboard.title'),
@@ -85,7 +101,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                  */
                 new Stat(
                     label: __('purchase::dashboard.payable'),
-                    value: Money::format(app(AccountsFacts::class)->payable()),
+                    value: Money::format($payable),
                     hint: __('purchase::dashboard.payable_hint'),
                     href: route('purchase.bill.index'),
                     tone: Stat::BAD,
@@ -93,8 +109,7 @@ final class PurchaseDashboard implements ProvidesDashboard
 
                 new Stat(
                     label: __('purchase::dashboard.bought_this_month'),
-                    value: Money::format(PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
-                        ->where('trx_date', '>=', $month)->sum('total')),
+                    value: Money::format($bought),
                     hint: __('purchase::dashboard.bought_hint'),
                     href: route('purchase.bill.index'),
                 ),
@@ -102,7 +117,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                 new Stat(
                     label: __('purchase::dashboard.paid_this_month'),
                     // ⛔ কেবল খাতায় ওঠা পরিশোধ, সাথে বিলের বিপরীতে পরিশোধ-ভাউচার (কাউন্টার) — অডিট ⚠️১৪, ৬ অক্টোবর ২০২৬ ([[paidFrom()]])
-                    value: Money::format(self::paidFrom($month)),
+                    value: Money::format($paid),
                     hint: __('purchase::dashboard.paid_hint'),
                     href: route('purchase.payment.index'),
                     tone: Stat::GOOD,
@@ -127,7 +142,7 @@ final class PurchaseDashboard implements ProvidesDashboard
             ],
 
             // ⚠️ প্রথম চার্টটা হোমে যায় — নতুনগুলো তার পরে (৬ অক্টোবর ২০২৬)
-            panels: [self::boughtAgainstPaid(), ...self::topSuppliers(), ...PurchaseCharts::panels()],
+            panels: [$series, ...self::topSuppliers(), ...$panels],
 
             listings: [
                 new Listing(
@@ -147,7 +162,169 @@ final class PurchaseDashboard implements ProvidesDashboard
                 ...self::goodsNotYetIn(),
                 ...PurchaseCharts::listings(),
             ],
+
+            /*
+             * ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "pur"): কেনা বনাম পরিশোধ (রেখা), সবচেয়ে বেশি কেনা
+             *   (লোলিপপ), ক্রয়ের পথ (ফানেল), দেনা কবে দিতে হবে (রঙিন কলাম), মাল আসেনি (সময়রেখা), পণ্যের দলের ভাগ (100% স্তূপ)।
+             *   যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়; বাকি (ফেরত, অনুমোদনের অপেক্ষা, আদেশের অবস্থা, তালিকাগুলো) নিচে।
+             */
+            sections: [Card::board(fn (): array => self::charts($payable, $bought, $paid, $panels), covers: [
+                __('purchase::dashboard.payable'), __('purchase::dashboard.bought_this_month'), __('purchase::dashboard.paid_this_month'),
+                __('purchase::dashboard.open_orders'), $series->label,
+                __('purchase::dashboard.top_suppliers', ['year' => Carbon::today()->year]), __('purchase::dashboard.funnel'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ ক্রয়ের গ্রাফের বোর্ড — প্রতিটা অঙ্ক আগের ঘর আর চার্টের একই সংজ্ঞা থেকে (একই কোয়েরি, একই চাবি)।
+     * ⓘ টাকা স্ট্রিং হয়ে যায়; ছোট লেখায় (৳ 96 লা) কেবল পূর্ণ টাকার পূর্ণসংখ্যা — float নয়।
+     *
+     * @param  list<Breakdown>  $panels  [[PurchaseCharts::panels()]] — ফানেল এখান থেকেই, আবার গোনা হয় না
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(string $payable, string $bought, string $paid, array $panels): array
+    {
+        $user = auth()->user();
+        $short = fn (string $amount): string => (bccomp($amount, '0', 4) < 0 ? '−' : '').'৳ '.Svg::short((int) ltrim(Money::round($amount, 0), '-'));
+        $t = fn (string $key, array $with = []): string => (string) __('purchase::dashboard.'.$key, $with);
+        $today = Carbon::today();
+
+        // ── ১. কেনা বনাম পরিশোধ, ছয় মাস — উপরের দুই সংখ্যা আর বছরের চার্টের একই সংজ্ঞা ([[boughtAndPaidByMonth()]])
+        $start = $today->copy()->startOfMonth()->subMonths(5);
+        [$byMonthBought, $byMonthPaid] = self::boughtAndPaidByMonth($start);
+        $line = ['v' => [], 'v2' => [], 'l' => []];
+        for ($m = $start->copy(); $m->lessThanOrEqualTo($today); $m->addMonth()) {
+            $line['v'][] = (string) ($byMonthBought[$m->format('Y-m')] ?? '0');
+            $line['v2'][] = (string) ($byMonthPaid[$m->format('Y-m')] ?? '0');
+            $line['l'][] = $m->translatedFormat('M');
+        }
+
+        // ── ২. সবচেয়ে বেশি কেনা — আগের চার্টের একই সারি (বিল দেখার চাবিতে)
+        $top = config('abos.dashboards_v2') && $user?->can('purchase.bill.view') ? self::topSupplierRows() : collect();
+
+        // ── ৩. ক্রয়ের পথ — [[PurchaseCharts::funnel()]]-এর হুবহু ভাগ
+        $funnel = collect($panels)->first(fn ($p) => $p->label === __('purchase::dashboard.funnel'));
+
+        // ── ৪. দেনা কবে দিতে হবে — বিলে যা বাকি ([[biggestPayable()]]-এর একই হিসাব), শেষ তারিখ ধরে; শেষ তারিখ না থাকলে বিলের তারিখ
+        $due = '(b.total - b.ait_amount - b.vds_amount - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0))';
+        $on = 'COALESCE(b.due_on, b.trx_date)';
+        $soon = $today->copy()->addDays(7)->toDateString();
+        $late30 = $today->copy()->subDays(30)->toDateString();
+        $buckets = DB::query()
+            ->fromSub(PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)->withPaid(), 'b')
+            ->whereRaw("{$due} > 0")
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$on} > ? THEN {$due} ELSE 0 END), 0) as later", [$soon])
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$on} >= ? AND {$on} <= ? THEN {$due} ELSE 0 END), 0) as week", [$today->toDateString(), $soon])
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$on} < ? AND {$on} >= ? THEN {$due} ELSE 0 END), 0) as late", [$today->toDateString(), $late30])
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$on} < ? THEN {$due} ELSE 0 END), 0) as stale", [$late30])
+            ->first();
+        $dues = array_map(fn (string $k) => (string) ($buckets->{$k} ?? '0'), ['later', 'week', 'late', 'stale']);
+
+        // ── ৫. মাল আসেনি — "অপেক্ষমাণ ক্রয়াদেশ"-এর একই ছাঁকনি; সবচেয়ে পুরনো ছয়টা, কত দিন ধরে
+        $open = PurchaseOrder::query()->where('status', DocumentStatus::CONFIRMED);
+        $openCount = (clone $open)->count();
+        $oldest = (clone $open)->with('supplier')->orderBy('trx_date')->orderBy('id')->limit(6)->get();
+        $ages = $oldest->map(fn (PurchaseOrder $o) => max(0, (int) $o->trx_date->diffInDays($today)));
+        $window = max(7, (int) (ceil(max($ages->max() ?? 0, 1) / 7) * 7));
+        $gantt = $oldest->values()->map(fn (PurchaseOrder $o, int $i) => [
+            Str::limit($o->document_no.' '.($o->supplier?->name() ?? ''), 13),
+            1 - $ages[$i] / $window, 1,
+            $ages[$i] > 21 ? Svg::STATUS[3] : ($ages[$i] > 14 ? Svg::STATUS[2] : ($ages[$i] > 7 ? Svg::STATUS[1] : Svg::STATUS[0])),
+        ])->all();
+        $step = intdiv($window, 3);
+
+        // ── ৬. পণ্যের দল — এ মাস বনাম গত মাস, বিলের সারির টাকা (বিল দেখার চাবিতে)
+        $mix = $user?->can('purchase.bill.view') ? self::categoryMix() : ['rows' => [], 'names' => []];
+
+        return [
+            Card::make($t('viz_bought_paid'), 'line', $line + ['color' => Svg::PALETTE[0], 'c2' => '#f59e0b'],
+                value: $short($bought), sub: $t('viz_bought_paid_sub', ['paid' => Money::format($paid)]),
+                legend: [[$t('bought'), Svg::PALETTE[0]], [$t('paid'), '#f59e0b']], href: route('purchase.bill.index'), colour: Svg::PALETTE[0]),
+            Card::make($t('top_suppliers', ['year' => $today->year]), 'lollipop', [
+                'v' => $top->map(fn (PurchaseBill $r) => (string) $r->amount)->all(),
+                'l' => $top->map(fn (PurchaseBill $r) => Str::limit($r->supplier?->name() ?? '—', 12))->all(),
+                'top' => $top->map(fn (PurchaseBill $r) => $short((string) $r->amount))->all(),
+            ], sub: $t('top_suppliers_hint'), href: route('purchase.bill.index'), colour: Svg::PALETTE[1]),
+            Card::make($t('viz_path'), 'funnel', ['p' => $funnel === null ? [] : array_map(
+                fn (array $part) => [$part['label'], (int) $part['value'], (string) $part['value']], $funnel->parts,
+            )], sub: $t('viz_path_sub'), href: route('purchase.order.index'), colour: Svg::PALETTE[2]),
+            Card::make($t('payable'), 'bars', [
+                'v' => $dues, 'l' => [$t('viz_due_later'), $t('viz_due_week'), $t('viz_due_late'), $t('viz_due_stale')],
+                'top' => array_map($short, $dues), 'colors' => [Svg::PALETTE[2], Svg::STATUS[1], Svg::STATUS[2], Svg::STATUS[3]],
+            ], value: $short($payable), sub: $t('viz_due_sub'), href: route('purchase.bill.index'), colour: '#f97316'),
+            Card::make($t('goods_not_in'), 'gantt', [
+                'ticks' => [$t('viz_days_ago', ['n' => $window]), '−'.($step * 2), '−'.$step, $t('viz_today')], 'today' => 1, 'p' => $gantt,
+            ], value: $t('viz_count', ['n' => $openCount]), sub: $t('viz_waiting_sub'), href: route('purchase.order.index'), colour: Svg::STATUS[3]),
+            Card::make($t('viz_mix'), 'stack100', ['rows' => $mix['rows'], 'colors' => array_slice(Svg::PALETTE, 0, 5)],
+                sub: $t('viz_mix_sub'), legend: array_map(fn (string $n, int $i) => [$n, Svg::PALETTE[$i]], $mix['names'], array_keys($mix['names'])),
+                href: route('purchase.bill.index'), colour: Svg::PALETTE[7]),
+        ];
+    }
+
+    /**
+     * ⭐ পণ্যের দলের ভাগ — এ মাস আর গত মাসের নিশ্চিত বিলের সারির টাকা, পণ্যের দল (শ্রেণি) ধরে; এ মাসের বড় চারটা দল, বাকি "অন্যান্য"।
+     * ⓘ কাঁচা কোয়েরি — কোম্পানি, মোছা বাদ আর হেডারে বাছা শাখা হাতে বসানো ([[DataScope::inView()]]), [[PurchaseCharts::priceChanges()]]-এর মতো।
+     *
+     * @return array{rows: list<array{0: string, 1: list<string>}>, names: list<string>}
+     */
+    private static function categoryMix(): array
+    {
+        $today = Carbon::today();
+        $periods = [
+            'now' => [$today->copy()->startOfMonth()->toDateString(), $today->toDateString()],
+            'last' => [$today->copy()->startOfMonth()->subMonthNoOverflow()->toDateString(), $today->copy()->startOfMonth()->subDay()->toDateString()],
+        ];
+        $sums = [];
+
+        foreach ($periods as $key => $range) {
+            $query = DB::table('pur_bill_lines')
+                ->join('pur_bills', 'pur_bills.id', '=', 'pur_bill_lines.purchase_bill_id')
+                ->leftJoin((new Product)->getTable().' as p', 'p.id', '=', 'pur_bill_lines.product_id')
+                ->where('pur_bills.company_id', CompanyContext::id())
+                ->whereIn('pur_bills.status', DocumentStatus::POSTED)
+                ->whereNull('pur_bills.deleted_at')
+                ->whereBetween('pur_bills.trx_date', $range)
+                ->selectRaw('p.category_id as category, COALESCE(SUM(pur_bill_lines.amount), 0) as amount')
+                ->groupBy('p.category_id');
+
+            app(DataScope::class)->inView($query, 'pur_bills.branch_id');
+            $sums[$key] = $query->pluck('amount', 'category')->map(fn ($v) => (string) $v)->all();
+        }
+
+        $ranked = $sums['now'];
+        uasort($ranked, fn (string $a, string $b) => bccomp($b, $a, 4));
+        $ids = array_slice(array_keys($ranked), 0, 4);
+        $names = ProductCategory::query()->whereKey(array_filter($ids))->get()->keyBy('id');
+
+        // ⓘ বড় চারটার বাইরের সব দল এক ঘরে — দুই সারিতে একই ঘর, যাতে রং আর নাম মেলে
+        $rests = [];
+        foreach ($sums as $key => $byCategory) {
+            $rests[$key] = '0';
+            foreach ($byCategory as $id => $amount) {
+                if (! in_array($id, $ids, true)) {
+                    $rests[$key] = bcadd($rests[$key], $amount, 4);
+                }
+            }
+        }
+        $withRest = bccomp($rests['now'], '0', 4) > 0 || bccomp($rests['last'], '0', 4) > 0;
+
+        $rows = [];
+        foreach (['now' => __('purchase::dashboard.viz_this_month'), 'last' => __('purchase::dashboard.viz_last_month')] as $key => $label) {
+            $values = array_map(fn ($id) => $sums[$key][$id] ?? '0', $ids);
+            if ($withRest) {
+                $values[] = $rests[$key];
+            }
+            $rows[] = [(string) $label, $values];
+        }
+
+        $legend = array_map(fn ($id) => $id === '' ? (string) __('purchase::dashboard.viz_no_group')
+            : ($names->get($id)?->name() ?? '—'), $ids);
+        if ($withRest) {
+            $legend[] = (string) __('purchase::dashboard.viz_others');
+        }
+
+        return ['rows' => $ids === [] ? [] : $rows, 'names' => array_values($legend)];
     }
 
     /**
@@ -213,15 +390,7 @@ final class PurchaseDashboard implements ProvidesDashboard
             return [];
         }
 
-        $rows = PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
-            ->where('trx_date', '>=', Carbon::today()->startOfYear()->toDateString())
-            ->whereNotNull('supplier_id')
-            ->selectRaw('supplier_id, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('supplier_id')
-            ->orderByDesc('amount')
-            ->limit(5)
-            ->with('supplier')
-            ->get();
+        $rows = self::topSupplierRows();
 
         if ($rows->isEmpty()) {
             return [];
@@ -237,15 +406,32 @@ final class PurchaseDashboard implements ProvidesDashboard
         )];
     }
 
-    private static function boughtAgainstPaid(): Series
+    /**
+     * এ বছর সবচেয়ে বেশি কেনা পাঁচ সরবরাহকারী — নিশ্চিত বিলের `total`; আগের চার্ট আর গ্রাফের বোর্ড দুইটাই এটা পড়ে।
+     *
+     * @return Collection<int, PurchaseBill>
+     */
+    private static function topSupplierRows(): Collection
     {
-        /*
-         * ⭐ নতুন ড্যাশবোর্ডে এ বছরের জানুয়ারি–ডিসেম্বর — বিক্রয় ও মজুদের মতোই (মালিক, ২ অক্টোবর ২০২৬:
-         * "১২ মাসের দিবে January to Dec")। ভবিষ্যতের মাসগুলো শূন্য নিয়ে। সুইচ বন্ধে আগের মতো ছয় মাস।
-         */
-        $year = (bool) config('abos.dashboards_v2');
-        $start = $year ? Carbon::today()->startOfYear() : Carbon::today()->startOfMonth()->subMonths(5);
-        $last = $year ? Carbon::today()->endOfYear() : Carbon::today();
+        return PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
+            ->where('trx_date', '>=', Carbon::today()->startOfYear()->toDateString())
+            ->whereNotNull('supplier_id')
+            ->selectRaw('supplier_id, COALESCE(SUM(total), 0) as amount')
+            ->groupBy('supplier_id')
+            ->orderByDesc('amount')
+            ->limit(5)
+            ->with('supplier')
+            ->get()
+            ->toBase();
+    }
+
+    /**
+     * মাস ধরে কেনা আর পরিশোধ — `Y-m` => টাকা; একটা তারিখ থেকে। বছরের চার্ট আর গ্রাফের বোর্ডের ছয় মাস একই সংজ্ঞা পড়ে।
+     *
+     * @return array{0: \Illuminate\Support\Collection<string, mixed>, 1: \Illuminate\Support\Collection<string, mixed>}
+     */
+    private static function boughtAndPaidByMonth(Carbon $start): array
+    {
         $expr = "DATE_FORMAT(trx_date, '%Y-%m')";
 
         $bought = PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
@@ -263,6 +449,20 @@ final class PurchaseDashboard implements ProvidesDashboard
         foreach ($byVoucher as $ym => $amount) {
             $paid[$ym] = bcadd((string) ($paid[$ym] ?? '0'), (string) $amount, 4);
         }
+
+        return [$bought, $paid];
+    }
+
+    private static function boughtAgainstPaid(): Series
+    {
+        /*
+         * ⭐ নতুন ড্যাশবোর্ডে এ বছরের জানুয়ারি–ডিসেম্বর — বিক্রয় ও মজুদের মতোই (মালিক, ২ অক্টোবর ২০২৬:
+         * "১২ মাসের দিবে January to Dec")। ভবিষ্যতের মাসগুলো শূন্য নিয়ে। সুইচ বন্ধে আগের মতো ছয় মাস।
+         */
+        $year = (bool) config('abos.dashboards_v2');
+        $start = $year ? Carbon::today()->startOfYear() : Carbon::today()->startOfMonth()->subMonths(5);
+        $last = $year ? Carbon::today()->endOfYear() : Carbon::today();
+        [$bought, $paid] = self::boughtAndPaidByMonth($start);
 
         $points = [];
 

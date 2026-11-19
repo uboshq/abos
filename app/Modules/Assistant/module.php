@@ -34,8 +34,13 @@ return [
      */
     'depends_on' => ['accounts', 'sales', 'inventory', 'finance', 'customer', 'credit_control', 'purchase', 'notification'],
 
+    // ⭐ কোপাইলটের ব্যবহারের ড্যাশবোর্ড — ছয়টা গ্রাফ (মালিক, ২০ নভেম্বর ২০২৬); চাবি মেনুর ড্যাশবোর্ড সারি থেকে (`assistant.use`)
+    'dashboard' => \App\Modules\Assistant\Dashboard\AssistantDashboard::class,
+
     'menu' => [
         'dashboard' => [
+            ['label' => 'assistant::menu.dashboard', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'assistant'], 'permission' => 'assistant.use'],
             ['label' => 'assistant::menu.today', 'icon' => 'brain', 'route' => 'assistant.today', 'permission' => 'assistant.use'],
         ],
         'reports' => [

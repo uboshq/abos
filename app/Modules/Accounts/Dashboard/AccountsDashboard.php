@@ -12,14 +12,20 @@ use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherParties;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -393,22 +399,25 @@ final class AccountsDashboard implements ProvidesDashboard
                 ),
             ],
 
-            // ⭐ মালিকের চূড়ান্ত নমুনা TErMgXrtgVBkuyuoCZq8NS-এর সারিগুলো ([[AccountsBoard]]) — সাত সারি হলে পাতা কেবল এগুলো (board)
+            /*
+             * ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "acc"): আয়-ব্যয়ের রেখা, টাকা কোথায় (ডোনাট),
+             *   প্রাপ্য-প্রদেয়ের বয়স (স্তূপ-দাগ), আজকের আসা-যাওয়া (কলাম), এ মাসের ভাউচার (ওয়াফল), খাতার স্বাস্থ্য (রেডিয়াল)। যে সংখ্যা-চার্ট
+             *   গ্রাফে এল, পাতায় আর আলাদা নয়; বাকি (রেওয়ামিল, চলতি অবস্থান, দুই তালিকা, খসড়া, হস্তান্তর, ড্রয়ার, ঋণ, সম্পদ) নিচে।
+             * ⓘ মালিকের ১০ নভেম্বরের সাত সারি ([[AccountsBoard]]) হারায় না — সবার নিচে, সমস্যা কেন্দ্র একদম শেষে।
+             */
             sections: [
-                [
-                    'view' => 'accounts::dashboard.board-top',
-                    'place' => 'top',
-                    'permission' => 'accounts.view',
-                    'data' => function (): array {
-                        $board = app(AccountsBoard::class);
-
-                        return ['problems' => $board->problems(), 'close' => $board->monthClose()];
-                    },
-                ],
+                Card::board(fn (): array => self::charts($facts, $income, $expense, $today), covers: [
+                    __('accounts::dashboard.cash_in_hand'), __('accounts::dashboard.bank_balance'),
+                    __('accounts::dashboard.receivable'), __('accounts::dashboard.payable'),
+                    __('accounts::dashboard.today_collection'), __('accounts::dashboard.today_payment'), __('accounts::dashboard.today_expense'),
+                    __('accounts::dashboard.net_profit_month'), __('accounts::dashboard.month_so_far'), __('accounts::dashboard.income_expense_months'),
+                    __('accounts::dashboard.papers_this_month'), __('accounts::dashboard.posted_today'), __('accounts::dashboard.reversed_this_month'),
+                    __('accounts::dashboard.backdated_this_month'), __('accounts::dashboard.awaiting_signature'),
+                ], permission: 'accounts.view'),
                 // ⭐ সারি 2 — লাভ-ক্ষতির সেতু, স্থিতিপত্র, রেওয়ামিল ও উপ-খাতার মিল
                 [
                     'view' => 'accounts::dashboard.board-statements',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
@@ -419,7 +428,7 @@ final class AccountsDashboard implements ProvidesDashboard
                 // ⭐ সারি 3 — এক নজরে আর খরচের ট্রিম্যাপ
                 [
                     'view' => 'accounts::dashboard.board-glance',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
@@ -430,7 +439,7 @@ final class AccountsDashboard implements ProvidesDashboard
                 // ⭐ সারি 4 — মাস বন্ধের সময়রেখা, ব্যাংক মিলকরণ, কর ও সরকারি দায়
                 [
                     'view' => 'accounts::dashboard.board-close',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
@@ -441,7 +450,7 @@ final class AccountsDashboard implements ProvidesDashboard
                 // ⭐ সারি 5 — ভাউচারের প্রবাহ, খরচ এ মাস বনাম গত মাস, আয় বনাম খরচ
                 [
                     'view' => 'accounts::dashboard.board-trends',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
@@ -452,14 +461,14 @@ final class AccountsDashboard implements ProvidesDashboard
                 // ⭐ সারি 6 — কাগজের যাত্রা, ধরন ধরে টাকা, পোস্টিংয়ের ক্যালেন্ডার, নগদ বাক্স ও চেক
                 [
                     'view' => 'accounts::dashboard.board-pipeline',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => fn (): array => ['pipe' => app(AccountsBoard::class)->pipeline()],
                 ],
                 // ⭐ সারি 7 — অনুমোদনে সময়, খাতার স্বাস্থ্য, সবচেয়ে বেশি নড়াচড়া, সাম্প্রতিক কাজ
                 [
                     'view' => 'accounts::dashboard.board-review',
-                    'place' => 'top',
+                    'place' => 'bottom',
                     'permission' => 'accounts.view',
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
@@ -467,11 +476,160 @@ final class AccountsDashboard implements ProvidesDashboard
                         return ['bubbles' => $board->approvalTimes(), 'health' => $board->ledgerHealth(), 'top' => $board->topAccounts(), 'recent' => $board->recentWork()];
                     },
                 ],
-            ],
+                // ⭐ সারি 1 — সমস্যা কেন্দ্র আর মাস বন্ধ; গ্রাফের বোর্ডের পরে সবার শেষে (মালিক, ২০ নভেম্বর ২০২৬: "সমস্যা কেন্দ্র সবার নিচে")
+                [
+                    'view' => 'accounts::dashboard.board-top',
+                    'place' => 'bottom',
+                    'permission' => 'accounts.view',
+                    'data' => function (): array {
+                        $board = app(AccountsBoard::class);
 
-            // ⭐ পাতায় কেবল নমুনার সাত সারি (সংখ্যা-চার্ট-তালিকা হোম ও ফোনের জন্য থাকে) — [[DashboardDefinition::forPage()]]
-            board: true,
+                        return ['problems' => $board->problems(), 'close' => $board->monthClose()];
+                    },
+                ],
+            ],
+            // ⓘ `board: true` আর নেই — পাতা এখন গ্রাফের বোর্ড, তার নিচে গ্রাফে না আসা সংখ্যা-চার্ট-তালিকা ([[DashboardDefinition::forPage()]])
         );
+    }
+
+    /**
+     * ⭐ হিসাবের গ্রাফের বোর্ড — মালিকের অনুমোদিত নমুনা (boards15 "acc", ২০ নভেম্বর ২০২৬)।
+     *
+     * ⓘ প্রতিটা অঙ্ক আগের ঘরগুলোর একই সংজ্ঞা থেকে ([[AccountsFacts]]) — দেখার শাখা, চাবি সব আগের মতো; যে ঘরের চাবি নেই, তার
+     *   অংশ গ্রাফেও নেই (ব্যাংক আর চূড়ান্ত হিসাব `accounts.report.final`, আজকের তিনটা নিজের নিজের চাবিতে)।
+     * ⓘ টাকা স্ট্রিং হয়ে যায়; ছোট লেখায় (৳ 9.8 লা) কেবল পূর্ণ টাকার পূর্ণসংখ্যা — float নয়।
+     *
+     * @param  array{collection: string, payment: string, expense: string}  $today
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(AccountsFacts $facts, string $income, string $expense, array $today): array
+    {
+        $user = auth()->user();
+        $final = (bool) $user?->can('accounts.report.final');
+        $short = fn (string $amount): string => (bccomp($amount, '0', 4) < 0 ? '−' : '').'৳ '.Svg::short((int) ltrim(Money::round($amount, 0), '-'));
+        $t = fn (string $key, array $with = []): string => (string) __('accounts::dashboard.'.$key, $with);
+
+        // ── ১. আয় ও ব্যয়, ছয় মাস — [[incomeAndExpense()]]-এর একই মাস; চূড়ান্ত হিসাবের চাবিতে
+        $months = $final ? $facts->incomeExpenseByMonth(6) : [];
+        $profit = $facts->netProfit($income, $expense);
+
+        // ── ২. টাকা কোথায় — হাতে নগদ (ড্রয়ার, আগের ঘরের হুবহু), ব্যাংক আর MFS (চূড়ান্ত চাবিতে)
+        $money = [[$t('cash_in_hand'), $facts->cashInHand(), Svg::STATUS[0]]];
+        if ($final) {
+            $money[] = [$t('bank_balance'), $facts->bankBalance(), Svg::PALETTE[0]];
+            $money[] = [$t('viz_mfs'), $facts->moneyPositions()['mfs'], Svg::PALETTE[5]];
+        }
+        $money = array_values(array_filter($money, fn (array $m) => bccomp($m[1], '0', 4) > 0));
+        $moneyTotal = array_reduce($money, fn (string $sum, array $m) => bcadd($sum, $m[1], 4), '0');
+
+        // ── ৩. প্রাপ্য বনাম প্রদেয়, বয়স ধরে — গ্রাহক আর সরবরাহকারীর বয়সের রিপোর্টের মোট (রিপোর্টের চাবি থাকলে)
+        $ageing = [];
+        foreach ([['customer.ageing', 'customer.report', 'receivable'], ['supplier.ageing', 'supplier.report', 'payable']] as [$key, $permission, $label]) {
+            $buckets = self::ageingBuckets($key, $permission);
+            if ($buckets !== null) {
+                $ageing[] = [$t($label), $buckets];
+            }
+        }
+
+        // ── ৪. আজকের আসা-যাওয়া — [[AccountsFacts::today()]], প্রতিটা নিজের চাবিতে (আগের তিন ঘরের মতো)
+        $flow = array_values(array_filter([
+            $user?->can('sales.collection.view') ? [$t('viz_in'), $today['collection'], Svg::STATUS[0], '1'] : null,
+            $user?->can('purchase.payment.view') ? [$t('viz_paid'), $today['payment'], Svg::STATUS[3], '-1'] : null,
+            $user?->can('accounts.report') ? [$t('viz_spent'), $today['expense'], '#f59e0b', '-1'] : null,
+        ]));
+        $flowNet = array_reduce($flow, fn (string $sum, array $f) => bcadd($sum, bcmul($f[1], $f[3], 4), 4), '0');
+
+        // ── ৫. এ মাসের ভাউচার, ধরন ধরে — বাতিল বাদ; আজ পোস্ট হওয়া নিচের লাইনে
+        $byType = Voucher::query()->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereBetween('trx_date', [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()])
+            ->selectRaw('type, COUNT(*) as n')->groupBy('type')->toBase()->pluck('n', 'type');
+        $papers = array_values(array_filter(array_map(
+            fn (string $type) => [(string) __('accounts::menu.'.$type), (int) ($byType[$type] ?? 0), (string) (int) ($byType[$type] ?? 0)],
+            Voucher::TYPES,
+        ), fn (array $p) => $p[1] > 0));
+        $paperCount = array_sum(array_column($papers, 1));
+        $activity = $facts->ledgerActivity();
+
+        // ── ৬. খাতার স্বাস্থ্য — [[papersThisMonth()]] আর [[bookHealth()]]-এর একই গোনা, অনুপাতে
+        $counts = self::monthCounts();
+        $awaiting = $facts->vouchersAwaitingSignature();
+        $written = $counts['draft'] + $counts['posted'];
+        $share = fn (int $good, int $all): float => $all > 0 ? max(0, min($good, $all)) / $all : 0;
+        $health = $written === 0 ? [] : ['p' => [
+            [$t('papers_posted'), $share($counts['posted'], $written)],
+            [$t('viz_signed'), $share($counts['posted'], $counts['posted'] + $awaiting)],
+            [$t('viz_on_date'), $counts['posted'] > 0 ? $share($counts['posted'] - $activity['backdated_this_month'], $counts['posted']) : 1],
+            [$t('viz_not_reversed'), $counts['posted'] > 0 ? $share($counts['posted'] - $activity['reversed_this_month'], $counts['posted']) : 1],
+        ]];
+
+        return [
+            Card::make($t('viz_ie'), 'line', [
+                'v' => array_column($months, 'income'), 'v2' => array_column($months, 'expense'), 'l' => array_column($months, 'month'),
+                'color' => Svg::STATUS[0], 'c2' => '#f59e0b',
+            ], value: $final ? $short($profit) : '', sub: $final ? $t('viz_ie_sub', ['income' => Money::format($income), 'expense' => Money::format($expense)]) : $t('viz_ie_hint'),
+                legend: [[$t('income'), Svg::STATUS[0]], [$t('expense'), '#f59e0b']],
+                href: Route::has('accounts.report.final.profit_loss') && $final ? route('accounts.report.final.profit_loss') : '', colour: Svg::STATUS[0]),
+            Card::make($t('viz_where'), 'donut', [
+                'c' => $short($moneyTotal), 'cs' => $t('viz_total'),
+                'p' => array_map(fn (array $m) => [$m[0], $m[1], $m[2], $short($m[1])], $money),
+            ], value: $money === [] ? '' : $short($moneyTotal), sub: $final ? $t('viz_where_sub') : $t('viz_where_sub_cash'),
+                href: route('accounts.till.index'), colour: Svg::PALETTE[0]),
+            Card::make($t('viz_age'), 'stack100', ['rows' => $ageing, 'colors' => Svg::STATUS],
+                sub: $t('viz_age_sub', ['in' => Money::format($facts->receivable()), 'out' => Money::format($facts->payable())]),
+                legend: [[$t('viz_age_0'), Svg::STATUS[0]], [$t('viz_age_30'), Svg::STATUS[1]], [$t('viz_age_60'), Svg::STATUS[2]], [$t('viz_age_90'), Svg::STATUS[3]]],
+                href: Route::has('customer.report.show') ? route('customer.report.show', ['slug' => 'ageing']) : '', colour: '#f97316'),
+            Card::make($t('viz_today'), 'bars', [
+                'v' => array_column($flow, 1), 'l' => array_column($flow, 0), 'colors' => array_column($flow, 2),
+                'top' => array_map(fn (array $f) => $short($f[1]), $flow),
+            ], value: $flow === [] ? '' : (bccomp($flowNet, '0', 4) > 0 ? '+' : '').$short($flowNet), sub: $t('viz_today_sub'), colour: Svg::PALETTE[2]),
+            Card::make($t('papers_this_month'), 'waffle', ['p' => $papers],
+                value: $t('viz_count', ['n' => $paperCount]), sub: $t('viz_papers_sub', ['n' => $activity['posted_today']]),
+                href: Route::has('accounts.voucher.list') ? route('accounts.voucher.list') : '', colour: Svg::PALETTE[1]),
+            Card::make($t('viz_health'), 'radial', $health, sub: $t('viz_health_sub', [
+                'draft' => $counts['draft'], 'awaiting' => $awaiting, 'back' => $activity['backdated_this_month'],
+                'reversed' => $activity['reversed_this_month'], 'cancelled' => $counts['cancelled'],
+            ]), href: Route::has('approval.inbox.index') && $awaiting > 0 ? route('approval.inbox.index') : '', colour: '#e11d48'),
+        ];
+    }
+
+    /**
+     * বয়সের রিপোর্টের মোট চার ধাপে — রিপোর্টটাই চালানো হয় (গ্রাহক বা সরবরাহকারীর), তাই রিপোর্ট আর গ্রাফ কখনো দুই কথা বলে না।
+     * ⓘ মডিউলের ক্লাস নয়, রিপোর্টের নাম ধরে ([[ReportEngine]]) — হিসাব কারও উপর দাঁড়ায় না। ⛔ রিপোর্টের চাবি না থাকলে, বা মডিউলটাই
+     * না থাকলে, null — সারিটাই নেই।
+     *
+     * @return list<string>|null
+     */
+    private static function ageingBuckets(string $key, string $permission): ?array
+    {
+        $engine = app(ReportEngine::class);
+
+        if (! auth()->user()?->can($permission) || ! in_array($key, $engine->keys(), true)) {
+            return null;
+        }
+
+        $totals = $engine->run($key, ['to' => Carbon::today()->toDateString(), 'branch_id' => ViewedBranch::one()], 1, 1)->totals;
+
+        return array_map(fn (string $bucket) => (string) ($totals[$bucket] ?? '0'), ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90']);
+    }
+
+    /**
+     * এ মাসের ভাউচার অবস্থা ধরে — খসড়া, পোস্ট (নিশ্চিত + বন্ধ), বাতিল। [[papersThisMonth()]] আর গ্রাফের বোর্ড দুইটাই এটা পড়ে।
+     *
+     * @return array{draft: int, posted: int, cancelled: int}
+     */
+    private static function monthCounts(): array
+    {
+        $counts = Voucher::query()
+            ->whereBetween('trx_date', [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()])
+            ->selectRaw('status, COUNT(*) as n')
+            ->groupBy('status')
+            ->toBase()->pluck('n', 'status');
+
+        return [
+            'draft' => (int) ($counts[DocumentStatus::DRAFT] ?? 0),
+            'posted' => (int) ($counts[DocumentStatus::CONFIRMED] ?? 0) + (int) ($counts[DocumentStatus::CLOSED] ?? 0),
+            'cancelled' => (int) ($counts[DocumentStatus::CANCELLED] ?? 0),
+        ];
     }
 
     /**
@@ -514,20 +672,15 @@ final class AccountsDashboard implements ProvidesDashboard
             return [];
         }
 
-        $counts = Voucher::query()
-            ->whereBetween('trx_date', [\Illuminate\Support\Carbon::today()->startOfMonth()->toDateString(), \Illuminate\Support\Carbon::today()->toDateString()])
-            ->selectRaw('status, COUNT(*) as n')
-            ->groupBy('status')
-            ->toBase()->pluck('n', 'status');
-
-        $posted = (int) ($counts[\App\Core\Support\DocumentStatus::CONFIRMED] ?? 0) + (int) ($counts[\App\Core\Support\DocumentStatus::CLOSED] ?? 0);
+        // ⓘ গোনা এক জায়গায় — গ্রাফের বোর্ডের "খাতার স্বাস্থ্য"-ও এটাই পড়ে ([[monthCounts()]])
+        $counts = self::monthCounts();
 
         return [new Breakdown(
             label: __('accounts::dashboard.papers_this_month'),
             parts: [
-                ['label' => __('accounts::dashboard.papers_draft'), 'value' => (string) (int) ($counts[\App\Core\Support\DocumentStatus::DRAFT] ?? 0)],
-                ['label' => __('accounts::dashboard.papers_posted'), 'value' => (string) $posted],
-                ['label' => __('accounts::dashboard.papers_cancelled'), 'value' => (string) (int) ($counts[\App\Core\Support\DocumentStatus::CANCELLED] ?? 0)],
+                ['label' => __('accounts::dashboard.papers_draft'), 'value' => (string) $counts['draft']],
+                ['label' => __('accounts::dashboard.papers_posted'), 'value' => (string) $counts['posted']],
+                ['label' => __('accounts::dashboard.papers_cancelled'), 'value' => (string) $counts['cancelled']],
             ],
             hint: __('accounts::dashboard.papers_this_month_hint'),
             range: DateRange::label(\Illuminate\Support\Carbon::today()->startOfMonth(), \Illuminate\Support\Carbon::today()),

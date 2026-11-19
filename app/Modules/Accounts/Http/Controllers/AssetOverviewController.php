@@ -47,12 +47,16 @@ class AssetOverviewController extends Controller implements HasMiddleware
             panels: $dashboard->panels,
             listings: $dashboard->listings,
             tiles: array_values(array_filter($dashboard->tiles, fn ($t) => $user->can($t->permission))),
+            // ⭐ গ্রাফের বোর্ড (মালিক, ২০ নভেম্বর ২০২৬) — চাবি চাওয়া অংশ চাবি থাকলে তবেই
+            sections: array_values(array_filter($dashboard->sections,
+                fn (array $s) => ! isset($s['permission']) || $user->can($s['permission']))),
         );
 
         return view(config('abos.dashboards_v2') ? 'dashboard.module-v2' : 'dashboard.module', [
             'menu' => $this->menu->forUser($user),
             'module' => 'accounts',
-            'dashboard' => $dashboard,
+            // ⓘ গ্রাফে আসা সংখ্যা-চার্ট-তালিকা পাতায় আর আলাদা নয় ([[DashboardDefinition::forPage()]])
+            'dashboard' => $dashboard->forPage(),
         ]);
     }
 

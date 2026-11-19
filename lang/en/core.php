@@ -627,6 +627,8 @@ return [
     'viz' => [
         'empty' => 'Nothing in this period.',
         'details' => 'Details',
+        'today' => 'Today',
+        'weekdays' => ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     ],
     'table' => [
         'range' => ':from - :to of :total',

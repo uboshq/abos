@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Documents\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
+use App\Core\Dashboard\Viz\Svg;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -90,7 +92,131 @@ final class DocumentsDashboard implements ProvidesDashboard
             ],
 
             listings: [self::shelfRecent(), self::recent()],
+
+            // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'doc'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            sections: [Card::board(fn (): array => self::charts($today), covers: [
+                __('documents::dashboard.doc_total'), __('documents::dashboard.doc_active'),
+                __('documents::dashboard.doc_pending_approval'), __('documents::dashboard.doc_pending_signature'),
+                __('documents::dashboard.doc_archived'), __('documents::dashboard.doc_status'),
+                __('documents::dashboard.doc_activity'), __('documents::dashboard.by_kind'),
+                // ⓘ জায়গার ঘর কেবল যাঁর বোর্ডে জায়গার কাঁটা-মিটার আছে — বাকিদের পাতায় আগের "জায়গা নিয়েছে" সংখ্যাটা থাকে, হারায় না
+                ...(auth()->user()?->can('system_admin.settings.manage') ? [__('documents::dashboard.storage')] : []),
+                __('documents::dashboard.doc_expiring'),
+                __('documents::dashboard.by_module'),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ নথির গ্রাফের বোর্ড — অবস্থা (ওয়াফল), 14 দিনের কাজ (জোড়া রেখা), ধরন সংখ্যায় আর জায়গায় (100% স্তূপ), জায়গা (কাঁটা-মিটার),
+     *   শিগগির মেয়াদ শেষ (সময়রেখা), কোন কাজে কত নথি (লোলিপপ)।
+     * ⛔ তাকের কাগজ কেবল [[shelfBase()]]-এর দেয়ালে (শাখা, বিভাগ, গোপনীয়তা); অন্য কাজে জোড়া নথি [[attachedElsewhere()]] দিয়ে —
+     *   নিচের সংখ্যাগুলোর হুবহু উৎস।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(Carbon $today): array
+    {
+        $base = self::shelfBase();
+        $cards = [];
+
+        // অবস্থা — প্রতিটা কাগজ ঠিক একটা ভাগে: আর্কাইভে → অনুমোদনে → সইয়ের অপেক্ষায় → মেয়াদ পেরোনো → বাকিটা চলতি
+        $review = [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW];
+        $signing = Approval::query()->where('module', DocumentWorkflow::MODULE)->where('action', DocumentSignatures::ACTION)
+            ->pending()->whereNotNull('approvable_id')->select('approvable_id');
+        $total = (clone $base)->count();
+        $archived = (clone $base)->onlyArchived()->count();
+        $inReview = (clone $base)->notArchived()->whereIn('dms_documents.status', $review)->count();
+        $toSign = (clone $base)->notArchived()->whereNotIn('dms_documents.status', $review)
+            ->whereIn('dms_documents.id', $signing)->count();
+        $expired = (clone $base)->notArchived()->where('dms_documents.status', DocumentCatalog::EXPIRED)
+            ->whereNotIn('dms_documents.id', $signing)->count();
+        $active = max(0, $total - $archived - $inReview - $toSign - $expired);
+        $cards[] = Card::make(__('documents::dashboard.doc_status'), 'waffle', ['p' => [
+            [__('documents::dashboard.doc_active'), $active, number_format($active)],
+            [__('documents::dashboard.doc_archived'), $archived, number_format($archived)],
+            [__('documents::dashboard.doc_in_review'), $inReview, number_format($inReview)],
+            [__('documents::dashboard.doc_pending_signature'), $toSign, number_format($toSign)],
+            [__('documents::dashboard.doc_status_expired'), $expired, number_format($expired)],
+        ]], value: number_format($total), sub: __('documents::dashboard.doc_status_board_hint'),
+            href: route('documents.index'), colour: '#2160d8');
+
+        // গত 14 দিনের কাজ — আগের চার্টের হুবহু বিন্দু
+        $points = self::shelfActivity($today)->points;
+        $last = count($points) - 1;
+        $cards[] = Card::make(__('documents::dashboard.doc_activity'), 'line', [
+            'v' => array_map(fn ($p) => (int) $p['first'], $points),
+            'v2' => array_map(fn ($p) => (int) $p['second'], $points),
+            'l' => array_map(fn ($k) => in_array($k, [0, 7], true) ? $points[$k]['label'] : ($k === $last ? __('documents::dashboard.today') : ''), array_keys($points)),
+            'color' => '#7c3aed', 'c2' => '#0ea5e9',
+        ], sub: __('documents::dashboard.doc_activity_hint'), legend: [
+            [__('documents::dashboard.doc_uploaded'), '#7c3aed'], [__('documents::dashboard.doc_downloaded'), '#0ea5e9'],
+        ], colour: '#7c3aed');
+
+        // নথির ধরন — সংখ্যায় আর জায়গায়, অন্য কাজে জোড়া নথি (আগের ধরনের চার্টের একই উৎস)
+        $kinds = ['pdf' => [0, '0'], 'image' => [0, '0'], 'sheet' => [0, '0'], 'word' => [0, '0'], 'other' => [0, '0']];
+        foreach (self::attachedElsewhere()->selectRaw('mime_type, COUNT(*) as n, SUM(size_bytes) as b')->groupBy('mime_type')->toBase()->get() as $r) {
+            $k = self::kindOf((string) $r->mime_type);
+            $kinds[$k][0] += (int) $r->n;
+            $kinds[$k][1] = bcadd($kinds[$k][1], (string) ($r->b ?? '0'), 0);
+        }
+        $kindColours = array_slice(Svg::PALETTE, 0, 5);
+        $cards[] = Card::make(__('documents::dashboard.by_kind'), 'stack100', [
+            'rows' => [
+                [__('documents::dashboard.by_count'), array_column($kinds, 0)],
+                [__('documents::dashboard.by_space'), array_column($kinds, 1)],
+            ],
+            'colors' => $kindColours,
+        ], sub: __('documents::dashboard.by_kind_board_hint'), legend: array_map(
+            fn (string $k, int $i) => [__('documents::dashboard.kind_'.$k), $kindColours[$i]], array_keys($kinds), range(0, 4),
+        ), colour: '#0ea5e9');
+
+        // জায়গা — সব জোড়া নথির মাপ, সার্ভারের ডিস্কে বাকি খালি জায়গার তুলনায় (bcmath-এ; float কেবল আঁকার মাপে)
+        $bytes = (string) (Attachment::query()->sum('size_bytes') ?: '0');
+        // ⛔ সার্ভারের ডিস্কের খবর কেবল যাঁর সিস্টেমের সেটিংসের চাবি আছে — ডকুমেন্ট খুলতে পারা সবাই সার্ভারের ভেতরের তথ্য দেখবেন না
+        //   (fe-র পর্যালোচনা, ২০ নভেম্বর ২০২৬); বাকিরা কার্ডের মাথায় কেবল মোট জায়গা দেখেন
+        $free = auth()->user()?->can('system_admin.settings.manage') ? @disk_free_space(storage_path()) : false;
+        $gauge = [];
+        if ($free !== false && bccomp($bytes, '0', 0) > 0) {
+            $freeBytes = sprintf('%.0f', $free);
+            $room = bcadd($bytes, $freeBytes, 0);
+            if (bccomp($room, '0', 0) > 0) {
+                $ratio = bcdiv($bytes, $room, 4);
+                $gauge = ['v' => $ratio, 'label' => bcmul($ratio, '100', 0).'%', 'color' => '#16a34a',
+                    'sub' => __('documents::dashboard.storage_sub', ['used' => self::size($bytes), 'free' => self::size($freeBytes)])];
+            }
+        }
+        if ($free !== false) {
+            $cards[] = Card::make(__('documents::dashboard.storage'), 'gauge', $gauge, value: self::size($bytes),
+                sub: __('documents::dashboard.storage_board_hint'), colour: '#14b8a6');
+        }
+
+        // শিগগির মেয়াদ শেষ — আজ থেকে 30 দিন (নিচের "শিগগির মেয়াদ শেষ" সংখ্যার একই শর্ত), সবচেয়ে কাছের ছয়টা
+        $soon = (clone $base)->notArchived()->whereNotNull('dms_documents.expiry_date')
+            ->whereDate('dms_documents.expiry_date', '>=', $today->toDateString())
+            ->whereDate('dms_documents.expiry_date', '<=', $today->copy()->addDays(30)->toDateString());
+        $expiring = (clone $soon)->count();
+        $bars = (clone $soon)->orderBy('dms_documents.expiry_date')->limit(6)->get(['dms_documents.id', 'dms_documents.name', 'dms_documents.expiry_date']);
+        $cards[] = Card::make(__('documents::dashboard.expiry_soon'), 'gantt', $bars->isEmpty() ? [] : [
+            'ticks' => [__('documents::dashboard.today'), '+10', '+20', '+30'],
+            'today' => 0,
+            'p' => $bars->map(function (Document $d) use ($today) {
+                $days = (int) $today->diffInDays(Carbon::parse($d->expiry_date)->startOfDay());
+
+                return [mb_strimwidth((string) $d->name, 0, 16, '…'), 0, max(1, $days) / 30,
+                    $days <= 7 ? '#e11d48' : ($days <= 15 ? '#f97316' : null)];
+            })->all(),
+        ], value: number_format($expiring), sub: __('documents::dashboard.doc_expiring_hint'),
+            href: route('documents.expiry'), colour: '#e11d48');
+
+        // কোন কাজে কত নথি — আগের চার্টের হুবহু ভাগ
+        $modules = self::byModule()->parts;
+        $cards[] = Card::make(__('documents::dashboard.by_module'), 'lollipop', [
+            'v' => array_map(fn ($p) => (int) $p['value'], $modules),
+            'l' => array_map(fn ($p) => mb_strimwidth((string) $p['label'], 0, 14, '…'), $modules),
+        ], sub: __('documents::dashboard.by_module_hint'), colour: '#e8175d');
+
+        return $cards;
     }
 
     /**

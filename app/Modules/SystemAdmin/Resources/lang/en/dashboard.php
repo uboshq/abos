@@ -39,4 +39,20 @@ return [
     'errors_week_hint' => 'The same error counted once however often it happened; the full log is on the audit error screen',
     'errors_unseen' => 'Nobody looked yet',
     'errors_seen' => 'Looked at',
+
+    // Chart board (20 Nov 2026)
+    'users_word' => 'users',
+    'who_gets_in_board_hint' => 'People of this company — who really signs in',
+    'two_step_board_hint' => 'By role, the four biggest roles · on for :on of :all in all',
+    'access_changes_board_hint' => 'Last seven days, by day — roles, companies, scopes, passwords, second step',
+    'jobs' => 'Background jobs',
+    'jobs_board_hint' => 'The whole server queue, shown only to the super admin',
+    'jobs_waiting' => 'Waiting',
+    'jobs_running' => 'Running',
+    'jobs_retrying' => 'Retrying',
+    'jobs_failed_short' => 'Failed',
+    'errors_board_hint' => 'Distinct errors, by the day last seen · :n nobody looked at',
+    'this_week' => 'This week',
+    'last_week' => 'Last week',
+    'backup_board_hint' => 'Daily backup files — five weeks',
 ];

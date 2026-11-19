@@ -124,3 +124,13 @@
         height: 360px;
     }
 }
+
+/* ⭐ একই তথ্য দুইবার নয় (মালিক, ২০ নভেম্বর ২০২৬) — হিসাবের পাতায় গ্রাফের বোর্ড যা দেখায়, ১০ নভেম্বরের পুরনো সারির সেই বক্সগুলো
+   (এক নজরে · আজকের হিসাব, আয় ও ব্যয়, খাতার স্বাস্থ্য) আর আঁকা হয় না; সারির বাকি বক্স নিচে আগের মতো, পাশেরটা জায়গা নেয় */
+main:has([data-viz-board]) :is([data-acc-glance], [data-acc-income-expense], [data-acc-health]) {
+    display: none;
+}
+
+main:has([data-viz-board]) [data-acc-tree] {
+    grid-column: 1 / -1 !important;
+}

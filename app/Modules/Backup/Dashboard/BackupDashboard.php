@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Backup\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Viz\Card;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -107,7 +108,203 @@ final class BackupDashboard implements ProvidesDashboard
             panels: [...self::monthsOfCopies(), ...self::lastThirtyDays()],
 
             listings: [...self::destinations(), ...self::policies()],
+
+            /*
+             * ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'bak': ক্যালেন্ডার, কাঁটা-মিটার, কলাম, বুলেট, সময়রেখা,
+             *   প্রবাহ)। ⛔ গন্তব্যের নাম আর সময়সূচি কেবল `backup.configure`-এ — নিচের তালিকা দুটোর একই চাবি; চাবি না থাকলে ঐ দুই গ্রাফ
+             *   আসে না, আর "গন্তব্য" সংখ্যাটা আগের মতো নিচে থাকে।
+             * ⓘ গ্রাফে নেই, তাই নিচে আগের মতো: মাসে মাসে নিরাপদ বনাম সমস্যা (6 মাস), গন্তব্যের তালিকা।
+             */
+            sections: [Card::board(fn (): array => self::charts($latestAt, $lastRun), covers: [
+                __('backup::dashboard.last_backup'), __('backup::dashboard.last_verified'),
+                __('backup::dashboard.latest_size'), __('backup::dashboard.last_30_days'),
+                ...(auth()->user()?->can('backup.configure') ? [__('backup::dashboard.destinations'), __('backup::dashboard.schedule')] : []),
+            ])],
         );
+    }
+
+    /**
+     * ⭐ ব্যাকআপের গ্রাফের বোর্ড — রানের খাতা (`bak_runs`), যাচাই (`bak_verifications`), গন্তব্য আর নীতি থেকে; কিছুই বানানো নয়।
+     *
+     * ⓘ ক্যালেন্ডার: শনিবার থেকে শেষ পাঁচ সপ্তাহ, ✓ = সেদিন অন্তত একটা `success` রান (প্রতিটা গন্তব্যে পৌঁছেছে)।
+     * ⓘ কাঁটা-মিটার: গত 30 দিনে যে রানগুলো ফাইল বানিয়েছে, তার কতগুলো সত্যিই ফিরিয়ে এনে দেখা গেছে (`test_restore` পাস)।
+     * ⓘ বুলেট: প্রতিটা চালু গন্তব্যে গত 30 দিনের রানের কত ভাগ পৌঁছেছে (`destinations_ok`), লক্ষ্য 95%।
+     * ⓘ সময়রেখা: এখন থেকে 24 ঘণ্টা — সার্ভারের রাতের ব্যাকআপ (`abos.backup.daily_at`) আর পর্দার চালু নীতি (ঘণ্টায়/প্রতিদিন)।
+     * ⓘ প্রবাহ: কে চালাল (রাতের নিয়ম/হাতে/ডিপ্লয়) → কী হলো (সব গন্তব্যে/আংশিক/কেবল এই মেশিনে/ব্যর্থ), গত 30 দিন।
+     * ⓘ ভাগ আর মাপ bcmath/intdiv-এ — float নয়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function charts(?Carbon $latestAt, ?BackupRun $lastRun): array
+    {
+        $configure = (bool) auth()->user()?->can('backup.configure');
+        $today = Carbon::today();
+        $from = $today->copy()->subDays(29);
+        $range = DateRange::label($from, $today);
+
+        $runs = BackupRun::query()
+            ->where('started_at', '>=', $today->copy()->startOfWeek(Carbon::SATURDAY)->subWeeks(4)->toDateTimeString())
+            ->whereIn('status', ['success', 'partial', 'local_only', 'failed'])
+            ->withExists(['verifications as restore_tested' => fn ($q) => $q->where('kind', 'test_restore')->where('status', 'passed')])
+            ->get();
+        $recent = $runs->filter(fn (BackupRun $r) => $r->started_at !== null && $r->started_at->greaterThanOrEqualTo($from))->values();
+
+        // ক্যালেন্ডার — শনিবার থেকে, আজ পর্যন্ত (29–35 দিন)
+        $safeDays = $runs->filter(fn (BackupRun $r) => $r->status === 'success')->map(fn (BackupRun $r) => $r->started_at->toDateString())->flip();
+        $days = [];
+        $safe = 0;
+        for ($day = $today->copy()->startOfWeek(Carbon::SATURDAY)->subWeeks(4); $day->lte($today); $day->addDay()) {
+            $ok = isset($safeDays[$day->toDateString()]) ? 1 : 0;
+            $safe += $ok;
+            $days[] = [$day->day, $ok];
+        }
+
+        // ফিরিয়ে আনা যায়? — ফাইল বানানো রানের কতগুলো পরীক্ষায় ফিরেছে
+        $made = $recent->filter(fn (BackupRun $r) => $r->status !== 'failed');
+        $tested = $made->filter(fn (BackupRun $r) => (bool) $r->restore_tested)->count();
+        $restorable = $made->count() === 0 ? [] : [
+            'v' => bcdiv((string) $tested, (string) $made->count(), 4),
+            'label' => intdiv($tested * 100, $made->count()).'%',
+            'sub' => __('backup::dashboard.restore_sub', ['n' => $tested, 'of' => $made->count()]),
+        ];
+
+        // মাসে মাসে মাপ — প্রতি মাসের শেষ সফল রানের মাপ, 6 মাস
+        $start = $today->copy()->startOfMonth()->subMonths(5);
+        $sizes = BackupRun::query()->where('status', 'success')->whereNotNull('bytes')
+            ->where('started_at', '>=', $start->toDateTimeString())->orderBy('started_at')->orderBy('id')
+            ->get(['started_at', 'bytes'])->keyBy(fn (BackupRun $r) => $r->started_at->format('Y-m'));
+        $bytes = [];
+        $months = [];
+        for ($month = $start->copy(); $month->lte($today); $month->addMonth()) {
+            $bytes[] = (int) ($sizes[$month->format('Y-m')]->bytes ?? 0);
+            $months[] = $month->translatedFormat('M');
+        }
+        $inMb = max($bytes) >= 10485760;
+        $sizeBars = array_map(fn (int $b) => $inMb ? intdiv($b, 1048576) : intdiv($b, 1024), $bytes);
+        $latest = BackupRun::query()->where('status', 'success')->whereNotNull('bytes')->latest('started_at')->latest('id')->first();
+
+        $cards = [
+            Card::make(__('backup::dashboard.daily_runs'), 'calendar', ['days' => $days, 'marks' => true, 'color' => '#16a34a'],
+                value: $safe.' / '.count($days), sub: __('backup::dashboard.calendar_hint', ['last' => $latestAt === null
+                    ? __('core.backup.none_yet')
+                    : __('core.backup.days_ago', ['days' => (int) $latestAt->diffInDays(now())])]),
+                href: route('backup.index'), colour: '#16a34a'),
+            Card::make(__('backup::dashboard.last_verified'), 'gauge', $restorable,
+                value: $restorable === [] ? '' : $restorable['label'],
+                sub: __('backup::dashboard.restore_hint', ['range' => $range, 'last' => $lastRun?->restoreWasTested()
+                    ? __('backup::dashboard.verified_yes') : __('backup::dashboard.verified_no')]),
+                href: route('backup.verification.index'), colour: '#2160d8'),
+            Card::make(__('backup::dashboard.size_by_month'), 'bars', [
+                'v' => $sizeBars, 'l' => $months, 'color' => '#0ea5e9',
+                'top' => array_map(fn (int $n) => $n === 0 ? '' : $n.($inMb ? ' MB' : ' KB'), $sizeBars),
+            ], value: $latest === null ? '' : self::size((int) $latest->bytes),
+                sub: __('backup::dashboard.size_by_month_hint', ['range' => DateRange::label($start, $today)]),
+                href: route('backup.verification.index'), colour: '#0ea5e9'),
+        ];
+
+        if ($configure) {
+            $cards[] = self::destinationsChart($recent);
+            $cards[] = self::scheduleChart();
+        }
+
+        $cards[] = self::flowChart($recent, $range);
+
+        return $cards;
+    }
+
+    /**
+     * গন্তব্যগুলো কেমন আছে — প্রতিটা চালু গন্তব্যে গত 30 দিনের রানের কত ভাগ পৌঁছেছে (বুলেট, লক্ষ্য 95%)।
+     *
+     * @param  \Illuminate\Support\Collection<int, BackupRun>  $recent
+     * @return array<string, mixed>
+     */
+    private static function destinationsChart($recent): array
+    {
+        $active = BackupDestination::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $total = $recent->count();
+        $p = [];
+        foreach ($active->take(6) as $d) {
+            $landed = $recent->filter(fn (BackupRun $r) => collect($r->destinations_ok ?? [])->contains(fn ($x) => (int) ($x['id'] ?? 0) === (int) $d->id))->count();
+            $p[] = [(string) $d->name, $total === 0 ? '0' : bcdiv((string) $landed, (string) $total, 4), '0.95'];
+        }
+
+        return Card::make(__('backup::dashboard.destinations_reach'), 'bullet', ['p' => $p],
+            value: (string) $active->count(), sub: __('backup::dashboard.destinations_chart_hint', ['count' => $total]),
+            href: route('backup.destination.index'), colour: '#7c3aed');
+    }
+
+    /**
+     * ব্যাকআপের সময়সূচি — এখন থেকে 24 ঘণ্টা (সময়রেখা)।
+     *
+     * ⓘ সার্ভারের রাতের ব্যাকআপ সবসময় প্রথম সারি — আজ সেটাই চলে ([[policies()]]-এর কথা)। নীতির মধ্যে কেবল ঘণ্টায় আর প্রতিদিনেরগুলো:
+     *   সাপ্তাহিক বা মাসিক নীতির দিন খাতায় নেই, তাই আন্দাজে বসানো হয় না।
+     *
+     * @return array<string, mixed>
+     */
+    private static function scheduleChart(): array
+    {
+        $now = Carbon::now();
+        $at = function (string $hhmm) use ($now): ?string {
+            if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $hhmm, $m) !== 1) {
+                return null;
+            }
+            $next = $now->copy()->setTime((int) $m[1], (int) $m[2]);
+            if ($next->lessThan($now)) {
+                $next->addDay();
+            }
+
+            return bcdiv((string) (int) $now->diffInMinutes($next), '1440', 4);
+        };
+        $slot = fn (string $s) => [$s, bcadd($s, '0.03', 4)];
+
+        $p = [];
+        $server = $at((string) config('abos.backup.daily_at'));
+        if ($server !== null) {
+            $p[] = [__('backup::dashboard.server_nightly'), ...$slot($server), '#2160d8'];
+        }
+        $colours = ['#16a34a', '#7c3aed', '#f97316', '#14b8a6', '#e8175d'];
+        foreach (BackupPolicy::query()->where('is_active', true)->whereIn('frequency', ['hourly', 'daily'])->orderBy('name')->limit(5)->get() as $i => $policy) {
+            if ($policy->frequency === 'hourly') {
+                $p[] = [(string) $policy->name, '0', '1', $colours[$i]];
+            } elseif (($s = $at((string) $policy->run_at)) !== null) {
+                $p[] = [(string) $policy->name, ...$slot($s), $colours[$i]];
+            }
+        }
+
+        return Card::make(__('backup::dashboard.schedule'), 'gantt', [
+            'ticks' => (array) __('backup::dashboard.ticks'), 'today' => 0, 'p' => $p,
+        ], sub: __('backup::dashboard.schedule_chart_hint'), href: route('backup.policy.index'), colour: '#f97316');
+    }
+
+    /**
+     * কে চালাল → কী হলো, গত 30 দিন (প্রবাহ) — আগের "গত 30 দিনের রান" ডোনাটের পাঁচ ভাগ এখানে ডানে (যাচাই-করা অংশ কাঁটা-মিটারে)।
+     *
+     * @param  \Illuminate\Support\Collection<int, BackupRun>  $recent
+     * @return array<string, mixed>
+     */
+    private static function flowChart($recent, string $range): array
+    {
+        $outcomes = ['success' => __('backup::dashboard.copies_safe_short'), 'partial' => __('backup::dashboard.run_partial'),
+            'local_only' => __('backup::dashboard.run_local_only'), 'failed' => __('backup::dashboard.run_failed')];
+        $triggers = ['schedule' => __('backup::screen.trigger_schedule'), 'manual' => __('backup::screen.trigger_manual'), 'deploy' => __('backup::dashboard.trigger_deploy')];
+
+        $left = [];
+        foreach ($triggers as $t => $tLabel) {
+            foreach ($outcomes as $o => $oLabel) {
+                $n = $recent->filter(fn (BackupRun $r) => ($r->triggered_by ?? 'schedule') === $t && $r->status === $o)->count();
+                if ($n > 0) {
+                    $left[] = [(string) $tLabel, $n, (string) $oLabel];
+                }
+            }
+        }
+        $right = [];
+        foreach ($outcomes as $o => $oLabel) {
+            $right[] = [(string) $oLabel, $recent->where('status', $o)->count()];
+        }
+
+        return Card::make(__('backup::dashboard.flow'), 'sankey', ['left' => $left, 'right' => $right],
+            value: (string) $recent->count(), sub: __('backup::dashboard.flow_hint', ['range' => $range]),
+            href: route('backup.index'), colour: '#14b8a6');
     }
 
     /**
@@ -269,13 +466,13 @@ final class BackupDashboard implements ProvidesDashboard
         )];
     }
 
-    /** বাইট থেকে পড়ার মতো মাপ — ব্যাকআপের পর্দার একই নিয়ম, বড় হলে জিবি। */
+    /** বাইট থেকে পড়ার মতো মাপ — ব্যাকআপের পর্দার একই নিয়ম, বড় হলে জিবি। ⓘ ভাগ bcmath/intdiv-এ, float নয় (২০ নভেম্বর ২০২৬)। */
     private static function size(int $bytes): string
     {
         return match (true) {
-            $bytes >= 1073741824 => round($bytes / 1073741824, 2).' GB',
-            $bytes >= 1048576 => round($bytes / 1048576, 1).' MB',
-            default => max(1, (int) round($bytes / 1024)).' KB',
+            $bytes >= 1073741824 => bcdiv((string) $bytes, '1073741824', 2).' GB',
+            $bytes >= 1048576 => bcdiv((string) $bytes, '1048576', 1).' MB',
+            default => max(1, intdiv($bytes + 512, 1024)).' KB',
         };
     }
 

@@ -32,4 +32,23 @@ return [
     'paper_shared' => 'Sent as a link',
     'paper_opened' => 'Link opened',
     'latest_logins' => 'Latest login attempts — from which IP',
+
+    // Chart board (20 Nov 2026)
+    'audit_month' => 'Audit activity — this month',
+    'by_kind_of_action' => 'By kind of action',
+    'today_by_hour' => 'Today\'s changes — by hour',
+    'today_by_hour_hint' => 'Module × hour — the darker, the more changes',
+    'other_modules' => 'Other',
+    'login_attempts' => 'All attempts',
+    'logins_funnel_hint' => 'Succeeded · wrong password · stopped',
+    'papers_out' => 'How papers went out — this month',
+    'papers_out_hint' => 'Printed · downloaded · sent as a link · link opened',
+    'papers' => 'papers',
+    'changes_30' => 'Changes — 30 days',
+    'changes_30_hint' => 'Total changes each day',
+    'logins_by_ip' => 'Login attempts — by IP',
+    'logins_by_ip_hint' => 'Last 30 days · x = attempts · y = wrong % · circle = people',
+    'axis_attempts' => 'attempts →',
+    'axis_wrong' => '↑ wrong %',
+    'today' => 'today',
 ];

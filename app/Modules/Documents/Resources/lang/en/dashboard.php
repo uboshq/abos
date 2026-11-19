@@ -62,4 +62,17 @@ return [
     'doc_status_draft' => 'Draft',
     'doc_status_archived' => 'Archived',
     'doc_recent' => 'Recent documents',
+
+    // Chart board (20 Nov 2026)
+    'doc_in_review' => 'In review',
+    'doc_status_expired' => 'Expired status',
+    'doc_status_board_hint' => 'Each document in one share — active · archived · in review · awaiting signature',
+    'doc_activity_hint' => 'Uploaded against downloaded, by day',
+    'today' => 'today',
+    'by_count' => 'Count',
+    'by_space' => 'Space',
+    'by_kind_board_hint' => 'Share % · by count against by space',
+    'storage_board_hint' => 'All attached documents, against the free room on the server',
+    'storage_sub' => ':used · :free free on disk',
+    'expiry_soon' => 'Expiry — ending soon',
 ];
