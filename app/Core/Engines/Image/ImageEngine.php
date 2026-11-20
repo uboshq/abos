@@ -94,6 +94,17 @@ final class ImageEngine
     public const FACE_BYTES = 120 * 1024;
 
     /**
+     * ⭐ প্রোফাইলের মলাট (cover) ছবি — ৩:১, সর্বোচ্চ ১৫০০×৫০০ (প্রোফাইল পাতা, ২০ নভেম্বর ২০২৬)।
+     *
+     * ⓘ পর্দায় মলাট বসে পুরো পাতার চওড়ায় (১৯২০-এর পর্দায় ~১৪০০px), তাই ১৫০০ — বড় পর্দাতেও কড়কড়ে, আর ৩০০KB-র নিচে।
+     */
+    public const COVER_WIDTH = 1500;
+
+    public const COVER_HEIGHT = 500;
+
+    public const COVER_BYTES = 300 * 1024;
+
+    /**
      * লোগোর সর্বোচ্চ লম্বা বাহু।
      *
      * ⓘ ছাপার কাগজে লোগো বসে ~২ ইঞ্চি চওড়ায়; ৮০০px মানে ৪০০ DPI —
@@ -465,6 +476,50 @@ final class ImageEngine
         }
 
         return $this->squeeze($image, self::FACE_BYTES);
+    }
+
+    /**
+     * ⭐ মলাট ছবি — সোজা করা → মাঝখান থেকে ৩:১ কাটা → ১৫০০×৫০০-এর মধ্যে → ৩০০KB JPEG।
+     *
+     * ⓘ আগে কাটা, পরে ছোট করা: কাটা অংশটা অনুপাতের হিসাব, তাই ক্রম ফলাফল বদলায় না — কিন্তু কাটার পর ছবি ছোট, ছোট করার
+     * কাজও কম। ⛔ নতুন করে আঁকা JPEG — EXIF (GPS সহ) সাথে যায় না।
+     */
+    public function cover(string $path): string
+    {
+        $image = $this->open($path);
+        $image = $this->straighten($image, $path);
+        $image = $this->cropToRatio($image, self::COVER_WIDTH / self::COVER_HEIGHT);
+        $image = $this->fit($image, self::COVER_WIDTH);
+
+        return $this->squeeze($image, self::COVER_BYTES);
+    }
+
+    /** ⓘ মাঝখান থেকে চওড়া:উচ্চতা = $ratio কাটা — ছবি যেদিকে বেশি, সেদিক থেকেই ছাঁটা হয়। */
+    private function cropToRatio(GdImage $image, float $ratio): GdImage
+    {
+        $w = imagesx($image);
+        $h = imagesy($image);
+
+        if ($w / $h > $ratio) {
+            $cw = max(1, (int) round($h * $ratio));
+            $ch = $h;
+        } else {
+            $cw = $w;
+            $ch = max(1, (int) round($w / $ratio));
+        }
+
+        if ($cw === $w && $ch === $h) {
+            return $image;
+        }
+
+        $cropped = imagecrop($image, [
+            'x' => (int) (($w - $cw) / 2),
+            'y' => (int) (($h - $ch) / 2),
+            'width' => $cw,
+            'height' => $ch,
+        ]);
+
+        return $cropped instanceof GdImage ? $cropped : $image;
     }
 
     /**

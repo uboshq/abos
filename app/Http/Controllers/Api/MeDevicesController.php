@@ -102,11 +102,39 @@ final class MeDevicesController extends Controller
      */
     public function destroy(Request $request, string $device): Response
     {
-        $user = $this->staff($request);
+        abort_unless($this->signOut($this->staff($request), $device), 404);
 
+        return response()->noContent();
+    }
+
+    /**
+     * ⭐ ওয়েবের "আমার প্রোফাইল"-এর "আমার ফোনগুলো" — একই তালিকা, নতুনটা আগে (২০ নভেম্বর ২০২৬, মালিকের ok — প্রোফাইলের নমুনা গ)।
+     * ⓘ ফোনের তালিকার মতো পাতা নেই — একজনের ফোন হাতে গোনা।
+     *
+     * @return list<array{id: string, name: string, platform: ?string, app_version: ?string, last_used_at: ?Carbon}>
+     */
+    public function listFor(User $user): array
+    {
+        return $this->devicesOf($user)
+            ->sortByDesc(fn (array $d) => $d['last_used_at']?->getTimestamp() ?? 0)
+            ->map(fn (array $d): array => [
+                'id' => $d['id'], 'name' => $d['name'], 'platform' => $d['platform'],
+                'app_version' => $d['app_version'], 'last_used_at' => $d['last_used_at'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * ⛔ একটা ফোন বের করা — ফোনের `DELETE /me/devices/{id}` আর ওয়েবের "বাদ দিন" একই পথে। নিজের টোকেনের মধ্যেই খোঁজা; না মিললে false।
+     */
+    public function signOut(User $user, string $device): bool
+    {
         $found = $this->devicesOf($user)->firstWhere('id', $device);
 
-        abort_if($found === null, 404);
+        if ($found === null) {
+            return false;
+        }
 
         $user->tokens()
             ->whereIn('name', [
@@ -123,7 +151,7 @@ final class MeDevicesController extends Controller
         // ⓘ কারণের ঘরে কেবল ফোনের নাম — টোকেন বা কাঁচা deviceId খাতায় নয়
         $this->audit->recordAction($user, 'device_signed_out', $found['name']);
 
-        return response()->noContent();
+        return true;
     }
 
     private function staff(Request $request): User

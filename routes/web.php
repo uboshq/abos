@@ -141,6 +141,20 @@ Route::middleware('auth')->group(function () {
         ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
 
     /*
+     * ⭐ প্রোফাইল পাতা আর মলাট ছবি (২০ নভেম্বর ২০২৬)। ⓘ মলাটের পাহারা মুখেরই — সহকর্মী না হলে ৪০৪ ([[UserCoverController]]);
+     * ফোনের যমজ `api.users.cover`। নিজের পাতা `/me`, সহকর্মীর `/people/{public_id}`।
+     */
+    Route::get('/me', [\App\Http\Controllers\ProfilePageController::class, 'me'])->name('me.profile');
+    Route::delete('/me/devices/{device}', [\App\Http\Controllers\ProfilePageController::class, 'forgetDevice'])
+        ->where('device', '[0-9a-f]{32}')->name('me.devices.forget');
+    Route::get('/people/{user}', [\App\Http\Controllers\ProfilePageController::class, 'show'])
+        ->where('user', '[0-9A-Za-z-]{1,64}')->name('people.profile');
+    Route::post('/profile/cover', [\App\Http\Controllers\ProfileCoverController::class, 'store'])->name('profile.cover');
+    Route::delete('/profile/cover', [\App\Http\Controllers\ProfileCoverController::class, 'destroy'])->name('profile.cover.remove');
+    Route::get('/users/{user}/cover', [\App\Http\Controllers\UserCoverController::class, 'show'])
+        ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.cover');
+
+    /*
      * পাসওয়ার্ড বদল — নিজের, আর তাই নিজের পথ।
      *
      * ⚠️ পরিচয়ের ফর্মটার সাথে জোড়া হয়নি, আর সেটা ইচ্ছাকৃত: নাম ঠিক

@@ -250,6 +250,22 @@ Route::prefix('v1')
             ->middleware('throttle:10,1,me-photo')->name('me.photo.destroy');
         Route::get('/users/{user}/photo', [\App\Http\Controllers\UserPhotoController::class, 'show'])
             ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
+
+        /*
+         * ⭐ প্রোফাইল পাতা, মলাট ছবি আর আজকের তিন সংখ্যা (২০ নভেম্বর ২০২৬)। ⓘ ছবির একই নিয়ম: নিজের মলাট নিজে বদলান
+         * (মিনিটে ১০টা), অন্যের মলাট আর পাতা কেবল সহকর্মী দেখেন ([[UserCoverController]], [[ProfileApiController]])।
+         */
+        Route::get('/me/profile', [\App\Http\Controllers\Api\ProfileApiController::class, 'me'])->name('me.profile');
+        Route::get('/users/{user}/profile', [\App\Http\Controllers\Api\ProfileApiController::class, 'show'])
+            ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.profile');
+        Route::post('/me/cover', [\App\Http\Controllers\Api\MeCoverController::class, 'store'])
+            ->middleware('throttle:10,1,me-cover')->name('me.cover.store');
+        Route::delete('/me/cover', [\App\Http\Controllers\Api\MeCoverController::class, 'destroy'])
+            ->middleware('throttle:10,1,me-cover')->name('me.cover.destroy');
+        Route::get('/users/{user}/cover', [\App\Http\Controllers\UserCoverController::class, 'show'])
+            ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.cover');
+        Route::get('/me/today', \App\Http\Controllers\Api\MeTodayController::class)->name('me.today');
+
         Route::get('/me/devices', [\App\Http\Controllers\Api\MeDevicesController::class, 'index'])->name('me.devices.index');
         Route::delete('/me/devices/{device}', [\App\Http\Controllers\Api\MeDevicesController::class, 'destroy'])
             ->where('device', '[0-9a-f]{32}')->middleware('throttle:30,1,me-devices')->name('me.devices.destroy');
