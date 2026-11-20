@@ -90,6 +90,9 @@ class TheSecondDoorIsNotWeakerThanTheFirstTest extends TestCase
             ->getJson('/api/v1/sync/capabilities')
             ->assertOk();
 
+        // ⓘ দুই মিনিটের টক্কর-জানালা পেরিয়ে (AuthController::GRACE_SECONDS, ২০ নভেম্বর ২০২৬)
+        $this->travel(3)->minutes();
+
         $this->asToken($first['refreshToken'])
             ->postJson('/api/v1/auth/refresh', ['deviceId' => self::DEVICE])
             ->assertUnauthorized();
