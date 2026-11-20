@@ -31,7 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * স্টকে বা খতিয়ানে এই কাগজ কিছুই বসায় না — মাল আগেই চালানে বেরিয়েছে।
  * এটার কাজ একটাই, আর সেটা কম নয়: **যা ফেরেনি তার নাম বলা**।
  */
-class Shipment extends Model implements Drillable
+class Shipment extends Model implements \App\Core\Contracts\ExplainsItsCostVoucher, Drillable
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -204,5 +204,11 @@ class Shipment extends Model implements Drillable
     public function drillRoute(): array
     {
         return ['sales.shipment.show', ['shipment' => $this->id]];
+    }
+
+    /** ⭐ ট্রাকের ভাড়ার ভাউচার খুললে — সব চালান আর সব পয়েন্টসহ (মালিক, ২১ নভেম্বর ২০২৬; [[CostNarration::facts()]]) */
+    public function costVoucherFacts(): array
+    {
+        return app(\App\Modules\Sales\Services\CostNarration::class)->facts($this);
     }
 }

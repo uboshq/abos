@@ -61,7 +61,8 @@
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
          'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
         ...$flowColumns,
-        ['key' => 'narration', 'label' => __('core.table.narration')],
+        // ⭐ বিবরণ পুরোটা, লাইন ভেঙে — কাটা বা "…" নয় (কেবল ABOS/Navy/Blue-এ — SAP আর Dynamic হুবহু আগের মতো; মালিক, ২১ নভেম্বর ২০২৬, নমুনা v6 ক: ভাড়ার বিবরণে সব পয়েন্ট)
+        ['key' => 'narration', 'label' => __('core.table.narration'), 'wrap' => in_array(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)), ['rose', 'navy', 'blue'], true)],
         ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          // ⓘ মোটে কেবল পাকা ভাউচার — বাতিল আর খসড়া শূন্য ([[Voucher::countedAmount()]])
          'raw' => fn ($v) => $v->countedAmount(),

@@ -9,7 +9,27 @@ return [
     'needs_reference' => 'For a bank or MFS payment, enter the transaction number (TrxID).',
     'unknown_payer' => 'The person who paid is not part of this company.',
     'later_needs_carrier' => 'To pay the fare later, pick the carrier, so the debt has a name on it.',
-    'narration' => 'Vehicle fare — challan :challan, vehicle :vehicle, carrier or driver :by',
+    // the text before 21 Nov 2026 — only to recognise old vouchers (FareNarrations command); never on a new voucher
+    'narration_v1' => 'Vehicle fare — challan :challan, vehicle :vehicle, carrier or driver :by',
+
+    // expense voucher narration — owner, 21 Nov 2026 (sample v6, a): head — challan, points (all), vehicle, (driver: name) (CostNarration)
+    'narration_head' => 'Vehicle fare — challan :challans',
+    'trip_narration_head' => 'Truck fare — challans :challans',
+    'loading_head' => 'Loading :challans',
+    'narration_points' => 'points: :points',
+    'narration_vehicle' => 'vehicle :vehicle',
+    'narration_driver' => '(driver: :driver)',
+
+    // opening the voucher — fare details
+    'facts_title' => 'Vehicle and fare details',
+    'facts_fare' => 'Fare',
+    'facts_medium' => 'Medium',
+    'facts_driver' => 'Driver',
+    'facts_phone' => 'Mobile',
+    'facts_vehicle' => 'Vehicle number',
+    'facts_challans' => 'All challans (:count)',
+    'facts_points' => 'All points (:count)',
+    'narration_skip_approval' => 'Skipped — this voucher has approval rows; changing the narration would void the approval',
 
     // screen
     'when' => 'Fare paid',
@@ -49,7 +69,8 @@ return [
     // trip — one truck, one fare (decision d)
     'trip_amount' => 'Truck fare',
     'trip_hint' => 'The fare is for the whole truck and is booked when the truck leaves. A trip with a fare cannot carry a challan that has its own fare.',
-    'trip_narration' => 'Truck fare — trip :trip (challans :challans), vehicle :vehicle, carrier or driver :by',
+    // the text before 21 Nov 2026 — only to recognise old vouchers; the new one is built from `trip_narration_head`
+    'trip_narration_v1' => 'Truck fare — trip :trip (challans :challans), vehicle :vehicle, carrier or driver :by',
     'trip_paid_narration' => 'Truck fare paid — trip :trip, carrier :by',
     'state_trip_waits' => 'Booked when the truck leaves',
     'challan_on_trip' => 'This challan is on trip :trip, which has its fare recorded. The same truck\'s fare cannot be recorded twice.',
