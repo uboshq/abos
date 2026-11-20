@@ -3668,5 +3668,6 @@
   "deliveryOrdersPartialHint": "To approve a smaller quantity, lower it here",
   "@deliveryOrdersPartialHint": {
     "description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"
-  }
+  },
+  "networkErrorFirewallBlocked": "This WiFi/network is blocked by the server's firewall — try mobile data, or tell the office."
 }

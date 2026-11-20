@@ -945,5 +945,7 @@
   "deliveryOrdersPartialApproval": "আংশিক অনুমোদন",
   "@deliveryOrdersPartialApproval": {"description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"},
   "deliveryOrdersPartialHint": "কম পরিমাণে অনুমোদন দিতে চাইলে এখানে কমান",
-  "@deliveryOrdersPartialHint": {"description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"}
+  "@deliveryOrdersPartialHint": {"description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"},
+  "networkErrorFirewallBlocked": "এই WiFi/নেটওয়ার্ক থেকে সার্ভারে ঢোকা আটকানো আছে — মোবাইল ডেটা দিয়ে চেষ্টা করুন, বা অফিসকে জানান।",
+  "@networkErrorFirewallBlocked": {"description": "Any request the server's host firewall (Imunify360) refused for this WiFi/network IP — 403 naming Imunify360, its \"One moment, please\" splash, or any HTML answer to an /api call. Never the raw body (20 Nov 2026)"}
 }

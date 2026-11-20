@@ -12005,4 +12005,8 @@ class AppL10nEn extends AppL10n {
   @override
   String get deliveryOrdersPartialHint =>
       'To approve a smaller quantity, lower it here';
+
+  @override
+  String get networkErrorFirewallBlocked =>
+      'This WiFi/network is blocked by the server\'s firewall — try mobile data, or tell the office.';
 }

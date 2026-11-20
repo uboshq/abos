@@ -19759,6 +19759,12 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'কম পরিমাণে অনুমোদন দিতে চাইলে এখানে কমান'**
   String get deliveryOrdersPartialHint;
+
+  /// Any request the server's host firewall (Imunify360) refused for this WiFi/network IP — 403 naming Imunify360, its "One moment, please" splash, or any HTML answer to an /api call. Never the raw body (20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই WiFi/নেটওয়ার্ক থেকে সার্ভারে ঢোকা আটকানো আছে — মোবাইল ডেটা দিয়ে চেষ্টা করুন, বা অফিসকে জানান।'**
+  String get networkErrorFirewallBlocked;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

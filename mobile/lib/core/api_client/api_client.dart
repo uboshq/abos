@@ -99,8 +99,26 @@ class ApiClient {
           }
           handler.next(options);
         },
+        onResponse: (response, handler) {
+          // ⛔ The firewall's splash page can come back 2xx — HTML where a
+          // screen expects JSON. Turned into the same network failure as its
+          // 403, so nobody reads it as data ([[FirewallBlocked]]).
+          if (looksBlockedByFirewall(response)) {
+            return handler.reject(
+                firewallBlockedError(response.requestOptions, response.statusCode));
+          }
+          handler.next(response);
+        },
         onError: (DioException error, handler) async {
           final options = error.requestOptions;
+
+          // ⛔ The host firewall (Imunify360) turned this network away — a
+          // network failure with no response, never "you may not", never the
+          // raw body ([[FirewallBlocked]], 20 Nov 2026).
+          if (error.error is! FirewallBlocked && looksBlockedByFirewall(error.response)) {
+            return handler.next(
+                firewallBlockedError(options, error.response?.statusCode));
+          }
 
           // ⛔ এই বিল্ড বন্ধ — আপডেটের দেয়াল তোলা ([[RetiredBuild]])
           if (error.response?.statusCode == 426) {

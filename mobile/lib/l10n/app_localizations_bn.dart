@@ -11827,4 +11827,8 @@ class AppL10nBn extends AppL10n {
   @override
   String get deliveryOrdersPartialHint =>
       'কম পরিমাণে অনুমোদন দিতে চাইলে এখানে কমান';
+
+  @override
+  String get networkErrorFirewallBlocked =>
+      'এই WiFi/নেটওয়ার্ক থেকে সার্ভারে ঢোকা আটকানো আছে — মোবাইল ডেটা দিয়ে চেষ্টা করুন, বা অফিসকে জানান।';
 }

@@ -1,6 +1,104 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../locale/app_locale.dart';
+
+/// ⛔ The server's host firewall (Imunify360) turned this request away before
+/// ABOS ever saw it — some home and office WiFi IPs get a 403 on every call,
+/// or its "One moment, please…" splash page (20 Nov 2026). Before this, the
+/// login screen said "Could not sign in" and the owner thought the app was
+/// broken.
+///
+/// <p>[ApiClient] swaps such a failure for a [DioException] of type
+/// `connectionError` carrying this as its `error`, with **no response**: the
+/// network is the fault, so every caller already treats it as one (the sync
+/// queue keeps its rows, a refresh does not sign the person out, a screen
+/// does not read the firewall's 403 as "you may not"), the raw body never
+/// reaches a screen, and [errorMessageFor] names the fault.
+class FirewallBlocked implements Exception {
+  const FirewallBlocked(this.statusCode);
+
+  /// What the firewall answered with — for a log line, never for a screen.
+  final int? statusCode;
+
+  @override
+  String toString() => 'FirewallBlocked($statusCode)';
+}
+
+/// Whether [response] is the host firewall's answer rather than ours.
+///
+/// <ul>
+/// <li>a 403 whose body names Imunify360 (its JSON `message`, or any text);</li>
+/// <li>a body carrying the splash page's marks — "One moment, please" or
+/// `wssplashchk` — whatever the status;</li>
+/// <li>any HTML answer to an `/api` call. Our server renders JSON for every
+/// `api/*` request, errors included (bootstrap/app.php
+/// `shouldRenderJsonWhen`), so HTML there is somebody else talking. The one
+/// exception is a 502/503/504: a proxy's own "bad gateway" page is the server
+/// being down, not this network being turned away, and must not send
+/// somebody off to find mobile data.</li>
+/// </ul>
+///
+/// <p>⛔ A 403 of our own — JSON, no "Imunify" in it — is not this, and keeps
+/// its meaning ("you may not").
+bool looksBlockedByFirewall(Response<dynamic>? response) {
+  if (response == null) return false;
+  final status = response.statusCode ?? 0;
+  final text = _bodyText(response.data);
+  final lower = text.toLowerCase();
+  if (status == 403 && lower.contains('imunify')) return true;
+  if (lower.contains('one moment, please') || lower.contains('wssplashchk')) {
+    return true;
+  }
+  if (status == 502 || status == 503 || status == 504) return false;
+  return _isHtml(response, text) && _isApiCall(response.requestOptions);
+}
+
+/// Whether [error] is a firewall refusal — already marked by [ApiClient], or
+/// a raw one (a client built elsewhere, a test).
+bool isFirewallBlock(Object error) =>
+    error is DioException &&
+    (error.error is FirewallBlocked || looksBlockedByFirewall(error.response));
+
+/// The replacement [ApiClient] passes on: no response (so no raw body and no
+/// status for a caller to misread), the network's own type.
+DioException firewallBlockedError(RequestOptions options, int? statusCode) =>
+    DioException(
+      requestOptions: options,
+      type: DioExceptionType.connectionError,
+      error: FirewallBlocked(statusCode),
+      message: 'Blocked by the server host firewall (HTTP $statusCode)',
+    );
+
+/// The body as text, as much as needed to recognise it. Bytes (a PDF or a
+/// photo asked for) are read as UTF-8 from the first 4 KB only.
+String _bodyText(Object? data) {
+  if (data == null) return '';
+  if (data is String) return data;
+  if (data is List<int>) {
+    final head = data.length > 4096 ? data.sublist(0, 4096) : data;
+    return utf8.decode(head, allowMalformed: true);
+  }
+  if (data is Map || data is List) {
+    try {
+      return jsonEncode(data);
+    } catch (_) {
+      return data.toString();
+    }
+  }
+  return '';
+}
+
+bool _isHtml(Response<dynamic> response, String text) {
+  final type = response.headers.value(Headers.contentTypeHeader) ?? '';
+  if (type.toLowerCase().contains('text/html')) return true;
+  final start = text.trimLeft().toLowerCase();
+  return start.startsWith('<!doctype html') || start.startsWith('<html');
+}
+
+bool _isApiCall(RequestOptions options) =>
+    options.uri.path.contains('/api/') || options.uri.path.endsWith('/api');
 
 /// Whether a caught error is the connection's fault -- unreachable host, timed
 /// out, no signal -- rather than the server having an opinion about what was
@@ -47,6 +145,11 @@ String errorMessageFor(
   required String fallback,
   String? whenAbsent,
 }) {
+  // ⛔ Ahead of "no connection": the phone has a connection, this network is
+  // the one the firewall turns away — mobile data is the fix, not a window.
+  if (isFirewallBlock(error)) {
+    return AppLocale.l10n.networkErrorFirewallBlocked;
+  }
   if (isNetworkError(error)) {
     return AppLocale.l10n.networkErrorNoConnection;
   }
