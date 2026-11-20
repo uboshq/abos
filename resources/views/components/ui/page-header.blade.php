@@ -16,8 +16,11 @@
 <div {{ $attributes->merge(['class' => 'flex flex-wrap items-start justify-between gap-3']) }}>
     <div class="min-w-0">
         {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — [[PageHeading]] --}}
-        @php($tag = \App\Core\Support\PageHeading::tag())
         @php
+            /* ⛔ `$tag` এই ব্লকের ভিতরে — আলাদা এক-লাইনের php নির্দেশে রাখলে পরের php ব্লক সেটাকেও গিলে ফেলে, আর পাতা
+               "Undefined variable $tag"-এ ৫০০ দেয় (fe-menu2, ২০ নভেম্বর ২০২৬, /appearance-এ ধরা) */
+            $tag = \App\Core\Support\PageHeading::tag();
+
             /*
              * ⭐ কাগজের পাতা (`*.show`, রুটে বাঁধা কাগজ) — মালিক নিজে লিখে নিজে অনুমোদন বা পোস্ট করলে নামের পাশে ছোট দাগ
              * (মালিক, ২০ নভেম্বর ২০২৬; [[ui.owner-self-mark]])। ⓘ এক জায়গায়, পনেরোটা পাতায় নয়; দাগ না থাকলে কিছুই আঁকা হয় না।
