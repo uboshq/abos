@@ -118,6 +118,8 @@ final class NotificationKinds
             // ⭐ নতুন সীমা বাড়ানোর অনুরোধ মালিকের সইয়ের অপেক্ষায়; অস্থায়ী সীমা তিন দিনে শেষ (বাকি নিয়ন্ত্রণ ধাপ ৩.৪)
             'customer.limit_request_waiting' => 'core.notify.kind.limit_request_waiting',
             'credit_control.temporary_limit_ending' => 'core.notify.kind.temporary_limit_ending',
+            // ⭐ সময়-বাঁধা রোল কাল শেষ — ঐ মানুষ আর মালিক ([[RoleTerms]], রোলের পাতার নমুনা, ২০ নভেম্বর ২০২৬)
+            'system_admin.role_ending' => 'core.notify.kind.role_ending',
             // ⭐ সরবরাহকারীর ব্যাংক তথ্যের বদল দ্বিতীয় সইয়ের অপেক্ষায় — সইকারীদের, যিনি চাইলেন তাঁকে নয় (নকশা দফা #৬, ২১ অক্টোবর ২০২৬)
             'supplier.bank_change_waiting' => 'core.notify.kind.bank_change_waiting',
             // ⭐ জরুরি সেটিংয়ের বদল দ্বিতীয় হাতের অপেক্ষায় — যিনি চাইলেন তাঁকে নয় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭)

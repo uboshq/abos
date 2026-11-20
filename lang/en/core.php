@@ -1629,6 +1629,7 @@ return [
             'bank_change_waiting' => 'When a supplier bank details change waits for my approval',
             'setting_change_waiting' => 'When a key setting change waits for my approval',
             'temporary_limit_ending' => 'When a temporary credit limit ends within three days',
+            'role_ending' => 'When a time-bound role ends tomorrow',
             'deposit_maturing_soon' => 'When a deposit matures within seven days or is past maturity',
             'dps_instalment_due' => 'When a DPS instalment is overdue',
             'bank_instalment_due' => 'When a bank loan instalment falls due',

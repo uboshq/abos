@@ -172,6 +172,14 @@ Schedule::command('abos:credit-due')
     ->dailyAt('06:40')
     ->withoutOverlapping();
 
+/*
+ * ⭐ সময়-বাঁধা রোল — রাত বারোটার পরপরই: শেষ দিন পেরোনো রোল ওঠে, শুরুর দিন আসা রোল বসে, শেষের আগের দিন খবর
+ * ([[RoleTermsDue]]; রোলের পাতার নমুনা, মালিক "ok", ২০ নভেম্বর ২০২৬)। ⓘ লগইনের মুহূর্তেও দেখা হয় ([[RoleTerms::expireFor()]])।
+ */
+Schedule::command('abos:role-terms')
+    ->dailyAt('00:05')
+    ->withoutOverlapping();
+
 Schedule::command('abos:reports-due')
     ->everyFifteenMinutes()
     ->withoutOverlapping()

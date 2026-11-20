@@ -294,6 +294,16 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         /*
+         * ⭐ সময়-বাঁধা রোল — লগইনের মুহূর্তে মেয়াদ পেরোনো রোল তোলা (রোলের পাতার নমুনা, মালিক "ok", ২০ নভেম্বর ২০২৬)।
+         * ⓘ রোজ রাতের `abos:role-terms` কোনো কারণে না চললেও পুরনো রোলে কেউ ঢোকেন না ([[RoleTerms::expireFor()]])।
+         */
+        Event::listen(\Illuminate\Auth\Events\Login::class, function (\Illuminate\Auth\Events\Login $event): void {
+            if ($event->user instanceof User) {
+                app(\App\Core\Services\RoleTerms::class)->expireFor($event->user);
+            }
+        });
+
+        /*
          * ⭐ কোন মাপে ছাপা হলো — `X-Print-Scale: 85; auto` ([[PrintScale]], ১ অক্টোবর ২০২৬)।
          * ⓘ এক জায়গায়, তাই কোনো ছাপার কন্ট্রোলার ছুঁতে হয়নি; কাগজে কিছু লেখা হয় না (মালিক: কাগজ পরিষ্কার)।
          */
