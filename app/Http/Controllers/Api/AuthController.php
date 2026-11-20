@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -312,21 +313,76 @@ class AuthController extends Controller
          * ⛔ একটা টোকেন একবারই — মুছে ফেলাটাই প্রমাণ: দুইটা নবায়ন একসাথে এলে কেবল যে মুছতে পেরেছে সে নতুন জোড়া পায়
          * (আগে দুটোই পেত)। ব্যবহার করা টোকেনের ছাপ রাখা হয়, যাতে পরে কেউ আবার আনলে চুরি বলে ধরা পড়ে ([[refuseAReusedToken()]])।
          */
-        if (PersonalAccessToken::query()->whereKey($current->getKey())->delete() !== 1) {
-            // ⭐ একই সেকেন্ডে আরেকটা নবায়ন জিতেছে — তার জোড়াটাই ফেরত ([[answerARepeatedRefresh()]])
-            return $this->answerARepeatedRefresh($request, waitForTheWinner: true)
-                ?? response()->json(['message' => 'Unauthenticated.'], 401);
+        $plain = (string) $this->plainRefreshToken($request);
+        $key = self::usedKey($plain);
+        $record = ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()];
+
+        /*
+         * ⛔ "চলছে" দাগ মোছার **আগে**, আর পারমাণবিক (`Cache::add`) — দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬: আগে দাগ বসত মোছার পরে, তাই
+         * মাঝের ফাঁকে আসা একই ফোনের আরেকটা নবায়ন টোকেনও পেত না, দাগও পেত না — ৪০১, আর ফোন বের। এখন দাগ যে বসাতে পারে সেই জেতে;
+         * বাকিরা তার জোড়ার জন্য অপেক্ষা করে।
+         */
+        if (! Cache::add($key, $record + ['pending' => true], now()->addDays(self::REFRESH_DAYS + 1))) {
+            return $this->answerARepeatedRefresh($request, waitForTheWinner: true) ?? $this->tryAgainShortly();
         }
 
-        $key = self::usedKey((string) $this->plainRefreshToken($request));
-        $record = ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()];
-        // ⓘ আগে "চলছে" দাগ, যাতে একই মুহূর্তের হারা নবায়ন জানে অপেক্ষা করতে হবে
-        Cache::put($key, $record + ['pending' => true], now()->addDays(self::REFRESH_DAYS + 1));
+        /*
+         * ⛔ মোছা আর নতুন জোড়া এক লেনদেনে — দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬: আগে মোছার পরে `issue()` ভাঙলে (ডেটাবেসের হেঁচকি) পুরনো
+         * টোকেন মরা, নতুনটা নেই, দাগ "চলছে" — ফোনের পরের চেষ্টাগুলো শেষে চুরি বলে ধরা পড়ে সব বাতিল হত। এখন ভাঙলে মোছাও ফেরে,
+         * দাগ ওঠে, আর ফোন পায় ৫০৩ "একটু পরে" — যা অ্যাপ সাময়িক ধরে, টোকেন রাখে।
+         */
+        try {
+            $body = DB::transaction(function () use ($current, $user, $deviceId): ?array {
+                if (PersonalAccessToken::query()->whereKey($current->getKey())->delete() !== 1) {
+                    return null; // ⓘ দাগ ছাড়া কেউ আগেই মুছেছে (পুরনো কোডের সাথে deploy-এর মুহূর্ত) — নিচে
+                }
 
-        $body = $this->issue($user, $deviceId);
-        Cache::put($key, $record + $this->successorOf($body), now()->addDays(self::REFRESH_DAYS + 1));
+                return $this->issue($user, $deviceId);
+            });
+        } catch (\Throwable $failed) {
+            Cache::forget($key);
+            report($failed);
+
+            return $this->tryAgainShortly();
+        }
+
+        if ($body === null) {
+            Cache::forget($key);
+
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $this->rememberTheSuccessor($key, $plain, $record, $body);
 
         return response()->json($body);
+    }
+
+    /** ৫০৩ — সার্ভার একটু পরে; অ্যাপ এটা সাময়িক ধরে, টোকেন রাখে, আবার চেষ্টা করে ([[ApiClient]]) */
+    private function tryAgainShortly(): JsonResponse
+    {
+        return response()->json(['message' => __('auth.try_again_shortly')], 503)->header('Retry-After', '2');
+    }
+
+    /**
+     * জেতা জোড়ার চিহ্ন — লম্বা মেয়াদে কেবল সারি-নম্বর (পুনঃব্যবহার ধরার জন্য); জোড়ার লেখা নিজে কেবল টক্কর-জানালার জন্য, আলাদা চাবিতে, ছোট
+     * মেয়াদে (দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬: আগে এক বছর ক্যাশে থাকত — ডেটাবেসের কপি আর APP_KEY পেলে চালু টোকেন)।
+     *
+     * @param  array<string, mixed>  $record
+     * @param  array<string, mixed>  $body
+     */
+    private function rememberTheSuccessor(string $key, string $plain, array $record, array $body): void
+    {
+        Cache::put(self::pairKey($plain), Crypt::encryptString(json_encode($body, JSON_THROW_ON_ERROR)),
+            now()->addSeconds(self::GRACE_SECONDS + 60));
+        Cache::put($key, $record + [
+            'access_id' => self::tokenId((string) $body['accessToken']),
+            'refresh_id' => self::tokenId((string) $body['refreshToken']),
+        ], now()->addDays(self::REFRESH_DAYS + 1));
+    }
+
+    private static function pairKey(string $plain): string
+    {
+        return 'refresh-pair:'.hash('sha256', $plain);
     }
 
     /**
@@ -355,16 +411,25 @@ class AuthController extends Controller
         }
         $key = self::usedKey($plain);
 
+        /*
+         * ⓘ জেতাটা চলছে ("pending") — তার জোড়ার জন্য অপেক্ষা। ⛔ দাগটা উঠে গেলে (জেতাটা ভেঙে লেনদেন ফিরিয়েছে, পুরনো টোকেন আবার
+         * বৈধ) বা সময় পেরোলে ৪০১ নয়, ৫০৩ "একটু পরে" — অ্যাপ টোকেন রেখে আবার চেষ্টা করে (দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬)।
+         */
         $used = Cache::get($key);
+        $sawPending = is_array($used) && ($used['pending'] ?? false) === true;
         $deadline = microtime(true) + self::WINNER_WAIT_SECONDS;
         while (($waitForTheWinner && ! is_array($used)) || (is_array($used) && ($used['pending'] ?? false) === true)) {
             if (microtime(true) >= $deadline) {
-                return null;
+                return $this->tryAgainShortly();
             }
             usleep(200_000);
             $used = Cache::get($key);
+            $sawPending = $sawPending || (is_array($used) && ($used['pending'] ?? false) === true);
         }
-        if (! is_array($used) || ! isset($used['pair'], $used['refresh_id'])) {
+        if (! is_array($used)) {
+            return $sawPending ? $this->tryAgainShortly() : null;
+        }
+        if (! isset($used['refresh_id'])) {
             return null;
         }
 
@@ -373,14 +438,16 @@ class AuthController extends Controller
             return null;
         }
         $deviceId = (string) ($used['device'] ?? '');
+        $age = now()->getTimestamp() - (int) ($used['at'] ?? 0);
 
-        if (now()->getTimestamp() - (int) ($used['at'] ?? 0) <= self::GRACE_SECONDS) {
+        if ($age <= self::GRACE_SECONDS) {
+            $sealed = Cache::get(self::pairKey($plain));
             try {
-                $pair = json_decode(Crypt::decryptString((string) $used['pair']), true, 512, JSON_THROW_ON_ERROR);
+                $pair = is_string($sealed) ? json_decode(Crypt::decryptString($sealed), true, 512, JSON_THROW_ON_ERROR) : null;
             } catch (\Throwable) {
-                return null;
+                $pair = null;
             }
-            // ⓘ জেতা জোড়াটা এর মধ্যে বাতিল হয়ে থাকলে (বের হওয়া, ফোন বাদ) ফেরত নয়
+            // ⓘ জেতা জোড়াটা এর মধ্যে বাতিল হয়ে থাকলে (বের হওয়া, ফোন বাদ, পাসওয়ার্ড বদল) ফেরত নয়
             if (! is_array($pair) || ! PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->exists()) {
                 return null;
             }
@@ -388,7 +455,16 @@ class AuthController extends Controller
             return response()->json($pair);
         }
 
-        // ⓘ ২: উত্তর হারানো — নতুন জোড়াটা আছে, আর তার access টোকেন একবারও ব্যবহার হয়নি
+        /*
+         * ⓘ ২: উত্তর হারানো — নতুন জোড়াটা আছে, তার access টোকেন একবারও ব্যবহার হয়নি।
+         * ⛔ কেবল [[LOST_ANSWER_SECONDS]]-এর মধ্যে, আর কেবল একই ফোনের নামে (দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬): আগে সময়ের সীমা ছিল না,
+         * ফোনের নামও দেখা হত না — আগে চুরি যাওয়া পুরনো টোকেন দিনের পর দিন পরে এনে কেউ নতুন জোড়া পেতেন, আর আসল ফোনের (অব্যবহৃত)
+         * জোড়া মুছে আসল মানুষকেই বের করে দিতেন। সীমার পরে এটা সাধারণ পুনঃব্যবহার — সব বাতিল ([[refuseAReusedToken()]])।
+         */
+        $sentDevice = (string) $request->input('deviceId', '');
+        if ($age > self::LOST_ANSWER_SECONDS || $deviceId === '' || ! hash_equals($deviceId, $sentDevice)) {
+            return null;
+        }
         $successorRefresh = PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->first();
         $successorAccess = PersonalAccessToken::query()->whereKey((int) ($used['access_id'] ?? 0))->first();
         if ($successorRefresh === null || $successorRefresh->last_used_at !== null
@@ -396,28 +472,20 @@ class AuthController extends Controller
             return null;
         }
 
-        $body = $this->issue($user, $deviceId);
-        Cache::put($key, ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()]
-            + $this->successorOf($body), now()->addDays(self::REFRESH_DAYS + 1));
+        try {
+            $body = DB::transaction(fn (): array => $this->issue($user, $deviceId));
+        } catch (\Throwable $failed) {
+            report($failed);
+
+            return $this->tryAgainShortly();
+        }
+        $this->rememberTheSuccessor($key, $plain, ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()], $body);
 
         return response()->json($body);
     }
 
-    /**
-     * জেতা জোড়ার চিহ্ন — টোকেন দুটোর সারি-নম্বর আর এনক্রিপ্ট করা উত্তর।
-     *
-     * @param  array<string, mixed>  $body
-     * @return array<string, mixed>
-     */
-    private function successorOf(array $body): array
-    {
-        return [
-            'pair' => Crypt::encryptString(json_encode($body, JSON_THROW_ON_ERROR)),
-            'access_id' => self::tokenId((string) $body['accessToken']),
-            'refresh_id' => self::tokenId((string) $body['refreshToken']),
-        ];
-    }
-
+    /** উত্তর-হারানোর পথ কতক্ষণ খোলা — দুর্বল নেটে আবার চেষ্টা এর মধ্যেই হয়; তার পরে পুরনো টোকেন মানে চুরি */
+    private const LOST_ANSWER_SECONDS = 900;
     /** Sanctum-এর লেখা টোকেন "id|গোপন" — সারি-নম্বরটা */
     private static function tokenId(string $plain): int
     {

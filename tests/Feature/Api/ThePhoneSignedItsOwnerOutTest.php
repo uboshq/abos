@@ -38,8 +38,8 @@ final class ThePhoneSignedItsOwnerOutTest extends TestCase
         $first = $this->login()->assertOk()->json();
         $lost = $this->refresh($first['refreshToken'])->assertOk()->json();
 
-        // ⓘ ফোন উত্তরটা পায়নি — নতুন জোড়া কখনো ব্যবহার হয়নি; এক ঘণ্টা পরে পুরনো টোকেনেই আবার
-        $this->travel(1)->hours();
+        // ⓘ ফোন উত্তরটা পায়নি — নতুন জোড়া কখনো ব্যবহার হয়নি; দশ মিনিট পরে পুরনো টোকেনেই আবার (১৫ মিনিটের সীমার মধ্যে)
+        $this->travel(10)->minutes();
         $again = $this->refresh($first['refreshToken'])->assertOk()->json();
 
         $this->assertNotSame($lost['refreshToken'], $again['refreshToken'], '⛔ হারানো জোড়াটাই আবার দেওয়া হল।');
@@ -47,6 +47,49 @@ final class ThePhoneSignedItsOwnerOutTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->flushHeaders();
         $this->withToken($again['accessToken'])->getJson('/api/v1/me')->assertOk();
+    }
+
+    /**
+     * ⛔ দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬: আগে চুরি যাওয়া পুরনো টোকেন অনেক পরে এনে কেউ নতুন জোড়া পেতেন, আর আসল ফোনের অব্যবহৃত জোড়া
+     * মুছে আসল মানুষকে বের করে দিতেন। এখন ১৫ মিনিটের পরে সেটা পুনঃব্যবহার — ঐ ফোনের সব টোকেন বাতিল, চোর কিছু পান না।
+     */
+    public function test_an_old_token_brought_back_after_the_lost_answer_window_gets_nothing(): void
+    {
+        $first = $this->login()->assertOk()->json();
+        $this->refresh($first['refreshToken'])->assertOk();
+
+        $this->travel(20)->minutes();
+
+        $this->refresh($first['refreshToken'])->assertUnauthorized();
+        $this->assertFalse(PersonalAccessToken::query()->where('name', 'like', '%:'.self::DEVICE)->exists(),
+            '⛔ পুরনো টোকেন ফিরে এল, অথচ ফোনের টোকেন বাতিল হল না।');
+    }
+
+    public function test_the_lost_answer_path_needs_the_same_phone(): void
+    {
+        $first = $this->login()->assertOk()->json();
+        $this->refresh($first['refreshToken'])->assertOk();
+
+        $this->travel(5)->minutes();
+
+        $this->app['auth']->forgetGuards();
+        $this->flushHeaders();
+        $this->withToken($first['refreshToken'])->postJson('/api/v1/auth/refresh', ['deviceId' => 'a-thiefs-phone'])
+            ->assertUnauthorized();
+    }
+
+    /** ⛔ জোড়ার লেখা ক্যাশে কেবল টক্কর-জানালার জন্য — এক বছর নয় (দ্বিতীয় নিরীক্ষা, ২১ নভেম্বর ২০২৬) */
+    public function test_the_pair_itself_leaves_the_cache_after_the_window(): void
+    {
+        $first = $this->login()->assertOk()->json();
+        $second = $this->refresh($first['refreshToken'])->assertOk()->json();
+
+        $this->assertStringNotContainsString($second['refreshToken'], json_encode(\Illuminate\Support\Facades\Cache::get(
+            'refresh-used:'.hash('sha256', $first['refreshToken']))), '⛔ নতুন টোকেনের লেখা লম্বা মেয়াদের চিহ্নে।');
+
+        $this->travel(4)->minutes();
+        $this->assertNull(\Illuminate\Support\Facades\Cache::get('refresh-pair:'.hash('sha256', $first['refreshToken'])),
+            '⛔ জোড়াটা জানালার পরেও ক্যাশে।');
     }
 
     public function test_after_signing_out_the_old_token_gets_nothing_even_inside_the_window(): void
