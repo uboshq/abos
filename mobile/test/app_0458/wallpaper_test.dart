@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,7 +45,8 @@ void main() {
   // ⓘ সবচেয়ে খারাপ অবস্থা: প্রতিটা রং (আভা আর ঢেউ নিজের স্বচ্ছতায়, পটের সবচেয়ে উজ্জ্বল রঙের ওপর), তার ওপর কালচে পর্দা,
   // তার ওপর সবচেয়ে ঘন কাচের সাদা আভা (১৮%) — সাদা লেখা তবু ৪.৫:১ (WCAG 1.4.3)। ⓘ দুই আভা একে অন্যের ওপর পড়লে একটু
   // উজ্জ্বল হতে পারে — এটা এক-স্তরের হিসাব
-  for (final paper in GlassWallpaper.values.where((w) => w != GlassWallpaper.balls)) {
+  // ⓘ বেগুনি ঢেউ এই হিসাবে নয় — নিচে আঁকা ছবির পিক্সেল ধরে, যেখানে লেখা বসে
+  for (final paper in GlassWallpaper.values.where((w) => w != GlassWallpaper.balls && w != GlassWallpaper.purpleWave)) {
     test('white text on the glass reads at 4.5:1 everywhere on "${paper.name}"', () {
       final spec = paper.spec;
       final brightest = spec.base.reduce((a, b) => a.computeLuminance() >= b.computeLuminance() ? a : b);
@@ -62,6 +66,76 @@ void main() {
       }
     });
   }
+
+  // ⭐ বেগুনি ঢেউ — মালিকের নমুনার মতো উজ্জ্বল (পর্দা ০.১২), তাই পুরো পটে ৪.৫:১ নয়; মাপা হয় আঁকা ছবির প্রতিটা পিক্সেলে, কেবল
+  // যেখানে লেখা বসে — হোমের ৪১২×৯০০ ছবির (home_glass_purpleWave.png) জায়গা ধরে:
+  //  - উপরের বার: কোম্পানি-শাখার লেখা ৪.৫:১, ডানের চিহ্ন ৩:১ (WCAG 1.4.11) — উপরের কালো পট্টি এটা রাখে;
+  //  - বাঁ-উপরের শুভেচ্ছা আর শিরোনাম, সরাসরি পটে — ৪.৫:১;
+  //  - কাচের কার্ডের ভেতরের লেখা — পট কার্ডের ঝাপসায় (BackdropFilter-এর একই sigma) আর সাদা আভায়, তার ওপর ৪.৫:১;
+  //    ঝাপসা ১৫ থেকে (শুরুর ৪০ সহ)। ⓘ ১৫-র নিচে ("একদম স্বচ্ছ") উজ্জ্বল ফিতার ওপর ২.১:১ পর্যন্ত নামে — সেখানে লেখার
+  //    নিজের ছায়া ভরসা, এটা সেই বাছাইয়ের জেনে-নেওয়া দাম
+  group('purple wave: white text reads where text sits', () {
+    const size = Size(412, 900);
+    const barText = Rect.fromLTRB(50, 4, 176, 50);
+    const barIcons = Rect.fromLTRB(268, 8, 402, 50);
+    const greetingAndTitle = Rect.fromLTRB(12, 70, 158, 128);
+    const cards = Rect.fromLTRB(14, 146, 398, 528);
+
+    Future<ByteData> render(WidgetTester tester, {int? glassLevel}) async => (await tester.runAsync(() async {
+          final recorder = ui.PictureRecorder();
+          final canvas = Canvas(recorder);
+          if (glassLevel == null) {
+            const PurpleWavePainter().paint(canvas, size);
+          } else {
+            final spec = GlassSpec.of(glassLevel);
+            final inner = ui.PictureRecorder();
+            const PurpleWavePainter().paint(Canvas(inner), size);
+            canvas.saveLayer(Offset.zero & size,
+                Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: spec.sigma, sigmaY: spec.sigma));
+            canvas.drawPicture(inner.endRecording());
+            canvas.restore();
+            canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white.withValues(alpha: spec.fill));
+          }
+          final image = await recorder.endRecording().toImage(size.width.toInt(), size.height.toInt());
+          return (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        }))!;
+
+    /// সাদা লেখার সবচেয়ে কম তুলনা — অঞ্চলের প্রতিটা পিক্সেলে
+    double worst(ByteData pixels, Rect region) {
+      var low = double.infinity;
+      for (var y = region.top.toInt(); y < region.bottom; y++) {
+        for (var x = region.left.toInt(); x < region.right; x++) {
+          final i = (y * size.width.toInt() + x) * 4;
+          final c = Color.fromARGB(255, pixels.getUint8(i), pixels.getUint8(i + 1), pixels.getUint8(i + 2));
+          final ratio = _contrast(Colors.white, c);
+          if (ratio < low) low = ratio;
+        }
+      }
+      return low;
+    }
+
+    testWidgets('the top bar band: text 4.5:1, icons 3:1', (tester) async {
+      final bare = await render(tester);
+      expect(worst(bare, barText), greaterThanOrEqualTo(4.5), reason: 'কোম্পানি আর শাখার লেখা');
+      expect(worst(bare, barIcons), greaterThanOrEqualTo(3), reason: 'ডানের চিহ্ন — ডান-উপরের উজ্জ্বল গোলাপির ওপর');
+    });
+
+    testWidgets('the greeting and title at the top-left: 4.5:1', (tester) async {
+      expect(worst(await render(tester), greetingAndTitle), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('text inside a glass card, over the card blur and tint: 4.5:1 from blur 15 up', (tester) async {
+      for (final level in [15, AppLooks.defaultBlur, 100]) {
+        expect(worst(await render(tester, glassLevel: level), cards), greaterThanOrEqualTo(4.5), reason: 'ঝাপসা $level');
+      }
+    });
+
+    test('the picture stays vivid: a light scrim, a top band that fades out by 22%', () {
+      expect(PurpleWavePainter.scrim, 0.12);
+      expect(PurpleWavePainter.topBand, 0.45);
+      expect(PurpleWavePainter.topBandReach, 0.22);
+    });
+  });
 
   testWidgets('a chosen background is a still picture (cached), not the moving balls', (tester) async {
     AppLooks.instance = _memory({});

@@ -60,8 +60,8 @@ class WallpaperSpec {
 extension GlassWallpaperSpec on GlassWallpaper {
   /// ⓘ "রঙিন বল" নিজে আঁকে না ([GlassBackdrop]) — এখানে কেবল নমুনার ছবির (বাছাইয়ের ঘর) জন্য
   WallpaperSpec get spec => switch (this) {
-        // ⭐ বেগুনি ঢেউ — আঁকে [PurpleWavePainter]; এখানে তার সব রং (প্রতিটা ঢালের প্রতিটা থামা, দুই আভা) আর কালচে পর্দা, যাতে
-        // টেস্ট লেখার তুলনা মাপে। ⓘ পর্দা ০.৫ — ডান-ওপরের উজ্জ্বল গোলাপি (#F070FF) আর কিনারার আভায় সাদা লেখা ৪.৫:১ রাখতে
+        // ⭐ বেগুনি ঢেউ — আঁকে [PurpleWavePainter]; এখানে তার সব রং (প্রতিটা ঢালের প্রতিটা থামা, দুই আভা) আর হালকা পর্দা।
+        // ⓘ পর্দা ০.১২ আর উপরের পট্টি — লেখার তুলনা টেস্ট মাপে আঁকা ছবির পিক্সেল ধরে, যেখানে লেখা বসে (সব রঙের এক-স্তরের হিসাব নয়)
         GlassWallpaper.purpleWave => const WallpaperSpec(
             base: [
               ...PurpleWavePainter.bgStops, ...PurpleWavePainter.tlStops, ...PurpleWavePainter.trStops,
@@ -170,8 +170,13 @@ class PurpleWavePainter extends CustomPainter {
   static const rimLine = Color(0xFFFFB8FF);
   static const rimLineAlpha = 0.95;
 
-  /// সবার ওপরে কালো পর্দা — লেখা পড়ার জন্য (test/app_0458/wallpaper_test.dart)
-  static const double scrim = 0.5;
+  /// সবার ওপরে হালকা কালো পর্দা — ছবি মালিকের নমুনার মতো উজ্জ্বল বেগুনি-গোলাপি থাকে (মালিক, ২০ নভেম্বর ২০২৬: ০.৫-এ বেশি অন্ধকার)
+  static const double scrim = 0.12;
+
+  /// ⭐ উপরের পট্টি — y=0-তে কালো [topBand], পর্দার [topBandReach] উচ্চতায় শূন্য; উপরের বারের সাদা লেখা আর চিহ্ন ডান-উপরের উজ্জ্বল
+  /// গোলাপির ওপরেও পড়া যায়। ⓘ কার্ডের ভেতরের লেখা কাচের ঝাপসা ঢাকে (test/app_0458/wallpaper_test.dart অঞ্চল ধরে মাপে)
+  static const double topBand = 0.45;
+  static const double topBandReach = 0.22;
 
   static _Shape _tr() => _Shape(300, 0)
     ..line(589, 0)
@@ -300,6 +305,13 @@ class PurpleWavePainter extends CustomPainter {
       ..restore()
       ..restore();
     canvas.drawRect(rect, Paint()..color = const Color.fromRGBO(0, 0, 0, scrim));
+    final reach = size.height * topBandReach;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, reach),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(0, reach),
+            const [Color.fromRGBO(0, 0, 0, topBand), Color.fromRGBO(0, 0, 0, 0)]),
+    );
   }
 
   @override
