@@ -588,6 +588,15 @@ final class Ui
     }
 
     /**
+     * ⭐ বাঁয়ের মেনুর মাথায় মডিউলের রঙিন চিহ্ন আর বড় নাম (Fluent/Lightning) — কেবল "ABOS" (rose) রূপে (মালিক, ২০ নভেম্বর ২০২৬,
+     * "চ. আন্তর্জাতিক ok", আর একই দিনের সংশোধন: Navy আর Blue আগের মতো)।
+     */
+    public static function wearsModuleHead(?string $key): bool
+    {
+        return self::clean($key) === 'rose';
+    }
+
+    /**
      * ⭐ বাঁয়ের মডিউল-রেল — `icons` (আজকের সবাই) বা `none` (কেবল "ABOS", ১৯ নভেম্বর ২০২৬)।
      *
      * ⓘ `none`-এ রেলটা **আঁকাই হয় না** ([[shell.sidebar]]); মডিউল বদলের পথ তখন রূপের নিজের — "ABOS"-এ মেনুর নিচের তালিকা

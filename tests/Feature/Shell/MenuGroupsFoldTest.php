@@ -132,6 +132,47 @@ final class MenuGroupsFoldTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ মডিউলের মাথা — কেবল "ABOS" (rose) রূপে (মালিক, ২০ নভেম্বর ২০২৬, নমুনা "চ"; একই দিনের সংশোধন: Navy আর Blue আগের মতো):
+     * মডিউলের রঙের বর্গে মডিউলের চিহ্ন, পাশে নাম; এক করা মডিউলে এক করা নাম আর প্রধান মডিউলের চিহ্ন ও রং।
+     */
+    public function test_only_the_abos_look_wears_the_module_heading_with_its_icon_colour_and_name(): void
+    {
+        $picker = (array) config('abos.module_picker');
+        app()->setLocale('bn');
+
+        foreach ([route('purchase.order.index') => ['purchase', 'ক্রয়'], route('accounts.voucher.list') => ['accounts', 'হিসাব ও অর্থ'],
+            route('customer.index') => ['sales', 'বিক্রয়']] as $url => [$lead, $name]) {
+            $xpath = $this->menuOf('rose', $url);
+            $head = $xpath->query('//*[@data-site-map]//*[@data-module-head]');
+
+            $this->assertSame(1, $head->length, "⛔ {$url}: ABOS রূপে মডিউলের মাথা নেই");
+            $this->assertSame($lead, $head->item(0)->getAttribute('data-module-head'));
+
+            $icon = $xpath->query('.//*[@data-module-head-colour]', $head->item(0))->item(0);
+            $this->assertNotNull($icon);
+            $this->assertSame($picker[$lead]['colour'], $icon->getAttribute('data-module-head-colour'), "⛔ {$lead}: মাথার বর্গ মডিউলের রঙে নয়");
+            $this->assertStringContainsString('background: '.$picker[$lead]['colour'], $icon->getAttribute('style'));
+            $this->assertSame($picker[$lead]['icon'], $xpath->query('.//svg[@data-licon]', $icon)->item(0)?->getAttribute('data-licon'), "⛔ {$lead}: মাথায় মডিউলের চিহ্ন নেই");
+            $this->assertSame($name, trim($xpath->query('.//*[contains(@class, "module-head-name")]', $head->item(0))->item(0)?->textContent ?? ''));
+        }
+
+        foreach (array_diff(Ui::keys(), ['rose']) as $look) {
+            $this->assertStringNotContainsString('data-module-head', $this->pageIn($look, route('purchase.order.index')),
+                "⛔ {$look}: মডিউলের নতুন মাথা এই রূপে এল — কেবল ABOS-এ");
+        }
+
+        $css = (string) file_get_contents(resource_path('css/abos-look.css'));
+        preg_match_all('/([^{}]+)\{[^{}]*\}/', $css, $rules);
+        foreach ($rules[1] as $selector) {
+            $selector = trim((string) preg_replace('#/\*.*?\*/#s', '', $selector));
+            if (str_contains($selector, 'module-head')) {
+                $this->assertStringStartsWith(":root[data-ui='rose']", $selector, '⛔ মাথার CSS রূপে বাঁধা নয়');
+            }
+        }
+        $this->assertStringNotContainsString('module-head', (string) file_get_contents(resource_path('css/app.css')));
+    }
+
     public function test_every_fold_css_rule_is_bound_to_the_three_abos_looks(): void
     {
         $css = (string) file_get_contents(resource_path('css/app.css'));

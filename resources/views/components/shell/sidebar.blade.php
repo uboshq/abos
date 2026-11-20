@@ -734,10 +734,26 @@
                         </label>
                     @endif
 
+                    @php
+                        /* ⭐ মডিউলের মাথা — কেবল "ABOS" (rose) রূপে, Fluent/Lightning ধাঁচে (মালিক, ২০ নভেম্বর ২০২৬, "চ. আন্তর্জাতিক ok"):
+                           মডিউলের রঙের ৩২px বর্গে সাদা চিহ্ন, পাশে নাম; এক করা মডিউলে প্রধান মডিউলের চিহ্ন ও রং (`config/abos.php`-এর
+                           `module_picker`)। ⓘ ABOS Navy, ABOS Blue, SAP, Dynamic আর বাকিরা আগের ছোট নামই রাখে (মালিকের সংশোধন, একই দিন)। */
+                        $moduleHead = \App\Core\Support\Ui::wearsModuleHead(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)))
+                            ? (config('abos.module_picker')[$activeModule['code']] ?? config('abos.module_picker.default') ?? ['icon' => 'layout-grid', 'colour' => '#2563eb'])
+                            : null;
+                    @endphp
+                    @if ($moduleHead !== null)
+                        <div class="module-head" data-module-head="{{ $activeModule['code'] }}">
+                            <span class="module-head-icon" data-module-head-colour="{{ $moduleHead['colour'] }}"
+                                  style="background: {{ $moduleHead['colour'] }}" aria-hidden="true"><x-ui.licon :name="$moduleHead['icon']" :size="18" /></span>
+                            <span class="module-head-name">{{ $activeModule['label'] }}</span>
+                        </div>
+                    @else
                     <p class="shrink-0 truncate px-3 pt-2 pb-1 text-2xs font-semibold uppercase
                               tracking-wide text-(--color-ink-muted)">
                         {{ $activeModule['label'] }}
                     </p>
+                    @endif
 
                     {{-- কিছু না মিললে বলা হয়।
 
