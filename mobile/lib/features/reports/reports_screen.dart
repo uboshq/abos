@@ -10,6 +10,7 @@ import '../../core/printing/documents_api.dart';
 import '../../core/records/report_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../printing/document_actions_sheet.dart';
@@ -575,7 +576,7 @@ class _Table extends StatelessWidget {
             if (page.totals.isNotEmpty)
               DataRow(
                 color: WidgetStatePropertyAll(
-                    AppColors.primary.withValues(alpha: 0.06)),
+                    context.lookAccent(AppColors.primary).withValues(alpha: 0.06)),
                 cells: [
                   for (var i = 0; i < columns.length; i++)
                     DataCell(Text(

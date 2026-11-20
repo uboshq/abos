@@ -5,6 +5,8 @@ import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/orders/order_api.dart';
 import '../../core/records/money.dart';
+import '../../core/theme/app_look.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/widgets/customer_line.dart';
 
 /// The order screen's own tinted pairs — the owner-approved samples of 1 October 2026. Each background travels with its
@@ -32,13 +34,22 @@ class OrderPalette {
 /// onSurfaceVariant, রেখা outlineVariant, বোতাম primary, ভুল error) — নকশার নিয়ম ০.৪.৩৮ §১, a4-এর `context.palette`-এর
 /// একই ধারা।
 class OrderInk {
-  OrderInk.of(BuildContext context) : cs = Theme.of(context).colorScheme;
+  OrderInk.of(BuildContext context)
+      : cs = Theme.of(context).colorScheme,
+        _scheme = context.look != AppLook.abos,
+        _glass = context.look == AppLook.glass;
 
   final ColorScheme cs;
 
+  /// ⭐ নতুন দুই রূপে (০.৪.৬০) রং থিমের `colorScheme` থেকে — Liquid Glass-এ কাচ, Material 3-এ বেগুনি সুর; ABOS আগের মতো
+  final bool _scheme;
+
+  /// Liquid Glass — নিচের মোটের পট্টি ঘন কাচ, সাদা লেখা (উল্টো রঙের সাদা পট্টি কাচের উপর বেমানান)
+  final bool _glass;
+
   bool get _dark => cs.brightness == Brightness.dark;
 
-  Color _pick(int light, Color dark) => _dark ? dark : Color(light);
+  Color _pick(int light, Color dark) => _dark || _scheme ? dark : Color(light);
 
   Color get page => _pick(0xFFFBFCFF, cs.surface);
   Color get ink => _pick(0xFF1A1C20, cs.onSurface);
@@ -61,10 +72,10 @@ class OrderInk {
   Color get head => _pick(0xFF667085, cs.onSurfaceVariant);
 
   /// নিচের মোটের পট্টি — আলোতে গাঢ় পট্টিতে সাদা লেখা, অন্ধকারে থিমের উল্টো রং
-  Color get bar => _pick(0xFF1A1C20, cs.inverseSurface);
-  Color get onBar => _pick(0xFFFFFFFF, cs.onInverseSurface);
-  Color get onBarSoft => _pick(0xB3FFFFFF, cs.onInverseSurface.withValues(alpha: 0.7));
-  Color get barDisabled => _pick(0xFF4A4D55, cs.onInverseSurface.withValues(alpha: 0.24));
+  Color get bar => _glass ? const Color(0xE0161C33) : _pick(0xFF1A1C20, cs.inverseSurface);
+  Color get onBar => _glass ? const Color(0xFFFFFFFF) : _pick(0xFFFFFFFF, cs.onInverseSurface);
+  Color get onBarSoft => _glass ? const Color(0xD9FFFFFF) : _pick(0xB3FFFFFF, cs.onInverseSurface.withValues(alpha: 0.7));
+  Color get barDisabled => _glass ? const Color(0x3DFFFFFF) : _pick(0xFF4A4D55, cs.onInverseSurface.withValues(alpha: 0.24));
 
   /// "✓ ঝুড়িতে আছে" — সবুজ; অন্ধকার পটে গাঢ় সবুজ মিলিয়ে যায়, তাই সেখানে হালকা সবুজ
   Color get inCart => _dark ? OrderPalette.freeBorder : OrderPalette.inCart;

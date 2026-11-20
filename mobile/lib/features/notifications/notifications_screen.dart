@@ -6,6 +6,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_inside.dart';
 import '../../core/widgets/empty_state.dart';
@@ -164,7 +165,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         key: ValueKey('notification-${item.id}'),
                         leading: Icon(
                           item.read ? Icons.notifications_none : Icons.notifications_active,
-                          color: item.read ? context.palette.onSurfaceMuted : AppColors.primary,
+                          color: item.read ? context.palette.onSurfaceMuted : context.lookAccent(AppColors.primary),
                         ),
                         title: Text(item.title,
                             style: TextStyle(

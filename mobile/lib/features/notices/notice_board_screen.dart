@@ -6,6 +6,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -87,7 +88,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Text(context.l10n.noticesUnreadCount(page.unread),
                     key: const ValueKey('notices-unread'),
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    style: TextStyle(fontWeight: FontWeight.w700, color: context.lookAccent(AppColors.primary))),
               ),
             if (page != null && page.items.isEmpty)
               EmptyState(
@@ -105,7 +106,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       n.owesSignature ? Icons.draw_outlined : (n.standing == 'unread' ? Icons.mark_email_unread_outlined : Icons.drafts_outlined),
                       color: n.owesSignature
                           ? context.palette.danger
-                          : (n.standing == 'unread' ? AppColors.primary : context.palette.onSurfaceMuted),
+                          : (n.standing == 'unread' ? context.lookAccent(AppColors.primary) : context.palette.onSurfaceMuted),
                     ),
                     title: Text(n.title,
                         style: TextStyle(fontWeight: n.standing == 'unread' ? FontWeight.w700 : FontWeight.w500)),

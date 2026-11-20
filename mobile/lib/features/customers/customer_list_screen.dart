@@ -7,6 +7,8 @@ import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/app_look.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/customer_line.dart';
@@ -271,11 +273,13 @@ class _CustomerTile extends StatelessWidget {
         // ⓘ নামের প্রথম অক্ষরের বৃত্ত সাজ — TalkBack নামটা একবারই পড়ে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
         leading: ExcludeSemantics(
           child: CircleAvatar(
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+            // ⓘ রূপের মূল রং (০.৪.৬০) — Liquid Glass-এ স্বচ্ছ ছোঁয়ায় সাদা অক্ষর, Material 3-এ বেগুনি; ABOS আগের মতো
+            backgroundColor: context.lookAccent(AppColors.primary).withValues(alpha: context.look == AppLook.glass ? 0.28 : 0.12),
             child: Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  color: context.look == AppLook.glass ? Colors.white : context.lookAccent(AppColors.primary), // dark-ok: white only on the glass look
+                  fontWeight: FontWeight.w700),
             ),
           ),
         ),

@@ -4,6 +4,18 @@ import 'app_look.dart';
 import 'expressive.dart';
 import 'glass.dart';
 
+/// ⭐ এই পর্দার রূপ (০.৪.৬০) — থিমের উপর নির্ভর রাখে, তাই রূপ বদলালে (থিম বদলায়) widget নতুন করে আঁকা হয়।
+/// ⓘ ABOS-এ সব widget আগের মতো — রূপ-নির্ভর শাখা কেবল [AppLook.glass] আর [AppLook.expressive]-এ।
+extension LookOf on BuildContext {
+  AppLook get look {
+    Theme.of(this);
+    return AppLooks.instance.look.value;
+  }
+
+  /// ABOS-এর বাঁধা মূল রং ([abos], যেমন `AppColors.primary`) — নতুন দুই রূপে থিমের মূল রং (কাচে হালকা নীল, Material 3-এ বেগুনি)
+  Color lookAccent(Color abos) => look == AppLook.abos ? abos : Theme.of(this).colorScheme.primary;
+}
+
 /// ⭐ পর্দার অংশ রূপ ধরে (0.4.58; মালিকের নমুনা, ২০ নভেম্বর ২০২৬ "ok") — ABOS-এ কিছুই যোগ হয় না (একটুও বদলায় না), Liquid
 /// Glass-এ কাচের প্যানেল, Material 3-এ গোল কোনার হালকা বেগুনি বাক্স।
 class LookSurface extends StatelessWidget {

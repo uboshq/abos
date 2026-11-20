@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/records/money.dart';
+import '../../core/theme/app_look.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/expressive.dart';
+import '../../core/theme/glass.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../../core/locale/l10n.dart';
 
@@ -91,10 +95,23 @@ class TotalStrip extends StatelessWidget {
   final TotalsPeriod? period;
 
   @override
-  Widget build(BuildContext context) => Card(
-        key: const ValueKey('books-total'),
-        color: context.palette.successSurface,
-        child: Padding(
+  Widget build(BuildContext context) {
+    // ⭐ রূপ ধরে (০.৪.৬০): ABOS-এ সবুজ পট্টি (আগের মতো); Liquid Glass-এ কাচের প্যানেল ([GlassPanel], ঝাপসা দাগ থেকে);
+    // Material 3-এ বেগুনি সুরের মূল কার্ড (নমুনার উল্টো-কোনার আকার) আর মোটা চওড়া অঙ্ক
+    final look = context.look;
+    final body = _body(context, look);
+    return switch (look) {
+      AppLook.abos => Card(key: const ValueKey('books-total'), color: context.palette.successSurface, child: body),
+      AppLook.glass => KeyedSubtree(key: const ValueKey('books-total'), child: GlassPanel(radius: 22, child: body)),
+      AppLook.expressive => Card(
+          key: const ValueKey('books-total'),
+          color: Expressive.secondaryBox,
+          shape: const RoundedRectangleBorder(borderRadius: Expressive.heroShape),
+          child: body),
+    };
+  }
+
+  Widget _body(BuildContext context, AppLook look) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           // ⓘ জায়গা না হলে অঙ্ক নামের নিচে নামে — বড় লেখায় বা কোটি টাকায় কেটে যায় না, ঢেকেও যায় না
           // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এক সারিতে বাঁধা ছিল, ১৩ dp ওপারে চলে যেত।
@@ -118,8 +135,10 @@ class TotalStrip extends StatelessWidget {
                 children: [
                   Text(value,
                       semanticsLabel: Money.speakable(value),
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800)),
+                      style: look == AppLook.expressive
+                          ? Expressive.bigNumber.copyWith(fontSize: 24, color: Expressive.ink)
+                          : const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w800)),
                   if (count != null)
                     Text(context.l10n.booksTotalCount(count!),
                         style: TextStyle(color: context.palette.onSurfaceMuted)),
@@ -127,8 +146,7 @@ class TotalStrip extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      );
+        );
 }
 
 /// মোটের পট্টির নিচের এক লাইন — বাঁয়ে নাম, ডানে অঙ্ক; জায়গা না হলে অঙ্ক নিচের লাইনে ডানে নামে, ⛔ অঙ্ক মাঝখানে ভাঙে না

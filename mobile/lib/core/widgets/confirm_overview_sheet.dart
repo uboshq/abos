@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/records/money.dart';
 
 import '../locale/l10n.dart';
+import '../theme/app_look.dart';
 import '../theme/app_palette.dart';
+import '../theme/look_widgets.dart';
 import '../theme/app_spacing.dart';
 
 /// নিশ্চিতের আগে সারাংশ — সার্ভারের কেন্দ্রীয় ইঞ্জিনের ([[ConfirmOverview]]) একই আকার, নিচ থেকে ওঠা পাতায়
@@ -79,7 +81,8 @@ class ConfirmOverviewSheet extends StatelessWidget {
         'bad' || 'stop' => context.palette.danger,
         'good' => context.palette.success,
         'warn' => context.palette.warning,
-        _ => Colors.black87,
+        // ⓘ নতুন দুই রূপে থিমের লেখার রং (কাচের ঘন শিটে কালো লেখা পড়া যেত না); ABOS আগের মতো
+        _ => context.look == AppLook.abos ? Colors.black87 : Theme.of(context).colorScheme.onSurface,
       };
 
   @override

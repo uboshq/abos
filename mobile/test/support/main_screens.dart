@@ -103,8 +103,15 @@ bool appFrameAppTheme = false;
 /// ⓘ আসল ফন্টের পরীক্ষার জন্য (fe, ২২ অক্টোবর ২০২৬) — দিলে [appFrame] অ্যাপের আলোর থিম এটা দিয়ে মুড়ে পরে (যেমন realFontTheme)
 ThemeData Function(ThemeData)? appFrameFont;
 
+/// ⓘ রূপের ছবি-টেস্টের জন্য (০.৪.৬০) — দিলে [appFrame] পুরো মোড়ক এটাকে দেয় (Liquid Glass / Material 3-এর থিম আর কাচের পট);
+/// না দিলে আগের মতো
+Widget Function(Widget child)? appFrameOverride;
+
 /// [child]-কে অ্যাপের মতো মোড়ে — লেখার মাপ [textScale]।
-Widget appFrame(Widget child, {double textScale = 1}) => MaterialApp(
+Widget appFrame(Widget child, {double textScale = 1}) =>
+    appFrameOverride != null ? appFrameOverride!(child) : _appFrame(child, textScale: textScale);
+
+Widget _appFrame(Widget child, {double textScale = 1}) => MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: appFrameFont != null
           ? appFrameFont!(AppTheme.light())

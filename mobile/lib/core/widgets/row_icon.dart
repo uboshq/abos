@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_look.dart';
+import '../theme/expressive.dart';
+import '../theme/look_widgets.dart';
 
 /// ⭐ তালিকার সারির বাঁয়ের আইকন — ৪০dp গোল, হালকা পটে সেই রঙেরই গাঢ় সুর, অন্তত ৩:১ (WCAG 2.1 1.4.11; মোবাইলের নকশা ৩,
 /// পাতা ২ আর ৩)। [module] দিলে মডিউলের রং, [tone] দিলে সেই রং (যেমন আদায় সবুজ, খরচ ধূসর); কিছু না দিলে অ্যাপের মূল রং।
@@ -40,9 +43,20 @@ class RowIcon extends StatelessWidget {
     return hsl.toColor();
   }
 
+  /// ⭐ রূপের রং (০.৪.৬০): Liquid Glass-এ সেই রঙের স্বচ্ছ ছোঁয়া আর হালকা আইকন (কাচের উপর); Material 3-এ মূল-রঙের আইকন
+  /// বেগুনি সুরের পটে (মডিউল বা অবস্থার রং থাকলে আলোর রংই)। ABOS-এ [coloursOn] — আগের মতো।
+  (Color, Color) coloursFor(AppLook look, Brightness brightness) {
+    final base = module != null ? AppColors.moduleColor(module!) : (tone ?? AppColors.primary);
+    return switch (look) {
+      AppLook.glass => (base.withValues(alpha: 0.32), _lighten(base, darkPage, 6)),
+      AppLook.expressive when module == null && tone == null => (Expressive.secondaryBox, Expressive.primaryDeep),
+      _ => coloursOn(brightness),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final (bg, ink) = coloursOn(Theme.of(context).brightness);
+    final (bg, ink) = coloursFor(context.look, Theme.of(context).brightness);
     return ExcludeSemantics(
       child: Container(
         width: 40,

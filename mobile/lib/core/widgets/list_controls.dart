@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../locale/l10n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_palette.dart';
+import '../theme/look_widgets.dart';
 import '../theme/app_spacing.dart';
 
 /// ফিল্টার আর সাজানো — প্রতিটা তালিকার খোঁজ-বাক্সের নিচে একই দুটো বোতাম।
@@ -299,7 +300,7 @@ class _ChoiceLine extends StatelessWidget {
       selected: selected,
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: selected ? AppColors.primary : context.palette.onSurfaceMuted,
+        color: selected ? context.lookAccent(AppColors.primary) : context.palette.onSurfaceMuted,
       ),
       title: Text(label),
       onTap: onTap,

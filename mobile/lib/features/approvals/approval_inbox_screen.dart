@@ -10,8 +10,13 @@ import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_look.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/expressive.dart';
+import '../../core/theme/glass.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/day_part.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
@@ -510,31 +515,52 @@ class _SummaryBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final words = context.l10n;
+    final look = context.look;
     Widget box(String key, String figure, String label, {bool late = false}) => Expanded(
           child: Container(
             key: ValueKey('approvals-sum-$key'),
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             decoration: BoxDecoration(
-              color: late ? const Color(0xFFC62828) : Colors.white.withValues(alpha: 0.12), // dark-ok: on the fixed dark-blue summary band
+              // ⓘ Liquid Glass-এ দেরির ঘরও কাচ — লাল ছোঁয়া, যাতে পেছনের রং দেখা যায়
+              color: late
+                  ? (look == AppLook.glass ? const Color(0x99C62828) : const Color(0xFFC62828))
+                  : Colors.white.withValues(alpha: 0.12), // dark-ok: on the fixed dark-blue summary band
               border: Border.all(color: late ? const Color(0xFFEF5350) : Colors.white.withValues(alpha: 0.22)), // dark-ok: on the fixed dark-blue summary band
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(look == AppLook.abos ? 12 : 18),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(figure,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)), // dark-ok: white on the fixed dark-blue band
+                  // ⭐ Material 3-এ মোটা চওড়া অঙ্ক ([Expressive.bigNumber])
+                  style: look == AppLook.expressive
+                      ? Expressive.bigNumber.copyWith(color: Colors.white, fontSize: 19) // dark-ok: white on the purple band
+                      : const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)), // dark-ok: white on the fixed dark-blue band
               Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11.5)), // dark-ok: white on the fixed dark-blue band
             ]),
           ),
         );
 
+    // ⭐ রূপ ধরে (০.৪.৬০): ABOS-এ নমুনার গাঢ় নীল পট্টি (আগের মতো); Liquid Glass-এ পট্টি নেই — ঘরগুলো সরাসরি কাচের পটের উপর,
+    // খোঁজার ঘরও কাচ; Material 3-এ বেগুনি পট্টি, নিচের কোনা বড় গোল, খোঁজার ঘর ক্যাপসুল
+    final decoration = switch (look) {
+      AppLook.abos => const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF0F2B4C), Color(0xFF164A7A)]),
+        ),
+      AppLook.glass => const BoxDecoration(),
+      AppLook.expressive => const BoxDecoration(
+          gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Expressive.primary, Expressive.primaryDeep]),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+        ),
+    };
+    final glass = look == AppLook.glass;
+    final fieldInk = glass ? Colors.white : const Color(0xFF142130); // dark-ok: fixed ink on the fixed field
+    final fieldHint = glass ? AppTheme.glassMuted : const Color(0xFF5F6F80);
     return Container(
       key: const ValueKey('approvals-summary-band'),
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF0F2B4C), Color(0xFF164A7A)]),
-      ),
+      decoration: decoration,
       child: Column(children: [
         Row(children: [
           box('waiting', '${page.allCount}', words.approvalsSumWaiting),
@@ -550,15 +576,23 @@ class _SummaryBand extends StatelessWidget {
           onChanged: onTyped,
           onSubmitted: onTyped,
           textInputAction: TextInputAction.search,
-          style: const TextStyle(color: Color(0xFF142130), fontSize: 14),
+          style: TextStyle(color: fieldInk, fontSize: 14),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white, // dark-ok: a white field with fixed dark text, as the sample, in both modes
-            prefixIcon: const Icon(Icons.search, color: Color(0xFF5F6F80), size: 20),
+            // dark-ok: a white field with fixed dark text, as the sample, in both modes (glass: the theme's glass field)
+            fillColor: glass ? Colors.white.withValues(alpha: 0.06 + GlassSpec.current.fill / 2) : Colors.white, // dark-ok: fixed white field (glass: glass field)
+            prefixIcon: Icon(Icons.search, color: fieldHint, size: 20),
             hintText: words.approvalsSearchHint,
-            hintStyle: const TextStyle(color: Color(0xFF5F6F80), fontSize: 13.5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            hintStyle: TextStyle(color: fieldHint, fontSize: 13.5),
+            enabledBorder: glass
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: GlassSpec.current.edge))) // dark-ok: glass edge
+                : null,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(switch (look) { AppLook.abos => 12, AppLook.glass => 16, AppLook.expressive => 28 }),
+                borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
         ),
@@ -582,6 +616,7 @@ class _Chips extends StatelessWidget {
   Widget build(BuildContext context) {
     final words = context.l10n;
     final palette = context.palette;
+    final glass = context.look == AppLook.glass;
 
     Widget chip(Key key, String label, bool on, VoidCallback onTap, {Color? dot, Color? ink}) => Padding(
           padding: const EdgeInsets.only(right: 6),
@@ -604,7 +639,12 @@ class _Chips extends StatelessWidget {
                     Container(width: 9, height: 9, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
                     const SizedBox(width: 6),
                   ],
-                  Text(label, style: TextStyle(fontSize: 13, color: on ? palette.surface : (ink ?? palette.onSurface))),
+                  // ⓘ Liquid Glass-এ পট স্বচ্ছ — বাছা চিপের সাদা পটে লেখা কাচের পটের গাঢ় রঙে
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 13,
+                          shadows: const [],
+                          color: on ? (glass ? GlassBackdrop.ground : palette.surface) : (ink ?? palette.onSurface))),
                 ]),
               ),
             ),

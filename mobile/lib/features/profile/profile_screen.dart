@@ -18,8 +18,10 @@ import '../../core/profile/face_picker.dart';
 import '../../core/profile/profile_api.dart';
 import '../../core/profile/square_face.dart';
 import '../../core/router/profile_routes.dart';
+import '../../core/theme/app_look.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/look_widgets.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/locale/app_locale.dart';
 
@@ -203,6 +205,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final features = ref.watch(meFeaturesProvider) ?? MeFeatures.none;
     final percent = ((_progress ?? 0) * 100).round();
 
+    final look = context.look;
+    final tiles = <Widget>[
+      ListTile(
+        key: const ValueKey('profile-look'),
+        minVerticalPadding: 12,
+        leading: const Icon(Symbols.palette),
+        title: Text(context.l10n.lookTitle),
+        subtitle: Text(context.l10n.lookProfileSubtitle),
+        trailing: const Icon(Symbols.chevron_right),
+        onTap: () => LookScreen.open(context),
+      ),
+      if (features.myPhones)
+        ListTile(
+          key: const ValueKey('profile-phones'),
+          minVerticalPadding: 12,
+          leading: const Icon(Symbols.devices),
+          title: Text(context.l10n.profilePhonesTitle),
+          subtitle: Text(context.l10n.profilePhonesSubtitle),
+          trailing: const Icon(Symbols.chevron_right),
+          onTap: _openPhones,
+        ),
+      // ⭐ অফিসের SMS ফোন — কেবল যাঁর হাতে চাবি (আজ মালিক); বাকি সবার প্রোফাইলে সারিটাই নেই
+      // ⛔ play বিল্ডে কখনো নয় ([[ProfileRoutes.smsGatewayInThisBuild]])
+      if (ProfileRoutes.smsGatewayInThisBuild && (user?.can('notification.sms_gateway') ?? false))
+        ListTile(
+          key: const ValueKey('profile-sms-gateway'),
+          minVerticalPadding: 12,
+          leading: const Icon(Symbols.sms),
+          title: Text(context.l10n.smsGatewayTitle),
+          subtitle: Text(context.l10n.smsGatewaySubtitle),
+          trailing: const Icon(Symbols.chevron_right),
+          onTap: () => GoRouter.maybeOf(context)?.push('/home/${ProfileRoutes.smsGateway}'),
+        ),
+    ];
+
     return Scaffold(
       // ⓘ ছবি বদল না থাকলে নামেও তার প্রতিশ্রুতি নয়
       appBar: AbosScreenBar(
@@ -290,41 +327,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
           // ⭐ চেহারা — ABOS · Liquid Glass · Material 3, আর কাচের ঝাপসা (0.4.58; মালিক, ২০ নভেম্বর ২০২৬ "ok")
-          const Divider(height: AppSpacing.lg),
-          ListTile(
-            key: const ValueKey('profile-look'),
-            minVerticalPadding: 12,
-            leading: const Icon(Symbols.palette),
-            title: Text(context.l10n.lookTitle),
-            subtitle: Text(context.l10n.lookProfileSubtitle),
-            trailing: const Icon(Symbols.chevron_right),
-            onTap: () => LookScreen.open(context),
-          ),
-          if (features.myPhones) ...[
-            const Divider(height: AppSpacing.lg),
-            ListTile(
-              key: const ValueKey('profile-phones'),
-              minVerticalPadding: 12,
-              leading: const Icon(Symbols.devices),
-              title: Text(context.l10n.profilePhonesTitle),
-              subtitle: Text(context.l10n.profilePhonesSubtitle),
-              trailing: const Icon(Symbols.chevron_right),
-              onTap: _openPhones,
-            ),
-          ],
-          // ⭐ অফিসের SMS ফোন — কেবল যাঁর হাতে চাবি (আজ মালিক); বাকি সবার প্রোফাইলে সারিটাই নেই
-          // ⛔ play বিল্ডে কখনো নয় ([[ProfileRoutes.smsGatewayInThisBuild]])
-          if (ProfileRoutes.smsGatewayInThisBuild && (user?.can('notification.sms_gateway') ?? false)) ...[
-            const Divider(height: AppSpacing.lg),
-            ListTile(
-              key: const ValueKey('profile-sms-gateway'),
-              minVerticalPadding: 12,
-              leading: const Icon(Symbols.sms),
-              title: Text(context.l10n.smsGatewayTitle),
-              subtitle: Text(context.l10n.smsGatewaySubtitle),
-              trailing: const Icon(Symbols.chevron_right),
-              onTap: () => GoRouter.maybeOf(context)?.push('/home/${ProfileRoutes.smsGateway}'),
-            ),
+          // ⭐ ০.৪.৬০ — ABOS-এ সারিগুলো আগের মতো রেখায় ভাগ; নতুন দুই রূপে এক দলে ([LookGroup]: কাচের প্যানেল / জোড়া কার্ড)
+          if (look == AppLook.abos)
+            for (final tile in tiles) ...[const Divider(height: AppSpacing.lg), tile]
+          else ...[
+            const SizedBox(height: AppSpacing.sm),
+            LookGroup(children: [for (final tile in tiles) look == AppLook.expressive ? Card(child: tile) : tile]),
           ],
         ],
       ),
