@@ -189,7 +189,8 @@ final class DirectPurchaseService
              * সব ভুলে পুরো লেনদেন ফেরে। ছক না থাকলে আগের মতোই সোজা নিশ্চিত।
              */
             try {
-                $bill = $this->bills->confirm($bill);
+                // ⛔ বাকির দেয়াল এখনই-দেওয়া টাকা বাদ দিয়ে মাপে — নগদে কেনা সীমা পেরোনো সরবরাহকারীর কাছেও চলে (১৮ নভেম্বর ২০২৬)
+                $bill = $this->bills->confirm($bill, self::payingNowOf($data));
             } catch (HeldForApproval $e) {
                 $held = $e;
 
@@ -226,6 +227,57 @@ final class DirectPurchaseService
         }
 
         return $result;
+    }
+
+    /**
+     * ⭐ পর্দায় এখনই দেওয়া টাকার যোগ — [[payNow()]]-এর একই সারি-নিয়ম (`deposits` জেতে, নইলে পুরনো একক ঘর); বাকির দেয়ালের জন্য
+     * ([[SupplierCreditWall]], ১৮ নভেম্বর ২০২৬)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function payingNowOf(array $data): string
+    {
+        $rows = filled($data['deposits'] ?? null)
+            ? (array) $data['deposits']
+            : [['amount' => $data['paid_now'] ?? '0']];
+
+        $sum = '0';
+
+        foreach ($rows as $row) {
+            $amount = (string) ($row['amount'] ?? '0');
+
+            if (is_numeric($amount) && bccomp($amount, '0', 4) > 0) {
+                $sum = bcadd($sum, $amount, 4);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
+     * ⭐ সইয়ের জন্য থামা সরাসরি ক্রয়ের পর্দায় দেওয়া টাকা — শেষ সইয়ের পরে বিল পাকা হওয়ার দিন দেয়াল এটা বাদ দিয়ে মাপে।
+     * ⓘ সারিতে না থাকলে (সাধারণ বিল) `'0'`।
+     */
+    public function paidOnTheScreen(PurchaseBill $bill): string
+    {
+        if ($bill->id === null) {
+            return '0';
+        }
+
+        $asked = Approval::query()
+            ->where('approvable_type', $bill::class)
+            ->where('approvable_id', $bill->id)
+            ->where('action', 'bill')
+            ->whereNotNull('payload')
+            ->orderBy('id')
+            ->get()
+            ->first(fn (Approval $a) => isset(((array) $a->payload)[self::HELD_DIRECT]) && ! isset(((array) $a->payload)[self::HELD_DIRECT]['done_at']));
+
+        if ($asked === null) {
+            return '0';
+        }
+
+        return self::payingNowOf(['deposits' => (array) (((array) $asked->payload)[self::HELD_DIRECT]['pay_now'] ?? [])]);
     }
 
     /** সইয়ের সারিতে চিহ্ন — এটা সরাসরি ক্রয়, শেষ সইয়ে বাকিটা ([[finishAfterTheSignature()]]) */

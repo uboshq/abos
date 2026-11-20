@@ -68,7 +68,8 @@
     {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
          "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
     {{-- ⓘ `?bank=1` — অনুমোদনের বাক্স আর ঘণ্টার খবর থেকে এলে পপ-আপটা ব্যাংক কার্ডসহ খোলা ([[SupplierBank::cardUrl()]]) --}}
-    <div x-data="{ open: {{ request()->boolean('bank') ? 'true' : 'false' }} }" @party-eye.window="open = true" @keydown.escape.window="open = false">
+    {{-- ⓘ সীমার অনুরোধ ফিরে এলে (ভুলসহ) পপ-আপ খোলা — ঘরের নিচের কারণ যেন দেখা যায় (১৮ নভেম্বর ২০২৬) --}}
+    <div x-data="{ open: {{ request()->boolean('bank') || $errors->hasAny(['amount', 'reason']) ? 'true' : 'false' }} }" @party-eye.window="open = true" @keydown.escape.window="open = false">
     <div x-show="open" x-cloak @click.self="open = false" data-party-details
          class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
     <div class="w-full max-w-5xl rounded-(--radius-card) bg-(--color-surface-app) p-4 shadow-lg">
@@ -111,21 +112,51 @@
                 </p>
             @endif
 
-            @if (bccomp((string) $supplier->credit_limit, '0', 4) > 0)
-                <p class="mt-2 text-2xs text-(--color-ink-muted)">
-                    {{ __('supplier::field.credit_limit') }}:
-                    <span class="num">{{ \App\Core\Support\Money::format($supplier->credit_limit) }}</span>
-                </p>
-
-                @if ($supplier->isOverTheirLimit())
-                    {{-- সতর্কতা, বাধা নয়: সীমাটা তাদের সিদ্ধান্ত। কিন্তু
-                         পরের চালান আটকে গেলে ক্রয়কারীর আগে থেকে জানা
-                         দরকার, বিলের দিনে নয়। --}}
-                    <p class="mt-2 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-2 py-1
-                              text-2xs text-(--color-badge-pending-ink)">
-                        {{ __('supplier::message.over_limit') }}
-                    </p>
+            {{-- ⭐ বাকির দেয়াল — সীমা · সীমায় গোনা বাকি · অবশিষ্ট (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierCreditWall]])।
+                 ⓘ সীমা পেরোলে নতুন বিল বা মাল গ্রহণ নিশ্চিত হয় না; ০/ফাঁকা সীমা = দেয়াল নেই। অঙ্ক গোটা কোম্পানির — দেয়াল যা দেখে। --}}
+            <div class="mt-2 space-y-1 text-2xs text-(--color-ink-muted)" data-credit-wall>
+                @if ($creditState === null)
+                    <p>{{ __('supplier::credit_request.no_limit') }}</p>
+                @else
+                    <p>{{ __('supplier::credit_request.limit') }}: <span class="num">{{ \App\Core\Support\Money::format($supplier->credit_limit) }}</span></p>
+                    <p>{{ __('supplier::credit_request.used') }}: <span class="num">{{ \App\Core\Support\Money::format($creditUsed) }}</span></p>
+                    <p>{{ __('supplier::credit_request.room') }}: <span class="num" data-credit-room>{{ \App\Core\Support\Money::format($creditRoom) }}</span></p>
                 @endif
+            </div>
+
+            @if (in_array($creditState, ['over', 'near'], true))
+                <p class="mt-2 rounded-(--radius-field) px-2 py-1 text-2xs
+                          {{ $creditState === 'over' ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)' : 'bg-(--color-badge-pending-bg) text-(--color-badge-pending-ink)' }}"
+                   data-credit-state="{{ $creditState }}">
+                    {{ __('supplier::credit_request.'.$creditState) }}
+                </p>
+            @endif
+
+            {{-- ⭐ সীমা বাড়ানোর অনুরোধ — অনুমোদনে যায়, শেষ অনুমোদনে নিজে বসে ([[SupplierLimitRequests]]) --}}
+            @can('supplier.update')
+                <form method="POST" action="{{ route('supplier.limit_request.store', $supplier->id) }}"
+                      class="mt-3 space-y-2 border-t border-(--color-border) pt-3" data-limit-request>
+                    @csrf
+                    <p class="text-xs font-medium">{{ __('supplier::credit_request.ask') }}</p>
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal" numeric
+                                :label="__('supplier::credit_request.amount')" :value="old('amount')" required />
+                    <x-ui.field name="reason" :label="__('supplier::credit_request.reason')" :value="old('reason')" maxlength="500" required />
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('supplier::credit_request.ask_hint') }}</p>
+                    <x-ui.button type="submit" tone="secondary">{{ __('supplier::credit_request.ask') }}</x-ui.button>
+                </form>
+            @endcan
+
+            @if ($limitRequests->isNotEmpty())
+                <div class="mt-3 border-t border-(--color-border) pt-2 text-2xs" data-limit-requests>
+                    <p class="font-medium text-(--color-ink-muted)">{{ __('supplier::credit_request.history') }}</p>
+                    @foreach ($limitRequests as $row)
+                        <p class="mt-1">
+                            <span class="num">{{ \App\Core\Support\Money::format($row->current_limit) }} → {{ \App\Core\Support\Money::format($row->requested_limit) }}</span>
+                            · {{ __('supplier::credit_request.status_'.$row->shownStatus()) }}
+                            · {{ \App\Core\Support\DateFormat::format($row->created_at) }}
+                        </p>
+                    @endforeach
+                </div>
             @endif
 
             @if ($supplier->paymentTerm || $supplier->credit_days > 0)

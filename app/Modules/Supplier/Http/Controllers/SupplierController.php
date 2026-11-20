@@ -126,6 +126,14 @@ class SupplierController extends Controller implements HasMiddleware
             // ⭐ বিল-না-আসা মাল — দেনার পাশে আলাদা ঘরে (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
             ->withGoodsNotBilledInView();
 
+        /*
+         * ⭐ বাকির দেয়ালের তিন ঘর — সীমা · সীমায় গোনা বাকি · অবশিষ্ট, আর "সীমা পেরোনো / সীমার কাছে" ছাঁকনি (মালিক, ১৮ নভেম্বর ২০২৬)।
+         * ⓘ বাকির অঙ্ক গোটা কোম্পানির — দেয়াল যা দেখে ([[SupplierCreditWall]]), শাখার ছাঁকনিতে নয়।
+         */
+        $credit = in_array($request->query('credit'), ['over', 'near', 'over_or_near'], true) ? (string) $request->query('credit') : null;
+        \App\Modules\Supplier\Services\SupplierCreditWall::withUsed($query);
+        \App\Modules\Supplier\Services\SupplierCreditWall::narrow($query, $credit);
+
         $sort = $this->applySort($query, $request, $this->sorts());
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
@@ -142,6 +150,7 @@ class SupplierController extends Controller implements HasMiddleware
             'grand' => $grand,
             'q' => $request->query('q'),
             'showInactive' => $request->boolean('inactive'),
+            'credit' => $credit,
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
 
@@ -263,7 +272,31 @@ class SupplierController extends Controller implements HasMiddleware
             'entries' => $entries,
             // ⭐ ব্যাংক তথ্য — দুই হাতে (নকশা দফা #৬; [[SupplierBank]])
             ...$this->bankCard($supplier, $request),
+            // ⭐ বাকির দেয়াল — সীমা, সীমায় গোনা বাকি, অবশিষ্ট, আর সীমা বাড়ানোর অনুরোধ (মালিক, ১৮ নভেম্বর ২০২৬)
+            ...$this->creditCard($supplier),
         ]);
+    }
+
+    /**
+     * বাকির কার্ডের তথ্য — দেয়াল যা দেখে ঠিক সেই অঙ্ক ([[SupplierCreditWall]]), আর শেষ পাঁচটা সীমার অনুরোধ।
+     *
+     * @return array<string, mixed>
+     */
+    private function creditCard(Supplier $supplier): array
+    {
+        $wall = app(\App\Modules\Supplier\Services\SupplierCreditWall::class);
+
+        return [
+            'creditUsed' => $wall->used($supplier),
+            'creditRoom' => $wall->room($supplier),
+            'creditState' => $wall->state($supplier),
+            'limitRequests' => \App\Modules\Supplier\Models\SupplierCreditRequest::query()
+                ->where('supplier_id', $supplier->id)
+                ->with(['approval', 'requester'])
+                ->latest('id')
+                ->limit(5)
+                ->get(),
+        ];
     }
 
     /**
