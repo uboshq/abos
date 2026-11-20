@@ -181,10 +181,17 @@ final class CollectionAppContractTest extends TestCase
 
         foreach ($payloads as $shape => $extra) {
             if ($shape === 'closed month') {
+                /*
+                 * ⓘ মাস বন্ধ করাটা পরীক্ষার নিজের লেখা — তালাটা নিরীক্ষায় একটা সারি বসায় (PeriodLock নিরীক্ষিত)। তাই আগের সব
+                 *   আকার কিছু লেখেনি সেটা এখানেই মেপে, তালার পরে গোনা নতুন করে ধরা; বন্ধ মাসের আকারটা মাপা হয় শেষের দাবিতে।
+                 *   (Mac run of e88be43a3: audit_trails 954 → 955 ছিল এই তালার নিজের সারি, ফোনের নয়।)
+                 */
+                $this->assertSame($before, $this->rows(), '⛔ বন্ধ মাসের আগের আকারগুলো কিছু লিখল');
                 PeriodLock::query()->create([
                     'company_id' => $this->company->id, 'year' => (int) now()->year, 'month' => (int) now()->month,
                     'reason' => 'মাস শেষ', 'locked_by' => $this->owner->id, 'locked_at' => now(),
                 ]);
+                $before = $this->rows();
             }
 
             $payload = $this->payload([...$extra, 'confirm' => true]);

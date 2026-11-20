@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
-use App\Core\Navigation\MenuBuilder;
+// ⓘ MenuBuilder থাকে Core\Services-এ — আগের আমদানির ঠিকানা ভুল ছিল (Mac run of e88be43a3: "Target class does not exist")
+use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -77,7 +78,8 @@ final class MoneyIsTakenOnTheReceiptVoucherTest extends TestCase
         app(\App\Modules\Accounts\Services\StandardChart::class)->install();
         $collection = app(\App\Modules\Sales\Services\CollectionService::class)->create(
             ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'), 'trx_date' => now()->toDateString(), 'amount' => '4000',
-                'account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::CASH_IN_HAND)->id],
+                // ⓘ ১১০১ "হাতে নগদ" একটা দল (টিলগুলো তার নিচে) — দলে টাকা বসে না, সেবা ঠিকই ফেরায়; তাই প্রধান টিলের খাত, কাউন্টারের নিজের পথ (Mac run of e88be43a3)
+                'account_id' => app(\App\Modules\Accounts\Services\CashTillService::class)->ensurePrimaryTill()->account_id],
             [],
         );
 
@@ -101,7 +103,8 @@ final class MoneyIsTakenOnTheReceiptVoucherTest extends TestCase
         app(\App\Modules\Accounts\Services\StandardChart::class)->install();
         $make = fn () => app(\App\Modules\Sales\Services\CollectionService::class)->create(
             ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'), 'trx_date' => now()->toDateString(), 'amount' => '4000',
-                'account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::CASH_IN_HAND)->id],
+                // ⓘ ১১০১ "হাতে নগদ" একটা দল (টিলগুলো তার নিচে) — দলে টাকা বসে না, সেবা ঠিকই ফেরায়; তাই প্রধান টিলের খাত, কাউন্টারের নিজের পথ (Mac run of e88be43a3)
+                'account_id' => app(\App\Modules\Accounts\Services\CashTillService::class)->ensurePrimaryTill()->account_id],
             [],
         );
         $decide = fn (\App\Modules\Sales\Models\Collection $c, string $status) => event(new \App\Core\Events\ApprovalDecided(

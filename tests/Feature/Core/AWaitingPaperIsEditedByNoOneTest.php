@@ -135,6 +135,8 @@ final class AWaitingPaperIsEditedByNoOneTest extends TestCase
         Approval::query()->create([
             'company_id' => $this->company->id, 'approvable_type' => $customer->getMorphClass(), 'approvable_id' => $customer->id,
             'module' => 'customer', 'action' => 'credit_limit', 'status' => Approval::PENDING, 'requested_by' => $this->writer->id,
+            // ⓘ ঘরটায় ডিফল্ট নেই (সই ইঞ্জিন নিজে বসায়) — হাতে বানানো অনুরোধে দিতেই হয় (Mac run of e88be43a3: 1364)
+            'requested_at' => now(),
         ]);
 
         $this->assertFalse(app(WaitingPaper::class)->waits($customer), '⛔ গ্রাহকের একটা ঘরের অনুরোধে গোটা গ্রাহক তালাবদ্ধ।');

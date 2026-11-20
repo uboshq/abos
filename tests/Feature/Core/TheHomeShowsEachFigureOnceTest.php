@@ -64,8 +64,10 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         // ⭐ ১৯ নভেম্বর ২০২৬ (মালিকের অনুমোদিত নমুনা, "ABOS"): হোমের মাথায় বোর্ডের ৮টা ঘর ([[HomeBoard]]) — বিক্রি আর আদায় সেখানে,
         //    তাই মডিউলের বিক্রি/আদায়ের ঘর আর নয় (একই ঠিকানা, একই সংখ্যা দুইবার নয়)। বকেয়া আর মজুদ বোর্ডের তৃতীয় আর ষষ্ঠ ঘরে, মডিউলের
         //    নিজের ঘর হয়েই (একই উৎস, একই চাবি); মডিউলের বাকি সূচক "আরও সূচক"-এ।
+        // ⓘ 6b0c4ecf0 (১.৩.৭, ২০ নভেম্বর ২০২৬ — "বোর্ড যা বদলায় তার নাম বা পয়সাসহ অঙ্ক হারায় না"): বোর্ডের বিক্রির জায়গায় এখন বিক্রয় মডিউলের নিজের "নিট বিক্রি" ঘর (`data-home-sales`) — বকেয়া আর মজুদের একই নিয়ম; বোর্ডের তুলনা (▲/▼ আর "গত মাসের একই দিন পর্যন্ত") সেই ঘরেই; বোর্ডের নিজের বিক্রির ঘর তাই আর নয় — একই সংখ্যা দুইবার নয়।
         $kpis = $this->kpis($page);
         $this->assertSame([
+            __('sales::dashboard.sales_today'),
             __('customer::dashboard.kpi_owed'),
             __('inventory::overview.stock_value'),
             __('purchase::widget.margin_this_month'),
@@ -74,8 +76,9 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
             __('approval::dashboard.waiting_for_me'),
         ], array_keys($kpis), '⛔ মূল সূচকের ঘর বা ক্রম মালিকের নমুনা মতো নয়।');
         $board = $this->boardTiles($page);
-        $this->assertSame(['sales', 'collection', 'over_90', 'profit', 'active_shops', 'bills'], array_keys($board),
-            '⛔ বোর্ডের ঘর নমুনার ক্রমে নয় (বকেয়া আর মজুদ মডিউলের নিজের ঘর হয়ে তাদের জায়গায়)।');
+        $this->assertSame(['collection', 'over_90', 'profit', 'active_shops', 'bills'], array_keys($board),
+            '⛔ বোর্ডের ঘর নমুনার ক্রমে নয় (বিক্রি, বকেয়া আর মজুদ মডিউলের নিজের ঘর হয়ে তাদের জায়গায়)।');
+        $this->assertSame(1, $page->query('//*[@data-home-sales]')->length, '⛔ বিক্রির জায়গায় মডিউলের "নিট বিক্রি" ঘর নেই, বা দুইবার।');
 
         $owedTile = $page->query('//*[@data-home-owed]');
         $this->assertSame(1, $owedTile->length, '⛔ "বাজারে বকেয়া" সূচক-কার্ডে নেই, বা দুইবার।');
@@ -98,9 +101,9 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         $this->assertSame([], array_values(array_diff_assoc($names, array_unique($names))), '⛔ একই জিনিস দুইবার: '.implode(', ', $names));
 
         // ── আসল খাতা আর মজুদের সাথে মেলা ──
-        // ⓘ বোর্ডের বিক্রি নিট (VAT আর ফেরত বাদে, [[SalesMetrics::net()]] — মালিকের কেন্দ্রের একই সংখ্যা), পূর্ণ টাকায়
+        // ⓘ বিক্রি নিট (VAT আর ফেরত বাদে, [[SalesMetrics::net()]] — মালিকের কেন্দ্রের একই সংখ্যা), মডিউলের ঘরে পয়সাসহ
         $today = Carbon::today()->toDateString();
-        $this->assertSame('৳'.Money::format(SalesMetrics::net($today, $today), 0), $board['sales']['value'],
+        $this->assertSame(Money::format(SalesMetrics::net($today, $today)), $kpis[__('sales::dashboard.sales_today')],
             '⛔ আজকের বিক্রি বিলের খাতার সাথে মেলে না।');
         $this->assertSame(1, bccomp(SalesMetrics::net($today, $today), '0', 4), 'বিক্রি ওঠেনি — দাবির ভিত নেই।');
 
@@ -123,9 +126,10 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
 
         // ── সময় বদলালে প্রবাহ বদলায়, জের নয় ──
         $monthPage = $this->xpath($this->get(route('dashboard', ['period' => 'month']))->assertOk()->getContent());
-        $month = $this->boardTiles($monthPage);
         $from = Carbon::today()->startOfMonth()->toDateString();
-        $this->assertSame('৳'.Money::format(SalesMetrics::net($from, $today), 0), $month['sales']['value'] ?? null,
+        // ⓘ মাস বাছলেও বিক্রির জায়গায় সেই মডিউলের ঘর, মাসের নামে — বোর্ডের ঘরে ফিরে যায় না
+        $this->assertSame(0, $monthPage->query('//*[@data-board-tile="sales"]')->length, '⛔ "এই মাস"-এ বিক্রির ঘর আবার বোর্ডের — সময় বদলালে ঘরের ধরন বদলাল।');
+        $this->assertSame(Money::format(SalesMetrics::net($from, $today)), $this->kpis($monthPage)[__('sales::dashboard.sales_this_month')] ?? null,
             '⛔ "এই মাস" বাছলে বিক্রির ঘর মাসের মোট নয়।');
         $this->assertSame($stockValue, $this->stockTile($monthPage), '⛔ সময় বদলালে মজুদের জের বদলেছে।');
     }

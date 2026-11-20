@@ -123,7 +123,13 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $this->assertTrue($voucher->fresh()->isDraft(), '⛔ সই ছাড়া ফোনের পাকা করার দরজায় পাকা হলো।');
     }
 
-    /** ⭐ এক পথ — ওয়েবে সম্পাদনা করে "সংরক্ষণ ও পোস্ট" করলেও সই ঝুলে থাকা ভাউচার খসড়াই থাকে ([[VoucherWriter::update()]]) */
+    /**
+     * ⭐ এক পথ — ফোনে লেখা সই ঝুলে থাকা ভাউচার ওয়েবেও সইয়ের অপেক্ষাতেই থাকে।
+     *
+     * ⛔ মালিক, ২০ নভেম্বর ২০২৬ (চূড়ান্ত, maker-checker): সইয়ের অপেক্ষার কাগজ কেউ বদলান না — লেখকও না; সইকারী সই দেন, সংশোধনে
+     *   ফেরত পাঠান, বা না বলেন ([[WaitingPaper]], [[AWaitingPaperIsNotEdited]])। আগে এখানে দাবি ছিল লেখক ওয়েবে বদলালে খসড়াই থাকে
+     *   আর নতুন লেখা বসে; এখন বদলটাই ফেরে, কারণসহ — কাগজ অবিকল আগের মতো, খসড়া, সইয়ের অপেক্ষায়।
+     */
     public function test_editing_a_held_voucher_on_the_web_still_waits_for_the_signature(): void
     {
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
@@ -137,9 +143,15 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
 
         $this->app['auth']->forgetGuards();
         $this->actingAs($writer->fresh());
-        $this->put(route('accounts.voucher.update', $voucher), [...$this->journal(), 'narration' => 'আবার লেখা'])->assertSessionHasNoErrors();
+        $before = $voucher->fresh()->narration;
+        $this->put(route('accounts.voucher.update', $voucher), [...$this->journal(), 'narration' => 'আবার লেখা'])
+            ->assertRedirect(route('accounts.voucher.show', $voucher))
+            ->assertSessionHas(\App\Core\Services\FormBranchPin::OFFER, ['message' => __('core.approval_hold.refused')]);
         $this->assertTrue($voucher->fresh()->isDraft(), '⛔ সম্পাদনা করে সংরক্ষণেই সই এড়িয়ে পাকা হলো।');
-        $this->assertSame('আবার লেখা', $voucher->fresh()->narration);
+        $this->assertNotSame('আবার লেখা', $before, 'প্রস্তুতিটাই ভুল — নতুন লেখা আগের লেখার মতোই।');
+        $this->assertSame($before, $voucher->fresh()->narration, '⛔ সইয়ের অপেক্ষার ভাউচার ওয়েবে বদলে গেল।');
+        $this->assertSame('awaiting', $this->phone($writer)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->json('state'),
+            '⛔ ফেরানো সম্পাদনার পরে ভাউচার আর সইয়ের অপেক্ষায় নেই।');
     }
 
     /** ওয়েবের অনুরোধের নিয়ম — প্রতিটা খারাপ সারি একা ফেরে, ভালোটা বসে */

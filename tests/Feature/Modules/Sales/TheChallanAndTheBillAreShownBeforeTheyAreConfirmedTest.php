@@ -163,10 +163,14 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
             ->assertSee('data-overview-blocks="1"', false)
             ->assertSee(__('accounts::validation.cheque_only_through_register'));
 
+        /*
+         * ⛔ মালিক, ২০ নভেম্বর ২০২৬ ("টাকা ঢোকার কাগজ একটাই" — রসিদ ভাউচার): আদায়ের পাতায় আর "নিশ্চিত" নেই — ওয়েব থেকে আদায়
+         *   লেখা, বদলানো বা পাকা করা বন্ধ (dc0d02669)। আগে এখানে দাবি ছিল পাতায় নিশ্চিতের পপ-আপ বসানো; এখন উল্টো — দরজাটাই নেই।
+         *   সারাংশ (উপরে) পুরনো খসড়া পড়ার জন্য আগের মতোই উত্তর দেয়, কিছু লেখে না।
+         */
         $this->get(route('sales.collection.show', $collection))->assertOk()
-            ->assertSee('data-confirm-overview="'.route('sales.collection.overview', $collection).'"', false)
-            ->assertSee('data-confirm-overview-dialog', false)
-            ->assertSee('data-overview-trigger', false);
+            ->assertDontSee('data-confirm-overview="'.route('sales.collection.overview', $collection).'"', false)
+            ->assertDontSee('action="'.route('sales.collection.confirm', $collection).'"', false);
     }
 
     /**

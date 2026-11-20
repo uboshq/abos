@@ -190,7 +190,8 @@ final class AllBranchesViewIsReadOnlyTest extends TestCase
     {
         $this->as($this->clerk, 'all');
 
-        foreach ([route('accounts.voucher.index'), $this->voucherForm(), route('dashboard')] as $url) {
+        // ⓘ ভাউচারের তালিকার ঠিকানায় ধরন লাগে (vouchers/{type}) — ফর্মের একই ধরন, জাবেদা (Mac run of e88be43a3: UrlGenerationException)
+        foreach ([route('accounts.voucher.index', 'journal'), $this->voucherForm(), route('dashboard')] as $url) {
             $html = (string) $this->get($url)->assertOk()->getContent();
             $this->assertStringContainsString('data-all-branches-view', $html, "⛔ \"সব শাখা\"-র চিহ্ন নেই: {$url}");
             // ⛔ ফিতা নয় — মালিকের নিয়ম, ১৮–১৯ নভেম্বর ২০২৬ (পাতায় কোনো ফিতা নয়); ধূসর বোতামের কারণ-লেখাই যথেষ্ট
@@ -201,7 +202,7 @@ final class AllBranchesViewIsReadOnlyTest extends TestCase
 
         $this->as($this->clerk, $this->opened->id);
 
-        $list = (string) $this->get(route('accounts.voucher.index'))->assertOk()->getContent();
+        $list = (string) $this->get(route('accounts.voucher.index', 'journal'))->assertOk()->getContent();
         $this->assertStringNotContainsString('data-all-branches-view', $list, '⛔ একটা শাখা বাছার পরেও "সব শাখা"-র চিহ্ন।');
         $this->assertStringNotContainsString('data-all-branches-banner', $list);
         $this->assertStringNotContainsString('data-writing-branch', $list, '⛔ তালিকায় "লিখছেন" লাইন — কেবল ফর্মে।');
