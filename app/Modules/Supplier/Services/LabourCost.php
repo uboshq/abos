@@ -173,6 +173,16 @@ final class LabourCost
             throw ValidationException::withMessages([$prefix.'contractor_id' => __('supplier::labour.needs_contractor')]);
         }
 
+        /*
+         * ⛔ কেবল "হাম্মালি ঠিকাদার" ধরনের সরবরাহকারী — পর্দা যা দেখায়, সার্ভারও তাই মানে (সমন্বয়ক, ২০ নভেম্বর ২০২৬)। ⓘ নইলে মালের
+         * সরবরাহকারী বা পরিবহনকারীর নামে ২১১৭-এ দেনা বসত, আর প্রদেয় হাম্মালির তালিকায় ভুল মানুষ। ওয়েব, ফোনের মাল গ্রহণ আর ফোনের
+         * কাউন্টার — সবাই এই এক দরজা দিয়ে আসে।
+         */
+        if (! Supplier::query()->whereKey($contractorId)
+            ->whereHas('partyType', fn ($q) => $q->where('code', self::CONTRACTOR_TYPE))->exists()) {
+            throw ValidationException::withMessages([$prefix.'contractor_id' => __('supplier::labour.not_a_contractor')]);
+        }
+
         $out[$prefix.'contractor_id'] = $contractorId;
 
         return $out;

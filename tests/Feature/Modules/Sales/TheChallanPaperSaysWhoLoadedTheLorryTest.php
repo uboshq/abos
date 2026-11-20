@@ -52,8 +52,9 @@ final class TheChallanPaperSaysWhoLoadedTheLorryTest extends TestCase
         $challan = $this->confirmed(['loading_mode' => 'due', 'loading_amount' => '55', 'loading_contractor_id' => $contractor->id]);
         $expected = app(LabourCost::class)->describe($challan, 'loading_');
 
-        foreach (['sales.print.challan', 'sales.print.gatepass'] as $route) {
-            $line = (string) ($this->printed($route, $challan)->meta['supplier::labour.loading'] ?? '');
+        // ⓘ দামসহ চালান (অফিসের কপি) আর গেটপাস — দুটোতেই লোডিং
+        foreach (['sales.print.challan' => ['prices' => 1], 'sales.print.gatepass' => []] as $route => $query) {
+            $line = (string) ($this->printed($route, $challan, $query)->meta['supplier::labour.loading'] ?? '');
 
             $this->assertSame($expected, $line, "⛔ {$route}: কাগজে লোডিংয়ের লাইন নেই।");
             $this->assertStringContainsString($contractor->name(), $line, "⛔ {$route}: ঠিকাদারের নাম নেই।");
@@ -61,11 +62,22 @@ final class TheChallanPaperSaysWhoLoadedTheLorryTest extends TestCase
         }
     }
 
+    /** ⛔ দাম ছাড়া চালান গ্রাহকের হাতে যায় — সেখানে লোডিংয়ের অঙ্ক নয় (সমন্বয়ক, ২০ নভেম্বর ২০২৬) */
+    public function test_the_customers_copy_without_prices_carries_no_loading_amount(): void
+    {
+        $contractor = $this->labourContractor();
+        $challan = $this->confirmed(['loading_mode' => 'due', 'loading_amount' => '55', 'loading_contractor_id' => $contractor->id]);
+
+        $doc = $this->printed('sales.print.challan', $challan, ['prices' => 0]);
+
+        $this->assertSame('', (string) ($doc->meta['supplier::labour.loading'] ?? ''), '⛔ গ্রাহকের দামহীন কপিতে লোডিং বসল।');
+    }
+
     public function test_a_challan_without_loading_prints_no_loading_line(): void
     {
         $challan = $this->confirmed([]);
 
-        $this->assertSame('', (string) ($this->printed('sales.print.challan', $challan)->meta['supplier::labour.loading'] ?? ''),
+        $this->assertSame('', (string) ($this->printed('sales.print.challan', $challan, ['prices' => 1])->meta['supplier::labour.loading'] ?? ''),
             'লোডিং লেখা নেই, তবু চালানের কাগজে লোডিংয়ের লেখা বসল।');
     }
 
@@ -85,14 +97,15 @@ final class TheChallanPaperSaysWhoLoadedTheLorryTest extends TestCase
         return $challans->confirm($challan->fresh(['lines']));
     }
 
-    private function printed(string $route, DeliveryChallan $challan): \App\Core\Engines\Print\PrintableDocument
+    /** @param  array<string, mixed>  $query */
+    private function printed(string $route, DeliveryChallan $challan, array $query = []): \App\Core\Engines\Print\PrintableDocument
     {
         $seen = [];
         View::composer('print.document', function ($view) use (&$seen) {
             $seen = $view->getData();
         });
 
-        $this->get(route($route, $challan))->assertOk();
+        $this->get(route($route, ['challan' => $challan->id] + $query))->assertOk();
         $this->assertArrayHasKey('doc', $seen, "{$route} সাধারণ কাগজে আঁকা হয়নি — দাবি অন্ধ।");
 
         return $seen['doc'];

@@ -126,6 +126,20 @@ final class EachWayOfPayingTheUnloadingBooksItsOwnLinesTest extends TestCase
         $this->assertSame($count, PurchaseReceipt::query()->count(), '⛔ থেমে যাওয়া বাছাইয়ের মাল গ্রহণ সংরক্ষণ হয়ে গেল।');
     }
 
+    /**
+     * ⛔ বাকির ঠিকাদার কেবল "হাম্মালি ঠিকাদার" ধরনের — মালের সরবরাহকারীর নামে ২১১৭-এ দেনা নয় (সমন্বয়ক, ২০ নভেম্বর ২০২৬)।
+     */
+    public function test_a_supplier_who_is_not_a_labour_contractor_is_refused(): void
+    {
+        $count = PurchaseReceipt::query()->count();
+        $mill = $this->plainSupplier();
+
+        $this->refusedOn(fn () => $this->draft(['unload_mode' => 'due', 'unload_amount' => '50', 'unload_contractor_id' => $mill->id]),
+            'unload_contractor_id', __('supplier::labour.not_a_contractor'));
+
+        $this->assertSame($count, PurchaseReceipt::query()->count(), '⛔ ভুল ঠিকাদারের মাল গ্রহণ সংরক্ষণ হয়ে গেল।');
+    }
+
     public function test_a_blank_amount_falls_back_to_cartons_times_the_rate(): void
     {
         $contractor = $this->labourContractor();

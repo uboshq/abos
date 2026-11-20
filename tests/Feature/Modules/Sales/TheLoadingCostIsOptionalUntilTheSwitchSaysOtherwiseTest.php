@@ -117,6 +117,26 @@ final class TheLoadingCostIsOptionalUntilTheSwitchSaysOtherwiseTest extends Test
         $this->assertSame('60.0000', $this->booked(ChallanLoading::SOURCE, $challan->id, StandardChart::LOADING, 'debit'));
     }
 
+    /** ⛔ লোডিংয়ের ঠিকাদারও কেবল "হাম্মালি ঠিকাদার" ধরনের — চালানে আর পাকা চালানের লেখায় (সমন্বয়ক, ২০ নভেম্বর ২০২৬) */
+    public function test_a_supplier_who_is_not_a_labour_contractor_is_refused(): void
+    {
+        $mill = $this->plainSupplier();
+        $count = DeliveryChallan::query()->count();
+
+        $this->refusedOn(fn () => $this->draft(['loading_mode' => 'due', 'loading_amount' => '60', 'loading_contractor_id' => $mill->id]),
+            'loading_contractor_id', __('supplier::labour.not_a_contractor'));
+        $this->assertSame($count, DeliveryChallan::query()->count(), '⛔ ভুল ঠিকাদারের চালান থেকে গেল।');
+
+        $challan = $this->confirmed($this->draft());
+
+        $this->from(route('sales.challan.transport', $challan))
+            ->post(route('sales.challan.loading.record', $challan), ['loading_mode' => 'due', 'loading_amount' => '40', 'loading_contractor_id' => $mill->id])
+            ->assertSessionHasErrors(['loading_contractor_id' => __('supplier::labour.not_a_contractor')]);
+
+        $this->assertNull($challan->fresh()->loading_mode, '⛔ ভুল ঠিকাদারে লোডিং লেখা হয়ে গেল।');
+        $this->assertFalse(LedgerEntry::query()->where('source_type', ChallanLoading::SOURCE)->where('source_id', $challan->id)->exists());
+    }
+
     public function test_loading_is_recorded_once_on_a_confirmed_challan(): void
     {
         $contractor = $this->labourContractor();

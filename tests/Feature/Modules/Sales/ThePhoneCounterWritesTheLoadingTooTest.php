@@ -134,6 +134,19 @@ final class ThePhoneCounterWritesTheLoadingTooTest extends TestCase
         $this->assertSame($count, DeliveryChallan::query()->count(), '⛔ থেমে যাওয়া ফোনের বিক্রির চালান থেকে গেল।');
     }
 
+    /** ⛔ ফোনের কাউন্টারেও কেবল "হাম্মালি ঠিকাদার" (সমন্বয়ক, ২০ নভেম্বর ২০২৬) */
+    public function test_a_supplier_who_is_not_a_labour_contractor_is_refused(): void
+    {
+        $mill = $this->plainSupplier();
+        $count = DeliveryChallan::query()->count();
+
+        $this->postJson('/api/v1/sales/direct', $this->sale([
+            'loading_mode' => 'due', 'loading_amount' => '60', 'loading_contractor' => (string) $mill->public_id,
+        ]))->assertStatus(422)->assertJsonValidationErrors(['loading_contractor_id' => __('supplier::labour.not_a_contractor')]);
+
+        $this->assertSame($count, DeliveryChallan::query()->count(), '⛔ ভুল ঠিকাদারের ফোনের চালান থেকে গেল।');
+    }
+
     public function test_with_the_switch_on_a_phone_sale_without_loading_is_refused(): void
     {
         app(SettingsService::class)->set(ChallanLoading::MANDATORY_KEY, true);

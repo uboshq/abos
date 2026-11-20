@@ -43,6 +43,7 @@ return [
     'cash_only' => 'Only a cash till — bank or mobile money is not cash in hand.',
     'not_your_till' => 'This cash till is not yours — pay from your own till.',
     'needs_contractor' => 'Choose the labour contractor the money is owed to.',
+    'not_a_contractor' => 'This supplier is not a Labour Contractor — choose a supplier of the "Labour Contractor" kind, or pay in cash.',
     'unloading_required' => 'Unloading cost is not set on :no — choose cash, due to a contractor, paid by the supplier, or not needed, before it is confirmed.',
     'loading_required' => 'Loading cost is not set on :no — write the amount or choose "not needed" before the challan is confirmed.',
     'hand_over_amount' => 'The hand-set lines come to :hand, more than the :amount paid. Lower a rate or write the real amount.',

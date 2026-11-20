@@ -94,6 +94,24 @@ final class ThePhoneReceiptCarriesTheUnloadingTest extends TestCase
         $this->assertSame($count, PurchaseReceipt::query()->count(), '⛔ ফেরত যাওয়া ফোনের রসিদ থেকে গেল।');
     }
 
+    /** ⛔ ফোন থেকেও কেবল "হাম্মালি ঠিকাদার" — মালের সরবরাহকারী পাঠালে কারণসহ ফেরত, কিছুই লেখা হয় না (সমন্বয়ক, ২০ নভেম্বর ২০২৬) */
+    public function test_a_supplier_who_is_not_a_labour_contractor_is_sent_back(): void
+    {
+        $mill = $this->plainSupplier();
+        $count = PurchaseReceipt::query()->count();
+
+        try {
+            $this->receive(['unloading' => ['mode' => 'due', 'amount' => '50', 'contractor' => (string) $mill->public_id]]);
+            $this->fail('⛔ ঠিকাদার নন এমন সরবরাহকারীর নামে ফোনের রসিদ বসল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame([__('supplier::labour.not_a_contractor')], $e->errors()['unload_contractor_id'] ?? null);
+        } catch (SyncRejection) {
+            // ⓘ সিঙ্কের নিজের ফেরতেও চলে — থামাটাই দাবি
+        }
+
+        $this->assertSame($count, PurchaseReceipt::query()->count(), '⛔ ফেরত যাওয়া ফোনের রসিদ থেকে গেল।');
+    }
+
     public function test_an_old_phone_without_the_unloading_still_writes_its_draft(): void
     {
         $receipt = PurchaseReceipt::query()->where('public_id', $this->receive([]))->firstOrFail();

@@ -35,6 +35,12 @@ trait HiresTheLabour
         ]);
     }
 
+    /** ⛔ হাম্মালি ঠিকাদার নন — মালের সাধারণ সরবরাহকারী (ধরন বসানো নেই); ঠিকাদারের ঘরে বসালে থামার কথা */
+    protected function plainSupplier(string $code = 'VEN-LB', string $name = 'Rahim Rice Mill'): Supplier
+    {
+        return Supplier::query()->create(['code' => $code, 'name_en' => $name, 'name_bn' => $name]);
+    }
+
     /** নিজের নগদ টিল, টাকাসহ */
     protected function labourTill(string $code = 'LAB-T', string $money = '5000'): Account
     {
