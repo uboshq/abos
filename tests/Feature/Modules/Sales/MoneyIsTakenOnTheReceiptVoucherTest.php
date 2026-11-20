@@ -122,11 +122,14 @@ final class MoneyIsTakenOnTheReceiptVoucherTest extends TestCase
         $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, $returned->refresh()->status, '⛔ সংশোধনে ফেরত পাঠানো আদায় বাতিল হয়ে গেল — লেখক আর ঠিক করতে পারবেন না।');
     }
 
-    public function test_the_collections_written_before_can_be_found_from_the_menu(): void
+    /** ⛔ বিক্রয় মেনুতে টাকার লিংক বা তালিকা নেই — মালিক, ২০ নভেম্বর ২০২৬ (আন্তর্জাতিক নিয়মে টাকা হিসাবের কাজ) */
+    public function test_the_sales_menu_has_no_money_door(): void
     {
         $rows = collect(app(MenuBuilder::class)->forUser($this->owner))->firstWhere('code', 'sales')['groups'] ?? [];
-        $routes = collect($rows)->flatten(1)->pluck('url')->filter()->all();
+        $routes = collect($rows)->flatten(1)->pluck('route')->filter()->all();
 
-        $this->assertContains(route('sales.collection.index'), $routes, '⛔ আগে লেখা আদায়ের কাগজ (COL-…) খোঁজার তালিকা মেনুতে নেই।');
+        foreach (['sales.collection.index', 'sales.collection.create', 'accounts.voucher.create'] as $route) {
+            $this->assertNotContains($route, $routes, "⛔ বিক্রয় মেনুতে টাকার দরজা ({$route})।");
+        }
     }
 }
