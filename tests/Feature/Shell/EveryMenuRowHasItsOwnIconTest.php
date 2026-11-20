@@ -136,7 +136,8 @@ final class EveryMenuRowHasItsOwnIconTest extends TestCase
         libxml_clear_errors();
         $xpath = new DOMXPath($dom);
 
-        $this->assertGreaterThanOrEqual(2, $xpath->query('//p[contains(@class, "menu-kind-head")][@data-mc]')->length, '⛔ মেনুতে দলের রঙিন মাথা নেই');
+        // ⓘ ABOS Blue-তে দলের মাথা এখন বোতাম (ভাঁজ-করা দল, মালিক ২০ নভেম্বর ২০২৬) — তাই `p` বা `button`
+        $this->assertGreaterThanOrEqual(2, $xpath->query('//*[self::p or self::button][contains(@class, "menu-kind-head")][@data-mc]')->length, '⛔ মেনুতে দলের রঙিন মাথা নেই');
         $rows = $xpath->query('//*[contains(concat(" ", @class, " "), " menu-coloured ")]');
         $this->assertGreaterThan(5, $rows->length, '⛔ মেনুর সারি রঙিন নয়');
 

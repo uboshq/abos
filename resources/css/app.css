@@ -2295,6 +2295,75 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     background: var(--menu-g);
 }
 
+/* ⭐ ভাঁজ-করা দলের মাথা — তিন ABOS রূপে (rose · navy · blue; মালিক, ২০ নভেম্বর ২০২৬): দলের চিহ্ন + নাম, তীর নেই, হোভারে হালকা ছোপ,
+   খোলা দলের নাম মোটা ([[menu-fold.js]], [[Ui::foldsMenuGroups()]])। ⓘ বোতামটা কেবল এই তিন রূপে আঁকা হয়, তবু প্রতিটা নিয়ম রূপে বাঁধা —
+   SAP, Dynamic আর বাকিরা একটা পিক্সেলও বদলায় না। */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head {
+    width: 100%;
+    min-height: 34px;
+    margin: 1px 0 0;
+    padding: 4px 10px;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--radius-field);
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color .15s;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head::before {
+    content: none;
+    display: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head:hover {
+    background: color-mix(in srgb, var(--menu-g) 10%, transparent);
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head[aria-expanded='true'] {
+    font-weight: 700;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head:focus-visible {
+    outline: 2px solid var(--color-brand-gold);
+    outline-offset: -2px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    color: var(--menu-g);
+    background: color-mix(in srgb, var(--menu-g) 13%, transparent);
+}
+
+/* ⓘ নীল জমিনের দুই রূপ (rose, blue) — সাদা ছোপ, খোলা দল সাদা লেখায় */
+:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-head:hover {
+    background: rgb(255 255 255 / 0.14);
+}
+
+:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-head[aria-expanded='true'] {
+    color: #ffffff;
+}
+
+:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-icon {
+    color: #ffffff;
+    background: rgb(255 255 255 / 0.16);
+}
+
+/* ⛔ বন্ধ দলের সারি — সারির নিজের `flex` ক্লাস `hidden`-কে হারাতে না পারে */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] [data-menu-fold-row][hidden] {
+    display: none !important;
+}
+
 .rail-item.menu-coloured {
     border-inline-start: 3px solid var(--menu-g);
     border-radius: 0 var(--radius-field) var(--radius-field) 0;

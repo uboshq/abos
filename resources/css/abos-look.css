@@ -104,6 +104,43 @@
     padding-top: 8px;
 }
 
+/* ⭐ মডিউলের মাথা — Fluent/Lightning ধাঁচ (মালিক, ২০ নভেম্বর ২০২৬, নমুনা "চ", `.mh-intl`): মডিউলের রঙের ৩২px বর্গে সাদা চিহ্ন,
+   পাশে ১৮px আধা-মোটা সাদা নাম; বাক্স, জমিন বা রঙিন দাগ নেই; নিচে ১px হালকা রেখা, তারপর দলগুলো। কেবল এই রূপে ([[Ui::wearsModuleHead()]])। */
+:root[data-ui='rose'] [data-site-map] .module-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 8px 10px 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.2);
+}
+
+:root[data-ui='rose'] [data-site-map] .module-head-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: #ffffff;
+    /* ⓘ নীল জমিনে নীল মডিউলের বর্গ হারিয়ে যেত (হিসাব ও অর্থ, বিক্রয় — #2563eb) — Fluent-এর টাইলের মতো হালকা সাদা বেড় আর ছায়া,
+       তাই যে রঙেরই হোক, বর্গটা চোখে পড়ে */
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.55), 0 3px 8px rgb(0 0 0 / 0.25);
+}
+
+:root[data-ui='rose'] [data-site-map] .module-head-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .1px;
+    line-height: 1.3;
+}
+
 :root[data-ui='rose'] [data-site-map] [data-panel-section],
 :root[data-ui='rose'] [data-site-map] .menu-kind-head {
     color: var(--abos-menu-group);

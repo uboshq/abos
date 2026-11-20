@@ -35,7 +35,8 @@ return [
     /*
      * ⓘ গ্রাহক (৪৫) আর বিক্রয়ের (৫০) মাঝে — বাকি দুইজনেরই কথা: গ্রাহকের সীমা, বিক্রয়ের দেয়াল।
      */
-    'nav' => ['section' => 'business', 'order' => 47],
+    // ⭐ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬) — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    'nav' => ['section' => 'business', 'order' => 47, 'under' => 'sales'],
 
     'depends_on' => ['accounts', 'customer', 'sales'],
 

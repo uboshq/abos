@@ -155,29 +155,36 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
     public function test_the_top_search_finds_a_module_by_its_name_and_opens_its_first_page(): void
     {
         $menu = app(MenuBuilder::class)->forUser($this->owner);
-        $module = collect($menu)->firstWhere('code', 'fixed_assets') ?? $menu[array_key_last($menu)];
+        /*
+         * ⓘ স্থায়ী সম্পদ এখন "হিসাব ও অর্থ"-এর ভিতরের একটা দল (মালিক, ২০ নভেম্বর ২০২৬: এক করা মডিউল) — তাই মডিউলের নামে খোঁজার
+         * সাক্ষী এক করা মডিউলটাই, তার পুরো নামে (নামটা কোনো পাতার নামে নেই, তাই ফলটা কেবল মডিউলের)।
+         */
+        $module = collect($menu)->firstWhere('code', 'accounts');
+        $this->assertNotNull($module, 'প্রস্তুতিটাই ভুল — মালিকের মেনুতে হিসাব ও অর্থ নেই');
+        $this->assertSame(__('accounts::menu.merged_title'), (string) $module['label'], '⛔ এক করা মডিউলের নাম "হিসাব ও অর্থ" নয়');
         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
 
-        $hits = $this->getJson(route('search', ['q' => mb_substr((string) $module['label'], 0, 4)]))->assertOk()->json('hits');
+        $hits = $this->getJson(route('search', ['q' => (string) $module['label']]))->assertOk()->json('hits');
         $this->assertContains(['type' => __('core.search.module'), 'no' => '', 'label' => (string) $module['label'], 'url' => (string) $first['url']], $hits,
             '⛔ উপরের খোঁজায় মডিউলের নাম লিখলে মডিউলটা আসে না — "আরও"-তে থাকা মডিউলে পৌঁছানোর সোজা পথ নেই');
 
         /*
-         * ⭐ শব্দের শুরুতে মিল আগে, মাঝখানের মিল পরে (fe, ২৫ অক্টোবর ২০২৬): "স্থায়ী" লিখলে প্রথম ফল "মডিউল · স্থায়ী সম্পদ" — "অস্থায়ী"-ওয়ালা
-         * পাতা (বাকি নিয়ন্ত্রণ · অস্থায়ী সীমা) তার পরে। ⓘ খোঁজার শব্দ মডিউলের নামের প্রথম শব্দ, পরীক্ষার ভাষা যা-ই হোক।
+         * ⭐ শব্দের শুরুতে মিল আগে, মাঝখানের মিল পরে (fe, ২৫ অক্টোবর ২০২৬): "স্থায়ী" লিখলে প্রথম ফল শব্দের শুরুতে মেলা ("স্থায়ী সম্পদ")
+         * — "অস্থায়ী"-ওয়ালা পাতা (বাকি নিয়ন্ত্রণ · অস্থায়ী সীমা) তার পরে। ⓘ খোঁজার শব্দ স্থায়ী সম্পদ মডিউলের নামের প্রথম শব্দ, পরীক্ষার ভাষা যা-ই হোক।
          */
-        $word = mb_strtolower((string) preg_split('/\s+/u', trim((string) $module['label']))[0]);
+        $assetsName = (string) app(\App\Core\Module\ModuleRegistry::class)->get('fixed_assets')?->label();
+        $word = mb_strtolower((string) preg_split('/\s+/u', trim($assetsName))[0]);
         $midWord = collect($menu)->flatMap(fn (array $m) => collect($m['groups'] ?? [])->flatten(1))
             ->filter(fn (array $i) => ($i['url'] ?? null) !== null)
             ->contains(fn (array $i) => preg_match('/\p{L}'.preg_quote($word, '/').'/u', mb_strtolower((string) ($i['label'] ?? ''))) === 1);
         $this->assertTrue($midWord, "প্রস্তুতিটাই ভুল — মেনুতে \"{$word}\" শব্দের মাঝখানে মেলে এমন পাতা নেই, ক্রমের দাবি অর্থহীন");
         $ranked = $this->getJson(route('search', ['q' => $word]))->assertOk()->json('hits');
-        $this->assertSame(['type' => __('core.search.module'), 'label' => (string) $module['label']], ['type' => $ranked[0]['type'] ?? null, 'label' => $ranked[0]['label'] ?? null],
-            "⛔ \"{$word}\" লিখলে প্রথম ফল মডিউলটা নয় — শব্দের মাঝখানের মিল (\"অস্থায়ী\") আগে বসেছে");
+        $this->assertMatchesRegularExpression('/(?:^|[\s·,\-—\/(])'.preg_quote($word, '/').'/u', mb_strtolower((string) ($ranked[0]['label'] ?? '')),
+            "⛔ \"{$word}\" লিখলে প্রথম ফল শব্দের শুরুতে মেলা নয় — শব্দের মাঝখানের মিল (\"অস্থায়ী\") আগে বসেছে");
 
         $sr = $this->person(['customer.view']);
-        $this->assertNotContains('fixed_assets', $this->menuCodes($sr), 'প্রস্তুতিটাই ভুল — বিক্রয়কর্মীর স্থায়ী সম্পদের চাবি আছে');
-        $theirs = $this->actingAs($sr)->getJson(route('search', ['q' => mb_substr((string) $module['label'], 0, 4)]))->assertOk()->json('hits');
+        $this->assertNotContains('accounts', $this->menuCodes($sr), 'প্রস্তুতিটাই ভুল — বিক্রয়কর্মীর হিসাবের চাবি আছে');
+        $theirs = $this->actingAs($sr)->getJson(route('search', ['q' => (string) $module['label']]))->assertOk()->json('hits');
         $this->assertNotContains((string) $first['url'], array_column($theirs, 'url'), '⛔ চাবিহীন মডিউল খোঁজায় এল');
     }
 }

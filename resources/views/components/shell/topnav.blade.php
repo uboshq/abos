@@ -79,7 +79,8 @@
     if ($shape === 'sections' && $activeModule) {
         foreach ($activeModule['groups'] as $group => $items) {
             $entries[] = [
-                'label' => __('core.menu.'.$group),
+                // ⓘ এক করা মডিউলে অতিথির দলের নাম "অর্থ · লেনদেন" ([[MenuBuilder]], ২০ নভেম্বর ২০২৬)
+                'label' => $activeModule['group_titles'][$group] ?? __('core.menu.'.$group),
                 'icon' => null,
                 'accent' => null,
                 /*

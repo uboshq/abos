@@ -316,6 +316,8 @@ class MeController extends Controller
                         fn (array $row): array => [
                             'label' => $row['label'],
                             'route' => $row['route'],
+                            // ⭐ সারির নিজের মডিউল — এক করা মডিউলে অতিথির সারি আশ্রয়দাতার ঘরে (২০ নভেম্বর ২০২৬); পুরনো অ্যাপ এটা পড়ে না
+                            'module' => $row['module'] ?? $module['code'],
                             'planned' => $row['planned'],
                             /*
                              * ⭐ অ্যাপের ভিতরে খোলার ওয়েব-পথ (সাইটের ভিতরের, `/…`) — যে সারির ফোন-পর্দা নেই, অ্যাপ সেটা
@@ -332,11 +334,42 @@ class MeController extends Controller
             /*
              * ⭐ ফোনে বন্ধ মডিউল মেনুতে আসে না — [[PhoneModules::isOn()]]।
              * ⓘ ওয়েবের মেনু ছোঁয়া হয় না; এটা কেবল ফোনের উত্তর।
+             * ⭐ এক করা মডিউল (হিসাব ও অর্থ, বিক্রয়, ক্রয় — মালিক, ২০ নভেম্বর ২০২৬): সুইচটা **সারির নিজের মডিউলের** — ফোনে অর্থ বন্ধ
+             *   থাকলে হিসাব ও অর্থের ভিতরে অর্থের সারি আসে না, আর হিসাব বন্ধ অথচ অর্থ চালু হলে মডিউলটা কেবল অর্থের সারি নিয়ে আসে।
              */
-            array_values(array_filter(
-                $this->menu->forUser($user),
-                fn (array $module): bool => $this->phone->isOn((string) $module['code']),
-            )),
+            $this->phoneRows($this->menu->forUser($user)),
         );
+    }
+
+    /**
+     * ফোনে চালু মডিউলের সারিগুলো — প্রতিটা সারি তার নিজের মডিউলের সুইচে; একটাও না থাকলে মডিউলটাই নেই।
+     *
+     * @param  list<array<string, mixed>>  $menu
+     * @return list<array<string, mixed>>
+     */
+    private function phoneRows(array $menu): array
+    {
+        $out = [];
+
+        foreach ($menu as $module) {
+            $groups = [];
+
+            foreach ($module['groups'] ?? [] as $name => $rows) {
+                $kept = array_values(array_filter(
+                    $rows,
+                    fn (array $row): bool => $this->phone->isOn((string) ($row['module'] ?? $module['code'])),
+                ));
+
+                if ($kept !== []) {
+                    $groups[$name] = $kept;
+                }
+            }
+
+            if ($groups !== []) {
+                $out[] = ['groups' => $groups] + $module;
+            }
+        }
+
+        return $out;
     }
 }

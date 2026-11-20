@@ -44,7 +44,8 @@ return [
      * ক্রয়ের ভেতরে ঢোকানো হয়েছিল, আর মালিক সেদিনই ফিরিয়ে নিয়েছেন।
      * কারণ ও নজির গ্রাহকের `module.php`-তে।
      */
-    'nav' => ['section' => 'business', 'order' => 20],
+    // ⭐ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬) — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    'nav' => ['section' => 'business', 'order' => 20, 'under' => 'purchase'],
 
     // দেনা হিসাবের খাতায় বসে, আর ধরন ও শর্ত মাস্টার ডাটা থেকে
     'depends_on' => ['accounts', 'master_data'],

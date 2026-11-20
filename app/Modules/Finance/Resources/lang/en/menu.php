@@ -23,4 +23,7 @@ return [
 
     'deposit_kinds' => 'Deposit kinds',
 
+    // ⭐ inside Accounts & Finance — the dashboard row and the tab name (owner, 20 Nov 2026)
+    'dashboard' => 'Finance / treasury dashboard',
+    'tab' => 'Finance / treasury',
 ];

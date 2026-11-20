@@ -65,7 +65,7 @@ final class TheRestOfTheModulesAreOnThePhoneByDefaultTest extends TestCase
 
         foreach (self::FOUR as $code) {
             $this->assertContains($code, $me['phoneModules'], "⛔ নতুন কোম্পানিতে {$code} ফোনে বন্ধ।");
-            $this->assertContains($code, array_column($me['menu'], 'code'), "⛔ চাবিওয়ালার মেনুতে {$code} নেই।");
+            $this->assertContains($code, self::modulesIn($me['menu']), "⛔ চাবিওয়ালার মেনুতে {$code} নেই।");
             $this->assertContains(self::DOORS[$code][0], $me['user']['permissions'] ?? $me['permissions'] ?? [],
                 'ফোনের টাইল এই চাবি দেখে — /me-তে চাবিটা আসতে হবে।');
         }
@@ -74,7 +74,7 @@ final class TheRestOfTheModulesAreOnThePhoneByDefaultTest extends TestCase
         }
 
         $plain = $this->staff(['customer.view']);
-        $menu = array_column($this->phone($plain, '/api/v1/me')->assertOk()->json('menu'), 'code');
+        $menu = self::modulesIn($this->phone($plain, '/api/v1/me')->assertOk()->json('menu'));
 
         foreach (self::DOORS as $code => [$key, $door]) {
             $this->assertNotContains($code, $menu, "⛔ চাবি ছাড়াই {$code} মেনুতে।");
@@ -93,7 +93,7 @@ final class TheRestOfTheModulesAreOnThePhoneByDefaultTest extends TestCase
 
         foreach (self::DOORS as $code => [$key, $door]) {
             $this->assertNotContains($code, $me['phoneModules']);
-            $this->assertNotContains($code, array_column($me['menu'], 'code'));
+            $this->assertNotContains($code, self::modulesIn($me['menu']));
             $this->phone($keyholder, $door)->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
         }
     }
@@ -121,6 +121,28 @@ final class TheRestOfTheModulesAreOnThePhoneByDefaultTest extends TestCase
         $keyholder = $this->staff(['approval.decide', 'finance.deposit.view']);
         $this->phone($keyholder, '/api/v1/finance/deposits')->assertOk();
         $this->phone($keyholder, '/api/v1/approvals/pending')->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
+    }
+
+    /**
+     * ⓘ মেনুর মডিউল আর তার ভিতরে বসা অতিথিরা — এক করা মডিউলে (মালিক, ২০ নভেম্বর ২০২৬) অর্থ বা অফারের সারি আশ্রয়দাতার ঘরে বসতে পারে,
+     * প্রতিটা সারি নিজের মডিউল বলে (`module`)।
+     *
+     * @param  list<array<string, mixed>>  $menu
+     * @return list<string>
+     */
+    private static function modulesIn(array $menu): array
+    {
+        $codes = array_column($menu, 'code');
+
+        foreach ($menu as $module) {
+            foreach ($module['groups'] ?? [] as $rows) {
+                foreach ($rows as $row) {
+                    $codes[] = (string) ($row['module'] ?? $module['code']);
+                }
+            }
+        }
+
+        return array_values(array_unique($codes));
     }
 
     /** @param list<string> $keys */

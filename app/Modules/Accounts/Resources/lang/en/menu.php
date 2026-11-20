@@ -73,4 +73,6 @@ return [
     'asset_variance' => 'Asset count variance',
     'asset_book_vs_tax' => 'Book vs tax depreciation',
     'asset_maintenance' => 'Asset maintenance cost',
+    // ⭐ the merged module's name — Accounts + Finance + Fixed assets (owner, 20 Nov 2026)
+    'merged_title' => 'Accounts & Finance',
 ];

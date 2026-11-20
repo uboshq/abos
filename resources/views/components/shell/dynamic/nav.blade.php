@@ -51,7 +51,8 @@
                         <div class="dyn-drop pops-onto-page" data-dyn-drop>
                             @foreach ($module['groups'] as $group => $items)
                                 <div class="dyn-drop-group">
-                                    <p class="dyn-drop-head">{{ __('core.menu.'.$group) }}</p>
+                                    {{-- ⓘ এক করা মডিউলে অতিথির দলের নাম "অর্থ · লেনদেন" ([[MenuBuilder]]); বাকিদের আগের মতো --}}
+                                    <p class="dyn-drop-head">{{ $module['group_titles'][$group] ?? __('core.menu.'.$group) }}</p>
                                     @foreach ($items as $item)
                                         <a @if ($item['url']) href="{{ $item['url'] }}" @else aria-disabled="true" @endif
                                            @class(['dyn-drop-item', 'dyn-drop-on' => $item['active'], 'dyn-drop-off' => ! $item['url']])

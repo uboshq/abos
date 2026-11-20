@@ -229,6 +229,8 @@ final class MenuBuilder
                          * হিসাব মডিউলের ঊনত্রিশটা সারিও খুলে যেত।
                          */
                         'loose' => ($item['loose'] ?? false) === true,
+                        // ⭐ সারিটা কোন মডিউলের — এক করা মডিউলে অতিথির সারি আশ্রয়দাতার ঘরে বসে, তবু ফোনের সুইচ আর পরীক্ষা জানে কার (২০ নভেম্বর ২০২৬)
+                        'module' => $module->code,
                         'route' => $item['route'],
                         /* এখনো তৈরি হয়নি মানে রুটটাও নেই — `route()` ডাকলে
                            ব্যতিক্রম, আর সেটা গোটা মেনু নামিয়ে দিত */
@@ -298,6 +300,10 @@ final class MenuBuilder
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
                 'under' => $module->nav['under'] ?? null,
 
+                // ⭐ অতিথিরা ভিতরে বসলে টাইলের নাম ("হিসাব ও অর্থ"), আর এক করা ড্যাশবোর্ডের ট্যাবে এই মডিউলের নাম (২০ নভেম্বর ২০২৬)
+                'merged_label' => isset($module->nav['merged_label']) ? __($module->nav['merged_label']) : null,
+                'tab' => isset($module->nav['tab']) ? __($module->nav['tab']) : $module->label(),
+
                 // ⭐ বাঁয়ের মেনুর ভাগ, এই ক্রমে — খালি মানে ভাগ নেই, আগের মতো এক তালিকা
                 'panel_sections' => $module->nav['panel_sections'] ?? [],
 
@@ -322,7 +328,13 @@ final class MenuBuilder
     /**
      * অতিথি মডিউলের সারিগুলো আশ্রয়দাতার টাইলে বসায়, আর তার নিজের টাইল তুলে নেয়।
      *
-     * ⚠️ **আজ কোনো মডিউল `nav.under` ঘোষণা করে না — এই পদ্ধতিটা কিছুই করে না।**
+     * ⭐ ২০ নভেম্বর ২০২৬ থেকে চালু — মালিকের তিনটা এক করা মডিউল (SAP S/4 · D365 · Oracle · NetSuite-এর মতো এক মডিউলে কয়েক ভাগ):
+     *   হিসাব ও অর্থ = হিসাব + অর্থ + স্থায়ী সম্পদ · বিক্রয় = বিক্রয় + গ্রাহক + বাকি নিয়ন্ত্রণ + অফার ও প্রণোদনা · ক্রয় = ক্রয় + সরবরাহকারী।
+     *   ⓘ অতিথিরা নিজেদের `module.php`-তে `nav.under` বলে; আশ্রয়দাতা `nav.merged_label` দিলে টাইলের নাম বদলায়, আর ড্যাশবোর্ড ট্যাবে
+     *   সদস্যরা ([[membersOf()]], [[shell.merged-tabs]])। মেনুর দল ও ক্রম `resources/menu-look.php`-এ ([[MenuLook::arrange()]])।
+     *   ⛔ রুট, চাবি, ঠিকানা, ডাটা — কিছুই বদলায়নি; অতিথি বন্ধ হলে তার সারি আসে না, আশ্রয়দাতা বন্ধ হলে অতিথি নিজের টাইলে।
+     *
+     * ⓘ (৪ সেপ্টেম্বরের লেখা, ইতিহাস) তখন কোনো মডিউল `nav.under` ঘোষণা করত না:
      *
      * ── তাহলে রাখা কেন, ৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
      * সকালে গ্রাহক বিক্রয়ের ভেতরে আর সরবরাহকারী ক্রয়ের ভেতরে বসানো
@@ -404,10 +416,26 @@ final class MenuBuilder
              */
             foreach ($entry['groups'] as $group => $rows) {
                 $menu[$host]['groups'][$entry['code'].':'.$group] = $rows;
+                // ⓘ ড্রপডাউনের দলের নাম (Dynamic, উপরের মেনু) — "অর্থ · লেনদেন"; আশ্রয়দাতার নিজের দলগুলো আগের মতোই
+                $menu[$host]['group_titles'][$entry['code'].':'.$group] = $entry['label'].' · '.__('core.menu.'.$group);
             }
 
             $menu[$host]['codes'][] = $entry['code'];
+            $menu[$host]['guest_labels'][$entry['code']] = $entry['label'];
+            $menu[$host]['guests'][] = $entry;
             $absorbed[$i] = true;
+        }
+
+        foreach ($menu as $i => $entry) {
+            $menu[$i]['group_titles'] ??= [];
+            $menu[$i]['members'] = $this->membersOf($entry);
+
+            /* ⭐ অতিথি সত্যিই বসলে তবেই নতুন নাম — অর্থ বন্ধ থাকলে টাইলটা আগের "হিসাব"ই */
+            if (($entry['guests'] ?? []) !== [] && ($entry['merged_label'] ?? null) !== null) {
+                $menu[$i]['label'] = $entry['merged_label'];
+            }
+
+            unset($menu[$i]['guests']);
         }
 
         return array_values(array_filter(
@@ -415,6 +443,41 @@ final class MenuBuilder
             static fn (int $i): bool => ! isset($absorbed[$i]),
             ARRAY_FILTER_USE_KEY,
         ));
+    }
+
+    /**
+     * ⭐ এক করা মডিউলের সদস্যরা, ট্যাবের ক্রমে — আশ্রয়দাতা আগে, তারপর অতিথিরা (মালিক, ২০ নভেম্বর ২০২৬: "ড্যাশবোর্ড ট্যাবে —
+     * হিসাব · অর্থ / ট্রেজারি · স্থায়ী সম্পদ")। ⓘ প্রতিটার ড্যাশবোর্ডের সারি = তার নিজের `dashboard` দলের প্রথম খোলা সারি; সারি না
+     * থাকলে (চাবি নেই, সুইচ বন্ধ) ট্যাবও নেই। অতিথি না থাকলে খালি — একা মডিউলে ট্যাব আঁকা হয় না ([[shell.merged-tabs]])।
+     *
+     * @param  array<string, mixed>  $entry
+     * @return list<array{code: string, tab: string, url: string, active: bool}>
+     */
+    private function membersOf(array $entry): array
+    {
+        if (($entry['guests'] ?? []) === []) {
+            return [];
+        }
+
+        $members = [];
+
+        foreach ([$entry, ...$entry['guests']] as $member) {
+            // ⓘ আশ্রয়দাতার `dashboard` দলে কেবল তার নিজের সারি — অতিথির ড্যাশবোর্ড `অতিথি:dashboard` দলে বসে
+            $row = collect($member['groups']['dashboard'] ?? [])->first(fn (array $r): bool => ($r['url'] ?? null) !== null);
+
+            if ($row === null) {
+                continue;
+            }
+
+            $members[] = [
+                'code' => (string) $member['code'],
+                'tab' => (string) ($member['tab'] ?? $member['label']),
+                'url' => (string) $row['url'],
+                'active' => (bool) ($row['active'] ?? false),
+            ];
+        }
+
+        return $members;
     }
 
     /**

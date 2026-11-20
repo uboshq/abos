@@ -41,8 +41,12 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
      * রেলের মাথায় আলাদা করে আঁকে।
      */
     private const AS_HE_ASKED = [
+        /*
+         * ⭐ এক করা মডিউল — মালিক, ২০ নভেম্বর ২০২৬: অর্থ আর স্থায়ী সম্পদ "হিসাব ও অর্থ"-এর ভিতরে; গ্রাহক, বাকি নিয়ন্ত্রণ আর অফার
+         * বিক্রয়ের ভিতরে; সরবরাহকারী ক্রয়ের ভিতরে (nav.under)। ⓘ ওদের নিজের টাইল নেই, তাই এই তালিকা থেকে উঠে গেল; ভিতরে বসা
+         * [[test_a_guest_module_sits_inside_its_host()]] দেখে।
+         */
         ['finance', 'accounts'],
-        ['finance', 'finance'],
 
         /*
          * ── গেল, আর ফিরে এল — একই দিনে, ৪ সেপ্টেম্বর ২০২৬ ──────────────
@@ -65,21 +69,10 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
          * থেকে তিনি আসেন **মাল আসার পরে**, আর ডিপোর দিনটাও শুরু হয়
          * গাড়ি দিয়ে। ⭐ ক্রমটাই নতুন কর্মীকে ব্যবসাটা শিখিয়ে দেয়।
          */
-        ['business', 'supplier'],
         ['business', 'purchase'],
         ['business', 'inventory'],
-        ['business', 'customer'],
-
-        // ⭐ বাকি নিয়ন্ত্রণ — গ্রাহক আর বিক্রয়ের মাঝে (order ৪৭): বাকি দুইজনেরই কথা (১১ অক্টোবর ২০২৬)
-        ['business', 'credit_control'],
 
         ['business', 'sales'],
-
-        /*
-         * ⓘ অফার বিক্রয়ের ঠিক পরে (order ৫২) — ২৭ সেপ্টেম্বর ২০২৬ নিজের মডিউল হলো (`869396c5`);
-         * মানুষ অফার খোঁজেন বিক্রয়ের সাথেই।
-         */
-        ['business', 'promotion'],
 
         /*
          * ⭐ রেস্টুরেন্ট বিক্রয়ের ঠিক পরে — মালিকের সিদ্ধান্ত,
@@ -124,8 +117,7 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['system', 'executive'],
         ['system', 'documents'],
         ['system', 'notification'],
-        ['system', 'fixed_assets'],
-        // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — একই নিয়মে স্থায়ী সম্পদের নিচে; উপরের বারে মগজের বোতামও আছে
+        // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — একই নিয়মে বিজ্ঞপ্তির নিচে (স্থায়ী সম্পদ এখন হিসাব ও অর্থের ভিতরে); উপরের বারে মগজের বোতামও আছে
         ['system', 'assistant'],
 
         /*

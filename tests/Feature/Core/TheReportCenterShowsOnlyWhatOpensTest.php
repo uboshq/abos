@@ -48,9 +48,19 @@ final class TheReportCenterShowsOnlyWhatOpensTest extends TestCase
 
         $this->assertGreaterThan(30, count($links), '⛔ রিপোর্ট সেন্টারে রিপোর্টই নেই — পাওয়া গেছে '.count($links).'টা।');
 
-        foreach (['sales', 'purchase', 'inventory', 'accounts', 'customer', 'supplier'] as $code) {
+        foreach (['sales', 'purchase', 'inventory', 'accounts'] as $code) {
             $this->assertStringContainsString('data-map-section="'.$code.'"', $body, "⛔ '{$code}' মডিউলের ভাগই নেই।");
         }
+
+        /*
+         * ⓘ গ্রাহক বিক্রয়ের ভিতরে, সরবরাহকারী ক্রয়ের ভিতরে (মালিক, ২০ নভেম্বর ২০২৬: এক করা মডিউল) — নিজের ভাগ নেই, তাদের রিপোর্ট
+         * আশ্রয়দাতার ভাগে। ⛔ রিপোর্টগুলো হারায়নি।
+         */
+        foreach (['customer', 'supplier'] as $guest) {
+            $this->assertStringNotContainsString('data-map-section="'.$guest.'"', $body, "⛔ '{$guest}' এখনো আলাদা ভাগে — এক করা মডিউলের ভিতরে থাকার কথা।");
+        }
+        $this->assertStringContainsString(e(route('customer.report.show', 'due-list')), $body, '⛔ গ্রাহকের বকেয়ার রিপোর্ট রিপোর্ট সেন্টার থেকে হারাল।');
+        $this->assertStringContainsString(e(route('supplier.report.show', 'payable-list')), $body, '⛔ সরবরাহকারীর দেনার রিপোর্ট রিপোর্ট সেন্টার থেকে হারাল।');
 
         $broken = [];
 

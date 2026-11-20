@@ -107,7 +107,8 @@
      *
      * ⓘ অচেনা নাম দিলে `x-ui.icon` চুপ করে কিছুই আঁকে না, ভাঙে না।
      */
-    $groupIcon = fn (string $name): string => ['master' => 'book'][$name] ?? $name;
+    // ⓘ এক করা মডিউলে অতিথির দলের চাবি "অতিথি:দল" — আইকন দলের নামে (২০ নভেম্বর ২০২৬)
+    $groupIcon = fn (string $name): string => ['master' => 'book'][\Illuminate\Support\Str::afterLast($name, ':')] ?? \Illuminate\Support\Str::afterLast($name, ':');
 
     /*
      * ── আইকনের রং — গ্রুপ ধরে, আর স্থির ────────────────────────────────
@@ -333,7 +334,8 @@
                  * পরে, আর লেনদেন এখন নিজের দলের ড্রপডাউনে। ⚠️ কোনো সারি কোনো দলে না পড়লে (`menu-look.php`-এ নেই) পুরনো নিয়মই।
                  */
                 $oneLine = 10;
-                $kindRows = $tabs->values();
+                // ⓘ এক করা মডিউলের দলগুলো মালিকের ক্রমে ([[MenuLook::arrange()]], ২০ নভেম্বর ২০২৬) — ক্রম না দেওয়া মডিউলে আগের মতো
+                $kindRows = collect(\App\Core\Navigation\MenuLook::arrange((string) ($current['code'] ?? ''), $tabs->values()->all()));
                 $kindOfRow = $kindRows->map(fn ($r) => $lookFor($r)['kind']);
                 $byKind = $kindOfRow->every(fn ($k) => $k !== null);
 
@@ -358,6 +360,12 @@
                     }
                 }
 
+                /*
+                 * ⭐ এক করা মডিউলের অতিথি (হিসাব ও অর্থে অর্থ, বিক্রয়ে গ্রাহক …; মালিক, ২০ নভেম্বর ২০২৬) — প্রত্যেকে বারের শেষে নিজের
+                 * এক ড্রপডাউনে, নামটা তার দলের ([[MenuLook]]); আশ্রয়দাতার নিজের ঘরগুলো আগের মতোই, আর ঘর-না-দল বাছাইও কেবল তার ঘর গুনে।
+                 */
+                $guestCells = [];
+
                 foreach ($current['groups'] as $name => $raw) {
                     $items = collect($raw)
                         ->filter(fn ($r) => ($r['url'] ?? null) !== null)
@@ -365,6 +373,13 @@
                         ->values();
 
                     if ($items->isEmpty()) {
+                        continue;
+                    }
+
+                    if (str_contains((string) $name, ':')) {
+                        $guestCode = \Illuminate\Support\Str::before((string) $name, ':');
+                        $guestCells[$guestCode] = ($guestCells[$guestCode] ?? collect())->concat($items);
+
                         continue;
                     }
 
@@ -415,7 +430,21 @@
                  */
                 //   ⓘ আর কেবল তখনই, যখন দলের ঘরে সংখ্যাটা সত্যিই কমে — সিস্টেমে মালিকের "বারে সরাসরি" সারিগুলো দলে ঢোকে না, সেখানে
                 //   বদলালে নোটিশের ভাঁজও ভাঙত আর ঘর বাড়ত (মাপা: ১৫টা, দুই লাইন)
-                if ($byKind && $cells->count() > $oneLine && $kindCells->count() < $cells->count()) {
+                $hostCells = $cells->count();
+                $hostKindCells = $byKind
+                    ? $kindCells->filter(fn ($c) => ! str_contains((string) ($c['group'] ?? ''), ':'))->count()
+                    : 0;
+
+                foreach ($guestCells as $guestCode => $guestItems) {
+                    $guestItems = $guestItems->values();
+                    $cells[] = $guestItems->count() === 1
+                        ? ['tab' => $guestItems->first(), 'group' => $guestItems->first()['group']]
+                        : ['fold' => (string) $guestCode, 'items' => $guestItems,
+                            'icon' => $groupIcon($guestItems->first()['group']), 'group' => $guestItems->first()['group'],
+                            'label' => $current['guest_labels'][$guestCode] ?? (string) $guestCode];
+                }
+
+                if ($byKind && $hostCells > $oneLine && $hostKindCells < $hostCells) {
                     $cells = $kindCells;
                 }
             @endphp

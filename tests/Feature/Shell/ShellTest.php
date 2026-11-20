@@ -224,7 +224,12 @@ class ShellTest extends TestCase
         $codes = array_column($menu, 'code');
 
         // বিক্রয়কর্মীর গ্রাহক দেখার অধিকার আছে, তাই মডিউলটা আছে।
-        $this->assertContains('customer', $codes);
+        // ⓘ গ্রাহক এখন বিক্রয়ের ভিতরে (মালিক, ২০ নভেম্বর ২০২৬: এক করা মডিউল) — তাই মডিউলের কোড নয়, তার সারি দেখা হয়
+        $this->assertTrue(
+            in_array('customer', array_merge(...array_map(fn (array $m) => $m['codes'] ?? [$m['code']], $menu)), true)
+            && collect($menu)->flatMap(fn (array $m) => collect($m['groups'])->flatten(1))->contains('module', 'customer'),
+            '⛔ বিক্রয়কর্মীর মেনুতে গ্রাহকের সারি নেই',
+        );
 
         // অধিকার না থাকলে মডিউলটাই তালিকায় নেই — ধূসর করে দেখানো হয় না,
         // সেটা শুধু জানায় সে কী পারে না।
@@ -324,7 +329,8 @@ class ShellTest extends TestCase
         // নির্দিষ্ট মেনু সারির নাম লেখা ছিল, আর নতুন একটা মডিউল সক্রিয়
         // হওয়ামাত্র সাইডবারে অন্য মডিউলের সারিগুলো দেখাতে শুরু করায়
         // পরীক্ষাটা ভেঙে গিয়েছিল — নিয়ম ভাঙায় নয়, অগ্রগতিতে।
-        $label = app(ModuleRegistry::class)->all()['customer']->name['en'];
+        // ⓘ বিক্রয়, গ্রাহক নয় — গ্রাহক এখন বিক্রয়ের ভিতরে, নিজের টাইল নেই (মালিক, ২০ নভেম্বর ২০২৬)
+        $label = app(ModuleRegistry::class)->all()['sales']->name['en'];
 
         $this->actingAs($owner->fresh())->get('/')->assertSee($label, false);
     }
