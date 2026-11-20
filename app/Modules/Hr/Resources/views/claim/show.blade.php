@@ -19,6 +19,16 @@
         </div>
     @endif
 
+    {{-- ⚠️ একই রসিদ/স্লিপ আগে অন্য কাগজে এসেছে — সতর্কতা আর লিংক, আটকানো নয় ([[SeenBefore]], ২০ নভেম্বর ২০২৬) --}}
+    @if (session('warning'))
+        <div role="alert" class="mb-4 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">
+            {{ session('warning') }}
+            @if (session('warning_link'))
+                <a href="{{ session('warning_link') }}" data-slip-seen-before class="ms-1 font-semibold underline">{{ __('core.attachment.slip_seen_open') }}</a>
+            @endif
+        </div>
+    @endif
+
     <section data-claim-facts class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([
             [__('hr::claim.employee'), (string) $claim->employee?->name()],

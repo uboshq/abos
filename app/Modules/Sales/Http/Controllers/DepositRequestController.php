@@ -83,9 +83,20 @@ class DepositRequestController extends Controller implements HasMiddleware
         // ⚠️ একই চেহারার স্লিপ আগে এসেছে — সতর্কতা, আটকানো নয় (শেষ কথা ব্যাংক স্টেটমেন্ট; মালিক, ১৬ নভেম্বর ২০২৬)
         $earlier = $claim->lookalike;
 
-        return $earlier === null ? $redirect : $redirect->with('warning', __('sales::slip.lookalike', [
-            'no' => $earlier->id, 'date' => $earlier->claimed_on?->format('d-m-Y'), 'customer' => (string) $earlier->customer?->nameWithPoint(),
-        ]));
+        if ($earlier !== null) {
+            // ⭐ আগের জমার খবরের লিংক — তালিকা খোলে ঐ একটা সারিতে (২০ নভেম্বর ২০২৬)
+            return $redirect->with('warning', __('sales::slip.lookalike', [
+                'no' => $earlier->id, 'date' => $earlier->claimed_on?->format('d-m-Y'), 'customer' => (string) $earlier->customer?->nameWithPoint(),
+            ]))->with('warning_link', route('sales.claim.index', ['status' => 'all', 'claim' => $earlier->id]));
+        }
+
+        /*
+         * ⚠️ জমার খবরে নয়, অন্য কাগজে (রসিদের ভাউচার, HR-এর রসিদ) একই স্লিপ — সেটাও জানানো, লিংকসহ ([[SeenBefore]])।
+         * ⓘ PDF স্লিপ হুবহু একই হলেও এখন ধরা পড়ে (বাইটের ছাপ)।
+         */
+        $seen = $this->slips->seenBefore($claim);
+
+        return $seen === null ? $redirect : $redirect->with('warning', $seen['message'])->with('warning_link', $seen['url']);
     }
 
     /** `GET /api/v1/sales/deposit-requests/accounts` — অ্যাপের ব্যাংক বাছাই */
@@ -100,7 +111,20 @@ class DepositRequestController extends Controller implements HasMiddleware
     /** `POST /api/v1/sales/deposit-requests` — multipart, `slip` ফাইল */
     public function apiStore(Request $request): JsonResponse
     {
-        return response()->json($this->facts($this->raise($request)), 201);
+        $claim = $this->raise($request);
+
+        /*
+         * ⭐ ফোনেও একই সতর্কতা — একই স্লিপ আগে এসেছে কি না, বার্তা আর লিংকসহ (২০ নভেম্বর ২০২৬)। ⓘ কেবল তোলার উত্তরে; পুরনো
+         *   চাবিগুলো যেমন ছিল, এটা নতুন চাবি (`seen_before`) — পুরনো অ্যাপ না চিনলে উপেক্ষা করে। ⛔ সতর্কতা — দাবি জমা, ২০১।
+         */
+        $seen = $this->slips->seenBefore($claim);
+
+        return response()->json($this->facts($claim) + ['seen_before' => $seen === null ? null : [
+            'paper' => $seen['paper'],
+            'date' => $seen['date'],
+            'url' => $seen['url'],
+            'message' => $seen['message'],
+        ]], 201);
     }
 
     /** `GET /api/v1/sales/deposit-requests?customer=` — এক দোকানের অনুরোধগুলো, সর্বশেষ আগে */
@@ -155,7 +179,8 @@ class DepositRequestController extends Controller implements HasMiddleware
             // ⭐ টাকা কে জমা দিলেন — ডিলার নিজে, আত্মীয়, পরিচিত কেউ (ঐচ্ছিক; মালিক, ১৬ নভেম্বর ২০২৬)
             'depositor' => ['nullable', 'string', 'max:120'],
             'slip' => [Rule::requiredIf($request->input('method') === DepositClaim::BANK), 'nullable', 'file',
-                'max:'.intdiv(\App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, 1024)],
+                // ⓘ এখানে কেবল ১০ MB-র ছাদ; ধরন ধরে আঁটো সীমা আর বাংলা বার্তা ইঞ্জিনে ([[AttachmentEngine::slipMaxKb()]], ২০ নভেম্বর ২০২৬)
+                'max:'.\App\Core\Engines\Attachment\AttachmentEngine::SLIP_HARD_MAX_KB],
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক; বিলের public_id আর অঙ্ক ([[DepositClaimService::raise()]] বাকিটা দেখে)
             'bills' => ['nullable', 'array', 'max:50'],
             'bills.*.invoice' => ['required', 'string', 'max:64'],

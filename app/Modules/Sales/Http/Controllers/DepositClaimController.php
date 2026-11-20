@@ -49,6 +49,8 @@ class DepositClaimController extends Controller implements HasMiddleware
             // ⓘ "অপেক্ষমাণ" ট্যাব = সিদ্ধান্ত বাকি সব — যাচাই চলছে এমনগুলোও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
             ->when($status === DepositClaim::PENDING, fn ($q) => $q->open())
             ->when($status !== 'all' && $status !== DepositClaim::PENDING, fn ($q) => $q->where('status', $status))
+            // ⭐ একটা জমার খবর একা — "একই স্লিপ আগে এসেছে"-র লিংক এখানে আনে (`?status=all&claim=১২`; ২০ নভেম্বর ২০২৬)। দেখার শাখা বহাল।
+            ->when(is_string($request->query('claim')) && ctype_digit($request->query('claim')), fn ($q) => $q->whereKey((int) $request->query('claim')))
             /*
              * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
              * ⓘ রেফারেন্স, নোট, আর গ্রাহকের নাম/কোড।

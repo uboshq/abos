@@ -23,7 +23,7 @@
         @endif
         {{-- ⚠️ একই চেহারার স্লিপ — সতর্কতা, আটকানো নয় ([[DepositSlip::markLookalike()]]) --}}
         @if (session('warning'))
-            <div role="alert" data-slip-lookalike class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">{{ session('warning') }}</div>
+            <div role="alert" data-slip-lookalike class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">{{ session('warning') }}@if (session('warning_link')) <a href="{{ session('warning_link') }}" data-slip-seen-before class="ms-1 font-semibold underline">{{ __('core.attachment.slip_seen_open') }}</a>@endif</div>
         @endif
 
         <x-ui.select name="customer" :label="__('sales::slip.customer')"

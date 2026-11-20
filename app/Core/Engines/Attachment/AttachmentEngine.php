@@ -133,8 +133,51 @@ final class AttachmentEngine
         'application/pdf' => ['pdf'],
     ];
 
-    /** ⓘ ফোনের ছবি সাধারণত ২–৪ MB; ৫ MB স্লিপের জন্য যথেষ্ট, আর সার্ভারে বোঝা নয়। */
+    /** ⓘ ফোনের ছবি সাধারণত ২–৪ MB; ৫ MB স্লিপের জন্য যথেষ্ট, আর সার্ভারে বোঝা নয়। ⓘ এখন কেবল ছবির সীমার ডিফল্ট ([[slipMaxKb()]]) */
     public const SLIP_MAX_BYTES = 5 * 1024 * 1024;
+
+    /**
+     * ⭐ স্লিপের ধরন ধরে তোলার সীমা (KB) — কন্ট্রোল প্যানেলে বদলানো যায় (মালিক, ১৬ নভেম্বর ২০২৬: "deposit report flexible")।
+     *
+     * ⓘ ছবি ঢুকে ছোট হয় ([[budgetFor()]] — জমা হয় ১০০ KB-র কাছাকাছি), তাই ঢোকার সীমা ঢিলা: ৫ MB। ⛔ PDF ছোট করা হয় না — যা আসে
+     *   তাই জমা থাকে — তাই তার সীমা আঁটো: ২ MB (ব্যাংকের এক পাতার PDF সাধারণত ১০০–৫০০ KB)।
+     * ⛔ ওপরের ছাদ ১০ MB — সাধারণ কাগজের দরজার সমান ([[DEFAULT_MAX_BYTES]]); সেটিংসে ভুল করে বড় সংখ্যা বসালেও এর বেশি নয়।
+     */
+    public const SLIP_IMAGE_MAX_KB = 5120;
+
+    public const SLIP_PDF_MAX_KB = 2048;
+
+    public const SLIP_HARD_MAX_KB = 10240;
+
+    /** স্লিপের এক ধরনের (`image` বা `pdf`) তোলার সীমা, KB — সেটিংস থেকে, ৫০ KB থেকে ১০ MB-র মধ্যে */
+    public static function slipMaxKb(string $kind): int
+    {
+        $default = $kind === 'pdf' ? self::SLIP_PDF_MAX_KB : self::SLIP_IMAGE_MAX_KB;
+
+        try {
+            $kb = (int) app(SettingsService::class)->get('system.slip_max_kb.'.($kind === 'pdf' ? 'pdf' : 'image'), $default);
+        } catch (\Throwable) {
+            // ⓘ সেটিংস পড়া না গেলে (মডিউল বন্ধ, টেবিল নেই) ডিফল্ট — তোলা থামে না
+            $kb = $default;
+        }
+
+        return min(self::SLIP_HARD_MAX_KB, max(50, $kb > 0 ? $kb : $default));
+    }
+
+    /**
+     * ⭐ স্লিপের দরজার বাইরের সীমা — দুই ধরনের বড়টা (বাইট)। ফর্মের `max:` নিয়ম আর ইঞ্জিনের প্রথম পাহারা এটা পড়ে; ধরন ধরে
+     *   আঁটো সীমা পরে, বাইট দেখে ([[assertOneOf()]])।
+     */
+    public static function slipUploadBytes(): int
+    {
+        return max(self::slipMaxKb('image'), self::slipMaxKb('pdf')) * 1024;
+    }
+
+    /** ফর্মের `max:` নিয়মের জন্য — KB */
+    public static function slipUploadKb(): int
+    {
+        return intdiv(self::slipUploadBytes(), 1024);
+    }
 
     public function __construct(
         private readonly string $disk = 'local',
@@ -245,21 +288,41 @@ final class AttachmentEngine
     public function lookalikes(Attachment $attachment, int $within = self::LOOKALIKE_BITS)
     {
         $mine = (string) $attachment->fingerprint;
+        $sum = (string) $attachment->checksum;
+        $columns = ['id', 'company_id', 'source_module', 'source_entity', 'source_entity_id', 'original_name', 'checksum', 'fingerprint', 'uploaded_by', 'created_at'];
+
+        /*
+         * ⭐ হুবহু একই ফাইল — বাইটের ছাপ (sha256, পরিষ্কার করার **পরের** বাইটের; [[store()]]) মিললে (২০ নভেম্বর ২০২৬)।
+         * ⓘ চেহারার ছাপ কেবল ছবির হয় — PDF স্লিপ দুবার এলে আগে কিছুই ধরা পড়ত না; এটা PDF-ও ধরে। ছবির ক্ষেত্রেও একই ফাইল
+         *   আবার তোলা হলে পরিষ্কার করা বাইট একই হয় (একই ইঞ্জিন, একই ধাপ), তাই এটা চেহারার আগেই ধরে। সূচি `attachments_company_checksum`।
+         */
+        $exact = strlen($sum) === 64
+            ? Attachment::query()
+                ->where('company_id', $attachment->company_id)
+                ->whereKeyNot($attachment->getKey())
+                ->where('checksum', $sum)
+                ->where('created_at', '>=', now()->subYear())
+                ->orderBy('id')
+                ->limit(50)
+                ->get($columns)
+            : Attachment::query()->whereRaw('1 = 0')->get();
 
         if (strlen($mine) !== 16) {
-            return Attachment::query()->whereRaw('1 = 0')->get();
+            return $exact;
         }
 
-        return Attachment::query()
+        $near = Attachment::query()
             ->where('company_id', $attachment->company_id)
             ->whereKeyNot($attachment->getKey())
             ->whereNotNull('fingerprint')
             ->where('created_at', '>=', now()->subYear())
             ->orderBy('id')
             ->limit(20000)
-            ->get(['id', 'company_id', 'source_module', 'source_entity', 'source_entity_id', 'original_name', 'fingerprint', 'uploaded_by', 'created_at'])
-            ->filter(fn (Attachment $other) => ImageEngine::distance($mine, (string) $other->fingerprint) <= $within)
-            ->values();
+            ->get($columns)
+            ->filter(fn (Attachment $other) => ImageEngine::distance($mine, (string) $other->fingerprint) <= $within);
+
+        // ⓘ দুই খোঁজ এক তালিকায়, একবার করে, পুরনোটা আগে
+        return $exact->concat($near)->unique('id')->sortBy('id')->values();
     }
 
     /** @return Collection<int, Attachment> */
@@ -418,7 +481,20 @@ final class AttachmentEngine
             ));
         }
 
-        $path = $file->storeAs($directory, $storedName, ['disk' => $this->disk]);
+        /*
+         * ⛔ প্রক্রিয়া না হওয়া ছবিতেও ফোনের লুকানো তথ্য থাকে না — ২০ নভেম্বর ২০২৬ (মালিক, ১৬ নভেম্বর: স্লিপের ছবি পরিষ্কার)।
+         * ⓘ মূল পথে GD নতুন করে লেখে, তাই EXIF (জিপিএস, ফোনের নাম, সময়) এমনিই বাদ পড়ে। ⚠️ এই পড়ে-যাওয়া পথে আগে ফাইলটা হুবহু
+         *   বসত — দোকানের জিপিএস ঠিকানাসহ। ⭐ এখন JPEG/PNG-এর তথ্যের টুকরোগুলো বাইট থেকেই কাটা হয় ([[ImageEngine::withoutMetadata()]]),
+         *   ছবির বিন্দু ছোঁয়া হয় না। কাটা না গেলে (অচেনা গঠন) যেমন ছিল তেমনই — কাগজ হারানো চলে না।
+         */
+        if ($isImage) {
+            $raw = (string) file_get_contents((string) $source);
+            $clean = ImageEngine::withoutMetadata($raw, (string) $file->getMimeType());
+            $path = $directory.'/'.$storedName;
+            Storage::disk($this->disk)->put($path, $clean);
+        } else {
+            $path = $file->storeAs($directory, $storedName, ['disk' => $this->disk]);
+        }
 
         return [
             'path' => $path,
@@ -452,8 +528,9 @@ final class AttachmentEngine
      */
     private function assertOneOf(UploadedFile $file, array $only, int $maxBytes): void
     {
-        if ($file->isValid() && $file->getSize() > $maxBytes) {
-            throw new NotASlip(NotASlip::TOO_BIG);
+        // ⓘ স্লিপের মাপ নিচে ধরন ধরে দেখা হয় (কোন ধরন, কত বড়, সীমা কত — এক বাক্যে); বাকি তালিকার (দলিল-ভাণ্ডার) এক সীমা এখানেই
+        if ($only !== self::SLIP && $file->isValid() && $file->getSize() > $maxBytes) {
+            throw new NotASlip(NotASlip::TOO_BIG, maxKb: intdiv($maxBytes, 1024));
         }
 
         $path = $file->getRealPath();
@@ -462,6 +539,20 @@ final class AttachmentEngine
 
         if (! isset($only[$sniffed]) || ! in_array($extension, $only[$sniffed], true)) {
             throw new NotASlip(NotASlip::WRONG_KIND);
+        }
+
+        /*
+         * ⭐ স্লিপের ধরন ধরে সীমা — ছবি আর PDF আলাদা, কন্ট্রোল প্যানেলে বদলানো যায় ([[slipMaxKb()]])। ⚠️ ধরন বাইট থেকে পড়ার
+         *   পরে, তাই নাম বদলে (`.jpg` নামে PDF) ছবির ঢিলা সীমা পাওয়া যায় না — নাম আর বাইট না মিললে ওপরেই ফেরে।
+         */
+        if ($only === self::SLIP) {
+            $kind = $sniffed === 'application/pdf' ? 'pdf' : 'image';
+            // ⓘ ডাকার জায়গা আরও আঁটো সীমা দিলে সেটাই
+            $limitKb = min(self::slipMaxKb($kind), intdiv($maxBytes, 1024));
+
+            if ($file->getSize() > $limitKb * 1024) {
+                throw new NotASlip(NotASlip::TOO_BIG, kind: $kind, maxKb: $limitKb, sizeKb: (int) ceil($file->getSize() / 1024));
+            }
         }
     }
 

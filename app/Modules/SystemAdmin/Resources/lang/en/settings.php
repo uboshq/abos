@@ -80,6 +80,8 @@ return [
     ],
     'auto_logout_minutes' => 'Minutes of inactivity before automatic logout',
     'image_kb_slip' => 'Largest size of a deposit slip photo (KB)',
+    'slip_max_kb_image' => 'Largest photo accepted as a slip, before it is made smaller (KB)',
+    'slip_max_kb_pdf' => 'Largest PDF accepted as a slip (KB)',
     'date_format' => 'How dates are written',
     'time_format' => 'How the clock is written',
 

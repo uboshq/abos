@@ -302,9 +302,17 @@ return [
         'refused' => 'The file was not accepted — :reason',
         // Slips — [[AttachmentEngine::SLIP]], 28 September 2026
         'slip' => 'Bank or bKash slip',
-        'slip_hint' => 'Only a photo (JPG, PNG, WEBP) or a PDF, up to :max.',
+        'slip_hint' => 'Only a photo (JPG, PNG, WEBP — up to :image) or a PDF (up to :pdf).',
         'slip_too_big' => 'The slip is larger than :max — make it smaller or a PDF and try again.',
         'slip_wrong_kind' => 'Only a photo (JPG, PNG, WEBP) or a PDF can be a slip, and the file name must match what is inside.',
+        // Per-kind limits, KB in the control panel — 20 November 2026 ([[NotASlip::text()]])
+        'slip_too_big_image' => 'The photo is :size — the limit for a slip photo is :max. Make it smaller and try again.',
+        'slip_too_big_pdf' => 'The PDF is :size — the limit for a slip PDF is :max. Make it smaller, or take a photo, and try again.',
+        // The same slip came before — a warning, never a block ([[SeenBefore]])
+        'slip_seen_before' => 'Careful — the same slip twice? This slip came before: :paper (:date). The paper was kept; check the bank statement that the money is not counted twice.',
+        'slip_seen_open' => 'Open the earlier paper',
+        'paper_claim' => 'deposit report no. :no',
+        'paper_other' => 'another paper',
     ],
 
     'custom_field' => [

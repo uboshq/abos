@@ -134,10 +134,12 @@ final class ABankSlipIsAPhotoOrAPdfAndTheSignerCanOpenItTest extends TestCase
         $big = $this->bigPdf('big-slip.pdf');
         $this->assertSame(5 * 1024 * 1024 + 1, filesize($big->getRealPath()), 'প্রস্তুতিটাই ভুল — ফাইলটা ৫ MB + ১ বাইট নয়।');
 
+        // ⭐ ২০ নভেম্বর ২০২৬ — সীমা এখন ধরন ধরে: PDF-এর ডিফল্ট ২ MB (কন্ট্রোল প্যানেলে; [[AttachmentEngine::slipMaxKb()]]), আর বার্তা বলে
+        //   কোন ধরন, কত বড়, সীমা কত ([[NotASlip::text()]])
         $this->assertSame(
-            [__('core.attachment.slip_too_big', ['max' => '5 MB'])],
+            [__('core.attachment.slip_too_big_pdf', ['size' => '5 MB', 'max' => '2 MB'])],
             $this->fileErrors($this->postSlip($form, $big)),
-            '⛔ ৫ MB-র বেশি স্লিপ ঠিক বার্তায় ফেরেনি।',
+            '⛔ সীমার বেশি PDF স্লিপ ঠিক বার্তায় ফেরেনি।',
         );
 
         $this->assertSame(0, Attachment::query()->count(), '⛔ ফেরানো স্লিপের সারি তবু তৈরি হয়েছে।');

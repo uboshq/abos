@@ -8,6 +8,7 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
+use App\Core\Engines\Attachment\NotASlip;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -158,9 +159,13 @@ final class ExpenseClaimService
                         module: self::MODULE,
                         entity: ExpenseClaim::drillSourceType(),
                         entityId: (int) $claim->id,
-                        maxBytes: AttachmentEngine::SLIP_MAX_BYTES,
+                        // ⭐ সীমা কন্ট্রোল প্যানেল থেকে, ধরন ধরে (২০ নভেম্বর ২০২৬)
+                        maxBytes: AttachmentEngine::slipUploadBytes(),
                         only: AttachmentEngine::SLIP,
                     );
+                } catch (NotASlip $refused) {
+                    // ⓘ মানুষের ভাষায় — ছবি না PDF, সীমা কত ([[NotASlip::text()]])
+                    throw ValidationException::withMessages(['receipt' => $refused->text()]);
                 } catch (AttachmentException $refused) {
                     throw ValidationException::withMessages(['receipt' => $refused->getMessage()]);
                 }

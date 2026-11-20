@@ -9,6 +9,7 @@ use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Engines\Attachment\NotAllowedType;
 use App\Core\Engines\Attachment\NotASlip;
+use App\Core\Engines\Attachment\SeenBefore;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Models\Approval;
 use App\Models\Attachment;
@@ -84,17 +85,18 @@ class AttachmentController extends Controller
          * অর্থাৎ পাহারা ঠিকই ছিল, শুধু বার্তাটা মানুষের জন্য ছিল না।
          */
         try {
-            $this->attachments->store(
+            $stored = $this->attachments->store(
                 file: $request->file('file'),
                 module: $module,
                 entity: $validated['source_type'],
                 entityId: (int) $validated['source_id'],
-                maxBytes: $slip ? AttachmentEngine::SLIP_MAX_BYTES : null,
+                // ⭐ স্লিপের সীমা কন্ট্রোল প্যানেল থেকে, ধরন ধরে ([[AttachmentEngine::slipMaxKb()]]; ২০ নভেম্বর ২০২৬)
+                maxBytes: $slip ? AttachmentEngine::slipUploadBytes() : null,
                 only: $slip ? AttachmentEngine::SLIP : null,
             );
         } catch (NotASlip $refused) {
             throw ValidationException::withMessages([
-                'file' => __('core.attachment.slip_'.$refused->reason, ['max' => '5 MB']),
+                'file' => $refused->text(),
             ]);
         } catch (NotAllowedType) {
             // ⭐ ধরনের "না" বাংলায় — আগে ইঞ্জিনের ইংরেজি কারণটাই বসত (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬)
@@ -107,7 +109,15 @@ class AttachmentController extends Controller
             ]);
         }
 
-        return back()->with('saved', __('core.attachment.uploaded'));
+        $back = back()->with('saved', __('core.attachment.uploaded'));
+
+        /*
+         * ⚠️ একই স্লিপ আগে অন্য কাগজে এসেছে — সতর্কতা আর আগের কাগজের লিংক; কাগজটা রাখা হয়েই গেছে (মালিক, ১৮ নভেম্বর ২০২৬:
+         *   সতর্কতা কাজ আটকায় না)। ⓘ কেবল স্লিপে — সাধারণ কাগজে (চুক্তি, বিল) একই ফাইল দুই জায়গায় থাকা স্বাভাবিক।
+         */
+        $seen = $slip ? app(SeenBefore::class)->of($stored) : null;
+
+        return $seen === null ? $back : $back->with('warning', $seen['message'])->with('warning_link', $seen['url']);
     }
 
     /**
