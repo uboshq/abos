@@ -26,9 +26,20 @@ final class MenuLook
     /** @var array{kinds?: array<string, array{0: string, 1: string, 2?: string}>, order?: array<string, list<string>>, modules?: array<string, array<string, array{0: string, 1: string}>>}|null */
     private static ?array $data = null;
 
-    /** @return array{kinds: array<string, array{0: string, 1: string, 2?: string}>, order?: array<string, list<string>>, modules: array<string, array<string, array{0: string, 1: string}>>} */
+    /** ⓘ SAP আর Dynamic রূপের তালিকা — মডিউল এক করার আগের ([[Ui::keepsModulesApart()]]) */
+    private static ?array $apartData = null;
+
+    /**
+     * ⛔ SAP আর Dynamic রূপে এক করার আগের তালিকা (`menu-look-unmerged.php`) — মালিক, ২০ নভেম্বর ২০২৬: ওই দুই রূপ ১০০% আগের মতো।
+     *
+     * @return array{kinds: array<string, array{0: string, 1: string, 2?: string}>, order?: array<string, list<string>>, modules: array<string, array<string, array{0: string, 1: string}>>}
+     */
     public static function data(): array
     {
+        if (\App\Core\Support\Ui::viewerKeepsModulesApart()) {
+            return self::$apartData ??= (array) require resource_path('menu-look-unmerged.php');
+        }
+
         return self::$data ??= (array) require resource_path('menu-look.php');
     }
 

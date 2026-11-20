@@ -98,7 +98,7 @@ return [
          */
         'accounts' => [
             'accounts::dashboard.title' => ['start', 'layout-dashboard'],
-            'finance::menu.dashboard' => ['start', 'gauge'],
+            'finance::dashboard.title' => ['start', 'gauge'],
             'finance::forecast.cfo' => ['start', 'briefcase'],
             'accounts::menu.chart_of_accounts' => ['start', 'list-tree'],
             'accounts::menu.receipt' => ['daily', 'arrow-down-to-line'],
@@ -273,7 +273,7 @@ return [
             'executive::menu.links' => ['master', 'handshake'],
         ],
         'finance' => [
-            'finance::menu.dashboard' => ['start', 'layout-dashboard'],
+            'finance::dashboard.title' => ['start', 'layout-dashboard'],
             'finance::forecast.cfo' => ['plan', 'gauge'],
             'finance::budget.title' => ['plan', 'wallet'],
             'finance::forecast.title' => ['plan', 'chart-spline'],

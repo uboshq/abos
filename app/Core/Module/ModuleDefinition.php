@@ -953,9 +953,10 @@ final class ModuleDefinition
          * ⭐ এক করা মডিউল — মালিক, ২০ নভেম্বর ২০২৬ (হিসাব ও অর্থ · বিক্রয় · ক্রয়; SAP S/4, D365, Oracle, NetSuite-এর মতো এক মডিউলে কয়েক ভাগ)।
          *   `merged_label` — অতিথিরা ভিতরে বসলে আশ্রয়দাতার নাম যা হয় (অনুবাদের চাবি; "হিসাব" → "হিসাব ও অর্থ")
          *   `tab`          — এক করা মডিউলের ড্যাশবোর্ডের ট্যাবে এই মডিউলের নাম (অনুবাদের চাবি; না দিলে মডিউলের নিজের নাম)
-         * ⓘ দুটোই কেবল নাম — রুট, চাবি, ঠিকানা কিছুই বদলায় না ([[MenuBuilder::settleGuestsIntoTheirHosts()]])।
+         *   `dashboard_label` — অতিথি হয়ে বসলে তার ড্যাশবোর্ড-সারির নাম (অনুবাদের চাবি); একা থাকলে (SAP/Dynamic) সারির নিজের নাম
+         * ⓘ সবই কেবল নাম — রুট, চাবি, ঠিকানা কিছুই বদলায় না ([[MenuBuilder::settleGuestsIntoTheirHosts()]])।
          */
-        foreach (['merged_label', 'tab'] as $labelKey) {
+        foreach (['merged_label', 'tab', 'dashboard_label'] as $labelKey) {
             if (isset($nav[$labelKey])) {
                 if (! is_string($nav[$labelKey]) || $nav[$labelKey] === '') {
                     throw new InvalidArgumentException(
