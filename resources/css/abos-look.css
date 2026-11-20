@@ -124,6 +124,9 @@
     height: 32px;
     border-radius: 8px;
     color: #ffffff;
+    /* ⓘ নীল জমিনে নীল মডিউলের বর্গ হারিয়ে যেত (হিসাব ও অর্থ, বিক্রয় — #2563eb) — Fluent-এর টাইলের মতো হালকা সাদা বেড় আর ছায়া,
+       তাই যে রঙেরই হোক, বর্গটা চোখে পড়ে */
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.55), 0 3px 8px rgb(0 0 0 / 0.25);
 }
 
 :root[data-ui='rose'] [data-site-map] .module-head-name {
