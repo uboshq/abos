@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Purchase;
+namespace Tests\Feature\Modules\Purchase;
 
 use App\Modules\Purchase\Services\UnloadingSplit;
 use Illuminate\Validation\ValidationException;
