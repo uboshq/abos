@@ -108,10 +108,11 @@ final class SalesDashboard implements ProvidesDashboard
                     permission: 'sales.order.create',
                     icon: 'plus',
                 ),
+                // ⭐ টাকা নেওয়া হিসাবের রসিদ ভাউচারে (মালিক, ১৯ সেপ্টেম্বর ২০২৬) — পুরনো আদায়ের পাতায় নয়
                 new Tile(
                     label: __('sales::action.new_collection'),
-                    href: route('sales.collection.create'),
-                    permission: 'sales.collection.create',
+                    href: route('accounts.voucher.create', ['type' => 'receipt', 'party_type' => 'customer']),
+                    permission: 'accounts.voucher.create',
                     icon: 'cash',
                 ),
                 new Tile(

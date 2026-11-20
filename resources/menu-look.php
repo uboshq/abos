@@ -467,6 +467,7 @@ return [
             'sales::menu.cancelled_invoices' => ['bill', 'file-x'],
             'sales::menu.print_queue' => ['bill', 'printer'],
             'sales::menu.returns' => ['returns', 'rotate-ccw'],
+            'sales::menu.collections' => ['returns', 'hand-coins'],
             'sales::planned.pricing_lists' => ['price', 'tags'],
             'sales::planned.pricing_customer' => ['price', 'user-check'],
             'sales::planned.pricing_channel' => ['price', 'share-2'],

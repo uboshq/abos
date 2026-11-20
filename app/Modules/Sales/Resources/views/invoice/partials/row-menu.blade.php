@@ -87,9 +87,14 @@
         $items[] = ['label' => __('core.row_menu.transport'), 'icon' => 'challan', 'url' => route('sales.invoice.transport', $invoice)];
     }
 
-    if ($user?->can('sales.collection.create')) {
+    // ⭐ টাকা নেওয়া হিসাবের রসিদ ভাউচারে, বিলের পাতার "আদায় নিন"-এর একই ঠিকানা (মালিক, ১৯ সেপ্টেম্বর ২০২৬) — পক্ষ, বিল আর বকেয়া ভরা
+    if ($user?->can('accounts.voucher.create')) {
         $items[] = ['label' => __('core.row_menu.collect'), 'icon' => 'cash',
-            'url' => route('sales.collection.create', ['sales_invoice_id' => $invoice->id]), 'peek' => false,
+            'url' => route('accounts.voucher.create', array_filter([
+                'type' => 'receipt', 'party_type' => 'customer', 'party_id' => $invoice->customer_id,
+                'against_type' => \App\Modules\Sales\Models\SalesInvoice::drillSourceType(), 'against_id' => $invoice->id,
+                'amount' => $hasDue ? $due : null,
+            ], fn ($v) => $v !== null)), 'peek' => false,
             'hint' => $hasDue ? __('core.row_menu.due', ['amount' => \App\Core\Support\Money::format($due)]) : null,
             'off' => match (true) {
                 $isCancelled => __('core.row_menu.why_cancelled'),

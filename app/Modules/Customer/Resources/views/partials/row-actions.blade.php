@@ -39,9 +39,12 @@
         $items[] = ['label' => __('customer::row_menu.new_order'), 'icon' => 'plus', 'url' => route('sales.order.create', ['customer' => $customer->id]), 'peek' => false,
             'off' => $inactive ? __('customer::row_menu.why_inactive') : ($canOrder ? null : __('core.row_menu.why_no_key'))];
     }
-    if (\Illuminate\Support\Facades\Route::has('sales.collection.create')) {
-        $canCollect = (bool) $user?->can('sales.collection.create');
-        $items[] = ['label' => __('core.row_menu.collect'), 'icon' => 'cash', 'url' => route('sales.collection.create', ['customer' => $id]), 'peek' => false,
+    // ⭐ টাকা নেওয়া হিসাবের রসিদ ভাউচারে (মালিক, ১৯ সেপ্টেম্বর ২০২৬) — গ্রাহক আগে থেকে ভরা; পুরনো আদায়ের পাতায় নয় (২০ নভেম্বর ২০২৬:
+    //   এই দরজা আদায়ের পাতায় যেত, আর সেই কাগজ রসিদের তালিকায় আসে না বলে মালিক খুঁজে পাননি)
+    if (\Illuminate\Support\Facades\Route::has('accounts.voucher.create')) {
+        $canCollect = (bool) $user?->can('accounts.voucher.create');
+        $items[] = ['label' => __('core.row_menu.collect'), 'icon' => 'cash',
+            'url' => route('accounts.voucher.create', ['type' => 'receipt', 'party_type' => 'customer', 'party_id' => $id]), 'peek' => false,
             'off' => $canCollect ? null : __('core.row_menu.why_no_key')];
     }
     $items[] = ['label' => __('core.row_menu.edit'), 'icon' => 'edit', 'url' => route('customer.edit', $customer), 'peek' => false,

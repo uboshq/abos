@@ -283,6 +283,11 @@ return [
              * রুট থাকল — ইতিহাস, চেক ফেরত আর বিলের পাতার লিংক ওখানেই খোলে।
              */
             ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
+            /*
+             * ⭐ আদায়ের তালিকা — মালিক, ২০ নভেম্বর ২০২৬: "কালেকশন লিস্টটা কোথায় পাওয়া যাবে"। নতুন টাকা নেওয়া রসিদ ভাউচারে (১৯ সেপ্টেম্বরের
+             *   নিয়ম), কিন্তু যে আদায়ের কাগজ আগে লেখা হয়েছে (COL-…, খসড়া আর পাকা) সেগুলো খোঁজার পাতা মেনুতে ছিল না — এখন আছে।
+             */
+            ['label' => 'sales::menu.collections', 'icon' => 'cash', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
 
             /* ⓘ শিপমেন্ট এখন "ডিসপ্যাচ রেজিস্টার" নামে Delivery Processing ভাঁজে */
 
