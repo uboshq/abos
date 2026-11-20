@@ -265,6 +265,8 @@ return [
             // ⭐ ব্যক্তির লেজার — মালিক, ৫ অক্টোবর ২০২৬
             ['label' => 'accounts::party_ledger.person_title', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'person-ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report.final'], // ⛔ অডিট ম১৩/ম১৮
+            // ⭐ বছর-শেষের রেওয়ামিল — সমন্বয়ের আগে, সমন্বয়, পরে, আগের বছর-শেষ (মালিক, ১৭ নভেম্বর ২০২৬)
+            ['label' => 'accounts::fs.ytb.title', 'icon' => 'scale', 'route' => 'accounts.year_end_trial_balance', 'permission' => 'accounts.report.final'],
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'accounts::branch_dues.title', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'branch-dues'], 'permission' => 'accounts.report'],
 
