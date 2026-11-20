@@ -84,6 +84,9 @@ class PurchasePrintController extends Controller implements HasMiddleware
         $bill->load(['lines.product.unit', 'supplier', 'branch']);
         $price = $this->showsPurchasePrice();
 
+        // ⭐ আনলোডিং খরচ এক লাইনে — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"); বাছা না থাকলে খালি, আর খালি ঘর কাগজে বসে না
+        $unloading = filled($bill->unload_mode) ? app(\App\Modules\Supplier\Services\LabourCost::class)->describe($bill, 'unload_') : '';
+
         $doc = new PrintableDocument(
             title: __('purchase::doc.bill'),
             meta: [
@@ -91,6 +94,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'core.print.date' => DateFormat::format($bill->trx_date),
                 'purchase::field.supplier' => $bill->supplier?->name() ?? '',
                 'purchase::field.supplier_bill_no' => (string) ($bill->supplier_bill_no ?? ''),
+                'supplier::labour.unloading' => $unloading,
             ],
             lines: $this->lines($bill->lines, 'qty', money: $price),
             totals: $price ? $this->totals($bill) : [],
@@ -112,7 +116,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
             $request, $doc, $price ? (string) $bill->total : '0', (string) $bill->document_no,
             document: $bill, kind: 'purchase_bill', paperSetting: 'purchase.print.paper.bill',
             template: $modern ? 'purchase::print.bill-modern' : 'print.document',
-            extra: $modern ? ['bill' => $this->billFacts($bill, $price)] : [],
+            extra: $modern ? ['bill' => $this->billFacts($bill, $price), 'unloading' => $unloading] : [],
         );
     }
 
@@ -264,6 +268,13 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'core.print.date' => DateFormat::format($receipt->trx_date),
                 'purchase::field.supplier' => $receipt->supplier?->name() ?? '',
                 'purchase::field.warehouse' => $receipt->warehouse?->name() ?? '',
+
+                /*
+                 * ⭐ আনলোডিং — কীভাবে আর কত (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")। ⓘ মজুরির অঙ্কটা সরবরাহকারীর দাম নয় — গুদামের লোকই
+                 * নামিয়েছেন আর দিয়েছেন, তাই এই "দামহীন" কাগজেও থাকে। বাছা না থাকলে ঘরটা খালি, আর ছাঁচ খালি ঘর দেখায় না।
+                 */
+                'supplier::labour.unloading' => filled($receipt->unload_mode)
+                    ? app(\App\Modules\Supplier\Services\LabourCost::class)->describe($receipt, 'unload_') : '',
             ],
             lines: $this->lines($receipt->lines, 'received_qty', money: false),
             totals: [],

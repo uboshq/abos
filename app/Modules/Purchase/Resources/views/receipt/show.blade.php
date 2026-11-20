@@ -1,6 +1,10 @@
 {{-- একটা চালান — কী এসেছে, আর তার কতটুকুর বিল হয়েছে। --}}
 {{-- ⛔ ক্রয়মূল্য কেবল খরচ দেখার চাবিতে — ছাপার একই নিয়ম ([[PurchasePrintController::showsPurchasePrice()]]); fe, ১৩ অক্টোবর ২০২৬ --}}
-@php($showsPrice = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\Product::class, 'purchase_price'))
+{{-- ⛔ খোলা-বন্ধ রূপে, ছোট এক-লাইনের রূপে নয় — নিচের আনলোডিং কার্ডের ব্লকের সাথে দুই রূপ মিশলে Blade প্রথম খোলা থেকে
+     পরের বন্ধ পর্যন্ত এক ব্লক ধরে পাতা ভাঙত (২০ নভেম্বর ২০২৬)। ⚠️ এই মন্তব্যে নির্দেশের নাম লেখা নয় — মন্তব্যের ভেতরেও ধরা পড়ে। --}}
+@php
+    $showsPrice = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\Product::class, 'purchase_price');
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $receipt->document_no }}</x-slot:title>
 
@@ -154,6 +158,204 @@
                     'purchase::field.total' => $receipt->totalWithTax(),
                 ]" />
             </div>
+            @endif
+        </section>
+
+        {{-- ⭐ আনলোডিং খরচ — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"; [[LabourCost]], [[UnloadingSplit]], [[PurchaseReceiptController::unloading()]])।
+             ⓘ খসড়ায় ও চাবি থাকলে বাছাইয়ের ফর্ম আর সারি ধরে হাতের দর; পাকা বা বাতিল কাগজে কেবল দেখা।
+             ⛔ মালের দাম আর পৌঁছানো খরচ কেবল খরচ দেখার চাবিতে — উপরের ছকের একই নিয়ম ($showsPrice)। --}}
+        @php
+            $labour = app(\App\Modules\Supplier\Services\LabourCost::class);
+            $unloadDraft = $receipt->status === \App\Core\Support\DocumentStatus::DRAFT;
+            $unloadEdit = $unloadDraft && (auth()->user()?->can('purchase.receipt.create') ?? false);
+            $unloadRows = \App\Modules\Purchase\Services\UnloadingSplit::rows($receipt->lines, 'received_qty');
+
+            // ⓘ খসড়ায় আজকের দর (সংরক্ষণ আবার বসায়), পাকা কাগজে লেখার দিনের ছবি
+            $unloadRate = ! $unloadDraft && $receipt->unload_rate !== null
+                ? (string) $receipt->unload_rate
+                : \App\Modules\Purchase\Services\UnloadingSplit::rate();
+            $unloadRateText = fn (string $rate) => \App\Core\Support\Money::format($rate, bccomp(\App\Core\Support\Money::round($rate, 2), $rate, 4) === 0 ? 2 : 4);
+            $unloadCartons = \App\Modules\Purchase\Services\UnloadingSplit::cartonsOf($unloadRows);
+            $unloadExpected = __('supplier::labour.expected', [
+                'cartons' => \App\Core\Support\Money::quantity($unloadCartons, 2),
+                'rate' => $unloadRateText($unloadRate),
+                'amount' => \App\Core\Support\Money::format(\App\Modules\Purchase\Services\UnloadingSplit::expected($unloadRows, $unloadRate)),
+            ]);
+            $unloadMode = (string) old('unload_mode', $receipt->unload_mode ?? '');
+            $unloadContractors = $unloadEdit ? $labour->contractors()->pluck('label', 'id') : collect();
+        @endphp
+        <section data-boxed data-receipt-unloading
+                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-2 font-semibold">{{ __('supplier::labour.unloading') }}</h2>
+
+            @if ($unloadDraft && blank($receipt->unload_mode))
+                <p role="alert" data-unloading-missing
+                   class="mb-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2 text-sm text-(--color-badge-pending-ink)">
+                    {{ __('supplier::labour.unloading_required', ['no' => $receipt->document_no]) }}
+                </p>
+            @endif
+
+            @if ($unloadEdit)
+                <form method="POST" action="{{ route('purchase.receipt.unloading', $receipt) }}" class="grid gap-3" data-no-peek
+                      x-data="{ unloadMode: @js($unloadMode) }">
+                    @csrf
+                    @method('PUT')
+
+                    <p class="text-sm text-(--color-ink-muted)">{{ __('supplier::labour.how') }}</p>
+                    <div class="ds-seg" role="radiogroup" aria-label="{{ __('supplier::labour.how') }}">
+                        @foreach (\App\Modules\Supplier\Services\LabourCost::UNLOADING as $choice)
+                            <button type="button" role="radio" @click="unloadMode = '{{ $choice }}'"
+                                    :class="unloadMode === '{{ $choice }}' ? 'is-on' : ''"
+                                    :aria-checked="unloadMode === '{{ $choice }}' ? 'true' : 'false'">{{ __('supplier::labour.mode_'.$choice) }}</button>
+                        @endforeach
+                    </div>
+                    <input type="hidden" name="unload_mode" :value="unloadMode" value="{{ $unloadMode }}">
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div x-show="unloadMode === 'cash' || unloadMode === 'due'">
+                            <x-ui.field name="unload_amount" type="number" step="0.01" min="0" inputmode="decimal" numeric
+                                        :label="__('supplier::labour.amount')"
+                                        :value="old('unload_amount', \App\Modules\Supplier\Services\LabourCost::costsUs($receipt->unload_mode) ? \App\Core\Support\Money::round((string) $receipt->unload_amount, 2) : '')"
+                                        :hint="__('supplier::labour.amount_hint')" />
+                        </div>
+
+                        <div x-show="unloadMode === 'cash'">
+                            <x-ui.select name="unload_account_id" :label="__('supplier::labour.till')"
+                                         :options="collect($labour->cashTills())->pluck('label', 'id')"
+                                         :selected="$receipt->unload_account_id"
+                                         placeholder="-" />
+                        </div>
+
+                        <div x-show="unloadMode === 'due'">
+                            @if ($unloadContractors->isEmpty())
+                                <p class="rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2 text-sm text-(--color-badge-pending-ink)">
+                                    {{ __('supplier::labour.no_contractor_party') }}
+                                </p>
+                            @else
+                                <x-ui.select name="unload_contractor_id" :label="__('supplier::labour.contractor')"
+                                             :options="$unloadContractors"
+                                             :selected="$receipt->unload_contractor_id"
+                                             placeholder="-" />
+                            @endif
+                        </div>
+
+                        <div x-show="unloadMode === 'none'">
+                            <x-ui.field name="unload_reason" maxlength="255" :label="__('supplier::labour.reason')"
+                                        :value="old('unload_reason', $receipt->unload_reason)" />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-(--color-border)">
+                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($receipt->lines as $line)
+                                    <tr class="border-b border-(--color-border)">
+                                        <td class="px-2 py-1" id="unload-line-{{ $line->id }}">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity($unloadRows[(int) $line->id]['cartons'] ?? '0', 2) }}</td>
+                                        <td class="px-2 py-1 text-end">
+                                            <input type="number" step="0.01" min="0" inputmode="decimal"
+                                                   name="unload_rates[{{ $line->id }}]"
+                                                   value="{{ old('unload_rates.'.$line->id, $line->unload_rate === null ? '' : \App\Core\Support\Money::quantity((string) $line->unload_rate, 4)) }}"
+                                                   aria-label="{{ __('supplier::labour.hand_rate') }}"
+                                                   aria-describedby="unload-line-{{ $line->id }}"
+                                                   class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border border-(--color-border)
+                                                          bg-(--color-surface-card) px-2 text-end">
+                                            @error('unload_rates.'.$line->id)
+                                                <p class="mt-1 text-xs text-(--color-danger)">{{ $message }}</p>
+                                            @enderror
+                                        </td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-2xs text-(--color-ink-muted)" data-unload-expected>{{ $unloadExpected }}</p>
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_hint') }}</p>
+
+                    @foreach (\App\Modules\Supplier\Services\LabourCost::fields('unload_') as $field)
+                        @error($field)
+                            <p class="text-sm text-(--color-danger)" data-unload-error>{{ $message }}</p>
+                        @enderror
+                    @endforeach
+
+                    <div>
+                        <x-ui.button type="submit" tone="primary">{{ __('supplier::labour.save') }}</x-ui.button>
+                    </div>
+                </form>
+            @else
+                <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.how') }}</dt>
+                        <dd class="mt-0.5" data-unload-describe>{{ $labour->describe($receipt, 'unload_') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.cartons') }}</dt>
+                        <dd class="num mt-0.5">{{ \App\Core\Support\Money::quantity((string) ($receipt->unload_cartons ?? $unloadCartons), 2) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.rate_per_carton') }}</dt>
+                        <dd class="num mt-0.5">{{ $unloadRateText($unloadRate) }}</dd>
+                    </div>
+                </dl>
+
+                @if ($receipt->lines->isNotEmpty())
+                    <div class="table-responsive mt-3">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-(--color-border)">
+                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                    @if ($showsPrice)
+                                        <th class="px-2 py-1 text-end">{{ __('purchase::unloading.line_amount') }}</th>
+                                        <th class="px-2 py-1 text-end">{{ __('supplier::labour.landed') }}</th>
+                                    @endif
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($receipt->lines as $line)
+                                    <tr class="border-b border-(--color-border)">
+                                        <td class="px-2 py-1">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ $line->unload_rate === null ? __('purchase::unloading.equal_share') : $unloadRateText((string) $line->unload_rate) }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                        @if ($showsPrice)
+                                            <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) $line->amount) }}</td>
+                                            <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format(bcadd((string) ($line->amount ?? '0'), (string) ($line->unload_cost ?? '0'), 4)) }}</td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td class="px-2 py-1 text-end font-medium">{{ __('purchase::unloading.total') }}</td>
+                                    <td class="num px-2 py-1 text-end font-medium">{{ \App\Core\Support\Money::quantity(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cartons ?? '0')), 2) }}</td>
+                                    <td></td>
+                                    <td class="num px-2 py-1 text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cost ?? '0'))) }}</td>
+                                    @if ($showsPrice)
+                                        <td class="num px-2 py-1 text-end font-medium">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->amount ?? '0'))) }}</td>
+                                        <td class="num px-2 py-1 text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => bcadd((string) ($l->amount ?? '0'), (string) ($l->unload_cost ?? '0'), 4))) }}</td>
+                                    @endif
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @endif
+
+                @if ($unloadDraft)
+                    <p class="mt-2 text-2xs text-(--color-ink-muted)" data-unload-expected>{{ $unloadExpected }}</p>
+                @endif
             @endif
         </section>
 

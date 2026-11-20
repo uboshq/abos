@@ -191,6 +191,59 @@
             @endif
         </section>
 
+        {{-- ⭐ আনলোডিং খরচ — কেবল দেখা (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[LabourCost]], [[UnloadingSplit]])।
+             ⓘ বাছা থাকলেই আসে — সরাসরি ক্রয়ের পর্দা বাছাই নেয়; এখানে নতুন ফর্ম নেই।
+             ⓘ ভাগ কেবল সরাসরি সারিতে (মাল গ্রহণ ছাড়া) — গ্রহণের সারির খরচ গ্রহণের কাগজে। --}}
+        @if (filled($bill->unload_mode))
+            {{-- ⚠️ এক লাইনের রূপ — পাতার মাথায় একই রূপ আছে; খোলা-বন্ধ রূপ মেশালে Blade ভুল জায়গা পর্যন্ত কেটে নেয় --}}
+            @php($unloadDirect = $bill->lines->filter(fn ($l) => $l->purchase_receipt_line_id === null))
+            @php($unloadRateText = $bill->unload_rate === null ? '-' : \App\Core\Support\Money::format((string) $bill->unload_rate, bccomp(\App\Core\Support\Money::round((string) $bill->unload_rate, 2), (string) $bill->unload_rate, 4) === 0 ? 2 : 4))
+            <section data-boxed data-bill-unloading
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-2 font-semibold">{{ __('supplier::labour.unloading') }}</h2>
+
+                <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.how') }}</dt>
+                        <dd class="mt-0.5" data-unload-describe>{{ app(\App\Modules\Supplier\Services\LabourCost::class)->describe($bill, 'unload_') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.cartons') }}</dt>
+                        <dd class="num mt-0.5">{{ \App\Core\Support\Money::quantity((string) ($bill->unload_cartons ?? '0'), 2) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.rate_per_carton') }}</dt>
+                        <dd class="num mt-0.5">{{ $unloadRateText }}</dd>
+                    </div>
+                </dl>
+
+                @if ($unloadDirect->isNotEmpty())
+                    <div class="table-responsive mt-3">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-(--color-border)">
+                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($unloadDirect as $line)
+                                    <tr class="border-b border-(--color-border)">
+                                        <td class="px-2 py-1">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ $line->unload_rate === null ? '-' : \App\Core\Support\Money::quantity((string) $line->unload_rate, 4) }}</td>
+                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </section>
+        @endif
+
         {{-- সরবরাহকারীর আসল বিলের ছবি বা স্ক্যান — মিলিয়ে দেখার জন্য
              ছয় মাস পরেও এটাই লাগে --}}
         <x-ui.attachments :document="$bill" />
