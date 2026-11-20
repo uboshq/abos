@@ -24,6 +24,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillGiftLine;
+use App\Modules\Supplier\Services\LabourCost;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -180,6 +181,17 @@ final class DirectPurchaseService
              * আর কী এসেছিল।
              */
             $this->writeGifts($bill, $gifts);
+
+            /*
+             * ⭐ আনলোডিং — বাধ্যতামূলক, সইয়ের আগে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[ChargesUnloading]])। ⓘ বাছাই, অঙ্ক (খালি হলে
+             * কার্টন × দর), আর সারির হাতের দর (`lines.*.unload_rate`, খালি হলে পণ্যের নিজের দর) — বিলে লেখা থাকে, তাই সইয়ে আটকানো
+             * খসড়াও আনলোডিং মনে রাখে। ⛔ বাছা না হলে পুরো লেনদেন ফেরে — কাগজ, মাল, টাকা কিছুই বসে না।
+             */
+            $bill = $this->bills->setUnloading($bill, $data);
+
+            if ((bool) config('abos.unloading_required', true) || filled($bill->unload_mode)) {
+                app(LabourCost::class)->assertComplete($bill, 'unload_', 'unloading');
+            }
 
             /*
              * সই — এখন লেনদেনের **ভিতরে**, আর সেটাই ২৭ সেপ্টেম্বরের সংশোধন।
@@ -457,6 +469,9 @@ final class DirectPurchaseService
                 ? (string) $line['pricing_pct']
                 : null,
             'narration' => $line['narration'] ?? null,
+
+            // ⭐ হাতের আনলোড দর — ছাঁকনিতে না লিখলে পর্দার ঘর নীরবে হারাত (উপরের লটের একই শিক্ষা); খালি = পণ্যের নিজের দর
+            'unload_rate' => filled($line['unload_rate'] ?? null) ? (string) $line['unload_rate'] : null,
         ], $lines);
     }
 

@@ -80,6 +80,8 @@ class Product extends Model implements Drillable
          */
         'track_serial',
         'purchase_price', 'sale_price', 'pricing_anchor', 'pricing_pct', 'reorder_level',
+        // ⭐ কার্টনপ্রতি আনলোড দর — বড় কার্টনের নিজের দর (মালিক, ১৮ নভেম্বর ২০২৬; [[UnloadingSplit]])
+        'unload_rate',
 
         /*
          * ⭐ পরিকল্পনার তিনটা ঘর — ২৪ সেপ্টেম্বর ২০২৬।
@@ -100,6 +102,7 @@ class Product extends Model implements Drillable
             'sale_price' => 'decimal:4',
             'pricing_pct' => 'decimal:4',
             'reorder_level' => 'decimal:4',
+            'unload_rate' => 'decimal:4',
 
             /*
              * ⭐ পরিকল্পনার দুইটা ঘরও `decimal:4` — ২৪ সেপ্টেম্বর ২০২৬।

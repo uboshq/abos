@@ -119,6 +119,7 @@
                     'inventory::field.purchase_price' => ['purchase_price', $product->purchase_price],
                     'inventory::field.sale_price' => [null, $product->sale_price],
                     'inventory::field.reorder_level' => [null, $product->reorder_level],
+                    'inventory::field.unload_rate' => [null, $product->unload_rate],
                 ] as $label => [$guarded, $value])
                     <div class="flex items-baseline justify-between gap-3">
                         <dt class="text-sm text-(--color-ink-muted)">{{ __($label) }}</dt>

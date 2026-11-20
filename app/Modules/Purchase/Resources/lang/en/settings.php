@@ -6,6 +6,7 @@ return [
     'receipt_needs_order' => 'Goods can only be received against an order',
     'field_free_qty' => 'Show the free quantity field',
     'over_receipt_percent' => 'Percent over the ordered quantity that may be received',
+    'unloading_rate_per_carton' => 'Unloading rate per carton (Tk) — the expected unloading cost is cartons × this rate',
     'block_price_mismatch' => 'Block a bill whose value does not match the receipt',
     'block_order_price_mismatch' => 'Block a bill whose rate does not match the order',
     'payment_three_hands' => 'Proposer, approver and payer are three different people',

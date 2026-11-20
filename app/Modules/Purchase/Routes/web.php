@@ -165,6 +165,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::get('/{receipt}/edit', [PurchaseReceiptController::class, 'edit'])->whereNumber('receipt')->name('edit');
         Route::put('/{receipt}', [PurchaseReceiptController::class, 'update'])->whereNumber('receipt')->name('update');
         Route::post('/{receipt}/confirm', [PurchaseReceiptController::class, 'confirm'])->whereNumber('receipt')->name('confirm');
+        // ⭐ আনলোডিং — খসড়ার কার্ড থেকে (মালিক, ১৮ নভেম্বর ২০২৬)
+        Route::put('/{receipt}/unloading', [PurchaseReceiptController::class, 'unloading'])->whereNumber('receipt')->name('unloading');
         Route::post('/{receipt}/cancel', [PurchaseReceiptController::class, 'cancel'])->whereNumber('receipt')->name('cancel');
         // ⓘ বাকি অংশের বিল — বিল এখন মাল গ্রহণেই আপনা থেকে হয় (১৯ সেপ্টেম্বর ২০২৬)
         Route::post('/{receipt}/bill', [PurchaseReceiptController::class, 'bill'])->whereNumber('receipt')->name('bill');

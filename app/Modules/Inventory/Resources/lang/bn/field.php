@@ -46,6 +46,7 @@ return [
     'markup' => 'মার্কআপ',
     'track_batch' => 'লট (ব্যাচ) ধরে রাখা হবে',
     'reorder_level' => 'পুনঃক্রয়ের স্তর',
+    'unload_rate' => 'কার্টনপ্রতি আনলোড দর',
     'product' => 'পণ্য',
     'warehouse' => 'গুদাম',
     'branch' => 'শাখা',

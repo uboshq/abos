@@ -146,6 +146,13 @@ abstract class TestCase extends BaseTestCase
          * এই নিয়ম মাপে না। ⚠️ যে দাবি নিয়মটা মাপে, সে নিজে চালু করে ([[AllBranchesViewIsReadOnlyTest]])।
          */
         config(['abos.branch_pin.all_branches_read_only' => false]);
+
+        /*
+         * ⓘ আনলোডিং বাধ্যতামূলক — পরীক্ষায় বন্ধ ([[ChargesUnloading]], মালিক, ১৮ নভেম্বর ২০২৬)। শতাধিক পুরনো পরীক্ষা মাল গ্রহণ আর সরাসরি
+         * ক্রয় পাকা করে আনলোডিং না বেছে — সেগুলো এই নিয়ম মাপে না। ⚠️ যে দাবি নিয়মটা মাপে, সে নিজে চালু করে
+         * ([[TheLorryCannotBeConfirmedUntilTheUnloadingIsChosenTest]])।
+         */
+        config(['abos.unloading_required' => false]);
     }
 
     protected function setUpTraits(): array

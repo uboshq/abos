@@ -126,6 +126,8 @@ class ProductRequest extends FormRequest
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'reorder_level' => ['nullable', 'numeric', 'min:0'],
+            // ⭐ কার্টনপ্রতি আনলোড দর — খালি = সাধারণ দরে সমান ভাগ (মালিক, ১৮ নভেম্বর ২০২৬; [[UnloadingSplit]])
+            'unload_rate' => ['nullable', 'numeric', 'min:0', 'max:99999'],
 
             /*
              * ⭐ পরিকল্পনার তিনটা ঘর — ২৪ সেপ্টেম্বর ২০২৬।
@@ -158,6 +160,7 @@ class ProductRequest extends FormRequest
             'name_en' => __('inventory::field.name_en'),
             'barcode' => __('inventory::field.barcode'),
             'purchase_price' => __('inventory::field.purchase_price'),
+            'unload_rate' => __('inventory::field.unload_rate'),
             'sale_price' => __('inventory::field.sale_price'),
             'reorder_level' => __('inventory::field.reorder_level'),
         ];

@@ -53,6 +53,7 @@ final class PurchaseReceiptService
 {
     use BringsInLots;
     use CalculatesLineTotals;
+    use ChargesUnloading;
     use ReadsPackedQuantities;
     use ReadsTheRowUnderLock;
 
@@ -178,6 +179,9 @@ final class PurchaseReceiptService
 
             $this->replaceLines($receipt, $lines);
 
+            // ⭐ আনলোডিং — দরজা পাঠালে বাছাই, আর কার্টন ও ভাগ সবসময় (মালিক, ১৮ নভেম্বর ২০২৬; [[ChargesUnloading]])
+            $this->stampUnloading($receipt, $receipt->lines()->get(), 'received_qty', $data);
+
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
                 ->whereNull('source_id')
@@ -221,6 +225,49 @@ final class PurchaseReceiptService
             ]);
 
             $this->replaceLines($receipt, $lines);
+
+            // ⭐ আনলোডিং — দরজা পাঠালে বাছাই, আর কার্টন ও ভাগ সবসময় (মালিক, ১৮ নভেম্বর ২০২৬; [[ChargesUnloading]])
+            $this->stampUnloading($receipt, $receipt->lines()->get(), 'received_qty', $data);
+
+            return $receipt->fresh(['lines']);
+        });
+    }
+
+    /**
+     * ⭐ খসড়া মাল গ্রহণের আনলোডিং — মাল গ্রহণের পাতার কার্ড আর ফোন থেকে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")।
+     *
+     * ⓘ বাছাই (নগদ · বাকি · সরবরাহকারী · লাগেনি), অঙ্ক, আর সারি ধরে হাতের কার্টনপ্রতি দর (`$rates`: সারির id → দর; খালি = সমান ভাগ)।
+     * ⛔ কেবল খসড়ায় — পাকা কাগজের মালের দাম আর খাতা আগেই বসেছে। তালা, তারপর আবার দেখা ([[update()]]-এর একই কারণ)।
+     *
+     * @param  array<string, mixed>  $data  `unload_mode`, `unload_amount`, `unload_account_id`, `unload_contractor_id`, `unload_reason`
+     * @param  array<int|string, mixed>  $rates
+     */
+    public function setUnloading(PurchaseReceipt $receipt, array $data, array $rates = []): PurchaseReceipt
+    {
+        return DB::transaction(function () use ($receipt, $data, $rates) {
+            $this->lockFresh($receipt);
+
+            if ($receipt->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'unload_mode' => __('supplier::labour.only_draft', ['no' => $receipt->document_no]),
+                ]);
+            }
+
+            $lines = $receipt->lines()->get();
+
+            foreach ($lines as $line) {
+                if (! array_key_exists($line->id, $rates) && ! array_key_exists((string) $line->id, $rates)) {
+                    continue;
+                }
+
+                $given = $rates[$line->id] ?? $rates[(string) $line->id] ?? null;
+                $line->forceFill([
+                    'unload_rate' => $given === null || $given === '' || ! is_numeric($given) || bccomp((string) $given, '0', 4) < 0
+                        ? null : bcadd((string) $given, '0', 4),
+                ])->save();
+            }
+
+            $this->stampUnloading($receipt, $receipt->lines()->get(), 'received_qty', $data + ['unload_mode' => null]);
 
             return $receipt->fresh(['lines']);
         });
@@ -323,6 +370,12 @@ final class PurchaseReceiptService
         }
 
         /*
+         * ⛔ আনলোডিং বাছা না হলে পাকা নয় — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"): নগদে, ঠিকাদারের কাছে বাকি, সরবরাহকারী দিয়েছেন, বা
+         * লাগেনি (কারণসহ)। ⓘ সইয়ের আগে — অসম্পূর্ণ কাগজ সইয়ের ইনবক্সে যায় না ([[ChargesUnloading::assertUnloadingChosen()]])।
+         */
+        $this->assertUnloadingChosen($receipt);
+
+        /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
          *
          * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
@@ -367,6 +420,15 @@ final class PurchaseReceiptService
              * `TheBillAndTheReceiptBothBroughtTheGoodsTest`)।
              */
             $this->assertWithinOrder($receipt);
+
+            // ⓘ তালার ভিতরে বাছাই আবার — পাশের ট্যাবে বদলে থাকলে তাজা কপিই সত্য
+            $this->assertUnloadingChosen($receipt);
+
+            /*
+             * ⭐ আনলোডিংয়ের ভাগ — এখনই আবার গোনা, তাজা সারি থেকে (IAS 2: মাল হাতে পাওয়ার খরচ মালের দাম)। ⓘ নিচে প্রতিটা সারির
+             * খরচের স্তরে যোগ হয়, আর খাতায় ঠিক এই যোগফলই মজুদে ([[postToLedger()]]) — দুই খাতা মেলে।
+             */
+            $unloadShares = $this->spreadUnloading($receipt, $receipt->lines()->get(), 'received_qty');
 
             foreach ($receipt->lines as $line) {
                 /*
@@ -438,6 +500,28 @@ final class PurchaseReceiptService
                  * স্তর প্রতি লাইনে একটা, চালানে একটা নয়: এক চালানে একই
                  * পণ্য দুই দরে এলে দুইটা আলাদা স্তরই সত্যি।
                  */
+                $share = $unloadShares[(int) $line->id] ?? '0';
+
+                if (bccomp($share, '0', 4) > 0) {
+                    /*
+                     * ⭐ আনলোডিংয়ের ভাগ মালের দামে — মোট দামটাই স্থির ([[CostLayerService::receiveWorth()]]), তাই স্তরের যোগফল হুবহু
+                     * সারির মূল্য + ভাগ; ভাগ করার পয়সা কাটা পড়ে হারায় না।
+                     */
+                    $this->costs->receiveWorth(
+                        product: $line->product,
+                        qty: (string) $line->received_qty,
+                        value: bcadd(bcmul((string) $line->received_qty, (string) $line->rate, 4), $share, 4),
+                        sourceType: PurchaseReceipt::STOCK_SOURCE,
+                        sourceId: $receipt->id,
+                        documentNo: $receipt->document_no,
+                        date: $receipt->trx_date,
+                        batch: $batch,
+                        supplierId: (int) $receipt->supplier_id,
+                    );
+
+                    continue;
+                }
+
                 $this->costs->receive(
                     product: $line->product,
                     qty: (string) $line->received_qty,
@@ -457,7 +541,7 @@ final class PurchaseReceiptService
 
             $this->applySalesPrices($receipt);
 
-            $this->postToLedger($receipt);
+            $this->postToLedger($receipt, $unloadShares);
 
             $receipt->update(['status' => DocumentStatus::CONFIRMED]);
 
@@ -627,7 +711,10 @@ final class PurchaseReceiptService
     /**
      * খতিয়ানে বসানো — মজুদ বাড়ল, অপেক্ষমাণ দায় জন্মাল।
      */
-    private function postToLedger(PurchaseReceipt $receipt): void
+    /**
+     * @param  array<int, string>  $unloadShares  সারির id → আনলোডিংয়ের ভাগ ([[ChargesUnloading::spreadUnloading()]])
+     */
+    private function postToLedger(PurchaseReceipt $receipt, array $unloadShares = []): void
     {
         $total = (string) $receipt->total;
 
@@ -664,6 +751,12 @@ final class PurchaseReceiptService
                     'party_id' => $receipt->supplier_id,
                     'narration' => __('purchase::message.awaiting_bill', ['no' => $receipt->document_no]),
                 ],
+
+                /*
+                 * ⭐ আনলোডিং — Dr মজুদ (স্তরে যতটা বসল ঠিক ততটা) / Cr টিল (নগদ) বা ২১১৭ ঠিকাদারের নামে (বাকি)।
+                 * ⓘ কাগজের নিজের দাখিলায় — বাতিলের উল্টো দাখিলায় এটাও ফেরে ([[cancel()]]); সরবরাহকারী দিলে বা লাগেনি হলে কিছু নয়।
+                 */
+                ...$this->unloadingLines($receipt, $unloadShares),
             ],
             documentNo: $receipt->document_no,
             branchId: $receipt->branch_id,
@@ -787,6 +880,10 @@ final class PurchaseReceiptService
                 'amount' => $amount,
                 // ⭐ দামের ভেতরের ভ্যাট আলাদা ঘরে — কাগজ বিলের মতো: দর ভ্যাট বাদে, ভ্যাট আলাদা, মোট ভ্যাটসহ (মালিক, ১০ অক্টোবর ২০২৬)
                 'tax' => $tax,
+
+                // ⭐ হাতের আনলোড দর (কার্টনপ্রতি) — খালি হলে পণ্যের নিজের দর, সেটাও না থাকলে সমান ভাগ ([[ChargesUnloading]])
+                'unload_rate' => $this->unloadRateFor($line, $product),
+
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,
             ]);

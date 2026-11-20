@@ -16,6 +16,7 @@ return [
     'unknown_order' => 'The server does not have this order. Sync once and try again.',
     'order_not_open' => 'Goods cannot be received against this order - it is either a draft or cancelled.',
     'unknown_product' => 'The server does not have this product. Sync once and try again.',
+    'unknown_reference' => 'The server does not have this cash till or labour contractor. Sync once and try again.',
     'product_not_on_order' => 'This product is not on that order. Anything not ordered has to be received at the office.',
     'receipt_needs_qty' => 'How much arrived has to be a positive number.',
     'receipt_needs_lines' => 'There are no lines - write down what came off the lorry first.',
