@@ -189,6 +189,9 @@ final class DeliveryChallanService
             $this->replaceLines($challan, $lines);
             $this->stampFare($challan, $data);
 
+            // ⭐ লোডিং — দরজা পাঠালে (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]])
+            app(ChallanLoading::class)->stamp($challan, $data);
+
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
                 ->whereNull('source_id')
@@ -259,6 +262,9 @@ final class DeliveryChallanService
 
             $this->replaceLines($challan, $lines);
             $this->stampFare($challan, $data);
+
+            // ⭐ লোডিং — দরজা পাঠালে (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]])
+            app(ChallanLoading::class)->stamp($challan, $data);
 
             return $challan->fresh(['lines']);
         });
@@ -346,6 +352,12 @@ final class DeliveryChallanService
                 paper: CreditPaper::of('challan', $challan),
             );
         }
+
+        /*
+         * ⛔ লোডিং — সুইচ `sales.loading.mandatory` চালু থাকলে অঙ্ক বা "লাগেনি" ছাড়া পাকা নয় (মালিক, ১৮ নভেম্বর ২০২৬; ভাড়ার মতোই)।
+         * ⓘ সইয়ের আগে — অসম্পূর্ণ চালান সইয়ের ইনবক্সে যায় না ([[ChallanLoading::assertSet()]])।
+         */
+        app(ChallanLoading::class)->assertSet($challan);
 
         /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
@@ -522,6 +534,10 @@ final class DeliveryChallanService
             }
 
             $this->postTransportCost($challan);
+
+            // ⭐ লোডিং খাতায় — Dr ৫২১৮ / Cr টিল বা ২১১৭ ([[ChallanLoading::post()]]); তালার ভিতরের তাজা কপিতে আবার যাচাই
+            app(ChallanLoading::class)->assertSet($challan);
+            app(ChallanLoading::class)->post($challan);
 
             $challan->update(['status' => DocumentStatus::CONFIRMED]);
 
@@ -1242,6 +1258,9 @@ final class DeliveryChallanService
 
         // ⭐ এখনই-দেওয়া ভাড়ার ভাউচারও বাতিল — নিজের উল্টো সারিতে (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::undo()]])
         app(FarePayment::class)->undo($challan, $reason, $date->toDateString(), $paperNo);
+
+        // ⭐ লোডিংয়ের দাখিলাও ফেরে — নিজের উল্টো সারিতে ([[ChallanLoading::undo()]])
+        app(ChallanLoading::class)->undo($challan, $date, $reason, $paperNo);
 
         /*
          * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।

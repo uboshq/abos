@@ -115,6 +115,12 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             // ⭐ ভাড়া কে দিলেন — ব্যাংক বা MFS-এ বাছার তালিকা; নগদে লগইন করা মানুষ নিজেই (ওয়েবের একই, [[DirectSaleOptions::farePayers()]])
             'farePayers' => $this->publicFarePayers(),
 
+            /*
+             * ⭐ লোডিং — ওয়েবের একই ঘর (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]]): সুইচ চালু কি না, নিজের নগদ টিল আর হাম্মালি
+             * ঠিকাদার — id-গুলো public_id। ফোন পাঠায় `loading_mode`, `loading_amount`, `loading_account`, `loading_contractor`, `loading_reason`।
+             */
+            'loading' => $this->publicLoading(),
+
             // ⓘ বিল বাতিলের কারণ — ওয়েবের পপ-আপের একই তালিকা (`sales::field.cancel_reasons`)
             'voidReasons' => array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),
         ]);
@@ -373,7 +379,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         Validator::make($input, array_fill_keys([
             'discount_amount', 'expense_amount', 'transport_cost', 'deposit',
             'deposits.*.amount', 'deposits.*.charge_amount',
-            'lines.*.qty', 'lines.*.free_qty', 'lines.*.rate', 'lines.*.discount_percent', 'gifts.*.qty',
+            'lines.*.qty', 'lines.*.free_qty', 'lines.*.rate', 'lines.*.discount_percent', 'gifts.*.qty', 'loading_amount',
         ], ['nullable', PhoneInput::DECIMAL]) + ['rounding_amount' => ['nullable', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/']])->validate();
     }
 
@@ -436,7 +442,16 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             $out['fare_payer_id'] = $this->idOf(\App\Models\User::class, $in['fare_payer'], 'fare_payer');
         }
 
-        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume'], $out['fare_account'], $out['fare_payer']);
+        // ⭐ লোডিংয়ের টিল আর ঠিকাদার — public_id → ভেতরের id (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]])
+        if (filled($in['loading_account'] ?? null)) {
+            $out['loading_account_id'] = $this->idOf(Account::class, $in['loading_account'], 'loading_account');
+        }
+        if (filled($in['loading_contractor'] ?? null)) {
+            $out['loading_contractor_id'] = $this->idOf(Supplier::class, $in['loading_contractor'], 'loading_contractor');
+        }
+
+        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume'], $out['fare_account'], $out['fare_payer'],
+            $out['loading_account'], $out['loading_contractor']);
 
         return $out;
     }
@@ -481,6 +496,26 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'label' => $c['label'],
             'phone' => $c['phone'],
         ])->values()->all();
+    }
+
+    /**
+     * লোডিংয়ের তালিকা — ওয়েবের একই উৎস ([[LabourCost::cashTills()]], [[LabourCost::contractors()]]), id-গুলো public_id।
+     *
+     * @return array{mandatory: bool, tills: list<array{id: string, label: string}>, contractors: list<array{id: string, label: string}>}
+     */
+    private function publicLoading(): array
+    {
+        $labour = app(\App\Modules\Supplier\Services\LabourCost::class);
+        $tills = $labour->cashTills();
+        $contractors = $labour->contractors();
+        $tillIds = Account::query()->whereKey(array_map(fn ($t) => (int) $t['id'], $tills))->pluck('public_id', 'id');
+        $contractorIds = Supplier::query()->whereKey($contractors->pluck('id')->map(fn ($id) => (int) $id)->all())->pluck('public_id', 'id');
+
+        return [
+            'mandatory' => app(\App\Modules\Sales\Services\ChallanLoading::class)->mandatory(),
+            'tills' => array_map(fn (array $t) => ['id' => (string) ($tillIds[(int) $t['id']] ?? ''), 'label' => $t['label']], $tills),
+            'contractors' => $contractors->map(fn (array $c) => ['id' => (string) ($contractorIds[(int) $c['id']] ?? ''), 'label' => $c['label']])->values()->all(),
+        ];
     }
 
     /** @param  class-string<Model>  $model */

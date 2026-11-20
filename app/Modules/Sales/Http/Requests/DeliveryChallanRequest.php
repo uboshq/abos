@@ -103,6 +103,9 @@ class DeliveryChallanRequest extends FormRequest
             'own_transport' => ['nullable', 'boolean'],
             'narration' => ['nullable', 'string', 'max:500'],
 
+            // ⭐ লোডিং — ঐচ্ছিক, সুইচ চালু থাকলে বাধ্যতামূলক (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]])
+            ...\App\Modules\Supplier\Services\LabourCost::rules('loading_', \App\Modules\Supplier\Services\LabourCost::LOADING),
+
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
@@ -144,6 +147,8 @@ class DeliveryChallanRequest extends FormRequest
             'driver_phone', 'carrier_name', 'carrier_phone', 'transport_cost',
             // ⭐ ভাড়ার ঘর — পাঠানো হলে তবেই ([[FarePayment::stamp()]])
             'fare_paid_by', 'vehicle_owner', 'carrier_id', 'fare_when', 'fare_account_id', 'fare_reference', 'fare_payer_id',
+            // ⭐ লোডিংয়ের ঘর — পাঠানো হলে তবেই ([[ChallanLoading::stamp()]])
+            ...\App\Modules\Supplier\Services\LabourCost::fields('loading_'),
         ]) + ['own_transport' => $this->boolean('own_transport')];
     }
 

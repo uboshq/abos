@@ -2109,6 +2109,9 @@ final class DirectSaleService
             throw ValidationException::withMessages(['fare_account_id' => __('sales::fare.needs_account')]);
         }
 
+        // ⭐ লোডিং — কাউন্টারও পাঠায় (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]]); সুইচ চালু থাকলে চালান পাকার আগে বাধ্যতামূলক
+        app(ChallanLoading::class)->stamp($challan->fresh(), $data);
+
         // ফ্রি পরিমাণ ও লাইনের ছাড় — ক্রম ধরে, কারণ লাইনগুলো ওই ক্রমেই বসেছে
         foreach ($challan->lines()->orderBy('line_no')->get() as $index => $line) {
             $line->update([

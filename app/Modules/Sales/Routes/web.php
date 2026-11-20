@@ -553,6 +553,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         ->whereNumber('challan')->name('challan.fare.record');
     Route::post('/transport/challan/{challan}/fare/pay', [\App\Modules\Sales\Http\Controllers\ChallanFareController::class, 'pay'])
         ->whereNumber('challan')->name('challan.fare.pay');
+    // ⭐ লোডিং — পাকা চালানে লেখা (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoadingController]])
+    Route::post('/transport/challan/{challan}/loading', [\App\Modules\Sales\Http\Controllers\ChallanLoadingController::class, 'record'])
+        ->whereNumber('challan')->name('challan.loading.record');
 
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])
