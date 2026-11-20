@@ -581,6 +581,33 @@ final class Ui
     public const FOLD_MENU_LOOKS = ['rose', 'navy', 'blue'];
 
     /**
+     * ⛔ যে রূপে তিনটা এক করা মডিউল (হিসাব ও অর্থ, বিক্রয়, ক্রয়) **আলাদাই** থাকে — SAP (`tiles`) আর Dynamic।
+     * ⓘ মালিক, ২০ নভেম্বর ২০২৬: "সাপ এবং ডাইনামিকের রূপ 100% মানে 100% অরিজিনাল … এর বাইরে কোনো কথা নাই"।
+     *   এই দুই রূপে মেনু, টালি, ড্রপডাউন, ড্যাশবোর্ড — সব এক করার আগের মতো ([[MenuBuilder::forUser()]], [[MenuLook::data()]])।
+     */
+    public const MODULES_APART_LOOKS = ['tiles', 'dynamic'];
+
+    public static function keepsModulesApart(?string $key): bool
+    {
+        return in_array(self::clean($key), self::MODULES_APART_LOOKS, true);
+    }
+
+    /** ⓘ এই অনুরোধের মানুষটির রূপে কি মডিউল আলাদা — প্রিভিউ আর নিজের বানানো রূপও তার মূল রূপ ধরে ([[LookRegistry::lookFor()]]) */
+    public static function viewerKeepsModulesApart(): bool
+    {
+        // ⓘ এক অনুরোধে একবার — মেনুর প্রতিটা সারি [[MenuLook::data()]] ডাকে, আর প্রিভিউ থাকলে প্রতিবার ডাটাবেসে যেত
+        $attributes = request()->attributes;
+        $user = auth()->user();
+        $memo = 'ui.modules_apart.'.($user?->getAuthIdentifier() ?? 'guest').'.'.($user?->ui ?? '');
+
+        if (! $attributes->has($memo)) {
+            $attributes->set($memo, self::keepsModulesApart(LookRegistry::lookFor(LookPreview::orChosen($user?->ui))));
+        }
+
+        return (bool) $attributes->get($memo);
+    }
+
+    /**
      * ⭐ বাঁয়ের মেনুর দলের মাথা বোতাম (দলের চিহ্ন + নাম, চাপলে খোলে/বন্ধ) কি না — কেবল তিন ABOS রূপে।
      *
      * ⓘ SAP, Dynamic আর বাকি রূপে আগের `<p>` মাথাই, পিক্সেলে একই (মালিক, ১৯ নভেম্বর ২০২৬: "SAP + D365 হুবহু, আর কিছু নড়বে না")।

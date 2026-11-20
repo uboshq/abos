@@ -84,7 +84,9 @@ return [
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
     // ⭐ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬) — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
-    'nav' => ['section' => 'finance', 'order' => 20, 'under' => 'accounts', 'tab' => 'finance::menu.tab'],
+    // ⓘ `dashboard_label` — হিসাব ও অর্থের ভিতরে ড্যাশবোর্ড-সারির নাম; SAP/Dynamic-এ (আলাদা থাকে) সারিটা আগের নামেই
+    'nav' => ['section' => 'finance', 'order' => 20, 'under' => 'accounts', 'tab' => 'finance::menu.tab',
+        'dashboard_label' => 'finance::menu.dashboard'],
 
     /*
      * হিসাবের উপর — খাত, ভাউচার ও ছক ওখান থেকে আসে।
@@ -112,8 +114,8 @@ return [
 
     'menu' => [
         'dashboard' => [
-            // ⓘ হিসাব ও অর্থের ভিতরে দুইটা "ড্যাশবোর্ড" সারি পাশাপাশি না বসে — তাই নিজের নাম (২০ নভেম্বর ২০২৬); পাতার শিরোনাম আগের মতো
-            ['label' => 'finance::menu.dashboard', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+            // ⓘ চাবিটা আগের মতো (সুইচ আর রঙের তালিকা এটা ধরে); হিসাব ও অর্থের ভিতরে নাম বদলায় `nav.dashboard_label` দিয়ে (২০ নভেম্বর ২০২৬)
+            ['label' => 'finance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'finance'], 'permission' => 'finance.capital.view'],
         ],
 

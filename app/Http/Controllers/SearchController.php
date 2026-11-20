@@ -121,6 +121,26 @@ class SearchController extends Controller
                 $out[$first['url']] = ['type' => __('core.search.module'), 'no' => '', 'label' => (string) $module['label'], 'url' => (string) $first['url']];
             }
 
+            /*
+             * ⭐ এক করা মডিউলের ভিতরের পুরনো মডিউলের নামেও (মালিক, ২০ নভেম্বর ২০২৬) — "গ্রাহক", "অর্থ", "স্থায়ী সম্পদ" লিখলে তার নিজের
+             *   ড্যাশবোর্ড/প্রথম পাতা, নাম "বিক্রয় › গ্রাহক"। ⓘ নিজের টাইল আর নেই, তাই আগের লাইনটা আর ধরত না।
+             */
+            foreach ((array) ($module['guest_labels'] ?? []) as $guestCode => $guestLabel) {
+                if (! str_contains(mb_strtolower((string) $guestLabel), $needle)) {
+                    continue;
+                }
+
+                // ⛔ `null['url']` লারাভেলে ব্যতিক্রম — তাই আগে সারি, তারপর ঠিকানা
+                $guestRow = collect($module['members'] ?? [])->firstWhere('code', $guestCode)
+                    ?? collect($module['groups'] ?? [])->flatten(1)
+                        ->first(fn (array $r): bool => ($r['module'] ?? null) === $guestCode && ($r['url'] ?? null) !== null);
+                $guestUrl = is_array($guestRow) ? ($guestRow['url'] ?? null) : null;
+
+                if ($guestUrl !== null) {
+                    $out[$guestUrl] = ['type' => __('core.search.module'), 'no' => '', 'label' => $module['label'].' › '.$guestLabel, 'url' => (string) $guestUrl];
+                }
+            }
+
             foreach (collect($module['groups'] ?? [])->flatten(1) as $item) {
                 $label = (string) ($item['label'] ?? '');
 

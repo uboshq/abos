@@ -277,6 +277,42 @@ final class MergedModulesTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ মালিক, ২০ নভেম্বর ২০২৬: "সাপ এবং ডাইনামিকের রূপ 100% মানে 100% অরিজিনাল" — ওই দুই রূপে মডিউলগুলো আগের মতো আলাদা,
+     *   নাম আগের, অর্থের ড্যাশবোর্ড-সারির নাম আগের, রঙের তালিকা এক করার আগেরটা, ট্যাব নেই। ফোন তবু এক করা।
+     */
+    public function test_sap_and_dynamic_keep_the_modules_apart_as_before(): void
+    {
+        foreach (['tiles', 'dynamic'] as $look) {
+            $this->owner->forceFill(['ui' => $look])->save();
+            $this->actingAs($this->owner->fresh());
+            $menu = $this->menu();
+            $codes = array_column($menu, 'code');
+
+            foreach (self::FAMILIES as $host => $family) {
+                foreach ($family['guests'] as $guest) {
+                    $this->assertContains($guest, $codes, "⛔ {$look}: {$guest} নিজের মডিউল নয় — এক করা মেনু এই রূপে ঢুকেছে");
+                }
+                $this->assertSame([], $this->entry($menu, $host)['members'], "⛔ {$look}: {$host}-এ ড্যাশবোর্ডের ট্যাব");
+            }
+
+            $this->assertNotSame('হিসাব ও অর্থ', $this->entry($menu, 'accounts')['label'], "⛔ {$look}: হিসাবের নাম বদলেছে");
+            $this->assertSame(__('finance::dashboard.title'), collect($this->entry($menu, 'finance')['groups']['dashboard'])->first()['label'], "⛔ {$look}: অর্থের ড্যাশবোর্ড-সারির নাম বদলেছে");
+            $this->assertArrayNotHasKey('order', MenuLook::data(), "⛔ {$look}: এক করা মেনুর রঙের তালিকা পড়ছে");
+        }
+
+        $this->assertNotContains('finance', array_column(app(MenuBuilder::class)->forUser($this->owner->fresh(), merged: true), 'code'), '⛔ ফোনের মেনু এক করা নয়');
+    }
+
+    public function test_search_finds_a_merged_in_module_by_its_old_name(): void
+    {
+        $this->owner->forceFill(['ui' => 'rose'])->save();
+
+        $body = (string) $this->actingAs($this->owner->fresh())->getJson(route('search', ['q' => 'গ্রাহক']))->assertOk()->getContent();
+        $this->assertStringContainsString('বিক্রয় › গ্রাহক', json_encode(json_decode($body, true), JSON_UNESCAPED_UNICODE),
+            '⛔ "গ্রাহক" লিখে মডিউলটা পাওয়া গেল না — এক করার পর নিজের টাইল নেই, খোঁজার ঘরও ভুলে গেল');
+    }
+
     /** @return list<array<string, mixed>> */
     private function menu(): array
     {

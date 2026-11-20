@@ -7,6 +7,9 @@ namespace App\Core\Services;
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\LookPreview;
+use App\Core\Support\LookRegistry;
+use App\Core\Support\Ui;
 use App\Models\BranchModule;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -37,10 +40,15 @@ final class MenuBuilder
      * একটা ধূসর মেনু আইটেম ব্যবহারকারীকে শুধু জানায় সে কী পারে না, আর
      * প্রতিবার ক্লিক করে সেটা আবিষ্কার করে।
      *
+     * ⛔ `$merged` — তিনটা এক করা মডিউল (হিসাব ও অর্থ, বিক্রয়, ক্রয়) এক টাইলে বসবে কি না। না বললে মানুষটির রূপ ধরে: SAP আর
+     *   Dynamic-এ **না** — মালিক, ২০ নভেম্বর ২০২৬: "সাপ এবং ডাইনামিকের রূপ 100% মানে 100% অরিজিনাল" ([[Ui::keepsModulesApart()]])।
+     *   ফোন সবসময় এক করা মেনু পায় ([[MeController]]) — ফোনের নিজের রূপ, ওয়েবের SAP/Dynamic নয়।
+     *
      * @return list<array{code: string, label: string, icon: string, section: string, order: int, under: ?string, codes: list<string>, groups: array<string, list<array{label: string, route: string, url: ?string, active: bool}>>}>
      */
-    public function forUser(?User $user): array
+    public function forUser(?User $user, ?bool $merged = null): array
     {
+        $merged ??= ! Ui::keepsModulesApart(LookRegistry::lookFor(LookPreview::orChosen($user?->ui)));
         $menu = [];
 
         /*
@@ -298,11 +306,14 @@ final class MenuBuilder
 
                 /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
                    এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
-                'under' => $module->nav['under'] ?? null,
+                // ⛔ SAP আর Dynamic রূপে কেউ কারও ভেতরে বসে না — এক করার আগের মতো আলাদা টাইল ([[Ui::keepsModulesApart()]])
+                'under' => $merged ? ($module->nav['under'] ?? null) : null,
 
                 // ⭐ অতিথিরা ভিতরে বসলে টাইলের নাম ("হিসাব ও অর্থ"), আর এক করা ড্যাশবোর্ডের ট্যাবে এই মডিউলের নাম (২০ নভেম্বর ২০২৬)
                 'merged_label' => isset($module->nav['merged_label']) ? __($module->nav['merged_label']) : null,
                 'tab' => isset($module->nav['tab']) ? __($module->nav['tab']) : $module->label(),
+                // ⓘ অতিথি হয়ে বসলে তার ড্যাশবোর্ড-সারির নাম ("অর্থ / ট্রেজারি ড্যাশবোর্ড") — দুইটা "ড্যাশবোর্ড" পাশাপাশি না বসে; একা থাকলে আগের নাম
+                'dashboard_label' => isset($module->nav['dashboard_label']) ? __($module->nav['dashboard_label']) : null,
 
                 // ⭐ বাঁয়ের মেনুর ভাগ, এই ক্রমে — খালি মানে ভাগ নেই, আগের মতো এক তালিকা
                 'panel_sections' => $module->nav['panel_sections'] ?? [],
@@ -415,6 +426,10 @@ final class MenuBuilder
              * `groups` সমতল করে পড়ে — এটা কেবল ক্রমের বালতি।
              */
             foreach ($entry['groups'] as $group => $rows) {
+                if ($group === 'dashboard' && ($entry['dashboard_label'] ?? null) !== null) {
+                    $rows = array_map(fn (array $row): array => ['label' => $entry['dashboard_label']] + $row, $rows);
+                }
+
                 $menu[$host]['groups'][$entry['code'].':'.$group] = $rows;
                 // ⓘ ড্রপডাউনের দলের নাম (Dynamic, উপরের মেনু) — "অর্থ · লেনদেন"; আশ্রয়দাতার নিজের দলগুলো আগের মতোই
                 $menu[$host]['group_titles'][$entry['code'].':'.$group] = $entry['label'].' · '.__('core.menu.'.$group);
