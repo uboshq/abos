@@ -19277,19 +19277,19 @@ abstract class AppL10n {
   /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
   ///
   /// In bn, this message translates to:
-  /// **'ABOS'**
+  /// **'ক্লাসিক'**
   String get lookAbos;
 
   /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
   ///
   /// In bn, this message translates to:
-  /// **'Liquid Glass'**
+  /// **'গ্লাস'**
   String get lookGlass;
 
   /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
   ///
   /// In bn, this message translates to:
-  /// **'Material 3'**
+  /// **'স্মার্ট'**
   String get lookExpressive;
 
   /// App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)
@@ -19385,13 +19385,13 @@ abstract class AppL10n {
   /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
   ///
   /// In bn, this message translates to:
-  /// **'এখনকার ABOS — কিছুই বদলায় না'**
+  /// **'আগের চেহারা — কিছুই বদলায় না'**
   String get lookAbosHint;
 
   /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
   ///
   /// In bn, this message translates to:
-  /// **'iOS 26 — স্বচ্ছ কাচ, পেছনে রঙের ছোপ'**
+  /// **'স্বচ্ছ কাচ, পেছনে রঙের পটভূমি'**
   String get lookGlassHint;
 
   /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
@@ -19418,11 +19418,11 @@ abstract class AppL10n {
   /// **'ফোনের \"কম নড়াচড়া\" চালু থাকলে এমনিতেই থামে'**
   String get lookMotionHint;
 
-  /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
+  /// The three look names in picker order; the names themselves live only in lookExpressive, lookGlass, lookAbos
   ///
   /// In bn, this message translates to:
-  /// **'ABOS · Liquid Glass · Material 3'**
-  String get lookProfileSubtitle;
+  /// **'{smart} · {glass} · {classic}'**
+  String lookProfileSubtitle(String smart, String glass, String classic);
 
   /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
   ///
@@ -19459,6 +19459,96 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বকেয়া'**
   String get lookTileDues;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'Copilot'**
+  String get lookTabCopilot;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিশ'**
+  String get lookTabNotices;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'না-পড়া'**
+  String get lookTabUnread;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'তৈরি করুন'**
+  String get lookCreate;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা'**
+  String get lookMessages;
+
+  /// App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা — শীঘ্রই আসছে'**
+  String get lookMessagesSoon;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্লাস চেহারার পটভূমি'**
+  String get lookWallpaper;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'রঙিন বল'**
+  String get lookPaperBalls;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'বেগুনি আভা'**
+  String get lookPaperPurple;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'নীল ঢেউ'**
+  String get lookPaperBlueWave;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'সূর্যাস্ত'**
+  String get lookPaperSunset;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'সবুজ আলো'**
+  String get lookPaperAurora;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'সমুদ্র'**
+  String get lookPaperOcean;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'রাতের কালো'**
+  String get lookPaperGraphite;
+
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'রুপালি'**
+  String get lookPaperSilver;
 
   /// App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)
   ///

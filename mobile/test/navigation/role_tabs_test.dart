@@ -118,7 +118,8 @@ void main() {
     test('other pages stay with the tab they were opened from', () {
       expect(RoleTabs.owningTab('/home'), isNull);
       expect(RoleTabs.owningTab('/home/customers/c1'), isNull);
-      expect(RoleTabs.owningTab('/home/notifications'), isNull);
+      // ⓘ ২০ নভেম্বর ২০২৬ থেকে বিজ্ঞপ্তির পাতা নিচের বারের "নোটিশ" ঘরের (যে বারে ঘরটা নেই, সেখানে আগের মতো খোলা ঘরেই থাকে)
+      expect(RoleTabs.owningTab('/home/notifications'), BarTab.notices);
     });
   });
 

@@ -17,7 +17,8 @@ enum BarRole { owner, sr, depot, accounts, other }
 
 /// বারের সম্ভাব্য সব ঘর। প্রতিটা ভূমিকা এর চারটা পায়।
 /// ⓘ [deposit] ("জমা", 0.4.58) — জমার খবরের চাবি যাঁর আছে, সব রূপের বারে ([tabsFor])
-enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me, deposit }
+/// ⓘ [copilot] আর [notices] কেবল Liquid Glass আর Material 3-এর বারে ([lookTabsFor]; মালিক, ২০ নভেম্বর ২০২৬ "Ok")
+enum BarTab { home, approvals, reports, orders, collections, challans, stock, vouchers, modules, me, deposit, copilot, notices }
 
 /// একটা ঘরের সব তথ্য — নাম, আইকন (কেবল Material Symbols), কোন পথে খোলে, কোন চাবিতে দেখা যায়।
 @immutable
@@ -113,6 +114,15 @@ class RoleTabs {
         anyOf: const ['sales.claim.submit']),
     // ⭐ নিজের ছবি — নিচের বারের শেষ ঘর (মালিক, ১৩ নভেম্বর ২০২৬: উপরের বারে জায়গা; YouTube, Instagram, Facebook-এর একই নিয়ম)
     BarTab.me: BarTabSpec(tab: BarTab.me, label: l.homeMe, icon: Symbols.account_circle),
+    // ⭐ নতুন দুই রূপের বারে (মালিক, ২০ নভেম্বর ২০২৬ "Ok"): Copilot (চাপলে পুরো-পর্দার জিজ্ঞাসা, পাতা নয়) আর নোটিশ (উপরের
+    // ঘণ্টা নিচে নামল, না-পড়ার গোনাসহ)। ⓘ চাবি এখানে নয় — [lookTabsFor] যে বলে দেয় (কোপাইলটের চাবি সার্ভারের মেনু দেখে)
+    BarTab.copilot: BarTabSpec(tab: BarTab.copilot, label: l.lookTabCopilot, icon: Symbols.auto_awesome, path: 'copilot'),
+    BarTab.notices: BarTabSpec(
+        tab: BarTab.notices,
+        label: l.lookTabNotices,
+        icon: Symbols.notifications,
+        path: 'notifications',
+        waiting: l.lookTabUnread),
     };
   }
 
@@ -196,9 +206,22 @@ class RoleTabs {
   /// টাকা জমার খবরের পাতা — `/home/deposit-report` (দোকান পাতার ভেতরে বাছা হয়)
   static const String depositReportPath = 'deposit-report';
 
-  /// Liquid Glass আর Material 3-এর বার — ABOS-এর একই ঘর ([tabsFor]); কেবল চেহারা আলাদা
-  static List<BarTab> lookTabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) =>
-      tabsFor(permissions, modulesOn: modulesOn);
+  /// ⭐ Liquid Glass আর Material 3-এর বার — মালিকের ক্রম (২০ নভেম্বর ২০২৬ "Ok"): হোম · Copilot · জমা · সব মডিউল · অর্ডার ·
+  /// নোটিশ · আমি। ভূমিকার ঘর ABOS-এর একই ([tabsFor]: যার চাবি নেই সে ঘর নেই, বাকিদের ক্রম একই); তার ওপরে হোমের পরে
+  /// Copilot ([copilot]: কোপাইলটের চাবি আছে) আর "আমি"-র আগে নোটিশ ([notices]: সবার)। সর্বোচ্চ সাত ঘর।
+  static List<BarTab> lookTabsFor(Iterable<String> permissions,
+      {Set<String>? modulesOn, bool copilot = false, bool notices = true}) {
+    final out = [...tabsFor(permissions, modulesOn: modulesOn)];
+    if (copilot) {
+      final home = out.indexOf(BarTab.home);
+      out.insert(home + 1, BarTab.copilot);
+    }
+    if (notices) {
+      final me = out.indexOf(BarTab.me);
+      out.insert(me < 0 ? out.length : me, BarTab.notices);
+    }
+    return out;
+  }
 
   /// ⭐ একটা ঠিকানা কোন ঘরের — কেবল ঘরের নিজের পাতা আর তার কাগজ; বাকি পাতা যে ঘর থেকে খোলা, সেই ঘরের থাকে।
   /// বিজ্ঞপ্তি বা লিংক থেকে খোলা ওয়েবের ঠিকানাও (`/home/web/<চিহ্ন>`) এখানে চেনা যায়।

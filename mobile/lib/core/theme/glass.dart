@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'app_look.dart';
+import 'glass_wallpaper.dart';
 
 /// ⭐ Liquid Glass-এর কাচ — মালিকের নমুনা (BshQzFsr) আর ঝাপসার দাগ (BvqYK2tZ), ২০ নভেম্বর ২০২৬ "ok"।
 ///
@@ -61,9 +62,20 @@ class _GlassBackdropState extends State<GlassBackdrop> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppLooks.instance.motion,
-      builder: (context, moving, _) {
+    final looks = AppLooks.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([looks.motion, looks.wallpaper]),
+      builder: (context, _) {
+        final paper = looks.wallpaper.value;
+        // ⭐ বাছা পটভূমি (রঙিন বল ছাড়া) — স্থির, একবার আঁকা; নড়াচড়া তখন থামে
+        if (paper != GlassWallpaper.balls) {
+          _drift.stop();
+          return Stack(fit: StackFit.expand, children: [
+            GlassWallpaperView(wallpaper: paper),
+            widget.child,
+          ]);
+        }
+        final moving = looks.motion.value;
         if (moving && !still) {
           if (!_drift.isAnimating) _drift.repeat(reverse: true);
         } else {

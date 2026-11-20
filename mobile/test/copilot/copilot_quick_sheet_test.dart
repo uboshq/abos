@@ -7,6 +7,8 @@ import 'package:abos_mobile/features/copilot/copilot_quick_sheet.dart';
 import 'package:abos_mobile/features/copilot/copilot_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:abos_mobile/features/home/nav_bottom_bar.dart';
+import 'package:abos_mobile/core/navigation/role_tabs.dart';
 
 /// ⭐ মালিক, ১২ নভেম্বর ২০২৬: "সিরি এবং জেমিনাইয়ের মতো … মোবাইল অ্যাপের ডিজাইনটাও … যেভাবে চ্যাট করে চ্যাট বক্সে";
 /// নমুনা 3uJhK92DAMhwyELt63mSmr, ফোনের তিন ধাপ — খুলল, শুনছে, চ্যাট।
@@ -152,25 +154,35 @@ void main() {
     expect(find.byKey(const ValueKey('copilot-quick-input')), findsOneWidget);
   });
 
-  testWidgets('the brain sits on the top bar only for a person with the Copilot key', (tester) async {
-    Future<void> bar(VoidCallback? onCopilot) async {
-      await tester.pumpWidget(app(Scaffold(
-        appBar: AbosTopBar(company: 'ADI', branch: 'সব শাখা', avatarName: 'আল-আমিন', onAvatar: (_) {}, onSearch: () {}, onCopilot: onCopilot),
-      )));
-      await tester.pumpAndSettle();
-    }
+  // ⭐ ২০ নভেম্বর ২০২৬ (মালিকের "Ok", নমুনা v8): Copilot উপরের বার থেকে নিচের বারের দ্বিতীয় ঘরে — কেবল যাঁর চাবি আছে
+  testWidgets('Copilot is the bottom bar\'s second tab, only for a person with the Copilot key; never on the top bar', (tester) async {
+    await tester.pumpWidget(app(Scaffold(
+      appBar: AbosTopBar(company: 'ADI', branch: 'সব শাখা', avatarName: 'আল-আমিন', onAvatar: (_) {}, onSearch: () {}, onCopilot: () {}),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('top-copilot')), findsNothing, reason: 'উপরের বারে আর নেই');
 
-    await bar(null);
-    expect(find.byKey(const ValueKey('top-copilot')), findsNothing, reason: '⛔ চাবি ছাড়া মগজের বোতাম');
+    const perms = ['sales.order.view', 'sales.order.create'];
+    expect(RoleTabs.lookTabsFor(perms), isNot(contains(BarTab.copilot)), reason: '⛔ চাবি ছাড়া Copilot');
+    final tabs = RoleTabs.lookTabsFor(perms, copilot: true);
+    expect(tabs.indexOf(BarTab.copilot), 1, reason: 'হোমের ঠিক পরে');
 
     var opened = 0;
-    await bar(() => opened++);
-    final brain = find.byKey(const ValueKey('top-copilot'));
-    expect(brain, findsOneWidget);
-    expect(tester.getSize(brain).width, greaterThanOrEqualTo(48), reason: '⛔ আঙুলের জন্য ছোট');
-    expect(tester.getCenter(brain).dx, lessThan(tester.getCenter(find.byKey(const ValueKey('top-search'))).dx),
-        reason: '⛔ মগজ খোঁজার আগে বসে না');
-    await tester.tap(brain);
+    await tester.pumpWidget(app(Scaffold(
+      bottomNavigationBar: RoleBottomBar(
+        tabs: [for (final t in tabs) if (t != BarTab.me) t], // ⓘ "আমি"-র ছবি সেশন চায় — এখানে লাগে না
+        selected: BarTab.home,
+        badges: const {},
+        onSelect: (t) {
+          if (t == BarTab.copilot) opened++;
+        },
+      ),
+    )));
+    await tester.pumpAndSettle();
+    final tab = find.byKey(const ValueKey('nav-copilot'));
+    expect(find.descendant(of: tab, matching: find.byType(CopilotMark)), findsOneWidget, reason: 'নতুন AI চিহ্ন');
+    expect(tester.getSize(tab).height, greaterThanOrEqualTo(48), reason: '⛔ আঙুলের জন্য ছোট');
+    await tester.tap(tab);
     expect(opened, 1);
   });
 }

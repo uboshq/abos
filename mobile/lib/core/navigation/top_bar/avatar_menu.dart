@@ -178,7 +178,7 @@ class AvatarMenu extends StatelessWidget {
                 // ⓘ "রং"-এর প্যালেট নয় — দুই সারিতে একই চিহ্ন চোখে গুলিয়ে দেয়
                 icon: Symbols.style,
                 title: words.lookTitle,
-                hint: words.lookProfileSubtitle,
+                hint: words.lookProfileSubtitle(words.lookExpressive, words.lookGlass, words.lookAbos),
                 onTap: () => ProfileRoutes.openLookFromMenu(context),
               ),
               line,

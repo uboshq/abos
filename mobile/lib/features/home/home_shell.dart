@@ -55,6 +55,7 @@ import '../../core/navigation/role_tabs.dart';
 import 'nav_search.dart';
 import 'notice_ticker.dart';
 import 'workspace_picker.dart';
+import '../profile/look_screen.dart';
 import '../copilot/copilot_quick_sheet.dart';
 
 /// The signed-in person's home — the owner's navigation of 12 Oct 2026:
@@ -670,6 +671,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
           onSearch: _openSearch,
           onCopilot: _copilot == null ? null : () => _copilot!(context, context.l10n.navTabHome),
+          // ⭐ ＋ তৈরি করুন — Material 3-এর আগের ＋-এর একই দ্রুত কাজ, এখন উপরে (নতুন দুই রূপ; মালিক, ২০ নভেম্বর ২০২৬ "Ok")
+          onCreate: () => _openQuick(),
           unread: _unread,
           onBell: () async {
             await (widget.openPath ?? _push)('notifications');
@@ -733,8 +736,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
         bottomNavigationBar: AbosBottomBar(
           selected: tab,
-          onSearch: _openSearch,
-          onQuick: _openQuick,
           badges: NavBadges(
               pending: _pending, pendingMore: _pendingMore, unread: _unread),
           onSelect: (selected) async {
@@ -916,6 +917,19 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         // ⭐ রঙ আর ভাষা — আগে ছবির মেনুতে; ছবি নিচের বারে যাওয়ায় এখানে (মালিক, ১৪ নভেম্বর ২০২৬)
         const Card(clipBehavior: Clip.antiAlias, child: MeThemeRow()),
+        // ⭐ চেহারা (ABOS · Liquid Glass · Material 3) — ছবির মেনুর একই সারি, "আমি" থেকেও এক চাপে (মালিক, ২০ নভেম্বর ২০২৬:
+        // "চেহারা eta nai"; ছবি নিচের বারের "আমি" ঘরে, তাই মেনুর সারি এখানেও)
+        const SizedBox(height: AppSpacing.sm),
+        Card(
+          child: ListTile(
+            key: const ValueKey('me-look'),
+            leading: const Icon(Symbols.style),
+            title: Text(context.l10n.lookTitle),
+            subtitle: Text(context.l10n.lookProfileSubtitle(context.l10n.lookExpressive, context.l10n.lookGlass, context.l10n.lookAbos)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => LookScreen.open(context),
+          ),
+        ),
         if (LanguageSwitch.shown) ...[
           const SizedBox(height: AppSpacing.sm),
           const Card(clipBehavior: Clip.antiAlias, child: MeLanguageRow()),

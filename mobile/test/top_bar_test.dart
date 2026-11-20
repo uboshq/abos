@@ -38,7 +38,8 @@ void main() {
       for (final scale in [1.0, 2.0]) {
         testWidgets('at ${width.toInt()} dp, ${(scale * 100).toInt()}% text', (tester) async {
           await _pump(tester, _owner(), width: width, scale: scale);
-          for (final key in ['top-leading', 'workspace-header', 'top-search', 'top-bell', 'header-avatar']) {
+          // ⓘ ২০ নভেম্বর ২০২৬ (নমুনা v8): ঘণ্টার জায়গায় বার্তা — সাদামাটা আইকন, চাপার জায়গা তবু ৪৮
+          for (final key in ['top-leading', 'workspace-header', 'top-search', 'top-messages', 'header-avatar']) {
             final size = tester.getSize(find.byKey(ValueKey(key)));
             expect(size.width, greaterThanOrEqualTo(48), reason: '⛔ $key চওড়ায় ${size.width}dp');
             expect(size.height, greaterThanOrEqualTo(48), reason: '⛔ $key উচ্চতায় ${size.height}dp');
@@ -84,13 +85,14 @@ void main() {
   });
 
   group('TalkBack reads the bar in Bangla', () {
-    testWidgets('the title, the bell and the photo', (tester) async {
+    testWidgets('the title, search, messages and the photo', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester, _bar(company: 'ADI Wholesale', branch: 'ময়মনসিংহ', crumbs: const ['বিক্রয়'], unread: 3, onOrgTap: () {}));
       final title = tester.getSemantics(find.byKey(const ValueKey('top-title'))).getSemanticsData();
       expect(title.label, 'ADI Wholesale, ময়মনসিংহ শাখা, বিক্রয়');
       expect(title.hasAction(SemanticsAction.tap), isTrue, reason: 'শাখা বদল চাপ দিয়ে খোলে');
-      expect(find.byTooltip('বিজ্ঞপ্তি, ৩টা না-পড়া'), findsOneWidget);
+      expect(find.byTooltip('বিজ্ঞপ্তি, ৩টা না-পড়া'), findsNothing, reason: 'ঘণ্টা নিচের বারের "নোটিশ" ঘরে');
+      expect(find.byTooltip('বার্তা'), findsOneWidget);
       expect(find.byTooltip('আমার মেনু'), findsOneWidget);
       expect(find.byTooltip('খোঁজা'), findsOneWidget);
       expect(find.byTooltip('পুরো মেনু'), findsOneWidget);
@@ -125,7 +127,8 @@ void main() {
           expect(tester.takeException(), isNull, reason: '⛔ বার ভাঙল');
           final branch = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-branch')));
           expect(branch.didExceedMaxLines, isFalse, reason: '⛔ শাখার নাম কাটা গেল');
-          expect(_lines(branch), 1, reason: '⛔ শাখার নাম ভেঙে গেল');
+          // ⓘ নমুনা v8: শাখা নিজের চিপে, নামের নিচে — খুব সরু জায়গায় চিপের ভেতরে দুই লাইনে নামতে পারে, কাটে না
+          expect(_lines(branch), lessThanOrEqualTo(2), reason: '⛔ শাখার নাম তিন লাইনে ভাঙল');
           final crumbs = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-crumbs')));
           expect(crumbs.didExceedMaxLines, isFalse, reason: '⛔ মডিউলের নাম কাটা গেল');
           final r = tester.getRect(find.byKey(const ValueKey('top-branch')));
@@ -141,15 +144,16 @@ void main() {
     }
   });
 
-  group('a company name that does not fit shows its short code', () {
-    for (final (width, full) in [(320.0, false), (412.0, true)]) {
-      testWidgets('${width.toInt()} dp: ${full ? 'the full name' : 'the code'}, the branch whole, TalkBack the full name', (tester) async {
+  // ⭐ ২০ নভেম্বর ২০২৬ (মালিকের "Ok", নমুনা v7–v8): কোম্পানির পুরো নাম, কখনো ছোট নাম ("ADI") নয়; "…" কেবল শেষ উপায়
+  group('the company name is always the full name', () {
+    for (final width in [320.0, 412.0]) {
+      testWidgets('${width.toInt()} dp: the full name, never the code; the branch whole; TalkBack the full name', (tester) async {
         final handle = tester.ensureSemantics();
         await _pump(tester, _owner(), width: width);
-        expect(find.text('ADI Wholesale'), full ? findsOneWidget : findsNothing);
-        expect(find.text('ADI'), full ? findsNothing : findsOneWidget);
+        expect(find.text('ADI Wholesale'), findsOneWidget);
+        expect(find.text('ADI'), findsNothing, reason: '⛔ ছোট নাম');
         final company = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-company')));
-        expect(company.didExceedMaxLines, isFalse, reason: '⛔ "ADI …"-এর মতো আধা নাম');
+        if (width >= 360) expect(company.didExceedMaxLines, isFalse);
         final branch = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-branch')));
         expect(branch.didExceedMaxLines, isFalse);
         expect(find.text('সব শাখা'), findsOneWidget);
@@ -157,7 +161,7 @@ void main() {
         handle.dispose();
       });
     }
-    testWidgets('a long press on the code shows the full name', (tester) async {
+    testWidgets('a long press on the name shows the full name and branch', (tester) async {
       await _pump(tester, _owner(), width: 320);
       await tester.longPress(find.byKey(const ValueKey('workspace-header')));
       await tester.pump(const Duration(milliseconds: 300));
@@ -166,30 +170,12 @@ void main() {
     });
   });
 
-  group('the bell badge (Material 3)', () {
-    Future<void> bell(WidgetTester tester, {int? unread, bool news = false}) =>
-        _pump(tester, _bar(company: 'ADI Wholesale', branch: 'সব শাখা', unread: unread, news: news));
-    Badge badge(WidgetTester tester) => tester.widget<Badge>(find.byKey(const ValueKey('top-bell-badge')));
-
-    testWidgets('0 shows nothing', (tester) async {
-      await bell(tester, unread: 0);
-      expect(badge(tester).isLabelVisible, isFalse);
-      expect(find.byTooltip('বিজ্ঞপ্তি'), findsOneWidget);
-    });
-    testWidgets('7 shows 7', (tester) async {
-      await bell(tester, unread: 7);
-      expect(find.text('7'), findsOneWidget);
-    });
-    testWidgets('120 shows 99+ and says the real count', (tester) async {
-      await bell(tester, unread: 120);
-      expect(find.text('99+'), findsOneWidget);
-      expect(find.byTooltip('বিজ্ঞপ্তি, ১২০টা না-পড়া'), findsOneWidget);
-    });
-    testWidgets('news without a count is a small dot', (tester) async {
-      await bell(tester, news: true);
-      expect(badge(tester).isLabelVisible, isTrue);
-      expect(badge(tester).label, isNull, reason: 'বিন্দু, সংখ্যা নয়');
-      expect(find.byTooltip('বিজ্ঞপ্তি, নতুন খবর আছে'), findsOneWidget);
+  // ⭐ ২০ নভেম্বর ২০২৬: ঘণ্টা উপরের বারে আর নেই — না-পড়ার গোনা নিচের বারের "নোটিশ" ঘরে (test/app_0458/looks_test.dart)
+  group('the bell left the top bar', () {
+    testWidgets('no bell and no count on the top bar, whatever the unread count', (tester) async {
+      await _pump(tester, _bar(company: 'ADI Wholesale', branch: 'সব শাখা', unread: 7, news: true));
+      expect(find.byKey(const ValueKey('top-bell')), findsNothing);
+      expect(find.text('7'), findsNothing);
     });
     test('the numbers', () {
       expect([badgeText(null), badgeText(0), badgeText(1), badgeText(99), badgeText(100)], [null, null, '1', '99', '99+']);
@@ -314,7 +300,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('avatar-look')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('avatar-menu')), findsNothing, reason: 'মেনু বন্ধ হয়নি');
-      expect(find.text('Liquid Glass'), findsWidgets, reason: 'চেহারার পাতা খোলেনি');
+      expect(find.text('গ্লাস'), findsWidgets, reason: 'চেহারার পাতা খোলেনি');
     });
 
     testWidgets('the photo opens it, items in the owner\'s order, each with a Material Symbol', (tester) async {

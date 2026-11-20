@@ -37,12 +37,14 @@ void main() {
   // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভূমিকার চার ঘর + শেষে "আমি" (নিজের ছবি) = পাঁচ, Material 3-এর সীমা
   // ⭐ ১৪ নভেম্বর ২০২৬ (মালিকের নমুনা ৩): "সব মডিউল" সব ভূমিকায় মাঝখানে; ফোনের বারে কোনো লেখা নেই — নাম TalkBack-এ আর
   //   লম্বা চাপে ([Tooltip]); প্রতিটা ঘরে রঙিন আইকন ([ColourTabIcon]), "আমি"-তে নিজের বড় ছবি
-  group('four role tabs and "আমি" last, modules in the middle, colour icons without words', () {
+  // ⭐ ২০ নভেম্বর ২০২৬ (মালিকের "Ok", নমুনা v8): তিন রূপেই "আমি"-র আগে "নোটিশ" (উপরের ঘণ্টা নিচে নামল); আইকন Facebook-এর
+  //   মতো — রেখার আইকন, বাছা ঘর ভরাট নীল ([RoleBottomBar._slot]); রঙিন আইকন আর নেই
+  group('four role tabs, notices and "আমি" last, modules in the middle, icons without words', () {
     for (final (role, names, labels) in [
-      ('owner', ['home', 'approvals', 'modules', 'reports', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'রিপোর্ট', 'আমি']),
-      ('sr', ['home', 'orders', 'modules', 'collections', 'me'], ['হোম', 'অর্ডার', 'সব মডিউল', 'আদায়', 'আমি']),
-      ('depot', ['home', 'challans', 'modules', 'stock', 'me'], ['হোম', 'চালান', 'সব মডিউল', 'মজুদ', 'আমি']),
-      ('accounts', ['home', 'approvals', 'modules', 'vouchers', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'ভাউচার', 'আমি']),
+      ('owner', ['home', 'approvals', 'modules', 'reports', 'notices', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'রিপোর্ট', 'নোটিশ', 'আমি']),
+      ('sr', ['home', 'orders', 'modules', 'collections', 'notices', 'me'], ['হোম', 'অর্ডার', 'সব মডিউল', 'আদায়', 'নোটিশ', 'আমি']),
+      ('depot', ['home', 'challans', 'modules', 'stock', 'notices', 'me'], ['হোম', 'চালান', 'সব মডিউল', 'মজুদ', 'নোটিশ', 'আমি']),
+      ('accounts', ['home', 'approvals', 'modules', 'vouchers', 'notices', 'me'], ['হোম', 'অনুমোদন', 'সব মডিউল', 'ভাউচার', 'নোটিশ', 'আমি']),
     ]) {
       testWidgets('$role: ${labels.join(' · ')}', (tester) async {
         await pump(tester, role);
@@ -56,26 +58,30 @@ void main() {
               reason: '⛔ ${names[i]}: TalkBack নাম পড়ে না — লেখা তুলে দিলে চোখে কম দেখেন এমন মানুষ হারিয়ে যান');
           expect(find.descendant(of: tab(names[i]), matching: find.byWidgetPredicate((w) => w is Tooltip && w.message == labels[i])),
               findsOneWidget, reason: '⛔ ${names[i]}: লম্বা চাপে নাম ভেসে ওঠে না');
-          // ⓘ "আমি"-র আইকন মানুষের নিজের ছবি (না থাকলে নামের প্রথম অক্ষর), রঙিন আইকন নয়
-          expect(find.descendant(of: tab(names[i]), matching: find.byType(ColourTabIcon)), names[i] == 'me' ? findsNothing : findsOneWidget,
-              reason: '⛔ ${names[i]}: রঙিন আইকন নেই');
+          // ⓘ "আমি"-র আইকন মানুষের নিজের ছবি (না থাকলে নামের প্রথম অক্ষর); বাকিদের নিজের আইকন
+          expect(find.descendant(of: tab(names[i]), matching: find.byKey(ValueKey('nav-${names[i]}-icon'))),
+              names[i] == 'me' ? findsNothing : findsOneWidget,
+              reason: '⛔ ${names[i]}: আইকন নেই');
+          expect(find.descendant(of: tab(names[i]), matching: find.byType(ColourTabIcon)), findsNothing,
+              reason: '⛔ ${names[i]}: রঙিন আইকন — নমুনা v8-এ নেই');
         }
         expect(xs, orderedEquals([...xs]..sort()), reason: '⛔ ঘরের ক্রম ${labels.join(' · ')} নয়');
         expect(tester.getSize(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('nav-me-face')))).height,
-            greaterThanOrEqualTo(48), reason: '⛔ নিজের ছবি বড় নয় — নমুনায় ৫৬');
+            greaterThanOrEqualTo(28), reason: '⛔ নিজের ছবি ছোট — নমুনা v8-এ পাশের আইকনের মাপে');
         // ⓘ বাছা না থাকলে ছবির কিনারায় কোনো দাগ নয় — উপরের বারের সাদা কিনারা অন্ধকার থিমে বাছা ঘরের রিংয়ের মতো দেখাত
         final disc = tester.widget<Container>(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('avatar-disc'))));
         expect((disc.decoration! as BoxDecoration).border, isNull, reason: '⛔ বাছা না থাকা ছবির চারপাশে দাগ — দেখে মনে হয় "আমি" বাছা');
         expect(find.descendant(of: tab('me'), matching: find.byKey(const ValueKey('nav-me-face'))), findsOneWidget);
         expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(InkWell)),
-            findsNWidgets(5));
+            findsNWidgets(names.length));
       });
     }
 
-    testWidgets('notifications are not on the bar, yet their page still opens and draws the bar; "আমি" is the last tab',
+    testWidgets('notices is a tab now, its page opens with the bar and lights it; "আমি" is the last tab',
         (tester) async {
       final router = await pump(tester, 'owner');
       expect(tab('notifications'), findsNothing);
+      expect(tab('notices'), findsOneWidget, reason: 'ঘণ্টা নিচের বারে');
       expect(find.text('বিজ্ঞপ্তি'), findsNothing);
       expect(tab('me'), findsOneWidget);
       expect(tester.getCenter(tab('me')).dx, greaterThan(tester.getCenter(tab('modules')).dx),
@@ -94,14 +100,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('NOTIFICATIONS'), findsOneWidget);
       expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
-      expect(lit(tester, 'home'), isTrue, reason: 'opened from home, stays under home');
+      expect(lit(tester, 'notices'), isTrue, reason: 'বিজ্ঞপ্তির পাতা "নোটিশ" ঘরের');
     });
   });
 
   group('touch targets and TalkBack', () {
     testWidgets('every tab is at least 48×48dp, on the smallest phone too', (tester) async {
       await pump(tester, 'owner', size: const Size(320, 640));
-      for (final name in ['home', 'approvals', 'reports', 'modules', 'me']) {
+      for (final name in ['home', 'approvals', 'reports', 'modules', 'notices', 'me']) {
         final s = tester.getSize(tab(name));
         expect(s.width, greaterThanOrEqualTo(48), reason: name);
         expect(s.height, greaterThanOrEqualTo(48), reason: name);
@@ -163,7 +169,8 @@ void main() {
           .map((e) => (e.widget as Text).data ?? '').where((s) => int.tryParse(s.replaceAll('+', '')) == null && s.length > 1).toList();
       expect(badgeTexts, isEmpty, reason: '⛔ $role: বারে ঘরের নাম লেখা — নমুনায় কোনো ঘরে লেখা নেই');
       final h = tester.getSize(find.byKey(const ValueKey('nav-bar'))).height;
-      expect(h, inInclusiveRange(72, 96), reason: '⛔ $role: বারের উচ্চতা $h — বড় অক্ষরে বার পর্দা খাচ্ছে, বা ৭২-এর কম');
+      // ⓘ নমুনা v8: কেবল আইকন, বার ৬৪ উঁচু — বড় অক্ষরে বাড়ে না (লেখা নেই)
+      expect(h, inInclusiveRange(64, 96), reason: '⛔ $role: বারের উচ্চতা $h — বড় অক্ষরে বার পর্দা খাচ্ছে, বা ৬৪-এর কম');
     }
   });
 

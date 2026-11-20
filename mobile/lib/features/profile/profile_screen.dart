@@ -212,7 +212,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         minVerticalPadding: 12,
         leading: const Icon(Symbols.palette),
         title: Text(context.l10n.lookTitle),
-        subtitle: Text(context.l10n.lookProfileSubtitle),
+        subtitle: Text(context.l10n.lookProfileSubtitle(context.l10n.lookExpressive, context.l10n.lookGlass, context.l10n.lookAbos)),
         trailing: const Icon(Symbols.chevron_right),
         onTap: () => LookScreen.open(context),
       ),

@@ -3,12 +3,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
-/// ⭐ কোপাইলটের জীবন্ত মগজ — মালিকের বাছা "ঘ" (ক + খ + গ একসাথে, ১২ নভেম্বর ২০২৬; নমুনা Ve4fMPX3g6ksYwUSyDG99o):
-/// রঙিন মগজ, রং ধীরে ঘোরে, চারপাশে দুইটা স্ফুলিঙ্গ। টপ বারে গোল বা বাক্স নেই ("শুধু ব্রেনটা আর জীবন্তটা")।
+/// ⭐ কোপাইলটের চিহ্ন — মালিকের বাছা AI চিহ্ন (২০ নভেম্বর ২০২৬, বারের নমুনা; আগের মগজ "অ্যাপসের জন্য সুন্দর না"):
+/// খোলা কোণের গোল চারকোনা, ভেতরে "AI", ডান-উপরে তিন ঝিলিক; সবুজ-নীল → নীল → বেগুনি ঢাল। ABOS-এর নিজের আঁকা (নমুনার
+/// SVG-র ৪৮ ঘরের মাপে হুবহু), তাই যেকোনো মাপে ধারালো, কারো ছবির স্বত্বের ঝামেলা নেই।
 ///
-/// <p>ⓘ রংগুলো ব্র্যান্ডের — আলো আর অন্ধকার দুই মোডেই একই, পটের রং ছোঁয় না। "কম নড়াচড়া" চালু থাকলে স্থির।
+/// <p>ⓘ রংগুলো ব্র্যান্ডের — আলো আর অন্ধকার দুই মোডেই একই। শোনার সময় ([listening]) একটু বড়-ছোট হয়; "কম নড়াচড়া"
+/// চালু থাকলে, বা পরীক্ষায়, স্থির।
 class CopilotMark extends StatefulWidget {
   const CopilotMark({super.key, this.size = 26, this.listening = false});
 
@@ -17,8 +18,8 @@ class CopilotMark extends StatefulWidget {
   /// শোনার সময় একটু বড়-ছোট হয় — Siri-র আলোর মতো
   final bool listening;
 
-  /// ⓘ বেগুনি → গোলাপি → সবুজাভ নীল — ওয়েবের `.cq-s1/2/3`-এর একই তিন রং
-  static const colors = [Color(0xFF7C3AED), Color(0xFFDB2777), Color(0xFF0891B2)]; // dark-ok: ব্র্যান্ডের মগজ, দুই মোডেই একই
+  /// ⓘ নমুনার ঢাল — সবুজ-নীল → নীল → বেগুনি (#14e0d6 → #3b5bdb → #9b2fd0)
+  static const colors = [Color(0xFF14E0D6), Color(0xFF3B5BDB), Color(0xFF9B2FD0)]; // dark-ok: ব্র্যান্ডের চিহ্ন, দুই মোডেই একই
 
   @override
   State<CopilotMark> createState() => _CopilotMarkState();
@@ -27,23 +28,35 @@ class CopilotMark extends StatefulWidget {
 final bool _underTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
 
 class _CopilotMarkState extends State<CopilotMark> with SingleTickerProviderStateMixin {
-  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(seconds: 6));
+  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ⓘ পরীক্ষায় স্থির — অবিরাম ঘোরা `pumpAndSettle`-কে কখনো থামতে দিত না (মগজটা বারে থাকলে প্রতিটা হোমের পরীক্ষা আটকাত)
-    final still = (MediaQuery.maybeDisableAnimationsOf(context) ?? false) || _underTest;
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(CopilotMark oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listening != widget.listening) _follow();
+  }
+
+  /// ⓘ কেবল শোনার সময় নড়ে — বারে চিহ্ন স্থির, তাই `pumpAndSettle` কখনো আটকায় না
+  void _follow() {
+    final still = (MediaQuery.maybeDisableAnimationsOf(context) ?? false) || _underTest || !widget.listening;
     if (still) {
-      _spin.stop();
-    } else if (!_spin.isAnimating) {
-      _spin.repeat();
+      _pulse
+        ..stop()
+        ..value = 0;
+    } else if (!_pulse.isAnimating) {
+      _pulse.repeat();
     }
   }
 
   @override
   void dispose() {
-    _spin.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
@@ -54,40 +67,93 @@ class _CopilotMarkState extends State<CopilotMark> with SingleTickerProviderStat
       child: SizedBox.square(
         dimension: s,
         child: AnimatedBuilder(
-          animation: _spin,
-          builder: (context, _) {
-            final t = _spin.value;
-            final pulse = widget.listening ? 1 + 0.08 * math.sin(t * math.pi * 8) : 1.0;
-            return Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
-              Transform.scale(
-                scale: pulse,
-                child: ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (rect) => SweepGradient(
-                    colors: [...CopilotMark.colors, CopilotMark.colors.first],
-                    transform: GradientRotation(t * 2 * math.pi),
-                  ).createShader(rect),
-                  child: Icon(Symbols.neurology, size: s, fill: 1, weight: 500),
-                ),
-              ),
-              // ⓘ দুইটা স্ফুলিঙ্গ — উল্টো দিকে, মগজের কিনারা ঘেঁষে
-              for (final (i, phase) in [0.0, 0.5].indexed)
-                Transform.translate(
-                  offset: Offset.fromDirection((t + phase) * 2 * math.pi * (i == 0 ? 1 : -1), s * 0.5),
-                  child: Container(
-                    width: s * 0.14,
-                    height: s * 0.14,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: CopilotMark.colors[i == 0 ? 1 : 2],
-                      boxShadow: [BoxShadow(color: CopilotMark.colors[i == 0 ? 1 : 2].withValues(alpha: 0.6), blurRadius: s * 0.12)],
-                    ),
-                  ),
-                ),
-            ]);
-          },
+          animation: _pulse,
+          builder: (context, child) =>
+              Transform.scale(scale: 1 + 0.08 * math.sin(_pulse.value * 2 * math.pi), child: child),
+          child: const CustomPaint(painter: CopilotMarkPainter()),
         ),
       ),
     );
   }
+}
+
+/// নমুনার `<symbol id="copilot" viewBox="0 0 48 48">` — প্রতিটা অংশ নিজের মাপে ঢাল পায় (SVG-র objectBoundingBox-এর মতো)
+class CopilotMarkPainter extends CustomPainter {
+  const CopilotMarkPainter();
+
+  static Shader _shade(Rect r) => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: CopilotMark.colors,
+      ).createShader(r);
+
+  /// চার-কোণা ঝিলিক — মাঝখান [c], ব্যাসার্ধ [r] (নমুনার তিনটার একই অনুপাত)
+  static Path _sparkle(Offset c, double r) {
+    const a = 0.0636, b = 0.6545, d = 0.345, e = 0.936;
+    final top = c.translate(0, -r);
+    return Path()
+      ..moveTo(top.dx, top.dy)
+      ..cubicTo(c.dx + a * r, c.dy - r + b * r, c.dx + d * r, c.dy - r + e * r, c.dx + r, c.dy)
+      ..cubicTo(c.dx + r - b * r, c.dy + a * r, c.dx + r - e * r, c.dy + d * r, c.dx, c.dy + r)
+      ..cubicTo(c.dx - a * r, c.dy + r - b * r, c.dx - d * r, c.dy + r - e * r, c.dx - r, c.dy)
+      ..cubicTo(c.dx - r + b * r, c.dy - a * r, c.dx - r + e * r, c.dy - d * r, c.dx, c.dy - r)
+      ..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 48, size.height / 48);
+    const corner = Radius.circular(7);
+
+    // খোলা কোণের গোল চারকোনা — ডান-উপরের কোণ খোলা, সেখানে ঝিলিক
+    final frame = Path()
+      ..moveTo(26, 10)
+      ..lineTo(16, 10)
+      ..arcToPoint(const Offset(9, 17), radius: corner, clockwise: false)
+      ..lineTo(9, 32)
+      ..arcToPoint(const Offset(16, 39), radius: corner, clockwise: false)
+      ..lineTo(31, 39)
+      ..arcToPoint(const Offset(38, 32), radius: corner, clockwise: false)
+      ..lineTo(38, 24);
+    canvas.drawPath(
+      frame,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.6
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true
+        ..shader = _shade(frame.getBounds()),
+    );
+
+    // "A" — ভেতরের ত্রিভুজ ফাঁকা
+    final letterA = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(14.6, 32.5)
+      ..lineTo(19.6, 18)
+      ..lineTo(22.6, 18)
+      ..lineTo(27.6, 32.5)
+      ..lineTo(24.3, 32.5)
+      ..lineTo(23.2, 29.1)
+      ..lineTo(17.9, 29.1)
+      ..lineTo(16.8, 32.5)
+      ..close()
+      ..moveTo(19.8, 26.2)
+      ..lineTo(23.3, 26.2)
+      ..lineTo(21.55, 20.7)
+      ..close();
+    // "I"
+    final letterI = Path()..addRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(29.4, 18, 3.2, 14.5), const Radius.circular(0.4)));
+    for (final p in [
+      letterA,
+      letterI,
+      _sparkle(const Offset(36, 10), 5.5),
+      _sparkle(const Offset(43, 4.75), 2.75),
+      _sparkle(const Offset(42.5, 15.05), 3.05),
+    ]) {
+      canvas.drawPath(p, Paint()..isAntiAlias = true..shader = _shade(p.getBounds()));
+    }
+  }
+
+  @override
+  bool shouldRepaint(CopilotMarkPainter oldDelegate) => false;
 }

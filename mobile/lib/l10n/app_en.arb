@@ -3268,15 +3268,15 @@
   "@lookTitle": {
     "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
   },
-  "lookAbos": "ABOS",
+  "lookAbos": "Classic",
   "@lookAbos": {
     "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
   },
-  "lookGlass": "Liquid Glass",
+  "lookGlass": "Glass",
   "@lookGlass": {
     "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
   },
-  "lookExpressive": "Material 3",
+  "lookExpressive": "Smart",
   "@lookExpressive": {
     "description": "App looks: Liquid Glass and Material 3 Expressive (owner 20 Nov 2026, samples BshQzFsr and BvqYK2tZ)"
   },
@@ -3345,11 +3345,11 @@
   "@lookChoose": {
     "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
   },
-  "lookAbosHint": "Today's ABOS — nothing changes",
+  "lookAbosHint": "The earlier look — nothing changes",
   "@lookAbosHint": {
     "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
   },
-  "lookGlassHint": "iOS 26 — clear glass over moving colour",
+  "lookGlassHint": "Clear glass over a colour background",
   "@lookGlassHint": {
     "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
   },
@@ -3369,9 +3369,20 @@
   "@lookMotionHint": {
     "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
   },
-  "lookProfileSubtitle": "ABOS · Liquid Glass · Material 3",
+  "lookProfileSubtitle": "{smart} · {glass} · {classic}",
   "@lookProfileSubtitle": {
-    "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+    "description": "The three look names in picker order; the names themselves live only in lookExpressive, lookGlass, lookAbos",
+    "placeholders": {
+      "smart": {
+        "type": "String"
+      },
+      "glass": {
+        "type": "String"
+      },
+      "classic": {
+        "type": "String"
+      }
+    }
   },
   "lookTodaySales": "Today's sales",
   "@lookTodaySales": {
@@ -3406,6 +3417,66 @@
   "lookTileDues": "Dues",
   "@lookTileDues": {
     "description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"
+  },
+  "lookTabCopilot": "Copilot",
+  "@lookTabCopilot": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookTabNotices": "Notices",
+  "@lookTabNotices": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookTabUnread": "unread",
+  "@lookTabUnread": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookCreate": "Create",
+  "@lookCreate": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookMessages": "Messages",
+  "@lookMessages": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookMessagesSoon": "Messages — coming soon",
+  "@lookMessagesSoon": {
+    "description": "App bars in Liquid Glass and Material 3 (owner 20 Nov 2026 Ok, bar sample)"
+  },
+  "lookWallpaper": "Glass look background",
+  "@lookWallpaper": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperBalls": "Colour balls",
+  "@lookPaperBalls": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperPurple": "Purple glow",
+  "@lookPaperPurple": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperBlueWave": "Blue waves",
+  "@lookPaperBlueWave": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperSunset": "Sunset",
+  "@lookPaperSunset": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperAurora": "Green light",
+  "@lookPaperAurora": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperOcean": "Ocean",
+  "@lookPaperOcean": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperGraphite": "Night black",
+  "@lookPaperGraphite": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
+  },
+  "lookPaperSilver": "Silver",
+  "@lookPaperSilver": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
   },
   "scanSlipTitle": "Fix the slip",
   "@scanSlipTitle": {

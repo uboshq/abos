@@ -7,9 +7,10 @@ import '../../locale/app_locale.dart';
 import '../../locale/l10n.dart';
 import '../../sync_engine/sync_engine.dart';
 import '../../sync_engine/sync_status.dart';
+import '../../theme/app_look.dart';
 import '../../theme/bar_palette.dart';
+import '../../theme/expressive.dart';
 import '../../widgets/unsaved_guard.dart';
-import '../../../features/copilot/copilot_mark.dart';
 
 /// ⭐ উপরের বার — মালিকের চূড়ান্ত নকশা, সংস্করণ ৩ (২০ অক্টোবর ২০২৬; Material 3 top app bar, Apple HIG, SAP Fiori shell
 /// bar, WCAG 2.2 AA)।
@@ -35,6 +36,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.onOrgTap,
     this.onSearch,
     this.onCopilot,
+    this.onCreate,
     this.onBell,
     this.unread,
     this.news = false,
@@ -76,6 +78,10 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// ⭐ জীবন্ত মগজ — খোঁজার আগে; null মানে কোপাইলটের চাবি নেই, বোতামও নেই (মালিক, ১২ নভেম্বর ২০২৬)
   final VoidCallback? onCopilot;
+
+  /// ⭐ ＋ তৈরি করুন — দ্রুত কাজের তালিকা; কেবল Liquid Glass আর Material 3-এর বারে, সবার আগে (মালিক, ২০ নভেম্বর ২০২৬ "Ok")।
+  /// null মানে বোতাম নেই
+  final VoidCallback? onCreate;
   final VoidCallback? onBell;
 
   /// না-পড়া বিজ্ঞপ্তি — null বা ০ হলে গোনা নেই
@@ -236,30 +242,6 @@ class _AbosTopBarState extends State<AbosTopBar> {
     widget.onAvatar(bottom);
   }
 
-  /// শাখা (আর ▾) আর মডিউলের লাইনের প্রতিটা শব্দ [width]-এ ধরে কি না — না ধরলে শিরোনাম নিজের সারিতে নামে
-  bool _titleFits(BuildContext context, double width) {
-    final base = Theme.of(context).textTheme.bodyMedium ?? const TextStyle();
-    final scaler = MediaQuery.textScalerOf(context);
-    double measure(String s, TextStyle style) {
-      final p = TextPainter(text: TextSpan(text: s, style: base.merge(style)), textDirection: Directionality.of(context), textScaler: scaler, maxLines: 1)
-        ..layout();
-      final w = p.width;
-      p.dispose();
-      return w;
-    }
-
-    const line1 = TextStyle(fontSize: 15, fontWeight: FontWeight.w700);
-    const line2 = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
-    final branch = widget.branch.trim();
-    if (branch.isNotEmpty && measure(branch, line1) + (widget.onOrgTap == null ? 0 : 20) > width) return false;
-    for (final crumb in widget.crumbs) {
-      for (final word in '› $crumb'.split(' ')) {
-        if (measure(word, line2) > width) return false;
-      }
-    }
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -290,33 +272,33 @@ class _AbosTopBarState extends State<AbosTopBar> {
                 onPressed: widget.onLeading,
                 icon: Icon(widget.leading == TopBarLeading.menu ? Symbols.menu : Symbols.arrow_back),
               );
-              final title = _Title(
-                company: widget.company,
-                code: widget.companyCode,
-                branch: widget.branch,
-                fallback: widget.fallbackTitle,
-                crumbs: widget.crumbs,
+              final title = _OrgBlock(
+                company: widget.company.trim().isEmpty ? widget.fallbackTitle : widget.company.trim(),
+                spokenCompany: widget.company.trim(),
+                branch: widget.branch.trim(),
+                crumbs: widget.screenActions.isEmpty ? widget.crumbs : const [],
+                allCrumbs: widget.crumbs,
                 demo: demo,
                 colors: colors,
-                line2: widget.screenActions.isEmpty,
                 onTap: widget.onOrgTap == null ? null : _tapOrg,
               );
-              final actions = [
-                if (widget.onCopilot != null)
-                  IconButton(
-                    key: const ValueKey('top-copilot'),
-                    tooltip: context.l10n.copilotQuickOpen,
-                    onPressed: widget.onCopilot,
-                    icon: const CopilotMark(size: 26),
-                  ),
-                IconButton(
-                  key: const ValueKey('top-search'),
-                  tooltip: context.l10n.topBarSearch,
-                  color: fg,
-                  onPressed: widget.onSearch,
-                  icon: const Icon(Symbols.search),
-                ),
-                _Bell(unread: widget.unread, news: widget.news, onTap: widget.onBell, color: fg),
+              // ⭐ উপরের বার, তিন রূপেই (মালিক, ২০ নভেম্বর ২০২৬ "Ok", বারের নমুনা v8): ডানে ＋ · খোঁজা · বার্তা — সাদামাটা আইকন,
+              // কোনো গোল বা বাক্স নয়, ডান কিনারায় গায়ে-গায়ে; প্রতিটার চাপার জায়গা ৪৮dp (অদৃশ্য)। ঘণ্টা আর Copilot নিচের বারে।
+              final actions = <Widget>[
+                if (widget.onCreate != null)
+                  _PlainAction(
+                      key: const ValueKey('top-create'),
+                      tooltip: context.l10n.lookCreate,
+                      icon: Symbols.add,
+                      color: fg,
+                      onPressed: widget.onCreate),
+                _PlainAction(
+                    key: const ValueKey('top-search'),
+                    tooltip: context.l10n.topBarSearch,
+                    icon: Symbols.search,
+                    color: fg,
+                    onPressed: widget.onSearch),
+                _MessagesButton(color: fg),
                 if (widget.showAvatar)
                   IconButton(
                     key: const ValueKey('header-avatar'),
@@ -326,22 +308,13 @@ class _AbosTopBarState extends State<AbosTopBar> {
                     icon: AvatarDisc(name: widget.avatarName, image: widget.avatar, size: 36, ring: widget.menuOpen),
                   ),
               ];
-              // ⭐ শাখার নাম মাঝের জায়গায় না ধরলে (ছোট ফোন, বড় লেখা) শিরোনাম আইকনের সারির নিচে পুরো চওড়ায় নামে —
-              // Material 3-এর medium top app bar; শাখা কাটে না, বার লম্বা হয়
-              final middle = box.maxWidth - 10 - 48 * (3 + (widget.onCopilot == null ? 0 : 1) + (widget.showAvatar ? 1 : 0)) - 8;
-              final fits = _titleFits(context, middle);
               final rows = <Widget>[
-                if (fits)
-                  Row(children: [leading, Expanded(child: title), ...actions])
-                else ...[
-                  Row(children: [leading, const Spacer(), ...actions]),
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: title),
-                ],
+                Row(children: [leading, Expanded(child: title), const SizedBox(width: 4), ...actions]),
                 // ⭐ পর্দার বোতাম — "› মডিউল › পাতা"-র সারির ডান প্রান্তে
                 if (widget.screenActions.isNotEmpty)
                   Padding(
                     key: const ValueKey('top-action-row'),
-                    padding: EdgeInsetsDirectional.only(start: fits ? 52 : 12),
+                    padding: const EdgeInsetsDirectional.only(start: 52),
                     child: Row(children: [
                       Expanded(child: _Crumbs(crumbs: widget.crumbs, demo: demo, colors: colors)),
                       ScreenActionsRow(actions: widget.screenActions, color: fg),
@@ -388,12 +361,24 @@ class _AbosTopBarState extends State<AbosTopBar> {
 /// ⭐ নিজের ছবি — ছবি থাকলে ছবি, নইলে কমলা গোলে নামের প্রথম অক্ষর, চারপাশে সাদা দাগ; মেনু খোলা থাকলে বাইরে কমলা দাগ
 /// (নমুনা পাতা ২)। অক্ষরটা প্রতীক — বড় লেখায় বাড়ে না, গোলের ভেতরেই থাকে।
 class AvatarDisc extends StatelessWidget {
-  const AvatarDisc({super.key, required this.name, this.image, this.size = 36, this.ring = false, this.edge = true});
+  const AvatarDisc(
+      {super.key,
+      required this.name,
+      this.image,
+      this.size = 36,
+      this.ring = false,
+      this.edge = true,
+      this.ringColor,
+      this.ringWidth = 3});
 
   final String name;
   final ImageProvider? image;
   final double size;
   final bool ring;
+
+  /// রিংয়ের রং আর মোটা — না দিলে বারের কমলা, ৩dp (নিচের বারে নীল ২dp; মালিক, ২০ নভেম্বর ২০২৬)
+  final Color? ringColor;
+  final double ringWidth;
 
   /// ⓘ উপরের বারের রঙে সরু কিনারা — গাঢ় উপরের বারে ছবি আলাদা করে; নিচের বারে নয় (সেখানে সাদা কিনারা অন্ধকার থিমে বাছা
   /// ঘরের রিংয়ের মতো দেখাত, ১৫ নভেম্বর ২০২৬)
@@ -423,7 +408,7 @@ class AvatarDisc extends StatelessWidget {
     if (!ring) return disc;
     return DecoratedBox(
       key: const ValueKey('avatar-ring'),
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: c.avatarRing, width: 3)),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ringColor ?? c.avatarRing, width: ringWidth)),
       child: disc,
     );
   }
@@ -456,52 +441,84 @@ class TopBarColors {
   }
 }
 
-class _Title extends StatelessWidget {
-  const _Title({
+/// ⭐ বাঁয়ে ≡-এর পরে দুই লাইন (মালিক, ২০ নভেম্বর ২০২৬ "Ok", নমুনা v7–v8): ওপরে কোম্পানির পুরো নাম (১৫, মোটা, এক লাইন —
+/// কখনো ছোট নাম নয়; "…" কেবল শেষ উপায়), নিচে শাখা গোল চিপে (১১, আধা-মোটা, রূপের রঙে); ভেতরের পাতায় চিপের পাশে
+/// "› মডিউল › পাতা"। চাপলে শাখা বদল (থাকলে, চিপে ▾); আঙুল চেপে রাখলে পুরো নাম; পর্দা-পাঠক পুরো বাক্য।
+class _OrgBlock extends StatelessWidget {
+  const _OrgBlock({
     required this.company,
-    required this.code,
+    required this.spokenCompany,
     required this.branch,
-    required this.fallback,
     required this.crumbs,
+    required this.allCrumbs,
     required this.demo,
     required this.colors,
-    this.line2 = true,
     required this.onTap,
   });
 
   final String company;
-  final String code;
-
-  /// দ্বিতীয় লাইন এখানে — পর্দার বোতাম থাকলে সেটা বোতামের সারিতে যায় ([_Crumbs]); পর্দা-পাঠক তবু পুরোটা বলে
-  final bool line2;
+  final String spokenCompany;
   final String branch;
-  final String fallback;
+
+  /// এখানে দেখানো "› মডিউল › পাতা" — পর্দার বোতাম থাকলে সেটা বোতামের সারিতে যায়, তখন খালি
   final List<String> crumbs;
+
+  /// পর্দা-পাঠকের জন্য সবসময় পুরোটা
+  final List<String> allCrumbs;
   final bool demo;
   final TopBarColors colors;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final named = company.trim().isNotEmpty;
-    final first = named ? company.trim() : fallback;
-    final full = [first, if (branch.trim().isNotEmpty) branch.trim()].join(' · ');
-    final line1 = TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.foreground, height: 1.25);
-
-    final body = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _OrgLine(company: first, code: named ? code.trim() : '', branch: branch.trim(), style: line1, chevron: onTap != null),
-        if (line2 && (crumbs.isNotEmpty || demo)) Padding(padding: const EdgeInsets.only(top: 1), child: _Crumbs(crumbs: crumbs, demo: demo, colors: colors)),
-      ],
+    final fg = colors.foreground;
+    final chip = TopBarChipColors.of(context, fg);
+    final name = Text(
+      company,
+      key: const ValueKey('top-company'),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fg, height: 1.2),
     );
-
-    final label = titleLabel(named ? first : '', branch, crumbs, demo: demo);
+    final branchChip = branch.isEmpty
+        ? null
+        : Container(
+            key: const ValueKey('top-branch-chip'),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 1),
+            decoration: BoxDecoration(
+              color: chip.fill,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: chip.border),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                child: Text(branch,
+                    key: const ValueKey('top-branch'),
+                    softWrap: true,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: chip.ink, height: 1.3)),
+              ),
+              if (onTap != null)
+                Icon(Symbols.arrow_drop_down, key: const ValueKey('top-chevron'), size: 16, color: chip.ink),
+            ]),
+          );
+    final second = [
+      if (branchChip != null) branchChip,
+      if (demo || crumbs.isNotEmpty) _Crumbs(crumbs: crumbs, demo: demo, colors: colors),
+    ];
+    final body = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      name,
+      if (second.isNotEmpty) ...[
+        const SizedBox(height: 3),
+        Wrap(spacing: 6, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: second),
+      ],
+    ]);
+    final full = [company, if (branch.isNotEmpty) branch].join(' · ');
+    final label = titleLabel(spokenCompany, branch, allCrumbs, demo: demo);
     return Semantics(
       key: const ValueKey('top-title'),
       container: true,
-      label: label.isEmpty ? fallback : label,
+      label: label.isEmpty ? company : label,
       button: onTap != null,
       onTap: onTap,
       onTapHint: onTap == null ? null : context.l10n.topBarSwitchBranch,
@@ -518,7 +535,7 @@ class _Title extends StatelessWidget {
             // ⓘ চাপার জায়গা অন্তত ৪৮dp উঁচু (WCAG 2.5.8, Material 3)
             constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, child: body),
             ),
           ),
@@ -526,6 +543,51 @@ class _Title extends StatelessWidget {
       ),
     );
   }
+}
+
+/// শাখার চিপের রং — রূপের নিজের (নমুনা v7): ম্যাটেরিয়ালে secondaryContainer, লিকুইড গ্লাসে সাদা ১৪% আর ৪০% কিনারা,
+/// ক্লাসিকে নিরপেক্ষ ধূসর আভা
+@immutable
+class TopBarChipColors {
+  const TopBarChipColors({required this.fill, required this.border, required this.ink});
+
+  final Color fill;
+  final Color border;
+  final Color ink;
+
+  factory TopBarChipColors.of(BuildContext context, Color fg) => switch (AppLooks.instance.look.value) {
+        AppLook.expressive => const TopBarChipColors(
+            fill: Expressive.secondaryBox, border: Color(0xFFCBBFE0), ink: Color(0xFF1D192B)),
+        AppLook.glass => TopBarChipColors(
+            fill: Colors.white.withValues(alpha: 0.14), // dark-ok: কাচের চিপ, অন্ধকার পটে
+            border: Colors.white.withValues(alpha: 0.40), // dark-ok: কাচের চিপ, অন্ধকার পটে
+            ink: fg),
+        AppLook.abos => TopBarChipColors(
+            fill: const Color(0xFF7F7F7F).withValues(alpha: 0.16),
+            border: const Color(0xFF7F7F7F).withValues(alpha: 0.35),
+            ink: fg),
+      };
+}
+
+/// ⭐ উপরের বারের সাদামাটা আইকন — গোল বা বাক্স নেই, আইকন ২৪; চাপার জায়গা অদৃশ্য ৪৮×৪৮, পাশাপাশি গায়ে-গায়ে (WCAG 2.5.8, Material 3)
+class _PlainAction extends StatelessWidget {
+  const _PlainAction({super.key, required this.tooltip, required this.icon, required this.color, required this.onPressed});
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        color: color,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        icon: Icon(icon, size: 24),
+      );
 }
 
 /// দ্বিতীয় লাইন: "ডেমো" চিহ্ন আর "› মডিউল › পাতা" — শব্দ ভাঙে না, দরকারে নিচের লাইনে নামে
@@ -612,107 +674,30 @@ class ScreenActionsRow extends StatelessWidget {
   }
 }
 
-/// প্রথম লাইন: "কোম্পানি · শাখা ▾" — জায়গা হলে এক লাইনে (কোম্পানি "…"), না হলে শাখা নিচের লাইনে, পুরোটা
-class _OrgLine extends StatelessWidget {
-  const _OrgLine({required this.company, this.code = '', required this.branch, required this.style, required this.chevron});
+/// ⭐ বার্তা — মালিকের কথায়: "মেসেঞ্জার আইকনটা বসায় দিবা, বাট কোনো কাজ করবে না, বা চাপলে বলবে যে কামিং সুন বা শীঘ্রই আসছে"
+/// (২০ নভেম্বর ২০২৬)। চাপলে ছোট নরম খবর; না-পড়ার গোনা নেই (আসল কিছু এখনো নেই)। ⓘ "বার্তা" বানালে এখানেই খুলবে
+class _MessagesButton extends StatelessWidget {
+  const _MessagesButton({required this.color});
 
-  final String company;
-
-  /// ছোট নাম — পুরো নাম না ধরলে
-  final String code;
-  final String branch;
-  final TextStyle style;
-  final bool chevron;
-
-  static const double _chevron = 20;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = DefaultTextStyle.of(context).style.merge(this.style);
-    final scaler = MediaQuery.textScalerOf(context);
-    final arrow = chevron ? Icon(Symbols.arrow_drop_down, size: _chevron, color: style.color, key: const ValueKey('top-chevron')) : null;
-    Text companyText(String text) =>
-        Text(text, key: const ValueKey('top-company'), maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style);
-
-    return LayoutBuilder(builder: (context, c) {
-      double width(String s) {
-        final p = TextPainter(
-          text: TextSpan(text: s, style: style),
-          textDirection: Directionality.of(context),
-          textScaler: scaler,
-          maxLines: 1,
-        )..layout();
-        final w = p.width;
-        p.dispose();
-        return w;
-      }
-
-      // ⭐ পুরো নাম ধরলে পুরো নাম, না ধরলে ছোট নাম ("ADI") — "ADI …"-এর মতো আধা নাম নয় (মালিক, ২০ অক্টোবর ২০২৬)
-      String fit(double room) => width(company) <= room || code.isEmpty ? company : code;
-      if (branch.isEmpty) {
-        return Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: companyText(fit(c.maxWidth - (chevron ? _chevron : 0)))),
-          if (arrow != null) arrow,
-        ]);
-      }
-      final branchWidth = width(' · ') + width(branch) + (chevron ? _chevron : 0);
-      final shown = fit(c.maxWidth - branchWidth);
-      // কোম্পানির জন্য অন্তত দুই অক্ষর আর "…"
-      final companyMin = width(shown == code ? code : '${company.characters.take(2)}…');
-      final oneLine = c.maxWidth - branchWidth >= companyMin;
-      final branchText = Text(branch, key: const ValueKey('top-branch'), softWrap: true, style: style);
-      if (oneLine) {
-        return Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: companyText(shown)),
-          Text(' · ', style: style),
-          branchText,
-          if (arrow != null) arrow,
-        ]);
-      }
-      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        companyText(fit(c.maxWidth)),
-        Row(mainAxisSize: MainAxisSize.min, children: [Flexible(child: branchText), if (arrow != null) arrow]),
-      ]);
-    });
-  }
-}
-
-class _Bell extends StatelessWidget {
-  const _Bell({required this.unread, required this.news, required this.onTap, required this.color});
-
-  final int? unread;
-  final bool news;
-  final VoidCallback? onTap;
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.bar;
-    final text = badgeText(unread);
-    final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.3);
-    return IconButton(
-      key: const ValueKey('top-bell'),
-      tooltip: bellLabel(unread, news: news),
-      color: color,
-      onPressed: onTap,
-      icon: Badge(
-        key: const ValueKey('top-bell-badge'),
-        isLabelVisible: text != null || news,
-        backgroundColor: c.badge,
-        textColor: c.onBadge,
-        largeSize: 15 * scale,
-        smallSize: 8,
-        textStyle: (Theme.of(context).textTheme.labelSmall ?? const TextStyle()).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
-        label: text == null
-            ? null
-            : MediaQuery.withClampedTextScaling(
-                maxScaleFactor: 1.3,
-                child: ExcludeSemantics(child: Text(text, key: const ValueKey('top-bell-count'))),
-              ),
-        child: const Icon(Symbols.notifications),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _PlainAction(
+        key: const ValueKey('top-messages'),
+        tooltip: context.l10n.lookMessages,
+        icon: Symbols.chat_bubble,
+        color: color,
+        onPressed: () {
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          messenger?.hideCurrentSnackBar();
+          messenger?.showSnackBar(SnackBar(
+            key: const ValueKey('messages-soon'),
+            content: Text(context.l10n.lookMessagesSoon),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ));
+        },
+      );
 }
 
 /// ⭐ নেট না থাকলে বারের ঠিক নিচে হলুদ ফিতা — আইকন নয়, পুরো বাক্য (Material 3 banner; WCAG 1.4.1; নমুনা পাতা ২)

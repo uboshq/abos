@@ -153,7 +153,9 @@ void main() {
       expect(find.text('› বিক্রয় › আদায়'), findsOneWidget);
       expect(tester.getSemantics(find.byKey(const ValueKey('top-title'))).getSemanticsData().label,
           'ADI Wholesale, ময়মনসিংহ শাখা, বিক্রয়, আদায়');
-      expect(find.byTooltip('বিজ্ঞপ্তি, ৩টা না-পড়া'), findsOneWidget);
+      // ⓘ ২০ নভেম্বর ২০২৬ (নমুনা v8): ঘণ্টা নিচের বারের "নোটিশ" ঘরে; উপরে খোঁজা আর বার্তা
+      expect(find.byTooltip('বিজ্ঞপ্তি, ৩টা না-পড়া'), findsNothing);
+      expect(find.byTooltip('বার্তা'), findsOneWidget);
       expect(find.byTooltip('পিছনে'), findsOneWidget);
       handle.dispose();
     });
@@ -180,15 +182,15 @@ void main() {
     });
 
     // ⓘ ১৩ নভেম্বর ২০২৬ — মালিকের সিদ্ধান্ত "ছবি নিচের বারে": ভেতরের পর্দার বারে আর ছবি নেই; নিজের মেনু নিচের বারের "আমি" ঘরে
-    testWidgets('search, bell and the branch do what they do on the home; the photo is not on the bar', (tester) async {
+    testWidgets('search and the branch do what they do on the home; no bell and no photo on the bar', (tester) async {
       final calls = _Calls();
       await _pump(tester, _app(_screen(actions: const []), context: _context(calls)));
       expect(find.byKey(const ValueKey('header-avatar')), findsNothing, reason: 'the photo lives on the bottom bar (আমি)');
+      expect(find.byKey(const ValueKey('top-bell')), findsNothing, reason: 'ঘণ্টা নিচের বারের "নোটিশ" ঘরে');
       await tester.tap(find.byKey(const ValueKey('top-search')));
-      await tester.tap(find.byKey(const ValueKey('top-bell')));
       await tester.tap(find.byKey(const ValueKey('workspace-header')));
       await tester.pumpAndSettle();
-      expect([calls.search, calls.bell, calls.menu, calls.branch], [1, 1, 0, 1]);
+      expect([calls.search, calls.bell, calls.menu, calls.branch], [1, 0, 0, 1]);
     });
 
     testWidgets('one branch: nothing to switch, no ▾', (tester) async {
@@ -245,7 +247,7 @@ void main() {
           final visible = [for (final k in ['a-filter', 'a-refresh', 'a-print', 'a-share']) if (find.byKey(ValueKey(k)).evaluate().isNotEmpty) k];
           expect(visible.length, n > 2 ? 2 : n);
           // ⓘ সব চাপার জায়গা অন্তত ৪৮dp
-          for (final k in [...visible, if (n > 2) 'top-overflow', 'top-leading', 'top-search', 'top-bell']) {
+          for (final k in [...visible, if (n > 2) 'top-overflow', 'top-leading', 'top-search', 'top-messages']) {
             final size = tester.getSize(find.byKey(ValueKey(k)));
             expect(size.width >= 48 && size.height >= 48, isTrue, reason: '⛔ $k $size');
           }

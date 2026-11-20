@@ -8,6 +8,7 @@ import '../../core/auth/auth_state.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/colour_tab_icon.dart';
+import '../../core/navigation/deposit_icon.dart';
 import '../../core/navigation/role_tabs.dart';
 import '../../core/navigation/top_bar/abos_top_bar.dart' show AvatarDisc;
 import '../../core/navigation/top_bar/top_bar_context.dart';
@@ -19,6 +20,7 @@ import '../../core/theme/expressive.dart';
 import '../../core/theme/glass.dart';
 import '../../core/widgets/fab_clearance.dart';
 import '../../core/widgets/totals_bar.dart';
+import '../copilot/copilot_mark.dart';
 
 /// The home's own pages, as [HomeShell] names them for its [IndexedStack].
 /// ⓘ বিজ্ঞপ্তি আর "আমি" আর নিচের বারে নেই (বারের নকশা ৩, অংশ ৪): ঘণ্টা আর ছবি ওপরের বারে (a4)। পথ দুটো আগের মতোই আছে।
@@ -60,22 +62,22 @@ class AbosBottomBar extends ConsumerWidget {
     required this.selected,
     required this.badges,
     required this.onSelect,
-    this.onSearch,
-    this.onQuick,
   });
 
   final NavTab selected;
   final NavBadges badges;
   final ValueChanged<NavTab> onSelect;
 
-  /// Liquid Glass-এর খোঁজার কাচের বল, আর Material 3-এর ＋ (দ্রুত কাজ) — ABOS রূপে কোনোটাই আঁকা হয় না
-  final VoidCallback? onSearch;
-  final VoidCallback? onQuick;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (_InFrame.of(context)) return const SizedBox.shrink();
-    final tabs = _tabsOf(ref);
+    final top = ref.watch(topBarContextProvider);
+    // ⭐ কাঠামোর একই সাত ঘর — Copilot (চাবি থাকলে) আর নোটিশ সহ (মালিক, ২০ নভেম্বর ২০২৬ "Ok")
+    final tabs = RoleTabs.lookTabsFor(
+      ref.watch(authStateProvider).user?.permissions ?? const <String>[],
+      modulesOn: ref.watch(phoneModulesProvider),
+      copilot: top?.copilot != null,
+    );
     final shown = switch (selected) {
       NavTab.modules => BarTab.modules,
       NavTab.me => BarTab.me,
@@ -85,8 +87,6 @@ class AbosBottomBar extends ConsumerWidget {
       tabs: tabs,
       selected: tabs.contains(shown) ? shown : null,
       badges: _badgesOf(badges),
-      onSearch: onSearch,
-      onQuick: onQuick,
       onSelect: (tab) {
         switch (tab) {
           case BarTab.home:
@@ -98,6 +98,10 @@ class AbosBottomBar extends ConsumerWidget {
           // ⭐ ছবির ঘর — 'আমি' পাতা খোলে, অন্য ঠিকানায় ঠেলে না (মালিক, ১৪ নভেম্বর ২০২৬: ছবি নিচের বারে)
           case BarTab.me:
             onSelect(NavTab.me);
+          case BarTab.notices:
+            onSelect(NavTab.notifications);
+          case BarTab.copilot:
+            top?.copilot?.call(context, RoleTabs.specs[BarTab.home]!.label);
           default:
             GoRouter.maybeOf(context)?.push(RoleTabs.specs[tab]!.location);
         }
@@ -106,17 +110,10 @@ class AbosBottomBar extends ConsumerWidget {
   }
 }
 
-/// ⭐ বারের ঘর — সব রূপে একই, "জমা"-সহ ([RoleTabs.tabsFor])
-List<BarTab> _tabsOf(WidgetRef ref) => _tabsFor(
-      ref.watch(authStateProvider).user?.permissions ?? const <String>[],
-      ref.watch(phoneModulesProvider),
-    );
-
-List<BarTab> _tabsFor(List<String> permissions, Set<String>? modulesOn) =>
-    RoleTabs.tabsFor(permissions, modulesOn: modulesOn);
-
 Map<BarTab, TabBadge> _badgesOf(NavBadges b) => {
       BarTab.approvals: RoleTabs.badgeFor(b.pending, more: b.pendingMore),
+      // ⭐ নোটিশের ঘরে উপরের ঘণ্টার একই না-পড়ার গোনা (নতুন দুই রূপ; মালিক, ২০ নভেম্বর ২০২৬)
+      BarTab.notices: RoleTabs.badgeFor(b.unread),
     };
 
 /// ⭐ "＋ নতুন …" — বারের নকশা আর পুরো পাতার নমুনার বোতাম (মালিক, ২০ অক্টোবর ২০২৬): ডান-নিচে ভাসে, ১৬dp গোল কোণ,
@@ -394,8 +391,6 @@ class RoleBottomBar extends StatelessWidget {
     required this.selected,
     required this.badges,
     required this.onSelect,
-    this.onSearch,
-    this.onQuick,
   });
 
   final List<BarTab> tabs;
@@ -403,113 +398,92 @@ class RoleBottomBar extends StatelessWidget {
   final Map<BarTab, TabBadge> badges;
   final ValueChanged<BarTab> onSelect;
 
-  /// খোঁজা — Liquid Glass-এ ক্যাপসুলের পাশের কাচের বল ([AppLook.glass])
-  final VoidCallback? onSearch;
+  /// ⭐ বাছা ঘরের নীল (মালিক, ২০ নভেম্বর ২০২৬ "ok": Facebook-এর মতো; নমুনা v8-এর #3b82f6) — তিন রূপেই একই
+  static const Color lookBlue = Color(0xFF3B82F6); // dark-ok: সাদা বার, গাঢ় কাচ আর গাঢ় টুলবার — তিনটাতেই ৩:১-এর বেশি
 
-  /// দ্রুত কাজ — Material 3-এর বড় চারকোনা ＋ ([AppLook.expressive])
-  final VoidCallback? onQuick;
+  /// ⭐ একটা ঘর — Facebook-এর মতো (মালিক, ২০ নভেম্বর ২০২৬ "ok", তিন রূপেই): পেছনে গোল বা বড়ি নেই; বাছা ঘরের আইকন ভরাট আর
+  /// নীল, তার ঠিক ওপরে বারের কিনারায় সরু নীল দাগ (৩×২৮, গোল মাথা); বাকিরা রেখার আইকন, মলিন রঙে; "আমি"-র ছবিতে নীল রিং
+  Widget _slot(BarTab tab, {required Color blue, required Color muted, required bool strongBadge}) {
+    final on = tab == selected;
+    return Expanded(
+      child: Stack(children: [
+        Positioned.fill(
+          child: Center(
+            child: _BarItem(
+              spec: RoleTabs.specs[tab]!,
+              selected: on,
+              badge: badges[tab] ?? const TabBadge.none(),
+              onTap: () => onSelect(tab),
+              onLook: true,
+              blue: blue,
+              muted: muted,
+              strongBadge: strongBadge,
+            ),
+          ),
+        ),
+        if (on)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                key: ValueKey('nav-${tab.name}-line'),
+                width: 28,
+                height: 3,
+                decoration: BoxDecoration(color: blue, borderRadius: BorderRadius.circular(1.5)),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
 
-  /// রূপের বারের ঘর — বাছার দাগ ঘরের নিজের নয়, লেন্স বা বড়ির ([_BarItem.onLook])
-  Widget _item(BarTab tab) => _BarItem(
-        spec: RoleTabs.specs[tab]!,
-        selected: tab == selected,
-        badge: badges[tab] ?? const TabBadge.none(),
-        onTap: () => onSelect(tab),
-        onLook: true,
+  Widget _row({required Color blue, required Color muted, required bool strongBadge}) => Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [for (final tab in tabs) _slot(tab, blue: blue, muted: muted, strongBadge: strongBadge)],
       );
 
-  /// ⭐ Liquid Glass — ভাসমান কাচের ক্যাপসুল, বাছা ঘর কাচের লেন্সে, পাশে খোঁজার কাচের বল (মালিকের নমুনা, ২০ নভেম্বর ২০২৬)
+  /// ⭐ Liquid Glass — একটাই ভাসমান কাচের ক্যাপসুল, সাত ঘর পর্যন্ত, কেবল আইকন। ⛔ পাশের খোঁজার বল নেই — খোঁজা উপরের বারে
+  /// (মালিক, ২০ নভেম্বর ২০২৬ "Ok", বারের নমুনা)
   Widget _glass(BuildContext context) => SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Row(children: [
-            Expanded(
-              child: GlassPanel(
-                key: const ValueKey('nav-bar-glass'),
-                radius: 32,
-                child: SizedBox(
-                  height: 64,
-                  child: Row(children: [
-                    for (final tab in tabs)
-                      Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
-                          decoration: tab == selected
-                              ? BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.22), // dark-ok: কাচের লেন্স, অন্ধকার পটে
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6)), // dark-ok: কাচের লেন্স, অন্ধকার পটে
-                                )
-                              : null,
-                          child: _item(tab),
-                        ),
-                      ),
-                  ]),
-                ),
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+          child: GlassPanel(
+            key: const ValueKey('nav-bar-glass'),
+            radius: 32,
+            child: SizedBox(
+              height: 64,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: _row(
+                    blue: lookBlue,
+                    muted: Colors.white.withValues(alpha: 0.72), // dark-ok: কাচের বার, অন্ধকার পটে
+                    strongBadge: true),
               ),
             ),
-            if (onSearch != null) ...[
-              const SizedBox(width: 10),
-              GlassPanel(
-                key: const ValueKey('nav-search-glass'),
-                circle: true,
-                child: SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: IconButton(
-                    onPressed: onSearch,
-                    tooltip: AppLocale.l10n.lookSearch,
-                    icon: const Icon(Symbols.search, size: 26),
-                  ),
-                ),
-              ),
-            ],
-          ]),
+          ),
         ),
       );
 
-  /// ⭐ Material 3 Expressive — ভাসমান গাঢ় টুলবার, বাছা ঘর বেগুনি বড়িতে; ডানে বড় চারকোনা ＋ (দ্রুত কাজ)
+  /// ⭐ Material 3 Expressive — একটাই ভাসমান গাঢ় টুলবার, সাত ঘর পর্যন্ত, কেবল আইকন; Material 3-এর বড়ি-নির্দেশকও নেই
+  /// (মালিক, ২০ নভেম্বর ২০২৬ "ok")। ⛔ ডানের আলাদা ＋ নেই — ＋ উপরের বারে
   Widget _expressive(BuildContext context) => SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Flexible(
-              child: Container(
-                key: const ValueKey('nav-bar-expressive'),
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: const BoxDecoration(
-                  color: Expressive.toolbar,
-                  borderRadius: BorderRadius.all(Radius.circular(32)),
-                  boxShadow: [BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8))],
-                ),
-                // ⓘ সরু ফোনে (৩২০) পাঁচ ঘর আর ＋ না ধরলে টুলবার ছোট হয়, কাটে না
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  for (final tab in tabs)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: tab == selected ? 68 : 52,
-                      height: 52,
-                      margin: const EdgeInsets.symmetric(horizontal: 1),
-                      decoration: BoxDecoration(
-                        color: tab == selected ? Expressive.primaryDeep : Colors.transparent,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      child: _item(tab),
-                    ),
-                  ]),
-                ),
-              ),
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+          child: Container(
+            key: const ValueKey('nav-bar-expressive'),
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: const BoxDecoration(
+              color: Expressive.toolbar,
+              borderRadius: BorderRadius.all(Radius.circular(32)),
+              boxShadow: [BoxShadow(color: Color(0x4D000000), blurRadius: 20, offset: Offset(0, 8))],
             ),
-            const SizedBox(width: 10),
-            if (onQuick != null)
-              ExpressiveFab(
-                  key: const ValueKey('nav-quick-fab'), label: AppLocale.l10n.lookQuickActions, onPressed: onQuick!),
-          ]),
+            child: _row(blue: lookBlue, muted: Expressive.toolbarMuted, strongBadge: true),
+          ),
         ),
       );
 
@@ -536,26 +510,10 @@ class RoleBottomBar extends StatelessWidget {
           decoration: BoxDecoration(border: Border(top: BorderSide(color: palette.border))),
           child: SafeArea(
             top: false,
-            child: ConstrainedBox(
-              // ⭐ ১৪ নভেম্বর ২০২৬ (মালিকের নমুনা ৩): লেখা নেই, বড় রঙিন আইকন — বার ৭২ উঁচু
-              constraints: const BoxConstraints(minHeight: 72),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    for (final tab in tabs)
-                      Expanded(
-                        child: _BarItem(
-                          spec: RoleTabs.specs[tab]!,
-                          selected: tab == selected,
-                          badge: badges[tab] ?? const TabBadge.none(),
-                          onTap: () => onSelect(tab),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+            child: SizedBox(
+              // ⭐ লেখা নেই, কেবল আইকন — বার ৬৪ উঁচু; বাছা ঘরের নীল দাগ বারের ওপরের কিনারায় (মালিক, ২০ নভেম্বর ২০২৬ "ok")
+              height: 64,
+              child: _row(blue: lookBlue, muted: palette.onSurfaceMuted, strongBadge: false),
             ),
           ),
         ),
@@ -635,17 +593,28 @@ class RoleRail extends StatelessWidget {
 
 /// ⭐ "আমি" ঘরের আইকন — নিজের ছবি, না থাকলে নামের প্রথম অক্ষর (উপরের বারের একই [AvatarDisc]); বাছা থাকলে চারপাশে দাগ
 class _MyFace extends ConsumerWidget {
-  const _MyFace({required this.selected, this.size = 26});
+  const _MyFace({required this.selected, this.size = 26, this.ringColor});
 
   final bool selected;
   final double size;
+
+  /// ⭐ নিচের বারে বাছা থাকলে ২dp নীল রিং (মালিক, ২০ নভেম্বর ২০২৬ "ok"); null হলে আগের কমলা দাগ (খাড়া বার)
+  final Color? ringColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(authStateProvider).user?.name ?? '';
     final face = ref.watch(topBarContextProvider)?.avatar;
     // ⭐ নিচের বারে বড় ছবি (৫৬, মালিকের নমুনা ৩), পাশের খাড়া বারে আইকনের মাপে
-    return AvatarDisc(key: const ValueKey('nav-me-face'), name: name, image: face, size: size, ring: selected, edge: false);
+    return AvatarDisc(
+        key: const ValueKey('nav-me-face'),
+        name: name,
+        image: face,
+        size: size,
+        ring: selected,
+        edge: false,
+        ringColor: ringColor,
+        ringWidth: ringColor == null ? 3 : 2);
   }
 }
 
@@ -658,10 +627,19 @@ class _BarItem extends StatelessWidget {
     this.wide = false,
     this.rail = false,
     this.onLook = false,
+    this.blue,
+    this.muted,
+    this.strongBadge = false,
   });
 
-  /// ⭐ Liquid Glass বা Material 3-এর বারে (0.4.58) — নিজের পটি নেই (লেন্স বা বড়ি বার আঁকে), আইকন একটু ছোট
+  /// ⭐ নিচের ফোনের বার, তিন রূপেই (মালিক, ২০ নভেম্বর ২০২৬ "ok": Facebook-এর মতো) — পেছনে পটি নেই; বাছা ঘর ভরাট নীল
+  /// আইকন ([blue]), বাকিরা রেখার আইকন ([muted]); নীল দাগ বার আঁকে ([RoleBottomBar._slot])
   final bool onLook;
+  final Color? blue;
+  final Color? muted;
+
+  /// গাঢ় বারে গোনা ভরাট লাল, সাদা অঙ্ক
+  final bool strongBadge;
 
   final BarTabSpec spec;
   final bool selected;
@@ -679,28 +657,33 @@ class _BarItem extends StatelessWidget {
     final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
     // ⭐ নিচের বার (wide নয়, রেল নয়) — লেখা ছাড়া বড় রঙিন আইকন; রেলে নামসহ, আইকন ২৮
     final bare = ! wide && ! rail;
-    final icon = spec.tab == BarTab.me
-        ? _MyFace(selected: selected, size: onLook ? 40 : (bare ? 56 : 30))
-        : ColourTabIcon(key: ValueKey('nav-${spec.tab.name}-icon'), tab: spec.tab, size: onLook ? 30 : (bare ? 36 : 28));
+    final icon = onLook
+        ? _lookIcon(spec, selected, blue ?? Theme.of(context).colorScheme.primary, muted ?? palette.onSurfaceMuted)
+        : spec.tab == BarTab.me
+            ? _MyFace(selected: selected, size: bare ? 56 : 30)
+            : ColourTabIcon(key: ValueKey('nav-${spec.tab.name}-icon'), tab: spec.tab, size: bare ? 36 : 28);
+    // ⓘ নতুন দুই রূপের গাঢ় বারে গোনা নমুনার মতো ভরাট লাল, সাদা অঙ্ক (#e11d48) — থিমের হালকা লাল কাচে ফিকে দেখাত
+    final badgeInk = strongBadge ? const Color(0xFFE11D48) : palette.danger; // dark-ok: গাঢ় বারের ওপর, দুই মোডেই একই
+    final badgeText = strongBadge ? Colors.white : palette.surface; // dark-ok: ভরাট লালের ওপর
     final badged = switch (badge.kind) {
       TabBadgeKind.none => icon,
       TabBadgeKind.dot => Badge(
           key: ValueKey('nav-${spec.tab.name}-dot'),
           smallSize: 8,
-          backgroundColor: palette.danger,
+          backgroundColor: badgeInk,
           child: icon,
         ),
       TabBadgeKind.text => Badge(
           key: ValueKey('nav-${spec.tab.name}-badge'),
           largeSize: 16 * scale,
-          backgroundColor: palette.danger,
-          textColor: palette.surface,
+          backgroundColor: badgeInk,
+          textColor: badgeText,
           label: Text(badge.text!),
           child: icon,
         ),
     };
     final indicator = onLook
-        ? SizedBox(height: 44, child: Center(child: badged))
+        ? Center(child: badged)
         : AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: wide ? null : (bare ? 68 : 64),
@@ -745,7 +728,7 @@ class _BarItem extends StatelessWidget {
                 message: spec.label,
                 // ⛔ উচ্চতা বাঁধা — নিচের বার ঢিলা মাপ পায়, খালি Center পুরো পর্দা জুড়ে বার লম্বা করত আর তালিকা ঢাকত
                 // (fab_never_hides_data_test ধরেছে, ১৫ নভেম্বর ২০২৬)
-                child: SizedBox(height: onLook ? 52 : 64, child: Center(child: indicator)),
+                child: SizedBox(height: onLook ? 48 : 64, child: Center(child: indicator)),
               )
             : ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 64, minWidth: 48),
@@ -769,10 +752,29 @@ class _BarItem extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(wide ? 28 : 16),
+        customBorder: onLook ? const CircleBorder() : null,
+        borderRadius: onLook ? null : BorderRadius.circular(wide ? 28 : 16),
         child: body,
       ),
     );
+  }
+
+  /// ⭐ নতুন দুই রূপের বারের আইকন — নমুনার মতো এক রঙের রেখা ([IconTheme]-এর রং), ঘরের নাম কেবল লম্বা চাপে আর TalkBack-এ;
+  /// Copilot নিজের রঙিন AI চিহ্নে, "আমি" নিজের ছবিতে, জমা ৳-নোটে (মালিক, ২০ নভেম্বর ২০২৬ "Ok")
+  /// ⓘ বাছা = ভরাট (Material Symbols fill 1) আর নীল; না-বাছা = রেখা (fill 0), মলিন রঙে
+  static Widget _lookIcon(BarTabSpec spec, bool selected, Color blue, Color muted) {
+    final key = ValueKey('nav-${spec.tab.name}-icon');
+    final ink = selected ? blue : muted;
+    final fill = selected ? 1.0 : 0.0;
+    return switch (spec.tab) {
+      BarTab.me => _MyFace(selected: selected, size: 30, ringColor: blue),
+      // ⓘ Copilot নিজের রঙিন AI চিহ্নে — ভরাট রূপ নেই; বাছা বোঝায় ওপরের নীল দাগ
+      BarTab.copilot => CopilotMark(key: key, size: 28),
+      BarTab.deposit => DepositIcon(key: key, size: 26, color: ink, filled: selected),
+      // ⓘ নমুনার চার গোল-চারকোনা টালি
+      BarTab.modules => Icon(Symbols.grid_view, key: key, size: 26, color: ink, fill: fill),
+      _ => Icon(spec.icon, key: key, size: 26, color: ink, fill: fill),
+    };
   }
 }
 
@@ -834,8 +836,24 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
   String get _owner => ref.read(authStateProvider).user?.id ?? '';
 
   void _select(BarTab target, BarTab? current) {
+    final top = ref.read(topBarContextProvider);
+    // ⭐ Copilot পাতা নয় — চাপলে এখনকার মতো পুরো-পর্দার "জিজ্ঞেস করুন" (মালিক, ২০ নভেম্বর ২০২৬, বারের নমুনা)
+    if (target == BarTab.copilot) {
+      final ask = top?.copilot;
+      if (ask != null) {
+        HapticFeedback.lightImpact();
+        ask(context, current == null ? AppLocale.l10n.navTabHome : RoleTabs.specs[current]!.label);
+      }
+      return;
+    }
     if (target == current) {
       _reselect(target);
+      return;
+    }
+    // ⭐ নোটিশ — উপরের ঘণ্টা যা খুলত তা-ই (তালিকা, ফিরলে না-পড়ার গোনা আবার)
+    if (target == BarTab.notices && top != null) {
+      HapticFeedback.lightImpact();
+      top.openNotifications(context);
       return;
     }
     HapticFeedback.lightImpact();
@@ -913,8 +931,12 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final permissions = user?.permissions ?? const <String>[];
     final modulesOn = ref.watch(phoneModulesProvider);
     // ⓘ রূপ বদলালে থিম বদলায় — তাতে কাঠামোও নতুন করে আঁকা হয়, বারের ঘরও
-    final look = (Theme.of(context), AppLooks.instance.look.value).$2;
-    final tabs = _tabsFor(permissions, modulesOn);
+    Theme.of(context);
+    final top = ref.watch(topBarContextProvider);
+    // ⭐ নতুন দুই রূপে সাত ঘর পর্যন্ত — Copilot (চাবি থাকলে) আর নোটিশ যোগ ([RoleTabs.lookTabsFor]); ABOS আগের মতো
+    // ⭐ তিন রূপেই সাত ঘর পর্যন্ত — উপরের বারে ঘণ্টা আর Copilot আর নেই, তাই ক্লাসিকেও নিচে (মালিক, ২০ নভেম্বর ২০২৬ "Ok",
+    // নমুনা v8: "ক্লাসিক চেহারাতেও একই উপরের বার আর একই নীল বাছাই")
+    final tabs = RoleTabs.lookTabsFor(permissions, modulesOn: modulesOn, copilot: top?.copilot != null);
     final page = ref.watch(homePageProvider);
     final shown = _shownTab(tabs, page);
     final badges = _badgesOf(ref.watch(navBadgesProvider));
@@ -932,7 +954,6 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final layout = RoleTabs.layoutFor(media.size);
     final keyboardOpen = media.viewInsets.bottom > 0;
     void onSelect(BarTab t) => _select(t, shown);
-    final top = ref.watch(topBarContextProvider);
 
     // ⓘ হোমের "＋ নতুন" কেবল হোমের নিজের পাতায় — সব মডিউলে বা "আমি"-তে নয়
     final fab = _isHome && page.kind != HomePageKind.home
@@ -963,10 +984,8 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
               tabs: tabs,
               selected: shown,
               badges: badges,
+              // ⛔ নিচে খোঁজার বল আর ＋ নেই — দুটোই উপরের বারে (মালিক, ২০ নভেম্বর ২০২৬ "Ok", বারের নমুনা)
               onSelect: onSelect,
-              // ⭐ Liquid Glass-এর খোঁজার বল আর Material 3-এর ＋ (দ্রুত কাজ) — হোমের নিজের খোঁজা আর দ্রুত কাজ ([TopBarContext])
-              onSearch: look == AppLook.glass && top != null ? () => top.search(context) : null,
-              onQuick: look == AppLook.expressive && top?.quick != null ? () => top!.quick!(context) : null,
             );
       return Scaffold(
         body: child,

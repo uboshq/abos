@@ -11728,13 +11728,13 @@ class AppL10nEn extends AppL10n {
   String get lookTitle => 'Look';
 
   @override
-  String get lookAbos => 'ABOS';
+  String get lookAbos => 'Classic';
 
   @override
-  String get lookGlass => 'Liquid Glass';
+  String get lookGlass => 'Glass';
 
   @override
-  String get lookExpressive => 'Material 3';
+  String get lookExpressive => 'Smart';
 
   @override
   String get lookBlur => 'Glass blur';
@@ -11784,10 +11784,10 @@ class AppL10nEn extends AppL10n {
   String get lookChoose => 'Look';
 
   @override
-  String get lookAbosHint => 'Today\'s ABOS — nothing changes';
+  String get lookAbosHint => 'The earlier look — nothing changes';
 
   @override
-  String get lookGlassHint => 'iOS 26 — clear glass over moving colour';
+  String get lookGlassHint => 'Clear glass over a colour background';
 
   @override
   String get lookExpressiveHint => 'Bold shapes, waves and big numbers';
@@ -11804,7 +11804,9 @@ class AppL10nEn extends AppL10n {
       'Stops by itself when the phone\'s reduce-motion is on';
 
   @override
-  String get lookProfileSubtitle => 'ABOS · Liquid Glass · Material 3';
+  String lookProfileSubtitle(String smart, String glass, String classic) {
+    return '$smart · $glass · $classic';
+  }
 
   @override
   String get lookTodaySales => 'Today\'s sales';
@@ -11827,6 +11829,51 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get lookTileDues => 'Dues';
+
+  @override
+  String get lookTabCopilot => 'Copilot';
+
+  @override
+  String get lookTabNotices => 'Notices';
+
+  @override
+  String get lookTabUnread => 'unread';
+
+  @override
+  String get lookCreate => 'Create';
+
+  @override
+  String get lookMessages => 'Messages';
+
+  @override
+  String get lookMessagesSoon => 'Messages — coming soon';
+
+  @override
+  String get lookWallpaper => 'Glass look background';
+
+  @override
+  String get lookPaperBalls => 'Colour balls';
+
+  @override
+  String get lookPaperPurple => 'Purple glow';
+
+  @override
+  String get lookPaperBlueWave => 'Blue waves';
+
+  @override
+  String get lookPaperSunset => 'Sunset';
+
+  @override
+  String get lookPaperAurora => 'Green light';
+
+  @override
+  String get lookPaperOcean => 'Ocean';
+
+  @override
+  String get lookPaperGraphite => 'Night black';
+
+  @override
+  String get lookPaperSilver => 'Silver';
 
   @override
   String get scanSlipTitle => 'Fix the slip';

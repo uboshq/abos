@@ -17,6 +17,13 @@ class Expressive {
   static const Color toolbar = Color(0xFF2B2930);
   static const Color toolbarInk = Color(0xFFE6E0E9);
 
+  /// টুলবারের না-বাছা আইকন — মলিন ধূসর (Material 3 dark onSurfaceVariant)
+  static const Color toolbarMuted = Color(0xFFCAC4D0);
+
+  /// উপরের বারের ＋ তৈরি করুন — গোলাপি গোল-চারকোনা (বারের নমুনা, ২০ নভেম্বর ২০২৬)
+  static const Color create = Color(0xFFFFD8E4);
+  static const Color onCreate = Color(0xFF31111D);
+
   /// চার ঘরের রং আর আকার — পাতা, উল্টো পাতা, ক্যাপসুল, গোল কোনা
   static const List<(Color, Color, BorderRadius)> tiles = [
     (Color(0xFFFFD8E4), Color(0xFF31111D), BorderRadius.only(

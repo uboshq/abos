@@ -6,12 +6,17 @@ import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/locale/app_locale.dart';
+import 'package:abos_mobile/core/navigation/deposit_icon.dart';
 import 'package:abos_mobile/core/navigation/role_tabs.dart';
+import 'package:abos_mobile/core/navigation/top_bar/abos_top_bar.dart';
+import 'package:abos_mobile/core/sync_engine/sync_status.dart';
 import 'package:abos_mobile/core/orders/deposit_request_api.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/theme/app_look.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/core/theme/glass.dart';
+import 'package:abos_mobile/core/theme/glass_wallpaper.dart';
+import 'package:abos_mobile/features/copilot/copilot_mark.dart';
 import 'package:abos_mobile/features/customers/deposit_request_screen.dart';
 import 'package:abos_mobile/features/home/look_hero.dart';
 import 'package:abos_mobile/features/home/nav_bottom_bar.dart';
@@ -77,21 +82,44 @@ void main() {
         AppLook.abos => AppTheme.light(),
       });
 
-  Future<void> shoot(WidgetTester tester, AppLook look, Widget page, String name, {BarTab selected = BarTab.home}) async {
+  Future<void> shoot(WidgetTester tester, AppLook look, Widget page, String name,
+      {BarTab selected = BarTab.home, bool topBar = false}) async {
     AppLooks.instance.look.value = look;
     tester.view.physicalSize = const Size(412, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final bar = RoleBottomBar(
-      // ⛔ "সব মডিউল" মাঝখানে (মালিক, ২০ নভেম্বর ২০২৬)
-      tabs: const [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.orders, BarTab.me],
+      // ⭐ তিন রূপেই মালিকের সাত ঘর (২০ নভেম্বর ২০২৬ "Ok", নমুনা v8)
+      tabs: const [BarTab.home, BarTab.copilot, BarTab.deposit, BarTab.modules, BarTab.orders, BarTab.notices, BarTab.me],
       selected: selected,
-      badges: const {},
+      badges: {BarTab.notices: RoleTabs.badgeFor(20)},
       onSelect: (_) {},
-      onSearch: () {},
-      onQuick: () {},
     );
-    final body = Scaffold(body: page, bottomNavigationBar: bar);
+    final body = Scaffold(
+      // ⓘ হোমের মতো — বার ভাসে, পাতা তার নিচ দিয়ে
+      extendBody: topBar,
+      backgroundColor: topBar && look == AppLook.glass ? Colors.transparent : null,
+      appBar: topBar
+          ? AbosTopBar(
+              company: 'ADI Corporation',
+              branch: 'TD শাখা',
+              onOrgTap: () {},
+              demo: false,
+              syncStatus: SyncStatus(),
+              onLeading: () {},
+              onSearch: () {},
+              onCopilot: () {},
+              onCreate: () {},
+              onBell: () {},
+              unread: 20,
+              avatarName: 'শুভ',
+              showAvatar: false,
+              onAvatar: (_) {},
+            )
+          : null,
+      body: page,
+      bottomNavigationBar: bar,
+    );
     await tester.pumpWidget(ProviderScope(
       overrides: [authStateProvider.overrideWith((ref) => _SignedIn())],
       child: RepaintBoundary(
@@ -158,8 +186,72 @@ void main() {
     expect(find.textContaining('300'), findsNothing);
   });
 
+  // ⭐ মালিকের বাছা দুই চিহ্ন বড় করে — নমুনার "নতুন Copilot চিহ্ন" আর জমার "ক"-এর পাশে মেলানোর জন্য (২০ নভেম্বর ২০২৬)
+  testWidgets('the Copilot mark and the deposit icon, large', (tester) async {
+    tester.view.physicalSize = const Size(420, 140);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget tile(Color bg, Widget child) => Container(
+        width: 84, height: 84, alignment: Alignment.center,
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(18)),
+        child: child);
+    await tester.pumpWidget(RepaintBoundary(
+      key: const ValueKey('shot'),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: withBarFonts(AppTheme.light()),
+        home: Scaffold(
+          body: Center(
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              tile(const Color(0xFFFFFFFF), const CopilotMark(size: 64)),
+              tile(const Color(0xFF0B1026), const CopilotMark(size: 40)),
+              tile(const Color(0xFFFDF7FF), const DepositIcon(size: 56, color: Color(0xFF1D1B20))),
+              tile(const Color(0xFF2B2930), const DepositIcon(size: 32, color: Color(0xFFE6E0E9))),
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('../goldens/app_0458/bar_icons.png'));
+  });
+
   testWidgets('deposit report from the shortcut — abos', (tester) async {
     await shoot(tester, AppLook.abos, DepositRequestScreen(api: _Api(), customers: () => const []), 'deposit_abos');
+  });
+
+  // ⭐ মালিকের বারের নমুনার পাশে (২০ নভেম্বর ২০২৬ "Ok"), তিন রূপেই: নতুন দুই রূপে উপরে ＋ · খোঁজা · বার্তা, নিচে সাত আইকন;
+  // বাছা ঘর Facebook-এর মতো (ভরাট নীল আইকন, ওপরে সরু নীল দাগ) — হোম বাছা, আর অর্ডার বাছা
+  for (final look in [AppLook.expressive, AppLook.glass, AppLook.abos]) {
+    for (final pick in [BarTab.home, BarTab.orders]) {
+      testWidgets('home with the bars — ${look.name}, ${pick.name} selected', (tester) async {
+        await shoot(
+            tester,
+            look,
+            ListView(padding: const EdgeInsets.all(14), children: const [LookHero(today: _today, name: 'শুভ')]),
+            pick == BarTab.home ? 'home_bars_${look.name}' : 'home_bars_${look.name}_${pick.name}',
+            selected: pick,
+            topBar: true);
+      });
+    }
+  }
+
+  // ⭐ লিকুইড গ্লাসের পটভূমি — হোম বেগুনি আভা, সূর্যাস্ত আর রাতের কালোয় (মালিক, ২০ নভেম্বর ২০২৬)
+  for (final paper in [GlassWallpaper.purple, GlassWallpaper.sunset, GlassWallpaper.graphite]) {
+    testWidgets('home on the ${paper.name} background — glass', (tester) async {
+      await AppLooks.instance.chooseWallpaper(paper);
+      await shoot(
+          tester,
+          AppLook.glass,
+          ListView(padding: const EdgeInsets.all(14), children: const [LookHero(today: _today, name: 'শুভ')]),
+          'home_glass_${paper.name}',
+          topBar: true);
+    });
+  }
+
+  // ⭐ চেহারার পাতা — ক্রম ম্যাটেরিয়াল · লিকুইড গ্লাস · ক্লাসিক (মালিক, ২০ নভেম্বর ২০২৬ "ok")
+  testWidgets('Profile → চেহারা — material', (tester) async {
+    await shoot(tester, AppLook.expressive, const LookScreen(), 'look_screen_expressive');
   });
 
   for (final level in [0, 40, 100]) {

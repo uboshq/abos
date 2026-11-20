@@ -145,6 +145,8 @@ class _LiveScreenBarState extends ConsumerState<_LiveScreenBar> {
       onOrgTap: switchBranch == null ? null : () => switchBranch(context),
       onSearch: () => top.search(context),
       onCopilot: top.copilot == null ? null : () => top.copilot!(context, bar.title),
+      // ⭐ ＋ তৈরি করুন — নতুন দুই রূপে উপরের বারে (মালিক, ২০ নভেম্বর ২০২৬ "Ok")
+      onCreate: top.quick == null ? null : () => top.quick!(context),
       onBell: () => top.openNotifications(context),
       unread: unread,
       avatarName: user.name,

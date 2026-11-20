@@ -6,6 +6,7 @@ import '../../core/theme/app_look.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/glass.dart';
+import '../../core/theme/glass_wallpaper.dart';
 
 /// ⭐ প্রোফাইল → "চেহারা" (0.4.58; মালিক, ২০ নভেম্বর ২০২৬ "ok", নমুনা দুটো): তিন রূপ — ABOS (এখনকার, একটুও বদলায় না) ·
 /// Liquid Glass · Material 3; Liquid Glass-এ "কাচের ঝাপসা" দাগ 0–100 আর পাঁচ ধাপ (স্বচ্ছ · হালকা · মাঝারি · ঘন · ঘষা কাচ),
@@ -24,7 +25,7 @@ class LookScreen extends StatelessWidget {
     final looks = this.looks ?? AppLooks.instance;
     final l = context.l10n;
     return ListenableBuilder(
-      listenable: Listenable.merge([looks.look, looks.blur, looks.motion]),
+      listenable: Listenable.merge([looks.look, looks.blur, looks.motion, looks.wallpaper]),
       builder: (context, _) {
         final look = looks.look.value;
         final level = looks.blur.value;
@@ -38,9 +39,10 @@ class LookScreen extends StatelessWidget {
               Text(l.lookChoose, style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.sm),
               for (final (value, name, hint) in [
-                (AppLook.abos, l.lookAbos, l.lookAbosHint),
-                (AppLook.glass, l.lookGlass, l.lookGlassHint),
+                // ⭐ ক্রম: ম্যাটেরিয়াল · লিকুইড গ্লাস · ক্লাসিক (মালিক, ২০ নভেম্বর ২০২৬ "ok"; "ABOS" আর রূপের নাম নয়)
                 (AppLook.expressive, l.lookExpressive, l.lookExpressiveHint),
+                (AppLook.glass, l.lookGlass, l.lookGlassHint),
+                (AppLook.abos, l.lookAbos, l.lookAbosHint),
               ])
                 Card(
                   key: ValueKey('look-${value.name}'),
@@ -55,6 +57,19 @@ class LookScreen extends StatelessWidget {
                 ),
               // ⓘ দাগটা কেবল Liquid Glass-এ — ABOS আর Material 3-এ এর কাজ নেই (নমুনার নিয়ম)
               if (look == AppLook.glass) ...[
+                const SizedBox(height: AppSpacing.md),
+                // ⭐ পটভূমি — আটটা, সবই ABOS-এর নিজের আঁকা (মালিক, ২০ নভেম্বর ২০২৬); কাচের ঝাপসার দাগের ঠিক ওপরে
+                Text(l.lookWallpaper, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (final paper in GlassWallpaper.values)
+                    _WallpaperSwatch(
+                      paper: paper,
+                      name: wallpaperName(l, paper),
+                      selected: looks.wallpaper.value == paper,
+                      onTap: () => looks.chooseWallpaper(paper),
+                    ),
+                ]),
                 const SizedBox(height: AppSpacing.md),
                 Row(children: [
                   Expanded(child: Text(l.lookBlur, style: const TextStyle(fontWeight: FontWeight.w700))),
@@ -114,6 +129,67 @@ class LookScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// পটভূমির নাম — বাংলা আর ইংরেজি
+String wallpaperName(AppL10n l, GlassWallpaper paper) => switch (paper) {
+      GlassWallpaper.balls => l.lookPaperBalls,
+      GlassWallpaper.purple => l.lookPaperPurple,
+      GlassWallpaper.blueWave => l.lookPaperBlueWave,
+      GlassWallpaper.sunset => l.lookPaperSunset,
+      GlassWallpaper.aurora => l.lookPaperAurora,
+      GlassWallpaper.ocean => l.lookPaperOcean,
+      GlassWallpaper.graphite => l.lookPaperGraphite,
+      GlassWallpaper.silver => l.lookPaperSilver,
+    };
+
+/// একটা পটভূমির ছোট ছবি — বাছা থাকলে নীল দাগ আর টিক; নাম নিচে
+class _WallpaperSwatch extends StatelessWidget {
+  const _WallpaperSwatch({required this.paper, required this.name, required this.selected, required this.onTap});
+
+  final GlassWallpaper paper;
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final blue = Theme.of(context).colorScheme.primary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      excludeSemantics: true,
+      child: InkWell(
+        key: ValueKey('look-wallpaper-${paper.name}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 64,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 56,
+              height: 84,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: selected ? blue : context.palette.border, width: selected ? 2.5 : 1),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(fit: StackFit.expand, children: [
+                  CustomPaint(painter: WallpaperPainter(paper.spec)),
+                  if (selected)
+                    const Center(child: Icon(Icons.check_circle, color: Colors.white, size: 22)), // dark-ok: রঙিন ছবির ওপর
+                ]),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(name, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 11.5, height: 1.2)),
+          ]),
+        ),
+      ),
     );
   }
 }

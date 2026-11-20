@@ -164,9 +164,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('শুভ রাত্রি'), findsNothing);
-    // ⓘ বারের নকশা ৩ (২০ অক্টোবর ২০২৬): ঘণ্টা ওপরের বারে (a4), নিচের বারে নয়
-    expect(find.byKey(const ValueKey('nav-notifications')), findsNothing);
-    expect(find.byKey(const ValueKey('top-bell')), findsOneWidget);
+    // ⭐ ২০ নভেম্বর ২০২৬ (মালিকের "Ok", নমুনা v8): ঘণ্টা নিচের বারের "নোটিশ" ঘরে, উপরের বারে নয়
+    expect(find.byKey(const ValueKey('nav-notices')), findsOneWidget);
+    expect(find.byKey(const ValueKey('top-bell')), findsNothing);
     expect(find.byKey(const ValueKey('header-avatar')), findsNothing,
         reason: 'the photo is no longer in the header');
     expect(

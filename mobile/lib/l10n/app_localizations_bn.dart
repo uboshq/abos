@@ -11553,13 +11553,13 @@ class AppL10nBn extends AppL10n {
   String get lookTitle => 'চেহারা';
 
   @override
-  String get lookAbos => 'ABOS';
+  String get lookAbos => 'ক্লাসিক';
 
   @override
-  String get lookGlass => 'Liquid Glass';
+  String get lookGlass => 'গ্লাস';
 
   @override
-  String get lookExpressive => 'Material 3';
+  String get lookExpressive => 'স্মার্ট';
 
   @override
   String get lookBlur => 'কাচের ঝাপসা';
@@ -11609,10 +11609,10 @@ class AppL10nBn extends AppL10n {
   String get lookChoose => 'রূপ';
 
   @override
-  String get lookAbosHint => 'এখনকার ABOS — কিছুই বদলায় না';
+  String get lookAbosHint => 'আগের চেহারা — কিছুই বদলায় না';
 
   @override
-  String get lookGlassHint => 'iOS 26 — স্বচ্ছ কাচ, পেছনে রঙের ছোপ';
+  String get lookGlassHint => 'স্বচ্ছ কাচ, পেছনে রঙের পটভূমি';
 
   @override
   String get lookExpressiveHint => 'বড় আকার, ঢেউ আর মোটা অঙ্ক';
@@ -11627,7 +11627,9 @@ class AppL10nBn extends AppL10n {
   String get lookMotionHint => 'ফোনের \"কম নড়াচড়া\" চালু থাকলে এমনিতেই থামে';
 
   @override
-  String get lookProfileSubtitle => 'ABOS · Liquid Glass · Material 3';
+  String lookProfileSubtitle(String smart, String glass, String classic) {
+    return '$smart · $glass · $classic';
+  }
 
   @override
   String get lookTodaySales => 'আজকের বিক্রি';
@@ -11650,6 +11652,51 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get lookTileDues => 'বকেয়া';
+
+  @override
+  String get lookTabCopilot => 'Copilot';
+
+  @override
+  String get lookTabNotices => 'নোটিশ';
+
+  @override
+  String get lookTabUnread => 'না-পড়া';
+
+  @override
+  String get lookCreate => 'তৈরি করুন';
+
+  @override
+  String get lookMessages => 'বার্তা';
+
+  @override
+  String get lookMessagesSoon => 'বার্তা — শীঘ্রই আসছে';
+
+  @override
+  String get lookWallpaper => 'গ্লাস চেহারার পটভূমি';
+
+  @override
+  String get lookPaperBalls => 'রঙিন বল';
+
+  @override
+  String get lookPaperPurple => 'বেগুনি আভা';
+
+  @override
+  String get lookPaperBlueWave => 'নীল ঢেউ';
+
+  @override
+  String get lookPaperSunset => 'সূর্যাস্ত';
+
+  @override
+  String get lookPaperAurora => 'সবুজ আলো';
+
+  @override
+  String get lookPaperOcean => 'সমুদ্র';
+
+  @override
+  String get lookPaperGraphite => 'রাতের কালো';
+
+  @override
+  String get lookPaperSilver => 'রুপালি';
 
   @override
   String get scanSlipTitle => 'স্লিপ ঠিক করুন';

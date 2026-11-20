@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../features/copilot/copilot_mark.dart';
 import 'role_tabs.dart';
 
 /// ⭐ নিচের বারের রঙিন আইকন — মালিকের অনুমোদিত নমুনা ৩ (১৪ নভেম্বর ২০২৬: "ওকে, ডান, শুরু করো"):
@@ -18,6 +19,8 @@ class ColourTabIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⓘ Copilot-এর নিজের রঙিন চিহ্ন (মালিক, ২০ নভেম্বর ২০২৬)
+    if (tab == BarTab.copilot) return CopilotMark(size: size);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ring = Theme.of(context).colorScheme.surface;
     return SizedBox.square(
@@ -160,7 +163,21 @@ class _TabPainter extends CustomPainter {
         _rr(canvas, 12, 12, 10, 9, 2, ink.blue);
         _line(canvas, const [Offset(17, 13.5), Offset(17, 19)], _Ink.white, 1.8);
         _line(canvas, const [Offset(14.6, 16.8), Offset(17, 19.2), Offset(19.4, 16.8)], _Ink.white, 1.8);
+      // ⭐ নোটিশ — সোনালি ঘণ্টা, নীল দোলক (নতুন দুই রূপের খাড়া বারে; মালিক, ২০ নভেম্বর ২০২৬)
+      case BarTab.notices:
+        final bell = Path()
+          ..moveTo(6, 10)
+          ..quadraticBezierTo(6, 4, 12, 4)
+          ..quadraticBezierTo(18, 4, 18, 10)
+          ..lineTo(18, 14.5)
+          ..lineTo(20.5, 17.5)
+          ..lineTo(3.5, 17.5)
+          ..lineTo(6, 14.5)
+          ..close();
+        canvas.drawPath(bell, _fill(ink.gold));
+        canvas.drawCircle(const Offset(12, 20), 2.2, _fill(ink.navy));
       case BarTab.me:
+      case BarTab.copilot:
         break;
     }
   }
