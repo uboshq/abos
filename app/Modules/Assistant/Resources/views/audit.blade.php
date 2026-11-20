@@ -16,9 +16,10 @@
     <x-slot:title>{{ __('assistant::audit.title', ['name' => $name]) }}</x-slot:title>
 
     <div class="space-y-4" data-assistant-audit>
-        <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::audit.note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('assistant::audit.note') }}</p>
 
         <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
             <label class="grid gap-1">{{ __('assistant::audit.from') }}

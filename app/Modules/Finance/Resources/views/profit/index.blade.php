@@ -76,6 +76,15 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.profit_share') }}</x-slot:title>
 
+    {{--
+        ⭐ পাতার নাম আর ব্যাখ্যা — অর্থের বাকি তালিকার পাতাগুলোর একই ছাঁচে ([[ui/page-header]]); ২০ নভেম্বর ২০২৬।
+        ⓘ আগে নাম ছিল না (কেবল পথ "অর্থ › লাভ বণ্টন"), আর "টাকাটা কোথায় যায়" লাইনটা পাতার মাথায় ধূসর বাক্সে বসত। মালিক,
+          ১৯ নভেম্বর ২০২৬ রাত: শিরোনামের নিচে ব্যাখ্যার লাইন নয় — "ABOS"/"Dynamic"-এ লেখাটা নামের পাশে ⓘ-এ, বাকি রূপে নামের নিচে।
+    --}}
+    <x-slot:header>
+        <x-ui.page-header :title="__('finance::menu.profit_share')" :subtitle="__('finance::message.profit_flow')" />
+    </x-slot:header>
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -93,15 +102,12 @@
     @endif
 
     {{--
-        ⓘ টাকাটা কোথায় যায় — এক লাইনে, পর্দাতেই।
+        ⓘ টাকাটা কোথায় যায় — এখন পাতার মাথায়, নামের ব্যাখ্যা হয়ে (উপরে `header`)।
 
         ⚠️ এটা সাজসজ্জা নয়: অংশীদার পরে জিজ্ঞেস করলে *"আমার লাভ কোথায়"*,
         উত্তরটা এই পাতাতেই থাকা দরকার। ⛔ না থাকলে মানুষ ধরে নেয় টাকাটা
         মূলধনে গেছে, আর তখন তোলার সময় হিসাব নিয়ে তর্ক হয়।
     --}}
-    <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-sm">
-        {{ __('finance::message.profit_flow') }}
-    </p>
 
     <div class="grid gap-4 lg:grid-cols-2 lg:items-start">
         <div class="min-w-0 space-y-4">

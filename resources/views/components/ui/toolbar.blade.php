@@ -57,6 +57,8 @@
      */
     'title' => null,
     'subtitle' => null,
+    // ⭐ পাতার ব্যাখ্যা — শিরোনামের পাশে ⓘ-এ ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত: শিরোনামের নিচে ব্যাখ্যার লাইন নয়)
+    'info' => null,
     'count' => null,
 
     /**
@@ -362,12 +364,12 @@
             @endphp
             @if ($viewMode === 'dropdown')
                 <{{ $headingTag }} class="contents">
-                    <x-ui.view-menu :label="$title" mode="heading" />
+                    <x-ui.view-menu :label="$title" mode="heading" /><x-ui.page-info :text="$info" />
                 </{{ $headingTag }}>
             @else
                 <{{ $headingTag }} data-view-selector
                     class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
-                    {{ $title }}
+                    {{ $title }}<x-ui.page-info :text="$info" />
                 </{{ $headingTag }}>
             @endif
 

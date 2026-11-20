@@ -15,8 +15,9 @@
     <x-slot:title>{{ __('inventory::analysis.age_title') }}</x-slot:title>
 
     <div class="py-6">
-        <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.age_title') }}</h1>
-        <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('inventory::analysis.age_note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.age_title') }}<x-ui.page-info :text="__('inventory::analysis.age_note')" /></h1>
+        <p data-page-subtitle class="mt-1 text-sm text-(--color-ink-muted)">{{ __('inventory::analysis.age_note') }}</p>
 
         {{-- বয়স-ভাগ: প্রতিটায় আটকে থাকা টাকা --}}
         <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
