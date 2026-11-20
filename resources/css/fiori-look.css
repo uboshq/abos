@@ -591,3 +591,14 @@
 :root[data-ui='tiles'] .fiori-tile-kpi.is-muted {
     color: var(--fiori-label);
 }
+
+/* ── শেল বারের ফেরার তীর — Horizon-এর "Back": লোগোর বাঁয়ে, খালি, ৩৬px, চাপার আগে হালকা পট ([[chrome/tiles]]; ২০ নভেম্বর ২০২৬) ── */
+:root[data-ui='tiles'] header[data-topbar] [data-fiori-back]:hover {
+    background: var(--color-topbar-hover);
+    color: var(--color-topbar-ink);
+}
+
+:root[data-ui='tiles'] header[data-topbar] [data-fiori-back]:focus-visible {
+    outline: 2px solid var(--fiori-link);
+    outline-offset: 2px;
+}

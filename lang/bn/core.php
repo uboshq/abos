@@ -2133,5 +2133,6 @@ return [
     'fiori' => [
         'my_apps' => 'আমার অ্যাপ',
         'apps_count' => ':count টি অ্যাপ',
+        'back' => 'ফিরে যান',
     ],
 ];

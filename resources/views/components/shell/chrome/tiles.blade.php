@@ -19,7 +19,31 @@
         ) ?? collect($menu)->first(
             fn ($m) => collect($m['codes'])->contains(fn ($c) => str_starts_with($route, $c.'.')),
         );
+
+        /*
+         * ⭐ শেল বারের ফেরার তীর — আসল Horizon-এর মতো লোগোর বাঁয়ে, হোম ছাড়া সব পাতায় (২০ নভেম্বর ২০২৬: breadcrumb-পটি উঠে গেছে,
+         *   তাই ফেরার পথ এটাই)। ⓘ গন্তব্য আগের পাতা (একই সাইটের, এই পাতা নয়); না থাকলে চলতি স্পেসের পাতা, তাও না থাকলে হোম।
+         * ⓘ লিংক, স্ক্রিপ্ট নয় — Alpine-এর CSP গড়নে `history.back()` চলে না, আর লিংক কীবোর্ডেও চলে।
+         */
+        $backHref = null;
+        if ($route !== 'dashboard') {
+            $previous = url()->previous();
+            $sameSite = str_starts_with($previous, rtrim(url('/'), '/').'/') || $previous === url('/');
+            $backHref = ($sameSite && $previous !== url()->current())
+                ? $previous
+                : ($current ? \App\Core\Support\FioriLaunchpad::spaceUrl($current['code']) : route('dashboard'));
+        }
     @endphp
+
+    @if ($backHref)
+        <a href="{{ $backHref }}" data-fiori-back
+           class="hidden size-9 shrink-0 place-items-center rounded-[8px] text-(--color-topbar-ink-muted) sm:grid"
+           title="{{ __('core.fiori.back') }}" aria-label="{{ __('core.fiori.back') }}">
+            <svg viewBox="0 0 16 16" class="size-4" aria-hidden="true">
+                <path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    @endif
 
     <a href="{{ route('dashboard') }}" data-shell-bar data-fiori-shell
        class="hidden shrink-0 items-center gap-3 rounded-[8px] pe-2 text-(--color-topbar-ink) sm:flex">

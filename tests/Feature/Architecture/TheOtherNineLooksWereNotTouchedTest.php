@@ -58,6 +58,8 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
             'swatch' => '#0a6ed1',
             'topnav' => 'modules',
             'views' => 'title',
+            // ⭐ ২০ নভেম্বর ২০২৬: SAP-এ পাতার পথের সারি নেই — আসল Fiori Horizon-এ breadcrumb-পটি নেই (মালিকের "SAP 100% হুবহু")
+            'pathbar' => 'none',
         ],
         'suite' => [
             'accent' => 'netsuite',
@@ -313,7 +315,8 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
         $this->assertFalse(Ui::wearsAbosShell('rose'));
         foreach (array_diff(Ui::keys(), ['rose']) as $other) {
             $this->assertSame('icons', Ui::moduleRail($other), "⛔ {$other}-এর রেল হারিয়েছে।");
-            $this->assertSame(Ui::wearsAbosShell($other) ? 'modulebar' : 'crumbs', Ui::pathBar($other), "⛔ {$other}-এর মাথার সারি বদলেছে।");
+            // ⓘ SAP (`tiles`) ২০ নভেম্বর ২০২৬ থেকে `none` — Fiori Horizon-এ breadcrumb-পটি নেই
+            $this->assertSame($other === 'tiles' ? 'none' : (Ui::wearsAbosShell($other) ? 'modulebar' : 'crumbs'), Ui::pathBar($other), "⛔ {$other}-এর মাথার সারি বদলেছে।");
         }
     }
 }

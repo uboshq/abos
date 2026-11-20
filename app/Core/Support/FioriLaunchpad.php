@@ -23,6 +23,36 @@ final class FioriLaunchpad
 {
     public const KEY = 'tiles';
 
+    /**
+     * হোমের স্পেস-টালির এক-রঙা চিহ্ন (Lucide) — আসল Fiori-র টালির চিহ্ন এক রঙের, টালির চিহ্নের রঙে (মালিক/সমন্বয়ক, ২০ নভেম্বর ২০২৬)।
+     * ⓘ মডিউলের নিজের রঙিন চিহ্ন ABOS-এর রেলের — SAP-এ নয়। তালিকায় না থাকা মডিউল `layout-grid` পায়।
+     *
+     * @var array<string, string>
+     */
+    public const SPACE_ICONS = [
+        'accounts' => 'book-open',
+        'approval' => 'badge-check',
+        'assistant' => 'sparkles',
+        'backup' => 'database-backup',
+        'credit_control' => 'shield-alert',
+        'customer' => 'users',
+        'documents' => 'folder-open',
+        'executive' => 'crown',
+        'finance' => 'landmark',
+        'fixed_assets' => 'building-2',
+        'governance' => 'scale',
+        'hr' => 'users-round',
+        'inventory' => 'boxes',
+        'master_data' => 'database',
+        'notification' => 'megaphone',
+        'promotion' => 'gift',
+        'purchase' => 'shopping-cart',
+        'restaurant' => 'utensils',
+        'sales' => 'receipt-text',
+        'supplier' => 'factory',
+        'system_admin' => 'settings',
+    ];
+
     /** খোলসের রূপ (স্কিন হলে তার গোড়া) SAP কি না — `layouts/app`-এর `$shellLook`-এর একই নিয়ম */
     public static function on(): bool
     {
@@ -169,7 +199,7 @@ final class FioriLaunchpad
             $sections[count($sections) - 1]['tiles'][] = [
                 'code' => (string) $module['code'],
                 'label' => (string) $module['label'],
-                'icon' => (string) ($module['icon'] ?? $module['code']),
+                'icon' => self::SPACE_ICONS[(string) $module['code']] ?? 'layout-grid',
                 'url' => self::spaceUrl((string) $module['code']),
                 'apps' => $apps,
                 'active' => false,

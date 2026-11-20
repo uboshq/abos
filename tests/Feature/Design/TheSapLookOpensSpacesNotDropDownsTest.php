@@ -149,6 +149,46 @@ final class TheSapLookOpensSpacesNotDropDownsTest extends TestCase
         }
     }
 
+    public function test_the_sap_home_tiles_wear_one_colour_icons(): void
+    {
+        $body = $this->pageAs($this->owner, 'tiles', route('dashboard'));
+        $launchpad = substr($body, (int) strpos($body, 'data-fiori-launchpad="home"'));
+        $launchpad = substr($launchpad, 0, (int) strpos($launchpad, 'data-home-units'));
+
+        foreach (app(MenuBuilder::class)->forUser($this->owner->fresh()) as $module) {
+            $icon = FioriLaunchpad::SPACE_ICONS[$module['code']] ?? 'layout-grid';
+            $this->assertMatchesRegularExpression(
+                '/data-fiori-space-tile="'.preg_quote($module['code'], '/').'".*?data-licon="'.preg_quote($icon, '/').'"/s',
+                $launchpad,
+                "হোমে স্পেস {$module['code']}-এর টালিতে এক-রঙা চিহ্ন নেই",
+            );
+        }
+
+        // ⓘ এক-রঙা মানে লেখার রং নেয় (currentColor) — রঙিন মডিউল-চিহ্নের ছবি বা নিজের রং নয়
+        $this->assertStringNotContainsString('<img', $launchpad, 'হোমের টালিতে রঙিন ছবি-চিহ্ন বসেছে');
+        $this->assertDoesNotMatchRegularExpression('/fill="#|style="[^"]*color/i', $launchpad, 'হোমের টালির চিহ্নে নিজের রং');
+    }
+
+    public function test_the_sap_look_has_no_breadcrumb_row_and_the_shell_carries_a_back_arrow(): void
+    {
+        $crumbs = 'aria-label="'.e(__('core.a11y.breadcrumb')).'"';
+
+        $list = $this->pageAs($this->owner, 'tiles', route('sales.invoice.index'));
+        $this->assertStringNotContainsString($crumbs, $list, 'SAP রূপে breadcrumb-পটি ফিরে এসেছে');
+        $this->assertStringContainsString('data-fiori-back', $list, 'SAP রূপে তালিকার পাতায় শেল বারের ফেরার তীর নেই');
+        $this->assertLessThan(strpos($list, 'data-fiori-shell'), strpos($list, 'data-fiori-back'), 'ফেরার তীর লোগোর বাঁয়ে নয়');
+
+        $home = $this->pageAs($this->owner, 'tiles', route('dashboard'));
+        $this->assertStringNotContainsString('data-fiori-back', $home, 'হোমে ফেরার তীর — ফেরার জায়গা নেই');
+        $this->assertStringNotContainsString($crumbs, $home);
+
+        // ⓘ Dynamic-এর মাথার সারির নিয়ম আগের মতো (`crumbs`), আর ফেরার তীর পায় না
+        $this->assertSame('none', \App\Core\Support\Ui::pathBar('tiles'));
+        $this->assertSame('crumbs', \App\Core\Support\Ui::pathBar('dynamic'), 'Dynamic রূপের মাথার সারির নিয়ম বদলেছে');
+        $dynamic = $this->pageAs($this->owner, 'dynamic', route('sales.invoice.index'));
+        $this->assertStringNotContainsString('data-fiori-back', $dynamic);
+    }
+
     public function test_dynamic_and_the_other_looks_draw_no_fiori_markup_and_keep_their_own_nav(): void
     {
         foreach (['dynamic', 'rose', 'suite', 'classic'] as $look) {

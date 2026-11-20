@@ -1931,5 +1931,6 @@ return [
     'fiori' => [
         'my_apps' => 'My apps',
         'apps_count' => ':count apps',
+        'back' => 'Back',
     ],
 ];

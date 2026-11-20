@@ -36,12 +36,9 @@
                                 @endif
                             </span>
                             <span class="fiori-tile-foot">
+                                {{-- ⓘ চিহ্ন সবসময় এক-রঙা Lucide, টালির চিহ্নের রঙে (`--fiori-label`) — হোমের স্পেসেও ([[FioriLaunchpad::SPACE_ICONS]]) --}}
                                 <span class="fiori-tile-icon">
-                                    @if ($kind === 'home')
-                                        <x-ui.icon :name="$tile['icon']" :size="28" />
-                                    @else
-                                        <x-ui.licon :name="$tile['icon']" :size="28" />
-                                    @endif
+                                    <x-ui.licon :name="$tile['icon']" :size="28" />
                                 </span>
                                 @if (! $opens && ($tile['planned'] ?? false))
                                     <span class="fiori-tile-kpi is-muted" aria-hidden="true"><x-ui.icon name="clock" :size="18" /></span>

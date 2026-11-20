@@ -303,6 +303,9 @@ final class Ui
                 'swatch' => '#0a6ed1',
                 'ink' => '#32363a',
                 'panel' => 'light',
+                // ⭐ পাতার পথের সারি নেই — আসল Fiori Horizon-এ breadcrumb-পটি নেই; স্পেসের ট্যাব, পাতার শিরোনাম আর শেল বারের ফেরার
+                //   তীরই পথ ([[chrome/tiles]]; ২০ নভেম্বর ২০২৬)
+                'pathbar' => 'none',
             ],
             'suite' => [
                 'label' => 'core.ui.suite',
