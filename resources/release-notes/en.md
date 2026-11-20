@@ -1,5 +1,15 @@
 # What's new
 
+## 1.3.7 — 20-11-2026
+
+- Every module dashboard opens on colourful charts: six same-size charts of six kinds in two rows; all earlier boxes below, no figure shown twice. Copilot has its own dashboard too.
+- Finance, stock and sales dashboards: charts first, the problem centre at the very bottom.
+- "ABOS" lists get a pick column on the left: pick rows to copy, print or export to Excel.
+- One paper for money in, the receipt: "take money" on customers and bills opens the receipt; an accepted deposit report becomes a receipt; earlier collections show in the receipt list as "Collection (old)".
+- "All branches" is view-only: writing buttons are greyed with the reason; forms say "You are writing in … branch".
+- A paper waiting for approval is changed by no one: approve, send back for correction, or reject; a rejected collection cancels itself. A draft's "Cancel" is at the top of its page.
+- When the owner approves his own paper it carries a permanent mark, and Accounts reports list "Papers the owner wrote and approved himself".
+
 ## 1.3.6 — 19-11-2026
 
 - Home: the head on one line; "Top 10 customers" (was "shops"); top products, customers and collection by channel fall back to the month or year when today is empty; channel collection now counts voucher receipts too.
