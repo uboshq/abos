@@ -16,18 +16,34 @@ class AppPin {
   AppPin({
     Future<String?> Function(String key)? read,
     Future<void> Function(String key, String? value)? write,
-    DateTime Function()? clock,
+    Duration Function()? elapsed,
   })  : _read = read ?? _secureRead,
         _write = write ?? _secureWrite,
-        _clock = clock ?? DateTime.now;
+        _elapsed = elapsed ?? _monotonic;
 
-  final DateTime Function() _clock;
+  /// ⭐ একঘেয়ে-বাড়া সময় (Stopwatch) — ফোনের ঘড়ি নয়। ⛔ আগে অপেক্ষা গোনা হতো "শেষ ভুলের দেয়াল-ঘড়ির সময় + অপেক্ষা" দিয়ে:
+  /// ফোনের তারিখ সামনে নিলে অপেক্ষা উধাও, পেছনে নিলে মালিক ঘণ্টার পর ঘণ্টা আটকা (রিভিউ A1, ২১ নভেম্বর ২০২৬)।
+  final Duration Function() _elapsed;
+
+  static final Stopwatch _stopwatch = Stopwatch()..start();
+  static Duration _monotonic() => _stopwatch.elapsed;
 
   static const String _key = 'abos_app_pin_v1';
   static const String _triesKey = 'abos_app_pin_tries';
   static const int iterations = 20000;
 
+  /// ⭐ বাকি অপেক্ষা (মিলিসেকেন্ড) — অ্যাপ চলার সময় কেবল [_elapsed] দিয়ে কমে; বন্ধ করে খুললে যেখানে ছিল সেখান থেকে চলে
+  static const String _waitLeftKey = 'abos_app_pin_wait_left_ms';
+
+  /// ⓘ পুরনো দেয়াল-ঘড়ির চাবি — কেবল মোছার জন্য
   static const String _lastWrongKey = 'abos_app_pin_last_wrong';
+
+  /// বাকি অপেক্ষার সর্বোচ্চ — ভাণ্ডারে যা-ই থাক
+  static const Duration maxWait = Duration(hours: 1);
+
+  /// শেষবার পড়া/লেখা বাকি অপেক্ষা, আর তখনকার [_elapsed]
+  Duration? _left;
+  Duration _leftAt = Duration.zero;
 
   /// ভুলের সীমা — এর পরে অপেক্ষা ([waitAfter]); ⛔ আর বের করে দেওয়া নয় (মালিক, ২০ নভেম্বর ২০২৬: "লগআউট কেবল নিজে বের হলে, ফোন
   /// বাদ দিলে, পাসওয়ার্ড বদলালে, প্রশাসক বন্ধ করলে")
@@ -41,10 +57,38 @@ class AppPin {
     return Duration(seconds: seconds > 3600 ? 3600 : seconds);
   }
 
-  /// শেষ ভুলের সময় — অপেক্ষা গোনার জন্য
-  Future<DateTime?> lastWrongAt() async {
-    final ms = int.tryParse(await _read(_lastWrongKey) ?? '');
-    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  /// ⭐ এখনো কতক্ষণ PIN দেওয়া যাবে না — শেষ পড়া/লেখার পর থেকে একঘেয়ে সময় বাদ দিয়ে; নতুন বাকিটা লিখে রাখে, তাই অ্যাপ
+  /// আবার খুললেও শূন্য হয় না। সর্বোচ্চ [maxWait]।
+  Future<Duration> waitLeft() async {
+    var left = _left;
+    if (left == null) {
+      final ms = int.tryParse(await _read(_waitLeftKey) ?? '') ?? 0;
+      left = Duration(milliseconds: ms < 0 ? 0 : ms);
+      _leftAt = _elapsed();
+      // ⓘ পুরনো দেয়াল-ঘড়ির চাবি থাকলে মুছে ফেলা
+      if (await _read(_lastWrongKey) != null) await _write(_lastWrongKey, null);
+    }
+    final now = _elapsed();
+    final ran = now - _leftAt;
+    left = left - (ran.isNegative ? Duration.zero : ran);
+    if (left.isNegative) left = Duration.zero;
+    if (left > maxWait) left = maxWait;
+    await _keepLeft(left, now);
+    return left;
+  }
+
+  Future<void> _keepLeft(Duration left, Duration at) async {
+    final changed = _left != left;
+    _left = left;
+    _leftAt = at;
+    if (changed) await _write(_waitLeftKey, left == Duration.zero ? null : '${left.inMilliseconds}');
+  }
+
+  Future<void> _forgetWait() async {
+    _left = Duration.zero;
+    _leftAt = _elapsed();
+    await _write(_waitLeftKey, null);
+    await _write(_lastWrongKey, null);
   }
 
   final Future<String?> Function(String key) _read;
@@ -76,7 +120,7 @@ class AppPin {
     final salt = Uint8List.fromList(List<int>.generate(16, (_) => Random.secure().nextInt(256)));
     await _write(_key, 'v1:${base64Encode(salt)}:$iterations:${base64Encode(_derive(pin, salt, iterations))}');
     await _write(_triesKey, null);
-    await _write(_lastWrongKey, null);
+    await _forgetWait();
     return true;
   }
 
@@ -85,13 +129,15 @@ class AppPin {
     final stored = await _read(_key);
     final pin = normalise(typed);
     if (stored == null) return false;
+    // ⛔ অপেক্ষার মধ্যে যাচাই নয়, ভুলও গোনা নয়
+    if (await waitLeft() > Duration.zero) return false;
     if (pin == null) return _wrong();
     final parts = stored.split(':');
     if (parts.length != 4 || parts[0] != 'v1') return _wrong();
     final derived = _derive(pin, base64Decode(parts[1]), int.parse(parts[2]));
     if (_same(derived, base64Decode(parts[3]))) {
       await _write(_triesKey, null);
-      await _write(_lastWrongKey, null);
+      await _forgetWait();
       return true;
     }
     return _wrong();
@@ -103,12 +149,14 @@ class AppPin {
   Future<void> clear() async {
     await _write(_key, null);
     await _write(_triesKey, null);
-    await _write(_lastWrongKey, null);
+    await _forgetWait();
   }
 
   Future<bool> _wrong() async {
-    await _write(_triesKey, '${await tries() + 1}');
-    await _write(_lastWrongKey, '${_clock().millisecondsSinceEpoch}');
+    final tries = await this.tries() + 1;
+    await _write(_triesKey, '$tries');
+    // ⭐ সীমার পরে প্রতিটা ভুলে বাকি অপেক্ষা = নতুন অপেক্ষা, গোনা শুরু এখনকার একঘেয়ে সময় থেকে
+    if (tries >= maxTries) await _keepLeft(waitAfter(tries), _elapsed());
     return false;
   }
 

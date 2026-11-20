@@ -68,6 +68,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     if (!value) {
       _locked = false;
       _forgetPinState();
+      // ⛔ আগের জনের চাপা বার্তা পরের জনের জন্য খোলে না
+      _heldPath = null;
+      _heldOpen = null;
     }
     final cameIn = value && !_signedIn;
     _signedIn = value;
@@ -79,6 +82,48 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get locked => _locked && signedIn;
   bool get busy => _busy;
+
+  /// ⭐ তালা আছে, বা সামনে ফিরলেই পড়বে — বাইরে [idleLimit]-এর বেশি ছিল, অথচ `resumed` এখনো আসেনি (বার্তার চাপ অনেক সময়
+  /// তার আগেই আসে)
+  bool get lockedOrDue {
+    if (locked) return true;
+    final left = _leftAt;
+    return signedIn && left != null && _clock().difference(left) >= _idleLimitOf();
+  }
+
+  String? _heldPath;
+  void Function(String path)? _heldOpen;
+
+  /// ⭐ বার্তা বা উইজেটের চাপ — তালা থাকলে (বা পড়তে চলেছে) পথটা ধরে রাখা, খোলার পরপরই [open]; নইলে এখনই।
+  ///
+  /// <p>⛔ আগে তালার মধ্যেও সাথে সাথে `go(path)` — তালার পর্দার নিচে পাতা খুলত, তথ্য আনত, "পড়া হলো" দাগাত, অনুমোদন
+  /// আনত (রিভিউ A3, ২১ নভেম্বর ২০২৬)। ⓘ শেষ চাপটাই খোলে; বেরোলে ধরা পথ মোছে।
+  void openWhenUnlocked(String path, void Function(String path) open) {
+    if (lockedOrDue) {
+      _heldPath = path;
+      _heldOpen = open;
+      return;
+    }
+    open(path);
+  }
+
+  /// ধরে রাখা পথ আছে কি না (পরীক্ষার জন্যও)
+  bool get holdsATap => _heldPath != null;
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _releaseHeld();
+  }
+
+  void _releaseHeld() {
+    final path = _heldPath;
+    final open = _heldOpen;
+    if (path == null || open == null || !signedIn || lockedOrDue) return;
+    _heldPath = null;
+    _heldOpen = null;
+    open(path);
+  }
 
   /// ফোনে নিজের তালা নেই
   bool get noDeviceLock => _noDeviceLock;
@@ -145,13 +190,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// এখনো কতক্ষণ PIN দেওয়া যাবে না — শূন্য হলে দেওয়া যায়
-  Future<Duration> pinWaitLeft() async {
-    final wait = AppPin.waitAfter(await _pin.tries());
-    final last = await _pin.lastWrongAt();
-    if (wait == Duration.zero || last == null) return Duration.zero;
-    final left = last.add(wait).difference(_clock());
-    return left.isNegative ? Duration.zero : left;
-  }
+  ///
+  /// <p>⛔ ফোনের ঘড়ি দিয়ে নয় — বাকি অপেক্ষা গোনে [AppPin.waitLeft] একঘেয়ে সময়ে (রিভিউ A1, ২১ নভেম্বর ২০২৬)
+  Future<Duration> pinWaitLeft() => _pin.waitLeft();
 
   String _waitMessage(Duration wait) {
     final seconds = wait.inSeconds < 1 ? 1 : wait.inSeconds;
@@ -181,6 +222,8 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
         if (signedIn && left != null && _clock().difference(left) >= _idleLimitOf()) {
           _locked = true;
           notifyListeners();
+        } else {
+          _releaseHeld();
         }
       default:
         break;

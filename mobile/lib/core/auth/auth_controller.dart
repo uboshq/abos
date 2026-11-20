@@ -19,6 +19,7 @@ import '../sync_engine/sync_engine.dart';
 import '../launcher_widgets/hub/widget_hub.dart';
 import '../launcher_widgets/hub/widget_hub_task.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
+import '../menu/me_api.dart';
 import 'auth_exceptions.dart';
 import 'auth_state.dart';
 import 'auth_user.dart';
@@ -32,21 +33,30 @@ import '../web_inside/web_inside.dart';
 /// auth — one place decides what "signed in" means, matching how
 /// [ApiClient] is the one place a bearer header gets attached.
 class AuthController extends StateNotifier<AuthState> {
-  AuthController() : super(const AuthState.unknown()) {
+  AuthController({Future<AuthUser> Function()? fetchMe})
+      : _fetchMe = fetchMe ?? _meFromServer,
+        super(const AuthState.unknown()) {
     ApiClient.onSessionExpired = _handleSessionExpired;
   }
+
+  /// ⭐ `GET /me`-এর মানুষ — সংরক্ষিত প্রোফাইল হারালে টোকেন দিয়ে আবার গড়া ([[restoreSession]])
+  final Future<AuthUser> Function() _fetchMe;
+
+  static Future<AuthUser> _meFromServer() async => (await MeApi.fetch()).user;
+
+  /// সার্ভার নবায়নে নিশ্চিত "না" বলেছে ([[_handleSessionExpired]]) — তখনই কেবল বের
+  bool _sessionEnded = false;
 
   /// Called once from main.dart, after the core singletons this depends on
   /// (`TokenStorage`, `SessionRepository`) are ready but before the app shows
   /// anything other than a splash — see main.dart's own ordering comment.
   ///
-  /// <p>There is no `/me` endpoint yet (contract §৪), so this cannot ask the
-  /// server "who is this" — it can only trust the profile [SessionRepository]
-  /// saved at the last successful login. A refresh token with no saved
-  /// profile (a state this file itself never produces, but an upgrade from a
-  /// build that predates [SessionRepository] could) is treated as signed out
-  /// rather than signed in with an empty name, so a screen never has to
-  /// handle a user with a blank identity.
+  /// <p>It trusts the profile [SessionRepository] saved at the last
+  /// successful login. A refresh token with no saved (or a corrupt) profile
+  /// is not a sign-out: the profile is rebuilt from `GET /me`, and only the
+  /// refresh door's own 401/403 ends the session. With no network it keeps
+  /// the tokens and shows the login screen for this open only, so a screen
+  /// never has to handle a user with a blank identity.
   Future<void> restoreSession() async {
     // ⛔ ফোনের নিরাপদ ভাণ্ডার এক মুহূর্ত সাড়া না দিলে (ফোন সবে চালু, keystore ব্যস্ত) আগে শুরুটাই ভাঙত, বা প্রোফাইল "নেই"
     // পড়ে পুরো সেশন মুছে মানুষকে বের করে দিত (মালিক, ২০ নভেম্বর ২০২৬: লগআউট না চাপলে বের নয়)। এখন কয়েকবার চেষ্টা;
@@ -72,11 +82,38 @@ class AuthController extends StateNotifier<AuthState> {
     if (refreshToken != null && refreshToken.isNotEmpty && savedUser != null) {
       SyncEngine.instance.actAs(savedUser.id);
       state = AuthState.signedIn(savedUser);
+    } else if (refreshToken != null && refreshToken.isNotEmpty) {
+      // ⛔ টোকেন আছে, প্রোফাইল নেই বা নষ্ট — আগে পুরো সেশন মুছে বের করে দিত, মানুষ না চাইতেই (রিভিউ A2, ২১ নভেম্বর ২০২৬)।
+      // মালিক, ২০ নভেম্বর ২০২৬: লগআউট কেবল নিজে বের হলে, ফোন বাদ দিলে, পাসওয়ার্ড বদলালে, প্রশাসক বন্ধ করলে — চারটেই
+      // নবায়নের দরজায় ৪০১/৪০৩ হয়ে আসে। তাই প্রোফাইল `/me` থেকে আবার গড়া; বের কেবল সেই "না"-তে।
+      await _rebuildProfile();
     } else {
       // ⛔ সেশন "সাইন আউট" ছাড়াই শেষ হলে (পটভূমির রিফ্রেশ ব্যর্থ, ৩০ দিনের মেয়াদ, বন্ধ করা মানুষ) কেবল টোকেন মুছত — আগের জনের
       // গ্রাহক, পাওনা, দাম, প্রোফাইল আর ওয়েবের কুকি থেকে যেত, আর পরের জন সেগুলো দেখতেন। সাইন আউটের একই সাফাই এখানেও
       // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
       await _clearLocalSession();
+    }
+  }
+
+  Future<void> _rebuildProfile() async {
+    _sessionEnded = false;
+    try {
+      // ⓘ শুরুর পর্দা আটকে না থাকে — ধীর নেট সাময়িক ভুলের মতোই
+      final user = await _fetchMe().timeout(const Duration(seconds: 15));
+      if (user.id.isEmpty) throw StateError('/me answered without a user');
+      await SessionRepository.instance.saveUser(user);
+      SyncEngine.instance.actAs(user.id);
+      state = AuthState.signedIn(user);
+    } catch (_) {
+      // ⛔ নবায়নের দরজার নিশ্চিত "না" — [ApiClient] টোকেন মুছে [_handleSessionExpired] ডেকেছে; সাফাই সেখানেই
+      if (_sessionEnded) {
+        await _clearLocalSession();
+        return;
+      }
+      // ⓘ নেট নেই বা সার্ভার ব্যস্ত — টোকেন থাকে, কেবল এবারের জন্য লগইনের পর্দা; পরের খোলায় নেট থাকলে সেশন ফেরে।
+      // কেউ এর মধ্যে লগইন করলে আগে পুরো সাফাই ([[login]])।
+      _keptUnreadSession = true;
+      state = const AuthState.signedOut();
     }
   }
 
@@ -179,6 +216,7 @@ class AuthController extends StateNotifier<AuthState> {
     // the 30-day life ran out) — ApiClient already cleared the tokens; this
     // clears the rest of what a session left behind and drops to the login
     // screen the same way a manual sign-out does.
+    _sessionEnded = true;
     _clearLocalSession();
   }
 
