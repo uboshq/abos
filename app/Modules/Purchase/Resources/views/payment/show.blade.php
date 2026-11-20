@@ -6,9 +6,9 @@
         <x-ui.page-header :title="$payment->document_no" :subtitle="$payment->supplier?->name()">
             <x-slot:actions>
                 @can('update', $payment)
-                    <x-ui.button tone="secondary" :href="route('purchase.payment.edit', $payment)">
+                    <x-ui.edit-button tone="secondary" :paper="$payment" :href="route('purchase.payment.edit', $payment)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form id="confirm" method="POST" action="{{ route('purchase.payment.confirm', $payment) }}">
                         @csrf

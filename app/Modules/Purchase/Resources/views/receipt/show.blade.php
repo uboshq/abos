@@ -8,9 +8,9 @@
         <x-ui.page-header :title="$receipt->document_no" :subtitle="$receipt->supplier?->name()">
             <x-slot:actions>
                 @can('update', $receipt)
-                    <x-ui.button tone="secondary" :href="route('purchase.receipt.edit', $receipt)">
+                    <x-ui.edit-button tone="secondary" :paper="$receipt" :href="route('purchase.receipt.edit', $receipt)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form id="confirm" method="POST" action="{{ route('purchase.receipt.confirm', $receipt) }}">
                         @csrf

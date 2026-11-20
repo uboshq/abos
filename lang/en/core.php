@@ -1294,6 +1294,20 @@ return [
         'no_branch' => 'no branch',
     ],
 
+    // All branches = view only; with one branch picked, forms say where they write (owner, 20 Nov 2026; [[AllBranchesView]])
+    'all_branches' => [
+        'banner' => 'All branches — view only. Pick one branch to write',
+        'hint' => 'Pick one branch at the top to write',
+        'refused' => 'Nothing can be written while all branches are shown — nothing was saved. Pick one branch at the top, then submit again.',
+        'writing_in' => 'You are writing in :branch branch',
+    ],
+
+    // A paper waiting for approval is edited by no one — approve, send back for correction, or reject (owner, 20 Nov 2026; [[WaitingPaper]])
+    'approval_hold' => [
+        'hint' => 'Waiting for approval — send it back for correction to change it',
+        'refused' => 'This paper is waiting for approval — no one can change it, nothing was saved. The approver approves, sends it back for correction, or rejects it.',
+    ],
+
     'profile' => [
         'title' => 'My profile',
         'menu' => ':name — profile and settings',

@@ -13,9 +13,9 @@
         <x-ui.page-header :title="$order->document_no" :subtitle="$order->supplier?->name()">
             <x-slot:actions>
                 @can('update', $order)
-                    <x-ui.button tone="secondary" :href="route('purchase.order.edit', $order)">
+                    <x-ui.edit-button tone="secondary" :paper="$order" :href="route('purchase.order.edit', $order)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form id="confirm" method="POST" action="{{ route('purchase.order.confirm', $order) }}">
                         @csrf

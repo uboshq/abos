@@ -44,9 +44,9 @@
                 </x-ui.button>
 
                 @can('update', $document)
-                    <x-ui.button icon="edit" :href="route('documents.edit', $document)">
+                    <x-ui.edit-button icon="edit" :paper="$document" :href="route('documents.edit', $document)">
                         {{ __('documents::action.edit_details') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
                 @endcan
             </x-slot:actions>
         </x-ui.page-header>

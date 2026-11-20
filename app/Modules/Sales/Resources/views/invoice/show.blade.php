@@ -18,9 +18,9 @@
                 @php($fareOwed = app(\App\Modules\Sales\Services\FarePayment::class)->owedOnInvoice($invoice))
                 @can('update', $invoice)
                     @unless ($held)
-                        <x-ui.button tone="secondary" :href="route('sales.invoice.edit', $invoice)">
+                        <x-ui.edit-button tone="secondary" :paper="$invoice" :href="route('sales.invoice.edit', $invoice)">
                             {{ __('core.action.edit') }}
-                        </x-ui.button>
+                        </x-ui.edit-button>
                     @endunless
 
                     {{-- ⛔ গাড়ি ভাড়া বাকি থাকলে নিশ্চিত নেই (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok") --}}

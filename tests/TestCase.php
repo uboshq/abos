@@ -139,6 +139,13 @@ abstract class TestCase extends BaseTestCase
          * ([[AFormLandsInTheBranchItWasOpenedInTest]])।
          */
         config(['abos.branch_pin.grace_until' => '2999-12-31T23:59:59+00:00']);
+
+        /*
+         * ⓘ "সব শাখা = কেবল দেখা" পরীক্ষায় বন্ধ ([[AllBranchesView]], মালিক, ২০ নভেম্বর ২০২৬)। `view_all_branches`-এর ডিফল্ট
+         * `true`, আর ডেমোর মালিকের নাগালে কয়েকটা শাখা — চালু থাকলে হাজারটা পুরনো পরীক্ষার প্রতিটা লেখা ফেরত আসত, অথচ সেগুলো
+         * এই নিয়ম মাপে না। ⚠️ যে দাবি নিয়মটা মাপে, সে নিজে চালু করে ([[AllBranchesViewIsReadOnlyTest]])।
+         */
+        config(['abos.branch_pin.all_branches_read_only' => false]);
     }
 
     protected function setUpTraits(): array

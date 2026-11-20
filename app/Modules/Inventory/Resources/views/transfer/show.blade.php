@@ -21,9 +21,9 @@
             <x-slot:actions>
                 @if ($isDraft)
                     @can('update', $transfer)
-                        <x-ui.button tone="secondary" :href="route('inventory.transfer.edit', $transfer)">
+                        <x-ui.edit-button tone="secondary" :paper="$transfer" :href="route('inventory.transfer.edit', $transfer)">
                             {{ __('core.action.edit') }}
-                        </x-ui.button>
+                        </x-ui.edit-button>
 
                         <form id="confirm" method="POST" action="{{ route('inventory.transfer.dispatch', $transfer) }}">
                             @csrf

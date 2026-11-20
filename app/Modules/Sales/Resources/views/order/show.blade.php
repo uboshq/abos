@@ -6,9 +6,9 @@
         <x-ui.page-header :title="$order->document_no" :subtitle="$order->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $order)
-                    <x-ui.button tone="secondary" :href="route('sales.order.edit', $order)">
+                    <x-ui.edit-button tone="secondary" :paper="$order" :href="route('sales.order.edit', $order)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form id="confirm" method="POST" action="{{ route('sales.order.confirm', $order) }}" data-confirm-overview="{{ route('sales.order.overview', $order) }}">
                         @csrf

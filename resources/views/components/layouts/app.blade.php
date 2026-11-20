@@ -30,6 +30,9 @@
             {{-- ⛔ ভুল শাখায় জমা থামলে কারণ আর বোতাম — পপআপেও ([[shell.branch-pin]]) --}}
             <x-shell.branch-pin />
 
+            {{-- ⛔ "আপনি এখন X শাখায় লিখছেন" — পপআপের ফর্মেও (মালিক, ২০ নভেম্বর ২০২৬); "সব শাখা"-র ফিতা পেছনের পাতাতেই, এখানে নয় --}}
+            @auth <x-shell.all-branches-view :banner="false" /> @endauth
+
             {{-- ⛔ কেন কাজটা হলো না — পাতার নিজের বাক্স না থাকলে এখানে, থাকলে চুপ ([[ui.errors]]; fe, ২৪ অক্টোবর ২০২৬) --}}
             <x-ui.errors :shown="$slot" />
 
@@ -61,6 +64,9 @@
       {{-- ⭐ রঙিন মডিউল বন্ধ — সব মডিউল ব্র্যান্ডের এক রঙে (`tokens.css`-এর `[data-modules='calm']`; কোম্পানির সুইচ
            `system.colorful_modules`, ড্যাশবোর্ডের পরিকল্পনা §৩.৬) --}}
       @auth @unless ((bool) app(\App\Core\Services\SettingsService::class)->get('system.colorful_modules', true)) data-modules="calm" @endunless @endauth
+      {{-- ⛔ "সব শাখা" = কেবল দেখা (মালিক, ২০ নভেম্বর ২০২৬; [[AllBranchesView]]) — চিহ্ন, ধূসর বোতামের কারণ, আর খোলা দরজার ঠিকানার
+           ছাঁচ; [[all-branches-view.js]] এগুলো দেখে লেখার বোতাম ধূসর করে। ⓘ সার্ভারও থামায় ([[RefusesWritesInAllBranchesView]]) --}}
+      @auth @if (app(\App\Core\Services\AllBranchesView::class)->on(auth()->user())) data-all-branches-view data-all-branches-hint="{{ __('core.all_branches.hint') }}" data-all-branches-allow="{{ json_encode(app(\App\Core\Services\AllBranchesView::class)->allowedPathPatterns(), JSON_UNESCAPED_SLASHES) }}" @endif @endauth
 
       {{--
           চলতি রূপের টোকেনগুলো — সার্ভারে বাছাই করে, কেবল একটার।
@@ -466,6 +472,10 @@
                     {{-- ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — থামলে কারণ আর "X-এই জমা দিন" বোতাম, একবারই, সব পাতায়
                          ([[shell.branch-pin]], RCV-0143, ec, ১৯ অক্টোবর ২০২৬) --}}
                     <x-shell.branch-pin />
+
+                    {{-- ⛔ "সব শাখা — শুধু দেখার জন্য" ফিতা, বা একটা শাখা বাছা থাকলে ফর্মের মাথায় "আপনি এখন X শাখায় লিখছেন" — একটাই জায়গা,
+                         সব রূপে (মালিক, ২০ নভেম্বর ২০২৬; [[shell.all-branches-view]]) --}}
+                    @auth <x-shell.all-branches-view /> @endauth
 
                     {{-- ⛔ কেন কাজটা হলো না — একবারই, সব পাতায় ([[ui.errors]]; fe, ২৪ অক্টোবর ২০২৬)। ⓘ slot আগে আঁকা: পাতার নিজের
                          বাক্স থাকলে সেটাই দেখায় আর এটা চুপ; না থাকলে (বিলের তালিকা, চালানের ভাড়া …) এটাই — ঘরহীন কারণ আর হারায় না --}}
