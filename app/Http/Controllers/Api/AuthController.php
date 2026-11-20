@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -51,8 +52,14 @@ class AuthController extends Controller
     /** প্রতিটা অনুরোধে যায় — তাই ছোট। */
     private const ACCESS_MINUTES = 30;
 
-    /** কেবল নবায়নে যায় — তাই লম্বা, কিন্তু অসীম নয়। */
-    private const REFRESH_DAYS = 30;
+    /**
+     * কেবল নবায়নে যায় — তাই লম্বা, কিন্তু অসীম নয়।
+     *
+     * ⭐ ৩০ → ৩৬৫ দিন, আর প্রতিটা নবায়নে আবার পুরো মেয়াদ (sliding) — মালিক, ২০ নভেম্বর ২০২৬: "৩০ দিন না খুললেও লগআউট নয়"। আগে ৩০ দিন
+     * অ্যাপ না খুললে (আর পেছনের কাজ ফোন বন্ধ রাখলে) পরের খোলায় লগইনের পর্দা। ⓘ চুরির পাহারা মেয়াদে নয়: ঘোরানো, পুনঃব্যবহার ধরা, আর
+     * চারটা বাতিলের দরজা (বের হওয়া, "আমার ফোনগুলো" থেকে বাদ, পাসওয়ার্ড বদল, প্রশাসক বন্ধ) — সব আগের মতো।
+     */
+    private const REFRESH_DAYS = 365;
 
     public const ACCESS = 'sync';
 
@@ -236,6 +243,16 @@ class AuthController extends Controller
         $current = $this->refreshTokenFrom($request);
 
         if ($current === null) {
+            /*
+             * ⭐ একই ফোনের দুই-তিনটা নবায়ন একসাথে, বা উত্তরটা পথে হারানো — বের করে দেওয়া নয় (মালিক, ২০ নভেম্বর ২০২৬: "লগইন থাকবে যতক্ষণ না
+             * নিজে বের হন"; লাইভের খাতা: নভেম্বরে ৯৫৯ নবায়ন ২০০, ৫২৯ নবায়ন ৪০১ — একই সেকেন্ডে একই ফোনের একটা ২০০, বাকিগুলো ৪০১, আর
+             * ৪০১ পেয়ে অ্যাপ মানুষকে বের করে দিত)। [[answerARepeatedRefresh()]]।
+             */
+            $again = $this->answerARepeatedRefresh($request);
+            if ($again !== null) {
+                return $again;
+            }
+
             $this->refuseAReusedToken($request);
 
             return response()->json(['message' => 'Unauthenticated.'], 401); // ⓘ Laravel-এর নিজের ৪০১-এর একই কথা — অ্যাপ এটাই চেনে
@@ -296,14 +313,122 @@ class AuthController extends Controller
          * (আগে দুটোই পেত)। ব্যবহার করা টোকেনের ছাপ রাখা হয়, যাতে পরে কেউ আবার আনলে চুরি বলে ধরা পড়ে ([[refuseAReusedToken()]])।
          */
         if (PersonalAccessToken::query()->whereKey($current->getKey())->delete() !== 1) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            // ⭐ একই সেকেন্ডে আরেকটা নবায়ন জিতেছে — তার জোড়াটাই ফেরত ([[answerARepeatedRefresh()]])
+            return $this->answerARepeatedRefresh($request, waitForTheWinner: true)
+                ?? response()->json(['message' => 'Unauthenticated.'], 401);
         }
-        Cache::put(self::usedKey((string) $this->plainRefreshToken($request)), [
-            'user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp(),
-        ], now()->addDays(self::REFRESH_DAYS + 1));
 
-        return response()->json($this->issue($user, $deviceId));
+        $key = self::usedKey((string) $this->plainRefreshToken($request));
+        $record = ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()];
+        // ⓘ আগে "চলছে" দাগ, যাতে একই মুহূর্তের হারা নবায়ন জানে অপেক্ষা করতে হবে
+        Cache::put($key, $record + ['pending' => true], now()->addDays(self::REFRESH_DAYS + 1));
+
+        $body = $this->issue($user, $deviceId);
+        Cache::put($key, $record + $this->successorOf($body), now()->addDays(self::REFRESH_DAYS + 1));
+
+        return response()->json($body);
     }
+
+    /**
+     * ⭐ ঘোরানো (rotate) একটা নবায়ন-টোকেন আবার এলে — চুরি না ভুল, আলাদা করা (মালিক, ২০ নভেম্বর ২০২৬: "লগআউট কেবল নিজে বের হলে, ফোন বাদ
+     * দিলে, পাসওয়ার্ড বদলালে, প্রশাসক বন্ধ করলে")।
+     *
+     * ── লাইভের খাতায় যা দেখা গেল (২০ নভেম্বর ২০২৬) ─────────────────────────────────
+     *     103.205.132.152 21:38:45 /auth/refresh 401
+     *     103.205.132.152 21:38:45 /auth/refresh 401
+     *     103.205.132.152 21:38:45 /auth/refresh 200
+     * ফোনে সামনের অ্যাপ, পেছনের সিঙ্ক (WorkManager), উইজেট আর বিজ্ঞপ্তির পেছনের কাজ — চারটা আলাদা isolate, প্রত্যেকে নিজে নবায়ন করে।
+     * জেতে একটা; বাকিরা ৪০১ পায়, আর অ্যাপ ৪০১-কে "সেশন শেষ" ধরে টোকেন মুছে লগইনের পর্দা দেখাত। তারপরেই খাতায় নতুন `/auth/login`।
+     *
+     * ── এখন (Auth0/Okta-র "rotation overlap/leeway"-এর মতো) ──────────────────────────
+     * 1. [[GRACE_SECONDS]]-এর মধ্যে একই পুরনো টোকেন → জেতা নবায়নের **একই জোড়া** ফেরত (এনক্রিপ্ট করে রাখা)। জেতাটা তখনো চলছে হলে
+     *    কয়েক সেকেন্ড অপেক্ষা।
+     * 2. তার পরে, কিন্তু নতুন জোড়াটা কখনো ব্যবহারই হয়নি → উত্তরটা পথে হারিয়েছিল (দুর্বল নেট): অব্যবহৃত জোড়া মুছে নতুন জোড়া।
+     * 3. নতুন জোড়া ব্যবহার হয়ে গেছে, তারপরেও পুরনোটা এল → সত্যিকারের পুনঃব্যবহার: আগের মতোই সব বাতিল ([[refuseAReusedToken()]])।
+     * ⛔ মানুষ বন্ধ, বা দুই ধাপ বাধ্যতামূলক অথচ নেই → কিছুই ফেরত নয়।
+     */
+    private function answerARepeatedRefresh(Request $request, bool $waitForTheWinner = false): ?JsonResponse
+    {
+        $plain = $this->plainRefreshToken($request);
+        if ($plain === null) {
+            return null;
+        }
+        $key = self::usedKey($plain);
+
+        $used = Cache::get($key);
+        $deadline = microtime(true) + self::WINNER_WAIT_SECONDS;
+        while (($waitForTheWinner && ! is_array($used)) || (is_array($used) && ($used['pending'] ?? false) === true)) {
+            if (microtime(true) >= $deadline) {
+                return null;
+            }
+            usleep(200_000);
+            $used = Cache::get($key);
+        }
+        if (! is_array($used) || ! isset($used['pair'], $used['refresh_id'])) {
+            return null;
+        }
+
+        $user = User::query()->find((int) ($used['user'] ?? 0));
+        if (! $user instanceof User || ! $user->is_active || $this->twoStepMissing($user)) {
+            return null;
+        }
+        $deviceId = (string) ($used['device'] ?? '');
+
+        if (now()->getTimestamp() - (int) ($used['at'] ?? 0) <= self::GRACE_SECONDS) {
+            try {
+                $pair = json_decode(Crypt::decryptString((string) $used['pair']), true, 512, JSON_THROW_ON_ERROR);
+            } catch (\Throwable) {
+                return null;
+            }
+            // ⓘ জেতা জোড়াটা এর মধ্যে বাতিল হয়ে থাকলে (বের হওয়া, ফোন বাদ) ফেরত নয়
+            if (! is_array($pair) || ! PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->exists()) {
+                return null;
+            }
+
+            return response()->json($pair);
+        }
+
+        // ⓘ ২: উত্তর হারানো — নতুন জোড়াটা আছে, আর তার access টোকেন একবারও ব্যবহার হয়নি
+        $successorRefresh = PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->first();
+        $successorAccess = PersonalAccessToken::query()->whereKey((int) ($used['access_id'] ?? 0))->first();
+        if ($successorRefresh === null || $successorRefresh->last_used_at !== null
+            || ($successorAccess !== null && $successorAccess->last_used_at !== null)) {
+            return null;
+        }
+
+        $body = $this->issue($user, $deviceId);
+        Cache::put($key, ['user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp()]
+            + $this->successorOf($body), now()->addDays(self::REFRESH_DAYS + 1));
+
+        return response()->json($body);
+    }
+
+    /**
+     * জেতা জোড়ার চিহ্ন — টোকেন দুটোর সারি-নম্বর আর এনক্রিপ্ট করা উত্তর।
+     *
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    private function successorOf(array $body): array
+    {
+        return [
+            'pair' => Crypt::encryptString(json_encode($body, JSON_THROW_ON_ERROR)),
+            'access_id' => self::tokenId((string) $body['accessToken']),
+            'refresh_id' => self::tokenId((string) $body['refreshToken']),
+        ];
+    }
+
+    /** Sanctum-এর লেখা টোকেন "id|গোপন" — সারি-নম্বরটা */
+    private static function tokenId(string $plain): int
+    {
+        return (int) strstr($plain, '|', true);
+    }
+
+    /** একই পুরনো টোকেন এই সময়ের মধ্যে আবার এলে একই জোড়া (একই ফোনের isolate-গুলোর টক্কর, দুর্বল নেটে আবার পাঠানো) */
+    private const GRACE_SECONDS = 120;
+
+    /** হারা নবায়ন জেতাটার জোড়ার জন্য কতক্ষণ অপেক্ষা করে */
+    private const WINNER_WAIT_SECONDS = 5;
 
     /**
      * ⛔ ব্যবহার হয়ে যাওয়া নবায়ন-টোকেন আবার এলে — চুরির চিহ্ন (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬; OAuth-এর refresh-token

@@ -46,7 +46,8 @@ final class ThePhoneFellSilentAfterHalfAnHourTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->withToken($second['accessToken'])->getJson('/api/v1/me')->assertOk();
 
-        // ⛔ ব্যবহার করা টোকেন আর চলে না
+        // ⛔ ব্যবহার করা টোকেন আর চলে না — দুই মিনিটের টক্কর-জানালার পরে, আর নতুন জোড়া ব্যবহার হয়ে গেলে (২০ নভেম্বর ২০২৬)
+        $this->travel(3)->minutes();
         $this->bodyRefresh($first['refreshToken'])->assertUnauthorized();
     }
 
@@ -66,20 +67,23 @@ final class ThePhoneFellSilentAfterHalfAnHourTest extends TestCase
 
     /**
      * ⛔ ব্যবহার হয়ে যাওয়া নবায়ন-টোকেন এক মিনিট পরে আবার এলে — চুরি: ঐ ফোনের সব টোকেন বাতিল (পুরো ERP অডিট,
-     * ৯ অক্টোবর ২০২৬)। ⓘ এক মিনিটের মধ্যে আবার এলে কেবল ৪০১ — দুর্বল নেটে একই নবায়ন দুবার যেতে পারে, আসল ফোন থাকে।
+     * ৯ অক্টোবর ২০২৬)। ⭐ দুই মিনিটের মধ্যে আবার এলে একই জোড়া — একই ফোনের isolate-গুলোর টক্কর বা দুর্বল নেট; আগে ৪০১ পেয়ে অ্যাপ মানুষকে
+     * বের করে দিত (মালিক, ২০ নভেম্বর ২০২৬)।
      */
     public function test_a_used_refresh_token_brought_back_later_signs_that_phone_out_and_a_quick_repeat_does_not(): void
     {
         $first = $this->login()->assertOk()->json();
         $second = $this->bodyRefresh($first['refreshToken'])->assertOk()->json();
 
-        // ⓘ সাথে সাথে আবার — দুর্বল নেট; আসল ফোনের নতুন জোড়া থাকে
-        $this->bodyRefresh($first['refreshToken'])->assertUnauthorized();
+        // ⭐ সাথে সাথে আবার — একই জোড়া ফেরত, নতুন কিছু নয়, আসল ফোনের জোড়া থাকে
+        $again = $this->bodyRefresh($first['refreshToken'])->assertOk()->json();
+        $this->assertSame($second['accessToken'], $again['accessToken'], '⛔ টক্করের দ্বিতীয় নবায়ন অন্য জোড়া পেল।');
+        $this->assertSame($second['refreshToken'], $again['refreshToken']);
         $this->app['auth']->forgetGuards();
         $this->withToken($second['accessToken'])->getJson('/api/v1/me')->assertOk();
 
-        // ⛔ এক মিনিট পরে — চুরি; নতুন জোড়াও বাতিল
-        $this->travel(2)->minutes();
+        // ⛔ জানালার পরে, নতুন জোড়া ব্যবহার হয়ে যাওয়ার পরে — চুরি; নতুন জোড়াও বাতিল
+        $this->travel(3)->minutes();
         $this->bodyRefresh($first['refreshToken'])->assertUnauthorized();
         $this->assertFalse(PersonalAccessToken::query()->where('name', 'like', '%:'.self::DEVICE)->exists(), '⛔ চুরির পরেও ফোনের টোকেন থেকে গেল।');
         $this->bodyRefresh($second['refreshToken'])->assertUnauthorized();
