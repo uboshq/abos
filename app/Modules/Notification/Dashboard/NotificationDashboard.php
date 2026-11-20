@@ -196,7 +196,7 @@ final class NotificationDashboard implements ProvidesDashboard
                 [__('notification::dashboard.funnel_bell'), $total, number_format($total)],
                 [__('notification::dashboard.funnel_seen'), $seen, number_format($seen)],
                 [__('notification::dashboard.funnel_read'), $read, number_format($read)],
-            ]], value: (string) $total, sub: __('notification::dashboard.funnel_hint', ['range' => $range, 'unread' => $unread]),
+            ]], value: (string) $total, sub: __('notification::dashboard.funnel_hint', ['total' => number_format($total), 'range' => $range, 'unread' => $unread]),
                 href: route('notification.report.show', ['slug' => 'read-unread']), colour: '#2160d8'),
             Card::make(__('notification::dashboard.by_channel'), 'donut', [
                 'c' => (string) $jobsTotal, 'cs' => __('notification::dashboard.deliveries'),
@@ -205,7 +205,7 @@ final class NotificationDashboard implements ProvidesDashboard
             Card::make(__('notification::dashboard.daily'), 'stackedArea', [
                 'series' => $deliveries ? [$inBell, $out, $dead] : [$inBell, $out],
                 'colors' => ['#7c3aed', '#0ea5e9', '#e11d48'], 'l' => $labels,
-            ], value: (string) $delivered, sub: __('notification::dashboard.daily_hint', ['range' => $range]), legend: array_slice([
+            ], value: (string) $delivered, sub: __('notification::dashboard.daily_hint', ['delivered' => number_format($delivered), 'range' => $range]), legend: array_slice([
                 [__('notification::dashboard.trend_bell'), '#7c3aed'], [__('notification::dashboard.trend_out'), '#0ea5e9'], [__('notification::dashboard.failed'), '#e11d48'],
             ], 0, $deliveries ? 3 : 2), colour: '#7c3aed'),
             ...($deliveries ? [Card::make(__('notification::dashboard.health'), 'bullet', ['p' => $health],

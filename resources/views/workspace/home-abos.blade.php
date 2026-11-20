@@ -49,9 +49,14 @@
      */
     $owed = null;
     $stockValue = null;
+    // ⭐ "নিট বিক্রি" — বোর্ডের বিক্রির ঘরে মডিউলের নিজের ঘর (নাম, পয়সাসহ অঙ্ক, খুললে বিল · ফেরত · VAT সহ মোট); আগে একই ঠিকানা বলে
+    //   বাদ পড়ত আর ভাঙা হিসাব হারাত। বকেয়া আর মজুদের একই নিয়ম।
+    $netSales = null;
     $cards = [];
     foreach ($groups['kpi'] ?? [] as $candidate) {
-        if ($candidate->label === __('customer::dashboard.kpi_owed')) {
+        if ($candidate->label === __('sales::dashboard.sales_today')) {
+            $netSales = $candidate;
+        } elseif ($candidate->label === __('customer::dashboard.kpi_owed')) {
             $owed = $candidate;
         } elseif ($candidate->label === __('inventory::overview.stock_value')) {
             $stockValue = $candidate;
@@ -67,8 +72,14 @@
             $tile['widget'] = $owed;
         } elseif ($tile['key'] === 'stock' && $stockValue) {
             $tile['widget'] = $stockValue;
+        } elseif ($tile['key'] === 'sales' && $netSales) {
+            $tile['widget'] = $netSales;
         }
         $tiles[] = $tile;
+    }
+    // ⓘ বোর্ডে বিক্রির ঘর না থাকলে (চাবি নেই) মডিউলের ঘর "আরও সূচক"-এ — হারায় না
+    if ($netSales && ! in_array('sales', $boardKeys, true)) {
+        $cards[] = $netSales;
     }
     foreach ([2 => ['dues', $owed], 5 => ['stock', $stockValue]] as $at => [$key, $widget]) {
         if ($widget && ! in_array($key, $boardKeys, true)) {
@@ -294,7 +305,7 @@
                                 @if ($widget)
                                     {{-- ⓘ মডিউলের নিজের ঘর (বকেয়া · মজুদ) — নাম, অঙ্ক, ব্যাখ্যা হুবহু; বোর্ডের ছোট লেখা নিচে --}}
                                     <a href="{{ $widget->href }}" data-kpi data-boxed
-                                       @if ($tile['key'] === 'dues') data-home-owed @else data-home-stock @endif
+                                       @if ($tile['key'] === 'dues') data-home-owed @elseif ($tile['key'] === 'sales') data-home-sales @else data-home-stock @endif
                                        class="hb-card hb-tile" style="--hb-tone: {{ $tile['tone'] }}"
                                        @if ($widget->definition) title="{{ $widget->definition }}" @endif>
                                         <span class="hb-lb" data-kpi-label>{{ $widget->label }}</span>
@@ -304,6 +315,17 @@
                                         @endif
                                         @if (filled($tile['sub'] ?? null))
                                             <span class="hb-s" data-board-tile-sub>{{ $tile['sub'] }}</span>
+                                        @endif
+                                        {{-- ⓘ বোর্ডের ছোট রেখা থাকলে সেটাও (বিক্রির ঘরে) — কিছু হারায় না --}}
+                                        @if (count($spark) > 1 && $peak > $floor)
+                                            @php
+                                                $step = 74 / (count($spark) - 1);
+                                                $points = [];
+                                                foreach ($spark as $i => $value) {
+                                                    $points[] = round(2 + $i * $step, 1).','.round(27 - (($value - $floor) / ($peak - $floor)) * 22, 1);
+                                                }
+                                            @endphp
+                                            <svg viewBox="0 0 78 30" aria-hidden="true"><polyline points="{{ implode(' ', $points) }}" fill="none" stroke="{{ $tile['tone'] }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /></svg>
                                         @endif
                                     </a>
                                     @continue

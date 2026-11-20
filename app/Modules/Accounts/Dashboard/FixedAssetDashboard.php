@@ -124,6 +124,8 @@ final class FixedAssetDashboard
     {
         $money = (bool) auth()->user()?->can('accounts.report');
         $short = fn (string $amount): string => (bccomp($amount, '0', 4) < 0 ? '−' : '').'৳ '.Svg::short((int) ltrim(Money::round($amount, 0), '-'));
+        // ⓘ পুরো টাকা (পূর্ণ টাকায়, লাখ-কমায়) — আগের সংখ্যার ঘর যে অঙ্ক দেখাত
+        $exact = fn (string $amount): string => (bccomp($amount, '0', 4) < 0 ? '−' : '').'৳ '.Money::format(ltrim(Money::round($amount, 0), '-'), 0);
         $t = fn (string $key, array $with = []): string => (string) __('accounts::asset_report.'.$key, $with);
         $nbv = bcsub($cost, $accumulated, 4);
 
@@ -174,12 +176,13 @@ final class FixedAssetDashboard
         foreach (['warranty_ends_on' => 'warranty', 'insured_until' => 'insurance'] as $column => $what) {
             FixedAsset::query()->inService()->whereBetween($column, [$today->toDateString(), $until->toDateString()])
                 ->orderBy($column)->limit(6)->get()
-                ->each(fn (FixedAsset $a) => $ends->push(['name' => Str::limit($a->name.' · '.$t($what), 13), 'on' => $a->{$column}]));
+                ->each(fn (FixedAsset $a) => $ends->push(['name' => Str::limit($a->name.' · '.$t($what), 13), 'full' => $a->name.' · '.$t($what).' · '.$a->{$column}->format('d M Y'), 'on' => $a->{$column}]));
         }
         $timeline = $ends->sortBy('on')->take(6)->map(function (array $e) use ($today, $span) {
             $days = (int) $today->diffInDays($e['on']);
 
-            return [$e['name'], 0, $days / $span, $days <= self::EXPIRY_DAYS ? Svg::STATUS[3] : null];
+            // ⓘ পুরো নাম আর তারিখ দাগের উপর রাখলে — আগের তালিকার মতো (নাম ছোট করায় হারায় না)
+            return [$e['name'], 0, $days / $span, $days <= self::EXPIRY_DAYS ? Svg::STATUS[3] : null, $e['full']];
         })->values()->all();
         $ticks = [];
         for ($i = 0; $i < self::TIMELINE_MONTHS; $i++) {
@@ -198,11 +201,12 @@ final class FixedAssetDashboard
             Card::make($t('viz_value'), 'bars', $money ? [
                 'v' => [$cost, $accumulated, $nbv],
                 'l' => [$t('total_cost'), $t('accumulated'), $t('nbv')],
-                'top' => [$short($cost), $short(bcmul($accumulated, '-1', 4)), $short($nbv)],
+                // ⓘ পুরো টাকা — আগের তিন সংখ্যার ঘর (মোট খরচ, জমা অবচয়, বইয়ের মূল্য) এই গ্রাফে এসেছে, পয়সা ছাড়া অঙ্ক হারায় না
+                'top' => [$exact($cost), $exact(bcmul($accumulated, '-1', 4)), $exact($nbv)],
                 'colors' => ['#5b6b86', Svg::STATUS[3], Svg::PALETTE[0]],
-            ] : [], value: $money ? $short($nbv) : '', sub: $t('viz_value_sub', ['count' => $inBooks->count()]), href: $report('asset-nbv'), colour: Svg::PALETTE[0]),
+            ] : [], value: $money ? $exact($nbv) : '', sub: $t('viz_value_sub', ['count' => $inBooks->count()]), href: $report('asset-nbv'), colour: Svg::PALETTE[0]),
             Card::make($t('viz_depreciation'), 'line', $money ? ['v' => $depreciation, 'l' => $months, 'color' => Svg::PALETTE[1]] : [],
-                value: $money ? $short($thisMonth) : '', sub: $t('viz_depreciation_sub'), href: $report('asset-depreciation'), colour: Svg::PALETTE[1]),
+                value: $money ? $exact($thisMonth) : '', sub: $t('viz_depreciation_sub'), href: $report('asset-depreciation'), colour: Svg::PALETTE[1]),
             Card::make($t('by_status'), 'donut', ['c' => (string) $assetCount, 'cs' => $t('viz_assets'), 'p' => $statusParts],
                 value: $assetCount > 0 ? $t('viz_count', ['n' => $assetCount]) : '', sub: $t('by_status_hint'), href: route('accounts.asset.index'), colour: Svg::STATUS[0]),
             Card::make($t('viz_by_category'), 'hbars', $money ? [

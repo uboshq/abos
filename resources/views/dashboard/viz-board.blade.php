@@ -13,7 +13,8 @@
     <div class="viz-board" data-viz-board style="--viz-cols: {{ $cols }}">
         @foreach ($vizCards as $card)
             @php($svg = \App\Core\Dashboard\Viz\Svg::render($card['kind'], $card['data']))
-            <section class="viz-card" data-viz-card="{{ $card['kind'] }}" style="--viz-edge: {{ $card['colour'] }}">
+            {{-- ⓘ data-chart — সব চার্টের সাধারণ চিহ্ন (হোম আর আগের প্যানেলের মতো), তাই চার্টের দাবিগুলো এখানেও চেনে --}}
+            <section class="viz-card" data-viz-card="{{ $card['kind'] }}" data-chart="{{ $card['kind'] }}" style="--viz-edge: {{ $card['colour'] }}">
                 <header class="viz-head">
                     <h2>{{ $card['title'] }}</h2>
                     @if ($card['value'] !== '')

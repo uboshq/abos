@@ -102,13 +102,18 @@ final class TheAccountsBoardReadsTheBooksTest extends TestCase
         $this->assertSame('today', collect(app(AccountsBoard::class)->problems())->firstWhere('key', 'journal')['sev'], '⛔ বড় জাবেদার রং "আজই" নয়।');
     }
 
-    /** ⭐ পাতায় কেবল নমুনার সাত সারি, ক্রমে — পুরনো কার্ড-চার্ট-তালিকা নেই */
+    /**
+     * ⭐ পাতায় কেবল নমুনার সারি, ক্রমে — পুরনো কার্ড-চার্ট-তালিকা নেই।
+     * ⓘ মালিক, ২০ নভেম্বর ২০২৬ (নমুনা 5gynumii, RoPEayT7): মাথায় গ্রাফের বোর্ড, তারপর ১০ নভেম্বরের সারিগুলো হুবহু, আর সমস্যা কেন্দ্র
+     *   (মাস বন্ধের সাথে) সবার নিচে — ১০ নভেম্বরে সেটা মাথায় ছিল।
+     */
     public function test_the_page_is_the_samples_seven_rows_in_order(): void
     {
         $html = (string) $this->get(route('module.dashboard', ['module' => 'accounts']))->assertOk()->getContent();
-        $marks = ['data-acc-problems', 'data-acc-close', 'data-acc-pnl', 'data-acc-balance-sheet', 'data-acc-trial', 'data-acc-glance', 'data-acc-tree',
+        $marks = ['data-viz-board', 'data-acc-pnl', 'data-acc-balance-sheet', 'data-acc-trial', 'data-acc-glance', 'data-acc-tree',
             'data-acc-timeline', 'data-acc-banks', 'data-acc-tax', 'data-acc-flow', 'data-acc-bullets', 'data-acc-income-expense',
-            'data-acc-funnel', 'data-acc-types', 'data-acc-calendar', 'data-acc-tills', 'data-acc-bubbles', 'data-acc-health', 'data-acc-top', 'data-acc-recent'];
+            'data-acc-funnel', 'data-acc-types', 'data-acc-calendar', 'data-acc-tills', 'data-acc-bubbles', 'data-acc-health', 'data-acc-top', 'data-acc-recent',
+            'data-acc-problems', 'data-acc-close'];
         $at = [];
 
         foreach ($marks as $m) {

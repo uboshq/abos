@@ -239,7 +239,8 @@ final class SupplierDashboard implements ProvidesDashboard
             ->groupBy('pur_returns.supplier_id')
             ->pluck('amount', 'supplier_id');
 
-        $names = Supplier::query()->whereKey($ids)->get()->keyBy('id');
+        // ⓘ আইডিগুলো উপরের দেখা-শাখার ক্রয় থেকে — নাম আনার একটাই জায়গা ([[SupplierCharts::namesOf()]])
+        $names = SupplierCharts::namesOf($ids);
         $biggest = (string) $top->first()->amount;
         $out = [];
 

@@ -75,6 +75,17 @@ final class TheModuleDashboardFillsItsRowsTest extends TestCase
             if ($row !== 0) {
                 $wrong[] = "{$module->code}: শেষ চার্টের সারিতে ফাঁকা ({$row}/৩)";
             }
+            // ⓘ ২০ নভেম্বর ২০২৬ থেকে প্রায় সব মডিউলের মাথায় গ্রাফের বোর্ড (নমুনা RoPEayT7) — আগের যে চার্ট গ্রাফে এসেছে সেটা আর আলাদা
+            //   আঁকা হয় না; বোর্ডের সারিও ভরা হতে হবে: কার্ডের সংখ্যা সারির ঘরের (`--viz-cols`) গুণিতক
+            foreach ($page->query('//*[@data-viz-board]') as $board) {
+                $cards = $page->query('.//*[@data-viz-card]', $board)->length;
+                $looked['panels'] += $cards;
+                preg_match('/--viz-cols:\s*(\d+)/', (string) $board->getAttribute('style'), $m);
+                $cols = (int) ($m[1] ?? 0);
+                if ($cols < 1 || $cards % $cols !== 0) {
+                    $wrong[] = "{$module->code}: গ্রাফের বোর্ডে {$cards}টা কার্ড, সারিতে {$cols}টা — শেষ সারি ফাঁকা";
+                }
+            }
 
             // ── ২. সূচকের ঘর ──
             $grid = $page->query('//*[@data-stat-grid]')->item(0);

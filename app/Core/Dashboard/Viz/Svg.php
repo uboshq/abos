@@ -634,7 +634,9 @@ final class Svg
             $a = max(0.0, min(1.0, (float) $bar[1]));
             $b = max($a + .01, min(1.0, (float) $bar[2]));
             $s .= self::t(140, $y + $bh / 2 + 5, (string) $bar[0], ['size' => 13.5, 'fill' => self::INK, 'anchor' => 'end', 'weight' => 600]);
-            $s .= '<rect x="'.self::n(150 + (self::W - 160) * $a).'" y="'.self::n($y).'" width="'.self::n((self::W - 160) * ($b - $a)).'" height="'.self::n($bh).'" rx="8" fill="'.($bar[3] ?? self::PALETTE[$i % count(self::PALETTE)]).'"/>';
+            // ⓘ পঞ্চম ঘরে পুরো নাম (ছোট করা নামের) — দাগের উপর রাখলে দেখা যায়, পর্দা-পাঠকও পড়ে; কিছু হারায় না
+            $full = isset($bar[4]) && $bar[4] !== '' ? '<title>'.e((string) $bar[4]).'</title>' : '';
+            $s .= '<rect x="'.self::n(150 + (self::W - 160) * $a).'" y="'.self::n($y).'" width="'.self::n((self::W - 160) * ($b - $a)).'" height="'.self::n($bh).'" rx="8" fill="'.($bar[3] ?? self::PALETTE[$i % count(self::PALETTE)]).'">'.$full.'</rect>';
             $y += $bh + 10;
         }
         $today = 150 + (self::W - 160) * (float) ($o['today'] ?? 0);

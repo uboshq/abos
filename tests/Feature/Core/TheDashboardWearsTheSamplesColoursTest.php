@@ -101,8 +101,10 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
-        // ⓘ ক্রয়ের ড্যাশবোর্ড — বিক্রয়, হিসাব, অর্থ আর মজুদ এখন মালিকের চূড়ান্ত নমুনার বোর্ড (১০ নভেম্বর ২০২৬ রাত), রঙিন কার্ডের সাজ বাকিদের
-        $html = (string) $this->actingAs($owner)->get(route('module.dashboard', 'purchase'))->assertOk()->getContent();
+        // ⓘ গ্রাহকের ড্যাশবোর্ড — বিক্রয়, হিসাব, অর্থ আর মজুদ মালিকের চূড়ান্ত নমুনার বোর্ড (১০ নভেম্বর ২০২৬ রাত), রঙিন কার্ডের সাজ বাকিদের।
+        //   ২০ নভেম্বর ২০২৬ থেকে ক্রয়ের দুই কার্ড আর প্রথম চার্ট মাথার গ্রাফের বোর্ডে (একই তথ্য দুইবার নয়), তাই চার কার্ড আর জোড়া-সারি
+        //   এখন গ্রাহকের পাতায় দেখা — সেখানে বোর্ডের নিচে আগের সাজ পুরো আছে
+        $html = (string) $this->actingAs($owner)->get(route('module.dashboard', 'customer'))->assertOk()->getContent();
 
         // ⛔ মাথার পট্টি, নাম আর উপশিরোনাম নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: "একদম প্লেন থাকবে, কোনো ড্যাশবোর্ড লেখার দরকার নাই"
         $this->assertStringNotContainsString('data-dashboard-head', $html, '⛔ ড্যাশবোর্ডের মাথায় আবার নাম-উপশিরোনামের পট্টি বসেছে।');

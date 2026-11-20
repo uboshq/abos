@@ -27,13 +27,14 @@ return [
 
     // ⭐ Chart board (owner, 20 Nov 2026)
     'funnel' => 'Notified → seen → read',
-    'funnel_hint' => ':range · :unread unread now',
+    // ⓘ with the names of the three number boxes the chart replaced
+    'funnel_hint' => 'Total notifications :total · :unread unread now · :range',
     'funnel_bell' => 'In the bell',
     'funnel_seen' => 'Seen',
     'funnel_read' => 'Read',
     'deliveries' => 'deliveries',
     'daily' => 'Notifications per day — 30 days',
-    'daily_hint' => ':range · in the bell, delivered outside, failed',
+    'daily_hint' => 'Delivered outside :delivered · :range',
     'today' => 'Today',
     'health_chart_hint' => 'Last 7 days, by channel · black mark = 95% goal',
     'by_module' => 'Notifications by kind of work',

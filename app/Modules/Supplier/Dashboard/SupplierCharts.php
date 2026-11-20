@@ -154,7 +154,7 @@ final class SupplierCharts
             ->groupBy('pur_returns.supplier_id')
             ->pluck('amount', 'supplier_id');
 
-        $names = Supplier::query()->whereKey($ids)->get()->keyBy('id');
+        $names = self::namesOf($ids);
 
         $rows = $top->map(fn ($r) => [
             'name' => $names->get((int) $r->supplier_id)?->name() ?? '—',
@@ -179,6 +179,18 @@ final class SupplierCharts
             empty: __('supplier::dashboard.no_purchase_this_month'),
             href: route('supplier.index'),
         )];
+    }
+
+    /**
+     * চার্টের নাম — আইডিগুলো ডাকার আগেই দেখা শাখায় ছাঁকা ক্রয় থেকে বাছা ([[DataScope::inView()]]); অন্য শাখার সরবরাহকারী এই শাখায়
+     * বেচলেও নামটা আসে (শাখা ধরে ছাঁকলে "—" হত)। ⓘ সরবরাহকারীর ড্যাশবোর্ডও এটাই ডাকে — নাম আনার জায়গা একটা।
+     *
+     * @param  list<int>  $ids
+     * @return \Illuminate\Support\Collection<int, Supplier>
+     */
+    public static function namesOf(array $ids): \Illuminate\Support\Collection
+    {
+        return Supplier::query()->whereKey($ids)->get()->keyBy('id');
     }
 
     private static function on(): bool

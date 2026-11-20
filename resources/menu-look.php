@@ -198,6 +198,8 @@ return [
         ],
         // ⭐ কোপাইলট (১১ নভেম্বর ২০২৬) — মগজের ছবি, উপরের বারের একই আঁকা
         'assistant' => [
+            // ⭐ Copilot-এর ড্যাশবোর্ড (মালিক, ২০ নভেম্বর ২০২৬) — বাকি মডিউলের ড্যাশবোর্ডের সারির মতো
+            'assistant::menu.dashboard' => ['start', 'layout-dashboard'],
             'assistant::menu.today' => ['start', 'brain'],
             'assistant::menu.audit' => ['audit', 'history'],
         ],

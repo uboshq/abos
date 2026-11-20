@@ -108,7 +108,7 @@
             @if ($branchLabel)
                 <span data-shell-branch class="mt-0.5 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 text-2xs font-semibold"
                       style="background: var(--color-topbar-pill-bg); border: 1px solid var(--color-topbar-pill-border); color: var(--color-topbar-pill-ink);">
-                    <span class="size-1.5 rounded-full" style="background: var(--color-topbar-pill-dot);" aria-hidden="true"></span><span data-shell-branch-name @if ($viewAll || ! $branch) data-all-branches @endif class="truncate">{{ $branchLabel }}</span>
+                    <span class="size-1.5 rounded-full" style="background: var(--color-topbar-pill-dot);" aria-hidden="true"></span><span data-shell-branch-name class="truncate"{!! ($viewAll || ! $branch) ? ' data-all-branches' : '' !!}>{{ $branchLabel }}</span>
                 </span>
             @endif
         </span>
