@@ -534,7 +534,8 @@ return [
         'salesforce_blurb' => 'Dark navy header, a white tab row beneath it, sharp 4px corners.',
         'linear' => 'Linear',
         'linear_blurb' => 'A near-black screen, one indigo, almost no chrome at all.',
-        'rose' => 'ABOS',
+        // Shown as "ABOS Smart" (owner, 20 Nov 2026) — the key `rose`, data-ui, CSS and saved choices are unchanged
+        'rose' => 'ABOS Smart',
         'rose_blurb' => 'An ABOS original — a flat menu in the frame blue, the module list at its foot, a rounded work panel.',
         'navy' => 'ABOS Navy',
         'navy_blurb' => 'An ABOS original — the brand teal, dense and quiet.',

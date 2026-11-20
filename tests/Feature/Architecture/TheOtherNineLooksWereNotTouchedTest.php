@@ -278,8 +278,9 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
 
         $this->assertSame('rose', Ui::DEFAULT, '⛔ নতুন "ABOS" ডিফল্ট নয় — মালিকের ১৯ নভেম্বরের সিদ্ধান্ত।');
         $this->assertSame('rose', Ui::APPEARANCE_ORDER[0], '⛔ চেহারার পাতায় "ABOS" প্রথমে নয়।');
-        $this->assertSame('ABOS', __('core.ui.rose', [], 'bn'));
-        $this->assertSame('ABOS', __('core.ui.rose', [], 'en'));
+        // ⓘ দেখানো নাম "ABOS স্মার্ট" / "ABOS Smart" (মালিক, ২০ নভেম্বর ২০২৬) — চাবি `rose` আগের মতো
+        $this->assertSame('ABOS স্মার্ট', __('core.ui.rose', [], 'bn'));
+        $this->assertSame('ABOS Smart', __('core.ui.rose', [], 'en'));
 
         // ── স্বাধীন: নিজের ফাইল, নিজের পরিবার ──
         $this->assertSame('rose', Ui::family('rose'), '⛔ "ABOS" অন্য রূপের গড়নে দাঁড়িয়েছে।');
