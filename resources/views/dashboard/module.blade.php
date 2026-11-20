@@ -20,6 +20,11 @@
     {{-- ⛔ শিরোনাম আর উপশিরোনাম নেই — মালিক, ১০ নভেম্বর ২০২৬ রাত: ড্যাশবোর্ড "একদম প্লেন থাকবে" ([[dashboard.module-v2]]) --}}
     @php view()->share('ownBoard', $dashboard->stats === [] && $dashboard->panels === [] && $dashboard->sections !== []); @endphp
 
+    {{-- ⭐ SAP রূপে এই পাতাই স্পেসের পাতা — মাথায় মেনুর ভাগ আর টালি, নিচে ড্যাশবোর্ড হুবহু (মালিক, ২০ নভেম্বর ২০২৬; [[FioriLaunchpad]]) --}}
+    @if (\App\Core\Support\FioriLaunchpad::on())
+        <x-fiori.sections :sections="\App\Core\Support\FioriLaunchpad::sections(\App\Core\Support\FioriLaunchpad::space($menu, $module) ?? [])" kind="page" />
+    @endif
+
     {{-- ── দ্রুত কাজ ───────────────────────────────────────────────
          সবার উপরে: মানুষ প্রায়ই ড্যাশবোর্ডে আসেন কিছু **করতে**, আর
          সংখ্যাগুলো পেরিয়ে নামতে হলে পরেরবার তিনি সোজা মেনুতে যান।

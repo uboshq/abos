@@ -1926,4 +1926,10 @@ return [
             'any' => 'Any date',
         ],
     ],
+
+    /* ⭐ The SAP look's launchpad — spaces, pages, tiles ([[FioriLaunchpad]]; owner, 20 Nov 2026) */
+    'fiori' => [
+        'my_apps' => 'My apps',
+        'apps_count' => ':count apps',
+    ],
 ];

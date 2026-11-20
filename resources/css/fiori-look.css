@@ -486,3 +486,108 @@
     height: 9px;
     margin-inline-start: 1px;
 }
+
+/* ── লঞ্চপ্যাড: স্পেসের পাতা আর হোম — ভাগ আর টালি ──────────────────────────────────────────────────────────────────────
+   ⭐ মালিক, ২০ নভেম্বর ২০২৬: SAP-এ মডিউল চাপলে সারির ড্রপডাউন নয় (ওটা Business Central-এর), আসল Fiori-র মতো স্পেসের পাতা —
+   ভাগের মাথায় মোটা শিরোনাম, নিচে টালি ([[components/fiori/sections]], [[FioriLaunchpad]])।
+   ⓘ Horizon-এর মাপ: টালি ১১rem × ১১rem (১৭৬px), কোণ ১rem, ফাঁক .৫rem, ভিতরে ১rem; নাম মোটা ১৪px, উপশিরোনাম ১৪px ধূসর-নীল;
+     চিহ্ন নিচের বাঁয়ে ২rem, সংখ্যা নিচের ডানে; ছায়া কার্ডের, চাপার আগে (hover) একটু গাঢ়। */
+:root[data-ui='tiles'] .fiori-launchpad {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+:root[data-ui='tiles'] .fiori-section-title {
+    margin: 0 0 12px;
+    color: var(--color-ink);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+:root[data-ui='tiles'] .fiori-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+:root[data-ui='tiles'] .fiori-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 176px;
+    height: 176px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--color-surface-card);
+    box-shadow: var(--fiori-shadow);
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: box-shadow 0.12s ease;
+}
+
+:root[data-ui='tiles'] a.fiori-tile[href]:hover {
+    box-shadow: 0 0 0.125rem rgb(34 53 72 / 0.2), 0 0.5rem 1rem rgb(34 53 72 / 0.15);
+}
+
+:root[data-ui='tiles'] a.fiori-tile[href]:focus-visible {
+    outline: 2px solid var(--fiori-link);
+    outline-offset: 2px;
+}
+
+:root[data-ui='tiles'] .fiori-tile.is-off {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+:root[data-ui='tiles'] .fiori-tile-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+:root[data-ui='tiles'] .fiori-tile-title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    color: var(--color-ink);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+:root[data-ui='tiles'] .fiori-tile-sub {
+    overflow: hidden;
+    color: var(--fiori-label);
+    font-size: 13px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+:root[data-ui='tiles'] .fiori-tile-foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+:root[data-ui='tiles'] .fiori-tile-icon {
+    display: inline-flex;
+    color: var(--fiori-label);
+}
+
+:root[data-ui='tiles'] .fiori-tile-kpi {
+    color: var(--color-ink);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+:root[data-ui='tiles'] .fiori-tile-kpi.is-muted {
+    color: var(--fiori-label);
+}

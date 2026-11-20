@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Engines\Dashboard\DashboardEngine;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\FioriLaunchpad;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -32,6 +33,25 @@ class ModuleDashboardController extends Controller
 
     public function show(Request $request, string $module): View
     {
+        /*
+         * ⭐ SAP রূপে স্পেসের পাতা — মডিউলের ড্যাশবোর্ড না থাকলে (বা তার চাবি না থাকলে) কেবল টালির ভাগগুলো, যাতে উপরের পটির
+         *   প্রতিটা স্পেস একটা পাতা খোলে (মালিক, ২০ নভেম্বর ২০২৬; [[FioriLaunchpad]])।
+         * ⓘ টালি মেনুর ডাটা থেকে, তাই যা মেনুতে নেই তা এখানেও নেই; মেনুতে মডিউলটাই না থাকলে নিচের আগের দরজাগুলো (৪০৪/৪০৩)
+         *   আগের মতোই উত্তর দেয়। ⛔ অন্য সব রূপে এই শাখা ছোঁয়াই হয় না — আচরণ হুবহু আগের।
+         */
+        if (FioriLaunchpad::on() && ! $this->opensBoard($request, $module)) {
+            $menu = $this->menu->forUser($request->user());
+            $space = FioriLaunchpad::space($menu, $module);
+
+            if ($space !== null) {
+                return view('dashboard.fiori-space', [
+                    'menu' => $menu,
+                    'module' => $module,
+                    'space' => $space,
+                ]);
+            }
+        }
+
         /*
          * ── কেন ৪০৪, ৫০০ নয় ─────────────────────────────────────────
          * `{module}` ঠিকানার অংশ, তাই যেকোনো লেখা আসতে পারে — পুরনো
@@ -74,5 +94,17 @@ class ModuleDashboardController extends Controller
             // ⓘ নিজের সারিতে আঁকা বোর্ড পাতায় কেবল সারিগুলো দেখায় ([[DashboardDefinition::forPage()]]); হোম ও ফোন পুরো সংজ্ঞা পড়ে
             'dashboard' => $dashboard->forPage(),
         ]);
+    }
+
+    /** এই মডিউলের ড্যাশবোর্ড আছে আর এই মানুষটা তার দরজা খুলতে পারেন কি না — নিচের আগের তিন দরজার একই প্রশ্ন, ছোড়া ছাড়া */
+    private function opensBoard(Request $request, string $module): bool
+    {
+        if (! $this->engine->has($module)) {
+            return false;
+        }
+
+        $permission = $this->engine->permissionFor($module);
+
+        return $permission !== null && (bool) $request->user()?->can($permission);
     }
 }

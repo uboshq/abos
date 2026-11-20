@@ -289,8 +289,10 @@
          ⭐ ডিফল্ট ক্রম মালিকের (১৮ নভেম্বর ২০২৬): ৮টা চার্ট → ৮টা সূচক আর টাকার বাক্স → আজ যা করতে হবে → নজরে রাখুন ও সদ্য যা
          হয়েছে। ⓘ সব রূপেই — পাতা রূপ চেনে না ([[EveryScreenObeysTheThemeTest]]); যিনি নিজে ক্রম সাজিয়েছেন তাঁর ক্রমই থাকে।
          ⓘ Dynamic রূপে আগে হোমের "রোল সেন্টার" — এই পাতার একই হিসাব, অন্য আঁকা ([[shell.dynamic.role-center]]; মালিক, ১৯ নভেম্বর
-         ২০২৬)। ⛔ নির্দেশটা `<div>`-এর ঠিক আগে, একই লাইনে — বাকি রূপে পাতার আউটপুট বাইট ধরে আগের মতো থাকে। --}}
-    @includeWhen(\App\Core\Support\DynamicLook::on(), 'components.shell.dynamic.role-center')<div data-home-units style="display: flex; flex-direction: column">
+         ২০২৬)। ⛔ নির্দেশটা `<div>`-এর ঠিক আগে, একই লাইনে — বাকি রূপে পাতার আউটপুট বাইট ধরে আগের মতো থাকে।
+         ⭐ SAP রূপে হোম = লঞ্চপ্যাড: মাথায় প্রতিটা স্পেস (মডিউল) একটা টালি, রেলের ভাগে ভাগে; নিচে আগের হোম হুবহু (মালিক, ২০ নভেম্বর
+         ২০২৬; [[FioriLaunchpad]]) — নির্দেশটা একই লাইনে, একই কারণে। --}}
+    @includeWhen(\App\Core\Support\FioriLaunchpad::on(), 'components.fiori.home', ['menu' => $menu])@includeWhen(\App\Core\Support\DynamicLook::on(), 'components.shell.dynamic.role-center')<div data-home-units style="display: flex; flex-direction: column">
 
         {{-- ── ব্যবসার চিত্র — ৮টা চার্ট, ৪টা করে দুই সারি, শুরুর পর্দাতেই ── --}}
         <div data-home-unit="pictures" style="order: {{ $layout->position('pictures') }}">

@@ -39,6 +39,11 @@
          ⓘ কোম্পানি আর শাখা ওপরের পট্টিতে আগেই আছে, তাই এখানে আবার নয়। [[TheDashboardWearsTheSamplesColoursTest]] পাহারা দেয়। --}}
 
 
+    {{-- ⭐ SAP রূপে এই পাতাই স্পেসের পাতা — মাথায় মেনুর ভাগ আর টালি, নিচে ড্যাশবোর্ড হুবহু (মালিক, ২০ নভেম্বর ২০২৬; [[FioriLaunchpad]]) --}}
+    @if (\App\Core\Support\FioriLaunchpad::on())
+        <x-fiori.sections :sections="\App\Core\Support\FioriLaunchpad::sections(\App\Core\Support\FioriLaunchpad::space($menu, $module) ?? [])" kind="page" />
+    @endif
+
     <div data-dashboard-v2 class="flex flex-col gap-4">
 
         {{-- ── কাজের বোতাম ─────────────────────────────────────────── --}}
