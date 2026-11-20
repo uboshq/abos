@@ -92,6 +92,36 @@ final class MoneyIsTakenOnTheReceiptVoucherTest extends TestCase
             '⛔ বাতিল কাগজেও "বাতিল করুন" বোতাম।');
     }
 
+    /**
+     * ⛔ ২০ নভেম্বর ২০২৬ লাইভে: COL-0007-এর অনুমোদন প্রত্যাখ্যাত, অথচ কাগজটা "খসড়া" হয়ে ঝুলে রইল। সইয়ের পাতা বলে প্রত্যাখ্যান চূড়ান্ত —
+     *   তাই খসড়া আদায় নিজেই বাতিল, কারণে অনুরোধের নম্বর; ফেরত পাঠালে (সংশোধনে) খসড়াই থাকে, লেখক ঠিক করবেন।
+     */
+    public function test_a_rejected_collection_is_cancelled_and_a_returned_one_stays_a_draft(): void
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+        $make = fn () => app(\App\Modules\Sales\Services\CollectionService::class)->create(
+            ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'), 'trx_date' => now()->toDateString(), 'amount' => '4000',
+                'account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::CASH_IN_HAND)->id],
+            [],
+        );
+        $decide = fn (\App\Modules\Sales\Models\Collection $c, string $status) => event(new \App\Core\Events\ApprovalDecided(
+            publicId: 'test-'.$c->id.'-'.$status,
+            payload: ['approval_id' => 9000 + $c->id, 'status' => $status, 'module' => 'sales', 'action' => 'collection',
+                'approvable_type' => $c->getMorphClass(), 'approvable_id' => (int) $c->id],
+            companyId: (int) $c->company_id,
+        ));
+
+        $rejected = $make();
+        $decide($rejected, \App\Models\Approval::REJECTED);
+        $rejected->refresh();
+        $this->assertSame(\App\Core\Support\DocumentStatus::CANCELLED, $rejected->status, '⛔ প্রত্যাখ্যাত আদায় খসড়া হয়ে ঝুলে রইল।');
+        $this->assertStringContainsString('#'.(9000 + $rejected->id), (string) $rejected->cancel_reason, '⛔ বাতিলের কারণে অনুরোধের নম্বর নেই।');
+
+        $returned = $make();
+        $decide($returned, \App\Models\Approval::RETURNED);
+        $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, $returned->refresh()->status, '⛔ সংশোধনে ফেরত পাঠানো আদায় বাতিল হয়ে গেল — লেখক আর ঠিক করতে পারবেন না।');
+    }
+
     public function test_the_collections_written_before_can_be_found_from_the_menu(): void
     {
         $rows = collect(app(MenuBuilder::class)->forUser($this->owner))->firstWhere('code', 'sales')['groups'] ?? [];

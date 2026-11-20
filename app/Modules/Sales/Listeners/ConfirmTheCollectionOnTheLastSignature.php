@@ -29,7 +29,9 @@ final class ConfirmTheCollectionOnTheLastSignature
 
     public function handle(ApprovalDecided $event): void
     {
-        if (($event->payload['status'] ?? null) !== Approval::APPROVED) {
+        $status = $event->payload['status'] ?? null;
+
+        if ($status !== Approval::APPROVED && $status !== Approval::REJECTED) {
             return;
         }
 
@@ -43,6 +45,21 @@ final class ConfirmTheCollectionOnTheLastSignature
 
         // ⓘ খসড়া থাকলেই — একই সই দুইবার এলে বা কেউ হাতে আগেই পাকা করলে কিছুই নয়
         if ($collection === null || $collection->status !== DocumentStatus::DRAFT) {
+            return;
+        }
+
+        /*
+         * ⭐ প্রত্যাখ্যান চূড়ান্ত — খসড়া আদায় নিজেই বাতিল, কারণসহ (মালিক, ২০ নভেম্বর ২০২৬)। ⓘ সইয়ের পাতা আগেই বলে "প্রত্যাখ্যান চূড়ান্ত —
+         *   কাগজটা আর এগোবে না; ঠিক করে আবার পাঠাতে চাইলে সংশোধনে ফেরত দিন"; অথচ COL-0007 প্রত্যাখ্যানের পরেও "খসড়া" হয়ে তালিকায়
+         *   ঝুলে ছিল, আর মালিক বাদ দেওয়ার পথ খুঁজে পাননি। ⓘ খসড়ায় খাতায় কিছু ওঠেনি, তাই বাতিলে কোনো উল্টো দাখিলা নেই; কাগজ মোছে না,
+         *   "বাতিল" হয়ে ইতিহাসে থাকে (হাতের বাতিলের একই দরজা, [[CollectionService::cancel()]])।
+         */
+        if ($status === Approval::REJECTED) {
+            $this->collections->cancel(
+                Collection::query()->withoutGlobalScope('user-branch')->findOrFail($collection->getKey()),
+                (string) __('sales::collection_rules.rejected_reason', ['id' => (int) ($event->payload['approval_id'] ?? 0)]),
+            );
+
             return;
         }
 

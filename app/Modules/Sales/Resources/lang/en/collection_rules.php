@@ -23,6 +23,7 @@ return [
     'attachment_required' => 'This company requires the slip, advice or screenshot on a collection — attach it first.',
     'other_branch_account' => 'The money account belongs to another branch — a collection sits in the customer\'s branch, and inter-branch posting is not switched on yet (awaiting the owner\'s decision).',
     'second_person_cancels' => 'You cannot reverse a posted collection you made yourself — a second person reverses it, with the reason.',
+    'rejected_reason' => 'Approval rejected (request #:id)',
     'unknown_transfer_mode' => 'Unknown transfer mode — choose one from the setup list.',
     'rounding_awaiting' => 'Rounding ৳:amount — above ৳:free, so it needs the owner\'s approval; the request is sent. The collection stays a draft; once the owner approves it reaches the books by itself, and you are told if anything stops it.',
     'rounding_no_signer' => 'Rounding ৳:amount — rounding above ৳:free needs the owner\'s approval, and nobody is set to approve (the discount approval flow is off or missing). Round by ৳:free at most, or switch the flow on.',
