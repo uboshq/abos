@@ -18,7 +18,8 @@
             <a href="{{ route('sales.claim.match.index') }}" class="text-(--color-brand-500) hover:underline" data-go-match>{{ __('sales::deposit.go_match') }}</a>
         @endcan
     @endif
-    @if ($claim->isAccepted() && $claim->collection_id !== null)
+    {{-- ⓘ নতুন খবরে রসিদ ভাউচার, ২০ নভেম্বর ২০২৬-এর আগের খবরে আদায় — দুটোরই মানি রিসিট --}}
+    @if ($claim->isAccepted() && ($claim->voucher_id !== null || $claim->collection_id !== null))
         <a href="{{ route('sales.claim.receipt', $claim) }}" target="_blank" class="text-(--color-brand-500) hover:underline" data-deposit-receipt>{{ __('sales::deposit.receipt_title') }}</a>
     @endif
 </span>

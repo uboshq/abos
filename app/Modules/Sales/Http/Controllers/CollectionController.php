@@ -13,25 +13,14 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Sales\Http\Requests\CollectionRequest;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Core\Engines\Attachment\AttachmentEngine;
-use App\Core\Engines\Overview\ConfirmOverview;
-use App\Core\Support\DateFormat;
-use App\Core\Support\Money;
-use App\Modules\MasterData\Models\TransferMode;
-use App\Modules\Sales\Services\CollectionOpenItems;
-use App\Modules\Sales\Services\CollectionPreview;
 use App\Modules\Sales\Services\CollectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -40,6 +29,11 @@ use Illuminate\View\View;
 
 /**
  * আদায় — পর্দা।
+ *
+ * ⭐ মালিক, ২০ নভেম্বর ২০২৬ (চূড়ান্ত — "one money-in paper"): গ্রাহকের টাকা ঢোকে কেবল দুই দরজায় — কাউন্টারের সরাসরি বিক্রির রসিদ আর
+ * হিসাবের রসিদ ভাউচার (RCV-…); "টাকা জমার খবর" কেবল খবর, গৃহীত হলে রসিদ ভাউচার হয় ([[DepositClaimService::accept()]])। আদায়ের কাগজ
+ * (COL-…) আর লেখা যায় না: নতুন/বদলের ঠিকানা রসিদের পর্দায় যায়, লেখার দরজা কারণসহ ফেরায়। ⓘ আগের কাগজ তালিকায়, পাতায়, ছাপায় থাকে;
+ * বাতিল আর চেক-ফেরত আগের মতোই।
  */
 class CollectionController extends Controller implements HasMiddleware
 {
@@ -51,7 +45,6 @@ class CollectionController extends Controller implements HasMiddleware
     public function __construct(
         private readonly CollectionService $service,
         private readonly MenuBuilder $menu,
-        private readonly CollectionOpenItems $openItems,
     ) {}
 
     public static function middleware(): array
@@ -162,92 +155,46 @@ class CollectionController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function create(Request $request): View
+    /**
+     * ⭐ টাকা ঢোকার কাগজ একটাই — হিসাবের রসিদ ভাউচার (মালিক, ২০ নভেম্বর ২০২৬, চূড়ান্ত: "one money-in paper")।
+     *
+     * ⓘ পুরনো ঠিকানা (`/sales/collections/create`, বুকমার্ক, পুরনো লিংক) রসিদের পর্দায় পাঠায়, গ্রাহক ভরা; বিল ধরে এলে বিল আর
+     * বকেয়াও ভরা — গ্রাহক আর বিলের তালিকার "⋯ → টাকা নিন"-এর একই ঠিকানা। কারণটা উপরে নোটিশে। ⛔ আদায়ের ফর্ম আর আঁকা হয় না।
+     * ⓘ আগের আদায়ের কাগজ (COL-…) দেখা, ছাপা, বাতিল আর চেক-ফেরত আগের মতোই ([[index()]], [[show()]], [[cancel()]], [[bounceCheque()]])।
+     */
+    public function create(Request $request): RedirectResponse
     {
         $invoice = $this->chosenInvoice($request);
         $customer = $invoice?->customer ?? $this->chosenCustomer($request->query('customer'));
 
-        return view('sales::collection.form', [
-            'menu' => $this->menu->forUser($request->user()),
-            'collection' => new Collection(['trx_date' => now()->toDateString(), 'customer_id' => $customer?->id]),
-            'invoice' => $invoice,
-            'open' => $customer === null ? null : $this->openItems->for($customer),
-            ...$this->formData(),
-        ]);
+        return $this->toTheReceipt($customer?->id, $invoice);
     }
 
-    /**
-     * ⭐ টাকা নেওয়া — খসড়া রাখুন, নয়তো পোস্ট (নকশা ১০০-এর নিচের পট্টি; ২১ অক্টোবর ২০২৬)।
-     *
-     * ⓘ "পোস্ট" (`post=1`) একই চাপে খসড়া লেখে আর খাতায় তোলে — নিশ্চিতের আগে সারাংশের পপ-আপ দেখে ([[overviewNew()]])।
-     * ⓘ পোস্ট আটকালে (ছাড়ে মালিকের সই, মাস বন্ধ, রেফারেন্স ছাড়া) কাগজ খসড়া হয়ে থাকে, পাতায় কারণ লেখা — টাইপ করা কিছু হারায় না।
-     */
-    public function store(CollectionRequest $request): RedirectResponse
+    /** ⛔ নতুন আদায় লেখা হয় না — রসিদের পর্দায়, কারণসহ; কিছুই লেখা হয় না (মালিক, ২০ নভেম্বর ২০২৬) */
+    public function store(Request $request): RedirectResponse
     {
-        $document = $this->service->createFrom($request->collectionInput());
-
-        $this->keepSlip($request, $document);
-
-        if ($request->input('post') === '1') {
-            return $this->post($document);
-        }
-
         return redirect()
-            ->route('sales.collection.show', $document)
-            ->with('saved', __('sales::message.collection_created'));
+            ->route('accounts.voucher.create', ['type' => 'receipt'])
+            ->withErrors(['collection' => __('sales::collection_rules.no_new_collection')])
+            ->with('warning', __('sales::collection_rules.no_new_collection'));
     }
 
-    /** ⭐ গ্রাহকের খোলা বিল ও ক্রেডিট — দফা ১, ৩ ([[CollectionOpenItems]]) */
+    /** ⛔ নতুন আদায়ের ফর্মের সাহায্যকারী — আর নেই (রসিদের পর্দার নিজের খোলা বিল আছে) */
     public function openItems(Request $request): JsonResponse
     {
-        $customer = $this->chosenCustomer($request->query('customer'));
-
-        abort_if($customer === null, 404);
-
-        return response()->json($this->openItems->for($customer));
+        return $this->refusedJson();
     }
 
-    /** ⭐ খাতায় যা যাবে — দফা ১০; কিছুই লেখে না ([[CollectionPreview]]) */
-    public function preview(CollectionRequest $request, CollectionPreview $preview): JsonResponse
+    /** ⛔ নতুন আদায়ের প্রিভিউ — আর নেই; কিছুই লেখে না, কিছুই দেখায় না */
+    public function preview(Request $request): JsonResponse
     {
-        return response()->json($preview->of($request->collectionInput()));
+        return $this->refusedJson();
     }
 
-    /**
-     * ⭐ নতুন আদায়ের নিশ্চিত-সারাংশ — পপ-আপের ভিতর ([[confirm-overview.js]]), খাতার লাইনসহ। কাগজ তখনো লেখা হয়নি, তাই ফর্মের
-     * ঘর থেকে; প্রিভিউর একই হিসাব।
-     */
-    public function overviewNew(CollectionRequest $request, CollectionPreview $preview): View
+    /** ⛔ নতুন আদায়ের নিশ্চিত-সারাংশ — আর নেই */
+    public function overviewNew(Request $request): JsonResponse
     {
-        $in = $request->collectionInput();
-        $facts = $preview->of($in);
-        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)->find($in->customerId); // ⓘ পিকারের ছাঁকনি; নাগালের বাইরের গ্রাহক অনুরোধেই ফেরে (CollectionRequest)
-
-        $o = ConfirmOverview::titled(__('sales::collection_form.overview_title'))
-            ->head(__('sales::field.customer'), $customer?->nameWithPoint())
-            ->head(__('sales::field.date'), DateFormat::format($in->trxDate));
-
-        foreach ($facts['lines'] as $line) {
-            $o->line($line['account'], [$line['branch']], bccomp($line['dr'], '0', 4) > 0
-                ? __('sales::collection_form.dr').' '.Money::format($line['dr'])
-                : __('sales::collection_form.cr').' '.Money::format($line['cr']));
-        }
-
-        $o->total(__('sales::collection_form.total'), Money::format($facts['total_dr']), strong: true);
-
-        if (bccomp($facts['unapplied'], '0', 4) > 0) {
-            $o->money(__('sales::collection_form.unapplied'), Money::format($facts['unapplied']));
-        }
-
-        foreach ($facts['stops'] as $message) {
-            $o->note($message, 'stop');
-        }
-
-        if ($facts['needs_signature']) {
-            $o->note(__('sales::collection_form.owner_signs'), 'warn');
-        }
-
-        return view('ui.confirm-overview-body', ['overview' => $o->toArray()]);
+        return $this->refusedJson();
     }
 
     public function show(Request $request, Collection $collection): View
@@ -260,71 +207,66 @@ class CollectionController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function edit(Request $request, Collection $collection): View
+    /**
+     * ⛔ আদায়ের কাগজ আর বদলানো হয় না — রসিদের পর্দায়, সেই গ্রাহক ভরা (মালিক, ২০ নভেম্বর ২০২৬)। ⓘ খসড়া আদায় বাতিল করা যায়
+     * ([[cancel()]]); টাকাটা তখন রসিদে নেওয়া হয়।
+     */
+    public function edit(Request $request, Collection $collection): RedirectResponse
     {
-        $collection->load(['lines.invoice', 'applications', 'customer']);
-
-        return view('sales::collection.form', [
-            'menu' => $this->menu->forUser($request->user()),
-            'collection' => $collection,
-            'invoice' => null,
-            'open' => $collection->customer === null ? null : $this->openItems->for($collection->customer),
-            ...$this->formData(),
-        ]);
+        return $this->toTheReceipt($collection->customer_id === null ? null : (int) $collection->customer_id, null);
     }
 
-    public function update(CollectionRequest $request, Collection $collection): RedirectResponse
+    /** ⛔ বদল নয় — কাগজের পাতায় ফেরত, কারণসহ; কিছুই বদলায় না */
+    public function update(Request $request, Collection $collection): RedirectResponse
     {
-        $this->service->updateFrom($collection, $request->collectionInput());
-
-        $this->keepSlip($request, $collection);
-
-        if ($request->input('post') === '1') {
-            return $this->post($collection->fresh());
-        }
-
-        return redirect()
-            ->route('sales.collection.show', $collection)
-            ->with('saved', __('sales::message.collection_updated'));
+        return $this->refusedOn($collection);
     }
 
+    /**
+     * ⛔ হাতে পাকা করা নয় — কাগজের পাতায় ফেরত, কারণসহ (মালিক, ২০ নভেম্বর ২০২৬)।
+     * ⓘ আগে সইয়ে পাঠানো খসড়া শেষ সইয়ে নিজের পুরনো পথে পাকা হয় ([[\App\Modules\Sales\Listeners\ConfirmTheCollectionOnTheLastSignature]]);
+     * না চাইলে বাতিল করুন।
+     */
     public function confirm(Collection $collection): RedirectResponse
     {
-        $this->service->confirm($collection);
+        return $this->refusedOn($collection);
+    }
 
+    /**
+     * রসিদ ভাউচারের পর্দা — গ্রাহক, আর বিল ধরে এলে বিল ও তার বকেয়া ভরা ([[\App\Modules\Accounts\Http\Controllers\VoucherController::prefill()]]-এর
+     * সাদা তালিকার ঘর)।
+     */
+    private function toTheReceipt(?int $customerId, ?SalesInvoice $invoice): RedirectResponse
+    {
+        $due = $invoice === null ? null
+            : SalesInvoice::query()->withCollected()->whereKey($invoice->id)->first()?->dueAmount();
+
+        return redirect()
+            ->route('accounts.voucher.create', array_filter([
+                'type' => 'receipt',
+                'party_type' => $customerId === null ? null : 'customer',
+                'party_id' => $customerId,
+                'against_type' => $invoice === null ? null : SalesInvoice::drillSourceType(),
+                'against_id' => $invoice?->id,
+                'amount' => $due !== null && bccomp($due, '0', 4) > 0 ? $due : null,
+            ], fn ($v) => $v !== null))
+            ->with('warning', __('sales::collection_rules.now_on_receipt'));
+    }
+
+    private function refusedOn(Collection $collection): RedirectResponse
+    {
         return redirect()
             ->route('sales.collection.show', $collection)
-            ->with('saved', __('sales::message.collection_confirmed'));
+            ->withErrors(['collection' => __('sales::collection_rules.no_new_collection')])
+            ->with('warning', __('sales::collection_rules.no_new_collection'));
     }
 
-    /** খসড়া লেখা হয়ে গেছে — এবার খাতায়; আটকালে খসড়ার পাতায় কারণসহ (টাইপ করা কিছু হারায় না) */
-    private function post(Collection $document): RedirectResponse
+    private function refusedJson(): JsonResponse
     {
-        try {
-            $this->service->confirm($document);
-        } catch (ValidationException $stopped) {
-            return redirect()
-                ->route('sales.collection.show', $document)
-                ->withErrors($stopped->errors())
-                ->with('saved', __('sales::message.collection_created'));
-        }
-
-        return redirect()
-            ->route('sales.collection.show', $document)
-            ->with('saved', __('sales::message.collection_confirmed'));
-    }
-
-    /** ⭐ দফা ১৫ — স্লিপ/অ্যাডভাইস/স্ক্রিনশট, কাগজের সাথে ([[AttachmentEngine]], স্লিপের ধরন, ৫ MB) */
-    private function keepSlip(Request $request, Collection $document): void
-    {
-        $file = $request->file('slip');
-
-        if (! $file instanceof UploadedFile) {
-            return;
-        }
-
-        app(AttachmentEngine::class)->store($file, 'sales', Collection::drillSourceType(), (int) $document->id,
-            maxBytes: AttachmentEngine::SLIP_MAX_BYTES, only: AttachmentEngine::SLIP);
+        return response()->json([
+            'message' => __('sales::collection_rules.no_new_collection'),
+            'errors' => ['collection' => [__('sales::collection_rules.no_new_collection')]],
+        ], 422);
     }
 
     /** গ্রাহক — নাগালে থাকলে: হেডারে বাছা শাখার (পিকারের একই ছাঁকনি; Customer-এ শাখার গ্লোবাল স্কোপ ইচ্ছা করেই নেই, ফোনের open-bills-ও তাই), তার উপরে ডিলারের নিয়ম */
@@ -411,51 +353,6 @@ class CollectionController extends Controller implements HasMiddleware
             ->where('status', DocumentStatus::CONFIRMED)
             ->with('customer')
             ->find($id);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function formData(): array
-    {
-        $mine = \App\Modules\Accounts\Models\CashTill::query()->heldBy((int) auth()->id())->pluck('account_id')
-            ->map(fn ($id) => (int) $id)->all();
-
-        // ⭐ জের-থাকা নিষ্ক্রিয় গ্রাহকও — বকেয়া রেখে বন্ধ দোকানের টাকা আদায়ের পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
-        // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; একবারে, সারি ধরে নয় ([[Customer::PLACE]])
-        $customers = Customer::query()->inViewedBranch()->activeOrOwing()->with(Customer::PLACE)->orderBy('name_en')->get();
-
-        return [
-            'customers' => $customers,
-            /*
-             * ⭐ গ্রাহকের পিকারের সারি — নাম, আর তার নিচের ছোট লাইনে পয়েন্ট · শাখা (x-ui.party-search stacked; fe, ২৪ অক্টোবর ২০২৬):
-             * সাধারণ select বন্ধ অবস্থায় "নাম · পয়েন্ট · শাখা" তীরের নিচে কাটত। খোঁজা যায় নাম, পয়েন্ট, শাখা আর কোডে।
-             * ⓘ নিষ্ক্রিয়-কিন্তু-জের-থাকা গ্রাহকের নামে আগের মতোই চিহ্ন ([[Customer::pickerName()]])।
-             */
-            'customerRows' => $customers->map(fn (Customer $c): array => [
-                'id' => (int) $c->id,
-                'label' => $c->is_active ? $c->name() : $c->name().' — '.__('core.inactive_with_balance'),
-                'hint' => (string) ($c->placeName() ?? ''),
-                'find' => mb_strtolower(trim($c->name().' '.($c->placeName() ?? '').' '.$c->code)),
-            ])->values()->all(),
-            // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
-            // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
-            'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()
-                ->whereIn('code', StandardChart::MONEY_PARENTS)
-                ->orWhereIn('parent_id', Account::query()
-                    ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
-                ->select('id'))
-                ->orderBy('code')->get()
-                // ⭐ নিজের হাতের নগদ আগে — যিনি টাকা নিচ্ছেন তাঁর টিল (a5-র চুক্তি; [[CashTill::mayUse()]]), তারপর কোড ধরে
-                ->sortBy(fn (Account $a) => [in_array((int) $a->id, $mine, true) ? 0 : 1, (string) $a->code])
-                ->values(),
-            // ⭐ ব্যাংক ট্রান্সফারের মোড — BEFTN · NPSB · RTGS (cb-র x-money.method)
-            'transferModes' => TransferMode::query()->active()->orderBy('code')->get()
-                ->mapWithKeys(fn (TransferMode $m) => [$m->id => $m->name()])->all(),
-            // ⓘ এই কোম্পানিতে আদায়ে সই চালু কি না — নিয়ন্ত্রণের ঘরের প্রথম লাইন
-            'collectionSigned' => \App\Models\ApprovalFlow::query()->where('module', 'sales')->where('action', 'collection')
-                ->where('is_active', true)->exists(),
-        ];
     }
 
     /**

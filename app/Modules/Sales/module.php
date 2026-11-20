@@ -117,6 +117,9 @@ return [
 
         // ⭐ সইয়ে আটকে থাকা কাউন্টারের বিক্রি এক পাতায়, এক ক্লিকে নিশ্চিত (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\ApprovalBundles::class => \App\Modules\Sales\Services\CounterSaleBundle::class,
+
+        // ⭐ রসিদের তালিকায় আগের আদায় (COL-…), কেবল দেখা — টাকা ঢোকার কাগজ একটাই, রসিদ (মালিক, ২০ নভেম্বর ২০২৬)
+        \App\Core\Contracts\OldReceiptPapers::class => \App\Modules\Sales\Services\SalesOldCollections::class,
     ],
 
     'menu' => [
@@ -954,7 +957,13 @@ return [
             // ⭐ জমার খবরের আদায় পাকা — খবর "খাতায়" (ধাপ গ, ১৮ নভেম্বর ২০২৬)
             \App\Modules\Sales\Listeners\SettleTheClaimWithItsCollection::class,
         ],
-        \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
+        \App\Modules\Accounts\Events\VoucherPosted::class => [
+            \App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class,
+            // ⭐ জমার খবরের রসিদ ভাউচার পাকা — খবর "খাতায়" (মালিক, ২০ নভেম্বর ২০২৬: খবরের টাকা রসিদে, আদায়ে নয়)
+            \App\Modules\Sales\Listeners\SettleTheClaimWithItsReceipt::class,
+        ],
+        // ⓘ খবরের অপেক্ষার রসিদ হিসাব থেকে বাতিল — খবর আবার রসিদহীন ([[SettleTheClaimWithItsReceipt]])
+        \App\Modules\Accounts\Events\VoucherCancelled::class => [\App\Modules\Sales\Listeners\SettleTheClaimWithItsReceipt::class],
         \App\Modules\Accounts\Events\ChequeCleared::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Core\Events\ApprovalDecided::class => [
             \App\Modules\Sales\Listeners\FinishTheHeldSaleOnTheLastSignature::class,

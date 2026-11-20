@@ -5,16 +5,8 @@
     <x-slot:header>
         <x-ui.page-header :title="$collection->document_no" :subtitle="$collection->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
-                @can('update', $collection)
-                    <x-ui.edit-button tone="secondary" :paper="$collection" :href="route('sales.collection.edit', $collection)">
-                        {{ __('core.action.edit') }}
-                    </x-ui.edit-button>
-
-                    <form id="confirm" method="POST" action="{{ route('sales.collection.confirm', $collection) }}" data-confirm-overview="{{ route('sales.collection.overview', $collection) }}">
-                        @csrf
-                        <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('sales::action.confirm') }}</x-ui.button>
-                    </form>
-                @endcan
+                {{-- ⛔ সম্পাদনা আর নিশ্চিত নেই — আদায়ের কাগজ আর লেখা বা বদলানো যায় না, টাকা হিসাবের রসিদ ভাউচারে (মালিক, ২০ নভেম্বর ২০২৬);
+                     আগের কাগজ দেখা, ছাপা, বাতিল আগের মতোই। সইয়ে পাঠানো খসড়া শেষ সইয়ে নিজের পথে পাকা হয়। --}}
                 {{-- ⭐ "বাতিল করুন" মাথার বোতামের সারিতে — মালিক, ২০ নভেম্বর ২০২৬: ভুল শাখার খসড়া (COL-0006) বাদ দেওয়ার "অপশনই পাইতেছি না";
                      ফর্মটা পাতার একদম নিচে বন্ধ বাক্সে ছিল। চাপলে সেই ফর্মটাই খোলা অবস্থায় আসে — কারণ লেখা বাধ্যতামূলক থাকে --}}
                 @can('delete', $collection)

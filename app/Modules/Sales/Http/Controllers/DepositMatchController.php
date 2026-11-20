@@ -52,7 +52,7 @@ class DepositMatchController extends Controller implements HasMiddleware
         $suggestedIds = array_map(fn (array $p) => (int) $p['claim']->id, $suggested);
 
         $matched = DepositClaim::query()->inViewedBranch()->open()->whereNotNull('statement_line_id')
-            ->with(['customer.location.parent', 'customer.branch', 'statementLine.bankAccount', 'matcher', 'collection'])
+            ->with(['customer.location.parent', 'customer.branch', 'statementLine.bankAccount', 'matcher', 'collection', 'voucher'])
             ->orderBy('claimed_on')->orderBy('id')->limit(200)->get();
 
         $waiting = $this->matches->waitingClaims()
@@ -141,21 +141,21 @@ class DepositMatchController extends Controller implements HasMiddleware
     public function receipt(Request $request, DepositClaim $claim, PrintEngine $print): Response
     {
         $this->inView($claim);
-        abort_unless($claim->isAccepted() && $claim->collection_id !== null, 404);
+        abort_unless($claim->isAccepted() && ($claim->voucher_id !== null || $claim->collection_id !== null), 404);
 
-        $claim->load(['customer.location.parent', 'customer.branch', 'collection.account', 'statementLine', 'submitter', 'decider', 'matcher']);
-        $collection = $claim->collection;
-        abort_if($collection === null, 404);
+        $claim->load(['customer.location.parent', 'customer.branch', 'collection.account', 'voucher.lines.account', 'statementLine', 'submitter', 'decider', 'matcher']);
+        $paper = $this->paperOf($claim);
+        abort_if($paper === null, 404);
 
-        $amount = (string) $collection->amount;
+        $amount = $paper['amount'];
 
         $doc = new PrintableDocument(
             title: __('sales::deposit.receipt_title'),
             meta: array_filter([
-                'sales::deposit.receipt_no' => (string) $collection->document_no,
-                'core.print.date' => DateFormat::format($collection->trx_date),
+                'sales::deposit.receipt_no' => $paper['no'],
+                'core.print.date' => DateFormat::format($paper['date']),
                 'sales::field.customer' => (string) $claim->customer?->nameWithPoint(),
-                'sales::field.account' => (string) $collection->account?->name(),
+                'sales::field.account' => $paper['account'],
                 'sales::portal.reference' => (string) ($claim->reference ?? ''),
                 'sales::slip.depositor' => (string) ($claim->depositor ?? ''),
                 'sales::deposit.bank_date' => $claim->statementLine === null ? '' : DateFormat::format($claim->statementLine->trx_date),
@@ -169,25 +169,65 @@ class DepositMatchController extends Controller implements HasMiddleware
                 'amount' => Money::format($amount),
             ]],
             totals: array_filter([
-                'sales::field.bank_charge' => bccomp((string) ($collection->bank_charge ?? '0'), '0', 4) > 0 ? Money::format($collection->bank_charge) : '',
+                'sales::field.bank_charge' => bccomp($paper['charge'], '0', 4) > 0 ? Money::format($paper['charge']) : '',
                 'core.print.total' => Money::format($amount),
             ], fn (string $v) => $v !== ''),
             signatures: ['core.print.prepared_by', 'core.print.approved_by'],
-            narration: $collection->narration,
+            narration: $paper['narration'],
         );
 
         $locale = \App\Core\Support\PaperLanguage::for($claim->customer);
         $pdf = $print->render(
             template: 'print.document',
-            data: ['doc' => $doc->withWordsFor($amount, $locale), 'title' => $doc->title.' '.$collection->document_no],
+            data: ['doc' => $doc->withWordsFor($amount, $locale), 'title' => $doc->title.' '.$paper['no']],
             paper: PaperSize::A5,
             locale: $locale,
         );
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$collection->document_no.'.pdf"',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$paper['no'].'.pdf"',
         ]);
+    }
+
+    /**
+     * ⭐ খাতায় তোলার কাগজ — নতুন খবরে রসিদ ভাউচার (RCV-…), ২০ নভেম্বর ২০২৬-এর আগের খবরে তার আদায় (COL-…)।
+     * ⓘ অঙ্ক দুই কাগজেই "যা পাঠানো হলো" (ব্যাংকে এসেছে + চার্জ); খাত — টাকা যে খাতে ঢুকল; কাগজটা পাকা না হলে রিসিট নয়।
+     *
+     * @return array{no: string, date: mixed, account: string, amount: string, charge: string, narration: ?string}|null
+     */
+    private function paperOf(DepositClaim $claim): ?array
+    {
+        if ($claim->voucher_id !== null) {
+            $voucher = $claim->voucher;
+
+            if ($voucher === null || ! $voucher->isPosted() || $voucher->isCancelled()) {
+                return null;
+            }
+
+            $money = $voucher->lines->first(fn ($line) => $line->account !== null && $line->account->money_kind !== null
+                && bccomp((string) $line->debit, '0', 4) > 0)?->account;
+
+            return [
+                'no' => (string) $voucher->document_no,
+                'date' => $voucher->trx_date,
+                'account' => (string) $money?->name(),
+                'amount' => (string) $voucher->amount,
+                'charge' => (string) ($voucher->charge_amount ?? '0'),
+                'narration' => $voucher->narration,
+            ];
+        }
+
+        $collection = $claim->collection;
+
+        return $collection === null ? null : [
+            'no' => (string) $collection->document_no,
+            'date' => $collection->trx_date,
+            'account' => (string) $collection->account?->name(),
+            'amount' => (string) $collection->amount,
+            'charge' => (string) ($collection->bank_charge ?? '0'),
+            'narration' => $collection->narration,
+        ];
     }
 
     /** ⛔ দেখা শাখার বাইরের খবর — ৪০৪ (শাখার দেয়াল) */

@@ -40,4 +40,7 @@ return [
         '5211' => 'Mobile Banking Charges',
         '5305' => 'Rounding Difference',
     ],
+    // ⭐ One money-in paper — the receipt voucher (owner, 20 Nov 2026); collections stay only to view, print and cancel
+    'now_on_receipt' => 'Collections are now taken on the receipt — take the customer\'s money on the Accounts receipt voucher. Earlier collections can still be viewed, printed and cancelled.',
+    'no_new_collection' => 'A collection can no longer be written or changed — take the customer\'s money on the Accounts receipt voucher. Earlier collections can only be viewed, printed and cancelled.',
 ];

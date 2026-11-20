@@ -66,7 +66,8 @@ final class DepositRegisterReport
                     'drill' => ['route' => 'sales.claim.index', 'params' => ['status' => '=all', 'q' => 'customer_code']]],
                 ['key' => 'confirmed_amount', 'label' => 'sales::deposit.confirmed_amount', 'type' => ReportColumn::MONEY, 'total' => true,
                     // ⓘ আদায়ের কাগজ নিজের দেখার নিয়মে খোলে ([[DrillResolver]]) — জমার খাতার চাবি আদায়ের তালিকা খুলে দেয় না
-                    'drill' => ['source' => ['type' => 'collection_type', 'id' => 'collection_id']]],
+                    // ⓘ নতুন খবরে রসিদ ভাউচার, ২০ নভেম্বর ২০২৬-এর আগের খবরে আদায় — সারি নিজেই বলে কোনটা
+                    'drill' => ['source' => ['type' => 'paper_type', 'id' => 'paper_id']]],
                 ['key' => 'waiting_amount', 'label' => 'sales::deposit.waiting_amount', 'type' => ReportColumn::MONEY, 'total' => true,
                     'drill' => ['route' => 'sales.claim.index', 'params' => ['status' => '=pending', 'q' => 'customer_code']]],
             ],
@@ -78,7 +79,7 @@ final class DepositRegisterReport
     {
         return "CASE WHEN {$a}.status = '".DepositClaim::ACCEPTED."' THEN '".DepositClaim::STAGE_CONFIRMED."'"
             ." WHEN {$a}.status = '".DepositClaim::REJECTED."' THEN '".DepositClaim::STAGE_REJECTED."'"
-            ." WHEN {$a}.collection_id IS NOT NULL THEN '".DepositClaim::STAGE_AWAITING."'"
+            ." WHEN {$a}.voucher_id IS NOT NULL OR {$a}.collection_id IS NOT NULL THEN '".DepositClaim::STAGE_AWAITING."'"
             ." WHEN {$a}.statement_line_id IS NOT NULL THEN '".DepositClaim::STAGE_MATCHED."'"
             ." ELSE '".DepositClaim::STAGE_REPORTED."' END";
     }
@@ -98,11 +99,18 @@ final class DepositRegisterReport
 
         $status = $f['status'] ?? null;
 
+        // ⓘ খাতায় উঠেছে — খবর গৃহীত আর তার কাগজ পাকা: নতুন খবরে রসিদ (v), পুরনোয় আদায় (col)
+        $accepted = "dc.status = '".DepositClaim::ACCEPTED."'";
+        $inVoucher = "{$accepted} AND v.id IS NOT NULL AND v.deleted_at IS NULL AND v.status IN ({$posted})";
+        $inCollection = "{$accepted} AND col.status IN ({$posted})";
+
         return DB::table('sal_deposit_claims as dc')
             ->join('customers as c', 'c.id', '=', 'dc.customer_id')
             ->leftJoin('accounts as a', 'a.id', '=', 'dc.bank_account_id')
             ->leftJoin('acc_bank_statement_lines as l', 'l.id', '=', 'dc.statement_line_id')
             ->leftJoin('sal_collections as col', 'col.id', '=', 'dc.collection_id')
+            // ⭐ খবরের রসিদ ভাউচার (মালিক, ২০ নভেম্বর ২০২৬) — পাকা হলে তবেই "খাতায় উঠেছে"
+            ->leftJoin('vouchers as v', 'v.id', '=', 'dc.voucher_id')
             ->leftJoin('users as u', 'u.id', '=', 'dc.submitted_by')
             ->where('dc.company_id', $f['company_id'])
             ->whereNull('dc.deleted_at')
@@ -118,17 +126,18 @@ final class DepositRegisterReport
             ->selectRaw("{$name} as customer_name")
             ->selectRaw('dc.customer_id')
             ->selectRaw('c.code as customer_code')
-            ->selectRaw(DB::getPdo()->quote(\App\Modules\Sales\Models\Collection::drillSourceType()).' as collection_type')
-            ->selectRaw("CASE WHEN dc.status = '".DepositClaim::ACCEPTED."' AND col.status IN ({$posted}) THEN dc.collection_id END as collection_id")
+            ->selectRaw("CASE WHEN {$inVoucher} THEN ".DB::getPdo()->quote(\App\Modules\Accounts\Models\Voucher::drillSourceType())
+                .' ELSE '.DB::getPdo()->quote(\App\Modules\Sales\Models\Collection::drillSourceType()).' END as paper_type')
+            ->selectRaw("CASE WHEN {$inVoucher} THEN dc.voucher_id WHEN {$inCollection} THEN dc.collection_id END as paper_id")
             ->selectRaw("COALESCE(NULLIF(dc.depositor, ''), u.name) as given_by")
             ->selectRaw("{$bank} as bank_name")
             ->selectRaw('dc.reference')
             ->selectRaw('l.trx_date as bank_date')
             ->selectRaw("CASE ({$stage}) {$labels} END as stage_label")
-            ->selectRaw("CASE WHEN dc.status = '".DepositClaim::ACCEPTED."' AND col.status IN ({$posted}) THEN col.document_no END as receipt_no")
+            ->selectRaw("CASE WHEN {$inVoucher} THEN v.document_no WHEN {$inCollection} THEN col.document_no END as receipt_no")
             ->selectRaw('dc.amount as reported_amount')
-            // ⛔ কেবল পাকা আদায় — খবর গৃহীত আর আদায় এখনো খাতায় (পরে বাতিল হলে নয়)
-            ->selectRaw("CASE WHEN dc.status = '".DepositClaim::ACCEPTED."' AND col.status IN ({$posted}) THEN col.amount END as confirmed_amount")
+            // ⛔ কেবল পাকা রসিদ বা আদায় — খবর গৃহীত আর কাগজ এখনো খাতায় (পরে বাতিল হলে নয়)
+            ->selectRaw("CASE WHEN {$inVoucher} THEN v.amount WHEN {$inCollection} THEN col.amount END as confirmed_amount")
             ->selectRaw("CASE WHEN dc.status IN ({$open}) THEN dc.amount END as waiting_amount");
     }
 }

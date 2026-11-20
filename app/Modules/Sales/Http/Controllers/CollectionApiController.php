@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
-use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Services\DealerScope;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DocumentStatus;
@@ -13,7 +12,6 @@ use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Services\CollectionInput;
 use App\Modules\Sales\Services\CollectionOpenItems;
-use App\Modules\Sales\Services\CollectionPreview;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
@@ -79,14 +77,21 @@ class CollectionApiController extends Controller implements HasMiddleware
      *
      * ⓘ ওয়েবের পর্দার একই প্রিভিউ ([[CollectionPreview]] → সেবার সেই লাইন-বানানো যা পোস্ট খাতায় পাঠায়)।
      */
-    public function preview(Request $request, CollectionPreview $preview): JsonResponse
+    public function preview(Request $request): JsonResponse
     {
-        $payload = $request->all();
-        $in = CollectionInput::fromPhone($payload);
+        // ⛔ নতুন আদায় আর নয় — মালিক, ২০ নভেম্বর ২০২৬; সিঙ্কের একই কথা ([[CollectionSync::useTheDepositReport()]])
+        return self::useTheDepositReport();
+    }
 
-        abort_unless(app(DealerScope::class)->allowsCustomer($in->customerId), 404);
+    /**
+     * ⛔ ফোনের আদায়-লেখার দরজার উত্তর — ৪২২, `message` আর `errors` (লারাভেলের যাচাইয়ের চেনা আকার), যাতে পুরনো অ্যাপ বার্তাটা দেখায়,
+     * আবার চেষ্টা না করে (মালিক, ২০ নভেম্বর ২০২৬: "টাকা ঢোকার কাগজ একটাই")।
+     */
+    private static function useTheDepositReport(): JsonResponse
+    {
+        $message = \App\Modules\Sales\Sync\CollectionSync::useTheDepositReport();
 
-        return response()->json($preview->of($in));
+        return response()->json(['message' => $message, 'errors' => ['collection' => [$message]]], 422);
     }
 
     /**
@@ -96,53 +101,11 @@ class CollectionApiController extends Controller implements HasMiddleware
      */
     public function attachment(Request $request, string $id): JsonResponse
     {
-        $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,pdf']]);
-
-        $collection = ViewedBranch::narrow(Collection::query(), 'sal_collections.branch_id')->where('public_id', $id)->firstOrFail();
-
-        $paper = app(AttachmentEngine::class)->store($request->file('file'), 'sales', Collection::drillSourceType(), (int) $collection->id,
-            maxBytes: AttachmentEngine::SLIP_MAX_BYTES, only: AttachmentEngine::SLIP);
-
         /*
-         * ⭐ স্লিপ এল — ফোন "পোস্ট" চেয়েছিল, তবে এখন পোস্ট (দফা ১৫; a4-এর অ্যাপ a3a030302, ২১ অক্টোবর ২০২৬)।
-         * ⓘ অ্যাপ আগে আদায় পাঠায় (`confirm: true`), স্লিপের ছবি পরে, বসার পরে। স্লিপ বাধ্যতামূলক কোম্পানিতে প্রথম চাপে পোস্ট
-         * আটকায় (তখনো স্লিপ নেই), আদায় খসড়া থাকে — আর ফোনে খসড়া পোস্টের আর কোনো বোতাম নেই, তাই চিরকাল খসড়া। ⓘ এখন:
-         * যিনি পাঠালেন তিনিই স্লিপ দিলে, আর তাঁর সিঙ্কের বদলটা সত্যিই পোস্ট চেয়েছিল, পোস্টের একই দরজা আবার
-         * ([[CollectionService::confirm()]]) — বাকি সব পাহারা (মাস বন্ধ, ছাড়ের সই, রেফারেন্স) আগের মতোই থামায়, তখন খসড়াই থাকে।
+         * ⛔ ফোন আর আদায় লেখে না (মালিক, ২০ নভেম্বর ২০২৬) — তাই "সদ্য পাঠানো আদায়ের স্লিপ" বলে কিছু নেই; স্লিপ যায় "টাকা জমার খবর"-এর
+         * সাথে। ⓘ কারণসহ ফেরত, কিছুই রাখা বা পাকা হয় না।
          */
-        $collection = $collection->fresh();
-
-        if ($collection->status === DocumentStatus::DRAFT
-            && (int) $collection->created_by === (int) auth()->id()
-            && $this->phoneAskedToPost($collection)) {
-            try {
-                $collection = app(\App\Modules\Sales\Services\CollectionService::class)->confirm($collection->fresh(['lines']));
-            } catch (\Illuminate\Validation\ValidationException|\App\Core\Engines\Posting\PostingException) {
-                // ⓘ অন্য কারণে আটকাল — খসড়া থাকল, সিঙ্কের পথের একই আচরণ ([[CollectionSync::apply()]])
-            }
-        }
-
-        return response()->json([
-            'id' => (string) ($paper->public_id ?? $paper->id),
-            'name' => (string) $paper->original_name,
-            // ⓘ আদায়ের এখনকার অবস্থা — সিঙ্কের উত্তরের একই ঘর ([[answer()]])
-            'state' => self::answer($collection->fresh())['state'],
-        ], 201);
-    }
-
-    /** ফোনের সিঙ্কের যে বদল এই আদায়টা বানাল, সেটা "পোস্ট" (`confirm: true`) চেয়েছিল কি না */
-    private function phoneAskedToPost(Collection $collection): bool
-    {
-        $payload = \App\Models\SyncChange::query()
-            ->where('company_id', (int) $collection->company_id)
-            ->where('entity_type', \App\Modules\Sales\Sync\CollectionSync::entityType())
-            ->where('applied_entity_id', (string) $collection->public_id)
-            ->where('status', \App\Models\SyncChange::APPLIED)
-            ->value('payload_json');
-
-        $decoded = is_string($payload) ? json_decode($payload, true) : null;
-
-        return is_array($decoded) && ($decoded['confirm'] ?? false) === true;
+        return self::useTheDepositReport();
     }
 
     /**

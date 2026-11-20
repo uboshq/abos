@@ -174,6 +174,17 @@ class VoucherController extends Controller implements HasMiddleware
             'filterLabels' => $chips['labels'],
             'filterValues' => $chips['values'],
 
+            /*
+             * ⭐ রসিদের তালিকায় আগের আদায় (COL-…), কেবল দেখা, "আদায় (পুরনো)" দাগে — মালিক, ২০ নভেম্বর ২০২৬ (টাকা ঢোকার কাগজ একটাই,
+             * রসিদ)। ⓘ আলাদা ছোট টেবিল, এই পাতা-ভাঙার সাথে মেশানো নয়; একই তারিখ, পক্ষ, শাখা আর খোঁজার ছাঁকনিতে। ⓘ যে ছাঁকনি আদায়ে
+             * খাটে না (খাত, পদ্ধতি, অবস্থা, টাকার পরিসর, কে বানালেন, অপেক্ষায়) সেটা বাছা থাকলে দেখানো হয় না — ভুল মিল দেখানোর চেয়ে না দেখানো।
+             * ⛔ হিসাব বিক্রয়কে চেনে না — Core-এর চুক্তি ([[\App\Core\Contracts\OldReceiptPapers]])।
+             */
+            'oldPapers' => $type === Voucher::RECEIPT && ! $request->boolean('awaiting') && blank($request->query('status'))
+                && array_diff(array_keys($chosen), ['from', 'to', 'party', 'branch_id']) === []
+                ? app(\App\Core\Contracts\OldReceiptPapers::class)->forReceiptList($chosen, is_string($request->query('q')) ? $request->query('q') : null)
+                : null,
+
             // ⭐ "সংশোধিত" দাগ — এই পাতার ভাউচারগুলোর, একটা প্রশ্নে (পাকা ভাউচার সম্পাদনা, ৫ অক্টোবর ২০২৬)
             'revisedIds' => DocumentRevision::query()
                 ->where('document_type', (new Voucher)->getMorphClass())

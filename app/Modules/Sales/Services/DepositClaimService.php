@@ -24,6 +24,7 @@ use Illuminate\Validation\ValidationException;
  * ── দাবি আর আদায়ের মাঝখানে একটা মানুষ থাকে, ইচ্ছাকৃতভাবে ────────────
  * গ্রাহক দাবি তোলেন; ডিপো ব্যাংকের কাগজে খুঁজে দেখে গ্রহণ করে। গ্রহণের
  * মুহূর্তে আদায়টা তৈরি হয়, আর তখনই খাতায় টাকা বসে।
+ * ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায় (COL) নয়, রসিদ ভাউচার (RCV) — মালিক: "টাকা ঢোকার কাগজ একটাই" ([[accept()]])।
  *
  * মাঝখানের মানুষটা না থাকলে যে কেউ বসে বসে নিজের বকেয়া শূন্য করে
  * ফেলতে পারতেন — আর ধরা পড়ত মাস শেষে, ব্যাংক মিলকরণে, যদি কেউ
@@ -230,7 +231,7 @@ final class DepositClaimService
      * ব্যাংকের চার্জ কেটে অঙ্ক কমাতে পারে। ⛔ তখন আদায় আটকে দিলে ডিপো দাবিটা গ্রহণই করতে পারতেন না — তাই যা মেলে তা মেলে,
      * বাকি টাকা আগের মতো গ্রাহকের খাতায় (বিলে না বসা আদায়)। আদায়ের নিজের পাহারা ([[CollectionService]]) তারপরও চলে।
      *
-     * @return list<array{sales_invoice_id: int, amount: string}>
+     * @return list<array{sales_invoice_id: int, public_id: string, amount: string}>
      */
     private function sharesAt(DepositClaim $claim, string $amount): array
     {
@@ -261,7 +262,7 @@ final class DepositClaimService
                 continue;
             }
 
-            $lines[] = ['sales_invoice_id' => (int) $invoice->id, 'amount' => $share];
+            $lines[] = ['sales_invoice_id' => (int) $invoice->id, 'public_id' => (string) $invoice->public_id, 'amount' => $share];
             $left = bcsub($left, $share, 4);
         }
 
@@ -274,7 +275,7 @@ final class DepositClaimService
     }
 
     /**
-     * ডিপো দাবিটা যাচাই করে গ্রহণ করছে — আর তখনই আদায়টা তৈরি হয়।
+     * ডিপো দাবিটা যাচাই করে গ্রহণ করছে — আর তখনই রসিদ ভাউচারটা তৈরি হয় (২০ নভেম্বর ২০২৬-এর আগে আদায় হত)।
      *
      * @param  array<string, mixed>  $overrides  ডিপো যা সংশোধন করেছে
      */
@@ -285,9 +286,14 @@ final class DepositClaimService
             $this->lockPending($claim);
 
             /*
-             * ⭐ সইয়ের অপেক্ষার খসড়া আদায় আগেই আছে — নতুন আদায় নয়, সেটাই আবার পাকা করার চেষ্টা (ধাপ গ, ১৮ নভেম্বর ২০২৬)।
-             * ⛔ নইলে "অনুমোদন দিন" দুইবার চাপলে দুইটা আদায়ের খসড়া, আর দুই সইয়ে দুইবার খাতায়।
+             * ⭐ সইয়ের অপেক্ষার খসড়া আগেই আছে — নতুন কাগজ নয়, সেটাই আবার পাকা করার চেষ্টা (ধাপ গ, ১৮ নভেম্বর ২০২৬)।
+             * ⛔ নইলে "অনুমোদন দিন" দুইবার চাপলে দুইটা খসড়া, আর দুই সইয়ে দুইবার খাতায়।
+             * ⓘ নতুন খবরে রসিদ ভাউচার (২০ নভেম্বর ২০২৬); ২০ নভেম্বরের আগে বসা আদায়ের খসড়া (COL) নিজের পুরনো পথে শেষ হয়।
              */
+            if ($claim->voucher_id !== null) {
+                return $this->postTheWaitingReceipt($claim);
+            }
+
             if ($claim->collection_id !== null) {
                 return $this->confirmTheWaitingDraft($claim);
             }
@@ -336,7 +342,7 @@ final class DepositClaimService
              * ⭐ ব্যাংক চার্জ নিজের খাতে — টাকার পরিকল্পনা ৫ (মালিক, ৭ অক্টোবর ২০২৬; [[TheBankChargeGoesToItsOwnHeadTest]])।
              * ⓘ উপরের অঙ্ক যা সত্যিই ব্যাংকে এসেছে (৪৯,৯৫০); চার্জ (৫০) ব্যাংক রেখে দিয়েছে। ⚠️ আগে চার্জের ঘর ছিল না: অঙ্ক
              * কমালে ডিলারের পাওনাও কম কমত, ৫০ টাকা তাঁর নামে বকেয়া থেকে যেত — অথচ তিনি পুরোটা পাঠিয়েছেন। এখন আদায়টা
-             * ৫০,০০০-এর (পাওনা ততটাই কমে, বিলেও ততটাই মেলে), আর খাতায় ব্যাংক ৪৯,৯৫০ + ব্যাংক চার্জ ৫০ ([[CollectionService::confirm()]])।
+             * ৫০,০০০-এর (পাওনা ততটাই কমে, বিলেও ততটাই মেলে), আর খাতায় ব্যাংক ৪৯,৯৫০ + ব্যাংক চার্জ ৫০ (২০ নভেম্বর ২০২৬ থেকে রসিদের চার্জের ঘরে — [[VoucherService::twoLineEntry()]])।
              */
             $charge = Money::of((string) ($overrides['bank_charge'] ?? '0'));
             $credit = bcadd($amount, $charge, 4);
@@ -378,24 +384,119 @@ final class DepositClaimService
                 ]);
             }
 
-            // ⓘ আদায় দাবির শাখায় — বিলের ভাগ যাচাইও সেই শাখায় চলে, গ্রহণকারীর হেডারে নয় ([[CompanyContext::inBranch()]])
-            $collection = CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->create([
-                'customer_id' => $claim->customer_id,
-                'branch_id' => $claim->branch_id,
-                'trx_date' => $date,
-                'amount' => $credit,
-                'bank_charge' => $charge,
-                'account_id' => $accountId,
-                'instrument' => $claim->method,
-                'instrument_no' => $claim->reference,
-                'narration' => __('sales::portal.from_claim', ['no' => $claim->public_id]),
-                // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
-            ], $this->sharesAt($claim, $credit)));
+            /*
+             * ⭐ টাকা ঢোকার কাগজ একটাই — রসিদ ভাউচার (RCV-…), আদায় (COL-…) নয় (মালিক, ২০ নভেম্বর ২০২৬, চূড়ান্ত)।
+             * ⓘ জমার খবর কেবল খবর; হিসাবরক্ষক ব্যাংকে মিলিয়ে গ্রহণ করলে রসিদের নিজের লেখকের হাতে ([[VoucherWriter::store()]]) — রসিদের
+             * পর্দার একই ধাপ: ছাঁচ, বিলের ভাগ, রসিদের নিজের অনুমোদনের ছক, লেখক ≠ পাকাকারী, তারপর খাতা। দ্বিতীয় কোনো পোস্টিং পথ নয়।
+             * ⓘ রসিদ খবরের শাখায় — বিলের ভাগ যাচাইও সেই শাখায় চলে, গ্রহণকারীর হেডারে নয় ([[CompanyContext::inBranch()]])।
+             */
+            [$voucher, $waiting] = CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id,
+                fn () => $this->writeTheReceipt($claim, $account, $date, $credit, $charge, $line));
 
-            $claim->forceFill(['collection_id' => $collection->id])->save();
+            $claim->forceFill(['voucher_id' => $voucher->id])->save();
 
-            return $this->confirmTheWaitingDraft($claim);
+            // ⓘ সই বা অন্য হাতের অপেক্ষায় — খবর খোলা থাকে "অনুমোদনের অপেক্ষায়"; রসিদ পাকা হলে খবর নিজে "খাতায়" ([[settleWithVoucher()]])
+            if ($waiting !== false) {
+                return $claim->refresh();
+            }
+
+            return $this->acceptNow($claim);
         });
+    }
+
+    /**
+     * ⭐ খবর থেকে রসিদ ভাউচার — রসিদের পর্দা যা পাঠায়, ঠিক তাই (মালিক, ২০ নভেম্বর ২০২৬)।
+     *
+     *   পক্ষ        গ্রাহক (প্রাপ্য ১১১০ ক্রেডিটে, [[\App\Modules\Accounts\Http\Requests\VoucherRequest::fillAccountFromParty()]]-এর একই খাত)
+     *   অঙ্ক        যা পাঠানো হলো = ব্যাংকে এসেছে + চার্জ; চার্জ নিজের খাতে (৫২১০/৫২১১), পাওনা পুরোটায় কমে (টাকার পরিকল্পনা ৫)
+     *   খাত         টাকার খাত — মেলানো থাকলে ব্যাংকের সারির খাত
+     *   মাধ্যম       ব্যাংকে জমা ('deposit'), MFS ('mfs'), ক্যাশে নগদ ('cash')
+     *   নম্বর       খবরের রেফারেন্স → ব্যাংকের সারির রেফারেন্স → খবরের নম্বর (ব্যাংক বা MFS খাতে রসিদ নম্বর চায়, আর একই খাতে
+     *               একই নম্বর দুবার নয় — অন্য কেউ একই জমায় আগেই রসিদ কেটে থাকলে এখানে থামে, টাকা দুবার ওঠে না)
+     *   বিল         খবরে বাছা বিল, গ্রহণের মুহূর্তের বকেয়ায় ([[sharesAt()]]); না বাছলে গ্রাহকের খাতায় মোট টাকা
+     *
+     * @return array{0: \App\Modules\Accounts\Models\Voucher, 1: bool|string}
+     */
+    private function writeTheReceipt(DepositClaim $claim, \App\Modules\Accounts\Models\Account $account, string $date, string $credit, string $charge, ?\App\Modules\Accounts\Models\BankStatementLine $line): array
+    {
+        $receipt = \App\Modules\Accounts\Models\Voucher::RECEIPT;
+
+        $instrument = match (true) {
+            $account->isMfs() => 'mfs',
+            $account->isBank() => 'deposit',
+            default => 'cash',
+        };
+
+        $reference = collect([$claim->reference, $line?->reference])
+            ->map(fn ($r) => trim((string) $r))->first(fn (string $r) => $r !== '');
+
+        if ($reference === null && $instrument !== 'cash') {
+            $reference = (string) $claim->public_id;
+        }
+
+        $data = [
+            'type' => $receipt,
+            'branch_id' => $claim->branch_id === null ? null : (int) $claim->branch_id,
+            'trx_date' => $date,
+            'party_type' => 'customer',
+            'party_id' => (int) $claim->customer_id,
+            'from_account_id' => (int) \App\Modules\Accounts\Services\StandardChart::accountFor(\App\Modules\Accounts\Services\StandardChart::RECEIVABLE)->id,
+            'to_account_id' => (int) $account->id,
+            'amount' => $credit,
+            'charge_amount' => bccomp($charge, '0', 4) > 0 ? $charge : null,
+            'instrument' => $instrument,
+            'instrument_no' => $reference,
+            'deposit_slip_no' => $instrument === 'deposit' && filled($claim->reference) ? trim((string) $claim->reference) : null,
+            'narration' => (string) __('sales::portal.from_claim', ['no' => $claim->public_id]),
+        ];
+
+        // ⭐ বাছা বিলে মেলে — রসিদের "এক টাকা, বহু বিল" ঘরে (`bills[i][id]` বিলের public_id)
+        $bills = array_map(fn (array $share): array => ['id' => $share['public_id'], 'amount' => $share['amount']], $this->sharesAt($claim, $credit));
+
+        if ($bills !== []) {
+            $data['bills'] = $bills;
+        }
+
+        $writer = app(\App\Modules\Accounts\Services\VoucherWriter::class);
+
+        return $writer->store($data, $writer->linesFor($receipt, $data), asDraft: false);
+    }
+
+    /**
+     * ⭐ সইয়ের বা অন্য হাতের অপেক্ষার রসিদ — রসিদের নিজের পাকা করার দরজায় ([[VoucherWriter::post()]]: তালা, সই, তারপর খাতা)।
+     * ⓘ সই এখনো বাকি হলে খবর খোলা থাকে; রসিদ বাতিল হয়ে গেলে কারণসহ থামে।
+     */
+    private function postTheWaitingReceipt(DepositClaim $claim): DepositClaim
+    {
+        $voucher = \App\Modules\Accounts\Models\Voucher::query()->withoutGlobalScope('user-branch')->findOrFail($claim->voucher_id);
+
+        if ($voucher->isDraft()) {
+            $stopping = CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id,
+                fn () => app(\App\Modules\Accounts\Services\VoucherWriter::class)->post($voucher));
+
+            if ($stopping !== null) {
+                return $claim->refresh();
+            }
+
+            $voucher->refresh();
+        }
+
+        if (! $voucher->isPosted()) {
+            throw ValidationException::withMessages(['status' => __('sales::deposit.draft_gone', ['no' => $voucher->document_no])]);
+        }
+
+        return $this->acceptNow($claim);
+    }
+
+    private function acceptNow(DepositClaim $claim): DepositClaim
+    {
+        $claim->update([
+            'status' => DepositClaim::ACCEPTED,
+            'decided_by' => Actor::userId(),
+            'decided_at' => now(),
+        ]);
+
+        return $claim->refresh();
     }
 
     /**
@@ -406,6 +507,7 @@ final class DepositClaimService
      * নিজে পাকা হয় ([[ConfirmTheCollectionOnTheLastSignature]]) আর খবর "খাতায়" ([[\App\Modules\Sales\Listeners\SettleTheClaimWithItsCollection]])।
      * ⚠️ অন্য যেকোনো থামা (বিল বাতিল, রেফারেন্স) পুরো লেনদেন ফিরিয়ে দেয় — আগের মতোই।
      * ⓘ অবশ্যই `DB::transaction`-এর ভিতরে, খবর তালায়।
+     * ⓘ ২০ নভেম্বর ২০২৬ থেকে কেবল আগে বসা আদায়ের খসড়ায় — নতুন খবর রসিদ ভাউচারে ([[postTheWaitingReceipt()]])।
      */
     private function confirmTheWaitingDraft(DepositClaim $claim): DepositClaim
     {
@@ -431,7 +533,38 @@ final class DepositClaimService
     }
 
     /**
+     * ⭐ খবরের রসিদ ভাউচার পাকা হলো — শেষ সইয়ে নিজে ([[\App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature]]) বা
+     * হিসাবে অন্য কেউ হাতে — খবর "খাতায়" (মালিক, ২০ নভেম্বর ২০২৬)। একবারই; খোলা খবরেই।
+     */
+    public function settleWithVoucher(int $voucherId, ?int $by): void
+    {
+        DB::transaction(function () use ($voucherId, $by): void {
+            $claim = DepositClaim::query()->withoutGlobalScopes()
+                ->where('voucher_id', $voucherId)->whereNull('deleted_at')->lockForUpdate()->first();
+
+            if ($claim === null || ! $claim->isOpen()) {
+                return;
+            }
+
+            $claim->update(['status' => DepositClaim::ACCEPTED, 'decided_by' => $by, 'decided_at' => now()]);
+        });
+    }
+
+    /**
+     * ⭐ খোলা খবরের অপেক্ষার রসিদ হিসাব থেকে বাতিল হলো — খবর আবার রসিদহীন, "অনুমোদন দিন" নতুন রসিদ লেখে (২০ নভেম্বর ২০২৬)।
+     * ⓘ গৃহীত খবরে হাত দেয় না — পাকা রসিদ পরে উল্টালে খবর "খাতায়"-ই থাকে, জমার খাতা কেবল পাকা রসিদ গোনে ([[DepositRegisterReport]])।
+     */
+    public function releaseCancelledVoucher(int $voucherId): void
+    {
+        DepositClaim::query()->withoutGlobalScopes()
+            ->where('voucher_id', $voucherId)->whereNull('deleted_at')->whereIn('status', DepositClaim::OPEN)
+            ->get()
+            ->each(fn (DepositClaim $claim) => $claim->forceFill(['voucher_id' => null])->save());
+    }
+
+    /**
      * ⭐ আদায় পাকা হলো (শেষ সইয়ে বা হাতে) — তার খবর "খাতায়"। একবারই; খোলা খবরেই।
+     * ⓘ কেবল ২০ নভেম্বর ২০২৬-এর আগে বসা আদায়ের খসড়ার জন্য — নতুন খবর রসিদে ([[settleWithVoucher()]])।
      */
     public function settleWith(int $collectionId, ?int $by): void
     {

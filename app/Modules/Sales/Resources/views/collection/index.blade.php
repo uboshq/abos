@@ -72,10 +72,11 @@
             <x-ui.toolbar :title="__('sales::menu.collections')" :count="__('sales::message.collection_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.collection_search')"
                           :sort="$sortOptions">
+        {{-- ⛔ "নতুন আদায়" নেই — টাকা ঢোকার কাগজ একটাই, হিসাবের রসিদ ভাউচার (মালিক, ২০ নভেম্বর ২০২৬); এই তালিকা কেবল আগের কাগজ খোঁজার --}}
         <x-slot:actions>
-            @can('create', \App\Modules\Sales\Models\Collection::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.collection.create')">
-                        {{ __('sales::action.new_collection') }}
+            @can('accounts.voucher.create')
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', ['type' => 'receipt'])" data-new-receipt>
+                        {{ __('accounts::voucher.receipt') }}
                     </x-ui.button>
                 @endcan
         </x-slot:actions>

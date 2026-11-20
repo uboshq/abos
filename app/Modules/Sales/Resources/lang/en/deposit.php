@@ -40,7 +40,7 @@ return [
     'lines_title' => 'Money came into the bank, no report matches it',
     'lines_empty' => 'No unmatched deposit line.',
     'no_free_line' => 'No bank line to match — load a statement.',
-    'awaiting_hint' => 'Receipt :no is with the approver — it reaches the books on its own once approved.',
+    'awaiting_hint' => 'Receipt :no is awaiting approval — it reaches the books on its own once approved (or once another person posts it in Accounts).',
 
     'loaded' => 'Statement loaded — new lines :added, already there :known, unreadable :bad.',
     'bad_line' => 'Line :line — could not read the date ":value"',

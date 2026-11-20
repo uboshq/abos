@@ -16,6 +16,8 @@ return [
     'order_line_has_no_price' => ':product has no sale price yet. Ask the office to set one, then send again.',
     'order_has_no_lines' => 'The order has no products on it.',
     'collection_edit_needs_network' => 'A collection cannot be corrected offline — the office may have applied it to a bill in the meantime. Come back into coverage and correct it there.',
+    // ⭐ One money-in paper — the receipt voucher (owner, 20 Nov 2026); the phone sends news, not collections
+    'collection_use_deposit_report' => 'Collections are no longer written from the phone — send the customer\'s money as a "deposit report"; the office matches it with the bank and issues the receipt. This collection was not booked.',
     'collection_needs_amount' => 'A collection needs an amount above zero.',
     'unknown_reference' => 'Something picked (shop, product, lot, warehouse or account) was not found on the server. Sync the lists and try again.',
     // Phone collections (7 Oct 2026)

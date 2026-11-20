@@ -216,6 +216,11 @@
 
         <x-ui.pager :rows="$vouchers" />
         <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
+
+        {{-- ⭐ আগের আদায় (COL-…), কেবল দেখা — মালিক, ২০ নভেম্বর ২০২৬ ([[VoucherController::index()]]-এর `oldPapers`) --}}
+        @if ($oldPapers ?? null)
+            @include('accounts::voucher.partials.old-papers', ['papers' => $oldPapers])
+        @endif
     </div>
     </x-money.page>
 </x-layouts.app>

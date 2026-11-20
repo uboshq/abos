@@ -73,6 +73,8 @@ class DepositClaim extends Model
         'submitted_by',
         'claimed_on', 'amount', 'method', 'reference', 'bank_account_id',
         'status', 'note', 'bills', 'collection_id',
+        // ⭐ গৃহীত খবরের রসিদ ভাউচার (RCV-…) — মালিক, ২০ নভেম্বর ২০২৬: "টাকা ঢোকার কাগজ একটাই"; `collection_id` কেবল পুরনো সারিতে
+        'voucher_id',
         // ⭐ টাকা কে জমা দিলেন, আর একই চেহারার আগের স্লিপের দাবি (১৬ নভেম্বর ২০২৬)
         'depositor', 'lookalike_claim_id',
         // ⭐ ব্যাংক স্টেটমেন্টের কোন সারিতে মিলল — শেষ কথা ব্যাংকের (ধাপ গ, ১৬ নভেম্বর ২০২৬; [[DepositMatchService]])
@@ -171,6 +173,21 @@ class DepositClaim extends Model
         return $this->belongsTo(Collection::class, 'collection_id');
     }
 
+    /**
+     * ⭐ যে রসিদ ভাউচারে এই খবরের টাকা খাতায় ওঠে — মালিক, ২০ নভেম্বর ২০২৬ ([[DepositClaimService::accept()]])।
+     * ⓘ শাখার দেয়াল ছাড়া — খবর দেখা গেলে তার রসিদের নম্বরও দেখা যায় (রসিদ খবরের শাখায় বসে, পাতা খোলার নাগাল রসিদের নিজের নিয়মে)।
+     */
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class, 'voucher_id')->withoutGlobalScope('user-branch');
+    }
+
+    /** ⓘ খাতায় তোলার কাগজের নম্বর — নতুন খবরে রসিদ (RCV-…), পুরনো খবরে আদায় (COL-…) */
+    public function receiptNo(): ?string
+    {
+        return $this->voucher_id !== null ? $this->voucher?->document_no : $this->collection?->document_no;
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -201,7 +218,8 @@ class DepositClaim extends Model
         return match (true) {
             $this->status === self::ACCEPTED => self::STAGE_CONFIRMED,
             $this->status === self::REJECTED => self::STAGE_REJECTED,
-            $this->collection_id !== null => self::STAGE_AWAITING,
+            // ⓘ রসিদ ভাউচার (নতুন) বা আদায় (পুরনো) খসড়া হয়ে সইয়ের অপেক্ষায়
+            $this->voucher_id !== null, $this->collection_id !== null => self::STAGE_AWAITING,
             $this->statement_line_id !== null => self::STAGE_MATCHED,
             default => self::STAGE_REPORTED,
         };

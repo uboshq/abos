@@ -293,6 +293,27 @@ final class DepositMatchService
      */
     public function dropTheWaitingDraft(DepositClaim $claim, string $reason): void
     {
+        /*
+         * ⭐ নতুন খবরের অপেক্ষার রসিদ ভাউচার — সইয়ের অনুরোধ তুলে খসড়া বাতিল (মালিক, ২০ নভেম্বর ২০২৬: খবরের টাকা রসিদে)।
+         * ⓘ পাকা রসিদে হাত দেয় না — সেটা হিসাবের উল্টো কাগজের পথে।
+         */
+        if ($claim->voucher_id !== null) {
+            $voucher = \App\Modules\Accounts\Models\Voucher::query()->withoutGlobalScope('user-branch')->find($claim->voucher_id);
+
+            if ($voucher !== null && $voucher->isDraft()) {
+                $approvals = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+                $action = app(\App\Modules\Accounts\Services\VoucherApproval::class)->actionFor($voucher);
+                $waiting = $action === null ? null : $approvals->latestFor($voucher, $action);
+                if ($waiting !== null && $waiting->status === \App\Models\Approval::PENDING) {
+                    $approvals->withdrawStale($waiting);
+                }
+
+                app(\App\Modules\Accounts\Services\VoucherService::class)->cancel($voucher, $reason);
+            }
+
+            $claim->forceFill(['voucher_id' => null])->save();
+        }
+
         if ($claim->collection_id === null) {
             return;
         }

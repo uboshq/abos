@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'receipt' => 'Receipt Voucher',
     'payment' => 'Payment Voucher',
+    // ⭐ Earlier collections (COL-…) on the receipt list, view only — owner, 20 Nov 2026: one money-in paper, the receipt
+    'old_papers' => 'Collection (old)',
+    'old_papers_note' => 'Collection papers taken in Sales before the receipt voucher — view, print and cancel only; new money goes on a receipt.',
+    'old_papers_more' => 'All (:count) in the collection list',
+    'old_papers_total' => 'Total of posted collections',
     'origin_sales_deposit' => 'Sales added deposit',
     'origin_purchase_payment' => 'Purchase added payment',
     'expense' => 'Expense Voucher',

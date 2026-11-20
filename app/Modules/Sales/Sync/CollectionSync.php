@@ -12,16 +12,9 @@ use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Models\User;
-use App\Modules\Accounts\Models\Account;
-use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
-use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Http\Controllers\CollectionApiController;
-use App\Modules\Sales\Services\CollectionInput;
-use App\Modules\Sales\Services\CollectionService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 /**
  * মাঠ থেকে আদায় — নেট ছাড়া নেওয়া, নেট এলে বসানো।
@@ -44,10 +37,13 @@ use Illuminate\Validation\ValidationException;
  * — গ্রুপ খাত ও টাকা-নয় খাত ফেরায়, holding-খাত কেবল স্পষ্ট অনুমতিতে)
  * ওয়েব ও ফোন দুই দিকেই এক থাকে। ফোনের জন্য আলাদা সহজ পথ বানালে দুইটা
  * সত্যি তৈরি হত।
+ *
+ * ── ⛔ ২০ নভেম্বর ২০২৬ থেকে লেখা বন্ধ (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই") ─────────────────
+ * ফোনের পাঠানো নতুন আদায় কারণসহ ফেরে ([[apply()]]) — গ্রাহকের টাকার খবর যায় "টাকা জমার খবর" দিয়ে, অফিস মিলিয়ে রসিদ ভাউচার
+ * কাটে। ⓘ আগে বসা আদায় ফোনে ফিরে আসে আগের মতোই ([[pull()]], [[answerFor()]])।
  */
 final class CollectionSync implements SyncsToDevices, AnswersAfterSync
 {
-    public function __construct(private readonly CollectionService $collections) {}
 
     public static function module(): string
     {
@@ -85,9 +81,12 @@ final class CollectionSync implements SyncsToDevices, AnswersAfterSync
     /** ⭐ ফোনে আদায় — আদায়ের চাবি, খাতায় টাকা তোলার চাবি, আর ডিলারে বাঁধা নন; /me আর সিঙ্ক দুই জায়গায় একই প্রশ্ন */
     public static function officeMayCollect(User $user): bool
     {
-        return $user->can('sales.collection.create')
-            && $user->can('accounts.voucher.create')
-            && ! app(\App\Core\Services\DealerScope::class)->walled($user);
+        /*
+         * ⛔ কারো নয় — মালিক, ২০ নভেম্বর ২০২৬ (চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই")। ফোনে নতুন আদায় লেখা বন্ধ ([[apply()]]); অফিসের
+         * লোক টাকা নেন রসিদ ভাউচারে (ফোনের ভাউচারের দরজা, `accounts.voucher.create`), মাঠ খবর পাঠায় "টাকা জমার খবর" দিয়ে।
+         * ⓘ নতুন অ্যাপ /me-র `mayCollect` মিথ্যা দেখে "আদায়" বোতাম আড়াল করে; হোমের দ্রুত-বোতামও যায় ([[QuickActionsSummary]])।
+         */
+        return false;
     }
 
     /**
@@ -163,9 +162,9 @@ final class CollectionSync implements SyncsToDevices, AnswersAfterSync
     }
 
     /**
-     * ফোনের তোলা একটা আদায় — সার্ভারের নিয়ম ধরে, খসড়া হিসেবে।
+     * ফোনের তোলা একটা আদায় — ⛔ ২০ নভেম্বর ২০২৬ থেকে আর বসে না, কারণসহ ফেরে।
      *
-     * ── কেন কেবল CREATE ─────────────────────────────────────────────
+     * ── কেন সংশোধন আগে থেকেই নয় ─────────────────────────────────────────────
      * অফলাইনে বসা একটা আদায় সংশোধন করলে অফিসে ইতিমধ্যে হয়ে যাওয়া
      * বণ্টন **নীরবে চাপা পড়ত**, আর টাকার হিসাব দুই জায়গায় দুই রকম হত —
      * অর্ডারের চেয়েও এখানে দামটা বেশি। তাই সংশোধন নেটওয়ার্কে।
@@ -176,110 +175,18 @@ final class CollectionSync implements SyncsToDevices, AnswersAfterSync
             throw SyncRejection::conflict(__('sales::sync.collection_edit_needs_network'));
         }
 
-        // ⓘ দুই চাবিই সেবা দেখে নেয় ([[SyncService::applyOne()]]): পড়ার — আদায়ের ([[requiredPermission()]]),
-        // লেখার — খাতায় টাকা তোলার ([[requiredPushPermission()]])
-
-        $payload = $change->payload();
-
-        // বাইরের কী থেকে ভেতরের আইডি — ফোন কেবল public_id চেনে, ক্রমিক id নয়
-        // ⛔ ফোনে বাছা শাখার গ্রাহকই — অনলাইন পথের মতো (অডিট ফোন ⛔৩, ৬ অক্টোবর ২০২৬)
-        $customer = Customer::query()->inViewedBranch()
-            ->where('public_id', (string) ($payload['customerId'] ?? ''))
-            ->first();
-
-        if ($customer === null) {
-            throw new SyncRejection(__('sales::sync.unknown_customer'));
-        }
-
         /*
-         * ⭐ ফোনের আদায় — ওয়েবের আদায়-ফর্মের একই নিয়ম ([[CollectionRequest]]), একই সেবা ([[CollectionService]]);
-         * মালিক, ৭ অক্টোবর ২০২৬: "অ্যাপে পেমেন্ট অপশন চালু করো"। ⓘ টাকার খাত (নগদ/ব্যাংক/MFS), মাধ্যম, লেনদেন-নম্বর,
-         * তারিখ আর মন্তব্য — পুরনো অ্যাপ এগুলো পাঠায় না, তখন আগের মতো প্রধান টিলের নগদ।
-         * ⓘ অঙ্ক আর লেখার ঘর কঠোরভাবে — "1e5" বা অ্যারে এলে ৫০০ নয়, কারণসহ ফেরত (একটা ভুল সারি গোটা সারি আটকায় না)।
-         * ⭐ নকশা ১০০ (a4-এর চুক্তি, ২১ অক্টোবর ২০২৬): নতুন ঐচ্ছিক ঘর `lines: [{kind, id, amount}]` (a4-এর `{invoice, amount}` = বিল),
-         * `difference: {kind, amount}`, `vds`, `ait`, `method`, `reference`, `value_date`, `bank_charge` — ওয়েবের একই আবেদনে
-         * ([[CollectionInput::fromPhone()]]) আর একই সেবায় ([[CollectionService::createFrom()]])। সারি না দিলে পুরনো বিল আগে।
+         * ⛔ ফোন থেকে নতুন আদায় আর নয় — মালিক, ২০ নভেম্বর ২০২৬ (চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই")। গ্রাহকের টাকার খবর ফোন পাঠায়
+         * "টাকা জমার খবর" দিয়ে; অফিস ব্যাংকে মিলিয়ে গ্রহণ করলে রসিদ ভাউচার হয় ([[DepositClaimService::accept()]])।
+         * ⓘ সৎ প্রত্যাখ্যান, কারণসহ (REJECTED, `message`) — পুরনো অ্যাপ বার্তাটা দেখায় আর আবার পাঠায় না; চুপচাপ ফেলে দিলে ফোন
+         * "বসেছে" ভাবত, অপ্রত্যাশিত ভুল হলে চিরকাল আবার পাঠাত ([[SyncService::applyOne()]])। আগে বসা আদায় পড়া ([[pull()]]) আগের মতোই।
          */
-        $plain = 'regex:/^\d{1,14}(\.\d{1,4})?$/';
-        $data = [
-            'trx_date' => is_string($payload['trxDate'] ?? null) ? $payload['trxDate'] : now()->toDateString(),
-            'amount' => is_scalar($payload['amount'] ?? null) ? (string) $payload['amount'] : '',
-            'instrument' => $payload['method'] ?? $payload['instrument'] ?? null,
-            'instrument_no' => $payload['reference'] ?? $payload['instrumentNo'] ?? null,
-            'narration' => $payload['narration'] ?? null,
-        ];
+        throw new SyncRejection(self::useTheDepositReport());
+    }
 
-        $check = Validator::make([
-            ...$data,
-            'allocations' => $payload['allocations'] ?? [],
-            'lines' => $payload['lines'] ?? [],
-            'vds' => $payload['vds'] ?? null,
-            'ait' => $payload['ait'] ?? null,
-            'bank_charge' => $payload['bank_charge'] ?? $payload['bankCharge'] ?? null,
-            'difference' => $payload['difference'] ?? null,
-        ], [
-            'trx_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'amount' => ['required', $plain, 'not_regex:/^0+(\.0+)?$/'],
-            'instrument' => ['nullable', 'string', 'max:32'],
-            'instrument_no' => ['nullable', 'string', 'max:64'],
-            'narration' => ['nullable', 'string', 'max:500'],
-            /*
-             * ⛔ বণ্টনের অঙ্কও একই সাধারণ দশমিক — "1e3" `is_numeric` পেরিয়ে সেবার bccomp-এ ভাঙত, আর অ্যারে "Array to string"-এ;
-             * দুটোই অপ্রত্যাশিত ভাঙন, তাই উত্তরহীন হয়ে চিরকাল আবার যেত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
-             * [[ThePhoneReceiptTookAnyDateAndAnyNumberTest]])। ⓘ ওয়েবের নিয়মও সাধারণ দশমিক।
-             */
-            'allocations' => ['nullable', 'array', 'max:200'],
-            'allocations.*' => ['array'],
-            'allocations.*.invoiceId' => ['required', 'string', 'max:64'],
-            'allocations.*.amount' => ['required', $plain, 'not_regex:/^0+(\.0+)?$/'],
-            'lines' => ['nullable', 'array', 'max:200'],
-            'lines.*' => ['array'],
-            'lines.*.kind' => ['nullable', 'in:bill,debit_note,credit_note,credit'],
-            'lines.*.id' => ['nullable', 'string', 'max:64'],
-            'lines.*.invoice' => ['nullable', 'string', 'max:64'],
-            // ⓘ ক্রেডিটের সারি ঋণাত্মকও আসে (পর্দা যেমন দেখায়)
-            'lines.*.amount' => ['required', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/'],
-            'vds' => ['nullable', $plain],
-            'ait' => ['nullable', $plain],
-            'bank_charge' => ['nullable', $plain],
-            'difference' => ['nullable', 'array'],
-            'difference.kind' => ['nullable', 'in:discount,rounding'],
-            'difference.amount' => ['nullable', $plain],
-        ]);
-
-        if ($check->fails()) {
-            throw new SyncRejection((string) $check->errors()->first());
-        }
-
-        /*
-         * অন্য অংশের মতো এখানেও: প্রতিটা বণ্টনের কাগজ আসে বাইরের কী দিয়ে। অচেনা কাগজ মানে এই পরিবর্তন প্রত্যাখ্যাত — অর্ধেক বণ্টন
-         * বসিয়ে বাকিটা নীরবে বাদ দেওয়া হিসাব গুলিয়ে দেয় ([[CollectionInput::fromPhone()]] ফেরায়)।
-         */
-        try {
-            $collection = $this->collections->createFrom(CollectionInput::fromPhone([
-                ...$payload,
-                'customerId' => (string) $customer->public_id,
-                // ⓘ পুরনো অ্যাপ মাধ্যম পাঠায় না — খাত না বললে আগের মতো নগদ ([[CollectionInput::fromPhone()]])
-                'method' => $data['instrument'],
-                'reference' => $data['instrument_no'],
-            ]));
-        } catch (ValidationException $refused) {
-            throw new SyncRejection((string) collect($refused->errors())->flatten()->first());
-        }
-
-        /*
-         * ⭐ "এখনই নিশ্চিত" — ওয়েবের দুই চাপ (লেখা, তারপর নিশ্চিত) এক চাপে; চাবিও একই (`sales.collection.create`)।
-         * ⓘ অনুমোদনের অপেক্ষায় ([[HeldForApproval]]) বা টাকার কোনো নিয়মে আটকালে খসড়াই থাকে — ওয়েবে যেমন থাকে;
-         * অনুরোধটাও থাকে, ফোন পরে আদায়ের অবস্থা দেখে বলে কেন।
-         */
-        if (($payload['confirm'] ?? false) === true) {
-            try {
-                $collection = $this->collections->confirm($collection->fresh(['lines']));
-            } catch (ValidationException|\App\Core\Engines\Posting\PostingException) {
-                // ⓘ খসড়া থাকল — ওয়েবের একই আচরণ; খাতার "না"-ও (যেমন অন্য শাখার পক্ষ) খসড়া রাখে, ফোনকে চিরকাল আবার পাঠাতে দেয় না
-            }
-        }
-
-        return (string) $collection->public_id;
+    /** ⓘ ফোনের সব আদায়-লেখার দরজা একই কথা বলে — সিঙ্ক, প্রিভিউ, স্লিপ ([[CollectionApiController]]) */
+    public static function useTheDepositReport(): string
+    {
+        return (string) __('sales::sync.collection_use_deposit_report');
     }
 }

@@ -8,7 +8,7 @@
 @endphp
 <div class="flex flex-wrap items-end gap-2">
     @if ($claim->stage() === 'awaiting')
-        <span class="text-2xs text-(--color-ink-muted)" data-awaiting-approval>{{ __('sales::deposit.awaiting_hint', ['no' => $claim->collection?->document_no]) }}</span>
+        <span class="text-2xs text-(--color-ink-muted)" data-awaiting-approval>{{ __('sales::deposit.awaiting_hint', ['no' => $claim->receiptNo()]) }}</span>
     @else
         @can('sales.claim.decide')
             <form method="POST" action="{{ route('sales.claim.accept', $claim) }}" class="flex flex-wrap items-end gap-2" data-confirm-deposit>

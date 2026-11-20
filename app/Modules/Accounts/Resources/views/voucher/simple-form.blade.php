@@ -305,6 +305,15 @@
                    value="{{ old('against_id', $voucher->against_id) }}">
         @endif
 
+        {{-- ⓘ অন্য পর্দা থেকে কারণসহ এখানে পাঠানো — যেমন পুরনো "নতুন আদায়" ঠিকানা: "আদায় এখন রসিদে" (মালিক, ২০ নভেম্বর ২০২৬) --}}
+        @if (session('warning') && ! $errors->any())
+            <div role="status" data-sent-here
+                 class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+                        text-(--color-badge-warning-ink)">
+                {{ session('warning') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div role="alert"
                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm

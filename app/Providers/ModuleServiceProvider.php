@@ -117,6 +117,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(LinkedDocuments::class, NoLinkedDocuments::class);
         // ⓘ ছকের বাইরের সই — কোনো মডিউল না দিলে অনুমোদনের বাক্সে বাড়তি কিছু নেই ([[SignaturesWaitingElsewhere]])
         $this->app->bind(SignaturesWaitingElsewhere::class, NoSignaturesWaitingElsewhere::class);
+        // ⓘ রসিদের তালিকায় আগের টাকা-ঢোকার কাগজ — কোনো মডিউল না দিলে নেই ([[\App\Core\Contracts\OldReceiptPapers]], ২০ নভেম্বর ২০২৬)
+        $this->app->bind(\App\Core\Contracts\OldReceiptPapers::class, \App\Core\Services\NoOldReceiptPapers::class);
     }
 
     /**
