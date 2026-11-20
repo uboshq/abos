@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Services\AvatarService;
+use App\Core\Services\CoverService;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Notifications\PasswordResetLink;
@@ -226,6 +227,8 @@ class User extends Authenticatable
             'password', 'remember_token',
             'last_login_at', 'current_company_id', 'current_branch_id',
             'locale', 'theme', 'ui', 'accent', 'avatar_path',
+            // ⓘ মলাট ছবি — ছবির মতোই নাম-দেওয়া ঘটনায় খাতায় ওঠে ([[CoverService]], ২০ নভেম্বর ২০২৬)
+            'cover_path',
             // ⓘ রেলের নিজের সাজ — নিজের পছন্দ, ব্যবসার তথ্য নয় (fe, ২৪ অক্টোবর ২০২৬)
             'nav_layout',
         ];
@@ -391,6 +394,33 @@ class User extends Authenticatable
         $path = $this->getRawOriginal('avatar_path');
 
         if (! is_string($path) || $path === '' || ! app(AvatarService::class)->exists($path)) {
+            return null;
+        }
+
+        return route($route, ['user' => $this->public_id, 'v' => substr(sha1($path), 0, 12)], $absolute);
+    }
+
+    /**
+     * ⭐ মলাট ছবির ঠিকানা (ওয়েব, আপেক্ষিক) — না থাকলে null (প্রোফাইল পাতা, ২০ নভেম্বর ২০২৬)।
+     *
+     * ⓘ একই পাহারা: [[App\Http\Controllers\UserCoverController]] → সহকর্মী না হলে ৪০৪।
+     */
+    public function coverUrl(): ?string
+    {
+        return $this->coverRoute('users.cover', false);
+    }
+
+    /** ⭐ ফোনের মলাট ঠিকানা — টোকেন চাওয়া দরজা, পরম। */
+    public function coverApiUrl(): ?string
+    {
+        return $this->coverRoute('api.users.cover', true);
+    }
+
+    private function coverRoute(string $route, bool $absolute): ?string
+    {
+        $path = $this->getRawOriginal('cover_path');
+
+        if (! is_string($path) || $path === '' || ! app(CoverService::class)->exists($path)) {
             return null;
         }
 

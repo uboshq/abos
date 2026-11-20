@@ -105,6 +105,11 @@ class MeController extends Controller
                     && \Illuminate\Support\Facades\Route::has('api.users.photo'),
                 'my_phones' => \Illuminate\Support\Facades\Route::has('api.me.devices.index')
                     && \Illuminate\Support\Facades\Route::has('api.me.devices.destroy'),
+                // ⭐ প্রোফাইল পাতা আর মলাট ছবি (২০ নভেম্বর ২০২৬) — পুরনো সার্ভারে ঘর নেই, অ্যাপ false ধরে
+                'profile_page' => \Illuminate\Support\Facades\Route::has('api.me.profile')
+                    && \Illuminate\Support\Facades\Route::has('api.users.profile'),
+                'cover_photo' => \Illuminate\Support\Facades\Route::has('api.me.cover.store')
+                    && \Illuminate\Support\Facades\Route::has('api.users.cover'),
             ],
 
             /*

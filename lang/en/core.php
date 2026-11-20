@@ -1403,6 +1403,17 @@ return [
         'phone_jpg_png_only' => 'Use a JPG or PNG photo.',
     ],
 
+    // profile cover photo ([[CoverService]], 20 Nov 2026)
+    'cover' => [
+        'too_large' => 'That cover photo is too large. Please use one under 8 MB.',
+        'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
+        'jpg_png_only' => 'Use a JPG or PNG photo.',
+        'saved' => 'Cover photo saved.',
+        'removed' => 'Cover photo removed.',
+        'change' => 'Change cover',
+        'remove' => 'Remove cover',
+    ],
+
     // "My phones" on the app's profile menu ([[MeDevicesController]])
     'devices' => [
         'android' => 'Android phone',
