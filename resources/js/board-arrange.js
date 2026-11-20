@@ -26,8 +26,10 @@ export const BOARD_ORDERS = {
             ['fin-fdr', 'fin-health', 'fin-flows'],
         ],
     },
+    // ⭐ মজুদ আর বিক্রয়ও এক মাপে (মালিক, ২১ নভেম্বর ২০২৬) — লাইভ/ডেমোতে প্রথম সারি অর্ধেক পর্দার বেশি উঁচু, দ্বিতীয় সারি কাটা পড়ত
     'data-inv-board-trend': {
         first: 2,
+        equal: true,
         rows: [
             ['inv-trend', 'inv-wh', 'inv-cover'],
             ['inv-roll', 'inv-brand', 'inv-ageing'],
@@ -41,6 +43,7 @@ export const BOARD_ORDERS = {
     },
     'data-sales-board-profit': {
         first: 2,
+        equal: true,
         rows: [
             ['sales-ladder', 'sales-target', 'sales-path'],
             ['sales-branches', 'sales-brands', 'sales-pareto'],

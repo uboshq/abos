@@ -88,3 +88,39 @@ describe('finance board', () => {
         expect(document.querySelectorAll('[data-board-equal]')).toHaveLength(2)
     })
 })
+
+/* ⭐ মজুদ আর বিক্রয় — প্রথম পর্দায় দুই সারি, সারিতে তিনটা সমান কার্ড; সমস্যা কেন্দ্র সবার শেষে, কোনো বক্স হারায় না (মালিক, ২১ নভেম্বর ২০২৬) */
+describe.each([
+    ['data-inv-board-trend', 'inv-problems', [['inv-trend', 'inv-wh', 'inv-cover'], ['inv-roll', 'inv-brand', 'inv-ageing']]],
+    ['data-sales-board-profit', 'sales-problems', [['sales-ladder', 'sales-target', 'sales-path'], ['sales-branches', 'sales-brands', 'sales-pareto']]],
+])('%s', (mark, problems, firstRows) => {
+    const keys = BOARD_ORDERS[mark].rows.flatMap(r => (Array.isArray(r) ? r : r.keys))
+
+    function page () {
+        document.documentElement.dataset.ui = 'rose'
+        // ⓘ সার্ভারের ক্রমের মতো — সমস্যা কেন্দ্র প্রথমে আঁকা
+        const order = [problems, ...keys.filter(k => k !== problems)]
+        document.body.innerHTML = `<main><div><div ${mark}>`
+            + order.map(k => `<section data-${k}>${k}</section>`).join('') + '</div></div></main>'
+    }
+
+    it('opens on two rows of three equal cards, the problem centre last, no box lost', () => {
+        page()
+        const res = arrangeBoards(document, BOARD_ORDERS)
+        const first = [...document.querySelectorAll('[data-board-first]')]
+
+        expect(first).toHaveLength(2)
+        for (const row of first) {
+            expect(row.children).toHaveLength(3)
+            expect(row.style.gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))')
+            expect(row.hasAttribute('data-board-equal')).toBe(true)
+        }
+        expect(first.map(r => [...r.children].map(s => s.textContent))).toEqual(firstRows)
+        expect(document.querySelectorAll('[data-board-equal]')).toHaveLength(2)
+
+        const placed = [...document.querySelectorAll('[data-board-row] > section')].map(s => s.textContent)
+        expect(placed).toHaveLength(keys.length)
+        expect(placed.at(-1)).toBe(problems)
+        expect(res.placed).toBe(keys.length)
+    })
+})
