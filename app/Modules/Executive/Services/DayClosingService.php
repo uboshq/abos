@@ -14,10 +14,13 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Dashboard\SalesBoard;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Supplier\Services\LabourCost;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -57,7 +60,7 @@ final class DayClosingService
         $inflow = $this->inflow($d);
         $delivery = $this->delivery($d, $base['fare']['rows']);
         $sales = $this->salesByParty($d);
-        $fareAccounts = $this->fareAccounts();
+        $fareAccounts = $this->deliveryAccounts();
         $expenses = $this->expenses($d, $fareAccounts);
         $count = $this->cashCount($d, $base['money']['rows']);
         $paidOut = $this->paidNotExpense($d);
@@ -74,6 +77,7 @@ final class DayClosingService
             'delivery' => $delivery,
             'sales' => $sales,
             'expenses' => $expenses,
+            'labour' => $this->labour($d),
             'count' => $count,
             'paid_out' => $paidOut,
             'balances' => $base['money'],
@@ -147,7 +151,7 @@ final class DayClosingService
 
     /**
      * @param  Collection<int, array<string, mixed>>  $fareRows  [[DailySummary]]-এর ভাড়ার সারি
-     * @return array{rows: list<array<string, mixed>>, value: string, fare: string}
+     * @return array{rows: list<array<string, mixed>>, value: string, fare: string, pct: ?string, loading: string}
      */
     private function delivery(string $d, Collection $fareRows): array
     {
@@ -166,6 +170,8 @@ final class DayClosingService
                     'vehicle' => trim(implode(' · ', array_filter([(string) ($fare['vehicle'] ?? $c->vehicle_no ?? ''), (string) ($fare['driver'] ?? $c->driver_name ?? '')]))),
                     'fare' => $amount,
                     'pct' => bccomp((string) $c->total, '0', 4) > 0 ? bcmul(bcdiv($amount, (string) $c->total, 6), '100', 2) : null,
+                    // ⭐ লোডিং (হাম্মালি) — নগদ বা বাকিতে যা গেল; "লাগেনি" হলে শূন্য (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")
+                    'loading' => LabourCost::costsUs($c->loading_mode) ? bcadd((string) ($c->loading_amount ?? '0'), '0', 4) : '0',
                 ];
             })->values()->all();
 
@@ -173,7 +179,8 @@ final class DayClosingService
         $fare = $this->sum($rows, 'fare');
 
         return ['rows' => $rows, 'value' => $value, 'fare' => $fare,
-            'pct' => bccomp($value, '0', 4) > 0 ? bcmul(bcdiv($fare, $value, 6), '100', 2) : null];
+            'pct' => bccomp($value, '0', 4) > 0 ? bcmul(bcdiv($fare, $value, 6), '100', 2) : null,
+            'loading' => $this->sum($rows, 'loading')];
     }
 
     // ── ৩ · পার্টি ধরে বিক্রয় ও লাভ ─────────────────────────────────────
@@ -233,7 +240,7 @@ final class DayClosingService
     // ── ৪ · আজকের খরচ ─────────────────────────────────────────────────
 
     /**
-     * খরচের খাতে ডেবিট (বিক্রীত পণ্যের ব্যয় বাদে) — ডেলিভারির খরচ (চালানের ভাড়ার খাত) আর অফিস ও অন্যান্য।
+     * খরচের খাতে ডেবিট (বিক্রীত পণ্যের ব্যয় বাদে) — ডেলিভারির খরচ (চালানের ভাড়ার খাত আর লোডিং ৫২১৮) আর অফিস ও অন্যান্য।
      *
      * @param  list<int>  $fareAccounts
      * @return array{groups: list<array{key: string, rows: list<array<string, mixed>>, total: string}>, total: string}
@@ -263,6 +270,71 @@ final class DayClosingService
         }
 
         return ['groups' => $groups, 'total' => $this->sum($groups, 'total')];
+    }
+
+    // ── ৪খ · হাম্মালি (মাল নামানো ও তোলা) ──────────────────────────────
+
+    /**
+     * ⭐ আজকের হাম্মালি — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"): পাকা মাল-গ্রহণ আর সরাসরি কেনার বিলে নামানো, পাকা চালানে তোলা —
+     * কেবল যেখানে আমাদের টাকা গেল (নগদ বা ঠিকাদারের কাছে বাকি); আর দিনের শেষে ঠিকাদারদের কাছে মোট দেনা (২১১৭)।
+     * ⓘ নামানো মজুদের দামে বসে (খরচে নয়), তাই ৪-এর খরচে নেই — এখানে আলাদা চোখে পড়ে।
+     * ⓘ শাখা: মডেলের নিজের দেখার-শাখার ছাঁকনি ([[ScopedToUserBranch]]), ডেলিভারির মতোই।
+     *
+     * @return array{rows: list<array{no: string, kind: string, party: string, how: string, amount: string}>, unloading: string, loading: string, total: string, payable: string}
+     */
+    private function labour(string $d): array
+    {
+        $labour = app(LabourCost::class);
+        $paid = [LabourCost::CASH, LabourCost::DUE];
+        $rows = [];
+
+        // ⓘ বিলে কেবল যেখানে পথ বসানো (সরাসরি কেনা) — মাল-গ্রহণের বিলের পথ খালি, নামানো মাল-গ্রহণেই ধরা
+        foreach ([PurchaseReceipt::class, PurchaseBill::class] as $model) {
+            $model::query()->with('supplier')
+                ->whereIn('status', DocumentStatus::POSTED)->whereDate('trx_date', $d)
+                ->whereIn('unload_mode', $paid)->where('unload_amount', '>', 0)
+                ->orderBy('id')->get()
+                ->each(function ($p) use (&$rows, $labour) {
+                    $rows[] = [
+                        'no' => (string) $p->document_no,
+                        'kind' => 'unloading',
+                        'party' => $p->supplier?->name() ?? '—',
+                        'how' => $labour->describe($p, 'unload_'),
+                        'amount' => bcadd((string) $p->unload_amount, '0', 4),
+                    ];
+                });
+        }
+
+        DeliveryChallan::query()->with(Customer::placeVia('customer'))
+            ->whereIn('status', DocumentStatus::POSTED)->whereDate('trx_date', $d)
+            ->whereIn('loading_mode', $paid)->where('loading_amount', '>', 0)
+            ->orderBy('id')->get()
+            ->each(function (DeliveryChallan $c) use (&$rows, $labour) {
+                $rows[] = [
+                    'no' => (string) $c->document_no,
+                    'kind' => 'loading',
+                    'party' => $c->customer?->nameWithPoint() ?? '—',
+                    'how' => $labour->describe($c, 'loading_'),
+                    'amount' => bcadd((string) $c->loading_amount, '0', 4),
+                ];
+            });
+
+        $unloading = $this->sum(array_filter($rows, fn ($r) => $r['kind'] === 'unloading'), 'amount');
+        $loading = $this->sum(array_filter($rows, fn ($r) => $r['kind'] === 'loading'), 'amount');
+
+        // ⓘ প্রদেয় হাম্মালি — দায়ের খাত, তাই জের ক্রেডিট − ডেবিট, দিনের শেষ পর্যন্ত, দেখার শাখায়
+        $ids = $this->accountTree(StandardChart::LABOUR_PAYABLE);
+        $payable = (string) (ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->whereIn('account_id', $ids ?: [0])->where('trx_date', '<=', $d)
+            ->selectRaw('COALESCE(SUM(credit - debit),0) as v')->value('v') ?? '0');
+
+        return [
+            'rows' => $rows,
+            'unloading' => $unloading,
+            'loading' => $loading,
+            'total' => bcadd($unloading, $loading, 4),
+            'payable' => bcadd($payable, '0', 4),
+        ];
     }
 
     // ── ৫ · নগদ গণনা ও মিল ─────────────────────────────────────────────
@@ -652,6 +724,16 @@ final class DayClosingService
     {
         return DB::table('sal_challans')->where('company_id', CompanyContext::id())->whereNotNull('fare_account_id')
             ->distinct()->pluck('fare_account_id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /**
+     * @return list<int> ডেলিভারির খরচের খাত — চালানের ভাড়ার খাত আর লোডিং (৫২১৮ ও নিচের সব)
+     *
+     * ⭐ লোডিংয়ের হাম্মালি মাল পাঠানোর খরচ, অফিসের নয় — তাই ৪-এর "ডেলিভারি" দলে আর ৮-এর ডেলিভারির সারিতে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")
+     */
+    private function deliveryAccounts(): array
+    {
+        return array_values(array_unique(array_merge($this->fareAccounts(), $this->accountTree(StandardChart::LOADING))));
     }
 
     /** @return list<int> একটা কোডের হিসাব আর তার নিচের সব */
