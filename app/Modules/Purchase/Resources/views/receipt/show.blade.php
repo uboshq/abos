@@ -246,21 +246,21 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="w-full text-sm">
+                        <table class="ui-grid is-compact">
                             <thead>
                                 <tr class="border-b border-(--color-border)">
-                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
-                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                    <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.share') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($receipt->lines as $line)
                                     <tr class="border-b border-(--color-border)">
-                                        <td class="px-2 py-1" id="unload-line-{{ $line->id }}">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity($unloadRows[(int) $line->id]['cartons'] ?? '0', 2) }}</td>
-                                        <td class="px-2 py-1 text-end">
+                                        <td id="unload-line-{{ $line->id }}">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::quantity($unloadRows[(int) $line->id]['cartons'] ?? '0', 2) }}</td>
+                                        <td class="text-end">
                                             <input type="number" step="0.01" min="0" inputmode="decimal"
                                                    name="unload_rates[{{ $line->id }}]"
                                                    value="{{ old('unload_rates.'.$line->id, $line->unload_rate === null ? '' : \App\Core\Support\Money::quantity((string) $line->unload_rate, 4)) }}"
@@ -272,7 +272,7 @@
                                                 <p class="mt-1 text-xs text-(--color-danger)">{{ $message }}</p>
                                             @enderror
                                         </td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -310,42 +310,42 @@
 
                 @if ($receipt->lines->isNotEmpty())
                     <div class="table-responsive mt-3">
-                        <table class="w-full text-sm">
+                        <table class="ui-grid is-compact">
                             <thead>
                                 <tr class="border-b border-(--color-border)">
-                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
-                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                    <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.share') }}</th>
                                     @if ($showsPrice)
-                                        <th class="px-2 py-1 text-end">{{ __('purchase::unloading.line_amount') }}</th>
-                                        <th class="px-2 py-1 text-end">{{ __('supplier::labour.landed') }}</th>
+                                        <th class="text-end">{{ __('purchase::unloading.line_amount') }}</th>
+                                        <th class="text-end">{{ __('supplier::labour.landed') }}</th>
                                     @endif
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($receipt->lines as $line)
                                     <tr class="border-b border-(--color-border)">
-                                        <td class="px-2 py-1">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ $line->unload_rate === null ? __('purchase::unloading.equal_share') : $unloadRateText((string) $line->unload_rate) }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                        <td>{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
+                                        <td class="num text-end">{{ $line->unload_rate === null ? __('purchase::unloading.equal_share') : $unloadRateText((string) $line->unload_rate) }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
                                         @if ($showsPrice)
-                                            <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) $line->amount) }}</td>
-                                            <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format(bcadd((string) ($line->amount ?? '0'), (string) ($line->unload_cost ?? '0'), 4)) }}</td>
+                                            <td class="num text-end">{{ \App\Core\Support\Money::format((string) $line->amount) }}</td>
+                                            <td class="num text-end">{{ \App\Core\Support\Money::format(bcadd((string) ($line->amount ?? '0'), (string) ($line->unload_cost ?? '0'), 4)) }}</td>
                                         @endif
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td class="px-2 py-1 text-end font-medium">{{ __('purchase::unloading.total') }}</td>
-                                    <td class="num px-2 py-1 text-end font-medium">{{ \App\Core\Support\Money::quantity(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cartons ?? '0')), 2) }}</td>
+                                    <td class="text-end font-medium">{{ __('purchase::unloading.total') }}</td>
+                                    <td class="num text-end font-medium">{{ \App\Core\Support\Money::quantity(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cartons ?? '0')), 2) }}</td>
                                     <td></td>
-                                    <td class="num px-2 py-1 text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cost ?? '0'))) }}</td>
+                                    <td class="num text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->unload_cost ?? '0'))) }}</td>
                                     @if ($showsPrice)
-                                        <td class="num px-2 py-1 text-end font-medium">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->amount ?? '0'))) }}</td>
-                                        <td class="num px-2 py-1 text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => bcadd((string) ($l->amount ?? '0'), (string) ($l->unload_cost ?? '0'), 4))) }}</td>
+                                        <td class="num text-end font-medium">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => (string) ($l->amount ?? '0'))) }}</td>
+                                        <td class="num text-end font-semibold">{{ \App\Core\Support\Money::format(\App\Core\Support\Money::sumOf($receipt->lines, fn ($l) => bcadd((string) ($l->amount ?? '0'), (string) ($l->unload_cost ?? '0'), 4))) }}</td>
                                     @endif
                                 </tr>
                             </tfoot>

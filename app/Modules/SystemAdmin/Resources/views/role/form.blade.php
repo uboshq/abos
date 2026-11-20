@@ -101,16 +101,18 @@
          "দায়িত্বের সংঘাত" চাপলে বাঁয়ের তালিকা কেবল সেগুলো; আবার চাপলে সব। --}}
     @php
         $cardHref = fn (string $key) => $only === $key ? $here : $here.'?only='.$key;
+        // ⓘ চিহ্ন আর রং RoleCards-এ (অন্য তালিকার কার্ডের মতো PHP-তে) — পাতায় হাতে লেখা রং বা ইমোজি নয়
+        $look = \App\Modules\SystemAdmin\Support\RoleCards::class;
         $cards = [
-            ['users', 'system_admin::permission.card_users', '👥', $summary['users'] ?? 0, '', ['#2346d8', '#3b82f6'],
+            ['users', 'system_admin::permission.card_users', $look::icon('users'), $summary['users'] ?? 0, '', $look::tone('users'),
                 \Illuminate\Support\Facades\Route::has('system_admin.user.index') ? route('system_admin.user.index') : $here, false],
-            ['roles', 'system_admin::permission.card_roles', '🔑', $summary['roles'] ?? 0, '', ['#059669', '#10b981'], $here, false],
-            ['unassigned', 'system_admin::permission.card_unassigned', '∅', $summary['unassigned'] ?? 0, '', ['#dc2626', '#f97316'], $cardHref('empty'), $only === 'empty'],
-            ['clash', 'system_admin::permission.card_clash', '⚠', $summary['clash'] ?? 0, '', ['#d97706', '#f59e0b'], $cardHref('clash'), $only === 'clash'],
-            ['last-change', 'system_admin::permission.card_last_change', '🕒',
+            ['roles', 'system_admin::permission.card_roles', $look::icon('roles'), $summary['roles'] ?? 0, '', $look::tone('roles'), $here, false],
+            ['unassigned', 'system_admin::permission.card_unassigned', $look::icon('unassigned'), $summary['unassigned'] ?? 0, '', $look::tone('unassigned'), $cardHref('empty'), $only === 'empty'],
+            ['clash', 'system_admin::permission.card_clash', $look::icon('clash'), $summary['clash'] ?? 0, '', $look::tone('clash'), $cardHref('clash'), $only === 'clash'],
+            ['last-change', 'system_admin::permission.card_last_change', $look::icon('last-change'),
                 $lastChange ? \App\Core\Support\DateFormat::spokenDate($lastChange['at']) : '—',
                 $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : '',
-                ['#0284c7', '#22d3ee'], $saved ? $here.'?tab=history' : $here, false],
+                $look::tone('last-change'), $saved ? $here.'?tab=history' : $here, false],
         ];
     @endphp
     {{-- ⓘ `data-allow-all-branches` — কার্ড আর তালিকা কেবল রোল দেখার লিংক (রোল কোম্পানির, শাখার নয়); "সব শাখা"-তে ধূসর হত, কারণ রোলের পাতার ঠিকানা `/edit`-এ শেষ। সংরক্ষণ তবু বন্ধ থাকে --}}
@@ -255,7 +257,7 @@
                             <span class="role-sod is-ok" data-role-sod="0" title="{{ __('system_admin::permission.sod_hint') }}">✓ {{ __('system_admin::permission.sod_none') }}</span>
                         @else
                             <details class="role-sod-wrap" data-role-sod="{{ count($clashes) }}">
-                                <summary class="role-sod is-warn">⚠ {{ __('system_admin::permission.sod_some', ['count' => count($clashes)]) }}</summary>
+                                <summary class="role-sod is-warn"><x-ui.icon name="alert-triangle" :size="14" /> {{ __('system_admin::permission.sod_some', ['count' => count($clashes)]) }}</summary>
                                 <div class="role-pop">
                                     <p>{{ __('system_admin::permission.sod_hint') }}</p>
                                     <ul>
@@ -413,7 +415,7 @@
                     <section class="role-panel" data-role-panel="approval" id="role-panel-approval" role="tabpanel"
                              aria-labelledby="role-tab-approval" @if ($startTab !== 'approval') hidden @endif>
                         <h3 class="sr-only">{{ __('system_admin::permission.approval_power') }}</h3>
-                        <table class="role-list-table">
+                        <table class="role-list-table ui-grid">
                             <thead>
                                 <tr>
                                     <th>{{ __('system_admin::permission.approval_paper') }}</th>

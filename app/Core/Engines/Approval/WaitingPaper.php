@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Contracts\IsAMasterRecord;
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,23 +21,11 @@ use Illuminate\Database\Eloquent\Model;
  * ([[ApprovalEngine::adoptSignerEdit()]]) পর্দার পথে বাতিল করে — নতুন সিদ্ধান্ত পুরনোটার উপরে।
  *
  * ⓘ পাহারা দরজায় ([[App\Http\Middleware\AWaitingPaperIsNotEdited]] — প্রতিটা `*.edit`/`*.update`), বোতাম ধূসর পাতায়
- * ([[ui.paper-row-menu]], [[approval.edit-button]])। ⓘ মাস্টার রেকর্ড ([[MASTERS]]) এর বাইরে — সেগুলো কাগজ নয়।
+ * ([[ui.paper-row-menu]], [[approval.edit-button]])। ⓘ মাস্টার রেকর্ড ([[IsAMasterRecord]]) এর বাইরে — সেগুলো কাগজ নয়;
+ * মডিউল নিজের মডেলে ঘোষণা করে, কোর কোনো মডিউলের নাম জানে না ([[BoundariesTest]])।
  */
 final class WaitingPaper
 {
-    /**
-     * ⓘ কাগজ নয়, মাস্টার — নিজের একটা ঘরের অনুরোধ (বাকির সীমা, ব্যাংক হিসাব …) অপেক্ষায় থাকলেও বাকিটা বদলানো চলে।
-     *
-     * @var list<class-string>
-     */
-    public const MASTERS = [
-        \App\Modules\Customer\Models\Customer::class,
-        \App\Modules\Supplier\Models\Supplier::class,
-        \App\Modules\Inventory\Models\Product::class,
-        \App\Modules\Accounts\Models\Account::class,
-        \App\Modules\Accounts\Models\CashTill::class,
-    ];
-
     /**
      * কাগজটা এখন কারও সইয়ের অপেক্ষায় কি না — মাস্টার হলে কখনো নয়।
      *
@@ -44,7 +33,7 @@ final class WaitingPaper
      */
     public function waits(Model $paper): bool
     {
-        if (! $paper->exists || $this->isMaster($paper)) {
+        if (! $paper->exists || $paper instanceof IsAMasterRecord) {
             return false;
         }
 
@@ -55,14 +44,41 @@ final class WaitingPaper
             ->exists();
     }
 
-    private function isMaster(Model $paper): bool
+    /**
+     * তালিকার সারির জন্য একই প্রশ্ন — এক অনুরোধে এক ধরনের কাগজের জন্য একটাই কোয়েরি ([[ui.paper-row-menu]])।
+     *
+     * ⛔ Mac run of e88be43a3 (TheBillListShowsTheSuppliersOwnNumberTest): তালিকার প্রতিটা খসড়া সারি [[waits()]] ডাকত — দুই বিলে
+     *   ৪৫টা কোয়েরি, ছয় বিলে ৪৯টা। ⭐ এখন প্রথম সারিতে এই ধরনের সব অপেক্ষার কাগজের id একবারে, বাকি সারি সেখান থেকে।
+     * ⓘ মনে রাখা কেবল এই অনুরোধের ভিতরে — অনুরোধের বস্তু ধরে ([[WeakMap]]), তাই পরের অনুরোধ (পরীক্ষায় একই প্রসেসেও) নতুন করে পড়ে।
+     *   দরজার পাহারা আর পাতার বোতাম তবু তাজা [[waits()]] ডাকে — এটা কেবল তালিকা আঁকার জন্য।
+     */
+    public function waitsInList(Model $paper): bool
     {
-        foreach (self::MASTERS as $master) {
-            if ($paper instanceof $master) {
-                return true;
-            }
+        if (! $paper->exists || $paper instanceof IsAMasterRecord) {
+            return false;
         }
 
-        return false;
+        $request = request();
+        self::$listed ??= new \WeakMap;
+        $known = self::$listed[$request] ?? [];
+        $type = $paper->getMorphClass();
+
+        if (! array_key_exists($type, $known)) {
+            $known[$type] = array_fill_keys(
+                Approval::query()
+                    ->where('approvable_type', $type)
+                    ->where('status', Approval::PENDING)
+                    ->pluck('approvable_id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->all(),
+                true,
+            );
+            self::$listed[$request] = $known;
+        }
+
+        return isset($known[$type][(int) $paper->getKey()]);
     }
+
+    /** @var \WeakMap<\Illuminate\Http\Request, array<string, array<int, true>>>|null */
+    private static ?\WeakMap $listed = null;
 }

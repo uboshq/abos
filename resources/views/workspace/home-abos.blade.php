@@ -52,9 +52,12 @@
     // ⭐ "নিট বিক্রি" — বোর্ডের বিক্রির ঘরে মডিউলের নিজের ঘর (নাম, পয়সাসহ অঙ্ক, খুললে বিল · ফেরত · VAT সহ মোট); আগে একই ঠিকানা বলে
     //   বাদ পড়ত আর ভাঙা হিসাব হারাত। বকেয়া আর মজুদের একই নিয়ম।
     $netSales = null;
+    // ⓘ বাছা সময় ধরে মডিউলের ঘরের নাম বদলায় (আজ · এই মাস · এই বছর) — তিনটাই সেই একই "নিট বিক্রি" ঘর; কেবল "আজ"-এ মেলালে মাস/বছরে
+    //   ঘরটা আবার বোর্ডের ঘরে ফিরত আর মডিউলের ভাঙা হিসাব হারাত (Mac run of e88be43a3)
+    $netSalesLabels = [__('sales::dashboard.sales_today'), __('sales::dashboard.sales_this_month'), __('sales::dashboard.sales_this_year')];
     $cards = [];
     foreach ($groups['kpi'] ?? [] as $candidate) {
-        if ($candidate->label === __('sales::dashboard.sales_today')) {
+        if (in_array($candidate->label, $netSalesLabels, true)) {
             $netSales = $candidate;
         } elseif ($candidate->label === __('customer::dashboard.kpi_owed')) {
             $owed = $candidate;
@@ -313,8 +316,14 @@
                                         @if ($widget->hint)
                                             <span class="hb-s"><span data-kpi-hint>{{ $widget->hint }}</span></span>
                                         @endif
-                                        @if (filled($tile['sub'] ?? null))
-                                            <span class="hb-s" data-board-tile-sub>{{ $tile['sub'] }}</span>
+                                        {{-- ⓘ বোর্ডের তুলনা (▲/▼ শতাংশ) আর তার লেখা একসাথে — লেখাটা ("গত মাসের একই দিন পর্যন্ত") শতাংশ ছাড়া একা বসলে কিছু বলে না --}}
+                                        @if (filled($tile['sub'] ?? null) || ($tile['delta'] ?? null))
+                                            <span class="hb-s" data-board-tile-sub>
+                                                @if ($tile['delta'] ?? null)
+                                                    <span class="{{ $tile['delta']['up'] ? 'hb-up' : 'hb-down' }}" data-board-delta>{{ $tile['delta']['up'] ? '▲' : '▼' }} {{ $tile['delta']['text'] }}</span>
+                                                @endif
+                                                {{ $tile['sub'] ?? '' }}
+                                            </span>
                                         @endif
                                         {{-- ⓘ বোর্ডের ছোট রেখা থাকলে সেটাও (বিক্রির ঘরে) — কিছু হারায় না --}}
                                         @if (count($spark) > 1 && $peak > $floor)

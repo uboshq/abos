@@ -138,4 +138,6 @@ return [
     'obligation_cancelled' => 'Obligation cancelled',
     // ⓘ অফিসের SMS ফোনের চাবি বদল (১১ নভেম্বর ২০২৬; SmsPhoneController)
     'sms_phone_token' => 'New SMS phone key',
+    // ⓘ Supplier credit limit raised — an approved request applied (20 Nov 2026; SupplierLimitRequests)
+    'credit_limit_raised' => 'Supplier credit limit raised',
 ];

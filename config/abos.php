@@ -229,6 +229,34 @@ return [
     ],
 
     /*
+     * ⭐ SAP রূপের হোমে স্পেস-টালির এক-রঙা চিহ্ন (Lucide) — মডিউলের কোড ধরে (মালিক/সমন্বয়ক, ২০ নভেম্বর ২০২৬)। ⓘ মডিউলের কোড —
+     * ডেটা, কোড নয় (কোর মডিউলের নাম হাতে লেখে না; [[FioriLaunchpad::spaceIcon()]] পড়ে)। তালিকায় নেই এমন মডিউল `layout-grid` পায়।
+     */
+    'fiori_space_icons' => [
+        'accounts' => 'book-open',
+        'approval' => 'badge-check',
+        'assistant' => 'sparkles',
+        'backup' => 'database-backup',
+        'credit_control' => 'shield-alert',
+        'customer' => 'users',
+        'documents' => 'folder-open',
+        'executive' => 'crown',
+        'finance' => 'landmark',
+        'fixed_assets' => 'building-2',
+        'governance' => 'scale',
+        'hr' => 'users-round',
+        'inventory' => 'boxes',
+        'master_data' => 'database',
+        'notification' => 'megaphone',
+        'promotion' => 'gift',
+        'purchase' => 'shopping-cart',
+        'restaurant' => 'utensils',
+        'sales' => 'receipt-text',
+        'supplier' => 'factory',
+        'system_admin' => 'settings',
+    ],
+
+    /*
      * ⭐ গ্রুপের মালিক — কেবল পরিচয়ের জন্য (মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬)।
      *
      * ⓘ এই ইমেইলের মানুষটির পদবি সব কোম্পানিতে একটাই ("গ্রুপ চেয়ারম্যান ও সিইও"), কোনো কোম্পানির কর্মী-সারি যা-ই বলুক।

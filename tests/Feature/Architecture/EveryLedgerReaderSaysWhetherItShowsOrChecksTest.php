@@ -92,6 +92,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         // ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি (ISA 505) — পক্ষের পাতার খাতার একই ভিত্তি, তাই পাতার মতোই দেখার শাখা ধরে (হিসাবের ফাঁক #১৯)
         'app/Modules/Customer/Http/Controllers/CustomerBalanceConfirmationController.php' => 'গ্রাহকের জের নিশ্চিতকরণের চিঠি — গ্রাহকের পাতার একই খাতা, দেখার শাখা ধরে',
         'app/Modules/Supplier/Http/Controllers/SupplierBalanceConfirmationController.php' => 'সরবরাহকারীর জের নিশ্চিতকরণের চিঠি — সরবরাহকারীর পাতার একই দেনার খাতা, দেখার শাখা ধরে',
+        // ⭐ বছর-শেষের রেওয়ামিল (মালিক, ১৭ নভেম্বর ২০২৬ "ok")
+        'app/Modules/Accounts/Services/YearEndTrialBalance.php' => 'বছর-শেষের রেওয়ামিল — আগে, সমন্বয়, পরে আর আগের বছর; হেডারে বাছা শাখা ধরে (ViewedBranch::one(), স্থিতিপত্রের একই নিয়ম) আর রিপোর্টের শাখার দেয়ালে (ReportEngine::branchWall)',
     ];
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
@@ -140,6 +142,10 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Services/SalesReturnService.php' => 'ফেরতের পোস্টিং',
         'app/Modules/Sales/Services/ShiftService.php' => 'কাউন্টারের পালার নগদ মেলানো',
         'app/Modules/Supplier/Models/Supplier.php' => 'মূল উপকরণ — পাওনা',
+        // ⭐ চালানের লোডিং খরচ (মালিক, ১৮ নভেম্বর ২০২৬ "ওকে")
+        'app/Modules/Sales/Services/ChallanLoading.php' => 'চালানের লোডিং খরচ বাতিল/সম্পাদনায় — একটা চালানের নিজের খোলা দাখিলা আছে কি না দেখে উল্টায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ে উল্টানো বাদ পড়ত (DeliveryChallanService::unpost()-এর একই পাহারা)',
+        // ⭐ সরবরাহকারীর বাকির দেয়াল (মালিক, ১৮ নভেম্বর ২০২৬)
+        'app/Modules/Supplier/Services/SupplierCreditWall.php' => '⛔ সরবরাহকারীর বাকির সীমা — দেনা আর বিল-না-আসা মাল, গোটা কোম্পানি ধরে; সীমা সরবরাহকারীর, শাখার নয় (গ্রাহকের CreditExposure-এর একই নিয়ম); তালিকার ঘরও দেয়াল যা দেখে তা-ই',
         'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
     ];
 

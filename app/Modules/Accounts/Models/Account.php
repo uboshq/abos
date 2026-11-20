@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Services\LedgerBalances;
 use App\Core\Support\RunningBalance;
 use App\Models\LedgerEntry;
@@ -29,7 +30,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * লেনদেন শেষমেশ দুইটা খাতের মধ্যে টাকা সরায়। তাই এই মডেলটা ভুল হলে বাকি
  * সব মডিউল ভুল হয়।
  */
-class Account extends Model implements Drillable
+class Account extends Model implements Drillable, IsAMasterRecord
 {
     use BelongsToCompany;
     use HasActiveState;

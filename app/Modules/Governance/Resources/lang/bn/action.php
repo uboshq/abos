@@ -158,4 +158,6 @@ return [
     'obligation_cancelled' => 'করণীয় বাতিল',
     // ⓘ অফিসের SMS ফোনের চাবি বদল (১১ নভেম্বর ২০২৬; SmsPhoneController)
     'sms_phone_token' => 'SMS ফোনের নতুন চাবি',
+    // ⓘ সরবরাহকারীর বাকির সীমা বাড়ল — অনুমোদিত অনুরোধ বসানো হলো (২০ নভেম্বর ২০২৬; SupplierLimitRequests)
+    'credit_limit_raised' => 'সরবরাহকারীর বাকির সীমা বাড়ানো',
 ];

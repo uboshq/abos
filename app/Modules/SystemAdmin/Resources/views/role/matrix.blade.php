@@ -17,7 +17,7 @@
 
     <section data-boxed data-role-matrix-export class="role-main">
         <div class="role-table-wrap">
-            <table class="role-list-table">
+            <table class="role-list-table ui-grid">
                 <thead>
                     <tr>
                         @foreach ($columns as $column)

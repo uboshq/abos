@@ -156,7 +156,8 @@ final class TheSapLookOpensSpacesNotDropDownsTest extends TestCase
         $launchpad = substr($launchpad, 0, (int) strpos($launchpad, 'data-home-units'));
 
         foreach (app(MenuBuilder::class)->forUser($this->owner->fresh()) as $module) {
-            $icon = FioriLaunchpad::SPACE_ICONS[$module['code']] ?? 'layout-grid';
+            // ⓘ মডিউলের কোড ধরে তালিকাটা config-এ (কোর মডিউলের নাম হাতে লেখে না) — পড়া হয় একই দরজা দিয়ে
+            $icon = FioriLaunchpad::spaceIcon($module['code']);
             $this->assertMatchesRegularExpression(
                 '/data-fiori-space-tile="'.preg_quote($module['code'], '/').'".*?data-licon="'.preg_quote($icon, '/').'"/s',
                 $launchpad,

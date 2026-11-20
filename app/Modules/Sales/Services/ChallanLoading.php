@@ -70,6 +70,13 @@ final class ChallanLoading
     /** চালান পাকা হলে খাতায় — খরচ না থাকলে কিছুই নয় */
     public function post(DeliveryChallan $challan): void
     {
+        /*
+         * ⛔ চালানের সারিতে তালা — দুই দরজা (চালান পাকা করা আর recordOnConfirmed()) আগেই তালা দিয়ে ডাকে, আর একই লেনদেনে আবার
+         *   তালা কোনো খরচ নয়; পরের কোনো দরজা তালা ছাড়া ডাকলেও দুই হাত একসাথে একই চালানের খরচ বসাতে পারে না (Architecture:
+         *   টাকার প্রতিটা কাজ সারিতে তালা দেয়)। ⓘ কেবল তালা, কপি নয় — ডাকার জনের হাতের চালানটাই খাতায় যায়।
+         */
+        DeliveryChallan::acrossBranches()->whereKey($challan->id)->lockForUpdate()->value('id');
+
         $lines = $this->labour->lines(
             $challan,
             'loading_',

@@ -11,6 +11,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Services\DataScope;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
@@ -50,7 +51,7 @@ use Illuminate\Support\Collection;
  *
  * এখানে ভুল হওয়ার জায়গাই নেই: সারিটাই গ্রাহক।
  */
-class Customer extends Model implements AuthenticatableContract, Drillable
+class Customer extends Model implements AuthenticatableContract, Drillable, IsAMasterRecord
 {
     /**
      * ⓘ বাকির সীমার সইয়ের ছাপে না-সংরক্ষিত প্রস্তাব থাকে ([[CustomerService::withProposedLimit()]]) — সারি থেকে আবার মেলানো যায় না

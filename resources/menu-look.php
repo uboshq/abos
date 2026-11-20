@@ -93,6 +93,8 @@ return [
             'accounts::menu.inflow' => ['books', 'list-checks'],
             'accounts::menu.monthly_cash' => ['books', 'calendar-range'],
             'accounts::menu.cheque_register' => ['books', 'file-check'],
+            // ⓘ মালিকের নিজে লেখা ও নিজে অনুমোদিত কাগজের রিপোর্ট (মালিক, ২০ নভেম্বর ২০২৬) — রিপোর্টের দলে, পরের সারিগুলোর সাথে
+            'accounts::menu.owner_self_approved' => ['reports', 'user-check'],
             'accounts::menu.party_target' => ['reports', 'target'],
             'accounts::menu.party_target_areas' => ['reports', 'map-pinned'],
             'accounts::expense.title' => ['reports', 'chart-pie'],

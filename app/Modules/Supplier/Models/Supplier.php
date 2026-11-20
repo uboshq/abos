@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  * সরবরাহকারীর কাছে আমাদের দেনা। লেজারে সেটা ক্রেডিট প্রকৃতির খাত,
  * তাই এখানে "বকেয়া" ধনাত্মক মানে আমরা দিতে বাকি।
  */
-class Supplier extends Model implements Drillable
+class Supplier extends Model implements Drillable, IsAMasterRecord
 {
     use BelongsToCompany;
     use HasActiveState;

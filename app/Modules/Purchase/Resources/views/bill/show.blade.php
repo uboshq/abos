@@ -219,22 +219,22 @@
 
                 @if ($unloadDirect->isNotEmpty())
                     <div class="table-responsive mt-3">
-                        <table class="w-full text-sm">
+                        <table class="ui-grid is-compact">
                             <thead>
                                 <tr class="border-b border-(--color-border)">
-                                    <th class="px-2 py-1 text-start">{{ __('purchase::field.product') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.cartons') }}</th>
-                                    <th class="px-2 py-1 text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
-                                    <th class="px-2 py-1 text-end">{{ __('supplier::labour.share') }}</th>
+                                    <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.share') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($unloadDirect as $line)
                                     <tr class="border-b border-(--color-border)">
-                                        <td class="px-2 py-1">{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ $line->unload_rate === null ? '-' : \App\Core\Support\Money::quantity((string) $line->unload_rate, 4) }}</td>
-                                        <td class="num px-2 py-1 text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
+                                        <td>{{ $line->product?->code }} - {{ $line->product?->name() }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::quantity((string) ($line->unload_cartons ?? '0'), 2) }}</td>
+                                        <td class="num text-end">{{ $line->unload_rate === null ? '-' : \App\Core\Support\Money::quantity((string) $line->unload_rate, 4) }}</td>
+                                        <td class="num text-end">{{ \App\Core\Support\Money::format((string) ($line->unload_cost ?? '0')) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
