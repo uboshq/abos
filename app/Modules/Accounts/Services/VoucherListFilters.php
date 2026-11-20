@@ -31,13 +31,20 @@ use Illuminate\Http\Request;
  *   min, max      — টাকার পরিসর (লাখ-কমা ছেঁটে)
  *   by            — কে বানালেন (`created_by`)
  *   branch_id     — শাখা; হেডারে এক শাখা বাছা থাকলে সেটাই শুরুর মান (শাখার দেয়াল তো আছেই, [[ScopedToUserBranch]])
+ *   origin        — কোথা থেকে: `counter` (কাউন্টারের রসিদ, [[Voucher::ORIGIN_COUNTER]]) বা `office` (বাকি সব); কেবল রসিদের তালিকায়
+ *                   (মালিক, ২০ নভেম্বর ২০২৬: কাউন্টারের টাকাও রসিদ — তালিকায় সব / কাউন্টার / অফিস)
  *
  * ⛔ ভুল বা অ্যারে মান (`?party[]=x`, `?min=abc`) নীরবে বাদ — ৫০০ নয়, আর "সব" দেখানোর ভুলও নয়: অচেনা অবস্থা বা পদ্ধতি বাদ যায়,
  * কারণ সেগুলো কারো হাতে-লেখা ঠিকানা থেকেই আসে।
  */
 final class VoucherListFilters
 {
-    public const KEYS = ['from', 'to', 'party', 'account', 'method', 'state', 'min', 'max', 'by', 'branch_id'];
+    public const KEYS = ['from', 'to', 'party', 'account', 'method', 'state', 'min', 'max', 'by', 'branch_id', 'origin'];
+
+    /** ⓘ উৎসের ছাঁকনির দুই মান — খালি মানে "সব" */
+    public const ORIGIN_COUNTER = 'counter';
+
+    public const ORIGIN_OFFICE = 'office';
 
     public function __construct(
         private readonly PartyRegistry $parties,
@@ -68,6 +75,7 @@ final class VoucherListFilters
                 'account', 'by', 'branch_id' => ctype_digit($value),
                 'method' => in_array($value, [...MoneyMethod::METHODS, ...MoneyMethod::LEGACY], true),
                 'state' => in_array($value, ListSummary::GROUPS, true),
+                'origin' => in_array($value, [self::ORIGIN_COUNTER, self::ORIGIN_OFFICE], true),
                 'min', 'max' => is_numeric($value = str_replace(',', '', $value)),
                 default => false,
             };
@@ -99,7 +107,14 @@ final class VoucherListFilters
             ->when(isset($f['min']), fn ($q) => $q->where('amount', '>=', $f['min']))
             ->when(isset($f['max']), fn ($q) => $q->where('amount', '<=', $f['max']))
             ->when($f['by'] ?? null, fn ($q, $id) => $q->where('created_by', (int) $id))
-            ->when($f['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', (int) $id));
+            ->when($f['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', (int) $id))
+            /*
+             * ⭐ কাউন্টার / অফিস — মালিক, ২০ নভেম্বর ২০২৬। ⓘ কাউন্টার = উৎস "counter" (সরাসরি বিক্রয় আর POS দুই কাউন্টারই); অফিস = বাকি
+             * সব, উৎস খালি সহ (⛔ `!=` একা NULL বাদ দিত — হাতে লেখা প্রতিটা রসিদ "অফিস" থেকে হারাত)।
+             */
+            ->when(($f['origin'] ?? null) === self::ORIGIN_COUNTER, fn ($q) => $q->where('origin', Voucher::ORIGIN_COUNTER))
+            ->when(($f['origin'] ?? null) === self::ORIGIN_OFFICE,
+                fn ($q) => $q->where(fn ($w) => $w->whereNull('origin')->orWhere('origin', '<>', Voucher::ORIGIN_COUNTER)));
 
         // ⓘ অবস্থা শেষে — দলের ভাগ বাকি ছাঁকা সারিগুলোর উপরেই ([[ListSummary::onlyGroup()]])
         if (isset($f['state'])) {
@@ -129,7 +144,7 @@ final class VoucherListFilters
     /**
      * পর্দার ঘরগুলোর বাছাই — পক্ষের দল, খাত, পদ্ধতি, অবস্থা, যিনি বানালেন, শাখা।
      *
-     * @return array{parties: list<array<string, mixed>>, accounts: array<string, string>, methods: array<string, string>, states: array<string, string>, makers: array<string, string>, branches: array<string, string>}
+     * @return array{parties: list<array<string, mixed>>, accounts: array<string, string>, methods: array<string, string>, states: array<string, string>, makers: array<string, string>, branches: array<string, string>, origins: array<string, string>}
      */
     public function options(string $type, ?User $user): array
     {
@@ -157,6 +172,11 @@ final class VoucherListFilters
             'states' => collect(ListSummary::GROUPS)->mapWithKeys(fn (string $g) => [$g => __('accounts::voucher.filter.state_'.$g)])->all(),
             'makers' => $makers,
             'branches' => $branches,
+            // ⓘ কেবল রসিদে — অন্য তালিকায় কাউন্টারের কাগজ হয় নেই, নয় নিজের ট্যাবে ([[VoucherListController]])
+            'origins' => $type === Voucher::RECEIPT ? [
+                self::ORIGIN_COUNTER => __('accounts::voucher.filter.origin_counter'),
+                self::ORIGIN_OFFICE => __('accounts::voucher.filter.origin_office'),
+            ] : [],
         ];
     }
 
@@ -183,6 +203,7 @@ final class VoucherListFilters
             'max' => __('accounts::voucher.filter.max'),
             'by' => __('accounts::voucher.filter.by'),
             'branch_id' => __('accounts::voucher.filter.branch'),
+            'origin' => __('accounts::voucher.filter.origin'),
         ];
 
         $partyName = null;
@@ -200,6 +221,7 @@ final class VoucherListFilters
                 'state' => $options['states'],
                 'by' => $options['makers'],
                 'branch_id' => $options['branches'],
+                'origin' => $options['origins'] ?? [],
             ],
         ];
     }
