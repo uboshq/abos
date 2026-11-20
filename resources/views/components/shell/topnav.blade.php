@@ -45,6 +45,19 @@
         ?? ($menu[0] ?? null);
 
     /*
+     * ⭐ SAP রূপে স্পেসের ট্যাব — প্রতিটা মডিউল একটা **লিংক**, চাপলে স্পেসের পাতা খোলে (মডিউলের ড্যাশবোর্ড, মাথায় টালির ভাগ);
+     *   সারির ড্রপডাউন নেই। মালিক, ২০ নভেম্বর ২০২৬: *"SAP-এর ভেতরে Dynamic-এর চেহারা ঢুকে গেছে"* — সারির লম্বা তালিকা Business
+     *   Central-এর ধরন, আসল Fiori-র (Spaces and Pages, Horizon) নয়। কারণ আর নিয়ম [[FioriLaunchpad]]-এ।
+     * ⛔ কেবল `tiles`-এ; NetSuite আর ক্লাসিক (`modules`) আর Odoo (`sections`) আগের মতোই হুবহু।
+     */
+    $fioriSpaces = $shape === 'modules' && \App\Core\Support\FioriLaunchpad::on();
+
+    // ⓘ স্পেসের পাতায় (`module.dashboard`) চলতি স্পেস রুটের মান থেকে — যে মডিউলের ড্যাশবোর্ড-সারি নেই তার পাতাতেও দাগটা বসে
+    if ($fioriSpaces && $routeName === 'module.dashboard') {
+        $activeModule = \App\Core\Support\FioriLaunchpad::space($menu, (string) request()->route('module')) ?? $activeModule;
+    }
+
+    /*
      * পটিতে কী কী বসবে — মডিউল, না চলতি মডিউলের ভাগ।
      *
      * ── কেন এই দুইটা আলাদা, ২৮ আগস্ট ২০২৬ ───────────────────────────
@@ -187,7 +200,19 @@
             $only = count($entry['items']) === 1 ? $entry['items'][0] : null;
         @endphp
 
-        @if ($only && $only['url'])
+        @if ($fioriSpaces)
+            {{-- ⭐ SAP: স্পেসের ট্যাব — সোজা লিংক, ড্রপডাউন নেই; চলতিটার নিচে নীল দাগ ([[resources/css/fiori-look.css]]) --}}
+            <a href="{{ \App\Core\Support\FioriLaunchpad::spaceUrl($entry['accent']) }}" data-nav-item data-fiori-space="{{ $entry['accent'] }}"
+               @class([
+                   'flex h-(--spacing-command) shrink-0 items-center gap-1.5',
+                   'rounded-(--radius-field) px-2.5 text-sm whitespace-nowrap transition-colors',
+                   'bg-(--color-topnav-selected) font-semibold text-(--color-topnav-ink)' => $entry['active'],
+                   'text-(--color-topnav-ink-muted) hover:bg-(--color-topnav-hover)' => ! $entry['active'],
+               ])
+               @if ($entry['active']) aria-current="page" @endif>
+                <span>{{ $entry['label'] }}</span>
+            </a>
+        @elseif ($only && $only['url'])
             <a href="{{ $only['url'] }}" data-nav-item
                @class([
                    'flex h-(--spacing-command) shrink-0 items-center gap-1.5',
