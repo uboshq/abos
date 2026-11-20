@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { arrangeBoards } from './board-arrange.js'
+import { arrangeBoards, BOARD_ORDERS } from './board-arrange.js'
 
 /* ⭐ ড্যাশবোর্ডের প্রথম পর্দায় গ্রাফ, বাকি নিচে, কেউ হারায় না (মালিক, ২০ নভেম্বর ২০২৬, নমুনা 5gynumii "ok") */
 const ORDERS = {
@@ -46,5 +46,45 @@ describe('arrangeBoards', () => {
             expect(arrangeBoards(document, ORDERS)).toBeNull()
             expect(document.querySelector('[data-board-row]')).toBeNull()
         }
+    })
+})
+
+/* ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): অর্থের প্রথম পর্দায় 4 + 3, তিন রকম চওড়া — এখন দুই সারি, সারিতে তিনটা সমান কার্ড */
+describe('finance board', () => {
+    const keys = ['fin-receivable', 'fin-payable', 'fin-ratios', 'fin-cycle', 'fin-loans', 'fin-fund-trend', 'fin-calendar',
+        'fin-margins', 'fin-banks', 'fin-owners', 'fund', 'fund-news', 'fin-forecast', 'fin-cash-flow', 'fin-wc', 'fin-budget',
+        'fin-cheques', 'fin-fdr', 'fin-health', 'fin-flows']
+
+    function finance () {
+        document.documentElement.dataset.ui = 'rose'
+        document.body.innerHTML = '<main><div><div data-fin-board-position>'
+            + keys.map(k => `<section data-${k}>${k}</section>`).join('') + '</div></div></main>'
+    }
+
+    it('opens on two rows of three equal cards, and loses no box', () => {
+        finance()
+        const res = arrangeBoards(document, BOARD_ORDERS)
+        const first = [...document.querySelectorAll('[data-board-first]')]
+
+        expect(first).toHaveLength(2)
+        for (const row of first) {
+            expect(row.children).toHaveLength(3)
+            expect(row.style.gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))')
+            expect(row.hasAttribute('data-board-equal')).toBe(true)
+        }
+        expect(first.map(r => [...r.children].map(s => s.textContent))).toEqual([
+            ['fin-receivable', 'fin-payable', 'fin-ratios'],
+            ['fin-cycle', 'fin-fund-trend', 'fin-calendar'],
+        ])
+        expect(res.placed).toBe(keys.length)
+        expect(document.querySelectorAll('[data-board-row] > section')).toHaveLength(keys.length)
+        expect(document.querySelector('[data-board-row="rest"]')).toBeNull()
+    })
+
+    it('rows below the first screen keep their own heights', () => {
+        finance()
+        arrangeBoards(document, BOARD_ORDERS)
+
+        expect(document.querySelectorAll('[data-board-equal]')).toHaveLength(2)
     })
 })
