@@ -1308,6 +1308,14 @@ return [
         'refused' => 'This paper is waiting for approval — no one can change it, nothing was saved. The approver approves, sends it back for correction, or rejects it.',
     ],
 
+    // The owner wrote and approved a paper himself — a permanent mark (owner, 20 Nov 2026; [[OwnerSelfApproval]])
+    'owner_self' => [
+        'mark' => 'Written and approved by the same person (owner)',
+        'mark_hint' => 'The person who wrote this paper also approved or posted it — the owner. Staff cannot do this; the mark cannot be removed.',
+        'how_approved' => 'Approved',
+        'how_posted' => 'Posted',
+    ],
+
     'profile' => [
         'title' => 'My profile',
         'menu' => ':name — profile and settings',

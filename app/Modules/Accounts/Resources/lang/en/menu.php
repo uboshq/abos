@@ -40,6 +40,8 @@ return [
     'inflow' => 'Money In',
     'monthly_cash' => 'Monthly cash in & out',
     'cheque_register' => 'Cheque report',
+    // Owner, 20 Nov 2026 ([[OwnerSelfApprovedReport]])
+    'owner_self_approved' => 'Papers the owner wrote and approved himself',
     'party_target' => 'Target vs collection by party',
     'party_target_areas' => 'Target vs collection by area',
 

@@ -104,6 +104,8 @@ class ReportController extends Controller implements HasMiddleware
         'monthly-cash' => MonthlyCashReport::KEY,
         // ⭐ চেকের খাতা — আগামী তারিখের, আজ জমার, ফেরত (২ অক্টোবর ২০২৬)
         'cheque-register' => ChequeReports::KEY,
+        // ⭐ মালিকের নিজে পাকা করা কাগজ — সেতুটা মেনুর সারির সাথেই (মালিক, ২০ নভেম্বর ২০২৬)
+        'owner-self-approved' => \App\Modules\Accounts\Reports\OwnerSelfApprovedReport::KEY,
         /*
          * ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬: "Accounts → রিপোর্ট"। ⓘ রিপোর্টটা Sales-এর (লক্ষ্য সেখানে),
          * তাই চাবিটা লেখা হিসেবে — Accounts Sales-এর উপর নির্ভর করে না ([[BoundariesTest]]); Sales বন্ধ থাকলে চাবিটা নেই, দরজা ৪০৪।

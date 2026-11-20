@@ -17,7 +17,26 @@
     <div class="min-w-0">
         {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — [[PageHeading]] --}}
         @php($tag = \App\Core\Support\PageHeading::tag())
-        <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}@if ($subtitle)<span data-page-info class="hidden" title="{{ $subtitle }}" aria-label="{{ $subtitle }}"><x-ui.icon name="info" :size="15" /></span>@endif</{{ $tag }}>
+        @php
+            /*
+             * ⭐ কাগজের পাতা (`*.show`, রুটে বাঁধা কাগজ) — মালিক নিজে লিখে নিজে অনুমোদন বা পোস্ট করলে নামের পাশে ছোট দাগ
+             * (মালিক, ২০ নভেম্বর ২০২৬; [[ui.owner-self-mark]])। ⓘ এক জায়গায়, পনেরোটা পাতায় নয়; দাগ না থাকলে কিছুই আঁকা হয় না।
+             */
+            $headRoute = request()->route();
+            $headPaper = null;
+
+            if ($headRoute instanceof \Illuminate\Routing\Route && str_ends_with((string) $headRoute->getName(), '.show')
+                && ! str_starts_with((string) $headRoute->getName(), 'approval.')) {
+                foreach ($headRoute->parameters() as $headValue) {
+                    if ($headValue instanceof \Illuminate\Database\Eloquent\Model) {
+                        $headPaper = $headValue;
+
+                        break;
+                    }
+                }
+            }
+        @endphp
+        <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}@if ($subtitle)<span data-page-info class="hidden" title="{{ $subtitle }}" aria-label="{{ $subtitle }}"><x-ui.icon name="info" :size="15" /></span>@endif<x-ui.owner-self-mark :paper="$headPaper" class="ms-2 inline-block align-middle text-base font-normal" /></{{ $tag }}>
 
         {{-- ⭐ "ABOS"-এ ব্যাখ্যার লাইন নয়, নামের পাশে ⓘ — মালিক, ১৯ নভেম্বর ২০২৬ রাত: "এটা কোনো ইন্টারন্যাশনাল স্ট্যান্ডার্ডে পড়ে না …
              সবগুলো পর্দা একসাথে সরাই ফেলবে"। ⓘ চিহ্নটা বাকি রূপে `hidden`, লাইনটা `data-page-subtitle` ধরে কেবল "ABOS"-এ লুকায় ([[abos-look.css]]) --}}

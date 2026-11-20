@@ -203,6 +203,10 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
+            // ⭐ মালিকের নিজে পাকা করা কাগজ — নিজে লিখে নিজে অনুমোদন বা পোস্ট (মালিক, ২০ নভেম্বর ২০২৬; [[OwnerSelfApprovedReport]])
+            ['label' => 'accounts::menu.owner_self_approved', 'icon' => 'check-circle', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'owner-self-approved'], 'permission' => 'accounts.report'],
+
             // ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ (রিপোর্টটা Sales-এর, দরজা এখানেও)
             ['label' => 'accounts::menu.party_target', 'icon' => 'wallet', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'party-target'], 'permission' => 'accounts.report'],
@@ -821,6 +825,8 @@ return [
         BranchDuesReports::class,
         // ⭐ স্থায়ী সম্পদের দশটা কাগজ (ধাপ ৫)
         FixedAssetReports::class,
+        // ⭐ মালিকের নিজে পাকা করা কাগজ (মালিক, ২০ নভেম্বর ২০২৬)
+        \App\Modules\Accounts\Reports\OwnerSelfApprovedReport::class,
     ],
 
     // হোম পর্দার টাকার সংখ্যাগুলো
