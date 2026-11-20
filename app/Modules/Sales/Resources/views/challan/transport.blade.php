@@ -5,8 +5,10 @@
 
     <section data-boxed class="mx-auto max-w-xl rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
              data-challan-transport>
-        <h1 class="mb-1 text-lg font-semibold">{{ __('sales::transport.title') }}</h1>
-        <p class="mb-4 text-sm text-(--color-ink-muted)">{{ $challan->document_no }} · {{ __('sales::transport.why') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) —
+             বাক্সের ভিতরে বলে foldPageNotes() এটা ধরত না; চালান নম্বর পাতার শিরোনামে (ট্যাবে) আছে, ⓘ-এও থাকে --}}
+        <h1 class="mb-1 text-lg font-semibold">{{ __('sales::transport.title') }}<x-ui.page-info :text="$challan->document_no.' · '.__('sales::transport.why')" /></h1>
+        <p data-page-subtitle class="mb-4 text-sm text-(--color-ink-muted)">{{ $challan->document_no }} · {{ __('sales::transport.why') }}</p>
 
         @if ($locked)
             {{-- ⓘ গেট পাস হয়ে গেছে — মাল বেরিয়ে গেছে, কেবল দেখা --}}
