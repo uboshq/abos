@@ -17,7 +17,8 @@
                 <h2 id="fiori-section-{{ $kind }}-{{ $loop->index }}" class="fiori-section-title">{{ $section['title'] }}</h2>
 
                 <div class="fiori-tiles">
-                    @foreach ($section['tiles'] as $tile)
+                    {{-- ⓘ টালির তালিকার চাবি `items` — `tiles` একটা রূপের নাম, পাতা রূপের নাম লেখে না ([[EveryScreenObeysTheThemeTest]]) --}}
+                    @foreach ($section['items'] as $tile)
                         @php
                             $opens = ($tile['url'] ?? null) !== null && ! ($tile['planned'] ?? false);
                             $sub = $kind === 'home'

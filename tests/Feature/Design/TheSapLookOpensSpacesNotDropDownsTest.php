@@ -85,7 +85,7 @@ final class TheSapLookOpensSpacesNotDropDownsTest extends TestCase
         foreach ($sections as $section) {
             $this->assertStringContainsString('>'.e($section['title']).'</h2>', $body, "ভাগের শিরোনাম নেই: {$section['title']}");
 
-            foreach ($section['tiles'] as $tile) {
+            foreach ($section['items'] as $tile) {
                 $tiles++;
 
                 if ($tile['url'] !== null && ! $tile['planned']) {

@@ -73,7 +73,7 @@ final class FioriLaunchpad
      * ⓘ এই পাতার নিজের সারি (মডিউলের ড্যাশবোর্ড) টালি হয় না — পাতাটা তো ওটাই।
      *
      * @param  array<string, mixed>  $module  [[MenuBuilder::forUser()]]-এর একটা মডিউল
-     * @return list<array{key: string, title: string, colour: ?string, tiles: list<array{label: string, icon: string, url: ?string, planned: bool, active: bool, badge: ?int}>}>
+     * @return list<array{key: string, title: string, colour: ?string, items: list<array{label: string, icon: string, url: ?string, planned: bool, active: bool, badge: ?int}>}>
      */
     public static function sections(array $module): array
     {
@@ -126,14 +126,14 @@ final class FioriLaunchpad
 
             if (! isset($at[$key])) {
                 $at[$key] = count($sections);
-                $sections[] = ['key' => $key, 'title' => (string) $title, 'colour' => $look['colour'] ?? null, 'tiles' => []];
+                $sections[] = ['key' => $key, 'title' => (string) $title, 'colour' => $look['colour'] ?? null, 'items' => []];
             }
 
             $icon = $look['icon']
                 ?? ($look['kind'] !== null ? (MenuLook::KIND_ICONS[$look['kind']] ?? null) : null)
                 ?? 'layout-grid';
 
-            $sections[$at[$key]]['tiles'][] = [
+            $sections[$at[$key]]['items'][] = [
                 'label' => (string) ($row['label'] ?? ''),
                 'icon' => (string) $icon,
                 'url' => $row['url'] ?? null,
@@ -150,7 +150,7 @@ final class FioriLaunchpad
      * হোমের লঞ্চপ্যাড — প্রতিটা মডিউল একটা টালি (স্পেসের পাতায় যায়), রেলের ভাগে ভাগে ("অর্থ ও হিসাব", "ব্যবসা" …)।
      *
      * @param  list<array<string, mixed>>  $menu
-     * @return list<array{key: string, title: string, tiles: list<array{code: string, label: string, icon: string, url: string, app_count: int, active: bool}>}>
+     * @return list<array{key: string, title: string, items: list<array{code: string, label: string, icon: string, url: string, app_count: int, active: bool}>}>
      */
     public static function home(array $menu): array
     {
@@ -164,7 +164,7 @@ final class FioriLaunchpad
                 $sections[] = [
                     'key' => $section,
                     'title' => $section === 'top' ? __('core.fiori.my_apps') : __('core.nav_section.'.$section),
-                    'tiles' => [],
+                    'items' => [],
                 ];
                 $currentKey = $section;
             }
@@ -179,7 +179,7 @@ final class FioriLaunchpad
                 }
             }
 
-            $sections[count($sections) - 1]['tiles'][] = [
+            $sections[count($sections) - 1]['items'][] = [
                 'code' => (string) $module['code'],
                 'label' => (string) $module['label'],
                 'icon' => self::spaceIcon((string) $module['code']),
