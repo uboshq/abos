@@ -214,7 +214,15 @@ final class NoticeLifecycle
             return;
         }
 
-        if ((int) $notice->created_by === (int) $me) {
+        /*
+         * ⭐ মালিক (super admin) নিজের নোটিশ নিজে অনুমোদন দেন — লেখক ≠ অনুমোদনকারী কর্মীদের নিয়ম, মালিকের উপরে কেউ নেই
+         * (মালিক, ২০ নভেম্বর ২০২৬, "ok"; [[MakerChecker]]-এর একই ছাড়)। ⓘ মানুষ ছাড়া পথে (রাতের কাজ) আগের মতো আটকায়।
+         */
+        $user = auth()->user();
+        $owner = $user instanceof \App\Models\User && (int) $user->id === (int) $me
+            && $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+
+        if ((int) $notice->created_by === (int) $me && ! $owner) {
             throw ValidationException::withMessages([
                 'status' => __('core.notice.creator_cannot_approve', [
                     'no' => $notice->document_no ?: (string) $notice->id,

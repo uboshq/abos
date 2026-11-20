@@ -111,7 +111,7 @@ class NotificationTemplateController extends Controller
         $version = NotificationTemplateVersion::query()->where('template_id', $template->id)->findOrFail((int) $data['version_id']);
 
         // ⭐ লেখক নিজের লেখা প্রকাশ করেন না — দ্বিতীয় একজন দেখে প্রকাশ করেন (স্পেক §৯গ "Approval"); সুইচ দিয়ে বন্ধ করা যায়
-        if ($this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id) {
+        if ($this->needsSecondPerson() && $this->writtenBy($version, $request->user())) {
             app(NotificationAudit::class)->record('template_publish', $template, 'denied', ['template_id' => $template->id, 'version' => (int) $version->version]);
 
             return back()->with('failed', __('notification::template.own_version'));
@@ -146,6 +146,15 @@ class NotificationTemplateController extends Controller
         return (bool) app(SettingsService::class)->get('notification.templates_four_eyes', true);
     }
 
+    /**
+     * ⓘ সংস্করণটা এই মানুষের লেখা, আর তিনি মালিক নন — দ্বিতীয় জন লাগে। ⭐ মালিক (super admin) নিজের লেখাও প্রকাশ করেন:
+     * লেখক ≠ অনুমোদনকারী কর্মীদের নিয়ম, মালিকের উপরে কেউ নেই (মালিক, ২০ নভেম্বর ২০২৬, "ok"; [[MakerChecker]])।
+     */
+    private function writtenBy(NotificationTemplateVersion $version, \App\Models\User $user): bool
+    {
+        return ! \App\Core\Support\MakerChecker::isAnotherHand($user, $version->created_by === null ? null : (int) $version->created_by);
+    }
+
     private function form(Request $request, NotificationTemplate $template, ?NotificationTemplateVersion $version): View
     {
         return view('notification::templates.form', [
@@ -156,8 +165,8 @@ class NotificationTemplateController extends Controller
             'previews' => $version === null ? [] : ['bn' => $this->studio->preview($version, 'bn'), 'en' => $this->studio->preview($version, 'en')],
             'variables' => NotificationVariables::ALL,
             'canPublish' => $request->user()->can('notification.templates.publish')
-                && ! ($version !== null && $this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id),
-            'ownVersion' => $version !== null && $this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id,
+                && ! ($version !== null && $this->needsSecondPerson() && $this->writtenBy($version, $request->user())),
+            'ownVersion' => $version !== null && $this->needsSecondPerson() && $this->writtenBy($version, $request->user()),
         ]);
     }
 

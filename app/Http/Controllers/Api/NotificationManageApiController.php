@@ -213,8 +213,9 @@ class NotificationManageApiController extends Controller
         $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
         $version = NotificationTemplateVersion::query()->where('template_id', $template->id)->where('version', (int) $data['version'])->firstOrFail();
 
+        // ⭐ মালিক (super admin) নিজের লেখাও প্রকাশ করেন — ওয়েবের একই নিয়ম (মালিক, ২০ নভেম্বর ২০২৬; [[MakerChecker]])
         if ((bool) app(SettingsService::class)->get('notification.templates_four_eyes', true)
-            && (int) $version->created_by === (int) $request->user()->id) {
+            && ! \App\Core\Support\MakerChecker::isAnotherHand($request->user(), $version->created_by === null ? null : (int) $version->created_by)) {
             app(NotificationAudit::class)->record('template_publish', $template, 'denied', ['template_id' => $template->id, 'version' => (int) $version->version]);
 
             return response()->json(['message' => __('core.notify.own_version')], 403);
