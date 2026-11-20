@@ -911,6 +911,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             ($self ? 'sales::field.collected_by' : 'sales::field.driver_name') => $t['driver_name'] ?: $gatePass->driver_name,
             'sales::field.driver_phone' => $t['driver_phone'] ?: $gatePass->driver_phone,
             'sales::field.transport_cost' => $t['cost'] === null ? null : Money::format($t['cost']),
+            // ⭐ লোডিং খরচ — ভাড়ার পাশে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")
+            'supplier::labour.loading' => $this->loadingLine($challan),
         ], fn ($v) => filled($v));
 
         $doc = new PrintableDocument(
@@ -1623,7 +1625,17 @@ class SalesPrintController extends Controller implements HasMiddleware
             'sales::field.vehicle_no' => $challan->vehiclePlate(),
             'sales::field.driver_name' => $challan->driver_name ?? '',
             'sales::field.driver_phone' => $challan->driver_phone ?? '',
+            // ⭐ লোডিং খরচ — বাছা থাকলে এক লাইনে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"); খালি সারি কাগজে বসে না
+            'supplier::labour.loading' => $this->loadingLine($challan),
         ];
+    }
+
+    /** ⓘ চালানের লোডিং এক লাইনে — বাছা না থাকলে খালি, কাগজে সারিটাই বসে না ([[LabourCost::describe()]]) */
+    private function loadingLine(DeliveryChallan $challan): string
+    {
+        return filled($challan->loading_mode)
+            ? app(\App\Modules\Supplier\Services\LabourCost::class)->describe($challan, 'loading_')
+            : '';
     }
 
     /**

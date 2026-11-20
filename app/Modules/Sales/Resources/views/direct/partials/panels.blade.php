@@ -252,6 +252,19 @@
             <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
         </div>
 
+        {{-- ⭐ লোডিং খরচ — অফিসের চালানের একই ঘর (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[DirectSaleService::stampExtras()]] →
+             [[ChallanLoading::stamp()]])। ⓘ গাড়ি যারই হোক, মাল তোলার লোক লাগতে পারে — তাই `carriesGoods`-এ বাঁধা নয়।
+             ⓘ ঘরগুলো বিলের ফর্মের ভেতরে নামসহ, সাধারণ জমায় যায় — জাভাস্ক্রিপ্টে কিছু লাগে না। --}}
+        <div class="sm:col-span-3 rounded-(--radius-card) border border-(--color-border) p-3" data-counter-loading>
+            @include('sales::challan.partials.loading-fields', ['compact' => true, 'loadingValues' => [
+                'mode' => $resume['fields']['loading_mode'] ?? '',
+                'amount' => $resume['fields']['loading_amount'] ?? '',
+                'account_id' => $resume['fields']['loading_account_id'] ?? '',
+                'contractor_id' => $resume['fields']['loading_contractor_id'] ?? '',
+                'reason' => $resume['fields']['loading_reason'] ?? '',
+            ]])
+        </div>
+
         {{-- ⓘ পুরনো "পরিবহন লাগবে না" চেকবক্স উঠে গেছে — গাড়ি "ক্রেতার নিজের" বা "নেই" থেকেই বোঝা যায় (af) --}}
         <input type="hidden" name="own_transport" :value="ownTransport">
 

@@ -104,11 +104,11 @@ final class ChallanLoading
             $challan = DeliveryChallan::acrossBranches()->lockForUpdate()->findOrFail($challan->id);
 
             if ($challan->status !== DocumentStatus::CONFIRMED) {
-                throw ValidationException::withMessages(['loading_mode' => __('sales::fare.only_confirmed')]);
+                throw ValidationException::withMessages(['loading_mode' => __('supplier::labour.loading_only_confirmed')]);
             }
 
             if (filled($challan->loading_mode)) {
-                throw ValidationException::withMessages(['loading_mode' => __('sales::fare.already_recorded')]);
+                throw ValidationException::withMessages(['loading_mode' => __('supplier::labour.loading_already')]);
             }
 
             if (trim((string) ($data['loading_mode'] ?? '')) === '') {

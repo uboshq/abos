@@ -38,6 +38,6 @@ final class ChallanLoadingController extends Controller implements HasMiddleware
 
         $this->loading->recordOnConfirmed($challan, $data);
 
-        return back()->with('saved', __('supplier::labour.saved'));
+        return back()->with('saved', __('supplier::labour.loading_saved'));
     }
 }

@@ -31,6 +31,9 @@ return [
     'no_contractor_party' => 'No supplier of the type "Labour Contractor" yet — add one in Suppliers, or pay in cash.',
     'save' => 'Save unloading',
     'saved' => 'Unloading cost saved.',
+    'loading_saved' => 'Loading cost saved.',
+    'loading_only_confirmed' => 'Loading can be written here only on a confirmed challan — on a draft, write it on the challan form.',
+    'loading_already' => 'Loading is already written on this challan — it is not booked twice.',
 
     // ⛔ walls
     'pick_one' => 'Choose how the labour was paid: cash now, due to a contractor, paid by the supplier, or not needed.',
