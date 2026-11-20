@@ -50,9 +50,16 @@ final class FcmSender
             'token' => $token,
             'notification' => array_filter(['title' => $title, 'body' => $body]),
             'data' => array_map('strval', $data),
-            'android' => ['priority' => 'HIGH'],
+            /*
+             * ⭐ অ্যাপের "জরুরি বার্তা" চ্যানেল — উঁচু গুরুত্ব, তাই বন্ধ বা তালা দেওয়া অ্যাপেও পর্দার উপরে ভেসে ওঠে (মালিক, ২০ নভেম্বর ২০২৬:
+             * "নোটিফিকেশন সবসময় আসে")। ⓘ চ্যানেলটা না থাকা পুরনো অ্যাপে Android নিজের সাধারণ চ্যানেলে দেখায় — কিছুই হারায় না।
+             */
+            'android' => ['priority' => 'HIGH', 'notification' => ['channel_id' => self::CHANNEL]],
         ]);
     }
+
+    /** অ্যাপের চ্যানেলের নাম — `mobile/lib/core/push/` একই নামে বানায় */
+    public const CHANNEL = 'abos_alerts';
 
     /**
      * ⭐ নীরব বার্তা — কেবল `data`, কোনো শিরোনাম বা লেখা নয় (রিয়েল-টাইম সিঙ্ক, মালিক, ১০ অক্টোবর ২০২৬)।
