@@ -269,6 +269,44 @@ final class DepositClaimService
         return $lines;
     }
 
+    /**
+     * ⭐ বিল না বাছা খবরের টাকা গ্রাহকের খোলা বিলে, পুরনো আগে — প্রতিটায় তার বকেয়া পর্যন্ত (টাকার পরিকল্পনা ৬; আদায়ের
+     * [[CollectionService::oldestFirst()]]-এর একই নিয়ম, ২০ নভেম্বর ২০২৬ থেকে রসিদে)। ⓘ কেবল খবরের শাখার বিল; বাড়তি টাকা গ্রাহকের খাতায়।
+     *
+     * @return list<array{sales_invoice_id: int, public_id: string, amount: string}>
+     */
+    private function oldestFirst(DepositClaim $claim, string $amount): array
+    {
+        $left = $amount;
+        $lines = [];
+
+        $bills = SalesInvoice::acrossBranches()
+            ->where('sal_invoices.company_id', $claim->company_id)
+            ->where('sal_invoices.customer_id', $claim->customer_id)
+            ->where('sal_invoices.status', DocumentStatus::CONFIRMED)
+            ->when($claim->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $claim->branch_id))
+            ->withCollected()
+            ->orderBy('sal_invoices.trx_date')->orderBy('sal_invoices.id')
+            ->get();
+
+        foreach ($bills as $bill) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $share = self::least($bill->dueAmount(), $left);
+
+            if (bccomp($share, '0', 4) <= 0) {
+                continue;
+            }
+
+            $lines[] = ['sales_invoice_id' => (int) $bill->id, 'public_id' => (string) $bill->public_id, 'amount' => $share];
+            $left = bcsub($left, $share, 4);
+        }
+
+        return $lines;
+    }
+
     private static function least(string ...$amounts): string
     {
         return array_reduce($amounts, fn (?string $min, string $a) => $min === null || bccomp($a, $min, 4) < 0 ? $a : $min);
@@ -450,8 +488,17 @@ final class DepositClaimService
             'narration' => (string) __('sales::portal.from_claim', ['no' => $claim->public_id]),
         ];
 
-        // ⭐ বাছা বিলে মেলে — রসিদের "এক টাকা, বহু বিল" ঘরে (`bills[i][id]` বিলের public_id)
-        $bills = array_map(fn (array $share): array => ['id' => $share['public_id'], 'amount' => $share['amount']], $this->sharesAt($claim, $credit));
+        /*
+         * ⭐ বাছা বিলে মেলে — রসিদের "এক টাকা, বহু বিল" ঘরে (`bills[i][id]` বিলের public_id)। ⭐ কিছুই না মিললে সবচেয়ে পুরনো বিল আগে —
+         * টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬), আদায়ের দিনের একই নিয়ম; নইলে পাওনা কমত অথচ প্রতিটা বিল "বাকি" দেখাত।
+         */
+        $shares = $this->sharesAt($claim, $credit);
+
+        if ($shares === []) {
+            $shares = $this->oldestFirst($claim, $credit);
+        }
+
+        $bills = array_map(fn (array $share): array => ['id' => $share['public_id'], 'amount' => $share['amount']], $shares);
 
         if ($bills !== []) {
             $data['bills'] = $bills;
