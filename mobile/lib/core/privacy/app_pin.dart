@@ -13,16 +13,39 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// <p>⭐ ৪–৬ অঙ্ক। রাখা হয় কেবল লবণ-মেশানো PBKDF2-HMAC-SHA256 (২০,০০০ পাক), নিরাপদ ভাণ্ডারে — PIN নিজে কোথাও নয়।
 /// ⓘ বেরোলে মোছে ([[clear]]) — পরের জন নিজের PIN বসান।
 class AppPin {
-  AppPin({Future<String?> Function(String key)? read, Future<void> Function(String key, String? value)? write})
-      : _read = read ?? _secureRead,
-        _write = write ?? _secureWrite;
+  AppPin({
+    Future<String?> Function(String key)? read,
+    Future<void> Function(String key, String? value)? write,
+    DateTime Function()? clock,
+  })  : _read = read ?? _secureRead,
+        _write = write ?? _secureWrite,
+        _clock = clock ?? DateTime.now;
+
+  final DateTime Function() _clock;
 
   static const String _key = 'abos_app_pin_v1';
   static const String _triesKey = 'abos_app_pin_tries';
   static const int iterations = 20000;
 
-  /// ভুলের সীমা — এর পরে বের করে দেওয়া হয়
+  static const String _lastWrongKey = 'abos_app_pin_last_wrong';
+
+  /// ভুলের সীমা — এর পরে অপেক্ষা ([waitAfter]); ⛔ আর বের করে দেওয়া নয় (মালিক, ২০ নভেম্বর ২০২৬: "লগআউট কেবল নিজে বের হলে, ফোন
+  /// বাদ দিলে, পাসওয়ার্ড বদলালে, প্রশাসক বন্ধ করলে")
   static const int maxTries = 5;
+
+  /// ⭐ [maxTries]-এর পরে প্রতিটা ভুলে অপেক্ষা দ্বিগুণ — ৩০ সেকেন্ড, ১, ২, ৪ … মিনিট, সর্বোচ্চ এক ঘণ্টা (iOS/Android তালার নিয়মের মতো;
+  /// ৪ অঙ্কের PIN আন্দাজে খুলতে তখন মাসের পর মাস)। [maxTries]-এর আগে শূন্য।
+  static Duration waitAfter(int tries) {
+    if (tries < maxTries) return Duration.zero;
+    final seconds = 30 * (1 << (tries - maxTries).clamp(0, 7));
+    return Duration(seconds: seconds > 3600 ? 3600 : seconds);
+  }
+
+  /// শেষ ভুলের সময় — অপেক্ষা গোনার জন্য
+  Future<DateTime?> lastWrongAt() async {
+    final ms = int.tryParse(await _read(_lastWrongKey) ?? '');
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
 
   final Future<String?> Function(String key) _read;
   final Future<void> Function(String key, String? value) _write;
@@ -53,6 +76,7 @@ class AppPin {
     final salt = Uint8List.fromList(List<int>.generate(16, (_) => Random.secure().nextInt(256)));
     await _write(_key, 'v1:${base64Encode(salt)}:$iterations:${base64Encode(_derive(pin, salt, iterations))}');
     await _write(_triesKey, null);
+    await _write(_lastWrongKey, null);
     return true;
   }
 
@@ -67,6 +91,7 @@ class AppPin {
     final derived = _derive(pin, base64Decode(parts[1]), int.parse(parts[2]));
     if (_same(derived, base64Decode(parts[3]))) {
       await _write(_triesKey, null);
+      await _write(_lastWrongKey, null);
       return true;
     }
     return _wrong();
@@ -78,10 +103,12 @@ class AppPin {
   Future<void> clear() async {
     await _write(_key, null);
     await _write(_triesKey, null);
+    await _write(_lastWrongKey, null);
   }
 
   Future<bool> _wrong() async {
     await _write(_triesKey, '${await tries() + 1}');
+    await _write(_lastWrongKey, '${_clock().millisecondsSinceEpoch}');
     return false;
   }
 

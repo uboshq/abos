@@ -7,13 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// <p>⛔ আগে ফোনে PIN/আঙুল না থাকলে অ্যাপ-তালা খুলে দিত — খোলা ফোন হাতে পেলে যে কেউ অনুমোদন-বাক্সে সই দিতেন।
 ///
-/// <p>⭐ দাবি: পাসওয়ার্ডে ঢোকার পরপরই PIN বসাতে হয়; ফিরে এলে PIN ছাড়া খোলে না; ভুল PIN খোলে না, পাঁচবারে বের করে দেয়;
+/// <p>⭐ দাবি: পাসওয়ার্ডে ঢোকার পরপরই PIN বসাতে হয়; ফিরে এলে PIN ছাড়া খোলে না; ভুল PIN খোলে না, পাঁচবারের পরে অপেক্ষা (বের করে দেওয়া নয়, ২০ নভেম্বর ২০২৬);
 /// PIN না থাকা পুরনো সেশন পাসওয়ার্ড চায়; PIN নিজে কোথাও রাখা হয় না।
 void main() {
   late Map<String, String> store;
   late DateTime now;
 
-  AppPin pin() => AppPin(read: (k) async => store[k], write: (k, v) async => v == null ? store.remove(k) : store[k] = v);
+  AppPin pin() => AppPin(
+      read: (k) async => store[k], write: (k, v) async => v == null ? store.remove(k) : store[k] = v, clock: () => now);
 
   AppLock lock({bool startLocked = false}) => AppLock(
         startLocked: startLocked,
@@ -71,7 +72,8 @@ void main() {
     expect(l.locked, isFalse);
   });
 
-  test('five wrong PINs send the person out', () async {
+  // ⭐ মালিক, ২০ নভেম্বর ২০২৬: পাঁচবার ভুলে আর বের করে দেওয়া নয় — অপেক্ষা, প্রতি ভুলে দ্বিগুণ; অপেক্ষার মধ্যে ঠিক PIN-ও খোলে না
+  test('five wrong PINs make the person wait, doubling, and never sign them out', () async {
     final l = lock();
     await l.prepare();
     await l.setPin('2580', '2580');
@@ -82,6 +84,28 @@ void main() {
     }
     expect(l.tooManyTries, isTrue, reason: '⛔ অসীম চেষ্টা — চার অঙ্ক অনুমানে খোলা যেত');
     expect(l.locked, isTrue);
+    expect(l.signedIn, isTrue, reason: '⛔ পাঁচবার ভুলে বের করে দিল');
+    expect(await l.pinWaitLeft(), const Duration(seconds: 30));
+
+    expect(await l.submitPin('2580'), isNotNull, reason: '⛔ অপেক্ষার মধ্যে PIN যাচাই হলো');
+    expect(l.locked, isTrue);
+
+    now = now.add(const Duration(seconds: 31));
+    expect(await l.submitPin('1111'), isNotNull);
+    expect(await l.pinWaitLeft(), const Duration(minutes: 1), reason: '⛔ অপেক্ষা দ্বিগুণ হলো না');
+
+    now = now.add(const Duration(minutes: 2));
+    expect(await l.submitPin('2580'), isNull);
+    expect(l.locked, isFalse);
+    expect(l.tooManyTries, isFalse);
+  });
+
+  test('the wait doubles and stops at one hour', () {
+    expect(AppPin.waitAfter(4), Duration.zero);
+    expect(AppPin.waitAfter(5), const Duration(seconds: 30));
+    expect(AppPin.waitAfter(6), const Duration(minutes: 1));
+    expect(AppPin.waitAfter(12), const Duration(hours: 1));
+    expect(AppPin.waitAfter(40), const Duration(hours: 1));
   });
 
   test('a saved session with no PIN on a phone with no lock asks for the password, never a new PIN', () async {
@@ -93,7 +117,7 @@ void main() {
     expect(l.locked, isTrue);
   });
 
-  testWidgets('the gate: set-up cover after sign-in, PIN cover after the idle limit, five misses sign out', (tester) async {
+  testWidgets('the gate: set-up cover after sign-in, PIN cover after the idle limit, five misses only wait', (tester) async {
     var signedOut = 0;
     final l = lock();
     await tester.pumpWidget(MaterialApp(home: AppLockGate(lock: l, onSignOut: () => signedOut++, child: const Text('APP'))));
@@ -115,6 +139,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('app-pin-open')));
       await tester.pumpAndSettle();
     }
-    expect(signedOut, 1, reason: '⛔ পাঁচবার ভুলেও বের করল না');
+    expect(signedOut, 0, reason: '⛔ পাঁচবার ভুলে বের করে দিল — তালা মানে তালা (মালিক, ২০ নভেম্বর ২০২৬)');
+    expect(find.byKey(const ValueKey('app-pin-enter')), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-pin-error')), findsOneWidget, reason: '⛔ অপেক্ষার কথা দেখাল না');
   });
 }

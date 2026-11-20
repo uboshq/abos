@@ -190,7 +190,7 @@
   "lockDelayMinutes": "{count, plural, one{{shown} minute} other{{shown} minutes}}",
   "lockScreenPinLength": "The PIN is {min} to {max} digits.",
   "lockScreenPinTwice": "Type the same PIN twice.",
-  "lockScreenTooManyTries": "Five wrong PINs — sign in with your password again.",
+  "lockScreenPinWait": "{count, plural, one{Too many wrong PINs — try again in {shown} second.} other{Too many wrong PINs — try again in {shown} seconds.}}",
   "lockScreenPinWrong": "{count, plural, one{Wrong PIN — {shown} more try left.} other{Wrong PIN — {shown} more tries left.}}",
   "lockScreenBiometricReason": "Use your fingerprint or phone PIN to open ABOS",
   "lockScreenBiometricTitle": "Open ABOS",

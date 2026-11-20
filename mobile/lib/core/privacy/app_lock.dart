@@ -119,21 +119,43 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     return null;
   }
 
-  /// তালা-পর্দার PIN — মিললে খোলে; না মিললে কারণ (কয়বার বাকি), পাঁচবারে [tooManyTries]
+  /// তালা-পর্দার PIN — মিললে খোলে; না মিললে কারণ (কয়বার বাকি), পাঁচবারের পরে অপেক্ষা ([AppPin.waitAfter])
+  ///
+  /// <p>⛔ আগে পাঁচবার ভুলে বের করে দিত — মালিক, ২০ নভেম্বর ২০২৬: তালা মানে তালা, লগআউট নয়; লগআউট কেবল নিজে বের হলে, "আমার
+  /// ফোনগুলো" থেকে বাদ দিলে, পাসওয়ার্ড বদলালে, প্রশাসক বন্ধ করলে। এখন ফোনের নিজের তালার মতো অপেক্ষা, দ্বিগুণ হয়ে।
+  /// ⓘ অপেক্ষার মধ্যে PIN যাচাই হয় না — ভুলও গোনা হয় না, তাই অপেক্ষা নিজে নিজে বাড়ে না।
   Future<String?> submitPin(String typed) async {
+    final wait = await pinWaitLeft();
+    if (wait > Duration.zero) return _waitMessage(wait);
     if (await _pin.check(typed)) {
       _locked = false;
       _askPin = false;
+      _tooMany = false;
       notifyListeners();
       return null;
     }
-    final left = AppPin.maxTries - await _pin.tries();
+    final tries = await _pin.tries();
+    final left = AppPin.maxTries - tries;
     if (left <= 0) {
       _tooMany = true;
       notifyListeners();
-      return AppLocale.l10n.lockScreenTooManyTries;
+      return _waitMessage(AppPin.waitAfter(tries));
     }
     return AppLocale.l10n.lockScreenPinWrong(left, bnDigits(left));
+  }
+
+  /// এখনো কতক্ষণ PIN দেওয়া যাবে না — শূন্য হলে দেওয়া যায়
+  Future<Duration> pinWaitLeft() async {
+    final wait = AppPin.waitAfter(await _pin.tries());
+    final last = await _pin.lastWrongAt();
+    if (wait == Duration.zero || last == null) return Duration.zero;
+    final left = last.add(wait).difference(_clock());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  String _waitMessage(Duration wait) {
+    final seconds = wait.inSeconds < 1 ? 1 : wait.inSeconds;
+    return AppLocale.l10n.lockScreenPinWait(seconds, bnDigits(seconds));
   }
 
   /// বেরোলে PIN-এর হিসাব ভোলা — ভাণ্ডারের PIN মোছে [[AuthController]] (বেরোনোর পথ একটাই)
@@ -218,7 +240,6 @@ class _AppLockGateState extends State<AppLockGate> {
   final _pinField = TextEditingController();
   final _pinAgain = TextEditingController();
   String? _pinError;
-  bool _sentOut = false;
 
   @override
   void initState() {
@@ -237,12 +258,7 @@ class _AppLockGateState extends State<AppLockGate> {
 
   void _changed() {
     if (!widget.lock.locked) _asked = false;
-    // ⛔ পাঁচবার ভুল — বের করে দেওয়া
-    if (widget.lock.tooManyTries && !_sentOut) {
-      _sentOut = true;
-      widget.onSignOut?.call();
-    }
-    if (!widget.lock.tooManyTries) _sentOut = false;
+    // ⓘ পাঁচবার ভুলে আর বের করে দেওয়া নয় — অপেক্ষা ([AppLock.submitPin], মালিক, ২০ নভেম্বর ২০২৬)
     if (mounted) setState(() {});
   }
 

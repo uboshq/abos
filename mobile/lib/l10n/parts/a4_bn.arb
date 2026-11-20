@@ -840,9 +840,17 @@
   "@lockScreenPinTwice": {
     "description": "Setting a PIN: the two PINs differ"
   },
-  "lockScreenTooManyTries": "পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।",
-  "@lockScreenTooManyTries": {
-    "description": "Lock screen: too many wrong PINs"
+  "lockScreenPinWait": "{count, plural, other{অনেকবার ভুল PIN — {shown} সেকেন্ড পরে আবার চেষ্টা করুন।}}",
+  "@lockScreenPinWait": {
+    "description": "Lock screen: too many wrong PINs, wait before the next try (never a sign-out); shown is the seconds in the reader's digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "String"
+      }
+    }
   },
   "lockScreenPinWrong": "{count, plural, other{PIN মেলেনি — আর {shown}বার চেষ্টা করা যাবে।}}",
   "@lockScreenPinWrong": {

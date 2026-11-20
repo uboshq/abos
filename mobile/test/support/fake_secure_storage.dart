@@ -23,6 +23,9 @@ class FakeSecureStorage {
 
   static void reset() => _values.clear();
 
+  /// একটা চাবি সরানো — আগের বিল্ডের রাখা অবস্থা সাজাতে
+  static void remove(String key) => _values.remove(key);
+
   static void install() {
     TestWidgetsFlutterBinding.ensureInitialized();
     const channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');

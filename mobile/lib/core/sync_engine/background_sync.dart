@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../api_client/api_client.dart';
 import '../auth/session_repository.dart';
 import '../auth/token_storage.dart';
 import '../launcher_widgets/hub/widget_hub.dart';
@@ -85,6 +86,28 @@ Future<void> widgetRound() async {
   }
 }
 
+/// কত পুরনো জোড়া পেছনে আগেভাগে নতুন হয় ([[renewIfStale]])
+const Duration renewTokensAfter = Duration(days: 3);
+
+/// ⭐ অ্যাপ না খুললেও ঢোকা থাকে (মালিক, ২০ নভেম্বর ২০২৬: "লগআউট না চাপা পর্যন্ত ঢোকা; ৩০ দিন না খুললেও বের নয়") —
+/// জোড়া [renewTokensAfter]-এর বেশি পুরনো (বা কবে রাখা জানা নেই) হলে পেছনেই নবায়ন ([[ApiClient.renewNow]])। সার্ভারের
+/// নবায়ন-টোকেন ৩৬৫ দিন, প্রতি নবায়নে নতুন করে গোনা — তাই ফোন মাঝে মাঝে নেট পেলেই সেশন চিরকাল চলে।
+/// ⛔ নেট নেই, সার্ভার ব্যস্ত — টোকেন থাকে, পরের গোলে আবার; কেবল সার্ভারের নিশ্চিত "না"-তে মোছে (ApiClient-এর নিয়ম)।
+/// ⓘ ঢোকা না থাকলে কিছু নয়। ফেরে নবায়ন হলো কি না; কখনো ছোড়ে না।
+Future<bool> renewIfStale({DateTime? now, Future<bool> Function()? renew}) async {
+  try {
+    final refreshToken = await TokenStorage.instance.refreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return false;
+    final savedAt = await TokenStorage.instance.tokensSavedAt();
+    final current = (now ?? DateTime.now()).toUtc();
+    if (savedAt != null && current.difference(savedAt) < renewTokensAfter) return false;
+    return await (renew ?? ApiClient.renewNow)();
+  } catch (error) {
+    debugPrint('ABOS background renew: skipped ($error)');
+    return false;
+  }
+}
+
 /// ⭐ পেছনের একটা গোল — জমা কাজ পাঠানো আর ঘরের পর্দার উইজেট; WorkManager-এর ১৫ মিনিটের কাজ আর পেছনের নীরব ডাক
 /// ([onBackgroundNudge]) দুইয়েরই একই শরীর।
 /// ⛔ টানা (pull) এখানে নয়: খোলা অ্যাপ পেছনে থাকলে তার Hive বাক্স খোলা — দুই isolate একই বাক্স খুললে বাক্স ভাঙে;
@@ -100,6 +123,9 @@ Future<void> backgroundRound() async {
       // rejection — for a session that is simply closed, not failing.
       final refreshToken = await TokenStorage.instance.refreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return;
+
+      // ⭐ চুপচাপ নবায়ন — সারি পাঠানোর আগে, যাতে পাঠানোও নতুন টোকেনে ([[renewIfStale]]); কখনো ছোড়ে না
+      await renewIfStale();
 
       // ⛔ খোলা অ্যাপ বাক্স ধরে থাকলে পেছনে কিছুই খোলা হয় না, কিছুই মোছা হয় না — অ্যাপ নিজেই পাঠায় ([[QueueLock]])
       await SyncEngine.instance.init(background: true);

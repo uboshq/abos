@@ -34,7 +34,18 @@ class SessionRepository {
 
   Future<AuthUser?> readUser() async {
     try {
-      final raw = await _storage.read(key: _userKey);
+      return await readUserOrThrow();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// ⭐ [readUser]-এর মতোই, কিন্তু ভাণ্ডার নিজে না পড়া গেলে ছোড়ে — "প্রোফাইল নেই" আর "এখন পড়া গেল না" আলাদা, যাতে
+  /// ফোনের এক মুহূর্তের keystore ভুলে সেশন মুছে না যায় ([[AuthController.restoreSession]], ২০ নভেম্বর ২০২৬)।
+  /// নষ্ট বা অচেনা মান এখনও null — নতুন ইনস্টলের মতো।
+  Future<AuthUser?> readUserOrThrow() async {
+    final raw = await _storage.read(key: _userKey);
+    try {
       if (raw == null || raw.isEmpty) return null;
       return AuthUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {

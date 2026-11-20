@@ -48,8 +48,27 @@ class AuthController extends StateNotifier<AuthState> {
   /// rather than signed in with an empty name, so a screen never has to
   /// handle a user with a blank identity.
   Future<void> restoreSession() async {
-    final refreshToken = await TokenStorage.instance.refreshToken();
-    final savedUser = await SessionRepository.instance.readUser();
+    // ⛔ ফোনের নিরাপদ ভাণ্ডার এক মুহূর্ত সাড়া না দিলে (ফোন সবে চালু, keystore ব্যস্ত) আগে শুরুটাই ভাঙত, বা প্রোফাইল "নেই"
+    // পড়ে পুরো সেশন মুছে মানুষকে বের করে দিত (মালিক, ২০ নভেম্বর ২০২৬: লগআউট না চাপলে বের নয়)। এখন কয়েকবার চেষ্টা;
+    // তবু না পড়া গেলে টোকেন রেখে কেবল এবারের জন্য লগইনের পর্দা — পরের খোলায় সেশন আবার ফেরে।
+    String? refreshToken;
+    AuthUser? savedUser;
+    var readable = false;
+    for (var attempt = 0; attempt < 3 && !readable; attempt++) {
+      if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 400));
+      try {
+        refreshToken = await TokenStorage.instance.refreshToken();
+        savedUser = await SessionRepository.instance.readUserOrThrow();
+        readable = true;
+      } catch (_) {
+        // ⓘ আবার চেষ্টা
+      }
+    }
+    if (!readable) {
+      _keptUnreadSession = true;
+      state = const AuthState.signedOut();
+      return;
+    }
     if (refreshToken != null && refreshToken.isNotEmpty && savedUser != null) {
       SyncEngine.instance.actAs(savedUser.id);
       state = AuthState.signedIn(savedUser);
@@ -61,11 +80,19 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// শুরুতে ভাণ্ডার পড়া যায়নি, তাই আগের সেশন না মুছে রাখা ([[restoreSession]]) — এই অবস্থায় কেউ লগইন করলে আগে
+  /// সেটার পুরো সাফাই, যাতে নতুন জন আগের জনের তথ্য না দেখেন
+  bool _keptUnreadSession = false;
+
   Future<void> login({
     required String identifier,
     required String password,
     String? code,
   }) async {
+    if (_keptUnreadSession) {
+      _keptUnreadSession = false;
+      await _clearLocalSession();
+    }
     final deviceId = await TokenStorage.instance.deviceId();
     try {
       final response = await ApiClient.dio.post<Map<String, dynamic>>(

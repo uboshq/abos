@@ -1237,11 +1237,11 @@ abstract class AppL10n {
   /// **'দুইবার একই PIN লিখুন।'**
   String get lockScreenPinTwice;
 
-  /// Lock screen: too many wrong PINs
+  /// Lock screen: too many wrong PINs, wait before the next try (never a sign-out); shown is the seconds in the reader's digits
   ///
   /// In bn, this message translates to:
-  /// **'পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।'**
-  String get lockScreenTooManyTries;
+  /// **'{count, plural, other{অনেকবার ভুল PIN — {shown} সেকেন্ড পরে আবার চেষ্টা করুন।}}'**
+  String lockScreenPinWait(int count, String shown);
 
   /// Lock screen: a wrong PIN and the tries left; shown is the count in the reader's digits
   ///

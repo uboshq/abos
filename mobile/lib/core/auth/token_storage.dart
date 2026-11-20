@@ -25,6 +25,10 @@ class TokenStorage {
   static const _refreshTokenKey = 'abos_refresh_token';
   static const _deviceIdKey = 'abos_device_id';
 
+  /// ⭐ জোড়াটা শেষ কবে রাখা হয়েছিল (UTC মিলিসেকেন্ড) — পেছনের গোল এটা দেখে পুরনো জোড়া আগেভাগে নতুন করে
+  /// ([[backgroundRound]], মালিক, ২০ নভেম্বর ২০২৬: ৩০ দিন না খুললেও বের নয়)
+  static const _savedAtKey = 'abos_tokens_saved_at';
+
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
@@ -55,12 +59,32 @@ class TokenStorage {
     _accessTokenCache = accessToken;
     await _storage.write(key: _accessTokenKey, value: accessToken);
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
+    try {
+      await _storage.write(
+          key: _savedAtKey, value: '${DateTime.now().toUtc().millisecondsSinceEpoch}');
+    } catch (_) {
+      // ⓘ কেবল আগেভাগে নবায়নের হিসাব — না লেখা গেলে পেছনের গোল জোড়াটাকে পুরনো ধরে নবায়ন করে, ক্ষতি নেই
+    }
+  }
+
+  /// জোড়াটা শেষ কবে রাখা হয়েছিল — না জানা গেলে (এই চাবির আগের বিল্ড, ভাণ্ডারের ভুল) null
+  Future<DateTime?> tokensSavedAt() async {
+    try {
+      final raw = await _storage.read(key: _savedAtKey);
+      final ms = raw == null ? null : int.tryParse(raw);
+      return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> clear() async {
     _accessTokenCache = null;
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
+    try {
+      await _storage.delete(key: _savedAtKey);
+    } catch (_) {}
     // The device id deliberately survives sign-out: it identifies the handset
     // to the sync bookkeeping (the server's per-device watermark rows), not
     // the person. Clearing it would make every sign-out look like a brand new
