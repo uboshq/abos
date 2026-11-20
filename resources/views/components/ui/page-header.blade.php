@@ -16,8 +16,11 @@
 <div {{ $attributes->merge(['class' => 'flex flex-wrap items-start justify-between gap-3']) }}>
     <div class="min-w-0">
         {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — [[PageHeading]] --}}
-        @php($tag = \App\Core\Support\PageHeading::tag())
+        {{-- ⛔ এক লাইনের php-নির্দেশ আর নিচে php-ব্লক একই ফাইলে থাকলে Blade প্রথমটা থেকে ব্লকের শেষ পর্যন্ত গিলে ফেলে —
+             `$tag` বসতই না, প্রতিটা পাতা ৫০০ (fe, ২০ নভেম্বর ২০২৬, লোকাল সার্ভারে `/appearance`)। তাই এক ব্লকে। --}}
         @php
+            $tag = \App\Core\Support\PageHeading::tag();
+
             /*
              * ⭐ কাগজের পাতা (`*.show`, রুটে বাঁধা কাগজ) — মালিক নিজে লিখে নিজে অনুমোদন বা পোস্ট করলে নামের পাশে ছোট দাগ
              * (মালিক, ২০ নভেম্বর ২০২৬; [[ui.owner-self-mark]])। ⓘ এক জায়গায়, পনেরোটা পাতায় নয়; দাগ না থাকলে কিছুই আঁকা হয় না।
