@@ -193,7 +193,8 @@ final class AllBranchesViewIsReadOnlyTest extends TestCase
         foreach ([route('accounts.voucher.index'), $this->voucherForm(), route('dashboard')] as $url) {
             $html = (string) $this->get($url)->assertOk()->getContent();
             $this->assertStringContainsString('data-all-branches-view', $html, "⛔ \"সব শাখা\"-র চিহ্ন নেই: {$url}");
-            $this->assertStringContainsString('data-all-branches-banner', $html, "⛔ \"শুধু দেখার জন্য\" ফিতা নেই: {$url}");
+            // ⛔ ফিতা নয় — মালিকের নিয়ম, ১৮–১৯ নভেম্বর ২০২৬ (পাতায় কোনো ফিতা নয়); ধূসর বোতামের কারণ-লেখাই যথেষ্ট
+            $this->assertStringNotContainsString('data-all-branches-banner', $html, "⛔ \"সব শাখা\"-তে পাতায় ফিতা: {$url}");
             $this->assertStringContainsString('data-all-branches-allow', $html, '⛔ খোলা দরজার ছাঁচ পাতায় যায়নি।');
             $this->assertStringNotContainsString('data-writing-branch', $html);
         }

@@ -19,15 +19,9 @@
     $writingIn = $readOnlyView ? null : $branchView->writingBranch($branchViewer, request()->route()?->getName());
 @endphp
 
-@if ($readOnlyView)
-    @if ($banner)
-    <div role="status" data-all-branches-banner
-         class="mb-3 flex items-center gap-2 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-1.5 text-sm font-semibold text-(--color-badge-warning-ink)">
-        <span class="size-2 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
-        <span>{{ __('core.all_branches.banner') }}</span>
-    </div>
-    @endif
-@elseif ($writingIn !== null)
+{{-- ⛔ "সব শাখা"-তে পাতার মাথায় ফিতা নেই — মালিকের নিয়ম, ১৮–১৯ নভেম্বর ২০২৬: পাতায় কোনো ফিতা/লাইন নয়। ধূসর বোতামের উপর রাখলে
+     কারণটা দেখায় ("লিখতে হলে ওপর থেকে একটা শাখা বাছুন"), আর সার্ভার থামায় — ফিতা ছাড়াই বোঝা যায়। --}}
+@if (! $readOnlyView && $writingIn !== null)
     <div role="status" data-writing-branch
          class="mb-3 flex items-center gap-2 rounded-(--radius-field) bg-(--color-badge-info-bg) px-3 py-1.5 text-sm font-semibold text-(--color-badge-info-ink)">
         <span class="size-2 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
