@@ -15,10 +15,11 @@
     <x-slot:title>{{ __('governance::menu.my_sessions') }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="__('governance::menu.my_sessions')" />
+        <x-ui.page-header :title="__('governance::menu.my_sessions')" :info="__('governance::message.sessions_why')" />
     </x-slot:header>
 
-    <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
+    {{-- ⭐ লেখাটা নামের পাশে ⓘ-এ (page-header-এর `info`), বাক্সটা "ABOS"/"Dynamic"-এ লুকায় — মালিক, ১৯ নভেম্বর ২০২৬ রাত --}}
+    <p data-page-subtitle class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
               text-(--color-ink-muted)">
         {{ __('governance::message.sessions_why') }}
     </p>

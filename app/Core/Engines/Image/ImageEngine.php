@@ -320,6 +320,121 @@ final class ImageEngine
     }
 
     /**
+     * ⭐ ছবির লুকানো তথ্য বাদ — জিপিএস, ফোনের নাম, তোলার সময় (২০ নভেম্বর ২০২৬; মালিক, ১৬ নভেম্বর: স্লিপের ছবি পরিষ্কার)।
+     *
+     * ⓘ কেবল বাইটের টুকরো কাটা — ছবির বিন্দু ছোঁয়া হয় না, তাই GD যেখানে হোঁচট খায় ([[AttachmentEngine]]-এর পড়ে-যাওয়া পথ) সেখানেও
+     *   চলে। JPEG: APP1 (EXIF/XMP), APP13 (IPTC), মন্তব্য; PNG: eXIf, লেখার টুকরো (tEXt/zTXt/iTXt), সময় (tIME)।
+     * ⓘ রঙের প্রোফাইল (APP2/iCCP) থাকে — ওটা ছবির রং, তথ্য নয়।
+     * ⚠️ EXIF-এর সাথে "কোন দিকে সোজা" কথাটাও যায় — তাই এটা কেবল তখন, যখন GD দিয়ে ঘুরিয়ে নতুন করে লেখা যায়নি। গঠন অচেনা হলে
+     *   (ভাঙা ফাইল) যেমন ছিল তেমনই ফেরে — কাগজ হারানো চলে না।
+     */
+    public static function withoutMetadata(string $bytes, string $mime): string
+    {
+        try {
+            return match (strtolower($mime)) {
+                'image/jpeg', 'image/jpg', 'image/pjpeg' => self::jpegWithoutMetadata($bytes),
+                'image/png' => self::pngWithoutMetadata($bytes),
+                default => $bytes,
+            };
+        } catch (\Throwable) {
+            return $bytes;
+        }
+    }
+
+    private static function jpegWithoutMetadata(string $b): string
+    {
+        $n = strlen($b);
+
+        if ($n < 4 || substr($b, 0, 2) !== "\xFF\xD8") {
+            return $b;
+        }
+
+        $out = "\xFF\xD8";
+        $i = 2;
+
+        while ($i + 2 <= $n) {
+            if ($b[$i] !== "\xFF") {
+                return $b;
+            }
+
+            $marker = ord($b[$i + 1]);
+
+            // ⓘ ভরাট বাইট
+            if ($marker === 0xFF) {
+                $i++;
+
+                continue;
+            }
+
+            // ⓘ স্ক্যানের শুরু বা শেষ — এরপর কেবল ছবির বাইট, যেমন আছে তেমন
+            if ($marker === 0xDA || $marker === 0xD9) {
+                return $out.substr($b, $i);
+            }
+
+            // ⓘ দৈর্ঘ্যহীন চিহ্ন
+            if ($marker === 0x01 || ($marker >= 0xD0 && $marker <= 0xD8)) {
+                $out .= substr($b, $i, 2);
+                $i += 2;
+
+                continue;
+            }
+
+            if ($i + 4 > $n) {
+                return $b;
+            }
+
+            $length = (ord($b[$i + 2]) << 8) | ord($b[$i + 3]);
+
+            if ($length < 2 || $i + 2 + $length > $n) {
+                return $b;
+            }
+
+            // ⛔ APP1 (EXIF, XMP — জিপিএস এখানে), APP13 (IPTC), COM (মন্তব্য)
+            if (! in_array($marker, [0xE1, 0xED, 0xFE], true)) {
+                $out .= substr($b, $i, 2 + $length);
+            }
+
+            $i += 2 + $length;
+        }
+
+        return $b;
+    }
+
+    private static function pngWithoutMetadata(string $b): string
+    {
+        $n = strlen($b);
+
+        if ($n < 8 || substr($b, 0, 8) !== "\x89PNG\r\n\x1a\n") {
+            return $b;
+        }
+
+        $out = substr($b, 0, 8);
+        $i = 8;
+
+        while ($i + 12 <= $n) {
+            $length = (int) unpack('N', substr($b, $i, 4))[1];
+            $type = substr($b, $i + 4, 4);
+            $total = 12 + $length;
+
+            if ($i + $total > $n) {
+                return $b;
+            }
+
+            if (! in_array($type, ['eXIf', 'tEXt', 'zTXt', 'iTXt', 'tIME'], true)) {
+                $out .= substr($b, $i, $total);
+            }
+
+            $i += $total;
+
+            if ($type === 'IEND') {
+                return $out;
+            }
+        }
+
+        return $b;
+    }
+
+    /**
      * প্রোফাইল ছবি — বর্গাকার, ছোট।
      *
      * ⓘ `$crop` দিলে ঠিক ঐ অংশটাই নেওয়া হয় (ব্যবহারকারী পর্দায় যা

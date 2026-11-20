@@ -411,8 +411,9 @@ class PortalController extends Controller
              */
             'bank_account_id' => ['nullable', 'integer', Rule::in($this->banks()->modelKeys())],
             'note' => ['nullable', 'string', 'max:500'],
-            // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
-            'slip' => ['nullable', 'file', 'max:'.intdiv(AttachmentEngine::SLIP_MAX_BYTES, 1024)],
+            // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF; ধরন ধরে সীমা কন্ট্রোল প্যানেলে,
+            //   এখানে কেবল ১০ MB-র ছাদ — ২০ নভেম্বর ২০২৬)
+            'slip' => ['nullable', 'file', 'max:'.AttachmentEngine::SLIP_HARD_MAX_KB],
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক, কেবল নিজের বিল ([[DepositRequestController::billIds()]]-এর একই পাহারা)
             'bills' => ['nullable', 'array', 'max:50'],
             'bills.*.invoice' => ['required', 'string', 'max:64'],

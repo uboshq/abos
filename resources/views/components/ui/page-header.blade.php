@@ -1,4 +1,6 @@
-@props(['title', 'subtitle' => null, 'more' => []])
+@props(['title', 'subtitle' => null, 'more' => [], 'info' => null])
+{{-- ⭐ `info` — কেবল ⓘ-এর ভিতরের বাড়তি লেখা (২০ নভেম্বর ২০২৬): পাতার নিজের ব্যাখ্যার বাক্স `data-page-subtitle` পেয়ে "ABOS"/"Dynamic"-এ
+     লুকায়, আর লেখাটা এখানে আসে — বাকি রূপে বাক্সটা যেমন ছিল তেমন ([[ui/page-info]]) --}}
 {{--
     ⭐ পাতার মাথার এক ছাঁচ — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: "কোথায় আছি" (লেআউট নিজেই উপরে বসায়,
     [[shell/page-path]]) → শিরোনাম → এক লাইনের ব্যাখ্যা (`subtitle`) → ডান কোণে **একটাই** প্রধান বোতাম (`actions`
@@ -39,7 +41,7 @@
                 }
             }
         @endphp
-        <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}@if ($subtitle)<span data-page-info class="hidden" title="{{ $subtitle }}" aria-label="{{ $subtitle }}"><x-ui.icon name="info" :size="15" /></span>@endif<x-ui.owner-self-mark :paper="$headPaper" class="ms-2 inline-block align-middle text-base font-normal" /></{{ $tag }}>
+        <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}@if ($subtitle || filled($info))<span data-page-info class="hidden" title="{{ trim($subtitle.' '.$info) }}" aria-label="{{ trim($subtitle.' '.$info) }}"><x-ui.icon name="info" :size="15" /></span>@endif<x-ui.owner-self-mark :paper="$headPaper" class="ms-2 inline-block align-middle text-base font-normal" /></{{ $tag }}>
 
         {{-- ⭐ "ABOS"-এ ব্যাখ্যার লাইন নয়, নামের পাশে ⓘ — মালিক, ১৯ নভেম্বর ২০২৬ রাত: "এটা কোনো ইন্টারন্যাশনাল স্ট্যান্ডার্ডে পড়ে না …
              সবগুলো পর্দা একসাথে সরাই ফেলবে"। ⓘ চিহ্নটা বাকি রূপে `hidden`, লাইনটা `data-page-subtitle` ধরে কেবল "ABOS"-এ লুকায় ([[abos-look.css]]) --}}

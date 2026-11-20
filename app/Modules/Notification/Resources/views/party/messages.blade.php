@@ -6,9 +6,10 @@
     <x-slot:title>{{ __('notification::party.messages_title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::party.messages_title')" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::party.messages_title')" :info="__('notification::party.messages_note')" :search="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::party.messages_note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::party.messages_note') }}</p>
 
         <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
             <label class="grid gap-1">{{ __('notification::party.from') }}

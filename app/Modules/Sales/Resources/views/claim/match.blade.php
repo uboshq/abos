@@ -70,8 +70,9 @@
     @endif
 
     <div class="mb-4">
-        <h1 class="text-lg font-semibold">{{ __('sales::deposit.title') }}</h1>
-        <p class="text-sm text-(--color-ink-muted)">{{ __('sales::deposit.subtitle', ['days' => $days]) }}</p>
+        <h1 class="text-lg font-semibold">{{ __('sales::deposit.title') }}<x-ui.page-info :text="__('sales::deposit.subtitle', ['days' => $days])" /></h1>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('sales::deposit.subtitle', ['days' => $days]) }}</p>
     </div>
 
     {{-- ⓘ গোনা — খবর এসেছে (ব্যাংকে নেই) · মিলেছে · আজ খাতায় --}}

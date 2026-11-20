@@ -8,9 +8,10 @@
     <x-slot:title>{{ __('notification::sms.title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::sms.title')" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::sms.title')" :info="__('notification::sms.note')" :search="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::sms.note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::sms.note') }}</p>
 
         @include('notification::partials.flash')
 

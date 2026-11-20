@@ -6,9 +6,10 @@
     <x-slot:title>{{ __('notification::delivery.health_title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::delivery.health_title')" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::delivery.health_title')" :info="__('notification::delivery.health_note')" :search="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.health_note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.health_note') }}</p>
 
         <div class="overflow-x-auto">
             <table class="ui-grid">

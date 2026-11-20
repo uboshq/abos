@@ -17,7 +17,8 @@
 
     <x-slot:header>
         <x-ui.page-header :title="$isCredit ? __('accounts::note.new_credit') : __('accounts::note.new_debit')"
-                          :subtitle="$isCredit ? __('accounts::note.credit_hint') : __('accounts::note.debit_hint')" />
+                          :subtitle="$isCredit ? __('accounts::note.credit_hint') : __('accounts::note.debit_hint')"
+                          :info="__('accounts::note.no_goods_move')" />
     </x-slot:header>
 
     @if ($errors->any())
@@ -30,7 +31,8 @@
     @endif
 
     {{-- ⚠️ সীমানাটা ফর্মেই লেখা — মানুষ নোট আর ফেরত নিয়মিত গুলিয়ে ফেলেন --}}
-    <p class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2
+    {{-- ⭐ লেখাটা নামের পাশে ⓘ-এ (page-header-এর `info`), বাক্সটা "ABOS"/"Dynamic"-এ লুকায় — মালিক, ১৯ নভেম্বর ২০২৬ রাত --}}
+    <p data-page-subtitle class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2
               text-sm text-(--color-ink-muted)">
         {{ __('accounts::note.no_goods_move') }}
     </p>

@@ -17,8 +17,9 @@
         <div class="flex flex-wrap items-center gap-3">
             <span class="inline-flex size-10 items-center justify-center rounded-(--radius-card) bg-(--color-brand-500) text-white" aria-hidden="true"><x-ui.icon name="brain" :size="24" /></span>
             <div class="min-w-0">
-                <h1 class="text-lg font-semibold">{{ $name }}</h1>
-                <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::page.lede') }}</p>
+                <h1 class="text-lg font-semibold">{{ $name }}<x-ui.page-info :text="__('assistant::page.lede')" /></h1>
+                {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+                <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('assistant::page.lede') }}</p>
             </div>
         </div>
 

@@ -6,6 +6,8 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
+use App\Core\Engines\Attachment\NotASlip;
+use App\Core\Engines\Attachment\SeenBefore;
 use App\Models\Attachment;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DepositClaim;
@@ -51,9 +53,13 @@ final class DepositSlip
                         module: self::MODULE,
                         entity: DepositClaim::class,
                         entityId: (int) $claim->id,
-                        maxBytes: AttachmentEngine::SLIP_MAX_BYTES,
+                        // ⭐ সীমা কন্ট্রোল প্যানেল থেকে, ধরন ধরে — ওয়েব, ফোন আর পোর্টাল এই এক দরজায় (২০ নভেম্বর ২০২৬)
+                        maxBytes: AttachmentEngine::slipUploadBytes(),
                         only: AttachmentEngine::SLIP,
                     );
+                } catch (NotASlip $refused) {
+                    // ⓘ মানুষের ভাষায় — আগে "Not a slip: too_big" ইংরেজি চাবিটাই ফর্মে বসত
+                    throw ValidationException::withMessages(['slip' => $refused->text()]);
                 } catch (AttachmentException $refused) {
                     throw ValidationException::withMessages(['slip' => $refused->getMessage()]);
                 }
@@ -79,6 +85,19 @@ final class DepositSlip
         if ($earlier !== null) {
             $claim->forceFill(['lookalike_claim_id' => (int) $earlier->source_entity_id])->save();
         }
+    }
+
+    /**
+     * ⚠️ এই দাবির স্লিপ আগে অন্য কোনো কাগজে এসেছে কি না — আরেকটা জমার খবর, রসিদের ভাউচার, যেকোনো কাগজ; বার্তা আর লিংকসহ
+     *   ([[SeenBefore]], ২০ নভেম্বর ২০২৬)। ⓘ কেবল জানানো — দাবি আগেই জমা; ওয়েবের ফর্ম আর ফোনের উত্তর দুইটাই এটা দেখায়।
+     *
+     * @return array{attachment: Attachment, paper: string, date: string, url: ?string, message: string}|null
+     */
+    public function seenBefore(DepositClaim $claim): ?array
+    {
+        $slip = $this->of($claim);
+
+        return $slip === null ? null : app(SeenBefore::class)->of($slip);
     }
 
     /** দাবির সর্বশেষ স্লিপ — না থাকলে null */

@@ -127,7 +127,11 @@
             {{-- সীমাটা লেখা থাকে, নাহলে বড় ফাইল বেছে জমা দেওয়ার পর
                  ব্যবহারকারী জানতেন সেটা নেওয়া হয়নি --}}
             <span class="w-full text-2xs text-(--color-ink-muted)">
-                {{ $slip ? __('core.attachment.slip').' — '.__('core.attachment.slip_hint', ['max' => '5 MB']) : __('core.attachment.limit') }}
+                {{-- ⭐ সীমা কন্ট্রোল প্যানেল থেকে, ধরন ধরে ([[AttachmentEngine::slipMaxKb()]], ২০ নভেম্বর ২০২৬) --}}
+                {{ $slip ? __('core.attachment.slip').' — '.__('core.attachment.slip_hint', [
+                    'image' => \App\Core\Engines\Attachment\NotASlip::human(\App\Core\Engines\Attachment\AttachmentEngine::slipMaxKb('image')),
+                    'pdf' => \App\Core\Engines\Attachment\NotASlip::human(\App\Core\Engines\Attachment\AttachmentEngine::slipMaxKb('pdf')),
+                ]) : __('core.attachment.limit') }}
             </span>
         </form>
     @endif

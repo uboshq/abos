@@ -6,9 +6,10 @@
     <x-slot:title>{{ __('notification::channel.title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::channel.title')" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::channel.title')" :info="__('notification::channel.note')" :search="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::channel.note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::channel.note') }}</p>
 
         @if (session('saved'))
             <p role="status" class="rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2

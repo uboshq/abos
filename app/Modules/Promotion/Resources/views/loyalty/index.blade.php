@@ -15,9 +15,11 @@
     <div class="space-y-4">
         <x-ui.toolbar :title="__('promotion::loyalty_screen.title')"
                       :search-placeholder="__('promotion::loyalty_screen.search')"
+                      :info="__('promotion::loyalty_screen.balance_note')"
                       :filter="false" :export="false" :share="false" />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::loyalty_screen.balance_note') }}</p>
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('promotion::loyalty_screen.balance_note') }}</p>
 
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::loyalty_screen.none') }}</p>

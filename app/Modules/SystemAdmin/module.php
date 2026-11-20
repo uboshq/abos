@@ -713,6 +713,25 @@ return [
             'default' => \App\Core\Engines\Attachment\AttachmentEngine::SLIP_KB,
             'group' => 'general',
         ],
+        [
+            /*
+             * ⭐ স্লিপ হিসেবে কত বড় ফাইল নেওয়া হবে — ধরন ধরে (২০ নভেম্বর ২০২৬; মালিক, ১৬ নভেম্বর: "deposit report flexible")।
+             * ⓘ ছবি ঢুকে ছোট হয় (ওপরের KB-তে), তাই তার সীমা ঢিলা; PDF যেমন আসে তেমন থাকে, তাই আঁটো। ছাদ ১০ MB
+             *   ([[AttachmentEngine::slipMaxKb()]])।
+             */
+            'key' => 'system.slip_max_kb.image',
+            'label' => 'system_admin::settings.slip_max_kb_image',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Attachment\AttachmentEngine::SLIP_IMAGE_MAX_KB,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'system.slip_max_kb.pdf',
+            'label' => 'system_admin::settings.slip_max_kb_pdf',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Attachment\AttachmentEngine::SLIP_PDF_MAX_KB,
+            'group' => 'general',
+        ],
         /*
          * নিজের জরুরি নোটিশ নিজে অনুমোদন নয় — স্পেক, ধারা ১৭।
          *

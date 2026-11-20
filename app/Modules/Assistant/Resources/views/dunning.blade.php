@@ -6,8 +6,9 @@
     <x-slot:title>{{ __('assistant::draft.dunning_title') }}</x-slot:title>
 
     <div class="space-y-4" data-assistant-dunning>
-        <x-ui.toolbar :title="__('assistant::draft.dunning_title')" :search="false" :export="false" :share="false" />
-        <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::draft.dunning_note', ['name' => $name]) }}</p>
+        <x-ui.toolbar :title="__('assistant::draft.dunning_title')" :info="__('assistant::draft.dunning_note', ['name' => $name])" :search="false" :export="false" :share="false" />
+        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('assistant::draft.dunning_note', ['name' => $name]) }}</p>
 
         @include('notification::partials.flash')
 
