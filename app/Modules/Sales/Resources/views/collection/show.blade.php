@@ -15,6 +15,15 @@
                         <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('sales::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
+                {{-- ⭐ "বাতিল করুন" মাথার বোতামের সারিতে — মালিক, ২০ নভেম্বর ২০২৬: ভুল শাখার খসড়া (COL-0006) বাদ দেওয়ার "অপশনই পাইতেছি না";
+                     ফর্মটা পাতার একদম নিচে বন্ধ বাক্সে ছিল। চাপলে সেই ফর্মটাই খোলা অবস্থায় আসে — কারণ লেখা বাধ্যতামূলক থাকে --}}
+                @can('delete', $collection)
+                    @if ($collection->status !== \App\Core\Support\DocumentStatus::CANCELLED)
+                        <x-ui.button tone="secondary" data-cancel-jump :href="route('sales.collection.show', ['collection' => $collection, 'cancel' => 1]).'#cancel'">
+                            {{ __('sales::action.cancel_document') }}
+                        </x-ui.button>
+                    @endif
+                @endcan
                 <x-ui.print-menu :documents="[
                     ['label' => __('sales::doc.collection'), 'url' => route('sales.print.receipt', $collection), 'paper_setting' => 'sales.print.paper.receipt', 'type' => 'sales_collection', 'id' => $collection->id, 'no' => $collection->document_no, 'share' => ['route' => 'sales.print.receipt', 'params' => ['collection' => $collection->id]]],
                 ]" />

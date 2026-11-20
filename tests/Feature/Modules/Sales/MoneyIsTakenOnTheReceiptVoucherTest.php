@@ -68,6 +68,30 @@ final class MoneyIsTakenOnTheReceiptVoucherTest extends TestCase
         $this->assertStringNotContainsString($old, $sales, '⛔ বিক্রয়ের ড্যাশবোর্ডের "আদায়" এখনো পুরনো আদায়ের ফর্মে।');
     }
 
+    /**
+     * ⛔ ২০ নভেম্বর ২০২৬: ভুল শাখায় লেখা খসড়া আদায় (COL-0006) মালিক বাদ দিতে পারলেন না — বাতিলের ফর্ম পাতার নিচে বন্ধ বাক্সে।
+     *   এখন মাথার বোতামের সারিতে "বাতিল করুন", যা ফর্মটা খোলা অবস্থায় আনে; বাতিল হলে বোতাম আর নেই।
+     */
+    public function test_a_draft_collection_can_be_cancelled_from_the_buttons_at_the_top(): void
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+        $collection = app(\App\Modules\Sales\Services\CollectionService::class)->create(
+            ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'), 'trx_date' => now()->toDateString(), 'amount' => '4000',
+                'account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::CASH_IN_HAND)->id],
+            [],
+        );
+
+        $html = (string) $this->get(route('sales.collection.show', $collection))->assertOk()->getContent();
+        $head = strstr($html, 'id="cancel"', true);
+        $this->assertNotFalse($head, 'প্রস্তুতিটাই ভুল — বাতিলের ফর্ম পাতায় নেই।');
+        $this->assertStringContainsString('data-cancel-jump', $head, '⛔ খসড়া আদায়ের মাথায় "বাতিল করুন" নেই — ফর্মটা কেবল পাতার নিচে।');
+        $this->assertStringContainsString(e(route('sales.collection.show', ['collection' => $collection, 'cancel' => 1])).'#cancel', $head);
+
+        $this->post(route('sales.collection.cancel', $collection), ['reason' => 'ভুল শাখায় লেখা'])->assertRedirect();
+        $this->assertStringNotContainsString('data-cancel-jump', (string) $this->get(route('sales.collection.show', $collection))->getContent(),
+            '⛔ বাতিল কাগজেও "বাতিল করুন" বোতাম।');
+    }
+
     public function test_the_collections_written_before_can_be_found_from_the_menu(): void
     {
         $rows = collect(app(MenuBuilder::class)->forUser($this->owner))->firstWhere('code', 'sales')['groups'] ?? [];
