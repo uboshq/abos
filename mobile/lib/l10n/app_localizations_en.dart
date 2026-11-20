@@ -11947,4 +11947,12 @@ class AppL10nEn extends AppL10n {
   @override
   String get updateStoreFailed =>
       'Could not open Play Store. Find ABOS in the phone\'s Play Store and update it there.';
+
+  @override
+  String get vouchersReceiptCustomerHint =>
+      'An amount from a customer — on a receipt voucher (RCV)';
+
+  @override
+  String get approvalPendingNoEdit =>
+      'Awaiting approval — to change it, send back for correction';
 }

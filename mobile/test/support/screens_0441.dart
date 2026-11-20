@@ -138,13 +138,13 @@ class SampleBooks implements BooksApi {
 }
 
 Widget srCollectBody(
-        {List<ShopDue> Function()? dues, BooksApi? api, List<UnsentCollection> Function()? unsent, bool canCollect = false}) =>
+        {List<ShopDue> Function()? dues, BooksApi? api, List<UnsentCollection> Function()? unsent, bool canReportDeposit = false}) =>
     MoneyInListScreen(
         api: api ?? SampleBooks(),
         today: DateTime(2026, 10, 20),
         dues: dues ?? sampleDues,
         unsent: unsent ?? () => const [],
-        canCollect: canCollect);
+        canReportDeposit: canReportDeposit);
 
 class _SignedIn extends AuthController {
   _SignedIn(AuthUser user) {

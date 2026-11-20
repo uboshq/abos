@@ -93,9 +93,23 @@ void main() {
     const sr = ['sales.order.view', 'sales.order.create', 'sales.collection.view', 'sales.claim.submit'];
     const owner = ['executive.view', 'approval.decide', 'sales.order.view', 'customer.view', 'sales.claim.submit'];
 
-    test('Liquid Glass and Material 3: Home · Deposit · the role\'s own tab · Modules · Me', () {
-      expect(RoleTabs.lookTabsFor(sr), [BarTab.home, BarTab.deposit, BarTab.orders, BarTab.modules, BarTab.me]);
-      expect(RoleTabs.lookTabsFor(owner), [BarTab.home, BarTab.deposit, BarTab.approvals, BarTab.modules, BarTab.me]);
+    // ⛔ "সব মডিউল" মাঝখানে (০.৪.৫৭-এর "ok"; মালিক, ২০ নভেম্বর ২০২৬: জমা তাকে চতুর্থ ঘরে ঠেলেছিল)
+    test('Liquid Glass and Material 3: Home · Deposit · Modules (middle) · the role\'s own tab · Me', () {
+      expect(RoleTabs.lookTabsFor(sr), [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.orders, BarTab.me]);
+      expect(RoleTabs.lookTabsFor(owner), [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.approvals, BarTab.me]);
+    });
+
+    test('"সব মডিউল" sits in the middle of the bar for the owner and the SR, with and without the deposit tab', () {
+      const srNoKey = ['sales.order.view', 'sales.order.create', 'sales.collection.view'];
+      const ownerNoKey = [
+        'executive.view', 'approval.decide', 'sales.order.view', 'customer.view', 'accounts.voucher.create',
+      ];
+      for (final p in [sr, owner, srNoKey, ownerNoKey, [...ownerNoKey, 'sales.claim.submit']]) {
+        final tabs = RoleTabs.tabsFor(p);
+        expect(tabs.length.isOdd, isTrue, reason: '$tabs');
+        expect(tabs.indexOf(BarTab.modules), tabs.length ~/ 2, reason: '⛔ সব মডিউল মাঝখানে নেই: $tabs');
+        expect(RoleTabs.lookTabsFor(p), tabs, reason: 'তিন রূপে একই ঘর');
+      }
     });
 
     test('ABOS has the same tabs (only the drawing differs); without the deposit key the bar is exactly 0.4.57\'s', () {
@@ -104,7 +118,7 @@ void main() {
       expect(RoleTabs.tabsFor(sr), RoleTabs.lookTabsFor(sr), reason: 'জমা ABOS-এর বারেও (সমন্বয়কারী, ২০ নভেম্বর ২০২৬)');
       // ⓘ চার ঘরের ভূমিকা ("অন্য") — জমা যোগ হয়, কিছু বাদ যায় না
       expect(RoleTabs.tabsFor(['approval.decide', 'sales.claim.submit']),
-          [BarTab.home, BarTab.deposit, BarTab.approvals, BarTab.modules, BarTab.me]);
+          [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.approvals, BarTab.me]);
       for (final p in [sr, owner, ['accounts.voucher.create', 'approval.decide', 'sales.claim.submit']]) {
         final tabs = RoleTabs.tabsFor(p);
         expect(tabs.length, lessThanOrEqualTo(5));
@@ -130,7 +144,7 @@ void main() {
         },
         home: Scaffold(
           bottomNavigationBar: RoleBottomBar(
-            tabs: const [BarTab.home, BarTab.deposit, BarTab.orders, BarTab.modules, BarTab.me],
+            tabs: const [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.orders, BarTab.me],
             selected: BarTab.deposit,
             badges: const {},
             onSelect: (_) {},

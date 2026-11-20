@@ -122,7 +122,7 @@ final List<_Shot> _shots = [
   (
     name: 'collections_today',
     screen: () => MoneyInListScreen(
-        api: _NoMoneyIn(), today: DateTime(2026, 10, 22), canCollect: true, dues: () => const [], unsent: () => const []),
+        api: _NoMoneyIn(), today: DateTime(2026, 10, 22), canReportDeposit: true, dues: () => const [], unsent: () => const []),
     seed: false,
     then: (tester) async {
       await tester.tap(find.byKey(const ValueKey('range-today')));

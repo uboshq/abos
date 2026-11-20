@@ -76,7 +76,7 @@ GoRouter _router(String initial) => GoRouter(initialLocation: initial, routes: [
           GoRoute(
             path: 'collections',
             builder: (context, state) =>
-                ScreenFrame(location: state.matchedLocation, child: srCollectBody(canCollect: true)),
+                ScreenFrame(location: state.matchedLocation, child: srCollectBody(canReportDeposit: true)),
           ),
         ],
       ),

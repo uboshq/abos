@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/auth/auth_state.dart';
-import '../../core/books/collection_entry.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/colour_tab_icon.dart';
@@ -938,8 +937,7 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     // ⓘ হোমের "＋ নতুন" কেবল হোমের নিজের পাতায় — সব মডিউলে বা "আমি"-তে নয়
     final fab = _isHome && page.kind != HomePageKind.home
         ? null
-        : RoleTabs.fabFor(widget.location, permissions,
-            modulesOn: modulesOn, mayCollect: ref.watch(mayCollectProvider));
+        : RoleTabs.fabFor(widget.location, permissions, modulesOn: modulesOn);
     final built = fab == null || (fab.route == null && fab.choices.isEmpty)
         ? null
         : BarFab(

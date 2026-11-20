@@ -5,6 +5,7 @@ import '../../core/records/money.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/approvals/approvals_api.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
@@ -437,10 +438,13 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
 
 /// একটা DO — মাথা, লাইন, আর যার হাতে যে কাজ।
 class DeliveryOrderScreen extends StatefulWidget {
-  const DeliveryOrderScreen({super.key, required this.id, this.api = const ServerDeliveryOrderApi()});
+  const DeliveryOrderScreen({super.key, required this.id, this.api = const ServerDeliveryOrderApi(), this.sendBack});
 
   final String id;
   final DeliveryOrderApi api;
+
+  /// সংশোধনে ফেরত — না দিলে সার্ভার ([ApprovalsApi.sendBack]); পরীক্ষা নিজেরটা দেয়
+  final Future<void> Function(String approvalId, String remarks)? sendBack;
 
   @override
   State<DeliveryOrderScreen> createState() => _DeliveryOrderScreenState();
@@ -448,7 +452,6 @@ class DeliveryOrderScreen extends StatefulWidget {
 
 class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   DeliveryOrder? _order;
-  final Map<int, TextEditingController> _boxes = {};
   final _reason = TextEditingController();
   bool _busy = false;
   String? _error;
@@ -462,9 +465,6 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
 
   @override
   void dispose() {
-    for (final c in _boxes.values) {
-      c.dispose();
-    }
     _reason.dispose();
     super.dispose();
   }
@@ -473,9 +473,6 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
     _order = order;
     // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ — DO, বা বিক্রয় আদেশ (মালিক, ১২ অক্টোবর ২০২৬)
     RecentPapers.note(kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no, party: order.customer);
-    for (final line in order.lines) {
-      (_boxes[line.id] ??= TextEditingController()).text = _qty(line.finalQty);
-    }
   }
 
   Future<void> _run(Future<DeliveryOrder?> Function() work, String doneText) async {
@@ -514,10 +511,6 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  Map<int, int> _wanted() => {
-        for (final e in _boxes.entries) e.key: int.tryParse(e.value.text.trim()) ?? -1,
-      };
 
   @override
   Widget build(BuildContext context) {
@@ -576,14 +569,9 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                     children: [
                       Text(line.product, style: const TextStyle(fontWeight: FontWeight.w600)),
                       Text(context.l10n.deliveryOrdersAsked(_qty(line.qty))),
-                      if (order.awaitingMe)
-                        TextField(
-                          key: ValueKey('do-line-${line.id}'),
-                          controller: _boxes[line.id],
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: context.l10n.deliveryOrdersApprovedQtyField),
-                        )
-                      else if (line.approvedQty != null)
+                      // ⛔ অনুমোদনের অপেক্ষার কাগজ কেউ বদলান না — অনুমোদনকারীও পরিমাণ বদলান না (মালিক, ২০ নভেম্বর ২০২৬: maker-checker;
+                      // আগে এখানে "অনুমোদিত পরিমাণ"-এর ঘর ছিল)। কম দিতে হলে সংশোধনে ফেরত — লেখক ঠিক করে আবার পাঠান
+                      if (line.approvedQty != null)
                         Text(context.l10n.deliveryOrdersApprovedQty(_qty(line.approvedQty!))),
                       Text(Money.taka(line.lineTotal)),
                     ],
@@ -597,19 +585,19 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                 child: Text(context.l10n.deliveryOrdersSubmit),
               ),
             if (order.awaitingMe && order.approvalId != null) ...[
-              OutlinedButton(
-                key: const ValueKey('do-save-qty'),
-                onPressed: _busy ? null : () => _run(() => widget.api.setQuantities(order.id, _wanted()), context.l10n.deliveryOrdersQtySaved),
-                child: Text(context.l10n.deliveryOrdersSaveQty),
+              // ⭐ অনুমোদনকারীর তিন কাজ — অনুমোদন, সংশোধনে ফেরত, বাতিল; বদলানো নয় (মালিক, ২০ নভেম্বর ২০২৬)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text(context.l10n.approvalPendingNoEdit,
+                    key: const ValueKey('do-pending-no-edit'),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
-              const SizedBox(height: AppSpacing.xs),
               FilledButton(
                 key: const ValueKey('do-approve'),
                 onPressed: _busy
                     ? null
                     : () => _run(() async {
-                          // ⓘ আগে ঘরের পরিমাণ রাখা, তারপর সই — যা দেখছেন তাতেই সই
-                          await widget.api.setQuantities(order.id, _wanted());
+                          // ⓘ যা দেখছেন ঠিক তাতেই সই — পরিমাণ লেখকের, অনুমোদনকারী বদলান না
                           await widget.api.approve(order.approvalId!);
                           return null;
                         }, context.l10n.deliveryOrdersApproved),
@@ -637,6 +625,23 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                         }, context.l10n.deliveryOrdersRejected(_kind(widget.api)));
                       },
                 child: Text(context.l10n.deliveryOrdersReject),
+              ),
+              OutlinedButton(
+                key: const ValueKey('do-send-back'),
+                onPressed: _busy
+                    ? null
+                    : () {
+                        if (_reason.text.trim().isEmpty) {
+                          setState(() => _error = context.l10n.approvalsSendBackReasonRequired);
+                          return;
+                        }
+                        _run(() async {
+                          final send = widget.sendBack ?? (id, remarks) => ApprovalsApi.sendBack(id, remarks: remarks);
+                          await send(order.approvalId!, _reason.text.trim());
+                          return null;
+                        }, context.l10n.approvalsInboxSentBack);
+                      },
+                child: Text(context.l10n.approvalsInboxSendBackButton),
               ),
             ],
           ],

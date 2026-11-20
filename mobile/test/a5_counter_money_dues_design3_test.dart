@@ -240,12 +240,15 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('আদায়: খালি হলে "আদায় নিন"; দেখার লোকের "নতুন করে দেখুন" সার্ভারকে আবার ডাকে', (tester) async {
-        await _pump(tester, theme(), MoneyInListScreen(api: _Books([_none]), canCollect: true, today: DateTime(2026, 10, 19)));
+      // ⛔ ২০ নভেম্বর ২০২৬: ফোনে আদায় লেখা নেই — খালি তালিকার কাজ "টাকা জমার খবর"
+      testWidgets('আদায়: খালি হলে "টাকা জমার খবর"; দেখার লোকের "নতুন করে দেখুন" সার্ভারকে আবার ডাকে', (tester) async {
+        await _pump(tester, theme(), MoneyInListScreen(api: _Books([_none]), canReportDeposit: true, today: DateTime(2026, 10, 19)));
         await tester.pumpAndSettle();
         expect(find.byType(EmptyState), findsOneWidget);
-        expect(find.byKey(const ValueKey('money-in-empty-collect')), findsOneWidget);
-        expect(find.text('আদায় নিন'), findsOneWidget);
+        expect(find.byKey(const ValueKey('money-in-empty-deposit-report')), findsOneWidget);
+        expect(find.descendant(of: find.byKey(const ValueKey('money-in-empty-deposit-report')), matching: find.text('টাকা জমার খবর')),
+            findsOneWidget);
+        expect(find.text('আদায় নিন'), findsNothing, reason: '⛔ ফোনে আবার আদায় নেওয়ার পথ');
         expect(find.byType(TotalsBar), findsNothing, reason: 'খালি তালিকায় শূন্যের পট্টি নয়');
         expect(find.ancestor(of: find.byType(EmptyState), matching: find.byType(RefreshIndicator)), findsOneWidget,
             reason: 'খালি তালিকাও টেনে নতুন করা যায়');

@@ -278,7 +278,8 @@ class NavCatalog {
         group: _l.navGroupTransactions,
         label: _l.lookQuickDeposit,
         icon: Icons.payments_outlined,
-        aliases: ['জমা', 'deposit', 'slip', 'স্লিপ', 'ব্যাংক', 'bank', 'deposit report', 'টাকা জমার খবর']),  // l10n-ok: search aliases in both languages
+        // ⓘ "আদায়" খুঁজলেও এটা — ফোনে নতুন আদায় নেই, মাঠের টাকা এখানে (মালিক, ২০ নভেম্বর ২০২৬)
+        aliases: ['জমা', 'deposit', 'slip', 'স্লিপ', 'ব্যাংক', 'bank', 'deposit report', 'টাকা জমার খবর', 'আদায়', 'collect']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'deliveries',
         module: 'sales',

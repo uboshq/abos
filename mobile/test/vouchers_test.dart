@@ -528,7 +528,6 @@ void main() {
                 branches: () async => const [],
                 view: view,
                 canCreate: true,
-                collect: () => const _CollectPage(),
                 mayCollect: true));
 
         expect(api.asked, hasLength(1), reason: 'আগে "সব" চেয়ে তারপর ধরন — দুবার ডাকা হয়েছে');
@@ -541,9 +540,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('voucher-type-receipt')), findsNothing, reason: 'ধরন বাছাই আর দেখানোর কথা নয়');
         if (type == 'receipt') {
-          // ⭐ এক পথ (মালিক, ২১ অক্টোবর ২০২৬): রসিদের ধরন থেকে "নতুন" খোলে আদায়ের পাতা
-          expect(find.byType(_CollectPage), findsOneWidget, reason: '⛔ রসিদ থেকে নতুন — আদায়ের পাতা নয়');
-          expect(find.byType(VoucherFormScreen), findsNothing);
+          // ⭐ মালিক, ২০ নভেম্বর ২০২৬ (টাকা নেওয়ার এক কাগজ): রসিদের ধরন থেকে "নতুন" খোলে রসিদ ভাউচারের ফর্ম (RCV), আদায়ের পাতা নয়
+          expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt',
+              reason: '⛔ রসিদ থেকে নতুন — রসিদের ফর্ম নয়');
         } else if (type == 'payment' || type == 'expense') {
           // ⭐ পরিশোধ আর খরচ — ওয়েবের টাকা দেওয়ার পর্দার গড়নে (মালিক, ২১ ও ২৪ অক্টোবর ২০২৬)
           expect(find.byType(VoucherFormScreen), findsNothing, reason: '⛔ পরিশোধ/খরচ এখনো পুরনো ফর্মে');
@@ -555,7 +554,8 @@ void main() {
       });
     }
 
-    testWidgets('one path: "আদায় ভাউচার" opens the collection screen; "অন্য আয়" is a separate entry that opens the receipt form',
+    // ⭐ মালিক, ২০ নভেম্বর ২০২৬: গ্রাহকের টাকা হিসাবের রসিদ ভাউচারে (RCV) — ফোনে আদায় (COL) লেখা নেই
+    testWidgets('one money-in paper: the customer receipt opens the receipt voucher form; "অন্য আয়" stays a separate entry',
         (tester) async {
       await _pump(
           tester,
@@ -564,15 +564,15 @@ void main() {
               newChangeId: _key,
               branches: () async => const [],
               canCreate: true,
-              collect: () => const _CollectPage(),
-                mayCollect: true));
+              mayCollect: true));
       await tester.tap(find.byKey(const ValueKey('voucher-new')));
       await tester.pumpAndSettle();
       expect(find.text('অন্য আয়'), findsOneWidget, reason: 'গ্রাহক ছাড়া আয়ের আলাদা ঘর নেই');
+      expect(find.text('গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)'), findsOneWidget, reason: 'রসিদের নিচে কোথায় টাকা নেওয়া হয় বলা নেই');
       await tester.tap(find.byKey(const ValueKey('voucher-type-receipt')));
       await tester.pumpAndSettle();
-      expect(find.byType(_CollectPage), findsOneWidget, reason: '⛔ "আদায় ভাউচার" আদায়ের পাতা খোলেনি');
-      expect(find.byType(VoucherFormScreen), findsNothing, reason: '⛔ আদায়ের দুই পথ রয়ে গেল');
+      expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt',
+          reason: '⛔ গ্রাহকের রসিদ রসিদ ভাউচারের ফর্ম খোলেনি');
 
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -581,7 +581,6 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('voucher-type-other-income')));
       await tester.pumpAndSettle();
       expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt');
-      expect(find.byType(_CollectPage), findsNothing);
     });
 
     // ⭐ এক উৎস (মালিকের নিয়ম, ৭ অক্টোবর ২০২৬): "আদায় ভাউচার" `/me`-র mayCollect মানে — হোমের "নতুন আদায়" আর আদায়ের তালিকার বোতামের মতো
@@ -594,8 +593,7 @@ void main() {
               newChangeId: _key,
               branches: () async => const [],
               canCreate: true,
-              mayCollect: false,
-              collect: () => const _CollectPage()));
+              mayCollect: false));
       await tester.tap(find.byKey(const ValueKey('voucher-new')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('voucher-type-receipt')), findsNothing, reason: '⛔ দেয়ালের SR "আদায় ভাউচার" দেখল');
@@ -612,11 +610,9 @@ void main() {
               branches: () async => const [],
               view: 'cash-receipt',
               canCreate: true,
-              mayCollect: false,
-              collect: () => const _CollectPage()));
+              mayCollect: false));
       await tester.tap(find.byKey(const ValueKey('voucher-new')));
       await tester.pumpAndSettle();
-      expect(find.byType(_CollectPage), findsNothing, reason: '⛔ দেয়ালের SR আদায়ের পাতায় পৌঁছাল');
       expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt');
     });
 
@@ -807,9 +803,3 @@ class _Server implements HttpClientAdapter {
 }
 
 /// আদায়ের পাতার জায়গায় — পথটা ঠিক কি না দেখতে, নেট ছাড়া
-class _CollectPage extends StatelessWidget {
-  const _CollectPage();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(), body: const SizedBox());
-}

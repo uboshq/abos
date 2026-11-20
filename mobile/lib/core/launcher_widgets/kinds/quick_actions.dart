@@ -15,13 +15,17 @@ class QuickActionsWidget extends LauncherWidgetKind {
     final l = AppLocale.l10n;
     return {
       'order': l.launcherWidgetQuickOrder,
-      'collect': l.launcherWidgetQuickCollect,
+      // ⛔ "টাকা আদায়" নয় — "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬: ফোনে আদায় লেখা নেই); ছবির নাম `collect` যেমন ছিল
+      'collect': l.lookQuickDeposit,
       'voucher': l.launcherWidgetQuickVoucher,
       'scan': l.launcherWidgetQuickScan,
       'approve': l.launcherWidgetQuickSign,
       'notice': l.launcherWidgetNotices,
     };
   }
+
+  /// টাকা জমার খবরের পাতা — `collect` বোতাম সবসময় এখানে যায়
+  static const String depositReportLink = '/home/deposit-report';
 
   @override
   String get key => 'quick_actions';
@@ -38,7 +42,11 @@ class QuickActionsWidget extends LauncherWidgetKind {
     final actions = <WidgetAction>[
       for (final a in (summary['actions'] as List? ?? const []))
         if (a is Map && labels.containsKey(a['key']) && (a['link'] ?? '').toString().isNotEmpty)
-          WidgetAction(label: labels[a['key']]!, icon: a['key'] as String, link: a['link'].toString()),
+          WidgetAction(
+              label: labels[a['key']]!,
+              icon: a['key'] as String,
+              // ⛔ পুরনো সার্ভারের "আদায়" লিংক (তালিকা বা নতুন আদায়) — সোজা টাকা জমার খবরে (২০ নভেম্বর ২০২৬)
+              link: a['key'] == 'collect' ? depositReportLink : a['link'].toString()),
     ];
     return WidgetDoc(
       title: title,

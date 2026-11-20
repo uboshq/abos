@@ -12,7 +12,7 @@ import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
-import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
+import 'package:abos_mobile/features/customers/deposit_request_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -990,11 +990,14 @@ void main() {
       expect(find.textContaining('পাকা'), findsNothing, reason: '⛔ "পাকা" আর নয় — খাতায় ওঠা মানে "পোস্ট হয়েছে"');
     });
 
-    testWidgets('only an office person sees "নতুন আদায়"; the field keeps the deposit request', (tester) async {
+    // ⛔ মালিক, ২০ নভেম্বর ২০২৬: টাকা নেওয়ার এক কাগজ — ফোনে আর কেউ "নতুন আদায়" দেখেন না; জমার খবরের চাবিতে "টাকা জমার খবর"
+    testWidgets('no one sees "নতুন আদায়" on the list any more; the deposit-report key gets "টাকা জমার খবর"', (tester) async {
       await _pump(tester, MoneyInListScreen(api: FakeBooks(), dues: () => const [], unsent: () => const []));
-      expect(find.byKey(const ValueKey('money-in-new')), findsNothing, reason: '⛔ মাঠের লোকও ফোনে আদায় লিখতে পারছে');
-      await _pump(tester, MoneyInListScreen(api: FakeBooks(), canCollect: true, dues: () => const [], unsent: () => const []));
-      expect(find.byKey(const ValueKey('money-in-new')), findsOneWidget);
+      expect(find.byKey(const ValueKey('money-in-deposit-report')), findsNothing, reason: 'চাবি নেই, তবু বোতাম');
+      await _pump(tester, MoneyInListScreen(api: FakeBooks(), canReportDeposit: true, dues: () => const [], unsent: () => const []));
+      expect(find.byKey(const ValueKey('money-in-deposit-report')), findsOneWidget);
+      expect(find.text('নতুন আদায়'), findsNothing, reason: '⛔ ফোনে আবার নতুন আদায়');
+      expect(find.text('টাকা জমার খবর'), findsOneWidget);
     });
 
     testWidgets('a collection still waiting in the phone\'s queue is listed first with the "পাঠানো বাকি" chip', (tester) async {
@@ -1258,14 +1261,17 @@ void main() {
       expect(api.sent, isEmpty);
     });
 
-    test('18 · a walled SR never sees "নতুন আদায়": the entry follows /me\'s mayCollect (collection + voucher keys, not walled)', () {
-      // ⓘ সার্ভার: mayCollect = sales.collection.create আর accounts.voucher.create, আর দেয়ালে বাঁধা নন (CollectionSync::officeMayCollect)
+    // ⛔ মালিক, ২০ নভেম্বর ২০২৬: হোমের "＋ নতুন"-এ আদায় কারো নেই — জমার খবরের চাবিতে "টাকা জমার খবর"
+    test('18 · the home\'s "＋ নতুন" offers no collection to anyone; the deposit-report key offers the deposit report', () {
       const sr = ['sales.order.create', 'sales.collection.view', 'sales.collection.create'];
-      expect(RoleTabs.createChoices(sr, mayCollect: false).map((c) => c.route), isNot(contains('/home/collections')),
-          reason: '⛔ দেয়ালের SR-এর "＋ নতুন"-এ আদায়');
-      expect(RoleTabs.createChoices(sr, mayCollect: false).map((c) => c.route), contains('/home/new-order'));
+      expect(RoleTabs.createChoices(sr).map((c) => c.route), isNot(contains('/home/collections')),
+          reason: '⛔ SR-এর "＋ নতুন"-এ আদায়');
+      expect(RoleTabs.createChoices(sr).map((c) => c.route), contains('/home/new-order'));
       const office = ['sales.collection.create', 'accounts.voucher.create'];
-      expect(RoleTabs.createChoices(office, mayCollect: true).map((c) => c.route), contains('/home/collections'));
+      expect(RoleTabs.createChoices(office).map((c) => c.route), isNot(contains('/home/collections')),
+          reason: '⛔ অফিসের "＋ নতুন"-এ আদায়');
+      const field = ['sales.order.create', 'sales.claim.submit'];
+      expect(RoleTabs.createChoices(field).map((c) => c.route), contains('/home/deposit-report'));
     });
 
     for (final (typed, blocked) in [('5.00', false), ('6.00', true)]) {
@@ -1325,26 +1331,32 @@ void main() {
   /// ⛔ পরীক্ষার ভুল-ঢোকানো পথ (debugAfterAllocate) অ্যাপের আসল কোনো পথে বসে না (fe, ২৪ অক্টোবর ২০২৬): ওয়েবের ঠিকানা থেকে
   /// খোলা পাতা (NativeForWeb, `/sales/collections/create`), আদায় তালিকার "＋ নতুন আদায়" আর ভাউচার তালিকার "আদায় ভাউচার" —
   /// তিনটার তৈরি করা উইজেট নিজে দেখা, grep নয়। release-এ বসানো constructor-এর assert-এ থামে।
-  test('no real path sets the test hook: the web-path page, the collections list and the voucher list build it null', () {
+  // ⛔ মালিক, ২০ নভেম্বর ২০২৬ (টাকা নেওয়ার এক কাগজ): আগের পথ — ওয়েবের পুরনো লিংক আর আদায়ের তালিকা — এখন টাকা জমার খবর
+  // খোলে; ভাউচারের রসিদ খোলে রসিদের ফর্ম (vouchers_test)। কোনো আসল পথ আর আদায়ের পাতা খোলে না।
+  test('no real path opens the collection screen: the old web link and the collections list open the deposit report', () {
     final routed = NativeForWeb.screenFor('/sales/collections/create');
-    expect(routed, isA<ModuleGateView>(), reason: 'ওয়েবের ঠিকানাটা আর আদায়ের পাতায় যায় না');
+    expect(routed, isA<ModuleGateView>(), reason: 'ওয়েবের ঠিকানাটা চেনা নেই');
     final fromWeb = (routed! as ModuleGateView).child;
-    final fromList = MoneyInListScreen.defaultCollect(FakeBooks());
-    final fromVouchers = const VoucherListScreen().collect();
-    for (final (path, screen) in [('web path', fromWeb), ('collections list', fromList), ('voucher list', fromVouchers)]) {
-      expect(screen, isA<CollectScreen>(), reason: '$path আদায়ের পাতা খোলে না');
-      expect((screen as CollectScreen).debugAfterAllocate, isNull, reason: '⛔ $path পরীক্ষার পথ বসিয়েছে');
+    final fromList = MoneyInListScreen.defaultReportDeposit();
+    for (final (path, screen) in [('web path', fromWeb), ('collections list', fromList)]) {
+      expect(screen, isA<DepositRequestScreen>(), reason: '$path টাকা জমার খবর খোলে না');
+      expect(screen, isNot(isA<CollectScreen>()), reason: '⛔ $path এখনো আদায়ের পাতা খোলে');
     }
   });
 
-  testWidgets('the collections list\'s "＋ নতুন আদায়" opens this screen', (tester) async {
+  testWidgets('the collections list\'s "টাকা জমার খবর" opens the deposit report', (tester) async {
     await _pump(
         tester,
         MoneyInListScreen(
-            api: FakeBooks(), canCollect: true, dues: () => const [], unsent: () => const [], collect: () => _screen(FakeCollect())));
-    await tester.tap(find.byKey(const ValueKey('money-in-new')));
+            api: FakeBooks(),
+            canReportDeposit: true,
+            dues: () => const [],
+            unsent: () => const [],
+            reportDeposit: () => const Scaffold(body: Text('DEPOSIT REPORT'))));
+    await tester.tap(find.byKey(const ValueKey('money-in-deposit-report')));
     await tester.pumpAndSettle();
-    expect(find.byType(CollectScreen), findsOneWidget);
+    expect(find.text('DEPOSIT REPORT'), findsOneWidget);
+    expect(find.byType(CollectScreen), findsNothing);
   });
 
   testWidgets('19 · the same fields, names and order as the web and the design, two screens, one column, buttons fixed at the bottom',

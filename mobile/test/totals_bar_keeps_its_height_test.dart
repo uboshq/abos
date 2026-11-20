@@ -52,7 +52,7 @@ Widget _app() => ProviderScope(
             GoRoute(
               path: 'collections',
               builder: (context, state) =>
-                  ScreenFrame(location: state.matchedLocation, child: srCollectBody(canCollect: true)),
+                  ScreenFrame(location: state.matchedLocation, child: srCollectBody(canReportDeposit: true)),
             ),
           ]),
         ]),
@@ -99,7 +99,7 @@ void main() {
   //   ওপরে শেষ হয় — দেখা কোনো সারি বোতামের নিচে নেই; আর মোটের সারিতে স্ক্রল করলে সেটা পুরো দেখা যায়, বোতাম থেকে আলাদা।
   testWidgets('412×915: the list ends above the "+ নতুন আদায়" bar, and "মোট · 2টি দোকান" scrolled to is clear of it', (tester) async {
     await atRest(tester);
-    final fab = tester.getRect(find.byKey(const ValueKey('money-in-new')));
+    final fab = tester.getRect(find.byKey(const ValueKey('money-in-deposit-report')));
     final bar = tester.getRect(find.byKey(const ValueKey('totals-bar')));
     // ⓘ মোটের সারি যে স্ক্রলের ভিতরে — পাতার তালিকা (তারিখের চিপের আড়াআড়ি স্ক্রল নয়)
     final list = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('shop-dues-total')), matching: find.byType(Scrollable)).first);

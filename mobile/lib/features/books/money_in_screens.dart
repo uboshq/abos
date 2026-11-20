@@ -20,7 +20,7 @@ import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import '../printing/row_actions.dart';
 import 'books_widgets.dart';
-import 'collect_screen.dart';
+import '../customers/deposit_request_screen.dart';
 import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 
@@ -33,16 +33,17 @@ class MoneyInListScreen extends StatefulWidget {
       {super.key,
       this.api = const ServerBooksApi(),
       this.today,
-      this.canCollect = false,
+      this.canReportDeposit = false,
       this.dues,
       this.unsent,
-      this.collect});
+      this.reportDeposit});
 
   final BooksApi api;
   final DateTime? today;
 
-  /// ⭐ অফিসের লোক — "নতুন আদায়" বোতাম (`/me`-র `mayCollect`, ৭ অক্টোবর ২০২৬)
-  final bool canCollect;
+  /// ⭐ "টাকা জমার খবর" বোতাম — জমার খবরের চাবি (`sales.claim.submit`) থাকলে। ⛔ ফোনে "নতুন আদায়" আর নেই (মালিক, ২০ নভেম্বর
+  /// ২০২৬: টাকা নেওয়ার এক কাগজ — কাউন্টার আর হিসাবের রসিদ; মাঠ থেকে কেবল জমার খবর)। এই তালিকা কেবল দেখা।
+  final bool canReportDeposit;
 
   /// ⭐ দোকানের বকেয়া (০.৪.৪১ নমুনা) — ফোনে রাখা বকেয়া থেকে ([shopDuesInCache]); টেস্ট নিজের সারি দেয়
   final List<ShopDue> Function()? dues;
@@ -50,11 +51,11 @@ class MoneyInListScreen extends StatefulWidget {
   /// ফোনে আটকে থাকা আদায় ([unsentCollections]); টেস্ট নিজের সারি দেয়
   final List<UnsentCollection> Function()? unsent;
 
-  /// ⭐ "＋ নতুন আদায়" খোলে আদায়ের এক পাতা ([CollectScreen]) — এক পথ (মালিক, ২১ অক্টোবর ২০২৬); টেস্ট নিজের পাতা দেয়
-  final Widget Function()? collect;
+  /// "টাকা জমার খবর" খোলে জমার খবরের পাতা ([DepositRequestScreen], দোকান পাতার ভেতরে বাছা); টেস্ট নিজের পাতা দেয়
+  final Widget Function()? reportDeposit;
 
-  /// অ্যাপের আসল "＋ নতুন আদায়" পাতা — পরীক্ষাও এটা দেখে যে পরীক্ষার পথ এখানে কখনো বসে না
-  static Widget defaultCollect(BooksApi books) => CollectScreen(books: books);
+  /// অ্যাপের আসল জমার খবরের পাতা — পরীক্ষাও এটা দেখে যে এখানে আদায়ের পাতা আর বসে না
+  static Widget defaultReportDeposit() => const DepositRequestScreen();
 
   @override
   State<MoneyInListScreen> createState() => _MoneyInListScreenState();
@@ -126,15 +127,15 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     return Scaffold(
       // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › আদায়" (০.৪.৪১ নমুনা, পাতা ২); অফলাইনের হলুদ পট্টি বার নিজে আঁকে
       appBar: AbosScreenBar(title: context.l10n.booksMoneyInTitle, module: context.l10n.booksModuleSales),
-      // ⭐ "＋ নতুন আদায়" — সব পাতার একই [BarFab], কেবল আদায় নেওয়ার চাবি থাকলে; নিচের বারে মোটের পাশে
+      // ⭐ "টাকা জমার খবর" — সব পাতার একই [BarFab], কেবল জমার খবরের চাবি থাকলে; নিচের বারে মোটের পাশে
       // ([ActionBottomBar]) — তালিকার কোনো সারি বা মোট কখনো ঢাকে না
       bottomNavigationBar: ActionBottomBar.maybe(
           totals: page == null || _rows.isEmpty
               ? null
               : TotalsBar(pageCount: shown.count, pageSum: shown.sum, allCount: page.count, allSum: page.total,
                   period: TotalsPeriod.range(_from, _to, today: widget.today)),
-          action: widget.canCollect
-              ? BarFab(key: const ValueKey('money-in-new'), label: context.l10n.booksMoneyInNew, onPressed: _collect)
+          action: widget.canReportDeposit
+              ? BarFab(key: const ValueKey('money-in-deposit-report'), label: context.l10n.lookQuickDeposit, onPressed: _reportDeposit)
               : null),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -196,14 +197,14 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                 icon: Icons.savings_outlined,
                 title: context.l10n.booksMoneyInEmptyTitle,
                 message: context.l10n.booksMoneyInEmptyHint,
-                // ⓘ অফিসের লোক সোজা আদায় নিতে পারেন; বাকিরা নতুন করে আনেন
-                action: widget.canCollect
+                // ⓘ জমার খবরের চাবি থাকলে সোজা টাকা জমার খবর; বাকিরা নতুন করে আনেন
+                action: widget.canReportDeposit
                     ? FilledButton.icon(
-                        key: const ValueKey('money-in-empty-collect'),
+                        key: const ValueKey('money-in-empty-deposit-report'),
                         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
-                        onPressed: _collect,
+                        onPressed: _reportDeposit,
                         icon: const Icon(Icons.add),
-                        label: Text(context.l10n.booksMoneyInEmptyCollect))
+                        label: Text(context.l10n.lookQuickDeposit))
                     : OutlinedButton.icon(
                         key: const ValueKey('money-in-empty-refresh'),
                         style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -271,9 +272,9 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     return _from == today && _to == today;
   }
 
-  Future<void> _collect() async {
+  Future<void> _reportDeposit() async {
     await Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => widget.collect?.call() ?? MoneyInListScreen.defaultCollect(widget.api)));
+        .push(MaterialPageRoute<void>(builder: (_) => widget.reportDeposit?.call() ?? MoneyInListScreen.defaultReportDeposit()));
     if (mounted) await _load();
   }
 }

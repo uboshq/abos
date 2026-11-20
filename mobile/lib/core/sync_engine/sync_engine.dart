@@ -744,7 +744,11 @@ class SyncEngine {
 
   Future<void> _recordFailedAttempt(String module, Object error) async {
     debugPrint('ABOS sync: $module push failed ($error) — kept in queue');
-    _lastFailureByModule[module] = SyncAttemptFailure.from(error);
+    final failure = SyncAttemptFailure.from(error);
+    _lastFailureByModule[module] = failure;
+    // ⛔ সার্ভার পুরো পাঠানোটাই কারণসহ ফেরালে (যেমন পুরনো ফোনের সারিতে পড়ে থাকা নতুন আদায় — মালিক, ২০ নভেম্বর ২০২৬: আদায়
+    // আর নেওয়া হয় না) শেষে "ফেরত"-এ সার্ভারের নিজের কথাই থাকে, "বারবার পাঠানো গেল না" নয় — মানুষ জানে কেন আর কী করবেন
+    final serverSaid = failure.isServerRefusal ? failure.serverMessage?.trim() : null;
 
     // ⛔ নেট না থাকা চেষ্টা নয় — আগে ১০ মিনিটের টাইমার আর অ্যাপ খোলায় সংকেতহীন ফোনের অর্ডার পাঁচবারেই চিরকালের জন্য "ফেরত" হত,
     // সার্ভার কখনো না দেখা সত্ত্বেও (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। গোনা কেবল সার্ভার কিছু বললে।
@@ -764,7 +768,9 @@ class SyncEngine {
         await _box.put(key, <String, dynamic>{
           ...row.cast<String, dynamic>(),
           'status': _statusRejected,
-          'reason': AppLocale.l10n.syncSendFailedRepeatedly(attempts),
+          'reason': serverSaid != null && serverSaid.isNotEmpty
+              ? serverSaid
+              : AppLocale.l10n.syncSendFailedRepeatedly(attempts),
         });
         continue;
       }

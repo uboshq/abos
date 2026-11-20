@@ -49,7 +49,7 @@ void main() {
     'screen_owner_home': (ownerHomeBody, (_) async {}, false),
     // ⓘ নমুনার "আজকের আদায়" — তারিখের বারে "আজ" চেপে
     'screen_sr_collect': (
-      () => srCollectBody(canCollect: true), // ⓘ নমুনার মতো "＋ নতুন আদায়" সহ
+      () => srCollectBody(canReportDeposit: true), // ⓘ নমুনার মতো "＋ নতুন আদায়" সহ
       (tester) async {
         await tester.tap(find.byKey(const ValueKey('range-today')));
         await tester.pumpAndSettle();
@@ -98,7 +98,7 @@ void main() {
       setScreenSize(tester, size);
       await tester.pumpWidget(RepaintBoundary(
         key: const ValueKey('shot'),
-        child: inSession(framed(srCollectBody(canCollect: true), textScale: scale, font: _realFonts)),
+        child: inSession(framed(srCollectBody(canReportDeposit: true), textScale: scale, font: _realFonts)),
       ));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('range-today')));

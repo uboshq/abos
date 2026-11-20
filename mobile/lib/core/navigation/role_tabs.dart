@@ -157,7 +157,7 @@ class RoleTabs {
   static List<BarTab> tabsFor(Iterable<String> permissions, {Set<String>? modulesOn}) {
     final p = permissions.toSet();
     final base = _roleTabsFor(p, modulesOn);
-    if (!allows(BarTab.deposit, p, modulesOn)) return base;
+    if (!allows(BarTab.deposit, p, modulesOn)) return _modulesInMiddle(base);
     final out = [...base]..insert(base.isEmpty ? 0 : 1, BarTab.deposit);
     while (out.length > 5) {
       final modules = out.indexOf(BarTab.modules);
@@ -166,7 +166,21 @@ class RoleTabs {
       if (drop < 0) break;
       out.removeAt(drop);
     }
-    return out;
+    return _modulesInMiddle(out);
+  }
+
+  /// ⛔ "সব মডিউল" বারের মাঝখানে (০.৪.৫৭-এ মালিকের "ok": "সব মডিউল মাঝখানে"; ০.৪.৫৮-এর "জমা" তাকে চতুর্থ ঘরে ঠেলেছিল —
+  /// মালিক, ২০ নভেম্বর ২০২৬: আবার মাঝখানে)। বেজোড় গোনায় ঠিক মাঝের ঘর (count ~/ 2); জোড় গোনায় মাঝের দুই ঘরের যেকোনোটায়
+  /// থাকলে যেমন আছে, নইলে count ~/ 2। বাকি ঘরের ক্রম বদলায় না।
+  static List<BarTab> _modulesInMiddle(List<BarTab> tabs) {
+    final at = tabs.indexOf(BarTab.modules);
+    if (at < 0) return tabs;
+    final n = tabs.length;
+    final middle = n ~/ 2;
+    if (at == middle || (n.isEven && at == middle - 1)) return tabs;
+    return [...tabs]
+      ..removeAt(at)
+      ..insert(middle, BarTab.modules);
   }
 
   /// ভূমিকার নিজের ঘর আর "আমি" — জমা ছাড়া (০.৪.৫৭-এর বার)
@@ -230,17 +244,16 @@ class RoleTabs {
     'voucher': BarTab.vouchers,
   };
 
-  /// ⭐ ＋ নতুন — কেবল যে পাতায় কিছু বানানো যায় (আদায়, অর্ডার, খরচ, ভাউচার), আর কেবল যার সেই লেখার চাবি আছে।
-  /// [mayCollect]: ফোনে আদায় লেখার সার্ভারের উত্তর (`/me`-র `mayCollect` — আদায় আর ভাউচারের চাবি, ডিলারে বাঁধা নন)।
+  /// ⭐ ＋ নতুন — কেবল যে পাতায় কিছু বানানো যায় (অর্ডার, খরচ, ভাউচার; আদায়ের তালিকায় টাকা জমার খবর), আর কেবল যার সেই
+  /// লেখার চাবি আছে। ⛔ ২০ নভেম্বর ২০২৬ থেকে `/me`-র `mayCollect` আর কিছু খোলে না — ফোনে আদায় লেখা নেই।
   ///
   /// <p>হোমে (মালিকের হোমের নমুনা, ২০ অক্টোবর ২০২৬) "＋ নতুন" — চাপলে ভূমিকার যা যা বানানো যায় তার তালিকা
   /// ([createChoices]); কিছুই না থাকলে বোতামও নেই।
-  static FabSpec? fabFor(String location, Iterable<String> permissions,
-      {Set<String>? modulesOn, bool mayCollect = false}) {
+  static FabSpec? fabFor(String location, Iterable<String> permissions, {Set<String>? modulesOn}) {
     var rest = Uri.parse(location).path;
     final p = permissions.toSet();
     if (rest == '/home') {
-      final choices = createChoices(p, modulesOn: modulesOn, mayCollect: mayCollect);
+      final choices = createChoices(p, modulesOn: modulesOn);
       return choices.isEmpty
           ? null
           : FabSpec(label: AppLocale.l10n.navFabNew, drawnByScreen: false, choices: choices);
@@ -252,7 +265,9 @@ class RoleTabs {
       'orders' when p.contains('sales.order.create') =>
         // ⓘ অর্ডারের পাতা কাঠামোর বোতাম নিজের Scaffold-এ বসায় ([ScreenFrame.fabOf]) — মোটের বারের ওপরে ভাসে
         FabSpec(label: l.navFabNewOrder, route: '/home/new-order', drawnByScreen: true),
-      'collections' when mayCollect => FabSpec(label: l.navFabNewCollection, drawnByScreen: true),
+      // ⛔ ফোনে নতুন আদায় নেই — মাঠের টাকা কেবল "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬: টাকা নেওয়ার এক কাগজ — কাউন্টার আর
+      // হিসাবের রসিদ)। আদায়ের তালিকা কেবল দেখা; তার বোতাম জমার খবর খোলে, জমার খবরের চাবি থাকলে
+      'collections' when p.contains('sales.claim.submit') => FabSpec(label: l.lookQuickDeposit, drawnByScreen: true),
       'claims' when p.contains('hr.claim.self') => FabSpec(label: l.navFabNewClaim, drawnByScreen: true),
       _ when (rest == 'vouchers' || rest.startsWith('vouchers/')) && p.contains('accounts.voucher.create') =>
         FabSpec(label: l.navFabNewVoucher, drawnByScreen: true),
@@ -262,15 +277,16 @@ class RoleTabs {
     return ModuleGate.allows(modulesOn, rest) ? spec : null;
   }
 
-  /// ⭐ হোমের "＋ নতুন"-এর তালিকা — অর্ডার, আদায়, খরচ, ভাউচার, খরচের দাবি; কেবল যার চাবি আর সুইচ আছে
-  static List<FabChoice> createChoices(Iterable<String> permissions,
-      {Set<String>? modulesOn, bool mayCollect = false}) {
+  /// ⭐ হোমের "＋ নতুন"-এর তালিকা — অর্ডার, টাকা জমার খবর, খরচ, ভাউচার, খরচের দাবি; কেবল যার চাবি আর সুইচ আছে
+  static List<FabChoice> createChoices(Iterable<String> permissions, {Set<String>? modulesOn}) {
     final p = permissions.toSet();
     final l = AppLocale.l10n;
     return [
       if (p.contains('sales.order.create'))
         FabChoice(label: l.navFabNewOrder, route: '/home/new-order', icon: Symbols.shopping_cart),
-      if (mayCollect) FabChoice(label: l.navFabNewCollection, route: '/home/collections', icon: Symbols.payments),
+      // ⛔ "নতুন আদায়"-এর জায়গায় "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬: ফোন থেকে আদায় লেখা বন্ধ)
+      if (p.contains('sales.claim.submit'))
+        FabChoice(label: l.lookQuickDeposit, route: '/home/$depositReportPath', icon: Symbols.payments),
       if (p.contains('accounts.voucher.create')) ...[
         FabChoice(label: l.navFabNewExpense, route: '/home/vouchers/expense', icon: Symbols.shopping_bag),
         FabChoice(label: l.navFabNewVoucher, route: '/home/vouchers', icon: Symbols.receipt_long),

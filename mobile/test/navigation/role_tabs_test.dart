@@ -132,9 +132,10 @@ void main() {
       expect(RoleTabs.fabFor('/home/orders', const ['sales.order.view']), isNull);
     });
 
-    test('collection: only when the server lets this phone collect', () {
-      expect(RoleTabs.fabFor('/home/collections', rolePermissions['sr']!, mayCollect: true)?.label, 'নতুন আদায়');
+    // ⛔ মালিক, ২০ নভেম্বর ২০২৬: ফোনে নতুন আদায় নেই — আদায়ের তালিকার বোতাম "টাকা জমার খবর", জমার খবরের চাবিতে
+    test('collections: no "নতুন আদায়"; the deposit-report key gets "টাকা জমার খবর"', () {
       expect(RoleTabs.fabFor('/home/collections', rolePermissions['sr']!), isNull);
+      expect(RoleTabs.fabFor('/home/collections', [...rolePermissions['sr']!, 'sales.claim.submit'])?.label, 'টাকা জমার খবর');
     });
 
     test('voucher and expense: only with accounts.voucher.create', () {
@@ -146,15 +147,16 @@ void main() {
 
     test('pages where nothing is created have none', () {
       for (final path in ['approvals', 'reports', 'challans', 'stock', 'customers', 'notifications']) {
-        expect(RoleTabs.fabFor('/home/$path', rolePermissions['owner']!, mayCollect: true), isNull, reason: path);
+        expect(RoleTabs.fabFor('/home/$path', rolePermissions['owner']!), isNull, reason: path);
       }
     });
 
     test('the home\'s ＋ নতুন lists what this role may create', () {
-      final owner = RoleTabs.fabFor('/home', rolePermissions['owner']!, mayCollect: true)!;
+      final owner = RoleTabs.fabFor('/home', [...rolePermissions['owner']!, 'sales.claim.submit'])!;
       expect(owner.label, 'নতুন');
+      // ⛔ "নতুন আদায়" নয় — "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬)
       expect([for (final c in owner.choices) c.label],
-          ['নতুন অর্ডার', 'নতুন আদায়', 'নতুন খরচ', 'নতুন ভাউচার', 'খরচের দাবি']);
+          ['নতুন অর্ডার', 'টাকা জমার খবর', 'নতুন খরচ', 'নতুন ভাউচার', 'খরচের দাবি']);
       expect([for (final c in RoleTabs.fabFor('/home', rolePermissions['sr']!)!.choices) c.label], ['নতুন অর্ডার']);
       expect(RoleTabs.fabFor('/home', rolePermissions['depot']!), isNull);
     });

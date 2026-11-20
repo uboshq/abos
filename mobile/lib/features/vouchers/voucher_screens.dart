@@ -16,7 +16,6 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../books/books_widgets.dart';
-import '../books/collect_screen.dart';
 import 'money_voucher_screen.dart';
 import '../printing/document_actions_sheet.dart';
 import '../printing/row_actions.dart';
@@ -41,19 +40,15 @@ class VoucherListScreen extends StatefulWidget {
     this.today,
     this.view,
     this.canCreate = false,
-    this.collect = _collectScreen,
     this.mayCollect = false,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
 
-  static Widget _collectScreen() => const CollectScreen();
-
-  /// ⭐ "আদায় ভাউচার" = আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ) — পরীক্ষা নিজের পাতা দেয়
-  final Widget Function() collect;
-
-  /// ⭐ "আদায় ভাউচার" দেখাবে কি না — `/me`-র `mayCollect`, হোমের "নতুন আদায়" আর আদায়ের তালিকার বোতামের একই উৎস (সার্ভার:
-  /// আদায় আর ভাউচারের চাবি, আর দেয়ালে বাঁধা নন — মালিকের নিয়ম, SR কেবল অর্ডার দেন, ৭ অক্টোবর ২০২৬)। ⛔ ভাউচারের চাবি একা যথেষ্ট নয়।
+  /// ⭐ গ্রাহকের টাকার "রসিদ ভাউচার" দেখাবে কি না — `/me`-র `mayCollect` (সার্ভার: টাকা নেওয়া আর ভাউচারের চাবি, আর দেয়ালে
+  /// বাঁধা নন — মালিকের নিয়ম, SR কেবল অর্ডার দেন, ৭ অক্টোবর ২০২৬)। ⛔ ভাউচারের চাবি একা যথেষ্ট নয়।
+  /// ⭐ ২০ নভেম্বর ২০২৬ থেকে এটা খোলে রসিদ ভাউচারের ফর্ম (RCV), আদায়ের পাতা নয় — মালিক: গ্রাহকের টাকা কেবল কাউন্টারে আর হিসাবের
+  /// রসিদে; ফোনে আদায় (COL) লেখা নেই।
   final bool mayCollect;
 
   /// ⓘ নাগালের শাখা — `/me` থেকে; না পেলে শাখার ছাঁকনিই দেখায় না
@@ -171,7 +166,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                   ListTile(
                     key: ValueKey('voucher-type-$t'),
                     title: Text(VoucherTypes.label(t)),
-                    subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
+                    subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.vouchersReceiptCustomerHint) : null,
                     onTap: () => Navigator.of(sheet).pop(t),
                   ),
                 // ⭐ গ্রাহক ছাড়া অন্য আয় — আলাদা, পরিষ্কার নামে; আদায়ের সাথে মেশানো নয় (মালিক, ২১ অক্টোবর ২০২৬)
@@ -187,13 +182,8 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
           ),
         );
     if (type == null || !mounted) return;
-    // ⭐ গ্রাহকের টাকা নেওয়ার একটাই পথ: "আদায় ভাউচার" খোলে আদায়ের পাতা (মালিক, ২১ অক্টোবর ২০২৬) — কেবল যিনি আদায় নিতে পারেন;
-    // ⓘ রসিদের ধরন থেকে "নতুন" অন্যদের জন্য গ্রাহক ছাড়া আয় ("অন্য আয়"-এর ফর্ম)
-    if (type == VoucherTypes.receipt && widget.mayCollect) {
-      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => widget.collect()));
-      if (mounted) await _load();
-      return;
-    }
+    // ⭐ গ্রাহকের টাকা হিসাবের রসিদ ভাউচারে (RCV) — আদায়ের পাতা আর নয় (মালিক, ২০ নভেম্বর ২০২৬: টাকা নেওয়ার এক কাগজ);
+    // রসিদ আর "অন্য আয়" দুটোই রসিদের ফর্ম
     final formType = type == _otherIncome ? VoucherTypes.receipt : type;
     // ⭐ পরিশোধ আর খরচ — ওয়েবের টাকা দেওয়ার পর্দার গড়নে ([MoneyVoucherScreen]; মালিক, ২১ ও ২৪ অক্টোবর ২০২৬); বাকিরা আগের ফর্মে
     final landed = await Navigator.of(context).push<String>(MaterialPageRoute(

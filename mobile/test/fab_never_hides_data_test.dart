@@ -174,6 +174,13 @@ List<String> _numbersOf(String screen) => switch (screen) {
 const _longShop = 'মেসার্স ভাই ভাই এন্টারপ্রাইজ অ্যান্ড জেনারেল স্টোর · ফুলপুর বাজার · ময়মনসিংহ';
 
 final _sr = AuthUser(id: 'u2', name: 'করিম উদ্দিন', email: 'sr@x', roles: const ['SR'], permissions: rolePermissions['sr']!);
+/// জমার খবরের চাবিসহ মালিক — আদায়ের তালিকার বোতাম "টাকা জমার খবর" (২০ নভেম্বর ২০২৬)
+final _depositor = AuthUser(
+    id: 'u3',
+    name: ownerUser.name,
+    email: ownerUser.email,
+    roles: ownerUser.roles,
+    permissions: [...rolePermissions['owner']!, 'sales.claim.submit']);
 final _owner =
     AuthUser(id: 'u1', name: ownerUser.name, email: ownerUser.email, roles: ownerUser.roles, permissions: rolePermissions['owner']!);
 
@@ -209,8 +216,8 @@ Widget _app(String initial, {required double scale, AuthUser? user, NavigatorObs
                       // ⓘ নমুনার দুই দোকান আর একটা লম্বা নামের — ৩৬০dp-তে নাম "…"-এ কাটে (কাটা নামের দাবি)
                       dues: () => [...sampleDues(), const ShopDue(_longShop, 5250)],
                       unsent: () => const [],
-                      canCollect: true,
-                      collect: () => const Scaffold(body: Text('COLLECT SCREEN'))),
+                      canReportDeposit: true,
+                      reportDeposit: () => const Scaffold(body: Text('DEPOSIT REPORT SCREEN'))),
                 ),
               ),
               GoRoute(path: 'new-order', builder: (context, state) => const Scaffold(body: Text('NEW ORDER SCREEN'))),
@@ -252,13 +259,13 @@ Map<String, _Case> _cases() => {
       // ⓘ SR-এর আদায়, "আজ" বাছা — ০.৪.৪১ নমুনার একই তালিকা; "মোট · 2টি দোকান" তালিকার ভেতরের মোট
       'SR collections': (
         app: (scale, observer) => _app('/home/collections', scale: scale, user: _sr, observer: observer),
-        fab: 'money-in-new',
+        fab: 'money-in-deposit-report',
         keyed: const ['shop-dues-total', 'shop-dues'],
         ready: (tester) async {
           await tester.tap(find.byKey(const ValueKey('range-today')));
           await tester.pumpAndSettle();
         },
-        opened: (tester) async => expect(find.text('COLLECT SCREEN'), findsOneWidget),
+        opened: (tester) async => expect(find.text('DEPOSIT REPORT SCREEN'), findsOneWidget),
       ),
       'owner home': (
         app: (scale, observer) => _app('/home', scale: scale, observer: observer),
@@ -650,8 +657,9 @@ void main() {
     ),
     'collections': (
       initial: '/home/collections',
-      label: 'নতুন আদায়',
-      opened: (tester) async => expect(find.text('COLLECT SCREEN'), findsOneWidget),
+      // ⛔ ২০ নভেম্বর ২০২৬: "নতুন আদায়" নয় — টাকা জমার খবর, জমার খবরের চাবিতে
+      label: 'টাকা জমার খবর',
+      opened: (tester) async => expect(find.text('DEPOSIT REPORT SCREEN'), findsOneWidget),
     ),
     'orders': (
       initial: '/home/orders',
@@ -664,7 +672,7 @@ void main() {
       testWidgets('$name $size: no floating button, nothing covered before any scroll; the rail carries the action', (tester) async {
         setScreenSize(tester, dp);
         await tester.runAsync(seedMainData);
-        await tester.pumpWidget(_app(s.initial, scale: 1));
+        await tester.pumpWidget(_app(s.initial, scale: 1, user: s.initial == '/home/collections' ? _depositor : null));
         await tester.pumpAndSettle();
         expect(floating(), findsNothing, reason: 'a FAB floats over the page');
         expect(find.byKey(const ValueKey('action-bar')), findsNothing, reason: 'the tablet keeps the action in the rail');

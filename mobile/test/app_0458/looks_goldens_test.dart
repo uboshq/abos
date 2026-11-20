@@ -83,7 +83,8 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final bar = RoleBottomBar(
-      tabs: const [BarTab.home, BarTab.deposit, BarTab.orders, BarTab.modules, BarTab.me],
+      // ⛔ "সব মডিউল" মাঝখানে (মালিক, ২০ নভেম্বর ২০২৬)
+      tabs: const [BarTab.home, BarTab.deposit, BarTab.modules, BarTab.orders, BarTab.me],
       selected: selected,
       badges: const {},
       onSelect: (_) {},

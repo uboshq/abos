@@ -11769,4 +11769,12 @@ class AppL10nBn extends AppL10n {
   @override
   String get updateStoreFailed =>
       'Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।';
+
+  @override
+  String get vouchersReceiptCustomerHint =>
+      'গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)';
+
+  @override
+  String get approvalPendingNoEdit =>
+      'অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান';
 }

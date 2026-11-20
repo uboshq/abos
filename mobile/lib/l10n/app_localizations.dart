@@ -19651,6 +19651,18 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।'**
   String get updateStoreFailed;
+
+  /// Voucher type sheet: the receipt voucher is where Accounts take a customer's money (owner 20 Nov 2026: one money-in paper, no app collection)
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)'**
+  String get vouchersReceiptCustomerHint;
+
+  /// A paper waiting for approval is edited by no one (owner 20 Nov 2026, maker-checker): the approver approves, sends back or rejects
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান'**
+  String get approvalPendingNoEdit;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

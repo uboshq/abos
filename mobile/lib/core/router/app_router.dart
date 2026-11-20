@@ -296,11 +296,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           _framed(
             path: 'collections',
-            // ⭐ অফিসের লোকের "নতুন আদায়" (`mayCollect`, ৭ অক্টোবর ২০২৬)
+            // ⛔ আদায়ের তালিকা কেবল দেখা — ফোনে "নতুন আদায়" নেই; বোতাম "টাকা জমার খবর", জমার খবরের চাবিতে (মালিক, ২০ নভেম্বর ২০২৬:
+            // টাকা নেওয়ার এক কাগজ — কাউন্টার আর হিসাবের রসিদ; আগে `mayCollect`-এ "নতুন আদায়", ৭ অক্টোবর ২০২৬)
             builder: (context, state) => Consumer(
                 builder: (context, ref, _) => ModuleGateView(
                     path: 'collections',
-                    child: MoneyInListScreen(canCollect: ref.watch(mayCollectProvider)))),
+                    child: MoneyInListScreen(
+                        canReportDeposit: ref.watch(authStateProvider).user?.can('sales.claim.submit') ?? false))),
           ),
           _framed(
             path: 'principals',

@@ -45,23 +45,24 @@ void main() {
       expect(find.byType(BarFab), findsNothing, reason: 'চাবি নেই → বোতাম নেই');
       expect(find.byType(FloatingActionButton), findsNothing);
 
-      await pump(tester, srCollectBody(canCollect: true));
-      final fab = find.byKey(const ValueKey('money-in-new'));
+      await pump(tester, srCollectBody(canReportDeposit: true));
+      final fab = find.byKey(const ValueKey('money-in-deposit-report'));
       expect(tester.widget(fab), isA<BarFab>());
-      expect(tester.widget<BarFab>(fab).label, 'নতুন আদায়');
+      // ⛔ ২০ নভেম্বর ২০২৬: "নতুন আদায়" নয় — টাকা জমার খবর
+      expect(tester.widget<BarFab>(fab).label, 'টাকা জমার খবর');
     });
 
     testWidgets('BarFab: 48dp or more, and TalkBack says "নতুন আদায়" in Bengali', (tester) async {
       final handle = tester.ensureSemantics();
-      await pump(tester, srCollectBody(canCollect: true));
-      final size = tester.getSize(find.byKey(const ValueKey('money-in-new')));
+      await pump(tester, srCollectBody(canReportDeposit: true));
+      final size = tester.getSize(find.byKey(const ValueKey('money-in-deposit-report')));
       expect(size.height, greaterThanOrEqualTo(48));
       expect(size.width, greaterThanOrEqualTo(48));
       final spoken = find.descendant(
-          of: find.byKey(const ValueKey('money-in-new')), matching: find.bySemanticsLabel('নতুন আদায়'));
+          of: find.byKey(const ValueKey('money-in-deposit-report')), matching: find.bySemanticsLabel('টাকা জমার খবর'));
       expect(spoken, findsOneWidget);
       // ⓘ বোতাম আর তার নাম এক কথায় — "নতুন আদায়, বোতাম"
-      expect(tester.getSemantics(spoken), isSemantics(label: 'নতুন আদায়', isButton: true, hasTapAction: true));
+      expect(tester.getSemantics(spoken), isSemantics(label: 'টাকা জমার খবর', isButton: true, hasTapAction: true));
       handle.dispose();
     });
   });

@@ -267,8 +267,8 @@ void main() {
       '/sales/deliveries': 'deliveries',
       '/inventory/quality': 'stock',
       '/inventory/serials': 'stock',
-      // ⭐ ওয়েবের "নতুন আদায়" → আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ)
-      '/sales/collections/create': 'collections',
+      // ⛔ ওয়েবের পুরনো "নতুন আদায়" → টাকা জমার খবর (মালিক, ২০ নভেম্বর ২০২৬: ফোনে আদায় লেখা নেই)
+      '/sales/collections/create': 'deposit-report',
     };
     expect(NativeForWeb.desks, gates.keys.toSet());
     for (final entry in gates.entries) {

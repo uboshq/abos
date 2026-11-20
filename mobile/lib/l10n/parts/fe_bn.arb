@@ -909,5 +909,9 @@
   "updateOpenStore": "Play Store-এ আপডেট করুন",
   "@updateOpenStore": {"description": "Play build: the update button opens the app page on Google Play (no self-install there)"},
   "updateStoreFailed": "Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।",
-  "@updateStoreFailed": {"description": "Play build: the store page could not be opened"}
+  "@updateStoreFailed": {"description": "Play build: the store page could not be opened"},
+  "vouchersReceiptCustomerHint": "গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)",
+  "@vouchersReceiptCustomerHint": {"description": "Voucher type sheet: the receipt voucher is where Accounts take a customer's money (owner 20 Nov 2026: one money-in paper, no app collection)"},
+  "approvalPendingNoEdit": "অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান",
+  "@approvalPendingNoEdit": {"description": "A paper waiting for approval is edited by no one (owner 20 Nov 2026, maker-checker): the approver approves, sends back or rejects"}
 }

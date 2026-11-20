@@ -167,7 +167,9 @@ void main() {
     expect(api.sentSubmit, isTrue);
   });
 
-  testWidgets('the writer submits a draft; the supervisor lowers the quantity and signs through the approval door', (tester) async {
+  // ⛔ মালিক, ২০ নভেম্বর ২০২৬ (maker-checker): অনুমোদনের অপেক্ষার কাগজ কেউ বদলান না — অনুমোদনকারী পরিমাণ বদলান না, কেবল
+  // অনুমোদন, সংশোধনে ফেরত বা বাতিল। আগে এখানে "অনুমোদিত পরিমাণ"-এর ঘর ছিল।
+  testWidgets('the writer submits a draft; the supervisor cannot change it, only signs through the approval door', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(MaterialApp(home: DeliveryOrderScreen(id: 'do-1', api: api)));
     await tester.pumpAndSettle();
@@ -185,14 +187,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('do-send')), findsNothing);
 
-    await tester.enterText(find.byKey(const ValueKey('do-line-7')), '6');
+    expect(find.byKey(const ValueKey('do-line-7')), findsNothing, reason: '⛔ অনুমোদনকারী অপেক্ষার কাগজের পরিমাণ বদলাতে পারছেন');
+    expect(find.byKey(const ValueKey('do-save-qty')), findsNothing, reason: '⛔ "পরিমাণ রাখুন" রয়ে গেল');
+    expect(find.byType(TextField), findsOneWidget, reason: 'কেবল ফেরতের কারণের ঘর — বদলানোর কোনো ঘর নয়');
+    expect(find.text('অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান'), findsOneWidget);
+
     await tester.ensureVisible(find.byKey(const ValueKey('do-approve')));
     await tester.tap(find.byKey(const ValueKey('do-approve')));
     await tester.pumpAndSettle();
 
-    expect(api.sentQty, {7: 6}, reason: 'যা ঘরে দেখছেন তাতেই অনুমোদন — আগে পরিমাণ যায়');
-    expect(api.calls, ['submit', 'qty', 'approve:ap-1']);
+    expect(api.sentQty, isNull, reason: '⛔ অনুমোদনের সাথে পরিমাণ বদল গেল');
+    expect(api.calls, ['submit', 'approve:ap-1']);
     expect(find.text('অবস্থা: অনুমোদিত'), findsOneWidget);
+  });
+
+  testWidgets('the supervisor sends a waiting paper back for correction, with a reason, instead of changing it', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final sentBack = <String>[];
+    final api = _FakeApi()..current = _FakeApi._order(awaitingMe: true, editable: false, status: 'সুপারভাইজারের অপেক্ষায়');
+    await tester.pumpWidget(MaterialApp(
+        home: DeliveryOrderScreen(id: 'do-1', api: api, sendBack: (id, remarks) async => sentBack.add('$id:$remarks'))));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const ValueKey('do-send-back')));
+    await tester.tap(find.byKey(const ValueKey('do-send-back')));
+    await tester.pumpAndSettle();
+    expect(sentBack, isEmpty, reason: 'কারণ ছাড়া ফেরত');
+
+    await tester.enterText(find.byKey(const ValueKey('do-reason')), 'পরিমাণ ৬ করুন');
+    await tester.ensureVisible(find.byKey(const ValueKey('do-send-back')));
+    await tester.tap(find.byKey(const ValueKey('do-send-back')));
+    await tester.pumpAndSettle();
+    expect(sentBack, ['ap-1:পরিমাণ ৬ করুন']);
+    expect(api.calls, isEmpty, reason: '⛔ ফেরতের সাথে অনুমোদন বা বাতিলও গেল');
   });
 
   // ⭐ DO+SO মেশানো, ধাপ ১০ — কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা "আদেশ" বলে, আর সীমায় আটকালে কত কম
