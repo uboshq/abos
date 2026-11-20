@@ -20,6 +20,7 @@ import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
+import { foldMenuGroups } from './menu-fold.js'
 import { bulkBars, pickColumns } from './bulk-bar.js'
 import { arrangeBoards } from './board-arrange.js'
 import { sidebarStore } from './sidebar-state.js'
@@ -194,6 +195,8 @@ arrangeBoards()
 window.Alpine = Alpine
 // ⭐ ভাসমান তালিকা পর্দার ভেতরে — Dynamic-এর মডিউল-মেনু ([[keep-on-screen.js]])
 keepMenusOnScreen()
+// ⭐ বাঁয়ের মেনুর দল ভাঁজ করা — তিন ABOS রূপে (মালিক, ২০ নভেম্বর ২০২৬; [[menu-fold.js]])
+foldMenuGroups()
 Alpine.start()
 
 // ⭐ জীবন্ত ABOS লোগো আর লোড হওয়ার পর্দা (মালিক, ১ নভেম্বর ২০২৬)

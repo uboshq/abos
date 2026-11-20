@@ -757,7 +757,13 @@
 
                     {{-- ⛔ `min-h-0` — না থাকলে flex-কলামে তালিকাটা নিজের পুরো উচ্চতা নিত, ভেতরে স্ক্রল না করে বাক্সের বাইরে উপচে পড়ত:
                          পাতা অকারণে লম্বা হত (রসিদে ১,৭০০px), স্টিকি সাইডবার পাতার সাথে সরে যেত আর মেনু নিচের বারের তলায় যেত (fe, ২২ অক্টোবর ২০২৬) --}}
+                    @php
+                        /* ⭐ দল ভাঁজ করা — কেবল তিন ABOS রূপে ([[Ui::foldsMenuGroups()]]; মালিক, ২০ নভেম্বর ২০২৬); বাকি রূপে আগের মাথা */
+                        $foldGroups = ($activeModule['panel_sections'] ?? []) === []
+                            && \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)));
+                    @endphp
                     <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
+                         @if ($foldGroups) data-menu-fold-nav="{{ $activeModule['code'] }}" @endif
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @php
@@ -774,14 +780,55 @@
                                     ->sort(fn ($x, $y) => [$x[0], $x[1]] <=> [$y[0], $y[1]])
                                     ->map(fn ($x) => $x[2])->values();
                             }
+                            // ⭐ এক করা মডিউলের সারি তার দলের ক্রমে ([[MenuLook::arrange()]]; মালিক, ২০ নভেম্বর ২০২৬) — ক্রম না দেওয়া মডিউলে কিছুই নড়ে না
+                            if ($panelSections === []) {
+                                $panelRows = collect(\App\Core\Navigation\MenuLook::arrange((string) $activeModule['code'], $panelRows->all(), $foldGroups));
+                            }
                             // ⭐ রঙিন মেনু — প্রতিটা সারির দল, রং আর নিজের চিহ্ন ([[MenuLook]]; মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok")
                             $menuLooks = \App\Core\Navigation\MenuLook::forRows((string) $activeModule['code'], $panelRows->all());
+
+                            /*
+                             * ⭐ ভাঁজের চাবি — প্রতিটা দলের ধরন আর কততম বার ("reports-2"), যাতে একই ধরনের দুই আলাদা দল আলাদা মনে থাকে;
+                             * এই পাতার সারি যে দলে সেটা খোলা, বাকিরা বন্ধ ([[menu-fold.js]] মনে রাখা দলগুলো পরে খোলে)।
+                             */
+                            $foldKeyOf = [];
+                            $foldHere = [];
+                            $foldSeen = [];
+                            $foldNow = null;
+                            foreach ($panelRows as $foldAt => $foldRow) {
+                                $foldLook = $menuLooks[$foldAt] ?? null;
+                                if (($foldLook['kind'] ?? null) === null) {
+                                    $foldNow = null;
+                                } elseif ($foldLook['starts']) {
+                                    $foldSeen[$foldLook['kind']] = ($foldSeen[$foldLook['kind']] ?? 0) + 1;
+                                    $foldNow = $foldLook['kind'].'-'.$foldSeen[$foldLook['kind']];
+                                }
+                                $foldKeyOf[$foldAt] = $foldGroups ? $foldNow : null;
+                                if ($foldNow !== null && ($foldRow['active'] ?? false)) {
+                                    $foldHere[$foldNow] = true;
+                                }
+                            }
                         @endphp
                         @foreach ($panelRows as $item)
-                            @php($look = $menuLooks[$loop->index] ?? ['kind' => null, 'starts' => false, 'colour' => null, 'icon' => null, 'name' => null])
+                            @php($look = $menuLooks[$loop->index] ?? ['kind' => null, 'starts' => false, 'colour' => null, 'icon' => null, 'kind_icon' => null, 'name' => null])
+                            @php($foldKey = $foldKeyOf[$loop->index] ?? null)
                             @if ($look['kind'] !== null && $look['starts'] && $panelSections === [])
+                                @if ($foldKey !== null)
+                                    {{-- ⭐ দলের মাথা বোতাম — চিহ্ন + নাম, তীর নেই (মালিক, ২০ নভেম্বর ২০২৬); Enter/Space বোতাম নিজেই চাপে --}}
+                                    <button type="button" class="menu-kind-head menu-fold-head" data-menu-kind="{{ $look['kind'] }}"
+                                            data-mc="{{ ltrim((string) $look['colour'], '#') }}" data-menu-fold="{{ $foldKey }}"
+                                            @if (isset($foldHere[$foldKey])) data-menu-fold-here @endif
+                                            aria-expanded="{{ isset($foldHere[$foldKey]) ? 'true' : 'false' }}"
+                                            x-show="filter === ''">
+                                        @if ($look['kind_icon'] ?? null)
+                                            <span class="menu-fold-icon" aria-hidden="true"><x-ui.licon :name="$look['kind_icon']" :size="15" /></span>
+                                        @endif
+                                        <span class="min-w-0 truncate">{{ $look['name'] }}</span>
+                                    </button>
+                                @else
                                 <p class="menu-kind-head" data-menu-kind="{{ $look['kind'] }}" data-mc="{{ ltrim((string) $look['colour'], '#') }}"
                                    x-show="filter === ''">{{ $look['name'] }}</p>
+                                @endif
                             @endif
                             @if ($panelSections !== [] && ($item['section'] ?? null) !== null
                                 && ($item['section'] ?? null) !== ($panelRows[$loop->index - 1]['section'] ?? null))
@@ -809,6 +856,7 @@
                                    ])
                                    @if (! $item['url']) aria-disabled="true" @endif
                                    @if ($look['kind'] !== null) data-mc="{{ ltrim((string) $look['colour'], '#') }}" data-menu-row-kind="{{ $look['kind'] }}" @endif
+                                   @if ($foldKey !== null) data-menu-fold-row="{{ $foldKey }}" @unless (isset($foldHere[$foldKey])) hidden @endunless @endif
                                    @if ($item['active']) aria-current="page" @endif>
                                     @if ($look['icon'])
                                         <span class="menu-icon"><x-ui.licon :name="$look['icon']" :size="15" /></span>

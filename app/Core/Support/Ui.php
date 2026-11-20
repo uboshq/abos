@@ -574,6 +574,19 @@ final class Ui
         return in_array(self::clean($key), ['navy', 'blue'], true);
     }
 
+    /** ⭐ বাঁয়ের মেনুর দল ভাঁজ করা যায় যে রূপগুলোয় — তিন ABOS রূপ (মালিক, ২০ নভেম্বর ২০২৬); [[menu-fold.js]]-এর `FOLD_LOOKS` একই */
+    public const FOLD_MENU_LOOKS = ['rose', 'navy', 'blue'];
+
+    /**
+     * ⭐ বাঁয়ের মেনুর দলের মাথা বোতাম (দলের চিহ্ন + নাম, চাপলে খোলে/বন্ধ) কি না — কেবল তিন ABOS রূপে।
+     *
+     * ⓘ SAP, Dynamic আর বাকি রূপে আগের `<p>` মাথাই, পিক্সেলে একই (মালিক, ১৯ নভেম্বর ২০২৬: "SAP + D365 হুবহু, আর কিছু নড়বে না")।
+     */
+    public static function foldsMenuGroups(?string $key): bool
+    {
+        return in_array(self::clean($key), self::FOLD_MENU_LOOKS, true);
+    }
+
     /**
      * ⭐ বাঁয়ের মডিউল-রেল — `icons` (আজকের সবাই) বা `none` (কেবল "ABOS", ১৯ নভেম্বর ২০২৬)।
      *

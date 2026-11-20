@@ -1,0 +1,137 @@
+/*
+ * ⭐ বাঁয়ের মেনুর দল ভাঁজ করা — মালিক, ২০ নভেম্বর ২০২৬ (D365/SAP/Oracle-এর বাঁ নেভিগেশন: মডিউল → দল → পাতা)।
+ *   · দলের মাথা একটা বোতাম: দলের নিজের চিহ্ন + নাম, কোনো তীর নেই (মালিক: আন্তর্জাতিক মানে তীর থাকে না)
+ *   · পাতা খুললে সব দল বন্ধ, কেবল যে দলে এই পাতা সেটা খোলা
+ *   · চাপলে খোলে/বন্ধ হয়; কোন দল খোলা তা মডিউল ধরে মনে থাকে (localStorage — না পেলেও পাতা চলে)
+ *   · Enter/Space বোতাম নিজেই চাপে; `aria-expanded` মাথায়, বন্ধ দলের সারিতে `hidden`
+ * ⓘ কেবল তিন ABOS রূপে — "ABOS" (rose), ABOS Navy, ABOS Blue (মালিক, ২০ নভেম্বর ২০২৬); বাকি রূপে বোতামই আঁকা হয় না
+ *   ([[shell.sidebar]], [[Ui::foldsMenuGroups()]]), আর এখানেও রূপ দেখে থামে।
+ * ⓘ সার্ভার প্রথম অবস্থাটা নিজেই আঁকে (এই পাতার দল খোলা, বাকি `hidden`) — এই ফাইল কেবল মনে রাখা দলগুলো খোলে আর চাপ সামলায়।
+ */
+
+export const FOLD_LOOKS = ['rose', 'navy', 'blue']
+
+export const STORE_PREFIX = 'abos.menuFold.'
+
+/** localStorage, না পেলে null — ব্যক্তিগত জানালা বা বন্ধ সাইট-ডাটায় ছুঁড়তে পারে */
+function defaultStore () {
+    try {
+        return window.localStorage ?? null
+    } catch (e) {
+        return null
+    }
+}
+
+export function readSaved (store, module) {
+    if (! store) {
+        return {}
+    }
+
+    try {
+        const raw = store.getItem(STORE_PREFIX + module)
+        const said = raw ? JSON.parse(raw) : {}
+
+        return said && typeof said === 'object' && ! Array.isArray(said) ? said : {}
+    } catch (e) {
+        return {}
+    }
+}
+
+function save (store, module, state) {
+    if (! store) {
+        return
+    }
+
+    try {
+        store.setItem(STORE_PREFIX + module, JSON.stringify(state))
+    } catch (e) {
+        // ⓘ জায়গা নেই বা বন্ধ — মনে রাখা যায় না, ভাঁজ তবু চলে
+    }
+}
+
+/** এক দলের মাথা আর তার সারিগুলো খোলা বা বন্ধ */
+export function setOpen (nav, head, open) {
+    head.setAttribute('aria-expanded', open ? 'true' : 'false')
+
+    nav.querySelectorAll('[data-menu-fold-row]').forEach(row => {
+        if (row.dataset.menuFoldRow === head.dataset.menuFold) {
+            row.hidden = ! open
+        }
+    })
+}
+
+/** খোঁজার ঘরে কিছু লেখা থাকলে সব সারি খোলা — নইলে বন্ধ দলের মিল খুঁজে পাওয়া যেত না */
+function showAllWhileFiltering (nav, heads, store, module) {
+    const panel = nav.closest('[data-site-map]') ?? nav.parentElement
+    const input = panel?.querySelector('input[type="search"]')
+
+    if (! input) {
+        return
+    }
+
+    input.addEventListener('input', () => {
+        if (input.value.trim() !== '') {
+            nav.querySelectorAll('[data-menu-fold-row]').forEach(row => { row.hidden = false })
+
+            return
+        }
+
+        apply(nav, heads, readSaved(store, module))
+    })
+}
+
+function apply (nav, heads, saved) {
+    heads.forEach(head => {
+        const here = head.hasAttribute('data-menu-fold-here')
+        setOpen(nav, head, here || saved[head.dataset.menuFold] === true)
+    })
+}
+
+/**
+ * পাতার প্রতিটা ভাঁজ-করা মেনু জাগায়; কতগুলো জাগল তা ফেরায়।
+ *
+ * @param {Document|HTMLElement} root
+ * @param {{ store?: Storage|null, ui?: string }} options
+ */
+export function foldMenuGroups (root = document, { store = defaultStore(), ui } = {}) {
+    const look = ui ?? (root.ownerDocument ?? root).documentElement?.dataset.ui
+
+    if (! FOLD_LOOKS.includes(look)) {
+        return 0
+    }
+
+    let woke = 0
+
+    root.querySelectorAll('[data-menu-fold-nav]').forEach(nav => {
+        if (nav.dataset.menuFoldWoke === '1') {
+            return
+        }
+
+        nav.dataset.menuFoldWoke = '1'
+        woke++
+
+        const module = nav.dataset.menuFoldNav
+        const heads = [...nav.querySelectorAll('[data-menu-fold]')]
+
+        apply(nav, heads, readSaved(store, module))
+
+        nav.addEventListener('click', event => {
+            const head = event.target.closest?.('[data-menu-fold]')
+
+            if (! head || ! nav.contains(head)) {
+                return
+            }
+
+            const open = head.getAttribute('aria-expanded') !== 'true'
+            setOpen(nav, head, open)
+
+            const saved = readSaved(store, module)
+            saved[head.dataset.menuFold] = open
+            save(store, module, saved)
+        })
+
+        showAllWhileFiltering(nav, heads, store, module)
+    })
+
+    return woke
+}
