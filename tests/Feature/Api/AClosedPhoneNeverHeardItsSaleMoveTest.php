@@ -110,7 +110,9 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
             $message = $request->data()['message'] ?? [];
 
             return ($message['notification']['title'] ?? null) === 'S-0007 — গেট পেরিয়েছে'
-                && ($message['notification']['body'] ?? null) === 'রহিম স্টোর · কারওয়ান বাজার';
+                && ($message['notification']['body'] ?? null) === 'রহিম স্টোর · কারওয়ান বাজার'
+                // ⭐ উঁচু গুরুত্বের চ্যানেল — বন্ধ বা তালা দেওয়া অ্যাপেও ভেসে ওঠে (২০ নভেম্বর ২০২৬)
+                && ($message['android']['notification']['channel_id'] ?? null) === \App\Core\Services\FcmSender::CHANNEL;
         });
         $this->assertSame('tok-live', $live->fresh()->push_token);
         $this->assertNull($gone->fresh()->push_token, '"আর নেই" বলা টোকেন রয়ে গেল।');
