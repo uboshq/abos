@@ -68,7 +68,9 @@ class AListenerNobodyEverBoundTest extends TestCase
     private function screens(): array
     {
         return [
-            'আদায়ের ফর্ম' => route('sales.collection.create'),
+            // ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): আদায়ের ফর্ম আর আঁকা হয় না (পুরনো ঠিকানা
+            //   রসিদে পাঠায়, ফাঁকা পাতা মাপলে দাবি মিথ্যা সবুজ হত) — টাকা নেওয়ার পর্দা এখন রসিদ ভাউচার
+            'রসিদ ভাউচারের ফর্ম' => route('accounts.voucher.create', ['type' => 'receipt']),
             'চালানের ফর্ম' => route('sales.invoice.create'),
             'ক্রয় বিলের ফর্ম' => route('purchase.bill.create'),
             'গ্রাহকের ফর্ম' => route('customer.create'),

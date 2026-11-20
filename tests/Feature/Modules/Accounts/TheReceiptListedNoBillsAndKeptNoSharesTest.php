@@ -114,12 +114,20 @@ final class TheReceiptListedNoBillsAndKeptNoSharesTest extends TestCase
      * ⓘ টাকা নেওয়ার নকশা ১০০-এর পর্দায় (a6, ২১ অক্টোবর ২০২৬) পুরনো বিল আগে নিজে থেকেই বসে — আলাদা বোতাম নেই; পর্দা সেটা
      * বলে ("পুরনো আগে নিজে বসেছে"), আর "পুরো বকেয়া" টাকার ঘরে বকেয়া বসিয়ে আবার পুরনো আগে বসায়। হিসাবটা নিজে
      * [[TheCollectionFormPostsWhatTheDesignSaysTest]] আর collection-form.test.js মাপে।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): টাকা ঢোকে কেবল রসিদ ভাউচারে; আদায়ের পর্দা আর আঁকা
+     *   হয় না, পুরনো ঠিকানা রসিদের পর্দায় পাঠায় (গ্রাহক বাছা থাকলে ভরা)। বহু বিল এখন রসিদের নিজের খোলা বিলে, পুরনো আগে
+     *   ([[SalesPartyOpenBills]]-এর ক্রম) — উপরের দাবিগুলো তা মাপে।
      */
-    public function test_the_collection_screen_offers_oldest_bills_first(): void
+    public function test_the_old_collection_address_opens_this_receipt(): void
     {
-        $this->get(route('sales.collection.create'))->assertOk()
-            ->assertSee(__('sales::collection_form.open_hint'))
-            ->assertSee('data-fill-due', false);
+        $this->get(route('sales.collection.create', ['customer' => $this->customer->id]))
+            ->assertRedirect(route('accounts.voucher.create', ['type' => Voucher::RECEIPT, 'party_type' => 'customer', 'party_id' => $this->customer->id]));
+
+        $older = $this->confirmedInvoice($this->customer, '1', '100');
+        $newer = $this->confirmedInvoice($this->customer, '1', '100');
+        $this->assertSame([(int) $older->id, (int) $newer->id], array_map(fn (array $b) => (int) $b['id'], $this->billsFor($this->customer)),
+            '⛔ রসিদের খোলা বিল পুরনো আগে আসে না।');
     }
 
     /** ⓘ বিক্রয় বন্ধ থাকলে খালি তালিকা — মিথ্যা তালিকা নয় */

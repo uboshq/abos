@@ -9,6 +9,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
@@ -225,8 +226,15 @@ final class APaymentMethodFitsItsMoneyAccountTest extends TestCase
 
         $claim = $claim->fresh();
         $this->assertSame(DepositClaim::ACCEPTED, $claim->status);
-        $this->assertNotNull($claim->collection_id);
-        $this->assertSame($this->bank->id, (int) Collection::query()->findOrFail($claim->collection_id)->account_id);
+
+        // ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায় নয়, রসিদ ভাউচার — মালিক: "টাকা ঢোকার কাগজ একটাই"; টাকা সেই ব্যাংকের খাতেই
+        $this->assertNull($claim->collection_id, '⛔ খবর থেকে আবার আদায় (COL) বসেছে — রসিদ ভাউচার হওয়ার কথা।');
+        $this->assertNotNull($claim->voucher_id, '⛔ গৃহীত খবরের রসিদ ভাউচার নেই।');
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id);
+        $this->assertSame(Voucher::RECEIPT, $voucher->type);
+        $this->assertTrue($voucher->isPosted(), '⛔ রসিদ ভাউচার পাকা হয়নি।');
+        $this->assertTrue($voucher->lines()->where('account_id', $this->bank->id)->where('debit', '>', 0)->exists(),
+            '⛔ রসিদের টাকা বাছা ব্যাংকের খাতে বসেনি।');
     }
 
     /** ⭐ পাল্টা দাবি: বিকাশের দাবি বিকাশের খাতে বসে। */
@@ -330,5 +338,9 @@ final class APaymentMethodFitsItsMoneyAccountTest extends TestCase
     {
         $this->assertSame(DepositClaim::PENDING, $claim->fresh()->status, '⛔ ভুল খাতে দাবিটা মঞ্জুর হয়ে গেছে।');
         $this->assertSame(0, Collection::query()->count(), '⛔ ভুল খাতে আদায়ের সারি বসে গেছে — গ্রাহকের বকেয়া কমেছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে — ভুল খাতে রসিদও নয় (নম্বর এই ফাইলের নিজের রেফারেন্স)
+        $this->assertNull($claim->fresh()->voucher_id, '⛔ ভুল খাতে খবরের রসিদ ভাউচার বাঁধা হয়ে গেছে।');
+        $this->assertFalse(Voucher::query()->withoutGlobalScopes()->where('instrument_no', $claim->reference)->exists(),
+            '⛔ ভুল খাতে রসিদ ভাউচার বসে গেছে — গ্রাহকের বকেয়া কমেছে।');
     }
 }

@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherAllocation;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -31,6 +33,7 @@ use Tests\TestCase;
  * সেই বিলগুলোতে মেলে — গৃহীত অঙ্ক কমলে ক্রমে যতটা মেলে, মাঝে শোধ হওয়া বিলে বকেয়া পর্যন্ত; না বাছলে আগের মতো খালি আদায়।
  * অন্যের বিল, পাকা নয় এমন বিল, বকেয়ার বেশি, একই বিল দুইবার, বা মোট জমার বেশি — দাবি তোলার মুহূর্তেই ৪২২। ফোন, পোর্টাল আর
  * ওয়েবের অনুরোধ-ফর্ম একই নিয়মে; ডিপোর তালিকা আর ডিলারের দাবির পাতা বাছা বিল দেখায়।
+ * ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায়ের সারি নয়, রসিদ ভাউচারের বিলের ভাগ (মালিক: "টাকা ঢোকার কাগজ একটাই"); না বাছলে আগের মতো পুরনো বিল আগে।
  */
 final class TheDepositSaysWhichBillsItPaysTest extends TestCase
 {
@@ -83,6 +86,12 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $this->assertSame([['id' => (string) $old->public_id, 'no' => 'INV-B-1', 'amount' => '600.00'], ['id' => (string) $new->public_id, 'no' => 'INV-B-2', 'amount' => '400.00']], $json['bills']);
 
         $claim = DepositClaim::query()->where('public_id', $json['id'])->firstOrFail();
+        /*
+         * ⓘ ডিপোর মালিক গ্রহণ করেন, ফোনের কর্মী নন — ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে, আর রসিদে লেখক ≠ পাকাকারী;
+         * ফোনের কর্মীর হাতে রসিদ খসড়াই থাকত। এই ফাইল মাপে বিলের ভাগ, অন্য হাতের অপেক্ষা নয়।
+         */
+        $this->app['auth']->forgetGuards();
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         app(DepositClaimService::class)->accept($claim, $this->bank->id);
 
         $this->assertSame(['INV-B-1' => '600.0000', 'INV-B-2' => '400.0000'], $this->linesOf($claim));
@@ -117,9 +126,13 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $plain = $service->raise($this->dealer, ['claimed_on' => now()->toDateString(), 'amount' => '300', 'method' => DepositClaim::BANK]);
         $this->assertNull($plain->bills);
         $service->accept($plain, $this->bank->id);
-        // ⭐ বিল না বাছা আদায় সবচেয়ে পুরনো খোলা বিলে — টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬; [[AnUnpointedCollectionPaysTheOldestBillFirstTest]])।
-        // ⓘ আগে খালি বসত; খসড়া আর অন্যের বিল বাদ, তাই কেবল নিজের পাকা INV-D-1
-        $this->assertSame(['INV-D-1' => '300.0000'], $this->linesOf($plain), '⛔ বিল না বাছা আদায় পুরনো বিলে বসেনি, বা ভুল বিলে বসল।');
+        /*
+         * ⭐ বিল না বাছা খবরের টাকা সবচেয়ে পুরনো খোলা বিলে — টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬); ২০ নভেম্বর ২০২৬ থেকে রসিদ
+         * ভাউচারের বিলের ভাগে ([[DepositClaimService::oldestFirst()]])। ⓘ খসড়া আর অন্যের বিল বাদ, তাই কেবল নিজের পাকা INV-D-1।
+         */
+        $this->assertSame(['INV-D-1' => '300.0000'], $this->linesOf($plain), '⛔ বিল না বাছা খবরের রসিদ পুরনো বিলে বসেনি, বা ভুল বিলে বসল।');
+        $this->assertSame(0, bccomp($draft->fresh()->dueAmount(), '500', 4), '⛔ খসড়া বিলে টাকা বসল।');
+        $this->assertSame(0, bccomp($theirs->fresh()->dueAmount(), '500', 4), '⛔ অন্যের বিলে টাকা বসল।');
 
         $this->phone(['sales.collection.create', 'sales.claim.submit']); // ⓘ খবরের দরজার চাবি এখন sales.claim.submit (ধাপ খ, 19e713177) — আদায়ের চাবি একা দরজা খোলে না
         foreach ([
@@ -203,14 +216,21 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         return Customer::query()->whereKeyNot($this->dealer->id)->orderBy('id')->firstOrFail();
     }
 
-    /** @return array<string, string> বিলের নম্বর → আদায়ের সারির অঙ্ক */
+    /**
+     * বিলের নম্বর → রসিদ ভাউচারের বিলের ভাগ — ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদে (আগে আদায়ের সারি)।
+     *
+     * @return array<string, string>
+     */
     private function linesOf(DepositClaim $claim): array
     {
         $claim->refresh();
         $this->assertSame(DepositClaim::ACCEPTED, $claim->status);
+        $this->assertNull($claim->collection_id, '⛔ খবর থেকে আবার আদায় (COL) বসেছে।');
+        $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id)->isPosted(), '⛔ খবরের রসিদ পাকা হয়নি।');
 
-        return CollectionLine::query()->where('collection_id', $claim->collection_id)->orderBy('line_no')->get()
-            ->mapWithKeys(fn (CollectionLine $l) => [(string) SalesInvoice::query()->whereKey($l->sales_invoice_id)->value('document_no') => bcadd((string) $l->amount, '0', 4)])
+        return VoucherAllocation::query()->withoutGlobalScopes()->where('voucher_id', $claim->voucher_id)
+            ->where('against_type', SalesInvoice::drillSourceType())->orderBy('id')->get()
+            ->mapWithKeys(fn (VoucherAllocation $a) => [(string) SalesInvoice::query()->whereKey($a->against_id)->value('document_no') => bcadd((string) $a->amount, '0', 4)])
             ->all();
     }
 

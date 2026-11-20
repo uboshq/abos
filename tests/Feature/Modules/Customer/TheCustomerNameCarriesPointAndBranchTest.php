@@ -140,14 +140,16 @@ final class TheCustomerNameCarriesPointAndBranchTest extends TestCase
         $this->assertStringContainsString($label, (string) $this->get(route('sales.order.create'))->assertOk()->getContent(),
             '⛔ বিক্রয় আদেশের ফর্মের গ্রাহক-পিকারে "নাম · পয়েন্ট · শাখা" নেই।');
         /*
-         * ⓘ আদায়ের গ্রাহক-ঘর এখন খোঁজা যায় এমন পিকার, দুই লাইনে (fe, ২৪ অক্টোবর ২০২৬): নাম উপরে, তার নিচে "পয়েন্ট · শাখা"। তালিকার
-         * সারি পাতায় আঁকা হয় JS-এ, তাই দাবি পিকারের সারি থেকে — নামের সাথে পয়েন্ট আর শাখা ঠিক সেই সারিতেই, আর ঘরটা দুই-লাইনের।
+         * ⓘ টাকা নেওয়ার পর্দার গ্রাহক-ঘর। ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): গ্রাহকের টাকা ঢোকে
+         *   কেবল রসিদ ভাউচারে; আদায়ের ফর্ম আর আঁকা হয় না (পুরনো ঠিকানা রসিদে পাঠায়)। তাই দাবি রসিদের পর্দার পক্ষের তালিকা থেকে —
+         *   নামের সারিতে "পয়েন্ট · শাখা"।
          */
-        $collection = $this->get(route('sales.collection.create'))->assertOk();
-        $row = collect($collection->viewData('customerRows'))->firstWhere('id', $this->shop->id);
-        $this->assertSame([$this->shop->name(), self::POINT.' · '.self::BRANCH], [$row['label'] ?? null, $row['hint'] ?? null],
-            '⛔ আদায়ের ফর্মের গ্রাহক-পিকারে নামের সাথে "পয়েন্ট · শাখা" নেই।');
-        $collection->assertSee('data-party-stacked', false);
+        $this->get(route('sales.collection.create'))->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
+        $parties = $this->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk()->viewData('parties');
+        $row = collect(collect($parties)->firstWhere('type', Customer::drillSourceType())['options'] ?? [])->firstWhere('id', (int) $this->shop->id);
+        $this->assertNotNull($row, '⛔ রসিদের পর্দার পক্ষের তালিকায় দোকানটাই নেই।');
+        $this->assertStringContainsString(self::POINT.' · '.self::BRANCH, (string) ($row['hint'] ?? ''),
+            '⛔ রসিদের পর্দার গ্রাহক-পিকারে নামের সাথে "পয়েন্ট · শাখা" নেই।');
 
         $terms = $this->get(route('sales.direct.create'))->assertOk()->viewData('customerTerms');
         $this->assertSame(self::POINT.' · '.self::BRANCH, $terms[$this->shop->id]['location'] ?? null,

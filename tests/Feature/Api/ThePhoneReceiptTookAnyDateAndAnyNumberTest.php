@@ -55,6 +55,10 @@ final class ThePhoneReceiptTookAnyDateAndAnyNumberTest extends TestCase
 
         $shop = Customer::query()->orderBy('id')->firstOrFail();
 
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ থেকে ফোনের নতুন আদায় আর বসেই না (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই") — "1e3" বণ্টনও তাই কারণসহ
+         * ফেরত, অপ্রত্যাশিত ভাঙন নয়; কারণ এখন "টাকা জমার খবর" পাঠান, বিল খুঁজতে যাওয়া নয়।
+         */
         try {
             app(CollectionSync::class)->apply($owner, $change('Collection', [
                 'customerId' => (string) $shop->public_id, 'trxDate' => now()->toDateString(), 'amount' => '100',
@@ -63,6 +67,8 @@ final class ThePhoneReceiptTookAnyDateAndAnyNumberTest extends TestCase
             $this->fail('⛔ "1e3" বণ্টনের আদায় বসল');
         } catch (SyncRejection $e) {
             $this->assertNotSame(__('sales::sync.unknown_invoice'), $e->getMessage(), '⛔ "1e3" বণ্টন যাচাইয়ে ধরা পড়ল না — বিল খুঁজতে চলে গেল');
+            $this->assertSame(CollectionSync::useTheDepositReport(), $e->getMessage(), '⛔ ফোনের আদায় "টাকা জমার খবর"-এর কারণে ফেরেনি');
+            $this->assertFalse($e->isConflict, '⛔ নতুন আদায়ের ফেরত দ্বন্দ্ব হয়ে গেল — ফোন আবার পাঠাবে');
         }
     }
 }

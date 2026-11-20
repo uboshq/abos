@@ -11,9 +11,10 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherAllocation;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DepositClaimService;
@@ -66,7 +67,12 @@ final class AClaimedBillIsFoundWhateverTheAcceptersHeaderTest extends TestCase
 
         $claim = DepositClaim::query()->withoutGlobalScopes()->findOrFail($claim->id);
         $this->assertSame(DepositClaim::ACCEPTED, $claim->status);
-        $this->assertSame([(int) $bill->id], CollectionLine::query()->where('collection_id', $claim->collection_id)->pluck('sales_invoice_id')->map(fn ($i) => (int) $i)->all(),
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে আদায় নয়, রসিদ ভাউচার (মালিক: "টাকা ঢোকার কাগজ একটাই") — বিল রসিদের ভাগের সারিতে
+        $this->assertNotNull($claim->voucher_id, '⛔ গৃহীত খবরের রসিদ ভাউচার নেই');
+        $this->assertSame((int) $home->id, (int) Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id)->branch_id,
+            '⛔ রসিদ গ্রহণকারীর হেডারের শাখায় বসেছে, খবরের শাখায় নয়');
+        $this->assertSame([(int) $bill->id], VoucherAllocation::query()->withoutGlobalScopes()->where('voucher_id', $claim->voucher_id)
+            ->where('against_type', SalesInvoice::drillSourceType())->pluck('against_id')->map(fn ($i) => (int) $i)->all(),
             '⛔ বাছা বিল চুপচাপ বাদ — টাকা খালি জমা হয়ে বসল');
         // ⓘ বকেয়া দেখা বিলের শাখা থেকে
         $owner->forceFill(['view_all_branches' => true])->save();

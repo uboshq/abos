@@ -50,11 +50,15 @@ final class AnInactivePartyWithABalanceCouldNotBeSettledTest extends TestCase
         $plain = collect(collect(app(PartyRegistry::class)->forPicker())->firstWhere('type', Customer::drillSourceType())['options'])->pluck('id')->all();
         $this->assertNotContains((int) $owing->id, $plain, 'সাধারণ পিকারে নিষ্ক্রিয় গ্রাহক এলেন');
 
-        // ⓘ আদায়ের পর্দা — চিহ্নসহ। ভাগ করা পিকারে নাম আর চিহ্ন প্রথম লাইনে, পয়েন্ট · শাখা নিচের লাইনে (hint; মালিকের নিয়ম "নাম
-        //   প্রথম লাইনে, জায়গা নিচে") — তাই দুটো আলাদা দেখা হয় (fe, ২৬ অক্টোবর ২০২৬: আগে এক লাইনে খুঁজত, cb-ma-5c-এ লাল)
-        $withPoint = $owing->fresh()->load(Customer::PLACE)->nameWithPoint();
-        $collect = $this->get(route('sales.collection.create'))->assertOk();
-        $collect->assertSee(\Illuminate\Support\Str::before($withPoint, ' · ').' — '.__('core.inactive_with_balance'), false);
-        $collect->assertSee(\Illuminate\Support\Str::after($withPoint, ' · '), false);
+        /*
+         * ⓘ টাকা নেওয়ার পর্দা। ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): গ্রাহকের টাকা ঢোকে কেবল রসিদ
+         *   ভাউচারে; আদায়ের পর্দা আর আঁকা হয় না (পুরনো ঠিকানা রসিদে পাঠায়)। তাই আগের "আদায়ের পর্দায় চিহ্নসহ নাম" দাবির জায়গায়:
+         *   রসিদের পর্দা নিজের পক্ষের তালিকায় বকেয়া রেখে বন্ধ গ্রাহককে দেয়, জের-শূন্যকে নয়।
+         */
+        $this->get(route('sales.collection.create'))->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
+        $parties = $this->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk()->viewData('parties');
+        $onScreen = collect(collect($parties)->firstWhere('type', Customer::drillSourceType())['options'] ?? [])->pluck('id')->all();
+        $this->assertContains((int) $owing->id, $onScreen, '⛔ রসিদের পর্দায় বকেয়া রেখে বন্ধ গ্রাহক নেই — টাকা এলেও বসানো যায় না');
+        $this->assertNotContains((int) $quiet->id, $onScreen, 'রসিদের পর্দায় জের-শূন্য নিষ্ক্রিয় গ্রাহক এলেন');
     }
 }

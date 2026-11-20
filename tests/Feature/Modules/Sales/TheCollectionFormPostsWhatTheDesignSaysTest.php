@@ -30,11 +30,18 @@ use App\Modules\Customer\Models\DealerBinding;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionApplication;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionOpenItems;
+use App\Modules\Sales\Services\CollectionPreview;
+use App\Modules\Sales\Services\CollectionService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -45,6 +52,16 @@ use Tests\TestCase;
  * প্রতিটা দাবির নামে নকশার দফার নম্বর (`test_item_N_…`), আর প্রতিটা assert নিজের বাংলা কারণ বলে — নিয়ম ভাঙলে সেটাই পড়া যায়।
  * ⓘ পর্দার আঁকা আলাদা ফাইলে ([[TheCollectionScreenIsDrawnLikeTheDesignTest]]); ফোনের চুক্তি tests/Feature/Api/Collection*Test।
  * ⚠️ সহায়কের নাম `book()`, `post()` নয় — TestCase-এর HTTP `post()`-এর সাথে সংঘর্ষে গোটা ফাইল Fatal হত।
+ *
+ * ⭐ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): গ্রাহকের টাকা ঢোকে কেবল কাউন্টারের রসিদ আর হিসাবের রসিদ
+ *   ভাউচারে (RCV-…)। ওয়েবের আদায়ের দরজা আর কিছু লেখে না: নতুন/বদলের পাতা রসিদে পাঠায়, store/update/confirm কারণসহ ফেরায়,
+ *   preview/open_items/overview_new ৪২২ দেয় ([[CollectionController]])। আদায়ের সেবা ([[CollectionService]]) আছে — কাউন্টারের POS
+ *   ডাকে, আর আগের খসড়া শেষ সইয়ে তার পথেই পাকা হয়। তাই:
+ *   · খাতা, হিসাব আর নিয়মের দাবিগুলো থাকল — `book()`/`send()` এখন সেবা ডাকে, ঠিক যে পথে পুরনো ফর্ম ডাকত
+ *     ([[CollectionInput::fromRequest()]] → createFrom, স্লিপ রাখা, "পোস্ট" হলে confirm; থামলে কারণ `said()`-এ); প্রিভিউ আর খোলা
+ *     কাগজও সেবা থেকে ([[CollectionPreview]], [[CollectionOpenItems]]);
+ *   · কেবল-ফর্মের দাবি (পাতার ঘরের ক্রম, ফেরানোর বাক্স একবার, ফর্মের অনুরোধের −০.৫১ যাচাই) গেল, বা দরজার নতুন কথায় বদলাল —
+ *     দরজা ফেরায় আর কিছুই লেখে না; প্রতিটার পাশে কারণ লেখা।
  */
 final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 {
@@ -59,6 +76,9 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     private Customer $dealer;
 
     private Account $bank;
+
+    /** সেবার শেষ ডাকের থামার কারণ — null মানে থামেনি, তখন `errors()` সেশনের থলে পড়ে (ওয়েবের বাকি দরজা: বাতিল, পুরনো দরজার ফেরত) */
+    private ?ViewErrorBag $serviceErrors = null;
 
     protected function setUp(): void
     {
@@ -121,13 +141,13 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $onTheBank = LedgerEntry::query()->where('account_id', $tax->id)->count();
         $form = ['amount' => '9750', 'ait' => '250', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]];
 
-        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form($form), 'post' => '1']);
+        $this->send([...$form, 'post' => '1']);
         $this->assertSame($refusal, $this->said('status'), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫-এ AIT — বাংলায় কারণ বলে ফেরায়নি');
         $this->assertSame($papers, Collection::acrossBranches()->count(), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫ থাকতেও আদায়ের কাগজ (খসড়াও) বসল');
         $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ৫: ব্যাংকে-বসা ১১৩৫ থাকতেও খাতায় সারি বসল');
         $this->assertSame($onTheBank, LedgerEntry::query()->where('account_id', $tax->id)->count(), '⛔ দফা ৫: গ্রাহকের কাটা AIT ডিপোর ব্যাংকে বসল');
 
-        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form($form))->assertOk()->json();
+        $preview = $this->preview($form);
         $this->assertContains($refusal, (array) $preview['stops'], '⛔ দফা ৫: প্রিভিউ ব্যাংকে-বসা ১১৩৫-এর কথা থামার কারণে বলেনি');
         $this->assertSame($rows, LedgerEntry::query()->count(), '⛔ দফা ৫: প্রিভিউ খাতায় কিছু লিখল');
 
@@ -148,13 +168,8 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
      */
     public function test_the_method_comes_first_and_its_account_must_match(): void
     {
-        $page = (string) $this->actingAs($this->maker)->get(route('sales.collection.create', ['customer' => $this->dealer->id]))->assertOk()->getContent();
-        $this->assertSame(1, substr_count($page, 'name="account_id"'), '⛔ "যে খাতে জমা" ঘর একটার বেশি (বা নেই) — পুরনো খাতের ঘর রয়ে গেল');
-        $legend = strpos($page, e(__('money.method.legend')));
-        $account = strpos($page, 'data-money-account-row');
-        $this->assertNotFalse($legend, 'প্রস্তুতিটাই ভুল — পদ্ধতির ব্লক নেই');
-        $this->assertTrue($account !== false && $account > $legend, '⛔ খাতের ঘর পদ্ধতির আগে, বা পদ্ধতির ব্লকের বাইরে — পদ্ধতি আগে, খাত পরে');
-
+        // ⓘ পাতার অংশ ("যে খাতে জমা" একটাই ঘর, পদ্ধতির পরে) আদায়ের ফর্মের সাথে গেল — মালিক, ২০ নভেম্বর ২০২৬ ("one money-in
+        //   paper"): ফর্ম আর আঁকা হয় না। নিয়মের অংশ (পদ্ধতির সাথে না-মেলা খাত ফেরে, প্রিভিউ আগেই বলে) সেবায় থাকল।
         $rows = LedgerEntry::query()->count();
         $papers = Collection::acrossBranches()->count();
         foreach (['cash', 'mfs'] as $method) {
@@ -167,8 +182,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame([$rows, $papers], [LedgerEntry::query()->count(), Collection::acrossBranches()->count()],
             '⛔ পদ্ধতির সাথে না-মেলা খাতে আদায় বা খাতার সারি বসল');
 
-        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form(['amount' => '500', 'instrument' => 'cash',
-            'lines_given' => '1']))->assertOk()->json('stops');
+        $preview = $this->preview(['amount' => '500', 'instrument' => 'cash', 'lines_given' => '1'])['stops'];
         $this->assertContains(__('money.validation.account_not_for_method', ['account' => $this->bank->label(), 'method' => __('money.method.cash'),
             'kind' => __('money.kind.cash')]), (array) $preview, '⛔ "খাতায় যা যাবে" আগে বলে না যে নগদ ব্যাংকের খাতে বসে না — পোস্টে গিয়ে তবে জানা যেত');
 
@@ -187,8 +201,9 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
             '⛔ কমাসহ টাকায় আদায় বা খাতার সারি বসল');
 
+        // ⓘ সারির কমা — পুরনো ফর্মের অনুরোধ `lines.0.amount`-এ ফেরাত; ২০ নভেম্বর ২০২৬ থেকে (ফর্ম নেই) আবেদন নিজেই ফেরায়, টাকার ঘরের কথায়
         $this->send(['amount' => '1000', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1,000.00']]]);
-        $this->assertNotSame('', $this->said('lines.0.amount'), '⛔ বিলের সারির "1,000.00" ফেরেনি — কমাসহ প্রয়োগ ভুল পড়া হতে পারে');
+        $this->assertNotSame([], $this->errors()?->all() ?? [], '⛔ বিলের সারির "1,000.00" ফেরেনি — কমাসহ প্রয়োগ ভুল পড়া হতে পারে');
         $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
             '⛔ কমাসহ সারির টাকায় আদায় বা খাতার সারি বসল');
     }
@@ -197,25 +212,24 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
      * ফেরানোর কারণ আদায়ের পাতায় একবারই (fe, ২৪ অক্টোবর ২০২৬, main 2c026a303 মেশানো): layout এখন নিজেও কারণের বাক্স বসায়,
      * পাতা আগে না দেখালে। আদায়ের ফর্ম নিজের বাক্স আঁকে — তাই একই বাক্য পাতার বাক্সে আর layout-এর বাক্সে দুবার আসতে পারত।
      * ⓘ ঘরহীন কারণ (`status`) দিয়ে, যেটা কেবল বাক্সেই দেখা যায়: ফেরানো পোস্টের পরে ফিরে-আসা পাতা যা আঁকে, তাতে গোনা।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): আদায়ের পাতা আর আঁকা হয় না, তাই "পাতায় একবার" দাবিটা
+     *   ফর্মের সাথে গেল। এখন দরজার কথা: একই পোস্ট (১১৩৫ ব্যাংকে বসা, AIT-সহ) পুরনো দরজায় আর সেবা পর্যন্ত পৌঁছায়ই না — রসিদের
+     *   পর্দায় ফেরে, কারণ "নতুন আদায় নয়", আর কাগজ বা খাতার সারি কিছুই বসে না।
      */
-    public function test_a_refusal_reason_shows_once_on_the_collection_page(): void
+    public function test_the_old_door_refuses_any_post_and_writes_nothing(): void
     {
         $bill = $this->bill('INV-CF-ONCE', 10, '10000');
-        $tax = StandardChart::find(StandardChart::ADVANCE_INCOME_TAX);
-        $this->assertNotNull($tax, 'প্রস্তুতিটাই ভুল — ডেমো ছকে ১১৩৫ নেই');
-        \Illuminate\Support\Facades\DB::table('accounts')->where('id', $tax->id)->update([
-            'money_kind' => Account::BANK, 'parent_id' => (int) StandardChart::find(StandardChart::BANK)->id,
-        ]);
-        $refusal = __('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']);
-        $back = route('sales.collection.create', ['customer' => $this->dealer->id]);
+        $papers = Collection::acrossBranches()->count();
+        $rows = LedgerEntry::query()->count();
 
-        $page = (string) $this->actingAs($this->maker)->followingRedirects()->from($back)
-            ->post(route('sales.collection.store'), [...$this->form(['amount' => '9750', 'ait' => '250',
-                'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]), 'post' => '1'])
-            ->assertOk()->getContent();
+        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form(['amount' => '9750', 'ait' => '250',
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]), 'post' => '1'])
+            ->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']))
+            ->assertSessionHasErrors(['collection' => __('sales::collection_rules.no_new_collection')]);
 
-        $this->assertSame(1, substr_count($page, e($refusal)), '⛔ ফেরানোর কারণ আদায়ের পাতায় '.substr_count($page, e($refusal))
-            .' বার — একবারই দেখানোর কথা (পাতার বাক্স আর layout-এর বাক্স দুজনেই দেখালে দুবার, কেউ না দেখালে শূন্য)');
+        $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ পুরনো আদায়ের দরজা কাগজ বা খাতার সারি লিখল');
     }
 
     /**
@@ -232,8 +246,8 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $papers = Collection::acrossBranches()->count();
         $rows = LedgerEntry::query()->count();
 
-        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form(['amount' => '9750', 'ait' => '250',
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]), 'post' => '1']);
+        $this->send(['amount' => '9750', 'ait' => '250', 'post' => '1',
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '10000']]]);
 
         $this->assertSame(__('sales::collection_rules.head_not_in_chart', ['name' => 'অগ্রিম আয়কর', 'code' => '1135']), $this->said('status'),
             '⛔ দফা ৫: দল-খাত ১১৩৫-এ AIT — বাংলায় কারণ বলে ফেরায়নি');
@@ -319,7 +333,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertTrue($refused, '⛔ দফা ৪: মালিক নন এমন একজনের সইয়ে রাউন্ডিং পার হলো');
         $this->assertSame(Approval::PENDING, $approval->fresh()->status, '⛔ দফা ৪: অন্যের সইয়ে রাউন্ডিংয়ের অনুরোধ মিটে গেল');
 
-        $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
+        $this->confirmAgain($collection);
         $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ দফা ৪: কর্তা নিজে আবার চেপে সই ছাড়া রাউন্ডিং পার করলেন');
 
         // ⭐ কেউ আবার চাপে না — পর্দা আর বার্তা বলে "সই পেলে নিজেই খাতায় উঠবে" (মালিক ১১ অক্টোবর; fe ২৩ অক্টোবর, সইয়ে পাঠান)
@@ -423,6 +437,9 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
      * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬; Mac-এর লাল 21c633e60): আগের দাবি ধরে নিত ওয়েবও −০.৫১-কে ০.৫১ পড়ে সইয়ের অপেক্ষায় রাখে — ওটা
      * ফোনের প্রিভিউর পথ ([[CollectionInput::difference()]]-এর abs); সেই পা এখন
      * [[CollectionAppContractTest::test_item_4_a_negative_rounding_on_the_phone_is_read_as_its_size_and_needs_the_owner]]।
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের দরজা আর যাচাই পর্যন্ত যায় না (ফর্মের অনুরোধ
+     *   `CollectionRequest` আর ডাকা হয় না) — যেকোনো পোস্ট, −৳০.৫১-সহ, "নতুন আদায় নয়" বলে ফেরে। দাবির আসল কথা (চিহ্ন বদলে মালিকের
+     *   সই এড়ানো যায় না, কিছুই লেখা হয় না) তাই আরও কড়া হয়ে থাকল।
      */
     public function test_item_4_a_negative_rounding_of_fifty_one_paisa_is_refused_on_the_web_and_writes_nothing(): void
     {
@@ -430,11 +447,11 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $bill = $this->bill('INV-CF-RN51', 10, '1000.51');
         $before = [Collection::acrossBranches()->count(), LedgerEntry::query()->count(), Approval::query()->count()];
 
-        $this->send(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '-0.51'], 'post' => '1',
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
+        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form(['amount' => '1000',
+            'difference' => ['kind' => 'rounding', 'amount' => '-0.51'], 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]),
+            'post' => '1'])->assertSessionHasErrors('collection');
 
-        // ⓘ বার্তাটা Mac-এর লগের হুবহু (validation.min.numeric, ঘরের নাম অনুবাদহীন)
-        $this->assertSame('difference.amount 0-এর কম হতে পারবে না।', $this->said('difference.amount'),
+        $this->assertSame(__('sales::collection_rules.no_new_collection'), $this->said('collection'),
             '⛔ দফা ৪: ওয়েবে −৳০.৫১ রাউন্ডিং বাংলায় কারণসহ ফেরত হয়নি');
         $this->assertSame($before, [Collection::acrossBranches()->count(), LedgerEntry::query()->count(), Approval::query()->count()],
             '⛔ দফা ৪: ফেরত −৳০.৫১ রাউন্ডিং তবু কাগজ, খাতার সারি বা সইয়ের অনুরোধ লিখল');
@@ -504,14 +521,16 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertTrue($refused, '⛔ দফা ৪: মালিক নন এমন একজনের সইয়ে আদায়ের ছাড় পার হলো');
         $this->assertSame(Approval::PENDING, $approval->fresh()->status, '⛔ দফা ৪: অন্যের সইয়ে ছাড়ের অনুরোধ মিটে গেল');
 
-        // ⛔ কর্তা আবার "পোস্ট" চাপলেও সই ছাড়া যায় না
-        $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection))->assertSessionHasErrors('difference');
+        // ⛔ কর্তা আবার "পোস্ট" চাপলেও সই ছাড়া যায় না — দরজা ফেরায় (২০ নভেম্বর ২০২৬ থেকে), সেবাও ছাড়ের কারণে থামায়
+        $this->confirmAgain($collection);
+        $this->assertNotSame('', $this->said('difference'), '⛔ দফা ৪: সই ছাড়া ছাড়ের আদায়ে সেবা কারণ বলে থামায়নি');
         $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ দফা ৪: কর্তা নিজে আবার চেপে সই ছাড়া ছাড় পার করলেন');
 
-        // ⭐ মালিক সই দিলেন — শেষ সইয়ে আদায় নিজে পোস্ট হয় ([[ConfirmTheCollectionOnTheLastSignature]]); না হলে কর্তা চাপেন
+        // ⭐ মালিক সই দিলেন — শেষ সইয়ে আদায় নিজে পোস্ট হয় ([[ConfirmTheCollectionOnTheLastSignature]]); না হলে কর্তা চাপেন (সেবায়)
         app(ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
         if ($collection->fresh()->status === DocumentStatus::DRAFT) {
-            $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection))->assertSessionHasNoErrors();
+            $this->confirmAgain($collection);
+            $this->assertSame([], $this->errors()?->all() ?? [], '⛔ দফা ৪: মালিকের সইয়ের পরেও সেবা থামাল');
         }
 
         $collection = $collection->fresh();
@@ -568,7 +587,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame(1, CollectionApplication::query()->where('collection_id', $second->id)->where('kind', 'credit')
             ->where('target_invoice_id', $bill->id)->count(), '⛔ দফা ৩: ক্রেডিটটা বিলে বসার লেখা নেই');
 
-        $open = $this->actingAs($this->maker)->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->json('items');
+        $open = $this->openItems($this->dealer)['items'];
         $this->assertSame([], array_values(array_filter($open, fn ($i) => $i['id'] === $first->public_id)), '⛔ দফা ৩: খরচ হওয়া ক্রেডিট এখনো খোলা দেখায়');
     }
 
@@ -662,7 +681,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             $extra = ['amount' => '1000', 'difference' => ['kind' => $kind, 'amount' => $diff],
                 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => $applied]]];
 
-            $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form($extra))->assertOk()->json();
+            $preview = $this->preview($extra);
             $own = collect($preview['lines'])->first(fn (array $l) => str_starts_with($l['account'], $code.' '));
             $this->assertNotNull($own, "⛔ দফা ১০: {$kind}-এর প্রিভিউতে {$code}-এর সারি নেই");
             $this->assertSame(0, bccomp((string) $own['dr'], $diff, 4), "⛔ দফা ১০: {$kind}-এর প্রিভিউতে {$code} Dr {$diff} নয়");
@@ -674,7 +693,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             $this->assertNotNull($approval, "⛔ দফা ১০: {$kind}-এ মালিকের সইয়ের অনুরোধ যায়নি");
             app(ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
             if ($collection->fresh()->status === DocumentStatus::DRAFT) {
-                $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
+                $this->confirmAgain($collection);
             }
             $this->assertSame(DocumentStatus::CONFIRMED, $collection->fresh()->status, "⛔ দফা ১০: {$kind}-এর আদায় সইয়ের পরেও পোস্ট হলো না");
 
@@ -696,7 +715,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $papers = Collection::query()->count();
         $rows = LedgerEntry::query()->count();
 
-        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $form)->assertOk()->json();
+        $preview = $this->preview($form);
 
         $this->assertSame([$papers, $rows], [Collection::query()->count(), LedgerEntry::query()->count()], '⛔ দফা ১০: প্রিভিউ কাগজ বা খাতায় কিছু লিখল');
         $this->assertSame([], $preview['stops'], '⛔ দফা ১০: বৈধ আদায়ের প্রিভিউ থামার কারণ বলল');
@@ -728,7 +747,8 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $newer = $this->bill('INV-CF-NEW', 3, '200');
         $older = $this->bill('INV-CF-OLD', 40, '300', dueDaysAgo: 9);
 
-        $json = $this->actingAs($this->maker)->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk()->json();
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে ওয়েবের দরজা ৪২২ — খোলা কাগজের হিসাব সেবায় ([[CollectionOpenItems]]; ফোনের open-bills-ও এটাই)
+        $json = json_decode((string) json_encode($this->openItems($this->dealer)), true);
 
         $this->assertSame($this->dealer->fresh()->outstanding(), $json['due'], '⛔ দফা ১: পর্দার বকেয়া খাতার বকেয়া (Customer::outstanding) নয়');
         $this->assertSame(['INV-CF-OLD', 'INV-CF-NEW'], array_column(array_values(array_filter($json['items'], fn ($i) => $i['kind'] === 'bill')), 'no'),
@@ -913,12 +933,10 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         ]);
         $closed = __('core.period.month_closed', ['month' => $lock->label(), 'reason' => $lock->reason]);
 
-        $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form(['amount' => '500', 'lines_given' => '1']))
-            ->assertOk()->json();
+        $preview = $this->preview(['amount' => '500', 'lines_given' => '1']);
         $this->assertContains($closed, $preview['stops'], '⛔ দফা ১৩: বন্ধ মাসের কথা প্রিভিউ বলেনি');
 
-        $this->assertFalse($this->actingAs($this->maker)->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->json('month_open'),
-            '⛔ দফা ১৩: খোলা কাগজ বলল মাস খোলা');
+        $this->assertFalse($this->openItems($this->dealer)['month_open'], '⛔ দফা ১৩: খোলা কাগজ বলল মাস খোলা');
 
         $collection = $this->bookAllowingStops(['amount' => '500', 'lines_given' => '1']);
         $this->assertSame(DocumentStatus::DRAFT, $collection->status, '⛔ দফা ১৩: বন্ধ মাসে আদায় পোস্ট হলো');
@@ -955,12 +973,15 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $before = Collection::acrossBranches()->count();
 
         $this->assertNull($this->maker->current_branch_id, 'প্রস্তুতিটাই ভুল — কর্তার কাজের শাখা আছে');
+        // ⓘ সেবা সরাসরি ডাকা হয় (২০ নভেম্বর ২০২৬ থেকে), তাই কর্তার "কাজের শাখা নেই" প্রসঙ্গটা হাতে — অনুরোধের মধ্যস্তর যা বসাত
+        CompanyContext::set($this->company->id, null);
         $this->send(['account_id' => $till->account_id, 'amount' => '250', 'lines_given' => '1', 'post' => '1']);
 
         $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ দফা ২২: শাখাহীন আদায় অন্য শাখার টিলে বসল — আদায়ের শাখা না থাকলে নিয়মটাই বাদ পড়ল');
         $this->assertSame(__('sales::collection_rules.other_branch_account'), $this->said('account_id'), '⛔ দফা ২২: শাখাহীন আদায়, অন্য শাখার খাত — বাংলায় কারণ বলেনি');
 
         $this->maker->forceFill(['current_branch_id' => $this->company->defaultBranch()->id])->save();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()->id);
         $this->send(['account_id' => $till->account_id, 'amount' => '250', 'lines_given' => '1', 'post' => '1']);
 
         $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ দফা ২২: প্রধান শাখার আদায় অন্য শাখার টিলে বসল — আন্তঃশাখার হিসাব মালিকের সিদ্ধান্তের অপেক্ষায়');
@@ -1040,6 +1061,9 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
      * [[DealerScope::MAY_CREATE]]): আদায়ের চাবি থাকলেও পর্দা, খোলা কাগজ আর প্রিভিউ ৪০৩ — নিজের ডিলারেও।
      * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬): আগের দাবি ধরে নিত SR নিজের ডিলারের কাগজ খোলেন — নিয়মের উল্টো; Mac-এ লাল হত।
      * ⓘ তুলনার জন্য: দেয়ালের বাইরের কর্তা ([[maker]]) একই গ্রাহকে ২০০ — দাবিটা কিছু মাপে।
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের আদায়ের দরজা এখন কারও জন্যই কিছু লেখে না বা
+     *   দেখায় না (পর্দা রসিদে পাঠায়, খোলা কাগজ আর প্রিভিউ ৪২২), তাই "কর্তার ২০০" তুলনাটা গেল। দাবি থাকল: দেয়ালের SR-এর হাতে
+     *   কোনো দরজাই খোলে না (৪০৩ বা ফেরত — কখনো ফর্ম বা খোলা কাগজ নয়), পোস্ট কিছুই লেখে না, আর রসিদের চাবিও তাঁর নেই।
      */
     public function test_item_18_a_walled_salesman_takes_no_collection_on_the_web(): void
     {
@@ -1052,21 +1076,28 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         app(DealerScope::class)->forget();
         $this->actingAs($sr);
         $this->assertTrue(app(DealerScope::class)->walled(), 'প্রস্তুতিটাই ভুল — SR দেয়ালে নেই');
+        $papers = Collection::acrossBranches()->count();
 
-        $this->assertSame(403, $this->get(route('sales.collection.create'))->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের পর্দা খুললেন');
+        $this->assertNotSame(200, $this->get(route('sales.collection.create'))->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের পর্দা খুললেন');
         $items = $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]));
-        $this->assertSame(403, $items->status(), '⛔ দফা ১৮: দেয়ালের SR নিজের ডিলারের খোলা কাগজ আদায়ের জন্য খুললেন');
+        $this->assertNotSame(200, $items->status(), '⛔ দফা ১৮: দেয়ালের SR নিজের ডিলারের খোলা কাগজ আদায়ের জন্য খুললেন');
+        $this->assertStringNotContainsString('INV-CF-SR', (string) $items->getContent(), '⛔ দফা ১৮: দেয়ালের SR-এর হাতে ডিলারের বিল');
         $preview = $this->postJson(route('sales.collection.preview'), $this->form(['amount' => '100']));
-        $this->assertSame(403, $preview->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের প্রিভিউ খুললেন');
+        $this->assertNotSame(200, $preview->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের প্রিভিউ খুললেন');
+        $this->post(route('sales.collection.store'), [...$this->form(['amount' => '100']), 'post' => '1']);
+        $this->assertSame($papers, Collection::acrossBranches()->count(), '⛔ দফা ১৮: দেয়ালের SR ওয়েবে আদায় লিখলেন');
 
-        $this->app['auth']->forgetGuards();
-        $this->actingAs($this->maker)->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk();
+        $this->assertSame(403, $this->get(route('accounts.voucher.create', ['type' => 'receipt']))->status(),
+            '⛔ দফা ১৮: দেয়ালের SR রসিদের পর্দা খুললেন — টাকা নেন কেবল অফিস');
     }
 
     /**
      * দফা ১৮ — "গোপন অঙ্ক ঢাকা থাকে": বিক্রয়ের গোপন অঙ্ক বিলের ক্রয়মূল্য (`cost_of_goods`, [[FieldSecurity]]-এ `sales.cost.view`-এর
      * পেছনে; গ্রাহক বা আদায়ের কোনো ঘর গোপন ঘোষিত নয়)। চাবিহীন কর্তার আদায়ের ছয় দরজার কোনোটায় বিলের ক্রয়মূল্য আসে না —
      * পর্দা, খোলা কাগজ, ওয়েবের প্রিভিউ, ফোনের open-bills, সিঙ্কের উত্তর, আর টাকার রসিদ।
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): টাকা নেওয়ার পর্দা এখন রসিদ ভাউচার — তাই "পর্দা"-র
+     *   জায়গায় রসিদের পর্দা (গ্রাহক আর বিল ভরা) আর তার খোলা বিলের উত্তর (`accounts.voucher.due`); আদায়ের খোলা কাগজ আর প্রিভিউ
+     *   সেবা থেকে (ওয়েবের দরজা ৪২২); ফোনের সিঙ্ক নতুন আদায় আর নেয় না (সেই দাবি ফোনের পরীক্ষায়), তাই রসিদের কাগজ সেবায় লেখা।
      */
     public function test_item_18_a_bills_hidden_cost_never_reaches_any_collection_door(): void
     {
@@ -1076,31 +1107,30 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $line = ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '9000'];
 
         $doors = [
-            'পর্দা' => $this->actingAs($this->maker)->get(route('sales.collection.create', ['customer' => $this->dealer->id]))->assertOk()->getContent(),
-            'খোলা কাগজ' => $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk()->getContent(),
-            'ওয়েবের প্রিভিউ' => $this->postJson(route('sales.collection.preview'), $this->form(['amount' => '9000', 'lines' => [$line]]))->assertOk()->getContent(),
+            'খোলা কাগজ' => (string) json_encode($this->openItems($this->dealer)),
+            'প্রিভিউ' => (string) json_encode($this->preview(['amount' => '9000', 'lines' => [$line]])),
         ];
 
         $clerk = $this->person(['sales.collection.create', 'sales.collection.view', 'accounts.voucher.create']);
+        $this->assertFalse($clerk->can('sales.cost.view'), 'প্রস্তুতিটাই ভুল — কেরানির ক্রয়মূল্যের চাবি আছে');
         $this->app['auth']->forgetGuards();
-        // ⓘ আসল ফোনের টোকেনের দুই চাবিই ([[AuthController]]: ACCESS = sync, APP) — শুধু APP দিলে সিঙ্কের দরজা `abilities:sync`-এ ৪০৩ দিত
+        $doors['রসিদের পর্দা'] = $this->actingAs($clerk)->get(route('accounts.voucher.create', ['type' => 'receipt', 'party_type' => 'customer',
+            'party_id' => $this->dealer->id, 'against_type' => SalesInvoice::drillSourceType(), 'against_id' => $bill->id]))->assertOk()->getContent();
+        $doors['রসিদের খোলা বিল'] = $this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $this->dealer->id]))
+            ->assertOk()->getContent();
+        $this->app['auth']->forgetGuards();
+        // ⓘ আসল ফোনের টোকেনের দুই চাবিই ([[AuthController]]: ACCESS = sync, APP)
         \Laravel\Sanctum\Sanctum::actingAs($clerk, [\App\Http\Controllers\Api\AuthController::ACCESS, \App\Http\Controllers\Api\AuthController::APP]);
         $doors['ফোনের open-bills'] = $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->assertOk()->getContent();
-        $doors['সিঙ্কের উত্তর'] = $this->postJson('/api/v1/sync/sales/push?deviceId=phone-cost', [[
-            'changeId' => 'cost-1', 'entityType' => 'Collection', 'entityId' => null, 'operation' => 'CREATE', 'clientVersion' => 1,
-            'payloadJson' => json_encode(['customerId' => (string) $this->dealer->public_id, 'trxDate' => now()->toDateString(),
-                'accountId' => (string) $this->bank->public_id, 'amount' => '9000', 'confirm' => true,
-                'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '9000.00']]]),
-        ]])->assertOk()->getContent();
         $this->app['auth']->forgetGuards();
 
-        $paper = Collection::acrossBranches()->latest('id')->firstOrFail();
+        $paper = $this->book(['amount' => '9000', 'lines' => [$line]]);
         $doors['টাকার রসিদ'] = $this->receiptAs($this->maker, $paper)[1];
 
         foreach ($doors as $door => $body) {
             $this->assertNotSame('', $body, "প্রস্তুতিটাই ভুল — {$door} খোলেনি");
             // ⓘ ঘরের নাম কেবল JSON আর রসিদে খোঁজা — পর্দার খোলসে অন্য কাজে শব্দটা থাকতে পারে; অঙ্ক সব দরজায়
-            $secrets = ['4321.98', '4,321.98', '4321.99', '4,321.99', ...($door === 'পর্দা' ? [] : ['cost_of_goods'])];
+            $secrets = ['4321.98', '4,321.98', '4321.99', '4,321.99', ...($door === 'রসিদের পর্দা' ? [] : ['cost_of_goods'])];
             foreach ($secrets as $secret) {
                 $this->assertStringNotContainsString($secret, $body, "⛔ দফা ১৮: {$door}-এ বিলের ক্রয়মূল্য ({$secret}) ফাঁস — চাবি ছাড়া গোপন অঙ্ক দেখা গেল");
             }
@@ -1150,31 +1180,27 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->maker->forceFill(['current_branch_id' => $home, 'view_all_branches' => false])->save();
         $this->actingAs($this->maker->fresh());
 
-        $own = $this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]))->assertOk()->getContent();
-        $this->assertStringContainsString('INV-CF-HOME', (string) $own, 'প্রস্তুতিটাই ভুল — নিজের শাখার গ্রাহকের বিলও আসে না');
-
-        $other = $this->getJson(route('sales.collection.open_items', ['customer' => $there->id]));
-        $this->assertSame(404, $other->status(), '⛔ দফা ১৮: শাখায় বাঁধা কর্তা অন্য শাখার গ্রাহকের খোলা কাগজ পেলেন ('.$other->status().')');
-        $this->assertStringNotContainsString('INV-CF-AWAY', (string) $other->getContent(), '⛔ দফা ১৮: অন্য শাখার গ্রাহকের বিল ফাঁস হলো');
-        $this->assertSame(404, $this->getJson(route('sales.collection.open_items', ['customer' => (string) $there->public_id]))->status(),
-            '⛔ দফা ১৮: public_id ধরে অন্য শাখার গ্রাহকের খোলা কাগজ খুলল');
         /*
-         * ⓘ উত্তর মাপা হয় অবস্থা আর ভুলের ধরন-কথায়, JSON-এর `message`-এ নয় (a6, ২২ অক্টোবর ২০২৬; Mac-এর লাল 21c633e60): ওয়েবের
-         * ভুল কেবল `api/*`-এ JSON হয় (bootstrap/app.php-এর shouldRenderJsonWhen), তাই এখানে ৪০৪ HTML-এর পাতা — আর TestResponse::json()
-         * অ-JSON দেহে জমা ৪০৪-টাই আবার ছোঁড়ে। দরজা ঠিক ছিল (৪০৪ যেখানে চাওয়া), দাবির পড়াটা ভুল।
+         * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের খোলা কাগজের দরজা এখন কারও জন্যই খোলে না
+         *   (৪২২, কারণসহ) — তাই "নিজের শাখায় ২০০, অন্যটায় ৪০৪" দাবিটা দরজার নতুন কথায়: দুই গ্রাহকেই একই ফেরত, কোনো বিল নেই, কে
+         *   আছেন জানা যায় না। আর পুরনো পর্দার ঠিকানা রসিদে পাঠায় — নিজের শাখার গ্রাহক ভরা, অন্য শাখার গ্রাহক ভরা নয় (নাগালের বাইরে)।
          */
-        $answer = fn ($r) => [$r->status(), $r->exception === null ? null : $r->exception::class, (string) $r->exception?->getMessage()];
-        $missing = $this->getJson(route('sales.collection.open_items', ['customer' => (int) Customer::query()->withoutGlobalScopes()->max('id') + 1000]));
-        $this->assertSame([404, \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class, ''], $answer($other),
-            '⛔ দফা ১৮: অন্য শাখার গ্রাহকের উত্তর খালি ৪০৪ নয়');
-        $this->assertSame($answer($missing), $answer($other),
-            '⛔ দফা ১৮: অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
-        $this->assertStringNotContainsString('Away Store', (string) $other->getContent(), '⛔ দফা ১৮: ৪০৪-এর পাতায় অন্য শাখার গ্রাহকের নাম');
+        $own = $this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]));
+        $other = $this->getJson(route('sales.collection.open_items', ['customer' => $there->id]));
+        $byPublic = $this->getJson(route('sales.collection.open_items', ['customer' => (string) $there->public_id]));
+        foreach ([$own, $other, $byPublic] as $answer) {
+            $this->assertSame(422, $answer->status(), '⛔ পুরনো খোলা কাগজের দরজা এখনো উত্তর দেয় ('.$answer->status().')');
+            $this->assertSame(__('sales::collection_rules.no_new_collection'), $answer->json('errors.collection.0'));
+        }
+        $this->assertSame($own->getContent(), $other->getContent(), '⛔ দফা ১৮: নিজের আর অন্য শাখার গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
+        foreach (['INV-CF-HOME', 'INV-CF-AWAY', 'Away Store'] as $secret) {
+            $this->assertStringNotContainsString($secret, (string) $other->getContent().$byPublic->getContent(), "⛔ দফা ১৮: পুরনো দরজায় {$secret} ফাঁস");
+        }
 
-        $this->assertStringContainsString('INV-CF-HOME', (string) $this->get(route('sales.collection.create', ['customer' => $mine->id]))->assertOk()->getContent(),
-            'প্রস্তুতিটাই ভুল — পর্দা নিজের শাখার গ্রাহকের বিল আঁকে না');
-        $this->assertStringNotContainsString('INV-CF-AWAY', (string) $this->get(route('sales.collection.create', ['customer' => $there->id]))->assertOk()->getContent(),
-            '⛔ দফা ১৮: পর্দা ?customer= ধরে অন্য শাখার গ্রাহকের বিল আঁকল');
+        $this->get(route('sales.collection.create', ['customer' => $mine->id]))
+            ->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt', 'party_type' => 'customer', 'party_id' => $mine->id]));
+        $this->get(route('sales.collection.create', ['customer' => $there->id]))
+            ->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
     }
 
     /**
@@ -1195,26 +1221,21 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->actingAs($this->maker->fresh());
 
-        $page = (string) $this->get(route('sales.collection.create'))->assertOk()->getContent();
-        $hidden = [];
-        foreach (['_token', '_branch'] as $name) {
-            if (preg_match('/<input[^>]*name="'.$name.'"[^>]*value="([^"]*)"|<input[^>]*value="([^"]*)"[^>]*name="'.$name.'"/', $page, $m) === 1) {
-                $hidden[$name] = html_entity_decode($m[1] !== '' ? $m[1] : ($m[2] ?? ''));
-            }
-        }
-        $headers = ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest', 'X-CSRF-TOKEN' => (string) ($hidden['_token'] ?? '')];
-        $ask = fn (Customer $customer) => $this->post(route('sales.collection.preview'), [...$hidden, 'customer_id' => $customer->id,
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): পাতাটা আর আঁকা হয় না (পুরনো ঠিকানা রসিদে পাঠায়),
+         *   আর প্রিভিউর দরজা কারও জন্যই খাতার লাইন দেয় না। দাবির যে অংশ এখনো সত্য রাখতে হবে: fetch-এর মতো অনুরোধে উত্তর JSON-এ
+         *   ৪২২, বাংলা কারণসহ — কখনো ৩০২ নয় (৩০২ হলে পুরনো খোলা ট্যাব কারণ দেখাতে পারত না); নাগালের ভেতরে-বাইরে একই কথা।
+         */
+        $this->get(route('sales.collection.create'))->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
+        $headers = ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'];
+        $ask = fn (Customer $customer) => $this->post(route('sales.collection.preview'), ['customer_id' => $customer->id,
             'account_id' => $this->bank->id, 'trx_date' => now()->toDateString(), 'amount' => '600', 'lines_given' => '1'], $headers);
 
-        $inReach = $ask($mine);
-        $this->assertSame(200, $inReach->status(), '⛔ দফা ১০: নিজের শাখার গ্রাহকে পাতার প্রিভিউ খুলল না ('.$inReach->status().')');
-        $this->assertNotSame([], (array) $inReach->json('lines'), '⛔ দফা ১০: নিজের শাখার গ্রাহকের প্রিভিউতে খাতার লাইন নেই');
-
-        $outOfReach = $ask($there);
-        $this->assertSame(422, $outOfReach->status(),
-            '⛔ দফা ১৮: অন্য শাখার গ্রাহকে পাতার প্রিভিউ ৪২২ নয় ('.$outOfReach->status().') — ৩০২ হলে পাতা কারণ দেখাতে পারে না');
-        $this->assertSame(__('sales::sync.unknown_customer'), $outOfReach->json('errors.customer_id.0'), '⛔ দফা ১৮: পাতার প্রিভিউ ফোনের বাক্যে ফেরায়নি');
-        $this->assertSame(__('sales::sync.unknown_customer'), $outOfReach->json('message'), '⛔ দফা ১৮: ৪২২-এর `message` বাংলা কারণ নয়');
+        foreach (['নিজের শাখার' => $ask($mine), 'অন্য শাখার' => $ask($there)] as $who => $answer) {
+            $this->assertSame(422, $answer->status(), "⛔ দফা ১৮: {$who} গ্রাহকে পুরনো প্রিভিউ ৪২২ নয় (".$answer->status().') — ৩০২ হলে পাতা কারণ দেখাতে পারে না');
+            $this->assertSame(__('sales::collection_rules.no_new_collection'), $answer->json('message'), "⛔ দফা ১৮: {$who} গ্রাহকে ৪২২-এর `message` বাংলা কারণ নয়");
+            $this->assertNull($answer->json('lines'), "⛔ দফা ১৮: {$who} গ্রাহকে পুরনো প্রিভিউ খাতার লাইন দিল");
+        }
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
@@ -1235,7 +1256,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     {
         $last = (int) Collection::acrossBranches()->max('id');
 
-        $this->actingAs($this->maker)->post(route('sales.collection.store'), [...$this->form($extra), 'post' => '1'])->assertRedirect();
+        $this->send([...$extra, 'post' => '1']);
 
         // ⓘ শাখা পেরিয়ে — আদায় বসে গ্রাহকের শাখায় (দফা ১৪), মাথার শাখায় নয়
         $paper = Collection::acrossBranches()->where('id', '>', $last)->latest('id')->first();
@@ -1244,10 +1265,91 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         return $paper;
     }
 
-    /** দরজায় পাঠানো, ফেরত হলেও — কারণ `session('errors')`-এ; দাবি নিজে মাপে কী বসল আর কী বলল */
+    /**
+     * আদায়ের সেবায় পাঠানো, কর্তা হিসেবে — পুরনো ফর্মের ঠিক সেই পথ (২০ নভেম্বর ২০২৬ পর্যন্ত [[CollectionController::store()]]):
+     * আবেদন ([[CollectionInput::fromRequest()]]) → খসড়া ([[CollectionService::createFrom()]]) → স্লিপ থাকলে কাগজের সাথে (দফা ১৫,
+     * [[AttachmentEngine]]) → "পোস্ট" হলে confirm। থামলে কারণ `said()`-এ, খসড়া (যদি লেখা হয়ে থাকে) থেকে যায় — আগের মতোই।
+     * ⓘ ওয়েবের দরজা আর এ কাজ করে না (মালিক, ২০ নভেম্বর ২০২৬); দরজার ফেরত আলাদা দাবিতে ([[refusedAtTheDoor()]])।
+     */
     private function send(array $extra): void
     {
-        $this->actingAs($this->maker)->post(route('sales.collection.store'), $this->form($extra));
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker);
+        $data = $this->form($extra);
+        $slip = $data['slip'] ?? null;
+        $post = ($data['post'] ?? null) === '1';
+        unset($data['slip'], $data['post']);
+
+        $this->serviceErrors = new ViewErrorBag;
+
+        try {
+            $paper = app(CollectionService::class)->createFrom(CollectionInput::fromRequest($data));
+
+            if ($slip instanceof UploadedFile) {
+                app(\App\Core\Engines\Attachment\AttachmentEngine::class)->store($slip, 'sales', Collection::drillSourceType(), (int) $paper->id,
+                    maxBytes: \App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, only: \App\Core\Engines\Attachment\AttachmentEngine::SLIP);
+            }
+
+            if ($post) {
+                app(CollectionService::class)->confirm($paper->fresh());
+            }
+        } catch (ValidationException $stopped) {
+            $this->serviceErrors = (new ViewErrorBag)->put('default', new MessageBag($stopped->errors()));
+        }
+    }
+
+    /** খাতার প্রিভিউ — পুরনো `sales.collection.preview`-এর ঠিক সেই হিসাব ([[CollectionPreview::of()]]); কিছুই লেখে না */
+    private function preview(array $extra): array
+    {
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker);
+
+        return app(CollectionPreview::class)->of(CollectionInput::fromRequest($this->form($extra)));
+    }
+
+    /** খোলা কাগজ — পুরনো `sales.collection.open_items`-এর ঠিক সেই উত্তর ([[CollectionOpenItems::for()]]) */
+    private function openItems(Customer $customer): array
+    {
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker);
+
+        return app(CollectionOpenItems::class)->for(Customer::query()->with(Customer::PLACE)->findOrFail($customer->id));
+    }
+
+    /**
+     * কর্তা আবার "পোস্ট" চাপেন: ওয়েবের দরজা এখন কারণসহ ফেরায় আর কিছু বদলায় না (মালিক, ২০ নভেম্বর ২০২৬); সেবার confirm-ও
+     * নিজের নিয়মে (সই, মাস, রেফারেন্স) থামায় — কারণ `said()`-এ।
+     */
+    private function confirmAgain(Collection $collection): void
+    {
+        $this->refusedAtTheDoor($this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection)), $collection);
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker);
+        $this->serviceErrors = new ViewErrorBag;
+
+        try {
+            app(CollectionService::class)->confirm($collection->fresh());
+        } catch (ValidationException $stopped) {
+            $this->serviceErrors = (new ViewErrorBag)->put('default', new MessageBag($stopped->errors()));
+        }
+    }
+
+    /** ⛔ পুরনো দরজা ফেরায়, কারণসহ, আর কাগজটা বদলায় না (মালিক, ২০ নভেম্বর ২০২৬) */
+    private function refusedAtTheDoor(\Illuminate\Testing\TestResponse $response, Collection $collection): void
+    {
+        $before = [(string) $collection->status, bcadd((string) $collection->amount, '0', 4)];
+        $response->assertRedirect(route('sales.collection.show', $collection))->assertSessionHasErrors('collection');
+        $fresh = $collection->fresh();
+        $this->assertSame($before, [(string) $fresh->status, bcadd((string) $fresh->amount, '0', 4)], '⛔ পুরনো আদায়ের দরজা কাগজটা বদলে দিল।');
+    }
+
+    /** ⓘ প্রতিটা HTTP ডাকের আগে সেবার থলে মোছা — তখন `said()` আবার সেশনের থলে পড়ে (বাতিল আর দরজার ফেরতের কারণ) */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        $this->serviceErrors = null;
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
     }
 
     private function said(string $field): string
@@ -1259,9 +1361,14 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
      * শেষ অনুরোধের ভুলের থলে। ⚠️ `session('errors')` সরাসরি নয়: সেশন JSON-এ সাজানো (`config/session.php` serialization = json),
      * তাই অনুরোধ শেষে `Store::save()` থলেটাকে array বানিয়ে রাখে — `->all()`/`->first()` তখন "on array" Error (Mac, ২২ অক্টোবর ২০২৬,
      * ১৪টা দাবি)। সেশন আবার চালু করলে `marshalErrorBag()` থলে ফেরায় — TestResponse::session()-ও ঠিক এটাই করে।
+     * ⓘ ২০ নভেম্বর ২০২৬ থেকে আগে সেবার থলে ([[send()]]), যদি শেষ কাজটা সেবার হয়।
      */
     private function errors(): ?\Illuminate\Support\ViewErrorBag
     {
+        if ($this->serviceErrors !== null) {
+            return $this->serviceErrors;
+        }
+
         $store = app('session.store');
         if (! $store->isStarted()) {
             $store->start();
@@ -1287,7 +1394,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         return $seen[0] === '' ? ['', ''] : [$seen[0], view($seen[0], $seen[1])->render()];
     }
 
-    /** "পোস্ট" — থামলে (সই, বন্ধ মাস, স্লিপ) খসড়াটাই ফেরে; থামার কারণ `session('errors')`-এ */
+    /** "পোস্ট" — থামলে (সই, বন্ধ মাস, স্লিপ) খসড়াটাই ফেরে; থামার কারণ `said()`-এ */
     private function bookAllowingStops(array $extra): Collection
     {
         return $this->book($extra);

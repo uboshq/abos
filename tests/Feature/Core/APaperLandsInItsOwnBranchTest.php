@@ -36,6 +36,8 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Supplier\Models\Supplier;
@@ -338,10 +340,7 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'lines' => [['product_id' => $this->product->id, 'qty' => '1']],
             ]],
-            // ⓘ আদায় — শাখা আগেই গ্রাহকের (fe), এখন নম্বরও
-            'আদায়' => [Collection::class, route('sales.collection.store'), [
-                'customer_id' => $this->customer->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
-            ]],
+            // ⓘ আদায় — নিচে, সেবা ধরে (২০ নভেম্বর ২০২৬ থেকে ওয়েবের দরজা নতুন আদায় লেখে না)
             // ⓘ সরবরাহকারীকে পরিশোধ — সরবরাহকারীর শাখায়
             'সরবরাহকারীকে পরিশোধ' => [Payment::class, route('purchase.payment.store'), [
                 'supplier_id' => $this->supplier->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
@@ -360,6 +359,20 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
             $this->assertSame((int) $this->a->id, (int) $paper->branch_id, "⛔ {$name}: A-র পক্ষের কাগজ উপরের B-তে বসল");
             $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $paper->document_no), "⛔ {$name}: নম্বর B-র সিরিজ থেকে");
         }
+
+        /*
+         * ⓘ আদায় — শাখা আগেই গ্রাহকের (fe), এখন নম্বরও। ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"):
+         *   ওয়েবের দরজা নতুন আদায় লেখে না (রসিদ ভাউচারে পাঠায়, কিছু লেখে না); আদায়ের সেবা এখনো আছে (কাউন্টারের POS ডাকে), তাই
+         *   শাখা আর নম্বরের দাবি সেবা ধরে — ওয়েবের পুরনো ফর্ম যে পথে ডাকত ঠিক সেই পথ ([[CollectionInput::fromRequest()]] → createFrom)।
+         */
+        $form = ['customer_id' => $this->customer->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50'];
+        $before = Collection::acrossBranches()->count();
+        $this->post(route('sales.collection.store'), $form)->assertSessionHasErrors('collection');
+        $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ আদায়: ওয়েবের দরজা নতুন কাগজ লিখল');
+
+        $paper = app(CollectionService::class)->createFrom(CollectionInput::fromRequest($form));
+        $this->assertSame((int) $this->a->id, (int) $paper->branch_id, '⛔ আদায়: A-র পক্ষের কাগজ উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $paper->document_no), '⛔ আদায়: নম্বর B-র সিরিজ থেকে');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

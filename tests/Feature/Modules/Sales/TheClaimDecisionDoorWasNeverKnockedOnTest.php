@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -62,6 +63,8 @@ final class TheClaimDecisionDoorWasNeverKnockedOnTest extends TestCase
         app(StandardChart::class)->install();
         // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
         app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে, আর রসিদে লেখক ≠ পাকাকারী — এই ফাইল মাপে দরজার চাবি, তাই সুইচ বন্ধ (অন্য হাতের অপেক্ষা [[TheBankStatementHasTheFinalWordTest]]-এ)
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\VoucherService::MAKER_CHECKER, false);
 
         /*
          * ⛔ চাবিহীন লোকটা **হিসাবরক্ষক**, বিক্রয়কর্মী নয় — আর সেটা
@@ -132,6 +135,10 @@ final class TheClaimDecisionDoorWasNeverKnockedOnTest extends TestCase
         $this->assertSame(0, Collection::query()->count(),
             '⛔ ৪০৩ ফিরেছে, তবু একটা আদায়ের সারি তৈরি হয়ে গেছে — '
             .'অর্থাৎ গ্রাহকের খাতায় টাকা বসেছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে — সেটাও নয়
+        $this->assertNull($claim->fresh()->voucher_id, '⛔ ৪০৩ ফিরেছে, তবু খবরে রসিদ ভাউচার বাঁধা হয়ে গেছে।');
+        $this->assertFalse(Voucher::query()->withoutGlobalScopes()->where('instrument_no', 'TRX-CLAIMDOOR')->exists(),
+            '⛔ ৪০৩ ফিরেছে, তবু রসিদ ভাউচার তৈরি হয়ে গেছে — অর্থাৎ গ্রাহকের খাতায় টাকা বসেছে।');
     }
 
     /**
@@ -163,18 +170,20 @@ final class TheClaimDecisionDoorWasNeverKnockedOnTest extends TestCase
             '⛔ দরজা খুলেছে, কিন্তু দাবিটা মঞ্জুর হয়নি — অর্থাৎ ২০০ এসেছে, কাজ হয়নি।');
 
         /*
-         * ⭐ আসল কাজটা এখানে: মঞ্জুর করা মানে একটা **আদায়ের সারি**
+         * ⭐ আসল কাজটা এখানে: মঞ্জুর করা মানে একটা **রসিদ ভাউচার**
          * তৈরি হওয়া আর দাবির সাথে জোড়া লাগা ([[DepositClaimService::accept]])।
+         * ⓘ ২০ নভেম্বর ২০২৬ থেকে — আগে আদায়ের সারি (COL); মালিক: "টাকা ঢোকার কাগজ একটাই"।
          *
-         * ⓘ ভাউচারটা আলাদা করে মাপা হয়নি, কারণ বড় অঙ্কে আদায় অনুমোদনের
+         * ⓘ খাতার দাখিলা আলাদা করে মাপা হয়নি, কারণ বড় অঙ্কে রসিদ অনুমোদনের
          * জন্য অপেক্ষা করতে পারে — তখন সারিটা থাকে, দাখিলাটা পরে বসে।
          * ⚠️ ঐ শাখাটা মাপা এই ফাইলের কাজ নয়, আর মাপতে গেলে দাবিটা
          * অনুমোদনের সীমার উপর নির্ভরশীল হয়ে পড়ত।
          */
-        $this->assertNotNull($claim->collection_id,
-            '⛔ দাবিটা মঞ্জুর, অথচ কোনো আদায়ের সারি তৈরি হয়নি — টাকাটা কোথাও বসেনি।');
+        $this->assertNotNull($claim->voucher_id,
+            '⛔ দাবিটা মঞ্জুর, অথচ কোনো রসিদ ভাউচার তৈরি হয়নি — টাকাটা কোথাও বসেনি।');
+        $this->assertSame(Voucher::RECEIPT, Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id)->type);
 
-        $this->assertSame(1, Collection::query()->count());
+        $this->assertSame(0, Collection::query()->count(), '⛔ রসিদের পাশে আদায়ও বসেছে — একই টাকা দুই কাগজে।');
 
         $this->assertSame($this->decider->id, $claim->decided_by,
             '⛔ কে সিদ্ধান্ত নিলেন সেটা লেখা হয়নি।');

@@ -19,7 +19,7 @@ use Tests\TestCase;
  * ⭐ NPSB, BEFTN, RTGS — বাংলাতেও ব্যাংকিং পরিভাষা, লিপ্যন্তর নয় (fe, ২৪ অক্টোবর ২০২৬; আদায়ের পর্দা লাইভে যাওয়ার আগে)।
  *
  * seed এখন ঠিক নাম বসায়; পুরনো কোম্পানির সারি [[FixTransferModeNames]] বদলায় — কেবল ঠিক পুরনো লিপ্যন্তর, হাতে বসানো নাম
- * কখনো নয়, `--dry` কিছু লেখে না, আর প্রতিটা বদল নিরীক্ষায়। শেষে আদায়ের পর্দায় "NPSB"।
+ * কখনো নয়, `--dry` কিছু লেখে না, আর প্রতিটা বদল নিরীক্ষায়। শেষে টাকা নেওয়ার পর্দায় (২০ নভেম্বর ২০২৬ থেকে রসিদ ভাউচার) "NPSB"।
  */
 class TransferModesSayTheirBankingNameTest extends TestCase
 {
@@ -83,7 +83,13 @@ class TransferModesSayTheirBankingNameTest extends TestCase
         $this->assertSame([FixTransferModeNames::OLD['NPSB'], 'NPSB'], [$change?->old_value, $change?->new_value],
             '⛔ নিরীক্ষায় NPSB-এর পুরনো আর নতুন নাম নেই');
 
-        $page = $this->actingAs($this->owner)->get(route('sales.collection.create'))->assertOk();
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): গ্রাহকের টাকা ঢোকে কেবল রসিদ ভাউচারে; আদায়ের
+         *   পর্দা আর আঁকা হয় না (পুরনো ঠিকানা রসিদে পাঠায়)। তাই শেষের দেখা রসিদ ভাউচারের পর্দায় — তার মাধ্যমের ঘরে মোডগুলো
+         *   ([[MasterListsOnTheVoucherForm]])।
+         */
+        $this->actingAs($this->owner)->get(route('sales.collection.create'))->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
+        $page = $this->get(route('accounts.voucher.create', ['type' => 'receipt']))->assertOk();
         $page->assertSee('NPSB', false);
         $page->assertDontSee(FixTransferModeNames::OLD['NPSB'], false);
     }

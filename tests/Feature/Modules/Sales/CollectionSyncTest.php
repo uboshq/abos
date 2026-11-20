@@ -6,7 +6,6 @@ namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Engines\Sync\SyncService;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\SyncChange;
 use App\Models\User;
@@ -17,11 +16,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * মাঠ থেকে আদায় সিঙ্ক — খসড়া হিসেবে বসে, আর লেখার পাহারা পড়ার সমান।
+ * মাঠ থেকে আদায় সিঙ্ক — ⛔ ২০ নভেম্বর ২০২৬ থেকে আর বসে না (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই" — রসিদ ভাউচার;
+ * মাঠ পাঠায় "টাকা জমার খবর")। লেখার পাহারা পড়ার সমান আগের মতোই।
  *
- * দুইটা দাবি সবচেয়ে জরুরি: (১) আদায় নিশ্চিত নয়, খসড়া — অফিস নগদ মিলিয়ে
- * বসায়; (২) যাঁর আদায় বসানোর অনুমতি নেই তাঁর push নীরবে হারায় না,
- * REJECTED হয়ে ফেরে — নাহলে সেলসম্যান ভাবতেন সিঙ্ক হয়ে গেছে।
+ * দুইটা দাবি সবচেয়ে জরুরি: (১) ফোনের নতুন আদায় কারণসহ REJECTED, কিছুই বসে না — বার্তা "টাকা জমার খবর" দেখায়;
+ * (২) যাঁর আদায় বসানোর অনুমতি নেই তাঁর push নীরবে হারায় না, আগের অনুমতির কারণেই REJECTED হয়ে ফেরে — নাহলে
+ * সেলসম্যান ভাবতেন সিঙ্ক হয়ে গেছে।
  */
 class CollectionSyncTest extends TestCase
 {
@@ -75,8 +75,11 @@ class CollectionSyncTest extends TestCase
         ], fn ($v) => $v !== null);
     }
 
-    /** ★ মাঠের আদায় খসড়া হিসেবে বসে — অফিস নগদ মিলিয়ে নিশ্চিত করে। */
-    public function test_a_field_collection_lands_as_a_draft(): void
+    /**
+     * ★ মাঠের আদায় আর বসে না — খসড়াও নয় (মালিক, ২০ নভেম্বর ২০২৬: "টাকা ঢোকার কাগজ একটাই")। দুই চাবিওয়ালা মানুষের পাঠানো
+     * নতুন আদায় REJECTED, বার্তা "টাকা জমার খবর" পাঠাতে বলে, আর কোনো আদায় লেখা হয় না।
+     */
+    public function test_a_field_collection_is_refused_and_points_to_the_deposit_report(): void
     {
         $before = Collection::query()->count();
 
@@ -84,13 +87,11 @@ class CollectionSyncTest extends TestCase
             $this->change('c-1', ['customerId' => (string) $this->shop->public_id, 'amount' => '500']),
         ]);
 
-        $this->assertSame(SyncChange::APPLIED, $out[0]['status']);
-        $this->assertSame($before + 1, Collection::query()->count());
-
-        $collection = Collection::query()->latest('id')->firstOrFail();
-        $this->assertSame(DocumentStatus::DRAFT, $collection->status, 'মাঠের আদায় নিশ্চিত নয়, খসড়া হওয়ার কথা।');
-        $this->assertSame($this->shop->id, $collection->customer_id);
-        $this->assertSame(0, bccomp((string) $collection->amount, '500', 4));
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ ফোনের নতুন আদায় ফেরত হয়নি: '.json_encode($out[0]));
+        $this->assertSame(__('sales::sync.collection_use_deposit_report'), $out[0]['message'] ?? null,
+            '⛔ ফেরতের বার্তা "টাকা জমার খবর" পাঠাতে বলেনি');
+        $this->assertArrayNotHasKey('entityId', $out[0], '⛔ ফেরত আদায়ের উত্তরে কাগজের id এল');
+        $this->assertSame($before, Collection::query()->count(), '⛔ ফেরত সত্ত্বেও একটা আদায় বসল');
     }
 
     /** আদায় অফলাইনে সংশোধন নয় — নেটওয়ার্কে। */
@@ -107,14 +108,22 @@ class CollectionSyncTest extends TestCase
         $this->assertSame($before, Collection::query()->count());
     }
 
-    /** অচেনা গ্রাহক — প্রত্যাখ্যান, কিছুই বসে না। */
+    /**
+     * অচেনা গ্রাহক — প্রত্যাখ্যান, কিছুই বসে না। ⓘ ২০ নভেম্বর ২০২৬ থেকে কারণ একটাই ("টাকা জমার খবর") — গ্রাহক খোঁজার আগেই
+     * ফেরে, তাই চেনা আর অচেনা গ্রাহকের উত্তর এক, কে আছেন জানা যায় না।
+     */
     public function test_an_unknown_customer_is_refused(): void
     {
+        $before = Collection::query()->count();
+
         $out = $this->sync()->push($this->salesman, 'phone-a', 'sales', [
             $this->change('c-3', ['customerId' => 'no-such-public-id', 'amount' => '500']),
         ]);
 
         $this->assertSame(SyncChange::REJECTED, $out[0]['status']);
+        $this->assertSame(__('sales::sync.collection_use_deposit_report'), $out[0]['message'] ?? null,
+            '⛔ অচেনা গ্রাহকের ফেরত অন্য কারণে — চেনা গ্রাহকের উত্তর থেকে আলাদা');
+        $this->assertSame($before, Collection::query()->count());
     }
 
     /**
@@ -125,7 +134,7 @@ class CollectionSyncTest extends TestCase
      */
     public function test_a_push_without_permission_is_rejected_and_records_nothing(): void
     {
-        // সত্যিকারের সেলসম্যানের কাছে চাবিটা আছে — তাই উপরের happy path খাটে
+        // সত্যিকারের সেলসম্যানের কাছে চাবিটা আছে — তাই উপরে তাঁর ফেরত "টাকা জমার খবর"-এর, চাবির নয়
         $this->assertTrue($this->salesman->can('sales.collection.create'));
 
         $stranger = User::factory()->create();
@@ -136,6 +145,8 @@ class CollectionSyncTest extends TestCase
         ]);
 
         $this->assertSame(SyncChange::REJECTED, $out[0]['status']);
+        // ⓘ চাবির পাহারা আগে, আগের মতোই (২০ নভেম্বর ২০২৬-এ বদলায়নি) — চাবিহীন মানুষ চাবির কারণই পান
+        $this->assertSame(__('sync.push_needs_permission'), $out[0]['message'] ?? null, '⛔ চাবিহীন মানুষের ফেরত চাবির কারণে নয়');
         $this->assertSame($before, Collection::query()->count(), 'অনুমতি ছাড়া push-এও একটা আদায় বসে গেছে।');
     }
 }

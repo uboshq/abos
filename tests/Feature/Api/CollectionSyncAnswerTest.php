@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Core\Engines\Posting\PostingException;
 use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Api\AuthController;
+use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\SyncChange;
@@ -19,22 +21,29 @@ use App\Modules\Approval\Services\OwnerSignsDiscounts;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionService;
+use App\Modules\Sales\Sync\CollectionSync;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * ⭐ ফোনের আদায় বসার সাথে সাথে রসিদের কথা — সিঙ্কের উত্তরে, সেই বদলের নিজের সারিতে (a5-র উত্তর ৩; a4/collect-easy a3a030302:
+ * ⭐ আদায়ের রসিদের কথা — নম্বর, অবস্থা, কথায় টাকা, রসিদের PDF, কোন কাগজে কত (a5-র উত্তর ৩; a4/collect-easy a3a030302:
  * `CollectionSaved.of(landed, outcome.details)`; মালিকের নকশা ১০০-এর দফা ৪, ৭, ১৫, ১৭, ১৯)।
  *
- * ⓘ দাবিগুলো ফোনের আসল দরজায় (`POST /api/v1/sync/sales/push?deviceId=`), উত্তরের সারি changeId ধরে মেলানো — অ্যাপ যেভাবে মেলায়:
+ * ⛔ ২০ নভেম্বর ২০২৬ (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই") — ফোন আর আদায় লেখে না: পাঠানো নতুন আদায় "টাকা জমার খবর"-এর
+ * কারণে REJECTED, স্লিপের দরজা ৪২২। তাই রসিদের কথার দাবিগুলো এখন আগের আদায়ে (এখানে সেবা দিয়ে সরাসরি বানানো, ফোন আগে যেমন
+ * বসাত — [[CollectionInput::fromPhone()]] আর [[CollectionService]]), সিঙ্কের নিজের উত্তর-বানানো দিয়ে ([[CollectionSync::answerFor()]]
+ * — একই বদল আবার এলে পুরনো বসা আদায়ের উত্তর এখান থেকেই) আর ফোনের আদায়ের পাতায়:
  *   · `no`, `state` (paper_states-এর চাবি), `amount_words`, `receipt_pdf`, `applied` (ক্রেডিট ঋণাত্মক), `unapplied`
- *   · একই changeId দুবার — একটাই আদায়, একই উত্তর (দফা ৭)
+ *   · একই changeId দুবার — দুবারই ফেরত, একই কথা, কিছুই বসে না (দফা ৭)
  *   · ছাড়ে মালিকের সই — `state: waiting` (দফা ৪)
- *   · স্লিপের ঘরের নাম `file` (a5-র উত্তর ৫); কোম্পানি স্লিপ চাইলে স্লিপ পৌঁছালে তবে পোস্ট (দফা ১৫)
+ *   · আগের আদায়ে স্লিপ — ৪২২, কিছুই রাখা বা পাকা হয় না (দফা ১৫)
  */
 final class CollectionSyncAnswerTest extends TestCase
 {
@@ -78,63 +87,58 @@ final class CollectionSyncAnswerTest extends TestCase
     }
 
     /**
-     * দফা ১৭, ১৯ — উত্তরের সারিতে রসিদের সব কথা, সেই বদলেরই: নম্বর, `posted`, কথায় টাকা, রসিদের ঠিকানা, কোন কাগজে কত (বিলে পুরো
-     * অঙ্ক, ক্রেডিট ঋণাত্মক — যোগ = পাওয়া টাকা), অপ্রয়োগকৃত। একই পুশে দুই বদল — প্রতিটা সারি নিজের আদায়ের কথা বলে।
+     * দফা ১৭, ১৯ — রসিদের সব কথা, সেই আদায়েরই: নম্বর, `posted`, কথায় টাকা, রসিদের ঠিকানা, কোন কাগজে কত (বিলে পুরো অঙ্ক, ক্রেডিট
+     * ঋণাত্মক — যোগ = পাওয়া টাকা), অপ্রয়োগকৃত। দুই আদায় — প্রতিটার উত্তর নিজের কথা বলে।
      */
-    public function test_item_17_each_push_row_carries_its_own_receipt_answer(): void
+    public function test_item_17_each_collection_answers_with_its_own_receipt(): void
     {
-        $prior = $this->rowOf($this->pushHttp([$this->change('ans-0', ['amount' => '500', 'lines' => []])]), 'ans-0');
-        $priorNo = Collection::acrossBranches()->where('public_id', $prior['entityId'])->value('document_no');
+        $prior = $this->paper(['amount' => '500', 'lines' => []]);
         $bill = $this->bill('INV-ANS-1', '1200');
 
-        $out = $this->pushHttp([
-            $this->change('ans-1', ['amount' => '700', 'lines' => [
-                ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1200.00'],
-                ['kind' => 'credit', 'id' => $prior['entityId'], 'amount' => '-500.00'],
-            ]]),
-            $this->change('ans-2', ['amount' => '300', 'lines' => []]),
-        ]);
+        $paper = $this->paper(['amount' => '700', 'lines' => [
+            ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1200.00'],
+            ['kind' => 'credit', 'id' => $prior->public_id, 'amount' => '-500.00'],
+        ]]);
+        $other = $this->paper(['amount' => '300', 'lines' => []]);
 
-        $row = $this->rowOf($out, 'ans-1');
-        $paper = Collection::acrossBranches()->where('public_id', $row['entityId'])->firstOrFail();
+        $row = $this->answerOf($paper);
 
-        $this->assertSame(SyncChange::APPLIED, $row['status'], '⛔ দফা ১৭: আদায় বসেনি — '.json_encode($row));
-        $this->assertSame($paper->document_no, $row['no'] ?? null, '⛔ দফা ১৭: উত্তরের সারিতে নম্বর নেই');
+        $this->assertSame(DocumentStatus::CONFIRMED, $paper->status, 'প্রস্তুতিটাই ভুল — আদায় পাকা হয়নি');
+        $this->assertSame($paper->document_no, $row['no'] ?? null, '⛔ দফা ১৭: উত্তরে নম্বর নেই');
         $this->assertSame('posted', $row['state'] ?? null, '⛔ দফা ১৭: উত্তরের অবস্থা paper_states-এর `posted` নয়');
-        $this->assertSame(AmountInWords::of('700.0000', 'bn'), $row['amount_words'] ?? null, '⛔ দফা ১৭: কথায় টাকা নেই বা ভুল');
+        $this->assertSame(AmountInWords::of('700.0000', app()->getLocale()), $row['amount_words'] ?? null, '⛔ দফা ১৭: কথায় টাকা নেই বা ভুল');
         $this->assertSame(route('api.documents.pdf', ['type' => 'Collection', 'id' => $paper->public_id]), $row['receipt_pdf'] ?? null,
             '⛔ দফা ১৭: রসিদের ঠিকানা নেই, বা ফোনের টোকেনের দরজা নয়');
         $this->assertSame([
             ['kind' => 'bill', 'no' => 'INV-ANS-1', 'amount' => '1200.0000'],
-            ['kind' => 'credit', 'no' => (string) $priorNo, 'amount' => '-500.0000'],
+            ['kind' => 'credit', 'no' => (string) $prior->document_no, 'amount' => '-500.0000'],
         ], $row['applied'] ?? null, '⛔ দফা ১৭: কোন কাগজে কত — বিলে পুরো অঙ্ক আর ক্রেডিট ঋণাত্মক নয় (যোগ পাওয়া টাকার সমান নয়)');
         $this->assertSame('0.0000', $row['unapplied'] ?? null, '⛔ দফা ১৭: অপ্রয়োগকৃত ভুল');
 
-        $other = $this->rowOf($out, 'ans-2');
-        $this->assertSame(Collection::acrossBranches()->where('public_id', $other['entityId'])->value('document_no'), $other['no'] ?? null,
-            '⛔ দফা ১৯: দ্বিতীয় বদলের সারিতে অন্য আদায়ের কথা — উত্তর নিজের সারিতে নয়');
-        $this->assertSame('300.0000', $other['unapplied'] ?? null, '⛔ দফা ১৯: দ্বিতীয় সারির অপ্রয়োগকৃত নিজের নয়');
+        $second = $this->answerOf($other);
+        $this->assertSame($other->document_no, $second['no'] ?? null, '⛔ দফা ১৯: দ্বিতীয় আদায়ের উত্তরে অন্য আদায়ের কথা — উত্তর নিজের নয়');
+        $this->assertSame('300.0000', $second['unapplied'] ?? null, '⛔ দফা ১৯: দ্বিতীয় আদায়ের অপ্রয়োগকৃত নিজের নয়');
     }
 
     /**
-     * কথায় টাকা যিনি পাঠালেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — একই পুশ: ইংরেজির মানুষ ইংরেজি কথা পান, বাংলার মানুষ
-     * বাংলা। ⓘ ভাষা মানুষের `users.locale` থেকে ([[ResolveCompanyContext]]); সই-করা মানুষের বেলায় `Accept-Language` তাঁর বাছাই উল্টায় না
-     * (a4/api-locale-এর একই ক্রম), তাই শিরোনামটা ইচ্ছে করে উল্টো ভাষায় পাঠানো।
+     * কথায় টাকা যিনি চাইছেন তাঁর ভাষায় (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — ফোনের আদায়ের পাতায়: ইংরেজির মানুষ ইংরেজি কথা
+     * পান, বাংলার মানুষ বাংলা। ⓘ ভাষা মানুষের `users.locale` থেকে ([[ResolveCompanyContext]]); সই-করা মানুষের বেলায় `Accept-Language`
+     * তাঁর বাছাই উল্টায় না (a4/api-locale-এর একই ক্রম), তাই শিরোনামটা ইচ্ছে করে উল্টো ভাষায় পাঠানো।
      */
-    public function test_the_amount_in_words_follows_the_senders_own_language(): void
+    public function test_the_amount_in_words_follows_the_readers_own_language(): void
     {
         $this->assertNotSame(AmountInWords::of('700.0000', 'en'), AmountInWords::of('700.0000', 'bn'), 'দুই ভাষার কথা একই — দাবিটা কিছু মাপছে না');
+        $paper = $this->paper(['amount' => '700', 'lines' => []]);
+        $page = '/api/v1/sales/collections/'.$paper->public_id;
 
         $this->clerk->forceFill(['locale' => 'en'])->save();
-        $this->withHeader('Accept-Language', 'bn');
-        $english = $this->rowOf($this->pushHttp([$this->change('lang-en', ['amount' => '700', 'lines' => []])]), 'lang-en');
-
+        $this->phone();
+        $english = $this->getJson($page, ['Accept-Language' => 'bn'])->assertOk()->json();
         $this->assertSame(AmountInWords::of('700.0000', 'en'), $english['amount_words'] ?? null, '⛔ ইংরেজির মানুষ কথায় টাকা ইংরেজিতে পাননি');
 
         $this->clerk->forceFill(['locale' => 'bn'])->save();
-        $this->withHeader('Accept-Language', 'en');
-        $bangla = $this->rowOf($this->pushHttp([$this->change('lang-bn', ['amount' => '700', 'lines' => []])]), 'lang-bn');
-
+        $this->phone();
+        $bangla = $this->getJson($page, ['Accept-Language' => 'en'])->assertOk()->json();
         $this->assertSame(AmountInWords::of('700.0000', 'bn'), $bangla['amount_words'] ?? null, '⛔ বাংলার মানুষ কথায় টাকা বাংলায় পাননি');
     }
 
@@ -145,9 +149,9 @@ final class CollectionSyncAnswerTest extends TestCase
      */
     public function test_item_17_the_receipt_pdf_opens_with_the_phones_token_and_only_for_whom_it_may(): void
     {
-        $row = $this->rowOf($this->pushHttp([$this->change('pdf-1', ['amount' => '640', 'lines' => []])]), 'pdf-1');
-        $url = (string) ($row['receipt_pdf'] ?? '');
-        $this->assertStringContainsString('/api/v1/documents/Collection/'.$row['entityId'].'/pdf', $url, '⛔ রসিদের ঠিকানা ফোনের দরজার নয়');
+        $paper = $this->paper(['amount' => '640', 'lines' => []]);
+        $url = (string) ($this->answerOf($paper)['receipt_pdf'] ?? '');
+        $this->assertStringContainsString('/api/v1/documents/Collection/'.$paper->public_id.'/pdf', $url, '⛔ রসিদের ঠিকানা ফোনের দরজার নয়');
 
         $this->phone();
         $pdf = $this->get($url, ['Accept' => 'application/json'])->assertOk()->assertHeader('Content-Type', 'application/pdf');
@@ -166,90 +170,119 @@ final class CollectionSyncAnswerTest extends TestCase
         $this->get($url, ['Accept' => 'application/json'])->assertForbidden();
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
-        \Illuminate\Support\Facades\DB::table('sal_collections')->where('public_id', $row['entityId'])->update(['company_id' => $other->id]);
+        \Illuminate\Support\Facades\DB::table('sal_collections')->where('public_id', $paper->public_id)->update(['company_id' => $other->id]);
         $this->phone();
         $gone = $this->get($url, ['Accept' => 'application/json'])->assertNotFound();
         $this->assertStringStartsNotWith('%PDF', (string) $gone->getContent(), '⛔ অন্য কোম্পানির রসিদের বাইট এল');
     }
 
-    /** দফা ৭ — নেট গেলে আবার চাপলে (একই changeId) একটাই আদায়, আর উত্তরে একই নম্বর ও রসিদ */
-    public function test_item_7_the_same_change_twice_gives_one_collection_and_the_same_answer(): void
+    /**
+     * দফা ৭ — নেট গেলে আবার চাপলে (একই changeId): ⛔ ২০ নভেম্বর ২০২৬ থেকে দুবারই ফেরত ("টাকা জমার খবর"), একই কথা, কোনো আদায় বা
+     * খাতার সারি নয়, উত্তরে কাগজের id-ও নয় — ফোন ফেরত দেখে আর পাঠায় না।
+     */
+    public function test_item_7_the_same_change_twice_is_refused_twice_and_writes_nothing(): void
     {
-        $first = $this->rowOf($this->pushHttp([$this->change('twice-1', ['amount' => '450', 'lines' => []])]), 'twice-1');
-        $count = Collection::query()->count();
+        $papers = Collection::acrossBranches()->count();
+        $rows = LedgerEntry::query()->count();
 
+        $first = $this->rowOf($this->pushHttp([$this->change('twice-1', ['amount' => '450', 'lines' => []])]), 'twice-1');
         $again = $this->rowOf($this->pushHttp([$this->change('twice-1', ['amount' => '450', 'lines' => []])]), 'twice-1');
 
-        $this->assertSame($count, Collection::query()->count(), '⛔ দফা ৭: একই changeId-তে দ্বিতীয় আদায় বসল');
-        $this->assertSame($first['entityId'], $again['entityId'], '⛔ দফা ৭: দ্বিতীয়বার অন্য আদায় ফিরল');
-        $this->assertSame($first['no'] ?? null, $again['no'] ?? null, '⛔ দফা ৭: দ্বিতীয়বারের উত্তরে নম্বর নেই — ফোন রসিদ দেখাতে পারে না');
-        $this->assertSame($first['receipt_pdf'] ?? null, $again['receipt_pdf'] ?? null, '⛔ দফা ৭: দ্বিতীয়বারের উত্তরে রসিদ নেই');
+        foreach (['প্রথমবার' => $first, 'দ্বিতীয়বার' => $again] as $when => $row) {
+            $this->assertSame(SyncChange::REJECTED, $row['status'] ?? null, "⛔ দফা ৭: {$when} ফোনের আদায় ফেরত হয়নি — ".json_encode($row));
+            $this->assertSame(CollectionSync::useTheDepositReport(), $row['message'] ?? null, "⛔ দফা ৭: {$when} ফেরতের কথা \"টাকা জমার খবর\" নয়");
+            $this->assertArrayNotHasKey('entityId', $row, "⛔ দফা ৭: {$when} ফেরত উত্তরে কাগজের id এল");
+            $this->assertArrayNotHasKey('no', $row, "⛔ দফা ৭: {$when} ফেরত উত্তরে রসিদের নম্বর এল");
+        }
+
+        $this->assertSame([CollectionSync::useTheDepositReport()], $again['errors']['_'] ?? null, '⛔ দফা ৭: দ্বিতীয়বারের ফেরতে ঘরহীন কারণ নেই (চুক্তি §৭.২)');
+        $this->assertSame([$papers, $rows], [Collection::acrossBranches()->count(), LedgerEntry::query()->count()],
+            '⛔ দফা ৭: ফেরত বদলেও আদায় বা খাতার সারি বসল');
     }
 
-    /** দফা ৪ — ফোনের আদায়ে ছাড়: খাতায় নয়, মালিকের সইয়ের অপেক্ষায় — উত্তরে `state: waiting` */
-    public function test_item_4_a_phone_discount_waits_for_the_owner_and_says_waiting(): void
+    /** দফা ৪ — আদায়ে ছাড়: খাতায় নয়, মালিকের সইয়ের অপেক্ষায় — উত্তরে `state: waiting` */
+    public function test_item_4_a_discount_waits_for_the_owner_and_says_waiting(): void
     {
         app(OwnerSignsDiscounts::class)->ensure($this->company);
         $bill = $this->bill('INV-ANS-D', '1000');
 
-        $row = $this->rowOf($this->pushHttp([$this->change('disc-1', ['amount' => '980',
+        $paper = $this->paper(['amount' => '980',
             'difference' => ['kind' => 'discount', 'amount' => '20'],
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.00']]])]), 'disc-1');
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.00']]]);
+        $row = $this->answerOf($paper);
 
-        $paper = Collection::acrossBranches()->where('public_id', $row['entityId'])->firstOrFail();
-        $this->assertSame(DocumentStatus::DRAFT, $paper->status, '⛔ দফা ৪: ফোনের ছাড় মালিকের সই ছাড়াই পোস্ট হলো');
+        $this->assertSame(DocumentStatus::DRAFT, $paper->status, '⛔ দফা ৪: ছাড় মালিকের সই ছাড়াই পোস্ট হলো');
         $this->assertSame('waiting', $row['state'] ?? null, '⛔ দফা ৪: উত্তর বলল না যে সইয়ের অপেক্ষায় (`waiting`)');
         $this->assertSame(0, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $paper->id)->count(),
             '⛔ দফা ৪: সইয়ের আগে খাতায় সারি');
     }
 
     /**
-     * দফা ১৫ (a5-র উত্তর ৫) — স্লিপের ঘরের নাম `file`: অন্য নামে ৪২২, `file`-এ ২০১। কোম্পানি স্লিপ চাইলে ফোনের "পোস্ট" স্লিপ
-     * ছাড়া খসড়ায় থামে (`draft`), আর অ্যাপ বসার পরে স্লিপ পাঠালে তখন পোস্ট হয় — অ্যাপে খসড়া পোস্টের আর কোনো বোতাম নেই।
+     * দফা ১৫ — ⛔ ২০ নভেম্বর ২০২৬ থেকে ফোনের স্লিপের দরজা আদায় নেয় না (স্লিপ যায় "টাকা জমার খবর"-এর সাথে): স্লিপ-বাধ্যতামূলক
+     * কোম্পানিতে খসড়ায় থামা আগের আদায়ে `file` পাঠালেও ৪২২, কারণ "টাকা জমার খবর"; আদায় খসড়াই থাকে, খাতায় কিছু নয়, কোনো
+     * সংযুক্তি রাখা হয় না। ⓘ আগের দ্বিতীয় দাবি ("খসড়া রাখুন" স্লিপে পোস্ট হয় না) এর ভিতরেই — স্লিপে কিছুই পোস্ট হয় না।
      */
-    public function test_item_15_the_slip_field_is_file_and_a_required_slip_posts_when_it_arrives(): void
+    public function test_item_15_a_slip_for_an_old_collection_is_refused_and_posts_nothing(): void
     {
         Storage::fake('local');
         app(SettingsService::class)->set('sales.collection.attachment_required', true);
 
-        $row = $this->rowOf($this->pushHttp([$this->change('slip-1', ['amount' => '600', 'lines' => []])]), 'slip-1');
-        $this->assertSame('draft', $row['state'] ?? null, '⛔ দফা ১৫: স্লিপ ছাড়া ফোনের আদায় পোস্ট হলো');
-
-        $door = '/api/v1/sales/collections/'.$row['entityId'].'/attachment';
-        $this->phone();
-        $wrong = $this->post($door, ['slip' => UploadedFile::fake()->image('slip.png', 40, 30)], ['Accept' => 'application/json']);
-        $this->assertSame(422, $wrong->status(), '⛔ দফা ১৫: অন্য নামের ঘরে (`slip`) স্লিপ নেওয়া হলো — অ্যাপ পাঠায় `file`');
-        $this->assertArrayHasKey('file', (array) $wrong->json('errors'), '⛔ দফা ১৫: ভুলের কথায় `file` ঘরের নাম নেই');
+        $paper = $this->paper(['amount' => '600', 'lines' => []]);
+        $this->assertSame('draft', $this->answerOf($paper)['state'] ?? null, 'প্রস্তুতিটাই ভুল — স্লিপ ছাড়া আদায় পোস্ট হলো');
+        $kept = Attachment::query()->withoutGlobalScopes()->count();
 
         $this->phone();
-        $right = $this->post($door, ['file' => UploadedFile::fake()->image('slip.png', 40, 30)], ['Accept' => 'application/json']);
+        $answer = $this->post('/api/v1/sales/collections/'.$paper->public_id.'/attachment',
+            ['file' => UploadedFile::fake()->image('slip.png', 40, 30)], ['Accept' => 'application/json']);
 
-        $paper = Collection::acrossBranches()->where('public_id', $row['entityId'])->firstOrFail();
-        $this->assertSame(DocumentStatus::CONFIRMED, $paper->status, '⛔ দফা ১৫: স্লিপ পৌঁছানোর পরেও ফোনের "পোস্ট" চাওয়া আদায় খসড়াই রইল');
-        $this->assertSame(2, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $paper->id)->count(),
-            '⛔ দফা ১৫: স্লিপের পরে খাতায় টাকা আর গ্রাহকের দুই সারি নেই');
-        $this->assertSame(201, $right->status(), '⛔ দফা ১৫: `file` ঘরের স্লিপ নেওয়া হয়নি');
-        $this->assertSame('posted', $right->json('state'), '⛔ দফা ১৫: স্লিপের উত্তর নতুন অবস্থা (`posted`) বলেনি');
-    }
+        $this->assertSame(422, $answer->status(), '⛔ দফা ১৫: ফোনের স্লিপ আদায়ে নেওয়া হলো ('.$answer->status().')');
+        $this->assertSame(CollectionSync::useTheDepositReport(), $answer->json('message'), '⛔ দফা ১৫: স্লিপের ফেরতের কথা "টাকা জমার খবর" নয়');
+        $this->assertSame([CollectionSync::useTheDepositReport()], $answer->json('errors.collection'), '⛔ দফা ১৫: ফেরতের `errors.collection` নেই');
 
-    /** দফা ১৫ — কেবল "পোস্ট" চাওয়া আদায় স্লিপে পোস্ট হয়; "খসড়া রাখুন" (`confirm: false`) স্লিপ পেলেও খসড়া */
-    public function test_item_15_a_slip_does_not_post_a_paper_the_phone_kept_as_a_draft(): void
-    {
-        Storage::fake('local');
-        app(SettingsService::class)->set('sales.collection.attachment_required', true);
-
-        $row = $this->rowOf($this->pushHttp([$this->change('keep-1', ['amount' => '600', 'lines' => [], 'confirm' => false])]), 'keep-1');
-
-        $this->phone();
-        $answer = $this->post('/api/v1/sales/collections/'.$row['entityId'].'/attachment', ['file' => UploadedFile::fake()->image('slip.png', 40, 30)],
-            ['Accept' => 'application/json']);
-
-        $this->assertSame(DocumentStatus::DRAFT, Collection::acrossBranches()->where('public_id', $row['entityId'])->value('status'),
-            '⛔ দফা ১৫: "খসড়া রাখুন" বলা আদায় স্লিপ পেয়ে নিজে পোস্ট হয়ে গেল');
-        $this->assertSame([201, 'draft'], [$answer->status(), $answer->json('state')], '⛔ দফা ১৫: স্লিপ নেওয়া হয়নি, বা উত্তর খসড়া বলেনি');
+        $this->assertSame(DocumentStatus::DRAFT, Collection::acrossBranches()->whereKey($paper->id)->value('status'), '⛔ দফা ১৫: স্লিপের দরজায় আদায় পোস্ট হলো');
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $paper->id)->count(),
+            '⛔ দফা ১৫: ফেরত স্লিপের পরে খাতায় সারি');
+        $this->assertSame($kept, Attachment::query()->withoutGlobalScopes()->count(), '⛔ দফা ১৫: ফেরত স্লিপের সংযুক্তি রাখা হলো');
+        $this->assertSame([], Storage::disk('local')->allFiles(), '⛔ দফা ১৫: ফেরত স্লিপের ফাইল জমা হলো');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⓘ আগের আদায় — ফোন ২০ নভেম্বর ২০২৬-এর আগে যেমন বসাত: অ্যাপের আকারের আবেদন ([[CollectionInput::fromPhone()]]), একই সেবা, আর
+     * "এখনই নিশ্চিত" — অনুমোদন বা টাকার নিয়মে আটকালে খসড়া (সিঙ্কের পুরনো আচরণ)। পাঠানো মানুষটা হিসাবরক্ষক।
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    private function paper(array $extra, bool $confirm = true): Collection
+    {
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->clerk->fresh());
+
+        $service = app(CollectionService::class);
+        $collection = $service->createFrom(CollectionInput::fromPhone([
+            'customerId' => (string) $this->dealer->public_id,
+            'trxDate' => now()->toDateString(),
+            'accountId' => (string) $this->bank->public_id,
+            ...$extra,
+        ]));
+
+        if ($confirm) {
+            try {
+                $collection = $service->confirm($collection->fresh(['lines']));
+            } catch (ValidationException|PostingException) {
+                // ⓘ খসড়া থাকল — আগের সিঙ্কের একই আচরণ
+            }
+        }
+
+        return Collection::acrossBranches()->whereKey($collection->id)->firstOrFail();
+    }
+
+    /** @return array<string, mixed> — সিঙ্কের নিজের উত্তর-বানানো ([[CollectionSync::answerFor()]]) */
+    private function answerOf(Collection $paper): array
+    {
+        return app(CollectionSync::class)->answerFor((string) $paper->public_id);
+    }
 
     /** @param  array<string, mixed>  $extra @return array<string, mixed> — অ্যাপের একটা বদল, `CollectionDraft.toPayload()`-এর আকারে */
     private function change(string $id, array $extra): array

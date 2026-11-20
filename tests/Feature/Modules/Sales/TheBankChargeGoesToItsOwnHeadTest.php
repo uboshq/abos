@@ -9,9 +9,10 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\DepositClaimService;
@@ -49,6 +50,8 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         app(StandardChart::class)->install();
         // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
         app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে, আর রসিদে লেখক ≠ পাকাকারী — এই ফাইল মাপে চার্জের খাত, তাই সুইচ বন্ধ (অন্য হাতের অপেক্ষা [[TheBankStatementHasTheFinalWordTest]]-এ)
+        app(\App\Core\Services\SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
 
         $this->decider = User::factory()->create(['current_company_id' => $this->company->id]);
         $this->decider->companies()->attach($this->company->id, ['is_active' => true]);
@@ -73,23 +76,25 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
-        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
-        $this->assertSame(0, bccomp((string) $collection->amount, '50000', 4), '⛔ আদায়টা পুরো পাঠানো অঙ্কের নয়');
-        $this->assertSame(0, bccomp((string) $collection->bank_charge, '50', 4));
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে আদায় নয়, রসিদ ভাউচার (মালিক: "টাকা ঢোকার কাগজ একটাই") — চার্জ রসিদের চার্জের ঘরে
+        $voucher = $this->receiptOf($claim);
+        $this->assertSame(0, bccomp((string) $voucher->amount, '50000', 4), '⛔ রসিদটা পুরো পাঠানো অঙ্কের নয়');
+        $this->assertSame(0, bccomp((string) $voucher->charge_amount, '50', 4));
 
         $this->assertSame(bcsub($dueBefore, '50000', 4), $this->dealer->fresh()->outstanding(),
             '⛔ ডিলারের পাওনা পুরো ৫০,০০০ কমেনি — চার্জের ৫০ তাঁর নামে বকেয়া থেকে গেল');
 
-        $this->assertSame(0, bccomp($this->net($this->bank->id, $collection), '49950', 4), '⛔ ব্যাংকে যা সত্যিই এসেছে, খাতায় তা নয়');
-        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $collection), '50', 4),
+        $this->assertSame(0, bccomp($this->net($this->bank->id, $voucher), '49950', 4), '⛔ ব্যাংকে যা সত্যিই এসেছে, খাতায় তা নয়');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $voucher), '50', 4),
             '⛔ ব্যাংক চার্জ নিজের খাতে বসেনি');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::RECEIVABLE)->id, $voucher), '-50000', 4),
+            '⛔ পাওনার খাতে পুরো ৫০,০০০ ক্রেডিট নয়');
 
         // ⓘ বাতিল করলে চার্জও ফেরে — উল্টো দাখিলা হুবহু
         $this->actingAs($this->decider->fresh());
-        app(CollectionService::class)->cancel($collection->fresh(), 'ভুল ব্যাংকে মঞ্জুর');
-        $charges = LedgerEntry::query()->where('account_id', StandardChart::find(StandardChart::BANK_CHARGES)->id)
-            ->where('source_id', $collection->id)->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
-        $this->assertSame(0, bccomp((string) $charges, '0', 4), '⛔ বাতিলের পরেও চার্জ খাতে থেকে গেল');
+        app(VoucherService::class)->cancel($voucher->fresh(), 'ভুল ব্যাংকে মঞ্জুর');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $voucher), '0', 4),
+            '⛔ বাতিলের পরেও চার্জ খাতে থেকে গেল');
     }
 
     /**
@@ -112,12 +117,14 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
-        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
-        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::MFS_CHARGES)->id, $collection), '180', 4),
+        $voucher = $this->receiptOf($claim);
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::MFS_CHARGES)->id, $voucher), '180', 4),
             '⛔ #৯: MFS-এর চার্জ MFS চার্জের খাতে (৫২১১) বসেনি');
-        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $collection), '0', 4),
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $voucher), '0', 4),
             '⛔ #৯: MFS-এর চার্জ ব্যাংক চার্জে (৫২১০) গেল');
-        $this->assertSame(0, bccomp($this->net($wallet->id, $collection), '19820', 4), '⛔ ওয়ালেটে যা সত্যিই এসেছে, খাতায় তা নয়');
+        $this->assertSame(0, bccomp($this->net($wallet->id, $voucher), '19820', 4), '⛔ ওয়ালেটে যা সত্যিই এসেছে, খাতায় তা নয়');
+        $this->assertSame('mfs', $voucher->instrument, '⛔ MFS-এ আসা টাকার রসিদের মাধ্যম MFS নয়');
+        $this->assertSame('TRX9MFS20000', $voucher->instrument_no, '⛔ রসিদের নম্বর খবরের TrxID নয়');
         $this->assertSame(bcsub($dueBefore, '20000', 4), $this->dealer->fresh()->outstanding(), '⛔ ডিলারের পাওনা পুরো অঙ্কে কমেনি');
     }
 
@@ -129,10 +136,10 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
             ->post(route('sales.claim.accept', $claim), ['account_id' => $this->bank->id])
             ->assertSessionHasNoErrors();
 
-        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
-        $this->assertSame(0, bccomp($this->net($this->bank->id, $collection), '30000', 4));
+        $voucher = $this->receiptOf($claim);
+        $this->assertSame(0, bccomp($this->net($this->bank->id, $voucher), '30000', 4));
         $this->assertSame(0, LedgerEntry::query()->where('account_id', StandardChart::find(StandardChart::BANK_CHARGES)->id)
-            ->where('source_id', $collection->id)->count(), 'চার্জ ছাড়া চার্জের সারি বসেছে');
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)->count(), 'চার্জ ছাড়া চার্জের সারি বসেছে');
     }
 
     public function test_a_charge_that_eats_the_whole_amount_is_refused(): void
@@ -189,11 +196,24 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         ]);
     }
 
-    /** এই আদায়ের নামে একটা খাতের নিট ডেবিট */
-    private function net(int $accountId, Collection $collection): string
+    /** খবরের রসিদ ভাউচার — পাকা, আদায় (COL) নয় (২০ নভেম্বর ২০২৬) */
+    private function receiptOf(DepositClaim $claim): Voucher
+    {
+        $claim = $claim->fresh();
+        $this->assertSame(DepositClaim::ACCEPTED, $claim->status, '⛔ খবর গৃহীত হয়নি');
+        $this->assertNull($claim->collection_id, '⛔ খবর থেকে আবার আদায় (COL) বসেছে');
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id);
+        $this->assertSame(Voucher::RECEIPT, $voucher->type);
+        $this->assertTrue($voucher->isPosted(), '⛔ রসিদ ভাউচার পাকা হয়নি');
+
+        return $voucher;
+    }
+
+    /** এই রসিদের নামে একটা খাতের নিট ডেবিট */
+    private function net(int $accountId, Voucher $voucher): string
     {
         return (string) LedgerEntry::query()
-            ->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)
             ->where('account_id', $accountId)
             ->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
     }

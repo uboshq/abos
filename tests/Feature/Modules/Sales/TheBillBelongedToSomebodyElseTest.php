@@ -8,12 +8,19 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -63,8 +70,12 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
      */
     /**
      * ⓘ টাকা নেওয়ার নকশা ১০০-এর পর্দা (a6, ২১ অক্টোবর ২০২৬): বিলের তালিকা আর পাতায় সবার বিল নিয়ে আসে না — গ্রাহক বাছলে
-     * সার্ভার কেবল তাঁর খোলা কাগজ পাঠায় (`sales.collection.open_items`)। তাই দাবি দুইটা: গ্রাহকের ঘরের বদল সত্যিই শোনা হয়
-     * (ঘরটা ফর্মের নিজের `x-data`-র ভেতরে), আর সার্ভারের উত্তরে অন্যের বিল আসে না।
+     * সার্ভার কেবল তাঁর খোলা কাগজ পাঠায়।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): টাকা নেওয়া হয় কেবল রসিদ ভাউচারে; আদায়ের ফর্ম আর
+     *   আঁকা হয় না (তাই `pickCustomer`-এর শোনার ঘরের দাবি গেল), তার খোলা কাগজের দরজা (`sales.collection.open_items`) ৪২২ দেয়।
+     *   দাবিটা এখন রসিদের পর্দার উৎসে (`accounts.voucher.due` → [[SalesPartyOpenBills]]): এই গ্রাহকের বিল আসে, অন্যের আসে না।
+     *   আর পুরনো ঠিকানা রসিদেই পাঠায়।
      */
     public function test_the_screen_is_told_which_customer_each_open_bill_belongs_to(): void
     {
@@ -77,34 +88,16 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
         $own = $this->confirmedBill($mine->id, 'INV-MINE-1');
         $foreign = $this->confirmedBill($theirs->id, 'INV-THEIRS-1');
 
-        $html = (string) $this->actingAs($this->user)
-            ->get(route('sales.collection.create'))->getContent();
+        $this->actingAs($this->user)->get(route('sales.collection.create'))
+            ->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']));
+        $this->assertSame(422, $this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]))->status(),
+            '⛔ পুরনো আদায়ের খোলা কাগজের দরজা এখনো উত্তর দেয়।');
 
-        /*
-         * ── শোনার ঘরটা যেন সত্যিই শোনে ───────────────────────────────
-         * প্রথম সারাইয়ের পর `@change` markup-এ ছিল, পরীক্ষাও সবুজ ছিল, আর তবু তালিকা খালিই থাকত — ঘরটার উপরে কোনো `x-data`
-         * ছিল না। ⓘ এখন ঘরটা ফর্মের `collectionForm`-এর ভেতরে, আর বদলে `pickCustomer` ডাকে।
-         */
-        $form = strpos($html, 'x-data="collectionForm(');
-        $select = null;
+        $bills = collect($this->getJson(route('accounts.voucher.due', ['party_type' => 'customer', 'party_id' => $mine->id]))
+            ->assertOk()->json('bills'));
 
-        // ⓘ গ্রাহকের ঘর এখন খোঁজা যায় এমন পিকার (x-ui.party-search; fe, ২৪ অক্টোবর ২০২৬): `@change` পিকারের গায়ে, আর বাছলে তার
-        // ভিতরের লুকানো `customer_id` ঘর `change` ছাড়ে — তাই শোনার ঘর সেই গা, আর তার ভিতরেই পাঠানোর ঘর
-        if (preg_match('/<[a-z]+[^>]*pickCustomer\(\$event\.target\.value\)[^>]*>/s', $html, $m, PREG_OFFSET_CAPTURE) === 1) {
-            $select = $m[0];
-        }
-
-        $this->assertNotFalse($form, 'টাকা নেওয়ার ফর্মে `collectionForm` নেই।');
-        $this->assertNotNull($select, 'গ্রাহকের ঘরটাই পাওয়া যায়নি।');
-        $this->assertNotFalse(strpos($html, 'name="customer_id"', $select[1]), 'গ্রাহকের পিকারের ভিতরে পাঠানোর ঘর (`customer_id`) নেই।');
-        $this->assertGreaterThan($form, $select[1], 'গ্রাহকের ঘর ফর্মের `x-data`-র বাইরে — বদলটা কেউ শোনে না।');
-        $this->assertStringContainsString('pickCustomer($event.target.value)', $select[0],
-            'গ্রাহক বদলালে তাঁর খোলা কাগজ আনার ডাক নেই — আগের গ্রাহকের বিল থেকে যেত।');
-
-        $items = collect($this->getJson(route('sales.collection.open_items', ['customer' => $mine->id]))->assertOk()->json('items'));
-
-        $this->assertTrue($items->contains('id', $own->public_id), 'নিজের খোলা বিলটাই আসেনি।');
-        $this->assertFalse($items->contains('id', $foreign->public_id), '⛔ অন্য গ্রাহকের বিল এই গ্রাহকের তালিকায় — "বিলটা অন্য গ্রাহকের" আবার।');
+        $this->assertTrue($bills->contains('id', (int) $own->id), 'নিজের খোলা বিলটাই রসিদের তালিকায় আসেনি।');
+        $this->assertFalse($bills->contains('id', (int) $foreign->id), '⛔ অন্য গ্রাহকের বিল এই গ্রাহকের রসিদের তালিকায় — "বিলটা অন্য গ্রাহকের" আবার।');
     }
 
     private function confirmedBill(int $customerId, string $no): \App\Modules\Sales\Models\SalesInvoice
@@ -120,12 +113,20 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
      *
      * পর্দার ছাঁকনি সুবিধা, প্রহরী নয়। কেউ সরাসরি অনুরোধ পাঠালে —
      * বা ব্রাউজারে JS বন্ধ থাকলে — টাকাটা যেন ভুল বিলে না বসে।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের আদায়ের দরজা আর কিছুই লেখে না, তাই দাবি
+     *   তিন জায়গায়: (১) পুরনো দরজা ফেরায়, কিছু লেখে না; (২) টাকা নেওয়ার আসল দরজা — রসিদ ভাউচার — অন্যের বিলে বাঁধা ফেরায়
+     *   (`against_wrong_party`); (৩) আদায়ের সেবা (কাউন্টারের POS এখনো ডাকে) নিজেও অন্যের বিল ফেরায়।
      */
     public function test_the_server_still_refuses_a_bill_that_is_not_this_customers(): void
     {
+        $this->actingAs($this->user);
+
         $a = app(CustomerService::class)->create([
             'name_en' => 'Customer A', 'credit_limit' => 0, 'credit_days' => 0,
         ]);
+        // ⓘ বিলটা পাকা হতে ঋণসীমা লাগে (সীমা অলঙ্ঘ্য) — প্রস্তুতি কেবল
+        $a->forceFill(['credit_limit' => '1000000000'])->save();
 
         $b = app(CustomerService::class)->create([
             'name_en' => 'Customer B', 'credit_limit' => 0, 'credit_days' => 0,
@@ -134,20 +135,46 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
         $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $product = Product::query()->firstOrFail();
 
-        $invoice = app(SalesInvoiceService::class)->create(
+        $invoice = app(SalesInvoiceService::class)->confirm(app(SalesInvoiceService::class)->create(
             ['customer_id' => $a->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
             [['product_id' => $product->id, 'qty' => '1', 'rate' => '100']],
-        );
+        ));
 
-        $response = $this->actingAs($this->user)->post(route('sales.collection.store'), [
+        $form = [
             'customer_id' => $b->id,
             'account_id' => $this->cashAccountId(),
             'trx_date' => now()->toDateString(),
             'amount' => '100.00',
             'lines' => [['sales_invoice_id' => $invoice->id, 'amount' => '100.00']],
-        ]);
+        ];
 
-        $response->assertSessionHasErrors();
+        // (১) পুরনো দরজা
+        $this->post(route('sales.collection.store'), $form)->assertSessionHasErrors('collection');
+        $this->assertSame(0, Collection::query()->where('customer_id', $b->id)->count(), '⛔ পুরনো আদায়ের দরজা কাগজ লিখল।');
+
+        // (২) রসিদ ভাউচার — B-র নামে A-র বিল
+        $vouchers = Voucher::query()->count();
+        $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [
+            'type' => Voucher::RECEIPT,
+            'trx_date' => now()->toDateString(),
+            'narration' => 'অন্যের বিলে টাকা',
+            'amount' => '100.00',
+            'party_type' => 'customer',
+            'party_id' => $b->id,
+            'from_account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id,
+            'to_account_id' => $this->cashAccountId(),
+            'against_type' => SalesInvoice::drillSourceType(),
+            'against_id' => $invoice->id,
+        ])->assertSessionHasErrors('against_id');
+        $this->assertSame($vouchers, Voucher::query()->count(), '⛔ অন্যের বিলে বাঁধা রসিদ লেখা হয়ে গেল।');
+
+        // (৩) সেবা নিজে
+        try {
+            app(CollectionService::class)->createFrom(CollectionInput::fromRequest($form));
+            $this->fail('⛔ আদায়ের সেবা অন্য গ্রাহকের বিলে টাকা বসাল।');
+        } catch (ValidationException) {
+            $this->assertSame(0, Collection::query()->where('customer_id', $b->id)->count());
+        }
     }
 
     private function cashAccountId(): int

@@ -107,15 +107,20 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
      */
     public function test_every_money_screen_offers_the_mfs_account(): void
     {
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): গ্রাহকের টাকা ঢোকে কেবল রসিদ ভাউচারে; আদায়ের
+         *   পর্দা আর আঁকা হয় না (পুরনো ঠিকানা রসিদে পাঠায়)। তাই "আদায়"-এর জায়গায় রসিদ ভাউচারের পর্দা — তার টাকার ঘরের তালিকা
+         *   `moneyAccounts` ([[DepositFormOptions]])।
+         */
         $screens = [
-            'আদায়' => route('sales.collection.create'),
-            'মূলধন' => route('finance.capital.index'),
-            'ব্যাংক আমানত' => route('finance.deposit.create', ['issuer' => 'bank']),
+            'রসিদ ভাউচার' => [route('accounts.voucher.create', ['type' => 'receipt']), 'moneyAccounts'],
+            'মূলধন' => [route('finance.capital.index'), 'accounts'],
+            'ব্যাংক আমানত' => [route('finance.deposit.create', ['issuer' => 'bank']), 'accounts'],
         ];
 
         $missing = [];
 
-        foreach ($screens as $name => $url) {
+        foreach ($screens as $name => [$url, $key]) {
             /*
              * পর্দার নিজের তালিকাটা পড়া হয়, HTML নয়।
              *
@@ -126,7 +131,7 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
              * তালিকাটাই আসল প্রশ্ন: পর্দা কী কী বাছতে দেয়। কোন সারি
              * আজ আছে কি নেই, সেটা আলাদা কথা।
              */
-            $offered = $this->get($url)->assertOk()->viewData('accounts');
+            $offered = $this->get($url)->assertOk()->viewData($key);
 
             if (! collect($offered)->contains('id', $this->mfsAccount->id)) {
                 $missing[] = $name;

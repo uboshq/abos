@@ -10,6 +10,7 @@ use App\Models\AuditTrail;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -44,6 +45,11 @@ final class WhoeverSentTheAdviceDoesNotAcceptItTest extends TestCase
         app(StandardChart::class)->install();
         // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
         app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে, আর রসিদের নিজের লেখক ≠ পাকাকারী — মালিক ছাড়া গ্রহণকারীর লেখা রসিদ খসড়াই
+         * থাকে। এই ফাইল মাপে খবরের নিজের চার চোখ ([[DepositClaim::FOUR_EYES]]), রসিদেরটা নয় — তাই রসিদের সুইচ বন্ধ।
+         */
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\VoucherService::MAKER_CHECKER, false);
 
         $this->bank = Account::query()->create([
             'company_id' => $this->company->id, 'code' => '1102-FOUREYES', 'name_en' => 'Four eyes bank', 'name_bn' => 'চার চোখের ব্যাংক',
@@ -64,12 +70,16 @@ final class WhoeverSentTheAdviceDoesNotAcceptItTest extends TestCase
             ->assertSessionHasErrors('status');
         $this->assertSame(DepositClaim::PENDING, $advice->fresh()->status, '⛔ পাঠানেওয়ালা নিজেই গ্রহণ করে ফেললেন।');
         $this->assertSame(0, Collection::query()->count(), '⛔ থেমেছে, অথচ আদায় খাতায় বসে গেছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে — সেটাও নয়
+        $this->assertNull($advice->fresh()->voucher_id, '⛔ থেমেছে, অথচ খবরে রসিদ ভাউচার বাঁধা।');
+        $this->assertFalse(Voucher::query()->withoutGlobalScopes()->where('instrument_no', 'TRX-4E-1')->exists(), '⛔ থেমেছে, অথচ রসিদ ভাউচার বসে গেছে।');
 
         // ⭐ অন্য হাত — চলে, আর পাঠানেওয়ালার নাম ফোনেও
         $this->actingAs($this->clerk())
             ->post(route('sales.claim.accept', $advice), ['account_id' => $this->bank->id])
             ->assertSessionHasNoErrors()->assertRedirect();
         $this->assertSame(DepositClaim::ACCEPTED, $advice->fresh()->status);
+        $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($advice->fresh()->voucher_id)->isPosted(), '⛔ অন্য হাতে গৃহীত খবরের রসিদ পাকা হয়নি।');
         $this->assertSame($clerk->name, $this->phoneFacts($advice->fresh())['submitted_by_name']);
     }
 

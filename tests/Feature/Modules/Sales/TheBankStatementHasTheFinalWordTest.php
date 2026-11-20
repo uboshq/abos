@@ -18,7 +18,10 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankStatementLine;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DepositClaim;
@@ -36,6 +39,7 @@ use Tests\TestCase;
  *
  * ⓘ খবর তখনই খাতায় ওঠে যখন ব্যাংকের স্টেটমেন্টের একটা সারিতে মেলে; মেলানোর প্রস্তাব কেবল হুবহু অঙ্ক, একই খাত আর ±N দিনে;
  * এক সারি এক খবর; খাতায় তোলা আদায়ের নিজের দরজায় — অনুমোদনের ছক আর সীমাসহ; জমার খাতার মোটে কেবল পাকা টাকা।
+ * ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায় (COL) নয়, রসিদ ভাউচার (RCV) — রসিদের নিজের ছক, সীমা আর লেখক ≠ পাকাকারী (মালিক: "টাকা ঢোকার কাগজ একটাই")।
  */
 final class TheBankStatementHasTheFinalWordTest extends TestCase
 {
@@ -74,9 +78,18 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $this->dealer = Customer::query()->orderBy('id')->firstOrFail();
         $this->dealer->forceFill(['branch_id' => $this->company->defaultBranch()?->id])->save();
 
-        // ⓘ ডেমোর আদায়ের ছক থাকলে বন্ধ — প্রতিটা দাবি নিজের ছক নিজে বসায়
-        ApprovalFlow::query()->where('module', 'sales')->where('action', 'collection')->update(['is_active' => false]);
+        /*
+         * ⓘ ডেমোর রসিদের ছক থাকলে বন্ধ — প্রতিটা দাবি নিজের ছক নিজে বসায়। ⭐ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে
+         * (মালিক: "টাকা ঢোকার কাগজ একটাই"), তাই ছকটাও রসিদের ('accounts' · 'receipt'), আদায়ের ('sales' · 'collection') নয়।
+         */
+        ApprovalFlow::query()->where('module', VoucherApproval::MODULE)->where('action', Voucher::RECEIPT)->update(['is_active' => false]);
         ApprovalEngine::flowsChanged();
+
+        /*
+         * ⓘ রসিদে লেখক ≠ পাকাকারী — মালিক ছাড়া কেউ নিজের লেখা রসিদ নিজে পাকা করেন না। এই ফাইলের কেরানি মালিক নন, আর ফাইলটা
+         * মাপে ব্যাংকের সারি আর রসিদের সইয়ের ছক; তাই সুইচ বন্ধ, কেবল [[test_with_maker_checker_on_the_clerks_receipt_waits_for_another_hand()]]-এ চালু।
+         */
+        app(\App\Core\Services\SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
 
         $this->actingAs($this->clerk->fresh());
     }
@@ -253,6 +266,7 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $this->assertSame(__('sales::deposit.not_in_the_bank_yet'), session('errors')?->first('account_id'),
             '⛔ মেলানো ছাড়া গ্রহণ থামল, কিন্তু অন্য কারণে');
         $this->assertNull($claim->fresh()->collection_id, '⛔ ব্যাংকে না মেলা খবরের আদায় বসল');
+        $this->assertNull($claim->fresh()->voucher_id, '⛔ ব্যাংকে না মেলা খবরের রসিদ ভাউচার বসল');
         $this->assertTrue($claim->fresh()->isOpen());
     }
 
@@ -267,18 +281,33 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
 
         $claim = $claim->fresh();
         $this->assertSame(DepositClaim::ACCEPTED, $claim->status, '⛔ মেলানো খবর "অনুমোদন দিন"-এ খাতায় উঠল না');
-        $collection = Collection::query()->findOrFail($claim->collection_id);
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status);
-        $this->assertSame((int) $this->bank->id, (int) $collection->account_id, '⛔ ব্যাংকের সারির খাতে নয়');
-        $this->assertSame('2026-11-17', $collection->trx_date->toDateString(), '⛔ খাতার তারিখ ব্যাংকের তারিখ নয়');
-        $this->assertSame(0, bccomp($this->net($this->bank->id, $collection), '49950', 4), '⛔ ব্যাংক খাতে ব্যাংকের অঙ্ক নয়');
+        // ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায় (COL) নয়, রসিদ ভাউচার (RCV) — গ্রাহক পক্ষ, খবরের শাখা, ব্যাংকের তারিখ, মোট = এসেছে + চার্জ
+        $this->assertNull($claim->collection_id, '⛔ খবর থেকে আবার আদায় (COL) বসেছে');
+        $voucher = $this->receiptOf($claim);
+        $this->assertSame(DocumentStatus::CONFIRMED, $voucher->status);
+        $this->assertSame('customer', $voucher->party_type, '⛔ রসিদের পক্ষ গ্রাহক নয়');
+        $this->assertSame((int) $this->dealer->id, (int) $voucher->party_id);
+        $this->assertSame((int) $claim->branch_id, (int) $voucher->branch_id, '⛔ রসিদ খবরের শাখায় নয়');
+        $this->assertSame('deposit', $voucher->instrument, '⛔ ব্যাংকে আসা টাকার রসিদের মাধ্যম "ব্যাংকে জমা" নয়');
+        $this->assertSame((string) $claim->public_id, $voucher->instrument_no, '⛔ রেফারেন্সহীন খবরের রসিদে নম্বর খবরের নম্বর নয়');
+        $this->assertSame(0, bccomp((string) $voucher->amount, '50000', 4), '⛔ রসিদের মোট এসেছে + চার্জ নয়');
+        $this->assertSame(0, bccomp((string) $voucher->charge_amount, '50', 4));
+        $this->assertStringContainsString((string) $claim->public_id, (string) $voucher->narration, '⛔ রসিদের বিবরণে খবরের নম্বর নেই');
+        $this->assertSame('2026-11-17', $voucher->trx_date->toDateString(), '⛔ খাতার তারিখ ব্যাংকের তারিখ নয়');
+        $this->assertSame(0, bccomp($this->net($this->bank->id, $voucher), '49950', 4), '⛔ ব্যাংকের সারির খাতে ব্যাংকের অঙ্ক নয়');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $voucher), '50', 4), '⛔ চার্জ ৫২১০-এ নয়');
+        $this->assertSame(1, LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)
+            ->where('account_id', StandardChart::find(StandardChart::RECEIVABLE)->id)->where('party_type', 'customer')->where('party_id', $this->dealer->id)
+            ->where('credit', '>', 0)->count(), '⛔ পাওনার (১১১০) ক্রেডিট গ্রাহকের নামে নয়');
         $this->assertSame(bcsub($dueBefore, '50000', 4), $this->dealer->fresh()->outstanding(), '⛔ ডিলারের পাওনা এসেছে + চার্জে কমেনি');
 
         $this->post(route('sales.claim.accept', $claim), ['bank_charge' => '50'])->assertSessionHasErrors('status');
-        $this->assertSame(1, Collection::query()->where('customer_id', $this->dealer->id)->where('narration', 'like', '%'.$claim->public_id.'%')->count(),
-            '⛔ দ্বিতীয় চাপে আরেকটা আদায়');
-        $this->assertSame(1, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
+        $this->assertSame(1, Voucher::query()->withoutGlobalScopes()->where('type', Voucher::RECEIPT)->where('narration', 'like', '%'.$claim->public_id.'%')->count(),
+            '⛔ দ্বিতীয় চাপে আরেকটা রসিদ');
+        $this->assertSame(1, LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)
             ->where('account_id', $this->bank->id)->count(), '⛔ ব্যাংক খাতে দুইবার');
+        $this->assertSame(0, Collection::query()->where('customer_id', $this->dealer->id)->where('narration', 'like', '%'.$claim->public_id.'%')->count(),
+            '⛔ রসিদের পাশে আদায়ও বসেছে — একই টাকা দুই কাগজে');
     }
 
     public function test_a_claim_into_the_cash_till_needs_no_bank_line(): void
@@ -289,6 +318,38 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $this->post(route('sales.claim.accept', $claim), ['account_id' => $till->id])->assertSessionHasNoErrors();
 
         $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status, '⛔ ক্যাশে হাতে দেওয়া টাকাও ব্যাংকের সারি চাইল');
+        // ⓘ নগদের রসিদ — মাধ্যম নগদ, নম্বর লাগে না
+        $voucher = $this->receiptOf($claim->fresh());
+        $this->assertSame('cash', $voucher->instrument);
+        $this->assertSame(0, bccomp($this->net($till->id, $voucher), '3000', 4), '⛔ নগদের খাতে টাকা বসেনি');
+    }
+
+    /**
+     * ⭐ লেখক ≠ পাকাকারী — রসিদের নিজের নিয়ম (মালিক, ২০ নভেম্বর ২০২৬: খবরের টাকা রসিদে, রসিদের নিয়মে)।
+     * ⓘ কেরানি মালিক নন: তাঁর লেখা রসিদ খসড়াই থাকে, খবর "অনুমোদনের অপেক্ষায়", খাতায় কিছু নয়; অন্য হাত পাকা করলে খবর নিজে "খাতায়"।
+     */
+    public function test_with_maker_checker_on_the_clerks_receipt_waits_for_another_hand(): void
+    {
+        app(\App\Core\Services\SettingsService::class)->set(VoucherService::MAKER_CHECKER, true);
+        $claim = $this->claim('14000', '2026-11-16');
+        app(DepositMatchService::class)->match($claim, $this->line($this->bank, '2026-11-16', '14000'));
+
+        $this->post(route('sales.claim.accept', $claim))->assertSessionHasNoErrors();
+
+        $claim = $claim->fresh();
+        $this->assertTrue($claim->isOpen(), '⛔ কেরানির নিজের লেখা রসিদ নিজেই খাতায় — লেখক ≠ পাকাকারী ভাঙল');
+        $this->assertSame(DepositClaim::STAGE_AWAITING, $claim->stage());
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id);
+        $this->assertSame(DocumentStatus::DRAFT, $voucher->status);
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)->count(),
+            '⛔ অন্য হাতের আগেই খাতায় দাখিলা');
+
+        // ⓘ অন্য হাত — মালিক — রসিদের নিজের দরজায় পাকা করেন; খবর নিজে "খাতায়" ([[SettleTheClaimWithItsReceipt]])
+        $this->actingAs($this->owner);
+        $this->assertNull(app(\App\Modules\Accounts\Services\VoucherWriter::class)->post($voucher->fresh()));
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $voucher->fresh()->status);
+        $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status, '⛔ রসিদ খাতায়, কিন্তু খবর তবু "অপেক্ষায়"');
     }
 
     // ── ৫. অনুমোদনের ছক আর সীমা ─────────────────────────────────────────
@@ -305,21 +366,23 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $claim = $claim->fresh();
         $this->assertTrue($claim->isOpen(), '⛔ সীমার উপরের জমা অনুমোদন ছাড়াই খাতায়');
         $this->assertSame(DepositClaim::STAGE_AWAITING, $claim->stage());
-        $collection = Collection::query()->findOrFail($claim->collection_id);
-        $this->assertSame(DocumentStatus::DRAFT, $collection->status);
-        $this->assertSame(0, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)->count(),
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে অপেক্ষায় থাকে রসিদ ভাউচারের খসড়া, আদায়ের নয়
+        $this->assertNull($claim->collection_id, '⛔ খবর থেকে আবার আদায় (COL) বসেছে');
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id);
+        $this->assertSame(DocumentStatus::DRAFT, $voucher->status);
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)->count(),
             '⛔ অনুমোদনের আগেই খাতায় দাখিলা');
 
-        // ⓘ আবার চাপলে নতুন আদায় নয়
+        // ⓘ আবার চাপলে নতুন রসিদ নয়
         $this->post(route('sales.claim.accept', $claim));
-        $this->assertSame((int) $collection->id, (int) $claim->fresh()->collection_id, '⛔ দ্বিতীয় চাপে দ্বিতীয় খসড়া আদায়');
-        $this->assertSame(1, Approval::query()->where('approvable_id', $collection->id)->where('status', Approval::PENDING)->count());
+        $this->assertSame((int) $voucher->id, (int) $claim->fresh()->voucher_id, '⛔ দ্বিতীয় চাপে দ্বিতীয় খসড়া রসিদ');
+        $this->assertSame(1, $this->waitingSignatures($voucher)->count());
 
-        $approval = Approval::query()->where('approvable_id', $collection->id)->where('status', Approval::PENDING)->firstOrFail();
+        $approval = $this->waitingSignatures($voucher)->firstOrFail();
         app(ApprovalEngine::class)->approve($approval, $this->owner);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->fresh()->status, '⛔ অনুমোদনের পরে আদায় খাতায় উঠল না');
-        $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status, '⛔ আদায় খাতায়, কিন্তু খবর তবু "অপেক্ষায়"');
+        $this->assertSame(DocumentStatus::CONFIRMED, $voucher->fresh()->status, '⛔ অনুমোদনের পরে রসিদ খাতায় উঠল না');
+        $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status, '⛔ রসিদ খাতায়, কিন্তু খবর তবু "অপেক্ষায়"');
     }
 
     public function test_below_the_limit_and_with_approvals_off_it_books_at_once(): void
@@ -345,14 +408,16 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $claim = $this->claim('12000', '2026-11-16');
         app(DepositMatchService::class)->match($claim, $this->line($this->bank, '2026-11-16', '12000'));
         $this->post(route('sales.claim.accept', $claim));
-        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->fresh()->voucher_id);
+        $this->assertSame(1, $this->waitingSignatures($voucher)->count(), 'রসিদের সইয়ের অনুরোধ যায়নি — পরীক্ষাটা কিছুই মাপছে না');
 
         app(DepositMatchService::class)->unmatch($claim->fresh(), 'ব্যাংক ভুল সারি দিয়েছে');
 
-        $this->assertSame(DocumentStatus::CANCELLED, $collection->fresh()->status, '⛔ মিল খুলল, কিন্তু খসড়া আদায় থেকে গেল');
+        $this->assertSame(DocumentStatus::CANCELLED, $voucher->fresh()->status, '⛔ মিল খুলল, কিন্তু খসড়া রসিদ থেকে গেল');
+        $this->assertNull($claim->fresh()->voucher_id);
         $this->assertNull($claim->fresh()->collection_id);
-        $this->assertSame(0, Approval::query()->where('approvable_id', $collection->id)->where('status', Approval::PENDING)->count(),
-            '⛔ বাতিল আদায়ের অনুরোধ অনুমোদনকারীর কাছে থেকে গেল');
+        $this->assertSame(0, $this->waitingSignatures($voucher)->count(),
+            '⛔ বাতিল রসিদের অনুরোধ অনুমোদনকারীর কাছে থেকে গেল');
     }
 
     // ── ৬. জমার খাতা ───────────────────────────────────────────────────
@@ -372,7 +437,7 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         $result = app(ReportEngine::class)->run(DepositRegisterReport::KEY, ['from' => '2026-11-16', 'to' => '2026-11-16']);
 
         $confirmed = DepositClaim::query()->where('status', DepositClaim::ACCEPTED)->whereBetween('claimed_on', ['2026-11-16', '2026-11-16'])
-            ->with('collection')->get()->reduce(fn (string $s, DepositClaim $c) => bcadd($s, (string) $c->collection->amount, 4), '0');
+            ->with('voucher')->get()->reduce(fn (string $s, DepositClaim $c) => bcadd($s, (string) $c->voucher->amount, 4), '0'); // ⓘ ২০ নভেম্বর ২০২৬ থেকে রসিদ ভাউচার
 
         $this->assertSame(0, bccomp((string) ($result->totals['confirmed_amount'] ?? '0'), $confirmed, 4),
             '⛔ খাতার "খাতায় উঠেছে" মোট পাকা জমার যোগফল নয়');
@@ -433,6 +498,34 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         app(DepositClaimService::class)->accept($claim->fresh(), null);
 
         $this->get(route('sales.claim.receipt', $claim))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে রিসিটের নম্বর রসিদ ভাউচারের (RCV), আদায়ের নয়
+        $this->assertSame($this->receiptOf($claim->fresh())->document_no, $claim->fresh()->receiptNo());
+    }
+
+    /**
+     * ⓘ ২০ নভেম্বর ২০২৬-এর আগে গৃহীত খবর — টাকা তখন আদায়ে (COL) উঠেছিল। ⛔ নতুন নিয়মে রসিদ ভাউচার নেই বলে পুরনো খবরের মানি রিসিট
+     * ৪০৪ হলে দোকানির হাতের কাগজ আর ছাপা যেত না — তাই পুরনো খবর নিজের আদায় থেকেই ছাপে।
+     */
+    public function test_an_old_claim_with_a_collection_still_prints_its_receipt(): void
+    {
+        $claim = $this->claim('2500', '2026-11-16', null, DepositClaim::CASH);
+        $till = Account::query()->where('money_kind', Account::CASH)->where('is_group', false)->notAnotherBranchsTill()->active()->orderBy('id')->firstOrFail();
+
+        $this->actingAs($this->owner);
+        $service = app(\App\Modules\Sales\Services\CollectionService::class);
+        $collection = $service->confirm($service->create([
+            'customer_id' => $this->dealer->id, 'trx_date' => '2026-11-16', 'amount' => '2500', 'account_id' => $till->id,
+            'narration' => (string) __('sales::portal.from_claim', ['no' => $claim->public_id]),
+        ], []));
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->fresh()->status);
+
+        // ⓘ পুরনো ছবি — খবর গৃহীত, আদায়ে বাঁধা, রসিদ ভাউচার নেই
+        $claim->forceFill(['collection_id' => $collection->id, 'voucher_id' => null, 'status' => DepositClaim::ACCEPTED,
+            'decided_by' => $this->owner->id, 'decided_at' => now()])->save();
+
+        $this->actingAs($this->clerk->fresh());
+        $this->get(route('sales.claim.receipt', $claim))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertSame($collection->document_no, $claim->fresh()->receiptNo(), '⛔ পুরনো খবরের রিসিট নম্বর তার আদায়ের নয়');
     }
 
     public function test_both_languages_show_words_not_keys(): void
@@ -487,8 +580,9 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
 
     private function flow(string $threshold): void
     {
+        // ⓘ রসিদ ভাউচারের নিজের ছক — ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদে, আদায়ের ছক ('sales' · 'collection') আর খাটে না
         $flow = ApprovalFlow::query()->create([
-            'company_id' => $this->company->id, 'module' => 'sales', 'action' => 'collection', 'document_type' => '',
+            'company_id' => $this->company->id, 'module' => VoucherApproval::MODULE, 'action' => Voucher::RECEIPT, 'document_type' => '',
             'threshold_amount' => $threshold, 'is_active' => true,
         ]);
         ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
@@ -553,10 +647,27 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
         return new UploadedFile($path, 'statement.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
     }
 
-    private function net(int $accountId, Collection $collection): string
+    /** খবরের পাকা রসিদ ভাউচার (২০ নভেম্বর ২০২৬ থেকে; আগে আদায়) */
+    private function receiptOf(DepositClaim $claim): Voucher
+    {
+        $this->assertNotNull($claim->voucher_id, '⛔ গৃহীত খবরের রসিদ ভাউচার নেই');
+        $voucher = Voucher::query()->withoutGlobalScopes()->findOrFail($claim->voucher_id);
+        $this->assertSame(Voucher::RECEIPT, $voucher->type);
+        $this->assertTrue($voucher->isPosted(), '⛔ রসিদ ভাউচার পাকা হয়নি');
+
+        return $voucher;
+    }
+
+    /** এই রসিদের অপেক্ষার সই */
+    private function waitingSignatures(Voucher $voucher): \Illuminate\Database\Eloquent\Builder
+    {
+        return Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $voucher->id)->where('status', Approval::PENDING);
+    }
+
+    private function net(int $accountId, Voucher $voucher): string
     {
         return (string) LedgerEntry::query()
-            ->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)
             ->where('account_id', $accountId)
             ->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
     }

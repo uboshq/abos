@@ -156,12 +156,26 @@ final class EverySalesDoorAsksForItsOwnKeyTest extends TestCase
 
     // ── আদায় ─────────────────────────────────────────────────────────────
 
+    /**
+     * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের দরজা আদায় আর পাকা করে না (খসড়া শেষ সইয়ে নিজের
+     *   পথে পাকা হয়, নয়তো বাতিল)। তাই চাবি পাওয়ার পরের "কাজটা হলো" আর নেই — দাবি: চাবি ছাড়া ৪০৩, চাবিসহ কারণসহ ফেরত; দুবারই
+     *   কাগজ খসড়া।
+     */
     public function test_confirming_a_collection_asks_for_the_collection_create_key(): void
     {
         $collection = $this->draftCollection();
+        $url = route('sales.collection.confirm', $collection);
 
-        $this->knock('sales.collection.create', 'sales.collection.confirm', $collection, [],
-            fn () => $collection->fresh()->status, DocumentStatus::DRAFT, DocumentStatus::CONFIRMED);
+        $user = $this->withEverythingBut('sales.collection.create');
+        $this->assertFalse($user->can('sales.collection.create'), "প্রস্তুতিটাই ভুল — 'sales.collection.create' না দেওয়া সত্ত্বেও হাতে আছে।");
+        $this->postAs($url, [], $user)->assertForbidden();
+        $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ চাবি ছাড়া ৪০৩ ঠিকই, তবু আদায়ের অবস্থা বদলাল।');
+
+        $user->givePermissionTo('sales.collection.create');
+        $this->postAs($url, [], $user->fresh())
+            ->assertRedirect(route('sales.collection.show', $collection))
+            ->assertSessionHasErrors(['collection' => __('sales::collection_rules.no_new_collection')]);
+        $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ ওয়েবের দরজা আদায় পাকা করল — মালিকের ২০ নভেম্বরের সিদ্ধান্তের উল্টো।');
     }
 
     public function test_cancelling_a_collection_asks_for_the_collection_cancel_key(): void

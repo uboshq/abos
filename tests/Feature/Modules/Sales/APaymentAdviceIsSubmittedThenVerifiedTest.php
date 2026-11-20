@@ -45,6 +45,8 @@ final class APaymentAdviceIsSubmittedThenVerifiedTest extends TestCase
         app(StandardChart::class)->install();
         // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
         app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে, আর রসিদে লেখক ≠ পাকাকারী — এই ফাইল মাপে খবরের ধাপ, তাই সুইচ বন্ধ (অন্য হাতের অপেক্ষা [[TheBankStatementHasTheFinalWordTest]]-এ)
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\VoucherService::MAKER_CHECKER, false);
 
         $this->clerk = User::factory()->create(['current_company_id' => $this->company->id]);
         $this->clerk->companies()->attach($this->company->id, ['is_active' => true]);

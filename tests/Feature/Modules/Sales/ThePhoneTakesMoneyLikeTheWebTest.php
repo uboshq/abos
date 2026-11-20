@@ -15,6 +15,8 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -27,13 +29,16 @@ use Tests\TestCase;
  * ⭐ কেবল অফিসের লোক — মালিক, ৭ অক্টোবর ২০২৬: *"এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের জন্য থাকবে payment
  * request"* — মাঠের টাকা যায় স্লিপসহ জমার অনুরোধে। দরজা খাতায় টাকা তোলার চাবিতে ([[CollectionSync::officeMayCollect()]])।
  *
+ * ⛔ ২০ নভেম্বর ২০২৬ (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই") — ফোন আর আদায় লেখে না: টাকা ঢোকে কাউন্টারের রসিদে আর হিসাবের
+ * রসিদ ভাউচারে (RCV-…), মাঠ পাঠায় "টাকা জমার খবর" ([[CollectionSync::apply()]], [[CollectionSync::officeMayCollect()]])।
+ *
  * দাবি:
- *   · টাকার খাত ওয়েবের ফর্মের একই তালিকা, ধরনসহ; /me বলে ফোনে আদায় চলে কি না
- *   · SR (আদায়ের চাবি আছে, অফিসের নেই) — ফোনে ঘর নেই, খাতের দরজা ৪০৩, পাঠানো আদায় ফেরত, কিছুই বসে না
- *   · ফোন থেকে খাত, মাধ্যম, লেনদেন-নম্বর আর "এখনই নিশ্চিত" — ওয়েবের একই সেবায় পাকা: বাছা খাতে টাকা, গ্রাহকের প্রাপ্য কমে
- *   · একই আদায় দুবার পৌঁছালে একটাই
- *   · "1e5", ভবিষ্যতের তারিখ, অচেনা খাত — কারণসহ ফেরত, ৫০০ নয়; একই ব্যাচের ভালো আদায়টা তবু বসে
- *   · "নিশ্চিত" না চাইলে খসড়া — ওয়েবের মতো
+ *   · টাকার খাত ওয়েবের ফর্মের একই তালিকা, ধরনসহ; /me-র `mayCollect` কারো নয় — মালিক বা হিসাবরক্ষকেরও না
+ *   · SR (আদায়ের চাবি আছে, অফিসের নেই) — ফোনে ঘর নেই, খাতের দরজা ৪০৩, পাঠানো আদায় চাবির কারণে ফেরত, কিছুই বসে না
+ *   · দুই চাবিওয়ালার আদায়ও (খাত, মাধ্যম, লেনদেন-নম্বর, "এখনই নিশ্চিত" সহ) "টাকা জমার খবর"-এর কারণে ফেরত — কাগজ, খাতা, প্রাপ্য
+ *     কিছুই বদলায় না; একই বদল আবার এলেও ফেরত, কিছু নয়
+ *   · আগের পাকা আদায় ফোনে আগের মতোই পড়া যায় (নম্বর আর অবস্থা)
+ *   · "1e5", ভবিষ্যতের তারিখ, অচেনা খাত — কারণসহ ফেরত, ৫০০ নয়; "ভালো" আদায়টাও এখন ফেরত
  */
 final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
 {
@@ -55,7 +60,8 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
         $this->shop = Customer::query()->orderBy('id')->firstOrFail();
     }
 
-    public function test_the_phone_gets_the_webs_money_accounts_and_knows_it_may_collect(): void
+    /** ⛔ ২০ নভেম্বর ২০২৬ থেকে /me-র `mayCollect` সবার মিথ্যা — দুই চাবিওয়ালা হিসাবরক্ষক আর মালিকেরও (ফোনে "আদায়" বোতাম নেই) */
+    public function test_the_phone_gets_the_webs_money_accounts_but_no_one_may_collect(): void
     {
         $this->phone($this->owner);
         $accounts = $this->getJson('/api/v1/sales/collections/setup')->assertOk()->json('accounts');
@@ -63,10 +69,12 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
         foreach ($accounts as $a) {
             $this->assertContains($a['kind'], ['cash', 'bank', 'mfs']);
         }
-        $this->assertTrue($this->getJson('/api/v1/me')->assertOk()->json('mayCollect'));
+        $this->assertFalse($this->getJson('/api/v1/me')->assertOk()->json('mayCollect'), '⛔ মালিকের ফোনে এখনো আদায়ের ঘর — টাকা ঢোকার কাগজ একটাই');
 
         $this->phone($this->accountant());
-        $this->assertTrue($this->getJson('/api/v1/me')->assertOk()->json('mayCollect'), 'অফিসের হিসাবরক্ষকের ফোনে আদায় নেই।');
+        $this->assertTrue($this->accountant()->can('accounts.voucher.create') && $this->accountant()->can('sales.collection.create'),
+            'প্রস্তুতিটাই ভুল — হিসাবরক্ষকের দুই চাবি নেই, দাবিটা কিছু মাপছে না');
+        $this->assertFalse($this->getJson('/api/v1/me')->assertOk()->json('mayCollect'), '⛔ দুই চাবিওয়ালা হিসাবরক্ষকের ফোনে এখনো আদায়ের ঘর');
     }
 
     public function test_a_field_salesman_has_no_collection_on_the_phone(): void
@@ -83,6 +91,8 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
             'customerId' => (string) $this->shop->public_id, 'amount' => '300', 'trxDate' => now()->toDateString(),
         ])]);
         $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ SR-এর ফোন থেকে আদায় বসল।');
+        // ⓘ চাবির পাহারা আগে, আগের মতোই (২০ নভেম্বর ২০২৬-এ বদলায়নি)
+        $this->assertSame(__('sync.push_needs_permission'), $out[0]['message'] ?? null, '⛔ SR-এর ফেরত চাবির কারণে নয়');
 
         // ⓘ উল্টোটাও — খাতার চাবি আছে, আদায়ের নেই: ফোনের আদায় নয়
         $clerk = $this->person(['accounts.voucher.create']);
@@ -90,6 +100,7 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
             'customerId' => (string) $this->shop->public_id, 'amount' => '300', 'trxDate' => now()->toDateString(),
         ])]);
         $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ আদায়ের চাবি ছাড়া ফোন থেকে আদায় বসল।');
+        $this->assertSame(__('sync.push_needs_permission'), $out[0]['message'] ?? null, '⛔ আদায়ের চাবিহীনের ফেরত চাবির কারণে নয়');
         $this->assertSame($before, \App\Modules\Sales\Models\Collection::query()->count());
     }
 
@@ -113,7 +124,12 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
         return $user->fresh();
     }
 
-    public function test_a_phone_collection_with_confirm_posts_to_the_chosen_account_once(): void
+    /**
+     * ⛔ ২০ নভেম্বর ২০২৬ (মালিক, চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই") — খাত, মাধ্যম, লেনদেন-নম্বর আর "এখনই নিশ্চিত" সহ ফোনের আদায়ও
+     * "টাকা জমার খবর"-এর কারণে ফেরত: কাগজ, খাতার সারি আর গ্রাহকের প্রাপ্য কিছুই বদলায় না; একই বদল আবার পৌঁছালেও ফেরত, কিছু নয়।
+     * ⭐ আগের পাকা আদায় (এখানে সেবা দিয়ে সরাসরি বানানো) ফোনে আগের মতোই পড়া যায় — নম্বর আর অবস্থা।
+     */
+    public function test_a_phone_collection_even_with_confirm_is_refused_and_an_old_one_still_reads(): void
     {
         $account = $this->anAccount();
         $due = $this->shop->outstanding();
@@ -122,29 +138,38 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
             'accountId' => (string) $account->public_id, 'instrument' => 'bKash', 'instrumentNo' => 'TRX-7781',
             'narration' => 'দোকানে গিয়ে নেওয়া', 'confirm' => true,
         ];
+        $papers = Collection::query()->count();
+        $rows = LedgerEntry::query()->count();
 
         $out = $this->push([$this->change('pay-1', $payload)]);
-        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], json_encode($out));
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ ফোনের আদায় ফেরত হয়নি: '.json_encode($out));
+        $this->assertSame(__('sales::sync.collection_use_deposit_report'), $out[0]['message'] ?? null, '⛔ ফেরতের বার্তা "টাকা জমার খবর" পাঠাতে বলেনি');
+        $this->assertArrayNotHasKey('entityId', $out[0], '⛔ ফেরত আদায়ের উত্তরে কাগজের id এল');
+        $this->assertSame([$papers, $rows], [Collection::query()->count(), LedgerEntry::query()->count()], '⛔ ফেরত সত্ত্বেও কাগজ বা খাতার সারি বসল');
+        $this->assertSame(0, bccomp($due, $this->shop->fresh()->outstanding(), 2), '⛔ ফেরত আদায়ে গ্রাহকের প্রাপ্য বদলাল');
 
-        $collection = Collection::query()->where('public_id', $out[0]['entityId'])->firstOrFail();
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ "এখনই নিশ্চিত" চাইলেও পাকা হয়নি।');
-        // ⓘ ফোনের রসিদ — নম্বর আর অবস্থা
-        $this->phone($this->accountant());
-        $this->getJson('/api/v1/sales/collections/'.$collection->public_id)->assertOk()
-            ->assertJsonPath('no', $collection->document_no)->assertJsonPath('status', DocumentStatus::CONFIRMED);
-        $this->assertSame([$account->id, 'bKash', 'TRX-7781'], [(int) $collection->account_id, $collection->instrument, $collection->instrument_no]);
-        $this->assertTrue(LedgerEntry::query()->where('account_id', $account->id)->where('debit', '750.5000')
-            ->where('document_no', $collection->document_no)->exists(), '⛔ টাকা বাছা খাতে বসেনি।');
-        $this->assertSame(0, bccomp(bcsub($due, '750.50', 4), $this->shop->fresh()->outstanding(), 2), '⛔ গ্রাহকের প্রাপ্য কমেনি।');
-
-        // ⭐ একই আদায় আবার পৌঁছাল — একটাই
-        $before = Collection::query()->count();
+        // ⭐ একই বদল আবার পৌঁছাল — আবার ফেরত, একই কথা, কিছুই বসে না
         $again = $this->push([$this->change('pay-1', $payload)]);
-        $this->assertSame($out[0]['entityId'], $again[0]['entityId']);
-        $this->assertSame($before, Collection::query()->count(), '⛔ একই আদায় দুবার বসল।');
+        $this->assertSame(SyncChange::REJECTED, $again[0]['status'], '⛔ একই বদল দ্বিতীয়বার অন্য উত্তর পেল: '.json_encode($again));
+        $this->assertSame($out[0]['message'] ?? null, $again[0]['message'] ?? null, '⛔ দ্বিতীয়বারের ফেরতের কথা আলাদা');
+        $this->assertSame([$papers, $rows], [Collection::query()->count(), LedgerEntry::query()->count()], '⛔ দ্বিতীয়বারে কাগজ বা খাতার সারি বসল');
+
+        // ⓘ আগের আদায় — সেবা দিয়ে সরাসরি (ফোন আর লেখে না), পাকা; ফোনের রসিদ আগের মতোই: নম্বর আর অবস্থা
+        $this->actingAs($this->owner);
+        $old = app(CollectionService::class)->createFrom(new CollectionInput(
+            customerId: (int) $this->shop->id, accountId: (int) $account->id, trxDate: now()->toDateString(), amount: '750.5000',
+            method: CollectionInput::methodName('bKash'), reference: 'TRX-7781', narration: 'দোকানে গিয়ে নেওয়া',
+        ));
+        $old = app(CollectionService::class)->confirm($old->fresh(['lines']));
+        $this->assertSame(DocumentStatus::CONFIRMED, $old->status, 'প্রস্তুতিটাই ভুল — আগের আদায় পাকা হয়নি');
+
+        $this->phone($this->accountant());
+        $this->getJson('/api/v1/sales/collections/'.$old->public_id)->assertOk()
+            ->assertJsonPath('no', $old->document_no)->assertJsonPath('status', DocumentStatus::CONFIRMED);
     }
 
-    public function test_bad_rows_are_refused_with_a_reason_and_the_good_one_still_lands(): void
+    /** "1e5", ভবিষ্যতের তারিখ, অচেনা খাত, দল-খাত — কারণসহ ফেরত, ৫০০ নয়; ⛔ ২০ নভেম্বর ২০২৬ থেকে "ভালো" আদায়টাও ফেরত, কিছুই বসে না */
+    public function test_bad_rows_are_refused_with_a_reason_and_so_is_the_good_one(): void
     {
         $base = ['customerId' => (string) $this->shop->public_id, 'trxDate' => now()->toDateString()];
         $before = Collection::query()->count();
@@ -158,14 +183,16 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
             $this->change('good-1', $base + ['amount' => '100']),
         ]);
 
-        $this->assertSame([SyncChange::REJECTED, SyncChange::REJECTED, SyncChange::REJECTED, SyncChange::REJECTED, SyncChange::APPLIED], array_column($out, 'status'), json_encode($out));
-        $this->assertSame($before + 1, Collection::query()->count());
-
-        // ⓘ "নিশ্চিত" না চাইলে খসড়া — ওয়েবে লেখার পরের অবস্থা
-        $this->assertSame(DocumentStatus::DRAFT, Collection::query()->where('public_id', $out[4]['entityId'])->value('status'));
+        $this->assertSame(array_fill(0, 5, SyncChange::REJECTED), array_column($out, 'status'), json_encode($out));
+        $this->assertSame(array_fill(0, 5, __('sales::sync.collection_use_deposit_report')), array_column($out, 'message'),
+            '⛔ কোনো সারির ফেরত "টাকা জমার খবর"-এর কারণে নয়');
+        $this->assertSame($before, Collection::query()->count(), '⛔ ফেরত সারির কোনোটা বসল');
     }
 
-    /** ⛔ ফোনে বাছা শাখার বাইরের দোকানের নামে আদায় নয় (অডিট ফোন ⛔৩); একই মানুষ, দোকান শাখায় ফিরলে বসে */
+    /**
+     * ⛔ ফোনে বাছা শাখার বাইরের দোকানের নামে আদায় নয় (অডিট ফোন ⛔৩)। ⓘ ২০ নভেম্বর ২০২৬ থেকে নিজের শাখার দোকানেও নয় — দুটোর উত্তর
+     * এক ("টাকা জমার খবর"), তাই অন্য শাখার দোকান আছে কি না জানা যায় না; কিছুই বসে না।
+     */
     public function test_a_shop_of_another_branch_than_the_one_in_view_gives_no_collection(): void
     {
         $company = \App\Models\Company::query()->findOrFail($this->owner->current_company_id);
@@ -181,13 +208,18 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
 
         $payload = ['customerId' => (string) $this->shop->public_id, 'trxDate' => now()->toDateString(), 'amount' => '100'];
 
+        $before = Collection::acrossBranches()->count();
+
         $this->shop->forceFill(['branch_id' => $other->id])->save();
-        $out = $this->push([$this->change('br-1', $payload)]);
-        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ অন্য শাখার দোকানের নামে ফোন থেকে আদায় বসল।');
+        $there = $this->push([$this->change('br-1', $payload)]);
+        $this->assertSame(SyncChange::REJECTED, $there[0]['status'], '⛔ অন্য শাখার দোকানের নামে ফোন থেকে আদায় বসল।');
 
         $this->shop->forceFill(['branch_id' => $home->id])->save();
-        $out = $this->push([$this->change('br-2', $payload)]);
-        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], json_encode($out));
+        $here = $this->push([$this->change('br-2', $payload)]);
+        $this->assertSame(SyncChange::REJECTED, $here[0]['status'], '⛔ নিজের শাখার দোকানে ফোন থেকে আদায় বসল: '.json_encode($here));
+        $this->assertSame([__('sales::sync.collection_use_deposit_report'), __('sales::sync.collection_use_deposit_report')],
+            [$there[0]['message'] ?? null, $here[0]['message'] ?? null], '⛔ অন্য শাখা আর নিজের শাখার দোকানের ফেরতের কথা আলাদা — কে আছেন জানা যায়');
+        $this->assertSame($before, Collection::acrossBranches()->count(), '⛔ ফেরত আদায়ের কিছু বসল');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

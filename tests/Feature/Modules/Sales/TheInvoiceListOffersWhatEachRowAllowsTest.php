@@ -110,9 +110,12 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
         $this->assertStringContainsString(__('core.row_menu.why_posted', [], 'bn'), $text,
             '⛔ নিশ্চিত বিলে "সম্পাদনা" ধূসর নয়, বা কারণ লেখা নেই।');
 
-        /* ⓘ বাকি ১০০ — "টাকা নিন" সাদা, আদায়ের পর্দায় এই বিলটা বেছে */
-        $this->assertStringContainsString('href="'.e(route('sales.collection.create', ['sales_invoice_id' => $live->id])).'"', $html,
-            '⛔ বাকিওয়ালা নিশ্চিত বিলে "টাকা নিন" নেই।');
+        /* ⓘ বাকি ১০০ — "টাকা নিন" সাদা, রসিদ ভাউচারে এই বিলটা বেছে। ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in
+           paper"): টাকা ঢোকে কেবল রসিদ ভাউচারে, পুরনো আদায়ের পর্দা আর নয় — তাই ঠিকানা রসিদের, পক্ষ আর বিল ভরা (বকেয়া তার পরে) */
+        $this->assertStringContainsString('href="'.e(route('accounts.voucher.create', ['type' => 'receipt', 'party_type' => 'customer',
+            'party_id' => $live->customer_id, 'against_type' => SalesInvoice::drillSourceType(), 'against_id' => $live->id])), $html,
+            '⛔ বাকিওয়ালা নিশ্চিত বিলে "টাকা নিন" নেই, বা রসিদে বিলটা ভরে না।');
+        $this->assertStringNotContainsString(e(route('sales.collection.create')), $html, '⛔ বিলের সারি এখনো পুরনো আদায়ের পর্দায় পাঠায়।');
     }
 
     /**

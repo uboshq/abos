@@ -25,9 +25,10 @@ use Tests\TestCase;
  *
  * দাবি (আসল দরজায়, `GET /api/v1/widgets/summary`):
  *  - কেবল আদেশের চাবি: order আর সবার নোটিশ বোর্ড — আর কিছু নয়; ভাউচারের চাবি দিলে voucher যোগ হয়।
- *  - আদায়ের চাবি একা যথেষ্ট নয় — খাতায় টাকা তোলার চাবিও লাগে (ফোনের /me-র mayCollect)।
+ *  - আদায়ের বোতাম (collect) আর কারো নয় — দুই চাবিতেও না, মালিকেরও না (মালিক, ২০ নভেম্বর ২০২৬: "টাকা ঢোকার কাগজ একটাই";
+ *    ফোনের /me-র mayCollect মিথ্যা)।
  *  - কোনো চাবি নেই: উইজেট আছে, বোতাম কেবল notice (নোটিশ বোর্ড সবার) — খালি নয়, উধাও নয়।
- *  - ফোনে বিক্রয় বন্ধ: order, collect, scan সরে যায়; voucher, approve, notice থাকে।
+ *  - ফোনে বিক্রয় বন্ধ: order, scan সরে যায়; voucher, approve, notice থাকে।
  */
 final class AQuickButtonComesOnlyWithItsKeyTest extends TestCase
 {
@@ -67,13 +68,17 @@ final class AQuickButtonComesOnlyWithItsKeyTest extends TestCase
         $this->assertSame('/accounts/voucher-list', $actions[1]['link']);
     }
 
-    public function test_collecting_needs_both_the_collection_key_and_the_books_key(): void
+    /**
+     * ⛔ আদায়ের বোতাম আর কারো নয় — মালিক, ২০ নভেম্বর ২০২৬ (চূড়ান্ত: "টাকা ঢোকার কাগজ একটাই"); দুই চাবি থাকলেও কেবল ভাউচার
+     * (রসিদ ভাউচারের দরজা) আসে, collect নয় ([[CollectionSync::officeMayCollect()]])।
+     */
+    public function test_collecting_is_no_button_even_with_both_the_collection_key_and_the_books_key(): void
     {
         $sr = $this->staff('sales.collection.create');
         $this->assertSame(['notice'], array_column($this->actions($sr), 'key'), '⛔ খাতায় টাকা তোলার চাবি ছাড়াই আদায়ের বোতাম।');
 
         $this->grant($sr, 'accounts.voucher.create');
-        $this->assertSame(['collect', 'voucher', 'notice'], array_column($this->actions($sr), 'key'));
+        $this->assertSame(['voucher', 'notice'], array_column($this->actions($sr), 'key'), '⛔ দুই চাবিতে এখনো আদায়ের বোতাম — টাকা ঢোকার কাগজ একটাই');
     }
 
     public function test_nobody_with_no_keys_gets_only_the_notice_board(): void
@@ -89,8 +94,9 @@ final class AQuickButtonComesOnlyWithItsKeyTest extends TestCase
     public function test_a_module_switched_off_on_the_phone_takes_its_buttons_away(): void
     {
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $this->assertSame(['order', 'collect', 'voucher', 'scan', 'approve', 'notice'], array_column($this->actions($owner), 'key'),
-            'প্রস্তুতিটাই ভুল — মালিক সব পারেন।');
+        // ⓘ collect নেই — মালিকেরও না (২০ নভেম্বর ২০২৬, "টাকা ঢোকার কাগজ একটাই")
+        $this->assertSame(['order', 'voucher', 'scan', 'approve', 'notice'], array_column($this->actions($owner), 'key'),
+            'প্রস্তুতিটাই ভুল — মালিক সব পারেন (আদায় ছাড়া)।');
 
         app(SettingsService::class)->set(PhoneModules::key('sales'), false);
         app()->forgetInstance(SettingsService::class);

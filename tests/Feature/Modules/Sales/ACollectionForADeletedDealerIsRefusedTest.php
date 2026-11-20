@@ -19,6 +19,9 @@ use Tests\TestCase;
  *
  * ⓘ বিপজ্জনক ইনপুট: আদায়ের ফর্মে মুছে ফেলা ডিলারের id। `exists` নিয়ম কাঁচা কোয়েরি, তাই SoftDeletes
  * সেখানে চলত না — আদায়টা বসে যেত এমন এক পক্ষের নামে, যাকে কোনো তালিকা আর দেখায় না।
+ *
+ * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের দরজা আর কোনো নতুন আদায় লেখে না, রসিদ
+ *   ভাউচারে পাঠায়। দাবিটা তাই কড়া হলো: মুছে ফেলা ডিলারের নামেও দরজা কারণসহ ফেরায়, আর কিছুই লেখা হয় না।
  */
 class ACollectionForADeletedDealerIsRefusedTest extends TestCase
 {
@@ -48,7 +51,7 @@ class ACollectionForADeletedDealerIsRefusedTest extends TestCase
             'account_id' => $this->cashAccountId(),
             'trx_date' => now()->toDateString(),
             'amount' => '100.00',
-        ])->assertSessionHasErrors('customer_id');
+        ])->assertRedirect(route('accounts.voucher.create', ['type' => 'receipt']))->assertSessionHasErrors('collection');
 
         $this->assertSame(0, Collection::query()->where('customer_id', $gone->id)->count(),
             '⛔ মুছে ফেলা ডিলারের নামে আদায় বসে গেল।');

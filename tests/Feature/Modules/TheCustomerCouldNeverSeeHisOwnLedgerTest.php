@@ -13,6 +13,7 @@ use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -224,6 +225,8 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $this->assertNull($claim->collection_id);
         $this->assertSame($before, Collection::query()->count(),
             'দাবি তোলার সাথে সাথেই একটা আদায় বসে গেছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে — তোলার সময় সেটাও নয়
+        $this->assertNull($claim->voucher_id, '⛔ দাবি তোলার সাথে সাথেই রসিদ ভাউচার বাঁধা হয়ে গেছে।');
     }
 
     public function test_a_deposit_cannot_be_dated_in_the_future(): void
@@ -281,8 +284,14 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $accepted = app(DepositClaimService::class)->accept($claim, $this->bank->id);
 
         $this->assertTrue($accepted->isAccepted());
-        $this->assertNotNull($accepted->collection_id);
-        $this->assertSame($before + 1, Collection::query()->count());
+        // ⭐ ২০ নভেম্বর ২০২৬ থেকে আদায় (COL) নয়, পাকা রসিদ ভাউচার (RCV) — মালিক: "টাকা ঢোকার কাগজ একটাই"
+        $this->assertNull($accepted->collection_id, '⛔ খবর থেকে আবার আদায় বসেছে।');
+        $this->assertSame($before, Collection::query()->count(), '⛔ রসিদের পাশে আদায়ও বসেছে — একই টাকা দুই কাগজে।');
+        $this->assertNotNull($accepted->voucher_id, '⛔ গৃহীত খবরের রসিদ ভাউচার নেই।');
+        $voucher = $accepted->voucher;
+        $this->assertSame(Voucher::RECEIPT, $voucher->type);
+        $this->assertTrue($voucher->isPosted(), '⛔ রসিদ ভাউচার খাতায় ওঠেনি।');
+        $this->assertSame((int) $this->karim->id, (int) $voucher->party_id, '⛔ রসিদ অন্য গ্রাহকের নামে।');
     }
 
     /**
@@ -298,7 +307,8 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $claim = $this->claimFor($this->karim, '50000');
         $accepted = app(DepositClaimService::class)->accept($claim, $this->bank->id, ['amount' => '49950']);
 
-        $this->assertSame('49950.0000', (string) $accepted->collection->amount);
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে রসিদ ভাউচারে, আদায়ে নয়
+        $this->assertSame(0, bccomp((string) $accepted->voucher->amount, '49950', 4), '⛔ রসিদে ব্যাংকে যা এসেছে তা বসেনি।');
         $this->assertSame('50000.0000', (string) $accepted->amount,
             'দাবির সারিটাও বদলে গেছে — তফাতটা তাহলে আর দেখা যাবে না।');
     }
@@ -335,6 +345,7 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $rejected = app(DepositClaimService::class)->reject($claim, 'ব্যাংকের কাগজে পাওয়া যায়নি');
 
         $this->assertNull($rejected->collection_id);
+        $this->assertNull($rejected->voucher_id, '⛔ ফেরত খবরে রসিদ ভাউচার বাঁধা।'); // ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদে
         $this->assertSame($before, Collection::query()->count());
         $this->assertSame('ব্যাংকের কাগজে পাওয়া যায়নি', $rejected->decision_reason);
     }

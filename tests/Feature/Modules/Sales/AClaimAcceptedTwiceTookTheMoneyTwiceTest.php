@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -59,6 +60,12 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
         app(StandardChart::class)->install();
         // ⓘ ধাপ গ-এর আগের গ্রহণের দরজা — এই ফাইল সেটাই মাপে; ব্যাংক স্টেটমেন্টে মেলানোর নিয়ম [[TheBankStatementHasTheFinalWordTest]]-এ
         app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Models\DepositClaim::BANK_LINE_FIRST, false);
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ থেকে খবরের টাকা রসিদ ভাউচারে (মালিক: "টাকা ঢোকার কাগজ একটাই"), আর রসিদে লেখক ≠ পাকাকারী —
+         * মালিক ছাড়া কেউ নিজের লেখা রসিদ নিজে পাকা করেন না। এই ফাইল মাপে দুই ক্লিকে টাকা একবার, তাই সুইচ বন্ধ; অন্য হাতের
+         * অপেক্ষা [[TheBankStatementHasTheFinalWordTest]]-এ।
+         */
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\VoucherService::MAKER_CHECKER, false);
 
         // ভূমিকাহীন সদস্য — চাবিটা প্রতিটা দাবির ভিতরে দেওয়া হয়
         $this->decider = User::factory()->create(['current_company_id' => $this->company->id]);
@@ -150,8 +157,11 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
         $this->assertMatchesRegularExpression('/\p{Bengali}/u', (string) $message,
             '⛔ ফেরানোর বার্তাটা বাংলায় নয়।');
 
-        $this->assertSame(1, Collection::query()->where('customer_id', $this->dealer->id)->count(),
-            '⛔ একটা দাবি থেকে একাধিক আদায় তৈরি হয়েছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে আদায় নয়, রসিদ ভাউচার
+        $this->assertSame(1, $this->receiptsOf($claim)->count(),
+            '⛔ একটা দাবি থেকে একাধিক রসিদ ভাউচার তৈরি হয়েছে।');
+        $this->assertSame(0, Collection::query()->where('customer_id', $this->dealer->id)->count(),
+            '⛔ খবর থেকে আবার আদায় (COL) বসেছে।');
 
         $this->assertSame(
             bcsub($dueBefore, '250000', 4),
@@ -160,10 +170,22 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
         );
 
         $this->assertSame(
-            Collection::query()->where('customer_id', $this->dealer->id)->value('id'),
-            $claim->fresh()->collection_id,
-            '⛔ দাবির সাথে জোড়া আদায়টা প্রথমটা নয়।',
+            (int) $this->receiptsOf($claim)->value('id'),
+            (int) $claim->fresh()->voucher_id,
+            '⛔ দাবির সাথে জোড়া রসিদটা প্রথমটা নয়।',
         );
+    }
+
+    /**
+     * এই খবরের রসিদ ভাউচার — বিবরণে খবরের নম্বর ([[DepositClaimService::writeTheReceipt()]]); ভাষা যা-ই হোক, নম্বর একই।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Voucher>
+     */
+    private function receiptsOf(DepositClaim $claim): \Illuminate\Database\Eloquent\Builder
+    {
+        return Voucher::query()->withoutGlobalScopes()
+            ->where('type', Voucher::RECEIPT)
+            ->where('narration', 'like', '%'.$claim->public_id.'%');
     }
 
     /**
@@ -184,7 +206,7 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
             ->post(route('sales.claim.accept', $claim), ['account_id' => $this->bank->id])
             ->assertSessionHasErrors('status');
 
-        $this->assertSame(1, Collection::query()->where('customer_id', $this->dealer->id)->count());
+        $this->assertSame(1, $this->receiptsOf($claim)->count(), '⛔ দ্বিতীয় POST-এ দ্বিতীয় রসিদ ভাউচার বসেছে।');
         $this->assertSame(bcsub($dueBefore, '250000', 4), $this->dealer->fresh()->outstanding());
     }
 
@@ -202,7 +224,7 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(DepositClaim::PENDING, $claim->fresh()->status);
-        $this->assertSame(0, Collection::query()->count());
+        $this->assertSame(0, $this->receiptsOf($claim)->count());
 
         $this->decider->givePermissionTo('sales.claim.decide');
 
@@ -212,7 +234,8 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status);
-        $this->assertSame(1, Collection::query()->count());
+        $this->assertSame(1, $this->receiptsOf($claim)->count());
+        $this->assertSame(0, Collection::query()->count(), '⛔ খবর থেকে আবার আদায় (COL) বসেছে।');
     }
 
     /**
@@ -247,6 +270,7 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
 
         $this->assertSame(DepositClaim::REJECTED, $claim->fresh()->status);
         $this->assertSame(0, Collection::query()->count());
+        $this->assertSame(0, $this->receiptsOf($claim)->count(), '⛔ নাকচ হওয়া দাবিতে রসিদ ভাউচার বসেছে।');
         $this->assertSame($dueBefore, $this->dealer->fresh()->outstanding());
     }
 
@@ -272,7 +296,9 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
 
         $this->assertTrue($refused, '⛔ গৃহীত দাবিটা পুরনো ছবি দিয়ে নাকচ হয়ে গেছে।');
         $this->assertSame(DepositClaim::ACCEPTED, $claim->fresh()->status);
-        $this->assertNotNull($claim->fresh()->collection_id);
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে রসিদ ভাউচার — পাকা, খাতায়
+        $this->assertNotNull($claim->fresh()->voucher_id);
+        $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($claim->fresh()->voucher_id)->isPosted());
     }
 
     private function pendingClaim(string $amount, ?string $reference = null): DepositClaim

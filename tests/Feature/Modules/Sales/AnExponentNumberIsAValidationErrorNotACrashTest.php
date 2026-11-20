@@ -14,9 +14,11 @@ use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Http\Requests\PlainNumber;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\CollectionInput;
 use App\Modules\Sales\Services\SalesOrderService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -71,12 +73,25 @@ final class AnExponentNumberIsAValidationErrorNotACrashTest extends TestCase
             'lines' => [['product_id' => $this->product->id, 'ordered_qty' => '1', 'rate' => '1e5']],
         ])->assertStatus(302)->assertSessionHasErrors('lines.0.rate');
 
-        $this->post(route('sales.collection.store'), [
+        /*
+         * ⓘ ২০ নভেম্বর ২০২৬ — মালিকের চূড়ান্ত সিদ্ধান্ত ("one money-in paper"): ওয়েবের আদায়ের দরজা আর কিছু লেখে না, যাচাইও
+         *   করে না — কারণসহ রসিদ ভাউচারে পাঠায়। তাই দাবি দুই ভাগে: দরজা ৫০০ নয়, ফেরায়; আর আবেদনের আকার
+         *   ([[CollectionInput::fromRequest()]], কাউন্টারের POS এখনো এই সেবা ডাকে) `1e5`-কে টাকার ঘরের যাচাইয়ের ভুল বলে।
+         */
+        $collection = [
             'customer_id' => $this->dealer->id,
             'account_id' => (int) Account::query()->postable()->where('name_en', 'like', '%Cash%')->value('id'),
             'trx_date' => now()->toDateString(),
             'amount' => '1e5',
-        ])->assertStatus(302)->assertSessionHasErrors('amount');
+        ];
+        $this->post(route('sales.collection.store'), $collection)->assertStatus(302)->assertSessionHasErrors('collection');
+
+        try {
+            CollectionInput::fromRequest($collection);
+            $this->fail('⛔ আদায়ের আবেদনে `1e5` পার হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('amount', $e->errors(), '⛔ `1e5` টাকার ঘরের ভুল হয়ে ফিরল না।');
+        }
 
         $this->post(route('sales.customer_target.store'), [
             'month' => now()->startOfMonth()->toDateString(),

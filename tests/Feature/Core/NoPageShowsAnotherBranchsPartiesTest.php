@@ -48,7 +48,8 @@ final class NoPageShowsAnotherBranchsPartiesTest extends TestCase
         'sales.challan.create' => ['c'],
         'sales.commission.create' => [],
         'sales.shipment.create' => [],
-        'sales.collection.create' => ['c'],
+        // ⓘ 'sales.collection.create' গেল — মালিক, ২০ নভেম্বর ২০২৬ ("one money-in paper"): আদায়ের ফর্ম আর আঁকা হয় না, ঠিকানাটা
+        //   রসিদ ভাউচারে পাঠায় (৩০২)। রসিদের পর্দার ঠিকানায় ধরন লাগে (`{type}`), এই তালিকা নাম ধরে খোলে — তাই সেটা এখানে নয়।
         'sales.return.create' => ['c'],
         'sales.scheme.create' => [],
         'sales.invoice.index' => [],

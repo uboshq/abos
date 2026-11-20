@@ -19,6 +19,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
+use App\Modules\Sales\Services\CollectionInput;
 use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\DealerOwnership;
 use App\Modules\Sales\Services\SalesTargetService;
@@ -156,8 +157,9 @@ final class TheSaleBelongsToTheSalesmanBoundThatDayTest extends TestCase
     // ── খ · ফোন থেকে টাকা নয় ────────────────────────────────────────────────
 
     /**
-     * ⛔ একই বিক্রয়কর্মী: চিহ্ন ছাড়া ফোনের আদায় খসড়া হয়; চিহ্নসহ "টাকা নেবে কেবল অফিস"। ⭐ আগের খসড়া
-     * বৈধই থাকে, অফিস সেটা নিশ্চিত করে।
+     * ⛔ একই বিক্রয়কর্মী: চিহ্ন ছাড়া ফোনের আদায় "টাকা জমার খবর"-এর কারণে ফেরে (২০ নভেম্বর ২০২৬ থেকে, মালিক: "টাকা ঢোকার কাগজ
+     * একটাই" — আগে খসড়া হত); চিহ্নসহ আগেই "টাকা নেবে কেবল অফিস"। দুই কারণ আলাদা, তাই দেয়ালের ফেরানো আলাদা করে দেখা যায়।
+     * ⭐ আগের খসড়া (এখানে সেবা দিয়ে সরাসরি বানানো — ফোন আর লেখে না) বৈধই থাকে, অফিস সেটা নিশ্চিত করে।
      */
     public function test_a_walled_salesman_cannot_send_money_from_the_phone_but_old_drafts_still_settle(): void
     {
@@ -173,8 +175,15 @@ final class TheSaleBelongsToTheSalesmanBoundThatDayTest extends TestCase
         $this->actingAs($this->sales->fresh());
 
         $out = app(SyncService::class)->push($this->sales->fresh(), 'phone-dw', 'sales', [$this->collection('dw-c-1', $rahim, '700')]);
-        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], 'চিহ্ন ছাড়াও ফোনের আদায় বসেনি — দাবিটা কিছু মাপছে না।');
-        $old = Collection::query()->withoutGlobalScopes()->latest('id')->firstOrFail();
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ চিহ্ন ছাড়া ফোনের আদায় বসল — টাকা ঢোকার কাগজ একটাই');
+        $this->assertSame(__('sales::sync.collection_use_deposit_report'), $out[0]['message'] ?? null,
+            'চিহ্ন ছাড়া ফেরত "টাকা জমার খবর"-এর কারণে নয় — দেয়ালের ফেরানো আলাদা দেখা যায় না, দাবিটা কিছু মাপছে না।');
+
+        // ⓘ আগের ফোনের খসড়া — সেবা দিয়ে সরাসরি, খসড়া হিসেবে (২০ নভেম্বরের আগে ফোন যেমন বসাত: খাত নেই → নগদ, সারি নেই → পুরনো বিল আগে)
+        $old = app(CollectionService::class)->createFrom(new CollectionInput(
+            customerId: (int) $rahim->id, accountId: null, trxDate: now()->toDateString(), amount: '700.0000', method: 'cash', autoLines: true,
+        ));
+        $this->assertSame(DocumentStatus::DRAFT, $old->status, 'প্রস্তুতিটাই ভুল — আগের আদায় খসড়া নয়।');
 
         $this->mark(true);
         $this->actingAs($this->sales->fresh());
