@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * কোনোটা সইয়ের অপেক্ষায় থাকলে কিছু না লিখে কাগজের পাতায় ফেরত, বার্তাসহ; JSON হলে ৪০৯।
  *
  * ⚠️ বাঁধাইয়ের **পরে** চলে (`SubstituteBindings` web গোষ্ঠীর আগে বসে) — তাই রুটের ঘরে আসল মডেল থাকে। ⓘ ফেরত পাঠানো
- * (`returned`) কাগজে অপেক্ষার অনুরোধ নেই, তাই লেখক আজকের মতোই বদলান। ⓘ ফোনের দরজা (`/api`) এখনো এর বাইরে।
+ * (`returned`) কাগজে অপেক্ষার অনুরোধ নেই, তাই লেখক আজকের মতোই বদলান। ⓘ ফোনের দরজা (`/api`) নিজের পাহারায় ([[AWaitingPaperIsNotEditedFromThePhone]], ২০ নভেম্বর ২০২৬)।
  */
 class AWaitingPaperIsNotEdited
 {

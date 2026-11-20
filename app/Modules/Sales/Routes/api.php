@@ -93,18 +93,23 @@ Route::prefix('v1/sales')
         Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
         Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.store');
         Route::get('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'show'])->whereUuid('id')->name('delivery_order.show');
-        Route::put('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'update'])->whereUuid('id')->name('delivery_order.update');
+        // ⛔ সইয়ের অপেক্ষার কাগজ ফোন থেকেও কেউ বদলান না — ৪০৯ (মালিক, ২০ নভেম্বর ২০২৬; [[AWaitingPaperIsNotEditedFromThePhone]])
+        Route::put('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'update'])->whereUuid('id')->middleware(\App\Http\Middleware\AWaitingPaperIsNotEditedFromThePhone::for(\App\Modules\Sales\Models\DeliveryOrder::class))->name('delivery_order.update');
         Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[DeliveryOrderService::setApprovedQuantities()]])
+        // ⚠️ অপেক্ষার পাহারার বাইরে, জেনেবুঝে — এটা সইকারীর সিদ্ধান্তের অংশ, কেবল অপেক্ষায় চলে, আর আদেশ সংশোধনে ফেরত যায় না
+        //    (কাগজ খসড়া নয়); ওয়েবের `sales.do.quantities`-এর একই (২০ নভেম্বর ২০২৬, মালিকের কথার অপেক্ষায়; [[AWaitingPaperIsNotEditedFromThePhone]])
         Route::post('/delivery-orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.approved_quantities');
 
         // ⭐ বিক্রয় আদেশ — DO-র যমজ দরজা, একই আকারের JSON ([[SalesOrderApiController]]; DO বিক্রয় আদেশে মেশানো, ধাপ ১০, ৫ অক্টোবর ২০২৬)
         Route::get('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'index'])->name('order.index');
         Route::post('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.store');
         Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'show'])->whereUuid('id')->name('order.show');
-        Route::put('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'update'])->whereUuid('id')->name('order.update');
+        // ⛔ সইয়ের অপেক্ষার কাগজ ফোন থেকেও কেউ বদলান না — ৪০৯ (মালিক, ২০ নভেম্বর ২০২৬; [[AWaitingPaperIsNotEditedFromThePhone]])
+        Route::put('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'update'])->whereUuid('id')->middleware(\App\Http\Middleware\AWaitingPaperIsNotEditedFromThePhone::for(\App\Modules\Sales\Models\SalesOrder::class))->name('order.update');
         Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
+        // ⚠️ অপেক্ষার পাহারার বাইরে, জেনেবুঝে — DO-র উপরের একই কারণ (ওয়েবের `sales.order.quantities`)
         Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.approved_quantities');
 
         // ⭐ বিক্রয়ের হালচাল, ফোনের নিজের পর্দায় — ওয়েবের একই সেবা ও চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[SalesOverviewApiController]])

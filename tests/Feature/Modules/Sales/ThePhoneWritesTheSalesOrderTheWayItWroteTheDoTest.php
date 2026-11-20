@@ -106,7 +106,8 @@ final class ThePhoneWritesTheSalesOrderTheWayItWroteTheDoTest extends TestCase
         Sanctum::actingAs($writer, [AuthController::APP]);
         $this->putJson('/api/v1/sales/orders/'.$made['id'], $this->body(qty: '6'))->assertOk();
         $this->postJson('/api/v1/sales/orders/'.$made['id'].'/submit')->assertOk();
-        $this->putJson('/api/v1/sales/orders/'.$made['id'], $this->body(qty: '50'))->assertStatus(422);
+        // ⓘ ছক থাকলে অপেক্ষার কাগজ — দরজাতেই ৪০৯ ([[AWaitingPaperIsNotEditedFromThePhone]], ২০ নভেম্বর ২০২৬); নাহলে সেবার ৪২২
+        $this->assertContains($this->putJson('/api/v1/sales/orders/'.$made['id'], $this->body(qty: '50'))->status(), [409, 422]);
         $this->assertSame('6.0000', $this->getJson('/api/v1/sales/orders/'.$made['id'])->assertOk()->json('lines.0.qty'),
             '⛔ জমার পরে লেখক পরিমাণ বদলে ফেললেন।');
     }
