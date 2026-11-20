@@ -143,7 +143,8 @@ final class TheRoleScreenWasTwoScreensTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('∅', $html,
+        // ⓘ চিহ্নটা এখন নমুনার দাগ-কাটা "–" ঘর (মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬); আগে `∅` — কথাটা একই
+        $this->assertMatchesRegularExpression('/data-permission-absent[^>]*>\s*<span class="role-dash" aria-hidden="true">–<\/span>/u', $html,
             '⛔ ফাঁকা ঘরের চিহ্নটাই নেই — স্পেক §৩-এর ছয় রকম ঘরের একটা।');
 
         /*

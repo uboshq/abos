@@ -110,6 +110,8 @@ final class ARoleKeeperCouldHandOutAnyKeyTest extends TestCase
         $this->put(route('system_admin.role.update', $role), [
             'name' => 'দুই চাবি',
             'permissions' => ['sales.invoice.view'],
+            // ⓘ বদলের কারণ এখন লাগে (রোলের পাতার নমুনা, ২০ নভেম্বর ২০২৬) — না দিলে কী হয়, তা [[TheRolePageRedesignTest]]-এ
+            'reason' => 'অডিটের পরে গণনার অনুমোদন তুলে নেওয়া',
         ])->assertSessionHasNoErrors();
 
         $this->assertFalse($role->fresh()->hasPermissionTo('accounts.count.approve'));

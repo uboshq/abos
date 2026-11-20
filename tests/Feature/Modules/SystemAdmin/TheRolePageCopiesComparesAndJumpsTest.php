@@ -39,15 +39,22 @@ final class TheRolePageCopiesComparesAndJumpsTest extends TestCase
         $html = (string) $this->actingAs($this->owner)->get(route('system_admin.role.edit', $role))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('data-role-card="permissions"', $html, '⛔ "অনুমতি ৩১৯" এখনো মাথায়।');
-        $this->assertMatchesRegularExpression('/data-role-card="members"(?:(?!<\/div>\s*<\/div>).)*>\s*'.$role->users()->count().'\s*</s', $html, '⛔ "এই রোলে যাঁরা আছেন" রোলের মানুষ গোনে না।');
-        $this->assertMatchesRegularExpression('/data-role-card="last-change"(?:(?!<\/div>\s*<\/div>).)*20\d{2}/s', $html, '⛔ "শেষ বদল"-এ তারিখ নেই।');
+        /*
+         * ⭐ মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬: "এই রোলে যাঁরা আছেন" কার্ড উঠে গেল — সংখ্যাটা "সদস্য (n)" ট্যাবে, আর এক সংখ্যা
+         *   দুই জায়গায় নয়। ⓘ সংখ্যাটা তবু রোলের মানুষই গোনে — এখন ট্যাবের নামে।
+         */
+        $this->assertStringNotContainsString('data-role-card="members"', $html, '⛔ সদস্যের সংখ্যা কার্ডে আর ট্যাবে — দুইবার।');
+        $this->assertStringContainsString('data-role-tab="members"', $html, '⛔ সদস্য ট্যাব নেই।');
+        $this->assertMatchesRegularExpression('/data-role-tab="members"[^>]*>'.preg_quote(e(__('system_admin::permission.tab_members', ['count' => $role->users()->count()])), '/').'</u', $html, '⛔ "সদস্য (n)" রোলের মানুষ গোনে না।');
+        $this->assertMatchesRegularExpression('/data-role-card="last-change"(?:(?!<\/a>).)*20\d{2}/s', $html, '⛔ "শেষ বদল"-এ তারিখ নেই।');
 
-        // ⓘ মডিউলে যান: প্রতিটা মডিউলের লিংক, আর লিংক যেখানে নিয়ে যায় সেই ভাঁজ
+        /*
+         * ⓘ মডিউলে যাওয়া: আগে বাঁয়ে আলাদা "মডিউলে যান" তালিকা ছিল (লম্বা দুই-কলামের ছকে নিচে পৌঁছাতে)। ⭐ নতুন ছকে প্রতিটা মডিউল
+         *   নিজেই এক সারির মাথা, সবই ভাঁজ করা — মাথাটাই এক চাপে সেখানে নিয়ে যায়, তাই আলাদা তালিকা নমুনায় নেই। ভাঁজের ঠিকানা থাকে।
+         */
         preg_match_all('/data-permission-module="([a-z_]+)" id="perm-\1"/', $html, $modules);
         $this->assertNotEmpty($modules[1], '⛔ মডিউলের ভাঁজে যাওয়ার ঠিকানা নেই।');
-        foreach ($modules[1] as $module) {
-            $this->assertStringContainsString('href="#perm-'.$module.'" data-permission-jump="'.$module.'"', $html, "⛔ \"{$module}\" মডিউলে যাওয়ার লিংক বাঁয়ে নেই।");
-        }
+        $this->assertDoesNotMatchRegularExpression('/<details[^>]*data-permission-module="[a-z_]+"[^>]*\sopen[\s>]/', $html, '⛔ শুরুতেই কোনো মডিউল খোলা — নমুনায় সব বন্ধ।');
     }
 
     public function test_a_new_role_like_this_opens_with_the_same_ticks_and_never_from_the_owner_or_another_company(): void
