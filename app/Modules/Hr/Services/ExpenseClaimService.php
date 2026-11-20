@@ -9,6 +9,7 @@ use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Engines\Attachment\NotASlip;
+use App\Core\Engines\Attachment\SeenBefore;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -62,6 +63,27 @@ final class ExpenseClaimService
         private readonly AttachmentEngine $attachments,
         private readonly AdvanceBalance $advances,
     ) {}
+
+    /**
+     * ⚠️ এই দাবির রসিদ/স্লিপ আগে অন্য কোনো কাগজে এসেছে কি না — বার্তা আর লিংকসহ ([[SeenBefore]]; মালিক, ১৬ নভেম্বর ২০২৬: একই স্লিপ
+     *   দুইবার)। ⓘ ২০ নভেম্বর ২০২৬: ছাপ ([[AttachmentEngine::store()]]) এই দরজাতেও রাখা হত, দাবির পাতায় সতর্কতার বাক্সও ছিল — কিন্তু
+     *   ওয়েব বা ফোনের কোনো দরজা খোঁজটা চালাত না। ⛔ কেবল জানানো, আটকানো নয় — দাবি আগেই জমা।
+     *
+     * @return array{attachment: \App\Models\Attachment, paper: string, date: string, url: ?string, message: string}|null
+     */
+    public function seenBefore(ExpenseClaim $claim): ?array
+    {
+        try {
+            $receipt = $this->attachments->listFor(self::MODULE, ExpenseClaim::drillSourceType(), (int) $claim->id)->first();
+
+            return $receipt === null ? null : app(SeenBefore::class)->of($receipt);
+        } catch (\Throwable $e) {
+            // ⓘ সতর্কতা খুঁজতে না পারলে দাবি থামে না — কেবল লগে
+            report($e);
+
+            return null;
+        }
+    }
 
     /** ব্যবহারকারীর নিজের কর্মীর খাতা — না থাকলে টাকা চাওয়া যায় না */
     public function employeeOf(?User $user): ?Employee

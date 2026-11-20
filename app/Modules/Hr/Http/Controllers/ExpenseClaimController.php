@@ -81,7 +81,12 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     {
         $claim = $this->claims->submit($request->user(), $this->validated($request), $request->file('receipt'));
 
-        return redirect()->route('hr.claim.show', $claim)->with('saved', __('hr::claim.sent_'.$claim->status, ['no' => $claim->document_no]));
+        $redirect = redirect()->route('hr.claim.show', $claim)->with('saved', __('hr::claim.sent_'.$claim->status, ['no' => $claim->document_no]));
+
+        // ⚠️ একই রসিদ/স্লিপ আগে অন্য কাগজে — দাবির পাতার সতর্কতার বাক্সে, লিংকসহ ([[ExpenseClaimService::seenBefore()]], ২০ নভেম্বর ২০২৬)
+        $seen = $request->hasFile('receipt') ? $this->claims->seenBefore($claim) : null;
+
+        return $seen === null ? $redirect : $redirect->with('warning', $seen['message'])->with('warning_link', $seen['url']);
     }
 
     public function show(Request $request, ExpenseClaim $claim): View
@@ -142,7 +147,18 @@ class ExpenseClaimController extends Controller implements HasMiddleware
 
         $claim = $claim->fresh('expenseAccount');
 
-        return response()->json($this->facts($claim, $this->standingOf(collect([$claim]))), 201);
+        /*
+         * ⭐ ফোনেও একই সতর্কতা — জমার খবরের উত্তরের একই চাবি `seen_before` ([[DepositRequestController::apiStore()]]); পুরনো অ্যাপ না
+         *   চিনলে উপেক্ষা করে। ⛔ সতর্কতা — দাবি জমা, ২০১ (২০ নভেম্বর ২০২৬)।
+         */
+        $seen = $request->hasFile('receipt') ? $this->claims->seenBefore($claim) : null;
+
+        return response()->json($this->facts($claim, $this->standingOf(collect([$claim]))) + ['seen_before' => $seen === null ? null : [
+            'paper' => $seen['paper'],
+            'date' => $seen['date'],
+            'url' => $seen['url'],
+            'message' => $seen['message'],
+        ]], 201);
     }
 
     public function apiShow(Request $request, ExpenseClaim $claim): JsonResponse
