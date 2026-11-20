@@ -9,6 +9,8 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\Ownership;
 use App\Core\Support\Money;
 use App\Models\Approval;
+use App\Models\ApprovalDecision;
+use App\Models\ApprovalFlow;
 use App\Models\User;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Models\SupplierCreditRequest;
@@ -20,7 +22,9 @@ use Illuminate\Validation\ValidationException;
  *
  * ⓘ গ্রাহকের [[CreditLimitRequests]]-এর ছাঁচ, সরবরাহকারীর মাপে:
  *   · অনুরোধ যায় বিদ্যমান সইয়ের ব্যবস্থায় — `supplier.credit_limit` ছক। ⛔ কোনো ছক বীজ হিসেবে বসে না।
- *   · সইয়ের আগে চলতি সীমা এক পয়সাও বদলায় না; বসে কেবল শেষ সইয়ে ([[applySigned()]], শ্রোতা [[ApplyTheSignedSupplierLimit]])।
+ *   · সইয়ের আগে চলতি সীমা এক পয়সাও বদলায় না; বসে কেবল শেষ সইয়ে ([[applySigned()]], শ্রোতা [[ApplyTheSignedSupplierLimit]]),
+ *     আর সেই সইগুলোর মধ্যে মালিকের নিজের সই থাকা চাই ([[ownerSigned()]]) — গ্রাহকের নিয়মের হুবহু (সমন্বয়ক, ২০ নভেম্বর ২০২৬)।
+ *     ছকে মালিক না থাকলে অনুরোধই ওঠে না।
  *   · যিনি চাইলেন তিনি সই দিতে পারেন না — ইঞ্জিনের নিজের নিয়ম।
  *   · কোম্পানির সই বন্ধ (কোনো সচল ছক নেই) → মালিক ছাড়া কেউ তোলেন না; মালিকেরটা সরাসরি বসে (UB-র মতো সই-বন্ধ কোম্পানি)।
  *     ⛔ নিজে থেকে পাস (auto-approve) নেই।
@@ -69,6 +73,11 @@ final class SupplierLimitRequests
 
         if (! $flowOn && ! $isOwner) {
             throw ValidationException::withMessages(['amount' => __('supplier::credit_request.approvals_off')]);
+        }
+
+        // ⛔ ছকে মালিক সই দিতে না পারলে অনুরোধই ওঠে না — নইলে সই পড়েও কখনো বসত না (গ্রাহকের নিয়মের হুবহু, ২০ নভেম্বর ২০২৬)
+        if ($flowOn && ! $this->ownerCanSign((int) $supplier->company_id)) {
+            throw ValidationException::withMessages(['amount' => __('supplier::credit_request.owner_not_in_flow')]);
         }
 
         return DB::transaction(function () use ($supplier, $amount, $reason, $by, $base, $flowOn) {
@@ -150,6 +159,17 @@ final class SupplierLimitRequests
                 return;
             }
 
+            /*
+             * ⛔ মালিকের নিজের সই ছাড়া সীমা বসে না — ছকের অন্য ধাপ যা-ই হোক (সমন্বয়ক, ২০ নভেম্বর ২০২৬: গ্রাহকের নিয়মের হুবহু,
+             * [[CreditLimitRequests::ownerSigned()]])। ⓘ অনুরোধ `void`, কারণ লেখা; সীমা যেমন ছিল।
+             */
+            if (! self::ownerSigned($approval)) {
+                $request->forceFill(['status' => SupplierCreditRequest::VOID, 'decided_at' => now(),
+                    'note' => __('supplier::credit_request.no_owner_signature')])->save();
+
+                return;
+            }
+
             $supplier = Supplier::query()->withoutGlobalScopes()
                 ->where('company_id', $approval->company_id)
                 ->whereKey($request->supplier_id)
@@ -169,6 +189,45 @@ final class SupplierLimitRequests
 
             $this->apply($request, $supplier, (int) $approval->id);
         });
+    }
+
+    /**
+     * ⭐ সইয়ের "হ্যাঁ"-গুলোর মধ্যে এই কোম্পানির মালিকের (super_admin) কোনোটা আছে কি না — মালিক নিজে, বা তাঁর হয়ে দায়িত্বপ্রাপ্ত।
+     * ⓘ গ্রাহকের [[CreditLimitRequests::ownerSigned()]]-এর হুবহু; এখানে লেখা — সরবরাহকারী গ্রাহকের উপর নির্ভর করে না ([[BoundariesTest]])।
+     */
+    public static function ownerSigned(Approval $approval): bool
+    {
+        $owners = app(Ownership::class)->activeOwnersIn((int) $approval->company_id)->pluck('id')->all();
+
+        return ApprovalDecision::query()
+            ->where('approval_id', $approval->id)
+            ->where('decision', 'approved')
+            ->where(fn ($q) => $q->whereIn('user_id', $owners ?: [0])->orWhereIn('on_behalf_of', $owners ?: [0]))
+            ->exists();
+    }
+
+    /**
+     * ⓘ ইঞ্জিন যে ছক চালাবে (অনুরোধের নিজের ধরনের ছক, নইলে সাধারণটা — [[ApprovalEngine::flowFor()]]) তার কোনো ধাপে মালিক সই দিতে
+     * পারেন কি না। গ্রাহকের [[CreditLimitRequests::ownerCanSign()]]-এর হুবহু।
+     */
+    private function ownerCanSign(int $companyId): bool
+    {
+        $owners = $this->owners->activeOwnersIn($companyId);
+
+        $flows = ApprovalFlow::query()
+            ->where('module', self::MODULE)
+            ->where('action', self::ACTION)
+            ->whereIn('document_type', ['', class_basename(SupplierCreditRequest::class)])
+            ->where('is_active', true)
+            ->with('steps')
+            ->get();
+
+        $flow = $flows->first(fn (ApprovalFlow $f) => $f->document_type === class_basename(SupplierCreditRequest::class))
+            ?? $flows->first(fn (ApprovalFlow $f) => (string) $f->document_type === '');
+
+        return $flow !== null && $flow->steps->contains(
+            fn ($step) => $owners->contains(fn (User $owner) => $step->allows($owner)),
+        );
     }
 
     /** সরবরাহকারীর সারিতে বসানো — নিরীক্ষায় আগে-পরে, কারণ আর সইয়ের সূত্রসহ */

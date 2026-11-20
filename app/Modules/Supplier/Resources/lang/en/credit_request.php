@@ -33,6 +33,8 @@ return [
     'saved_direct' => 'The new limit is set (approvals are off in this company and the owner set it).',
     'not_a_raise' => 'The new limit must be above the current one (:limit) — use the edit page to lower it.',
     'approvals_off' => 'This company has no approval steps for raising a limit — only the owner can raise it. Set up the steps (Supplier → Credit limit) or ask the owner.',
+    'owner_not_in_flow' => 'The owner is not in the approval steps for raising a limit — a limit is only raised with the owner’s approval. Add the owner to the steps (Supplier → Credit limit).',
+    'no_owner_signature' => 'Approved, but not by the owner — the limit was not set. A limit is only raised with the owner’s approval.',
     'already_waiting' => 'A request for this supplier is already awaiting approval — wait for its decision first.',
     'limit_moved' => 'The limit changed another way after the request — this approval is for an old paper and was not applied. Ask again if needed.',
     'use_the_request' => 'Raising or removing a credit limit goes for approval — use “Ask to raise the limit” on the supplier page. Lowering works here.',

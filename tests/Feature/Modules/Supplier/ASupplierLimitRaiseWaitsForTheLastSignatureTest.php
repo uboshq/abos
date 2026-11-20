@@ -26,7 +26,8 @@ use Tests\TestCase;
 /**
  * ⭐ সরবরাহকারীর বাকির সীমা বাড়ানো — অনুরোধ → অনুমোদন → শেষ অনুমোদনে নিজে বসে (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierLimitRequests]])।
  *
- *   · দুই ধাপের ছকে প্রথম ধাপের "হ্যাঁ"-তে কিছুই বসে না; শেষ ধাপে বসে।
+ *   · দুই ধাপের ছকে প্রথম ধাপের "হ্যাঁ"-তে কিছুই বসে না; শেষ ধাপে (মালিকের সইসহ) বসে।
+ *   · মালিকের নিজের সই ছাড়া বসে না — গ্রাহকের নিয়মের হুবহু; ছকে মালিক না থাকলে অনুরোধই ওঠে না।
  *   · "না" হলে সীমা যেমন ছিল, অনুরোধ থাকে "না" হয়ে।
  *   · মাঝে সীমা অন্য পথে বদলালে পুরনো অনুরোধের অনুমোদন বসে না (`void`)।
  *   · ছক বন্ধ: কর্মী অনুরোধ তুলতে পারেন না; মালিকেরটা সরাসরি বসে।
@@ -92,6 +93,31 @@ final class ASupplierLimitRaiseWaitsForTheLastSignatureTest extends TestCase
         $this->assertSame(0, bccomp((string) $this->supplier->fresh()->credit_limit, '50000', 4), '⛔ শেষ অনুমোদনের পরেও সীমা বসেনি।');
         $this->assertSame(SupplierCreditRequest::APPROVED, $request->fresh()->status);
         $this->assertNotNull($request->fresh()->applied_at);
+    }
+
+    /**
+     * ⛔ মালিকের নিজের সই ছাড়া সীমা বসে না — গ্রাহকের নিয়মের হুবহু (সমন্বয়ক, ২০ নভেম্বর ২০২৬;
+     * [[ALimitRaiseWaitsForTheOwnersSignatureTest]])।
+     */
+    public function test_a_flow_without_the_owner_refuses_the_request_and_a_signature_without_him_sets_nothing(): void
+    {
+        $flow = ApprovalFlow::create(['module' => 'supplier', 'action' => 'credit_limit', 'threshold_amount' => null, 'is_active' => true]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $this->manager->id]);
+
+        // ⓘ ছকে মালিক নেই — অনুরোধই ওঠে না
+        $this->ask(['amount' => '50000', 'reason' => 'চাই'])->assertSessionHasErrors('amount');
+        $this->assertSame(0, SupplierCreditRequest::query()->count(), '⛔ মালিকহীন ছকে অনুরোধ উঠল।');
+
+        // ⓘ অনুরোধের পরে কেউ ছক থেকে মালিককে সরালেন — ম্যানেজারের শেষ সইয়েও সীমা বসে না
+        $owner = ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_ROLE, 'approver_id' => $this->ownerRole()->id]);
+        $this->ask(['amount' => '50000', 'reason' => 'চাই'])->assertSessionHasNoErrors();
+        $owner->delete();
+
+        $request = SupplierCreditRequest::query()->sole();
+        app(ApprovalEngine::class)->approve(Approval::query()->findOrFail($request->approval_id), $this->manager);
+
+        $this->assertSame(SupplierCreditRequest::VOID, $request->fresh()->status, '⛔ মালিকের সই ছাড়া শেষ অনুমোদনে অনুরোধ বাতিল হয়নি।');
+        $this->assertSame(0, bccomp((string) $this->supplier->fresh()->credit_limit, '10000', 4), '⛔ মালিকের সই ছাড়াই সীমা বসল।');
     }
 
     public function test_a_rejected_request_changes_nothing_and_is_kept(): void
