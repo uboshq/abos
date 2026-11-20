@@ -83,7 +83,8 @@ return [
      * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
-    'nav' => ['section' => 'finance', 'order' => 20],
+    // ⭐ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬) — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    'nav' => ['section' => 'finance', 'order' => 20, 'under' => 'accounts', 'tab' => 'finance::menu.tab'],
 
     /*
      * হিসাবের উপর — খাত, ভাউচার ও ছক ওখান থেকে আসে।
@@ -111,7 +112,8 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'finance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+            // ⓘ হিসাব ও অর্থের ভিতরে দুইটা "ড্যাশবোর্ড" সারি পাশাপাশি না বসে — তাই নিজের নাম (২০ নভেম্বর ২০২৬); পাতার শিরোনাম আগের মতো
+            ['label' => 'finance::menu.dashboard', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'finance'], 'permission' => 'finance.capital.view'],
         ],
 

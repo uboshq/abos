@@ -1875,6 +1875,19 @@ return [
         'access' => 'Access',
         'notice' => 'Notice',
         'forms' => 'Forms',
+        // ⭐ parts of a merged module (owner, 20 Nov 2026) — Accounts & Finance, Sales, Purchase
+        'daily' => 'Daily vouchers',
+        'receivable' => 'Receivables',
+        'payable' => 'Payables',
+        'bank_cash' => 'Bank & cash',
+        'loans_invest' => 'Loans & investments',
+        'fixed_assets' => 'Fixed assets',
+        'budget' => 'Budget',
+        'reports_close' => 'Reports & month close',
+        'customers' => 'Customers',
+        'credit' => 'Credit control',
+        'promo' => 'Offers & incentives',
+        'suppliers' => 'Suppliers',
     ],
 
     // ⭐ ছাঁকনি প্যানেল — সব তালিকায় এক ([[filter-layout]], [[FilterSet]]; ১৪ নভেম্বর ২০২৬)

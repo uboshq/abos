@@ -99,7 +99,29 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
     /** @return list<string> */
     private function menuCodes(): array
     {
-        return array_column($this->phone('GET', '/api/v1/me')->assertOk()->json('menu'), 'code');
+        return self::modulesIn($this->phone('GET', '/api/v1/me')->assertOk()->json('menu'));
+    }
+
+    /**
+     * ⓘ মেনুর মডিউল আর তার ভিতরে বসা অতিথিরা — এক করা মডিউলে (হিসাব ও অর্থ, বিক্রয়, ক্রয়; মালিক, ২০ নভেম্বর ২০২৬) অর্থ বা গ্রাহকের
+     * নিজের ঘর নেই, তাদের সারি আশ্রয়দাতার ঘরে, প্রতিটা সারি নিজের মডিউল বলে (`module`)।
+     *
+     * @param  list<array<string, mixed>>  $menu
+     * @return list<string>
+     */
+    private static function modulesIn(array $menu): array
+    {
+        $codes = array_column($menu, 'code');
+
+        foreach ($menu as $module) {
+            foreach ($module['groups'] ?? [] as $rows) {
+                foreach ($rows as $row) {
+                    $codes[] = (string) ($row['module'] ?? $module['code']);
+                }
+            }
+        }
+
+        return array_values(array_unique($codes));
     }
 
     private function assertModuleOff(TestResponse $response, string $code): void
@@ -120,13 +142,18 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             $body['phoneModules'],
         );
 
-        foreach (array_column($body['menu'], 'code') as $code) {
+        // ⓘ অতিথির সারিও গোনা — এক করা মডিউলের ভিতরে বন্ধ মডিউলের সারি এলেও ধরা পড়ে
+        foreach (self::modulesIn($body['menu']) as $code) {
             $this->assertContains($code, $body['phoneModules'], "the menu carries {$code}, which is off");
         }
 
         // ⭐ অর্থ, ডকুমেন্টস, প্রমোশন, HR — মালিক, ১৩ অক্টোবর ২০২৬: *"ok tai koro"*
         $this->assertContains('hr', array_column($body['menu'], 'code'));
-        $this->assertContains('finance', array_column($body['menu'], 'code'));
+        // ⓘ অর্থ এখন হিসাব ও অর্থের ভিতরে (মালিক, ২০ নভেম্বর ২০২৬) — নিজের ঘর নয়, হিসাবের ঘরে তার সারি
+        $this->assertNotContains('finance', array_column($body['menu'], 'code'), '⛔ অর্থ এখনো আলাদা মডিউল হয়ে ফোনে');
+        $accounts = collect($body['menu'])->firstWhere('code', 'accounts');
+        $this->assertNotNull($accounts, '⛔ ফোনের মেনুতে হিসাব ও অর্থ নেই');
+        $this->assertTrue(collect($accounts['groups'])->flatten(1)->contains('module', 'finance'), '⛔ হিসাব ও অর্থের ভিতরে অর্থের সারি নেই');
     }
 
     public function test_the_menu_follows_the_switch_for_the_same_token(): void

@@ -87,7 +87,8 @@ return [
      * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
-    'nav' => ['section' => 'finance', 'order' => 10],
+    // ⭐ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬) — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    'nav' => ['section' => 'finance', 'order' => 10, 'merged_label' => 'accounts::menu.merged_title'],
 
     'depends_on' => [
         /*
