@@ -109,7 +109,11 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
         $this->assertFalse($this->engine()->canDecide($approval, $this->maker), '⛔ নিজের সীমার নিচে বলে টাকার কাগজে নিজে সই দেওয়া গেল।');
     }
 
-    public function test_a_super_admin_cannot_sign_their_own_money_paper(): void
+    /**
+     * ⭐ মালিক, ২০ নভেম্বর ২০২৬ ("১ক"): মালিকের ওপরে কেউ নেই — টাকার কাগজেও নিজের সই দেন (২৭ সেপ্টেম্বরের "সুপার অ্যাডমিনেরও নয়" বদলাল);
+     *   পাহারা এখন স্থায়ী চিহ্ন আর রিপোর্টে। কর্মীর নিয়ম অবিকল — নিচের দাবি দুইটা।
+     */
+    public function test_the_owner_signs_his_own_money_paper(): void
     {
         $owner = $this->superAdmin();
 
@@ -118,7 +122,8 @@ class AMoneyPaperPostedWithNobodyToSignTest extends TestCase
 
         $approval = $this->engine()->request($this->paper(), $module, $action, '5000', userId: $owner->id);
 
-        $this->assertFalse($this->engine()->canDecide($approval, $owner), '⛔ সুপার অ্যাডমিন নিজের টাকার কাগজে নিজে সই দিতে পারেন।');
+        $this->assertTrue($this->engine()->canDecide($approval, $owner), '⛔ মালিক নিজের টাকার কাগজে সই দিতে পারছেন না।');
+        $this->assertFalse($this->engine()->canDecide($approval, $this->maker), '⛔ মালিকের ছাড়ে কর্মীও ঢুকে গেল।');
     }
 
     public function test_neither_the_creator_nor_the_requester_can_sign_money(): void
