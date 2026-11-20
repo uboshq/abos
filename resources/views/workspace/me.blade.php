@@ -104,7 +104,8 @@
 
         @if (session('saved'))
             <div role="status" class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
-                {{ is_string(session('saved')) ? session('saved') : __('core.profile.saved') }}
+                {{-- ⓘ মলাটের দরজা লেখাটা `status`-এ দেয়, ফোন বাদের দরজা `saved`-এ --}}
+                {{ is_string(session('status')) ? session('status') : (is_string(session('saved')) ? session('saved') : __('core.profile.saved')) }}
             </div>
         @endif
         <x-ui.errors />
