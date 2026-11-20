@@ -1,0 +1,412 @@
+/*
+ * ⭐ রোল ও অনুমতির পাতা — মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬ ("ok"; [[role/form.blade.php]])।
+ *
+ * ⓘ সব রং টোকেন থেকে (`--color-*`), তাই প্রতিটা রূপ নিজের রঙে পাতাটা আঁকে; কোনো রূপের নিজের নিয়ম ছোঁয়া হয়নি।
+ * ⓘ ক্লাসগুলো কেবল এই পাতার (`role-…`) — অন্য কোনো পাতায় একটা পিক্সেলও নড়ে না।
+ * ⓘ মডিউলের রঙিন দাগ `--edge` (মডিউলের নিজের রং, [[tokens.css]] `--color-module-*`)।
+ */
+
+/* ── চিকন কার্ড: অন্য তালিকার `list-card`, এখানে পাঁচটা ── */
+.role-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+/* ── দুই কলাম: রোলের তালিকা ২৭০px, বাকিটা ── */
+.role-body {
+    display: grid;
+    grid-template-columns: 270px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.role-body > * { min-width: 0; }
+
+.role-list,
+.role-main {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card, 14px);
+    background: var(--color-surface-card);
+}
+
+.role-list { display: flex; flex-direction: column; gap: 4px; padding: 12px; }
+
+.role-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-ink-muted);
+}
+
+.role-search input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    color: var(--color-ink);
+}
+
+.role-search input:focus { outline: none; box-shadow: none; }
+.role-search kbd { font-size: 11px; padding: 0 4px; border: 1px solid var(--color-border); border-radius: 4px; }
+.role-search-wide { width: 360px; max-width: 100%; }
+
+.role-filter-on {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--color-badge-warning-bg);
+    color: var(--color-badge-warning-ink);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.role-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 4px 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-ink-muted);
+}
+
+.role-group-head small { font-weight: 400; font-size: 11.5px; }
+.role-items { display: flex; flex-direction: column; gap: 1px; }
+
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--color-ink);
+    text-decoration: none;
+}
+
+.role-item svg { color: var(--color-ink-muted); }
+a.role-item:hover { background: var(--color-surface-hover); }
+.role-item.is-on { background: var(--color-surface-selected); color: var(--color-brand-700); font-weight: 700; }
+.role-item.is-locked { color: var(--color-ink-muted); }
+.role-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.role-item small { color: var(--color-ink-muted); font-size: 12px; white-space: nowrap; font-weight: 400; }
+
+.role-new-composite {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-link);
+    text-align: center;
+}
+
+/* ── ডানে: বাছা রোল ── */
+.role-main { display: flex; flex-direction: column; min-width: 0; }
+.role-pick { display: grid; place-items: center; min-height: 16rem; padding: 2rem; text-align: center; border-style: dashed; }
+
+.role-errors {
+    margin: 12px 16px 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--color-badge-danger-bg);
+    color: var(--color-badge-danger-ink);
+    font-size: 13.5px;
+}
+
+.role-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 12px 16px; }
+.role-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.role-meta { color: var(--color-ink-muted); font-size: 13px; }
+.role-grow { flex: 1; }
+.role-last-change { margin: -6px 16px 6px; }
+.role-newname { max-width: 28rem; padding: 0 16px 8px; }
+
+.role-sod {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: default;
+    list-style: none;
+}
+
+.role-sod::-webkit-details-marker { display: none; }
+.role-sod.is-ok { color: var(--color-badge-success-ink); background: var(--color-badge-success-bg); }
+.role-sod.is-warn { color: var(--color-badge-warning-ink); background: var(--color-badge-warning-bg); cursor: pointer; }
+
+.role-sod-wrap,
+.role-rename,
+.role-term { position: relative; }
+
+.role-pop {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 280px;
+    max-width: 420px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface-card);
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.16);
+    font-size: 13px;
+}
+
+.role-rename .role-pop,
+.role-term .role-pop { left: auto; right: 0; }
+.role-pop ul { margin: 6px 0 0; padding-left: 18px; list-style: disc; }
+
+.role-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.role-btn::-webkit-details-marker { display: none; }
+.role-btn:hover { background: var(--color-surface-hover); }
+.role-btn.is-primary { border-color: var(--color-brand-500); background: var(--color-brand-500); color: var(--color-brand-ink); }
+
+/* ── রোলের ট্যাব ── */
+.role-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 0 16px; border-bottom: 1px solid var(--color-border); }
+
+.role-tab {
+    padding: 8px 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.role-tab.is-on { color: var(--color-brand-600); border-bottom-color: var(--color-brand-600); }
+.role-panel { padding: 0 16px 16px; }
+.role-panel[hidden] { display: none; }
+.role-note { margin: 10px 0 0; color: var(--color-ink-muted); font-size: 12.5px; }
+
+.role-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; }
+.role-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; color: var(--color-ink-muted); font-size: 12.5px; }
+.role-legend > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ── ঘর: সবুজ ✓ চেকবক্স ── */
+.role-ck { width: 16px; height: 16px; margin: 0; accent-color: var(--color-success); vertical-align: middle; cursor: pointer; }
+.role-ck:disabled { cursor: default; }
+
+/* ⓘ দেখার ঘর ("কে আসলে কী পারে", যৌথ রোল, ব্যাখ্যা) — বন্ধ চেকবক্স ধূসর দেখায়, তাই নিজের ✓ ঘর */
+.role-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.role-mark.is-on { border-color: var(--color-success); background: var(--color-success); }
+.role-cell { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.role-caption { color: var(--color-ink-muted); font-size: 11.5px; }
+
+.role-dash {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border: 1.5px dashed var(--color-border-strong);
+    border-radius: 4px;
+    color: var(--color-ink-muted);
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* ── মডিউল: এক সারিতে একটা, ভাঁজ করা ── */
+.role-mods { display: flex; flex-direction: column; gap: 6px; }
+
+.role-mod {
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--edge);
+    border-radius: 10px;
+}
+
+.role-mod-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--color-surface-card);
+    cursor: pointer;
+    list-style: none;
+}
+
+/* ⛔ তীর-চিহ্ন নেই — মালিক: আন্তর্জাতিক নিয়মে এখানে নেই */
+.role-mod-head::-webkit-details-marker { display: none; }
+.role-mod-head::marker { content: ''; }
+.role-mod-head:hover,
+.role-mod[open] > .role-mod-head { background: var(--color-surface-selected); }
+.role-mod-name { font-size: 15px; }
+.role-mod-bar { width: 140px; height: 6px; margin-left: auto; overflow: hidden; border-radius: 3px; background: var(--color-surface-sunken); }
+.role-mod-bar i { display: block; height: 100%; background: var(--edge); }
+.role-mod-count { min-width: 64px; text-align: right; font-weight: 700; font-size: 13px; color: var(--edge); }
+.role-mod-all { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-muted); font-size: 13px; cursor: pointer; }
+
+.role-table-wrap { max-width: 100%; overflow-x: auto; }
+.role-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+
+.role-table th,
+.role-table td {
+    padding: 6px 10px;
+    border-top: 1px solid var(--color-border);
+    font-size: 13.5px;
+    text-align: center;
+}
+
+.role-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface-card);
+    color: var(--color-ink-muted);
+    font-weight: 600;
+    font-size: 12.5px;
+}
+
+.role-table .role-colall th { top: 31px; font-weight: 400; font-size: 12px; }
+.role-table th:first-child,
+.role-table td:first-child,
+.role-table tbody th { width: 28%; text-align: left; font-weight: 400; }
+.role-table tbody tr:nth-child(even):not(.role-grp) > * { background: var(--color-row-alt, var(--color-surface-muted)); }
+.role-table .role-grp > th { background: var(--color-surface-selected); color: var(--color-brand-700); font-weight: 700; text-align: left; }
+.role-table .role-grp label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.role-table .role-span { text-align: center; }
+.role-special-col,
+.role-table .role-special { text-align: left; }
+.role-chip { display: inline-flex; align-items: center; gap: 4px; margin: 1px 6px 1px 0; font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+
+/* ── স্থির পট্টি: "● n টা ঘর বদলেছে" ── */
+.role-dirty { color: var(--color-warning-ink, var(--color-badge-warning-ink)); font-weight: 700; font-size: 13px; }
+.role-dirty-note { color: var(--color-ink-muted); font-size: 12.5px; }
+
+.role-dialog {
+    width: min(560px, calc(100vw - 32px));
+    padding: 18px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+}
+
+.role-dialog::backdrop { background: rgb(15 23 42 / 0.45); }
+.role-dialog h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.role-changes { max-height: 40vh; margin: 0 0 12px; padding-left: 18px; overflow-y: auto; font-size: 13px; list-style: disc; }
+.role-reason-field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+
+.role-reason-field textarea,
+.role-reason-inline input,
+.role-term-form input,
+.role-pick-user select {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    font-size: 13px;
+}
+
+.role-dialog-actions,
+.role-panel-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: end; gap: 8px; margin-top: 12px; }
+.role-reason-inline { display: grid; flex: 1; gap: 4px; max-width: 28rem; font-size: 12.5px; }
+.role-pick-user { display: grid; gap: 4px; min-width: 16rem; font-size: 12.5px; font-weight: 600; }
+
+/* ── এতে যে রোল আছে ── */
+.role-include-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; margin-top: 10px; }
+
+.role-include {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 13.5px;
+    cursor: pointer;
+}
+
+.role-include small { color: var(--color-ink-muted); font-size: 12px; }
+.role-include.is-blocked { opacity: 0.6; cursor: not-allowed; }
+.role-include-why { flex-basis: 100%; }
+
+/* ── সদস্য, অনুমোদনের ক্ষমতা, রপ্তানির ছক ── */
+.role-list-table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+
+.role-list-table th,
+.role-list-table td {
+    padding: 7px 10px;
+    border-top: 1px solid var(--color-border);
+    font-size: 13.5px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.role-list-table thead th { color: var(--color-ink-muted); font-weight: 600; font-size: 12.5px; }
+.role-list-table tbody tr:nth-child(even) > td { background: var(--color-row-alt, var(--color-surface-muted)); }
+.role-member-name { font-weight: 600; color: var(--color-ink); }
+.role-member-mail { display: block; color: var(--color-ink-muted); font-size: 12px; }
+.role-term-form { display: grid; gap: 8px; }
+.role-term-form label { display: grid; gap: 2px; font-size: 12.5px; font-weight: 600; }
+
+.role-state { padding: 1px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.role-state.is-ok { color: var(--color-badge-success-ink); background: var(--color-badge-success-bg); }
+.role-state.is-warn { color: var(--color-badge-warning-ink); background: var(--color-badge-warning-bg); }
+.role-state.is-wait { color: var(--color-badge-info-ink); background: var(--color-badge-info-bg); }
+.role-state.is-off { color: var(--color-ink-muted); background: var(--color-surface-muted); }
+
+/* ── বদলের ইতিহাস ── */
+.role-history { display: flex; flex-direction: column; margin: 10px 0 0; padding: 0; list-style: none; }
+.role-history > li { padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 13.5px; }
+.role-history-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.role-history-top a { color: var(--color-link); font-weight: 600; }
+.role-history-reason { margin: 4px 0 0; color: var(--color-ink); }
+.role-history-change { margin: 2px 0 0; color: var(--color-ink-muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.role-history-change span { font-weight: 600; }
+
+/* ⓘ "ABOS"-এ চিকন কার্ড এক সারিতে পাঁচটা; ছোট পর্দায় দুইটা, ফোনে একটা */
+@media (max-width: 1100px) {
+    .role-body { grid-template-columns: 1fr; }
+    .role-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .role-search-wide { width: 100%; }
+}
+
+@media (max-width: 640px) {
+    .role-cards { grid-template-columns: 1fr; }
+    .role-legend { margin-left: 0; }
+}

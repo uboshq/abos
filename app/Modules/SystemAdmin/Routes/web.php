@@ -416,6 +416,10 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::post('/', [RoleController::class, 'store'])->name('store');
         Route::get('/{role}/edit', [RoleController::class, 'edit'])->whereNumber('role')->name('edit');
         Route::put('/{role}', [RoleController::class, 'update'])->whereNumber('role')->name('update');
+        // ⭐ রোলের পাতার নমুনা (মালিক "ok", ২০ নভেম্বর ২০২৬): যৌথ রোলের ভেতরের রোল, সদস্যের মেয়াদ, ছাপুন · Excel
+        Route::put('/{role}/includes', [RoleController::class, 'includes'])->whereNumber('role')->name('includes');
+        Route::put('/{role}/members/{user}/term', [RoleController::class, 'term'])->whereNumber('role')->whereNumber('user')->name('term');
+        Route::get('/{role}/matrix', [RoleController::class, 'matrix'])->whereNumber('role')->name('matrix');
     });
 
     /*

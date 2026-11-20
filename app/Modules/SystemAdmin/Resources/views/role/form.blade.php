@@ -1,43 +1,59 @@
 {{--
-    রোল ও অনুমতি — **একটাই** পর্দা।
+    রোল ও অনুমতি — **একটাই** পর্দা (২৪ সেপ্টেম্বর ২০২৬: "ekoi jinis dui porda keno?")।
 
-    ── ⭐ কেন একটাই, ২৪ সেপ্টেম্বর ২০২৬ ─────────────────────────────────
-    মালিকের প্রশ্ন: *"ekoi jinis dui porda keno?"* ⓘ আগে তালিকা আর
-    সম্পাদনা দুইটা আলাদা পর্দা ছিল, অথচ সম্পাদনার পর্দার বাঁ কলামে ঠিক
-    সেই তালিকাটাই আবার বসত। ⚠️ একই জিনিস দুইবার, আর রোল বদলাতে গেলে
-    প্রতিবার পুরো পাতা নতুন করে।
+    ── ⭐ নতুন চেহারা — মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬ ("ok") ─────────────────────────────────────────────
+    ১. মাথা এক সারিতে: নাম ⓘ (ব্যাখ্যার লাইন ⓘ-এর ভেতরে — সব পাতার নিয়ম, [[x-ui.page-header]]), পিল ট্যাব (রোল · ব্যবহারকারী ·
+       দুই রোল পাশাপাশি — [[x-ui.list-tabs]], "ABOS"-এ মাথার সারিতে ওঠে), ডানে ছাপুন · Excel · ＋ নতুন রোল।
+    ২. পাঁচটা বড় বক্স → চিকন এক-লাইনের রঙিন কার্ড (অন্য তালিকার `list-card`); "এই রোলে যাঁরা আছেন" উঠে গেল — সদস্য ট্যাবের
+       গুনতির সাথে একই সংখ্যা দুইবার হত (মালিকের নিয়ম: এক সংখ্যা এক জায়গায়)। "দায়িত্বের সংঘাত" নতুন।
+    ৩. ডানের আলাদা কলাম নেই — অনুমোদনের ক্ষমতা আর সদস্য রোলের নিজের ট্যাবে; অনুমতির ছক পুরো চওড়া।
+    ৪. বাঁয়ে রোলের তালিকা (২৭০px): সিস্টেম · ব্যবসায়িক · নিজের বানানো · যৌথ রোল।
+    ৫. মডিউল এক সারিতে একটা, ভাঁজ করা, একটা খুললে আগেরটা বন্ধ ([[role/partials/matrix]])।
+    ৬. রোলের নামের পাশে দায়িত্বের সংঘাতের চিহ্ন। ৭. নিচে স্থির পট্টি — "● n টা ঘর বদলেছে", সংরক্ষণে কারণ লাগে।
+    ৮. "কে আসলে কী পারে"। ৯. যৌথ রোল। ১০. সময়-বাঁধা সদস্যপদ।
 
-    ⭐ এখন তিন কলাম (স্পেক §২.০): বাঁয়ে তালিকা, মাঝে অনুমতির ছক, ডানে
-    অ্যাকসেসের বিবরণ। ⓘ `role` শূন্য মানে *"এখনো কিছু বাছা হয়নি"*।
-
-    ── ⛔ কেন ছক, ১৯ সেপ্টেম্বর ২০২৬ ────────────────────────────────────
-    আগে প্রতিটা মডিউলের নিচে অনুমতিগুলো **কাঁচা নামে** বসত —
-    `accounts.voucher.update`, `inventory.stock.opening`। ⚠️ কাঁচা নামে
-    টিক দেওয়া মানে না বুঝে অধিকার দেওয়া — আর এখানে ভুল টিক মানে ভুল
-    মানুষের হাতে টাকার দরজা।
-
-    ── ⓘ জমা দেওয়া বদলায়নি ────────────────────────────────────────────
-    প্রতিটা সুইচ এখনো `permissions[]`-এ পুরো নামটাই পাঠায়। ছকটা কেবল
-    সাজানো — কোন ঘরে কোনটা বসবে সেটা `RoleController::formData()` ঠিক
-    করে, আর যেটা চার কলামে ধরে না সেটা "বিশেষ" কলামে যায়, বাদ পড়ে না।
+    ── ⓘ জমা দেওয়া বদলায়নি ───────────────────────────────────────────────────────────────────────────────────
+    প্রতিটা ঘর এখনো `permissions[]`-এ পুরো নামটাই পাঠায় — কোন ঘরে কোনটা বসবে তা `RoleController::formData()` ঠিক করে, আর যা
+    আট কলামে ধরে না তা "অন্য কাজ" কলামে যায়, বাদ পড়ে না।
 --}}
 @php
     /* ⓘ `null` = তালিকার পর্দা, `exists === false` = নতুন রোল। */
     $picked = $role !== null;
     $isNew = $picked && ! $role->exists;
+    $isComposite = (bool) $composite;
 
     $chosen = collect(old('permissions', $held))->all();
 
     $title = ! $picked
         ? __('system_admin::menu.roles')
-        : ($isNew ? __('system_admin::action.new_role') : \App\Core\Support\RoleLabel::for($role->name));
+        : ($isNew ? ($newKind === 'composite' ? __('system_admin::permission.new_composite') : __('system_admin::action.new_role')) : \App\Core\Support\RoleLabel::for($role->name));
 
-    $columns = [
-        'view' => __('system_admin::permission.column_view'),
-        'create' => __('system_admin::permission.column_create'),
-        'update' => __('system_admin::permission.column_update'),
-        'delete' => __('system_admin::permission.column_delete'),
-    ];
+    $columns = [];
+    foreach (['view', 'create', 'update', 'delete', 'approve', 'post', 'export', 'print'] as $c) {
+        $columns[$c] = __('system_admin::permission.column_'.$c);
+    }
+
+    $saved = $picked && ! $isNew;
+    $here = $saved ? route('system_admin.role.edit', $role) : route('system_admin.role.index');
+
+    /* ⓘ রোলের ট্যাব — যেটার কিছু বলার নেই সেটা আঁকা হয় না (অনুমোদনের ক্ষমতা শূন্য হলে ট্যাবটাই নেই, আগের "বাক্স নেই"-এর মতো) */
+    $roleTabs = ['permissions' => __('system_admin::permission.tab_permissions')];
+    if ($saved && $isComposite) {
+        $roleTabs['includes'] = __('system_admin::permission.tab_includes', ['count' => count($includes)]);
+    }
+    if ($saved && $approvalPower !== []) {
+        $roleTabs['approval'] = __('system_admin::permission.tab_approval', ['count' => count($approvalPower)]);
+    }
+    if ($saved) {
+        $roleTabs['members'] = __('system_admin::permission.tab_members', ['count' => collect($memberRows)->where('state.0', '!=', 'off')->count()]);
+        $roleTabs['effective'] = __('system_admin::permission.tab_effective');
+        $roleTabs['history'] = __('system_admin::permission.tab_history');
+    }
+    if ($newKind === 'composite') {
+        $roleTabs = ['includes' => __('system_admin::permission.tab_includes', ['count' => count(old('includes', []))])];
+    }
+    $startTab = isset($roleTabs[$tab]) ? $tab : array_key_first($roleTabs);
+
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -45,157 +61,134 @@
 
     <x-slot:header>
         <x-ui.page-header :title="__('system_admin::menu.roles')"
-                          :subtitle="__('system_admin::message.roles_note')" />
+                          :subtitle="__('system_admin::message.roles_note')">
+            <x-slot:actions>
+                {{-- ⭐ ছাপুন · Excel — বাছা রোলের পুরো ছক, সাধারণ রপ্তানির পথে ([[RoleController::matrix()]]) --}}
+                @if ($saved)
+                    <x-ui.button tone="secondary" icon="printer" data-role-print target="_blank"
+                                 :href="route('system_admin.role.matrix', ['role' => $role, 'export' => 'print'])">
+                        {{ __('system_admin::permission.print') }}
+                    </x-ui.button>
+                    <x-ui.button tone="secondary" icon="download" data-role-excel
+                                 :href="route('system_admin.role.matrix', ['role' => $role, 'export' => 'xlsx'])">
+                        Excel
+                    </x-ui.button>
+                @endif
+                <x-ui.button tone="primary" icon="plus" :href="route('system_admin.role.create')">
+                    {{ __('system_admin::action.new_role') }}
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
-    {{-- ⭐ সংরক্ষণের বার্তা এখানে — ২৪ সেপ্টেম্বর ২০২৬।
+    {{-- ⭐ পাতার পিল ট্যাব — "ABOS"-এ নামের পাশে মাথার সারিতে ওঠে ([[abos-list-head.js]] `compactPageHead`) --}}
+    <x-ui.list-tabs :label="__('system_admin::menu.roles')" :tabs="array_values(array_filter([
+        ['key' => 'roles', 'label' => __('system_admin::permission.pill_roles'), 'url' => route('system_admin.role.index'), 'active' => true],
+        \Illuminate\Support\Facades\Route::has('system_admin.user.index')
+            ? ['key' => 'users', 'label' => __('system_admin::permission.pill_users'), 'url' => route('system_admin.user.index'), 'active' => false] : null,
+        ['key' => 'compare', 'label' => __('system_admin::permission.compare_roles'),
+            'url' => $saved ? route('system_admin.role.compare', ['a' => $role->id]) : route('system_admin.role.compare'), 'active' => false],
+    ]))" />
 
-         ⓘ আগে এটা কেবল তালিকার পর্দায় ছিল, আর সংরক্ষণের পর ওখানেই ফেরত
-         পাঠানো হত। ⚠️ এখন সংরক্ষণের পর রোলটাতেই থাকা হয়
-         ([[RoleController::store()]]), তাই বার্তাটা এই পর্দায় না থাকলে
-         **কোনো বার্তাই দেখা যেত না** — কাজ হয়েছে কি না বলার উপায় থাকত না। --}}
     @if (session('saved'))
         <div role="status"
-             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
-                    text-(--color-badge-success-ink)">
+             class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
             {{ session('saved') }}
         </div>
     @endif
 
-    {{-- ⭐ সারাংশের কার্ড — মালিকের স্পেকের "Overview Cards", ২৩ সেপ্টেম্বর ২০২৬।
-
-         ⓘ স্পেকে ছয়টা কার্ড: ব্যবহারকারী · রোল · অনুমতি · উচ্চ ঝুঁকি ·
-         অপেক্ষায় · স্থগিত।
-
-         ── ⛔ এখানে চারটা, আর সেটাই ইচ্ছাকৃত ───────────────────────────
-         ⚠️ *"উচ্চ ঝুঁকি"*, *"অপেক্ষায়"* আর *"স্থগিত"* — তিনটার পিছনেই
-         এখনো কোনো ব্যবস্থা নেই (ঝুঁকির মাত্রা, অ্যাকসেস রিভিউ, স্থগিত
-         করা)। ⛔ স্পেকের সংখ্যা তিনটা (১৪ · ৭ · ৩) বসিয়ে দিলে পর্দাটা
-         নকশার মতোই দেখাত — আর কার্ডগুলো হত **সাজসজ্জা**, যা একদিন কেউ
-         বিশ্বাস করে সিদ্ধান্ত নিতেন।
-
-         ⓘ শূন্য দেখানোও চলত না: শূন্য মানে *"একটাও নেই"*, *"এখনো বানানো
-         হয়নি"* নয়। ⭐ ব্যবস্থাগুলো এলে কার্ডগুলো এখানেই বসবে — জায়গা
-         আছে, আর সংখ্যাটা তখন সত্যি বলবে।
-
-         ⓘ চতুর্থ কার্ডটা স্পেকের বাইরে, কিন্তু মেপে পাওয়া আর কাজের:
-         **যে রোলে কেউ নেই** — আজ ১৩টার মধ্যে ১০টাই ফাঁকা, আর ঐ সংখ্যাটা
-         দেখলে সবার আগে ওগুলো গোছানোর কথা মনে পড়ে।
-
-         ⚠️ উচ্চতা স্পেক মতো ১০০–১২০px — `p-4` ও দুই লাইনের লেখায় ≈১০৪। --}}
-    {{-- ⭐ দফা ১০ (কন্ট্রোল প্যানেলের পরিকল্পনা, ২১ অক্টোবর ২০২৬): "অনুমতি ৩১৯" উঠে গেল — জায়গায় "এই রোলে যাঁরা আছেন" আর "শেষ বদল"।
-         ⓘ রোল না বাছা থাকলে প্রথমটা "একটা রোল বাছুন", শেষ বদলটা এই কোম্পানির যেকোনো রোলের ([[RoleController::lastChange()]])। --}}
+    {{-- ⭐ চিকন কার্ড — দফা ২ ("উপরের বড় বক্স পাঁচটা — চিকন, এক লাইনে, অন্য পাতার মতো")। ⓘ "যে রোলে কেউ নেই" আর
+         "দায়িত্বের সংঘাত" চাপলে বাঁয়ের তালিকা কেবল সেগুলো; আবার চাপলে সব। --}}
     @php
-        $hasMembers = $picked && $role->exists;
+        $cardHref = fn (string $key) => $only === $key ? $here : $here.'?only='.$key;
         $cards = [
-            ['users', 'system_admin::permission.card_users', 'people', $summary['users'] ?? 0, null],
-            ['roles', 'system_admin::permission.card_roles', 'check-circle', $summary['roles'] ?? 0, null],
-            ['members', 'system_admin::permission.card_members', 'people', $hasMembers ? $members->count() : '—', $hasMembers ? null : __('system_admin::permission.pick_for_members')],
-            ['last-change', 'system_admin::permission.card_last_change', 'clock', $lastChange ? \App\Core\Support\DateFormat::spokenDate($lastChange['at']) : '—', $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : null],
-            ['unassigned', 'system_admin::permission.card_unassigned', 'alert-triangle', $summary['unassigned'] ?? 0, null],
+            ['users', 'system_admin::permission.card_users', '👥', $summary['users'] ?? 0, '', ['#2346d8', '#3b82f6'],
+                \Illuminate\Support\Facades\Route::has('system_admin.user.index') ? route('system_admin.user.index') : $here, false],
+            ['roles', 'system_admin::permission.card_roles', '🔑', $summary['roles'] ?? 0, '', ['#059669', '#10b981'], $here, false],
+            ['unassigned', 'system_admin::permission.card_unassigned', '∅', $summary['unassigned'] ?? 0, '', ['#dc2626', '#f97316'], $cardHref('empty'), $only === 'empty'],
+            ['clash', 'system_admin::permission.card_clash', '⚠', $summary['clash'] ?? 0, '', ['#d97706', '#f59e0b'], $cardHref('clash'), $only === 'clash'],
+            ['last-change', 'system_admin::permission.card_last_change', '🕒',
+                $lastChange ? \App\Core\Support\DateFormat::spokenDate($lastChange['at']) : '—',
+                $lastChange && $lastChange['by'] ? __('system_admin::permission.changed_by', ['name' => $lastChange['by']]) : '',
+                ['#0284c7', '#22d3ee'], $saved ? $here.'?tab=history' : $here, false],
         ];
     @endphp
-    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        @foreach ($cards as [$key, $label, $icon, $value, $hint])
-            <div data-boxed data-role-card="{{ $key }}"
-                 class="rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card) p-4">
-                <div class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
-                    <x-ui.icon :name="$icon" class="size-4" />
-                    <span>{{ __($label) }}</span>
-                </div>
-
-                {{-- ⓘ তারিখের কার্ডে ছোট অক্ষর — "28 অক্টোবর 2026" বড় অক্ষরে দুই লাইনে ভাঙত আর সারির সব কার্ড লম্বা হত (দফা ১৪, ১০৮০p) --}}
-                <div @class(['num mt-1 font-bold', 'text-2xl' => $key !== 'last-change', 'text-lg leading-8' => $key === 'last-change'])>{{ $value }}</div>
-                @if ($hint)
-                    <div class="truncate text-2xs text-(--color-ink-muted)">{{ $hint }}</div>
-                @endif
-            </div>
+    {{-- ⓘ `data-allow-all-branches` — কার্ড আর তালিকা কেবল রোল দেখার লিংক (রোল কোম্পানির, শাখার নয়); "সব শাখা"-তে ধূসর হত, কারণ রোলের পাতার ঠিকানা `/edit`-এ শেষ। সংরক্ষণ তবু বন্ধ থাকে --}}
+    <div class="list-cards role-cards" data-role-cards data-allow-all-branches>
+        @foreach ($cards as [$key, $label, $icon, $value, $sub, $tone, $href, $on])
+            <a href="{{ $href }}" @class(['list-card', 'is-on' => $on]) data-role-card="{{ $key }}"
+               style="--a: {{ $tone[0] }}; --b: {{ $tone[1] }}" @if ($on) aria-current="true" @endif>
+                <span class="list-card-icon" aria-hidden="true">{{ $icon }}</span>
+                <span class="min-w-0">
+                    <span class="list-card-label">{{ __($label) }}</span>
+                    <span class="list-card-value num">{{ $value }}</span>
+                    <span class="list-card-sub">{{ $sub }}</span>
+                </span>
+            </a>
         @endforeach
     </div>
 
-    {{-- ⭐ তিন প্যানেলের মাপ — মালিকের স্পেক, ২৩ সেপ্টেম্বর ২০২৬।
+    <div class="role-body" data-role-screen data-role-tab-start="{{ $startTab }}">
 
-         তাঁর দেওয়া মাপ, হুবহু:
-             Left Role Panel        ২৪০–২৮০px
-             Permission Matrix      flex / 1fr
-             Right Details Panel    ৩২০–৩৮০px
-
-         ⓘ বাঁ কলাম `16.25rem` (২৬০px) — তাঁর ২৪০–২৮০-র মাঝামাঝি।
-         ⓘ ডান কলাম `21.875rem` (৩৫০px) — তাঁর ৩২০–৩৮০-র মাঝামাঝি।
-
-         ── ⛔ আগে কী ছিল ───────────────────────────────────────────────
-         বাঁ ১৫rem (২৪০) আর ডান **১৬rem (২৫৬)** — ⚠️ ডানটা স্পেকের
-         সর্বনিম্নেরও ৬৪px নিচে। ⓘ ঐ কলামে ডেটা স্কোপ, অনুমোদনের সীমা
-         আর ঝুঁকি বসবে; ২৫৬px-এ *"৳৫,০০,০০০"* সারিটাই দুই লাইনে ভাঙত।
-
-         ⚠️ `minmax(0,1fr)` — নাহলে ম্যাট্রিক্সের চওড়া ছক গ্রিড ঠেলে
-         বাড়িয়ে দেয়, আর ডান কলাম পর্দার বাইরে চলে যায়। --}}
-    <div class="grid items-start gap-4
-                lg:grid-cols-[16.25rem_minmax(0,1fr)]
-                xl:grid-cols-[16.25rem_minmax(0,1fr)_21.875rem]">
-
-        {{-- ── বাঁয়ে: রোলের তালিকা ─────────────────────────────────────── --}}
-        <aside data-boxed x-data="{ q: '' }"
-               class="order-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3 lg:order-none">
-            <div class="flex items-center justify-between gap-2">
-                <h2 class="text-sm font-semibold">{{ __('system_admin::permission.roles') }}</h2>
-                <x-ui.button tone="primary" icon="plus" :href="route('system_admin.role.create')">
-                    {{ __('system_admin::action.new_role') }}
-                </x-ui.button>
-            </div>
-
-            <label class="mt-3 flex items-center gap-2 rounded-(--radius-field) border border-(--color-border) px-2">
+        {{-- ── বাঁয়ে: রোলের তালিকা (২৭০px) ────────────────────────────────────── --}}
+        <aside data-boxed x-data="{ q: '' }" class="role-list" data-allow-all-branches>
+            <label class="role-search">
                 <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
-                {{-- ⓘ `data-shortcut` — স্পেক §২.৯-এর `Ctrl+K` এই ঘরটাই খোঁজে।
-                     ⚠️ ক্লাস বা `x-model` ধরে খুঁজলে পর্দার সাজ বদলানোর দিন
-                     শর্টকাটটা নীরবে মরে যেত। --}}
+                {{-- ⓘ `data-shortcut` — Ctrl+K এই ঘরটাই খোঁজে --}}
                 <input type="search" x-model="q" data-shortcut="search-roles"
                        placeholder="{{ __('system_admin::permission.search_roles') }}"
-                       aria-label="{{ __('system_admin::permission.search_roles') }}"
-                       title="Ctrl+K"
-                       class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
+                       aria-label="{{ __('system_admin::permission.search_roles') }}" title="Ctrl+K">
             </label>
 
-            {{-- ⭐ তিন ভাগে — স্পেক §২.৩। ভাগটা কোথা থেকে আসে তা
-                 [[RoleController::grouped()]]-এ, আর সেটা মেপে, ধরে নিয়ে নয়। --}}
+            @if ($only)
+                <a href="{{ $here }}" class="role-filter-on" data-role-filter-clear>
+                    {{ __('system_admin::permission.filter_'.$only) }} ✕
+                </a>
+            @endif
+
+            @php
+                $legendShown = false;
+            @endphp
             @foreach ($roleList as $groupKey => $group)
-                <h3 class="mt-3 px-2 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
-                    {{ $group['label'] }}
+                <h3 class="role-group-head">
+                    <span>{{ $group['label'] }}</span>
+                    @if ($groupKey === 'composite')
+                        <small>{{ __('system_admin::permission.legend_composite') }}</small>
+                    @elseif ($groupKey !== 'system' && ! $legendShown)
+                        <small>{{ __('system_admin::permission.legend_people_permissions') }}</small>
+                        @php
+                            $legendShown = true;
+                        @endphp
+                    @endif
                 </h3>
 
-                <ul class="mt-1 space-y-0.5">
+                <ul class="role-items">
                     @foreach ($group['roles'] as $r)
                         @php
-                            $current = $picked && $role->exists && $r->id === $role->id;
+                            $current = $saved && $r->id === $role->id;
                             $label = \App\Core\Support\RoleLabel::for($r->name);
                         @endphp
                         <li x-show="! q || @js(mb_strtolower($label.' '.$r->name)).includes(q.toLowerCase())">
                             @if ($r->name === $ownerRole)
-                                <div title="{{ __('system_admin::permission.owner_locked') }}"
-                                     class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 text-sm text-(--color-ink-muted)">
+                                <div class="role-item is-locked" title="{{ __('system_admin::permission.owner_locked') }}">
                                     <x-ui.icon name="lock" class="size-4 flex-none" />
-                                    <span class="min-w-0 flex-1 truncate" title="{{ $label }}">{{ $label }}</span>
-                                    <span class="tabular-nums text-xs">{{ $r->users_count }}</span>
+                                    <span class="role-item-name" title="{{ $label }}">{{ $label }}</span>
+                                    <small class="num">{{ $r->users_count }}</small>
                                 </div>
                             @else
-                                <a href="{{ route('system_admin.role.edit', $r) }}"
+                                <a href="{{ route('system_admin.role.edit', $r) }}{{ $only ? '?only='.$only : '' }}"
                                    @if ($current) aria-current="page" @endif
-                                   @class([
-                                       'flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 text-sm',
-                                       'bg-(--color-surface-selected) font-semibold text-(--color-brand-700)' => $current,
-                                       'hover:bg-(--color-surface-hover)' => ! $current,
-                                   ])>
-                                    <x-ui.icon name="people" class="size-4 flex-none text-(--color-ink-muted)" />
-                                    <span class="min-w-0 flex-1 truncate" title="{{ $label }}">{{ $label }}</span>
-
-                                    {{-- ⓘ দুইটা সংখ্যা: কতজন · কয়টা অনুমতি। ⛔ পুরনো
-                                         তালিকার পর্দায় দুইটাই কলাম হয়ে ছিল, আর ঐ পর্দাটা
-                                         আর নেই — সংখ্যাগুলো হারিয়ে যেতে দেওয়া হয়নি। --}}
-                                    <span class="tabular-nums text-xs text-(--color-ink-muted)"
-                                          title="{{ __('system_admin::field.user_count') }} · {{ __('system_admin::field.permission_count') }}">
-                                        {{ $r->users_count }} · {{ $r->permissions_count }}
-                                    </span>
+                                   @class(['role-item', 'is-on' => $current])>
+                                    <x-ui.icon :name="$groupKey === 'composite' ? 'grid' : 'people'" class="size-4 flex-none" />
+                                    <span class="role-item-name" title="{{ $label }}">{{ $label }}</span>
+                                    {{-- ⓘ দুইটা সংখ্যা: কতজন · কয়টা অনুমতি (যৌথে: কতজন · কয়টা রোল) --}}
+                                    <small class="num" title="{{ __('system_admin::field.user_count') }} · {{ __('system_admin::field.permission_count') }}">
+                                        @if ($groupKey === 'composite')
+                                            {{ $r->users_count }} · {{ __('system_admin::permission.roles_inside', ['count' => count(app(\App\Core\Services\CompositeRoles::class)->includedIds((int) $r->id))]) }}
+                                        @else
+                                            {{ $r->users_count }} · {{ $r->permissions_count }}
+                                        @endif
+                                    </small>
                                 </a>
                             @endif
                         </li>
@@ -203,532 +196,289 @@
                 </ul>
             @endforeach
 
-            {{-- ⭐ মডিউলে যান — দফা ১০: ছকে চোদ্দটার বেশি মডিউল, নিচেরগুলোয় পৌঁছাতে লম্বা স্ক্রল। এক চাপে সেখানে, ভাঁজ খুলে
-                 (actions.js `data-permission-jump`)। ⓘ পাশে টিকের সংখ্যা — কোথায় কিছু দেওয়া আছে, তালিকাতেই দেখা যায়। --}}
-            @if ($picked && $grid !== [])
-                <nav data-permission-jump-list aria-label="{{ __('system_admin::permission.jump_to_module') }}">
-                    <h3 class="mt-4 px-2 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
-                        {{ __('system_admin::permission.jump_to_module') }}
-                    </h3>
-                    <ul class="mt-1 space-y-0.5">
-                        @foreach ($grid as $module => $block)
-                            <li>
-                                <a href="#perm-{{ $module }}" data-permission-jump="{{ $module }}"
-                                   class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 text-sm hover:bg-(--color-surface-hover)">
-                                    <span class="min-w-0 flex-1 truncate">{{ $block['label'] }}</span>
-                                    <span class="tabular-nums text-xs text-(--color-ink-muted)">{{ count(array_intersect($block['all'], $chosen)) }}/{{ count($block['all']) }}</span>
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </nav>
-            @endif
+            {{-- ⭐ যৌথ রোল — কয়েকটা রোল মিলিয়ে একটা (নমুনা, দফা ৯) --}}
+            <a href="{{ route('system_admin.role.create', ['kind' => 'composite']) }}" class="role-new-composite" data-role-new-composite>
+                ＋ {{ __('system_admin::permission.new_composite') }}
+            </a>
         </aside>
 
-        {{-- ── মাঝে: নাম আর অনুমতির ছক ───────────────────────────────── --}}
+        {{-- ── ডানে: বাছা রোল, পুরো চওড়া ──────────────────────────────────────── --}}
         @if (! $picked)
-            {{-- ⭐ কোনো রোল বাছা হয়নি — খালি পর্দা নয়, একটা কথা।
-
-                 ⚠️ ছকটা এখানে আঁকা হয় না, আর সেটা ইচ্ছাকৃত: কোন রোলের ছক?
-                 ⛔ সব টিক তোলা একটা ছক দেখালে মনে হত এই রোলটার কিছুই নেই। --}}
-            <section data-boxed
-                     class="order-1 grid min-h-64 place-items-center rounded-(--radius-card) border
-                            border-dashed border-(--color-border) bg-(--color-surface-card) p-8 text-center lg:order-none">
+            {{-- ⓘ কোনো রোল বাছা হয়নি — খালি ছক নয়, একটা কথা (সব টিক তোলা ছক দেখালে মনে হত রোলটার কিছুই নেই) --}}
+            <section data-boxed class="role-main role-pick">
                 <div>
                     <x-ui.icon name="lock" class="mx-auto size-8 text-(--color-ink-muted)" />
                     <h2 class="mt-3 text-base font-semibold">{{ __('system_admin::permission.pick_a_role') }}</h2>
-                    <p class="mx-auto mt-1 max-w-sm text-sm text-(--color-ink-muted)">
-                        {{ __('system_admin::permission.pick_a_role_note') }}
-                    </p>
+                    <p class="mx-auto mt-1 max-w-sm text-sm text-(--color-ink-muted)">{{ __('system_admin::permission.pick_a_role_note') }}</p>
                 </div>
             </section>
         @else
-        <form method="POST"
-              action="{{ $isNew ? route('system_admin.role.store') : route('system_admin.role.update', $role) }}"
-              class="order-1 min-w-0 space-y-3 lg:order-none">
-            @csrf
-            @unless ($isNew) @method('PUT') @endunless
+        <section data-boxed class="role-main">
+            <form method="POST" id="role-form" data-role-form @if ($saved) data-role-reason-needed @endif
+                  action="{{ $isNew ? route('system_admin.role.store') : route('system_admin.role.update', $role) }}">
+                @csrf
+                @unless ($isNew) @method('PUT') @endunless
+                @if ($newKind === 'composite')
+                    <input type="hidden" name="kind" value="composite">
+                @endif
 
-            @if ($errors->any())
-                <div role="alert"
-                     class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
-                            text-(--color-badge-danger-ink)">
-                    <ul class="list-inside list-disc">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <h2 class="text-base font-semibold">{{ $title }}</h2>
-
-                        {{-- ⭐ রোলের মাথা — মালিকের স্পেক §২.৪, ২৪ সেপ্টেম্বর ২০২৬।
-
-                             তাঁর নমুনায়: *"ব্যবসায়িক রোল · ১২ জন · ● সচল"*, আর
-                             নিচে *"তৈরি ১২ আগস্ট · শেষ বদল ২১ সেপ্টেম্বর"*।
-
-                             ⓘ প্রতিটা টুকরো মাপা: ভাগটা রেজিস্ট্রি থেকে
-                             ([[RoleController::grouped()]]), গুনতি `users_count`,
-                             তারিখ দুইটা সারির নিজের ঘর।
-
-                             ⛔ *"● সচল"* এখানে **নেই**: রোলে সচল/নিষ্ক্রিয় বলে
-                             কোনো ঘরই নেই আজ। ⚠️ সবুজ বিন্দুটা বসিয়ে দিলে সেটা
-                             সবসময় সবুজ থাকত — অর্থাৎ একটা চিহ্ন যা কোনোদিন কিছু
-                             বলে না, অথচ দেখে মনে হয় বলছে। --}}
-                        @unless ($isNew)
-                            <p class="mt-0.5 text-xs text-(--color-ink-muted)">
-                                @foreach ($roleList as $groupKey => $group)
-                                    @if ($group['roles']->contains('id', $role->id))
-                                        {{ $group['label'] }} ·
-                                        @break
-                                    @endif
-                                @endforeach
-
-                                {{ __('system_admin::permission.people_count', [
-                                    'count' => $members->count(),
-                                ]) }}
-                            </p>
-
-                            @if ($role->created_at)
-                                <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
-                                    {{ __('system_admin::permission.made_on', [
-                                        'date' => \App\Core\Support\DateFormat::spokenDate($role->created_at),
-                                    ]) }}
-                                    @if ($role->updated_at && ! $role->updated_at->equalTo($role->created_at))
-                                        · {{ __('system_admin::permission.changed_on', [
-                                            'date' => \App\Core\Support\DateFormat::spokenDate($role->updated_at),
-                                        ]) }}
-                                    @endif
-                                </p>
-                            @endif
-                            {{-- ⭐ দফা ১৩: শেষ বদল কে করলেন, আর বদলের ইতিহাসের দরজা --}}
-                            <x-audit.last-change :subject="$role" class="mt-1" />
-                        @endunless
+                @if ($errors->any())
+                    <div role="alert" class="role-errors">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                     </div>
+                @endif
 
-                    <div class="flex flex-wrap gap-2">
-                        {{-- ⭐ দফা ১০: "এর মতো নতুন রোল" আর "দুই রোল পাশাপাশি" — সংরক্ষিত রোলেই; নতুনটার কপির কিছু নেই --}}
-                        @unless ($isNew)
+                {{-- ── রোলের মাথা: নাম · ভাগ · তৈরি · সংঘাত · এর মতো নতুন · নাম বদলান ── --}}
+                <div class="role-head">
+                    <h2>{{ $title }}</h2>
+
+                    @if ($saved)
+                        <span class="role-meta">
+                            @foreach ($roleList as $groupKey => $group)
+                                @if ($group['roles']->contains('id', $role->id))
+                                    {{ $group['label'] }} ·
+                                    @break
+                                @endif
+                            @endforeach
+                            @if ($role->created_at)
+                                {{ __('system_admin::permission.made_on', ['date' => \App\Core\Support\DateFormat::spokenDate($role->created_at)]) }} ·
+                            @endif
+                            {{ __('system_admin::permission.inner_name', ['name' => $role->name]) }}
+                        </span>
+
+                        {{-- ⭐ দায়িত্বের সংঘাত — দফা ৬; চাপলে কোন কাগজে --}}
+                        @if ($clashes === [])
+                            <span class="role-sod is-ok" data-role-sod="0" title="{{ __('system_admin::permission.sod_hint') }}">✓ {{ __('system_admin::permission.sod_none') }}</span>
+                        @else
+                            <details class="role-sod-wrap" data-role-sod="{{ count($clashes) }}">
+                                <summary class="role-sod is-warn">⚠ {{ __('system_admin::permission.sod_some', ['count' => count($clashes)]) }}</summary>
+                                <div class="role-pop">
+                                    <p>{{ __('system_admin::permission.sod_hint') }}</p>
+                                    <ul>
+                                        @foreach ($clashes as $clash)
+                                            <li>{{ $clash }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </details>
+                        @endif
+                    @endif
+
+                    <span class="role-grow"></span>
+
+                    @if ($saved)
+                        {{-- ⓘ "দুই রোল পাশাপাশি" মাথার পিল ট্যাবে; এখানে "এর মতো নতুন রোল" আর "নাম বদলান" --}}
+                        @unless ($isComposite)
                             <x-ui.button tone="secondary" icon="plus" data-role-copy
                                          :href="route('system_admin.role.create', ['from' => $role->id])">
                                 {{ __('system_admin::permission.copy_role') }}
                             </x-ui.button>
-                            <x-ui.button tone="secondary" icon="columns" data-role-compare
-                                         :href="route('system_admin.role.compare', ['a' => $role->id])">
-                                {{ __('system_admin::permission.compare_roles') }}
-                            </x-ui.button>
                         @endunless
-                        <x-ui.button tone="secondary" :href="route('system_admin.role.index')">
-                            {{ __('core.action.cancel') }}
-                        </x-ui.button>
-                        <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-                    </div>
-                </div>
-
-                <div class="mt-3 max-w-md">
-                    <x-ui.field name="name" :label="__('system_admin::field.role_name')"
-                                :value="old('name', $role->name)"
-                                :hint="__('system_admin::field.role_name_hint')" required />
-                    {{-- ⭐ দফা ১১: ঘরে ভিতরের নাম ("Accountant") — পাশেই পর্দার নামটা, নইলে ইংরেজি-বাংলা মেশানো দেখায় আর কোনটা কী বোঝা যায় না --}}
-                    @if (! $isNew && \App\Core\Support\RoleLabel::for($role->name) !== $role->name)
-                        <p data-role-shown-as class="mt-1 text-xs text-(--color-ink-muted)">
-                            {{ __('system_admin::permission.shown_as', ['name' => \App\Core\Support\RoleLabel::for($role->name)]) }}
-                        </p>
+                        <details class="role-rename" data-role-rename @if ($errors->has('name')) open @endif>
+                            <summary class="role-btn">✎ {{ __('system_admin::permission.rename') }}</summary>
+                            <div class="role-pop">
+                                <x-ui.field name="name" :label="__('system_admin::field.role_name')"
+                                            :value="old('name', $role->name)"
+                                            :hint="__('system_admin::field.role_name_hint')" required />
+                                @if (\App\Core\Support\RoleLabel::for($role->name) !== $role->name)
+                                    <p data-role-shown-as class="mt-1 text-xs text-(--color-ink-muted)">
+                                        {{ __('system_admin::permission.shown_as', ['name' => \App\Core\Support\RoleLabel::for($role->name)]) }}
+                                    </p>
+                                @endif
+                            </div>
+                        </details>
                     @endif
                 </div>
-            </section>
 
-            {{-- ⭐ ছকের সরঞ্জাম — মালিকের স্পেক §২.৫, ২৪ সেপ্টেম্বর ২০২৬।
+                @if ($saved)
+                    {{-- ⭐ দফা ১৩ (কন্ট্রোল প্যানেল): শেষ বদল কে করলেন, আর নিরীক্ষার খাতার দরজা --}}
+                    <x-audit.last-change :subject="$role" class="role-last-change" />
+                @else
+                    <div class="role-newname">
+                        <x-ui.field name="name" :label="__('system_admin::field.role_name')"
+                                    :value="old('name', $role->name)"
+                                    :hint="__('system_admin::field.role_name_hint')" required />
+                    </div>
+                @endif
 
-                 তাঁর নমুনায়: `🔎 মডিউল / পর্দা / অনুমতি খুঁজুন…` আর তার নিচে
-                 `[সব বাছুন] [সব মুছুন] …`
-
-                 ── ⛔ কেন এটা ছাড়া চলছিল না ────────────────────────────────
-                 ⓘ আজ ছকে **চোদ্দটা মডিউল, চারশোর বেশি অনুমতি**। ⚠️ একটা
-                 নির্দিষ্ট অনুমতি (*"ক্রয় বিল অনুমোদন"*) খুঁজতে হলে চোদ্দটা
-                 ভাঁজ একে একে খুলে চোখে খুঁজতে হত — আর না পেলে মানুষ ধরে নেয়
-                 জিনিসটা নেই, তারপর গোটা মডিউলটাই টিক দিয়ে দেয়।
-
-                 ⛔ *"সব বাছুন"* সত্যিই বিপজ্জনক, তাই সে **একা নয়** — পাশেই
-                 *"শুধু দেখা"*, কারণ বাস্তবে সবচেয়ে চাওয়া ভূমিকাটা ঐটাই
-                 (*"সবকিছু দেখবে, কিছুই বদলাবে না"*)। ⓘ সহজ পথটা নিরাপদ
-                 পথ না হলে মানুষ বিপজ্জনকটাই নেয়। --}}
-            <section data-boxed data-permission-grid
-                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
-                <label class="flex items-center gap-2 rounded-(--radius-field) border border-(--color-border) px-2">
-                    <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
-                    <input type="search" data-permission-search
-                           placeholder="{{ __('system_admin::permission.search_permissions') }}"
-                           aria-label="{{ __('system_admin::permission.search_permissions') }}"
-                           class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
-
-                    {{-- ⭐ শর্টকাটগুলো পর্দাতেই লেখা — স্পেক §২.৯।
-
-                         ⛔ না লিখলে ওগুলো থাকত আর কেউ জানত না, আর না-জানা
-                         শর্টকাট আর না-থাকা শর্টকাট একই জিনিস। ⓘ সরু পর্দায়
-                         লুকানো: ওখানে কি-বোর্ডই নেই। --}}
-                    <span class="hidden flex-none gap-1 text-2xs text-(--color-ink-muted) sm:flex">
-                        <kbd class="rounded border border-(--color-border) px-1">Ctrl</kbd>
-                        <kbd class="rounded border border-(--color-border) px-1">F</kbd>
-                    </span>
-                </label>
-
-                <p class="mt-1 text-2xs text-(--color-ink-muted)">
-                    {{ __('system_admin::permission.shortcuts') }}
-                </p>
-
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <x-ui.button type="button" tone="secondary" data-permission-bulk="view">
-                        {{ __('system_admin::permission.read_only_preset') }}
-                    </x-ui.button>
-                    <x-ui.button type="button" tone="secondary" data-permission-bulk="all">
-                        {{ __('system_admin::permission.select_everything') }}
-                    </x-ui.button>
-                    <x-ui.button type="button" tone="secondary" data-permission-bulk="none">
-                        {{ __('system_admin::permission.clear_everything') }}
-                    </x-ui.button>
-
-                    {{-- ⭐ "কেবল দেওয়াগুলো" — সিস্টেম পর্দার নকশা §৩, ১০ অক্টোবর ২০২৬: চারশো সারির ভিতরে রোলটা আসলে কী পায়, এক চাপে।
-                         ⓘ খোঁজার সাথেই কাজ করে (actions.js), কোনো টিক বদলায় না। --}}
-                    <label class="flex min-h-(--spacing-touch) cursor-pointer items-center gap-2 text-sm">
-                        <input type="checkbox" data-permission-granted-only class="size-4 rounded border-(--color-border)">
-                        {{ __('system_admin::permission.granted_only') }}
-                    </label>
-
-                    {{-- ⭐ ঘরের অবস্থার ব্যাখ্যা — স্পেক §৩।
-
-                         ⛔ স্পেকে ছয় রকম ঘর; এখানে **তিনটা**, আর কারণটা
-                         ভাষা ফাইলে লেখা: বাকি তিনটার পিছনে এখনো কোনো
-                         ব্যবস্থা নেই, আর ব্যবস্থাহীন চিহ্ন সাজসজ্জা। --}}
-                    <span class="ms-auto flex flex-wrap items-center gap-3 text-2xs text-(--color-ink-muted)">
-                        <span class="font-semibold">{{ __('system_admin::permission.legend') }}:</span>
-                        <span class="flex items-center gap-1">
-                            <span aria-hidden="true" class="text-(--color-badge-success-ink)">✓</span>
-                            {{ __('system_admin::permission.state_granted') }}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span aria-hidden="true">☐</span>
-                            {{ __('system_admin::permission.state_denied') }}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span aria-hidden="true" class="text-(--color-ink-disabled)">∅</span>
-                            {{ __('system_admin::permission.state_absent') }}
-                        </span>
-                    </span>
+                {{-- ── রোলের ট্যাব ── --}}
+                <div class="role-tabs" role="tablist" aria-label="{{ $title }}">
+                    @foreach ($roleTabs as $key => $label)
+                        <button type="button" role="tab" data-role-tab="{{ $key }}" id="role-tab-{{ $key }}"
+                                aria-controls="role-panel-{{ $key }}" aria-selected="{{ $key === $startTab ? 'true' : 'false' }}"
+                                @class(['role-tab', 'is-on' => $key === $startTab])>{{ $label }}</button>
+                    @endforeach
                 </div>
 
-                <p data-permission-empty hidden
-                   class="mt-3 text-sm text-(--color-ink-muted)">{{ __('system_admin::permission.nothing_matched') }}</p>
-            </section>
+                @if ($newKind === 'composite')
+                    {{-- ⭐ নতুন যৌথ রোল — ছক নয়, কোন রোলগুলো মিলবে (দফা ৯) --}}
+                    <section class="role-panel" data-role-panel="includes" id="role-panel-includes" role="tabpanel" aria-labelledby="role-tab-includes">
+                        @include('system_admin::role.partials.includes', ['choices' => $allRoles, 'picked' => array_map('intval', old('includes', [])), 'self' => null])
+                    </section>
+                @else
+                    {{-- ── অনুমতি ── --}}
+                    <section data-permission-grid class="role-panel" data-role-panel="permissions" id="role-panel-permissions" role="tabpanel"
+                             aria-labelledby="role-tab-permissions" @if ($startTab !== 'permissions') hidden @endif>
+                        @if ($isComposite)
+                            <p class="role-note" data-role-composite-note>{{ __('system_admin::permission.composite_matrix_note') }}</p>
+                        @endif
 
-            {{--
-                ⭐ দুই কলামে মডিউল — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
-
-                ℹ চৌদ্দটা মডিউল একটার পর একটা বসলে পর্দাটা অনেক লম্বা হয়,
-                আর নিচের মডিউলগুলো কেউ স্ক্রল করে দেখেই না।
-
-                ℹ `items-start` — ভাঁজ খুললে পাশের বাক্সটা যেন লম্বা না হয়।
-            --}}
-            {{-- ⛔ `xl:`, `2xl:` নয় — ২২ সেপ্টেম্বর ২০২৬।
-
-                 ⚠️ এখানে লেখা ছিল `2xl:grid-cols-2`, আর সেটা **কিছুই করত
-                 না**: বিল্ড করা CSS-এ ঐ ক্লাসটা নেই। ⓘ ফলে চওড়া পর্দাতেও
-                 অনুমতির ছকটা এক কলামেই থাকত, আর কেউ টের পেত না — ক্লাসটা
-                 ব্লেডে লেখা আছে বলে দেখে মনে হত কাজ করছে।
-
-                 ⛔ কারণটা এই একটা ক্লাস নয়, **গোটা `2xl:` ভ্যারিয়েন্টটাই
-                 এখানে তৈরি হয় না** — মেপে দেখা: একই পরীক্ষামূলক লাইনে
-                 একই ইউটিলিটির `xl` রূপটা বিল্ডে আসে, `2xl` রূপটা আসে না।
-                 ⚠️ এখানে কোনো আস্ত ক্লাসের নাম লেখা নেই, আর সেটা
-                 ইচ্ছাকৃত: Tailwind মন্তব্যও স্ক্যান করে, তাই ব্যাখ্যাটাই
-                 একটা অব্যবহৃত নিয়ম বানিয়ে বান্ডিলে বসিয়ে দিত — দুইবার
-                 মেপে দেখা হয়েছে। ⓘ টোকেনে
-                 `--breakpoint-2xl: 1920px` থাকা সত্ত্বেও
-                 ([[tokens.css]])।
-
-                 ⓘ `xl` এখানে ১৪৪০px — দুই কলামে ভাগ করার জন্য যথেষ্ট চওড়া। --}}
-            <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
-            @foreach ($grid as $module => $block)
-                @php
-                    $on = count(array_intersect($block['all'], $chosen));
-                    $all = count($block['all']);
-                @endphp
-
-                <details data-boxed data-permission-module="{{ $module }}" id="perm-{{ $module }}" @if ($on > 0) open @endif
-                         class="group rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                    <summary class="flex min-h-(--spacing-touch) cursor-pointer list-none items-center gap-3 px-4 py-2
-                                    [&::-webkit-details-marker]:hidden">
-                        <span class="text-(--color-ink-muted) transition group-open:rotate-90" aria-hidden="true">▸</span>
-                        <span class="flex-1 font-semibold">{{ $block['label'] }}</span>
-
-                        {{--
-                            ⭐ গোটা মডিউল একসাথে — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
-
-                            ⛔ আগে একটা নতুন ভূমিকা বানাতে **দুইশোর বেশি ক্লিক** লাগত,
-                            আর মানুষ তখন যা করে: সবচেয়ে কাছাকাছি একটা ভূমিকা খুঁজে নিয়ে
-                            কাজ চালায়। ⚠️ ফলে মানুষ পায় তার দরকারের চেয়ে বেশি অনুমতি — আর
-                            সেটা অনুমতি ব্যবস্থা না থাকার চেয়েও খারাপ, কারণ কাগজে দেখায় ঠিক আছে।
-
-                            ℹ `<summary>`-এ চেকবক্স বসালে ক্লিক করলে বাক্সটা ভাঁজ হয়ে যায় —
-                            সেটা থামানো JS-এ, ইনলাইনে নয় (CSP)।
-                        --}}
-                        <label class="flex cursor-pointer items-center gap-1.5 text-xs text-(--color-ink-muted)"
-                               title="{{ __('system_admin::permission.select_all_module') }}">
-                            <input type="checkbox" data-permission-all
-                                   class="size-4 rounded border-(--color-border)"
-                                   @checked($on === $all && $all > 0)>
-                            <span class="hidden sm:inline">{{ __('system_admin::permission.select_all') }}</span>
-                        </label>
-
-                        <span data-permission-count
-                              data-permission-total="{{ $all }}"
-                              data-permission-label="{{ __('system_admin::permission.granted', ['on' => ':on', 'all' => ':all']) }}"
-                              @class([
-                                  'rounded-full px-2 py-0.5 text-xs tabular-nums',
-                                  'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $on > 0,
-                                  'bg-(--color-surface-muted) text-(--color-ink-muted)' => $on === 0,
-                              ])>{{ __('system_admin::permission.granted', ['on' => $on, 'all' => $all]) }}</span>
-                    </summary>
-
-                    <div class="border-t border-(--color-border) px-4 pb-3 pt-1">
-                        <div class="overflow-x-auto">
-                            <table class="ui-grid w-full min-w-[40rem] text-sm">
-                                <thead>
-                                    <tr class="border-b border-(--color-border) text-left text-xs text-(--color-ink-muted)">
-                                        <th class="pr-3 font-medium">{{ __('system_admin::permission.column_subject') }}</th>
-                                        {{--
-                                            ⭐ কলামের মাথায়ও একটা টিক — "এই মডিউলের সব দেখা"।
-
-                                            ℹ Skin Soft-এ এটা ভাগ ধরে (Settings · Reports); আমাদের
-                                            সারিগুলো পর্দা, ভাগ নয় — তাই এখানে উপযুক্ত ছাঁচটা কলাম।
-                                            ⛔ "সবকিছু দেখা যাবে, কিছুই বদলানো যাবে না" — সবচেয়ে সাধারণ
-                                            ভূমিকাটা এক ক্লিকে বসে।
-                                        --}}
-                                        @foreach ($columns as $column => $label)
-                                            <th class="w-20 text-center font-medium">
-                                                <label class="flex cursor-pointer flex-col items-center gap-1">
-                                                    <span>{{ $label }}</span>
-                                                    <input type="checkbox" data-permission-column="{{ $column }}"
-                                                           class="size-3.5 rounded border-(--color-border)"
-                                                           aria-label="{{ $label }} — {{ __('system_admin::permission.select_all') }}">
-                                                </label>
-                                            </th>
-                                        @endforeach
-                                        <th class="pl-3 font-medium">{{ __('system_admin::permission.column_special') }}</th>
-                                    </tr>
-                                </thead>
-                                {{--
-                                    ⭐ প্রতিটা ভাগের নিজের দেহ — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
-
-                                    ── ⛔ আগে সব সারি একটানা ছিল ─────────────────────────────
-                                    হিসাব মডিউলে বাইশটা সারি একসাথে, কোনো মাথা ছাড়া। ⚠️ যিনি
-                                    *"সব রিপোর্ট দেখতে দাও, আর কিছু নয়"* চান, তাঁকে বাইশটা নাম
-                                    পড়ে বেছে নিতে হত — আর একটা ভুলে গেলে কেউ বলত না।
-
-                                    ⭐ এখন ভাগের মাথায় একটা টিক, আর ঐ কাজটা এক ক্লিক।
-
-                                    ⓘ `<tbody>` একাধিক থাকতে পারে, আর সেটাই ঠিক ছাঁচ: ভাগটা
-                                    সারিগুলোর **মালিক**, কেবল উপরে বসা একটা লেবেল নয়।
-                                --}}
-                                @foreach ($block['sections'] as $section => $part)
-                                <tbody data-permission-section="{{ $section }}">
-                                    <tr data-permission-section-head class="bg-(--color-surface-muted)">
-                                        <th scope="colgroup" colspan="{{ count($columns) + 2 }}"
-                                            class="px-0 py-1.5 text-left text-xs font-semibold text-(--color-ink-muted)">
-                                            <label class="flex cursor-pointer items-center gap-2">
-                                                <input type="checkbox" data-permission-section-all
-                                                       class="size-3.5 rounded border-(--color-border)"
-                                                       @checked(count(array_intersect($part['all'], $chosen)) === count($part['all']) && $part['all'] !== [])
-                                                       aria-label="{{ $part['label'] }} — {{ __('system_admin::permission.select_all') }}">
-                                                {{ $part['label'] }}
-                                            </label>
-                                        </th>
-                                    </tr>
-
-                                    @foreach ($part['rows'] as $row)
-                                        {{-- ⓘ খোঁজার জন্য এই সারির সব লেখা এক জায়গায়: মডিউলের
-                                             নাম, জিনিসের নাম আর **কাঁচা অনুমতির নামগুলো**।
-
-                                             ⚠️ কাঁচা নামগুলোও থাকতে হবে: ডেভেলপার বা সাপোর্ট
-                                             `sales.invoice.approve` লিখে খোঁজেন, আর পর্দায় ঐ
-                                             লেখাটা কোথাও দেখা যায় না। --}}
-                                        @php
-                                            $haystack = mb_strtolower(implode(' ', array_filter([
-                                                $block['label'],
-                                                $row['label'],
-                                                $row['key'],
-                                                ...array_values($row['cells']),
-                                                $row['manage'],
-                                                ...array_keys($row['special']),
-                                                ...array_values($row['special']),
-                                            ])));
-                                        @endphp
-                                        <tr data-permission-row data-permission-text="{{ $haystack }}"
-                                            class="border-b border-(--color-border) last:border-0">
-                                            <th scope="row" class="pr-3 text-left font-normal">{{ $row['label'] }}</th>
-
-                                            @foreach ($columns as $column => $label)
-                                                @if ($column === 'create' && $row['manage'])
-                                                    <td colspan="3" class="px-2 py-2 text-center">
-                                                        @include('system_admin::role.partials.switch', [
-                                                            'name' => $row['manage'],
-                                                            'label' => $row['label'].' — '.__('system_admin::permission.verbs.manage'),
-                                                            'checked' => in_array($row['manage'], $chosen, true),
-                                                            'caption' => __('system_admin::permission.manage_spans'),
-                                                            'cell' => 'manage',
-                                                        ])
-                                                    </td>
-                                                @elseif ($row['manage'] && in_array($column, ['update', 'delete'], true))
-                                                    {{-- তিন কলাম জুড়ে বসেছে — উপরের ঘরেই --}}
-                                                @elseif (isset($row['cells'][$column]))
-                                                    <td class="text-center">
-                                                        @include('system_admin::role.partials.switch', [
-                                                            'name' => $row['cells'][$column],
-                                                            'label' => $row['label'].' — '.$label,
-                                                            'checked' => in_array($row['cells'][$column], $chosen, true),
-                                                            'cell' => $column,
-                                                        ])
-                                                    </td>
-                                                @else
-                                                    {{-- ⭐ `∅` — *"এই পর্দায় এই কাজটাই নেই"*, স্পেক §৩।
-
-                                                         ── ⛔ আগে এখানে একটা `—` বসত, আর সেটা ভুল ছিল ──
-                                                         ⚠️ স্পেক স্পষ্ট করে বলে দুইটা আলাদা: `∅` মানে
-                                                         কাজটার **অস্তিত্বই নেই**, আর `—` মানে
-                                                         *"উত্তরাধিকারে পাওয়া"*। ⓘ আমাদের ঘরটা প্রথমটা,
-                                                         অথচ চিহ্নটা ছিল দ্বিতীয়টার।
-
-                                                         ⛔ আর `aria-hidden` থাকায় পর্দা-পাঠকের কাছে
-                                                         ঘরটা **নীরব** ছিল: যিনি চোখে দেখেন না, তিনি
-                                                         "দেওয়া নেই" আর "এমন কাজই নেই" আলাদা করতে
-                                                         পারতেন না — অথচ পার্থক্যটাই এখানে আসল কথা। --}}
-                                                    <td class="text-center text-(--color-ink-disabled)"
-                                                        title="{{ __('system_admin::permission.state_absent') }}">
-                                                        <span aria-hidden="true">∅</span>
-                                                        <span class="sr-only">{{ __('system_admin::permission.state_absent') }}</span>
-                                                    </td>
-                                                @endif
-                                            @endforeach
-
-                                            <td class="pl-3">
-                                                <div class="flex flex-wrap gap-1.5">
-                                                    @foreach ($row['special'] as $name => $verb)
-                                                        <label class="cursor-pointer" title="{{ $name }}">
-                                                            <input type="checkbox" name="permissions[]" value="{{ $name }}"
-                                                                   class="peer sr-only" @checked(in_array($name, $chosen, true))>
-                                                            <span class="inline-flex items-center gap-1 rounded-full border border-(--color-border)
-                                                                         px-2 py-0.5 text-xs text-(--color-ink-muted)
-                                                                         peer-checked:border-(--color-brand-500) peer-checked:bg-(--color-brand-50)
-                                                                         peer-checked:font-medium peer-checked:text-(--color-brand-700)
-                                                                         peer-focus-visible:ring-2 peer-focus-visible:ring-(--color-brand-500)">
-                                                                {{ $verb }}
-                                                            </span>
-                                                        </label>
-                                                    @endforeach
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                                @endforeach
-                            </table>
+                        {{-- ⭐ ছকের সরঞ্জাম — খোঁজা, শুধু দেখা, সব বাছুন, সব মুছুন, কেবল দেওয়াগুলো, ঘরের অবস্থা (স্পেক §২.৫) --}}
+                        <div class="role-tools">
+                            <label class="role-search role-search-wide">
+                                <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
+                                <input type="search" data-permission-search
+                                       placeholder="{{ __('system_admin::permission.search_permissions') }}"
+                                       aria-label="{{ __('system_admin::permission.search_permissions') }}"
+                                       title="{{ __('system_admin::permission.shortcuts') }}">
+                                <kbd>Ctrl F</kbd>
+                            </label>
+                            @unless ($isComposite)
+                                <button type="button" class="role-btn" data-permission-bulk="view">{{ __('system_admin::permission.read_only_preset') }}</button>
+                                <button type="button" class="role-btn" data-permission-bulk="all">{{ __('system_admin::permission.select_everything') }}</button>
+                                <button type="button" class="role-btn" data-permission-bulk="none">{{ __('system_admin::permission.clear_everything') }}</button>
+                            @endunless
+                            <label class="role-btn">
+                                <input type="checkbox" data-permission-granted-only class="role-ck">
+                                {{ __('system_admin::permission.granted_only') }}
+                            </label>
+                            <span class="role-legend">
+                                <span><span class="role-mark is-on" aria-hidden="true">✓</span> {{ __('system_admin::permission.state_granted') }}</span>
+                                <span><span class="role-mark" aria-hidden="true"></span> {{ __('system_admin::permission.state_denied') }}</span>
+                                <span><span class="role-dash" aria-hidden="true">–</span> {{ __('system_admin::permission.state_absent') }}</span>
+                            </span>
                         </div>
-                    </div>
-                </details>
-            @endforeach
-            </div>
 
-            {{-- ⭐ নিচের বাতিল · সংরক্ষণ স্থির পট্টিতে ([[x-ui.form-actions]]) — সিস্টেম পর্দার নকশা §৩, ১০ অক্টোবর ২০২৬। ⓘ চোদ্দটা
-                 মডিউলের ছক খুললে পাতা কয়েক হাজার পিক্সেল লম্বা; মাথার বোতাম দুটো উপরে থাকে, আর এটা স্ক্রলের সাথে নিচে লেগে থাকে। --}}
-            <x-ui.form-actions :cancel="route('system_admin.role.index')" />
-        </form>
-        @endif
+                        <p data-permission-empty hidden class="role-note">{{ __('system_admin::permission.nothing_matched') }}</p>
 
-        {{-- ── ডানে: অ্যাকসেসের বিবরণ — স্পেক §২.৬ ─────────────────────── --}}
-        <aside data-boxed x-data="{ q: '' }"
-               class="order-3 space-y-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3
-                      lg:col-start-2 xl:col-start-auto">
+                        @include('system_admin::role.partials.matrix', [
+                            'grid' => $grid, 'chosen' => $chosen, 'columns' => $columns, 'readonly' => $isComposite, 'prefix' => 'perm',
+                        ])
 
-            {{-- ⭐ অনুমোদনের ক্ষমতা — স্পেক §২.৬, ২৪ সেপ্টেম্বর ২০২৬।
+                        {{-- ⭐ স্থির পট্টি — দফা ৭: "● n টা ঘর বদলেছে" · বাতিল · সংরক্ষণ ([[x-ui.form-actions]]) --}}
+                        <x-ui.form-actions :cancel="route('system_admin.role.index')">
+                            <span class="role-dirty" data-role-dirty hidden
+                                  data-label="{{ __('system_admin::permission.dirty', ['count' => ':count']) }}"></span>
+                            <span class="role-dirty-note">{{ __('system_admin::permission.dirty_note') }}</span>
+                        </x-ui.form-actions>
 
-                 ── ⛔ কেন এটা এখানে থাকতেই হবে ──────────────────────────
-                 ⓘ অনুমোদনের ক্ষমতা অনুমতির ছকে **আসেই না** — ওটা বসে
-                 [[ApprovalFlowStep]]-এ, একটা আলাদা পর্দায়। ⚠️ ফলে এতদিন
-                 রোলের পর্দা দেখে কেউ বুঝতেই পারতেন না যে এই রোলটা পঞ্চাশ
-                 লাখ টাকার কাগজ ছাড়তে পারে।
+                        {{-- ⭐ কারণ — সংরক্ষণের আগে কোন ঘরগুলো বদলাল তার সারাংশ, আর কারণ লেখা (ইতিহাসে থাকে) --}}
+                        @if ($saved)
+                            <dialog class="role-dialog" data-role-reason aria-labelledby="role-reason-title">
+                                <h3 id="role-reason-title">{{ __('system_admin::permission.reason_title') }}</h3>
+                                <ul class="role-changes" data-role-reason-list
+                                    data-add="{{ __('system_admin::permission.change_added') }}"
+                                    data-remove="{{ __('system_admin::permission.change_removed') }}"
+                                    data-rename="{{ __('system_admin::permission.change_renamed') }}"></ul>
+                                <label class="role-reason-field">
+                                    <span>{{ __('system_admin::permission.reason_label') }}</span>
+                                    <textarea name="reason" rows="3" maxlength="500" data-role-reason-text>{{ old('reason') }}</textarea>
+                                </label>
+                                <div class="role-dialog-actions">
+                                    <button type="button" class="role-btn" data-role-reason-cancel>{{ __('core.action.cancel') }}</button>
+                                    <button type="submit" class="role-btn is-primary" data-role-reason-ok>{{ __('core.action.save') }}</button>
+                                </div>
+                            </dialog>
+                        @endif
+                    </section>
+                @endif
+            </form>
 
-                 ⛔ সারিগুলো মাপা, স্পেকের নমুনার সংখ্যা নয় — কারণসহ
-                 [[RoleController::approvalPower()]]-এ। ⓘ একটাও না থাকলে
-                 ঘরটা আঁকাই হয় না: শূন্য একটা ছক দেখালে মনে হত ব্যবস্থাটা
-                 আছে অথচ খালি, আর আসল কথাটা হলো এই রোল কোথাও ধাপ নয়। --}}
-            @if ($approvalPower !== [])
-                <section>
-                    <h2 class="text-sm font-semibold">{{ __('system_admin::permission.approval_power') }}</h2>
+            @if ($saved)
+                {{-- ── এতে যে রোল আছে (যৌথ রোল) ── --}}
+                @if ($isComposite)
+                    <section class="role-panel" data-role-panel="includes" id="role-panel-includes" role="tabpanel"
+                             aria-labelledby="role-tab-includes" @if ($startTab !== 'includes') hidden @endif>
+                        <form method="POST" action="{{ route('system_admin.role.includes', $role) }}" data-role-includes-form>
+                            @csrf
+                            @method('PUT')
+                            @include('system_admin::role.partials.includes', ['choices' => $allRoles, 'picked' => $includes, 'self' => $role])
+                            <div class="role-panel-actions">
+                                <label class="role-reason-inline">
+                                    <span>{{ __('system_admin::permission.reason_label') }}</span>
+                                    <input type="text" name="reason" maxlength="500">
+                                </label>
+                                <button type="submit" class="role-btn is-primary">{{ __('core.action.save') }}</button>
+                            </div>
+                        </form>
+                    </section>
+                @endif
 
-                    <ul class="mt-2 space-y-1.5">
-                        @foreach ($approvalPower as $step)
-                            <li class="flex items-baseline justify-between gap-2 text-sm">
-                                <span class="min-w-0">
-                                    <span class="block truncate">{{ $step['label'] }}</span>
-                                    <span class="block text-2xs text-(--color-ink-muted)">
-                                        {{ $step['module'] }} ·
-                                        {{ __('system_admin::permission.approval_level', ['level' => $step['level']]) }}
-                                    </span>
-                                </span>
+                {{-- ── অনুমোদনের ক্ষমতা — ApprovalFlowStep থেকে, মাপা ([[RoleController::approvalPower()]]) ── --}}
+                @if ($approvalPower !== [])
+                    <section class="role-panel" data-role-panel="approval" id="role-panel-approval" role="tabpanel"
+                             aria-labelledby="role-tab-approval" @if ($startTab !== 'approval') hidden @endif>
+                        <h3 class="sr-only">{{ __('system_admin::permission.approval_power') }}</h3>
+                        <table class="role-list-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('system_admin::permission.approval_paper') }}</th>
+                                    <th>{{ __('system_admin::permission.column_module') }}</th>
+                                    <th>{{ __('system_admin::permission.approval_step') }}</th>
+                                    <th class="text-end">{{ __('system_admin::permission.approval_from_amount') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($approvalPower as $step)
+                                    <tr>
+                                        <td>{{ $step['label'] }}</td>
+                                        <td>{{ $step['module'] }}</td>
+                                        <td>{{ __('system_admin::permission.approval_level', ['level' => $step['level']]) }}</td>
+                                        {{-- ⓘ সীমা না থাকা মানে "সব কাগজেই", শূন্য নয় --}}
+                                        <td class="num text-end">
+                                            @if ($step['threshold'] === null)
+                                                {{ __('system_admin::permission.approval_always') }}
+                                            @else
+                                                ৳{{ \App\Core\Support\Money::format($step['threshold']) }}+
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </section>
+                @endif
 
-                                {{-- ⓘ সীমা না থাকা মানে *"সব কাগজেই"*, শূন্য নয় —
-                                     ⚠️ "৳০" লিখলে মনে হত সীমাটা বসানো আছে আর শূন্য। --}}
-                                <span class="num flex-none text-xs">
-                                    @if ($step['threshold'] === null)
-                                        {{ __('system_admin::permission.approval_always') }}
-                                    @else
-                                        ৳{{ \App\Core\Support\Money::format($step['threshold']) }}+
-                                    @endif
-                                </span>
-                            </li>
-                        @endforeach
-                    </ul>
+                {{-- ── সদস্য — সময়-বাঁধা সদস্যপদসহ (দফা ১০) ── --}}
+                <section class="role-panel" data-role-panel="members" id="role-panel-members" role="tabpanel"
+                         aria-labelledby="role-tab-members" @if ($startTab !== 'members') hidden @endif>
+                    @include('system_admin::role.partials.members', ['rows' => $memberRows, 'role' => $role])
+                </section>
+
+                {{-- ── কে আসলে কী পারে (দফা ৮) ── --}}
+                <section class="role-panel" data-role-panel="effective" id="role-panel-effective" role="tabpanel"
+                         aria-labelledby="role-tab-effective" @if ($startTab !== 'effective') hidden @endif>
+                    <form method="GET" action="{{ route('system_admin.role.edit', $role) }}" class="role-tools" data-role-effective-form>
+                        <input type="hidden" name="tab" value="effective">
+                        <label class="role-pick-user">
+                            <span>{{ __('system_admin::permission.effective_pick') }}</span>
+                            <select name="as" data-action="submit-form">
+                                <option value="">—</option>
+                                @foreach ($companyUsers as $u)
+                                    <option value="{{ $u->id }}" @selected($effectiveUser?->id === $u->id)>{{ $u->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <span class="role-note">{{ __('system_admin::permission.effective_access_note') }}</span>
+                    </form>
+                    @if ($effectiveUser)
+                        @include('system_admin::role.partials.matrix', [
+                            'grid' => $grid, 'chosen' => $effectiveHeld, 'columns' => $columns, 'readonly' => true, 'prefix' => 'eff',
+                        ])
+                    @endif
+                </section>
+
+                {{-- ── বদলের ইতিহাস — কারণসহ (দফা ৭) ── --}}
+                <section class="role-panel" data-role-panel="history" id="role-panel-history" role="tabpanel"
+                         aria-labelledby="role-tab-history" @if ($startTab !== 'history') hidden @endif>
+                    @include('system_admin::role.partials.history', ['trails' => $history])
                 </section>
             @endif
-
-            <h2 class="text-sm font-semibold">
-                {{ __('system_admin::permission.users_in_role') }}
-                <span class="tabular-nums text-(--color-ink-muted)">({{ $members->count() }})</span>
-            </h2>
-
-            @if ($members->isEmpty())
-                <p class="mt-3 text-sm text-(--color-ink-muted)">{{ __('system_admin::permission.no_users') }}</p>
-            @else
-                <label class="mt-3 flex items-center gap-2 rounded-(--radius-field) border border-(--color-border) px-2">
-                    <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
-                    <input type="search" x-model="q" placeholder="{{ __('system_admin::permission.search_users') }}"
-                           aria-label="{{ __('system_admin::permission.search_users') }}"
-                           class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
-                </label>
-
-                <ul class="mt-2 space-y-0.5">
-                    {{-- ⭐ দফা ১২: ইমেইল পুরো কেবল মানুষ সামলানোর চাবিতে ([[ContactMask]]) — খোঁজার লেখাতেও, নইলে পাতার কোডে খোলা থাকত --}}
-                    @foreach ($members as $member)
-                        @php($memberEmail = \App\Core\Support\ContactMask::email($member->email))
-                        <li x-show="! q || @js(mb_strtolower($member->name.' '.$memberEmail)).includes(q.toLowerCase())">
-                            <a href="{{ route('system_admin.user.edit', $member->id) }}"
-                               class="flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 hover:bg-(--color-surface-hover)">
-                                <span class="grid size-7 flex-none place-items-center rounded-full bg-(--color-avatar) text-xs font-semibold text-(--color-avatar-ink)">
-                                    {{ mb_substr($member->name, 0, 1) }}
-                                </span>
-                                <span class="min-w-0">
-                                    <span class="block truncate text-sm">{{ $member->name }}</span>
-                                    <span class="block truncate text-xs text-(--color-ink-muted)">{{ $memberEmail }}</span>
-                                </span>
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-        </aside>
+        </section>
+        @endif
     </div>
 </x-layouts.app>

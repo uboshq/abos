@@ -33,7 +33,7 @@
  * regex দিয়ে বদলানো হয়েছিল — ⛔ ওটা ভুল ছিল: বাংলা অঙ্ক (১২ / ৪৩)
  * এলে `\d` কিছুই মিলত না, আর ব্যাজটা চিরকাল পুরনো সংখ্যা দেখাত।
  */
-function countPermissions (module) {
+export function countPermissions (module) {
     const badge = module.querySelector('[data-permission-count]')
 
     if (! badge) {
@@ -52,6 +52,30 @@ function countPermissions (module) {
     if (all) {
         all.checked = on > 0 && String(on) === String(total)
         all.indeterminate = on > 0 && String(on) !== String(total)
+    }
+
+    /*
+     * ⭐ মাথার সরু দাগ, আর "পুরো কলাম" ও ভাগের টিক আংশিক হলে মাঝামাঝি — মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬ (দফা ৫)।
+     * ⓘ পুরো, ফাঁকা নাকি মাঝামাঝি — ঘরগুলো দেখেই, তাই হাতে একটা ঘর বদলালেও কলামের টিক সত্যি বলে।
+     */
+    const bar = module.querySelector('[data-permission-bar]')
+
+    if (bar) {
+        bar.style.width = `${Number(total) > 0 ? Math.round(on * 100 / Number(total)) : 0}%`
+    }
+
+    const mark = (box, cells) => {
+        const ticked = cells.filter((c) => c.checked).length
+        box.checked = cells.length > 0 && ticked === cells.length
+        box.indeterminate = ticked > 0 && ticked < cells.length
+    }
+
+    for (const box of module.querySelectorAll('[data-permission-column]')) {
+        mark(box, [...module.querySelectorAll(`input[data-permission-cell="${box.dataset.permissionColumn}"]`)])
+    }
+
+    for (const box of module.querySelectorAll('[data-permission-section-all]')) {
+        mark(box, [...(box.closest('[data-permission-section]')?.querySelectorAll('input[name="permissions[]"]') ?? [])])
     }
 }
 
@@ -349,14 +373,12 @@ export function wireActions (root = document) {
          * নতুন করে লিখতে হয় — নাহলে ব্যাজে পুরনো সংখ্যা বসে থাকত, আর
          * ব্যবহারকারী ঐ সংখ্যাটাই বিশ্বাস করতেন।
          */
+        /*
+         * ⓘ মাথার গোনা আর দাগই বদলটা দেখায় — মডিউলগুলো ভাঁজ খোলে না। ⛔ আগে "সব বাছুন" টিক পাওয়া প্রতিটা মডিউল খুলে দিত, অথচ
+         *   নতুন ছকে একসাথে একটাই খোলা থাকে (মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬, দফা ৫)।
+         */
         for (const module of grid.querySelectorAll('[data-permission-module]')) {
             countPermissions(module)
-
-            /* ⓘ যে মডিউলে এখন কিছু আছে সেটা খুলে দেখানো হয় — নাহলে
-             * "সব বাছুন" চেপে পর্দায় কোনো বদলই চোখে পড়ত না। */
-            if (mode !== 'none') {
-                module.open = module.querySelector('input[name="permissions[]"]:checked') !== null
-            }
         }
     })
 
@@ -394,6 +416,7 @@ export function wireActions (root = document) {
         const term = (search?.value ?? '').trim().toLowerCase()
         const grantedOnly = form.querySelector('[data-permission-granted-only]')?.checked === true
         let shown = 0
+        let opened = false
 
         for (const module of form.querySelectorAll('[data-permission-module]')) {
             let inModule = 0
@@ -422,10 +445,11 @@ export function wireActions (root = document) {
             module.hidden = inModule === 0
             shown += inModule
 
-            /* ⓘ মেলা মডিউলগুলো নিজে থেকেই খোলে — নাহলে খুঁজে পেয়েও
-             * জিনিসটা ভাঁজের ভিতরে লুকানো থাকত। */
-            if ((term !== '' || grantedOnly) && inModule > 0) {
+            /* ⓘ প্রথম মেলা মডিউলটা নিজে থেকেই খোলে — নাহলে খুঁজে পেয়েও জিনিসটা ভাঁজের ভিতরে লুকানো থাকত। ⓘ কেবল প্রথমটা:
+             * একসাথে একটাই খোলা (নমুনা, ২০ নভেম্বর ২০২৬); বাকি মেলা মডিউল মাথা দেখিয়ে সারিতে থাকে, অমিলগুলো লুকায়। */
+            if ((term !== '' || grantedOnly) && inModule > 0 && ! opened) {
                 module.open = true
+                opened = true
             }
         }
 

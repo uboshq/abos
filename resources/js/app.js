@@ -1,6 +1,7 @@
 import Alpine from '@alpinejs/csp'
 import morph from '@alpinejs/morph'
 import { wireActions } from './components/actions.js'
+import { wireRoleScreen } from './components/role-screen.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
@@ -171,6 +172,9 @@ listenForFreshData(document, window.fetch.bind(window), (from, to, options) => A
  * ⓘ কারণটা [[actions.js]]-এ; মালিকের "print buton kaj kore na"।
  */
 wireActions()
+// ⭐ রোল ও অনুমতির পাতা — ট্যাব, এক-খোলা ভাঁজ, বদলের গোনা আর কারণ ([[role-screen.js]]; মালিকের নমুনা, ২০ নভেম্বর ২০২৬)।
+// ⚠️ একবার-জমার পাহারার আগে — থামানো জমা তখন "জমা হয়েছে" ধরা পড়ে না
+wireRoleScreen()
 
 /*
  * ⛔ একটা ফর্ম একবারই জমা — পাহারা আর তার পুরো ইতিহাস [[one-submit.js]]-এ।

@@ -6,8 +6,14 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\CompositeRoles;
+use App\Core\Services\ListExport;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
+use App\Core\Services\RoleTerms;
+use App\Core\Support\RoleLabel;
+use App\Modules\SystemAdmin\Support\DutyClash;
+use Illuminate\Support\Carbon;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalFlowStep;
@@ -47,6 +53,8 @@ class RoleController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly ModuleRegistry $modules,
         private readonly AuditEngine $audit,
+        private readonly CompositeRoles $composites,
+        private readonly RoleTerms $terms,
     ) {}
 
     public static function middleware(): array
@@ -74,16 +82,39 @@ class RoleController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         return view('system_admin::role.form', [
-            'menu' => $this->menu->forUser($request->user()),
+            ...$this->blank($request),
             'role' => null,
-            'held' => [],
-            'members' => collect(),
-            'approvalPower' => [],
             'lastChange' => $this->lastChange(null),
 
             /* ⓘ ছকটা এখানে আঁকা হয় না — কারণসহ [[formData()]]-এ। */
             ...$this->formData(withGrid: false),
         ]);
+    }
+
+    /**
+     * ⭐ নতুন পর্দার (মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬ "ok") যে ঘরগুলো রোল না বাছা থাকলেও লাগে — খালি মানে।
+     *
+     * @return array<string, mixed>
+     */
+    private function blank(Request $request): array
+    {
+        return [
+            'menu' => $this->menu->forUser($request->user()),
+            'held' => [],
+            'members' => collect(),
+            'memberRows' => [],
+            'approvalPower' => [],
+            'clashes' => [],
+            'history' => collect(),
+            'composite' => false,
+            'includes' => [],
+            'effectiveUser' => null,
+            'effectiveHeld' => [],
+            'companyUsers' => collect(),
+            'tab' => (string) $request->query('tab', 'permissions'),
+            'only' => in_array($request->query('only'), ['empty', 'clash'], true) ? (string) $request->query('only') : null,
+            'newKind' => null,
+        ];
     }
 
     /**
@@ -107,13 +138,16 @@ class RoleController extends Controller implements HasMiddleware
             $held = $source->permissions->pluck('name')->all();
         }
 
+        /* ⭐ "＋ নতুন যৌথ রোল" — ছক নয়, ভেতরের রোল বাছাই ([[CompositeRoles]]) */
+        $composite = $request->query('kind') === 'composite';
+
         return view('system_admin::role.form', [
-            'menu' => $this->menu->forUser($request->user()),
+            ...$this->blank($request),
             'role' => $role,
             'held' => $held,
-            'members' => collect(),
-            'approvalPower' => [],
             'lastChange' => null,
+            'newKind' => $composite ? 'composite' : null,
+            'composite' => $composite,
             ...$this->formData(),
         ]);
     }
@@ -134,12 +168,7 @@ class RoleController extends Controller implements HasMiddleware
         if ($a && $b) {
             $heldA = array_flip($a->permissions()->pluck('name')->all());
             $heldB = array_flip($b->permissions()->pluck('name')->all());
-            $columns = [
-                'view' => __('system_admin::permission.column_view'),
-                'create' => __('system_admin::permission.column_create'),
-                'update' => __('system_admin::permission.column_update'),
-                'delete' => __('system_admin::permission.column_delete'),
-            ];
+            $columns = self::columnLabels();
 
             foreach ($this->formData()['grid'] as $block) {
                 foreach ($block['rows'] as $row) {
@@ -199,11 +228,34 @@ class RoleController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request, null);
+
+        /*
+         * ⭐ যৌথ রোল — ভেতরের রোল বাছাই থেকে (নমুনা, ২০ নভেম্বর ২০২৬)। ⓘ অনুমতি ভেতরের যোগফল, আর "যা নিজের হাতে নেই তা দেওয়া
+         * যায় না" ঐ যোগফলের উপরেই — রোল মিলিয়ে চাবি ছড়ানো যায় না।
+         */
+        if ($request->input('kind') === 'composite') {
+            $ids = array_values(array_map('intval', (array) $request->input('includes', [])));
+            $this->composites->assertMayHold(new Role, $ids);
+            $union = $this->unionOf($ids);
+            $this->grantable($request, null, $union);
+
+            $role = DB::transaction(function () use ($data, $ids): Role {
+                $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+                $this->composites->setIncludes($role, $ids, $data['reason'] ?? null);
+
+                return $role;
+            });
+
+            return redirect()
+                ->route('system_admin.role.edit', ['role' => $role, 'tab' => 'includes'])
+                ->with('saved', __('system_admin::message.role_created', ['name' => $role->name]));
+        }
+
         $wanted = $this->grantable($request, null, $data['permissions'] ?? []);
 
         $role = DB::transaction(function () use ($data, $wanted): Role {
             $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
-            $this->syncAndRecord($role, $wanted);
+            $this->syncAndRecord($role, $wanted, $data['reason'] ?? null);
 
             return $role;
         });
@@ -225,14 +277,40 @@ class RoleController extends Controller implements HasMiddleware
         $this->mustBeInThisCompany($role);
         $this->assertNotTheOwnerRole($role);
 
+        $held = $role->permissions->pluck('name')->all();
+        $members = $role->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']);
+
+        /*
+         * ⭐ "কে আসলে কী পারে" — একজন মানুষ বাছলে তাঁর সব রোলের (যৌথের ভেতর দিয়েও) মিলিত অনুমতি, কেবল দেখা (নমুনা, দফা ৮)।
+         * ⓘ যৌথ রোলের যোগফল যৌথেই বসানো ([[CompositeRoles]]), তাই spatie-র `getAllPermissions()`-ই আসল উত্তর — অনুমতির যাচাই যা
+         *   দেখে, পর্দাও তাই দেখে। ⛔ অন্য কোম্পানির মানুষ বাছা যায় না (তালিকা এই কোম্পানির, আর id মিলিয়ে দেখা)।
+         */
+        $companyUsers = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->orderBy('name')->get(['users.id', 'users.name']);
+        $effectiveUser = $request->filled('as') ? $companyUsers->firstWhere('id', (int) $request->query('as')) : null;
+        $effectiveHeld = $effectiveUser
+            ? User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->find($effectiveUser->id)?->getAllPermissions()->pluck('name')->all() ?? []
+            : [];
+
+        $form = $this->formData();
+
         return view('system_admin::role.form', [
-            'menu' => $this->menu->forUser($request->user()),
+            ...$this->blank($request),
             'role' => $role,
-            'held' => $role->permissions->pluck('name')->all(),
-            'members' => $role->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
+            'held' => $held,
+            'members' => $members,
+            'memberRows' => $this->memberRows($role, $members),
             'approvalPower' => $this->approvalPower($role),
             'lastChange' => $this->lastChange($role),
-            ...$this->formData(),
+            'clashes' => $this->clashLabels($held),
+            'history' => $this->history($role),
+            'composite' => $this->composites->isComposite((int) $role->id),
+            'includes' => $this->composites->includedIds((int) $role->id),
+            'companyUsers' => $companyUsers,
+            'effectiveUser' => $effectiveUser,
+            'effectiveHeld' => $effectiveHeld,
+            ...$form,
         ]);
     }
 
@@ -242,17 +320,270 @@ class RoleController extends Controller implements HasMiddleware
         $this->assertNotTheOwnerRole($role);
 
         $data = $this->validated($request, $role);
-        $wanted = $this->grantable($request, $role, $data['permissions'] ?? []);
+
+        /*
+         * ⓘ যৌথ রোলের অনুমতি ছক থেকে আসে না — ভেতরের রোলগুলোর যোগফল ([[CompositeRoles::refresh()]]); এখানে কেবল নাম বদলায়।
+         */
+        $composite = $this->composites->isComposite((int) $role->id);
+        $wanted = $composite
+            ? $role->permissions->pluck('name')->all()
+            : $this->grantable($request, $role, $data['permissions'] ?? []);
+
+        /*
+         * ⭐ বদলের কারণ লিখতেই হবে — নমুনা, দফা ৭ ("কারণ লিখতে হবে, ইতিহাসে থাকবে")। ⓘ কেবল যখন সত্যিই কিছু বদলায়: কিছু না
+         * ছুঁয়ে সংরক্ষণ চাপলে প্রশ্ন নেই। ⚠️ চাবির যাচাই আগে ([[grantable()]]) — যা দেওয়াই যায় না, তার কারণ চাওয়া অর্থহীন।
+         */
+        $before = $role->permissions->pluck('name')->all();
+        $changes = count(array_diff($wanted, $before)) + count(array_diff($before, $wanted)) + (int) ($data['name'] !== $role->name);
+
+        if ($changes > 0 && trim((string) ($data['reason'] ?? '')) === '') {
+            throw ValidationException::withMessages(['reason' => __('system_admin::permission.reason_required')]);
+        }
 
         DB::transaction(function () use ($role, $data, $wanted): void {
             $role->update(['name' => $data['name']]);
-            $this->syncAndRecord($role, $wanted);
+            $this->syncAndRecord($role, $wanted, $data['reason'] ?? null);
+            $this->composites->refreshAbove($role);
         });
 
         /* ⓘ কারণটা [[store()]]-এ একবারই লেখা। */
         return redirect()
             ->route('system_admin.role.edit', $role)
             ->with('saved', __('system_admin::message.role_updated', ['name' => $role->name]));
+    }
+
+    /**
+     * ⭐ যৌথ রোলের "এতে যে রোল আছে" — ভেতরের রোল যোগ বা সরানো (নমুনা, দফা ৯)।
+     *
+     * ⛔ চক্র, মালিকের রোল, অন্য কোম্পানির রোল — [[CompositeRoles::assertMayHold()]]। ⛔ নতুন যোগফলে নিজের হাতে নেই এমন চাবি
+     *   থাকলে আটকায় ([[grantable()]]) — রোল মিলিয়ে চাবি ছড়ানো যায় না। ⓘ রোল যোগ বা সরালে সব সদস্যের অনুমতি একসাথে বদলায়।
+     */
+    public function includes(Request $request, Role $role): RedirectResponse
+    {
+        $this->mustBeInThisCompany($role);
+        $this->assertNotTheOwnerRole($role);
+
+        $data = $request->validate([
+            'includes' => ['nullable', 'array'],
+            'includes.*' => ['integer'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $ids = array_values(array_unique(array_map('intval', $data['includes'] ?? [])));
+        $this->composites->assertMayHold($role, $ids);
+        $this->grantable($request, $role, $this->unionOf($ids));
+
+        DB::transaction(fn () => $this->composites->setIncludes($role, $ids, $data['reason'] ?? null));
+
+        return redirect()
+            ->route('system_admin.role.edit', ['role' => $role, 'tab' => 'includes'])
+            ->with('saved', __('system_admin::message.role_updated', ['name' => $role->name]));
+    }
+
+    /**
+     * ⭐ সদস্যের মেয়াদ — "সময় বদলান" (নমুনা, দফা ১০)। ⓘ কেবল এই রোল সরাসরি যাঁর হাতে (বা যাঁর মেয়াদ শুরুর অপেক্ষায়) —
+     *   যৌথ রোলের ভেতর দিয়ে পাওয়া সদস্যের মেয়াদ যৌথ রোলের পাতায়।
+     */
+    public function term(Request $request, Role $role, User $user): RedirectResponse
+    {
+        $this->mustBeInThisCompany($role);
+        $this->assertNotTheOwnerRole($role);
+
+        $data = $request->validate([
+            'valid_from' => ['nullable', 'date'],
+            'valid_until' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        $direct = $role->users()->whereKey($user->id)->exists();
+        $waiting = isset($this->terms->forRole((int) $role->id)[$user->id]);
+        abort_unless($direct || $waiting, 404);
+
+        $this->terms->set($role, $user,
+            isset($data['valid_from']) ? Carbon::parse($data['valid_from'])->toDateString() : null,
+            isset($data['valid_until']) ? Carbon::parse($data['valid_until'])->toDateString() : null,
+            $data['note'] ?? null);
+
+        return redirect()
+            ->route('system_admin.role.edit', ['role' => $role, 'tab' => 'members'])
+            ->with('saved', __('system_admin::permission.term_saved', ['name' => $user->name]));
+    }
+
+    /**
+     * ⭐ ছাপুন · Excel — বাছা রোলের পুরো অনুমতির ছক (নমুনা, দফা ১)।
+     *
+     * ⓘ টেবিলটা সাধারণ রপ্তানির পথেই যায় ([[ListExport]] → `ExportListing`): `?export=xlsx` Excel, `?export=print` ছাপার
+     *   কাগজ — একই চাবি (`system_admin.list.export`), একই খাতা। ⓘ ঠিকানা খালি থাকলে পাতাটা পর্দাতেই ছকটা দেখায়।
+     */
+    public function matrix(Request $request, Role $role, ListExport $export): View
+    {
+        $this->mustBeInThisCompany($role);
+
+        $held = array_flip($role->permissions->pluck('name')->all());
+        $labels = self::columnLabels();
+        $columns = [['key' => 'module', 'label' => __('system_admin::permission.column_module'), 'render' => null],
+            ['key' => 'subject', 'label' => __('system_admin::permission.column_subject'), 'render' => null]];
+
+        foreach ($labels as $key => $label) {
+            $columns[] = ['key' => $key, 'label' => $label, 'render' => null];
+        }
+
+        $columns[] = ['key' => 'special', 'label' => __('system_admin::permission.column_special'), 'render' => null];
+        $mark = fn (?string $name): string => $name === null ? '–' : (isset($held[$name]) ? '✓' : '');
+        $rows = [];
+
+        foreach ($this->formData()['grid'] as $block) {
+            foreach ($block['rows'] as $row) {
+                $line = ['module' => $block['label'], 'subject' => $row['label']];
+
+                foreach (array_keys($labels) as $key) {
+                    $line[$key] = $row['manage'] && in_array($key, ['create', 'update', 'delete'], true)
+                        ? $mark($row['manage'])
+                        : $mark($row['cells'][$key] ?? null);
+                }
+
+                $line['special'] = implode(', ', array_map(fn (string $name, string $verb): string => $verb.' '.$mark($name),
+                    array_keys($row['special']), array_values($row['special'])));
+                $rows[] = $line;
+            }
+        }
+
+        $export->describe([
+            'title' => __('system_admin::permission.matrix_title', ['name' => RoleLabel::for($role->name)]),
+            'facts' => [__('system_admin::permission.matrix_legend')],
+        ]);
+        $export->capture($columns, $rows, fn (array $row, array $column): string => (string) ($row[$column['key']] ?? ''));
+
+        return view('system_admin::role.matrix', [
+            'menu' => $this->menu->forUser($request->user()),
+            'role' => $role,
+            'columns' => $columns,
+            'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * যৌথ রোলের সম্ভাব্য অনুমতি — এই রোলগুলো মিলালে কী হবে (ভেতরের ভেতরেরও)।
+     *
+     * @param  list<int>  $ids
+     * @return list<string>
+     */
+    private function unionOf(array $ids): array
+    {
+        $names = [];
+
+        foreach ($ids as $id) {
+            foreach ($this->composites->effectivePermissions($id) as $name) {
+                $names[$name] = true;
+            }
+        }
+
+        return array_keys($names);
+    }
+
+    /**
+     * ⭐ সদস্য ট্যাবের সারি — সরাসরি, যৌথ রোলের ভেতর দিয়ে, মেয়াদের অপেক্ষায়, আর শেষ হয়ে যাওয়া (নমুনা, দফা ১০)।
+     *
+     * @param  Collection<int, User>  $direct
+     * @return list<array<string, mixed>>
+     */
+    private function memberRows(Role $role, Collection $direct): array
+    {
+        $terms = $this->terms->forRole((int) $role->id);
+        $today = Carbon::today();
+        $rows = [];
+        $seen = [];
+
+        $state = function (?object $term) use ($today): array {
+            if ($term === null || $term->valid_until === null) {
+                return ['ok', __('system_admin::permission.term_state_on')];
+            }
+
+            $days = (int) $today->diffInDays(Carbon::parse($term->valid_until)->startOfDay(), false);
+
+            return $days <= 7
+                ? ['warn', __('system_admin::permission.term_state_ending', ['days' => max(0, $days)])]
+                : ['ok', __('system_admin::permission.term_state_on')];
+        };
+
+        foreach ($direct as $user) {
+            $term = $terms[$user->id] ?? null;
+            $term = $term && $term->state === 'ended' ? null : $term;
+            $seen[$user->id] = true;
+            $rows[] = ['user' => $user, 'via' => null, 'term' => $term, 'state' => $state($term), 'editable' => true];
+        }
+
+        foreach ($this->composites->containersOf((int) $role->id) as $outerId) {
+            $outer = Role::query()->find($outerId);
+
+            foreach ($outer?->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']) ?? [] as $user) {
+                if (isset($seen[$user->id])) {
+                    continue;
+                }
+
+                $seen[$user->id] = true;
+                $rows[] = ['user' => $user, 'via' => RoleLabel::for($outer->name), 'term' => null, 'state' => $state(null), 'editable' => false];
+            }
+        }
+
+        $names = User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->whereIn('id', array_keys($terms))->get(['id', 'name', 'email'])->keyBy('id');
+
+        foreach ($terms as $userId => $term) {
+            if (isset($seen[$userId]) || ! isset($names[$userId])) {
+                continue;
+            }
+
+            if ($term->state === 'pending') {
+                $rows[] = ['user' => $names[$userId], 'via' => null, 'term' => $term, 'editable' => true,
+                    'state' => ['wait', __('system_admin::permission.term_state_pending')]];
+            } elseif ($term->state === 'ended') {
+                $rows[] = ['user' => $names[$userId], 'via' => null, 'term' => $term, 'editable' => false,
+                    'state' => ['off', __('system_admin::permission.term_state_ended')]];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * ⭐ দায়িত্বের সংঘাত — একই কাগজে লেখা আর পাকা করা (অনুমোদন বা পোস্ট) একই রোলে (নমুনা, দফা ৬)।
+     *
+     * @param  list<string>  $held
+     * @return list<string>
+     */
+    private function clashLabels(array $held): array
+    {
+        return array_map(fn (string $subject): string => $this->subjectLabel($subject), DutyClash::of($held));
+    }
+
+    /**
+     * ⭐ বদলের ইতিহাস — রোলের নিজের খাতা, কারণসহ, নতুন আগে (নমুনা, দফা ৭)। ⓘ শেষ পঞ্চাশটা; পুরোটা নিরীক্ষার পাতায়।
+     *
+     * @return Collection<int, AuditTrail>
+     */
+    private function history(Role $role): Collection
+    {
+        return AuditTrail::query()
+            ->where('auditable_type', Role::class)->where('auditable_id', $role->id)
+            ->with(['user:id,name', 'changes'])
+            ->latest('id')->limit(50)->get();
+    }
+
+    /**
+     * ছকের আট কলামের নাম — পর্দা, তুলনা আর রপ্তানি একই নামে।
+     *
+     * @return array<string, string>
+     */
+    private static function columnLabels(): array
+    {
+        $labels = [];
+
+        foreach (array_keys(self::COLUMNS) as $column) {
+            $labels[$column] = __('system_admin::permission.column_'.$column);
+        }
+
+        return $labels;
     }
 
     /**
@@ -358,26 +689,10 @@ class RoleController extends Controller implements HasMiddleware
      *
      * @param  list<string>  $wanted
      */
-    private function syncAndRecord(Role $role, array $wanted): void
+    private function syncAndRecord(Role $role, array $wanted, ?string $reason = null): void
     {
-        $before = $role->permissions()->pluck('name')->all();
-
-        $role->syncPermissions($wanted);
-
-        $added = array_values(array_diff($wanted, $before));
-        $removed = array_values(array_diff($before, $wanted));
-
-        if ($added === [] && $removed === []) {
-            return;
-        }
-
-        sort($added);
-        sort($removed);
-
-        $this->audit->record($role, 'role_permissions_changed', [
-            'permissions_added' => [null, implode(', ', $added)],
-            'permissions_removed' => [implode(', ', $removed), null],
-        ]);
+        /* ⓘ লেখার কাজটা এখন [[CompositeRoles::syncRecorded()]]-এ — যৌথ রোলও একই খাতায়, একই আকারে লেখে; কারণসহ (নমুনা, দফা ৭) */
+        $this->composites->syncRecorded($role, $wanted, $reason !== null && trim($reason) !== '' ? trim($reason) : null);
     }
 
     private function mustBeInThisCompany(Role $role): void
@@ -452,6 +767,10 @@ class RoleController extends Controller implements HasMiddleware
                     ->ignore($role?->id)],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => [Rule::exists('permissions', 'name')],
+            // ⭐ বদলের কারণ — ইতিহাসে থাকে (নমুনা, ২০ নভেম্বর ২০২৬, দফা ৭)
+            'reason' => ['nullable', 'string', 'max:500'],
+            'includes' => ['nullable', 'array'],
+            'includes.*' => ['integer'],
         ]);
     }
 
@@ -492,6 +811,7 @@ class RoleController extends Controller implements HasMiddleware
             return [
                 'grid' => [],
                 'roleList' => $this->grouped($roles),
+                'allRoles' => $roles,
                 'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
                 'summary' => $this->summary($roles),
             ];
@@ -670,6 +990,8 @@ class RoleController extends Controller implements HasMiddleware
         return [
             'grid' => $grid,
             'roleList' => $this->grouped($roles),
+            // ⓘ ছাঁকনি ছাড়া পুরো তালিকা — যৌথ রোলের বাছাই ছাঁকা তালিকা থেকে হলে না-দেখা ভেতরের রোল নীরবে কেটে যেত
+            'allRoles' => $roles,
             'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
             'summary' => $this->summary($roles),
         ];
@@ -698,9 +1020,11 @@ class RoleController extends Controller implements HasMiddleware
      */
     private function rolesOfThisCompany(): Collection
     {
+        /* ⓘ অনুমতির নামগুলোও — "দায়িত্বের সংঘাত" কার্ড আর তার ছাঁকনি প্রতিটা রোলের অনুমতি দেখে ([[DutyClash]]) */
         return Role::query()
             ->where('company_id', CompanyContext::id())
             ->withCount(['users', 'permissions'])
+            ->with('permissions:id,name')
             ->orderBy('name')
             ->get();
     }
@@ -736,13 +1060,33 @@ class RoleController extends Controller implements HasMiddleware
             }
         }
 
-        $of = function (Role $role) use ($fromModules): string {
+        $map = $this->composites->map();
+
+        $of = function (Role $role) use ($fromModules, $map): string {
             if ($role->name === PermissionSyncer::SUPER_ADMIN_ROLE) {
                 return 'system';
             }
 
+            // ⭐ যৌথ রোল নিজের ভাগে — নমুনা, দফা ৪ ("কয়েকটা রোল মিলিয়ে")
+            if (($map[(int) $role->id] ?? []) !== []) {
+                return 'composite';
+            }
+
             return isset($fromModules[$role->name]) ? 'business' : 'custom';
         };
+
+        /*
+         * ⭐ কার্ডে চাপলে কেবল সেই রোলগুলো — "যে রোলে কেউ নেই", "দায়িত্বের সংঘাত" (নমুনা, দফা ২)। ⓘ মালিকের রোল কখনো ছাঁকা যায় না
+         *   — ওটা সবসময় তালিকার মাথায়, আর ওটা সংজ্ঞায় সব পারে, তাই "সংঘাত" ওর কথা নয়।
+         */
+        $only = request()->query('only');
+
+        if ($only === 'empty') {
+            $roles = $roles->filter(fn (Role $r) => $r->name === PermissionSyncer::SUPER_ADMIN_ROLE || (int) $r->users_count === 0);
+        } elseif ($only === 'clash') {
+            $roles = $roles->filter(fn (Role $r) => $r->name === PermissionSyncer::SUPER_ADMIN_ROLE
+                || DutyClash::of($r->permissions->pluck('name')->all()) !== []);
+        }
 
         $out = [];
 
@@ -843,6 +1187,7 @@ class RoleController extends Controller implements HasMiddleware
         'system' => 'system_admin::permission.group_system',
         'business' => 'system_admin::permission.group_business',
         'custom' => 'system_admin::permission.group_custom',
+        'composite' => 'system_admin::permission.group_composite',
     ];
 
     /**
@@ -889,6 +1234,9 @@ class RoleController extends Controller implements HasMiddleware
             'roles' => $roles->count(),
             // ⛔ "অনুমতি ৩১৯" উঠে গেল — দফা ১০: মোট অনুমতির সংখ্যা কোনো সিদ্ধান্তে লাগে না; জায়গায় "এই ভূমিকায় যাঁরা আছেন" আর "শেষ বদল"
             'unassigned' => $roles->where('users_count', 0)->count(),
+            // ⭐ দায়িত্বের সংঘাত — একই কাগজে লেখা আর পাকা করা একই রোলে; মালিকের রোল বাদ (নমুনা, দফা ২ ও ৬)
+            'clash' => $roles->filter(fn (Role $r) => $r->name !== PermissionSyncer::SUPER_ADMIN_ROLE
+                && DutyClash::of($r->permissions->pluck('name')->all()) !== [])->count(),
         ];
     }
 
@@ -903,6 +1251,14 @@ class RoleController extends Controller implements HasMiddleware
         'create' => ['create'],
         'update' => ['update'],
         'delete' => ['delete', 'cancel'],
+        /*
+         * ⭐ আরও চারটা কলাম — মালিকের অনুমোদিত নমুনা, ২০ নভেম্বর ২০২৬: "দেখা · তৈরি · সম্পাদনা · মোছা/বাতিল · অনুমোদন · পোস্ট ·
+         * রপ্তানি · ছাপা"। ⓘ যে কাজ এই আটটায় পড়ে না (নিয়ম পেরোনো, বন্ধ করা …) "অন্য কাজ" কলামে নামসহ — কিছুই বাদ পড়ে না।
+         */
+        'approve' => ['approve'],
+        'post' => ['post'],
+        'export' => ['export'],
+        'print' => ['print'],
     ];
 
     /**
