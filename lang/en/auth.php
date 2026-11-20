@@ -132,6 +132,7 @@ return [
     'dismissed' => 'Your account has been switched off, so you have been logged out. If this looks wrong, ask your manager.',
     'password_changed_elsewhere' => 'Your password was changed somewhere else, so this session has ended. Log in again with the new password.',
     'two_step_required' => 'Two-step login is required for a super admin. Set it up first; the rest of the screens open after that.',
+    'try_again_shortly' => 'The server is busy for a moment — it will try again in a few seconds. You are still signed in.',
     'two_step_set_up_on_web_first' => 'Two-step login is required for your account but is not set up yet. Log in on the web first and set it up, then log in on the phone.',
     'two_step_reset_done' => 'Their two-step login has been reset. They will set it up again on their next login.',
     'two_step_reset_needs_reason' => 'Say why you are resetting it — this is the answer that stays in the audit trail.',
