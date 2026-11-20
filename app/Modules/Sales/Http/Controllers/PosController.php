@@ -282,7 +282,24 @@ class PosController extends Controller implements HasMiddleware
              */
             'approver_email' => ['nullable', 'string', 'email', 'max:255'],
             'approver_password' => ['nullable', 'string', 'max:255'],
+
+            /*
+             * ⭐ ভাগ করে দেওয়ার সারি — পর্দা যা পাঠায় হুবহু সেই নামে (`payments[i][payment_method_id|amount|reference]`, [[pos.js]]
+             * `startSplit()`), ২০ নভেম্বর ২০২৬।
+             *
+             * ⛔ আগে এই ঘরগুলো যাচাইয়ের তালিকায় ছিল না, আর `validate()` কেবল তালিকার ঘরই ফেরায় — তাই সারিগুলো সেবায় পৌঁছাতই না:
+             * ২,০০০ বিকাশ + ৩০০ নগদের বিক্রিও পুরো ২,৩০০ নগদে টিলে বসত। দিনশেষে ড্রয়ারে ২,০০০ কম, বিকাশে ২,০০০ বেশি — ঠিক সেই
+             * মিথ্যা ঘাটতি যেটা সারাতে ভাগের ঘর বানানো। ⓘ খাত আসে পদ্ধতি থেকে (পর্দায় সারির খাতের ঘর নেই); পদ্ধতি খালি = নগদ।
+             * নিষ্ক্রিয় পদ্ধতি, নম্বর, ফেরত নগদের ভাগ থেকে — সেবার নিজের পাহারা ([[PosService::split()]])।
+             */
+            'payments' => ['nullable', 'array', 'max:10'],
+            'payments.*.payment_method_id' => ['nullable', 'integer',
+                Rule::exists('mdm_payment_methods', 'id')->where('company_id', $companyId)],
+            'payments.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'payments.*.reference' => ['nullable', 'string', 'max:100'],
         ]);
+
+        $this->assertTheSplitAddsUp($data);
 
         /*
          * ⛔ সুইচ বন্ধ থাকলে অঙ্কটা সত্যিই বাদ, কেবল অযাচাই নয়।
@@ -314,6 +331,42 @@ class PosController extends Controller implements HasMiddleware
                 'no' => $result['invoice']->document_no,
                 'change' => Money::format($result['change']),
             ]));
+    }
+
+    /**
+     * ⛔ ভাগগুলোর যোগফল = "যা দিলেন" — না মিললে বিক্রয় নয় (২০ নভেম্বর ২০২৬)।
+     *
+     * ⓘ পর্দা যোগফল লাল দেখায়, কিন্তু চাপ দিলে তবু পাঠায়। ⚠️ সারি খোলা রেখে কেবল "যা দিলেন" বদলালে (৫০০ → ২০০০) সেবা ভাগগুলোকেই
+     * টাকা ধরত আর বাকিটা নীরবে বাকি বা বাড়তি হত। তাই দরজাতেই, সারির ঘরে কারণসহ — কার্ট পর্দায় থাকে, ক্যাশিয়ার ঠিক করে আবার চাপেন।
+     * ⓘ সারি না এলে (কেবল নগদ) কিছুই দেখা হয় না — আগের মতোই।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertTheSplitAddsUp(array $data): void
+    {
+        $rows = $data['payments'] ?? null;
+
+        if (! is_array($rows) || $rows === []) {
+            return;
+        }
+
+        $sum = '0';
+
+        foreach ($rows as $row) {
+            $amount = trim((string) ($row['amount'] ?? ''));
+            $sum = bcadd($sum, $amount === '' ? '0' : $amount, 4);
+        }
+
+        $paid = bcadd(trim((string) ($data['paid'] ?? '')) ?: '0', '0', 4);
+
+        if (bccomp($sum, $paid, 4) !== 0) {
+            throw ValidationException::withMessages([
+                'payments' => __('sales::validation.split_does_not_add_up', [
+                    'sum' => Money::format($sum),
+                    'paid' => Money::format($paid),
+                ]),
+            ]);
+        }
     }
 
     /**

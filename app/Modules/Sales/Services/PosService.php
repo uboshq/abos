@@ -8,8 +8,11 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\MoneyAccountRule;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
@@ -29,8 +32,10 @@ use Illuminate\Validation\ValidationException;
  *
  * ── এটা সমান্তরাল কোনো পথ নয় ─────────────────────────────────────────
  * POS নিজে কোনো নিয়ম জানে না। ভেতরে সে SalesInvoiceService ও
- * CollectionService-ই ডাকে — অর্থাৎ ধারের সীমা, স্টকের অঙ্ক, খরচের
- * দাখিলা, নম্বর সিরিজ, সবই একই কোড।
+ * VoucherService-ই ডাকে — অর্থাৎ ধারের সীমা, স্টকের অঙ্ক, খরচের
+ * দাখিলা, নম্বর সিরিজ, সবই একই কোড। ⓘ ২০ নভেম্বর ২০২৬-এর আগে টাকাটা
+ * আদায়ের কাগজ (CollectionService, COL-…) হত; মালিকের সিদ্ধান্তে এখন
+ * রসিদ ভাউচার (RCV-…, উৎস "কাউন্টার") — [[takeMoney()]]।
  *
  * আলাদা করে লিখলে দুইটা পথ হত: কাউন্টারের বিক্রিতে বিক্রীত পণ্যের ব্যয়
  * বসত না, বা স্টক নামত না — আর অমিলটা ধরা পড়ত মাস শেষে, যখন কেউ বলত
@@ -47,7 +52,6 @@ final class PosService
 {
     public function __construct(
         private readonly SalesInvoiceService $invoices,
-        private readonly CollectionService $collections,
         private readonly SettingsService $settings,
         private readonly SalesReturnService $returns,
         private readonly VoucherService $vouchers,
@@ -421,36 +425,116 @@ final class PosService
             $accountId = $method?->account_id ?? ($data['account_id'] ?? null);
 
             if ($method !== null && filled($accountId)) {
-                $account = \App\Modules\Accounts\Models\Account::query()->find((int) $accountId);
+                $account = Account::query()->find((int) $accountId);
 
                 if ($account !== null) {
                     app(MethodFitsAccount::class)->assert($account, $method, 'payment_method_id');
                 }
             }
 
-            $collection = $this->collections->create(
-                [
-                    'customer_id' => $customer->id,
-                    /*
-                     * খাত না বললে কিছুই পাঠানো হয় না — আদায়ের সেবাই
-                     * প্রধান নগদ কাউন্টার বেছে নেয়।
-                     *
-                     * আগে এখানে নিজের একটা ডিফল্ট ছিল, আর সেটা ছিল
-                     * "হাতে নগদ" মাথাটা (১১০১) — গ্রুপ খাত। ওখানে
-                     * বসানো টাকা কোনো ব্যালেন্সে দেখাত না।
-                     */
-                    'account_id' => $method?->account_id ?? ($data['account_id'] ?? null),
-                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                    'amount' => $part['amount'],
-                    'instrument' => $method?->name(),
-                    'instrument_no' => $this->reference($method, $part['reference']),
-                    'narration' => __('sales::message.pos_narration', ['no' => $invoice->document_no]),
-                ],
-                [['sales_invoice_id' => $invoice->id, 'amount' => $part['amount']]],
-            );
+            /*
+             * ⭐ কাউন্টারের টাকাও রসিদ ভাউচার (RCV-…), আদায় (COL-…) নয় — মালিক, ২০ নভেম্বর ২০২৬ ("ok"): টাকা ঢোকার কাগজ একটাই।
+             * ⓘ প্রতিটা ভাগ একটা রসিদ, নিজের খাতে (বিকাশ বিকাশে, নগদ টিলে) — আগের এক-ভাগ-এক-আদায়ের নিয়মই।
+             * ⓘ সই বা দ্বিতীয় হাত নেই: কাউন্টারের বিক্রিটাই অনুমোদন — সেবার নিজের পোস্ট (`byHand` নয়)। খাতের নিয়ম, টিলের
+             * নিয়ম, রেফারেন্সের পাহারা আগের মতোই খাটে ([[VoucherService::post()]])।
+             */
+            // ⓘ নম্বরের প্রশ্ন আগে, খাতের পরে — আগের আদায়ের পথের একই ক্রম (কোন ঘরে ত্রুটি আগে দেখায়)
+            $reference = $this->reference($method, $part['reference']);
 
-            $this->collections->confirm($collection);
+            $this->vouchers->post($this->counterReceipt(
+                $invoice,
+                $customer,
+                $this->moneyAccountOf($method, $data),
+                $part['amount'],
+                $method,
+                $reference,
+                (string) ($data['trx_date'] ?? $invoice->trx_date?->toDateString() ?? now()->toDateString()),
+            ));
         }
+    }
+
+    /**
+     * কাউন্টারের এক ভাগের রসিদ ভাউচার — খসড়া; পোস্ট ডাকনেওয়ালার ([[takeMoney()]])।
+     *
+     * ⓘ সরাসরি বিক্রয়ের কাউন্টারের রসিদের হুবহু ঘর ([[DirectSaleService::counterVoucher()]]): পক্ষ গ্রাহক, বিলের বিপরীতে
+     * (`against_type` = বিক্রয় বিল), উৎস "কাউন্টার" ([[Voucher::ORIGIN_COUNTER]]), শাখা বিলের — ⛔ দুই কাউন্টারের রসিদ দুই
+     * রকম হলে রসিদের তালিকা, বিলের বাকি আর দিনের হিসাব একদিন দুই কথা বলত।
+     */
+    private function counterReceipt(
+        SalesInvoice $invoice,
+        Customer $customer,
+        int $moneyAccount,
+        string $amount,
+        ?PaymentMethod $method,
+        ?string $reference,
+        string $trxDate,
+    ): Voucher {
+        // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা ([[StandardChart::accountFor()]])
+        $receivable = StandardChart::accountFor(StandardChart::RECEIVABLE);
+
+        $narration = __('sales::message.pos_narration', ['no' => $invoice->document_no]);
+
+        return $this->vouchers->create(
+            [
+                'type' => Voucher::RECEIPT,
+                'trx_date' => $trxDate,
+                'branch_id' => $invoice->branch_id,
+                'party_type' => 'customer',
+                'party_id' => $customer->id,
+                'instrument' => $this->instrumentOf($method, $moneyAccount),
+                'instrument_no' => $reference,
+                'narration' => $narration,
+                'against_type' => SalesInvoice::drillSourceType(),
+                'against_id' => $invoice->id,
+                'origin' => Voucher::ORIGIN_COUNTER,
+            ],
+            $this->vouchers->twoLineEntry(Voucher::RECEIPT, (int) $receivable->id, $moneyAccount, $amount, $narration),
+        );
+    }
+
+    /**
+     * টাকা কোন খাতে নামে — পদ্ধতির খাত, নাহলে পাঠানো খাত, নাহলে ক্যাশিয়ারের নিজের টিল (না থাকলে প্রধান টিল)।
+     *
+     * ⓘ আগের আদায় খাত না পেলে প্রধান টিল ধরত। ⛔ রসিদের পোস্টে নিয়ম আছে — নগদ কেবল নিজের বাক্সে (মালিক, ২১ সেপ্টেম্বর
+     * ২০২৬; [[CashTill::mayUse()]]); বাক্স কারও নামে বসলে প্রধান টিল ক্যাশিয়ারের না-ও হতে পারে, তাই আগে তাঁর নিজের টিল।
+     * কারও নামে কিছু না বসলে আগের মতোই প্রধান টিল।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function moneyAccountOf(?PaymentMethod $method, array $data): int
+    {
+        $accountId = $method?->account_id ?? ($data['account_id'] ?? null);
+
+        $accountId = filled($accountId) ? (int) $accountId : $this->tillAccount();
+
+        // ⛔ টাকার খাত ছাড়া রসিদ নয় — মাথা, নিষ্ক্রিয় বা টাকার নয় এমন খাত এখানেই থামে (আগের আদায়ের একই পাহারা)
+        app(MoneyAccountRule::class)->assert($accountId, false, $method !== null ? 'payment_method_id' : 'account_id');
+
+        return $accountId;
+    }
+
+    /** ক্যাশিয়ারের নিজের সক্রিয় টিলের খাত — না থাকলে প্রধান টিলের */
+    private function tillAccount(): int
+    {
+        $userId = (int) (auth()->id() ?? 0);
+
+        $own = $userId > 0
+            ? CashTill::query()->active()->heldBy($userId)->orderByDesc('is_primary')->orderBy('id')->value('account_id')
+            : null;
+
+        return (int) ($own ?? $this->tills->ensurePrimaryTill()->account_id);
+    }
+
+    /**
+     * রসিদের "কোন পথে" — পদ্ধতির কোড (সরাসরি বিক্রয়ের কাউন্টারের মতো); পদ্ধতি না বললে নগদ খাতে "cash"।
+     */
+    private function instrumentOf(?PaymentMethod $method, int $moneyAccount): ?string
+    {
+        if ($method !== null) {
+            return $method->code;
+        }
+
+        return Account::query()->find($moneyAccount)?->isCash() ? 'cash' : null;
     }
 
     /**
@@ -584,8 +668,6 @@ final class PosService
 
     private function refund(SalesReturn $return, string $amount): Voucher
     {
-        $till = $this->tills->ensurePrimaryTill();
-
         $voucher = $this->vouchers->create([
             'type' => Voucher::PAYMENT,
             'trx_date' => $return->trx_date,
@@ -594,7 +676,8 @@ final class PosService
             'narration' => __('sales::message.pos_refund_narration', ['no' => $return->document_no]),
         ], $this->vouchers->twoLineEntry(
             type: Voucher::PAYMENT,
-            fromAccountId: $till->account_id,
+            // ⓘ যে টিলে কাউন্টারের রসিদ নামে, ফেরতও সেখান থেকে ([[tillAccount()]]; ২০ নভেম্বর ২০২৬) — কারও নামে টিল না বসলে আগের মতোই প্রধান টিল
+            fromAccountId: $this->tillAccount(),
             // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
             toAccountId: StandardChart::accountFor(StandardChart::RECEIVABLE)->id,
             amount: $amount,

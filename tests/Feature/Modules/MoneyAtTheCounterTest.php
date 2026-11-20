@@ -211,15 +211,22 @@ class MoneyAtTheCounterTest extends TestCase
         $this->assertNotEmpty($result['invoice']->document_no);
     }
 
-    /** নম্বরটা আদায়ের রেকর্ডে থেকে যায় — নাহলে পরে মেলানোর কিছু নেই। */
-    public function test_the_reference_is_kept_on_the_collection(): void
+    /**
+     * নম্বরটা রসিদ ভাউচারে থেকে যায় — নাহলে পরে মেলানোর কিছু নেই।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ থেকে কাউন্টারের টাকা রসিদে (উৎস "কাউন্টার"), আদায়ে নয় — মালিকের "ok"।
+     */
+    public function test_the_reference_is_kept_on_the_receipt(): void
     {
         $this->sell(['payment_method_id' => $this->method()->id, 'reference' => 'CDA7XY9K21']);
 
-        $this->assertDatabaseHas('sal_collections', [
+        $this->assertDatabaseHas('vouchers', [
             'company_id' => $this->company->id,
+            'type' => 'receipt',
+            'origin' => 'counter',
             'instrument_no' => 'CDA7XY9K21',
         ]);
+        $this->assertDatabaseMissing('sal_collections', ['instrument_no' => 'CDA7XY9K21']);
     }
 
     // ── বন্ধ করা উপায় ───────────────────────────────────────────────

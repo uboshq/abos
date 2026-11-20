@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
@@ -158,16 +159,39 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
             'ড্রয়ারে ৩০০ পৌঁছায়নি।');
     }
 
-    /** প্রতিটা ভাগ আলাদা আদায় — নাহলে খাত ধরে মেলানোর উপায় থাকত না। */
-    public function test_each_part_is_its_own_collection(): void
+    /**
+     * প্রতিটা ভাগ আলাদা রসিদ ভাউচার, নিজের খাতে — নাহলে খাত ধরে মেলানোর উপায় থাকত না।
+     *
+     * ⓘ ২০ নভেম্বর ২০২৬ থেকে কাউন্টারের টাকা রসিদে (উৎস "কাউন্টার"), আদায়ে নয় — মালিকের "ok"।
+     */
+    public function test_each_part_is_its_own_receipt(): void
     {
         $this->sell('2300', ['payments' => [
             ['payment_method_id' => $this->bkashMethod->id, 'amount' => '2000', 'reference' => 'CDA7XY9K21'],
             ['payment_method_id' => $this->cashMethod->id, 'amount' => '300'],
         ]]);
 
-        $this->assertDatabaseHas('sal_collections', ['amount' => '2000.0000', 'instrument_no' => 'CDA7XY9K21']);
-        $this->assertDatabaseHas('sal_collections', ['amount' => '300.0000']);
+        $receipts = Voucher::query()->where('type', Voucher::RECEIPT)->where('origin', Voucher::ORIGIN_COUNTER)
+            ->with('lines')->orderBy('id')->get();
+
+        $this->assertCount(2, $receipts, 'দুই ভাগে দুইটা রসিদ নয়।');
+        $this->assertSame(0, Collection::query()->count(), 'কাউন্টার আর আদায় লেখে না।');
+
+        $bkash = $receipts->firstWhere('instrument_no', 'CDA7XY9K21');
+        $this->assertNotNull($bkash);
+        $this->assertSame(0, bccomp((string) $bkash->amount, '2000', 4));
+        $this->assertTrue($bkash->lines->contains(fn ($l) => (int) $l->account_id === $this->bkash->id && bccomp((string) $l->debit, '2000', 4) === 0),
+            'বিকাশের রসিদ বিকাশের খাতে ডেবিট নয়।');
+
+        $cash = $receipts->first(fn ($v) => $v->id !== $bkash->id);
+        $this->assertSame(0, bccomp((string) $cash->amount, '300', 4));
+        $this->assertTrue($cash->lines->contains(fn ($l) => (int) $l->account_id === $this->tillAccount()->id && bccomp((string) $l->debit, '300', 4) === 0),
+            'নগদের রসিদ টিলের খাতে ডেবিট নয়।');
+
+        foreach ($receipts as $receipt) {
+            $this->assertSame(DocumentStatus::CONFIRMED, $receipt->status, 'কাউন্টারের রসিদ নিজে পাকা হয়নি।');
+            $this->assertSame('customer', $receipt->party_type);
+        }
     }
 
     /** খাতা মেলে — ভাগ যতই হোক। */
@@ -271,6 +295,7 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         ]]);
 
         $this->assertSame(0, Collection::query()->count(), 'টাকা না নিয়েই একটা আদায় বসেছে।');
+        $this->assertSame(0, Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)->count(), 'টাকা না নিয়েই একটা রসিদ বসেছে।');
         $this->assertSame(0, bccomp((string) $result['invoice']->total, '2300', 2));
     }
 
@@ -282,7 +307,9 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
             ['payment_method_id' => '', 'amount' => ''],
         ]]);
 
-        $this->assertSame(1, Collection::query()->count());
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে রসিদ, আদায় নয়
+        $this->assertSame(1, Voucher::query()->where('type', Voucher::RECEIPT)->where('origin', Voucher::ORIGIN_COUNTER)->count());
+        $this->assertSame(0, Collection::query()->count());
     }
 
     // ── পুরনো পথটা ভাঙেনি ───────────────────────────────────────────
@@ -403,8 +430,11 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         $this->assertSame(0, bccomp(bcsub($afterSale, $this->balanceOf($this->tillAccount()), 4), '1000', 4),
             'ড্রয়ার থেকে টাকাটা বেরোয়নি।');
 
-        // আদায়ের সংখ্যাটা কমেনি — ফেরত আর না-দেওয়া আলাদা ঘটনা
-        $this->assertSame(1, Collection::query()->count());
+        // রসিদটা থাকে, পাকা — ফেরত আর না-দেওয়া আলাদা ঘটনা; ফেরত নিজের পরিশোধ ভাউচারে (২০ নভেম্বর ২০২৬ থেকে রসিদ, আদায় নয়)
+        $receipt = Voucher::query()->where('type', Voucher::RECEIPT)->where('origin', Voucher::ORIGIN_COUNTER)->sole();
+        $this->assertSame(DocumentStatus::CONFIRMED, $receipt->status);
+        $this->assertSame(Voucher::PAYMENT, $result['refund']->type);
+        $this->assertSame(0, Collection::query()->count());
     }
 
     /** খসড়া বা অচেনা নম্বরে ফেরত হয় না — যে মাল বেরোয়নি তা ফেরে না। */

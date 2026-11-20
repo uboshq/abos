@@ -10,6 +10,8 @@ return [
     'old_papers_note' => 'Collection papers taken in Sales before the receipt voucher — view, print and cancel only; new money goes on a receipt.',
     'old_papers_more' => 'All (:count) in the collection list',
     'old_papers_total' => 'Total of posted collections',
+    'counter_badge' => 'Counter',
+    'counter_badge_hint' => 'Money taken with a counter sale; the sale is the approval, so it posted by itself',
     'origin_sales_deposit' => 'Sales added deposit',
     'origin_purchase_payment' => 'Purchase added payment',
     'expense' => 'Expense Voucher',
@@ -60,5 +62,8 @@ return [
         'max' => 'Amount to',
         'by' => 'Made by',
         'branch' => 'Branch',
+        'origin' => 'Taken at',
+        'origin_counter' => 'Counter',
+        'origin_office' => 'Office',
     ],
 ];

@@ -137,9 +137,12 @@
                     $pick('state', $filterOptions['states'] ?? [], $filterLabels['state'] ?? ''),
                     $pick('by', $filterOptions['makers'] ?? [], $filterLabels['by'] ?? ''),
                     $pick('branch_id', $filterOptions['branches'] ?? [], $filterLabels['branch_id'] ?? ''),
+                    // ⭐ সব / কাউন্টার / অফিস — কেবল রসিদে (মালিক, ২০ নভেম্বর ২০২৬; [[VoucherListFilters]] `origin`)
+                    $pick('origin', $filterOptions['origins'] ?? [], $filterLabels['origin'] ?? ''),
                 ] as $f)
-                    {{-- ⓘ এক শাখা হলে শাখার ঘরের কিছু বলার নেই --}}
+                    {{-- ⓘ এক শাখা হলে শাখার ঘরের কিছু বলার নেই; উৎসের ঘর কেবল রসিদের তালিকায় (অন্যগুলোতে বাছাই খালি) --}}
                     @continue($f['key'] === 'branch_id' && count($f['options']) < 2)
+                    @continue($f['key'] === 'origin' && $f['options'] === [])
                     <select name="{{ $f['key'] }}" aria-label="{{ $f['all'] }}" class="{{ $compact }}" data-filter="{{ $f['key'] }}">
                         <option value="">{{ $f['all'] }}: {{ __('accounts::voucher.filter.all') }}</option>
                         @foreach ($f['options'] as $value => $text)

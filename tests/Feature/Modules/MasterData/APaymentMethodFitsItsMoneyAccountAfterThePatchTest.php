@@ -9,6 +9,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
@@ -130,6 +131,8 @@ final class APaymentMethodFitsItsMoneyAccountAfterThePatchTest extends TestCase
 
         $this->assertSame($bkashBefore, $this->bkash->fresh()->balanceOn(), '⛔ বিকাশের খাতে টাকা বসে গেছে।');
         $this->assertSame(0, Collection::query()->count(), '⛔ ভুল খাতে আদায়ের সারি বসে গেছে।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে কাউন্টারের টাকা রসিদে — সেটাও বসেনি
+        $this->assertSame(0, Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)->count(), '⛔ ভুল খাতে রসিদ বসে গেছে।');
     }
 
     /** ⭐ পাল্টা দাবি: MFS পদ্ধতি বিকাশে — কাউন্টারে টাকা বসে। */
@@ -139,8 +142,11 @@ final class APaymentMethodFitsItsMoneyAccountAfterThePatchTest extends TestCase
 
         $this->sell(['payment_method_id' => $method->id, 'reference' => 'TRX-FITP-1']);
 
-        $this->assertSame(1, Collection::query()->where('account_id', $this->bkash->id)->count(),
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে কাউন্টারের টাকা রসিদ ভাউচারে (উৎস "কাউন্টার"), আদায়ে নয়
+        $this->assertSame(1, Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)->where('type', Voucher::RECEIPT)
+            ->whereHas('lines', fn ($l) => $l->where('account_id', $this->bkash->id)->where('debit', '>', 0))->count(),
             'মেলা জোড়ায় কাউন্টারের টাকা বিকাশে বসেনি।');
+        $this->assertSame(0, Collection::query()->count(), 'কাউন্টার আর আদায় লেখে না।');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
