@@ -265,11 +265,10 @@ return [
             // ⭐ ব্যক্তির লেজার — মালিক, ৫ অক্টোবর ২০২৬
             ['label' => 'accounts::party_ledger.person_title', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'person-ledger'], 'permission' => 'accounts.report'],
             /*
-             * ⭐ প্রদেয় হাম্মালি (২১১৭) — কোন ঠিকাদারের কাছে কত বাকি; পার্টি লেজারের পাশে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")।
-             * ⓘ পাতাটা অর্থের ([[CarrierAndLabourController]], চাবিও তারই `finance.expense.view`) — দরজা এখানে, দিন বন্ধের মতোই।
+             * ⛔ প্রদেয় হাম্মালির সারি এখানে নয় — পাতাটা অর্থের, চাবিও অর্থের (`finance.expense.view`), আর মডিউল অন্যের চাবিতে মেনু-সারি
+             *   বসাতে পারে না ([[ModuleDefinition]] বুট-পাহারা; Mac run of 65a8e55b3: গোটা অ্যাপ বুটেই থেমেছিল)। পাতাটা অর্থের মেনুতে আর
+             *   দিন শেষের হিসাবের লিংকে আছে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")।
              */
-            ['label' => 'supplier::labour.payable_link', 'icon' => 'handover', 'route' => 'finance.carrier_labour.index',
-                'route_params' => ['tab' => 'labour'], 'permission' => 'finance.expense.view'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report.final'], // ⛔ অডিট ম১৩/ম১৮
             // ⭐ বছর-শেষের রেওয়ামিল — সমন্বয়ের আগে, সমন্বয়, পরে, আগের বছর-শেষ (মালিক, ১৭ নভেম্বর ২০২৬)
             ['label' => 'accounts::fs.ytb.title', 'icon' => 'scale', 'route' => 'accounts.year_end_trial_balance', 'permission' => 'accounts.report.final'],
