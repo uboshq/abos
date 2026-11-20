@@ -115,9 +115,29 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
         $this->assertCount(4, $cards[1], '⛔ রঙিন ড্যাশবোর্ড: উপরে চারটা রঙিন কার্ড নেই।');
         $this->assertSame(count($cards[1]), count(array_unique($cards[1])), '⛔ রঙিন ড্যাশবোর্ড: পাতায় একই রঙের দুই কার্ড।');
 
-        // ছ — নমুনার সারি
-        $this->assertMatchesRegularExpression('/data-dashboard-pair[^>]*lg:grid-cols-2.*?data-panel.*?data-dashboard-exceptions/s', $html,
-            '⛔ নমুনার সারি: প্রথম চার্ট আর "নজরে রাখুন" পাশাপাশি নয়।');
+        /*
+         * ছ — নমুনার সারি: প্রথম চার্ট আর "নজরে রাখুন" পাশাপাশি।
+         * ⓘ ২০ নভেম্বর ২০২৬ থেকে চার্টের বড় অংশ মাথার গ্রাফের বোর্ডে; বোর্ডের বাইরে যে চার্ট থাকে তা অনেক পাতায় তথ্য-নির্ভর (যেমন গ্রাহকের
+         *   "মেয়াদ পেরোনো" — কেউ পেরোলে তবেই)। তাই কয়েকটা পাতা দেখা: যার চার্ট আছে তার প্রথমটা জোড়া-সারিতে, যার নেই তার জোড়া-সারিতে
+         *   কেবল "নজরে রাখুন"; আর অন্তত একটা পাতায় চার্ট থাকতেই হবে — নাহলে দাবি অন্ধ।
+         */
+        $withChart = 0;
+        foreach (['customer', 'hr', 'supplier', 'documents', 'master_data', 'backup', 'approval', 'purchase'] as $code) {
+            $page = $this->get(route('module.dashboard', $code));
+            if ($page->status() !== 200) {
+                continue;
+            }
+            $page = (string) $page->getContent();
+            if (preg_match('/<section[^>]*data-panel[ >=]/', $page) === 1) {
+                $withChart++;
+                $this->assertMatchesRegularExpression('/data-dashboard-pair[^>]*lg:grid-cols-2.*?data-panel.*?data-dashboard-exceptions/s', $page,
+                    "⛔ নমুনার সারি ({$code}): প্রথম চার্ট আর \"নজরে রাখুন\" পাশাপাশি নয়।");
+            } else {
+                $this->assertMatchesRegularExpression('/data-dashboard-pair.*?data-dashboard-exceptions/s', $page,
+                    "⛔ নমুনার সারি ({$code}): চার্ট না থাকলেও \"নজরে রাখুন\" জোড়া-সারিতে থাকার কথা।");
+            }
+        }
+        $this->assertGreaterThan(0, $withChart, '⛔ কোনো পাতায় বোর্ডের বাইরে চার্ট নেই — জোড়া-সারির দাবি অন্ধ।');
         $this->assertMatchesRegularExpression('/data-watch-row="good"[^>]*var\(--color-pal-green\)/s', $html,
             '⛔ নজরে রাখুন: কিছু বাকি না থাকলে সবুজ "সব ঠিক" সারি নেই — খালি বাক্স।');
     }

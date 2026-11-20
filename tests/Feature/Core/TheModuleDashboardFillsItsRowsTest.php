@@ -116,7 +116,9 @@ final class TheModuleDashboardFillsItsRowsTest extends TestCase
         }
 
         $this->assertGreaterThan(20, $looked['panels'], 'চার্ট প্রায় দেখাই হয়নি — দাবি অন্ধ।');
-        $this->assertGreaterThan(30, $looked['stats'], 'সূচক প্রায় দেখাই হয়নি — দাবি অন্ধ।');
+        // ⓘ ২০ নভেম্বর ২০২৬ থেকে বেশিরভাগ সংখ্যার ঘর মাথার গ্রাফের বোর্ডে (একই তথ্য দুইবার নয়) — ঘরের ছকে এখন অল্প কয়েকটা থাকে
+        //   (Mac run of 6b0c4ecf0: 6টা); নিয়মটা তাদের উপরেই, অন্ধ না হওয়ার সীমা তাই ৩-এর বেশি
+        $this->assertGreaterThan(3, $looked['stats'], 'সূচক প্রায় দেখাই হয়নি — দাবি অন্ধ।');
         $this->assertGreaterThan(3, $looked['notTodo'], 'করণীয়-নয় এমন উইজেট নেই — তৃতীয় দাবি অন্ধ।');
         $this->assertSame([], $wrong, implode("\n", $wrong));
     }
