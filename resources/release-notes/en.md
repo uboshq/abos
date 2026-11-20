@@ -1,5 +1,15 @@
 # What's new
 
+## 1.3.8 — 21-11-2026
+
+- The left menu in the three "ABOS" looks comes in groups, each with its own icon; a group opens or folds on a click, the current page's group open.
+- Three modules are now one each: "Accounts & Finance" (Accounts + Finance + Fixed assets), "Sales" (Sales + Customers + Credit control + Offers), "Purchase" (Purchase + Suppliers). Each one's dashboards sit in tabs, nothing lost; old addresses and permissions unchanged. SAP and Dynamic stay as before.
+- The "ABOS" look opens its left menu with the module's coloured icon and name.
+- The "ABOS" look is now called "ABOS Smart".
+- Two more pages moved the grey line under their title behind the ⓘ.
+- The same receipt or slip given twice now warns on expense claims too, with a link to the earlier paper.
+- The app stays signed in until you sign out: no more signing out by itself now and then, and not after many days unopened.
+
 ## 1.3.7 — 20-11-2026
 
 - Every module dashboard opens on colourful charts: six same-size charts of six kinds in two rows; all earlier boxes below, no figure shown twice. Copilot has its own dashboard too.
