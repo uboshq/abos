@@ -107,6 +107,8 @@ return [
             'accounts::party_ledger.supplier_title' => ['ledger', 'truck'],
             'accounts::party_ledger.person_title' => ['ledger', 'contact'],
             'accounts::menu.trial_balance' => ['ledger', 'scale'],
+            // ⓘ বছর-শেষের রেওয়ামিল (মালিক, ১৭ নভেম্বর ২০২৬ "ok") — রেওয়ামিলের পাশে, লেজারের দলে
+            'accounts::fs.ytb.title' => ['ledger', 'book-open-text'],
             'accounts::branch_dues.title' => ['ledger', 'git-compare-arrows'],
             'accounts::menu.books_check' => ['ledger', 'badge-check'],
             'accounts::menu.posting_monitor' => ['control', 'activity'],
