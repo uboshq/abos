@@ -123,7 +123,8 @@ final class GovernanceDashboard implements ProvidesDashboard
         $parts = fn (array $breakdowns) => $breakdowns === [] ? [] : $breakdowns[0]->parts;
 
         // এ মাসের কাজ — আগের মাসের চার্টের হুবহু ভাগ
-        $month = $parts(self::whatWasDone());
+        // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): বোর্ড সুইচ বন্ধেও আঁকা হয়, অথচ এই চার গ্রাফ সুইচ দেখত — বন্ধে ছয়টার জায়গায় তিনটা, তারও দুটো ফাঁকা
+        $month = $parts(self::whatWasDone(board: true));
         $cards[] = Card::make(__('governance::dashboard.audit_month'), 'hbars', [
             'v' => array_map(fn ($p) => (int) $p['value'], $month),
             'l' => array_map(fn ($p) => $p['label'], $month),
@@ -168,7 +169,7 @@ final class GovernanceDashboard implements ProvidesDashboard
             href: route('governance.audit.index'), colour: '#7c3aed');
 
         // আজকের লগইন — আগের চার্টের হুবহু ভাগ, মাথায় মোট চেষ্টা
-        $logins = $parts(self::loginsToday());
+        $logins = $parts(self::loginsToday(board: true));
         if ($logins !== []) {
             $tried = array_sum(array_map(fn ($p) => (int) $p['value'], $logins));
             $cards[] = Card::make(__('governance::dashboard.logins_today'), 'funnel', ['p' => array_merge(
@@ -180,7 +181,7 @@ final class GovernanceDashboard implements ProvidesDashboard
         }
 
         // কাগজ কীভাবে বেরোল — আগের চার্টের হুবহু ভাগ
-        $papers = $parts(self::papersThisMonth());
+        $papers = $parts(self::papersThisMonth(board: true));
         if ($papers !== []) {
             $out = array_sum(array_map(fn ($p) => (int) $p['value'], $papers));
             $cards[] = Card::make(__('governance::dashboard.papers_out'), 'donut', [
@@ -205,7 +206,7 @@ final class GovernanceDashboard implements ProvidesDashboard
         ], sub: __('governance::dashboard.changes_30_hint'), href: route('governance.audit.index'), colour: '#14b8a6');
 
         // ঢোকার চেষ্টা আইপি ধরে — গত 30 দিন, বড় ছয়টা আইপি; ঢোকার খাতার একই দেয়াল
-        if (config('abos.dashboards_v2') && $viewer?->can('governance.login.view')) {
+        if ($viewer?->can('governance.login.view')) {
             $ips = app(\App\Modules\Governance\Services\CompanylessRows::class)->logins($viewer)
                 ->where('created_at', '>=', $from)
                 ->selectRaw('ip_address, COUNT(*) as n, SUM(CASE WHEN succeeded THEN 0 ELSE 1 END) as bad, COUNT(DISTINCT identifier) as people')
@@ -234,9 +235,10 @@ final class GovernanceDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function whatWasDone(): array
+    private static function whatWasDone(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2')) {
+        // ⓘ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়; আগের চার্ট সুইচ মানে আগের মতো (লাইভ 1.3.7)
+        if (! $board && ! config('abos.dashboards_v2')) {
             return [];
         }
 
@@ -279,11 +281,12 @@ final class GovernanceDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function loginsToday(): array
+    private static function loginsToday(bool $board = false): array
     {
         $viewer = auth()->user();
 
-        if (! config('abos.dashboards_v2') || ! $viewer?->can('governance.login.view')) {
+        // ⓘ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়; আগের চার্ট সুইচ মানে আগের মতো (লাইভ 1.3.7)
+        if ((! $board && ! config('abos.dashboards_v2')) || ! $viewer?->can('governance.login.view')) {
             return [];
         }
 
@@ -330,9 +333,10 @@ final class GovernanceDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function papersThisMonth(): array
+    private static function papersThisMonth(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('governance.audit.view')) {
+        // ⓘ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়; আগের চার্ট সুইচ মানে আগের মতো (লাইভ 1.3.7)
+        if ((! $board && ! config('abos.dashboards_v2')) || ! auth()->user()?->can('governance.audit.view')) {
             return [];
         }
 

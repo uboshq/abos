@@ -121,8 +121,9 @@ final class ApprovalDashboard implements ProvidesDashboard
     private static function charts(): array
     {
         $parts = fn (array $breakdowns) => $breakdowns === [] ? [] : $breakdowns[0]->parts;
-        $byModule = $parts(self::byModule());
-        $byPerson = $parts(self::byPerson());
+        // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): বোর্ড সুইচ বন্ধেও আঁকা হয়, অথচ এই দুই ভাগ সুইচ দেখত — অপেক্ষমাণ অনুমোদন থাকতেও কার্ড ফাঁকা
+        $byModule = $parts(self::byModule(board: true));
+        $byPerson = $parts(self::byPerson(board: true));
         $waiting = self::howLongWaiting()->parts;
         $pending = array_sum(array_map(fn ($p) => (int) $p['value'], $waiting));
 
@@ -353,9 +354,10 @@ final class ApprovalDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function byPerson(): array
+    private static function byPerson(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2')) {
+        // ⭐ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়; আগের চার্ট সুইচ মানে আগের মতো
+        if (! $board && ! config('abos.dashboards_v2')) {
             return [];
         }
 
@@ -398,9 +400,10 @@ final class ApprovalDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function byModule(): array
+    private static function byModule(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2')) {
+        // ⭐ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়; আগের চার্ট সুইচ মানে আগের মতো
+        if (! $board && ! config('abos.dashboards_v2')) {
             return [];
         }
 

@@ -432,8 +432,13 @@ final class FinanceCharts
         $cogs = $this->moved([StandardChart::COST_OF_GOODS_SOLD], $from, $date);
         $wc = $this->workingCapital->on($date);
 
+        /*
+         * ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): পাওনার খাতা উল্টো জেরে (গ্রাহকের অগ্রিম বাকির চেয়ে বেশি) থাকায় DSO "-2 দিন", আর নগদ চক্রের সারিতে
+         *   "+-2 দিন"। DSO মানে "বিক্রির টাকা ঘরে আসতে গড়ে কত দিন লাগে" — জের ÷ দিনে গড় বিক্রি; উল্টো জের মানে আদায় আগেই হয়ে গেছে, কোনো
+         *   টাকা আটকে নেই, তাই 0 দিন (আন্তর্জাতিক নিয়মে অগ্রিম পাওনা নয়, চুক্তির দায় — IFRS 15)। দেনা (DPO) আর মজুদেও (DIO) একই: উল্টো জের = 0।
+         */
         $days = fn (string $balance, string $flow): ?int => bccomp($flow, '0', 4) > 0
-            ? (int) bcdiv(bcmul($balance, (string) self::WINDOW_DAYS, 4), $flow, 0)
+            ? (int) bcdiv(bcmul(bccomp($balance, '0', 4) > 0 ? $balance : '0', (string) self::WINDOW_DAYS, 4), $flow, 0)
             : null;
 
         $dso = $days($wc['receivable'], $sales);

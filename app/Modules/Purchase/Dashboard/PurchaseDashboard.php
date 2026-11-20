@@ -201,10 +201,13 @@ final class PurchaseDashboard implements ProvidesDashboard
         }
 
         // ── ২. সবচেয়ে বেশি কেনা — আগের চার্টের একই সারি (বিল দেখার চাবিতে)
-        $top = config('abos.dashboards_v2') && $user?->can('purchase.bill.view') ? self::topSupplierRows() : collect();
+        // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): এখানে নতুন-ড্যাশবোর্ডের সুইচও দেখা হত — অথচ গ্রাফের বোর্ড দুই অবস্থাতেই আঁকা হয়, তাই সুইচ বন্ধে
+        //   এ বছরের ৳30.4 লাখ কেনার পরেও কার্ড ফাঁকা ("এই সময়ে কিছু নেই")। ⭐ কার্ড কেবল চাবি মানে, সুইচ নয়।
+        $top = $user?->can('purchase.bill.view') ? self::topSupplierRows() : collect();
 
         // ── ৩. ক্রয়ের পথ — [[PurchaseCharts::funnel()]]-এর হুবহু ভাগ
-        $funnel = collect($panels)->first(fn ($p) => $p->label === __('purchase::dashboard.funnel'));
+        // ⛔ লাইভ 1.3.7: `panels()` সুইচ বন্ধে খালি, তাই কার্ডটা ফাঁকা থাকত — বোর্ড দুই অবস্থাতেই আঁকা হয়, ফানেল তখন সরাসরি
+        $funnel = collect($panels)->first(fn ($p) => $p->label === __('purchase::dashboard.funnel')) ?? PurchaseCharts::funnel();
 
         // ── ৪. দেনা কবে দিতে হবে — বিলে যা বাকি ([[biggestPayable()]]-এর একই হিসাব), শেষ তারিখ ধরে; শেষ তারিখ না থাকলে বিলের তারিখ
         $due = '(b.total - b.ait_amount - b.vds_amount - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0))';

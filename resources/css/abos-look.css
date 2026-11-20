@@ -1147,3 +1147,14 @@
         grid-template-columns: minmax(0, 1fr) !important;
     }
 }
+
+/* ⭐ প্রথম পর্দার দুই সারি এক মাপের কার্ডে — গ্রাফের বোর্ডের (`.viz-card`, 418px) একই উচ্চতা, তাই 1920×1080-এ মেনু খোলা রেখে ঠিক দুই
+   সারি (লাইভ 1.3.7-এ অর্থের পাতায় 4 + 3, তিন রকম চওড়া; মালিক, ২১ নভেম্বর ২০২৬)। ⓘ লম্বা ভেতর (ক্যালেন্ডারের তালিকা) কাটে না, বক্সের
+   ভেতরেই সরে — কিছু হারায় না। ⓘ কেবল "ABOS" আর কেবল যে বোর্ড `equal` চায় ([[board-arrange.js]]) */
+@media (min-width: 1024px) {
+    :root[data-ui='rose'] [data-board-equal] > section {
+        height: 418px !important;
+        min-height: 0 !important;
+        overflow-y: auto;
+    }
+}
