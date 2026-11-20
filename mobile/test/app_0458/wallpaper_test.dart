@@ -7,7 +7,8 @@ import 'package:abos_mobile/core/theme/glass.dart';
 import 'package:abos_mobile/core/theme/glass_wallpaper.dart';
 import 'package:abos_mobile/features/profile/look_screen.dart';
 
-/// ⭐ Liquid Glass-এর পটভূমি (মালিক, ২০ নভেম্বর ২০২৬): আটটা, সবই নিজেদের আঁকা; শুরুতে রঙিন বল; লেখা সব পটে পড়া যায়
+/// ⭐ Liquid Glass-এর পটভূমি (মালিক, ২০ নভেম্বর ২০২৬): নয়টা, সবই নিজেদের আঁকা; শুরুতে রঙিন বল; লেখা সব পটে পড়া যায়;
+/// বেগুনি ঢেউ বাছাইয়ে প্রথমে, কিন্তু শুরুর পট নয়
 AppLooks _memory(Map<String, String> box) => AppLooks(read: (k) async => box[k], write: (k, v) async => box[k] = v);
 
 double _contrast(Color a, Color b) {
@@ -20,8 +21,9 @@ void main() {
   setUp(() => saved = AppLooks.instance);
   tearDown(() => AppLooks.instance = saved);
 
-  test('eight backgrounds; the colour balls are the default; a choice is kept and read back', () async {
-    expect(GlassWallpaper.values, hasLength(8));
+  test('nine backgrounds, purple wave first; the colour balls are still the default; a choice is kept and read back', () async {
+    expect(GlassWallpaper.values, hasLength(9));
+    expect(GlassWallpaper.values.first, GlassWallpaper.purpleWave);
     final box = <String, String>{};
     final first = _memory(box);
     await first.load();
@@ -30,6 +32,10 @@ void main() {
     final next = _memory(box);
     await next.load();
     expect(next.wallpaper.value, GlassWallpaper.purple);
+    await next.chooseWallpaper(GlassWallpaper.purpleWave);
+    final third = _memory(box);
+    await third.load();
+    expect(third.wallpaper.value, GlassWallpaper.purpleWave);
     expect(AppLooks.parseWallpaper('nonsense'), GlassWallpaper.balls);
   });
 
@@ -72,7 +78,28 @@ void main() {
     expect(tester.hasRunningAnimations, isFalse);
   });
 
-  testWidgets('the picker: only under Liquid Glass, eight swatches with names, a tap chooses', (tester) async {
+  test('purple wave is drawn by its own still painter, the others by the shared one', () {
+    expect(GlassWallpaper.purpleWave.painter, isA<PurpleWavePainter>());
+    expect(GlassWallpaper.purpleWave.painter.shouldRepaint(const PurpleWavePainter()), isFalse);
+    for (final w in GlassWallpaper.values.where((w) => w != GlassWallpaper.purpleWave)) {
+      expect(w.painter, isA<WallpaperPainter>(), reason: w.name);
+    }
+  });
+
+  testWidgets('purple wave is a still picture (cached) too', (tester) async {
+    AppLooks.instance = _memory({});
+    AppLooks.instance.look.value = AppLook.glass;
+    await AppLooks.instance.chooseWallpaper(GlassWallpaper.purpleWave);
+    await tester.pumpWidget(const MaterialApp(home: GlassBackdrop(child: SizedBox.expand())));
+    final paint = tester.widget<CustomPaint>(find.byKey(const ValueKey('wallpaper-purpleWave')));
+    expect(paint.painter, isA<PurpleWavePainter>());
+    expect(paint.isComplex, isTrue);
+    expect(paint.willChange, isFalse);
+    expect(tester.takeException(), isNull);
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('the picker: only under Liquid Glass, nine swatches with names, purple wave first, a tap chooses', (tester) async {
     final looks = _memory({});
     AppLooks.instance = looks;
     tester.view.physicalSize = const Size(412, 1600);
@@ -87,9 +114,15 @@ void main() {
       expect(find.byKey(ValueKey('look-wallpaper-${w.name}')), findsOneWidget, reason: w.name);
     }
     expect(find.text('গ্লাস চেহারার পটভূমি'), findsOneWidget);
-    for (final name in ['রঙিন বল', 'বেগুনি আভা', 'নীল ঢেউ', 'সূর্যাস্ত', 'সবুজ আলো', 'সমুদ্র', 'রাতের কালো', 'রুপালি']) {
+    for (final name in ['বেগুনি ঢেউ', 'রঙিন বল', 'বেগুনি আভা', 'নীল ঢেউ', 'সূর্যাস্ত', 'সবুজ আলো', 'সমুদ্র', 'রাতের কালো', 'রুপালি']) {
       expect(find.text(name), findsOneWidget, reason: name);
     }
+    // ⭐ বেগুনি ঢেউ প্রথম ঘর — রঙিন বলের আগে
+    final wave = tester.getTopLeft(find.byKey(const ValueKey('look-wallpaper-purpleWave')));
+    final balls = tester.getTopLeft(find.byKey(const ValueKey('look-wallpaper-balls')));
+    expect(wave.dy, balls.dy);
+    expect(wave.dx, lessThan(balls.dx));
+    expect(looks.wallpaper.value, GlassWallpaper.balls, reason: 'প্রথমে থাকলেও শুরুর পট রঙিন বল');
     // ⓘ পটভূমি কাচের ঝাপসার দাগের ঠিক ওপরে
     expect(tester.getTopLeft(find.byKey(const ValueKey('look-wallpaper-balls'))).dy,
         lessThan(tester.getTopLeft(find.byKey(const ValueKey('look-blur'))).dy));

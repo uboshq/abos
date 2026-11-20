@@ -11852,6 +11852,9 @@ class AppL10nEn extends AppL10n {
   String get lookWallpaper => 'Glass look background';
 
   @override
+  String get lookPaperPurpleWave => 'Purple wave';
+
+  @override
   String get lookPaperBalls => 'Colour balls';
 
   @override

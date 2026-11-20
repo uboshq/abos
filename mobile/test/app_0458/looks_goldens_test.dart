@@ -237,7 +237,8 @@ void main() {
   }
 
   // ⭐ লিকুইড গ্লাসের পটভূমি — হোম বেগুনি আভা, সূর্যাস্ত আর রাতের কালোয় (মালিক, ২০ নভেম্বর ২০২৬)
-  for (final paper in [GlassWallpaper.purple, GlassWallpaper.sunset, GlassWallpaper.graphite]) {
+  // ⭐ বেগুনি ঢেউ (মালিক, ২০ নভেম্বর ২০২৬) — home_glass_purpleWave.png
+  for (final paper in [GlassWallpaper.purpleWave, GlassWallpaper.purple, GlassWallpaper.sunset, GlassWallpaper.graphite]) {
     testWidgets('home on the ${paper.name} background — glass', (tester) async {
       await AppLooks.instance.chooseWallpaper(paper);
       await shoot(

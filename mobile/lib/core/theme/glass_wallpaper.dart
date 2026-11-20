@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -10,7 +12,10 @@ import 'package:flutter/material.dart';
 /// <p>ⓘ সব স্থির — একবার আঁকা, ইঞ্জিন ছবিটা রেখে দেয় ([GlassWallpaperView]-এর RepaintBoundary, isComplex); নড়ে কেবল
 /// "রঙিন বল" ([balls], আগের মতো, [GlassBackdrop]-এর নিজের)। ⓘ লেখা পড়া যায় — প্রতিটার ওপরে নিজের কালচে পর্দা ([scrim]);
 /// test/app_0458/wallpaper_test.dart প্রতিটা রঙে সাদা লেখার তুলনা মেপে দেখে।
-enum GlassWallpaper { balls, purple, blueWave, sunset, aurora, ocean, graphite, silver }
+///
+/// <p>⭐ [purpleWave] "বেগুনি ঢেউ" (মালিকের অনুমোদন, ২০ নভেম্বর ২০২৬) — বাছাইয়ে প্রথমে, তবে শুরুর পট নয় (শুরুতে রঙিন বল)।
+/// ⓘ ক্রম = বাছাইয়ের ঘরের ক্রম; মনে রাখা হয় নাম ধরে, তাই নতুনটা সামনে বসালে আগের বাছাই বদলায় না।
+enum GlassWallpaper { purpleWave, balls, purple, blueWave, sunset, aurora, ocean, graphite, silver }
 
 /// একটা গোল আভা — মাঝখান আর ব্যাসার্ধ পর্দার অনুপাতে (ব্যাসার্ধ লম্বা দিকের অনুপাতে)
 @immutable
@@ -55,6 +60,19 @@ class WallpaperSpec {
 extension GlassWallpaperSpec on GlassWallpaper {
   /// ⓘ "রঙিন বল" নিজে আঁকে না ([GlassBackdrop]) — এখানে কেবল নমুনার ছবির (বাছাইয়ের ঘর) জন্য
   WallpaperSpec get spec => switch (this) {
+        // ⭐ বেগুনি ঢেউ — আঁকে [PurpleWavePainter]; এখানে তার সব রং (প্রতিটা ঢালের প্রতিটা থামা, দুই আভা) আর কালচে পর্দা, যাতে
+        // টেস্ট লেখার তুলনা মাপে। ⓘ পর্দা ০.৫ — ডান-ওপরের উজ্জ্বল গোলাপি (#F070FF) আর কিনারার আভায় সাদা লেখা ৪.৫:১ রাখতে
+        GlassWallpaper.purpleWave => const WallpaperSpec(
+            base: [
+              ...PurpleWavePainter.bgStops, ...PurpleWavePainter.tlStops, ...PurpleWavePainter.trStops,
+              ...PurpleWavePainter.midStops, ...PurpleWavePainter.diagStops, ...PurpleWavePainter.sStops,
+              ...PurpleWavePainter.lowStops,
+            ],
+            glows: [
+              WallpaperGlow(1, 0.8, 0.5, PurpleWavePainter.violet, alpha: 0.7),
+              WallpaperGlow(0, 0, 0, PurpleWavePainter.rimGlow, alpha: PurpleWavePainter.rimGlowAlpha),
+            ],
+            scrim: PurpleWavePainter.scrim),
         GlassWallpaper.balls => const WallpaperSpec(base: [Color(0xFF0B1026), Color(0xFF0B1026)], glows: [
             WallpaperGlow(0.15, 0.25, 0.45, Color(0xFFFF2D6F)),
             WallpaperGlow(0.95, 0.55, 0.5, Color(0xFF2A5BFF)),
@@ -123,6 +141,214 @@ extension GlassWallpaperSpec on GlassWallpaper {
             ],
             scrim: 0.6),
       };
+
+  /// যে আঁকে — বেগুনি ঢেউ নিজের পথ আর ঢালে, বাকিরা [WallpaperPainter]-এ
+  CustomPainter get painter => this == GlassWallpaper.purpleWave ? const PurpleWavePainter() : WallpaperPainter(spec);
+}
+
+/// ⭐ "বেগুনি ঢেউ" — ABOS-এর নিজের আঁকা নকশা (৫৮৯×১২৮০ মাপের SVG), হুবহু Flutter-এ: একই রং, একই cubic পথ, একই ঢাল আর
+/// জ্বলা কিনারা (ঝাপসা ৫px দাগের ওপর ১.৬px দাগ)। পর্দায় বসে BoxFit.cover-এর মতো — মাপ = max(w/589, h/1280), মাঝখানে।
+///
+/// <p>ⓘ SVG-র ঢাল নিজের পথের বাক্স ধরে (objectBoundingBox) — তাই প্রতিটা ঢাল ০–১ মাপে বানিয়ে পথের আঁটসাঁট বাক্সের ম্যাট্রিক্সে বসানো,
+/// চওড়া-লম্বা আলাদা বাক্সে গোল আলো ডিম্বাকার হয় SVG-র মতোই। ⓘ পথ আর ঢাল একবারই বানানো (static), পর্দার মাপ বদলালেও একই —
+/// বদলায় কেবল ক্যানভাসের মাপ। ⓘ স্থির — [GlassWallpaperView]-এর RepaintBoundary ছবিটা রেখে দেয়।
+class PurpleWavePainter extends CustomPainter {
+  const PurpleWavePainter();
+
+  static const double viewW = 589, viewH = 1280;
+
+  static const bgStops = [Color(0xFFA93AD0), Color(0xFF4A106A), Color(0xFF1C0428), Color(0xFF0B0112)];
+  static const tlStops = [Color(0xFF16031F), Color(0xFF330948), Color(0xFF6A1B8C)];
+  static const trStops = [Color(0xFFF070FF), Color(0xFFB237D8), Color(0xFF5A1379), Color(0xFF3A0A52)];
+  static const midStops = [Color(0xFF6A2194), Color(0xFF43105F), Color(0xFF240633), Color(0xFF10021A)];
+  static const diagStops = [Color(0xFF120219), Color(0xFF360C4F), Color(0xFF8A2DB5)];
+  static const sStops = [Color(0xFFC24AE6), Color(0xFF5C177F), Color(0xFF1D0529)];
+  static const lowStops = [Color(0xFF1E0530), Color(0xFF5B1D8E)];
+  static const violet = Color(0xFF9A52E6);
+  static const rimGlow = Color(0xFFFF7CFF);
+  static const rimGlowAlpha = 0.65;
+  static const rimLine = Color(0xFFFFB8FF);
+  static const rimLineAlpha = 0.95;
+
+  /// সবার ওপরে কালো পর্দা — লেখা পড়ার জন্য (test/app_0458/wallpaper_test.dart)
+  static const double scrim = 0.5;
+
+  static _Shape _tr() => _Shape(300, 0)
+    ..line(589, 0)
+    ..line(589, 470)
+    ..cubic(520, 420, 470, 330, 440, 230)
+    ..cubic(410, 130, 360, 50, 300, 0)
+    ..close();
+  static _Shape _tl() => _Shape(0, 0)
+    ..line(330, 0)
+    ..cubic(300, 110, 190, 270, 0, 450)
+    ..close();
+  static _Shape _mid() => _Shape(0, 475)
+    ..cubic(130, 420, 300, 410, 430, 445)
+    ..cubic(500, 465, 545, 470, 589, 455)
+    ..line(589, 1280)
+    ..line(0, 1280)
+    ..close();
+  static _Shape _s() => _Shape(360, 452)
+    ..cubic(500, 600, 470, 900, 300, 1280)
+    ..line(589, 1280)
+    ..line(589, 600)
+    ..cubic(540, 520, 470, 470, 430, 447)
+    ..close();
+  static _Shape _diag() => _Shape(0, 1060)
+    ..cubic(130, 900, 330, 720, 589, 560)
+    ..line(589, 700)
+    ..cubic(420, 800, 230, 980, 90, 1280)
+    ..line(0, 1280)
+    ..close();
+  static _Shape _low() => _Shape(589, 700)
+    ..cubic(430, 800, 250, 1000, 170, 1280)
+    ..line(589, 1280)
+    ..close();
+
+  /// জ্বলা কিনারার ছয়টা খোলা পথ
+  static final List<Path> _rims = [
+    (_Shape(330, 0)..cubic(300, 110, 190, 270, 0, 450)).path,
+    (_Shape(589, 470)
+          ..cubic(520, 420, 470, 330, 440, 230)
+          ..cubic(410, 130, 360, 50, 300, 0))
+        .path,
+    (_Shape(0, 475)
+          ..cubic(130, 420, 300, 410, 430, 445)
+          ..cubic(500, 465, 545, 470, 589, 455))
+        .path,
+    (_Shape(360, 452)..cubic(500, 600, 470, 900, 300, 1280)).path,
+    (_Shape(0, 1060)..cubic(130, 900, 330, 720, 589, 560)).path,
+    (_Shape(589, 700)..cubic(430, 800, 250, 1000, 170, 1280)).path,
+  ];
+
+  static const _full = Rect.fromLTWH(0, 0, viewW, viewH);
+
+  /// (পথ, রঙের তুলি) — SVG-র ক্রমে; একবারই বানানো
+  static final List<(Path, Paint)> _fills = () {
+    final tr = _tr(), tl = _tl(), mid = _mid(), s = _s(), diag = _diag(), low = _low();
+    return <(Path, Paint)>[
+      (Path()..addRect(_full), _paint(_radial(_full, const Offset(0.85, 0.1), 1, bgStops, const [0, 0.3, 0.7, 1]))),
+      (tr.path, _paint(_linear(tr.bounds, const Offset(1, 0), const Offset(0, 1), trStops, const [0, 0.4, 0.8, 1]))),
+      (tl.path, _paint(_linear(tl.bounds, Offset.zero, const Offset(1, 1), tlStops, const [0, 0.55, 1]))),
+      (mid.path, _paint(_linear(mid.bounds, Offset.zero, const Offset(0, 1), midStops, const [0, 0.06, 0.4, 1]))),
+      (s.path, _paint(_linear(s.bounds, Offset.zero, const Offset(1, 0), sStops, const [0, 0.25, 1]), 0.9)),
+      (diag.path, _paint(_linear(diag.bounds, const Offset(0, 1), const Offset(1, 0), diagStops, const [0, 0.55, 1]), 0.92)),
+      (low.path, _paint(_linear(low.bounds, Offset.zero, const Offset(1, 1), lowStops, const [0, 1]))),
+      (
+        Path()..addRect(_full),
+        _paint(_radial(_full, const Offset(1, 0.8), 0.5, [violet.withValues(alpha: 0.7), violet.withValues(alpha: 0)],
+            const [0, 1]))
+      ),
+    ];
+  }();
+
+  static Paint _paint(Shader shader, [double opacity = 1]) => Paint()
+    ..shader = shader
+    ..color = Color.fromRGBO(0, 0, 0, opacity);
+
+  /// ০–১ মাপের বিন্দু [box]-এ বসানোর ম্যাট্রিক্স (SVG-র objectBoundingBox)
+  static Float64List _boxMatrix(Rect box) => Float64List.fromList([
+        box.width, 0, 0, 0, //
+        0, box.height, 0, 0,
+        0, 0, 1, 0,
+        box.left, box.top, 0, 1,
+      ]);
+
+  static Shader _linear(Rect box, Offset from, Offset to, List<Color> colors, List<double> stops) =>
+      ui.Gradient.linear(from, to, colors, stops, TileMode.clamp, _boxMatrix(box));
+
+  static Shader _radial(Rect box, Offset centre, double r, List<Color> colors, List<double> stops) =>
+      ui.Gradient.radial(centre, r, colors, stops, TileMode.clamp, _boxMatrix(box));
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final scale = math.max(size.width / viewW, size.height / viewH);
+    canvas
+      ..save()
+      ..clipRect(rect)
+      ..translate((size.width - viewW * scale) / 2, (size.height - viewH * scale) / 2)
+      ..scale(scale);
+    for (final (path, paint) in _fills) {
+      canvas.drawPath(path, paint);
+    }
+    // ⭐ জ্বলা কিনারা — ঝাপসা ৫px দাগ (স্বচ্ছতা দলে, SVG-র <g opacity>-এর মতো), তার ওপর ১.৬px সরু দাগ
+    final layer = _full.inflate(20);
+    canvas.saveLayer(layer, Paint()..color = const Color.fromRGBO(0, 0, 0, rimGlowAlpha));
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..color = rimGlow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
+    for (final p in _rims) {
+      canvas.drawPath(p, glow);
+    }
+    canvas
+      ..restore()
+      ..saveLayer(layer, Paint()..color = const Color.fromRGBO(0, 0, 0, rimLineAlpha));
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..color = rimLine;
+    for (final p in _rims) {
+      canvas.drawPath(p, line);
+    }
+    canvas
+      ..restore()
+      ..restore();
+    canvas.drawRect(rect, Paint()..color = const Color.fromRGBO(0, 0, 0, scrim));
+  }
+
+  @override
+  bool shouldRepaint(PurpleWavePainter old) => false;
+}
+
+/// একটা SVG পথ — Flutter-এর [Path] আর তার আঁটসাঁট বাক্স (SVG-র bbox: বাঁকের নিজের সীমা, নিয়ন্ত্রণ-বিন্দু নয়)
+class _Shape {
+  _Shape(double x, double y)
+      : _x = x,
+        _y = y {
+    path.moveTo(x, y);
+    _grow(x, y);
+  }
+
+  final Path path = Path();
+  double _x, _y;
+  double _l = double.infinity, _t = double.infinity, _r = -double.infinity, _b = -double.infinity;
+
+  Rect get bounds => Rect.fromLTRB(_l, _t, _r, _b);
+
+  void _grow(double x, double y) {
+    _l = math.min(_l, x);
+    _t = math.min(_t, y);
+    _r = math.max(_r, x);
+    _b = math.max(_b, y);
+  }
+
+  void line(double x, double y) {
+    path.lineTo(x, y);
+    _grow(x, y);
+    _x = x;
+    _y = y;
+  }
+
+  void cubic(double x1, double y1, double x2, double y2, double x, double y) {
+    path.cubicTo(x1, y1, x2, y2, x, y);
+    // ⓘ বাঁকের ওপর ঘন বিন্দু — বাক্সের ভুল এক পিক্সেলের ভগ্নাংশ
+    const steps = 96;
+    for (var i = 1; i <= steps; i++) {
+      final t = i / steps, u = 1 - t;
+      final a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+      _grow(a * _x + b * x1 + c * x2 + d * x, a * _y + b * y1 + c * y2 + d * y);
+    }
+    _x = x;
+    _y = y;
+  }
+
+  void close() => path.close();
 }
 
 /// একটা পটভূমি আঁকা — সব মাপে একই অনুপাতে
@@ -197,7 +423,7 @@ class GlassWallpaperView extends StatelessWidget {
           key: ValueKey('wallpaper-${wallpaper.name}'),
           isComplex: true,
           willChange: false,
-          painter: WallpaperPainter(wallpaper.spec),
+          painter: wallpaper.painter,
           child: const SizedBox.expand(),
         ),
       );

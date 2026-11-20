@@ -58,7 +58,7 @@ class LookScreen extends StatelessWidget {
               // ⓘ দাগটা কেবল Liquid Glass-এ — ABOS আর Material 3-এ এর কাজ নেই (নমুনার নিয়ম)
               if (look == AppLook.glass) ...[
                 const SizedBox(height: AppSpacing.md),
-                // ⭐ পটভূমি — আটটা, সবই ABOS-এর নিজের আঁকা (মালিক, ২০ নভেম্বর ২০২৬); কাচের ঝাপসার দাগের ঠিক ওপরে
+                // ⭐ পটভূমি — নয়টা (প্রথমে বেগুনি ঢেউ), সবই ABOS-এর নিজের আঁকা (মালিক, ২০ নভেম্বর ২০২৬); কাচের ঝাপসার দাগের ঠিক ওপরে
                 Text(l.lookWallpaper, style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(spacing: 10, runSpacing: 10, children: [
@@ -135,6 +135,7 @@ class LookScreen extends StatelessWidget {
 
 /// পটভূমির নাম — বাংলা আর ইংরেজি
 String wallpaperName(AppL10n l, GlassWallpaper paper) => switch (paper) {
+      GlassWallpaper.purpleWave => l.lookPaperPurpleWave,
       GlassWallpaper.balls => l.lookPaperBalls,
       GlassWallpaper.purple => l.lookPaperPurple,
       GlassWallpaper.blueWave => l.lookPaperBlueWave,
@@ -179,7 +180,7 @@ class _WallpaperSwatch extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Stack(fit: StackFit.expand, children: [
-                  CustomPaint(painter: WallpaperPainter(paper.spec)),
+                  CustomPaint(painter: paper.painter),
                   if (selected)
                     const Center(child: Icon(Icons.check_circle, color: Colors.white, size: 22)), // dark-ok: রঙিন ছবির ওপর
                 ]),

@@ -19502,6 +19502,12 @@ abstract class AppL10n {
   /// **'গ্লাস চেহারার পটভূমি'**
   String get lookWallpaper;
 
+  /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026) — purple wave, first in the picker, not the default
+  ///
+  /// In bn, this message translates to:
+  /// **'বেগুনি ঢেউ'**
+  String get lookPaperPurpleWave;
+
   /// Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)
   ///
   /// In bn, this message translates to:

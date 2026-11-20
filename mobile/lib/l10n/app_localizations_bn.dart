@@ -11675,6 +11675,9 @@ class AppL10nBn extends AppL10n {
   String get lookWallpaper => 'গ্লাস চেহারার পটভূমি';
 
   @override
+  String get lookPaperPurpleWave => 'বেগুনি ঢেউ';
+
+  @override
   String get lookPaperBalls => 'রঙিন বল';
 
   @override

@@ -3446,6 +3446,10 @@
   "@lookWallpaper": {
     "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
   },
+  "lookPaperPurpleWave": "Purple wave",
+  "@lookPaperPurpleWave": {
+    "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026) — purple wave, first in the picker, not the default"
+  },
   "lookPaperBalls": "Colour balls",
   "@lookPaperBalls": {
     "description": "Liquid Glass backgrounds, all drawn in code by ABOS (owner 20 Nov 2026)"
