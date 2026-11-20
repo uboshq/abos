@@ -337,5 +337,17 @@
   "customersDepositLookalikeUnknown": "The office will catch a slip sent twice — if this is a mistake, say so now.",
   "@customersDepositLookalikeUnknown": {"description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)"},
   "customersDepositHistoryDepositor": "Deposited by: {name}",
-  "@customersDepositHistoryDepositor": {"description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)", "placeholders": {"name": {"type": "String"}}}
+  "@customersDepositHistoryDepositor": {"description": "App 0.4.58 looks, deposit report and slip scanner (owner 20 Nov 2026 ok)", "placeholders": {"name": {"type": "String"}}},
+  "lookRowApprovals": "Awaiting approval",
+  "@lookRowApprovals": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"},
+  "lookRowPapers": "{count} papers",
+  "@lookRowPapers": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"count": {"type": "int"}}},
+  "lookRowReceipts": "{count} receipts",
+  "@lookRowReceipts": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"count": {"type": "int"}}},
+  "lookRowCustomers": "{count} customers",
+  "@lookRowCustomers": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"count": {"type": "int"}}},
+  "lookRowMoney": "In hand and bank",
+  "@lookRowMoney": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"},
+  "lookRowMoneySub": "Cash {cash} · Bank {bank}",
+  "@lookRowMoneySub": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"cash": {"type": "String"}, "bank": {"type": "String"}}}
 }

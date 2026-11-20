@@ -3530,5 +3530,52 @@
         "type": "String"
       }
     }
+  },
+  "lookRowApprovals": "Awaiting approval",
+  "@lookRowApprovals": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"
+  },
+  "lookRowPapers": "{count} papers",
+  "@lookRowPapers": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowReceipts": "{count} receipts",
+  "@lookRowReceipts": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowCustomers": "{count} customers",
+  "@lookRowCustomers": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowMoney": "In hand and bank",
+  "@lookRowMoney": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"
+  },
+  "lookRowMoneySub": "Cash {cash} · Bank {bank}",
+  "@lookRowMoneySub": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "cash": {
+        "type": "String"
+      },
+      "bank": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -11914,4 +11914,30 @@ class AppL10nEn extends AppL10n {
   String customersDepositHistoryDepositor(String name) {
     return 'Deposited by: $name';
   }
+
+  @override
+  String get lookRowApprovals => 'Awaiting approval';
+
+  @override
+  String lookRowPapers(int count) {
+    return '$count papers';
+  }
+
+  @override
+  String lookRowReceipts(int count) {
+    return '$count receipts';
+  }
+
+  @override
+  String lookRowCustomers(int count) {
+    return '$count customers';
+  }
+
+  @override
+  String get lookRowMoney => 'In hand and bank';
+
+  @override
+  String lookRowMoneySub(String cash, String bank) {
+    return 'Cash $cash · Bank $bank';
+  }
 }

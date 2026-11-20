@@ -34,4 +34,7 @@ Future<void> loadBarFonts() async {
 ThemeData withBarFonts(ThemeData t) => t.copyWith(
       textTheme: t.textTheme.apply(fontFamily: 'Roboto', fontFamilyFallback: const ['Bangla']),
       primaryTextTheme: t.primaryTextTheme.apply(fontFamily: 'Roboto', fontFamilyFallback: const ['Bangla']),
+      // ⓘ রূপের নিজের মাথার লেখা (Material 3-এর মোটা শিরোনাম) — নইলে ছবিতে চৌকো বাক্স; ফোনে দেশি ফন্ট নিজেই আসে
+      appBarTheme: t.appBarTheme.copyWith(
+          titleTextStyle: t.appBarTheme.titleTextStyle?.copyWith(fontFamily: 'Roboto', fontFamilyFallback: const ['Bangla'])),
     );

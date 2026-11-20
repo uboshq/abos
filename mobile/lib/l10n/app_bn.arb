@@ -16328,5 +16328,52 @@
         "type": "String"
       }
     }
+  },
+  "lookRowApprovals": "অনুমোদনের অপেক্ষায়",
+  "@lookRowApprovals": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"
+  },
+  "lookRowPapers": "{count}টা কাগজ",
+  "@lookRowPapers": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowReceipts": "{count}টা রসিদ",
+  "@lookRowReceipts": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowCustomers": "{count} জন গ্রাহক",
+  "@lookRowCustomers": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lookRowMoney": "হাতে ও ব্যাংকে",
+  "@lookRowMoney": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"
+  },
+  "lookRowMoneySub": "নগদ {cash} · ব্যাংক {bank}",
+  "@lookRowMoneySub": {
+    "description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr",
+    "placeholders": {
+      "cash": {
+        "type": "String"
+      },
+      "bank": {
+        "type": "String"
+      }
+    }
   }
 }

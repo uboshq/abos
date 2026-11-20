@@ -94,6 +94,42 @@ class LookHero extends StatelessWidget {
             ],
           ]),
         ),
+        // ⭐ নমুনার কাচের তালিকা — অনুমোদন, আজ আদায়, বকেয়া, হাতে ও ব্যাংকে; সার্ভার যা পাঠায় কেবল সেই সারি (চাবি না থাকলে সারি নেই)
+        if (_glassRows(context).isNotEmpty) ...[
+          const SizedBox(height: 12),
+          GlassPanel(
+            key: const ValueKey('look-hero-glass-list'),
+            radius: 26,
+            child: Column(children: [
+              for (final (i, row) in _glassRows(context).indexed) ...[
+                if (i > 0) Divider(height: 1, color: Colors.white.withValues(alpha: 0.14)), // dark-ok: কাচ সবসময় অন্ধকার পটে
+                InkWell(
+                  key: ValueKey('look-row-${row.path ?? 'money'}'),
+                  onTap: row.path == null || onTile == null ? null : () => onTile!(row.path!, row.label),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(children: [
+                      Container(width: 7, height: 7, decoration: BoxDecoration(color: row.dot, shape: BoxShape.circle)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(row.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+                          if (row.sub != null)
+                            Text(row.sub!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))), // dark-ok: কাচ সবসময় অন্ধকার পটে
+                        ]),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(row.value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ),
+              ],
+            ]),
+          ),
+        ],
       ]);
     }
     // Material 3 Expressive
@@ -165,6 +201,53 @@ class LookHero extends StatelessWidget {
         ]);
       }),
     ]);
+  }
+
+  /// কাচের তালিকার সারি — নমুনার ক্রমে, নমুনার বিন্দুর রঙে; অঙ্ক না এলে সেই সারি নেই (বানানো অঙ্ক কখনো নয়)
+  List<({String label, String? sub, String value, Color dot, String? path})> _glassRows(BuildContext context) {
+    final l = context.l10n;
+    final t = today;
+    if (t == null) return const [];
+    final rows = <({String label, String? sub, String value, Color dot, String? path})>[];
+    final approvals = t.pendingApprovals;
+    if (approvals != null) {
+      rows.add((label: l.lookRowApprovals, sub: null, value: l.lookRowPapers(approvals), dot: const Color(0xFFFFC46B), path: 'approvals'));
+    }
+    final got = t.collections;
+    if (got?.amount != null) {
+      rows.add((
+        label: l.lookTileCollected,
+        sub: got!.count == null ? null : l.lookRowReceipts(got.count!),
+        value: Money.taka(got.amount!),
+        dot: const Color(0xFF7CC8FF),
+        path: 'collections',
+      ));
+    }
+    final dues = t.dues;
+    if (dues?.amount != null) {
+      final who = dues!.shops ?? dues.count;
+      rows.add((
+        label: l.lookTileDues,
+        sub: who == null ? null : l.lookRowCustomers(who),
+        value: Money.taka(dues.amount!),
+        dot: const Color(0xFFFF7A8A),
+        path: 'dues',
+      ));
+    }
+    final money = t.money;
+    if (money?.amount != null) {
+      rows.add((
+        label: l.lookRowMoney,
+        // ⓘ নিচের লাইন কেবল নগদ আর ব্যাংক মিলে পুরো অঙ্ক হলে — MFS বা পথে থাকা টাকা থাকলে দুইটা ভাগ যোগে মিলত না
+        sub: money!.cash == null || money.bank == null || (money.mfs ?? 0) != 0 || (money.transit ?? 0) != 0
+            ? null
+            : l.lookRowMoneySub(Money.taka(money.cash!), Money.taka(money.bank!)),
+        value: Money.taka(money.amount!),
+        dot: const Color(0xFF9DFF8A),
+        path: null,
+      ));
+    }
+    return rows;
   }
 
   /// "৳41L" — নমুনার ছোট রূপ (লাখ/কোটি), ইংরেজি অঙ্কে

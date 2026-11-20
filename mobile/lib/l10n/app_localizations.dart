@@ -19603,6 +19603,42 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'জমা দিলেন: {name}'**
   String customersDepositHistoryDepositor(String name);
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায়'**
+  String get lookRowApprovals;
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'{count}টা কাগজ'**
+  String lookRowPapers(int count);
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'{count}টা রসিদ'**
+  String lookRowReceipts(int count);
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'{count} জন গ্রাহক'**
+  String lookRowCustomers(int count);
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'হাতে ও ব্যাংকে'**
+  String get lookRowMoney;
+
+  /// App 0.4.58 Liquid Glass home list, sample BshQzFsr
+  ///
+  /// In bn, this message translates to:
+  /// **'নগদ {cash} · ব্যাংক {bank}'**
+  String lookRowMoneySub(String cash, String bank);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

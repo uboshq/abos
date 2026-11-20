@@ -11736,4 +11736,30 @@ class AppL10nBn extends AppL10n {
   String customersDepositHistoryDepositor(String name) {
     return 'জমা দিলেন: $name';
   }
+
+  @override
+  String get lookRowApprovals => 'অনুমোদনের অপেক্ষায়';
+
+  @override
+  String lookRowPapers(int count) {
+    return '$countটা কাগজ';
+  }
+
+  @override
+  String lookRowReceipts(int count) {
+    return '$countটা রসিদ';
+  }
+
+  @override
+  String lookRowCustomers(int count) {
+    return '$count জন গ্রাহক';
+  }
+
+  @override
+  String get lookRowMoney => 'হাতে ও ব্যাংকে';
+
+  @override
+  String lookRowMoneySub(String cash, String bank) {
+    return 'নগদ $cash · ব্যাংক $bank';
+  }
 }
