@@ -11953,6 +11953,9 @@ class AppL10nEn extends AppL10n {
       'An amount from a customer — on a receipt voucher (RCV)';
 
   @override
-  String get approvalPendingNoEdit =>
-      'Awaiting approval — to change it, send back for correction';
+  String get deliveryOrdersPartialApproval => 'Partial approval';
+
+  @override
+  String get deliveryOrdersPartialHint =>
+      'To approve a smaller quantity, lower it here';
 }

@@ -356,6 +356,8 @@
   "@updateStoreFailed": {"description": "Play build: the store page could not be opened"},
   "vouchersReceiptCustomerHint": "An amount from a customer — on a receipt voucher (RCV)",
   "@vouchersReceiptCustomerHint": {"description": "Voucher type sheet: the receipt voucher is where Accounts take a customer's money (owner 20 Nov 2026: one money-in paper, no app collection)"},
-  "approvalPendingNoEdit": "Awaiting approval — to change it, send back for correction",
-  "@approvalPendingNoEdit": {"description": "A paper waiting for approval is edited by no one (owner 20 Nov 2026, maker-checker): the approver approves, sends back or rejects"}
+  "deliveryOrdersPartialApproval": "Partial approval",
+  "@deliveryOrdersPartialApproval": {"description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"},
+  "deliveryOrdersPartialHint": "To approve a smaller quantity, lower it here",
+  "@deliveryOrdersPartialHint": {"description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"}
 }

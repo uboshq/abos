@@ -11775,6 +11775,9 @@ class AppL10nBn extends AppL10n {
       'গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)';
 
   @override
-  String get approvalPendingNoEdit =>
-      'অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান';
+  String get deliveryOrdersPartialApproval => 'আংশিক অনুমোদন';
+
+  @override
+  String get deliveryOrdersPartialHint =>
+      'কম পরিমাণে অনুমোদন দিতে চাইলে এখানে কমান';
 }

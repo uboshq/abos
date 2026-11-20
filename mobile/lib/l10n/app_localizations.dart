@@ -19658,11 +19658,17 @@ abstract class AppL10n {
   /// **'গ্রাহকের টাকা — রসিদ ভাউচারে (RCV)'**
   String get vouchersReceiptCustomerHint;
 
-  /// A paper waiting for approval is edited by no one (owner 20 Nov 2026, maker-checker): the approver approves, sends back or rejects
+  /// Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)
   ///
   /// In bn, this message translates to:
-  /// **'অনুমোদনের অপেক্ষায় — বদলাতে হলে সংশোধনের জন্য ফেরত পাঠান'**
-  String get approvalPendingNoEdit;
+  /// **'আংশিক অনুমোদন'**
+  String get deliveryOrdersPartialApproval;
+
+  /// Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)
+  ///
+  /// In bn, this message translates to:
+  /// **'কম পরিমাণে অনুমোদন দিতে চাইলে এখানে কমান'**
+  String get deliveryOrdersPartialHint;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
