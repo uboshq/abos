@@ -216,6 +216,25 @@ return [
      */
     'dashboard' => SupplierDashboard::class,
 
+    /*
+     * ⭐ বাকির সীমা বাড়ানো সইয়ে — মালিক, ১৮ নভেম্বর ২০২৬ (সরবরাহকারীর বাকির দেয়াল, [[SupplierCreditWall]])।
+     * ⓘ সীমা পেরোলে নতুন বিল বা মাল গ্রহণ পাকা হয় না; খোলার পথ টাকা দেওয়া বা সীমা বাড়ানো, আর বাড়ানো এই ছকে
+     * ([[SupplierLimitRequests]])। ⛔ কোনো ছক বীজ হিসেবে বসে না — ছক না থাকলে কেবল মালিক সরাসরি বসান।
+     */
+    'approvals' => [
+        'credit_limit' => 'supplier::approval.credit_limit',
+    ],
+
+    /* ⓘ সীমার কাগজ — খাতায় কিছু বসে না, টাকা নড়ে না ([[EveryModuleSaysWhereMoneyMovesTest]]) */
+    'moves_money' => [],
+
+    'listeners' => [
+        \App\Core\Events\ApprovalDecided::class => [
+            // ⭐ শেষ সই পড়লে নতুন সীমা নিজে বসে, "না" হলে অনুরোধ থাকে "না" হয়ে
+            \App\Modules\Supplier\Listeners\ApplyTheSignedSupplierLimit::class,
+        ],
+    ],
+
     'widgets' => [
         SupplierWidgets::class,
     ],
