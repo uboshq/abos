@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/me_features.dart';
 import '../config/app_channel.dart';
 import '../locale/app_locale.dart';
+import '../../features/profile/look_screen.dart';
 
 /// ⭐ প্রোফাইল মেনুর দুই পর্দার পথ (অ্যাপ ০.৪.৪১; মালিকের অনুমোদিত পুরো-পাতার নমুনা, পাতা ২: ছবির মেনুতে
 /// "প্রোফাইল ও ছবি বদল" আর "আমার ফোনগুলো"; a6, ২০ অক্টোবর ২০২৬)।
@@ -39,6 +40,13 @@ class ProfileRoutes {
 
   /// ⭐ ছবির মেনুর সারি থেকে সরাসরি — মেনু বন্ধ করে "আমার ফোনগুলো" খোলে। ⓘ মেনুর ফাইলটা a4-এর
   /// (`lib/core/navigation/top_bar/avatar_menu.dart`); এর জন্য সেখানে একটা সারিই লাগে, নতুন [AvatarChoice] নয়।
+  /// ⭐ চেহারার পাতা ছবির মেনু থেকে সরাসরি (মালিক, ২০ নভেম্বর ২০২৬) — মেনু বন্ধ, তারপর একই নেভিগেটরে পাতা
+  static void openLookFromMenu(BuildContext menu) {
+    final nav = Navigator.of(menu);
+    nav.pop();
+    LookScreen.open(nav.context);
+  }
+
   static void openPhonesFromMenu(BuildContext menu) {
     final router = GoRouter.maybeOf(menu);
     Navigator.of(menu).pop();

@@ -172,6 +172,16 @@ class AvatarMenu extends StatelessWidget {
               ],
               const _ThemeRow(),
               line,
+              // ⭐ চেহারা (ABOS · Liquid Glass · Material 3) মেনুতেই — মালিক, ২০ নভেম্বর ২০২৬: "চেহারা eta nai"; আগে কেবল প্রোফাইলের ভিতরে ছিল
+              _Item(
+                key: const ValueKey('avatar-look'),
+                // ⓘ "রং"-এর প্যালেট নয় — দুই সারিতে একই চিহ্ন চোখে গুলিয়ে দেয়
+                icon: Symbols.style,
+                title: words.lookTitle,
+                hint: words.lookProfileSubtitle,
+                onTap: () => ProfileRoutes.openLookFromMenu(context),
+              ),
+              line,
               // ⛔ ভাষার সারি লুকানো — সব লেখা ARB-তে না যাওয়া পর্যন্ত ([LanguageSwitch.ready])
               if (LanguageSwitch.shown) ...[
                 const _LanguageRow(),

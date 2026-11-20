@@ -299,10 +299,23 @@ void main() {
       'avatar-profile',
       'avatar-company',
       'avatar-theme',
+      'avatar-look',
       'avatar-lock',
       'avatar-settings',
       'avatar-logout',
     ];
+
+    // ⭐ চেহারা ছবির মেনুতেই — মালিক, ২০ নভেম্বর ২০২৬ ("চেহারা eta nai"); চাপলে চেহারার পাতা খোলে
+    testWidgets('the look page opens straight from the avatar menu', (tester) async {
+      await _pump(tester, _owner(onMenu: (_) {}), height: 900);
+      await tester.tap(find.byKey(const ValueKey('header-avatar')));
+      await tester.pumpAndSettle();
+      expect(find.text('চেহারা'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('avatar-look')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('avatar-menu')), findsNothing, reason: 'মেনু বন্ধ হয়নি');
+      expect(find.text('Liquid Glass'), findsWidgets, reason: 'চেহারার পাতা খোলেনি');
+    });
 
     testWidgets('the photo opens it, items in the owner\'s order, each with a Material Symbol', (tester) async {
       AvatarChoice? picked;
