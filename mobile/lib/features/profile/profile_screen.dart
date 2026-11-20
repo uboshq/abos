@@ -313,7 +313,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
           // ⭐ অফিসের SMS ফোন — কেবল যাঁর হাতে চাবি (আজ মালিক); বাকি সবার প্রোফাইলে সারিটাই নেই
-          if (user?.can('notification.sms_gateway') ?? false) ...[
+          // ⛔ play বিল্ডে কখনো নয় ([[ProfileRoutes.smsGatewayInThisBuild]])
+          if (ProfileRoutes.smsGatewayInThisBuild && (user?.can('notification.sms_gateway') ?? false)) ...[
             const Divider(height: AppSpacing.lg),
             ListTile(
               key: const ValueKey('profile-sms-gateway'),

@@ -905,5 +905,9 @@
   "lookRowMoney": "হাতে ও ব্যাংকে",
   "@lookRowMoney": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr"},
   "lookRowMoneySub": "নগদ {cash} · ব্যাংক {bank}",
-  "@lookRowMoneySub": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"cash": {"type": "String"}, "bank": {"type": "String"}}}
+  "@lookRowMoneySub": {"description": "App 0.4.58 Liquid Glass home list, sample BshQzFsr", "placeholders": {"cash": {"type": "String"}, "bank": {"type": "String"}}},
+  "updateOpenStore": "Play Store-এ আপডেট করুন",
+  "@updateOpenStore": {"description": "Play build: the update button opens the app page on Google Play (no self-install there)"},
+  "updateStoreFailed": "Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।",
+  "@updateStoreFailed": {"description": "Play build: the store page could not be opened"}
 }

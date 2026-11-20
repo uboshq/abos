@@ -11762,4 +11762,11 @@ class AppL10nBn extends AppL10n {
   String lookRowMoneySub(String cash, String bank) {
     return 'নগদ $cash · ব্যাংক $bank';
   }
+
+  @override
+  String get updateOpenStore => 'Play Store-এ আপডেট করুন';
+
+  @override
+  String get updateStoreFailed =>
+      'Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।';
 }

@@ -5,7 +5,7 @@ import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
-import 'update_download_button.dart';
+import 'store_update_button.dart';
 
 /// ⭐ "আরও" পাতার "অ্যাপ হালনাগাদ" — মালিক, ৭ অক্টোবর ২০২৬: "অ্যাপে আপডেট বোতাম দেওয়ার কথা ছিল"।
 ///
@@ -83,7 +83,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
               for (final line in release.whatsNew) _Line('• $line', context.palette.pending),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                child: UpdateDownloadButton(release: release, label: context.l10n.updateNow),
+                child: updateButtonFor(release, label: context.l10n.updateNow),
               ),
             ],
           ],

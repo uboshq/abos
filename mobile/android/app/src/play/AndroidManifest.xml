@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Google Play build only (flavor "play", applicationId univer.abos), 20 Nov 2026.
+      Merged on top of src/main/AndroidManifest.xml; the side build never reads this file.
+
+      1. No self-update. Play does not allow an app to download and install its own APK
+         (Device and Network Abuse policy), so the install permission goes. The Dart side
+         shows a Play Store link instead (lib/features/update/store_update_button.dart).
+
+      2. No office SMS phone. Play grants SEND_SMS only to the default SMS app, so the
+         permission, the specialUse foreground-service type and the three SMS components go.
+         The Dart side has no row and no route for it (lib/core/router/profile_routes.dart).
+
+      Kept on purpose: FOREGROUND_SERVICE and RECEIVE_BOOT_COMPLETED are also declared by
+      WorkManager (androidx.work, used by the background sync); removing them here would
+      remove WorkManager's too. RECORD_AUDIO stays: the Copilot voice ask uses it.
+
+      test/android_build_config_test.dart holds this list.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" tools:node="remove" />
+
+    <application>
+        <service android:name=".sms.SmsGatewayService" tools:node="remove" />
+        <receiver android:name=".sms.SmsResultReceiver" tools:node="remove" />
+        <receiver android:name=".sms.SmsBootReceiver" tools:node="remove" />
+    </application>
+</manifest>

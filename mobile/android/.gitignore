@@ -10,6 +10,8 @@ GeneratedPluginRegistrant.java
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore
 key.properties
+# ⭐ Google Play-র আপলোড-চাবির ফাইল (২০ নভেম্বর ২০২৬) — key.properties-এর মতোই গোপন
+key-play.properties
 **/*.keystore
 **/*.jks
 

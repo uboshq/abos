@@ -16375,5 +16375,13 @@
         "type": "String"
       }
     }
+  },
+  "updateOpenStore": "Play Store-এ আপডেট করুন",
+  "@updateOpenStore": {
+    "description": "Play build: the update button opens the app page on Google Play (no self-install there)"
+  },
+  "updateStoreFailed": "Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।",
+  "@updateStoreFailed": {
+    "description": "Play build: the store page could not be opened"
   }
 }

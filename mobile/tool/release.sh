@@ -17,10 +17,13 @@ flutter test
 # `symbols/<সংস্করণ>/`-এ থাকে (git-এর বাইরে, .gitignore)। ক্র্যাশের খবর পড়তে:
 #   flutter symbolize -i stack.txt -d symbols/<সংস্করণ>/app.android-arm64.symbols
 VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}')
-flutter build apk --release --obfuscate --split-debug-info="symbols/$VERSION"
+# ⭐ side ফ্লেভার (২০ নভেম্বর ২০২৬) — অফিসের লিংকের APK, com.abos.abos_mobile, নিজে-আপডেট আর SMS ফোন সহ।
+# Google Play-র .aab আলাদা: tool/release-play.sh। ⓘ ABOS_CHANNEL না দিলে side — তবু স্পষ্ট লেখা।
+flutter build apk --release --flavor side --dart-define=ABOS_CHANNEL=side --obfuscate --split-debug-info="symbols/$VERSION"
 echo "চিহ্নের ফাইল: symbols/$VERSION — এই সংস্করণের ক্র্যাশ পড়তে রেখে দিন, মুছবেন না"
 
-APK=build/app/outputs/flutter-apk/app-release.apk
+# ⓘ ফ্লেভারের পর থেকে APK-র নাম app-side-release.apk (আগে app-release.apk)
+APK=build/app/outputs/flutter-apk/app-side-release.apk
 SDK="${ANDROID_SDK_ROOT:-/c/Android/Sdk}"
 BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
 "$BT"/apksigner.bat verify --print-certs "$APK" | grep "SHA-256"

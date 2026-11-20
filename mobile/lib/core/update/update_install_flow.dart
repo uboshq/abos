@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../config/app_channel.dart';
 import 'apk_installer.dart';
 import 'app_version_check.dart';
 import 'storage_check.dart';
@@ -143,7 +144,9 @@ class UpdateInstallFlow {
     UpdateActions actions = const UpdateActions.real(),
     void Function(UpdateStep step, double? progress)? onStep,
   }) async {
-    if (!release.installable) {
+    // ⛔ Google Play-র বিল্ড নিজের APK কখনো নামায় না, বসায় না (Play-র নিয়ম; ওর ম্যানিফেস্টে REQUEST_INSTALL_PACKAGES-ও নেই)।
+    // বোতামটাই সেখানে নেই ([[updateButtonFor]]) — এটা দ্বিতীয় তালা, কেউ ভুলে ডাকলেও।
+    if (AppChannel.isPlay || !release.installable) {
       return const UpdateResult(UpdateOutcome.notInstallable);
     }
     final url = release.url!;

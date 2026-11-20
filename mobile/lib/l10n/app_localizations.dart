@@ -19639,6 +19639,18 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'নগদ {cash} · ব্যাংক {bank}'**
   String lookRowMoneySub(String cash, String bank);
+
+  /// Play build: the update button opens the app page on Google Play (no self-install there)
+  ///
+  /// In bn, this message translates to:
+  /// **'Play Store-এ আপডেট করুন'**
+  String get updateOpenStore;
+
+  /// Play build: the store page could not be opened
+  ///
+  /// In bn, this message translates to:
+  /// **'Play Store খোলা গেল না। ফোনের Play Store থেকে ABOS খুঁজে আপডেট করুন।'**
+  String get updateStoreFailed;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

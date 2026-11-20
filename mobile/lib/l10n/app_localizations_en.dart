@@ -11940,4 +11940,11 @@ class AppL10nEn extends AppL10n {
   String lookRowMoneySub(String cash, String bank) {
     return 'Cash $cash · Bank $bank';
   }
+
+  @override
+  String get updateOpenStore => 'Update on Play Store';
+
+  @override
+  String get updateStoreFailed =>
+      'Could not open Play Store. Find ABOS in the phone\'s Play Store and update it there.';
 }

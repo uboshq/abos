@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import '../config/app_channel.dart';
 import '../config/app_config.dart';
 
 /// ⭐ অফিসের SMS ফোন — Android-এর সামনের-সেবার সাথে কথা (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২)।
@@ -23,14 +24,21 @@ class SmsGatewayChannel {
     return SmsGatewayStatus.fromMap(raw);
   }
 
-  Future<bool> requestPermission() async => await _channel.invokeMethod<bool>('requestPermission') ?? false;
+  Future<bool> requestPermission() async {
+    if (AppChannel.isPlay) return false;
+    return await _channel.invokeMethod<bool>('requestPermission') ?? false;
+  }
 
   /// চাবি খালি হলে আগের চাবিই থাকে (একবার বসানো চাবি আবার লিখতে হয় না)
-  Future<void> start({required String key}) => _channel.invokeMethod<bool>('start', {
-        'baseUrl': serverRoot(),
-        'key': key.trim(),
-        'appVersion': AppConfig.appVersion,
-      });
+  Future<void> start({required String key}) async {
+    // ⛔ দ্বিতীয় তালা: play বিল্ডে সেবাটা ম্যানিফেস্টেই নেই, চালু করার চেষ্টাও নয়
+    if (AppChannel.isPlay) return;
+    await _channel.invokeMethod<bool>('start', {
+      'baseUrl': serverRoot(),
+      'key': key.trim(),
+      'appVersion': AppConfig.appVersion,
+    });
+  }
 
   Future<void> stop() => _channel.invokeMethod<bool>('stop');
 }

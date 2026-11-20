@@ -28,9 +28,13 @@ void main() {
 
   test('a release package without the release key stops instead of signing with the debug key', () {
     final gradle = File('android/app/build.gradle.kts').readAsStringSync();
-    final guard = RegExp(r'if \(!hasReleaseKey\) \{\s*tasks\.matching \{[^}]*packageRelease[^}]*bundleRelease[^}]*\}\.configureEach \{\s*doFirst \{\s*throw GradleException',
+    // ⓘ ২০ নভেম্বর ২০২৬ থেকে দুই ফ্লেভার — side-এর পাহারা key.properties-এ, play-এর key-play.properties-এ
+    final guard = RegExp(r'if \(!hasReleaseKey\) \{\s*tasks\.matching \{[^}]*packageSideRelease[^}]*bundleSideRelease[^}]*\}\.configureEach \{\s*doFirst \{\s*throw GradleException',
         dotAll: true);
     expect(guard.hasMatch(gradle), isTrue, reason: '⛔ চাবি ছাড়া release প্যাকেজ থামে না');
+    final playGuard = RegExp(r'if \(!hasPlayKey\) \{\s*tasks\.matching \{[^}]*packagePlayRelease[^}]*bundlePlayRelease[^}]*\}\.configureEach \{\s*doFirst \{\s*throw GradleException',
+        dotAll: true);
+    expect(playGuard.hasMatch(gradle), isTrue, reason: '⛔ আপলোড-চাবি ছাড়া Play-র .aab থামে না');
   });
 
   test('a change id is a random version-4 uuid, never the clock', () {

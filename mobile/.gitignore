@@ -18,6 +18,7 @@ symbols/
 *.jks
 *.keystore
 key.properties
+key-play.properties
 
 # Local overrides
 .env

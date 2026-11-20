@@ -24,6 +24,22 @@ if (hasReleaseKey) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+/*
+ * ⭐ Google Play-র আপলোড-চাবি — android/key-play.properties থেকে (git-এ নেই; ২০ নভেম্বর ২০২৬)।
+ *
+ * Play App Signing: ফোনে যে চাবিতে সই থাকে সেটা Google-এর কাছে (Google-managed app key); আমরা কেবল আপলোডের চাবি
+ * (univer-abos-upload.jks) দিয়ে .aab সই করে পাঠাই। ⓘ এটা side-এর abos-release.jks নয়, আলাদা — আপলোড-চাবি হারালে
+ * Play Console থেকে বদলানো যায়, অ্যাপ হারায় না। ফাইলের চার লাইন key.properties-এর মতোই:
+ * storeFile / storePassword / keyAlias / keyPassword।
+ * ⛔ ফাইল না থাকলে play-এর release বিল্ড থামে (নিচে) — debug চাবিতে সই করা .aab Play নেয় না।
+ */
+val playKeyProperties = Properties()
+val playKeyPropertiesFile = rootProject.file("key-play.properties")
+val hasPlayKey = playKeyPropertiesFile.exists()
+if (hasPlayKey) {
+    playKeyPropertiesFile.inputStream().use { playKeyProperties.load(it) }
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -52,6 +68,7 @@ android {
     }
 
     defaultConfig {
+        // ⓘ আসল applicationId ফ্লেভারে (নিচে) — side আজকেরটাই, play নতুন
         applicationId = "com.abos.abos_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -89,19 +106,52 @@ android {
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
+        if (hasPlayKey) {
+            create("playUpload") {
+                keyAlias = playKeyProperties["keyAlias"] as String
+                keyPassword = playKeyProperties["keyPassword"] as String
+                storeFile = rootProject.file(playKeyProperties["storeFile"] as String)
+                storePassword = playKeyProperties["storePassword"] as String
+            }
+        }
+    }
+
+    /*
+     * ⭐ দুই বিলি-পথ, দুই ফ্লেভার (মালিকের সিদ্ধান্ত, ২০ নভেম্বর ২০২৬) — lib/core/config/app_channel.dart-এর সাথে জোড়া।
+     *
+     * side (ডিফল্ট) — আজকের APK: com.abos.abos_mobile, abos-release.jks (key.properties), অ্যাপের ভেতরের আপডেট আর অফিসের
+     *   SMS ফোন সহ। ⛔ এর applicationId বা চাবি বদলালে মাঠের কোনো ফোন আর আপডেট নেবে না।
+     * play — Google Play-র নতুন অ্যাপ univer.abos (UNIVER BANGLADESH-এর ডেভেলপার অ্যাকাউন্ট), আপলোড-চাবি key-play.properties।
+     *   নিজে-আপডেট আর SMS ফোন নেই — ম্যানিফেস্ট src/play/AndroidManifest.xml, Dart-এ --dart-define=ABOS_CHANNEL=play।
+     * ⓘ namespace (Kotlin প্যাকেজ, MethodChannel-এর নাম) দুটোতেই com.abos.abos_mobile — applicationId থেকে আলাদা জিনিস।
+     * ⓘ versionCode দুটোতেই 20000 + flutter.versionCode (উপরে)।
+     * বানানো: tool/release.sh (side APK) আর tool/release-play.sh (play .aab)। test/android_build_config_test.dart ধরে রাখে।
+     */
+    flavorDimensions += "channel"
+    productFlavors {
+        create("side") {
+            dimension = "channel"
+            isDefault = true
+            applicationId = "com.abos.abos_mobile"
+            signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
+        }
+        create("play") {
+            dimension = "channel"
+            applicationId = "univer.abos"
+            signingConfig = signingConfigs.getByName(if (hasPlayKey) "playUpload" else "debug")
+        }
     }
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseKey) {
-                signingConfigs.getByName("release")
-            } else {
+            // ⛔ release-এর চাবি এখন ফ্লেভারে (উপরে), buildType-এ নয় — buildType-এর signingConfig ফ্লেভারেরটাকে ঢেকে দেয়।
+            // ⓘ চাবি না থাকলে ফ্লেভার debug চাবি নেয় কেবল কনফিগারেশন চলুক বলে; প্যাকেজ বানানো নিচের পাহারায় থামে।
+            if (!hasReleaseKey) {
                 logger.warn(
-                    "ABOS: android/key.properties নেই — এই release বিল্ড debug চাবি দিয়ে সই হচ্ছে। " +
+                    "ABOS: android/key.properties নেই — side-এর release বিল্ড debug চাবি দিয়ে সই হচ্ছে। " +
                     "চালানোর জন্য চলবে, কিন্তু বিতরণ করা যাবে না: debug চাবিতে সই করা APK দিয়ে " +
                     "আপডেট দিলে কোনো ফোন নেবে না। docs/মোবাইল অ্যাপ রিলিজ করার নিয়ম.md দেখুন।"
                 )
-                signingConfigs.getByName("debug")
             }
         }
     }
@@ -137,11 +187,26 @@ android {
  * আপডেট হয়ে বসত না।
  */
 if (!hasReleaseKey) {
-    tasks.matching { it.name == "packageRelease" || it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+    tasks.matching { it.name == "packageSideRelease" || it.name == "bundleSideRelease" || it.name == "assembleSideRelease" }.configureEach {
         doFirst {
             throw GradleException(
                 "ABOS: android/key.properties নেই — release বিল্ড থামল। debug চাবিতে সই করা APK কোনো ফোনে আপডেট হয় না। " +
                 "docs/মোবাইল অ্যাপ রিলিজ করার নিয়ম.md দেখুন।"
+            )
+        }
+    }
+}
+
+/*
+ * ⛔ play-এর আপলোড-চাবি (key-play.properties) না থাকলে play-এর release প্যাকেজ থামে — debug চাবিতে সই করা .aab
+ * Play Console নেয় না, আর ভুল চাবিতে প্রথম আপলোড হলে সেটাই আপলোড-চাবি হয়ে বসে।
+ */
+if (!hasPlayKey) {
+    tasks.matching { it.name == "packagePlayRelease" || it.name == "bundlePlayRelease" || it.name == "assemblePlayRelease" }.configureEach {
+        doFirst {
+            throw GradleException(
+                "ABOS: android/key-play.properties নেই — Google Play-র release বিল্ড থামল। আপলোড-চাবি " +
+                "(univer-abos-upload.jks) বানিয়ে key-play.properties লিখুন। docs/মোবাইল অ্যাপ রিলিজ করার নিয়ম.md দেখুন।"
             )
         }
     }

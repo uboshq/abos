@@ -6,7 +6,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
-import 'update_download_button.dart';
+import 'store_update_button.dart';
 
 /// Stands between the person and the app when this build is too old to be
 /// trusted, and says so quietly when it is merely behind — docs/Contract §৬.
@@ -143,11 +143,8 @@ class _UpdateNotice extends StatelessWidget {
             // and hands over its own update. No link, no browser.
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: UpdateDownloadButton(
-                release: release,
-                label: context.l10n.updateNow,
-                dense: true,
-              ),
+              // ⓘ play বিল্ডে নামানো নয় — Play Store-এর পাতা ([[updateButtonFor]])
+              child: updateButtonFor(release, label: context.l10n.updateNow, dense: true),
             ),
           ],
         ),
@@ -220,7 +217,8 @@ class _UpdateWall extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                UpdateDownloadButton(release: release),
+                // ⓘ play বিল্ডে দেয়াল থেকেও Play Store-এ — নিজে নামানো Play-র নিয়মে নিষেধ
+                updateButtonFor(release),
               ],
             ),
           ),

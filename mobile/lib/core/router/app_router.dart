@@ -387,10 +387,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MyPhonesScreen(),
           ),
           // ⭐ অফিসের SMS ফোন — প্রোফাইল থেকে, কেবল SMS-এর ফোনের চাবিওয়ালা মানুষের (নমুনা ধাপ ২, ১১ নভেম্বর ২০২৬)
-          _framed(
-            path: ProfileRoutes.smsGateway,
-            builder: (context, state) => const SmsGatewayScreen(),
-          ),
+          // ⛔ play বিল্ডে পথটাই নেই — লিংক বা পুরনো ইতিহাস দিয়েও খোলে না
+          if (ProfileRoutes.smsGatewayInThisBuild)
+            _framed(
+              path: ProfileRoutes.smsGateway,
+              builder: (context, state) => const SmsGatewayScreen(),
+            ),
           // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
           _framed(
             path: 'invoices',

@@ -3577,5 +3577,13 @@
         "type": "String"
       }
     }
+  },
+  "updateOpenStore": "Update on Play Store",
+  "@updateOpenStore": {
+    "description": "Play build: the update button opens the app page on Google Play (no self-install there)"
+  },
+  "updateStoreFailed": "Could not open Play Store. Find ABOS in the phone's Play Store and update it there.",
+  "@updateStoreFailed": {
+    "description": "Play build: the store page could not be opened"
   }
 }
