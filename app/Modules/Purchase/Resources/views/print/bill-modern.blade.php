@@ -103,6 +103,10 @@
                 <tr><td>{{ $L('bill_date') }}</td><td class="v">{{ $bill['date'] }}</td></tr>
                 <tr><td>{{ $L('due_on') }}</td><td class="v">{{ $bill['due'] !== '' ? $bill['due'] : '—' }}</td></tr>
                 <tr><td>{{ $L('status') }}</td><td class="v"><span class="status">{{ $bill['status'] }}</span></td></tr>
+                {{-- ⭐ আনলোডিং খরচ — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"); বাছা না থাকলে সারিটাই নেই --}}
+                @if (($unloading ?? '') !== '')
+                    <tr data-unloading><td>{{ __('supplier::labour.unloading') }}</td><td class="v">{{ $unloading }}</td></tr>
+                @endif
             </table>
         </td>
     </tr>

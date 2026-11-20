@@ -390,6 +390,89 @@
                  কলাম পড়ে থাকত। --}}
             @include('purchase::direct.partials.deposit')
 
+            {{-- ⭐ আনলোডিং খরচ — বাধ্যতামূলক, সবসময় খোলা (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[LabourCost]], [[UnloadingSplit]])।
+                 ⓘ বোতামের পিছনে নয় — না বাছলে বিল পাকা হয় না ([[DirectPurchaseService::complete()]]), তাই চোখের সামনে।
+                 ⓘ নিজের ছোট x-data — direct-purchase.js-এ হাত পড়ে না; ঘরগুলো পথ ধরে দেখা দেয়, লুকানোটা সেবা পড়ে না। --}}
+            @php
+                $unloadMode = (string) old('unload_mode', '');
+                $unloadRateText = \App\Core\Support\Money::format($unloadRate, bccomp(\App\Core\Support\Money::round($unloadRate, 2), $unloadRate, 4) === 0 ? 2 : 4);
+                $unloadInput = 'h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs';
+            @endphp
+            <section data-boxed data-direct-unloading
+                     x-data="{ unloadMode: @js($unloadMode) }"
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <h2 class="text-sm font-semibold">
+                        {{ __('supplier::labour.unloading') }} <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                    </h2>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.how') }}</span>
+                </div>
+
+                <div class="ds-seg" role="radiogroup" aria-label="{{ __('supplier::labour.how') }}">
+                    @foreach (\App\Modules\Supplier\Services\LabourCost::UNLOADING as $choice)
+                        <button type="button" role="radio" @click="unloadMode = '{{ $choice }}'"
+                                :class="unloadMode === '{{ $choice }}' ? 'is-on' : ''"
+                                :aria-checked="unloadMode === '{{ $choice }}' ? 'true' : 'false'">{{ __('supplier::labour.mode_'.$choice) }}</button>
+                    @endforeach
+                </div>
+                <input type="hidden" name="unload_mode" :value="unloadMode" value="{{ $unloadMode }}">
+
+                <div class="mt-2 flex flex-wrap items-end gap-2">
+                    <label class="min-w-0 flex-1" x-show="unloadMode === 'cash' || unloadMode === 'due'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.amount') }}</span>
+                        <input type="number" step="0.01" min="0" inputmode="decimal" name="unload_amount"
+                               value="{{ old('unload_amount') }}"
+                               class="num {{ $unloadInput }} text-end">
+                    </label>
+
+                    <label class="min-w-0 flex-1" x-show="unloadMode === 'cash'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.till') }}</span>
+                        <select name="unload_account_id" class="{{ $unloadInput }}">
+                            <option value="">—</option>
+                            @foreach ($labourTills as $till)
+                                <option value="{{ $till['id'] }}" @selected((string) old('unload_account_id') === $till['id'])>{{ $till['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <div class="min-w-0 flex-1" x-show="unloadMode === 'due'" x-cloak>
+                        @if ($labourContractors->isEmpty())
+                            <p class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1 text-2xs text-(--color-badge-warning-ink)">
+                                {{ __('supplier::labour.no_contractor_party') }}
+                            </p>
+                        @else
+                            <label class="block">
+                                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.contractor') }}</span>
+                                <select name="unload_contractor_id" class="{{ $unloadInput }}">
+                                    <option value="">—</option>
+                                    @foreach ($labourContractors as $contractor)
+                                        <option value="{{ $contractor['id'] }}" @selected((string) old('unload_contractor_id') === $contractor['id'])>{{ $contractor['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        @endif
+                    </div>
+
+                    <label class="min-w-0 flex-1" x-show="unloadMode === 'none'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.reason') }}</span>
+                        <input type="text" name="unload_reason" maxlength="255" value="{{ old('unload_reason') }}"
+                               class="{{ $unloadInput }}">
+                    </label>
+                </div>
+
+                <p class="mt-2 text-2xs text-(--color-ink-muted)" x-show="unloadMode === 'cash' || unloadMode === 'due'" x-cloak>
+                    {{ __('supplier::labour.amount_hint') }}
+                    · {{ __('supplier::labour.rate_per_carton') }}: <span class="num">{{ $unloadRateText }}</span>
+                </p>
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_hint') }}</p>
+
+                @foreach (\App\Modules\Supplier\Services\LabourCost::fields('unload_') as $field)
+                    @error($field)
+                        <p class="mt-1 text-2xs text-(--color-danger)" role="alert" data-unload-error>{{ $message }}</p>
+                    @enderror
+                @endforeach
+            </section>
+
             {{-- ⭐ পরিবহন · শিপমেন্ট · নোট — **বাঁ দিকে, কার্টের নিচে**।
 
                  মালিকের নির্দেশ, ৬ সেপ্টেম্বর ২০২৬: *"Direct Pur e ei buton

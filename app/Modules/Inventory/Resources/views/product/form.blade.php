@@ -186,6 +186,15 @@
                             :hint="__('inventory::message.reorder_hint')" numeric />
             </div>
 
+            {{-- ⭐ কার্টনপ্রতি আনলোড দর — বড় কার্টনের নিজের দর (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")। ⓘ মাল গ্রহণ আর সরাসরি ক্রয়ের সারিতে
+                 নিজে থেকে বসে, হাতে বদলানো যায়; খালি = সাধারণ দরে সমান ভাগ ([[UnloadingSplit]]) --}}
+            <div class="mt-3 sm:w-1/2">
+                <x-ui.field name="unload_rate" type="number" step="0.01" min="0" inputmode="decimal"
+                            :label="__('inventory::field.unload_rate')"
+                            :value="old('unload_rate', $product->unload_rate)"
+                            :hint="__('inventory::message.unload_rate_hint')" numeric />
+            </div>
+
             {{-- ⭐ লট ধরা হবে কি না — মালিকের নিয়ম, ২৩ সেপ্টেম্বর ২০২৬।
 
                  ⓘ তাঁর কথা: *"লট ছাড়া মাল ঢুকবেও না, বেরোবেও না"*। লট মানে

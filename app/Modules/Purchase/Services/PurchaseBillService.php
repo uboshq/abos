@@ -59,6 +59,7 @@ final class PurchaseBillService
 {
     use BringsInLots;
     use CalculatesLineTotals;
+    use ChargesUnloading;
     use ReadsPackedQuantities;
     use ReadsTheRowUnderLock;
 
@@ -382,6 +383,45 @@ final class PurchaseBillService
     }
 
     /**
+     * ⭐ খসড়া বিলের আনলোডিং — সরাসরি ক্রয়ের পর্দা আর বিলের পাতা থেকে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[ChargesUnloading]])।
+     *
+     * ⓘ কেবল চালান-ছাড়া সারির মালের জন্য — চালান ধরে আসা মালের আনলোডিং চালানেই বসেছে। ⛔ কেবল খসড়ায়।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int|string, mixed>  $rates  সারির id → হাতের কার্টনপ্রতি দর (খালি = সমান ভাগ); না পাঠালে সারির আগের দর
+     */
+    public function setUnloading(PurchaseBill $bill, array $data, array $rates = []): PurchaseBill
+    {
+        return DB::transaction(function () use ($bill, $data, $rates) {
+            $this->lockFresh($bill);
+
+            if ($bill->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'unload_mode' => __('supplier::labour.only_draft', ['no' => $bill->document_no]),
+                ]);
+            }
+
+            $direct = $bill->lines()->whereNull('purchase_receipt_line_id')->get();
+
+            foreach ($direct as $line) {
+                if (! array_key_exists($line->id, $rates) && ! array_key_exists((string) $line->id, $rates)) {
+                    continue;
+                }
+
+                $given = $rates[$line->id] ?? $rates[(string) $line->id] ?? null;
+                $line->forceFill([
+                    'unload_rate' => $given === null || $given === '' || ! is_numeric($given) || bccomp((string) $given, '0', 4) < 0
+                        ? null : bcadd((string) $given, '0', 4),
+                ])->save();
+            }
+
+            $this->stampUnloading($bill, $bill->lines()->whereNull('purchase_receipt_line_id')->get(), 'qty', $data + ['unload_mode' => null]);
+
+            return $bill->fresh(['lines']);
+        });
+    }
+
+    /**
      * বিলটা খাতায় বসানো — দায় সরবরাহকারীর নামে যায়।
      */
     public function confirm(PurchaseBill $bill, ?string $payingNow = null): PurchaseBill
@@ -441,6 +481,14 @@ final class PurchaseBillService
 
             // ⛔ দেয়াল আবার, সরবরাহকারীর সারিতে তালা দিয়ে — দুই টেবিলের দুই বিল একা একা ভিতরে, মিলে বাইরে, এমন নয় (১৮ নভেম্বর ২০২৬)
             app(SupplierCreditWall::class)->assertRoomLocked((int) $bill->supplier_id, $newCredit, $payingNow);
+
+            /*
+             * ⓘ আনলোডিং বাছা থাকলে পূর্ণ কি না — সরাসরি ক্রয়ের পর্দা বাছাই বাধ্যতামূলক করে ([[DirectPurchaseService::complete()]]);
+             * অন্য পথের বিল (চালান ধরে) আনলোডিং চালানেই দেয়, তাই এখানে বাছাই না থাকলে থামা নয়।
+             */
+            if (filled($bill->unload_mode)) {
+                app(\App\Modules\Supplier\Services\LabourCost::class)->assertComplete($bill, 'unload_', 'unloading');
+            }
 
             $this->bringInDirectLines($bill);
             $this->postToLedger($bill);
@@ -523,6 +571,12 @@ final class PurchaseBillService
          * মাস শেষে।
          */
         $shares = $this->bringingInShares($bill, $direct);
+
+        /*
+         * ⭐ আনলোডিংয়ের ভাগ — কার্টন ধরে, হাতের দর আগে (মালিক, ১৮ নভেম্বর ২০২৬; [[UnloadingSplit]])। ⓘ সারিতে লেখা হয় আর নিচে
+         * মালের দামে যোগ হয়; খাতায় ঠিক এই যোগফল মজুদে ([[postToLedger()]])।
+         */
+        $unload = $this->spreadUnloading($bill, $direct, 'qty');
 
         foreach ($direct as $line) {
             // লট ধরা পণ্যে লটটা এখানেই জন্মায় — মালের সাথে একসাথে
@@ -613,7 +667,7 @@ final class PurchaseBillService
              * ⓘ কিন্তু ওজন ABOS জানে না — আর **যে সংখ্যাটা আছে তার উপর
              * ভাগ করা** না-করার চেয়ে ভালো।
              */
-            $share = $shares[$line->id] ?? '0';
+            $share = bcadd($shares[$line->id] ?? '0', $unload[(int) $line->id] ?? '0', 4);
 
             $this->costs->receiveWorth(
                 product: $line->product,
@@ -1740,6 +1794,20 @@ final class PurchaseBillService
 
         $this->postBringingIn($bill, $lines);
 
+        /*
+         * ⭐ আনলোডিং — Dr মজুদ (চালান-ছাড়া সারির স্তরে যতটা বসল) / Cr টিল বা ২১১৭ ঠিকাদারের নামে। ⓘ জোড়াটা নিজেই মেলে, তাই
+         * `$difference` বা মিলের ফল বদলায় না (ভাড়ার একই কারণে এখানে, পার্থক্য গোনার পরে); বিলের উল্টো দাখিলায় এটাও ফেরে।
+         */
+        $unloadShares = [];
+
+        foreach ($bill->lines as $line) {
+            if ($line->purchase_receipt_line_id === null) {
+                $unloadShares[(int) $line->id] = (string) ($line->unload_cost ?? '0');
+            }
+        }
+
+        array_push($lines, ...$this->unloadingLines($bill, $unloadShares));
+
         $this->posting->post(
             sourceType: PurchaseBill::drillSourceType(),
             sourceId: $bill->id,
@@ -1782,14 +1850,15 @@ final class PurchaseBillService
             $received = PurchaseReceiptLine::query()
                 ->where('purchase_receipt_id', $group['receipt_id'])
                 ->where('product_id', $group['product_id'])
-                ->selectRaw('COALESCE(SUM(received_qty), 0) as qty, COALESCE(SUM(received_qty * rate), 0) as value')
+                ->selectRaw('COALESCE(SUM(received_qty), 0) as qty, COALESCE(SUM(received_qty * rate), 0) as value, COALESCE(SUM(unload_cost), 0) as unload')
                 ->first();
 
             if (bccomp($group['qty'], '0', 4) <= 0 || bccomp($group['qty'], (string) $received->qty, 4) !== 0) {
                 continue;
             }
 
-            $whole[] = $group + ['receipt_value' => (string) $received->value];
+            // ⭐ চালানের আনলোডিং স্তরে থাকে — বিল কেবল সরবরাহকারীর দামের পার্থক্য বসায় (মালিক, ১৮ নভেম্বর ২০২৬)
+            $whole[] = $group + ['receipt_value' => (string) $received->value, 'unload' => (string) ($received->unload ?? '0')];
         }
 
         return $whole;
@@ -1810,7 +1879,7 @@ final class PurchaseBillService
                 PurchaseReceipt::STOCK_SOURCE,
                 $group['receipt_id'],
                 $group['product_id'],
-                bcdiv($group['net'], $group['qty'], 6),
+                bcdiv(bcadd($group['net'], $group['unload'], 6), $group['qty'], 6),
                 $bill->trx_date,
             );
 
@@ -1838,7 +1907,7 @@ final class PurchaseBillService
                 PurchaseReceipt::STOCK_SOURCE,
                 $group['receipt_id'],
                 $group['product_id'],
-                bcdiv($group['receipt_value'], $group['qty'], 6),
+                bcdiv(bcadd($group['receipt_value'], $group['unload'], 6), $group['qty'], 6),
                 $date,
             );
 
@@ -2078,6 +2147,10 @@ final class PurchaseBillService
                 'tax' => $figures['tax'],
                 'tax_variance' => $figures['tax_variance'],
                 'amount' => $figures['amount'],
+
+                // ⭐ হাতের আনলোড দর — কেবল চালান-ছাড়া সারিতে; চালানের মালের আনলোডিং চালানেই বসেছে ([[ChargesUnloading]])
+                'unload_rate' => $receiptLine === null ? $this->unloadRateFor($line, $product) : null,
+
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,
             ]);

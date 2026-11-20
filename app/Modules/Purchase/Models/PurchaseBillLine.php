@@ -39,6 +39,8 @@ class PurchaseBillLine extends Model
         'batch_no', 'expiry_date', 'mrp',
         'rate', 'sales_price', 'pricing_anchor', 'pricing_pct',
         'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
+        // ⭐ হাতের আনলোড দর (কার্টনপ্রতি) — মালিক, ১৮ নভেম্বর ২০২৬ ([[ChargesUnloading]])
+        'unload_rate',
     ];
 
     protected function casts(): array
@@ -46,6 +48,10 @@ class PurchaseBillLine extends Model
         return [
             'qty' => 'decimal:4',
             'free_qty' => 'decimal:4',
+            // ⭐ আনলোডিং — টাকা float নয়
+            'unload_rate' => 'decimal:4',
+            'unload_cartons' => 'decimal:4',
+            'unload_cost' => 'decimal:4',
             'expiry_date' => 'date',
             'mrp' => 'decimal:4',
             'entered_qty' => 'decimal:4',

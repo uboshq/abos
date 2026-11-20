@@ -78,6 +78,8 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
         return [
             /* টাকা float নয় — [[MoneyIsNeverAFloatTest]] */
             'transport_cost' => 'decimal:4',
+            // ⭐ লোডিং (মালিক, ১৮ নভেম্বর ২০২৬) — কেবল সেবা বসায় ([[ChallanLoading]])
+            'loading_amount' => 'decimal:4',
             'own_transport' => 'boolean',
             'ship_date' => 'date',
             'issue_at_gate' => 'boolean',

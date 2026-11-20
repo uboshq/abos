@@ -19,6 +19,7 @@ return [
     'track_batch_hint' => 'Which consignment the goods came in, and when they expire — both are then kept. Leave it on for goods with a date.',
     'lot_off_has_stock' => 'This product still has stock in a lot, so its lots cannot be switched off. Bring the lot stock to zero first.',
     'reorder_hint' => 'You will be told when stock falls below this. 0 means no alert.',
+    'unload_rate_hint' => 'A rate of its own for a big carton — it fills in on goods receipt lines. Blank = shared equally at the normal rate.',
     'no_movements' => 'No movements for this product yet.',
     'stock_math' => 'What is on the floor, less what is reserved and held, is what may be sold.',
     'adjusted' => 'Adjusted — difference :difference.',

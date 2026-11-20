@@ -96,14 +96,16 @@
     <div class="{{ $box }}">
         <table class="ui-grid w-full text-sm" data-sec="delivery">
             <thead><tr><th>{{ __('accounts::dayclose.col.challan') }}</th><th>{{ __('accounts::dayclose.col.party') }}</th><th class="num">{{ __('accounts::dayclose.col.value') }}</th>
-                <th>{{ __('accounts::dayclose.col.vehicle') }}</th><th class="num">{{ __('accounts::dayclose.col.fare') }}</th><th class="num">{{ __('accounts::dayclose.col.pct') }}</th></tr></thead>
+                <th>{{ __('accounts::dayclose.col.vehicle') }}</th><th class="num">{{ __('accounts::dayclose.col.fare') }}</th><th class="num">{{ __('accounts::dayclose.col.pct') }}</th>
+                {{-- ⭐ লোডিং (হাম্মালি) — মালিক, ১৮ নভেম্বর ২০২৬ --}}
+                <th class="num">{{ __('supplier::labour.day_column') }}</th></tr></thead>
             <tbody>
                 @foreach ($r['delivery']['rows'] as $row)
                     <tr><td class="font-mono text-xs">{{ $row['no'] }}</td><td>{{ $row['party'] }}</td><td class="num">{{ $m($row['value']) }}</td><td class="text-(--color-ink-muted)">{{ $row['vehicle'] }}</td>
-                        <td class="num">{{ $z($row['fare']) }}</td><td class="num">{{ $row['pct'] !== null ? $row['pct'].'%' : '' }}</td></tr>
+                        <td class="num">{{ $z($row['fare']) }}</td><td class="num">{{ $row['pct'] !== null ? $row['pct'].'%' : '' }}</td><td class="num">{{ $z($row['loading'] ?? '0') }}</td></tr>
                 @endforeach
                 <tr class="font-bold"><td colspan="2" class="text-end">{{ __('accounts::dayclose.delivery_total', ['count' => count($r['delivery']['rows'])]) }}</td><td class="num">{{ $m($r['delivery']['value']) }}</td><td></td>
-                    <td class="num">{{ $m($r['delivery']['fare']) }}</td><td class="num">{{ $r['delivery']['pct'] !== null ? $r['delivery']['pct'].'%' : '' }}</td></tr>
+                    <td class="num">{{ $m($r['delivery']['fare']) }}</td><td class="num">{{ $r['delivery']['pct'] !== null ? $r['delivery']['pct'].'%' : '' }}</td><td class="num">{{ $m($r['delivery']['loading'] ?? '0') }}</td></tr>
             </tbody>
         </table>
     </div>
@@ -171,6 +173,36 @@
                 @endif
             </div>
         </div>
+    </div>
+
+    {{-- ⭐ ৪খ · হাম্মালি (মাল নামানো ও তোলা) — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"); ৪-এর উপ-অংশ, তাই মালিকের ১১ অংশের ক্রম ভাঙে না --}}
+    @php($lab = $r['labour'])
+    <h2 class="mb-1 font-semibold">{{ __('accounts::dayclose.labour.no') }} · {{ __('supplier::labour.day_title') }}</h2>
+    <div class="{{ $box }}">
+        <table class="ui-grid w-full text-sm" data-sec="labour">
+            <thead><tr><th>{{ __('supplier::labour.day_paper') }}</th><th>{{ __('supplier::labour.day_kind') }}</th><th>{{ __('supplier::labour.day_party') }}</th>
+                <th>{{ __('supplier::labour.day_how') }}</th><th class="num">{{ __('accounts::dayclose.col.amount') }}</th></tr></thead>
+            <tbody>
+                @forelse ($lab['rows'] as $row)
+                    <tr><td class="font-mono text-xs">{{ $row['no'] }}</td><td>{{ __('supplier::labour.day_'.$row['kind']) }}</td><td>{{ $row['party'] }}</td>
+                        <td class="text-(--color-ink-muted)">{{ $row['how'] }}</td><td class="num">{{ $m($row['amount']) }}</td></tr>
+                @empty
+                    <tr><td colspan="5" class="text-(--color-ink-muted)" data-labour-none>{{ __('supplier::labour.day_none') }}</td></tr>
+                @endforelse
+                @if ($lab['rows'] !== [])
+                    <tr><td colspan="4" class="text-end">{{ __('supplier::labour.day_unloading') }}</td><td class="num">{{ $m($lab['unloading']) }}</td></tr>
+                    <tr><td colspan="4" class="text-end">{{ __('supplier::labour.day_loading') }}</td><td class="num">{{ $m($lab['loading']) }}</td></tr>
+                @endif
+                <tr class="font-bold" data-labour-total><td colspan="4" class="text-end">{{ __('supplier::labour.day_total') }}</td><td class="num">{{ $m($lab['total']) }}</td></tr>
+                <tr class="font-semibold" data-labour-payable><td colspan="4" class="text-end">
+                    @if (\Illuminate\Support\Facades\Route::has('finance.carrier_labour.index') && auth()->user()?->can('finance.expense.view'))
+                        <a href="{{ route('finance.carrier_labour.index', ['tab' => 'labour']) }}" class="text-(--color-brand-600) underline-offset-2 hover:underline" data-labour-payable-link>{{ __('supplier::labour.day_payable') }}</a>
+                    @else
+                        {{ __('supplier::labour.day_payable') }}
+                    @endif
+                    </td><td class="num">{{ $neg($lab['payable']) }}</td></tr>
+            </tbody>
+        </table>
     </div>
 
     {{-- ৬ · আজ টাকা গেছে, কিন্তু খরচ নয় --}}

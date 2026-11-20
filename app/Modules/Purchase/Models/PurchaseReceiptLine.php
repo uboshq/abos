@@ -30,6 +30,9 @@ class PurchaseReceiptLine extends Model
         'received_qty', 'free_qty', 'entered_qty', 'entered_unit_id',
         'batch_no', 'expiry_date', 'mrp',
         'rate', 'sales_price', 'amount', 'tax', 'line_no', 'narration',
+
+        // ⭐ হাতের আনলোড দর (কার্টনপ্রতি) — মালিক, ১৮ নভেম্বর ২০২৬; কার্টন আর ভাগ কেবল সেবা বসায় ([[ChargesUnloading]])
+        'unload_rate',
     ];
 
     protected function casts(): array
@@ -47,6 +50,10 @@ class PurchaseReceiptLine extends Model
             // ⓘ পাকা হওয়ার আগে পণ্যের দাম — বাতিলে ফেরানোর জন্য (১৩ অক্টোবর ২০২৬)
             'prior_purchase_price' => 'decimal:4',
             'prior_sale_price' => 'decimal:4',
+            // ⭐ আনলোডিং — টাকা float নয় ([[MoneyIsNeverAFloatTest]])
+            'unload_rate' => 'decimal:4',
+            'unload_cartons' => 'decimal:4',
+            'unload_cost' => 'decimal:4',
         ];
     }
 

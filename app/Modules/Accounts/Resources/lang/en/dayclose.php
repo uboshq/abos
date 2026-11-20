@@ -196,6 +196,11 @@ return [
         'who' => 'Entered by',
         'when' => 'When',
     ],
+    // ⭐ 4b · loading and unloading labour — owner, 18 Nov 2026 ("ok"); the words are in supplier::labour.day_*
+    'labour' => [
+        'no' => '4b',
+        'caption' => 'LOADING & UNLOADING LABOUR',
+    ],
     'create_menu' => 'Day closing — close the day',
     'staff_cash' => [
         'title' => 'Cash in staff hands',

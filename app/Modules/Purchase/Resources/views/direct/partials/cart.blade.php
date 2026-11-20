@@ -155,6 +155,18 @@
                                                 {{ __('purchase::message.first_from_supplier') }}
                                             </span>
                                         </template>
+
+                                        {{-- ⭐ হাতে বসানো আনলোডিং দর, কার্টনপ্রতি — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"; [[UnloadingSplit]])।
+                                             ⓘ খালি = পণ্যের নিজের দর বা সমান ভাগ। পণ্যের ঘরের ভিতরেই — নতুন কলাম নয় (উপরের লটের একই কারণ)। --}}
+                                        <label class="mt-1 block" data-unload-rate>
+                                            <input type="number" step="0.01" min="0" inputmode="decimal"
+                                                   :name="'lines[' + (index) + '][unload_rate]'" x-model="line.unload_rate"
+                                                   placeholder="{{ __('supplier::labour.hand_rate_short') }}"
+                                                   title="{{ __('supplier::labour.hand_rate') }}"
+                                                   aria-label="{{ __('supplier::labour.hand_rate') }}"
+                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
+                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end text-xs">
+                                        </label>
                                     </td>
                                     {{-- ── ⛔ কার্টে লেখার ঘর নেই — মালিক, ৩ অক্টোবর ২০২৬ ──────────────
                                          দর, পরিমাণ, ফ্রি আর ছাড় কেবল দেখা যায়; বদলাতে ✎ — সারিটা উপরের বাক্সে

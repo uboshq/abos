@@ -31,6 +31,7 @@ return [
     'markup' => 'Markup',
     'track_batch' => 'Track lots (batches)',
     'reorder_level' => 'Reorder level',
+    'unload_rate' => 'Unload rate per carton',
     'product' => 'Product',
     'warehouse' => 'Warehouse',
     'branch' => 'Branch',

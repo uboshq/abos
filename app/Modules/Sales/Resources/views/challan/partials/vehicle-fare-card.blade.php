@@ -79,5 +79,19 @@
                 @endif
             </dd>
         </div>
+        {{-- ⭐ লোডিং খরচ — এক লাইনে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[LabourCost::describe()]])। ⓘ পাকা চালানে না লেখা থাকলে
+             পরিবহন পাতার লিংক — লেখার ফর্ম সেখানে ([[ChallanLoadingController]]), ভাড়ার একই জায়গা। --}}
+        <div data-vehicle-loading>
+            <dt class="text-(--color-ink-muted)">{{ __('supplier::labour.loading') }}</dt>
+            <dd class="mt-0.5">
+                @if (filled($challan->loading_mode))
+                    <span class="font-semibold">{{ app(\App\Modules\Supplier\Services\LabourCost::class)->describe($challan, 'loading_') }}</span>
+                @elseif ($challan->status === \App\Core\Support\DocumentStatus::CONFIRMED && (auth()->user()?->can('sales.challan.create') ?? false))
+                    — <a href="{{ route('sales.challan.transport', $challan) }}" class="font-semibold text-(--color-link) underline" data-vehicle-loading-write>{{ __('sales::loading_cost.write') }} →</a>
+                @else
+                    —
+                @endif
+            </dd>
+        </div>
     </dl>
 </section>

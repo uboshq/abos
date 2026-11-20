@@ -166,6 +166,10 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — নাহলে যোগ-বিয়োগে
             // এক পয়সা করে হারাত, আর ধরা পড়ত মাস শেষে
             'transport_cost' => 'decimal:4',
+            // ⭐ আনলোডিং (মালিক, ১৮ নভেম্বর ২০২৬) — কেবল সেবা বসায় ([[ChargesUnloading]])
+            'unload_amount' => 'decimal:4',
+            'unload_rate' => 'decimal:4',
+            'unload_cartons' => 'decimal:4',
 
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — মিলকরণের পার্থক্যও টাকা
             'match_difference' => 'decimal:4',

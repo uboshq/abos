@@ -157,6 +157,18 @@
                     </div>
                 </div>
 
+                {{-- ⭐ লোডিং খরচ — ভাড়ার পাশেই (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[ChallanLoading::stamp()]])। ⓘ ঐচ্ছিক; সুইচ চালু
+                     থাকলে বাধ্যতামূলক। খসড়ায় যা বাছা ছিল, সম্পাদনায় ফিরে আসে — নইলে সংরক্ষণে মুছে যেত। --}}
+                <div class="sm:col-span-2 xl:col-span-4" data-challan-loading-form>
+                    @include('sales::challan.partials.loading-fields', ['loadingValues' => [
+                        'mode' => $challan->loading_mode,
+                        'amount' => $challan->loading_amount,
+                        'account_id' => $challan->loading_account_id,
+                        'contractor_id' => $challan->loading_contractor_id,
+                        'reason' => $challan->loading_reason,
+                    ]])
+                </div>
+
                 {{-- ⭐ ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬: গাড়ি না লাগলে বলার জায়গা — নিশ্চিত করতে তিনটার একটা লাগে ([[TransportRule]]) --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="hidden" name="own_transport" value="0">

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Http\Requests;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Supplier\Services\LabourCost;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -69,6 +70,10 @@ class PurchaseReceiptRequest extends FormRequest
              */
             'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
+
+            // ⭐ আনলোডিং — মালিক, ১৮ নভেম্বর ২০২৬; সারির হাতের দর খালি = পণ্যের নিজের দর বা সমান ভাগ ([[ChargesUnloading]])
+            'lines.*.unload_rate' => ['nullable', 'numeric', 'min:0', 'max:99999'],
+            ...LabourCost::rules('unload_', LabourCost::UNLOADING),
         ];
     }
 
@@ -80,6 +85,8 @@ class PurchaseReceiptRequest extends FormRequest
         return $this->safe()->only([
             'supplier_id', 'warehouse_id', 'purchase_order_id',
             'trx_date', 'supplier_challan_no', 'narration',
+            // ⭐ আনলোডিং — পাঠানো হলে তবেই ([[LabourCost::read()]])
+            ...LabourCost::fields('unload_'),
         ]);
     }
 

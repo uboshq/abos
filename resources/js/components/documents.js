@@ -295,6 +295,9 @@ export function purchaseLineEditor (config = {}) {
          * বদলায় না ([[seedFromProduct]])।
          */
         pricing: config.pricing || {},
+
+        // ⭐ পণ্যের নিজের আনলোড দর (কার্টনপ্রতি) — মাল গ্রহণের পর্দা দেয় (মালিক, ১৮ নভেম্বর ২০২৬); বাকিরা `{}`
+        unloadRates: config.unloadRates || {},
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
         },
@@ -346,6 +349,14 @@ export function purchaseLineEditor (config = {}) {
         },
 
         seedFromProduct(row) {
+            // ⓘ আনলোড দর দামের আগে — দামের তালিকা না থাকলেও বসে; ⚠️ হাতে লেখা দর মোছে না (খালি হলেই কেবল)
+            const unloadRate = (this.unloadRates || {})[row.product_id];
+
+            if ((row.unload_rate === undefined || row.unload_rate === null || row.unload_rate === '')
+                && unloadRate !== undefined && unloadRate !== null && unloadRate !== '') {
+                row.unload_rate = String(unloadRate);
+            }
+
             const known = (this.pricing || {})[row.product_id];
 
             if (! known) {
@@ -383,7 +394,7 @@ export function purchaseLineEditor (config = {}) {
             this.rows.push({
                 product_id: '', qty: '', free_qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
                 sales_price: '', markup: '', margin: '', anchor: '',
-                batch_no: '', expiry_date: '', mrp: '',
+                batch_no: '', expiry_date: '', mrp: '', unload_rate: '',
             });
         },
         remove(i) {

@@ -26,7 +26,9 @@ use App\Modules\Purchase\Http\Requests\DirectPurchaseRules;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\LastPaidRate;
 use App\Modules\Purchase\Services\PurchaseLots;
+use App\Modules\Purchase\Services\UnloadingSplit;
 use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\LabourCost;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -281,6 +283,11 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 'line_discount' => $this->settings->get('purchase.field_line_discount', true),
                 'vat' => $this->settings->get('purchase.vat_enabled', false),
             ],
+
+            // ⭐ আনলোডিং খরচ — সরাসরি ক্রয়েও বাধ্যতামূলক (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[LabourCost]], [[UnloadingSplit]])
+            'labourTills' => app(LabourCost::class)->cashTills(),
+            'labourContractors' => app(LabourCost::class)->contractors(),
+            'unloadRate' => UnloadingSplit::rate(),
         ]);
     }
 

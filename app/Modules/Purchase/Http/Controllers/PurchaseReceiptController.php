@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Http\Requests\PurchaseReceiptRequest;
+use App\Modules\Supplier\Services\LabourCost;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -46,7 +47,7 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
     {
         return [
             ...static::resourcePermissions(PurchaseReceipt::class, 'receipt'),
-            new Middleware('can:purchase.receipt.create', only: ['confirm']),
+            new Middleware('can:purchase.receipt.create', only: ['confirm', 'unloading']),
             new Middleware('can:purchase.bill.create', only: ['bill']),
             new Middleware('can:purchase.receipt.cancel', only: ['cancel']),
         ];
@@ -184,6 +185,29 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
         $result = $this->receipts->confirmAndBill($receipt);
 
         return $this->backWithBill($result['receipt'], $result, __('purchase::message.receipt_confirmed'));
+    }
+
+    /**
+     * ⭐ আনলোডিং — খসড়া মাল গ্রহণের পাতার কার্ড থেকে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[PurchaseReceiptService::setUnloading()]])।
+     * ⓘ বাছাই, অঙ্ক, আর সারি ধরে হাতের কার্টনপ্রতি দর (`unload_rates[সারির id]`, খালি = সমান ভাগ)।
+     */
+    public function unloading(Request $request, PurchaseReceipt $receipt): RedirectResponse
+    {
+        $data = $request->validate([
+            ...LabourCost::rules('unload_', LabourCost::UNLOADING),
+            'unload_rates' => ['nullable', 'array', 'max:500'],
+            'unload_rates.*' => ['nullable', 'numeric', 'min:0', 'max:99999'],
+        ]);
+
+        $this->receipts->setUnloading(
+            $receipt,
+            array_intersect_key($data, array_flip(LabourCost::fields('unload_'))) + ['unload_mode' => null],
+            (array) ($data['unload_rates'] ?? []),
+        );
+
+        return redirect()
+            ->route('purchase.receipt.show', $receipt)
+            ->with('saved', __('supplier::labour.saved'));
     }
 
     /**

@@ -58,6 +58,10 @@ class PurchaseReceipt extends Model implements Drillable
             'trx_date' => 'date',
             'cancelled_at' => 'datetime',
             'total' => 'decimal:4',
+            // ⭐ আনলোডিং (মালিক, ১৮ নভেম্বর ২০২৬) — ঘরগুলো fillable নয়, কেবল সেবা বসায় ([[ChargesUnloading]])
+            'unload_amount' => 'decimal:4',
+            'unload_rate' => 'decimal:4',
+            'unload_cartons' => 'decimal:4',
         ];
     }
 

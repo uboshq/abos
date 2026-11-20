@@ -11,9 +11,12 @@ use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
+use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\LabourCost;
 use Illuminate\Support\Carbon;
 
 /**
@@ -104,6 +107,15 @@ final class GoodsReceiptSync implements SyncsToDevices
             'lines.*' => ['array'],
             'lines.*.productId' => ['required', 'string', 'max:64'],
             'lines.*.receivedQty' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+
+            // ⭐ আনলোডিং — ঐচ্ছিক এখানে (রসিদ খসড়াই থাকে); পাকা করার সময় ওয়েবে বাধ্যতামূলক (মালিক, ১৮ নভেম্বর ২০২৬; [[ChargesUnloading]])
+            'lines.*.unloadRate' => ['nullable', 'regex:/^\d{1,8}(\.\d{1,4})?$/'],
+            'unloading' => ['nullable', 'array'],
+            'unloading.mode' => ['nullable', 'string', 'in:'.implode(',', LabourCost::UNLOADING)],
+            'unloading.amount' => ['nullable', 'regex:/^\d{1,14}(\.\d{1,4})?$/'],
+            'unloading.till' => ['nullable', 'string', 'max:64'],
+            'unloading.contractor' => ['nullable', 'string', 'max:64'],
+            'unloading.reason' => ['nullable', 'string', 'max:255'],
         ])->validate();
 
         /*
@@ -176,6 +188,8 @@ final class GoodsReceiptSync implements SyncsToDevices
                 'received_qty' => $qty,
                 'rate' => (string) $onOrder->rate,
                 'purchase_order_line_id' => $onOrder->id,
+                // ⓘ খালি = পণ্যের নিজের আনলোড দর বা সমান ভাগ ([[ChargesUnloading::unloadRateFor()]])
+                'unload_rate' => $row['unloadRate'] ?? null,
             ];
         }
 
@@ -197,6 +211,8 @@ final class GoodsReceiptSync implements SyncsToDevices
                  * মিলিয়ে দেখেনি, ট্রাকের পাশে লেখা হয়েছে।
                  */
                 'narration' => __('purchase::sync.from_the_handset'),
+
+                ...$this->unloadingFrom((array) ($payload['unloading'] ?? [])),
             ],
             $lines,
         );
@@ -205,5 +221,35 @@ final class GoodsReceiptSync implements SyncsToDevices
          * ⛔ `confirm()` ডাকা হয় না, আর কোনোদিন হবে না — উপরের ব্যাখ্যা।
          */
         return (string) $receipt->public_id;
+    }
+
+    /**
+     * ⭐ ফোনের আনলোডিং → সেবার ঘর (মালিক, ১৮ নভেম্বর ২০২৬)। ⓘ টিল আর ঠিকাদার public_id হয়ে আসে — ফোন ভেতরের id দেখে না;
+     * না মিললে কারণসহ ফেরত। আসল নিয়ম (নিজের টিল, কারণ, অঙ্ক) সেবায় ([[LabourCost::read()]])। পথ না পাঠালে কিছুই নয় — বাছাই
+     * পরে ওয়েবে, পাকা করার আগে।
+     *
+     * @param  array<string, mixed>  $in
+     * @return array<string, mixed>
+     */
+    private function unloadingFrom(array $in): array
+    {
+        if (blank($in['mode'] ?? null)) {
+            return [];
+        }
+
+        $till = filled($in['till'] ?? null) ? Account::query()->where('public_id', (string) $in['till'])->value('id') : null;
+        $contractor = filled($in['contractor'] ?? null) ? Supplier::query()->where('public_id', (string) $in['contractor'])->value('id') : null;
+
+        if ((filled($in['till'] ?? null) && $till === null) || (filled($in['contractor'] ?? null) && $contractor === null)) {
+            throw new SyncRejection(__('purchase::sync.unknown_reference'));
+        }
+
+        return [
+            'unload_mode' => (string) $in['mode'],
+            'unload_amount' => $in['amount'] ?? null,
+            'unload_account_id' => $till,
+            'unload_contractor_id' => $contractor,
+            'unload_reason' => $in['reason'] ?? null,
+        ];
     }
 }

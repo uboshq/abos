@@ -68,4 +68,7 @@
 
     {{-- ⭐ ভাড়া — লেখা আর পরে দেওয়া, গেট পাস হলেও (মালিক, ৭ অক্টোবর ২০২৬) --}}
     @include('sales::challan.partials.fare', ['challan' => $challan])
+
+    {{-- ⭐ লোডিং খরচ — দেখা, আর পাকা চালানে প্রথমবার লেখা (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে") --}}
+    @include('sales::challan.partials.loading', ['challan' => $challan])
 </x-layouts.app>

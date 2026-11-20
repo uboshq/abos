@@ -62,6 +62,15 @@
      * ⓘ কেবল দেখায়, খরচ হয় না; ঘর খালি রেখে সংরক্ষণ করলে কাগজের তারিখে নম্বরটা বসে ([[PurchaseLots]])।
      */
     'lotHint' => null,
+
+    /*
+     * ⭐ সারির হাতের আনলোড দর (কার্টনপ্রতি) — কেবল মাল গ্রহণে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[UnloadingSplit]])।
+     * ⓘ খালি = পণ্যের নিজের দর, সেটাও না থাকলে সমান ভাগ। ⚠️ ডিফল্ট `false` — আদেশ আর বিলের সারিতে কলামটা নেই।
+     */
+    'unload' => false,
+
+    // ⓘ পণ্যের id → পণ্যের নিজের আনলোড দর; null হলে `$products` থেকে গোনা হয় (`unload` চালু থাকলেই)
+    'unloadRates' => null,
 ])
 @php
     $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.vat_enabled', false);
@@ -144,6 +153,24 @@
         ->map(fn ($product) => (string) $product->id)
         ->values()
         ->all();
+
+    // ⭐ পণ্যের নিজের আনলোড দর — পণ্য বাছলে খালি ঘরে বসে ([[purchaseLineEditor]] seedFromProduct); কেবল ভরা দরগুলো
+    $unloadRates ??= $unload
+        ? collect($products)
+            ->filter(fn ($product) => $product->unload_rate !== null && $product->unload_rate !== '')
+            ->mapWithKeys(fn ($product) => [(string) $product->id => (string) $product->unload_rate])
+            ->all()
+        : [];
+
+    // ⓘ মোটের ঘরের আগের কলাম — প্রতিটা চালু কলাম গোনা (আগে ফ্রি আর লটের তিনটা বাদ পড়ত, মোট এক-চার ঘর বাঁয়ে বসত)
+    $beforeAmount = 3
+        + ($linkField ? 1 : 0)
+        + ($showFree ? 1 : 0)
+        + ($packs !== [] ? 1 : 0)
+        + ($lots && $lotProducts->isNotEmpty() ? 3 : 0)
+        + ($showSalesPrice ? 3 : 0)
+        + ($showDiscount ? ($showTax ? 2 : 1) : 0)
+        + ($unload ? 1 : 0);
 @endphp
 <div x-data="purchaseLineEditor({
                  rows: @js($lines),
@@ -152,6 +179,7 @@
                  lots: @js($lotProducts),
                  pricing: @js($pricing ?? []),
                  inclusive: @js($inclusive),
+                 unloadRates: @js((object) $unloadRates),
                })">
 
     <div class="table-responsive">
@@ -186,6 +214,9 @@
                         @if ($showTax)
                             <th class="text-end">{{ __('purchase::field.tax') }}</th>
                         @endif
+                    @endif
+                    @if ($unload)
+                        <th class="text-end" title="{{ __('supplier::labour.hand_rate') }}">{{ __('supplier::labour.hand_rate_short') }}</th>
                     @endif
                     <th class="text-end">{{ __('purchase::field.amount') }}</th>
                     <th><span class="sr-only">{{ __('purchase::action.remove_line') }}</span></th>
@@ -395,6 +426,16 @@
                             @endif
                         @endif
 
+                        {{-- ⭐ হাতের আনলোড দর — খালি = সমান ভাগ (মালিক, ১৮ নভেম্বর ২০২৬); ⓘ দামে যোগ হয় না, তাই মোটে হাত দেয় না --}}
+                        @if ($unload)
+                            <td class="cell-input" data-label="{{ __('supplier::labour.hand_rate_short') }}">
+                                <input aria-label="{{ __('supplier::labour.hand_rate') }}" :id="'pl-' + i + '-unload_rate'" :aria-labelledby="'pl-' + i + '-unload_rate' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" min="0" inputmode="decimal"
+                                       :name="'lines[' + (i) + '][unload_rate]'" x-model="row.unload_rate"
+                                       class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-card) px-2 text-end">
+                            </td>
+                        @endif
+
                         <td class="num cell" data-label="{{ __('purchase::field.amount') }}"
                             x-text="amount(row).toFixed(2)"></td>
 
@@ -412,7 +453,7 @@
             <tfoot>
                 <tr>
                     <td class="cell text-end font-medium"
-                        colspan="{{ ($showDiscount ? ($showTax ? 5 : 4) : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) + ($packs !== [] ? 1 : 0) }}">
+                        colspan="{{ $beforeAmount }}">
                         {{ __('purchase::field.total') }}
                     </td>
                     <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>

@@ -210,6 +210,9 @@ final class DirectSaleRules
             'fare_reference' => ['nullable', 'string', 'max:64'],
             'fare_payer_id' => ['nullable', 'integer'],
 
+            // ⭐ লোডিং — কাউন্টারেও (মালিক, ১৮ নভেম্বর ২০২৬; [[ChallanLoading]]); আসল নিয়ম সেবায়
+            ...\App\Modules\Supplier\Services\LabourCost::rules('loading_', \App\Modules\Supplier\Services\LabourCost::LOADING),
+
             /*
              * কাউন্টারে নেওয়া টাকার বিবরণ — অঙ্কটা আগে থেকেই ছিল।
              *

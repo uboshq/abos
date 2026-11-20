@@ -764,7 +764,8 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         $doc = new PrintableDocument(
             title: __('sales::doc.challan'),
-            meta: $this->challanMeta($challan),
+            // ⛔ দাম ছাড়া কপি গ্রাহকের হাতে যায় — লোডিংয়ের অঙ্ক কেবল দামসহ (অফিসের) কপিতে (সমন্বয়ক, ২০ নভেম্বর ২০২৬)
+            meta: $this->challanMeta($challan, withLoading: $withMoney),
             lines: $lines,
             totals: $money === []
                 ? ['core.print.total' => $this->money($challan->total)]
@@ -911,6 +912,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             ($self ? 'sales::field.collected_by' : 'sales::field.driver_name') => $t['driver_name'] ?: $gatePass->driver_name,
             'sales::field.driver_phone' => $t['driver_phone'] ?: $gatePass->driver_phone,
             'sales::field.transport_cost' => $t['cost'] === null ? null : Money::format($t['cost']),
+            // ⭐ লোডিং খরচ — ভাড়ার পাশে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে")
+            'supplier::labour.loading' => $this->loadingLine($challan),
         ], fn ($v) => filled($v));
 
         $doc = new PrintableDocument(
@@ -1610,7 +1613,10 @@ class SalesPrintController extends Controller implements HasMiddleware
     /**
      * @return array<string, string>
      */
-    private function challanMeta(DeliveryChallan $challan): array
+    /**
+     * @param  bool  $withLoading  লোডিংয়ের লাইন — দামসহ চালান আর গেটপাস (অফিস ও গেটের কাগজ) হ্যাঁ; দাম ছাড়া চালান (গ্রাহকের কপি) না
+     */
+    private function challanMeta(DeliveryChallan $challan, bool $withLoading = true): array
     {
         return [
             'core.print.document_no' => $challan->document_no,
@@ -1623,7 +1629,17 @@ class SalesPrintController extends Controller implements HasMiddleware
             'sales::field.vehicle_no' => $challan->vehiclePlate(),
             'sales::field.driver_name' => $challan->driver_name ?? '',
             'sales::field.driver_phone' => $challan->driver_phone ?? '',
+            // ⭐ লোডিং খরচ — বাছা থাকলে এক লাইনে (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"); খালি সারি কাগজে বসে না
+            'supplier::labour.loading' => $withLoading ? $this->loadingLine($challan) : '',
         ];
+    }
+
+    /** ⓘ চালানের লোডিং এক লাইনে — বাছা না থাকলে খালি, কাগজে সারিটাই বসে না ([[LabourCost::describe()]]) */
+    private function loadingLine(DeliveryChallan $challan): string
+    {
+        return filled($challan->loading_mode)
+            ? app(\App\Modules\Supplier\Services\LabourCost::class)->describe($challan, 'loading_')
+            : '';
     }
 
     /**

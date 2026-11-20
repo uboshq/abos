@@ -196,6 +196,11 @@ return [
         'who' => 'কে দিলেন',
         'when' => 'কবে',
     ],
+    // ⭐ ৪খ · হাম্মালি (মাল নামানো ও তোলা) — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"); কথাগুলো supplier::labour.day_*-এ
+    'labour' => [
+        'no' => '4খ',
+        'caption' => 'LOADING & UNLOADING LABOUR',
+    ],
     'create_menu' => 'দিন শেষের হিসাব — দিন বন্ধ',
     'staff_cash' => [
         'title' => 'কর্মীর হাতে টাকা',

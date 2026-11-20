@@ -209,6 +209,9 @@ final class DirectPurchaseRules
             'lines.*.pricing_anchor' => ['nullable', 'string', Rule::in(['markup', 'margin', 'sales_price'])],
             'lines.*.pricing_pct' => ['nullable', 'numeric', PlainNumber::RULE],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
+            // ⭐ আনলোডিং — হাতের কার্টনপ্রতি দর (খালি = পণ্যের নিজের দর বা সমান ভাগ) আর বাছাই (মালিক, ১৮ নভেম্বর ২০২৬; [[LabourCost]])
+            'lines.*.unload_rate' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0', 'max:99999'],
+            ...\App\Modules\Supplier\Services\LabourCost::rules('unload_', \App\Modules\Supplier\Services\LabourCost::UNLOADING),
 
             /*
              * লট · মেয়াদ · ছাপা দাম — লট ধরা পণ্যে লট নম্বরটা
