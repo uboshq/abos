@@ -10,8 +10,8 @@ return [
     'contact_hint' => 'At a large supplier, the office number gets you nowhere.',
     'bin_hint' => 'Needed to withhold VAT at source on purchases.',
 
-    'credit_limit_hint' => 'How much credit they give us. 0 means no stated limit. '
-        .'Going over blocks nothing — it is only shown, because the limit is their decision.',
+    'credit_limit_hint' => 'How much credit they give us. 0 or blank = no limit, nothing is blocked. '
+        .'With a limit, a bill or goods receipt that goes past it is not confirmed. Raising or removing it goes for approval; lowering works here.',
 
     'opening_note' => 'What was owed to them before this system. Can only be set now — '
         .'to change it later, post a journal voucher, or the ledger and this list would disagree.',

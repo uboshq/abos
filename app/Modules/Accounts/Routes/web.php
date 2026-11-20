@@ -346,6 +346,10 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::get('/reports/trial-balance/ledger', [ReportController::class, 'ledgerFromTrialBalance'])
         ->middleware('can:accounts.report.final')->name('report.tb_ledger');
 
+    // ⭐ বছর-শেষের রেওয়ামিল — সমন্বয়ের আগে → সমন্বয় → পরে → আগের বছর-শেষ (মালিক, ১৭ নভেম্বর ২০২৬; [[YearEndTrialBalanceController]]); catch-all-এর আগে
+    Route::get('/reports/year-end-trial-balance', [\App\Modules\Accounts\Http\Controllers\YearEndTrialBalanceController::class, 'show'])
+        ->name('year_end_trial_balance');
+
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 
     /*

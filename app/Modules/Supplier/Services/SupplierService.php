@@ -101,6 +101,43 @@ final class SupplierService
         app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($supplier, 'withholding_rate', implode('; ', $changed).' — '.$reason);
     }
 
+    /**
+     * ⛔ বাকির সীমা ঢিলা করা সইয়ে — মালিক, ১৮ নভেম্বর ২০২৬ (সরবরাহকারীর বাকির দেয়াল, [[SupplierCreditWall]])।
+     *
+     * ⓘ ঢিলা মানে দেয়াল নরম হয়: চলতি সীমা থাকা অবস্থায় (০-এর বেশি) সেটা বাড়ানো, বা ০/ফাঁকা করে দেয়ালই তুলে দেওয়া। ফর্মে এটা
+     * চলে কেবল মালিকের, আর কেবল সই-বন্ধ কোম্পানিতে (UB-র মতো); বাকি সবার জন্য পথ "সীমা বাড়ানোর অনুরোধ" ([[SupplierLimitRequests]])।
+     * ⓘ কমানো, বা সীমাহীন থেকে প্রথম সীমা বসানো — দেয়াল শক্ত হয়, তাই আগের মতো সরাসরি।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertLimitChangeIsAllowed(Supplier $supplier, array $data): void
+    {
+        if (! array_key_exists('credit_limit', $data)) {
+            return;
+        }
+
+        $was = bcadd((string) ($supplier->credit_limit ?? '0') ?: '0', '0', 4);
+        $now = blank($data['credit_limit']) ? '0.0000' : bcadd((string) $data['credit_limit'], '0', 4);
+
+        if (bccomp($was, '0', 4) <= 0 || bccomp($now, $was, 4) === 0) {
+            return;
+        }
+
+        // ⓘ কমানো (০-এর উপরে) — দেয়াল শক্ত হয়, সরাসরি চলে
+        if (bccomp($now, '0', 4) > 0 && bccomp($now, $was, 4) < 0) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user instanceof \App\Models\User && ! app(SupplierLimitRequests::class)->flowOn()
+            && app(\App\Core\Services\Ownership::class)->isOwnerIn($user, (int) $supplier->company_id)) {
+            return;
+        }
+
+        throw ValidationException::withMessages(['credit_limit' => __('supplier::credit_request.use_the_request')]);
+    }
+
     public function create(array $data): Supplier
     {
         unset($data['rate_reason']);
@@ -189,6 +226,7 @@ final class SupplierService
     public function update(Supplier $supplier, array $data): Supplier
     {
         $this->assertRateChangeHasAReason($supplier, $data);
+        $this->assertLimitChangeIsAllowed($supplier, $data);
         $this->assertBanglaNameIfRequired($data, $supplier);
         $this->assertBinIfRequired($data, $supplier);
         $this->assertNotADuplicate($data, $supplier->id);

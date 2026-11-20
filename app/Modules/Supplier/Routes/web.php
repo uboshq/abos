@@ -61,4 +61,8 @@ Route::middleware('auth')->prefix('suppliers')->group(function () {
         ->whereNumber(['supplier', 'bank'])->name('bank.reject');
     Route::post('/{supplier}/bank/{bank}/withdraw', [SupplierBankController::class, 'withdraw'])
         ->whereNumber(['supplier', 'bank'])->name('bank.withdraw');
+
+    // ⭐ বাকির সীমা বাড়ানোর অনুরোধ — সইয়ে যায়, শেষ সইয়ে বসে (মালিক, ১৮ নভেম্বর ২০২৬: সরবরাহকারীর বাকির দেয়াল)
+    Route::post('/{supplier}/limit-requests', [\App\Modules\Supplier\Http\Controllers\SupplierLimitRequestController::class, 'store'])
+        ->whereNumber('supplier')->name('limit_request.store')->middleware('can:supplier.update');
 });

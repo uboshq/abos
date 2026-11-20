@@ -27,6 +27,8 @@ use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
+use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\SupplierCreditWall;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -333,6 +335,16 @@ final class PurchaseReceiptService
          * ⓘ কত টাকার উপরে সই লাগবে সেটা প্রতিটা কোম্পানি নিজে বসায় —
          * এক ডিপোর "বড় কাজ" আরেকটার রোজকার কাজ।
          */
+        /*
+         * ⛔ সরবরাহকারীর বাকির দেয়াল — সইয়ের আগে (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierCreditWall]])। ⓘ মাল গ্রহণের পুরো মূল্য নতুন
+         * বাকি (GRNI-তে তাঁর নামে বসে); পরে এই চালানের বিল কেবল দামের ফারাকটুকু যোগ করে ([[PurchaseBillService::newCreditOf()]])।
+         */
+        $supplier = Supplier::query()->withoutGlobalScopes()->where('company_id', $receipt->company_id)->find($receipt->supplier_id);
+
+        if ($supplier !== null) {
+            app(SupplierCreditWall::class)->assertRoom($supplier, (string) $receipt->total);
+        }
+
         $print = $this->approvals->assertClear(
             document: $receipt,
             module: 'purchase',
@@ -357,6 +369,9 @@ final class PurchaseReceiptService
 
             // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
             $this->approvals->assertUnchangedSince($receipt, $print, 'status');
+
+            // ⛔ দেয়াল আবার, সরবরাহকারীর সারিতে তালা দিয়ে — তাজা দেনায় (১৮ নভেম্বর ২০২৬)
+            app(SupplierCreditWall::class)->assertRoomLocked((int) $receipt->supplier_id, (string) $receipt->total);
 
             /*
              * ⛔ আদেশের সীমা আবার — ঠিক এখানে, মাল ঢোকার আগের মুহূর্তে।

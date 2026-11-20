@@ -75,6 +75,37 @@
             'width' => '10rem',
             'render' => fn ($s) => \App\Core\Support\Money::format((string) ($s->grni_in_view ?? $s->goodsNotBilled())),
         ],
+        /*
+         * ⭐ বাকির দেয়াল — সীমা · সীমায় গোনা বাকি · অবশিষ্ট (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierCreditWall]])।
+         * ⓘ সীমা নেই = "—" (দেয়াল নেই); অবশিষ্ট শূন্য হলে লাল, ৯০% ভরলে হলুদ। বাকির অঙ্ক গোটা কোম্পানির — দেয়াল যা দেখে।
+         * ⓘ যোগফল নেই: সীমা আর অবশিষ্ট প্রতিটা একটা দেয়াল — দেয়ালের যোগ অর্থহীন।
+         */
+        [
+            'key' => 'credit_limit',
+            'label' => __('supplier::credit_request.limit'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($s) => \App\Modules\Supplier\Services\SupplierCreditWall::hasLimit($s)
+                ? \App\Core\Support\Money::format((string) $s->credit_limit) : '—',
+        ],
+        [
+            'key' => 'credit_used',
+            'label' => __('supplier::credit_request.used'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($s) => \App\Modules\Supplier\Services\SupplierCreditWall::hasLimit($s)
+                ? view('ui.amount-link', [
+                    'value' => bcadd((string) ($s->credit_used ?? '0'), '0', 4),
+                    'href' => route('supplier.show', $s).'#transactions',
+                ]) : '—',
+        ],
+        [
+            'key' => 'credit_room',
+            'label' => __('supplier::credit_request.room'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($s) => view('supplier::partials.credit-room', ['supplier' => $s]),
+        ],
         [
             'key' => 'is_active',
             'label' => __('supplier::field.state'),
@@ -136,6 +167,15 @@
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('supplier::action.show_inactive') }}
                 </label>
+                {{-- ⭐ বাকির দেয়ালের ছাঁকনি — সীমা পেরোনো / সীমার কাছে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
+                <select name="credit" aria-label="{{ __('supplier::credit_request.filter') }}" data-credit-filter
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('supplier::credit_request.filter_all') }}</option>
+                    @foreach (['over_or_near', 'over', 'near'] as $value)
+                        <option value="{{ $value }}" @selected($credit === $value)>{{ __('supplier::credit_request.filter_'.$value) }}</option>
+                    @endforeach
+                </select>
             </x-ui.toolbar>
         </form>
 

@@ -9,4 +9,6 @@ return [
     'active_needs_delete_key' => 'Switching a supplier on or off needs the deactivate permission; the edit permission is not enough.',
     'opening_needs_key' => 'An opening balance puts money in the books and needs its own permission (the accountant’s). Create the supplier with zero; the accountant will set the opening balance.',
     'rate_needs_reason' => 'Give a reason when changing the AIT or VDS rate — it changes every later payment.',
+    'over_their_limit' => 'This would take :supplier past their credit limit — limit :limit, owed now :used (goods not billed included), room left :left, '
+        .'and this paper adds :adding of new credit. Pay first, or ask to raise the limit from the supplier page.',
 ];

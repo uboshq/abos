@@ -27,6 +27,8 @@ use App\Modules\Purchase\Models\PurchaseBillLine;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
+use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\SupplierCreditWall;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -382,7 +384,7 @@ final class PurchaseBillService
     /**
      * বিলটা খাতায় বসানো — দায় সরবরাহকারীর নামে যায়।
      */
-    public function confirm(PurchaseBill $bill): PurchaseBill
+    public function confirm(PurchaseBill $bill, ?string $payingNow = null): PurchaseBill
     {
         if ($bill->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
@@ -396,6 +398,19 @@ final class PurchaseBillService
             throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
         }
 
+        /*
+         * ⛔ সরবরাহকারীর বাকির দেয়াল — সইয়ের **আগে** (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierCreditWall]])। ⓘ সীমা পেরোনো বিল সইকারীর
+         * কাছে যায় না — সই পেয়েও পাকা হত না। ⓘ সরাসরি ক্রয়ের পর্দা এখনই-দেওয়া টাকা পাঠায়; সইয়ের পরে শেষ হওয়া সরাসরি ক্রয়ে
+         * সেটা সইয়ের সারিতে রাখা ([[DirectPurchaseService::paidOnTheScreen()]])।
+         */
+        $payingNow ??= app(DirectPurchaseService::class)->paidOnTheScreen($bill);
+        $newCredit = $this->newCreditOf($bill);
+        $supplier = Supplier::query()->withoutGlobalScopes()->where('company_id', $bill->company_id)->find($bill->supplier_id);
+
+        if ($supplier !== null) {
+            app(SupplierCreditWall::class)->assertRoom($supplier, $newCredit, $payingNow);
+        }
+
         // ছক বসানো থাকলে সই আগে, খতিয়ান পরে — লেনদেনের বাইরে, কারণ
         // অপেক্ষা করা মানে কিছুই না বসা, আধা-বসা নয়।
         $print = $this->approvals->assertClear(
@@ -407,7 +422,7 @@ final class PurchaseBillService
             reason: $bill->narration,
         );
 
-        return DB::transaction(function () use ($bill, $print) {
+        return DB::transaction(function () use ($bill, $print, $payingNow, $newCredit) {
             /*
              * ⛔ বিলের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
              * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
@@ -424,6 +439,9 @@ final class PurchaseBillService
             // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
             $this->approvals->assertUnchangedSince($bill, $print, 'status');
 
+            // ⛔ দেয়াল আবার, সরবরাহকারীর সারিতে তালা দিয়ে — দুই টেবিলের দুই বিল একা একা ভিতরে, মিলে বাইরে, এমন নয় (১৮ নভেম্বর ২০২৬)
+            app(SupplierCreditWall::class)->assertRoomLocked((int) $bill->supplier_id, $newCredit, $payingNow);
+
             $this->bringInDirectLines($bill);
             $this->postToLedger($bill);
             $this->applySalesPrices($bill);
@@ -435,6 +453,27 @@ final class PurchaseBillService
 
             return $bill->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ এই বিল সরবরাহকারীর বাকি কতটা **বাড়ায়** — দেয়ালের অঙ্ক ([[SupplierCreditWall]], ১৮ নভেম্বর ২০২৬)।
+     *
+     * ⓘ দেনায় যা বসে (মোট − উৎসে কাটা, [[postToLedger()]]) থেকে বিল-না-আসা মালের যতটা সরে (চালানের দরে) — চালান থেকে আসা বিল
+     * মূল্যটা GRNI থেকে দেনায় সরায় মাত্র, তাই কেবল দামের ফারাকটুকু নতুন বাকি। চালান ছাড়া সারি পুরোটাই নতুন। ঋণাত্মক = বাকি কমে।
+     */
+    public function newCreditOf(PurchaseBill $bill): string
+    {
+        $bill->loadMissing('lines.receiptLine');
+
+        $fromReceipts = '0';
+
+        foreach ($bill->lines as $line) {
+            if ($line->receiptLine !== null) {
+                $fromReceipts = bcadd($fromReceipts, bcmul((string) $line->qty, (string) $line->receiptLine->rate, 4), 4);
+            }
+        }
+
+        return bcsub(bcsub((string) $bill->total, $bill->withheldAmount(), 4), $fromReceipts, 4);
     }
 
     /**
@@ -1256,6 +1295,18 @@ final class PurchaseBillService
          * অনুরোধটা ইনবক্সে টিকে থাকে আর বিল যেমন ছিল তেমনই থাকে।
          */
         $newTotal = $this->newTotalOf($bill, $lines);
+
+        /*
+         * ⛔ পাকা বিলের সম্পাদনাও দেয়ালের ভিতরে — অঙ্ক বাড়িয়ে সীমা পেরোনো যেত (মালিক, ১৮ নভেম্বর ২০২৬; [[SupplierCreditWall]])।
+         * ⓘ একই সরবরাহকারী: কেবল বাড়তি অংশ নতুন বাকি; সরবরাহকারী বদলালে নতুনজনের পুরোটা (পুরনো দেনা আগেরজনের খাতা থেকে সরে)।
+         */
+        $targetId = (int) ($data['supplier_id'] ?? $bill->supplier_id);
+        $target = Supplier::query()->withoutGlobalScopes()->where('company_id', $bill->company_id)->find($targetId);
+
+        if ($target !== null) {
+            $adding = $targetId === (int) $bill->supplier_id ? bcsub($newTotal, (string) $bill->total, 4) : $newTotal;
+            app(SupplierCreditWall::class)->assertRoom($target, $adding);
+        }
 
         if (bccomp($newTotal, (string) $bill->total, 4) > 0) {
             $this->approvals->assertClear(
