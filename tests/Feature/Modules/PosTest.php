@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -168,16 +169,25 @@ class PosTest extends TestCase
         ));
     }
 
-    /** বিল ও আদায় দুইটাই তৈরি হয়, আর দুইটাই নিশ্চিত। */
-    public function test_both_an_invoice_and_a_collection_are_created(): void
+    /**
+     * বিল ও রসিদ ভাউচার দুইটাই তৈরি হয়, আর দুইটাই পাকা — আদায় (COL-…) আর নয়।
+     *
+     * ⓘ মালিক, ২০ নভেম্বর ২০২৬ ("ok"): কাউন্টারের টাকাও রসিদ, উৎস "কাউন্টার"।
+     */
+    public function test_both_an_invoice_and_a_receipt_voucher_are_created(): void
     {
+        $collectionsBefore = Collection::query()->count();
+
         $this->sell('1', '500');
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
-        $collection = Collection::query()->latest('id')->firstOrFail();
+        $receipt = Voucher::query()->where('type', Voucher::RECEIPT)->latest('id')->firstOrFail();
 
         $this->assertSame(DocumentStatus::CONFIRMED, $invoice->status);
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status);
+        $this->assertSame(DocumentStatus::CONFIRMED, $receipt->status);
+        $this->assertSame(Voucher::ORIGIN_COUNTER, $receipt->origin);
+        $this->assertSame((int) $invoice->id, (int) $receipt->against_id);
+        $this->assertSame($collectionsBefore, Collection::query()->count(), 'কাউন্টার আর আদায় লেখে না।');
         $this->assertSame(0, bccomp($invoice->dueAmount(), '0', 4));
     }
 
@@ -260,14 +270,16 @@ class PosTest extends TestCase
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::RECEIVABLE), '150', 4));
     }
 
-    /** কিছুই না দিলে পুরোটাই বাকি — আদায়ের সারি বসে না। */
+    /** কিছুই না দিলে পুরোটাই বাকি — আদায় বা রসিদ কিছুই বসে না। */
     public function test_paying_nothing_creates_no_collection(): void
     {
         $before = Collection::query()->count();
+        $receipts = Voucher::query()->where('type', Voucher::RECEIPT)->count();
 
         $result = $this->sell('2', '100', '0', customer: $this->dealerWithRoom());
 
         $this->assertSame($before, Collection::query()->count());
+        $this->assertSame($receipts, Voucher::query()->where('type', Voucher::RECEIPT)->count());
         $this->assertSame(0, bccomp($result['invoice']->fresh()->dueAmount(), '200', 4));
     }
 
