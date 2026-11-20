@@ -166,7 +166,8 @@ final class TheLorryCannotBeConfirmedUntilTheUnloadingIsChosenTest extends TestC
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'supplier_bill_no' => 'UNL-'.fake()->unique()->numberBetween(1000, 9999),
-            'lines' => [['product_id' => $this->product->id, 'qty' => '100', 'rate' => '60']],
+            // ⓘ বিক্রয়দর ছাড়া সরাসরি ক্রয়ের সারি নয় — মালিক, ৩ অক্টোবর ২০২৬ (DirectPurchaseRules); আনলোডিংয়ের দাবি কেবল সেই নিয়ম মেনে
+            'lines' => [['product_id' => $this->product->id, 'qty' => '100', 'rate' => '60', 'sales_price' => '75']],
             ...$extra,
         ];
     }

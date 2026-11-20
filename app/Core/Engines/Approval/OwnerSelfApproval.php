@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Engines\Approval;
 
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\PermissionSyncer;
@@ -145,14 +146,20 @@ final class OwnerSelfApproval
             }
         }
 
-        $union = array_shift($parts) ?? $this->nothing();
+        $union = array_shift($parts) ?? $this->nothing($company);
 
         foreach ($parts as $part) {
             $union->unionAll($part);
         }
 
+        /*
+         * ⓘ তারিখের পরিসর বাইরের প্রশ্নেও — প্রতিটা ভাগ নিজেও একই ঘরে (সই/পোস্টের মুহূর্ত) একই সীমায় ছাঁকে (সূচি কাজে লাগে), তাই ফল
+         *   একই; কিন্তু কোনো ভাগ না থাকলেও (খালি খাতা) পরিসরটা প্রশ্নেই লেখা থাকে, PHP-তে লুকিয়ে নয় ([[ADrawnFilterBoxThatChangesNothingTest]]:
+         *   Mac run of e88be43a3 — date_range "মরা" দেখাচ্ছিল, কারণ খালি ডেটাবেসে প্রশ্নটা কেবল খালি UNION)।
+         */
         return DB::query()
             ->fromSub($union, 'o')
+            ->whereBetween('o.approved_at', [$from, $to])
             ->tap(ReportEngine::branchWall($f, 'o.branch_id'))
             ->orderByDesc('o.approved_at')
             ->orderByDesc('o.source_id')
@@ -244,10 +251,13 @@ final class OwnerSelfApproval
         ];
     }
 
-    /** কিছু না পেলে — একই ঘরের খালি প্রশ্ন, যাতে ইঞ্জিনের যোগ, খোঁজা আর পাতা আগের মতো চলে */
-    private function nothing(): Builder
+    /**
+     * কিছু না পেলে — একই ঘরের খালি প্রশ্ন, যাতে ইঞ্জিনের যোগ, খোঁজা আর পাতা আগের মতো চলে।
+     * ⓘ কোনো সারি ফেরে না, তবু কোম্পানির ছাঁকনি বসানো — প্রতিটা কাঁচা কোয়েরি নিজের কোম্পানি বলে ([[EveryRawQueryNamesItsCompanyTest]])।
+     */
+    private function nothing(int $company): Builder
     {
-        return DB::table('approvals')->whereRaw('1 = 0')->selectRaw(
+        return DB::table('approvals')->where('company_id', $company)->whereRaw('1 = 0')->selectRaw(
             'NULL as paper_date, NULL as paper_type, NULL as document_no, NULL as party_key, 0 as amount, NULL as writer, NULL as approver,'
             .' NULL as approved_at, NULL as how, NULL as source_type, NULL as source_id, NULL as branch_id'
         );
@@ -303,7 +313,7 @@ final class OwnerSelfApproval
     private function columnsOf(string $class): ?array
     {
         if (! class_exists($class) || ! is_subclass_of($class, Model::class) || ! is_subclass_of($class, Drillable::class)
-            || in_array($class, WaitingPaper::MASTERS, true)) {
+            || is_subclass_of($class, IsAMasterRecord::class)) {
             return null;
         }
 
@@ -322,13 +332,7 @@ final class OwnerSelfApproval
 
     private function isPaper(Model $paper): bool
     {
-        foreach (WaitingPaper::MASTERS as $master) {
-            if ($paper instanceof $master) {
-                return false;
-            }
-        }
-
-        return true;
+        return ! $paper instanceof IsAMasterRecord;
     }
 
     /**

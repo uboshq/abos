@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Support\ViewedBranch;
 use App\Models\Attachment;
 use App\Models\Branch;
@@ -34,7 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * রাখলে সেটা একদিন সারির যোগফলের সাথে মিলত না, আর তখন "খাতায় ৫০, তাকে
  * ৪৭" প্রশ্নের কোনো উত্তর থাকত না।
  */
-class Product extends Model implements Drillable
+class Product extends Model implements Drillable, IsAMasterRecord
 {
     use BelongsToCompany;
     use HasActiveState;

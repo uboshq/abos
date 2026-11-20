@@ -62,15 +62,21 @@ final class TheYearEndTrialBalanceShowsTheAdjustmentsTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * ⓘ পোস্ট হওয়া জাবেদা — `create()` কেবল খসড়া লেখে, খাতায় কিছু বসে না; রেওয়ামিল পড়ে খাতা আর কেবল পোস্ট হওয়া সমন্বয় জাবেদা
+     *   (Mac run of e88be43a3: খসড়াগুলো কোনো ঘরেই আসেনি — "সমন্বয়ের ঘরে আসেনি")।
+     */
     private function journal(string $date, string $debitCode, string $creditCode, string $amount, bool $adjusting): Voucher
     {
-        return app(VoucherService::class)->create(
+        $service = app(VoucherService::class);
+
+        return $service->post($service->create(
             ['type' => Voucher::JOURNAL, 'trx_date' => $date, 'narration' => 'YTB '.$amount, 'is_adjusting' => $adjusting],
             [
                 ['account_id' => StandardChart::find($debitCode)->id, 'debit' => $amount, 'credit' => '0'],
                 ['account_id' => StandardChart::find($creditCode)->id, 'debit' => '0', 'credit' => $amount],
             ],
-        );
+        ));
     }
 
     /** @return array<string, string> খাতের নিট (ডেবিট − ক্রেডিট) — আগে, সমন্বয়, পরে, আগের বছর */

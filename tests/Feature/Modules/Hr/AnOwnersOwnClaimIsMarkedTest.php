@@ -70,19 +70,17 @@ final class AnOwnersOwnClaimIsMarkedTest extends TestCase
             ->where('auditable_type', $claim->getMorphClass())->where('auditable_id', $claim->id)->count();
 
         /*
-         * ⓘ মালিকের নিজের দাবি — ভা-১৪ (মালিকের চেকলিস্ট, ২৪ অক্টোবর ২০২৬; কোড ৭ নভেম্বর ২০২৬): "টাকার কাগজে যিনি চাইলেন
-         *    বা বানালেন তিনি অনুমোদন দেন না, মালিকও না; নিজের অনুমোদনের পুরনো পাশ আর খাটে না"। ⚠️ এটা ৭ অক্টোবরের দফা ১৩-এর
-         *    "মালিক একাই করলে আটকায় না, দাগ থাকে" নিয়মের জায়গা নিল — নতুন সিদ্ধান্ত পুরনোটা বদলায়। তাই এখন থামে, দাগও বসে না।
+         * ⭐ মালিকের নিজের দাবি — মালিক, ২০ নভেম্বর ২০২৬ ("১ক", 26e35e9db): "মালিকের ওপরে তো আর কেউ নাই" — মালিক নিজের টাকার
+         *    কাগজেও নিজে অনুমোদন দেন; পাহারা পরে দেখায়: স্থায়ী চিহ্ন "নিজে লিখে নিজে অনুমোদিত (মালিক)" ([[OwnerSelfApproval]]) আর
+         *    নিরীক্ষার "একই মানুষ" দাগ। ⚠️ এটা ২৪ অক্টোবরের ভা-১৪ ("মালিকও না") বদলায় — নতুন সিদ্ধান্ত পুরনোটার উপরে; ৭ অক্টোবরের
+         *    দফা ১৩-এর "আটকায় না, দাগ থাকে" আবার খাটে। কর্মীর নিয়ম অবিকল (নিচে, আর [[AMoneyPaperPostedWithNobodyToSignTest]])।
          */
         $own = $send($owner);
-        try {
-            $sign($own);
-            $this->fail('⛔ মালিক নিজের টাকার দাবিতে নিজেই অনুমোদন দিলেন — ভা-১৪ ভাঙল।');
-        } catch (\RuntimeException $e) {
-            $this->assertStringContainsString('cannot decide', $e->getMessage(), '⛔ অন্য কারণে থামল: '.$e->getMessage());
-        }
-        $this->assertNotSame(ExpenseClaim::APPROVED, $own->fresh()->status, '⛔ মালিকের নিজের দাবি তাঁর নিজের অনুমোদনে পাকা হলো।');
-        $this->assertSame(0, $marks($own), '⛔ থেমে যাওয়া অনুমোদনেও "একই মানুষ" দাগ বসল।');
+        $sign($own);
+        $this->assertSame(ExpenseClaim::APPROVED, $own->fresh()->status, '⛔ মালিকের নিজের দাবি তাঁর নিজের অনুমোদনে পাকা হলো না — "১ক" ভাঙল।');
+        $this->assertSame(1, $marks($own), '⛔ মালিক নিজের দাবিতে নিজে অনুমোদন দিলেন, অথচ নিরীক্ষায় "একই মানুষ" দাগ নেই।');
+        $this->assertTrue(app(\App\Core\Engines\Approval\OwnerSelfApproval::class)->ofPaper($own->fresh()),
+            '⛔ মালিকের নিজে লেখা ও নিজে অনুমোদিত দাবিতে স্থায়ী চিহ্ন নেই।');
 
         // ⓘ কর্মীর দাবি — মালিক সই দিলেন; দুই আলাদা মানুষ, দাগ নয়
         $theirs = $send($worker);

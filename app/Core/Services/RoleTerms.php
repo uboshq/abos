@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\RoleLabel;
@@ -97,7 +98,7 @@ final class RoleTerms
             'ended_at' => null,
             // ⓘ শেষ দিন বদলালে নতুন দিনের খবর আবার যাবে
             'warned_for' => $existing && $existing->valid_until === $until ? $existing->warned_for : null,
-            'set_by' => auth()->id(),
+            'set_by' => Actor::userId(),
             'updated_at' => now(),
         ];
 

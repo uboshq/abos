@@ -46,10 +46,10 @@
             </summary>
 
             <div class="role-table-wrap">
-                <table class="role-table">
+                <table class="role-table ui-grid">
                     <thead>
                         <tr>
-                            <th scope="col" class="role-subject-col">{{ __('system_admin::permission.column_subject') }}</th>
+                            <th scope="col">{{ __('system_admin::permission.column_subject') }}</th>
                             @foreach ($columns as $column => $label)
                                 <th scope="col">{{ $label }}</th>
                             @endforeach
@@ -129,7 +129,7 @@
                                             </td>
                                         @else
                                             {{-- ⭐ "–" — এই পর্দায় এই কাজটাই নেই (নমুনার দাগ-কাটা ঘর); ⓘ কথাটা পর্দা-পাঠকের জন্যও লেখা --}}
-                                            <td class="role-absent" data-permission-absent title="{{ __('system_admin::permission.state_absent') }}">
+                                            <td data-permission-absent title="{{ __('system_admin::permission.state_absent') }}">
                                                 <span class="role-dash" aria-hidden="true">–</span>
                                                 <span class="sr-only">{{ __('system_admin::permission.state_absent') }}</span>
                                             </td>

@@ -15,20 +15,20 @@
             @endif
         </div>
         <div class="overflow-x-auto px-3 pb-3 pt-2">
-            <table class="w-full text-sm">
+            <table class="ui-grid is-compact">
                 <thead>
                     <tr class="text-left text-xs text-(--color-ink-muted)">
-                        <th class="py-1 pe-3 font-medium">{{ __('core.print.document_no') }}</th>
-                        <th class="py-1 pe-3 font-medium">{{ __('core.print.date') }}</th>
-                        <th class="py-1 pe-3 font-medium">{{ __('core.print.party') }}</th>
-                        <th class="py-1 pe-3 font-medium">{{ __('accounts::voucher.filter.state') }}</th>
-                        <th class="py-1 text-end font-medium">{{ __('core.print.amount') }}</th>
+                        <th class="font-medium">{{ __('core.print.document_no') }}</th>
+                        <th class="font-medium">{{ __('core.print.date') }}</th>
+                        <th class="font-medium">{{ __('core.print.party') }}</th>
+                        <th class="font-medium">{{ __('accounts::voucher.filter.state') }}</th>
+                        <th class="text-end font-medium">{{ __('core.print.amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($papers['rows'] as $row)
                         <tr class="border-t border-(--color-border)" data-old-paper="{{ $row['no'] }}">
-                            <td class="py-1.5 pe-3">
+                            <td>
                                 @if ($row['url'])
                                     <a href="{{ $row['url'] }}" class="text-(--color-brand-500) hover:underline">{{ $row['no'] }}</a>
                                 @else
@@ -36,17 +36,17 @@
                                 @endif
                                 <span class="ms-1 rounded-(--radius-pill) bg-(--color-badge-pending-bg) px-2 text-2xs text-(--color-badge-pending-ink)">{{ __('accounts::voucher.old_papers') }}</span>
                             </td>
-                            <td class="py-1.5 pe-3 whitespace-nowrap">{{ \App\Core\Support\DateFormat::format($row['date']) }}</td>
-                            <td class="py-1.5 pe-3">{{ $row['party'] }}</td>
-                            <td class="py-1.5 pe-3">{{ $row['status'] }}</td>
-                            <td class="num py-1.5 text-end">{{ \App\Core\Support\Money::format($row['amount']) }}</td>
+                            <td class="whitespace-nowrap">{{ \App\Core\Support\DateFormat::format($row['date']) }}</td>
+                            <td>{{ $row['party'] }}</td>
+                            <td>{{ $row['status'] }}</td>
+                            <td class="num text-end">{{ \App\Core\Support\Money::format($row['amount']) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr class="border-t border-(--color-border) font-semibold">
-                        <td colspan="4" class="py-1.5 pe-3">{{ __('accounts::voucher.old_papers_total') }}</td>
-                        <td class="num py-1.5 text-end">{{ \App\Core\Support\Money::format($papers['total'] ?? '0') }}</td>
+                        <td colspan="4">{{ __('accounts::voucher.old_papers_total') }}</td>
+                        <td class="num text-end">{{ \App\Core\Support\Money::format($papers['total'] ?? '0') }}</td>
                     </tr>
                 </tfoot>
             </table>

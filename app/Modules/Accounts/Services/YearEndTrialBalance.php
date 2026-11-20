@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ViewedBranch;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -78,6 +79,8 @@ final class YearEndTrialBalance
      */
     public function build(FinancialYear $year, ?int $branchId = null): array
     {
+        // ⓘ শাখা না বললে হেডারে বাছা শাখা — স্থিতিপত্রের একই নিয়ম ([[BalanceSheetService::build()]]); পাতা নিজে বলে দেয়
+        $branchId ??= ViewedBranch::one();
         $from = Carbon::parse($year->starts_on)->toDateString();
         $to = Carbon::parse($year->ends_on)->toDateString();
         $prev = self::previousOf($year);

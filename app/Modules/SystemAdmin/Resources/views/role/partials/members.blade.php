@@ -10,7 +10,7 @@
     <p class="role-note">{{ __('system_admin::permission.no_users') }}</p>
 @else
     <div class="role-table-wrap">
-        <table class="role-list-table" data-role-members>
+        <table class="role-list-table ui-grid" data-role-members>
             <thead>
                 <tr>
                     <th>{{ __('system_admin::permission.member_name') }}</th>
@@ -54,10 +54,11 @@
                                     <form method="POST" action="{{ route('system_admin.role.term', ['role' => $role, 'user' => $user->id]) }}" class="role-pop role-term-form">
                                         @csrf
                                         @method('PUT')
+                                        {{-- ⓘ আমাদের তারিখের ঘর (দিন-মাস-বছর সবখানে এক ছাঁদে), ব্রাউজারের নিজেরটা নয় — Design: তারিখের ঘর; জমা যায় Y-m-d --}}
                                         <label><span>{{ __('system_admin::permission.member_from') }}</span>
-                                            <input type="date" name="valid_from" value="{{ $term?->valid_from }}"></label>
+                                            <x-ui.date name="valid_from" :value="$term?->valid_from" dense /></label>
                                         <label><span>{{ __('system_admin::permission.member_until') }}</span>
-                                            <input type="date" name="valid_until" value="{{ $term?->valid_until }}"></label>
+                                            <x-ui.date name="valid_until" :value="$term?->valid_until" dense /></label>
                                         <label><span>{{ __('system_admin::permission.term_note') }}</span>
                                             <input type="text" name="note" maxlength="200" value="{{ $term?->note }}"></label>
                                         <p class="role-note">{{ __('system_admin::permission.term_hint') }}</p>

@@ -11,6 +11,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\OpensInReach;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\IsAMasterRecord;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * দুই জায়গায় একই সংখ্যা রাখলে একদিন সেগুলো আলাদা হবে, আর তখন কোনটা
  * সত্যি তা কেউ বলতে পারবে না। টাকার হিসাবে সেটা মেনে নেওয়ার মতো নয়।
  */
-class CashTill extends Model implements Drillable
+class CashTill extends Model implements Drillable, IsAMasterRecord
 {
     use BelongsToCompany;
     use HasActiveState;

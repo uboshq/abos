@@ -209,11 +209,18 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         return $voucher;
     }
 
-    /** এই রসিদের নামে একটা খাতের নিট ডেবিট */
+    /**
+     * এই রসিদের নামে একটা খাতের নিট ডেবিট।
+     *
+     * ⓘ রসিদের নিজের সারি আর তার উল্টো সারি (`…:reversal`, [[PostingEngine::reverse()]]) একসাথে — নইলে বাতিলের পরের জের কখনো শূন্য
+     *   হতে পারত না, কারণ উল্টো দাখিলা আলাদা নামে বসে (Mac run of e88be43a3: "বাতিলের পরেও চার্জ খাতে" — উল্টো সারি গোনাতেই ছিল না)।
+     */
     private function net(int $accountId, Voucher $voucher): string
     {
+        $type = Voucher::SOURCE_TYPES[Voucher::RECEIPT];
+
         return (string) LedgerEntry::query()
-            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::RECEIPT])->where('source_id', $voucher->id)
+            ->whereIn('source_type', [$type, $type.':reversal'])->where('source_id', $voucher->id)
             ->where('account_id', $accountId)
             ->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
     }

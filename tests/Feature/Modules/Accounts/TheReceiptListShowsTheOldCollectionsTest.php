@@ -8,7 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
@@ -89,11 +89,12 @@ final class TheReceiptListShowsTheOldCollectionsTest extends TestCase
 
     private function collection(string $no, string $on, string $amount, string $status = DocumentStatus::CONFIRMED): Collection
     {
-        $bank = Account::query()->where('money_kind', Account::BANK)->where('is_group', false)->orderBy('id')->firstOrFail();
+        // ⓘ ডেমো কোম্পানিতে পোস্টযোগ্য ব্যাংক খাত নেই (কেবল দল) — প্রধান টিলের খাত, টাকা বসার একটা আসল খাত (Mac run of e88be43a3)
+        $till = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
 
         return Collection::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id, 'document_no' => $no,
-            'customer_id' => $this->dealer->id, 'account_id' => $bank->id, 'trx_date' => $on, 'amount' => $amount, 'status' => $status,
+            'customer_id' => $this->dealer->id, 'account_id' => $till, 'trx_date' => $on, 'amount' => $amount, 'status' => $status,
         ]);
     }
 }

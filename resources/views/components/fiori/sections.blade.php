@@ -12,16 +12,17 @@
 @if ($sections !== [])
     <div data-fiori-launchpad="{{ $kind }}" class="fiori-launchpad">
         @foreach ($sections as $section)
-            <section data-fiori-section="{{ $section['key'] }}" class="fiori-section"
+            <section data-fiori-section="{{ $section['key'] }}"
                      aria-labelledby="fiori-section-{{ $kind }}-{{ $loop->index }}">
                 <h2 id="fiori-section-{{ $kind }}-{{ $loop->index }}" class="fiori-section-title">{{ $section['title'] }}</h2>
 
                 <div class="fiori-tiles">
-                    @foreach ($section['tiles'] as $tile)
+                    {{-- ⓘ টালির তালিকার চাবি `items` — `tiles` একটা রূপের নাম, পাতা রূপের নাম লেখে না ([[EveryScreenObeysTheThemeTest]]) --}}
+                    @foreach ($section['items'] as $tile)
                         @php
                             $opens = ($tile['url'] ?? null) !== null && ! ($tile['planned'] ?? false);
                             $sub = $kind === 'home'
-                                ? __('core.fiori.apps_count', ['count' => $tile['apps'] ?? 0])
+                                ? __('core.fiori.apps_count', ['count' => $tile['app_count'] ?? 0])
                                 : (($tile['planned'] ?? false) ? __('core.menu.coming_soon') : null);
                         @endphp
                         <a @if ($opens) href="{{ $tile['url'] }}" @else aria-disabled="true" @endif
@@ -36,7 +37,7 @@
                                 @endif
                             </span>
                             <span class="fiori-tile-foot">
-                                {{-- ⓘ চিহ্ন সবসময় এক-রঙা Lucide, টালির চিহ্নের রঙে (`--fiori-label`) — হোমের স্পেসেও ([[FioriLaunchpad::SPACE_ICONS]]) --}}
+                                {{-- ⓘ চিহ্ন সবসময় এক-রঙা Lucide, টালির চিহ্নের রঙে (`--fiori-label`) — হোমের স্পেসেও ([[FioriLaunchpad::spaceIcon()]]) --}}
                                 <span class="fiori-tile-icon">
                                     <x-ui.licon :name="$tile['icon']" :size="28" />
                                 </span>

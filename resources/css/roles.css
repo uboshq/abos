@@ -379,6 +379,18 @@ a.role-item:hover { background: var(--color-surface-hover); }
 
 .role-list-table thead th { color: var(--color-ink-muted); font-weight: 600; font-size: 12.5px; }
 .role-list-table tbody tr:nth-child(even) > td { background: var(--color-row-alt, var(--color-surface-muted)); }
+
+/*
+ * ⓘ এই পাতার চার ছক `ui-grid`-ও পরে (Design: প্রতিটা টেবিল তিন নামের একটা — থিমের নিয়ম যেন পৌঁছায়)। `.ui-grid` থাকে
+ *   `@layer components`-এ, আর এই ফাইল স্তরের বাইরে — তাই উপরের মাপ-রং জেতে; নিচে কেবল সেটুকু ফেরানো যা `.ui-grid` বাড়তি
+ *   বসাত আর অনুমোদিত নমুনায় নেই (মাথার পটি ও দাগ, বিজোড় সারির ডোরা, সারির নিচের দাগ, মাথার বড়-হাতের ছাঁদ ও এক-লাইন)।
+ */
+:is(.role-table, .role-list-table) thead tr { border-bottom: 0; background: none; }
+:is(.role-table, .role-list-table) tbody tr { border-bottom: 0; }
+.role-table tbody tr:nth-child(odd):not(.role-grp) > td,
+.role-list-table tbody tr:nth-child(odd) > td { background: none; }
+:is(.role-table, .role-list-table) th { text-transform: none; letter-spacing: normal; white-space: normal; }
+.role-table tbody tr:not(.role-grp) > th { color: inherit; }
 .role-member-name { font-weight: 600; color: var(--color-ink); }
 .role-member-mail { display: block; color: var(--color-ink-muted); font-size: 12px; }
 .role-term-form { display: grid; gap: 8px; }

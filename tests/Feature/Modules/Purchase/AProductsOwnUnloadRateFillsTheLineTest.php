@@ -82,7 +82,8 @@ final class AProductsOwnUnloadRateFillsTheLineTest extends TestCase
             'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id,
             'trx_date' => now()->toDateString(),
             'supplier_bill_no' => 'UNL-RATE-1',
-            'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60']],
+            // ⓘ বিক্রয়দর ছাড়া সরাসরি ক্রয়ের সারি নয় — মালিক, ৩ অক্টোবর ২০২৬ (DirectPurchaseRules); আনলোডিংয়ের দাবি কেবল সেই নিয়ম মেনে
+            'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '75']],
             'unload_mode' => 'supplier',
         ])->assertSessionHasNoErrors()->assertRedirect();
 

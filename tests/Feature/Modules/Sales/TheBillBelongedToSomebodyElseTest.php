@@ -7,7 +7,6 @@ namespace Tests\Feature\Modules\Sales;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Services\CustomerService;
@@ -177,11 +176,13 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
         }
     }
 
+    /**
+     * ⓘ প্রধান টিলের খাত — টাকা বসার আসল খাত। ⛔ আগে নামে "Cash" থাকা প্রথম পোস্টযোগ্য খাত নেওয়া হত, আর তাতে "1103 — পথের টাকা"
+     *   (Cash in transit) উঠত; রসিদের টাকার ঘর কেবল নগদ/ব্যাংক/MFS নেয়, তাই রসিদটা ভুল কারণে (`to_account_id`) থামত, বিলের
+     *   কারণে (`against_id`) নয় (Mac run of e88be43a3)।
+     */
     private function cashAccountId(): int
     {
-        return (int) Account::query()
-            ->postable()
-            ->where('name_en', 'like', '%Cash%')
-            ->value('id');
+        return (int) app(\App\Modules\Accounts\Services\CashTillService::class)->ensurePrimaryTill()->account_id;
     }
 }

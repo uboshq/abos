@@ -9,6 +9,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -147,14 +148,15 @@ final class NoNewCollectionIsWrittenFromTheWebTest extends TestCase
     {
         return app(CollectionService::class)->create(
             ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'amount' => '4000',
-                'account_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id],
+                'account_id' => $this->cashAccountId()],
             [],
         )->fresh();
     }
 
+    /** ⓘ ১১০১ "হাতে নগদ" একটা দল (টিলগুলো তার নিচে) — দলে টাকা বসে না, সেবা ঠিকই ফেরায়; তাই প্রধান টিলের খাত, কাউন্টারের নিজের পথ (Mac run of e88be43a3) */
     private function cashAccountId(): int
     {
-        return (int) StandardChart::find(StandardChart::CASH_IN_HAND)->id;
+        return (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
     }
 
     /** ⓘ একটা বাকির বিল — [[MoneyIsTakenOnTheReceiptVoucherTest]]-এর একই প্রস্তুতি */

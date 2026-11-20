@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -234,16 +235,16 @@ final class CompositeRoles
         $now = now();
         $rows = array_map(fn (int $id): array => [
             'public_id' => (string) Str::uuid7(),
-            'company_id' => $companyId,
             'role_id' => (int) $role->id,
             'included_role_id' => $id,
-            'created_by' => auth()->id(),
+            'created_by' => Actor::userId(),
             'created_at' => $now,
             'updated_at' => $now,
         ], $added);
 
         if ($rows !== []) {
-            DB::table(self::TABLE)->insert($rows);
+            // ⓘ প্রতিটা সারি এই কোম্পানির — ছাঁকনিটা কোয়েরির গায়েই লেখা ([[EveryRawQueryNamesItsCompanyTest]])
+            DB::table(self::TABLE)->insert(array_map(fn (array $row): array => ['company_id' => $companyId] + $row, $rows));
         }
 
         unset($this->maps[$companyId]);

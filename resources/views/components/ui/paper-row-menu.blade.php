@@ -46,10 +46,10 @@
      * ⛔ মালিক, ২০ নভেম্বর ২০২৬ — দুইটা নতুন "কেন নয়", লুকানো নয়, ধূসর:
      *  · "সব শাখা"-তে লেখা নয় ([[AllBranchesView]]) — নিশ্চিত, সম্পাদনা, বাতিল ধূসর, কারণ "একটা শাখা বাছুন";
      *  · সইয়ের অপেক্ষার কাগজ কেউ বদলান না ([[WaitingPaper]]) — সম্পাদনা ধূসর, কারণ "সংশোধনের জন্য ফেরত পাঠান"।
-     * ⓘ অপেক্ষার প্রশ্নটা কেবল যে সারিতে সম্পাদনা এমনিতে খোলা — তালিকায় প্রতিটা সারিতে প্রশ্ন নয়।
+     * ⓘ অপেক্ষার প্রশ্নটা কেবল যে সারিতে সম্পাদনা এমনিতে খোলা — আর তালিকায় এক ধরনের কাগজে একটাই কোয়েরি (waitsInList), সারিপ্রতি নয়।
      */
     $readOnlyView = app(\App\Core\Services\AllBranchesView::class)->on($user);
-    $waitsForSignature = $edit && $editable && ! $readOnlyView && app(\App\Core\Engines\Approval\WaitingPaper::class)->waits($paper);
+    $waitsForSignature = $edit && $editable && ! $readOnlyView && app(\App\Core\Engines\Approval\WaitingPaper::class)->waitsInList($paper);
 
     $items = [\App\Core\Support\RowMenu::head($paper->document_no, $state)];
 

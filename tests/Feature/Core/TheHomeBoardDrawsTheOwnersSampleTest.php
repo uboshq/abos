@@ -75,7 +75,8 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
         $this->assertSame(8, $page->query('//*[@data-home-companies]//thead//th')->length, '⛔ টেবিলের কলাম নমুনার নয়।');
 
         // ⓘ প্রতিটা ঘর "গত মাসের একই দিন পর্যন্ত"-এর তুলনা বলে (যেখানে প্রবাহ)
-        $sales = $page->query('//*[@data-board-tile="sales"]//*[@data-board-tile-sub]')->item(0)?->textContent ?? '';
+        // ⓘ 6b0c4ecf0 (১.৩.৭, ২০ নভেম্বর ২০২৬ — "বোর্ড যা বদলায় তার নাম বা পয়সাসহ অঙ্ক হারায় না"): বোর্ডের বিক্রির জায়গায় এখন বিক্রয় মডিউলের নিজের "নিট বিক্রি" ঘর (`data-home-sales`) — বকেয়া আর মজুদের একই নিয়ম; বোর্ডের তুলনা (▲/▼ আর "গত মাসের একই দিন পর্যন্ত") সেই ঘরেই
+        $sales = $page->query('//*[@data-home-sales]//*[@data-board-tile-sub]')->item(0)?->textContent ?? '';
         $this->assertStringContainsString(__('home.board.vs_last_month'), $sales, '⛔ বিক্রির ঘরে আগের মাসের একই দিনের তুলনা নেই।');
 
         // ⓘ ঘরে চাপলে উৎস — প্রতিটা বোর্ডের ঘর লিংক
@@ -120,16 +121,17 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
         $this->sellToday();
         $today = Carbon::today()->toDateString();
 
-        $all = $this->tileValue('sales');
-        $this->assertSame('৳'.Money::format(SalesMetrics::net($today, $today), 0), $all);
-        $this->assertNotSame('৳0', $all, 'বিক্রি ওঠেনি — দাবির ভিত নেই।');
+        // ⓘ 6b0c4ecf0 (১.৩.৭, ২০ নভেম্বর ২০২৬ — "বোর্ড যা বদলায় তার নাম বা পয়সাসহ অঙ্ক হারায় না"): বোর্ডের বিক্রির জায়গায় এখন বিক্রয় মডিউলের নিজের "নিট বিক্রি" ঘর (`data-home-sales`) — বকেয়া আর মজুদের একই নিয়ম; বোর্ডের তুলনা (▲/▼ আর "গত মাসের একই দিন পর্যন্ত") সেই ঘরেই — তাই অঙ্কটা মডিউলের ঘরের, পয়সাসহ
+        $all = $this->salesValue();
+        $this->assertSame(Money::format(SalesMetrics::net($today, $today)), $all);
+        $this->assertNotSame(Money::format('0'), $all, 'বিক্রি ওঠেনি — দাবির ভিত নেই।');
 
         // ⛔ বিক্রিটা মূল শাখায়; হেডারে অন্য শাখা বাছলে সেই শাখার কিছুই নেই
         $other = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
             ->where('id', '!=', $this->company->defaultBranch()?->id)->firstOrFail();
         $this->choose($other->id);
 
-        $this->assertSame('৳0', $this->tileValue('sales'), '⛔ অন্য শাখা বাছা, অথচ বোর্ডে গোটা কোম্পানির বিক্রি — শাখার দেয়াল ভাঙল।');
+        $this->assertSame(Money::format('0'), $this->salesValue(), '⛔ অন্য শাখা বাছা, অথচ বোর্ডে গোটা কোম্পানির বিক্রি — শাখার দেয়াল ভাঙল।');
         $data = app(HomeBoard::class)->for($this->owner, 'today');
         $this->assertSame('৳0', collect($data['cards'])->firstWhere('key', 'sales')['value'] ?? null);
     }
@@ -157,7 +159,8 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
         // ⛔ বিক্রয়ের চাবি একটাও নেই — বিক্রির গ্রাফ আর ঘর নেই
         $this->as($this->person(['customer.report']));
         $page = $this->xpath((string) $this->get(route('dashboard'))->assertOk()->getContent());
-        $this->assertSame(0, $page->query('//*[@data-board-chart="sales_trend"] | //*[@data-board-tile="sales"]')->length,
+        // ⓘ বিক্রির ঘর মডিউলেরটা হলেও (data-home-sales) একই কথা — চাবি ছাড়া কোনোটাই নয়
+        $this->assertSame(0, $page->query('//*[@data-board-chart="sales_trend"] | //*[@data-board-tile="sales"] | //*[@data-home-sales]')->length,
             '⛔ বিক্রি দেখার চাবি ছাড়াই বিক্রির ধারা।');
         $this->assertSame(1, $page->query('//*[@data-board-chart="dues_ageing"]')->length, 'প্রস্তুতিটাই ভুল — বকেয়ার চাবিতেও বাকির বয়স নেই।');
     }
@@ -212,11 +215,13 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
         );
     }
 
-    private function tileValue(string $key): string
+    /** বোর্ডের বিক্রির জায়গার অঙ্ক — বিক্রয় মডিউলের নিজের "নিট বিক্রি" ঘর (6b0c4ecf0), ঠিক একটা */
+    private function salesValue(): string
     {
         $page = $this->xpath((string) $this->get(route('dashboard'))->assertOk()->getContent());
+        $this->assertSame(1, $page->query('//*[@data-home-sales]')->length, '⛔ বিক্রির ঘর নেই, বা দুইবার।');
 
-        return trim($page->query('//*[@data-board-tile="'.$key.'"]//*[@data-board-tile-value]')->item(0)?->textContent ?? '');
+        return trim($page->query('//*[@data-home-sales]//*[@data-kpi-value]')->item(0)?->textContent ?? '');
     }
 
     private function choose(int $branch): void

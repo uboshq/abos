@@ -55,6 +55,9 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/Accounts/Services/NetWorthStatement.php' => 'কেবল মালিক — প্রতিটা কোম্পানিতে ঢোকার আগে সেখানে Ownership::isOwnerIn() জিজ্ঞেস করে (mayView); যেখানে মালিক নন, সেটা যোগে আসে না, কেবল নাম ধরে "দেখা যাচ্ছে না"',
         'app/Core/Services/Ownership.php' => 'মালিকের সুপার ক্ষমতা সব কোম্পানিতে (ABOS_OWNER_EMAILS)',
         'app/Core/Services/PermissionSyncer.php' => 'চাবির তালিকা সব কোম্পানিতে মেলানো — ডিপ্লয়/কনসোল',
+        // ⭐ সময়-বাঁধা রোল (রোলের পাতার নমুনা, মালিক "ok", ২০ নভেম্বর ২০২৬)
+        'app/Core/Services/RoleTerms.php' => 'লগইনের মুহূর্তে (expireFor) কেবল লগইন করা মানুষটার নিজের মেয়াদ পেরোনো রোল তোলে, প্রতিটা সারির নিজের কোম্পানিতে — '
+            .'কারও চাবিতে কিছু খোলে না, কেবল কমে; কোনো মানুষ অন্য কোম্পানির কিছু বদলাতে পারেন না (রাতের abos:role-terms-এর একই কাজ)',
     ];
 
     public function test_every_door_into_another_company_is_known_and_asks_the_key_there(): void
