@@ -269,6 +269,8 @@
   "commonBranch": "Branch",
   "commonLoadFailed": "Could not load",
   "commonSign": "Approve",
+  "pushChannelAlertsName": "Alerts",
+  "pushChannelAlertsDescription": "Approvals, deposits, messages and calls — whether the app is closed, in the background or open",
   "voucherTypeReceipt": "Collection voucher",
   "voucherTypePayment": "Payment voucher",
   "voucherTypeExpense": "Expense voucher",

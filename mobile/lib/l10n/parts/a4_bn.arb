@@ -1194,5 +1194,13 @@
   "commonSign": "অনুমোদন দিন",
   "@commonSign": {
     "description": "Button: sign (approve) a paper — fe: the action is \"সই দিন\""
+  },
+  "pushChannelAlertsName": "জরুরি বার্তা",
+  "@pushChannelAlertsName": {
+    "description": "Android notification channel name (phone Settings → Notifications) for approvals, deposits, messages and calls"
+  },
+  "pushChannelAlertsDescription": "অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়",
+  "@pushChannelAlertsDescription": {
+    "description": "Android notification channel description shown under the channel name in phone settings"
   }
 }

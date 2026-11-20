@@ -918,6 +918,13 @@ class AppL10nEn extends AppL10n {
   String get commonSign => 'Approve';
 
   @override
+  String get pushChannelAlertsName => 'Alerts';
+
+  @override
+  String get pushChannelAlertsDescription =>
+      'Approvals, deposits, messages and calls — whether the app is closed, in the background or open';
+
+  @override
   String get voucherTypeReceipt => 'Collection voucher';
 
   @override

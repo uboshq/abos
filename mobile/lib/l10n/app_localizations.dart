@@ -1711,6 +1711,18 @@ abstract class AppL10n {
   /// **'অনুমোদন দিন'**
   String get commonSign;
 
+  /// Android notification channel name (phone Settings → Notifications) for approvals, deposits, messages and calls
+  ///
+  /// In bn, this message translates to:
+  /// **'জরুরি বার্তা'**
+  String get pushChannelAlertsName;
+
+  /// Android notification channel description shown under the channel name in phone settings
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়'**
+  String get pushChannelAlertsDescription;
+
   /// Voucher type name when the server sends none: receipt
   ///
   /// In bn, this message translates to:

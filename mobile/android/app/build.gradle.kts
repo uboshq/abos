@@ -65,6 +65,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // ⓘ flutter_local_notifications (সামনে খোলা অ্যাপের বার্তা, ২০ নভেম্বর ২০২৬) java.time-এর desugaring চায়
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -240,4 +242,6 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
     // ⓘ glance-material3 Material 3-এর রং-পরিবার (lightColorScheme, dynamic…) নিজে আনে না — compileOnly
     implementation("androidx.compose.material3:material3:1.3.1")
+    // ⓘ flutter_local_notifications 22-এর নিজের সাথে একই সংস্করণ
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

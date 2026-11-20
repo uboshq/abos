@@ -910,6 +910,13 @@ class AppL10nBn extends AppL10n {
   String get commonSign => 'অনুমোদন দিন';
 
   @override
+  String get pushChannelAlertsName => 'জরুরি বার্তা';
+
+  @override
+  String get pushChannelAlertsDescription =>
+      'অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়';
+
+  @override
   String get voucherTypeReceipt => 'আদায় ভাউচার';
 
   @override

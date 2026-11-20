@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../permissions/permission_rationale.dart';
+import 'local_alerts.dart';
 import '../storage/hive_encryption.dart';
 
 import '../api_client/api_client.dart';
@@ -77,7 +78,12 @@ class PushService {
     } catch (e) {
       debugPrint('ABOS push: Firebase did not start ($e) — pushes off this run');
     }
-    if (_ready) _attachPending();
+    if (_ready) {
+      // ⭐ "জরুরি বার্তা" চ্যানেল, আর সামনে খোলা অ্যাপেও বার্তা দেখানো (মালিক, ২০ নভেম্বর ২০২৬; [[LocalAlerts]])
+      await LocalAlerts.instance.init();
+      _listenInForeground();
+      _attachPending();
+    }
     return _ready;
   }
 
@@ -148,6 +154,14 @@ class PushService {
     }
   }
 
+  /// ⭐ সামনে খোলা (বা তালার পর্দা ঢাকা) অ্যাপে আসা বার্তা — Firebase নিজে দেখায় না, তাই [showInForeground] দেখায়;
+  /// নীরব সিঙ্ক-ডাক বাদ ([listenForSync] ওটা ধরে)। ⓘ [init]-এ একবারই।
+  void _listenInForeground() {
+    try {
+      FirebaseMessaging.onMessage.listen((m) => unawaited(showInForeground(m, LocalAlerts.instance)));
+    } catch (_) {}
+  }
+
   /// ⭐ রিয়েল-টাইম সিঙ্ক — অফিসে কিছু লেখা হলে সার্ভারের নীরব ডাক ([isSyncNudge]); খোলা অ্যাপ তখনই
   /// [run] চালায় (মালিক, ১০ অক্টোবর ২০২৬)। ⓘ অ্যাপ বন্ধ থাকলে কিছু নয় — খুললেই নিজের গোল চলে।
   void listenForSync(Future<void> Function() run) => whenReady(() {
@@ -159,7 +173,13 @@ class PushService {
       });
 
   /// বার্তায় চেপে অ্যাপ খুলল — শুরুতে একবার আর চলার সময়। ঠিকানা দেয় [destinationOf]।
-  void listenForTaps(void Function(String path) open) => whenReady(() {
+  /// ⭐ সামনে দেখানো বার্তার চাপও একই [open]-এ ([LocalAlerts.onTap]) — তালার পর্দা খোলা পর্যন্ত ঢেকে রাখে।
+  void listenForTaps(void Function(String path) open) {
+    LocalAlerts.instance.onTap(open);
+    _listenForFirebaseTaps(open);
+  }
+
+  void _listenForFirebaseTaps(void Function(String path) open) => whenReady(() {
         try {
           FirebaseMessaging.instance.getInitialMessage().then((m) {
             final path = destinationOf(m?.data);

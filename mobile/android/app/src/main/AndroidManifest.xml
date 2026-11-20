@@ -473,6 +473,15 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- ⭐ Notifications always show (owner, 20 Nov 2026): tray pushes land on the "abos_alerts" channel
+             (high importance, created at start by lib/core/push/local_alerts.dart) instead of "Miscellaneous",
+             with the launcher's monochrome layer as the small icon. The server also names the channel. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="abos_alerts" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher_monochrome" />
         <!--
           Glance's package-replaced receiver runs in the app's own process right after
           every update; if it throws, the first launch after updating dies (0.4.1).
