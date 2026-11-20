@@ -144,7 +144,9 @@ final class SystemAdminDashboard implements ProvidesDashboard
     private static function covers(): array
     {
         $viewer = auth()->user();
-        $v2 = (bool) config('abos.dashboards_v2');
+        // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): বোর্ড সুইচ বন্ধেও আঁকা হয়, অথচ ছয়টার পাঁচটা কার্ড সুইচ দেখত — বন্ধে কেবল "শেষ ব্যাকআপ", এক কার্ড।
+        //   ⭐ এখন কার্ড আর তার ঢাকা কেবল চাবি মানে, সুইচ নয় — দুই অবস্থায় একই ছয়টা, একই অঙ্ক দুইবার নয় ([[charts()]] একই শর্ত)
+        $v2 = true;
         $covers = [__('system_admin::dashboard.last_backup')];
 
         if ($v2 && $viewer?->can('system_admin.user.manage')) {
@@ -172,7 +174,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
     private static function charts(?int $backup): array
     {
         $viewer = auth()->user();
-        $v2 = (bool) config('abos.dashboards_v2');
+        // ⓘ সুইচ নয় — বোর্ড দুই অবস্থাতেই আঁকা হয় ([[covers()]]-এর একই কথা; লাইভ 1.3.7)
+        $v2 = true;
         $today = Carbon::today();
         $company = CompanyContext::id();
         $cards = [];
@@ -180,7 +183,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
 
         if ($v2 && $viewer?->can('system_admin.user.manage')) {
             // ব্যবহারকারীর অবস্থা — আগের চার্টের হুবহু চার ভাগ
-            $who = self::whoCanGetIn()[0]->parts;
+            $who = self::whoCanGetIn(board: true)[0]->parts;
             $everyone = array_sum(array_map(fn ($p) => (int) $p['value'], $who));
             $tones = ['#16a34a', '#f59e0b', '#0ea5e9', '#94a3b8'];
             $cards[] = Card::make(__('system_admin::dashboard.who_gets_in'), 'donut', [
@@ -190,7 +193,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                 href: route('system_admin.user.index'), colour: '#2160d8');
 
             // দ্বিতীয় ধাপ — রোল ধরে, বড় চারটা রোল; মাথায় সবার মিলিয়ে
-            $two = self::twoStep()[0]->parts;
+            $two = self::twoStep(board: true)[0]->parts;
             $on = (int) $two[0]['value'];
             $all = $on + (int) $two[1]['value'];
             $roles = DB::table('model_has_roles as mhr')
@@ -320,9 +323,10 @@ final class SystemAdminDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function whoCanGetIn(): array
+    private static function whoCanGetIn(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.user.manage')) {
+        // ⓘ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — আগের চার্ট সুইচ মানে আগের মতো
+        if ((! $board && ! config('abos.dashboards_v2')) || ! auth()->user()?->can('system_admin.user.manage')) {
             return [];
         }
 
@@ -394,9 +398,10 @@ final class SystemAdminDashboard implements ProvidesDashboard
      *
      * @return list<Breakdown>
      */
-    private static function twoStep(): array
+    private static function twoStep(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.user.manage')) {
+        // ⓘ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — আগের চার্ট সুইচ মানে আগের মতো
+        if ((! $board && ! config('abos.dashboards_v2')) || ! auth()->user()?->can('system_admin.user.manage')) {
             return [];
         }
 

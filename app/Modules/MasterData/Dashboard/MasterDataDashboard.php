@@ -137,7 +137,9 @@ final class MasterDataDashboard implements ProvidesDashboard
 
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'md'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
             // ⓘ রেডিয়ালে চারটা তালিকা ধরে — কেবল ঐ চারটার নিজের ঘর ঢাকা পড়ে, পঞ্চমটা নিচে থাকে
-            sections: [Card::board(fn (): array => self::charts($lists), covers: [
+            // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): `lists()` সুইচ বন্ধে খালি, অথচ বোর্ড দুই অবস্থাতেই আঁকা হয় — ছয়টা কার্ডই "এই সময়ে কিছু নেই"।
+            //   ⭐ বোর্ড নিজের জন্য তালিকাগুলো পড়ে (সুইচ চালু থাকলে উপরের একই ফল, আবার গোনা নয়)
+            sections: [Card::board(fn (): array => self::charts($lists !== [] ? $lists : self::lists(board: true)), covers: [
                 __('master_data::dashboard.quality_score'), __('master_data::dashboard.missing'),
                 __('master_data::dashboard.same'), __('master_data::dashboard.inactive'),
                 __('master_data::dashboard.new_month'),
@@ -198,9 +200,9 @@ final class MasterDataDashboard implements ProvidesDashboard
      *
      * @return list<\App\Core\Dashboard\Widget>
      */
-    private static function lists(): array
+    private static function lists(bool $board = false): array
     {
-        if (! config('abos.dashboards_v2')) {
+        if (! $board && ! config('abos.dashboards_v2')) {
             return [];
         }
 

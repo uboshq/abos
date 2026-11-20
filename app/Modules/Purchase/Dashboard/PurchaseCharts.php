@@ -152,8 +152,9 @@ final class PurchaseCharts
      * ⓘ সংখ্যা কাগজের, টাকার নয় — কোন ধাপে এসে ক্রয় আটকে যাচ্ছে সেটাই প্রশ্ন (বিক্রয়ের ফানেলের মতোই, [[SalesCharts]])।
      * ⓘ প্রতিটা ধাপে কেবল পাকা কাগজ (নিশ্চিত বা বন্ধ) — খসড়া আর বাতিল বাদ। দরপত্রের তারিখ `quoted_on`, বাকিদের `trx_date`।
      * ⓘ সরাসরি ক্রয়ে মাল গ্রহণের কাগজ জন্মায় না (বিলই মাল আনে), তাই বিলের ধাপ মাল গ্রহণের চেয়ে বড় হতে পারে — সেটা ভুল নয়।
+     * ⓘ খোলা (public) — গ্রাফের বোর্ড সুইচ ছাড়াই আঁকা হয়, তাই সে এটা সরাসরি ডাকে ([[PurchaseDashboard::charts()]]); `panels()` সুইচ মানে।
      */
-    private static function funnel(): Breakdown
+    public static function funnel(): Breakdown
     {
         [$from, $to] = self::month();
 

@@ -141,7 +141,9 @@ final class SupplierDashboard implements ProvidesDashboard
         // ── দেনার বয়স — বয়সের রিপোর্টটাই (বড় চারজন আর সবাই মিলে), রিপোর্টের চাবিতে ([[ageing()]]-এর একই ডাক)
         $ageRows = [];
         $agePayable = null;
-        if (config('abos.dashboards_v2') && $user?->can('supplier.report')) {
+        // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): গ্রাফের বোর্ড সুইচ বন্ধেও আঁকা হয়, অথচ এই তিন কার্ড (বয়স, সবচেয়ে বেশি দেনা, সময়মতো মাল) নতুন-ড্যাশবোর্ডের
+        //   সুইচ দেখত — তাই ৳47.7 লাখ দেনা থাকতেও ফাঁকা। ⭐ বোর্ডের কার্ড কেবল চাবি মানে; আগের চার্ট (`panels`) সুইচ মানে আগের মতো।
+        if ($user?->can('supplier.report')) {
             $result = app(\App\Core\Engines\Report\ReportEngine::class)
                 ->run('supplier.ageing', ['to' => Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 4);
             foreach ($result->rows as $row) {
@@ -154,7 +156,7 @@ final class SupplierDashboard implements ProvidesDashboard
         }
 
         // ── সবচেয়ে বেশি যাঁদের দিতে হবে — [[mostOwed()]]-এর একই পাঁচজন
-        $owed = self::mostOwedRows();
+        $owed = self::mostOwedRows(board: true);
 
         // ── প্রিন্সিপালের কমিশন — রিপোর্টের সারি; প্রিন্সিপালের ভাগের কতটা পাঠানো হলো (দাগ = পুরোটা)
         $principals = array_values(array_filter(self::principalRows(), fn (array $r) => bccomp((string) $r['share'], '0', 4) > 0));
@@ -203,7 +205,8 @@ final class SupplierDashboard implements ProvidesDashboard
      */
     private static function deliveryBubbles(): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.bill.view')) {
+        // ⓘ কেবল গ্রাফের বোর্ড ডাকে, আর বোর্ড দুই অবস্থাতেই আঁকা হয় — তাই সুইচ নয়, কেবল চাবি (লাইভ 1.3.7)
+        if (! auth()->user()?->can('purchase.bill.view')) {
             return [];
         }
 
@@ -349,10 +352,10 @@ final class SupplierDashboard implements ProvidesDashboard
      *
      * @return list<array{name: string, amount: string}>
      */
-    private static function mostOwedRows(): array
+    private static function mostOwedRows(bool $board = false): array
     {
-        // ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.payment.view')) {
+        // ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2); ⭐ গ্রাফের বোর্ড (`$board`) সুইচ ছাড়াই — সে দুই অবস্থাতেই আঁকা হয়
+        if ((! $board && ! config('abos.dashboards_v2')) || ! auth()->user()?->can('purchase.payment.view')) {
             return [];
         }
 
