@@ -42,6 +42,15 @@
     $user = auth()->user();
     $glue = str_contains($show, '?') ? '&' : '?';
 
+    /*
+     * ⛔ মালিক, ২০ নভেম্বর ২০২৬ — দুইটা নতুন "কেন নয়", লুকানো নয়, ধূসর:
+     *  · "সব শাখা"-তে লেখা নয় ([[AllBranchesView]]) — নিশ্চিত, সম্পাদনা, বাতিল ধূসর, কারণ "একটা শাখা বাছুন";
+     *  · সইয়ের অপেক্ষার কাগজ কেউ বদলান না ([[WaitingPaper]]) — সম্পাদনা ধূসর, কারণ "সংশোধনের জন্য ফেরত পাঠান"।
+     * ⓘ অপেক্ষার প্রশ্নটা কেবল যে সারিতে সম্পাদনা এমনিতে খোলা — তালিকায় প্রতিটা সারিতে প্রশ্ন নয়।
+     */
+    $readOnlyView = app(\App\Core\Services\AllBranchesView::class)->on($user);
+    $waitsForSignature = $edit && $editable && ! $readOnlyView && app(\App\Core\Engines\Approval\WaitingPaper::class)->waits($paper);
+
     $items = [\App\Core\Support\RowMenu::head($paper->document_no, $state)];
 
     $items[] = \App\Core\Support\RowMenu::group('look');
@@ -77,11 +86,13 @@
     $items[] = \App\Core\Support\RowMenu::group('work');
     if ($confirmable) {
         $items[] = ['label' => __('core.row_menu.confirm'), 'icon' => 'check-circle', 'url' => $show.'#confirm', 'peek' => false,
-            'tone' => 'success', 'hint' => __('core.row_menu.confirm_hint')];
+            'tone' => 'success', 'hint' => __('core.row_menu.confirm_hint'), 'off' => $readOnlyView ? __('core.all_branches.hint') : null];
     }
     if ($edit) {
         $items[] = ['label' => __('core.row_menu.edit'), 'icon' => 'edit', 'url' => $edit, 'peek' => false,
-            'off' => $editable ? null : ($isCancelled ? __('core.row_menu.why_cancelled') : ($isDraft ? __('core.row_menu.why_no_key') : __('core.row_menu.why_posted')))];
+            'off' => $editable
+                ? ($readOnlyView ? __('core.all_branches.hint') : ($waitsForSignature ? __('core.approval_hold.hint') : null))
+                : ($isCancelled ? __('core.row_menu.why_cancelled') : ($isDraft ? __('core.row_menu.why_no_key') : __('core.row_menu.why_posted')))];
     }
     foreach ($work as $row) {
         $items[] = $row;
@@ -90,7 +101,8 @@
     if ($cancellable && ! $isCancelled) {
         $items[] = ['line' => true];
         $items[] = ['label' => $isDraft ? ($draftCancelLabel ?? __('core.row_menu.delete_draft')) :($cancelLabel ?? __('core.row_menu.cancel_paper')), 'icon' => 'trash', 'tone' => 'danger',
-            'url' => $show.$glue.'cancel=1#cancel', 'peek' => false, 'key' => $isDraft ? 'Del' : null];
+            'url' => $show.$glue.'cancel=1#cancel', 'peek' => false, 'key' => $isDraft ? 'Del' : null,
+            'off' => $readOnlyView ? __('core.all_branches.hint') : null];
     }
 @endphp
 

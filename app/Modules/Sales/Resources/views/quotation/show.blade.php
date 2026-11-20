@@ -20,9 +20,9 @@
         <x-ui.page-header :title="$quotation->document_no" :subtitle="$quotation->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $quotation)
-                    <x-ui.button tone="secondary" :href="route('sales.quotation.edit', $quotation)">
+                    <x-ui.edit-button tone="secondary" :paper="$quotation" :href="route('sales.quotation.edit', $quotation)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
                 @endcan
 
                 @can('advance', $quotation)

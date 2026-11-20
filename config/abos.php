@@ -249,6 +249,9 @@ return [
      */
     'branch_pin' => [
         'grace_until' => (string) env('ABOS_BRANCH_PIN_GRACE_UNTIL', ''),
+
+        // ⛔ "সব শাখা" = কেবল দেখা, লেখা নয় (মালিক, ২০ নভেম্বর ২০২৬; [[AllBranchesView]])। ⓘ চালুই ডিফল্ট; বন্ধ কেবল পরীক্ষার ঘরে ([[TestCase]])
+        'all_branches_read_only' => (bool) env('ABOS_ALL_BRANCHES_READ_ONLY', true),
     ],
 
     /*

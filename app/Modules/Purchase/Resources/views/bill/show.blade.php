@@ -8,9 +8,9 @@
         <x-ui.page-header :title="$bill->document_no" :subtitle="$bill->supplier?->name()">
             <x-slot:actions>
                 @can('update', $bill)
-                    <x-ui.button tone="secondary" :href="route('purchase.bill.edit', $bill)">
+                    <x-ui.edit-button tone="secondary" :paper="$bill" :href="route('purchase.bill.edit', $bill)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     {{--
                         ⛔ নিশ্চিত বিলেও "নিশ্চিত করুন" দেখা যেত — লাইভ QA, ২৭ সেপ্টেম্বর ২০২৬।

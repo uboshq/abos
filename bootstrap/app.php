@@ -5,6 +5,7 @@ use App\Core\Services\ErrorJournal;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
+use App\Http\Middleware\AWaitingPaperIsNotEdited;
 use App\Http\Middleware\KeepsAFormInItsOwnBranch;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\NudgePhonesAfterWrite;
@@ -13,6 +14,7 @@ use App\Http\Middleware\PeekVaries;
 use App\Http\Middleware\RemembersOpenedPapers;
 use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
+use App\Http\Middleware\RefusesWritesInAllBranchesView;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
 use App\Http\Middleware\ResolveCompanyContext;
 use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
@@ -284,6 +286,20 @@ return Application::configure(basePath: dirname(__DIR__))
              * ⚠️ ABOS-এর চেনা রোগ, আবার: কাজটা হয়েছে, জোড়াটা নয়।
              */
             RefuseWorkWithoutALicence::class,
+
+            /*
+             * ⛔ "সব শাখা" = কেবল দেখা — মালিকের চূড়ান্ত সিদ্ধান্ত, ২০ নভেম্বর ২০২৬ (লাইভে আদায় ভুল শাখায় বসল, তারপর আবার লেখা)।
+             *
+             * ⓘ প্রসঙ্গ আর পর্দার তালাগুলোর **পরে** (কোম্পানি না জেনে নাগালের শাখা গোনা যায় না), শাখার ছাপের **আগে** — "এখানে
+             * লেখাই চলে না" ছাপ মেলানোর আগের প্রশ্ন। ছাড়ের দরজা [[AllBranchesView::ALLOWED]]-এ।
+             */
+            RefusesWritesInAllBranchesView::class,
+
+            /*
+             * ⛔ সইয়ের অপেক্ষার কাগজ কেউ বদলান না — মালিক, ২০ নভেম্বর ২০২৬ (COL-0008: মালিক বদলালেন, অনুরোধ তাঁর নামে, কেউ সই দিতে
+             * পারলেন না)। ⓘ বাঁধাইয়ের পরে চলে, তাই রুটের কাগজটা হাতে থাকে ([[WaitingPaper]])।
+             */
+            AWaitingPaperIsNotEdited::class,
 
             /*
              * ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়" (ec, ১৯ অক্টোবর ২০২৬)।

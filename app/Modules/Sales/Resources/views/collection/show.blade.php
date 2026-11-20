@@ -6,9 +6,9 @@
         <x-ui.page-header :title="$collection->document_no" :subtitle="$collection->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $collection)
-                    <x-ui.button tone="secondary" :href="route('sales.collection.edit', $collection)">
+                    <x-ui.edit-button tone="secondary" :paper="$collection" :href="route('sales.collection.edit', $collection)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form id="confirm" method="POST" action="{{ route('sales.collection.confirm', $collection) }}" data-confirm-overview="{{ route('sales.collection.overview', $collection) }}">
                         @csrf

@@ -22,9 +22,9 @@
                           :subtitle="$shipment->vehiclePlate() ?: __('sales::shipment.title')">
             <x-slot:actions>
                 @can('update', $shipment)
-                    <x-ui.button tone="secondary" :href="route('sales.shipment.edit', $shipment)">
+                    <x-ui.edit-button tone="secondary" :paper="$shipment" :href="route('sales.shipment.edit', $shipment)">
                         {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    </x-ui.edit-button>
 
                     <form method="POST" action="{{ route('sales.shipment.dispatch', $shipment) }}">
                         @csrf

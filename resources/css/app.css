@@ -2326,3 +2326,11 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     font-weight: 600;
     line-height: 1.5;
 }
+
+/* ⛔ "সব শাখা" = কেবল দেখা (মালিক, ২০ নভেম্বর ২০২৬; [[all-branches-view.js]]) — লেখার বোতাম ধূসর, লুকানো নয়; সব রূপে একই।
+   ⓘ `pointer-events: none` নয়: তাতে কারণের `title` আর কার্সর দুটোই হারাত — চাপা থামায় JS-এর শ্রোতা, আর সার্ভার। */
+[data-all-branches-view] [data-all-branches-off]:not(form) {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}

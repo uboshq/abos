@@ -94,9 +94,9 @@
 
                 @if ($voucher->isDraft())
                     @can('accounts.voucher.update')
-                        <x-ui.button tone="secondary" :href="route('accounts.voucher.edit', $voucher)">
+                        <x-ui.edit-button tone="secondary" :paper="$voucher" :href="route('accounts.voucher.edit', $voucher)">
                             {{ __('core.action.edit') }}
-                        </x-ui.button>
+                        </x-ui.edit-button>
 
                         @if ($awaitingApproval)
                             {{-- ⚠️ কেবল বান্ডিলে থাকা শ্রেণি — লাইভে node নেই, তাই নতুন শ্রেণি
