@@ -137,6 +137,15 @@ dependencies:
   file_picker: ^11.0.3
   material_symbols_icons: 4.2960.0
   flutter_local_notifications: ^22.3.3
+  # ⭐ বার্তা ও কল, প্রথম ধাপ (মালিক "ok", ২১ নভেম্বর ২০২৬; নমুনা 3nuwRUdn v5)। একজনের সাথে ভয়েস/ভিডিও কল চলে
+  # অফিসের নিজের LiveKit সার্ভারে (Mac mini) — কথা কোনো বাইরের সেবায় যায় না। Apache-2.0।
+  livekit_client: ^2.5.4
+  # ভয়েস বার্তা রেকর্ড (চেপে ধরে বলুন) — ফোনের নিজের এনকোডার, AAC/m4a। BSD-3।
+  record: ^7.2.0
+  # ভয়েস বার্তা শোনা। Apache-2.0 / MIT।
+  just_audio: ^0.10.6
+  # সংযুক্তির "অবস্থান" — কেবল মানুষ নিজে চাপলে একবার জায়গা নেয়; পেছনে কখনো নয়। MIT।
+  geolocator: ^14.0.2
 
 
 dev_dependencies:
