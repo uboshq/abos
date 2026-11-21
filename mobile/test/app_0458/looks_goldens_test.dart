@@ -111,6 +111,8 @@ void main() {
               onCopilot: () {},
               onCreate: () {},
               onBell: () {},
+              // ⓘ বার্তা চালু (`features.messaging`) — HomeShell-এর মতোই বারে বার্তা-বোতাম
+              onMessages: () {},
               unread: 20,
               avatarName: 'শুভ',
               showAvatar: false,

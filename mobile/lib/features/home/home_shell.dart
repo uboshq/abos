@@ -59,6 +59,12 @@ import '../profile/me_page.dart';
 import '../menu/menu_page.dart';
 import '../../core/profile/me_profile_api.dart';
 import '../copilot/copilot_quick_sheet.dart';
+import '../../core/messenger/messenger_api.dart';
+import '../../core/messenger/messenger_push.dart';
+import '../../core/messenger/messenger_unread.dart';
+import '../messenger/call/calls.dart';
+import '../messenger/list/chat_list_page.dart';
+import '../messenger/list/people_picker.dart';
 
 /// The signed-in person's home — the owner's navigation of 12 Oct 2026:
 /// *"app icon e tap korle age module asbe, module e dhukle tar menu, menu r
@@ -240,6 +246,22 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     RecentPapers.changes.addListener(_loadPrefs);
     // ⭐ root করা বা ছদ্ম-ফোন — একবার বলা, আটকানো নয় ([[DeviceIntegrity]])
     WidgetsBinding.instance.addPostFrameCallback((_) => _warnIfUnsafe());
+    // ⭐ উপরের বারের বার্তার গোনা — শুরুতে, push-এ নতুন বার্তা এলে, আর অ্যাপে ফিরলে (নমুনা 3nuwRUdn v5 "ক")
+    _loadMessagesUnread();
+    _messengerPush = MessengerPush.instance.events.listen((e) {
+      if (e.type == 'chat') _loadMessagesUnread();
+    });
+    _lifecycle = AppLifecycleListener(onResume: _loadMessagesUnread);
+  }
+
+  StreamSubscription<MessengerEvent>? _messengerPush;
+  AppLifecycleListener? _lifecycle;
+
+  /// ⭐ বার্তা চালু কি — `/me`-র `features.messaging`; বন্ধ হলে বার্তা-বোতাম, তালিকা আর গোনা কিছুই নেই
+  bool get _messaging => ref.read(meFeaturesProvider)?.messaging ?? false;
+
+  void _loadMessagesUnread() {
+    if (mounted && _messaging) unawaited(MessengerUnread.refresh(ref.read(messengerApiProvider)));
   }
 
   Future<void> _warnIfUnsafe() async {
@@ -262,6 +284,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     LocaleChoices.savedOnServer.removeListener(_reloadForLanguage);
     RecentPapers.changes.removeListener(_loadPrefs);
     if (identical(RecentPapers.active, _prefs)) RecentPapers.active = null;
+    _messengerPush?.cancel();
+    _lifecycle?.dispose();
     super.dispose();
   }
 
@@ -391,6 +415,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           : null,
       copilot: _copilot,
       quick: (from) => _openQuick(from),
+      // ⭐ ভেতরের পর্দার বার্তা-বোতাম — হোমে ফিরে বার্তার তালিকা; বার্তা চালু না থাকলে বোতামই নেই
+      messages: !_messaging ? null : (_) async {
+        if (!mounted) return;
+        GoRouter.maybeOf(context)?.go('/home');
+        setState(() {
+          _menuPage = false;
+          _chatPage = true;
+        });
+      },
     );
   }
 
@@ -473,8 +506,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _setPage(HomePage page) {
-    // ⓘ অন্য পাতায় গেলে ≡ মেনুর পাতা বন্ধ
-    if (_menuPage) setState(() => _menuPage = false);
+    // ⓘ অন্য পাতায় গেলে ≡ মেনুর পাতা আর বার্তার তালিকা বন্ধ
+    if (_menuPage || _chatPage) {
+      setState(() {
+        _menuPage = false;
+        _chatPage = false;
+      });
+    }
     ref.read(homePageProvider.notifier).state = page;
   }
 
@@ -482,7 +520,34 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// জায়গা ("আমি" = [MePage]) আলাদা; এটা কাজের জায়গা — শর্টকাট, সাম্প্রতিক, আজকের কাজ, সেটিংস, বের হওয়া ([MenuPage])।
   bool _menuPage = false;
 
-  void _toggleMenuPage() => setState(() => _menuPage = !_menuPage);
+  void _toggleMenuPage() => setState(() {
+        _menuPage = !_menuPage;
+        _chatPage = false;
+      });
+
+  /// ⭐ বার্তার তালিকা খোলা — উপরের বারের বার্তা-বোতাম খোলে/বন্ধ করে, ≡ মেনুর পাতার মতোই অ্যাপের নিজের দুই বারের ভেতরে
+  /// (মালিকের অনুমোদিত নমুনা 3nuwRUdn v5 "ক", ২১ নভেম্বর ২০২৬); "পিছনে" আর নিচের যেকোনো ঘর বন্ধ করে
+  bool _chatPage = false;
+
+  void _toggleChatPage() {
+    setState(() {
+      _chatPage = !_chatPage;
+      _menuPage = false;
+    });
+    if (!_chatPage) _loadMessagesUnread();
+  }
+
+  /// "আমি"-র "বার্তা" আর "কল" — নিজের পাতায় নিজেকে বার্তা/কল চলে না, তাই কাকে তা বেছে ([pickPerson]): বার্তায় সেই মানুষের সাথের
+  /// কথোপকথন (`POST /messenger/direct` → চ্যাট), কলে সেই মানুষকে ভয়েস কল
+  Future<void> _messageSomeone() async {
+    final person = await pickPerson(context, title: context.l10n.msgListNew);
+    if (person != null && mounted) await messagePerson(context, ref.read(messengerApiProvider), person);
+  }
+
+  Future<void> _callSomeone() async {
+    final person = await pickPerson(context, title: context.l10n.msgListCallWho);
+    if (person != null && mounted) await Calls.start(context, person, video: false);
+  }
 
   /// মেনুর পাতা থেকে কোথাও গেলে — পাতা বন্ধ, তারপর পথ
   Future<void> _openFromMenu(String path, String label) async {
@@ -620,6 +685,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     // ⭐ ছবির পর্দায় মুখ বদলালে বা সরালে — ওপরের বার, ছবির মেনু আর "আমি" সাথে সাথে নতুন মুখে, `/me` আবার না ডেকে
+    // ⭐ বার্তা চালু/বন্ধ হলে — বার্তা-বোতাম, গোনা আর খোলা তালিকা সাথে সাথে
+    ref.listen<bool>(meFeaturesProvider.select((f) => f?.messaging ?? false), (_, on) {
+      if (!mounted) return;
+      if (on) {
+        _loadMessagesUnread();
+      } else {
+        MessengerUnread.count.value = null;
+        if (_chatPage) setState(() => _chatPage = false);
+      }
+      _publishTopBar();
+    });
+    final messaging = ref.watch(meFeaturesProvider.select((f) => f?.messaging ?? false));
     ref.listen<String?>(myFaceProvider, (_, face) {
       if (face == _avatarUrl || !mounted) return;
       setState(() => _avatarUrl = face);
@@ -659,9 +736,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return PopScope(
       // ⭐ অ্যান্ড্রয়েডের "পিছনে" — সবসময় এক ধাপ উপরে; হোমে থাকলে তবেই অ্যাপ বন্ধ
       // ⓘ ≡ মেনুর পাতা খোলা থাকলে "পিছনে" আগে সেটাই বন্ধ করে
-      canPop: page.up == null && !_menuPage,
+      canPop: page.up == null && !_menuPage && !(messaging && _chatPage),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        if (_chatPage) {
+          setState(() => _chatPage = false);
+          _loadMessagesUnread();
+          return;
+        }
         if (_menuPage) {
           setState(() => _menuPage = false);
           return;
@@ -680,7 +762,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           branch: headerNamesOrg ? org.branch : '',
           companyCode: headerNamesOrg ? org.companyCode : '',
           fallbackTitle: user.name,
-          crumbs: switch (page.kind) {
+          crumbs: messaging && _chatPage ? const [] : switch (page.kind) {
             HomePageKind.home => const [],
             HomePageKind.modules => [context.l10n.homeAllModules],
             HomePageKind.module => [module?.label ?? context.l10n.homeAllModules],
@@ -690,14 +772,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               ],
             HomePageKind.me => [context.l10n.homeMe],
           },
-          leading: switch (page.kind) {
+          leading: messaging && _chatPage ? TopBarLeading.menu : switch (page.kind) {
             HomePageKind.home || HomePageKind.modules => TopBarLeading.menu,
             _ => TopBarLeading.back,
           },
           // ⭐ ≡ = দ্রুত কাজ (0.4.58; মালিক, ১৬ নভেম্বর ২০২৬: মডিউল নিচের বারে আছেই); ← এক ধাপ উপরে (অ্যান্ড্রয়েডের "পিছনে"-র
           // একই নিয়ম)
           // ⭐ আইটেম ১০ (২১ নভেম্বর ২০২৬): ≡ এখন Facebook-ধাঁচের মেনুর পাতা খোলে/বন্ধ করে; দ্রুত কাজ সেই পাতার "শর্টকাট"-এ আর ＋-এ
-          onLeading: () => _menuPage || page.up == null || page.kind == HomePageKind.modules ? _toggleMenuPage() : _setPage(page.up!),
+          onLeading: () => _chatPage || _menuPage || page.up == null || page.kind == HomePageKind.modules ? _toggleMenuPage() : _setPage(page.up!),
           leadingActive: _menuPage,
           // ⓘ ≡-এর নাম (TalkBack) এখন বারের নিজের "পুরো মেনু" — দ্রুত কাজ আর ≡-এ নয়
           onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
@@ -705,6 +787,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           onCopilot: _copilot == null ? null : () => _copilot!(context, context.l10n.navTabHome),
           // ⭐ ＋ তৈরি করুন — Material 3-এর আগের ＋-এর একই দ্রুত কাজ, এখন উপরে (নতুন দুই রূপ; মালিক, ২০ নভেম্বর ২০২৬ "Ok")
           onCreate: () => _openQuick(),
+          // ⭐ বার্তা — তালিকা খোলে/বন্ধ করে; খোলা থাকলে নীল ঘরে, ভরাট চিহ্নে
+          onMessages: messaging ? _toggleChatPage : null,
+          messagesActive: messaging && _chatPage,
           unread: _unread,
           onBell: () async {
             await (widget.openPath ?? _push)('notifications');
@@ -730,7 +815,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 fetch: widget.fetchNoticeBar),
             Expanded(
                 child: IndexedStack(
-              index: _menuPage ? 3 : (tab == NavTab.home ? 0 : (tab == NavTab.me ? 2 : 1)),
+              index: messaging && _chatPage ? 4 : _menuPage ? 3 : (tab == NavTab.home ? 0 : (tab == NavTab.me ? 2 : 1)),
               children: [
                 HomeDashboard(
                   key: ValueKey('home-dashboard-$_generation'),
@@ -769,6 +854,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   ),
                   onEditProfile: () => (widget.openPath ?? _push)(ProfileRoutes.profile),
                   onLockDelay: () => _showLockDelaySheet(context),
+                  // ⭐ "বার্তা" আর "কল" — নিজের পাতা: বার্তা খোলে বার্তার তালিকা, কল বেছে নেওয়া মানুষকে
+                  onMessage: _messageSomeone,
+                  onCall: _callSomeone,
                 ),
                 MenuPage(
                   key: ValueKey('menu-page-$_generation'),
@@ -804,6 +892,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   updateTile: const AppUpdateTile(),
                   onLogout: () => _confirmLogout(context, ref),
                 ),
+                // ⓘ খুললে তবেই বানানো — প্রতিবার খুললে নতুন করে আনে, বন্ধ থাকলে পেছনে কিছু টানে না
+                if (messaging && _chatPage) const ChatListPage(key: ValueKey('chat-list-page')) else const SizedBox.shrink(),
               ],
             )),
           ]),
@@ -813,7 +903,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           badges: NavBadges(
               pending: _pending, pendingMore: _pendingMore, unread: _unread),
           onSelect: (selected) async {
-            if (_menuPage) setState(() => _menuPage = false);
+            if (_menuPage || _chatPage) {
+              setState(() {
+                _menuPage = false;
+                _chatPage = false;
+              });
+            }
             switch (selected) {
               case NavTab.home:
                 _setPage(HomePage.home);

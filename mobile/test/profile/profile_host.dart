@@ -20,6 +20,7 @@ TopBarContext topBar() => TopBarContext(
       search: (_) async {},
       openNotifications: (_) async {},
       openMenu: (_, __) async {},
+      messages: (_) async {},
     );
 
 /// নতুন সার্ভার — দুটোই আছে

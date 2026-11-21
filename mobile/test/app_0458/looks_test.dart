@@ -327,7 +327,7 @@ void main() {
     setUpAll(loadBarFonts);
 
     Future<List<String>> pumpTop(WidgetTester tester, AppLook look,
-        {double width = 412, VoidCallback? onCreate, String company = 'ADI Corporation'}) async {
+        {double width = 412, VoidCallback? onCreate, String company = 'ADI Corporation', bool messaging = true}) async {
       AppLooks.instance = _memory({});
       AppLooks.instance.look.value = look;
       tester.view.physicalSize = Size(width, 800);
@@ -356,6 +356,8 @@ void main() {
             onCopilot: () {},
             onCreate: onCreate ?? () {},
             onBell: () {},
+            // ⓘ বার্তা চালু (`features.messaging`) হলে তবেই বার্তা-বোতাম
+            onMessages: messaging ? () {} : null,
             unread: 20,
             avatarName: 'শুভ',
             showAvatar: false,
@@ -423,15 +425,10 @@ void main() {
         });
       }
 
-      testWidgets('${look.name}: messages only says "coming soon" — no badge, nothing opens', (tester) async {
-        await pumpTop(tester, look);
-        expect(find.descendant(of: find.byKey(const ValueKey('top-messages')), matching: find.byType(Badge)), findsNothing,
-            reason: 'না-পড়ার গোনা নেই — আসল কিছু এখনো নেই');
-        await tester.tap(find.byKey(const ValueKey('top-messages')));
-        await tester.pump();
-        expect(find.byKey(const ValueKey('messages-soon')), findsOneWidget);
-        expect(find.text(AppLocale.l10n.lookMessagesSoon), findsOneWidget);
-        expect(AppLocale.l10n.lookMessagesSoon, 'বার্তা — শীঘ্রই আসছে');
+      // ⭐ বার্তা ও কল (২১ নভেম্বর ২০২৬): বার্তা চালু না থাকলে (`features.messaging` false) বোতামই নেই — "শীঘ্রই" আর নয়
+      testWidgets('${look.name}: messaging off — no messages button, no "coming soon"', (tester) async {
+        expect(await pumpTop(tester, look, messaging: false), ['top-create', 'top-search']);
+        expect(find.byKey(const ValueKey('messages-soon')), findsNothing);
       });
     }
 

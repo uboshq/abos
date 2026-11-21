@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/auth/me_features.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../../core/printing/document_delivery.dart';
@@ -12,6 +13,7 @@ import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../messenger/list/send_paper_sheet.dart';
 import 'pdf_view_page.dart';
 import 'printer_settings_screen.dart';
 import 'thermal_flow.dart';
@@ -254,6 +256,14 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
     });
   }
 
+  /// এই শিট বন্ধ করে "বার্তায় পাঠান" শিট — নেভিগেটরের নিজের context-এ, কারণ এই শিটের context বন্ধ হলে আর থাকে না
+  void _sendInMessages() {
+    final nav = Navigator.of(context);
+    final paper = paperRefFor(type: widget.type, id: widget.id, title: widget.title, number: widget.fileStem);
+    nav.pop();
+    showSendPaperSheet(nav.context, paper);
+  }
+
   /// Chooses (and remembers) a printer when none is set yet.
   Future<bool> _ensurePrinter() async {
     if (_settings.hasPrinter) return true;
@@ -404,6 +414,15 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
                 onTap: _busy || _currentPaper == null ? null : _save,
               ),
             ],
+            // ⭐ বার্তায় পাঠান — কাগজটা মানুষ বা গ্রুপকে বার্তায় (নমুনা 3nuwRUdn v5 "গ" ১); PDF লাগে না, তাই সবসময়।
+            // ⓘ রিপোর্ট কাগজ নয় — তার জন্য নেই; বার্তা চালু না থাকলে (`features.messaging`) নেই
+            if (widget.type != 'report' && messagingOn(context))
+              ListTile(
+                key: const Key('document-send-chat'),
+                leading: const Icon(Icons.chat_outlined),
+                title: Text(words.msgListSendPaper),
+                onTap: _sendInMessages,
+              ),
           ],
         ),
       ),

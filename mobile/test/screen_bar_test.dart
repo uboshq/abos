@@ -48,6 +48,8 @@ TopBarContext _context(_Calls calls, {bool canSwitch = true}) => TopBarContext(
       openNotifications: (_) async => calls.bell++,
       openMenu: (_, __) async => calls.menu++,
       switchBranch: canSwitch ? (_) async => calls.branch++ : null,
+      // ⓘ বার্তা চালু — বারে বার্তা-বোতাম থাকে
+      messages: (_) async {},
     );
 
 List<Widget> _actions(_Calls calls, int n) => [

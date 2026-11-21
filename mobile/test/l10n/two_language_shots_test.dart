@@ -160,6 +160,8 @@ Widget _screen(String screen, bool en) => switch (screen) {
             // ⓘ HomeShell-এর মতোই উপরে ＋ (দ্রুত কাজ) — 0.4.63 থেকে হোমে নিচের "＋ নতুন" নেই
             onCreate: () {},
             onBell: () {},
+            // ⓘ বার্তা চালু (`features.messaging`) — HomeShell-এর মতোই বারে বার্তা-বোতাম
+            onMessages: () {},
             unread: 3,
             avatarName: _owner.name,
             onAvatar: (_) async {},
@@ -222,12 +224,14 @@ Widget _app(String screen, Locale locale) {
           search: (_) async {},
           openNotifications: (_) async {},
           openMenu: (_, __) async {},
+          // ⓘ বার্তা চালু — ভেতরের পর্দার বারেও বার্তা-বোতাম
+          messages: (_) async {},
         )),
     navBadgesProvider.overrideWith((ref) => const NavBadges(unread: 3, pending: 3)),
     mayCollectProvider.overrideWith((ref) => true),
   ]);
   c.read(myFaceProvider.notifier).state = oldFace;
-  c.read(meFeaturesProvider.notifier).state = const MeFeatures(profilePhoto: true, myPhones: true);
+  c.read(meFeaturesProvider.notifier).state = const MeFeatures(profilePhoto: true, myPhones: true, messaging: true);
   addTearDown(c.dispose);
   return UncontrolledProviderScope(
     container: c,

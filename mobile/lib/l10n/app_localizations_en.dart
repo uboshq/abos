@@ -12195,4 +12195,136 @@ class AppL10nEn extends AppL10n {
   String menuPageAppVersion(String version) {
     return 'ABOS app $version';
   }
+
+  @override
+  String get msgListSearch => 'Search names or messages';
+
+  @override
+  String get msgListAll => 'All';
+
+  @override
+  String get msgListUnread => 'Unread';
+
+  @override
+  String msgListUnreadCount(String count) {
+    return 'Unread $count';
+  }
+
+  @override
+  String get msgListGroups => 'Groups';
+
+  @override
+  String get msgListPapers => 'Papers';
+
+  @override
+  String get msgListNew => 'New message';
+
+  @override
+  String get msgListYou => 'You:';
+
+  @override
+  String msgListSender(String name) {
+    return '$name:';
+  }
+
+  @override
+  String msgListVoice(String duration) {
+    return 'Voice message · $duration';
+  }
+
+  @override
+  String get msgListPhoto => 'Photo';
+
+  @override
+  String get msgListFile => 'File';
+
+  @override
+  String get msgListLocation => 'Location';
+
+  @override
+  String get msgListYesterday => 'Yesterday';
+
+  @override
+  String msgListWeekday(String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      day,
+      {
+        'mon': 'Mon',
+        'tue': 'Tue',
+        'wed': 'Wed',
+        'thu': 'Thu',
+        'fri': 'Fri',
+        'sat': 'Sat',
+        'other': 'Sun',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String msgListUnreadSpoken(String count) {
+    return '$count unread';
+  }
+
+  @override
+  String msgListMessagesUnread(String count) {
+    return 'Messages, $count unread';
+  }
+
+  @override
+  String get msgListNotOpenYet => 'Messages are not switched on yet';
+
+  @override
+  String get msgListNotAllowed => 'You do not have permission for messages';
+
+  @override
+  String get msgListLoadFailed => 'Could not load messages';
+
+  @override
+  String get msgListRetry => 'Try again';
+
+  @override
+  String get msgListEmpty => 'No messages yet';
+
+  @override
+  String get msgListNoMatch => 'Nothing found';
+
+  @override
+  String get msgListFindPerson => 'Search names';
+
+  @override
+  String get msgListClose => 'Close';
+
+  @override
+  String get msgListCallWho => 'Whom to call?';
+
+  @override
+  String get msgListSendPaper => 'Send in messages';
+
+  @override
+  String get msgListSendWho => 'Send to whom? Search names';
+
+  @override
+  String get msgListRecent => 'Recent';
+
+  @override
+  String get msgListNoPaperAccess =>
+      'No permission to open this paper — will see only the number';
+
+  @override
+  String get msgListNote => 'Add a note (optional)';
+
+  @override
+  String msgListSendTo(String count) {
+    return 'Send · $count';
+  }
+
+  @override
+  String get msgListSent => 'Sent';
+
+  @override
+  String get msgListSendFailed => 'Could not send — try again';
+
+  @override
+  String get msgListSelected => 'Selected';
 }

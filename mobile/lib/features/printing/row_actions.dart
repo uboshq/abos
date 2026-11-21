@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'document_actions_sheet.dart';
+import '../../core/auth/me_features.dart';
+import '../messenger/list/send_paper_sheet.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -74,6 +76,7 @@ class RowActionsButton extends StatelessWidget {
 Future<void> showRowActions(BuildContext context, {required RowActionsButton button}) {
   final words = context.l10n;
   final hasPaper = button.paperType != null && button.paperId != null;
+  final messaging = messagingOn(context);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -123,6 +126,17 @@ Future<void> showRowActions(BuildContext context, {required RowActionsButton but
                   icon: Icons.print_outlined,
                   onTap: () => DocumentActionsSheet.show(context,
                       type: button.paperType!, id: button.paperId!, title: button.paperTitle ?? button.number, fileStem: button.number),
+                )),
+                // ⭐ বার্তায় পাঠান — কাগজটা মানুষ বা গ্রুপকে বার্তায় (নমুনা 3nuwRUdn v5 "গ" ১); বার্তা চালু থাকলে তবেই
+                if (messaging)
+                  item(RowAction(
+                  key: 'send-chat',
+                  label: words.msgListSendPaper,
+                  icon: Icons.chat_outlined,
+                  onTap: () => showSendPaperSheet(
+                      context,
+                      paperRefFor(
+                          type: button.paperType!, id: button.paperId!, title: button.paperTitle ?? button.number, number: button.number)),
                 )),
               ],
               if (button.work.isNotEmpty) ...[

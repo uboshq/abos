@@ -61,6 +61,8 @@ class MePage extends ConsumerStatefulWidget {
     this.onLockDelay,
     this.signOutHere,
     this.now,
+    this.onMessage,
+    this.onCall,
   });
 
   /// শেলের হাতে যা আছে — [MeProfile.fallback] (নাম, পদবি, কোম্পানি, শাখা, ছবি, ইমেইল); `/me/profile` আসার আগে আর পুরনো সার্ভারে
@@ -108,6 +110,11 @@ class MePage extends ConsumerStatefulWidget {
 
   /// ঘড়ি — পরীক্ষার পথ
   final DateTime Function()? now;
+
+  /// ⭐ "বার্তা" আর "কল" (বার্তা ও কল, প্রথম ধাপ; ২১ নভেম্বর ২০২৬) — শেল দেয়। বোতাম দেখায় কেবল `/me`-র `features.messaging` /
+  /// `features.calls` true হলে; বোতাম থাকলে কিন্তু শেল কিছু না দিলে (একা পাতার পরীক্ষা) "শীঘ্রই"
+  final VoidCallback? onMessage;
+  final VoidCallback? onCall;
 
   @override
   ConsumerState<MePage> createState() => _MePageState();
@@ -371,7 +378,14 @@ class _MePageState extends ConsumerState<MePage> {
             onCover: features.coverPhoto ? (_busy ? () {} : _changeCover) : null,
             onPhoto: features.profilePhoto ? (_busy ? () {} : _changePhoto) : null,
           ),
-          _Buttons(tok: t, onEdit: _editProfile, onSoon: () => _say(l.mePageSoonSnack)),
+          _Buttons(
+              tok: t,
+              onEdit: _editProfile,
+              onSoon: () => _say(l.mePageSoonSnack),
+              showMessage: features.messaging,
+              showCall: features.calls,
+              onMessage: widget.onMessage,
+              onCall: widget.onCall),
           if (_progress != null)
             Semantics(
               key: const ValueKey('me-progress'),
