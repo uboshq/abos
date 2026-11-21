@@ -127,7 +127,6 @@ void main() {
         onOpenProfile: () {},
         onSwitchWorkspace: () {},
         shortcuts: shortcuts,
-        shortcutCounts: const {'approvals': 3},
         onOpenPath: (_, __) async {},
         recents: const [
           RecentEntry(path: 'paper/money-in/142', label: 'RCV-0142 · টাকা প্রাপ্তি'),

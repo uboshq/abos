@@ -781,7 +781,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   onOpenProfile: () => _setPage(HomePage.me),
                   onSwitchWorkspace: (_profile?.canSwitch ?? false) ? () => _openPicker() : null,
                   shortcuts: _quickActions,
-                  shortcutCounts: {if ((_pending ?? 0) > 0) 'approvals': _pending!},
+                  // ⛔ শর্টকাটে সংখ্যার বড়ি নেই — অনুমোদনের অপেক্ষা "আজকের কাজ"-এ একবারই (মালিকের নমুনা TjvNzZvq; একই সংখ্যা দুবার নয়)
                   onOpenPath: _openFromMenu,
                   recents: _recentRows,
                   approvalsWaiting: _pending,
