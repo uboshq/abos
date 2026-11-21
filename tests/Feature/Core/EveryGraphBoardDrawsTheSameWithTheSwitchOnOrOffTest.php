@@ -80,8 +80,10 @@ final class EveryGraphBoardDrawsTheSameWithTheSwitchOnOrOffTest extends TestCase
     private function topSuppliersIsDrawn(bool $v2): void
     {
         $bill = PurchaseBill::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())->whereNotNull('supplier_id')
-            ->orderBy('id')->first();
-        $this->assertNotNull($bill, 'দাবির ভিত্তি নেই — ডেমোতে সরবরাহকারীর বিল নেই।');
+            ->orderBy('id')->first()
+            // ⓘ ডেমোর এই কোম্পানিতে বিল না থাকলে দাবিটা নিজেই একটা বসায় (Mac-রান ২১ নভেম্বর ২০২৬: ডেমোতে বিল নেই, দাবি কিছুই মাপত না)
+            ?? $this->aBillOfOneSupplier();
+        $this->assertNotNull($bill, 'দাবির ভিত্তি নেই — ডেমোতে সরবরাহকারী নেই।');
         PurchaseBill::query()->withoutGlobalScopes()->whereKey($bill->id)
             ->update(['status' => DocumentStatus::CONFIRMED, 'trx_date' => '2026-11-10', 'total' => '3040000', 'deleted_at' => null]);
 
@@ -90,6 +92,35 @@ final class EveryGraphBoardDrawsTheSameWithTheSwitchOnOrOffTest extends TestCase
 
         $this->assertArrayHasKey($title, $cards ?? [], 'দাবির ভিত্তি নেই — "সবচেয়ে বেশি কেনা" কার্ড পাতায় নেই।');
         $this->assertFalse($cards[$title], '⛔ এ বছরের নিশ্চিত বিল থাকতেও "সবচেয়ে বেশি কেনা" ফাঁকা (সুইচ '.($v2 ? 'চালু' : 'বন্ধ').')।');
+    }
+
+    /** একটা সরবরাহকারীর একটা বিল — খসড়া হিসেবে বসে, উপরে নিশ্চিত করা হয় */
+    private function aBillOfOneSupplier(): ?PurchaseBill
+    {
+        $supplier = \App\Modules\Supplier\Models\Supplier::query()->orderBy('id')->first();
+        $warehouse = \App\Modules\Inventory\Models\Warehouse::query()->orderBy('id')->first();
+        $year = \App\Models\FinancialYear::query()->orderByDesc('id')->first();
+
+        if ($supplier === null || $warehouse === null || $year === null) {
+            return null;
+        }
+
+        return PurchaseBill::query()->create([
+            'branch_id' => CompanyContext::branchId() ?? $warehouse->branch_id,
+            'financial_year_id' => $year->id,
+            'supplier_id' => $supplier->id,
+            'warehouse_id' => $warehouse->id,
+            'document_no' => 'PBL-T'.random_int(10000, 99999),
+            'supplier_bill_no' => 'TOP-1',
+            'trx_date' => '2026-11-10',
+            'subtotal' => '3040000',
+            'discount' => '0',
+            'tax' => '0',
+            'total' => '3040000',
+            'ait_amount' => '0',
+            'vds_amount' => '0',
+            'status' => DocumentStatus::DRAFT,
+        ]);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Posting;
 
+use App\Core\Services\LedgerBalances;
 use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
@@ -81,6 +82,13 @@ final class PostingEngine
         $userId = $userId ?? \App\Core\Support\Actor::userId();
 
         $lines = $this->placePartiesInTheirBranch($lines, $branchId, $sourceType, $sourceId);
+
+        /*
+         * ⛔ খতিয়ান বদলাচ্ছে — আগে তোলা জের আর সত্যি নয় ([[LedgerBalances]]), Mac-রান ২১ নভেম্বর ২০২৬: নতুন ড্যাশবোর্ড
+         * (ABOS_DASHBOARDS_V2, লাইভে চালু) জেরগুলো আগে তুলে রাখে, আর একই অনুরোধে পরে দাখিলা হলে হোমের "বকেয়া আদায়" পুরনো
+         * অঙ্কই দেখাত। ⓘ মোছা দাখিলার আগে — তার পরের যেকোনো তোলা একই লেনদেনের নতুন সারিও দেখে।
+         */
+        app(LedgerBalances::class)->forget();
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
             $this->assertYearStillOpen($financialYear);
@@ -326,6 +334,8 @@ final class PostingEngine
         $claimKey = $lastReversal === null
             ? $reversalType
             : $reversalType.'@'.$original->last()->id;
+
+        app(LedgerBalances::class)->forget(); // ⛔ উল্টো দাখিলাও খতিয়ান বদলায় — আগে তোলা জের বাদ ([[post()]]-এর একই কারণ)
 
         return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey, $documentNo) {
             $this->assertYearStillOpen($financialYear);
