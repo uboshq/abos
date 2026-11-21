@@ -74,15 +74,18 @@ final class MessengerService
                     ->whereColumn('mm.thread_id', 'messenger_threads.id')
                     ->where('mm.user_id', $user->id)
                     ->whereColumn('m.id', '>', 'mm.read_id')
-                    ->where(fn ($w) => $w->whereNull('m.sender_id')->orWhere('m.sender_id', '!=', $user->id));
+                    ->whereNotNull('m.sender_id')->where('m.sender_id', '!=', $user->id)
+                    ->whereNull('m.deleted_at')
+                    ->whereNotIn('m.id', $this->hiddenFor($user));
             });
         }
 
         if ($q !== '') {
             $like = '%'.addcslashes($q, '%_\\').'%';
-            $query->where(function ($w) use ($like): void {
+            $query->where(function ($w) use ($like, $user): void {
                 $w->where('title', 'like', $like)
-                    ->orWhereIn('id', Member::query()->select('thread_id')
+                    // ⓘ the OTHER members' names — my own name would match every thread
+                    ->orWhereIn('id', Member::query()->select('thread_id')->where('user_id', '!=', $user->id)
                         ->whereIn('user_id', User::query()->select('id')->where('name', 'like', $like)))
                     ->orWhereIn('id', Message::query()->select('thread_id')->where('kind', 'text')->where('text', 'like', $like));
             });
@@ -98,7 +101,10 @@ final class MessengerService
             ->where('mm.user_id', $user->id)
             ->where('mm.company_id', \App\Core\Support\CompanyContext::id())
             ->whereColumn('m.id', '>', 'mm.read_id')
-            ->where(fn ($w) => $w->whereNull('m.sender_id')->orWhere('m.sender_id', '!=', $user->id))
+            // ⓘ unread = someone else's live message: not a system line, not deleted for everyone, not hidden for me
+            ->whereNotNull('m.sender_id')->where('m.sender_id', '!=', $user->id)
+            ->whereNull('m.deleted_at')
+            ->whereNotIn('m.id', $this->hiddenFor($user))
             ->count();
     }
 
@@ -176,6 +182,9 @@ final class MessengerService
         $added = [];
         DB::transaction(function () use ($thread, $me, $people, &$added): void {
             foreach ($people as $p) {
+                if (Member::query()->where('thread_id', $thread->id)->where('user_id', $p->id)->exists()) {
+                    continue;
+                }
                 $this->refuseUnlessMayTalk($me, $p);
                 $row = Member::query()->firstOrCreate(['thread_id' => $thread->id, 'user_id' => $p->id], ['joined_at' => now()]);
                 if ($row->wasRecentlyCreated) {
@@ -277,7 +286,13 @@ final class MessengerService
         }
 
         $threads = [];
-        foreach (array_values(array_unique($to)) as $i => $target) {
+        $to = array_values(array_unique(array_map('strval', $to)));
+        // ⛔ every target first — a refusal on the third must not leave the first two already sent
+        foreach ($to as $target) {
+            $this->checkTarget($me, $target);
+        }
+
+        foreach ($to as $i => $target) {
             $thread = $this->targetThread($me, (string) $target);
             foreach ($sources as $j => $source) {
                 $data = [
@@ -365,6 +380,29 @@ final class MessengerService
         return $v === null ? null : \Illuminate\Support\Carbon::parse($v);
     }
 
+    /** Would [[targetThread()]] succeed? — asks without creating anything. */
+    private function checkTarget(User $me, string $target): void
+    {
+        [$kind, $ref] = array_pad(explode(':', $target, 2), 2, '');
+
+        if ($kind === 'thread') {
+            $this->threadFor($me, $ref);
+
+            return;
+        }
+
+        if ($kind !== 'person') {
+            throw ValidationException::withMessages(['to' => __('messaging::messenger.bad_target')]);
+        }
+
+        $other = User::query()->find((int) $ref) ?? throw new HttpException(404);
+        $existing = Thread::query()->where('direct_key', Thread::directKey((int) $me->id, (int) $other->id))->exists();
+
+        if (! $existing) {
+            $this->refuseUnlessMayTalk($me, $other);
+        }
+    }
+
     private function targetThread(User $me, string $target): Thread
     {
         [$kind, $ref] = array_pad(explode(':', $target, 2), 2, '');
@@ -390,6 +428,10 @@ final class MessengerService
         if ($clientId !== null) {
             $again = Message::query()->where('sender_id', $user->id)->where('client_id', $clientId)->first();
             if ($again !== null) {
+                // ⛔ the phone's id is per message; the same id in another thread is a phone bug, not a repeat
+                if ((int) $again->thread_id !== (int) $thread->id) {
+                    throw ValidationException::withMessages(['client_id' => __('messaging::messenger.client_id_used')]);
+                }
                 $again->setAttribute('repeated', true);
 
                 return $again;
@@ -486,7 +528,13 @@ final class MessengerService
         }
 
         $threads = [];
-        foreach (array_values(array_unique($to)) as $i => $target) {
+        $to = array_values(array_unique(array_map('strval', $to)));
+        // ⛔ every target first — a refusal on the third must not leave the first two already sent
+        foreach ($to as $target) {
+            $this->checkTarget($me, $target);
+        }
+
+        foreach ($to as $i => $target) {
             $thread = $this->targetThread($me, (string) $target);
             $this->send($thread, $me, [
                 'kind' => 'paper',

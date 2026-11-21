@@ -64,7 +64,10 @@ final class MessengerPresenter
         $unread = $me === null ? 0 : Message::query()
             ->where('thread_id', $thread->id)
             ->where('id', '>', $me->read_id)
-            ->where(fn ($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $viewer->id))
+            // ⓘ the same rule as [[MessengerService::unreadTotal()]] — no system lines, no tombstones, nothing hidden for me
+            ->whereNotNull('sender_id')->where('sender_id', '!=', $viewer->id)
+            ->whereNull('deleted_at')
+            ->whereNotIn('id', \App\Modules\Messaging\Models\HiddenMessage::query()->select('message_id')->where('user_id', $viewer->id))
             ->count();
 
         $last = $thread->last_message_id ? ($thread->relationLoaded('lastMessage') ? $thread->lastMessage : $thread->lastMessage()->first()) : null;

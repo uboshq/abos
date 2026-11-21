@@ -318,7 +318,8 @@ final class MessengerApiController extends Controller implements HasMiddleware
     {
         $me = $this->me($request);
         $row = $this->messenger->fileFor($me, $file);
-        $path = $request->boolean('thumb') && $row->thumb_path ? $row->thumb_path : $row->path;
+        $thumb = $request->boolean('thumb') && $row->kind === 'image' && $row->thumb_path !== null;
+        $path = $thumb ? (string) $row->thumb_path : $row->path;
         $disk = Storage::disk(MessageFile::DISK);
 
         abort_unless($disk->exists($path), 404);
@@ -326,7 +327,7 @@ final class MessengerApiController extends Controller implements HasMiddleware
         $inline = in_array($row->kind, ['image', 'voice'], true) || $row->mime === 'application/pdf';
 
         return $disk->response($path, $row->name, [
-            'Content-Type' => $request->boolean('thumb') ? 'image/jpeg' : $row->mime,
+            'Content-Type' => $thumb ? 'image/jpeg' : $row->mime,
             'Cache-Control' => 'private, max-age=86400',
             'X-Content-Type-Options' => 'nosniff',
         ], $inline ? 'inline' : 'attachment');

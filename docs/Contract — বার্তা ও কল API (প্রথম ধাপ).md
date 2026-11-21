@@ -17,7 +17,7 @@
 
 | `error` | When |
 |---|---|
-| `forbidden` | The caller has no `messaging.use`, or is not a member of this thread |
+| `forbidden` | Not an admin for a group action. Note: a missing `messaging.use` is a plain 403 (Laravel's own body plus a Bengali `message`), and a thread the caller is not in is a **404** ("exists" is information too) |
 | `may_not_talk` | The role allow-list forbids this pair |
 | `group_create_denied` | The caller has no `messaging.group.create` |
 | `paper_denied` | The **sender** may not open the paper themselves |
@@ -28,7 +28,7 @@
 | `503 calls_off` | LiveKit is not set up |
 
 - **IDs are strings:**
-  - thread = ULID;
+  - thread = UUID v7 (the house `public_id`);
   - message = a number as a string; it grows, so it doubles as the cursor;
   - person = the user id as a string;
   - call = ULID.
@@ -53,7 +53,10 @@
   - `delivered`: every other member has fetched it;
   - `read`: every other member has read it.
 - `read_count`: in a group, for my own message, how many members have read it.
-- *Server addition:* `reply_to` is `{ id, sender_name, kind, text }` or null. The app may ignore it.
+- `reply_to` is `{ id, kind, text (short preview), sender: person, mine }` or null (sample v7).
+- `forwarded` (bool) — a copy sent on from another thread.
+- `kind: "deleted"` — deleted for everyone: `text` "", `attachment`, `paper`, `lat`, `lng` null; the app shows "এই বার্তাটি মুছে ফেলা হয়েছে".
+- **Unread** counts only other people's live messages: never system lines, tombstones, or messages hidden "for me".
 
 **attachment** (`ChatAttachment`):
 - Fields: `url`, `name`, `mime`, `size` (bytes), `duration_ms`, `waveform` (a list of 0–1 values).
@@ -164,8 +167,15 @@ Typing, online and ticks ride in the same `meta`. One open chat costs 20 request
 - Messages stay on the company's own server.
 - Normally nobody reads another person's messages. The owner or an admin can read a thread only through the web audit page, which needs the `messaging.audit` key and a written reason. Every such read is recorded in the audit trail. The app has no API for this.
 
-**Not in the sample, so not built in phase 1**
-- editing or deleting a message;
-- forwarding;
+**Message actions (sample v7, owner-approved)**
+- `POST /messenger/forward` `{ message_ids, to: ["person:12","thread:…"], client_id }` → `201 { data: { sent, thread_ids } }`.
+- `DELETE /messenger/messages/{id}?for=me|everyone` → `204`. `everyone` only for one's own message within 60 minutes, else `403 delete_not_allowed`.
+- `GET /messenger/messages/{id}/info` → `{ data: [ { person, delivered_at, read_at } ] }` for every member except the sender.
+- `meta.states` reports `{ id, state: "deleted" }` for any message in the last 100.
+- Paper send and forward check **every** target first; one refused target means nothing is sent.
+- A `client_id` belongs to one message in one thread; reusing it in another thread is `422`.
+
+**Not in the samples, so not built in phase 1**
+- editing a message;
 - reactions;
 - group calls and video meetings (phase 2).

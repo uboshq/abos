@@ -10,6 +10,7 @@ return [
     'too_big' => 'The file is too big — :mb MB at most.',
     'bad_type' => 'This kind of file cannot be sent.',
     'deleted' => 'This message was deleted',
+    'client_id_used' => 'This message id was already used in another conversation.',
     'kind' => [
         'image' => 'Photo',
         'file' => 'File',
