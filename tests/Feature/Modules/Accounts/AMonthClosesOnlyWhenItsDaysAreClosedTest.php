@@ -102,13 +102,15 @@ final class AMonthClosesOnlyWhenItsDaysAreClosedTest extends TestCase
         app(SettingsService::class)->set('accounts.day_close.weekly_holiday', 'friday');
         $this->closeEveryDayOfTheWindowExcept([self::OPEN_DAY, '2026-10-30']);
         $this->book(self::OPEN_DAY);
-        $this->book('2026-10-30'); // ⓘ শুক্রবার — সাপ্তাহিক ছুটি, বন্ধ না হলেও গোনা হয় না
+        // ⓘ শুক্রবার সাপ্তাহিক ছুটি, কিন্তু লেখা হয়েছে — তাহলে কাজের দিন, বন্ধ হতে হয় (রিভিউ, ২১ নভেম্বর ২০২৬)
+        $this->book('2026-10-30');
 
         $row = $this->row('days_closed');
         $this->assertSame(MonthEndChecklist::PENDING, $row['state'], '⛔ বন্ধ না হওয়া কর্মদিবস চেকলিস্টে আসেনি');
-        $this->assertSame([self::OPEN_DAY], $row['dates'], '⛔ সাপ্তাহিক ছুটির দিনও বন্ধ-না-হওয়া ধরা হলো, বা খোলা দিনটা নেই');
+        $this->assertSame([self::OPEN_DAY, '2026-10-30'], $row['dates'],
+            '⛔ লেখা হওয়া ছুটির দিন বাদ পড়ল, লেখাহীন দিন খোলা ধরা হলো, বা খোলা দিনটা নেই');
 
-        $this->close()->assertSessionHasErrors(['month' => __('accounts::validation.month_days_open', ['count' => 1, 'days' => '29-10'])]);
+        $this->close()->assertSessionHasErrors(['month' => __('accounts::validation.month_days_open', ['count' => 2, 'days' => '29-10, 30-10'])]);
         $this->assertNull($this->lock(), '⛔ খোলা দিনসহ মাস বন্ধ হলো — দিন-শেষগুলোর যোগ আর মাস মেলে না');
 
         // ⓘ কারণ লিখলেও নয় — এটা কারণের সারি নয়, মালিকের "মাস বন্ধ হবে না"
@@ -120,7 +122,38 @@ final class AMonthClosesOnlyWhenItsDaysAreClosedTest extends TestCase
             'closed_by' => $this->owner->id, 'closed_at' => now()]);
         Cache::flush();
 
-        $this->assertSame(MonthEndChecklist::OK, $this->row('days_closed')['state'], '⛔ শাখা দিন বন্ধ করার পরেও দিনটা খোলা ধরা হলো');
+        $this->assertSame(['2026-10-30'], $this->row('days_closed')['dates'], '⛔ শাখা দিন বন্ধ করার পরেও দিনটা খোলা ধরা হলো');
+    }
+
+    /**
+     * ⛔ শাখাহীন সারি মাসকে চিরকাল খোলা রাখত — রিভিউ, ২১ নভেম্বর ২০২৬। ⓘ "সব শাখা" কেবল দেখার (মালিক, ২০ নভেম্বর), তাই বহু-শাখার
+     * কোম্পানিতে গোটা কোম্পানির দিন বন্ধ হয় না; নির্ধারিত কাজ বা "সব শাখা" থেকে অনুমোদনে বসা সারির শাখা নেই।
+     */
+    public function test_a_branchless_entry_is_closed_by_the_branches_that_closed_that_day(): void
+    {
+        $this->closeEveryDayOfTheWindowExcept([self::OPEN_DAY]);
+
+        // ⓘ সেদিন কোনো শাখা লেখেনি, কেবল শাখাহীন সারি — কোনো বন্ধই নেই: খোলা
+        $this->book(self::OPEN_DAY, null);
+        $this->assertSame([self::OPEN_DAY], $this->row('days_closed')['dates'], '⛔ কোনো বন্ধ ছাড়াই শাখাহীন সারির দিন বন্ধ ধরা হলো');
+
+        // ⓘ কোনো শাখা না লিখলে যেকোনো শাখার বন্ধই যথেষ্ট
+        DayClose::query()->forceCreate(['company_id' => $this->company->id, 'branch_id' => $this->a->id, 'day' => self::OPEN_DAY,
+            'closed_by' => $this->owner->id, 'closed_at' => now()]);
+        $this->assertSame(MonthEndChecklist::OK, $this->row('days_closed')['state'],
+            '⛔ শাখার দিন বন্ধের পরেও শাখাহীন সারি দিনটা খোলা রাখল — মাস আর কখনো বন্ধ হত না');
+
+        // ⓘ শাখা লিখলে সেই শাখার বন্ধ লাগে — আরেক শাখা লিখল, বন্ধ করেনি: খোলা
+        $other = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->whereKeyNot($this->a->id)->first()
+            ?? Branch::query()->forceCreate(['company_id' => $this->company->id, 'code' => 'MC2', 'name_en' => 'Month close two', 'name_bn' => 'মাস বন্ধ দুই', 'is_active' => true]);
+        $this->book(self::OPEN_DAY, (int) $other->id);
+        $this->assertSame([self::OPEN_DAY], $this->row('days_closed')['dates'], '⛔ যে শাখা লিখেছে সে বন্ধ না করলেও দিনটা বন্ধ ধরা হলো');
+
+        DayClose::query()->forceCreate(['company_id' => $this->company->id, 'branch_id' => $other->id, 'day' => self::OPEN_DAY,
+            'closed_by' => $this->owner->id, 'closed_at' => now()]);
+        $this->assertSame(MonthEndChecklist::OK, $this->row('days_closed')['state']);
+        $this->close('closing for the test')->assertSessionHasNoErrors();
+        $this->assertNotNull($this->lock(), '⛔ সব শাখা দিন বন্ধ করলেও শাখাহীন সারির জন্য মাস বন্ধ হলো না');
     }
 
     public function test_work_left_needs_a_reason_and_the_lock_keeps_what_was_left(): void
@@ -299,13 +332,21 @@ final class AMonthClosesOnlyWhenItsDaysAreClosedTest extends TestCase
         Approval::query()->where('status', Approval::PENDING)->update(['status' => Approval::REJECTED]);
     }
 
-    private function book(string $date): void
+    /** @param  int|null|false  $branch  `false` = শাখা A; `null` = শাখাহীন (নির্ধারিত কাজের মতো) */
+    private function book(string $date, int|null|false $branch = false): void
     {
+        $branch = $branch === false ? (int) $this->a->id : $branch;
         $id = ++$this->source;
         app(PostingEngine::class)->post('journal_voucher', $id, $date, [
-            ['account_id' => $this->cash->id, 'debit' => '500', 'branch_id' => $this->a->id],
-            ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'credit' => '500', 'branch_id' => $this->a->id],
-        ], 'MC-'.$id, $this->a->id);
+            ['account_id' => $this->cash->id, 'debit' => '500', 'branch_id' => $branch],
+            ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'credit' => '500', 'branch_id' => $branch],
+        ], 'MC-'.$id, $branch);
         Cache::flush();
+
+        if ($branch === null) {
+            // ⓘ সারিটা সত্যিই শাখাহীন — ইঞ্জিন শাখা বসিয়ে দিলে দৃশ্যটা আর এই দাবির নয়
+            $this->assertSame(0, \App\Models\LedgerEntry::query()->where('document_no', 'MC-'.$id)->whereNotNull('branch_id')->count(),
+                'পরীক্ষার সারিটা শাখাহীন হওয়ার কথা');
+        }
     }
 }

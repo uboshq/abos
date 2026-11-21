@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
-use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
@@ -96,8 +95,8 @@ final class MonthEndChecklist
      * ⭐ দিন বন্ধ আর মাস — মালিক, ১৭ নভেম্বর ২০২৬: *"দিন-শেষগুলোর যোগ = মাসের অঙ্ক, নইলে মাস বন্ধ হবে না"*।
      *
      * দুই সারি:
-     *   · `days_closed` — মাসের যে কর্মদিবসে খাতায় কিছু লেখা হয়েছে, তার প্রতিটা দিন শেষের হিসাবে বন্ধ ([[DayChecklist::openDays()]]-এর
-     *     একই নিয়ম: সাপ্তাহিক ছুটি বাদ; দিনটা বন্ধ যদি কোম্পানির পুরো দিন বন্ধ, বা সেদিন যে শাখায় লেখা হয়েছে তার প্রতিটা বন্ধ)।
+     *   · `days_closed` — মাসের যেদিন খাতায় কিছু লেখা হয়েছে (সাপ্তাহিক ছুটিও, লেখা হলে), তার প্রতিটা দিন শেষের হিসাবে বন্ধ: দিনটা বন্ধ
+     *     যদি কোম্পানির পুরো দিন বন্ধ, বা সেদিন যে শাখায় লেখা হয়েছে তার প্রতিটা বন্ধ; শাখাহীন সারি সেই শাখাগুলোর বন্ধেই বন্ধ।
      *   · `days_changed` — বন্ধ দিনে বন্ধের পরে খাতায় যা বসেছে (দিনের কাগজের "দিন বন্ধের পরে যোগ হয়েছে" — [[DayClosingService]])।
      *     ⓘ ডিফল্টে বন্ধ দিনে লেখা চলে (মালিক, ১৮ নভেম্বর: "কাজ যাতে আটকে না থাকে"), তাই এটা কারণ চায়, মাস আটকায় না।
      *
@@ -122,9 +121,6 @@ final class MonthEndChecklist
             ];
         }
 
-        $holiday = (string) (app(SettingsService::class)->get('accounts.day_close.weekly_holiday') ?? 'friday');
-        $off = ['sunday' => 0, 'monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6][$holiday] ?? null;
-
         // ⓘ এক প্রশ্নে: কোন দিন কোন শাখায় লেখা হয়েছে, আর সেখানে শেষ সারিটা কখন বসেছে
         $written = LedgerEntry::query()
             ->whereBetween('trx_date', [$start->toDateString(), $end->toDateString()])
@@ -143,18 +139,32 @@ final class MonthEndChecklist
         $open = [];
         $changed = [];
 
+        // ⓘ সাপ্তাহিক ছুটি আলাদা করে বাদ নেই — এখানে কেবল যেদিন খাতায় লেখা হয়েছে সেই দিনগুলো আসে; ছুটির দিনে লেখা হলে সেটা কাজের দিন,
+        //   অন্য দিনের মতোই বন্ধ হতে হয় (রিভিউ, ২১ নভেম্বর ২০২৬ — নইলে শুক্রবারের বিক্রি কোনো দিন-শেষে থাকত না, অথচ মাসে থাকত)।
         foreach ($written as $day => $rows) {
-            if ($off !== null && CarbonImmutable::parse($day)->dayOfWeek === $off) {
-                continue;
-            }
-
             $records = $closes->get($day, collect());
             $whole = $records->first(fn (DayClose $c) => $c->branch_id === null);
             $late = false;
             $shut = true;
 
+            /*
+             * ⛔ শাখাহীন সারি (নির্ধারিত কাজ, সিস্টেমের পোস্ট, "সব শাখা" থেকে দেওয়া অনুমোদন — [[PostingEngine]]) — রিভিউ, ২১ নভেম্বর ২০২৬।
+             * ⓘ "সব শাখা" কেবল দেখার (মালিক, ২০ নভেম্বর), তাই বহু-শাখার কোম্পানিতে গোটা কোম্পানির দিন বন্ধ হয় না; আগে এমন একটা সারিই
+             *   মাসকে চিরকাল খোলা রাখত। এখন সেদিন যে শাখাগুলো লিখেছে তাদের সবাই বন্ধ করলে সারিটাও বন্ধ ধরা; কোনো শাখা না লিখলে
+             *   সেদিন যেকোনো শাখার বন্ধই যথেষ্ট। পরে-যোগের তুলনা সেদিনের সবচেয়ে পরের বন্ধের সাথে।
+             */
+            $branchRows = $rows->filter(fn ($r) => $r->branch_id !== null);
+            $branchCloses = $branchRows->isNotEmpty()
+                ? $branchRows->map(fn ($r) => $records->first(fn (DayClose $c) => $c->branch_id !== null && (int) $c->branch_id === (int) $r->branch_id))
+                : $records;
+            $branchless = $branchCloses->isEmpty() || $branchCloses->contains(null)
+                ? null
+                : $branchCloses->sortByDesc(fn (DayClose $c) => $c->closed_at?->getTimestamp() ?? 0)->first();
+
             foreach ($rows as $r) {
-                $record = $whole ?? ($r->branch_id === null ? null : $records->first(fn (DayClose $c) => (int) $c->branch_id === (int) $r->branch_id));
+                $record = $whole ?? ($r->branch_id === null
+                    ? $branchless
+                    : $records->first(fn (DayClose $c) => $c->branch_id !== null && (int) $c->branch_id === (int) $r->branch_id));
 
                 if ($record === null) {
                     $shut = false;
