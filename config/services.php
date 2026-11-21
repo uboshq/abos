@@ -38,6 +38,15 @@ return [
         'project_id' => env('FIREBASE_PROJECT_ID', ''),
     ],
 
+    /*
+     * Messenger calls - LiveKit on the office Mac mini ([[LiveKitToken]]). Empty = calls off (503 calls_off).
+     */
+    'livekit' => [
+        'url' => env('LIVEKIT_URL'),
+        'key' => env('LIVEKIT_API_KEY'),
+        'secret' => env('LIVEKIT_API_SECRET'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
