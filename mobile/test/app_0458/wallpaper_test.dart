@@ -72,8 +72,8 @@ void main() {
   //  - উপরের বার: কোম্পানি-শাখার লেখা ৪.৫:১, ডানের চিহ্ন ৩:১ (WCAG 1.4.11) — উপরের কালো পট্টি এটা রাখে;
   //  - বাঁ-উপরের শুভেচ্ছা আর শিরোনাম, সরাসরি পটে — ৪.৫:১;
   //  - কাচের কার্ডের ভেতরের লেখা — পট কার্ডের ঝাপসায় (BackdropFilter-এর একই sigma) আর সাদা আভায়, তার ওপর ৪.৫:১;
-  //    ঝাপসা ১৫ থেকে (শুরুর ৪০ সহ)। ⓘ ১৫-র নিচে ("একদম স্বচ্ছ") উজ্জ্বল ফিতার ওপর ২.১:১ পর্যন্ত নামে — সেখানে লেখার
-  //    নিজের ছায়া ভরসা, এটা সেই বাছাইয়ের জেনে-নেওয়া দাম
+  //    সব ঝাপসায়। ⭐ ১৫-র নিচে ("একদম স্বচ্ছ") উজ্জ্বল ফিতার ওপর ২.১:১ পর্যন্ত নামত (0.4.62) — এখন কার্ডের ভেতরে কালো
+  //    পর্দা ([GlassSpec.darkFloor], ০-তে ০.৪০) সেটা ৪.৫:১-এর ওপরে রাখে
   group('purple wave: white text reads where text sits', () {
     const size = Size(412, 900);
     const barText = Rect.fromLTRB(50, 4, 176, 50);
@@ -90,10 +90,18 @@ void main() {
             final spec = GlassSpec.of(glassLevel);
             final inner = ui.PictureRecorder();
             const PurpleWavePainter().paint(Canvas(inner), size);
-            canvas.saveLayer(Offset.zero & size,
-                Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: spec.sigma, sigmaY: spec.sigma));
-            canvas.drawPicture(inner.endRecording());
-            canvas.restore();
+            // ⓘ GlassPanel-এর মতোই: ঝাপসা প্রায় শূন্য হলে ঝাপসা নেই
+            if (spec.sigma > 0.05) {
+              canvas.saveLayer(Offset.zero & size,
+                  Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: spec.sigma, sigmaY: spec.sigma));
+              canvas.drawPicture(inner.endRecording());
+              canvas.restore();
+            } else {
+              canvas.drawPicture(inner.endRecording());
+            }
+            // ⭐ ঝাপসা পটের ওপরে কালো পর্দা (১৫-র নিচে), তার ওপরে সাদা আভা — GlassPanel-এর একই ক্রম
+            canvas.drawRect(Offset.zero & size,
+                Paint()..color = Colors.black.withValues(alpha: GlassSpec.darkFloor(glassLevel, GlassWallpaper.purpleWave)));
             canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white.withValues(alpha: spec.fill));
           }
           final image = await recorder.endRecording().toImage(size.width.toInt(), size.height.toInt());
@@ -124,10 +132,41 @@ void main() {
       expect(worst(await render(tester), greetingAndTitle), greaterThanOrEqualTo(4.5));
     });
 
-    testWidgets('text inside a glass card, over the card blur and tint: 4.5:1 from blur 15 up', (tester) async {
-      for (final level in [15, AppLooks.defaultBlur, 100]) {
+    testWidgets('text inside a glass card, over the card blur and tint: 4.5:1 at every blur, 0 included', (tester) async {
+      for (final level in [0, 5, 10, 14, 15, AppLooks.defaultBlur, 100]) {
         expect(worst(await render(tester, glassLevel: level), cards), greaterThanOrEqualTo(4.5), reason: 'ঝাপসা $level');
       }
+    });
+
+    test('the dark floor: purple wave only, only under blur 15, deepest at 0', () {
+      expect(GlassSpec.darkFloor(0, GlassWallpaper.purpleWave), GlassSpec.floorMax);
+      expect(GlassSpec.darkFloor(5, GlassWallpaper.purpleWave), closeTo(GlassSpec.floorMax * 10 / 15, 1e-9));
+      expect(GlassSpec.darkFloor(10, GlassWallpaper.purpleWave), closeTo(GlassSpec.floorMax * 5 / 15, 1e-9));
+      for (final level in [15, AppLooks.defaultBlur, 100]) {
+        expect(GlassSpec.darkFloor(level, GlassWallpaper.purpleWave), 0, reason: 'ঝাপসা $level — কার্ড আগের মতো');
+      }
+      for (final paper in GlassWallpaper.values.where((w) => w != GlassWallpaper.purpleWave)) {
+        for (final level in [0, 5, 10, 15, 100]) {
+          expect(GlassSpec.darkFloor(level, paper), 0, reason: '${paper.name} $level — বাকি পট বদলায় না');
+        }
+      }
+    });
+
+    testWidgets('a glass card puts the floor in under its tint, and lifts it when the blur goes up', (tester) async {
+      final looks = _memory({});
+      AppLooks.instance = looks;
+      await looks.chooseWallpaper(GlassWallpaper.purpleWave);
+      looks.blur.value = 0;
+      await tester.pumpWidget(const MaterialApp(home: Center(child: GlassPanel(child: SizedBox(width: 100, height: 60)))));
+      Color floor() => tester.widget<ColoredBox>(find.byKey(const ValueKey('glass-dark-floor'))).color;
+      expect(floor().a, closeTo(GlassSpec.floorMax, 0.01));
+      looks.blur.value = 15;
+      await tester.pump();
+      expect(floor().a, 0);
+      looks.blur.value = 0;
+      await looks.chooseWallpaper(GlassWallpaper.sunset);
+      await tester.pump();
+      expect(floor().a, 0, reason: 'অন্য পটে কালো পর্দা নেই');
     });
 
     test('the picture stays vivid: a light scrim, a top band that fades out by 22%', () {

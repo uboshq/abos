@@ -250,6 +250,18 @@ void main() {
     });
   }
 
+  // ⭐ 0.4.63: বেগুনি ঢেউ, ঝাপসা ০ — কার্ডের ভেতরে কালো পর্দা ([GlassSpec.darkFloor]) সাদা লেখাকে ৪.৫:১-এর ওপরে রাখে
+  testWidgets('home on the purpleWave background at blur 0 — glass', (tester) async {
+    await AppLooks.instance.chooseWallpaper(GlassWallpaper.purpleWave);
+    await AppLooks.instance.chooseBlur(0);
+    await shoot(
+        tester,
+        AppLook.glass,
+        ListView(padding: const EdgeInsets.all(14), children: const [LookHero(today: _today, name: 'শুভ')]),
+        'home_glass_purpleWave_blur0',
+        topBar: true);
+  });
+
   // ⭐ চেহারার পাতা — ক্রম ম্যাটেরিয়াল · লিকুইড গ্লাস · ক্লাসিক (মালিক, ২০ নভেম্বর ২০২৬ "ok")
   testWidgets('Profile → চেহারা — material', (tester) async {
     await shoot(tester, AppLook.expressive, const LookScreen(), 'look_screen_expressive');

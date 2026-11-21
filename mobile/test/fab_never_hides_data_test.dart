@@ -166,7 +166,6 @@ List<String> _dropped(List<String> old, List<String> now) {
 /// প্রতিটা পর্দার সারির তথ্যের কাগজের নম্বর (নমুনা থেকে, আঁকা লেখা থেকে নয়)
 List<String> _numbersOf(String screen) => switch (screen) {
       'SR collections' => [for (final r in collectionRows) r.no],
-      'owner home' => const ['RCV-0190', 'PBL-0010', 'EXP-0044'],
       'orders' => [for (final o in SalesOrderRecord.all()) o.documentNo].whereType<String>().where((n) => n.isNotEmpty).toList(),
       _ => fabScreenNumbers[screen] ?? const [],
     };
@@ -267,13 +266,7 @@ Map<String, _Case> _cases() => {
         },
         opened: (tester) async => expect(find.text('DEPOSIT REPORT SCREEN'), findsOneWidget),
       ),
-      'owner home': (
-        app: (scale, observer) => _app('/home', scale: scale, observer: observer),
-        fab: 'frame-fab',
-        keyed: const [],
-        ready: _none,
-        opened: (tester) async => expect(find.byKey(const ValueKey('fab-choice-/home/new-order')), findsOneWidget),
-      ),
+      // ⛔ হোমে নিচের "＋ নতুন" আর নেই (0.4.63) — উপরের বারের ＋ একই দ্রুত কাজ খোলে
       'orders': (
         app: (scale, observer) => _app('/home/orders', scale: scale, observer: observer),
         fab: 'frame-fab',
@@ -650,11 +643,6 @@ void main() {
   // leading; fe, ২২ অক্টোবর ২০২৬)। গড়ানোর আগেই কিছু ঢাকা পড়ে না। ⓘ ০.৪.৪৮-এ অপরিবর্তিত।
   Finder floating() => find.byWidgetPredicate((w) => w is FloatingActionButton && w.key != const ValueKey('rail-fab'));
   final screens = <String, ({String initial, String label, Future<void> Function(WidgetTester) opened})>{
-    'owner home': (
-      initial: '/home',
-      label: 'নতুন',
-      opened: (tester) async => expect(find.byKey(const ValueKey('fab-choice-/home/new-order')), findsOneWidget),
-    ),
     'collections': (
       initial: '/home/collections',
       // ⛔ ২০ নভেম্বর ২০২৬: "নতুন আদায়" নয় — টাকা জমার খবর, জমার খবরের চাবিতে

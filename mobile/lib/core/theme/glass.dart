@@ -21,6 +21,21 @@ class GlassSpec {
   /// এখনকার মানুষের বাছাই থেকে
   static GlassSpec get current => GlassSpec.of(AppLooks.instance.blur.value);
 
+  /// ঝাপসা এর নিচে নামলে বেগুনি ঢেউয়ে কার্ডের ভেতরে কালো পর্দা ([darkFloor])
+  static const int floorBelow = 15;
+
+  /// [floorBelow]-এর নিচে, ঝাপসা ০-তে কালো পর্দা কতটা ঘন
+  static const double floorMax = 0.40;
+
+  /// ⭐ কাচের ভেতরের কালো পর্দা — কেবল বেগুনি ঢেউয়ে, কেবল ঝাপসা ১৫-র নিচে: ১৫-তে ০, ০-তে [floorMax], মাঝে সমান হারে বাড়ে।
+  /// ঢেউয়ের উজ্জ্বল ফিতা প্রায়-স্বচ্ছ কাচে সাদা লেখাকে ২.১:১-এ নামাত (0.4.62); এতে প্রতিটা মানে ৪.৫:১-এর ওপরে
+  /// (wallpaper_test)। ⓘ বাকি পট আর ১৫ বা বেশি ঝাপসায় কাচ ঠিক আগের মতো — ০।
+  static double darkFloor(int level, GlassWallpaper paper) {
+    if (paper != GlassWallpaper.purpleWave) return 0;
+    final l = level.clamp(0, 100);
+    return l >= floorBelow ? 0 : floorMax * (floorBelow - l) / floorBelow;
+  }
+
   final int level;
 
   /// ঝাপসার মাপ (Gaussian sigma) — 0 থেকে 28 (ঝাপসার নমুনার `blur(k × 28px)`)
@@ -142,10 +157,13 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: AppLooks.instance.blur,
-      builder: (context, level, _) {
+    final looks = AppLooks.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([looks.blur, looks.wallpaper]),
+      builder: (context, _) {
+        final level = looks.blur.value;
         final spec = GlassSpec.of(level);
+        final floor = GlassSpec.darkFloor(level, looks.wallpaper.value);
         final shape = circle ? null : BorderRadius.circular(radius);
         final inner = Container(
           padding: padding,
@@ -176,9 +194,13 @@ class GlassPanel extends StatelessWidget {
                 child: Material(type: MaterialType.transparency, child: child)),
           ),
         );
+        // ⓘ ঝাপসা পটের ওপরে, সাদা আভার নিচে — বেগুনি ঢেউয়ে কম ঝাপসায় কালো পর্দা ([GlassSpec.darkFloor]); বাকি সবখানে
+        // পুরো স্বচ্ছ (কিছুই আঁকে না)। ⓘ গাছ সবসময় একই — দাগ ১৫ পেরোলে ভেতরের অবস্থা হারায় না
+        final floored = ColoredBox(
+            key: const ValueKey('glass-dark-floor'), color: Colors.black.withValues(alpha: floor), child: inner);
         final clipped = circle
-            ? ClipOval(child: _blur(spec, inner))
-            : ClipRRect(borderRadius: shape!, child: _blur(spec, inner));
+            ? ClipOval(child: _blur(spec, floored))
+            : ClipRRect(borderRadius: shape!, child: _blur(spec, floored));
         return DecoratedBox(
           decoration: BoxDecoration(
             shape: circle ? BoxShape.circle : BoxShape.rectangle,

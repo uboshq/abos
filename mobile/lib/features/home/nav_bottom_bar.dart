@@ -904,27 +904,6 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     GoRouter.of(context).go(spec.location);
   }
 
-  Future<void> _chooseNew(List<FabChoice> choices) async {
-    final route = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      // ⓘ ছোট ফোনে ২০০% অক্ষরে সব বাছাই না ধরলে গড়ায় — নিচের সারি কাটা পড়ে না
-      builder: (sheet) => SafeArea(
-        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final c in choices)
-            ListTile(
-              key: ValueKey('fab-choice-${c.route}'),
-              minTileHeight: 56,
-              leading: Icon(c.icon),
-              title: Text(c.label),
-              onTap: () => Navigator.of(sheet).pop(c.route),
-            ),
-        ])),
-      ),
-    );
-    if (route != null && mounted) await context.push(route);
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).user;
@@ -955,16 +934,14 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     final keyboardOpen = media.viewInsets.bottom > 0;
     void onSelect(BarTab t) => _select(t, shown);
 
-    // ⓘ হোমের "＋ নতুন" কেবল হোমের নিজের পাতায় — সব মডিউলে বা "আমি"-তে নয়
-    final fab = _isHome && page.kind != HomePageKind.home
-        ? null
-        : RoleTabs.fabFor(widget.location, permissions, modulesOn: modulesOn);
-    final built = fab == null || (fab.route == null && fab.choices.isEmpty)
+    // ⛔ হোমে কাঠামোর "＋ নতুন" আর নেই (0.4.63) — উপরের বারের ＋ তিন রূপেই একই দ্রুত কাজ খোলে ([RoleTabs.fabFor])
+    final fab = _isHome ? null : RoleTabs.fabFor(widget.location, permissions, modulesOn: modulesOn);
+    final built = fab == null || fab.route == null
         ? null
         : BarFab(
             key: const ValueKey('frame-fab'),
             label: fab.label,
-            onPressed: () => fab.choices.isEmpty ? context.push(fab.route!) : _chooseNew(fab.choices),
+            onPressed: () => context.push(fab.route!),
           );
     // ⭐ বোতাম কখনো তথ্য ঢাকে না: পাতার ওপরে ভাসে না — কাঠামোর নিজের বোতাম (হোম) নিচের বারের ওপরে নিজের সরু বারে
     // ([ActionBottomBar]); যে পর্দা নিজে বসায় ([FabSpec.drawnByScreen] আর পথ আছে — অর্ডার), সে নিজের নিচের বারে মোটের পাশে

@@ -60,6 +60,8 @@ GoRouter _router(String initial) => GoRouter(initialLocation: initial, routes: [
               leading: TopBarLeading.menu,
               onLeading: () {},
               onSearch: () {},
+              // ⓘ HomeShell-এর মতোই উপরে ＋ (দ্রুত কাজ) — 0.4.63 থেকে হোমে নিচের "＋ নতুন" নেই
+              onCreate: () {},
               onBell: () {},
               unread: 3,
               avatarName: _owner.name,
