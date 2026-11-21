@@ -67,7 +67,7 @@ return [
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',
-    'bank_reference_used' => 'Transaction number :reference is already on voucher :no. The same money cannot be booked twice.',
+    'bank_reference_used' => 'Transaction number :reference is already on voucher :no (same party, same account, same date). The same money cannot be booked twice.',
 
     'inter_company_their_books' => 'In the books of :company — :problem',
     'inter_company_needs_receiving_account' => 'On their side choose a money, expense or liability account (not income or equity).',

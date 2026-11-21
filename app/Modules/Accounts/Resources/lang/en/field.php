@@ -141,6 +141,7 @@ return [
     'moved_to' => 'Moved to',
     'instrument' => 'Mode',
     'instrument_no' => 'Cheque / txn number',
+    'same_deposit' => 'Same deposit also on',
     'instrument_date' => 'Cheque date',
     // Asked for at posting time, so it gets its own name — "Cheque/" would
     // mislead there, since most of the time this is a bKash TrxID

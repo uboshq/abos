@@ -263,6 +263,7 @@ return [
     'inter_company_reversed' => 'Both sides of the inter-company transfer have been reversed.',
     'voucher_awaits_another_hand' => ':no is kept as a draft. You cannot post your own voucher; someone else must open it and press Post.',
     'reference_free' => 'Not used on this account before ✓',
+    'same_deposit_also_in' => 'Same deposit also on: :no',
     'ledger_matches' => 'Matches: debit = credit ✓',
     'ledger_empty' => 'Shows here once the party, amount and account are filled.',
     'after_post_receipt' => 'After posting: money receipt (amount in words) print · PDF · WhatsApp',

@@ -24,7 +24,10 @@ use Tests\TestCase;
  * গ্রাহকের খাতায় জমা হত।
  *
  * দাবি — একই মানুষ, একই খাত, একই রেফারেন্স (বড়-ছোট হাত আর ফাঁকা জায়গা আলাদা করে লিখলেও): দ্বিতীয়টা থামে; প্রথমটা
- * প্রত্যাখ্যাত হলে আবার পাঠানো যায়; অন্য খাতে একই রেফারেন্স চলে; অন্য দোকানের নামেও একই স্লিপ থামে।
+ * প্রত্যাখ্যাত হলে আবার পাঠানো যায়; অন্য খাতে একই রেফারেন্স চলে।
+ *
+ * ⭐ জমার ভাগ — মালিক, ২১ নভেম্বর ২০২৬ (৳১,০০,০০০ জমা, নম্বর 175300556, দুই ডিলারের ৫০,০০০ করে): অন্য দোকানের নামে একই স্লিপ
+ * এখন **চলে** (আগে থামত), আর অন্য দিনের একই নম্বরও চলে। একই দোকান + একই খাত + একই দিন + একই রেফারেন্স — তবেই থামে।
  */
 final class OnePaymentAdviceForOneBankReferenceTest extends TestCase
 {
@@ -54,8 +57,15 @@ final class OnePaymentAdviceForOneBankReferenceTest extends TestCase
 
         $this->assertRefused(fn () => $this->advise($shop, $this->bank, ' trx-7788 '), '⛔ একই খাতে একই রেফারেন্স দ্বিতীয়বার পাঠানো গেল।');
 
+        // ⭐ জমার ভাগ — অন্য দোকানের নামে একই স্লিপ চলে (মালিক, ২১ নভেম্বর ২০২৬)
         $other = Customer::query()->whereKeyNot($shop->id)->orderBy('id')->firstOrFail();
-        $this->assertRefused(fn () => $this->advise($other, $this->bank, 'TRX-7788'), '⛔ অন্য দোকানের নামে একই স্লিপ চলে গেল।');
+        $this->assertNotNull($this->advise($other, $this->bank, 'TRX-7788'), '⛔ একটা জমা দুই ডিলারের নামে ভাগ করা গেল না');
+
+        // ⭐ অন্য দিনের একই নম্বর — আলাদা জমা
+        $this->assertNotNull(app(DepositClaimService::class)->raise($shop, [
+            'claimed_on' => now()->subDays(3)->toDateString(), 'amount' => '5000', 'method' => DepositClaim::BANK,
+            'reference' => 'TRX-7788', 'bank_account_id' => $this->bank->id,
+        ]), '⛔ অন্য দিনের একই নম্বর আগের জমার জোড়া বলে থামল');
 
         // ⭐ অন্য খাতে একই রেফারেন্স — আলাদা টাকা
         $this->assertNotNull($this->advise($shop, $this->otherBank, 'TRX-7788'));

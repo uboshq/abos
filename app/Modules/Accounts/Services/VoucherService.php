@@ -1886,13 +1886,102 @@ final class VoucherService
      * ⛔ সব শাখা জুড়ে, কিন্তু কেবল নিজের কোম্পানিতে: `acrossBranches()` শুধু শাখার দেয়াল তোলে, কোম্পানির দেয়াল
      * ([[BelongsToCompany]]) থাকে — অন্য কোম্পানির একই নম্বর এখানে আসেই না, তাই তার কাগজের অস্তিত্বও কোথাও ফাঁস হয় না।
      */
-    public function referenceTwin(int $accountId, string $reference, ?int $exceptId = null): ?Voucher
+    public function referenceTwin(int $accountId, string $reference, ?int $exceptId = null, ?array $facts = null): ?Voucher
     {
-        return Voucher::acrossBranches()
+        return $this->sameDeposit($accountId, $reference, $exceptId, $facts)['twin'];
+    }
+
+    /**
+     * ⭐ একই জমা — একই টাকা, না একই জমার ভাগ (মালিক, ২১ নভেম্বর ২০২৬: ৳১,০০,০০০ জমা, লেনদেন নম্বর 175300556, দুই ডিলারের
+     * ৫০,০০০ করে — RCV-0537 আর RCV-0538 দুটোই বৈধ)।
+     *
+     * ⓘ আন্তর্জাতিক নিয়ম: ব্যাংকের রেফারেন্স অনন্য কেবল এক ব্যাংক খাত আর এক তারিখের ভিতরে, আর একটা জমা কয়েকজন গ্রাহকের নামে
+     * ভাগ হতে পারে। তাই দুইটা রসিদ "একই টাকা" কেবল যখন চারটাই মেলে:
+     *   · একই নম্বর;
+     *   · একই টাকার খাত (`money_account_id`), আর দুই কাগজেই পাঠানোর মাধ্যম (`transfer_mode_id`) থাকলে একই মাধ্যম;
+     *   · একই মূল্য-তারিখ (`value_date`, না থাকলে কাগজের তারিখ);
+     *   · একই পক্ষ।
+     * ⓘ পক্ষ আলাদা হলে সেটা জমার ভাগ — থামে না, কাগজে তথ্য হিসেবে দেখায় ("একই জমা আরও যে রসিদে")। তারিখ, খাত বা মাধ্যম আলাদা
+     * হলে কোনো সম্পর্কই নেই।
+     * ⛔ কেবল পাকা কাগজ ([[DocumentStatus::POSTED]]) — খসড়া বা বাতিল রসিদ কখনো থামায় না, ভাগও নয়।
+     *
+     * ⓘ `$facts` না দিলে (পুরনো ডাক, পক্ষ অজানা) পক্ষ বা তারিখ মেলানো যায় না — একই খাতের একই নম্বরের যেকোনো পাকা কাগজই জোড়া;
+     * পর্দা কিছু না জেনে "ভাগ" বলবে না।
+     *
+     * @param  array{party_type?: string|null, party_id?: int|string|null, date?: mixed, transfer_mode_id?: int|string|null}|null  $facts
+     * @return array{twin: Voucher|null, shared: \Illuminate\Support\Collection<int, Voucher>}
+     */
+    public function sameDeposit(int $accountId, string $reference, ?int $exceptId = null, ?array $facts = null): array
+    {
+        $date = filled($facts['date'] ?? null) ? Carbon::parse($facts['date'])->toDateString() : null;
+        $mode = filled($facts['transfer_mode_id'] ?? null) ? (int) $facts['transfer_mode_id'] : null;
+
+        $found = Voucher::acrossBranches()
             ->where('money_account_id', $accountId)
             ->where('instrument_no', trim($reference))
+            ->whereIn('status', DocumentStatus::POSTED)
             ->when($exceptId !== null, fn ($q) => $q->whereKeyNot($exceptId))
-            ->first();
+            ->when($date !== null, fn ($q) => $q->whereRaw('DATE(COALESCE(value_date, trx_date)) = ?', [$date]))
+            ->when($mode !== null, fn ($q) => $q->where(fn ($m) => $m->whereNull('transfer_mode_id')->orWhere('transfer_mode_id', $mode)))
+            ->orderBy('id')
+            ->get();
+
+        if ($facts === null) {
+            return ['twin' => $found->first(), 'shared' => collect()];
+        }
+
+        $party = [(string) ($facts['party_type'] ?? ''), (int) ($facts['party_id'] ?? 0)];
+        $sameParty = fn (Voucher $v) => [(string) ($v->party_type ?? ''), (int) ($v->party_id ?? 0)] === $party;
+
+        return [
+            'twin' => $found->first($sameParty),
+            'shared' => $found->reject($sameParty)->values()->toBase(),
+        ];
+    }
+
+    /**
+     * ⓘ কাগজের নিজের চার কথা — [[sameDeposit()]]-এর প্রশ্নে। মূল্য-তারিখ না থাকলে কাগজের তারিখ।
+     *
+     * @return array{party_type: string|null, party_id: int|null, date: string|null, transfer_mode_id: int|null}
+     */
+    public function depositFacts(Voucher $voucher): array
+    {
+        $date = $voucher->value_date ?? $voucher->trx_date;
+
+        return [
+            'party_type' => filled($voucher->party_type) ? (string) $voucher->party_type : null,
+            'party_id' => filled($voucher->party_id) ? (int) $voucher->party_id : null,
+            'date' => $date === null ? null : Carbon::parse($date)->toDateString(),
+            'transfer_mode_id' => filled($voucher->transfer_mode_id) ? (int) $voucher->transfer_mode_id : null,
+        ];
+    }
+
+    /**
+     * ⭐ একই জমার অন্য রসিদ — কাগজের পাতায় একটা সারি ("একই জমা আরও যে রসিদে: RCV-0538"), নোটিশের ফিতা নয়।
+     *
+     * ⓘ খাতটা মাথায় বসে পোস্টের মুহূর্তে; খসড়ায় তখনো নেই, তাই টাকার সারির ব্যাংক/MFS খাত থেকে। নগদ বা নম্বরহীন কাগজে খালি।
+     *
+     * @return \Illuminate\Support\Collection<int, Voucher>
+     */
+    public function sharedDeposit(Voucher $voucher): \Illuminate\Support\Collection
+    {
+        $reference = trim((string) $voucher->instrument_no);
+
+        if ($reference === '' || $voucher->isCancelled()) {
+            return collect();
+        }
+
+        $accountId = $voucher->money_account_id !== null
+            ? (int) $voucher->money_account_id
+            : $voucher->loadMissing('lines.account')->lines
+                ->map(fn (VoucherLine $line) => $line->account)
+                ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs()))?->id;
+
+        if ($accountId === null) {
+            return collect();
+        }
+
+        return $this->sameDeposit((int) $accountId, $reference, (int) $voucher->id, $this->depositFacts($voucher))['shared'];
     }
 
     /**
@@ -1921,6 +2010,10 @@ final class VoucherService
             'narration' => $header['narration'] ?? null,
             'instrument' => $header['instrument'] ?? null,
             'instrument_no' => $header['instrument_no'] ?? null,
+            // ⓘ একই জমার প্রশ্নের তারিখ আর মাধ্যম — পোস্টের একই কথা ([[sameDeposit()]]); নাহলে প্রিভিউ ভাগকে জোড়া বলত
+            'trx_date' => $header['trx_date'] ?? null,
+            'value_date' => $header['value_date'] ?? null,
+            'transfer_mode_id' => $header['transfer_mode_id'] ?? null,
         ]);
         // ⓘ সম্পাদনায় নিজের নম্বর নিজের সাথে "আগে বসেছে" নয়
         if (filled($header['voucher_id'] ?? null)) {
@@ -1957,7 +2050,7 @@ final class VoucherService
 
     private function assertBankReferenceIsFree(Voucher $voucher): void
     {
-        $account = $this->bankReferenceAccount($voucher);
+        $account = $this->bankReferenceAccount($voucher, lock: true);
 
         if ($account === null) {
             return;
@@ -1972,7 +2065,7 @@ final class VoucherService
      * ⭐ রেফারেন্সের নিয়ম, কিছু না লিখে — থাকতেই হবে, অর্থপূর্ণ হতে হবে, আর একই খাতে আগে বসেনি (পোস্ট আর "খাতায় যা যাবে"
      * একই কথা বলে; cb, ২৩ অক্টোবর ২০২৬)। ⓘ ফেরে নম্বরের টাকার খাত, নগদ বা জাবেদায় null।
      */
-    private function bankReferenceAccount(Voucher $voucher): ?Account
+    private function bankReferenceAccount(Voucher $voucher, bool $lock = false): ?Account
     {
         $account = $voucher->lines
             ->map(fn (VoucherLine $line) => $line->account)
@@ -2015,7 +2108,20 @@ final class VoucherService
          * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৩)। ⓘ টাকার খাতা আর অনন্যতার ইনডেক্স গোটা কোম্পানির, অথচ খোঁজ
          * ছিল দেখার শাখার দেয়ালে: অন্য শাখার ভাউচারে একই TrxID থাকলে পরিষ্কার বার্তার বদলে ডেটাবেসের ভাঙা ভুল আসত।
          */
-        $twin = $this->referenceTwin((int) $account->id, $reference, $voucher->id === null ? null : (int) $voucher->id);
+        /*
+         * ⛔ টাকার খাতের সারিতে তালা — পোস্টের লেনদেনে (২১ নভেম্বর ২০২৬)। ⓘ আগে ডেটাবেসের `vouchers_bank_reference_unique` শেষ পাহারা
+         * ছিল; জমার ভাগ বৈধ হওয়ায় সেটা আর অনন্য নয় (একই খাত আর নম্বরে দুই ডিলার)। তাই একই মুহূর্তে একই জমা দুই হাতে পোস্ট হলে
+         * দ্বিতীয়জন অপেক্ষা করেন, তারপর প্রথমটাকে দেখে থামেন। প্রিভিউ কিছু লেখে না, তালাও নেয় না।
+         */
+        if ($lock) {
+            Account::query()->whereKey($account->id)->lockForUpdate()->first();
+        }
+
+        /*
+         * ⭐ একই টাকা কেবল একই নম্বর + একই খাত/মাধ্যম + একই মূল্য-তারিখ + একই পক্ষ, আর কেবল পাকা কাগজে ([[sameDeposit()]]; মালিক,
+         * ২১ নভেম্বর ২০২৬)। ⓘ অন্য পক্ষের একই নম্বর জমার ভাগ — থামে না, কাগজের পাতায় তথ্যের সারি।
+         */
+        $twin = $this->referenceTwin((int) $account->id, $reference, $voucher->id === null ? null : (int) $voucher->id, $this->depositFacts($voucher));
 
         if ($twin !== null) {
             throw ValidationException::withMessages([

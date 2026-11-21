@@ -926,6 +926,12 @@ class VoucherController extends Controller implements HasMiddleware
             'account_id' => ['required', 'integer'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'voucher' => ['nullable', 'integer'],
+            // ⭐ একই জমার প্রশ্নের বাকি তিন কথা — পক্ষ, মূল্য-তারিখ, মাধ্যম ([[VoucherService::sameDeposit()]]; মালিক, ২১ নভেম্বর ২০২৬)
+            'party_type' => ['nullable', 'string', 'max:32'],
+            'party_id' => ['nullable', 'integer'],
+            'trx_date' => ['nullable', 'date'],
+            'value_date' => ['nullable', 'date'],
+            'transfer_mode_id' => ['nullable', 'integer'],
         ]);
 
         $account = \App\Modules\Accounts\Models\Account::query()->find((int) $data['account_id']);
@@ -938,7 +944,26 @@ class VoucherController extends Controller implements HasMiddleware
             return response()->json(['state' => 'empty', 'message' => '']);
         }
 
-        $twin = $this->vouchers->referenceTwin((int) $account->id, $no, isset($data['voucher']) ? (int) $data['voucher'] : null);
+        /*
+         * ⓘ পর্দা পক্ষ পাঠালে পোস্টের পুরো প্রশ্ন — একই পক্ষ হলে "used", অন্য পক্ষ হলে জমার ভাগ ("split", তথ্য, থামায় না)। পক্ষের ঘর
+         * না এলে (পুরনো ডাক) পক্ষ অজানা: একই খাতের একই নম্বরের পাকা কাগজই জোড়া ([[VoucherService::sameDeposit()]])।
+         */
+        $facts = $request->has('party_type') || $request->has('party_id') ? [
+            'party_type' => $data['party_type'] ?? null,
+            'party_id' => $data['party_id'] ?? null,
+            'date' => $data['value_date'] ?? $data['trx_date'] ?? null,
+            'transfer_mode_id' => $data['transfer_mode_id'] ?? null,
+        ] : null;
+
+        $found = $this->vouchers->sameDeposit((int) $account->id, $no, isset($data['voucher']) ? (int) $data['voucher'] : null, $facts);
+        $twin = $found['twin'];
+
+        if ($twin === null && $found['shared']->isNotEmpty()) {
+            return response()->json([
+                'state' => 'split',
+                'message' => __('accounts::message.same_deposit_also_in', ['no' => $found['shared']->pluck('document_no')->implode(', ')]),
+            ]);
+        }
 
         return response()->json([
             'state' => $twin === null ? 'free' : 'used',

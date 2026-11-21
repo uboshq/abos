@@ -455,6 +455,8 @@ export function voucherMoney ({
             })
             form?.addEventListener('change', (e) => {
                 if (e.target?.name !== 'instrument_no' && e.target?.name !== 'deposit_slip_no') this.refresh()
+                // ⓘ একই জমার প্রশ্ন পক্ষ, তারিখ আর মাধ্যমেও বদলায় ([[checkSlip()]])
+                if (['party_type', 'party_id', 'trx_date', 'value_date', 'transfer_mode_id'].includes(e.target?.name)) this.slipSoon()
             })
             this.$nextTick(() => this.refresh())
         },
@@ -653,6 +655,17 @@ export function voucherMoney ({
 
             const query = new URLSearchParams({ account_id: this.account, instrument_no: no })
             if (voucherId) query.set('voucher', String(voucherId))
+            /*
+             * ⭐ একই জমার বাকি কথা — পক্ষ, তারিখ, মূল্য-তারিখ, মাধ্যম (মালিক, ২১ নভেম্বর ২০২৬): একই নম্বর অন্য পক্ষের হলে জমার ভাগ
+             * ("split", তথ্য), একই পক্ষের হলে "used" — পোস্টের একই প্রশ্ন ([[VoucherService::sameDeposit()]])। ⓘ পক্ষের ঘর সবসময় যায়,
+             * খালি হলেও: খালি মানে "পক্ষ নেই", অজানা নয়।
+             */
+            const field = (name) => String(form?.querySelector('[name="' + name + '"]')?.value || '').trim()
+            query.set('party_type', field('party_type'))
+            query.set('party_id', field('party_id'))
+            for (const name of ['trx_date', 'value_date', 'transfer_mode_id']) {
+                if (field(name) !== '') query.set(name, field(name))
+            }
 
             try {
                 const response = await fetch(referenceUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })
@@ -663,7 +676,7 @@ export function voucherMoney ({
             }
         },
 
-        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
+        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' || this.slip.state === 'split' },
         get slipUsed () { return this.slip.state === 'used' },
 
         /* ⭐ খাতায় যা যাবে — সার্ভারের হিসাবে, একটু থেমে (প্রতিটা অক্ষরে নয়) */

@@ -325,6 +325,21 @@
                         </div>
                     @endif
                 @endforeach
+                {{-- ⭐ জমার ভাগ — একই নম্বর, একই খাত আর তারিখ, অন্য পক্ষের পাকা রসিদ (মালিক, ২১ নভেম্বর ২০২৬: একটা ৳১,০০,০০০ জমা দুই
+                     ডিলারের)। ⓘ কাগজের একটা সারি, নোটিশের ফিতা নয়; থামায় না ([[VoucherService::sharedDeposit()]]) --}}
+                @php
+                    $sharedDeposit = app(\App\Modules\Accounts\Services\VoucherService::class)->sharedDeposit($voucher);
+                @endphp
+                @if ($sharedDeposit->isNotEmpty())
+                    <div data-voucher-same-deposit>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::field.same_deposit') }}</dt>
+                        <dd class="text-sm">
+                            @foreach ($sharedDeposit as $other)
+                                <a href="{{ route('accounts.voucher.show', $other) }}" class="num font-semibold text-(--color-link) hover:underline">{{ $other->document_no }}</a>{{ $loop->last ? '' : ', ' }}
+                            @endforeach
+                        </dd>
+                    </div>
+                @endif
             </dl>
 
             {{-- ⭐ ভাড়া বা লোডিংয়ের ভাউচার — কাগজের বিস্তারিত: ভাড়া, মাধ্যম, ড্রাইভার, মোবাইল, গাড়ি, সব চালান, সব পয়েন্ট (মালিক,
