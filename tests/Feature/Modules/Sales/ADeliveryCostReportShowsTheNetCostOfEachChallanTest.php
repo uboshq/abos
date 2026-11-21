@@ -8,6 +8,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -64,6 +65,19 @@ final class ADeliveryCostReportShowsTheNetCostOfEachChallanTest extends TestCase
         app()->setLocale('bn');
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->first() ?? Warehouse::query()->firstOrFail();
+
+        /*
+         * ⓘ ২০৩১-এর দিনটা ডেমোর কোনো হিসাববর্ষে পড়ে না, আর চালান খোলা বছর চায় ([[DeliveryChallanService]]) —
+         * তাই সেই বছরটা এখানেই খোলা, সিডারের উপর ভরসা নয়। সেবাটা ঢিলে করা নয়।
+         */
+        $covered = FinancialYear::query()
+            ->whereDate('starts_on', '<=', self::DAY)->whereDate('ends_on', '>=', self::DAY)->exists();
+        if (! $covered) {
+            FinancialYear::query()->create([
+                'company_id' => $this->company->id, 'name' => 'TEST-2030-31',
+                'starts_on' => '2030-07-01', 'ends_on' => '2031-06-30', 'is_closed' => false, 'is_current' => false,
+            ]);
+        }
     }
 
     public function test_the_page_needs_its_own_key(): void

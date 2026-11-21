@@ -9,7 +9,7 @@
 
     $exporting = app(\App\Core\Services\ListExport::class)->wanted();
     $money = fn ($v) => Money::format((string) $v, $decimals);
-    $up = '<svg viewBox="0 0 12 12" aria-hidden="true" style="width:10px;height:10px;flex:none"><path d="M6 1.5 11 10H1z" fill="currentColor"/></svg>';
+    $up = '<svg viewBox="0 0 12 12" aria-hidden="true" class="size-2.5 flex-none"><path d="M6 1.5 11 10H1z" fill="currentColor"/></svg>';
 
     // ⭐ খরচ % — সীমার উপরে চিহ্ন আর রং (নমুনার `.hi`); ফাইলে কেবল সংখ্যা
     $pct = function (?string $percent, bool $over) use ($exporting, $up) {
@@ -27,13 +27,14 @@
             .$up.e($percent).'%</span>');
     };
 
+    // ⓘ 'total' => 'shown' — সর্বমোটের সারি রিপোর্টের নিজের (গোটা ছাঁকা রিপোর্ট, % মোট থেকে), যেমন সাজানো তেমনই ([[Table]])
     $moneyColumns = [
-        ['key' => 'value', 'label' => __('sales::delivery_cost.col_value'), 'numeric' => true, 'render' => fn ($r) => $money($r['value'])],
-        ['key' => 'fare', 'label' => __('sales::delivery_cost.col_fare'), 'numeric' => true, 'render' => fn ($r) => $money($r['fare'])],
-        ['key' => 'loading', 'label' => __('sales::delivery_cost.col_loading'), 'numeric' => true, 'render' => fn ($r) => $money($r['loading'])],
-        ['key' => 'other', 'label' => __('sales::delivery_cost.col_other'), 'numeric' => true, 'render' => fn ($r) => $money($r['other'])],
-        ['key' => 'total', 'label' => __('sales::delivery_cost.col_total'), 'numeric' => true, 'render' => fn ($r) => $money($r['total'])],
-        ['key' => 'percent', 'label' => __('sales::delivery_cost.col_percent'), 'numeric' => true, 'render' => fn ($r) => $pct($r['percent'], (bool) $r['over'])],
+        ['key' => 'value', 'label' => __('sales::delivery_cost.col_value'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['value'])],
+        ['key' => 'fare', 'label' => __('sales::delivery_cost.col_fare'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['fare'])],
+        ['key' => 'loading', 'label' => __('sales::delivery_cost.col_loading'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['loading'])],
+        ['key' => 'other', 'label' => __('sales::delivery_cost.col_other'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['other'])],
+        ['key' => 'total', 'label' => __('sales::delivery_cost.col_total'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['total'])],
+        ['key' => 'percent', 'label' => __('sales::delivery_cost.col_percent'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $pct($r['percent'], (bool) $r['over'])],
     ];
 
     if ($by === 'challan') {
@@ -49,7 +50,7 @@
     } else {
         $columns = [
             ['key' => 'label', 'label' => __('sales::delivery_cost.by_'.$by), 'wrap' => true, 'render' => fn ($r) => $r['label']],
-            ['key' => 'count', 'label' => __('sales::delivery_cost.col_count'), 'numeric' => true, 'width' => '6rem', 'render' => fn ($r) => (string) $r['count']],
+            ['key' => 'count', 'label' => __('sales::delivery_cost.col_count'), 'numeric' => true, 'width' => '6rem', 'total' => 'shown', 'render' => fn ($r) => (string) $r['count']],
             ...$moneyColumns,
         ];
     }
@@ -80,10 +81,10 @@
                 <div class="list-card" data-card="{{ $card['key'] }}" style="--a: {{ $card['gradient'][0] }}; --b: {{ $card['gradient'][1] }}">
                     <span class="list-card-icon" aria-hidden="true">
                         @switch($card['key'])
-                            @case('value')<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M3 7h13v10H3zM16 10h3l2 3v4h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>@break
-                            @case('cost')<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>@break
-                            @case('average')<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M5 19 19 5M7 7h.01M17 17h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>@break
-                            @default<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 4 21 20H3z M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                            @case('value')<svg viewBox="0 0 24 24" class="size-3.5"><path d="M3 7h13v10H3zM16 10h3l2 3v4h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>@break
+                            @case('cost')<svg viewBox="0 0 24 24" class="size-3.5"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>@break
+                            @case('average')<svg viewBox="0 0 24 24" class="size-3.5"><path d="M5 19 19 5M7 7h.01M17 17h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>@break
+                            @default<svg viewBox="0 0 24 24" class="size-3.5"><path d="M12 4 21 20H3z M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
                         @endswitch
                     </span>
                     <span class="min-w-0">
@@ -103,29 +104,20 @@
                                   :search-placeholder="__('sales::delivery_cost.search')" />
                 </form>
 
+                {{--
+                    ⭐ সর্বমোট — গোটা ছাঁকা রিপোর্টের একটাই সারি (পাতার নয়), % মোট থেকে। ⓘ ফাইলের শেষেও টেবিল নিজেই দেয়, লুকানো
+                      কলাম বাদ দিয়ে ([[Table::grandLine()]]); সারির "দেখুন" কেবল চালান ধরে দেখালে — ভাগের সারির নিজের পাতা নেই।
+                --}}
                 <x-ui.table
                     :empty="__('sales::delivery_cost.empty')"
                     :rows="$shown"
                     :columns="$columns"
                     :compact="\App\Core\Support\Ui::compact()"
-                    :totals="$shown === [] ? [] : $totalLine"
-                    :totalsLabel="$totalLabel" />
+                    :grand="$shown->total() === 0 ? [] : $totalLine"
+                    :grand-label="$totalLabel"
+                    :view-url="fn ($r) => $by === 'challan' ? route('sales.challan.show', $r['id']) : null" />
 
-                @php
-                    /*
-                     * ⓘ ফাইলের শেষে মোটের সারি — টেবিল নিজে কেবল টাকা/পরিমাণের সর্বমোট দেয়, % নয়; তাই এখানে, কলামের ক্রমে
-                     *   (প্রথম ঘরে লেবেল)। ⓘ টেবিল আঁকার পরে, যাতে ধরা কলামের জায়গা জানা থাকে।
-                     */
-                    if ($exporting && $shown !== []) {
-                        // ⓘ "কলাম" মেনুতে লুকানো কলাম ফাইলেও নেই — টেবিলের একই নিয়ম ([[Table]]), নইলে মোট এক ঘর সরে বসত
-                        $hidden = array_filter(array_map('trim', explode(',', (string) request('hide'))));
-                        $kept = array_values(array_filter($columns, fn (array $c) => ! in_array($c['key'], $hidden, true))) ?: $columns;
-                        app(\App\Core\Services\ListExport::class)->footer(array_map(
-                            fn (array $c) => $c['key'] === $kept[0]['key'] ? $totalLabel : ($totalLine[$c['key']] ?? ''),
-                            $kept,
-                        ));
-                    }
-                @endphp
+                <x-ui.pager :rows="$shown" />
             </div>
 
             {{-- ⭐ চার্ট — গাড়ি (বা পয়েন্ট / মাস) অনুযায়ী খরচ %, দাগ = সীমা, সীমার উপরে সতর্কতার রং --}}
@@ -141,9 +133,10 @@
                                  title="{{ $bar['label'] }}: ৳{{ $money($bar['value']) }} · ৳{{ $money($bar['total']) }}"
                                  style="display:grid;grid-template-columns:minmax(0,7.5rem) minmax(0,1fr) 3.5rem;gap:8px;align-items:center;margin:7px 0;font-size:13px">
                                 <span class="truncate num">{{ $bar['label'] }}</span>
-                                <span style="position:relative;height:14px;border-radius:4px;background:var(--color-surface-app)">
-                                    <i style="position:absolute;inset:0 auto 0 0;border-radius:4px;width:{{ min(100, (float) $bar['width']) }}%;background:{{ $bar['over'] ? 'var(--color-warning)' : 'var(--color-chart-1)' }}"></i>
-                                    <span aria-hidden="true" style="position:absolute;top:-3px;bottom:-3px;width:0;left:{{ min(100, (float) $chart['line']) }}%;border-left:2px dashed var(--color-ink-muted)"></span>
+                                <span class="h-3.5" style="position:relative;border-radius:4px;background:var(--color-surface-app)">
+                                    {{-- ⓘ চওড়া আর দাগ ১০০-এ আটকানো সেবাতেই ([[DeliveryCostReport::chart()]]) — float নয় --}}
+                                    <i style="position:absolute;inset:0 auto 0 0;border-radius:4px;width:{{ $bar['width'] }}%;background:{{ $bar['over'] ? 'var(--color-warning)' : 'var(--color-chart-1)' }}"></i>
+                                    <span aria-hidden="true" style="position:absolute;top:-3px;bottom:-3px;width:0;left:{{ $chart['line'] }}%;border-left:2px dashed var(--color-ink-muted)"></span>
                                 </span>
                                 <span class="num text-end" @if ($bar['over']) style="color:var(--color-badge-warning-ink);font-weight:700" @endif>{{ $bar['percent'] }}%</span>
                             </div>

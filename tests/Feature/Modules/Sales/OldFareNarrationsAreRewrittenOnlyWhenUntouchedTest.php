@@ -64,6 +64,8 @@ final class OldFareNarrationsAreRewrittenOnlyWhenUntouchedTest extends TestCase
             'name_en' => 'Mirpur', 'name_bn' => 'মিরপুর', 'is_active' => true]);
         $shop = Customer::query()->create(['company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id,
             'code' => 'OFN-1', 'name_en' => 'Mirpur Store', 'name_bn' => 'মিরপুর স্টোর', 'location_id' => $point->id, 'is_active' => true]);
+        // ⓘ সীমা পরম (মালিক) — নতুন দোকানের সীমা ০, তাই নিশ্চিত করতে সীমা বসানো, অন্য চালানের পরীক্ষার মতো
+        $shop->forceFill(['credit_limit' => '1000000000'])->save();
 
         [$untouched, $untouchedChallan] = $this->oldFareVoucher($shop, '6500');
         [$edited] = $this->oldFareVoucher($shop, '700');

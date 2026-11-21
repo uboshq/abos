@@ -3,6 +3,8 @@
     ⓘ হিসাব সব [[PurchaseCostReport]]-এ; এখানে কেবল দেখানো। মাথা এক সারিতে: নাম · ভাগ (ইনভয়েস/সরবরাহকারী/মাস/পণ্য) · প্রিন্ট · PDF · Excel;
       নিচে সময়/শাখার চিপ আর ডান পাশ থেকে খোলা ছাঁকনি; চারটা সরু রঙিন কার্ড; টেবিল আর পাশে চার্ট।
     ⓘ নতুন CSS নেই — বানানো শ্রেণি আর চার্টের মাপের জন্য style-অ্যাট্রিবিউট (শুধু এই পাতায়)।
+    ⓘ রং টোকেন থেকে, উচ্চতা বানানো শ্রেণিতে; কার্ডের দুই রং [[PurchaseCostReport::CARD_GRADIENTS]]-এ (ডেলিভারি খরচের কার্ডের মতো)।
+    ⓘ সারি পাতায় ভাগ ([[PurchaseCostReportController]]); মোট, কার্ড আর চার্ট গোটা ছাঁকা রিপোর্টের — পাতার নয়।
 --}}
 @php
     use App\Core\Support\DateFormat;
@@ -32,14 +34,15 @@
     };
 
     $metrics = [
-        ['key' => 'cartons', 'label' => __('purchase::cost_report.col.cartons'), 'numeric' => true, 'render' => fn ($r) => $cartons($r['cartons'])],
-        ['key' => 'value', 'label' => __('purchase::cost_report.col.value'), 'numeric' => true, 'render' => fn ($r) => $money($r['value'])],
-        ['key' => 'labour', 'label' => __('purchase::cost_report.col.labour'), 'numeric' => true, 'render' => fn ($r) => $money($r['labour'])],
-        ['key' => 'fare', 'label' => __('purchase::cost_report.col.fare'), 'numeric' => true, 'render' => fn ($r) => $money($r['fare'])],
-        ['key' => 'other', 'label' => __('purchase::cost_report.col.other'), 'numeric' => true, 'render' => fn ($r) => $money($r['other'])],
-        ['key' => 'total', 'label' => __('purchase::cost_report.col.total'), 'numeric' => true, 'render' => fn ($r) => $money($r['total'])],
-        ['key' => 'pct', 'label' => __('purchase::cost_report.col.pct'), 'numeric' => true, 'render' => $pctCell],
-        ['key' => 'per_carton', 'label' => __('purchase::cost_report.col.per_carton'), 'numeric' => true, 'render' => fn ($r) => $perCarton($r['per_carton'])],
+        // ⓘ 'total' => 'shown' — সর্বমোটের সারি রিপোর্টের নিজের (গোটা ছাঁকা রিপোর্ট, হার মোট থেকে), যেমন সাজানো তেমনই ([[Table]])
+        ['key' => 'cartons', 'label' => __('purchase::cost_report.col.cartons'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $cartons($r['cartons'])],
+        ['key' => 'value', 'label' => __('purchase::cost_report.col.value'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['value'])],
+        ['key' => 'labour', 'label' => __('purchase::cost_report.col.labour'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['labour'])],
+        ['key' => 'fare', 'label' => __('purchase::cost_report.col.fare'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['fare'])],
+        ['key' => 'other', 'label' => __('purchase::cost_report.col.other'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['other'])],
+        ['key' => 'total', 'label' => __('purchase::cost_report.col.total'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $money($r['total'])],
+        ['key' => 'pct', 'label' => __('purchase::cost_report.col.pct'), 'numeric' => true, 'total' => 'shown', 'render' => $pctCell],
+        ['key' => 'per_carton', 'label' => __('purchase::cost_report.col.per_carton'), 'numeric' => true, 'total' => 'shown', 'render' => fn ($r) => $perCarton($r['per_carton'])],
     ];
 
     $docLink = function (array $r) {
@@ -98,31 +101,57 @@
 
     $highest = $result['highest'];
     // ⓘ কার্ডের ছোট আইকন — নমুনার একই রেখা-ছবি (ইমোজি নয়); ডেলিভারি খরচের কার্ডের একই আঁকা
-    $svg = fn (string $d, string $width = '2') => new HtmlString('<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="'.$d.'" fill="none" stroke="currentColor" stroke-width="'.$width.'" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+    $svg = fn (string $d, string $width = '2') => new HtmlString('<svg viewBox="0 0 24 24" class="size-3.5"><path d="'.$d.'" fill="none" stroke="currentColor" stroke-width="'.$width.'" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+    $tone = \App\Modules\Purchase\Services\PurchaseCostReport::CARD_GRADIENTS;
     $cards = [
-        [$svg('M3 7h13v10H3zM16 10h3l2 3v4h-5'), ['#2563eb', '#3b82f6'], __('purchase::cost_report.card_value'), '৳'.$money($totals['value']),
+        [$svg('M3 7h13v10H3zM16 10h3l2 3v4h-5'), $tone['value'], __('purchase::cost_report.card_value'), '৳'.$money($totals['value']),
             __('purchase::cost_report.card_value_sub', ['n' => $totals['count'], 'cartons' => $cartons($totals['cartons'])])],
-        [$svg('M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6'), ['#7c3aed', '#a855f7'], __('purchase::cost_report.card_cost'), '৳'.$money($totals['total']),
+        [$svg('M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6'), $tone['cost'], __('purchase::cost_report.card_cost'), '৳'.$money($totals['total']),
             __('purchase::cost_report.card_cost_sub', ['labour' => $money($totals['labour']), 'fare' => $money($totals['fare']), 'other' => $money($totals['other'])])],
-        [$svg('M5 19 19 5M7 7h.01M17 17h.01', '2.4'), ['#059669', '#22c55e'], __('purchase::cost_report.card_pct'), $pctPlain($totals['pct']), __('purchase::cost_report.card_pct_sub')],
-        [$svg('M12 4 21 20H3z M12 10v4M12 17h.01'), ['#e11d48', '#f43f5e'], __('purchase::cost_report.card_per_carton'), $totals['per_carton'] === null ? '—' : '৳'.$perCarton($totals['per_carton']),
+        [$svg('M5 19 19 5M7 7h.01M17 17h.01', '2.4'), $tone['pct'], __('purchase::cost_report.card_pct'), $pctPlain($totals['pct']), __('purchase::cost_report.card_pct_sub')],
+        [$svg('M12 4 21 20H3z M12 10v4M12 17h.01'), $tone['per_carton'], __('purchase::cost_report.card_per_carton'), $totals['per_carton'] === null ? '—' : '৳'.$perCarton($totals['per_carton']),
             $highest === null ? '' : __('purchase::cost_report.card_per_carton_sub', ['no' => $highest['doc_no'], 'amount' => $perCarton($highest['per_carton'])])],
     ];
 
     // ── চার্ট: খরচ % — দাগে সীমা, সীমার উপরে কমলা ──
     $bars = $result['chart'];
-    $maxPct = max([(float) $threshold, ...array_map(fn ($b) => (float) ($b['pct'] ?? 0), $bars)]);
+    // ⓘ মাপ bc-তে, float-এ নয় ([[MoneyIsNeverAFloatTest]])
+    $maxPct = (string) $threshold;
+    foreach ($bars as $b) {
+        $p = (string) ($b['pct'] ?? '0');
+        if (bccomp($p, $maxPct, 4) > 0) {
+            $maxPct = $p;
+        }
+    }
     // ⓘ অক্ষে বড়জোর ছয়-সাতটা দাগ — ধাপ ১, ২, ৫, ১০ …; শেষ দাগ সবচেয়ে বড় দণ্ডের একটু উপরে
-    $raw = max(1.0, $maxPct * 1.05);
+    $raw = bcmul($maxPct, '1.05', 4);
+    if (bccomp($raw, '1', 4) < 0) {
+        $raw = '1';
+    }
     $step = 1;
     foreach ([1, 2, 5, 10, 20, 25, 50] as $s) {
         $step = $s;
-        if ($raw / $s <= 6) {
+        if (bccomp(bcdiv($raw, (string) $s, 4), '6', 4) <= 0) {
             break;
         }
     }
-    $scale = (int) (ceil($raw / $step) * $step);
-    $at = fn ($p) => round(min(100, max(0, (float) $p / $scale * 100)), 2);
+    // ⓘ ধাপের পূর্ণ গুণিতকে উপরে তোলা (ceil) — bc-তে
+    $steps = bcdiv($raw, (string) $step, 0);
+    if (bccomp(bcmul($steps, (string) $step, 4), $raw, 4) < 0) {
+        $steps = bcadd($steps, '1', 0);
+    }
+    $scale = (int) $steps * $step;
+    $at = function ($p) use ($scale): string {
+        $v = bcdiv(bcmul((string) ($p ?? '0'), '100', 6), (string) $scale, 6);
+        if (bccomp($v, '0', 6) < 0) {
+            $v = '0';
+        }
+        if (bccomp($v, '100', 6) > 0) {
+            $v = '100';
+        }
+
+        return Money::round($v, 2);
+    };
     $chartTitle = $result['chart_by'] === 'product' ? __('purchase::cost_report.chart_product') : __('purchase::cost_report.chart_supplier');
 
     $segment = 'inline-flex items-center px-3 py-1 text-sm transition-colors hover:bg-(--color-surface-hover)';
@@ -190,20 +219,18 @@
                     ]);
                 @endphp
 
+                {{-- ⭐ সর্বমোট — গোটা ছাঁকা রিপোর্টের একটাই সারি (পাতার নয়), হার মোট থেকে; ফাইলের শেষেও টেবিল নিজেই দেয় ([[Table]]) --}}
                 <x-ui.table
                     :rows="$result['rows']"
                     :columns="$columns"
                     :empty="__('purchase::cost_report.empty')"
                     :compact="\App\Core\Support\Ui::compact()"
-                    :totals="$result['rows'] === [] ? [] : $footer"
-                    :totalsLabel="$totalLabel" />
+                    :grand="$result['rows']->total() === 0 ? [] : $footer"
+                    :grand-label="$totalLabel"
+                    :view-url="fn ($r) => $by !== 'invoice' ? null
+                        : ($r['doc'] === 'grn' ? route('purchase.receipt.show', $r['doc_id']) : route('purchase.bill.show', $r['doc_id']))" />
 
-                @php
-                    // ⭐ মোটের সারি ফাইলেও — পর্দায় যা, ফাইলে তাই
-                    if ($export->wanted() && $result['rows'] !== []) {
-                        $export->footer(array_map(fn (array $c, int $i) => $i === 0 ? $totalLabel : ($footer[$c['key']] ?? ''), $columns, array_keys($columns)));
-                    }
-                @endphp
+                <x-ui.pager :rows="$result['rows']" />
             </div>
 
             {{-- ⭐ খরচ % — আড়াআড়ি দণ্ড, দাগে সীমা, সীমার উপরে কমলা; প্রতিটা দণ্ডের পাশে সংখ্যা (রং একা কিছু বলে না) --}}
@@ -221,8 +248,8 @@
                          title="{{ __('purchase::cost_report.chart_bar', ['name' => $name, 'pct' => Money::format((string) ($bar['pct'] ?? '0'), 2), 'value' => $money($bar['value']), 'cost' => $money($bar['total'])]) }}"
                          style="display:grid; grid-template-columns:minmax(0,9rem) minmax(0,1fr) 3.5rem; gap:.5rem; align-items:center; margin:.45rem 0; font-size:13px">
                         <span class="truncate">{{ $name }}</span>
-                        <span style="position:relative; height:14px; border-radius:4px; background:var(--color-surface-hover)">
-                            <i style="position:absolute; inset:0 auto 0 0; width:{{ $at($bar['pct'] ?? 0) }}%; border-radius:4px; background:{{ $over ? 'var(--color-status-week-bar, #f59e0b)' : 'var(--color-chart-1, #2563eb)' }}"></i>
+                        <span class="h-3.5" style="position:relative; border-radius:4px; background:var(--color-surface-hover)">
+                            <i style="position:absolute; inset:0 auto 0 0; width:{{ $at($bar['pct'] ?? 0) }}%; border-radius:4px; background:{{ $over ? 'var(--color-warning)' : 'var(--color-chart-1)' }}"></i>
                             <span aria-hidden="true" style="position:absolute; top:-3px; bottom:-3px; left:{{ $at($threshold) }}%; border-left:2px dashed var(--color-ink-muted)"></span>
                         </span>
                         <span class="num text-end">{{ $pctPlain($bar['pct']) }}</span>

@@ -14,6 +14,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\PerPage;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\Location;
@@ -23,6 +24,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Services\DeliveryCostReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
@@ -95,7 +97,7 @@ final class DeliveryCostController extends Controller implements HasMiddleware
             'by' => $by,
             'threshold' => $threshold,
             'rows' => $rows,
-            'shown' => $this->report->group($rows, $by, $threshold),
+            'shown' => $this->paginate($this->report->group($rows, $by, $threshold), $request),
             'totals' => $totals,
             'decimals' => $decimals,
             'cards' => $this->report->cards($rows, $totals, $decimals),
@@ -108,6 +110,28 @@ final class DeliveryCostController extends Controller implements HasMiddleware
                 'active' => $g === $by,
             ], DeliveryCostReport::GROUPS),
         ]);
+    }
+
+    /**
+     * ⭐ দেখানো সারি পাতায় ভাগ — ৫০টা করে ([[PerPage]]); ⓘ মোট, কার্ড আর চার্ট গোটা ছাঁকা রিপোর্ট থেকে, আগেই গোনা — পাতার নয়।
+     * ⓘ রিপোর্টের সারি গোটা সময়কালের চালান/কাগজ থেকে গোনা (ট্রিপের ভাড়া চালানগুলোয় ভাগ, GRN-এর বিল একবার) — তাই ভাগটা
+     *   গোনার পরে, সারির তালিকায়। ⓘ রপ্তানি সব পাতা জোড়া দেয় ([[ExportListing]]), তাই ফাইলে গোটা রিপোর্ট।
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function paginate(array $rows, Request $request): LengthAwarePaginator
+    {
+        $perPage = PerPage::of();
+        $page = max(1, LengthAwarePaginator::resolveCurrentPage());
+
+        return (new LengthAwarePaginator(
+            array_slice($rows, ($page - 1) * $perPage, $perPage),
+            count($rows),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'pageName' => 'page'],
+        ))->withQueryString();
     }
 
     /** সীমা % — ছাঁকনির ঘরে দিলে সেটা, নইলে সেটিং (ডিফল্ট ৩) */
@@ -177,8 +201,9 @@ final class DeliveryCostController extends Controller implements HasMiddleware
     {
         $section = Places::section(
             Location::POINT,
-            fn (array $ids) => fn (Builder $q) => $q->whereIn('sal_challans.customer_id',
-                Customer::query()->whereIn('location_id', $ids ?: [0])->select('customers.id')),
+            // ⓘ চালানের নিজের গ্রাহক ধরে — চালান আগেই মাথার শাখায় ছাঁকা ([[ScopedToUserBranch]]), তাই আলাদা পক্ষের তালিকা নয়
+            fn (array $ids) => fn (Builder $q) => $q->whereHas('customer',
+                fn (Builder $c) => $c->whereIn('customers.location_id', $ids ?: [0])),
             fn (Builder $q) => (clone $q)->reorder()->toBase()
                 ->selectRaw('(SELECT place_customer.location_id FROM customers AS place_customer WHERE place_customer.id = sal_challans.customer_id) AS loc, COUNT(*) AS n')
                 ->groupBy('loc')->get(),
@@ -197,7 +222,8 @@ final class DeliveryCostController extends Controller implements HasMiddleware
         $options = [];
         $ids = DeliveryChallan::query()->whereIn('sal_challans.status', DocumentStatus::POSTED)->distinct()->pluck('customer_id')->filter()->all();
 
-        foreach (Customer::query()->whereIn('id', $ids ?: [0])->get() as $customer) {
+        // ⓘ পিকারে কেবল মাথায় বাছা শাখার পক্ষ ([[Customer::scopeInViewedBranch()]])
+        foreach (Customer::query()->inViewedBranch()->whereIn('id', $ids ?: [0])->get() as $customer) {
             $id = (int) $customer->id;
             $options[(string) $id] = [
                 'label' => $customer->name(),
