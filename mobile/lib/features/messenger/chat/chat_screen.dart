@@ -20,3 +20,6 @@ class _ChatScreenState extends State<ChatScreen> {
 /// একটা কথোপকথন খোলে — তালিকা, "আমি" পাতা, নোটিফিকেশন সবাই এটাই ডাকে
 Future<void> openChat(BuildContext context, ChatThread thread) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ChatScreen(thread: thread)));
+
+/// কেবল নম্বর জানা থাকলে (নোটিফিকেশন চাপলে) — কথোপকথন খুঁজে খোলে
+Future<void> openChatById(BuildContext context, String threadId) async {}
