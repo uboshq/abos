@@ -1,0 +1,101 @@
+{
+  "@@locale": "bn",
+  "menuPageSeeProfile": "আমার প্রোফাইল দেখুন",
+  "@menuPageSeeProfile": {
+    "description": "≡ menu page (item 10): the link under the person's name that opens the Me page"
+  },
+  "menuPageSwitch": "বদলান",
+  "@menuPageSwitch": {
+    "description": "≡ menu page: the button on the company and branch card that opens the company/branch picker"
+  },
+  "menuPageAllBranchesNote": "\"সব শাখা — কেবল দেখা\": লেখা বা বদল নয়; অনুমোদন দেওয়া যায়।",
+  "@menuPageAllBranchesNote": {
+    "description": "≡ menu page: amber note under the company card, shown only while all branches are chosen (view only, approvals allowed)"
+  },
+  "menuPageShortcuts": "শর্টকাট",
+  "@menuPageShortcuts": {
+    "description": "≡ menu page: title over the 2-column shortcut tiles"
+  },
+  "menuPageSeeMore": "আরও দেখুন",
+  "@menuPageSeeMore": {
+    "description": "≡ menu page: button under the first 8 shortcut tiles that shows the rest"
+  },
+  "menuPageRecentPaper": "কাগজ",
+  "@menuPageRecentPaper": {
+    "description": "≡ menu page, Recent: the small line under a recently opened paper (voucher, order …)"
+  },
+  "menuPageRecentPage": "পাতা",
+  "@menuPageRecentPage": {
+    "description": "≡ menu page, Recent: the small line under a recently opened screen or list"
+  },
+  "menuPageUnreadNotices": "না-পড়া নোটিশ",
+  "@menuPageUnreadNotices": {
+    "description": "≡ menu page, Today's work: row with the count of unread notices"
+  },
+  "menuPageDayClosePending": "দিন বন্ধ বাকি",
+  "@menuPageDayClosePending": {
+    "description": "≡ menu page, Today's work: row with the count of days not yet closed"
+  },
+  "menuPageHelp": "সাহায্য ও সহায়তা",
+  "@menuPageHelp": {
+    "description": "≡ menu page: folded section title for help and support"
+  },
+  "menuPageHelpCentre": "সাহায্য কেন্দ্র",
+  "@menuPageHelpCentre": {
+    "description": "≡ menu page, help fold: opens the help centre"
+  },
+  "menuPageReportProblem": "সমস্যা জানান",
+  "@menuPageReportProblem": {
+    "description": "≡ menu page, help fold: report a problem"
+  },
+  "menuPageSettings": "সেটিংস ও গোপনীয়তা",
+  "@menuPageSettings": {
+    "description": "≡ menu page: folded section title for settings and privacy"
+  },
+  "menuPageSettingsHint": "চেহারা, রং, ভাষা, আঙুলের ছাপ…",
+  "@menuPageSettingsHint": {
+    "description": "≡ menu page: the small line under the settings and privacy fold title"
+  },
+  "menuPageLookColour": "চেহারা ও রং",
+  "@menuPageLookColour": {
+    "description": "≡ menu page, settings fold: app look and colour"
+  },
+  "menuPageFingerprint": "আঙুলের ছাপ",
+  "@menuPageFingerprint": {
+    "description": "≡ menu page, settings fold: fingerprint / app lock"
+  },
+  "menuPageScreenshot": "স্ক্রিনশট",
+  "@menuPageScreenshot": {
+    "description": "≡ menu page, settings fold: screenshot setting"
+  },
+  "menuPageNotifications": "নোটিফিকেশন",
+  "@menuPageNotifications": {
+    "description": "≡ menu page, settings fold: notification settings"
+  },
+  "menuPageAbout": "অ্যাপ সম্পর্কে",
+  "@menuPageAbout": {
+    "description": "≡ menu page: folded section title about the app"
+  },
+  "menuPageVersion": "সংস্করণ {version}",
+  "@menuPageVersion": {
+    "description": "≡ menu page, about fold: the running app version",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menuPageCheckUpdate": "আপডেট দেখুন",
+  "@menuPageCheckUpdate": {
+    "description": "≡ menu page, about fold: check for an app update"
+  },
+  "menuPageAppVersion": "ABOS অ্যাপ {version}",
+  "@menuPageAppVersion": {
+    "description": "≡ menu page: the last line under the sign-out button",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
+}

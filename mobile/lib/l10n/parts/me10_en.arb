@@ -1,0 +1,49 @@
+{
+  "@@locale": "en",
+  "mePageCoverChange": "Change cover",
+  "mePagePhotoChange": "Change photo",
+  "mePageEditProfile": "Edit profile",
+  "mePageMessage": "Message",
+  "mePageCall": "Call",
+  "mePageSoon": "Soon",
+  "mePageSoonSnack": "Coming soon",
+  "mePageMonthTitle": "My work this month",
+  "mePageAboutTitle": "About",
+  "mePageAboutPhone": "Phone",
+  "mePageAboutEmail": "Email",
+  "mePageAboutEmployeeNo": "Employee no.",
+  "mePageAboutJoined": "Joined on",
+  "mePageAboutRole": "Role",
+  "mePageAboutBranches": "Branches I may work in",
+  "mePageRecentTitle": "My recent work",
+  "mePageSeeAll": "See all",
+  "mePageYesterday": "Yesterday",
+  "mePageRemovePhone": "Remove",
+  "mePageSecurityTitle": "Security",
+  "mePagePassword": "Password",
+  "mePagePasswordChanged": "{count, plural, one{Last changed {digits} day ago} other{Last changed {digits} days ago}}",
+  "@mePagePasswordChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "digits": {
+        "type": "String"
+      }
+    }
+  },
+  "mePageAppLock": "Fingerprint & PIN",
+  "mePageAppLockHint": "Asked when the app opens",
+  "mePageLockDelay": "Lock after",
+  "mePageLockDelayHint": "While the app is closed",
+  "mePageCoverSending": "Sending cover… {percent}%",
+  "@mePageCoverSending": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "mePageCoverChanged": "Cover changed",
+  "mePageCoverFailed": "The cover could not be sent. Please try again in a moment."
+}

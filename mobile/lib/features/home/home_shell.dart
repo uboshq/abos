@@ -37,7 +37,6 @@ import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/auto_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
@@ -56,6 +55,9 @@ import 'nav_search.dart';
 import 'notice_ticker.dart';
 import 'workspace_picker.dart';
 import '../profile/look_screen.dart';
+import '../profile/me_page.dart';
+import '../menu/menu_page.dart';
+import '../../core/profile/me_profile_api.dart';
 import '../copilot/copilot_quick_sheet.dart';
 
 /// The signed-in person's home — the owner's navigation of 12 Oct 2026:
@@ -438,7 +440,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       case AvatarChoice.lock:
         await _showLockDelaySheet(context);
       case AvatarChoice.settings:
-        _setPage(HomePage.me);
+        // ⓘ সেটিংস এখন ≡ মেনুর পাতায় ("সেটিংস ও গোপনীয়তা"; আইটেম ১০) — হোমে ফিরে সেই পাতা খোলা
+        _setPage(HomePage.home);
+        if (mounted) setState(() => _menuPage = true);
         if (fromScreen) GoRouter.maybeOf(context)?.go('/home');
       case AvatarChoice.logout:
         await _confirmLogout(context, ref);
@@ -468,8 +472,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _publishTopBar();
   }
 
-  void _setPage(HomePage page) =>
-      ref.read(homePageProvider.notifier).state = page;
+  void _setPage(HomePage page) {
+    // ⓘ অন্য পাতায় গেলে ≡ মেনুর পাতা বন্ধ
+    if (_menuPage) setState(() => _menuPage = false);
+    ref.read(homePageProvider.notifier).state = page;
+  }
+
+  /// ⭐ ≡ মেনুর পাতা খোলা — Facebook-ধাঁচের পুরো পাতা (আইটেম ১০; মালিকের অনুমোদিত নমুনা "ক", খ-ভাগ, ২১ নভেম্বর ২০২৬)। ⓘ নিজের
+  /// জায়গা ("আমি" = [MePage]) আলাদা; এটা কাজের জায়গা — শর্টকাট, সাম্প্রতিক, আজকের কাজ, সেটিংস, বের হওয়া ([MenuPage])।
+  bool _menuPage = false;
+
+  void _toggleMenuPage() => setState(() => _menuPage = !_menuPage);
+
+  /// মেনুর পাতা থেকে কোথাও গেলে — পাতা বন্ধ, তারপর পথ
+  Future<void> _openFromMenu(String path, String label) async {
+    if (_menuPage) setState(() => _menuPage = false);
+    await _open(path, label);
+  }
 
   /// Opens `/home/<path>` and remembers it under "সাম্প্রতিক".
   Future<void> _open(String path, String label) async {
@@ -634,10 +653,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     return PopScope(
       // ⭐ অ্যান্ড্রয়েডের "পিছনে" — সবসময় এক ধাপ উপরে; হোমে থাকলে তবেই অ্যাপ বন্ধ
-      canPop: page.up == null,
+      // ⓘ ≡ মেনুর পাতা খোলা থাকলে "পিছনে" আগে সেটাই বন্ধ করে
+      canPop: page.up == null && !_menuPage,
       onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_menuPage) {
+          setState(() => _menuPage = false);
+          return;
+        }
         final up = page.up;
-        if (!didPop && up != null) _setPage(up);
+        if (up != null) _setPage(up);
       },
       child: Scaffold(
         // ⭐ Liquid Glass আর Material 3-এ নিচের বার ভাসে — পাতা তার নিচ দিয়ে যায় (0.4.58)
@@ -666,8 +691,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           },
           // ⭐ ≡ = দ্রুত কাজ (0.4.58; মালিক, ১৬ নভেম্বর ২০২৬: মডিউল নিচের বারে আছেই); ← এক ধাপ উপরে (অ্যান্ড্রয়েডের "পিছনে"-র
           // একই নিয়ম)
-          onLeading: () => page.up == null || page.kind == HomePageKind.modules ? _openQuick() : _setPage(page.up!),
-          menuTooltip: context.l10n.lookQuickActions,
+          // ⭐ আইটেম ১০ (২১ নভেম্বর ২০২৬): ≡ এখন Facebook-ধাঁচের মেনুর পাতা খোলে/বন্ধ করে; দ্রুত কাজ সেই পাতার "শর্টকাট"-এ আর ＋-এ
+          onLeading: () => _menuPage || page.up == null || page.kind == HomePageKind.modules ? _toggleMenuPage() : _setPage(page.up!),
+          leadingActive: _menuPage,
+          // ⓘ ≡-এর নাম (TalkBack) এখন বারের নিজের "পুরো মেনু" — দ্রুত কাজ আর ≡-এ নয়
           onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
           onSearch: _openSearch,
           onCopilot: _copilot == null ? null : () => _copilot!(context, context.l10n.navTabHome),
@@ -698,7 +725,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 fetch: widget.fetchNoticeBar),
             Expanded(
                 child: IndexedStack(
-              index: tab == NavTab.home ? 0 : (tab == NavTab.me ? 2 : 1),
+              index: _menuPage ? 3 : (tab == NavTab.home ? 0 : (tab == NavTab.me ? 2 : 1)),
               children: [
                 HomeDashboard(
                   key: ValueKey('home-dashboard-$_generation'),
@@ -722,14 +749,56 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   netWorth: widget.netWorth ?? const ServerNetWorthApi(),
                 ),
                 _modulesArea(page, module, counts),
-                _MoreTab(
-                    user: user,
-                    org: org,
+                // ⭐ "আমি" — Facebook-ধাঁচের প্রোফাইল: মলাট, ছবি, এই মাসের কাজ, পরিচয়, সাম্প্রতিক কাজ, ফোন, নিরাপত্তা, চেহারা
+                // (আইটেম ১০; মালিকের অনুমোদিত নমুনা "ক", ক-ভাগ)। ⓘ আগের "আমি"-র প্রিন্টার, সিঙ্ক, রং, ভাষা, হালনাগাদ ≡ মেনুর
+                // "সেটিংস ও গোপনীয়তা" আর "অ্যাপ সম্পর্কে"-তে — কিছুই হারায়নি
+                MePage(
+                  key: ValueKey('me-page-$_generation'),
+                  fallback: MeProfile.fallback(
+                    name: user.name,
                     designation: _designation,
-                    avatarUrl: _avatarUrl,
-                    onProfile: () => (widget.openPath ?? _push)(ProfileRoutes.profile),
-                    profileTitle: ProfileRoutes.profileTitle(ref.watch(meFeaturesProvider) ?? MeFeatures.none),
-                    onOpen: _open),
+                    company: org?.company ?? '',
+                    branch: org?.branch ?? '',
+                    photoUrl: _avatarUrl,
+                    email: user.email.isEmpty ? null : user.email,
+                  ),
+                  onEditProfile: () => (widget.openPath ?? _push)(ProfileRoutes.profile),
+                  onLockDelay: () => _showLockDelaySheet(context),
+                ),
+                MenuPage(
+                  key: ValueKey('menu-page-$_generation'),
+                  name: user.name,
+                  designation: _designation,
+                  company: org?.company ?? '',
+                  branch: org?.branch ?? '',
+                  avatarUrl: _avatarUrl,
+                  allBranches: _profile?.branch.publicId == WorkspaceSwitcher.allBranches,
+                  onOpenProfile: () => _setPage(HomePage.me),
+                  onSwitchWorkspace: (_profile?.canSwitch ?? false) ? () => _openPicker() : null,
+                  shortcuts: _quickActions,
+                  shortcutCounts: {if ((_pending ?? 0) > 0) 'approvals': _pending!},
+                  onOpenPath: _openFromMenu,
+                  recents: _recentRows,
+                  approvalsWaiting: _pending,
+                  unreadNotices: _unread,
+                  onApprovals: () => _openFromMenu('approvals', context.l10n.navScreenApprovals),
+                  onNotices: () async {
+                    setState(() => _menuPage = false);
+                    await (widget.openPath ?? _push)('notifications');
+                    if (mounted) _loadUnread();
+                  },
+                  onLookAndColour: () => LookScreen.open(context),
+                  onFingerprint: () => _showLockDelaySheet(context),
+                  onPrinter: () => Navigator.of(context)
+                      .push(MaterialPageRoute<void>(builder: (_) => const PrinterSettingsScreen())),
+                  onSyncStatus: () => _openFromMenu('sync-status', context.l10n.homeSyncStatus),
+                  settingsExtras: [
+                    const MeThemeRow(),
+                    if (LanguageSwitch.shown) const MeLanguageRow(),
+                  ],
+                  updateTile: const AppUpdateTile(),
+                  onLogout: () => _confirmLogout(context, ref),
+                ),
               ],
             )),
           ]),
@@ -739,6 +808,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           badges: NavBadges(
               pending: _pending, pendingMore: _pendingMore, unread: _unread),
           onSelect: (selected) async {
+            if (_menuPage) setState(() => _menuPage = false);
             switch (selected) {
               case NavTab.home:
                 _setPage(HomePage.home);
@@ -810,149 +880,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 }
 
-/// "আমি" — who is signed in, where, the sync status, the update button and
-/// the way out. Signing out asks first: on a shared phone one stray tap must
-/// not cost somebody their session and the login that follows.
-class _MoreTab extends ConsumerWidget {
-  const _MoreTab(
-      {required this.user,
-      required this.org,
-      required this.onOpen,
-      this.designation,
-      this.avatarUrl,
-      this.onProfile,
-      this.profileTitle});
-
-  /// ⭐ নামের কার্ডে চাপ — 'প্রোফাইল ও ছবি' (ছবি, নিজের তথ্য, 'আমার ফোনগুলো'); আগে উপরের বারের ছবির মেনুতে ছিল
-  final VoidCallback? onProfile;
-  final String? profileTitle;
-
-  final String? designation;
-  final String? avatarUrl;
-
-  final AuthUser user;
-  final OrgSnapshot? org;
-  final Future<void> Function(String path, String label) onOpen;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
-    final cs = Theme.of(context).colorScheme;
-    return ListView(
-      key: const ValueKey('me-page'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
-        Card(
-          child: ListTile(
-            // ⭐ ছবি আর পদবি — মালিক, ২ অক্টোবর ২০২৬: "profile photo dekhay na, role nadekiye designation dekhabe"
-            leading: CircleAvatar(
-              key: const ValueKey('profile-avatar'),
-              backgroundColor: cs.primary,
-              foregroundColor: cs.onPrimary,
-              foregroundImage: avatarImage(avatarUrl),
-              // ⓘ ছবি না এলে (৪০৪, নেট নেই) নামের প্রথম অক্ষর — ভুলটা লাল পর্দা হয়ে ওঠে না
-              onForegroundImageError: avatarUrl == null ? null : (_, __) {},
-              child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
-            ),
-            title: Text(user.name,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text([
-              if (designation != null) designation!,
-              if (user.email.isNotEmpty) user.email,
-            ].join('\n')),
-            isThreeLine: designation != null && user.email.isNotEmpty,
-            trailing: onProfile == null ? null : const Icon(Icons.chevron_right),
-            onTap: onProfile,
-          ),
-        ),
-        if (onProfile != null && profileTitle != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Card(
-            child: ListTile(
-              key: const ValueKey('me-profile'),
-              leading: const Icon(Icons.person_outline),
-              title: Text(profileTitle!),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: onProfile,
-            ),
-          ),
-        ],
-        if (org != null && !org!.isEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.business_outlined),
-              title: Text(org!.company),
-              subtitle: org!.branch.isEmpty ? null : Text(org!.branch),
-            ),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        Card(
-          child: ListTile(
-            key: const ValueKey('me-sync-status'),
-            leading: const Icon(Icons.sync_outlined),
-            title: Text(context.l10n.homeSyncStatus),
-            subtitle: Text(context.l10n.homeSyncStatusHint),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => onOpen('sync-status', context.l10n.homeSyncStatus),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // ⭐ প্রিন্টার — থার্মাল (ব্লুটুথ) আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
-        Card(
-          child: ListTile(
-            key: const ValueKey('me-printer'),
-            leading: const Icon(Icons.print_outlined),
-            title: Text(context.l10n.homePrinter),
-            subtitle: Text(context.l10n.homePrinterHint),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                builder: (_) => const PrinterSettingsScreen())),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬; [[LockDelay]])
-        const _LockDelayTile(),
-        const SizedBox(height: AppSpacing.sm),
-        // ⭐ রঙ আর ভাষা — আগে ছবির মেনুতে; ছবি নিচের বারে যাওয়ায় এখানে (মালিক, ১৪ নভেম্বর ২০২৬)
-        const Card(clipBehavior: Clip.antiAlias, child: MeThemeRow()),
-        // ⭐ চেহারা (ABOS · Liquid Glass · Material 3) — ছবির মেনুর একই সারি, "আমি" থেকেও এক চাপে (মালিক, ২০ নভেম্বর ২০২৬:
-        // "চেহারা eta nai"; ছবি নিচের বারের "আমি" ঘরে, তাই মেনুর সারি এখানেও)
-        const SizedBox(height: AppSpacing.sm),
-        Card(
-          child: ListTile(
-            key: const ValueKey('me-look'),
-            leading: const Icon(Symbols.style),
-            title: Text(context.l10n.lookTitle),
-            subtitle: Text(context.l10n.lookProfileSubtitle(context.l10n.lookExpressive, context.l10n.lookGlass, context.l10n.lookAbos)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => LookScreen.open(context),
-          ),
-        ),
-        if (LanguageSwitch.shown) ...[
-          const SizedBox(height: AppSpacing.sm),
-          const Card(clipBehavior: Clip.antiAlias, child: MeLanguageRow()),
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
-        const AppUpdateTile(),
-        const SizedBox(height: AppSpacing.lg),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: cs.error,
-            side: BorderSide(color: cs.error),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          onPressed: () => _confirmLogout(context, ref),
-          icon: const Icon(Icons.logout),
-          label: Text(context.l10n.homeSignOut),
-        ),
-      ],
-    );
-  }
-}
-
 /// বেরোনোর আগে জিজ্ঞেস — শেয়ার করা ফোনে এক ভুল চাপে কারও সেশন না যায় ("আমি" পাতা আর ছবির মেনু দুটোই)
 Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
   final pending = SyncEngine.instance.pendingCount;
@@ -975,28 +902,6 @@ Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
   );
   if (yes == true) {
     await ref.read(authStateProvider.notifier).logout();
-  }
-}
-
-/// অ্যাপ-তালার সময় বাছাই — "আমি" ট্যাবে; চারটা পছন্দ, "কখনো না" নেই ([[LockDelay]])
-class _LockDelayTile extends StatelessWidget {
-  const _LockDelayTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<Duration>(
-      valueListenable: LockDelay.instance.current,
-      builder: (context, delay, _) => Card(
-        child: ListTile(
-          key: const ValueKey('me-lock-delay'),
-          leading: const Icon(Icons.lock_clock_outlined),
-          title: Text(context.l10n.homeLockDelay),
-          subtitle: Text(context.l10n.homeLockDelayHint(LockDelay.label(delay.inMinutes))),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _showLockDelaySheet(context),
-        ),
-      ),
-    );
   }
 }
 

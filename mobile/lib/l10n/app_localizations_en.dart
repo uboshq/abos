@@ -12012,4 +12012,173 @@ class AppL10nEn extends AppL10n {
   @override
   String get networkErrorFirewallBlocked =>
       'This WiFi/network is blocked by the server\'s firewall — try mobile data, or tell the office.';
+
+  @override
+  String get mePageCoverChange => 'Change cover';
+
+  @override
+  String get mePagePhotoChange => 'Change photo';
+
+  @override
+  String get mePageEditProfile => 'Edit profile';
+
+  @override
+  String get mePageMessage => 'Message';
+
+  @override
+  String get mePageCall => 'Call';
+
+  @override
+  String get mePageSoon => 'Soon';
+
+  @override
+  String get mePageSoonSnack => 'Coming soon';
+
+  @override
+  String get mePageMonthTitle => 'My work this month';
+
+  @override
+  String get mePageAboutTitle => 'About';
+
+  @override
+  String get mePageAboutPhone => 'Phone';
+
+  @override
+  String get mePageAboutEmail => 'Email';
+
+  @override
+  String get mePageAboutEmployeeNo => 'Employee no.';
+
+  @override
+  String get mePageAboutJoined => 'Joined on';
+
+  @override
+  String get mePageAboutRole => 'Role';
+
+  @override
+  String get mePageAboutBranches => 'Branches I may work in';
+
+  @override
+  String get mePageRecentTitle => 'My recent work';
+
+  @override
+  String get mePageSeeAll => 'See all';
+
+  @override
+  String get mePageYesterday => 'Yesterday';
+
+  @override
+  String get mePageRemovePhone => 'Remove';
+
+  @override
+  String get mePageSecurityTitle => 'Security';
+
+  @override
+  String get mePagePassword => 'Password';
+
+  @override
+  String mePagePasswordChanged(int count, String digits) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Last changed $digits days ago',
+      one: 'Last changed $digits day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mePageAppLock => 'Fingerprint & PIN';
+
+  @override
+  String get mePageAppLockHint => 'Asked when the app opens';
+
+  @override
+  String get mePageLockDelay => 'Lock after';
+
+  @override
+  String get mePageLockDelayHint => 'While the app is closed';
+
+  @override
+  String mePageCoverSending(int percent) {
+    return 'Sending cover… $percent%';
+  }
+
+  @override
+  String get mePageCoverChanged => 'Cover changed';
+
+  @override
+  String get mePageCoverFailed =>
+      'The cover could not be sent. Please try again in a moment.';
+
+  @override
+  String get menuPageSeeProfile => 'See my profile';
+
+  @override
+  String get menuPageSwitch => 'Switch';
+
+  @override
+  String get menuPageAllBranchesNote =>
+      '\"All branches — view only\": no writing or changes; approvals are allowed.';
+
+  @override
+  String get menuPageShortcuts => 'Shortcuts';
+
+  @override
+  String get menuPageSeeMore => 'See more';
+
+  @override
+  String get menuPageRecentPaper => 'Paper';
+
+  @override
+  String get menuPageRecentPage => 'Page';
+
+  @override
+  String get menuPageUnreadNotices => 'Unread notices';
+
+  @override
+  String get menuPageDayClosePending => 'Days not closed';
+
+  @override
+  String get menuPageHelp => 'Help and support';
+
+  @override
+  String get menuPageHelpCentre => 'Help centre';
+
+  @override
+  String get menuPageReportProblem => 'Report a problem';
+
+  @override
+  String get menuPageSettings => 'Settings and privacy';
+
+  @override
+  String get menuPageSettingsHint => 'Look, colour, language, fingerprint…';
+
+  @override
+  String get menuPageLookColour => 'Look and colour';
+
+  @override
+  String get menuPageFingerprint => 'Fingerprint';
+
+  @override
+  String get menuPageScreenshot => 'Screenshots';
+
+  @override
+  String get menuPageNotifications => 'Notifications';
+
+  @override
+  String get menuPageAbout => 'About the app';
+
+  @override
+  String menuPageVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get menuPageCheckUpdate => 'Check for update';
+
+  @override
+  String menuPageAppVersion(String version) {
+    return 'ABOS app $version';
+  }
 }

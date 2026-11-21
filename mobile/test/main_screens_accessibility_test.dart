@@ -102,7 +102,7 @@ void main() {
     handle.dispose();
   });
 
-  // "আমি" — অ্যাপের সেটিংসের পাতা (সিঙ্ক, প্রিন্টার, হালনাগাদ, বেরোনো)
+  // "আমি" — নিজের প্রোফাইল (আইটেম ১০, ২১ নভেম্বর ২০২৬: মলাট, ছবি, "প্রোফাইল ঠিক করুন", নিরাপত্তা, চেহারা)
   for (final g in guidelines.entries) {
     testWidgets('settings (আমি): ${g.key}', (tester) async {
       setScreenSize(tester, const Size(390, 844));
@@ -112,7 +112,39 @@ void main() {
       // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
       await tester.tap(find.byKey(const ValueKey('nav-me')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('me-sync-status')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
+      expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
+      await expectLater(tester, meetsGuideline(g.value));
+      handle.dispose();
+    });
+  }
+
+  // ≡ মেনু — অ্যাপের সেটিংসের পাতা এখন (সিঙ্ক, প্রিন্টার, হালনাগাদ, বেরোনো; আইটেম ১০, ২১ নভেম্বর ২০২৬); সেটিংস আর অ্যাপ সম্পর্কে খোলা
+  for (final g in guidelines.entries) {
+    testWidgets('settings (≡ মেনু): ${g.key}', (tester) async {
+      setScreenSize(tester, const Size(390, 844));
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(homeShell());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('top-leading')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('menu-page')), findsOneWidget, reason: '⛔ ≡ মেনুর পাতা খোলেনি — অন্য পাতা মাপা হতো');
+      final menu = find.descendant(of: find.byKey(const ValueKey('menu-page')), matching: find.byType(Scrollable)).first;
+      // ⓘ সাহায্যের ভাঁজ খোলস এখনো দেয় না (ডাক নেই, ভাঁজ নেই)
+      for (final fold in ['settings', 'about']) {
+        final head = find.byKey(ValueKey('menu-fold-$fold'));
+        await tester.scrollUntilVisible(head, 150, scrollable: menu);
+        await tester.pumpAndSettle();
+        if (find.byKey(ValueKey('menu-fold-$fold-body')).evaluate().isEmpty) {
+          await tester.tap(head);
+          await tester.pumpAndSettle();
+        }
+      }
+      // ⓘ এক পর্দায় যা দেখা যায় তা-ই মাপা — দুই জায়গায়: সেটিংসের ভাঁজ আর পাতার শেষ (বের হওয়া)
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-sub-sync-status')), 150, scrollable: menu);
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(g.value));
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-version')), 150, scrollable: menu);
+      await tester.pumpAndSettle();
       await expectLater(tester, meetsGuideline(g.value));
       handle.dispose();
     });

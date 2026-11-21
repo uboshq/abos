@@ -1,0 +1,39 @@
+{
+  "@@locale": "en",
+  "menuPageSeeProfile": "See my profile",
+  "menuPageSwitch": "Switch",
+  "menuPageAllBranchesNote": "\"All branches — view only\": no writing or changes; approvals are allowed.",
+  "menuPageShortcuts": "Shortcuts",
+  "menuPageSeeMore": "See more",
+  "menuPageRecentPaper": "Paper",
+  "menuPageRecentPage": "Page",
+  "menuPageUnreadNotices": "Unread notices",
+  "menuPageDayClosePending": "Days not closed",
+  "menuPageHelp": "Help and support",
+  "menuPageHelpCentre": "Help centre",
+  "menuPageReportProblem": "Report a problem",
+  "menuPageSettings": "Settings and privacy",
+  "menuPageSettingsHint": "Look, colour, language, fingerprint…",
+  "menuPageLookColour": "Look and colour",
+  "menuPageFingerprint": "Fingerprint",
+  "menuPageScreenshot": "Screenshots",
+  "menuPageNotifications": "Notifications",
+  "menuPageAbout": "About the app",
+  "menuPageVersion": "Version {version}",
+  "@menuPageVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menuPageCheckUpdate": "Check for update",
+  "menuPageAppVersion": "ABOS app {version}",
+  "@menuPageAppVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
+}

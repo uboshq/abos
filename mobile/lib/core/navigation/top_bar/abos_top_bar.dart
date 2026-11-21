@@ -44,6 +44,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.avatar,
     required this.onAvatar,
     this.menuOpen = false,
+    this.leadingActive = false,
     this.showAvatar = true,
     this.demo,
     this.syncStatus,
@@ -103,6 +104,9 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// মেনু খোলা — ছবির চারপাশে কমলা দাগ (নমুনা পাতা ২)
   final bool menuOpen;
+
+  /// ⭐ ≡ মেনুর পাতা খোলা (আইটেম ১০, নমুনা "ক" খ-ভাগ) — ≡ নীল, হালকা নীল ঘরে; আবার চাপলে বন্ধ
+  final bool leadingActive;
 
   /// ডেমো সার্ভার — null হলে [AppConfig.apiBaseUrl] দেখে ([isDemoServer])
   final bool? demo;
@@ -265,10 +269,19 @@ class _AbosTopBarState extends State<AbosTopBar> {
             child: LayoutBuilder(builder: (context, box) {
               final leading = IconButton(
                 key: const ValueKey('top-leading'),
+                // ⓘ বন্ধ থাকলে null — আগের বোতামের হুবহু (false দিলে M3 "বাছাইযোগ্য" বোতাম হয়, পিক্সেল নড়ে)
+                isSelected: widget.leadingActive ? true : null,
+                style: widget.leadingActive
+                    ? IconButton.styleFrom(
+                        foregroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: const Color(0x243B82F6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      )
+                    : null,
                 tooltip: widget.leading == TopBarLeading.menu
                     ? (widget.menuTooltip ?? context.l10n.topBarFullMenu)
                     : context.l10n.topBarBack,
-                color: fg,
+                color: widget.leadingActive ? const Color(0xFF3B82F6) : fg,
                 onPressed: widget.onLeading,
                 icon: Icon(widget.leading == TopBarLeading.menu ? Symbols.menu : Symbols.arrow_back),
               );

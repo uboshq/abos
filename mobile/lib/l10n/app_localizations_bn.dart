@@ -11834,4 +11834,172 @@ class AppL10nBn extends AppL10n {
   @override
   String get networkErrorFirewallBlocked =>
       'এই WiFi/নেটওয়ার্ক থেকে সার্ভারে ঢোকা আটকানো আছে — মোবাইল ডেটা দিয়ে চেষ্টা করুন, বা অফিসকে জানান।';
+
+  @override
+  String get mePageCoverChange => 'মলাট বদলান';
+
+  @override
+  String get mePagePhotoChange => 'ছবি বদলান';
+
+  @override
+  String get mePageEditProfile => 'প্রোফাইল ঠিক করুন';
+
+  @override
+  String get mePageMessage => 'বার্তা';
+
+  @override
+  String get mePageCall => 'কল';
+
+  @override
+  String get mePageSoon => 'শীঘ্রই';
+
+  @override
+  String get mePageSoonSnack => 'শীঘ্রই আসছে';
+
+  @override
+  String get mePageMonthTitle => 'এই মাসে আমার কাজ';
+
+  @override
+  String get mePageAboutTitle => 'পরিচয়';
+
+  @override
+  String get mePageAboutPhone => 'ফোন';
+
+  @override
+  String get mePageAboutEmail => 'ইমেইল';
+
+  @override
+  String get mePageAboutEmployeeNo => 'কর্মী নম্বর';
+
+  @override
+  String get mePageAboutJoined => 'যোগদানের তারিখ';
+
+  @override
+  String get mePageAboutRole => 'রোল';
+
+  @override
+  String get mePageAboutBranches => 'অনুমতি আছে যে শাখায়';
+
+  @override
+  String get mePageRecentTitle => 'আমার সাম্প্রতিক কাজ';
+
+  @override
+  String get mePageSeeAll => 'সব দেখুন';
+
+  @override
+  String get mePageYesterday => 'গতকাল';
+
+  @override
+  String get mePageRemovePhone => 'বাদ দিন';
+
+  @override
+  String get mePageSecurityTitle => 'নিরাপত্তা';
+
+  @override
+  String get mePagePassword => 'পাসওয়ার্ড';
+
+  @override
+  String mePagePasswordChanged(int count, String digits) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'শেষ বদল $digits দিন আগে',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mePageAppLock => 'আঙুলের ছাপ ও পিন';
+
+  @override
+  String get mePageAppLockHint => 'খোলার সময় চাওয়া হয়';
+
+  @override
+  String get mePageLockDelay => 'কতক্ষণ পরে তালা';
+
+  @override
+  String get mePageLockDelayHint => 'অ্যাপ বন্ধ থাকলে';
+
+  @override
+  String mePageCoverSending(int percent) {
+    return 'মলাট পাঠানো হচ্ছে… $percent%';
+  }
+
+  @override
+  String get mePageCoverChanged => 'মলাট বদলানো হলো';
+
+  @override
+  String get mePageCoverFailed =>
+      'মলাট পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।';
+
+  @override
+  String get menuPageSeeProfile => 'আমার প্রোফাইল দেখুন';
+
+  @override
+  String get menuPageSwitch => 'বদলান';
+
+  @override
+  String get menuPageAllBranchesNote =>
+      '\"সব শাখা — কেবল দেখা\": লেখা বা বদল নয়; অনুমোদন দেওয়া যায়।';
+
+  @override
+  String get menuPageShortcuts => 'শর্টকাট';
+
+  @override
+  String get menuPageSeeMore => 'আরও দেখুন';
+
+  @override
+  String get menuPageRecentPaper => 'কাগজ';
+
+  @override
+  String get menuPageRecentPage => 'পাতা';
+
+  @override
+  String get menuPageUnreadNotices => 'না-পড়া নোটিশ';
+
+  @override
+  String get menuPageDayClosePending => 'দিন বন্ধ বাকি';
+
+  @override
+  String get menuPageHelp => 'সাহায্য ও সহায়তা';
+
+  @override
+  String get menuPageHelpCentre => 'সাহায্য কেন্দ্র';
+
+  @override
+  String get menuPageReportProblem => 'সমস্যা জানান';
+
+  @override
+  String get menuPageSettings => 'সেটিংস ও গোপনীয়তা';
+
+  @override
+  String get menuPageSettingsHint => 'চেহারা, রং, ভাষা, আঙুলের ছাপ…';
+
+  @override
+  String get menuPageLookColour => 'চেহারা ও রং';
+
+  @override
+  String get menuPageFingerprint => 'আঙুলের ছাপ';
+
+  @override
+  String get menuPageScreenshot => 'স্ক্রিনশট';
+
+  @override
+  String get menuPageNotifications => 'নোটিফিকেশন';
+
+  @override
+  String get menuPageAbout => 'অ্যাপ সম্পর্কে';
+
+  @override
+  String menuPageVersion(String version) {
+    return 'সংস্করণ $version';
+  }
+
+  @override
+  String get menuPageCheckUpdate => 'আপডেট দেখুন';
+
+  @override
+  String menuPageAppVersion(String version) {
+    return 'ABOS অ্যাপ $version';
+  }
 }

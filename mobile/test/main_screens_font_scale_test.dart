@@ -73,7 +73,29 @@ void main() {
         // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
         await tester.tap(find.byKey(const ValueKey('nav-me')));
         await tester.pumpAndSettle();
-        expect(find.byKey(const ValueKey('me-page')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
+        expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget, reason: '⛔ "আমি" পাতা খোলেনি — অন্য পাতা মাপা হতো');
+      });
+
+  /// ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): আগের "আমি"-র সেটিংস ≡ মেনুর পাতায় — দুই ভাঁজ খুলে পাতার শেষ পর্যন্ত নামা
+  /// (সাহায্যের ভাঁজ খোলস এখনো দেয় না — ডাক নেই, ভাঁজ নেই)
+  Future<List<String>> openMenuToTheEnd(WidgetTester tester, double scale) => collectBreaks(() async {
+        await tester.pumpWidget(homeShell(textScale: scale));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('top-leading')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('menu-page')), findsOneWidget, reason: '⛔ ≡ মেনুর পাতা খোলেনি — অন্য পাতা মাপা হতো');
+        final menu = find.descendant(of: find.byKey(const ValueKey('menu-page')), matching: find.byType(Scrollable)).first;
+        for (final fold in ['settings', 'about']) {
+          final head = find.byKey(ValueKey('menu-fold-$fold'));
+          await tester.scrollUntilVisible(head, 150, scrollable: menu);
+          await tester.pumpAndSettle();
+          if (find.byKey(ValueKey('menu-fold-$fold-body')).evaluate().isEmpty) {
+            await tester.tap(head);
+            await tester.pumpAndSettle();
+          }
+        }
+        await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-version')), 150, scrollable: menu);
+        await tester.pumpAndSettle();
       });
 
   // ⛔ বড় লেখায় বোতামের লেখা বোতামের ভেতরে, উপরে-নিচে-পাশে অন্তত ৮dp ফাঁক রেখে — দুই লাইনে ভাঙলে বোতাম বাড়ে, লেখা কিনারা ছোঁয় না
@@ -134,11 +156,23 @@ void main() {
     }
   }
 
-  // "আমি" — সেটিংসের পাতা
+  // "আমি" — নিজের প্রোফাইল (আইটেম ১০); পাতার শেষ (চেহারা) পর্যন্ত নেমে
   testWidgets('settings (আমি): nothing overflows at 200% text', (tester) async {
     setScreenSize(tester, const Size(390, 844));
     final breaks = await openSettings(tester, 2.0);
+    breaks.addAll(await collectBreaks(() async {
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-look')), 150,
+          scrollable: find.descendant(of: find.byKey(const ValueKey('me-page-10')), matching: find.byType(Scrollable)).first);
+      await tester.pumpAndSettle();
+    }));
     expect(breaks, isEmpty, reason: '⛔ ২০০% লেখায় "আমি" ভাঙল: ${breaks.join(' | ')}');
+  });
+
+  // ≡ মেনু — এখনকার সেটিংসের পাতা (সিঙ্ক, প্রিন্টার, রং, ভাষা, হালনাগাদ, বের হওয়া)
+  testWidgets('settings (≡ মেনু): nothing overflows at 200% text, every fold open', (tester) async {
+    setScreenSize(tester, const Size(390, 844));
+    final breaks = await openMenuToTheEnd(tester, 2.0);
+    expect(breaks, isEmpty, reason: '⛔ ২০০% লেখায় ≡ মেনু ভাঙল: ${breaks.join(' | ')}');
   });
 
   for (final scale in [1.3, 2.0]) {

@@ -276,21 +276,30 @@ void main() {
     expect(find.byKey(const ValueKey('favourite-attendance')), findsNothing);
   });
 
-  testWidgets('the sync status and the update button are under আমি', (tester) async {
-    // ⓘ "আমি" পাতায় সারি বেড়েছে (আলো/অন্ধকার, ২০ অক্টোবর ২০২৬) — লম্বা পর্দায়, যাতে সব সারি একসাথে দেখা যায়
+  // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): "আমি" এখন Facebook-ধাঁচের প্রোফাইল; আগের "আমি"-র সিঙ্কের অবস্থা ≡ মেনুর
+  // "সেটিংস ও গোপনীয়তা"-য়, অ্যাপ হালনাগাদ "অ্যাপ সম্পর্কে"-তে
+  testWidgets('the sync status and the update button are in the ≡ menu\'s settings and about folds', (tester) async {
+    // ⓘ লম্বা পর্দায়, যাতে খোলা ভাঁজের সব সারি একসাথে দেখা যায়
     tester.view.physicalSize = const Size(1200, 7200);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
-    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    await tester.tap(find.byKey(const ValueKey('top-leading')));
     await tester.pumpAndSettle();
+    for (final fold in ['settings', 'about']) {
+      if (find.byKey(ValueKey('menu-fold-$fold-body')).evaluate().isEmpty) {
+        await tester.tap(find.byKey(ValueKey('menu-fold-$fold')));
+        await tester.pumpAndSettle();
+      }
+    }
 
-    expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('me-sync-status')));
+    expect(find.descendant(of: find.byKey(const ValueKey('menu-fold-about-body')), matching: find.text('অ্যাপ হালনাগাদ')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('menu-sub-sync-status')));
     await tester.pumpAndSettle();
     expect(opened, ['sync-status']);
+    expect(find.byKey(const ValueKey('menu-page')), findsNothing, reason: 'মেনুর পাতা থেকে কোথাও গেলে পাতা বন্ধ');
   });
 
   // ⓘ বারের নকশা ৩ (২০ অক্টোবর ২০২৬): অনুমোদনের ঘর চাবিতে (`approval.decide`); ঘণ্টা ওপরের বারে, নিচে নয়

@@ -111,19 +111,27 @@ void main() {
     expect(page(tester), AppTheme.dark().scaffoldBackgroundColor);
   });
 
-  testWidgets('the আমি page offers the three choices and a tap is the choice', (tester) async {
+  testWidgets('the ≡ menu\'s settings offer the three choices and a tap is the choice', (tester) async {
     setScreenSize(tester, const Size(390, 1600));
     await tester.runAsync(seedMainData);
     await tester.pumpWidget(homeShell());
     await tester.pumpAndSettle();
-    // ⭐ ১৪ নভেম্বর ২০২৬: ছবি নিচের বারের "আমি" — রঙ বাছাই সেই পাতায় (আগে ছবির মেনুতে)
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    // ⭐ ১৪ নভেম্বর ২০২৬: রঙ বাছাই "আমি" পাতায় (আগে ছবির মেনুতে)। ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): "আমি" এখন প্রোফাইল (তাতে
+    // কেবল রূপ — স্মার্ট/গ্লাস/ক্লাসিক); আলো/অন্ধকার/ফোনের মতো ([MeThemeRow]) ≡ মেনুর পাতার "সেটিংস ও গোপনীয়তা" ভাঁজে
+    await tester.tap(find.byKey(const ValueKey('top-leading')));
     await tester.pumpAndSettle();
+    final menu = find.descendant(of: find.byKey(const ValueKey('menu-page')), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-fold-settings')), 150, scrollable: menu);
+    await tester.pumpAndSettle();
+    if (find.byKey(const ValueKey('menu-fold-settings-body')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(const ValueKey('menu-fold-settings')));
+      await tester.pumpAndSettle();
+    }
     try {
-      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-theme')), 150,
-          scrollable: find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first);
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-theme')), 150, scrollable: menu);
+      await tester.pumpAndSettle();
     } on StateError {
-      fail('⛔ "আমি" পাতার শেষ পর্যন্ত নেমেও রঙ বাছাইয়ের সারি নেই');
+      fail('⛔ ≡ মেনুর সেটিংসে নেমেও রঙ বাছাইয়ের সারি নেই');
     }
 
     expect(find.byKey(const ValueKey('me-theme')), findsOneWidget);

@@ -1,0 +1,132 @@
+{
+  "@@locale": "bn",
+  "mePageCoverChange": "মলাট বদলান",
+  "@mePageCoverChange": {
+    "description": "Me page: the camera button on the cover picture that changes it"
+  },
+  "mePagePhotoChange": "ছবি বদলান",
+  "@mePagePhotoChange": {
+    "description": "Me page: screen-reader label of the small camera button on the round profile photo"
+  },
+  "mePageEditProfile": "প্রোফাইল ঠিক করুন",
+  "@mePageEditProfile": {
+    "description": "Me page: the full-width primary button that opens the profile editor"
+  },
+  "mePageMessage": "বার্তা",
+  "@mePageMessage": {
+    "description": "Me page: the Message button (the messenger is not built yet)"
+  },
+  "mePageCall": "কল",
+  "@mePageCall": {
+    "description": "Me page: the Call button (calls are not built yet)"
+  },
+  "mePageSoon": "শীঘ্রই",
+  "@mePageSoon": {
+    "description": "Me page: the small chip on Message and Call that says the feature comes later"
+  },
+  "mePageSoonSnack": "শীঘ্রই আসছে",
+  "@mePageSoonSnack": {
+    "description": "Me page: the snackbar shown when Message or Call is tapped"
+  },
+  "mePageMonthTitle": "এই মাসে আমার কাজ",
+  "@mePageMonthTitle": {
+    "description": "Me page: heading of the this-month figures section"
+  },
+  "mePageAboutTitle": "পরিচয়",
+  "@mePageAboutTitle": {
+    "description": "Me page: heading of the About section (phone, email, employee no …)"
+  },
+  "mePageAboutPhone": "ফোন",
+  "@mePageAboutPhone": {
+    "description": "Me page, About: the phone number row label"
+  },
+  "mePageAboutEmail": "ইমেইল",
+  "@mePageAboutEmail": {
+    "description": "Me page, About: the email row label"
+  },
+  "mePageAboutEmployeeNo": "কর্মী নম্বর",
+  "@mePageAboutEmployeeNo": {
+    "description": "Me page, About: the employee number row label"
+  },
+  "mePageAboutJoined": "যোগদানের তারিখ",
+  "@mePageAboutJoined": {
+    "description": "Me page, About: the joining date row label"
+  },
+  "mePageAboutRole": "রোল",
+  "@mePageAboutRole": {
+    "description": "Me page, About: the role row label"
+  },
+  "mePageAboutBranches": "অনুমতি আছে যে শাখায়",
+  "@mePageAboutBranches": {
+    "description": "Me page, About: the row naming the branches the person may work in"
+  },
+  "mePageRecentTitle": "আমার সাম্প্রতিক কাজ",
+  "@mePageRecentTitle": {
+    "description": "Me page: heading of the recent-work timeline"
+  },
+  "mePageSeeAll": "সব দেখুন",
+  "@mePageSeeAll": {
+    "description": "Me page: link beside the recent-work heading that opens the full list"
+  },
+  "mePageYesterday": "গতকাল",
+  "@mePageYesterday": {
+    "description": "Me page, recent work: the time of an item done yesterday"
+  },
+  "mePageRemovePhone": "বাদ দিন",
+  "@mePageRemovePhone": {
+    "description": "Me page, My phones: the button that signs the account out of that phone"
+  },
+  "mePageSecurityTitle": "নিরাপত্তা",
+  "@mePageSecurityTitle": {
+    "description": "Me page: heading of the Security section"
+  },
+  "mePagePassword": "পাসওয়ার্ড",
+  "@mePagePassword": {
+    "description": "Me page, Security: the password row"
+  },
+  "mePagePasswordChanged": "{count, plural, other{শেষ বদল {digits} দিন আগে}}",
+  "@mePagePasswordChanged": {
+    "description": "Me page, Security: how long ago the password was last changed; digits is the count as written",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "digits": {
+        "type": "String"
+      }
+    }
+  },
+  "mePageAppLock": "আঙুলের ছাপ ও পিন",
+  "@mePageAppLock": {
+    "description": "Me page, Security: the fingerprint and PIN switch row"
+  },
+  "mePageAppLockHint": "খোলার সময় চাওয়া হয়",
+  "@mePageAppLockHint": {
+    "description": "Me page, Security: under the fingerprint and PIN row — it is asked when the app opens"
+  },
+  "mePageLockDelay": "কতক্ষণ পরে তালা",
+  "@mePageLockDelay": {
+    "description": "Me page, Security: the row choosing after how long away the app locks"
+  },
+  "mePageLockDelayHint": "অ্যাপ বন্ধ থাকলে",
+  "@mePageLockDelayHint": {
+    "description": "Me page, Security: under the lock delay row — counted while the app is closed"
+  },
+  "mePageCoverSending": "মলাট পাঠানো হচ্ছে… {percent}%",
+  "@mePageCoverSending": {
+    "description": "Me page: progress line while the new cover picture uploads",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "mePageCoverChanged": "মলাট বদলানো হলো",
+  "@mePageCoverChanged": {
+    "description": "Me page: snackbar after the cover picture changed"
+  },
+  "mePageCoverFailed": "মলাট পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।",
+  "@mePageCoverFailed": {
+    "description": "Me page: the cover upload failed for a network or server reason"
+  }
+}

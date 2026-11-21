@@ -182,8 +182,19 @@ void main() {
     expect(find.text('নতুন অর্ডার'), findsWidgets);
     expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');
 
-    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): "আমি" — নিজের ছবি — নিচের বারের শেষ ঘর; চাপলে "আমি" পাতা
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): আগের "আমি"-র সিঙ্কের অবস্থা এখন ≡ মেনুর পাতার "সেটিংস ও গোপনীয়তা" ভাঁজে
+    await tester.tap(find.byKey(const ValueKey('nav-home')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('top-leading')));
+    await tester.pumpAndSettle();
+    final menu = find.descendant(of: find.byKey(const ValueKey('menu-page')), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-fold-settings')), 150, scrollable: menu);
+    await tester.pumpAndSettle();
+    if (find.byKey(const ValueKey('menu-fold-settings-body')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(const ValueKey('menu-fold-settings')));
+      await tester.pumpAndSettle();
+    }
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('menu-sub-sync-status')), 150, scrollable: menu);
     await tester.pumpAndSettle();
     expect(find.text('সিঙ্কের অবস্থা'), findsWidgets);
     expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');

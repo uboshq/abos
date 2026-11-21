@@ -19771,6 +19771,312 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'এই WiFi/নেটওয়ার্ক থেকে সার্ভারে ঢোকা আটকানো আছে — মোবাইল ডেটা দিয়ে চেষ্টা করুন, বা অফিসকে জানান।'**
   String get networkErrorFirewallBlocked;
+
+  /// Me page: the camera button on the cover picture that changes it
+  ///
+  /// In bn, this message translates to:
+  /// **'মলাট বদলান'**
+  String get mePageCoverChange;
+
+  /// Me page: screen-reader label of the small camera button on the round profile photo
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবি বদলান'**
+  String get mePagePhotoChange;
+
+  /// Me page: the full-width primary button that opens the profile editor
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রোফাইল ঠিক করুন'**
+  String get mePageEditProfile;
+
+  /// Me page: the Message button (the messenger is not built yet)
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা'**
+  String get mePageMessage;
+
+  /// Me page: the Call button (calls are not built yet)
+  ///
+  /// In bn, this message translates to:
+  /// **'কল'**
+  String get mePageCall;
+
+  /// Me page: the small chip on Message and Call that says the feature comes later
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই'**
+  String get mePageSoon;
+
+  /// Me page: the snackbar shown when Message or Call is tapped
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে'**
+  String get mePageSoonSnack;
+
+  /// Me page: heading of the this-month figures section
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মাসে আমার কাজ'**
+  String get mePageMonthTitle;
+
+  /// Me page: heading of the About section (phone, email, employee no …)
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিচয়'**
+  String get mePageAboutTitle;
+
+  /// Me page, About: the phone number row label
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোন'**
+  String get mePageAboutPhone;
+
+  /// Me page, About: the email row label
+  ///
+  /// In bn, this message translates to:
+  /// **'ইমেইল'**
+  String get mePageAboutEmail;
+
+  /// Me page, About: the employee number row label
+  ///
+  /// In bn, this message translates to:
+  /// **'কর্মী নম্বর'**
+  String get mePageAboutEmployeeNo;
+
+  /// Me page, About: the joining date row label
+  ///
+  /// In bn, this message translates to:
+  /// **'যোগদানের তারিখ'**
+  String get mePageAboutJoined;
+
+  /// Me page, About: the role row label
+  ///
+  /// In bn, this message translates to:
+  /// **'রোল'**
+  String get mePageAboutRole;
+
+  /// Me page, About: the row naming the branches the person may work in
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমতি আছে যে শাখায়'**
+  String get mePageAboutBranches;
+
+  /// Me page: heading of the recent-work timeline
+  ///
+  /// In bn, this message translates to:
+  /// **'আমার সাম্প্রতিক কাজ'**
+  String get mePageRecentTitle;
+
+  /// Me page: link beside the recent-work heading that opens the full list
+  ///
+  /// In bn, this message translates to:
+  /// **'সব দেখুন'**
+  String get mePageSeeAll;
+
+  /// Me page, recent work: the time of an item done yesterday
+  ///
+  /// In bn, this message translates to:
+  /// **'গতকাল'**
+  String get mePageYesterday;
+
+  /// Me page, My phones: the button that signs the account out of that phone
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get mePageRemovePhone;
+
+  /// Me page: heading of the Security section
+  ///
+  /// In bn, this message translates to:
+  /// **'নিরাপত্তা'**
+  String get mePageSecurityTitle;
+
+  /// Me page, Security: the password row
+  ///
+  /// In bn, this message translates to:
+  /// **'পাসওয়ার্ড'**
+  String get mePagePassword;
+
+  /// Me page, Security: how long ago the password was last changed; digits is the count as written
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{শেষ বদল {digits} দিন আগে}}'**
+  String mePagePasswordChanged(int count, String digits);
+
+  /// Me page, Security: the fingerprint and PIN switch row
+  ///
+  /// In bn, this message translates to:
+  /// **'আঙুলের ছাপ ও পিন'**
+  String get mePageAppLock;
+
+  /// Me page, Security: under the fingerprint and PIN row — it is asked when the app opens
+  ///
+  /// In bn, this message translates to:
+  /// **'খোলার সময় চাওয়া হয়'**
+  String get mePageAppLockHint;
+
+  /// Me page, Security: the row choosing after how long away the app locks
+  ///
+  /// In bn, this message translates to:
+  /// **'কতক্ষণ পরে তালা'**
+  String get mePageLockDelay;
+
+  /// Me page, Security: under the lock delay row — counted while the app is closed
+  ///
+  /// In bn, this message translates to:
+  /// **'অ্যাপ বন্ধ থাকলে'**
+  String get mePageLockDelayHint;
+
+  /// Me page: progress line while the new cover picture uploads
+  ///
+  /// In bn, this message translates to:
+  /// **'মলাট পাঠানো হচ্ছে… {percent}%'**
+  String mePageCoverSending(int percent);
+
+  /// Me page: snackbar after the cover picture changed
+  ///
+  /// In bn, this message translates to:
+  /// **'মলাট বদলানো হলো'**
+  String get mePageCoverChanged;
+
+  /// Me page: the cover upload failed for a network or server reason
+  ///
+  /// In bn, this message translates to:
+  /// **'মলাট পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।'**
+  String get mePageCoverFailed;
+
+  /// ≡ menu page (item 10): the link under the person's name that opens the Me page
+  ///
+  /// In bn, this message translates to:
+  /// **'আমার প্রোফাইল দেখুন'**
+  String get menuPageSeeProfile;
+
+  /// ≡ menu page: the button on the company and branch card that opens the company/branch picker
+  ///
+  /// In bn, this message translates to:
+  /// **'বদলান'**
+  String get menuPageSwitch;
+
+  /// ≡ menu page: amber note under the company card, shown only while all branches are chosen (view only, approvals allowed)
+  ///
+  /// In bn, this message translates to:
+  /// **'\"সব শাখা — কেবল দেখা\": লেখা বা বদল নয়; অনুমোদন দেওয়া যায়।'**
+  String get menuPageAllBranchesNote;
+
+  /// ≡ menu page: title over the 2-column shortcut tiles
+  ///
+  /// In bn, this message translates to:
+  /// **'শর্টকাট'**
+  String get menuPageShortcuts;
+
+  /// ≡ menu page: button under the first 8 shortcut tiles that shows the rest
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দেখুন'**
+  String get menuPageSeeMore;
+
+  /// ≡ menu page, Recent: the small line under a recently opened paper (voucher, order …)
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ'**
+  String get menuPageRecentPaper;
+
+  /// ≡ menu page, Recent: the small line under a recently opened screen or list
+  ///
+  /// In bn, this message translates to:
+  /// **'পাতা'**
+  String get menuPageRecentPage;
+
+  /// ≡ menu page, Today's work: row with the count of unread notices
+  ///
+  /// In bn, this message translates to:
+  /// **'না-পড়া নোটিশ'**
+  String get menuPageUnreadNotices;
+
+  /// ≡ menu page, Today's work: row with the count of days not yet closed
+  ///
+  /// In bn, this message translates to:
+  /// **'দিন বন্ধ বাকি'**
+  String get menuPageDayClosePending;
+
+  /// ≡ menu page: folded section title for help and support
+  ///
+  /// In bn, this message translates to:
+  /// **'সাহায্য ও সহায়তা'**
+  String get menuPageHelp;
+
+  /// ≡ menu page, help fold: opens the help centre
+  ///
+  /// In bn, this message translates to:
+  /// **'সাহায্য কেন্দ্র'**
+  String get menuPageHelpCentre;
+
+  /// ≡ menu page, help fold: report a problem
+  ///
+  /// In bn, this message translates to:
+  /// **'সমস্যা জানান'**
+  String get menuPageReportProblem;
+
+  /// ≡ menu page: folded section title for settings and privacy
+  ///
+  /// In bn, this message translates to:
+  /// **'সেটিংস ও গোপনীয়তা'**
+  String get menuPageSettings;
+
+  /// ≡ menu page: the small line under the settings and privacy fold title
+  ///
+  /// In bn, this message translates to:
+  /// **'চেহারা, রং, ভাষা, আঙুলের ছাপ…'**
+  String get menuPageSettingsHint;
+
+  /// ≡ menu page, settings fold: app look and colour
+  ///
+  /// In bn, this message translates to:
+  /// **'চেহারা ও রং'**
+  String get menuPageLookColour;
+
+  /// ≡ menu page, settings fold: fingerprint / app lock
+  ///
+  /// In bn, this message translates to:
+  /// **'আঙুলের ছাপ'**
+  String get menuPageFingerprint;
+
+  /// ≡ menu page, settings fold: screenshot setting
+  ///
+  /// In bn, this message translates to:
+  /// **'স্ক্রিনশট'**
+  String get menuPageScreenshot;
+
+  /// ≡ menu page, settings fold: notification settings
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিফিকেশন'**
+  String get menuPageNotifications;
+
+  /// ≡ menu page: folded section title about the app
+  ///
+  /// In bn, this message translates to:
+  /// **'অ্যাপ সম্পর্কে'**
+  String get menuPageAbout;
+
+  /// ≡ menu page, about fold: the running app version
+  ///
+  /// In bn, this message translates to:
+  /// **'সংস্করণ {version}'**
+  String menuPageVersion(String version);
+
+  /// ≡ menu page, about fold: check for an app update
+  ///
+  /// In bn, this message translates to:
+  /// **'আপডেট দেখুন'**
+  String get menuPageCheckUpdate;
+
+  /// ≡ menu page: the last line under the sign-out button
+  ///
+  /// In bn, this message translates to:
+  /// **'ABOS অ্যাপ {version}'**
+  String menuPageAppVersion(String version);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

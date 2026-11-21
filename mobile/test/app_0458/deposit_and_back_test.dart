@@ -221,10 +221,11 @@ void main() {
     });
   });
 
-  group('≡ = quick actions', () {
+  // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): ≡ এখন পুরো মেনুর পাতা খোলে/বন্ধ করে; দ্রুত কাজ উপরের ＋-এ আর মেনুর পাতার "শর্টকাট"-এ
+  group('≡ = the menu page, ＋ = quick actions', () {
     MenuItem item(String path, String label) => MenuItem(key: path, label: label, icon: Icons.circle, routeName: path);
 
-    testWidgets('≡ opens the quick actions of this person\'s own menu, in order, not the module list', (tester) async {
+    testWidgets('≡ opens the menu page with this person\'s shortcuts; ＋ opens the quick actions of this person\'s own menu, in order, not the module list', (tester) async {
       final opened = <String>[];
       await tester.pumpWidget(ProviderScope(
         overrides: [
@@ -256,8 +257,24 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('দ্রুত কাজ'), findsOneWidget);
+      // ≡ — the menu page, its shortcuts the same quick actions, in the same order; ≡ again closes it
       await tester.tap(find.byKey(const ValueKey('top-leading')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('menu-page')), findsOneWidget);
+      expect(find.byKey(const ValueKey('quick-actions')), findsNothing, reason: '≡ আর দ্রুত কাজের পাতা খোলে না');
+      final tiles = [
+        for (final p in ['deposit-report', 'new-order', 'collections', 'approvals', 'today', 'customers'])
+          if (find.byKey(ValueKey('menu-tile-$p')).evaluate().isNotEmpty) p,
+      ];
+      expect(tiles, ['deposit-report', 'new-order', 'customers']);
+      expect(find.byKey(const ValueKey('module-sales')), findsNothing, reason: '⛔ ≡ আবার মডিউলের তালিকা খুলল');
+      await tester.tap(find.byKey(const ValueKey('top-leading')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('menu-page')), findsNothing);
+
+      // ＋ — the quick actions sheet
+      expect(find.byTooltip('তৈরি করুন'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('top-create')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('quick-actions')), findsOneWidget);

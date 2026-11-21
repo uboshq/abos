@@ -178,9 +178,10 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    await _scrollToLogout(tester);
-    expect(find.text('বেরিয়ে যান'), findsOneWidget,
+    // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): "আমি" = Facebook-ধাঁচের প্রোফাইল ([MePage])
+    expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget,
         reason: 'the photo opens the আমি page');
+    expect(find.byKey(const ValueKey('me-name')), findsOneWidget);
   });
 
   // ⭐ "আমার প্রোফাইল" → পুরো পর্দা "প্রোফাইল ও ছবি" (০.৪.৪১, a6, ২০ অক্টোবর ২০২৬: সার্ভারের ছবি আর ফোনের দরজা এসেছে;
@@ -189,17 +190,21 @@ void main() {
     final opened = <String>[];
     await tester.pumpWidget(shell(openPath: (path) async => opened.add(path)));
     await tester.pumpAndSettle();
-    // ⭐ ১৪ নভেম্বর ২০২৬: ছবি নিচের বারের "আমি" — সেখানে নামের কার্ড আর "প্রোফাইল ও ছবি" সারি দুটোই প্রোফাইল খোলে
+    // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): "আমি" পাতার "প্রোফাইল ঠিক করুন" প্রোফাইল খোলে; ≡ মেনুর নিজের সারি "আমি" পাতা খোলে
     await _openMe(tester);
-    expect(find.byKey(const ValueKey('me-page')), findsOneWidget, reason: '⛔ নিচের বারের ছবিতে চাপ দিলে "আমি" পাতা খোলেনি');
-    await tester.tap(find.byKey(const ValueKey('profile-avatar')));
+    expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget, reason: '⛔ নিচের বারের ছবিতে চাপ দিলে "আমি" পাতা খোলেনি');
+    await tester.tap(find.byKey(const ValueKey('me-edit')));
     await tester.pumpAndSettle();
-    expect(opened, ['me/profile'], reason: '⛔ নামের কার্ডে চাপ দিলে প্রোফাইল খোলেনি');
-    await _scrollMeTo(tester, find.byKey(const ValueKey('me-profile')));
-    await tester.tap(find.byKey(const ValueKey('me-profile')));
-    await tester.pumpAndSettle();
-    expect(opened, ['me/profile', 'me/profile'], reason: '⛔ "প্রোফাইল ও ছবি" সারি প্রোফাইল খোলেনি');
+    expect(opened, ['me/profile'], reason: '⛔ "প্রোফাইল ঠিক করুন" প্রোফাইল খোলেনি');
     expect(find.byKey(const ValueKey('profile-dialog')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('nav-home')));
+    await tester.pumpAndSettle();
+    await _openMenu(tester);
+    await tester.tap(find.byKey(const ValueKey('menu-self')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('menu-page')), findsNothing, reason: 'মেনুর পাতা বন্ধ');
+    expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget, reason: '⛔ মেনুর নিজের সারি "আমি" পাতা খোলেনি');
   });
 
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা
@@ -324,15 +329,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('গ্রাহক'), findsOneWidget);
 
-    // ⓘ "আমি" — নিচের বারের শেষ ঘর (১৩ নভেম্বর ২০২৬)
+    // ⓘ "আমি" — নিচের বারের শেষ ঘর (১৩ নভেম্বর ২০২৬); আইটেম ১০ (২১ নভেম্বর ২০২৬): নিজের প্রোফাইল
     await _openMe(tester);
-    expect(find.textContaining('karim@testco.local'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('me-name'))).data, 'করিম');
+    expect(find.descendant(of: find.byKey(const ValueKey('me-where')), matching: find.text('টেষ্ট কোম্পানী লিমিটেড · Head Office')),
+        findsOneWidget);
+
+    // ⓘ আগের "আমি"-র প্রিন্টার, বের হওয়া আর হালনাগাদ এখন ≡ মেনুর পাতায়
+    await tester.tap(find.byKey(const ValueKey('nav-home')));
+    await tester.pumpAndSettle();
+    await _openMenu(tester);
+    await _openFolds(tester);
     // ⭐ প্রিন্টার — থার্মাল আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
-    expect(find.byKey(const ValueKey('me-printer')), findsOneWidget);
-    await _scrollToLogout(tester);
-    expect(find.text('বেরিয়ে যান'), findsOneWidget);
+    await _scrollMenuTo(tester, find.byKey(const ValueKey('menu-sub-printer')));
+    expect(find.byKey(const ValueKey('menu-sub-printer')), findsOneWidget);
     // ⭐ হাতে হালনাগাদ যাচাই — মালিক, ৭ অক্টোবর ২০২৬
+    await _scrollMenuTo(tester, find.text('অ্যাপ হালনাগাদ'));
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
+    await _scrollMenuTo(tester, find.byKey(const ValueKey('menu-logout')));
+    expect(find.descendant(of: find.byKey(const ValueKey('menu-logout')), matching: find.text('বের হওয়া')), findsOneWidget);
   });
 
   testWidgets('with no signal the header still names the company it last knew',
@@ -351,15 +366,15 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
-    // ⓘ ১৩ নভেম্বর ২০২৬ (মালিক, "ছবি নিচের বারে"): ছবির মেনু হোমের মাথায় আর নেই — বেরোনোর পথ নিচের বারের "আমি" পাতা;
-    // মেনুর "বের হওয়া" নিজে test/top_bar_test.dart-এ যাচাই হয়
-    await _openMe(tester);
-    await _scrollToLogout(tester);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
+    // ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): বেরোনোর পথ ≡ মেনুর পাতার নিচের লাল "বের হওয়া"; ছবির মেনুর "বের হওয়া" নিজে
+    // test/top_bar_test.dart-এ যাচাই হয়
+    await _openMenu(tester);
+    await _scrollMenuTo(tester, find.byKey(const ValueKey('menu-logout')));
+    await tester.tap(find.byKey(const ValueKey('menu-logout')));
     await tester.pumpAndSettle();
 
     expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget,
-        reason: 'the আমি page\'s way out asks first');
+        reason: 'the ≡ menu page\'s way out asks first');
     await tester.tap(find.text('থাক'));
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
@@ -410,13 +425,27 @@ Future<void> _openMe(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// "আমি" grew a printer row (14 Oct 2026); on the test's 800×600 screen the
-/// way out now sits below the fold, as it does on a short phone.
-Future<void> _scrollToLogout(WidgetTester tester) => _scrollMeTo(tester, find.text('বেরিয়ে যান'));
+/// ≡ — the top bar's leading button opens the menu page (item 10, 21 Nov 2026)
+Future<void> _openMenu(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('top-leading')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('menu-page')), findsOneWidget, reason: '⛔ ≡ মেনুর পাতা খোলেনি');
+}
 
-/// ⓘ "আমি" পাতার নিজের তালিকা ধরে নামা — ১৪ নভেম্বর ২০২৬ পাতায় প্রোফাইল, রঙ আর ভাষার সারি এল, কোনো একটা সারি ধরে টানলে সেটা নিজেই পর্দা ছাড়ে
-Future<void> _scrollMeTo(WidgetTester tester, Finder target) async {
-  final list = find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first;
+/// The menu page's settings and about folds, open (Smart starts with settings open, the others shut)
+Future<void> _openFolds(WidgetTester tester) async {
+  for (final fold in ['settings', 'about']) {
+    await _scrollMenuTo(tester, find.byKey(ValueKey('menu-fold-$fold')));
+    if (find.byKey(ValueKey('menu-fold-$fold-body')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(ValueKey('menu-fold-$fold')));
+      await tester.pumpAndSettle();
+    }
+  }
+}
+
+/// ⓘ মেনুর পাতার নিজের তালিকা ধরে নামা — পরীক্ষার 800×600 পর্দায় নিচের সারি পর্দার বাইরে, ছোট ফোনের মতো
+Future<void> _scrollMenuTo(WidgetTester tester, Finder target) async {
+  final list = find.descendant(of: find.byKey(const ValueKey('menu-page')), matching: find.byType(Scrollable)).first;
   await tester.scrollUntilVisible(target, 150, scrollable: list);
   await tester.pumpAndSettle();
 }

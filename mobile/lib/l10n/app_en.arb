@@ -3673,5 +3673,87 @@
   "@deliveryOrdersPartialHint": {
     "description": "Delivery/sales order: the approver may approve a smaller quantity than asked — partial approval is part of the decision, not editing the paper (owner 20 Nov 2026, 2ক)"
   },
-  "networkErrorFirewallBlocked": "This WiFi/network is blocked by the server's firewall — try mobile data, or tell the office."
+  "networkErrorFirewallBlocked": "This WiFi/network is blocked by the server's firewall — try mobile data, or tell the office.",
+  "mePageCoverChange": "Change cover",
+  "mePagePhotoChange": "Change photo",
+  "mePageEditProfile": "Edit profile",
+  "mePageMessage": "Message",
+  "mePageCall": "Call",
+  "mePageSoon": "Soon",
+  "mePageSoonSnack": "Coming soon",
+  "mePageMonthTitle": "My work this month",
+  "mePageAboutTitle": "About",
+  "mePageAboutPhone": "Phone",
+  "mePageAboutEmail": "Email",
+  "mePageAboutEmployeeNo": "Employee no.",
+  "mePageAboutJoined": "Joined on",
+  "mePageAboutRole": "Role",
+  "mePageAboutBranches": "Branches I may work in",
+  "mePageRecentTitle": "My recent work",
+  "mePageSeeAll": "See all",
+  "mePageYesterday": "Yesterday",
+  "mePageRemovePhone": "Remove",
+  "mePageSecurityTitle": "Security",
+  "mePagePassword": "Password",
+  "mePagePasswordChanged": "{count, plural, one{Last changed {digits} day ago} other{Last changed {digits} days ago}}",
+  "@mePagePasswordChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "digits": {
+        "type": "String"
+      }
+    }
+  },
+  "mePageAppLock": "Fingerprint & PIN",
+  "mePageAppLockHint": "Asked when the app opens",
+  "mePageLockDelay": "Lock after",
+  "mePageLockDelayHint": "While the app is closed",
+  "mePageCoverSending": "Sending cover… {percent}%",
+  "@mePageCoverSending": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "mePageCoverChanged": "Cover changed",
+  "mePageCoverFailed": "The cover could not be sent. Please try again in a moment.",
+  "menuPageSeeProfile": "See my profile",
+  "menuPageSwitch": "Switch",
+  "menuPageAllBranchesNote": "\"All branches — view only\": no writing or changes; approvals are allowed.",
+  "menuPageShortcuts": "Shortcuts",
+  "menuPageSeeMore": "See more",
+  "menuPageRecentPaper": "Paper",
+  "menuPageRecentPage": "Page",
+  "menuPageUnreadNotices": "Unread notices",
+  "menuPageDayClosePending": "Days not closed",
+  "menuPageHelp": "Help and support",
+  "menuPageHelpCentre": "Help centre",
+  "menuPageReportProblem": "Report a problem",
+  "menuPageSettings": "Settings and privacy",
+  "menuPageSettingsHint": "Look, colour, language, fingerprint…",
+  "menuPageLookColour": "Look and colour",
+  "menuPageFingerprint": "Fingerprint",
+  "menuPageScreenshot": "Screenshots",
+  "menuPageNotifications": "Notifications",
+  "menuPageAbout": "About the app",
+  "menuPageVersion": "Version {version}",
+  "@menuPageVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menuPageCheckUpdate": "Check for update",
+  "menuPageAppVersion": "ABOS app {version}",
+  "@menuPageAppVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -71,17 +71,14 @@ void main() {
     addTearDown(c.dispose);
     await tester.pumpWidget(shell(c, opened));
     await tester.pumpAndSettle();
-    // ⭐ ১৪ নভেম্বর ২০২৬: ছবির মেনু নেই — "আমি" পাতার "প্রোফাইল ও ছবি" সারি
+    // ⭐ ১৪ নভেম্বর ২০২৬: ছবির মেনু নেই — নিচের বারের "আমি"। ⓘ আইটেম ১০ (২১ নভেম্বর ২০২৬): "আমি" এখন Facebook-ধাঁচের
+    // প্রোফাইল — "প্রোফাইল ঠিক করুন" বোতাম পুরো পর্দা খোলে; সার্ভার ছবি বদল নিলে ছবির ওপরেই ক্যামেরা
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    try {
-      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-profile')), 150,
-          scrollable: find.descendant(of: find.byKey(const ValueKey('me-page')), matching: find.byType(Scrollable)).first);
-    } on StateError {
-      fail('⛔ "আমি" পাতার শেষ পর্যন্ত নেমেও "প্রোফাইল ও ছবি" সারি নেই');
-    }
-    expect(find.text('প্রোফাইল ও ছবি বদল'), findsOneWidget, reason: '⛔ সার্ভার ছবি বদল নেয়, তবু সারি "আমার প্রোফাইল"');
-    await tester.tap(find.byKey(const ValueKey('me-profile')));
+    expect(find.byKey(const ValueKey('me-page-10')), findsOneWidget);
+    expect(find.byKey(const ValueKey('me-photo-change')), findsOneWidget, reason: '⛔ সার্ভার ছবি বদল নেয়, তবু ছবিতে ক্যামেরা নেই');
+    expect(find.descendant(of: find.byKey(const ValueKey('me-edit')), matching: find.text('প্রোফাইল ঠিক করুন')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('me-edit')));
     await tester.pumpAndSettle();
     expect(opened, [ProfileRoutes.profile]);
     expect(ProfileRoutes.profile, 'me/profile');
